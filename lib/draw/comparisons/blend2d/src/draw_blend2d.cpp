@@ -154,8 +154,7 @@ void endDevice(BLContextCore* ctx) {
 }
 
 BLRgba rgbaOf(PrColor c) {
-    return BLRgba{clampF32(c.r, 0, 1), clampF32(c.g, 0, 1), clampF32(c.b, 0, 1),
-                  clampF32(c.a, 0, 1)};
+    return BLRgba{clampF32(c.r, 0, 1), clampF32(c.g, 0, 1), clampF32(c.b, 0, 1), clampF32(c.a, 0, 1)};
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -248,8 +247,8 @@ void pathOf(Renderer& r, const PrPath* path) {
                 PrVec2 c2 = points[next + 1];
                 PrVec2 p = points[next + 2];
                 next += 3;
-                bl_path_cubic_to(&r.path, double(c1.x), double(c1.y), double(c2.x), double(c2.y),
-                                 double(p.x), double(p.y));
+                bl_path_cubic_to(&r.path, double(c1.x), double(c1.y), double(c2.x), double(c2.y), double(p.x),
+                    double(p.y));
                 break;
             }
             case PrPathVerb_Close:
@@ -407,12 +406,9 @@ BLExtendMode extendOf(PrDrawExtend x, PrDrawExtend y) {
     };
     // Rows by x's mode, and columns by y's mode: pad, repeat, reflect.
     constexpr BLExtendMode kModes[3][3] = {
-        {BL_EXTEND_MODE_PAD_X_PAD_Y, BL_EXTEND_MODE_PAD_X_REPEAT_Y,
-         BL_EXTEND_MODE_PAD_X_REFLECT_Y},
-        {BL_EXTEND_MODE_REPEAT_X_PAD_Y, BL_EXTEND_MODE_REPEAT_X_REPEAT_Y,
-         BL_EXTEND_MODE_REPEAT_X_REFLECT_Y},
-        {BL_EXTEND_MODE_REFLECT_X_PAD_Y, BL_EXTEND_MODE_REFLECT_X_REPEAT_Y,
-         BL_EXTEND_MODE_REFLECT_X_REFLECT_Y},
+        {BL_EXTEND_MODE_PAD_X_PAD_Y, BL_EXTEND_MODE_PAD_X_REPEAT_Y, BL_EXTEND_MODE_PAD_X_REFLECT_Y},
+        {BL_EXTEND_MODE_REPEAT_X_PAD_Y, BL_EXTEND_MODE_REPEAT_X_REPEAT_Y, BL_EXTEND_MODE_REPEAT_X_REFLECT_Y},
+        {BL_EXTEND_MODE_REFLECT_X_PAD_Y, BL_EXTEND_MODE_REFLECT_X_REPEAT_Y, BL_EXTEND_MODE_REFLECT_X_REFLECT_Y},
     };
     return kModes[simple(x)][simple(y)];
 }
@@ -421,20 +417,17 @@ BLExtendMode extendOf(PrDrawExtend x, PrDrawExtend y) {
 // Texels on whole pixels become the pattern's area, which repeats. Otherwise the pattern uses the whole image, placed
 // so that the texels land in the right place.
 void patternOf(const BLImageCore* image, PrRect texels, PrRect onto, PrAffine2 toSpace,
-               BLExtendMode extend, BLPatternCore* out) {
-    bool whole = texels.left == floorF32(texels.left) && texels.top == floorF32(texels.top)
-                 && texels.right == floorF32(texels.right)
-                 && texels.bottom == floorF32(texels.bottom);
+        BLExtendMode extend, BLPatternCore* out) {
+    bool whole = texels.left == floorF32(texels.left) && texels.top == floorF32(texels.top) &&
+        texels.right == floorF32(texels.right) && texels.bottom == floorF32(texels.bottom);
     float sx = prRectWidth(onto) / prRectWidth(texels);
     float sy = prRectHeight(onto) / prRectHeight(texels);
     PrVec2 origin = whole ? PrVec2{0, 0} : PrVec2{texels.left, texels.top};
-    PrAffine2 place = prAffine2Concat(
-        prAffine2Concat(prAffine2Translate(-origin), prAffine2Scale(PrVec2{sx, sy})),
+    PrAffine2 place = prAffine2Concat(prAffine2Concat(prAffine2Translate(-origin), prAffine2Scale(PrVec2{sx, sy})),
         prAffine2Translate(PrVec2{onto.left, onto.top}));
     BLMatrix2D m = matrixOf(prAffine2Concat(place, toSpace));
     if (whole) {
-        BLRectI area{int(texels.left), int(texels.top), int(prRectWidth(texels)),
-                     int(prRectHeight(texels))};
+        BLRectI area{int(texels.left), int(texels.top), int(prRectWidth(texels)), int(prRectHeight(texels))};
         bl_pattern_init_as(out, image, &area, extend, &m);
     } else {
         bl_pattern_init_as(out, image, nullptr, extend, &m);
@@ -451,7 +444,7 @@ void gradientStops(Renderer& r, const PrDrawBrush* brush, PrColor color) {
     r.rampPieces.resize(prDrawGradientRampMaxPieces(brush->stopCount));
     r.ramp.resize(prDrawGradientRampMaxColors(brush->stopCount, kRampResolution));
     r.rampPieces.resize(prDrawGradientRamp(brush, color, PrColorSpace_Srgb, kRampResolution, r.rampPieces.data,
-                                           r.ramp.data));
+        r.ramp.data));
     r.stops.clear();
     // The pieces past the ends are left out: Blend2D extends the end stops itself.
     for (uint32_t p = 1; p + 1 < r.rampPieces.count; ++p) {
@@ -466,8 +459,8 @@ void gradientStops(Renderer& r, const PrDrawBrush* brush, PrColor color) {
             };
             BLGradientStop stop{};
             stop.offset = double(piece.start) + double(piece.end - piece.start) * double(k) / double(ends - 1);
-            stop.rgba.value = (uint64_t(a * 65535 + 0.5f) << 48) | (channel(c.r) << 32) | (channel(c.g) << 16)
-                              | channel(c.b);
+            stop.rgba.value =
+                (uint64_t(a * 65535 + 0.5f) << 48) | (channel(c.r) << 32) | (channel(c.g) << 16) | channel(c.b);
             r.stops.push(stop);
         }
     }
@@ -484,8 +477,7 @@ bool brushPlacement(const PrDrawBrush* brush, PrRect bounds, PrAffine2* toSpace,
 // Sets the target's fill or stroke style to the paint: the color, or the brush times the color, for a command whose
 // fill geometry has `bounds` in the current space. The caller resets the style with resetStyle. Returns false if it
 // paints nothing.
-bool setStyle(Renderer& r, BLContextStyleSlot slot, const PrDrawBrush* PR_NULLABLE brush, PrColor color,
-              PrRect bounds) {
+bool setStyle(Renderer& r, BLContextStyleSlot slot, const PrDrawBrush* PR_NULLABLE brush, PrColor color, PrRect bounds) {
     BLContextCore* ctx = context(r);
     bool fill = slot == BL_CONTEXT_STYLE_SLOT_FILL;
     if (brush == nullptr) {
@@ -520,10 +512,9 @@ bool setStyle(Renderer& r, BLContextStyleSlot slot, const PrDrawBrush* PR_NULLAB
             return false;
         BLPatternCore pattern{};
         patternOf(image, texels, tiles.tile, toSpace, extendOf(tiles.x, tiles.y), &pattern);
+        bool nearest = (brush->image.sampling & PrDrawSamplingFlag_Kind) == PrDrawSampling_Nearest;
         bl_context_set_hint(ctx, BL_CONTEXT_HINT_PATTERN_QUALITY,
-                            (brush->image.sampling & PrDrawSamplingFlag_Kind) == PrDrawSampling_Nearest
-                                ? BL_PATTERN_QUALITY_NEAREST
-                                : BL_PATTERN_QUALITY_BILINEAR);
+            nearest ? BL_PATTERN_QUALITY_NEAREST : BL_PATTERN_QUALITY_BILINEAR);
         setPaint(&pattern);
         bl_pattern_destroy(&pattern);
         double alpha = double(clampF32(color.a, 0, 1));
@@ -536,9 +527,11 @@ bool setStyle(Renderer& r, BLContextStyleSlot slot, const PrDrawBrush* PR_NULLAB
     gradientStops(r, brush, color);
     const BLGradientStop* stops = r.stops.data;
     const size_t stopCount = r.stops.count;
-    BLExtendMode extend = brush->extend == PrDrawExtend_Repeat    ? BL_EXTEND_MODE_REPEAT
-                          : brush->extend == PrDrawExtend_Reflect ? BL_EXTEND_MODE_REFLECT
-                                                                  : BL_EXTEND_MODE_PAD;
+    BLExtendMode extend = BL_EXTEND_MODE_PAD;
+    if (brush->extend == PrDrawExtend_Repeat)
+        extend = BL_EXTEND_MODE_REPEAT;
+    else if (brush->extend == PrDrawExtend_Reflect)
+        extend = BL_EXTEND_MODE_REFLECT;
     BLGradientCore gradient{};
     BLMatrix2D m = matrixOf(toSpace);
     switch (brush->kind) {
@@ -565,8 +558,7 @@ bool setStyle(Renderer& r, BLContextStyleSlot slot, const PrDrawBrush* PR_NULLAB
             v.y1 = double(brush->radial.start.y * k);
             v.r0 = double(brush->radial.endRadius * k);
             v.r1 = double(brush->radial.startRadius * k);
-            bl_gradient_init_as(&gradient, BL_GRADIENT_TYPE_RADIAL, &v, extend, stops, stopCount,
-                                &scaled);
+            bl_gradient_init_as(&gradient, BL_GRADIENT_TYPE_RADIAL, &v, extend, stops, stopCount, &scaled);
             break;
         }
         case PrDrawBrushKind_Conic: {
@@ -584,14 +576,11 @@ bool setStyle(Renderer& r, BLContextStyleSlot slot, const PrDrawBrush* PR_NULLAB
             if (!(g.radii.x > 0 && g.radii.y > 0))
                 return false;
             // A unit circle scaled to the radii, 256 units wide for the reason above.
-            BLMatrix2D ellipse = matrixOf(prAffine2Concat(
-                prAffine2Concat(prAffine2Scale(g.radii / 256),
-                                prAffine2Translate(g.center)),
-                toSpace));
+            BLMatrix2D ellipse = matrixOf(prAffine2Concat(prAffine2Concat(prAffine2Scale(g.radii / 256),
+                prAffine2Translate(g.center)), toSpace));
             BLRadialGradientValues v{};
             v.r0 = 256;
-            bl_gradient_init_as(&gradient, BL_GRADIENT_TYPE_RADIAL, &v, extend, stops, stopCount,
-                                &ellipse);
+            bl_gradient_init_as(&gradient, BL_GRADIENT_TYPE_RADIAL, &v, extend, stops, stopCount, &ellipse);
             break;
         }
     }
@@ -614,20 +603,19 @@ float spaceTolerance(Renderer& r) {
 
 // Fills the shape with the paint.
 void fillShape(Renderer& r, const Shape& shape, PrPathFillRule rule, const PrDrawBrush* PR_NULLABLE brush,
-               PrColor color, PrRect bounds) {
+        PrColor color, PrRect bounds) {
     if (shapeEmpty(shape) || !setStyle(r, BL_CONTEXT_STYLE_SLOT_FILL, brush, color, bounds))
         return;
     pathOf(r, shape);
     BLContextCore* ctx = context(r);
-    bl_context_set_fill_rule(ctx, rule == PrPathFillRule_EvenOdd ? BL_FILL_RULE_EVEN_ODD
-                                                             : BL_FILL_RULE_NON_ZERO);
+    bl_context_set_fill_rule(ctx, rule == PrPathFillRule_EvenOdd ? BL_FILL_RULE_EVEN_ODD : BL_FILL_RULE_NON_ZERO);
     BLPoint origin{0, 0};
     bl_context_fill_path_d(ctx, &origin, &r.path);
     resetStyle(r);
 }
 
 void fillPolyline(Renderer& r, const PrPathPolyline& polyline, PrPathFillRule rule,
-                  const PrDrawBrush* PR_NULLABLE brush, PrColor color, PrRect bounds) {
+        const PrDrawBrush* PR_NULLABLE brush, PrColor color, PrRect bounds) {
     fillShape(r, Shape{nullptr, &polyline}, rule, brush, color, bounds);
 }
 
@@ -669,8 +657,8 @@ void drawShapePath(Renderer& r, const PrDrawCommand& c, PrRect bounds) {
         return;
     }
     const PrPathStroke& stroke = c.stroke->shape;
-    if (!(stroke.width > 0) || prPathVerbCount(r.shape) == 0
-        || !setStyle(r, BL_CONTEXT_STYLE_SLOT_STROKE, c.brush, c.color, bounds))
+    if (!(stroke.width > 0) || prPathVerbCount(r.shape) == 0 ||
+            !setStyle(r, BL_CONTEXT_STYLE_SLOT_STROKE, c.brush, c.color, bounds))
         return;
     BLContextCore* ctx = context(r);
     bl_context_set_stroke_width(ctx, double(stroke.width));
@@ -678,8 +666,8 @@ void drawShapePath(Renderer& r, const PrDrawCommand& c, PrRect bounds) {
     bl_context_set_stroke_join(ctx, joinOf(stroke.join));
     bl_context_set_stroke_cap(ctx, BL_STROKE_CAP_POSITION_START, capOf(stroke.startCap));
     bl_context_set_stroke_cap(ctx, BL_STROKE_CAP_POSITION_END, capOf(stroke.endCap));
-    bl_context_set_stroke_transform_order(ctx, c.stroke->nonScaling ? BL_STROKE_TRANSFORM_ORDER_BEFORE
-                                                                    : BL_STROKE_TRANSFORM_ORDER_AFTER);
+    bl_context_set_stroke_transform_order(ctx,
+        c.stroke->nonScaling ? BL_STROKE_TRANSFORM_ORDER_BEFORE : BL_STROKE_TRANSFORM_ORDER_AFTER);
     pathOf(r, r.shape);
     BLPoint origin{0, 0};
     bl_context_stroke_path_d(ctx, &origin, &r.path);
@@ -705,7 +693,7 @@ struct BorderDraw {
 };
 
 void drawBorderPiece(void* PR_NULLABLE context, const PrDrawBorderPiece* piece,
-                     const PrPathPolyline* shape, const PrPathPolyline* PR_NULLABLE cut) {
+        const PrPathPolyline* shape, const PrPathPolyline* PR_NULLABLE cut) {
     BorderDraw& d = *static_cast<BorderDraw*>(context);
     Renderer& r = *d.r;
     const PrDrawCommand& c = *d.command;
@@ -731,16 +719,15 @@ void drawBorder(Renderer& r, const PrDrawCommand& c) {
 
 // Computes the coverage of the shape over the box, as an A8 image, where `user` maps the shape's space to target
 // pixels.
-void coverageOf(Renderer& r, const Shape& shape, PrPathFillRule rule, PrIRect box, const BLMatrix2D& user,
-                BLImageCore* out) {
+void coverageOf(Renderer& r, const Shape& shape, PrPathFillRule rule, PrIRect box, const BLMatrix2D& user, BLImageCore* out) {
     Target* t = newTarget(box, BL_FORMAT_A8, user);
     r.targets.push(t);
     BLRgba white{1, 1, 1, 1};
     bl_context_set_fill_style_rgba(&t->context, &white);
     if (!shapeEmpty(shape)) {
         pathOf(r, shape);
-        bl_context_set_fill_rule(&t->context, rule == PrPathFillRule_EvenOdd ? BL_FILL_RULE_EVEN_ODD
-                                                                         : BL_FILL_RULE_NON_ZERO);
+        bl_context_set_fill_rule(&t->context,
+            rule == PrPathFillRule_EvenOdd ? BL_FILL_RULE_EVEN_ODD : BL_FILL_RULE_NON_ZERO);
         BLPoint origin{0, 0};
         bl_context_fill_path_d(&t->context, &origin, &r.path);
     }
@@ -774,9 +761,9 @@ void drawImageRects(Renderer& r, const PrDrawCommand& c, const PrDrawImageRect* 
     const PrRect& texels = source.rect;
     beginPaint(r, c);
     BLContextCore* ctx = context(r);
+    bool nearest = (c.sampling & PrDrawSamplingFlag_Kind) == PrDrawSampling_Nearest;
     bl_context_set_hint(ctx, BL_CONTEXT_HINT_PATTERN_QUALITY,
-                        (c.sampling & PrDrawSamplingFlag_Kind) == PrDrawSampling_Nearest ? BL_PATTERN_QUALITY_NEAREST
-                                                             : BL_PATTERN_QUALITY_BILINEAR);
+        nearest ? BL_PATTERN_QUALITY_NEAREST : BL_PATTERN_QUALITY_BILINEAR);
     for (uint32_t i = 0; i < count; ++i) {
         const PrRect& s = rects[i].source;
         PrRect from{texels.left + s.left, texels.top + s.top, texels.left + s.right, texels.top + s.bottom};
@@ -803,12 +790,10 @@ void drawNineSlice(Renderer& r, const PrDrawCommand& c) {
     const PrRect& area = c.nineSlice.source.rect;
     float width = prRectWidth(area);
     float height = prRectHeight(area);
-    uint32_t count =
-        prDrawNineSliceRects(c.nineSlice.slices, PrVec2{width, height}, c.nineSlice.destination, nullptr, 0);
+    uint32_t count = prDrawNineSliceRects(c.nineSlice.slices, PrVec2{width, height}, c.nineSlice.destination, nullptr, 0);
     Array<PrDrawImageRect> pieces;
     pieces.reserve(count);
-    pieces.count = prDrawNineSliceRects(c.nineSlice.slices, PrVec2{width, height}, c.nineSlice.destination,
-                                        pieces.data, count);
+    pieces.count = prDrawNineSliceRects(c.nineSlice.slices, PrVec2{width, height}, c.nineSlice.destination, pieces.data, count);
     drawImageRects(r, c, pieces.data, pieces.count);
     pieces.reset();
 }
@@ -878,8 +863,8 @@ bool readsBeneath(const PrDrawCommand* commands, uint32_t count) {
                     return true;
                 break;
             case PrDrawCommandKind_PushGroup:
-                if (c.group->composite != PrDrawComposite_SourceOver
-                    || c.group->blendMode != PrDrawBlendMode_Normal || c.group->backdrop != nullptr)
+                if (c.group->composite != PrDrawComposite_SourceOver ||
+                        c.group->blendMode != PrDrawBlendMode_Normal || c.group->backdrop != nullptr)
                     return true;
                 break;
             default:
@@ -986,7 +971,7 @@ void maskOf(Renderer& r, const Push& push, const PrIRect& box, BLImageCore* out)
     PrAffine2 fromTarget{};
     if (prRectIsEmpty(bounds) && prAffine2Invert(toTarget(r), &fromTarget))
         bounds = prAffine2MapRect(fromTarget,
-                                  PrRect{float(box.left), float(box.top), float(box.right), float(box.bottom)});
+            PrRect{float(box.left), float(box.top), float(box.right), float(box.bottom)});
     Target* painted = newTarget(box, BL_FORMAT_A8, userOf(r));
     r.targets.push(painted);
     if (setStyle(r, BL_CONTEXT_STYLE_SLOT_FILL, &mask->brush, PrColor{1, 1, 1, mask->brush.opacity}, bounds))
@@ -1019,9 +1004,9 @@ void pushProjectedGroup(Renderer& r, const PrDrawCommand* commands, uint32_t at)
     const PrDrawCommand& c = commands[at];
     const PrDrawGroup* g = c.group;
     PrDrawProjection p{};
-    if (r.collapsed != 0 || prIRectIsEmpty(r.clip)
-        || !prDrawProjectionPlace(g->projection, toTarget(r), g->bounds, prRectFromIRect(r.clip),
-                                  float(kPrDrawRenderMaxSize), &p)) {
+    if (r.collapsed != 0 || prIRectIsEmpty(r.clip) ||
+            !prDrawProjectionPlace(g->projection, toTarget(r), g->bounds, prRectFromIRect(r.clip),
+                float(kPrDrawRenderMaxSize), &p)) {
         Push nothing{};
         nothing.kind = PushKind_Rect;
         bl_context_save(context(r), nullptr);
@@ -1082,8 +1067,7 @@ void pushGroup(Renderer& r, const PrDrawCommand& c) {
 
 void pop(Renderer& r) {
     Push push = r.pushes.data[--r.pushes.count];
-    r.clip = r.pushes.count != 0 ? r.pushes.last().clip
-                                 : r.targets.data[0]->box;
+    r.clip = r.pushes.count != 0 ? r.pushes.last().clip : r.targets.data[0]->box;
     if (push.collapsed)
         --r.collapsed;
     switch (push.kind) {
@@ -1185,9 +1169,8 @@ void runCommands(Renderer& r, const PrDrawCommand* commands, uint32_t count) {
     for (uint32_t i = 0; i < count; ++i) {
         const PrDrawCommand& c = commands[i];
         bool skipped = r.collapsed != 0 && prDrawCommandSkipsCollapsed(&c);
-        if (skipped && c.kind != PrDrawCommandKind_PushGroup
-            && !(c.kind >= PrDrawCommandKind_PushClipRect
-                 && c.kind <= PrDrawCommandKind_PushClipPath))
+        if (skipped && c.kind != PrDrawCommandKind_PushGroup && !(c.kind >= PrDrawCommandKind_PushClipRect &&
+                c.kind <= PrDrawCommandKind_PushClipPath))
             continue;
         switch (c.kind) {
             case PrDrawCommandKind_Clear:
@@ -1229,8 +1212,8 @@ void runCommands(Renderer& r, const PrDrawCommand* commands, uint32_t count) {
                 Push push{};
                 push.kind = PushKind_Transform;
                 push.clip = r.clip;
-                push.collapsed = r.collapsed != 0
-                                 || prDrawAffine2Collapses(prAffine2Concat(prAffine2FromDAffine2(pushed), toTarget(r)));
+                push.collapsed = r.collapsed != 0 ||
+                    prDrawAffine2Collapses(prAffine2Concat(prAffine2FromDAffine2(pushed), toTarget(r)));
                 bl_context_save(context(r), nullptr);
                 if (push.collapsed) {
                     ++r.collapsed;
@@ -1322,8 +1305,7 @@ void renderPixels(PrDrawRenderer* renderer, PrPixels pixels, PrPixelFormat forma
     root->box = prIRectAt(PrIVec2{0, 0}, pixels.extent);
     bl_image_init(&root->image);
     bl_image_create_from_data(&root->image, int(pixels.extent.x), int(pixels.extent.y),
-                              BL_FORMAT_PRGB32, pixels.data, intptr_t(pixels.stride),
-                              BL_DATA_ACCESS_RW, nullptr, nullptr);
+        BL_FORMAT_PRGB32, pixels.data, intptr_t(pixels.stride), BL_DATA_ACCESS_RW, nullptr, nullptr);
     beginTarget(root, b2->options.threads);
     Renderer r{};
     initRenderer(r, b2, root, &pixels);

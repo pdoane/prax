@@ -201,8 +201,10 @@ PrCharset metaCharset(Prescan* p, bool* outOfBytes) {
 
 // The elements whose content the tokenizer reads as text, which holds no tags (html/#parsing-html-fragments). The
 // prescan assumes that scripting is enabled, as a document's parse usually has it, so noscript is among them.
-constexpr PrStringView kTextElements[] = {"title", "textarea", "style", "xmp", "iframe", "noembed", "noframes",
-                                          "noscript", "script"};
+constexpr PrStringView kTextElements[] = {
+    "title", "textarea", "style", "xmp", "iframe", "noembed", "noframes",
+    "noscript", "script",
+};
 
 // Skips the text of the element that the start tag `name` opens, if its content is text, to its end tag, and leaves the
 // position at the `<` of the end tag. A plaintext element's text runs to the end. Returns false if the bytes end first.
@@ -217,8 +219,8 @@ bool skipText(Prescan* p, PrStringView name) {
     if (!text)
         return true;
     for (size_t at = p->at + 1; at + 2 + name.size < p->bytes.size; ++at) {
-        if (p->bytes.data[at] != '<' || p->bytes.data[at + 1] != '/'
-            || !asciiEqualsFold(stringSlice(p->bytes, at + 2, name.size), name))
+        if (p->bytes.data[at] != '<' || p->bytes.data[at + 1] != '/' ||
+                !asciiEqualsFold(stringSlice(p->bytes, at + 2, name.size), name))
             continue;
         char after = p->bytes.data[at + 2 + name.size];
         if (asciiIsSpace(after) || after == '/' || after == '>') {
@@ -307,18 +309,16 @@ bool htmlPrescan(PrStringView bytes, bool complete, PrCharset* out) {
             if (atEnd(&p))
                 break;
             p.at += 2;
-        } else if (scanned.size - p.at >= 6 && asciiEqualsFold(stringSlice(scanned, p.at, 5), "<meta")
-                   && (asciiIsSpace(scanned.data[p.at + 5]) || scanned.data[p.at + 5] == '/')) {
+        } else if (scanned.size - p.at >= 6 && asciiEqualsFold(stringSlice(scanned, p.at, 5), "<meta") &&
+                (asciiIsSpace(scanned.data[p.at + 5]) || scanned.data[p.at + 5] == '/')) {
             p.at += 5;
             PrCharset charset = metaCharset(&p, &outOfBytes);
             if (charset != PrCharset_None) {
                 result = charset;
                 break;
             }
-        } else if (byteAt(&p) == '<' && p.at + 1 < scanned.size
-                   && (asciiIsLetter(scanned.data[p.at + 1])
-                       || (scanned.data[p.at + 1] == '/' && p.at + 2 < scanned.size
-                           && asciiIsLetter(scanned.data[p.at + 2])))) {
+        } else if (byteAt(&p) == '<' && p.at + 1 < scanned.size && (asciiIsLetter(scanned.data[p.at + 1]) ||
+                (scanned.data[p.at + 1] == '/' && p.at + 2 < scanned.size && asciiIsLetter(scanned.data[p.at + 2])))) {
             bool start = scanned.data[p.at + 1] != '/';
             size_t nameStart = p.at + (start ? 1 : 2);
             while (!atEnd(&p) && !asciiIsSpace(byteAt(&p)) && byteAt(&p) != '>')

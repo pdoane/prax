@@ -73,16 +73,14 @@ bool packedBytes(const PrImageFormat& format, uint32_t width, uint32_t height, s
 // Checks that the information a backend reported for an image is possible and within the limits.
 PrStatus validateInfo(const PrImageInfo& info, const PrImageLimits& limits) {
     size_t bytes = 0;
-    if (info.orientation > PrImageOrientation_Rotate270 || info.frameCount == 0
-        || !(info.pixelsPerMeter.x >= 0 && info.pixelsPerMeter.x <= 1e30f)
-        || !(info.pixelsPerMeter.y >= 0 && info.pixelsPerMeter.y <= 1e30f)
-        || !packedBytes(info.format, info.extent.x, info.extent.y, &bytes))
+    if (info.orientation > PrImageOrientation_Rotate270 || info.frameCount == 0 ||
+            !(info.pixelsPerMeter.x >= 0 && info.pixelsPerMeter.x <= 1e30f) ||
+            !(info.pixelsPerMeter.y >= 0 && info.pixelsPerMeter.y <= 1e30f) ||
+            !packedBytes(info.format, info.extent.x, info.extent.y, &bytes))
         return PrStatus_InvalidData;
-    if (info.frameCount > limits.frames || uint64_t(info.extent.x) * info.extent.y > limits.pixels
-        || info.workingBytes > limits.workingBytes
-        || (info.format.color.encoding == PrImageColorEncoding_Icc
-            && info.format.color.profile.size > limits.metadataBytes)
-        || bytes > limits.outputBytes)
+    if (info.frameCount > limits.frames || uint64_t(info.extent.x) * info.extent.y > limits.pixels ||
+            info.workingBytes > limits.workingBytes || (info.format.color.encoding == PrImageColorEncoding_Icc &&
+                info.format.color.profile.size > limits.metadataBytes) || bytes > limits.outputBytes)
         return PrStatus_Limit;
     return PrStatus_Ok;
 }
@@ -139,7 +137,7 @@ bool prImageCodecSupportsType(PrImageCodec* codec, PrStringView type) {
 }
 
 PrStatus prImageCodecEncode(PrImageCodec* codec, PrStringView type, PrPixelView pixels, uint8_t* PR_NULLABLE out,
-                            size_t capacity, size_t* size) {
+        size_t capacity, size_t* size) {
     PR_ASSERT(pixels.extent.x != 0 && pixels.extent.y != 0 && size_t(pixels.extent.x) * 4 <= pixels.stride);
     PR_ASSERT(out != nullptr || capacity == 0);
     *size = 0;
@@ -149,17 +147,18 @@ PrStatus prImageCodecEncode(PrImageCodec* codec, PrStringView type, PrPixelView 
 }
 
 PrImageLimits prImageLimitsDefault(void) {
-    return PrImageLimits{256u * 1024u * 1024u, 64u * 1024u * 1024u, 512u * 1024u * 1024u,
-                         512u * 1024u * 1024u, 1000000000u,         4096,
-                         16u * 1024u * 1024u,  64u * 1024u};
+    return PrImageLimits{
+        256u * 1024u * 1024u, 64u * 1024u * 1024u, 512u * 1024u * 1024u,
+        512u * 1024u * 1024u, 1000000000u,         4096,
+        16u * 1024u * 1024u,  64u * 1024u,
+    };
 }
 
 uint64_t prImageSourceSize(const PrImageSource* source) {
     return source->readAt == nullptr ? source->memory.size : source->stream.size;
 }
 
-PrStatus prImageSourceRead(const PrImageSource* source, uint64_t offset, void* PR_NULLABLE out,
-                           size_t size) {
+PrStatus prImageSourceRead(const PrImageSource* source, uint64_t offset, void* PR_NULLABLE out, size_t size) {
     PR_ASSERT(out != nullptr || size == 0);
     uint64_t length = prImageSourceSize(source);
     if (offset > length || uint64_t(size) > length - offset)
@@ -267,7 +266,7 @@ PrStatus prImageDecoderRead(PrImageDecoder* decoder, uint32_t frame, PrPixels ou
 }
 
 PrStatus prImageDecoderReadRgba8(PrImageDecoder* decoder, uint32_t frame, PrImageAlpha alpha,
-                                 PrImageOrientation orientation, PrPixels output) {
+        PrImageOrientation orientation, PrPixels output) {
     const PrImageInfo& info = decoder->info;
     PR_ASSERT(alpha == PrImageAlpha_Straight || alpha == PrImageAlpha_Premultiplied);
     PR_ASSERT(orientation <= PrImageOrientation_Rotate270);
@@ -308,10 +307,9 @@ PrStatus prImageDecoderReadRgba8(PrImageDecoder* decoder, uint32_t frame, PrImag
     }
     bool truncated = status == PrStatus_Truncated;
     uint8_t* converted = orient ? static_cast<uint8_t*>(prMemoryAlloc(rgbaSize)) : nullptr;
-    const PrPixels destination = orient ? PrPixels{converted, size_t(info.extent.x) * 4, info.extent}
-                                        : output;
+    const PrPixels destination = orient ? PrPixels{converted, size_t(info.extent.x) * 4, info.extent} : output;
     status = imageConvert(prPixelsView(stored), info.format, destination, format,
-                          PrImageConversionFlag_AssumeSrgb | PrImageConversionFlag_ApproximateCmyk);
+        PrImageConversionFlag_AssumeSrgb | PrImageConversionFlag_ApproximateCmyk);
     if (usable(status) && orient)
         prImageOrient(PrPixelView{converted, size_t(info.extent.x) * 4, info.extent}, 4, orientation, output);
     if (orient)
@@ -325,7 +323,7 @@ uint32_t prImageFormatSize(const PrImageFormat* format) {
 }
 
 PrStatus prImageConvert(PrPixelView source, const PrImageFormat* sourceFormat, PrPixels destination,
-                        const PrImageFormat* destinationFormat, PrImageConversionFlags flags) {
+        const PrImageFormat* destinationFormat, PrImageConversionFlags flags) {
     return imageConvert(source, *sourceFormat, destination, *destinationFormat, flags);
 }
 
@@ -383,7 +381,7 @@ void prImageOrient(PrPixelView source, uint32_t pixelSize, PrImageOrientation or
                     break;
             }
             memCopy(output.data + size_t(y) * output.stride + size_t(x) * pixelSize,
-                    source.data + size_t(sy) * source.stride + size_t(sx) * pixelSize, pixelSize);
+                source.data + size_t(sy) * source.stride + size_t(sx) * pixelSize, pixelSize);
         }
     }
 }

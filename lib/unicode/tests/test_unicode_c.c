@@ -13,10 +13,10 @@ int prTestUnicodeCApi(void) {
     PrUnicodeLineBreakFlags flags = 0;
     PrStringView text = PR_SV("ab");
     uint32_t folded[3];
-    return prUnicodeBidiClass('a') != PrUnicodeBidiClass_L
-        || prUnicodeLineBreakClass(' ', &flags) != PrUnicodeLineBreakClass_SP || prUnicodeGraphemeNext(text, 0) != 1
-        || prUnicodeScript('a') != PrScript_Latn || kPrUnicodeBidiMaxDepth != 125
-        || !prUnicodeIsNormalized(text, PrUnicodeNormalForm_Nfc) || prUnicodeCombiningClass(0x300) != 230
-        || PrUnicodeIdnaFlag_CheckBidi == 0
-        || prUnicodeGeneralCategory('a') != PrUnicodeGeneralCategory_LowercaseLetter || prUnicodeFold('A', folded) != 1;
+    return prUnicodeBidiClass('a') != PrUnicodeBidiClass_L ||
+        prUnicodeLineBreakClass(' ', &flags) != PrUnicodeLineBreakClass_SP || prUnicodeGraphemeNext(text, 0) != 1 ||
+        prUnicodeScript('a') != PrScript_Latn || kPrUnicodeBidiMaxDepth != 125 ||
+        !prUnicodeIsNormalized(text, PrUnicodeNormalForm_Nfc) || prUnicodeCombiningClass(0x300) != 230 ||
+        PrUnicodeIdnaFlag_CheckBidi == 0 ||
+        prUnicodeGeneralCategory('a') != PrUnicodeGeneralCategory_LowercaseLetter || prUnicodeFold('A', folded) != 1;
 }

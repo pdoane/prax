@@ -59,13 +59,12 @@ const CssComputedStyle* svgCascadeStyle(SvgCascade* cascade, const PrDomElement*
 // shadow tree inherits (SVG2/struct.html#UseElement). `element` may be outside the document, as such a tree's elements
 // are. The caller holds one reference.
 const CssComputedStyle* svgCascadeStyleUnder(SvgCascade* cascade, const PrDomElement* element,
-                                             const CssComputedStyle* PR_NULLABLE parent);
+    const CssComputedStyle* PR_NULLABLE parent);
 
 // Returns the style of the ::first-line or ::first-letter `pseudo` of `element`, inheriting from `parent`, or null if
 // no rule styles it. The caller holds one reference.
 const CssComputedStyle* PR_NULLABLE svgCascadePseudoStyleUnder(SvgCascade* cascade, const PrDomElement* element,
-                                                               CssPseudo pseudo,
-                                                               const CssComputedStyle* PR_NULLABLE parent);
+    CssPseudo pseudo, const CssComputedStyle* PR_NULLABLE parent);
 
 } // namespace pr_impl
 

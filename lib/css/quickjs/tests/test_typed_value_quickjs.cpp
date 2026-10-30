@@ -210,9 +210,7 @@ TEST_CASE("Typed OM transforms retain children and serialize their dimensions") 
         return true;
     })())JS"));
     JS_RunGC(runtime);
-    CHECK(evaluates(
-        ctx,
-        "transform.z.marker === 41 && transform.x.marker === 43 && sum.values[0].marker === 42"));
+    CHECK(evaluates(ctx, "transform.z.marker === 41 && transform.x.marker === 43 && sum.values[0].marker === 42"));
     CHECK(evaluates(ctx, R"JS((() => {
         const t = new CSSTranslate(CSS.px(1), CSS.px(2));
         t.z.owner = t;

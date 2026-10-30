@@ -23,7 +23,7 @@ struct MemoryCanvas {
     PrCanvas* handle;
 
     explicit MemoryCanvas(uint32_t width = 100, uint32_t height = 50,
-                          PrCanvasSettings settings = prCanvasSettingsDefault()) {
+            PrCanvasSettings settings = prCanvasSettingsDefault()) {
         PrCanvasDesc desc{.extent = PrUVec2{width, height}, .settings = settings};
         handle = prCanvasCreate(&desc);
     }
@@ -34,18 +34,24 @@ struct MemoryCanvas {
     // Returns the pixel at (x, y) as "r,g,b,a".
     std::string pixel(int32_t x, int32_t y) {
         uint8_t bytes[4];
-        PrCanvasImageData data{.extent = PrUVec2{1, 1}, .format = PrCanvasPixelFormat_RgbaUnorm8,
-                               .colorSpace = PrColorSpace_Srgb};
+        PrCanvasImageData data{
+            .extent = PrUVec2{1, 1},
+            .format = PrCanvasPixelFormat_RgbaUnorm8,
+            .colorSpace = PrColorSpace_Srgb,
+        };
         prCanvasGetImageData(handle, PrIVec2{x, y}, &data, bytes);
-        return std::to_string(bytes[0]) + "," + std::to_string(bytes[1]) + "," + std::to_string(bytes[2]) + ","
-               + std::to_string(bytes[3]);
+        return std::to_string(bytes[0]) + "," + std::to_string(bytes[1]) + "," + std::to_string(bytes[2]) + "," +
+            std::to_string(bytes[3]);
     }
 
     // Returns true if each channel of the pixel at (x, y) is within `tolerance` of r, g, b, a.
     bool near(int32_t x, int32_t y, int r, int g, int b, int a, int tolerance = 2) {
         uint8_t bytes[4];
-        PrCanvasImageData data{.extent = PrUVec2{1, 1}, .format = PrCanvasPixelFormat_RgbaUnorm8,
-                               .colorSpace = PrColorSpace_Srgb};
+        PrCanvasImageData data{
+            .extent = PrUVec2{1, 1},
+            .format = PrCanvasPixelFormat_RgbaUnorm8,
+            .colorSpace = PrColorSpace_Srgb,
+        };
         prCanvasGetImageData(handle, PrIVec2{x, y}, &data, bytes);
         const int expected[] = {r, g, b, a};
         for (uint32_t i = 0; i < 4; ++i) {
@@ -257,8 +263,11 @@ TEST_CASE("a linear gradient interpolates its stops along its line") {
 TEST_CASE("putImageData replaces pixels, and getImageData reads them back") {
     MemoryCanvas canvas;
     uint8_t pixels[2 * 2 * 4] = {255, 0, 0, 255, 0, 255, 0, 255, 0, 0, 255, 255, 10, 20, 30, 255};
-    PrCanvasImageData data{.extent = PrUVec2{2, 2}, .format = PrCanvasPixelFormat_RgbaUnorm8,
-                           .colorSpace = PrColorSpace_Srgb};
+    PrCanvasImageData data{
+        .extent = PrUVec2{2, 2},
+        .format = PrCanvasPixelFormat_RgbaUnorm8,
+        .colorSpace = PrColorSpace_Srgb,
+    };
     prCanvasPutImageData(canvas.handle, &data, pixels, PrIVec2{10, 10}, 0, 0, 2, 2);
     CHECK(canvas.pixel(10, 10) == "255,0,0,255");
     CHECK(canvas.pixel(11, 11) == "10,20,30,255");
@@ -336,9 +345,8 @@ TEST_CASE("a bitmap on a device is drawn by the renderer that presents it there,
     presentation.painter.paint(presentation.painter.context, PrVec2{8, 8}, list);
     prDrawListFreeze(list);
     PrGpuTexture target{};
-    PrGpuTextureDesc targetDesc =
-        prGpuTextureDesc2d(prGpuFormatFromPixelFormat(PrPixelFormat_Rgba8), PrUVec2{8, 8},
-                           PrGpuTextureUsageFlag_Sampled | PrGpuTextureUsageFlag_RenderTarget);
+    PrGpuTextureDesc targetDesc = prGpuTextureDesc2d(prGpuFormatFromPixelFormat(PrPixelFormat_Rgba8), PrUVec2{8, 8},
+        PrGpuTextureUsageFlag_Sampled | PrGpuTextureUsageFlag_RenderTarget);
     REQUIRE(prGpuTextureCreate(device, &targetDesc, &target) == PrStatus_Ok);
     PrDrawFrame* frame = prDrawFrameCreate(renderer);
     PrGpuCommands* commands = nullptr;
@@ -361,8 +369,11 @@ TEST_CASE("a bitmap on a device is drawn by the renderer that presents it there,
 
     // A read returns what the presenting renderer drew into the bitmap.
     uint8_t read[4] = {};
-    PrCanvasImageData data{.extent = PrUVec2{1, 1}, .format = PrCanvasPixelFormat_RgbaUnorm8,
-                           .colorSpace = PrColorSpace_Srgb};
+    PrCanvasImageData data{
+        .extent = PrUVec2{1, 1},
+        .format = PrCanvasPixelFormat_RgbaUnorm8,
+        .colorSpace = PrColorSpace_Srgb,
+    };
     prCanvasGetImageData(canvas, PrIVec2{1, 1}, &data, read);
     CHECK(read[0] == 255);
     CHECK(read[3] == 255);
@@ -381,8 +392,11 @@ TEST_CASE("a bitmap on a device reads back what the context drew before any pres
     REQUIRE(prGpuDeviceCreate(PrGpuBackend_Default, nullptr, &device) == PrStatus_Ok);
     PrCanvasDesc desc{.extent = PrUVec2{8, 8}, .settings = prCanvasSettingsDefault(), .device = device};
     PrCanvas* canvas = prCanvasCreate(&desc);
-    PrCanvasImageData data{.extent = PrUVec2{1, 1}, .format = PrCanvasPixelFormat_RgbaUnorm8,
-                           .colorSpace = PrColorSpace_Srgb};
+    PrCanvasImageData data{
+        .extent = PrUVec2{1, 1},
+        .format = PrCanvasPixelFormat_RgbaUnorm8,
+        .colorSpace = PrColorSpace_Srgb,
+    };
     auto alphaAt = [&](int32_t x, int32_t y) {
         uint8_t read[4] = {};
         prCanvasGetImageData(canvas, PrIVec2{x, y}, &data, read);

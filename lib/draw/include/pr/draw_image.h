@@ -40,8 +40,7 @@ PrStatus prDrawImageCreate(const PrDrawImageDesc* desc, const PrDrawImage* PR_NU
 // Returns NotSupported if the codec cannot read the image, and InvalidData if the image is corrupt. On failure, `*out`
 // is null.
 PrStatus prDrawImageCreateFromBytes(PrImageCodec* codec, PrByteView bytes,
-                                    const PrDrawImage* PR_NULLABLE* PR_NONNULL out,
-                                    PrImageOrientation* PR_NULLABLE orientation);
+    const PrDrawImage* PR_NULLABLE* PR_NONNULL out, PrImageOrientation* PR_NULLABLE orientation);
 
 // Creates a copy of `image` with its pixels arranged as `orientation` maps them.
 const PrDrawImage* prDrawImageCreateOriented(const PrDrawImage* image, PrImageOrientation orientation);

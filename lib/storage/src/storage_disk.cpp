@@ -186,8 +186,8 @@ void readIndex(DiskStorage* storage) {
     uint8_t magic[4];
     uint32_t version = 0;
     uint32_t count = 0;
-    if (take(magic, 4) && memEquals(magic, kIndexMagic, 4) && take(&version, 4) && version == kIndexVersion
-        && take(&count, 4)) {
+    if (take(magic, 4) && memEquals(magic, kIndexMagic, 4) && take(&version, 4) && version == kIndexVersion &&
+            take(&count, 4)) {
         for (uint32_t i = 0; i < count; ++i) {
             uint32_t keySize = 0;
             if (!take(&keySize, 4) || size_t(end - at) < keySize)
@@ -290,9 +290,8 @@ bool writeStorage(PrStorage* base, PrStringView key, PrByteView bytes) {
     prMutexLock(&storage->mutex);
     uint32_t position = storageIndexFind(&storage->index, key);
     uint64_t replaced = position != kHashMissing ? key.size + storage->index.entries.data[position].size : 0;
-    bool fits = buffer != nullptr
-                && (storage->eviction == PrStorageEviction_LeastRecentlyUsed
-                    || storage->index.total - replaced + key.size + bytes.size <= storage->limit);
+    bool fits = buffer != nullptr && (storage->eviction == PrStorageEviction_LeastRecentlyUsed ||
+        storage->index.total - replaced + key.size + bytes.size <= storage->limit);
     if (!fits) {
         if (storage->eviction == PrStorageEviction_LeastRecentlyUsed && position != kHashMissing)
             removeAt(storage, position);
@@ -358,9 +357,11 @@ uint32_t countStorage(const PrStorage* base) {
 PrString keyStorage(const PrStorage* base, uint32_t position) {
     DiskStorage* storage = const_cast<DiskStorage*>(static_cast<const DiskStorage*>(base));
     prMutexLock(&storage->mutex);
-    PrString key = position < storage->index.entries.count
-                       ? prStringCopy(prStringView(&storage->index.entries.data[position].key))
-                       : prStringNull();
+    PrString key;
+    if (position < storage->index.entries.count)
+        key = prStringCopy(prStringView(&storage->index.entries.data[position].key));
+    else
+        key = prStringNull();
     prMutexUnlock(&storage->mutex);
     return key;
 }

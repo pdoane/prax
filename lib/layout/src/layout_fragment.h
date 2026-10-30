@@ -331,7 +331,7 @@ static_assert(sizeof(LayoutFragment) == 88);
 // Creates a box, line or inline fragment with one reference, and with room for `childCount` children and a list of
 // `pendingCount` boxes out of flow. The maker fills these in before sharing the fragment.
 LayoutFragment* layoutFragmentCreate(LayoutFragmentKind kind, LayoutNodeIndex node, uint32_t childCount,
-                                     uint32_t pendingCount = 0);
+    uint32_t pendingCount = 0);
 
 // Returns the list of a fragment that was made with room for one, for its maker to fill in.
 LayoutPending* layoutFragmentPendingStorage(LayoutFragment* fragment);
@@ -363,10 +363,9 @@ inline bool layoutFragmentIsPoint(const LayoutFragment* fragment) {
 // Returns the number of bytes that a text fragment of `fontCount` fonts, `rangeCount` font ranges, `glyphCount` glyphs
 // and `stopCount` caret stops allocates. The fonts follow the fragment with no padding, the ranges follow the fonts,
 // the glyphs follow the ranges, and the stops follow the glyphs.
-inline size_t layoutFragmentTextBytes(uint32_t fontCount, uint32_t rangeCount, uint32_t glyphCount,
-                                      uint32_t stopCount) {
-    return sizeof(LayoutFragment) + sizeof(const PrFont*) * fontCount + sizeof(LayoutFragmentFontRange) * rangeCount
-           + sizeof(PrFontGlyph) * glyphCount + sizeof(LayoutCaretStop) * stopCount;
+inline size_t layoutFragmentTextBytes(uint32_t fontCount, uint32_t rangeCount, uint32_t glyphCount, uint32_t stopCount) {
+    return sizeof(LayoutFragment) + sizeof(const PrFont*) * fontCount + sizeof(LayoutFragmentFontRange) * rangeCount +
+        sizeof(PrFontGlyph) * glyphCount + sizeof(LayoutCaretStop) * stopCount;
 }
 
 // Creates a text fragment with one reference, of `glyphCount` glyphs in the `fontCount` distinct fonts `fonts`, divided
@@ -374,9 +373,8 @@ inline size_t layoutFragmentTextBytes(uint32_t fontCount, uint32_t rangeCount, u
 // to each font. The maker fills in the glyphs, the stops and the end of its bytes, and sets `text.stopCount` to the
 // number of stops it filled. A fragment with no glyphs, a break, has no fonts and no ranges.
 LayoutFragment* layoutFragmentCreateText(LayoutNodeIndex node, float size,
-                                         const PrFont* PR_NONNULL const* PR_NULLABLE fonts, uint32_t fontCount,
-                                         const LayoutFragmentFontRange* PR_NULLABLE ranges, uint32_t rangeCount,
-                                         uint32_t glyphCount, uint32_t stopCount);
+    const PrFont* PR_NONNULL const* PR_NULLABLE fonts, uint32_t fontCount,
+    const LayoutFragmentFontRange* PR_NULLABLE ranges, uint32_t rangeCount, uint32_t glyphCount, uint32_t stopCount);
 
 // Returns the fonts of a text fragment, of which it has `text.fontCount`.
 inline const PrFont* PR_NONNULL const* PR_NONNULL layoutFragmentTextFonts(const LayoutFragment* fragment) {
@@ -385,16 +383,16 @@ inline const PrFont* PR_NONNULL const* PR_NONNULL layoutFragmentTextFonts(const 
 
 // Returns the font ranges of a text fragment, of which it has `text.rangeCount`.
 inline const LayoutFragmentFontRange* layoutFragmentTextRanges(const LayoutFragment* fragment) {
-    return reinterpret_cast<const LayoutFragmentFontRange*>(layoutFragmentTextFonts(fragment)
-                                                            + fragment->text.fontCount);
+    return reinterpret_cast<const LayoutFragmentFontRange*>(layoutFragmentTextFonts(fragment) +
+        fragment->text.fontCount);
 }
 
 // Returns the caret stops of a text fragment, of which it has `text.stopCount`.
 inline LayoutCaretStop* layoutFragmentTextStops(const LayoutFragment* fragment) {
-    const uint8_t* glyphs = reinterpret_cast<const uint8_t*>(layoutFragmentTextRanges(fragment)
-                                                             + fragment->text.rangeCount);
-    return reinterpret_cast<LayoutCaretStop*>(const_cast<uint8_t*>(glyphs)
-                                              + sizeof(PrFontGlyph) * fragment->text.glyphCount);
+    const uint8_t* glyphs = reinterpret_cast<const uint8_t*>(layoutFragmentTextRanges(fragment) +
+        fragment->text.rangeCount);
+    return reinterpret_cast<LayoutCaretStop*>(const_cast<uint8_t*>(glyphs) +
+        sizeof(PrFontGlyph) * fragment->text.glyphCount);
 }
 
 // Records the exported baselines of a box fragment: their positions, the sources of their sets, and their clamps. A Box
@@ -485,7 +483,7 @@ struct LayoutTableGrid {
 // Returns a table fragment (LayoutFragmentFlag_Table) made from `built`, whose grid is `rect` and has the `count`
 // collapsed borders `borders`. The function takes `built`, whose children move to the new fragment, and frees it.
 LayoutFragment* layoutFragmentTable(LayoutFragment* built, PrLayoutRect rect,
-                                    const LayoutGridBorder* PR_NULLABLE borders, uint32_t count);
+    const LayoutGridBorder* PR_NULLABLE borders, uint32_t count);
 
 // Returns the grid data that a table's fragment holds.
 LayoutTableGrid layoutFragmentTableGrid(const LayoutFragment* table);
@@ -562,7 +560,7 @@ struct LayoutPieces {
 // Returns the pieces of the inline box `node` in `container`, whose content is at `base`, starting from the line
 // `opening`, which holds its opening part.
 inline LayoutPieces layoutPiecesFrom(const LayoutFragment* container, PrLayoutVec base, LayoutNodeIndex node,
-                                     LayoutPieceAt opening) {
+        LayoutPieceAt opening) {
     return LayoutPieces{container, base, node, opening, false};
 }
 
@@ -588,13 +586,13 @@ struct LayoutLogicalChild {
 // list of boxes out of flow of the fragment gathers the lists of its children, each moved by the offset of the child,
 // and its placeholders, in order.
 LayoutFragment* layoutFragmentBuild(Array<LayoutLogicalChild>& children, uint32_t mark, LayoutFragmentKind kind,
-                                    LayoutNodeIndex node, LayoutMode mode, LayoutLogicalSize size);
+    LayoutNodeIndex node, LayoutMode mode, LayoutLogicalSize size);
 
 // Returns the fragment of a holder, made from `built`, which this function takes and frees. The new fragment has the
 // children of `built`, then the `heldCount` boxes out of flow of `held` that it holds, each at its physical offset. Its
 // list is the `pendingCount` boxes of `pending`.
 LayoutFragment* layoutFragmentHold(LayoutFragment* built, const LayoutChild* PR_NULLABLE held, uint32_t heldCount,
-                                   const LayoutPending* PR_NULLABLE pending, uint32_t pendingCount);
+    const LayoutPending* PR_NULLABLE pending, uint32_t pendingCount);
 
 // Releases the children of `children` from `mark` on, and removes them.
 void layoutFragmentDiscard(Array<LayoutLogicalChild>& children, uint32_t mark);

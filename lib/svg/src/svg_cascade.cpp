@@ -73,8 +73,7 @@ void svgCascadeInit(SvgCascade* cascade, PrDomDocument* document, const PrSvgDra
     Array<CssParsedUserAgentSheet> userAgent;
     for (uint32_t i = 0; i < cascade->userAgent.count; ++i)
         userAgent.push(CssParsedUserAgentSheet{cascade->userAgent.data[i], 0, CssAppearance_None});
-    cssRuleSetBuildUserAgent(&cascade->userAgentRules, document, userAgent.data, userAgent.count, 0,
-                             document->media);
+    cssRuleSetBuildUserAgent(&cascade->userAgentRules, document, userAgent.data, userAgent.count, 0, document->media);
     userAgent.reset();
     PrCssStyleSheetList* sheets = cssDocumentStyleSheets(document);
     CssTreeSheets tree{document, 0, sheets->sheets.data, sheets->sheets.count};
@@ -101,8 +100,7 @@ void svgCascadeReset(SvgCascade* cascade) {
 }
 
 const CssComputedStyle* svgCascadeStyle(SvgCascade* cascade, const PrDomElement* element) {
-    uint32_t at =
-        cascade->index.find(keyOf(element), [&](uint32_t i) { return keyOf(cascade->styles.data[i].element); });
+    uint32_t at = cascade->index.find(keyOf(element), [&](uint32_t i) { return keyOf(cascade->styles.data[i].element); });
     if (at != kHashMissing)
         return cascade->styles.data[at].style;
     // The flat parent, so that a use element's instance root inherits from the use
@@ -119,31 +117,34 @@ const CssComputedStyle* svgCascadeStyle(SvgCascade* cascade, const PrDomElement*
 }
 
 const CssComputedStyle* svgCascadeStyleUnder(SvgCascade* cascade, const PrDomElement* element,
-                                             const CssComputedStyle* PR_NULLABLE parent) {
+        const CssComputedStyle* PR_NULLABLE parent) {
     cssStylePrepare(const_cast<PrDomElement*>(element));
-    CssCascadeInput input{.element = element,
-                          .parent = parent,
-                          .rootFont = cascade->rootFont,
-                          .viewport = cascade->viewport,
-                          .fresh = false,
-                          .matched = nullptr,
-                          .pseudo = CssPseudo_None};
+    CssCascadeInput input{
+        .element = element,
+        .parent = parent,
+        .rootFont = cascade->rootFont,
+        .viewport = cascade->viewport,
+        .fresh = false,
+        .matched = nullptr,
+        .pseudo = CssPseudo_None,
+    };
     return cssCascadeStyle(&cascade->rules, &cascade->builder, &cascade->scratch, input);
 }
 
 const CssComputedStyle* PR_NULLABLE svgCascadePseudoStyleUnder(SvgCascade* cascade, const PrDomElement* element,
-                                                               CssPseudo pseudo,
-                                                               const CssComputedStyle* PR_NULLABLE parent) {
+        CssPseudo pseudo, const CssComputedStyle* PR_NULLABLE parent) {
     cssStylePrepare(const_cast<PrDomElement*>(element));
     if ((cssCascadeOriginating(&cascade->rules, &cascade->scratch, element) & (1u << pseudo)) == 0)
         return nullptr;
-    CssCascadeInput input{.element = element,
-                          .parent = parent,
-                          .rootFont = cascade->rootFont,
-                          .viewport = cascade->viewport,
-                          .fresh = false,
-                          .matched = nullptr,
-                          .pseudo = pseudo};
+    CssCascadeInput input{
+        .element = element,
+        .parent = parent,
+        .rootFont = cascade->rootFont,
+        .viewport = cascade->viewport,
+        .fresh = false,
+        .matched = nullptr,
+        .pseudo = pseudo,
+    };
     return cssCascadeStyle(&cascade->rules, &cascade->builder, &cascade->scratch, input);
 }
 

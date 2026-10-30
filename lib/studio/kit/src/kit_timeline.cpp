@@ -271,16 +271,14 @@ Snapped snapTime(const PrKitTimeline& t, const Span& span, float time, bool scru
 
 // Creates a span in `parent` (SpanBox) with `fill` and, if `edge` is not clear, a 1 px frame of it.
 PrLayoutNode spanBox(Kit& kit, PrLayoutNode parent, float left, float width, float top, float bottom, PrColor fill,
-                     PrColor edge) {
+        PrColor edge) {
     SpanBox box{.left = left, .width = width, .top = top, .bottom = bottom, .framed = edge.a > 0};
-    return prLayoutTreeFrameElement(kit.tree, parent, 0,
-                                    kitStyle(kit, box, KitColors{.background = fill, .border = edge}));
+    return prLayoutTreeFrameElement(kit.tree, parent, 0, kitStyle(kit, box, KitColors{.background = fill, .border = edge}));
 }
 
 // Creates a line at `percent` of `parent`'s width (LineBox).
 void line(Kit& kit, PrLayoutNode parent, float percent, PrColor color) {
-    prLayoutTreeFrameElement(kit.tree, parent, 0,
-                             kitStyle(kit, LineBox{.percent = percent}, KitColors{.background = color}));
+    prLayoutTreeFrameElement(kit.tree, parent, 0, kitStyle(kit, LineBox{.percent = percent}, KitColors{.background = color}));
 }
 
 // Creates a mark at `percent` of `parent`'s width (MarkBox), a diamond if `diamond` is true.
@@ -307,9 +305,8 @@ void ticks(Kit& kit, PrLayoutNode ruler, const Span& span) {
         float time = i * step;
         float percent = span.percent(time);
         line(kit, ruler, percent, p.line2);
-        PrLayoutStyleIndex record =
-            kitStyle(kit, TickLabelBox{.percent = percent},
-                     KitFont{.role = PrKitTextRole_Meta}, KitInk{.color = p.text3});
+        PrLayoutStyleIndex record = kitStyle(kit, TickLabelBox{.percent = percent},
+            KitFont{.role = PrKitTextRole_Meta}, KitInk{.color = p.text3});
         PrLayoutNode label = prLayoutTreeFrameElement(kit.tree, ruler, 0, record);
         char text[kF64TextMaxBytes + 1];
         size_t size = formatF64Significant(double(time), 6, text);
@@ -342,7 +339,7 @@ PrLayoutNode prKitTimeline(PrKit* kit, PrLayoutNode parent, PrKitTimeline timeli
     bool editable = !t.readOnly && !prUiIsDisabled(ui, parent);
 
     PrLayoutNode frame = prLayoutTreeFrameElement(k.tree, parent, t.key,
-                                                  kitStyle(k, FrameBox{}, FrameFlex{}, KitColors{.background = p.bg1}));
+        kitStyle(k, FrameBox{}, FrameFlex{}, KitColors{.background = p.bg1}));
     TimelineAdd& add = kitProvide<TimelineAdd>(k, frame, KitContext_Timeline);
     PrUiFlags flags = PrUiFlag_Wheel;
     if (editable)
@@ -350,11 +347,10 @@ PrLayoutNode prKitTimeline(PrKit* kit, PrLayoutNode parent, PrKitTimeline timeli
     prUiSetFlags(ui, frame, flags);
     prKitPlace(kit, frame, &style.place);
     TimelineState* state = static_cast<TimelineState*>(prUiState(ui, frame, &kKitOwner, KitStateKey_Timeline,
-                                                                 sizeof(TimelineState)));
+        sizeof(TimelineState)));
 
     KitColors gutterRule{.border = p.line1};
-    PrLayoutNode header = prLayoutTreeFrameElement(
-        k.tree, frame, 0,
+    PrLayoutNode header = prLayoutTreeFrameElement(k.tree, frame, 0,
         kitStyle(k, BandBox{.height = kRulerHeight}, KitFixed{}, KitColors{.background = p.bg2, .border = p.line1}));
     prLayoutTreeFrameElement(k.tree, header, 0, kitStyle(k, GutterBox{}, GutterFlex{}, gutterRule));
     PrLayoutNode ruler = prLayoutTreeFrameElement(k.tree, header, 0, kitStyle(k, LaneBox{}, KitGrow{}));
@@ -422,8 +418,7 @@ PrLayoutNode prKitTimeline(PrKit* kit, PrLayoutNode parent, PrKitTimeline timeli
             k.tree, frame, 0, kitStyle(k, BandBox{.height = trackHeight}, KitFixed{}, gutterRule));
         PrLayoutNode name =
             prLayoutTreeFrameElement(k.tree, row, 0, kitStyle(k, GutterBox{}, GutterFlex{}, gutterRule));
-        PrKitTextStyle nameStyle{.role = PrKitTextRole_BodySmall, .tone = PrKitTone_Secondary,
-                                 .wrap = PrKitWrap_Clip};
+        PrKitTextStyle nameStyle{.role = PrKitTextRole_BodySmall, .tone = PrKitTone_Secondary, .wrap = PrKitWrap_Clip};
         prKitLabel(kit, name, {.text = t.tracks[track].name}, nameStyle);
         PrLayoutNode lane = prLayoutTreeFrameElement(k.tree, row, 0, kitStyle(k, LaneBox{}, KitGrow{}));
         lanes.push(lane);
@@ -467,8 +462,7 @@ PrLayoutNode prKitTimeline(PrKit* kit, PrLayoutNode parent, PrKitTimeline timeli
                     bool changed = false;
                     for (uint32_t i = 0; i < t.blockCount; ++i) {
                         PrKitTimelineBlock& b = t.blocks[i];
-                        bool inside = b.track >= top && b.track <= bottom && b.start < high
-                                      && b.start + b.duration > low;
+                        bool inside = b.track >= top && b.track <= bottom && b.start < high && b.start + b.duration > low;
                         bool selected = inside || (state->extend && b.selected);
                         changed = changed || selected != b.selected;
                         b.selected = selected;
@@ -488,7 +482,7 @@ PrLayoutNode prKitTimeline(PrKit* kit, PrLayoutNode parent, PrKitTimeline timeli
             PrColor wash = p.accent;
             wash.a = 0.06f;
             spanBox(k, lane, span.percent(t.loop->start), (t.loop->end - t.loop->start) / span.seconds * 100, 0, 0,
-                    wash, PrColor{});
+                wash, PrColor{});
         }
 
         for (uint32_t i = 0; i < t.blockCount; ++i) {
@@ -499,12 +493,19 @@ PrLayoutNode prKitTimeline(PrKit* kit, PrLayoutNode parent, PrKitTimeline timeli
             PrColor fill = b.color;
             fill.a = b.selected ? 1 : 0.8f;
             PrLayoutNode node = spanBox(k, lane, span.percent(b.start), b.duration / span.seconds * 100,
-                                        kBlockInset, kBlockInset, fill, edge);
+                kBlockInset, kBlockInset, fill, edge);
             if (b.label.size != 0) {
-                PrKitTextStyle labelStyle{.role = PrKitTextRole_BodySmall, .tone = PrKitTone_Primary,
-                                          .wrap = PrKitWrap_Clip};
-                PrKitBoxStyle inner{.direction = PrKitDirection_Row, .align = PrKitAlign_Center,
-                                    .overflow = PrKitOverflow_Clip, .padding = prKitEdgesXY(0, kPrKitSpace3)};
+                PrKitTextStyle labelStyle{
+                    .role = PrKitTextRole_BodySmall,
+                    .tone = PrKitTone_Primary,
+                    .wrap = PrKitWrap_Clip,
+                };
+                PrKitBoxStyle inner{
+                    .direction = PrKitDirection_Row,
+                    .align = PrKitAlign_Center,
+                    .overflow = PrKitOverflow_Clip,
+                    .padding = prKitEdgesXY(0, kPrKitSpace3),
+                };
                 inner.place.width = prKitPercent(100);
                 inner.place.height = prKitPercent(100);
                 prKitLabel(kit, prKitBox(kit, node, {}, inner), {.text = b.label}, labelStyle);
@@ -515,11 +516,11 @@ PrLayoutNode prKitTimeline(PrKit* kit, PrLayoutNode parent, PrKitTimeline timeli
             float width = kitExtent(k, node).x;
             PrVec2 pointer{};
             PrVec2 local{};
-            bool near = prUiPointer(ui, &pointer) && prUiLocalPoint(ui, node, pointer, &local) && width > 0
-                        && (local.x < kEdgeZone || local.x > width - kEdgeZone);
+            bool near = prUiPointer(ui, &pointer) && prUiLocalPoint(ui, node, pointer, &local) && width > 0 &&
+                (local.x < kEdgeZone || local.x > width - kEdgeZone);
             // A block that a resize holds keeps the resize cursor wherever the drag takes the pointer.
-            bool resizing = state->block == b.id
-                            && (state->mode == DragMode_ResizeStart || state->mode == DragMode_ResizeEnd);
+            bool resizing = state->block == b.id &&
+                (state->mode == DragMode_ResizeStart || state->mode == DragMode_ResizeEnd);
             prUiSetCursor(ui, node, near || resizing ? PrAppCursor_ResizeX : PrAppCursor_Hand);
             if (!prUiDrag(ui, node, 0, 0, &drag) || !(drag.active || drag.released))
                 continue;
@@ -545,9 +546,12 @@ PrLayoutNode prKitTimeline(PrKit* kit, PrLayoutNode parent, PrKitTimeline timeli
                         t.blocks[j].selected = extend && t.blocks[j].selected;
                     b.selected = true;
                 }
-                state->mode = origin.x < kEdgeZone           ? DragMode_ResizeStart
-                              : origin.x > width - kEdgeZone ? DragMode_ResizeEnd
-                                                             : DragMode_Move;
+                if (origin.x < kEdgeZone)
+                    state->mode = DragMode_ResizeStart;
+                else if (origin.x > width - kEdgeZone)
+                    state->mode = DragMode_ResizeEnd;
+                else
+                    state->mode = DragMode_Move;
                 state->block = b.id;
                 state->grab = span.timeAt(pressed.x) - b.start;
                 state->start = b.start;
@@ -638,7 +642,7 @@ PrLayoutNode prKitTimeline(PrKit* kit, PrLayoutNode parent, PrKitTimeline timeli
         PrColor wash = p.accent;
         wash.a = 0.25f;
         spanBox(k, ruler, span.percent(t.loop->start), (t.loop->end - t.loop->start) / span.seconds * 100,
-                kRulerHeight - kPrKitSpace2 - 1, 0, wash, PrColor{});
+            kRulerHeight - kPrKitSpace2 - 1, 0, wash, PrColor{});
     }
     if (t.playhead != nullptr) {
         float percent = span.percent(*t.playhead);

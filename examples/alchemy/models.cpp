@@ -35,7 +35,7 @@ constexpr EssentialModel kEssentials[] = {
         .base = "SDXL",
         .filename = "sd_xl_base_1.0.safetensors",
         .url = "https://huggingface.co/stabilityai/stable-diffusion-xl-base-1.0/resolve/main/"
-               "sd_xl_base_1.0.safetensors",
+            "sd_xl_base_1.0.safetensors",
         .folder = "models/checkpoints",
     },
     {
@@ -106,8 +106,8 @@ double contextWidthOf(const PrJson* d, PrJsonValueIndex tensor) {
 bool isCrossAttentionKeyDown(PrStringView key) {
     if (!stringContains(key, "attn2") || !stringContains(key, "to_k"))
         return false;
-    return stringEndsWith(key, "lora_down.weight") || stringEndsWith(key, "lora.down.weight")
-        || stringEndsWith(key, "lora_A.weight");
+    return stringEndsWith(key, "lora_down.weight") || stringEndsWith(key, "lora.down.weight") ||
+        stringEndsWith(key, "lora_A.weight");
 }
 
 ModelArchitecture fromTensors(const PrJson* d) {

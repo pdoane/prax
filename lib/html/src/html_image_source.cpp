@@ -46,14 +46,14 @@ void addCandidate(PrStringView url, const Array<PrStringView>& descriptors, Arra
         char last = descriptor.data[descriptor.size - 1];
         PrStringView value{descriptor.data, descriptor.size - 1};
         if (last == 'w') {
-            error = width != 0 || density >= 0 || !isNonNegativeInteger(value)
-                    || !domParseNonNegativeInteger(value, &width) || width == 0;
+            error = width != 0 || density >= 0 || !isNonNegativeInteger(value) ||
+                !domParseNonNegativeInteger(value, &width) || width == 0;
         } else if (last == 'x') {
-            error = width != 0 || density >= 0 || height != 0 || !domIsValidFloat(value)
-                    || !domParseFloat(value, &density) || density < 0;
+            error = width != 0 || density >= 0 || height != 0 || !domIsValidFloat(value) ||
+                !domParseFloat(value, &density) || density < 0;
         } else if (last == 'h') {
-            error = height != 0 || density >= 0 || !isNonNegativeInteger(value)
-                    || !domParseNonNegativeInteger(value, &height) || height == 0;
+            error = height != 0 || density >= 0 || !isNonNegativeInteger(value) ||
+                !domParseNonNegativeInteger(value, &height) || height == 0;
         } else {
             error = true;
         }
@@ -73,9 +73,9 @@ double sourceSizeOf(const CssTokenArray* tokens, uint32_t index, const HtmlImage
         return -1;
     if (kind == CssTokenKind_Number)
         return number == 0 ? 0 : -1;
-    double height = environment.media != nullptr
-                        ? environment.media->features[PrCssDescriptor_MediaHeight - kCssDescriptorMediaFirst].number
-                        : 0;
+    double height = 0;
+    if (environment.media != nullptr)
+        height = environment.media->features[PrCssDescriptor_MediaHeight - kCssDescriptorMediaFirst].number;
     double vw = environment.viewportWidth / 100;
     double vh = height == height ? height / 100 : vw;
     PrCssUnit unit = cssTokenUnit(tokens, index);
@@ -132,12 +132,14 @@ HtmlImageSource selectCandidate(const Array<HtmlImageCandidate>& set, double sou
     bool above = false;
     for (uint32_t i = 0; i < set.count; ++i) {
         const HtmlImageCandidate& candidate = set.data[i];
-        double density = candidate.density > 0                    ? candidate.density
-                         : candidate.width != 0 && sourceSize > 0 ? double(candidate.width) / sourceSize
-                                                                  : 1;
+        double density = 1;
+        if (candidate.density > 0)
+            density = candidate.density;
+        else if (candidate.width != 0 && sourceSize > 0)
+            density = double(candidate.width) / sourceSize;
         bool enough = density >= pixelRatio;
-        bool better = chosen.url.data == nullptr || (enough && !above)
-                      || (enough && density < chosen.density) || (!enough && !above && density > chosen.density);
+        bool better = chosen.url.data == nullptr || (enough && !above) ||
+            (enough && density < chosen.density) || (!enough && !above && density > chosen.density);
         if (better) {
             chosen = HtmlImageSource{candidate.url, density};
             above = enough;
@@ -236,8 +238,8 @@ double htmlSourceSize(PrStringView value, const HtmlImageEnvironment& environmen
         while (at < count && cssTokenKind(&tokens, at) != CssTokenKind_Comma) {
             CssTokenKind kind = cssTokenKind(&tokens, at);
             uint32_t next = at + 1;
-            if (kind == CssTokenKind_Function || kind == CssTokenKind_OpenParen || kind == CssTokenKind_OpenBracket
-                || kind == CssTokenKind_OpenBrace)
+            if (kind == CssTokenKind_Function || kind == CssTokenKind_OpenParen || kind == CssTokenKind_OpenBracket ||
+                    kind == CssTokenKind_OpenBrace)
                 next = cssTokenCloser(&tokens, at) + 1;
             if (kind != CssTokenKind_Whitespace) {
                 if (first == kHashMissing)
@@ -252,9 +254,7 @@ double htmlSourceSize(PrStringView value, const HtmlImageEnvironment& environmen
             if (length >= 0) {
                 // What comes before the length is a media condition, which must match.
                 bool unconditional = first == last;
-                PrStringView condition =
-                    unconditional ? PrStringView{}
-                                  : cssSpanText(&tokens, CssTokenSpan{first, last - first});
+                PrStringView condition = unconditional ? PrStringView{} : cssSpanText(&tokens, CssTokenSpan{first, last - first});
                 if (unconditional || matches(condition, environment))
                     size = length;
             }
@@ -307,7 +307,7 @@ HtmlImageSource htmlSelectImageSource(const PrDomElement* img, const HtmlImageEn
         return HtmlImageSource{src, 1};
     }
     selected = selectCandidate(set, htmlSourceSize(domAttributeValue(img, "sizes"), environment),
-                               environment.pixelRatio);
+        environment.pixelRatio);
     set.reset();
     return selected;
 }

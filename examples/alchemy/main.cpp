@@ -118,9 +118,10 @@ PrKitThemeVariant variantOf(PrAppColorScheme scheme) {
 
 void build(void* context, PrUi*, const PrUiRound*) {
     Window& w = *static_cast<Window*>(context);
-    PrKitSurfaceStyle style{.box = {.overflow = PrKitOverflow_Clip,
-                                    .place = {.width = prKitPercent(100), .height = prKitPercent(100)}},
-                            .ground = PrKitGround_App};
+    PrKitSurfaceStyle style{
+        .box = {.overflow = PrKitOverflow_Clip, .place = {.width = prKitPercent(100), .height = prKitPercent(100)}},
+        .ground = PrKitGround_App,
+    };
     PrLayoutNode root = prKitSurface(w.kit, kPrLayoutNodeNone, {}, style);
     buildView(w.kit, root, w.view, *w.commands);
 }
@@ -141,10 +142,10 @@ void closeDevice(Window& w) {
 bool openDevice(Window& w) {
     PrAppSurface surface{};
     PrGpuSwapChainDesc desc{.intent = PrGpuSwapChainIntent_Sdr};
-    if (prGpuDeviceCreate(PrGpuBackend_Default, nullptr, &w.device) != PrStatus_Ok
-        || prAppSurface(w.app.load(), &surface) != PrStatus_Ok
-        || prGpuSwapChainCreate(w.device, &surface, &desc, &w.swapChain) != PrStatus_Ok
-        || prDrawRendererCreate(PrDrawRendererBackend_Default, w.device, nullptr, &w.renderer) != PrStatus_Ok) {
+    if (prGpuDeviceCreate(PrGpuBackend_Default, nullptr, &w.device) != PrStatus_Ok ||
+            prAppSurface(w.app.load(), &surface) != PrStatus_Ok ||
+            prGpuSwapChainCreate(w.device, &surface, &desc, &w.swapChain) != PrStatus_Ok ||
+            prDrawRendererCreate(PrDrawRendererBackend_Default, w.device, nullptr, &w.renderer) != PrStatus_Ok) {
         closeDevice(w);
         return false;
     }
@@ -155,8 +156,8 @@ bool openDevice(Window& w) {
 void render(Window& w, PrUVec2 extent, PrColor canvas) {
     PrGpuTexture drawable{};
     PrGpuCommands* commands = nullptr;
-    if (prGpuSwapChainAcquire(w.swapChain, extent, &drawable) != PrStatus_Ok
-        || !prGpuCommandsBegin(w.device, nullptr, &commands))
+    if (prGpuSwapChainAcquire(w.swapChain, extent, &drawable) != PrStatus_Ok ||
+            !prGpuCommandsBegin(w.device, nullptr, &commands))
         return;
     PrDrawTarget into{.extent = extent, .format = PrPixelFormat_Bgra8, .commands = commands};
     prDrawFramePrepare(w.frame, w.list, &into);
@@ -208,12 +209,14 @@ void frame(void* context, PrApp* app, const PrAppFrame* f) {
     applyDimensions(w.state);
     noteVisit(w.state);
 
-    PrUiFrameDesc desc{.time = f->time,
-                       .delta = f->delta,
-                       .extent = f->extent,
-                       .maxRounds = 4,
-                       .display = f->display,
-                       .preferences = f->preferences};
+    PrUiFrameDesc desc{
+        .time = f->time,
+        .delta = f->delta,
+        .extent = f->extent,
+        .maxRounds = 4,
+        .display = f->display,
+        .preferences = f->preferences,
+    };
     prUiFrame(w.ui, &desc, build, &w);
 
     const PrLayoutScene* scene = prLayoutTreeScene(w.tree);
@@ -273,15 +276,13 @@ void runOnLoop(PrNet* net, void (*fn)(Window&), Window& w) {
     } task;
     task.fn = fn;
     task.w = &w;
-    prNetPost(net,
-              [](void* PR_NULLABLE context) {
-                  Task* t = static_cast<Task*>(context);
-                  t->fn(*t->w);
-                  std::lock_guard<std::mutex> lock(t->mutex);
-                  t->finished = true;
-                  t->done.notify_one();
-              },
-              &task);
+    prNetPost(net, [](void* PR_NULLABLE context) {
+        Task* t = static_cast<Task*>(context);
+        t->fn(*t->w);
+        std::lock_guard<std::mutex> lock(t->mutex);
+        t->finished = true;
+        t->done.notify_one();
+    }, &task);
     std::unique_lock<std::mutex> lock(task.mutex);
     task.done.wait(lock, [&task] { return task.finished; });
 }
@@ -315,8 +316,12 @@ int main() {
     w.state.codec = prImageCodecCreate(PrImageCodecBackend_Default, w.state.compress);
     w.state.pool = prTaskPoolCreate(PrTaskPoolBackend_Default, 4);
     w.state.images = imageCacheCreate(w.state.pool, w.state.codec, [] { wake(w); });
-    w.state.client = comfyClientCreate({.net = w.net, .http = w.http, .websockets = w.websockets,
-                                        .wake = [] { wake(w); }});
+    w.state.client = comfyClientCreate({
+        .net = w.net,
+        .http = w.http,
+        .websockets = w.websockets,
+        .wake = [] { wake(w); },
+    });
     if (const char* server = getenv("ALCHEMY_SERVER"))
         w.state.server = server;
     w.capturePath = getenv("ALCHEMY_CAPTURE");

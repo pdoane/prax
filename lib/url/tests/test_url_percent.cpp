@@ -59,14 +59,12 @@ TEST_CASE("percent codec sizes are exact for every buffer capacity") {
         for (size_t capacity = 0; capacity <= full.size() + 1; ++capacity) {
             std::vector<char> buffer(capacity + 1, '!');
             CHECK(prUrlPercentEncode(bytes, set, buffer.data(), capacity) == full.size());
-            CHECK(std::string(buffer.data(), std::min(capacity, full.size()))
-                  == full.substr(0, capacity));
+            CHECK(std::string(buffer.data(), std::min(capacity, full.size())) == full.substr(0, capacity));
             CHECK(buffer[capacity] == '!');
         }
         for (size_t capacity = 0; capacity <= input.size() + 1; ++capacity) {
             std::string buffer = full;
-            CHECK(prUrlPercentDecode({buffer.data(), buffer.size()}, buffer.data(), capacity)
-                  == input.size());
+            CHECK(prUrlPercentDecode({buffer.data(), buffer.size()}, buffer.data(), capacity) == input.size());
             CHECK(buffer.substr(0, std::min(capacity, input.size())) == input.substr(0, capacity));
             CHECK(buffer.substr(capacity) == full.substr(capacity));
         }

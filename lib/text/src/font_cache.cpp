@@ -118,7 +118,7 @@ CachedFace* PR_NULLABLE faceOf(PrTextShaper* shaper, FontCache* cache, const PrF
 } // namespace
 
 bool textFontCacheFind(PrTextShaper* shaper, const PrFont* font, void* PR_NULLABLE* PR_NONNULL face,
-                       void* PR_NULLABLE* PR_NONNULL state) {
+        void* PR_NULLABLE* PR_NONNULL state) {
     FontCache* cache = cacheOf(shaper);
     uint64_t id = prFontId(font);
     ++cache->clock;

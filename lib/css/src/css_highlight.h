@@ -68,8 +68,7 @@ PrCssHighlightRegistry* cssHighlightRegistryLive(PrCssHighlightRegistry* registr
 uint32_t cssHighlightRegistryFind(const PrCssHighlightRegistry* registry, PrStringView name);
 
 // Sets `name` to refer to `highlight`, replacing the highlight that the name referred to before.
-void cssHighlightRegistrySet(PrCssHighlightRegistry* registry, PrStringView name,
-                             PrCssHighlight* highlight);
+void cssHighlightRegistrySet(PrCssHighlightRegistry* registry, PrStringView name, PrCssHighlight* highlight);
 
 // Removes the entry for `name`. Returns false if there is none.
 bool cssHighlightRegistryDelete(PrCssHighlightRegistry* registry, PrStringView name);

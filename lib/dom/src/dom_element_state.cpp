@@ -103,8 +103,7 @@ bool autoRtl(const PrDomElement* element) {
                 return strong == PrUnicodeBidiStrong_Right;
         }
         const PrDomElement* child = domElementFromNode(node);
-        node = child != nullptr && skipsDirection(child) ? domNodeNextSkipping(element, node)
-                                                         : domNodeNext(element, node);
+        node = child != nullptr && skipsDirection(child) ? domNodeNextSkipping(element, node) : domNodeNext(element, node);
     }
     return false;
 }
@@ -117,12 +116,11 @@ bool autoRtl(const PrDomElement* element) {
 bool inDisabledFieldset(const PrDomElement* element) {
     const PrDomElement* child = element;
     for (const PrDomElement* at = domNodeParentElement(element); at != nullptr;
-         child = at, at = domNodeParentElement(at)) {
+            child = at, at = domNodeParentElement(at)) {
         if (!domIsHtml(at, PrDomTag_Fieldset) || !domHasAttribute(at, "disabled"))
             continue;
         const PrDomElement* legend = nullptr;
-        for (const PrDomNode* node = at->first; node != nullptr && legend == nullptr;
-             node = node->next) {
+        for (const PrDomNode* node = at->first; node != nullptr && legend == nullptr; node = node->next) {
             const PrDomElement* candidate = domElementFromNode(node);
             legend = domIsHtml(candidate, PrDomTag_Legend) ? candidate : nullptr;
         }
@@ -155,8 +153,7 @@ bool isDefaultButton(const PrDomElement* button) {
     if (owner == nullptr)
         return false;
     const PrDomNode* root = domNodeRoot(button);
-    for (const PrDomNode* node = domNodeNext(root, root); node != button;
-         node = domNodeNext(root, node)) {
+    for (const PrDomNode* node = domNodeNext(root, root); node != button; node = domNodeNext(root, node)) {
         const PrDomElement* element = domElementFromNode(node);
         if (element != nullptr && domIsSubmitButton(element) && domFormOwner(element) == owner)
             return false;
@@ -223,8 +220,8 @@ bool pointedAt(const PrDomElement* PR_NULLABLE pointed, const PrDomElement* elem
 // Returns true if the document's host reports `state` for the element.
 bool hostState(const PrDomElement* element, PrDomHostState state) {
     const DomDocumentHost* host = element->document->host;
-    return host != nullptr && host->elementState != nullptr
-           && (host->elementState(host->context, element, state) & state) != 0;
+    return host != nullptr && host->elementState != nullptr &&
+        (host->elementState(host->context, element, state) & state) != 0;
 }
 
 // Returns true if the element is an a or area element, of HTML or of SVG, that names a URL, whether or not it is a
@@ -232,8 +229,8 @@ bool hostState(const PrDomElement* element, PrDomHostState state) {
 bool namesLink(const PrDomElement* element) {
     if (domIsHtml(element, PrDomTag_A) || domIsHtml(element, PrDomTag_Area))
         return domHasAttribute(element, "href");
-    return element->space == PrDomNamespace_Svg && element->tag == PrDomTag_A
-           && (domHasAttribute(element, "href") || domAttribute(element, PrDomNamespace_XLink, "href") != nullptr);
+    return element->space == PrDomNamespace_Svg && element->tag == PrDomTag_A &&
+        (domHasAttribute(element, "href") || domAttribute(element, PrDomNamespace_XLink, "href") != nullptr);
 }
 
 } // namespace
@@ -253,8 +250,8 @@ PrStringView domElementOwnLanguage(const PrDomElement* element) {
         PrStringView name = prStringView(&a->name);
         if (a->space == PrDomNamespace_Xml && name == "lang")
             return prStringView(&a->value);
-        if (plain && lang == nullptr && a->space == PrDomNamespace_None
-            && (lowered ? asciiEqualsLowered(name, "lang") : name == "lang"))
+        if (plain && lang == nullptr && a->space == PrDomNamespace_None &&
+                (lowered ? asciiEqualsLowered(name, "lang") : name == "lang"))
             lang = a;
     }
     return lang != nullptr ? prStringView(&lang->value) : PrStringView{nullptr, 0};
@@ -281,8 +278,8 @@ PrStringView domDocumentLanguage(const PrDomDocument* document) {
 }
 
 void domMetaConnected(PrDomElement* element) {
-    if (!domIsHtml(element, PrDomTag_Meta) || !domIsConnected(element)
-        || !asciiEqualsFold(domAttributeValue(element, "http-equiv"), "content-language"))
+    if (!domIsHtml(element, PrDomTag_Meta) || !domIsConnected(element) ||
+            !asciiEqualsFold(domAttributeValue(element, "http-equiv"), "content-language"))
         return;
     // A content attribute that lists several languages sets none. One with several tokens sets the first.
     PrStringView content = domAttributeValue(element, "content");
@@ -413,7 +410,7 @@ DomRequirement domElementRequirement(const PrDomElement* element) {
 bool domElementReadWrite(const PrDomElement* element) {
     if (domIsHtml(element, PrDomTag_Input)) {
         return takesReadOnly(inputType(element)) && !domHasAttribute(element,
-                                                                     "readonly") && !formControlDisabled(element);
+            "readonly") && !formControlDisabled(element);
     }
     if (domIsHtml(element, PrDomTag_Textarea))
         return !domHasAttribute(element, "readonly") && !formControlDisabled(element);
@@ -448,8 +445,7 @@ const PrDomElement* PR_NULLABLE domLabeledControl(const PrDomElement* label) {
             domElementById(const_cast<PrDomNode*>(domNodeRoot(label)), prStringView(&named->value));
         return control != nullptr && domIsLabelable(control) ? control : nullptr;
     }
-    for (const PrDomNode* node = domNodeNext(label, label); node != nullptr;
-         node = domNodeNext(label, node)) {
+    for (const PrDomNode* node = domNodeNext(label, label); node != nullptr; node = domNodeNext(label, node)) {
         const PrDomElement* element = domElementFromNode(node);
         if (element != nullptr && domIsLabelable(element))
             return element;
@@ -481,8 +477,8 @@ DomWidget domElementWidget(const PrDomElement* element) {
 // Other elements
 
 bool domElementDefined(const PrDomElement* element) {
-    return element->customState == PrDomCustomElementState_Uncustomized
-        || element->customState == PrDomCustomElementState_Custom;
+    return element->customState == PrDomCustomElementState_Uncustomized ||
+        element->customState == PrDomCustomElementState_Custom;
 }
 
 bool domElementMediaFlag(const PrDomElement* element, DomMediaFlags flag) {
@@ -499,8 +495,7 @@ bool domElementMediaFlag(const PrDomElement* element, DomMediaFlags flag) {
 
 uint32_t domElementHeadingLevel(const PrDomElement* element) {
     static_assert(PrDomTag_H6 - PrDomTag_H1 == 5);
-    if (element->space != PrDomNamespace_Html || element->tag < PrDomTag_H1
-        || element->tag > PrDomTag_H6)
+    if (element->space != PrDomNamespace_Html || element->tag < PrDomTag_H1 || element->tag > PrDomTag_H6)
         return 0;
     return uint32_t(element->tag - PrDomTag_H1) + 1;
 }
@@ -511,7 +506,7 @@ bool domElementLink(const PrDomElement* element) {
     if (element->space != PrDomNamespace_Svg)
         return true;
     for (const PrDomNode* node = domShadowIncludingParent(element); node != nullptr;
-         node = domShadowIncludingParent(node)) {
+            node = domShadowIncludingParent(node)) {
         const PrDomElement* ancestor = domElementFromNode(node);
         if (ancestor != nullptr && namesLink(ancestor))
             return false;
@@ -543,8 +538,7 @@ bool domElementFocused(const PrDomElement* element) {
     if (focused == element)
         return true;
     const PrDomShadowRoot* shadow = domShadowRootOfHost(element);
-    for (const PrDomNode* node = focused; shadow != nullptr && node != nullptr;
-         node = domShadowIncludingParent(node)) {
+    for (const PrDomNode* node = focused; shadow != nullptr && node != nullptr; node = domShadowIncludingParent(node)) {
         if (node == shadow)
             return true;
     }
@@ -552,8 +546,7 @@ bool domElementFocused(const PrDomElement* element) {
 }
 
 bool domElementFocusWithin(const PrDomElement* element) {
-    for (const PrDomNode* node = element->document->focused; node != nullptr;
-         node = domShadowIncludingParent(node)) {
+    for (const PrDomNode* node = element->document->focused; node != nullptr; node = domShadowIncludingParent(node)) {
         if (node == element)
             return true;
     }

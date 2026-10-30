@@ -53,9 +53,8 @@ bool validColor(const PrImageFormat& format) {
             return color.profile.data != nullptr && color.profile.size != 0;
         case PrImageColorEncoding_Named: {
             const PrColorModel model = prColorSpaceModel(color.space);
-            return model != PrColorModel_Count
-                   && (format.model == model
-                       || (format.model == PrColorModel_Gray && model == PrColorModel_Rgb));
+            return model != PrColorModel_Count && (format.model == model ||
+                (format.model == PrColorModel_Gray && model == PrColorModel_Rgb));
         }
         default:
             return false;
@@ -65,8 +64,7 @@ bool validColor(const PrImageFormat& format) {
 uint32_t pixelBytes(const PrImageFormat& format) {
     const uint32_t colors = colorChannels(format.model);
     const uint32_t sample = sampleBytes(format.sample);
-    if (colors == 0 || sample == 0 || format.alpha > PrImageAlpha_Independent
-        || !validColor(format)) {
+    if (colors == 0 || sample == 0 || format.alpha > PrImageAlpha_Independent || !validColor(format)) {
         return 0;
     }
     return (colors + (format.alpha != PrImageAlpha_None ? 1u : 0u)) * sample;
@@ -145,8 +143,7 @@ void writeSample(uint8_t* out, PrImageSample sample, double value) {
 }
 
 // Converts a row of eight-bit pixels between alpha forms, and from gray to RGB.
-void convertEightBit(const uint8_t* input, const PrImageFormat& from, uint8_t* output,
-                     const PrImageFormat& to, uint32_t width) {
+void convertEightBit(const uint8_t* input, const PrImageFormat& from, uint8_t* output, const PrImageFormat& to, uint32_t width) {
     const uint32_t sourceChannels = colorChannels(from.model);
     const uint32_t destinationChannels = colorChannels(to.model);
     const uint32_t sourcePixel = pixelBytes(from);
@@ -290,7 +287,7 @@ struct ProfileConversion {
 // Converts pixels whose color `profile` describes to `to`, a named space of three channels, by its default rendering
 // intent. An image of more pixels than the table has points converts through the table.
 PrStatus convertProfile(PrPixelView source, const PrImageFormat& from, const PrColorProfile* profile,
-                        PrPixels destination, const PrImageFormat& to) {
+        PrPixels destination, const PrImageFormat& to) {
     const uint32_t sourceChannels = colorChannels(from.model);
     const uint32_t sourceSample = sampleBytes(from.sample);
     const uint32_t destinationSample = sampleBytes(to.sample);
@@ -303,9 +300,9 @@ PrStatus convertProfile(PrPixelView source, const PrImageFormat& from, const PrC
             double channels[kPrColorProfileMaxChannels] = {};
             for (uint32_t c = 0; c < sourceChannels; ++c)
                 channels[c] = readSample(input + c * sourceSample, from.sample);
-            const double alpha = from.alpha == PrImageAlpha_None
-                                     ? 1.0
-                                     : readSample(input + sourceChannels * sourceSample, from.sample);
+            double alpha = 1.0;
+            if (from.alpha != PrImageAlpha_None)
+                alpha = readSample(input + sourceChannels * sourceSample, from.sample);
             if (from.alpha == PrImageAlpha_Premultiplied) {
                 for (uint32_t c = 0; c < sourceChannels; ++c)
                     channels[c] = alpha != 0 ? channels[c] / alpha : 0;
@@ -346,7 +343,7 @@ uint32_t imagePixelBytes(const PrImageFormat& format) {
 }
 
 PrStatus imageConvert(PrPixelView source, const PrImageFormat& from, PrPixels destination,
-                      const PrImageFormat& to, PrImageConversionFlags policy) {
+        const PrImageFormat& to, PrImageConversionFlags policy) {
     PR_ASSERT(source.extent.x == destination.extent.x && source.extent.y == destination.extent.y);
     PR_ASSERT(pixelBytes(from) != 0 && pixelBytes(to) != 0);
     PR_ASSERT(size_t(source.extent.x) * pixelBytes(from) <= source.stride);
@@ -364,16 +361,15 @@ PrStatus imageConvert(PrPixelView source, const PrImageFormat& from, PrPixels de
     const bool equalModel = from.model == to.model;
     const bool replicateGray = from.model == PrColorModel_Gray && to.model == PrColorModel_Rgb;
     const bool cmyk = from.model == PrColorModel_Cmyk && to.model == PrColorModel_Rgb;
-    const bool namedModels = colorChannels(from.model) == 3 && colorChannels(to.model) == 3
-                             && from.color.encoding == PrImageColorEncoding_Named
-                             && to.color.encoding == PrImageColorEncoding_Named;
+    const bool namedModels = colorChannels(from.model) == 3 && colorChannels(to.model) == 3 &&
+        from.color.encoding == PrImageColorEncoding_Named && to.color.encoding == PrImageColorEncoding_Named;
     // A source that an ICC profile describes converts through the profile to a named space, whatever its model. A
     // profile that the engine does not read is not supported.
     PrColorProfile* profile = nullptr;
-    if (from.color.encoding == PrImageColorEncoding_Icc && to.color.encoding == PrImageColorEncoding_Named
-        && !equalColor && colorChannels(to.model) == 3
-        && prColorProfileCreate(from.color.profile, &profile) == PrStatus_Ok
-        && prColorProfileChannels(profile) != colorChannels(from.model)) {
+    if (from.color.encoding == PrImageColorEncoding_Icc && to.color.encoding == PrImageColorEncoding_Named &&
+            !equalColor && colorChannels(to.model) == 3 &&
+            prColorProfileCreate(from.color.profile, &profile) == PrStatus_Ok &&
+            prColorProfileChannels(profile) != colorChannels(from.model)) {
         prColorProfileDestroy(profile);
         profile = nullptr;
     }
@@ -396,9 +392,8 @@ PrStatus imageConvert(PrPixelView source, const PrImageFormat& from, PrPixels de
     if (cmyk && ((policy & PrImageConversionFlag_ApproximateCmyk) == 0)) {
         return PrStatus_NotSupported;
     }
-    if ((from.color.encoding == PrImageColorEncoding_Icc
-         || to.color.encoding == PrImageColorEncoding_Icc)
-        && (!equalColor || !equalModel)) {
+    if ((from.color.encoding == PrImageColorEncoding_Icc || to.color.encoding == PrImageColorEncoding_Icc) &&
+            (!equalColor || !equalModel)) {
         return PrStatus_NotSupported;
     }
     const bool changeSpace = !equalColor || (!equalModel && !replicateGray);
@@ -406,15 +401,15 @@ PrStatus imageConvert(PrPixelView source, const PrImageFormat& from, PrPixels de
     PrColorSpace toSpace = to.color.space;
     if (changeSpace) {
         if (from.color.encoding == PrImageColorEncoding_Unknown && !cmyk) {
-            if ((policy & PrImageConversionFlag_AssumeSrgb) == 0
-                || (from.model != PrColorModel_Rgb && from.model != PrColorModel_Gray)) {
+            if ((policy & PrImageConversionFlag_AssumeSrgb) == 0 ||
+                    (from.model != PrColorModel_Rgb && from.model != PrColorModel_Gray)) {
                 return PrStatus_NotSupported;
             }
             fromSpace = PrColorSpace_Srgb;
         }
         if (to.color.encoding == PrImageColorEncoding_Unknown) {
-            if ((policy & PrImageConversionFlag_AssumeSrgb) == 0
-                || (to.model != PrColorModel_Rgb && to.model != PrColorModel_Gray)) {
+            if ((policy & PrImageConversionFlag_AssumeSrgb) == 0 ||
+                    (to.model != PrColorModel_Rgb && to.model != PrColorModel_Gray)) {
                 return PrStatus_NotSupported;
             }
             toSpace = PrColorSpace_Srgb;
@@ -431,12 +426,11 @@ PrStatus imageConvert(PrPixelView source, const PrImageFormat& from, PrPixels de
     const uint32_t destinationSample = sampleBytes(to.sample);
     const uint32_t sourcePixel = pixelBytes(from);
     const uint32_t destinationPixel = pixelBytes(to);
-    const bool identical =
-        equalModel && equalColor && from.sample == to.sample && from.alpha == to.alpha;
+    const bool identical = equalModel && equalColor && from.sample == to.sample && from.alpha == to.alpha;
     // Converting eight bits to eight bits in one space needs no floating point. Premultiplying and unpremultiplying
     // round the exact quotient half up.
-    const bool eightBit = from.sample == PrImageSample_U8 && to.sample == PrImageSample_U8 && !cmyk
-                          && !(changeSpace && fromSpace != toSpace);
+    const bool eightBit = from.sample == PrImageSample_U8 && to.sample == PrImageSample_U8 && !cmyk &&
+        !(changeSpace && fromSpace != toSpace);
     for (uint32_t y = 0; y < source.extent.y; ++y) {
         const uint8_t* input = source.data + size_t(y) * source.stride;
         uint8_t* output = destination.data + size_t(y) * destination.stride;
@@ -453,10 +447,9 @@ PrStatus imageConvert(PrPixelView source, const PrImageFormat& from, PrPixels de
             for (uint32_t c = 0; c < sourceChannels; ++c) {
                 channels[c] = readSample(input + c * sourceSample, from.sample);
             }
-            const double alpha =
-                from.alpha == PrImageAlpha_None
-                    ? 1.0
-                    : readSample(input + sourceChannels * sourceSample, from.sample);
+            double alpha = 1.0;
+            if (from.alpha != PrImageAlpha_None)
+                alpha = readSample(input + sourceChannels * sourceSample, from.sample);
             if (from.alpha == PrImageAlpha_Premultiplied) {
                 for (uint32_t c = 0; c < sourceChannels; ++c) {
                     channels[c] = alpha != 0 ? channels[c] / alpha : 0;
@@ -486,8 +479,8 @@ PrStatus imageConvert(PrPixelView source, const PrImageFormat& from, PrPixels de
             }
             if (to.alpha != PrImageAlpha_None) {
                 if (from.alpha == PrImageAlpha_Independent && from.sample == to.sample) {
-                    memCopy(output + destinationChannels * destinationSample,
-                            input + sourceChannels * sourceSample, sourceSample);
+                    memCopy(output + destinationChannels * destinationSample, input + sourceChannels * sourceSample,
+                        sourceSample);
                 } else {
                     writeSample(output + destinationChannels * destinationSample, to.sample, alpha);
                 }

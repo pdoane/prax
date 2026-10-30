@@ -88,8 +88,8 @@ bool calcNodes(CssValueRun run, uint32_t index, Array<PrLayoutCalcNode>& out) {
         CssValueRun children = cssValueChildren(run, index);
         for (uint32_t i = 0; i < children.count; i = i + children.values[i].next) {
             const CssValueNode& child = children.values[i];
-            if (child.kind == PrCssValueKind_Literal
-                || (child.kind == PrCssValueKind_Keyword && cssValueKeyword(&child) != PrCssKeyword_None))
+            if (child.kind == PrCssValueKind_Literal ||
+                    (child.kind == PrCssValueKind_Keyword && cssValueKeyword(&child) != PrCssKeyword_None))
                 continue;
             if (!calcNodes(children, i, out))
                 return false;
@@ -136,10 +136,13 @@ bool calcNodes(CssValueRun run, uint32_t index, Array<PrLayoutCalcNode>& out) {
                 case CssValueDef_AbsFn:     return operation(PrLayoutCalcOp_Abs);
                 case CssValueDef_SignFn:    return operation(PrLayoutCalcOp_Sign);
                 case CssValueDef_RoundFn:
-                    return operation(strategy == PrCssKeyword_Up       ? PrLayoutCalcOp_RoundUp
-                                     : strategy == PrCssKeyword_Down   ? PrLayoutCalcOp_RoundDown
-                                     : strategy == PrCssKeyword_ToZero ? PrLayoutCalcOp_RoundToZero
-                                                                       : PrLayoutCalcOp_RoundNearest);
+                    if (strategy == PrCssKeyword_Up)
+                        return operation(PrLayoutCalcOp_RoundUp);
+                    if (strategy == PrCssKeyword_Down)
+                        return operation(PrLayoutCalcOp_RoundDown);
+                    if (strategy == PrCssKeyword_ToZero)
+                        return operation(PrLayoutCalcOp_RoundToZero);
+                    return operation(PrLayoutCalcOp_RoundNearest);
                 default:
                     return false;
             }
@@ -200,9 +203,13 @@ WillChange willChangeOf(CssValueRun run) {
     WillChange will{};
     for (uint32_t i = 0; i < run.count; i += run.values[i].next) {
         const CssValueNode* value = &run.values[i];
-        PrStringView name = value->kind == PrCssValueKind_Keyword ? cssKeywordName(cssValueKeyword(value))
-                            : value->kind == PrCssValueKind_Ident ? cssValueText(run, value)
-                                                                  : PrStringView{};
+        PrStringView name;
+        if (value->kind == PrCssValueKind_Keyword)
+            name = cssKeywordName(cssValueKeyword(value));
+        else if (value->kind == PrCssValueKind_Ident)
+            name = cssValueText(run, value);
+        else
+            name = PrStringView{};
         const PrStringView transforms[] = {"transform", "translate", "rotate", "scale", "perspective"};
         for (PrStringView property : transforms)
             will.transforms = will.transforms || asciiEqualsFold(name, property);
@@ -300,8 +307,8 @@ PrLayoutAlignment alignmentOf(CssValueRun run, PrLayoutAlignment otherwise) {
 
 // Returns the number that a computed flex-grow or flex-shrink holds.
 float factorOf(CssValueRun run, float otherwise) {
-    bool number = run.count == 1
-                  && (run.values[0].kind == PrCssValueKind_Number || run.values[0].kind == PrCssValueKind_Integer);
+    bool number = run.count == 1 &&
+        (run.values[0].kind == PrCssValueKind_Number || run.values[0].kind == PrCssValueKind_Integer);
     return number ? float(run.values[0].number) : otherwise;
 }
 
@@ -371,16 +378,21 @@ PrLayoutGridTrack trackOf(PrCssPresentation* r, CssValueRun run, uint32_t index)
         uint32_t second = args.values[0].next;
         if (second < args.count && args.values[second].kind == PrCssValueKind_Literal)
             second += args.values[second].next;
-        PrLayoutTrackBreadth max =
-            second < args.count ? breadthOf(r, cssValueSubtree(args, second)) : prLayoutTrackBreadthAuto();
+        PrLayoutTrackBreadth max;
+        if (second < args.count)
+            max = breadthOf(r, cssValueSubtree(args, second));
+        else
+            max = prLayoutTrackBreadthAuto();
         return PrLayoutGridTrack{breadthOf(r, cssValueSubtree(args, 0)), max, prLayoutLengthPx(0)};
     }
     if (cssValueIsFunction(value, PrCssKeyword_FitContent)) {
         CssValueRun args = cssValueChildren(run, index);
         PrLayoutLength limit = args.count != 0 ? lengthOf(r, cssValueSubtree(args, 0)) : prLayoutLengthPx(0);
         bool fixed = prLayoutWordKind(limit.bits) != PrLayoutWordKind_Keyword;
-        return PrLayoutGridTrack{prLayoutTrackBreadthAuto(), prLayoutTrackBreadthFitContent(),
-                                 fixed ? limit : prLayoutLengthPx(0)};
+        return PrLayoutGridTrack{
+            prLayoutTrackBreadthAuto(), prLayoutTrackBreadthFitContent(),
+            fixed ? limit : prLayoutLengthPx(0),
+        };
     }
     PrLayoutTrackBreadth breadth = breadthOf(r, cssValueSubtree(run, index));
     bool flexible = prLayoutWordKind(breadth.bits) == PrLayoutWordKind_Number;
@@ -389,8 +401,7 @@ PrLayoutGridTrack trackOf(PrCssPresentation* r, CssValueRun run, uint32_t index)
 
 // Adds the names of the <line-names> block at `*at` of `run`, which starts with its '[', to `names` at `line`, and
 // moves `*at` past its ']'.
-void lineNamesOf(PrCssPresentation* r, CssValueRun run, uint32_t* at, uint32_t line,
-                 Array<PrLayoutGridLineName>& names) {
+void lineNamesOf(PrCssPresentation* r, CssValueRun run, uint32_t* at, uint32_t line, Array<PrLayoutGridLineName>& names) {
     uint32_t i = *at + run.values[*at].next;
     for (; i < run.count && !cssValueIsLiteral(&run.values[i], ']'); i += run.values[i].next) {
         if (run.values[i].kind != PrCssValueKind_Ident)
@@ -449,11 +460,11 @@ PrLayoutGridTracksIndex trackListOf(PrCssPresentation* r, CssValueRun run) {
             listStart += args.values[listStart].next;
         CssValueRun items{args.values + listStart, args.count - listStart, args.text};
         PrCssKeyword countKeyword = cssValueKeyword(&args.values[0]);
-        bool automatic = args.values[0].kind == PrCssValueKind_Keyword
-                         && (countKeyword == PrCssKeyword_AutoFill || countKeyword == PrCssKeyword_AutoFit);
+        bool automatic = args.values[0].kind == PrCssValueKind_Keyword &&
+            (countKeyword == PrCssKeyword_AutoFill || countKeyword == PrCssKeyword_AutoFit);
         if (automatic && list.repeat == PrLayoutGridRepeat_None) {
-            list.repeat = countKeyword == PrCssKeyword_AutoFill ? PrLayoutGridRepeat_AutoFill
-                                                                : PrLayoutGridRepeat_AutoFit;
+            list.repeat =
+                countKeyword == PrCssKeyword_AutoFill ? PrLayoutGridRepeat_AutoFill : PrLayoutGridRepeat_AutoFit;
             list.repeatStart = r->gridTracks.count;
             trackItemsOf(r, items, list.repeatStart, r->gridRepeatNames);
             list.repeatCount = r->gridTracks.count - list.repeatStart;
@@ -494,8 +505,10 @@ PrLayoutGridAreasIndex areasOf(PrCssPresentation* r, CssValueRun run) {
                 while (at < r->gridAreas.count && r->gridAreas.data[at].name != name)
                     ++at;
                 if (at == r->gridAreas.count)
-                    r->gridAreas.push(PrLayoutGridArea{name, uint16_t(rows), uint16_t(rows + 1), uint16_t(column),
-                                                       uint16_t(column + 1)});
+                    r->gridAreas.push(PrLayoutGridArea{
+                        name, uint16_t(rows), uint16_t(rows + 1), uint16_t(column),
+                        uint16_t(column + 1),
+                    });
                 PrLayoutGridArea& area = r->gridAreas.data[at];
                 area.rowEnd = uint16_t(rows + 1);
                 area.columnEnd = uint16_t(column + 1 > area.columnEnd ? column + 1 : area.columnEnd);
@@ -505,10 +518,12 @@ PrLayoutGridAreasIndex areasOf(PrCssPresentation* r, CssValueRun run) {
         columns = column < kPrLayoutGridMaxLine ? column : kPrLayoutGridMaxLine;
         ++rows;
     }
-    PrLayoutGridAreas areas{.rowCount = rows,
-                            .columnCount = columns,
-                            .areas = r->gridAreas.data,
-                            .areaCount = r->gridAreas.count};
+    PrLayoutGridAreas areas{
+        .rowCount = rows,
+        .columnCount = columns,
+        .areas = r->gridAreas.data,
+        .areaCount = r->gridAreas.count,
+    };
     return prLayoutGridAreasIntern(r->tree, &areas);
 }
 
@@ -673,16 +688,24 @@ PrDrawBorderStyle borderStyleOf(CssValueRun run) {
 }
 
 // The margin and padding properties of each side, by PrRectSide.
-constexpr PrCssProperty kMargins[] = {PrCssProperty_MarginTop, PrCssProperty_MarginRight, PrCssProperty_MarginBottom,
-                                      PrCssProperty_MarginLeft};
-constexpr PrCssProperty kPaddings[] = {PrCssProperty_PaddingTop, PrCssProperty_PaddingRight,
-                                       PrCssProperty_PaddingBottom, PrCssProperty_PaddingLeft};
+constexpr PrCssProperty kMargins[] = {
+    PrCssProperty_MarginTop, PrCssProperty_MarginRight, PrCssProperty_MarginBottom,
+    PrCssProperty_MarginLeft,
+};
+constexpr PrCssProperty kPaddings[] = {
+    PrCssProperty_PaddingTop, PrCssProperty_PaddingRight,
+    PrCssProperty_PaddingBottom, PrCssProperty_PaddingLeft,
+};
 
 // The border properties of each side, by PrRectSide.
-constexpr PrCssProperty kBorderWidths[] = {PrCssProperty_BorderTopWidth, PrCssProperty_BorderRightWidth,
-                                           PrCssProperty_BorderBottomWidth, PrCssProperty_BorderLeftWidth};
-constexpr PrCssProperty kBorderStyles[] = {PrCssProperty_BorderTopStyle, PrCssProperty_BorderRightStyle,
-                                           PrCssProperty_BorderBottomStyle, PrCssProperty_BorderLeftStyle};
+constexpr PrCssProperty kBorderWidths[] = {
+    PrCssProperty_BorderTopWidth, PrCssProperty_BorderRightWidth,
+    PrCssProperty_BorderBottomWidth, PrCssProperty_BorderLeftWidth,
+};
+constexpr PrCssProperty kBorderStyles[] = {
+    PrCssProperty_BorderTopStyle, PrCssProperty_BorderRightStyle,
+    PrCssProperty_BorderBottomStyle, PrCssProperty_BorderLeftStyle,
+};
 
 // Returns true if the border at `side` has a style. Without one, its used width is 0 (css-backgrounds-3/#border-width).
 bool borderStyled(const CssComputedStyle* style, uint32_t side) {
@@ -701,8 +724,9 @@ PrLayoutBaselineShift baselineShiftOf(PrCssPresentation* r, CssValueRun run) {
         default: break;
     }
     PrLayoutLength raise = lengthOf(r, run);
-    return prLayoutWordKind(raise.bits) == PrLayoutWordKind_Keyword ? prLayoutBaselineShiftPx(0)
-                                                                    : prLayoutBaselineShiftLength(raise);
+    if (prLayoutWordKind(raise.bits) == PrLayoutWordKind_Keyword)
+        return prLayoutBaselineShiftPx(0);
+    return prLayoutBaselineShiftLength(raise);
 }
 
 PrLayoutAlignmentBaseline alignmentBaselineOf(CssValueRun run) {
@@ -966,11 +990,13 @@ PrTextFont* textFontIn(PrFontSet* set, CssPresentationTextFonts& fonts, const Cs
     });
     if (found != kHashMissing)
         return fonts.fonts.data[found].font;
-    PrTextFontDesc desc{.set = set,
-                        .families = fonts.familyViews.data,
-                        .familyCount = fonts.familyViews.count,
-                        .style = font,
-                        .locale = style->locale};
+    PrTextFontDesc desc{
+        .set = set,
+        .families = fonts.familyViews.data,
+        .familyCount = fonts.familyViews.count,
+        .style = font,
+        .locale = style->locale,
+    };
     CssPresentationTextFont entry{fonts.keys.count, key.count, prTextFontCreate(&desc)};
     fonts.keys.append(key.data, key.count);
     fonts.index.insert(hash, fonts.fonts.count);
@@ -1000,8 +1026,7 @@ PrTextFont* textFontOf(PrCssPresentation* r, const CssComputedStyle* style) {
 // text fonts, brought up to date with the document's fonts. The x-height and cap height are those of the first
 // available face, and a face with no cap height measures its ascent (css-values-4/#cap). An advance is that of the
 // glyph in the face that sets the character.
-bool measureFont(void* PR_NULLABLE data, const CssComputedStyle* style, CssFontMetric metric, bool upright,
-                 double* ems) {
+bool measureFont(void* PR_NULLABLE data, const CssComputedStyle* style, CssFontMetric metric, bool upright, double* ems) {
     PrCssPresentation* r = static_cast<PrCssPresentation*>(data);
     prMutexLock(&r->measuring);
     r->readsMetrics = true;
@@ -1019,8 +1044,10 @@ bool measureFont(void* PR_NULLABLE data, const CssComputedStyle* style, CssFontM
     } else {
         float advance = 0;
         PrTextAxis axis = upright ? PrTextAxis_Vertical : PrTextAxis_Horizontal;
-        found = metric == CssFontMetric_Ch ? prTextFontAdvance(font, '0', PrScript_Zyyy, axis, &advance)
-                                           : prTextFontAdvance(font, 0x6c34, PrScript_Hani, axis, &advance);
+        if (metric == CssFontMetric_Ch)
+            found = prTextFontAdvance(font, '0', PrScript_Zyyy, axis, &advance);
+        else
+            found = prTextFontAdvance(font, 0x6c34, PrScript_Hani, axis, &advance);
         *ems = double(advance);
     }
     prMutexUnlock(&r->measuring);
@@ -1082,7 +1109,7 @@ bool isForeignRoot(const PrDomElement* element) {
     if (parent == nullptr || parent->space != PrDomNamespace_Svg || parent->tag == PrDomTag_ForeignObject)
         return false;
     for (const PrDomElement* at = parent; at != nullptr && at->space == PrDomNamespace_Svg;
-         at = domElementFromNode(domFlatParent(at))) {
+            at = domElementFromNode(domFlatParent(at))) {
         if (neverRendered(at))
             return false;
         if (domIsOuterSvg(at))
@@ -1117,9 +1144,9 @@ bool isPseudo(const PrDomNode* node) {
 // (css-contain-2/#contain-property, css-conditional-5/#container-type). Size containment contains the inline axis too.
 bool containsInline(CssValueRun run) {
     for (uint32_t i = 0; i < run.count; i += run.values[i].next) {
-        if (cssValueIsKeyword(&run.values[i], PrCssKeyword_Size)
-            || cssValueIsKeyword(&run.values[i], PrCssKeyword_InlineSize)
-            || cssValueIsKeyword(&run.values[i], PrCssKeyword_Strict))
+        if (cssValueIsKeyword(&run.values[i], PrCssKeyword_Size) ||
+                cssValueIsKeyword(&run.values[i], PrCssKeyword_InlineSize) ||
+                cssValueIsKeyword(&run.values[i], PrCssKeyword_Strict))
             return true;
     }
     return false;
@@ -1153,14 +1180,16 @@ bool isSemiReplaced(const PrDomNode* node) {
 Presentation presentationOf(const PrDomNode* node) {
     const PrDomElement* element = domElementFromNode(node);
     CssBoxTraits traits = traitsOf(node);
-    return Presentation{.buttonLayout = traits.kind == CssBoxKind_Button,
-                        .replaced = traits.kind == CssBoxKind_Replaced,
-                        .spans = traits.spans,
-                        .columnSpan = traits.columnSpan,
-                        .rowSpan = traits.rowSpan,
-                        .characters = traits.characters,
-                        .placed = element != nullptr && isForeignRoot(element),
-                        .waitsForWheel = element != nullptr && domHasBlockingWheelListener(element)};
+    return Presentation{
+        .buttonLayout = traits.kind == CssBoxKind_Button,
+        .replaced = traits.kind == CssBoxKind_Replaced,
+        .spans = traits.spans,
+        .columnSpan = traits.columnSpan,
+        .rowSpan = traits.rowSpan,
+        .characters = traits.characters,
+        .placed = element != nullptr && isForeignRoot(element),
+        .waitsForWheel = element != nullptr && domHasBlockingWheelListener(element),
+    };
 }
 
 // Makes a box fill its containing block, in place of where its own position, margins and sizes would put it, as a
@@ -1330,15 +1359,14 @@ CssPresentationImageDrawing imageDrawingOf(const PrCssPresentation* r, const Css
         case PrCssKeyword_Pixelated: drawing.rendering = PrLayoutImageRendering_Pixelated; break;
         default: break;
     }
-    drawing.oriented = cssComputedFirstKeyword(style,
-                                               PrCssProperty_ImageOrientation) != PrCssKeyword_None;
+    drawing.oriented = cssComputedFirstKeyword(style, PrCssProperty_ImageOrientation) != PrCssKeyword_None;
     return drawing;
 }
 
 // Returns the image that an element shows of `image`, which was arranged from its stored pixels by `orientation`:
 // `image` itself if `oriented` is true, and otherwise the stored arrangement, which is made once and kept in `stored`.
 const PrDrawImage* orientedImage(const PrDrawImage* image, PrImageOrientation orientation, bool oriented,
-                                 const PrDrawImage* PR_NULLABLE* PR_NONNULL stored) {
+        const PrDrawImage* PR_NULLABLE* PR_NONNULL stored) {
     if (oriented || orientation == PrImageOrientation_Identity)
         return image;
     if (*stored == nullptr)
@@ -1358,10 +1386,12 @@ PrLayoutNaturalSize orientedSize(PrLayoutNaturalSize size, PrImageOrientation or
 // Returns the environment that colors resolve in for a display of `headroom` stops, with the user's preferred scheme
 // and the page's supported schemes that the presentation projects for.
 CssColorEnvironment colorEnvironmentOf(const PrCssPresentation* r, float headroom, bool* PR_NULLABLE readsOutside) {
-    return CssColorEnvironment{.headroom = headroom,
-                               .prefersDark = r->prefersDark,
-                               .pageSchemes = r->pageSchemes,
-                               .readsOutside = readsOutside};
+    return CssColorEnvironment{
+        .headroom = headroom,
+        .prefersDark = r->prefersDark,
+        .pageSchemes = r->pageSchemes,
+        .readsOutside = readsOutside,
+    };
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -1383,8 +1413,8 @@ void imageFetched(void* PR_NULLABLE data, const DomFetchResult* result) {
     const DomDocumentHost* host = r->document->host;
     DomDecodedImage decoded{};
     PrByteView bytes{reinterpret_cast<const uint8_t*>(result->body.data), result->body.size};
-    if (result->status == PrStatus_Ok && host != nullptr && host->decodeImage != nullptr
-        && host->decodeImage(host->context, bytes, domUrlFragment(prStringView(&image.url)), &decoded)) {
+    if (result->status == PrStatus_Ok && host != nullptr && host->decodeImage != nullptr &&
+            host->decodeImage(host->context, bytes, domUrlFragment(prStringView(&image.url)), &decoded)) {
         image.state = CssPresentationImageState_Loaded;
         image.image = decoded.image;
         image.orientation = decoded.orientation;
@@ -1429,8 +1459,8 @@ bool urlOf(CssValueRun run, PrStringView* out) {
         *out = cssValueText(run, value);
         return true;
     }
-    bool function = value->kind == PrCssValueKind_Function
-                    && (cssValueKeyword(value) == PrCssKeyword_Url || cssValueKeyword(value) == PrCssKeyword_Src);
+    bool function = value->kind == PrCssValueKind_Function &&
+        (cssValueKeyword(value) == PrCssKeyword_Url || cssValueKeyword(value) == PrCssKeyword_Src);
     if (!function || value->next < 2 || value[1].kind != PrCssValueKind_String)
         return false;
     *out = cssValueText(run, &value[1]);
@@ -1452,8 +1482,7 @@ CssPresentationImage* PR_NULLABLE imageOf(PrCssPresentation* r, PrStringView ref
     prUrlDestroy(parsed);
     PrStringView view = prStringView(&url);
     uint32_t hash = uint32_t(hashBytes(view.data, view.size, 0x5be0cd19137e2179ull));
-    uint32_t found =
-        r->imageIndex.find(hash, [&](uint32_t at) { return prStringView(&r->images.data[at].url) == view; });
+    uint32_t found = r->imageIndex.find(hash, [&](uint32_t at) { return prStringView(&r->images.data[at].url) == view; });
     if (found != kHashMissing) {
         prStringReset(&url);
         return &r->images.data[found];
@@ -1524,8 +1553,8 @@ void repeatStyleOf(CssValueRun run, PrLayoutBackgroundLayer& layer) {
         layer.repeatY = PrLayoutBackgroundRepeat_Repeat;
     } else if (run.count != 0) {
         layer.repeatX = repeatOf(first);
-        layer.repeatY = run.values[0].next < run.count ? repeatOf(cssValueKeyword(&run.values[run.values[0].next]))
-                                                       : layer.repeatX;
+        layer.repeatY =
+            run.values[0].next < run.count ? repeatOf(cssValueKeyword(&run.values[run.values[0].next])) : layer.repeatX;
     }
 }
 
@@ -1557,8 +1586,8 @@ bool hasNoImages(CssValueRun run) {
 // color scheme picks (css-color-5/#light-dark), and the choice may read the user's preference. Any other item is
 // returned as it is.
 CssValueRun schemeImageOf(CssValueRun image, const ColorTarget& target) {
-    if (image.count == 0 || image.values[0].kind != PrCssValueKind_Function
-        || cssValueKeyword(image.values) != PrCssKeyword_LightDark)
+    if (image.count == 0 || image.values[0].kind != PrCssValueKind_Function ||
+            cssValueKeyword(image.values) != PrCssKeyword_LightDark)
         return image;
     uint32_t end = image.values[0].next;
     uint32_t comma = 1;
@@ -1583,16 +1612,14 @@ PrLayoutLength treePosition(void* PR_NULLABLE context, CssValueRun run, uint32_t
 // Writes the gradient of the computed <gradient> at `index` to `out`, with its stops appended to `stops`, for the
 // presentation's layout tree.
 void gradientOf(PrCssPresentation* r, CssValueRun run, uint32_t index, const ColorTarget& target,
-                Array<PrLayoutColorStop>& stops, PrLayoutGradient* out) {
-    cssGradientFromValue(run, index, target.context, target.cap, CssLayoutLengths{treeLength, treePosition, r}, stops,
-                         out);
+        Array<PrLayoutColorStop>& stops, PrLayoutGradient* out) {
+    cssGradientFromValue(run, index, target.context, target.cap, CssLayoutLengths{treeLength, treePosition, r}, stops, out);
 }
 
 bool imageLayerOf(PrCssPresentation* r, CssValueRun image, const ColorTarget& target,
-                  CssPresentationImageDrawing drawing,
-                  PrLayoutBackgroundLayer& layer);
+    CssPresentationImageDrawing drawing, PrLayoutBackgroundLayer& layer);
 bool filterItemsOf(PrCssPresentation* r, CssValueRun run, const CssColorContext& colors, Array<PrLayoutFilter>& out,
-                   Array<PrLayoutSource>& sources);
+    Array<PrLayoutSource>& sources);
 void releaseSource(const PrLayoutSource& source);
 
 // Returns where the gradient stops and filter items of the image that is resolved next start in the presentation's
@@ -1627,7 +1654,7 @@ void releaseImageSources(PrCssPresentation* r) {
 // Sets the image of `layer` from the image that the url() `reference` names. Returns false if the image has not loaded
 // or failed to load. A box that names an image that is loading projects again when it loads.
 bool loadedImageOf(PrCssPresentation* r, PrStringView reference, CssPresentationImageDrawing drawing,
-                   PrLayoutBackgroundLayer& layer) {
+        PrLayoutBackgroundLayer& layer) {
     CssPresentationImage* loaded = imageOf(r, reference);
     if (loaded != nullptr && loaded->state == CssPresentationImageState_Loading && r->projecting != nullptr)
         loaded->waiting.push(r->projecting);
@@ -1664,18 +1691,19 @@ uint32_t filterInputEnd(CssValueRun image) {
 // list filtering nothing, as it does in the filter property (filter-effects-1/#FilterProperty). Returns false if the
 // input cannot be displayed.
 bool filteredImageOf(PrCssPresentation* r, CssValueRun image, const ColorTarget& target,
-                     CssPresentationImageDrawing drawing,
-                     PrLayoutBackgroundLayer& layer) {
+        CssPresentationImageDrawing drawing, PrLayoutBackgroundLayer& layer) {
     uint32_t comma = filterInputEnd(image);
     CssValueRun input = runBetween(image, 1, comma);
-    bool shown = input.count != 0 && input.values[0].kind == PrCssValueKind_String
-                     ? loadedImageOf(r, cssValueText(input, input.values), drawing, layer)
-                     : imageLayerOf(r, input, target, drawing, layer);
+    bool shown;
+    if (input.count != 0 && input.values[0].kind == PrCssValueKind_String)
+        shown = loadedImageOf(r, cssValueText(input, input.values), drawing, layer);
+    else
+        shown = imageLayerOf(r, input, target, drawing, layer);
     if (!shown)
         return false;
     uint32_t mark = r->imageFilters.count;
     if (filterItemsOf(r, runBetween(image, comma + 1, image.values[0].next), target.context, r->imageFilters,
-                      r->imageSources))
+            r->imageSources))
         layer.filterCount += r->imageFilters.count - mark;
     return true;
 }
@@ -1686,8 +1714,7 @@ bool filteredImageOf(PrCssPresentation* r, CssValueRun image, const ColorTarget&
 // image cannot be displayed, now or ever: an image that has not loaded, that failed to load, or of a kind that the
 // engine does not draw. When the image loads, the box projects again.
 bool imageLayerOf(PrCssPresentation* r, CssValueRun image, const ColorTarget& target,
-                  CssPresentationImageDrawing drawing,
-                  PrLayoutBackgroundLayer& layer) {
+        CssPresentationImageDrawing drawing, PrLayoutBackgroundLayer& layer) {
     PrStringView reference{};
     if (image.count != 0 && urlOf(image, &reference))
         return loadedImageOf(r, reference, drawing, layer);
@@ -1746,7 +1773,7 @@ PrLayoutNaturalSize generatedNaturalOf(PrCssPresentation* r, CssValueRun image, 
 // Returns the background of an anonymous box that shows the generated image `image` as its content: one layer, the
 // image stretched over its padding box, which is its content box.
 PrLayoutBackgroundIndex generatedBackgroundOf(PrCssPresentation* r, CssValueRun image, const ColorTarget& target,
-                                              CssPresentationImageDrawing drawing) {
+        CssPresentationImageDrawing drawing) {
     PrLayoutBackgroundLayer layer = prLayoutBackgroundLayerDefault();
     layer.sizeX = prLayoutLengthPercent(100);
     layer.sizeY = prLayoutLengthPercent(100);
@@ -1776,8 +1803,7 @@ void mixBlendOf(PrCssKeyword keyword, PrDrawBlendMode* blendMode, PrDrawComposit
 // Returns the background layers of a computed style, interned by the tree, or kPrLayoutBackgroundNone if every layer is
 // none. Each layer takes its image's item of background-image and the same item of each other background list property,
 // whose items repeat as needed (css-backgrounds-3/#layering). A layer whose image cannot be displayed draws nothing.
-PrLayoutBackgroundIndex backgroundLayersOf(PrCssPresentation* r, const CssComputedStyle* style,
-                                           const ColorTarget& target) {
+PrLayoutBackgroundIndex backgroundLayersOf(PrCssPresentation* r, const CssComputedStyle* style, const ColorTarget& target) {
     CssValueRun images = cssComputedValue(style, PrCssProperty_BackgroundImage);
     if (hasNoImages(images))
         return kPrLayoutBackgroundNone;
@@ -1818,9 +1844,12 @@ PrLayoutBackgroundIndex backgroundLayersOf(PrCssPresentation* r, const CssComput
             repeatStyleOf(cssListItem(repeats, repeatItems, i), layer);
         if (attachmentItems.count != 0) {
             PrCssKeyword attachment = cssValueRunFirstKeyword(cssListItem(attachments, attachmentItems, i));
-            layer.attachment = attachment == PrCssKeyword_Fixed   ? PrLayoutBackgroundAttachment_Fixed
-                               : attachment == PrCssKeyword_Local ? PrLayoutBackgroundAttachment_Local
-                                                                  : PrLayoutBackgroundAttachment_Scroll;
+            if (attachment == PrCssKeyword_Fixed)
+                layer.attachment = PrLayoutBackgroundAttachment_Fixed;
+            else if (attachment == PrCssKeyword_Local)
+                layer.attachment = PrLayoutBackgroundAttachment_Local;
+            else
+                layer.attachment = PrLayoutBackgroundAttachment_Scroll;
         }
         if (originItems.count != 0)
             layer.origin = backgroundBoxOf(cssListItem(origins, originItems, i), PrLayoutBackgroundBox_PaddingBox);
@@ -1880,7 +1909,7 @@ void releaseSource(const PrLayoutSource& source) {
 // and each URL resolved to the filter element that it names, and appends each source to `sources`. Returns false, and
 // appends nothing, if a URL names no filter element.
 bool filterItemsOf(PrCssPresentation* r, CssValueRun run, const CssColorContext& colors, Array<PrLayoutFilter>& out,
-                   Array<PrLayoutSource>& sources) {
+        Array<PrLayoutSource>& sources) {
     Array<CssFilterFunction> functions;
     cssFilterFunctions(run, colors, &functions);
     uint32_t mark = out.count;
@@ -1911,8 +1940,7 @@ PrLayoutLength shapeLength(void* PR_NULLABLE context, CssValueRun run, CssShapeA
     return lengthOf(static_cast<PrCssPresentation*>(context), run);
 }
 
-PrLayoutLength shapePosition(void* PR_NULLABLE context, CssValueRun run, uint32_t index, uint32_t offset,
-                             CssShapeAxis) {
+PrLayoutLength shapePosition(void* PR_NULLABLE context, CssValueRun run, uint32_t index, uint32_t offset, CssShapeAxis) {
     return positionComponentOf(static_cast<PrCssPresentation*>(context), run, index, offset);
 }
 
@@ -1989,10 +2017,12 @@ void clipPathOf(PrCssPresentation* r, CssValueRun clip, PrLayoutCompositingStyle
 void cornersOf(PrCssPresentation* r, const CssComputedStyle* style, PrLayoutDecorationStyle* decoration) {
     static const PrCssProperty kRadii[PrRectCorner_Count] = {
         PrCssProperty_BorderTopLeftRadius, PrCssProperty_BorderTopRightRadius, PrCssProperty_BorderBottomRightRadius,
-        PrCssProperty_BorderBottomLeftRadius};
+        PrCssProperty_BorderBottomLeftRadius,
+    };
     static const PrCssProperty kShapes[PrRectCorner_Count] = {
         PrCssProperty_CornerTopLeftShape, PrCssProperty_CornerTopRightShape, PrCssProperty_CornerBottomRightShape,
-        PrCssProperty_CornerBottomLeftShape};
+        PrCssProperty_CornerBottomLeftShape,
+    };
     bool rounded = false;
     for (uint32_t corner = 0; corner < PrRectCorner_Count; ++corner) {
         CssValueRun run = cssComputedValue(style, kRadii[corner]);
@@ -2002,8 +2032,8 @@ void cornersOf(PrCssPresentation* r, const CssComputedStyle* style, PrLayoutDeco
         decoration->radii[2 * corner] = lengthOf(r, cssValueSubtree(run, 0));
         decoration->radii[2 * corner + 1] =
             second < run.count ? lengthOf(r, cssValueSubtree(run, second)) : decoration->radii[2 * corner];
-        rounded = rounded || decoration->radii[2 * corner].bits != prLayoutLengthPx(0).bits
-                  || decoration->radii[2 * corner + 1].bits != prLayoutLengthPx(0).bits;
+        rounded = rounded || decoration->radii[2 * corner].bits != prLayoutLengthPx(0).bits ||
+            decoration->radii[2 * corner + 1].bits != prLayoutLengthPx(0).bits;
     }
     // A shape matters only at a corner with a radius, so boxes with square corners share a group whatever their shapes.
     for (uint32_t corner = 0; rounded && corner < PrRectCorner_Count; ++corner)
@@ -2031,8 +2061,9 @@ PrLayoutBackgroundBox maskBoxOf(CssValueRun run, PrCssProperty property) {
     switch (cssValueRunFirstKeyword(run)) {
         case PrCssKeyword_ContentBox: return PrLayoutBackgroundBox_ContentBox;
         case PrCssKeyword_FillBox:
-            return property == PrCssProperty_MaskClip ? PrLayoutBackgroundBox_ContentBox
-                                                      : PrLayoutBackgroundBox_BorderBox;
+            if (property == PrCssProperty_MaskClip)
+                return PrLayoutBackgroundBox_ContentBox;
+            return PrLayoutBackgroundBox_BorderBox;
         case PrCssKeyword_PaddingBox: return PrLayoutBackgroundBox_PaddingBox;
         default: return PrLayoutBackgroundBox_BorderBox;
     }
@@ -2041,7 +2072,7 @@ PrLayoutBackgroundBox maskBoxOf(CssValueRun run, PrCssProperty property) {
 // Sets the sides of a mask border's width or outset from a computed value of one to four sides, each a length, a
 // percentage, a number or auto (css-backgrounds-3/#border-image-width).
 void borderSidesOf(PrCssPresentation* r, CssValueRun run, PrLayoutBorderImageKind* kinds, PrLayoutLength* lengths,
-                   float* numbers) {
+        float* numbers) {
     uint32_t items[4] = {};
     uint32_t count = 0;
     for (uint32_t i = 0; i < run.count && count < 4; i += run.values[i].next)
@@ -2080,7 +2111,7 @@ PrDrawSliceMode sliceModeOf(PrCssKeyword keyword) {
 // Sets `border` from the computed mask border properties (css-masking-1/#mask-borders). A border whose image cannot be
 // displayed masks nothing.
 void maskBorderOf(PrCssPresentation* r, const CssComputedStyle* style, const ColorTarget& target,
-                  CssPresentationImageDrawing drawing, PrLayoutMaskBorder* border) {
+        CssPresentationImageDrawing drawing, PrLayoutMaskBorder* border) {
     CssValueRun source = cssComputedValue(style, PrCssProperty_MaskBorderSource);
     if (source.count == 0 || cssValueRunFirstKeyword(source) == PrCssKeyword_None)
         return;
@@ -2108,26 +2139,27 @@ void maskBorderOf(PrCssPresentation* r, const CssComputedStyle* style, const Col
         // A number is pixels of the image, and a percentage is of its size.
         for (uint32_t side = 0; side < PrRectSide_Count; ++side) {
             const CssValueNode* value = &slice.values[items[side]];
-            border->slice[side] = value->kind == PrCssValueKind_Percentage
-                                      ? prLayoutLengthPercent(float(value->number))
-                                      : prLayoutLengthPx(float(value->number));
+            if (value->kind == PrCssValueKind_Percentage)
+                border->slice[side] = prLayoutLengthPercent(float(value->number));
+            else
+                border->slice[side] = prLayoutLengthPx(float(value->number));
         }
     }
     borderSidesOf(r, cssComputedValue(style, PrCssProperty_MaskBorderWidth), border->widthKind, border->width,
-                  border->widthNumber);
+        border->widthNumber);
     borderSidesOf(r, cssComputedValue(style, PrCssProperty_MaskBorderOutset), border->outsetKind, border->outset,
-                  border->outsetNumber);
+        border->outsetNumber);
     CssValueRun repeat = cssComputedValue(style, PrCssProperty_MaskBorderRepeat);
     if (repeat.count != 0) {
         border->horizontal = sliceModeOf(cssValueKeyword(repeat.values));
         uint32_t second = repeat.values[0].next;
-        border->vertical = second < repeat.count ? sliceModeOf(cssValueKeyword(&repeat.values[second]))
-                                                 : border->horizontal;
+        if (second < repeat.count)
+            border->vertical = sliceModeOf(cssValueKeyword(&repeat.values[second]));
+        else
+            border->vertical = border->horizontal;
     }
-    border->mode = cssComputedFirstKeyword(style,
-                                           PrCssProperty_MaskBorderMode) == PrCssKeyword_Luminance
-                       ? PrDrawMaskMode_Luminance
-                       : PrDrawMaskMode_Alpha;
+    bool luminance = cssComputedFirstKeyword(style, PrCssProperty_MaskBorderMode) == PrCssKeyword_Luminance;
+    border->mode = luminance ? PrDrawMaskMode_Luminance : PrDrawMaskMode_Alpha;
 }
 
 // Returns the mask of a computed style, interned by the tree (css-masking-1/#positioned-masks): a layer for each item
@@ -2135,7 +2167,7 @@ void maskBorderOf(PrCssPresentation* r, const CssComputedStyle* style, const Col
 // transparent. A layer that references no mask element, or whose image cannot be displayed, is left out, so that it
 // masks nothing.
 PrLayoutMaskIndex maskOf(PrCssPresentation* r, const CssComputedStyle* style, const ColorTarget& target,
-                         Array<PrLayoutSource>& sources) {
+        Array<PrLayoutSource>& sources) {
     PrLayoutMask mask{.border = prLayoutMaskBorderDefault()};
     CssPresentationImageDrawing drawing = imageDrawingOf(r, style);
     r->maskLayers.clear();
@@ -2165,14 +2197,17 @@ PrLayoutMaskIndex maskOf(PrCssPresentation* r, const CssComputedStyle* style, co
                 if (!referenceOf(r, url, CssPresentationReferenceKind_Mask, &layer.source))
                     continue;
                 sources.push(layer.source);
-            } else if (cssValueRunFirstKeyword(image) != PrCssKeyword_None && !imageLayerOf(r, image, target, drawing,
-                                                                                            layer.image)) {
+            } else if (cssValueRunFirstKeyword(image) != PrCssKeyword_None &&
+                    !imageLayerOf(r, image, target, drawing, layer.image)) {
                 continue;
             }
             PrCssKeyword mode = cssValueRunFirstKeyword(itemOf(modes, i));
-            layer.mode = mode == PrCssKeyword_Alpha       ? PrLayoutMaskMode_Alpha
-                         : mode == PrCssKeyword_Luminance ? PrLayoutMaskMode_Luminance
-                                                          : PrLayoutMaskMode_MatchSource;
+            if (mode == PrCssKeyword_Alpha)
+                layer.mode = PrLayoutMaskMode_Alpha;
+            else if (mode == PrCssKeyword_Luminance)
+                layer.mode = PrLayoutMaskMode_Luminance;
+            else
+                layer.mode = PrLayoutMaskMode_MatchSource;
             CssValueRun repeat = itemOf(repeats, i);
             if (repeat.count != 0)
                 repeatStyleOf(repeat, layer.image);
@@ -2216,7 +2251,7 @@ PrLayoutMaskIndex maskOf(PrCssPresentation* r, const CssComputedStyle* style, co
 // (filter-effects-1/#FilterProperty). If a URL names no filter element, the whole list is ignored and filters nothing,
 // though the box keeps its group.
 PrLayoutFilterIndex filterListOf(PrCssPresentation* r, CssValueRun run, const CssColorContext& colors,
-                                 Array<PrLayoutSource>& sources) {
+        Array<PrLayoutSource>& sources) {
     if (run.count == 0 || cssValueRunFirstKeyword(run) == PrCssKeyword_None)
         return kPrLayoutFilterNone;
     r->filters.clear();
@@ -2232,7 +2267,7 @@ PrLayoutFilterIndex filterListOf(PrCssPresentation* r, CssValueRun run, const Cs
 // interned by the tree, and sets `filtered` if its filter or backdrop filter is not none, or `will` names either. The
 // default group is index 0, which most styles take without reading the properties.
 PrLayoutGroupIndex compositingOf(PrCssPresentation* r, const CssComputedStyle* style, const ColorTarget& target,
-                                 const WillChange& will, bool* filtered) {
+        const WillChange& will, bool* filtered) {
     *filtered = will.filters;
     bool backdropRoot = will.composites || will.filters || will.groups;
     if (style->groups[CssStyleGroup_Compositing] == r->styles.initial[CssStyleGroup_Compositing] && !backdropRoot)
@@ -2248,8 +2283,7 @@ PrLayoutGroupIndex compositingOf(PrCssPresentation* r, const CssComputedStyle* s
     c.backdrop = filterListOf(r, backdrop, target.context, sources);
     *filtered = *filtered || c.filter != kPrLayoutFilterNone || c.backdrop != kPrLayoutFilterNone;
     c.backdropRoot = backdropRoot;
-    mixBlendOf(cssComputedFirstKeyword(style, PrCssProperty_MixBlendMode), &c.blendMode,
-               &c.composite);
+    mixBlendOf(cssComputedFirstKeyword(style, PrCssProperty_MixBlendMode), &c.blendMode, &c.composite);
     c.isolated = cssComputedFirstKeyword(style, PrCssProperty_Isolation) == PrCssKeyword_Isolate;
     PrLayoutGroupIndex index = prLayoutCompositingStyleIntern(r->tree, &c);
     for (uint32_t i = 0; i < sources.count; ++i)
@@ -2277,15 +2311,15 @@ const PrTextFeatureSet* PR_NULLABLE featureSetOf(PrCssPresentation* r, const Css
 // a compositor animates its effects. Sets `readsOutside` if a color resolved for the display's headroom or the user's
 // preferred scheme.
 PrLayoutStyleIndex project(PrCssPresentation* r, const CssComputedStyle* style, const Presentation& presentation,
-                           bool layer, bool* readsOutside) {
+        bool layer, bool* readsOutside) {
 
     PrLayoutStyle record = prLayoutStyleDefault();
 
     PrLayoutFontStyle font = prLayoutFontStyleDefault();
     font.font = textFontOf(r, style);
     CssValueRun lineHeight = cssComputedValue(style, PrCssProperty_LineHeight);
-    if (lineHeight.count == 1 && (lineHeight.values[0].kind == PrCssValueKind_Number
-                                  || lineHeight.values[0].kind == PrCssValueKind_Integer))
+    if (lineHeight.count == 1 && (lineHeight.values[0].kind == PrCssValueKind_Number ||
+            lineHeight.values[0].kind == PrCssValueKind_Integer))
         font.lineHeight = prLayoutLineHeightNumber(float(lineHeight.values[0].number));
     else if (cssValueRunFirstKeyword(lineHeight) != PrCssKeyword_Normal)
         // A length is rounded to the nearest unit. A number is multiplied by the font size in layout, and the result is
@@ -2293,16 +2327,13 @@ PrLayoutStyleIndex project(PrCssPresentation* r, const CssComputedStyle* style, 
         font.lineHeight = prLayoutLineHeightUnits(prLayoutUnitFromPxRoundDouble(pxOf(lineHeight)));
     const CssComputedStyle* flow = presentation.flow != nullptr ? presentation.flow : style;
     font.writingMode = writingModeOf(cssComputedValue(flow, PrCssProperty_WritingMode));
-    font.direction = cssComputedFirstKeyword(flow, PrCssProperty_Direction) == PrCssKeyword_Rtl
-                         ? PrTextDirection_Rtl
-                         : PrTextDirection_Ltr;
+    bool rtl = cssComputedFirstKeyword(flow, PrCssProperty_Direction) == PrCssKeyword_Rtl;
+    font.direction = rtl ? PrTextDirection_Rtl : PrTextDirection_Ltr;
     font.textOrientation = textOrientationOf(cssComputedValue(style, PrCssProperty_TextOrientation));
     font.dominantBaseline = dominantBaselineOf(cssComputedValue(style, PrCssProperty_DominantBaseline));
     font.whiteSpaceCollapse = whiteSpaceCollapseOf(cssComputedValue(style, PrCssProperty_WhiteSpaceCollapse));
-    font.textWrapMode = cssComputedFirstKeyword(style,
-                                                PrCssProperty_TextWrapMode) == PrCssKeyword_Nowrap
-                            ? PrLayoutTextWrapMode_Nowrap
-                            : PrLayoutTextWrapMode_Wrap;
+    bool nowrap = cssComputedFirstKeyword(style, PrCssProperty_TextWrapMode) == PrCssKeyword_Nowrap;
+    font.textWrapMode = nowrap ? PrLayoutTextWrapMode_Nowrap : PrLayoutTextWrapMode_Wrap;
     if (!presentation.marker) {
         setTextIndent(r, font, cssComputedValue(style, PrCssProperty_TextIndent));
         font.textAlign = textAlignOf(cssComputedValue(style, PrCssProperty_TextAlignAll));
@@ -2331,31 +2362,31 @@ PrLayoutStyleIndex project(PrCssPresentation* r, const CssComputedStyle* style, 
     PrColor currentColor = colors.current;
     PrLayoutColorStyle color = prLayoutColorStyleDefault();
     color.color = prColor16FromColor(currentColor);
-    color.visibility = cssComputedFirstKeyword(style,
-                                               PrCssProperty_Visibility) == PrCssKeyword_Visible
-                           ? PrLayoutVisibility_Visible
-                           : PrLayoutVisibility_Hidden;
-    color.emptyCells = cssComputedFirstKeyword(style, PrCssProperty_EmptyCells) == PrCssKeyword_Hide
-                           ? PrLayoutEmptyCells_Hide
-                           : PrLayoutEmptyCells_Show;
+    bool visible = cssComputedFirstKeyword(style, PrCssProperty_Visibility) == PrCssKeyword_Visible;
+    color.visibility = visible ? PrLayoutVisibility_Visible : PrLayoutVisibility_Hidden;
+    bool hideCells = cssComputedFirstKeyword(style, PrCssProperty_EmptyCells) == PrCssKeyword_Hide;
+    color.emptyCells = hideCells ? PrLayoutEmptyCells_Hide : PrLayoutEmptyCells_Show;
     // On a CSS box, SVG's values of pointer-events take the pointer as auto does. A replaced element whose
     // pointer-events is none still lets the content that it draws take the pointer. The descendants of an outermost svg
     // element may take it, as the descendants of a CSS box may (SVG2/interact.html#PointerEventsProp). An inert box,
     // with what it draws, hit tests as if its pointer-events were none (html/#inert-subtrees).
     bool inert = cssComputedFirstKeyword(style, PrCssProperty_Interactivity) == PrCssKeyword_Inert;
     bool none = cssComputedFirstKeyword(style, PrCssProperty_PointerEvents) == PrCssKeyword_None;
-    color.pointerEvents = inert                   ? PrLayoutPointerEvents_None
-                          : !none                 ? PrLayoutPointerEvents_Auto
-                          : presentation.replaced ? PrLayoutPointerEvents_Content
-                                                  : PrLayoutPointerEvents_None;
+    if (inert)
+        color.pointerEvents = PrLayoutPointerEvents_None;
+    else if (!none)
+        color.pointerEvents = PrLayoutPointerEvents_Auto;
+    else if (presentation.replaced)
+        color.pointerEvents = PrLayoutPointerEvents_Content;
+    else
+        color.pointerEvents = PrLayoutPointerEvents_None;
     color.wheelEvents = presentation.waitsForWheel ? PrLayoutWheelEvents_Blocking : PrLayoutWheelEvents_Passive;
     record.groups[PrLayoutGroup_Color] = prLayoutColorStyleIntern(r->tree, &color);
 
     PrLayoutBoxStyle box = prLayoutBoxStyleDefault();
     box.display = displayOf(cssComputedValue(style, PrCssProperty_Display));
-    box.boxSizing = cssComputedFirstKeyword(style, PrCssProperty_BoxSizing) == PrCssKeyword_BorderBox
-                        ? PrLayoutBoxSizing_BorderBox
-                        : PrLayoutBoxSizing_ContentBox;
+    bool borderBox = cssComputedFirstKeyword(style, PrCssProperty_BoxSizing) == PrCssKeyword_BorderBox;
+    box.boxSizing = borderBox ? PrLayoutBoxSizing_BorderBox : PrLayoutBoxSizing_ContentBox;
     box.position = positionOf(cssComputedValue(style, PrCssProperty_Position));
     box.staticInline = style->staticInline;
     box.floating = floatOf(cssComputedValue(style, PrCssProperty_Float));
@@ -2376,8 +2407,10 @@ PrLayoutStyleIndex project(PrCssPresentation* r, const CssComputedStyle* style, 
     box.maxWidth = lengthOf(r, cssComputedValue(style, PrCssProperty_MaxWidth));
     box.maxHeight = lengthOf(r, cssComputedValue(style, PrCssProperty_MaxHeight));
     const PrCssProperty insets[] = {PrCssProperty_Top, PrCssProperty_Right, PrCssProperty_Bottom, PrCssProperty_Left};
-    const PrCssProperty borderColors[] = {PrCssProperty_BorderTopColor, PrCssProperty_BorderRightColor,
-                                    PrCssProperty_BorderBottomColor, PrCssProperty_BorderLeftColor};
+    const PrCssProperty borderColors[] = {
+        PrCssProperty_BorderTopColor, PrCssProperty_BorderRightColor,
+        PrCssProperty_BorderBottomColor, PrCssProperty_BorderLeftColor,
+    };
     for (uint32_t side = 0; side < PrRectSide_Count; ++side) {
         box.margin[side] = lengthOf(r, cssComputedValue(style, kMargins[side]));
         box.padding[side] = lengthOf(r, cssComputedValue(style, kPaddings[side]));
@@ -2399,7 +2432,8 @@ PrLayoutStyleIndex project(PrCssPresentation* r, const CssComputedStyle* style, 
     // and skip making the function list.
     CssValueRun transforms[4] = {
         cssComputedValue(style, PrCssProperty_Translate), cssComputedValue(style, PrCssProperty_Rotate),
-        cssComputedValue(style, PrCssProperty_Scale), cssComputedValue(style, PrCssProperty_Transform)};
+        cssComputedValue(style, PrCssProperty_Scale), cssComputedValue(style, PrCssProperty_Transform),
+    };
     bool anyTransform = false;
     for (CssValueRun run : transforms)
         anyTransform = anyTransform || cssValueRunFirstKeyword(run) != PrCssKeyword_None;
@@ -2423,22 +2457,20 @@ PrLayoutStyleIndex project(PrCssPresentation* r, const CssComputedStyle* style, 
     box.zIndexed = zIndex.count == 1 && zIndex.values[0].kind == PrCssValueKind_Integer;
     // Layout reads whether the box's visibility is collapse. Painting reads whether it is visible.
     box.collapsed = cssComputedFirstKeyword(style, PrCssProperty_Visibility) == PrCssKeyword_Collapse;
-    box.overflowAnchor = cssComputedFirstKeyword(style,
-                                                 PrCssProperty_OverflowAnchor) == PrCssKeyword_None
-                             ? PrLayoutOverflowAnchor_None
-                             : PrLayoutOverflowAnchor_Auto;
+    bool unanchored = cssComputedFirstKeyword(style, PrCssProperty_OverflowAnchor) == PrCssKeyword_None;
+    box.overflowAnchor = unanchored ? PrLayoutOverflowAnchor_None : PrLayoutOverflowAnchor_Auto;
     aspectRatioOf(cssComputedValue(style, PrCssProperty_AspectRatio), box);
     // content-visibility: hidden skips the element's contents, which applies size containment
     // (css-contain-2/#content-visibility).
-    box.containInline = containsInline(cssComputedValue(style, PrCssProperty_Contain))
-                        || containsInline(cssComputedValue(style, PrCssProperty_ContainerType))
-                        || cssComputedFirstKeyword(style, PrCssProperty_ContentVisibility) == PrCssKeyword_Hidden;
+    box.containInline = containsInline(cssComputedValue(style, PrCssProperty_Contain)) ||
+        containsInline(cssComputedValue(style, PrCssProperty_ContainerType)) ||
+        cssComputedFirstKeyword(style, PrCssProperty_ContentVisibility) == PrCssKeyword_Hidden;
     box.containIntrinsicWidth = containIntrinsicOf(r, cssComputedValue(style, PrCssProperty_ContainIntrinsicWidth));
     box.containIntrinsicHeight = containIntrinsicOf(r, cssComputedValue(style, PrCssProperty_ContainIntrinsicHeight));
     // A text field of fixed field sizing sizes its inline axis in characters, and not by the text it shows
     // (html/#the-input-element-as-a-text-entry-widget).
-    if (presentation.characters != 0
-        && cssComputedFirstKeyword(style, PrCssProperty_FieldSizing) != PrCssKeyword_Content) {
+    if (presentation.characters != 0 &&
+            cssComputedFirstKeyword(style, PrCssProperty_FieldSizing) != PrCssKeyword_Content) {
         box.containInline = 1;
         box.intrinsicCharacters = presentation.characters;
     }
@@ -2486,7 +2518,7 @@ PrLayoutStyleIndex project(PrCssPresentation* r, const CssComputedStyle* style, 
     bool given = style->groups[CssStyleGroup_Table] != r->styles.initial[CssStyleGroup_Table];
     if (presentation.spans || tableLike || given) {
         PrLayoutTableStyle table = tableOf(style, presentation.spans ? presentation.columnSpan : 1,
-                                           presentation.spans ? presentation.rowSpan : 1);
+            presentation.spans ? presentation.rowSpan : 1);
         PrLayoutTableStyle initialTable = prLayoutTableStyleDefault();
         if (!memEquals(&table, &initialTable, sizeof(PrLayoutTableStyle)))
             record.groups[PrLayoutGroup_Table] = prLayoutTableStyleIntern(r->tree, &table);
@@ -2504,13 +2536,13 @@ PrLayoutStyleIndex project(PrCssPresentation* r, const CssComputedStyle* style, 
     if (!presentation.dropBackground) {
         PrColor background{0, 0, 0, 0};
         cssResolveColor(cssComputedValue(backgroundStyle, PrCssProperty_BackgroundColor), 0, backgroundColors,
-                        &background);
+            &background);
         decoration.background = prColor16FromColor(capped(background));
-        decoration.backgroundLayers =
-            presentation.image.count != 0
-                ? generatedBackgroundOf(r, presentation.image, ColorTarget{backgroundColors, cap},
-                                        imageDrawingOf(r, style))
-                : backgroundLayersOf(r, backgroundStyle, ColorTarget{backgroundColors, cap});
+        if (presentation.image.count != 0)
+            decoration.backgroundLayers =
+                generatedBackgroundOf(r, presentation.image, ColorTarget{backgroundColors, cap}, imageDrawingOf(r, style));
+        else
+            decoration.backgroundLayers = backgroundLayersOf(r, backgroundStyle, ColorTarget{backgroundColors, cap});
         decoration.backgroundClip = backgroundClipOf(backgroundStyle);
         decoration.backgroundAttachment = backgroundAttachmentOf(backgroundStyle);
     } else {
@@ -2529,8 +2561,10 @@ PrLayoutStyleIndex project(PrCssPresentation* r, const CssComputedStyle* style, 
         positionOf(r, objectPosition, &decoration.objectPositionX, &decoration.objectPositionY);
     // An outline of style auto is drawn solid. An outline of style none has no width (css-ui-4/#outline-style).
     CssValueRun outlineStyle = cssComputedValue(style, PrCssProperty_OutlineStyle);
-    decoration.outlineStyle = cssValueRunFirstKeyword(outlineStyle) == PrCssKeyword_Auto ? PrDrawBorderStyle_Solid
-                                                                           : borderStyleOf(outlineStyle);
+    if (cssValueRunFirstKeyword(outlineStyle) == PrCssKeyword_Auto)
+        decoration.outlineStyle = PrDrawBorderStyle_Solid;
+    else
+        decoration.outlineStyle = borderStyleOf(outlineStyle);
     if (decoration.outlineStyle != PrDrawBorderStyle_None) {
         PrColor outline = currentColor;
         cssResolveColor(cssComputedValue(style, PrCssProperty_OutlineColor), 0, colors, &outline);
@@ -2550,8 +2584,8 @@ PrLayoutStyleIndex project(PrCssPresentation* r, const CssComputedStyle* style, 
         effect.originX = originOf(r, origin, 0);
         uint32_t second = origin.values[0].next;
         // A single vertical keyword sets the y of the origin, and leaves x at the center.
-        bool vertical = cssValueIsKeyword(origin.values, PrCssKeyword_Top)
-                        || cssValueIsKeyword(origin.values, PrCssKeyword_Bottom);
+        bool vertical = cssValueIsKeyword(origin.values, PrCssKeyword_Top) ||
+            cssValueIsKeyword(origin.values, PrCssKeyword_Bottom);
         if (second >= origin.count && vertical) {
             effect.originY = effect.originX;
             effect.originX = prLayoutLengthPercent(50);
@@ -2573,8 +2607,7 @@ PrLayoutStyleIndex project(PrCssPresentation* r, const CssComputedStyle* style, 
             positionOf(r, perspectiveOrigin, &effect.perspectiveOriginX, &effect.perspectiveOriginY);
     }
     if (anyTransform || layer)
-        effect.backfaceHidden =
-            cssComputedFirstKeyword(style, PrCssProperty_BackfaceVisibility) == PrCssKeyword_Hidden;
+        effect.backfaceHidden = cssComputedFirstKeyword(style, PrCssProperty_BackfaceVisibility) == PrCssKeyword_Hidden;
     effect.layer = layer;
     if (box.zIndexed)
         effect.zIndex = int32_t(zIndex.values[0].number);
@@ -2603,16 +2636,15 @@ bool generatesBox(const PrDomElement*, const CssComputedStyle* style) {
 // parent has a box for its children's boxes. An element whose box is unusual generates no boxes at all
 // (css-display-4/#unbox).
 bool passesBoxes(const PrDomElement* element, const CssComputedStyle* style) {
-    return cssComputedFirstKeyword(style, PrCssProperty_Display) == PrCssKeyword_Contents
-           && !unboxesToNothing(element);
+    return cssComputedFirstKeyword(style, PrCssProperty_Display) == PrCssKeyword_Contents && !unboxesToNothing(element);
 }
 
 // Returns true if the ::marker of a list item styled by `item` is outside, and takes no place in the item's content
 // (css-lists-3/#list-style-position-property). The marker of an inline list item is inside whatever its
 // list-style-position says.
 bool isOutsideMarker(const CssComputedStyle* item) {
-    return cssComputedFirstKeyword(item, PrCssProperty_ListStylePosition) != PrCssKeyword_Inside
-           && displayOf(cssComputedValue(item, PrCssProperty_Display)) != PrLayoutDisplay_Inline;
+    return cssComputedFirstKeyword(item, PrCssProperty_ListStylePosition) != PrCssKeyword_Inside &&
+        displayOf(cssComputedValue(item, PrCssProperty_Display)) != PrLayoutDisplay_Inline;
 }
 
 // Returns the record of the box of `node`, styled by `style`, for a node that is neither the root nor the body.
@@ -2622,7 +2654,7 @@ bool isOutsideMarker(const CssComputedStyle* item) {
 // the others. The inherited values also reach the marker's text, whose record is the box's. An outside marker's box is
 // a marker box, which layout places beside its list item's first line.
 PrLayoutStyleIndex recordOf(PrCssPresentation* r, const PrDomNode* node, const CssComputedStyle* style, bool layer,
-                            bool* readsOutside) {
+        bool* readsOutside) {
     if (!isPseudo(node) || !cssPseudoIsMarker(static_cast<const CssPresentationPseudo*>(node)->pseudo))
         return project(r, style, presentationOf(node), layer, readsOutside);
     CssComputedStyle marker{};
@@ -2633,7 +2665,7 @@ PrLayoutStyleIndex recordOf(PrCssPresentation* r, const PrDomNode* node, const C
     marker.font = style->font;
     const CssComputedStyle* item = r->entries.data[cssPresentationNodeEntry(r, node->parent)].style;
     return project(r, &marker, Presentation{.bidi = style, .outsideMarker = isOutsideMarker(item), .marker = true},
-                   layer, readsOutside);
+        layer, readsOutside);
 }
 
 // Returns the record of an entry's box, for a node that is neither the root nor the body. projectCanvas sets the
@@ -2844,7 +2876,7 @@ PrDomNode* PR_NULLABLE presented(const PrCssPresentation* r, PrLayoutNode layout
 // tree.
 PrDomNode* PR_NULLABLE presenter(const PrCssPresentation* r, PrLayoutNode layoutNode) {
     for (PrLayoutNode n = layoutNode; n != kPrLayoutNodeNone && prLayoutNodeIsValid(r->tree, n);
-         n = prLayoutNodeParent(r->tree, n)) {
+            n = prLayoutNodeParent(r->tree, n)) {
         if (PrDomNode* node = presented(r, n))
             return node;
     }
@@ -2880,7 +2912,7 @@ void unmap(PrCssPresentation* r, PrLayoutNode box) {
 void dropPendingBoxes(PrCssPresentation* r, const PrDomElement* element) {
     DomFlatWalk walk;
     for (const PrDomNode* node = domFlatWalkNext(walk, element, element); node != nullptr;
-         node = domFlatWalkNext(walk, element, node)) {
+            node = domFlatWalkNext(walk, element, node)) {
         auto drop = [&](const PrDomNode* owner) {
             uint32_t at = cssPresentationNodeEntry(r, owner);
             if (at != kHashMissing && r->entries.data[at].boxed && r->entries.data[at].layoutNode == kPrLayoutNodeNone)
@@ -2931,8 +2963,11 @@ typedef uint8_t CssPresentationScrollBy;
 // Queues the scroll and scrollend events of the scroll container of layout `node`, or of the document for
 // kPrLayoutNodeNone, for the next rendering update. A container is queued once.
 void queueScrolled(PrCssPresentation* r, PrLayoutNode node) {
-    PrDomNode* target =
-        node == kPrLayoutNodeNone ? static_cast<PrDomNode*>(r->document) : cssPresentationNodeFromLayout(r, node);
+    PrDomNode* target;
+    if (node == kPrLayoutNodeNone)
+        target = static_cast<PrDomNode*>(r->document);
+    else
+        target = cssPresentationNodeFromLayout(r, node);
     if (target == nullptr)
         return;
     for (uint32_t i = 0; i < r->scrolled.count; ++i) {
@@ -2954,8 +2989,10 @@ void scrollTree(PrCssPresentation* r, PrLayoutNode node, PrLayoutVec offset, Css
     auto clamp = [](PrLayoutUnit unit, PrLayoutUnit least, PrLayoutUnit greatest) {
         return unit < least ? least : unit > greatest ? greatest : unit;
     };
-    PrLayoutVec to{clamp(offset.x, info.range.left, info.range.right),
-                   clamp(offset.y, info.range.top, info.range.bottom)};
+    PrLayoutVec to{
+        clamp(offset.x, info.range.left, info.range.right),
+        clamp(offset.y, info.range.top, info.range.bottom),
+    };
     prLayoutNodeSetScroll(r->tree, node, to);
     if (to == info.offset)
         return;
@@ -3066,10 +3103,10 @@ void clearFirsts(PrCssPresentation* r, CssPresentationFirsts& firsts) {
     // the text it held before.
     if (firsts.letterSource != kPrLayoutNodeNone && prLayoutNodeIsValid(r->tree, firsts.letterSource)) {
         PrDomNode* node = presented(r, firsts.letterSource);
-        prLayoutNodeSetText(r->tree, firsts.letterSource,
-                            node != nullptr && domIsText(node)
-                                ? prStringView(&static_cast<PrDomCharacterData*>(node)->data)
-                                : PrStringView{firsts.letterFull.data, firsts.letterFull.count});
+        PrStringView text{firsts.letterFull.data, firsts.letterFull.count};
+        if (node != nullptr && domIsText(node))
+            text = prStringView(&static_cast<PrDomCharacterData*>(node)->data);
+        prLayoutNodeSetText(r->tree, firsts.letterSource, text);
     }
     if (firsts.letterBox != kPrLayoutNodeNone && prLayoutNodeIsValid(r->tree, firsts.letterBox)) {
         if (prLayoutNodeParent(r->tree, firsts.letterBox) != kPrLayoutNodeNone)
@@ -3189,7 +3226,7 @@ void mark(PrDomNode* node, DomStyleFlags flags) {
     node->pending |= flags;
     bool shadows = node->document->slots != nullptr;
     for (PrDomNode* at = shadows ? domFlatParentShadowed(node) : node->parent; at != nullptr;
-         at = shadows ? domFlatParentShadowed(at) : at->parent) {
+            at = shadows ? domFlatParentShadowed(at) : at->parent) {
         if ((at->pending & DomStyleFlag_Descendant) != 0)
             break;
         at->pending |= DomStyleFlag_Descendant;
@@ -3229,8 +3266,7 @@ void addFeatures(PrCssPresentation* r, PrDomElement* element, const Array<uint32
 // Marks the elements that a change to the style of `element` reaches: the element, its siblings, its subtree, or the
 // descendants that carry one of `descendants`.
 void restyleReach(PrCssPresentation* r, PrDomElement* element, bool self, bool laterSiblings, bool siblings,
-                  bool subtree,
-                  const Array<uint32_t>& descendants) {
+        bool subtree, const Array<uint32_t>& descendants) {
     r->changed = true;
     if (self)
         mark(element, DomStyleFlag_Self);
@@ -3340,12 +3376,11 @@ void invalidateAnchors(PrCssPresentation* r, PrDomNode* node, const CssHasAnchor
 // set's invalidation for the feature.
 void invalidate(PrCssPresentation* r, PrDomElement* element, uint32_t hash) {
     for (const CssInvalidation* invalidation = cssRuleSetInvalidation(&r->rules, hash); invalidation != nullptr;
-         invalidation = invalidation->next != kHashMissing ? &r->rules.invalidations.data[invalidation->next]
-                                                           : nullptr) {
+            invalidation = invalidation->next != kHashMissing ? &r->rules.invalidations.data[invalidation->next] : nullptr) {
         if (invalidation->qualifier != 0 && !carries(element, &invalidation->qualifier, 1))
             continue;
         restyleReach(r, element, invalidation->self, invalidation->laterSiblings, invalidation->siblings,
-                     invalidation->subtree, invalidation->descendants);
+            invalidation->subtree, invalidation->descendants);
         if (invalidation->anchors.anchors.count != 0)
             invalidateAnchors(r, element, invalidation->anchors);
     }
@@ -3504,8 +3539,8 @@ bool sameStyle(const CssComputedStyle* a, const CssComputedStyle* b, bool sameCu
         if (a->groups[g] != b->groups[g])
             return false;
     }
-    return sameCustom && a->locale == b->locale && a->appearance == b->appearance
-           && a->staticInline == b->staticInline && a->childrenAreItems == b->childrenAreItems;
+    return sameCustom && a->locale == b->locale && a->appearance == b->appearance &&
+        a->staticInline == b->staticInline && a->childrenAreItems == b->childrenAreItems;
 }
 
 // How a parent's style changed. This decides which of its children are restyled under it.
@@ -3520,8 +3555,8 @@ typedef uint8_t ParentChange;
 // properties.
 ParentChange changeOf(const CssComputedStyle* PR_NULLABLE old, const CssComputedStyle* style, bool sameCustom) {
     // Whether the children are items decides their display when their own styles compute it.
-    if (old == nullptr || !sameCustom || old->locale != style->locale
-        || old->childrenAreItems != style->childrenAreItems)
+    if (old == nullptr || !sameCustom || old->locale != style->locale ||
+            old->childrenAreItems != style->childrenAreItems)
         return ParentChange_Inherited;
     ParentChange change = ParentChange_None;
     for (uint32_t g = 0; g < CssStyleGroup_Count; ++g) {
@@ -3581,12 +3616,19 @@ const Array<uint32_t>* PR_NULLABLE cachedMatches(const PrCssPresentation* r, uin
 // matched properties cache and the element's memo, which verification needs. With the element's entry `at`, the style
 // may come from the entry's memo, which the cascade updates.
 const CssComputedStyle* cascade(PrCssPresentation* r, PrDomElement* element, const CssComputedStyle* PR_NULLABLE parent,
-                                CssFontBases rootFont, bool fresh = false,
-                                const Array<uint32_t>* PR_NULLABLE matched = nullptr, uint32_t at = kHashMissing) {
+        CssFontBases rootFont, bool fresh = false, const Array<uint32_t>* PR_NULLABLE matched = nullptr,
+        uint32_t at = kHashMissing) {
     cssStylePrepare(element);
     startThreads(r);
-    CssCascadeInput input{.element = element, .parent = parent, .rootFont = rootFont, .viewport = viewportOf(r),
-                          .fresh = fresh, .matched = matched, .pseudo = CssPseudo_None};
+    CssCascadeInput input{
+        .element = element,
+        .parent = parent,
+        .rootFont = rootFont,
+        .viewport = viewportOf(r),
+        .fresh = fresh,
+        .matched = matched,
+        .pseudo = CssPseudo_None,
+    };
     if (at != kHashMissing && !fresh)
         input.memo = &r->entries.data[at].memo;
     return cssCascadeStyle(&r->rules, &r->threads.data[0].builder, &r->threads.data[0].scratch, input);
@@ -3595,10 +3637,17 @@ const CssComputedStyle* cascade(PrCssPresentation* r, PrDomElement* element, con
 // Returns the style of the ::first-line or ::first-letter `pseudo` of `element` under `parent`. The caller owns a
 // reference to the style.
 const CssComputedStyle* cascadeFirst(PrCssPresentation* r, const PrDomElement* element, CssPseudo pseudo,
-                                     const CssComputedStyle* PR_NULLABLE parent) {
+        const CssComputedStyle* PR_NULLABLE parent) {
     startThreads(r);
-    CssCascadeInput input{.element = element, .parent = parent, .rootFont = r->rootFont, .viewport = viewportOf(r),
-                          .fresh = false, .matched = nullptr, .pseudo = pseudo};
+    CssCascadeInput input{
+        .element = element,
+        .parent = parent,
+        .rootFont = r->rootFont,
+        .viewport = viewportOf(r),
+        .fresh = false,
+        .matched = nullptr,
+        .pseudo = pseudo,
+    };
     return cssCascadeStyle(&r->rules, &r->threads.data[0].builder, &r->threads.data[0].scratch, input);
 }
 
@@ -3606,8 +3655,7 @@ const CssComputedStyle* cascadeFirst(PrCssPresentation* r, const PrDomElement* e
 bool stylesFirsts(const PrCssPresentation* r) {
     const CssRuleIndex& line = r->rules.filed[CssPseudo_FirstLine];
     const CssRuleIndex& letter = r->rules.filed[CssPseudo_FirstLetter];
-    return line.universal.count != 0 || line.buckets.count != 0 || letter.universal.count != 0
-           || letter.buckets.count != 0;
+    return line.universal.count != 0 || line.buckets.count != 0 || letter.universal.count != 0 || letter.buckets.count != 0;
 }
 
 // Brings the ::first-line and ::first-letter styles of the element at `at` up to date under `style`, its style as
@@ -3624,8 +3672,8 @@ void restyleFirsts(PrCssPresentation* r, uint32_t at, PrDomElement* element, con
         letter = cascadeFirst(r, element, CssPseudo_FirstLetter, line != nullptr ? line : style);
     uint32_t i = r->entries.data[at].originates ? firstsOf(r, element) : kHashMissing;
     auto same = [](const CssComputedStyle* PR_NULLABLE a, const CssComputedStyle* PR_NULLABLE b) {
-        return a == b
-               || (a != nullptr && b != nullptr && sameStyle(a, b, cssCustomPropertiesEqual(a->custom, b->custom)));
+        return a == b ||
+            (a != nullptr && b != nullptr && sameStyle(a, b, cssCustomPropertiesEqual(a->custom, b->custom)));
     };
     const CssComputedStyle* oldLine = i != kHashMissing ? r->firsts.data[i].line : nullptr;
     const CssComputedStyle* oldLetter = i != kHashMissing ? r->firsts.data[i].letter : nullptr;
@@ -3641,8 +3689,14 @@ void restyleFirsts(PrCssPresentation* r, uint32_t at, PrDomElement* element, con
         dropFirsts(r, i);
     } else if (originates) {
         r->firstsIndex.insert(firstsHash(element), r->firsts.count);
-        r->firsts.push(CssPresentationFirsts{.element = element, .line = line, .letter = letter, .stale = true,
-                                    .letterBox = kPrLayoutNodeNone, .letterSource = kPrLayoutNodeNone});
+        r->firsts.push(CssPresentationFirsts{
+            .element = element,
+            .line = line,
+            .letter = letter,
+            .stale = true,
+            .letterBox = kPrLayoutNodeNone,
+            .letterSource = kPrLayoutNodeNone,
+        });
     }
     r->entries.data[at].originates = originates;
     if (changed)
@@ -3689,8 +3743,8 @@ FirstFlow firstFlowOf(const PrCssPresentation* r, PrLayoutNode box) {
     if (style == nullptr || (isPseudo(node) && cssPseudoIsMarker(static_cast<CssPresentationPseudo*>(node)->pseudo)))
         return FirstFlow_Skip;
     PrCssKeyword position = cssComputedFirstKeyword(style, PrCssProperty_Position);
-    if (cssComputedFirstKeyword(style, PrCssProperty_Float) != PrCssKeyword_None
-        || position == PrCssKeyword_Absolute || position == PrCssKeyword_Fixed)
+    if (cssComputedFirstKeyword(style, PrCssProperty_Float) != PrCssKeyword_None ||
+            position == PrCssKeyword_Absolute || position == PrCssKeyword_Fixed)
         return FirstFlow_Skip;
     PrLayoutNodeKind kind = prLayoutNodeKind(r->tree, box);
     if (kind != PrLayoutNodeKind_Element)
@@ -3740,7 +3794,7 @@ struct LinedBox {
 // (css-pseudo-4/#first-line-inheritance). The caller owns a reference to the style. The box presents an element or a
 // ::before or ::after.
 const CssComputedStyle* lineStyleOf(PrCssPresentation* r, PrLayoutNode box, const CssComputedStyle* parent,
-                                    const CssComputedStyle* PR_NULLABLE own) {
+        const CssComputedStyle* PR_NULLABLE own) {
     PrDomNode* node = presented(r, box);
     bool pseudo = isPseudo(node);
     startThreads(r);
@@ -3758,10 +3812,15 @@ const CssComputedStyle* lineStyleOf(PrCssPresentation* r, PrLayoutNode box, cons
         mixed.font = parent->font;
         parent = &mixed;
     }
-    CssCascadeInput input{.element = static_cast<const PrDomElement*>(pseudo ? node->parent : node), .parent = parent,
-                          .rootFont = r->rootFont, .viewport = viewportOf(r), .fresh = false, .matched = nullptr,
-                          .pseudo = pseudo ? static_cast<CssPresentationPseudo*>(node)->pseudo
-                                           : CssPseudo(CssPseudo_None)};
+    CssCascadeInput input{
+        .element = static_cast<const PrDomElement*>(pseudo ? node->parent : node),
+        .parent = parent,
+        .rootFont = r->rootFont,
+        .viewport = viewportOf(r),
+        .fresh = false,
+        .matched = nullptr,
+        .pseudo = pseudo ? static_cast<CssPresentationPseudo*>(node)->pseudo : CssPseudo(CssPseudo_None),
+    };
     return cssCascadeStyle(&r->rules, &r->threads.data[0].builder, &r->threads.data[0].scratch, input);
 }
 
@@ -3771,7 +3830,7 @@ const CssComputedStyle* lineStyleOf(PrCssPresentation* r, PrLayoutNode box, cons
 // That box takes the line's styles the same way, with its own ::first-line nested inside the line's. Appends each box
 // and its style there to `lined`.
 void lineRecords(PrCssPresentation* r, CssPresentationFirsts& firsts, PrLayoutNode box, const CssComputedStyle* style,
-                 Array<LinedBox>& lined, bool container) {
+        Array<LinedBox>& lined, bool container) {
     bool reads = false;
     prLayoutNodeSetFirstLineStyle(r->tree, box, recordOf(r, presented(r, box), style, false, &reads));
     r->readsOutside = r->readsOutside || reads;
@@ -3780,7 +3839,7 @@ void lineRecords(PrCssPresentation* r, CssPresentationFirsts& firsts, PrLayoutNo
     lined.push(LinedBox{box, style});
     bool before = false;
     for (PrLayoutNode child = prLayoutNodeFirstChild(r->tree, box); child != kPrLayoutNodeNone;
-         child = prLayoutNodeNextSibling(r->tree, child)) {
+            child = prLayoutNodeNextSibling(r->tree, child)) {
         PrLayoutNodeKind kind = prLayoutNodeKind(r->tree, child);
         if (child == firsts.letterBox)
             continue;
@@ -3814,8 +3873,7 @@ void lineRecords(PrCssPresentation* r, CssPresentationFirsts& firsts, PrLayoutNo
         PrDomNode* node = presented(r, child);
         const PrDomElement* element = domElementFromNode(node);
         if (element != nullptr && isBlockContainer(inner)) {
-            if (const CssComputedStyle* nested = cssPresentationPseudoStyleUnder(r, element, CssPseudo_FirstLine,
-                                                                                 inner))
+            if (const CssComputedStyle* nested = cssPresentationPseudoStyleUnder(r, element, CssPseudo_FirstLine, inner))
                 own = nested;
         }
         if (isBlockContainer(inner))
@@ -3848,15 +3906,18 @@ typedef uint8_t LetterSearch;
 // first. Marker boxes, boxes out of flow and the anonymous boxes of letters already taken are passed over.
 LetterSearch findLetter(const PrCssPresentation* r, PrLayoutNode box, bool container, FirstLetterText* out) {
     for (PrLayoutNode child = prLayoutNodeFirstChild(r->tree, box); child != kPrLayoutNodeNone;
-         child = prLayoutNodeNextSibling(r->tree, child)) {
+            child = prLayoutNodeNextSibling(r->tree, child)) {
         PrLayoutNodeKind kind = prLayoutNodeKind(r->tree, child);
         if (kind == PrLayoutNodeKind_Text) {
             // A text node of the document holds its data. A text box of generated content holds its own text, or the
             // text it held before a letter was taken from it.
             PrDomNode* node = presented(r, child);
             bool data = node != nullptr && domIsText(node);
-            PrStringView text = data ? prStringView(&static_cast<PrDomCharacterData*>(node)->data)
-                                     : prLayoutNodeText(r->tree, child);
+            PrStringView text;
+            if (data)
+                text = prStringView(&static_cast<PrDomCharacterData*>(node)->data);
+            else
+                text = prLayoutNodeText(r->tree, child);
             for (uint32_t k = 0; k < r->firsts.count && !data; ++k) {
                 const CssPresentationFirsts& taken = r->firsts.data[k];
                 if (taken.letterSource == child)
@@ -3906,9 +3967,9 @@ bool letterHolds(const PrCssPresentation* r, const CssPresentationFirsts& firsts
     if (!prLayoutNodeIsValid(r->tree, firsts.letterBox) || !prLayoutNodeIsValid(r->tree, firsts.letterSource))
         return false;
     PrStringView rest{firsts.letterFull.data + firsts.letterEnd, firsts.letterFull.count - firsts.letterEnd};
-    return prLayoutNodeParent(r->tree, firsts.letterBox) == prLayoutNodeParent(r->tree, firsts.letterSource)
-           && prLayoutNodeNextSibling(r->tree, firsts.letterBox) == firsts.letterSource
-           && prLayoutNodeText(r->tree, firsts.letterSource) == rest;
+    return prLayoutNodeParent(r->tree, firsts.letterBox) == prLayoutNodeParent(r->tree, firsts.letterSource) &&
+        prLayoutNodeNextSibling(r->tree, firsts.letterBox) == firsts.letterSource &&
+        prLayoutNodeText(r->tree, firsts.letterSource) == rest;
 }
 
 // Returns the number of ancestors of `node` in the flat tree.
@@ -3956,8 +4017,8 @@ void applyFirsts(PrCssPresentation* r) {
         uint32_t i = order.data[o];
         CssPresentationFirsts& firsts = r->firsts.data[i];
         uint32_t at = cssPresentationNodeEntry(r, firsts.element);
-        if (at == kHashMissing || !r->entries.data[at].boxed || r->entries.data[at].layoutNode == kPrLayoutNodeNone
-            || r->entries.data[at].style == nullptr || !isBlockContainer(r->entries.data[at].style))
+        if (at == kHashMissing || !r->entries.data[at].boxed || r->entries.data[at].layoutNode == kPrLayoutNodeNone ||
+                r->entries.data[at].style == nullptr || !isBlockContainer(r->entries.data[at].style))
             continue;
         PrLayoutNode box = r->entries.data[at].layoutNode;
         bool reached = false;
@@ -4003,10 +4064,10 @@ void applyFirsts(PrCssPresentation* r) {
         firsts.letterSource = letter.box;
         firsts.letterBox = prLayoutNodeCreateElement(r->tree, kPrLayoutNodeNone, record);
         prLayoutNodeCreateText(r->tree, firsts.letterBox,
-                               PrStringView{letter.text.data + letter.start, letter.end - letter.start});
+            PrStringView{letter.text.data + letter.start, letter.end - letter.start});
         prLayoutTreeInsert(r->tree, holder, firsts.letterBox, letter.box);
         prLayoutNodeSetText(r->tree, letter.box,
-                            PrStringView{letter.text.data + letter.end, letter.text.size - letter.end});
+            PrStringView{letter.text.data + letter.end, letter.text.size - letter.end});
     }
     for (uint32_t k = 0; k < lined.count; ++k)
         cssComputedStyleRelease(lined.data[k].style);
@@ -4031,8 +4092,7 @@ void dropPrefetch(PrCssPresentation* r) {
 // computes the element's style itself. This happens if the parent presents an animation, which the cascade does not.
 // The walk takes an element's style only after its parent's, so the parent style that a prefetch read is still held.
 const CssComputedStyle* PR_NULLABLE takePrefetched(PrCssPresentation* r, const PrDomElement* element,
-                                                   const CssComputedStyle* PR_NULLABLE parentStyle,
-                                                   uint32_t* generating) {
+        const CssComputedStyle* PR_NULLABLE parentStyle, uint32_t* generating) {
     if (r->prefetchNext == r->prefetched.count)
         return nullptr;
     // The walk visits the prefetched elements in tree order, among other elements that it computes as it goes.
@@ -4082,9 +4142,15 @@ void runPrefetch(void* PR_NULLABLE context, uint32_t slice, uint32_t) {
             if (entry.style != nullptr)
                 continue;
             entry.parentStyle = parentOf(*job, entry);
-            CssCascadeInput input{.element = entry.element, .parent = entry.parentStyle, .rootFont = job->rootFont,
-                                  .viewport = viewportOf(r), .fresh = false, .matched = entry.matched,
-                                  .pseudo = CssPseudo_None};
+            CssCascadeInput input{
+                .element = entry.element,
+                .parent = entry.parentStyle,
+                .rootFont = job->rootFont,
+                .viewport = viewportOf(r),
+                .fresh = false,
+                .matched = entry.matched,
+                .pseudo = CssPseudo_None,
+            };
             entry.style = cssCascadeStyle(&r->rules, &t.builder, &t.scratch, input);
             if (entry.matched == nullptr)
                 entry.generating = cssCascadeGenerating(&r->rules, &t.scratch, entry.element);
@@ -4103,7 +4169,7 @@ void runPrefetch(void* PR_NULLABLE context, uint32_t slice, uint32_t) {
 // changed. If it has not, each descendant takes what it matched last, unless its own change, or the change of an
 // element between it and `element`, can change that.
 void prefetch(PrCssPresentation* r, PrDomElement* element, const CssComputedStyle* style, CssFontBases rootFont,
-              uint32_t fresh, bool rematch) {
+        uint32_t fresh, bool rematch) {
     if (r->prefetchNext != r->prefetched.count || domAgentRestyleWidth(r->agent) == 1)
         return;
     // Lists the descendant elements in tree order, each with its parent's index and the end of its subtree.
@@ -4127,8 +4193,8 @@ void prefetch(PrCssPresentation* r, PrDomElement* element, const CssComputedStyl
         cssStylePrepare(e);
         uint32_t parent = open.count != 0 ? open.last() : kHashMissing;
         bool above = parent != kHashMissing ? r->prefetched.data[parent].rematch : rematch;
-        bool own = above || (e->pending & DomStyleFlag_Self) != 0
-                   || (r->features.count != 0 && carries(e, r->features.data, r->features.count));
+        bool own = above || (e->pending & DomStyleFlag_Self) != 0 ||
+            (r->features.count != 0 && carries(e, r->features.data, r->features.count));
         const Array<uint32_t>* matched = !own && entry != kHashMissing ? cachedMatches(r, entry) : nullptr;
         bool below = above || (e->pending & (DomStyleFlag_Subtree | DomStyleFlag_Features)) != 0;
         r->prefetched.push(
@@ -4167,9 +4233,15 @@ void prefetch(PrCssPresentation* r, PrDomElement* element, const CssComputedStyl
             continue;
         }
         entry.parentStyle = parentOf(job, entry);
-        CssCascadeInput input{.element = entry.element, .parent = entry.parentStyle, .rootFont = rootFont,
-                              .viewport = viewportOf(r), .fresh = false, .matched = entry.matched,
-                              .pseudo = CssPseudo_None};
+        CssCascadeInput input{
+            .element = entry.element,
+            .parent = entry.parentStyle,
+            .rootFont = rootFont,
+            .viewport = viewportOf(r),
+            .fresh = false,
+            .matched = entry.matched,
+            .pseudo = CssPseudo_None,
+        };
         entry.style = cssCascadeStyle(&r->rules, &r->threads.data[0].builder, &r->threads.data[0].scratch, input);
         if (entry.matched == nullptr)
             entry.generating = cssCascadeGenerating(&r->rules, &r->threads.data[0].scratch, entry.element);
@@ -4264,8 +4336,7 @@ void placeBox(PrCssPresentation* r, PrLayoutNode box, PrLayoutNode node, PrLayou
 
 // Puts the box of the element's pseudo-element at `which` of CssPresentationEntry::pseudos under `box` at `next`, if it
 // has one.
-void placePseudo(PrCssPresentation* r, const PrDomElement* element, uint32_t which, PrLayoutNode box,
-                 PrLayoutNode& next) {
+void placePseudo(PrCssPresentation* r, const PrDomElement* element, uint32_t which, PrLayoutNode box, PrLayoutNode& next) {
     uint32_t at = cssPresentationNodeEntry(r, element);
     CssPresentationPseudo* pseudo = at != kHashMissing ? r->entries.data[at].pseudos[which] : nullptr;
     uint32_t own = pseudo != nullptr ? cssPresentationNodeEntry(r, pseudo) : kHashMissing;
@@ -4335,12 +4406,12 @@ bool generatesPseudo(const PrDomElement* element, CssPseudo pseudo, const CssCom
     if (cssPseudoIsMarker(pseudo)) {
         if (content != PrCssKeyword_Normal)
             return content != PrCssKeyword_None;
-        return cssComputedFirstKeyword(style, PrCssProperty_ListStyleImage) != PrCssKeyword_None
-               || cssComputedFirstKeyword(style, PrCssProperty_ListStyleType) != PrCssKeyword_None;
+        return cssComputedFirstKeyword(style, PrCssProperty_ListStyleImage) != PrCssKeyword_None ||
+            cssComputedFirstKeyword(style, PrCssProperty_ListStyleType) != PrCssKeyword_None;
     }
     PrCssKeyword display = cssComputedFirstKeyword(style, PrCssProperty_Display);
-    return content != PrCssKeyword_None && content != PrCssKeyword_Normal && generatesBox(element, style)
-           && display != PrCssKeyword_TableColumn && display != PrCssKeyword_TableColumnGroup;
+    return content != PrCssKeyword_None && content != PrCssKeyword_Normal && generatesBox(element, style) &&
+        display != PrCssKeyword_TableColumn && display != PrCssKeyword_TableColumnGroup;
 }
 
 // Calls `text` with each run of the text of a pseudo-element's content (css-content-3/#content-property), and `image`
@@ -4356,7 +4427,7 @@ bool generatesPseudo(const PrDomElement* element, CssPseudo pseudo, const CssCom
 // scheme.
 template <typename Text, typename Image>
 void eachGenerated(PrCssPresentation* r, const CssComputedStyle* style, CssPseudo pseudo,
-                   const CssCountingTexts& counters, bool* readsOutside, Text text, Image image) {
+        const CssCountingTexts& counters, bool* readsOutside, Text text, Image image) {
     CssValueRun content = cssComputedValue(style, PrCssProperty_Content);
     auto counterText = [&](uint32_t at) {
         uint32_t start = at == 0 ? 0 : counters.ends.data[at - 1];
@@ -4370,8 +4441,8 @@ void eachGenerated(PrCssPresentation* r, const CssComputedStyle* style, CssPseud
             CssColorEnvironment environment = colorEnvironmentOf(r, r->headroom, readsOutside);
             markerImage = schemeImageOf(markerImage, ColorTarget{cssStyleColorContext(style, environment), 0});
         }
-        bool shown = (scheme && cssValueRunFirstKeyword(markerImage) == PrCssKeyword_None) || imageShows(r,
-                                                                                                         markerImage);
+        bool shown =
+            (scheme && cssValueRunFirstKeyword(markerImage) == PrCssKeyword_None) || imageShows(r, markerImage);
         if (shown) {
             image(markerImage);
             text(" ");
@@ -4389,9 +4460,8 @@ void eachGenerated(PrCssPresentation* r, const CssComputedStyle* style, CssPseud
         PrStringView reference{};
         if (item->kind == PrCssValueKind_String) {
             textAppend(&run, cssValueText(content, item));
-        } else if (cssValueIsFunction(item, PrCssKeyword_Counter) || cssValueIsFunction(item, PrCssKeyword_Counters)
-                   || cssValueIsKeyword(item, PrCssKeyword_OpenQuote)
-                   || cssValueIsKeyword(item, PrCssKeyword_CloseQuote)) {
+        } else if (cssValueIsFunction(item, PrCssKeyword_Counter) || cssValueIsFunction(item, PrCssKeyword_Counters) ||
+                cssValueIsKeyword(item, PrCssKeyword_OpenQuote) || cssValueIsKeyword(item, PrCssKeyword_CloseQuote)) {
             textAppend(&run, counterText(next++));
         } else if (urlOf(cssValueSubtree(content, i), &reference) || isFilterImage(cssValueSubtree(content, i))) {
             if (run.text.count != 0)
@@ -4410,7 +4480,7 @@ void eachGenerated(PrCssPresentation* r, const CssComputedStyle* style, CssPseud
 // generated image `image` as its content if it is not empty. Sets `readsOutside` if a color resolved for the display's
 // headroom or the user's preferred scheme.
 PrLayoutStyleIndex anonymousRecord(PrCssPresentation* r, const CssComputedStyle* parent, CssValueRun image,
-                                   bool* readsOutside) {
+        bool* readsOutside) {
     CssComputedStyle anonymous{};
     for (uint32_t g = 0; g < CssStyleGroup_Count; ++g)
         anonymous.groups[g] = cssStyleGroupInherited(CssStyleGroup(g)) ? parent->groups[g] : r->styles.initial[g];
@@ -4444,8 +4514,11 @@ PrLayoutNaturalSize markerImageSize(PrLayoutNaturalSize natural, double em) {
         // The largest box of the ratio that fits the default size, as `contain` fits it.
         size = ratio >= 1 ? PrVec2{side, side / ratio} : PrVec2{side * ratio, side};
     }
-    return PrLayoutNaturalSize{.width = prLayoutUnitFromPx(size.x), .height = prLayoutUnitFromPx(size.y),
-                               .ratio = ratio};
+    return PrLayoutNaturalSize{
+        .width = prLayoutUnitFromPx(size.x),
+        .height = prLayoutUnitFromPx(size.y),
+        .ratio = ratio,
+    };
 }
 
 // Returns the box of the marker of the pseudo-element `entry`, or none if it has none.
@@ -4475,7 +4548,7 @@ void applyGenerated(PrCssPresentation* r, CssPresentationEntry& entry) {
     const CssPresentationPseudo* pseudo = static_cast<const CssPresentationPseudo*>(entry.node);
     PrLayoutNode marker = markerBoxOf(r, entry);
     for (PrLayoutNode child = prLayoutNodeFirstChild(r->tree, box); child != kPrLayoutNodeNone;
-         child = prLayoutNodeFirstChild(r->tree, box)) {
+            child = prLayoutNodeFirstChild(r->tree, box)) {
         prLayoutTreeRemove(r->tree, child);
         if (child != marker)
             r->erasing.push(child);
@@ -4483,16 +4556,16 @@ void applyGenerated(PrCssPresentation* r, CssPresentationEntry& entry) {
     bool isMarker = cssPseudoIsMarker(pseudo->pseudo);
     PrLayoutStyleIndex record = kPrLayoutStyleNone;
     bool reads = false;
-    eachGenerated(
-        r, entry.style, pseudo->pseudo, pseudo->counters, &reads,
-        [&](PrStringView text) { prLayoutNodeCreateText(r->tree, box, text); },
-        [&](CssValueRun value) {
+    eachGenerated(r, entry.style, pseudo->pseudo, pseudo->counters, &reads,
+        [&](PrStringView text) { prLayoutNodeCreateText(r->tree, box, text); }, [&](CssValueRun value) {
             // A generated image, or a transparent image, which paints nothing.
             bool generated = generatedImage(value);
             if (generated || cssValueRunFirstKeyword(value) == PrCssKeyword_None) {
-                PrLayoutNaturalSize natural = generated
-                                                  ? generatedNaturalOf(r, value, imageDrawingOf(r, entry.style))
-                                                  : prLayoutNaturalSizeNone();
+                PrLayoutNaturalSize natural;
+                if (generated)
+                    natural = generatedNaturalOf(r, value, imageDrawingOf(r, entry.style));
+                else
+                    natural = prLayoutNaturalSizeNone();
                 if (isMarker)
                     natural = markerImageSize(natural, entry.style->font.em);
                 PrLayoutStyleIndex painted = anonymousRecord(r, entry.style, generated ? value : CssValueRun{}, &reads);
@@ -4556,7 +4629,7 @@ bool pseudoMarked(const PrCssPresentation* r, uint32_t at) {
 }
 
 void visitMarkerOf(Walk& w, uint32_t at, CssPseudo kind, PrDomElement* element,
-                   const CssComputedStyle* PR_NULLABLE style, bool restyle, bool suppressed);
+    const CssComputedStyle* PR_NULLABLE style, bool restyle, bool suppressed);
 
 // Brings the pseudo-element `kind` that the entry at `at` holds at `which` up to date: its style, under `parent`, the
 // presented style of what originates it, its animations, its box, and whether it takes part in the counter pass.
@@ -4569,7 +4642,7 @@ void visitMarkerOf(Walk& w, uint32_t at, CssPseudo kind, PrDomElement* element,
 // cancels its animations. An animation that takes the box away, as one of display or content may, keeps the
 // pseudo-element's styles and animations.
 bool visitPseudo(Walk& w, uint32_t at, uint32_t which, CssPseudo kind, PrDomElement* element,
-                 const CssComputedStyle* PR_NULLABLE parent, bool restyle, bool generating, bool suppressed) {
+        const CssComputedStyle* PR_NULLABLE parent, bool restyle, bool generating, bool suppressed) {
     PrCssPresentation* r = w.presentation;
     CssPresentationPseudo* pseudo = r->entries.data[at].pseudos[which];
     if (pseudo == nullptr && !generating)
@@ -4582,8 +4655,15 @@ bool visitPseudo(Walk& w, uint32_t at, uint32_t which, CssPseudo kind, PrDomElem
     const CssComputedStyle* base = nullptr;
     if (restyle && generating) {
         PR_ASSERT(parent != nullptr);
-        CssCascadeInput input{.element = element, .parent = parent, .rootFont = w.rootFont,
-                              .viewport = viewportOf(r), .fresh = false, .matched = nullptr, .pseudo = kind};
+        CssCascadeInput input{
+            .element = element,
+            .parent = parent,
+            .rootFont = w.rootFont,
+            .viewport = viewportOf(r),
+            .fresh = false,
+            .matched = nullptr,
+            .pseudo = kind,
+        };
         base = cssCascadeStyle(&r->rules, &r->threads.data[0].builder, &r->threads.data[0].scratch, input);
     } else if (!restyle && !suppressed && kept) {
         const CssPresentationEntry& entry = r->entries.data[own];
@@ -4676,8 +4756,8 @@ bool visitPseudo(Walk& w, uint32_t at, uint32_t which, CssPseudo kind, PrDomElem
     // font.
     const CssStyleValues* const* now = pseudoStyle->groups;
     bool marker = cssPseudoIsMarker(kind);
-    bool groups = old == nullptr || old->groups[CssStyleGroup_Generated] != now[CssStyleGroup_Generated]
-                  || (marker && old->groups[CssStyleGroup_List] != now[CssStyleGroup_List]);
+    bool groups = old == nullptr || old->groups[CssStyleGroup_Generated] != now[CssStyleGroup_Generated] ||
+        (marker && old->groups[CssStyleGroup_List] != now[CssStyleGroup_List]);
     bool sized = marker && old != nullptr && old->groups[CssStyleGroup_Font] != now[CssStyleGroup_Font];
     bool content = groups || sized || (flags & DomStyleFlag_Self) != 0;
     // Whether a marker is outside depends on its list item's style, which its record reads.
@@ -4718,7 +4798,7 @@ bool visitPseudo(Walk& w, uint32_t at, uint32_t which, CssPseudo kind, PrDomElem
 // has one (css-lists-3/#marker-pseudo). `kind` is the pseudo-element. A box made or erased places the boxes of the
 // pseudo-element's content again.
 void visitMarkerOf(Walk& w, uint32_t at, CssPseudo kind, PrDomElement* element,
-                   const CssComputedStyle* PR_NULLABLE style, bool restyle, bool suppressed) {
+        const CssComputedStyle* PR_NULLABLE style, bool restyle, bool suppressed) {
     if (kind != CssPseudo_Before && kind != CssPseudo_After)
         return;
     PrCssPresentation* r = w.presentation;
@@ -4727,7 +4807,7 @@ void visitMarkerOf(Walk& w, uint32_t at, CssPseudo kind, PrDomElement* element,
         return;
     CssPseudo marker = kind == CssPseudo_Before ? CssPseudo_BeforeMarker : CssPseudo_AfterMarker;
     if (visitPseudo(w, at, kMarkerPseudo, marker, element, style, restyle, listItem && !suppressed,
-                    suppressed || !listItem))
+            suppressed || !listItem))
         queueBox(r, at, CssPresentationBoxOp_Children);
 }
 
@@ -4738,7 +4818,7 @@ void visitMarkerOf(Walk& w, uint32_t at, CssPseudo kind, PrDomElement* element,
 // what cssCascadeGenerating gives for the element, if a prefetch found it, or kGeneratingUnknown. Returns true if a
 // pseudo-element's box was made or erased, so that its parent's children are placed again.
 bool visitPseudos(Walk& w, uint32_t at, PrDomElement* element, const CssComputedStyle* style, bool holds,
-                  bool restyle, uint32_t generating) {
+        bool restyle, uint32_t generating) {
     PrCssPresentation* r = w.presentation;
     bool changed = false;
     bool suppressed = !holds || unboxesToNothing(element);
@@ -4768,8 +4848,7 @@ bool visitPseudos(Walk& w, uint32_t at, PrDomElement* element, const CssComputed
     for (uint32_t which = 0; which < kCssPresentationPseudos; ++which) {
         CssPseudo kind = CssPseudo(CssPseudo_Before + which);
         bool hidden = kind == CssPseudo_FieldContent ? !holds : suppressed;
-        changed = visitPseudo(w, at, which, kind, element, style, restyle, (generating & (1u << kind)) != 0, hidden)
-                  || changed;
+        changed = visitPseudo(w, at, which, kind, element, style, restyle, (generating & (1u << kind)) != 0, hidden) || changed;
     }
     return changed;
 }
@@ -4780,7 +4859,7 @@ bool visitPseudos(Walk& w, uint32_t at, PrDomElement* element, const CssComputed
 // nor the element's own change can, a restyle takes what the element matched last. `parentBox` says whether the parent
 // has a box for the boxes of its children. Returns true if the element's box was made or erased.
 bool visitElement(Walk& w, PrDomElement* element, const CssComputedStyle* PR_NULLABLE parentStyle, ParentChange parent,
-                  bool forced, bool rematch, bool parentBox) {
+        bool forced, bool rematch, bool parentBox) {
     PrCssPresentation* r = w.presentation;
     ++r->accrued.elementsVisited;
     DomStyleFlags flags = element->pending;
@@ -4792,8 +4871,8 @@ bool visitElement(Walk& w, PrDomElement* element, const CssComputedStyle* PR_NUL
     bool matches = w.all || rematch || old == nullptr || (flags & DomStyleFlag_Self) != 0 || carried;
     // The style that the element presents takes the parent's value of a property that does not inherit if its base
     // style or one of its animations does.
-    bool restyle = matches || forced || parent == ParentChange_Inherited
-                   || (parent == ParentChange_Reset && (oldBase->inheritsReset || old->inheritsReset));
+    bool restyle = matches || forced || parent == ParentChange_Inherited ||
+        (parent == ParentChange_Reset && (oldBase->inheritsReset || old->inheritsReset));
     bool animate = (flags & DomStyleFlag_Animate) != 0 && old != nullptr;
     if (old == nullptr) {
         ++w.taken;
@@ -4847,8 +4926,7 @@ bool visitElement(Walk& w, PrDomElement* element, const CssComputedStyle* PR_NUL
         CssColorEnvironment environment = colorEnvironmentOf(r, r->headroom, &animationReads);
         if (restyle && (entry.animated || base->groups[CssStyleGroup_Animation] != initial)) {
             CssAnimateContext context{parentStyle, w.rootFont, viewportOf(r)};
-            cssAnimateRestyled(r, element, old != nullptr ? oldBase : nullptr, old, base, context,
-                               environment);
+            cssAnimateRestyled(r, element, old != nullptr ? oldBase : nullptr, old, base, context, environment);
         }
         entry.animated = cssAnimateHas(r, element);
         if (entry.animated) {
@@ -4864,9 +4942,12 @@ bool visitElement(Walk& w, PrDomElement* element, const CssComputedStyle* PR_NUL
         r->readsOutside = r->readsOutside || entry.animationReadsOutside;
         if (restyle) {
             bool unknown = !r->rules.reads.direction || !automaticDirection(element);
-            entry.direction = unknown                  ? CssPresentationDirection_Unknown
-                              : domElementRtl(element) ? CssPresentationDirection_Rtl
-                                                       : CssPresentationDirection_Ltr;
+            if (unknown)
+                entry.direction = CssPresentationDirection_Unknown;
+            else if (domElementRtl(element))
+                entry.direction = CssPresentationDirection_Rtl;
+            else
+                entry.direction = CssPresentationDirection_Ltr;
         }
         change = changeOf(old, style, sameCustom);
         valuesChanged = style != old && (old == nullptr || !sameStyle(old, style, sameCustom));
@@ -4907,8 +4988,8 @@ bool visitElement(Walk& w, PrDomElement* element, const CssComputedStyle* PR_NUL
         // (css-values-4/#font-relative-lengths).
         CssFontBases rootFont = cssStyleFontBases(style);
         // rex, rcap, rch and ric also read the root's font. A page that has measured no metric has never read it.
-        bool metrics = r->readsMetrics
-                       && (old == nullptr || old->groups[CssStyleGroup_Font] != style->groups[CssStyleGroup_Font]);
+        bool metrics = r->readsMetrics &&
+            (old == nullptr || old->groups[CssStyleGroup_Font] != style->groups[CssStyleGroup_Font]);
         if ((rootFont.em != w.rootFont.em || rootFont.lh != w.rootFont.lh || metrics) && !w.all)
             w.all = true;
         w.rootFont = rootFont;
@@ -4920,8 +5001,7 @@ bool visitElement(Walk& w, PrDomElement* element, const CssComputedStyle* PR_NUL
     // For a change that restyles every descendant, their styles are computed ahead in parallel, if a caller waits for
     // the result.
     if (w.parallel && domFlatHasChildren(element) && (w.all || subtree))
-        prefetch(r, element, style, w.rootFont, w.fresh,
-                 w.all || childRematch || (flags & DomStyleFlag_Features) != 0);
+        prefetch(r, element, style, w.rootFont, w.fresh, w.all || childRematch || (flags & DomStyleFlag_Features) != 0);
 
     // A foreignObject of SVG content has a box of its own, a root of the layout tree, whatever its parent's.
     bool box = (parentBox || isForeignRoot(element)) && generatesBox(element, style);
@@ -4968,8 +5048,8 @@ bool visitElement(Walk& w, PrDomElement* element, const CssComputedStyle* PR_NUL
     if (old == nullptr || countersChanged || scopeChanged || boxChanged) {
         bool counts = box && cssCountsElement(r, style, r->entries.data[at].listItem);
         CssPresentationEntry& counted = r->entries.data[at];
-        if (counts != counted.counts || (counts && countersChanged)
-            || ((boxChanged || scopeChanged) && counted.countsBelow))
+        if (counts != counted.counts || (counts && countersChanged) ||
+                ((boxChanged || scopeChanged) && counted.countsBelow))
             cssCountersChanged(r, element);
         counted.counts = counts;
         if (counts)
@@ -4988,8 +5068,8 @@ bool visitElement(Walk& w, PrDomElement* element, const CssComputedStyle* PR_NUL
     if ((flags & DomStyleFlag_Features) != 0)
         pushFeatures(r, element);
     bool checking = r->features.count != 0;
-    bool visit = made || w.all || subtree || change != ParentChange_None || checking
-                 || (flags & (DomStyleFlag_Descendant | DomStyleFlag_Children)) != 0;
+    bool visit = made || w.all || subtree || change != ParentChange_None || checking ||
+        (flags & (DomStyleFlag_Descendant | DomStyleFlag_Children)) != 0;
     if (!visit) {
         if (pseudos && contents)
             return true;
@@ -5084,7 +5164,7 @@ bool neverRendered(const PrDomElement* element) {
 // Returns the nearest ancestor of `element` whose children are fallback content, as a canvas's are, or null.
 const PrDomElement* PR_NULLABLE fallbackAround(const PrDomElement* element) {
     for (const PrDomElement* at = domElementFromNode(element->parent); at != nullptr;
-         at = domElementFromNode(at->parent)) {
+            at = domElementFromNode(at->parent)) {
         if (cssBoxTraits(at).holdsFallback)
             return at;
     }
@@ -5098,23 +5178,20 @@ const PrDomElement* PR_NULLABLE fallbackAround(const PrDomElement* element) {
 // displayed and the canvas is rendered (html/#being-used-as-relevant-canvas-fallback-content).
 bool interactive(const PrCssPresentation* r, const PrDomElement* element) {
     const PrDomElement* parent = domElementFromNode(element->parent);
-    bool svgContent = parent != nullptr && parent->space == PrDomNamespace_Svg
-                      && parent->tag != PrDomTag_ForeignObject;
+    bool svgContent = parent != nullptr && parent->space == PrDomNamespace_Svg && parent->tag != PrDomTag_ForeignObject;
     if (svgContent && neverRendered(element))
         return false;
     uint32_t at = cssPresentationNodeEntry(r, element);
     const CssPresentationEntry* entry = at != kHashMissing ? &r->entries.data[at] : nullptr;
     if (entry == nullptr || entry->style == nullptr)
         return svgContent && interactive(r, parent);
-    bool displayed = cssComputedFirstKeyword(entry->style,
-                                             PrCssProperty_Display) != PrCssKeyword_None;
+    bool displayed = cssComputedFirstKeyword(entry->style, PrCssProperty_Display) != PrCssKeyword_None;
     const PrDomElement* canvas = !svgContent && !entry->boxed && !entry->contents ? fallbackAround(element) : nullptr;
     const PrDomElement* around = svgContent ? parent : canvas;
     bool shown = around != nullptr ? displayed : entry->boxed || entry->contents;
-    return shown && cssComputedFirstKeyword(entry->style,
-                                            PrCssProperty_Visibility) == PrCssKeyword_Visible
-           && cssComputedFirstKeyword(entry->style, PrCssProperty_Interactivity) != PrCssKeyword_Inert
-           && (around == nullptr || interactive(r, around));
+    return shown && cssComputedFirstKeyword(entry->style, PrCssProperty_Visibility) == PrCssKeyword_Visible &&
+        cssComputedFirstKeyword(entry->style, PrCssProperty_Interactivity) != PrCssKeyword_Inert &&
+        (around == nullptr || interactive(r, around));
 }
 
 // Returns the layout node that presents `node`, or kPrLayoutNodeNone.
@@ -5137,10 +5214,10 @@ uint32_t edgeSideOf(PrCssProperty property, bool* padding) {
 // Returns true if the resolved value of `property` can be a used value, which a layout decides.
 bool resolvesFromLayout(PrCssProperty property) {
     bool padding = false;
-    return edgeSideOf(property, &padding) != PrRectSide_Count || property == PrCssProperty_Width
-           || property == PrCssProperty_Height
-           || property == PrCssProperty_TransformOrigin || property == PrCssProperty_PerspectiveOrigin
-           || property == PrCssProperty_GridTemplateColumns || property == PrCssProperty_GridTemplateRows;
+    return edgeSideOf(property, &padding) != PrRectSide_Count || property == PrCssProperty_Width ||
+        property == PrCssProperty_Height ||
+        property == PrCssProperty_TransformOrigin || property == PrCssProperty_PerspectiveOrigin ||
+        property == PrCssProperty_GridTemplateColumns || property == PrCssProperty_GridTemplateRows;
 }
 
 // Writes the used track list of the grid container `node` along `axis` (css-grid-1/#resolved-track-list): each track of
@@ -5192,8 +5269,8 @@ PrVec2 referenceBoxOf(const PrCssPresentation* r, PrLayoutNode node) {
 // Writes `m` as matrix() if it is a 2D matrix, and as matrix3d() otherwise
 // (css-transforms-2/#serialization-of-the-computed-value).
 void serializeMatrix(TextBuffer* out, const PrMatrix4& m) {
-    bool flat = m.m[2][0] == 0 && m.m[2][1] == 0 && m.m[0][2] == 0 && m.m[1][2] == 0 && m.m[2][2] == 1
-                && m.m[3][0] == 0 && m.m[3][1] == 0 && m.m[3][2] == 0 && m.m[3][3] == 1 && m.m[2][3] == 0;
+    bool flat = m.m[2][0] == 0 && m.m[2][1] == 0 && m.m[0][2] == 0 && m.m[1][2] == 0 && m.m[2][2] == 1 &&
+        m.m[3][0] == 0 && m.m[3][1] == 0 && m.m[3][2] == 0 && m.m[3][3] == 1 && m.m[2][3] == 0;
     // A matrix's arguments go column by column. matrix() leaves out the third row and column, and the fourth row.
     textAppend(out, flat ? "matrix(" : "matrix3d(");
     bool first = true;
@@ -5229,10 +5306,10 @@ double snapBorderWidth(double px, float ratio) {
 // Returns true if the computed value of `property` is snapped as a border width: a <line-width>
 // (css-backgrounds-3/#typedef-line-width), or outline-offset (w3c/csswg-drafts#12906).
 bool snapsAsBorderWidth(PrCssProperty property) {
-    return property == PrCssProperty_BorderTopWidth || property == PrCssProperty_BorderRightWidth
-           || property == PrCssProperty_BorderBottomWidth || property == PrCssProperty_BorderLeftWidth
-           || property == PrCssProperty_OutlineWidth || property == PrCssProperty_ColumnRuleWidth
-           || property == PrCssProperty_OutlineOffset;
+    return property == PrCssProperty_BorderTopWidth || property == PrCssProperty_BorderRightWidth ||
+        property == PrCssProperty_BorderBottomWidth || property == PrCssProperty_BorderLeftWidth ||
+        property == PrCssProperty_OutlineWidth || property == PrCssProperty_ColumnRuleWidth ||
+        property == PrCssProperty_OutlineOffset;
 }
 
 // Serializes the resolved value of `property` (cssom-1/#resolved-values). For width and height, this is the used value
@@ -5248,7 +5325,7 @@ bool snapsAsBorderWidth(PrCssProperty property) {
 // to over the reference box, which is empty if the element generates no box that is not an inline box. For every other
 // property, it is the computed value.
 void serializeResolved(TextBuffer* out, PrCssPresentation* r, const CssComputedStyle* style, PrCssProperty property,
-                       PrLayoutNode node) {
+        PrLayoutNode node) {
     for (uint32_t side = 0; side < PrRectSide_Count; ++side) {
         if (property == kBorderWidths[side] && !borderStyled(style, side)) {
             textAppend(out, "0px");
@@ -5257,8 +5334,8 @@ void serializeResolved(TextBuffer* out, PrCssPresentation* r, const CssComputedS
     }
     if (snapsAsBorderWidth(property)) {
         CssValueRun length = cssComputedValue(style, property);
-        if (length.count == 1 && length.values[0].kind == PrCssValueKind_Dimension
-            && length.values[0].unit == PrCssUnit_Px) {
+        if (length.count == 1 && length.values[0].kind == PrCssValueKind_Dimension &&
+                length.values[0].unit == PrCssUnit_Px) {
             float ratio = cssMediaEnvironmentPixelRatio(r->document->media);
             cssSerializeNumber(out, snapBorderWidth(length.values[0].number, ratio));
             textAppend(out, "px");
@@ -5281,9 +5358,8 @@ void serializeResolved(TextBuffer* out, PrCssPresentation* r, const CssComputedS
             return;
         }
     }
-    bool hasBox = node != kPrLayoutNodeNone
-                  && (prLayoutNodeKind(r->tree, node) == PrLayoutNodeKind_Replaced
-                      || !prLayoutDisplayIsInlineBox(displayOf(cssComputedValue(style, PrCssProperty_Display))));
+    bool hasBox = node != kPrLayoutNodeNone && (prLayoutNodeKind(r->tree, node) == PrLayoutNodeKind_Replaced ||
+        !prLayoutDisplayIsInlineBox(displayOf(cssComputedValue(style, PrCssProperty_Display))));
     if (property == PrCssProperty_Transform) {
         CssValueRun transform = cssComputedValue(style, PrCssProperty_Transform);
         if (transform.count == 0 || cssValueIsKeyword(transform.values, PrCssKeyword_None)) {
@@ -5341,9 +5417,8 @@ void serializeResolved(TextBuffer* out, PrCssPresentation* r, const CssComputedS
         PrLayoutStyle record = prLayoutStyleRecord(r->tree, prLayoutNodeStyle(r->tree, node));
         PrLayoutDisplay display = prLayoutBoxStyleRecord(r->tree, record.groups[PrLayoutGroup_Box]).display;
         if (display == PrLayoutDisplay_Grid || display == PrLayoutDisplay_InlineGrid) {
-            serializeTrackList(out, r, node,
-                               property == PrCssProperty_GridTemplateColumns ? PrLayoutGridAxis_Columns
-                                                                             : PrLayoutGridAxis_Rows);
+            bool columns = property == PrCssProperty_GridTemplateColumns;
+            serializeTrackList(out, r, node, columns ? PrLayoutGridAxis_Columns : PrLayoutGridAxis_Rows);
             return;
         }
     }
@@ -5370,19 +5445,18 @@ void serializeResolved(TextBuffer* out, PrCssPresentation* r, const CssComputedS
     CssValueRun computed = cssComputedValue(style, property);
     // light-dark() resolves to the color that the used color scheme chooses (css-color-5/#light-dark), which resolves
     // as if it were written alone.
-    while (cssIsColorProperty(property) && computed.count != 0
-           && cssValueIsFunction(computed.values, PrCssKeyword_LightDark)) {
+    while (cssIsColorProperty(property) && computed.count != 0 &&
+            cssValueIsFunction(computed.values, PrCssKeyword_LightDark)) {
         uint32_t at = 1;
         if (cssUsesDarkScheme(style, colorEnvironmentOf(r, 0, nullptr)))
             at += computed.values[at].next + 1;
         computed = cssValueSubtree(computed, at);
     }
     CssColor color{};
-    bool resolvable = computed.count != 0 && (computed.values[0].kind == PrCssValueKind_Keyword
-                                              || computed.values[0].kind == PrCssValueKind_Function);
-    if (cssIsColorProperty(property) && resolvable
-        && cssResolveColorComponents(computed, 0, cssStyleColorContext(style, colorEnvironmentOf(r, 0, nullptr)),
-                                     &color)) {
+    bool resolvable = computed.count != 0 && (computed.values[0].kind == PrCssValueKind_Keyword ||
+        computed.values[0].kind == PrCssValueKind_Function);
+    if (cssIsColorProperty(property) && resolvable &&
+            cssResolveColorComponents(computed, 0, cssStyleColorContext(style, colorEnvironmentOf(r, 0, nullptr)), &color)) {
         CssValuePool pool{};
         if (computed.values[0].kind == PrCssValueKind_Keyword) {
             PrColor srgb = cssColorToSrgb(color);
@@ -5428,17 +5502,17 @@ void serializeResolved(TextBuffer* out, PrCssPresentation* r, const CssComputedS
 
 // Returns true if a computed overflow is visible along both axes.
 bool overflowsVisibly(const CssComputedStyle* style) {
-    return overflowOf(cssComputedValue(style, PrCssProperty_OverflowX)) == PrLayoutOverflow_Visible
-           && overflowOf(cssComputedValue(style, PrCssProperty_OverflowY)) == PrLayoutOverflow_Visible;
+    return overflowOf(cssComputedValue(style, PrCssProperty_OverflowX)) == PrLayoutOverflow_Visible &&
+        overflowOf(cssComputedValue(style, PrCssProperty_OverflowY)) == PrLayoutOverflow_Visible;
 }
 
 // Returns true if any containment applies to an element styled by `style` (css-contain-2/#containment-types). The
 // containment can come from contain, from a content-visibility other than visible, or from a container-type that sizes
 // the element.
 bool isContained(const CssComputedStyle* style) {
-    return cssComputedFirstKeyword(style, PrCssProperty_Contain) != PrCssKeyword_None
-           || cssComputedFirstKeyword(style, PrCssProperty_ContentVisibility) != PrCssKeyword_Visible
-           || cssComputedFirstKeyword(style, PrCssProperty_ContainerType) != PrCssKeyword_Normal;
+    return cssComputedFirstKeyword(style, PrCssProperty_Contain) != PrCssKeyword_None ||
+        cssComputedFirstKeyword(style, PrCssProperty_ContentVisibility) != PrCssKeyword_Visible ||
+        cssComputedFirstKeyword(style, PrCssProperty_ContainerType) != PrCssKeyword_Normal;
 }
 
 // Sets the tree's canvas color (prLayoutTreeSetCanvasColor): the Canvas system color in the root's used color scheme
@@ -5473,15 +5547,14 @@ void projectCanvas(PrCssPresentation* r, PrDomElement* root, PrDomElement* PR_NU
     CssPresentationEntry& rootEntry = r->entries.data[rootAt];
     rootEntry.readsOutside = false;
     // If the body has no box, or containment applies, the root takes nothing from the body, whatever it took before.
-    if (bodyAt == kHashMissing || r->entries.data[bodyAt].layoutNode == kPrLayoutNodeNone
-        || isContained(rootEntry.style) || isContained(r->entries.data[bodyAt].style)) {
+    if (bodyAt == kHashMissing || r->entries.data[bodyAt].layoutNode == kPrLayoutNodeNone ||
+            isContained(rootEntry.style) || isContained(r->entries.data[bodyAt].style)) {
         if (bodyAt != kHashMissing && r->entries.data[bodyAt].layoutNode != kPrLayoutNodeNone) {
             CssPresentationEntry& bodyEntry = r->entries.data[bodyAt];
             bodyEntry.readsOutside = false;
             r->projecting = body;
             prLayoutNodeSetStyle(r->tree, bodyEntry.layoutNode,
-                                 project(r, bodyEntry.style, Presentation{}, bodyEntry.composited,
-                                         &bodyEntry.readsOutside));
+                project(r, bodyEntry.style, Presentation{}, bodyEntry.composited, &bodyEntry.readsOutside));
             r->readsOutside = r->readsOutside || bodyEntry.readsOutside;
         }
         r->projecting = root;
@@ -5500,24 +5573,24 @@ void projectCanvas(PrCssPresentation* r, PrDomElement* root, PrDomElement* PR_NU
     PrColor bodyBackground{};
     CssColorEnvironment environment = colorEnvironmentOf(r, r->headroom, &reads);
     cssResolveColor(cssComputedValue(rootEntry.style, PrCssProperty_BackgroundColor), 0,
-                    cssStyleColorContext(rootEntry.style, environment), &background);
+        cssStyleColorContext(rootEntry.style, environment), &background);
     cssResolveColor(cssComputedValue(bodyEntry.style, PrCssProperty_BackgroundColor), 0,
-                    cssStyleColorContext(bodyEntry.style, environment), &bodyBackground);
-    bool propagates = background.a == 0 && hasNoImages(cssComputedValue(rootEntry.style, PrCssProperty_BackgroundImage))
-                      && (bodyBackground.a != 0
-                          || !hasNoImages(cssComputedValue(bodyEntry.style, PrCssProperty_BackgroundImage)));
+        cssStyleColorContext(bodyEntry.style, environment), &bodyBackground);
+    bool propagates = background.a == 0 && hasNoImages(cssComputedValue(rootEntry.style,
+        PrCssProperty_BackgroundImage)) && (bodyBackground.a != 0 ||
+            !hasNoImages(cssComputedValue(bodyEntry.style, PrCssProperty_BackgroundImage)));
     bool scrolls = overflowsVisibly(rootEntry.style) && !overflowsVisibly(bodyEntry.style);
-    Presentation rootShare{.background = propagates ? bodyEntry.style : nullptr,
-                           .overflow = scrolls ? bodyEntry.style : nullptr,
-                           .flow = bodyEntry.style};
+    Presentation rootShare{
+        .background = propagates ? bodyEntry.style : nullptr,
+        .overflow = scrolls ? bodyEntry.style : nullptr,
+        .flow = bodyEntry.style,
+    };
     setCanvasColor(r, rootEntry.style, &reads);
     Presentation bodyShare{.dropBackground = propagates, .dropOverflow = scrolls};
     r->projecting = root;
-    prLayoutNodeSetStyle(r->tree, rootEntry.layoutNode,
-                         project(r, rootEntry.style, rootShare, rootEntry.composited, &reads));
+    prLayoutNodeSetStyle(r->tree, rootEntry.layoutNode, project(r, rootEntry.style, rootShare, rootEntry.composited, &reads));
     r->projecting = body;
-    prLayoutNodeSetStyle(r->tree, bodyEntry.layoutNode,
-                         project(r, bodyEntry.style, bodyShare, bodyEntry.composited, &reads));
+    prLayoutNodeSetStyle(r->tree, bodyEntry.layoutNode, project(r, bodyEntry.style, bodyShare, bodyEntry.composited, &reads));
     rootEntry.readsOutside = reads;
     bodyEntry.readsOutside = reads;
     r->readsOutside = r->readsOutside || reads;
@@ -5532,8 +5605,7 @@ const CssComputedStyle* presentedStyle(PrCssPresentation* r, uint32_t at) {
         return entry.style;
     }
     const CssComputedStyle* base = entry.base != nullptr ? entry.base : entry.style;
-    return cssAnimateApply(r, entry.node, base, true,
-                           colorEnvironmentOf(r, r->headroom, nullptr));
+    return cssAnimateApply(r, entry.node, base, true, colorEnvironmentOf(r, r->headroom, nullptr));
 }
 
 // Returns the entry of the pseudo-element `pseudo` of the element at `at`, if the presentation keeps a style for it, or
@@ -5541,9 +5613,11 @@ const CssComputedStyle* presentedStyle(PrCssPresentation* r, uint32_t at) {
 uint32_t keptPseudoOf(const PrCssPresentation* r, uint32_t at, CssPseudo pseudo) {
     if (pseudo == CssPseudo_FirstLine || pseudo == CssPseudo_FirstLetter)
         return kHashMissing;
-    CssPseudo holder = pseudo == CssPseudo_BeforeMarker ? CssPseudo_Before
-                       : pseudo == CssPseudo_AfterMarker ? CssPseudo_After
-                                                         : pseudo;
+    CssPseudo holder = pseudo;
+    if (pseudo == CssPseudo_BeforeMarker)
+        holder = CssPseudo_Before;
+    else if (pseudo == CssPseudo_AfterMarker)
+        holder = CssPseudo_After;
     const CssPresentationPseudo* kept = r->entries.data[at].pseudos[holder - CssPseudo_Before];
     uint32_t own = kept != nullptr ? cssPresentationNodeEntry(r, kept) : kHashMissing;
     if (own != kHashMissing && holder != pseudo) {
@@ -5567,9 +5641,15 @@ const CssComputedStyle* targetStyle(PrCssPresentation* r, uint32_t at, CssPseudo
         return style;
     startThreads(r);
     auto cascadePseudo = [&](const CssComputedStyle* parent, CssPseudo target) {
-        CssCascadeInput input{.element = static_cast<const PrDomElement*>(r->entries.data[at].node),
-                              .parent = parent, .rootFont = r->rootFont, .viewport = viewportOf(r), .fresh = false,
-                              .matched = nullptr, .pseudo = target};
+        CssCascadeInput input{
+            .element = static_cast<const PrDomElement*>(r->entries.data[at].node),
+            .parent = parent,
+            .rootFont = r->rootFont,
+            .viewport = viewportOf(r),
+            .fresh = false,
+            .matched = nullptr,
+            .pseudo = target,
+        };
         const CssComputedStyle* made =
             cssCascadeStyle(&r->rules, &r->threads.data[0].builder, &r->threads.data[0].scratch, input);
         cssComputedStyleRelease(parent);
@@ -5665,15 +5745,17 @@ bool differs(Difference* out, const PrDomNode* node, const char* what) {
 }
 
 // The names of the style groups, for reports.
-constexpr const char* kGroupNames[] = {"font",      "color",     "box",  "flex", "decoration",   "background",
-                                       "effect",    "compositing", "animation", "generated", "list", "svg",
-                                       "svg geometry", "table", "typography", "grid"};
+constexpr const char* kGroupNames[] = {
+    "font",      "color",     "box",  "flex", "decoration",   "background",
+    "effect",    "compositing", "animation", "generated", "list", "svg",
+    "svg geometry", "table", "typography", "grid",
+};
 static_assert(countOf(kGroupNames) == CssStyleGroup_Count);
 
 // Appends the first property of `group` whose value differs between the cached style and a restyle from scratch, with
 // both values.
 void describeGroupDifference(TextBuffer* out, CssStyleGroup group, const CssComputedStyle* cached,
-                             const CssComputedStyle* fresh) {
+        const CssComputedStyle* fresh) {
     CssStyleGroupProperties properties = cssStyleGroupProperties(group);
     for (uint32_t i = 0; i < properties.count; ++i) {
         PrCssProperty property = properties.properties[i];
@@ -5703,23 +5785,34 @@ void describeGroupDifference(TextBuffer* out, CssStyleGroup group, const CssComp
 // element, and `generating` says whether the pseudo-element may generate a box. `holds` says whether the boxes of the
 // element's children have a place. The marker of a ::before or an ::after is checked as its first box.
 bool verifyPseudo(PrCssPresentation* r, PrDomElement* element, uint32_t at, uint32_t which, CssPseudo kind,
-                  const CssComputedStyle* PR_NULLABLE style, bool generating, bool holds, CssFontBases rootFont,
-                  Difference* out, PrLayoutNode& expected) {
+        const CssComputedStyle* PR_NULLABLE style, bool generating, bool holds, CssFontBases rootFont,
+        Difference* out, PrLayoutNode& expected) {
     const CssComputedStyle* fresh = nullptr;
     if (generating) {
-        CssCascadeInput input{.element = element, .parent = style, .rootFont = rootFont, .viewport = viewportOf(r),
-                              .fresh = true, .matched = nullptr, .pseudo = kind};
+        CssCascadeInput input{
+            .element = element,
+            .parent = style,
+            .rootFont = rootFont,
+            .viewport = viewportOf(r),
+            .fresh = true,
+            .matched = nullptr,
+            .pseudo = kind,
+        };
         fresh = cssCascadeStyle(&r->rules, &r->threads.data[0].builder, &r->threads.data[0].scratch, input);
     }
     bool generates = fresh != nullptr && generatesPseudo(element, kind, fresh);
     CssPresentationPseudo* pseudo = r->entries.data[at].pseudos[which];
     uint32_t own = pseudo != nullptr ? cssPresentationNodeEntry(r, pseudo) : kHashMissing;
     PrLayoutNode node = own != kHashMissing ? r->entries.data[own].layoutNode : PrLayoutNode(kPrLayoutNodeNone);
-    const char* name = kind == CssPseudo_Before         ? "its ::before"
-                       : kind == CssPseudo_After        ? "its ::after"
-                       : kind == CssPseudo_BeforeMarker ? "its ::before::marker"
-                       : kind == CssPseudo_AfterMarker  ? "its ::after::marker"
-                                                        : "its ::marker";
+    const char* name = "its ::marker";
+    if (kind == CssPseudo_Before)
+        name = "its ::before";
+    else if (kind == CssPseudo_After)
+        name = "its ::after";
+    else if (kind == CssPseudo_BeforeMarker)
+        name = "its ::before::marker";
+    else if (kind == CssPseudo_AfterMarker)
+        name = "its ::after::marker";
     bool same = true;
     bool kept = own != kHashMissing && r->entries.data[own].style != nullptr;
     // An element whose box holds no children keeps the styles of its pseudo-elements until its box holds them again,
@@ -5760,27 +5853,23 @@ bool verifyPseudo(PrCssPresentation* r, PrDomElement* element, uint32_t at, uint
         PrLayoutNode run = prLayoutNodeFirstChild(r->tree, node);
         if (same && (kind == CssPseudo_Before || kind == CssPseudo_After)) {
             CssPseudo marker = kind == CssPseudo_Before ? CssPseudo_BeforeMarker : CssPseudo_AfterMarker;
-            same = verifyPseudo(r, element, own, kMarkerPseudo, marker, cached, cssIsListItem(cached), true,
-                                rootFont, out, run);
+            same = verifyPseudo(r, element, own, kMarkerPseudo, marker, cached, cssIsListItem(cached), true, rootFont, out, run);
         }
         bool content = true;
         bool contentReads = false;
-        eachGenerated(
-            r, cached, kind, pseudo->counters, &contentReads,
-            [&](PrStringView text) {
-                content = content && run != kPrLayoutNodeNone && prLayoutNodeText(r->tree, run) == text;
-                run = run != kPrLayoutNodeNone ? prLayoutNodeNextSibling(r->tree, run) : run;
-            },
-            [&](CssValueRun value) {
-                PrStringView reference{};
-                CssPresentationImage* loaded = urlOf(value, &reference) ? imageOf(r, reference) : nullptr;
-                bool painted = generatedImage(value) || cssValueRunFirstKeyword(value) == PrCssKeyword_None;
-                if (!painted && (loaded == nullptr || loaded->state != CssPresentationImageState_Loaded))
-                    return;
-                content = content && run != kPrLayoutNodeNone
-                          && prLayoutNodeKind(r->tree, run) == PrLayoutNodeKind_Replaced;
-                run = run != kPrLayoutNodeNone ? prLayoutNodeNextSibling(r->tree, run) : run;
-            });
+        eachGenerated(r, cached, kind, pseudo->counters, &contentReads, [&](PrStringView text) {
+            content = content && run != kPrLayoutNodeNone && prLayoutNodeText(r->tree, run) == text;
+            run = run != kPrLayoutNodeNone ? prLayoutNodeNextSibling(r->tree, run) : run;
+        }, [&](CssValueRun value) {
+            PrStringView reference{};
+            CssPresentationImage* loaded = urlOf(value, &reference) ? imageOf(r, reference) : nullptr;
+            bool painted = generatedImage(value) || cssValueRunFirstKeyword(value) == PrCssKeyword_None;
+            if (!painted && (loaded == nullptr || loaded->state != CssPresentationImageState_Loaded))
+                return;
+            content = content && run != kPrLayoutNodeNone &&
+                prLayoutNodeKind(r->tree, run) == PrLayoutNodeKind_Replaced;
+            run = run != kPrLayoutNodeNone ? prLayoutNodeNextSibling(r->tree, run) : run;
+        });
         content = content && run == kPrLayoutNodeNone;
         if (same && !content) {
             same = differs(out, element, name);
@@ -5801,7 +5890,7 @@ bool verifyPseudo(PrCssPresentation* r, PrDomElement* element, uint32_t at, uint
 // under `parentStyle`, and the children of each box are the boxes of the element's children in order. Writes the first
 // difference to `out`.
 bool verifyElement(PrCssPresentation* r, PrDomElement* element, const CssComputedStyle* PR_NULLABLE parentStyle,
-                   bool parentBox, CssFontBases rootFont, Difference* out, PrLayoutNode& cursor) {
+        bool parentBox, CssFontBases rootFont, Difference* out, PrLayoutNode& cursor) {
     const PrDomNode* self = element;
     uint32_t at = cssPresentationNodeEntry(r, element);
     if (at == kHashMissing || r->entries.data[at].style == nullptr)
@@ -5838,21 +5927,20 @@ bool verifyElement(PrCssPresentation* r, PrDomElement* element, const CssCompute
     PrLayoutNode node = r->entries.data[at].layoutNode;
     if (box != (node != kPrLayoutNodeNone))
         return differs(out, self, box ? "the element should generate a box and has none" : "the element has a box it "
-                                                                                           "should not generate");
+            "should not generate");
     // The records of the root and the body hold the canvas's background, which projectCanvas decides.
     bool canvas = parentStyle == nullptr || element == domDocumentBody(r->document);
     if (box && !canvas) {
         bool reads = false;
-        PrLayoutStyleIndex record =
-            project(r, cached, presentationOf(element), r->entries.data[at].composited, &reads);
+        PrLayoutStyleIndex record = project(r, cached, presentationOf(element), r->entries.data[at].composited, &reads);
         if (record != prLayoutNodeStyle(r->tree, node))
             return differs(out, self, "the box's layout record");
     }
     bool replaced = isReplaced(element);
     if (box) {
         PrLayoutNodeKind kind = prLayoutNodeKind(r->tree, node);
-        if ((kind == PrLayoutNodeKind_Replaced) != replaced
-            || (kind == PrLayoutNodeKind_SemiReplaced) != isSemiReplaced(element))
+        if ((kind == PrLayoutNodeKind_Replaced) != replaced ||
+                (kind == PrLayoutNodeKind_SemiReplaced) != isSemiReplaced(element))
             return differs(out, self, "the box's kind");
         if (replaced) {
             CssPresentationImageDrawing drawing = imageDrawingOf(r, cached);
@@ -5865,20 +5953,19 @@ bool verifyElement(PrCssPresentation* r, PrDomElement* element, const CssCompute
             const PrDrawImage* picture = pictureOf(element, drawing.oriented);
             // The painter of an outermost svg element's content, or of an SVG image.
             PrLayoutPainter vector = element->state != nullptr ? element->state->vector : PrLayoutPainter{};
-            bool painted = (domIsOuterSvg(element) && presentsSvg(r))
-                           || (embedOf(element) == 0 && !(sized && picture != nullptr) && vector.paint != nullptr);
-            if ((content.kind == PrLayoutContentKind_Embed) != (embedOf(element) != 0)
-                || (content.kind == PrLayoutContentKind_Embed && content.embed != embedOf(element))
-                || (content.kind == PrLayoutContentKind_Image) != (sized && picture != nullptr)
-                || (content.kind == PrLayoutContentKind_Image && content.image != picture)
-                || content.kind == PrLayoutContentKind_DrawList
-                || (content.kind == PrLayoutContentKind_Painter) != painted
-                || (content.kind == PrLayoutContentKind_Painter && !domIsOuterSvg(element)
-                    && (content.painter.context != vector.context
-                        || content.revision != element->state->vectorRevision)))
+            bool painted = (domIsOuterSvg(element) && presentsSvg(r)) ||
+                (embedOf(element) == 0 && !(sized && picture != nullptr) && vector.paint != nullptr);
+            if ((content.kind == PrLayoutContentKind_Embed) != (embedOf(element) != 0) ||
+                    (content.kind == PrLayoutContentKind_Embed && content.embed != embedOf(element)) ||
+                    (content.kind == PrLayoutContentKind_Image) != (sized && picture != nullptr) ||
+                    (content.kind == PrLayoutContentKind_Image && content.image != picture) ||
+                    content.kind == PrLayoutContentKind_DrawList || (content.kind == PrLayoutContentKind_Painter) != painted ||
+                    (content.kind == PrLayoutContentKind_Painter && !domIsOuterSvg(element) &&
+                        (content.painter.context != vector.context ||
+                            content.revision != element->state->vectorRevision)))
                 return differs(out, self, "the replaced box's content");
-            if (content.kind == PrLayoutContentKind_Image
-                && (content.limit != drawing.limit || content.rendering != drawing.rendering))
+            if (content.kind == PrLayoutContentKind_Image &&
+                    (content.limit != drawing.limit || content.rendering != drawing.rendering))
                 return differs(out, self, "how the replaced box's image is drawn");
         }
     }
@@ -5900,8 +5987,7 @@ bool verifyElement(PrCssPresentation* r, PrDomElement* element, const CssCompute
         generating |= 1u << CssPseudo_FieldContent;
     auto pseudoSame = [&](uint32_t which) {
         CssPseudo kind = CssPseudo(CssPseudo_Before + which);
-        return verifyPseudo(r, element, at, which, kind, cached, (generating & (1u << kind)) != 0, box, rootFont, out,
-                            expected);
+        return verifyPseudo(r, element, at, which, kind, cached, (generating & (1u << kind)) != 0, box, rootFont, out, expected);
     };
     if (!pseudoSame(kMarkerPseudo) || !pseudoSame(kBeforePseudo) || !pseudoSame(kFieldContentPseudo))
         return false;
@@ -5913,18 +5999,17 @@ bool verifyElement(PrCssPresentation* r, PrDomElement* element, const CssCompute
                 return false;
         } else if (!domIsText(child)) {
             continue;
-        } else if (box && prStringView(&static_cast<PrDomCharacterData*>(child)->data).size != 0
-                   && layoutNodeOf(r, child) == kPrLayoutNodeNone) {
+        } else if (box && prStringView(&static_cast<PrDomCharacterData*>(child)->data).size != 0 &&
+                layoutNodeOf(r, child) == kPrLayoutNodeNone) {
             return differs(out, child, "the text node should generate a box and has none");
         }
         // A foreignObject's box is a root, among no box's children.
-        PrLayoutNode childBox =
-            e != nullptr && isForeignRoot(e) ? PrLayoutNode(kPrLayoutNodeNone) : layoutNodeOf(r, child);
+        PrLayoutNode childBox = e != nullptr && isForeignRoot(e) ? PrLayoutNode(kPrLayoutNodeNone) : layoutNodeOf(r, child);
         if (childBox != kPrLayoutNodeNone && domIsText(child)) {
             bool reads = false;
-            PrLayoutStyleIndex textStyle =
-                contents ? project(r, cached, presentationOf(element), r->entries.data[at].composited, &reads)
-                         : kPrLayoutStyleNone;
+            PrLayoutStyleIndex textStyle = kPrLayoutStyleNone;
+            if (contents)
+                textStyle = project(r, cached, presentationOf(element), r->entries.data[at].composited, &reads);
             if (prLayoutNodeStyle(r->tree, childBox) != textStyle)
                 return differs(out, child, "the record the text is set in");
         }
@@ -5945,8 +6030,8 @@ bool verifyElement(PrCssPresentation* r, PrDomElement* element, const CssCompute
 bool sameCounterTexts(const CssCountingTexts& a, const CssCountingTexts& b) {
     if (a.text.count != b.text.count || a.ends.count != b.ends.count)
         return false;
-    return (a.text.count == 0 || memEquals(a.text.data, b.text.data, a.text.count))
-           && (a.ends.count == 0 || memEquals(a.ends.data, b.ends.data, a.ends.count * sizeof(uint32_t)));
+    return (a.text.count == 0 || memEquals(a.text.data, b.text.data, a.text.count)) &&
+        (a.ends.count == 0 || memEquals(a.ends.data, b.ends.data, a.ends.count * sizeof(uint32_t)));
 }
 
 // Returns true if the texts that the counters give each pseudo-element are those that a pass over every box gives. The
@@ -5959,15 +6044,15 @@ bool verifyCounters(PrCssPresentation* r, Difference* out) {
     };
     Check check{out, true};
     cssCountersRun(r, CssCountingWalk_Every, [](void* PR_NULLABLE context, CssPresentationPseudo* pseudo,
-                                                const CssCountingTexts* texts) {
-        Check* c = static_cast<Check*>(context);
-        if (!c->same || sameCounterTexts(pseudo->counters, *texts))
-            return;
-        c->same = differs(c->out, pseudo, "the texts that counters give its content: cached ");
-        textAppend(&c->out->what, PrStringView{pseudo->counters.text.data, pseudo->counters.text.count});
-        textAppend(&c->out->what, ", fresh ");
-        textAppend(&c->out->what, PrStringView{texts->text.data, texts->text.count});
-    }, &check);
+        const CssCountingTexts* texts) {
+            Check* c = static_cast<Check*>(context);
+            if (!c->same || sameCounterTexts(pseudo->counters, *texts))
+                return;
+            c->same = differs(c->out, pseudo, "the texts that counters give its content: cached ");
+            textAppend(&c->out->what, PrStringView{pseudo->counters.text.data, pseudo->counters.text.count});
+            textAppend(&c->out->what, ", fresh ");
+            textAppend(&c->out->what, PrStringView{texts->text.data, texts->text.count});
+        }, &check);
     return check.same;
 }
 
@@ -6096,7 +6181,11 @@ void syncFonts(PrCssPresentation* r) {
             index = r->fontFaces.count;
             uint64_t key = ++r->nextFontFaceKey;
             r->fontFaces.push(CssPresentationFontFace{
-                .face = face, .key = key, .status = PrCssFontFaceStatus_Unloaded, .described = described});
+                .face = face,
+                .key = key,
+                .status = PrCssFontFaceStatus_Unloaded,
+                .described = described,
+            });
             r->fontFaceKeys.insert(key, index);
             r->fontFaceAddresses.insert(uint64_t(uintptr_t(face)), index);
             if (described) {
@@ -6146,8 +6235,8 @@ void syncFonts(PrCssPresentation* r) {
     if (r->readsMetrics) {
         for (uint32_t i = 0; i < r->entries.count; ++i) {
             const CssPresentationEntry& entry = r->entries.data[i];
-            if (entry.node != nullptr && entry.style != nullptr
-                && (entry.style->readsFontMetrics || entry.style->readsRootMetrics))
+            if (entry.node != nullptr && entry.style != nullptr &&
+                    (entry.style->readsFontMetrics || entry.style->readsRootMetrics))
                 mark(seen(const_cast<PrDomNode*>(entry.node)), DomStyleFlag_Self);
         }
     }
@@ -6225,8 +6314,8 @@ bool restyle(PrCssPresentation* r, PrLayoutVec extent, RestyleReach reach) {
         svgInvalidate(r);
     for (uint32_t i = 0; reproject && i < r->entries.count; ++i) {
         const CssPresentationEntry& entry = r->entries.data[i];
-        if (entry.node != nullptr
-            && (everyBox || entry.readsOutside || entry.animationReadsOutside || entry.contentReadsOutside)) {
+        if (entry.node != nullptr &&
+                (everyBox || entry.readsOutside || entry.animationReadsOutside || entry.contentReadsOutside)) {
             r->entries.data[i].reprojectPending = true;
             mark(const_cast<PrDomNode*>(r->entries.data[i].node), DomStyleFlag_Self);
         }
@@ -6252,7 +6341,7 @@ bool restyle(PrCssPresentation* r, PrLayoutVec extent, RestyleReach reach) {
     // element. A change to the document's sheets files them again over the same user agent's rules.
     if (r->restyleAll || r->userAgentRules.generation == 0) {
         cssRuleSetBuildUserAgent(&r->userAgentRules, r->document, r->userAgent.data, r->userAgent.count, conditions,
-                                 r->document->media);
+            r->document->media);
     }
     if (r->restyleAll || r->rulesStale) {
         Array<CssTreeSheets> trees;
@@ -6262,8 +6351,8 @@ bool restyle(PrCssPresentation* r, PrLayoutVec extent, RestyleReach reach) {
         cssRuleSetBuild(&r->rules, &r->userAgentRules, trees.data, trees.count, r->document->media);
         trees.reset();
         const Array<const CssRuleData* PR_NONNULL>& now = r->rules.counterStyleRules;
-        if (now.count != counterStyles.count
-            || !memEquals(now.data, counterStyles.data, now.count * sizeof(const CssRuleData*)))
+        if (now.count != counterStyles.count ||
+                !memEquals(now.data, counterStyles.data, now.count * sizeof(const CssRuleData*)))
             counterStylesChanged(r);
         counterStyles.reset();
     }
@@ -6284,14 +6373,16 @@ bool restyle(PrCssPresentation* r, PrLayoutVec extent, RestyleReach reach) {
         // The restyles of a load are background work, which uses only this thread. A caller that waits for the restyle,
         // or a change after all the content is in, counts as someone waiting.
         bool loading = r->document->readiness == DomReadiness_Loading || r->holding;
-        Walk w{.presentation = r,
-               .all = all,
-               .fresh = job ? r->newLeft : UINT32_MAX,
-               .taken = 0,
-               .deadline = deadline,
-               .parallel = !job || !loading,
-               .rootFont = r->rootFont,
-               .body = body};
+        Walk w{
+            .presentation = r,
+            .all = all,
+            .fresh = job ? r->newLeft : UINT32_MAX,
+            .taken = 0,
+            .deadline = deadline,
+            .parallel = !job || !loading,
+            .rootFont = r->rootFont,
+            .body = body,
+        };
         visitElement(w, root, nullptr, ParentChange_None, false, false, true);
         r->rootFont = w.rootFont;
         if (r->countersStale)
@@ -6346,9 +6437,9 @@ PrLayoutWheelEvents viewportWheelEvents(const PrCssPresentation* r) {
     PrDomDocument* document = r->document;
     const PrDomElement* root = domDocumentElement(document);
     const PrDomElement* body = root != nullptr ? domDocumentBody(document) : nullptr;
-    bool waits = (document->global != nullptr && domHasBlockingWheelListener(document->global))
-                 || domHasBlockingWheelListener(document) || (root != nullptr && domHasBlockingWheelListener(root))
-                 || (body != nullptr && domHasBlockingWheelListener(body));
+    bool waits = (document->global != nullptr && domHasBlockingWheelListener(document->global)) ||
+        domHasBlockingWheelListener(document) || (root != nullptr && domHasBlockingWheelListener(root)) ||
+        (body != nullptr && domHasBlockingWheelListener(body));
     return waits ? PrLayoutWheelEvents_Blocking : PrLayoutWheelEvents_Passive;
 }
 
@@ -6399,7 +6490,7 @@ void applyBoxes(PrCssPresentation* r) {
                 box = prLayoutNodeCreateElement(r->tree, kPrLayoutNodeNone, projectEntry(r, entry));
             } else if (domIsText(node)) {
                 box = prLayoutNodeCreateText(r->tree, kPrLayoutNodeNone,
-                                             prStringView(&static_cast<PrDomCharacterData*>(node)->data));
+                    prStringView(&static_cast<PrDomCharacterData*>(node)->data));
             } else if (isReplaced(static_cast<PrDomElement*>(node))) {
                 box = prLayoutNodeCreateReplaced(r->tree, kPrLayoutNodeNone, projectEntry(r, entry));
                 applyContent(r, static_cast<PrDomElement*>(node), box);
@@ -6454,8 +6545,11 @@ void applyBoxes(PrCssPresentation* r) {
     PrLayoutNode node = at != kHashMissing ? r->entries.data[at].layoutNode : PrLayoutNode(kPrLayoutNodeNone);
     r->root = node;
     uint32_t bodyAt = body != nullptr ? cssPresentationNodeEntry(r, body) : kHashMissing;
-    PrLayoutNode bodyNode =
-        bodyAt != kHashMissing ? r->entries.data[bodyAt].layoutNode : PrLayoutNode(kPrLayoutNodeNone);
+    PrLayoutNode bodyNode;
+    if (bodyAt != kHashMissing)
+        bodyNode = r->entries.data[bodyAt].layoutNode;
+    else
+        bodyNode = PrLayoutNode(kPrLayoutNodeNone);
     if (root != nullptr && (canvas || node != r->canvasRoot || bodyNode != r->canvasBody))
         projectCanvas(r, root, body);
     r->canvasRoot = node;
@@ -6577,8 +6671,7 @@ void cssPresentationRemoving(PrCssPresentation* presentation, PrDomNode* node) {
 }
 
 void cssPresentationAttributeChanged(PrCssPresentation* presentation, PrDomElement* element, DomNamespaceId space,
-                                     PrStringView name,
-                                     PrStringView oldValue, PrStringView value) {
+        PrStringView name, PrStringView oldValue, PrStringView value) {
     // HTML's attributes are in no namespace. An attribute in another namespace, such as xml:lang, reaches what reads
     // its local name.
     bool html = space == PrDomNamespace_None;
@@ -6603,9 +6696,8 @@ void cssPresentationAttributeChanged(PrCssPresentation* presentation, PrDomEleme
     }
     invalidate(presentation, element, cssFeatureHash(CssFeature_Attribute, name));
     // The element's language is part of its style, and a change of locale restyles its descendants (changeOf).
-    bool language = name == "lang"
-                    && (space == PrDomNamespace_Xml
-                        || (html && (element->space == PrDomNamespace_Html || element->space == PrDomNamespace_Svg)));
+    bool language = name == "lang" && (space == PrDomNamespace_Xml ||
+        (html && (element->space == PrDomNamespace_Html || element->space == PrDomNamespace_Svg)));
     if (language) {
         presentation->changed = true;
         mark(element, DomStyleFlag_Self);
@@ -6615,8 +6707,8 @@ void cssPresentationAttributeChanged(PrCssPresentation* presentation, PrDomEleme
     // A style that reads attributes through attr() restyles its element: the element's inline style, or a rule whose
     // attr() takes its name from another function.
     const CssElementStyle* style = element->style;
-    if (presentation->rules.reads.attributes
-        || (style != nullptr && style->inlineStyle != nullptr && cssBlockReadsAttributes(&style->inlineStyle->block))) {
+    if (presentation->rules.reads.attributes ||
+            (style != nullptr && style->inlineStyle != nullptr && cssBlockReadsAttributes(&style->inlineStyle->block))) {
         presentation->changed = true;
         mark(element, DomStyleFlag_Self);
     }
@@ -6662,8 +6754,7 @@ void cssPresentationDataChanged(PrCssPresentation* presentation, PrDomNode* node
     if (presentation->rules.reads.direction && invalidates(presentation))
         invalidateDirection(presentation, node);
     // :empty in a :has() argument reads whether an element has text.
-    if (!presentation->restyleAll && presentation->rules.reads.structure
-        && presentation->rules.anchors.anchors.count != 0)
+    if (!presentation->restyleAll && presentation->rules.reads.structure && presentation->rules.anchors.anchors.count != 0)
         invalidateAnchors(presentation, node, presentation->rules.anchors);
     // :empty reads whether an element has text.
     if (presentation->rules.reads.structure && node->parent != nullptr && readsEmpty(presentation, node->parent))
@@ -6676,7 +6767,7 @@ void cssPresentationContentChanged(PrCssPresentation* presentation, PrDomElement
 }
 
 void cssPresentationStateChanged(PrCssPresentation* presentation, PrDomElement* element, const CssPseudoClass* states,
-                                 uint32_t count) {
+        uint32_t count) {
     if (!invalidates(presentation))
         return;
     for (uint32_t i = 0; i < count; ++i)
@@ -6684,8 +6775,7 @@ void cssPresentationStateChanged(PrCssPresentation* presentation, PrDomElement* 
 }
 
 void cssPresentationSlotChanged(PrCssPresentation* presentation, PrDomElement* slot,
-                                PrDomNode* const PR_NONNULL* PR_NULLABLE before,
-                                uint32_t beforeCount) {
+        PrDomNode* const PR_NONNULL* PR_NULLABLE before, uint32_t beforeCount) {
     presentation->changed = true;
     uint32_t count = domSlotAssignedCount(slot);
     PrDomNode* const* now = domSlotAssigned(slot);
@@ -6758,9 +6848,9 @@ void cssPresentationFlush(PrCssPresentation* presentation) {
         return;
     }
     PrVec2 viewport{};
-    PrLayoutVec extent = host != nullptr && host->viewport != nullptr && host->viewport(host->context, &viewport)
-                             ? prLayoutVecFromPx(viewport)
-                             : presentation->extent;
+    PrLayoutVec extent = presentation->extent;
+    if (host != nullptr && host->viewport != nullptr && host->viewport(host->context, &viewport))
+        extent = prLayoutVecFromPx(viewport);
     prCssPresentationUpdate(presentation, extent);
 }
 
@@ -6858,8 +6948,7 @@ void cssPresentationHits(PrCssPresentation* presentation, PrLayoutVec point, uin
     boxes.reset();
 }
 
-const CssComputedStyle* PR_NULLABLE cssPresentationStyle(const PrCssPresentation* presentation,
-                                                         const PrDomElement* element) {
+const CssComputedStyle* PR_NULLABLE cssPresentationStyle(const PrCssPresentation* presentation, const PrDomElement* element) {
     uint32_t at = cssPresentationNodeEntry(presentation, element);
     return at != kHashMissing ? presentation->entries.data[at].style : nullptr;
 }
@@ -6870,27 +6959,27 @@ bool cssPresentationIsInteractive(PrCssPresentation* presentation, const PrDomEl
 }
 
 const CssComputedStyle* cssPresentationStyleUnder(PrCssPresentation* presentation, const PrDomElement* element,
-                                                  const CssComputedStyle* PR_NULLABLE parent) {
+        const CssComputedStyle* PR_NULLABLE parent) {
     startThreads(presentation);
     cssStylePrepare(const_cast<PrDomElement*>(element));
     // The element is a copy, made again by each build of its tree, which may take the place of a copy that the matchers
     // learned of.
     cssCascadeScratchForget(&presentation->threads.data[0].scratch);
-    CssCascadeInput input{.element = element,
-                          .parent = parent,
-                          .rootFont = presentation->rootFont,
-                          .viewport = viewportOf(presentation),
-                          .fresh = false,
-                          .matched = nullptr,
-                          .pseudo = CssPseudo_None};
+    CssCascadeInput input{
+        .element = element,
+        .parent = parent,
+        .rootFont = presentation->rootFont,
+        .viewport = viewportOf(presentation),
+        .fresh = false,
+        .matched = nullptr,
+        .pseudo = CssPseudo_None,
+    };
     CssPresentationThread& thread = presentation->threads.data[0];
     return cssCascadeStyle(&presentation->rules, &thread.builder, &thread.scratch, input);
 }
 
 const CssComputedStyle* PR_NULLABLE cssPresentationPseudoStyleUnder(PrCssPresentation* presentation,
-                                                                    const PrDomElement* element,
-                                                                    CssPseudo pseudo,
-                                                                    const CssComputedStyle* PR_NULLABLE parent) {
+        const PrDomElement* element, CssPseudo pseudo, const CssComputedStyle* PR_NULLABLE parent) {
     if (!stylesFirsts(presentation))
         return nullptr;
     startThreads(presentation);
@@ -6919,8 +7008,7 @@ CssColorContext cssPresentationColorContext(PrCssPresentation* presentation, con
     return cssStyleColorContext(style, environment);
 }
 
-const CssComputedStyle* PR_NULLABLE cssPresentationStyleCurrent(PrCssPresentation* presentation,
-                                                                const PrDomElement* element) {
+const CssComputedStyle* PR_NULLABLE cssPresentationStyleCurrent(PrCssPresentation* presentation, const PrDomElement* element) {
     restyle(presentation, presentation->extent, RestyleReach_All);
     return cssPresentationStyle(presentation, element);
 }
@@ -6931,7 +7019,7 @@ PrLayoutTree* cssPresentationOwnTree(PrCssPresentation* presentation) {
 }
 
 bool cssPresentationMapFromContent(PrCssPresentation* presentation, const PrDomElement* element, PrDVec2* points,
-                                   uint32_t count) {
+        uint32_t count) {
     PrLayoutTree* tree = cssPresentationOwnTree(presentation);
     PrLayoutNode box = layoutNodeOf(presentation, element);
     if (box == kPrLayoutNodeNone)
@@ -7001,9 +7089,9 @@ void cssPresentationSendAnimationEvents(PrCssPresentation* presentation) {
 }
 
 bool cssPresentationHasWork(const PrCssPresentation* presentation) {
-    return presentation->scrolled.count != 0 || presentation->animations.events.count != 0 || presentation->changed
-           || cssDocumentRoot(presentation->document)->fontsVersion != presentation->fontsVersion
-           || cssPresentationAwaitsFontRequests(presentation);
+    return presentation->scrolled.count != 0 || presentation->animations.events.count != 0 || presentation->changed ||
+        cssDocumentRoot(presentation->document)->fontsVersion != presentation->fontsVersion ||
+        cssPresentationAwaitsFontRequests(presentation);
 }
 
 bool cssPresentationAwaitsFontRequests(const PrCssPresentation* presentation) {
@@ -7015,9 +7103,8 @@ bool cssPresentationAwaitsFontRequests(const PrCssPresentation* presentation) {
     // The count describes the faces as the last sync listed them. A face added or deleted, or a sheet or rule changed
     // since then, leaves the count stale, and a stale count may hide a face that layout will request. A face's status
     // leaves Unloaded and never returns to it, so a status change leaves the count no lower than the true value.
-    bool counted =
-        style->fontSetVersion == presentation->unloadedFacesVersion && !presentation->rulesStale
-        && !presentation->restyleAll;
+    bool counted = style->fontSetVersion == presentation->unloadedFacesVersion && !presentation->rulesStale &&
+        !presentation->restyleAll;
     return !counted || presentation->unloadedFaces != 0;
 }
 
@@ -7028,8 +7115,7 @@ void cssPresentationUpdateStyle(PrCssPresentation* presentation) {
 }
 
 void cssPresentationComputedBlock(PrCssPresentation* presentation, const PrDomElement* element, CssPseudo pseudo,
-                                  CssDeclarationBlock* out, const void* PR_NULLABLE* PR_NONNULL filler,
-                                  uint64_t* version) {
+        CssDeclarationBlock* out, const void* PR_NULLABLE* PR_NONNULL filler, uint64_t* version) {
     cssPresentationFlush(presentation);
     if (*filler == presentation && *version == presentation->version)
         return;
@@ -7054,8 +7140,7 @@ void cssPresentationComputedBlock(PrCssPresentation* presentation, const PrDomEl
 }
 
 bool cssPresentationComputedValue(PrCssPresentation* presentation, const PrDomElement* element, CssPseudo pseudo,
-                                  PrCssProperty property,
-                                  TextBuffer* out) {
+        PrCssProperty property, TextBuffer* out) {
     // A flow-relative property resolves as its physical counterpart, using the element's own writing mode and
     // direction.
     if (cssIsFlowRelative(property)) {
@@ -7076,12 +7161,12 @@ bool cssPresentationComputedValue(PrCssPresentation* presentation, const PrDomEl
     else
         restyle(presentation, presentation->extent, RestyleReach_All);
     uint32_t at = cssPresentationNodeEntry(presentation, element);
-    if (at == kHashMissing || presentation->entries.data[at].style == nullptr
-        || cssStyleSlot(property).group == CssStyleGroup_Count)
+    if (at == kHashMissing || presentation->entries.data[at].style == nullptr ||
+            cssStyleSlot(property).group == CssStyleGroup_Count)
         return true;
     const CssComputedStyle* style = targetStyle(presentation, at, pseudo);
     serializeResolved(out, presentation, style, property,
-                      pseudo == CssPseudo_None ? presentation->entries.data[at].layoutNode : kPrLayoutNodeNone);
+        pseudo == CssPseudo_None ? presentation->entries.data[at].layoutNode : kPrLayoutNodeNone);
     cssComputedStyleRelease(style);
     return true;
 }
@@ -7132,7 +7217,10 @@ PrCssPresentation* prCssPresentationCreate(const PrCssPresentationDesc* desc) {
         CssSheetData* data = cssSheetDataCreate();
         cssSheetDataParse(data, sheet.source, nullptr, CssOrigin_UserAgent);
         r->userAgent.push(CssParsedUserAgentSheet{
-            .data = data, .conditions = sheet.conditions, .appearance = appearanceOf(sheet.appearance)});
+            .data = data,
+            .conditions = sheet.conditions,
+            .appearance = appearanceOf(sheet.appearance),
+        });
     }
     r->extent = kDefaultExtent;
     r->schemesStale = true;
@@ -7284,8 +7372,8 @@ void prCssPresentationSetJobBudget(PrCssPresentation* presentation, double milli
 bool prCssPresentationIsCurrent(const PrCssPresentation* presentation) {
     // The listeners that make the wheel wait over the whole viewport are found as each job starts, since the window's
     // are not the document's to report.
-    return !presentation->changed && !presentation->layoutStale && !presentation->sceneStale
-           && viewportWheelEvents(presentation) == prLayoutTreeViewportWheelEvents(presentation->tree);
+    return !presentation->changed && !presentation->layoutStale && !presentation->sceneStale &&
+        viewportWheelEvents(presentation) == prLayoutTreeViewportWheelEvents(presentation->tree);
 }
 
 void prCssPresentationWait(PrCssPresentation* presentation) {
@@ -7337,8 +7425,9 @@ uint32_t prCssPresentationTracks(PrCssPresentation* presentation, PrLayoutTrack*
     own(presentation);
     auto layoutNode = [](const PrCssPresentation* d, const PrDomNode* target) {
         uint32_t at = cssPresentationNodeEntry(d, target);
-        return at != kHashMissing && d->entries.data[at].composited ? d->entries.data[at].layoutNode
-                                                                      : PrLayoutNode(kPrLayoutNodeNone);
+        if (at != kHashMissing && d->entries.data[at].composited)
+            return d->entries.data[at].layoutNode;
+        return PrLayoutNode(kPrLayoutNodeNone);
     };
     auto baseOf = [](const PrCssPresentation* d, const PrDomNode* target) -> const CssComputedStyle* {
         uint32_t at = cssPresentationNodeEntry(d, target);
@@ -7373,8 +7462,8 @@ bool prCssPresentationVerify(PrCssPresentation* presentation, PrString* PR_NULLA
     Difference found{nullptr, {}};
     PrDomElement* root = domDocumentElement(r->document);
     PrLayoutNode cursor = kPrLayoutNodeNone;
-    bool same = root == nullptr
-                || verifyElement(r, root, nullptr, true, cssStyleFontBases(rootStyleOf(r, root)), &found, cursor);
+    bool same =
+        root == nullptr || verifyElement(r, root, nullptr, true, cssStyleFontBases(rootStyleOf(r, root)), &found, cursor);
     if (same)
         same = verifyCounters(r, &found);
     if (same)
@@ -7467,7 +7556,7 @@ PrLayoutVec prCssPresentationScrollFrom(PrCssPresentation* presentation, PrLayou
 }
 
 uint32_t prCssPresentationTakeScrolls(PrCssPresentation* presentation, PrLayoutSceneScroll* PR_NULLABLE out,
-                                      uint32_t capacity) {
+        uint32_t capacity) {
     uint32_t count = presentation->documentScrolls.count < capacity ? presentation->documentScrolls.count : capacity;
     for (uint32_t i = 0; i < count; ++i)
         out[i] = presentation->documentScrolls.data[i];

@@ -52,31 +52,42 @@ PrLayoutNode specimenRow(PrKit* kit, PrLayoutNode parent, float gap, bool wrap) 
 
 // Creates the cells of an asset's row: its name by its icon, its type, its size and when it was modified.
 void assetCells(PrKit* kit, PrLayoutNode row, const AssetRow& asset) {
-    prKitTableCell(kit, row,
-                   {.column = 0, .text = asset.name, .icon = asset.icon, .role = PrKitTextRole_BodySmall});
-    prKitTableCell(kit, row, {.column = 1, .text = asset.type, .role = PrKitTextRole_Mono,
-                              .tone = PrKitTone_Secondary});
-    prKitTableCell(kit, row, {.column = 2, .text = asset.sizeText, .role = PrKitTextRole_Mono,
-                              .tone = PrKitTone_Secondary});
-    prKitTableCell(kit, row, {.column = 3, .text = asset.modified, .role = PrKitTextRole_Mono,
-                              .tone = PrKitTone_Muted});
+    prKitTableCell(kit, row, {.column = 0, .text = asset.name, .icon = asset.icon, .role = PrKitTextRole_BodySmall});
+    prKitTableCell(kit, row, {
+        .column = 1,
+        .text = asset.type,
+        .role = PrKitTextRole_Mono,
+        .tone = PrKitTone_Secondary,
+    });
+    prKitTableCell(kit, row, {
+        .column = 2,
+        .text = asset.sizeText,
+        .role = PrKitTextRole_Mono,
+        .tone = PrKitTone_Secondary,
+    });
+    prKitTableCell(kit, row, {
+        .column = 3,
+        .text = asset.modified,
+        .role = PrKitTextRole_Mono,
+        .tone = PrKitTone_Muted,
+    });
 }
 
 } // namespace
 
 void sectionTree(PrKit* kit, PrLayoutNode parent, GalleryState& state) {
     TreeState& tree = state.tree;
-    PrLayoutNode section = sectionFrame(
-        kit, parent, "10", "Tree View", "Expand, select, hide, drag to reparent.",
+    PrLayoutNode section = sectionFrame(kit, parent, "10", "Tree View", "Expand, select, hide, drag to reparent.",
         "Click a row and Up and Down walk the tree, Left and Right fold and unfold it. A row carries an "
-              "optional status in place of its glyph, and a drag lands before, after or into the row under the "
-              "pointer.");
+            "optional status in place of its glyph, and a drag lands before, after or into the row under the pointer.");
     PrLayoutNode panel = demoPanel(kit, section, "SCENE HIERARCHY", "LIVE . DRAG TO REPARENT", true);
     treeOrder(tree);
-    PrKitTreeView content{.count = uint32_t(tree.rows.size()),
-                          .selection = &tree.cursor,
-                          .items = tree.rows.data(),
-                          .dragKind = kDragTreeRow};
+    PrKitTreeView content{
+        .count = uint32_t(tree.rows.size()),
+        .selection = &tree.cursor,
+        .items = tree.rows.data(),
+        .dragKind = kDragTreeRow,
+    };
     PrLayoutNode view =
         prKitTreeView(kit, panel, content, {.place = {.height = prKitPx(300), .flex = PrKitFlex_Fixed}});
     PrUi* ui = prKitUi(kit);
@@ -84,15 +95,17 @@ void sectionTree(PrKit* kit, PrLayoutNode parent, GalleryState& state) {
     for (uint32_t i = window.first; i < window.first + window.count; ++i) {
         uint32_t key = tree.keys[i];
         TreeNode* node = findTreeNode(tree, key);
-        PrKitRow row{.index = i,
-                     .item = key,
-                     .icon = node->icon,
-                     .tone = PrKitTone(node->hidden ? PrKitTone_Faint : PrKitTone_Primary),
-                     .selected = tree.selected == key,
-                     .statusTone = node->badgeTone,
-                     .status = node->badge,
-                     .label = node->name,
-                     .meta = node->meta};
+        PrKitRow row{
+            .index = i,
+            .item = key,
+            .icon = node->icon,
+            .tone = PrKitTone(node->hidden ? PrKitTone_Faint : PrKitTone_Primary),
+            .selected = tree.selected == key,
+            .statusTone = node->badgeTone,
+            .status = node->badge,
+            .label = node->name,
+            .meta = node->meta,
+        };
         PrLayoutNode rowNode = prKitTreeRow(kit, view, row);
         PrKitVisibilityToggle toggle{.hidden = node->hidden, .revealed = prUiIsHovered(ui, rowNode)};
         if (prKitActivated(kit, prKitVisibilityToggle(kit, rowNode, toggle)))
@@ -108,9 +121,11 @@ void sectionTree(PrKit* kit, PrLayoutNode parent, GalleryState& state) {
         tree.selected = tree.keys[tree.cursor.lead];
     PrKitTreeDrop drop{};
     if (prKitRowDropped(kit, view, &drop) && drop.row < tree.keys.size()) {
-        TreePlacement placement = drop.zone == PrKitDropZone_Before  ? TreePlacement_Before
-                                  : drop.zone == PrKitDropZone_After ? TreePlacement_After
-                                                                     : TreePlacement_Into;
+        TreePlacement placement = TreePlacement_Into;
+        if (drop.zone == PrKitDropZone_Before)
+            placement = TreePlacement_Before;
+        else if (drop.zone == PrKitDropZone_After)
+            placement = TreePlacement_After;
         moveTreeNode(tree, uint32_t(drop.item), tree.keys[drop.row], placement);
     }
     const PrUiPayload* carried = prUiDragging(ui);
@@ -124,10 +139,9 @@ void sectionTree(PrKit* kit, PrLayoutNode parent, GalleryState& state) {
 
 void sectionInspector(PrKit* kit, PrLayoutNode parent, GalleryState& state) {
     InspectorState& inspector = state.inspector;
-    PrLayoutNode section = sectionFrame(
-        kit, parent, "11", "Inspector Rows", "The workhorse of the property editor.",
+    PrLayoutNode section = sectionFrame(kit, parent, "11", "Inspector Rows", "The workhorse of the property editor.",
         "An inspector row is a two-column grid: a label column and the controls that take the width it leaves. "
-              "A group header folds its rows away, and a numeric field scrubs under a drag.");
+            "A group header folds its rows away, and a numeric field scrubs under a drag.");
     PrLayoutNode panel = demoPanel(kit, section, "ENTITY PROPERTIES", "ENTITY . PLAYER", true);
     {
         PrKitSurfaceStyle bar{.rules = PrKitRuleFlag_Bottom};
@@ -144,15 +158,23 @@ void sectionInspector(PrKit* kit, PrLayoutNode parent, GalleryState& state) {
         prKitBadge(kit, identity, {.text = "ENTITY"}, {.variant = PrKitBadgeVariant_Accent});
         prKitBadge(kit, identity, {.text = "0x7FF8_A2B0"}, {.variant = PrKitBadgeVariant_Neutral});
     }
-    PrKitInspectorGroup transformGroup{.name = "Transform", .badge = "CORE",
-                                       .badgeVariant = PrKitBadgeVariant_Accent, .open = &inspector.openTransform};
+    PrKitInspectorGroup transformGroup{
+        .name = "Transform",
+        .badge = "CORE",
+        .badgeVariant = PrKitBadgeVariant_Accent,
+        .open = &inspector.openTransform,
+    };
     PrLayoutNode transform = prKitInspectorGroup(kit, panel, transformGroup);
     if (transform != kPrLayoutNodeNone) {
         PrKitNumberRange fine{.step = 0.05};
         PrLayoutNode position = prKitInspectorRow(kit, transform, {.label = "Position"}, {});
         prKitVectorField(kit, position, {.value = prKitScalarF32(inspector.position), .count = 3, .range = fine}, {});
-        PrKitVector rotation{.value = prKitScalarF32(inspector.rotation), .count = 3, .range = {.step = 0.5},
-                             .precision = 1};
+        PrKitVector rotation{
+            .value = prKitScalarF32(inspector.rotation),
+            .count = 3,
+            .range = {.step = 0.5},
+            .precision = 1,
+        };
         prKitVectorField(kit, prKitInspectorRow(kit, transform, {.label = "Rotation"}, {}), rotation, {});
         PrLayoutNode scale = prKitInspectorRow(kit, transform, {.label = "Scale"}, {});
         PrKitNumberRange positive{.step = 0.01, .min = 0, .hasMin = true};
@@ -171,26 +193,25 @@ void sectionInspector(PrKit* kit, PrLayoutNode parent, GalleryState& state) {
         }
         PrKitAssetField material{.name = "player_pbr", .tint = inspector.tint};
         prKitAssetField(kit, prKitInspectorRow(kit, mesh, {.label = "Material"}, {}), material);
-        prKitColorField(
-            kit, prKitInspectorRow(kit, mesh, {.label = "Tint"}, {}),
-            {.color = &inspector.tint}, {});
-        prKitColorField(
-            kit, prKitInspectorRow(kit, mesh, {.label = "Emissive"}, {}),
-            {.color = &inspector.emissive}, {});
+        prKitColorField(kit, prKitInspectorRow(kit, mesh, {.label = "Tint"}, {}), {.color = &inspector.tint}, {});
+        prKitColorField(kit, prKitInspectorRow(kit, mesh, {.label = "Emissive"}, {}), {.color = &inspector.emissive}, {});
         prKitCheckbox(kit, prKitInspectorRow(kit, mesh, {.label = "Cast Shadows"}, {}),
-                      {.value = &inspector.castShadows}, {});
+            {.value = &inspector.castShadows}, {});
         prKitCheckbox(kit, prKitInspectorRow(kit, mesh, {.label = "Receive Shadows"}, {}),
-                      {.value = &inspector.receiveShadows}, {});
-        const PrKitChoice lighting[] = {{.label = "realtime"}, {.label = "mixed"},
-                                        {.label = "baked"}};
+            {.value = &inspector.receiveShadows}, {});
+        const PrKitChoice lighting[] = {{.label = "realtime"}, {.label = "mixed"}, {.label = "baked"}};
         segmented(kit, prKitInspectorRow(kit, mesh, {.label = "Lighting"}, {}), lighting, 3, &inspector.lighting,
-                  {.size = PrKitControlSize_Sm});
+            {.size = PrKitControlSize_Sm});
     }
     PrKitInspectorGroup bodyGroup{.name = "Rigidbody", .open = &inspector.openRigidbody};
     PrLayoutNode rigidbody = prKitInspectorGroup(kit, panel, bodyGroup);
     if (rigidbody != kPrLayoutNodeNone) {
-        PrKitNumber mass{.value = prKitScalarF32(&inspector.mass), .range = {.step = 0.1, .min = 0, .hasMin = true},
-                         .unit = "kg", .precision = 1};
+        PrKitNumber mass{
+            .value = prKitScalarF32(&inspector.mass),
+            .range = {.step = 0.1, .min = 0, .hasMin = true},
+            .unit = "kg",
+            .precision = 1,
+        };
         prKitNumberField(kit, prKitInspectorRow(kit, rigidbody, {.label = "Mass"}, {}), mass, {});
         PrLayoutNode drag = prKitInspectorRow(kit, rigidbody, {.label = "Drag"}, {});
         prKitSlider(kit, drag, {.value = prKitScalarF32(&inspector.drag), .min = 0, .max = 1}, {});
@@ -199,7 +220,7 @@ void sectionInspector(PrKit* kit, PrLayoutNode parent, GalleryState& state) {
         PrKitPlace fixed{.width = prKitPx(72), .flex = PrKitFlex_Fixed};
         prKitPlace(kit, field, &fixed);
         prKitToggle(kit, prKitInspectorRow(kit, rigidbody, {.label = "Use Gravity"}, {}),
-                    {.value = &inspector.useGravity}, {});
+            {.value = &inspector.useGravity}, {});
     }
     {
         PrKitSurfaceStyle foot{.rules = PrKitRuleFlag_Top};
@@ -221,8 +242,7 @@ void sectionInspector(PrKit* kit, PrLayoutNode parent, GalleryState& state) {
     const char* const values[] = {"48213", "0.0021 s", "0x0004", "+0.512 / -0.087"};
     PrKitInspectorRowStyle mono{.mono = true};
     for (uint32_t i = 0; i < 4; ++i)
-        prKitLabel(kit, prKitInspectorRow(kit, telemetry, {.label = keys[i]}, mono), {.text = values[i]},
-                   kMono);
+        prKitLabel(kit, prKitInspectorRow(kit, telemetry, {.label = keys[i]}, mono), {.text = values[i]}, kMono);
 
     PrLayoutNode references = demoPanel(kit, section, "ASSET REFERENCE", "PICK . LOCATE . CLEAR", false);
     PrKitBoxStyle column{.gap = kPrKitSpace2};
@@ -255,8 +275,7 @@ void sectionInspector(PrKit* kit, PrLayoutNode parent, GalleryState& state) {
 
 void sectionToolbar(PrKit* kit, PrLayoutNode parent, GalleryState& state) {
     ToolbarState& toolbar = state.toolbar;
-    PrLayoutNode section = sectionFrame(kit, parent, "12", "Toolbar",
-                                        "The tool row and the transport beside it.", {});
+    PrLayoutNode section = sectionFrame(kit, parent, "12", "Toolbar", "The tool row and the transport beside it.", {});
     PrLayoutNode panel = demoPanel(kit, section, "VIEWPORT TOOLBAR", "MAIN", true);
     PrKitSurfaceStyle strip{.ground = PrKitGround_Panel};
     strip.box.direction = PrKitDirection_Row;
@@ -270,7 +289,7 @@ void sectionToolbar(PrKit* kit, PrLayoutNode parent, GalleryState& state) {
     const PrKitIconKind tools[] = {PrKitIconKind_Cursor, PrKitIconKind_Move, PrKitIconKind_Rotate, PrKitIconKind_Scale};
     for (uint32_t i = 0; i < 4; ++i) {
         PrLayoutNode tool = prKitButton(kit, bar, {.icon = tools[i], .selected = i == toolbar.tool},
-                                        {.variant = PrKitButtonVariant_Ghost, .size = PrKitControlSize_Md});
+            {.variant = PrKitButtonVariant_Ghost, .size = PrKitControlSize_Md});
         PrKitTooltip tip{.text = tips[i]};
         prKitTooltip(kit, tool, tip);
         if (prKitActivated(kit, tool))
@@ -281,45 +300,46 @@ void sectionToolbar(PrKit* kit, PrLayoutNode parent, GalleryState& state) {
     segmented(kit, bar, spaces, 2, &toolbar.space, {.size = PrKitControlSize_Sm});
     prKitDivider(kit, bar, {});
     if (prKitActivated(kit, prKitButton(kit, bar, {.icon = PrKitIconKind_Magnet, .selected = toolbar.snap},
-                                        {.variant = PrKitButtonVariant_Ghost, .size = PrKitControlSize_Md})))
+            {.variant = PrKitButtonVariant_Ghost, .size = PrKitControlSize_Md})))
         toolbar.snap = !toolbar.snap;
     if (prKitActivated(kit, prKitButton(kit, bar, {.icon = PrKitIconKind_Grid, .selected = toolbar.grid},
-                                        {.variant = PrKitButtonVariant_Ghost, .size = PrKitControlSize_Md})))
+            {.variant = PrKitButtonVariant_Ghost, .size = PrKitControlSize_Md})))
         toolbar.grid = !toolbar.grid;
     prKitLabel(kit, bar, {.text = "0.25m"}, kCaption);
     prKitSpacer(kit, bar, {});
     PrKitIconKind play = toolbar.playing ? PrKitIconKind_Pause : PrKitIconKind_Play;
     if (prKitActivated(kit, prKitButton(kit, bar, {.icon = play, .selected = toolbar.playing},
-                                        {.variant = PrKitButtonVariant_Ghost, .size = PrKitControlSize_Md})))
+            {.variant = PrKitButtonVariant_Ghost, .size = PrKitControlSize_Md})))
         toolbar.playing = !toolbar.playing;
     prKitButton(kit, bar, {.icon = PrKitIconKind_Step},
-                {.variant = PrKitButtonVariant_Ghost, .size = PrKitControlSize_Md});
+        {.variant = PrKitButtonVariant_Ghost, .size = PrKitControlSize_Md});
     if (prKitActivated(kit, prKitButton(kit, bar, {.icon = PrKitIconKind_Stop},
-                                        {.variant = PrKitButtonVariant_Ghost, .size = PrKitControlSize_Md})))
+            {.variant = PrKitButtonVariant_Ghost, .size = PrKitControlSize_Md})))
         toolbar.playing = false;
 
     PrLayoutNode sizes = demoPanel(kit, section, "CELL SIZES", "XS . SM . MD . LG", false);
     PrKitBoxStyle line{.direction = PrKitDirection_Row, .align = PrKitAlign_End, .gap = kPrKitSpace8};
     PrLayoutNode row = prKitBox(kit, sizes, {}, line);
     // Each cell is shown selected, so that its ground shows its size.
-    const PrKitControlSize steps[] = {PrKitControlSize_Xs, PrKitControlSize_Sm, PrKitControlSize_Md,
-                                      PrKitControlSize_Lg};
+    const PrKitControlSize steps[] = {
+        PrKitControlSize_Xs, PrKitControlSize_Sm, PrKitControlSize_Md,
+        PrKitControlSize_Lg,
+    };
     const char* const names[] = {"XS 18", "SM 22", "MD 26", "LG 30"};
     for (uint32_t i = 0; i < 4; ++i) {
         PrKitBoxStyle cell{.align = PrKitAlign_Center, .gap = kPrKitSpace2};
         PrLayoutNode column = prKitBox(kit, row, {}, cell);
         prKitButton(kit, column, {.icon = PrKitIconKind_Magnet, .selected = true},
-                    {.variant = PrKitButtonVariant_Ghost, .size = steps[i]});
+            {.variant = PrKitButtonVariant_Ghost, .size = steps[i]});
         prKitLabel(kit, column, {.text = names[i]}, kCaption);
     }
 }
 
 void sectionTables(PrKit* kit, PrLayoutNode parent, GalleryState& state) {
     TableState& table = state.table;
-    PrLayoutNode section = sectionFrame(
-        kit, parent, "13", "Tables", "Dense rows: a header that sorts, rows that select.",
+    PrLayoutNode section = sectionFrame(kit, parent, "13", "Tables", "Dense rows: a header that sorts, rows that select.",
         "Click a heading to sort by its column and again to reverse it; click, Shift-click and Cmd-click rows "
-              "to select them. The name column fills the room that the fixed columns leave.");
+            "to select them. The name column fills the room that the fixed columns leave.");
     uint32_t count = 0;
     const AssetRow* assets = galleryAssets(&count);
     const PrKitTableColumn columns[] = {
@@ -330,13 +350,14 @@ void sectionTables(PrKit* kit, PrLayoutNode parent, GalleryState& state) {
     };
     {
         char tags[16];
-        PrLayoutNode panel =
-            demoPanel(kit, section, "ASSET BROWSER", format(tags, sizeof tags, "%u ROWS", count), true);
-        PrKitTable content{.count = count,
-                           .selection = &table.cursor,
-                           .columns = columns,
-                           .columnCount = countOf(columns),
-                           .sort = &table.sort};
+        PrLayoutNode panel = demoPanel(kit, section, "ASSET BROWSER", format(tags, sizeof tags, "%u ROWS", count), true);
+        PrKitTable content{
+            .count = count,
+            .selection = &table.cursor,
+            .columns = columns,
+            .columnCount = countOf(columns),
+            .sort = &table.sort,
+        };
         PrLayoutNode view =
             prKitTable(kit, panel, content, {.place = {.maxHeight = prKitPx(260), .flex = PrKitFlex_Fixed}});
         uint32_t order[16];
@@ -363,14 +384,9 @@ void sectionTables(PrKit* kit, PrLayoutNode parent, GalleryState& state) {
         };
         // The panel is as wide as the table, which is narrower than its columns.
         PrKitBoxStyle fit{.direction = PrKitDirection_Row, .align = PrKitAlign_Start};
-        PrLayoutNode panel = demoPanel(kit, prKitBox(kit, section, {}, fit), "OVERFLOWING COLUMNS",
-                                       "SCROLLS BOTH AXES", true);
-        PrKitListViewStyle style{
-            .place = {.height = prKitPx(110), .maxWidth = prKitPx(380), .flex = PrKitFlex_Fixed}};
-        PrLayoutNode view = prKitTable(
-            kit, panel,
-            {.count = count, .columns = wide, .columnCount = countOf(wide)},
-            style);
+        PrLayoutNode panel = demoPanel(kit, prKitBox(kit, section, {}, fit), "OVERFLOWING COLUMNS", "SCROLLS BOTH AXES", true);
+        PrKitListViewStyle style{.place = {.height = prKitPx(110), .maxWidth = prKitPx(380), .flex = PrKitFlex_Fixed}};
+        PrLayoutNode view = prKitTable(kit, panel, {.count = count, .columns = wide, .columnCount = countOf(wide)}, style);
         PrKitWindow window = prKitListWindow(kit, view);
         for (uint32_t i = window.first; i < window.first + window.count; ++i)
             assetCells(kit, prKitTableRow(kit, view, {.index = i, .item = i}), assets[i]);
@@ -378,8 +394,7 @@ void sectionTables(PrKit* kit, PrLayoutNode parent, GalleryState& state) {
 }
 
 void sectionTags(PrKit* kit, PrLayoutNode parent, GalleryState& state) {
-    PrLayoutNode section =
-        sectionFrame(kit, parent, "14", "Tags & Badges", "Small metadata, clearly typed.", {});
+    PrLayoutNode section = sectionFrame(kit, parent, "14", "Tags & Badges", "Small metadata, clearly typed.", {});
     {
         PrLayoutNode panel = demoPanel(kit, section, "BADGES", "STATIC LABEL", false);
         PrLayoutNode row = specimenRow(kit, panel, kPrKitSpace3, true);

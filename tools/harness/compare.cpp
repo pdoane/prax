@@ -75,7 +75,7 @@ void parallelRows(uint32_t count, Each each) {
 // Pillow's extended box blur along one line of four-channel pixels, with an integer radius and fractional edge weights
 // in 8.24 fixed point.
 void boxBlurLine(uint8_t* out, const uint8_t* in, int32_t last, int32_t radius, int32_t edgeA,
-                 int32_t edgeB, uint32_t whole, uint32_t edge) {
+        int32_t edgeB, uint32_t whole, uint32_t edge) {
     uint32_t acc[4];
     for (uint32_t c = 0; c < 4; ++c) {
         acc[c] = uint32_t(in[c]) * uint32_t(radius + 1);
@@ -191,8 +191,7 @@ Image onWhite(const uint8_t* rgba, uint32_t width, uint32_t height, size_t strid
 } // namespace
 
 ImageDifference compareImages(const uint8_t* reference, const uint8_t* rendered, uint32_t width,
-                              uint32_t height, size_t stride, const ImageComparison& comparison,
-                              uint8_t* PR_NULLABLE diff) {
+        uint32_t height, size_t stride, const ImageComparison& comparison, uint8_t* PR_NULLABLE diff) {
     Image referenceWhite = onWhite(reference, width, height, stride);
     Image renderedWhite = onWhite(rendered, width, height, stride);
     Image a = gaussianBlur(referenceWhite, comparison.blurRadius);
@@ -266,14 +265,13 @@ ImageDifference compareImages(const uint8_t* reference, const uint8_t* rendered,
     size_t total = size_t(width) * height;
     ImageDifference d{};
     d.changedRatio = total != 0 ? double(changed) / double(total) : 0;
-    d.contentChangedRatio =
-        content != 0 ? double(changedContent) / double(content) : d.changedRatio;
+    d.contentChangedRatio = content != 0 ? double(changedContent) / double(content) : d.changedRatio;
     d.mae = total != 0 ? double(sum) / double(total) / 3 : 0;
     return d;
 }
 
-PixelDifference countDifferences(const uint8_t* reference, const uint8_t* rendered,
-                                 uint32_t width, uint32_t height, size_t stride) {
+PixelDifference countDifferences(const uint8_t* reference, const uint8_t* rendered, uint32_t width, uint32_t height,
+        size_t stride) {
     Image a = onWhite(reference, width, height, stride);
     Image b = onWhite(rendered, width, height, stride);
     // Pillow's weights of red, green and blue in luma, in 16-bit fixed point.

@@ -119,8 +119,8 @@ void prAppDestroy(PrApp* PR_NULLABLE app) {
 }
 
 void prAppRun(PrApp* app, const PrAppHandler* handler) {
-    PR_ASSERT(handler->start != nullptr && handler->frame != nullptr && handler->event != nullptr
-              && handler->shutdown != nullptr);
+    PR_ASSERT(handler->start != nullptr && handler->frame != nullptr && handler->event != nullptr &&
+        handler->shutdown != nullptr);
     app->run(app, handler);
 }
 
@@ -176,18 +176,16 @@ void prAppBrowserResize(PrAppBrowser* browser, PrUVec2 viewport) {
     browser->app->browserResize(browser->app, browser, viewport);
 }
 
-void prAppBrowserLoad(PrAppBrowser* browser, PrStringView url, PrAppBrowserDoneFn done,
-                      void* PR_NULLABLE context) {
+void prAppBrowserLoad(PrAppBrowser* browser, PrStringView url, PrAppBrowserDoneFn done, void* PR_NULLABLE context) {
     browser->app->browserLoad(browser->app, browser, url, done, context);
 }
 
-void prAppBrowserEvaluate(PrAppBrowser* browser, PrStringView script, PrAppBrowserResultFn done,
-                          void* PR_NULLABLE context) {
+void prAppBrowserEvaluate(PrAppBrowser* browser, PrStringView script, PrAppBrowserResultFn done, void* PR_NULLABLE context) {
     browser->app->browserEvaluate(browser->app, browser, script, done, context);
 }
 
 void prAppBrowserCapture(PrAppBrowser* browser, PrRect rect, PrUVec2 size, PrAppBrowserCaptureFn done,
-                         void* PR_NULLABLE context) {
+        void* PR_NULLABLE context) {
     browser->app->browserCapture(browser->app, browser, rect, size, done, context);
 }
 
@@ -200,7 +198,7 @@ void prAppBrowserHide(PrAppBrowser* browser) {
 }
 
 PrStatus prAppBrowserPrint(PrAppBrowser* browser, PrStringView path, PrVec2 paper, PrAppBrowserDoneFn done,
-                           void* PR_NULLABLE context) {
+        void* PR_NULLABLE context) {
     PrApp* app = browser->app;
     if (app->browserPrint == nullptr)
         return PrStatus_NotSupported;

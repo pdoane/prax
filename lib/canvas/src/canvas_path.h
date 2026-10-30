@@ -53,15 +53,13 @@ void canvasPathMoveTo(CanvasPath* path, PrDAffine2 transform, double x, double y
 void canvasPathLineTo(CanvasPath* path, PrDAffine2 transform, double x, double y);
 void canvasPathQuadraticCurveTo(CanvasPath* path, PrDAffine2 transform, double cpx, double cpy, double x, double y);
 void canvasPathBezierCurveTo(CanvasPath* path, PrDAffine2 transform, double cp1x, double cp1y, double cp2x,
-                             double cp2y, double x, double y);
-PrStatus canvasPathArcTo(CanvasPath* path, PrDAffine2 transform, double x1, double y1, double x2, double y2,
-                         double radius);
+    double cp2y, double x, double y);
+PrStatus canvasPathArcTo(CanvasPath* path, PrDAffine2 transform, double x1, double y1, double x2, double y2, double radius);
 void canvasPathRect(CanvasPath* path, PrDAffine2 transform, double x, double y, double w, double h);
 PrStatus canvasPathRoundRect(CanvasPath* path, PrDAffine2 transform, double x, double y, double w, double h,
-                             const PrDVec2* PR_NULLABLE radii, uint32_t radiusCount);
+    const PrDVec2* PR_NULLABLE radii, uint32_t radiusCount);
 PrStatus canvasPathEllipse(CanvasPath* path, PrDAffine2 transform, double x, double y, double radiusX,
-                           double radiusY, double rotation, double startAngle, double endAngle,
-                           bool counterclockwise);
+    double radiusY, double rotation, double startAngle, double endAngle, bool counterclockwise);
 
 // Appends the subpaths of `other` mapped through `transform`, then starts a subpath at its last point mapped
 // (html/#dom-path2d-addpath). Adds nothing if `other` has no subpath.

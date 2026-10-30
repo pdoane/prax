@@ -17,14 +17,8 @@ PR_ASSUME_NONNULL_BEGIN
 namespace pr_impl {
 
 extern const PrStringView kHtmlStateName[HtmlState_Count] = {
-    "data",
-    "rcdata",
-    "rawtext",
-    "script-data",
-    "plaintext",
-    "cdata-section",
-    "script-data-escaped",
-    "script-data-double-escaped",
+    "data", "rcdata", "rawtext", "script-data", "plaintext", "cdata-section", "script-data-escaped",
+        "script-data-double-escaped",
 };
 
 namespace {
@@ -82,8 +76,8 @@ constexpr bool isNoncharacter(uint32_t codePoint) {
 constexpr bool isControl(uint32_t codePoint) {
     if (codePoint >= 0x7f)
         return codePoint <= 0x9f;
-    return codePoint != 0 && codePoint < 0x20 && codePoint != '\t' && codePoint != '\n'
-        && codePoint != '\f' && codePoint != '\r';
+    return codePoint != 0 && codePoint < 0x20 && codePoint != '\t' && codePoint != '\n' &&
+        codePoint != '\f' && codePoint != '\r';
 }
 
 // Returns the code point that html/#numeric-character-reference-end-state substitutes for a numeric character reference
@@ -161,8 +155,7 @@ struct HtmlByteTable {
 // controls are the only code points above ASCII for which isControl returns true.
 constexpr bool anyReported(uint32_t lo, uint32_t hi) {
     bool planeEnd = (hi & 0xffff) >= 0xfffe || (hi >> 16) > (lo >> 16);
-    return planeEnd || (lo <= 0xdfff && hi >= 0xd800) || (lo <= 0xfdef && hi >= 0xfdd0)
-        || (lo <= 0x9f && hi >= 0x80);
+    return planeEnd || (lo <= 0xdfff && hi >= 0xd800) || (lo <= 0xfdef && hi >= 0xfdd0) || (lo <= 0x9f && hi >= 0x80);
 }
 
 // Returns true if a byte starts a UTF-8 sequence that encodes such a code point. A continuation byte starts no
@@ -406,8 +399,7 @@ bool emitEof(HtmlTokenizer* t) {
 }
 
 // Emits the characters in `chars`. `source` is the input that they were written with.
-bool emitCharacters(HtmlTokenizer* t, HtmlSpan chars, HtmlSpan source, HtmlTokenFlags flags,
-                    HtmlState next) {
+bool emitCharacters(HtmlTokenizer* t, HtmlSpan chars, HtmlSpan source, HtmlTokenFlags flags, HtmlState next) {
     t->token.kind = HtmlTokenKind_Character;
     t->token.flags = flags;
     t->token.span = source;
@@ -449,7 +441,7 @@ bool emitReplacement(HtmlTokenizer* t, HtmlState next) {
     }
     t->input.pos = at;
     return emitCharacters(t, HtmlSpan{values | kHtmlSpanValues, t->values.count},
-                          HtmlSpan{start, at}, HtmlTokenFlag_Text, next);
+        HtmlSpan{start, at}, HtmlTokenFlag_Text, next);
 }
 
 // Emits a tag. The read point is past its '>', and its '<' is at `start`.
@@ -475,8 +467,7 @@ bool emitComment(HtmlTokenizer* t, uint32_t start, HtmlSpan data) {
     return true;
 }
 
-bool emitDoctype(HtmlTokenizer* t, uint32_t start, HtmlSpan name, HtmlSpan publicId,
-                 HtmlSpan systemId) {
+bool emitDoctype(HtmlTokenizer* t, uint32_t start, HtmlSpan name, HtmlSpan publicId, HtmlSpan systemId) {
     t->token.kind = HtmlTokenKind_Doctype;
     t->token.name = name;
     t->token.publicId = publicId;
@@ -507,8 +498,7 @@ bool emitProcessingInstruction(HtmlTokenizer* t, uint32_t start, HtmlSpan name, 
 uint32_t matchEntity(HtmlTokenizer* t, uint32_t from, PrStringView* text) {
     PrStringView source = htmlInputText(t);
     uint32_t end = from;
-    while (end < source.size && end - from < kPrHtmlEntityMaxLength
-           && (classOf(source.data[end]) & ByteClass_Alnum) != 0)
+    while (end < source.size && end - from < kPrHtmlEntityMaxLength && (classOf(source.data[end]) & ByteClass_Alnum) != 0)
         ++end;
     if (end == source.size && end - from < kPrHtmlEntityMaxLength)
         t->cut = true;
@@ -536,8 +526,7 @@ uint32_t matchEntity(HtmlTokenizer* t, uint32_t from, PrStringView* text) {
 
 // Flushes the input's own bytes from `from` to `to`, which are the characters of a reference that resolved to nothing.
 // `value` is the attribute value that they join. In text, `value` is null and the bytes become a character token.
-void flushInput(HtmlTokenizer* t, HtmlSpan* PR_NULLABLE value, uint32_t from, uint32_t to,
-                HtmlState next) {
+void flushInput(HtmlTokenizer* t, HtmlSpan* PR_NULLABLE value, uint32_t from, uint32_t to, HtmlState next) {
     if (value != nullptr) {
         appendInput(t, value, from, to);
         return;
@@ -548,7 +537,7 @@ void flushInput(HtmlTokenizer* t, HtmlSpan* PR_NULLABLE value, uint32_t from, ui
 
 // Flushes the text that a reference resolved to, which is not the input's own bytes, in the same way as flushInput.
 void flushText(HtmlTokenizer* t, HtmlSpan* PR_NULLABLE value, PrStringView resolved,
-               uint32_t from, uint32_t to, HtmlState next) {
+        uint32_t from, uint32_t to, HtmlState next) {
     if (value != nullptr) {
         appendText(t, value, resolved);
         return;
@@ -556,7 +545,7 @@ void flushText(HtmlTokenizer* t, HtmlSpan* PR_NULLABLE value, PrStringView resol
     uint32_t at = t->values.count;
     t->values.append(resolved.data, uint32_t(resolved.size));
     emitCharacters(t, HtmlSpan{at | kHtmlSpanValues, t->values.count}, HtmlSpan{from, to},
-                   textFlags(classesOf(resolved)), next);
+        textFlags(classesOf(resolved)), next);
 }
 
 // Reads the character reference whose '&' is at the read point. If the reference is part of an attribute value, `value`
@@ -580,8 +569,7 @@ void readReference(HtmlTokenizer* t, HtmlSpan* PR_NULLABLE value, HtmlState next
 
         uint32_t code = 0;
         uint32_t end = digits;
-        while (end < text.size
-               && (base == 16 ? asciiIsHexDigit(text.data[end]) : asciiIsDigit(text.data[end]))) {
+        while (end < text.size && (base == 16 ? asciiIsHexDigit(text.data[end]) : asciiIsDigit(text.data[end]))) {
             if (code <= kPrUtf8MaxCodePoint)
                 code = code * base + asciiHexValue(text.data[end]);
             ++end;
@@ -642,8 +630,8 @@ void readReference(HtmlTokenizer* t, HtmlSpan* PR_NULLABLE value, HtmlState next
 
         uint32_t end = at + length;
         bool semicolon = text.data[end - 1] == ';';
-        if (value != nullptr && !semicolon && end < text.size
-            && (text.data[end] == '=' || (classOf(text.data[end]) & ByteClass_Alnum) != 0)) {
+        if (value != nullptr && !semicolon && end < text.size &&
+                (text.data[end] == '=' || (classOf(text.data[end]) & ByteClass_Alnum) != 0)) {
             t->input.pos = end;
             flushInput(t, value, start, end, next);
             return;
@@ -720,10 +708,12 @@ uint32_t pushAttribute(HtmlTokenizer* t, HtmlSpan name, HtmlSpan value) {
 // `quote` is the quote that the value started with, or kEof if it started with none. Returns the character that follows
 // the value, or kEof if the end of the input ended the tag.
 uint32_t readAttributeValue(HtmlTokenizer* t, uint32_t quote, HtmlSpan* value) {
-    ByteClass stop = quote != kEof
-        ? ByteClass(ByteClass_Quote | ByteClass_Amp | ByteClass_Null)
-        : ByteClass(ByteClass_Space | ByteClass_Gt | ByteClass_Amp | ByteClass_Null
-                    | ByteClass_Quote | ByteClass_Backtick | ByteClass_Lt | ByteClass_Equals);
+    ByteClass stop;
+    if (quote != kEof)
+        stop = ByteClass(ByteClass_Quote | ByteClass_Amp | ByteClass_Null);
+    else
+        stop = ByteClass(ByteClass_Space | ByteClass_Gt | ByteClass_Amp | ByteClass_Null | ByteClass_Quote |
+            ByteClass_Backtick | ByteClass_Lt | ByteClass_Equals);
     for (;;) {
         uint32_t byte = take(t, value, stop);
         if (byte == kEof)
@@ -756,8 +746,7 @@ uint32_t readAttributeValue(HtmlTokenizer* t, uint32_t quote, HtmlSpan* value) {
 // html/#before-attribute-name-state to html/#after-attribute-value-(quoted)-state: reads one attribute of the current
 // tag, starting at `byte`. Returns the character that ended it, or kEof if the end of the input ended the tag.
 uint32_t readAttribute(HtmlTokenizer* t, uint32_t byte) {
-    constexpr ByteClass kAttributeEnd =
-        ByteClass_TagEnd | ByteClass_Equals | ByteClass_Quote | ByteClass_Lt;
+    constexpr ByteClass kAttributeEnd = ByteClass_TagEnd | ByteClass_Equals | ByteClass_Quote | ByteClass_Lt;
 
     uint32_t start = t->input.pos;
     HtmlSpan name = begin(start);
@@ -1303,8 +1292,7 @@ bool readCdataSection(HtmlTokenizer* t) {
                 t->state = HtmlState_Data;
                 return false;
             }
-            return emitCharacters(t, HtmlSpan{start, last}, HtmlSpan{start, end + 1},
-                                  textFlags(seen), HtmlState_Data);
+            return emitCharacters(t, HtmlSpan{start, last}, HtmlSpan{start, end + 1}, textFlags(seen), HtmlState_Data);
         }
         seen |= ByteClass_Text;
         t->input.pos = end;
@@ -1385,8 +1373,7 @@ bool readTagOpen(HtmlTokenizer* t, uint32_t start) {
         return readBogusComment(t, start, begin(at + 1));
     }
 
-    errorAt(t, byte == kEof ? HtmlErrorCode_EofBeforeTagName
-                            : HtmlErrorCode_InvalidFirstCharacterOfTagName, at);
+    errorAt(t, byte == kEof ? HtmlErrorCode_EofBeforeTagName : HtmlErrorCode_InvalidFirstCharacterOfTagName, at);
     return emitRun(t, start, at, ByteClass_Text, HtmlState_Data);
 }
 
@@ -1429,9 +1416,11 @@ bool readPlaintext(HtmlTokenizer* t) {
 // The RCDATA and RAWTEXT states. Their text ends at the end tag of the element whose content the text is. Every other
 // '<' is text.
 bool readTextContent(HtmlTokenizer* t, HtmlState state) {
-    ByteClass stop = state == HtmlState_Rcdata
-                         ? ByteClass(ByteClass_Lt | ByteClass_Amp | ByteClass_Null)
-                         : ByteClass(ByteClass_Lt | ByteClass_Null);
+    ByteClass stop;
+    if (state == HtmlState_Rcdata)
+        stop = ByteClass(ByteClass_Lt | ByteClass_Amp | ByteClass_Null);
+    else
+        stop = ByteClass(ByteClass_Lt | ByteClass_Null);
     uint32_t start = t->input.pos;
     ByteClass seen = 0;
     for (;;) {
@@ -1521,8 +1510,7 @@ bool readScript(HtmlTokenizer* t) {
         if (state == HtmlState_ScriptData) {
             // html/#script-data-escape-start-state to html/#script-data-escaped-state: the "<!--" that starts an
             // escape. The next '>' after its second dash closes the escape.
-            if (at + 4 <= text.size && text.data[at + 1] == '!' && text.data[at + 2] == '-'
-                && text.data[at + 3] == '-') {
+            if (at + 4 <= text.size && text.data[at + 1] == '!' && text.data[at + 2] == '-' && text.data[at + 3] == '-') {
                 state = HtmlState_ScriptDataEscaped;
                 dashes = 2;
                 t->input.pos = at + 4;
@@ -1540,10 +1528,9 @@ bool readScript(HtmlTokenizer* t) {
         uint32_t end = name;
         while (end < text.size && asciiIsLetter(text.data[end]))
             ++end;
-        if (end != name && end < text.size
-            && (classOf(text.data[end]) & ByteClass_TagEnd) != 0
-            && closing == (state == HtmlState_ScriptDataDoubleEscaped)
-            && asciiEqualsFold(stringSlice(text, name, end - name), "script")) {
+        if (end != name && end < text.size && (classOf(text.data[end]) & ByteClass_TagEnd) != 0 &&
+                closing == (state == HtmlState_ScriptDataDoubleEscaped) &&
+                asciiEqualsFold(stringSlice(text, name, end - name), "script")) {
             state = closing ? HtmlState_ScriptDataEscaped : HtmlState_ScriptDataDoubleEscaped;
             t->input.pos = end;
             continue;
@@ -1616,8 +1603,7 @@ bool reachedEnd(const HtmlTokenizer* t, HtmlState state, uint32_t start) {
         return false;
     switch (t->token.kind) {
         case HtmlTokenKind_Character:
-            return state != HtmlState_Data || input.text.data[start] == '<'
-                   || input.text.data[start] == '&';
+            return state != HtmlState_Data || input.text.data[start] == '<' || input.text.data[start] == '&';
         case HtmlTokenKind_Eof:
             return true;
         default:
@@ -1746,14 +1732,12 @@ void htmlTokenizerReset(HtmlTokenizer* tokenizer) {
 }
 
 PrStringView htmlSpanText(const HtmlTokenizer* tokenizer, HtmlSpan span) {
-    const Array<char>& from = (span.start & kHtmlSpanValues) != 0 ? tokenizer->values
-                                                                 : tokenizer->input.text;
+    const Array<char>& from = (span.start & kHtmlSpanValues) != 0 ? tokenizer->values : tokenizer->input.text;
     uint32_t start = span.start & ~kHtmlSpanValues;
     return PrStringView{from.data + start, span.end - start};
 }
 
-uint32_t htmlTokenRun(const HtmlTokenizer* tokenizer, const HtmlToken* token,
-                      HtmlTokenFlags flags) {
+uint32_t htmlTokenRun(const HtmlTokenizer* tokenizer, const HtmlToken* token, HtmlTokenFlags flags) {
     PrStringView text = htmlSpanText(tokenizer, token->data);
     uint32_t count = 0;
     while (count < text.size && (textFlags(classOf(text.data[count])) & flags) != 0)
@@ -1772,8 +1756,7 @@ void htmlTokenAdvance(const HtmlTokenizer* tokenizer, HtmlToken* token, uint32_t
     token->flags = textFlags(classesOf(htmlSpanText(tokenizer, token->data)));
 }
 
-void htmlInputPosition(PrStringView text, uint32_t* at, uint32_t to, uint32_t* line,
-                       uint32_t* column) {
+void htmlInputPosition(PrStringView text, uint32_t* at, uint32_t to, uint32_t* line, uint32_t* column) {
     uint32_t i = *at;
     while (i < to && i < text.size) {
         if (text.data[i] == '\n') {

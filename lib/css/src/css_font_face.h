@@ -89,7 +89,7 @@ struct CssFontFaceSet : DomDocumentTarget {
 // each PrCssFontFaceDescriptor after the family. A null view keeps the descriptor's default. The caller holds the
 // face's only reference.
 PrCssFontFace* cssFontFaceCreate(PrStringView family, PrStringView source, PrByteView data,
-                                 PrCompressCodec* PR_NULLABLE compress, const PrStringView* PR_NULLABLE descriptors);
+    PrCompressCodec* PR_NULLABLE compress, const PrStringView* PR_NULLABLE descriptors);
 
 // Adds or releases a reference. The last release frees the face.
 void cssFontFaceRetain(PrCssFontFace* face);
@@ -100,8 +100,7 @@ PrString cssFontFaceDescriptor(const PrCssFontFace* face, PrCssFontFaceDescripto
 
 // Sets `descriptor` to `value`. Returns Syntax, and leaves the descriptor unchanged, if the descriptor does not accept
 // `value`.
-PrStatus cssFontFaceSetDescriptor(PrCssFontFace* face, PrCssFontFaceDescriptor descriptor,
-                                  PrStringView value);
+PrStatus cssFontFaceSetDescriptor(PrCssFontFace* face, PrCssFontFaceDescriptor descriptor, PrStringView value);
 
 // Loads the font of an unloaded face from the first of its sources whose bytes make a font
 // (css-font-loading-3/#dom-fontface-load). The document's host fetches each source that the document has not already
@@ -115,7 +114,7 @@ void cssFontFaceLoad(PrCssFontFace* face, PrDomDocument* document);
 // (css-fonts-4/#font-face-rule). Appends the code point ranges that its unicode-range descriptor names to `ranges`. An
 // auto range matches as normal. Returns false for a face with no family.
 bool cssFontFaceDescribe(const PrCssFontFace* face, PrString* family, PrFontFaceDescriptor* out,
-                         Array<PrFontCodePointRange>* ranges);
+    Array<PrFontCodePointRange>* ranges);
 
 // Returns the CSS-connected face of an @font-face rule, and creates the face on the first request.
 PrCssFontFace* cssFontFaceOfRule(PrCssRule* rule);
@@ -150,8 +149,7 @@ void cssFontFaceSetClear(PrCssFontFaceSet* set);
 
 // Appends to `out` the faces in the set whose family is one that `font` names
 // (css-font-loading-3/#find-the-matching-font-faces). Returns Syntax if `font` is not a value of the font property.
-PrStatus cssFontFaceSetMatch(const PrCssFontFaceSet* set, PrStringView font,
-                             Array<PrCssFontFace* PR_NONNULL>* out);
+PrStatus cssFontFaceSetMatch(const PrCssFontFaceSet* set, PrStringView font, Array<PrCssFontFace* PR_NONNULL>* out);
 
 // Appends the document's font faces to `out`, in order. These are the faces of its FontFaceSet. The document has them
 // whether or not the set's object has been created.
@@ -185,8 +183,7 @@ struct CssFontFacesData : DomEventExtra {
 };
 
 // Gives a FontFaceSetLoadEvent `count` faces, taking a reference to each.
-void cssFontFaceSetLoadEventSetFaces(PrDomEvent* event, PrCssFontFace* PR_NONNULL const* PR_NULLABLE faces,
-                                     uint32_t count);
+void cssFontFaceSetLoadEventSetFaces(PrDomEvent* event, PrCssFontFace* PR_NONNULL const* PR_NULLABLE faces, uint32_t count);
 
 } // namespace pr_impl
 

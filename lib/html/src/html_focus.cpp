@@ -35,9 +35,9 @@ bool tabIndexAttribute(const PrDomElement* element, int32_t* out) {
 bool hiddenOrInert(const PrDomElement* element) {
     for (const PrDomNode* node = element; node != nullptr; node = domShadowIncludingParent(node)) {
         const PrDomElement* ancestor = domElementFromNode(node);
-        if (ancestor != nullptr && ancestor->space == PrDomNamespace_Html
-            && (domAttribute(ancestor, PrDomNamespace_None, "hidden") != nullptr
-                || domAttribute(ancestor, PrDomNamespace_None, "inert") != nullptr))
+        if (ancestor != nullptr && ancestor->space == PrDomNamespace_Html &&
+                (domAttribute(ancestor, PrDomNamespace_None, "hidden") != nullptr ||
+                    domAttribute(ancestor, PrDomNamespace_None, "inert") != nullptr))
             return true;
     }
     return false;
@@ -70,9 +70,8 @@ bool focusableKind(const PrDomElement* element) {
         case PrDomTag_Area:
             return domAttribute(element, PrDomNamespace_None, "href") != nullptr;
         case PrDomTag_Input:
-            return !domElementDisabled(element)
-                   && domInputType(domAttributeValue(element, "type"))
-                          != PrDomInputType_Hidden;
+            return !domElementDisabled(element) && domInputType(domAttributeValue(element, "type")) !=
+                PrDomInputType_Hidden;
         case PrDomTag_Button:
         case PrDomTag_Select:
         case PrDomTag_Textarea:
@@ -86,8 +85,7 @@ bool focusableKind(const PrDomElement* element) {
             return isDetailsSummary(element);
         default: {
             // An editing host (html/#editing-host).
-            DomContentEditable editable =
-                domContentEditable(domAttributeValue(element, "contenteditable"));
+            DomContentEditable editable = domContentEditable(domAttributeValue(element, "contenteditable"));
             return editable == DomContentEditable_True || editable == DomContentEditable_PlaintextOnly;
         }
     }
@@ -112,8 +110,7 @@ PrDomElement* PR_NULLABLE focusDelegate(PrDomElement* host) {
 }
 
 // Fires a focus event named `type` at `target`, with `related` as the related target (html/#fire-a-focus-event).
-void fireFocusEvent(PrDomElement* target, PrStringView type, bool bubbles,
-                    PrDomElement* PR_NULLABLE related) {
+void fireFocusEvent(PrDomElement* target, PrStringView type, bool bubbles, PrDomElement* PR_NULLABLE related) {
     PrDomEventInit init = prDomEventInitDefault();
     init.bubbles = bubbles;
     init.composed = true;
@@ -139,8 +136,7 @@ PrDomDocument* PR_NULLABLE frameDocument(const PrDomElement* element);
 // has the focus while blur and focusout are dispatched, and a focus change that their listeners make persists. An
 // element that gains focus becomes the sequential focus navigation starting point. Focus that moves to the viewport
 // leaves the starting point at the element that lost it, so that navigation continues from there.
-void focusUpdate(PrDomDocument* document, PrDomElement* PR_NULLABLE old,
-                 PrDomElement* PR_NULLABLE focused) {
+void focusUpdate(PrDomDocument* document, PrDomElement* PR_NULLABLE old, PrDomElement* PR_NULLABLE focused) {
     // The element that loses focus stops matching the focus pseudo-classes before its listeners run.
     const CssPseudoClass states[] = {CssPseudoClass_Focus, CssPseudoClass_FocusVisible, CssPseudoClass_FocusWithin};
     if (old != nullptr) {
@@ -424,7 +420,7 @@ PrDomElement* PR_NULLABLE searchFrom(PrDomNode* start, bool forward, bool after)
         }
         int64_t step = forward ? 1 : -1;
         for (int64_t i = at >= 0 ? at + step : nearestItem(scope, start, forward, after);
-             i >= 0 && i < int64_t(scope.count) && found == nullptr; i += step)
+                i >= 0 && i < int64_t(scope.count) && found == nullptr; i += step)
             found = itemArea(scope.data[i], forward);
         // Past the end of its scope, the search continues from the scope's owner in the scope around it. Going
         // backward, an owner that focuses itself comes before its scope.
@@ -494,7 +490,7 @@ bool targetAround(const PrDomDocument* document) {
 // scripts (html/#sandboxed-automatic-features-browsing-context-flag). The iframe's attribute is read as it is now.
 bool sandboxedAutomatic(const PrDomDocument* document) {
     for (const PrDomElement* container = htmlFrameContainer(document); container != nullptr;
-         container = htmlFrameContainer(container->document)) {
+            container = htmlFrameContainer(container->document)) {
         const PrDomAttr* sandbox = domAttribute(container, PrDomNamespace_None, "sandbox");
         if (sandbox == nullptr)
             continue;
@@ -528,9 +524,11 @@ bool htmlFocusable(const PrDomElement* element) {
         return false;
     // An area is rendered through the image that uses its map, and has no box of its own.
     PrCssPresentation* presentation = cssPresentationOf(element->document);
-    bool rendered = presentation != nullptr && !domIsHtml(element, PrDomTag_Area)
-                        ? cssPresentationIsInteractive(presentation, element)
-                        : !hiddenOrInert(element);
+    bool rendered;
+    if (presentation != nullptr && !domIsHtml(element, PrDomTag_Area))
+        rendered = cssPresentationIsInteractive(presentation, element);
+    else
+        rendered = !hiddenOrInert(element);
     if (!rendered)
         return false;
     int32_t index = 0;
@@ -564,8 +562,7 @@ bool htmlFocus(PrDomElement* element, HtmlFocusIndication indication) {
         cssPresentationFlush(presentation);
     PrDomDocument* document = element->document;
     PrDomElement* target = element;
-    if (PrDomShadowRoot* shadow = domShadowRootOfHost(element);
-        shadow != nullptr && shadow->delegatesFocus) {
+    if (PrDomShadowRoot* shadow = domShadowRootOfHost(element); shadow != nullptr && shadow->delegatesFocus) {
         if (document->focused != nullptr && domShadowIncludingContains(element, document->focused))
             return true;
         target = focusDelegate(element);
@@ -583,8 +580,8 @@ bool htmlFocus(PrDomElement* element, HtmlFocusIndication indication) {
             visible = false;
             break;
         case HtmlFocusIndication_Script:
-            visible = takesTextInput(target)
-                      || (!document->pressInput && (document->focused == nullptr || document->focusVisible));
+            visible = takesTextInput(target) ||
+                (!document->pressInput && (document->focused == nullptr || document->focusVisible));
             break;
         case HtmlFocusIndication_Press:
             visible = takesTextInput(target);
@@ -665,8 +662,7 @@ void htmlFocusFlushAutofocus(PrDomDocument* top) {
         for (uint32_t c = 0; c < own.count; ++c)
             candidates.push(own.data[c]);
     }
-    bool processed = top->autofocusProcessed || (candidates.count != 0 && (top->focused != nullptr
-                                                                            || top->target != nullptr));
+    bool processed = top->autofocusProcessed || (candidates.count != 0 && (top->focused != nullptr || top->target != nullptr));
     PrDomElement* focus = nullptr;
     for (uint32_t i = 0; i < candidates.count && !processed; ++i) {
         PrDomElement* element = candidates.data[i];
@@ -744,8 +740,8 @@ bool htmlFocusNavigate(PrDomDocument* document, HtmlFocusDirection direction) {
         area = searchFrom(start, forward, at->navigationStartAfter);
         // A starting point inside the focused element finds what the element holds. Past that, the search moves on from
         // the element itself, in its order.
-        if (focused != nullptr && start != focused
-            && (area == nullptr || area == focused || !domShadowIncludingContains(focused, area)))
+        if (focused != nullptr && start != focused &&
+                (area == nullptr || area == focused || !domShadowIncludingContains(focused, area)))
             area = searchFrom(focused, forward, false);
     } else {
         area = searchFrom(focused != nullptr ? static_cast<PrDomNode*>(focused) : at, forward, false);
@@ -781,10 +777,8 @@ PrDomElement* PR_NULLABLE htmlKeyTarget(PrDomDocument* document) {
 }
 
 PrDomElement* PR_NULLABLE htmlActiveElement(PrDomNode* root) {
-    PrDomDocument* document =
-        root->type == PrDomNodeType_Document ? static_cast<PrDomDocument*>(root) : root->document;
-    PrDomNode* candidate =
-        document->focused != nullptr ? static_cast<PrDomNode*>(document->focused) : document;
+    PrDomDocument* document = root->type == PrDomNodeType_Document ? static_cast<PrDomDocument*>(root) : root->document;
+    PrDomNode* candidate = document->focused != nullptr ? static_cast<PrDomNode*>(document->focused) : document;
     // Retarget against the root: move to the host of each shadow tree that contains the candidate and that the root is
     // not in.
     for (;;) {
@@ -792,8 +786,7 @@ PrDomElement* PR_NULLABLE htmlActiveElement(PrDomNode* root) {
         if (shadow == nullptr || shadow == root)
             break;
         bool within = false;
-        for (PrDomNode* node = root; node != nullptr && !within;
-             node = domShadowIncludingParent(node))
+        for (PrDomNode* node = root; node != nullptr && !within; node = domShadowIncludingParent(node))
             within = node == shadow;
         if (within)
             break;
@@ -816,8 +809,7 @@ bool htmlHasFocus(const PrDomDocument* document) {
     if (window->document != document)
         return false;
     // A nested browsing context has system focus if its container is focused in its parent.
-    for (const PrHtmlWindow* parent = window->parent; parent != nullptr;
-         window = parent, parent = parent->parent) {
+    for (const PrHtmlWindow* parent = window->parent; parent != nullptr; window = parent, parent = parent->parent) {
         bool focused = false;
         for (uint32_t i = 0; i < parent->frames.count; ++i) {
             const HtmlFrame& frame = parent->frames.data[i];

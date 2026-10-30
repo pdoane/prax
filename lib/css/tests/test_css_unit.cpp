@@ -39,13 +39,11 @@ TEST_CASE("every unit is found however its case is written") {
 
     struct Case { const char* text; PrCssUnit unit; };
     for (const Case& test : {Case{"px", PrCssUnit_Px}, Case{"PX", PrCssUnit_Px},
-                             Case{"Px", PrCssUnit_Px}, Case{"q", PrCssUnit_Q},
-                             Case{"Q", PrCssUnit_Q}, Case{"hz", PrCssUnit_Hz},
-                             Case{"Hz", PrCssUnit_Hz}, Case{"HZ", PrCssUnit_Hz},
-                             Case{"khz", PrCssUnit_KHz}, Case{"kHz", PrCssUnit_KHz},
-                             Case{"KHZ", PrCssUnit_KHz}, Case{"db", PrCssUnit_DB},
-                             Case{"dB", PrCssUnit_DB}, Case{"dvmin", PrCssUnit_Dvmin},
-                             Case{"s", PrCssUnit_S}, Case{"st", PrCssUnit_St}}) {
+        Case{"Px", PrCssUnit_Px}, Case{"q", PrCssUnit_Q}, Case{"Q", PrCssUnit_Q}, Case{"hz", PrCssUnit_Hz},
+                Case{"Hz", PrCssUnit_Hz}, Case{"HZ", PrCssUnit_Hz}, Case{"khz", PrCssUnit_KHz},
+                Case{"kHz", PrCssUnit_KHz}, Case{"KHZ", PrCssUnit_KHz}, Case{"db", PrCssUnit_DB},
+                Case{"dB", PrCssUnit_DB}, Case{"dvmin", PrCssUnit_Dvmin},
+                Case{"s", PrCssUnit_S}, Case{"st", PrCssUnit_St}}) {
         INFO(test.text);
         CHECK(cssUnitFromText(test.text) == test.unit);
     }

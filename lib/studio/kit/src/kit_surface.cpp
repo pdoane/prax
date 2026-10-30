@@ -42,8 +42,10 @@ struct SurfaceBox {
 
     void make(const Kit& kit, PrLayoutBoxStyle& box) const {
         KitContainerBox{.style = style}.make(kit, box);
-        static const PrKitRuleFlags kRules[PrRectSide_Count] = {PrKitRuleFlag_Top, PrKitRuleFlag_Right,
-                                                                PrKitRuleFlag_Bottom, PrKitRuleFlag_Left};
+        static const PrKitRuleFlags kRules[PrRectSide_Count] = {
+            PrKitRuleFlag_Top, PrKitRuleFlag_Right,
+            PrKitRuleFlag_Bottom, PrKitRuleFlag_Left,
+        };
         for (uint32_t side = 0; side < PrRectSide_Count; ++side) {
             if ((rules & kRules[side]) != 0)
                 box.border[side] = prLayoutUnitFromPx(1);
@@ -55,29 +57,38 @@ PR_NO_PADDING_END
 // Returns a surface's colors: its ground, and its rules', which are the HUD's border on the HUD ground.
 KitColors surfaceColors(const Kit& kit, PrKitGround ground) {
     const PrKitPalette& p = kit.theme.palette;
-    return KitColors{.background = groundColor(kit, ground),
-                     .border = ground == PrKitGround_Hud ? p.hudBorder : p.line1};
+    return KitColors{
+        .background = groundColor(kit, ground),
+        .border = ground == PrKitGround_Hud ? p.hudBorder : p.line1,
+    };
 }
 
 // Returns the record of a surface in `style`.
 PrLayoutStyleIndex surfaceStyle(Kit& kit, const PrKitSurfaceStyle& style) {
     return kitStyle(kit, SurfaceBox{.style = style.box, .rules = style.rules}, kitContainerFlex(style.box),
-                    surfaceColors(kit, style.ground));
+        surfaceColors(kit, style.ground));
 }
 
 // A panel header's bar: a row on the header ground with a rule below it, a medium control's height.
 PrKitSurfaceStyle headerBar() {
-    return {.box = {.direction = PrKitDirection_Row,
-                    .align = PrKitAlign_Center,
-                    .gap = kPrKitSpace3,
-                    .padding = {0, kPrKitSpace4, 0, kPrKitSpace4},
-                    .place = {.height = prKitPx(kPrKitHeightMd), .flex = PrKitFlex_Fixed}},
-            .ground = PrKitGround_Header,
-            .rules = PrKitRuleFlag_Bottom};
+    return {
+        .box = {
+            .direction = PrKitDirection_Row,
+            .align = PrKitAlign_Center,
+            .gap = kPrKitSpace3,
+            .padding = {0, kPrKitSpace4, 0, kPrKitSpace4},
+            .place = {.height = prKitPx(kPrKitHeightMd), .flex = PrKitFlex_Fixed},
+        },
+        .ground = PrKitGround_Header,
+        .rules = PrKitRuleFlag_Bottom,
+    };
 }
 
-constexpr PrKitTextStyle kHeaderTitle = {.role = PrKitTextRole_Caption, .tone = PrKitTone_Secondary,
-                                         .wrap = PrKitWrap_Clip};
+constexpr PrKitTextStyle kHeaderTitle = {
+    .role = PrKitTextRole_Caption,
+    .tone = PrKitTone_Secondary,
+    .wrap = PrKitWrap_Clip,
+};
 constexpr PrKitTextStyle kHeaderMeta = {.role = PrKitTextRole_Meta};
 
 // A swatch's box: a bordered square of `size` px.
@@ -108,7 +119,7 @@ PrLayoutNode prKitSelectable(PrKit* kit, PrLayoutNode parent, PrKitSelectable se
     Kit& k = *kit;
     PrLayoutNode node = kitBoxNode(k, parent, PrKitBox{.key = selectable.key}, style.overflow, 0);
     KitControl c = kitControlFromNode(k, node, prUiFlags(k.ui, node) | PrUiFlag_Pressable | PrUiFlag_Focusable,
-                                      selectable.disabled);
+        selectable.disabled);
     KitLookId look = selectable.selected ? KitLookId_SelectableSelected : KitLookId_Selectable;
     PrLayoutStyleIndex record =
         kitStyle(k, KitContainerBox{.style = style}, kitContainerFlex(style), kitDress(k, c, look).fill);
@@ -118,8 +129,8 @@ PrLayoutNode prKitSelectable(PrKit* kit, PrLayoutNode parent, PrKitSelectable se
 
 PrLayoutNode prKitPanelHeader(PrKit* kit, PrLayoutNode parent, PrKitPanelHeader header) {
     Kit& k = *kit;
-    PrLayoutNode bar = kitBoxNode(k, parent, PrKitBox{.key = header.key}, PrKitOverflow_Visible,
-                                  surfaceStyle(k, headerBar()));
+    PrLayoutNode bar =
+        kitBoxNode(k, parent, PrKitBox{.key = header.key}, PrKitOverflow_Visible, surfaceStyle(k, headerBar()));
     prKitLabel(kit, bar, PrKitLabel{.text = header.title}, kHeaderTitle);
     prKitSpacer(kit, bar, PrKitSpacer{});
     if (header.meta.size != 0)
@@ -130,6 +141,6 @@ PrLayoutNode prKitPanelHeader(PrKit* kit, PrLayoutNode parent, PrKitPanelHeader 
 PrLayoutNode prKitSwatch(PrKit* kit, PrLayoutNode parent, PrKitSwatch swatch, PrKitSwatchStyle style) {
     Kit& k = *kit;
     PrLayoutStyleIndex record = kitStyle(k, SwatchBox{.size = style.size}, KitFixed{},
-                                         KitColors{.background = swatch.color, .border = k.theme.palette.line2});
+        KitColors{.background = swatch.color, .border = k.theme.palette.line2});
     return prLayoutTreeFrameElement(k.tree, parent, swatch.key, record);
 }

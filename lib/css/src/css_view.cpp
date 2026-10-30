@@ -80,8 +80,8 @@ bool isPotentiallyScrollable(PrCssPresentation* presentation, PrDomElement* body
     if (cssPresentationBox(presentation, body) == kPrLayoutNodeNone || own == nullptr || around == nullptr)
         return false;
     auto scrolls = [](const CssComputedStyle* style) {
-        return !doesNotScroll(cssComputedFirstKeyword(style, PrCssProperty_OverflowX))
-               || !doesNotScroll(cssComputedFirstKeyword(style, PrCssProperty_OverflowY));
+        return !doesNotScroll(cssComputedFirstKeyword(style, PrCssProperty_OverflowX)) ||
+            !doesNotScroll(cssComputedFirstKeyword(style, PrCssProperty_OverflowY));
     };
     return scrolls(around) && scrolls(own);
 }
@@ -126,8 +126,11 @@ void scrollElement(PrDomElement* element, const PrCssScrollToOptions* options, b
     Scrolling scrolling = scrollingOf(presentation, element);
     if (scrolling == Scrolling_None)
         return;
-    PrLayoutNode node =
-        scrolling == Scrolling_Viewport ? PrLayoutNode(kPrLayoutNodeNone) : cssPresentationBox(presentation, element);
+    PrLayoutNode node;
+    if (scrolling == Scrolling_Viewport)
+        node = PrLayoutNode(kPrLayoutNodeNone);
+    else
+        node = cssPresentationBox(presentation, element);
     if (scrolling == Scrolling_Own && node == kPrLayoutNodeNone)
         return;
     PrLayoutScrollInfo info{};
@@ -144,8 +147,8 @@ void scrollElement(PrDomElement* element, const PrCssScrollToOptions* options, b
 // Writes the border box of the first box of the element, as laid out. Returns false if the element has no box.
 bool firstBox(PrCssPresentation* presentation, const PrDomElement* element, PrLayoutRect* out) {
     PrLayoutNode box = cssPresentationBox(presentation, element);
-    return box != kPrLayoutNodeNone
-           && prLayoutNodeBoxes(cssPresentationOwnTree(presentation), box, PrLayoutCoordinates_Layout, out, 1) != 0;
+    return box != kPrLayoutNodeNone &&
+        prLayoutNodeBoxes(cssPresentationOwnTree(presentation), box, PrLayoutCoordinates_Layout, out, 1) != 0;
 }
 
 } // namespace
@@ -153,8 +156,7 @@ bool firstBox(PrCssPresentation* presentation, const PrDomElement* element, PrLa
 PrLayoutVec cssViewViewportExtent(PrDomDocument* document) {
     PrCssPresentation* presentation = presentationFor(document);
     PrLayoutScrollInfo info{};
-    if (presentation == nullptr
-        || !prLayoutNodeScrollInfo(cssPresentationOwnTree(presentation), kPrLayoutNodeNone, &info))
+    if (presentation == nullptr || !prLayoutNodeScrollInfo(cssPresentationOwnTree(presentation), kPrLayoutNodeNone, &info))
         return PrLayoutVec{};
     return info.portExtent;
 }
@@ -162,8 +164,7 @@ PrLayoutVec cssViewViewportExtent(PrDomDocument* document) {
 PrLayoutVec cssViewViewportScroll(PrDomDocument* document) {
     PrCssPresentation* presentation = presentationFor(document);
     PrLayoutScrollInfo info{};
-    if (presentation == nullptr
-        || !prLayoutNodeScrollInfo(cssPresentationOwnTree(presentation), kPrLayoutNodeNone, &info))
+    if (presentation == nullptr || !prLayoutNodeScrollInfo(cssPresentationOwnTree(presentation), kPrLayoutNodeNone, &info))
         return PrLayoutVec{};
     return info.offset;
 }
@@ -180,19 +181,20 @@ void cssViewScrollViewportBy(PrDomDocument* document, PrLayoutVec delta) {
 PrDomElement* PR_NULLABLE cssViewOffsetParent(PrDomElement* element) {
     PrCssPresentation* presentation = presentationFor(element);
     PrDomDocument* document = element->document;
-    if (presentation == nullptr || cssPresentationBox(presentation, element) == kPrLayoutNodeNone
-        || element == domDocumentElement(document) || element == domDocumentBody(document))
+    if (presentation == nullptr || cssPresentationBox(presentation, element) == kPrLayoutNodeNone ||
+            element == domDocumentElement(document) || element == domDocumentBody(document))
         return nullptr;
     const CssComputedStyle* style = cssPresentationStyle(presentation, element);
-    PrCssKeyword position =
-        style != nullptr ? cssComputedFirstKeyword(style, PrCssProperty_Position) : PrCssKeyword_Static;
+    PrCssKeyword position = PrCssKeyword_Static;
+    if (style != nullptr)
+        position = cssComputedFirstKeyword(style, PrCssProperty_Position);
     PrLayoutTree* tree = cssPresentationOwnTree(presentation);
     // The offset parent of a fixed box is the nearest containing block of fixed boxes, or none if no ancestor is one.
     // The offset parent of any other box is the nearest containing block of absolutely positioned boxes, or the body.
     // Layout decides which boxes are containing blocks.
     bool fixed = position == PrCssKeyword_Fixed;
     for (PrDomElement* ancestor = domElementFromNode(element->parent); ancestor != nullptr;
-         ancestor = domElementFromNode(ancestor->parent)) {
+            ancestor = domElementFromNode(ancestor->parent)) {
         PrLayoutNode box = cssPresentationBox(presentation, ancestor);
         if (box == kPrLayoutNodeNone)
             continue;
@@ -203,9 +205,8 @@ PrDomElement* PR_NULLABLE cssViewOffsetParent(PrDomElement* element) {
         }
         if (prLayoutNodeHoldsAbsolute(tree, box) || ancestor == domDocumentBody(document))
             return ancestor;
-        if (position == PrCssKeyword_Static
-            && (domIsHtml(ancestor, PrDomTag_Td) || domIsHtml(ancestor, PrDomTag_Th)
-                || domIsHtml(ancestor, PrDomTag_Table)))
+        if (position == PrCssKeyword_Static && (domIsHtml(ancestor, PrDomTag_Td) || domIsHtml(ancestor, PrDomTag_Th) ||
+                domIsHtml(ancestor, PrDomTag_Table)))
             return ancestor;
     }
     return nullptr;
@@ -231,10 +232,8 @@ PrDomRect cssViewOffsetRect(PrDomElement* element) {
     // A static body measures from the initial containing block, rather than from its padding box.
     PrDomElement* parent = cssViewOffsetParent(element);
     const CssComputedStyle* parentStyle = parent != nullptr ? cssPresentationStyle(presentation, parent) : nullptr;
-    bool fromBody =
-        parent == domDocumentBody(element->document)
-        && (parentStyle == nullptr
-            || cssComputedFirstKeyword(parentStyle, PrCssProperty_Position) == PrCssKeyword_Static);
+    bool fromBody = parent == domDocumentBody(element->document) && (parentStyle == nullptr ||
+        cssComputedFirstKeyword(parentStyle, PrCssProperty_Position) == PrCssKeyword_Static);
     PrLayoutRect from{};
     if (parent != nullptr && !fromBody && firstBox(presentation, parent, &from)) {
         PrLayoutNode parentBox = cssPresentationBox(presentation, parent);
@@ -250,8 +249,11 @@ using namespace pr_impl;
 
 uint32_t prCssElementGetClientRects(PrDomElement* element, PrDomRect* PR_NULLABLE out, uint32_t capacity) {
     PrCssPresentation* presentation = presentationFor(element);
-    PrLayoutNode box =
-        presentation != nullptr ? cssPresentationBox(presentation, element) : PrLayoutNode(kPrLayoutNodeNone);
+    PrLayoutNode box;
+    if (presentation != nullptr)
+        box = cssPresentationBox(presentation, element);
+    else
+        box = PrLayoutNode(kPrLayoutNodeNone);
     // An element of SVG content has no box. Its one rectangle is its bounding box
     // (cssom-view-1/#dom-element-getclientrects).
     const CssPresentationSvg* around =
@@ -283,8 +285,10 @@ uint32_t prCssElementGetClientRects(PrDomElement* element, PrDomRect* PR_NULLABL
         PrDomRect rect = domRect(rects.data[i]);
         const CssPresentationSvg* drawing = foreign != nullptr ? svgAround(presentation, foreign) : nullptr;
         if (drawing != nullptr) {
-            PrDVec2 corners[4] = {{rect.x, rect.y}, {rect.x + rect.width, rect.y},
-                                  {rect.x + rect.width, rect.y + rect.height}, {rect.x, rect.y + rect.height}};
+            PrDVec2 corners[4] = {
+                {rect.x, rect.y}, {rect.x + rect.width, rect.y},
+                {rect.x + rect.width, rect.y + rect.height}, {rect.x, rect.y + rect.height},
+            };
             if (drawing->functions->foreignToClient(drawing->content, foreign, corners, 4)) {
                 double left = corners[0].x, top = corners[0].y, right = corners[0].x, bottom = corners[0].y;
                 for (const PrDVec2& corner : corners) {
@@ -389,8 +393,7 @@ void prCssElementScrollIntoView(PrDomElement* element, const PrCssScrollIntoView
     // Each scrolling box that the element is in, innermost first, and then the viewport, scrolls the element's border
     // box to the position in the box's scrollport where the options align it. The border box is measured where the
     // earlier scrolls left the element.
-    auto align = [](PrCssScrollLogicalPosition position, double start, double end, double portStart,
-                    double portEnd) {
+    auto align = [](PrCssScrollLogicalPosition position, double start, double end, double portStart, double portEnd) {
         double size = end - start;
         double portSize = portEnd - portStart;
         switch (position) {
@@ -408,8 +411,7 @@ void prCssElementScrollIntoView(PrDomElement* element, const PrCssScrollIntoView
         }
     };
     PrLayoutTree* tree = cssPresentationOwnTree(presentation);
-    for (PrDomElement* ancestor = domElementFromNode(element->parent);;
-         ancestor = domElementFromNode(ancestor->parent)) {
+    for (PrDomElement* ancestor = domElementFromNode(element->parent);; ancestor = domElementFromNode(ancestor->parent)) {
         bool viewport = ancestor == nullptr;
         PrLayoutNode node = viewport ? PrLayoutNode(kPrLayoutNodeNone) : cssPresentationBox(presentation, ancestor);
         PrLayoutScrollInfo info{};
@@ -441,11 +443,12 @@ int32_t prCssElementScrollWidth(PrDomElement* element) {
     if (presentation == nullptr)
         return 0;
     PrLayoutScrollInfo info{};
+    bool found;
     if (measuresViewport(element))
-        return prLayoutNodeScrollInfo(cssPresentationOwnTree(presentation), kPrLayoutNodeNone, &info)
-                   ? integer(px(info.content.right - info.content.left))
-                   : 0;
-    return scrollInfoOf(presentation, element, &info) ? integer(px(info.content.right - info.content.left)) : 0;
+        found = prLayoutNodeScrollInfo(cssPresentationOwnTree(presentation), kPrLayoutNodeNone, &info);
+    else
+        found = scrollInfoOf(presentation, element, &info);
+    return found ? integer(px(info.content.right - info.content.left)) : 0;
 }
 
 int32_t prCssElementScrollHeight(PrDomElement* element) {
@@ -453,11 +456,12 @@ int32_t prCssElementScrollHeight(PrDomElement* element) {
     if (presentation == nullptr)
         return 0;
     PrLayoutScrollInfo info{};
+    bool found;
     if (measuresViewport(element))
-        return prLayoutNodeScrollInfo(cssPresentationOwnTree(presentation), kPrLayoutNodeNone, &info)
-                   ? integer(px(info.content.bottom - info.content.top))
-                   : 0;
-    return scrollInfoOf(presentation, element, &info) ? integer(px(info.content.bottom - info.content.top)) : 0;
+        found = prLayoutNodeScrollInfo(cssPresentationOwnTree(presentation), kPrLayoutNodeNone, &info);
+    else
+        found = scrollInfoOf(presentation, element, &info);
+    return found ? integer(px(info.content.bottom - info.content.top)) : 0;
 }
 
 int32_t prCssElementClientTop(PrDomElement* element) {
@@ -507,7 +511,7 @@ PrDomElement* PR_NULLABLE prCssDocumentScrollingElement(PrDomDocument* document)
 }
 
 uint32_t prCssDocumentElementsFromPoint(PrDomDocument* document, double x, double y,
-                                        PrDomElement* PR_NULLABLE* PR_NULLABLE out, uint32_t capacity) {
+        PrDomElement* PR_NULLABLE* PR_NULLABLE out, uint32_t capacity) {
     PrCssPresentation* presentation = presentationFor(document);
     if (presentation == nullptr)
         return 0;

@@ -87,8 +87,8 @@ bool readMonth(PrStringView text, size_t* at, int64_t* year, uint32_t* month) {
 // html/#parse-a-date-component
 bool readDate(PrStringView text, size_t* at, DomDate* out) {
     DomDate date{};
-    if (!readMonth(text, at, &date.year, &date.month) || !readChar(text, at, '-')
-        || !readDigits(text, at, 2, &date.day) || date.day < 1 || date.day > daysInMonth(date.year, date.month))
+    if (!readMonth(text, at, &date.year, &date.month) || !readChar(text, at, '-') ||
+            !readDigits(text, at, 2, &date.day) || date.day < 1 || date.day > daysInMonth(date.year, date.month))
         return false;
     *out = date;
     return true;
@@ -98,8 +98,8 @@ bool readDate(PrStringView text, size_t* at, DomDate* out) {
 bool readTime(PrStringView text, size_t* at, DomTime* out, uint32_t* fractionDigits) {
     uint32_t hour = 0;
     uint32_t minute = 0;
-    if (!readDigits(text, at, 2, &hour) || hour > 23 || !readChar(text, at, ':') || !readDigits(text, at, 2, &minute)
-        || minute > 59)
+    if (!readDigits(text, at, 2, &hour) || hour > 23 || !readChar(text, at, ':') || !readDigits(text, at, 2, &minute) ||
+            minute > 59)
         return false;
     double milliseconds = double(hour * 3600000 + minute * 60000);
     *fractionDigits = 0;
@@ -276,8 +276,8 @@ bool domParseWeek(PrStringView text, int64_t* year, uint32_t* week) {
     parseU64Prefix(text.data, digits, &value);
     at = digits;
     uint32_t number = 0;
-    if (value == 0 || !readChar(text, &at, '-') || !readChar(text, &at, 'W') || !readDigits(text, &at, 2, &number)
-        || at != text.size || number < 1 || number > domWeeksInYear(int64_t(value)))
+    if (value == 0 || !readChar(text, &at, '-') || !readChar(text, &at, 'W') || !readDigits(text, &at, 2, &number) ||
+            at != text.size || number < 1 || number > domWeeksInYear(int64_t(value)))
         return false;
     *year = int64_t(value);
     *week = number;

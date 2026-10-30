@@ -17,8 +17,10 @@ const std::vector<Drawing>& allFeatures() {
     static const std::vector<Drawing> features = [] {
         std::vector<Drawing> all;
         for (const std::vector<Drawing>* group :
-             {&shapeFeatures(), &paintFeatures(), &composeFeatures(), &boxFeatures(), &filterFeatures(),
-              &textFeatures(), &fontFeatures()})
+                {
+                    &shapeFeatures(), &paintFeatures(), &composeFeatures(), &boxFeatures(), &filterFeatures(),
+                    &textFeatures(), &fontFeatures(),
+                })
             all.insert(all.end(), group->begin(), group->end());
         return all;
     }();

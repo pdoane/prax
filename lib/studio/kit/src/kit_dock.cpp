@@ -110,13 +110,15 @@ PR_NO_PADDING_END
 PrLayoutNode splitBand(Kit& kit, PrLayoutNode box, PrKitDirection direction) {
     PrLayoutNode band = prUiElement(kit.ui, box, 0, 0, PrUiFlag_Pressable);
     bool enabled = (prUiFlags(kit.ui, band) & PrUiFlag_Disabled) == 0;
-    BandState state = prUiIsPressed(kit.ui, band, 0)                ? BandState_Press
-                    : enabled && prUiIsHovered(kit.ui, band) ? BandState_Hover
-                                                           : BandState_Rest;
+    BandState state = BandState_Rest;
+    if (prUiIsPressed(kit.ui, band, 0))
+        state = BandState_Press;
+    else if (enabled && prUiIsHovered(kit.ui, band))
+        state = BandState_Hover;
     const PrKitPalette& p = kit.theme.palette;
     KitColors wash{.background = state == BandState_Rest ? PrColor{0, 0, 0, 0} : p.accentWeak};
     prLayoutTreeFrameSetStyle(kit.tree, band,
-                              kitStyle(kit, BandBox{.direction = direction}, BandFlex{.direction = direction}, wash));
+        kitStyle(kit, BandBox{.direction = direction}, BandFlex{.direction = direction}, wash));
     KitColors line{.background = state == BandState_Press ? p.accent : p.line1};
     prLayoutTreeFrameElement(kit.tree, band, 0, kitStyle(kit, BandRuleBox{.direction = direction}, KitFixed{}, line));
     if (enabled)
@@ -180,7 +182,7 @@ float motionIn(const Kit& kit, PrLayoutNode box, const PrUiDrag& drag, bool acro
 // Creates `count` panes under a split's `box`, with a band between each pair. Applies the round's drag of each band to
 // `weights`, then sizes the panes by the weights. Writes the panes to `panes`.
 void splitPanes(Kit& kit, PrLayoutNode box, PrKitDirection direction, float* weights, uint32_t count, float minShare,
-                PrLayoutNode* panes) {
+        PrLayoutNode* panes) {
     PrLayoutTree* tree = kit.tree;
     PrVec2 size = kitExtent(kit, box);
     bool across = direction == PrKitDirection_Row;
@@ -439,8 +441,7 @@ void moveToTab(Dock& dock, PrKitDockPanelId panel, PrKitDockNode leaf, uint32_t 
 
 void moveToSplit(Dock& dock, PrKitDockPanelId panel, PrKitDockNode leaf, PrKitDockEdge edge) {
     PrKitDockNode source = findPanel(dock, panel);
-    if (!isLeaf(dock, leaf) || source == kPrKitDockNodeNone
-        || (source == leaf && nodeAt(dock, leaf).tabs.count <= 1))
+    if (!isLeaf(dock, leaf) || source == kPrKitDockNodeNone || (source == leaf && nodeAt(dock, leaf).tabs.count <= 1))
         return;
     detachPanel(dock, panel, leaf);
     splitLeaf(dock, leaf, edge, panel, 0.5f);
@@ -619,10 +620,11 @@ uint64_t keyOf(const DockBuild& b, DockKey salt, uint64_t item) {
 // Resolves a drop at `pointer` over a leaf's `content`, in the dock's `area`. Near the dock's border, the drop takes a
 // side of the dock. In the leaf's outer band, it takes an edge of the leaf. In the leaf's middle, it joins the tabs.
 Drop resolveDrop(PrRect content, PrRect area, PrVec2 pointer) {
-    float distances[] = {pointer.x - area.left, area.right - pointer.x, pointer.y - area.top,
-                         area.bottom - pointer.y};
-    static const PrKitDockEdge kEdges[] = {PrKitDockEdge_Left, PrKitDockEdge_Right, PrKitDockEdge_Top,
-                                           PrKitDockEdge_Bottom};
+    float distances[] = {pointer.x - area.left, area.right - pointer.x, pointer.y - area.top, area.bottom - pointer.y};
+    static const PrKitDockEdge kEdges[] = {
+        PrKitDockEdge_Left, PrKitDockEdge_Right, PrKitDockEdge_Top,
+        PrKitDockEdge_Bottom,
+    };
     float nearest = kDockMargin;
     Drop drop{.kind = DropKind_Tab, .edge = PrKitDockEdge_Left};
     for (uint32_t i = 0; i < 4; ++i) {
@@ -637,8 +639,10 @@ Drop resolveDrop(PrRect content, PrRect area, PrVec2 pointer) {
     float height = content.bottom - content.top;
     if (width <= 0 || height <= 0)
         return drop;
-    float fractions[] = {(pointer.x - content.left) / width, (content.right - pointer.x) / width,
-                         (pointer.y - content.top) / height, (content.bottom - pointer.y) / height};
+    float fractions[] = {
+        (pointer.x - content.left) / width, (content.right - pointer.x) / width,
+        (pointer.y - content.top) / height, (content.bottom - pointer.y) / height,
+    };
     nearest = kEdgeFraction;
     for (uint32_t i = 0; i < 4; ++i) {
         if (fractions[i] < nearest) {
@@ -714,9 +718,8 @@ void buildStrip(DockBuild& b, PrLayoutNode column, PrKitDockNode leaf) {
         // The title is the tab's own text, set in its record's font and color.
         KitColors fill{.background = active ? p.bg1 : hover ? p.bg3 : PrColor{0, 0, 0, 0}, .border = p.line1};
         KitInk ink{.color = active ? p.text1 : hover ? p.text2 : p.text3};
-        prLayoutTreeFrameSetStyle(kit->tree, tab,
-                                  kitStyle(*kit, DockTabBox{}, DockTabFlex{}, fill,
-                                           KitFont{.role = PrKitTextRole_BodySmall, .wrap = PrKitWrap_Nowrap}, ink));
+        prLayoutTreeFrameSetStyle(kit->tree, tab, kitStyle(*kit, DockTabBox{}, DockTabFlex{}, fill,
+            KitFont{.role = PrKitTextRole_BodySmall, .wrap = PrKitWrap_Nowrap}, ink));
         if (enabled && prUiIsPressed(ui, tab, 0))
             prUiDragStart(ui, tab, kDragThreshold, kPrKitDockDragKind, panel);
 
@@ -790,16 +793,22 @@ void buildLeaf(DockBuild& b, PrLayoutNode parent, PrKitDockNode leaf) {
     Drop drop = resolveDrop(rect, b.area, b.pointer);
     if (dropped != 0) {
         DockOp op{.panel = dropped, .leaf = leaf, .index = kArrayMissing, .edge = drop.edge};
-        op.kind = drop.kind == DropKind_DockEdge ? DockOpKind_ToEdge
-                  : drop.kind == DropKind_Split  ? DockOpKind_ToSplit
-                                                 : DockOpKind_ToTab;
+        if (drop.kind == DropKind_DockEdge)
+            op.kind = DockOpKind_ToEdge;
+        else if (drop.kind == DropKind_Split)
+            op.kind = DockOpKind_ToSplit;
+        else
+            op.kind = DockOpKind_ToTab;
         stage(b, op);
     }
     if (over && b.dragging) {
         b.preview = true;
-        b.previewRect = drop.kind == DropKind_DockEdge ? halfAt(b.area, drop.edge)
-                        : drop.kind == DropKind_Split  ? halfAt(rect, drop.edge)
-                                                       : rect;
+        if (drop.kind == DropKind_DockEdge)
+            b.previewRect = halfAt(b.area, drop.edge);
+        else if (drop.kind == DropKind_Split)
+            b.previewRect = halfAt(rect, drop.edge);
+        else
+            b.previewRect = rect;
     }
 }
 
@@ -831,11 +840,13 @@ void buildFloating(DockBuild& b, PrKitDockPanelId dragged) {
     PrLayoutNode overlay = prUiOverlay(kit.ui);
     const PrKitPalette& p = kit.theme.palette;
     auto box = [](PrRect rect, bool sized) {
-        return DockFloatBox{.left = rect.left,
-                            .top = rect.top,
-                            .width = rect.right - rect.left,
-                            .height = rect.bottom - rect.top,
-                            .sized = sized};
+        return DockFloatBox{
+            .left = rect.left,
+            .top = rect.top,
+            .width = rect.right - rect.left,
+            .height = rect.bottom - rect.top,
+            .sized = sized,
+        };
     };
     if (b.preview) {
         PrColor wash = p.accent;
@@ -843,22 +854,18 @@ void buildFloating(DockBuild& b, PrKitDockPanelId dragged) {
         DockFloatBox area = box(b.previewRect, true);
         area.bordered = true;
         prUiElement(kit.ui, overlay, keyOf(b, DockKey_Preview, 0),
-                    kitStyle(kit, area, KitColors{.background = wash, .border = p.accent}),
-                    PrUiFlag_SubtreeTransparent);
+            kitStyle(kit, area, KitColors{.background = wash, .border = p.accent}), PrUiFlag_SubtreeTransparent);
     }
     if (b.mark) {
         prUiElement(kit.ui, overlay, keyOf(b, DockKey_Mark, 0),
-                    kitStyle(kit, box(b.markRect, true), KitColors{.background = p.accent}),
-                    PrUiFlag_SubtreeTransparent);
+            kitStyle(kit, box(b.markRect, true), KitColors{.background = p.accent}), PrUiFlag_SubtreeTransparent);
     }
     DockFloatBox title = box(PrRect{b.pointer.x + kGhostOffset, b.pointer.y + kGhostOffset, 0, 0}, false);
     title.bordered = true;
     title.padded = true;
     PrLayoutStyleIndex record = kitStyle(kit, title, KitColors{.background = p.bg3, .border = p.line2},
-                                         KitFont{.role = PrKitTextRole_BodySmall, .wrap = PrKitWrap_Nowrap},
-                                         KitInk{.color = p.text1});
-    PrLayoutNode ghost =
-        prUiElement(kit.ui, overlay, keyOf(b, DockKey_Ghost, 0), record, PrUiFlag_SubtreeTransparent);
+        KitFont{.role = PrKitTextRole_BodySmall, .wrap = PrKitWrap_Nowrap}, KitInk{.color = p.text1});
+    PrLayoutNode ghost = prUiElement(kit.ui, overlay, keyOf(b, DockKey_Ghost, 0), record, PrUiFlag_SubtreeTransparent);
     prLayoutTreeFrameText(kit.tree, ghost, 0, b.describe(b.context, dragged).title);
 }
 
@@ -990,8 +997,7 @@ void prKitDockAddPanel(PrKitDock* dock, PrKitDockNode leaf, PrKitDockPanelId pan
     addPanel(*dock, leaf, panel);
 }
 
-PrKitDockNode prKitDockSplit(PrKitDock* dock, PrKitDockNode leaf, PrKitDockEdge edge, PrKitDockPanelId panel,
-                             float share) {
+PrKitDockNode prKitDockSplit(PrKitDock* dock, PrKitDockNode leaf, PrKitDockEdge edge, PrKitDockPanelId panel, float share) {
     return splitLeaf(*dock, leaf, edge, panel, share);
 }
 

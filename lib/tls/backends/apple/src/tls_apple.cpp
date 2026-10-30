@@ -278,28 +278,28 @@ void run(void* PR_NULLABLE context) {
 
 // Asks for the next bytes, from the loop, unless one receive is waiting or the session holds as much as it may.
 void receive(AppleSession* session) {
-    if (session->receiving || session->ended || session->state != SessionState_Open
-        || session->received.count - session->receivedStart >= kReceivedMaxBytes)
+    if (session->receiving || session->ended || session->state != SessionState_Open ||
+            session->received.count - session->receivedStart >= kReceivedMaxBytes)
         return;
     session->receiving = true;
     retain(session);
     nw_connection_receive(session->connection, 1, kReceiveChunkBytes,
-                          ^(dispatch_data_t content, nw_content_context_t message, bool complete, nw_error_t error) {
-        Delivery* delivery = deliveryOf(session, DeliveryKind_Received);
-        if (content != nullptr) {
-            dispatch_data_apply(content, ^bool(dispatch_data_t, size_t, const void* buffer, size_t size) {
-                delivery->bytes.append(static_cast<const uint8_t*>(buffer), uint32_t(size));
-                return true;
-            });
-        }
-        if (error != nullptr) {
-            delivery->kind = DeliveryKind_Failed;
-            describeError(delivery, error, false);
-        } else {
-            delivery->complete = complete && (message == nullptr || nw_content_context_get_is_final(message));
-        }
-        post(delivery);
-    });
+        ^(dispatch_data_t content, nw_content_context_t message, bool complete, nw_error_t error) {
+            Delivery* delivery = deliveryOf(session, DeliveryKind_Received);
+            if (content != nullptr) {
+                dispatch_data_apply(content, ^bool(dispatch_data_t, size_t, const void* buffer, size_t size) {
+                    delivery->bytes.append(static_cast<const uint8_t*>(buffer), uint32_t(size));
+                    return true;
+                });
+            }
+            if (error != nullptr) {
+                delivery->kind = DeliveryKind_Failed;
+                describeError(delivery, error, false);
+            } else {
+                delivery->complete = complete && (message == nullptr || nw_content_context_get_is_final(message));
+            }
+            post(delivery);
+        });
 }
 
 // Runs on the queue with each change of the connection's state.
@@ -313,9 +313,12 @@ void stateChanged(AppleSession* session, nw_connection_state_t state, nw_error_t
             if (metadata != nullptr) {
                 sec_protocol_metadata_t secure = nw_tls_copy_sec_protocol_metadata(metadata);
                 tls_protocol_version_t version = sec_protocol_metadata_get_negotiated_tls_protocol_version(secure);
-                delivery->version = version == tls_protocol_version_TLSv13 ? PrTlsVersion_Tls13
-                                  : version == tls_protocol_version_TLSv12 ? PrTlsVersion_Tls12
-                                                                           : PrTlsVersion_None;
+                if (version == tls_protocol_version_TLSv13)
+                    delivery->version = PrTlsVersion_Tls13;
+                else if (version == tls_protocol_version_TLSv12)
+                    delivery->version = PrTlsVersion_Tls12;
+                else
+                    delivery->version = PrTlsVersion_None;
                 char* protocol = const_cast<char*>(sec_protocol_metadata_copy_negotiated_protocol(secure));
                 if (protocol != nullptr) {
                     size_t size = 0;
@@ -475,8 +478,8 @@ PrStatus connectTls(PrTls* base, const PrTlsSessionDesc* desc, PrTlsSession* PR_
         return PrStatus_NotSupported;
     char host[kNameMaxBytes];
     char serverName[kNameMaxBytes];
-    if (!copyName(desc->host, host)
-        || !copyName(desc->serverName.data != nullptr ? desc->serverName : desc->host, serverName))
+    if (!copyName(desc->host, host) ||
+            !copyName(desc->serverName.data != nullptr ? desc->serverName : desc->host, serverName))
         return PrStatus_InvalidData;
     CFMutableArrayRef anchors = nullptr;
     if (desc->anchorCount != 0) {
@@ -544,11 +547,10 @@ PrStatus connectTls(PrTls* base, const PrTlsSessionDesc* desc, PrTlsSession* PR_
             protocol[offer.size] = 0;
             sec_protocol_options_add_tls_application_protocol(secure, protocol);
         }
-        sec_protocol_options_set_verify_block(secure,
-                                              ^(sec_protocol_metadata_t, sec_trust_t trust,
-                                                sec_protocol_verify_complete_t complete) {
-            complete(verify(session, trust));
-        }, tls->queue);
+        sec_protocol_options_set_verify_block(secure, ^(sec_protocol_metadata_t, sec_trust_t trust,
+            sec_protocol_verify_complete_t complete) {
+                complete(verify(session, trust));
+            }, tls->queue);
         sec_release(secure);
     }, NW_PARAMETERS_DEFAULT_CONFIGURATION);
     PR_ASSERT(configured);

@@ -13,14 +13,12 @@ namespace pr_impl {
 // Evaluates a brush's alpha over a box of target pixels, row by row, for a node that reads a brush. The filter calls
 // this function because it cannot reach the backend's paint itself.
 typedef void (*FilterBrushAlphaFn)(void* PR_NULLABLE context, const PrDrawBrush* brush,
-                                   PrAffine2 transform, PrIRect box, float* out);
+    PrAffine2 transform, PrIRect box, float* out);
 
 // Returns a texture of an image node's source: the image's texture, or the list's area rendered at `width` by `height`
 // pixels. Writes the texels that the source spans to `texels`. Returns null if the source has no texture.
-typedef const CpuTexture* PR_NULLABLE (*FilterSourceTextureFn)(void* PR_NULLABLE context,
-                                                               const PrDrawSource* source,
-                                                               uint32_t width, uint32_t height,
-                                                               PrRect* texels);
+typedef const CpuTexture* PR_NULLABLE (*FilterSourceTextureFn)(void* PR_NULLABLE context, const PrDrawSource* source,
+    uint32_t width, uint32_t height, PrRect* texels);
 
 // The inputs that a filter reads besides the offscreen that it filters.
 struct CpuFilterInputs {

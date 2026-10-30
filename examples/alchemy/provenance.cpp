@@ -149,8 +149,7 @@ bool provenanceParse(PrStringView text, ProvenanceRecord* out) {
     bool ok = prJsonKind(d, operations) == PrJsonKind_Array;
     if (ok) {
         out->operations.clear();
-        for (PrJsonValueIndex i = prJsonFirst(d, operations); i != kPrJsonMissing;
-             i = prJsonAfter(d, operations, i)) {
+        for (PrJsonValueIndex i = prJsonFirst(d, operations); i != kPrJsonMissing; i = prJsonAfter(d, operations, i)) {
             if (prJsonKind(d, i) == PrJsonKind_Object)
                 out->operations.push_back(readOp(d, i));
         }
@@ -173,8 +172,7 @@ std::string provenanceWrite(PrByteView png, const ProvenanceRecord& record) {
     if (prImagePngSetText(png, kProvenanceKeyword, text, nullptr, 0, &size) != PrStatus_Ok)
         return std::string();
     std::string out(size, '\0');
-    prImagePngSetText(png, kProvenanceKeyword, text, reinterpret_cast<uint8_t*>(out.data()), size,
-                      &size);
+    prImagePngSetText(png, kProvenanceKeyword, text, reinterpret_cast<uint8_t*>(out.data()), size, &size);
     return out;
 }
 

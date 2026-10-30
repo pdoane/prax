@@ -114,14 +114,12 @@ bool readScreen(const uint8_t* bytes, size_t size, Screen& screen) {
         at += size_t(screen.paletteCount) * 3;
     }
     screen.blocks = at;
-    return screen.width != 0 && screen.height != 0
-           && uint64_t(screen.width) * uint64_t(screen.height) <= kMaxPixels;
+    return screen.width != 0 && screen.height != 0 && uint64_t(screen.width) * uint64_t(screen.height) <= kMaxPixels;
 }
 
 // Collects frames from the block chain until reaching `limit` or the trailer. Returns false for a malformed block,
 // keeping the frames read before it.
-bool readFrames(const uint8_t* bytes, size_t size, Screen& screen, uint32_t limit,
-                Array<Frame>& frames) {
+bool readFrames(const uint8_t* bytes, size_t size, Screen& screen, uint32_t limit, Array<Frame>& frames) {
     size_t at = screen.blocks;
     Frame control = {};
     control.delayMs = delayOf(0);
@@ -137,9 +135,8 @@ bool readFrames(const uint8_t* bytes, size_t size, Screen& screen, uint32_t limi
             const uint8_t label = bytes[at++];
             // The Netscape application extension stores the loop count in its own sub-block, after the eleven-byte
             // identifier.
-            if (label == 0xFF && size - at >= 19 && bytes[at] == 11
-                && memEquals(bytes + at + 1, "NETSCAPE2.0", 11) && bytes[at + 12] == 3
-                && bytes[at + 13] == 1) {
+            if (label == 0xFF && size - at >= 19 && bytes[at] == 11 &&
+                    memEquals(bytes + at + 1, "NETSCAPE2.0", 11) && bytes[at + 12] == 3 && bytes[at + 13] == 1) {
                 const uint32_t repeats = readLeU16(bytes + at + 14);
                 screen.loops = repeats == 0 ? 0 : repeats + 1;
             }
@@ -234,9 +231,11 @@ struct LzwTables {
 };
 
 LzwTables lzwTables() {
-    return {static_cast<uint16_t*>(prMemoryAlloc(kMaxCodes * sizeof(uint16_t))),
-            static_cast<uint8_t*>(prMemoryAlloc(kMaxCodes)),
-            static_cast<uint8_t*>(prMemoryAlloc(kMaxCodes))};
+    return {
+        static_cast<uint16_t*>(prMemoryAlloc(kMaxCodes * sizeof(uint16_t))),
+        static_cast<uint8_t*>(prMemoryAlloc(kMaxCodes)),
+        static_cast<uint8_t*>(prMemoryAlloc(kMaxCodes)),
+    };
 }
 
 // Expands the LZW sub-blocks of the frame into one palette index per pixel of its rect, writing at `indices`. Reports
@@ -244,7 +243,7 @@ LzwTables lzwTables() {
 // undrawn instead of failing. Returns false for an invalid minimum code size, or a code that the dictionary cannot
 // hold.
 bool decodeLzw(const uint8_t* bytes, size_t size, const Frame& frame, const LzwTables& tables,
-               uint8_t* indices, size_t count, size_t* outWritten) {
+        uint8_t* indices, size_t count, size_t* outWritten) {
     *outWritten = 0;
     const uint32_t minCodeSize = bytes[frame.data];
     if (minCodeSize < 1 || minCodeSize + 1 > kCodeMaxBits) {
@@ -326,8 +325,7 @@ bool decodeLzw(const uint8_t* bytes, size_t size, const Frame& frame, const LzwT
 
 // Draws the pixels of one frame onto the screen. Pixels with the transparent index of the frame, and pixels beyond the
 // coded data, are left untouched.
-void drawFrame(const Frame& frame, const uint8_t* indices, size_t written, const Screen& screen,
-               uint8_t* pixels) {
+void drawFrame(const Frame& frame, const uint8_t* indices, size_t written, const Screen& screen, uint8_t* pixels) {
     uint32_t pass = 0;
     uint32_t interlacedRow = kPassOrigin[0];
     for (uint32_t row = 0; row < frame.height; ++row) {
@@ -348,9 +346,8 @@ void drawFrame(const Frame& frame, const uint8_t* indices, size_t written, const
             }
             const uint32_t screenX = frame.left + column;
             const uint8_t value = indices[index];
-            if (!visible || screenX >= screen.width
-                || (frame.transparent && value == frame.transparentIndex)
-                || value >= frame.paletteCount) {
+            if (!visible || screenX >= screen.width || (frame.transparent && value == frame.transparentIndex) ||
+                    value >= frame.paletteCount) {
                 continue;
             }
             const uint8_t* entry = frame.palette + size_t(value) * 3;
@@ -368,8 +365,7 @@ void clearFrame(const Frame& frame, const Screen& screen, uint8_t* pixels) {
     if (frame.left >= screen.width) {
         return;
     }
-    const uint32_t columns =
-        frame.width < screen.width - frame.left ? frame.width : screen.width - frame.left;
+    const uint32_t columns = frame.width < screen.width - frame.left ? frame.width : screen.width - frame.left;
     for (uint32_t row = 0; row < frame.height; ++row) {
         const uint32_t screenY = frame.top + row;
         if (screenY >= screen.height) {
@@ -409,8 +405,8 @@ struct GifAnimation {
 };
 
 bool gifHasSignature(PrByteView bytes) {
-    return bytes.size >= 6 && bytes.data[0] == 'G' && bytes.data[1] == 'I' && bytes.data[2] == 'F'
-           && isVersion(bytes.data);
+    return bytes.size >= 6 && bytes.data[0] == 'G' && bytes.data[1] == 'I' && bytes.data[2] == 'F' &&
+        isVersion(bytes.data);
 }
 
 GifAnimation* gifAnimationOpen(PrByteView bytes) {
@@ -455,8 +451,7 @@ uint32_t gifAnimationDelay(const GifAnimation& animation, uint32_t frame) {
 
 // Composes frames from the current frame of the screen through `frame`, drawing each over the disposal of the one
 // before it. A frame at or before the current frame of the screen restarts the walk from an empty screen.
-bool gifAnimationFrame(GifAnimation& animation, uint32_t frame, uint8_t* pixels,
-                       size_t pixelsSize) {
+bool gifAnimationFrame(GifAnimation& animation, uint32_t frame, uint8_t* pixels, size_t pixelsSize) {
     if (frame >= animation.frames.count || pixelsSize != animation.pixelsSize) {
         return false;
     }
@@ -483,8 +478,7 @@ bool gifAnimationFrame(GifAnimation& animation, uint32_t frame, uint8_t* pixels,
         }
         size_t written = 0;
         const size_t count = size_t(current.width) * size_t(current.height);
-        if (!decodeLzw(animation.bytes, animation.size, current, animation.tables,
-                       animation.indices, count, &written)) {
+        if (!decodeLzw(animation.bytes, animation.size, current, animation.tables, animation.indices, count, &written)) {
             animation.at = kNoFrame;
             return false;
         }

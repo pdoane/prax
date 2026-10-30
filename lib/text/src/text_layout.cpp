@@ -286,8 +286,9 @@ void placeLine(TextLayout& t, PrTextLine& line, const PrTextLayoutDesc& d, float
             const PrTextGlyph& glyph = t.shaped.data[g];
             if (glyph.cluster < piece.start || glyph.cluster >= piece.end)
                 continue;
-            t.glyphs.push(PrFontGlyph{glyph.id, PrVec2{pen + glyph.offset.x * t.size,
-                                                        line.baseline + glyph.offset.y * t.size}});
+            t.glyphs.push(PrFontGlyph{
+                glyph.id, PrVec2{pen + glyph.offset.x * t.size, line.baseline + glyph.offset.y * t.size},
+            });
             t.transforms.push(prAffine2Scale(PrVec2{glyph.scale, glyph.scale}));
             placed.scaled = placed.scaled || glyph.scale != 1;
             float next = pen + glyph.advance.x * t.size;

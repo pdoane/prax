@@ -56,10 +56,12 @@ PrStorage* PR_NULLABLE createArea(const HtmlStorageProvider* provider, PrStringV
     textAppend(&path, prStringView(&provider->directory));
     textAppendChar(&path, '/');
     appendDirectoryName(origin, &path);
-    PrStorageDiskDesc desc{.directory = textView(&path),
-                           .limitBytes = provider->quota,
-                           .eviction = PrStorageEviction_None,
-                           .pool = provider->pool};
+    PrStorageDiskDesc desc{
+        .directory = textView(&path),
+        .limitBytes = provider->quota,
+        .eviction = PrStorageEviction_None,
+        .pool = provider->pool,
+    };
     PrStorage* store = nullptr;
     prStorageDiskCreate(&desc, &store);
     textReset(&path);
@@ -153,8 +155,7 @@ PrString prHtmlStorageGetItem(const PrHtmlStorage* self, PrStringView key) {
     PrStorageRecord record{};
     if (!prStorageRead(self->area, key, &record))
         return prStringNull();
-    PrString value =
-        prStringCopy(PrStringView{reinterpret_cast<const char*>(record.bytes.data), record.bytes.size});
+    PrString value = prStringCopy(PrStringView{reinterpret_cast<const char*>(record.bytes.data), record.bytes.size});
     prStorageRecordRelease(self->area, &record);
     return value;
 }

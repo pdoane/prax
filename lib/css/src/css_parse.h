@@ -160,12 +160,12 @@ bool cssIsCssWideKeyword(PrCssKeyword keyword);
 // property (css-values-4/#common-keywords). A value that contains a substitution function is kept as tokens
 // (css-values-5/#arbitrary-substitution).
 bool cssParsePropertyValue(PrCssProperty property, CssTokenStream* ts, CssValuePool* pool,
-                           CssMatchState* state, CssValueSpan* out);
+    CssMatchState* state, CssValueSpan* out);
 
 // Parses the value of a declaration of `descriptor`, which is the whole of `ts`. The value must match the grammar and
 // satisfy the prose. On failure, the stream and pool are unmodified.
 bool cssParseDescriptorValue(PrCssDescriptor descriptor, CssTokenStream* ts, CssValuePool* pool,
-                             CssMatchState* state, CssValueSpan* out);
+    CssMatchState* state, CssValueSpan* out);
 
 // Keeps the whole of `ts` as tokens. `ts` must be a <declaration-value> or nothing. A custom property's value is kept
 // this way (css-variables-1/#defining-variables), as is a value that contains a substitution function
@@ -174,26 +174,23 @@ bool cssParseTokens(CssTokenStream* ts, CssValuePool* pool, CssValueSpan* out);
 
 // Adds to the pool the values that a grammar matches (css-values-4/#value-defs). The whole of `ts` must match. On
 // failure, the stream and pool are unmodified.
-bool cssParseValue(CssGrammarIndex root, CssTokenStream* ts, CssValuePool* pool,
-                   CssMatchState* state, CssValueSpan* out);
+bool cssParseValue(CssGrammarIndex root, CssTokenStream* ts, CssValuePool* pool, CssMatchState* state, CssValueSpan* out);
 
 // Parses a numeric value of any type that Typed OM has (cssParseTypedNumeric). The value must be the whole of `ts`
 // apart from surrounding whitespace. On failure, the stream and pool are unmodified.
-bool cssParseNumericValue(CssTokenStream* ts, CssValuePool* pool, CssMatchState* state,
-                          CssValueSpan* out);
+bool cssParseNumericValue(CssTokenStream* ts, CssValuePool* pool, CssMatchState* state, CssValueSpan* out);
 
 // Matches the structural production `production` against the whole of `ts`. Adds the match to the pool as the
 // production's node, or as its children if the production keeps no node (kCssValueDefKeepsNode). On failure, the stream
 // and pool are unmodified.
 bool cssParseProduction(CssValueDef production, CssTokenStream* ts,
-                        const CssParseContext* context, CssValuePool* pool, CssMatchState* state,
-                        CssValueSpan* out);
+    const CssParseContext* context, CssValuePool* pool, CssMatchState* state, CssValueSpan* out);
 
 // Matches the prelude of an at-rule or a qualified rule, whose grammar is `root` (css_at_rule.h), against the whole of
 // `ts`. The match is structural: every type with a grammar keeps a node. On failure, the stream and pool are
 // unmodified.
 bool cssParsePrelude(CssGrammarIndex root, CssTokenStream* ts, const CssParseContext* context,
-                     CssValuePool* pool, CssMatchState* state, CssValueSpan* out);
+    CssValuePool* pool, CssMatchState* state, CssValueSpan* out);
 
 // Returns the pseudo-element that the matched <pseudo-element-selector> at `node` names.
 CssPseudoElement cssMatchedPseudoElement(const CssValuePool* pool, uint32_t node);

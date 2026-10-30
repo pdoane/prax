@@ -55,8 +55,7 @@ double fetchCacheAge(const FetchCachedResponse* response, double now);
 
 // Returns true if the request's headers match the values that the response's Vary recorded (rfc 9111 section 4.1). A
 // Vary of `*` matches nothing.
-bool fetchCacheVaryMatches(const FetchCachedResponse* response, const PrFetchHeader* PR_NULLABLE request,
-                           uint32_t count);
+bool fetchCacheVaryMatches(const FetchCachedResponse* response, const PrFetchHeader* PR_NULLABLE request, uint32_t count);
 
 // Appends the record of `response` to `out`.
 void fetchCacheWrite(const FetchCachedResponse* response, TextBuffer* out);

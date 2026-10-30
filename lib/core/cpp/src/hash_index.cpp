@@ -53,8 +53,7 @@ void HashIndex::erase(uint32_t hash, uint32_t index) {
     if (slots == nullptr)
         return;
     uint32_t hole = hash & mask;
-    while (slots[hole].index != kHashMissing
-           && (slots[hole].hash != hash || slots[hole].index != index))
+    while (slots[hole].index != kHashMissing && (slots[hole].hash != hash || slots[hole].index != index))
         hole = (hole + 1) & mask;
     if (slots[hole].index == kHashMissing)
         return;

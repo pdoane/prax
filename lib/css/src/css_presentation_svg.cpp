@@ -7,8 +7,7 @@
 
 namespace pr_impl {
 
-CssPresentationSvg* PR_NONNULL const* PR_NULLABLE cssPresentationSvgs(const PrCssPresentation* presentation,
-                                                                      uint32_t* count) {
+CssPresentationSvg* PR_NONNULL const* PR_NULLABLE cssPresentationSvgs(const PrCssPresentation* presentation, uint32_t* count) {
     *count = presentation->svgs.count;
     return presentation->svgs.data;
 }
@@ -21,15 +20,14 @@ CssPresentationSvg* PR_NULLABLE cssPresentationSvgOf(const PrCssPresentation* pr
     return nullptr;
 }
 
-void cssPresentationSvgSetNatural(PrCssPresentation* presentation, CssPresentationSvg* svg,
-                                  PrLayoutNaturalSize natural) {
-    if (natural.width == svg->natural.width && natural.height == svg->natural.height
-        && natural.ratio == svg->natural.ratio)
+void cssPresentationSvgSetNatural(PrCssPresentation* presentation, CssPresentationSvg* svg, PrLayoutNaturalSize natural) {
+    if (natural.width == svg->natural.width && natural.height == svg->natural.height &&
+            natural.ratio == svg->natural.ratio)
         return;
     svg->natural = natural;
     uint32_t at = cssPresentationNodeEntry(presentation, svg->element);
-    if (at == kHashMissing || !presentation->entries.data[at].boxed
-        || presentation->entries.data[at].layoutNode == kPrLayoutNodeNone)
+    if (at == kHashMissing || !presentation->entries.data[at].boxed ||
+            presentation->entries.data[at].layoutNode == kPrLayoutNodeNone)
         return;
     prLayoutNodeSetNaturalSize(presentation->tree, presentation->entries.data[at].layoutNode, natural);
     presentation->layoutStale = true;
@@ -49,13 +47,12 @@ PrVec2 cssPresentationSvgExtent(const PrCssPresentation* presentation, const Css
     return prLayoutVecToPx(extent);
 }
 
-void cssPresentationSvgUpdated(PrCssPresentation* presentation, CssPresentationSvg* svg,
-                               const CssPresentationSvgUpdate& update) {
+void cssPresentationSvgUpdated(PrCssPresentation* presentation, CssPresentationSvg* svg, const CssPresentationSvgUpdate& update) {
     svg->stale = false;
     presentation->accrued.svgNodesBuilt += update.built;
     uint32_t at = cssPresentationNodeEntry(presentation, svg->element);
-    if (at == kHashMissing || !presentation->entries.data[at].boxed
-        || presentation->entries.data[at].layoutNode == kPrLayoutNodeNone)
+    if (at == kHashMissing || !presentation->entries.data[at].boxed ||
+            presentation->entries.data[at].layoutNode == kPrLayoutNodeNone)
         return;
     PrLayoutNode box = presentation->entries.data[at].layoutNode;
     PrLayoutTree* tree = presentation->tree;
@@ -65,8 +62,8 @@ void cssPresentationSvgUpdated(PrCssPresentation* presentation, CssPresentationS
     for (uint32_t i = 0; !foreign && i < update.foreignObjectCount; ++i) {
         const CssPresentationSvgForeignObject& was = svg->foreignObjects.data[i];
         const CssPresentationSvgForeignObject& now = update.foreignObjects[i];
-        foreign = was.element != now.element || was.root != now.root || was.extent.x != now.extent.x
-                  || was.extent.y != now.extent.y;
+        foreign = was.element != now.element || was.root != now.root || was.extent.x != now.extent.x ||
+            was.extent.y != now.extent.y;
     }
     if (foreign) {
         svg->foreignObjects.clear();
@@ -76,8 +73,10 @@ void cssPresentationSvgUpdated(PrCssPresentation* presentation, CssPresentationS
     }
     PrLayoutContent current = prLayoutNodeContent(tree, box);
     if (current.kind != PrLayoutContentKind_Painter || current.painter.context != svg->content) {
-        PrLayoutContent content{.kind = PrLayoutContentKind_Painter,
-                                .painter = {.paint = svg->functions->paint, .context = svg->content}};
+        PrLayoutContent content{
+            .kind = PrLayoutContentKind_Painter,
+            .painter = {.paint = svg->functions->paint, .context = svg->content},
+        };
         prLayoutNodeSetContent(tree, box, &content);
         laidOut = true;
     } else if (update.changed) {
@@ -93,8 +92,7 @@ void cssPresentationSvgStale(PrCssPresentation* presentation, CssPresentationSvg
     presentation->changed = true;
 }
 
-const CssPresentationSvgNote* PR_NULLABLE cssPresentationSvgNotes(const PrCssPresentation* presentation,
-                                                                  uint32_t* count) {
+const CssPresentationSvgNote* PR_NULLABLE cssPresentationSvgNotes(const PrCssPresentation* presentation, uint32_t* count) {
     *count = presentation->svgNotes.count;
     return presentation->svgNotes.data;
 }
@@ -112,7 +110,7 @@ bool cssPresentationTakeSvgInvalid(PrCssPresentation* presentation) {
 }
 
 void cssPresentationSetReferences(PrCssPresentation* presentation,
-                                  const CssPresentationReferences* PR_NULLABLE references) {
+        const CssPresentationReferences* PR_NULLABLE references) {
     presentation->references = references;
 }
 

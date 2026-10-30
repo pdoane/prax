@@ -97,8 +97,7 @@ bool setLength(JSContext* ctx, Handler* handler, JSValueConst value, bool* resul
     while (handler->list.count > length) {
         uint32_t index = handler->list.count - 1;
         JSValue item = handler->list.data[index];
-        if (handler->hooks->remove != nullptr
-            && !handler->hooks->remove(ctx, handler->owner, item, index))
+        if (handler->hooks->remove != nullptr && !handler->hooks->remove(ctx, handler->owner, item, index))
             return false;
         // A hook may have run script that changed the list.
         if (handler->list.count == index + 1) {
@@ -111,8 +110,7 @@ bool setLength(JSContext* ctx, Handler* handler, JSValueConst value, bool* resul
 }
 
 // webidl/#observable-array-exotic-object-set-the-indexed-value
-bool setIndexed(JSContext* ctx, Handler* handler, uint32_t index, JSValueConst value,
-                bool* result) {
+bool setIndexed(JSContext* ctx, Handler* handler, uint32_t index, JSValueConst value, bool* result) {
     if (index > handler->list.count) {
         *result = false;
         return true;
@@ -121,8 +119,7 @@ bool setIndexed(JSContext* ctx, Handler* handler, uint32_t index, JSValueConst v
     if (JS_IsException(item))
         return false;
     if (index < handler->list.count) {
-        if (handler->hooks->remove != nullptr
-            && !handler->hooks->remove(ctx, handler->owner, handler->list.data[index], index)) {
+        if (handler->hooks->remove != nullptr && !handler->hooks->remove(ctx, handler->owner, handler->list.data[index], index)) {
             JS_FreeValue(ctx, item);
             return false;
         }
@@ -136,8 +133,7 @@ bool setIndexed(JSContext* ctx, Handler* handler, uint32_t index, JSValueConst v
 }
 
 // Reads the field `name` of a property descriptor object: whether it is present, and its value.
-bool descriptorField(JSContext* ctx, JSValueConst descriptor, const char* name, bool* present,
-                     JSValue* value) {
+bool descriptorField(JSContext* ctx, JSValueConst descriptor, const char* name, bool* present, JSValue* value) {
     JSAtom atom = JS_NewAtom(ctx, name);
     int has = JS_HasProperty(ctx, descriptor, atom);
     JS_FreeAtom(ctx, atom);
@@ -162,8 +158,7 @@ int descriptorIs(JSContext* ctx, JSValueConst descriptor, const char* name, bool
 
 // webidl/#js-observable-array-defineProperty, for the length and an index. The descriptor must describe a data property
 // and keep the attributes that the property has: writable for both, and configurable and enumerable only for an index.
-JSValue defineOwn(JSContext* ctx, Handler* handler, Key key, uint32_t index,
-                  JSValueConst descriptor) {
+JSValue defineOwn(JSContext* ctx, Handler* handler, Key key, uint32_t index, JSValueConst descriptor) {
     bool accessor = false;
     constexpr const char* kAccessors[] = {"get", "set"};
     for (const char* name : kAccessors) {
@@ -188,9 +183,11 @@ JSValue defineOwn(JSContext* ctx, Handler* handler, Key key, uint32_t index,
     if (!descriptorField(ctx, descriptor, "value", &present, &value))
         return JS_EXCEPTION;
     bool result = true;
-    bool ok = !present
-              || (key == Key_Length ? setLength(ctx, handler, value, &result)
-                                    : setIndexed(ctx, handler, index, value, &result));
+    bool ok = true;
+    if (present && key == Key_Length)
+        ok = setLength(ctx, handler, value, &result);
+    else if (present)
+        ok = setIndexed(ctx, handler, index, value, &result);
     JS_FreeValue(ctx, value);
     return ok ? JS_NewBool(ctx, result) : JS_EXCEPTION;
 }
@@ -199,10 +196,8 @@ JSValue descriptorOf(JSContext* ctx, JSValue value, bool configurable) {
     JSValue descriptor = JS_NewObject(ctx);
     JS_DefinePropertyValueStr(ctx, descriptor, "value", value, JS_PROP_C_W_E);
     JS_DefinePropertyValueStr(ctx, descriptor, "writable", JS_TRUE, JS_PROP_C_W_E);
-    JS_DefinePropertyValueStr(ctx, descriptor, "enumerable", JS_NewBool(ctx, configurable),
-                              JS_PROP_C_W_E);
-    JS_DefinePropertyValueStr(ctx, descriptor, "configurable", JS_NewBool(ctx, configurable),
-                              JS_PROP_C_W_E);
+    JS_DefinePropertyValueStr(ctx, descriptor, "enumerable", JS_NewBool(ctx, configurable), JS_PROP_C_W_E);
+    JS_DefinePropertyValueStr(ctx, descriptor, "configurable", JS_NewBool(ctx, configurable), JS_PROP_C_W_E);
     return descriptor;
 }
 
@@ -224,8 +219,7 @@ JSValue ownKeys(JSContext* ctx, Handler* handler, JSValueConst reflect, JSValueC
 }
 
 // A trap of webidl/#js-observable-array-abstract-operations, selected by the magic, with the handler as `this`.
-JSValue trap(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv, int magic,
-             JSValueConst* data) {
+JSValue trap(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv, int magic, JSValueConst* data) {
     Handler* handler = static_cast<Handler*>(JS_GetOpaque(self, handlerClass));
     if (handler == nullptr || argc < 1)
         return JS_ThrowTypeError(ctx, "Illegal invocation");
@@ -250,8 +244,7 @@ JSValue trap(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv, in
             if (key == Key_Length || length == 0 || index != length - 1)
                 return JS_FALSE;
             bool result = false;
-            return setLength(ctx, handler, JS_NewUint32(ctx, index), &result) ? JS_NewBool(ctx, result)
-                                                                              : JS_EXCEPTION;
+            return setLength(ctx, handler, JS_NewUint32(ctx, index), &result) ? JS_NewBool(ctx, result) : JS_EXCEPTION;
         }
         case Trap_Get:
             if (key == Key_Length)
@@ -260,15 +253,14 @@ JSValue trap(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv, in
         case Trap_GetOwnPropertyDescriptor:
             if (key == Key_Length)
                 return descriptorOf(ctx, JS_NewUint32(ctx, length), false);
-            return index < length ? descriptorOf(ctx, JS_DupValue(ctx, handler->list.data[index]), true)
-                                  : JS_UNDEFINED;
+            return index < length ? descriptorOf(ctx, JS_DupValue(ctx, handler->list.data[index]), true) : JS_UNDEFINED;
         case Trap_Has:
             return JS_NewBool(ctx, key == Key_Length || index < length);
         case Trap_Set: {
             JSValueConst value = argc > 2 ? argv[2] : JS_UNDEFINED;
             bool result = false;
-            bool ok = key == Key_Length ? setLength(ctx, handler, value, &result)
-                                        : setIndexed(ctx, handler, index, value, &result);
+            bool ok =
+                key == Key_Length ? setLength(ctx, handler, value, &result) : setIndexed(ctx, handler, index, value, &result);
             return ok ? JS_NewBool(ctx, result) : JS_EXCEPTION;
         }
         default:
@@ -289,8 +281,7 @@ Handler* PR_NULLABLE handlerOf(JSContext* ctx, JSValueConst array) {
 
 void jsObservableArrayBind(JSContext* ctx) {
     JSRuntime* runtime = JS_GetRuntime(ctx);
-    JSClassDef definition = {
-        "ObservableArrayHandler", handlerFinalize, handlerMark, nullptr, nullptr, nullptr};
+    JSClassDef definition = {"ObservableArrayHandler", handlerFinalize, handlerMark, nullptr, nullptr, nullptr};
     jsRegisterClass(runtime, &handlerClass, definition);
     JSValue existing = JS_GetClassProto(ctx, handlerClass);
     bool bound = JS_IsObject(existing);
@@ -313,8 +304,7 @@ void jsObservableArrayBind(JSContext* ctx) {
     JS_FreeValue(ctx, global);
 }
 
-JSValue jsObservableArrayNew(JSContext* ctx, JSValueConst owner,
-                             const JsObservableArrayHooks* hooks) {
+JSValue jsObservableArrayNew(JSContext* ctx, JSValueConst owner, const JsObservableArrayHooks* hooks) {
     JSValue object = JS_NewObjectClass(ctx, int(handlerClass));
     if (JS_IsException(object))
         return object;
@@ -340,9 +330,9 @@ uint32_t jsObservableArrayLength(JSContext* ctx, JSValueConst array) {
 
 JSValue jsObservableArrayItem(JSContext* ctx, JSValueConst array, uint32_t index) {
     Handler* handler = handlerOf(ctx, array);
-    return handler != nullptr && index < handler->list.count
-               ? JS_DupValue(ctx, handler->list.data[index])
-               : JS_UNDEFINED;
+    if (handler == nullptr || index >= handler->list.count)
+        return JS_UNDEFINED;
+    return JS_DupValue(ctx, handler->list.data[index]);
 }
 
 bool jsObservableArraySet(JSContext* ctx, JSValueConst array, JSValueConst values) {

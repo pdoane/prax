@@ -63,8 +63,7 @@ void hullOf(PrRect r, uint32_t corner, PrCorner c, PrVec2 out[3]) {
     PrVec2 start{f.point.x - f.before.x * before, f.point.y - f.before.y * before};
     PrVec2 end{f.point.x + f.after.x * after, f.point.y + f.after.y * after};
     out[0] = start;
-    out[1] = c.shape < 0 ? start + f.after * after
-                         : f.point;
+    out[1] = c.shape < 0 ? start + f.after * after : f.point;
     out[2] = end;
 }
 
@@ -109,8 +108,7 @@ bool concaveOverlap(PrRect r, const PrCorner corners[4], float factor) {
     for (uint32_t i = 0; i < 2; ++i) {
         const PrCorner& first = scaled[i];
         const PrCorner& second = scaled[i + 2];
-        if ((first.shape >= 0 && second.shape >= 0) || prCornerIsSquare(first)
-            || prCornerIsSquare(second))
+        if ((first.shape >= 0 && second.shape >= 0) || prCornerIsSquare(first) || prCornerIsSquare(second))
             continue;
         PrVec2 a[3];
         PrVec2 b[3];
@@ -174,13 +172,11 @@ PrRect prRectUnion(PrRect a, PrRect b) {
         return b;
     if (prRectIsEmpty(b))
         return a;
-    return PrRect{minF32(a.left, b.left), minF32(a.top, b.top), maxF32(a.right, b.right),
-                  maxF32(a.bottom, b.bottom)};
+    return PrRect{minF32(a.left, b.left), minF32(a.top, b.top), maxF32(a.right, b.right), maxF32(a.bottom, b.bottom)};
 }
 
 PrRect prRectIntersect(PrRect a, PrRect b) {
-    return PrRect{maxF32(a.left, b.left), maxF32(a.top, b.top), minF32(a.right, b.right),
-                  minF32(a.bottom, b.bottom)};
+    return PrRect{maxF32(a.left, b.left), maxF32(a.top, b.top), minF32(a.right, b.right), minF32(a.bottom, b.bottom)};
 }
 
 bool prRectIsOnPixels(PrRect rect) {
@@ -208,15 +204,19 @@ PrIRect prIRectRoundOut(PrRect rect) {
     if (prRectIsEmpty(rect))
         return PrIRect{0, 0, 0, 0};
     float t = kPrRectOnPixelTolerance;
-    return PrIRect{pixelEdge(floorF32(rect.left + t)), pixelEdge(floorF32(rect.top + t)),
-                   pixelEdge(ceilF32(rect.right - t)), pixelEdge(ceilF32(rect.bottom - t))};
+    return PrIRect{
+        pixelEdge(floorF32(rect.left + t)), pixelEdge(floorF32(rect.top + t)),
+        pixelEdge(ceilF32(rect.right - t)), pixelEdge(ceilF32(rect.bottom - t)),
+    };
 }
 
 PrIRect prIRectRound(PrRect rect) {
     if (prRectIsEmpty(rect))
         return PrIRect{0, 0, 0, 0};
-    return PrIRect{pixelEdge(ceilF32(rect.left - 0.5f)), pixelEdge(ceilF32(rect.top - 0.5f)),
-                   pixelEdge(ceilF32(rect.right - 0.5f)), pixelEdge(ceilF32(rect.bottom - 0.5f))};
+    return PrIRect{
+        pixelEdge(ceilF32(rect.left - 0.5f)), pixelEdge(ceilF32(rect.top - 0.5f)),
+        pixelEdge(ceilF32(rect.right - 0.5f)), pixelEdge(ceilF32(rect.bottom - 0.5f)),
+    };
 }
 
 PrRect prRectFromIRect(PrIRect rect) {
@@ -232,13 +232,17 @@ PrIRect prIRectUnion(PrIRect a, PrIRect b) {
         return b;
     if (prIRectIsEmpty(b))
         return a;
-    return PrIRect{a.left < b.left ? a.left : b.left, a.top < b.top ? a.top : b.top,
-                   a.right > b.right ? a.right : b.right, a.bottom > b.bottom ? a.bottom : b.bottom};
+    return PrIRect{
+        a.left < b.left ? a.left : b.left, a.top < b.top ? a.top : b.top,
+        a.right > b.right ? a.right : b.right, a.bottom > b.bottom ? a.bottom : b.bottom,
+    };
 }
 
 PrIRect prIRectIntersect(PrIRect a, PrIRect b) {
-    return PrIRect{a.left > b.left ? a.left : b.left, a.top > b.top ? a.top : b.top,
-                   a.right < b.right ? a.right : b.right, a.bottom < b.bottom ? a.bottom : b.bottom};
+    return PrIRect{
+        a.left > b.left ? a.left : b.left, a.top > b.top ? a.top : b.top,
+        a.right < b.right ? a.right : b.right, a.bottom < b.bottom ? a.bottom : b.bottom,
+    };
 }
 
 PrIRect prIRectOutset(PrIRect rect, int32_t by) {
@@ -246,8 +250,8 @@ PrIRect prIRectOutset(PrIRect rect, int32_t by) {
 }
 
 bool prIRectContains(PrIRect outer, PrIRect inner) {
-    return !prIRectIsEmpty(inner) && inner.left >= outer.left && inner.top >= outer.top
-           && inner.right <= outer.right && inner.bottom <= outer.bottom;
+    return !prIRectIsEmpty(inner) && inner.left >= outer.left && inner.top >= outer.top &&
+        inner.right <= outer.right && inner.bottom <= outer.bottom;
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -311,14 +315,10 @@ PrCornerRect prCornerRectFit(PrCornerRect shape) {
     float width = rect.right - rect.left;
     float height = rect.bottom - rect.top;
     float factor = 1;
-    factor = sideFactor(factor, width, c[PrRectCorner_TopLeft].radii.x,
-                        c[PrRectCorner_TopRight].radii.x);
-    factor = sideFactor(factor, width, c[PrRectCorner_BottomLeft].radii.x,
-                        c[PrRectCorner_BottomRight].radii.x);
-    factor = sideFactor(factor, height, c[PrRectCorner_TopLeft].radii.y,
-                        c[PrRectCorner_BottomLeft].radii.y);
-    factor = sideFactor(factor, height, c[PrRectCorner_TopRight].radii.y,
-                        c[PrRectCorner_BottomRight].radii.y);
+    factor = sideFactor(factor, width, c[PrRectCorner_TopLeft].radii.x, c[PrRectCorner_TopRight].radii.x);
+    factor = sideFactor(factor, width, c[PrRectCorner_BottomLeft].radii.x, c[PrRectCorner_BottomRight].radii.x);
+    factor = sideFactor(factor, height, c[PrRectCorner_TopLeft].radii.y, c[PrRectCorner_BottomLeft].radii.y);
+    factor = sideFactor(factor, height, c[PrRectCorner_TopRight].radii.y, c[PrRectCorner_BottomRight].radii.y);
     if (!(factor > 0))
         factor = 0;
     for (PrCorner& corner : shape.corners)
@@ -361,9 +361,11 @@ PrCornerRect prCornerRectInset(PrCornerRect shape, const float insets[PR_NONNULL
         PrCorner c = fitted[i];
         if (c.shape >= 0) {
             // A round corner's midpoint is 1 - sqrt(1/2) of its radii from the corner, so its factor is 1.
-            float midpoint = c.shape == 1               ? 1 - sqrtF32(0.5f)
-                             : isFiniteF32(c.shape) ? 1 - powF32(2, -1 / powF32(2, c.shape))
-                                                    : 1;
+            float midpoint = 1;
+            if (c.shape == 1)
+                midpoint = 1 - sqrtF32(0.5f);
+            else if (isFiniteF32(c.shape))
+                midpoint = 1 - powF32(2, -1 / powF32(2, c.shape));
             float factor = (1 - sqrtF32(0.5f)) / midpoint;
             c.radii = PrVec2{c.radii.x - horizontal[i] * factor, c.radii.y - vertical[i] * factor};
         }
@@ -383,12 +385,18 @@ PrCornerRect prCornerRectInset(PrCornerRect shape, const float insets[PR_NONNULL
 PrCornerRect prCornerRectOutset(PrCornerRect shape, const float outsets[PR_NONNULL PrRectSide_Count]) {
     PrCornerRect grown = prCornerRectFit(shape);
     const PrRect& rect = shape.rect;
-    grown.rect = PrRect{rect.left - outsets[PrRectSide_Left], rect.top - outsets[PrRectSide_Top],
-                        rect.right + outsets[PrRectSide_Right], rect.bottom + outsets[PrRectSide_Bottom]};
-    float horizontal[4] = {outsets[PrRectSide_Left], outsets[PrRectSide_Right], outsets[PrRectSide_Right],
-                           outsets[PrRectSide_Left]};
-    float vertical[4] = {outsets[PrRectSide_Top], outsets[PrRectSide_Top], outsets[PrRectSide_Bottom],
-                         outsets[PrRectSide_Bottom]};
+    grown.rect = PrRect{
+        rect.left - outsets[PrRectSide_Left], rect.top - outsets[PrRectSide_Top],
+        rect.right + outsets[PrRectSide_Right], rect.bottom + outsets[PrRectSide_Bottom],
+    };
+    float horizontal[4] = {
+        outsets[PrRectSide_Left], outsets[PrRectSide_Right], outsets[PrRectSide_Right],
+        outsets[PrRectSide_Left],
+    };
+    float vertical[4] = {
+        outsets[PrRectSide_Top], outsets[PrRectSide_Top], outsets[PrRectSide_Bottom],
+        outsets[PrRectSide_Bottom],
+    };
     auto grow = [](float radius, float outset) {
         if (!(radius > 0) || !(outset > 0))
             return radius;
@@ -449,8 +457,7 @@ PrCornerPlacement prCornerRectPlacement(PrCornerRect shape, PrRectCorner corner)
 
 PrVec2 prCornerPlacementPoint(PrCornerPlacement placement, PrVec2 uv) {
     PrVec2 start = placement.point - placement.before * placement.radiusBefore;
-    return start + placement.before * (placement.radiusBefore * uv.x)
-           + placement.after * (placement.radiusAfter * uv.y);
+    return start + placement.before * (placement.radiusBefore * uv.x) + placement.after * (placement.radiusAfter * uv.y);
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -487,9 +494,11 @@ PrAffine2 prAffine2Rotate(float radians) {
 PrAffine2 prAffine2Concat(PrAffine2 first, PrAffine2 second) {
     const PrAffine2& m = second;
     const PrAffine2& n = first;
-    return PrAffine2{m.a * n.a + m.c * n.b,       m.b * n.a + m.d * n.b,
-                    m.a * n.c + m.c * n.d,       m.b * n.c + m.d * n.d,
-                    m.a * n.e + m.c * n.f + m.e, m.b * n.e + m.d * n.f + m.f};
+    return PrAffine2{
+        m.a * n.a + m.c * n.b,       m.b * n.a + m.d * n.b,
+        m.a * n.c + m.c * n.d,       m.b * n.c + m.d * n.d,
+        m.a * n.e + m.c * n.f + m.e, m.b * n.e + m.d * n.f + m.f,
+    };
 }
 
 bool prAffine2Invert(PrAffine2 transform, PrAffine2* out) {
@@ -498,12 +507,14 @@ bool prAffine2Invert(PrAffine2 transform, PrAffine2* out) {
     if (determinant == 0 || !isFiniteF32(1 / determinant))
         return false;
     float inverse = 1 / determinant;
-    *out = PrAffine2{m.d * inverse,
-                    -m.b * inverse,
-                    -m.c * inverse,
-                    m.a * inverse,
-                    (m.c * m.f - m.d * m.e) * inverse,
-                    (m.b * m.e - m.a * m.f) * inverse};
+    *out = PrAffine2{
+        m.d * inverse,
+        -m.b * inverse,
+        -m.c * inverse,
+        m.a * inverse,
+        (m.c * m.f - m.d * m.e) * inverse,
+        (m.b * m.e - m.a * m.f) * inverse,
+    };
     return true;
 }
 
@@ -539,8 +550,8 @@ float prAffine2MaxScale(PrAffine2 transform) {
 }
 
 bool prAffine2IsIdentity(PrAffine2 transform) {
-    return transform.a == 1 && transform.b == 0 && transform.c == 0 && transform.d == 1 && transform.e == 0
-           && transform.f == 0;
+    return transform.a == 1 && transform.b == 0 && transform.c == 0 && transform.d == 1 && transform.e == 0 &&
+        transform.f == 0;
 }
 
 bool prAffine2IsSimilarity(PrAffine2 transform) {
@@ -567,21 +578,27 @@ PrDAffine2 prDAffine2Translate(double x, double y) {
 }
 
 PrDAffine2 prDAffine2FromAffine2(PrAffine2 transform) {
-    return PrDAffine2{double(transform.a), double(transform.b), double(transform.c),
-                      double(transform.d), double(transform.e), double(transform.f)};
+    return PrDAffine2{
+        double(transform.a), double(transform.b), double(transform.c),
+        double(transform.d), double(transform.e), double(transform.f),
+    };
 }
 
 PrAffine2 prAffine2FromDAffine2(PrDAffine2 transform) {
-    return PrAffine2{float(transform.a), float(transform.b), float(transform.c),
-                     float(transform.d), float(transform.e), float(transform.f)};
+    return PrAffine2{
+        float(transform.a), float(transform.b), float(transform.c),
+        float(transform.d), float(transform.e), float(transform.f),
+    };
 }
 
 PrDAffine2 prDAffine2Concat(PrDAffine2 first, PrDAffine2 second) {
     const PrDAffine2& m = second;
     const PrDAffine2& n = first;
-    return PrDAffine2{m.a * n.a + m.c * n.b,       m.b * n.a + m.d * n.b,
-                      m.a * n.c + m.c * n.d,       m.b * n.c + m.d * n.d,
-                      m.a * n.e + m.c * n.f + m.e, m.b * n.e + m.d * n.f + m.f};
+    return PrDAffine2{
+        m.a * n.a + m.c * n.b,       m.b * n.a + m.d * n.b,
+        m.a * n.c + m.c * n.d,       m.b * n.c + m.d * n.d,
+        m.a * n.e + m.c * n.f + m.e, m.b * n.e + m.d * n.f + m.f,
+    };
 }
 
 bool prDAffine2Invert(PrDAffine2 transform, PrDAffine2* out) {
@@ -590,12 +607,14 @@ bool prDAffine2Invert(PrDAffine2 transform, PrDAffine2* out) {
     if (determinant == 0 || !isFiniteF64(1 / determinant))
         return false;
     double inverse = 1 / determinant;
-    *out = PrDAffine2{m.d * inverse,
-                      -m.b * inverse,
-                      -m.c * inverse,
-                      m.a * inverse,
-                      (m.c * m.f - m.d * m.e) * inverse,
-                      (m.b * m.e - m.a * m.f) * inverse};
+    *out = PrDAffine2{
+        m.d * inverse,
+        -m.b * inverse,
+        -m.c * inverse,
+        m.a * inverse,
+        (m.c * m.f - m.d * m.e) * inverse,
+        (m.b * m.e - m.a * m.f) * inverse,
+    };
     return true;
 }
 
@@ -803,9 +822,9 @@ bool prDMatrix4ShowsBack(const PrDMatrix4* matrix) {
             if (i != skipColumn)
                 c[k++] = i;
         }
-        return m[r[0]][c[0]] * (m[r[1]][c[1]] * m[r[2]][c[2]] - m[r[1]][c[2]] * m[r[2]][c[1]])
-               - m[r[0]][c[1]] * (m[r[1]][c[0]] * m[r[2]][c[2]] - m[r[1]][c[2]] * m[r[2]][c[0]])
-               + m[r[0]][c[2]] * (m[r[1]][c[0]] * m[r[2]][c[1]] - m[r[1]][c[1]] * m[r[2]][c[0]]);
+        return m[r[0]][c[0]] * (m[r[1]][c[1]] * m[r[2]][c[2]] - m[r[1]][c[2]] * m[r[2]][c[1]]) -
+            m[r[0]][c[1]] * (m[r[1]][c[0]] * m[r[2]][c[2]] - m[r[1]][c[2]] * m[r[2]][c[0]]) +
+            m[r[0]][c[2]] * (m[r[1]][c[0]] * m[r[2]][c[1]] - m[r[1]][c[1]] * m[r[2]][c[0]]);
     };
     double determinant = 0;
     for (uint32_t column = 0; column < 4; ++column) {
@@ -947,8 +966,10 @@ bool prMatrix3MapPoint(const PrMatrix3* matrix, PrVec2 point, PrVec2* out) {
     float d = m[2][0] * point.x + m[2][1] * point.y + m[2][2];
     if (!(d > 0))
         return false;
-    *out = PrVec2{(m[0][0] * point.x + m[0][1] * point.y + m[0][2]) / d,
-                   (m[1][0] * point.x + m[1][1] * point.y + m[1][2]) / d};
+    *out = PrVec2{
+        (m[0][0] * point.x + m[0][1] * point.y + m[0][2]) / d,
+        (m[1][0] * point.x + m[1][1] * point.y + m[1][2]) / d,
+    };
     return true;
 }
 
@@ -1026,8 +1047,10 @@ bool prDMatrix3MapPoint(const PrDMatrix3* matrix, PrDVec2 point, PrDVec2* out) {
     const double d = m[2][0] * point.x + m[2][1] * point.y + m[2][2];
     if (!(d > 0))
         return false;
-    *out = PrDVec2{(m[0][0] * point.x + m[0][1] * point.y + m[0][2]) / d,
-                   (m[1][0] * point.x + m[1][1] * point.y + m[1][2]) / d};
+    *out = PrDVec2{
+        (m[0][0] * point.x + m[0][1] * point.y + m[0][2]) / d,
+        (m[1][0] * point.x + m[1][1] * point.y + m[1][2]) / d,
+    };
     return true;
 }
 
@@ -1035,9 +1058,11 @@ bool prDMatrix3Invert(const PrDMatrix3* matrix, PrDMatrix3* out) {
     double m[9];
     for (uint32_t i = 0; i < 9; ++i)
         m[i] = matrix->m[i / 3][i % 3];
-    const double c[9] = {m[4] * m[8] - m[5] * m[7], m[2] * m[7] - m[1] * m[8], m[1] * m[5] - m[2] * m[4],
-                         m[5] * m[6] - m[3] * m[8], m[0] * m[8] - m[2] * m[6], m[2] * m[3] - m[0] * m[5],
-                         m[3] * m[7] - m[4] * m[6], m[1] * m[6] - m[0] * m[7], m[0] * m[4] - m[1] * m[3]};
+    const double c[9] = {
+        m[4] * m[8] - m[5] * m[7], m[2] * m[7] - m[1] * m[8], m[1] * m[5] - m[2] * m[4],
+        m[5] * m[6] - m[3] * m[8], m[0] * m[8] - m[2] * m[6], m[2] * m[3] - m[0] * m[5],
+        m[3] * m[7] - m[4] * m[6], m[1] * m[6] - m[0] * m[7], m[0] * m[4] - m[1] * m[3],
+    };
     const double determinant = m[0] * c[0] + m[1] * c[3] + m[2] * c[6];
     if (!(determinant != 0) || !isFiniteF64(determinant))
         return false;

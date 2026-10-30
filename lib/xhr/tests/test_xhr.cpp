@@ -38,25 +38,23 @@ struct TestClient {
         return PrXhrClient{
             .context = this,
             .baseUrl = [](void*) { return prStringCopy("https://example.com/dir/page.html"); },
-            .fetch = [](void* context, const PrFetchClientRequest* request, PrFetchClientFn done,
-                        void* doneContext) -> PrStatus {
+            .fetch = [](void* context, const PrFetchClientRequest* request, PrFetchClientFn done, void* doneContext) -> PrStatus {
                 TestClient* self = static_cast<TestClient*>(context);
                 if (self->refuses)
                     return PrStatus_NotSupported;
-                Request fetch{.url = std::string(request->url.data, request->url.size),
-                            .method = request->method.data != nullptr
-                                          ? std::string(request->method.data, request->method.size)
-                                          : std::string("GET"),
-                            .body = std::string(reinterpret_cast<const char*>(request->body.data),
-                                                request->body.size),
-                            .credentials = request->credentials,
-                            .done = done,
-                            .context = doneContext};
+                Request fetch{
+                    .url = std::string(request->url.data, request->url.size),
+                    .method = "GET",
+                    .body = std::string(reinterpret_cast<const char*>(request->body.data), request->body.size),
+                    .credentials = request->credentials,
+                    .done = done,
+                    .context = doneContext,
+                };
+                if (request->method.data != nullptr)
+                    fetch.method = std::string(request->method.data, request->method.size);
                 for (uint32_t i = 0; i < request->headerCount; ++i)
-                    fetch.headers.push_back(std::string(request->headers[i].name.data, request->headers[i].name.size)
-                                            + ": "
-                                            + std::string(request->headers[i].value.data,
-                                                          request->headers[i].value.size));
+                    fetch.headers.push_back(std::string(request->headers[i].name.data, request->headers[i].name.size) + ": " +
+                        std::string(request->headers[i].value.data, request->headers[i].value.size));
                 self->fetches.push_back(fetch);
                 return PrStatus_Ok;
             },
@@ -100,12 +98,14 @@ struct TestClient {
     // Answers the last fetch with `body`, `status` and `headers`.
     void respond(const std::string& body, uint16_t status, std::vector<PrFetchHeader> headers) {
         Request fetch = fetches.back();
-        PrFetchClientResponse response{.status = PrStatus_Ok,
-                                       .responseStatus = status,
-                                       .url = "https://example.com/final",
-                                       .headers = headers.data(),
-                                       .headerCount = uint32_t(headers.size()),
-                                       .body = PrByteView{reinterpret_cast<const uint8_t*>(body.data()), body.size()}};
+        PrFetchClientResponse response{
+            .status = PrStatus_Ok,
+            .responseStatus = status,
+            .url = "https://example.com/final",
+            .headers = headers.data(),
+            .headerCount = uint32_t(headers.size()),
+            .body = PrByteView{reinterpret_cast<const uint8_t*>(body.data()), body.size()},
+        };
         fetch.done(fetch.context, &response);
     }
 
@@ -126,8 +126,8 @@ struct Recorded {
 void record(void* PR_NULLABLE context, PrDomEvent* event) {
     Recorded* recorded = static_cast<Recorded*>(context);
     PrStringView type = prDomEventType(event);
-    recorded->events.push_back(std::string(type.data, type.size) + ":"
-                               + std::to_string(prXhrReadyState(recorded->request)));
+    recorded->events.push_back(std::string(type.data, type.size) + ":" +
+        std::to_string(prXhrReadyState(recorded->request)));
 }
 
 void listen(Recorded* recorded, PrDomEventTarget* target, std::initializer_list<const char*> types) {
@@ -145,10 +145,8 @@ PrXhr* createRequest(TestClient* client, Activity* activity = nullptr) {
     PrXhrDesc desc{.client = client->client()};
     PrXhr* request = prXhrCreate(&desc);
     if (activity != nullptr) {
-        prXhrSetActivity(
-            request,
-            [](void* context, PrXhr*, bool active) { static_cast<Activity*>(context)->changes.push_back(active); },
-            activity);
+        prXhrSetActivity(request,
+            [](void* context, PrXhr*, bool active) { static_cast<Activity*>(context)->changes.push_back(active); }, activity);
     }
     return request;
 }
@@ -240,24 +238,23 @@ TEST_CASE("a response fires its events in order, and is read as its headers, its
     Activity activity;
     PrXhr* request = createRequest(&client, &activity);
     Recorded recorded{request, {}};
-    listen(&recorded, prXhrAsEventTarget(request),
-           {"readystatechange", "loadstart", "progress", "load", "loadend", "error"});
+    listen(&recorded, prXhrAsEventTarget(request), {"readystatechange", "loadstart", "progress", "load", "loadend", "error"});
     REQUIRE(prXhrOpen(request, "GET", "a", true) == PrStatus_Ok);
     REQUIRE(prXhrSend(request, PrByteView{nullptr, 0}, PrStringView{nullptr, 0}) == PrStatus_Ok);
     CHECK(activity.changes == std::vector<bool>{true});
     CHECK(prXhrSend(request, PrByteView{nullptr, 0}, PrStringView{nullptr, 0}) == PrStatus_InvalidState);
     client.respond("caf\xe9", 200,
-                   {{"Content-Type", "text/plain; charset=windows-1252"}, {"X-B", "1"}, {"x-a", "2"}, {"X-B", "3"}});
-    CHECK(recorded.events
-          == std::vector<std::string>{"readystatechange:1", "loadstart:1", "readystatechange:2", "readystatechange:3",
-                                      "progress:3", "readystatechange:4", "load:4", "loadend:4"});
+        {{"Content-Type", "text/plain; charset=windows-1252"}, {"X-B", "1"}, {"x-a", "2"}, {"X-B", "3"}});
+    CHECK(recorded.events == std::vector<std::string>{
+        "readystatechange:1", "loadstart:1", "readystatechange:2", "readystatechange:3",
+        "progress:3", "readystatechange:4", "load:4", "loadend:4",
+    });
     CHECK(activity.changes == std::vector<bool>{true, false});
     CHECK(prXhrStatus(request) == 200);
     CHECK(prXhrResponseUrl(request) == "https://example.com/final");
     CHECK(take(prXhrResponseHeader(request, "x-b")) == "1, 3");
     CHECK(take(prXhrResponseHeader(request, "X-Missing")) == "(null)");
-    CHECK(take(prXhrResponseHeaders(request))
-          == "content-type: text/plain; charset=windows-1252\r\nx-a: 2\r\nx-b: 1, 3\r\n");
+    CHECK(take(prXhrResponseHeaders(request)) == "content-type: text/plain; charset=windows-1252\r\nx-a: 2\r\nx-b: 1, 3\r\n");
     CHECK(take(prXhrResponseText(request)) == "caf\xc3\xa9");
     CHECK(prXhrResponseBody(request).size == 4);
     CHECK(prXhrSetResponseType(request, PrXhrResponseType_Json) == PrStatus_InvalidState);
@@ -295,8 +292,7 @@ TEST_CASE("a network error, and a client that cannot fetch, fire error and loade
             client.fireTimers();
         else
             client.fail(PrStatus_Io);
-        CHECK(recorded.events
-              == std::vector<std::string>{"readystatechange:4", "error:4", "loadend:4", "error:4", "loadend:4"});
+        CHECK(recorded.events == std::vector<std::string>{"readystatechange:4", "error:4", "loadend:4", "error:4", "loadend:4"});
         CHECK(prXhrStatus(request) == 0);
         prXhrRelease(request);
     }

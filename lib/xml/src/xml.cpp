@@ -75,8 +75,8 @@ bool expect(Parser* p, PrStringView literal, PrStringView message) {
 
 // Returns true if `c` matches XML's Char production.
 bool isChar(uint32_t c) {
-    return c == 0x9 || c == 0xa || c == 0xd || (c >= 0x20 && c <= 0xd7ff)
-           || (c >= 0xe000 && c <= 0xfffd) || (c >= 0x10000 && c <= 0x10ffff);
+    return c == 0x9 || c == 0xa || c == 0xd || (c >= 0x20 && c <= 0xd7ff) ||
+        (c >= 0xe000 && c <= 0xfffd) || (c >= 0x10000 && c <= 0x10ffff);
 }
 
 // Returns the code point at the parser's position, and writes its size in bytes to `*size`.
@@ -134,9 +134,8 @@ bool characterReference(Parser* p, TextBuffer* out, bool* handled) {
         p->at += hex;
         uint64_t value = 0;
         size_t digits = 0;
-        while (
-            p->at < p->input.size
-            && (hex ? asciiIsHexDigit(p->input.data[p->at]) : asciiIsDigit(p->input.data[p->at]))) {
+        while (p->at < p->input.size &&
+                (hex ? asciiIsHexDigit(p->input.data[p->at]) : asciiIsDigit(p->input.data[p->at]))) {
             value = value * (hex ? 16 : 10) + asciiHexValue(p->input.data[p->at++]);
             value = value > 0x10ffff ? 0x110000 : value;
             ++digits;
@@ -158,11 +157,7 @@ bool characterReference(Parser* p, TextBuffer* out, bool* handled) {
         PrStringView name;
         char value;
     };
-    constexpr PredefinedEntity kPredefined[] = {{"lt", '<'},
-                                                {"gt", '>'},
-                                                {"amp", '&'},
-                                                {"apos", '\''},
-                                                {"quot", '"'}};
+    constexpr PredefinedEntity kPredefined[] = {{"lt", '<'}, {"gt", '>'}, {"amp", '&'}, {"apos", '\''}, {"quot", '"'}};
     for (const PredefinedEntity& entity : kPredefined) {
         if (name == entity.name) {
             textAppendChar(out, entity.value);
@@ -426,18 +421,13 @@ bool startTag(Parser* p) {
     for (uint32_t i = 0; ok && i < attributes.count; ++i) {
         PrStringView attribute = attributes.data[i].name;
         PrStringView url = prStringView(&attributes.data[i].value);
-        bool declares =
-            attribute == "xmlns" || stringStartsWith(attribute, "xmlns:");
+        bool declares = attribute == "xmlns" || stringStartsWith(attribute, "xmlns:");
         if (!declares)
             continue;
-        PrStringView prefix =
-            attribute.size > 5 ? stringSlice(attribute, 6, attribute.size - 6) : "";
-        if (prefix == "xmlns" || url == kXmlnsNamespace
-            || ((prefix == "xml") != (url == kXmlNamespace))
-            || (prefix.size != 0 && url.size == 0))
-            ok = fail(
-                p,
-                "a namespace declaration binds a reserved prefix or name, or undeclares a prefix");
+        PrStringView prefix = attribute.size > 5 ? stringSlice(attribute, 6, attribute.size - 6) : "";
+        if (prefix == "xmlns" || url == kXmlnsNamespace || ((prefix == "xml") != (url == kXmlNamespace)) ||
+                (prefix.size != 0 && url.size == 0))
+            ok = fail(p, "a namespace declaration binds a reserved prefix or name, or undeclares a prefix");
         else
             p->bindings.push(XmlBinding{prStringCopy(prefix), prStringCopy(url)});
     }
@@ -512,8 +502,8 @@ bool processingInstruction(Parser* p) {
     p->at += 2;
     if (!flushText(p))
         return false;
-    return p->handler->processingInstruction == nullptr
-           || handled(p, p->handler->processingInstruction(p->handler->context, p, target, data));
+    return p->handler->processingInstruction == nullptr ||
+        handled(p, p->handler->processingInstruction(p->handler->context, p, target, data));
 }
 
 // Reads a CDATA section, with the parser past its "<![CDATA[".
@@ -527,8 +517,7 @@ bool cdataSection(Parser* p) {
     p->at += end + 3;
     if (!flushText(p))
         return false;
-    return p->handler->cdataSection == nullptr
-           || handled(p, p->handler->cdataSection(p->handler->context, p, data));
+    return p->handler->cdataSection == nullptr || handled(p, p->handler->cdataSection(p->handler->context, p, data));
 }
 
 // Skips a declaration of the internal subset that the parser does not read, up to its '>' outside quotes.
@@ -572,8 +561,7 @@ bool entityDeclaration(Parser* p) {
                 size_t end = stringFind(stringSlice(literal, i, literal.size - i), ';');
                 PrStringView input = p->input;
                 size_t at = p->at;
-                p->input = stringSlice(literal, i + 1,
-                                       end < literal.size - i ? end : literal.size - i - 1);
+                p->input = stringSlice(literal, i + 1, end < literal.size - i ? end : literal.size - i - 1);
                 p->at = 0;
                 bool handled = false;
                 bool ok = characterReference(p, &text, &handled);
@@ -652,8 +640,7 @@ bool doctypeDeclaration(Parser* p) {
     bool spaced = skipSpaces(p) != 0;
     if (spaced && startsWith(p, "PUBLIC")) {
         p->at += 6;
-        if (skipSpaces(p) == 0 || !parseQuoted(p, &publicId) || skipSpaces(p) == 0
-            || !parseQuoted(p, &systemId))
+        if (skipSpaces(p) == 0 || !parseQuoted(p, &publicId) || skipSpaces(p) == 0 || !parseQuoted(p, &systemId))
             return fail(p, "a public identifier is not well-formed");
         skipSpaces(p);
     } else if (spaced && startsWith(p, "SYSTEM")) {
@@ -671,8 +658,8 @@ bool doctypeDeclaration(Parser* p) {
     if (!expect(p, ">", "a document type declaration is not closed"))
         return false;
     p->publicId = prStringCopy(publicId);
-    return p->handler->doctype == nullptr
-           || handled(p, p->handler->doctype(p->handler->context, p, name, publicId, systemId));
+    return p->handler->doctype == nullptr ||
+        handled(p, p->handler->doctype(p->handler->context, p, name, publicId, systemId));
 }
 
 // Returns true if more input may follow the text being read: the parser reads the source, and its end has not arrived.
@@ -846,10 +833,15 @@ bool doctypeArrived(const Parser* p, size_t start) {
         }
         if (startsPart(tail, "<!--") || startsPart(tail, "<?"))
             return false;
-        PrStringView close = stringStartsWith(tail, "<!--") ? "-->"
-                             : stringStartsWith(tail, "<?") ? "?>"
-                             : c == '%'                     ? ";"
-                                                            : PrStringView{};
+        PrStringView close;
+        if (stringStartsWith(tail, "<!--"))
+            close = "-->";
+        else if (stringStartsWith(tail, "<?"))
+            close = "?>";
+        else if (c == '%')
+            close = ";";
+        else
+            close = PrStringView{};
         if (close.data != nullptr) {
             size_t end = stringFind(tail, close);
             if (end == tail.size)
@@ -1115,18 +1107,16 @@ bool prXmlParserIsInEntity(const PrXmlParser* parser) {
 }
 
 bool prXmlIsNameStartChar(uint32_t c) {
-    return c == ':' || c == '_' || (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z')
-           || (c >= 0xc0 && c <= 0xd6) || (c >= 0xd8 && c <= 0xf6) || (c >= 0xf8 && c <= 0x2ff)
-           || (c >= 0x370 && c <= 0x37d) || (c >= 0x37f && c <= 0x1fff)
-           || (c >= 0x200c && c <= 0x200d) || (c >= 0x2070 && c <= 0x218f)
-           || (c >= 0x2c00 && c <= 0x2fef) || (c >= 0x3001 && c <= 0xd7ff)
-           || (c >= 0xf900 && c <= 0xfdcf) || (c >= 0xfdf0 && c <= 0xfffd)
-           || (c >= 0x10000 && c <= 0xeffff);
+    return c == ':' || c == '_' || (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') ||
+        (c >= 0xc0 && c <= 0xd6) || (c >= 0xd8 && c <= 0xf6) || (c >= 0xf8 && c <= 0x2ff) ||
+        (c >= 0x370 && c <= 0x37d) || (c >= 0x37f && c <= 0x1fff) || (c >= 0x200c && c <= 0x200d) ||
+        (c >= 0x2070 && c <= 0x218f) || (c >= 0x2c00 && c <= 0x2fef) || (c >= 0x3001 && c <= 0xd7ff) ||
+        (c >= 0xf900 && c <= 0xfdcf) || (c >= 0xfdf0 && c <= 0xfffd) || (c >= 0x10000 && c <= 0xeffff);
 }
 
 bool prXmlIsNameChar(uint32_t c) {
-    return prXmlIsNameStartChar(c) || c == '-' || c == '.' || (c >= '0' && c <= '9') || c == 0xb7
-           || (c >= 0x300 && c <= 0x36f) || (c >= 0x203f && c <= 0x2040);
+    return prXmlIsNameStartChar(c) || c == '-' || c == '.' || (c >= '0' && c <= '9') || c == 0xb7 ||
+        (c >= 0x300 && c <= 0x36f) || (c >= 0x203f && c <= 0x2040);
 }
 
 bool prXmlIsName(PrStringView name) {

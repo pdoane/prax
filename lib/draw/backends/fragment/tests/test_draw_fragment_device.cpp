@@ -40,7 +40,7 @@ PrDrawRenderer* createRenderer(PrGpuDevice* device, const PrDrawFragmentOptions*
 // textures do.
 PrGpuPass* beginPass(PrGpuCommands* commands, const PrGpuPassDesc* desc) {
     prGpuCommandsTextureBarrier(commands, desc->color[0].texture, PrGpuSubresources{}, PrGpuAccessFlag_ShaderRead,
-                                PrGpuAccessFlag_ColorAttachment);
+        PrGpuAccessFlag_ColorAttachment);
     return prGpuPassBegin(commands, desc);
 }
 
@@ -49,7 +49,7 @@ void endPass(PrGpuPass* pass, const PrGpuPassDesc* desc) {
     PrGpuCommands* commands = prGpuPassCommands(pass);
     prGpuPassEnd(pass);
     prGpuCommandsTextureBarrier(commands, desc->color[0].texture, PrGpuSubresources{},
-                                PrGpuAccessFlag_ColorAttachment, PrGpuAccessFlag_ShaderRead);
+        PrGpuAccessFlag_ColorAttachment, PrGpuAccessFlag_ShaderRead);
 }
 
 // Copies all of `from` into `to` at its origin. Both rest in the accesses of shader reads.
@@ -73,14 +73,13 @@ struct Device {
     uint32_t height;
 
     Device(uint32_t w, uint32_t h, PrDrawFragmentPaths paths = PrDrawFragmentPaths_Tessellate,
-           PrDrawFragmentEmbeds embeds = PrDrawFragmentEmbeds_Keep)
-        : width(w), height(h) {
+            PrDrawFragmentEmbeds embeds = PrDrawFragmentEmbeds_Keep) : width(w), height(h) {
         PrDrawFragmentOptions options = prDrawFragmentOptionsDefault();
         options.paths = paths;
         options.embeds = embeds;
         renderer = createRenderer(gpuDevice, &options);
         PrGpuTextureDesc desc = prGpuTextureDesc2d(prGpuFormatFromPixelFormat(PrPixelFormat_Rgba8), PrUVec2{w, h},
-                                                   PrGpuTextureUsageFlag_Sampled | PrGpuTextureUsageFlag_RenderTarget);
+            PrGpuTextureUsageFlag_Sampled | PrGpuTextureUsageFlag_RenderTarget);
         REQUIRE(prGpuTextureCreate(gpuDevice, &desc, &texture) == PrStatus_Ok);
     }
 
@@ -95,9 +94,11 @@ struct Device {
     std::vector<uint8_t> render(const PrDrawList* list) {
         PrGpuCommands* commands = nullptr;
         REQUIRE(prGpuCommandsBegin(gpuDevice, nullptr, &commands));
-        PrDrawTarget prepared{.extent = prGpuTextureExtent(gpuDevice, texture),
-                              .format = PrPixelFormat_Rgba8,
-                              .commands = commands};
+        PrDrawTarget prepared{
+            .extent = prGpuTextureExtent(gpuDevice, texture),
+            .format = PrPixelFormat_Rgba8,
+            .commands = commands,
+        };
         if (frame == nullptr)
             frame = prDrawFrameCreate(renderer);
         REQUIRE(prDrawFramePrepare(frame, list, &prepared) == PrStatus_Ok);
@@ -222,16 +223,20 @@ PrMatrix4 tiltedPlane(float radians, float distance, PrVec2 center) {
 // Records a gradient under a checkerboard of eight columns over `r`. It shows both where the projection places the
 // plane and how the plane is sampled.
 void planeContent(PrDrawList* list, PrRect r) {
-    PrDrawColorStop stops[2] = {{.offset = 0, .color = PrColor{1, 0.2f, 0, 1}},
-                                {.offset = 1, .color = PrColor{0, 0.3f, 1, 1}}};
+    PrDrawColorStop stops[2] = {
+        {.offset = 0, .color = PrColor{1, 0.2f, 0, 1}},
+        {.offset = 1, .color = PrColor{0, 0.3f, 1, 1}},
+    };
     PrDrawBrush brush = prDrawBrushLinear(PrVec2{r.left, r.top}, PrVec2{r.right, r.bottom}, stops, 2);
     prDrawListRect(list, r, {.brush = &brush});
     float cell = prRectWidth(r) / 8;
     uint32_t rows = uint32_t(prRectHeight(r) / cell);
     for (uint32_t y = 0; y < rows; ++y) {
         for (uint32_t x = (y & 1); x < 8; x += 2) {
-            PrRect square{r.left + cell * float(x), r.top + cell * float(y), r.left + cell * float(x + 1),
-                          r.top + cell * float(y + 1)};
+            PrRect square{
+                r.left + cell * float(x), r.top + cell * float(y), r.left + cell * float(x + 1),
+                r.top + cell * float(y + 1),
+            };
             prDrawListRect(list, square, {.color = PrColor{0, 0, 0, 0.5f}});
         }
     }
@@ -251,10 +256,10 @@ TEST_CASE("the fragment renderer evaluates superellipse corners as the cpu backe
     PrCorner scoop{{12, 12}, -1};
     PrCorner notch{{8, 8}, -INFINITY};
     prDrawListCornerRect(list, PrCornerRect{PrRect{4, 4, 44, 60}, {squircle, bevel, scoop, notch}},
-                         {.color = PrColor{0.2f, 0.4f, 0.8f, 1}});
+        {.color = PrColor{0.2f, 0.4f, 0.8f, 1}});
     prDrawListPushTransformAffine2(list, prAffine2Concat(prAffine2Rotate(0.3f), prAffine2Translate(PrVec2{60, 6})));
     prDrawListPushClipCornerRect(list, PrCornerRect{PrRect{0, 0, 30, 40}, {scoop, squircle, squircle, bevel}},
-                                 PrDrawEdges_Antialiased);
+        PrDrawEdges_Antialiased);
     prDrawListRect(list, PrRect{-10, -10, 50, 60}, {.color = PrColor{0.8f, 0.2f, 0.2f, 1}});
     prDrawListPopClip(list);
     prDrawListPopTransform(list);
@@ -278,15 +283,17 @@ TEST_CASE("the fragment renderer draws the host's texture as the cpu backend dra
         t[3] = left ? 128 : 255;
     }
     PrGpuTextureDesc desc = prGpuTextureDesc2d(prGpuFormatFromPixelFormat(PrPixelFormat_Rgba8), PrUVec2{8, 8},
-                                               PrGpuTextureUsageFlag_Sampled);
+        PrGpuTextureUsageFlag_Sampled);
     PrGpuTexture texture{};
     REQUIRE(prGpuTextureCreate(device.gpuDevice, &desc, &texture) == PrStatus_Ok);
     PrPixels upload{texels.data(), 32, {8, 8}};
     prGpuTextureWrite(device.gpuDevice, texture, PrIVec2{0, 0}, prPixelsView(upload));
     for (PrDrawAlpha alpha : {PrDrawAlpha_Straight, PrDrawAlpha_Opaque}) {
         CAPTURE(int(alpha));
-        PrDrawImageDesc imageDesc{PrPixelView{texels.data(), 32, {8, 8}}, PrPixelFormat_Rgba8, alpha,
-                                        PrColorSpace_Srgb};
+        PrDrawImageDesc imageDesc{
+            PrPixelView{texels.data(), 32, {8, 8}}, PrPixelFormat_Rgba8, alpha,
+            PrColorSpace_Srgb,
+        };
         const PrDrawImage* image = nullptr;
         REQUIRE(prDrawImageCreate(&imageDesc, &image) == PrStatus_Ok);
         auto draw = [&](PrDrawSource source) {
@@ -297,7 +304,7 @@ TEST_CASE("the fragment renderer draws the host's texture as the cpu backend dra
         };
         PrDrawList* fromTexture =
             draw(prDrawSourceTexture(prDrawGpuTexture(texture), prGpuTextureExtent(device.gpuDevice, texture),
-                                     PrRect{0, 0, 8, 8}, alpha));
+                PrRect{0, 0, 8, 8}, alpha));
         PrDrawList* fromImage = draw(prDrawSourceImage(image, PrRect{0, 0, 8, 8}));
         std::vector<uint8_t> drawn = device.render(fromTexture);
         std::vector<uint8_t> expected = reference(fromImage, 64, 32);
@@ -333,11 +340,13 @@ TEST_CASE("the fragment renderer fills shapes as the cpu backend does") {
 }
 
 TEST_CASE("the fragment renderer paints each kind of gradient per pixel") {
-    PrDrawColorStop stops[3] = {{.offset = 0, .color = PrColor{1, 0, 0, 1}},
-                                {.offset = 0.5f, .color = PrColor{0, 1, 0, 1}},
-                                {.offset = 1, .color = PrColor{0, 0, 1, 1}}};
+    PrDrawColorStop stops[3] = {
+        {.offset = 0, .color = PrColor{1, 0, 0, 1}},
+        {.offset = 0.5f, .color = PrColor{0, 1, 0, 1}},
+        {.offset = 1, .color = PrColor{0, 0, 1, 1}},
+    };
     for (PrDrawBrushKind kind : {PrDrawBrushKind_Linear, PrDrawBrushKind_Radial, PrDrawBrushKind_Conic,
-                                 PrDrawBrushKind_Diamond}) {
+        PrDrawBrushKind_Diamond}) {
         CAPTURE(int(kind));
         Device device(96, 96);
         PrDrawList* list = prDrawListCreate();
@@ -368,7 +377,7 @@ TEST_CASE("the fragment renderer clips to rounded rectangles as the cpu backend 
     prDrawListPushTransformAffine2(list, prAffine2Concat(prAffine2Rotate(0.4f), prAffine2Translate(PrVec2{30, 4})));
     PrCorner round = prCornerRound(PrVec2{8, 6});
     prDrawListPushClipCornerRect(list, PrCornerRect{PrRect{0, 0, 30, 36}, {round, round, round, round}},
-                                 PrDrawEdges_Antialiased);
+        PrDrawEdges_Antialiased);
     prDrawListPushClipRect(list, PrRect{8.5f, -10, 64, 64}, PrDrawEdges_Antialiased);
     prDrawListRect(list, PrRect{-40, -40, 80, 80}, {.color = PrColor{0, 0, 0, 1}});
     prDrawListPopClip(list);
@@ -445,8 +454,10 @@ TEST_CASE("the fragment renderer tiles an image brush in the shader") {
             t[3] = 255;
         }
     }
-    PrDrawImageDesc desc{PrPixelView{texels.data(), 64, {16, 16}}, PrPixelFormat_Rgba8, PrDrawAlpha_Premultiplied,
-                         PrColorSpace_Srgb};
+    PrDrawImageDesc desc{
+        PrPixelView{texels.data(), 64, {16, 16}}, PrPixelFormat_Rgba8, PrDrawAlpha_Premultiplied,
+        PrColorSpace_Srgb,
+    };
     const PrDrawImage* image = nullptr;
     REQUIRE(prDrawImageCreate(&desc, &image) == PrStatus_Ok);
     for (PrDrawExtend mode : {PrDrawExtend_None, PrDrawExtend_Repeat, PrDrawExtend_Reflect}) {
@@ -484,8 +495,10 @@ TEST_CASE("the fragment renderer composites groups through layers, with masks, o
     prDrawListRect(list, PrRect{30, 30, 60, 60}, {.color = PrColor{1, 0, 0, 1}});
     prDrawListPopGroup(list);
     // A group masked by a gradient's luminance, blended by multiply.
-    PrDrawColorStop stops[2] = {{.offset = 0, .color = PrColor{1, 1, 1, 1}},
-                                {.offset = 1, .color = PrColor{0, 0, 0, 1}}};
+    PrDrawColorStop stops[2] = {
+        {.offset = 0, .color = PrColor{1, 1, 1, 1}},
+        {.offset = 1, .color = PrColor{0, 0, 0, 1}},
+    };
     PrDrawBrush brush = prDrawBrushLinear(PrVec2{50, 0}, PrVec2{90, 0}, stops, 2);
     PrDrawMask mask = prDrawMaskDefault(&brush);
     mask.mode = PrDrawMaskMode_Luminance;
@@ -499,10 +512,10 @@ TEST_CASE("the fragment renderer composites groups through layers, with masks, o
     // An operator on a single command acts where the command's shape covers. A group's operator reaches the group's
     // bounds, which here are the clip's bounds.
     prDrawListEllipse(list, PrVec2{80, 15}, PrVec2{10, 10}, 0,
-                      {.color = PrColor{0, 0, 0, 1}, .composite = PrDrawComposite_DestinationOut});
+        {.color = PrColor{0, 0, 0, 1}, .composite = PrDrawComposite_DestinationOut});
     prDrawListPushClipRect(list, PrRect{0, 70, 40, 96}, PrDrawEdges_Antialiased);
     prDrawListEllipse(list, PrVec2{20, 84}, PrVec2{12, 8}, 0,
-                      {.color = PrColor{1, 0, 1, 1}, .composite = PrDrawComposite_SourceIn});
+        {.color = PrColor{1, 0, 1, 1}, .composite = PrDrawComposite_SourceIn});
     prDrawListPopClip(list);
     prDrawListPushClipRect(list, PrRect{60, 60, 96, 96}, PrDrawEdges_Antialiased);
     PrDrawGroup sourceIn = prDrawGroupDefault();
@@ -651,8 +664,10 @@ TEST_CASE("the fragment renderer filters what lies beneath a group as its backdr
     prDrawListRect(list, PrRect{8, 8, 56, 56}, {.color = PrColor{1, 1, 1, 0.3f}});
     prDrawListPopGroup(list);
     // The backdrop is sharp at the top and most blurred at the bottom.
-    PrDrawColorStop stops[2] = {{.offset = 0, .color = PrColor{0, 0, 0, 0}},
-                                {.offset = 1, .color = PrColor{0, 0, 0, 1}}};
+    PrDrawColorStop stops[2] = {
+        {.offset = 0, .color = PrColor{0, 0, 0, 0}},
+        {.offset = 1, .color = PrColor{0, 0, 0, 1}},
+    };
     PrDrawFilterNode progressive = nodeOf(PrDrawFilterKind_ProgressiveBlur);
     progressive.progressive.sigma = 8;
     progressive.progressive.brush = prDrawBrushLinear(PrVec2{0, 4}, PrVec2{0, 60}, stops, 2);
@@ -727,9 +742,8 @@ TEST_CASE("the fragment renderer reads what the host provides beneath a render a
     PrDrawFrame* backgroundTarget = nullptr;
     PrDrawFrame* overTexture = nullptr;
     PrDrawFrame* overRedraw = nullptr;
-    PrGpuTextureDesc desc =
-        prGpuTextureDesc2d(prGpuFormatFromPixelFormat(PrPixelFormat_Rgba8), PrUVec2{kWidth, kHeight},
-                           PrGpuTextureUsageFlag_Sampled | PrGpuTextureUsageFlag_RenderTarget);
+    PrGpuTextureDesc desc = prGpuTextureDesc2d(prGpuFormatFromPixelFormat(PrPixelFormat_Rgba8), PrUVec2{kWidth, kHeight},
+        PrGpuTextureUsageFlag_Sampled | PrGpuTextureUsageFlag_RenderTarget);
     PrGpuTexture backgroundTexture{};
     PrGpuTexture second{};
     REQUIRE(prGpuTextureCreate(device.gpuDevice, &desc, &backgroundTexture) == PrStatus_Ok);
@@ -737,9 +751,7 @@ TEST_CASE("the fragment renderer reads what the host provides beneath a render a
 
     PrGpuCommands* commands = nullptr;
     REQUIRE(prGpuCommandsBegin(device.gpuDevice, nullptr, &commands));
-    PrDrawTarget whole{.extent = {kWidth, kHeight},
-                       .format = PrPixelFormat_Rgba8,
-                       .commands = commands};
+    PrDrawTarget whole{.extent = {kWidth, kHeight}, .format = PrPixelFormat_Rgba8, .commands = commands};
     if (backgroundTarget == nullptr)
         backgroundTarget = prDrawFrameCreate(device.renderer);
     REQUIRE(prDrawFramePrepare(backgroundTarget, background, &whole) == PrStatus_Ok);
@@ -752,9 +764,7 @@ TEST_CASE("the fragment renderer reads what the host provides beneath a render a
     texture.texture = prDrawGpuTexture(backgroundTexture);
     texture.extent = prGpuTextureExtent(device.gpuDevice, backgroundTexture);
     texture.origin = PrIVec2{kAt, 0};
-    PrDrawTarget part{.extent = {kPanel, kPanel},
-                      .format = PrPixelFormat_Rgba8,
-                      .commands = commands};
+    PrDrawTarget part{.extent = {kPanel, kPanel}, .format = PrPixelFormat_Rgba8, .commands = commands};
     if (again == nullptr)
         again = prDrawFrameCreate(redraw);
     REQUIRE(prDrawFramePrepare(again, shifted, &part) == PrStatus_Ok);
@@ -836,7 +846,7 @@ TEST_CASE("the fragment renderer reads the host's texture alone beneath a backdr
         columns[i * 4 + 3] = 255;
     }
     PrGpuTextureDesc desc = prGpuTextureDesc2d(prGpuFormatFromPixelFormat(PrPixelFormat_Rgba8), PrUVec2{kSize, kSize},
-                                               PrGpuTextureUsageFlag_Sampled | PrGpuTextureUsageFlag_RenderTarget);
+        PrGpuTextureUsageFlag_Sampled | PrGpuTextureUsageFlag_RenderTarget);
     PrGpuTexture host{};
     REQUIRE(prGpuTextureCreate(device.gpuDevice, &desc, &host) == PrStatus_Ok);
     PrPixels texels{columns.data(), size_t(kSize) * 4, {kSize, kSize}};
@@ -860,10 +870,12 @@ TEST_CASE("the fragment renderer reads the host's texture alone beneath a backdr
     beneath.kind = PrDrawBeneathKind_Texture;
     beneath.texture = prDrawGpuTexture(host);
     beneath.extent = prGpuTextureExtent(device.gpuDevice, host);
-    PrDrawTarget prepared{.extent = {kSize, kSize},
-                          .format = PrPixelFormat_Rgba8,
-                          .commands = commands,
-                          .beneath = &beneath};
+    PrDrawTarget prepared{
+        .extent = {kSize, kSize},
+        .format = PrPixelFormat_Rgba8,
+        .commands = commands,
+        .beneath = &beneath,
+    };
     if (device.frame == nullptr)
         device.frame = prDrawFrameCreate(device.renderer);
     REQUIRE(prDrawFramePrepare(device.frame, list, &prepared) == PrStatus_Ok);
@@ -902,8 +914,7 @@ TEST_CASE("the fragment renderer reads what lies beneath a turned group, as a te
     PrDrawFilterNode offset = nodeOf(PrDrawFilterKind_Offset);
     offset.inputs[0] = PrDrawFilterInput_Backdrop;
     offset.offset = PrVec2{6, 0};
-    PrAffine2 turn = prAffine2Concat(
-        prAffine2Concat(prAffine2Translate(PrVec2{-16, -16}), prAffine2Rotate(3.14159265f / 2)),
+    PrAffine2 turn = prAffine2Concat(prAffine2Concat(prAffine2Translate(PrVec2{-16, -16}), prAffine2Rotate(3.14159265f / 2)),
         prAffine2Translate(PrVec2{16, 16}));
     prDrawListPushTransformAffine2(list, turn);
     PrDrawGroup group = prDrawGroupDefault();
@@ -916,7 +927,7 @@ TEST_CASE("the fragment renderer reads what lies beneath a turned group, as a te
 
     // The host's texture of the columns, and a frame of another backend that redraws them.
     PrGpuTextureDesc desc = prGpuTextureDesc2d(prGpuFormatFromPixelFormat(PrPixelFormat_Rgba8), PrUVec2{kSize, kSize},
-                                               PrGpuTextureUsageFlag_Sampled | PrGpuTextureUsageFlag_RenderTarget);
+        PrGpuTextureUsageFlag_Sampled | PrGpuTextureUsageFlag_RenderTarget);
     PrGpuTexture host{};
     PrGpuTexture second{};
     REQUIRE(prGpuTextureCreate(device.gpuDevice, &desc, &host) == PrStatus_Ok);
@@ -927,9 +938,7 @@ TEST_CASE("the fragment renderer reads what lies beneath a turned group, as a te
     PrDrawFrame* overRedraw = nullptr;
     PrGpuCommands* commands = nullptr;
     REQUIRE(prGpuCommandsBegin(device.gpuDevice, nullptr, &commands));
-    PrDrawTarget whole{.extent = {kSize, kSize},
-                       .format = PrPixelFormat_Rgba8,
-                       .commands = commands};
+    PrDrawTarget whole{.extent = {kSize, kSize}, .format = PrPixelFormat_Rgba8, .commands = commands};
     if (hostTarget == nullptr)
         hostTarget = prDrawFrameCreate(redraw);
     REQUIRE(prDrawFramePrepare(hostTarget, columns, &whole) == PrStatus_Ok);
@@ -1016,15 +1025,16 @@ TEST_CASE("the fragment renderer reads a solid color beneath a render as the cpu
     REQUIRE(prGpuCommandsBegin(device.gpuDevice, nullptr, &commands));
     PrDrawBeneath beneath{};
     beneath.color = color;
-    PrDrawTarget prepared{.extent = {kSize, kSize},
-                          .format = PrPixelFormat_Rgba8,
-                          .commands = commands,
-                          .beneath = &beneath};
+    PrDrawTarget prepared{
+        .extent = {kSize, kSize},
+        .format = PrPixelFormat_Rgba8,
+        .commands = commands,
+        .beneath = &beneath,
+    };
     if (device.frame == nullptr)
         device.frame = prDrawFrameCreate(device.renderer);
     REQUIRE(prDrawFramePrepare(device.frame, list, &prepared) == PrStatus_Ok);
-    PrGpuPassDesc desc = prGpuPassDescColor(device.texture, PrGpuLoad_Clear,
-                                            PrColor{color.r, color.g, color.b, color.a});
+    PrGpuPassDesc desc = prGpuPassDescColor(device.texture, PrGpuLoad_Clear, PrColor{color.r, color.g, color.b, color.a});
     PrGpuPass* pass = beginPass(commands, &desc);
     prDrawFrameRender(device.frame, pass, PrIVec2{0, 0});
     endPass(pass, &desc);
@@ -1097,8 +1107,10 @@ TEST_CASE("the fragment renderer fills paths alike whether tessellated, in strip
     stroke.shape.startCap = stroke.shape.endCap = stroke.shape.dashCap = PrPathCap_Round;
     prDrawListPath(list, wave, PrPathFillRule_NonZero, {.color = PrColor{0, 0.5f, 0.2f, 1}, .stroke = &stroke});
     std::vector<uint8_t> expected = reference(list, 144, 112);
-    PrDrawFragmentPaths modes[] = {PrDrawFragmentPaths_Tessellate, PrDrawFragmentPaths_Strips,
-                                   PrDrawFragmentPaths_Tiles};
+    PrDrawFragmentPaths modes[] = {
+        PrDrawFragmentPaths_Tessellate, PrDrawFragmentPaths_Strips,
+        PrDrawFragmentPaths_Tiles,
+    };
     for (PrDrawFragmentPaths paths : modes) {
         Device device(144, 112, paths);
         std::vector<uint8_t> drawn = device.render(list);
@@ -1173,15 +1185,13 @@ TEST_CASE("the fragment renderer draws small paths from the atlas as the cpu bac
         float x = 2;
         for (float size : sizes) {
             PrAffine2 scale = prAffine2Scale(PrVec2{size / 24, size / 24});
-            prDrawListPushTransformAffine2(
-                list, prAffine2Concat(scale, prAffine2Translate(PrVec2{x + offset.x, y + offset.y})));
-            prDrawListPath(list, check, PrPathFillRule_NonZero,
-                           {.color = PrColor{0.1f, 0.1f, 0.1f, 1}, .stroke = &stroke});
+            prDrawListPushTransformAffine2(list,
+                prAffine2Concat(scale, prAffine2Translate(PrVec2{x + offset.x, y + offset.y})));
+            prDrawListPath(list, check, PrPathFillRule_NonZero, {.color = PrColor{0.1f, 0.1f, 0.1f, 1}, .stroke = &stroke});
             prDrawListPopTransform(list);
-            prDrawListPushTransformAffine2(
-                list, prAffine2Concat(scale, prAffine2Translate(PrVec2{x + offset.x, y + 40 + offset.y})));
-            prDrawListPath(list, circle, PrPathFillRule_NonZero,
-                           {.color = PrColor{0.1f, 0.4f, 0.8f, 1}, .stroke = &inside});
+            prDrawListPushTransformAffine2(list,
+                prAffine2Concat(scale, prAffine2Translate(PrVec2{x + offset.x, y + 40 + offset.y})));
+            prDrawListPath(list, circle, PrPathFillRule_NonZero, {.color = PrColor{0.1f, 0.4f, 0.8f, 1}, .stroke = &inside});
             prDrawListPath(list, star, PrPathFillRule_EvenOdd, {.color = PrColor{0.8f, 0.2f, 0.1f, 0.7f}});
             prDrawListPopTransform(list);
             x += size + 6;
@@ -1217,8 +1227,10 @@ TEST_CASE("the fragment renderer samples images as the cpu backend does, by ever
             t[3] = 255;
         }
     }
-    PrDrawImageDesc desc{PrPixelView{texels.data(), 48, {12, 10}}, PrPixelFormat_Rgba8, PrDrawAlpha_Premultiplied,
-                         PrColorSpace_Srgb};
+    PrDrawImageDesc desc{
+        PrPixelView{texels.data(), 48, {12, 10}}, PrPixelFormat_Rgba8, PrDrawAlpha_Premultiplied,
+        PrColorSpace_Srgb,
+    };
     const PrDrawImage* image = nullptr;
     REQUIRE(prDrawImageCreate(&desc, &image) == PrStatus_Ok);
     Device device(96, 96);
@@ -1228,13 +1240,15 @@ TEST_CASE("the fragment renderer samples images as the cpu backend does, by ever
         PrRect texels;
         PrVec2 spacing;
     };
-    const Case cases[] = {{PrRect{1, 1, 11, 9}, PrVec2{2, 3}}, {PrRect{0, 0, 12, 10}, PrVec2{2, 3}},
-                          {PrRect{0, 0, 12, 10}, PrVec2{0, 0}}};
+    const Case cases[] = {
+        {PrRect{1, 1, 11, 9}, PrVec2{2, 3}}, {PrRect{0, 0, 12, 10}, PrVec2{2, 3}},
+        {PrRect{0, 0, 12, 10}, PrVec2{0, 0}},
+    };
     const PrDrawTileFlags kFlagSets[] = {0, PrDrawTileFlag_Clamped};
     for (PrDrawSampling sampling :
-         {PrDrawSampling_Nearest, PrDrawSampling_Linear, PrDrawSampling_Cubic, PrDrawSampling_Mipmap}) {
+            {PrDrawSampling_Nearest, PrDrawSampling_Linear, PrDrawSampling_Cubic, PrDrawSampling_Mipmap}) {
         for (PrDrawExtend mode :
-             {PrDrawExtend_None, PrDrawExtend_Pad, PrDrawExtend_Repeat, PrDrawExtend_Reflect}) {
+                {PrDrawExtend_None, PrDrawExtend_Pad, PrDrawExtend_Repeat, PrDrawExtend_Reflect}) {
             for (PrDrawTileFlags flags : kFlagSets) {
                 for (const Case& c : cases) {
                     CAPTURE(int(sampling));
@@ -1279,8 +1293,10 @@ TEST_CASE("the fragment renderer samples a sub-rectangle with a gutter through t
             t[3] = 255;
         }
     }
-    PrDrawImageDesc desc{PrPixelView{texels.data(), 128, {32, 32}}, PrPixelFormat_Rgba8, PrDrawAlpha_Premultiplied,
-                         PrColorSpace_Srgb};
+    PrDrawImageDesc desc{
+        PrPixelView{texels.data(), 128, {32, 32}}, PrPixelFormat_Rgba8, PrDrawAlpha_Premultiplied,
+        PrColorSpace_Srgb,
+    };
     const PrDrawImage* image = nullptr;
     REQUIRE(prDrawImageCreate(&desc, &image) == PrStatus_Ok);
     Device device(96, 96);
@@ -1316,9 +1332,11 @@ TEST_CASE("the fragment renderer maps a brush along strokes by each pixel's near
     prPathLineTo(path, PrVec2{90, 50});
     prPathLineTo(path, PrVec2{70, 10});
     prPathClose(path);
-    PrDrawColorStop stops[3] = {{.offset = 0, .color = PrColor{1, 0, 0, 1}},
-                                {.offset = 0.5f, .color = PrColor{0, 1, 0, 1}},
-                                {.offset = 1, .color = PrColor{0, 0, 1, 1}}};
+    PrDrawColorStop stops[3] = {
+        {.offset = 0, .color = PrColor{1, 0, 0, 1}},
+        {.offset = 0.5f, .color = PrColor{0, 1, 0, 1}},
+        {.offset = 1, .color = PrColor{0, 0, 1, 1}},
+    };
     PrDrawBrush along = prDrawBrushLinear(PrVec2{0, 0}, PrVec2{1, 0}, stops, 3);
     PrDrawStroke stroke = prDrawStrokeDefault();
     stroke.shape.width = 6;
@@ -1367,8 +1385,10 @@ TEST_CASE("the fragment renderer draws a list source as a texture at its scale i
     prDrawListPushTransformAffine2(list, prAffine2Scale(PrVec2{1.3f, 1.3f}));
     prDrawListPushGroup(list, &masked);
     std::vector<uint8_t> texels(8 * 8 * 4, 200);
-    PrDrawImageDesc desc{PrPixelView{texels.data(), 32, {8, 8}}, PrPixelFormat_Rgba8, PrDrawAlpha_Premultiplied,
-                         PrColorSpace_Srgb};
+    PrDrawImageDesc desc{
+        PrPixelView{texels.data(), 32, {8, 8}}, PrPixelFormat_Rgba8, PrDrawAlpha_Premultiplied,
+        PrColorSpace_Srgb,
+    };
     const PrDrawImage* image = nullptr;
     REQUIRE(prDrawImageCreate(&desc, &image) == PrStatus_Ok);
     PrDrawSource source = prDrawSourceImage(image, PrRect{0, 0, 8, 8});
@@ -1586,15 +1606,17 @@ TEST_CASE("the fragment renderer draws a kept embed, in place and moved by whole
         PrVec2 at;
         float scale;
     };
-    const Place places[] = {{{10, 10}, 1}, {{10, 10}, 1}, {{13, 6}, 1}, {{13, 6}, 1}, {{13.5f, 6}, 1},
-                            {{13.5f, 6}, 1}, {{120, 50}, 1}, {{120, 50}, 1}, {{20, 20}, 1}, {{20, 20}, 2}};
+    const Place places[] = {
+        {{10, 10}, 1}, {{10, 10}, 1}, {{13, 6}, 1}, {{13, 6}, 1}, {{13.5f, 6}, 1},
+        {{13.5f, 6}, 1}, {{120, 50}, 1}, {{120, 50}, 1}, {{20, 20}, 1}, {{20, 20}, 2},
+    };
     Device kept(160, 80);
     Device walked(160, 80, PrDrawFragmentPaths_Tessellate, PrDrawFragmentEmbeds_Walk);
     for (const Place& place : places) {
         PrDrawList* frame = prDrawListCreate();
         prDrawListPushClipRect(frame, PrRect{4, 4, 150, 76}, PrDrawEdges_Antialiased);
         prDrawListPushTransformAffine2(frame, prAffine2Concat(prAffine2Scale(PrVec2{place.scale, place.scale}),
-                                                              prAffine2Translate(place.at)));
+            prAffine2Translate(place.at)));
         prDrawListEmbed(frame, content, PrDVec2{0, 0});
         prDrawListPopTransform(frame);
         prDrawListPopClip(frame);
@@ -1614,8 +1636,10 @@ TEST_CASE("the fragment renderer keeps colors past white in a half-float target,
     const PrColor bright{4, 2, 0.5f, 1};
     PrDrawList* list = prDrawListCreate();
     prDrawListRect(list, PrRect{0, 0, 16, 8}, {.color = bright});
-    PrDrawColorStop stops[2] = {{.offset = 0, .color = PrColor{3, 3, 3, 1}},
-                                {.offset = 1, .color = PrColor{3, 3, 3, 1}}};
+    PrDrawColorStop stops[2] = {
+        {.offset = 0, .color = PrColor{3, 3, 3, 1}},
+        {.offset = 1, .color = PrColor{3, 3, 3, 1}},
+    };
     PrDrawBrush gradient = prDrawBrushLinear(PrVec2{16, 0}, PrVec2{32, 0}, stops, 2);
     prDrawListRect(list, PrRect{16, 0, 32, 8}, {.brush = &gradient});
     PrFloat16 texels[4 * 4];
@@ -1623,21 +1647,22 @@ TEST_CASE("the fragment renderer keeps colors past white in a half-float target,
         for (uint32_t k = 0; k < 4; ++k)
             texels[i * 4 + k] = prFloat16FromFloat(k < 3 ? 2.0f : 1.0f);
     }
-    PrDrawImageDesc desc{.pixels = PrPixelView{reinterpret_cast<const uint8_t*>(texels), 16, {2, 2}},
-                         .format = PrPixelFormat_RgbaF16,
-                         .alpha = PrDrawAlpha_Premultiplied,
-                         .space = PrColorSpace_Srgb};
+    PrDrawImageDesc desc{
+        .pixels = PrPixelView{reinterpret_cast<const uint8_t*>(texels), 16, {2, 2}},
+        .format = PrPixelFormat_RgbaF16,
+        .alpha = PrDrawAlpha_Premultiplied,
+        .space = PrColorSpace_Srgb,
+    };
     const PrDrawImage* image = nullptr;
     REQUIRE(prDrawImageCreate(&desc, &image) == PrStatus_Ok);
     PrDrawBrush brush = prDrawBrushImage(prDrawSourceImage(image, PrRect{0, 0, 2, 2}), PrRect{32, 0, 48, 8},
-                                         PrDrawSampling_Nearest);
+        PrDrawSampling_Nearest);
     prDrawListRect(list, PrRect{32, 0, 48, 8}, {.brush = &brush});
 
     PrGpuDevice* gpuDevice = createDevice();
     PrDrawRenderer* renderer = createRenderer(gpuDevice);
-    PrGpuTextureDesc textureDesc =
-        prGpuTextureDesc2d(prGpuFormatFromPixelFormat(PrPixelFormat_RgbaF16), PrUVec2{kWidth, kHeight},
-                           PrGpuTextureUsageFlag_Sampled | PrGpuTextureUsageFlag_RenderTarget);
+    PrGpuTextureDesc textureDesc = prGpuTextureDesc2d(prGpuFormatFromPixelFormat(PrPixelFormat_RgbaF16), PrUVec2{kWidth, kHeight},
+        PrGpuTextureUsageFlag_Sampled | PrGpuTextureUsageFlag_RenderTarget);
     PrGpuTexture texture{};
     REQUIRE(prGpuTextureCreate(gpuDevice, &textureDesc, &texture) == PrStatus_Ok);
     PrDrawFrame* frame = prDrawFrameCreate(renderer);
@@ -1645,9 +1670,7 @@ TEST_CASE("the fragment renderer keeps colors past white in a half-float target,
     auto render = [&](PrColor out[3]) {
         PrGpuCommands* commands = nullptr;
         REQUIRE(prGpuCommandsBegin(gpuDevice, nullptr, &commands));
-        PrDrawTarget target{.extent = {kWidth, kHeight},
-                            .format = PrPixelFormat_RgbaF16,
-                            .commands = commands};
+        PrDrawTarget target{.extent = {kWidth, kHeight}, .format = PrPixelFormat_RgbaF16, .commands = commands};
         REQUIRE(prDrawFramePrepare(frame, list, &target) == PrStatus_Ok);
         PrGpuPassDesc pass = prGpuPassDescColor(texture, PrGpuLoad_Clear, PrColor{0, 0, 0, 0});
         PrGpuPass* encoder = beginPass(commands, &pass);
@@ -1663,8 +1686,8 @@ TEST_CASE("the fragment renderer keeps colors past white in a half-float target,
         }
     };
     auto near = [](PrColor a, PrColor b) {
-        return std::abs(a.r - b.r) < 0.01f && std::abs(a.g - b.g) < 0.01f && std::abs(a.b - b.b) < 0.01f
-               && std::abs(a.a - b.a) < 0.01f;
+        return std::abs(a.r - b.r) < 0.01f && std::abs(a.g - b.g) < 0.01f && std::abs(a.b - b.b) < 0.01f &&
+            std::abs(a.a - b.a) < 0.01f;
     };
     PrColor colors[3];
     render(colors);
@@ -1689,9 +1712,8 @@ TEST_CASE("the fragment renderer keeps colors past white in a half-float target,
 TEST_CASE("the fragment renderer renders into a half-float target without a layer of its own") {
     PrGpuDevice* gpuDevice = createDevice();
     PrDrawRenderer* renderer = createRenderer(gpuDevice);
-    PrGpuTextureDesc textureDesc =
-        prGpuTextureDesc2d(prGpuFormatFromPixelFormat(PrPixelFormat_RgbaF16), PrUVec2{16, 16},
-                           PrGpuTextureUsageFlag_Sampled | PrGpuTextureUsageFlag_RenderTarget);
+    PrGpuTextureDesc textureDesc = prGpuTextureDesc2d(prGpuFormatFromPixelFormat(PrPixelFormat_RgbaF16), PrUVec2{16, 16},
+        PrGpuTextureUsageFlag_Sampled | PrGpuTextureUsageFlag_RenderTarget);
     PrGpuTexture texture{};
     REQUIRE(prGpuTextureCreate(gpuDevice, &textureDesc, &texture) == PrStatus_Ok);
     PrDrawList* list = prDrawListCreate();
@@ -1699,9 +1721,7 @@ TEST_CASE("the fragment renderer renders into a half-float target without a laye
     PrDrawFrame* frame = prDrawFrameCreate(renderer);
     PrGpuCommands* commands = nullptr;
     REQUIRE(prGpuCommandsBegin(gpuDevice, nullptr, &commands));
-    PrDrawTarget target{.extent = {16, 16},
-                        .format = PrPixelFormat_RgbaF16,
-                        .commands = commands};
+    PrDrawTarget target{.extent = {16, 16}, .format = PrPixelFormat_RgbaF16, .commands = commands};
     REQUIRE(prDrawFramePrepare(frame, list, &target) == PrStatus_Ok);
     PrGpuPassDesc pass = prGpuPassDescColor(texture, PrGpuLoad_Clear, PrColor{0, 0, 0, 0});
     PrGpuPass* encoder = beginPass(commands, &pass);
@@ -1712,9 +1732,7 @@ TEST_CASE("the fragment renderer renders into a half-float target without a laye
     // A target of 10-bit channels is refused.
     PrGpuCommands* refused = nullptr;
     REQUIRE(prGpuCommandsBegin(gpuDevice, nullptr, &refused));
-    PrDrawTarget packed{.extent = {16, 16},
-                        .format = PrPixelFormat_Rgb10A2,
-                        .commands = refused};
+    PrDrawTarget packed{.extent = {16, 16}, .format = PrPixelFormat_Rgb10A2, .commands = refused};
     CHECK(prDrawFramePrepare(frame, list, &packed) == PrStatus_NotSupported);
     prGpuCommandsSubmitAndWait(refused);
     prDrawFrameDestroy(frame);
@@ -1728,8 +1746,10 @@ TEST_CASE("the fragment renderer renders colors past white into a half-float tar
     constexpr uint32_t kSize = 64;
     PrDrawList* list = prDrawListCreate();
     prDrawListEllipse(list, PrVec2{16, 16}, PrVec2{12, 9}, 0.3f, {.color = PrColor{3, 1, 0.2f, 1}});
-    PrDrawColorStop stops[2] = {{.offset = 0, .color = PrColor{0, 0, 0, 1}},
-                                {.offset = 1, .color = PrColor{4, 2, 1, 1}}};
+    PrDrawColorStop stops[2] = {
+        {.offset = 0, .color = PrColor{0, 0, 0, 1}},
+        {.offset = 1, .color = PrColor{4, 2, 1, 1}},
+    };
     PrDrawBrush ramp = prDrawBrushLinear(PrVec2{32, 0}, PrVec2{64, 0}, stops, 2);
     prDrawListRect(list, PrRect{32, 0, 64, 32}, {.brush = &ramp});
     // Light added in a group, and a group blurred, both past white.
@@ -1738,7 +1758,7 @@ TEST_CASE("the fragment renderer renders colors past white into a half-float tar
     prDrawListPushGroup(list, &added);
     prDrawListRect(list, PrRect{4, 36, 28, 60}, {.color = PrColor{2, 0.5f, 0.5f, 1}});
     prDrawListCornerRect(list, prCornerRectRound(PrRect{14, 40, 30, 56}, 4),
-                         {.color = PrColor{0.5f, 2, 2, 1}, .composite = PrDrawComposite_PlusLighter});
+        {.color = PrColor{0.5f, 2, 2, 1}, .composite = PrDrawComposite_PlusLighter});
     prDrawListPopGroup(list);
     PrDrawFilterNode blur = nodeOf(PrDrawFilterKind_Blur);
     blur.inputs[0] = PrDrawFilterInput_Source;
@@ -1752,17 +1772,14 @@ TEST_CASE("the fragment renderer renders colors past white into a half-float tar
 
     PrGpuDevice* gpuDevice = createDevice();
     PrDrawRenderer* renderer = createRenderer(gpuDevice);
-    PrGpuTextureDesc textureDesc =
-        prGpuTextureDesc2d(prGpuFormatFromPixelFormat(PrPixelFormat_RgbaF16), PrUVec2{kSize, kSize},
-                           PrGpuTextureUsageFlag_Sampled | PrGpuTextureUsageFlag_RenderTarget);
+    PrGpuTextureDesc textureDesc = prGpuTextureDesc2d(prGpuFormatFromPixelFormat(PrPixelFormat_RgbaF16), PrUVec2{kSize, kSize},
+        PrGpuTextureUsageFlag_Sampled | PrGpuTextureUsageFlag_RenderTarget);
     PrGpuTexture texture{};
     REQUIRE(prGpuTextureCreate(gpuDevice, &textureDesc, &texture) == PrStatus_Ok);
     PrDrawFrame* frame = prDrawFrameCreate(renderer);
     PrGpuCommands* commands = nullptr;
     REQUIRE(prGpuCommandsBegin(gpuDevice, nullptr, &commands));
-    PrDrawTarget target{.extent = {kSize, kSize},
-                        .format = PrPixelFormat_RgbaF16,
-                        .commands = commands};
+    PrDrawTarget target{.extent = {kSize, kSize}, .format = PrPixelFormat_RgbaF16, .commands = commands};
     REQUIRE(prDrawFramePrepare(frame, list, &target) == PrStatus_Ok);
     PrGpuPassDesc pass = prGpuPassDescColor(texture, PrGpuLoad_Clear, PrColor{0, 0, 0, 0});
     PrGpuPass* encoder = beginPass(commands, &pass);
@@ -1771,7 +1788,7 @@ TEST_CASE("the fragment renderer renders colors past white into a half-float tar
     prGpuCommandsSubmitAndWait(commands);
     std::vector<PrFloat16> drawn(size_t(kSize) * kSize * 4);
     prGpuTextureRead(gpuDevice, texture, PrGpuAccessFlag_ShaderRead, PrIVec2{0, 0},
-                     PrPixels{reinterpret_cast<uint8_t*>(drawn.data()), size_t(kSize) * 8, {kSize, kSize}});
+        PrPixels{reinterpret_cast<uint8_t*>(drawn.data()), size_t(kSize) * 8, {kSize, kSize}});
 
     std::vector<PrFloat16> expected(drawn.size());
     PrDrawRenderer* cpu = prDrawCpuCreate(nullptr);
@@ -1812,12 +1829,16 @@ TEST_CASE("the fragment renderer renders colors past white into a half-float tar
 TEST_CASE("the fragment renderer draws a group into the host's texture, which keeps each revision's contents once") {
     Device device(8, 8);
     PrGpuTextureDesc desc = prGpuTextureDesc2d(prGpuFormatFromPixelFormat(PrPixelFormat_Rgba8), PrUVec2{4, 4},
-                                               PrGpuTextureUsageFlag_Sampled | PrGpuTextureUsageFlag_RenderTarget);
+        PrGpuTextureUsageFlag_Sampled | PrGpuTextureUsageFlag_RenderTarget);
     PrGpuTexture held{};
     REQUIRE(prGpuTextureCreate(device.gpuDevice, &desc, &held) == PrStatus_Ok);
     uint64_t drawn = 0;
-    PrDrawGroupLayer layer{.texture = prDrawGpuTexture(held), .extent = {4, 4}, .drawn = &drawn,
-                           .sampling = PrDrawSampling_Nearest};
+    PrDrawGroupLayer layer{
+        .texture = prDrawGpuTexture(held),
+        .extent = {4, 4},
+        .drawn = &drawn,
+        .sampling = PrDrawSampling_Nearest,
+    };
     // A list of revisions `first` to `last` of a group whose bounds cover the target. Revision 1 replaces the texture's
     // texels with red, and each later one draws half-opaque blue over the left half, which would darken if it drew
     // twice.
@@ -1834,7 +1855,7 @@ TEST_CASE("the fragment renderer draws a group into the host's texture, which ke
             prDrawListPushGroup(l, &segment);
             if (revision == 1)
                 prDrawListRect(l, PrRect{0, 0, 8, 8},
-                               {.color = PrColor{1, 0, 0, 1}, .composite = PrDrawComposite_Copy});
+                    {.color = PrColor{1, 0, 0, 1}, .composite = PrDrawComposite_Copy});
             else
                 prDrawListRect(l, PrRect{0, 0, 4, 8}, {.color = PrColor{0, 0, 1, 0.5f}});
             prDrawListPopGroup(l);
@@ -1845,7 +1866,7 @@ TEST_CASE("the fragment renderer draws a group into the host's texture, which ke
     auto pixel = [](const std::vector<uint8_t>& pixels, uint32_t x, uint32_t y) {
         const uint8_t* p = &pixels[(size_t(y) * 8 + x) * 4];
         return std::to_string(p[0]) + "," + std::to_string(p[1]) + "," + std::to_string(p[2]) + "," +
-               std::to_string(p[3]);
+            std::to_string(p[3]);
     };
     PrDrawList* first = list(1, 1);
     std::vector<uint8_t> once = device.render(first);
@@ -1917,10 +1938,12 @@ TEST_CASE("the fragment renderer clips to rectangles and rounded rectangles with
 TEST_CASE("the fragment renderer paints a gradient's hard stops as the cpu backend does") {
     Device device(96, 32);
     PrDrawList* list = prDrawListCreate();
-    PrDrawColorStop hard[4] = {{.offset = 0, .color = PrColor{0, 1, 0, 1}},
-                               {.offset = 0.25f, .color = PrColor{0, 1, 0, 1}},
-                               {.offset = 0.25f, .color = PrColor{1, 1, 0, 1}},
-                               {.offset = 1, .color = PrColor{1, 0, 1, 1}}};
+    PrDrawColorStop hard[4] = {
+        {.offset = 0, .color = PrColor{0, 1, 0, 1}},
+        {.offset = 0.25f, .color = PrColor{0, 1, 0, 1}},
+        {.offset = 0.25f, .color = PrColor{1, 1, 0, 1}},
+        {.offset = 1, .color = PrColor{1, 0, 1, 1}},
+    };
     PrDrawBrush brush = prDrawBrushLinear(PrVec2{0, 0}, PrVec2{96, 0}, hard, 4);
     prDrawListRect(list, PrRect{0, 0, 96, 32}, {.brush = &brush});
     std::vector<uint8_t> drawn = device.render(list);
@@ -1932,8 +1955,10 @@ TEST_CASE("the fragment renderer uploads an image, glyphs and small paths' cover
     Device device(64, 64);
     const PrFont* font = load("NotoSans.ttf");
     uint8_t texels[4] = {255, 0, 0, 255};
-    PrDrawImageDesc desc{PrPixelView{texels, 4, {1, 1}}, PrPixelFormat_Rgba8, PrDrawAlpha_Premultiplied,
-                         PrColorSpace_Srgb};
+    PrDrawImageDesc desc{
+        PrPixelView{texels, 4, {1, 1}}, PrPixelFormat_Rgba8, PrDrawAlpha_Premultiplied,
+        PrColorSpace_Srgb,
+    };
     const PrDrawImage* image = nullptr;
     REQUIRE(prDrawImageCreate(&desc, &image) == PrStatus_Ok);
     PrPath* path = prPathCreate();
@@ -1942,10 +1967,9 @@ TEST_CASE("the fragment renderer uploads an image, glyphs and small paths' cover
     prPathLineTo(path, PrVec2{4, 20});
     PrDrawList* list = prDrawListCreate();
     PrDrawBrush brush = prDrawBrushImage(prDrawSourceImage(image, PrRect{0, 0, 1, 1}), PrRect{0, 0, 16, 16},
-                                         PrDrawSampling_Nearest);
+        PrDrawSampling_Nearest);
     prDrawListRect(list, PrRect{0, 0, 16, 16}, {.brush = &brush});
-    PrFontGlyph glyphs[2] = {{prFontCodePointGlyph(font, 'H'), {20, 30}},
-                             {prFontCodePointGlyph(font, 'i'), {40, 30}}};
+    PrFontGlyph glyphs[2] = {{prFontCodePointGlyph(font, 'H'), {20, 30}}, {prFontCodePointGlyph(font, 'i'), {40, 30}}};
     PrFontGlyphRun run{};
     run.font = font;
     run.size = 24;

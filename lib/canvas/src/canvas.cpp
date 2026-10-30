@@ -293,7 +293,7 @@ PrColor srgbOf(const PrCssUsedColor& color) {
 // Parses `text` as a CSS color (html/#parsed-as-a-css-color-value), and writes it and, if `serialization` is not null,
 // its serialization. Returns false if it does not parse.
 bool parseColor(PrStringView text, const PrDomElement* PR_NULLABLE element, PrColor* color,
-                PrString* PR_NULLABLE serialization) {
+        PrString* PR_NULLABLE serialization) {
     PrCssUsedColor parsed{};
     if (prCssParseColor(text, element, &parsed) != PrStatus_Ok)
         return false;
@@ -327,8 +327,11 @@ void stateInit(CanvasState* state, CanvasFont* font) {
     *state = CanvasState{};
     state->transform = prDAffine2Identity();
     for (CanvasStyleValue& style : state->styles)
-        style = CanvasStyleValue{.kind = PrCanvasStyleKind_Color, .color = PrColor{0, 0, 0, 1},
-                            .text = prStringExternal(kBlack)};
+        style = CanvasStyleValue{
+            .kind = PrCanvasStyleKind_Color,
+            .color = PrColor{0, 0, 0, 1},
+            .text = prStringExternal(kBlack),
+        };
     state->globalAlpha = 1;
     state->smoothing = true;
     state->smoothingQuality = PrCanvasImageSmoothingQuality_Low;
@@ -400,8 +403,7 @@ bool parseSpacing(PrStringView text, CanvasSpacing* out) {
     bool parsed = prCssValueParseNumeric(text, value) == PrStatus_Ok && prCssValueSize(value) == 1;
     PrCssValueFields fields = parsed ? prCssValueFields(value, 0) : PrCssValueFields{};
     PrCssNumericType type{};
-    bool length = parsed && fields.kind == PrCssValueKind_Dimension
-                  && prCssNumericTypeFromUnit(fields.number.unit, &type);
+    bool length = parsed && fields.kind == PrCssValueKind_Dimension && prCssNumericTypeFromUnit(fields.number.unit, &type);
     for (uint32_t i = 0; length && i < PrCssNumericBaseType_Count; ++i)
         length = type.exponents[i] == (i == PrCssNumericBaseType_Length ? 1 : 0);
     if (length)
@@ -577,8 +579,13 @@ void paintShown(void* PR_NULLABLE context, PrVec2 extent, PrDrawList* list) {
     PrVec2 size{float(bitmap->extent.x), float(bitmap->extent.y)};
     prDrawListPushTransformAffine2(list, prAffine2Scale(PrVec2{extent.x / size.x, extent.y / size.y}));
     uint64_t newest = shown->segments.count != 0 ? shown->segments.last().revision : 0;
-    PrDrawGroupLayer layer{.texture = bitmap->id, .extent = bitmap->extent, .drawn = &bitmap->drawn,
-                           .revision = newest, .sampling = shown->sampling};
+    PrDrawGroupLayer layer{
+        .texture = bitmap->id,
+        .extent = bitmap->extent,
+        .drawn = &bitmap->drawn,
+        .revision = newest,
+        .sampling = shown->sampling,
+    };
     PrDrawGroup group = prDrawGroupDefault();
     group.bounds = PrRect{0, 0, size.x, size.y};
     group.layer = &layer;
@@ -694,8 +701,7 @@ void allocateBitmap(CanvasContext* c, PrUVec2 extent) {
             bitmap->id = prDrawCpuTexture(&bitmap->cpu);
             c->bitmap = bitmap;
         } else {
-            PrGpuTextureDesc desc = prGpuTextureDesc2d(
-                prGpuFormatFromPixelFormat(c->format), extent,
+            PrGpuTextureDesc desc = prGpuTextureDesc2d(prGpuFormatFromPixelFormat(c->format), extent,
                 PrGpuTextureUsageFlag_Sampled | PrGpuTextureUsageFlag_RenderTarget);
             desc.name = "canvas";
             if (prGpuTextureCreate(c->device, &desc, &bitmap->texture) == PrStatus_Ok) {
@@ -832,11 +838,10 @@ bool gradientBrush(const CanvasGradient& g, PrDAffine2 transform, PrDrawBrush* o
             *out = prDrawBrushLinear(start, end, g.stops.data, g.stops.count);
             break;
         case PrDrawBrushKind_Radial:
-            if ((g.start.x == g.end.x && g.start.y == g.end.y && g.startRadius == g.endRadius)
-                || !invertible(transform))
+            if ((g.start.x == g.end.x && g.start.y == g.end.y && g.startRadius == g.endRadius) ||
+                    !invertible(transform))
                 return false;
-            *out = prDrawBrushRadial(start, float(g.startRadius), end, float(g.endRadius), g.stops.data,
-                                     g.stops.count);
+            *out = prDrawBrushRadial(start, float(g.startRadius), end, float(g.endRadius), g.stops.data, g.stops.count);
             break;
         default:
             if (!invertible(transform))
@@ -1033,7 +1038,7 @@ void drawPainted(CanvasContext* c, PrDrawPaint paint, PrDAffine2 shapeTransform,
 // into the space of the shape (drawPainted).
 template <typename Record>
 void drawStyled(CanvasContext* c, PrCanvasStyleRole role, const PrDrawStroke* PR_NULLABLE stroke,
-                PrDAffine2 shapeTransform, PrDAffine2 brushTransform, Record record) {
+        PrDAffine2 shapeTransform, PrDAffine2 brushTransform, Record record) {
     CanvasPaint painted;
     paintOf(c, role, brushTransform, &painted);
     painted.paint.stroke = stroke;
@@ -1085,25 +1090,32 @@ CanvasTextStyle textStyleOf(const CanvasContext* c, const PrCanvasTextSource& so
     double size = double(prCssFontStyle(s.font->css).size);
     PrStringView lang = prStringView(&s.lang);
     PrLocale locale = lang == kInherit ? source.language : lang.size == 0 ? PrLocale(0) : prLocaleFromTag(lang);
-    PrTextDirection direction = s.direction == PrCanvasDirection_Ltr   ? PrTextDirection_Ltr
-                                : s.direction == PrCanvasDirection_Rtl ? PrTextDirection_Rtl
-                                                                       : source.direction;
+    PrTextDirection direction = source.direction;
+    if (s.direction == PrCanvasDirection_Ltr)
+        direction = PrTextDirection_Ltr;
+    else if (s.direction == PrCanvasDirection_Rtl)
+        direction = PrTextDirection_Rtl;
     // The attributes that override the font's width and capitals do so only where they are not normal.
     PrTextCaps caps = PrTextCaps(s.fontVariantCaps);
     if (caps == PrTextCaps_Normal && prCssFontSmallCaps(s.font->css))
         caps = PrTextCaps_Small;
-    float width = s.fontStretch != PrCanvasFontStretch_Normal ? kStretchWidths[s.fontStretch]
-                                                              : prCssFontStyle(s.font->css).width;
-    return CanvasTextStyle{.font = s.font,
-                           .align = s.textAlign,
-                           .baseline = s.textBaseline,
-                           .direction = direction,
-                           .locale = locale,
-                           .letterSpacing = spacingPx(s.letterSpacing, size),
-                           .wordSpacing = spacingPx(s.wordSpacing, size),
-                           .kerning = PrTextKerning(s.fontKerning),
-                           .caps = caps,
-                           .width = width};
+    float width;
+    if (s.fontStretch != PrCanvasFontStretch_Normal)
+        width = kStretchWidths[s.fontStretch];
+    else
+        width = prCssFontStyle(s.font->css).width;
+    return CanvasTextStyle{
+        .font = s.font,
+        .align = s.textAlign,
+        .baseline = s.textBaseline,
+        .direction = direction,
+        .locale = locale,
+        .letterSpacing = spacingPx(s.letterSpacing, size),
+        .wordSpacing = spacingPx(s.wordSpacing, size),
+        .kerning = PrTextKerning(s.fontKerning),
+        .caps = caps,
+        .width = width,
+    };
 }
 
 // Sets `text` in the text styles into the context's text. Returns false if the context sets no text.
@@ -1117,7 +1129,7 @@ bool setText(CanvasContext* c, PrStringView text) {
 // Fills or strokes text in style `role` (html/#dom-context-2d-filltext): the glyphs placed from (x, y), condensed
 // across to `maxWidth` if they are wider.
 void drawText(CanvasContext* c, PrStringView source, double x, double y, const double* PR_NULLABLE maxWidth,
-              PrCanvasStyleRole role) {
+        PrCanvasStyleRole role) {
     if (!canvasIsFinite(x, y) || (maxWidth != nullptr && (!canvasIsFinite(*maxWidth) || !(*maxWidth > 0))))
         return;
     if (!setText(c, source) || c->text.runs.count == 0)
@@ -1127,10 +1139,10 @@ void drawText(CanvasContext* c, PrStringView source, double x, double y, const d
     PrDAffine2 brush{.a = 1 / scale, .d = 1, .e = -x / scale, .f = -y};
     PrDrawStroke stroke = strokeOf(c);
     drawStyled(c, role, role == PrCanvasStyleRole_Stroke ? &stroke : nullptr,
-               prDAffine2Concat(local, c->state.transform), brush, [&](PrDrawPaint paint) {
-                   for (uint32_t i = 0; i < c->text.runs.count; ++i)
-                       prDrawListGlyphs(c->pending, &c->text.runs.data[i], PrVec2{0, 0}, paint);
-               });
+        prDAffine2Concat(local, c->state.transform), brush, [&](PrDrawPaint paint) {
+            for (uint32_t i = 0; i < c->text.runs.count; ++i)
+                prDrawListGlyphs(c->pending, &c->text.runs.data[i], PrVec2{0, 0}, paint);
+        });
 }
 
 } // namespace
@@ -1167,7 +1179,7 @@ PrCanvasGradient* prCanvasGradientCreateLinear(double x0, double y0, double x1, 
 }
 
 PrStatus prCanvasGradientCreateRadial(double x0, double y0, double r0, double x1, double y1, double r1,
-                                      PrCanvasGradient* PR_NULLABLE* PR_NONNULL out) {
+        PrCanvasGradient* PR_NULLABLE* PR_NONNULL out) {
     PR_ASSERT(canvasIsFinite(x0, y0, r0, x1, y1, r1));
     *out = nullptr;
     if (r0 < 0 || r1 < 0)
@@ -1288,7 +1300,7 @@ void prCanvasPath2DQuadraticCurveTo(PrCanvasPath2D* path, double cpx, double cpy
 }
 
 void prCanvasPath2DBezierCurveTo(PrCanvasPath2D* path, double cp1x, double cp1y, double cp2x, double cp2y, double x,
-                                 double y) {
+        double y) {
     canvasPathBezierCurveTo(path, prDAffine2Identity(), cp1x, cp1y, cp2x, cp2y, x, y);
 }
 
@@ -1301,20 +1313,20 @@ void prCanvasPath2DRect(PrCanvasPath2D* path, double x, double y, double w, doub
 }
 
 PrStatus prCanvasPath2DRoundRect(PrCanvasPath2D* path, double x, double y, double w, double h,
-                                 const PrDVec2* PR_NULLABLE radii, uint32_t radiusCount) {
+        const PrDVec2* PR_NULLABLE radii, uint32_t radiusCount) {
     return canvasPathRoundRect(path, prDAffine2Identity(), x, y, w, h, radii, radiusCount);
 }
 
 PrStatus prCanvasPath2DArc(PrCanvasPath2D* path, double x, double y, double radius, double startAngle,
-                           double endAngle, bool counterclockwise) {
+        double endAngle, bool counterclockwise) {
     return canvasPathEllipse(path, prDAffine2Identity(), x, y, radius, radius, 0, startAngle, endAngle,
-                             counterclockwise);
+        counterclockwise);
 }
 
 PrStatus prCanvasPath2DEllipse(PrCanvasPath2D* path, double x, double y, double radiusX, double radiusY,
-                               double rotation, double startAngle, double endAngle, bool counterclockwise) {
+        double rotation, double startAngle, double endAngle, bool counterclockwise) {
     return canvasPathEllipse(path, prDAffine2Identity(), x, y, radiusX, radiusY, rotation, startAngle, endAngle,
-                             counterclockwise);
+        counterclockwise);
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -1396,10 +1408,12 @@ const PrDrawImage* PR_NULLABLE prCanvasSnapshot(PrCanvas* canvas) {
     if (canvas->pixels == nullptr)
         return nullptr;
     if (canvas->snapshot == nullptr) {
-        PrDrawImageDesc desc{.pixels = prPixelsView(pixelsOf(canvas)), .format = canvas->format,
-                             .alpha = PrDrawAlpha(canvas->settings.alpha ? PrDrawAlpha_Premultiplied
-                                                                         : PrDrawAlpha_Opaque),
-                             .space = PrColorSpace_Srgb};
+        PrDrawImageDesc desc{
+            .pixels = prPixelsView(pixelsOf(canvas)),
+            .format = canvas->format,
+            .alpha = PrDrawAlpha(canvas->settings.alpha ? PrDrawAlpha_Premultiplied : PrDrawAlpha_Opaque),
+            .space = PrColorSpace_Srgb,
+        };
         const PrDrawImage* image = nullptr;
         if (prDrawImageCreate(&desc, &image) != PrStatus_Ok)
             return nullptr;
@@ -1415,8 +1429,12 @@ PrCanvasPresentation prCanvasPresent(PrCanvas* canvas, PrDrawSampling sampling) 
     if (canvas->bitmap == nullptr)
         return presentation;
     CanvasShown* shown = show(canvas, sampling);
-    presentation.painter = PrLayoutPainter{.paint = paintShown, .context = shown, .retain = shownRetain,
-                                           .release = shownRelease};
+    presentation.painter = PrLayoutPainter{
+        .paint = paintShown,
+        .context = shown,
+        .retain = shownRetain,
+        .release = shownRelease,
+    };
     presentation.revision = canvas->revision;
     return presentation;
 }
@@ -1523,13 +1541,11 @@ void prCanvasSetImageSmoothingEnabled(PrCanvas* canvas, bool value) {
     canvas->state.smoothing = value;
 }
 
-PrCanvasImageSmoothingQuality prCanvasImageSmoothingQuality(
-    const PrCanvas* canvas) {
+PrCanvasImageSmoothingQuality prCanvasImageSmoothingQuality(const PrCanvas* canvas) {
     return canvas->state.smoothingQuality;
 }
 
-void prCanvasSetImageSmoothingQuality(PrCanvas* canvas,
-                                      PrCanvasImageSmoothingQuality value) {
+void prCanvasSetImageSmoothingQuality(PrCanvas* canvas, PrCanvasImageSmoothingQuality value) {
     canvas->state.smoothingQuality = value;
 }
 
@@ -1545,8 +1561,7 @@ PrCanvasStyle prCanvasStyle(const PrCanvas* canvas, PrCanvasStyleRole role) {
     return out;
 }
 
-void prCanvasSetStyleColor(PrCanvas* canvas, PrCanvasStyleRole role,
-                           PrStringView color) {
+void prCanvasSetStyleColor(PrCanvas* canvas, PrCanvasStyleRole role, PrStringView color) {
     PrColor parsed{};
     PrString text = prStringNull();
     if (!parseColor(color, canvas->element, &parsed, &text))
@@ -1556,16 +1571,14 @@ void prCanvasSetStyleColor(PrCanvas* canvas, PrCanvasStyleRole role,
     *style = CanvasStyleValue{.kind = PrCanvasStyleKind_Color, .color = parsed, .text = text};
 }
 
-void prCanvasSetStyleGradient(PrCanvas* canvas, PrCanvasStyleRole role,
-                              PrCanvasGradient* gradient) {
+void prCanvasSetStyleGradient(PrCanvas* canvas, PrCanvasStyleRole role, PrCanvasGradient* gradient) {
     ++gradient->references;
     CanvasStyleValue* style = &canvas->state.styles[role];
     styleReset(style);
     *style = CanvasStyleValue{.kind = PrCanvasStyleKind_Gradient, .gradient = gradient};
 }
 
-void prCanvasSetStylePattern(PrCanvas* canvas, PrCanvasStyleRole role,
-                             PrCanvasPattern* pattern) {
+void prCanvasSetStylePattern(PrCanvas* canvas, PrCanvasStyleRole role, PrCanvasPattern* pattern) {
     ++pattern->references;
     CanvasStyleValue* style = &canvas->state.styles[role];
     styleReset(style);
@@ -1642,11 +1655,10 @@ void prCanvasFillRect(PrCanvas* canvas, double x, double y, double w, double h) 
         return;
     PrRect rect{float(minF64(x, x + w)), float(minF64(y, y + h)), float(maxF64(x, x + w)), float(maxF64(y, y + h))};
     drawStyled(canvas, PrCanvasStyleRole_Fill, nullptr, canvas->state.transform, prDAffine2Identity(),
-               [&](PrDrawPaint paint) { prDrawListRect(canvas->pending, rect, paint); });
+        [&](PrDrawPaint paint) { prDrawListRect(canvas->pending, rect, paint); });
 }
 
-void prCanvasStrokeRect(PrCanvas* canvas, double x, double y, double w,
-                        double h) {
+void prCanvasStrokeRect(PrCanvas* canvas, double x, double y, double w, double h) {
     if (!canvasIsFinite(x, y, w, h) || (w == 0 && h == 0))
         return;
     // A rectangle with one side of zero length is a line, which a stroke caps at both ends instead of joining.
@@ -1668,14 +1680,13 @@ void prCanvasBeginPath(PrCanvas* canvas) {
     canvasPathClear(&canvas->path);
 }
 
-void prCanvasFill(PrCanvas* canvas, const PrCanvasPath2D* PR_NULLABLE path,
-                  PrPathFillRule rule) {
+void prCanvasFill(PrCanvas* canvas, const PrCanvasPath2D* PR_NULLABLE path, PrPathFillRule rule) {
     // The current default path is in the bitmap's space already, and the brush is in the current transform's space.
     const PrPath* shape = path != nullptr ? path->path : canvas->path.path;
     PrDAffine2 shapeTransform = path != nullptr ? canvas->state.transform : prDAffine2Identity();
     PrDAffine2 brushTransform = path != nullptr ? prDAffine2Identity() : canvas->state.transform;
     drawStyled(canvas, PrCanvasStyleRole_Fill, nullptr, shapeTransform, brushTransform,
-               [&](PrDrawPaint paint) { prDrawListPath(canvas->pending, shape, rule, paint); });
+        [&](PrDrawPaint paint) { prDrawListPath(canvas->pending, shape, rule, paint); });
 }
 
 void prCanvasStroke(PrCanvas* canvas, const PrCanvasPath2D* PR_NULLABLE path) {
@@ -1686,15 +1697,13 @@ void prCanvasStroke(PrCanvas* canvas, const PrCanvasPath2D* PR_NULLABLE path) {
     prPathDestroy(shape);
 }
 
-void prCanvasClip(PrCanvas* canvas, const PrCanvasPath2D* PR_NULLABLE path,
-                  PrPathFillRule rule) {
+void prCanvasClip(PrCanvas* canvas, const PrCanvasPath2D* PR_NULLABLE path, PrPathFillRule rule) {
     PrPath* area = path != nullptr ? mappedPath(path->path, canvas->state.transform) : prPathClone(canvas->path.path);
     canvas->state.clips.push(CanvasClip{area, ++canvas->nextClipId, rule});
 }
 
-bool prCanvasIsPointInPath(const PrCanvas* canvas,
-                           const PrCanvasPath2D* PR_NULLABLE path, double x, double y,
-                           PrPathFillRule rule) {
+bool prCanvasIsPointInPath(const PrCanvas* canvas, const PrCanvasPath2D* PR_NULLABLE path, double x, double y,
+        PrPathFillRule rule) {
     if (!canvasIsFinite(x, y))
         return false;
     PrVec2 point{float(x), float(y)};
@@ -1706,8 +1715,7 @@ bool prCanvasIsPointInPath(const PrCanvas* canvas,
     return inside;
 }
 
-bool prCanvasIsPointInStroke(const PrCanvas* canvas,
-                             const PrCanvasPath2D* PR_NULLABLE path, double x, double y) {
+bool prCanvasIsPointInStroke(const PrCanvas* canvas, const PrCanvasPath2D* PR_NULLABLE path, double x, double y) {
     PrDAffine2 inverse{};
     if (!canvasIsFinite(x, y) || !prDAffine2Invert(canvas->state.transform, &inverse))
         return false;
@@ -1721,8 +1729,7 @@ bool prCanvasIsPointInStroke(const PrCanvas* canvas,
     return inside;
 }
 
-void prCanvasDrawFocusRing(PrCanvas* canvas,
-                           const PrCanvasPath2D* PR_NULLABLE path) {
+void prCanvasDrawFocusRing(PrCanvas* canvas, const PrCanvasPath2D* PR_NULLABLE path) {
     PrPath* shape = userPath(canvas, path);
     if (shape == nullptr)
         return;
@@ -1742,13 +1749,11 @@ void prCanvasDrawFocusRing(PrCanvas* canvas,
     prPathDestroy(shape);
 }
 
-void prCanvasFillText(PrCanvas* canvas, PrStringView text, double x, double y,
-                      const double* PR_NULLABLE maxWidth) {
+void prCanvasFillText(PrCanvas* canvas, PrStringView text, double x, double y, const double* PR_NULLABLE maxWidth) {
     drawText(canvas, text, x, y, maxWidth, PrCanvasStyleRole_Fill);
 }
 
-void prCanvasStrokeText(PrCanvas* canvas, PrStringView text, double x, double y,
-                        const double* PR_NULLABLE maxWidth) {
+void prCanvasStrokeText(PrCanvas* canvas, PrStringView text, double x, double y, const double* PR_NULLABLE maxWidth) {
     drawText(canvas, text, x, y, maxWidth, PrCanvasStyleRole_Stroke);
 }
 
@@ -1757,23 +1762,24 @@ PrCanvasTextMetrics prCanvasMeasureText(PrCanvas* canvas, PrStringView text) {
         return PrCanvasTextMetrics{};
     const CanvasText& t = canvas->text;
     bool inked = !prRectIsEmpty(t.ink);
-    return PrCanvasTextMetrics{.width = t.width,
-                               .actualBoundingBoxLeft = inked ? -double(t.ink.left) : 0,
-                               .actualBoundingBoxRight = inked ? double(t.ink.right) : 0,
-                               .fontBoundingBoxAscent = -t.ascent,
-                               .fontBoundingBoxDescent = t.descent,
-                               .actualBoundingBoxAscent = inked ? -double(t.ink.top) : 0,
-                               .actualBoundingBoxDescent = inked ? double(t.ink.bottom) : 0,
-                               .emHeightAscent = -t.emTop,
-                               .emHeightDescent = t.emBottom,
-                               .hangingBaseline = -t.hanging,
-                               .alphabeticBaseline = -t.alphabetic,
-                               .ideographicBaseline = -t.ideographic};
+    return PrCanvasTextMetrics{
+        .width = t.width,
+        .actualBoundingBoxLeft = inked ? -double(t.ink.left) : 0,
+        .actualBoundingBoxRight = inked ? double(t.ink.right) : 0,
+        .fontBoundingBoxAscent = -t.ascent,
+        .fontBoundingBoxDescent = t.descent,
+        .actualBoundingBoxAscent = inked ? -double(t.ink.top) : 0,
+        .actualBoundingBoxDescent = inked ? double(t.ink.bottom) : 0,
+        .emHeightAscent = -t.emTop,
+        .emHeightDescent = t.emBottom,
+        .hangingBaseline = -t.hanging,
+        .alphabeticBaseline = -t.alphabetic,
+        .ideographicBaseline = -t.ideographic,
+    };
 }
 
 void prCanvasDrawImage(PrCanvas* canvas, const PrCanvasImageSource* source,
-                       double sx, double sy, double sw, double sh, double dx, double dy, double dw,
-                       double dh) {
+        double sx, double sy, double sw, double sh, double dx, double dy, double dw, double dh) {
     if (!canvasIsFinite(sx, sy, sw, sh, dx, dy, dw, dh) || sw == 0 || sh == 0 || dw == 0 || dh == 0)
         return;
     if (!source->originClean)
@@ -1819,18 +1825,17 @@ void prCanvasDrawImage(PrCanvas* canvas, const PrCanvasImageSource* source,
     brush.opacity = float(canvas->state.globalAlpha);
     PrDrawPaint paint{.color = PrColor{1, 1, 1, float(canvas->state.globalAlpha)}, .brush = &brush};
     drawPainted(canvas, paint, canvas->state.transform,
-                [&](PrDrawPaint painted) { prDrawListRect(canvas->pending, destination, painted); });
+        [&](PrDrawPaint painted) { prDrawListRect(canvas->pending, destination, painted); });
 }
 
-void prCanvasGetImageData(PrCanvas* canvas, PrIVec2 origin,
-                          const PrCanvasImageData* data, void* out) {
+void prCanvasGetImageData(PrCanvas* canvas, PrIVec2 origin, const PrCanvasImageData* data, void* out) {
     readPixels(canvas);
     uint32_t pixelSize = prCanvasPixelFormatSize(data->format);
     memZero(out, size_t(data->extent.x) * data->extent.y * pixelSize);
     if (canvas->pixels == nullptr)
         return;
-    bool exact = holdsBytes(canvas) && data->format == PrCanvasPixelFormat_RgbaUnorm8
-                 && data->colorSpace == PrColorSpace_Srgb;
+    bool exact = holdsBytes(canvas) && data->format == PrCanvasPixelFormat_RgbaUnorm8 &&
+        data->colorSpace == PrColorSpace_Srgb;
     for (uint32_t y = 0; y < data->extent.y; ++y) {
         int64_t row = int64_t(origin.y) + y;
         if (row < 0 || row >= int64_t(canvas->extent.y))
@@ -1860,8 +1865,7 @@ void prCanvasGetImageData(PrCanvas* canvas, PrIVec2 origin,
 }
 
 void prCanvasPutImageData(PrCanvas* canvas, const PrCanvasImageData* data,
-                          const void* pixels, PrIVec2 origin, int32_t dirtyX, int32_t dirtyY,
-                          int32_t dirtyWidth, int32_t dirtyHeight) {
+        const void* pixels, PrIVec2 origin, int32_t dirtyX, int32_t dirtyY, int32_t dirtyWidth, int32_t dirtyHeight) {
     readPixels(canvas);
     int64_t x0 = dirtyX;
     int64_t y0 = dirtyY;
@@ -1883,8 +1887,8 @@ void prCanvasPutImageData(PrCanvas* canvas, const PrCanvasImageData* data,
     y1 = y1 > int64_t(data->extent.y) ? int64_t(data->extent.y) : y1;
     if (canvas->pixels == nullptr || x1 <= x0 || y1 <= y0)
         return;
-    bool exact = holdsBytes(canvas) && data->format == PrCanvasPixelFormat_RgbaUnorm8
-                 && data->colorSpace == PrColorSpace_Srgb;
+    bool exact = holdsBytes(canvas) && data->format == PrCanvasPixelFormat_RgbaUnorm8 &&
+        data->colorSpace == PrColorSpace_Srgb;
     for (int64_t y = y0; y < y1; ++y) {
         int64_t row = origin.y + y;
         if (row < 0 || row >= int64_t(canvas->extent.y))
@@ -1947,8 +1951,7 @@ void prCanvasSetLineJoin(PrCanvas* canvas, PrCanvasLineJoin value) {
     canvas->state.lineJoin = value;
 }
 
-void prCanvasSetLineDash(PrCanvas* canvas, const double* PR_NULLABLE segments,
-                         uint32_t count) {
+void prCanvasSetLineDash(PrCanvas* canvas, const double* PR_NULLABLE segments, uint32_t count) {
     for (uint32_t i = 0; i < count; ++i) {
         if (!canvasIsFinite(segments[i]) || segments[i] < 0)
             return;
@@ -2091,18 +2094,15 @@ void prCanvasLineTo(PrCanvas* canvas, double x, double y) {
     canvasPathLineTo(&canvas->path, canvas->state.transform, x, y);
 }
 
-void prCanvasQuadraticCurveTo(PrCanvas* canvas, double cpx, double cpy, double x,
-                              double y) {
+void prCanvasQuadraticCurveTo(PrCanvas* canvas, double cpx, double cpy, double x, double y) {
     canvasPathQuadraticCurveTo(&canvas->path, canvas->state.transform, cpx, cpy, x, y);
 }
 
-void prCanvasBezierCurveTo(PrCanvas* canvas, double cp1x, double cp1y,
-                           double cp2x, double cp2y, double x, double y) {
+void prCanvasBezierCurveTo(PrCanvas* canvas, double cp1x, double cp1y, double cp2x, double cp2y, double x, double y) {
     canvasPathBezierCurveTo(&canvas->path, canvas->state.transform, cp1x, cp1y, cp2x, cp2y, x, y);
 }
 
-PrStatus prCanvasArcTo(PrCanvas* canvas, double x1, double y1, double x2,
-                       double y2, double radius) {
+PrStatus prCanvasArcTo(PrCanvas* canvas, double x1, double y1, double x2, double y2, double radius) {
     return canvasPathArcTo(&canvas->path, canvas->state.transform, x1, y1, x2, y2, radius);
 }
 
@@ -2111,19 +2111,18 @@ void prCanvasRect(PrCanvas* canvas, double x, double y, double w, double h) {
 }
 
 PrStatus prCanvasRoundRect(PrCanvas* canvas, double x, double y, double w,
-                           double h, const PrDVec2* PR_NULLABLE radii, uint32_t radiusCount) {
+        double h, const PrDVec2* PR_NULLABLE radii, uint32_t radiusCount) {
     return canvasPathRoundRect(&canvas->path, canvas->state.transform, x, y, w, h, radii, radiusCount);
 }
 
 PrStatus prCanvasArc(PrCanvas* canvas, double x, double y, double radius,
-                     double startAngle, double endAngle, bool counterclockwise) {
+        double startAngle, double endAngle, bool counterclockwise) {
     return canvasPathEllipse(&canvas->path, canvas->state.transform, x, y, radius, radius, 0, startAngle, endAngle,
-                             counterclockwise);
+        counterclockwise);
 }
 
 PrStatus prCanvasEllipse(PrCanvas* canvas, double x, double y, double radiusX,
-                         double radiusY, double rotation, double startAngle, double endAngle,
-                         bool counterclockwise) {
+        double radiusY, double rotation, double startAngle, double endAngle, bool counterclockwise) {
     return canvasPathEllipse(&canvas->path, canvas->state.transform, x, y, radiusX, radiusY, rotation, startAngle,
-                             endAngle, counterclockwise);
+        endAngle, counterclockwise);
 }

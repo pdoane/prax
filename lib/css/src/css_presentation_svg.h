@@ -44,7 +44,7 @@ struct CssPresentationReferences {
     // caller owns a reference to the source. Returns false if `url` names no such element. The source's functions run
     // on the thread that records the scene. They read only what changes while the presentation holds its layout tree.
     bool (*PR_NONNULL reference)(void* PR_NULLABLE context, const PrDomElement* element, PrStringView url,
-                                 CssPresentationReferenceKind kind, PrLayoutSource* out);
+        CssPresentationReferenceKind kind, PrLayoutSource* out);
     void* PR_NULLABLE context;
 };
 
@@ -90,8 +90,7 @@ struct CssPresentationSvgContentFunctions {
 
     // Hit tests `point`, in CSS pixels from the top left of the element's content box, against the content as of its
     // last update. Writes up to `capacity` hits to `out`, topmost first, and returns their number.
-    uint32_t (*PR_NONNULL hitTest)(const void* content, PrVec2 point, CssPresentationSvgHit* PR_NULLABLE out,
-                                   uint32_t capacity);
+    uint32_t (*PR_NONNULL hitTest)(const void* content, PrVec2 point, CssPresentationSvgHit* PR_NULLABLE out, uint32_t capacity);
 
     // Writes the bounding box of `element`, an element of the content, in viewport coordinates, to `out`
     // (cssom-view-1/#dom-element-getclientrects). Returns false if the content does not draw the element.
@@ -100,8 +99,7 @@ struct CssPresentationSvgContentFunctions {
     // Maps `count` points in place from the containing block of the content of `foreignObject`, an element of the
     // content, to viewport coordinates, through the foreignObject's place in the content and every transform around it.
     // Returns false if the content does not draw the foreignObject.
-    bool (*PR_NONNULL foreignToClient)(const void* content, const PrDomElement* foreignObject, PrDVec2* points,
-                                       uint32_t count);
+    bool (*PR_NONNULL foreignToClient)(const void* content, const PrDomElement* foreignObject, PrDVec2* points, uint32_t count);
 
     // Returns true if the content, as last brought up to date, matches content built from scratch. Writes the first
     // difference to `report` otherwise, replacing its contents.
@@ -140,15 +138,13 @@ struct CssPresentationSvgUpdate {
 
 // Returns the presentation's records, of the outermost svg elements that have boxes, in no order, and writes their
 // number to `count`.
-CssPresentationSvg* PR_NONNULL const* PR_NULLABLE cssPresentationSvgs(const PrCssPresentation* presentation,
-                                                                      uint32_t* count);
+CssPresentationSvg* PR_NONNULL const* PR_NULLABLE cssPresentationSvgs(const PrCssPresentation* presentation, uint32_t* count);
 
 // Returns the record of the outermost svg element `svg`, or null if it has no box.
 CssPresentationSvg* PR_NULLABLE cssPresentationSvgOf(const PrCssPresentation* presentation, const PrDomElement* svg);
 
 // Sets the natural dimensions of the element of `svg`, which its box is laid out again for if they changed.
-void cssPresentationSvgSetNatural(PrCssPresentation* presentation, CssPresentationSvg* svg,
-                                  PrLayoutNaturalSize natural);
+void cssPresentationSvgSetNatural(PrCssPresentation* presentation, CssPresentationSvg* svg, PrLayoutNaturalSize natural);
 
 // Returns the size in CSS pixels that the content of `svg` is built for: the extent that layout last gave its content
 // box, or before the box's first layout, its natural size if it has both a width and a height.
@@ -156,15 +152,13 @@ PrVec2 cssPresentationSvgExtent(const PrCssPresentation* presentation, const Css
 
 // Takes what bringing the content of `svg` up to date gave. The box draws the content, and the box and the roots of the
 // foreignObject elements are laid out again if what layout reads of them changed.
-void cssPresentationSvgUpdated(PrCssPresentation* presentation, CssPresentationSvg* svg,
-                               const CssPresentationSvgUpdate& update);
+void cssPresentationSvgUpdated(PrCssPresentation* presentation, CssPresentationSvg* svg, const CssPresentationSvgUpdate& update);
 
 // Notes that the content of `svg` needs bringing up to date, so that the next update does.
 void cssPresentationSvgStale(PrCssPresentation* presentation, CssPresentationSvg* svg);
 
 // Returns the changes noted since cssPresentationClearSvgNotes last forgot them, and writes their number to `count`.
-const CssPresentationSvgNote* PR_NULLABLE cssPresentationSvgNotes(const PrCssPresentation* presentation,
-                                                                  uint32_t* count);
+const CssPresentationSvgNote* PR_NULLABLE cssPresentationSvgNotes(const PrCssPresentation* presentation, uint32_t* count);
 void cssPresentationClearSvgNotes(PrCssPresentation* presentation);
 
 // Returns true if everything that the content reads may have changed since the last call: the document's fonts, or what
@@ -174,7 +168,7 @@ bool cssPresentationTakeSvgInvalid(PrCssPresentation* presentation);
 // Sets the references that resolve what the effects of the presentation's boxes name by URL, or clears them if null.
 // The references must outlive the presentation or be cleared first.
 void cssPresentationSetReferences(PrCssPresentation* presentation,
-                                  const CssPresentationReferences* PR_NULLABLE references);
+    const CssPresentationReferences* PR_NULLABLE references);
 
 // Sets what lib/svg keeps for the presentation, or null. lib/svg frees it before the presentation is destroyed. Notes
 // are kept only while the presentation has it.

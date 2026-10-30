@@ -88,14 +88,12 @@ void ellipseShape(PrVec2 p, PrVec2 size, bool reversed, LottieGeometry& g) {
     float x = p.x;
     float y = p.y;
     uint32_t contour = beginContour(g, true);
-    addVertex(g, PrVec2{x, y - s1}, PrVec2{cw ? x - s0 * k : x + s0 * k, y - s1},
-              PrVec2{cw ? x + s0 * k : x - s0 * k, y - s1});
+    addVertex(g, PrVec2{x, y - s1}, PrVec2{cw ? x - s0 * k : x + s0 * k, y - s1}, PrVec2{cw ? x + s0 * k : x - s0 * k, y - s1});
     addVertex(g, PrVec2{cw ? x + s0 : x - s0, y}, PrVec2{cw ? x + s0 : x - s0, y - s1 * k},
-              PrVec2{cw ? x + s0 : x - s0, y + s1 * k});
-    addVertex(g, PrVec2{x, y + s1}, PrVec2{cw ? x + s0 * k : x - s0 * k, y + s1},
-              PrVec2{cw ? x - s0 * k : x + s0 * k, y + s1});
+        PrVec2{cw ? x + s0 : x - s0, y + s1 * k});
+    addVertex(g, PrVec2{x, y + s1}, PrVec2{cw ? x + s0 * k : x - s0 * k, y + s1}, PrVec2{cw ? x - s0 * k : x + s0 * k, y + s1});
     addVertex(g, PrVec2{cw ? x - s0 : x + s0, y}, PrVec2{cw ? x - s0 : x + s0, y + s1 * k},
-              PrVec2{cw ? x - s0 : x + s0, y - s1 * k});
+        PrVec2{cw ? x - s0 : x + s0, y - s1 * k});
     endContour(g, contour);
 }
 
@@ -132,8 +130,7 @@ void starShape(const LottieAnimation& a, const LottieItem& item, double frame, L
         x += double(p.x);
         y += double(p.y);
         double t = segment * roundness * dir;
-        triple(g, float(x), float(y), float(x - ox * t), float(y - oy * t), float(x + ox * t),
-               float(y + oy * t));
+        triple(g, float(x), float(y), float(x - ox * t), float(y - oy * t), float(x + ox * t), float(y + oy * t));
         current += angle * dir;
     }
     endContour(g, contour);
@@ -181,13 +178,12 @@ void shapeGeometry(LottieRender& r, const LottieItem& item, double frame) {
         }
         case LottieItemKind_Rect:
             rectShape(lottiePoint(a, item.props[LottieProp_Position], frame, PrVec2{0, 0}),
-                      lottiePoint(a, item.props[LottieProp_Size], frame, PrVec2{0, 0}),
-                      lottieScalar(a, item.props[LottieProp_Roundness], frame, 0), item.reversed, r.geometry);
+                lottiePoint(a, item.props[LottieProp_Size], frame, PrVec2{0, 0}),
+                lottieScalar(a, item.props[LottieProp_Roundness], frame, 0), item.reversed, r.geometry);
             return;
         case LottieItemKind_Ellipse:
             ellipseShape(lottiePoint(a, item.props[LottieProp_Position], frame, PrVec2{0, 0}),
-                         lottiePoint(a, item.props[LottieProp_Size], frame, PrVec2{0, 0}), item.reversed,
-                         r.geometry);
+                lottiePoint(a, item.props[LottieProp_Size], frame, PrVec2{0, 0}), item.reversed, r.geometry);
             return;
         case LottieItemKind_Star:
             starShape(a, item, frame, r.geometry);
@@ -198,19 +194,19 @@ void shapeGeometry(LottieRender& r, const LottieItem& item, double frame) {
 }
 
 bool isStyle(LottieItemKind kind) {
-    return kind == LottieItemKind_Fill || kind == LottieItemKind_Stroke || kind == LottieItemKind_GradientFill
-           || kind == LottieItemKind_GradientStroke;
+    return kind == LottieItemKind_Fill || kind == LottieItemKind_Stroke || kind == LottieItemKind_GradientFill ||
+        kind == LottieItemKind_GradientStroke;
 }
 
 bool isShape(LottieItemKind kind) {
-    return kind == LottieItemKind_Path || kind == LottieItemKind_Rect || kind == LottieItemKind_Ellipse
-           || kind == LottieItemKind_Star;
+    return kind == LottieItemKind_Path || kind == LottieItemKind_Rect || kind == LottieItemKind_Ellipse ||
+        kind == LottieItemKind_Star;
 }
 
 bool isModifier(LottieItemKind kind) {
-    return kind == LottieItemKind_Trim || kind == LottieItemKind_RoundCorners || kind == LottieItemKind_Repeater
-           || kind == LottieItemKind_PuckerBloat || kind == LottieItemKind_ZigZag || kind == LottieItemKind_Twist
-           || kind == LottieItemKind_OffsetPath || kind == LottieItemKind_Merge;
+    return kind == LottieItemKind_Trim || kind == LottieItemKind_RoundCorners || kind == LottieItemKind_Repeater ||
+        kind == LottieItemKind_PuckerBloat || kind == LottieItemKind_ZigZag || kind == LottieItemKind_Twist ||
+        kind == LottieItemKind_OffsetPath || kind == LottieItemKind_Merge;
 }
 
 // The styles and modifiers in effect as items are found, innermost last.
@@ -263,8 +259,8 @@ PrAffine2 repeaterStep(const LottieAnimation& a, const LottieTransform& t, doubl
 // Applies a repeater. The items before it, `first` to `before`, are drawn once per copy. Each copy is a group with its
 // own steps of the repeater's transform, and its share of the opacity from start to end. The first copy is on top when
 // copies stack above, and at the bottom when they stack below.
-void repeat(LottieRender& r, Active& active, const LottieItem& item, uint32_t first, uint32_t before,
-            uint32_t group, double frame) {
+void repeat(LottieRender& r, Active& active, const LottieItem& item, uint32_t first, uint32_t before, uint32_t group,
+        double frame) {
     const LottieAnimation& a = *r.a;
     if (item.transform == kLottieNone || before == 0)
         return;
@@ -541,8 +537,7 @@ void lottieAddContour(const LottieGeometry& g, const LottieContour& c, PrAffine2
     }
 }
 
-void lottieItemPaths(LottieRender& r, uint32_t first, uint32_t count, double frame, PrAffine2 transform,
-                     PrPath* path) {
+void lottieItemPaths(LottieRender& r, uint32_t first, uint32_t count, double frame, PrAffine2 transform, PrPath* path) {
     const LottieAnimation& a = *r.a;
     for (uint32_t i = count; i-- > 0;) {
         const LottieItem& item = a.items.data[first + i];

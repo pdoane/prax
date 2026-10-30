@@ -75,8 +75,7 @@ void fontOutlineEndContour(FontGlyphOutline& outline) {
 PrRect fontOutlineControlBox(const FontGlyphOutline& outline) {
     if (outline.points.count == 0)
         return PrRect{0, 0, 0, 0};
-    PrRect box{outline.points.data[0].x, outline.points.data[0].y, outline.points.data[0].x,
-               outline.points.data[0].y};
+    PrRect box{outline.points.data[0].x, outline.points.data[0].y, outline.points.data[0].x, outline.points.data[0].y};
     for (uint32_t i = 1; i < outline.points.count; ++i) {
         PrVec2 p = outline.points.data[i];
         box.left = minF32(box.left, p.x);

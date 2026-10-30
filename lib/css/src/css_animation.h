@@ -41,7 +41,7 @@ PrLayoutEasing cssEasing(CssValueRun easing);
 // terms: lengths in px, a percentage as a fraction of the reference box, and angles in radians. Each value may be
 // `none`, or empty for none.
 PrLayoutTransformList cssTransformFunctions(CssValueRun translate, CssValueRun rotate, CssValueRun scale,
-                                            CssValueRun transform);
+    CssValueRun transform);
 
 // Returns true if the computed values `from` and `to` of `property` differ and interpolate other than discretely. A
 // transition between them requires both (css-transitions-1/#starting).
@@ -65,7 +65,7 @@ bool cssInterpolable(PrCssProperty property, CssValueRun from, CssValueRun to, c
 // (kCssPropertyDiscrete): the result is `from` below a progress of one half, and `to` from one half on
 // (web-animations-1/#discrete). Colors resolve in `colors`, the element's.
 void cssInterpolate(CssValuePool* out, PrCssProperty property, CssValueRun from, CssValueRun to, double progress,
-                    const CssColorContext& colors);
+    const CssColorContext& colors);
 
 // How a keyframe's value combines with the value under the animation (web-animations-1/#effect-composition).
 enum {
@@ -89,7 +89,7 @@ CssComposite cssCompositeFromValue(CssValueRun item);
 // nothing at an amount of one (filter-effects-1/#accumulation). Any other pair, and every pair of a discrete property,
 // gives `value`, as replace does. Colors resolve in `colors`.
 void cssComposite(CssValuePool* out, PrCssProperty property, CssValueRun underlying, CssValueRun value,
-                  CssComposite composite, const CssColorContext& colors);
+    CssComposite composite, const CssColorContext& colors);
 
 } // namespace pr_impl
 

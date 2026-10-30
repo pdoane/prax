@@ -15,6 +15,6 @@ int prTestAppCApi(void) {
     event.selection = selection;
     PrAppFrame frame = {.extent = {10, 20}, .display = {.pixelRatio = 2, .headroom = 1, .potentialHeadroom = 1}};
     prAppDestroy(NULL);
-    return event.key != PrAppKey_Escape || event.selection.end != 3 || prAppKeyCodeName(event.code).size != 6
-           || frame.display.pixelRatio != 2 || (event.modifiers & 8) == 0;
+    return event.key != PrAppKey_Escape || event.selection.end != 3 || prAppKeyCodeName(event.code).size != 6 ||
+        frame.display.pixelRatio != 2 || (event.modifiers & 8) == 0;
 }

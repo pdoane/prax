@@ -35,17 +35,16 @@ typedef uint8_t Match;
 constexpr size_t kLanguageSubtagMaxLength = 8;
 
 Match matchFrom(CssSelectorMatcher* m, const CssComplexSelector* complex, uint32_t index,
-                const PrDomElement* element, const PrDomElement* PR_NULLABLE anchor);
+    const PrDomElement* element, const PrDomElement* PR_NULLABLE anchor);
 Match matchMaybeHost(CssSelectorMatcher* m, const CssComplexSelector* complex, uint32_t index,
-                     const PrDomElement* element, const PrDomElement* PR_NULLABLE anchor);
+    const PrDomElement* element, const PrDomElement* PR_NULLABLE anchor);
 
 // ---------------------------------------------------------------------------------------------------------------------
 // The tree
 
 // Returns the parent of `element` in the tree that the matcher matches in: its parent element, or the host for a top
 // element of the matcher's shadow tree. Returns null for the host, which is the root of that tree.
-PR_FORCE_INLINE const PrDomElement* PR_NULLABLE parentInTree(const CssSelectorMatcher* m,
-                                                             const PrDomElement* element) {
+PR_FORCE_INLINE const PrDomElement* PR_NULLABLE parentInTree(const CssSelectorMatcher* m, const PrDomElement* element) {
     const PrDomElement* host = m->host;
     if (host == nullptr)
         return domNodeParentElement(element);
@@ -64,8 +63,8 @@ bool matchesFeatureless(const PrCssSelectors* selectors, const CssCompoundSelect
         const CssSimpleSelector* simple = &selectors->simple[compound->simple + k];
         switch (simple->kind) {
             case CssSimpleKind_PseudoClass:
-                if (simple->pseudoClass != CssPseudoClass_Host && simple->pseudoClass != CssPseudoClass_HostFn
-                    && simple->pseudoClass != CssPseudoClass_HostContextFn)
+                if (simple->pseudoClass != CssPseudoClass_Host && simple->pseudoClass != CssPseudoClass_HostFn &&
+                        simple->pseudoClass != CssPseudoClass_HostContextFn)
                     return false;
                 host = true;
                 break;
@@ -134,8 +133,7 @@ bool holdsWord(PrStringView list, PrStringView word, bool fold) {
 // Returns true if `space` is the namespace that the selector's prefix names (selectors-4/#type-nmsp,
 // selectors-4/#attrnmsp). Without a prefix, an element's selector accepts any namespace if the sheet declares no
 // default namespace. An attribute's selector without a prefix accepts only an attribute in no namespace.
-bool inNamespace(CssSelectorMatcher* m, const CssSimpleSelector* simple, const PrDomNode* node,
-                 bool element) {
+bool inNamespace(CssSelectorMatcher* m, const CssSimpleSelector* simple, const PrDomNode* node, bool element) {
     DomNamespaceId space = node->space;
     switch (simple->prefix) {
         case CssNamespacePrefix_Any:
@@ -161,8 +159,7 @@ DomTagId localNameTag(CssSelectorMatcher* m, uint32_t name) {
             return m->localNames.data[i].tag;
     }
     const AtomTable* names = m->document->localNames;
-    Atom atom = names != nullptr ? atomTableFind(names, cssSelectorNameLowered(m->selectors, name))
-                                 : kAtomNone;
+    Atom atom = names != nullptr ? atomTableFind(names, cssSelectorNameLowered(m->selectors, name)) : kAtomNone;
     DomTagId tag = atom != kAtomNone ? PrDomTag_Count + atom : DomTagId(PrDomTag_Unknown);
     m->localNames.push(CssLocalName{name, tag});
     return tag;
@@ -170,8 +167,7 @@ DomTagId localNameTag(CssSelectorMatcher* m, uint32_t name) {
 
 // html/#case-sensitivity-of-selectors: an HTML element's name is compared with the selector's name in ASCII lowercase.
 // Every other element's name is compared with the selector's name as written.
-bool matchesType(CssSelectorMatcher* m, const CssSimpleSelector* simple,
-                 const PrDomElement* element) {
+bool matchesType(CssSelectorMatcher* m, const CssSimpleSelector* simple, const PrDomElement* element) {
     if (!inNamespace(m, simple, element, true))
         return false;
     if (!domIsHtmlInHtmlDocument(element))
@@ -188,15 +184,18 @@ bool matchesType(CssSelectorMatcher* m, const CssSimpleSelector* simple,
 // ASCII lowercase. Every other name is compared with the selector's name as written
 // (html/#case-sensitivity-of-selectors).
 const PrDomAttr* PR_NULLABLE nextNamed(CssSelectorMatcher* m, const CssSimpleSelector* simple,
-                                       const PrDomElement* element, const PrDomAttr* PR_NULLABLE from) {
+        const PrDomElement* element, const PrDomAttr* PR_NULLABLE from) {
     const CssSelectorName* name = &m->selectors->names[simple->name];
     for (const PrDomAttr* attribute = from; attribute != nullptr;
-         attribute = static_cast<const PrDomAttr*>(attribute->next)) {
+            attribute = static_cast<const PrDomAttr*>(attribute->next)) {
         if (attribute->hash != name->hash || !inNamespace(m, simple, attribute, false))
             continue;
         bool lowered = domIsHtmlInHtmlDocument(element) && attribute->space == PrDomNamespace_None;
-        PrStringView wanted = lowered ? cssSelectorNameLowered(m->selectors, simple->name)
-                                      : cssSelectorName(m->selectors, simple->name);
+        PrStringView wanted;
+        if (lowered)
+            wanted = cssSelectorNameLowered(m->selectors, simple->name);
+        else
+            wanted = cssSelectorName(m->selectors, simple->name);
         if (prStringView(&attribute->name) == wanted)
             return attribute;
     }
@@ -206,40 +205,34 @@ const PrDomAttr* PR_NULLABLE nextNamed(CssSelectorMatcher* m, const CssSimpleSel
 // Returns true if `value` satisfies the attribute selector's operator, which is not Exists
 // (selectors-4/#attribute-representation, selectors-4/#attribute-substrings). `plain` means the attribute is in no
 // namespace, on an HTML element in an HTML document.
-bool matchesValue(CssSelectorMatcher* m, const CssSimpleSelector* simple, PrStringView value,
-                  bool plain) {
+bool matchesValue(CssSelectorMatcher* m, const CssSimpleSelector* simple, PrStringView value, bool plain) {
     PrStringView wanted = cssSelectorName(m->selectors, simple->value);
-    bool fold = simple->letterCase == CssAttributeCase_Insensitive
-                || (simple->letterCase == CssAttributeCase_Html && plain);
+    bool fold = simple->letterCase == CssAttributeCase_Insensitive || (simple->letterCase == CssAttributeCase_Html && plain);
     switch (simple->match) {
         case CssAttributeMatch_Equals:
             return fold ? asciiEqualsFold(value, wanted) : value == wanted;
         case CssAttributeMatch_Includes:
             return holdsWord(value, wanted, fold);
         case CssAttributeMatch_DashMatch:
-            return (fold ? asciiStartsWithFold(value, wanted) : stringStartsWith(value, wanted))
-                   && (value.size == wanted.size || value.data[wanted.size] == '-');
+            return (fold ? asciiStartsWithFold(value, wanted) : stringStartsWith(value, wanted)) &&
+                (value.size == wanted.size || value.data[wanted.size] == '-');
         case CssAttributeMatch_Prefix:
-            return wanted.size != 0
-                   && (fold ? asciiStartsWithFold(value, wanted) : stringStartsWith(value, wanted));
+            return wanted.size != 0 && (fold ? asciiStartsWithFold(value, wanted) : stringStartsWith(value, wanted));
         case CssAttributeMatch_Suffix:
-            return wanted.size != 0
-                   && (fold ? asciiEndsWithFold(value, wanted) : stringEndsWith(value, wanted));
+            return wanted.size != 0 && (fold ? asciiEndsWithFold(value, wanted) : stringEndsWith(value, wanted));
         case CssAttributeMatch_Substring:
-            return wanted.size != 0
-                   && (fold ? asciiContainsFold(value, wanted) : stringContains(value, wanted));
+            return wanted.size != 0 && (fold ? asciiContainsFold(value, wanted) : stringContains(value, wanted));
         default:
             return false;
     }
 }
 
-bool matchesAttribute(CssSelectorMatcher* m, const CssSimpleSelector* simple,
-                      const PrDomElement* element) {
+bool matchesAttribute(CssSelectorMatcher* m, const CssSimpleSelector* simple, const PrDomElement* element) {
     const PrDomAttr* attribute = nextNamed(m, simple, element, element->firstAttribute);
     if (simple->match == CssAttributeMatch_Exists)
         return attribute != nullptr;
     for (; attribute != nullptr;
-         attribute = nextNamed(m, simple, element, static_cast<const PrDomAttr*>(attribute->next))) {
+            attribute = nextNamed(m, simple, element, static_cast<const PrDomAttr*>(attribute->next))) {
         bool plain = domIsHtmlInHtmlDocument(element) && attribute->space == PrDomNamespace_None;
         if (matchesValue(m, simple, prStringView(&attribute->value), plain))
             return true;
@@ -263,8 +256,7 @@ Atom classAtom(CssSelectorMatcher* m, uint32_t name) {
     return atom;
 }
 
-bool matchesClass(CssSelectorMatcher* m, const CssSimpleSelector* simple,
-                  const PrDomElement* element) {
+bool matchesClass(CssSelectorMatcher* m, const CssSimpleSelector* simple, const PrDomElement* element) {
     if (element->classes == kDomClassesNone)
         return false;
     if (m->quirks || element->document != m->document) {
@@ -344,8 +336,7 @@ uint32_t memoSlot(const CssMatchMemos* memos, const PrDomElement* element, uint3
 }
 
 // Returns the memo of `key` for `element`, or null if there is none. Adding a memo may move the others.
-const CssMatchMemo* PR_NULLABLE findMemo(const CssSelectorMatcher* m, const PrDomElement* element,
-                                         uint32_t key) {
+const CssMatchMemo* PR_NULLABLE findMemo(const CssSelectorMatcher* m, const PrDomElement* element, uint32_t key) {
     const CssMatchMemos* memos = &m->memos;
     if (memos->slots == nullptr)
         return nullptr;
@@ -387,25 +378,23 @@ void addMemo(CssSelectorMatcher* m, const PrDomElement* element, uint32_t key, u
 // Returns true if a count of the siblings of `element` includes `sibling`. The count includes the siblings of the
 // element's type, or the siblings that the list `of` matches.
 bool counts(CssSelectorMatcher* m, const PrDomElement* element, const PrDomElement* sibling,
-            bool ofType, CssSelectorList of) {
+        bool ofType, CssSelectorList of) {
     return ofType ? typeEquals(sibling, element) : of.count == 0 || matchesList(m, of, sibling);
 }
 
 // Computes positionOf for elements queried out of order. The first query of a count of a parent's children counts all
 // of the children, and keeps each position as a memo.
-uint32_t positionMemo(CssSelectorMatcher* m, const PrDomElement* element, bool last, bool ofType,
-                      uint32_t argument) {
+uint32_t positionMemo(CssSelectorMatcher* m, const PrDomElement* element, bool last, bool ofType, uint32_t argument) {
     const PrDomNode* parent = element->parent;
     CssSelectorList of = m->selectors->arguments[argument].selectors;
-    uint32_t key = (last ? kMemoLast : 0) | (ofType ? kMemoOfType : 0)
-                   | (of.count != 0 ? (argument + 1) << kMemoShift : 0);
+    uint32_t key = (last ? kMemoLast : 0) | (ofType ? kMemoOfType : 0) | (of.count != 0 ? (argument + 1) << kMemoShift : 0);
     const CssMatchMemo* memo = findMemo(m, element, key);
     if (memo != nullptr)
         return memo->value;
 
     uint32_t position = 0;
-    for (const PrDomNode* node = last ? parent->last : parent->first; node != nullptr;
-         node = last ? node->previous : node->next) {
+    for (const PrDomNode* node = last ? parent->last : parent->first; node != nullptr; node =
+            last ? node->previous : node->next) {
         if (node->type != PrDomNodeType_Element)
             continue;
         const PrDomElement* sibling = static_cast<const PrDomElement*>(node);
@@ -422,8 +411,7 @@ uint32_t positionMemo(CssSelectorMatcher* m, const PrDomElement* element, bool l
 // last. The count includes only siblings of its type, or only siblings that the `of` list of the argument at `argument`
 // matches, which must include `element`. A count queried in element order counts back to the element that it counted
 // last.
-uint32_t positionOf(CssSelectorMatcher* m, const PrDomElement* element, bool last, bool ofType,
-                    uint32_t argument) {
+uint32_t positionOf(CssSelectorMatcher* m, const PrDomElement* element, bool last, bool ofType, uint32_t argument) {
     const PrDomNode* parent = element->parent;
     if (parent == nullptr)
         return 1;
@@ -476,8 +464,7 @@ uint32_t positionOf(CssSelectorMatcher* m, const PrDomElement* element, bool las
     return entry->count - position + 1;
 }
 
-bool matchesNthPseudo(CssSelectorMatcher* m, uint32_t argument, const PrDomElement* element,
-                      bool last, bool ofType) {
+bool matchesNthPseudo(CssSelectorMatcher* m, uint32_t argument, const PrDomElement* element, bool last, bool ofType) {
     const CssSelectorArgument* nth = &m->selectors->arguments[argument];
     if (nth->selectors.count != 0 && !matchesList(m, nth->selectors, element))
         return false;
@@ -486,8 +473,7 @@ bool matchesNthPseudo(CssSelectorMatcher* m, uint32_t argument, const PrDomEleme
 
 // Returns true if no element sibling before the element, or after it, has the element's type.
 bool firstOfType(const PrDomElement* element) {
-    for (const PrDomElement* sibling = previousElement(element); sibling != nullptr;
-         sibling = previousElement(sibling)) {
+    for (const PrDomElement* sibling = previousElement(element); sibling != nullptr; sibling = previousElement(sibling)) {
         if (typeEquals(sibling, element))
             return false;
     }
@@ -495,8 +481,7 @@ bool firstOfType(const PrDomElement* element) {
 }
 
 bool lastOfType(const PrDomElement* element) {
-    for (const PrDomElement* sibling = nextElement(element); sibling != nullptr;
-         sibling = nextElement(sibling)) {
+    for (const PrDomElement* sibling = nextElement(element); sibling != nullptr; sibling = nextElement(sibling)) {
         if (typeEquals(sibling, element))
             return false;
     }
@@ -506,19 +491,18 @@ bool lastOfType(const PrDomElement* element) {
 // ---------------------------------------------------------------------------------------------------------------------
 // Logical combinations (selectors-4/#logical-combination)
 
-bool matchesCompound(CssSelectorMatcher* m, const CssCompoundSelector* compound,
-                     const PrDomElement* element);
+bool matchesCompound(CssSelectorMatcher* m, const CssCompoundSelector* compound, const PrDomElement* element);
 
 // Returns true if a descendant of `root` matches the relative selector `complex` from `anchor`. The descendant is
 // exactly `depth` below `root`, or at any depth for kCssReachAny.
 bool walkHas(CssSelectorMatcher* m, const CssComplexSelector* complex, const PrDomElement* root,
-             uint32_t depth, const PrDomElement* anchor) {
+        uint32_t depth, const PrDomElement* anchor) {
     const PrDomNode* node = root->first;
     uint32_t level = 1;
     while (node != nullptr) {
         const PrDomElement* element = domElementFromNode(node);
-        if (element != nullptr && (depth == kCssReachAny || level == depth)
-            && matchFrom(m, complex, 0, element, anchor) == Match_Yes)
+        if (element != nullptr && (depth == kCssReachAny || level == depth) &&
+                matchFrom(m, complex, 0, element, anchor) == Match_Yes)
             return true;
         if (node->first != nullptr && level < depth) {
             node = node->first;
@@ -539,8 +523,7 @@ bool walkHas(CssSelectorMatcher* m, const CssComplexSelector* complex, const PrD
 // Returns true if a descendant of `root` matches `compound`, the single compound of the selector at `index`. The walk
 // keeps a memo for each element that it finishes or finds a match below, so an anchor inside an element that was
 // already searched finds its result there.
-bool belowMatches(CssSelectorMatcher* m, uint32_t index, const CssCompoundSelector* compound,
-                  const PrDomElement* root) {
+bool belowMatches(CssSelectorMatcher* m, uint32_t index, const CssCompoundSelector* compound, const PrDomElement* root) {
     uint32_t key = (index << kMemoShift) | kMemoBelow;
     const CssMatchMemo* memo = findMemo(m, root, key);
     if (memo != nullptr)
@@ -554,8 +537,7 @@ bool belowMatches(CssSelectorMatcher* m, uint32_t index, const CssCompoundSelect
             memo = findMemo(m, element, key);
             known = memo != nullptr;
             if (matchesCompound(m, compound, element) || (known && memo->value != 0)) {
-                for (const PrDomElement* at = domNodeParentElement(element); at != root;
-                     at = domNodeParentElement(at))
+                for (const PrDomElement* at = domNodeParentElement(element); at != root; at = domNodeParentElement(at))
                     addMemo(m, at, key, 1);
                 addMemo(m, root, key, 1);
                 return true;
@@ -617,8 +599,7 @@ bool laterMatches(CssSelectorMatcher* m, uint32_t index, uint32_t k, const PrDom
 // that reaches only siblings. Returns kCssReachAny if the selector has any other combinators.
 uint32_t rigidSiblings(const PrCssSelectors* selectors, const CssComplexSelector* complex) {
     const CssCompoundSelector* compounds = &selectors->compounds[complex->compound];
-    if (complex->depth != 0
-        || compounds[complex->compoundCount - 1].combinator != CssCombinator_SubsequentSibling)
+    if (complex->depth != 0 || compounds[complex->compoundCount - 1].combinator != CssCombinator_SubsequentSibling)
         return kCssReachAny;
     for (uint32_t i = 0; i + 1 < complex->compoundCount; ++i) {
         if (compounds[i].combinator != CssCombinator_NextSibling)
@@ -629,8 +610,7 @@ uint32_t rigidSiblings(const PrCssSelectors* selectors, const CssComplexSelector
 
 // Returns true if some element of the document has had each class that the compounds of `complex` name. This is checked
 // only if the document keeps classes as atoms. A selector that names a class that no element has matches nothing.
-bool classesPresent(CssSelectorMatcher* m, const CssComplexSelector* complex,
-                    const PrDomElement* anchor) {
+bool classesPresent(CssSelectorMatcher* m, const CssComplexSelector* complex, const PrDomElement* anchor) {
     if (m->quirks || anchor->document != m->document)
         return true;
     for (uint32_t i = 0; i < complex->compoundCount; ++i) {
@@ -661,9 +641,13 @@ bool reachesMatch(CssSelectorMatcher* m, uint32_t index, const PrDomElement* anc
                 if (rigid != kCssReachAny)
                     return laterMatches(m, index, rigid, anchor);
                 for (const PrDomElement* sibling = nextElement(anchor); sibling != nullptr;
-                     sibling = nextElement(sibling)) {
-                    if (complex->depth == 0 ? matchFrom(m, complex, 0, sibling, anchor) == Match_Yes
-                                            : walkHas(m, complex, sibling, complex->depth, anchor))
+                        sibling = nextElement(sibling)) {
+                    bool found;
+                    if (complex->depth == 0)
+                        found = matchFrom(m, complex, 0, sibling, anchor) == Match_Yes;
+                    else
+                        found = walkHas(m, complex, sibling, complex->depth, anchor);
+                    if (found)
                         return true;
                 }
                 return false;
@@ -673,8 +657,9 @@ bool reachesMatch(CssSelectorMatcher* m, uint32_t index, const PrDomElement* anc
                 sibling = nextElement(sibling);
             if (sibling == nullptr)
                 return false;
-            return complex->depth == 0 ? matchFrom(m, complex, 0, sibling, anchor) == Match_Yes
-                                       : walkHas(m, complex, sibling, complex->depth, anchor);
+            if (complex->depth == 0)
+                return matchFrom(m, complex, 0, sibling, anchor) == Match_Yes;
+            return walkHas(m, complex, sibling, complex->depth, anchor);
         }
         default: {
             const PrDomNode* root = domNodeRoot(anchor);
@@ -693,8 +678,8 @@ bool reachesMatch(CssSelectorMatcher* m, uint32_t index, const PrDomElement* anc
 bool searchHas(CssSelectorMatcher* m, CssSelectorList list, const PrDomElement* anchor) {
     for (uint32_t i = 0; i < list.count; ++i) {
         const CssComplexSelector* complex = &m->selectors->complex[list.first + i];
-        if ((complex->flags & CssComplexFlag_Invalid) == 0 && classesPresent(m, complex, anchor)
-            && reachesMatch(m, list.first + i, anchor))
+        if ((complex->flags & CssComplexFlag_Invalid) == 0 && classesPresent(m, complex, anchor) &&
+                reachesMatch(m, list.first + i, anchor))
             return true;
     }
     return false;
@@ -708,9 +693,8 @@ bool searchIsCheap(const PrCssSelectors* selectors, const CssComplexSelector* co
         case CssReach_Descendant:
             return complex->compoundCount == 1 && complex->depth == kCssReachAny;
         case CssReach_Sibling:
-            return complex->depth == 0
-                   && (complex->siblings != kCssReachAny
-                       || rigidSiblings(selectors, complex) != kCssReachAny);
+            return complex->depth == 0 &&
+                (complex->siblings != kCssReachAny || rigidSiblings(selectors, complex) != kCssReachAny);
         default:
             return false;
     }
@@ -788,8 +772,7 @@ bool matchesLanguage(PrStringView tag, PrStringView range) {
     return true;
 }
 
-bool matchesLang(CssSelectorMatcher* m, const CssSelectorArgument* argument,
-                 const PrDomElement* element) {
+bool matchesLang(CssSelectorMatcher* m, const CssSelectorArgument* argument, const PrDomElement* element) {
     PrStringView language = domElementLanguage(element);
     for (uint32_t i = 0; i < argument->itemCount; ++i) {
         if (matchesLanguage(language, cssSelectorName(m->selectors, argument->items + i)))
@@ -801,16 +784,14 @@ bool matchesLang(CssSelectorMatcher* m, const CssSelectorArgument* argument,
 // ---------------------------------------------------------------------------------------------------------------------
 // The directionality pseudo-class (html/#the-directionality)
 
-bool matchesDir(CssSelectorMatcher* m, const CssSelectorArgument* argument,
-                const PrDomElement* element) {
+bool matchesDir(CssSelectorMatcher* m, const CssSelectorArgument* argument, const PrDomElement* element) {
     PrStringView direction = cssSelectorNameLowered(m->selectors, argument->items);
     if (direction == "rtl")
         return domElementRtl(element);
     return direction == "ltr" && !domElementRtl(element);
 }
 
-bool matchesHeading(CssSelectorMatcher* m, const CssSelectorArgument* argument,
-                    const PrDomElement* element) {
+bool matchesHeading(CssSelectorMatcher* m, const CssSelectorArgument* argument, const PrDomElement* element) {
     uint32_t level = domElementHeadingLevel(element);
     for (uint32_t i = 0; i < argument->itemCount && level != 0; ++i) {
         if (m->selectors->numbers[argument->items + i] == int32_t(level))
@@ -824,7 +805,7 @@ bool matchesHeading(CssSelectorMatcher* m, const CssSelectorArgument* argument,
 
 // Records that a match read `flags` of the children of `node` on behalf of `element`, if the matcher records reads.
 void noteStructure(CssSelectorMatcher* m, const PrDomNode* PR_NULLABLE node, DomStructureFlags flags,
-                   const PrDomElement* element) {
+        const PrDomElement* element) {
     if (m->structure == nullptr || node == nullptr)
         return;
     if (element != m->target)
@@ -883,8 +864,7 @@ bool matchesStructural(CssSelectorMatcher* m, const CssSimpleSelector* simple, c
     }
 }
 
-bool matchesPseudoClass(CssSelectorMatcher* m, const CssSimpleSelector* simple,
-                        const PrDomElement* element) {
+bool matchesPseudoClass(CssSelectorMatcher* m, const CssSimpleSelector* simple, const PrDomElement* element) {
     const CssSelectorArgument* argument =
         simple->argument != kCssSelectorNone ? &m->selectors->arguments[simple->argument] : nullptr;
     switch (simple->pseudoClass) {
@@ -922,8 +902,7 @@ bool matchesPseudoClass(CssSelectorMatcher* m, const CssSimpleSelector* simple,
             return matchesDir(m, argument, element);
         case CssPseudoClass_StateFn:
             // selectors-5/#state-pseudo: a custom element whose state set holds the identifier.
-            return argument != nullptr
-                   && domCustomHasState(element, cssSelectorName(m->selectors, argument->items));
+            return argument != nullptr && domCustomHasState(element, cssSelectorName(m->selectors, argument->items));
         case CssPseudoClass_Defined:
             return domElementDefined(element);
         case CssPseudoClass_Playing:
@@ -944,8 +923,7 @@ bool matchesPseudoClass(CssSelectorMatcher* m, const CssSimpleSelector* simple,
             return domElementLink(element);
         // A script sees every link as unvisited (selectors-4/#link).
         case CssPseudoClass_Link:
-            return domElementLink(element)
-                   && (m->purpose == CssMatchPurpose_Script || !domElementVisited(element));
+            return domElementLink(element) && (m->purpose == CssMatchPurpose_Script || !domElementVisited(element));
         case CssPseudoClass_Visited:
             return m->purpose == CssMatchPurpose_Style && domElementVisited(element);
         case CssPseudoClass_Autofill:
@@ -973,12 +951,11 @@ bool matchesPseudoClass(CssSelectorMatcher* m, const CssSimpleSelector* simple,
         case CssPseudoClass_PlaceholderShown:
             return domElementPlaceholderShown(element);
         case CssPseudoClass_Open:
-            return (domIsHtml(element, PrDomTag_Details) || domIsHtml(element, PrDomTag_Dialog))
-                   && domHasAttribute(element, "open");
+            return (domIsHtml(element, PrDomTag_Details) || domIsHtml(element, PrDomTag_Dialog)) &&
+                domHasAttribute(element, "open");
         // html/#selector-modal matches a modal dialog. Nothing here puts an element in fullscreen.
         case CssPseudoClass_Modal:
-            return domIsHtml(element, PrDomTag_Dialog) && element->state != nullptr
-                   && element->state->modal;
+            return domIsHtml(element, PrDomTag_Dialog) && element->state != nullptr && element->state->modal;
         case CssPseudoClass_HasSlotted:
             return domIsSlot(element) && domSlotHasSlotted(element);
         // css-shadow-1/#host-selector
@@ -993,8 +970,8 @@ bool matchesPseudoClass(CssSelectorMatcher* m, const CssSimpleSelector* simple,
             bool matches = matchesList(m, argument->selectors, element);
             // :host-context() also matches through the host's shadow-including ancestors.
             for (const PrDomNode* at = domShadowIncludingParent(element);
-                 !matches && at != nullptr && simple->pseudoClass == CssPseudoClass_HostContextFn;
-                 at = domShadowIncludingParent(at)) {
+                    !matches && at != nullptr && simple->pseudoClass == CssPseudoClass_HostContextFn;
+                    at = domShadowIncludingParent(at)) {
                 if (const PrDomElement* ancestor = domElementFromNode(at))
                     matches = matchesList(m, argument->selectors, ancestor);
             }
@@ -1026,8 +1003,7 @@ bool matchesPseudoClass(CssSelectorMatcher* m, const CssSimpleSelector* simple,
     }
 }
 
-bool matchesSimple(CssSelectorMatcher* m, const CssSimpleSelector* simple,
-                   const PrDomElement* element) {
+bool matchesSimple(CssSelectorMatcher* m, const CssSimpleSelector* simple, const PrDomElement* element) {
     switch (simple->kind) {
         case CssSimpleKind_Type:
             return matchesType(m, simple, element);
@@ -1037,8 +1013,8 @@ bool matchesSimple(CssSelectorMatcher* m, const CssSimpleSelector* simple,
                 return true;
             return inNamespace(m, simple, element, true);
         case CssSimpleKind_Id:
-            return (element->flags & DomNodeFlag_Id) != 0
-                   && matchesId(m, domElementId(element), cssSelectorName(m->selectors, simple->name));
+            return (element->flags & DomNodeFlag_Id) != 0 &&
+                matchesId(m, domElementId(element), cssSelectorName(m->selectors, simple->name));
         case CssSimpleKind_Class:
             return matchesClass(m, simple, element);
         case CssSimpleKind_Attribute:
@@ -1056,7 +1032,7 @@ bool matchesSimple(CssSelectorMatcher* m, const CssSimpleSelector* simple,
 
 // Returns true if `element` matches the compound's simple selectors from `start` to `end`.
 bool matchesSimples(CssSelectorMatcher* m, const CssCompoundSelector* compound, uint32_t start, uint32_t end,
-                    const PrDomElement* element) {
+        const PrDomElement* element) {
     for (uint32_t i = start; i < end; ++i) {
         if (!matchesSimple(m, &m->selectors->simple[compound->simple + i], element))
             return false;
@@ -1064,8 +1040,7 @@ bool matchesSimples(CssSelectorMatcher* m, const CssCompoundSelector* compound, 
     return true;
 }
 
-bool matchesCompound(CssSelectorMatcher* m, const CssCompoundSelector* compound,
-                     const PrDomElement* element) {
+bool matchesCompound(CssSelectorMatcher* m, const CssCompoundSelector* compound, const PrDomElement* element) {
     return matchesSimples(m, compound, 0, compound->simpleCount, element);
 }
 
@@ -1075,8 +1050,7 @@ bool matchesCompound(CssSelectorMatcher* m, const CssCompoundSelector* compound,
 // Returns true if an element of the tree matches the compounds from `index`, and the element's attribute that the
 // combinator names holds the ID of `element` (selectors-5/#idref-combinators).
 Match matchReference(CssSelectorMatcher* m, const CssComplexSelector* complex, uint32_t index,
-                     const CssCompoundSelector* compound, const PrDomElement* element,
-                     const PrDomElement* PR_NULLABLE anchor) {
+        const CssCompoundSelector* compound, const PrDomElement* element, const PrDomElement* PR_NULLABLE anchor) {
     PrStringView id = domElementId(element);
     if (id.size == 0)
         return Match_Fails;
@@ -1087,11 +1061,9 @@ Match matchReference(CssSelectorMatcher* m, const CssComplexSelector* complex, u
         if (referrer == nullptr)
             continue;
         for (const PrDomAttr* attribute = nextNamed(m, reference, referrer, referrer->firstAttribute);
-             attribute != nullptr;
-             attribute =
-             nextNamed(m, reference, referrer, static_cast<const PrDomAttr*>(attribute->next))) {
-            if (matchesId(m, prStringView(&attribute->value), id)
-                && matchFrom(m, complex, index, referrer, anchor) == Match_Yes)
+                attribute != nullptr; attribute =
+                nextNamed(m, reference, referrer, static_cast<const PrDomAttr*>(attribute->next))) {
+            if (matchesId(m, prStringView(&attribute->value), id) && matchFrom(m, complex, index, referrer, anchor) == Match_Yes)
                 return Match_Yes;
         }
     }
@@ -1103,8 +1075,7 @@ Match matchReference(CssSelectorMatcher* m, const CssComplexSelector* complex, u
 // it passed on the way. A walk that follows another walk from the same parent returns the same result. A walk that
 // passes more than kCssShallowWalk ancestors keeps its result for the ancestors beyond them. So the walks from the
 // elements under one ancestor pass that ancestor once.
-Match matchAncestors(CssSelectorMatcher* m, const CssComplexSelector* complex, uint32_t index,
-                     const PrDomElement* element) {
+Match matchAncestors(CssSelectorMatcher* m, const CssComplexSelector* complex, uint32_t index, const PrDomElement* element) {
     uint32_t key = ((complex->compound + index) << kMemoShift) | kMemoAncestors;
     const PrDomElement* start = parentInTree(m, element);
     CssAncestorWalk* last = nullptr;
@@ -1136,10 +1107,10 @@ Match matchAncestors(CssSelectorMatcher* m, const CssComplexSelector* complex, u
     };
     if (m->host == nullptr) {
         walk([](const PrDomElement* at) { return domNodeParentElement(at); },
-             [&](const PrDomElement* at) { return matchFrom(m, complex, index, at, nullptr); });
+            [&](const PrDomElement* at) { return matchFrom(m, complex, index, at, nullptr); });
     } else {
         walk([&](const PrDomElement* at) { return parentInTree(m, at); },
-             [&](const PrDomElement* at) { return matchMaybeHost(m, complex, index, at, nullptr); });
+            [&](const PrDomElement* at) { return matchMaybeHost(m, complex, index, at, nullptr); });
     }
     for (uint32_t i = passed; i < m->walk.count; ++i)
         addMemo(m, m->walk.data[i], key, result);
@@ -1162,7 +1133,7 @@ Match matchAncestors(CssSelectorMatcher* m, const CssComplexSelector* complex, u
 // and that the read gave `match`. Nothing is recorded if the compounds beyond the siblings fail. Those compounds relate
 // to the siblings' parent and its ancestors, so no change among the siblings makes the selector match.
 void noteSiblings(CssSelectorMatcher* m, const CssComplexSelector* complex, uint32_t index, const PrDomElement* element,
-                  const PrDomElement* PR_NULLABLE anchor, Match match) {
+        const PrDomElement* PR_NULLABLE anchor, Match match) {
     if (m->structure == nullptr || element->parent == nullptr)
         return;
     // The compound whose combinator leads off the siblings.
@@ -1191,17 +1162,16 @@ void noteSiblings(CssSelectorMatcher* m, const CssComplexSelector* complex, uint
     }
     // A lone `+` reads only the element immediately before.
     const CssCompoundSelector* compounds = m->selectors->compounds + complex->compound;
-    bool lone = last == index + 1 && compounds[index].combinator == CssCombinator_NextSibling
-                && (index == 0 || (compounds[index - 1].combinator != CssCombinator_NextSibling
-                                   && compounds[index - 1].combinator != CssCombinator_SubsequentSibling));
+    bool lone = last == index + 1 && compounds[index].combinator == CssCombinator_NextSibling &&
+        (index == 0 || (compounds[index - 1].combinator != CssCombinator_NextSibling &&
+            compounds[index - 1].combinator != CssCombinator_SubsequentSibling));
     noteStructure(m, element->parent, lone ? DomStructureFlag_Next : DomStructureFlag_Forward, element);
 }
 
 // Matches the compounds of `complex` after the compound at `index`, which `element` matches, through that compound's
 // combinator.
 Match matchCombinator(CssSelectorMatcher* m, const CssComplexSelector* complex, uint32_t index,
-                      const CssCompoundSelector* compound, const PrDomElement* element,
-                      const PrDomElement* PR_NULLABLE anchor) {
+        const CssCompoundSelector* compound, const PrDomElement* element, const PrDomElement* PR_NULLABLE anchor) {
     CssCombinator combinator = compound->combinator;
     if (combinator == CssCombinator_None) {
         if (anchor == nullptr)
@@ -1257,15 +1227,14 @@ Match matchCombinator(CssSelectorMatcher* m, const CssComplexSelector* complex, 
 // is the element of the :has() whose argument is `complex`, and the leftmost compound relates to it. Beyond the
 // leftmost compound of a relative selector without an anchor is the `&` or :scope that the selector is relative to.
 Match matchFrom(CssSelectorMatcher* m, const CssComplexSelector* complex, uint32_t index,
-                const PrDomElement* element, const PrDomElement* PR_NULLABLE anchor) {
+        const PrDomElement* element, const PrDomElement* PR_NULLABLE anchor) {
     if (index == complex->compoundCount)
-        return (anchor != nullptr ? element == anchor : matchesScope(m, element)) ? Match_Yes
-                                                                                  : Match_Fails;
+        return (anchor != nullptr ? element == anchor : matchesScope(m, element)) ? Match_Yes : Match_Fails;
 
     const CssCompoundSelector* compound = &m->selectors->compounds[complex->compound + index];
     uint32_t placedEnd = compound->placed + compound->placedCount;
-    if (!matchesSimples(m, compound, 0, compound->placed, element)
-        || !matchesSimples(m, compound, placedEnd, compound->simpleCount, element))
+    if (!matchesSimples(m, compound, 0, compound->placed, element) ||
+            !matchesSimples(m, compound, placedEnd, compound->simpleCount, element))
         return Match_Fails;
     // The selectors that read structure are tested after the rest match, so a match that the rest decide reads no
     // structure.
@@ -1278,9 +1247,9 @@ Match matchFrom(CssSelectorMatcher* m, const CssComplexSelector* complex, uint32
 // Matches as matchFrom does, for an element that may be the matcher's host, which is featureless: only a compound of
 // :host, :host() or :host-context() matches it.
 Match matchMaybeHost(CssSelectorMatcher* m, const CssComplexSelector* complex, uint32_t index,
-                     const PrDomElement* element, const PrDomElement* PR_NULLABLE anchor) {
-    if (element == m->host && !m->hostArgument && index < complex->compoundCount
-        && !matchesFeatureless(m->selectors, &m->selectors->compounds[complex->compound + index]))
+        const PrDomElement* element, const PrDomElement* PR_NULLABLE anchor) {
+    if (element == m->host && !m->hostArgument && index < complex->compoundCount &&
+            !matchesFeatureless(m->selectors, &m->selectors->compounds[complex->compound + index]))
         return Match_Fails;
     return matchFrom(m, complex, index, element, anchor);
 }
@@ -1288,8 +1257,7 @@ Match matchMaybeHost(CssSelectorMatcher* m, const CssComplexSelector* complex, u
 bool matchesList(CssSelectorMatcher* m, CssSelectorList list, const PrDomElement* element) {
     for (uint32_t i = 0; i < list.count; ++i) {
         const CssComplexSelector* complex = &m->selectors->complex[list.first + i];
-        if ((complex->flags & CssComplexFlag_Invalid) == 0
-            && matchFrom(m, complex, 0, element, nullptr) == Match_Yes)
+        if ((complex->flags & CssComplexFlag_Invalid) == 0 && matchFrom(m, complex, 0, element, nullptr) == Match_Yes)
             return true;
     }
     return false;
@@ -1308,8 +1276,7 @@ const CssCompoundSelector* PR_NULLABLE subjectOf(const PrCssSelectors* selectors
 
 // Returns the first simple selector of `kind` in the compound, or null if it has none.
 const CssSimpleSelector* PR_NULLABLE simpleOf(const PrCssSelectors* selectors,
-                                              const CssCompoundSelector* PR_NULLABLE compound,
-                                              CssSimpleKind kind) {
+        const CssCompoundSelector* PR_NULLABLE compound, CssSimpleKind kind) {
     for (uint32_t i = 0; compound != nullptr && i < compound->simpleCount; ++i) {
         const CssSimpleSelector* simple = &selectors->simple[compound->simple + i];
         if (simple->kind == kind)
@@ -1337,9 +1304,8 @@ bool subjectFilter(CssSelectorMatcher* m, uint32_t index, CssSubjectFilter* out)
     const CssSimpleSelector* id = simpleOf(selectors, named, CssSimpleKind_Id);
     const CssSimpleSelector* name = simpleOf(selectors, named, CssSimpleKind_Class);
     const CssSimpleSelector* type = simpleOf(selectors, subject, CssSimpleKind_Type);
-    if (type != nullptr
-        && (type->space != kCssSelectorNone
-            || (type->prefix != CssNamespacePrefix_None && type->prefix != CssNamespacePrefix_Any)))
+    if (type != nullptr && (type->space != kCssSelectorNone ||
+            (type->prefix != CssNamespacePrefix_None && type->prefix != CssNamespacePrefix_Any)))
         type = nullptr;
 
     out->complex = index;
@@ -1347,16 +1313,17 @@ bool subjectFilter(CssSelectorMatcher* m, uint32_t index, CssSubjectFilter* out)
     out->atom = name != nullptr ? classAtom(m, name->name) : kAtomNone;
     if (name != nullptr && out->atom == kAtomNone)
         return false;
-    out->tag = type == nullptr                 ? kCssAnyTag
-               : type->tag != PrDomTag_Unknown ? DomTagId(type->tag)
-                                               : localNameTag(m, type->name);
+    if (type == nullptr)
+        out->tag = kCssAnyTag;
+    else if (type->tag != PrDomTag_Unknown)
+        out->tag = DomTagId(type->tag);
+    else
+        out->tag = localNameTag(m, type->name);
     out->whole = complex->compoundCount == 1;
     for (uint32_t i = 0; out->whole && i < subject->simpleCount; ++i) {
         const CssSimpleSelector* simple = &selectors->simple[subject->simple + i];
-        bool universal =
-            simple->kind == CssSimpleKind_Universal && simple->space == kCssSelectorNone
-            && (simple->prefix == CssNamespacePrefix_None
-                || simple->prefix == CssNamespacePrefix_Any);
+        bool universal = simple->kind == CssSimpleKind_Universal && simple->space == kCssSelectorNone &&
+            (simple->prefix == CssNamespacePrefix_None || simple->prefix == CssNamespacePrefix_Any);
         out->whole = simple == id || simple == name || simple == type || universal;
     }
     return true;
@@ -1365,13 +1332,10 @@ bool subjectFilter(CssSelectorMatcher* m, uint32_t index, CssSubjectFilter* out)
 // Returns true if `element` matches the selector of `filter`. If it can, the filter answers without reading the
 // element.
 bool passes(CssSelectorMatcher* m, const CssSubjectFilter* filter, const PrDomElement* element) {
-    if (filter->id.data != nullptr
-        && ((element->flags & DomNodeFlag_Id) == 0
-            || domElementId(element) != filter->id))
+    if (filter->id.data != nullptr && ((element->flags & DomNodeFlag_Id) == 0 || domElementId(element) != filter->id))
         return false;
-    if (filter->atom != kAtomNone
-        && (element->classes == kDomClassesNone
-            || !domClassesHas(m->document, element->classes, filter->atom)))
+    if (filter->atom != kAtomNone && (element->classes == kDomClassesNone ||
+            !domClassesHas(m->document, element->classes, filter->atom)))
         return false;
     bool html = domIsHtmlInHtmlDocument(element);
     if (filter->tag != kCssAnyTag) {
@@ -1383,9 +1347,9 @@ bool passes(CssSelectorMatcher* m, const CssSubjectFilter* filter, const PrDomEl
         return true;
     }
     const CssComplexSelector* complex = &m->selectors->complex[filter->complex];
-    return complex->compoundCount == 1
-               ? matchesCompound(m, &m->selectors->compounds[complex->compound], element)
-               : matchFrom(m, complex, 0, element, nullptr) == Match_Yes;
+    if (complex->compoundCount == 1)
+        return matchesCompound(m, &m->selectors->compounds[complex->compound], element);
+    return matchFrom(m, complex, 0, element, nullptr) == Match_Yes;
 }
 
 } // namespace
@@ -1451,8 +1415,7 @@ void cssSelectorCacheDestroy(CssSelectorCache* PR_NULLABLE cache) {
 }
 
 void cssSelectorMatcherInit(CssSelectorMatcher* matcher, const PrCssSelectors* selectors,
-                            const PrDomElement* PR_NULLABLE scope, const PrDomDocument* document,
-                            const PrDomNode* PR_NULLABLE tree) {
+        const PrDomElement* PR_NULLABLE scope, const PrDomDocument* document, const PrDomNode* PR_NULLABLE tree) {
     matcher->selectors = selectors;
     matcher->purpose = CssMatchPurpose_Script;
     matcher->document = document;
@@ -1486,15 +1449,13 @@ void cssSelectorMatcherInit(CssSelectorMatcher* matcher, const PrCssSelectors* s
 
     // The nearest compound left of the subject that has an ID, across child and descendant combinators.
     matcher->scopeId = PrStringView{};
-    const CssComplexSelector* complex =
-        subjectOf(selectors) != nullptr ? &selectors->complex[selectors->list.first] : nullptr;
-    for (uint32_t i = 1; !matcher->quirks && complex != nullptr && i < complex->compoundCount;
-         ++i) {
+    const CssComplexSelector* complex = subjectOf(selectors) != nullptr ? &selectors->complex[selectors->list.first] : nullptr;
+    for (uint32_t i = 1; !matcher->quirks && complex != nullptr && i < complex->compoundCount; ++i) {
         CssCombinator combinator = selectors->compounds[complex->compound + i - 1].combinator;
         if (combinator != CssCombinator_Child && combinator != CssCombinator_Descendant)
             break;
         const CssSimpleSelector* left =
-        simpleOf(selectors, &selectors->compounds[complex->compound + i], CssSimpleKind_Id);
+            simpleOf(selectors, &selectors->compounds[complex->compound + i], CssSimpleKind_Id);
         if (left != nullptr) {
             matcher->scopeId = cssSelectorName(selectors, left->name);
             break;
@@ -1534,14 +1495,14 @@ bool cssSelectorMatcherMatches(CssSelectorMatcher* matcher, const PrDomElement* 
 bool cssSelectorMatcherMatchesComplex(CssSelectorMatcher* matcher, uint32_t complex, const PrDomElement* element) {
     const CssComplexSelector* selector = &matcher->selectors->complex[complex];
     matcher->target = element;
-    bool matches = (selector->flags & CssComplexFlag_Invalid) == 0
-                   && matchMaybeHost(matcher, selector, 0, element, nullptr) == Match_Yes;
+    bool matches = (selector->flags & CssComplexFlag_Invalid) == 0 &&
+        matchMaybeHost(matcher, selector, 0, element, nullptr) == Match_Yes;
     matcher->target = nullptr;
     return matches;
 }
 
 bool cssSelectorMatcherMatchesSlotted(CssSelectorMatcher* matcher, uint32_t complex, const PrDomElement* element,
-                                      const PrDomElement* slot) {
+        const PrDomElement* slot) {
     const PrCssSelectors* selectors = matcher->selectors;
     const CssComplexSelector* selector = &selectors->complex[complex];
     if ((selector->flags & CssComplexFlag_Invalid) != 0)
@@ -1550,8 +1511,8 @@ bool cssSelectorMatcherMatchesSlotted(CssSelectorMatcher* matcher, uint32_t comp
     // outside the matcher's tree.
     const CssCompoundSelector* subject = &selectors->compounds[selector->compound];
     const CssSimpleSelector* slotted = &selectors->simple[subject->simple + subject->simpleCount - 1];
-    if (slotted->kind != CssSimpleKind_PseudoElement || slotted->pseudoElement != CssPseudoElement_SlottedFn
-        || slotted->argument == kCssSelectorNone)
+    if (slotted->kind != CssSimpleKind_PseudoElement || slotted->pseudoElement != CssPseudoElement_SlottedFn ||
+            slotted->argument == kCssSelectorNone)
         return false;
     const PrDomElement* host = matcher->host;
     matcher->host = nullptr;
@@ -1569,19 +1530,15 @@ bool cssSelectorMatcherMatchesSlotted(CssSelectorMatcher* matcher, uint32_t comp
     return matches;
 }
 
-PrDomElement* PR_NULLABLE cssSelectorMatcherNext(CssSelectorMatcher* matcher, PrDomNode* root,
-                                                 PrDomNode* after) {
+PrDomElement* PR_NULLABLE cssSelectorMatcherNext(CssSelectorMatcher* matcher, PrDomNode* root, PrDomNode* after) {
     const CssSubjectFilter* subjects = matcher->subjects.data;
     uint32_t count = matcher->subjects.count;
     if (count == 0)
         return nullptr;
     // If the tree keeps the one element with the subject ID of the single selector, that element is the only one to
     // test.
-    PrStringView subjectId = count == 1 && matcher->selectors->list.count == 1
-                                 ? subjects[0].id
-                                 : PrStringView{};
-    PrDomNode* tree =
-        subjectId.data != nullptr || matcher->scopeId.data != nullptr ? domNodeRoot(root) : nullptr;
+    PrStringView subjectId = count == 1 && matcher->selectors->list.count == 1 ? subjects[0].id : PrStringView{};
+    PrDomNode* tree = subjectId.data != nullptr || matcher->scopeId.data != nullptr ? domNodeRoot(root) : nullptr;
     bool ids = tree != nullptr && domKeepsIds(tree);
     if (ids && subjectId.data != nullptr) {
         PrDomElement* first = nullptr;
@@ -1607,8 +1564,7 @@ PrDomElement* PR_NULLABLE cssSelectorMatcherNext(CssSelectorMatcher* matcher, Pr
             return nullptr;
         }
     }
-    for (PrDomNode* node = domNodeNext(within, after); node != nullptr;
-         node = domNodeNext(within, node)) {
+    for (PrDomNode* node = domNodeNext(within, after); node != nullptr; node = domNodeNext(within, node)) {
         PrDomElement* element = domElementFromNode(node);
         if (element == nullptr)
             continue;
@@ -1620,8 +1576,7 @@ PrDomElement* PR_NULLABLE cssSelectorMatcherNext(CssSelectorMatcher* matcher, Pr
     return nullptr;
 }
 
-bool cssSelectorsMatch(const PrCssSelectors* selectors, const PrDomElement* element,
-                       const PrDomElement* PR_NULLABLE scope) {
+bool cssSelectorsMatch(const PrCssSelectors* selectors, const PrDomElement* element, const PrDomElement* PR_NULLABLE scope) {
     CssSelectorMatcher matcher;
     cssSelectorMatcherInit(&matcher, selectors, scope, element->document, element);
     bool matches = cssSelectorMatcherMatches(&matcher, element);

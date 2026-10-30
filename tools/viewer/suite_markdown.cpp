@@ -26,8 +26,7 @@ constexpr const char* kTabArrow = "\xe2\x86\x92";
 
 // The styles of a reference, which are those that lib/html's user agent sheet gives a Markdown document, so that a
 // reference draws as its example does wherever the HTML is the same. A change to that sheet is made here too.
-constexpr const char* kReferenceStyle =
-    "html { color-scheme: light dark; }\n"
+constexpr const char* kReferenceStyle = "html { color-scheme: light dark; }\n"
     "body { max-width: 48em; margin: 0 auto; padding: 1em 2em; font-family: sans-serif; line-height: 1.5; }\n"
     "h1, h2 { padding-block-end: 0.3em; border-block-end: 1px solid color-mix(in srgb, CanvasText 20%, Canvas); }\n"
     "h1, h2, h3, h4, h5, h6 { margin-block: 1.5em 0.75em; line-height: 1.25; }\n"
@@ -128,8 +127,8 @@ std::vector<Document> examples(const char* suite, const std::vector<fs::path>& f
             else if (!example.extensions.empty())
                 variant = "; variant=GFM";
             writeIfChanged(fs::path(markdown.string() + ".headers"), "Content-Type: text/markdown" + variant + "\n");
-            writeIfChanged(html, "<!DOCTYPE html>\n<meta charset=\"utf-8\">\n<style>\n" + std::string(kReferenceStyle)
-                                     + "</style>\n<body>\n" + example.html);
+            writeIfChanged(html, "<!DOCTYPE html>\n<meta charset=\"utf-8\">\n<style>\n" + std::string(kReferenceStyle) +
+                "</style>\n<body>\n" + example.html);
             std::string description = "Example " + std::to_string(example.number) + " of " + stem + ".txt";
             if (!example.extensions.empty())
                 description += ", with" + example.extensions;
@@ -151,15 +150,27 @@ std::vector<Collection> markdownCollections() {
     std::error_code error;
     fs::path commonmark = fs::path(kThirdParty) / "commonmark-spec" / "spec.txt";
     if (fs::exists(commonmark, error)) {
-        collections.push_back(Collection{"CommonMark", 800, 600, 0, [commonmark] {
-            return examples("commonmark", {commonmark});
-        }});
+        collections.push_back(Collection{
+            "CommonMark",
+            800,
+            600,
+            0,
+            [commonmark] {
+                return examples("commonmark", {commonmark});
+            },
+        });
     }
     fs::path gfm = fs::path(kThirdParty) / "cmark-gfm" / "test";
     if (fs::exists(gfm / "spec.txt", error)) {
-        collections.push_back(Collection{"GFM", 800, 600, 0, [gfm] {
-            return examples("gfm", {gfm / "spec.txt", gfm / "extensions.txt", gfm / "regression.txt"});
-        }});
+        collections.push_back(Collection{
+            "GFM",
+            800,
+            600,
+            0,
+            [gfm] {
+                return examples("gfm", {gfm / "spec.txt", gfm / "extensions.txt", gfm / "regression.txt"});
+            },
+        });
     }
     return collections;
 }

@@ -89,15 +89,13 @@ bool atInputEnd(const CssTokenStream* ts) {
 }
 
 bool isCloser(CssTokenKind kind) {
-    return kind == CssTokenKind_CloseParen || kind == CssTokenKind_CloseBracket
-           || kind == CssTokenKind_CloseBrace;
+    return kind == CssTokenKind_CloseParen || kind == CssTokenKind_CloseBracket || kind == CssTokenKind_CloseBrace;
 }
 
 // Matches the token that a one-character literal names: a punctuation token of its own kind, or a delim for everything
 // else. A closer that is missing because the input ended is matched at the position where it would be.
 bool matchLiteral(CssMatcher* m, uint32_t character) {
-    CssTokenKind kind = character < 0x80 ? kCssPunctuation.kindOf[character]
-                                         : CssTokenKind_Delim;
+    CssTokenKind kind = character < 0x80 ? kCssPunctuation.kindOf[character] : CssTokenKind_Delim;
     if (cssPeek(m->ts) != kind)
         return isCloser(kind) && atInputEnd(m->ts);
     if (kind == CssTokenKind_Delim && cssTokenDelim(m->ts->tokens, m->ts->pos) != character)
@@ -143,8 +141,11 @@ Upcoming upcomingAt(const CssTokenStream* ts, uint32_t pos) {
     CssTokenKind kind = kindAt(ts, pos);
     if (kind == CssTokenKind_Value)
         return Upcoming{givenKinds(cssTokenValue(ts->tokens, pos).values), 0};
-    uint32_t character = kind == CssTokenKind_Delim ? cssTokenDelim(ts->tokens, pos)
-                                               : uint8_t(kCssPunctuation.byteOf[kind]);
+    uint32_t character;
+    if (kind == CssTokenKind_Delim)
+        character = cssTokenDelim(ts->tokens, pos);
+    else
+        character = uint8_t(kCssPunctuation.byteOf[kind]);
     return Upcoming{1u << kind, character < 128 ? kCssGrammarLiteralBit[character] : 0};
 }
 
@@ -152,8 +153,7 @@ Upcoming upcomingAt(const CssTokenStream* ts, uint32_t pos) {
 // or character, or the node can match nothing.
 bool mayBegin(CssGrammarIndex index, Upcoming next) {
     const CssGrammarFirst& first = kCssGrammarFirsts[kCssGrammarFirstOf[index]];
-    return (first.kinds & (kCssGrammarFirstEmpty | next.kind)) != 0
-           || (first.literals & next.literal) != 0;
+    return (first.kinds & (kCssGrammarFirstEmpty | next.kind)) != 0 || (first.literals & next.literal) != 0;
 }
 
 // Returns true if the node under its multiplier could begin at `next`. This is mayBegin, except that it is also true if
@@ -182,8 +182,7 @@ void inherit(const CssMatcher* m, uint32_t outer, CssMatchFrame* frame) {
 }
 
 // Returns a frame of `kind` for the node at `index`, continuing at `outer`.
-CssMatchFrame nodeFrame(const CssMatcher* m, CssMatchFrameKind kind, CssGrammarIndex index,
-                        uint32_t outer) {
+CssMatchFrame nodeFrame(const CssMatcher* m, CssMatchFrameKind kind, CssGrammarIndex index, uint32_t outer) {
     CssMatchFrame frame = {};
     frame.kind = kind;
     inherit(m, outer, &frame);
@@ -232,8 +231,10 @@ bool advanceFrame(CssMatcher* m, uint32_t index, CssMatchFrame frame) {
 
 // Records where to return, and which alternative to try then, if what the frame is about to try fails.
 void pushChoice(CssMatcher* m, uint32_t frame, uint32_t state) {
-    CssMatchChoice choice = {frame, state, m->match->frames.count, m->ts->pos, m->ts->end,
-                             m->pool->values.count, m->pool->text.count, m->match->edits.count};
+    CssMatchChoice choice = {
+        frame, state, m->match->frames.count, m->ts->pos, m->ts->end,
+        m->pool->values.count, m->pool->text.count, m->match->edits.count,
+    };
     m->match->choices.push(choice);
     m->floor = choice.frames;
 }
@@ -353,8 +354,7 @@ bool enterProduction(CssMatcher* m, CssValueDef production, uint32_t outer) {
 // Matches a reference to a production, then everything after it. Inside a structural production, a production that
 // keeps a node gets one.
 bool enterType(CssMatcher* m, CssValueDef production, uint32_t outer) {
-    if ((frameAt(m, outer).flags & CssMatchFlag_Structural) != 0
-        && bitsetTest(kCssValueDefKeepsNode, production))
+    if ((frameAt(m, outer).flags & CssMatchFlag_Structural) != 0 && bitsetTest(kCssValueDefKeepsNode, production))
         return enterProduction(m, production, outer);
     return enterNode(m, kCssValueDefGrammarRoot[production], outer);
 }
@@ -391,8 +391,7 @@ void recordGroup(CssMatcher* m, uint32_t index) {
     uint32_t end = m->pool->values.count;
     for (uint32_t i = index, part = f.done; part != 0; --i) {
         const CssMatchFrame& taken = frameAt(m, i);
-        if (taken.kind == CssMatchFrameKind_AnyOrder && taken.node == f.node
-            && taken.outer == f.outer && taken.done == part) {
+        if (taken.kind == CssMatchFrameKind_AnyOrder && taken.node == f.node && taken.outer == f.outer && taken.done == part) {
             edits->data[group + part] = CssMatchEdit{taken.anchor, end, taken.end, 0};
             end = taken.anchor;
             --part;
@@ -404,9 +403,7 @@ void recordGroup(CssMatcher* m, uint32_t index) {
 // Returns the entry in kCssGrammarOmissions for `node`, or null.
 const CssGrammarOmission* PR_NULLABLE omissionOf(CssGrammarIndex node) {
     uint32_t at = lowerBound(kCssGrammarOmissions, kCssGrammarOmissionCount, node);
-    return at < kCssGrammarOmissionCount && kCssGrammarOmissions[at].node == node
-               ? &kCssGrammarOmissions[at]
-               : nullptr;
+    return at < kCssGrammarOmissionCount && kCssGrammarOmissions[at].node == node ? &kCssGrammarOmissions[at] : nullptr;
 }
 
 // Returns true if a value is the one that `implied` gives.
@@ -415,19 +412,18 @@ bool isImpliedValue(const CssValueNode* value, const CssGrammarImpliedValue& imp
         case CssGrammarImpliedKind_Keyword:
             return cssValueIsKeyword(value, implied.keyword);
         case CssGrammarImpliedKind_Number:
-            return (value->kind == PrCssValueKind_Integer || value->kind == PrCssValueKind_Number)
-                   && value->number == implied.number;
+            return (value->kind == PrCssValueKind_Integer || value->kind == PrCssValueKind_Number) &&
+                value->number == implied.number;
         case CssGrammarImpliedKind_Percentage:
             return value->kind == PrCssValueKind_Percentage && value->number == implied.number;
         default:
-            return (value->kind == PrCssValueKind_Dimension || value->kind == PrCssValueKind_Integer
-                    || value->kind == PrCssValueKind_Number) && value->number == 0.0;
+            return (value->kind == PrCssValueKind_Dimension || value->kind == PrCssValueKind_Integer ||
+                value->kind == PrCssValueKind_Number) && value->number == 0.0;
     }
 }
 
 // Returns true if the values in [start, end) are the implied value of an omitted component.
-bool isImplied(const CssValueNode* values, uint32_t start, uint32_t end,
-               const CssGrammarImplied& implied) {
+bool isImplied(const CssValueNode* values, uint32_t start, uint32_t end, const CssGrammarImplied& implied) {
     const CssGrammarImpliedValue* run = kCssGrammarImpliedValues + implied.first;
     if (implied.alternatives) {
         bool one = start != end && values[start].next == end - start;
@@ -470,8 +466,7 @@ uint32_t canonicalGroup(CssValuePool* pool, CssMatchEdit* group) {
     if ((kCssGrammarShapes[group->node] & CssGrammarShape_OmitsChild) != 0) {
         for (uint32_t i = 0; i < group->parts; ++i) {
             const CssGrammarOmission* omission = omissionOf(parts[i].node);
-            if (omission != nullptr
-                && isImplied(pool->values.data, parts[i].start, parts[i].end, omission->whole)) {
+            if (omission != nullptr && isImplied(pool->values.data, parts[i].start, parts[i].end, omission->whole)) {
                 omitted |= uint64_t(1) << i;
             }
         }
@@ -490,7 +485,7 @@ uint32_t canonicalGroup(CssValuePool* pool, CssMatchEdit* group) {
         if ((omitted & (uint64_t(1) << i)) != 0)
             continue;
         memCopy(scratch + written, values->data + parts[i].start,
-                (parts[i].end - parts[i].start) * sizeof(CssValueNode));
+            (parts[i].end - parts[i].start) * sizeof(CssValueNode));
         written += parts[i].end - parts[i].start;
     }
     memCopy(values->data + group->start, scratch, written * sizeof(CssValueNode));
@@ -550,16 +545,14 @@ bool isSecondAxis(const CssValueNode* one) {
 // end or adding room there. The values above it adjust their spans by the difference, and the edits from `later` on
 // move with the values they refer to. A comma that an empty run leaves first or last among its siblings is also removed
 // (css-values-4/#comb-comma).
-void resizeRun(CssMatcher* m, uint32_t later, uint32_t root, uint32_t start, uint32_t end,
-               uint32_t length) {
+void resizeRun(CssMatcher* m, uint32_t later, uint32_t root, uint32_t start, uint32_t end, uint32_t length) {
     Array<CssValueNode>* values = &m->pool->values;
     int32_t delta = int32_t(length) - int32_t(end - start);
     if (delta < 0) {
         values->erase(start + length, uint32_t(-delta));
     } else {
         values->reserve(values->count + uint32_t(delta));
-        memMove(values->data + end + delta, values->data + end,
-                (values->count - end) * sizeof(CssValueNode));
+        memMove(values->data + end + delta, values->data + end, (values->count - end) * sizeof(CssValueNode));
         values->count += uint32_t(delta);
     }
 
@@ -647,8 +640,7 @@ void applyEdits(CssMatcher* m, uint32_t first, uint32_t root) {
             foldProduction(m, later, root, &edit);
             continue;
         }
-        uint32_t held = edit.parts != 0 ? canonicalGroup(m->pool, &edits->data[i])
-                                        : canonicalRepeat(m->pool, &edit);
+        uint32_t held = edit.parts != 0 ? canonicalGroup(m->pool, &edits->data[i]) : canonicalRepeat(m->pool, &edit);
         if (held != edit.end - edit.start)
             resizeRun(m, later, root, edit.start + held, edit.end, 0);
     }
@@ -675,9 +667,8 @@ uint32_t editsInside(const CssMatcher* m, uint32_t first, uint32_t at) {
 // no tokens.
 bool emptyAfterComma(const CssValuePool* pool) {
     uint32_t count = pool->values.count;
-    return count >= 2 && cssValueIsLiteral(&pool->values.data[count - 2], ',')
-           && pool->values.data[count - 1].kind == PrCssValueKind_Tokens
-           && pool->values.data[count - 1].text.length == 0;
+    return count >= 2 && cssValueIsLiteral(&pool->values.data[count - 2], ',') &&
+        pool->values.data[count - 1].kind == PrCssValueKind_Tokens && pool->values.data[count - 1].text.length == 0;
 }
 
 // Resumes the children of a sequence, one at a time. Advancing pushes a frame rather than moving this one forward, so
@@ -744,17 +735,13 @@ bool resumeRepeat(CssMatcher* m, uint32_t index, uint32_t state) {
     // The bracketed range bounds the value of each repetition, if the value is a number. If a given number, rather than
     // a written one, is outside its range, it is wrapped in a calculation, which is clamped when used
     // (css-typed-om-1/#create-an-internal-representation).
-    if (state == 0 && modifier->range != CssGrammarRange_None && f.done != 0
-        && m->pool->values.count > f.taken) {
+    if (state == 0 && modifier->range != CssGrammarRange_None && f.done != 0 && m->pool->values.count > f.taken) {
         const CssValueNode* last = &m->pool->values.data[f.taken];
-        if (cssValueIsNumeric(last->kind)
-            && !inRange(kCssGrammarRanges[modifier->range], last->number)) {
-            bool given = m->ts->pos != 0
-                         && cssTokenKind(m->ts->tokens, m->ts->pos - 1) == CssTokenKind_Value;
+        if (cssValueIsNumeric(last->kind) && !inRange(kCssGrammarRanges[modifier->range], last->number)) {
+            bool given = m->ts->pos != 0 && cssTokenKind(m->ts->tokens, m->ts->pos - 1) == CssTokenKind_Value;
             if (!m->match->calculate || !given || m->pool->values.count != f.taken + 1)
                 return false;
-            m->match->edits.push(
-                CssMatchEdit{uint32_t(f.taken), uint32_t(f.taken + 1), kCssMatchCalculate, 0});
+            m->match->edits.push(CssMatchEdit{uint32_t(f.taken), uint32_t(f.taken + 1), kCssMatchCalculate, 0});
         }
     }
 
@@ -776,8 +763,7 @@ bool resumeRepeat(CssMatcher* m, uint32_t index, uint32_t state) {
         // either, so there is nothing to return to. A # list's comma decides every item except the first, which has no
         // comma before it.
         bool list = (modifier->flags & CssGrammarFlag_Comma) != 0;
-        bool decided = (kCssGrammarShapes[f.node] & CssGrammarShape_Decided) != 0
-                       && (f.done != 0 || !list);
+        bool decided = (kCssGrammarShapes[f.node] & CssGrammarShape_Decided) != 0 && (f.done != 0 || !list);
         bool stops = f.done >= modifier->min && !decided;
         if (stops)
             pushChoice(m, index, 1);
@@ -820,8 +806,8 @@ bool resumeRepeat(CssMatcher* m, uint32_t index, uint32_t state) {
         return false;
     if ((modifier->flags & CssGrammarFlag_Required) != 0 && m->pool->values.count == f.anchor)
         return false;
-    if ((kCssGrammarShapes[f.node] & CssGrammarShape_Omissible) != 0
-        && (modifier->max == 1 || f.done > 1) && m->pool->values.count != f.anchor) {
+    if ((kCssGrammarShapes[f.node] & CssGrammarShape_Omissible) != 0 &&
+            (modifier->max == 1 || f.done > 1) && m->pool->values.count != f.anchor) {
         m->match->edits.push(CssMatchEdit{f.anchor, m->pool->values.count, f.node, 0});
     }
 
@@ -873,8 +859,7 @@ bool resumeAnyOrder(CssMatcher* m, uint32_t index, uint32_t state) {
         // Returning here is worthwhile if a later child could begin here, or if a || could end without this child.
         bool later = !all && f.done != 0;
         for (uint32_t other = slot + 1; other < count && !later; ++other) {
-            later = (f.taken & (uint64_t(1) << other)) == 0
-                    && mayMatch(childAt(f.node, other), next);
+            later = (f.taken & (uint64_t(1) << other)) == 0 && mayMatch(childAt(f.node, other), next);
         }
         if (later)
             pushChoice(m, index, slot + 1);
@@ -894,8 +879,8 @@ bool resumeAnyOrder(CssMatcher* m, uint32_t index, uint32_t state) {
     if (all ? f.done != count : f.done == 0)
         return false;
     CssGrammarShape shape = kCssGrammarShapes[f.node];
-    if (((f.flags & CssMatchFlag_Unordered) != 0 && (shape & CssGrammarShape_Written) == 0)
-        || (shape & CssGrammarShape_OmitsChild) != 0) {
+    if (((f.flags & CssMatchFlag_Unordered) != 0 && (shape & CssGrammarShape_Written) == 0) ||
+            (shape & CssGrammarShape_OmitsChild) != 0) {
         recordGroup(m, index);
     }
     continueAt(m, f.outer);
@@ -995,8 +980,7 @@ bool matchLeaf(CssMatcher* m, CssGrammarIndex index, uint32_t outer) {
     switch (cssGrammarType(node)) {
         case CssGrammarType_Keyword: {
             skipSpace(m, outer);
-            if (cssPeek(m->ts) != CssTokenKind_Ident
-                || cssTokenKeyword(m->ts->tokens, m->ts->pos) != value)
+            if (cssPeek(m->ts) != CssTokenKind_Ident || cssTokenKeyword(m->ts->tokens, m->ts->pos) != value)
                 return false;
             ++m->ts->pos;
             cssValuePoolAdd(m->pool, cssKeywordValue(PrCssKeyword(value)));
@@ -1035,8 +1019,7 @@ bool matchLeaf(CssMatcher* m, CssGrammarIndex index, uint32_t outer) {
 
         case CssGrammarType_AtKeyword:
             skipSpace(m, outer);
-            if (cssPeek(m->ts) != CssTokenKind_AtKeyword
-                || cssTokenKeyword(m->ts->tokens, m->ts->pos) != value) {
+            if (cssPeek(m->ts) != CssTokenKind_AtKeyword || cssTokenKeyword(m->ts->tokens, m->ts->pos) != value) {
                 return false;
             }
             ++m->ts->pos;
@@ -1049,8 +1032,8 @@ bool matchLeaf(CssMatcher* m, CssGrammarIndex index, uint32_t outer) {
                 return false;
             // A percentage written for a number (CssGrammarShape_Fraction) is stored as the number.
             CssValueNode* matched = &m->pool->values.data[at];
-            if ((kCssGrammarShapes[index] & CssGrammarShape_Fraction) != 0
-                && matched->kind == PrCssValueKind_Percentage) {
+            if ((kCssGrammarShapes[index] & CssGrammarShape_Fraction) != 0 &&
+                    matched->kind == PrCssValueKind_Percentage) {
                 matched->kind = PrCssValueKind_Number;
                 matched->number /= 100.0;
             }
@@ -1096,8 +1079,7 @@ bool matchOnce(CssMatcher* m, CssGrammarIndex index, uint32_t outer) {
 
         case CssGrammarType_Function: {
             skipSpace(m, outer);
-            if (cssPeek(m->ts) != CssTokenKind_Function
-                || cssTokenKeyword(m->ts->tokens, m->ts->pos) != value) {
+            if (cssPeek(m->ts) != CssTokenKind_Function || cssTokenKeyword(m->ts->tokens, m->ts->pos) != value) {
                 return false;
             }
             ++m->ts->pos;
@@ -1120,7 +1102,7 @@ bool matchOnce(CssMatcher* m, CssGrammarIndex index, uint32_t outer) {
             CssGrammarIndex only = CssGrammarRoot_None;
             uint32_t viable = 0;
             for (CssGrammarIndex child = CssGrammarIndex(index + 1); child < end && viable < 2;
-                 child = cssGrammarAfter(child)) {
+                    child = cssGrammarAfter(child)) {
                 if (mayMatch(child, next)) {
                     only = child;
                     ++viable;
@@ -1152,14 +1134,13 @@ bool matchOnce(CssMatcher* m, CssGrammarIndex index, uint32_t outer) {
             // A run of leaves, each taken once, needs no frame to walk it.
             if ((kCssGrammarShapes[index] & CssGrammarShape_Leaves) != 0) {
                 for (CssGrammarIndex child = CssGrammarIndex(index + 1); child < cssGrammarAfter(index);
-                     child = cssGrammarAfter(child)) {
+                        child = cssGrammarAfter(child)) {
                     if (!matchLeaf(m, child, outer))
                         return false;
                 }
                 break;
             }
-            CssMatchFrame frame =
-                nodeFrame(m, CssMatchFrameKind_Siblings, CssGrammarIndex(index + 1), outer);
+            CssMatchFrame frame = nodeFrame(m, CssMatchFrameKind_Siblings, CssGrammarIndex(index + 1), outer);
             frame.end = cssGrammarAfter(index);
             if ((cssGrammarModifier(node)->flags & CssGrammarFlag_Required) != 0) {
                 frame.flags |= CssMatchFlag_Required;
@@ -1238,8 +1219,8 @@ bool checkNamespacePrefix(const CssMatcher* m, const CssMatchFrame& f) {
         return true;
 
     PrStringView url;
-    return m->context != nullptr && m->context->sheet != nullptr
-           && cssSheetNamespace(m->context->sheet, cssValuePoolText(m->pool, prefix), &url);
+    return m->context != nullptr && m->context->sheet != nullptr &&
+        cssSheetNamespace(m->context->sheet, cssValuePoolText(m->pool, prefix), &url);
 }
 
 // Checks that a subclass selector is allowed here. After a pseudo-element, a compound holds only pseudo-classes, and so
@@ -1264,8 +1245,7 @@ bool checkComplex(const CssMatcher* m, const CssMatchFrame& f) {
         }
         if (pseudo)
             return false;
-        if (!joined
-            && cssTokenKind(m->ts->tokens, values[i].tokens.start) != CssTokenKind_Whitespace)
+        if (!joined && cssTokenKind(m->ts->tokens, values[i].tokens.start) != CssTokenKind_Whitespace)
             return false;
         joined = false;
         ++units;
@@ -1283,8 +1263,9 @@ bool checkComplex(const CssMatcher* m, const CssMatchFrame& f) {
 // Returns the keyword that an ident's value names, compared ASCII case-insensitively, or PrCssKeyword_Unknown for any
 // other value.
 PrCssKeyword identKeyword(const CssValuePool* pool, const CssValueNode* value) {
-    return value->kind == PrCssValueKind_Ident ? cssKeywordFromText(cssValuePoolText(pool, value))
-                                             : PrCssKeyword_Unknown;
+    if (value->kind == PrCssValueKind_Ident)
+        return cssKeywordFromText(cssValuePoolText(pool, value));
+    return PrCssKeyword_Unknown;
 }
 
 // Checks that a <media-type> is not one of the keywords that join media queries in the grammar, and is not `layer`
@@ -1312,8 +1293,7 @@ bool checkFeatureName(CssMatcher* m, const CssMatchFrame& f) {
     PrStringView text = cssValuePoolText(m->pool, name);
     PrCssDescriptor descriptor = cssDescriptorFromText(m->features, text);
     CssValueAuxFlags prefix = 0;
-    if (descriptor == PrCssDescriptor_None
-        && isProduction(enclosing(m, f.outer), CssValueDef_MfPlain)) {
+    if (descriptor == PrCssDescriptor_None && isProduction(enclosing(m, f.outer), CssValueDef_MfPlain)) {
         if (asciiStartsWithFold(text, "min-"))
             prefix = CssValueAuxFlag_FeatureMin;
         else if (asciiStartsWithFold(text, "max-"))
@@ -1323,8 +1303,10 @@ bool checkFeatureName(CssMatcher* m, const CssMatchFrame& f) {
         if (descriptor != PrCssDescriptor_None && !bitsetTest(kCssDescriptorRange, descriptor))
             descriptor = PrCssDescriptor_None;
     }
-    name->aux = descriptor == PrCssDescriptor_None ? CssValueAuxFlags(PrCssDescriptor_None)
-                                                   : CssValueAuxFlags(descriptor | prefix);
+    if (descriptor == PrCssDescriptor_None)
+        name->aux = CssValueAuxFlags(PrCssDescriptor_None);
+    else
+        name->aux = CssValueAuxFlags(descriptor | prefix);
     return true;
 }
 
@@ -1358,8 +1340,7 @@ bool checkFeatureValues(const CssMatcher* m, const CssMatchFrame& f, bool range)
         CssValueNode value = pool->values.data[i];
         if (!cssValueIsProduction(&value, CssValueDef_MfValue))
             continue;
-        CssTokenStream tokens =
-            cssSubStream(m->ts, CssTokenSpan{value.tokens.start, value.tokens.count});
+        CssTokenStream tokens = cssSubStream(m->ts, CssTokenSpan{value.tokens.start, value.tokens.count});
         CssValueSpan matched;
         bool takes = cssParseDescriptorValue(descriptor, &tokens, pool, m->match, &matched);
         pool->values.count = end;
@@ -1395,8 +1376,7 @@ void holdFeatureValues(CssMatcher* m, uint32_t later, uint32_t root, const CssMa
         }
         uint32_t node = pool->values.count;
         pool->values.push(value);
-        CssTokenStream tokens =
-            cssSubStream(m->ts, CssTokenSpan{value.tokens.start, value.tokens.count});
+        CssTokenStream tokens = cssSubStream(m->ts, CssTokenSpan{value.tokens.start, value.tokens.count});
         CssValueSpan matched;
         if (!cssParseDescriptorValue(descriptor, &tokens, pool, m->match, &matched)) {
             pool->values.count = built;
@@ -1409,8 +1389,7 @@ void holdFeatureValues(CssMatcher* m, uint32_t later, uint32_t root, const CssMa
     int32_t delta = int32_t(length) - int32_t(run->end - run->start);
     resizeRun(m, later, root, run->start, run->end, length);
     built = uint32_t(int32_t(built) + delta);
-    memCopy(pool->values.data + run->start, pool->values.data + built,
-            length * sizeof(CssValueNode));
+    memCopy(pool->values.data + run->start, pool->values.data + built, length * sizeof(CssValueNode));
     pool->values.count = built;
 }
 
@@ -1478,8 +1457,7 @@ bool parseForgiving(const CssMatcher* m, CssTokenSpan span, CssMatchArgument arg
         uint32_t comma = ts.end;
         bool more = cssNextComma(&ts, &comma);
         CssTokenSpan item = {ts.pos, comma - ts.pos};
-        if (!cssMatchArgument(m, item, CssGrammarRoot_None, CssValueDef_ComplexRealSelector,
-                              argument)) {
+        if (!cssMatchArgument(m, item, CssGrammarRoot_None, CssValueDef_ComplexRealSelector, argument)) {
             if (whole)
                 return false;
             cssValuePoolAddTokens(m->pool, m->ts, cssTrimWhitespace(m->ts->tokens, item));
@@ -1513,13 +1491,12 @@ bool parseNth(const CssMatcher* m, CssPseudoClass pseudo, CssTokenSpan span, boo
     cssSkipWhitespace(&ts);
     if (ts.pos == ts.end)
         return true;
-    if (!takesOf || cssPeek(&ts) != CssTokenKind_Ident
-        || cssTokenKeyword(ts.tokens, ts.pos) != PrCssKeyword_Of)
+    if (!takesOf || cssPeek(&ts) != CssTokenKind_Ident || cssTokenKeyword(ts.tokens, ts.pos) != PrCssKeyword_Of)
         return false;
     ++ts.pos;
     cssValuePoolAdd(m->pool, cssKeywordValue(PrCssKeyword_Of));
     return cssMatchArgument(m, CssTokenSpan{ts.pos, ts.end - ts.pos}, CssGrammarRoot_None,
-                            CssValueDef_ComplexRealSelectorList, argumentOf(pseudo));
+        CssValueDef_ComplexRealSelectorList, argumentOf(pseudo));
 }
 
 // Parses the argument of :lang(): a list of language ranges, each an <ident> or a <string>
@@ -1529,8 +1506,7 @@ bool parseLang(const CssMatcher* m, CssTokenSpan span) {
     CssMatcher argument = cssMatchNested(m, &ts);
     for (;;) {
         cssSkipWhitespace(&ts);
-        if (!cssParseIdentToken(&argument)
-            && !cssParseStringToken(&argument)) {
+        if (!cssParseIdentToken(&argument) && !cssParseStringToken(&argument)) {
             return false;
         }
         cssSkipWhitespace(&ts);
@@ -1565,8 +1541,7 @@ bool parseActiveViewTransitionTypeArgument(const CssMatcher* m, CssTokenSpan spa
 // Parses the argument of a functional pseudo-class: by its grammar if the spec writes one, and by its prose otherwise.
 // A logical combination pseudo-class passes to its argument whatever its own position allows
 // (selectors-4/#logical-combination): what may follow `after`, and a compound if the enclosing argument requires one.
-bool parseClassArgument(const CssMatcher* m, CssPseudoClass pseudo, CssTokenSpan span,
-                        CssPseudoElement after) {
+bool parseClassArgument(const CssMatcher* m, CssPseudoClass pseudo, CssTokenSpan span, CssPseudoElement after) {
     CssGrammarIndex root = kCssPseudoClassGrammarRoot[pseudo];
     if (root != CssGrammarRoot_None)
         return cssMatchArgument(m, span, root, CssValueDef_Count, argumentOf(pseudo));
@@ -1577,12 +1552,10 @@ bool parseClassArgument(const CssMatcher* m, CssPseudoClass pseudo, CssTokenSpan
         case CssPseudoClass_WhereFn:
             return parseForgiving(m, span, logical);
         case CssPseudoClass_NotFn:
-            return cssMatchArgument(m, span, CssGrammarRoot_None, CssValueDef_ComplexRealSelectorList,
-                                    logical);
+            return cssMatchArgument(m, span, CssGrammarRoot_None, CssValueDef_ComplexRealSelectorList, logical);
         case CssPseudoClass_HasFn:
-            return !insideHas(m)
-                   && cssMatchArgument(m, span, CssGrammarRoot_None,
-                                       CssValueDef_RelativeRealSelectorList, argumentOf(pseudo));
+            return !insideHas(m) && cssMatchArgument(m, span, CssGrammarRoot_None,
+                CssValueDef_RelativeRealSelectorList, argumentOf(pseudo));
         case CssPseudoClass_NthChildFn:
         case CssPseudoClass_NthLastChildFn:
             return parseNth(m, pseudo, span, true);
@@ -1594,13 +1567,13 @@ bool parseClassArgument(const CssMatcher* m, CssPseudoClass pseudo, CssTokenSpan
         case CssPseudoClass_DirFn:
             // selectors-4/#the-dir-pseudo: any identifier, of which only ltr and rtl match.
             return cssMatchArgument(m, span, kCssValueDefGrammarRoot[CssValueDef_Ident],
-                                    CssValueDef_Count, argumentOf(pseudo));
+                CssValueDef_Count, argumentOf(pseudo));
         case CssPseudoClass_LangFn:
             return parseLang(m, span);
         case CssPseudoClass_HostFn:
         case CssPseudoClass_HostContextFn:
             return cssMatchArgument(m, span, CssGrammarRoot_None, CssValueDef_CompoundSelector,
-                                    {pseudo, CssPseudoElement_None, true});
+                {pseudo, CssPseudoElement_None, true});
         case CssPseudoClass_ActiveViewTransitionTypeFn:
             return parseActiveViewTransitionTypeArgument(m, span);
         default:
@@ -1616,7 +1589,7 @@ bool parseClassArgument(const CssMatcher* m, CssPseudoClass pseudo, CssTokenSpan
 // (css-view-transitions-2/#pseudo-element-class-additions).
 bool parseViewTransitionArgument(const CssMatcher* m, CssTokenSpan span) {
     return cssMatchArgument(m, span, CssGrammarRoot_None, CssValueDef_PtNameAndClassSelector,
-                            argumentOf(CssPseudoClass_None));
+        argumentOf(CssPseudoClass_None));
 }
 
 // Parses the argument of a functional pseudo-element: by its grammar if the spec writes one, and by its prose
@@ -1629,7 +1602,7 @@ bool parseElementArgument(const CssMatcher* m, CssPseudoElement pseudo, CssToken
     switch (pseudo) {
         case CssPseudoElement_SlottedFn:
             return cssMatchArgument(m, span, CssGrammarRoot_None, CssValueDef_CompoundSelector,
-                                    {CssPseudoClass_None, CssPseudoElement_None, true});
+                {CssPseudoClass_None, CssPseudoElement_None, true});
         case CssPseudoElement_ViewTransitionGroupFn:
         case CssPseudoElement_ViewTransitionGroupChildrenFn:
         case CssPseudoElement_ViewTransitionImagePairFn:
@@ -1682,8 +1655,7 @@ bool checkPseudo(CssMatcher* m, uint32_t index) {
     CssPseudoElement after;
     if (element) {
         CssPseudoElement found = cssPseudoElement(name, function);
-        if (found == CssPseudoElement_None && isUnknownWebkit(name, function)
-            && !insideSupportsSelector(m))
+        if (found == CssPseudoElement_None && isUnknownWebkit(name, function) && !insideSupportsSelector(m))
             found = CssPseudoElement_UnknownWebkit;
         after = pseudoElementBefore(m, enclosing(m, outer.outer));
         if (found == CssPseudoElement_None || !cssPseudoElementFollows(after, found))
@@ -1693,9 +1665,10 @@ bool checkPseudo(CssMatcher* m, uint32_t index) {
         CssPseudoClass found = cssPseudoClass(name, function);
         if (found >= CssPseudoClass_FirstPrivate && !m->match->userAgent)
             found = CssPseudoClass_None;
-        after = isProduction(outer, CssValueDef_PseudoCompoundSelector)
-                    ? cssMatchedPseudoElement(m->pool, outer.anchor + 1)
-                    : m->argument.after;
+        if (isProduction(outer, CssValueDef_PseudoCompoundSelector))
+            after = cssMatchedPseudoElement(m->pool, outer.anchor + 1);
+        else
+            after = m->argument.after;
         if (found == CssPseudoClass_None || !cssPseudoClassFollows(after, found))
             return false;
         pseudo = found;
@@ -1706,8 +1679,7 @@ bool checkPseudo(CssMatcher* m, uint32_t index) {
 
     // The argument replaces what <any-value> took after the name and its '(', and the ')' after it.
     uint32_t argumentAt = nameAt + 2;
-    if (m->pool->values.count > argumentAt
-        && m->pool->values.data[argumentAt].kind == PrCssValueKind_Tokens)
+    if (m->pool->values.count > argumentAt && m->pool->values.data[argumentAt].kind == PrCssValueKind_Tokens)
         m->pool->text.count = m->pool->values.data[argumentAt].text.start;
     m->pool->values.count = argumentAt;
 
@@ -1715,8 +1687,11 @@ bool checkPseudo(CssMatcher* m, uint32_t index) {
     CssTokenStream argument = {m->ts->tokens, nameToken + 1, m->ts->pos};
     uint32_t close = cssBlockEnd(&argument);
     CssTokenSpan span = {nameToken + 1, close - nameToken - 1};
-    bool parsed = element ? parseElementArgument(m, CssPseudoElement(pseudo), span)
-                          : parseClassArgument(m, CssPseudoClass(pseudo), span, after);
+    bool parsed;
+    if (element)
+        parsed = parseElementArgument(m, CssPseudoElement(pseudo), span);
+    else
+        parsed = parseClassArgument(m, CssPseudoClass(pseudo), span, after);
     if (parsed)
         cssValuePoolAdd(m->pool, cssLiteralValue(')'));
     return parsed;
@@ -1768,8 +1743,8 @@ bool checkFunction(const CssMatcher* m, uint32_t at) {
     for (uint32_t i = at + 1; i < at + function->next; i += m->pool->values.data[i].next) {
         const CssValueNode* argument = &m->pool->values.data[i];
         if (argument->kind == PrCssValueKind_Keyword)
-            twoNeeded = twoNeeded || cssValueKeyword(argument) == PrCssKeyword_Alphabetic
-                        || cssValueKeyword(argument) == PrCssKeyword_Numeric;
+            twoNeeded = twoNeeded || cssValueKeyword(argument) == PrCssKeyword_Alphabetic ||
+                cssValueKeyword(argument) == PrCssKeyword_Numeric;
         else if (argument->kind != PrCssValueKind_Literal)
             ++symbols;
     }
@@ -1785,8 +1760,7 @@ bool checkFunction(const CssMatcher* m, uint32_t at) {
 
 // Folds the arguments of the color function at `at`, from `first` on, into a color in `space`: its channels as written,
 // and an alpha of 1 if none is written.
-void foldColor(CssValuePool* pool, uint32_t at, uint32_t first, PrColorSpace space,
-               CssValueAuxFlags form) {
+void foldColor(CssValuePool* pool, uint32_t at, uint32_t first, PrColorSpace space, CssValueAuxFlags form) {
     uint32_t end = pool->values.count;
     uint32_t write = at + 1;
     uint32_t channels = 0;
@@ -1817,9 +1791,8 @@ void foldColor(CssValuePool* pool, uint32_t at, uint32_t first, PrColorSpace spa
 void foldRelativeColor(CssValuePool* pool, uint32_t at) {
     CssValueNode* origin = &pool->values.data[at + 2];
     PrColorSpace originSpace = cssValueColorSpace(origin);
-    bool written =
-        (originSpace == PrColorSpace_Srgb && cssValueColorLegacy(origin))
-        || originSpace == PrColorSpace_Hsl || originSpace == PrColorSpace_Hwb;
+    bool written = (originSpace == PrColorSpace_Srgb && cssValueColorLegacy(origin)) ||
+        originSpace == PrColorSpace_Hsl || originSpace == PrColorSpace_Hwb;
     if (origin->kind == PrCssValueKind_Color && written) {
         for (uint32_t i = at + 3; i < at + 2 + origin->next; i += pool->values.data[i].next) {
             if (cssValueIsKeyword(&pool->values.data[i], PrCssKeyword_None))
@@ -1924,9 +1897,8 @@ void foldMix(CssValuePool* pool, uint32_t at) {
 void omitImpliedShape(Array<CssValueNode>* values, uint32_t at) {
     const CssValueNode* shape = &values->data[at + 1];
     PrCssValueKind size = shape[1].kind;
-    bool implied = cssValueIsKeyword(shape, PrCssKeyword_Ellipse)
-                   || (cssValueIsKeyword(shape, PrCssKeyword_Circle)
-                       && (size == PrCssValueKind_Dimension || size == PrCssValueKind_Math));
+    bool implied = cssValueIsKeyword(shape, PrCssKeyword_Ellipse) || (cssValueIsKeyword(shape, PrCssKeyword_Circle) &&
+        (size == PrCssValueKind_Dimension || size == PrCssValueKind_Math));
     if (!implied)
         return;
     values->erase(at + 1);
@@ -1944,8 +1916,7 @@ void foldGradient(CssValuePool* pool, uint32_t at) {
         omitImpliedShape(values, at);
 
     uint32_t method = values->count;
-    for (uint32_t i = at + 1; i < values->count && !cssValueIsLiteral(&values->data[i], ',');
-         i += values->data[i].next) {
+    for (uint32_t i = at + 1; i < values->count && !cssValueIsLiteral(&values->data[i], ','); i += values->data[i].next) {
         if (cssValueIsKeyword(&values->data[i], PrCssKeyword_In))
             method = i;
     }
@@ -1980,9 +1951,8 @@ bool folds(const CssValueNode* values, uint32_t at) {
         case PrCssKeyword_Alpha:
             return true;
         case PrCssKeyword_Color:
-            return cssValueIsKeyword(argument, PrCssKeyword_From)
-                   || (argument->kind == PrCssValueKind_Keyword
-                       && cssColorSpaceFromKeyword(cssValueKeyword(argument)) != PrColorSpace_Count);
+            return cssValueIsKeyword(argument, PrCssKeyword_From) || (argument->kind == PrCssValueKind_Keyword &&
+                cssColorSpaceFromKeyword(cssValueKeyword(argument)) != PrColorSpace_Count);
         default:
             return cssColorSpaceFromKeyword(keyword) != PrColorSpace_Count;
     }
@@ -2023,8 +1993,7 @@ void foldFunction(CssValuePool* pool, uint32_t at) {
         space = cssColorSpaceFromKeyword(cssValueKeyword(argument));
         foldColor(pool, at, at + 2, space, 0);
     } else {
-        foldColor(pool, at, at + 1, space,
-                  space == PrColorSpace_Srgb ? CssValueAuxFlag_ColorLegacy : 0);
+        foldColor(pool, at, at + 1, space, space == PrColorSpace_Srgb ? CssValueAuxFlag_ColorLegacy : 0);
     }
 }
 
@@ -2050,8 +2019,7 @@ bool cssMatchWhole(CssMatcher* m, CssGrammarIndex root, CssValueDef production, 
     last.production = frames;
     bool matched = enterFrame(m, last);
     if (matched) {
-        matched = production != CssValueDef_Count ? enterType(m, production, m->frame)
-                                                  : enterNode(m, root, m->frame);
+        matched = production != CssValueDef_Count ? enterType(m, production, m->frame) : enterNode(m, root, m->frame);
     }
     matched = matched && run(m);
 
@@ -2090,7 +2058,7 @@ CssMatcher cssMatchNested(const CssMatcher* m, CssTokenStream* ts) {
 // Matches the whole of `span`, from `production` or `root` as in cssMatchWhole, for the argument of a pseudo-class or
 // pseudo-element whose check `m` is running.
 bool cssMatchArgument(const CssMatcher* m, CssTokenSpan span, CssGrammarIndex root,
-                      CssValueDef production, CssMatchArgument argument) {
+        CssValueDef production, CssMatchArgument argument) {
     CssTokenStream ts = cssSubStream(m->ts, span);
     CssMatcher nested = cssMatchNested(m, &ts);
     nested.argument = argument;
@@ -2098,8 +2066,7 @@ bool cssMatchArgument(const CssMatcher* m, CssTokenSpan span, CssGrammarIndex ro
 }
 
 // Matches the whole of `span` as `production`, a query whose features are descriptors of `features`.
-bool cssMatchQuery(const CssMatcher* m, CssTokenSpan span, CssValueDef production,
-                   CssAtRule features) {
+bool cssMatchQuery(const CssMatcher* m, CssTokenSpan span, CssValueDef production, CssAtRule features) {
     CssTokenStream ts = cssSubStream(m->ts, span);
     CssMatcher nested = cssMatchNested(m, &ts);
     nested.features = features;
@@ -2110,8 +2077,7 @@ bool cssMatchQuery(const CssMatcher* m, CssTokenSpan span, CssValueDef productio
 // them. For alpha(), which accepts only `alpha`, each keyword is PrCssKeyword_Unknown. Returns null outside a relative
 // color.
 const PrCssKeyword* PR_NULLABLE cssMatchRelativeComponents(const CssMatcher* m) {
-    static constexpr PrCssKeyword kAlphaAlone[3] = {PrCssKeyword_Unknown, PrCssKeyword_Unknown,
-                                                  PrCssKeyword_Unknown};
+    static constexpr PrCssKeyword kAlphaAlone[3] = {PrCssKeyword_Unknown, PrCssKeyword_Unknown, PrCssKeyword_Unknown};
     const CssValueNode* values = m->pool->values.data;
     uint32_t count = m->pool->values.count;
     for (uint32_t index = m->frame;; index = frameAt(m, index).outer) {
@@ -2125,8 +2091,8 @@ const PrCssKeyword* PR_NULLABLE cssMatchRelativeComponents(const CssMatcher* m) 
 
         const CssValueNode* function = &values[f.anchor];
         PrColorSpace space = cssColorSpaceFromKeyword(cssValueKeyword(function));
-        if (space == PrColorSpace_Count && cssValueKeyword(function) != PrCssKeyword_Color
-            && cssValueKeyword(function) != PrCssKeyword_Alpha) {
+        if (space == PrColorSpace_Count && cssValueKeyword(function) != PrCssKeyword_Color &&
+                cssValueKeyword(function) != PrCssKeyword_Alpha) {
             continue;
         }
         if (f.anchor + 2 >= count || !cssValueIsKeyword(&function[1], PrCssKeyword_From))

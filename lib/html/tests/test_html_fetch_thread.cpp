@@ -38,8 +38,10 @@ void answer(void* PR_NULLABLE context, PrFetchInterceptRequest* request) {
         t->held.push_back(request);
         return;
     }
-    PrFetchInterceptResponse response{.status = 200,
-                                      .body = PrByteView{reinterpret_cast<const uint8_t*>("external"), 8}};
+    PrFetchInterceptResponse response{
+        .status = 200,
+        .body = PrByteView{reinterpret_cast<const uint8_t*>("external"), 8},
+    };
     prFetchInterceptRequestRespond(request, &response);
 }
 
@@ -114,9 +116,8 @@ TEST_CASE("fetches run on the network's thread and arrive in the agent's tasks, 
     PrHtmlHost host = hostOf(&t);
 
     PrHtmlPage* page = prHtmlPageCreate(&host);
-    REQUIRE(prHtmlPageLoad(page, "<script src=a.js></script><p id=after>", "https://example.test/",
-                           nullptr)
-            == PrStatus_Ok);
+    REQUIRE(prHtmlPageLoad(page, "<script src=a.js></script><p id=after>", "https://example.test/", nullptr) ==
+        PrStatus_Ok);
     PrDomDocument* document = prHtmlWindowDocument(prHtmlPageWindow(page));
     CHECK(runUntil(&t, [&] {
         return prHtmlDocumentReadyState(document) == PrHtmlDocumentReadyState_Complete;
@@ -129,8 +130,7 @@ TEST_CASE("fetches run on the network's thread and arrive in the agent's tasks, 
 
     // A context destroyed while its fetch waits drops the fetch, whose answer then posts nothing to the agent.
     page = prHtmlPageCreate(&host);
-    REQUIRE(prHtmlPageLoad(page, "<script src=b.js></script>", "https://example.test/", nullptr)
-            == PrStatus_Ok);
+    REQUIRE(prHtmlPageLoad(page, "<script src=b.js></script>", "https://example.test/", nullptr) == PrStatus_Ok);
     prHtmlPageDestroy(page);
     prNetPost(t.net, failHeld, &t);
 

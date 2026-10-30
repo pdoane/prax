@@ -49,8 +49,7 @@ PrGpuPipeline pipelineFor(Pipelines* p, const char* fragment, PrGpuPass* pass) {
 Pipelines* PR_NULLABLE pipelinesCreate(PrGpuDevice* device) {
     Pipelines* p = new Pipelines{};
     p->device = device;
-    if (prGpuShaderLibraryCreate(device, kPerspectiveShaders, sizeof(kPerspectiveShaders), &p->library)
-        != PrStatus_Ok) {
+    if (prGpuShaderLibraryCreate(device, kPerspectiveShaders, sizeof(kPerspectiveShaders), &p->library) != PrStatus_Ok) {
         fprintf(stderr, "perspective: the device takes no shaders of the example's\n");
         delete p;
         return nullptr;

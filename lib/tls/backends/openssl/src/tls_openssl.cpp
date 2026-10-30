@@ -181,9 +181,10 @@ void drainTransport(Session* session) {
         if (session->dead || session->state == TlsSharedState_Failed)
             return;
     }
-    if (session->transportEnded && !session->stalled && !session->ended)
-        tlsSharedFail(session, PrNetError_Protocol, session->state == TlsSharedState_Handshaking
-                                               ? PrTlsFailure_Handshake : PrTlsFailure_Truncated);
+    if (session->transportEnded && !session->stalled && !session->ended) {
+        bool handshaking = session->state == TlsSharedState_Handshaking;
+        tlsSharedFail(session, PrNetError_Protocol, handshaking ? PrTlsFailure_Handshake : PrTlsFailure_Truncated);
+    }
 }
 
 // Session functions

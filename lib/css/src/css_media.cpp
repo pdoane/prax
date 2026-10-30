@@ -29,11 +29,10 @@ CssMediaValue* valueOf(CssMediaEnvironment* environment, PrCssDescriptor descrip
 
 // Returns the value that a query sees: the override of a preference if it has one, and otherwise the stored value.
 const CssMediaValue* valueOf(const CssMediaEnvironment* environment, PrCssDescriptor descriptor) {
-    const CssMediaValue* overridden =
-        &environment->overrides[descriptor - kCssDescriptorMediaFirst];
-    return overridden->keyword != PrCssKeyword_Unknown
-               ? overridden
-               : &environment->features[descriptor - kCssDescriptorMediaFirst];
+    const CssMediaValue* overridden = &environment->overrides[descriptor - kCssDescriptorMediaFirst];
+    if (overridden->keyword != PrCssKeyword_Unknown)
+        return overridden;
+    return &environment->features[descriptor - kCssDescriptorMediaFirst];
 }
 
 // Returns true if the feature's value is computed from other features rather than stored.
@@ -57,8 +56,8 @@ CssMediaValue featureValue(const CssMediaEnvironment* environment, PrCssDescript
         case PrCssDescriptor_MediaAspectRatio:
             return mediaNumber(width / height);
         case PrCssDescriptor_MediaDeviceAspectRatio:
-            return mediaNumber(valueOf(environment, PrCssDescriptor_MediaDeviceWidth)->number
-                               / valueOf(environment, PrCssDescriptor_MediaDeviceHeight)->number);
+            return mediaNumber(valueOf(environment, PrCssDescriptor_MediaDeviceWidth)->number /
+                valueOf(environment, PrCssDescriptor_MediaDeviceHeight)->number);
         case PrCssDescriptor_MediaOrientation:
             // mediaqueries-5/#valdef-media-orientation-portrait
             return mediaKeyword(height >= width ? PrCssKeyword_Portrait : PrCssKeyword_Landscape);
@@ -119,8 +118,7 @@ bool relativeLength(const CssMediaEnvironment* environment, PrCssUnit unit, doub
 // Computes the number that the value at `index` represents, in the canonical unit of its type. The value is a number, a
 // dimension, or a node of a calculation tree. Returns false for a percentage, for a function left in a tree, and for a
 // length that the environment gives no px value for.
-bool calculate(CssValueRun run, uint32_t index, const CssMediaEnvironment* environment,
-               double* out) {
+bool calculate(CssValueRun run, uint32_t index, const CssMediaEnvironment* environment, double* out) {
     const CssValueNode* value = &run.values[index];
     switch (value->kind) {
         case PrCssValueKind_Integer:
@@ -160,13 +158,14 @@ bool calculate(CssValueRun run, uint32_t index, const CssMediaEnvironment* envir
 
 // Computes the value that a match of a feature's grammar represents, from the values in [first, end): a keyword, or a
 // number, a dimension or a ratio (css-values-4/#ratio). Returns false if one of its numbers is unknown.
-bool mediaValue(CssValueRun run, uint32_t first, uint32_t end,
-                const CssMediaEnvironment* environment, CssMediaValue* out) {
+bool mediaValue(CssValueRun run, uint32_t first, uint32_t end, const CssMediaEnvironment* environment, CssMediaValue* out) {
     const CssValueNode* value = &run.values[first];
     if (value->kind == PrCssValueKind_Keyword) {
         // mediaqueries-5/#valdef-media-resolution-infinite
-        *out = cssValueKeyword(value) == PrCssKeyword_Infinite ? mediaNumber(kInfinityF64)
-                                                   : mediaKeyword(cssValueKeyword(value));
+        if (cssValueKeyword(value) == PrCssKeyword_Infinite)
+            *out = mediaNumber(kInfinityF64);
+        else
+            *out = mediaKeyword(cssValueKeyword(value));
         return true;
     }
     double number;
@@ -339,8 +338,8 @@ Truth featureComparison(CssValueRun run, uint32_t index, const CssMediaEnvironme
                 if (!mediaValue(run, at + 1, at + value->next, environment, &given))
                     return Truth_Unknown;
                 // A nested value that the device's value includes matches as the device's value.
-                if (nestedRank(descriptor, given.keyword) >= 0
-                    && nestedRank(descriptor, given.keyword) <= nestedRank(descriptor, held.keyword))
+                if (nestedRank(descriptor, given.keyword) >= 0 &&
+                        nestedRank(descriptor, given.keyword) <= nestedRank(descriptor, held.keyword))
                     given = held;
                 if (at < name)
                     before = given;
@@ -386,8 +385,7 @@ Truth typeMatches(CssValueRun run, uint32_t index, const CssMediaEnvironment* en
 
 // Returns the truth of a <media-query>, whose node is the first node of `query`. The query is read from its end, so
 // every <media-in-parens> is evaluated before the condition that contains it, and leaves its truth on `stack`.
-Truth evaluateQuery(CssValueRun query, const CssMediaEnvironment* environment,
-                    Array<Truth>* stack) {
+Truth evaluateQuery(CssValueRun query, const CssMediaEnvironment* environment, Array<Truth>* stack) {
     const CssValueNode* values = query.values;
     if (query.count == 1)
         return Truth_False;
@@ -402,8 +400,7 @@ Truth evaluateQuery(CssValueRun query, const CssMediaEnvironment* environment,
                 stack->push(featureComparison(query, i, environment));
                 break;
             case CssValueDef_MediaInParens:
-                if (cssValueIsLiteral(&values[i + 1], '(')
-                    && cssValueIsProduction(&values[i + 2], CssValueDef_MfName))
+                if (cssValueIsLiteral(&values[i + 1], '(') && cssValueIsProduction(&values[i + 2], CssValueDef_MfName))
                     stack->push(booleanFeature(query, i + 3, environment));
                 break;
             case CssValueDef_GeneralEnclosed:
@@ -492,8 +489,7 @@ void cssMediaEnvironmentInit(CssMediaEnvironment* environment, bool scripting) {
         {PrCssDescriptor_MediaPrefersReducedMotion, PrCssKeyword_NoPreference},
         {PrCssDescriptor_MediaPrefersReducedTransparency, PrCssKeyword_NoPreference},
         {PrCssDescriptor_MediaPrefersReducedData, PrCssKeyword_NoPreference},
-        {PrCssDescriptor_MediaScripting,
-         PrCssKeyword(scripting ? PrCssKeyword_Enabled : PrCssKeyword_None)},
+        {PrCssDescriptor_MediaScripting, PrCssKeyword(scripting ? PrCssKeyword_Enabled : PrCssKeyword_None)},
         {PrCssDescriptor_MediaDisplayMode, PrCssKeyword_Browser},
         {PrCssDescriptor_MediaDisplayState, PrCssKeyword_Normal},
         {PrCssDescriptor_MediaResizable, PrCssKeyword_True},
@@ -506,8 +502,7 @@ void cssMediaEnvironmentInit(CssMediaEnvironment* environment, bool scripting) {
 }
 
 bool cssMediaEnvironmentSet(CssMediaEnvironment* environment, PrCssDescriptor feature, PrStringView value) {
-    PR_ASSERT(feature >= kCssDescriptorMediaFirst && feature < kCssDescriptorMediaEnd
-              && !isComputed(feature));
+    PR_ASSERT(feature >= kCssDescriptorMediaFirst && feature < kCssDescriptorMediaEnd && !isComputed(feature));
 
     CssParser parser;
     cssParserInit(&parser);
@@ -515,23 +510,19 @@ bool cssMediaEnvironmentSet(CssMediaEnvironment* environment, PrCssDescriptor fe
     CssTokenStream ts = cssSubStream(&all, cssStreamTrimmed(&all));
     CssValueSpan matched;
     CssMediaValue held;
-    bool set =
-        cssParseValue(kCssDescriptorGrammarRoot[feature], &ts, &parser.pool, &parser.match,
-                      &matched)
-        && mediaValue(cssValuePoolRun(&parser.pool, matched), 0, matched.count, environment, &held);
+    bool set = cssParseValue(kCssDescriptorGrammarRoot[feature], &ts, &parser.pool, &parser.match, &matched) &&
+        mediaValue(cssValuePoolRun(&parser.pool, matched), 0, matched.count, environment, &held);
     if (set)
         *valueOf(environment, feature) = held;
     cssParserReset(&parser);
     return set;
 }
 
-void cssMediaEnvironmentOverride(CssMediaEnvironment* environment, PrCssDescriptor feature,
-                                 PrCssKeyword keyword) {
+void cssMediaEnvironmentOverride(CssMediaEnvironment* environment, PrCssDescriptor feature, PrCssKeyword keyword) {
     environment->overrides[feature - kCssDescriptorMediaFirst] = mediaKeyword(keyword);
 }
 
-PrCssKeyword cssMediaEnvironmentKeyword(const CssMediaEnvironment* environment,
-                                        PrCssDescriptor feature) {
+PrCssKeyword cssMediaEnvironmentKeyword(const CssMediaEnvironment* environment, PrCssDescriptor feature) {
     return valueOf(environment, feature)->keyword;
 }
 
@@ -559,13 +550,13 @@ bool cssMediaEnvironmentSetDisplay(CssMediaEnvironment* environment, const PrApp
     PrCssKeyword colors = PrCssKeyword_Srgb;
     if (display.gamut == PrColorSpace_DisplayP3 || display.gamut == PrColorSpace_DisplayP3Linear)
         colors = PrCssKeyword_P3;
-    else if (display.gamut == PrColorSpace_Rec2020 || display.gamut == PrColorSpace_Rec2100Linear
-             || display.gamut == PrColorSpace_Rec2100Pq || display.gamut == PrColorSpace_Rec2100Hlg)
+    else if (display.gamut == PrColorSpace_Rec2020 || display.gamut == PrColorSpace_Rec2100Linear ||
+            display.gamut == PrColorSpace_Rec2100Pq || display.gamut == PrColorSpace_Rec2100Hlg)
         colors = PrCssKeyword_Rec2020;
     float ratio = display.pixelRatio > 0 ? display.pixelRatio : 1;
     CssMediaValue* resolution = valueOf(environment, PrCssDescriptor_MediaResolution);
-    if (environment->headroom == stops && environment->pixelRatio == ratio && resolution->number == double(ratio)
-        && valueOf(environment, PrCssDescriptor_MediaColorGamut)->keyword == colors)
+    if (environment->headroom == stops && environment->pixelRatio == ratio && resolution->number == double(ratio) &&
+            valueOf(environment, PrCssDescriptor_MediaColorGamut)->keyword == colors)
         return false;
     environment->headroom = stops;
     environment->pixelRatio = ratio;
@@ -590,13 +581,19 @@ bool cssMediaEnvironmentSetUserPreferences(CssMediaEnvironment* environment, con
         PrCssKeyword keyword;
     };
     const Preference set[] = {
-        {PrCssDescriptor_MediaPrefersColorScheme,
-         PrCssKeyword(preferences.colorScheme == PrAppColorScheme_Dark ? PrCssKeyword_Dark : PrCssKeyword_Light)},
+        {
+            PrCssDescriptor_MediaPrefersColorScheme,
+            PrCssKeyword(preferences.colorScheme == PrAppColorScheme_Dark ? PrCssKeyword_Dark : PrCssKeyword_Light),
+        },
         {PrCssDescriptor_MediaPrefersContrast, contrast},
-        {PrCssDescriptor_MediaPrefersReducedMotion,
-         PrCssKeyword(preferences.reducedMotion ? PrCssKeyword_Reduce : PrCssKeyword_NoPreference)},
-        {PrCssDescriptor_MediaPrefersReducedTransparency,
-         PrCssKeyword(preferences.reducedTransparency ? PrCssKeyword_Reduce : PrCssKeyword_NoPreference)},
+        {
+            PrCssDescriptor_MediaPrefersReducedMotion,
+            PrCssKeyword(preferences.reducedMotion ? PrCssKeyword_Reduce : PrCssKeyword_NoPreference),
+        },
+        {
+            PrCssDescriptor_MediaPrefersReducedTransparency,
+            PrCssKeyword(preferences.reducedTransparency ? PrCssKeyword_Reduce : PrCssKeyword_NoPreference),
+        },
     };
     bool changed = false;
     for (const Preference& preference : set) {
@@ -622,8 +619,7 @@ bool cssMediaListMatches(const CssMediaQueries* list, const CssMediaEnvironment*
     Array<Truth> stack = {};
     for (uint32_t i = 0; i < run.count; i += run.values[i].next) {
         if (cssValueIsProduction(&run.values[i], CssValueDef_MediaQuery))
-            matches = matches
-                      || evaluateQuery(cssValueSubtree(run, i), environment, &stack) == Truth_True;
+            matches = matches || evaluateQuery(cssValueSubtree(run, i), environment, &stack) == Truth_True;
     }
     stack.reset();
     return matches;
@@ -638,8 +634,7 @@ const CssMediaEnvironment* PR_NULLABLE cssStyleSheetMedia(const PrCssStyleSheet*
 // ---------------------------------------------------------------------------------------------------------------------
 // Media query lists
 
-PrCssMediaQueryList* cssMediaQueryListCreate(const CssMediaEnvironment* environment,
-                                             PrStringView query) {
+PrCssMediaQueryList* cssMediaQueryListCreate(const CssMediaEnvironment* environment, PrStringView query) {
     PrCssMediaQueryList* list = allocZeroed<PrCssMediaQueryList>();
     list->type = DomTargetType_MediaQueryList;
     list->destroy = [](DomCountedTarget* target) {

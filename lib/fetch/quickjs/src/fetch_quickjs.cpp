@@ -182,8 +182,8 @@ bool validate(JSContext* ctx, const JsHeaders* headers, PrStringView name, PrStr
         JS_ThrowTypeError(ctx, "Headers are immutable");
         return false;
     }
-    *ignored = (headers->guard == Guard_Request && prFetchIsForbiddenRequestHeader(name, value))
-               || (headers->guard == Guard_Response && prFetchIsForbiddenResponseHeaderName(name));
+    *ignored = (headers->guard == Guard_Request && prFetchIsForbiddenRequestHeader(name, value)) ||
+        (headers->guard == Guard_Response && prFetchIsForbiddenResponseHeaderName(name));
     return true;
 }
 
@@ -319,8 +319,8 @@ JSValue nameMethod(JSContext* ctx, JSValueConst self, int argc, JSValueConst* ar
                 return JS_EXCEPTION;
             if (ignored)
                 return JS_UNDEFINED;
-            if (headers->guard == Guard_RequestNoCors && !prFetchIsNoCorsSafelistedRequestHeaderName(name)
-                && !isPrivilegedNoCors(name))
+            if (headers->guard == Guard_RequestNoCors && !prFetchIsNoCorsSafelistedRequestHeaderName(name) &&
+                    !isPrivilegedNoCors(name))
                 return JS_UNDEFINED;
             eraseHeaders(headers, name);
             if (headers->guard == Guard_RequestNoCors)
@@ -334,8 +334,7 @@ JSValue nameMethod(JSContext* ctx, JSValueConst self, int argc, JSValueConst* ar
             if (magic == Method_Has)
                 return JS_NewBool(ctx, findHeader(headers, name) != kArrayMissing);
             TextBuffer combined;
-            JSValue result = combinedValue(headers, name, &combined) ? newByteString(ctx, textView(&combined))
-                                                                      : JS_NULL;
+            JSValue result = combinedValue(headers, name, &combined) ? newByteString(ctx, textView(&combined)) : JS_NULL;
             textReset(&combined);
             return result;
         }
@@ -345,8 +344,7 @@ JSValue nameMethod(JSContext* ctx, JSValueConst self, int argc, JSValueConst* ar
             bool ignored = false;
             if (!validate(ctx, headers, name, value, &ignored))
                 return JS_EXCEPTION;
-            if (ignored || (headers->guard == Guard_RequestNoCors
-                            && !prFetchIsNoCorsSafelistedRequestHeader(name, value)))
+            if (ignored || (headers->guard == Guard_RequestNoCors && !prFetchIsNoCorsSafelistedRequestHeader(name, value)))
                 return JS_UNDEFINED;
             uint32_t first = findHeader(headers, name);
             if (first == kArrayMissing) {
@@ -370,8 +368,7 @@ JSValue getSetCookie(JSContext* ctx, JSValueConst self, int, JSValueConst*) {
         return JS_EXCEPTION;
     JSValue all = JS_NewArray(ctx);
     uint32_t count = 0;
-    for (uint32_t i = findHeader(headers, "set-cookie"); i != kArrayMissing;
-         i = findHeader(headers, "set-cookie", i + 1))
+    for (uint32_t i = findHeader(headers, "set-cookie"); i != kArrayMissing; i = findHeader(headers, "set-cookie", i + 1))
         JS_SetPropertyUint32(ctx, all, count++, newByteString(ctx, prStringView(&headers->values.data[i])));
     return all;
 }
@@ -507,9 +504,8 @@ JSValue consume(JSContext* ctx, Body* body, Read read) {
     }
     if (body->present)
         body->used = true;
-    PrStringView bytes{reinterpret_cast<const char*>(body->bytes.data != nullptr ? body->bytes.data
-                                                                                  : reinterpret_cast<const uint8_t*>("")),
-                       body->bytes.count};
+    const uint8_t* data = body->bytes.data != nullptr ? body->bytes.data : reinterpret_cast<const uint8_t*>("");
+    PrStringView bytes{reinterpret_cast<const char*>(data), body->bytes.count};
     JSValue result = JS_UNDEFINED;
     switch (read) {
         case Read_ArrayBuffer:
@@ -623,7 +619,7 @@ bool readMember(JSContext* ctx, JSValueConst dictionary, const char* name, JSVal
 
 // fetch/#initialize-a-response, with `body` extracted from the constructor's body, or null for the null body.
 bool initializeResponse(JSContext* ctx, JsResponse* response, JsHeaders* headers, JSValueConst init,
-                        const ExtractedBody* PR_NULLABLE body) {
+        const ExtractedBody* PR_NULLABLE body) {
     bool present = false;
     if (!jsDictionary(ctx, init, &present))
         return false;
@@ -807,12 +803,14 @@ JSValue cloneMethod(JSContext* ctx, JSValueConst self, int, JSValueConst*) {
         headers->values.push(prStringCopy(prStringView(&original->values.data[i])));
     }
     JsResponse* clone = allocZeroed<JsResponse>();
-    *clone = JsResponse{.type = response->type,
-                        .error = response->error,
-                        .constructed = response->constructed,
-                        .status = response->status,
-                        .statusText = prStringCopy(prStringView(&response->statusText)),
-                        .url = prStringCopy(prStringView(&response->url))};
+    *clone = JsResponse{
+        .type = response->type,
+        .error = response->error,
+        .constructed = response->constructed,
+        .status = response->status,
+        .statusText = prStringCopy(prStringView(&response->statusText)),
+        .url = prStringCopy(prStringView(&response->url)),
+    };
     clone->body.present = response->body.present;
     if (response->body.bytes.count != 0)
         clone->body.bytes.append(response->body.bytes.data, response->body.bytes.count);
@@ -904,40 +902,46 @@ constexpr JSCFunctionListEntry kResponseStatic[] = {
 using namespace pr_impl;
 
 void prJsFetchBind(JSContext* ctx) {
-    JSValue headers = jsDefineClass(ctx, {.name = "Headers",
-                                          .id = &headersClass,
-                                          .finalizer = headersFinalizer,
-                                          .mark = headersMark,
-                                          .proto = kHeadersProto,
-                                          .protoCount = int(countOf(kHeadersProto)),
-                                          .constructor = constructHeaders,
-                                          .iterator = "entries"});
+    JSValue headers = jsDefineClass(ctx, {
+        .name = "Headers",
+        .id = &headersClass,
+        .finalizer = headersFinalizer,
+        .mark = headersMark,
+        .proto = kHeadersProto,
+        .protoCount = int(countOf(kHeadersProto)),
+        .constructor = constructHeaders,
+        .iterator = "entries",
+    });
     JS_FreeValue(ctx, headers);
     jsPairIteratorBind(ctx, &headersIteratorClass, "Headers Iterator");
-    JSValue response = jsDefineClass(ctx, {.name = "Response",
-                                           .id = &responseClass,
-                                           .finalizer = responseFinalizer,
-                                           .mark = responseMark,
-                                           .proto = kResponseProto,
-                                           .protoCount = int(countOf(kResponseProto)),
-                                           .statics = kResponseStatic,
-                                           .staticCount = int(countOf(kResponseStatic)),
-                                           .constructor = constructResponse});
+    JSValue response = jsDefineClass(ctx, {
+        .name = "Response",
+        .id = &responseClass,
+        .finalizer = responseFinalizer,
+        .mark = responseMark,
+        .proto = kResponseProto,
+        .protoCount = int(countOf(kResponseProto)),
+        .statics = kResponseStatic,
+        .staticCount = int(countOf(kResponseStatic)),
+        .constructor = constructResponse,
+    });
     JS_FreeValue(ctx, response);
 }
 
-bool prJsFetchRequestRead(JSContext* ctx, JSValueConst input, JSValueConst init, PrStringView baseUrl,
-                          PrJsFetchRequest* out) {
+bool prJsFetchRequestRead(JSContext* ctx, JSValueConst input, JSValueConst init, PrStringView baseUrl, PrJsFetchRequest* out) {
     *out = PrJsFetchRequest{
-        .mode = PrFetchMode_Cors, .credentials = PrFetchCredentials_SameOrigin, .signal = JS_UNDEFINED};
+        .mode = PrFetchMode_Cors,
+        .credentials = PrFetchCredentials_SameOrigin,
+        .signal = JS_UNDEFINED,
+    };
     PrStringView given;
     if (!jsReadString(ctx, input, &given))
         return false;
     // The URL parses before init is read, so that its TypeError comes first.
     PrUrl* base = nullptr;
     PrUrl* parsed = nullptr;
-    bool valid = prUrlCreate(baseUrl, nullptr, PrCharset_Utf8, &base) == PrStatus_Ok
-                 && prUrlCreate(given, base, PrCharset_Utf8, &parsed) == PrStatus_Ok;
+    bool valid = prUrlCreate(baseUrl, nullptr, PrCharset_Utf8, &base) == PrStatus_Ok &&
+        prUrlCreate(given, base, PrCharset_Utf8, &parsed) == PrStatus_Ok;
     bool userinfo = valid && (prUrlUsername(parsed).size != 0 || prUrlPassword(parsed).size != 0);
     if (valid && !userinfo)
         out->parsedUrl = prUrlSerialize(parsed, PrUrlSerialization_Whole);
@@ -965,10 +969,10 @@ bool prJsFetchRequestRead(JSContext* ctx, JSValueConst input, JSValueConst init,
         uint32_t credentials = 1;
         ok = ok && readEnum(ctx, init, "credentials", kCredentials, &credentials);
         constexpr PrFetchCredentials kCredentialsOf[] = {
-            PrFetchCredentials_Omit, PrFetchCredentials_SameOrigin, PrFetchCredentials_Include};
+            PrFetchCredentials_Omit, PrFetchCredentials_SameOrigin, PrFetchCredentials_Include,
+        };
         out->credentials = kCredentialsOf[credentials];
-        ok = ok && readMember(ctx, init, "headers", &value)
-             && (JS_IsUndefined(value) || headersFill(ctx, headers, value));
+        ok = ok && readMember(ctx, init, "headers", &value) && (JS_IsUndefined(value) || headersFill(ctx, headers, value));
         ok = ok && readMember(ctx, init, "method", &value);
         if (ok && !JS_IsUndefined(value)) {
             PrStringView method;
@@ -989,13 +993,17 @@ bool prJsFetchRequestRead(JSContext* ctx, JSValueConst input, JSValueConst init,
             JS_ThrowTypeError(ctx, "A request's mode cannot be navigate");
             ok = false;
         }
-        constexpr PrFetchMode kModeOf[] = {PrFetchMode_Navigate, PrFetchMode_SameOrigin, PrFetchMode_NoCors,
-                                           PrFetchMode_Cors};
+        constexpr PrFetchMode kModeOf[] = {
+            PrFetchMode_Navigate, PrFetchMode_SameOrigin, PrFetchMode_NoCors,
+            PrFetchMode_Cors,
+        };
         out->mode = kModeOf[mode];
         uint32_t redirect = 0;
         ok = ok && readEnum(ctx, init, "redirect", kRedirects, &redirect);
-        constexpr PrFetchRedirect kRedirectOf[] = {PrFetchRedirect_Follow, PrFetchRedirect_Error,
-                                                   PrFetchRedirect_Manual};
+        constexpr PrFetchRedirect kRedirectOf[] = {
+            PrFetchRedirect_Follow, PrFetchRedirect_Error,
+            PrFetchRedirect_Manual,
+        };
         out->redirect = kRedirectOf[redirect];
         ok = ok && readMember(ctx, init, "signal", &value);
         if (ok && !JS_IsUndefined(value) && !JS_IsNull(value)) {
@@ -1043,9 +1051,10 @@ bool prJsFetchRequestRead(JSContext* ctx, JSValueConst input, JSValueConst init,
             return PrStringView{reinterpret_cast<const char*>(out->bytes) + at, text.size};
         };
         out->headerCount = headers->names.count;
-        out->headers = out->headerCount != 0
-                           ? static_cast<PrFetchHeader*>(prMemoryAlloc(out->headerCount * sizeof(PrFetchHeader)))
-                           : nullptr;
+        if (out->headerCount != 0)
+            out->headers = static_cast<PrFetchHeader*>(prMemoryAlloc(out->headerCount * sizeof(PrFetchHeader)));
+        else
+            out->headers = nullptr;
         for (uint32_t i = 0; i < headers->names.count; ++i) {
             PrStringView name = copy(prStringView(&headers->names.data[i]));
             out->headers[i] = PrFetchHeader{name, copy(prStringView(&headers->values.data[i]))};
@@ -1074,8 +1083,8 @@ JSValue prJsFetchResponseNew(JSContext* ctx, const PrJsFetchResponseDesc* desc) 
     response->status = desc->status;
     if (desc->url.data != nullptr)
         response->url = prStringCopy(desc->url);
-    response->body.present = desc->type != PrFetchResponseType_Opaque
-                             && desc->type != PrFetchResponseType_OpaqueRedirect && !isNullBodyStatus(desc->status);
+    response->body.present = desc->type != PrFetchResponseType_Opaque &&
+        desc->type != PrFetchResponseType_OpaqueRedirect && !isNullBodyStatus(desc->status);
     if (desc->body.size != 0)
         response->body.bytes.append(desc->body.data, uint32_t(desc->body.size));
     JSValue object = newResponse(ctx, response, headers);

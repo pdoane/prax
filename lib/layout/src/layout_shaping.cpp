@@ -47,8 +47,8 @@ void dropCollapsibleSpace(LayoutInlineShaping& t) {
         item.start = item.start < end ? item.start : end;
         item.end = item.end < end ? item.end : end;
     }
-    while (t.items.count != 0 && t.items.last().kind == LayoutInlineItemKind_Text
-           && t.items.last().start == t.items.last().end)
+    while (t.items.count != 0 && t.items.last().kind == LayoutInlineItemKind_Text &&
+            t.items.last().start == t.items.last().end)
         t.items.pop();
 }
 
@@ -59,19 +59,16 @@ void dropCollapsibleSpace(LayoutInlineShaping& t) {
 void collectText(LayoutInlineShaping& t, PrStringView text, const PrLayoutFontStyle& font, bool& space) {
     PrLayoutWhiteSpaceCollapse collapse = font.whiteSpaceCollapse;
     bool discard = collapse == PrLayoutWhiteSpaceCollapse_Discard;
-    bool keepSpaces = collapse == PrLayoutWhiteSpaceCollapse_Preserve
-                      || collapse == PrLayoutWhiteSpaceCollapse_PreserveSpaces
-                      || collapse == PrLayoutWhiteSpaceCollapse_BreakSpaces;
-    bool keepBreaks = collapse == PrLayoutWhiteSpaceCollapse_Preserve
-                      || collapse == PrLayoutWhiteSpaceCollapse_PreserveBreaks
-                      || collapse == PrLayoutWhiteSpaceCollapse_BreakSpaces;
+    bool keepSpaces = collapse == PrLayoutWhiteSpaceCollapse_Preserve ||
+        collapse == PrLayoutWhiteSpaceCollapse_PreserveSpaces || collapse == PrLayoutWhiteSpaceCollapse_BreakSpaces;
+    bool keepBreaks = collapse == PrLayoutWhiteSpaceCollapse_Preserve ||
+        collapse == PrLayoutWhiteSpaceCollapse_PreserveBreaks || collapse == PrLayoutWhiteSpaceCollapse_BreakSpaces;
     // Preserved spaces at the end of a line hang if the line may wrap, except with break-spaces, which wraps after
     // them.
     bool wraps = font.textWrapMode == PrLayoutTextWrapMode_Wrap;
     LayoutSpaceFlags wrapping = wraps ? LayoutSpaceFlag_Wraps : LayoutSpaceFlags(0);
     LayoutSpaceFlags preserved =
-        LayoutSpaceFlags(wrapping | (wraps && collapse != PrLayoutWhiteSpaceCollapse_BreakSpaces ? LayoutSpaceFlag_Hangs
-                                                                                                   : 0));
+        LayoutSpaceFlags(wrapping | (wraps && collapse != PrLayoutWhiteSpaceCollapse_BreakSpaces ? LayoutSpaceFlag_Hangs : 0));
     for (size_t i = 0; i < text.size; ++i) {
         char c = text.data[i] == '\r' || text.data[i] == '\f' ? ' ' : text.data[i];
         uint32_t source = uint32_t(i);
@@ -123,8 +120,8 @@ constexpr char kAtomicText[] = "\xEF\xBF\xBC";
 // which the anonymous inline table around it lays out.
 bool laidOutApart(const LayoutState& state, LayoutNodeIndex node) {
     LayoutChildKind kind = layoutChildKind(state.tree, node);
-    return kind == LayoutChildKind_Float || layoutChildKindIsBlock(kind) || kind == LayoutChildKind_OutOfFlow
-           || (kind == LayoutChildKind_Inline && layoutIsAtomicInline(state.tree, node));
+    return kind == LayoutChildKind_Float || layoutChildKindIsBlock(kind) || kind == LayoutChildKind_OutOfFlow ||
+        (kind == LayoutChildKind_Inline && layoutIsAtomicInline(state.tree, node));
 }
 
 // Returns the item kind that a node laid out apart is collected as.
@@ -153,13 +150,12 @@ bool breaksShaping(const LayoutStyles* styles, PrLayoutStyleIndex style, LayoutM
     auto nonZero = [](PrLayoutLength length) {
         return length.bits != prLayoutLengthPx(0).bits && length.bits != prLayoutLengthPercent(0).bits;
     };
-    bool aligned = box.alignmentBaseline == PrLayoutAlignmentBaseline_Baseline
-                   && box.baselineShift.bits == prLayoutBaselineShiftPx(0).bits;
-    bool isolates = box.unicodeBidi == PrTextBidi_Isolate
-                    || box.unicodeBidi == PrTextBidi_IsolateOverride
-                    || box.unicodeBidi == PrTextBidi_Plaintext;
-    return nonZero(logical.margin[side]) || logical.border[side] != kLayoutUnitZero || nonZero(logical.padding[side])
-           || !aligned || isolates;
+    bool aligned = box.alignmentBaseline == PrLayoutAlignmentBaseline_Baseline &&
+        box.baselineShift.bits == prLayoutBaselineShiftPx(0).bits;
+    bool isolates = box.unicodeBidi == PrTextBidi_Isolate || box.unicodeBidi == PrTextBidi_IsolateOverride ||
+        box.unicodeBidi == PrTextBidi_Plaintext;
+    return nonZero(logical.margin[side]) || logical.border[side] != kLayoutUnitZero || nonZero(logical.padding[side]) ||
+        !aligned || isolates;
 }
 
 // Appends the items of `node` and its descendants, collapsing white space as each style says (collectText), and leaves
@@ -353,9 +349,8 @@ PrTextTransform transformOf(const LayoutState& state, const LayoutInlineItem& it
 void transformText(const LayoutState& state, LayoutInlineShaping& t) {
     uint32_t firstItem = 0;
     PrLocale locale = 0;
-    while (firstItem < t.items.count
-           && (t.items.data[firstItem].kind != LayoutInlineItemKind_Text
-               || transformOf(state, t.items.data[firstItem], &locale) == PrTextTransform_None))
+    while (firstItem < t.items.count && (t.items.data[firstItem].kind != LayoutInlineItemKind_Text ||
+            transformOf(state, t.items.data[firstItem], &locale) == PrTextTransform_None))
         ++firstItem;
     if (firstItem == t.items.count)
         return;
@@ -513,8 +508,8 @@ void clearChanges(LayoutState& state, const LayoutInlineShaping& t) {
 // a node laid out apart that keeps its kind also leaves the shaping current. A run of table parts must also hold the
 // same nodes, with no change to those between its parts.
 bool isCurrent(const LayoutState& state, const LayoutInlineShaping& shaping, uint32_t first, uint32_t last) {
-    if (shaping.containerFont != containerFontOf(state, first)
-        || shaping.containerLineFont != containerLineFontOf(state, first))
+    if (shaping.containerFont != containerFontOf(state, first) ||
+            shaping.containerLineFont != containerLineFontOf(state, first))
         return false;
     if (shaping.containerBidi != containerBidiOf(state, first))
         return false;
@@ -534,13 +529,12 @@ bool isCurrent(const LayoutState& state, const LayoutInlineShaping& shaping, uin
             // It was also collected as a node laid out apart, of the same kind.
             LayoutInlineItemKind kind = apartKind(state, node);
             auto apart = [&](LayoutInlineItemKind k) {
-                return k == LayoutInlineItemKind_Atomic || k == LayoutInlineItemKind_Float
-                       || k == LayoutInlineItemKind_Block || k == LayoutInlineItemKind_OutOfFlow;
+                return k == LayoutInlineItemKind_Atomic || k == LayoutInlineItemKind_Float ||
+                    k == LayoutInlineItemKind_Block || k == LayoutInlineItemKind_OutOfFlow;
             };
             while (item < shaping.items.count && !apart(shaping.items.data[item].kind))
                 ++item;
-            same = item < shaping.items.count && shaping.items.data[item].node == node
-                   && shaping.items.data[item].kind == kind;
+            same = item < shaping.items.count && shaping.items.data[item].node == node && shaping.items.data[item].kind == kind;
             if (!same || !shaping.items.data[item].wraps) {
                 ++item;
                 return node;
@@ -549,9 +543,9 @@ bool isCurrent(const LayoutState& state, const LayoutInlineShaping& shaping, uin
             same = runLast == layoutTablePartRunLast(state.tree, node, kPrLayoutNodeNone);
             for (LayoutNodeIndex c = node; same && c != runLast;) {
                 c = layoutTreeNode(state.tree, c).next;
-                same = at < shaping.nodes.count && shaping.nodes.data[at] == c
-                       && (layoutChildKind(state.tree, c) == LayoutChildKind_TablePart
-                           || (layoutTreeNode(state.tree, c).dirty & LayoutDirtyFlag_Self) == 0);
+                same = at < shaping.nodes.count && shaping.nodes.data[at] == c &&
+                    (layoutChildKind(state.tree, c) == LayoutChildKind_TablePart ||
+                        (layoutTreeNode(state.tree, c).dirty & LayoutDirtyFlag_Self) == 0);
                 ++at;
             }
             return runLast;
@@ -604,8 +598,8 @@ void wrapBreaks(const LayoutStyles* styles, LayoutInlineShaping& t, LayoutShapin
         if (t.breakAt.data[b] != PrUnicodeLineBreak_Allowed)
             return;
         LayoutSpaceFlags before = t.spaces.data[b - 1];
-        bool space = (before & (LayoutSpaceFlag_Collapsible | LayoutSpaceFlag_Hangs | LayoutSpaceFlag_Tab)) != 0
-                     || t.text.data[b - 1] == ' ';
+        bool space = (before & (LayoutSpaceFlag_Collapsible | LayoutSpaceFlag_Hangs | LayoutSpaceFlag_Tab)) != 0 ||
+            t.text.data[b - 1] == ' ';
         bool wraps = space ? (before & LayoutSpaceFlag_Wraps) != 0 : holder.textWrapMode == PrLayoutTextWrapMode_Wrap;
         if (!wraps)
             t.breakAt.data[b] = PrUnicodeLineBreak_Prohibited;
@@ -625,8 +619,7 @@ void wrapBreaks(const LayoutStyles* styles, LayoutInlineShaping& t, LayoutShapin
             shallowest = shallowest < open.count ? shallowest : open.count;
             continue;
         }
-        if ((item.kind != LayoutInlineItemKind_Text && item.kind != LayoutInlineItemKind_Atomic)
-            || item.start == item.end)
+        if ((item.kind != LayoutInlineItemKind_Text && item.kind != LayoutInlineItemKind_Atomic) || item.start == item.end)
             continue;
         if (before)
             settle(item.start, fontAt(shallowest));
@@ -634,8 +627,8 @@ void wrapBreaks(const LayoutStyles* styles, LayoutInlineShaping& t, LayoutShapin
         const PrLayoutFontStyle& font = text ? layoutTableAt(styles->font, item.font) : fontAt(open.count);
         bool breakSpaces = text && font.whiteSpaceCollapse == PrLayoutWhiteSpaceCollapse_BreakSpaces;
         for (uint32_t b = item.start + 1; b <= item.end; ++b) {
-            if (breakSpaces && (t.text.data[b - 1] == ' ' || t.text.data[b - 1] == '\t')
-                && t.breakAt.data[b] == PrUnicodeLineBreak_Prohibited)
+            if (breakSpaces && (t.text.data[b - 1] == ' ' || t.text.data[b - 1] == '\t') &&
+                    t.breakAt.data[b] == PrUnicodeLineBreak_Prohibited)
                 t.breakAt.data[b] = PrUnicodeLineBreak_Allowed;
             if (b < item.end)
                 settle(b, font);
@@ -651,8 +644,8 @@ void wrapBreaks(const LayoutStyles* styles, LayoutInlineShaping& t, LayoutShapin
 bool wrapsBesideAtomic(uint32_t codePoint) {
     PrUnicodeLineBreakFlags flags = 0;
     PrUnicodeLineBreakClass c = prUnicodeLineBreakClass(codePoint, &flags);
-    return codePoint == 0xA0
-           || (c != PrUnicodeLineBreakClass_GL && c != PrUnicodeLineBreakClass_WJ && c != PrUnicodeLineBreakClass_ZWJ);
+    return codePoint == 0xA0 ||
+        (c != PrUnicodeLineBreakClass_GL && c != PrUnicodeLineBreakClass_WJ && c != PrUnicodeLineBreakClass_ZWJ);
 }
 
 // Returns true if the code point `codePoint`, which follows an atomic inline, takes a soft wrap opportunity before it.
@@ -661,8 +654,8 @@ bool wrapsBesideAtomic(uint32_t codePoint) {
 bool wrapsBeforeAfterAtomic(uint32_t codePoint) {
     PrUnicodeLineBreakFlags flags = 0;
     PrUnicodeLineBreakClass c = prUnicodeLineBreakClass(codePoint, &flags);
-    return c != PrUnicodeLineBreakClass_SP && c != PrUnicodeLineBreakClass_BK && c != PrUnicodeLineBreakClass_CR
-           && c != PrUnicodeLineBreakClass_LF && c != PrUnicodeLineBreakClass_NL && wrapsBesideAtomic(codePoint);
+    return c != PrUnicodeLineBreakClass_SP && c != PrUnicodeLineBreakClass_BK && c != PrUnicodeLineBreakClass_CR &&
+        c != PrUnicodeLineBreakClass_LF && c != PrUnicodeLineBreakClass_NL && wrapsBesideAtomic(codePoint);
 }
 
 // Adds a soft wrap opportunity before and after each atomic inline. None is added beside a code point of its segment
@@ -678,13 +671,13 @@ void atomicBreaks(LayoutInlineShaping& t, const LayoutShapingScratch& s) {
                 continue;
             while (at < s.codeEnds.count && s.codeEnds.data[at] <= item.start)
                 ++at;
-            if (item.start != segment.byteStart && t.breakAt.data[item.start] != PrUnicodeLineBreak_Mandatory
-                && wrapsBesideAtomic(s.codePoints.data[at - 1]))
+            if (item.start != segment.byteStart && t.breakAt.data[item.start] != PrUnicodeLineBreak_Mandatory &&
+                    wrapsBesideAtomic(s.codePoints.data[at - 1]))
                 t.breakAt.data[item.start] = PrUnicodeLineBreak_Allowed;
             while (at < s.codeEnds.count && s.codeEnds.data[at] <= item.end)
                 ++at;
-            if (item.end != segment.byteEnd && t.breakAt.data[item.end] != PrUnicodeLineBreak_Mandatory
-                && wrapsBeforeAfterAtomic(s.codePoints.data[at]))
+            if (item.end != segment.byteEnd && t.breakAt.data[item.end] != PrUnicodeLineBreak_Mandatory &&
+                    wrapsBeforeAfterAtomic(s.codePoints.data[at]))
                 t.breakAt.data[item.end] = PrUnicodeLineBreak_Allowed;
         }
     }
@@ -697,15 +690,16 @@ PrTextBreakStyle breakStyleOf(const LayoutStyles* styles, const LayoutInlineItem
         return PrTextBreakStyle{};
     const PrLayoutFontStyle& font = layoutTableAt(styles->font, item.font);
     if (font.textWrapMode == PrLayoutTextWrapMode_Nowrap)
-        return PrTextBreakStyle{font.wordBreak == PrTextWordBreak_BreakWord ? PrTextWordBreak(PrTextWordBreak_Normal)
-                                                                            : font.wordBreak,
-                                PrTextOverflowWrap_Normal};
+        return PrTextBreakStyle{
+            font.wordBreak == PrTextWordBreak_BreakWord ? PrTextWordBreak(PrTextWordBreak_Normal) : font.wordBreak,
+            PrTextOverflowWrap_Normal,
+        };
     return PrTextBreakStyle{font.wordBreak, font.overflowWrap};
 }
 
 // Writes the style of each of `count` code points of the text of `t`, which end at `base` plus `ends`, to `out`.
 void fillBreakStyles(const LayoutStyles* styles, const LayoutInlineShaping& t, uint32_t base, const uint32_t* ends,
-                     PrTextBreakStyle* out, uint32_t count) {
+        PrTextBreakStyle* out, uint32_t count) {
     uint32_t at = 0;
     for (uint32_t i = 0; i < t.items.count && at < count; ++i) {
         const LayoutInlineItem& item = t.items.data[i];
@@ -785,8 +779,8 @@ void findBreaks(const LayoutStyles* styles, LayoutInlineShaping& t, LayoutShapin
 // vertical metrics, each typographic character unit advances by the face's ascent and descent as layout rounds them,
 // `across` (css-writing-modes-4/#vertical-font-features), rather than by the unrounded sum that shaping synthesizes.
 void shapeRun(LayoutInlineShaping& t, PrTextShaper* PR_NULLABLE shaper, PrTextGlyphBuffer* buffer,
-              LayoutShapingRun& run, uint32_t index, const PrFont* font, float size, float ratio, PrLocale locale,
-              const LayoutFaceMetrics& metrics, const PrTextFeatureSet* PR_NULLABLE features) {
+        LayoutShapingRun& run, uint32_t index, const PrFont* font, float size, float ratio, PrLocale locale,
+        const LayoutFaceMetrics& metrics, const PrTextFeatureSet* PR_NULLABLE features) {
     PR_ASSERT(shaper != nullptr); // text needs a shaper (PrLayoutTreeDesc)
     run.glyphStart = t.glyphs.count;
     run.glyphEnd = t.glyphs.count;
@@ -828,7 +822,7 @@ void shapeRun(LayoutInlineShaping& t, PrTextShaper* PR_NULLABLE shaper, PrTextGl
 // `locale`. The advance is down the line if `upright` is true, in a face of `metrics`, in the same way that shapeRun
 // advances it.
 float advanceOf(PrTextShaper* PR_NULLABLE shaper, PrTextGlyphBuffer* buffer, const PrFont* font, float size,
-                float ratio, PrLocale locale, PrStringView text, bool upright, const LayoutFaceMetrics& metrics) {
+        float ratio, PrLocale locale, PrStringView text, bool upright, const LayoutFaceMetrics& metrics) {
     PR_ASSERT(shaper != nullptr); // text needs a shaper (PrLayoutTreeDesc)
     PrTextRun run{};
     run.font = font;
@@ -851,8 +845,7 @@ float advanceOf(PrTextShaper* PR_NULLABLE shaper, PrTextGlyphBuffer* buffer, con
 
 // Sets the tab stops of text with preserved tabs from the first face of the container's font, which the context has
 // already matched, in the orientation in which the container sets its spaces and digits.
-void measureTabs(LayoutStyles* styles, PrTextShaper* PR_NULLABLE shaper, PrTextGlyphBuffer* buffer,
-                 LayoutInlineShaping& t) {
+void measureTabs(LayoutStyles* styles, PrTextShaper* PR_NULLABLE shaper, PrTextGlyphBuffer* buffer, LayoutInlineShaping& t) {
     t.tabSize = 0;
     t.tabMinimum = 0;
     const LayoutFontFaces& faces = layoutFontFacesOfGroup(styles, t.containerFont);
@@ -875,7 +868,7 @@ void measureTabs(LayoutStyles* styles, PrTextShaper* PR_NULLABLE shaper, PrTextG
 // clusters need (layoutItemize). Returns true if it resolved bidi levels. A context of only atomic inlines shapes no
 // run and needs no shaper.
 bool shape(LayoutStyles* styles, PrTextShaper* PR_NULLABLE shaper, PrTextGlyphBuffer* buffer, LayoutInlineShaping& t,
-           LayoutShapingScratch& s) {
+        LayoutShapingScratch& s) {
     bool leveled = layoutItemize(styles, t, s);
     t.glyphs.clear();
     t.advance.clear();
@@ -889,8 +882,7 @@ bool shape(LayoutStyles* styles, PrTextShaper* PR_NULLABLE shaper, PrTextGlyphBu
             continue;
         float size = prLayoutUnitToPx(faces.size);
         shapeRun(t, shaper, buffer, run, r, layoutFaceFont(faces, run.face), size, styles->targetPixelRatio,
-                 prTextFontLocale(faces.font), faces.metrics.data[run.face],
-                 layoutTableAt(styles->font, run.font).features);
+            prTextFontLocale(faces.font), faces.metrics.data[run.face], layoutTableAt(styles->font, run.font).features);
     }
     // Glyphs are in ascending cluster order across the runs.
     t.reach.clear();
@@ -994,19 +986,15 @@ void prepareParts(LayoutState& state, LayoutNodeIndex first, LayoutNodeIndex las
 // `last`, and those of the changed boxes laid out apart in the run. The run is the content of a block container or of
 // an anonymous box.
 void prepareRun(LayoutState& state, LayoutNodeIndex first, LayoutNodeIndex last, Array<LayoutInlineShaping*>& jobs) {
-    layoutEachChildIn(
-        state.tree, first, last,
-        [&](uint32_t child, const PrLayoutBoxStyle&) {
-            if (layoutTreeNode(state.tree, child).dirty != 0)
-                prepareContainer(state, child, jobs);
-        },
-        [&](uint32_t runFirst, uint32_t runLast, bool) {
+    layoutEachChildIn(state.tree, first, last, [&](uint32_t child, const PrLayoutBoxStyle&) {
+        if (layoutTreeNode(state.tree, child).dirty != 0)
+            prepareContainer(state, child, jobs);
+    }, [&](uint32_t runFirst, uint32_t runLast, bool) {
             // This runs before the context is collected, because collecting clears the marks of the inline boxes that
             // lead to the changed nodes.
-            prepareAtomics(state, runFirst, runLast, jobs);
-            prepareContext(state, runFirst, runLast, jobs);
-        },
-        [&](uint32_t runFirst, uint32_t runLast) { prepareParts(state, runFirst, runLast, jobs); });
+        prepareAtomics(state, runFirst, runLast, jobs);
+        prepareContext(state, runFirst, runLast, jobs);
+    }, [&](uint32_t runFirst, uint32_t runLast) { prepareParts(state, runFirst, runLast, jobs); });
 }
 
 // Collects the inline formatting contexts in the block container, flex or grid container or table `node` whose shaping
@@ -1015,41 +1003,31 @@ void prepareRun(LayoutState& state, LayoutNodeIndex first, LayoutNodeIndex last,
 void prepareContainer(LayoutState& state, LayoutNodeIndex node, Array<LayoutInlineShaping*>& jobs) {
     LayoutChildren children = layoutTreeNode(state.tree, node).children;
     if (children == LayoutChildren_Table) {
-        layoutEachTableBox(
-            state.tree, node,
-            [&](uint32_t child) {
-                if (layoutTreeNode(state.tree, child).dirty != 0)
-                    prepareContainer(state, child, jobs);
-            },
-            [&](uint32_t first, uint32_t last) { prepareRun(state, first, last, jobs); });
+        layoutEachTableBox(state.tree, node, [&](uint32_t child) {
+            if (layoutTreeNode(state.tree, child).dirty != 0)
+                prepareContainer(state, child, jobs);
+        }, [&](uint32_t first, uint32_t last) { prepareRun(state, first, last, jobs); });
         return;
     }
     if (layoutChildrenAreItems(children)) {
-        layoutEachItem(
-            state.tree, node,
-            [&](uint32_t child, const PrLayoutBoxStyle&) {
-                if (layoutTreeNode(state.tree, child).dirty != 0)
-                    prepareContainer(state, child, jobs);
-            },
-            [&](uint32_t first, uint32_t last) { prepareContext(state, first, last, jobs); });
+        layoutEachItem(state.tree, node, [&](uint32_t child, const PrLayoutBoxStyle&) {
+            if (layoutTreeNode(state.tree, child).dirty != 0)
+                prepareContainer(state, child, jobs);
+        }, [&](uint32_t first, uint32_t last) { prepareContext(state, first, last, jobs); });
         return;
     }
     LayoutNodeIndex marker = layoutNodeMarker(state.tree, node);
     if (marker != kPrLayoutNodeNone && layoutTreeNode(state.tree, marker).dirty != 0)
         prepareContainer(state, marker, jobs);
-    layoutEachChild(
-        state.tree, node,
-        [&](uint32_t child, const PrLayoutBoxStyle&) {
-            if (layoutTreeNode(state.tree, child).dirty != 0)
-                prepareContainer(state, child, jobs);
-        },
-        [&](uint32_t first, uint32_t last, bool) {
+    layoutEachChild(state.tree, node, [&](uint32_t child, const PrLayoutBoxStyle&) {
+        if (layoutTreeNode(state.tree, child).dirty != 0)
+            prepareContainer(state, child, jobs);
+    }, [&](uint32_t first, uint32_t last, bool) {
             // This runs before the context is collected, because collecting clears the marks of the inline boxes that
             // lead to the changed nodes.
-            prepareAtomics(state, first, last, jobs);
-            prepareContext(state, first, last, jobs);
-        },
-        [&](uint32_t first, uint32_t last) { prepareParts(state, first, last, jobs); });
+        prepareAtomics(state, first, last, jobs);
+        prepareContext(state, first, last, jobs);
+    }, [&](uint32_t first, uint32_t last) { prepareParts(state, first, last, jobs); });
 }
 
 } // namespace
@@ -1110,7 +1088,7 @@ void layoutShapingScratchReset(LayoutShapingScratch& scratch) {
 }
 
 void layoutWordBreaks(const LayoutStyles* styles, const LayoutInlineShaping& t, uint32_t start, uint32_t end,
-                      LayoutWordScratch& s) {
+        LayoutWordScratch& s) {
     if (s.end == end && s.start <= start)
         return;
     s.start = start;
@@ -1148,8 +1126,7 @@ void layoutWordScratchReset(LayoutWordScratch& s) {
     s.atByte.reset();
 }
 
-const LayoutInlineShaping& layoutShaping(LayoutState& state, LayoutInlineShaping& fresh, uint32_t first,
-                                         uint32_t last) {
+const LayoutInlineShaping& layoutShaping(LayoutState& state, LayoutInlineShaping& fresh, uint32_t first, uint32_t last) {
     LayoutInlineShaping* cached = shapingOf(state, first);
     LayoutInlineShaping& t = cached != nullptr ? *cached : fresh;
     if (cached != nullptr && cached->nodes.count != 0 && isCurrent(state, *cached, first, last)) {

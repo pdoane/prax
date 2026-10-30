@@ -80,8 +80,7 @@ PrDomNodeList* prHtmlFormElementRadioNodeList(PrHtmlFormElement* self, PrStringV
 // `out` if there is exactly one, and the form's past names map remembers it. If there is none, writes the element that
 // the map holds for `name` and counts it as one. Otherwise writes null, and the caller makes a list of them with
 // prHtmlFormElementRadioNodeList.
-uint32_t prHtmlFormElementNamedItem(PrHtmlFormElement* self, PrStringView name,
-                                    PrDomElement* PR_NULLABLE* PR_NONNULL out);
+uint32_t prHtmlFormElementNamedItem(PrHtmlFormElement* self, PrStringView name, PrDomElement* PR_NULLABLE* PR_NONNULL out);
 
 // Writes up to `capacity` of the form's supported property names (html/#the-form-element:supported-property-names) to
 // `items`, which the caller releases, and returns the total number of names.
@@ -304,7 +303,7 @@ PrHtmlDetailsElement* PR_NULLABLE prHtmlDetailsElementQuery(PrDomEventTarget* PR
 // NotFound for one whose form owner is not `form`, and InvalidState for a form that is already constructing its entry
 // list. It then writes null.
 PrStatus prHtmlFormDataCreate(PrHtmlFormElement* PR_NULLABLE form, PrHtmlElement* PR_NULLABLE submitter,
-                              PrHtmlFormData* PR_NULLABLE* PR_NONNULL out);
+    PrHtmlFormData* PR_NULLABLE* PR_NONNULL out);
 
 // Adds or releases a reference. The last release frees the FormData.
 void prHtmlFormDataRetain(PrHtmlFormData* self);
@@ -321,8 +320,7 @@ PrStringView prHtmlFormDataGet(const PrHtmlFormData* self, PrStringView name);
 
 // Writes up to `capacity` of the values of the entries named `name` to `items`, and returns the number of such entries
 // (xhr/#dom-formdata-getall).
-uint32_t prHtmlFormDataGetAll(const PrHtmlFormData* self, PrStringView name, PrStringView* PR_NULLABLE items,
-                              uint32_t capacity);
+uint32_t prHtmlFormDataGetAll(const PrHtmlFormData* self, PrStringView name, PrStringView* PR_NULLABLE items, uint32_t capacity);
 
 // Returns true if an entry is named `name` (xhr/#dom-formdata-has).
 bool prHtmlFormDataHas(const PrHtmlFormData* self, PrStringView name);
@@ -354,14 +352,13 @@ PrHtmlCommandEvent* PR_NULLABLE prHtmlCommandEventQuery(PrDomEvent* PR_NULLABLE 
 // Create each event of `type`, with one reference that the caller holds. An event holds a reference to its submitter,
 // source and form data, and copies its strings.
 PrHtmlSubmitEvent* prHtmlSubmitEventCreate(PrStringView type, const PrDomEventInit* PR_NULLABLE init,
-                                           PrHtmlElement* PR_NULLABLE submitter);
+    PrHtmlElement* PR_NULLABLE submitter);
 PrHtmlFormDataEvent* prHtmlFormDataEventCreate(PrStringView type, const PrDomEventInit* PR_NULLABLE init,
-                                               PrHtmlFormData* formData);
+    PrHtmlFormData* formData);
 PrHtmlToggleEvent* prHtmlToggleEventCreate(PrStringView type, const PrDomEventInit* PR_NULLABLE init,
-                                           PrStringView oldState, PrStringView newState,
-                                           PrDomElement* PR_NULLABLE source);
+    PrStringView oldState, PrStringView newState, PrDomElement* PR_NULLABLE source);
 PrHtmlCommandEvent* prHtmlCommandEventCreate(PrStringView type, const PrDomEventInit* PR_NULLABLE init,
-                                             PrStringView command, PrDomElement* PR_NULLABLE source);
+    PrStringView command, PrDomElement* PR_NULLABLE source);
 
 // html/#dom-submitevent-submitter and html/#dom-formdataevent-formdata
 PrHtmlElement* PR_NULLABLE prHtmlSubmitEventSubmitter(PrHtmlSubmitEvent* self);

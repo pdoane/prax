@@ -57,21 +57,23 @@ TEST_CASE("shapes fill without a stroke and are stroked with one") {
     prDrawListEllipse(list, PrVec2{5, 5}, PrVec2{3, 2}, 0, {.color = PrColor{0, 0, 1, 0.5f}, .stroke = &thin});
     prDrawListLine(list, PrVec2{0, 0}, PrVec2{4, 4}, {.color = kRed, .stroke = &thin});
     CHECK(dump(list) == "push-clip-rect 0 0 64 64\n"
-                        "clear 1 1 1 1\n"
-                        "pop-clip\n"
-                        "rect 0 0 10 5 color 1 0 0 1\n"
-                        "ellipse 5 5 3 2 0 stroke 2 4 0 miter butt butt butt color 0 0 1 0.5\n"
-                        "line 0 0 4 4 stroke 2 4 0 miter butt butt butt color 1 0 0 1\n");
+        "clear 1 1 1 1\n"
+        "pop-clip\n"
+        "rect 0 0 10 5 color 1 0 0 1\n"
+        "ellipse 5 5 3 2 0 stroke 2 4 0 miter butt butt butt color 0 0 1 0.5\n"
+        "line 0 0 4 4 stroke 2 4 0 miter butt butt butt color 1 0 0 1\n");
     prDrawListRelease(list);
 }
 
 TEST_CASE("a paint's operator, blend mode and edges are recorded into its shape") {
     PrDrawList* list = prDrawListCreate();
     prDrawListRect(list, PrRect{0, 0, 1, 1}, {.color = kRed});
-    prDrawListRect(list, PrRect{0, 0, 1, 1}, {.color = kRed,
-                                              .composite = PrDrawComposite_Copy,
-                                              .blendMode = PrDrawBlendMode_Multiply,
-                                              .edges = PrDrawEdges_Aliased});
+    prDrawListRect(list, PrRect{0, 0, 1, 1}, {
+        .color = kRed,
+        .composite = PrDrawComposite_Copy,
+        .blendMode = PrDrawBlendMode_Multiply,
+        .edges = PrDrawEdges_Aliased,
+    });
     REQUIRE(prDrawListCommandCount(list) == 2);
     const PrDrawCommand* commands = prDrawListCommands(list);
     CHECK(commands[0].antialias);
@@ -108,8 +110,7 @@ TEST_CASE("strokes, dashes, points and paths are copied as they are when recorde
     dashed.shape.dashCount = 2;
     dashed.nonScaling = true;
     PrVec2 points[] = {{0, 0}, {10, 0}, {10, 10}};
-    prDrawListPolylineContour(list, points, 3, PrDrawContour_Open, PrPathFillRule_NonZero,
-                              {.color = kRed, .stroke = &dashed});
+    prDrawListPolylineContour(list, points, 3, PrDrawContour_Open, PrPathFillRule_NonZero, {.color = kRed, .stroke = &dashed});
     PrPath* path = prPathCreate();
     prPathMoveTo(path, PrVec2{0, 0});
     prPathQuadTo(path, PrVec2{5, 10}, PrVec2{10, 0});
@@ -122,10 +123,9 @@ TEST_CASE("strokes, dashes, points and paths are copied as they are when recorde
     for (int i = 0; i < 300; ++i)
         prDrawListPolylineContour(list, points, 3, PrDrawContour_Closed, PrPathFillRule_NonZero, {.color = kRed});
     std::string text = dump(list);
-    CHECK(text.substr(0, text.find('\n', text.find('\n') + 1) + 1)
-          == "polyline open 0 0 10 0 10 10 stroke 1 4 0 miter butt butt butt dashes 3 1 non-scaling "
-             "color 1 0 0 1\n"
-             "path M 0 0 Q 5 10 10 0 Z evenodd color 1 0 0 1\n");
+    CHECK(text.substr(0, text.find('\n', text.find('\n') + 1) + 1) ==
+        "polyline open 0 0 10 0 10 10 stroke 1 4 0 miter butt butt butt dashes 3 1 non-scaling color 1 0 0 1\n"
+        "path M 0 0 Q 5 10 10 0 Z evenodd color 1 0 0 1\n");
     prDrawListRelease(list);
     prDrawListRelease(nullptr);
 }
@@ -145,7 +145,7 @@ TEST_CASE("a polyline records every contour, whether each is closed, and a copy 
     PrDrawStroke thin = stroke(1);
     prDrawListPolyline(list, &flat, PrPathFillRule_NonZero, {.color = kRed, .stroke = &thin});
     CHECK(dump(list) == "polyline closed 0 0 10 0 10 10 open 20 0 30 0 evenodd color 1 0 0 1\n"
-                        "polyline open 20 0 30 0 stroke 1 4 0 miter butt butt butt color 1 0 0 1\n");
+        "polyline open 20 0 30 0 stroke 1 4 0 miter butt butt butt color 1 0 0 1\n");
     prDrawListRelease(list);
 }
 
@@ -163,11 +163,11 @@ TEST_CASE("pushes and pops nest in one order") {
     prDrawListPopTransform(list);
     CHECK(prDrawListDepth(list) == 0);
     CHECK(dump(list) == "push-transform-affine 1 0 0 1 2 3\n"
-                        "push-clip-rect 0 0 5 5\n"
-                        "pop-clip\n"
-                        "push-clip-path M 1 1 L 2 1 L 2 2 L 1 2 Z evenodd\n"
-                        "pop-clip\n"
-                        "pop-transform\n");
+        "push-clip-rect 0 0 5 5\n"
+        "pop-clip\n"
+        "push-clip-path M 1 1 L 2 1 L 2 2 L 1 2 Z evenodd\n"
+        "pop-clip\n"
+        "pop-transform\n");
     prDrawListRelease(list);
 }
 
@@ -244,8 +244,8 @@ TEST_CASE("a singular transform is recorded as any other, for its backend to com
     prDrawListRect(list, PrRect{0, 0, 10, 10}, {.color = kRed});
     prDrawListPopTransform(list);
     CHECK(dump(list) == "push-transform-affine 0 0 0 1 0 0\n"
-                        "rect 0 0 10 10 color 1 0 0 1\n"
-                        "pop-transform\n");
+        "rect 0 0 10 10 color 1 0 0 1\n"
+        "pop-transform\n");
     prDrawListRelease(list);
 }
 
@@ -266,14 +266,14 @@ TEST_CASE("new shapes, clips and groups record what they are given") {
     prDrawListPopClip(list);
     shape.corners[0].shape = 7;
     CHECK(dump(list) == "corner-rect 0 0 10 10 corners 4 4 2 0 0 1 2 3 -1 1 1 1 color 1 0 0 1\n"
-                        "sector 5 5 1 4 0 2 color 1 0 0 1\n"
-                        "capsule 0 0 4 0 2 color 1 0 0 1\n"
-                        "push-clip-corner-rect 0 0 10 10 corners 4 4 2 0 0 1 2 3 -1 1 1 1\n"
-                        "push-clip-target-rect 0 0 3 3\n"
-                        "push-group 0 0 0 0 opacity 0.5 isolated\n"
-                        "pop-group\n"
-                        "pop-clip\n"
-                        "pop-clip\n");
+        "sector 5 5 1 4 0 2 color 1 0 0 1\n"
+        "capsule 0 0 4 0 2 color 1 0 0 1\n"
+        "push-clip-corner-rect 0 0 10 10 corners 4 4 2 0 0 1 2 3 -1 1 1 1\n"
+        "push-clip-target-rect 0 0 3 3\n"
+        "push-group 0 0 0 0 opacity 0.5 isolated\n"
+        "pop-group\n"
+        "pop-clip\n"
+        "pop-clip\n");
     prDrawListRelease(list);
 }
 
@@ -321,8 +321,7 @@ TEST_CASE("an embed moved by an offset is one command, and its bounds move with 
 
 TEST_CASE("images keep their pixels and convert other spaces to extended sRGB") {
     const uint8_t pixels[8] = {255, 0, 0, 255, 0, 255, 0, 128};
-    PrDrawImageDesc desc{PrPixelView{pixels, 8, {2, 1}}, PrPixelFormat_Rgba8, PrDrawAlpha_Straight,
-                               PrColorSpace_Srgb};
+    PrDrawImageDesc desc{PrPixelView{pixels, 8, {2, 1}}, PrPixelFormat_Rgba8, PrDrawAlpha_Straight, PrColorSpace_Srgb};
     const PrDrawImage* image = nullptr;
     REQUIRE(prDrawImageCreate(&desc, &image) == PrStatus_Ok);
     CHECK(prDrawImageFormat(image) == PrPixelFormat_Rgba8);
@@ -354,8 +353,7 @@ TEST_CASE("images keep their pixels and convert other spaces to extended sRGB") 
 
 TEST_CASE("an oriented copy of an image keeps its format and arranges its pixels") {
     const uint8_t pixels[8] = {255, 0, 0, 255, 0, 255, 0, 128};
-    PrDrawImageDesc desc{PrPixelView{pixels, 8, {2, 1}}, PrPixelFormat_Rgba8, PrDrawAlpha_Straight,
-                         PrColorSpace_Srgb};
+    PrDrawImageDesc desc{PrPixelView{pixels, 8, {2, 1}}, PrPixelFormat_Rgba8, PrDrawAlpha_Straight, PrColorSpace_Srgb};
     const PrDrawImage* image = nullptr;
     REQUIRE(prDrawImageCreate(&desc, &image) == PrStatus_Ok);
     const PrDrawImage* turned = prDrawImageCreateOriented(image, PrImageOrientation_Rotate90);
@@ -476,8 +474,10 @@ TEST_CASE("a convolution's default divisor is its kernel's sum, and 1 for a kern
 TEST_CASE("pixels written cover their image wherever the clips are") {
     PrDrawList* list = prDrawListCreate();
     uint8_t pixels[4 * 4 * 4] = {};
-    PrDrawImageDesc desc{PrPixelView{pixels, 16, {4, 4}}, PrPixelFormat_Rgba8, PrDrawAlpha_Premultiplied,
-                         PrColorSpace_Srgb};
+    PrDrawImageDesc desc{
+        PrPixelView{pixels, 16, {4, 4}}, PrPixelFormat_Rgba8, PrDrawAlpha_Premultiplied,
+        PrColorSpace_Srgb,
+    };
     const PrDrawImage* image = nullptr;
     REQUIRE(prDrawImageCreate(&desc, &image) == PrStatus_Ok);
     prDrawListPushTransformAffine2(list, PrAffine2{2, 0, 0, 2, 100, 100});

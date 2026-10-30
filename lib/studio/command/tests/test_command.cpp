@@ -38,8 +38,8 @@ void record(void* PR_NULLABLE context, const PrCommandArgs* args) {
 
 PrCommandStateFlags stateOf(void* PR_NULLABLE context) {
     const Log* log = static_cast<const Log*>(context);
-    return PrCommandStateFlags((log->disabled ? PrCommandStateFlag_Disabled : 0)
-                               | (log->checked ? PrCommandStateFlag_Checked : 0));
+    return PrCommandStateFlags((log->disabled ? PrCommandStateFlag_Disabled : 0) |
+        (log->checked ? PrCommandStateFlag_Checked : 0));
 }
 
 const PrCommandParam kParams[] = {
@@ -57,7 +57,7 @@ std::string stringOf(PrString* string) {
 
 // Runs `id` with the arguments that the JSON `text` holds, and returns the status and, through `error`, why it failed.
 PrStatus runWith(const PrCommandRegistry* registry, const char* id, const char* text, std::string* error = nullptr,
-                 PrJsonWriter* result = nullptr) {
+        PrJsonWriter* result = nullptr) {
     PrJson* document = prJsonCreate();
     REQUIRE(prJsonParse(document, text, nullptr));
     PrCommandArgs args{.document = document, .object = 0, .result = result};
@@ -90,12 +90,25 @@ TEST_CASE("a registry keeps its commands in order, by id, with copies of what de
     Log log;
     PrCommandRegistry* registry = prCommandRegistryCreate();
     std::string id = "app.greet";
-    PrCommandDesc greet{.id = id, .title = "Greet", .category = "App", .params = kParams, .paramCount = 3,
-                        .run = record, .context = &log};
+    PrCommandDesc greet{
+        .id = id,
+        .title = "Greet",
+        .category = "App",
+        .params = kParams,
+        .paramCount = 3,
+        .run = record,
+        .context = &log,
+    };
     prCommandRegistryAdd(registry, &greet);
     id = "overwritten";
-    PrCommandDesc quit{.id = "app.quit", .title = "Quit", .flags = PrCommandFlag_Hidden, .run = record,
-                       .state = stateOf, .context = &log};
+    PrCommandDesc quit{
+        .id = "app.quit",
+        .title = "Quit",
+        .flags = PrCommandFlag_Hidden,
+        .run = record,
+        .state = stateOf,
+        .context = &log,
+    };
     prCommandRegistryAdd(registry, &quit);
     REQUIRE(prCommandRegistryCount(registry) == 2);
     CHECK(prCommandRegistryFind(registry, "app.greet") == 0);
@@ -119,12 +132,18 @@ TEST_CASE("a registry keeps its commands in order, by id, with copies of what de
 TEST_CASE("a run checks its arguments against the parameters, and a disabled command does not run") {
     Log log;
     PrCommandRegistry* registry = prCommandRegistryCreate();
-    PrCommandDesc greet{.id = "app.greet", .params = kParams, .paramCount = 3, .run = record, .state = stateOf,
-                        .context = &log};
+    PrCommandDesc greet{
+        .id = "app.greet",
+        .params = kParams,
+        .paramCount = 3,
+        .run = record,
+        .state = stateOf,
+        .context = &log,
+    };
     prCommandRegistryAdd(registry, &greet);
     PrJsonWriter* result = prJsonWriterCreate();
-    CHECK(runWith(registry, "app.greet", "{\"name\": \"ada\", \"count\": 2, \"loud\": true}", nullptr, result)
-          == PrStatus_Ok);
+    CHECK(runWith(registry, "app.greet", "{\"name\": \"ada\", \"count\": 2, \"loud\": true}", nullptr, result) ==
+        PrStatus_Ok);
     CHECK(prJsonWriterText(result) == "1");
     CHECK(runWith(registry, "app.greet", "{\"name\": \"bo\"}") == PrStatus_Ok);
     CHECK(log.runs == std::vector<std::string>{"run ada 2!", "run bo"});

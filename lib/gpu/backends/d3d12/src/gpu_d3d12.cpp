@@ -418,8 +418,8 @@ PrGpuFormat gpuFormatOf(DXGI_FORMAT format) {
 }
 
 bool isSrgb(PrGpuFormat format) {
-    return format == PrGpuFormat_Rgba8Srgb || format == PrGpuFormat_Bgra8Srgb || format == PrGpuFormat_Bc1Srgb
-           || format == PrGpuFormat_Bc3Srgb || format == PrGpuFormat_Bc7Srgb || format == PrGpuFormat_Astc4x4Srgb;
+    return format == PrGpuFormat_Rgba8Srgb || format == PrGpuFormat_Bgra8Srgb || format == PrGpuFormat_Bc1Srgb ||
+        format == PrGpuFormat_Bc3Srgb || format == PrGpuFormat_Bc7Srgb || format == PrGpuFormat_Astc4x4Srgb;
 }
 
 // The format of a texture's resource: typeless for depth, which shader resource views read in a color format, and for
@@ -757,8 +757,7 @@ void retire(D3d12Device* d, D3d12RetiredKind kind, uint32_t slot) {
 }
 
 // Creates a committed buffer in `heap`. Returns null if the device has no memory for it.
-ID3D12Resource* PR_NULLABLE createBuffer(D3d12Device* d, uint64_t size, D3D12_HEAP_TYPE heap,
-                                         D3D12_RESOURCE_FLAGS flags) {
+ID3D12Resource* PR_NULLABLE createBuffer(D3d12Device* d, uint64_t size, D3D12_HEAP_TYPE heap, D3D12_RESOURCE_FLAGS flags) {
     D3D12_HEAP_PROPERTIES properties{};
     properties.Type = heap;
     D3D12_RESOURCE_DESC1 desc{};
@@ -772,8 +771,7 @@ ID3D12Resource* PR_NULLABLE createBuffer(D3d12Device* d, uint64_t size, D3D12_HE
     desc.Flags = flags;
     ID3D12Resource* buffer = nullptr;
     if (FAILED(d->device->CreateCommittedResource3(&properties, D3D12_HEAP_FLAG_NONE, &desc,
-                                                   D3D12_BARRIER_LAYOUT_UNDEFINED, nullptr, nullptr, 0, nullptr,
-                                                   IID_PPV_ARGS(&buffer))))
+            D3D12_BARRIER_LAYOUT_UNDEFINED, nullptr, nullptr, 0, nullptr, IID_PPV_ARGS(&buffer))))
         return nullptr;
     return buffer;
 }
@@ -852,7 +850,7 @@ D3d12List takeList(D3d12Device* d) {
         if (FAILED(d->device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&l.allocator))))
             return D3d12List{};
         if (FAILED(d->device->CreateCommandList1(0, D3D12_COMMAND_LIST_TYPE_DIRECT, D3D12_COMMAND_LIST_FLAG_NONE,
-                                                 IID_PPV_ARGS(&l.list)))) {
+                IID_PPV_ARGS(&l.list)))) {
             l.allocator->Release();
             return D3d12List{};
         }
@@ -981,18 +979,18 @@ bool supportsFormat(const PrGpuDevice* device, PrGpuFormat format, PrGpuTextureU
     D3D12_FEATURE_DATA_FORMAT_SUPPORT shader{shaderFormatOf(format)};
     D3D12_FEATURE_DATA_FORMAT_SUPPORT target{formatOf(format)};
     D3D12_FEATURE_DATA_FORMAT_SUPPORT storage{storageFormatOf(format)};
-    if (FAILED(d->device->CheckFeatureSupport(D3D12_FEATURE_FORMAT_SUPPORT, &shader, sizeof(shader)))
-        || FAILED(d->device->CheckFeatureSupport(D3D12_FEATURE_FORMAT_SUPPORT, &target, sizeof(target)))
-        || FAILED(d->device->CheckFeatureSupport(D3D12_FEATURE_FORMAT_SUPPORT, &storage, sizeof(storage))))
-        return false;
+    if (FAILED(d->device->CheckFeatureSupport(D3D12_FEATURE_FORMAT_SUPPORT, &shader, sizeof(shader))) ||
+        FAILED(d->device->CheckFeatureSupport(D3D12_FEATURE_FORMAT_SUPPORT, &target, sizeof(target))) ||
+        FAILED(d->device->CheckFeatureSupport(D3D12_FEATURE_FORMAT_SUPPORT, &storage, sizeof(storage))))
+    return false;
     if ((usage & PrGpuTextureUsageFlag_Sampled) && !(shader.Support1 & D3D12_FORMAT_SUPPORT1_SHADER_LOAD))
         return false;
     if ((usage & PrGpuTextureUsageFlag_RenderTarget) && !(target.Support1 & D3D12_FORMAT_SUPPORT1_RENDER_TARGET))
         return false;
     if ((usage & PrGpuTextureUsageFlag_DepthStencil) && !(target.Support1 & D3D12_FORMAT_SUPPORT1_DEPTH_STENCIL))
         return false;
-    if ((usage & PrGpuTextureUsageFlag_Storage)
-        && !(storage.Support1 & D3D12_FORMAT_SUPPORT1_TYPED_UNORDERED_ACCESS_VIEW))
+    if ((usage & PrGpuTextureUsageFlag_Storage) &&
+            !(storage.Support1 & D3D12_FORMAT_SUPPORT1_TYPED_UNORDERED_ACCESS_VIEW))
         return false;
     return true;
 }
@@ -1082,7 +1080,7 @@ bool openUploads(D3d12Device* d) {
 
 // Records a barrier on a texture's subresources.
 void textureBarrier(ID3D12GraphicsCommandList7* list, const D3d12Resource& r, D3D12_BARRIER_SUBRESOURCE_RANGE range,
-                    PrGpuAccessFlags before, PrGpuAccessFlags after) {
+        PrGpuAccessFlags before, PrGpuAccessFlags after) {
     D3D12_TEXTURE_BARRIER b{};
     b.LayoutBefore = layoutOf(before);
     b.LayoutAfter = layoutOf(after);
@@ -1100,9 +1098,8 @@ void textureBarrier(ID3D12GraphicsCommandList7* list, const D3d12Resource& r, D3
     b.SyncAfter = b.AccessAfter == D3D12_BARRIER_ACCESS_NO_ACCESS ? D3D12_BARRIER_SYNC_NONE : syncOf(after);
     b.pResource = r.resource;
     b.Subresources = range;
-    if ((before & PrGpuAccessFlag_Discard)
-        && (b.LayoutAfter == D3D12_BARRIER_LAYOUT_RENDER_TARGET
-            || b.LayoutAfter == D3D12_BARRIER_LAYOUT_DEPTH_STENCIL_WRITE))
+    if ((before & PrGpuAccessFlag_Discard) && (b.LayoutAfter == D3D12_BARRIER_LAYOUT_RENDER_TARGET ||
+            b.LayoutAfter == D3D12_BARRIER_LAYOUT_DEPTH_STENCIL_WRITE))
         b.Flags = D3D12_TEXTURE_BARRIER_FLAG_DISCARD;
     D3D12_BARRIER_GROUP group{};
     group.Type = D3D12_BARRIER_TYPE_TEXTURE;
@@ -1152,13 +1149,11 @@ void submitUploads(D3d12Device* d) {
     for (uint32_t i = 0; i < copies.count; ++i) {
         const GpuSharedUploadCopy& c = copies.data[i];
         if (c.size != 0)
-            list->CopyBufferRegion(resourceOf(d, c.buffer), c.target, d->uploadBlocks.data[c.block].buffer, c.source,
-                                   c.size);
+            list->CopyBufferRegion(resourceOf(d, c.buffer), c.target, d->uploadBlocks.data[c.block].buffer, c.source, c.size);
     }
     for (uint32_t i = 0; i < d->uploadBatch.written.count; ++i) {
         const D3d12Resource& r = d->resources[d->uploadBatch.written.data[i]];
-        textureBarrier(list, r, rangeOf(r, PrGpuSubresources{}), PrGpuAccessFlag_CopyWrite,
-                       PrGpuAccessFlag_ShaderRead);
+        textureBarrier(list, r, rangeOf(r, PrGpuSubresources{}), PrGpuAccessFlag_CopyWrite, PrGpuAccessFlag_ShaderRead);
     }
     list->Close();
     PrGpuFence fence = execute(d, list);
@@ -1226,7 +1221,7 @@ UINT subresourceOf(const D3d12Resource& r, uint32_t level, uint32_t layer) {
 }
 
 void textureUpload(PrGpuDevice* device, PrGpuTexture texture, const PrGpuTextureRegion* region, const void* data,
-                   uint32_t rowBytes, uint32_t layerBytes) {
+        uint32_t rowBytes, uint32_t layerBytes) {
     D3d12Device* d = d3d12Of(device);
     const D3d12Resource& r = textureOf(d, texture.id);
     PrGpuFormatBlock b = prGpuFormatBlock(r.texture.format);
@@ -1249,14 +1244,12 @@ void textureUpload(PrGpuDevice* device, PrGpuTexture texture, const PrGpuTexture
     const uint8_t* from = static_cast<const uint8_t*>(data);
     for (uint32_t s = 0; s < slices; ++s) {
         for (uint32_t y = 0; y < rows; ++y)
-            memCopy(to + s * sliceBytes + uint64_t(y) * pitch, from + uint64_t(s) * layerBytes + uint64_t(y) * rowBytes,
-                    row);
+            memCopy(to + s * sliceBytes + uint64_t(y) * pitch, from + uint64_t(s) * layerBytes + uint64_t(y) * rowBytes, row);
     }
     ID3D12GraphicsCommandList7* list = d->uploads.list;
     if (d->uploadBatch.written.find(texture.id) == kArrayMissing) {
         d->uploadBatch.written.push(texture.id);
-        textureBarrier(list, r, rangeOf(r, PrGpuSubresources{}), PrGpuAccessFlag_ShaderRead,
-                       PrGpuAccessFlag_CopyWrite);
+        textureBarrier(list, r, rangeOf(r, PrGpuSubresources{}), PrGpuAccessFlag_ShaderRead, PrGpuAccessFlag_CopyWrite);
     }
     if (gpuSharedUploadNeedsTextureBarrier(&d->uploadBatch, texture.id))
         globalBarrier(list, PrGpuAccessFlag_CopyWrite, PrGpuAccessFlag_CopyWrite);
@@ -1286,15 +1279,16 @@ void textureUpload(PrGpuDevice* device, PrGpuTexture texture, const PrGpuTexture
 
 PrStatus bufferCreate(PrGpuDevice* device, const PrGpuBufferDesc* desc, PrGpuBuffer* out) {
     D3d12Device* d = d3d12Of(device);
-    D3D12_HEAP_TYPE heap = desc->memory == PrGpuMemory_Upload     ? D3D12_HEAP_TYPE_UPLOAD
-                           : desc->memory == PrGpuMemory_Readback ? D3D12_HEAP_TYPE_READBACK
-                                                                  : D3D12_HEAP_TYPE_DEFAULT;
+    D3D12_HEAP_TYPE heap = D3D12_HEAP_TYPE_DEFAULT;
+    if (desc->memory == PrGpuMemory_Upload)
+        heap = D3D12_HEAP_TYPE_UPLOAD;
+    else if (desc->memory == PrGpuMemory_Readback)
+        heap = D3D12_HEAP_TYPE_READBACK;
     bool storage = (desc->usage & PrGpuBufferUsageFlag_Storage) != 0;
     uint64_t size = alignUp(desc->size, 16);
     // D3D12 zeroes a new committed resource's memory.
-    ID3D12Resource* buffer = createBuffer(d, size, heap,
-                                          storage ? D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS
-                                                  : D3D12_RESOURCE_FLAG_NONE);
+    D3D12_RESOURCE_FLAGS flags = storage ? D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS : D3D12_RESOURCE_FLAG_NONE;
+    ID3D12Resource* buffer = createBuffer(d, size, heap, flags);
     if (buffer == nullptr)
         return PrStatus_Limit;
     nameObject(buffer, desc->name);
@@ -1429,7 +1423,7 @@ void writeTextureViews(D3d12Device* d, uint32_t slot) {
 // Puts a texture's resource into new slots, as `desc` describes it, and writes its views. Returns zero, and releases
 // nothing, if no slot is left.
 uint32_t addTexture(D3d12Device* d, ID3D12Resource* resource, const PrGpuTextureDesc& desc, DXGI_FORMAT format,
-                    uint8_t resourceLevels, uint16_t resourceLayers, uint8_t firstLevel, uint16_t firstLayer) {
+        uint8_t resourceLevels, uint16_t resourceLayers, uint8_t firstLevel, uint16_t firstLayer) {
     bool storage = (desc.usage & PrGpuTextureUsageFlag_Storage) != 0;
     prMutexLock(&d->mutex);
     uint32_t slot = takeSlotLocked(d);
@@ -1466,8 +1460,8 @@ PrStatus textureCreate(PrGpuDevice* device, const PrGpuTextureDesc* desc, PrGpuT
     D3D12_HEAP_PROPERTIES heap{};
     heap.Type = D3D12_HEAP_TYPE_DEFAULT;
     D3D12_RESOURCE_DESC1 rd{};
-    rd.Dimension = desc->kind == PrGpuTextureKind_3d ? D3D12_RESOURCE_DIMENSION_TEXTURE3D
-                                                     : D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+    rd.Dimension =
+        desc->kind == PrGpuTextureKind_3d ? D3D12_RESOURCE_DIMENSION_TEXTURE3D : D3D12_RESOURCE_DIMENSION_TEXTURE2D;
     rd.Width = desc->extent.width;
     rd.Height = desc->extent.height;
     rd.DepthOrArraySize = UINT16(desc->extent.depth);
@@ -1483,8 +1477,7 @@ PrStatus textureCreate(PrGpuDevice* device, const PrGpuTextureDesc* desc, PrGpuT
         rd.Flags |= D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
     ID3D12Resource* resource = nullptr;
     if (FAILED(d->device->CreateCommittedResource3(&heap, D3D12_HEAP_FLAG_NONE, &rd,
-                                                   D3D12_BARRIER_LAYOUT_SHADER_RESOURCE, nullptr, nullptr, 0, nullptr,
-                                                   IID_PPV_ARGS(&resource))))
+            D3D12_BARRIER_LAYOUT_SHADER_RESOURCE, nullptr, nullptr, 0, nullptr, IID_PPV_ARGS(&resource))))
         return PrStatus_Limit;
     nameObject(resource, desc->name);
     uint16_t layers = desc->kind == PrGpuTextureKind_3d ? 1 : uint16_t(desc->extent.depth);
@@ -1498,7 +1491,7 @@ PrStatus textureCreate(PrGpuDevice* device, const PrGpuTextureDesc* desc, PrGpuT
 }
 
 PrStatus textureCreateView(PrGpuDevice* device, PrGpuTexture texture, PrGpuTextureKind kind,
-                           PrGpuSubresources subresources, PrGpuTexture* out) {
+        PrGpuSubresources subresources, PrGpuTexture* out) {
     D3d12Device* d = d3d12Of(device);
     const D3d12Resource& t = textureOf(d, texture.id);
     PrGpuTextureDesc desc = t.texture;
@@ -1515,8 +1508,7 @@ PrStatus textureCreateView(PrGpuDevice* device, PrGpuTexture texture, PrGpuTextu
     v.extent.depth = desc.kind == PrGpuTextureKind_3d ? desc.extent.depth : layers;
     t.resource->AddRef();
     uint32_t slot = addTexture(d, t.resource, v, t.format, t.resourceLevels, t.resourceLayers,
-                               uint8_t(t.firstLevel + subresources.firstLevel),
-                               uint16_t(t.firstLayer + subresources.firstLayer));
+        uint8_t(t.firstLevel + subresources.firstLevel), uint16_t(t.firstLayer + subresources.firstLayer));
     if (slot == 0) {
         t.resource->Release();
         return PrStatus_Limit;
@@ -1545,16 +1537,16 @@ PrStatus samplerCreate(PrGpuDevice* device, const PrGpuSamplerDesc* desc, PrGpuS
     D3d12Device* d = d3d12Of(device);
     D3D12_SAMPLER_DESC s{};
     bool compare = desc->compare != PrGpuCompare_Never;
-    D3D12_FILTER_REDUCTION_TYPE reduction = compare ? D3D12_FILTER_REDUCTION_TYPE_COMPARISON
-                                                    : D3D12_FILTER_REDUCTION_TYPE_STANDARD;
+    D3D12_FILTER_REDUCTION_TYPE reduction =
+        compare ? D3D12_FILTER_REDUCTION_TYPE_COMPARISON : D3D12_FILTER_REDUCTION_TYPE_STANDARD;
     if (desc->maxAnisotropy > 1) {
         s.Filter = D3D12_ENCODE_ANISOTROPIC_FILTER(reduction);
         s.MaxAnisotropy = desc->maxAnisotropy;
     } else {
-        D3D12_FILTER_TYPE minify = desc->minify == PrGpuFilter_Linear ? D3D12_FILTER_TYPE_LINEAR
-                                                                      : D3D12_FILTER_TYPE_POINT;
-        D3D12_FILTER_TYPE magnify = desc->magnify == PrGpuFilter_Linear ? D3D12_FILTER_TYPE_LINEAR
-                                                                        : D3D12_FILTER_TYPE_POINT;
+        D3D12_FILTER_TYPE minify =
+            desc->minify == PrGpuFilter_Linear ? D3D12_FILTER_TYPE_LINEAR : D3D12_FILTER_TYPE_POINT;
+        D3D12_FILTER_TYPE magnify =
+            desc->magnify == PrGpuFilter_Linear ? D3D12_FILTER_TYPE_LINEAR : D3D12_FILTER_TYPE_POINT;
         D3D12_FILTER_TYPE mip = desc->mip == PrGpuFilter_Linear ? D3D12_FILTER_TYPE_LINEAR : D3D12_FILTER_TYPE_POINT;
         s.Filter = D3D12_ENCODE_BASIC_FILTER(minify, magnify, mip, reduction);
         s.MaxAnisotropy = 1;
@@ -1581,7 +1573,7 @@ PrStatus samplerCreate(PrGpuDevice* device, const PrGpuSamplerDesc* desc, PrGpuS
 
 // The entries hold each entry point's DXIL, which a pipeline compiles from as it is made.
 PrStatus shaderLibraryCreate(PrGpuDevice*, PrGpuShaderEntry*, uint32_t entryCount,
-                             PrGpuShaderLibrary* PR_NULLABLE* PR_NONNULL out) {
+        PrGpuShaderLibrary* PR_NULLABLE* PR_NONNULL out) {
     if (entryCount == 0)
         return PrStatus_InvalidData;
     *out = allocZeroed<D3d12Library>();
@@ -1614,12 +1606,11 @@ D3D12_SHADER_BYTECODE bytecodeOf(const PrGpuShaderEntry* entry) {
 
 D3D12_DEPTH_STENCILOP_DESC stencilFaceOf(const PrGpuStencilFace& face) {
     return D3D12_DEPTH_STENCILOP_DESC{stencilOpOf(face.fail), stencilOpOf(face.depthFail), stencilOpOf(face.pass),
-                                      compareOf(face.compare)};
+        compareOf(face.compare)};
 }
 
 PrStatus graphicsPipelineCreate(PrGpuDevice* device, const PrGpuGraphicsPipelineDesc* desc,
-                                const PrGpuShaderEntry* vertex, const PrGpuShaderEntry* PR_NULLABLE fragment,
-                                PrGpuPipeline* out) {
+        const PrGpuShaderEntry* vertex, const PrGpuShaderEntry* PR_NULLABLE fragment, PrGpuPipeline* out) {
     D3d12Device* d = d3d12Of(device);
     D3D12_GRAPHICS_PIPELINE_STATE_DESC p{};
     p.pRootSignature = d->rootSignature;
@@ -1639,18 +1630,21 @@ PrStatus graphicsPipelineCreate(PrGpuDevice* device, const PrGpuGraphicsPipeline
         a.BlendOpAlpha = blendOpOf(blend.alphaOp);
         a.LogicOp = D3D12_LOGIC_OP_NOOP;
         PrGpuColorWriteFlags write = blend.write != 0 ? blend.write : PrGpuColorWriteFlag_All;
-        a.RenderTargetWriteMask = UINT8(((write & PrGpuColorWriteFlag_Red) ? D3D12_COLOR_WRITE_ENABLE_RED : 0)
-                                        | ((write & PrGpuColorWriteFlag_Green) ? D3D12_COLOR_WRITE_ENABLE_GREEN : 0)
-                                        | ((write & PrGpuColorWriteFlag_Blue) ? D3D12_COLOR_WRITE_ENABLE_BLUE : 0)
-                                        | ((write & PrGpuColorWriteFlag_Alpha) ? D3D12_COLOR_WRITE_ENABLE_ALPHA : 0));
+        a.RenderTargetWriteMask = UINT8(((write & PrGpuColorWriteFlag_Red) ? D3D12_COLOR_WRITE_ENABLE_RED : 0) |
+            ((write & PrGpuColorWriteFlag_Green) ? D3D12_COLOR_WRITE_ENABLE_GREEN : 0) |
+            ((write & PrGpuColorWriteFlag_Blue) ? D3D12_COLOR_WRITE_ENABLE_BLUE : 0) |
+            ((write & PrGpuColorWriteFlag_Alpha) ? D3D12_COLOR_WRITE_ENABLE_ALPHA : 0));
         p.RTVFormats[i] = formatOf(desc->formats.color[i]);
     }
     p.NumRenderTargets = desc->formats.colorCount;
     p.SampleMask = UINT_MAX;
     p.RasterizerState.FillMode = D3D12_FILL_MODE_SOLID;
-    p.RasterizerState.CullMode = desc->cull == PrGpuCull_Front  ? D3D12_CULL_MODE_FRONT
-                                 : desc->cull == PrGpuCull_Back ? D3D12_CULL_MODE_BACK
-                                                                : D3D12_CULL_MODE_NONE;
+    if (desc->cull == PrGpuCull_Front)
+        p.RasterizerState.CullMode = D3D12_CULL_MODE_FRONT;
+    else if (desc->cull == PrGpuCull_Back)
+        p.RasterizerState.CullMode = D3D12_CULL_MODE_BACK;
+    else
+        p.RasterizerState.CullMode = D3D12_CULL_MODE_NONE;
     // D3D12 winds triangles in the target, with y down, as the description does.
     p.RasterizerState.FrontCounterClockwise = desc->frontClockwise ? FALSE : TRUE;
     p.RasterizerState.DepthBias = INT(desc->depthBias);
@@ -1673,7 +1667,7 @@ PrStatus graphicsPipelineCreate(PrGpuDevice* device, const PrGpuGraphicsPipeline
     HRESULT made = d->device->CreateGraphicsPipelineState(&p, IID_PPV_ARGS(&state));
     if (FAILED(made)) {
         fprintf(stderr, "lib/gpu: D3D12 made no pipeline for %.*s (0x%08lx)\n", int(vertex->name.size),
-                vertex->name.data, long(made));
+            vertex->name.data, long(made));
         return PrStatus_NotSupported;
     }
     nameObject(state, desc->name);
@@ -1691,7 +1685,7 @@ PrStatus graphicsPipelineCreate(PrGpuDevice* device, const PrGpuGraphicsPipeline
 }
 
 PrStatus computePipelineCreate(PrGpuDevice* device, const PrGpuShaderLibrary*, const PrGpuShaderEntry* compute,
-                               PrStringView name, PrGpuPipeline* out) {
+        PrStringView name, PrGpuPipeline* out) {
     D3d12Device* d = d3d12Of(device);
     D3D12_COMPUTE_PIPELINE_STATE_DESC p{};
     p.pRootSignature = d->rootSignature;
@@ -1700,7 +1694,7 @@ PrStatus computePipelineCreate(PrGpuDevice* device, const PrGpuShaderLibrary*, c
     HRESULT made = d->device->CreateComputePipelineState(&p, IID_PPV_ARGS(&state));
     if (FAILED(made)) {
         fprintf(stderr, "lib/gpu: D3D12 made no compute pipeline for %.*s (0x%08lx)\n", int(compute->name.size),
-                compute->name.data, long(made));
+            compute->name.data, long(made));
         return PrStatus_NotSupported;
     }
     nameObject(state, name);
@@ -1750,19 +1744,20 @@ D3d12AttachmentHeaps takeAttachmentHeaps(D3d12Device* d) {
         return heaps;
     }
     D3d12AttachmentHeaps heaps{};
-    D3D12_DESCRIPTOR_HEAP_DESC color{D3D12_DESCRIPTOR_HEAP_TYPE_RTV, kPrGpuMaxColorAttachments,
-                                     D3D12_DESCRIPTOR_HEAP_FLAG_NONE, 0};
+    D3D12_DESCRIPTOR_HEAP_DESC color{
+        D3D12_DESCRIPTOR_HEAP_TYPE_RTV, kPrGpuMaxColorAttachments,
+        D3D12_DESCRIPTOR_HEAP_FLAG_NONE, 0,
+    };
     D3D12_DESCRIPTOR_HEAP_DESC depth{D3D12_DESCRIPTOR_HEAP_TYPE_DSV, 1, D3D12_DESCRIPTOR_HEAP_FLAG_NONE, 0};
-    if (FAILED(d->device->CreateDescriptorHeap(&color, IID_PPV_ARGS(&heaps.color)))
-        || FAILED(d->device->CreateDescriptorHeap(&depth, IID_PPV_ARGS(&heaps.depth)))) {
+    if (FAILED(d->device->CreateDescriptorHeap(&color, IID_PPV_ARGS(&heaps.color))) ||
+            FAILED(d->device->CreateDescriptorHeap(&depth, IID_PPV_ARGS(&heaps.depth)))) {
         release(heaps.color);
         return D3d12AttachmentHeaps{};
     }
     return heaps;
 }
 
-bool commandsBegin(PrGpuDevice* device, const PrGpuCommandsOptions* options,
-                   PrGpuCommands* PR_NULLABLE* PR_NONNULL out) {
+bool commandsBegin(PrGpuDevice* device, const PrGpuCommandsOptions* options, PrGpuCommands* PR_NULLABLE* PR_NONNULL out) {
     D3d12Device* d = d3d12Of(device);
     D3d12List list{};
     if (options->native != nullptr) {
@@ -1832,8 +1827,7 @@ void* stream(D3d12Device* d, D3d12Commands* c, uint64_t size, uint32_t* slot, ui
     return last->mapped + at;
 }
 
-void* commandsStream(PrGpuDevice* device, PrGpuCommands* commands, uint64_t size, PrGpuBuffer* buffer,
-                     uint64_t* offset) {
+void* commandsStream(PrGpuDevice* device, PrGpuCommands* commands, uint64_t size, PrGpuBuffer* buffer, uint64_t* offset) {
     uint32_t slot = 0;
     void* bytes = stream(d3d12Of(device), commandsOf(commands), size, &slot, offset);
     buffer->id = slot;
@@ -1922,10 +1916,10 @@ void commandsDispatchIndirect(PrGpuDevice* device, PrGpuCommands* commands, PrGp
 }
 
 void commandsCopyBuffer(PrGpuDevice* device, PrGpuCommands* commands, PrGpuBuffer source, uint64_t sourceOffset,
-                        PrGpuBuffer target, uint64_t targetOffset, uint64_t size) {
+        PrGpuBuffer target, uint64_t targetOffset, uint64_t size) {
     D3d12Device* d = d3d12Of(device);
     commandsOf(commands)->list.list->CopyBufferRegion(resourceOf(d, target.id), targetOffset,
-                                                      resourceOf(d, source.id), sourceOffset, size);
+        resourceOf(d, source.id), sourceOffset, size);
 }
 
 // The location of a subresource of a texture, for a copy.
@@ -1939,7 +1933,7 @@ D3D12_TEXTURE_COPY_LOCATION subresourceLocation(const D3d12Resource& r, uint32_t
 
 // The location of a texture's texels in a buffer at `offset`, with rows `rowBytes` apart, for a copy of `extent`.
 D3D12_TEXTURE_COPY_LOCATION footprintLocation(const D3d12Resource& texture, ID3D12Resource* buffer, uint64_t offset,
-                                              uint32_t rowBytes, PrGpuExtent extent) {
+        uint32_t rowBytes, PrGpuExtent extent) {
     PrGpuFormatBlock b = prGpuFormatBlock(texture.texture.format);
     D3D12_TEXTURE_COPY_LOCATION l{};
     l.pResource = buffer;
@@ -1957,13 +1951,11 @@ D3D12_TEXTURE_COPY_LOCATION footprintLocation(const D3d12Resource& texture, ID3D
 D3D12_BOX boxOf(const PrGpuTextureRegion* region, bool is3d) {
     uint32_t z = is3d ? region->z : 0;
     uint32_t depth = is3d ? region->extent.depth : 1;
-    return D3D12_BOX{region->x, region->y, z, region->x + region->extent.width, region->y + region->extent.height,
-                     z + depth};
+    return D3D12_BOX{region->x, region->y, z, region->x + region->extent.width, region->y + region->extent.height, z + depth};
 }
 
 void commandsCopyTexture(PrGpuDevice* device, PrGpuCommands* commands, PrGpuTexture source,
-                         const PrGpuTextureRegion* sourceRegion, PrGpuTexture target,
-                         const PrGpuTextureRegion* targetRegion) {
+        const PrGpuTextureRegion* sourceRegion, PrGpuTexture target, const PrGpuTextureRegion* targetRegion) {
     D3d12Device* d = d3d12Of(device);
     const D3d12Resource& from = textureOf(d, source.id);
     const D3d12Resource& to = textureOf(d, target.id);
@@ -1974,13 +1966,13 @@ void commandsCopyTexture(PrGpuDevice* device, PrGpuCommands* commands, PrGpuText
         D3D12_TEXTURE_COPY_LOCATION s = subresourceLocation(from, sourceRegion->level, sourceRegion->firstLayer + i);
         D3D12_TEXTURE_COPY_LOCATION t = subresourceLocation(to, targetRegion->level, targetRegion->firstLayer + i);
         commandsOf(commands)->list.list->CopyTextureRegion(&t, targetRegion->x, targetRegion->y,
-                                                           is3d ? targetRegion->z : 0, &s, &box);
+            is3d ? targetRegion->z : 0, &s, &box);
     }
 }
 
 void commandsCopyBufferToTexture(PrGpuDevice* device, PrGpuCommands* commands, PrGpuBuffer source,
-                                 uint64_t sourceOffset, uint32_t rowBytes, uint32_t layerBytes, PrGpuTexture target,
-                                 const PrGpuTextureRegion* targetRegion) {
+        uint64_t sourceOffset, uint32_t rowBytes, uint32_t layerBytes, PrGpuTexture target,
+        const PrGpuTextureRegion* targetRegion) {
     D3d12Device* d = d3d12Of(device);
     const D3d12Resource& to = textureOf(d, target.id);
     bool is3d = to.texture.kind == PrGpuTextureKind_3d;
@@ -1989,16 +1981,16 @@ void commandsCopyBufferToTexture(PrGpuDevice* device, PrGpuCommands* commands, P
     PrGpuExtent extent{targetRegion->extent.width, targetRegion->extent.height, is3d ? targetRegion->extent.depth : 1};
     for (uint32_t i = 0; i < images; ++i) {
         D3D12_TEXTURE_COPY_LOCATION s = footprintLocation(to, resourceOf(d, source.id), sourceOffset + i * imageBytes,
-                                                          rowBytes, extent);
+            rowBytes, extent);
         D3D12_TEXTURE_COPY_LOCATION t = subresourceLocation(to, targetRegion->level, targetRegion->firstLayer + i);
         commandsOf(commands)->list.list->CopyTextureRegion(&t, targetRegion->x, targetRegion->y,
-                                                           is3d ? targetRegion->z : 0, &s, nullptr);
+            is3d ? targetRegion->z : 0, &s, nullptr);
     }
 }
 
 void commandsCopyTextureToBuffer(PrGpuDevice* device, PrGpuCommands* commands, PrGpuTexture source,
-                                 const PrGpuTextureRegion* sourceRegion, PrGpuBuffer target, uint64_t targetOffset,
-                                 uint32_t rowBytes, uint32_t layerBytes) {
+        const PrGpuTextureRegion* sourceRegion, PrGpuBuffer target, uint64_t targetOffset, uint32_t rowBytes,
+        uint32_t layerBytes) {
     D3d12Device* d = d3d12Of(device);
     const D3d12Resource& from = textureOf(d, source.id);
     bool is3d = from.texture.kind == PrGpuTextureKind_3d;
@@ -2009,7 +2001,7 @@ void commandsCopyTextureToBuffer(PrGpuDevice* device, PrGpuCommands* commands, P
     for (uint32_t i = 0; i < images; ++i) {
         D3D12_TEXTURE_COPY_LOCATION s = subresourceLocation(from, sourceRegion->level, sourceRegion->firstLayer + i);
         D3D12_TEXTURE_COPY_LOCATION t = footprintLocation(from, resourceOf(d, target.id),
-                                                          targetOffset + i * imageBytes, rowBytes, extent);
+            targetOffset + i * imageBytes, rowBytes, extent);
         commandsOf(commands)->list.list->CopyTextureRegion(&t, 0, 0, 0, &s, &box);
     }
 }
@@ -2032,7 +2024,7 @@ void commandsPopGroup(PrGpuDevice*, PrGpuCommands* commands) {
 }
 
 void commandsBufferBarrier(PrGpuDevice* device, PrGpuCommands* commands, PrGpuBuffer buffer, PrGpuAccessFlags before,
-                           PrGpuAccessFlags after) {
+        PrGpuAccessFlags after) {
     // Only a buffer that shaders write takes unordered accesses.
     const D3d12Resource& r = d3d12Of(device)->resources[buffer.id];
     if (!(r.buffer.usage & PrGpuBufferUsageFlag_Storage)) {
@@ -2057,7 +2049,7 @@ void commandsBufferBarrier(PrGpuDevice* device, PrGpuCommands* commands, PrGpuBu
 }
 
 void commandsTextureBarrier(PrGpuDevice* device, PrGpuCommands* commands, PrGpuTexture texture,
-                            PrGpuSubresources subresources, PrGpuAccessFlags before, PrGpuAccessFlags after) {
+        PrGpuSubresources subresources, PrGpuAccessFlags before, PrGpuAccessFlags after) {
     const D3d12Resource& r = textureOf(d3d12Of(device), texture.id);
     textureBarrier(commandsOf(commands)->list.list, r, rangeOf(r, subresources), before, after);
 }
@@ -2073,7 +2065,7 @@ PrGpuFence commandsSubmit(PrGpuDevice* device, PrGpuCommands* commands) {
     if (c->timestamp != kTimestampPairs) {
         list->EndQuery(d->timestamps, D3D12_QUERY_TYPE_TIMESTAMP, c->timestamp * 2 + 1);
         list->ResolveQueryData(d->timestamps, D3D12_QUERY_TYPE_TIMESTAMP, c->timestamp * 2, 2, d->timestampReadback,
-                               uint64_t(c->timestamp) * 16);
+            uint64_t(c->timestamp) * 16);
     }
     if (!c->host)
         list->Close();
@@ -2297,7 +2289,7 @@ void resolve(D3d12Device* d, ID3D12GraphicsCommandList7* list, const PrGpuAttach
     group.pTextureBarriers = b;
     list->Barrier(1, &group);
     list->ResolveSubresource(to.resource, subresourceOf(to, a.level, a.layer), from.resource,
-                             subresourceOf(from, a.level, a.layer), formatOf(from.texture.format));
+        subresourceOf(from, a.level, a.layer), formatOf(from.texture.format));
     for (int i = 0; i < 2; ++i) {
         b[i].SyncBefore = D3D12_BARRIER_SYNC_RESOLVE;
         b[i].SyncAfter = D3D12_BARRIER_SYNC_RENDER_TARGET;
@@ -2334,8 +2326,10 @@ PrGpuHostStateFlags hostStateSync(PrGpuDevice*, PrGpuCommands* commands) {
 
 void passSetViewport(PrGpuDevice*, PrGpuPass* handle, PrRect viewport, float minDepth, float maxDepth) {
     D3d12Pass* pass = static_cast<D3d12Pass*>(handle);
-    D3D12_VIEWPORT v{viewport.left, viewport.top, viewport.right - viewport.left, viewport.bottom - viewport.top,
-                     minDepth, maxDepth};
+    D3D12_VIEWPORT v{
+        viewport.left, viewport.top, viewport.right - viewport.left, viewport.bottom - viewport.top,
+        minDepth, maxDepth,
+    };
     commandsOf(pass->commands)->list.list->RSSetViewports(1, &v);
     commandsOf(pass->commands)->changed |= PrGpuHostStateFlag_Viewport;
 }
@@ -2373,8 +2367,10 @@ void passSetIndexBuffer(PrGpuDevice* device, PrGpuPass* handle, PrGpuBuffer buff
     D3d12Device* d = d3d12Of(device);
     D3d12Pass* pass = static_cast<D3d12Pass*>(handle);
     const D3d12Resource& r = d->resources[buffer.id];
-    D3D12_INDEX_BUFFER_VIEW view{r.address + offset, UINT(alignUp(r.buffer.size, 16) - offset),
-                                 wide ? DXGI_FORMAT_R32_UINT : DXGI_FORMAT_R16_UINT};
+    D3D12_INDEX_BUFFER_VIEW view{
+        r.address + offset, UINT(alignUp(r.buffer.size, 16) - offset),
+        wide ? DXGI_FORMAT_R32_UINT : DXGI_FORMAT_R16_UINT,
+    };
     commandsOf(pass->commands)->list.list->IASetIndexBuffer(&view);
     commandsOf(pass->commands)->changed |= PrGpuHostStateFlag_IndexBuffer;
 }
@@ -2430,24 +2426,24 @@ const D3d12Pipeline& prepareDraw(D3d12Device* d, D3d12Pass* pass) {
 }
 
 void passDraw(PrGpuDevice* device, PrGpuPass* handle, uint32_t vertexCount, uint32_t instanceCount,
-              uint32_t firstVertex, uint32_t firstInstance) {
+        uint32_t firstVertex, uint32_t firstInstance) {
     D3d12Pass* pass = static_cast<D3d12Pass*>(handle);
     prepareDraw(d3d12Of(device), pass);
     commandsOf(pass->commands)->list.list->DrawInstanced(vertexCount, instanceCount, firstVertex, firstInstance);
 }
 
 void passDrawIndexed(PrGpuDevice* device, PrGpuPass* handle, uint32_t indexCount, uint32_t instanceCount,
-                     uint32_t firstIndex, int32_t vertexOffset, uint32_t firstInstance) {
+        uint32_t firstIndex, int32_t vertexOffset, uint32_t firstInstance) {
     D3d12Pass* pass = static_cast<D3d12Pass*>(handle);
     prepareDraw(d3d12Of(device), pass);
     commandsOf(pass->commands)->list.list->DrawIndexedInstanced(indexCount, instanceCount, firstIndex, vertexOffset,
-                                                                firstInstance);
+        firstInstance);
 }
 
 // Records indirect draws through `signature`, which reads arguments of `argumentBytes`: all at once if they are packed,
 // and one at a time otherwise.
 void drawIndirect(D3d12Device* d, D3d12Pass* pass, ID3D12CommandSignature* signature, uint32_t argumentBytes,
-                  PrGpuBuffer buffer, uint64_t offset, uint32_t count, uint32_t stride) {
+        PrGpuBuffer buffer, uint64_t offset, uint32_t count, uint32_t stride) {
     prepareDraw(d, pass);
     ID3D12GraphicsCommandList7* list = commandsOf(pass->commands)->list.list;
     ID3D12Resource* arguments = resourceOf(d, buffer.id);
@@ -2460,17 +2456,16 @@ void drawIndirect(D3d12Device* d, D3d12Pass* pass, ID3D12CommandSignature* signa
 }
 
 void passDrawIndirect(PrGpuDevice* device, PrGpuPass* handle, PrGpuBuffer buffer, uint64_t offset, uint32_t count,
-                      uint32_t stride) {
+        uint32_t stride) {
     D3d12Device* d = d3d12Of(device);
-    drawIndirect(d, static_cast<D3d12Pass*>(handle), d->drawSignature, sizeof(PrGpuDrawIndirect), buffer, offset,
-                 count, stride);
+    drawIndirect(d, static_cast<D3d12Pass*>(handle), d->drawSignature, sizeof(PrGpuDrawIndirect), buffer, offset, count, stride);
 }
 
 void passDrawIndexedIndirect(PrGpuDevice* device, PrGpuPass* handle, PrGpuBuffer buffer, uint64_t offset,
-                             uint32_t count, uint32_t stride) {
+        uint32_t count, uint32_t stride) {
     D3d12Device* d = d3d12Of(device);
     drawIndirect(d, static_cast<D3d12Pass*>(handle), d->drawIndexedSignature, sizeof(PrGpuDrawIndexedIndirect),
-                 buffer, offset, count, stride);
+        buffer, offset, count, stride);
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -2487,7 +2482,7 @@ bool takeBuffers(D3d12Device* d, D3d12SwapChain* sc) {
             continue;
         }
         PrGpuTextureDesc desc = prGpuTextureDesc2d(sc->info.format, sc->capacity,
-                                                   PrGpuTextureUsageFlag_RenderTarget | PrGpuTextureUsageFlag_Sampled);
+            PrGpuTextureUsageFlag_RenderTarget | PrGpuTextureUsageFlag_Sampled);
         sc->buffers[i] = addTexture(d, buffer, desc, sc->format, 1, 1, 0, 0);
         if (sc->buffers[i] == 0) {
             buffer->Release();
@@ -2532,8 +2527,8 @@ bool displayTakesHdr10(IDXGIFactory6* factory, HWND window) {
 // Returns true if the swap chain presents its buffers in the color space.
 bool presents(IDXGISwapChain3* swapChain, DXGI_COLOR_SPACE_TYPE space) {
     UINT support = 0;
-    return SUCCEEDED(swapChain->CheckColorSpaceSupport(space, &support))
-           && (support & DXGI_SWAP_CHAIN_COLOR_SPACE_SUPPORT_FLAG_PRESENT) != 0;
+    return SUCCEEDED(swapChain->CheckColorSpaceSupport(space, &support)) &&
+        (support & DXGI_SWAP_CHAIN_COLOR_SPACE_SUPPORT_FLAG_PRESENT) != 0;
 }
 
 // Returns the format and the color space that a swap chain's intent wants for the window's display. HDR presents HDR10
@@ -2554,11 +2549,13 @@ PrGpuSwapChainInfo infoFor(D3d12SwapChain* sc) {
 bool takeInfo(D3d12SwapChain* sc, PrGpuSwapChainInfo info, UINT width, UINT height) {
     DXGI_FORMAT format = formatOf(info.format);
     if (FAILED(sc->swapChain->ResizeBuffers(kSwapChainBuffers, width, height, format,
-                                            DXGI_SWAP_CHAIN_FLAG_FRAME_LATENCY_WAITABLE_OBJECT)))
+            DXGI_SWAP_CHAIN_FLAG_FRAME_LATENCY_WAITABLE_OBJECT)))
         return false;
-    DXGI_COLOR_SPACE_TYPE space = info.space == PrColorSpace_Rec2100Pq    ? DXGI_COLOR_SPACE_RGB_FULL_G2084_NONE_P2020
-                                  : info.space == PrColorSpace_SrgbLinear ? DXGI_COLOR_SPACE_RGB_FULL_G10_NONE_P709
-                                                                          : DXGI_COLOR_SPACE_RGB_FULL_G22_NONE_P709;
+    DXGI_COLOR_SPACE_TYPE space = DXGI_COLOR_SPACE_RGB_FULL_G22_NONE_P709;
+    if (info.space == PrColorSpace_Rec2100Pq)
+        space = DXGI_COLOR_SPACE_RGB_FULL_G2084_NONE_P2020;
+    else if (info.space == PrColorSpace_SrgbLinear)
+        space = DXGI_COLOR_SPACE_RGB_FULL_G10_NONE_P709;
     sc->swapChain->SetColorSpace1(space);
     sc->format = format;
     sc->info = info;
@@ -2591,12 +2588,14 @@ PrUVec2 monitorExtent(HWND window) {
     info.cbSize = sizeof info;
     if (!GetMonitorInfoW(MonitorFromWindow(window, MONITOR_DEFAULTTONEAREST), &info))
         return PrUVec2{};
-    return PrUVec2{uint32_t(info.rcMonitor.right - info.rcMonitor.left),
-                   uint32_t(info.rcMonitor.bottom - info.rcMonitor.top)};
+    return PrUVec2{
+        uint32_t(info.rcMonitor.right - info.rcMonitor.left),
+        uint32_t(info.rcMonitor.bottom - info.rcMonitor.top),
+    };
 }
 
 PrStatus swapChainCreate(PrGpuDevice* device, const PrAppSurface* surface, const PrGpuSwapChainDesc* desc,
-                         PrGpuSwapChain* PR_NULLABLE* PR_NONNULL out) {
+        PrGpuSwapChain* PR_NULLABLE* PR_NONNULL out) {
     D3d12Device* d = d3d12Of(device);
     if (surface->kind != PrAppSurfaceKind_Hwnd || d->factory == nullptr)
         return PrStatus_NotSupported;
@@ -2737,10 +2736,9 @@ void swapChainPresent(PrGpuDevice*, PrGpuSwapChain* handle, PrGpuCommands* comma
 // Writes the debug layer's errors and warnings to the standard error, except the warning for a clear of a texture made
 // without an optimized clear value, which no texture has.
 void CALLBACK reportMessage(D3D12_MESSAGE_CATEGORY, D3D12_MESSAGE_SEVERITY severity, D3D12_MESSAGE_ID id,
-                            LPCSTR description, void*) {
-    if (severity <= D3D12_MESSAGE_SEVERITY_WARNING
-        && id != D3D12_MESSAGE_ID_CLEARRENDERTARGETVIEW_MISMATCHINGCLEARVALUE
-        && id != D3D12_MESSAGE_ID_CLEARDEPTHSTENCILVIEW_MISMATCHINGCLEARVALUE)
+        LPCSTR description, void*) {
+    if (severity <= D3D12_MESSAGE_SEVERITY_WARNING && id != D3D12_MESSAGE_ID_CLEARRENDERTARGETVIEW_MISMATCHINGCLEARVALUE &&
+            id != D3D12_MESSAGE_ID_CLEARDEPTHSTENCILVIEW_MISMATCHINGCLEARVALUE)
         fprintf(stderr, "d3d12: %s\n", description);
 }
 
@@ -2750,27 +2748,25 @@ bool hasFeatures(ID3D12Device* device) {
     D3D12_FEATURE_DATA_SHADER_MODEL model{D3D_SHADER_MODEL_6_6};
     D3D12_FEATURE_DATA_D3D12_OPTIONS options{};
     D3D12_FEATURE_DATA_D3D12_OPTIONS12 options12{};
-    return SUCCEEDED(device->CheckFeatureSupport(D3D12_FEATURE_SHADER_MODEL, &model, sizeof(model)))
-           && model.HighestShaderModel >= D3D_SHADER_MODEL_6_6
-           && SUCCEEDED(device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS, &options, sizeof(options)))
-           && options.ResourceBindingTier >= D3D12_RESOURCE_BINDING_TIER_3
-           && SUCCEEDED(device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS12, &options12, sizeof(options12)))
-           && options12.EnhancedBarriersSupported;
+    return SUCCEEDED(device->CheckFeatureSupport(D3D12_FEATURE_SHADER_MODEL, &model, sizeof(model))) &&
+        model.HighestShaderModel >= D3D_SHADER_MODEL_6_6 &&
+        SUCCEEDED(device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS, &options, sizeof(options))) &&
+        options.ResourceBindingTier >= D3D12_RESOURCE_BINDING_TIER_3 &&
+        SUCCEEDED(device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS12, &options12, sizeof(options12))) &&
+        options12.EnhancedBarriersSupported;
 }
 
 // Creates a device on the first adapter, in order of performance, that has what the backend needs, or returns null.
 ID3D12Device10* PR_NULLABLE createDevice(IDXGIFactory6* factory) {
     IDXGIAdapter1* adapter = nullptr;
     for (UINT i = 0; factory->EnumAdapterByGpuPreference(i, DXGI_GPU_PREFERENCE_HIGH_PERFORMANCE,
-                                                         IID_PPV_ARGS(&adapter))
-                     != DXGI_ERROR_NOT_FOUND;
-         ++i) {
+            IID_PPV_ARGS(&adapter)) != DXGI_ERROR_NOT_FOUND; ++i) {
         DXGI_ADAPTER_DESC1 desc{};
         adapter->GetDesc1(&desc);
         ID3D12Device10* device = nullptr;
-        if ((desc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE) == 0
-            && SUCCEEDED(D3D12CreateDevice(adapter, D3D_FEATURE_LEVEL_12_0, IID_PPV_ARGS(&device)))
-            && !hasFeatures(device)) {
+        if ((desc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE) == 0 &&
+                SUCCEEDED(D3D12CreateDevice(adapter, D3D_FEATURE_LEVEL_12_0, IID_PPV_ARGS(&device))) &&
+                !hasFeatures(device)) {
             device->Release();
             device = nullptr;
         }
@@ -2794,8 +2790,8 @@ ID3D12RootSignature* PR_NULLABLE createRootSignature(ID3D12Device* device) {
     desc.Version = D3D_ROOT_SIGNATURE_VERSION_1_1;
     desc.Desc_1_1.NumParameters = 3;
     desc.Desc_1_1.pParameters = parameters;
-    desc.Desc_1_1.Flags = D3D12_ROOT_SIGNATURE_FLAG_CBV_SRV_UAV_HEAP_DIRECTLY_INDEXED
-                          | D3D12_ROOT_SIGNATURE_FLAG_SAMPLER_HEAP_DIRECTLY_INDEXED;
+    desc.Desc_1_1.Flags = D3D12_ROOT_SIGNATURE_FLAG_CBV_SRV_UAV_HEAP_DIRECTLY_INDEXED |
+        D3D12_ROOT_SIGNATURE_FLAG_SAMPLER_HEAP_DIRECTLY_INDEXED;
     ID3DBlob* blob = nullptr;
     ID3DBlob* error = nullptr;
     ID3D12RootSignature* signature = nullptr;
@@ -2807,8 +2803,7 @@ ID3D12RootSignature* PR_NULLABLE createRootSignature(ID3D12Device* device) {
 }
 
 // Creates the signature of indirect draws or dispatches that read arguments of one kind.
-ID3D12CommandSignature* PR_NULLABLE createSignature(ID3D12Device* device, D3D12_INDIRECT_ARGUMENT_TYPE type,
-                                                    uint32_t bytes) {
+ID3D12CommandSignature* PR_NULLABLE createSignature(ID3D12Device* device, D3D12_INDIRECT_ARGUMENT_TYPE type, uint32_t bytes) {
     D3D12_INDIRECT_ARGUMENT_DESC argument{};
     argument.Type = type;
     D3D12_COMMAND_SIGNATURE_DESC desc{bytes, 1, &argument, 0};
@@ -2821,26 +2816,30 @@ ID3D12CommandSignature* PR_NULLABLE createSignature(ID3D12Device* device, D3D12_
 // if the device cannot make one of them.
 bool createObjects(D3d12Device* d) {
     ID3D12Device10* device = d->device;
-    D3D12_DESCRIPTOR_HEAP_DESC resources{D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, kMaxResources,
-                                         D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, 0};
-    D3D12_DESCRIPTOR_HEAP_DESC samplers{D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, kMaxSamplers,
-                                        D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, 0};
-    if (FAILED(device->CreateDescriptorHeap(&resources, IID_PPV_ARGS(&d->resourceHeap)))
-        || FAILED(device->CreateDescriptorHeap(&samplers, IID_PPV_ARGS(&d->samplerHeap)))
-        || FAILED(device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&d->fence))))
-        return false;
+    D3D12_DESCRIPTOR_HEAP_DESC resources{
+        D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, kMaxResources,
+        D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, 0,
+    };
+    D3D12_DESCRIPTOR_HEAP_DESC samplers{
+        D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, kMaxSamplers,
+        D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, 0,
+    };
+    if (FAILED(device->CreateDescriptorHeap(&resources, IID_PPV_ARGS(&d->resourceHeap))) ||
+        FAILED(device->CreateDescriptorHeap(&samplers, IID_PPV_ARGS(&d->samplerHeap))) ||
+        FAILED(device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&d->fence))))
+    return false;
     d->resourceIncrement = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
     d->samplerIncrement = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
     d->colorIncrement = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
     d->rootSignature = createRootSignature(device);
     d->drawSignature = createSignature(device, D3D12_INDIRECT_ARGUMENT_TYPE_DRAW, sizeof(PrGpuDrawIndirect));
     d->drawIndexedSignature = createSignature(device, D3D12_INDIRECT_ARGUMENT_TYPE_DRAW_INDEXED,
-                                              sizeof(PrGpuDrawIndexedIndirect));
+        sizeof(PrGpuDrawIndexedIndirect));
     d->dispatchSignature = createSignature(device, D3D12_INDIRECT_ARGUMENT_TYPE_DISPATCH,
-                                           sizeof(PrGpuDispatchIndirect));
+        sizeof(PrGpuDispatchIndirect));
     d->zeros = createBuffer(d, kZeroUniformBytes, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_FLAG_NONE);
-    if (d->rootSignature == nullptr || d->drawSignature == nullptr || d->drawIndexedSignature == nullptr
-        || d->dispatchSignature == nullptr || d->zeros == nullptr)
+    if (d->rootSignature == nullptr || d->drawSignature == nullptr || d->drawIndexedSignature == nullptr ||
+            d->dispatchSignature == nullptr || d->zeros == nullptr)
         return false;
     // The timestamps that each timed command buffer writes, at its start and its end, and the memory that they resolve
     // into.
@@ -2850,7 +2849,7 @@ bool createObjects(D3d12Device* d) {
     D3D12_QUERY_HEAP_DESC queries{D3D12_QUERY_HEAP_TYPE_TIMESTAMP, kTimestampPairs * 2, 0};
     if (SUCCEEDED(device->CreateQueryHeap(&queries, IID_PPV_ARGS(&d->timestamps)))) {
         d->timestampReadback = createBuffer(d, uint64_t(kTimestampPairs) * 16, D3D12_HEAP_TYPE_READBACK,
-                                            D3D12_RESOURCE_FLAG_NONE);
+            D3D12_RESOURCE_FLAG_NONE);
         void* mapped = nullptr;
         if (d->timestampReadback != nullptr && SUCCEEDED(d->timestampReadback->Map(0, nullptr, &mapped))) {
             d->timestampTicks = static_cast<const uint64_t*>(mapped);
@@ -2869,8 +2868,7 @@ void nameAdapter(D3d12Device* d) {
     if (d->factory != nullptr && SUCCEEDED(d->factory->EnumAdapterByLuid(luid, IID_PPV_ARGS(&adapter))))
         adapter->GetDesc1(&desc);
     release(adapter);
-    int size = WideCharToMultiByte(CP_UTF8, 0, desc.Description, -1, d->adapter, int(sizeof(d->adapter)), nullptr,
-                                   nullptr);
+    int size = WideCharToMultiByte(CP_UTF8, 0, desc.Description, -1, d->adapter, int(sizeof(d->adapter)), nullptr, nullptr);
     if (size <= 1)
         memCopy(d->adapter, "Direct3D 12", sizeof("Direct3D 12"));
 }
@@ -3020,8 +3018,8 @@ PrStatus prGpuD3d12Create(const PrGpuD3d12Options* PR_NULLABLE options, PrGpuDev
     d->shaderTarget = PrGpuShaderTarget_Dxil;
     d->info.adapter = PrStringView{d->adapter, strlen(d->adapter)};
     d->info.backend = "Direct3D 12";
-    d->info.features = PrGpuFeatureFlag_TextureCompressionBc
-                       | (d->timestampTicks != nullptr ? PrGpuFeatureFlag_Timestamps : 0);
+    d->info.features = PrGpuFeatureFlag_TextureCompressionBc |
+        (d->timestampTicks != nullptr ? PrGpuFeatureFlag_Timestamps : 0);
     d->info.maxTextureSize = D3D12_REQ_TEXTURE2D_U_OR_V_DIMENSION;
     d->info.maxResourceHandles = kMaxResources - 1;
     d->info.maxSamplerHandles = kMaxSamplers - 1;
@@ -3050,18 +3048,22 @@ PrStatus prGpuD3d12TextureWrap(PrGpuDevice* device, void* resource, PrGpuTexture
     if (format == PrGpuFormat_None)
         return PrStatus_NotSupported;
     bool is3d = rd.Dimension == D3D12_RESOURCE_DIMENSION_TEXTURE3D;
-    PrGpuTextureKind kind = is3d                      ? PrGpuTextureKind_3d
-                            : rd.DepthOrArraySize > 1 ? PrGpuTextureKind_2dArray
-                                                      : PrGpuTextureKind_2d;
-    PrGpuTextureDesc desc{.kind = kind,
-                          .format = format,
-                          .usage = usage,
-                          .levels = uint8_t(rd.MipLevels),
-                          .samples = uint8_t(rd.SampleDesc.Count),
-                          .extent = {uint32_t(rd.Width), uint32_t(rd.Height), uint32_t(rd.DepthOrArraySize)}};
+    PrGpuTextureKind kind = PrGpuTextureKind_2d;
+    if (is3d)
+        kind = PrGpuTextureKind_3d;
+    else if (rd.DepthOrArraySize > 1)
+        kind = PrGpuTextureKind_2dArray;
+    PrGpuTextureDesc desc{
+        .kind = kind,
+        .format = format,
+        .usage = usage,
+        .levels = uint8_t(rd.MipLevels),
+        .samples = uint8_t(rd.SampleDesc.Count),
+        .extent = {uint32_t(rd.Width), uint32_t(rd.Height), uint32_t(rd.DepthOrArraySize)},
+    };
     r->AddRef();
     uint32_t slot = addTexture(d, r, desc, rd.Format, uint8_t(rd.MipLevels),
-                               is3d ? uint16_t(1) : uint16_t(rd.DepthOrArraySize), 0, 0);
+        is3d ? uint16_t(1) : uint16_t(rd.DepthOrArraySize), 0, 0);
     if (slot == 0) {
         r->Release();
         return PrStatus_Limit;

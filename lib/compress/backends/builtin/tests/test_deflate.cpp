@@ -25,9 +25,11 @@ std::vector<uint8_t> noise(size_t size, uint32_t seed) {
 
 // Returns words of a small vocabulary in an order that repeats only now and then, as text does.
 std::vector<uint8_t> text(size_t size) {
-    static const char* const kWords[] = {"the ",   "quick ", "brown ", "fox ",    "jumps ", "over ",
-                                         "lazy ",  "dog ",   "and ",   "then ",   "runs ",  "away, ",
-                                         "while ", "a ",     "cat ",   "sleeps. "};
+    static const char* const kWords[] = {
+        "the ",   "quick ", "brown ", "fox ",    "jumps ", "over ",
+        "lazy ",  "dog ",   "and ",   "then ",   "runs ",  "away, ",
+        "while ", "a ",     "cat ",   "sleeps. ",
+    };
     std::vector<uint8_t> out;
     uint32_t x = 7;
     while (out.size() < size) {
@@ -53,7 +55,7 @@ std::vector<uint8_t> decode(InflateFormat format, const std::vector<uint8_t>& st
     size_t consumed = 0;
     size_t written = 0;
     const InflateResult result = inflateRead(parser, {stream.data(), stream.size()}, true, &consumed, out.data(),
-                                             out.size(), &written);
+        out.size(), &written);
     inflateDestroy(parser);
     CHECK(result == InflateResult_Done);
     CHECK(consumed == stream.size());
@@ -142,7 +144,7 @@ TEST_CASE("Deflate frames zlib and gzip streams as their formats define") {
     CHECK(gzip[1] == 0x8b);
     CHECK(gzip[2] == 8);
     const size_t end = gzip.size();
-    const uint32_t size = uint32_t(gzip[end - 4]) | uint32_t(gzip[end - 3]) << 8 | uint32_t(gzip[end - 2]) << 16
-                          | uint32_t(gzip[end - 1]) << 24;
+    const uint32_t size = uint32_t(gzip[end - 4]) | uint32_t(gzip[end - 3]) << 8 | uint32_t(gzip[end - 2]) << 16 |
+        uint32_t(gzip[end - 1]) << 24;
     CHECK(size == input.size());
 }

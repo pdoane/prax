@@ -42,7 +42,7 @@ typedef uint8_t PrLayoutCoordinates;
 // rectangle at the origin. An element that generates no box, or an erased node, has none. Writes up to `capacity`
 // rectangles to `out` and returns the total count.
 uint32_t prLayoutNodeBoxes(PrLayoutTree* tree, PrLayoutNode node, PrLayoutCoordinates coordinates,
-                           PrLayoutRect* PR_NULLABLE out, uint32_t capacity);
+    PrLayoutRect* PR_NULLABLE out, uint32_t capacity);
 
 // Returns the union of the node's boxes in `coordinates`, or an empty rectangle at the origin if it has none.
 PrLayoutRect prLayoutNodeBounds(PrLayoutTree* tree, PrLayoutNode node, PrLayoutCoordinates coordinates);
@@ -95,7 +95,7 @@ typedef uint8_t PrLayoutGridAxis;
 // start of its implicit grid, as its last layout sized them, and returns the number of its tracks. A collapsed track's
 // size is zero (css-grid-1/#collapsed-grid-track). Returns zero if `node` is not a grid container with a box.
 uint32_t prLayoutNodeGridTrackSizes(const PrLayoutTree* tree, PrLayoutNode node, PrLayoutGridAxis axis,
-                                    PrLayoutUnit* PR_NULLABLE out, uint32_t capacity);
+    PrLayoutUnit* PR_NULLABLE out, uint32_t capacity);
 
 // Writes up to `capacity` of the names that the template of the grid container `node` gives the lines along `axis` to
 // `out`, and returns the number of names. Each name's line is counted from the start of the implicit grid of the
@@ -103,7 +103,7 @@ uint32_t prLayoutNodeGridTrackSizes(const PrLayoutTree* tree, PrLayoutNode node,
 // their lines, and those of one line in the order that the template gives them. Names that areas give their edges are
 // not among them. Returns zero if `node` is not a grid container with a box.
 uint32_t prLayoutNodeGridLineNames(const PrLayoutTree* tree, PrLayoutNode node, PrLayoutGridAxis axis,
-                                   PrLayoutGridLineName* PR_NULLABLE out, uint32_t capacity);
+    PrLayoutGridLineName* PR_NULLABLE out, uint32_t capacity);
 
 // Returns the text that the tree interned for `name` (prLayoutGridNameIntern), valid for the tree's life.
 PrStringView prLayoutGridNameText(const PrLayoutTree* tree, PrLayoutGridName name);
@@ -127,21 +127,20 @@ PrLayoutUnit prLayoutNodeBorderWidth(const PrLayoutTree* tree, PrLayoutNode node
 // `coordinates`, to `out`. The caret has no extent along its line and spans the content area of the text across it, so
 // it is a vertical segment on a horizontal line. Returns false if the last layout drew none of the node's text.
 bool prLayoutNodeTextCaret(PrLayoutTree* tree, PrLayoutNode text, uint32_t offset, PrLayoutTextAffinity affinity,
-                           PrLayoutCoordinates coordinates, PrLayoutRect* out);
+    PrLayoutCoordinates coordinates, PrLayoutRect* out);
 
 // Returns the rectangles that the bytes from `start` to `end` of the text node `text` cover in the last layout, in
 // `coordinates`, in content order: one for each part of the text on a line in one direction that holds some of them,
 // across the content area of the text (cssom-view-1/#dom-range-getclientrects). Writes up to `capacity` rectangles to
 // `out` and returns the total count.
 uint32_t prLayoutNodeTextRangeBoxes(PrLayoutTree* tree, PrLayoutNode text, uint32_t start, uint32_t end,
-                                    PrLayoutCoordinates coordinates, PrLayoutRect* PR_NULLABLE out, uint32_t capacity);
+    PrLayoutCoordinates coordinates, PrLayoutRect* PR_NULLABLE out, uint32_t capacity);
 
 // Writes the position in the text of `root` or its descendants, in the last layout, nearest `point` in viewport
 // coordinates as painted, to `out` (cssom-view-1/#dom-document-caretpositionfrompoint). The nearest line is the one
 // nearest the point across lines, and the nearest position on it the nearest along it. Returns false if the last layout
 // drew none of their text, or if the point does not reach the plane of any line that holds it.
-bool prLayoutTextPositionFromPoint(PrLayoutTree* tree, PrLayoutNode root, PrLayoutVec point,
-                                   PrLayoutTextPosition* out);
+bool prLayoutTextPositionFromPoint(PrLayoutTree* tree, PrLayoutNode root, PrLayoutVec point, PrLayoutTextPosition* out);
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Containing blocks
@@ -169,7 +168,7 @@ uint32_t prLayoutTreeHitTest(PrLayoutTree* tree, PrLayoutVec point, PrLayoutNode
 // content of an SVG foreignObject that a replaced element's painter draws (prLayoutNodeDraw). `point` is in the root's
 // coordinates, from the top left of its containing block. Returns zero if the last layout did not lay out `root`.
 uint32_t prLayoutNodeHitTest(PrLayoutTree* tree, PrLayoutNode root, PrLayoutVec point,
-                             PrLayoutNode* PR_NULLABLE out, uint32_t capacity);
+    PrLayoutNode* PR_NULLABLE out, uint32_t capacity);
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Scroll state

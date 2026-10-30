@@ -27,13 +27,13 @@ extern "C" {
 // Normal binding claims its chord, and an Override binding captures it. A chord whose command is missing or takes a
 // required parameter is left unbound, and one whose command is disabled is taken and does nothing.
 void prCommandScope(PrUi* ui, PrLayoutNode node, const PrCommandRegistry* registry, const PrCommandKeymap* keymap,
-                    PrStringView context);
+    PrStringView context);
 
 // Creates a menu item that runs the command `commandId`, showing its title, the chord of its first binding, its check
 // and whether it is disabled. Running it closes the menu. Returns kPrLayoutNodeNone, and creates nothing, if the
 // registry has no such command.
 PrLayoutNode prCommandMenuItem(PrKit* kit, PrLayoutNode menu, const PrCommandRegistry* registry,
-                               const PrCommandKeymap* keymap, PrStringView commandId);
+    const PrCommandKeymap* keymap, PrStringView commandId);
 
 // Returns true if `title` and `category` match `query`: each word of the query, in any case, is in one of them. An
 // empty query matches every command.
@@ -43,7 +43,7 @@ bool prCommandMatches(PrStringView query, PrStringView title, PrStringView categ
 // the query that `query` holds, in the registry's order. The palette leaves out hidden commands and those that a
 // surface cannot run. Activating an item runs its command. Returns the palette's list, or none while it is closed.
 PrLayoutNode prCommandPalette(PrKit* kit, PrLayoutNode trigger, const PrCommandRegistry* registry,
-                              const PrCommandKeymap* keymap, PrUiTextBuffer query);
+    const PrCommandKeymap* keymap, PrUiTextBuffer query);
 
 #if defined(__cplusplus)
 }

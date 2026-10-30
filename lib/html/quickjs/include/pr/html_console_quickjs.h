@@ -27,8 +27,7 @@ typedef uint8_t PrJsHtmlConsoleLevel;
 // The destination of the console's output (console/#printer). `print` receives one message at a time. `depth` is the
 // nesting depth of the message's group, which the printer indents the message by.
 typedef struct PrJsHtmlConsolePrinter {
-    void (*PR_NONNULL print)(JSContext* ctx, PrJsHtmlConsoleLevel level, uint32_t depth,
-                             PrStringView text);
+    void (*PR_NONNULL print)(JSContext* ctx, PrJsHtmlConsoleLevel level, uint32_t depth, PrStringView text);
 } PrJsHtmlConsolePrinter;
 
 // Defines the console namespace on the global. The namespace prints through the runtime's printer.

@@ -397,8 +397,7 @@ Built buildSum(Builder* b, Cursor* c) {
         Built operand = buildProduct(b, c);
         if (operand.node == kCssMathNone)
             return kInvalid;
-        uint32_t node =
-            subtract ? addOperator(b, PrCssCalc_Negate, operand.node) : operand.node;
+        uint32_t node = subtract ? addOperator(b, PrCssCalc_Negate, operand.node) : operand.node;
         type = addTypes(type, operand.type);
         nodeAt(b, last).sibling = node;
         last = node;
@@ -431,15 +430,13 @@ void addArgument(Builder* b, Arguments* args, uint32_t node) {
 }
 
 bool buildArguments(Builder* b, uint32_t index, Arguments* args) {
-    *args =
-        Arguments{kCssMathNone, kCssMathNone, 0, kFailure, kFailure, true, PrCssKeyword_Unknown};
+    *args = Arguments{kCssMathNone, kCssMathNone, 0, kFailure, kFailure, true, PrCssKeyword_Unknown};
     Cursor c = {index + 1, index + b->values[index].next};
     while (c.at < c.end) {
         const CssValueNode* value = &b->values[c.at];
         double ignored;
-        bool keyword = value->kind == PrCssValueKind_Keyword
-                       && !keywordNumber(cssValueKeyword(value), &ignored)
-                       && !componentKeyword(cssValueKeyword(value));
+        bool keyword = value->kind == PrCssValueKind_Keyword && !keywordNumber(cssValueKeyword(value), &ignored) &&
+            !componentKeyword(cssValueKeyword(value));
         if (keyword || value->kind == PrCssValueKind_Ident || atLiteral(b, &c, ',')) {
             if (keyword && args->keyword == PrCssKeyword_Unknown)
                 args->keyword = cssValueKeyword(value);
@@ -482,8 +479,8 @@ Type functionType(CssValueDef def, const Arguments& args) {
         case CssValueDef_RoundFn:
             // css-values-4/#round-func: B may be omitted if A is a <number>, and also with line-width, in which case A
             // must be a <length>.
-            if (args.keyword == PrCssKeyword_LineWidth
-                && !entriesEquals(args.single, typeOf(PrCssNumericBaseType_Length)))
+            if (args.keyword == PrCssKeyword_LineWidth &&
+                    !entriesEquals(args.single, typeOf(PrCssNumericBaseType_Length)))
                 return kFailure;
             if (args.calculations == 1 && args.keyword != PrCssKeyword_LineWidth && !args.numbers)
                 return kFailure;
@@ -548,15 +545,13 @@ Built buildFunction(Builder* b, uint32_t index) {
 Built adoptNode(Builder* b, uint32_t index);
 
 bool adoptArguments(Builder* b, uint32_t index, Arguments* args) {
-    *args =
-        Arguments{kCssMathNone, kCssMathNone, 0, kFailure, kFailure, true, PrCssKeyword_Unknown};
+    *args = Arguments{kCssMathNone, kCssMathNone, 0, kFailure, kFailure, true, PrCssKeyword_Unknown};
     uint32_t end = index + b->values[index].next;
     for (uint32_t at = index + 1; at < end; at += b->values[at].next) {
         const CssValueNode* value = &b->values[at];
         double ignored;
-        bool keyword = value->kind == PrCssValueKind_Keyword
-                       && !keywordNumber(cssValueKeyword(value), &ignored)
-                       && !componentKeyword(cssValueKeyword(value));
+        bool keyword = value->kind == PrCssValueKind_Keyword && !keywordNumber(cssValueKeyword(value), &ignored) &&
+            !componentKeyword(cssValueKeyword(value));
         if (keyword || value->kind == PrCssValueKind_Ident || cssValueIsLiteral(value, ',')) {
             if (keyword && args->keyword == PrCssKeyword_Unknown)
                 args->keyword = cssValueKeyword(value);
@@ -751,18 +746,15 @@ bool comparesPercentages(const Builder* b) {
 // combined only if `percentages` is set.
 template <typename Combine>
 void combineUnits(Builder* b, uint32_t parent, bool percentages, Combine combine) {
-    for (uint32_t child = nodeAt(b, parent).child; child != kCssMathNone;
-         child = nodeAt(b, child).sibling) {
-        if (!isNumeric(nodeAt(b, child))
-            || (!percentages && nodeAt(b, child).value.kind == PrCssValueKind_Percentage)) {
+    for (uint32_t child = nodeAt(b, parent).child; child != kCssMathNone; child = nodeAt(b, child).sibling) {
+        if (!isNumeric(nodeAt(b, child)) || (!percentages && nodeAt(b, child).value.kind == PrCssValueKind_Percentage)) {
             continue;
         }
         uint32_t before = child;
         while (nodeAt(b, before).sibling != kCssMathNone) {
             CssMathNode& other = nodeAt(b, nodeAt(b, before).sibling);
             if (isNumeric(other) && unitEquals(other.value, nodeAt(b, child).value)) {
-                nodeAt(b, child).value.number =
-                    combine(nodeAt(b, child).value.number, other.value.number);
+                nodeAt(b, child).value.number = combine(nodeAt(b, child).value.number, other.value.number);
                 unlinkNext(b, before);
             } else {
                 before = nodeAt(b, before).sibling;
@@ -837,8 +829,7 @@ bool foldFactors(Builder* b, uint32_t node, bool numbers, CssValueNode* out) {
     PrCssUnit unit[PrCssNumericBaseType_Count] = {};
     double product = 1;
     bool any = false;
-    for (uint32_t child = nodeAt(b, node).child; child != kCssMathNone;
-         child = nodeAt(b, child).sibling) {
+    for (uint32_t child = nodeAt(b, node).child; child != kCssMathNone; child = nodeAt(b, child).sibling) {
         if (!isFactor(b, child, numbers))
             continue;
         any = true;
@@ -908,13 +899,11 @@ uint32_t simplifyProduct(Builder* b, uint32_t node) {
     uint32_t second = nodeAt(b, first).sibling;
     if (second == kCssMathNone)
         return first;
-    if (factor == kCssMathNone || !isNumber(nodeAt(b, factor))
-        || nodeAt(b, second).sibling != kCssMathNone)
+    if (factor == kCssMathNone || !isNumber(nodeAt(b, factor)) || nodeAt(b, second).sibling != kCssMathNone)
         return node;
     uint32_t sum = first == factor ? second : first;
     bool numeric = isOperator(nodeAt(b, sum), PrCssCalc_Sum);
-    for (uint32_t term = nodeAt(b, sum).child; numeric && term != kCssMathNone;
-         term = nodeAt(b, term).sibling)
+    for (uint32_t term = nodeAt(b, sum).child; numeric && term != kCssMathNone; term = nodeAt(b, term).sibling)
         numeric = isNumeric(nodeAt(b, term));
     if (!numeric)
         return node;
@@ -964,8 +953,7 @@ bool computeFunction(Builder* b, uint32_t node, CssValueNode* out) {
     double acc = 0;
     bool fixed = false;         // random(): true if the key is `fixed`; `base` is then its value
     double base = kNanF64;
-    for (uint32_t child = nodeAt(b, node).child; child != kCssMathNone;
-         child = nodeAt(b, child).sibling) {
+    for (uint32_t child = nodeAt(b, node).child; child != kCssMathNone; child = nodeAt(b, child).sibling) {
         const CssMathNode& argument = nodeAt(b, child);
         const CssValueNode& value = argument.value;
         if (argument.leaf != kCssMathNone) {
@@ -979,8 +967,8 @@ bool computeFunction(Builder* b, uint32_t node, CssValueNode* out) {
                 base = baseValue(b->scratch->leaves.data + argument.leaf);
             continue;
         }
-        if (!isNumeric(argument) || (numeric && !unitEquals(first, value))
-            || (value.kind == PrCssValueKind_Percentage && comparesPercentages(b))) {
+        if (!isNumeric(argument) || (numeric && !unitEquals(first, value)) ||
+                (value.kind == PrCssValueKind_Percentage && comparesPercentages(b))) {
             return false;
         }
         if (!numeric)
@@ -1007,9 +995,9 @@ bool computeFunction(Builder* b, uint32_t node, CssValueNode* out) {
         return false;
     // A number from a dimension is the ratio of the dimension to its unit. That ratio is unknown for a unit that
     // depends on context, and for a percentage.
-    if ((def == CssValueDef_SignFn || def == CssValueDef_Atan2Fn || def == CssValueDef_ProgressFn)
-        && (first.kind == PrCssValueKind_Percentage
-            || (first.kind == PrCssValueKind_Dimension && cssUnitScale(first.unit) == 0))) {
+    if ((def == CssValueDef_SignFn || def == CssValueDef_Atan2Fn || def == CssValueDef_ProgressFn) &&
+            (first.kind == PrCssValueKind_Percentage ||
+                (first.kind == PrCssValueKind_Dimension && cssUnitScale(first.unit) == 0))) {
         return false;
     }
 
@@ -1060,13 +1048,10 @@ bool computeFunction(Builder* b, uint32_t node, CssValueNode* out) {
             break;
         case CssValueDef_LogFn:
             same = cssNumberValue(PrCssValueKind_Number, PrCssUnit_Number,
-                                  present[1] ? logF64(v[0]) / logF64(v[1]) : logF64(v[0]));
+                present[1] ? logF64(v[0]) / logF64(v[1]) : logF64(v[0]));
             break;
         case CssValueDef_SignFn:
-            same = cssNumberValue(PrCssValueKind_Number, PrCssUnit_Number,
-                                  isNanF64(v[0]) || v[0] == 0 ? v[0]
-                                  : v[0] < 0                  ? -1
-                                                              : 1);
+            same = cssNumberValue(PrCssValueKind_Number, PrCssUnit_Number, v[0] > 0 ? 1 : v[0] < 0 ? -1 : v[0]);
             break;
         case CssValueDef_ProgressFn:
             same = cssNumberValue(PrCssValueKind_Number, PrCssUnit_Number, (v[0] - v[1]) / (v[2] - v[1]));
@@ -1127,15 +1112,13 @@ uint32_t simplifyFunction(Builder* b, uint32_t node) {
         return node;
     bool larger = name == PrCssKeyword_Max;
     combineUnits(b, node, !comparesPercentages(b),
-                 [larger](double x, double y) { return larger ? maximumF64(x, y) : minimumF64(x, y); });
+        [larger](double x, double y) { return larger ? maximumF64(x, y) : minimumF64(x, y); });
 
     // The commas of the arguments that were combined away are removed with them.
-    for (uint32_t child = nodeAt(b, node).child; child != kCssMathNone;
-         child = nodeAt(b, child).sibling) {
+    for (uint32_t child = nodeAt(b, node).child; child != kCssMathNone; child = nodeAt(b, child).sibling) {
         uint32_t next = nodeAt(b, child).sibling;
-        while (next != kCssMathNone && cssValueIsLiteral(&nodeAt(b, next).value, ',')
-               && (nodeAt(b, next).sibling == kCssMathNone
-                   || cssValueIsLiteral(&nodeAt(b, nodeAt(b, next).sibling).value, ','))) {
+        while (next != kCssMathNone && cssValueIsLiteral(&nodeAt(b, next).value, ',') &&
+                (nodeAt(b, next).sibling == kCssMathNone || cssValueIsLiteral(&nodeAt(b, nodeAt(b, next).sibling).value, ','))) {
             unlinkNext(b, child);
             next = nodeAt(b, child).sibling;
         }
@@ -1287,8 +1270,8 @@ bool singleItems(CssValueRun run, uint32_t index, SumValue* items) {
         if (cssValueIsLiteral(&run.values[at], ','))
             continue;
         SumValue sum;
-        bool ok = sumValue(run, at, &sum) && sum.count == 1
-            && (items->count == 0 || unitsEquals(items->data[0], sum.data[0]));
+        bool ok = sumValue(run, at, &sum) && sum.count == 1 &&
+            (items->count == 0 || unitsEquals(items->data[0], sum.data[0]));
         if (ok)
             items->push(sum.data[0]);
         sum.reset();
@@ -1320,8 +1303,7 @@ bool sumValue(CssValueRun run, uint32_t index, SumValue* out) {
         if (!minimum && name != PrCssKeyword_Max && name != PrCssKeyword_Clamp)
             return false;
         SumValue items;
-        bool ok = singleItems(run, index, &items)
-                  && (cssValueKeyword(value) != PrCssKeyword_Clamp || items.count == 3);
+        bool ok = singleItems(run, index, &items) && (cssValueKeyword(value) != PrCssKeyword_Clamp || items.count == 3);
         if (ok && cssValueKeyword(value) == PrCssKeyword_Clamp) {
             SumItem result = items.data[1];
             double lower = items.data[0].value;
@@ -1334,8 +1316,7 @@ bool sumValue(CssValueRun run, uint32_t index, SumValue* out) {
             SumItem result = items.data[0];
             for (uint32_t i = 1; i < items.count; ++i) {
                 double x = items.data[i].value;
-                result.value = minimum ? (x < result.value ? x : result.value)
-                                       : (x > result.value ? x : result.value);
+                result.value = minimum ? (x < result.value ? x : result.value) : (x > result.value ? x : result.value);
             }
             out->push(result);
         }
@@ -1373,8 +1354,7 @@ bool sumValue(CssValueRun run, uint32_t index, SumValue* out) {
                         SumItem item = out->data[i];
                         item.value *= factor.data[j].value;
                         for (uint32_t k = 0; ok && k < factor.data[j].count; ++k)
-                            ok = multiplyUnit(&item, factor.data[j].units[k].unit,
-                                              factor.data[j].units[k].power);
+                            ok = multiplyUnit(&item, factor.data[j].units[k].unit, factor.data[j].units[k].power);
                         product.push(item);
                     }
                 }
@@ -1447,8 +1427,7 @@ void replaceWithTree(Builder* b, CssValuePool* pool, uint32_t first, Built root)
     pool->values.count = first;
     CssValueNode math = {};
     math.kind = PrCssValueKind_Math;
-    math.aux =
-        b->slot.category != CssUnitCategory_Unknown ? b->slot.category : categoryOf(root.type);
+    math.aux = b->slot.category != CssUnitCategory_Unknown ? b->slot.category : categoryOf(root.type);
     uint32_t at = cssValuePoolAdd(pool, math);
     emit(b, pool, tree);
     pool->values.data[at].next = pool->values.count - at;
@@ -1467,8 +1446,7 @@ PrCssNumericType numericTypeOf(const Type& type) {
     for (uint32_t i = 0; i < PrCssNumericBaseType_Count; ++i)
         out.exponents[i] = type.exponent[i];
     out.hasPercentHint = type.hint != kBaseTypeNone;
-    out.percentHint =
-        out.hasPercentHint ? PrCssNumericBaseType(type.hint) : PrCssNumericBaseType(0);
+    out.percentHint = out.hasPercentHint ? PrCssNumericBaseType(type.hint) : PrCssNumericBaseType(0);
     return out;
 }
 
@@ -1510,13 +1488,15 @@ bool cssMathAdopt(CssValuePool* pool, uint32_t first, CssMathSlot slot, CssMathS
 void cssMathWrap(CssValueNode value, CssValueNode out[PR_NONNULL 2]) {
     canonicalize(&value);
     value.next = 1;
-    value.kind =
-        value.kind == PrCssValueKind_Integer ? PrCssValueKind_Number : value.kind;
+    value.kind = value.kind == PrCssValueKind_Integer ? PrCssValueKind_Number : value.kind;
     CssValueNode math = {};
     math.kind = PrCssValueKind_Math;
-    math.aux = value.kind == PrCssValueKind_Dimension ? cssUnitCategory(value.unit)
-             : value.kind == PrCssValueKind_Percentage ? CssUnitCategory_Percent
-                                                     : CssUnitCategory_Number;
+    if (value.kind == PrCssValueKind_Dimension)
+        math.aux = cssUnitCategory(value.unit);
+    else if (value.kind == PrCssValueKind_Percentage)
+        math.aux = CssUnitCategory_Percent;
+    else
+        math.aux = CssUnitCategory_Number;
     math.next = 2;
     out[0] = math;
     out[1] = value;
@@ -1587,13 +1567,12 @@ bool cssMathType(CssValueRun run, uint32_t index, PrCssNumericType* out) {
     CssMathScratch scratch = {};
     Builder b = {
         run.values, &scratch,   CssMathSlot{CssUnitCategory_Unknown, CssUnitCategory_Percent},
-        0,          UINT32_MAX, false};
+        0,          UINT32_MAX, false,
+    };
     // A Math's type is its tree's type.
     const CssValueNode* value = &run.values[index];
     bool math = value->kind == PrCssValueKind_Math;
-    Built built = !math             ? adoptNode(&b, index)
-                  : value->next > 1 ? adoptNode(&b, index + 1)
-                                    : kInvalid;
+    Built built = !math             ? adoptNode(&b, index) : value->next > 1 ? adoptNode(&b, index + 1) : kInvalid;
     cssMathScratchReset(&scratch);
     if (built.node == kCssMathNone || built.type.failure)
         return false;
@@ -1613,16 +1592,14 @@ bool cssNumericTypeOfUnit(PrCssUnit unit, PrCssNumericType* out) {
     return !type.failure;
 }
 
-bool cssNumericTypeAdd(const PrCssNumericType& a, const PrCssNumericType& b,
-                       PrCssNumericType* out) {
+bool cssNumericTypeAdd(const PrCssNumericType& a, const PrCssNumericType& b, PrCssNumericType* out) {
     Type sum = addTypes(typeFrom(a), typeFrom(b));
     if (!sum.failure)
         *out = numericTypeOf(sum);
     return !sum.failure;
 }
 
-bool cssNumericTypeMultiply(const PrCssNumericType& a, const PrCssNumericType& b,
-                            PrCssNumericType* out) {
+bool cssNumericTypeMultiply(const PrCssNumericType& a, const PrCssNumericType& b, PrCssNumericType* out) {
     Type product = multiplyTypes(typeFrom(a), typeFrom(b));
     if (!product.failure)
         *out = numericTypeOf(product);
@@ -1636,14 +1613,13 @@ PrCssNumericType cssNumericTypeInvert(const PrCssNumericType& type) {
 bool cssMathTo(CssValueRun run, uint32_t index, PrCssUnit unit, double* out) {
     SumValue sum;
     PrCssUnit from;
-    bool ok = sumValue(run, index, &sum) && sum.count == 1 && unitOfItem(sum.data[0], &from)
-        && convert(sum.data[0].value, from, unit, out);
+    bool ok = sumValue(run, index, &sum) && sum.count == 1 && unitOfItem(sum.data[0], &from) &&
+        convert(sum.data[0].value, from, unit, out);
     sum.reset();
     return ok;
 }
 
-bool cssMathToSum(CssValueRun run, uint32_t index, const PrCssUnit* PR_NULLABLE units,
-                  uint32_t count, CssValuePool* out) {
+bool cssMathToSum(CssValueRun run, uint32_t index, const PrCssUnit* PR_NULLABLE units, uint32_t count, CssValuePool* out) {
     SumValue sum;
     Array<SumItem> values;
     bool ok = sumValue(run, index, &sum);
@@ -1657,12 +1633,8 @@ bool cssMathToSum(CssValueRun run, uint32_t index, const PrCssUnit* PR_NULLABLE 
     if (ok && count == 0) {
         // Sort in code point order of the units' names.
         for (uint32_t i = 1; i < values.count; ++i) {
-            for (uint32_t j = i;
-                 j > 0
-                 && stringCompare(cssNumericUnitName(values.data[j].units[0].unit),
-                                  cssNumericUnitName(values.data[j - 1].units[0].unit))
-                        < 0;
-                 --j) {
+            for (uint32_t j = i; j > 0 && stringCompare(cssNumericUnitName(values.data[j].units[0].unit),
+                    cssNumericUnitName(values.data[j - 1].units[0].unit)) < 0; --j) {
                 SumItem swap = values.data[j];
                 values.data[j] = values.data[j - 1];
                 values.data[j - 1] = swap;
@@ -1680,8 +1652,7 @@ bool cssMathToSum(CssValueRun run, uint32_t index, const PrCssUnit* PR_NULLABLE 
             double total = 0;
             for (uint32_t i = 0; i < values.count;) {
                 double converted;
-                if (convert(values.data[i].value, values.data[i].units[0].unit, units[u],
-                            &converted)) {
+                if (convert(values.data[i].value, values.data[i].units[0].unit, units[u], &converted)) {
                     total += converted;
                     values.erase(i);
                 } else {
@@ -1704,8 +1675,7 @@ bool cssMathToSum(CssValueRun run, uint32_t index, const PrCssUnit* PR_NULLABLE 
         node.aux = PrCssCalc_Sum;
         uint32_t operands = cssValuePoolAdd(out, node);
         for (uint32_t i = 0; i < values.count; ++i)
-            cssValuePoolAdd(out,
-                            cssNumericValue(values.data[i].value, values.data[i].units[0].unit));
+            cssValuePoolAdd(out, cssNumericValue(values.data[i].value, values.data[i].units[0].unit));
         out->values.data[operands].next = out->values.count - operands;
         out->values.data[at].next = out->values.count - at;
     }

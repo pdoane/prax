@@ -112,7 +112,7 @@ PrVec2 prKitGraphPortAnchor(const PrKitGraphNode* node, PrKitGraphSide side, uin
 // column of the nodes that feed it. A column keeps the order of its nodes in the array. A wire that closes a cycle is
 // ignored.
 void prKitGraphArrange(PrKitGraphNode* PR_NULLABLE nodes, uint32_t nodeCount, const PrKitGraphWire* PR_NULLABLE wires,
-                       uint32_t wireCount);
+    uint32_t wireCount);
 
 #if defined(__cplusplus)
 }

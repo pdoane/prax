@@ -25,11 +25,14 @@ constexpr DimensionSize kSdxlBuckets[] = {
     {832, 1216}, {832, 1152}, {896, 1152}, {896, 1088}, {960, 1088}, {960, 1024}, {1024, 1024},
     {1024, 960}, {1088, 960}, {1088, 896}, {1152, 896}, {1152, 832}, {1216, 832}, {1280, 768},
     {1344, 768}, {1344, 704}, {1408, 704}, {1472, 704}, {1536, 640}, {1600, 640}, {1664, 576},
-    {1728, 576}, {1792, 576}, {1856, 512}, {1920, 512}, {1984, 512}, {2048, 512}};
+    {1728, 576}, {1792, 576}, {1856, 512}, {1920, 512}, {1984, 512}, {2048, 512},
+};
 
 // SD 1.5 samples at 512 on one edge, and the other edge steps up to a 16:9 frame.
-constexpr DimensionSize kSd15Sizes[] = {{512, 912}, {512, 832}, {512, 768}, {512, 704}, {512, 640}, {512, 512},
-                                    {640, 512}, {704, 512}, {768, 512}, {832, 512}, {912, 512}};
+constexpr DimensionSize kSd15Sizes[] = {
+    {512, 912}, {512, 832}, {512, 768}, {512, 704}, {512, 640}, {512, 512},
+    {640, 512}, {704, 512}, {768, 512}, {832, 512}, {912, 512},
+};
 
 constexpr double kMegapixels[] = {0.5, 1.0, 1.5, 2.0};
 
@@ -184,7 +187,7 @@ DimensionSize resolvedSize(const Dimensions& dims) {
         case DimensionFamily_Sd15: return kSd15Sizes[std::min(dims.sd15Preset, kSd15Count - 1)];
         case DimensionFamily_Flexible:
             return flexibleSize(kMegapixels[std::min(dims.megapixel, kMegapixelCount - 1)],
-                                std::exp2(std::clamp(dims.aspectExponent, kMinAspectExponent, kMaxAspectExponent)));
+                std::exp2(std::clamp(dims.aspectExponent, kMinAspectExponent, kMaxAspectExponent)));
     }
     return dims.size;
 }
@@ -251,8 +254,10 @@ void swapDimensions(Dimensions& dims) {
 }
 
 bool adoptExactSize(Dimensions& dims, DimensionSize size) {
-    const DimensionFamily families[] = {dims.family, DimensionFamily_Sdxl, DimensionFamily_Sd15,
-                                        DimensionFamily_Flexible};
+    const DimensionFamily families[] = {
+        dims.family, DimensionFamily_Sdxl, DimensionFamily_Sd15,
+        DimensionFamily_Flexible,
+    };
     for (DimensionFamily family : families) {
         LadderPick pick;
         if (!ladderStatesSize(family, size, &pick))

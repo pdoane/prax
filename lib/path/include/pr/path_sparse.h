@@ -88,7 +88,7 @@ enum { kPrPathSparseMaxCoordinate = 1 << 30 };
 // contour counts as closed. A `box` with an edge farther than kPrPathSparseMaxCoordinate from the origin fills nothing.
 // The result lives in the storage of the rasterizer, and stays valid until the next fill.
 PrPathSparse prPathSparseRasterizerFill(PrPathSparseRasterizer* rasterizer, const PrPathPolyline* polyline,
-                                        PrPathFillRule rule, PrIRect box);
+    PrPathFillRule rule, PrIRect box);
 
 #if defined(__cplusplus)
 }

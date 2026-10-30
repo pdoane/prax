@@ -68,61 +68,122 @@ void multiply(const PrDMatrix3& matrix, const double* in, double* out) {
 
 // Matrices that convert the linear RGB of each space to XYZ, and back, relative to the space's own white. The white is
 // D50 for ProPhoto and D65 for the rest.
-constexpr PrDMatrix3 kSrgbToXyz = {{{506752.0 / 1228815, 87881.0 / 245763, 12673.0 / 70218},
-                                {87098.0 / 409605, 175762.0 / 245763, 12673.0 / 175545},
-                                {7918.0 / 409605, 87881.0 / 737289, 1001167.0 / 1053270}}};
-constexpr PrDMatrix3 kXyzToSrgb = {{{12831.0 / 3959, -329.0 / 214, -1974.0 / 3959},
-                                {-851781.0 / 878810, 1648619.0 / 878810, 36519.0 / 878810},
-                                {705.0 / 12673, -2585.0 / 12673, 705.0 / 667}}};
-constexpr PrDMatrix3 kP3ToXyz = {{{608311.0 / 1250200, 189793.0 / 714400, 198249.0 / 1000160},
-                              {35783.0 / 156275, 247089.0 / 357200, 198249.0 / 2500400},
-                              {0.0, 32229.0 / 714400, 5220557.0 / 5000800}}};
-constexpr PrDMatrix3 kXyzToP3 = {{{446124.0 / 178915, -333277.0 / 357830, -72051.0 / 178915},
-                              {-14852.0 / 17905, 63121.0 / 35810, 423.0 / 17905},
-                              {11844.0 / 330415, -50337.0 / 660830, 316169.0 / 330415}}};
-constexpr PrDMatrix3 kA98ToXyz = {{{573536.0 / 994567, 263643.0 / 1420810, 187206.0 / 994567},
-                               {591459.0 / 1989134, 6239551.0 / 9945670, 374412.0 / 4972835},
-                               {53769.0 / 1989134, 351524.0 / 4972835, 4929758.0 / 4972835}}};
-constexpr PrDMatrix3 kXyzToA98 = {{{1829569.0 / 896150, -506331.0 / 896150, -308931.0 / 896150},
-                               {-851781.0 / 878810, 1648619.0 / 878810, 36519.0 / 878810},
-                               {16779.0 / 1248040, -147721.0 / 1248040, 1266979.0 / 1248040}}};
-constexpr PrDMatrix3 kRec2020ToXyz = {{
-    {63426534.0 / 99577255, 20160776.0 / 139408157, 47086771.0 / 278816314},
-    {26158966.0 / 99577255, 472592308.0 / 697040785, 8267143.0 / 139408157},
-    {0.0, 19567812.0 / 697040785, 295819943.0 / 278816314}}};
-constexpr PrDMatrix3 kXyzToRec2020 = {{
-    {30757411.0 / 17917100, -6372589.0 / 17917100, -4539589.0 / 17917100},
-    {-19765991.0 / 29648200, 47925759.0 / 29648200, 467509.0 / 29648200},
-    {792561.0 / 44930125, -1921689.0 / 44930125, 42328811.0 / 44930125}}};
-constexpr PrDMatrix3 kProPhotoToXyz = {{{0.79776664490064230, 0.13518129740053308, 0.03134773412839220},
-                                    {0.28807482881940130, 0.71183523424187300, 0.00008993693872564},
-                                    {0.0, 0.0, 0.82510460251046020}}};
-constexpr PrDMatrix3 kXyzToProPhoto = {{
-    {1.34578688164715830, -0.25557208737979464, -0.05110186497554526},
-    {-0.54463070512490190, 1.50824774284514680, 0.02052744743642139},
-    {0.0, 0.0, 1.21196754563894520}}};
+constexpr PrDMatrix3 kSrgbToXyz = {
+    {
+        {506752.0 / 1228815, 87881.0 / 245763, 12673.0 / 70218},
+        {87098.0 / 409605, 175762.0 / 245763, 12673.0 / 175545},
+        {7918.0 / 409605, 87881.0 / 737289, 1001167.0 / 1053270},
+    },
+};
+constexpr PrDMatrix3 kXyzToSrgb = {
+    {
+        {12831.0 / 3959, -329.0 / 214, -1974.0 / 3959},
+        {-851781.0 / 878810, 1648619.0 / 878810, 36519.0 / 878810},
+        {705.0 / 12673, -2585.0 / 12673, 705.0 / 667},
+    },
+};
+constexpr PrDMatrix3 kP3ToXyz = {
+    {
+        {608311.0 / 1250200, 189793.0 / 714400, 198249.0 / 1000160},
+        {35783.0 / 156275, 247089.0 / 357200, 198249.0 / 2500400},
+        {0.0, 32229.0 / 714400, 5220557.0 / 5000800},
+    },
+};
+constexpr PrDMatrix3 kXyzToP3 = {
+    {
+        {446124.0 / 178915, -333277.0 / 357830, -72051.0 / 178915},
+        {-14852.0 / 17905, 63121.0 / 35810, 423.0 / 17905},
+        {11844.0 / 330415, -50337.0 / 660830, 316169.0 / 330415},
+    },
+};
+constexpr PrDMatrix3 kA98ToXyz = {
+    {
+        {573536.0 / 994567, 263643.0 / 1420810, 187206.0 / 994567},
+        {591459.0 / 1989134, 6239551.0 / 9945670, 374412.0 / 4972835},
+        {53769.0 / 1989134, 351524.0 / 4972835, 4929758.0 / 4972835},
+    },
+};
+constexpr PrDMatrix3 kXyzToA98 = {
+    {
+        {1829569.0 / 896150, -506331.0 / 896150, -308931.0 / 896150},
+        {-851781.0 / 878810, 1648619.0 / 878810, 36519.0 / 878810},
+        {16779.0 / 1248040, -147721.0 / 1248040, 1266979.0 / 1248040},
+    },
+};
+constexpr PrDMatrix3 kRec2020ToXyz = {
+    {
+        {63426534.0 / 99577255, 20160776.0 / 139408157, 47086771.0 / 278816314},
+        {26158966.0 / 99577255, 472592308.0 / 697040785, 8267143.0 / 139408157},
+        {0.0, 19567812.0 / 697040785, 295819943.0 / 278816314},
+    },
+};
+constexpr PrDMatrix3 kXyzToRec2020 = {
+    {
+        {30757411.0 / 17917100, -6372589.0 / 17917100, -4539589.0 / 17917100},
+        {-19765991.0 / 29648200, 47925759.0 / 29648200, 467509.0 / 29648200},
+        {792561.0 / 44930125, -1921689.0 / 44930125, 42328811.0 / 44930125},
+    },
+};
+constexpr PrDMatrix3 kProPhotoToXyz = {
+    {
+        {0.79776664490064230, 0.13518129740053308, 0.03134773412839220},
+        {0.28807482881940130, 0.71183523424187300, 0.00008993693872564},
+        {0.0, 0.0, 0.82510460251046020},
+    },
+};
+constexpr PrDMatrix3 kXyzToProPhoto = {
+    {
+        {1.34578688164715830, -0.25557208737979464, -0.05110186497554526},
+        {-0.54463070512490190, 1.50824774284514680, 0.02052744743642139},
+        {0.0, 0.0, 1.21196754563894520},
+    },
+};
 
 // Bradford chromatic adaptation between the D65 and D50 whites.
-constexpr PrDMatrix3 kD65ToD50 = {{{1.0479297925449969, 0.022946870601609652, -0.05019226628920524},
-                               {0.02962780877005599, 0.9904344267538799, -0.017073799063418826},
-                               {-0.009243040646204504, 0.015055191490298152, 0.7518742814281371}}};
-constexpr PrDMatrix3 kD50ToD65 = {{{0.955473421488075, -0.02309845494876471, 0.06325924320057072},
-                               {-0.0283697093338637, 1.0099953980813041, 0.021041441191917323},
-                               {0.012314014864481998, -0.020507649298898964, 1.330365926242124}}};
+constexpr PrDMatrix3 kD65ToD50 = {
+    {
+        {1.0479297925449969, 0.022946870601609652, -0.05019226628920524},
+        {0.02962780877005599, 0.9904344267538799, -0.017073799063418826},
+        {-0.009243040646204504, 0.015055191490298152, 0.7518742814281371},
+    },
+};
+constexpr PrDMatrix3 kD50ToD65 = {
+    {
+        {0.955473421488075, -0.02309845494876471, 0.06325924320057072},
+        {-0.0283697093338637, 1.0099953980813041, 0.021041441191917323},
+        {0.012314014864481998, -0.020507649298898964, 1.330365926242124},
+    },
+};
 
 // Matrices that convert XYZ relative to D65 to Oklab's cone responses and then to Oklab, and back.
-constexpr PrDMatrix3 kXyzToLms = {{{0.8190224379967030, 0.3619062600528904, -0.1288737815209879},
-                               {0.0329836539323885, 0.9292868615863434, 0.0361446663506424},
-                               {0.0481771893596242, 0.2642395317527308, 0.6335478284694309}}};
-constexpr PrDMatrix3 kLmsToOklab = {{{0.2104542683093140, 0.7936177747023054, -0.0040720430116193},
-                                 {1.9779985324311684, -2.4285922420485799, 0.4505937096174110},
-                                 {0.0259040424655478, 0.7827717124575296, -0.8086757549230774}}};
-constexpr PrDMatrix3 kLmsToXyz = {{{1.2268798758459243, -0.5578149944602171, 0.2813910456659647},
-                               {-0.0405757452148008, 1.1122868032803170, -0.0717110580655164},
-                               {-0.0763729366746601, -0.4214933324022432, 1.5869240198367816}}};
-constexpr PrDMatrix3 kOklabToLms = {{{1.0, 0.3963377773761749, 0.2158037573099136},
-                                 {1.0, -0.1055613458156586, -0.0638541728258133},
-                                 {1.0, -0.0894841775298119, -1.2914855480194092}}};
+constexpr PrDMatrix3 kXyzToLms = {
+    {
+        {0.8190224379967030, 0.3619062600528904, -0.1288737815209879},
+        {0.0329836539323885, 0.9292868615863434, 0.0361446663506424},
+        {0.0481771893596242, 0.2642395317527308, 0.6335478284694309},
+    },
+};
+constexpr PrDMatrix3 kLmsToOklab = {
+    {
+        {0.2104542683093140, 0.7936177747023054, -0.0040720430116193},
+        {1.9779985324311684, -2.4285922420485799, 0.4505937096174110},
+        {0.0259040424655478, 0.7827717124575296, -0.8086757549230774},
+    },
+};
+constexpr PrDMatrix3 kLmsToXyz = {
+    {
+        {1.2268798758459243, -0.5578149944602171, 0.2813910456659647},
+        {-0.0405757452148008, 1.1122868032803170, -0.0717110580655164},
+        {-0.0763729366746601, -0.4214933324022432, 1.5869240198367816},
+    },
+};
+constexpr PrDMatrix3 kOklabToLms = {
+    {
+        {1.0, 0.3963377773761749, 0.2158037573099136},
+        {1.0, -0.1055613458156586, -0.0638541728258133},
+        {1.0, -0.0894841775298119, -1.2914855480194092},
+    },
+};
 
 // Returns the inverse of the matrix. Unlike prDMatrix3Invert, it runs at compile time, for the tables below.
 constexpr PrDMatrix3 inverse(const PrDMatrix3& matrix) {
@@ -161,22 +222,30 @@ constexpr double kHlgC = 0.55991073;
 constexpr double kHlgScale = 3.7743;
 
 // ICtCp: absolute XYZ to LMS with the crosstalk built in, then PQ-encoded LMS to ICtCp.
-constexpr PrDMatrix3 kXyzToIctcpLms = {{{0.3592832590121217, 0.6976051147779502, -0.0358915932320290},
-                                    {-0.1920808463704993, 1.1004767970374321, 0.0753748658519118},
-                                    {0.0070797844607479, 0.0748396662186362, 0.8433265453898765}}};
-constexpr PrDMatrix3 kIctcpLmsToIctcp = {{{2048.0 / 4096, 2048.0 / 4096, 0},
-                                      {6610.0 / 4096, -13613.0 / 4096, 7003.0 / 4096},
-                                      {17933.0 / 4096, -17390.0 / 4096, -543.0 / 4096}}};
+constexpr PrDMatrix3 kXyzToIctcpLms = {
+    {
+        {0.3592832590121217, 0.6976051147779502, -0.0358915932320290},
+        {-0.1920808463704993, 1.1004767970374321, 0.0753748658519118},
+        {0.0070797844607479, 0.0748396662186362, 0.8433265453898765},
+    },
+};
+constexpr PrDMatrix3 kIctcpLmsToIctcp = {
+    {
+        {2048.0 / 4096, 2048.0 / 4096, 0},
+        {6610.0 / 4096, -13613.0 / 4096, 7003.0 / 4096},
+        {17933.0 / 4096, -17390.0 / 4096, -543.0 / 4096},
+    },
+};
 constexpr PrDMatrix3 kIctcpLmsToXyz = inverse(kXyzToIctcpLms);
 constexpr PrDMatrix3 kIctcpToIctcpLms = inverse(kIctcpLmsToIctcp);
 
 // Jzazbz (Safdar et al. 2017): modified absolute XYZ to LMS, then PQ-encoded LMS to Iz, az and bz.
-constexpr PrDMatrix3 kXyzToJzLms = {{{0.41478972, 0.579999, 0.0146480},
-                                 {-0.2015100, 1.120649, 0.0531008},
-                                 {-0.0166008, 0.264800, 0.6684799}}};
-constexpr PrDMatrix3 kJzLmsToIzazbz = {{{0.5, 0.5, 0},
-                                        {3.524000, -4.066708, 0.542708},
-                                        {0.199076, 1.096799, -1.295875}}};
+constexpr PrDMatrix3 kXyzToJzLms = {
+    {{0.41478972, 0.579999, 0.0146480}, {-0.2015100, 1.120649, 0.0531008}, {-0.0166008, 0.264800, 0.6684799}},
+};
+constexpr PrDMatrix3 kJzLmsToIzazbz = {
+    {{0.5, 0.5, 0}, {3.524000, -4.066708, 0.542708}, {0.199076, 1.096799, -1.295875}},
+};
 constexpr PrDMatrix3 kJzLmsToXyz = inverse(kXyzToJzLms);
 constexpr PrDMatrix3 kIzazbzToJzLms = inverse(kJzLmsToIzazbz);
 constexpr double kJzB = 1.15;
@@ -230,8 +299,7 @@ double decode(PrColorTransfer transfer, double v) {
         case PrColorTransfer_Pq:
             return pqDecode(v, kPqM2) / kReferenceWhite;
         case PrColorTransfer_Hlg: {
-            double linear = magnitude <= 0.5 ? magnitude * magnitude / 3
-                                             : (expF64((magnitude - kHlgC) / kHlgA) + kHlgB) / 12;
+            double linear = magnitude <= 0.5 ? magnitude * magnitude / 3 : (expF64((magnitude - kHlgC) / kHlgA) + kHlgB) / 12;
             return sign * linear * kHlgScale;
         }
         default:
@@ -257,8 +325,7 @@ double encode(PrColorTransfer transfer, double v) {
             return pqEncode(v * kReferenceWhite, kPqM2);
         case PrColorTransfer_Hlg: {
             double scaled = magnitude / kHlgScale;
-            double encoded = scaled <= 1.0 / 12 ? sqrtF64(3 * scaled)
-                                                : kHlgA * logF64(12 * scaled - kHlgB) + kHlgC;
+            double encoded = scaled <= 1.0 / 12 ? sqrtF64(3 * scaled) : kHlgA * logF64(12 * scaled - kHlgB) + kHlgC;
             return sign * encoded;
         }
         default:
@@ -302,10 +369,10 @@ void srgbToHsl(double* c) {
     double hue = 0;
     double saturation = 0;
     if (delta != 0) {
-        saturation = lightness == 0 || lightness == 1
-                         ? 0
-                         : (high - lightness) / (lightness < 1 - lightness ? lightness
-                                                                             : 1 - lightness);
+        if (lightness == 0 || lightness == 1)
+            saturation = 0;
+        else
+            saturation = (high - lightness) / (lightness < 1 - lightness ? lightness : 1 - lightness);
         if (high == r)
             hue = (g - b) / delta + (g < b ? 6 : 0);
         else if (high == g)
@@ -336,13 +403,16 @@ void toXyzD65(PrColorSpace space, const double* in, double* out) {
         case PrColorSpace_ProPhotoRgb: {
             for (double& channel : c)
                 channel = decode(kSpaces[space].transfer, channel);
-            const PrDMatrix3& m = space == PrColorSpace_DisplayP3 || space == PrColorSpace_DisplayP3Linear
-                                  ? kP3ToXyz
-                              : space == PrColorSpace_A98Rgb      ? kA98ToXyz
-                              : space == PrColorSpace_Rec2020     ? kRec2020ToXyz
-                              : space == PrColorSpace_ProPhotoRgb ? kProPhotoToXyz
-                                                                  : kSrgbToXyz;
-            multiply(m, c, out);
+            const PrDMatrix3* m = &kSrgbToXyz;
+            if (space == PrColorSpace_DisplayP3 || space == PrColorSpace_DisplayP3Linear)
+                m = &kP3ToXyz;
+            else if (space == PrColorSpace_A98Rgb)
+                m = &kA98ToXyz;
+            else if (space == PrColorSpace_Rec2020)
+                m = &kRec2020ToXyz;
+            else if (space == PrColorSpace_ProPhotoRgb)
+                m = &kProPhotoToXyz;
+            multiply(*m, c, out);
             if (space == PrColorSpace_ProPhotoRgb)
                 multiply(kD50ToD65, out, out);
             return;
@@ -377,8 +447,7 @@ void toXyzD65(PrColorSpace space, const double* in, double* out) {
         }
         case PrColorSpace_Hsl:
         case PrColorSpace_Hwb: {
-            PrColor rgb = space == PrColorSpace_Hsl ? prColorFromHsl(c[0], c[1], c[2], 1)
-                                                    : prColorFromHwb(c[0], c[1], c[2], 1);
+            PrColor rgb = space == PrColorSpace_Hsl ? prColorFromHsl(c[0], c[1], c[2], 1) : prColorFromHwb(c[0], c[1], c[2], 1);
             double srgb[3] = {double(rgb.r), double(rgb.g), double(rgb.b)};
             toXyzD65(PrColorSpace_Srgb, srgb, c);
             break;
@@ -441,13 +510,16 @@ void fromXyzD65(PrColorSpace space, const double* in, double* out) {
         case PrColorSpace_ProPhotoRgb: {
             if (space == PrColorSpace_ProPhotoRgb)
                 multiply(kD65ToD50, c, c);
-            const PrDMatrix3& m = space == PrColorSpace_DisplayP3 || space == PrColorSpace_DisplayP3Linear
-                                  ? kXyzToP3
-                              : space == PrColorSpace_A98Rgb      ? kXyzToA98
-                              : space == PrColorSpace_Rec2020     ? kXyzToRec2020
-                              : space == PrColorSpace_ProPhotoRgb ? kXyzToProPhoto
-                                                                  : kXyzToSrgb;
-            multiply(m, c, c);
+            const PrDMatrix3* m = &kXyzToSrgb;
+            if (space == PrColorSpace_DisplayP3 || space == PrColorSpace_DisplayP3Linear)
+                m = &kXyzToP3;
+            else if (space == PrColorSpace_A98Rgb)
+                m = &kXyzToA98;
+            else if (space == PrColorSpace_Rec2020)
+                m = &kXyzToRec2020;
+            else if (space == PrColorSpace_ProPhotoRgb)
+                m = &kXyzToProPhoto;
+            multiply(*m, c, c);
             for (double& channel : c)
                 channel = encode(kSpaces[space].transfer, channel);
             break;
@@ -578,8 +650,7 @@ float prColorTransferDecode(PrColorTransfer transfer, float encoded) {
 float prColorTransferEncode(PrColorTransfer transfer, float linear) {
     if (transfer == PrColorTransfer_Srgb) {
         float magnitude = absF32(linear);
-        float encoded = magnitude <= 0.0031308f ? magnitude * 12.92f
-                                                : 1.055f * powF32(magnitude, 1 / 2.4f) - 0.055f;
+        float encoded = magnitude <= 0.0031308f ? magnitude * 12.92f : 1.055f * powF32(magnitude, 1 / 2.4f) - 0.055f;
         return linear < 0 ? -encoded : encoded;
     }
     return float(encode(transfer, double(linear)));
@@ -607,9 +678,11 @@ PrColor prColorFromHsl(double hue, double saturation, double lightness, double a
     hue = prColorHue(hue);
     saturation /= 100.0;
     lightness /= 100.0;
-    return PrColor{float(hslChannel(0.0, hue, saturation, lightness)),
-                   float(hslChannel(8.0, hue, saturation, lightness)),
-                   float(hslChannel(4.0, hue, saturation, lightness)), float(alpha)};
+    return PrColor{
+        float(hslChannel(0.0, hue, saturation, lightness)),
+        float(hslChannel(8.0, hue, saturation, lightness)),
+        float(hslChannel(4.0, hue, saturation, lightness)), float(alpha),
+    };
 }
 
 PrColor prColorFromHwb(double hue, double whiteness, double blackness, double alpha) {
@@ -622,9 +695,11 @@ PrColor prColorFromHwb(double hue, double whiteness, double blackness, double al
 
     hue = prColorHue(hue);
     double scale = 1.0 - whiteness - blackness;
-    return PrColor{float(hslChannel(0.0, hue, 1.0, 0.5) * scale + whiteness),
-                   float(hslChannel(8.0, hue, 1.0, 0.5) * scale + whiteness),
-                   float(hslChannel(4.0, hue, 1.0, 0.5) * scale + whiteness), float(alpha)};
+    return PrColor{
+        float(hslChannel(0.0, hue, 1.0, 0.5) * scale + whiteness),
+        float(hslChannel(8.0, hue, 1.0, 0.5) * scale + whiteness),
+        float(hslChannel(4.0, hue, 1.0, 0.5) * scale + whiteness), float(alpha),
+    };
 }
 
 void prColorConvert(PrColorSpace from, PrColorSpace to, const double* in, double* out) {
@@ -676,23 +751,29 @@ PrColor prColorHdrResolve(const PrColorHdr* color, float headroom) {
 PrColor prColorLimit(PrColor color, float limit) {
     if (!(limit > 0))
         return color;
-    double linear[3] = {decode(PrColorTransfer_Srgb, double(color.r)), decode(PrColorTransfer_Srgb, double(color.g)),
-                        decode(PrColorTransfer_Srgb, double(color.b))};
+    double linear[3] = {
+        decode(PrColorTransfer_Srgb, double(color.r)), decode(PrColorTransfer_Srgb, double(color.g)),
+        decode(PrColorTransfer_Srgb, double(color.b)),
+    };
     double largest = linear[0] > linear[1] ? linear[0] : linear[1];
     largest = linear[2] > largest ? linear[2] : largest;
     if (!(largest > double(limit)))
         return color;
     double scale = double(limit) / largest;
-    return PrColor{float(encode(PrColorTransfer_Srgb, linear[0] * scale)),
-                   float(encode(PrColorTransfer_Srgb, linear[1] * scale)),
-                   float(encode(PrColorTransfer_Srgb, linear[2] * scale)), color.a};
+    return PrColor{
+        float(encode(PrColorTransfer_Srgb, linear[0] * scale)),
+        float(encode(PrColorTransfer_Srgb, linear[1] * scale)),
+        float(encode(PrColorTransfer_Srgb, linear[2] * scale)), color.a,
+    };
 }
 
 PrColor prColorToneMap(PrColor color, float headroom) {
-    double linear[3] = {decode(PrColorTransfer_Srgb, double(color.r)), decode(PrColorTransfer_Srgb, double(color.g)),
-                        decode(PrColorTransfer_Srgb, double(color.b))};
-    double luminance = double(kPrColorLuminanceRed) * linear[0] + double(kPrColorLuminanceGreen) * linear[1]
-                       + double(kPrColorLuminanceBlue) * linear[2];
+    double linear[3] = {
+        decode(PrColorTransfer_Srgb, double(color.r)), decode(PrColorTransfer_Srgb, double(color.g)),
+        decode(PrColorTransfer_Srgb, double(color.b)),
+    };
+    double luminance = double(kPrColorLuminanceRed) * linear[0] + double(kPrColorLuminanceGreen) * linear[1] +
+        double(kPrColorLuminanceBlue) * linear[2];
     double limit = headroom > 1 ? double(headroom) : 1;
     double knee = (1 + limit) / 2;
     if (!(luminance > knee))
@@ -704,9 +785,11 @@ PrColor prColorToneMap(PrColor color, float headroom) {
         mapped = knee + (limit - knee) * x / (1 + x);
     }
     double scale = mapped / luminance;
-    return PrColor{float(encode(PrColorTransfer_Srgb, linear[0] * scale)),
-                   float(encode(PrColorTransfer_Srgb, linear[1] * scale)),
-                   float(encode(PrColorTransfer_Srgb, linear[2] * scale)), color.a};
+    return PrColor{
+        float(encode(PrColorTransfer_Srgb, linear[0] * scale)),
+        float(encode(PrColorTransfer_Srgb, linear[1] * scale)),
+        float(encode(PrColorTransfer_Srgb, linear[2] * scale)), color.a,
+    };
 }
 
 PrColor prColorGamutMap(PrColor color, PrColorSpace gamut, float limit) {
@@ -761,8 +844,7 @@ PrColor prColorGamutMap(PrColor color, PrColorSpace gamut, float limit) {
         double b[3];
         toXyzD65(gamut, clipped, at);
         fromXyzD65(PrColorSpace_Oklab, at, b);
-        return sqrtF64((a[0] - b[0]) * (a[0] - b[0]) + (a[1] - b[1]) * (a[1] - b[1])
-                              + (a[2] - b[2]) * (a[2] - b[2]));
+        return sqrtF64((a[0] - b[0]) * (a[0] - b[0]) + (a[1] - b[1]) * (a[1] - b[1]) + (a[2] - b[2]) * (a[2] - b[2]));
     };
     constexpr double kJnd = 0.02;
     constexpr double kEpsilon = 0.0001;

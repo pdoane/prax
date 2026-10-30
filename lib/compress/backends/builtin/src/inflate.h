@@ -58,7 +58,7 @@ bool inflateSetDictionary(Inflate* parser, PrByteView dictionary);
 // Raw and zlib streams leave any bytes after their end unread. Gzip reads members to the end of the final input. The
 // checksums of framed streams are checked. Output may have been written before an Invalid or Truncated result.
 InflateResult inflateRead(Inflate* parser, PrByteView bytes, bool final, size_t* consumed,
-                          uint8_t* PR_NULLABLE output, size_t capacity, size_t* written);
+    uint8_t* PR_NULLABLE output, size_t capacity, size_t* written);
 
 } // namespace pr_impl
 

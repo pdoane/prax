@@ -36,7 +36,7 @@ LayoutStaticEdges layoutStaticEdges(LayoutMode mode);
 // `inlineAlign` in the context's inline axis and by `blockAlign` in its block axis. In an axis whose alignment is safe,
 // a box that overflows aligns at the start.
 LayoutStaticEdges layoutStaticEdgesAligned(LayoutMode mode, LayoutStaticAlign inlineAlign,
-                                           LayoutStaticAlign blockAlign, bool inlineSafe, bool blockSafe);
+    LayoutStaticAlign blockAlign, bool inlineSafe, bool blockSafe);
 
 // Lays out the box out of flow that `pending` lists, in its containing block `containing`. Returns its fragment, with a
 // reference that the caller takes, positioned from the holder's top-left corner (css-position-3/#abspos-layout).
@@ -48,14 +48,13 @@ LayoutChild layoutAbsolute(LayoutState& state, const LayoutPending& pending, con
 // placements name if `node` is a grid container whose layout kept `grid` (css-grid-1/#abspos-items), in the fallback
 // that its content is given. The rest stay in its list.
 LayoutFragment* layoutHolderBuild(LayoutState& state, LayoutNodeIndex node, uint32_t mark, LayoutMode mode,
-                                  LayoutLogicalSize size, PrLayoutVec fallback,
-                                  const LayoutGridLines* PR_NULLABLE grid = nullptr);
+    LayoutLogicalSize size, PrLayoutVec fallback, const LayoutGridLines* PR_NULLABLE grid = nullptr);
 
 // Lays out the boxes out of flow listed by the root's fragment `root`, which is at `at` in the viewport. Each is laid
 // out against the initial containing block or the viewport, which has size `extent` at the origin in the root's writing
 // mode `mode`. Appends their fragments to `out`.
 void layoutViewportHold(LayoutState& state, const LayoutFragment* root, PrLayoutVec at, PrLayoutVec extent,
-                        LayoutMode mode, Array<LayoutChild>& out);
+    LayoutMode mode, Array<LayoutChild>& out);
 
 } // namespace pr_impl
 

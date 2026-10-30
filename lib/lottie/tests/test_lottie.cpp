@@ -29,8 +29,8 @@ PrLottieAnimation* read(const std::string& json) {
 
 // Returns a 100 by 100 animation with one shape layer that holds `shapes`, from frame 0 to 60.
 std::string shapeLayer(const std::string& shapes, const std::string& ks = "{}") {
-    return R"({"w": 100, "h": 100, "fr": 30, "ip": 0, "op": 60, "layers": [{"ty": 4, "ip": 0, "op": 60, "st": 0, "ks": )"
-           + ks + R"(, "shapes": [)" + shapes + "]}]}";
+    return R"({"w": 100, "h": 100, "fr": 30, "ip": 0, "op": 60, "layers": [{"ty": 4, "ip": 0, "op": 60, "st": 0, "ks": )" +
+        ks + R"(, "shapes": [)" + shapes + "]}]}";
 }
 
 // Returns a 100 by 100 animation with a 3D solid square, 40 on a side, centered, and a camera with `zoom` at `camera`,
@@ -40,8 +40,8 @@ std::string cameraScene(const std::string& camera, float zoom) {
         R"({"ty": 1, "ddd": 1, "ip": 0, "op": 60, "st": 0, "sw": 40, "sh": 40, "sc": "#ff0000",
             "ks": {"a": {"k": [20, 20, 0]}, "p": {"k": [50, 50, 0]}}})";
     if (!camera.empty())
-        layers = R"({"ty": 13, "ip": 0, "op": 60, "st": 0, "pe": {"k": )" + std::to_string(zoom)
-                 + R"(}, "ks": {"p": {"k": )" + camera + "}}}, " + layers;
+        layers = R"({"ty": 13, "ip": 0, "op": 60, "st": 0, "pe": {"k": )" + std::to_string(zoom) +
+            R"(}, "ks": {"p": {"k": )" + camera + "}}}, " + layers;
     return R"({"w": 100, "h": 100, "fr": 30, "ip": 0, "op": 60, "layers": [)" + layers + "]}";
 }
 
@@ -285,10 +285,13 @@ TEST_CASE("a trim that wraps past the end of several contours joins none of them
     PrVec2 last{0, 0};
     uint32_t crossings = 0;
     for (uint32_t i = 0; i < prPathVerbCount(paths[0].path); ++i) {
-        uint32_t count = verbs[i] == PrPathVerb_Move || verbs[i] == PrPathVerb_Line ? 1
-                         : verbs[i] == PrPathVerb_Quad                             ? 2
-                         : verbs[i] == PrPathVerb_Cubic                            ? 3
-                                                                                   : 0;
+        uint32_t count = 0;
+        if (verbs[i] == PrPathVerb_Move || verbs[i] == PrPathVerb_Line)
+            count = 1;
+        else if (verbs[i] == PrPathVerb_Quad)
+            count = 2;
+        else if (verbs[i] == PrPathVerb_Cubic)
+            count = 3;
         if (count > 0) {
             PrVec2 end = points[at + count - 1];
             if (verbs[i] != PrPathVerb_Move && (last.x < 45) != (end.x < 45))
@@ -358,7 +361,7 @@ TEST_CASE("a gradient's stop count is read as a count of what its values hold, w
     for (auto [count, paths] : cases) {
         std::string fill = R"({"ty": "gf", "o": {"a": 0, "k": 100}, "t": 1, "s": {"a": 0, "k": [0, 0]},
                                "e": {"a": 0, "k": [100, 0]}, "g": {"p": )"
-                           + std::string(count) + R"(, "k": {"a": 0, "k": [0, 1, 0, 0, 1, 0, 0, 1]}}})";
+            + std::string(count) + R"(, "k": {"a": 0, "k": [0, 1, 0, 0, 1, 0, 0, 1]}}})";
         PrLottieAnimation* animation = read(shapeLayer(rect + ", " + fill));
         std::vector<PrDrawCommand> commands = painted(render(animation, 0, list));
         CHECK(commands.size() == paths);
@@ -372,8 +375,8 @@ TEST_CASE("a zig-zag's ridges are bounded, whatever the file asks for") {
     std::string fill = R"({"ty": "fl", "o": {"a": 0, "k": 100}, "c": {"a": 0, "k": [1, 0, 0, 1]}})";
     PrDrawList* list = prDrawListCreate();
     for (const char* points : {"1e30", "-1e30", "4"}) {
-        std::string zigZag = R"({"ty": "zz", "s": {"a": 0, "k": 5}, "r": {"a": 0, "k": )" + std::string(points)
-                             + R"(}, "pt": {"a": 0, "k": 1}})";
+        std::string zigZag = R"({"ty": "zz", "s": {"a": 0, "k": 5}, "r": {"a": 0, "k": )" + std::string(points) +
+            R"(}, "pt": {"a": 0, "k": 1}})";
         PrLottieAnimation* animation = read(shapeLayer(rect + ", " + zigZag + ", " + fill));
         std::vector<PrDrawCommand> commands = painted(render(animation, 0, list));
         REQUIRE(commands.size() == 1);
@@ -388,17 +391,17 @@ TEST_CASE("precomps that multiply each other's layers draw a bounded number of l
     auto layers = [](const std::string& ref) {
         std::string out;
         for (int i = 0; i < 10; ++i)
-            out += std::string(i != 0 ? ", " : "") + R"({"ty": 0, "refId": ")" + ref
-                   + R"(", "w": 10, "h": 10, "ip": 0, "op": 60, "st": 0, "ks": {}})";
+            out += std::string(i != 0 ? ", " : "") + R"({"ty": 0, "refId": ")" + ref +
+                R"(", "w": 10, "h": 10, "ip": 0, "op": 60, "st": 0, "ks": {}})";
         return out;
     };
     std::string assets = R"({"id": "c0", "w": 10, "h": 10, "layers": [
         {"ty": 1, "ip": 0, "op": 60, "st": 0, "sw": 10, "sh": 10, "sc": "#00ff00", "ks": {}}]})";
     for (int level = 1; level <= 6; ++level)
-        assets += R"(, {"id": "c)" + std::to_string(level) + R"(", "w": 10, "h": 10, "layers": [)"
-                  + layers("c" + std::to_string(level - 1)) + "]}";
-    PrLottieAnimation* animation = read(R"({"w": 100, "h": 100, "fr": 30, "ip": 0, "op": 60, "assets": [)" + assets
-                                        + R"(], "layers": [)" + layers("c6") + "]}");
+        assets += R"(, {"id": "c)" + std::to_string(level) + R"(", "w": 10, "h": 10, "layers": [)" +
+            layers("c" + std::to_string(level - 1)) + "]}";
+    PrLottieAnimation* animation = read(R"({"w": 100, "h": 100, "fr": 30, "ip": 0, "op": 60, "assets": [)" + assets +
+        R"(], "layers": [)" + layers("c6") + "]}");
     PrDrawList* list = prDrawListCreate();
     uint32_t solids = 0;
     for (const PrDrawCommand& c : render(animation, 0, list))

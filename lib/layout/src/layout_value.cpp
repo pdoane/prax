@@ -59,9 +59,12 @@ struct Calc {
                         case PrLayoutCalcOp_Max:    acc = i == 0 ? x.value : maximumF64(acc, x.value); break;
                         default:
                             // Any NaN makes NaN (css-values-4/#calc-ieee), whereas hypot would let an infinity win.
-                            acc = i == 0 ? absF64(x.value)
-                                  : isNanF64(acc) || isNanF64(x.value) ? kNanF64
-                                                                       : hypotF64(acc, x.value);
+                            if (i == 0)
+                                acc = absF64(x.value);
+                            else if (isNanF64(acc) || isNanF64(x.value))
+                                acc = kNanF64;
+                            else
+                                acc = hypotF64(acc, x.value);
                             break;
                     }
                 }
@@ -105,8 +108,7 @@ struct Calc {
             case PrLayoutCalcOp_RoundToZero:
             case PrLayoutCalcOp_Mod:
             case PrLayoutCalcOp_Rem: {
-                if (operands != 2 || !next(&v[0]) || !next(&v[1]) || v[0].none || v[1].none
-                    || v[0].power != v[1].power)
+                if (operands != 2 || !next(&v[0]) || !next(&v[1]) || v[0].none || v[1].none || v[0].power != v[1].power)
                     return false;
                 double a = v[0].value;
                 double b = v[1].value;
@@ -184,8 +186,8 @@ bool evaluate(const PrLayoutCalcNode* nodes, uint32_t count, double base, double
 // Returns true if `percent` is a percentage that a word holds exactly.
 bool fitsPercent(double percent) {
     double fixed = percent * 65536;
-    return fixed >= double(kPrLayoutWordPercentMin) && fixed <= double(kPrLayoutWordPercentMax)
-           && fixed == floorF64(fixed);
+    return fixed >= double(kPrLayoutWordPercentMin) && fixed <= double(kPrLayoutWordPercentMax) &&
+        fixed == floorF64(fixed);
 }
 
 uint32_t hashNodes(const PrLayoutCalcNode* nodes, uint32_t count) {
@@ -214,8 +216,11 @@ PrLayoutLength layoutCompoundsIntern(LayoutCompounds* compounds, const PrLayoutC
 #if !defined(NDEBUG)
     for (uint32_t i = 0; i < count; ++i) {
         const PrLayoutCalcNode& node = nodes[i];
-        PrLayoutCalcNode made = node.op == PrLayoutCalcOp_Value ? prLayoutCalcLeaf(node.leaf, node.value)
-                                                                : prLayoutCalcOperation(node.op, node.count);
+        PrLayoutCalcNode made;
+        if (node.op == PrLayoutCalcOp_Value)
+            made = prLayoutCalcLeaf(node.leaf, node.value);
+        else
+            made = prLayoutCalcOperation(node.op, node.count);
         PR_ASSERT(memEquals(&made, &node, sizeof(PrLayoutCalcNode)));
     }
 #endif

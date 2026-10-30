@@ -58,8 +58,7 @@ void layoutAnchoringReset(LayoutAnchoring& anchoring);
 void layoutAnchoringScrolled(LayoutTree* tree, LayoutNodeIndex container, PrLayoutVec offset);
 
 // Records that the record of the element `node` changed from `was` to `style`, marking what suppresses anchoring.
-void layoutAnchoringStyleChanged(LayoutTree* tree, LayoutNodeIndex node, PrLayoutStyleIndex was,
-                                 PrLayoutStyleIndex style);
+void layoutAnchoringStyleChanged(LayoutTree* tree, LayoutNodeIndex node, PrLayoutStyleIndex was, PrLayoutStyleIndex style);
 
 // Chooses the anchors of the scrolled containers that have none, from the last layout. A layout calls this before it
 // lays out.

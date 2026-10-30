@@ -19,8 +19,8 @@ void secondaryClick(KitFixture& f, PrVec2 at) {
 }
 
 bool inside(PrRect outer, PrRect inner) {
-    return inner.left >= outer.left && inner.top >= outer.top && inner.right <= outer.right
-           && inner.bottom <= outer.bottom;
+    return inner.left >= outer.left && inner.top >= outer.top && inner.right <= outer.right &&
+        inner.bottom <= outer.bottom;
 }
 
 // A button that opens a popover with a menu of three items, the last of them disabled, beside a button that takes
@@ -486,7 +486,7 @@ TEST_CASE("a tooltip shows once the pointer has rested on its anchor for the del
     f.build = [&](PrLayoutNode ground) {
         PrLayoutNode row = prKitBox(f.kit, ground, {}, {.direction = PrKitDirection_Row, .gap = 0});
         anchor = prKitButton(f.kit, row, {.icon = PrKitIconKind_Grid},
-                             {.variant = PrKitButtonVariant_Ghost, .size = PrKitControlSize_Md});
+            {.variant = PrKitButtonVariant_Ghost, .size = PrKitControlSize_Md});
         PrKitTooltip content{.text = "Show Grid", .shortcut = "G"};
         tip = prKitTooltip(f.kit, anchor, content);
     };
@@ -687,7 +687,7 @@ TEST_CASE("a frame with an open palette and a shown tooltip that changes nothing
     f.build = [&](PrLayoutNode ground) {
         PrLayoutNode row = prKitBox(f.kit, ground, {}, {.direction = PrKitDirection_Row, .gap = 0});
         anchor = prKitButton(f.kit, row, {.icon = PrKitIconKind_Grid},
-                             {.variant = PrKitButtonVariant_Ghost, .size = PrKitControlSize_Md});
+            {.variant = PrKitButtonVariant_Ghost, .size = PrKitControlSize_Md});
         PrKitTooltip tip{.text = "Grid"};
         prKitTooltip(f.kit, anchor, tip);
         PrLayoutNode list = prKitCommandPalette(f.kit, ground, {.prompt = "Search", .count = 1});

@@ -112,8 +112,7 @@ std::vector<std::string_view> attributeValues(std::string_view tag, std::string_
             continue;
         size_t start = quote != '\0' ? i + 1 : i;
         size_t end = start;
-        while (end < tag.size() && (quote != '\0' ? tag[end] != quote : !space(tag[end]) && tag[end] != '"'
-                                                                            && tag[end] != '\''))
+        while (end < tag.size() && (quote != '\0' ? tag[end] != quote : !space(tag[end]) && tag[end] != '"' && tag[end] != '\''))
             ++end;
         if (quote != '\0' && end == tag.size())
             continue;
@@ -192,8 +191,7 @@ bool dynamic(std::string_view lower) {
 // SVG document.
 bool drawable(const fs::path& path, const std::string& text, std::string_view lower) {
     if (captured(path))
-        return !path.stem().string().ends_with("-print")
-               && text.find("reftest-print") == std::string::npos;
+        return !path.stem().string().ends_with("-print") && text.find("reftest-print") == std::string::npos;
     return path.extension() == ".svg" && !dynamic(lower);
 }
 
@@ -228,8 +226,8 @@ std::vector<Document> wpt() {
     std::vector<Document> documents;
     for (const fs::path& test : pages) {
         std::string stem = test.stem().string();
-        if (stem.ends_with("-ref") || stem.ends_with("-notref") || stem.starts_with("ref-")
-            || stem.starts_with("notref-") || stem.ends_with("-crash"))
+        if (stem.ends_with("-ref") || stem.ends_with("-notref") || stem.starts_with("ref-") ||
+                stem.starts_with("notref-") || stem.ends_with("-crash"))
             continue;
         fs::path relative = test.lexically_relative(root);
         bool crashtest = false;
@@ -252,10 +250,11 @@ std::vector<Document> wpt() {
             all = all && fs::exists(ref.path) && drawable(ref.path);
         if (!all)
             continue;
-        Document d{relative.generic_string(),
-                   refs[0].match ? "WPT reftest, against its reference"
-                                 : "WPT reftest, against the reference it must differ from",
-                   fileSource(test)};
+        Document d{
+            relative.generic_string(),
+            refs[0].match ? "WPT reftest, against its reference" : "WPT reftest, against the reference it must differ from",
+            fileSource(test),
+        };
         d.references.push_back(Reference{"corpus", fileSource(refs[0].path)});
         documents.push_back(std::move(d));
     }

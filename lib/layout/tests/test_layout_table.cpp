@@ -30,7 +30,7 @@ struct Stage {
     PrLayoutNode root = kPrLayoutNodeNone;
 
     explicit Stage(PrLayoutWritingMode mode = PrLayoutWritingMode_HorizontalTb,
-                   PrTextDirection direction = PrTextDirection_Ltr) {
+            PrTextDirection direction = PrTextDirection_Ltr) {
         font.font = textFontOf(0);
         font.writingMode = mode;
         font.direction = direction;

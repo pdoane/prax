@@ -25,7 +25,7 @@ namespace {
 
 // Returns a font for 20px text on 40px lines, in `direction` and `writingMode`.
 PrLayoutFontStyle font(PrTextDirection direction = PrTextDirection_Ltr,
-                       PrLayoutWritingMode writingMode = PrLayoutWritingMode_HorizontalTb) {
+        PrLayoutWritingMode writingMode = PrLayoutWritingMode_HorizontalTb) {
     PrLayoutFontStyle font = prLayoutFontStyleDefault();
     font.font = textFontOf(20);
     font.lineHeight = prLayoutLineHeightPx(40);
@@ -119,8 +119,8 @@ struct Stage {
     PrLayoutNode stage = kPrLayoutNodeNone;
 
     explicit Stage(bool relative = false, float height = -1, PrTextDirection direction = PrTextDirection_Ltr,
-                   PrLayoutWritingMode writingMode = PrLayoutWritingMode_HorizontalTb,
-                   PrLayoutTextAlign align = PrLayoutTextAlign_Start) {
+            PrLayoutWritingMode writingMode = PrLayoutWritingMode_HorizontalTb,
+            PrLayoutTextAlign align = PrLayoutTextAlign_Start) {
         style = font(direction, writingMode);
         style.textAlign = align;
         style.textAlignLast = align;
@@ -132,15 +132,13 @@ struct Stage {
     }
 
     // Creates an element under `parent` styled by `box`, in the stage's font or `withFont`.
-    PrLayoutNode add(PrLayoutNode parent, const PrLayoutBoxStyle& box,
-                     const PrLayoutFontStyle* PR_NULLABLE withFont = nullptr,
-                     const PrLayoutEffectStyle* PR_NULLABLE effects = nullptr,
-                     const PrLayoutDecorationStyle* PR_NULLABLE decoration = nullptr) {
+    PrLayoutNode add(PrLayoutNode parent, const PrLayoutBoxStyle& box, const PrLayoutFontStyle* PR_NULLABLE withFont = nullptr,
+            const PrLayoutEffectStyle* PR_NULLABLE effects = nullptr,
+            const PrLayoutDecorationStyle* PR_NULLABLE decoration = nullptr) {
         return f.element(parent, box, decoration, effects, withFont != nullptr ? withFont : &style);
     }
     PrLayoutNode text(PrLayoutNode parent, const char* value) { return f.text(parent, value); }
-    PrLayoutNode div(PrLayoutNode parent, const PrLayoutBoxStyle& box = block(),
-                     const char* PR_NULLABLE value = nullptr) {
+    PrLayoutNode div(PrLayoutNode parent, const PrLayoutBoxStyle& box = block(), const char* PR_NULLABLE value = nullptr) {
         PrLayoutNode node = add(parent, box);
         if (value != nullptr)
             text(node, value);
@@ -175,8 +173,10 @@ struct Stage {
         std::vector<std::vector<double>> out;
         for (const PrLayoutRect& box : boxes) {
             PrRect r = prLayoutRectToPx(box);
-            out.push_back({double(r.left - origin.left), double(r.top - origin.top), double(r.right - r.left),
-                           double(r.bottom - r.top)});
+            out.push_back({
+                double(r.left - origin.left), double(r.top - origin.top), double(r.right - r.left),
+                double(r.bottom - r.top),
+            });
         }
         return out;
     }
@@ -489,7 +489,7 @@ TEST_CASE("an empty inline box on a phantom line is zero high at the line's top,
 }
 
 TEST_CASE("a transform makes a box the containing block of absolute and fixed boxes, but not on an inline box, and a "
-          "filter does on any box") {
+        "filter does on any box") {
     SUBCASE("a transformed block") {
         Stage s(true, 80);
         PrLayoutBoxStyle holder = transformed(sized(block(), 120, 60));
@@ -695,7 +695,7 @@ TEST_CASE("an auto width fits the content where an inset is auto, and stretches 
 TEST_CASE("a replaced box out of flow keeps its natural size between insets") {
     Stage s(true, 40);
     PrLayoutNode image = replaced(s.f, s.stage, inset(absolute(prLayoutBoxStyleDefault()), kAuto, 0, kAuto, 0),
-                                  natural(30, 20));
+        natural(30, 20));
     s.layout();
     CHECK(s.width(image) == 30);
     CHECK(s.left(image) == 0);
@@ -905,7 +905,7 @@ TEST_CASE("a fixed box in an absolute box, both held outside a fading layer, pai
         faded.opacity = 0.5f;
         PrLayoutNode body = f.element(root, block(), nullptr, &faded);
         PrLayoutNode box = f.element(body, inset(sized(absolute(), 50, 50), 10, kAuto, kAuto, 10), nullptr,
-                                     ownLayer ? &faded : nullptr);
+            ownLayer ? &faded : nullptr);
         PrLayoutBoxStyle fixedBox = inset(square(), 0, kAuto, kAuto, 0);
         fixedBox.position = PrLayoutPosition_Fixed;
         PrLayoutDecorationStyle red = background(PrColor{1, 0, 0, 1});
@@ -1008,7 +1008,7 @@ TEST_CASE("a change of what holds a box out of flow lays out the holders before 
     s.layout();
     CHECK(s.left(box) == 180);
     prLayoutNodeSetStyle(s.f.tree, holder,
-                         s.f.style(positioned(inner, PrLayoutPosition_Relative), nullptr, nullptr, &s.style));
+        s.f.style(positioned(inner, PrLayoutPosition_Relative), nullptr, nullptr, &s.style));
     s.layout();
     CHECK(s.left(box) == 110);
     prLayoutNodeSetStyle(s.f.tree, holder, s.f.style(inner, nullptr, nullptr, &s.style));
@@ -1223,7 +1223,7 @@ TEST_CASE("a positioned span around a block holds what the block passes up, and 
     heldBySpan();
     // With the span static, the stage holds the box, at its corner.
     prLayoutNodeSetStyle(s.f.tree, span,
-                         s.f.style(positioned(spanStyle, PrLayoutPosition_Static), nullptr, nullptr, &s.style));
+        s.f.style(positioned(spanStyle, PrLayoutPosition_Static), nullptr, nullptr, &s.style));
     s.layout();
     CHECK(s.left(box) == 0);
     CHECK(s.top(box) == 0);

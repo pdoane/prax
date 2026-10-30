@@ -27,8 +27,7 @@ struct Document {
 
     explicit Document(const char* body) {
         std::string source = std::string("<svg xmlns='http://www.w3.org/2000/svg' "
-                                         "xmlns:xlink='http://www.w3.org/1999/xlink' width='200' height='100'>")
-                             + body + "</svg>";
+            "xmlns:xlink='http://www.w3.org/1999/xlink' width='200' height='100'>") + body + "</svg>";
         document = prDomParseXml(source, "image/svg+xml", nullptr);
         prCssEnable(document);
         prSvgEnable(document);
@@ -73,9 +72,8 @@ using namespace pr_impl;
 
 TEST_CASE("getBBox measures the fill, adds the stroke if asked, and cuts it by the clip path if asked") {
     Document d("<clipPath id='half'><rect width='50' height='100'/></clipPath>"
-               "<line id='line' x1='10' y1='20' x2='90' y2='20' stroke='black' stroke-width='10' "
-               "stroke-linecap='square'/>"
-               "<rect id='clipped' width='100' height='10' clip-path='url(#half)'/>");
+        "<line id='line' x1='10' y1='20' x2='90' y2='20' stroke='black' stroke-width='10' stroke-linecap='square'/>"
+        "<rect id='clipped' width='100' height='10' clip-path='url(#half)'/>");
     PrSvgElement* line = d.byId("line");
     checkRect(prSvgGraphicsElementGetBBox(line, nullptr), 10, 20, 80, 0);
     checkRect(boxOf(line, PrSvgBoundingBoxOptions{.fill = true, .stroke = true}), 5, 15, 90, 10);
@@ -84,20 +82,18 @@ TEST_CASE("getBBox measures the fill, adds the stroke if asked, and cuts it by t
     checkRect(boxOf(d.byId("clipped"), PrSvgBoundingBoxOptions{.fill = true, .clipped = true}), 0, 0, 50, 10);
 }
 
-TEST_CASE("a container's bounding box holds a child without area, and a hidden child, but not a child that displays "
-          "none") {
+TEST_CASE("a container's bounding box holds a child without area, and a hidden child, but not a child that displays none") {
     Document d("<g id='g'><line x1='10' y1='40' x2='90' y2='40' stroke='black'/>"
-               "<rect x='100' y='0' width='20' height='20' visibility='hidden'/>"
-               "<rect x='300' y='300' width='20' height='20' display='none'/></g>"
-               "<g id='empty'/>");
+        "<rect x='100' y='0' width='20' height='20' visibility='hidden'/>"
+        "<rect x='300' y='300' width='20' height='20' display='none'/></g><g id='empty'/>");
     checkRect(prSvgGraphicsElementGetBBox(d.byId("g"), nullptr), 10, 0, 110, 40);
     checkRect(prSvgGraphicsElementGetBBox(d.byId("empty"), nullptr), 0, 0, 0, 0);
 }
 
 TEST_CASE("getCTM maps to the coordinates that the nearest viewport is placed in, through its viewBox") {
     Document d("<svg id='inner' x='10' y='10' width='20' height='20' viewBox='0 0 10 10'>"
-               "<rect id='in' x='1' y='1' width='2' height='2'/></svg>"
-               "<rect id='moved' width='5' height='5' transform='translate(3 4)'/>");
+        "<rect id='in' x='1' y='1' width='2' height='2'/></svg>"
+        "<rect id='moved' width='5' height='5' transform='translate(3 4)'/>");
     PrDomMatrix m = prDomMatrixIdentity();
     REQUIRE(prSvgGraphicsElementGetCtm(d.byId("moved"), &m));
     CHECK(m.m[0] == doctest::Approx(1));
@@ -115,9 +111,9 @@ TEST_CASE("getCTM maps to the coordinates that the nearest viewport is placed in
 
 TEST_CASE("getBBox's markers option adds the bounds of the markers' content, placed at each vertex") {
     Document d("<marker id='m' markerWidth='10' markerHeight='10' refX='5' refY='5' markerUnits='userSpaceOnUse'>"
-               "<rect width='10' height='10'/></marker>"
-               "<g id='group'><line id='line' x1='20' y1='50' x2='80' y2='50' stroke='black' marker-start='url(#m)' "
-               "marker-end='url(#m)'/></g>");
+        "<rect width='10' height='10'/></marker>"
+        "<g id='group'><line id='line' x1='20' y1='50' x2='80' y2='50' stroke='black' marker-start='url(#m)' "
+        "marker-end='url(#m)'/></g>");
     PrSvgElement* line = d.byId("line");
     checkRect(prSvgGraphicsElementGetBBox(line, nullptr), 20, 50, 60, 0);
     checkRect(boxOf(line, PrSvgBoundingBoxOptions{.fill = true, .markers = true}), 15, 45, 70, 10);
@@ -126,8 +122,8 @@ TEST_CASE("getBBox's markers option adds the bounds of the markers' content, pla
 
 TEST_CASE("a use element's bounding box holds its x and y, and its CTM leaves them out") {
     Document d("<defs><rect id='r' x='5' y='5' width='20' height='10'/>"
-               "<clipPath id='c'><rect width='40' height='100'/></clipPath></defs>"
-               "<use id='u' href='#r' x='60' y='10' transform='scale(2 1)' clip-path='url(#c)'/>");
+        "<clipPath id='c'><rect width='40' height='100'/></clipPath></defs>"
+        "<use id='u' href='#r' x='60' y='10' transform='scale(2 1)' clip-path='url(#c)'/>");
     PrSvgElement* use = d.byId("u");
     checkRect(prSvgGraphicsElementGetBBox(use, nullptr), 65, 15, 20, 10);
     // The clip path is in the space that x and y move, where it holds the whole instance.
@@ -141,7 +137,7 @@ TEST_CASE("a use element's bounding box holds its x and y, and its CTM leaves th
 
 TEST_CASE("getCTM and a container's bounding box take the vector effects of the element and its children") {
     Document d("<g id='group' transform='translate(40 30) scale(3)'>"
-               "<rect id='sized' x='5' width='20' height='10' vector-effect='non-scaling-size'/></g>");
+        "<rect id='sized' x='5' width='20' height='10' vector-effect='non-scaling-size'/></g>");
     PrDomMatrix m = prDomMatrixIdentity();
     REQUIRE(prSvgGraphicsElementGetCtm(d.byId("sized"), &m));
     CHECK(m.m[0] == doctest::Approx(1));
@@ -153,8 +149,7 @@ TEST_CASE("getCTM and a container's bounding box take the vector effects of the 
     checkRect(prSvgGraphicsElementGetBBox(d.byId("group"), nullptr), 5.0 / 3, 0, 20.0 / 3, 10.0 / 3);
 }
 
-TEST_CASE("an element that no tree draws has no CTM and no screen CTM, and a document without a presentation no screen "
-          "CTM") {
+TEST_CASE("an element that no tree draws has no CTM and no screen CTM, and a document without a presentation no screen CTM") {
     Document d("<rect id='gone' width='5' height='5' display='none'/><rect id='shown' width='5' height='5'/>");
     PrDomMatrix m = prDomMatrixIdentity();
     CHECK_FALSE(prSvgGraphicsElementGetCtm(d.byId("gone"), &m));
@@ -162,10 +157,9 @@ TEST_CASE("an element that no tree draws has no CTM and no screen CTM, and a doc
 }
 
 TEST_CASE("isPointInStroke takes the stroke's dashes, and isPointInFill the interior by fill-rule") {
-    Document d("<line id='dashed' x1='0' y1='10' x2='100' y2='10' stroke='black' stroke-width='10' "
-               "stroke-dasharray='10 10'/>"
-               "<circle id='ring' cx='150' cy='50' r='20' fill='none' stroke='black' stroke-width='4'/>"
-               "<path id='hole' d='M0 0h60v60h-60z M20 20h20v20h-20z' fill-rule='evenodd'/>");
+    Document d("<line id='dashed' x1='0' y1='10' x2='100' y2='10' stroke='black' stroke-width='10' stroke-dasharray='10 10'/>"
+        "<circle id='ring' cx='150' cy='50' r='20' fill='none' stroke='black' stroke-width='4'/>"
+        "<path id='hole' d='M0 0h60v60h-60z M20 20h20v20h-20z' fill-rule='evenodd'/>");
     bool inside = false;
     REQUIRE(prSvgGeometryElementIsPointInStroke(d.byId("dashed"), PrDomPoint{5, 10, 0, 1}, &inside) == PrStatus_Ok);
     CHECK(inside);
@@ -183,7 +177,7 @@ TEST_CASE("isPointInStroke takes the stroke's dashes, and isPointInFill the inte
 
 TEST_CASE("a geometry element measures the length of its equivalent path and the point along it") {
     Document d("<circle id='circle' cx='50' cy='50' r='20'/><line id='line' x1='0' y1='10' x2='100' y2='10'/>"
-               "<rect id='gone' width='5' height='5' display='none'/>");
+        "<rect id='gone' width='5' height='5' display='none'/>");
     float length = 0;
     REQUIRE(prSvgGeometryElementGetTotalLength(d.byId("circle"), &length) == PrStatus_Ok);
     CHECK(length == doctest::Approx(2 * 3.14159265 * 20).epsilon(0.001));
@@ -198,8 +192,7 @@ TEST_CASE("a geometry element measures the length of its equivalent path and the
 
 TEST_CASE("each element has the interface that its tag names") {
     Document d("<g id='g'/><rect id='rect'/><a id='a'/><use id='use'/><switch id='switch'/><symbol id='symbol'/>"
-               "<script id='script'/><view id='view'/><animate id='animate'/><set id='set'/><text id='text'/>"
-               "<desc id='desc'/>");
+        "<script id='script'/><view id='view'/><animate id='animate'/><set id='set'/><text id='text'/><desc id='desc'/>");
     CHECK(prSvgElementInterface(d.byId("g")) == PrSvgInterface_Graphics);
     CHECK(prSvgElementInterface(d.byId("rect")) == PrSvgInterface_Rect);
     CHECK(prSvgInterfaceIsGeometry(PrSvgInterface_Rect));
@@ -218,8 +211,7 @@ TEST_CASE("each element has the interface that its tag names") {
 }
 
 TEST_CASE("a length reflects its attribute: its unit, its value in user units, and its string") {
-    Document d("<rect id='r' x='10%' width='2em' height='3mm' style='font-size: 20px'/>"
-               "<svg id='inner' width='50%' height='10'/>");
+    Document d("<rect id='r' x='10%' width='2em' height='3mm' style='font-size: 20px'/><svg id='inner' width='50%' height='10'/>");
     PrSvgAnimatedLength* x = prSvgAnimatedLengthCreate(d.byId("r"), "x");
     PrSvgAnimatedLength* width = prSvgAnimatedLengthCreate(d.byId("r"), "width");
     REQUIRE(x != nullptr);

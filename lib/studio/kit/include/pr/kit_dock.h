@@ -126,8 +126,7 @@ void prKitDockAddPanel(PrKitDock* dock, PrKitDockNode leaf, PrKitDockPanelId pan
 // Adds `panel`, which the dock does not hold, in a new leaf at `edge` of `leaf`. The new leaf takes `share` of the room
 // that `leaf` had, or half for 0. If the parent split runs along the same axis, the new leaf becomes one of its
 // children. Returns the new leaf, or none if `leaf` is not a leaf.
-PrKitDockNode prKitDockSplit(PrKitDock* dock, PrKitDockNode leaf, PrKitDockEdge edge, PrKitDockPanelId panel,
-                             float share);
+PrKitDockNode prKitDockSplit(PrKitDock* dock, PrKitDockNode leaf, PrKitDockEdge edge, PrKitDockPanelId panel, float share);
 
 // Removes the tab of `panel`. A leaf that this empties, other than the primary leaf, is removed, and a split left with
 // one child is replaced by that child. Returns true if the dock held the panel.

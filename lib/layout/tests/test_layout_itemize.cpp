@@ -45,20 +45,17 @@ using namespace pr_impl;
 
 TEST_CASE("two scripts in one face shape each in its own script") {
     // कि reorders its vowel sign before its consonant in Devanagari, but not in Latin, which the text starts in.
-    std::vector<uint16_t> alone =
-        glyphsOf(kDevanagari, "Noto Sans Devanagari",
-                 [](Fixture& f, PrLayoutNode root, const PrLayoutFontStyle&) { f.text(root, "कि"); });
-    std::vector<uint16_t> mixed =
-        glyphsOf(kDevanagari, "Noto Sans Devanagari",
-                 [](Fixture& f, PrLayoutNode root, const PrLayoutFontStyle&) { f.text(root, "ab कि"); });
+    std::vector<uint16_t> alone = glyphsOf(kDevanagari, "Noto Sans Devanagari",
+        [](Fixture& f, PrLayoutNode root, const PrLayoutFontStyle&) { f.text(root, "कि"); });
+    std::vector<uint16_t> mixed = glyphsOf(kDevanagari, "Noto Sans Devanagari",
+        [](Fixture& f, PrLayoutNode root, const PrLayoutFontStyle&) { f.text(root, "ab कि"); });
     REQUIRE(alone.size() == 2);
     REQUIRE(mixed.size() == 5);
     CHECK(mixed[3] == alone[0]);
     CHECK(mixed[4] == alone[1]);
     // Punctuation between them takes the script before it, and a closing bracket takes its opening bracket's script.
-    std::vector<uint16_t> bracketed =
-        glyphsOf(kDevanagari, "Noto Sans Devanagari",
-                 [](Fixture& f, PrLayoutNode root, const PrLayoutFontStyle&) { f.text(root, "(कि) a"); });
+    std::vector<uint16_t> bracketed = glyphsOf(kDevanagari, "Noto Sans Devanagari",
+        [](Fixture& f, PrLayoutNode root, const PrLayoutFontStyle&) { f.text(root, "(कि) a"); });
     REQUIRE(bracketed.size() == 6);
     CHECK(bracketed[1] == alone[0]);
     CHECK(bracketed[2] == alone[1]);

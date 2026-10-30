@@ -72,9 +72,8 @@ void endContour(PathMeasure& m, bool closed) {
     if (m.contours.count == 0)
         return;
     Contour& c = m.contours.last();
-    if (closed && c.count > 1
-        && distanceBetween(m.points.data[c.first], m.points.data[c.first + c.count - 1])
-               < kCoincident) {
+    if (closed && c.count > 1 &&
+            distanceBetween(m.points.data[c.first], m.points.data[c.first + c.count - 1]) < kCoincident) {
         --c.count;
         m.points.pop();
     }
@@ -94,8 +93,7 @@ uint32_t cellOf(float at, float origin, float size, uint32_t cells) {
 }
 
 // Writes the range of cells that an interval covers along an axis, clamped to the grid.
-void cellRange(float low, float high, float origin, float size, uint32_t cells, uint32_t* first,
-               uint32_t* last) {
+void cellRange(float low, float high, float origin, float size, uint32_t cells, uint32_t* first, uint32_t* last) {
     *first = cellOf(low, origin, size, cells);
     *last = cellOf(high, origin, size, cells);
 }
@@ -176,8 +174,7 @@ uint32_t segmentAt(const PathMeasure& m, const Contour& c, float distance) {
     return low > last ? last : low;
 }
 
-void positionOf(const PathMeasure& m, const Contour& c, float distance, PrVec2* point,
-                PrVec2* tangent) {
+void positionOf(const PathMeasure& m, const Contour& c, float distance, PrVec2* point, PrVec2* tangent) {
     distance = clampF32(distance, 0, c.length);
     uint32_t i = segmentAt(m, c, distance);
     PrVec2 a = m.points.data[c.first + i];
@@ -334,8 +331,8 @@ bool prPathMeasureNearest(const PrPathMeasure* measure, PrVec2 point, float reac
     uint32_t x1 = 0;
     uint32_t y0 = 0;
     uint32_t y1 = 0;
-    if (point.x + reach < measure->bounds.left || point.x - reach > measure->bounds.right
-        || point.y + reach < measure->bounds.top || point.y - reach > measure->bounds.bottom)
+    if (point.x + reach < measure->bounds.left || point.x - reach > measure->bounds.right ||
+            point.y + reach < measure->bounds.top || point.y - reach > measure->bounds.bottom)
         return false;
     cellRange(point.x - reach, point.x + reach, measure->bounds.left, measure->cellWidth, measure->columns, &x0, &x1);
     cellRange(point.y - reach, point.y + reach, measure->bounds.top, measure->cellHeight, measure->rows, &y0, &y1);
@@ -353,9 +350,7 @@ bool prPathMeasureNearest(const PrPathMeasure* measure, PrVec2 point, float reac
                 PrVec2 d{b.x - a.x, b.y - a.y};
                 float lengthSquared = d.x * d.x + d.y * d.y;
                 PrVec2 pa{point.x - a.x, point.y - a.y};
-                float t = lengthSquared > 0
-                              ? clampF32((pa.x * d.x + pa.y * d.y) / lengthSquared, 0, 1)
-                              : 0;
+                float t = lengthSquared > 0 ? clampF32((pa.x * d.x + pa.y * d.y) / lengthSquared, 0, 1) : 0;
                 PrVec2 near{a.x + d.x * t - point.x, a.y + d.y * t - point.y};
                 float squared = near.x * near.x + near.y * near.y;
                 bool tied = found && absF32(squared - best) <= kPrPathMeasureTieTolerance;

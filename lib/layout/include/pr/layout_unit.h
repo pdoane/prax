@@ -32,10 +32,14 @@ enum { kPrLayoutUnitsPerPx = 64 };
 static inline PrLayoutUnit prLayoutUnitFromPxDouble(double px) {
     double units = px * PR_VALUE_CAST(double, kPrLayoutUnitsPerPx);
     PrLayoutUnit unit;
-    unit.raw = units != units ? 0
-               : units >= 2147483647.0 ? 2147483647
-               : units <= -2147483648.0 ? -2147483647 - 1
-                                       : PR_VALUE_CAST(int32_t, units);
+    if (units != units)
+        unit.raw = 0;
+    else if (units >= 2147483647.0)
+        unit.raw = 2147483647;
+    else if (units <= -2147483648.0)
+        unit.raw = -2147483647 - 1;
+    else
+        unit.raw = PR_VALUE_CAST(int32_t, units);
     return unit;
 }
 static inline PrLayoutUnit prLayoutUnitFromPx(float px) {

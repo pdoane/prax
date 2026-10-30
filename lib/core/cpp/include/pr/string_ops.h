@@ -21,15 +21,13 @@ inline PrStringView stringSlice(PrStringView text, size_t start, size_t count) {
 
 // Returns true if `text` starts with `prefix`.
 inline bool stringStartsWith(PrStringView text, PrStringView prefix) {
-    return text.size >= prefix.size
-        && (prefix.size == 0 || memEquals(text.data, prefix.data, prefix.size));
+    return text.size >= prefix.size && (prefix.size == 0 || memEquals(text.data, prefix.data, prefix.size));
 }
 
 // Returns true if `text` ends with `suffix`.
 inline bool stringEndsWith(PrStringView text, PrStringView suffix) {
-    return text.size >= suffix.size
-        && (suffix.size == 0
-            || memEquals(text.data + text.size - suffix.size, suffix.data, suffix.size));
+    return text.size >= suffix.size &&
+        (suffix.size == 0 || memEquals(text.data + text.size - suffix.size, suffix.data, suffix.size));
 }
 
 // Returns the bytes of `text`, for a reader that takes bytes rather than text.

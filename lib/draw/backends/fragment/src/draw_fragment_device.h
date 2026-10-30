@@ -29,7 +29,7 @@ void fragmentDeviceDestroy(FragmentDevice* PR_NULLABLE device);
 // function that draws into the layers of passes marked beneath. The frame's data lives in the command buffer's stream,
 // so the frame renders into a pass of the same command buffer.
 void fragmentDevicePrepare(FragmentDevice* d, const FragmentFrame* frame, PrGpuCommands* commands,
-                           PrPixelFormat format, const PrDrawBeneath* PR_NULLABLE beneath);
+    PrPixelFormat format, const PrDrawBeneath* PR_NULLABLE beneath);
 
 // Draws the frame's passes into the target, with the frame's pixel (0, 0) at `origin` of the host pass's attachments.
 // Leaves the pass's viewport and scissor over the whole attachments.

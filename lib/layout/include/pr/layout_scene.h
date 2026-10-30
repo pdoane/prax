@@ -98,12 +98,10 @@ PrLayoutScenePlayOptions prLayoutScenePlayOptionsDefault(void);
 // transform is sampled with the extent of its layer's reference box, as a compositor samples it, so that playing the
 // scene with the overrides shows what a compositor's frame at `time` shows.
 uint32_t prLayoutSceneSampleTracks(const PrLayoutScene* scene, const PrLayoutTrack* PR_NULLABLE tracks,
-                                   uint32_t trackCount, double time, PrLayoutSceneEffect* PR_NULLABLE out,
-                                   uint32_t capacity);
+    uint32_t trackCount, double time, PrLayoutSceneEffect* PR_NULLABLE out, uint32_t capacity);
 
 // Plays the scene into `list`, in pixels. A null `options` means the defaults.
-void prLayoutScenePlay(const PrLayoutScene* scene, PrDrawList* list,
-                       const PrLayoutScenePlayOptions* PR_NULLABLE options);
+void prLayoutScenePlay(const PrLayoutScene* scene, PrDrawList* list, const PrLayoutScenePlayOptions* PR_NULLABLE options);
 
 // Returns the color that fills the scene's canvas beneath its content, straight alpha: the root's background color over
 // the tree's canvas color (prLayoutTreeSetCanvasColor), source-over on encoded values as a target blends. The fill
@@ -135,14 +133,13 @@ bool prLayoutSceneHasScroll(const PrLayoutScene* scene, PrLayoutNode node);
 // Writes to `out` up to `capacity` of the moves that scroll anchoring made to the tree's offsets since the scene before
 // this one, one for each container, and returns the total count. The scene's boxes are where those moves place them, so
 // a compositor that scrolled a container itself moves its own offset by as much when the scene arrives.
-uint32_t prLayoutSceneScrollAdjustments(const PrLayoutScene* scene, PrLayoutScrollAdjustment* PR_NULLABLE out,
-                                        uint32_t capacity);
+uint32_t prLayoutSceneScrollAdjustments(const PrLayoutScene* scene, PrLayoutScrollAdjustment* PR_NULLABLE out, uint32_t capacity);
 
 // Writes up to `capacity` of the tree's scroll offsets for the scroll containers of `scene`, a scene of the tree, to
 // `out`, each clamped to its container's range, and returns the total count. A container whose node the tree no longer
 // has is unscrolled.
 uint32_t prLayoutSceneScrolls(const PrLayoutTree* tree, const PrLayoutScene* scene,
-                              PrLayoutSceneScroll* PR_NULLABLE out, uint32_t capacity);
+    PrLayoutSceneScroll* PR_NULLABLE out, uint32_t capacity);
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Painting a tree directly

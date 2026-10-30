@@ -49,8 +49,10 @@ std::vector<uint8_t> solidTiff(uint32_t size, uint8_t r, uint8_t g, uint8_t b) {
         out.push_back(g);
         out.push_back(b);
     }
-    const uint32_t entries[][3] = {{256, 4, size}, {257, 4, size}, {259, 3, 1}, {262, 3, 2},
-                                   {273, 4, 8}, {277, 3, 3}, {278, 4, size}, {279, 4, pixels}};
+    const uint32_t entries[][3] = {
+        {256, 4, size}, {257, 4, size}, {259, 3, 1}, {262, 3, 2},
+        {273, 4, 8}, {277, 3, 3}, {278, 4, size}, {279, 4, pixels},
+    };
     put16(out, 8);
     for (const uint32_t* entry : entries) {
         put16(out, entry[0]);
@@ -70,7 +72,7 @@ std::vector<uint8_t> solidTiff(uint32_t size, uint8_t r, uint8_t g, uint8_t b) {
 // Returns the font file with its sbix table replaced by one strike of `ppem` pixels per em. In that strike, glyph
 // `glyph` is `image`, of the sbix graphic type `type`, with its bottom left corner at the origin.
 std::vector<uint8_t> withSbixImage(std::vector<uint8_t> font, uint16_t glyph, uint16_t glyphCount, uint32_t type,
-                                   const std::vector<uint8_t>& image, uint16_t ppem) {
+        const std::vector<uint8_t>& image, uint16_t ppem) {
     std::vector<uint8_t> sbix;
     put16(sbix, 1);
     put16(sbix, 1);
@@ -138,8 +140,8 @@ TEST_CASE("a TIFF image in an sbix strike draws through the image codec") {
     PrDrawList* list = prDrawListCreate();
     prDrawListGlyphs(list, &run, PrVec2{}, {.color = PrColor{0, 0, 0, 1}});
     std::vector<uint8_t> pixels(80 * 80 * 4, 0);
-    REQUIRE(prDrawRendererRenderPixels(renderer, list, PrPixels{pixels.data(), 80 * 4, {80, 80}}, PrPixelFormat_Rgba8)
-            == PrStatus_Ok);
+    REQUIRE(prDrawRendererRenderPixels(renderer, list, PrPixels{pixels.data(), 80 * 4, {80, 80}},
+        PrPixelFormat_Rgba8) == PrStatus_Ok);
     const uint8_t* inside = pixels.data() + (size_t(24) * 80 + 56) * 4;
     CHECK(inside[2] == 255);
     CHECK(inside[3] == 255);

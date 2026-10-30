@@ -168,7 +168,7 @@ enum { kPrUnicodeCaseMaxCodePoints = 3 };
 // `language` for Lithuanian, Turkish and Azerbaijani. The rest of `text` is the context that the conditions read.
 // Titlecase maps only the code point itself; the caller decides which code point starts a word.
 uint32_t prUnicodeMapCase(PrStringView text, size_t at, PrUnicodeCase target, PrLanguage language,
-                          uint32_t out[PR_NONNULL kPrUnicodeCaseMaxCodePoints]);
+    uint32_t out[PR_NONNULL kPrUnicodeCaseMaxCodePoints]);
 
 // Writes the full case folding of `codePoint` to `out`, and returns its length in code points. The folding is the
 // mappings of CaseFolding.txt with status C or F, without the Turkic mappings. A code point with no folding folds to

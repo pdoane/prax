@@ -22,7 +22,7 @@ std::string animationWith(const std::string& expression) {
         {"ty": 3, "nm": "Moved", "ind": 2, "ip": 0, "op": 60, "st": 0,
          "ks": {"o": {"a": 1, "k": [{"t": 0, "s": [0], "o": {"x": [0], "y": [0]}, "i": {"x": [1], "y": [1]}},
                                     {"t": 10, "s": [100]}], "x": ")"
-           + expression + R"("}}}]})";
+        + expression + R"("}}}]})";
 }
 
 // Returns the opacity of the layer "Moved" at `frame`, with its expression evaluated.
@@ -52,10 +52,9 @@ TEST_CASE("an expression's result replaces its property's value") {
 }
 
 TEST_CASE("an expression reaches other layers, their transforms and their effects") {
-    CHECK(opacityAt("var $bm_rt; $bm_rt = thisComp.layer('Target').transform.position[1];", 15) ==
-          doctest::Approx(30));
+    CHECK(opacityAt("var $bm_rt; $bm_rt = thisComp.layer('Target').transform.position[1];", 15) == doctest::Approx(30));
     CHECK(opacityAt("var $bm_rt; $bm_rt = thisComp.layer(1).effect('Slider Control')('Slider');", 0) ==
-          doctest::Approx(42));
+        doctest::Approx(42));
     CHECK(opacityAt("var $bm_rt; $bm_rt = thisLayer.name.length;", 0) == doctest::Approx(5));
 }
 

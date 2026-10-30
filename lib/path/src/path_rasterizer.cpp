@@ -31,8 +31,7 @@ struct PathRasterizer {
 };
 
 void addEdge(PathRasterizer* r, PrVec2 from, PrVec2 to) {
-    if (from.y == to.y || !isFiniteF32(from.x) || !isFiniteF32(from.y) || !isFiniteF32(to.x)
-        || !isFiniteF32(to.y))
+    if (from.y == to.y || !isFiniteF32(from.x) || !isFiniteF32(from.y) || !isFiniteF32(to.x) || !isFiniteF32(to.y))
         return;
     if (from.y < to.y)
         r->edges.push(PathCellEdge{from.x, from.y, to.x, to.y, 1});
@@ -77,8 +76,10 @@ void accumulateClipped(float* cells, size_t stride, uint32_t width, uint32_t hei
     for (uint32_t i = 0; i < cutCount; ++i) {
         float t0 = cuts[i];
         float t1 = cuts[i + 1];
-        PathCellEdge piece{e.x0 + (e.x1 - e.x0) * t0, e.y0 + (e.y1 - e.y0) * t0,
-                   e.x0 + (e.x1 - e.x0) * t1, e.y0 + (e.y1 - e.y0) * t1, e.direction};
+        PathCellEdge piece{
+            e.x0 + (e.x1 - e.x0) * t0, e.y0 + (e.y1 - e.y0) * t0,
+            e.x0 + (e.x1 - e.x0) * t1, e.y0 + (e.y1 - e.y0) * t1, e.direction,
+        };
         piece.x0 = minF32(maxF32(piece.x0, 0), right);
         piece.x1 = minF32(maxF32(piece.x1, 0), right);
         pathAccumulate(cells, stride, width, height, piece);
@@ -174,7 +175,7 @@ void prPathRasterizerDestroy(PrPathRasterizer* PR_NULLABLE rasterizer) {
 }
 
 void prPathRasterizerFill(PrPathRasterizer* rasterizer, const PrPathPolyline* polyline, PrPathFillRule rule,
-                          PrPathCoverage coverage, PrIVec2 origin, PrPixels mask) {
+        PrPathCoverage coverage, PrIVec2 origin, PrPixels mask) {
     if (mask.extent.x == 0 || mask.extent.y == 0)
         return;
     addEdges(rasterizer, *polyline, origin.x, origin.y);

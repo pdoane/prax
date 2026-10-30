@@ -29,7 +29,7 @@ void writeTree(TextBuffer* out, const PrDomNode* node) {
             textAppendChar(out, '<');
             textAppend(out, domElementName(element));
             for (const PrDomAttr* attribute = element->firstAttribute; attribute != nullptr;
-                 attribute = static_cast<const PrDomAttr*>(attribute->next)) {
+                    attribute = static_cast<const PrDomAttr*>(attribute->next)) {
                 textAppendChar(out, ' ');
                 textAppend(out, prStringView(&attribute->name));
                 textAppend(out, "=\"");

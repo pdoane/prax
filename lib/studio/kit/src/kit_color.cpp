@@ -58,10 +58,11 @@ constexpr uint32_t kPeakSteps = 18;
 // steps evenly and the chroma curves up through the middle tones, so that a tone reads as a shade of one color rather
 // than as a fade.
 constexpr uint32_t kRampTones = 11;
-constexpr float kRampLightness[kRampTones] = {0.97f, 0.93f, 0.87f, 0.80f, 0.71f, 0.64f,
-                                              0.58f, 0.51f, 0.45f, 0.39f, 0.27f};
-constexpr float kRampChroma[kRampTones] = {0.10f, 0.22f, 0.42f, 0.65f, 0.90f, 1.00f,
-                                           0.97f, 0.85f, 0.70f, 0.55f, 0.35f};
+constexpr float kRampLightness[kRampTones] = {
+    0.97f, 0.93f, 0.87f, 0.80f, 0.71f, 0.64f,
+    0.58f, 0.51f, 0.45f, 0.39f, 0.27f,
+};
+constexpr float kRampChroma[kRampTones] = {0.10f, 0.22f, 0.42f, 0.65f, 0.90f, 1.00f, 0.97f, 0.85f, 0.70f, 0.55f, 0.35f};
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Color spaces
@@ -472,8 +473,11 @@ PR_NO_PADDING_END
 // element holds a drawing already. Writes `key` to `*drawn`.
 template <typename Draw>
 void setDrawing(Kit& kit, PrLayoutNode node, PrVec2 extent, uint64_t key, uint64_t* drawn, Draw draw) {
-    PrLayoutNaturalSize natural{.width = prLayoutUnitFromPx(extent.x), .height = prLayoutUnitFromPx(extent.y),
-                                .ratio = extent.x / extent.y};
+    PrLayoutNaturalSize natural{
+        .width = prLayoutUnitFromPx(extent.x),
+        .height = prLayoutUnitFromPx(extent.y),
+        .ratio = extent.x / extent.y,
+    };
     prLayoutTreeFrameSetNaturalSize(kit.tree, node, natural);
     PrLayoutContent held = prLayoutNodeContent(kit.tree, node);
     if (*drawn == key && held.kind == PrLayoutContentKind_DrawList)
@@ -506,9 +510,11 @@ void fillChecker(PrDrawList* list, PrRect rect) {
     uint32_t rows = uint32_t(ceilF32(prRectHeight(rect) / kChecker));
     for (uint32_t y = 0; y < rows; ++y) {
         for (uint32_t x = (y & 1); x < columns; x += 2) {
-            PrRect square{rect.left + float(x) * kChecker, rect.top + float(y) * kChecker,
-                          minF32(rect.left + float(x + 1) * kChecker, rect.right),
-                          minF32(rect.top + float(y + 1) * kChecker, rect.bottom)};
+            PrRect square{
+                rect.left + float(x) * kChecker, rect.top + float(y) * kChecker,
+                minF32(rect.left + float(x + 1) * kChecker, rect.right),
+                minF32(rect.top + float(y + 1) * kChecker, rect.bottom),
+            };
             prDrawListRect(list, square, {.color = PrColor{0.41f, 0.41f, 0.41f, 1}});
         }
     }
@@ -521,8 +527,7 @@ struct Sampled {
     float hue;
 
     Oklch at(float across, float up) const {
-        return skyline ? Oklch{kPeakLightness, up * kMaxChroma, across * 360}
-                       : Oklch{across, up * kMaxChroma, hue};
+        return skyline ? Oklch{kPeakLightness, up * kMaxChroma, across * 360} : Oklch{across, up * kMaxChroma, hue};
     }
 };
 
@@ -543,13 +548,15 @@ void drawSampled(Kit& kit, PrDrawList* list, PrVec2 extent, Sampled plane, PrCol
             texel[3] = prFloat16FromFloat(1);
         }
     }
-    PrDrawImageDesc desc{PrPixelView{reinterpret_cast<const uint8_t*>(pixels.data), kSamples * 8, {kSamples, kSamples}},
-                         PrPixelFormat_RgbaF16, PrDrawAlpha_Straight, PrColorSpace_Srgb};
+    PrDrawImageDesc desc{
+        PrPixelView{reinterpret_cast<const uint8_t*>(pixels.data), kSamples * 8, {kSamples, kSamples}},
+        PrPixelFormat_RgbaF16, PrDrawAlpha_Straight, PrColorSpace_Srgb,
+    };
     const PrDrawImage* image = nullptr;
     PrRect rect{0, 0, extent.x, extent.y};
     if (prDrawImageCreate(&desc, &image) == PrStatus_Ok) {
         PrDrawBrush brush = prDrawBrushImage(prDrawSourceImage(image, PrRect{0, 0, float(kSamples), float(kSamples)}),
-                                             rect, PrDrawSampling_Linear);
+            rect, PrDrawSampling_Linear);
         prDrawListRect(list, rect, {.brush = &brush});
         prDrawImageRelease(image);
     }
@@ -569,7 +576,7 @@ void drawSampled(Kit& kit, PrDrawList* list, PrVec2 extent, Sampled plane, PrCol
         }
         if (points.count > 1)
             prDrawListPolylineContour(list, points.data, points.count, PrDrawContour_Open, PrPathFillRule_NonZero,
-                                      {.color = kit.theme.palette.text2, .stroke = &stroke});
+                {.color = kit.theme.palette.text2, .stroke = &stroke});
         points.reset();
     };
     PrDrawStroke solid = prDrawStrokeDefault();
@@ -679,8 +686,7 @@ void planeRow(Kit& kit, PrLayoutNode node, PickerState& s, PrColor* color, bool 
             return;
         }
         PrRect rect{0, 0, planeExtent.x, planeExtent.y};
-        fillGradient(list, rect, PrVec2{0, 0}, PrVec2{planeExtent.x, 0}, PrColor{1, 1, 1, 1},
-                     srgbOfHsv(hue, 100, 100, 1));
+        fillGradient(list, rect, PrVec2{0, 0}, PrVec2{planeExtent.x, 0}, PrColor{1, 1, 1, 1}, srgbOfHsv(hue, 100, 100, 1));
         fillGradient(list, rect, PrVec2{0, 0}, PrVec2{0, planeExtent.y}, PrColor{0, 0, 0, 0}, PrColor{0, 0, 0, 1});
     });
     if (perceptual)
@@ -693,25 +699,26 @@ void planeRow(Kit& kit, PrLayoutNode node, PickerState& s, PrColor* color, bool 
         PrDrawColorStop stops[kStops];
         for (uint32_t i = 0; i < kStops; ++i) {
             float place = float(i) / (kStops - 1);
-            PrColor at = perceptual ? shown(Oklch{kHueLightness, kHueChroma, place * 360}, 1, s.gamut)
-                                    : srgbOfHsv(place * 360, 100, 100, 1);
+            PrColor at;
+            if (perceptual)
+                at = shown(Oklch{kHueLightness, kHueChroma, place * 360}, 1, s.gamut);
+            else
+                at = srgbOfHsv(place * 360, 100, 100, 1);
             stops[i] = PrDrawColorStop{.offset = place, .color = at};
         }
-        fillStops(list, PrRect{0, 0, stripExtent.x, stripExtent.y}, PrVec2{0, 0}, PrVec2{0, stripExtent.y}, stops,
-                  kStops);
+        fillStops(list, PrRect{0, 0, stripExtent.x, stripExtent.y}, PrVec2{0, 0}, PrVec2{0, stripExtent.y}, stops, kStops);
     });
     marker(kit, hues.node, 0, hue / 360, true);
 
     if (!opaque) {
         PrColor solid{color->r, color->g, color->b, 1};
-        setDrawing(kit, alpha.fill, stripExtent, hashBytes(&solid, sizeof solid, 0), &s.drawn[2],
-                   [&](PrDrawList* list) {
-                       PrRect rect{0, 0, stripExtent.x, stripExtent.y};
-                       fillChecker(list, rect);
-                       PrColor clear = solid;
-                       clear.a = 0;
-                       fillGradient(list, rect, PrVec2{0, 0}, PrVec2{0, stripExtent.y}, solid, clear);
-                   });
+        setDrawing(kit, alpha.fill, stripExtent, hashBytes(&solid, sizeof solid, 0), &s.drawn[2], [&](PrDrawList* list) {
+            PrRect rect{0, 0, stripExtent.x, stripExtent.y};
+            fillChecker(list, rect);
+            PrColor clear = solid;
+            clear.a = 0;
+            fillGradient(list, rect, PrVec2{0, 0}, PrVec2{0, stripExtent.y}, solid, clear);
+        });
         marker(kit, alpha.node, 0, 1 - clampUnit(s.alpha), true);
     }
 }
@@ -726,7 +733,7 @@ void rampPlane(Kit& kit, PrLayoutNode node, PickerState& s) {
     }
     PrVec2 extent{kPickerWidth - 2, kPlaneSize - 2};
     setDrawing(kit, plane.fill, extent, 0x5c71 | uint64_t(s.gamut) << 16, &s.drawn[0],
-               [&](PrDrawList* list) { drawSampled(kit, list, extent, Sampled{.skyline = true}, s.gamut); });
+        [&](PrDrawList* list) { drawSampled(kit, list, extent, Sampled{.skyline = true}, s.gamut); });
     marker(kit, plane.node, s.rampHue / 360, 1 - s.rampChroma / kMaxChroma, false);
 }
 
@@ -738,8 +745,8 @@ void rampTones(PrKit* kit, PrLayoutNode node, const PickerState& s, PrColor* col
     PrLayoutNode row = part(*kit, node, 0, Part_Tones);
     for (uint32_t i = 0; i < kRampTones; ++i) {
         PrColor tone = rampTone(s.rampHue, s.rampChroma, i, s.gamut);
-        bool chosen = channelByte(tone.r) == channelByte(color->r) && channelByte(tone.g) == channelByte(color->g)
-                      && channelByte(tone.b) == channelByte(color->b);
+        bool chosen = channelByte(tone.r) == channelByte(color->r) && channelByte(tone.g) == channelByte(color->g) &&
+            channelByte(tone.b) == channelByte(color->b);
         PrLayoutNode cell = prLayoutTreeFrameElement(kit->tree, row, 0, 0);
         prUiSetFlags(kit->ui, cell, PrUiFlag_Pressable | PrUiFlag_Focusable);
         bool hover = prUiIsHovered(kit->ui, cell);
@@ -773,17 +780,23 @@ void coordinateRow(PrKit* kit, PrLayoutNode node, PickerState& s, PrColor* color
     bool perceptual = s.tab == PrKitColorMode_Oklch;
     quiet(*kit, row);
     if (perceptual) {
-        PrKitNumber l{.value = prKitScalarF32(&s.lightness),
-                      .range = {.step = 0.5, .min = 0, .max = 100, .hasMin = true, .hasMax = true},
-                      .axis = "L",
-                      .precision = 1};
-        PrKitNumber c{.value = prKitScalarF32(&s.chroma),
-                      .range = {.step = 0.005, .min = 0, .max = double(kMaxChroma), .hasMin = true, .hasMax = true},
-                      .axis = "C",
-                      .precision = 3};
-        PrKitNumber h{.value = prKitScalarI32(&s.whole[2]),
-                      .range = {.step = 1, .min = 0, .max = 360, .hasMin = true, .hasMax = true},
-                      .axis = "H"};
+        PrKitNumber l{
+            .value = prKitScalarF32(&s.lightness),
+            .range = {.step = 0.5, .min = 0, .max = 100, .hasMin = true, .hasMax = true},
+            .axis = "L",
+            .precision = 1,
+        };
+        PrKitNumber c{
+            .value = prKitScalarF32(&s.chroma),
+            .range = {.step = 0.005, .min = 0, .max = double(kMaxChroma), .hasMin = true, .hasMax = true},
+            .axis = "C",
+            .precision = 3,
+        };
+        PrKitNumber h{
+            .value = prKitScalarI32(&s.whole[2]),
+            .range = {.step = 1, .min = 0, .max = 360, .hasMin = true, .hasMax = true},
+            .axis = "H",
+        };
         prKitNumberField(kit, row, l, small);
         prKitNumberField(kit, row, c, small);
         prKitNumberField(kit, row, h, small);
@@ -791,9 +804,11 @@ void coordinateRow(PrKit* kit, PrLayoutNode node, PickerState& s, PrColor* color
         const PrStringView tags[] = {"H", "S", "V"};
         const double bounds[] = {360, 100, 100};
         for (uint32_t i = 0; i < 3; ++i) {
-            PrKitNumber n{.value = prKitScalarI32(&s.whole[i]),
-                          .range = {.step = 1, .min = 0, .max = bounds[i], .hasMin = true, .hasMax = true},
-                          .axis = tags[i]};
+            PrKitNumber n{
+                .value = prKitScalarI32(&s.whole[i]),
+                .range = {.step = 1, .min = 0, .max = bounds[i], .hasMin = true, .hasMax = true},
+                .axis = tags[i],
+            };
             prKitNumberField(kit, row, n, small);
         }
     }
@@ -872,9 +887,11 @@ void channelRow(PrKit* kit, PrLayoutNode node, PickerState& s, PrColor* color, b
     const PrStringView tags[] = {"R", "G", "B", "A"};
     quiet(*kit, row);
     for (uint32_t i = 0; i < (opaque ? 3u : 4u); ++i) {
-        PrKitNumber n{.value = prKitScalarI32(&s.channels[i]),
-                      .range = {.step = 1, .min = 0, .max = 255, .hasMin = true, .hasMax = true},
-                      .axis = tags[i]};
+        PrKitNumber n{
+            .value = prKitScalarI32(&s.channels[i]),
+            .range = {.step = 1, .min = 0, .max = 255, .hasMin = true, .hasMax = true},
+            .axis = tags[i],
+        };
         prKitNumberField(kit, row, n, small);
     }
     bool changed = false;
@@ -882,8 +899,10 @@ void channelRow(PrKit* kit, PrLayoutNode node, PickerState& s, PrColor* color, b
         changed = changed || s.channels[i] != s.channelsWritten[i];
     if (!changed)
         return;
-    PrColor made{float(s.channels[0]) / 255, float(s.channels[1]) / 255, float(s.channels[2]) / 255,
-                 float(s.channels[3]) / 255};
+    PrColor made{
+        float(s.channels[0]) / 255, float(s.channels[1]) / 255, float(s.channels[2]) / 255,
+        float(s.channels[3]) / 255,
+    };
     writeEdit(*kit, node, s, color, made);
 }
 
@@ -892,7 +911,7 @@ PrLayoutNode colorPicker(PrKit* kit, PrLayoutNode parent, const PrKitColorPicker
     PrColor* color = picker.color;
     PrLayoutNode node = part(*kit, parent, picker.key, Part_Picker);
     PickerState* state = static_cast<PickerState*>(prUiState(kit->ui, node, &kKitOwner, ColorStateKey_Picker,
-                                                             sizeof(PickerState)));
+        sizeof(PickerState)));
     PickerState& s = *state;
     s.gamut = picker.gamut;
     if (!s.seeded) {
@@ -950,8 +969,7 @@ PrLayoutNode prKitColorField(PrKit* kit, PrLayoutNode parent, PrKitColorField fi
     uint8_t state = disabled || !prUiIsHovered(ui, node) ? 0 : 1;
     bool ring = prUiIsFocusVisible(ui) && prUiFocus(ui) == node;
     prLayoutTreeFrameSetStyle(kit->tree, node,
-                              kitStyle(*kit, FieldBox{.size = style.size}, PickerRowFlex{.gap = kPrKitSpace3},
-                                       RingFill{.ring = ring}));
+        kitStyle(*kit, FieldBox{.size = style.size}, PickerRowFlex{.gap = kPrKitSpace3}, RingFill{.ring = ring}));
     if (!disabled)
         prUiSetCursor(ui, node, PrAppCursor_Hand);
     if (!disabled && prUiActivated(ui, node))
@@ -966,8 +984,7 @@ PrLayoutNode prKitColorField(PrKit* kit, PrLayoutNode parent, PrKitColorField fi
     char hex[9];
     const PrKitPalette& p = kit->theme.palette;
     KitInk ink{.color = disabled ? p.text4 : state == 0 ? p.text2 : p.text1};
-    PrLayoutNode label = prLayoutTreeFrameElement(
-        kit->tree, node, 0,
+    PrLayoutNode label = prLayoutTreeFrameElement(kit->tree, node, 0,
         kitStyle(*kit, KitBlock{}, KitFont{.role = PrKitTextRole_Mono}, ink));
     prLayoutTreeFrameText(kit->tree, label, 0, prKitColorHex(*color, hex));
     return node;
@@ -979,8 +996,10 @@ PrLayoutNode prKitColorPicker(PrKit* kit, PrLayoutNode parent, PrKitColorPicker 
 
 PrStringView prKitColorHex(PrColor color, char* out) {
     static const char kDigits[] = "0123456789ABCDEF";
-    const uint8_t channels[4] = {channelByte(color.r), channelByte(color.g), channelByte(color.b),
-                                 channelByte(color.a)};
+    const uint8_t channels[4] = {
+        channelByte(color.r), channelByte(color.g), channelByte(color.b),
+        channelByte(color.a),
+    };
     uint32_t count = channels[3] == 255 ? 3 : 4;
     out[0] = '#';
     for (uint32_t i = 0; i < count; ++i) {
@@ -1003,7 +1022,9 @@ bool prKitColorParseHex(PrStringView text, PrColor* out) {
             return false;
         channels[i] = asciiHexValue(high) * 16 + asciiHexValue(low);
     }
-    *out = PrColor{float(channels[0]) / 255, float(channels[1]) / 255, float(channels[2]) / 255,
-                   float(channels[3]) / 255};
+    *out = PrColor{
+        float(channels[0]) / 255, float(channels[1]) / 255, float(channels[2]) / 255,
+        float(channels[3]) / 255,
+    };
     return true;
 }

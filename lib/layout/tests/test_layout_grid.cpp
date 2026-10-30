@@ -21,8 +21,10 @@ PrLayoutGridTrack fixed(float px) {
     return PrLayoutGridTrack{prLayoutTrackBreadthPx(px), prLayoutTrackBreadthPx(px), prLayoutLengthPx(0)};
 }
 PrLayoutGridTrack percent(float value) {
-    return PrLayoutGridTrack{prLayoutTrackBreadthPercent(value), prLayoutTrackBreadthPercent(value),
-                             prLayoutLengthPx(0)};
+    return PrLayoutGridTrack{
+        prLayoutTrackBreadthPercent(value), prLayoutTrackBreadthPercent(value),
+        prLayoutLengthPx(0),
+    };
 }
 PrLayoutGridTrack fr(float factor) {
     return PrLayoutGridTrack{prLayoutTrackBreadthAuto(), prLayoutTrackBreadthFlex(factor), prLayoutLengthPx(0)};
@@ -65,7 +67,7 @@ struct Stage {
 
     // Returns the record of a box with its grid and flex groups.
     uint32_t style(const PrLayoutBoxStyle& box, const PrLayoutGridStyle& grid = prLayoutGridStyleDefault(),
-                   const PrLayoutFlexStyle& flex = prLayoutFlexStyleDefault()) {
+            const PrLayoutFlexStyle& flex = prLayoutFlexStyleDefault()) {
         PrLayoutStyle record = prLayoutStyleDefault();
         record.groups[PrLayoutGroup_Box] = prLayoutBoxStyleIntern(f.tree, &box);
         record.groups[PrLayoutGroup_Font] = prLayoutFontStyleIntern(f.tree, &font);
@@ -76,8 +78,8 @@ struct Stage {
 
     // Creates an element under `parent`.
     PrLayoutNode add(PrLayoutNode parent, const PrLayoutBoxStyle& box,
-                     const PrLayoutGridStyle& grid = prLayoutGridStyleDefault(),
-                     const PrLayoutFlexStyle& flex = prLayoutFlexStyleDefault()) {
+            const PrLayoutGridStyle& grid = prLayoutGridStyleDefault(),
+            const PrLayoutFlexStyle& flex = prLayoutFlexStyleDefault()) {
         PrLayoutNode node = prLayoutNodeCreateElement(f.tree, parent, style(box, grid, flex));
         if (parent == kPrLayoutNodeNone)
             f.root = node;
@@ -86,21 +88,25 @@ struct Stage {
 
     // Interns a track list of `tracks`, with the names given, by line.
     PrLayoutGridTracksIndex tracks(std::vector<PrLayoutGridTrack> list, std::vector<PrLayoutGridLineName> names = {}) {
-        PrLayoutGridTrackList desc{.tracks = list.data(),
-                                   .trackCount = uint32_t(list.size()),
-                                   .names = names.data(),
-                                   .nameCount = uint32_t(names.size())};
+        PrLayoutGridTrackList desc{
+            .tracks = list.data(),
+            .trackCount = uint32_t(list.size()),
+            .names = names.data(),
+            .nameCount = uint32_t(names.size()),
+        };
         return prLayoutGridTracksIntern(f.tree, &desc);
     }
 
     // Interns a track list whose tracks from `start`, `count` of them, repeat automatically by `repeat`.
     PrLayoutGridTracksIndex repeating(std::vector<PrLayoutGridTrack> list, uint32_t start, uint32_t count,
-                                      PrLayoutGridRepeat repeat) {
-        PrLayoutGridTrackList desc{.tracks = list.data(),
-                                   .trackCount = uint32_t(list.size()),
-                                   .repeat = repeat,
-                                   .repeatStart = start,
-                                   .repeatCount = count};
+            PrLayoutGridRepeat repeat) {
+        PrLayoutGridTrackList desc{
+            .tracks = list.data(),
+            .trackCount = uint32_t(list.size()),
+            .repeat = repeat,
+            .repeatStart = start,
+            .repeatCount = count,
+        };
         return prLayoutGridTracksIntern(f.tree, &desc);
     }
 
@@ -108,7 +114,7 @@ struct Stage {
 
     // Creates a grid container under `parent`, `width` wide if given.
     PrLayoutNode grid(PrLayoutNode parent, const PrLayoutGridStyle& grid, float width = -1,
-                      const PrLayoutFlexStyle& flex = prLayoutFlexStyleDefault()) {
+            const PrLayoutFlexStyle& flex = prLayoutFlexStyleDefault()) {
         PrLayoutBoxStyle box = block();
         box.display = PrLayoutDisplay_Grid;
         if (width >= 0)
@@ -118,8 +124,7 @@ struct Stage {
 
     // Creates an item under `parent`, placed by `placement`, `width` by `height` if given.
     PrLayoutNode item(PrLayoutNode parent, const PrLayoutGridStyle& placement = prLayoutGridStyleDefault(),
-                      float width = -1, float height = -1,
-                      const PrLayoutFlexStyle& flex = prLayoutFlexStyleDefault()) {
+            float width = -1, float height = -1, const PrLayoutFlexStyle& flex = prLayoutFlexStyleDefault()) {
         PrLayoutBoxStyle box = block();
         if (width >= 0)
             box.width = prLayoutLengthPx(width);
@@ -154,7 +159,7 @@ struct Stage {
 
 // Returns a placement in both axes: rows `rowStart` to `rowEnd`, and columns `columnStart` to `columnEnd`.
 PrLayoutGridStyle area(PrLayoutGridLine rowStart, PrLayoutGridLine columnStart, PrLayoutGridLine rowEnd,
-                       PrLayoutGridLine columnEnd) {
+        PrLayoutGridLine columnEnd) {
     PrLayoutGridStyle grid = prLayoutGridStyleDefault();
     grid.rowStart = rowStart;
     grid.columnStart = columnStart;
@@ -261,8 +266,10 @@ TEST_CASE("content-sized tracks that do not stretch keep their content's sizes")
 TEST_CASE("an item spanning auto tracks grows the tracks that its content needs") {
     Stage s;
     PrLayoutGridStyle style = prLayoutGridStyleDefault();
-    style.templateColumns = s.tracks({minmax(prLayoutTrackBreadthMinContent(), prLayoutTrackBreadthMaxContent()),
-                                      minmax(prLayoutTrackBreadthMinContent(), prLayoutTrackBreadthMaxContent())});
+    style.templateColumns = s.tracks({
+        minmax(prLayoutTrackBreadthMinContent(), prLayoutTrackBreadthMaxContent()),
+        minmax(prLayoutTrackBreadthMinContent(), prLayoutTrackBreadthMaxContent()),
+    });
     PrLayoutFlexStyle flex = prLayoutFlexStyleDefault();
     flex.justifyContent = PrLayoutAlignment_Start;
     PrLayoutNode g = s.grid(s.root, style, 400, flex);
@@ -395,8 +402,7 @@ TEST_CASE("auto-fill repeats as many tracks as fit, and auto-fit collapses the e
     for (PrLayoutGridRepeat repeat : {PrLayoutGridRepeat_AutoFill, PrLayoutGridRepeat_AutoFit}) {
         Stage s;
         PrLayoutGridStyle style = prLayoutGridStyleDefault();
-        style.templateColumns =
-            s.repeating({minmax(prLayoutTrackBreadthPx(100), prLayoutTrackBreadthFlex(1))}, 0, 1, repeat);
+        style.templateColumns = s.repeating({minmax(prLayoutTrackBreadthPx(100), prLayoutTrackBreadthFlex(1))}, 0, 1, repeat);
         PrLayoutFlexStyle flex = prLayoutFlexStyleDefault();
         flex.columnGap = prLayoutLengthPx(10);
         PrLayoutNode g = s.grid(s.root, style, 450, flex);

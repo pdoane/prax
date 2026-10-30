@@ -13,12 +13,11 @@ bool inspectBitmap(IcoImage& image) {
     }
     image.headerSize = readLeU32(image.bytes);
     image.bitCount = uint16_t(readLeU16(image.bytes + 14));
-    if ((image.headerSize != 40 && image.headerSize != 108 && image.headerSize != 124)
-        || image.headerSize > image.size || readLeU32(image.bytes + 4) != image.width
-        || readLeU32(image.bytes + 8) != image.height * 2 || readLeU16(image.bytes + 12) != 1
-        || readLeU32(image.bytes + 16) != 0
-        || (image.bitCount != 1 && image.bitCount != 4 && image.bitCount != 8
-            && image.bitCount != 24 && image.bitCount != 32)) {
+    if ((image.headerSize != 40 && image.headerSize != 108 && image.headerSize != 124) ||
+            image.headerSize > image.size || readLeU32(image.bytes + 4) != image.width ||
+            readLeU32(image.bytes + 8) != image.height * 2 || readLeU16(image.bytes + 12) != 1 ||
+            readLeU32(image.bytes + 16) != 0 || (image.bitCount != 1 && image.bitCount != 4 && image.bitCount != 8 &&
+                image.bitCount != 24 && image.bitCount != 32)) {
         return false;
     }
     const uint32_t colors = readLeU32(image.bytes + 32);
@@ -34,8 +33,7 @@ bool inspectBitmap(IcoImage& image) {
     const size_t rowBytes = ((size_t(image.width) * image.bitCount + 31) / 32) * 4;
     const size_t maskRowBytes = ((size_t(image.width) + 31) / 32) * 4;
     const size_t bitmapEnd = image.headerSize + image.paletteCount * 4 + rowBytes * image.height;
-    return bitmapEnd <= image.size
-           && (image.bitCount == 32 || maskRowBytes * image.height <= image.size - bitmapEnd);
+    return bitmapEnd <= image.size && (image.bitCount == 32 || maskRowBytes * image.height <= image.size - bitmapEnd);
 }
 
 } // namespace
@@ -62,11 +60,10 @@ bool icoSelectImage(PrByteView bytes, IcoImage* out) {
         image.size = length;
         image.width = entry[0] == 0 ? 256 : entry[0];
         image.height = entry[1] == 0 ? 256 : entry[1];
-        image.png = length >= sizeof(kPngSignature)
-                    && memEquals(image.bytes, kPngSignature, sizeof(kPngSignature));
+        image.png = length >= sizeof(kPngSignature) && memEquals(image.bytes, kPngSignature, sizeof(kPngSignature));
         if (image.png) {
-            if (length < 29 || readBeU32(image.bytes + 16) != image.width
-                || readBeU32(image.bytes + 20) != image.height) {
+            if (length < 29 || readBeU32(image.bytes + 16) != image.width ||
+                    readBeU32(image.bytes + 20) != image.height) {
                 continue;
             }
             image.bitCount = 32;
@@ -103,14 +100,12 @@ bool icoDecodeBitmap(const IcoImage& image, uint8_t* pixels, size_t pixelsSize) 
     for (uint32_t y = 0; y < image.height; ++y) {
         const uint32_t sourceY = image.height - 1 - y;
         const uint8_t* source = bitmap + size_t(sourceY) * rowBytes;
-        const uint8_t* mask =
-            hasMask ? image.bytes + maskOffset + size_t(sourceY) * maskRowBytes : nullptr;
+        const uint8_t* mask = hasMask ? image.bytes + maskOffset + size_t(sourceY) * maskRowBytes : nullptr;
         for (uint32_t x = 0; x < image.width; ++x) {
             const uint8_t* color = nullptr;
             if (image.bitCount <= 8) {
                 const uint32_t bit = x * image.bitCount;
-                const uint32_t index = (source[bit / 8] >> (8 - image.bitCount - bit % 8))
-                                       & ((1u << image.bitCount) - 1);
+                const uint32_t index = (source[bit / 8] >> (8 - image.bitCount - bit % 8)) & ((1u << image.bitCount) - 1);
                 if (index >= image.paletteCount) {
                     return false;
                 }
@@ -123,9 +118,12 @@ bool icoDecodeBitmap(const IcoImage& image, uint8_t* pixels, size_t pixelsSize) 
             pixel[1] = color[1];
             pixel[2] = color[0];
             // Legacy 32-bit icons with all-zero alpha use the AND mask.
-            pixel[3] = hasAlpha                                                     ? color[3]
-                       : mask != nullptr && (mask[x / 8] & (0x80u >> (x % 8))) != 0 ? 0
-                                                                                    : 255;
+            if (hasAlpha)
+                pixel[3] = color[3];
+            else if (mask != nullptr && (mask[x / 8] & (0x80u >> (x % 8))) != 0)
+                pixel[3] = 0;
+            else
+                pixel[3] = 255;
         }
     }
     return true;

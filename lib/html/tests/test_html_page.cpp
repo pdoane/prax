@@ -39,15 +39,14 @@ struct LaterHost {
             return PrStatus_Ok;
         };
         host.parseModule = [](void* data, PrHtmlPage*, const PrHtmlScript* script,
-                              PrHtmlModuleRequestFn request, void* PR_NULLABLE requestContext) {
+                PrHtmlModuleRequestFn request, void* PR_NULLABLE requestContext) {
             return static_cast<LaterHost*>(data)->modules.parse(script, request, requestContext);
         };
         return host;
     }
 
     // Answers the waiting fetch whose URL ends in `name` with `body`, of the content type `type` if one is given.
-    void answer(const char* name, const char* body, uint16_t status = 200,
-                PrStringView type = PrStringView{nullptr, 0}) {
+    void answer(const char* name, const char* body, uint16_t status = 200, PrStringView type = PrStringView{nullptr, 0}) {
         if (!fetcher.respond(name, body, status, type))
             FAIL("no fetch waits for " << name);
     }
@@ -125,8 +124,7 @@ TEST_CASE("the host loads resolved URLs and executes source with its location") 
     PrHtmlHost host = prHtmlHostDefault();
     host.context = &state;
     host.fetcher = fetcher.fetcher;
-    host.execute = [](void* data, PrHtmlPage* page,
-                      const PrHtmlScript* script) -> PrStatus {
+    host.execute = [](void* data, PrHtmlPage* page, const PrHtmlScript* script) -> PrStatus {
         State* state = static_cast<State*>(data);
         if (state->executed == 0) {
             CHECK(script->source == "inline");
@@ -136,22 +134,20 @@ TEST_CASE("the host loads resolved URLs and executes source with its location") 
         } else {
             CHECK(state->loaded == 1);
             CHECK(script->source == "external");
-            CHECK(
-                script->url == "https://example.test/assets/x%20y.js?x=1#frag");
+            CHECK(script->url == "https://example.test/assets/x%20y.js?x=1#frag");
             CHECK(script->line == 1);
             CHECK(script->column == 1);
-            CHECK(prHtmlDocumentWrite(prHtmlWindowDocument(prHtmlPageWindow(page)),
-                                      "<p id=written>inserted</p>") == PrStatus_Ok);
+            CHECK(prHtmlDocumentWrite(prHtmlWindowDocument(prHtmlPageWindow(page)), "<p id=written>inserted</p>") ==
+                PrStatus_Ok);
         }
         ++state->executed;
         return PrStatus_Ok;
     };
     PrHtmlPage* page = prHtmlPageCreate(&host);
     state.page = page;
-    CHECK(prHtmlPageLoad(page, "<!doctype html><meta charset=utf-8>\r\n<p>\xf0\x9f\x98\x80</p>"
-        "<script>inline</script>"
+    CHECK(prHtmlPageLoad(page, "<!doctype html><meta charset=utf-8>\r\n<p>\xf0\x9f\x98\x80</p><script>inline</script>"
         "<base href='../assets/'><script src='./x%20y.js?x=1#frag'>ignored</script>",
-                                    "https://example.test/tests/page.html", nullptr) == PrStatus_Ok);
+        "https://example.test/tests/page.html", nullptr) == PrStatus_Ok);
     fetcher.settle(prHtmlPageAgent(page));
     CHECK(state.loaded == 1);
     CHECK(state.executed == 2);
@@ -187,13 +183,9 @@ TEST_CASE("a script whose status is not ok fails, and not the load, and a failed
         nullptr,
         nullptr,
     };
-    prDomEventTargetAddEventListener(
-        prHtmlWindowAsEventTarget(prHtmlPageWindow(page)), "load", &listener,
-        nullptr);
-    CHECK(prHtmlPageLoad(
-              page, "<script src='missing.js'></script><script>later</script>",
-              "https://example.test/", nullptr)
-          == PrStatus_Ok);
+    prDomEventTargetAddEventListener(prHtmlWindowAsEventTarget(prHtmlPageWindow(page)), "load", &listener, nullptr);
+    CHECK(prHtmlPageLoad(page, "<script src='missing.js'></script><script>later</script>",
+        "https://example.test/", nullptr) == PrStatus_Ok);
     fetcher.settle(prHtmlPageAgent(page));
     CHECK(state.executed == 1);
     CHECK(state.loads == 1);
@@ -206,15 +198,11 @@ TEST_CASE("a script whose status is not ok fails, and not the load, and a failed
 TEST_CASE("base URL uses the first href and rejects data and javascript schemes") {
     PrHtmlPage* page = prHtmlPageCreate(nullptr);
     for (PrStringView href :
-         {"https://[invalid", "data:text/plain,base", "javascript:base"}) {
+            {"https://[invalid", "data:text/plain,base", "javascript:base"}) {
         PrString html = prStringCopy("<base href='");
         prStringAppend(&html, href);
-        prStringAppend(
-            &html,
-            "'><base href='https://ignored.test/'><script src='unloaded.js'></script>");
-        CHECK(prHtmlPageLoad(page, prStringView(&html),
-                                        "https://example.test/page", nullptr)
-              == PrStatus_Ok);
+        prStringAppend(&html, "'><base href='https://ignored.test/'><script src='unloaded.js'></script>");
+        CHECK(prHtmlPageLoad(page, prStringView(&html), "https://example.test/page", nullptr) == PrStatus_Ok);
         prStringReset(&html);
         PrDomDocument* document = prHtmlWindowDocument(prHtmlPageWindow(page));
         PrString base = prDomNodeBaseUri(prDomDocumentAsNode(document));
@@ -233,16 +221,11 @@ TEST_CASE("a script runs by its type, and data blocks and empty scripts do not")
         return PrStatus_Ok;
     };
     PrHtmlPage* page = prHtmlPageCreate(&host);
-    CHECK(
-        prHtmlPageLoad(
-            page,
-            "<script>a</script><script type=''>b</script><script type=' Text/JavaScript '>c</script>"
-                "<script language=JScript>d</script><script type='text/template'>no</script>"
-                "<script type='text/javascript; charset=utf-8'>no</script><script language=vbscript>no</script>"
-                "<script type=importmap>no</script><script></script><script src='/no-loader.js'></script>"
-                "<script nomodule>no</script>",
-            "https://example.test/", nullptr)
-        == PrStatus_Ok);
+    CHECK(prHtmlPageLoad(page, "<script>a</script><script type=''>b</script><script type=' Text/JavaScript '>c</script>"
+        "<script language=JScript>d</script><script type='text/template'>no</script>"
+        "<script type='text/javascript; charset=utf-8'>no</script><script language=vbscript>no</script>"
+        "<script type=importmap>no</script><script></script><script src='/no-loader.js'></script>"
+        "<script nomodule>no</script>", "https://example.test/", nullptr) == PrStatus_Ok);
     CHECK(state.sources == "abcd");
     prHtmlPageDestroy(page);
 }
@@ -251,12 +234,9 @@ TEST_CASE("an SVG script in HTML runs as the parser closes it, by its end tag or
     LaterHost later;
     PrHtmlHost host = later.host();
     PrHtmlPage* page = prHtmlPageCreate(&host);
-    CHECK(prHtmlPageLoad(page,
-                                    "<svg><script>a</script><rect/><script href='b.js'/>"
-                                    "<script xlink:href='c.js'></script><script type='text/plain'>no</script></svg>"
-                                    "<script>d</script>",
-                                    "https://example.test/", nullptr)
-          == PrStatus_Ok);
+    CHECK(prHtmlPageLoad(page, "<svg><script>a</script><rect/><script href='b.js'/>"
+        "<script xlink:href='c.js'></script><script type='text/plain'>no</script></svg>"
+        "<script>d</script>", "https://example.test/", nullptr) == PrStatus_Ok);
     later.settle(page);
     CHECK(later.log == "a ");
     later.answer("b.js", "b");
@@ -271,11 +251,8 @@ TEST_CASE("a module script runs once its graph is fetched, which fetches and par
     LaterHost later;
     PrHtmlHost host = later.host();
     PrHtmlPage* page = prHtmlPageCreate(&host);
-    CHECK(prHtmlPageLoad(page,
-                                    "<script type=module src=root.js></script><script type=module src=root.js></script>"
-                                    "<script type=module>import shared.js\ninline</script>",
-                                    "https://example.test/", nullptr)
-          == PrStatus_Ok);
+    CHECK(prHtmlPageLoad(page, "<script type=module src=root.js></script><script type=module src=root.js></script>"
+        "<script type=module>import shared.js\ninline</script>", "https://example.test/", nullptr) == PrStatus_Ok);
     CHECK(later.waitingFor("root.js") == 1);
     CHECK(later.waitingFor("shared.js") == 1);
     later.answerScript("root.js", "import a.js\nimport b.js\nroot");
@@ -302,19 +279,20 @@ TEST_CASE("a module script whose graph has a module that does not load fires err
     LaterHost later;
     PrHtmlHost host = later.host();
     PrHtmlPage* page = prHtmlPageCreate(&host);
-    CHECK(prHtmlPageLoad(page,
-                                    "<script id=missing type=module src=root.js></script>"
-                                    "<script id=typed type=module>import text.js\ntyped</script>"
-                                    "<script type=module>after</script>",
-                                    "https://example.test/", nullptr)
-          == PrStatus_Ok);
+    CHECK(prHtmlPageLoad(page, "<script id=missing type=module src=root.js></script>"
+        "<script id=typed type=module>import text.js\ntyped</script>"
+        "<script type=module>after</script>", "https://example.test/", nullptr) == PrStatus_Ok);
     uint32_t errors = 0;
-    PrDomEventListener error{[](void* data, PrDomEvent*) { ++*static_cast<uint32_t*>(data); }, &errors, 1, nullptr,
-                             nullptr};
+    PrDomEventListener error{
+        [](void* data, PrDomEvent*) { ++*static_cast<uint32_t*>(data); },
+        &errors,
+        1,
+        nullptr,
+        nullptr,
+    };
     PrDomNode* root = prDomDocumentAsNode(prHtmlWindowDocument(prHtmlPageWindow(page)));
     for (const char* id : {"missing", "typed"})
-        prDomEventTargetAddEventListener(prDomElementAsEventTarget(prDomNodeGetElementById(root, id)), "error", &error,
-                                         nullptr);
+        prDomEventTargetAddEventListener(prDomElementAsEventTarget(prDomNodeGetElementById(root, id)), "error", &error, nullptr);
     later.settle(page);
     later.answerScript("root.js", "import gone.js\nroot");
     later.settle(page);
@@ -366,13 +344,12 @@ TEST_CASE("a module's imports resolve against the URL that redirects left its re
     LaterHost later;
     PrHtmlHost host = later.host();
     PrHtmlPage* page = prHtmlPageCreate(&host);
-    CHECK(prHtmlPageLoad(page, "<script type=module src=root.js></script>", "https://example.test/",
-                         nullptr)
-          == PrStatus_Ok);
+    CHECK(prHtmlPageLoad(page, "<script type=module src=root.js></script>", "https://example.test/", nullptr) ==
+        PrStatus_Ok);
     later.settle(page);
     REQUIRE(later.fetcher.held.size() == 1);
     later.fetcher.respondTo(later.fetcher.held[0], "import a.js\nroot", 200, "text/javascript",
-                            "https://example.test/moved/root.js");
+        "https://example.test/moved/root.js");
     later.settle(page);
     CHECK(later.waitingFor("/moved/a.js") == 1);
     later.answerScript("a.js", "a");
@@ -415,11 +392,10 @@ TEST_CASE("module execution follows parsing and precedes host settlement and loa
     PrHtmlHost host = prHtmlHostDefault();
     host.context = &state;
     host.parseModule = [](void* data, PrHtmlPage*, const PrHtmlScript* script,
-                          PrHtmlModuleRequestFn request, void* PR_NULLABLE requestContext) {
+            PrHtmlModuleRequestFn request, void* PR_NULLABLE requestContext) {
         return static_cast<State*>(data)->modules.parse(script, request, requestContext);
     };
-    host.execute = [](void* data, PrHtmlPage* page,
-                      const PrHtmlScript* script) -> PrStatus {
+    host.execute = [](void* data, PrHtmlPage* page, const PrHtmlScript* script) -> PrStatus {
         State* state = static_cast<State*>(data);
         PrDomDocument* document = prHtmlWindowDocument(prHtmlPageWindow(page));
         CHECK_FALSE(state->settled);
@@ -430,9 +406,7 @@ TEST_CASE("module execution follows parsing and precedes host settlement and loa
         } else {
             CHECK(state->scripts == 1);
             CHECK(prDomNodeGetElementById(prDomDocumentAsNode(document), "later") != nullptr);
-            CHECK(prHtmlDocumentWrite(prHtmlWindowDocument(prHtmlPageWindow(page)),
-                                      "ignored")
-                  == PrStatus_Ok);
+            CHECK(prHtmlDocumentWrite(prHtmlWindowDocument(prHtmlPageWindow(page)), "ignored") == PrStatus_Ok);
             CHECK(script->baseUrl == "https://example.test/modules/");
         }
         ++state->scripts;
@@ -450,41 +424,52 @@ TEST_CASE("module execution follows parsing and precedes host settlement and loa
             State* state = static_cast<State*>(data);
             CHECK(state->settled);
             state->loaded = true;
-        }, &state, 1, nullptr, nullptr,
+        },
+        &state,
+        1,
+        nullptr,
+        nullptr,
     };
     PrHtmlPage* page = prHtmlPageCreate(&host);
-    prDomEventTargetAddEventListener(
-        prHtmlWindowAsEventTarget(prHtmlPageWindow(page)), "load", &listener,
-        nullptr);
-    CHECK(
-        prHtmlPageLoad(page,
-                                  "<base href='/modules/'><script type=module>module</script>"
-                                        "<script>classic</script><p id=later>later</p>",
-                                  "https://example.test/page", nullptr)
-        == PrStatus_Ok);
+    prDomEventTargetAddEventListener(prHtmlWindowAsEventTarget(prHtmlPageWindow(page)), "load", &listener, nullptr);
+    CHECK(prHtmlPageLoad(page, "<base href='/modules/'><script type=module>module</script>"
+        "<script>classic</script><p id=later>later</p>", "https://example.test/page", nullptr) == PrStatus_Ok);
     CHECK(state.loaded);
     prHtmlPageDestroy(page);
 }
 
 TEST_CASE("a style element fires load for each update of its block, and the window's load waits for it") {
     struct State { uint32_t loads = 0; uint32_t errors = 0; uint32_t loadsAtWindowLoad = 0; } state;
-    PrDomEventListener load{[](void* data, PrDomEvent*) { ++static_cast<State*>(data)->loads; },
-                            &state, 1, nullptr, nullptr};
-    PrDomEventListener error{[](void* data, PrDomEvent*) { ++static_cast<State*>(data)->errors; },
-                             &state, 1, nullptr, nullptr};
+    PrDomEventListener load{
+        [](void* data, PrDomEvent*) { ++static_cast<State*>(data)->loads; },
+        &state,
+        1,
+        nullptr,
+        nullptr,
+    };
+    PrDomEventListener error{
+        [](void* data, PrDomEvent*) { ++static_cast<State*>(data)->errors; },
+        &state,
+        1,
+        nullptr,
+        nullptr,
+    };
     PrDomEventListener window{
         [](void* data, PrDomEvent*) {
             State* state = static_cast<State*>(data);
             state->loadsAtWindowLoad = state->loads;
-        }, &state, 1, nullptr, nullptr,
+        },
+        &state,
+        1,
+        nullptr,
+        nullptr,
     };
     PrHtmlPage* page = prHtmlPageCreate(nullptr);
     PrHtmlWindow* view = prHtmlPageWindow(page);
     prDomEventTargetAddEventListener(prHtmlWindowAsEventTarget(view), "load", &window, nullptr);
     // The listeners are added when the style element is created, before its block is updated.
-    CHECK(prHtmlPageLoad(page, "<style id=s></style><style id=e></style>",
-                                    "https://example.test/", nullptr)
-          == PrStatus_Ok);
+    CHECK(prHtmlPageLoad(page, "<style id=s></style><style id=e></style>", "https://example.test/", nullptr) ==
+        PrStatus_Ok);
     PrDomNode* root = prDomDocumentAsNode(prHtmlWindowDocument(view));
     PrDomElement* style = prDomNodeGetElementById(root, "s");
     PrDomElement* failing = prDomNodeGetElementById(root, "e");
@@ -515,8 +500,7 @@ TEST_CASE("a style element fires load for each update of its block, and the wind
         Waiting* waiting = static_cast<Waiting*>(data);
         PrDomDocument* document = prHtmlWindowDocument(prHtmlPageWindow(page));
         PrDomEventTarget* target = prDomNodeAsEventTarget(prDomDocumentAsNode(document));
-        PrDomAddEventListenerOptions options =
-            prDomAddEventListenerOptionsDefault(target, "load");
+        PrDomAddEventListenerOptions options = prDomAddEventListenerOptionsDefault(target, "load");
         options.capture = true;
         prDomEventTargetAddEventListener(target, "load", waiting->load, &options);
         return PrStatus_Ok;
@@ -524,9 +508,7 @@ TEST_CASE("a style element fires load for each update of its block, and the wind
     page = prHtmlPageCreate(&host);
     view = prHtmlPageWindow(page);
     prDomEventTargetAddEventListener(prHtmlWindowAsEventTarget(view), "load", &window, nullptr);
-    CHECK(prHtmlPageLoad(page, "<style>a {}</style>",
-                                    "https://example.test/", nullptr)
-          == PrStatus_Ok);
+    CHECK(prHtmlPageLoad(page, "<style>a {}</style>", "https://example.test/", nullptr) == PrStatus_Ok);
     CHECK(state.loadsAtWindowLoad == 1);
     prHtmlPageDestroy(page);
 }
@@ -538,12 +520,8 @@ TEST_CASE("a parser failure releases deferred module source without executing it
         return PrStatus_InvalidState;
     };
     PrHtmlPage* page = prHtmlPageCreate(&host);
-    CHECK(prHtmlPageLoad(
-              page,
-              "<script type=module>an owned source string longer than inline storage</script>"
-                    "<script>fails</script>",
-              "https://example.test/", nullptr)
-          == PrStatus_InvalidState);
+    CHECK(prHtmlPageLoad(page, "<script type=module>an owned source string longer than inline storage</script>"
+        "<script>fails</script>", "https://example.test/", nullptr) == PrStatus_InvalidState);
     prHtmlPageDestroy(page);
 }
 
@@ -556,8 +534,7 @@ TEST_CASE("a media element its window runs may leave for a document that goes fi
     REQUIRE(media != nullptr);
     prHtmlMediaElementLoad(media);
     PrDomDocument* other = prDomDocumentCreate();
-    CHECK(prDomNodeAppendChild(prDomDocumentAsNode(other), prDomElementAsNode(video))
-          == PrStatus_Ok);
+    CHECK(prDomNodeAppendChild(prDomDocumentAsNode(other), prDomElementAsNode(video)) == PrStatus_Ok);
     prDomDocumentRelease(other);
     prHtmlPageDestroy(page);
 }
@@ -566,14 +543,14 @@ TEST_CASE("the host designates and activates elements, and answers the states it
     struct State { const PrDomElement* known = nullptr; } state;
     PrHtmlHost host = prHtmlHostDefault();
     host.context = &state;
-    host.elementState = [](void* data, PrHtmlPage*, const PrDomElement* element,
-                           PrDomHostState wanted) -> PrDomHostState {
+    host.elementState =
+            [](void* data, PrHtmlPage*, const PrDomElement* element, PrDomHostState wanted) -> PrDomHostState {
         return element == static_cast<State*>(data)->known ? wanted : PrDomHostState(0);
     };
     PrHtmlPage* page = prHtmlPageCreate(&host);
     REQUIRE(prHtmlPageLoad(page, "<div id=outer><label id=label for=name>Name <span id=inner>x</span></label></div>"
         "<input id=name><a id=link href=x>link</a><fieldset disabled><input id=off></fieldset>",
-                                      "about:blank", nullptr) == PrStatus_Ok);
+        "about:blank", nullptr) == PrStatus_Ok);
     PrDomDocument* document = prHtmlWindowDocument(prHtmlPageWindow(page));
     PrDomNode* root = prDomDocumentAsNode(document);
     auto byId = [&](const char* id) {
@@ -626,12 +603,9 @@ TEST_CASE("a script the host answers later pauses the parse, and a sheet it answ
     LaterHost later;
     PrHtmlHost host = later.host();
     PrHtmlPage* page = prHtmlPageCreate(&host);
-    CHECK(prHtmlPageLoad(page,
-                                    "<head><link rel=stylesheet href=a.css><script>inline</script>"
-                                          "<script src=b.js></script></head><body><p id=after>after</p>"
-                                          "<script defer src=d.js></script><img src=i.png></body>",
-                                    "https://example.test/", nullptr)
-          == PrStatus_Ok);
+    CHECK(prHtmlPageLoad(page, "<head><link rel=stylesheet href=a.css><script>inline</script>"
+        "<script src=b.js></script></head><body><p id=after>after</p>"
+        "<script defer src=d.js></script><img src=i.png></body>", "https://example.test/", nullptr) == PrStatus_Ok);
     // The sheet blocks the inline script, and the parse waits for it: the document has no body, and does not render.
     CHECK(later.log.empty());
     CHECK_FALSE(has(page, "after"));
@@ -667,11 +641,8 @@ TEST_CASE("a media attribute changes its sheet's media in place, and a link's lo
     LaterHost later;
     PrHtmlHost host = later.host();
     PrHtmlPage* page = prHtmlPageCreate(&host);
-    CHECK(prHtmlPageLoad(page,
-                                    "<link id=l rel=stylesheet href=a.css media=print>"
-                                          "<style id=s media=print>p {}</style>",
-                                    "https://example.test/", nullptr)
-          == PrStatus_Ok);
+    CHECK(prHtmlPageLoad(page, "<link id=l rel=stylesheet href=a.css media=print>"
+        "<style id=s media=print>p {}</style>", "https://example.test/", nullptr) == PrStatus_Ok);
     PrDomNode* root = prDomDocumentAsNode(prHtmlWindowDocument(prHtmlPageWindow(page)));
     PrDomElement* link = prDomNodeGetElementById(root, "l");
     PrDomElement* style = prDomNodeGetElementById(root, "s");
@@ -684,7 +655,11 @@ TEST_CASE("a media attribute changes its sheet's media in place, and a link's lo
             State* state = static_cast<State*>(data);
             ++state->loads;
             CHECK(prDomElementSetAttribute(state->link, "media", "all") == PrStatus_Ok);
-        }, &state, 1, nullptr, nullptr,
+        },
+        &state,
+        1,
+        nullptr,
+        nullptr,
     };
     prDomEventTargetAddEventListener(prDomElementAsEventTarget(link), "load", &load, nullptr);
     later.fetcher.waiting();
@@ -708,12 +683,8 @@ TEST_CASE("a preload link fetches its resource and fires load or error, and fetc
     LaterHost later;
     PrHtmlHost host = later.host();
     PrHtmlPage* page = prHtmlPageCreate(&host);
-    CHECK(prHtmlPageLoad(page,
-                                    "<link id=i rel=preload href=a.png as=image>"
-                                    "<link id=m rel=preload href=b.png as=image>"
-                                    "<link id=x rel=preload href=c.png as=nothing>",
-                                    "https://example.test/", nullptr)
-          == PrStatus_Ok);
+    CHECK(prHtmlPageLoad(page, "<link id=i rel=preload href=a.png as=image><link id=m rel=preload href=b.png as=image>"
+        "<link id=x rel=preload href=c.png as=nothing>", "https://example.test/", nullptr) == PrStatus_Ok);
     PrDomNode* root = prDomDocumentAsNode(prHtmlWindowDocument(prHtmlPageWindow(page)));
     // Each listener writes the type of the event that it receives.
     std::string log;
@@ -721,12 +692,14 @@ TEST_CASE("a preload link fetches its resource and fires load or error, and fetc
         [](void* data, PrDomEvent* event) {
             PrStringView type = prDomEventType(event);
             static_cast<std::string*>(data)->append(type.data, type.size).append(" ");
-        }, &log, 1, nullptr, nullptr,
+        },
+        &log,
+        1,
+        nullptr,
+        nullptr,
     };
-    prDomEventTargetAddEventListener(prDomElementAsEventTarget(prDomNodeGetElementById(root, "i")), "load", &listener,
-                                     nullptr);
-    prDomEventTargetAddEventListener(prDomElementAsEventTarget(prDomNodeGetElementById(root, "m")), "error",
-                                     &listener, nullptr);
+    prDomEventTargetAddEventListener(prDomElementAsEventTarget(prDomNodeGetElementById(root, "i")), "load", &listener, nullptr);
+    prDomEventTargetAddEventListener(prDomElementAsEventTarget(prDomNodeGetElementById(root, "m")), "error", &listener, nullptr);
     CHECK(later.fetcher.waiting() == 2);
     later.answer("a.png", "png");
     later.answer("b.png", "", 404);
@@ -739,15 +712,11 @@ TEST_CASE("an element's crossorigin attribute decides its request's mode and cre
     LaterHost later;
     PrHtmlHost host = later.host();
     PrHtmlPage* page = prHtmlPageCreate(&host);
-    CHECK(prHtmlPageLoad(page,
-                                    "<img src=none.png><img src=empty.png crossorigin>"
-                                    "<img src=invalid.png crossorigin=other>"
-                                    "<img src=credentials.png crossorigin=USE-CREDENTIALS>"
-                                    "<link rel=stylesheet href=sheet.css crossorigin=anonymous>"
-                                    "<script type=module src=module.js></script>"
-                                    "<iframe src=frame.html crossorigin=use-credentials></iframe>",
-                                    "https://example.test/", nullptr)
-          == PrStatus_Ok);
+    CHECK(prHtmlPageLoad(page, "<img src=none.png><img src=empty.png crossorigin>"
+        "<img src=invalid.png crossorigin=other><img src=credentials.png crossorigin=USE-CREDENTIALS>"
+        "<link rel=stylesheet href=sheet.css crossorigin=anonymous><script type=module src=module.js></script>"
+        "<iframe src=frame.html crossorigin=use-credentials></iframe>", "https://example.test/", nullptr) ==
+        PrStatus_Ok);
     // An img's fetch starts as its src is set, and starts again as its crossorigin is set. The last request is current.
     later.fetcher.waiting();
     struct Expected {
@@ -782,12 +751,10 @@ TEST_CASE("an XML document's parse pauses at an external script until it arrives
     PrHtmlHost host = later.host();
     PrHtmlPage* page = prHtmlPageCreate(&host);
     PrHtmlResponseHeaders headers{.contentType = "application/xhtml+xml"};
-    CHECK(prHtmlPageLoad(page,
-                                    "<html xmlns='http://www.w3.org/1999/xhtml'><body><p id='before'/>"
-                                    "<script src='a.js'/><script>inline</script><p id='after'/>"
-                                    "<script async='' src='b.js'/><p id='last'/></body></html>",
-                                    "https://example.test/page.xhtml", &headers)
-          == PrStatus_Ok);
+    CHECK(prHtmlPageLoad(page, "<html xmlns='http://www.w3.org/1999/xhtml'><body><p id='before'/>"
+        "<script src='a.js'/><script>inline</script><p id='after'/>"
+        "<script async='' src='b.js'/><p id='last'/></body></html>", "https://example.test/page.xhtml", &headers) ==
+        PrStatus_Ok);
     CHECK(has(page, "before"));
     CHECK_FALSE(has(page, "after"));
     REQUIRE(later.fetcher.waiting() == 1);
@@ -809,12 +776,10 @@ TEST_CASE("an XML document's script waits for the style sheets before it that bl
     PrHtmlHost host = later.host();
     PrHtmlPage* page = prHtmlPageCreate(&host);
     PrHtmlResponseHeaders headers{.contentType = "application/xhtml+xml"};
-    CHECK(prHtmlPageLoad(page,
-                                    "<html xmlns='http://www.w3.org/1999/xhtml'><head>"
-                                    "<link rel='stylesheet' href='a.css'/></head>"
-                                    "<body><script>inline</script><p id='after'/></body></html>",
-                                    "https://example.test/page.xhtml", &headers)
-          == PrStatus_Ok);
+    CHECK(prHtmlPageLoad(page, "<html xmlns='http://www.w3.org/1999/xhtml'><head>"
+        "<link rel='stylesheet' href='a.css'/></head>"
+        "<body><script>inline</script><p id='after'/></body></html>", "https://example.test/page.xhtml", &headers) ==
+        PrStatus_Ok);
     CHECK(later.log.empty());
     CHECK_FALSE(has(page, "after"));
     REQUIRE(later.fetcher.waiting() == 1);
@@ -850,8 +815,7 @@ TEST_CASE("a streamed XML document parses as its pieces arrive, in the charset t
     runTasks(page);
     CHECK(readiness(page) == PrHtmlDocumentReadyState_Complete);
     PrDomDocument* document = prHtmlWindowDocument(prHtmlPageWindow(page));
-    PrString text = prDomNodeTextContent(prDomElementAsNode(prDomNodeGetElementById(prDomDocumentAsNode(document),
-                                                                                     "first")));
+    PrString text = prDomNodeTextContent(prDomElementAsNode(prDomNodeGetElementById(prDomDocumentAsNode(document), "first")));
     CHECK(prStringView(&text) == "\xC3\xA9");
     prStringReset(&text);
     prHtmlPageDestroy(page);
@@ -864,7 +828,7 @@ TEST_CASE("a streamed XML document whose input ends while a script pauses its pa
     PrHtmlResponseHeaders headers{.contentType = "application/xhtml+xml"};
     REQUIRE(prHtmlPageBeginLoad(page, "https://example.test/page.xhtml", &headers) == PrStatus_Ok);
     prHtmlPageAppendLoad(page, "<html xmlns='http://www.w3.org/1999/xhtml'><body>"
-                                       "<script src='a.js'/><p id='after'/></body></html>");
+        "<script src='a.js'/><p id='after'/></body></html>");
     runTasks(page);
     CHECK_FALSE(has(page, "after"));
     prHtmlPageEndLoad(page);
@@ -902,8 +866,7 @@ TEST_CASE("a fetch the host answers after its browsing context is gone is droppe
     PrHtmlHost host = later.host();
     PrHtmlPage* page = prHtmlPageCreate(&host);
     CHECK(prHtmlPageLoad(page, "<script src=a.js></script><script async src=b.js></script>",
-                                    "https://example.test/", nullptr)
-          == PrStatus_Ok);
+        "https://example.test/", nullptr) == PrStatus_Ok);
     REQUIRE(later.fetcher.waiting() == 1);
     // An answer whose task has not run yet is dropped with the context too.
     later.answer("a.js", "first");
@@ -911,11 +874,8 @@ TEST_CASE("a fetch the host answers after its browsing context is gone is droppe
     CHECK(later.log.empty());
     // A new load drops the previous load's fetches as well.
     page = prHtmlPageCreate(&host);
-    CHECK(prHtmlPageLoad(page, "<script src=c.js></script>", "https://example.test/",
-                         nullptr)
-          == PrStatus_Ok);
-    CHECK(prHtmlPageLoad(page, "<p>", "https://example.test/", nullptr)
-          == PrStatus_InvalidState);
+    CHECK(prHtmlPageLoad(page, "<script src=c.js></script>", "https://example.test/", nullptr) == PrStatus_Ok);
+    CHECK(prHtmlPageLoad(page, "<p>", "https://example.test/", nullptr) == PrStatus_InvalidState);
     REQUIRE(later.fetcher.waiting() == 1);
     prHtmlPageDestroy(page);
     later.answer("c.js", "late");
@@ -936,8 +896,8 @@ TEST_CASE("a location of another document navigates through the host, from a tas
     REQUIRE(prHtmlPageLoad(page, "<p id=top>", "https://example.test/start", nullptr) == PrStatus_Ok);
     PrHtmlWindow* window = prHtmlPageWindow(page);
     CHECK(prHtmlWindowSetLocation(window, PrUrlComponent_Hash, "top", PrHtmlHistoryHandling_Push) == PrStatus_Ok);
-    CHECK(prHtmlWindowSetLocation(window, PrUrlComponent_Href, "next?q=1#part", PrHtmlHistoryHandling_Push)
-          == PrStatus_Ok);
+    CHECK(prHtmlWindowSetLocation(window, PrUrlComponent_Href, "next?q=1#part", PrHtmlHistoryHandling_Push) ==
+        PrStatus_Ok);
     CHECK(navigations.urls.empty());
     runTasks(page);
     REQUIRE(navigations.urls.size() == 1);
@@ -948,9 +908,8 @@ TEST_CASE("a location of another document navigates through the host, from a tas
     PrHtmlHost bare = prHtmlHostDefault();
     page = prHtmlPageCreate(&bare);
     REQUIRE(prHtmlPageLoad(page, "<p>", "https://example.test/start", nullptr) == PrStatus_Ok);
-    CHECK(prHtmlWindowSetLocation(prHtmlPageWindow(page), PrUrlComponent_Href, "other",
-                                  PrHtmlHistoryHandling_Push)
-          == PrStatus_NotSupported);
+    CHECK(prHtmlWindowSetLocation(prHtmlPageWindow(page), PrUrlComponent_Href, "other", PrHtmlHistoryHandling_Push) ==
+        PrStatus_NotSupported);
     prHtmlPageDestroy(page);
 }
 
@@ -988,8 +947,8 @@ TEST_CASE("a host's session history keeps each document's entries across the bro
     CHECK(prHtmlSessionHistoryIndex(tab.history) == 3);
     CHECK(tab.url(3) == "https://example.test/c");
     // A URL of another origin is refused.
-    CHECK(prHtmlHistoryPushState(window, PrStringView{}, "https://other.test/", PrHtmlHistoryHandling_Push)
-          == PrStatus_NotAllowed);
+    CHECK(prHtmlHistoryPushState(window, PrStringView{}, "https://other.test/", PrHtmlHistoryHandling_Push) ==
+        PrStatus_NotAllowed);
 
     // Going back within the document changes its URL and state in a task, and asks the host for nothing.
     prHtmlPageTraverse(tab.page, -1);
@@ -1024,8 +983,7 @@ TEST_CASE("a host's session history keeps each document's entries across the bro
 
     // A navigation that replaces drops nothing, and the load takes the current entry with no state.
     REQUIRE(prHtmlWindowSetLocation(prHtmlPageWindow(tab.page), PrUrlComponent_Href, "d",
-                                    PrHtmlHistoryHandling_Replace)
-            == PrStatus_Ok);
+        PrHtmlHistoryHandling_Replace) == PrStatus_Ok);
     runTasks(tab.page);
     REQUIRE(tab.navigations.size() == 3);
     tab.load(tab.navigations[2]);
@@ -1056,8 +1014,8 @@ TEST_CASE("a script's fetch sends what it asks, and receives the response filter
             PrStringView url = response->url.data != nullptr ? response->url : PrStringView{""};
             std::string text = std::to_string(response->responseStatus) + " " + std::string(url.data, url.size) + " ";
             for (uint32_t i = 0; i < response->headerCount; ++i) {
-                text += std::string(response->headers[i].name.data, response->headers[i].name.size) + "="
-                        + std::string(response->headers[i].value.data, response->headers[i].value.size) + " ";
+                text += std::string(response->headers[i].name.data, response->headers[i].name.size) + "=" +
+                    std::string(response->headers[i].value.data, response->headers[i].value.size) + " ";
             }
             if (response->body.size != 0)
                 text += std::string(reinterpret_cast<const char*>(response->body.data), response->body.size);
@@ -1072,32 +1030,46 @@ TEST_CASE("a script's fetch sends what it asks, and receives the response filter
         if (url.ends_with("/wait"))
             return;
         if (url.ends_with("/post")) {
-            sent = std::string(desc->method.data, desc->method.size) + " " + std::to_string(desc->destination) + " "
-                   + std::to_string(desc->mode) + " "
-                   + std::string(reinterpret_cast<const char*>(desc->body.data), desc->body.size);
+            sent = std::string(desc->method.data, desc->method.size) + " " + std::to_string(desc->destination) + " " +
+                std::to_string(desc->mode) + " " +
+                std::string(reinterpret_cast<const char*>(desc->body.data), desc->body.size);
             for (uint32_t i = 0; i < desc->headerCount; ++i)
                 sent += " " + std::string(desc->headers[i].name.data, desc->headers[i].name.size);
         }
-        const PrFetchHeader headers[] = {{"Content-Type", "text/plain"}, {"Set-Cookie", "a=b"},
-                                         {"X-Exposed", "1"}, {"X-Hidden", "2"},
-                                         {"Access-Control-Expose-Headers", "X-Exposed"}};
-        PrFetchResponseType type = url.ends_with("/cors")     ? PrFetchResponseType_Cors
-                                   : url.ends_with("/opaque") ? PrFetchResponseType_Opaque
-                                                              : PrFetchResponseType_Basic;
-        PrFetchInterceptResponse response{.status = 201, .type = type, .headers = headers, .headerCount = 5,
-                                     .body = PrByteView{reinterpret_cast<const uint8_t*>("body"), 4}};
+        const PrFetchHeader headers[] = {
+            {"Content-Type", "text/plain"}, {"Set-Cookie", "a=b"},
+            {"X-Exposed", "1"}, {"X-Hidden", "2"},
+            {"Access-Control-Expose-Headers", "X-Exposed"},
+        };
+        PrFetchResponseType type = PrFetchResponseType_Basic;
+        if (url.ends_with("/cors"))
+            type = PrFetchResponseType_Cors;
+        else if (url.ends_with("/opaque"))
+            type = PrFetchResponseType_Opaque;
+        PrFetchInterceptResponse response{
+            .status = 201,
+            .type = type,
+            .headers = headers,
+            .headerCount = 5,
+            .body = PrByteView{reinterpret_cast<const uint8_t*>("body"), 4},
+        };
         prFetchInterceptRequestRespond(request, &response);
     };
     PrHtmlHost host = later.host();
     PrHtmlPage* page = prHtmlPageCreate(&host);
-    CHECK(prHtmlPageLoad(page, "<base href=/dir/><p>", "https://example.test/page", nullptr)
-          == PrStatus_Ok);
+    CHECK(prHtmlPageLoad(page, "<base href=/dir/><p>", "https://example.test/page", nullptr) == PrStatus_Ok);
     later.settle(page);
 
     const PrFetchHeader asked[] = {{"X-Asked", "yes"}};
-    PrFetchClientRequest post{.url = "post#fragment", .method = "POST", .headers = asked, .headerCount = 1,
-                            .body = PrByteView{reinterpret_cast<const uint8_t*>("sent"), 4},
-                            .mode = PrFetchMode_Cors, .credentials = PrFetchCredentials_SameOrigin};
+    PrFetchClientRequest post{
+        .url = "post#fragment",
+        .method = "POST",
+        .headers = asked,
+        .headerCount = 1,
+        .body = PrByteView{reinterpret_cast<const uint8_t*>("sent"), 4},
+        .mode = PrFetchMode_Cors,
+        .credentials = PrFetchCredentials_SameOrigin,
+    };
     CHECK(prHtmlPageFetch(page, &post, Responses::done, &responses) == PrStatus_Ok);
     PrFetchClientRequest cors{.url = "https://other.test/cors", .mode = PrFetchMode_Cors};
     CHECK(prHtmlPageFetch(page, &cors, Responses::done, &responses) == PrStatus_Ok);
@@ -1117,7 +1089,7 @@ TEST_CASE("a script's fetch sends what it asks, and receives the response filter
     // Set-Cookie, a CORS one shows only what it exposes, and an opaque one shows nothing.
     CHECK(responses.received[0] == "200 data:,inline Content-Type=text/plain;charset=US-ASCII inline");
     CHECK(responses.received[1] == "201 https://example.test/dir/post Content-Type=text/plain X-Exposed=1 X-Hidden=2 "
-                                   "Access-Control-Expose-Headers=X-Exposed body");
+        "Access-Control-Expose-Headers=X-Exposed body");
     CHECK(responses.received[2] == "201 https://other.test/cors Content-Type=text/plain X-Exposed=1 body");
     CHECK(responses.received[3] == "0  ");
 
@@ -1135,8 +1107,8 @@ TEST_CASE("document.open() on an iframe's initial about:blank stops the load of 
     LaterHost later;
     PrHtmlHost host = later.host();
     PrHtmlPage* page = prHtmlPageCreate(&host);
-    CHECK(prHtmlPageLoad(page, "<iframe id=frame src=frame.html></iframe>", "https://example.test/", nullptr)
-          == PrStatus_Ok);
+    CHECK(prHtmlPageLoad(page, "<iframe id=frame src=frame.html></iframe>", "https://example.test/", nullptr) ==
+        PrStatus_Ok);
     later.settle(page);
     REQUIRE(later.waitingFor("frame.html") == 1);
     PrDomDocument* document = prHtmlWindowDocument(prHtmlPageWindow(page));

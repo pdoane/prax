@@ -239,11 +239,11 @@ bool isValidLabel(const uint32_t* PR_NULLABLE label, uint32_t count, PrUnicodeId
         IdnaStatus status = unicodeIdnaMapping(codePoint).status;
         if (status != IdnaStatus_Valid && (status != IdnaStatus_Deviation || (flags & PrUnicodeIdnaFlag_Transitional)))
             return false;
-        if ((flags & PrUnicodeIdnaFlag_UseStd3AsciiRules) && codePoint < 0x80 && codePoint != '-'
-            && !(codePoint >= 'a' && codePoint <= 'z') && !(codePoint >= '0' && codePoint <= '9'))
+        if ((flags & PrUnicodeIdnaFlag_UseStd3AsciiRules) && codePoint < 0x80 && codePoint != '-' &&
+                !(codePoint >= 'a' && codePoint <= 'z') && !(codePoint >= '0' && codePoint <= '9'))
             return false;
-        if ((flags & PrUnicodeIdnaFlag_CheckJoiners) && (codePoint == kZwnj || codePoint == kZwj)
-            && !joinerAllowed(label, count, i))
+        if ((flags & PrUnicodeIdnaFlag_CheckJoiners) && (codePoint == kZwnj || codePoint == kZwj) &&
+                !joinerAllowed(label, count, i))
             return false;
     }
     return true;
@@ -254,24 +254,23 @@ constexpr uint32_t bidiBit(PrUnicodeBidiClass c) {
 }
 
 // The classes that a right-to-left label may hold, and that a left-to-right one may (RFC 5893 rules 2 and 5).
-constexpr uint32_t kBidiNeutralClasses = bidiBit(PrUnicodeBidiClass_EN) | bidiBit(PrUnicodeBidiClass_ES)
-                                         | bidiBit(PrUnicodeBidiClass_CS) | bidiBit(PrUnicodeBidiClass_ET)
-                                         | bidiBit(PrUnicodeBidiClass_ON) | bidiBit(PrUnicodeBidiClass_BN)
-                                         | bidiBit(PrUnicodeBidiClass_NSM);
+constexpr uint32_t kBidiNeutralClasses = bidiBit(PrUnicodeBidiClass_EN) | bidiBit(PrUnicodeBidiClass_ES) |
+    bidiBit(PrUnicodeBidiClass_CS) | bidiBit(PrUnicodeBidiClass_ET) |
+    bidiBit(PrUnicodeBidiClass_ON) | bidiBit(PrUnicodeBidiClass_BN) | bidiBit(PrUnicodeBidiClass_NSM);
 constexpr uint32_t kBidiRtlClasses =
-    kBidiNeutralClasses | bidiBit(PrUnicodeBidiClass_R) | bidiBit(PrUnicodeBidiClass_AL)
-    | bidiBit(PrUnicodeBidiClass_AN);
+    kBidiNeutralClasses | bidiBit(PrUnicodeBidiClass_R) | bidiBit(PrUnicodeBidiClass_AL) |
+    bidiBit(PrUnicodeBidiClass_AN);
 constexpr uint32_t kBidiLtrClasses = kBidiNeutralClasses | bidiBit(PrUnicodeBidiClass_L);
 
 // The classes that make a domain name a bidi domain name (RFC 5893 section 1.4).
-constexpr uint32_t kBidiDomainClasses = bidiBit(PrUnicodeBidiClass_R) | bidiBit(PrUnicodeBidiClass_AL)
-                                        | bidiBit(PrUnicodeBidiClass_AN);
+constexpr uint32_t kBidiDomainClasses = bidiBit(PrUnicodeBidiClass_R) | bidiBit(PrUnicodeBidiClass_AL) |
+    bidiBit(PrUnicodeBidiClass_AN);
 
 // The classes that a right-to-left label may end with, and that a left-to-right one may, before any NSM (RFC 5893 rules
 // 3 and 6).
 constexpr uint32_t kBidiRtlEndClasses =
-    bidiBit(PrUnicodeBidiClass_R) | bidiBit(PrUnicodeBidiClass_AL) | bidiBit(PrUnicodeBidiClass_EN)
-    | bidiBit(PrUnicodeBidiClass_AN);
+    bidiBit(PrUnicodeBidiClass_R) | bidiBit(PrUnicodeBidiClass_AL) | bidiBit(PrUnicodeBidiClass_EN) |
+    bidiBit(PrUnicodeBidiClass_AN);
 constexpr uint32_t kBidiLtrEndClasses = bidiBit(PrUnicodeBidiClass_L) | bidiBit(PrUnicodeBidiClass_EN);
 
 // Returns true if the label satisfies the six rules of RFC 5893 section 2.

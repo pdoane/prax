@@ -66,8 +66,7 @@ bool conditionsHold(const PrDomElement* e) {
             ++tag.data;
             --tag.size;
         }
-        if (tag.size >= 2 && (tag.data[0] | 0x20) == 'e' && (tag.data[1] | 0x20) == 'n'
-            && (tag.size == 2 || tag.data[2] == '-'))
+        if (tag.size >= 2 && (tag.data[0] | 0x20) == 'e' && (tag.data[1] | 0x20) == 'n' && (tag.size == 2 || tag.data[2] == '-'))
             return true;
         start = i + 1;
     }
@@ -170,26 +169,29 @@ void freeReferences(SvgTree* tree, uint32_t first) {
 // for the null view, for what the build is building. A reference without an ID or a document is to the element that a
 // resource is built from, whose subtree the resource reads.
 void record(SvgBuilder& b, PrStringView id, const PrDomElement* PR_NULLABLE target, const PrDomNode* PR_NULLABLE scope,
-            bool content, PrStringView document = PrStringView{}) {
+        bool content, PrStringView document = PrStringView{}) {
     SvgTree* tree = b.tree;
     if (b.ownerResource == kSvgResourceNone && b.owner == kSvgNodeNone)
         return;
-    SvgReference reference{.id = id.data != nullptr ? prStringCopy(id) : PrString{},
-                           .document = document.data != nullptr ? prStringCopy(document) : PrString{},
-                           .target = target,
-                           .scope = scope,
-                           .node = b.ownerResource == kSvgResourceNone ? b.owner : kSvgNodeNone,
-                           .resource = b.ownerResource,
-                           .content = content};
+    SvgReference reference{
+        .id = id.data != nullptr ? prStringCopy(id) : PrString{},
+        .document = document.data != nullptr ? prStringCopy(document) : PrString{},
+        .target = target,
+        .scope = scope,
+        .node = b.ownerResource == kSvgResourceNone ? b.owner : kSvgNodeNone,
+        .resource = b.ownerResource,
+        .content = content,
+    };
     if (target != nullptr)
         domNodeRetain(const_cast<PrDomElement*>(target));
     if (scope != nullptr)
         domNodeRetain(const_cast<PrDomNode*>(scope));
     if (target != nullptr && content)
         tree->watched |= watchBit(target);
-    uint32_t& first = b.ownerResource != kSvgResourceNone ? tree->resources.data[b.ownerResource].firstReference
-                                                      : tree->nodes.data[b.owner].firstReference;
-    reference.next = first;
+    if (b.ownerResource != kSvgResourceNone)
+        reference.next = tree->resources.data[b.ownerResource].firstReference;
+    else
+        reference.next = tree->nodes.data[b.owner].firstReference;
     uint32_t index = take(tree->references, tree->freeReferences, reference);
     if (b.ownerResource != kSvgResourceNone)
         tree->resources.data[b.ownerResource].firstReference = index;
@@ -200,8 +202,7 @@ void record(SvgBuilder& b, PrStringView id, const PrDomElement* PR_NULLABLE targ
 // Returns the element of `id` in the shadow tree `scope`, or else in `document`. A reference in a shadow tree names an
 // element of that tree (css-shadow-1/#css-tree-scoped-reference), and the instances of a use element's shadow tree
 // reference the elements of the document.
-const PrDomElement* PR_NULLABLE findInScope(const PrDomNode* PR_NULLABLE scope, const PrDomNode* document,
-                                            PrStringView id) {
+const PrDomElement* PR_NULLABLE findInScope(const PrDomNode* PR_NULLABLE scope, const PrDomNode* document, PrStringView id) {
     const PrDomElement* found = scope != nullptr ? domElementById(const_cast<PrDomNode*>(scope), id) : nullptr;
     return found != nullptr ? found : svgFindById(document, id);
 }
@@ -335,7 +336,7 @@ void freeSubtree(SvgTree* tree, SvgNodeIndex index) {
         SvgNodeIndex at = stack.last();
         stack.pop();
         for (SvgNodeIndex child = tree->nodes.data[at].first; child != kSvgNodeNone;
-             child = tree->nodes.data[child].next)
+                child = tree->nodes.data[child].next)
             stack.push(child);
         freeNode(tree, at);
     }
@@ -455,7 +456,7 @@ void sweepResources(SvgTree* tree) {
             stack.pop();
             mark(tree->nodes.data[at]);
             for (SvgNodeIndex child = tree->nodes.data[at].first; child != kSvgNodeNone;
-                 child = tree->nodes.data[child].next)
+                    child = tree->nodes.data[child].next)
                 stack.push(child);
         }
     };
@@ -481,7 +482,7 @@ void sweepResources(SvgTree* tree) {
 
 SvgResourceIndex resourceOf(SvgBuilder& b, const PrDomElement* element, SvgResourceKind kind);
 SvgNodeIndex buildElement(SvgBuilder& b, const PrDomElement* e, const CssComputedStyle* PR_NULLABLE parentStyle,
-                          SvgNodeIndex parent, bool instance);
+    SvgNodeIndex parent, bool instance);
 
 // The values of an element's style that a node takes, beyond those that every node takes. An element's own node takes
 // all of them, and an element that builds more than one node, or that applies some elsewhere, divides them.
@@ -541,7 +542,7 @@ void readGradient(SvgBuilder& b, const CssComputedStyle* style, CssValueRun imag
     Array<PrLayoutColorStop> stops;
     CssColorContext colors = cssStyleColorContext(style, b.build->environment);
     cssGradientFromValue(image, 0, colors, 0, CssLayoutLengths{treelessLength, treelessPosition, nullptr}, stops,
-                  &layer->gradient);
+        &layer->gradient);
     if (stops.count != 0) {
         layer->stops = static_cast<PrLayoutColorStop*>(prMemoryAlloc(stops.count * sizeof(PrLayoutColorStop)));
         memCopy(layer->stops, stops.data, stops.count * sizeof(PrLayoutColorStop));
@@ -555,7 +556,7 @@ void readGradient(SvgBuilder& b, const CssComputedStyle* style, CssValueRun imag
 // resolved. A URL that names no filter element ignores the whole list (filter-effects-1/#FilterProperty), which leaves
 // `out` empty.
 void readFilters(SvgBuilder& b, const PrDomElement* element, const CssComputedStyle* style, CssValueRun filter,
-                 Array<SvgFilterItem>* out) {
+        Array<SvgFilterItem>* out) {
     Array<CssFilterFunction> functions;
     cssFilterFunctions(filter, cssStyleColorContext(style, b.build->environment), &functions);
     for (uint32_t i = 0; i < functions.count; ++i) {
@@ -587,17 +588,17 @@ void readEffects(SvgBuilder& b, SvgNodeIndex index, const CssComputedStyle* styl
     PrCssKeyword blend = svgStyleKeyword(style, PrCssProperty_MixBlendMode);
     // A 3D transform isolates the group of the node that takes the transform, as isolation: isolate does
     // (compositing-1/#csscompositingrules_SVG).
-    bool isolated = svgStyleIs(style, PrCssProperty_Isolation, PrCssKeyword_Isolate)
-                    || ((parts & StyleParts_Transform) != 0 && svgStyleTransforms3d(style));
+    bool isolated = svgStyleIs(style, PrCssProperty_Isolation, PrCssKeyword_Isolate) ||
+        ((parts & StyleParts_Transform) != 0 && svgStyleTransforms3d(style));
     // Most elements have no effect: their clip-path and filter are none, their mask-image a single none, their
     // mix-blend-mode normal, their isolation auto and their transform two-dimensional.
     bool compositing = (parts & StyleParts_Compositing) != 0;
-    bool clips = (parts & StyleParts_ClipPath) != 0 && clip.count != 0
-                 && !cssValueIsKeyword(clip.values, PrCssKeyword_None);
-    bool masks = (parts & StyleParts_Mask) != 0
-                 && !(images.count == 1 && cssValueIsKeyword(images.values, PrCssKeyword_None));
-    bool filters = (parts & StyleParts_Filter) != 0 && filter.count != 0
-                   && !cssValueIsKeyword(filter.values, PrCssKeyword_None);
+    bool clips = (parts & StyleParts_ClipPath) != 0 && clip.count != 0 &&
+        !cssValueIsKeyword(clip.values, PrCssKeyword_None);
+    bool masks = (parts & StyleParts_Mask) != 0 &&
+        !(images.count == 1 && cssValueIsKeyword(images.values, PrCssKeyword_None));
+    bool filters = (parts & StyleParts_Filter) != 0 && filter.count != 0 &&
+        !cssValueIsKeyword(filter.values, PrCssKeyword_None);
     bool composites = compositing && (blend != PrCssKeyword_Normal || isolated);
     if (!clips && !masks && !filters && !composites)
         return;
@@ -652,9 +653,8 @@ void readEffects(SvgBuilder& b, SvgNodeIndex index, const CssComputedStyle* styl
     else if (compositing)
         cssBlendModeFromKeyword(blend, &effects.blend);
     effects.isolated = compositing && isolated;
-    bool none = effects.clip == SvgClipKind_None && effects.layers.count == 0 && effects.filters.count == 0
-                && effects.blend == PrDrawBlendMode_Normal && effects.composite == PrDrawComposite_SourceOver
-                && !effects.isolated;
+    bool none = effects.clip == SvgClipKind_None && effects.layers.count == 0 && effects.filters.count == 0 &&
+        effects.blend == PrDrawBlendMode_Normal && effects.composite == PrDrawComposite_SourceOver && !effects.isolated;
     if (none) {
         effects.layers.reset();
         effects.filters.reset();
@@ -675,9 +675,7 @@ void readStyle(SvgBuilder& b, SvgNodeIndex index, const CssComputedStyle* style,
     node.fillRule = svgStyleFillRule(style, PrCssProperty_FillRule);
     node.clipRule = svgStyleFillRule(style, PrCssProperty_ClipRule);
     node.lines = svgStyleLines(style);
-    node.opacity = (parts & StyleParts_Opacity) != 0
-                       ? clampF32(svgStyleNumber(style, PrCssProperty_Opacity, 1), 0, 1)
-                       : 1;
+    node.opacity = (parts & StyleParts_Opacity) != 0 ? clampF32(svgStyleNumber(style, PrCssProperty_Opacity, 1), 0, 1) : 1;
     node.linear = svgStyleKeyword(style, PrCssProperty_ColorInterpolation) == PrCssKeyword_Linearrgb;
     node.pointerEvents = svgStylePointerEvents(style);
     node.vectorEffects = svgStyleVectorEffects(style);
@@ -685,9 +683,8 @@ void readStyle(SvgBuilder& b, SvgNodeIndex index, const CssComputedStyle* style,
     node.transformStyle = kArrayMissing;
     if ((parts & StyleParts_Transform) != 0) {
         SvgTransformStyle transform = svgStyleTransform(style);
-        bool fixed = transform.any && transform.origin[0].percent == 0 && transform.origin[1].percent == 0
-                     && !readsBox(transform.list)
-                     && (transform.box == PrCssKeyword_ViewBox || transform.box == PrCssKeyword_Count);
+        bool fixed = transform.any && transform.origin[0].percent == 0 && transform.origin[1].percent == 0 &&
+            !readsBox(transform.list) && (transform.box == PrCssKeyword_ViewBox || transform.box == PrCssKeyword_Count);
         if (fixed)
             node.transform = svgTransformMatrix(transform, PrRect{});
         else if (transform.any)
@@ -701,7 +698,7 @@ void readStyle(SvgBuilder& b, SvgNodeIndex index, const CssComputedStyle* style,
 // Adds a node of `kind` for `element` under `parent`, with the values that it takes from `style`, those of `parts`
 // among them, and returns its index. `own` says whether the node is the element's own.
 SvgNodeIndex addNode(SvgBuilder& b, SvgNodeKind kind, const PrDomElement* element, const CssComputedStyle* style,
-                     SvgNodeIndex parent, StyleParts parts, bool own) {
+        SvgNodeIndex parent, StyleParts parts, bool own) {
     SvgNode node{};
     node.kind = kind;
     node.element = element;
@@ -723,10 +720,12 @@ void readMarkers(SvgBuilder& b, SvgNodeIndex index, const CssComputedStyle* styl
         const PrDomElement* target = url.data != nullptr ? svgBuildReference(b, element, url, false) : nullptr;
         return target != nullptr ? resourceOf(b, target, SvgResourceKind_Marker) : kSvgResourceNone;
     };
-    SvgMarkers markers{.start = markerOf(PrCssProperty_MarkerStart),
-                       .mid = markerOf(PrCssProperty_MarkerMid),
-                       .end = markerOf(PrCssProperty_MarkerEnd),
-                       .strokeWidth = svgStyleLength(style, PrCssProperty_StrokeWidth)};
+    SvgMarkers markers{
+        .start = markerOf(PrCssProperty_MarkerStart),
+        .mid = markerOf(PrCssProperty_MarkerMid),
+        .end = markerOf(PrCssProperty_MarkerEnd),
+        .strokeWidth = svgStyleLength(style, PrCssProperty_StrokeWidth),
+    };
     if (markers.start == kSvgResourceNone && markers.mid == kSvgResourceNone && markers.end == kSvgResourceNone)
         return;
     b.tree->nodes.data[index].markers = take(b.tree->markers, b.tree->freeMarkers, markers);
@@ -734,7 +733,7 @@ void readMarkers(SvgBuilder& b, SvgNodeIndex index, const CssComputedStyle* styl
 
 // Adds a node of a shape, as addNode does, with its vertex markers.
 SvgNodeIndex addShape(SvgBuilder& b, SvgNodeKind kind, const PrDomElement* element, const CssComputedStyle* style,
-                      SvgNodeIndex parent, bool own) {
+        SvgNodeIndex parent, bool own) {
     SvgNodeIndex index = addNode(b, kind, element, style, parent, StyleParts_All, own);
     readMarkers(b, index, style);
     return index;
@@ -758,10 +757,9 @@ bool isDescriptive(const PrDomElement* e) {
 // until one is not of a kind that `templates` accepts or a cycle stops the chain
 // (SVG2/pservers.html#PaintServerTemplates).
 uint32_t templateChain(SvgBuilder& b, const PrDomElement* server, bool (*templates)(const PrDomElement*),
-                       const PrDomElement** chain) {
+        const PrDomElement** chain) {
     uint32_t count = 0;
-    for (const PrDomElement* e = server; e != nullptr && templates(e) && count < kMaxReferences;
-         e = svgBuildHref(b, e, true)) {
+    for (const PrDomElement* e = server; e != nullptr && templates(e) && count < kMaxReferences; e = svgBuildHref(b, e, true)) {
         for (uint32_t i = 0; i < count; ++i) {
             if (chain[i] == e)
                 return count;
@@ -774,7 +772,7 @@ uint32_t templateChain(SvgBuilder& b, const PrDomElement* server, bool (*templat
 // Returns the first gradient of the chain that has the attribute `name`, or null. A coordinate is taken only from a
 // gradient of the same kind as the first, and the attributes that both kinds have from either.
 const PrDomElement* PR_NULLABLE chainWith(const PrDomElement* const* chain, uint32_t count, PrStringView name,
-                                          bool sameKind) {
+        bool sameKind) {
     for (uint32_t i = 0; i < count; ++i) {
         if (sameKind && chain[i]->tag != chain[0]->tag)
             continue;
@@ -801,7 +799,7 @@ PrAffine2 chainTransform(SvgBuilder& b, const PrDomElement* const* chain, uint32
 // nondecreasing, and colors are multiplied by their stop-opacity (SVG2/pservers.html#StopElement). The stops of a
 // template are the gradient's shadow tree, whose clones inherit from the gradient, not from the template.
 void addStops(SvgBuilder& b, const PrDomElement* const* chain, uint32_t count, const CssComputedStyle* host,
-              Array<PrDrawColorStop>* stops) {
+        Array<PrDrawColorStop>* stops) {
     for (uint32_t i = 0; i < count && stops->count == 0; ++i) {
         float last = 0;
         for (const PrDomNode* child = chain[i]->first; child != nullptr; child = child->next) {
@@ -809,8 +807,7 @@ void addStops(SvgBuilder& b, const PrDomElement* const* chain, uint32_t count, c
             if (stop == nullptr || !svgIs(stop, PrDomTag_Stop))
                 continue;
             bool clone = i != 0;
-            const CssComputedStyle* style =
-                clone ? svgBuildStyleUnder(b, stop, host) : svgBuildStyle(b, stop);
+            const CssComputedStyle* style = clone ? svgBuildStyleUnder(b, stop, host) : svgBuildStyle(b, stop);
             if (style == nullptr)
                 continue;
             SvgLengthPercentage offset = svgAttributeLength(stop, "offset", SvgLengthPercentage{}, nullptr);
@@ -872,8 +869,7 @@ void buildGradient(SvgBuilder& b, SvgResourceIndex index, const PrDomElement* el
     b.tree->resources.data[index].gradient = g;
 }
 
-void buildChildren(SvgBuilder& b, const PrDomElement* element, const CssComputedStyle* style, SvgNodeIndex parent,
-                   bool instance);
+void buildChildren(SvgBuilder& b, const PrDomElement* element, const CssComputedStyle* style, SvgNodeIndex parent, bool instance);
 
 // Parses an angle: a number in degrees, or a number with an angle's unit. Returns false if `text` is not an angle.
 bool parseAngle(PrStringView text, float* radians) {
@@ -900,7 +896,7 @@ bool parseAngle(PrStringView text, float* radians) {
 // for 0% and 100% along the attribute's axis. Returns false, and writes zero, if the attribute is missing or does not
 // parse.
 bool referenceOf(const PrDomElement* e, PrStringView name, PrStringView start, PrStringView end,
-                 const CssComputedStyle* PR_NULLABLE style, SvgLengthPercentage* out) {
+        const CssComputedStyle* PR_NULLABLE style, SvgLengthPercentage* out) {
     PrStringView value = svgAttribute(e, name);
     *out = SvgLengthPercentage{};
     if (value.data == nullptr)
@@ -955,8 +951,10 @@ void buildMarker(SvgBuilder& b, SvgResourceIndex index, const PrDomElement* e) {
         m.content = addContentGroup(b, e);
         // Text's percentages are of the content's user space, as far as the build can tell it.
         PrVec2 saved = b.viewport;
-        b.viewport = m.hasViewBox ? PrVec2{prRectWidth(m.viewBox), prRectHeight(m.viewBox)}
-                                  : PrVec2{svgLengthResolve(m.width, saved.x), svgLengthResolve(m.height, saved.y)};
+        if (m.hasViewBox)
+            b.viewport = PrVec2{prRectWidth(m.viewBox), prRectHeight(m.viewBox)};
+        else
+            b.viewport = PrVec2{svgLengthResolve(m.width, saved.x), svgLengthResolve(m.height, saved.y)};
         buildChildren(b, e, style, m.content, false);
         b.viewport = saved;
     }
@@ -987,8 +985,8 @@ void buildPattern(SvgBuilder& b, SvgResourceIndex index, const PrDomElement* e) 
     const PrDomElement* units = from("patternUnits");
     p.userSpace = units != nullptr && svgAttribute(units, "patternUnits") == "userSpaceOnUse";
     const PrDomElement* contentUnits = from("patternContentUnits");
-    p.contentBoundingBox = contentUnits != nullptr
-                           && svgAttribute(contentUnits, "patternContentUnits") == "objectBoundingBox";
+    p.contentBoundingBox = contentUnits != nullptr &&
+        svgAttribute(contentUnits, "patternContentUnits") == "objectBoundingBox";
     const PrDomElement* viewBox = from("viewBox");
     p.hasViewBox = viewBox != nullptr && svgParseViewBox(svgAttribute(viewBox, "viewBox"), &p.viewBox);
     const PrDomElement* aspect = from("preserveAspectRatio");
@@ -1075,8 +1073,8 @@ void buildMask(SvgBuilder& b, SvgResourceIndex index, const PrDomElement* e) {
     m.mode = PrDrawMaskMode_Luminance;
     m.space = PrColorSpace_Srgb;
     if (style != nullptr) {
-        m.mode = svgStyleIs(style, PrCssProperty_MaskType, PrCssKeyword_Alpha) ? PrDrawMaskMode_Alpha
-                                                                              : PrDrawMaskMode_Luminance;
+        bool alpha = svgStyleIs(style, PrCssProperty_MaskType, PrCssKeyword_Alpha);
+        m.mode = alpha ? PrDrawMaskMode_Alpha : PrDrawMaskMode_Luminance;
         bool linear = svgStyleKeyword(style, PrCssProperty_ColorInterpolation) == PrCssKeyword_Linearrgb;
         m.space = linear ? PrColorSpace_SrgbLinear : PrColorSpace_Srgb;
         m.content = addContentGroup(b, e);
@@ -1167,7 +1165,7 @@ PrVec2 enterViewport(SvgBuilder& b, SvgViewportShape* v) {
 // Builds the children of `element`, whose style is `style`. Children in another namespace, and children whose
 // conditional processing attributes fail, are skipped. A switch builds only its first child that passes.
 void buildChildren(SvgBuilder& b, const PrDomElement* element, const CssComputedStyle* style, SvgNodeIndex parent,
-                   bool instance) {
+        bool instance) {
     bool isSwitch = svgIs(element, PrDomTag_Switch);
     for (const PrDomNode* child = element->first; child != nullptr; child = child->next) {
         const PrDomElement* e = domElementFromNode(child);
@@ -1181,7 +1179,7 @@ void buildChildren(SvgBuilder& b, const PrDomElement* element, const CssComputed
 
 // Returns the viewport that an svg or a symbol element establishes, at the position and size given.
 SvgViewportShape viewportOf(const PrDomElement* e, const CssComputedStyle* style, SvgLengthPercentage x,
-                            SvgLengthPercentage y, SvgLengthPercentage width, SvgLengthPercentage height) {
+        SvgLengthPercentage y, SvgLengthPercentage width, SvgLengthPercentage height) {
     SvgViewportShape v{};
     v.x = x;
     v.y = y;
@@ -1200,7 +1198,7 @@ SvgViewportShape viewportOf(const PrDomElement* e, const CssComputedStyle* style
 SvgViewportShape innerViewportOf(const PrDomElement* e, const CssComputedStyle* style) {
     SvgLengthPercentage full{0, 100};
     return viewportOf(e, style, svgStyleLength(style, PrCssProperty_X), svgStyleLength(style, PrCssProperty_Y),
-                      svgAttributeLength(e, "width", full, style), svgAttributeLength(e, "height", full, style));
+        svgAttributeLength(e, "width", full, style), svgAttributeLength(e, "height", full, style));
 }
 
 // Returns the viewport of the root of a tree, an svg element in a viewport of its own: the box's content box, or the
@@ -1224,7 +1222,7 @@ SvgViewportShape rootViewportOf(const PrDomElement* e, const CssComputedStyle* s
 // does not set (w3c/svgwg#1057), and its refX and refY place a point of its content at x and y
 // (SVG2/struct.html#SymbolAttributes).
 void buildInstanceViewport(SvgBuilder& b, const PrDomElement* e, const CssComputedStyle* style,
-                           SvgNodeIndex parent, SvgLengthPercentage width, SvgLengthPercentage height) {
+        SvgNodeIndex parent, SvgLengthPercentage width, SvgLengthPercentage height) {
     bool svg = svgIs(e, PrDomTag_Svg);
     SvgLengthPercentage x = svgStyleLength(style, PrCssProperty_X);
     SvgLengthPercentage y = svgStyleLength(style, PrCssProperty_Y);
@@ -1329,9 +1327,10 @@ SvgForeignShape foreignShapeOf(SvgBuilder& b, const PrDomElement* e, const CssCo
     shape.limits = svgStyleSizeLimits(style);
     PrCssKeyword overflow = svgStyleKeyword(style, PrCssProperty_OverflowX);
     shape.clips = overflow != PrCssKeyword_Visible && overflow != PrCssKeyword_Auto;
-    shape.extent = svgLimitExtent(shape.limits, PrVec2{svgLengthResolve(shape.width, b.viewport.x),
-                                                       svgLengthResolve(shape.height, b.viewport.y)},
-                                  b.viewport);
+    shape.extent = svgLimitExtent(shape.limits, PrVec2{
+        svgLengthResolve(shape.width, b.viewport.x),
+        svgLengthResolve(shape.height, b.viewport.y),
+    }, b.viewport);
     const SvgForeignSource& foreign = b.build->foreign;
     shape.root = foreign.root != nullptr ? foreign.root(foreign.context, e) : PrLayoutNode(kPrLayoutNodeNone);
     return shape;
@@ -1341,11 +1340,10 @@ SvgForeignShape foreignShapeOf(SvgBuilder& b, const PrDomElement* e, const CssCo
 // whether the element is in a use element's shadow tree, whose elements inherit from `parentStyle`. The first node of
 // an element of the document is its own.
 SvgNodeIndex buildElement(SvgBuilder& b, const PrDomElement* e, const CssComputedStyle* PR_NULLABLE parentStyle,
-                          SvgNodeIndex parent, bool instance) {
+        SvgNodeIndex parent, bool instance) {
     if (neverRenders(e))
         return kSvgNodeNone;
-    const CssComputedStyle* style = instance ? svgBuildStyleUnder(b, e, parentStyle)
-                                             : svgBuildStyle(b, e);
+    const CssComputedStyle* style = instance ? svgBuildStyleUnder(b, e, parentStyle) : svgBuildStyle(b, e);
     if (style == nullptr)
         return kSvgNodeNone;
     SvgNodeIndex savedOwner = b.owner;
@@ -1385,8 +1383,13 @@ SvgNodeIndex buildElement(SvgBuilder& b, const PrDomElement* e, const CssCompute
                 if (x.percent != 0 || y.percent != 0) {
                     moved.kind = SvgNodeKind_Viewport;
                     moved.transform = prAffine2Identity();
-                    moved.viewport = SvgViewportShape{.x = x, .y = y, .width = SvgLengthPercentage{0, 100},
-                                                      .height = SvgLengthPercentage{0, 100}, .fills = false};
+                    moved.viewport = SvgViewportShape{
+                        .x = x,
+                        .y = y,
+                        .width = SvgLengthPercentage{0, 100},
+                        .height = SvgLengthPercentage{0, 100},
+                        .fills = false,
+                    };
                     moved.viewport.aspect = SvgAspect{};
                 }
                 buildUse(b, e, style, shift);
@@ -1418,7 +1421,7 @@ SvgNodeIndex buildElement(SvgBuilder& b, const PrDomElement* e, const CssCompute
                         added.path.bounds = prPathTightBounds(path);
                         if (added.markers != kArrayMissing)
                             svgMarkerVertices(commands.data, commands.count,
-                                              &b.tree->markers.data[added.markers].vertices);
+                                &b.tree->markers.data[added.markers].vertices);
                         break;
                     }
                 }
@@ -1497,8 +1500,8 @@ PrVec2 userExtentOf(const SvgTree* tree, SvgNodeIndex index, PrVec2 fallback) {
 // Returns true if a node is a group whose own values are all that its element's style and attributes decide: a g or an
 // a. Its children are its elements' own.
 bool isPlainGroup(const SvgNode& node) {
-    return node.kind == SvgNodeKind_Group && node.own
-           && (svgIs(node.element, PrDomTag_G) || svgIs(node.element, PrDomTag_A));
+    return node.kind == SvgNodeKind_Group && node.own &&
+        (svgIs(node.element, PrDomTag_G) || svgIs(node.element, PrDomTag_A));
 }
 
 // Returns true if a node holds the children of its element, each of which is the child's own: a plain group, or the
@@ -1629,9 +1632,8 @@ Refreshed refresh(SvgBuilder& b, SvgNodeIndex index) {
         enterViewport(b, &now.viewport);
     }
     // Text inside the node reads its decorations and its user space.
-    bool textChanged = now.lines != before.lines
-                       || (now.kind == SvgNodeKind_Viewport
-                           && !memEquals(&now.viewport.userExtent, &before.viewport.userExtent, sizeof(PrVec2)));
+    bool textChanged = now.lines != before.lines || (now.kind == SvgNodeKind_Viewport &&
+        !memEquals(&now.viewport.userExtent, &before.viewport.userExtent, sizeof(PrVec2)));
     if (textChanged) {
         dropEffects(tree, before.effects);
         return rebuild(b, index) ? Refreshed_Changed : Refreshed_Whole;
@@ -1661,8 +1663,7 @@ bool noteWork(SvgChanges* changes, SvgWork work, SvgNodeIndex index) {
 
 // Notes the work that a change at `element`, under the element that built the tree, asks of the element's own node, or
 // of the nearest node that is an ancestor's own. Returns true if it noted any.
-bool noteLocal(const SvgTree* tree, const PrDomElement* element, SvgChange change, PrStringView name,
-               SvgChanges* changes) {
+bool noteLocal(const SvgTree* tree, const PrDomElement* element, SvgChange change, PrStringView name, SvgChanges* changes) {
     // A tree without a root may gain one from any change under its element.
     if (!isLive(tree, 0)) {
         changes->all = true;
@@ -1670,7 +1671,7 @@ bool noteLocal(const SvgTree* tree, const PrDomElement* element, SvgChange chang
     }
     SvgNodeIndex found = kSvgNodeNone;
     for (const PrDomElement* at = element; at != nullptr && at->space == PrDomNamespace_Svg && found == kSvgNodeNone;
-         at = domElementFromNode(domFlatParent(at))) {
+            at = domElementFromNode(domFlatParent(at))) {
         // An element that never renders where it is may render as a use's instance, as a symbol does, with a node.
         found = svgTreeNodeFromElement(tree, at);
         if (found == kSvgNodeNone && neverRenders(at))
@@ -1752,8 +1753,8 @@ bool sameAffine(const PrAffine2& a, const PrAffine2& b) {
 }
 
 bool sameStroke(const SvgStrokeStyle& a, const SvgStrokeStyle& b) {
-    if (!sameLength(a.width, b.width) || !sameLength(a.dashOffset, b.dashOffset) || a.dashCount != b.dashCount
-        || !sameFloat(a.miterLimit, b.miterLimit) || a.join != b.join || a.cap != b.cap)
+    if (!sameLength(a.width, b.width) || !sameLength(a.dashOffset, b.dashOffset) || a.dashCount != b.dashCount ||
+            !sameFloat(a.miterLimit, b.miterLimit) || a.join != b.join || a.cap != b.cap)
         return false;
     for (uint32_t i = 0; i < a.dashCount && i < kSvgMaxDashes; ++i) {
         if (!sameLength(a.dashes[i], b.dashes[i]))
@@ -1763,8 +1764,8 @@ bool sameStroke(const SvgStrokeStyle& a, const SvgStrokeStyle& b) {
 }
 
 bool sameTransformStyle(const SvgTransformStyle& a, const SvgTransformStyle& b) {
-    if (a.any != b.any || a.list.count != b.list.count || a.box != b.box || !sameLength(a.origin[0], b.origin[0])
-        || !sameLength(a.origin[1], b.origin[1]))
+    if (a.any != b.any || a.list.count != b.list.count || a.box != b.box || !sameLength(a.origin[0], b.origin[0]) ||
+            !sameLength(a.origin[1], b.origin[1]))
         return false;
     for (uint32_t i = 0; i < a.list.count; ++i) {
         const PrLayoutTransformFunction& f = a.list.functions[i];
@@ -1776,35 +1777,35 @@ bool sameTransformStyle(const SvgTransformStyle& a, const SvgTransformStyle& b) 
 }
 
 bool sameGradient(const SvgGradient& a, const SvgGradient& b) {
-    return a.radial == b.radial && a.userSpace == b.userSpace && a.hasFx == b.hasFx && a.hasFy == b.hasFy
-           && a.extend == b.extend && sameAffine(a.transform, b.transform) && sameLength(a.x1, b.x1)
-           && sameLength(a.y1, b.y1) && sameLength(a.x2, b.x2) && sameLength(a.y2, b.y2) && sameLength(a.cx, b.cx)
-           && sameLength(a.cy, b.cy) && sameLength(a.r, b.r) && sameLength(a.fx, b.fx) && sameLength(a.fy, b.fy)
-           && sameLength(a.fr, b.fr) && a.space == b.space && a.stopCount == b.stopCount
-           && (a.stopCount == 0 || memEquals(a.stops, b.stops, a.stopCount * sizeof(PrDrawColorStop)));
+    return a.radial == b.radial && a.userSpace == b.userSpace && a.hasFx == b.hasFx && a.hasFy == b.hasFy &&
+        a.extend == b.extend && sameAffine(a.transform, b.transform) && sameLength(a.x1, b.x1) &&
+        sameLength(a.y1, b.y1) && sameLength(a.x2, b.x2) && sameLength(a.y2, b.y2) && sameLength(a.cx, b.cx) &&
+        sameLength(a.cy, b.cy) && sameLength(a.r, b.r) && sameLength(a.fx, b.fx) && sameLength(a.fy, b.fy) &&
+        sameLength(a.fr, b.fr) && a.space == b.space && a.stopCount == b.stopCount &&
+        (a.stopCount == 0 || memEquals(a.stops, b.stops, a.stopCount * sizeof(PrDrawColorStop)));
 }
 
 bool sameMarker(const SvgMarker& a, const SvgMarker& b) {
-    return sameLength(a.width, b.width) && sameLength(a.height, b.height) && a.hasViewBox == b.hasViewBox
-           && (!a.hasViewBox || sameRect(a.viewBox, b.viewBox)) && a.aspect.x == b.aspect.x
-           && a.aspect.y == b.aspect.y && a.aspect.slice == b.aspect.slice && a.clips == b.clips
-           && a.strokeUnits == b.strokeUnits && a.orient == b.orient && sameFloat(a.angle, b.angle)
-           && sameLength(a.refX, b.refX) && sameLength(a.refY, b.refY)
-           && (a.content == kSvgNodeNone) == (b.content == kSvgNodeNone);
+    return sameLength(a.width, b.width) && sameLength(a.height, b.height) && a.hasViewBox == b.hasViewBox &&
+        (!a.hasViewBox || sameRect(a.viewBox, b.viewBox)) && a.aspect.x == b.aspect.x &&
+        a.aspect.y == b.aspect.y && a.aspect.slice == b.aspect.slice && a.clips == b.clips &&
+        a.strokeUnits == b.strokeUnits && a.orient == b.orient && sameFloat(a.angle, b.angle) &&
+        sameLength(a.refX, b.refX) && sameLength(a.refY, b.refY) &&
+        (a.content == kSvgNodeNone) == (b.content == kSvgNodeNone);
 }
 
 bool samePattern(const SvgPattern& a, const SvgPattern& b) {
-    return a.userSpace == b.userSpace && a.contentBoundingBox == b.contentBoundingBox && a.hasViewBox == b.hasViewBox
-           && (!a.hasViewBox || sameRect(a.viewBox, b.viewBox)) && a.aspect.x == b.aspect.x
-           && a.aspect.y == b.aspect.y && a.aspect.slice == b.aspect.slice && sameLength(a.x, b.x)
-           && sameLength(a.y, b.y) && sameLength(a.width, b.width) && sameLength(a.height, b.height)
-           && sameAffine(a.transform, b.transform) && (a.content == kSvgNodeNone) == (b.content == kSvgNodeNone);
+    return a.userSpace == b.userSpace && a.contentBoundingBox == b.contentBoundingBox && a.hasViewBox == b.hasViewBox &&
+        (!a.hasViewBox || sameRect(a.viewBox, b.viewBox)) && a.aspect.x == b.aspect.x &&
+        a.aspect.y == b.aspect.y && a.aspect.slice == b.aspect.slice && sameLength(a.x, b.x) &&
+        sameLength(a.y, b.y) && sameLength(a.width, b.width) && sameLength(a.height, b.height) &&
+        sameAffine(a.transform, b.transform) && (a.content == kSvgNodeNone) == (b.content == kSvgNodeNone);
 }
 
 bool sameMask(const SvgMask& a, const SvgMask& b) {
-    return a.userSpace == b.userSpace && a.contentBoundingBox == b.contentBoundingBox && sameLength(a.x, b.x)
-           && sameLength(a.y, b.y) && sameLength(a.width, b.width) && sameLength(a.height, b.height)
-           && a.mode == b.mode && a.space == b.space && (a.content == kSvgNodeNone) == (b.content == kSvgNodeNone);
+    return a.userSpace == b.userSpace && a.contentBoundingBox == b.contentBoundingBox && sameLength(a.x, b.x) &&
+        sameLength(a.y, b.y) && sameLength(a.width, b.width) && sameLength(a.height, b.height) &&
+        a.mode == b.mode && a.space == b.space && (a.content == kSvgNodeNone) == (b.content == kSvgNodeNone);
 }
 
 // Returns true if two references to resources, each of its own tree, are to the same element and resource. The content
@@ -1822,9 +1823,9 @@ bool sameResource(const SvgTree* tree, SvgResourceIndex a, const SvgTree* expect
         case SvgResourceKind_Marker: return sameMarker(x.marker, y.marker);
         case SvgResourceKind_Pattern: return samePattern(x.pattern, y.pattern);
         case SvgResourceKind_ClipPath:
-            return x.clipPath.boundingBox == y.clipPath.boundingBox
-                   && sameAffine(x.clipPath.transform, y.clipPath.transform)
-                   && (x.clipPath.content == kSvgNodeNone) == (y.clipPath.content == kSvgNodeNone);
+            return x.clipPath.boundingBox == y.clipPath.boundingBox &&
+                sameAffine(x.clipPath.transform, y.clipPath.transform) &&
+                (x.clipPath.content == kSvgNodeNone) == (y.clipPath.content == kSvgNodeNone);
         case SvgResourceKind_Mask: return sameMask(x.mask, y.mask);
         case SvgResourceKind_Filter: return svgFilterSame(x.filter, y.filter);
         default: return sameGradient(x.gradient, y.gradient);
@@ -1833,19 +1834,19 @@ bool sameResource(const SvgTree* tree, SvgResourceIndex a, const SvgTree* expect
 
 // Returns true if two gradients of mask layers are the same.
 bool sameGradientLayer(const PrLayoutGradient& a, const PrLayoutGradient& b) {
-    return a.kind == b.kind && a.space == b.space && a.hueMethod == b.hueMethod && a.repeating == b.repeating
-           && a.corner == b.corner && sameFloat(a.angle, b.angle) && a.shape == b.shape && a.extent == b.extent
-           && a.radiusX.bits == b.radiusX.bits && a.radiusY.bits == b.radiusY.bits && a.centerX.bits == b.centerX.bits
-           && a.centerY.bits == b.centerY.bits && a.stopCount == b.stopCount
-           && (a.stopCount == 0 || memEquals(a.stops, b.stops, a.stopCount * sizeof(PrLayoutColorStop)));
+    return a.kind == b.kind && a.space == b.space && a.hueMethod == b.hueMethod && a.repeating == b.repeating &&
+        a.corner == b.corner && sameFloat(a.angle, b.angle) && a.shape == b.shape && a.extent == b.extent &&
+        a.radiusX.bits == b.radiusX.bits && a.radiusY.bits == b.radiusY.bits && a.centerX.bits == b.centerX.bits &&
+        a.centerY.bits == b.centerY.bits && a.stopCount == b.stopCount &&
+        (a.stopCount == 0 || memEquals(a.stops, b.stops, a.stopCount * sizeof(PrLayoutColorStop)));
 }
 
 // Returns true if two filter functions are the same.
 bool sameFunction(const CssFilterFunction& x, const CssFilterFunction& y) {
     const PrLayoutFilter& a = x.filter;
     const PrLayoutFilter& b = y.filter;
-    return a.kind == b.kind && sameFloat(a.amount, b.amount) && memEquals(&a.offset, &b.offset, sizeof(PrVec2))
-           && sameFloat(a.sigma, b.sigma) && memEquals(&a.color, &b.color, sizeof(PrColor16));
+    return a.kind == b.kind && sameFloat(a.amount, b.amount) && memEquals(&a.offset, &b.offset, sizeof(PrVec2)) &&
+        sameFloat(a.sigma, b.sigma) && memEquals(&a.color, &b.color, sizeof(PrColor16));
 }
 
 // Returns true if two nodes' effects are the same, each with the resources of its own tree.
@@ -1856,9 +1857,9 @@ bool sameEffects(const SvgTree* tree, uint32_t a, const SvgTree* expectedTree, u
         return true;
     const SvgEffects& x = tree->effects.data[a];
     const SvgEffects& y = expectedTree->effects.data[b];
-    if (x.values != y.values || x.clip != y.clip || x.layers.count != y.layers.count
-        || x.filters.count != y.filters.count || x.blend != y.blend || x.composite != y.composite
-        || x.isolated != y.isolated)
+    if (x.values != y.values || x.clip != y.clip || x.layers.count != y.layers.count ||
+            x.filters.count != y.filters.count || x.blend != y.blend || x.composite != y.composite ||
+            x.isolated != y.isolated)
         return false;
     for (uint32_t i = 0; i < x.filters.count; ++i) {
         const SvgFilterItem& p = x.filters.data[i];
@@ -1882,8 +1883,8 @@ bool sameEffects(const SvgTree* tree, uint32_t a, const SvgTree* expectedTree, u
 }
 
 bool samePaint(const SvgTree* tree, const SvgPaint& a, const SvgTree* expectedTree, const SvgPaint& b) {
-    return a.kind == b.kind && a.fallback == b.fallback && memEquals(&a.color, &b.color, sizeof(PrColor))
-           && sameResource(tree, a.server, expectedTree, b.server);
+    return a.kind == b.kind && a.fallback == b.fallback && memEquals(&a.color, &b.color, sizeof(PrColor)) &&
+        sameResource(tree, a.server, expectedTree, b.server);
 }
 
 // Returns true if two nodes' vertex markers are the same, each with the resources of its own tree.
@@ -1894,10 +1895,10 @@ bool sameMarkers(const SvgTree* tree, uint32_t a, const SvgTree* expectedTree, u
         return true;
     const SvgMarkers& x = tree->markers.data[a];
     const SvgMarkers& y = expectedTree->markers.data[b];
-    return sameResource(tree, x.start, expectedTree, y.start) && sameResource(tree, x.mid, expectedTree, y.mid)
-           && sameResource(tree, x.end, expectedTree, y.end) && sameLength(x.strokeWidth, y.strokeWidth)
-           && x.vertices.count == y.vertices.count
-           && memEquals(x.vertices.data, y.vertices.data, x.vertices.count * sizeof(SvgVertex));
+    return sameResource(tree, x.start, expectedTree, y.start) && sameResource(tree, x.mid, expectedTree, y.mid) &&
+        sameResource(tree, x.end, expectedTree, y.end) && sameLength(x.strokeWidth, y.strokeWidth) &&
+        x.vertices.count == y.vertices.count &&
+        memEquals(x.vertices.data, y.vertices.data, x.vertices.count * sizeof(SvgVertex));
 }
 
 bool sameLimits(const SvgSizeLimits& a, const SvgSizeLimits& b) {
@@ -1909,37 +1910,34 @@ bool sameLimits(const SvgSizeLimits& a, const SvgSizeLimits& b) {
 }
 
 bool sameViewport(const SvgViewportShape& a, const SvgViewportShape& b) {
-    return sameLength(a.x, b.x) && sameLength(a.y, b.y) && sameLength(a.width, b.width)
-           && sameLength(a.height, b.height) && a.hasViewBox == b.hasViewBox
-           && (!a.hasViewBox || sameRect(a.viewBox, b.viewBox)) && a.aspect.x == b.aspect.x
-           && a.aspect.y == b.aspect.y && a.aspect.slice == b.aspect.slice && a.clips == b.clips
-           && a.fills == b.fills && memEquals(&a.userExtent, &b.userExtent, sizeof(PrVec2))
-           && a.hasRefX == b.hasRefX && a.hasRefY == b.hasRefY && sameLength(a.refX, b.refX)
-           && sameLength(a.refY, b.refY);
+    return sameLength(a.x, b.x) && sameLength(a.y, b.y) && sameLength(a.width, b.width) &&
+        sameLength(a.height, b.height) && a.hasViewBox == b.hasViewBox &&
+        (!a.hasViewBox || sameRect(a.viewBox, b.viewBox)) && a.aspect.x == b.aspect.x &&
+        a.aspect.y == b.aspect.y && a.aspect.slice == b.aspect.slice && a.clips == b.clips &&
+        a.fills == b.fills && memEquals(&a.userExtent, &b.userExtent, sizeof(PrVec2)) &&
+        a.hasRefX == b.hasRefX && a.hasRefY == b.hasRefY && sameLength(a.refX, b.refX) && sameLength(a.refY, b.refY);
 }
 
 bool sameImage(const SvgImageShape& a, const SvgImageShape& b) {
-    return sameLength(a.x, b.x) && sameLength(a.y, b.y) && sameLength(a.width, b.width)
-           && sameLength(a.height, b.height) && a.widthAuto == b.widthAuto && a.heightAuto == b.heightAuto
-           && sameLimits(a.limits, b.limits) && a.clips == b.clips && a.aspect.x == b.aspect.x
-           && a.aspect.y == b.aspect.y
-           && a.aspect.slice == b.aspect.slice && a.fit == b.fit && sameLength(a.position[0], b.position[0])
-           && sameLength(a.position[1], b.position[1]) && a.sampling == b.sampling
-           && a.picture.raster == b.picture.raster && a.picture.svg == b.picture.svg;
+    return sameLength(a.x, b.x) && sameLength(a.y, b.y) && sameLength(a.width, b.width) &&
+        sameLength(a.height, b.height) && a.widthAuto == b.widthAuto && a.heightAuto == b.heightAuto &&
+        sameLimits(a.limits, b.limits) && a.clips == b.clips && a.aspect.x == b.aspect.x && a.aspect.y == b.aspect.y &&
+        a.aspect.slice == b.aspect.slice && a.fit == b.fit && sameLength(a.position[0], b.position[0]) &&
+        sameLength(a.position[1], b.position[1]) && a.sampling == b.sampling &&
+        a.picture.raster == b.picture.raster && a.picture.svg == b.picture.svg;
 }
 
 // Returns true if two paints paint the same, with the strokes given, and each with the servers of its own tree.
 bool samePaints(const SvgTree* tree, const SvgPaints& paints, const SvgStrokeStyle* PR_NULLABLE stroke,
-                const SvgTree* expectedTree, const SvgPaints& expected,
-                const SvgStrokeStyle* PR_NULLABLE expectedStroke) {
-    return samePaint(tree, paints.fill, expectedTree, expected.fill)
-           && samePaint(tree, paints.stroke, expectedTree, expected.stroke)
-           && sameFloat(paints.fillOpacity, expected.fillOpacity)
-           && sameFloat(paints.strokeOpacity, expected.strokeOpacity) && paints.crisp == expected.crisp
-           && paints.nonScaling == expected.nonScaling && sameFloat(paints.pathLength, expected.pathLength)
-           && memEquals(paints.order, expected.order, sizeof(paints.order))
-           && (stroke == nullptr) == (expectedStroke == nullptr)
-           && (stroke == nullptr || sameStroke(*stroke, *expectedStroke));
+        const SvgTree* expectedTree, const SvgPaints& expected, const SvgStrokeStyle* PR_NULLABLE expectedStroke) {
+    return samePaint(tree, paints.fill, expectedTree, expected.fill) &&
+        samePaint(tree, paints.stroke, expectedTree, expected.stroke) &&
+        sameFloat(paints.fillOpacity, expected.fillOpacity) &&
+        sameFloat(paints.strokeOpacity, expected.strokeOpacity) && paints.crisp == expected.crisp &&
+        paints.nonScaling == expected.nonScaling && sameFloat(paints.pathLength, expected.pathLength) &&
+        memEquals(paints.order, expected.order, sizeof(paints.order)) &&
+        (stroke == nullptr) == (expectedStroke == nullptr) &&
+        (stroke == nullptr || sameStroke(*stroke, *expectedStroke));
 }
 
 // Returns true if two nodes draw the same, without their children.
@@ -1952,12 +1950,12 @@ bool sameValues(const NodeValues& values, const NodeValues& expectedValues, Text
         textAppend(difference, "kinds differ");
         return false;
     }
-    if (node.visible != expected.visible || node.fillRule != expected.fillRule || node.clipRule != expected.clipRule
-        || node.lines != expected.lines || !sameFloat(node.opacity, expected.opacity)
-        || node.context != expected.context || node.linear != expected.linear
-        || node.pointerEvents != expected.pointerEvents || node.vectorEffects != expected.vectorEffects) {
+    if (node.visible != expected.visible || node.fillRule != expected.fillRule || node.clipRule != expected.clipRule ||
+            node.lines != expected.lines || !sameFloat(node.opacity, expected.opacity) ||
+            node.context != expected.context || node.linear != expected.linear ||
+            node.pointerEvents != expected.pointerEvents || node.vectorEffects != expected.vectorEffects) {
         textAppend(difference, "visibility, fill or clip rule, decorations, opacity, context, color-interpolation, "
-                               "pointer-events or vector effects differ");
+            "pointer-events or vector effects differ");
         return false;
     }
     if (!sameEffects(tree, node.effects, expectedTree, expected.effects)) {
@@ -1966,9 +1964,9 @@ bool sameValues(const NodeValues& values, const NodeValues& expectedValues, Text
     }
     const SvgTransformStyle* transform = values.transform;
     const SvgTransformStyle* expectedTransform = expectedValues.transform;
-    bool sameTransform = sameAffine(node.transform, expected.transform)
-                         && (transform == nullptr) == (expectedTransform == nullptr)
-                         && (transform == nullptr || sameTransformStyle(*transform, *expectedTransform));
+    bool sameTransform =
+        sameAffine(node.transform, expected.transform) && (transform == nullptr) == (expectedTransform == nullptr) &&
+        (transform == nullptr || sameTransformStyle(*transform, *expectedTransform));
     if (!sameTransform) {
         textAppend(difference, "transforms differ");
         return false;
@@ -1986,16 +1984,16 @@ bool sameValues(const NodeValues& values, const NodeValues& expectedValues, Text
         case SvgNodeKind_Rect: {
             const SvgRectShape& a = node.rect;
             const SvgRectShape& b = expected.rect;
-            same = sameLength(a.x, b.x) && sameLength(a.y, b.y) && sameLength(a.width, b.width)
-                   && sameLength(a.height, b.height) && sameLength(a.rx, b.rx) && sameLength(a.ry, b.ry)
-                   && a.rxAuto == b.rxAuto && a.ryAuto == b.ryAuto && sameLimits(a.limits, b.limits);
+            same = sameLength(a.x, b.x) && sameLength(a.y, b.y) && sameLength(a.width, b.width) &&
+                sameLength(a.height, b.height) && sameLength(a.rx, b.rx) && sameLength(a.ry, b.ry) &&
+                a.rxAuto == b.rxAuto && a.ryAuto == b.ryAuto && sameLimits(a.limits, b.limits);
             break;
         }
         case SvgNodeKind_Ellipse: {
             const SvgEllipseShape& a = node.ellipse;
             const SvgEllipseShape& b = expected.ellipse;
-            same = sameLength(a.cx, b.cx) && sameLength(a.cy, b.cy) && sameLength(a.rx, b.rx) && sameLength(a.ry, b.ry)
-                   && a.rxAuto == b.rxAuto && a.ryAuto == b.ryAuto && a.circle == b.circle;
+            same = sameLength(a.cx, b.cx) && sameLength(a.cy, b.cy) && sameLength(a.rx, b.rx) && sameLength(a.ry,
+                b.ry) && a.rxAuto == b.rxAuto && a.ryAuto == b.ryAuto && a.circle == b.circle;
             break;
         }
         case SvgNodeKind_Line: {
@@ -2016,10 +2014,9 @@ bool sameValues(const NodeValues& values, const NodeValues& expectedValues, Text
         case SvgNodeKind_ForeignObject: {
             const SvgForeignShape& a = node.foreign;
             const SvgForeignShape& b = expected.foreign;
-            same = sameLength(a.x, b.x) && sameLength(a.y, b.y) && sameLength(a.width, b.width)
-                   && sameLength(a.height, b.height) && sameLimits(a.limits, b.limits) && a.clips == b.clips
-                   && a.root == b.root
-                   && memEquals(&a.extent, &b.extent, sizeof(PrVec2));
+            same = sameLength(a.x, b.x) && sameLength(a.y, b.y) && sameLength(a.width, b.width) &&
+                sameLength(a.height, b.height) && sameLimits(a.limits, b.limits) && a.clips == b.clips &&
+                a.root == b.root && memEquals(&a.extent, &b.extent, sizeof(PrVec2));
             break;
         }
         case SvgNodeKind_Text:
@@ -2063,7 +2060,7 @@ bool readsBackdrop(const SvgTree* tree) {
 // Returns true if the node `root` of `tree` and its descendants draw as `expectedRoot` of `expected` and its
 // descendants do. Otherwise writes the first difference to `difference`.
 bool sameSubtree(const SvgTree* tree, SvgNodeIndex root, const SvgTree* expected, SvgNodeIndex expectedRoot,
-                 TextBuffer* difference) {
+        TextBuffer* difference) {
     Array<SvgNodeIndex> stack;
     stack.push(root);
     stack.push(expectedRoot);
@@ -2077,15 +2074,15 @@ bool sameSubtree(const SvgTree* tree, SvgNodeIndex root, const SvgTree* expected
         const SvgNode& other = expected->nodes.data[e];
         TextBuffer what{};
         // The nodes of a use element's shadow tree are of copies, made again by each build.
-        same = node.own == other.own
-               && (node.own ? node.element == other.element : node.element->tag == other.element->tag);
+        same = node.own == other.own &&
+            (node.own ? node.element == other.element : node.element->tag == other.element->tag);
         if (!same)
             textAppend(&what, "the nodes are of different elements");
         same = same && sameValues(valuesOf(tree, node), valuesOf(expected, other), &what);
         SvgNodeIndex x = node.first;
         SvgNodeIndex y = other.first;
         for (; same && x != kSvgNodeNone && y != kSvgNodeNone;
-             x = tree->nodes.data[x].next, y = expected->nodes.data[y].next) {
+                x = tree->nodes.data[x].next, y = expected->nodes.data[y].next) {
             stack.push(x);
             stack.push(y);
         }
@@ -2109,17 +2106,21 @@ bool sameSubtree(const SvgTree* tree, SvgNodeIndex root, const SvgTree* expected
 uint32_t svgTreeBuild(SvgTree* tree, const PrDomElement* element, SvgRoot root, const SvgBuild& build) {
     svgTreeReset(tree);
     ++tree->update;
-    SvgBuilder b{.tree = tree, .build = &build, .document = element->document, .viewport = build.viewport,
-                 .owner = kSvgNodeNone, .ownerResource = kSvgResourceNone};
+    SvgBuilder b{
+        .tree = tree,
+        .build = &build,
+        .document = element->document,
+        .viewport = build.viewport,
+        .owner = kSvgNodeNone,
+        .ownerResource = kSvgResourceNone,
+    };
     const CssComputedStyle* style = svgBuildStyle(b, element);
     if (style != nullptr && !svgStyleIs(style, PrCssProperty_Display, PrCssKeyword_None)) {
         if (root == SvgRoot_InPlace) {
             // The element is drawn as a child of a group that stands for its parent's user space.
-            SvgNodeIndex group =
-                addNode(b, SvgNodeKind_Group, element, style, kSvgNodeNone, StyleParts_None, false);
+            SvgNodeIndex group = addNode(b, SvgNodeKind_Group, element, style, kSvgNodeNone, StyleParts_None, false);
             const PrDomElement* parent = domElementFromNode(element->parent);
-            const CssComputedStyle* parentStyle =
-                parent != nullptr ? svgBuildStyle(b, parent) : nullptr;
+            const CssComputedStyle* parentStyle = parent != nullptr ? svgBuildStyle(b, parent) : nullptr;
             buildElement(b, element, parentStyle, group, false);
         } else {
             buildRoot(b, element, style, root);
@@ -2209,13 +2210,13 @@ void svgTreeDetach(SvgTree* tree) {
 }
 
 SvgNodeIndex svgTreeNodeFromElement(const SvgTree* tree, const PrDomElement* element) {
-    uint32_t at = tree->elements.find(hashOf(element),
-                                      [&](uint32_t index) { return tree->nodes.data[index].element == element; });
+    uint32_t at =
+        tree->elements.find(hashOf(element), [&](uint32_t index) { return tree->nodes.data[index].element == element; });
     return at != kHashMissing ? at : kSvgNodeNone;
 }
 
 bool svgReadShape(const PrDomElement* element, const CssComputedStyle* style, SvgNode* node,
-                  Array<PrPathDataCommand>* commands) {
+        Array<PrPathDataCommand>* commands) {
     const PrDomElement* e = element;
     switch (e->space == PrDomNamespace_Svg ? e->tag : PrDomTag_Count) {
         case PrDomTag_Rect: {
@@ -2270,8 +2271,10 @@ bool svgReadShape(const PrDomElement* element, const CssComputedStyle* style, Sv
             Array<float> numbers;
             svgParseNumbers(svgAttribute(e, "points"), &numbers);
             for (uint32_t i = 0; i + 1 < numbers.count; i += 2)
-                commands->push(PrPathDataCommand{.letter = i == 0 ? 'M' : 'L',
-                                                 .arguments = {numbers.data[i], numbers.data[i + 1]}});
+                commands->push(PrPathDataCommand{
+                    .letter = i == 0 ? 'M' : 'L',
+                    .arguments = {numbers.data[i], numbers.data[i + 1]},
+                });
             if (e->tag == PrDomTag_Polygon && numbers.count >= 2)
                 commands->push(PrPathDataCommand{.letter = 'Z'});
             numbers.reset();
@@ -2282,14 +2285,13 @@ bool svgReadShape(const PrDomElement* element, const CssComputedStyle* style, Sv
     }
 }
 
-bool svgTreeNoteChange(const SvgTree* tree, const PrDomElement* element, SvgChange change,
-                       PrStringView name,
-                       bool under, SvgChanges* changes) {
+bool svgTreeNoteChange(const SvgTree* tree, const PrDomElement* element, SvgChange change, PrStringView name,
+        bool under, SvgChanges* changes) {
     if (changes->all)
         return true;
     bool noted = false;
     for (const PrDomElement* at = element; at != nullptr && at->space == PrDomNamespace_Svg;
-         at = domElementFromNode(domFlatParent(at))) {
+            at = domElementFromNode(domFlatParent(at))) {
         // Text found the document's SVG fonts by family, and a change to any of them may change which it finds.
         if (tree->readsSvgFonts && (at->tag == PrDomTag_Font || at->tag == PrDomTag_FontFace)) {
             changes->all = true;
@@ -2323,8 +2325,8 @@ SvgUpdate svgTreeUpdate(SvgTree* tree, const PrDomElement* element, SvgChanges* 
     if (!whole && changes->ids) {
         for (uint32_t i = 0; i < tree->references.count; ++i) {
             const SvgReference& reference = tree->references.data[i];
-            if ((reference.node != kSvgNodeNone || reference.resource != kSvgResourceNone)
-                && retargeted(reference, element->document))
+            if ((reference.node != kSvgNodeNone || reference.resource != kSvgResourceNone) &&
+                    retargeted(reference, element->document))
                 noteDependent(changes, reference);
         }
     }
@@ -2342,15 +2344,20 @@ SvgUpdate svgTreeUpdate(SvgTree* tree, const PrDomElement* element, SvgChanges* 
             continue;
         if (node && dirt.index == 0 && (dirt.work == SvgWork_Rebuild || dirt.work == SvgWork_Remove))
             whole = true;
-        uint32_t rank = dirt.work == SvgWork_Remove   ? 0
-                        : dirt.work == SvgWork_Resource ? 1
-                                                      : 2 + depthOf(tree, dirt.index);
+        uint32_t rank =
+            dirt.work == SvgWork_Remove   ? 0 : dirt.work == SvgWork_Resource ? 1 : 2 + depthOf(tree, dirt.index);
         order.push(Ordered{rank, dirt});
     }
     sortItems(order.data, order.count, [](const Ordered& a, const Ordered& b) { return a.rank < b.rank; });
     ++tree->update;
-    SvgBuilder b{.tree = tree, .build = &build, .document = element->document, .viewport = build.viewport,
-                 .owner = kSvgNodeNone, .ownerResource = kSvgResourceNone};
+    SvgBuilder b{
+        .tree = tree,
+        .build = &build,
+        .document = element->document,
+        .viewport = build.viewport,
+        .owner = kSvgNodeNone,
+        .ownerResource = kSvgResourceNone,
+    };
     for (uint32_t i = 0; !whole && i < order.count; ++i) {
         SvgDirt dirt = order.data[i].dirt;
         if (dirt.work == SvgWork_Resource) {
@@ -2407,9 +2414,15 @@ void svgChangesReset(SvgChanges* changes) {
 }
 
 SvgResourceIndex svgTreeResourceFor(SvgTree* tree, const PrDomElement* from, PrStringView url, SvgResourceKind kind,
-                                    const SvgBuild& build) {
-    SvgBuilder b{.tree = tree, .build = &build, .document = from->document, .viewport = build.viewport,
-                 .owner = kSvgNodeNone, .ownerResource = kSvgResourceNone};
+        const SvgBuild& build) {
+    SvgBuilder b{
+        .tree = tree,
+        .build = &build,
+        .document = from->document,
+        .viewport = build.viewport,
+        .owner = kSvgNodeNone,
+        .ownerResource = kSvgResourceNone,
+    };
     const PrDomElement* target = svgBuildReference(b, from, url, false);
     SvgResourceIndex index = target != nullptr ? resourceOf(b, target, kind) : kSvgResourceNone;
     finish(b);
@@ -2418,8 +2431,14 @@ SvgResourceIndex svgTreeResourceFor(SvgTree* tree, const PrDomElement* from, PrS
 
 bool svgTreeUpdateResources(SvgTree* tree, const PrDomNode* document, SvgChanges* changes, const SvgBuild& build) {
     bool changed = false;
-    SvgBuilder b{.tree = tree, .build = &build, .document = document, .viewport = build.viewport,
-                 .owner = kSvgNodeNone, .ownerResource = kSvgResourceNone};
+    SvgBuilder b{
+        .tree = tree,
+        .build = &build,
+        .document = document,
+        .viewport = build.viewport,
+        .owner = kSvgNodeNone,
+        .ownerResource = kSvgResourceNone,
+    };
     ++tree->update;
     if (changes->all) {
         for (uint32_t i = 0; i < tree->resources.count; ++i) {
@@ -2429,8 +2448,7 @@ bool svgTreeUpdateResources(SvgTree* tree, const PrDomNode* document, SvgChanges
     } else if (changes->ids) {
         for (uint32_t i = 0; i < tree->references.count; ++i) {
             const SvgReference& reference = tree->references.data[i];
-            if ((reference.node != kSvgNodeNone || reference.resource != kSvgResourceNone)
-                && retargeted(reference, document))
+            if ((reference.node != kSvgNodeNone || reference.resource != kSvgResourceNone) && retargeted(reference, document))
                 noteDependent(changes, reference);
         }
     }
@@ -2527,9 +2545,10 @@ SvgPaints svgBuildPaints(SvgBuilder& b, const CssComputedStyle* style, const PrD
     PrCssKeyword rendering = svgStyleKeyword(style, PrCssProperty_ShapeRendering);
     paints.crisp = rendering == PrCssKeyword_Crispedges || rendering == PrCssKeyword_Optimizespeed;
     paints.nonScaling = svgStyleNonScalingStroke(style);
-    paints.pathLength = svgStyleIs(style, PrCssProperty_PathLength, PrCssKeyword_None)
-                            ? -1
-                            : maxF32(svgStyleLength(style, PrCssProperty_PathLength).px, 0);
+    if (svgStyleIs(style, PrCssProperty_PathLength, PrCssKeyword_None))
+        paints.pathLength = -1;
+    else
+        paints.pathLength = maxF32(svgStyleLength(style, PrCssProperty_PathLength).px, 0);
     svgStylePaintOrder(style, paints.order);
     return paints;
 }
@@ -2552,7 +2571,7 @@ void svgTreeFreeStroke(SvgTree* tree, const SvgPaints& paints) {
 }
 
 bool svgPaintsSame(const SvgTree* tree, const SvgPaints& paints, const SvgTree* expectedTree, const SvgPaints& expected,
-                   TextBuffer* difference) {
+        TextBuffer* difference) {
     bool same =
         samePaints(tree, paints, strokeOf(tree, paints), expectedTree, expected, strokeOf(expectedTree, expected));
     if (!same)
@@ -2563,9 +2582,9 @@ bool svgPaintsSame(const SvgTree* tree, const SvgPaints& paints, const SvgTree* 
 bool svgPathSame(const PrPath* path, const PrPath* expected) {
     uint32_t verbs = prPathVerbCount(path);
     uint32_t points = prPathPointCount(path);
-    return verbs == prPathVerbCount(expected) && points == prPathPointCount(expected)
-           && memEquals(prPathVerbs(path), prPathVerbs(expected), verbs * sizeof(PrPathVerb))
-           && memEquals(prPathPoints(path), prPathPoints(expected), points * sizeof(PrVec2));
+    return verbs == prPathVerbCount(expected) && points == prPathPointCount(expected) &&
+        memEquals(prPathVerbs(path), prPathVerbs(expected), verbs * sizeof(PrPathVerb)) &&
+        memEquals(prPathPoints(path), prPathPoints(expected), points * sizeof(PrVec2));
 }
 
 void svgMarkerVertices(const PrPathDataCommand* PR_NULLABLE commands, uint32_t count, Array<SvgVertex>* out) {
@@ -2612,8 +2631,7 @@ void svgMarkerVertices(const PrPathDataCommand* PR_NULLABLE commands, uint32_t c
     path.reset();
 }
 
-const PrDomElement* PR_NULLABLE svgBuildReference(SvgBuilder& b, const PrDomElement* from, PrStringView url,
-                                                  bool content) {
+const PrDomElement* PR_NULLABLE svgBuildReference(SvgBuilder& b, const PrDomElement* from, PrStringView url, bool content) {
     if (url.size == 0)
         return nullptr;
     if (url.data[0] != '#') {
@@ -2623,9 +2641,9 @@ const PrDomElement* PR_NULLABLE svgBuildReference(SvgBuilder& b, const PrDomElem
         // A URL of the document itself names an element by its fragment.
         if (!reference.external) {
             PrStringView fragment = reference.fragment;
-            return fragment.data != nullptr
-                       ? svgBuildReference(b, from, PrStringView{fragment.data - 1, fragment.size + 1}, content)
-                       : nullptr;
+            if (fragment.data != nullptr)
+                return svgBuildReference(b, from, PrStringView{fragment.data - 1, fragment.size + 1}, content);
+            return nullptr;
         }
         const PrDomElement* target = domReferenceTarget(from->document, reference);
         record(b, reference.fragment, target, nullptr, content, prStringView(&reference.url));
@@ -2651,8 +2669,7 @@ const CssComputedStyle* PR_NULLABLE svgBuildStyle(SvgBuilder& b, const PrDomElem
     return svgCascadeStyle(cascadeOf(b, e->document), e);
 }
 
-const CssComputedStyle* svgBuildStyleUnder(SvgBuilder& b, const PrDomElement* e,
-                                           const CssComputedStyle* PR_NULLABLE parent) {
+const CssComputedStyle* svgBuildStyleUnder(SvgBuilder& b, const PrDomElement* e, const CssComputedStyle* PR_NULLABLE parent) {
     const SvgStyleSource& source = b.build->source;
     if (e->document == b.document)
         return source.styleUnder(source.context, e, parent);
@@ -2660,7 +2677,7 @@ const CssComputedStyle* svgBuildStyleUnder(SvgBuilder& b, const PrDomElement* e,
 }
 
 const CssComputedStyle* PR_NULLABLE svgBuildPseudoStyleUnder(SvgBuilder& b, const PrDomElement* e, CssPseudo pseudo,
-                                                             const CssComputedStyle* PR_NULLABLE parent) {
+        const CssComputedStyle* PR_NULLABLE parent) {
     const SvgStyleSource& source = b.build->source;
     if (e->document == b.document)
         return source.pseudoUnder(source.context, e, pseudo, parent);
@@ -2690,8 +2707,7 @@ bool svgParseLength(PrStringView text, const CssComputedStyle* PR_NULLABLE style
         *out = SvgLengthPercentage{float(double(number) * em / 2), 0};
     } else {
         PrCssUnit css = cssUnitFromText(unit);
-        double scale = css != PrCssUnit_Unknown && cssUnitCategory(css) == CssUnitCategory_Length ? cssUnitScale(css)
-                                                                                                    : 0;
+        double scale = css != PrCssUnit_Unknown && cssUnitCategory(css) == CssUnitCategory_Length ? cssUnitScale(css) : 0;
         if (scale == 0)
             return false;
         *out = SvgLengthPercentage{float(double(number) * scale), 0};
@@ -2699,13 +2715,12 @@ bool svgParseLength(PrStringView text, const CssComputedStyle* PR_NULLABLE style
     return true;
 }
 
-void svgBuildInstanceChildren(SvgBuilder& b, const PrDomElement* element, const CssComputedStyle* style,
-                              SvgNodeIndex parent) {
+void svgBuildInstanceChildren(SvgBuilder& b, const PrDomElement* element, const CssComputedStyle* style, SvgNodeIndex parent) {
     buildChildren(b, element, style, parent, true);
 }
 
 SvgLengthPercentage svgAttributeLength(const PrDomElement* element, PrStringView name, SvgLengthPercentage fallback,
-                                       const CssComputedStyle* PR_NULLABLE style) {
+        const CssComputedStyle* PR_NULLABLE style) {
     PrStringView text = svgAttribute(element, name);
     SvgLengthPercentage length{};
     return text.data != nullptr && svgParseLength(text, style, &length) ? length : fallback;

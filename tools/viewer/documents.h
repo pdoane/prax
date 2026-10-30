@@ -139,7 +139,7 @@ bool pixelsOnly(const Loaded& loaded);
 // pixels, as a page's layout does, lays out for the pixel ratio. A page resolves its colors for the display, and
 // follows the preferences.
 void draw(Loaded& loaded, PrDrawList* list, float width, float height, const PrAppDisplay& display,
-          const PrAppUserPreferences& preferences);
+    const PrAppUserPreferences& preferences);
 
 // Returns true if the source takes a host's input, as an HTML page does.
 bool takesInput(const Loaded& loaded);
@@ -151,9 +151,8 @@ void input(Loaded& loaded, const PrAppEvent& event);
 // A named, ordered set of documents, listed on first access. If a view fits the documents to a pane rather than giving
 // them the pane's size, they lay out for `width` by `height` logical pixels.
 struct Collection {
-    Collection(std::string name, float width, float height, float pixelRatio,
-               std::function<std::vector<Document>()> list)
-        : name(std::move(name)), width(width), height(height), pixelRatio(pixelRatio), list(std::move(list)) {}
+    Collection(std::string name, float width, float height, float pixelRatio, std::function<std::vector<Document>()> list) :
+            name(std::move(name)), width(width), height(height), pixelRatio(pixelRatio), list(std::move(list)) {}
 
     std::string name;
     float width;

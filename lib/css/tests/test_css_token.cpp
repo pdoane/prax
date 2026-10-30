@@ -52,10 +52,11 @@ TEST_CASE("an empty input has no tokens") {
 TEST_CASE("a declaration is its tokens") {
     CssTestSource tokens{"color: red;"};
     CHECK(tokens.all() == std::vector<std::string>{"color", ":", " ", "red", ";"});
-    CHECK(tokens.kinds()
-          == std::vector<CssTokenKind>{CssTokenKind_Ident, CssTokenKind_Colon,
-                                       CssTokenKind_Whitespace, CssTokenKind_Ident,
-                                       CssTokenKind_Semicolon});
+    CHECK(tokens.kinds() == std::vector<CssTokenKind>{
+        CssTokenKind_Ident, CssTokenKind_Colon,
+        CssTokenKind_Whitespace, CssTokenKind_Ident,
+        CssTokenKind_Semicolon,
+    });
 }
 
 TEST_CASE("a comment is not a token and the token after it is not contiguous") {
@@ -102,9 +103,8 @@ TEST_CASE("an ident followed by a paren is a function") {
 TEST_CASE("an unquoted url is one token and a quoted one is a function") {
     CHECK(CssTestSource{"url(x)"}.kinds() == std::vector<CssTokenKind>{CssTokenKind_Url});
     CHECK(CssTestSource{"url( x )"}.all() == std::vector<std::string>{"url( x )"});
-    CHECK(CssTestSource{"url(\"x\")"}.kinds()
-          == std::vector<CssTokenKind>{CssTokenKind_Function, CssTokenKind_String,
-                                       CssTokenKind_CloseParen});
+    CHECK(CssTestSource{"url(\"x\")"}.kinds() ==
+        std::vector<CssTokenKind>{CssTokenKind_Function, CssTokenKind_String, CssTokenKind_CloseParen});
     CHECK(CssTestSource{"url(a\"b)c"}.all() == std::vector<std::string>{"url(a\"b)", "c"});
     CHECK(CssTestSource{"url(a\"b)c"}.kind(0) == CssTokenKind_BadUrl);
 }
@@ -145,7 +145,7 @@ TEST_CASE("every code point above ASCII belongs to an ident") {
     CHECK(CssTestSource{"a\xc2\xa1" "b"}.all() == std::vector<std::string>{"a\xc2\xa1" "b"});    // U+00A1
     CHECK(CssTestSource{"\xc2\x81"}.all() == std::vector<std::string>{"\xc2\x81"});              // U+0081
     CHECK(CssTestSource{"\xe2\x80\xa3 \xe2\x97\xb0"}.all()                                       // U+2023, U+25F0
-          == std::vector<std::string>{"\xe2\x80\xa3", " ", "\xe2\x97\xb0"});
+        == std::vector<std::string>{"\xe2\x80\xa3", " ", "\xe2\x97\xb0"});
     CHECK(CssTestSource{"--\xe2\x9c\xa8"}.kind(0) == CssTokenKind_Ident);                       // U+2728
 }
 
@@ -315,8 +315,8 @@ TEST_CASE("a non-printable code point makes a url bad") {
 
 TEST_CASE("a token says whether its bytes are its value and its serialization") {
     CssTestSource tokens{"red \\72 ed 'a' \"a\""};
-    CHECK((tokens.flags(0) & (CssTokenFlag_PlainText | CssTokenFlag_Verbatim))
-          == (CssTokenFlag_PlainText | CssTokenFlag_Verbatim));
+    CHECK((tokens.flags(0) & (CssTokenFlag_PlainText | CssTokenFlag_Verbatim)) ==
+        (CssTokenFlag_PlainText | CssTokenFlag_Verbatim));
     CHECK((tokens.flags(2) & CssTokenFlag_PlainText) == 0);
     CHECK((tokens.flags(4) & CssTokenFlag_Verbatim) == 0);   // a single quoted string
     CHECK((tokens.flags(6) & CssTokenFlag_Verbatim) != 0);
@@ -350,8 +350,7 @@ TEST_CASE("a token is the same after a run of every length") {
 
 TEST_CASE("a long string, comment or name is still one token") {
     std::string body(200, 'x');
-    CHECK(tokensAfterRuns("\"" + body + "\"y")
-          == std::vector<std::string>{"\"" + body + "\"", "y"});
+    CHECK(tokensAfterRuns("\"" + body + "\"y") == std::vector<std::string>{"\"" + body + "\"", "y"});
     CHECK(tokensAfterRuns("a/*" + body + "*/b") == std::vector<std::string>{"a", "b"});
     CHECK(tokensAfterRuns(body + "(") == std::vector<std::string>{body + "("});
 }
@@ -415,10 +414,10 @@ TEST_CASE("a sheet decodes in the charset of its mark, its response, its @charse
     CHECK(decode("\xE9", PrCharset_None, PrCharset_Windows1252) == "\xC3\xA9");
     CHECK(decode("@charset \"koi8-r\";\xC1", PrCharset_None, PrCharset_Windows1252) == "@charset \"koi8-r\";\xD0\xB0");
     CHECK(decode("@charset \"koi8-r\";\xC1", PrCharset_Windows1251, PrCharset_None) == "@charset \"koi8-r\";\xD0\x91");
-    CHECK(decode("\xEF\xBB\xBF@charset \"koi8-r\";\xC3\xA9", PrCharset_Windows1251, PrCharset_None)
-          == "@charset \"koi8-r\";\xC3\xA9");
+    CHECK(decode("\xEF\xBB\xBF@charset \"koi8-r\";\xC3\xA9", PrCharset_Windows1251, PrCharset_None) ==
+        "@charset \"koi8-r\";\xC3\xA9");
     // Only the rule as the grammar writes it names a charset, and a name of UTF-16 means UTF-8.
     CHECK(decode("@charset 'koi8-r';\xC3\xA9", PrCharset_None, PrCharset_None) == "@charset 'koi8-r';\xC3\xA9");
-    CHECK(decode("@charset \"utf-16\";\xC3\xA9", PrCharset_None, PrCharset_Windows1252)
-          == "@charset \"utf-16\";\xC3\xA9");
+    CHECK(decode("@charset \"utf-16\";\xC3\xA9", PrCharset_None, PrCharset_Windows1252) ==
+        "@charset \"utf-16\";\xC3\xA9");
 }

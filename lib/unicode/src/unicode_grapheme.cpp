@@ -29,15 +29,15 @@ bool keeps(PrUnicodeGraphemeBreak before, PrUnicodeGraphemeBreak next, uint32_t 
         return true;                                                // GB3
     if (isControl(before) || isControl(next))
         return false;                                               // GB4, GB5
-    if (before == PrUnicodeGraphemeBreak_L
-        && (next == PrUnicodeGraphemeBreak_L || next == PrUnicodeGraphemeBreak_V || next == PrUnicodeGraphemeBreak_LV
-            || next == PrUnicodeGraphemeBreak_LVT))
+    if (before == PrUnicodeGraphemeBreak_L &&
+            (next == PrUnicodeGraphemeBreak_L || next == PrUnicodeGraphemeBreak_V || next == PrUnicodeGraphemeBreak_LV ||
+                next == PrUnicodeGraphemeBreak_LVT))
         return true;                                                // GB6
-    if ((before == PrUnicodeGraphemeBreak_LV || before == PrUnicodeGraphemeBreak_V)
-        && (next == PrUnicodeGraphemeBreak_V || next == PrUnicodeGraphemeBreak_T))
+    if ((before == PrUnicodeGraphemeBreak_LV || before == PrUnicodeGraphemeBreak_V) &&
+            (next == PrUnicodeGraphemeBreak_V || next == PrUnicodeGraphemeBreak_T))
         return true;                                                // GB7
-    if ((before == PrUnicodeGraphemeBreak_LVT || before == PrUnicodeGraphemeBreak_T)
-        && next == PrUnicodeGraphemeBreak_T)
+    if ((before == PrUnicodeGraphemeBreak_LVT || before == PrUnicodeGraphemeBreak_T) &&
+            next == PrUnicodeGraphemeBreak_T)
         return true;                                                // GB8
     if (next == PrUnicodeGraphemeBreak_Extend || next == PrUnicodeGraphemeBreak_ZWJ)
         return true;                                                // GB9
@@ -45,8 +45,7 @@ bool keeps(PrUnicodeGraphemeBreak before, PrUnicodeGraphemeBreak next, uint32_t 
         return true;                                                // GB9a
     if (before == PrUnicodeGraphemeBreak_Prepend)
         return true;                                                // GB9b
-    if (look.conjunct == 2
-        && prUnicodeIndicConjunctBreak(nextCodePoint) == PrUnicodeIndicConjunctBreak_Consonant)
+    if (look.conjunct == 2 && prUnicodeIndicConjunctBreak(nextCodePoint) == PrUnicodeIndicConjunctBreak_Consonant)
         return true;                                                // GB9c
     if (look.pictographicZwj && (prUnicodeFlags(nextCodePoint) & PrUnicodeFlag_ExtendedPictographic))
         return true;                                                // GB11

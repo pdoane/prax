@@ -41,8 +41,7 @@ PrDomAbortSignal* prDomAbortSignalCreateAborted(void);
 // Creates a signal that depends on `signals` (dom/#create-a-dependent-abort-signal). If one of them is aborted, the new
 // signal is aborted, and its reason is that of the first such signal, which the caller keeps for it. Otherwise it
 // aborts when any of them aborts. The caller holds the one reference.
-PrDomAbortSignal* prDomAbortSignalCreateDependent(PrDomAbortSignal* PR_NONNULL const* PR_NULLABLE signals,
-                                                  uint32_t count);
+PrDomAbortSignal* prDomAbortSignalCreateDependent(PrDomAbortSignal* PR_NONNULL const* PR_NULLABLE signals, uint32_t count);
 
 // Adds or releases a reference. The last release frees the signal.
 void prDomAbortSignalRetain(PrDomAbortSignal* self);
@@ -53,12 +52,10 @@ bool prDomAbortSignalAborted(const PrDomAbortSignal* self);
 
 // Called as the signal is aborted with `reason`, the caller's value, which is valid only during the call. The signals
 // that an abort reaches are each given the reason before any of them runs its abort algorithms.
-typedef void (*PrDomAbortReasonFn)(void* PR_NULLABLE context, PrDomAbortSignal* signal,
-                                   const void* PR_NULLABLE reason);
+typedef void (*PrDomAbortReasonFn)(void* PR_NULLABLE context, PrDomAbortSignal* signal, const void* PR_NULLABLE reason);
 
 // Sets the function that is given the signal's reason, and replaces any before it. A null `invoke` removes it.
-void prDomAbortSignalSetReasonHandler(PrDomAbortSignal* self, PrDomAbortReasonFn PR_NULLABLE invoke,
-                                      void* PR_NULLABLE context);
+void prDomAbortSignalSetReasonHandler(PrDomAbortSignal* self, PrDomAbortReasonFn PR_NULLABLE invoke, void* PR_NULLABLE context);
 
 // Aborts the signal with `reason`, then the signals that depend on it (dom/#abortsignal-signal-abort). Each signal runs
 // its abort algorithms and fires abort, and every signal is aborted, and its reason handler given `reason`, before the

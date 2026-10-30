@@ -76,8 +76,7 @@ PrDrawRendererOptions prDrawRendererOptionsDefault(void) {
 }
 
 PrStatus prDrawRendererCreate(PrDrawRendererBackend backend, PrGpuDevice* PR_NULLABLE device,
-                              const PrDrawRendererOptions* PR_NULLABLE options,
-                              PrDrawRenderer* PR_NULLABLE* PR_NONNULL out) {
+        const PrDrawRendererOptions* PR_NULLABLE options, PrDrawRenderer* PR_NULLABLE* PR_NONNULL out) {
     *out = nullptr;
     PrDrawRendererOptions o = options != nullptr ? *options : prDrawRendererOptionsDefault();
     if (backend == PrDrawRendererBackend_Default) {
@@ -148,15 +147,14 @@ PrStatus prDrawFramePrepare(PrDrawFrame* frame, const PrDrawList* list, const Pr
     PrDrawRenderer* renderer = frame->renderer;
     PR_ASSERT(prDrawListDepth(list) == 0);
     PR_ASSERT(!prDrawRendererIsOnDevice(renderer) || target->commands != nullptr);
-    PR_ASSERT(target->beneath == nullptr || target->beneath->kind != PrDrawBeneathKind_Texture
-              || target->beneath->texture != 0);
-    PR_ASSERT(target->beneath == nullptr || target->beneath->kind != PrDrawBeneathKind_Draw
-              || target->beneath->draw != nullptr);
+    PR_ASSERT(target->beneath == nullptr || target->beneath->kind != PrDrawBeneathKind_Texture ||
+        target->beneath->texture != 0);
+    PR_ASSERT(target->beneath == nullptr || target->beneath->kind != PrDrawBeneathKind_Draw || target->beneath->draw != nullptr);
     frame->prepared = false;
     if (target->extent.x > kPrDrawRenderMaxSize || target->extent.y > kPrDrawRenderMaxSize)
         return PrStatus_Limit;
-    if (target->format != PrPixelFormat_Rgba8 && target->format != PrPixelFormat_Bgra8
-        && target->format != PrPixelFormat_RgbaF16)
+    if (target->format != PrPixelFormat_Rgba8 && target->format != PrPixelFormat_Bgra8 &&
+            target->format != PrPixelFormat_RgbaF16)
         return PrStatus_NotSupported;
     PrStatus status = renderer->framePrepare(renderer, frame, list, target);
     if (status != PrStatus_Ok)
@@ -203,7 +201,7 @@ void prDrawFrameRenderPixels(PrDrawFrame* frame, PrPixels pixels, PrPixelFormat 
         }
     }
     frame->renderer->frameRenderPixels(frame->renderer, frame, PrPixels{narrow, stride, pixels.extent},
-                                       PrPixelFormat_Rgba8);
+        PrPixelFormat_Rgba8);
     for (uint32_t y = 0; y < pixels.extent.y; ++y) {
         for (uint32_t x = 0; x < pixels.extent.x; ++x) {
             PrFloat16 wide[4];
@@ -215,8 +213,7 @@ void prDrawFrameRenderPixels(PrDrawFrame* frame, PrPixels pixels, PrPixelFormat 
     prMemoryFree(narrow);
 }
 
-PrStatus prDrawRendererRenderPixels(PrDrawRenderer* renderer, const PrDrawList* list, PrPixels pixels,
-                                    PrPixelFormat format) {
+PrStatus prDrawRendererRenderPixels(PrDrawRenderer* renderer, const PrDrawList* list, PrPixels pixels, PrPixelFormat format) {
     PrDrawTarget target{};
     target.extent = pixels.extent;
     PrDrawFrame* frame = prDrawFrameCreate(renderer);

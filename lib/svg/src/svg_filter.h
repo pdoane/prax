@@ -58,8 +58,7 @@ SvgFiltered svgFilterFromNode(SvgDrawer& d, SvgNodeIndex index, SvgFilterGraph* 
 // `box`, reading `input` as its SourceGraphic. Writes the node of its result and its region. Returns false if the
 // filter hides what it applies to (svgFilterFromNode). Percentages in user space are of `viewport`.
 bool svgAppendFilter(const SvgTree* tree, SvgResourceIndex index, PrRect box, PrVec2 viewport,
-                     PrDrawFilterInput input, PrDrawFilterBuilder* builder, PrDrawFilterInput* result,
-                     PrRect* region);
+    PrDrawFilterInput input, PrDrawFilterBuilder* builder, PrDrawFilterInput* result, PrRect* region);
 
 } // namespace pr_impl
 

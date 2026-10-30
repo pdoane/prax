@@ -241,7 +241,7 @@ double repeatedSize(const LayoutStyles* styles, const PrLayoutGridTrack& track, 
 // one. A track that is not repeated counts at its repeated size, or as nothing if it has none. The count keeps the
 // tracks within kPrLayoutGridMaxLine.
 uint32_t repetitionsOf(const LayoutStyles* styles, const LayoutGridTracksEntry& list, PrLayoutUnit size,
-                       PrLayoutUnit minSize, PrLayoutUnit maxSize, PrLayoutUnit gap) {
+        PrLayoutUnit minSize, PrLayoutUnit maxSize, PrLayoutUnit gap) {
     PrLayoutUnit space = layoutIsDefinite(size) ? size : maxSize;
     bool fills = !layoutIsDefinite(space);
     if (fills)
@@ -270,9 +270,9 @@ uint32_t repetitionsOf(const LayoutStyles* styles, const LayoutGridTracksEntry& 
         double tracks = double(othersCount) + n * double(list.repeatCount);
         return others + n * repeated + g * maxF64(0, tracks - 1);
     };
-    uint32_t most = othersCount < uint32_t(kPrLayoutGridMaxLine)
-                        ? (uint32_t(kPrLayoutGridMaxLine) - othersCount) / list.repeatCount
-                        : 1;
+    uint32_t most = 1;
+    if (othersCount < uint32_t(kPrLayoutGridMaxLine))
+        most = (uint32_t(kPrLayoutGridMaxLine) - othersCount) / list.repeatCount;
     if (most < 1)
         most = 1;
     double avail = rawOf(space);
@@ -303,9 +303,11 @@ const PrLayoutGridTrack& templateTrack(const GridAxis& axis, uint32_t index) {
 }
 
 // The implicit track size, an auto track, of an empty list of implicit track sizes.
-constexpr PrLayoutGridTrack kAutoTrack{.min = {prLayoutWordKeyword(PrLayoutKeyword_Auto)},
-                                       .max = {prLayoutWordKeyword(PrLayoutKeyword_Auto)},
-                                       .limit = {prLayoutWordPx(0)}};
+constexpr PrLayoutGridTrack kAutoTrack{
+    .min = {prLayoutWordKeyword(PrLayoutKeyword_Auto)},
+    .max = {prLayoutWordKeyword(PrLayoutKeyword_Auto)},
+    .limit = {prLayoutWordPx(0)},
+};
 
 // Returns the sizing functions of the track `index` of `axis`, counted from 0 at the start of the explicit grid
 // (css-grid-1/#auto-tracks). A track of the template takes the template's. Any other track takes the implicit track
@@ -433,8 +435,7 @@ int32_t spanFrom(const AxisLines& lines, int32_t from, bool forward, PrLayoutGri
 // Returns the line that a grid-placement property's line `line` names, as a start edge if `start` is true and an end
 // edge otherwise (css-grid-1/#line-placement). A name alone names first the edge of an area of that name, through the
 // lines named with its `-start` or `-end` form, and otherwise the first line of that name.
-int32_t lineOf(const LayoutGridTemplates* templates, const AxisLines& lines, const PrLayoutGridLine& line,
-               bool start) {
+int32_t lineOf(const LayoutGridTemplates* templates, const AxisLines& lines, const PrLayoutGridLine& line, bool start) {
     if (line.name == kPrLayoutGridNameNone)
         return line.integer > 0 ? line.integer - 1 : lines.explicitCount + 1 + line.integer;
     if (line.integer != 0)
@@ -458,9 +459,7 @@ struct AxisPlacement {
 
 // Clamps a line to the limits of the implicit grid (css-grid-1/#overlarge-grids).
 int32_t clampLine(int32_t line) {
-    return line < -kPrLayoutGridMaxLine ? -kPrLayoutGridMaxLine
-           : line > kPrLayoutGridMaxLine ? kPrLayoutGridMaxLine
-                                         : line;
+    return line < -kPrLayoutGridMaxLine ? -kPrLayoutGridMaxLine : line > kPrLayoutGridMaxLine ? kPrLayoutGridMaxLine : line;
 }
 
 // Resolves the placement that the grid-placement properties `startLine` and `endLine` give in an axis
@@ -468,7 +467,7 @@ int32_t clampLine(int32_t line) {
 // order swap, and equal lines make a span of one. Of two spans, the start's counts, and a span of a name alone counts
 // as a span of one. An area past the implicit grid's limits is clamped into them (css-grid-1/#overlarge-grids).
 AxisPlacement placementOf(const LayoutGridTemplates* templates, const AxisLines& lines,
-                          const PrLayoutGridLine& startLine, const PrLayoutGridLine& endLine) {
+        const PrLayoutGridLine& startLine, const PrLayoutGridLine& endLine) {
     bool startIsLine = startLine.kind == PrLayoutGridLineKind_Line;
     bool endIsLine = endLine.kind == PrLayoutGridLineKind_Line;
     AxisPlacement p{};
@@ -485,15 +484,17 @@ AxisPlacement placementOf(const LayoutGridTemplates* templates, const AxisLines&
         p.definite = true;
     } else if (startIsLine) {
         p.start = lineOf(templates, lines, startLine, true);
-        p.end = endLine.kind == PrLayoutGridLineKind_Span
-                    ? spanFrom(lines, p.start, true, endLine.name, endLine.integer)
-                    : p.start + 1;
+        if (endLine.kind == PrLayoutGridLineKind_Span)
+            p.end = spanFrom(lines, p.start, true, endLine.name, endLine.integer);
+        else
+            p.end = p.start + 1;
         p.definite = true;
     } else if (endIsLine) {
         p.end = lineOf(templates, lines, endLine, false);
-        p.start = startLine.kind == PrLayoutGridLineKind_Span
-                      ? spanFrom(lines, p.end, false, startLine.name, startLine.integer)
-                      : p.end - 1;
+        if (startLine.kind == PrLayoutGridLineKind_Span)
+            p.start = spanFrom(lines, p.end, false, startLine.name, startLine.integer);
+        else
+            p.start = p.end - 1;
         p.definite = true;
     } else {
         const PrLayoutGridLine& span = startLine.kind == PrLayoutGridLineKind_Span ? startLine : endLine;
@@ -624,12 +625,14 @@ void placeItems(Grid& g) {
     // The bits reach every line that the items locked to a track can be placed at, past the definite extents.
     LayoutGridScratch& s = g.scratch();
     int32_t width = minorMax - minorMin + lockedSpans + widestAuto;
-    Occupancy o{.bits = s.occupied,
-                .mark = s.occupied.count,
-                .words = uint32_t(width + 63) / 64,
-                .majorBase = majorMin,
-                .minorBase = minorMin,
-                .rows = 0};
+    Occupancy o{
+        .bits = s.occupied,
+        .mark = s.occupied.count,
+        .words = uint32_t(width + 63) / 64,
+        .majorBase = majorMin,
+        .minorBase = minorMin,
+        .rows = 0,
+    };
     for (uint32_t i = 0; i < g.count; ++i) {
         const LayoutGridItem& it = g.item(i);
         if (it.definite[major] && it.definite[minor])
@@ -739,7 +742,7 @@ void findImplicitGrid(Grid& g) {
 // factor of a flexible one. A percentage of an indefinite `base` is auto (css-grid-1/#track-sizes). A flex factor is
 // auto as a minimum (css-grid-1/#algo-terms).
 LayoutGridSizing sizingOf(const LayoutStyles* styles, PrLayoutTrackBreadth breadth, PrLayoutUnit base, bool minimum,
-                          double* size) {
+        double* size) {
     *size = 0;
     switch (prLayoutWordKind(breadth.bits)) {
         case PrLayoutWordKind_Number:
@@ -767,8 +770,8 @@ LayoutGridSizing sizingOf(const LayoutStyles* styles, PrLayoutTrackBreadth bread
 
 // Returns true if a sizing function is intrinsic: auto, min-content, max-content or fit-content.
 bool isIntrinsic(LayoutGridSizing sizing) {
-    return sizing == LayoutGridSizing_Auto || sizing == LayoutGridSizing_MinContent
-           || sizing == LayoutGridSizing_MaxContent || sizing == LayoutGridSizing_FitContent;
+    return sizing == LayoutGridSizing_Auto || sizing == LayoutGridSizing_MinContent ||
+        sizing == LayoutGridSizing_MaxContent || sizing == LayoutGridSizing_FitContent;
 }
 
 // Sets up the tracks of `axis` from their sizing functions, with percentages of `base`, and collapses the empty tracks
@@ -785,8 +788,9 @@ void setUpTracks(Grid& g, PrLayoutGridAxis axis, PrLayoutUnit base) {
         track.max = sizingOf(g.state.styles, sizes.max, base, false, &track.maxFixed);
         if (track.max == LayoutGridSizing_FitContent) {
             PrLayoutLength limit = sizes.limit;
-            track.maxFixed = layoutResolves(limit, base) ? maxF64(0, rawOf(layoutResolve(g.state.styles, limit, base)))
-                                                         : kInfinityF64;
+            track.maxFixed = kInfinityF64;
+            if (layoutResolves(limit, base))
+                track.maxFixed = maxF64(0, rawOf(layoutResolve(g.state.styles, limit, base)));
         }
         tracks.data[a.trackMark + t] = track;
     }
@@ -911,19 +915,21 @@ double fixedSpanOf(const Grid& g, const LayoutGridItem& it, PrLayoutGridAxis axi
 // Returns the space that an item is measured or laid out in: an area of `inlineSize` and `blockSize` in the container's
 // mode, the latter negative if indefinite.
 LayoutSpace areaSpace(const Grid& g, PrLayoutUnit inlineSize, PrLayoutUnit blockSize) {
-    return LayoutSpace{.mode = g.mode(),
-                       .available = inlineSize,
-                       .percentInline = inlineSize,
-                       .percentBlock = blockSize,
-                       .containing = LayoutLogicalSize{inlineSize, blockSize},
-                       .blockLimit = layoutIsDefinite(blockSize) ? layoutUnit(-1) : g.content.blockLimit,
-                       .fallback = g.content.fallback};
+    return LayoutSpace{
+        .mode = g.mode(),
+        .available = inlineSize,
+        .percentInline = inlineSize,
+        .percentBlock = blockSize,
+        .containing = LayoutLogicalSize{inlineSize, blockSize},
+        .blockLimit = layoutIsDefinite(blockSize) ? layoutUnit(-1) : g.content.blockLimit,
+        .fallback = g.content.fallback,
+    };
 }
 
 // Returns the intrinsic sizes of the item in its own inline axis, with the edges that it resolves in an area whose
 // inline size is `containingInline`, and with `percentBlock` as the base of its block-axis percentages.
 LayoutIntrinsicSizes intrinsicOf(const Grid& g, const LayoutGridItem& it, PrLayoutUnit containingInline,
-                                 PrLayoutUnit percentBlock) {
+        PrLayoutUnit percentBlock) {
     LayoutIntrinsicInput input = layoutIntrinsicInputFromSpace(g.content);
     input.percentBlock = percentBlock;
     if (it.orthogonal)
@@ -932,7 +938,7 @@ LayoutIntrinsicSizes intrinsicOf(const Grid& g, const LayoutGridItem& it, PrLayo
     LayoutEdges measured = layoutEdgesFromBox(g.state.styles, logical, layoutUnit(-1));
     LayoutEdges used = layoutEdgesFromBox(g.state.styles, logical, containingInline);
     return layoutWithEdges(layoutIntrinsicSizes(g.state, it.node, input), layoutEdgesInline(measured),
-                           layoutEdgesInline(used));
+        layoutEdgesInline(used));
 }
 
 // Returns true if the item, whose automatic minimum size along `axis` is in question, takes its content-based minimum
@@ -956,7 +962,7 @@ bool takesContentMinimum(const Grid& g, const LayoutGridItem& it, PrLayoutGridAx
 // floored by its automatic minimum size. An item with an auto size that is not stretched fits its content. A preferred
 // size resolves against the area. The limits clamp each.
 PrLayoutUnit inlineSizeOf(const Grid& g, const LayoutGridItem& it, PrLayoutUnit area, const LayoutEdges& e,
-                          PrLayoutUnit percentBlock) {
+        PrLayoutUnit percentBlock) {
     PrLayoutGridAxis axis = inlineAxisOf(it);
     LayoutLogicalBox logical = layoutLogicalBox(*it.box, g.mode());
     AxisSizes sizes = axisSizesOf(logical, axis);
@@ -980,8 +986,7 @@ PrLayoutUnit inlineSizeOf(const Grid& g, const LayoutGridItem& it, PrLayoutUnit 
         size = layoutBorderSize(*it.box, layoutResolve(g.state.styles, sizes.size, area), edges);
     else
         size = keyword(layoutLengthIsContentBased(sizes.size) ? sizes.size : prLayoutLengthFitContent());
-    PrLayoutUnit clamped =
-        layoutClampSize(g.state.styles, *it.box, size, sizes.min, sizes.max, area, edges, stretch, keyword);
+    PrLayoutUnit clamped = layoutClampSize(g.state.styles, *it.box, size, sizes.min, sizes.max, area, edges, stretch, keyword);
     // A stretched item does not shrink below its content-based minimum size, which a fixed area caps.
     if (stretched && layoutLengthIsAuto(sizes.min) && takesContentMinimum(g, it, axis)) {
         PrLayoutUnit least = keyword(prLayoutLengthMinContent());
@@ -989,8 +994,7 @@ PrLayoutUnit inlineSizeOf(const Grid& g, const LayoutGridItem& it, PrLayoutUnit 
         if (cap >= 0)
             least = layoutUnitMin(least, layoutUnitMax(unitOf(cap) - marginsAcross(e, axis), edges));
         if (layoutResolves(sizes.max, area))
-            least = layoutUnitMin(least, layoutBorderSize(*it.box, layoutResolve(g.state.styles, sizes.max, area),
-                                                          edges));
+            least = layoutUnitMin(least, layoutBorderSize(*it.box, layoutResolve(g.state.styles, sizes.max, area), edges));
         clamped = layoutUnitMax(clamped, least);
     }
     return clamped;
@@ -1009,14 +1013,14 @@ LayoutRequest blockRequestOf(const Grid& g, const LayoutGridItem& it, PrLayoutUn
     PrLayoutUnit edges = edgesAcross(e, axis);
     PrLayoutUnit stretch = layoutStretchFit(area, e.margin[startSideOf(axis)], e.margin[endSideOf(axis)]);
     PrLayoutUnit size = layoutClampSize(g.state.styles, *it.box, layoutUnitMax(stretch, edges), sizes.min, sizes.max,
-                                        area, edges, stretch, layoutNoKeyword);
+        area, edges, stretch, layoutNoKeyword);
     return LayoutRequest{.size = size, .kind = LayoutRequestKind_Fixed, .definite = true};
 }
 
 // Returns the requests of the item in an area of `columns` by `rows`, the latter negative if indefinite, with its edges
 // `e`.
 LayoutRequests requestsOf(const Grid& g, const LayoutGridItem& it, PrLayoutUnit columns, PrLayoutUnit rows,
-                          const LayoutEdges& e) {
+        const LayoutEdges& e) {
     bool orthogonal = it.orthogonal;
     PrLayoutUnit inlineArea = orthogonal ? rows : columns;
     PrLayoutUnit blockArea = orthogonal ? columns : rows;
@@ -1024,7 +1028,8 @@ LayoutRequests requestsOf(const Grid& g, const LayoutGridItem& it, PrLayoutUnit 
     PrLayoutUnit inlineSize = inlineSizeOf(g, it, inlineArea, e, percentBlock);
     return LayoutRequests{
         .inlineAxis = LayoutRequest{.size = inlineSize, .kind = LayoutRequestKind_Fixed, .definite = true},
-        .blockAxis = blockRequestOf(g, it, blockArea, e)};
+        .blockAxis = blockRequestOf(g, it, blockArea, e),
+    };
 }
 
 // Measures the item's block size, and its baselines if `kind` asks for them, in its column area once the columns are
@@ -1047,13 +1052,19 @@ void findContentContributions(Grid& g, uint32_t i, PrLayoutGridAxis axis) {
     double minContent = 0;
     double maxContent = 0;
     if (axis == PrLayoutGridAxis_Columns) {
-        double rows = g.placed[PrLayoutGridAxis_Rows] ? rawOf(areaOf(g, copy, PrLayoutGridAxis_Rows))
-                                                    : fixedSpanOf(g, copy, PrLayoutGridAxis_Rows);
+        double rows;
+        if (g.placed[PrLayoutGridAxis_Rows])
+            rows = rawOf(areaOf(g, copy, PrLayoutGridAxis_Rows));
+        else
+            rows = fixedSpanOf(g, copy, PrLayoutGridAxis_Rows);
         LayoutIntrinsicInput input = layoutIntrinsicInputFromSpace(g.content);
         input.percentBlock = rows >= 0 ? unitOf(rows) : layoutUnit(-1);
         // The contribution of an anonymous item is its intrinsic sizes, because it has no sizes or edges of its own.
-        LayoutIntrinsicSizes c = copy.anonymous ? layoutIntrinsicSizes(g.state, copy.node, input)
-                                                : layoutContribution(g.state, copy.node, input);
+        LayoutIntrinsicSizes c;
+        if (copy.anonymous)
+            c = layoutIntrinsicSizes(g.state, copy.node, input);
+        else
+            c = layoutContribution(g.state, copy.node, input);
         minContent = rawOf(c.minContent);
         maxContent = rawOf(c.maxContent);
     } else if (copy.orthogonal) {
@@ -1112,8 +1123,8 @@ double minimumOf(Grid& g, uint32_t i, PrLayoutGridAxis axis) {
     LayoutEdges e = layoutEdgesFromBox(g.state.styles, logical, containingInline);
     PrLayoutUnit edges = edgesAcross(e, axis);
     PrLayoutUnit margins = marginsAcross(e, axis);
-    bool behavesAuto = layoutLengthIsAuto(sizes.size) || layoutLengthIsStretch(sizes.size)
-                       || (layoutLengthIsFixed(sizes.size) && layoutLengthReadsBase(sizes.size));
+    bool behavesAuto = layoutLengthIsAuto(sizes.size) || layoutLengthIsStretch(sizes.size) ||
+        (layoutLengthIsFixed(sizes.size) && layoutLengthReadsBase(sizes.size));
     double minimum = 0;
     if (!behavesAuto) {
         minimum = minContentOf(g, i, axis) - g.item(i).shimStart - g.item(i).shimEnd;
@@ -1132,8 +1143,7 @@ double minimumOf(Grid& g, uint32_t i, PrLayoutGridAxis axis) {
                 LayoutRequests requests = requestsOf(g, copy, columns, layoutUnit(-1), e);
                 requests.blockAxis = LayoutRequest{.kind = LayoutRequestKind_Content};
                 content = layoutMeasure(g.state, copy.node, areaSpace(g, columns, layoutUnit(-1)), requests,
-                                        LayoutMeasureKind_Size)
-                              .blockSize;
+                    LayoutMeasureKind_Size) .blockSize;
             } else {
                 content = unitOf(minContentOf(g, i, axis) - g.item(i).shimStart - g.item(i).shimEnd) - margins;
             }
@@ -1227,8 +1237,7 @@ bool maxIsMaxContent(LayoutGridSizing max) {
 // gives it, and adds each share to the track's incurred increase. Returns the space that is left once every track is
 // full.
 template <typename Room, typename Weight>
-double share(Grid& g, PrLayoutGridAxis axis, const uint32_t* tracks, uint32_t count, double space, Room room,
-             Weight weight) {
+double share(Grid& g, PrLayoutGridAxis axis, const uint32_t* tracks, uint32_t count, double space, Room room, Weight weight) {
     for (uint32_t k = 0; k < count; ++k)
         g.track(axis, tracks[k]).frozen = false;
     while (space > 0) {
@@ -1274,7 +1283,7 @@ double share(Grid& g, PrLayoutGridAxis axis, const uint32_t* tracks, uint32_t co
 // finite here is infinitely growable if `growable` is true.
 template <typename Affected, typename Contribution>
 void distribute(Grid& g, PrLayoutGridAxis axis, const uint32_t* items, uint32_t count, bool limits, Affected affected,
-                Contribution contribution, LayoutGridBeyond beyond, bool byFlex, bool growable) {
+        Contribution contribution, LayoutGridBeyond beyond, bool byFlex, bool growable) {
     uint32_t trackCount = g.axes[axis].trackCount;
     for (uint32_t t = 0; t < trackCount; ++t) {
         GridTrack& track = g.track(axis, t);
@@ -1344,20 +1353,23 @@ void distribute(Grid& g, PrLayoutGridAxis axis, const uint32_t* items, uint32_t 
             for (uint32_t s = mark; s < chosen; ++s) {
                 uint32_t t = set.data[s];
                 const GridTrack& track = g.track(axis, t);
-                bool takes =
-                    beyond == LayoutGridBeyond_MaxContent ? maxIsMaxContent(track.max) : isIntrinsic(track.max);
+                bool takes;
+                if (beyond == LayoutGridBeyond_MaxContent)
+                    takes = maxIsMaxContent(track.max);
+                else
+                    takes = isIntrinsic(track.max);
                 if (takes)
                     set.push(t);
             }
             auto pastLimit = [&](const GridTrack& track) {
-                return track.max == LayoutGridSizing_FitContent ? track.maxFixed - sizeOf(track) - track.incurred
-                                                                : kInfinityF64;
+                if (track.max != LayoutGridSizing_FitContent)
+                    return kInfinityF64;
+                return track.maxFixed - sizeOf(track) - track.incurred;
             };
             if (set.count > chosen)
                 space = share(g, axis, set.data + chosen, set.count - chosen, space, pastLimit, weight);
             if (space > 0 && beyond != LayoutGridBeyond_Limits)
-                share(g, axis, set.data + mark, affectedCount, space,
-                      [](const GridTrack&) { return kInfinityF64; }, weight);
+                share(g, axis, set.data + mark, affectedCount, space, [](const GridTrack&) { return kInfinityF64; }, weight);
             set.count = chosen;
         }
         for (uint32_t s = mark; s < mark + affectedCount; ++s) {
@@ -1525,25 +1537,17 @@ void resolveIntrinsicSizes(Grid& g, PrLayoutGridAxis axis, LayoutGridSpace space
         auto minContent = [&](uint32_t i) { return minContentOf(g, i, axis); };
         auto maxContent = [&](uint32_t i) { return maxContentOf(g, i, axis); };
         auto limitedMaxContent = [&](uint32_t i) { return limitedMaxContentOf(g, i, axis); };
-        distribute(
-            g, axis, group.data, group.count, false,
+        distribute(g, axis, group.data, group.count, false,
             [&](const GridTrack& t) { return only(isIntrinsic(t.min), t); }, minimum,
             LayoutGridBeyond_Intrinsic, flexible, false);
-        distribute(
-            g, axis, group.data, group.count, false,
-            [&](const GridTrack& t) {
-                return only(t.min == LayoutGridSizing_MinContent || t.min == LayoutGridSizing_MaxContent, t);
-            },
-            minContent, LayoutGridBeyond_Intrinsic, flexible, false);
+        distribute(g, axis, group.data, group.count, false, [&](const GridTrack& t) {
+            return only(t.min == LayoutGridSizing_MinContent || t.min == LayoutGridSizing_MaxContent, t);
+        }, minContent, LayoutGridBeyond_Intrinsic, flexible, false);
         if (space == LayoutGridSpace_MaxContent)
-            distribute(
-                g, axis, group.data, group.count, false,
-                [&](const GridTrack& t) {
-                    return only(t.min == LayoutGridSizing_Auto || t.min == LayoutGridSizing_MaxContent, t);
-                },
-                limitedMaxContent, LayoutGridBeyond_MaxContent, flexible, false);
-        distribute(
-            g, axis, group.data, group.count, false,
+            distribute(g, axis, group.data, group.count, false, [&](const GridTrack& t) {
+                return only(t.min == LayoutGridSizing_Auto || t.min == LayoutGridSizing_MaxContent, t);
+            }, limitedMaxContent, LayoutGridBeyond_MaxContent, flexible, false);
+        distribute(g, axis, group.data, group.count, false,
             [&](const GridTrack& t) { return only(t.min == LayoutGridSizing_MaxContent, t); }, maxContent,
             LayoutGridBeyond_MaxContent, flexible, false);
         raiseLimits(g, axis);
@@ -1551,11 +1555,9 @@ void resolveIntrinsicSizes(Grid& g, PrLayoutGridAxis axis, LayoutGridSpace space
             continue;
         for (uint32_t t = 0; t < g.axes[axis].trackCount; ++t)
             g.track(axis, t).infinitelyGrowable = false;
-        distribute(
-            g, axis, group.data, group.count, true, [](const GridTrack& t) { return isIntrinsic(t.max); },
+        distribute(g, axis, group.data, group.count, true, [](const GridTrack& t) { return isIntrinsic(t.max); },
             minContent, LayoutGridBeyond_Limits, false, true);
-        distribute(
-            g, axis, group.data, group.count, true, [](const GridTrack& t) { return maxIsMaxContent(t.max); },
+        distribute(g, axis, group.data, group.count, true, [](const GridTrack& t) { return maxIsMaxContent(t.max); },
             maxContent, LayoutGridBeyond_Limits, false, false);
     }
     group.reset();
@@ -1692,8 +1694,7 @@ void sizeTracks(Grid& g, PrLayoutGridAxis axis, LayoutGridSpace space, double av
             for (uint32_t t = 0; t < count; ++t)
                 g.track(axis, t).base = g.track(axis, t).limit;
         } else {
-            share(
-                g, axis, all.data + mark, count, free,
+            share(g, axis, all.data + mark, count, free,
                 [](const GridTrack& track) { return track.limit - track.base - track.incurred; },
                 [](const GridTrack&) { return 1.0; });
             for (uint32_t t = 0; t < count; ++t)
@@ -1755,9 +1756,13 @@ void alignTracks(Grid& g, PrLayoutGridAxis axis, double size) {
     PrLayoutAlignment value = PrLayoutAlignment(align & kPrLayoutAlignmentValueMask);
     bool safe = (align & PrLayoutAlignmentFlag_Safe) != 0;
     if (value == PrLayoutAlignment_Left || value == PrLayoutAlignment_Right) {
-        LayoutSide side = axis != PrLayoutGridAxis_Columns ? LayoutSide_InlineStart
-                          : value == PrLayoutAlignment_Left ? layoutLineLeft(g.mode())
-                                                            : layoutLineRight(g.mode());
+        LayoutSide side;
+        if (axis != PrLayoutGridAxis_Columns)
+            side = LayoutSide_InlineStart;
+        else if (value == PrLayoutAlignment_Left)
+            side = layoutLineLeft(g.mode());
+        else
+            side = layoutLineRight(g.mode());
         value = side == LayoutSide_InlineStart ? PrLayoutAlignment_Start : PrLayoutAlignment_End;
     }
     double leading = 0;
@@ -1805,15 +1810,15 @@ void alignTracks(Grid& g, PrLayoutGridAxis axis, double size) {
 // along the block axis. Baseline alignment needs the item's block axis to run along `axis`, and otherwise falls back to
 // safe self-start or safe self-end (css-align-3/#baseline-values).
 LayoutGridPlace placeOf(const Grid& g, const LayoutGridItem& it, PrLayoutGridAxis axis, PrLayoutAlignment self,
-                        PrLayoutAlignment items, bool stretches, bool ratio, bool* safe) {
+        PrLayoutAlignment items, bool stretches, bool ratio, bool* safe) {
     PrLayoutAlignment align = (self & kPrLayoutAlignmentValueMask) == PrLayoutAlignment_Auto ? items : self;
     *safe = (align & PrLayoutAlignmentFlag_Safe) != 0;
     PrLayoutAlignment value = PrLayoutAlignment(align & kPrLayoutAlignmentValueMask);
     LayoutMode own = layoutOwnMode(g.state.tree, it.node);
     LayoutSide start = startSideOf(axis);
     // The item's own start side along the axis.
-    LayoutSide ownStart = (axis == PrLayoutGridAxis_Columns) != it.orthogonal ? LayoutSide_InlineStart
-                                                                            : LayoutSide_BlockStart;
+    LayoutSide ownStart =
+        (axis == PrLayoutGridAxis_Columns) != it.orthogonal ? LayoutSide_InlineStart : LayoutSide_BlockStart;
     bool sameStart = layoutPhysicalSide(own, ownStart) == layoutPhysicalSide(g.mode(), start);
     bool baselines = (axis == PrLayoutGridAxis_Rows) != it.orthogonal;
     switch (value) {
@@ -1859,8 +1864,8 @@ bool baselineIsCyclic(const Grid& g, const LayoutGridItem& it, PrLayoutGridAxis 
         return false;
     for (int32_t t = it.start[axis]; t < it.end[axis]; ++t) {
         const GridTrack& track = g.track(axis, uint32_t(t));
-        if (isIntrinsic(track.min) || isIntrinsic(track.max)
-            || (track.max == LayoutGridSizing_Flex && !layoutIsDefinite(g.size[axis])))
+        if (isIntrinsic(track.min) || isIntrinsic(track.max) ||
+                (track.max == LayoutGridSizing_Flex && !layoutIsDefinite(g.size[axis])))
             return true;
     }
     return false;
@@ -1876,17 +1881,19 @@ void resolvePlaces(Grid& g) {
         bool ratio = replaced || it.box->aspectRatio > 0;
         for (PrLayoutGridAxis axis = 0; axis < PrLayoutGridAxis_Count; ++axis) {
             AxisSizes sizes = axisSizesOf(logical, axis);
-            bool autoMargins = layoutLengthIsAuto(logical.margin[startSideOf(axis)])
-                               || layoutLengthIsAuto(logical.margin[endSideOf(axis)]);
+            bool autoMargins = layoutLengthIsAuto(logical.margin[startSideOf(axis)]) ||
+                layoutLengthIsAuto(logical.margin[endSideOf(axis)]);
             it.autoMargins[axis] = autoMargins;
             bool stretches = layoutLengthIsAuto(sizes.size) && !autoMargins;
             PrLayoutAlignment self = axis == PrLayoutGridAxis_Columns ? it.flex->justifySelf : it.flex->alignSelf;
             PrLayoutAlignment items = axis == PrLayoutGridAxis_Columns ? g.flex.justifyItems : g.flex.alignItems;
             it.safe[axis] = false;
-            it.place[axis] = autoMargins ? LayoutGridPlace_Start
-                                         : placeOf(g, it, axis, self, items, stretches, ratio, &it.safe[axis]);
-            if ((it.place[axis] == LayoutGridPlace_Baseline || it.place[axis] == LayoutGridPlace_LastBaseline)
-                && baselineIsCyclic(g, it, axis)) {
+            if (autoMargins)
+                it.place[axis] = LayoutGridPlace_Start;
+            else
+                it.place[axis] = placeOf(g, it, axis, self, items, stretches, ratio, &it.safe[axis]);
+            if ((it.place[axis] == LayoutGridPlace_Baseline || it.place[axis] == LayoutGridPlace_LastBaseline) &&
+                    baselineIsCyclic(g, it, axis)) {
                 bool last = it.place[axis] == LayoutGridPlace_LastBaseline;
                 it.place[axis] = last ? LayoutGridPlace_End : LayoutGridPlace_Start;
                 it.safe[axis] = true;
@@ -1899,8 +1906,7 @@ void resolvePlaces(Grid& g) {
 // the item's border box and margins `start` and `end`. Positive free space goes to auto margins, which `autoStart` and
 // `autoEnd` say there are. Otherwise the item's place decides, and a safe alignment of an item that overflows its area
 // is start (css-grid-1/#auto-margins).
-PrLayoutUnit offsetInArea(LayoutGridPlace place, bool safe, PrLayoutUnit free, PrLayoutUnit start, bool autoStart,
-                          bool autoEnd) {
+PrLayoutUnit offsetInArea(LayoutGridPlace place, bool safe, PrLayoutUnit free, PrLayoutUnit start, bool autoStart, bool autoEnd) {
     if (autoStart || autoEnd) {
         if (free <= kLayoutUnitZero)
             return start;
@@ -1935,7 +1941,7 @@ uint32_t collectItems(Grid& g) {
     g.mark = items.count;
     uint32_t outOfFlow = 0;
     auto add = [&](LayoutNodeIndex c, const PrLayoutBoxStyle& box, const PrLayoutFlexStyle& flex,
-                   const PrLayoutGridStyle* PR_NULLABLE grid) {
+            const PrLayoutGridStyle* PR_NULLABLE grid) {
         LayoutGridItem it{};
         it.node = c;
         it.box = &box;
@@ -1948,16 +1954,14 @@ uint32_t collectItems(Grid& g) {
         items.push(it);
         ++g.count;
     };
-    layoutEachItem(
-        tree, g.node,
-        [&](uint32_t c, const PrLayoutBoxStyle& box) {
-            if (layoutIsOutOfFlow(tree, c)) {
-                ++outOfFlow;
-                return;
-            }
-            PrLayoutStyleIndex style = layoutTreeNode(tree, c).style;
-            add(c, box, layoutFlexStyle(g.state.styles, style), &layoutGridStyle(g.state.styles, style));
-        },
+    layoutEachItem(tree, g.node, [&](uint32_t c, const PrLayoutBoxStyle& box) {
+        if (layoutIsOutOfFlow(tree, c)) {
+            ++outOfFlow;
+            return;
+        }
+        PrLayoutStyleIndex style = layoutTreeNode(tree, c).style;
+        add(c, box, layoutFlexStyle(g.state.styles, style), &layoutGridStyle(g.state.styles, style));
+    },
         // A run of text is an anonymous item (css-grid-1/#grid-items), which is always placed automatically.
         [&](uint32_t first, uint32_t) { add(first, layoutAnonymousBoxStyle(), layoutAnonymousFlexStyle(), nullptr); });
     // A stable sort by order, which leaves the items of most containers unchanged.
@@ -2021,18 +2025,20 @@ void tearDownGrid(Grid& g) {
 Grid gridOf(LayoutState& state, LayoutNodeIndex node, const LayoutSpace& content) {
     PrLayoutStyleIndex style = layoutTreeNode(state.tree, node).style;
     scratchOf(state);
-    return Grid{.state = state,
-                .node = node,
-                .style = layoutGridStyle(state.styles, style),
-                .flex = layoutFlexStyle(state.styles, style),
-                .content = content,
-                .size = {content.containing.inlineSize, content.percentBlock},
-                .minSize = {kLayoutUnitZero, kLayoutUnitZero},
-                .maxSize = {layoutUnit(-1), layoutUnit(-1)},
-                .axes = {},
-                .placed = {false, false},
-                .mark = 0,
-                .count = 0};
+    return Grid{
+        .state = state,
+        .node = node,
+        .style = layoutGridStyle(state.styles, style),
+        .flex = layoutFlexStyle(state.styles, style),
+        .content = content,
+        .size = {content.containing.inlineSize, content.percentBlock},
+        .minSize = {kLayoutUnitZero, kLayoutUnitZero},
+        .maxSize = {layoutUnit(-1), layoutUnit(-1)},
+        .axes = {},
+        .placed = {false, false},
+        .mark = 0,
+        .count = 0,
+    };
 }
 
 // Sizes the rows of the grid, whose columns are sized and placed: under the container's definite block size, or
@@ -2054,9 +2060,8 @@ PrLayoutUnit sizeRows(Grid& g) {
     const GridAxis& a = g.axes[rows];
     for (uint32_t t = 0; t < a.trackCount && !again; ++t) {
         const PrLayoutGridTrack& sizes = trackSizes(a, int32_t(t) - a.explicitStart);
-        again = layoutLengthReadsBase(PrLayoutLength{sizes.min.bits})
-                || layoutLengthReadsBase(PrLayoutLength{sizes.max.bits})
-                || g.track(rows, t).max == LayoutGridSizing_Flex;
+        again = layoutLengthReadsBase(PrLayoutLength{sizes.min.bits}) ||
+            layoutLengthReadsBase(PrLayoutLength{sizes.max.bits}) || g.track(rows, t).max == LayoutGridSizing_Flex;
     }
     if (again) {
         g.size[rows] = size;
@@ -2097,8 +2102,10 @@ uint32_t baselineItemOf(const Grid& g, LayoutBaselineEdge edge) {
     int32_t row = first ? int32_t(rows) : -1;
     for (uint32_t i = 0; i < g.count; ++i) {
         const LayoutGridItem& it = g.item(i);
-        row = first ? (it.start[PrLayoutGridAxis_Rows] < row ? it.start[PrLayoutGridAxis_Rows] : row)
-                    : (it.end[PrLayoutGridAxis_Rows] - 1 > row ? it.end[PrLayoutGridAxis_Rows] - 1 : row);
+        if (first)
+            row = (it.start[PrLayoutGridAxis_Rows] < row ? it.start[PrLayoutGridAxis_Rows] : row);
+        else
+            row = (it.end[PrLayoutGridAxis_Rows] - 1 > row ? it.end[PrLayoutGridAxis_Rows] - 1 : row);
     }
     if (g.count == 0)
         return g.count;
@@ -2142,8 +2149,8 @@ uint32_t baselineItemOf(const Grid& g, LayoutBaselineEdge edge) {
 // does not have are the padding edges, `*start` and `*end` as given.
 template <typename Position>
 void absoluteEdges(const LayoutGridTemplates* templates, const AxisLines& lines, int32_t explicitStart,
-                   uint32_t trackCount, const PrLayoutGridLine& startLine, const PrLayoutGridLine& endLine,
-                   Position position, PrLayoutUnit* start, PrLayoutUnit* end) {
+        uint32_t trackCount, const PrLayoutGridLine& startLine, const PrLayoutGridLine& endLine,
+        Position position, PrLayoutUnit* start, PrLayoutUnit* end) {
     bool startIsLine = startLine.kind == PrLayoutGridLineKind_Line;
     bool endIsLine = endLine.kind == PrLayoutGridLineKind_Line;
     if (!startIsLine && !endIsLine)
@@ -2166,69 +2173,72 @@ void absoluteEdges(const LayoutGridTemplates* templates, const AxisLines& lines,
 // area of a child whose containing block is the container (css-position-3/#staticpos-rect). The content box is
 // `inlineSize` by `blockSize` from `origin`, and the container's padding is `padding`, by LayoutSide.
 void placeOutOfFlow(Grid& g, LayoutLogicalOffset origin, PrLayoutUnit inlineSize, PrLayoutUnit blockSize,
-                    const PrLayoutUnit* padding) {
+        const PrLayoutUnit* padding) {
     LayoutTree* tree = g.state.tree;
     const LayoutGridTemplates* templates = &g.state.styles->grids;
-    layoutEachItem(
-        tree, g.node,
-        [&](uint32_t c, const PrLayoutBoxStyle& box) {
-            if (!layoutIsOutOfFlow(tree, c))
-                return;
+    layoutEachItem(tree, g.node, [&](uint32_t c, const PrLayoutBoxStyle& box) {
+        if (!layoutIsOutOfFlow(tree, c))
+            return;
             // The rectangle, from the start corner of the content box.
-            PrLayoutUnit start[PrLayoutGridAxis_Count] = {kLayoutUnitZero, kLayoutUnitZero};
-            PrLayoutUnit end[PrLayoutGridAxis_Count] = {inlineSize, blockSize};
-            if (layoutHoldsPosition(tree, g.node, box.position)) {
-                const PrLayoutGridStyle& placement = layoutGridStyle(g.state.styles, layoutTreeNode(tree, c).style);
-                const PrLayoutGridLine starts[PrLayoutGridAxis_Count] = {placement.columnStart, placement.rowStart};
-                const PrLayoutGridLine ends[PrLayoutGridAxis_Count] = {placement.columnEnd, placement.rowEnd};
-                for (PrLayoutGridAxis axis = 0; axis < PrLayoutGridAxis_Count; ++axis) {
-                    const GridAxis& a = g.axes[axis];
-                    start[axis] = kLayoutUnitZero - padding[startSideOf(axis)];
-                    end[axis] = end[axis] + padding[endSideOf(axis)];
-                    auto position = [&](uint32_t line) {
-                        return line < a.trackCount ? unitOf(trackStart(g, axis, int32_t(line)))
-                               : a.trackCount != 0 ? unitOf(trackEnd(g, axis, int32_t(a.trackCount) - 1))
-                                                   : kLayoutUnitZero;
-                    };
-                    absoluteEdges(templates, linesOf(g, axis), a.explicitStart, a.trackCount, starts[axis],
-                                  ends[axis], position, &start[axis], &end[axis]);
-                }
-            }
-            LayoutGridItem it{};
-            it.node = c;
-            it.box = &box;
-            it.orthogonal = layoutIsOrthogonalRoot(tree, c, g.mode());
-            const PrLayoutFlexStyle& flex = layoutFlexStyle(g.state.styles, layoutTreeNode(tree, c).style);
-            LayoutStaticAlign aligns[PrLayoutGridAxis_Count] = {};
-            bool safe[PrLayoutGridAxis_Count] = {};
+        PrLayoutUnit start[PrLayoutGridAxis_Count] = {kLayoutUnitZero, kLayoutUnitZero};
+        PrLayoutUnit end[PrLayoutGridAxis_Count] = {inlineSize, blockSize};
+        if (layoutHoldsPosition(tree, g.node, box.position)) {
+            const PrLayoutGridStyle& placement = layoutGridStyle(g.state.styles, layoutTreeNode(tree, c).style);
+            const PrLayoutGridLine starts[PrLayoutGridAxis_Count] = {placement.columnStart, placement.rowStart};
+            const PrLayoutGridLine ends[PrLayoutGridAxis_Count] = {placement.columnEnd, placement.rowEnd};
             for (PrLayoutGridAxis axis = 0; axis < PrLayoutGridAxis_Count; ++axis) {
-                PrLayoutAlignment self = axis == PrLayoutGridAxis_Columns ? flex.justifySelf : flex.alignSelf;
-                PrLayoutAlignment items = axis == PrLayoutGridAxis_Columns ? g.flex.justifyItems : g.flex.alignItems;
-                LayoutGridPlace place = placeOf(g, it, axis, self, items, false, false, &safe[axis]);
-                aligns[axis] = place == LayoutGridPlace_Center ? LayoutStaticAlign_Center
-                               : place == LayoutGridPlace_End || place == LayoutGridPlace_LastBaseline
-                                   ? LayoutStaticAlign_End
-                                   : LayoutStaticAlign_Start;
+                const GridAxis& a = g.axes[axis];
+                start[axis] = kLayoutUnitZero - padding[startSideOf(axis)];
+                end[axis] = end[axis] + padding[endSideOf(axis)];
+                auto position = [&](uint32_t line) {
+                    if (line < a.trackCount)
+                        return unitOf(trackStart(g, axis, int32_t(line)));
+                    if (a.trackCount != 0)
+                        return unitOf(trackEnd(g, axis, int32_t(a.trackCount) - 1));
+                    return kLayoutUnitZero;
+                };
+                absoluteEdges(templates, linesOf(g, axis), a.explicitStart, a.trackCount, starts[axis],
+                    ends[axis], position, &start[axis], &end[axis]);
             }
-            auto at = [](LayoutStaticAlign align, PrLayoutUnit size) {
-                return align == LayoutStaticAlign_Start ? kLayoutUnitZero
-                       : align == LayoutStaticAlign_End ? size
-                                                        : layoutUnit(size.raw / 2);
-            };
-            PrLayoutUnit sizes[PrLayoutGridAxis_Count];
-            for (PrLayoutGridAxis axis = 0; axis < PrLayoutGridAxis_Count; ++axis)
-                sizes[axis] = layoutUnitMax(kLayoutUnitZero, end[axis] - start[axis]);
-            LayoutLogicalOffset offset{start[PrLayoutGridAxis_Columns]
-                                           + at(aligns[PrLayoutGridAxis_Columns], sizes[PrLayoutGridAxis_Columns]),
-                                       start[PrLayoutGridAxis_Rows]
-                                           + at(aligns[PrLayoutGridAxis_Rows], sizes[PrLayoutGridAxis_Rows])};
-            LayoutStaticEdges edges =
-                layoutStaticEdgesAligned(g.mode(), aligns[PrLayoutGridAxis_Columns], aligns[PrLayoutGridAxis_Rows],
-                                         safe[PrLayoutGridAxis_Columns], safe[PrLayoutGridAxis_Rows]);
-            LayoutFragment* placeholder = layoutFragmentCreatePlaceholder(c, edges, layoutIsFixed(tree, c));
-            g.state.scratch->children.push(LayoutLogicalChild{placeholder, origin + offset});
-        },
-        [](uint32_t, uint32_t) {});
+        }
+        LayoutGridItem it{};
+        it.node = c;
+        it.box = &box;
+        it.orthogonal = layoutIsOrthogonalRoot(tree, c, g.mode());
+        const PrLayoutFlexStyle& flex = layoutFlexStyle(g.state.styles, layoutTreeNode(tree, c).style);
+        LayoutStaticAlign aligns[PrLayoutGridAxis_Count] = {};
+        bool safe[PrLayoutGridAxis_Count] = {};
+        for (PrLayoutGridAxis axis = 0; axis < PrLayoutGridAxis_Count; ++axis) {
+            PrLayoutAlignment self = axis == PrLayoutGridAxis_Columns ? flex.justifySelf : flex.alignSelf;
+            PrLayoutAlignment items = axis == PrLayoutGridAxis_Columns ? g.flex.justifyItems : g.flex.alignItems;
+            LayoutGridPlace place = placeOf(g, it, axis, self, items, false, false, &safe[axis]);
+            if (place == LayoutGridPlace_Center)
+                aligns[axis] = LayoutStaticAlign_Center;
+            else if (place == LayoutGridPlace_End || place == LayoutGridPlace_LastBaseline)
+                aligns[axis] = LayoutStaticAlign_End;
+            else
+                aligns[axis] = LayoutStaticAlign_Start;
+        }
+        auto at = [](LayoutStaticAlign align, PrLayoutUnit size) {
+            if (align == LayoutStaticAlign_Start)
+                return kLayoutUnitZero;
+            if (align == LayoutStaticAlign_End)
+                return size;
+            return layoutUnit(size.raw / 2);
+        };
+        PrLayoutUnit sizes[PrLayoutGridAxis_Count];
+        for (PrLayoutGridAxis axis = 0; axis < PrLayoutGridAxis_Count; ++axis)
+            sizes[axis] = layoutUnitMax(kLayoutUnitZero, end[axis] - start[axis]);
+        LayoutLogicalOffset offset{
+            start[PrLayoutGridAxis_Columns] + at(aligns[PrLayoutGridAxis_Columns], sizes[PrLayoutGridAxis_Columns]),
+            start[PrLayoutGridAxis_Rows] + at(aligns[PrLayoutGridAxis_Rows], sizes[PrLayoutGridAxis_Rows]),
+        };
+        LayoutStaticEdges edges =
+            layoutStaticEdgesAligned(g.mode(), aligns[PrLayoutGridAxis_Columns], aligns[PrLayoutGridAxis_Rows],
+                safe[PrLayoutGridAxis_Columns], safe[PrLayoutGridAxis_Rows]);
+        LayoutFragment* placeholder = layoutFragmentCreatePlaceholder(c, edges, layoutIsFixed(tree, c));
+        g.state.scratch->children.push(LayoutLogicalChild{placeholder, origin + offset});
+    }, [](uint32_t, uint32_t) {});
 }
 
 // Keeps the lines of the grid for the boxes out of flow that the container holds, and sets `lines` to them.
@@ -2250,8 +2260,10 @@ void keepLines(Grid& g, LayoutLogicalOffset origin, LayoutGridLines* lines) {
             s.keptPositions.push(unitOf(trackStart(g, axis, int32_t(t))));
             s.keptSizes.push(unitOf(trackEnd(g, axis, int32_t(t))) - unitOf(trackStart(g, axis, int32_t(t))));
         }
-        s.keptPositions.push(a.trackCount != 0 ? unitOf(trackEnd(g, axis, int32_t(a.trackCount) - 1))
-                                               : kLayoutUnitZero);
+        if (a.trackCount != 0)
+            s.keptPositions.push(unitOf(trackEnd(g, axis, int32_t(a.trackCount) - 1)));
+        else
+            s.keptPositions.push(kLayoutUnitZero);
         kept.nameCount[axis] = a.nameCount;
         s.keptNames.append(s.names.data + a.nameMark, a.nameCount);
     }
@@ -2282,7 +2294,7 @@ void layoutGridScratchDestroy(LayoutGridScratch* PR_NULLABLE scratch) {
 }
 
 LayoutContentOutcome layoutGridContent(LayoutState& state, LayoutNodeIndex node, const LayoutContentInput& input,
-                                       LayoutGridLines* PR_NULLABLE lines) {
+        LayoutGridLines* PR_NULLABLE lines) {
     bool builds = input.goal == LayoutContentGoal_Build;
     Grid g = gridOf(state, node, *input.content);
     g.size[PrLayoutGridAxis_Rows] = input.blockSize;
@@ -2333,8 +2345,7 @@ LayoutContentOutcome layoutGridContent(LayoutState& state, LayoutNodeIndex node,
             copy.last = layoutFragmentBaseline(fragment, LayoutBaselineEdge_Last);
         } else {
             LayoutMeasurement m = layoutMeasure(state, copy.node, space, requests,
-                                                input.goal == LayoutContentGoal_Baselines ? LayoutMeasureKind_Baselines
-                                                                                          : LayoutMeasureKind_Size);
+                input.goal == LayoutContentGoal_Baselines ? LayoutMeasureKind_Baselines : LayoutMeasureKind_Size);
             bool inlineIsColumns = !copy.orthogonal;
             copy.size[inlineIsColumns ? PrLayoutGridAxis_Columns : PrLayoutGridAxis_Rows] = requests.inlineAxis.size;
             copy.size[inlineIsColumns ? PrLayoutGridAxis_Rows : PrLayoutGridAxis_Columns] = m.blockSize;
@@ -2349,8 +2360,8 @@ LayoutContentOutcome layoutGridContent(LayoutState& state, LayoutNodeIndex node,
             PrLayoutUnit free = area - copy.size[axis] - start - copy.margin[endSideOf(axis)];
             bool autoStart = copy.autoMargins[axis] && layoutLengthIsAuto(logical.margin[startSideOf(axis)]);
             bool autoEnd = copy.autoMargins[axis] && layoutLengthIsAuto(logical.margin[endSideOf(axis)]);
-            copy.offset[axis] = unitOf(trackStart(g, axis, copy.start[axis]))
-                                + offsetInArea(copy.place[axis], copy.safe[axis], free, start, autoStart, autoEnd);
+            copy.offset[axis] = unitOf(trackStart(g, axis, copy.start[axis])) +
+                offsetInArea(copy.place[axis], copy.safe[axis], free, start, autoStart, autoEnd);
         }
         g.item(i) = copy;
         if (fragment != nullptr) {
@@ -2378,8 +2389,11 @@ LayoutContentOutcome layoutGridContent(LayoutState& state, LayoutNodeIndex node,
         PrLayoutUnit baseline = itemBaseline(it, first ? LayoutBaselineEdge_First : LayoutBaselineEdge_Last).offset;
         double before = rawOf(it.margin[LayoutSide_BlockStart] + baseline);
         double after = rawOf(it.size[PrLayoutGridAxis_Rows] - baseline + it.margin[LayoutSide_BlockEnd]);
-        uint32_t slot =
-            first ? uint32_t(it.start[PrLayoutGridAxis_Rows]) : rowCount + uint32_t(it.end[PrLayoutGridAxis_Rows] - 1);
+        uint32_t slot;
+        if (first)
+            slot = uint32_t(it.start[PrLayoutGridAxis_Rows]);
+        else
+            slot = rowCount + uint32_t(it.end[PrLayoutGridAxis_Rows] - 1);
         extents.data[extentMark + slot] = maxF64(extents.data[extentMark + slot], first ? before : after);
     }
     if (anyBaseline) {
@@ -2389,8 +2403,7 @@ LayoutContentOutcome layoutGridContent(LayoutState& state, LayoutNodeIndex node,
             if (place != LayoutGridPlace_Baseline && place != LayoutGridPlace_LastBaseline)
                 continue;
             bool first = place == LayoutGridPlace_Baseline;
-            PrLayoutUnit baseline =
-                itemBaseline(it, first ? LayoutBaselineEdge_First : LayoutBaselineEdge_Last).offset;
+            PrLayoutUnit baseline = itemBaseline(it, first ? LayoutBaselineEdge_First : LayoutBaselineEdge_Last).offset;
             if (first) {
                 double shared = extents.data[extentMark + uint32_t(it.start[PrLayoutGridAxis_Rows])];
                 double start = trackStart(g, PrLayoutGridAxis_Rows, it.start[PrLayoutGridAxis_Rows]);
@@ -2419,37 +2432,50 @@ LayoutContentOutcome layoutGridContent(LayoutState& state, LayoutNodeIndex node,
             children.data[childMark + i].offset = origin + at + relative;
         }
         if (input.scrolls && builds) {
-            LayoutLogicalOffset start{at.inlineOffset - it.margin[LayoutSide_InlineStart],
-                                      at.blockOffset - it.margin[LayoutSide_BlockStart]};
+            LayoutLogicalOffset start{
+                at.inlineOffset - it.margin[LayoutSide_InlineStart],
+                at.blockOffset - it.margin[LayoutSide_BlockStart],
+            };
             LayoutLogicalOffset end{
                 at.inlineOffset + it.size[PrLayoutGridAxis_Columns] + it.margin[LayoutSide_InlineEnd],
-                at.blockOffset + it.size[PrLayoutGridAxis_Rows] + it.margin[LayoutSide_BlockEnd]};
+                at.blockOffset + it.size[PrLayoutGridAxis_Rows] + it.margin[LayoutSide_BlockEnd],
+            };
             if (built++ != 0) {
-                start = {layoutUnitMin(start.inlineOffset, outcome.itemsStart.inlineOffset),
-                         layoutUnitMin(start.blockOffset, outcome.itemsStart.blockOffset)};
-                end = {layoutUnitMax(end.inlineOffset, outcome.itemsEnd.inlineOffset),
-                       layoutUnitMax(end.blockOffset, outcome.itemsEnd.blockOffset)};
+                start = {
+                    layoutUnitMin(start.inlineOffset, outcome.itemsStart.inlineOffset),
+                    layoutUnitMin(start.blockOffset, outcome.itemsStart.blockOffset),
+                };
+                end = {
+                    layoutUnitMax(end.inlineOffset, outcome.itemsEnd.inlineOffset),
+                    layoutUnitMax(end.blockOffset, outcome.itemsEnd.blockOffset),
+                };
             }
             outcome.itemsStart = start;
             outcome.itemsEnd = end;
         }
     }
     if (input.scrolls && builds) {
-        LayoutLogicalOffset gridStart{
-            g.axes[PrLayoutGridAxis_Columns].trackCount != 0 ? unitOf(trackStart(g, PrLayoutGridAxis_Columns, 0))
-                                                           : kLayoutUnitZero,
-            g.axes[PrLayoutGridAxis_Rows].trackCount != 0 ? unitOf(trackStart(g, PrLayoutGridAxis_Rows, 0))
-                                                        : kLayoutUnitZero};
-        LayoutLogicalOffset gridEnd{gridStart.inlineOffset + unitOf(totalOf(g, PrLayoutGridAxis_Columns)),
-                                    gridStart.blockOffset + unitOf(totalOf(g, PrLayoutGridAxis_Rows))};
+        LayoutLogicalOffset gridStart{};
+        if (g.axes[PrLayoutGridAxis_Columns].trackCount != 0)
+            gridStart.inlineOffset = unitOf(trackStart(g, PrLayoutGridAxis_Columns, 0));
+        if (g.axes[PrLayoutGridAxis_Rows].trackCount != 0)
+            gridStart.blockOffset = unitOf(trackStart(g, PrLayoutGridAxis_Rows, 0));
+        LayoutLogicalOffset gridEnd{
+            gridStart.inlineOffset + unitOf(totalOf(g, PrLayoutGridAxis_Columns)),
+            gridStart.blockOffset + unitOf(totalOf(g, PrLayoutGridAxis_Rows)),
+        };
         if (built == 0) {
             outcome.itemsStart = gridStart;
             outcome.itemsEnd = gridEnd;
         } else {
-            outcome.itemsStart = {layoutUnitMin(gridStart.inlineOffset, outcome.itemsStart.inlineOffset),
-                                  layoutUnitMin(gridStart.blockOffset, outcome.itemsStart.blockOffset)};
-            outcome.itemsEnd = {layoutUnitMax(gridEnd.inlineOffset, outcome.itemsEnd.inlineOffset),
-                                layoutUnitMax(gridEnd.blockOffset, outcome.itemsEnd.blockOffset)};
+            outcome.itemsStart = {
+                layoutUnitMin(gridStart.inlineOffset, outcome.itemsStart.inlineOffset),
+                layoutUnitMin(gridStart.blockOffset, outcome.itemsStart.blockOffset),
+            };
+            outcome.itemsEnd = {
+                layoutUnitMax(gridEnd.inlineOffset, outcome.itemsEnd.inlineOffset),
+                layoutUnitMax(gridEnd.blockOffset, outcome.itemsEnd.blockOffset),
+            };
         }
     }
 
@@ -2459,10 +2485,10 @@ LayoutContentOutcome layoutGridContent(LayoutState& state, LayoutNodeIndex node,
         uint32_t last = baselineItemOf(g, LayoutBaselineEdge_Last);
         if (first != g.count)
             outcome.first = layoutBaselineMoved(itemBaseline(g.item(first), LayoutBaselineEdge_First),
-                                                g.item(first).offset[PrLayoutGridAxis_Rows]);
+                g.item(first).offset[PrLayoutGridAxis_Rows]);
         if (last != g.count)
             outcome.last = layoutBaselineMoved(itemBaseline(g.item(last), LayoutBaselineEdge_Last),
-                                               g.item(last).offset[PrLayoutGridAxis_Rows]);
+                g.item(last).offset[PrLayoutGridAxis_Rows]);
     }
     if (builds && outOfFlow != 0)
         placeOutOfFlow(g, origin, inlineSize, outcome.contentBlock, input.padding);
@@ -2474,7 +2500,7 @@ LayoutContentOutcome layoutGridContent(LayoutState& state, LayoutNodeIndex node,
 }
 
 PrLayoutRect layoutGridAbsoluteArea(LayoutState& state, const LayoutGridLines& lines, LayoutNodeIndex box,
-                                    PrLayoutRect padding, PrLayoutVec extent) {
+        PrLayoutRect padding, PrLayoutVec extent) {
     const LayoutGridScratch& s = *state.scratch->grid;
     const LayoutGridKept& kept = s.kept.data[lines.mark];
     const PrLayoutGridStyle& style = layoutGridStyle(state.styles, layoutTreeNode(state.tree, box).style);
@@ -2512,14 +2538,15 @@ PrLayoutRect layoutGridAbsoluteArea(LayoutState& state, const LayoutGridLines& l
         end[axis] = paddingEnd[axis];
         auto position = [&](uint32_t line) { return origin + s.keptPositions.data[positions + line]; };
         absoluteEdges(templates, axisLines, kept.explicitStart[axis], kept.trackCount[axis], starts[axis], ends[axis],
-                      position, &start[axis], &end[axis]);
+            position, &start[axis], &end[axis]);
         positions += kept.trackCount[axis] + 1;
         names += kept.nameCount[axis];
     }
     LayoutLogicalOffset at{start[PrLayoutGridAxis_Columns], start[PrLayoutGridAxis_Rows]};
     LayoutLogicalSize area{
         layoutUnitMax(kLayoutUnitZero, end[PrLayoutGridAxis_Columns] - start[PrLayoutGridAxis_Columns]),
-        layoutUnitMax(kLayoutUnitZero, end[PrLayoutGridAxis_Rows] - start[PrLayoutGridAxis_Rows])};
+        layoutUnitMax(kLayoutUnitZero, end[PrLayoutGridAxis_Rows] - start[PrLayoutGridAxis_Rows]),
+    };
     return layoutRectAt(layoutPhysicalOffset(mode, at, area, size), layoutPhysicalSize(mode, area));
 }
 
@@ -2530,8 +2557,10 @@ LayoutFragment* layoutGridFinish(LayoutState& state, const LayoutGridLines& line
     LayoutGridAxisTracks axes[PrLayoutGridAxis_Count];
     uint32_t sizes = kept.sizes;
     for (PrLayoutGridAxis axis = 0; axis < PrLayoutGridAxis_Count; ++axis) {
-        axes[axis] = LayoutGridAxisTracks{kept.trackCount[axis], kept.explicitStart[axis], kept.repetitions[axis],
-                                          s.keptSizes.data + sizes};
+        axes[axis] = LayoutGridAxisTracks{
+            kept.trackCount[axis], kept.explicitStart[axis], kept.repetitions[axis],
+            s.keptSizes.data + sizes,
+        };
         sizes += kept.trackCount[axis];
     }
     LayoutFragment* fragment = layoutFragmentGrid(built, axes);
@@ -2543,13 +2572,15 @@ LayoutFragment* layoutGridFinish(LayoutState& state, const LayoutGridLines& line
 }
 
 LayoutIntrinsicSizes layoutGridIntrinsic(LayoutState& state, LayoutNodeIndex node, const LayoutIntrinsicInput& input) {
-    LayoutSpace content{.mode = input.mode,
-                        .available = layoutUnit(-1),
-                        .percentInline = layoutUnit(-1),
-                        .percentBlock = input.percentBlock,
-                        .containing = LayoutLogicalSize{layoutUnit(-1), input.percentBlock},
-                        .blockLimit = input.blockLimit,
-                        .fallback = input.fallback};
+    LayoutSpace content{
+        .mode = input.mode,
+        .available = layoutUnit(-1),
+        .percentInline = layoutUnit(-1),
+        .percentBlock = input.percentBlock,
+        .containing = LayoutLogicalSize{layoutUnit(-1), input.percentBlock},
+        .blockLimit = input.blockLimit,
+        .fallback = input.fallback,
+    };
     Grid g = gridOf(state, node, content);
     // The container's limits, if they are fixed, set the repetitions of an automatic repetition of its columns
     // (css-grid-1/#auto-repeat). Its preferred size is the size that its intrinsic sizes stand in for, so it does not:

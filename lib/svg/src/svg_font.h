@@ -85,8 +85,8 @@ void svgFontReset(SvgFont* font);
 // `*length`. The glyph is the first glyph in document order whose characters start the text at `pos`. If the glyph has
 // languages, `language` must be one of them or a subtag of one. If the glyph has an Arabic form, that form must be
 // `form`, unless `form` is Any. If no glyph matches, the result is missing-glyph, covering one character.
-uint32_t svgFontMatch(const SvgFont& font, PrStringView text, size_t pos, PrStringView language,
-                      SvgArabicForm form, size_t* length);
+uint32_t svgFontMatch(const SvgFont& font, PrStringView text, size_t pos, PrStringView language, SvgArabicForm form,
+    size_t* length);
 
 // Returns how far glyph `second` moves toward glyph `first` when it follows `first`, in font units. The distance is
 // that of the first hkern whose `u1` or `g1` names `first` and whose `u2` or `g2` names `second`

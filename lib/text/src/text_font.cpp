@@ -122,12 +122,11 @@ uint32_t localeRank(PrLocale madeFor, PrLocale locale) {
     PrLanguage language = prLocaleLanguage(madeFor);
     PrScript script = prLocaleScript(madeFor);
     PrRegion region = prLocaleRegion(madeFor);
-    if ((language != PrLanguage_None && language != prLocaleLanguage(locale))
-        || (script != PrScript_Zzzz && script != prLocaleScript(locale))
-        || (region != PrRegion_None && region != prLocaleRegion(locale)))
+    if ((language != PrLanguage_None && language != prLocaleLanguage(locale)) ||
+            (script != PrScript_Zzzz && script != prLocaleScript(locale)) ||
+            (region != PrRegion_None && region != prLocaleRegion(locale)))
         return 0;
-    return (language != PrLanguage_None ? 1u : 0u) + (script != PrScript_Zzzz ? 1u : 0u)
-           + (region != PrRegion_None ? 1u : 0u);
+    return (language != PrLanguage_None ? 1u : 0u) + (script != PrScript_Zzzz ? 1u : 0u) + (region != PrRegion_None ? 1u : 0u);
 }
 
 // Starts an order of the families of the text font, followed by the default family of the set as it is now.
@@ -213,8 +212,12 @@ void matchFallback(TextFont& t, Order& o) {
             PrFontFace matched = prFontMatchFace(t.match, k);
             if (matched.font == nullptr)
                 continue;
-            FallbackFace face{.face = keep(o, matched), .scriptStart = o.fallbackScripts.count, .rank = rank,
-                              .index = kPrTextMatchNone};
+            FallbackFace face{
+                .face = keep(o, matched),
+                .scriptStart = o.fallbackScripts.count,
+                .rank = rank,
+                .index = kPrTextMatchNone,
+            };
             uint32_t scripts = prFontScriptTags(matched.font, tags, 64);
             o.fallbackScripts.append(tags, scripts < 64 ? scripts : 64);
             face.scriptCount = o.fallbackScripts.count - face.scriptStart;
@@ -394,8 +397,8 @@ uint32_t clusterHash(PrStringView cluster, PrScript script) {
 uint32_t findCluster(const TextFont& t, PrStringView cluster, PrScript script) {
     return t.clusterIndex.find(clusterHash(cluster, script), [&](uint32_t i) {
         const ClusterChoice& c = t.clusters.data[i];
-        return c.script == script && c.size == cluster.size
-               && memEquals(t.clusterText.data + c.start, cluster.data, cluster.size);
+        return c.script == script && c.size == cluster.size &&
+            memEquals(t.clusterText.data + c.start, cluster.data, cluster.size);
     });
 }
 
@@ -565,8 +568,7 @@ bool prTextFontAdvance(PrTextFont* font, uint32_t codePoint, PrScript script, Pr
     uint16_t glyph = prFontCodePointGlyph(face, codePoint);
     if (glyph == 0)
         return false;
-    *advance = axis == PrTextAxis_Vertical ? prFontGlyphVerticalAdvance(face, glyph)
-                                           : prFontGlyphAdvance(face, glyph, 0);
+    *advance = axis == PrTextAxis_Vertical ? prFontGlyphVerticalAdvance(face, glyph) : prFontGlyphAdvance(face, glyph, 0);
     return true;
 }
 

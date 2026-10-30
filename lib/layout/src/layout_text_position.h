@@ -34,8 +34,7 @@ uint32_t layoutTextOffsetAt(const LayoutTree* tree, const LayoutFragment* fragme
 
 // Returns the rectangle of the text fragment at `at` between the positions `from` and `to` along it, across the whole
 // fragment. `from` may be past `to`.
-PrLayoutRect layoutTextSpanRect(const LayoutTree* tree, const LayoutFragment* fragment, PrLayoutVec at, float from,
-                                float to);
+PrLayoutRect layoutTextSpanRect(const LayoutTree* tree, const LayoutFragment* fragment, PrLayoutVec at, float from, float to);
 
 } // namespace pr_impl
 

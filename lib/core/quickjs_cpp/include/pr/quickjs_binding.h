@@ -123,9 +123,8 @@ uint32_t jsHoldBytes(JSContext* ctx, void* PR_NULLABLE bytes);
 uint32_t jsHoldString(JSContext* ctx, PrString string);
 
 // Holds `data` until the call's scope ends, when `release` releases it.
-uint32_t jsHoldCustom(JSContext* ctx,
-                      void (*PR_NONNULL release)(JSContext* ctx, void* PR_NULLABLE data),
-                      void* PR_NULLABLE data);
+uint32_t jsHoldCustom(JSContext* ctx, void (*PR_NONNULL release)(JSContext* ctx, void* PR_NULLABLE data),
+    void* PR_NULLABLE data);
 
 // A native function that runs inside a call's scope. `call` is the function that QuickJS calls.
 template <auto Function>
@@ -236,7 +235,7 @@ void jsEnqueueNative(JSContext* ctx, void (*run)(void* data), void* data);
 // handle already has an object of class `id`, returns that object, whatever `owner` is. If `ownsHandle` is false, the
 // object takes a reference through `retain`, or through the class's JsReferences if `retain` is null.
 JSValue jsWrap(JSContext* ctx, JSClassID id, JSValueConst owner, void* PR_NULLABLE handle,
-               bool ownsHandle, void (*PR_NULLABLE retain)(void*) = nullptr);
+    bool ownsHandle, void (*PR_NULLABLE retain)(void*) = nullptr);
 
 // Reads or stores the value of the [SameObject] attribute `name` of `self`, an object of a bound class. The value is
 // undefined until stored. `self` keeps the value alive, and storing one makes `self` stateful.
@@ -308,8 +307,7 @@ JSValue jsResultString(JSContext* ctx, S text) {
 // cannot be made.
 template <typename T, typename S>
 bool jsNameAtoms(JSContext* ctx, const T* PR_NONNULL handle,
-                 uint32_t (*PR_NONNULL names)(const T* PR_NONNULL, S* PR_NULLABLE, uint32_t),
-                 Array<JSAtom>* out) {
+        uint32_t (*PR_NONNULL names)(const T* PR_NONNULL, S* PR_NULLABLE, uint32_t), Array<JSAtom>* out) {
     Array<S> strings;
     strings.reserve(names(handle, nullptr, 0));
     strings.count = names(handle, strings.data, strings.capacity);
@@ -344,8 +342,7 @@ void jsWrapperDestroy(JSRuntime* runtime, JsWrapper* wrapper);
 // Finalizes an object of class `id`. Detaches the callbacks registered through the object, and passes an owned handle
 // to `cleanup`, or to the class's release if `cleanup` is null. Then releases the wrapper's JS values.
 template <typename Handle>
-void jsFinalize(JSRuntime* runtime, JSValue self, JSClassID id,
-                void (*PR_NULLABLE cleanup)(Handle* PR_NONNULL)) {
+void jsFinalize(JSRuntime* runtime, JSValue self, JSClassID id, void (*PR_NULLABLE cleanup)(Handle* PR_NONNULL)) {
     JsWrapper* wrapper = static_cast<JsWrapper*>(JS_GetOpaque(self, id));
     if (wrapper == nullptr)
         return;
@@ -375,17 +372,15 @@ bool jsIndexAtomsTagged(JSContext* ctx);
 JSValue jsSettledPromise(JSContext* ctx, JSValueConst value, bool rejected);
 
 // The constructor for a class that has no constructor. It always throws.
-JSValue jsIllegalConstructor(JSContext* ctx, JSValueConst target, int argc,
-                             JSValueConst* PR_NULLABLE argv);
+JSValue jsIllegalConstructor(JSContext* ctx, JSValueConst target, int argc, JSValueConst* PR_NULLABLE argv);
 
 // Returns a new Float32Array or Float64Array of `count` values.
-JSValue jsNewFloatArray(JSContext* ctx, JSTypedArrayEnum type, const double* values,
-                        uint32_t count);
+JSValue jsNewFloatArray(JSContext* ctx, JSTypedArrayEnum type, const double* values, uint32_t count);
 
 // Writes up to `capacity` elements of the typed array `value` to `out`, and its element count to `*count`. `type` is
 // JS_TYPED_ARRAY_FLOAT32 or FLOAT64, and a value that is not a typed array of `type` throws a TypeError.
 bool jsReadFloatArray(JSContext* ctx, JSValueConst value, JSTypedArrayEnum type, double* out,
-                      uint32_t capacity, uint32_t* count);
+    uint32_t capacity, uint32_t* count);
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Classes
@@ -428,8 +423,7 @@ struct JsMemberScope {
 };
 
 // Sets the runtime's member scope, which `enter` and `leave` receive with `context`. Null sets none.
-void jsSetMemberScope(JSRuntime* runtime, const JsMemberScope* PR_NULLABLE scope,
-                      void* PR_NULLABLE context);
+void jsSetMemberScope(JSRuntime* runtime, const JsMemberScope* PR_NULLABLE scope, void* PR_NULLABLE context);
 
 // Registers the class that `definition` describes in the runtime under the ID `*id`, unless the runtime has it already.
 // If `*id` is zero, the process assigns the class its next ID first. A class has the same ID in every runtime of the
@@ -563,8 +557,7 @@ JSValue jsWrapperOf(JSContext* ctx, JSClassID base, void* PR_NULLABLE handle);
 
 // Returns the object for `handle` in the class that the classifiers of `id` and its derived classes find most specific,
 // or in `id` if they find none. Returns null for a null handle.
-JSValue jsWrapAs(JSContext* ctx, JSClassID id, JSValueConst owner, void* PR_NULLABLE handle,
-                 bool ownsHandle);
+JSValue jsWrapAs(JSContext* ctx, JSClassID id, JSValueConst owner, void* PR_NULLABLE handle, bool ownsHandle);
 
 // Stores or reads a value that a module keeps for a runtime, keyed by an address that the module owns. Reading a key
 // that was never stored gives null.
@@ -574,7 +567,7 @@ const void* PR_NULLABLE jsRuntimeData(JSRuntime* runtime, const void* key);
 // A value that a module keeps for a runtime and that the runtime owns, keyed by an address that the module owns. `make`
 // creates it on first request, and `destroy` frees it with the runtime.
 void* jsRuntimeOwned(JSRuntime* runtime, const void* key, void* PR_NONNULL (* PR_NONNULL make)(),
-                     void (* PR_NONNULL destroy)(void* PR_NONNULL));
+    void (* PR_NONNULL destroy)(void* PR_NONNULL));
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Value classes, whose objects each hold their own copy of a C value
@@ -593,8 +586,7 @@ JSValue jsNewValue(JSContext* ctx, JSClassID id, const T& value) {
 // Returns the value held by an object of class `base`, or of a class derived from it. Otherwise returns null, and
 // throws a TypeError naming `expected`.
 template <typename T>
-T* PR_NULLABLE jsValueOf(JSContext* ctx, JSValueConst object, JSClassID base,
-                         const char* expected) {
+T* PR_NULLABLE jsValueOf(JSContext* ctx, JSValueConst object, JSClassID base, const char* expected) {
     T* held = static_cast<T*>(jsHandleIn(ctx, object, base));
     if (held == nullptr)
         JS_ThrowTypeError(ctx, "Expected %s", expected);
@@ -697,8 +689,7 @@ JSValue jsUint32Setter(JSContext* ctx, JSValueConst self, JSValueConst input) {
 // `capacity` strings and returns the total count. If `frozen` is true, the array is frozen, as a FrozenArray requires.
 template <typename T, typename S>
 JSValue jsStringArray(JSContext* ctx, const T* PR_NONNULL handle,
-                      uint32_t (*PR_NONNULL write)(const T* PR_NONNULL, S* PR_NULLABLE, uint32_t),
-                      bool frozen) {
+        uint32_t (*PR_NONNULL write)(const T* PR_NONNULL, S* PR_NULLABLE, uint32_t), bool frozen) {
     Array<S> items;
     items.reserve(write(handle, nullptr, 0));
     items.count = write(handle, items.data, items.capacity);
@@ -730,8 +721,7 @@ JSValue jsSameObjectGetter(JSContext* ctx, JSValueConst self) {
     T* object = jsThis<T>(ctx, self, *Id);
     if (object == nullptr)
         return JS_EXCEPTION;
-    return jsSameObject(ctx, self, Name.text,
-                        [&] { return jsWrapAs(ctx, *As, self, Get(object), false); });
+    return jsSameObject(ctx, self, Name.text, [&] { return jsWrapAs(ctx, *As, self, Get(object), false); });
 }
 
 // An attribute's getter, which returns an object of class `*As` or of a class derived from it. The object keeps the

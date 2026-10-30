@@ -56,7 +56,7 @@ bool createFace(PrTextShaper*, const PrFont* font, void* state) {
     KbFace* face = static_cast<KbFace*>(state);
     PrByteView bytes = prFontData(font);
     face->kb = kbts_FontFromMemory(const_cast<uint8_t*>(bytes.data), int(bytes.size), int(prFontIndex(font)),
-                                   kbAllocate, nullptr);
+        kbAllocate, nullptr);
     if (kbts_FontIsValid(&face->kb))
         return true;
     kbts_FreeFont(&face->kb);
@@ -115,7 +115,7 @@ KbConfig* PR_NULLABLE configFor(KbFace* face, KbFont* font, kbts_script script, 
             return &c;
     }
     kbts_shape_config* config = kbts_CreateShapeConfig2(&face->kb, script, language, font->variation.data,
-                                                        kbAllocate, nullptr, nullptr);
+        kbAllocate, nullptr, nullptr);
     if (config == nullptr)
         return nullptr;
     KbConfig c{script, language, config, kbts_CreateShapeScratchpad(config, kbAllocate, nullptr)};
@@ -154,8 +154,7 @@ kbts_language languageOf(PrLocale locale) {
 // Features
 
 // Returns the glyph configuration of the features over byte `at`, made once for each feature set that the run uses.
-kbts_glyph_config* PR_NULLABLE configAt(KbBackend* kb, const PrTextRun* run, KbConfig* config,
-                                        uint32_t at) {
+kbts_glyph_config* PR_NULLABLE configAt(KbBackend* kb, const PrTextRun* run, KbConfig* config, uint32_t at) {
     uint64_t mask = 0;
     uint32_t count = run->featureCount < 64 ? run->featureCount : 64;
     for (uint32_t i = 0; i < count; ++i) {
@@ -171,8 +170,10 @@ kbts_glyph_config* PR_NULLABLE configAt(KbBackend* kb, const PrTextRun* run, KbC
     kb->overrides.clear();
     for (uint32_t i = 0; i < count; ++i) {
         if ((mask & (uint64_t(1) << i)) != 0)
-            kb->overrides.push(kbts_feature_override{kbts_feature_tag(kbTag(run->features[i].tag)),
-                                                     int(run->features[i].value)});
+            kb->overrides.push(kbts_feature_override{
+                kbts_feature_tag(kbTag(run->features[i].tag)),
+                int(run->features[i].value),
+            });
     }
     kbts_glyph_config* glyphConfig = kbts_CreateGlyphConfig(
         config->config, kb->overrides.data, int(kb->overrides.count), kbAllocate, nullptr);
@@ -205,13 +206,11 @@ PrStatus shapeAcross(KbBackend* kb, void* faceState, void* fontState, const PrTe
     while (at < run->text.size) {
         uint32_t codePoint = 0;
         uint32_t length = prUtf8Decode(run->text, at, &codePoint);
-        kbts_PushGlyph(&kb->storage, &face->kb, int(codePoint),
-                       configAt(kb, run, config, uint32_t(at)), int(at));
+        kbts_PushGlyph(&kb->storage, &face->kb, int(codePoint), configAt(kb, run, config, uint32_t(at)), int(at));
         at += length;
     }
     kbts_glyph_iterator it;
-    kbts_direction direction =
-        run->direction == PrTextDirection_Rtl ? KBTS_DIRECTION_RTL : KBTS_DIRECTION_LTR;
+    kbts_direction direction = run->direction == PrTextDirection_Rtl ? KBTS_DIRECTION_RTL : KBTS_DIRECTION_LTR;
     kbts_shape_error error = kbts_ShapeDirect2(config->scratchpad, &kb->storage, direction, font->normalized.data, &it);
     PrStatus status = PrStatus_Ok;
     if (error == KBTS_SHAPE_ERROR_NONE) {
@@ -244,8 +243,8 @@ PrStatus shapeDown(KbBackend* kb, void* faceState, void* fontState, const PrText
     features.clear();
     for (uint32_t i = 0; i < run->featureCount; ++i) {
         uint32_t tag = run->features[i].tag;
-        if (tag != PR_FONT_TAG('v', 'k', 'r', 'n') && tag != PR_FONT_TAG('v', 'p', 'a', 'l')
-            && tag != PR_FONT_TAG('v', 'h', 'a', 'l') && tag != PR_FONT_TAG('v', 'a', 'l', 't'))
+        if (tag != PR_FONT_TAG('v', 'k', 'r', 'n') && tag != PR_FONT_TAG('v', 'p', 'a', 'l') &&
+                tag != PR_FONT_TAG('v', 'h', 'a', 'l') && tag != PR_FONT_TAG('v', 'a', 'l', 't'))
             features.push(run->features[i]);
     }
     features.push(PrTextFeature{PR_FONT_TAG('v', 'e', 'r', 't'), 1, 0, kWholeRun});
@@ -286,8 +285,7 @@ PrStatus shapeDown(KbBackend* kb, void* faceState, void* fontState, const PrText
     return PrStatus_Ok;
 }
 
-PrStatus shape(PrTextShaper* shaper, void* faceState, void* fontState, const PrTextRun* run,
-               PrTextGlyphBuffer* out) {
+PrStatus shape(PrTextShaper* shaper, void* faceState, void* fontState, const PrTextRun* run, PrTextGlyphBuffer* out) {
     KbBackend* kb = static_cast<KbBackend*>(shaper);
     if (run->axis == PrTextAxis_Vertical)
         return shapeDown(kb, faceState, fontState, run, out);

@@ -120,13 +120,17 @@ using namespace pr_impl;
 
 TEST_CASE("an RGB profile maps by its curves and then its colorants' matrix") {
     // The colorants of red and green swapped, with linear curves for green and blue and a gamma of 2 for red.
-    ProfileBytes p{"RGB ", "XYZ ",
-                   {{"rXYZ", xyzElement(0.3851, 0.7169, 0.0971)},
-                    {"gXYZ", xyzElement(0.4361, 0.2225, 0.0139)},
-                    {"bXYZ", xyzElement(0.1431, 0.0606, 0.7141)},
-                    {"rTRC", gammaElement(2)},
-                    {"gTRC", parametricElement(1)},
-                    {"bTRC", gammaElement(1)}}};
+    ProfileBytes p{
+        "RGB ", "XYZ ",
+        {
+            {"rXYZ", xyzElement(0.3851, 0.7169, 0.0971)},
+            {"gXYZ", xyzElement(0.4361, 0.2225, 0.0139)},
+            {"bXYZ", xyzElement(0.1431, 0.0606, 0.7141)},
+            {"rTRC", gammaElement(2)},
+            {"gTRC", parametricElement(1)},
+            {"bTRC", gammaElement(1)},
+        },
+    };
     PrColorProfile* profile = create(p.build());
     CHECK(prColorProfileModel(profile) == PrColorModel_Rgb);
     CHECK(prColorProfileChannels(profile) == 3);
@@ -191,12 +195,16 @@ TEST_CASE("bytes that are no profile the engine reads are invalid data") {
     CHECK(prColorProfileCreate(PrByteView{few, sizeof(few)}, &profile) == PrStatus_InvalidData);
     CHECK(profile == nullptr);
     // An RGB profile missing a curve, and one whose tag lies past its end.
-    ProfileBytes partial{"RGB ", "XYZ ",
-                         {{"rXYZ", xyzElement(1, 0, 0)},
-                          {"gXYZ", xyzElement(0, 1, 0)},
-                          {"bXYZ", xyzElement(0, 0, 1)},
-                          {"rTRC", gammaElement(1)},
-                          {"gTRC", gammaElement(1)}}};
+    ProfileBytes partial{
+        "RGB ", "XYZ ",
+        {
+            {"rXYZ", xyzElement(1, 0, 0)},
+            {"gXYZ", xyzElement(0, 1, 0)},
+            {"bXYZ", xyzElement(0, 0, 1)},
+            {"rTRC", gammaElement(1)},
+            {"gTRC", gammaElement(1)},
+        },
+    };
     std::vector<uint8_t> bytes = partial.build();
     CHECK(prColorProfileCreate(PrByteView{bytes.data(), bytes.size()}, &profile) == PrStatus_InvalidData);
     ProfileBytes truncated{"GRAY", "XYZ ", {{"kTRC", gammaElement(1)}}};

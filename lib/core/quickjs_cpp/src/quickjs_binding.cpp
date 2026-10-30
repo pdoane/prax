@@ -84,8 +84,7 @@ struct WrapperTable {
         if (slots == nullptr || (count + 1) * 2 > mask + 1) {
             JsWrapper* PR_NULLABLE* old = slots;
             uint32_t size = slots == nullptr ? 64 : (mask + 1) * 2;
-            slots =
-                static_cast<JsWrapper* PR_NULLABLE*>(prMemoryAllocZeroed(size * sizeof(JsWrapper*)));
+            slots = static_cast<JsWrapper* PR_NULLABLE*>(prMemoryAllocZeroed(size * sizeof(JsWrapper*)));
             uint32_t oldSize = old != nullptr ? mask + 1 : 0;
             mask = size - 1;
             for (uint32_t i = 0; i < oldSize; ++i) {
@@ -226,9 +225,7 @@ JsWrappers* wrappersOf(JSRuntime* runtime) {
 
 // Returns the root of the hierarchy of class `id`, or the class itself if it was not defined here.
 JSClassID familyOf(const JsWrappers* wrappers, JSClassID id) {
-    return id < wrappers->classes.count && wrappers->classes.data[id].family != 0
-               ? wrappers->classes.data[id].family
-               : id;
+    return id < wrappers->classes.count && wrappers->classes.data[id].family != 0 ? wrappers->classes.data[id].family : id;
 }
 
 // Returns the class that most specifically describes a handle of class `id`, according to its classifiers.
@@ -266,8 +263,7 @@ const JsReferences* PR_NULLABLE referencesOf(const JsWrappers* wrappers, JSClass
 }
 
 // Returns the slot in which `handle` keeps its object in `family`, or null for a family whose objects are in the table.
-void* PR_NULLABLE* PR_NULLABLE slotOf(const JsWrappers* wrappers, JSClassID family,
-                                      const void* handle) {
+void* PR_NULLABLE* PR_NULLABLE slotOf(const JsWrappers* wrappers, JSClassID family, const void* handle) {
     if (family >= wrappers->classes.count || wrappers->classes.data[family].slot == nullptr)
         return nullptr;
     return wrappers->classes.data[family].slot(const_cast<void*>(handle));
@@ -457,9 +453,8 @@ uint32_t jsHoldString(JSContext* ctx, PrString string) {
     return jsHold(ctx, held);
 }
 
-uint32_t jsHoldCustom(JSContext* ctx,
-                      void (*PR_NONNULL release)(JSContext* ctx, void* PR_NULLABLE data),
-                      void* PR_NULLABLE data) {
+uint32_t jsHoldCustom(JSContext* ctx, void (*PR_NONNULL release)(JSContext* ctx, void* PR_NULLABLE data),
+        void* PR_NULLABLE data) {
     JsHeld held = {};
     held.kind = JsHeldKind_Custom;
     held.custom.release = release;
@@ -488,9 +483,7 @@ JSValue jsConstructed(JSContext* ctx, JSValueConst target, JSValue result) {
     if (JS_IsException(result))
         return result;
     JSValue proto = JS_GetProperty(ctx, target, JS_ATOM_prototype);
-    int status = JS_IsException(proto) ? -1
-                 : JS_IsObject(proto)  ? JS_SetPrototype(ctx, result, proto)
-                                       : 0;
+    int status = JS_IsException(proto) ? -1 : JS_IsObject(proto)  ? JS_SetPrototype(ctx, result, proto) : 0;
     JS_FreeValue(ctx, proto);
     if (status < 0) {
         JS_FreeValue(ctx, result);
@@ -607,17 +600,14 @@ void jsRuntimeDestroy(JSRuntime* PR_NULLABLE runtime) {
 
 void jsCallbackLink(JSRuntime* runtime, JsCallback* callback, JSValueConst owner) {
     JSClassID id = 0;
-    JsWrapper* wrapper =
-        JS_IsObject(owner) ? static_cast<JsWrapper*>(JS_GetAnyOpaque(owner, &id)) : nullptr;
+    JsWrapper* wrapper = JS_IsObject(owner) ? static_cast<JsWrapper*>(JS_GetAnyOpaque(owner, &id)) : nullptr;
     // Only an object of a bound class has a mark that traces its callbacks.
     const JsWrappers* wrappers = wrappersOf(runtime);
-    if (wrapper != nullptr
-        && (id >= wrappers->classes.count || !wrappers->classes.data[id].defined))
+    if (wrapper != nullptr && (id >= wrappers->classes.count || !wrappers->classes.data[id].defined))
         wrapper = nullptr;
     if (wrapper != nullptr)
         becomeStateful(runtime, wrapper);
-    JsCallback** list =
-        wrapper != nullptr ? &extraOf(wrapper, true)->callbacks : &wrappersOf(runtime)->callbacks;
+    JsCallback** list = wrapper != nullptr ? &extraOf(wrapper, true)->callbacks : &wrappersOf(runtime)->callbacks;
     callback->owner = wrapper;
     callback->previous = nullptr;
     callback->next = *list;
@@ -627,8 +617,11 @@ void jsCallbackLink(JSRuntime* runtime, JsCallback* callback, JSValueConst owner
 }
 
 void jsCallbackUnlink(JsCallback* callback) {
-    JsCallback** list = callback->owner != nullptr ? &callback->owner->extra->callbacks
-                                                   : &wrappersOf(callback->runtime)->callbacks;
+    JsCallback** list;
+    if (callback->owner != nullptr)
+        list = &callback->owner->extra->callbacks;
+    else
+        list = &wrappersOf(callback->runtime)->callbacks;
     if (callback->previous != nullptr)
         callback->previous->next = callback->next;
     else
@@ -646,8 +639,7 @@ void jsEnterRealm(JSContext* ctx) {
 
 void jsLeaveRealm(JSContext* ctx) {
     JsWrappers* wrappers = wrappersOf(JS_GetRuntime(ctx));
-    PR_ASSERT(wrappers->realms.count != 0
-              && wrappers->realms.last() == ctx);
+    PR_ASSERT(wrappers->realms.count != 0 && wrappers->realms.last() == ctx);
     wrappers->realms.pop();
 }
 
@@ -663,17 +655,15 @@ void jsEnqueueNative(JSContext* ctx, void (*run)(void* data), void* data) {
         int64_t argument = 0;
         JS_ToInt64(context, &function, argv[0]);
         JS_ToInt64(context, &argument, argv[1]);
-        reinterpret_cast<void (*)(void*)>(uintptr_t(function))(
-            reinterpret_cast<void*>(uintptr_t(argument)));
+        reinterpret_cast<void (*)(void*)>(uintptr_t(function))(reinterpret_cast<void*>(uintptr_t(argument)));
         return JS_UNDEFINED;
     };
-    JSValue args[] = {JS_NewInt64(ctx, int64_t(uintptr_t(run))),
-                      JS_NewInt64(ctx, int64_t(uintptr_t(data)))};
+    JSValue args[] = {JS_NewInt64(ctx, int64_t(uintptr_t(run))), JS_NewInt64(ctx, int64_t(uintptr_t(data)))};
     JS_EnqueueJob(ctx, job, 2, args);
 }
 
 JSValue jsWrap(JSContext* ctx, JSClassID id, JSValueConst owner, void* PR_NULLABLE handle,
-               bool ownsHandle, void (*PR_NULLABLE retain)(void*)) {
+        bool ownsHandle, void (*PR_NULLABLE retain)(void*)) {
     if (handle == nullptr)
         return JS_NULL;
 
@@ -681,8 +671,7 @@ JSValue jsWrap(JSContext* ctx, JSClassID id, JSValueConst owner, void* PR_NULLAB
     JSClassID family = familyOf(wrappers, id);
     uint32_t hash = hashPointer(handle, family);
     void* PR_NULLABLE* slot = slotOf(wrappers, family, handle);
-    const JsWrapper* found = slot != nullptr ? static_cast<JsWrapper*>(*slot)
-                                             : wrappers->table.find(handle, family, hash);
+    const JsWrapper* found = slot != nullptr ? static_cast<JsWrapper*>(*slot) : wrappers->table.find(handle, family, hash);
     if (found != nullptr)
         return JS_DupValue(ctx, objectOf(found));
 
@@ -690,8 +679,7 @@ JSValue jsWrap(JSContext* ctx, JSClassID id, JSValueConst owner, void* PR_NULLAB
     if (JS_IsException(object))
         return object;
 
-    const JsClassRecord* record =
-        id < wrappers->classes.count ? &wrappers->classes.data[id] : nullptr;
+    const JsClassRecord* record = id < wrappers->classes.count ? &wrappers->classes.data[id] : nullptr;
     const JsReferences* references = record != nullptr ? record->references : nullptr;
     if (!ownsHandle && retain == nullptr && references != nullptr)
         retain = references->retain;
@@ -701,13 +689,15 @@ JSValue jsWrap(JSContext* ctx, JSClassID id, JSValueConst owner, void* PR_NULLAB
     }
     PR_ASSERT(JS_IsObject(owner) || JS_IsUndefined(owner) || JS_IsNull(owner));
     JsWrapper* wrapper = alloc<JsWrapper>();
-    *wrapper = JsWrapper{handle,  JS_VALUE_GET_PTR(object),
-                         nullptr, nullptr,
-                         nullptr, nullptr,
-                         nullptr, hash,
-                         family,  ownsHandle,
-                         false,   false,
-                         false};
+    *wrapper = JsWrapper{
+        handle,  JS_VALUE_GET_PTR(object),
+        nullptr, nullptr,
+        nullptr, nullptr,
+        nullptr, hash,
+        family,  ownsHandle,
+        false,   false,
+        false,
+    };
     if (JS_IsObject(owner))
         wrapper->owner = JS_VALUE_GET_PTR(JS_DupValue(ctx, owner));
     if (references != nullptr && references->pinnable && wrappers->pending.count != 0) {
@@ -776,8 +766,8 @@ bool jsHold(JSContext* ctx, JSValueConst owner, const char* name, JSValueConst v
         ok = JS_SetPropertyInt64(ctx, held, length, JS_DupValue(ctx, value)) >= 0;
     } else if (ok && !hold && at >= 0) {
         // The last entry takes the place of the released one.
-        ok = JS_SetPropertyInt64(ctx, held, at, JS_GetPropertyInt64(ctx, held, length - 1)) >= 0
-            && JS_SetPropertyStr(ctx, held, "length", JS_NewInt64(ctx, length - 1)) >= 0;
+        ok = JS_SetPropertyInt64(ctx, held, at, JS_GetPropertyInt64(ctx, held, length - 1)) >= 0 &&
+            JS_SetPropertyStr(ctx, held, "length", JS_NewInt64(ctx, length - 1)) >= 0;
     }
     JS_FreeValue(ctx, held);
     return ok;
@@ -817,8 +807,7 @@ JSValue jsTakeString(JSContext* ctx, PrString text) {
 
 JSValue jsFixedString(JSContext* ctx, PrStringView text) {
     PR_ASSERT(text.data != nullptr && text.size <= 0xffffffffu);
-    FixedStrings::Entry* entry =
-        wrappersOf(JS_GetRuntime(ctx))->fixed.find(text.data, uint32_t(text.size));
+    FixedStrings::Entry* entry = wrappersOf(JS_GetRuntime(ctx))->fixed.find(text.data, uint32_t(text.size));
     if (entry->data == nullptr) {
         JSAtom atom = JS_NewAtomLen(ctx, text.data, text.size);
         if (atom == JS_ATOM_NULL)
@@ -902,8 +891,7 @@ void jsMark(JSRuntime* runtime, JSValueConst self, JSClassID id, JS_MarkFunc* ma
         return;
     if (wrapper->owner != nullptr)
         JS_MarkValue(runtime, JS_MKPTR(JS_TAG_OBJECT, wrapper->owner), mark);
-    for (const JsWrapper* member = wrapper->firstMember; member != nullptr;
-         member = member->nextMember)
+    for (const JsWrapper* member = wrapper->firstMember; member != nullptr; member = member->nextMember)
         JS_MarkValue(runtime, objectOf(member), mark);
     const JsWrapperExtra* extra = wrapper->extra;
     if (extra == nullptr)
@@ -912,8 +900,7 @@ void jsMark(JSRuntime* runtime, JSValueConst self, JSClassID id, JS_MarkFunc* ma
         JS_MarkValue(runtime, extra->sameObjects.data[i].value, mark);
     for (uint32_t i = 0; i < extra->references.count; ++i)
         JS_MarkValue(runtime, extra->references.data[i], mark);
-    for (const JsCallback* callback = extra->callbacks; callback != nullptr;
-         callback = callback->next)
+    for (const JsCallback* callback = extra->callbacks; callback != nullptr; callback = callback->next)
         JS_MarkValue(runtime, callback->value, mark);
     // The collector does not free a pinned object, except when the runtime is destroyed.
     if (!JS_IsUndefined(extra->self) && wrappersOf(runtime)->destroying)
@@ -971,8 +958,7 @@ JSValue jsIllegalConstructor(JSContext* ctx, JSValueConst, int, JSValueConst* PR
     return JS_ThrowTypeError(ctx, "Illegal constructor");
 }
 
-JSValue jsNewFloatArray(JSContext* ctx, JSTypedArrayEnum type, const double* values,
-                        uint32_t count) {
+JSValue jsNewFloatArray(JSContext* ctx, JSTypedArrayEnum type, const double* values, uint32_t count) {
     PR_ASSERT(type == JS_TYPED_ARRAY_FLOAT32 || type == JS_TYPED_ARRAY_FLOAT64);
     Array<uint8_t> bytes;
     if (type == JS_TYPED_ARRAY_FLOAT32) {
@@ -996,10 +982,9 @@ JSValue jsNewFloatArray(JSContext* ctx, JSTypedArrayEnum type, const double* val
 }
 
 bool jsReadFloatArray(JSContext* ctx, JSValueConst value, JSTypedArrayEnum type, double* out,
-                      uint32_t capacity, uint32_t* count) {
+        uint32_t capacity, uint32_t* count) {
     if (JS_GetTypedArrayType(value) != int(type)) {
-        JS_ThrowTypeError(ctx, type == JS_TYPED_ARRAY_FLOAT32 ? "Expected a Float32Array"
-                                                              : "Expected a Float64Array");
+        JS_ThrowTypeError(ctx, type == JS_TYPED_ARRAY_FLOAT32 ? "Expected a Float32Array" : "Expected a Float64Array");
         return false;
     }
     size_t offset = 0;
@@ -1046,8 +1031,7 @@ void jsMemberLeave(JSContext* ctx) {
         wrappers->scope->leave(wrappers->scopeContext);
 }
 
-void jsSetMemberScope(JSRuntime* runtime, const JsMemberScope* PR_NULLABLE scope,
-                      void* PR_NULLABLE context) {
+void jsSetMemberScope(JSRuntime* runtime, const JsMemberScope* PR_NULLABLE scope, void* PR_NULLABLE context) {
     JsWrappers* wrappers = wrappersOf(runtime);
     wrappers->scope = scope;
     wrappers->scopeContext = context;
@@ -1076,15 +1060,16 @@ void jsRegisterClass(JSRuntime* runtime, JSClassID* id, const JSClassDef& defini
 }
 
 void jsDeclareClass(JSRuntime* runtime, const JsClass& definition) {
-    JSClassDef classDef = {definition.name, definition.finalizer, definition.mark, nullptr,
-                           definition.exotic, objectState};
+    JSClassDef classDef = {
+        definition.name, definition.finalizer, definition.mark, nullptr,
+        definition.exotic, objectState,
+    };
     jsRegisterClass(runtime, definition.id, classDef);
     JsWrappers* wrappers = wrappersOf(runtime);
     JsClassRecord* record = recordOf(wrappers, *definition.id);
     JSClassID id = *definition.id;
     record->base = definition.base != nullptr ? *definition.base : 0;
-    const JsClassRecord* parent =
-        record->base != 0 ? &wrappers->classes.data[record->base] : nullptr;
+    const JsClassRecord* parent = record->base != 0 ? &wrappers->classes.data[record->base] : nullptr;
     PR_ASSERT(parent == nullptr || parent->family != 0);
     record->family = parent != nullptr ? parent->family : id;
     record->depth = parent != nullptr ? parent->depth + 1 : 0;
@@ -1093,15 +1078,21 @@ void jsDeclareClass(JSRuntime* runtime, const JsClass& definition) {
     for (uint32_t i = 0; i < record->depth; ++i)
         record->ancestors[i] = parent->ancestors[i];
     record->ancestors[record->depth] = id;
-    record->references = definition.references != nullptr ? definition.references
-        : parent != nullptr ? parent->references : nullptr;
+    if (definition.references != nullptr)
+        record->references = definition.references;
+    else if (parent != nullptr)
+        record->references = parent->references;
+    else
+        record->references = nullptr;
     record->slot = parent != nullptr ? parent->slot : definition.slot;
-    record->prepared = definition.prepared != nullptr ? definition.prepared
-                       : parent != nullptr            ? parent->prepared
-                                                      : nullptr;
-    record->wrapped = definition.wrapped != nullptr ? definition.wrapped
-                      : parent != nullptr           ? parent->wrapped
-                                                    : nullptr;
+    if (definition.prepared != nullptr)
+        record->prepared = definition.prepared;
+    else if (parent != nullptr)
+        record->prepared = parent->prepared;
+    else
+        record->prepared = nullptr;
+    record->wrapped =
+        definition.wrapped != nullptr ? definition.wrapped : parent != nullptr           ? parent->wrapped : nullptr;
     record->data = definition.data;
     record->defined = true;
 }
@@ -1119,8 +1110,7 @@ bool jsDerives(JSRuntime* runtime, JSClassID id, JSClassID base) {
         return false;
     const JsClassRecord& record = wrappers->classes.data[id];
     const JsClassRecord& ancestor = wrappers->classes.data[base];
-    return ancestor.family != 0 && record.depth > ancestor.depth
-           && record.ancestors[ancestor.depth] == base;
+    return ancestor.family != 0 && record.depth > ancestor.depth && record.ancestors[ancestor.depth] == base;
 }
 
 void* PR_NULLABLE jsHandleIn(JSContext* ctx, JSValueConst value, JSClassID base) {
@@ -1134,8 +1124,7 @@ void* PR_NULLABLE jsHandleIn(JSContext* ctx, JSValueConst value, JSClassID base)
 void* PR_NULLABLE jsHandleInSet(JSValueConst value, const JsClassSet* set) {
     JSClassID actual = 0;
     void* opaque = JS_GetAnyOpaque(value, &actual);
-    return opaque != nullptr && jsClassSetHas(set, actual) ? static_cast<JsWrapper*>(opaque)->handle
-                                                           : nullptr;
+    return opaque != nullptr && jsClassSetHas(set, actual) ? static_cast<JsWrapper*>(opaque)->handle : nullptr;
 }
 
 void* PR_NULLABLE jsGlobalHandleIn(JSContext* ctx, JSClassID base) {
@@ -1231,8 +1220,7 @@ JSValue jsWrapperOf(JSContext* ctx, JSClassID base, void* PR_NULLABLE handle) {
     return wrapper != nullptr ? JS_DupValue(ctx, objectOf(wrapper)) : JS_UNDEFINED;
 }
 
-JSValue jsWrapAs(JSContext* ctx, JSClassID id, JSValueConst owner, void* PR_NULLABLE handle,
-                 bool ownsHandle) {
+JSValue jsWrapAs(JSContext* ctx, JSClassID id, JSValueConst owner, void* PR_NULLABLE handle, bool ownsHandle) {
     if (handle == nullptr)
         return JS_NULL;
     // If the handle already has an object, it is returned without determining which class describes the handle.
@@ -1255,7 +1243,7 @@ const void* PR_NULLABLE jsRuntimeData(JSRuntime* runtime, const void* key) {
 }
 
 void* jsRuntimeOwned(JSRuntime* runtime, const void* key, void* PR_NONNULL (* PR_NONNULL make)(),
-                     void (* PR_NONNULL destroy)(void* PR_NONNULL)) {
+        void (* PR_NONNULL destroy)(void* PR_NONNULL)) {
     if (const JsRuntimeEntry* entry = runtimeEntry(wrappersOf(runtime), key))
         return const_cast<void*>(entry->value);
     void* value = make();

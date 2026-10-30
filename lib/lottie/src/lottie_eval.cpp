@@ -33,12 +33,11 @@ double bezierSlope(double t, double p1, double p2) {
 }
 
 // Writes the point on a spatial keyframe's path at `fraction` of the path's length.
-void spatialAt(const float* s, const float* e, const float* to, const float* ti, uint32_t dims,
-               double fraction, float* out) {
+void spatialAt(const float* s, const float* e, const float* to, const float* ti, uint32_t dims, double fraction, float* out) {
     auto point = [&](double t, uint32_t i) {
         double u = 1 - t;
-        return u * u * u * double(s[i]) + 3 * u * u * t * double(s[i] + to[i])
-               + 3 * u * t * t * double(e[i] + ti[i]) + t * t * t * double(e[i]);
+        return u * u * u * double(s[i]) + 3 * u * u * t * double(s[i] + to[i]) +
+            3 * u * t * t * double(e[i] + ti[i]) + t * t * t * double(e[i]);
     };
     double lengths[kSpatialSamples];
     double total = 0;
@@ -314,7 +313,7 @@ PrMatrix4 lottieTransformMatrix4(const LottieAnimation& a, const LottieTransform
     scale(m, double(scaled[0]) / 100, double(scaled[1]) / 100, double(scaled[2]) / 100);
     if (t.skew != kLottieNone)
         skewFromAxis(m, -double(lottieScalar(a, t.skew, frame, 0)) * kDegrees,
-                     double(lottieScalar(a, t.skewAxis, frame, 0)) * kDegrees);
+            double(lottieScalar(a, t.skewAxis, frame, 0)) * kDegrees);
     rotate(m, 0, 0, 1, double(lottieScalar(a, t.rotation, frame, 0)) * kDegrees);
     rotate(m, 0, 1, 0, -double(lottieScalar(a, t.rotationY, frame, 0)) * kDegrees);
     rotate(m, 1, 0, 0, -double(lottieScalar(a, t.rotationX, frame, 0)) * kDegrees);
@@ -327,8 +326,7 @@ PrMatrix4 lottieTransformMatrix4(const LottieAnimation& a, const LottieTransform
     return m;
 }
 
-PrMatrix4 lottieCameraView(const LottieAnimation& a, const LottieTransform& t, double frame, PrVec2 extent,
-                           float zoom) {
+PrMatrix4 lottieCameraView(const LottieAnimation& a, const LottieTransform& t, double frame, PrVec2 extent, float zoom) {
     float position[3];
     float interest[3];
     float orient[3];
@@ -345,8 +343,10 @@ PrMatrix4 lottieCameraView(const LottieAnimation& a, const LottieTransform& t, d
     // A two-node camera faces its point of interest: turned about y, then tilted about x.
     if (t.anchor != kLottieNone) {
         values3(a, t.anchor, frame, 0, interest);
-        double toward[3] = {double(position[0] - interest[0]), double(position[1] - interest[1]),
-                            double(position[2] - interest[2])};
+        double toward[3] = {
+            double(position[0] - interest[0]), double(position[1] - interest[1]),
+            double(position[2] - interest[2]),
+        };
         double length = sqrtF64(toward[0] * toward[0] + toward[1] * toward[1] + toward[2] * toward[2]);
         if (length > 0) {
             for (double& v : toward)
@@ -395,8 +395,10 @@ float lottieTransformOpacity(const LottieAnimation& a, const LottieTransform& t,
 }
 
 bool lottieTransformFixed(const LottieAnimation& a, const LottieTransform& t) {
-    const uint32_t parts[] = {t.anchor,    t.position,  t.positionX,   t.positionY, t.positionZ, t.scale,
-                              t.rotation,  t.rotationX, t.rotationY, t.orientation, t.skew,      t.skewAxis};
+    const uint32_t parts[] = {
+        t.anchor,    t.position,  t.positionX,   t.positionY, t.positionZ, t.scale,
+        t.rotation,  t.rotationX, t.rotationY, t.orientation, t.skew,      t.skewAxis,
+    };
     for (uint32_t p : parts) {
         if (p != kLottieNone && a.properties.data[p].keyframeCount > 0)
             return false;

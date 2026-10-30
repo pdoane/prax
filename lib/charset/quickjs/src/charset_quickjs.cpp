@@ -46,16 +46,14 @@ JSValue constructDecoder(JSContext* ctx, JSValueConst newTarget, int argc, JSVal
     bool present = false;
     bool fatal = false;
     bool ignoreBom = false;
-    if (!jsDictionary(ctx, options, &present)
-        || (present && (!jsDictBool(ctx, options, "fatal", &fatal) || !jsDictBool(ctx, options, "ignoreBOM",
-                                                                                     &ignoreBom))))
+    if (!jsDictionary(ctx, options, &present) || (present &&
+            (!jsDictBool(ctx, options, "fatal", &fatal) || !jsDictBool(ctx, options, "ignoreBOM", &ignoreBom))))
         return JS_EXCEPTION;
     PrCharset charset = prCharsetFromLabel(label.value());
     if (charset == PrCharset_None || charset == PrCharset_Replacement)
         return JS_ThrowRangeError(ctx, "The encoding label provided ('%.*s') is invalid.", int(label.value().size),
-                                  label.value().data);
-    PrCharsetDecoderFlags flags = (fatal ? PrCharsetDecoderFlag_Fatal : 0)
-                                  | (ignoreBom ? PrCharsetDecoderFlag_KeepBom : 0);
+            label.value().data);
+    PrCharsetDecoderFlags flags = (fatal ? PrCharsetDecoderFlag_Fatal : 0) | (ignoreBom ? PrCharsetDecoderFlag_KeepBom : 0);
     JsTextDecoder decoder = {.decoder = prCharsetDecoderMake(charset, flags)};
     return jsConstructed(ctx, newTarget, jsNewValue(ctx, textDecoderClass, decoder));
 }
@@ -82,9 +80,12 @@ JSValue decodeMethod(JSContext* ctx, JSValueConst self, int argc, JSValueConst* 
     text.text.resize(uint32_t(prCharsetDecodeMaxSize(&decoder->decoder, size)));
     size_t written = 0;
     bool decoded = prCharsetDecode(&decoder->decoder, bytes, stream ? PrCharsetInput_Partial : PrCharsetInput_Final,
-                                   text.text.data, &written);
-    JSValue result = decoded ? JS_NewStringLen(ctx, text.text.data, written)
-                             : JS_ThrowTypeError(ctx, "The encoded data was not valid.");
+        text.text.data, &written);
+    JSValue result;
+    if (decoded)
+        result = JS_NewStringLen(ctx, text.text.data, written);
+    else
+        result = JS_ThrowTypeError(ctx, "The encoded data was not valid.");
     textReset(&text);
     return result;
 }
@@ -194,20 +195,24 @@ constexpr JSCFunctionListEntry kTextEncoderProto[] = {
 using namespace pr_impl;
 
 void prJsCharsetBind(JSContext* ctx) {
-    JSValue decoder = jsDefineClass(ctx, {.name = "TextDecoder",
-                                          .id = &textDecoderClass,
-                                          .finalizer = jsValueFinalizer,
-                                          .mark = jsValueMark,
-                                          .proto = kTextDecoderProto,
-                                          .protoCount = int(countOf(kTextDecoderProto)),
-                                          .constructor = constructDecoder});
+    JSValue decoder = jsDefineClass(ctx, {
+        .name = "TextDecoder",
+        .id = &textDecoderClass,
+        .finalizer = jsValueFinalizer,
+        .mark = jsValueMark,
+        .proto = kTextDecoderProto,
+        .protoCount = int(countOf(kTextDecoderProto)),
+        .constructor = constructDecoder,
+    });
     JS_FreeValue(ctx, decoder);
-    JSValue encoder = jsDefineClass(ctx, {.name = "TextEncoder",
-                                          .id = &textEncoderClass,
-                                          .finalizer = jsValueFinalizer,
-                                          .mark = jsValueMark,
-                                          .proto = kTextEncoderProto,
-                                          .protoCount = int(countOf(kTextEncoderProto)),
-                                          .constructor = constructEncoder});
+    JSValue encoder = jsDefineClass(ctx, {
+        .name = "TextEncoder",
+        .id = &textEncoderClass,
+        .finalizer = jsValueFinalizer,
+        .mark = jsValueMark,
+        .proto = kTextEncoderProto,
+        .protoCount = int(countOf(kTextEncoderProto)),
+        .constructor = constructEncoder,
+    });
     JS_FreeValue(ctx, encoder);
 }

@@ -40,8 +40,7 @@ struct SvgSource {
     PrTextShaper* shaper;
 
     SvgSource(fs::path from, const fs::path& settings, PrTextShaper* shaper, PrFontHinting hinting,
-              PrFontHinter* PR_NULLABLE hinter)
-        : path(std::move(from)), document(parseSvg(path)), shaper(shaper) {
+            PrFontHinter* PR_NULLABLE hinter) : path(std::move(from)), document(parseSvg(path)), shaper(shaper) {
         if (!settings.empty()) {
             std::string root = fs::path(kThirdParty).parent_path().string();
             std::string file = settings.string();
@@ -79,7 +78,7 @@ struct SvgSource {
 };
 
 std::shared_ptr<SvgSource> loadSvg(const fs::path& path, const fs::path& settings, PrTextShaper* shaper,
-                                   PrFontHinting hinting, PrFontHinter* PR_NULLABLE hinter) {
+        PrFontHinting hinting, PrFontHinter* PR_NULLABLE hinter) {
     std::shared_ptr<SvgSource> svg = std::make_shared<SvgSource>(path, settings, shaper, hinting, hinter);
     return svg->document != nullptr ? svg : nullptr;
 }

@@ -30,10 +30,12 @@ bool loadImage(void* PR_NULLABLE context, PrDomDocument* from, PrStringView url,
     std::string fragment = hash != std::string::npos ? reference.substr(hash + 1) : std::string();
     if (name == "flag.png") {
         std::vector<uint8_t> pixels(40 * 20 * 4, 0xff);
-        PrDrawImageDesc desc{.pixels = {pixels.data(), 40 * 4, {40, 20}},
-                             .format = PrPixelFormat_Rgba8,
-                             .alpha = PrDrawAlpha_Straight,
-                             .space = PrColorSpace_Srgb};
+        PrDrawImageDesc desc{
+            .pixels = {pixels.data(), 40 * 4, {40, 20}},
+            .format = PrPixelFormat_Rgba8,
+            .alpha = PrDrawAlpha_Straight,
+            .space = PrColorSpace_Srgb,
+        };
         return prDrawImageCreate(&desc, &out->raster) == PrStatus_Ok;
     }
     std::map<std::string, std::string>::const_iterator found = images->svgs.find(name);
@@ -46,9 +48,7 @@ bool loadImage(void* PR_NULLABLE context, PrDomDocument* from, PrStringView url,
     PrSvgDrawOptions options = prSvgDrawOptionsDefault();
     options.loadImage = loadImage;
     options.loadContext = context;
-    out->svg = root != nullptr
-                   ? prSvgImageCreate(root, PrStringView{fragment.data(), fragment.size()}, &options)
-                   : nullptr;
+    out->svg = root != nullptr ? prSvgImageCreate(root, PrStringView{fragment.data(), fragment.size()}, &options) : nullptr;
     prDomDocumentRelease(document);
     return out->svg != nullptr;
 }
@@ -63,8 +63,8 @@ struct Embedded {
         options.loadContext = &images;
         // The flag 40 by 20 in quarters, with a viewBox of its size.
         images.svgs["flag.svg"] = "<svg xmlns='http://www.w3.org/2000/svg' width='40' height='20' viewBox='0 0 40 20'>"
-                                  "<rect width='20' height='10' fill='blue'/><rect id='orange' x='20' width='20' "
-                                  "height='10' fill='orange'/><view id='quarter' viewBox='20 0 20 10'/></svg>";
+            "<rect width='20' height='10' fill='blue'/><rect id='orange' x='20' width='20' "
+            "height='10' fill='orange'/><view id='quarter' viewBox='20 0 20 10'/></svg>";
     }
 
     // Returns the bounds of the commands that `body` draws, in order.
@@ -103,8 +103,7 @@ TEST_CASE("preserveAspectRatio fits a raster's ratio into the positioning rectan
 // The outermost svg element clips its content to its viewport, which is one clip around any command.
 TEST_CASE("an image clips to its positioning rectangle unless its overflow is visible") {
     Embedded e;
-    std::string image = "<image href='flag.png' x='20' y='10' width='120' height='40' "
-                        "preserveAspectRatio='xMidYMid slice'";
+    std::string image = "<image href='flag.png' x='20' y='10' width='120' height='40' preserveAspectRatio='xMidYMid slice'";
     Drawing hidden(svgDocument(image + "/>"), PrVec2{160, 60}, &e.options);
     REQUIRE(hidden.commands.size() == 1);
     CHECK(hidden.commands[0].clips == 2);
@@ -144,7 +143,7 @@ TEST_CASE("object-fit sizes the object, object-position places it, and preserveA
     CHECK(near(only(e, image + "style='object-fit: none'/>"), PrRect{60, 20, 100, 40}));
     CHECK(near(only(e, image + "style='object-fit: none; object-position: -20px 30px'/>"), PrRect{0, 40, 40, 60}));
     CHECK(near(only(e, image + "style='object-fit: none; object-position: right 10px bottom 25%'/>"),
-               PrRect{90, 25, 130, 45}));
+        PrRect{90, 25, 130, 45}));
 }
 
 TEST_CASE("an SVG image's viewport is the image-rendering rectangle, and its root's preserveAspectRatio is none") {
@@ -168,8 +167,7 @@ TEST_CASE("an SVG image with a width and a height but no viewBox scales as if th
 
 TEST_CASE("an SVG image without a ratio fills the positioning rectangle, whatever its preserveAspectRatio") {
     Embedded e;
-    e.images.svgs["free.svg"] =
-        "<svg xmlns='http://www.w3.org/2000/svg'><rect width='50%' height='100%'/></svg>";
+    e.images.svgs["free.svg"] = "<svg xmlns='http://www.w3.org/2000/svg'><rect width='50%' height='100%'/></svg>";
     std::string image = "<image href='free.svg' x='20' y='10' width='120' height='40' ";
     CHECK(near(only(e, image + "/>"), PrRect{20, 10, 80, 50}));
     CHECK(near(only(e, image + "preserveAspectRatio='xMinYMin meet'/>"), PrRect{20, 10, 80, 50}));
@@ -178,7 +176,7 @@ TEST_CASE("an SVG image without a ratio fills the positioning rectangle, whateve
 TEST_CASE("an SVG image's root applies its own filter, which no box applies") {
     Embedded e;
     e.images.svgs["inverted.svg"] = "<svg xmlns='http://www.w3.org/2000/svg' width='40' height='20' "
-                                    "style='filter: invert(1)'><rect width='40' height='20' fill='blue'/></svg>";
+        "style='filter: invert(1)'><rect width='40' height='20' fill='blue'/></svg>";
     Drawing drawing(svgDocument("<image href='inverted.svg' width='40' height='20'/>"), PrVec2{160, 60}, &e.options);
     CHECK(drawing.pixel(10, 10) == "255 255 0");
 }
@@ -186,16 +184,16 @@ TEST_CASE("an SVG image's root applies its own filter, which no box applies") {
 TEST_CASE("an SVG image's width and height give its ratio before its viewBox does") {
     Embedded e;
     e.images.svgs["square.svg"] = "<svg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 20' "
-                                  "preserveAspectRatio='xMinYMin meet'><rect width='40' height='20'/></svg>";
+        "preserveAspectRatio='xMinYMin meet'><rect width='40' height='20'/></svg>";
     CHECK(near(only(e, "<image href='square.svg' x='60' y='10' width='40' height='40'/>"), PrRect{60, 10, 100, 50}));
 }
 
 TEST_CASE("the root's overflow decides whether an SVG image clips to its viewport") {
     Embedded e;
     e.images.svgs["bar.svg"] = "<svg xmlns='http://www.w3.org/2000/svg' width='40' height='20' viewBox='0 0 40 20' "
-                               "style='overflow: visible'><rect x='-20' width='80' height='20'/></svg>";
+        "style='overflow: visible'><rect x='-20' width='80' height='20'/></svg>";
     Drawing both(svgDocument("<image href='bar.svg' x='20' y='10' width='120' height='40' style='overflow: visible'/>"),
-                 PrVec2{160, 60}, &e.options);
+        PrVec2{160, 60}, &e.options);
     REQUIRE(both.commands.size() == 1);
     CHECK(both.commands[0].clips == 1);
     CHECK(near(both.commands[0].bounds, PrRect{0, 10, 160, 50}));
@@ -218,13 +216,13 @@ TEST_CASE("svgView's transform() moves the view about its center, after its view
     // The blue quarter, from 40, 10 to 80, 30 without the transform, doubled about the center at 80, 30.
     CHECK(near(e.drawn("<image href='flag.svg#svgView(transform(scale(2)))" + place)[0], PrRect{0, -10, 80, 30}));
     CHECK(near(e.drawn("<image href='flag.svg#svgView(viewBox(0,0,20,10);transform(translate(10)))" + place)[0],
-               PrRect{50, 10, 130, 50}));
+        PrRect{50, 10, 130, 50}));
 }
 
 TEST_CASE("the element that an SVG image's fragment names matches :target") {
     Embedded e;
     e.images.svgs["target.svg"] = "<svg xmlns='http://www.w3.org/2000/svg' width='40' height='20'>"
-                                  "<style>#a:target { fill: orange }</style><rect id='a' width='40' height='20'/></svg>";
+        "<style>#a:target { fill: orange }</style><rect id='a' width='40' height='20'/></svg>";
     Drawing named(svgDocument("<image href='target.svg#a'/>"), PrVec2{160, 60}, &e.options);
     Drawing whole(svgDocument("<image href='target.svg'/>"), PrVec2{160, 60}, &e.options);
     REQUIRE(named.commands.size() == 1);
@@ -252,9 +250,8 @@ TEST_CASE("an image takes its transform, its opacity and its visibility") {
 
 TEST_CASE("requiredExtensions passes for the namespaces of HTML and MathML, and fails empty or for any other") {
     auto first = [](const char* extensions) {
-        Drawing drawing(svgDocument(std::string("<switch><rect requiredExtensions='") + extensions
-                                    + "' width='10' height='10' fill='lime'/><rect width='10' height='10' fill='red'/>"
-                                      "</switch>"));
+        Drawing drawing(svgDocument(std::string("<switch><rect requiredExtensions='") + extensions +
+            "' width='10' height='10' fill='lime'/><rect width='10' height='10' fill='red'/></switch>"));
         REQUIRE(drawing.commands.size() == 1);
         return drawing.commands[0].color.g == 1.0f;
     };

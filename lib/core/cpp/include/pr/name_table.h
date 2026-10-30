@@ -19,8 +19,7 @@ namespace pr {
 // Returns the text at `index` of `blob`, whose texts start at the offsets in `at`. `at` has one more entry than the
 // blob has texts.
 template <typename Offset>
-inline PrStringView nameAt(const char* blob, const Offset* PR_NONNULL at,
-                           uint32_t index) {
+inline PrStringView nameAt(const char* blob, const Offset* PR_NONNULL at, uint32_t index) {
     return PrStringView{blob + at[index], size_t(at[index + 1] - at[index])};
 }
 
@@ -28,13 +27,12 @@ inline PrStringView nameAt(const char* blob, const Offset* PR_NONNULL at,
 // The reads overlap and stay inside the text, and a byte that two reads cover has the same value in each.
 constexpr uint64_t nameWordPart(const char* text, size_t size) {
     if (size >= 4)
-        return uint64_t(loadUnaligned<uint32_t>(text))
-             | (uint64_t(loadUnaligned<uint32_t>(text + size - 4)) << (8 * (size - 4)));
+        return uint64_t(loadUnaligned<uint32_t>(text)) |
+            (uint64_t(loadUnaligned<uint32_t>(text + size - 4)) << (8 * (size - 4)));
     if (size == 0)
         return 0;
-    return uint64_t(uint8_t(text[0]))
-         | (uint64_t(uint8_t(text[size >> 1])) << (8 * (size >> 1)))
-         | (uint64_t(uint8_t(text[size - 1])) << (8 * (size - 1)));
+    return uint64_t(uint8_t(text[0])) | (uint64_t(uint8_t(text[size >> 1])) << (8 * (size >> 1))) |
+        (uint64_t(uint8_t(text[size - 1])) << (8 * (size - 1)));
 }
 
 // Returns a mask with the low `size` bytes set and zeros above them. `size` must be eight or fewer.
@@ -47,8 +45,7 @@ constexpr uint64_t nameWordMask(size_t size) {
 // carry of each byte stays inside that byte.
 constexpr uint64_t nameFold(uint64_t word) {
     uint64_t low = word & 0x7f7f7f7f7f7f7f7full;
-    uint64_t upper = (low + 0x3f3f3f3f3f3f3f3full) & ~(low + 0x2525252525252525ull) & ~word
-                   & 0x8080808080808080ull;
+    uint64_t upper = (low + 0x3f3f3f3f3f3f3f3full) & ~(low + 0x2525252525252525ull) & ~word & 0x8080808080808080ull;
     return word | (upper >> 2);
 }
 

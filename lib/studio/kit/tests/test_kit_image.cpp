@@ -19,8 +19,10 @@ namespace {
 // Returns an image of `width` by `height` opaque white pixels, which the caller releases.
 const PrDrawImage* whiteImage(uint32_t width, uint32_t height) {
     std::vector<uint8_t> pixels(size_t(width) * height * 4, 255);
-    PrDrawImageDesc desc{PrPixelView{pixels.data(), width * 4, {width, height}}, PrPixelFormat_Rgba8,
-                         PrDrawAlpha_Straight, PrColorSpace_Srgb};
+    PrDrawImageDesc desc{
+        PrPixelView{pixels.data(), width * 4, {width, height}}, PrPixelFormat_Rgba8,
+        PrDrawAlpha_Straight, PrColorSpace_Srgb,
+    };
     const PrDrawImage* image = nullptr;
     REQUIRE(prDrawImageCreate(&desc, &image) == PrStatus_Ok);
     return image;
@@ -42,9 +44,11 @@ TEST_CASE("an image takes its own size unless it is placed, and keeps its record
         PrKitBoxStyle line{.direction = PrKitDirection_Row, .align = PrKitAlign_Start};
         PrLayoutNode row = prKitBox(f.kit, ground, {}, line);
         natural = prKitImage(f.kit, row, {.image = image}, {});
-        PrKitImageStyle cover{.fit = PrKitImageFit_Cover,
-                              .alignX = PrKitAlign_Start,
-                              .place = {.width = prKitPx(40), .height = prKitPx(40), .flex = PrKitFlex_Fixed}};
+        PrKitImageStyle cover{
+            .fit = PrKitImageFit_Cover,
+            .alignX = PrKitAlign_Start,
+            .place = {.width = prKitPx(40), .height = prKitPx(40), .flex = PrKitFlex_Fixed},
+        };
         framed = prKitImage(f.kit, row, {.image = image}, cover);
     };
     f.frame();

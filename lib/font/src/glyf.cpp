@@ -64,8 +64,7 @@ typedef uint8_t RunFlags;
 // The bytes of the glyph's data, or an empty table if the glyph has none.
 SfntTable glyphData(const GlyfFace& face, uint32_t glyph) {
     uint32_t start = face.longOffsets ? face.loca.uint32At(glyph * 4) : uint32_t(face.loca.uint16At(glyph * 2)) * 2;
-    uint32_t end = face.longOffsets ? face.loca.uint32At(glyph * 4 + 4)
-                                    : uint32_t(face.loca.uint16At(glyph * 2 + 2)) * 2;
+    uint32_t end = face.longOffsets ? face.loca.uint32At(glyph * 4 + 4) : uint32_t(face.loca.uint16At(glyph * 2 + 2)) * 2;
     if (end <= start || end > face.glyf.size)
         return SfntTable{nullptr, 0};
     return SfntTable{face.glyf.data + start, end - start};
@@ -130,8 +129,7 @@ void readDeltas(Reader& r, uint32_t count, Array<float>& out) {
 // points `a` and `b`, as the IUP instruction does: a point outside the references' span takes the delta of the nearer
 // reference, and a point inside it a delta in proportion. References at one position with different deltas move
 // nothing.
-void interpolate(uint32_t first, uint32_t last, uint32_t a, uint32_t b, const PrVec2* original, PrVec2* deltas,
-                 uint32_t axis) {
+void interpolate(uint32_t first, uint32_t last, uint32_t a, uint32_t b, const PrVec2* original, PrVec2* deltas, uint32_t axis) {
     if (first > last)
         return;
     auto component = [axis](const PrVec2& v) -> float { return axis == 0 ? v.x : v.y; };
@@ -162,7 +160,7 @@ void interpolate(uint32_t first, uint32_t last, uint32_t a, uint32_t b, const Pr
 
 // Infers the deltas of the points that a tuple leaves untouched, contour by contour.
 void inferDeltas(const PrVec2* original, PrVec2* deltas, const bool* touched, const uint32_t* ends,
-                 uint32_t contourCount) {
+        uint32_t contourCount) {
     uint32_t first = 0;
     for (uint32_t c = 0; c < contourCount; ++c) {
         uint32_t end = ends[c] - 1;
@@ -200,8 +198,7 @@ void inferDeltas(const PrVec2* original, PrVec2* deltas, const bool* touched, co
 }
 
 // Returns the scalar of a tuple at the coordinates. Without an intermediate region, the region runs from 0 to the peak.
-float tupleScalar(SfntTable peaks, SfntTable starts, SfntTable ends, bool intermediate, uint32_t axisCount,
-                  SfntCoords coords) {
+float tupleScalar(SfntTable peaks, SfntTable starts, SfntTable ends, bool intermediate, uint32_t axisCount, SfntCoords coords) {
     float scalar = 1;
     for (uint32_t axis = 0; axis < axisCount && scalar != 0; ++axis) {
         float peak = peaks.f2dot14(axis * 2);
@@ -230,7 +227,7 @@ float tupleScalar(SfntTable peaks, SfntTable starts, SfntTable ends, bool interm
 // Adds to `deltas` the variations of gvar for the glyph's `count` points, the last four of which are its phantom
 // points. A simple glyph infers the deltas of the points that a tuple leaves out, within `ends`.
 void addDeltas(const GlyfFace& face, SfntCoords coords, uint32_t glyph, const PrVec2* original, uint32_t count,
-               const uint32_t* PR_NULLABLE ends, uint32_t contourCount, PrVec2* deltas) {
+        const uint32_t* PR_NULLABLE ends, uint32_t contourCount, PrVec2* deltas) {
     const SfntTable& gvar = face.gvar;
     if (gvar.size == 0 || coords.count == 0 || glyph >= gvar.uint16At(12))
         return;
@@ -347,8 +344,10 @@ GlyfPhantom phantomOf(const GlyfFace& face, SfntCoords coords, uint32_t glyph, i
     fontGlyphMetricsVertical(*face.metrics, coords, glyph, yMax, &height, &tsb);
     float origin = float(xMin - lsb);
     float top = float(yMax + tsb);
-    return GlyfPhantom{PrVec2{origin, 0}, PrVec2{origin + float(advance), 0}, PrVec2{0, top},
-                       PrVec2{0, top - float(height)}};
+    return GlyfPhantom{
+        PrVec2{origin, 0}, PrVec2{origin + float(advance), 0}, PrVec2{0, top},
+        PrVec2{0, top - float(height)},
+    };
 }
 
 // Applies phantom deltas, unless HVAR or VVAR varies the advances instead.
@@ -368,11 +367,11 @@ void movePhantom(const GlyfFace& face, GlyfPhantom* phantom, const PrVec2* delta
 }
 
 bool loadGlyph(const GlyfFace& face, SfntCoords coords, uint32_t glyph, uint32_t depth, FontGlyphOutline* out,
-               GlyfPhantom* phantom);
+    GlyfPhantom* phantom);
 
 // Appends a simple glyph's contours. `count` is its number of contours.
 bool loadSimple(const GlyfFace& face, SfntCoords coords, uint32_t glyph, SfntTable data, uint32_t count,
-                FontGlyphOutline* out, GlyfPhantom* phantom) {
+        FontGlyphOutline* out, GlyfPhantom* phantom) {
     uint32_t base = out->points.count;
     uint32_t pointCount = count != 0 ? uint32_t(data.uint16At(10 + (count - 1) * 2)) + 1 : 0;
     uint32_t instructions = data.uint16At(10 + count * 2);
@@ -400,8 +399,8 @@ bool loadSimple(const GlyfFace& face, SfntCoords coords, uint32_t glyph, SfntTab
             x += data.int16At(at);
             at += 2;
         }
-        fontOutlinePush(*out, PrVec2{float(x), 0}, (flag & PointFlag_OnCurve) != 0 ? OutlinePoint_On
-                                                                            : OutlinePoint_Quadratic);
+        bool onCurve = (flag & PointFlag_OnCurve) != 0;
+        fontOutlinePush(*out, PrVec2{float(x), 0}, onCurve ? OutlinePoint_On : OutlinePoint_Quadratic);
     }
     int32_t y = 0;
     for (uint32_t i = 0; i < pointCount; ++i) {
@@ -460,7 +459,7 @@ struct Component {
 
 // Appends a composite glyph's components.
 bool loadComposite(const GlyfFace& face, SfntCoords coords, uint32_t glyph, SfntTable data, uint32_t depth,
-                   FontGlyphOutline* out, GlyfPhantom* phantom) {
+        FontGlyphOutline* out, GlyfPhantom* phantom) {
     Array<Component> components;
     uint32_t at = 10;
     ComponentFlags flags = ComponentFlag_MoreComponents;
@@ -472,13 +471,17 @@ bool loadComposite(const GlyfFace& face, SfntCoords coords, uint32_t glyph, Sfnt
         at += 4;
         if ((flags & ComponentFlag_ArgsAreWords) != 0) {
             bool offsets = (flags & ComponentFlag_ArgsAreOffsets) != 0;
-            c.arguments = offsets ? PrVec2{float(data.int16At(at)), float(data.int16At(at + 2))}
-                                  : PrVec2{float(data.uint16At(at)), float(data.uint16At(at + 2))};
+            if (offsets)
+                c.arguments = PrVec2{float(data.int16At(at)), float(data.int16At(at + 2))};
+            else
+                c.arguments = PrVec2{float(data.uint16At(at)), float(data.uint16At(at + 2))};
             at += 4;
         } else {
             bool offsets = (flags & ComponentFlag_ArgsAreOffsets) != 0;
-            c.arguments = offsets ? PrVec2{float(int8_t(data.uint8At(at))), float(int8_t(data.uint8At(at + 1)))}
-                                  : PrVec2{float(data.uint8At(at)), float(data.uint8At(at + 1))};
+            if (offsets)
+                c.arguments = PrVec2{float(int8_t(data.uint8At(at))), float(int8_t(data.uint8At(at + 1)))};
+            else
+                c.arguments = PrVec2{float(data.uint8At(at)), float(data.uint8At(at + 1))};
             at += 2;
         }
         c.transform = PrAffine2{1, 0, 0, 1, 0, 0};
@@ -550,8 +553,10 @@ bool loadComposite(const GlyfFace& face, SfntCoords coords, uint32_t glyph, Sfnt
                 loaded = false;
                 break;
             }
-            offset = PrVec2{out->points.data[k].x - out->points.data[l].x,
-                            out->points.data[k].y - out->points.data[l].y};
+            offset = PrVec2{
+                out->points.data[k].x - out->points.data[l].x,
+                out->points.data[k].y - out->points.data[l].y,
+            };
         }
         if (offset.x != 0 || offset.y != 0)
             fontOutlineTransform(*out, base, PrAffine2{1, 0, 0, 1, offset.x, offset.y});
@@ -563,15 +568,17 @@ bool loadComposite(const GlyfFace& face, SfntCoords coords, uint32_t glyph, Sfnt
 }
 
 bool loadGlyph(const GlyfFace& face, SfntCoords coords, uint32_t glyph, uint32_t depth, FontGlyphOutline* out,
-               GlyfPhantom* phantom) {
+        GlyfPhantom* phantom) {
     if (glyph >= face.glyphCount || depth > kMaxComponentDepth)
         return false;
     SfntTable data = glyphData(face, glyph);
     if (data.size < 10) {
         *phantom = phantomOf(face, coords, glyph, 0, 0);
         if (face.gvar.size != 0 && coords.count != 0) {
-            PrVec2 original[4] = {phantom->horizontalOrigin, phantom->horizontalAdvance, phantom->verticalOrigin,
-                                  phantom->verticalAdvance};
+            PrVec2 original[4] = {
+                phantom->horizontalOrigin, phantom->horizontalAdvance, phantom->verticalOrigin,
+                phantom->verticalAdvance,
+            };
             PrVec2 deltas[4] = {};
             addDeltas(face, coords, glyph, original, 4, nullptr, 0, deltas);
             movePhantom(face, phantom, deltas);

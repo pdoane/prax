@@ -49,8 +49,7 @@ bool isSubstitution(PrCssKeyword keyword) {
 // match is unknown until substitution.
 bool holdsSubstitution(const CssTokenStream* ts, CssTokenSpan span) {
     for (uint32_t i = span.start; i < span.start + span.count; ++i) {
-        if (cssTokenKind(ts->tokens, i) == CssTokenKind_Function
-            && isSubstitution(cssTokenKeyword(ts->tokens, i)))
+        if (cssTokenKind(ts->tokens, i) == CssTokenKind_Function && isSubstitution(cssTokenKeyword(ts->tokens, i)))
             return true;
     }
     return false;
@@ -90,8 +89,7 @@ Substitution substitution(const CssTokenStream* ts, CssValuePool* pool, CssMatch
 void foldFeatureTagValues(CssValuePool* pool, CssValueSpan* span) {
     for (uint32_t i = span->start; i < pool->values.count;) {
         CssValueNode* value = &pool->values.data[i];
-        if ((value->kind == PrCssValueKind_Integer && value->number == 1)
-            || cssValueIsKeyword(value, PrCssKeyword_On)) {
+        if ((value->kind == PrCssValueKind_Integer && value->number == 1) || cssValueIsKeyword(value, PrCssKeyword_On)) {
             pool->values.erase(i);
             --span->count;
             continue;
@@ -122,12 +120,9 @@ bool absoluteColors(CssValueRun run) {
         const CssValueNode* value = &run.values[i];
         bool keyword = value->kind == PrCssValueKind_Keyword;
         PrCssKeyword name = cssValueKeyword(value);
-        absolute =
-            absolute
-            && !(keyword && (name == PrCssKeyword_Currentcolor || cssIsSystemColor(name)))
-            && !cssValueIsFunction(value, PrCssKeyword_LightDark)
-            && !cssValueIsFunction(value, PrCssKeyword_ContrastColor)
-            && !cssValueIsFunction(value, PrCssKeyword_DeviceCmyk);
+        absolute = absolute && !(keyword && (name == PrCssKeyword_Currentcolor || cssIsSystemColor(name))) &&
+            !cssValueIsFunction(value, PrCssKeyword_LightDark) && !cssValueIsFunction(value, PrCssKeyword_ContrastColor) &&
+            !cssValueIsFunction(value, PrCssKeyword_DeviceCmyk);
     }
     return absolute;
 }
@@ -150,8 +145,8 @@ bool itemsOrdered(CssValueRun run, Ordered ordered) {
             first = false;
             item[0] = item[1] = nullptr;
             count = 0;
-        } else if (run.values[i].kind == PrCssValueKind_Integer
-                   || cssValueIsKeyword(&run.values[i], PrCssKeyword_Infinite)) {
+        } else if (run.values[i].kind == PrCssValueKind_Integer ||
+                cssValueIsKeyword(&run.values[i], PrCssKeyword_Infinite)) {
             if (count < 2)
                 item[count] = run.values[i].kind == PrCssValueKind_Integer ? &run.values[i] : nullptr;
             ++count;
@@ -177,18 +172,16 @@ bool checkDescriptor(PrCssDescriptor descriptor, CssValuePool* pool, CssValueSpa
         case PrCssDescriptor_CounterStyleAdditiveSymbols:
             // css-counter-styles-3/#counter-style-symbols: the weights must strictly decrease.
             return itemsOrdered(cssValuePoolRun(pool, *span), [](const CssValueNode* PR_NULLABLE previous,
-                                                                 const CssValueNode* PR_NULLABLE weight,
-                                                                 const CssValueNode* PR_NULLABLE) {
-                return previous == nullptr || weight == nullptr || weight->number < previous->number;
-            });
+                const CssValueNode* PR_NULLABLE weight, const CssValueNode* PR_NULLABLE) {
+                    return previous == nullptr || weight == nullptr || weight->number < previous->number;
+                });
         case PrCssDescriptor_CounterStyleRange:
             // css-counter-styles-3/#counter-style-range: no range's lower bound is above its upper bound. An infinite
             // lower bound is below every bound, and an infinite upper bound above.
             return itemsOrdered(cssValuePoolRun(pool, *span), [](const CssValueNode* PR_NULLABLE,
-                                                                 const CssValueNode* PR_NULLABLE low,
-                                                                 const CssValueNode* PR_NULLABLE high) {
-                return low == nullptr || high == nullptr || low->number <= high->number;
-            });
+                const CssValueNode* PR_NULLABLE low, const CssValueNode* PR_NULLABLE high) {
+                    return low == nullptr || high == nullptr || low->number <= high->number;
+                });
         default:
             return true;
     }
@@ -196,7 +189,7 @@ bool checkDescriptor(PrCssDescriptor descriptor, CssValuePool* pool, CssValueSpa
 
 // Returns a matcher over the whole of `ts`, for a value of `property` if `ts` is one.
 CssMatcher matcherOf(CssTokenStream* ts, CssValuePool* pool, CssMatchState* state,
-                     const CssParseContext* PR_NULLABLE context, PrCssProperty property) {
+        const CssParseContext* PR_NULLABLE context, PrCssProperty property) {
     CssMatcher m = {};
     m.ts = ts;
     m.pool = pool;
@@ -222,8 +215,7 @@ void holdKeywordForms(PrCssProperty property, CssValuePool* pool, uint32_t first
         uint32_t keywords = 0;
         bool plain = true;
         uint32_t end = item;
-        for (; end < values->count && !cssValueIsLiteral(&values->data[end], ',');
-             end += values->data[end].next) {
+        for (; end < values->count && !cssValueIsLiteral(&values->data[end], ','); end += values->data[end].next) {
             plain = plain && values->data[end].kind == PrCssValueKind_Keyword;
             written = written << 16 | cssValueKeyword(&values->data[end]);
             ++keywords;
@@ -310,9 +302,8 @@ void foldProperty(PrCssProperty property, CssValuePool* pool, uint32_t first) {
             break;
         case PrCssProperty_FontStyle:
             // `oblique 0deg` is `normal`, as csswg-drafts#11430 resolved.
-            if (span.count == 2 && cssValueIsKeyword(&pool->values.data[first], PrCssKeyword_Oblique)
-                && pool->values.data[first + 1].kind == PrCssValueKind_Dimension
-                && pool->values.data[first + 1].number == 0) {
+            if (span.count == 2 && cssValueIsKeyword(&pool->values.data[first], PrCssKeyword_Oblique) &&
+                    pool->values.data[first + 1].kind == PrCssValueKind_Dimension && pool->values.data[first + 1].number == 0) {
                 pool->values.count = first;
                 cssValuePoolAdd(pool, cssKeywordValue(PrCssKeyword_Normal));
             }
@@ -323,8 +314,7 @@ void foldProperty(PrCssProperty property, CssValuePool* pool, uint32_t first) {
 }
 
 // Matches the whole of the matcher's stream, with the arguments of cssMatchWhole.
-bool matchAll(CssMatcher* m, CssGrammarIndex root, CssValueDef production, bool structural,
-              CssValueSpan* out) {
+bool matchAll(CssMatcher* m, CssGrammarIndex root, CssValueDef production, bool structural, CssValueSpan* out) {
     uint32_t values = m->pool->values.count;
     if (!cssMatchWhole(m, root, production, structural))
         return false;
@@ -392,7 +382,7 @@ bool cssIsCssWideKeyword(PrCssKeyword keyword) {
 }
 
 bool cssParsePropertyValue(PrCssProperty property, CssTokenStream* ts, CssValuePool* pool,
-                           CssMatchState* state, CssValueSpan* out) {
+        CssMatchState* state, CssValueSpan* out) {
     uint32_t pos = ts->pos;
     uint32_t values = pool->values.count;
     uint32_t text = pool->text.count;
@@ -434,7 +424,7 @@ bool cssParsePropertyValue(PrCssProperty property, CssTokenStream* ts, CssValueP
 }
 
 bool cssParseDescriptorValue(PrCssDescriptor descriptor, CssTokenStream* ts, CssValuePool* pool,
-                             CssMatchState* state, CssValueSpan* out) {
+        CssMatchState* state, CssValueSpan* out) {
     uint32_t pos = ts->pos;
     uint32_t text = pool->text.count;
     CssMatcher m = matcherOf(ts, pool, state, nullptr, PrCssProperty_Count);
@@ -470,14 +460,12 @@ bool cssParseTokens(CssTokenStream* ts, CssValuePool* pool, CssValueSpan* out) {
     return true;
 }
 
-bool cssParseValue(CssGrammarIndex root, CssTokenStream* ts, CssValuePool* pool,
-                   CssMatchState* state, CssValueSpan* out) {
+bool cssParseValue(CssGrammarIndex root, CssTokenStream* ts, CssValuePool* pool, CssMatchState* state, CssValueSpan* out) {
     CssMatcher m = matcherOf(ts, pool, state, nullptr, PrCssProperty_Count);
     return matchAll(&m, root, CssValueDef_Count, false, out);
 }
 
-bool cssParseNumericValue(CssTokenStream* ts, CssValuePool* pool, CssMatchState* state,
-                          CssValueSpan* out) {
+bool cssParseNumericValue(CssTokenStream* ts, CssValuePool* pool, CssMatchState* state, CssValueSpan* out) {
     uint32_t pos = ts->pos;
     uint32_t values = pool->values.count;
     uint32_t text = pool->text.count;
@@ -496,14 +484,13 @@ bool cssParseNumericValue(CssTokenStream* ts, CssValuePool* pool, CssMatchState*
 }
 
 bool cssParseProduction(CssValueDef production, CssTokenStream* ts,
-                        const CssParseContext* context, CssValuePool* pool, CssMatchState* state,
-                        CssValueSpan* out) {
+        const CssParseContext* context, CssValuePool* pool, CssMatchState* state, CssValueSpan* out) {
     CssMatcher m = matcherOf(ts, pool, state, context, PrCssProperty_Count);
     return matchAll(&m, CssGrammarRoot_None, production, true, out);
 }
 
 bool cssParsePrelude(CssGrammarIndex root, CssTokenStream* ts, const CssParseContext* context,
-                     CssValuePool* pool, CssMatchState* state, CssValueSpan* out) {
+        CssValuePool* pool, CssMatchState* state, CssValueSpan* out) {
     CssMatcher m = matcherOf(ts, pool, state, context, PrCssProperty_Count);
     return matchAll(&m, root, CssValueDef_Count, true, out);
 }

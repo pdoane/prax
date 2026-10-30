@@ -24,8 +24,8 @@ std::string resolved(const char* text) {
 
 uint32_t ot(const char* text) {
     std::string padded = std::string(text) + "    ";
-    return uint32_t(uint8_t(padded[0])) << 24 | uint32_t(uint8_t(padded[1])) << 16 | uint32_t(uint8_t(padded[2])) << 8
-           | uint32_t(uint8_t(padded[3]));
+    return uint32_t(uint8_t(padded[0])) << 24 | uint32_t(uint8_t(padded[1])) << 16 | uint32_t(uint8_t(padded[2])) << 8 |
+        uint32_t(uint8_t(padded[3]));
 }
 
 std::vector<uint32_t> systems(const char* text) {

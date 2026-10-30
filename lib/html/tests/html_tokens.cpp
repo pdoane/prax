@@ -30,8 +30,7 @@ void writeSpan(TextBuffer* out, const HtmlTokenizer* tokenizer, HtmlSpan span) {
 }
 
 // Writes a string that the suite writes as null if the token has none.
-void writeOptional(TextBuffer* out, const HtmlTokenizer* tokenizer, HtmlSpan span,
-                   HtmlTokenFlags absent) {
+void writeOptional(TextBuffer* out, const HtmlTokenizer* tokenizer, HtmlSpan span, HtmlTokenFlags absent) {
     if ((tokenizer->token.flags & absent) != 0)
         textAppend(out, "null");
     else
@@ -143,8 +142,7 @@ HtmlState stateFromName(PrStringView name) {
 }
 
 // A case's fields are its state and its last start tag, which is "-" if the case names none.
-void run(TextBuffer* out, HtmlTokenizer* tokenizer, const HarnessCase& test,
-         Array<HtmlError>* errors) {
+void run(TextBuffer* out, HtmlTokenizer* tokenizer, const HarnessCase& test, Array<HtmlError>* errors) {
     errors->count = 0;
     PrStringView input = textView(&test.input);
     htmlTokenizerStart(tokenizer, input, errors);

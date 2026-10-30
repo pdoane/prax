@@ -29,9 +29,11 @@ void makeFonts(Kit& kit) {
     for (uint32_t role = 0; role < PrKitTextRole_Count; ++role) {
         const PrKitType& type = kit.theme.types[role];
         PrStringView name = type.mono ? kit.theme.mono : kit.theme.sans;
-        PrFontFamily family = name.size != 0 ? prFontFamilyFromName(name)
-                                             : prFontFamilyGeneric(type.mono ? PrFontGeneric_Monospace
-                                                                             : PrFontGeneric_SansSerif);
+        PrFontFamily family;
+        if (name.size != 0)
+            family = prFontFamilyFromName(name);
+        else
+            family = prFontFamilyGeneric(type.mono ? PrFontGeneric_Monospace : PrFontGeneric_SansSerif);
         PrFontStyle style = prFontStyleDefault();
         style.size = type.size;
         style.weight = type.weight;
@@ -46,11 +48,9 @@ void makeFonts(Kit& kit) {
 void makeLooks(Kit& kit) {
     const PrKitPalette& p = kit.theme.palette;
     PrColor clear{0, 0, 0, 0};
-    auto look = [&](KitLookId id, PrColor rest, PrColor hover, PrColor press, PrColor border, PrColor text,
-                    PrColor icon) {
+    auto look = [&](KitLookId id, PrColor rest, PrColor hover, PrColor press, PrColor border, PrColor text, PrColor icon) {
         bool eases = !memEquals(&rest, &hover, sizeof rest) || !memEquals(&rest, &press, sizeof rest);
-        kit.looks[id] =
-            KitLook{.fill = {rest, hover, press}, .border = border, .text = text, .icon = icon, .eases = eases};
+        kit.looks[id] = KitLook{.fill = {rest, hover, press}, .border = border, .text = text, .icon = icon, .eases = eases};
     };
     look(KitLookId_Button, p.bg3, p.bg4, p.bg2, p.line2, p.text1, p.text2);
     look(KitLookId_ButtonPrimary, p.accent, p.accentHover, p.accentPress, p.accent, p.accentText, p.textInverse);
@@ -121,8 +121,10 @@ void KitFont::make(const Kit& kit, PrLayoutFontStyle& font) const {
     font.whiteSpaceCollapse = preserve ? PrLayoutWhiteSpaceCollapse_Preserve : PrLayoutWhiteSpaceCollapse_Collapse;
     PrKitWrap resolved = kitTextWrap(kit, role, wrap);
     font.textWrapMode = resolved == PrKitWrap_Wrap ? PrLayoutTextWrapMode_Wrap : PrLayoutTextWrapMode_Nowrap;
-    static const PrLayoutTextAlign kAlign[] = {PrLayoutTextAlign_Start, PrLayoutTextAlign_Center,
-                                               PrLayoutTextAlign_End};
+    static const PrLayoutTextAlign kAlign[] = {
+        PrLayoutTextAlign_Start, PrLayoutTextAlign_Center,
+        PrLayoutTextAlign_End,
+    };
     font.textAlign = font.textAlignLast = kAlign[align];
 }
 
@@ -224,8 +226,10 @@ void kitPlaceBox(PrLayoutBoxStyle& box, const PrKitPlace& place) {
         box.maxWidth = kitLength(place.maxWidth);
     if (place.maxHeight.kind != PrKitSizeKind_Auto)
         box.maxHeight = kitLength(place.maxHeight);
-    const float margins[PrRectSide_Count] = {place.margin.top, place.margin.right, place.margin.bottom,
-                                             place.margin.left};
+    const float margins[PrRectSide_Count] = {
+        place.margin.top, place.margin.right, place.margin.bottom,
+        place.margin.left,
+    };
     for (uint32_t side = 0; side < PrRectSide_Count; ++side) {
         if (margins[side] != 0)
             box.margin[side] = prLayoutLengthPx(margins[side]);
@@ -321,11 +325,13 @@ void KitFill::make(const Kit& kit, PrLayoutDecorationStyle& decoration) const {
 KitDress kitDress(const Kit& kit, const KitControl& control, KitLookId look) {
     KitState state = KitState_Rest;
     bool settled = kitSettled(kit, control, look, &state);
-    KitFill fill{.look = look,
-                 .state = state,
-                 .ring = control.ring,
-                 .hover = settled ? 0 : control.hover,
-                 .press = settled ? 0 : control.press};
+    KitFill fill{
+        .look = look,
+        .state = state,
+        .ring = control.ring,
+        .hover = settled ? 0 : control.hover,
+        .press = settled ? 0 : control.press,
+    };
     return KitDress{.fill = fill, .ink = KitInk{.color = kit.looks[look].text}};
 }
 
@@ -427,8 +433,7 @@ PrKitWrap kitTextWrap(const Kit& kit, PrKitTextRole role, PrKitWrap wrap) {
 
 float kitHoverFactor(Kit& kit, PrLayoutNode node) {
     bool over = prUiIsHovered(kit.ui, node) && (prUiFlags(kit.ui, node) & PrUiFlag_Disabled) == 0;
-    return prUiTween(kit.ui, node, &kKitOwner, KitStateKey_Hover, over ? 1.0f : 0.0f, over ? kHoverIn : kHoverOut,
-                     nullptr);
+    return prUiTween(kit.ui, node, &kKitOwner, KitStateKey_Hover, over ? 1.0f : 0.0f, over ? kHoverIn : kHoverOut, nullptr);
 }
 
 float kitPressFactor(Kit& kit, PrLayoutNode node) {

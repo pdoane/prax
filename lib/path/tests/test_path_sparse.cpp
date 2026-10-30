@@ -72,8 +72,11 @@ float tileWinding(const float* record, uint32_t height, float px, uint32_t row) 
         auto xAt = [&](float y) { return s[0] + (s[2] - s[0]) * (y - s[1]) / (s[3] - s[1]); };
         float xa = xAt(y0);
         float xb = xAt(y1);
-        float average = std::fabs(xb - xa) < 1e-6f ? std::fmin(std::fmax(px + 1 - (xa + xb) / 2, 0.0f), 1.0f)
-                                                    : (integral(px + 1 - xa) - integral(px + 1 - xb)) / (xb - xa);
+        float average;
+        if (std::fabs(xb - xa) < 1e-6f)
+            average = std::fmin(std::fmax(px + 1 - (xa + xb) / 2, 0.0f), 1.0f);
+        else
+            average = (integral(px + 1 - xa) - integral(px + 1 - xb)) / (xb - xa);
         winding += (s[3] > s[1] ? 1 : -1) * (y1 - y0) * average;
     }
     return winding;
@@ -81,7 +84,7 @@ float tileWinding(const float* record, uint32_t height, float px, uint32_t row) 
 
 // Returns the coverage that the spans give each pixel of the box, as bytes. Every pixel is covered at most once.
 std::vector<uint8_t> render(const PrPathSparse& sparse, const PrPathSparseRasterizerOptions& options,
-                            PrPathFillRule rule, int32_t left, int32_t top, uint32_t width, uint32_t height) {
+        PrPathFillRule rule, int32_t left, int32_t top, uint32_t width, uint32_t height) {
     std::vector<uint8_t> pixels(size_t(width) * height, 0);
     std::vector<uint8_t> covered(size_t(width) * height, 0);
     for (uint32_t i = 0; i < sparse.spanCount; ++i) {
@@ -115,14 +118,14 @@ std::vector<uint8_t> render(const PrPathSparse& sparse, const PrPathSparseRaster
 
 // Fills the path under the transform, flattened into `polyline`.
 void fillPath(PrPathSparseRasterizer* rasterizer, PrPathPolyline& polyline, const PrPath* path, PrAffine2 transform,
-              PrPathFillRule rule, PrIRect box, PrPathSparse* out) {
+        PrPathFillRule rule, PrIRect box, PrPathSparse* out) {
     prPathPolylineClear(&polyline);
     prPathFlatten(path, transform, 0.05f, PrPathFlattening_Balanced, &polyline);
     *out = prPathSparseRasterizerFill(rasterizer, &polyline, rule, box);
 }
 
 std::vector<uint8_t> rasterize(const PrPath* path, PrAffine2 transform, PrPathFillRule rule, int32_t left,
-                               int32_t top, uint32_t width, uint32_t height) {
+        int32_t top, uint32_t width, uint32_t height) {
     std::vector<uint8_t> pixels(size_t(width) * height, 0);
     PrPathRasterizer* rasterizer = prPathRasterizerCreate();
     PrPixels mask{pixels.data(), width, {width, height}};
@@ -148,10 +151,12 @@ int largestDifference(const std::vector<uint8_t>& a, const std::vector<uint8_t>&
 using namespace pr_impl;
 
 TEST_CASE("sparse spans cover each pixel as the rasterizer does") {
-    PrPathSparseRasterizerOptions kinds[] = {{PrPathSparseKind_Coverage, {4, 4}},
-                                   {PrPathSparseKind_Segments, {16, 16}},
-                                   {PrPathSparseKind_Segments, {8, 4}},
-                                   {PrPathSparseKind_Coverage, {16, 2}}};
+    PrPathSparseRasterizerOptions kinds[] = {
+        {PrPathSparseKind_Coverage, {4, 4}},
+        {PrPathSparseKind_Segments, {16, 16}},
+        {PrPathSparseKind_Segments, {8, 4}},
+        {PrPathSparseKind_Coverage, {16, 2}},
+    };
     Random random{2024};
     for (const PrPathSparseRasterizerOptions& options : kinds) {
         PrPathSparseRasterizer* rasterizer = prPathSparseRasterizerCreate(&options);
@@ -170,8 +175,8 @@ TEST_CASE("sparse spans cover each pixel as the rasterizer does") {
             fillPath(rasterizer, polyline, path, transform, rule, box, &sparse);
             std::vector<uint8_t> drawn = render(sparse, options, rule, left, top, width, height);
             std::vector<uint8_t> expected = rasterize(path, transform, rule, left, top, width, height);
-            INFO("kind " << int(options.kind) << " tile " << options.tileExtent.x << "x" << options.tileExtent.y
-                         << " trial " << trial);
+            INFO("kind " << int(options.kind) << " tile " << options.tileExtent.x << "x" << options.tileExtent.y <<
+                " trial " << trial);
             CHECK(largestDifference(drawn, expected) <= 2);
             prPathDestroy(path);
         }
@@ -234,14 +239,13 @@ TEST_CASE("sparse fills of points or transforms that are not finite, or of boxes
             prPathLineTo(path, PrVec2{bad, 5});
             prPathLineTo(path, PrVec2{5, 10});
             prPathClose(path);
-            fillPath(rasterizer, polyline, path, prAffine2Identity(), PrPathFillRule_NonZero, PrIRect{0, 0, 64, 64},
-                     &sparse);
+            fillPath(rasterizer, polyline, path, prAffine2Identity(), PrPathFillRule_NonZero, PrIRect{0, 0, 64, 64}, &sparse);
             PrPath* square = prPathCreate();
             prPathAddRect(square, PrRect{2, 2, 8, 8});
             fillPath(rasterizer, polyline, square, PrAffine2{bad, 0, 0, 1, 0, 0}, PrPathFillRule_NonZero,
-                     PrIRect{0, 0, 64, 64}, &sparse);
+                PrIRect{0, 0, 64, 64}, &sparse);
             fillPath(rasterizer, polyline, square, prAffine2Identity(), PrPathFillRule_NonZero,
-                     PrIRect{0, 0, INT32_MAX, 64}, &sparse);
+                PrIRect{0, 0, INT32_MAX, 64}, &sparse);
             prPathDestroy(square);
             prPathDestroy(path);
         }

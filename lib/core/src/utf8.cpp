@@ -101,12 +101,11 @@ uint32_t decode(PrStringView text, size_t offset, uint32_t* outCodePoint) {
             *outCodePoint = (uint32_t(p[0] & 0x1f) << 6) | (p[1] & 0x3fu);
             break;
         case 3:
-            *outCodePoint =
-                (uint32_t(p[0] & 0x0f) << 12) | (uint32_t(p[1] & 0x3f) << 6) | (p[2] & 0x3fu);
+            *outCodePoint = (uint32_t(p[0] & 0x0f) << 12) | (uint32_t(p[1] & 0x3f) << 6) | (p[2] & 0x3fu);
             break;
         default:
-            *outCodePoint = (uint32_t(p[0] & 0x07) << 18) | (uint32_t(p[1] & 0x3f) << 12)
-                            | (uint32_t(p[2] & 0x3f) << 6) | (p[3] & 0x3fu);
+            *outCodePoint = (uint32_t(p[0] & 0x07) << 18) | (uint32_t(p[1] & 0x3f) << 12) |
+                (uint32_t(p[2] & 0x3f) << 6) | (p[3] & 0x3fu);
             break;
     }
     return length;
@@ -208,8 +207,10 @@ size_t prUtf8Validate(PrStringView text) {
     size_t boundary = 0;
     size_t at = 0;
     for (; size - at >= 64; at += 64) {
-        uint64_t high[4] = {highBits(bytes + at), highBits(bytes + at + 16),
-                            highBits(bytes + at + 32), highBits(bytes + at + 48)};
+        uint64_t high[4] = {
+            highBits(bytes + at), highBits(bytes + at + 16),
+            highBits(bytes + at + 32), highBits(bytes + at + 48),
+        };
         if (state == DfaState_Accept && (high[0] | high[1] | high[2] | high[3]) == 0)
             continue;
         for (uint32_t part = 0; part < 4; ++part) {

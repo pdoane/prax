@@ -39,23 +39,26 @@ struct Fixture {
         http = prHttpCreate(PrHttpBackend_Default, &httpDesc);
         PrWebSocketNetworkDesc socketDesc{.net = net};
         websockets = prWebSocketNetworkCreate(PrWebSocketNetworkBackend_Default, &socketDesc);
-        client = comfyClientCreate({.net = net, .http = http, .websockets = websockets, .wake = [this] {
-                                        std::lock_guard<std::mutex> lock(mutex);
-                                        woken.notify_all();
-                                    }});
+        client = comfyClientCreate({
+            .net = net,
+            .http = http,
+            .websockets = websockets,
+            .wake = [this] {
+                std::lock_guard<std::mutex> lock(mutex);
+                woken.notify_all();
+            },
+        });
         return true;
     }
 
     ~Fixture() {
         comfyClientDestroy(client);
         if (net != nullptr) {
-            netRunOnLoop(net,
-                         [](void* PR_NULLABLE context) {
-                             Fixture* f = static_cast<Fixture*>(context);
-                             prWebSocketNetworkDestroy(f->websockets);
-                             prHttpDestroy(f->http);
-                         },
-                         this);
+            netRunOnLoop(net, [](void* PR_NULLABLE context) {
+                Fixture* f = static_cast<Fixture*>(context);
+                prWebSocketNetworkDestroy(f->websockets);
+                prHttpDestroy(f->http);
+            }, this);
             prNetDestroy(net);
         }
         netPeerReset(&peer);
@@ -140,8 +143,7 @@ TEST_CASE("a client uploads images and reads folders, and refuses requests witho
     CHECK(uploaded.tag == 2);
     CHECK(uploaded.name == "source _one_.png");
     comfyFetchFolderPaths(f.client, 3, "checkpoints");
-    CHECK(f.next(ComfyEventKind_Replied).names
-          == std::vector<std::string>{"/models/checkpoints", "/more/checkpoints"});
+    CHECK(f.next(ComfyEventKind_Replied).names == std::vector<std::string>{"/models/checkpoints", "/more/checkpoints"});
     comfyFetchManagerVersion(f.client, 4);
     CHECK(f.next(ComfyEventKind_Refused).tag == 4);
 

@@ -46,8 +46,8 @@ void event(void* PR_NULLABLE context, PrNetStream* stream, PrNetStreamEvent kind
     probe->events.push(kind);
     if (kind == PrNetStreamEvent_Readable) {
         uint8_t chunk[4096];
-        for (size_t got = prNetStreamRead(stream, chunk, sizeof(chunk)); got != 0;
-             got = prNetStreamRead(stream, chunk, sizeof(chunk)))
+        for (size_t got = prNetStreamRead(stream, chunk, sizeof(chunk)); got != 0; got =
+                prNetStreamRead(stream, chunk, sizeof(chunk)))
             probe->received.append(chunk, uint32_t(got));
     }
     bool done = kind == PrNetStreamEvent_End || kind == PrNetStreamEvent_Fail;

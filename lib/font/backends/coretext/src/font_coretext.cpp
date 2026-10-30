@@ -15,7 +15,7 @@ PrStringView utf8Of(CFStringRef string, char* buffer, size_t capacity) {
     CFIndex used = 0;
     CFIndex length = CFStringGetLength(string);
     if (CFStringGetBytes(string, CFRangeMake(0, length), kCFStringEncodingUTF8, 0, false,
-                         reinterpret_cast<UInt8*>(buffer), CFIndex(capacity), &used) != length)
+            reinterpret_cast<UInt8*>(buffer), CFIndex(capacity), &used) != length)
         return PrStringView{nullptr, 0};
     return PrStringView{buffer, size_t(used)};
 }
@@ -45,8 +45,8 @@ uint32_t prFontCoreTextInstall(PrFontSet* set) {
         CFURLRef url = static_cast<CFURLRef>(CTFontDescriptorCopyAttribute(descriptor, kCTFontURLAttribute));
         CFStringRef name =
             static_cast<CFStringRef>(CTFontDescriptorCopyAttribute(descriptor, kCTFontFamilyNameAttribute));
-        if (url != nullptr && name != nullptr
-            && CFURLGetFileSystemRepresentation(url, true, reinterpret_cast<UInt8*>(path), CFIndex(kTextMaxBytes))) {
+        if (url != nullptr && name != nullptr &&
+                CFURLGetFileSystemRepresentation(url, true, reinterpret_cast<UInt8*>(path), CFIndex(kTextMaxBytes))) {
             size_t size = 0;
             while (path[size] != 0)
                 ++size;

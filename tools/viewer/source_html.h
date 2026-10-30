@@ -33,11 +33,10 @@ bool wptServed();
 // The page is presented by a renderer on `device`, or by a renderer in memory if `device` is null.
 struct HtmlSource;
 std::shared_ptr<HtmlSource> loadHtml(const std::filesystem::path& path, PrTextShaper* shaper,
-                                     PrFontHinting hinting, PrFontHinter* PR_NULLABLE hinter,
-                                     PrGpuDevice* PR_NULLABLE device);
+    PrFontHinting hinting, PrFontHinter* PR_NULLABLE hinter, PrGpuDevice* PR_NULLABLE device);
 void htmlAt(HtmlSource& html, double time);
 void drawHtml(HtmlSource& html, PrDrawList* list, float width, float height, const PrAppDisplay& display,
-              const PrAppUserPreferences& preferences);
+    const PrAppUserPreferences& preferences);
 
 // Sends the page a host's input through its view, as a user's input reaches a page (PageHost::input). A position is in
 // the page's viewport, in CSS pixels.

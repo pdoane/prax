@@ -18,7 +18,7 @@ struct SvgTextFonts;
 // `parent`, and returns the node. `instance` says whether the element is in a use element's shadow tree, whose elements
 // inherit from their parents there.
 SvgNodeIndex svgBuildText(SvgBuilder& b, const PrDomElement* element, const CssComputedStyle* style,
-                          SvgNodeIndex parent, bool instance);
+    SvgNodeIndex parent, bool instance);
 
 // Draws a text node's glyphs and decorations. Its children, which the glyphs of SVG fonts draw, are drawn after them.
 void svgDrawText(SvgDrawer& d, const SvgNode& node);
@@ -80,7 +80,7 @@ const SvgPaints* PR_NULLABLE svgTextPaints(const SvgText* text);
 // Returns true if two texts draw the same, each with the strokes and servers of its own tree. Otherwise writes what
 // differs to `difference`.
 bool svgTextSame(const SvgTree* tree, const SvgText* text, const SvgTree* expectedTree, const SvgText* expected,
-                 TextBuffer* difference);
+    TextBuffer* difference);
 
 // Frees what a text node holds, with the strokes that it owns in `tree`.
 void svgTextDestroy(SvgTree* tree, SvgText* PR_NULLABLE text);

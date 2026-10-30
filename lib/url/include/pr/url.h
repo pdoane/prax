@@ -31,7 +31,7 @@ typedef struct PrUrlSearchParams PrUrlSearchParams;
 // that is not special, or whose scheme is ws or wss, is UTF-8 in any charset. Returns Syntax if `input` does not parse.
 // On failure, `*out` is null.
 PrStatus prUrlCreate(PrStringView input, const PrUrl* PR_NULLABLE base, PrCharset charset,
-                     PrUrl* PR_NULLABLE* PR_NONNULL out);
+    PrUrl* PR_NULLABLE* PR_NONNULL out);
 
 // Creates a copy of the URL. The copy has no query object of its own until one is requested.
 PrUrl* prUrlClone(const PrUrl* self);

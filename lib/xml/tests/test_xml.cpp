@@ -28,13 +28,12 @@ std::string qualified(const PrXmlName& name) {
     return (name.prefix.data != nullptr ? text(name.prefix) + ":" : "") + text(name.local);
 }
 
-PrStatus recordStart(void* context, PrXmlParser*, const PrXmlName* name, const PrXmlAttribute* attributes,
-                     uint32_t count) {
+PrStatus recordStart(void* context, PrXmlParser*, const PrXmlName* name, const PrXmlAttribute* attributes, uint32_t count) {
     Recorder* r = static_cast<Recorder*>(context);
     std::string line = "<" + text(name->space) + " " + qualified(*name) + ">";
     for (uint32_t i = 0; i < count; ++i)
-        line += " " + text(attributes[i].name.space) + " " + qualified(attributes[i].name) + "="
-                + text(attributes[i].value);
+        line += " " + text(attributes[i].name.space) + " " + qualified(attributes[i].name) + "=" +
+            text(attributes[i].value);
     r->line(line);
     ++r->depth;
     return PrStatus_Ok;
@@ -65,10 +64,8 @@ PrStatus recordInstruction(void* context, PrXmlParser*, PrStringView target, PrS
     return PrStatus_Ok;
 }
 
-PrStatus recordDoctype(void* context, PrXmlParser*, PrStringView name, PrStringView publicId,
-                       PrStringView systemId) {
-    static_cast<Recorder*>(context)->line("<!DOCTYPE " + text(name) + " \"" + text(publicId) + "\" \""
-                                          + text(systemId) + "\">");
+PrStatus recordDoctype(void* context, PrXmlParser*, PrStringView name, PrStringView publicId, PrStringView systemId) {
+    static_cast<Recorder*>(context)->line("<!DOCTYPE " + text(name) + " \"" + text(publicId) + "\" \"" + text(systemId) + "\">");
     return PrStatus_Ok;
 }
 
@@ -155,35 +152,30 @@ PrStatus pauseAtS(void* context, PrXmlParser* parser, const PrXmlName* name) {
 using namespace pr_impl;
 
 TEST_CASE("elements take the namespace their prefix or the default is bound to") {
-    CHECK(
-        parse("<svg xmlns='http://www.w3.org/2000/svg' xmlns:h='http://www.w3.org/1999/xhtml'>"
-              "<h:p a='1' h:b='2'/><g/></svg>")
-        == "<http://www.w3.org/2000/svg svg> http://www.w3.org/2000/xmlns/ xmlns=http://www.w3.org/2000/svg "
-           "http://www.w3.org/2000/xmlns/ xmlns:h=http://www.w3.org/1999/xhtml\n"
-           "  <http://www.w3.org/1999/xhtml h:p>  a=1 http://www.w3.org/1999/xhtml h:b=2\n"
-           "  <http://www.w3.org/2000/svg g>\n");
-    CHECK(
-        parse("<a xmlns='urn:x'><b xmlns=''/></a>")
-        == "<urn:x a> http://www.w3.org/2000/xmlns/ xmlns=urn:x\n  < b> http://www.w3.org/2000/xmlns/ xmlns=\n");
+    CHECK(parse("<svg xmlns='http://www.w3.org/2000/svg' xmlns:h='http://www.w3.org/1999/xhtml'>"
+        "<h:p a='1' h:b='2'/><g/></svg>") ==
+        "<http://www.w3.org/2000/svg svg> http://www.w3.org/2000/xmlns/ xmlns=http://www.w3.org/2000/svg "
+        "http://www.w3.org/2000/xmlns/ xmlns:h=http://www.w3.org/1999/xhtml\n"
+        "  <http://www.w3.org/1999/xhtml h:p>  a=1 http://www.w3.org/1999/xhtml h:b=2\n"
+        "  <http://www.w3.org/2000/svg g>\n");
+    CHECK(parse("<a xmlns='urn:x'><b xmlns=''/></a>") ==
+        "<urn:x a> http://www.w3.org/2000/xmlns/ xmlns=urn:x\n  < b> http://www.w3.org/2000/xmlns/ xmlns=\n");
 }
 
 TEST_CASE("text, CDATA sections, comments and processing instructions are reported with their data") {
-    CHECK(
-        parse(
-            "<?xml version='1.0'?>\r\n<!--c--><?pi data?><r>a&lt;&#x41;&#66;\r<![CDATA[<x>]]></r>")
-        == "<!--c-->\n<?pi data?>\n< r>\n  \"a<AB\n\"\n  <![CDATA[<x>]]>\n");
+    CHECK(parse("<?xml version='1.0'?>\r\n<!--c--><?pi data?><r>a&lt;&#x41;&#66;\r<![CDATA[<x>]]></r>") ==
+        "<!--c-->\n<?pi data?>\n< r>\n  \"a<AB\n\"\n  <![CDATA[<x>]]>\n");
 }
 
 TEST_CASE("the internal subset's entities expand, markup and all, and an external subset's resolve") {
-    CHECK(parse("<!DOCTYPE r [<!ENTITY e \"<b>&#65;</b>\"> <!ELEMENT r ANY>]><r a='&e;'>&e;</r>")
-          == "error 1:65 an attribute value holds a '<'");
-    CHECK(parse("<!DOCTYPE r [<!ENTITY e \"<b>&#65;</b>\">]><r>&e;&e;</r>")
-          == "<!DOCTYPE r \"\" \"\">\n< r>\n  < b>\n    \"A\"\n  < b>\n    \"A\"\n");
-    CHECK(parse("<!DOCTYPE p PUBLIC \"-//test//EN\" \"x\"><p>&nbsp;</p>")
-          == "<!DOCTYPE p \"-//test//EN\" \"x\">\n< p>\n  \"\xC2\xA0\"\n");
+    CHECK(parse("<!DOCTYPE r [<!ENTITY e \"<b>&#65;</b>\"> <!ELEMENT r ANY>]><r a='&e;'>&e;</r>") ==
+        "error 1:65 an attribute value holds a '<'");
+    CHECK(parse("<!DOCTYPE r [<!ENTITY e \"<b>&#65;</b>\">]><r>&e;&e;</r>") ==
+        "<!DOCTYPE r \"\" \"\">\n< r>\n  < b>\n    \"A\"\n  < b>\n    \"A\"\n");
+    CHECK(parse("<!DOCTYPE p PUBLIC \"-//test//EN\" \"x\"><p>&nbsp;</p>") ==
+        "<!DOCTYPE p \"-//test//EN\" \"x\">\n< p>\n  \"\xC2\xA0\"\n");
     CHECK(parse("<p>&nbsp;</p>") == "error 1:4 an entity is referred to that is not declared");
-    CHECK(parse("<!DOCTYPE r [<!ENTITY a \"&b;\"><!ENTITY b \"&a;\">]><r>&a;</r>")
-          == "error 1:53 an entity refers to itself");
+    CHECK(parse("<!DOCTYPE r [<!ENTITY a \"&b;\"><!ENTITY b \"&a;\">]><r>&a;</r>") == "error 1:53 an entity refers to itself");
 }
 
 TEST_CASE("a document that is not well-formed is an error where it goes wrong") {
@@ -191,8 +183,7 @@ TEST_CASE("a document that is not well-formed is an error where it goes wrong") 
     CHECK(parse("<a/><b/>") == "error 1:6 an element follows the document element");
     CHECK(parse("<p:a/>") == "error 1:7 an element's prefix is not bound to a namespace");
     CHECK(parse("<a x='1' x='2'/>") == "error 1:15 an attribute is given twice");
-    CHECK(parse("<a xmlns:p='u' xmlns:q='u' p:x='1' q:x='2'/>")
-          == "error 1:45 an attribute is given twice in one namespace");
+    CHECK(parse("<a xmlns:p='u' xmlns:q='u' p:x='1' q:x='2'/>") == "error 1:45 an attribute is given twice in one namespace");
     CHECK(parse("text<a/>") == "error 1:1 text is outside the document element");
     CHECK(parse("<a>]]></a>") == "error 1:4 text holds \"]]>\"");
     CHECK(parse("<a><!-- a -- b --></a>") == "error 1:11 a comment holds \"--\"");
@@ -219,9 +210,8 @@ TEST_CASE("a handler can find a document wrong, or stop its parse") {
 TEST_CASE("a document whose input arrives in pieces parses as it does whole, wherever the pieces divide it") {
     const std::string documents[] = {
         "\xEF\xBB\xBF<?xml version='1.0' encoding='utf-8'?>\r\n<!--c--><?pi data?>"
-        "<r a='x>y' b=\"'\">a&lt;&#x41;&#66;\r\n<![CDATA[<x>]]]]>]\r</r>",
-        "<!DOCTYPE r [<!ENTITY e \"<b>&#65;</b>\"> <!-- ]> --> <?pi ]>?> %p; <!ATTLIST r a CDATA '>'>]>"
-        "<r>&e;&e;</r>",
+            "<r a='x>y' b=\"'\">a&lt;&#x41;&#66;\r\n<![CDATA[<x>]]]]>]\r</r>",
+        "<!DOCTYPE r [<!ENTITY e \"<b>&#65;</b>\"> <!-- ]> --> <?pi ]>?> %p; <!ATTLIST r a CDATA '>'>]><r>&e;&e;</r>",
         "<!DOCTYPE p PUBLIC \"-//test//EN\" \"x\"><p>&nbsp;\xC3\xA9</p>",
         "<a><b></a>",
         "<a>]]></a>",

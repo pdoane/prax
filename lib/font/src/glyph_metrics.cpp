@@ -60,7 +60,7 @@ bool fontGlyphMetricsVariesVertical(const FontGlyphMetricTables& tables) {
 }
 
 void fontGlyphMetricsHorizontal(const FontGlyphMetricTables& tables, SfntCoords coords, uint32_t glyph,
-                                int32_t* advance, int32_t* lsb) {
+        int32_t* advance, int32_t* lsb) {
     uint32_t count = tables.horizontalCount;
     if (count == 0) {
         *advance = 0;
@@ -79,7 +79,7 @@ void fontGlyphMetricsHorizontal(const FontGlyphMetricTables& tables, SfntCoords 
 }
 
 void fontGlyphMetricsVertical(const FontGlyphMetricTables& tables, SfntCoords coords, uint32_t glyph, int32_t yMax,
-                              int32_t* advance, int32_t* tsb) {
+        int32_t* advance, int32_t* tsb) {
     uint32_t count = tables.verticalCount;
     if (count == 0) {
         *tsb = tables.ascender - yMax;

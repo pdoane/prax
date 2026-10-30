@@ -291,8 +291,7 @@ void releaseNode(PrDomNode* node) {
 
 // Appends the fragments that the element owns: its template contents and the shadow root that it hosts.
 void pushOwnedFragments(const PrDomElement* element, Array<PrDomNode* PR_NONNULL>* roots) {
-    if (domElementContents(element) != nullptr
-        && domNodeOwner(domElementContents(element)) == element)
+    if (domElementContents(element) != nullptr && domNodeOwner(domElementContents(element)) == element)
         roots->push(domElementContents(element));
     if (PrDomShadowRoot* shadow = domShadowRootOfHost(element))
         roots->push(shadow);
@@ -340,8 +339,7 @@ bool hasConnectionSteps(const PrDomElement* element);
 // Sets or clears the connected flag of `root` and its shadow-including descendants. Adds those with insertion or
 // removing steps to `stepped`, if given, in shadow-including tree order. `under` is the node that `root` is or was
 // linked under, and its tree keeps its elements by ID. The root of `under` is found only for an element with an ID.
-void setConnected(PrDomNode* root, bool connected, Array<PrDomElement* PR_NONNULL>* PR_NULLABLE stepped,
-                  PrDomNode* under) {
+void setConnected(PrDomNode* root, bool connected, Array<PrDomElement* PR_NONNULL>* PR_NULLABLE stepped, PrDomNode* under) {
     PrDomNode* scope = nullptr;
     for (PrDomNode* node = root; node != nullptr; node = domNodeNext(root, node)) {
         if (connected)
@@ -608,7 +606,7 @@ void unlink(PrDomNode* child) {
 // Links `child`, which has no parent, into the children of `parent` before `before`, running the range and slot steps
 // of the change.
 void link(PrDomNode* parent, PrDomNode* child, PrDomNode* PR_NULLABLE before,
-          Array<PrDomElement* PR_NONNULL>* PR_NULLABLE stepped) {
+        Array<PrDomElement* PR_NONNULL>* PR_NULLABLE stepped) {
     ++parent->document->treeVersion;
     child->parent = parent;
     child->next = before;
@@ -666,22 +664,20 @@ void transferDocument(PrDomDocument* document, PrDomNode* node, uint32_t* moved)
     node->document = document;
     if (PrDomElement* element = domElementFromNode(node)) {
         if (domTagIsAtom(element->tag))
-            element->tag = internLocalName(
-                document, atomTableText(from->localNames, element->tag - PrDomTag_Count));
+            element->tag = internLocalName(document, atomTableText(from->localNames, element->tag - PrDomTag_Count));
         transferClasses(element, from);
         domCustomAdopted(element, from);
         if (domIsHtml(element, PrDomTag_Option) || domIsHtml(element, PrDomTag_Selectedcontent))
             document->options = true;
         domControlAdopted(element, from);
         for (PrDomAttr* attribute = element->firstAttribute; attribute != nullptr;
-             attribute = static_cast<PrDomAttr*>(attribute->next)) {
+                attribute = static_cast<PrDomAttr*>(attribute->next)) {
             attribute->space = transferNamespace(document, attribute, attribute->space);
             if (attribute->prefix != 0)
                 attribute->prefix = internPrefix(document, domAttributePrefix(attribute));
             attribute->document = document;
         }
-        if (domElementContents(element) != nullptr
-            && domNodeOwner(domElementContents(element)) == element)
+        if (domElementContents(element) != nullptr && domNodeOwner(domElementContents(element)) == element)
             adoptTree(document, domElementContents(element), moved);
         if (PrDomShadowRoot* shadow = domShadowRootOfHost(element)) {
             domSlotsEnable(document);
@@ -704,9 +700,9 @@ void adoptTree(PrDomDocument* document, PrDomNode* node, uint32_t* moved) {
 // Returns the attribute of `element` in `space` named `name` or, if `lowered` is set, named the ASCII lowercase of
 // `name`. `hash` is domAttributeHash(name).
 PrDomAttr* PR_NULLABLE findAttribute(const PrDomElement* element, DomNamespaceId space,
-                                     PrStringView name, uint32_t hash, bool lowered) {
+        PrStringView name, uint32_t hash, bool lowered) {
     for (PrDomAttr* attribute = element->firstAttribute; attribute != nullptr;
-         attribute = static_cast<PrDomAttr*>(attribute->next)) {
+            attribute = static_cast<PrDomAttr*>(attribute->next)) {
         if (attribute->hash != hash || attribute->space != space)
             continue;
         PrStringView held = prStringView(&attribute->name);
@@ -746,11 +742,9 @@ constexpr struct NameClasses {
         for (uint32_t c = 0; c < 256; ++c) {
             bool stop = c == 0 || c == '/' || c == '>' || asciiIsSpace(char(c));
             bool start = c == ':' || c == '_' || c >= 0x80;
-            bool rest =
-                start || c == '-' || c == '.' || asciiIsDigit(char(c)) || asciiIsLetter(char(c));
-            of[c] = NameClass((stop ? NameClass_ElementStop | NameClass_AttributeStop : 0)
-                              | (c == '=' ? NameClass_AttributeStop : 0)
-                              | (start ? NameClass_Start : 0) | (rest ? NameClass_Rest : 0));
+            bool rest = start || c == '-' || c == '.' || asciiIsDigit(char(c)) || asciiIsLetter(char(c));
+            of[c] = NameClass((stop ? NameClass_ElementStop | NameClass_AttributeStop : 0) |
+                (c == '=' ? NameClass_AttributeStop : 0) | (start ? NameClass_Start : 0) | (rest ? NameClass_Rest : 0));
         }
     }
 } kNameClasses;
@@ -770,20 +764,19 @@ bool bytesAre(PrStringView name, size_t from, NameClass required, NameClass refu
 // Returns true if the element has an autofocus attribute that makes it an autofocus candidate when it is inserted
 // (html/#the-autofocus-attribute). HTML, SVG and MathML elements take the attribute.
 bool hasAutofocus(const PrDomElement* element) {
-    return element->firstAttribute != nullptr
-           && (element->space == PrDomNamespace_Html || element->space == PrDomNamespace_Svg
-               || element->space == PrDomNamespace_MathMl)
-           && domAttribute(element, PrDomNamespace_None, "autofocus") != nullptr;
+    return element->firstAttribute != nullptr &&
+        (element->space == PrDomNamespace_Html || element->space == PrDomNamespace_Svg ||
+            element->space == PrDomNamespace_MathMl) && domAttribute(element, PrDomNamespace_None, "autofocus") != nullptr;
 }
 
 // Returns true if the element has insertion or removing steps of its own. Most elements have none, and this function
 // decides that without calling out for each element.
 bool hasConnectionSteps(const PrDomElement* element) {
     const PrDomDocument* document = element->document;
-    if (element->state != nullptr || document->focused == element || document->hovered == element
-        || document->active == element || document->target == element
-        || element->customState == PrDomCustomElementState_Undefined
-        || element->customState == PrDomCustomElementState_Custom || hasAutofocus(element))
+    if (element->state != nullptr || document->focused == element || document->hovered == element ||
+            document->active == element || document->target == element ||
+            element->customState == PrDomCustomElementState_Undefined ||
+            element->customState == PrDomCustomElementState_Custom || hasAutofocus(element))
         return true;
     if (element->tag == PrDomTag_Style)
         return element->space == PrDomNamespace_Html || element->space == PrDomNamespace_Svg;
@@ -791,9 +784,8 @@ bool hasConnectionSteps(const PrDomElement* element) {
         return element->space == PrDomNamespace_Svg;
     if (domIsScript(element) || domEmbeds(element))
         return true;
-    return element->space == PrDomNamespace_Html
-           && (element->tag == PrDomTag_Link || element->tag == PrDomTag_Meta
-               || element->tag == PrDomTag_Selectedcontent);
+    return element->space == PrDomNamespace_Html && (element->tag == PrDomTag_Link || element->tag == PrDomTag_Meta ||
+        element->tag == PrDomTag_Selectedcontent);
 }
 
 // Runs the insertion or removing steps (dom/#concept-node-insert-ext, dom/#concept-node-remove-ext) of the elements
@@ -801,7 +793,7 @@ bool hasConnectionSteps(const PrDomElement* element) {
 // can reach the embedder and script. A connected script element that is not parser-inserted is appended to `scripts`,
 // held, for its post-connection steps (runPostConnectionSteps).
 void runConnectionSteps(Array<PrDomElement* PR_NONNULL>* stepped,
-                        Array<PrDomElement* PR_NONNULL>* PR_NULLABLE scripts = nullptr) {
+        Array<PrDomElement* PR_NONNULL>* PR_NULLABLE scripts = nullptr) {
     for (uint32_t i = 0; i < stepped->count; ++i)
         domNodeRetain(stepped->data[i]);
     for (uint32_t i = 0; i < stepped->count; ++i) {
@@ -813,8 +805,8 @@ void runConnectionSteps(Array<PrDomElement* PR_NONNULL>* stepped,
         domEmbedChanged(element, {});
         domCustomConnectionChanged(element);
         domSelectedContentConnected(element);
-        if (scripts != nullptr && domIsScript(element) && domIsConnected(element)
-            && (domScriptFlags(element) & DomScriptFlag_ParserInserted) == 0) {
+        if (scripts != nullptr && domIsScript(element) && domIsConnected(element) &&
+                (domScriptFlags(element) & DomScriptFlag_ParserInserted) == 0) {
             domNodeRetain(element);
             scripts->push(element);
         }
@@ -841,8 +833,8 @@ void runConnectionSteps(Array<PrDomElement* PR_NONNULL>* stepped,
 // host prepares it if it is still connected.
 void scriptPostConnection(PrDomElement* element) {
     const DomDocumentHost* host = element->document->host;
-    if (host != nullptr && host->prepareScript != nullptr && domIsConnected(element)
-        && (domScriptFlags(element) & DomScriptFlag_ParserInserted) == 0)
+    if (host != nullptr && host->prepareScript != nullptr && domIsConnected(element) &&
+            (domScriptFlags(element) & DomScriptFlag_ParserInserted) == 0)
         host->prepareScript(host->context, element);
 }
 
@@ -899,10 +891,10 @@ uint32_t elementChildren(const PrDomNode* fragment) {
 
 // dom/#concept-node-ensure-pre-insertion-validity, plus the checks that dom/#concept-node-replace makes when `replaced`
 // is the child being replaced.
-PrStatus validateInsertion(const PrDomNode* parent, const PrDomNode* node,
-                           const PrDomNode* PR_NULLABLE child, bool replaced) {
-    if (parent->type != PrDomNodeType_Document && parent->type != PrDomNodeType_DocumentFragment
-        && parent->type != PrDomNodeType_Element)
+PrStatus validateInsertion(const PrDomNode* parent, const PrDomNode* node, const PrDomNode* PR_NULLABLE child,
+        bool replaced) {
+    if (parent->type != PrDomNodeType_Document && parent->type != PrDomNodeType_DocumentFragment &&
+            parent->type != PrDomNodeType_Element)
         return PrStatus_NotAllowed;
     if (domIsHostIncludingInclusiveAncestor(node, parent))
         return PrStatus_NotAllowed;
@@ -949,8 +941,7 @@ PrStatus validateInsertion(const PrDomNode* parent, const PrDomNode* node,
                 text |= domIsText(each);
             if (elements > 1 || text)
                 return PrStatus_NotAllowed;
-            if (elements == 1
-                && (elementOtherThan(skipped) || (!replaced && childIsDoctype) || doctypeAfter))
+            if (elements == 1 && (elementOtherThan(skipped) || (!replaced && childIsDoctype) || doctypeAfter))
                 return PrStatus_NotAllowed;
             return PrStatus_Ok;
         }
@@ -982,8 +973,7 @@ bool among(const PrDomNode* node, const PrDomNodeOrString* PR_NULLABLE nodes, ui
 }
 
 // dom/#convert-nodes-into-a-node
-PrStatus nodesIntoNode(PrDomDocument* document, const PrDomNodeOrString* PR_NULLABLE nodes,
-                       uint32_t count, PrDomNode** out) {
+PrStatus nodesIntoNode(PrDomDocument* document, const PrDomNodeOrString* PR_NULLABLE nodes, uint32_t count, PrDomNode** out) {
     auto nodeAt = [&](uint32_t i) -> PrDomNode* {
         PrDomNode* node = nodes[i].node;
         return node != nullptr ? node : domTextCreate(document, nodes[i].string);
@@ -1005,8 +995,7 @@ PrStatus nodesIntoNode(PrDomDocument* document, const PrDomNodeOrString* PR_NULL
 // Appends the code units of `data` for which `keep` returns true, and inserts `insert` before the unit `at`, or at the
 // end. A code point is kept whole only if both its units are kept.
 template <typename Keep>
-void copyUnits(TextBuffer* out, PrStringView data, Keep keep, PrStringView insert = {},
-               uint32_t at = UINT32_MAX) {
+void copyUnits(TextBuffer* out, PrStringView data, Keep keep, PrStringView insert = {}, uint32_t at = UINT32_MAX) {
     uint32_t unit = 0;
     bool inserted = insert.data == nullptr;
     for (size_t offset = 0; offset < data.size;) {
@@ -1081,10 +1070,10 @@ bool reflectsWindow(PrDomEventHandler handler) {
 // `value` is null. The content attribute of an HTML element's event handler sets the handler on the target that
 // domEventHandlerTarget decides.
 void eventHandlerAttributeChanged(PrDomElement* element, DomNamespaceId space, PrStringView name,
-                                  const PrString* PR_NULLABLE value) {
+        const PrString* PR_NULLABLE value) {
     // HTML, SVG and MathML elements have event handler content attributes (html/#globaleventhandlers).
-    bool handlers = element->space == PrDomNamespace_Html || element->space == PrDomNamespace_Svg
-                    || element->space == PrDomNamespace_MathMl;
+    bool handlers = element->space == PrDomNamespace_Html || element->space == PrDomNamespace_Svg ||
+        element->space == PrDomNamespace_MathMl;
     if (!handlers || space != PrDomNamespace_None || !stringStartsWith(name, "on"))
         return;
     PrDomEventHandler handler = domEventHandlerFromName(name);
@@ -1094,8 +1083,7 @@ void eventHandlerAttributeChanged(PrDomElement* element, DomNamespaceId space, P
     // handler of WindowEventHandlers has one too.
     DomEventHandlerMixins mixins = domEventHandlerMixins(handler);
     bool body = element->tag == PrDomTag_Body || element->tag == PrDomTag_Frameset;
-    if ((mixins & DomEventHandlerMixin_Global) == 0
-        && !(body && (mixins & DomEventHandlerMixin_Window) != 0))
+    if ((mixins & DomEventHandlerMixin_Global) == 0 && !(body && (mixins & DomEventHandlerMixin_Window) != 0))
         return;
     PrDomEventTarget* target = domEventHandlerTarget(element, handler);
     if (target == nullptr)
@@ -1118,11 +1106,10 @@ void insertedNodes(PrDomNode* node, Array<PrDomNode* PR_NONNULL>* out) {
 
 // dom/#handle-attribute-changes up to the mutation record, for `attribute` of `element`, which is about to change from
 // `oldValue`. The null view means no value. Queues the record.
-void attributeWillChange(PrDomElement* element, const PrDomAttr* attribute,
-                         PrStringView oldValue) {
+void attributeWillChange(PrDomElement* element, const PrDomAttr* attribute, PrStringView oldValue) {
     if (domMutationsObserved(element->document))
         domQueueAttributeRecord(element, prStringView(&attribute->name),
-                                domNamespaceUrl(element->document, attribute->space), oldValue);
+            domNamespaceUrl(element->document, attribute->space), oldValue);
 }
 
 // dom/#handle-attribute-changes after the mutation record: runs a custom element's callback, and the attribute change
@@ -1132,21 +1119,23 @@ void attributeWillChange(PrDomElement* element, const PrDomAttr* attribute,
 // (html/#script-processing-model): an async attribute added makes its force async false, and a source set while it is
 // connected runs its post-connection steps. An SVG script's source is its href, or its XLink href
 // (SVG2/interact.html#ScriptElement).
-void scriptAttributeChanged(PrDomElement* element, DomNamespaceId space, PrStringView name,
-                            const PrString* PR_NULLABLE value) {
+void scriptAttributeChanged(PrDomElement* element, DomNamespaceId space, PrStringView name, const PrString* PR_NULLABLE value) {
     if (value == nullptr)
         return;
     bool html = element->space == PrDomNamespace_Html;
     if (html && space == PrDomNamespace_None && name == "async")
         domScriptSetFlags(element, domScriptFlags(element) | DomScriptFlag_NotForceAsync);
-    bool source = html ? space == PrDomNamespace_None && name == "src"
-                       : name == "href" && (space == PrDomNamespace_None || space == PrDomNamespace_XLink);
+    bool source;
+    if (html)
+        source = space == PrDomNamespace_None && name == "src";
+    else
+        source = name == "href" && (space == PrDomNamespace_None || space == PrDomNamespace_XLink);
     if (source)
         scriptPostConnection(element);
 }
 
 void attributeChanged(PrDomElement* element, DomNamespaceId space, PrStringView name,
-                      PrStringView oldValue, const PrString* PR_NULLABLE value) {
+        PrStringView oldValue, const PrString* PR_NULLABLE value) {
     ++element->document->treeVersion;
     domNotifyAttributeChanged(element, space, name, oldValue, value != nullptr ? prStringView(value) : PrStringView{});
     domUsesAttributeChanged(element, space, name);
@@ -1165,8 +1154,7 @@ void attributeChanged(PrDomElement* element, DomNamespaceId space, PrStringView 
             domControlsIdChanged(element);
         }
     }
-    domCustomAttributeChanged(element, space, name, oldValue,
-                              value != nullptr ? prStringView(value) : PrStringView{});
+    domCustomAttributeChanged(element, space, name, oldValue, value != nullptr ? prStringView(value) : PrStringView{});
     if (space == PrDomNamespace_None && element->document->slots != nullptr)
         domSlotsAttributeChanged(element, name);
     domNotifyOwnerAttributeChanged(element, space, name, value != nullptr ? prStringView(value) : PrStringView{});
@@ -1262,7 +1250,7 @@ void destroyDocument(PrDomDocument* document) {
 // Nothing references the attribute and nothing has an object for it, so it takes none of the steps of an adopted
 // attribute. `hash` is domAttributeHash(name).
 PrDomAttr* appendNew(PrDomElement* element, DomNamespaceId space, uint8_t prefix, PrStringView name,
-                     PrStringView value, uint32_t hash) {
+        PrStringView value, uint32_t hash) {
     PrDomAttr* attribute = allocZeroed<PrDomAttr>();
     attribute->type = PrDomNodeType_Attribute;
     attribute->document = element->document;
@@ -1279,16 +1267,14 @@ PrDomAttr* appendNew(PrDomElement* element, DomNamespaceId space, uint8_t prefix
     else
         element->firstAttribute = attribute;
     element->lastAttribute = attribute;
-    attributeChanged(element, space, prStringView(&attribute->name), PrStringView{},
-                     &attribute->value);
+    attributeChanged(element, space, prStringView(&attribute->name), PrStringView{}, &attribute->value);
     return attribute;
 }
 
 // Copies `attribute` into `document`, with its namespace, prefix, name and value (dom/#concept-node-clone).
 PrDomAttr* cloneAttribute(const PrDomAttr* attribute, PrDomDocument* document) {
     return domAttrCreate(document, transferNamespace(document, attribute, attribute->space),
-                         domAttributePrefix(attribute), prStringView(&attribute->name),
-                         prStringView(&attribute->value));
+        domAttributePrefix(attribute), prStringView(&attribute->name), prStringView(&attribute->value));
 }
 
 void tellHeld(PrDomNode* node, bool held) {
@@ -1439,8 +1425,7 @@ PrDomNode* domTreeRoot(PrDomNode* node) {
 }
 
 void domFreeTree(PrDomNode* root) {
-    PR_ASSERT(root->retained == 0 && domNodeOwner(root) == nullptr
-              && root->type != PrDomNodeType_Document);
+    PR_ASSERT(root->retained == 0 && domNodeOwner(root) == nullptr && root->type != PrDomNodeType_Document);
     removeDetached(root);
     destroyTree(root);
 }
@@ -1452,13 +1437,11 @@ void domTemplateNameShadow(PrDomElement* element, PrDomShadowRoot* shadow) {
     domElementState(element)->contents = shadow;
 }
 
-PrDomEventTarget* PR_NULLABLE domEventHandlerTarget(PrDomEventTarget* target,
-                                                    PrDomEventHandler handler) {
+PrDomEventTarget* PR_NULLABLE domEventHandlerTarget(PrDomEventTarget* target, PrDomEventHandler handler) {
     PrDomElement* element = domElementFromNode(domNodeFromTarget(target));
     if (!domIsHtml(element, PrDomTag_Body) && !domIsHtml(element, PrDomTag_Frameset))
         return target;
-    if ((domEventHandlerMixins(handler) & DomEventHandlerMixin_Window) == 0
-        && !reflectsWindow(handler))
+    if ((domEventHandlerMixins(handler) & DomEventHandlerMixin_Window) == 0 && !reflectsWindow(handler))
         return target;
     return element->document->global;
 }
@@ -1469,8 +1452,7 @@ void domVisitSubtree(PrDomNode* root, void (*visit)(void* context, PrDomNode* no
         for (PrDomNode* node = top; node != nullptr;) {
             visit(context, node);
             if (PrDomElement* element = domElementFromNode(node)) {
-                for (PrDomNode* attribute = element->firstAttribute; attribute != nullptr;
-                     attribute = attribute->next)
+                for (PrDomNode* attribute = element->firstAttribute; attribute != nullptr; attribute = attribute->next)
                     visit(context, attribute);
                 if (PrDomShadowRoot* shadow = domShadowRootOfHost(element))
                     roots.push(shadow);
@@ -1502,8 +1484,7 @@ PrUrl* domDocumentBaseUrl(const PrDomDocument* document) {
     // html/#document-base-url
     if (document->baseElements == 0)
         return prUrlClone(document->url);
-    for (const PrDomNode* node = domNodeNext(document, document); node != nullptr;
-         node = domNodeNext(document, node)) {
+    for (const PrDomNode* node = domNodeNext(document, document); node != nullptr; node = domNodeNext(document, node)) {
         const PrDomElement* element = domElementFromNode(node);
         if (!domIsHtml(element, PrDomTag_Base))
             continue;
@@ -1529,14 +1510,12 @@ PrStatus domDocumentParseUrl(const PrDomDocument* document, PrStringView text, P
     return status;
 }
 
-PrDomElement* domElementCreate(PrDomDocument* document, DomNamespaceId space, PrDomTag tag,
-                               PrStringView name) {
+PrDomElement* domElementCreate(PrDomDocument* document, DomNamespaceId space, PrDomTag tag, PrStringView name) {
     PrDomElement* element = make<PrDomElement>(document, PrDomNodeType_Element);
     element->space = space;
     // A name has one tag in a namespace. The tag is the table's tag if the table names elements of that namespace, and
     // the name's atom otherwise.
-    bool named =
-        space == PrDomNamespace_Html || space == PrDomNamespace_Svg || space == PrDomNamespace_MathMl;
+    bool named = space == PrDomNamespace_Html || space == PrDomNamespace_Svg || space == PrDomNamespace_MathMl;
     if (tag == PrDomTag_Unknown && named)
         tag = domTagFromText(name);
     element->tag = tag != PrDomTag_Unknown ? DomTagId(tag) : internLocalName(document, name);
@@ -1548,8 +1527,7 @@ PrDomElement* domElementCreate(PrDomDocument* document, DomNamespaceId space, Pr
     return element;
 }
 
-PrDomElement* domElementCreateNs(PrDomDocument* document, DomNamespaceId space, PrStringView prefix,
-                                 PrStringView local) {
+PrDomElement* domElementCreateNs(PrDomDocument* document, DomNamespaceId space, PrStringView prefix, PrStringView local) {
     PrDomElement* element = domElementCreate(document, space, PrDomTag_Unknown, local);
     if (prefix.data != nullptr)
         domElementState(element)->prefix = prStringCopy(prefix);
@@ -1574,8 +1552,7 @@ PrDomComment* domCommentCreate(PrDomDocument* document, PrStringView data) {
     return comment;
 }
 
-PrDomProcessingInstruction* domProcessingInstructionCreate(PrDomDocument* document,
-                                                           PrStringView target, PrStringView data) {
+PrDomProcessingInstruction* domProcessingInstructionCreate(PrDomDocument* document, PrStringView target, PrStringView data) {
     PrDomProcessingInstruction* instruction =
         make<PrDomProcessingInstruction>(document, PrDomNodeType_ProcessingInstruction);
     instruction->target = prStringCopy(target);
@@ -1584,7 +1561,7 @@ PrDomProcessingInstruction* domProcessingInstructionCreate(PrDomDocument* docume
 }
 
 PrDomDocumentType* domDocumentTypeCreate(PrDomDocument* document, PrStringView name, PrStringView publicId,
-                                         PrStringView systemId) {
+        PrStringView systemId) {
     PrDomDocumentType* doctype = make<PrDomDocumentType>(document, PrDomNodeType_DocumentType);
     doctype->name = prStringCopy(name);
     doctype->publicId = prStringCopy(publicId);
@@ -1596,8 +1573,7 @@ PrDomDocumentFragment* domDocumentFragmentCreate(PrDomDocument* document) {
     return make<PrDomDocumentFragment>(document, PrDomNodeType_DocumentFragment);
 }
 
-PrStatus domAttachShadow(PrDomElement* host, const PrDomShadowRootInit* init,
-                         PrDomShadowRoot* PR_NULLABLE* PR_NONNULL out) {
+PrStatus domAttachShadow(PrDomElement* host, const PrDomShadowRootInit* init, PrDomShadowRoot* PR_NULLABLE* PR_NONNULL out) {
     *out = nullptr;
     if (!isShadowHost(host) || domShadowRootOfHost(host) != nullptr)
         return PrStatus_NotSupported;
@@ -1662,8 +1638,8 @@ void domEmbedChanged(PrDomElement* element, PrStringView attribute) {
 }
 
 bool domIsScript(const PrDomElement* element) {
-    return element->tag == PrDomTag_Script
-           && (element->space == PrDomNamespace_Html || element->space == PrDomNamespace_Svg);
+    return element->tag == PrDomTag_Script &&
+        (element->space == PrDomNamespace_Html || element->space == PrDomNamespace_Svg);
 }
 
 DomScriptFlags domScriptFlags(const PrDomElement* element) {
@@ -1676,9 +1652,12 @@ void domScriptSetFlags(PrDomElement* element, DomScriptFlags flags) {
 }
 
 void domScriptParserCreated(PrDomElement* element, bool fragment) {
-    if (domIsScript(element))
-        domScriptSetFlags(element, fragment ? DomScriptFlag_Started
-                                            : DomScriptFlag_ParserInserted | DomScriptFlag_NotForceAsync);
+    if (!domIsScript(element))
+        return;
+    DomScriptFlags flags = DomScriptFlag_ParserInserted | DomScriptFlag_NotForceAsync;
+    if (fragment)
+        flags = DomScriptFlag_Started;
+    domScriptSetFlags(element, flags);
 }
 
 DomElementState* domElementState(PrDomElement* element) {
@@ -1697,37 +1676,32 @@ PrDomNode* PR_NULLABLE domClone(const PrDomNode* node, PrDomDocument* document, 
         case PrDomNodeType_Element: {
             const PrDomElement* element = static_cast<const PrDomElement*>(node);
             // dom/#concept-node-clone creates the copy with the element's is value, and not synchronously.
-            const DomCustomElement* custom =
-                element->state != nullptr ? element->state->custom : nullptr;
+            const DomCustomElement* custom = element->state != nullptr ? element->state->custom : nullptr;
             bool held = false;
-            PrDomElement* clone =
-                element->space == PrDomNamespace_Html
-                    ? domElementCreateHtml(document, domElementTag(element), domElementName(element),
-                                           custom != nullptr && !prStringIsNull(&custom->is)
-                                               ? prStringView(&custom->is)
-                                               : PrStringView{},
-                                           false, &held)
-                    : domElementCreate(document, element->space,
-                                       domTagIsAtom(element->tag) ? PrDomTag_Unknown
-                                                                  : PrDomTag(element->tag),
-                                       domElementName(element));
+            PrDomElement* clone;
+            if (element->space == PrDomNamespace_Html)
+                clone = domElementCreateHtml(document, domElementTag(element), domElementName(element),
+                    custom != nullptr && !prStringIsNull(&custom->is) ? prStringView(&custom->is) : PrStringView{},
+                    false, &held);
+            else
+                clone = domElementCreate(document, element->space,
+                    domTagIsAtom(element->tag) ? PrDomTag_Unknown : PrDomTag(element->tag), domElementName(element));
             for (const PrDomAttr* attribute = element->firstAttribute; attribute != nullptr;
-                 attribute = static_cast<const PrDomAttr*>(attribute->next)) {
-                uint8_t prefix = attribute->prefix == 0 || attribute->document == document
-                                     ? attribute->prefix
-                                     : internPrefix(document, domAttributePrefix(attribute));
+                    attribute = static_cast<const PrDomAttr*>(attribute->next)) {
+                uint8_t prefix;
+                if (attribute->prefix == 0 || attribute->document == document)
+                    prefix = attribute->prefix;
+                else
+                    prefix = internPrefix(document, domAttributePrefix(attribute));
                 appendNew(clone, transferNamespace(document, attribute, attribute->space), prefix,
-                          prStringView(&attribute->name), prStringView(&attribute->value),
-                          attribute->hash);
+                    prStringView(&attribute->name), prStringView(&attribute->value), attribute->hash);
             }
             // html/#script-processing-model: the cloning steps of a script copy whether it already started.
             if (domIsScript(element))
                 domScriptSetFlags(clone, domScriptFlags(element) & DomScriptFlag_Started);
             domControlCloned(element, clone);
-            if (deep && domElementContents(element) != nullptr
-                && domElementContents(clone) != nullptr) {
-                for (const PrDomNode* child = domElementContents(element)->first; child != nullptr;
-                     child = child->next)
+            if (deep && domElementContents(element) != nullptr && domElementContents(clone) != nullptr) {
+                for (const PrDomNode* child = domElementContents(element)->first; child != nullptr; child = child->next)
                     domAttach(domElementContents(clone), domClone(child, document, true), nullptr);
             }
             copy = clone;
@@ -1738,24 +1712,22 @@ PrDomNode* PR_NULLABLE domClone(const PrDomNode* node, PrDomDocument* document, 
             break;
         case PrDomNodeType_Text:
         case PrDomNodeType_CdataSection:
-            copy = domTextCreate(document,
-                                 prStringView(&static_cast<const PrDomCharacterData*>(node)->data));
+            copy = domTextCreate(document, prStringView(&static_cast<const PrDomCharacterData*>(node)->data));
             copy->type = node->type;
             break;
         case PrDomNodeType_Comment:
-            copy = domCommentCreate(document,
-                                    prStringView(&static_cast<const PrDomCharacterData*>(node)->data));
+            copy = domCommentCreate(document, prStringView(&static_cast<const PrDomCharacterData*>(node)->data));
             break;
         case PrDomNodeType_ProcessingInstruction: {
             const PrDomProcessingInstruction* instruction = static_cast<const PrDomProcessingInstruction*>(node);
             copy = domProcessingInstructionCreate(document, prStringView(&instruction->target),
-                                                  prStringView(&instruction->data));
+                prStringView(&instruction->data));
             break;
         }
         case PrDomNodeType_DocumentType: {
             const PrDomDocumentType* doctype = static_cast<const PrDomDocumentType*>(node);
             copy = domDocumentTypeCreate(document, prStringView(&doctype->name),
-                                         prStringView(&doctype->publicId), prStringView(&doctype->systemId));
+                prStringView(&doctype->publicId), prStringView(&doctype->systemId));
             break;
         }
         case PrDomNodeType_DocumentFragment:
@@ -1787,8 +1759,7 @@ PrString domNodeTextContent(const PrDomNode* node) {
     }
 
     PrString text = prStringEmpty();
-    for (const PrDomNode* at = domNodeNext(node, node); at != nullptr;
-         at = domNodeNext(node, at)) {
+    for (const PrDomNode* at = domNodeNext(node, node); at != nullptr; at = domNodeNext(node, at)) {
         if (domIsText(at))
             prStringAppend(&text, prStringView(&static_cast<const PrDomText*>(at)->data));
     }
@@ -1805,19 +1776,18 @@ bool domNodeEquals(const PrDomNode* a, const PrDomNode* b) {
         case PrDomNodeType_DocumentType: {
             const PrDomDocumentType* x = static_cast<const PrDomDocumentType*>(a);
             const PrDomDocumentType* y = static_cast<const PrDomDocumentType*>(b);
-            if (!same(x->name, y->name) || !same(x->publicId, y->publicId)
-                || !same(x->systemId, y->systemId))
+            if (!same(x->name, y->name) || !same(x->publicId, y->publicId) || !same(x->systemId, y->systemId))
                 return false;
             break;
         }
         case PrDomNodeType_Element: {
             const PrDomElement* x = static_cast<const PrDomElement*>(a);
             const PrDomElement* y = static_cast<const PrDomElement*>(b);
-            if (x->space != y->space || domElementName(x) != domElementName(y)
-                || domElementAttributeCount(x) != domElementAttributeCount(y))
+            if (x->space != y->space || domElementName(x) != domElementName(y) ||
+                    domElementAttributeCount(x) != domElementAttributeCount(y))
                 return false;
             for (const PrDomAttr* attribute = x->firstAttribute; attribute != nullptr;
-                 attribute = static_cast<const PrDomAttr*>(attribute->next)) {
+                    attribute = static_cast<const PrDomAttr*>(attribute->next)) {
                 const PrDomAttr* other =
                     domAttribute(y, DomNamespaceId(attribute->space), prStringView(&attribute->name));
                 if (other == nullptr || !same(attribute->value, other->value))
@@ -1834,14 +1804,13 @@ bool domNodeEquals(const PrDomNode* a, const PrDomNode* b) {
         }
         case PrDomNodeType_ProcessingInstruction:
             if (!same(static_cast<const PrDomProcessingInstruction*>(a)->target,
-                      static_cast<const PrDomProcessingInstruction*>(b)->target))
+                    static_cast<const PrDomProcessingInstruction*>(b)->target))
                 return false;
             [[fallthrough]];
         case PrDomNodeType_Text:
         case PrDomNodeType_CdataSection:
         case PrDomNodeType_Comment:
-            if (!same(static_cast<const PrDomCharacterData*>(a)->data,
-                      static_cast<const PrDomCharacterData*>(b)->data))
+            if (!same(static_cast<const PrDomCharacterData*>(a)->data, static_cast<const PrDomCharacterData*>(b)->data))
                 return false;
             break;
         default:
@@ -1963,12 +1932,10 @@ PrDomElement* PR_NULLABLE domElementById(PrDomNode* root, PrStringView id) {
 }
 
 bool domKeepsIds(const PrDomNode* root) {
-    return root->type == PrDomNodeType_Document
-           || (domNodeShadowRoot(root) != nullptr && domIsConnected(root));
+    return root->type == PrDomNodeType_Document || (domNodeShadowRoot(root) != nullptr && domIsConnected(root));
 }
 
-uint32_t domElementsById(PrDomNode* root, PrStringView id,
-                         PrDomElement* PR_NULLABLE* PR_NONNULL first) {
+uint32_t domElementsById(PrDomNode* root, PrStringView id, PrDomElement* PR_NULLABLE* PR_NONNULL first) {
     PR_ASSERT(domKeepsIds(root));
     *first = nullptr;
     DomIds* ids = *idsOf(root);
@@ -1977,8 +1944,7 @@ uint32_t domElementsById(PrDomNode* root, PrStringView id,
         return 0;
     DomIdEntry* entry = &ids->entries.data[at];
     if (entry->element == nullptr) {
-        for (PrDomNode* node = domNodeNext(root, root); node != nullptr && *first == nullptr;
-             node = domNodeNext(root, node)) {
+        for (PrDomNode* node = domNodeNext(root, root); node != nullptr && *first == nullptr; node = domNodeNext(root, node)) {
             PrDomElement* element = domElementFromNode(node);
             if (element != nullptr && domElementId(element) == id)
                 *first = element;
@@ -2019,7 +1985,7 @@ void domAutofocusInserted(PrDomElement* element) {
 }
 
 void domAttach(PrDomNode* parent, PrDomNode* child, PrDomNode* PR_NULLABLE before,
-               Array<PrDomElement* PR_NONNULL>* PR_NULLABLE stepped) {
+        Array<PrDomElement* PR_NONNULL>* PR_NULLABLE stepped) {
     // An attribute hangs off its element rather than being one of its children.
     PR_ASSERT(child->type != PrDomNodeType_Attribute);
     PR_ASSERT(before == nullptr || before->parent == parent);
@@ -2182,8 +2148,7 @@ PrStatus domReplace(PrDomNode* parent, PrDomNode* node, PrDomNode* child) {
         domSuppressMutations(document, false);
     if (observed) {
         PrDomNode* removed[] = {child};
-        domQueueTreeRecord(parent, added.data, added.count, removed, removing ? 1 : 0, previous,
-                           reference);
+        domQueueTreeRecord(parent, added.data, added.count, removed, removing ? 1 : 0, previous, reference);
         added.reset();
     }
     domNodeRelease(node);
@@ -2220,8 +2185,7 @@ void domReplaceAll(PrDomNode* parent, PrDomNode* PR_NULLABLE node) {
         domInsert(parent, node, nullptr);
     if (observed) {
         domSuppressMutations(document, false);
-        domQueueTreeRecord(parent, added.data, added.count, removed.data, removed.count, nullptr,
-                           nullptr);
+        domQueueTreeRecord(parent, added.data, added.count, removed.data, removed.count, nullptr, nullptr);
         for (uint32_t i = 0; i < removed.count; ++i)
             domNodeRelease(removed.data[i]);
         removed.reset();
@@ -2284,8 +2248,7 @@ PrStatus domAppend(PrDomNode* parent, const PrDomNodeOrString* PR_NULLABLE nodes
     return status == PrStatus_Ok ? domPreInsert(parent, node, nullptr) : status;
 }
 
-PrStatus domReplaceChildren(PrDomNode* parent, const PrDomNodeOrString* PR_NULLABLE nodes,
-                            uint32_t count) {
+PrStatus domReplaceChildren(PrDomNode* parent, const PrDomNodeOrString* PR_NULLABLE nodes, uint32_t count) {
     PrDomNode* node = nullptr;
     PrStatus status = nodesIntoNode(parent->document, nodes, count, &node);
     if (status == PrStatus_Ok)
@@ -2390,13 +2353,12 @@ void domAppendData(PrDomCharacterData* node, PrStringView data) {
     dataChanged(node);
 }
 
-const PrDomAttr* PR_NULLABLE domAttribute(const PrDomElement* element, DomNamespaceId space,
-                                          PrStringView name) {
+const PrDomAttr* PR_NULLABLE domAttribute(const PrDomElement* element, DomNamespaceId space, PrStringView name) {
     return domAttributeHashed(element, space, name, domAttributeHash(name));
 }
 
-const PrDomAttr* PR_NULLABLE domAttributeHashed(const PrDomElement* element, DomNamespaceId space,
-                                                PrStringView name, uint32_t hash) {
+const PrDomAttr* PR_NULLABLE domAttributeHashed(const PrDomElement* element, DomNamespaceId space, PrStringView name,
+        uint32_t hash) {
     // dom/#concept-element-attributes-get-by-name: HTML names are looked up in ASCII lowercase.
     bool lowered = domIsHtmlInHtmlDocument(element) && space == PrDomNamespace_None;
     return findAttribute(element, space, name, hash, lowered);
@@ -2407,24 +2369,20 @@ PrStringView domAttributeValue(const PrDomElement* element, PrStringView name) {
     return attribute != nullptr ? prStringView(&attribute->value) : PrStringView{};
 }
 
-void domSetAttribute(PrDomElement* element, DomNamespaceId space, PrStringView name,
-                     PrStringView value) {
+void domSetAttribute(PrDomElement* element, DomNamespaceId space, PrStringView name, PrStringView value) {
     domSetAttributeNs(element, space, PrStringView{}, name, value);
 }
 
-void domSetAttributeNs(PrDomElement* element, DomNamespaceId space, PrStringView prefix,
-                       PrStringView name, PrStringView value) {
+void domSetAttributeNs(PrDomElement* element, DomNamespaceId space, PrStringView prefix, PrStringView name, PrStringView value) {
     uint32_t hash = domAttributeHash(name);
     if (PrDomAttr* existing = findAttribute(element, space, name, hash, false))
         domSetAttributeValue(existing, value);
     else
-        appendNew(element, space,
-                  prefix.data != nullptr ? internPrefix(element->document, prefix) : 0, name, value,
-                  hash);
+        appendNew(element, space, prefix.data != nullptr ? internPrefix(element->document, prefix) : 0, name, value, hash);
 }
 
 PrDomAttr* domAttrCreate(PrDomDocument* document, DomNamespaceId space, PrStringView prefix,
-                         PrStringView name, PrStringView value) {
+        PrStringView name, PrStringView value) {
     PrDomAttr* attribute = make<PrDomAttr>(document, PrDomNodeType_Attribute);
     attribute->space = space;
     attribute->name = prStringCopy(name);
@@ -2451,8 +2409,7 @@ void domAppendAttribute(PrDomElement* element, PrDomAttr* attribute) {
     element->lastAttribute = attribute;
     joinOwner(attribute);
     treeMoved(attribute);
-    attributeChanged(element, attribute->space, prStringView(&attribute->name), {},
-                     &attribute->value);
+    attributeChanged(element, attribute->space, prStringView(&attribute->name), {}, &attribute->value);
 }
 
 void domReplaceAttribute(PrDomElement* element, PrDomAttr* old, PrDomAttr* attribute) {
@@ -2477,8 +2434,7 @@ void domReplaceAttribute(PrDomElement* element, PrDomAttr* old, PrDomAttr* attri
     leaveOwner(old, element);
     treeMoved(attribute);
     treeMoved(old);
-    attributeChanged(element, old->space, prStringView(&old->name), prStringView(&old->value),
-                     &attribute->value);
+    attributeChanged(element, old->space, prStringView(&old->name), prStringView(&old->value), &attribute->value);
     if (old->retained == 0)
         domFreeTree(old);
 }
@@ -2492,28 +2448,26 @@ void domSetAttributeValue(PrDomAttr* attribute, PrStringView value) {
     attributeWillChange(element, attribute, prStringView(&attribute->value));
     PrString old = attribute->value;
     attribute->value = prStringCopy(value);
-    attributeChanged(element, attribute->space, prStringView(&attribute->name), prStringView(&old),
-                     &attribute->value);
+    attributeChanged(element, attribute->space, prStringView(&attribute->name), prStringView(&old), &attribute->value);
     prStringReset(&old);
 }
 
 PrStringView domAttributePrefix(const PrDomAttr* attribute) {
-    return attribute->prefix != 0
-               ? atomTableText(attribute->document->prefixes, attribute->prefix - 1)
-               : PrStringView{};
+    if (attribute->prefix == 0)
+        return PrStringView{};
+    return atomTableText(attribute->document->prefixes, attribute->prefix - 1);
 }
 
 PrDomAttr* PR_NULLABLE domAttributeByName(const PrDomElement* element, PrStringView qualifiedName) {
     bool lowered = domIsHtmlInHtmlDocument(element);
     for (PrDomAttr* attribute = element->firstAttribute; attribute != nullptr;
-         attribute = static_cast<PrDomAttr*>(attribute->next)) {
+            attribute = static_cast<PrDomAttr*>(attribute->next)) {
         PrStringView prefix = domAttributePrefix(attribute);
         PrStringView name = prStringView(&attribute->name);
         PrStringView local = qualifiedName;
         if (prefix.data != nullptr) {
-            if (qualifiedName.size != prefix.size + 1 + name.size
-                || !stringStartsWith(qualifiedName, prefix)
-                || qualifiedName.data[prefix.size] != ':')
+            if (qualifiedName.size != prefix.size + 1 + name.size || !stringStartsWith(qualifiedName, prefix) ||
+                    qualifiedName.data[prefix.size] != ':')
                 continue;
             local = stringSlice(qualifiedName, prefix.size + 1, name.size);
         }
@@ -2543,8 +2497,7 @@ void domRemoveAttributeNode(PrDomElement* element, PrDomAttr* attribute) {
     attribute->parent = nullptr;
     leaveOwner(attribute, element);
     treeMoved(attribute);
-    attributeChanged(element, space, prStringView(&attribute->name),
-                     prStringView(&attribute->value), nullptr);
+    attributeChanged(element, space, prStringView(&attribute->name), prStringView(&attribute->value), nullptr);
     if (attribute->retained == 0)
         domFreeTree(attribute);
 }
@@ -2555,8 +2508,7 @@ bool domIsValidElementLocalName(PrStringView name) {
     char first = name.data[0];
     if (asciiIsLetter(first))
         return bytesAre(name, 1, 0, NameClass_ElementStop);
-    return (kNameClasses.of[uint8_t(first)] & NameClass_Start) != 0
-           && bytesAre(name, 1, NameClass_Rest, 0);
+    return (kNameClasses.of[uint8_t(first)] & NameClass_Start) != 0 && bytesAre(name, 1, NameClass_Rest, 0);
 }
 
 bool domIsValidAttributeLocalName(PrStringView name) {
@@ -2600,29 +2552,24 @@ uint32_t domCharacterDataLength(const PrDomCharacterData* node) {
     return utf16Length(prStringView(&node->data));
 }
 
-PrStatus domSubstringData(const PrDomCharacterData* node, uint32_t offset, uint32_t count,
-                          PrString* out) {
+PrStatus domSubstringData(const PrDomCharacterData* node, uint32_t offset, uint32_t count, PrString* out) {
     uint32_t length = domCharacterDataLength(node);
     if (offset > length)
         return PrStatus_OutOfRange;
     uint32_t end = count > length - offset ? length : offset + count;
     TextBuffer buffer;
-    copyUnits(&buffer, prStringView(&node->data),
-              [&](uint32_t unit) { return unit >= offset && unit < end; });
+    copyUnits(&buffer, prStringView(&node->data), [&](uint32_t unit) { return unit >= offset && unit < end; });
     *out = textTake(&buffer);
     return PrStatus_Ok;
 }
 
-PrStatus domReplaceData(PrDomCharacterData* node, uint32_t offset, uint32_t count,
-                        PrStringView data) {
+PrStatus domReplaceData(PrDomCharacterData* node, uint32_t offset, uint32_t count, PrStringView data) {
     uint32_t length = domCharacterDataLength(node);
     if (offset > length)
         return PrStatus_OutOfRange;
     uint32_t end = count > length - offset ? length : offset + count;
     TextBuffer buffer;
-    copyUnits(
-        &buffer, prStringView(&node->data),
-        [&](uint32_t unit) { return unit < offset || unit >= end; },
+    copyUnits(&buffer, prStringView(&node->data), [&](uint32_t unit) { return unit < offset || unit >= end; },
         data.data != nullptr ? data : "", offset);
     if (node->document->ranges != nullptr)
         domRangesDataReplaced(node, offset, end - offset, utf16Length(data));
@@ -2683,8 +2630,7 @@ void domNormalize(PrDomNode* node) {
     }
 }
 
-PrStatus domValidateInsertion(const PrDomNode* parent, const PrDomNode* node,
-                              const PrDomNode* PR_NULLABLE child) {
+PrStatus domValidateInsertion(const PrDomNode* parent, const PrDomNode* node, const PrDomNode* PR_NULLABLE child) {
     return validateInsertion(parent, node, child, false);
 }
 

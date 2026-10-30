@@ -265,7 +265,7 @@ void layoutPaintCacheReset(LayoutPaintCache& cache);
 // Returns the border, padding and content boxes of `fragment`, styled by `box`, whose border box is `border` in the
 // space that it paints in.
 LayoutBackgroundBoxes layoutBackgroundBoxes(const LayoutStyles* styles, const LayoutFragment* fragment,
-                                            const PrLayoutBoxStyle& box, PrRect border);
+    const PrLayoutBoxStyle& box, PrRect border);
 
 // Starts a paint: counts it, and resets the paint's work counts.
 void layoutPaintBegin(LayoutTree* tree);
@@ -277,7 +277,7 @@ void layoutPaintReused(LayoutTree* tree, uint32_t layers);
 // an inline box, the chunk is its container's chunk, with the box's opening part on the line `opening`. The chunk is
 // recorded again if it is not current. Marks the chunk as used by the running paint.
 uint32_t layoutPaintChunk(LayoutTree* tree, LayoutNodeIndex node, const LayoutFragment* fragment, LayoutPieceAt opening,
-                          bool root);
+    bool root);
 
 // Frees the chunks that the running paint did not use.
 void layoutPaintSweep(LayoutTree* tree);

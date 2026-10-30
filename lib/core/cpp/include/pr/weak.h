@@ -39,8 +39,7 @@ inline void weakReset(WeakReference* reference) {
 
 // Points `reference` at `target`, whose list of weak references is `list`. A null `target` or `list` clears the
 // reference.
-inline void weakSet(WeakReference* reference, WeakReferences* PR_NULLABLE list,
-                    void* PR_NULLABLE target) {
+inline void weakSet(WeakReference* reference, WeakReferences* PR_NULLABLE list, void* PR_NULLABLE target) {
     weakReset(reference);
     if (target == nullptr || list == nullptr)
         return;

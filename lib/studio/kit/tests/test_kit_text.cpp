@@ -182,7 +182,7 @@ TEST_CASE("a press places the caret at the nearer edge of the character under it
     // The second word is past the middle of the text, and a double press there selects it.
     PrLayoutRect caret{};
     REQUIRE(prLayoutNodeTextCaret(e.f.tree, e.textNode(), 8, PrLayoutTextAffinity_Downstream,
-                                  PrLayoutCoordinates_Viewport, &caret));
+        PrLayoutCoordinates_Viewport, &caret));
     PrVec2 beta{prLayoutUnitToPx(caret.left), start.y};
     e.f.click(beta);
     e.f.frame();
@@ -278,9 +278,9 @@ TEST_CASE("Return inserts a line feed in a text area, and Up and Down move betwe
     PrLayoutRect two{};
     PrLayoutRect after{};
     REQUIRE(prLayoutNodeTextCaret(e.f.tree, e.textNode(), 4, PrLayoutTextAffinity_Downstream,
-                                  PrLayoutCoordinates_Layout, &two));
+        PrLayoutCoordinates_Layout, &two));
     REQUIRE(prLayoutNodeTextCaret(e.f.tree, e.textNode(), 8, PrLayoutTextAffinity_Downstream,
-                                  PrLayoutCoordinates_Layout, &after));
+        PrLayoutCoordinates_Layout, &after));
     CHECK(after.top > two.top);
     CHECK(after.left == two.left);
     e.f.key(PrAppKey_Up);
@@ -303,7 +303,7 @@ TEST_CASE("a text area scrolls to keep the caret in view") {
     CHECK(info.offset.y.raw > 0);
     PrLayoutRect caret{};
     REQUIRE(prLayoutNodeTextCaret(e.f.tree, e.textNode(), e.selection().caret, PrLayoutTextAffinity_Downstream,
-                                  PrLayoutCoordinates_Viewport, &caret));
+        PrLayoutCoordinates_Viewport, &caret));
     PrRect box = e.f.bounds(e.node);
     CHECK(prLayoutUnitToPx(caret.bottom) <= box.bottom);
     CHECK(prLayoutUnitToPx(caret.top) >= box.top);
@@ -322,7 +322,7 @@ TEST_CASE("a text field scrolls along its line to keep the caret in view, and ba
     CHECK(info.offset.x.raw > 0);
     PrLayoutRect caret{};
     REQUIRE(prLayoutNodeTextCaret(e.f.tree, e.textNode(), e.selection().caret, PrLayoutTextAffinity_Downstream,
-                                  PrLayoutCoordinates_Viewport, &caret));
+        PrLayoutCoordinates_Viewport, &caret));
     CHECK(prLayoutUnitToPx(caret.left) <= e.f.bounds(value).right);
     e.f.key(PrAppKey_Home);
     e.f.frame();

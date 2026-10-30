@@ -80,7 +80,7 @@ bool incrementsListItem(const Step& step) {
     const CssComputedStyle* style = step.style;
     bool named = false;
     eachCounterItem(cssComputedValue(style, PrCssProperty_CounterIncrement),
-                    [&](PrStringView name, bool, bool, int32_t) { named = named || name == "list-item"; });
+        [&](PrStringView name, bool, bool, int32_t) { named = named || name == "list-item"; });
     return !named;
 }
 
@@ -133,7 +133,7 @@ int32_t reversedStart(const Pass& p, uint32_t at, PrStringView name) {
         const CssComputedStyle* style = step.style;
         bool resets = false;
         eachCounterItem(cssComputedValue(style, PrCssProperty_CounterReset),
-                        [&](PrStringView item, bool, bool, int32_t) { resets = resets || item == name; });
+            [&](PrStringView item, bool, bool, int32_t) { resets = resets || item == name; });
         if (resets && i != at) {
             if (step.depth == depth)
                 break;
@@ -142,10 +142,10 @@ int32_t reversedStart(const Pass& p, uint32_t at, PrStringView name) {
         }
         int64_t increment = 0;
         eachCounterItem(cssComputedValue(style, PrCssProperty_CounterIncrement),
-                        [&](PrStringView item, bool, bool given, int32_t value) {
-                            if (item == name)
-                                increment += given ? value : 1;
-                        });
+            [&](PrStringView item, bool, bool given, int32_t value) {
+                if (item == name)
+                    increment += given ? value : 1;
+            });
         if (name == "list-item" && incrementsListItem(step))
             increment -= 1;
         if (increment != 0)
@@ -155,13 +155,12 @@ int32_t reversedStart(const Pass& p, uint32_t at, PrStringView name) {
             contained = step.depth;
         bool sets = false;
         int32_t set = 0;
-        eachCounterItem(cssComputedValue(style, PrCssProperty_CounterSet),
-                        [&](PrStringView item, bool, bool, int32_t value) {
-                            if (item == name) {
-                                sets = true;
-                                set = value;
-                            }
-                        });
+        eachCounterItem(cssComputedValue(style, PrCssProperty_CounterSet), [&](PrStringView item, bool, bool, int32_t value) {
+            if (item == name) {
+                sets = true;
+                set = value;
+            }
+        });
         if (sets) {
             sum += set;
             break;
@@ -231,20 +230,19 @@ void applyCounters(Pass& p, uint32_t at) {
             instantiate(p, at, name, reversed, given, value, narrowScope(name));
     });
     eachCounterItem(cssComputedValue(style, PrCssProperty_CounterIncrement),
-                    [&](PrStringView name, bool, bool given, int32_t value) {
-                        uint32_t counter = changedCounter(p, at, name);
-                        p.counters.data[counter].value = increment(p.counters.data[counter].value, given ? value : 1);
-                    });
+        [&](PrStringView name, bool, bool given, int32_t value) {
+            uint32_t counter = changedCounter(p, at, name);
+            p.counters.data[counter].value = increment(p.counters.data[counter].value, given ? value : 1);
+        });
     if (incrementsListItem(step)) {
         uint32_t counter = changedCounter(p, at, "list-item");
         int32_t by = p.counters.data[counter].reversed ? -1 : 1;
         p.counters.data[counter].value = increment(p.counters.data[counter].value, by);
     }
-    eachCounterItem(cssComputedValue(style, PrCssProperty_CounterSet),
-                    [&](PrStringView name, bool, bool, int32_t value) {
-                        uint32_t counter = changedCounter(p, at, name);
-                        p.counters.data[counter].value = value;
-                    });
+    eachCounterItem(cssComputedValue(style, PrCssProperty_CounterSet), [&](PrStringView name, bool, bool, int32_t value) {
+        uint32_t counter = changedCounter(p, at, name);
+        p.counters.data[counter].value = value;
+    });
 }
 
 // Writes the index of the first value of each argument of the function at `at`, which commas separate, to `starts`, up
@@ -308,7 +306,7 @@ PrCssKeyword quoteOf(const CssValueNode* item) {
 // originating element or ::before or ::after of a pseudo-element, or an element's parent element in the flat tree.
 // Returns null for the root.
 const PrDomNode* PR_NULLABLE parentOf(const PrCssPresentation* r, const PrDomNode* node,
-                                      const CssComputedStyle* PR_NULLABLE* style) {
+        const CssComputedStyle* PR_NULLABLE* style) {
     for (const PrDomNode* at = domFlatParent(node); at != nullptr; at = domFlatParent(at)) {
         uint32_t entry = cssPresentationNodeEntry(r, at);
         if (entry != kHashMissing && r->entries.data[entry].style != nullptr) {
@@ -430,8 +428,7 @@ void readCounters(Pass& p, uint32_t at, bool marker) {
                 if (!first)
                     textAppend(&p.text, separator);
                 first = false;
-                cssCounterAppend(&p.text, styles, styleArgument(content, starts, count, 2), p.counters.data[c].value,
-                                 flow);
+                cssCounterAppend(&p.text, styles, styleArgument(content, starts, count, 2), p.counters.data[c].value, flow);
             }
         }
         close();
@@ -442,9 +439,9 @@ void readCounters(Pass& p, uint32_t at, bool marker) {
 bool readsCounters(const CssComputedStyle* style) {
     CssValueRun content = cssComputedValue(style, PrCssProperty_Content);
     for (uint32_t i = 0; i < content.count; i += content.values[i].next) {
-        if (cssValueIsFunction(&content.values[i], PrCssKeyword_Counter)
-            || cssValueIsFunction(&content.values[i], PrCssKeyword_Counters)
-            || quoteOf(&content.values[i]) != PrCssKeyword_None)
+        if (cssValueIsFunction(&content.values[i], PrCssKeyword_Counter) ||
+                cssValueIsFunction(&content.values[i], PrCssKeyword_Counters) ||
+                quoteOf(&content.values[i]) != PrCssKeyword_None)
             return true;
     }
     return false;
@@ -526,8 +523,11 @@ void collectFrom(Pass& p, const CssCountingResume& resume, uint32_t from) {
     uint32_t last = resume.chain.count - 1;
     for (uint32_t depth = from + 1; depth-- > 0;) {
         const PrDomElement* element = resume.chain.data[depth];
-        DomFlatChildren children = depth == last ? domFlatChildren(element)
-                                                 : domFlatChildrenAfter(element, resume.chain.data[depth + 1]);
+        DomFlatChildren children;
+        if (depth == last)
+            children = domFlatChildren(element);
+        else
+            children = domFlatChildrenAfter(element, resume.chain.data[depth + 1]);
         while (PrDomNode* child = domFlatNext(children)) {
             if (const PrDomElement* e = domElementFromNode(child))
                 collect(p, e, depth + 1, CssCountingWalk_Participants);
@@ -635,8 +635,7 @@ void chainFrom(PrCssPresentation* r, CssCountingResume& resume, const PrDomEleme
     const PrDomNode* node = last;
     for (uint32_t k = depth + 1; k-- > 0;) {
         uint32_t at = node != nullptr ? cssPresentationNodeEntry(r, node) : kHashMissing;
-        if (at == kHashMissing || !r->entries.data[at].boxed
-            || domElementFromNode(const_cast<PrDomNode*>(node)) == nullptr) {
+        if (at == kHashMissing || !r->entries.data[at].boxed || domElementFromNode(const_cast<PrDomNode*>(node)) == nullptr) {
             resume.chain.clear();
             return;
         }
@@ -661,17 +660,17 @@ bool cssIsListItem(const CssComputedStyle* style) {
 bool cssContainsStyle(const CssComputedStyle* style) {
     CssValueRun contain = cssComputedValue(style, PrCssProperty_Contain);
     for (uint32_t i = 0; i < contain.count; ++i) {
-        if (cssValueIsKeyword(&contain.values[i], PrCssKeyword_Style)
-            || cssValueIsKeyword(&contain.values[i], PrCssKeyword_Strict)
-            || cssValueIsKeyword(&contain.values[i], PrCssKeyword_Content))
+        if (cssValueIsKeyword(&contain.values[i], PrCssKeyword_Style) ||
+                cssValueIsKeyword(&contain.values[i], PrCssKeyword_Strict) ||
+                cssValueIsKeyword(&contain.values[i], PrCssKeyword_Content))
             return true;
     }
     if (!cssValueIsKeyword(cssComputedValue(style, PrCssProperty_ContentVisibility).values, PrCssKeyword_Visible))
         return true;
     CssValueRun container = cssComputedValue(style, PrCssProperty_ContainerType);
     for (uint32_t i = 0; i < container.count; ++i) {
-        if (cssValueIsKeyword(&container.values[i], PrCssKeyword_Size)
-            || cssValueIsKeyword(&container.values[i], PrCssKeyword_InlineSize))
+        if (cssValueIsKeyword(&container.values[i], PrCssKeyword_Size) ||
+                cssValueIsKeyword(&container.values[i], PrCssKeyword_InlineSize))
             return true;
     }
     return false;
@@ -681,9 +680,9 @@ bool cssCountsElement(const PrCssPresentation* presentation, const CssComputedSt
     // A style whose Generated group is the initial one changes no counter.
     if (listItem || style->groups[CssStyleGroup_Generated] == presentation->styles.initial[CssStyleGroup_Generated])
         return listItem;
-    return changesCounters(cssComputedValue(style, PrCssProperty_CounterReset))
-           || changesCounters(cssComputedValue(style, PrCssProperty_CounterIncrement))
-           || changesCounters(cssComputedValue(style, PrCssProperty_CounterSet));
+    return changesCounters(cssComputedValue(style, PrCssProperty_CounterReset)) ||
+        changesCounters(cssComputedValue(style, PrCssProperty_CounterIncrement)) ||
+        changesCounters(cssComputedValue(style, PrCssProperty_CounterSet));
 }
 
 bool cssCountsPseudo(const PrCssPresentation* presentation, const CssComputedStyle* style, CssPseudo pseudo) {
@@ -691,10 +690,9 @@ bool cssCountsPseudo(const PrCssPresentation* presentation, const CssComputedSty
         return true;
     if (style->groups[CssStyleGroup_Generated] == presentation->styles.initial[CssStyleGroup_Generated])
         return false;
-    return readsCounters(style)
-           || changesCounters(cssComputedValue(style, PrCssProperty_CounterReset))
-           || changesCounters(cssComputedValue(style, PrCssProperty_CounterIncrement))
-           || changesCounters(cssComputedValue(style, PrCssProperty_CounterSet));
+    return readsCounters(style) || changesCounters(cssComputedValue(style, PrCssProperty_CounterReset)) ||
+        changesCounters(cssComputedValue(style, PrCssProperty_CounterIncrement)) ||
+        changesCounters(cssComputedValue(style, PrCssProperty_CounterSet));
 }
 
 bool cssReadsQuotes(const CssComputedStyle* style) {
@@ -738,21 +736,22 @@ void cssCounterResumeReset(CssCountingResume& resume) {
     resume.points.reset();
 }
 
-void cssCountersRun(PrCssPresentation* presentation, CssCountingWalk walk, CssCountingTextsFn fn,
-                    void* PR_NULLABLE context) {
+void cssCountersRun(PrCssPresentation* presentation, CssCountingWalk walk, CssCountingTextsFn fn, void* PR_NULLABLE context) {
     PrDomElement* root = domDocumentElement(presentation->document);
     CssCountingScratch& scratch = presentation->counterScratch;
     CssCountingResume& resume = presentation->counterResume;
     bool participants = walk == CssCountingWalk_Participants;
-    Pass p{.presentation = presentation,
-           .steps = scratch.steps,
-           .counters = scratch.counters,
-           .texts = scratch.texts,
-           .text = scratch.text,
-           .initial = presentation->styles.initial[CssStyleGroup_Generated],
-           .boundaries = scratch.boundaries,
-           .found = 0,
-           .quoteDepth = 0};
+    Pass p{
+        .presentation = presentation,
+        .steps = scratch.steps,
+        .counters = scratch.counters,
+        .texts = scratch.texts,
+        .text = scratch.text,
+        .initial = presentation->styles.initial[CssStyleGroup_Generated],
+        .boundaries = scratch.boundaries,
+        .found = 0,
+        .quoteDepth = 0,
+    };
     p.steps.clear();
     p.counters.clear();
     p.boundaries.clear();
@@ -760,8 +759,8 @@ void cssCountersRun(PrCssPresentation* presentation, CssCountingWalk walk, CssCo
     // The point is where it would be in a run from the root, since nothing before it changed, unless a reversed counter
     // in scope there counts what follows.
     bool resumed = false;
-    if (participants && root != nullptr && !presentation->countersFromRoot && presentation->counterChanges.count != 0
-        && resume.chain.count != 0) {
+    if (participants && root != nullptr && !presentation->countersFromRoot && presentation->counterChanges.count != 0 &&
+            resume.chain.count != 0) {
         uint32_t from = 0;
         for (uint32_t i = 0; i < presentation->counterChanges.count && from != UINT32_MAX; ++i) {
             uint32_t depth = chainDepthOf(resume, presentation->counterChanges.data[i]);
@@ -797,9 +796,8 @@ void cssCountersRun(PrCssPresentation* presentation, CssCountingWalk walk, CssCo
         }
         const Step& step = p.steps.data[at];
         if (step.node == nullptr) {
-            while (p.counters.count != 0
-                   && (p.counters.last().depth > step.depth
-                       || (p.counters.last().narrow && p.counters.last().depth == step.depth)))
+            while (p.counters.count != 0 && (p.counters.last().depth > step.depth ||
+                    (p.counters.last().narrow && p.counters.last().depth == step.depth)))
                 p.counters.pop();
             if (p.boundaries.count != 0 && p.boundaries.last().depth == step.depth)
                 p.boundaries.pop();
@@ -814,9 +812,8 @@ void cssCountersRun(PrCssPresentation* presentation, CssCountingWalk walk, CssCo
         CssPresentationPseudo* pseudo = static_cast<CssPresentationPseudo*>(const_cast<PrDomNode*>(step.node));
         // A style whose Generated group is the initial one has a content of normal.
         bool initial = step.style->groups[CssStyleGroup_Generated] == p.initial;
-        bool normal = initial
-                      || cssValueIsKeyword(cssComputedValue(step.style, PrCssProperty_Content).values,
-                                           PrCssKeyword_Normal);
+        bool normal = initial || cssValueIsKeyword(cssComputedValue(step.style, PrCssProperty_Content).values,
+            PrCssKeyword_Normal);
         bool marker = cssPseudoIsMarker(pseudo->pseudo) && normal;
         bool kept = false;
         if (marker && participants) {

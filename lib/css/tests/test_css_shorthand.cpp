@@ -41,13 +41,11 @@ struct Block {
     }
 
     bool set(PrStringView name, PrStringView value, bool important = false) {
-        return cssDeclarationBlockSet(&style, named(&style, name), value, important, nullptr)
-               != CssEditResult_Rejected;
+        return cssDeclarationBlockSet(&style, named(&style, name), value, important, nullptr) != CssEditResult_Rejected;
     }
 
     bool remove(PrStringView name) {
-        return cssDeclarationBlockRemove(&style, named(&style, name), nullptr)
-               == CssEditResult_Changed;
+        return cssDeclarationBlockRemove(&style, named(&style, name), nullptr) == CssEditResult_Changed;
     }
 };
 
@@ -120,9 +118,7 @@ TEST_CASE("a CSS-wide keyword sets every longhand, and a shorthand writes it whe
 
     Block mixed("margin: inherit; margin-left: 1px");
     CHECK(mixed.value("margin") == "");
-    CHECK(
-        mixed.text()
-        == "margin-top: inherit; margin-right: inherit; margin-bottom: inherit; margin-left: 1px;");
+    CHECK(mixed.text() == "margin-top: inherit; margin-right: inherit; margin-bottom: inherit; margin-left: 1px;");
 }
 
 TEST_CASE("a shorthand with var() leaves each longhand a pending-substitution value") {
@@ -256,8 +252,7 @@ TEST_CASE("removeProperty removes the longhands a shared declaration lists") {
 TEST_CASE("a change that writes what the block holds leaves it unchanged") {
     Block block("margin: 1px 2px; all: initial; color: red");
     auto set = [&](PrStringView name, PrStringView value, bool important = false) {
-        return cssDeclarationBlockSet(&block.style, named(&block.style, name), value, important,
-                                      nullptr);
+        return cssDeclarationBlockSet(&block.style, named(&block.style, name), value, important, nullptr);
     };
     CHECK(set("color", "red") == CssEditResult_Unchanged);
     CHECK(set("color", "red", true) == CssEditResult_Changed);
@@ -270,27 +265,22 @@ TEST_CASE("a change that writes what the block holds leaves it unchanged") {
     CHECK(cssDeclarationBlockRemove(&block.style, named(&block.style, "--absent"), nullptr) == CssEditResult_Unchanged);
 
     Block written("margin: 1px 2px");
-    CHECK(cssDeclarationBlockSet(&written.style, named(&written.style, "margin"),
-                                 "1px 2px 1px", false, nullptr)
-          == CssEditResult_Unchanged);
-    CHECK(cssDeclarationBlockSet(&written.style, named(&written.style, "margin-left"),
-                                 "2px", false, nullptr)
-          == CssEditResult_Unchanged);
+    CHECK(cssDeclarationBlockSet(&written.style, named(&written.style, "margin"), "1px 2px 1px", false, nullptr) ==
+        CssEditResult_Unchanged);
+    CHECK(cssDeclarationBlockSet(&written.style, named(&written.style, "margin-left"), "2px", false, nullptr) ==
+        CssEditResult_Unchanged);
 }
 
 TEST_CASE("setProperty sets each longhand where it is, and removeProperty removes them") {
     Block block("color: red; margin-left: 5px");
-    CHECK(cssDeclarationBlockSet(&block.style, named(&block.style, "margin"), "1px",
-                                 true, nullptr)
-          == CssEditResult_Changed);
+    CHECK(cssDeclarationBlockSet(&block.style, named(&block.style, "margin"), "1px", true, nullptr) ==
+        CssEditResult_Changed);
     CHECK(block.text() == "color: red; margin: 1px !important;");
-    CHECK(textOf(cssDeclarationName(&block.style, &cssDeclarations(&block.style)[1]))
-          == "margin-left");
+    CHECK(textOf(cssDeclarationName(&block.style, &cssDeclarations(&block.style)[1])) == "margin-left");
     CHECK(cssDeclarationBlockImportant(&block.style, named(&block.style, "margin")));
 
-    CHECK(cssDeclarationBlockSet(&block.style, named(&block.style, "margin-top"),
-                                 "2px", false, nullptr)
-          == CssEditResult_Changed);
+    CHECK(cssDeclarationBlockSet(&block.style, named(&block.style, "margin-top"), "2px", false, nullptr) ==
+        CssEditResult_Changed);
     CHECK_FALSE(cssDeclarationBlockImportant(&block.style, named(&block.style, "margin")));
     CHECK(block.value("margin") == "");
 
@@ -386,18 +376,15 @@ TEST_CASE("font writes the longhands it sets and resets the rest") {
     CHECK(block.value("font") == "italic bold 12px / 1.5 serif");
 
     // A font with a font-width writes the keyword for its percentage, which may come from a calculation.
-    CHECK(cssDeclarationBlockSet(&block.style, named(&block.style, "font-stretch"),
-                                 "calc(50%)", false, nullptr)
-          == CssEditResult_Changed);
+    CHECK(cssDeclarationBlockSet(&block.style, named(&block.style, "font-stretch"), "calc(50%)", false, nullptr) ==
+        CssEditResult_Changed);
     CHECK(block.value("font") == "italic bold ultra-condensed 12px / 1.5 serif");
-    CHECK(cssDeclarationBlockSet(&block.style, named(&block.style, "font-stretch"),
-                                 "calc(50% + 1%)", false, nullptr)
-          == CssEditResult_Changed);
+    CHECK(cssDeclarationBlockSet(&block.style, named(&block.style, "font-stretch"), "calc(50% + 1%)", false, nullptr) ==
+        CssEditResult_Changed);
     CHECK(block.value("font") == "");
 
     CHECK(cssDeclarationBlockSet(&block.style, named(&block.style, "font-variant-caps"),
-                                 "all-small-caps", false, nullptr)
-          == CssEditResult_Changed);
+        "all-small-caps", false, nullptr) == CssEditResult_Changed);
     CHECK(block.value("font") == "");
 
     // A system font's longhands hold the font until computed.
@@ -450,9 +437,8 @@ TEST_CASE("a side's radius shorthand sets its two corners, horizontal radii befo
 
 TEST_CASE("shorthand serialization respects intermixed logical mappings") {
     Block blocked("margin-top: 1px; margin-inline-start: 2px; margin-right: 1px; margin-bottom: 1px; margin-left: 1px");
-    CHECK(
-        blocked.text()
-        == "margin-top: 1px; margin-inline-start: 2px; margin-right: 1px; margin-bottom: 1px; margin-left: 1px;");
+    CHECK(blocked.text() ==
+        "margin-top: 1px; margin-inline-start: 2px; margin-right: 1px; margin-bottom: 1px; margin-left: 1px;");
     // getPropertyValue does not reorder the declaration block.
     CHECK(blocked.value("margin") == "1px");
     Block unrelated("margin-top: 1px; padding-inline-start: 2px; margin-right: 1px; margin-bottom: 1px; margin-left: 1px");

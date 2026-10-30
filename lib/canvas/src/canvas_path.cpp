@@ -64,14 +64,18 @@ struct Ellipse {
 PrDVec2 pointAt(const Ellipse& ellipse, double angle) {
     double x = ellipse.radii.x * cosF64(angle);
     double y = ellipse.radii.y * sinF64(angle);
-    return PrDVec2{ellipse.center.x + x * ellipse.cosRotation - y * ellipse.sinRotation,
-                   ellipse.center.y + x * ellipse.sinRotation + y * ellipse.cosRotation};
+    return PrDVec2{
+        ellipse.center.x + x * ellipse.cosRotation - y * ellipse.sinRotation,
+        ellipse.center.y + x * ellipse.sinRotation + y * ellipse.cosRotation,
+    };
 }
 PrDVec2 tangentAt(const Ellipse& ellipse, double angle) {
     double x = -ellipse.radii.x * sinF64(angle);
     double y = ellipse.radii.y * cosF64(angle);
-    return PrDVec2{x * ellipse.cosRotation - y * ellipse.sinRotation,
-                   x * ellipse.sinRotation + y * ellipse.cosRotation};
+    return PrDVec2{
+        x * ellipse.cosRotation - y * ellipse.sinRotation,
+        x * ellipse.sinRotation + y * ellipse.cosRotation,
+    };
 }
 
 // Appends the arc of `ellipse` from `startAngle` through `sweep`, mapped through `transform`, as cubic curves of at
@@ -96,7 +100,7 @@ void appendArc(CanvasPath* path, PrDAffine2 transform, const Ellipse& ellipse, d
         PrDVec2 p3 = pointAt(ellipse, to);
         PrDVec2 t3 = tangentAt(ellipse, to);
         cubicAt(path, canvasMapPoint(transform, p0.x + k * t0.x, p0.y + k * t0.y),
-                canvasMapPoint(transform, p3.x - k * t3.x, p3.y - k * t3.y), canvasMapPoint(transform, p3.x, p3.y));
+            canvasMapPoint(transform, p3.x - k * t3.x, p3.y - k * t3.y), canvasMapPoint(transform, p3.x, p3.y));
     }
 }
 
@@ -220,7 +224,7 @@ void canvasPathQuadraticCurveTo(CanvasPath* path, PrDAffine2 transform, double c
 }
 
 void canvasPathBezierCurveTo(CanvasPath* path, PrDAffine2 transform, double cp1x, double cp1y, double cp2x,
-                             double cp2y, double x, double y) {
+        double cp2y, double x, double y) {
     if (!canvasIsFinite(cp1x, cp1y, cp2x, cp2y, x, y))
         return;
     PrDVec2 control1 = canvasMapPoint(transform, cp1x, cp1y);
@@ -228,8 +232,7 @@ void canvasPathBezierCurveTo(CanvasPath* path, PrDAffine2 transform, double cp1x
     cubicAt(path, control1, canvasMapPoint(transform, cp2x, cp2y), canvasMapPoint(transform, x, y));
 }
 
-PrStatus canvasPathArcTo(CanvasPath* path, PrDAffine2 transform, double x1, double y1, double x2, double y2,
-                         double radius) {
+PrStatus canvasPathArcTo(CanvasPath* path, PrDAffine2 transform, double x1, double y1, double x2, double y2, double radius) {
     if (!canvasIsFinite(x1, y1, x2, y2, radius))
         return PrStatus_Ok;
     PrDVec2 corner = canvasMapPoint(transform, x1, y1);
@@ -289,7 +292,7 @@ void canvasPathRect(CanvasPath* path, PrDAffine2 transform, double x, double y, 
 }
 
 PrStatus canvasPathRoundRect(CanvasPath* path, PrDAffine2 transform, double x, double y, double w, double h,
-                             const PrDVec2* PR_NULLABLE radii, uint32_t radiusCount) {
+        const PrDVec2* PR_NULLABLE radii, uint32_t radiusCount) {
     if (!canvasIsFinite(x, y, w, h))
         return PrStatus_Ok;
     if (radiusCount < 1 || radiusCount > 4)
@@ -310,8 +313,10 @@ PrStatus canvasPathRoundRect(CanvasPath* path, PrDAffine2 transform, double x, d
     // the direction of the subpath, and a negative height does the same vertically.
     double width = absF64(w);
     double height = absF64(h);
-    double sums[4] = {corners[0].x + corners[1].x, corners[1].y + corners[2].y, corners[2].x + corners[3].x,
-                      corners[0].y + corners[3].y};
+    double sums[4] = {
+        corners[0].x + corners[1].x, corners[1].y + corners[2].y, corners[2].x + corners[3].x,
+        corners[0].y + corners[3].y,
+    };
     double sides[4] = {width, height, width, height};
     double scale = 1;
     for (uint32_t i = 0; i < 4; ++i) {
@@ -343,8 +348,7 @@ PrStatus canvasPathRoundRect(CanvasPath* path, PrDAffine2 transform, double x, d
 }
 
 PrStatus canvasPathEllipse(CanvasPath* path, PrDAffine2 transform, double x, double y, double radiusX,
-                           double radiusY, double rotation, double startAngle, double endAngle,
-                           bool counterclockwise) {
+        double radiusY, double rotation, double startAngle, double endAngle, bool counterclockwise) {
     if (!canvasIsFinite(x, y, radiusX, radiusY, rotation, startAngle, endAngle))
         return PrStatus_Ok;
     if (radiusX < 0 || radiusY < 0)
@@ -356,8 +360,8 @@ PrStatus canvasPathEllipse(CanvasPath* path, PrDAffine2 transform, double x, dou
 }
 
 void canvasPathAddPath(CanvasPath* path, const CanvasPath& other, PrDAffine2 transform) {
-    if (!other.hasSubpath || !canvasIsFinite(transform.a, transform.b, transform.c, transform.d, transform.e,
-                                             transform.f))
+    if (!other.hasSubpath ||
+            !canvasIsFinite(transform.a, transform.b, transform.c, transform.d, transform.e, transform.f))
         return;
     // A path added to itself is read from a copy, since appending grows what it reads.
     PrPath* copy = other.path == path->path ? prPathClone(other.path) : nullptr;

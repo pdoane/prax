@@ -17,8 +17,8 @@ namespace {
 
 // Returns the arguments of `name(...)` if `text` is that call, or the null view.
 PrStringView argumentsOf(PrStringView text, PrStringView name) {
-    if (text.size < name.size + 2 || stringSlice(text, 0, name.size) != name || text.data[name.size] != '('
-        || text.data[text.size - 1] != ')')
+    if (text.size < name.size + 2 || stringSlice(text, 0, name.size) != name || text.data[name.size] != '(' ||
+            text.data[text.size - 1] != ')')
         return PrStringView{};
     return stringSlice(text, name.size + 1, text.size - name.size - 2);
 }
@@ -112,12 +112,16 @@ void applyMediaFragment(PrStringView fragment, PrRect image, bool hasImage, SvgR
         if (percent) {
             float width = prRectWidth(image) / 100;
             float height = prRectHeight(image) / 100;
-            region = PrRect{image.left + n[0] * width, image.top + n[1] * height, image.left + (n[0] + n[2]) * width,
-                            image.top + (n[1] + n[3]) * height};
+            region = PrRect{
+                image.left + n[0] * width, image.top + n[1] * height, image.left + (n[0] + n[2]) * width,
+                image.top + (n[1] + n[3]) * height,
+            };
         }
         if (hasImage)
-            region = PrRect{maxF32(region.left, image.left), maxF32(region.top, image.top),
-                            minF32(region.right, image.right), minF32(region.bottom, image.bottom)};
+            region = PrRect{
+                maxF32(region.left, image.left), maxF32(region.top, image.top),
+                minF32(region.right, image.right), minF32(region.bottom, image.bottom),
+            };
         if (!(region.right > region.left) || !(region.bottom > region.top))
             continue;
         view->viewBox = region;
@@ -241,10 +245,12 @@ void svgImageRelease(const SvgImage* PR_NULLABLE image) {
 }
 
 PrLayoutPainter svgImagePainter(const SvgImage* image) {
-    return PrLayoutPainter{.paint = painterDraw,
-                           .context = const_cast<SvgImage*>(image),
-                           .retain = painterRetain,
-                           .release = painterRelease};
+    return PrLayoutPainter{
+        .paint = painterDraw,
+        .context = const_cast<SvgImage*>(image),
+        .retain = painterRetain,
+        .release = painterRelease,
+    };
 }
 
 const SvgImage* PR_NULLABLE svgImageOfPainter(PrLayoutPainter painter) {

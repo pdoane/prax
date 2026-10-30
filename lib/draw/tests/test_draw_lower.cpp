@@ -61,8 +61,7 @@ struct Pieces {
     std::vector<PrDrawBorderPiece> pieces;
 };
 
-void collect(void* context, const PrDrawBorderPiece* piece, const PrPathPolyline* shape,
-             const PrPathPolyline* cut) {
+void collect(void* context, const PrDrawBorderPiece* piece, const PrPathPolyline* shape, const PrPathPolyline* cut) {
     Pieces& p = *static_cast<Pieces*>(context);
     p.pieces.push_back(*piece);
     p.areas.push_back(areaOf(*shape, piece->rule));
@@ -119,8 +118,10 @@ PrRect playedRect(const PrDrawList* list) {
 using namespace pr_impl;
 
 TEST_CASE("gradient parameters follow each kind's geometry") {
-    PrDrawColorStop stops[] = {{.offset = 0, .color = PrColor{0, 0, 0, 1}},
-                               {.offset = 1, .color = PrColor{1, 1, 1, 1}}};
+    PrDrawColorStop stops[] = {
+        {.offset = 0, .color = PrColor{0, 0, 0, 1}},
+        {.offset = 1, .color = PrColor{1, 1, 1, 1}},
+    };
     PrDrawBrush linear = brushOf(PrDrawBrushKind_Linear, stops, 2);
     linear.linear.start = PrVec2{10, 0};
     linear.linear.end = PrVec2{20, 0};
@@ -175,10 +176,12 @@ TEST_CASE("extending maps the parameter back into the unit interval, except for 
 }
 
 TEST_CASE("a ramp's pieces meet at its stops, and a piece that mixes linearly is its two ends") {
-    PrDrawColorStop stops[] = {{.offset = 0.25f, .color = PrColor{1, 0, 0, 1}},
-                               {.offset = 0.5f, .color = PrColor{1, 0, 0, 1}},
-                               {.offset = 0.5f, .color = PrColor{0, 0, 1, 1}},
-                               {.offset = 0.75f, .color = PrColor{0, 1, 0, 1}}};
+    PrDrawColorStop stops[] = {
+        {.offset = 0.25f, .color = PrColor{1, 0, 0, 1}},
+        {.offset = 0.5f, .color = PrColor{1, 0, 0, 1}},
+        {.offset = 0.5f, .color = PrColor{0, 0, 1, 1}},
+        {.offset = 0.75f, .color = PrColor{0, 1, 0, 1}},
+    };
     PrDrawBrush brush = brushOf(PrDrawBrushKind_Linear, stops, 4);
     PrDrawRampPiece pieces[7];
     std::vector<PrColor> colors(prDrawGradientRampMaxColors(4, 1024));
@@ -211,10 +214,12 @@ TEST_CASE("a ramp's pieces meet at its stops, and a piece that mixes linearly is
 }
 
 TEST_CASE("a ramp holds 1 in the gradient's colors, and its end stops' colors before 0 and past 1") {
-    PrDrawColorStop stops[] = {{.offset = 0, .color = PrColor{1, 0, 0, 1}},
-                               {.offset = 0, .color = PrColor{0, 0, 1, 1}},
-                               {.offset = 1, .color = PrColor{0, 0, 1, 1}},
-                               {.offset = 1, .color = PrColor{0, 1, 0, 1}}};
+    PrDrawColorStop stops[] = {
+        {.offset = 0, .color = PrColor{1, 0, 0, 1}},
+        {.offset = 0, .color = PrColor{0, 0, 1, 1}},
+        {.offset = 1, .color = PrColor{0, 0, 1, 1}},
+        {.offset = 1, .color = PrColor{0, 1, 0, 1}},
+    };
     PrDrawBrush brush = brushOf(PrDrawBrushKind_Radial, stops, 4);
     const float at[] = {-0.5f, 0, 1, 1.5f};
     PrColor ramp[4];
@@ -227,8 +232,10 @@ TEST_CASE("a ramp holds 1 in the gradient's colors, and its end stops' colors be
 }
 
 TEST_CASE("a ramp's piece that mixes in another space has colors at the resolution asked") {
-    PrDrawColorStop stops[] = {{.offset = 0, .color = PrColor{0, 0, 0, 1}},
-                               {.offset = 0.5f, .color = PrColor{1, 1, 1, 1}}};
+    PrDrawColorStop stops[] = {
+        {.offset = 0, .color = PrColor{0, 0, 0, 1}},
+        {.offset = 0.5f, .color = PrColor{1, 1, 1, 1}},
+    };
     PrDrawBrush brush = brushOf(PrDrawBrushKind_Linear, stops, 2);
     brush.interpolationSpace = PrColorSpace_SrgbLinear;
     PrDrawRampPiece pieces[5];
@@ -239,8 +246,10 @@ TEST_CASE("a ramp's piece that mixes in another space has colors at the resoluti
 }
 
 TEST_CASE("a ramp mixes stops premultiplied, in their space, and takes the color") {
-    PrDrawColorStop stops[] = {{.offset = 0, .color = PrColor{1, 0, 0, 1}},
-                               {.offset = 1, .color = PrColor{0, 0, 1, 0}}};
+    PrDrawColorStop stops[] = {
+        {.offset = 0, .color = PrColor{1, 0, 0, 1}},
+        {.offset = 1, .color = PrColor{0, 0, 1, 0}},
+    };
     PrDrawBrush brush = brushOf(PrDrawBrushKind_Linear, stops, 2);
     PrColor ramp[3];
     evenRamp(&brush, PrColor{1, 1, 1, 1}, 3, ramp);
@@ -253,24 +262,30 @@ TEST_CASE("a ramp mixes stops premultiplied, in their space, and takes the color
     CHECK(near(ramp[0].r, 0.5f));
 
     // A hint of a quarter makes the middle of the gap mostly the second stop's color.
-    PrDrawColorStop hinted[] = {{.offset = 0, .color = PrColor{0, 0, 0, 1}, .hint = 0.25f},
-                                {.offset = 1, .color = PrColor{1, 1, 1, 1}}};
+    PrDrawColorStop hinted[] = {
+        {.offset = 0, .color = PrColor{0, 0, 0, 1}, .hint = 0.25f},
+        {.offset = 1, .color = PrColor{1, 1, 1, 1}},
+    };
     brush = brushOf(PrDrawBrushKind_Linear, hinted, 2);
     evenRamp(&brush, PrColor{1, 1, 1, 1}, 3, ramp);
     CHECK(near(ramp[1].r, std::pow(0.5f, std::log(0.5f) / std::log(0.25f))));
 
     // Equal offsets make a hard stop, with the later stop's color at the offset.
-    PrDrawColorStop hard[] = {{.offset = 0, .color = PrColor{1, 0, 0, 1}},
-                              {.offset = 0.5f, .color = PrColor{1, 0, 0, 1}},
-                              {.offset = 0.5f, .color = PrColor{0, 0, 1, 1}},
-                              {.offset = 1, .color = PrColor{0, 0, 1, 1}}};
+    PrDrawColorStop hard[] = {
+        {.offset = 0, .color = PrColor{1, 0, 0, 1}},
+        {.offset = 0.5f, .color = PrColor{1, 0, 0, 1}},
+        {.offset = 0.5f, .color = PrColor{0, 0, 1, 1}},
+        {.offset = 1, .color = PrColor{0, 0, 1, 1}},
+    };
     brush = brushOf(PrDrawBrushKind_Linear, hard, 4);
     evenRamp(&brush, PrColor{1, 1, 1, 1}, 3, ramp);
     CHECK(near(ramp[1].b, 1));
 
     // In linear light, the middle of black and white is brighter than in sRGB.
-    PrDrawColorStop grays[] = {{.offset = 0, .color = PrColor{0, 0, 0, 1}},
-                               {.offset = 1, .color = PrColor{1, 1, 1, 1}}};
+    PrDrawColorStop grays[] = {
+        {.offset = 0, .color = PrColor{0, 0, 0, 1}},
+        {.offset = 1, .color = PrColor{1, 1, 1, 1}},
+    };
     brush = brushOf(PrDrawBrushKind_Linear, grays, 2);
     brush.interpolationSpace = PrColorSpace_SrgbLinear;
     evenRamp(&brush, PrColor{1, 1, 1, 1}, 3, ramp);
@@ -278,8 +293,10 @@ TEST_CASE("a ramp mixes stops premultiplied, in their space, and takes the color
 }
 
 TEST_CASE("a ramp that mixes straight mixes color and alpha apart, toward the color of a transparent stop") {
-    PrDrawColorStop stops[] = {{.offset = 0, .color = PrColor{1, 0.5f, 0, 1}},
-                               {.offset = 1, .color = PrColor{0, 0, 0, 0}}};
+    PrDrawColorStop stops[] = {
+        {.offset = 0, .color = PrColor{1, 0.5f, 0, 1}},
+        {.offset = 1, .color = PrColor{0, 0, 0, 0}},
+    };
     PrDrawBrush brush = brushOf(PrDrawBrushKind_Linear, stops, 2);
     brush.interpolationAlpha = PrDrawAlpha_Straight;
     PrColor ramp[3];
@@ -304,8 +321,10 @@ TEST_CASE("a ramp that mixes straight mixes color and alpha apart, toward the co
 }
 
 TEST_CASE("hues interpolate the way asked, and a gray takes the hue of each stop it mixes with") {
-    PrDrawColorStop stops[] = {{.offset = 0, .color = PrColor{1, 0, 0, 1}},
-                               {.offset = 1, .color = PrColor{0, 0, 1, 1}}};
+    PrDrawColorStop stops[] = {
+        {.offset = 0, .color = PrColor{1, 0, 0, 1}},
+        {.offset = 1, .color = PrColor{0, 0, 1, 1}},
+    };
     PrDrawBrush brush = brushOf(PrDrawBrushKind_Linear, stops, 2);
     brush.interpolationSpace = PrColorSpace_Hsl;
     PrColor ramp[3];
@@ -316,17 +335,21 @@ TEST_CASE("hues interpolate the way asked, and a gray takes the hue of each stop
     brush.hueMethod = PrColorHueMethod_Longer;
     evenRamp(&brush, PrColor{1, 1, 1, 1}, 3, ramp);
     CHECK(near(ramp[1].g, 1));
-    PrDrawColorStop fromGray[] = {{.offset = 0, .color = PrColor{0.5f, 0.5f, 0.5f, 1}},
-                                  {.offset = 1, .color = PrColor{0, 0, 1, 1}}};
+    PrDrawColorStop fromGray[] = {
+        {.offset = 0, .color = PrColor{0.5f, 0.5f, 0.5f, 1}},
+        {.offset = 1, .color = PrColor{0, 0, 1, 1}},
+    };
     brush = brushOf(PrDrawBrushKind_Linear, fromGray, 2);
     brush.interpolationSpace = PrColorSpace_Hsl;
     evenRamp(&brush, PrColor{1, 1, 1, 1}, 3, ramp);
     CHECK(ramp[1].b > ramp[1].r + 0.1f);
     CHECK(near(ramp[1].r, ramp[1].g));
     // Between red and gray, the gray takes red's hue. Between gray and green, it takes green's hue.
-    PrDrawColorStop throughGray[] = {{.offset = 0, .color = PrColor{1, 0, 0, 1}},
-                                     {.offset = 0.5f, .color = PrColor{0.5f, 0.5f, 0.5f, 1}},
-                                     {.offset = 1, .color = PrColor{0, 1, 0, 1}}};
+    PrDrawColorStop throughGray[] = {
+        {.offset = 0, .color = PrColor{1, 0, 0, 1}},
+        {.offset = 0.5f, .color = PrColor{0.5f, 0.5f, 0.5f, 1}},
+        {.offset = 1, .color = PrColor{0, 1, 0, 1}},
+    };
     brush = brushOf(PrDrawBrushKind_Linear, throughGray, 3);
     brush.interpolationSpace = PrColorSpace_Hsl;
     PrColor five[5];
@@ -347,8 +370,10 @@ TEST_CASE("hues interpolate the way asked, and a gray takes the hue of each stop
 }
 
 TEST_CASE("gradients share a ramp when their stops, interpolation and color agree, whatever their geometry") {
-    PrDrawColorStop stops[] = {{.offset = 0, .color = PrColor{1, 0, 0, 1}},
-                               {.offset = 1, .color = PrColor{0, 0, 1, 1}}};
+    PrDrawColorStop stops[] = {
+        {.offset = 0, .color = PrColor{1, 0, 0, 1}},
+        {.offset = 1, .color = PrColor{0, 0, 1, 1}},
+    };
     PrDrawColorStop copy[] = {{.offset = 0, .color = PrColor{1, 0, 0, 1}}, {.offset = 1, .color = PrColor{0, 0, 1, 1}}};
     PrDrawBrush linear = brushOf(PrDrawBrushKind_Linear, stops, 2);
     linear.linear.end = PrVec2{10, 0};
@@ -543,7 +568,7 @@ TEST_CASE("a decoration too long for its pattern draws a bounded number of dots 
         d.wavelength = 4;
         d.amplitude = 1;
         for (PrDrawDecorationStyle style : {PrDrawDecorationStyle_Dotted, PrDrawDecorationStyle_Dashed,
-                                            PrDrawDecorationStyle_Wavy}) {
+            PrDrawDecorationStyle_Wavy}) {
             d.style = style;
             prPathPolylineClear(&outline);
             prDrawDecorationOutline(&d, 0.25f, &outline);
@@ -620,12 +645,14 @@ TEST_CASE("a uniform border is one area, and sides that differ are pieces of the
 }
 
 TEST_CASE("sides whose brushes are the same record, with stops of the same values, are uniform") {
-    PrDrawColorStop stops[2][2] = {{{.offset = 0, .color = PrColor{1, 0, 0, 1}},
-                                    {.offset = 1, .color = PrColor{0, 0, 1, 1}}},
-                              {{.offset = 0, .color = PrColor{1, 0, 0, 1}},
-                               {.offset = 1, .color = PrColor{0, 0, 1, 1}}}};
-    PrDrawBrush brushes[2] = {brushOf(PrDrawBrushKind_Linear, stops[0], 2),
-                              brushOf(PrDrawBrushKind_Linear, stops[1], 2)};
+    PrDrawColorStop stops[2][2] = {
+        {{.offset = 0, .color = PrColor{1, 0, 0, 1}}, {.offset = 1, .color = PrColor{0, 0, 1, 1}}},
+        {{.offset = 0, .color = PrColor{1, 0, 0, 1}}, {.offset = 1, .color = PrColor{0, 0, 1, 1}}},
+    };
+    PrDrawBrush brushes[2] = {
+        brushOf(PrDrawBrushKind_Linear, stops[0], 2),
+        brushOf(PrDrawBrushKind_Linear, stops[1], 2),
+    };
     for (PrDrawBrush& brush : brushes)
         brush.linear = {{0, 0}, {10, 0}};
     PrDrawBorder border{};
@@ -691,7 +718,7 @@ TEST_CASE("a wide shadow blurs at a lower resolution, close to the full blur, wh
     const PrIRect box{0, 0, 300, 260};
     std::vector<uint8_t> reduced(300 * 260);
     prDrawShadowCoverage(rasterizer, &outline, &caster, PrDrawShadowKind_Drop, 40, PrPathCoverage_Area,
-                         PrIVec2{box.left, box.top}, PrPixels{reduced.data(), 300, {300, 260}});
+        PrIVec2{box.left, box.top}, PrPixels{reduced.data(), 300, {300, 260}});
     // The same blur at full resolution, over enough room that nothing is cut off.
     const uint32_t margin = 200;
     const uint32_t width = 300 + 2 * margin;
@@ -699,7 +726,7 @@ TEST_CASE("a wide shadow blurs at a lower resolution, close to the full blur, wh
     std::vector<uint8_t> coverage(size_t(width) * height);
     PrPixels mask{coverage.data(), width, {width, height}};
     prPathRasterizerFill(rasterizer, &outline, PrPathFillRule_NonZero, PrPathCoverage_Area,
-                         PrIVec2{-int32_t(margin), -int32_t(margin)}, mask);
+        PrIVec2{-int32_t(margin), -int32_t(margin)}, mask);
     std::vector<float> values(coverage.begin(), coverage.end());
     PrPixels blurred{reinterpret_cast<uint8_t*>(values.data()), width * sizeof(float), {width, height}};
     prImageBlur(blurred, PrPixelFormat_RF32, PrVec2{40, 40}, PrImageEdgeMode_None);
@@ -720,7 +747,7 @@ TEST_CASE("a wide shadow blurs at a lower resolution, close to the full blur, wh
     prPathPolylineClear(&outline);
     prPathFlatten(shape, prAffine2Identity(), 0.05f, PrPathFlattening_Balanced, &outline);
     prDrawShadowCoverage(rasterizer, &outline, &caster, PrDrawShadowKind_Drop, 1e6f, PrPathCoverage_Area,
-                         PrIVec2{0, 0}, PrPixels{wash.data(), 64, {64, 64}});
+        PrIVec2{0, 0}, PrPixels{wash.data(), 64, {64, 64}});
     CHECK(wash[0] <= 1);
     CHECK(wash[64 * 32 + 32] <= 1);
     prPathDestroy(shape);

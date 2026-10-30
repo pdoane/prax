@@ -202,9 +202,9 @@ constexpr uint32_t kCssSpecificityMaxCount = (1u << kCssSpecificityCountBits) - 
 
 // Returns the specificity of `ids` ID selectors, `classes` class-like selectors and `types` type-like selectors.
 constexpr CssSpecificity cssSpecificity(uint32_t ids, uint32_t classes, uint32_t types) {
-    return (ids < kCssSpecificityMaxCount ? ids : kCssSpecificityMaxCount) << (2 * kCssSpecificityCountBits)
-         | (classes < kCssSpecificityMaxCount ? classes : kCssSpecificityMaxCount) << kCssSpecificityCountBits
-         | (types < kCssSpecificityMaxCount ? types : kCssSpecificityMaxCount);
+    return (ids < kCssSpecificityMaxCount ? ids : kCssSpecificityMaxCount) << (2 * kCssSpecificityCountBits) |
+        (classes < kCssSpecificityMaxCount ? classes : kCssSpecificityMaxCount) << kCssSpecificityCountBits |
+        (types < kCssSpecificityMaxCount ? types : kCssSpecificityMaxCount);
 }
 
 // Properties of a complex selector beyond its compounds.
@@ -377,12 +377,11 @@ struct CssSelectorContext {
 // (selectors-4/#parse-a-selector), and sets the specificities. The parse uses the scratch of `parser`. Returns null for
 // tokens that are not a valid selector list (selectors-4/#invalid).
 PrCssSelectors* PR_NULLABLE cssParseSelectors(CssParser* parser, const CssTokenStream* ts,
-                                              CssTokenSpan span, const CssSelectorContext* context);
+    CssTokenSpan span, const CssSelectorContext* context);
 
 // Tokenizes `text` into the scratch of `parser`, then parses it in the same way as cssParseSelectors
 // (cssom-1/#parse-a-group-of-selectors).
-PrCssSelectors* PR_NULLABLE cssParseSelectorText(CssParser* parser, PrStringView text,
-                                                 const CssSelectorContext* context);
+PrCssSelectors* PR_NULLABLE cssParseSelectorText(CssParser* parser, PrStringView text, const CssSelectorContext* context);
 
 // Returns true if a node of a parse is a complex selector of a list, relative or not. A prelude holds its selectors as
 // such nodes.
@@ -391,7 +390,7 @@ bool cssIsComplexSelectorNode(const CssValueNode* value);
 // Compiles into one list, in order, the complex selectors that the parsed prelude `span` holds in the pool of `parser`.
 // Returns null if the prelude holds none. The prelude's own records stay as the parse left them.
 PrCssSelectors* PR_NULLABLE cssCompilePreludeSelectors(CssParser* parser, CssValueSpan span,
-                                                       const CssSheetData* PR_NULLABLE sheet);
+    const CssSheetData* PR_NULLABLE sheet);
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Serializing
@@ -401,8 +400,7 @@ PrCssSelectors* PR_NULLABLE cssCompilePreludeSelectors(CssParser* parser, CssVal
 void cssSerializeSelectors(TextBuffer* out, const PrCssSelectors* selectors);
 
 // Serializes `count` complex selectors of the list, starting at `first`, in the same form as cssSerializeSelectors.
-void cssSerializeSelectorRange(TextBuffer* out, const PrCssSelectors* selectors, uint32_t first,
-                               uint32_t count);
+void cssSerializeSelectorRange(TextBuffer* out, const PrCssSelectors* selectors, uint32_t first, uint32_t count);
 
 } // namespace pr_impl
 

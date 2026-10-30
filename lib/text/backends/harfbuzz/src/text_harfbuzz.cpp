@@ -30,7 +30,7 @@ struct HbFont {
 bool createFace(PrTextShaper*, const PrFont* font, void* state) {
     PrByteView bytes = prFontData(font);
     hb_blob_t* blob = hb_blob_create(reinterpret_cast<const char*>(bytes.data), unsigned(bytes.size),
-                                     HB_MEMORY_MODE_READONLY, nullptr, nullptr);
+        HB_MEMORY_MODE_READONLY, nullptr, nullptr);
     static_cast<HbFace*>(state)->hb = hb_face_create(blob, prFontIndex(font));
     hb_blob_destroy(blob);
     return true;
@@ -98,8 +98,7 @@ void destroyBackend(PrTextShaper* shaper) {
     prMemoryFree(h);
 }
 
-PrStatus shape(PrTextShaper* shaper, void*, void* fontState, const PrTextRun* run,
-               PrTextGlyphBuffer* out) {
+PrStatus shape(PrTextShaper* shaper, void*, void* fontState, const PrTextRun* run, PrTextGlyphBuffer* out) {
     HbBackend* h = static_cast<HbBackend*>(shaper);
     HbFont* font = static_cast<HbFont*>(fontState);
     hb_buffer_t* buffer = h->buffer;
@@ -115,9 +114,12 @@ PrStatus shape(PrTextShaper* shaper, void*, void* fontState, const PrTextRun* ru
         h->text.append(after.data, uint32_t(after.size));
     uint32_t start = uint32_t(before.size);
     hb_buffer_add_utf8(buffer, h->text.data, int(h->text.count), start, int(run->text.size));
-    hb_buffer_set_direction(buffer, run->axis == PrTextAxis_Vertical  ? HB_DIRECTION_TTB
-                                    : run->direction == PrTextDirection_Rtl ? HB_DIRECTION_RTL
-                                                                            : HB_DIRECTION_LTR);
+    hb_direction_t direction = HB_DIRECTION_LTR;
+    if (run->axis == PrTextAxis_Vertical)
+        direction = HB_DIRECTION_TTB;
+    else if (run->direction == PrTextDirection_Rtl)
+        direction = HB_DIRECTION_RTL;
+    hb_buffer_set_direction(buffer, direction);
     if (run->script != PrScript_Zzzz) {
         PrStringView code = prScriptCode(run->script);
         hb_buffer_set_script(buffer, hb_script_from_string(code.data, int(code.size)));

@@ -10,8 +10,7 @@ namespace pr_impl {
 namespace {
 
 void evaluate(JSContext* ctx, const char* source) {
-    JSValue result =
-        JS_Eval(ctx, source, std::strlen(source), "url projection", JS_EVAL_TYPE_GLOBAL);
+    JSValue result = JS_Eval(ctx, source, std::strlen(source), "url projection", JS_EVAL_TYPE_GLOBAL);
     if (JS_IsException(result)) {
         JSValue error = JS_GetException(ctx);
         const char* text = JS_ToCString(ctx, error);

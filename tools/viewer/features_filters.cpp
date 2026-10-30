@@ -20,7 +20,7 @@ const PrDrawFilter* filterOf(std::initializer_list<PrDrawFilterNode> nodes, PrRe
 }
 
 PrDrawFilterNode nodeOf(PrDrawFilterKind kind, int32_t input = PrDrawFilterInput_Source,
-                        int32_t second = PrDrawFilterInput_Source) {
+        int32_t second = PrDrawFilterInput_Source) {
     PrDrawFilterNode node{};
     node.kind = kind;
     node.space = PrColorSpace_Srgb;
@@ -43,8 +43,10 @@ void subject(PrDrawList* list, PrRect c) {
     PrVec2 center = prRectCenter(c);
     float r = extentOf(c) * 0.28f;
     prDrawListEllipse(list, PrVec2{center.x - r * 0.5f, center.y - r * 0.3f}, PrVec2{r, r}, 0, {.color = kRed});
-    prDrawListRect(list, PrRect{center.x, center.y - r * 0.2f, center.x + r * 1.1f,
-                                center.y + r * 0.9f}, {.color = kBlue});
+    prDrawListRect(list, PrRect{
+        center.x, center.y - r * 0.2f, center.x + r * 1.1f,
+        center.y + r * 0.9f,
+    }, {.color = kBlue});
     PrPath* path = star(PrVec2{center.x - r * 0.3f, center.y + r * 0.6f}, r * 0.6f, 5, 2);
     prDrawListPath(list, path, PrPathFillRule_NonZero, {.color = kGold});
     prPathDestroy(path);
@@ -106,15 +108,13 @@ void blursAndShadows(PrDrawList* list, float width, float height, double) {
     feather.feather = 24;
     c = grid.at(6);
     pushFiltered(list, c, filterOf({feather}));
-    drawImage(list, testCard(), PrRect{0, 0, 64, 64}, inset(c, 20), PrDrawSampling_Linear,
-              1);
+    drawImage(list, testCard(), PrRect{0, 0, 64, 64}, inset(c, 20), PrDrawSampling_Linear, 1);
     prDrawListPopGroup(list);
 
     // A blur with a different sigma on each axis, in a rotated space. It blurs along the space's axes.
     c = grid.at(7);
     PrVec2 center = prRectCenter(c);
-    prDrawListPushTransformAffine2(list, prAffine2Concat(prAffine2Rotate(0.5f),
-                                                         prAffine2Translate(center)));
+    prDrawListPushTransformAffine2(list, prAffine2Concat(prAffine2Rotate(0.5f), prAffine2Translate(center)));
     blur.blur.sigma = PrVec2{12, 0};
     PrDrawGroup group = prDrawGroupDefault();
     group.bounds = PrRect{-120, -120, 120, 120};
@@ -124,9 +124,11 @@ void blursAndShadows(PrDrawList* list, float width, float height, double) {
     prDrawListRect(list, PrRect{-50, -50, 50, 50}, {.color = kPurple});
     prDrawListPopGroup(list);
     prDrawListPopTransform(list);
-    const char* captions[] = {"blur 6",         "blur 16 by 1",  "drop shadow",
-                              "inner shadow",   "outer glow",    "inner glow",
-                              "feather",        "blur along x, rotated half a radian"};
+    const char* captions[] = {
+        "blur 6",         "blur 16 by 1",  "drop shadow",
+        "inner shadow",   "outer glow",    "inner glow",
+        "feather",        "blur along x, rotated half a radian",
+    };
     for (uint32_t i = 0; i < 8; ++i)
         grid.captionAt(i, captions[i]);
 }
@@ -135,10 +137,14 @@ void colorFilters(PrDrawList* list, float width, float height, double) {
     Grid grid{width, height, 4, 2};
     PrRect whole{0, 0, 64, 64};
     // Grayscale, sepia and a channel swap by color matrices.
-    const float gray[20] = {0.2126f, 0.7152f, 0.0722f, 0, 0, 0.2126f, 0.7152f, 0.0722f, 0, 0,
-                            0.2126f, 0.7152f, 0.0722f, 0, 0, 0,       0,       0,       1, 0};
-    const float sepia[20] = {0.393f, 0.769f, 0.189f, 0, 0, 0.349f, 0.686f, 0.168f, 0, 0,
-                             0.272f, 0.534f, 0.131f, 0, 0, 0,      0,      0,      1, 0};
+    const float gray[20] = {
+        0.2126f, 0.7152f, 0.0722f, 0, 0, 0.2126f, 0.7152f, 0.0722f, 0, 0,
+        0.2126f, 0.7152f, 0.0722f, 0, 0, 0,       0,       0,       1, 0,
+    };
+    const float sepia[20] = {
+        0.393f, 0.769f, 0.189f, 0, 0, 0.349f, 0.686f, 0.168f, 0, 0,
+        0.272f, 0.534f, 0.131f, 0, 0, 0,      0,      0,      1, 0,
+    };
     const float swap[20] = {0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0};
     const float* matrices[] = {gray, sepia, swap};
     for (uint32_t i = 0; i < 3; ++i) {
@@ -189,14 +195,16 @@ void colorFilters(PrDrawList* list, float width, float height, double) {
     pushFiltered(list, c, filterOf({stripes, blend}));
     drawImage(list, testCard(), whole, c, PrDrawSampling_Linear, 1);
     prDrawListPopGroup(list);
-    const char* captions[] = {"grayscale matrix",
-                              "sepia matrix",
-                              "channels swapped",
-                              "posterized by discrete steps",
-                              "inverted by a table",
-                              "gamma 0.5",
-                              "a flood kept to the source's alpha",
-                              "a gold flood multiplied under it"};
+    const char* captions[] = {
+        "grayscale matrix",
+        "sepia matrix",
+        "channels swapped",
+        "posterized by discrete steps",
+        "inverted by a table",
+        "gamma 0.5",
+        "a flood kept to the source's alpha",
+        "a gold flood multiplied under it",
+    };
     for (uint32_t i = 0; i < 8; ++i)
         grid.captionAt(i, captions[i], 20);
 }
@@ -221,14 +229,12 @@ void generatedFilters(PrDrawList* list, float width, float height, double) {
     noise.turbulence.baseFrequency = PrVec2{0.03f, 0.03f};
     noise.turbulence.octaves = 2;
     noise.turbulence.seed = 3;
-    PrDrawFilterNode displace =
-        nodeOf(PrDrawFilterKind_DisplacementMap, PrDrawFilterInput_Source, 0);
+    PrDrawFilterNode displace = nodeOf(PrDrawFilterKind_DisplacementMap, PrDrawFilterInput_Source, 0);
     displace.displacement.scale = 30;
     displace.displacement.x = PrDrawChannel_R;
     displace.displacement.y = PrDrawChannel_G;
     pushFiltered(list, c, filterOf({noise, displace}));
-    drawImage(list, testCard(), PrRect{0, 0, 64, 64}, inset(c, 10), PrDrawSampling_Linear,
-              1);
+    drawImage(list, testCard(), PrRect{0, 0, 64, 64}, inset(c, 10), PrDrawSampling_Linear, 1);
     prDrawListPopGroup(list);
     // Erode and dilate.
     c = grid.at(3, 20);
@@ -297,14 +303,16 @@ void generatedFilters(PrDrawList* list, float width, float height, double) {
         subject(list, c);
         prDrawListPopGroup(list);
     }
-    const char* captions[] = {"turbulence",
-                              "fractal noise",
-                              "displaced by noise",
-                              "eroded over dilated",
-                              "edges by convolution",
-                              "emboss by convolution",
-                              "diffuse light, distant",
-                              "specular light, point"};
+    const char* captions[] = {
+        "turbulence",
+        "fractal noise",
+        "displaced by noise",
+        "eroded over dilated",
+        "edges by convolution",
+        "emboss by convolution",
+        "diffuse light, distant",
+        "specular light, point",
+    };
     for (uint32_t i = 0; i < 8; ++i)
         grid.captionAt(i, captions[i], 20);
 }
@@ -315,8 +323,8 @@ void backdrops(PrDrawList* list, float width, float height, double) {
         float x = float((i * 97) % 1000) + 30;
         float y = float((i * 53) % 700) + 40;
         PrColor colors[] = {kRed, kBlue, kGreen, kGold, kPurple, kTeal};
-        prDrawListEllipse(list, PrVec2{x, y},
-                          PrVec2{30 + float(i % 5) * 8, 30 + float(i % 3) * 10}, 0, {.color = colors[i % 6]});
+        prDrawListEllipse(list, PrVec2{x, y}, PrVec2{30 + float(i % 5) * 8, 30 + float(i % 3) * 10}, 0,
+            {.color = colors[i % 6]});
     }
     PrDrawFilterNode blur = nodeOf(PrDrawFilterKind_Blur);
     blur.blur.sigma = PrVec2{10, 10};
@@ -335,8 +343,10 @@ void backdrops(PrDrawList* list, float width, float height, double) {
     // A backdrop darkened and desaturated by a color matrix.
     PrRect second{width / 2 + 20, 80, width - 80, height / 2 - 20};
     PrDrawFilterNode dim = nodeOf(PrDrawFilterKind_ColorMatrix);
-    const float matrix[20] = {0.15f, 0.3f, 0.05f, 0, 0, 0.15f, 0.3f, 0.05f, 0, 0,
-                              0.15f, 0.3f, 0.05f, 0, 0, 0,     0,    0,     1, 0};
+    const float matrix[20] = {
+        0.15f, 0.3f, 0.05f, 0, 0, 0.15f, 0.3f, 0.05f, 0, 0,
+        0.15f, 0.3f, 0.05f, 0, 0, 0,     0,    0,     1, 0,
+    };
     for (uint32_t k = 0; k < 20; ++k)
         dim.matrix.m[k / 5][k % 5] = matrix[k];
     group.bounds = second;
@@ -356,24 +366,21 @@ void backdrops(PrDrawList* list, float width, float height, double) {
     prDrawListPushGroup(list, &group);
     prDrawListPopGroup(list);
     prDrawFilterRelease(group.backdrop);
-    caption(PrRect{panel.left, panel.bottom - 22, panel.right, panel.bottom - 4},
-            "frosted: blurred under a translucent panel");
-    caption(PrRect{second.left, second.bottom - 22, second.right, second.bottom - 4},
-            "dimmed to gray under a gold square");
-    caption(PrRect{third.left, third.bottom + 4, third.right, third.bottom + 22},
-            "a progressive blur, growing toward the bottom");
+    caption(PrRect{panel.left, panel.bottom - 22, panel.right, panel.bottom - 4}, "frosted: blurred under a translucent panel");
+    caption(PrRect{second.left, second.bottom - 22, second.right, second.bottom - 4}, "dimmed to gray under a gold square");
+    caption(PrRect{third.left, third.bottom + 4, third.right, third.bottom + 22}, "a progressive blur, growing toward the bottom");
 }
 
 } // namespace
 
 const std::vector<Drawing>& filterFeatures() {
     static const std::vector<Drawing> features = {
-        {"Filters: blurs and shadows", "Blurs, shadows, glows and feathering on a group.",
-         blursAndShadows},
-        {"Filters: color", "Color matrices, component transfers, floods and blends.",
-         colorFilters},
-        {"Filters: generated and distorted",
-         "Noise, displacement, morphology, convolution and lighting.", generatedFilters},
+        {"Filters: blurs and shadows", "Blurs, shadows, glows and feathering on a group.", blursAndShadows},
+        {"Filters: color", "Color matrices, component transfers, floods and blends.", colorFilters},
+        {
+            "Filters: generated and distorted",
+            "Noise, displacement, morphology, convolution and lighting.", generatedFilters,
+        },
         {"Backdrops", "Filters on what lies beneath a group.", backdrops},
     };
     return features;

@@ -43,8 +43,12 @@ void growByNode(LayoutTree* tree) {
 LayoutFrameLinks& linksOf(LayoutFrame& frame, LayoutNodeIndex node) {
     LayoutFrameLinks& l = frame.links.data[node];
     if (l.frame != frame.frame)
-        l = LayoutFrameLinks{.frame = frame.frame, .first = kPrLayoutNodeNone, .last = kPrLayoutNodeNone,
-                             .next = kPrLayoutNodeNone};
+        l = LayoutFrameLinks{
+            .frame = frame.frame,
+            .first = kPrLayoutNodeNone,
+            .last = kPrLayoutNodeNone,
+            .next = kPrLayoutNodeNone,
+        };
     return l;
 }
 
@@ -66,8 +70,14 @@ void takeSubtree(LayoutTree* tree, LayoutNodeIndex root) {
     for (LayoutNodeIndex node = root; node != kPrLayoutNodeNone;) {
         const LayoutTreeNode& n = tree->nodes.data[node];
         frame.preorderAt.data[node] = frame.preorder.count;
-        frame.preorder.push(LayoutPreorderNode{.node = node, .parent = n.parent, .key = n.key, .style = n.style,
-                                               .generation = n.generation, .kind = n.kind});
+        frame.preorder.push(LayoutPreorderNode{
+            .node = node,
+            .parent = n.parent,
+            .key = n.key,
+            .style = n.style,
+            .generation = n.generation,
+            .kind = n.kind,
+        });
         if (n.first != kPrLayoutNodeNone) {
             node = n.first;
             continue;
@@ -125,8 +135,7 @@ void moveCursor(LayoutFrame& frame, uint32_t at) {
 
 // Returns the node that holds `key`, or kPrLayoutNodeNone if no node does.
 LayoutNodeIndex keyHolder(const LayoutTree* tree, uint64_t key) {
-    uint32_t found =
-        tree->keys.find(KeyIndex::hashOf(key), [&](uint32_t node) { return tree->nodes.data[node].key == key; });
+    uint32_t found = tree->keys.find(KeyIndex::hashOf(key), [&](uint32_t node) { return tree->nodes.data[node].key == key; });
     return found == kHashMissing ? kPrLayoutNodeNone : found;
 }
 
@@ -171,7 +180,7 @@ LayoutNodeIndex find(LayoutTree* tree, LayoutNodeIndex parent, uint64_t key, PrL
 
 // Creates a node of `kind` under `parent` that continues no committed node, and gives it `key` unless the key is 0.
 LayoutNodeIndex createNew(LayoutTree* tree, LayoutNodeIndex parent, uint64_t key, PrLayoutNodeKind kind,
-                          PrLayoutStyleIndex style) {
+        PrLayoutStyleIndex style) {
     LayoutFrame& frame = tree->frame;
     LayoutNodeIndex node = layoutTreeCreateNode(tree, kind);
     if (key != 0)
@@ -187,7 +196,7 @@ LayoutNodeIndex createNew(LayoutTree* tree, LayoutNodeIndex parent, uint64_t key
 // Creates a node where create's inline case does not: a committed node away from the cursor, which find finds, a new
 // node, or the node at the cursor when the storage for creations must grow.
 PrLayoutNode createAwayFrom(LayoutTree* tree, LayoutNodeIndex parent, uint64_t key, PrLayoutNodeKind kind,
-                            PrLayoutStyleIndex style) {
+        PrLayoutStyleIndex style) {
     LayoutFrame& frame = tree->frame;
     if (matches(frame, frame.cursor, parent, key, kind))
         return takeAt(frame, frame.cursor, parent, style);
@@ -199,7 +208,10 @@ PrLayoutNode createAwayFrom(LayoutTree* tree, LayoutNodeIndex parent, uint64_t k
         if (holder != kPrLayoutNodeNone && created(frame, holder)) {
             LayoutNodeIndex node = createNew(tree, parent, 0, kind, style);
             frame.duplicates.push(PrLayoutDuplicateKey{
-                .key = key, .first = layoutNodeName(tree, holder), .second = layoutNodeName(tree, node)});
+                .key = key,
+                .first = layoutNodeName(tree, holder),
+                .second = layoutNodeName(tree, node),
+            });
             return layoutNodeName(tree, node);
         }
     }
@@ -211,9 +223,8 @@ PrLayoutNode createAwayFrom(LayoutTree* tree, LayoutNodeIndex parent, uint64_t k
     // previous sibling was created before it, under the same parent. A frame in which every creation does so gives each
     // parent its committed children in order, in whatever order it creates across parents.
     const LayoutTreeNode& n = tree->nodes.data[node];
-    bool inOrder = n.parent == parent
-                   && (n.previous == kPrLayoutNodeNone
-                       || (created(frame, n.previous) && creationOf(tree, n.previous).parent == parent));
+    bool inOrder = n.parent == parent && (n.previous == kPrLayoutNodeNone ||
+        (created(frame, n.previous) && creationOf(tree, n.previous).parent == parent));
     if (!inOrder)
         markRelink(frame, parent);
     uint32_t at = frame.preorderAt.data[node];
@@ -231,7 +242,7 @@ PrLayoutNode createAwayFrom(LayoutTree* tree, LayoutNodeIndex parent, uint64_t k
 // frame found away from the cursor or made. The roots that the inline case continues are found from the committed roots
 // (gatherRoots), so that the common case pays nothing for roots.
 PR_NOINLINE PrLayoutNode createAway(LayoutTree* tree, LayoutNodeIndex parent, uint64_t key, PrLayoutNodeKind kind,
-                                    PrLayoutStyleIndex style) {
+        PrLayoutStyleIndex style) {
     PrLayoutNode node = createAwayFrom(tree, parent, key, kind, style);
     if (parent == kPrLayoutNodeNone)
         tree->frame.openRoots.push(layoutNodeIndex(tree, node));
@@ -265,19 +276,18 @@ void gatherRoots(const LayoutTree* tree, Array<LayoutNodeIndex>* out) {
 // The node is the committed node that the creation continues, or a new one. The common case, the next committed node in
 // preorder, is inline, and costs one comparison and one append.
 inline PrLayoutNode create(LayoutTree* tree, PrLayoutNode parent, uint64_t key, PrLayoutNodeKind kind,
-                           PrLayoutStyleIndex style) {
+        PrLayoutStyleIndex style) {
     LayoutFrame& frame = tree->frame;
     PR_ASSERT(frame.open);
     LayoutNodeIndex parentIndex = layoutNodeIndex(tree, parent);
-    PR_ASSERT(parentIndex == kPrLayoutNodeNone
-              || (created(frame, parentIndex) && layoutKindIsElement(tree->nodes.data[parentIndex].kind)));
+    PR_ASSERT(parentIndex == kPrLayoutNodeNone ||
+        (created(frame, parentIndex) && layoutKindIsElement(tree->nodes.data[parentIndex].kind)));
     uint32_t at = frame.cursor;
     uint32_t count = frame.created.count;
     if (matches(frame, at, parentIndex, key, kind) && count != frame.created.capacity) {
         const LayoutPreorderNode& p = frame.preorder.data[at];
         frame.positions.data[p.node] = count;
-        frame.created.data[count] =
-            LayoutCreation{.node = p.node, .parent = parentIndex, .style = style, .committed = p.style};
+        frame.created.data[count] = LayoutCreation{.node = p.node, .parent = parentIndex, .style = style, .committed = p.style};
         frame.created.count = count + 1;
         frame.cursor = at + 1;
         return PrLayoutNode(p.generation) << 32 | p.node;
@@ -298,7 +308,7 @@ void relink(LayoutTree* tree, LayoutNodeIndex parent) {
     }
     LayoutNodeIndex at = tree->nodes.data[parent].first;
     for (LayoutNodeIndex child = frame.links.data[parent].first; child != kPrLayoutNodeNone;
-         child = frame.links.data[child].next) {
+            child = frame.links.data[child].next) {
         if (child == at) {
             at = tree->nodes.data[child].next;
             continue;
@@ -457,18 +467,15 @@ PrLayoutNode prLayoutTreeFrameText(PrLayoutTree* tree, PrLayoutNode parent, uint
     return node;
 }
 
-PrLayoutNode prLayoutTreeFrameReplaced(PrLayoutTree* tree, PrLayoutNode parent, uint64_t key,
-                                       PrLayoutStyleIndex style) {
+PrLayoutNode prLayoutTreeFrameReplaced(PrLayoutTree* tree, PrLayoutNode parent, uint64_t key, PrLayoutStyleIndex style) {
     return create(tree, parent, key, PrLayoutNodeKind_Replaced, style);
 }
 
-PrLayoutNode prLayoutTreeFrameSemiReplaced(PrLayoutTree* tree, PrLayoutNode parent, uint64_t key,
-                                           PrLayoutStyleIndex style) {
+PrLayoutNode prLayoutTreeFrameSemiReplaced(PrLayoutTree* tree, PrLayoutNode parent, uint64_t key, PrLayoutStyleIndex style) {
     return create(tree, parent, key, PrLayoutNodeKind_SemiReplaced, style);
 }
 
-PrLayoutNode prLayoutTreeFrameLineBreak(PrLayoutTree* tree, PrLayoutNode parent, uint64_t key,
-                                        PrLayoutStyleIndex style) {
+PrLayoutNode prLayoutTreeFrameLineBreak(PrLayoutTree* tree, PrLayoutNode parent, uint64_t key, PrLayoutStyleIndex style) {
     return create(tree, parent, key, PrLayoutNodeKind_LineBreak, style);
 }
 
@@ -515,18 +522,18 @@ void prLayoutTreeFrameSetContent(PrLayoutTree* tree, PrLayoutNode replaced, cons
     // The same content at the same revision draws the same output. A draw list is frozen, and the drawing of a painter
     // changes only when it is invalidated or its revision changes.
     PrLayoutContent was = prLayoutNodeContent(tree, replaced);
-    bool same = was.kind == content->kind && was.revision == content->revision
-                && (content->kind != PrLayoutContentKind_DrawList || was.list == content->list)
-                && (content->kind != PrLayoutContentKind_Painter
-                    || (was.painter.paint == content->painter.paint && was.painter.context == content->painter.context))
-                && (content->kind != PrLayoutContentKind_Embed || was.embed == content->embed)
-                && (content->kind != PrLayoutContentKind_Image || was.image == content->image);
+    bool same = was.kind == content->kind && was.revision == content->revision &&
+        (content->kind != PrLayoutContentKind_DrawList || was.list == content->list) &&
+        (content->kind != PrLayoutContentKind_Painter ||
+            (was.painter.paint == content->painter.paint && was.painter.context == content->painter.context)) &&
+        (content->kind != PrLayoutContentKind_Embed || was.embed == content->embed) &&
+        (content->kind != PrLayoutContentKind_Image || was.image == content->image);
     if (!same)
         prLayoutNodeSetContent(tree, replaced, content);
 }
 
 void prLayoutTreeFrameSetHighlights(PrLayoutTree* tree, PrLayoutNode text,
-                                    const PrLayoutHighlight* PR_NULLABLE highlights, uint32_t count) {
+        const PrLayoutHighlight* PR_NULLABLE highlights, uint32_t count) {
     LayoutNodeIndex index = layoutNodeIndex(tree, text);
     PR_ASSERT(tree->frame.open && creationOf(tree, index).node != kPrLayoutNodeNone);
     layoutTreeSetHighlights(tree, index, highlights, count, tree->frame.frame);

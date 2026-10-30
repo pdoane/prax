@@ -62,8 +62,7 @@ constexpr PrTextShaperBackend kBuilt[] = {
 };
 
 constexpr uint32_t tagOf(char a, char b, char c, char d) {
-    return uint32_t(uint8_t(a)) << 24 | uint32_t(uint8_t(b)) << 16 | uint32_t(uint8_t(c)) << 8
-           | uint32_t(uint8_t(d));
+    return uint32_t(uint8_t(a)) << 24 | uint32_t(uint8_t(b)) << 16 | uint32_t(uint8_t(c)) << 8 | uint32_t(uint8_t(d));
 }
 
 PrTextGlyphBuffer& scratchOf(PrTextGlyphBuffer& g) {
@@ -77,8 +76,7 @@ bool isUtf8(PrStringView text) {
 }
 
 bool isSpace(uint32_t codePoint) {
-    return codePoint <= 0x20 || codePoint == 0xa0 || codePoint == 0x3000
-           || (codePoint >= 0x2000 && codePoint <= 0x200b);
+    return codePoint <= 0x20 || codePoint == 0xa0 || codePoint == 0x3000 || (codePoint >= 0x2000 && codePoint <= 0x200b);
 }
 
 // Writes to `out` the OpenType features that `caps` requests, and returns their number.
@@ -110,9 +108,11 @@ uint32_t capsFeatures(PrTextCaps caps, uint32_t out[2]) {
 }
 
 uint32_t positionFeature(PrTextPosition position) {
-    return position == PrTextPosition_Subscript     ? tagOf('s', 'u', 'b', 's')
-           : position == PrTextPosition_Superscript ? tagOf('s', 'u', 'p', 's')
-                                                    : 0;
+    if (position == PrTextPosition_Subscript)
+        return tagOf('s', 'u', 'b', 's');
+    if (position == PrTextPosition_Superscript)
+        return tagOf('s', 'u', 'p', 's');
+    return 0;
 }
 
 // Builds the features that a backend shapes the run with: those of the font, of the kerning policy, of the caps and of
@@ -151,8 +151,7 @@ PrStatus shapeWith(PrTextShaper* shaper, const PrTextRun& run, PrTextGlyphBuffer
 // Returns true if the font provides the feature for the text of the run. It shapes with the feature and without it. If
 // `every` is set, the glyphs of every character except spaces must differ. Otherwise, the glyphs of any one character
 // must differ.
-bool fontGives(PrTextShaper* shaper, const PrTextRun& run, uint32_t tag, bool every,
-               PrTextGlyphBuffer& g) {
+bool fontGives(PrTextShaper* shaper, const PrTextRun& run, uint32_t tag, bool every, PrTextGlyphBuffer& g) {
     PrTextGlyphBuffer& s = scratchOf(g);
     PrTextFeature on{tag, 1, 0, kWholeRun};
     PrTextRun probe = run;
@@ -210,7 +209,7 @@ CaseForm caseFormOf(PrTextCaps caps, uint32_t codePoint) {
 // Shapes the bytes [start, end) of the text of the run, uppercased if requested, and appends the glyphs to `out` scaled
 // by `scale`, with clusters in terms of the text of the run.
 PrStatus shapePiece(PrTextShaper* shaper, const PrTextRun& run, uint32_t start, uint32_t end,
-                    bool upper, float scale, PrTextGlyphBuffer& g, Array<PrTextGlyph>& out) {
+        bool upper, float scale, PrTextGlyphBuffer& g, Array<PrTextGlyph>& out) {
     g.piece.clear();
     g.origin.clear();
     for (size_t at = start; at < end;) {
@@ -231,9 +230,7 @@ PrStatus shapePiece(PrTextShaper* shaper, const PrTextRun& run, uint32_t start, 
     PrTextRun piece = run;
     piece.text = PrStringView{g.piece.data, g.piece.count};
     piece.before = start == 0 ? run.before : PrStringView{run.text.data, start};
-    piece.after = end == run.text.size
-                      ? run.after
-                      : PrStringView{run.text.data + end, run.text.size - end};
+    piece.after = end == run.text.size ? run.after : PrStringView{run.text.data + end, run.text.size - end};
     // Converts features over the bytes of the run to features over the bytes of the piece.
     g.pieceFeatures.clear();
     for (uint32_t i = 0; i < run.featureCount; ++i) {
@@ -266,8 +263,7 @@ PrStatus shapePiece(PrTextShaper* shaper, const PrTextRun& run, uint32_t start, 
 }
 
 // Shapes the run in pieces of characters that draw alike, with small capitals synthesized, in visual order.
-PrStatus shapeSynthesizedCaps(PrTextShaper* shaper, const PrTextRun& run, float scale,
-                              PrTextGlyphBuffer& g) {
+PrStatus shapeSynthesizedCaps(PrTextShaper* shaper, const PrTextRun& run, float scale, PrTextGlyphBuffer& g) {
     Array<PrTextGlyph> pieces;
     Array<uint32_t> firsts;                 // the start of the glyphs of each piece in `pieces`
     PrStatus status = PrStatus_Ok;
@@ -286,8 +282,7 @@ PrStatus shapeSynthesizedCaps(PrTextShaper* shaper, const PrTextRun& run, float 
             end += length;
         }
         firsts.push(pieces.count);
-        status = shapePiece(shaper, run, uint32_t(at), uint32_t(end), form.upper,
-                            form.scaled ? scale : 1, g, pieces);
+        status = shapePiece(shaper, run, uint32_t(at), uint32_t(end), form.upper, form.scaled ? scale : 1, g, pieces);
         at = end;
     }
     firsts.push(pieces.count);
@@ -360,8 +355,7 @@ PrStatus shapeRun(PrTextShaper* shaper, const PrTextRun* run, PrTextGlyphBuffer&
         if (petite && !fontGives(shaper, plain, tags[capsFeatures(caps, tags) - 1], false, g))
             caps = caps == PrTextCaps_Petite ? PrTextCaps_Small : PrTextCaps_AllSmall;
         uint32_t last = tags[capsFeatures(caps, tags) - 1];
-        synthesizeCaps = (run->synthesis & PrTextSynthesisFlag_SmallCaps) != 0
-                         && !fontGives(shaper, plain, last, false, g);
+        synthesizeCaps = (run->synthesis & PrTextSynthesisFlag_SmallCaps) != 0 && !fontGives(shaper, plain, last, false, g);
     }
     bool synthesizePosition = false;
     if (positionFeature(run->position) != 0 && (run->synthesis & PrTextSynthesisFlag_Position)) {
@@ -371,8 +365,7 @@ PrStatus shapeRun(PrTextShaper* shaper, const PrTextRun* run, PrTextGlyphBuffer&
     }
 
     PrTextRun shaped = *run;
-    mergeFeatures(g.features, *run, synthesizeCaps ? PrTextCaps_Normal : caps,
-                  !synthesizePosition);
+    mergeFeatures(g.features, *run, synthesizeCaps ? PrTextCaps_Normal : caps, !synthesizePosition);
     shaped.features = g.features.data;
     shaped.featureCount = g.features.count;
     PrStatus status = PrStatus_Ok;
@@ -431,8 +424,8 @@ PrStatus shapeRun(PrTextShaper* shaper, const PrTextRun* run, PrTextGlyphBuffer&
         uint32_t codePoint = 0;
         if (glyph.cluster < run->text.size)
             prUtf8Decode(run->text, glyph.cluster, &codePoint);
-        bool ignorable = (prUnicodeFlags(codePoint) & PrUnicodeFlag_DefaultIgnorable) != 0 && glyph.advance.x == 0
-                         && glyph.advance.y == 0;
+        bool ignorable = (prUnicodeFlags(codePoint) & PrUnicodeFlag_DefaultIgnorable) != 0 && glyph.advance.x == 0 &&
+            glyph.advance.y == 0;
         if (!ignorable)
             g.glyphs.data[kept++] = glyph;
     }
@@ -495,9 +488,9 @@ bool prTextFeatureSetEquals(const PrTextFeatureSet* PR_NULLABLE a, const PrTextF
     PrTextRun y{};
     prTextFeatureSetApply(a, &x);
     prTextFeatureSetApply(b, &y);
-    return x.caps == y.caps && x.position == y.position && x.kerning == y.kerning && x.synthesis == y.synthesis
-           && x.featureCount == y.featureCount
-           && (x.featureCount == 0 || memEquals(x.features, y.features, sizeof(PrTextFeature) * x.featureCount));
+    return x.caps == y.caps && x.position == y.position && x.kerning == y.kerning && x.synthesis == y.synthesis &&
+        x.featureCount == y.featureCount &&
+        (x.featureCount == 0 || memEquals(x.features, y.features, sizeof(PrTextFeature) * x.featureCount));
 }
 
 void prTextFeatureSetApply(const PrTextFeatureSet* PR_NULLABLE set, PrTextRun* run) {
@@ -624,7 +617,7 @@ PrVec2 prTextGlyphBufferAdvance(const PrTextGlyphBuffer* buffer) {
 }
 
 PrVec2 prTextGlyphBufferPlace(const PrTextGlyphBuffer* buffer, float size, PrVec2 origin, PrFontGlyph* out,
-                              PrAffine2* PR_NULLABLE transforms) {
+        PrAffine2* PR_NULLABLE transforms) {
     const Array<PrTextGlyph>& array = buffer->glyphs;
     PrVec2 pen = origin;
     for (uint32_t i = 0; i < array.count; ++i) {

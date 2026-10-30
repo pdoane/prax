@@ -27,10 +27,14 @@ constexpr uint32_t kMaxPipelines = 65536;
 const char* const kValidationLayer = "VK_LAYER_KHRONOS_validation";
 
 // The device extensions that the backend needs, and those that it uses where the device has them.
-const char* const kRequiredExtensions[] = {VK_EXT_MUTABLE_DESCRIPTOR_TYPE_EXTENSION_NAME,
-                                           VK_KHR_PUSH_DESCRIPTOR_EXTENSION_NAME};
-const char* const kOptionalExtensions[] = {VK_KHR_SWAPCHAIN_EXTENSION_NAME,
-                                           VK_KHR_DYNAMIC_RENDERING_LOCAL_READ_EXTENSION_NAME};
+const char* const kRequiredExtensions[] = {
+    VK_EXT_MUTABLE_DESCRIPTOR_TYPE_EXTENSION_NAME,
+    VK_KHR_PUSH_DESCRIPTOR_EXTENSION_NAME
+};
+const char* const kOptionalExtensions[] = {
+    VK_KHR_SWAPCHAIN_EXTENSION_NAME,
+    VK_KHR_DYNAMIC_RENDERING_LOCAL_READ_EXTENSION_NAME
+};
 
 // The chain of feature structures that a device is created with. The chain holds local reads only if the adapter has
 // them.
@@ -102,15 +106,23 @@ bool covers(const FeatureChain& supported, const FeatureChain& wanted) {
     };
     const Span spans[] = {
         {&wanted.features.features, &supported.features.features, 0, sizeof(VkPhysicalDeviceFeatures)},
-        {&wanted.vulkan11, &supported.vulkan11, offsetof(VkPhysicalDeviceVulkan11Features, storageBuffer16BitAccess),
-         sizeof(VkPhysicalDeviceVulkan11Features)},
-        {&wanted.vulkan12, &supported.vulkan12, offsetof(VkPhysicalDeviceVulkan12Features, samplerMirrorClampToEdge),
-         sizeof(VkPhysicalDeviceVulkan12Features)},
-        {&wanted.vulkan13, &supported.vulkan13, offsetof(VkPhysicalDeviceVulkan13Features, robustImageAccess),
-         sizeof(VkPhysicalDeviceVulkan13Features)},
-        {&wanted.mutableDescriptors, &supported.mutableDescriptors,
-         offsetof(VkPhysicalDeviceMutableDescriptorTypeFeaturesEXT, mutableDescriptorType),
-         sizeof(VkPhysicalDeviceMutableDescriptorTypeFeaturesEXT)},
+        {
+            &wanted.vulkan11, &supported.vulkan11, offsetof(VkPhysicalDeviceVulkan11Features, storageBuffer16BitAccess),
+            sizeof(VkPhysicalDeviceVulkan11Features),
+        },
+        {
+            &wanted.vulkan12, &supported.vulkan12, offsetof(VkPhysicalDeviceVulkan12Features, samplerMirrorClampToEdge),
+            sizeof(VkPhysicalDeviceVulkan12Features),
+        },
+        {
+            &wanted.vulkan13, &supported.vulkan13, offsetof(VkPhysicalDeviceVulkan13Features, robustImageAccess),
+            sizeof(VkPhysicalDeviceVulkan13Features),
+        },
+        {
+            &wanted.mutableDescriptors, &supported.mutableDescriptors,
+            offsetof(VkPhysicalDeviceMutableDescriptorTypeFeaturesEXT, mutableDescriptorType),
+            sizeof(VkPhysicalDeviceMutableDescriptorTypeFeaturesEXT),
+        },
     };
     for (const Span& span : spans) {
         const uint8_t* w = static_cast<const uint8_t*>(span.wanted);
@@ -143,8 +155,7 @@ bool hasExtension(const Array<VkExtensionProperties>& extensions, const char* na
 }
 
 VKAPI_ATTR VkBool32 VKAPI_CALL validationMessage(VkDebugUtilsMessageSeverityFlagBitsEXT severity,
-                                                 VkDebugUtilsMessageTypeFlagsEXT types,
-                                                 const VkDebugUtilsMessengerCallbackDataEXT* data, void* context) {
+        VkDebugUtilsMessageTypeFlagsEXT types, const VkDebugUtilsMessengerCallbackDataEXT* data, void* context) {
     (void)types;
     VulkanDevice* d = static_cast<VulkanDevice*>(context);
     if ((severity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT) != 0) {
@@ -193,8 +204,8 @@ PrStatus createInstance(VulkanDevice* d, bool validation) {
     d->vk.EnumerateInstanceExtensionProperties(nullptr, &count, available.data);
     Array<const char*> extensions;
     const char* surface = vulkanSurfaceExtension();
-    if (surface != nullptr && hasExtension(available, VK_KHR_SURFACE_EXTENSION_NAME)
-        && hasExtension(available, surface)) {
+    if (surface != nullptr && hasExtension(available, VK_KHR_SURFACE_EXTENSION_NAME) &&
+            hasExtension(available, surface)) {
         extensions.push(VK_KHR_SURFACE_EXTENSION_NAME);
         extensions.push(surface);
     }
@@ -242,8 +253,8 @@ PrStatus createInstance(VulkanDevice* d, bool validation) {
         messenger.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
         messenger.messageSeverity =
             VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
-        messenger.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT
-                                | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT;
+        messenger.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT |
+            VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT;
         messenger.pfnUserCallback = validationMessage;
         messenger.pUserData = d;
         d->vk.CreateDebugUtilsMessengerEXT(d->instance, &messenger, nullptr, &d->messenger);
@@ -400,7 +411,7 @@ PrStatus createDevice(VulkanDevice* d) {
 
 // Creates a descriptor set layout of `bindings`, extended as `next` says.
 bool createSetLayout(VulkanDevice* d, const VkDescriptorSetLayoutBinding* PR_NULLABLE bindings, uint32_t count,
-                     VkDescriptorSetLayoutCreateFlags flags, const void* PR_NULLABLE next, VkDescriptorSetLayout* out) {
+        VkDescriptorSetLayoutCreateFlags flags, const void* PR_NULLABLE next, VkDescriptorSetLayout* out) {
     VkDescriptorSetLayoutCreateInfo info{};
     info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
     info.pNext = next;
@@ -424,8 +435,10 @@ PrStatus createDescriptors(VulkanDevice* d, uint32_t resources, uint32_t sampler
     d->firstSampler = 0;
     d->samplerCount = samplers;
 
-    const VkDescriptorType mutableTypes[] = {VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
-                                             VK_DESCRIPTOR_TYPE_STORAGE_BUFFER};
+    const VkDescriptorType mutableTypes[] = {
+        VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
+        VK_DESCRIPTOR_TYPE_STORAGE_BUFFER
+    };
     VkMutableDescriptorTypeListEXT lists[2] = {};
     lists[1].descriptorTypeCount = countOf(mutableTypes);
     lists[1].pDescriptorTypes = mutableTypes;
@@ -436,8 +449,8 @@ PrStatus createDescriptors(VulkanDevice* d, uint32_t resources, uint32_t sampler
 
     VkDescriptorBindingFlags bindingFlags[2] = {};
     for (VkDescriptorBindingFlags& flags : bindingFlags)
-        flags = VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT | VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT
-                | VK_DESCRIPTOR_BINDING_UPDATE_UNUSED_WHILE_PENDING_BIT;
+        flags = VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT | VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT |
+            VK_DESCRIPTOR_BINDING_UPDATE_UNUSED_WHILE_PENDING_BIT;
     VkDescriptorSetLayoutBindingFlagsCreateInfo flagsInfo{};
     flagsInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO;
     flagsInfo.pNext = &mutableInfo;
@@ -452,14 +465,14 @@ PrStatus createDescriptors(VulkanDevice* d, uint32_t resources, uint32_t sampler
         {1, vulkanTargetDescriptor(d), 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr},
     };
     if (!createSetLayout(d, bindless, 2, VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT, &flagsInfo,
-                         &d->setLayout)
-        || !createSetLayout(d, pushed, 2, VK_DESCRIPTOR_SET_LAYOUT_CREATE_PUSH_DESCRIPTOR_BIT_KHR, nullptr,
-                            &d->pushLayout)
-        || !createSetLayout(d, nullptr, 0, 0, nullptr, &d->emptyLayout))
+            &d->setLayout) || !createSetLayout(d, pushed, 2, VK_DESCRIPTOR_SET_LAYOUT_CREATE_PUSH_DESCRIPTOR_BIT_KHR, nullptr,
+                &d->pushLayout) || !createSetLayout(d, nullptr, 0, 0, nullptr, &d->emptyLayout))
         return PrStatus_NotSupported;
 
-    VkDescriptorPoolSize sizes[2] = {{VK_DESCRIPTOR_TYPE_SAMPLER, samplers},
-                                     {VK_DESCRIPTOR_TYPE_MUTABLE_EXT, resources}};
+    VkDescriptorPoolSize sizes[2] = {
+        {VK_DESCRIPTOR_TYPE_SAMPLER, samplers},
+        {VK_DESCRIPTOR_TYPE_MUTABLE_EXT, resources},
+    };
     VkMutableDescriptorTypeListEXT poolLists[2] = {VkMutableDescriptorTypeListEXT{}, lists[1]};
     VkMutableDescriptorTypeCreateInfoEXT poolMutable{};
     poolMutable.sType = VK_STRUCTURE_TYPE_MUTABLE_DESCRIPTOR_TYPE_CREATE_INFO_EXT;

@@ -152,7 +152,7 @@ TEST_CASE("a node's listeners last while script reaches the node through what ho
         doc.addEventListener('lifetime', probe);
         return new StaticRange({startContainer: doc.body, startOffset: 0, endContainer: doc.body, endOffset: 0});
     }))JS",
-                                  probe);
+        probe);
     JS_FreeValue(lifetime.ctx, probe);
     lifetime.collect();
     CHECK(lifetime.finalized == 0);

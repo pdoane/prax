@@ -75,7 +75,7 @@ typedef struct PrTextBreakDesc {
 // allows one only if it ends a grapheme cluster of a word, and another cluster of the word or the white space after the
 // word follows it.
 void prTextBreaksTailor(const PrTextBreakDesc* desc, PrUnicodeLineBreak* breaks,
-                        PrTextEmergency* PR_NULLABLE emergency);
+    PrTextEmergency* PR_NULLABLE emergency);
 
 // Finds the initial letter of `text`: the first grapheme cluster of a letter, a number or a symbol, with the
 // punctuation before it, the punctuation after it that does not open, and the typographic spaces between them. U+3000

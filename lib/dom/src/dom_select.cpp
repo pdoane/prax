@@ -42,7 +42,7 @@ void setSelected(PrDomElement* option, bool selected) {
 // ancestors. `above` and its ancestors are the ancestors of `top` if `top` is linked under `above`. Linking or
 // unlinking `top` leaves the ancestors below it unchanged.
 PrDomElement* PR_NULLABLE nearestSelect(const PrDomElement* element, const PrDomNode* PR_NULLABLE top,
-                                        PrDomNode* PR_NULLABLE above) {
+        PrDomNode* PR_NULLABLE above) {
     bool optgroup = false;
     PrDomNode* at = element == top ? above : element->parent;
     while (at != nullptr) {
@@ -134,8 +134,7 @@ void selectOnly(PrDomElement* select, PrDomElement* option) {
 
 // html/#update-an-option's-nearest-ancestor-select, for an option whose nearest ancestor select changed from `before`
 // to `after`.
-void selectChanged(PrDomElement* option, PrDomElement* PR_NULLABLE before,
-                   PrDomElement* PR_NULLABLE after) {
+void selectChanged(PrDomElement* option, PrDomElement* PR_NULLABLE before, PrDomElement* PR_NULLABLE after) {
     if (before == after)
         return;
     if (before != nullptr)
@@ -178,7 +177,7 @@ bool domOptionDisabled(const PrDomElement* option) {
     if (domHasAttribute(option, "disabled"))
         return true;
     for (const PrDomElement* at = domElementFromNode(option->parent); at != nullptr;
-         at = domElementFromNode(at->parent)) {
+            at = domElementFromNode(at->parent)) {
         if (at->space != PrDomNamespace_Html)
             continue;
         switch (at->tag) {
@@ -246,8 +245,7 @@ void domSelectLinked(PrDomNode* node) {
     for (PrDomNode* at = node; at != nullptr; at = domNodeNext(node, at)) {
         PrDomElement* option = domElementFromNode(at);
         if (domIsHtml(option, PrDomTag_Option))
-            selectChanged(option, nearestSelect(option, node, nullptr),
-                          nearestSelect(option, node, node->parent));
+            selectChanged(option, nearestSelect(option, node, nullptr), nearestSelect(option, node, node->parent));
     }
 }
 
@@ -257,8 +255,7 @@ void domSelectUnlinked(PrDomNode* node, PrDomNode* parent) {
     for (PrDomNode* at = node; at != nullptr; at = domNodeNext(node, at)) {
         PrDomElement* option = domElementFromNode(at);
         if (domIsHtml(option, PrDomTag_Option))
-            selectChanged(option, nearestSelect(option, node, parent),
-                          nearestSelect(option, node, nullptr));
+            selectChanged(option, nearestSelect(option, node, parent), nearestSelect(option, node, nullptr));
     }
 }
 
@@ -326,8 +323,7 @@ void domSelectedContentConnected(PrDomElement* element) {
                 disabled = true;
             else
                 nearest = ancestor;
-        } else if (domIsHtml(ancestor, PrDomTag_Option)
-                   || domIsHtml(ancestor, PrDomTag_Selectedcontent)) {
+        } else if (domIsHtml(ancestor, PrDomTag_Option) || domIsHtml(ancestor, PrDomTag_Selectedcontent)) {
             disabled = true;
         }
     }

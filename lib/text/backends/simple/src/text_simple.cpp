@@ -245,7 +245,7 @@ float deviceDelta(const SimpleFace& face, const SimpleFont& font, Bytes table, u
 
 // Applies the value record at `record`, in font units, to the glyph. Its device tables are offsets from `subtable`.
 void applyValue(const SimpleFace& face, const SimpleFont& font, Bytes record, Bytes subtable, ValueFlags format,
-                float unit, PrTextGlyph& glyph) {
+        float unit, PrTextGlyph& glyph) {
     float values[8] = {};
     uint16_t devices[4] = {};
     uint32_t field = 0;
@@ -269,8 +269,7 @@ void applyValue(const SimpleFace& face, const SimpleFont& font, Bytes record, By
 // Applies a PairPos subtable to the pair at `first` and the glyph after it. Returns 0 if the subtable has no adjustment
 // for the pair, and otherwise the number of glyphs that the adjustment consumes: two if it adjusts the second glyph,
 // which then starts no pair of its own.
-uint32_t applyPair(const SimpleFace& face, const SimpleFont& font, Bytes subtable, PrTextGlyph* glyphs,
-                   uint32_t first) {
+uint32_t applyPair(const SimpleFace& face, const SimpleFont& font, Bytes subtable, PrTextGlyph* glyphs, uint32_t first) {
     uint16_t format = subtable.uint16At(0);
     int32_t covered = coverageIndex(subtable.from(subtable.uint16At(2)), glyphs[first].id);
     if (covered < 0)

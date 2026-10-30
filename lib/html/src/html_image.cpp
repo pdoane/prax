@@ -28,8 +28,7 @@ uint32_t littleEndian32(const uint8_t* at) {
 }
 
 bool startsWith(const uint8_t* data, size_t size, PrStringView signature, size_t at = 0) {
-    return size >= at + signature.size
-           && PrStringView{reinterpret_cast<const char*>(data) + at, signature.size} == signature;
+    return size >= at + signature.size && PrStringView{reinterpret_cast<const char*>(data) + at, signature.size} == signature;
 }
 
 // Reads the size of a JPEG image from the frame header of the first start-of-frame marker, skipping the segments before
@@ -45,8 +44,7 @@ bool jpegSize(const uint8_t* data, size_t size, uint32_t* width, uint32_t* heigh
             continue;
         }
         uint32_t length = bigEndian16(data + at + 2);
-        bool frame =
-            marker >= 0xC0 && marker <= 0xCF && marker != 0xC4 && marker != 0xC8 && marker != 0xCC;
+        bool frame = marker >= 0xC0 && marker <= 0xCF && marker != 0xC4 && marker != 0xC8 && marker != 0xCC;
         if (frame) {
             if (at + 9 > size)
                 return false;
@@ -94,9 +92,7 @@ uint32_t svgLength(PrStringView value) {
             ++at;
     }
     PrStringView unit = stringSlice(value, at, value.size - at);
-    return unit.size == 0 || unit == "px"
-               ? uint32_t(whole < UINT32_MAX ? whole : UINT32_MAX)
-               : 0;
+    return unit.size == 0 || unit == "px" ? uint32_t(whole < UINT32_MAX ? whole : UINT32_MAX) : 0;
 }
 
 // Reads the size of an SVG image from the width and height attributes of its root element.
@@ -128,8 +124,7 @@ bool svgSize(PrStringView text, uint32_t* width, uint32_t* height) {
             continue;
         }
         size_t name = at;
-        while (at < rest.size && rest.data[at] != '=' && rest.data[at] != '>'
-               && !asciiIsSpace(rest.data[at]))
+        while (at < rest.size && rest.data[at] != '=' && rest.data[at] != '>' && !asciiIsSpace(rest.data[at]))
             ++at;
         PrStringView attribute = stringSlice(rest, name, at - name);
         while (at < rest.size && asciiIsSpace(rest.data[at]))
@@ -189,8 +184,7 @@ bool htmlImageSize(PrStringView bytes, uint32_t* width, uint32_t* height) {
         return true;
     }
     // An icon or cursor file. Its first image gives its size, and a 0 byte means 256.
-    if (size >= 4 && data[0] == 0 && data[1] == 0 && (data[2] == 1 || data[2] == 2)
-        && data[3] == 0) {
+    if (size >= 4 && data[0] == 0 && data[1] == 0 && (data[2] == 1 || data[2] == 2) && data[3] == 0) {
         if (size < 8)
             return false;
         *width = data[6] != 0 ? data[6] : 256;

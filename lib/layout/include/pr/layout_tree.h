@@ -195,11 +195,11 @@ typedef struct PrLayoutHighlight {
 // count of zero removes them. The part of a glyph that a highlight covers is painted in the highlight's color, so a
 // highlight may divide a glyph.
 void prLayoutNodeSetHighlights(PrLayoutTree* tree, PrLayoutNode text, const PrLayoutHighlight* PR_NULLABLE highlights,
-                               uint32_t count);
+    uint32_t count);
 
 // Returns the number of highlights of a text node, and writes up to `capacity` of them to `out`.
 uint32_t prLayoutNodeHighlights(const PrLayoutTree* tree, PrLayoutNode text, PrLayoutHighlight* PR_NULLABLE out,
-                                uint32_t capacity);
+    uint32_t capacity);
 
 // The caret that a tree paints (css-ui-4/#caret): a bar 1 px wide at `position`, which `affinity` places where the
 // position stands at two places, in `color`, across the content area of the text there. The caret paints over its text
@@ -298,8 +298,7 @@ typedef struct PrLayoutScrollAdjustment {
 
 // Writes to `out` up to `capacity` of the moves that scroll anchoring made since the last call, one for each container,
 // and returns how many it wrote. A client calls it until it writes none. A document fires its scroll events for them.
-uint32_t prLayoutTreeTakeScrollAdjustments(PrLayoutTree* tree, PrLayoutScrollAdjustment* PR_NULLABLE out,
-                                           uint32_t capacity);
+uint32_t prLayoutTreeTakeScrollAdjustments(PrLayoutTree* tree, PrLayoutScrollAdjustment* PR_NULLABLE out, uint32_t capacity);
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Layout

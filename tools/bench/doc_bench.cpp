@@ -144,7 +144,7 @@ struct Measure {
     HarnessCounters typical() const {
         std::vector<HarnessCounters> sorted = costs;
         std::sort(sorted.begin(), sorted.end(),
-                  [](const HarnessCounters& a, const HarnessCounters& b) { return a.instructions < b.instructions; });
+            [](const HarnessCounters& a, const HarnessCounters& b) { return a.instructions < b.instructions; });
         size_t trim = sorted.size() / 5;
         HarnessCounters sum{};
         for (size_t i = trim; i < sorted.size() - trim; ++i)
@@ -217,20 +217,18 @@ void present(void* PR_NULLABLE context, PrDrawList* list, PrColor16 canvasColor)
     PrGpuCommands* commands = nullptr;
     if (!prGpuCommandsBegin(b.device, nullptr, &commands))
         return;
-    PrDrawTarget target{.extent = {b.width, b.height},
-                        .format = PrPixelFormat_Bgra8,
-                        .commands = commands};
+    PrDrawTarget target{.extent = {b.width, b.height}, .format = PrPixelFormat_Bgra8, .commands = commands};
     if (prDrawFramePrepare(b.frame, list, &target) == PrStatus_Ok) {
         PrColor canvas = prColorFromColor16(canvasColor);
         PrColor clear{canvas.r * canvas.a, canvas.g * canvas.a, canvas.b * canvas.a, canvas.a};
         prGpuCommandsTextureBarrier(commands, b.target, PrGpuSubresources{}, PrGpuAccessFlag_ShaderRead,
-                                    PrGpuAccessFlag_ColorAttachment);
+            PrGpuAccessFlag_ColorAttachment);
         PrGpuPassDesc pass = prGpuPassDescColor(b.target, PrGpuLoad_Clear, clear);
         PrGpuPass* encoder = prGpuPassBegin(commands, &pass);
         prDrawFrameRender(b.frame, encoder, PrIVec2{0, 0});
         prGpuPassEnd(encoder);
         prGpuCommandsTextureBarrier(commands, b.target, PrGpuSubresources{},
-                                    PrGpuAccessFlag_ColorAttachment, PrGpuAccessFlag_ShaderRead);
+            PrGpuAccessFlag_ColorAttachment, PrGpuAccessFlag_ShaderRead);
     }
     gpuMillis += prGpuCommandsSubmitAndWait(commands) * 1000;
     b.presented = now() - started;
@@ -246,14 +244,13 @@ bool setUp(Bench& b) {
     PrTextFontDesc defaultFontDesc{.set = b.fonts, .style = prFontStyleDefault()};
     b.font = prTextFontCreate(&defaultFontDesc);
 
-    if (prGpuDeviceCreate(PrGpuBackend_Default, nullptr, &b.device) != PrStatus_Ok
-        || prDrawFragmentCreate(b.device, nullptr, &b.renderer) != PrStatus_Ok)
+    if (prGpuDeviceCreate(PrGpuBackend_Default, nullptr, &b.device) != PrStatus_Ok ||
+            prDrawFragmentCreate(b.device, nullptr, &b.renderer) != PrStatus_Ok)
         return false;
     b.frame = prDrawFrameCreate(b.renderer);
     b.width = uint32_t(kWidth * b.pixelRatio);
     b.height = uint32_t(kHeight * b.pixelRatio);
-    PrGpuTextureDesc textureDesc = prGpuTextureDesc2d(
-        PrGpuFormat_Bgra8, PrUVec2{b.width, b.height},
+    PrGpuTextureDesc textureDesc = prGpuTextureDesc2d(PrGpuFormat_Bgra8, PrUVec2{b.width, b.height},
         PrGpuTextureUsageFlag_Sampled | PrGpuTextureUsageFlag_RenderTarget);
     return prGpuTextureCreate(b.device, &textureDesc, &b.target) == PrStatus_Ok;
 }
@@ -459,10 +456,9 @@ int main(int argc, char** argv) {
             hoverJobs = jobs;
         }
         bool changed = service();
-        bool loaded = prHtmlDocumentReadyState(prHtmlWindowDocument(prHtmlPageWindow(b.page)))
-                      == PrHtmlDocumentReadyState_Complete;
-        settled = jobs > 1 && !changed && loaded && !taskReady()
-                  && prCssPresentationIsCurrent(presentation);
+        bool loaded = prHtmlDocumentReadyState(prHtmlWindowDocument(prHtmlPageWindow(b.page))) ==
+            PrHtmlDocumentReadyState_Complete;
+        settled = jobs > 1 && !changed && loaded && !taskReady() && prCssPresentationIsCurrent(presentation);
         // The page's tasks run for the frame's budget while the layout thread lays out. The layout thread takes the
         // next job as soon as it is done with one.
         double deadline = frameStart + kTaskBudget;
@@ -550,7 +546,7 @@ int main(int argc, char** argv) {
         navigations.sample([&] {
             PrDomMouseEvent* click = prDomMouseEventCreate("click", &init);
             prDomEventTargetDispatchEvent(prDomNodeAsEventTarget(prDomElementAsNode(link)),
-                                          prDomMouseEventAsEvent(click), nullptr);
+                prDomMouseEventAsEvent(click), nullptr);
             prDomEventRelease(prDomMouseEventAsEvent(click));
             frameNow(b, extent);
         });
@@ -571,8 +567,7 @@ int main(int argc, char** argv) {
             prHtmlViewWait(b.view);
             prDomElementSetAttribute(written, "style", i % 2 == 0 ? "color: red" : "color: blue");
             sample(afterPaint);
-            prDomElementSetAttribute(written, "style",
-                                     i % 2 == 0 ? "padding-top: 3px" : "padding-top: 5px");
+            prDomElementSetAttribute(written, "style", i % 2 == 0 ? "padding-top: 3px" : "padding-top: 5px");
             sample(afterLayout);
             PrLayoutVec scroll = prLayoutVecFromPx(PrVec2{0, float(100 + 50 * i)});
             prCssPresentationSetScroll(presentation, kPrLayoutNodeNone, scroll);

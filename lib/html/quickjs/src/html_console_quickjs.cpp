@@ -59,8 +59,7 @@ Labeled* PR_NULLABLE findLabel(Array<Labeled>* list, PrStringView label) {
 // Appends the value as console/#generic-javascript-object-formatting formats it: the value's string, or a symbol's
 // description.
 void appendValue(JSContext* ctx, TextBuffer* out, JSValueConst value) {
-    JSValue text =
-        JS_IsSymbol(value) ? JS_GetPropertyStr(ctx, value, "description") : JS_ToString(ctx, value);
+    JSValue text = JS_IsSymbol(value) ? JS_GetPropertyStr(ctx, value, "description") : JS_ToString(ctx, value);
     JsString read = {};
     if (!JS_IsException(text) && (JS_IsString(text) || JS_IsUndefined(text))) {
         if (JS_IsSymbol(value))
@@ -112,8 +111,8 @@ int format(JSContext* ctx, TextBuffer* out, int argc, JSValueConst* argv) {
     int used = 1;
     for (size_t i = 0; i < text.size; ++i) {
         char specifier = i + 1 < text.size && text.data[i] == '%' ? text.data[i + 1] : 0;
-        bool known = specifier == 's' || specifier == 'd' || specifier == 'i' || specifier == 'f'
-                     || specifier == 'o' || specifier == 'O' || specifier == 'c';
+        bool known = specifier == 's' || specifier == 'd' || specifier == 'i' || specifier == 'f' ||
+            specifier == 'o' || specifier == 'O' || specifier == 'c';
         if (!known || used == argc) {
             textAppendChar(out, text.data[i]);
             continue;
@@ -141,7 +140,7 @@ void print(JSContext* ctx, PrJsHtmlConsoleLevel level, uint32_t depth, PrStringV
 
 // console/#logger, after the `prefix` that a method gives its message.
 void logger(JSContext* ctx, const ConsoleState* state, PrJsHtmlConsoleLevel level, PrStringView prefix,
-            int argc, JSValueConst* argv) {
+        int argc, JSValueConst* argv) {
     if (argc == 0 && prefix.size == 0)
         return;
     TextBuffer out;
@@ -181,12 +180,12 @@ enum {
 typedef uint8_t Method;
 
 // The logging methods other than assert, each of which prints at its level (console/#logging).
-JSValue logMethod(JSContext* ctx, JSValueConst, int argc, JSValueConst* argv, int magic,
-                  JSValueConst* data) {
+JSValue logMethod(JSContext* ctx, JSValueConst, int argc, JSValueConst* argv, int magic, JSValueConst* data) {
     constexpr PrJsHtmlConsoleLevel kLevels[] = {
         PrJsHtmlConsoleLevel_Log,   PrJsHtmlConsoleLevel_Info,  PrJsHtmlConsoleLevel_Warn,
         PrJsHtmlConsoleLevel_Error, PrJsHtmlConsoleLevel_Debug, PrJsHtmlConsoleLevel_Log,
-        PrJsHtmlConsoleLevel_Log,   PrJsHtmlConsoleLevel_Log,   PrJsHtmlConsoleLevel_Log};
+        PrJsHtmlConsoleLevel_Log,   PrJsHtmlConsoleLevel_Log,   PrJsHtmlConsoleLevel_Log,
+    };
     // dir and table print their single argument, not a format.
     int count = magic == Method_Dir || magic == Method_Table ? (argc > 0 ? 1 : 0) : argc;
     logger(ctx, stateOf(data), kLevels[magic], magic == Method_Trace ? "Trace:" : PrStringView{}, count, argv);
@@ -194,12 +193,11 @@ JSValue logMethod(JSContext* ctx, JSValueConst, int argc, JSValueConst* argv, in
 }
 
 // console/#assert
-JSValue assertMethod(JSContext* ctx, JSValueConst, int argc, JSValueConst* argv, int,
-                     JSValueConst* data) {
+JSValue assertMethod(JSContext* ctx, JSValueConst, int argc, JSValueConst* argv, int, JSValueConst* data) {
     if (argc > 0 && JS_ToBool(ctx, argv[0]))
         return JS_UNDEFINED;
-    logger(ctx, stateOf(data), PrJsHtmlConsoleLevel_Error, "Assertion failed:",
-           argc > 0 ? argc - 1 : 0, argc > 0 ? argv + 1 : argv);
+    logger(ctx, stateOf(data), PrJsHtmlConsoleLevel_Error, "Assertion failed:", argc > 0 ? argc - 1 : 0,
+        argc > 0 ? argv + 1 : argv);
     return JS_UNDEFINED;
 }
 
@@ -210,8 +208,7 @@ JSValue clearMethod(JSContext*, JSValueConst, int, JSValueConst*, int, JSValueCo
 }
 
 // console/#count and console/#countreset, selected by the magic.
-JSValue countMethod(JSContext* ctx, JSValueConst, int argc, JSValueConst* argv, int magic,
-                    JSValueConst* data) {
+JSValue countMethod(JSContext* ctx, JSValueConst, int argc, JSValueConst* argv, int magic, JSValueConst* data) {
     ConsoleState* state = stateOf(data);
     StringArgument label = {ctx, "default"};
     if (!readLabel(argc, argv, &label))
@@ -239,8 +236,7 @@ JSValue countMethod(JSContext* ctx, JSValueConst, int argc, JSValueConst* argv, 
 }
 
 // console/#group, console/#groupcollapsed and console/#groupend, selected by the magic.
-JSValue groupMethod(JSContext* ctx, JSValueConst, int argc, JSValueConst* argv, int magic,
-                    JSValueConst* data) {
+JSValue groupMethod(JSContext* ctx, JSValueConst, int argc, JSValueConst* argv, int magic, JSValueConst* data) {
     ConsoleState* state = stateOf(data);
     if (magic == 2) {
         if (state->depth != 0)
@@ -254,8 +250,7 @@ JSValue groupMethod(JSContext* ctx, JSValueConst, int argc, JSValueConst* argv, 
 }
 
 // console/#time, console/#timelog and console/#timeend, selected by the magic.
-JSValue timeMethod(JSContext* ctx, JSValueConst, int argc, JSValueConst* argv, int magic,
-                   JSValueConst* data) {
+JSValue timeMethod(JSContext* ctx, JSValueConst, int argc, JSValueConst* argv, int magic, JSValueConst* data) {
     ConsoleState* state = stateOf(data);
     StringArgument label = {ctx, "default"};
     if (!readLabel(argc, argv, &label))
@@ -276,8 +271,7 @@ JSValue timeMethod(JSContext* ctx, JSValueConst, int argc, JSValueConst* argv, i
             prStringReset(&found->label);
             state->timers.erase(uint32_t(found - state->timers.data));
         }
-        logger(ctx, state, PrJsHtmlConsoleLevel_Info, textView(&text),
-               magic == 1 && argc > 1 ? argc - 1 : 0, argv + 1);
+        logger(ctx, state, PrJsHtmlConsoleLevel_Info, textView(&text), magic == 1 && argc > 1 ? argc - 1 : 0, argv + 1);
     }
     textReset(&text);
     return JS_UNDEFINED;
@@ -335,8 +329,7 @@ void prJsHtmlConsoleBind(JSContext* ctx) {
     }
     JS_SetPropertyFunctionList(ctx, console, kTag, int(countOf(kTag)));
     JSValue global = JS_GetGlobalObject(ctx);
-    JS_DefinePropertyValueStr(ctx, global, "console", console,
-                              JS_PROP_WRITABLE | JS_PROP_CONFIGURABLE);
+    JS_DefinePropertyValueStr(ctx, global, "console", console, JS_PROP_WRITABLE | JS_PROP_CONFIGURABLE);
     JS_FreeValue(ctx, global);
 }
 

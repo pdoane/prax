@@ -106,16 +106,18 @@ void hostPresent(void* PR_NULLABLE context, PrDrawList* list, PrColor16) {
 // Commits the tree's scene for `embed`, with `tracks` and the tree's offsets, which include the compositor's offsets up
 // to `applied`.
 void commitTree(PrLayoutCompositor* compositor, const PrLayoutTree* tree, const PrLayoutScene* scene, uint64_t embed,
-                uint32_t applied, const PrLayoutTrack* PR_NULLABLE tracks = nullptr, uint32_t trackCount = 0) {
+        uint32_t applied, const PrLayoutTrack* PR_NULLABLE tracks = nullptr, uint32_t trackCount = 0) {
     std::vector<PrLayoutSceneScroll> scrolls = treeScrolls(tree, scene);
-    PrLayoutCommit commit{.embed = embed,
-                          .scene = scene,
-                          .transform = prAffine2Identity(),
-                          .tracks = tracks,
-                          .trackCount = trackCount,
-                          .scrolls = scrolls.data(),
-                          .scrollCount = uint32_t(scrolls.size()),
-                          .scrollsApplied = applied};
+    PrLayoutCommit commit{
+        .embed = embed,
+        .scene = scene,
+        .transform = prAffine2Identity(),
+        .tracks = tracks,
+        .trackCount = trackCount,
+        .scrolls = scrolls.data(),
+        .scrollCount = uint32_t(scrolls.size()),
+        .scrollsApplied = applied,
+    };
     prLayoutCompositorCommit(compositor, &commit);
 }
 
@@ -148,8 +150,10 @@ WebAndDefault webAndDefault(Fixture& f) {
     font.font = textFontOf(16, {prFontFamilyFromName("Web")});
     PrLayoutFontStyle taller = font;
     taller.lineHeight = prLayoutLineHeightPx(40);
-    WebAndDefault nodes{f.element(root, block(), nullptr, nullptr, &font),
-                        f.element(root, block(), nullptr, nullptr, &taller), f.element(root, block())};
+    WebAndDefault nodes{
+        f.element(root, block(), nullptr, nullptr, &font),
+        f.element(root, block(), nullptr, nullptr, &taller), f.element(root, block()),
+    };
     f.text(nodes.web, "Hamburgefonstiv");
     f.text(nodes.webTaller, "Hamburgefonstiv");
     f.text(nodes.plain, "Hamburgefonstiv");
@@ -173,7 +177,7 @@ PrLayoutColorStop colorStop(PrColor color, PrLayoutLength position = prLayoutLen
 
 // Returns a box `width` by `height` with the background layers given.
 PrLayoutNode backgroundBox(Fixture& f, PrLayoutNode parent, float width, float height,
-                           const PrLayoutBackgroundLayer* layers, uint32_t count, PrColor color = PrColor{}) {
+        const PrLayoutBackgroundLayer* layers, uint32_t count, PrColor color = PrColor{}) {
     PrLayoutBoxStyle box = block();
     box.width = prLayoutLengthPx(width);
     box.height = prLayoutLengthPx(height);
@@ -1444,8 +1448,10 @@ TEST_CASE("a background layer fixed to the viewport stays with it as its box scr
     scroller.overflowY = PrLayoutOverflow_Scroll;
     PrLayoutNode box = f.element(root, scroller);
     // Red over the viewport's top half and blue over its bottom half, wherever the box that paints it is.
-    PrLayoutColorStop stops[] = {colorStop(PrColor{1, 0, 0, 1}, prLayoutLengthPercent(50)),
-                                 colorStop(PrColor{0, 0, 1, 1}, prLayoutLengthPercent(50))};
+    PrLayoutColorStop stops[] = {
+        colorStop(PrColor{1, 0, 0, 1}, prLayoutLengthPercent(50)),
+        colorStop(PrColor{0, 0, 1, 1}, prLayoutLengthPercent(50)),
+    };
     PrLayoutBackgroundLayer layer = gradientLayer(stops, 2);
     layer.attachment = PrLayoutBackgroundAttachment_Fixed;
     backgroundBox(f, box, 20, 100, &layer, 1);
@@ -1475,8 +1481,10 @@ TEST_CASE("a background layer fixed to the viewport scrolls with its box under a
     scroller.overflowY = PrLayoutOverflow_Scroll;
     scroller.transformed = true;
     PrLayoutNode box = f.element(root, scroller);
-    PrLayoutColorStop stops[] = {colorStop(PrColor{1, 0, 0, 1}, prLayoutLengthPercent(50)),
-                                 colorStop(PrColor{0, 0, 1, 1}, prLayoutLengthPercent(50))};
+    PrLayoutColorStop stops[] = {
+        colorStop(PrColor{1, 0, 0, 1}, prLayoutLengthPercent(50)),
+        colorStop(PrColor{0, 0, 1, 1}, prLayoutLengthPercent(50)),
+    };
     PrLayoutBackgroundLayer layer = gradientLayer(stops, 2);
     layer.attachment = PrLayoutBackgroundAttachment_Fixed;
     backgroundBox(f, box, 20, 100, &layer, 1);
@@ -1514,8 +1522,10 @@ TEST_CASE("background layers intern by value, and a layout frees the layers that
 TEST_CASE("a linear gradient runs along its line, which a corner points") {
     Fixture f;
     PrLayoutNode root = f.element(kPrLayoutNodeNone, block());
-    PrLayoutColorStop stops[] = {colorStop(PrColor{1, 0, 0, 1}, prLayoutLengthPercent(50)),
-                                 colorStop(PrColor{0, 0, 1, 1}, prLayoutLengthPercent(50))};
+    PrLayoutColorStop stops[] = {
+        colorStop(PrColor{1, 0, 0, 1}, prLayoutLengthPercent(50)),
+        colorStop(PrColor{0, 0, 1, 1}, prLayoutLengthPercent(50)),
+    };
     // To the right, with a hard edge at the middle.
     PrLayoutBackgroundLayer right = gradientLayer(stops, 2);
     right.gradient.angle = 90;
@@ -1537,9 +1547,11 @@ TEST_CASE("color stops without positions spread evenly, and a stop before an ear
     Fixture f;
     PrLayoutNode root = f.element(kPrLayoutNodeNone, block());
     // red, lime, blue 50%, white 10%: lime at 25%, and white at 50% beside blue.
-    PrLayoutColorStop stops[] = {colorStop(PrColor{1, 0, 0, 1}), colorStop(PrColor{0, 1, 0, 1}),
-                                 colorStop(PrColor{0, 0, 1, 1}, prLayoutLengthPercent(50)),
-                                 colorStop(PrColor{1, 1, 1, 1}, prLayoutLengthPercent(10))};
+    PrLayoutColorStop stops[] = {
+        colorStop(PrColor{1, 0, 0, 1}), colorStop(PrColor{0, 1, 0, 1}),
+        colorStop(PrColor{0, 0, 1, 1}, prLayoutLengthPercent(50)),
+        colorStop(PrColor{1, 1, 1, 1}, prLayoutLengthPercent(10)),
+    };
     PrLayoutBackgroundLayer layer = gradientLayer(stops, 4);
     layer.gradient.angle = 90;
     backgroundBox(f, root, 40, 10, &layer, 1);
@@ -1600,8 +1612,10 @@ TEST_CASE("space spreads whole copies, and round scales them to fill the area") 
     PrLayoutBackgroundLayer rounded = spaced;
     rounded.repeatX = PrLayoutBackgroundRepeat_Round;
     // Half red, half blue in each copy, to see the copies' width.
-    PrLayoutColorStop halves[] = {colorStop(PrColor{1, 0, 0, 1}, prLayoutLengthPercent(50)),
-                                  colorStop(PrColor{0, 1, 0, 1}, prLayoutLengthPercent(50))};
+    PrLayoutColorStop halves[] = {
+        colorStop(PrColor{1, 0, 0, 1}, prLayoutLengthPercent(50)),
+        colorStop(PrColor{0, 1, 0, 1}, prLayoutLengthPercent(50)),
+    };
     rounded.gradient.stops = halves;
     rounded.gradient.angle = 90;
     backgroundBox(f, root, 40, 10, &rounded, 1, PrColor{0, 0, 1, 1});
@@ -1621,10 +1635,12 @@ TEST_CASE("a repeating conic gradient repeats its stops around the turn") {
     Fixture f;
     PrLayoutNode root = f.element(kPrLayoutNodeNone, block());
     // A checkerboard of 10px squares: white, then gray, a quarter turn each, from the top, repeated each half turn.
-    PrLayoutColorStop stops[] = {colorStop(PrColor{1, 1, 1, 1}, prLayoutLengthPercent(0)),
-                                 colorStop(PrColor{1, 1, 1, 1}, prLayoutLengthPercent(25)),
-                                 colorStop(PrColor{0, 0, 0, 1}, prLayoutLengthPercent(0)),
-                                 colorStop(PrColor{0, 0, 0, 1}, prLayoutLengthPercent(50))};
+    PrLayoutColorStop stops[] = {
+        colorStop(PrColor{1, 1, 1, 1}, prLayoutLengthPercent(0)),
+        colorStop(PrColor{1, 1, 1, 1}, prLayoutLengthPercent(25)),
+        colorStop(PrColor{0, 0, 0, 1}, prLayoutLengthPercent(0)),
+        colorStop(PrColor{0, 0, 0, 1}, prLayoutLengthPercent(50)),
+    };
     PrLayoutBackgroundLayer layer = gradientLayer(stops, 4);
     layer.gradient.kind = PrLayoutGradientKind_Conic;
     layer.gradient.angle = 0;
@@ -1645,8 +1661,10 @@ TEST_CASE("a repeating conic gradient repeats its stops around the turn") {
 TEST_CASE("a radial gradient's ellipse meets the farthest corner by default") {
     Fixture f;
     PrLayoutNode root = f.element(kPrLayoutNodeNone, block());
-    PrLayoutColorStop stops[] = {colorStop(PrColor{1, 0, 0, 1}, prLayoutLengthPercent(70)),
-                                 colorStop(PrColor{0, 0, 1, 1}, prLayoutLengthPercent(70))};
+    PrLayoutColorStop stops[] = {
+        colorStop(PrColor{1, 0, 0, 1}, prLayoutLengthPercent(70)),
+        colorStop(PrColor{0, 0, 1, 1}, prLayoutLengthPercent(70)),
+    };
     PrLayoutBackgroundLayer layer = gradientLayer(stops, 2);
     layer.gradient.kind = PrLayoutGradientKind_Radial;
     backgroundBox(f, root, 40, 20, &layer, 1);
@@ -2316,9 +2334,11 @@ TEST_CASE("verifying a tree publishes nothing: its placements, queries and recor
             if (!t->nodes.data[node].live)
                 continue;
             PrLayoutNode name = layoutNodeName(t, node);
-            out.push_back(Published{layoutCachePlacement(t->cache, node),
-                                    prLayoutNodeBounds(f.tree, name, PrLayoutCoordinates_Viewport),
-                                    prLayoutNodeContentExtent(f.tree, name)});
+            out.push_back(Published{
+                layoutCachePlacement(t->cache, node),
+                prLayoutNodeBounds(f.tree, name, PrLayoutCoordinates_Viewport),
+                prLayoutNodeContentExtent(f.tree, name),
+            });
         }
         return out;
     };
@@ -2327,8 +2347,8 @@ TEST_CASE("verifying a tree publishes nothing: its placements, queries and recor
         for (size_t i = 0; i < a.size() && equal; ++i) {
             const LayoutPlacement& x = a[i].placement;
             const LayoutPlacement& y = b[i].placement;
-            equal = x.parent == y.parent && x.offset == y.offset && x.fragment == y.fragment
-                    && memcmp(&a[i].bounds, &b[i].bounds, sizeof(PrLayoutRect)) == 0 && a[i].content == b[i].content;
+            equal = x.parent == y.parent && x.offset == y.offset && x.fragment == y.fragment &&
+                memcmp(&a[i].bounds, &b[i].bounds, sizeof(PrLayoutRect)) == 0 && a[i].content == b[i].content;
         }
         return equal;
     };
@@ -2706,7 +2726,11 @@ TEST_CASE("a compositor with a thread presents frames while the caller's thread 
     PrLayoutNode box = f.element(root, block(10), &green);
     Host host;
     PrLayoutCompositorDesc desc{
-        .context = &host, .now = hostNow, .present = [](void* PR_NULLABLE, PrDrawList*, PrColor16) {}, .interval = 1};
+        .context = &host,
+        .now = hostNow,
+        .present = [](void* PR_NULLABLE, PrDrawList*, PrColor16) {},
+        .interval = 1,
+    };
     PrLayoutCompositor* compositor = prLayoutCompositorCreate(&desc);
     PrLayoutScrollFn apply = [](void* PR_NULLABLE context, const PrLayoutScroll* scroll) {
         prLayoutNodeSetScroll(static_cast<PrLayoutTree*>(context), scroll->node, scroll->offset);
@@ -3005,13 +3029,10 @@ TEST_CASE("a compositor shows an embedded scene in its slot, and scrolls into it
         PrLayoutVec outer;
         PrLayoutVec inner;
     } taken{};
-    prLayoutCompositorTakeScrolls(
-        compositor,
-        [](void* PR_NULLABLE context, const PrLayoutScroll* scroll) {
-            Taken* t = static_cast<Taken*>(context);
-            (scroll->embed == 7 ? t->inner : t->outer) = scroll->offset;
-        },
-        &taken);
+    prLayoutCompositorTakeScrolls(compositor, [](void* PR_NULLABLE context, const PrLayoutScroll* scroll) {
+        Taken* t = static_cast<Taken*>(context);
+        (scroll->embed == 7 ? t->inner : t->outer) = scroll->offset;
+    }, &taken);
     CHECK(taken.inner == px(0, 10));
     CHECK(taken.outer == px(0, 4));
 

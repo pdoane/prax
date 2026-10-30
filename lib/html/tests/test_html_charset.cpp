@@ -45,10 +45,11 @@ std::string charsetOf(PrHtmlPage* page) {
 // A browsing context that has loaded `source` whole, with the Content-Type `type`, if any.
 PrHtmlPage* loaded(const std::string& source, const char* type = nullptr) {
     PrHtmlPage* page = prHtmlPageCreate(nullptr);
-    PrHtmlResponseHeaders headers = {type != nullptr ? PrStringView{type, strlen(type)} : PrStringView{nullptr, 0},
-                                     PrStringView{nullptr, 0}};
-    CHECK(prHtmlPageLoad(page, {source.data(), source.size()}, "https://charset.test/", &headers)
-          == PrStatus_Ok);
+    PrHtmlResponseHeaders headers = {
+        type != nullptr ? PrStringView{type, strlen(type)} : PrStringView{nullptr, 0},
+        PrStringView{nullptr, 0},
+    };
+    CHECK(prHtmlPageLoad(page, {source.data(), source.size()}, "https://charset.test/", &headers) == PrStatus_Ok);
     runTasks(page);
     return page;
 }
@@ -78,9 +79,9 @@ TEST_CASE("a loaded document has the charset that html5lib's encoding tests expe
             // These cases expect a meta element in the text of a script or style element, or one that script writes, to
             // declare a charset, as the byte prescan of html/#prescan-a-byte-stream-to-determine-its-encoding reads
             // them. The engine follows whatwg/html#6962 and WPT's html/syntax/charset, where neither declares one.
-            if (data.find("<script>document.write('<meta") != std::string::npos
-                || data.find("<script type=\"text/plain\"><meta") != std::string::npos
-                || data.find("<style type=\"text/plain\"><meta") != std::string::npos)
+            if (data.find("<script>document.write('<meta") != std::string::npos ||
+                    data.find("<script type=\"text/plain\"><meta") != std::string::npos ||
+                    data.find("<style type=\"text/plain\"><meta") != std::string::npos)
                 continue;
             PrHtmlPage* page = loaded(data);
             PrStringView want = prCharsetName(prCharsetFromLabel(expected));
@@ -109,8 +110,7 @@ TEST_CASE("a document without a declaration decodes in the default charset") {
 
     page = prHtmlPageCreate(nullptr);
     prHtmlPageSetDefaultCharset(page, PrCharset_Utf8);
-    CHECK(prHtmlPageLoad(page, "<p id=p>caf\xC3\xA9</p>", "https://charset.test/", nullptr)
-          == PrStatus_Ok);
+    CHECK(prHtmlPageLoad(page, "<p id=p>caf\xC3\xA9</p>", "https://charset.test/", nullptr) == PrStatus_Ok);
     CHECK(charsetOf(page) == "UTF-8");
     CHECK(textOf(page, "p") == "caf\xC3\xA9");
     prHtmlPageDestroy(page);
@@ -118,7 +118,7 @@ TEST_CASE("a document without a declaration decodes in the default charset") {
 
 TEST_CASE("a byte order mark decides the charset and is not text") {
     PrHtmlPage* page = loaded("\xEF\xBB\xBF<meta charset=koi8-r><p id=p>\xC3\xA9</p>",
-                                            "text/html; charset=windows-1252");
+        "text/html; charset=windows-1252");
     CHECK(charsetOf(page) == "UTF-8");
     CHECK(textOf(page, "p") == "\xC3\xA9");
     PrDomElement* body = prDomDocumentBody(prHtmlWindowDocument(prHtmlPageWindow(page)));
@@ -142,8 +142,7 @@ TEST_CASE("the Content-Type's charset is certain, and a meta element does not ch
 }
 
 TEST_CASE("a meta element in the prescan decides the charset") {
-    PrHtmlPage* page = loaded("<meta http-equiv=content-type content='text/html; charset=koi8-r'>"
-                                            "<p id=p>\xC1</p>");
+    PrHtmlPage* page = loaded("<meta http-equiv=content-type content='text/html; charset=koi8-r'><p id=p>\xC1</p>");
     CHECK(charsetOf(page) == "KOI8-R");
     CHECK(textOf(page, "p") == "\xD0\xB0");
     prHtmlPageDestroy(page);
@@ -156,8 +155,7 @@ TEST_CASE("a meta element in the prescan decides the charset") {
 
 TEST_CASE("a meta element in the head past the prescan parses the document again in its charset") {
     std::string padding = "<!--" + std::string(1100, 'x') + "-->";
-    PrHtmlPage* page = loaded("<!doctype html><title id=t>\xE9</title>" + padding
-                                            + "<meta charset=windows-1251><p id=q>\xE0</p>");
+    PrHtmlPage* page = loaded("<!doctype html><title id=t>\xE9</title>" + padding + "<meta charset=windows-1251><p id=q>\xE0</p>");
     CHECK(charsetOf(page) == "windows-1251");
     CHECK(textOf(page, "t") == "\xD0\xB9");
     CHECK(textOf(page, "q") == "\xD0\xB0");
@@ -165,7 +163,7 @@ TEST_CASE("a meta element in the head past the prescan parses the document again
 
     // Past the prescan, a meta element outside the head, in a template, or in text declares nothing.
     for (const char* late : {"</head><meta charset=windows-1251>", "<template><meta charset=windows-1251></template>",
-                             "<title><meta charset=windows-1251></title>", "<body><meta charset=windows-1251>"}) {
+        "<title><meta charset=windows-1251></title>", "<body><meta charset=windows-1251>"}) {
         CAPTURE(late);
         page = loaded("<!doctype html><head>" + padding + late + "<p id=q>\xE0</p>");
         CHECK(charsetOf(page) == "windows-1252");
@@ -193,14 +191,12 @@ TEST_CASE("the prescan reads the text of a title, a script or a style as text") 
 TEST_CASE("a meta element that script writes declares nothing") {
     PrHtmlHost host = prHtmlHostDefault();
     host.execute = [](void*, PrHtmlPage* page, const PrHtmlScript*) -> PrStatus {
-        return prHtmlDocumentWrite(prHtmlWindowDocument(prHtmlPageWindow(page)),
-                                   "<meta charset=windows-1251>");
+        return prHtmlDocumentWrite(prHtmlWindowDocument(prHtmlPageWindow(page)), "<meta charset=windows-1251>");
     };
     PrHtmlPage* page = prHtmlPageCreate(&host);
     std::string padding = "<!--" + std::string(1100, 'x') + "-->";
     std::string source = "<!doctype html><head>" + padding + "<script>w</script></head><p id=q>\xE0</p>";
-    CHECK(prHtmlPageLoad(page, {source.data(), source.size()}, "https://charset.test/", nullptr)
-          == PrStatus_Ok);
+    CHECK(prHtmlPageLoad(page, {source.data(), source.size()}, "https://charset.test/", nullptr) == PrStatus_Ok);
     CHECK(charsetOf(page) == "windows-1252");
     prHtmlPageDestroy(page);
 }
@@ -234,8 +230,7 @@ TEST_CASE("a streamed meta element changes the decoder for the bytes that follow
 }
 
 TEST_CASE("an XML document decodes in the charset of its declaration") {
-    PrHtmlPage* page = loaded("<?xml version='1.0' encoding='windows-1251'?><r id='p'>\xE0</r>",
-                                            "application/xml");
+    PrHtmlPage* page = loaded("<?xml version='1.0' encoding='windows-1251'?><r id='p'>\xE0</r>", "application/xml");
     CHECK(charsetOf(page) == "windows-1251");
     CHECK(textOf(page, "p") == "\xD0\xB0");
     prHtmlPageDestroy(page);
@@ -282,15 +277,14 @@ TEST_CASE("an external classic script decodes in its document's charset unless i
         return PrStatus_Ok;
     };
     host.parseModule = [](void* data, PrHtmlPage*, const PrHtmlScript* script,
-                          PrHtmlModuleRequestFn request, void* PR_NULLABLE requestContext) {
+            PrHtmlModuleRequestFn request, void* PR_NULLABLE requestContext) {
         return static_cast<State*>(data)->modules.parse(script, request, requestContext);
     };
     PrHtmlPage* page = prHtmlPageCreate(&host);
     CHECK(prHtmlPageLoad(page, "<meta charset=windows-1252><script src=document.js></script>"
-                                    "<script src=element.js charset=windows-1251></script>"
-                                    "<script src=response.js charset=windows-1251></script>"
-                                    "<script src=mark.js></script><script type=module src=module.js></script>",
-                                    "https://charset.test/", nullptr) == PrStatus_Ok);
+        "<script src=element.js charset=windows-1251></script><script src=response.js charset=windows-1251></script>"
+        "<script src=mark.js></script><script type=module src=module.js></script>", "https://charset.test/", nullptr) ==
+        PrStatus_Ok);
     fetcher.settle(prHtmlPageAgent(page));
     CHECK(state.sources == std::vector<std::string>{"\xC3\xA9", "\xD0\xB9", "\xD0\xB0", "\xC3\xA9", "\xEF\xBF\xBD"});
     prHtmlPageDestroy(page);

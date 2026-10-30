@@ -356,9 +356,11 @@ struct GalleryState {
 
     // The colors of the pickers in sRGB, Display P3 and Rec. 2020, each starting at P3's green primary in extended
     // sRGB, which lies past sRGB.
-    PrColor gamutColors[3] = {{-0.511f, 1.018f, -0.311f, 1.0f},
-                              {-0.511f, 1.018f, -0.311f, 1.0f},
-                              {-0.511f, 1.018f, -0.311f, 1.0f}};
+    PrColor gamutColors[3] = {
+        {-0.511f, 1.018f, -0.311f, 1.0f},
+        {-0.511f, 1.018f, -0.311f, 1.0f},
+        {-0.511f, 1.018f, -0.311f, 1.0f},
+    };
     float splitWeights[2] = {1.0f, 1.0f};
     float splitThirds[3] = {1.0f, 2.0f, 1.0f};
 
@@ -391,8 +393,7 @@ const PrDrawImage* galleryPicture(GalleryState& state);
 const AssetRow* galleryAssets(uint32_t* count);
 
 // Writes the indices of `count` assets to `order`, sorted by `column`. Equal keys keep their order.
-void sortAssetOrder(const AssetRow* assets, uint32_t count, AssetSort column, bool ascending,
-                    uint32_t* order);
+void sortAssetOrder(const AssetRow* assets, uint32_t count, AssetSort column, bool ascending, uint32_t* order);
 
 // Return the component types, the animation clips and the palette's commands, and write their counts.
 const PrStringView* galleryComponentTypes(uint32_t* count);
@@ -441,8 +442,7 @@ bool selectionHolds(const std::vector<uint32_t>& selection, uint32_t value);
 
 // Applies a view's edit to a selection of values. `keys` gives the value of each row, or is null if a row's index is
 // its value.
-void selectionApply(std::vector<uint32_t>& selection, const PrKitSelectionEdit& edit,
-                    const uint32_t* PR_NULLABLE keys);
+void selectionApply(std::vector<uint32_t>& selection, const PrKitSelectionEdit& edit, const uint32_t* PR_NULLABLE keys);
 
 // Finds the collection tree's visible rows: each group, and the assets of each open group.
 void collectionsTreeOrder(CollectionsState& collections);

@@ -18,7 +18,7 @@ namespace {
 // Returns the value of the attribute `name` of `element` as a non-negative integer clamped to `max`, or `otherwise` if
 // it does not parse or is below `least` (html/#rules-for-parsing-non-negative-integers).
 uint16_t clampedAttribute(const PrDomElement* element, PrStringView name, int64_t least, int64_t max,
-                          uint16_t otherwise) {
+        uint16_t otherwise) {
     int64_t value = 0;
     if (!domParseInteger(domAttributeValue(element, name), &value) || value < least)
         return otherwise;
@@ -29,16 +29,16 @@ uint16_t clampedAttribute(const PrDomElement* element, PrStringView name, int64_
 // (html/#the-input-element-as-a-text-entry-widget): one whose type is text, search, tel, url, email or password.
 bool isTextField(const PrDomElement* element) {
     PrDomInputType type = domInputType(domAttributeValue(element, "type"));
-    return type == PrDomInputType_Text || type == PrDomInputType_Search || type == PrDomInputType_Tel
-           || type == PrDomInputType_Url || type == PrDomInputType_Email || type == PrDomInputType_Password;
+    return type == PrDomInputType_Text || type == PrDomInputType_Search || type == PrDomInputType_Tel ||
+        type == PrDomInputType_Url || type == PrDomInputType_Email || type == PrDomInputType_Password;
 }
 
 // Returns true if a canvas element is replaced by its bitmap, which it is where scripting is enabled. It otherwise
 // represents its fallback content (html/#the-canvas-element).
 bool canvasReplaced(const PrDomElement* element) {
     const CssMediaEnvironment* media = element->document->media;
-    return media != nullptr
-           && cssMediaEnvironmentKeyword(media, PrCssDescriptor_MediaScripting) == PrCssKeyword_Enabled;
+    return media != nullptr &&
+        cssMediaEnvironmentKeyword(media, PrCssDescriptor_MediaScripting) == PrCssKeyword_Enabled;
 }
 
 // Returns true if display: contents makes the element generate no box at all, the same as display: none. This applies
@@ -148,8 +148,8 @@ const CssBoxProvider* htmlBoxes() {
 CssColorSchemeFlags htmlPageSchemes(PrDomDocument* document) {
     for (const PrDomNode* node = domNodeNext(document, document); node != nullptr; node = domNodeNext(document, node)) {
         const PrDomElement* element = domElementFromNode(node);
-        if (element == nullptr || !domIsHtml(element, PrDomTag_Meta)
-            || !asciiEqualsFold(domAttributeValue(element, "name"), "color-scheme"))
+        if (element == nullptr || !domIsHtml(element, PrDomTag_Meta) ||
+                !asciiEqualsFold(domAttributeValue(element, "name"), "color-scheme"))
             continue;
         const PrDomAttr* attribute = domAttribute(element, PrDomNamespace_None, "content");
         if (attribute == nullptr)

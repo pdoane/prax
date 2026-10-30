@@ -48,8 +48,7 @@ typedef struct PrDrawSnapped {
 
 // Returns `command` with the edges it snaps rounded to target pixels under `transform` (PrDrawEdges_Snapped), as a copy
 // in `storage`, or `command` itself if it snaps nothing. The copy is valid while `command` and `storage` are.
-const PrDrawCommand* prDrawTransformSnap(const PrDrawTransform* transform, const PrDrawCommand* command,
-                                         PrDrawSnapped* storage);
+const PrDrawCommand* prDrawTransformSnap(const PrDrawTransform* transform, const PrDrawCommand* command, PrDrawSnapped* storage);
 
 // Returns true if `command` changes nothing under the current transform. This is the case if the transform is
 // degenerate and the command draws nothing under a degenerate transform (prDrawCommandSkipsCollapsed).

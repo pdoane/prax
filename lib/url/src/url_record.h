@@ -73,8 +73,7 @@ typedef uint8_t UrlState;
 // Parses UTF-8 `input` into a new URL (url/#concept-basic-url-parser), resolved against `base` if it is not null, with
 // its query percent-encoded in `charset`, which is its own output charset. Returns Syntax if `input` does not parse. On
 // failure, `*out` is null.
-PrStatus urlParse(PrStringView input, const Url* PR_NULLABLE base, PrCharset charset,
-                  PrUrl* PR_NULLABLE* PR_NONNULL out);
+PrStatus urlParse(PrStringView input, const Url* PR_NULLABLE base, PrCharset charset, PrUrl* PR_NULLABLE* PR_NONNULL out);
 
 // Parses `input` into the existing `url`, starting from `state` (url/#basic-url-parser-state-override). A failure
 // leaves `url` unchanged.

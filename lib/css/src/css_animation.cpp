@@ -151,8 +151,8 @@ bool isLengthPercentage(CssValueRun run, uint32_t index) {
 
 // Returns true if `a` and `b` are functions of one name, whatever their arguments.
 bool sameFunction(const CssValueNode& a, const CssValueNode& b) {
-    return a.kind == PrCssValueKind_Function && b.kind == PrCssValueKind_Function
-           && cssValueKeyword(&a) == cssValueKeyword(&b);
+    return a.kind == PrCssValueKind_Function && b.kind == PrCssValueKind_Function &&
+        cssValueKeyword(&a) == cssValueKeyword(&b);
 }
 
 // Writes to `fromOut` and `toOut` the values of `from` and `to` in a common shape, if they differ only in that some
@@ -181,8 +181,8 @@ bool mixedShapes(CssValueRun from, CssValueRun to, CssValuePool* fromOut, CssVal
             fromOut->values.data[fromAt].next = fromOut->values.count - fromAt;
             toOut->values.data[toAt].next = toOut->values.count - toAt;
             mixed = true;
-        } else if (isLengthPercentage(from, a) && isLengthPercentage(to, b)
-                   && cssMathToSum(from, a, kUnits, 2, fromOut) && cssMathToSum(to, b, kUnits, 2, toOut)) {
+        } else if (isLengthPercentage(from, a) && isLengthPercentage(to, b) &&
+                cssMathToSum(from, a, kUnits, 2, fromOut) && cssMathToSum(to, b, kUnits, 2, toOut)) {
             mixed = true;
         } else {
             return false;
@@ -213,9 +213,8 @@ void addSum(CssValuePool* out, PrCssProperty property, CssValueRun a, CssValueRu
         }
         if (!cssValueIsNumeric(value.kind))
             continue;
-        bool scale = scales && (function == PrCssKeyword_Scale || function == PrCssKeyword_Scalex
-                                || function == PrCssKeyword_Scaley || function == PrCssKeyword_Scalez
-                                || function == PrCssKeyword_Scale3d);
+        bool scale = scales && (function == PrCssKeyword_Scale || function == PrCssKeyword_Scalex ||
+            function == PrCssKeyword_Scaley || function == PrCssKeyword_Scalez || function == PrCssKeyword_Scale3d);
         double number = a.values[i].number + value.number - (scale ? 1 : 0);
         value.number = combinedNumber(property, value, number, i < termEnd);
     }
@@ -229,8 +228,8 @@ void addSimplified(CssValuePool* out, CssValueRun run) {
         const CssValueNode* value = &run.values[i];
         bool sum = value->kind == PrCssValueKind_Math && value->next == 4;
         const CssValueNode* px = sum ? &run.values[i + 2] : nullptr;
-        sum = sum && run.values[i + 1].kind == PrCssValueKind_Calc && px->kind == PrCssValueKind_Dimension
-              && px->unit == PrCssUnit_Px && px->number == 0 && run.values[i + 3].kind == PrCssValueKind_Percentage;
+        sum = sum && run.values[i + 1].kind == PrCssValueKind_Calc && px->kind == PrCssValueKind_Dimension &&
+            px->unit == PrCssUnit_Px && px->number == 0 && run.values[i + 3].kind == PrCssValueKind_Percentage;
         if (sum) {
             cssValuePoolAdd(out, run.values[i + 3]);
         } else if (value->kind == PrCssValueKind_Function) {
@@ -278,8 +277,8 @@ void addIdentity(CssValuePool* out, CssValueRun list) {
         if (function.kind != PrCssValueKind_Function)
             continue;
         PrCssKeyword name = cssValueKeyword(&function);
-        bool scale = name == PrCssKeyword_Scale || name == PrCssKeyword_Scalex || name == PrCssKeyword_Scaley
-                     || name == PrCssKeyword_Scalez || name == PrCssKeyword_Scale3d;
+        bool scale = name == PrCssKeyword_Scale || name == PrCssKeyword_Scalex || name == PrCssKeyword_Scaley ||
+            name == PrCssKeyword_Scalez || name == PrCssKeyword_Scale3d;
         uint32_t argument = 0;
         for (uint32_t k = i + 1; k < i + function.next; ++k) {
             CssValueNode& value = out->values.data[span.start + k];
@@ -301,8 +300,9 @@ bool isNone(CssValueRun run) {
 // (css-transforms-2/#combining-transform-lists).
 bool hasMatrix(CssValueRun run) {
     for (uint32_t i = 0; i < run.count; i += run.values[i].next) {
-        PrCssKeyword name = run.values[i].kind == PrCssValueKind_Function ? cssValueKeyword(&run.values[i])
-                                                                          : PrCssKeyword_Count;
+        PrCssKeyword name = PrCssKeyword_Count;
+        if (run.values[i].kind == PrCssValueKind_Function)
+            name = cssValueKeyword(&run.values[i]);
         if (name == PrCssKeyword_Matrix || name == PrCssKeyword_Matrix3d)
             return true;
     }
@@ -321,8 +321,7 @@ bool paddedTransforms(CssValueRun from, CssValueRun to, CssValuePool* fromOut, C
     uint32_t i = 0;
     uint32_t j = 0;
     for (; i < a.count && j < b.count; i += a.values[i].next, j += b.values[j].next) {
-        if (!sameShape(CssValueRun{a.values + i, a.values[i].next, a.text},
-                       CssValueRun{b.values + j, b.values[j].next, b.text}))
+        if (!sameShape(CssValueRun{a.values + i, a.values[i].next, a.text}, CssValueRun{b.values + j, b.values[j].next, b.text}))
             return false;
     }
     cssValuePoolAddRun(fromOut, a);
@@ -570,7 +569,7 @@ void addIndividual(CssValuePool* out, PrCssProperty property, const Individual& 
 // the result if `out` is not null. Returns false if either value is not one that the property computes to, or both are
 // none.
 bool individualBetween(CssValuePool* PR_NULLABLE out, PrCssProperty property, CssValueRun from, CssValueRun to,
-                       double progress) {
+        double progress) {
     Individual a{};
     Individual b{};
     if (!individualOf(property, from, &a) || !individualOf(property, to, &b))
@@ -764,8 +763,7 @@ void addFunction(PrLayoutTransformList* out, CssValueRun function) {
     }
     switch (name) {
         case PrCssKeyword_Translate:
-            add(out, translation(v[0].value, v[0].fraction, count >= 2 ? v[1].value : 0, count >= 2 ? v[1].fraction : 0,
-                                 0));
+            add(out, translation(v[0].value, v[0].fraction, count >= 2 ? v[1].value : 0, count >= 2 ? v[1].fraction : 0, 0));
             break;
         case PrCssKeyword_Translate3d:
             if (count == 3)
@@ -797,9 +795,12 @@ void addFunction(PrLayoutTransformList* out, CssValueRun function) {
         case PrCssKeyword_Skewy: {
             PrLayoutTransformFunction f{.kind = PrLayoutTransformKind_Skew};
             f.values[0] = name == PrCssKeyword_Skewy ? 0 : float(v[0].value);
-            f.values[1] = name == PrCssKeyword_Skewy ? float(v[0].value)
-                          : name == PrCssKeyword_Skew && count >= 2 ? float(v[1].value)
-                                                                    : 0;
+            if (name == PrCssKeyword_Skewy)
+                f.values[1] = float(v[0].value);
+            else if (name == PrCssKeyword_Skew && count >= 2)
+                f.values[1] = float(v[1].value);
+            else
+                f.values[1] = 0;
             add(out, f);
             break;
         }
@@ -856,8 +857,9 @@ bool hasFraction(const PrLayoutTransformList& list) {
 // perspective() (css-transforms-2/#interpolation-of-transform-functions).
 bool hasMatrixLike(CssValueRun run) {
     for (uint32_t i = 0; i < run.count; i += run.values[i].next) {
-        PrCssKeyword name = run.values[i].kind == PrCssValueKind_Function ? cssValueKeyword(&run.values[i])
-                                                                          : PrCssKeyword_Count;
+        PrCssKeyword name = PrCssKeyword_Count;
+        if (run.values[i].kind == PrCssValueKind_Function)
+            name = cssValueKeyword(&run.values[i]);
         if (name == PrCssKeyword_Matrix || name == PrCssKeyword_Matrix3d || name == PrCssKeyword_Perspective)
             return true;
     }
@@ -958,8 +960,8 @@ bool repeatedLists(PrCssProperty property, CssValueRun a, CssValueRun b, CssValu
     CssListItems x = cssListItems(a);
     CssListItems y = cssListItems(b);
     // A list that fills CssListItems may hold more items than it lists.
-    if (x.count == 0 || y.count == 0 || x.count == y.count || x.count == countOf(x.starts)
-        || y.count == countOf(y.starts))
+    if (x.count == 0 || y.count == 0 || x.count == y.count || x.count == countOf(x.starts) ||
+            y.count == countOf(y.starts))
         return false;
     uint32_t common = x.count;
     while (common % y.count != 0)
@@ -983,15 +985,15 @@ bool repeatedLists(PrCssProperty property, CssValueRun a, CssValueRun b, CssValu
 // Returns true if `property` takes one to four values, one for each side, that repeat as the values of margin do. These
 // properties are a mask border's slices, widths and outsets.
 bool takesSides(PrCssProperty property) {
-    return property == PrCssProperty_MaskBorderSlice || property == PrCssProperty_MaskBorderWidth
-           || property == PrCssProperty_MaskBorderOutset;
+    return property == PrCssProperty_MaskBorderSlice || property == PrCssProperty_MaskBorderWidth ||
+        property == PrCssProperty_MaskBorderOutset;
 }
 
 // Returns true if `property` is a corner's radius: a horizontal radius, then a vertical one that is the horizontal one
 // if it is not given (css-backgrounds-3/#border-radius).
 bool isCorner(PrCssProperty property) {
-    return property == PrCssProperty_BorderTopLeftRadius || property == PrCssProperty_BorderTopRightRadius
-           || property == PrCssProperty_BorderBottomRightRadius || property == PrCssProperty_BorderBottomLeftRadius;
+    return property == PrCssProperty_BorderTopLeftRadius || property == PrCssProperty_BorderTopRightRadius ||
+        property == PrCssProperty_BorderBottomRightRadius || property == PrCssProperty_BorderBottomLeftRadius;
 }
 
 // Appends `run`, a corner's radius, with both of its radii.
@@ -1004,8 +1006,7 @@ void addBothRadii(CssValuePool* out, CssValueRun run) {
 // Appends `run`, a corner's radius, as its computed value serializes: one radius if its two are equal.
 void addFewestRadii(CssValuePool* out, CssValueRun run) {
     uint32_t second = run.count != 0 ? run.values[0].next : 0;
-    if (second != 0 && second < run.count
-        && cssValueRunEquals(cssValueSubtree(run, 0), cssValueSubtree(run, second)))
+    if (second != 0 && second < run.count && cssValueRunEquals(cssValueSubtree(run, 0), cssValueSubtree(run, second)))
         cssValuePoolAddRun(out, cssValueSubtree(run, 0));
     else
         cssValuePoolAddRun(out, run);
@@ -1186,8 +1187,8 @@ void addWithoutCommas(CssValuePool* out, CssValueRun run) {
 // Returns true if `property` is combined in a form of its own (normalized), and its result is written back in the form
 // of a computed value (addCombined).
 bool reshapes(PrCssProperty property) {
-    return takesSides(property) || isCorner(property) || property == PrCssProperty_Clip
-           || property == PrCssProperty_ClipPath;
+    return takesSides(property) || isCorner(property) || property == PrCssProperty_Clip ||
+        property == PrCssProperty_ClipPath;
 }
 
 // Returns true if `run` is a clip-path whose circle or ellipse is sized by an extent keyword, which combines only
@@ -1198,9 +1199,9 @@ bool hasKeywordRadius(PrCssProperty property, CssValueRun run) {
     for (uint32_t i = 0; i < run.count; i += run.values[i].next) {
         const CssValueNode* value = &run.values[i];
         PrCssKeyword name = value->kind == PrCssValueKind_Function ? cssValueKeyword(value) : PrCssKeyword_Count;
-        if ((name == PrCssKeyword_Circle || name == PrCssKeyword_Ellipse) && value->next > 1
-            && run.values[i + 1].kind == PrCssValueKind_Keyword
-            && cssValueKeyword(&run.values[i + 1]) != PrCssKeyword_At)
+        if ((name == PrCssKeyword_Circle || name == PrCssKeyword_Ellipse) && value->next > 1 &&
+                run.values[i + 1].kind == PrCssValueKind_Keyword &&
+                cssValueKeyword(&run.values[i + 1]) != PrCssKeyword_At)
             return true;
     }
     return false;
@@ -1278,8 +1279,8 @@ bool filterItemsOf(CssValueRun run, FilterItems* out) {
     if (isNone(run))
         return true;
     for (uint32_t i = 0; i < run.count; i += run.values[i].next) {
-        if (run.values[i].kind != PrCssValueKind_Function || out->count == 64
-            || cssValueKeyword(&run.values[i]) == PrCssKeyword_Url)
+        if (run.values[i].kind != PrCssValueKind_Function || out->count == 64 ||
+                cssValueKeyword(&run.values[i]) == PrCssKeyword_Url)
             return false;
         out->starts[out->count++] = i;
     }
@@ -1289,8 +1290,8 @@ bool filterItemsOf(CssValueRun run, FilterItems* out) {
 // Returns true if the filter function `name` does nothing at an amount of 1. Accumulation adds the amounts of such a
 // function one-based (filter-effects-1/#accumulation).
 bool oneBased(PrCssKeyword name) {
-    return name == PrCssKeyword_Brightness || name == PrCssKeyword_Contrast || name == PrCssKeyword_Opacity
-           || name == PrCssKeyword_Saturate;
+    return name == PrCssKeyword_Brightness || name == PrCssKeyword_Contrast || name == PrCssKeyword_Opacity ||
+        name == PrCssKeyword_Saturate;
 }
 
 // Appends the computed filter function named `name` at its initial value for interpolation
@@ -1344,8 +1345,8 @@ double filterAmount(PrCssKeyword name, double amount) {
     if (name == PrCssKeyword_HueRotate)
         return amount;
     amount = amount < 0 ? 0 : amount;
-    bool clamps = name == PrCssKeyword_Grayscale || name == PrCssKeyword_Invert || name == PrCssKeyword_Opacity
-                  || name == PrCssKeyword_Sepia;
+    bool clamps = name == PrCssKeyword_Grayscale || name == PrCssKeyword_Invert || name == PrCssKeyword_Opacity ||
+        name == PrCssKeyword_Sepia;
     return clamps && amount > 1 ? 1 : amount;
 }
 
@@ -1353,8 +1354,7 @@ double filterAmount(PrCssKeyword name, double amount) {
 // interpolated at `progress`. Otherwise it is added, one-based if the function is (filter-effects-1/#accumulation).
 // Colors interpolate or add as any color does, resolved in `colors`. Returns false, appending nothing, if the arguments
 // of the pair are not of one shape.
-bool combineFilter(CssValuePool* out, CssValueRun a, CssValueRun b, double progress, bool sum,
-                   const CssColorContext& colors) {
+bool combineFilter(CssValuePool* out, CssValueRun a, CssValueRun b, double progress, bool sum, const CssColorContext& colors) {
     PrCssKeyword name = cssValueKeyword(a.values);
     uint32_t mark = out->values.count;
     uint32_t at = cssValuePoolAdd(out, b.values[0]);
@@ -1388,8 +1388,8 @@ bool combineFilter(CssValuePool* out, CssValueRun a, CssValueRun b, double progr
                 cssValuePoolAddColorComponents(out, mixed);
             continue;
         }
-        if (x.count != 1 || y.count != 1 || x.values[0].kind != y.values[0].kind
-            || x.values[0].unit != y.values[0].unit || !cssValueIsNumeric(x.values[0].kind)) {
+        if (x.count != 1 || y.count != 1 || x.values[0].kind != y.values[0].kind ||
+                x.values[0].unit != y.values[0].unit || !cssValueIsNumeric(x.values[0].kind)) {
             out->values.count = mark;
             return false;
         }
@@ -1412,8 +1412,7 @@ bool combineFilter(CssValuePool* out, CssValueRun a, CssValueRun b, double progr
 
 // Combines two filter lists of one length whose functions pair by name, function by function, into `out`. Returns
 // false, appending nothing, if a pair does not combine.
-bool combineFilters(CssValuePool* out, CssValueRun a, CssValueRun b, double progress, bool sum,
-                    const CssColorContext& colors) {
+bool combineFilters(CssValuePool* out, CssValueRun a, CssValueRun b, double progress, bool sum, const CssColorContext& colors) {
     uint32_t mark = out->values.count;
     for (uint32_t i = 0, k = 0; i < a.count && k < b.count; i += a.values[i].next, k += b.values[k].next) {
         if (!combineFilter(out, cssValueSubtree(a, i), cssValueSubtree(b, k), progress, sum, colors)) {
@@ -1429,15 +1428,14 @@ bool combineFilters(CssValuePool* out, CssValueRun a, CssValueRun b, double prog
 // Appends the filter list at `progress` between `from` and `to` (filter-effects-1/#interpolation-of-filters), or
 // returns false if the lists interpolate only discretely, appending nothing.
 bool addFiltersBetween(CssValuePool* PR_NULLABLE out, CssValueRun from, CssValueRun to, double progress,
-                       const CssColorContext& colors) {
+        const CssColorContext& colors) {
     CssValuePool a{};
     CssValuePool b{};
     CssValuePool scratch{};
     bool paired = paddedFilters(from, to, &a, &b);
-    bool combined = paired
-                    && combineFilters(out != nullptr ? out : &scratch,
-                                      cssValuePoolRun(&a, CssValueSpan{0, a.values.count}),
-                                      cssValuePoolRun(&b, CssValueSpan{0, b.values.count}), progress, false, colors);
+    bool combined = paired && combineFilters(out != nullptr ? out : &scratch,
+        cssValuePoolRun(&a, CssValueSpan{0, a.values.count}),
+        cssValuePoolRun(&b, CssValueSpan{0, b.values.count}), progress, false, colors);
     cssValuePoolReset(&a);
     cssValuePoolReset(&b);
     cssValuePoolReset(&scratch);
@@ -1448,7 +1446,7 @@ bool addFiltersBetween(CssValuePool* PR_NULLABLE out, CssValueRun from, CssValue
 // appends the value's list to the underlying list. Accumulation combines the lists function by function if they pair as
 // interpolation pairs them, and otherwise gives the value, as replace does.
 void addFiltersComposite(CssValuePool* out, CssValueRun underlying, CssValueRun value, bool accumulate,
-                         const CssColorContext& colors) {
+        const CssColorContext& colors) {
     if (!accumulate) {
         if (isNone(underlying) || isNone(value)) {
             cssValuePoolAddRun(out, isNone(value) ? underlying : value);
@@ -1460,9 +1458,9 @@ void addFiltersComposite(CssValuePool* out, CssValueRun underlying, CssValueRun 
     }
     CssValuePool a{};
     CssValuePool b{};
-    bool combined = paddedFilters(underlying, value, &a, &b)
-                    && combineFilters(out, cssValuePoolRun(&a, CssValueSpan{0, a.values.count}),
-                                      cssValuePoolRun(&b, CssValueSpan{0, b.values.count}), 0, true, colors);
+    bool combined = paddedFilters(underlying, value, &a, &b) &&
+        combineFilters(out, cssValuePoolRun(&a, CssValueSpan{0, a.values.count}),
+            cssValuePoolRun(&b, CssValueSpan{0, b.values.count}), 0, true, colors);
     if (!combined)
         cssValuePoolAddRun(out, value);
     cssValuePoolReset(&a);
@@ -1474,9 +1472,9 @@ void addFiltersComposite(CssValuePool* out, CssValueRun underlying, CssValueRun 
 
 // Returns true if `property` takes a list of <image>s, or one, whose filter() images interpolate.
 bool isImageList(PrCssProperty property) {
-    return property == PrCssProperty_BackgroundImage || property == PrCssProperty_MaskImage
-           || property == PrCssProperty_ListStyleImage || property == PrCssProperty_BorderImageSource
-           || property == PrCssProperty_MaskBorderSource;
+    return property == PrCssProperty_BackgroundImage || property == PrCssProperty_MaskImage ||
+        property == PrCssProperty_ListStyleImage || property == PrCssProperty_BorderImageSource ||
+        property == PrCssProperty_MaskBorderSource;
 }
 
 // The parts of a computed filter() (filter-effects-1/#FilterCSSImageValue): its input and its filter list.
@@ -1487,8 +1485,8 @@ struct FilterImage {
 
 // Writes the parts of `image` to `out` if it is a filter() and nothing else. Returns false otherwise.
 bool filterImageOf(CssValueRun image, FilterImage* out) {
-    if (image.count == 0 || image.values[0].next != image.count
-        || !cssValueIsFunction(image.values, PrCssKeyword_Filter))
+    if (image.count == 0 || image.values[0].next != image.count ||
+            !cssValueIsFunction(image.values, PrCssKeyword_Filter))
         return false;
     uint32_t comma = 1;
     while (comma < image.count && !cssValueIsLiteral(&image.values[comma], ','))
@@ -1506,7 +1504,7 @@ bool filterImageOf(CssValueRun image, FilterImage* out) {
 // be equal. Any other pair is a generic image, which interpolates as cross-fade() would
 // (css-images-4/#interpolating-images), and the engine draws no cross-fade(), so the pair is discrete.
 bool addImagesBetween(CssValuePool* PR_NULLABLE out, CssValueRun from, CssValueRun to, double progress,
-                      const CssColorContext& colors) {
+        const CssColorContext& colors) {
     CssListItems a = cssListItems(from);
     CssListItems b = cssListItems(to);
     if (a.count != b.count || a.count == 0)
@@ -1519,8 +1517,8 @@ bool addImagesBetween(CssValuePool* PR_NULLABLE out, CssValueRun from, CssValueR
             continue;
         FilterImage p{};
         FilterImage q{};
-        if (!filterImageOf(x, &p) || !filterImageOf(y, &q) || !cssValueRunEquals(p.input, q.input)
-            || !addFiltersBetween(nullptr, p.filters, q.filters, 0, colors))
+        if (!filterImageOf(x, &p) || !filterImageOf(y, &q) || !cssValueRunEquals(p.input, q.input) ||
+                !addFiltersBetween(nullptr, p.filters, q.filters, 0, colors))
             return false;
         filtered = true;
     }
@@ -1579,8 +1577,8 @@ bool trackItemsOf(CssValueRun run, TrackItems* out) {
             i = end;
             continue;
         }
-        if (cssValueIsKeyword(value, PrCssKeyword_None) || cssValueIsKeyword(value, PrCssKeyword_Subgrid)
-            || out->count == TrackItems::kCapacity)
+        if (cssValueIsKeyword(value, PrCssKeyword_None) || cssValueIsKeyword(value, PrCssKeyword_Subgrid) ||
+                out->count == TrackItems::kCapacity)
             return false;
         out->tracks[out->count++] = CssValueRun{value, value->next, run.text};
         i += value->next;
@@ -1600,8 +1598,10 @@ Repetition repetitionOf(CssValueRun track) {
     uint32_t list = args.count != 0 ? args.values[0].next : 0;
     if (list < args.count && cssValueIsLiteral(&args.values[list], ','))
         list += args.values[list].next;
-    return Repetition{.count = CssValueRun{args.values, list, args.text},
-                      .list = CssValueRun{args.values + list, args.count - list, args.text}};
+    return Repetition{
+        .count = CssValueRun{args.values, list, args.text},
+        .list = CssValueRun{args.values + list, args.count - list, args.text},
+    };
 }
 
 // Returns true if the items `a` and `b` combine item by item (css-grid-1/#repeat-interpolation): there are as many of
@@ -1620,8 +1620,8 @@ bool itemsCombine(const TrackItems& a, const TrackItems& b) {
         Repetition q = repetitionOf(b.tracks[k]);
         TrackItems x;
         TrackItems y;
-        if (!cssValueRunEquals(p.count, q.count) || !trackItemsOf(p.list, &x) || !trackItemsOf(q.list, &y)
-            || !itemsCombine(x, y))
+        if (!cssValueRunEquals(p.count, q.count) || !trackItemsOf(p.list, &x) || !trackItemsOf(q.list, &y) ||
+                !itemsCombine(x, y))
             return false;
     }
     return true;
@@ -1658,10 +1658,10 @@ void addBreadths(CssValuePool* out, const TrackOp& op, CssValueRun a, CssValueRu
     CssValuePool x{};
     CssValuePool y{};
     CssValuePool mixed{};
-    if (isLengthPercentage(a, 0) && isLengthPercentage(b, 0) && cssMathToSum(a, 0, kUnits, 2, &x)
-        && cssMathToSum(b, 0, kUnits, 2, &y)) {
+    if (isLengthPercentage(a, 0) && isLengthPercentage(b, 0) && cssMathToSum(a, 0, kUnits, 2, &x) &&
+            cssMathToSum(b, 0, kUnits, 2, &y)) {
         combined(&mixed, cssValuePoolRun(&x, CssValueSpan{0, x.values.count}),
-                 cssValuePoolRun(&y, CssValueSpan{0, y.values.count}));
+            cssValuePoolRun(&y, CssValueSpan{0, y.values.count}));
         addSimplified(out, cssValuePoolRun(&mixed, CssValueSpan{0, mixed.values.count}));
     } else {
         cssValuePoolAddRun(out, op.first ? a : b);
@@ -1730,16 +1730,15 @@ bool interpolable(PrCssProperty property, CssValueRun from, CssValueRun to, cons
     if (cssValueRunEquals(from, to))
         return false;
     if (property == PrCssProperty_Visibility)
-        return (from.count == 1 && cssValueIsKeyword(from.values, PrCssKeyword_Visible))
-               || (to.count == 1 && cssValueIsKeyword(to.values, PrCssKeyword_Visible));
+        return (from.count == 1 && cssValueIsKeyword(from.values, PrCssKeyword_Visible)) ||
+            (to.count == 1 && cssValueIsKeyword(to.values, PrCssKeyword_Visible));
     if (bitsetTest(kCssPropertyDiscrete, property))
         return false;
     if (cssIsCornerShape(property))
         return true;
     PrColor a{};
     PrColor b{};
-    if (isOneValue(from) && isOneValue(to) && cssResolveColor(from, 0, colors, &a)
-        && cssResolveColor(to, 0, colors, &b))
+    if (isOneValue(from) && isOneValue(to) && cssResolveColor(from, 0, colors, &a) && cssResolveColor(to, 0, colors, &b))
         return true;
     if (property == PrCssProperty_AspectRatio)
         return sameShape(from, to) && ratioOf(from) > 0 && ratioOf(to) > 0;
@@ -1751,21 +1750,23 @@ bool interpolable(PrCssProperty property, CssValueRun from, CssValueRun to, cons
     CssValuePool y{};
     if (repeatedLists(property, from, to, &x, &y)) {
         bool repeated = interpolable(property, cssValuePoolRun(&x, CssValueSpan{0, x.values.count}),
-                                     cssValuePoolRun(&y, CssValueSpan{0, y.values.count}), colors);
+            cssValuePoolRun(&y, CssValueSpan{0, y.values.count}), colors);
         cssValuePoolReset(&x);
         cssValuePoolReset(&y);
         return repeated;
     }
-    bool shaped = property == PrCssProperty_Transform
-                      ? paddedTransforms(from, to, &x, &y) || addTransformsBetween(nullptr, from, to, 0)
-                      : mixedShapes(from, to, &x, &y);
+    bool shaped;
+    if (property == PrCssProperty_Transform)
+        shaped = paddedTransforms(from, to, &x, &y) || addTransformsBetween(nullptr, from, to, 0);
+    else
+        shaped = mixedShapes(from, to, &x, &y);
     cssValuePoolReset(&x);
     cssValuePoolReset(&y);
     return shaped;
 }
 
 void interpolate(CssValuePool* out, PrCssProperty property, CssValueRun from, CssValueRun to, double progress,
-                 const CssColorContext& colors) {
+        const CssColorContext& colors) {
     // Visibility is visible between two values if either of them is visible (web-animations-1/#animating-visibility).
     if (property == PrCssProperty_Visibility) {
         bool fromVisible = from.count == 1 && cssValueIsKeyword(from.values, PrCssKeyword_Visible);
@@ -1781,22 +1782,22 @@ void interpolate(CssValuePool* out, PrCssProperty property, CssValueRun from, Cs
     }
     CssColor a{};
     CssColor b{};
-    if (isOneValue(from) && isOneValue(to) && cssResolveColorComponents(from, 0, colors, &a)
-        && cssResolveColorComponents(to, 0, colors, &b)
-        && (cssIsColorProperty(property) || from.values[0].kind == PrCssValueKind_Color
-            || to.values[0].kind == PrCssValueKind_Color)) {
+    if (isOneValue(from) && isOneValue(to) && cssResolveColorComponents(from, 0, colors, &a) &&
+            cssResolveColorComponents(to, 0, colors, &b) &&
+            (cssIsColorProperty(property) || from.values[0].kind == PrCssValueKind_Color ||
+                to.values[0].kind == PrCssValueKind_Color)) {
         // Two legacy colors interpolate in sRGB and stay legacy, and any others in Oklab
         // (css-color-4/#interpolation-space). The result keeps its precision and any component outside its gamut, which
         // serialization rounds and clamps. An extrapolated alpha is clamped to [0, 1].
         bool legacy = cssColorsAreLegacy(from.values, 0, from.count) && cssColorsAreLegacy(to.values, 0, to.count);
         CssColor mixed = cssColorInterpolate(a, b, progress, legacy ? PrColorSpace_Srgb : PrColorSpace_Oklab,
-                                             PrColorHueMethod_Shorter);
+            PrColorHueMethod_Shorter);
         mixed.alpha = mixed.alpha < 0 ? 0 : mixed.alpha > 1 ? 1 : mixed.alpha;
         // oklab() clamps its lightness to [0, 1], which is right for a mix that extrapolates past its colors. A mix
         // between colors brighter than SDR white, which resolved for an HDR display, keeps its range in XYZ instead.
         constexpr double kSdrLightness = 1 + 1e-6;
-        if (!legacy && (cssColorConvert(a, PrColorSpace_Oklab).c[0] > kSdrLightness
-                        || cssColorConvert(b, PrColorSpace_Oklab).c[0] > kSdrLightness))
+        if (!legacy && (cssColorConvert(a, PrColorSpace_Oklab).c[0] > kSdrLightness ||
+                cssColorConvert(b, PrColorSpace_Oklab).c[0] > kSdrLightness))
             mixed = cssColorConvert(mixed, PrColorSpace_XyzD65);
         if (legacy)
             cssValuePoolAddLegacyColor(out, mixed);
@@ -1817,7 +1818,7 @@ void interpolate(CssValuePool* out, PrCssProperty property, CssValueRun from, Cs
         CssValuePool y{};
         if (!matrixLike && paddedTransforms(from, to, &x, &y))
             addBetween(out, property, cssValuePoolRun(&x, CssValueSpan{0, x.values.count}),
-                       cssValuePoolRun(&y, CssValueSpan{0, y.values.count}), progress);
+                cssValuePoolRun(&y, CssValueSpan{0, y.values.count}), progress);
         else if (!addTransformsBetween(out, from, to, progress))
             cssValuePoolAddRun(out, progress < 0.5 ? from : to);
         cssValuePoolReset(&x);
@@ -1859,7 +1860,7 @@ void interpolate(CssValuePool* out, PrCssProperty property, CssValueRun from, Cs
     CssValuePool mixed{};
     if (mixedShapes(from, to, &x, &y)) {
         addBetween(&mixed, property, cssValuePoolRun(&x, CssValueSpan{0, x.values.count}),
-                   cssValuePoolRun(&y, CssValueSpan{0, y.values.count}), progress);
+            cssValuePoolRun(&y, CssValueSpan{0, y.values.count}), progress);
         addSimplified(out, cssValuePoolRun(&mixed, CssValueSpan{0, mixed.values.count}));
     } else {
         cssValuePoolAddRun(out, progress < 0.5 ? from : to);
@@ -1870,10 +1871,10 @@ void interpolate(CssValuePool* out, PrCssProperty property, CssValueRun from, Cs
 }
 
 void combine(CssValuePool* out, PrCssProperty property, CssValueRun underlying, CssValueRun value,
-             CssComposite composite, const CssColorContext& colors) {
+        CssComposite composite, const CssColorContext& colors) {
     // A dash array does not add, so it composites as it replaces (SVG2/painting.html#StrokeDashing).
-    if (composite == CssComposite_Replace || property == PrCssProperty_Visibility
-        || property == PrCssProperty_StrokeDasharray || bitsetTest(kCssPropertyDiscrete, property)) {
+    if (composite == CssComposite_Replace || property == PrCssProperty_Visibility ||
+            property == PrCssProperty_StrokeDasharray || bitsetTest(kCssPropertyDiscrete, property)) {
         cssValuePoolAddRun(out, value);
         return;
     }
@@ -1881,10 +1882,10 @@ void combine(CssValuePool* out, PrCssProperty property, CssValueRun underlying, 
     // Colors add premultiplied, with their alpha clamped to [0, 1].
     CssColor a{};
     CssColor b{};
-    if (isOneValue(underlying) && isOneValue(value) && cssResolveColorComponents(underlying, 0, colors, &a)
-        && cssResolveColorComponents(value, 0, colors, &b)) {
-        bool legacy = cssColorsAreLegacy(underlying.values, 0, underlying.count)
-                      && cssColorsAreLegacy(value.values, 0, value.count);
+    if (isOneValue(underlying) && isOneValue(value) && cssResolveColorComponents(underlying, 0, colors, &a) &&
+            cssResolveColorComponents(value, 0, colors, &b)) {
+        bool legacy = cssColorsAreLegacy(underlying.values, 0, underlying.count) &&
+            cssColorsAreLegacy(value.values, 0, value.count);
         PrColorSpace space = legacy ? PrColorSpace_Srgb : PrColorSpace_Oklab;
         CssColor x = cssColorConvert(a, space);
         CssColor y = cssColorConvert(b, space);
@@ -1974,7 +1975,7 @@ void combine(CssValuePool* out, PrCssProperty property, CssValueRun underlying, 
     CssValuePool mixed{};
     if (mixedShapes(underlying, value, &x, &y)) {
         addSum(&mixed, property, cssValuePoolRun(&x, CssValueSpan{0, x.values.count}),
-               cssValuePoolRun(&y, CssValueSpan{0, y.values.count}), false);
+            cssValuePoolRun(&y, CssValueSpan{0, y.values.count}), false);
         addSimplified(out, cssValuePoolRun(&mixed, CssValueSpan{0, mixed.values.count}));
     } else {
         cssValuePoolAddRun(out, value);
@@ -2058,11 +2059,13 @@ PrLayoutEasing cssEasing(CssValueRun easing) {
             break;
         case PrCssKeyword_Steps:
             if (count >= 1 && numbers[0] >= 1) {
-                PrLayoutStepPosition position = keyword == PrCssKeyword_JumpStart || keyword == PrCssKeyword_Start
-                                                    ? PrLayoutStepPosition_JumpStart
-                                                : keyword == PrCssKeyword_JumpBoth ? PrLayoutStepPosition_JumpBoth
-                                                : keyword == PrCssKeyword_JumpNone ? PrLayoutStepPosition_JumpNone
-                                                                                   : PrLayoutStepPosition_JumpEnd;
+                PrLayoutStepPosition position = PrLayoutStepPosition_JumpEnd;
+                if (keyword == PrCssKeyword_JumpStart || keyword == PrCssKeyword_Start)
+                    position = PrLayoutStepPosition_JumpStart;
+                else if (keyword == PrCssKeyword_JumpBoth)
+                    position = PrLayoutStepPosition_JumpBoth;
+                else if (keyword == PrCssKeyword_JumpNone)
+                    position = PrLayoutStepPosition_JumpNone;
                 steps(uint32_t(numbers[0]), position);
             }
             break;
@@ -2073,20 +2076,20 @@ PrLayoutEasing cssEasing(CssValueRun easing) {
 }
 
 PrLayoutTransformList cssTransformFunctions(CssValueRun translate, CssValueRun rotate, CssValueRun scale,
-                                            CssValueRun transform) {
+        CssValueRun transform) {
     PrLayoutTransformList out{};
     TransformArgument v[4];
     uint32_t count = transformArguments(translate, v, 3);
     if (count != 0 && !v[0].keyword)
         add(&out, translation(v[0].value, v[0].fraction, count >= 2 ? v[1].value : 0, count >= 2 ? v[1].fraction : 0,
-                              count >= 3 ? v[2].value : 0));
+            count >= 3 ? v[2].value : 0));
     count = transformArguments(rotate, v, 4);
     if (count == 1 && !v[0].keyword) {
         add(&out, rotation(0, 0, 1, v[0].value));
     } else if (count == 2 && v[0].keyword) {
         PrCssKeyword axis = cssValueKeyword(rotate.values);
-        add(&out, rotation(axis == PrCssKeyword_X ? 1 : 0, axis == PrCssKeyword_Y ? 1 : 0,
-                           axis == PrCssKeyword_Z ? 1 : 0, v[1].value));
+        add(&out, rotation(axis == PrCssKeyword_X ? 1 : 0, axis == PrCssKeyword_Y ? 1 : 0, axis == PrCssKeyword_Z ? 1 : 0,
+            v[1].value));
     } else if (count == 4) {
         add(&out, rotation(v[0].value, v[1].value, v[2].value, v[3].value));
     }
@@ -2123,7 +2126,7 @@ bool cssInterpolable(PrCssProperty property, CssValueRun from, CssValueRun to, c
 }
 
 void cssInterpolate(CssValuePool* out, PrCssProperty property, CssValueRun from, CssValueRun to, double progress,
-                    const CssColorContext& colors) {
+        const CssColorContext& colors) {
     if (cssIsCornerShape(property)) {
         cssCornerShapeInterpolate(out, from, to, progress);
         return;
@@ -2178,7 +2181,7 @@ CssComposite cssCompositeFromValue(CssValueRun item) {
 }
 
 void cssComposite(CssValuePool* out, PrCssProperty property, CssValueRun underlying, CssValueRun value,
-                  CssComposite composite, const CssColorContext& colors) {
+        CssComposite composite, const CssColorContext& colors) {
     if (isFilterList(property)) {
         if (composite == CssComposite_Replace)
             cssValuePoolAddRun(out, value);
@@ -2207,8 +2210,7 @@ void cssComposite(CssValuePool* out, PrCssProperty property, CssValueRun underly
     CssValuePool x{};
     CssValuePool y{};
     CssValuePool combined{};
-    combine(&combined, property, normalized(property, underlying, &x), normalized(property, value, &y), composite,
-            colors);
+    combine(&combined, property, normalized(property, underlying, &x), normalized(property, value, &y), composite, colors);
     addCombined(out, property, cssValuePoolRun(&combined, CssValueSpan{0, combined.values.count}));
     cssValuePoolReset(&x);
     cssValuePoolReset(&y);

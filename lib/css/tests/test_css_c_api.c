@@ -30,7 +30,7 @@ static PrStringView constructed(PrStringView failed) {
     prCssStyleSheetReplaceSync(sheet, PR_SV("a {} b {}"));
 
     failed = check(failed, prCssRuleListLength(prCssStyleSheetCssRules(sheet)) == 2,
-                   "a constructed sheet holds the two rules it was replaced with");
+        "a constructed sheet holds the two rules it was replaced with");
     prCssStyleSheetRelease(sheet);
     prCssStyleSheetRelease(NULL);
     return failed;
@@ -43,13 +43,11 @@ static PrStringView declarations(PrStringView failed, PrCssStyleDeclaration* sty
     PrString value = prCssStyleDeclarationGetPropertyValue(style, &color);
     PrString removed = prStringNull();
 
-    failed = check(failed, prCssStyleDeclarationLength(style) == 1,
-                   "the declarations hold one property");
+    failed = check(failed, prCssStyleDeclarationLength(style) == 1, "the declarations hold one property");
     failed = check(failed, prStringView(&value).size == 3, "color is red");
 
     prCssStyleDeclarationSetProperty(style, &width, PR_SV("1px"), false);
-    failed =
-        check(failed, prCssStyleDeclarationLength(style) == 2, "setting width adds a property");
+    failed = check(failed, prCssStyleDeclarationLength(style) == 2, "setting width adds a property");
 
     prCssStyleDeclarationRemoveProperty(style, &width, &removed);
     failed = check(failed, prStringView(&removed).size == 3, "removing width answers 1px");
@@ -75,10 +73,8 @@ PrStringView prTestCApi(PrCssStyleDeclaration* style) {
     failed = check(failed, size == 3, "a snowman encodes to 3 bytes");
     failed = check(failed, prStringIsEmpty(&copy), "a string replaced with the empty one is empty");
     failed = check(failed, prStringIsNull(&none), "the null string is null");
-    failed =
-        check(failed, prStatusName(PrStatus_OutOfRange).size == 10, "a status is named for itself");
-    failed =
-        check(failed, (uint32_t)(color.b * 4.0f) == 2, "an 8-bit channel is a fraction of 255");
+    failed = check(failed, prStatusName(PrStatus_OutOfRange).size == 10, "a status is named for itself");
+    failed = check(failed, (uint32_t)(color.b * 4.0f) == 2, "an 8-bit channel is a fraction of 255");
     failed = declarations(failed, style);
     failed = constructed(failed);
 

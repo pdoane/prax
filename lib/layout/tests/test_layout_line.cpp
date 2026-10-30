@@ -90,8 +90,7 @@ struct Stage {
 
     // Creates an element under `parent` styled by `box`, in `withFont` if it is given, and otherwise in the stage's
     // font.
-    PrLayoutNode add(PrLayoutNode parent, const PrLayoutBoxStyle& box,
-                     const PrLayoutFontStyle* PR_NULLABLE withFont = nullptr) {
+    PrLayoutNode add(PrLayoutNode parent, const PrLayoutBoxStyle& box, const PrLayoutFontStyle* PR_NULLABLE withFont = nullptr) {
         return f.element(parent, box, nullptr, nullptr, withFont != nullptr ? withFont : &style);
     }
     PrLayoutNode text(PrLayoutNode parent, const char* value) {
@@ -151,8 +150,7 @@ double arimoBaseline(float PrFontMetrics::*name, float size) {
 }
 
 // Adds the test font `file` to the fixture's set as family `family`, serving the code points of `ranges` if given.
-void addFace(Fixture& f, const char* file, const char* family, const PrFontCodePointRange* PR_NULLABLE ranges,
-             uint32_t count) {
+void addFace(Fixture& f, const char* file, const char* family, const PrFontCodePointRange* PR_NULLABLE ranges, uint32_t count) {
     std::string path = std::string(PR_FONTS_DIR) + "/" + file;
     const PrFont* PR_NULLABLE loaded = nullptr;
     REQUIRE(prFontCreateFromFile(path, 0, nullptr, &loaded) == PrStatus_Ok);
@@ -185,7 +183,7 @@ PrLayoutFontStyle upperAndFallback(Fixture& f, float size, float lineHeight) {
 using namespace pr_impl;
 
 TEST_CASE("a line's strut sets its baseline, with the font's metrics in whole target pixels and the half-leading "
-          "above floored to one") {
+        "above floored to one") {
     Stage s;
     s.text(s.stage, "Xx");
     PrLayoutNode box = s.add(s.stage, square());
@@ -268,8 +266,7 @@ TEST_CASE("text-top, text-bottom and middle align with the parent's content area
         PrLayoutBoxStyle topBox = aligned(prLayoutBoxStyleDefault(), PrLayoutAlignmentBaseline_TextTop);
         PrLayoutNode top = s.add(s.stage, topBox, &small);
         s.text(top, "x");
-        PrLayoutNode bottom =
-            s.add(s.stage, aligned(prLayoutBoxStyleDefault(), PrLayoutAlignmentBaseline_TextBottom), &small);
+        PrLayoutNode bottom = s.add(s.stage, aligned(prLayoutBoxStyleDefault(), PrLayoutAlignmentBaseline_TextBottom), &small);
         s.text(bottom, "x");
         s.layout();
         CHECK(s.top(top) == 18);
@@ -358,9 +355,11 @@ TEST_CASE("a length raises a box, and a percentage of its own line height") {
     SUBCASE("a calculation") {
         Stage s;
         s.text(s.stage, "Xx ");
-        const PrLayoutCalcNode nodes[] = {prLayoutCalcOperation(PrLayoutCalcOp_Sum, 2),
-                                          prLayoutCalcLeaf(PrLayoutCalcLeaf_Percent, 50),
-                                          prLayoutCalcLeaf(PrLayoutCalcLeaf_Px, 5)};
+        const PrLayoutCalcNode nodes[] = {
+            prLayoutCalcOperation(PrLayoutCalcOp_Sum, 2),
+            prLayoutCalcLeaf(PrLayoutCalcLeaf_Percent, 50),
+            prLayoutCalcLeaf(PrLayoutCalcLeaf_Px, 5),
+        };
         PrLayoutLength calc = prLayoutLengthIntern(s.f.tree, nodes, 3);
         PrLayoutNode box = s.add(s.stage, aligned(square(), prLayoutBaselineShiftLength(calc)));
         s.layout();
@@ -537,8 +536,7 @@ TEST_CASE("a change of vertical-align moves the box and lays out nothing inside 
     CHECK(s.top(inner) == 30);
     PrLayoutFontStyle text = font(20, 40);
     prLayoutNodeSetStyle(s.f.tree, outer,
-                         s.f.style(aligned(inlineBlock(30, 30), keyword(PrLayoutKeyword_Bottom)), nullptr, nullptr,
-                                   &text));
+        s.f.style(aligned(inlineBlock(30, 30), keyword(PrLayoutKeyword_Bottom)), nullptr, nullptr, &text));
     s.layout();
     CHECK(s.top(outer) == 43);
     CHECK(s.top(inner) == 43);
@@ -596,7 +594,7 @@ TEST_CASE("alignment-baseline aligns a box's baseline of each name with its pare
         Stage s;
         s.text(s.stage, "Xx ");
         PrLayoutNode box = s.add(s.stage, aligned(aligned(square(), PrLayoutAlignmentBaseline_TextTop),
-                                                  prLayoutBaselineShiftPx(10)));
+            prLayoutBaselineShiftPx(10)));
         s.layout();
         CHECK(s.baseline() == 28);
         CHECK(s.top(box) == 0);
@@ -821,7 +819,7 @@ TEST_CASE("a clamped set's named baselines are each clamped, through nested scro
         Stage s;
         s.text(s.stage, "Xx ");
         PrLayoutNode box = s.add(s.stage, aligned(sourced(inlineBlock(-1, -1), PrLayoutBaselineSource_First),
-                                                  PrLayoutAlignmentBaseline_Hanging));
+            PrLayoutAlignmentBaseline_Hanging));
         PrLayoutFontStyle short4 = font(20, 4);
         s.text(s.add(box, clipping(block(30)), &short4), "one");
         s.layout();
@@ -886,8 +884,7 @@ TEST_CASE("a line of normal height is as tall as the faces its text uses on it")
     }
 }
 
-TEST_CASE("a box aligned by its leading box takes the faces its text uses on the line, and its descendants move "
-          "with it") {
+TEST_CASE("a box aligned by its leading box takes the faces its text uses on the line, and its descendants move with it") {
     auto normal = [](Fixture& f) { return upperAndFallback(f, 20, -1); };
     auto large = [](Stage& s) {
         PrLayoutFontStyle text = s.style;
@@ -1035,10 +1032,10 @@ TEST_CASE("a phantom line is zero high: no text, atomic inline, forced break or 
     };
     // Each edge on its own, including a non-zero percentage of a zero base.
     for (Case c : {Case{"padding-top", edges(prLayoutLengthPx(0), prLayoutLengthPx(1), PrRectSide_Top), 0},
-                   Case{"padding-left", edges(prLayoutLengthPx(0), prLayoutLengthPx(1), PrRectSide_Left), 40},
-                   Case{"padding-right", edges(prLayoutLengthPx(0), prLayoutLengthPx(1), PrRectSide_Right), 40},
-                   Case{"edges that cancel", edges(prLayoutLengthPx(-1), prLayoutLengthPx(1), PrRectSide_Left), 40},
-                   Case{"a percentage", edges(prLayoutLengthPx(0), prLayoutLengthPercent(10), PrRectSide_Left), 40}}) {
+        Case{"padding-left", edges(prLayoutLengthPx(0), prLayoutLengthPx(1), PrRectSide_Left), 40},
+                Case{"padding-right", edges(prLayoutLengthPx(0), prLayoutLengthPx(1), PrRectSide_Right), 40},
+                Case{"edges that cancel", edges(prLayoutLengthPx(-1), prLayoutLengthPx(1), PrRectSide_Left), 40},
+                Case{"a percentage", edges(prLayoutLengthPx(0), prLayoutLengthPercent(10), PrRectSide_Left), 40}}) {
         CAPTURE(c.what);
         Stage s(Width{200, false});
         s.add(s.stage, c.span);
@@ -1142,7 +1139,7 @@ TEST_CASE("lines may break before and after an atomic inline, but beside GL, WJ 
     // Two 80px inline-blocks in 100px, with no marker, whose own opportunity would break first. Each case gives the
     // second's top.
     for (Case c : {Case{" ", 57}, Case{"⁠", 17}, Case{" ", 17}, Case{"‍", 17}, Case{"", 57},
-                   Case{",", 57}}) {
+        Case{",", 57}}) {
         CAPTURE(c.between);
         Stage s(Width{100, false});
         s.add(s.stage, inlineBlock(80, 10));

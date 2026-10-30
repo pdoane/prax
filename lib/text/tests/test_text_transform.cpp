@@ -15,7 +15,7 @@ namespace {
 // Returns the bytes [start, end) of `text` transformed by `transform`, with the rest of `text` as context. By default
 // the run is all of `text`.
 std::string transformed(const std::string& text, PrTextTransform transform, PrLocale locale = 0, size_t start = 0,
-                        size_t end = std::string::npos) {
+        size_t end = std::string::npos) {
     PrTextTransformRun run{
         .text = {text.data(), text.size()},
         .start = start,
@@ -78,8 +78,7 @@ TEST_CASE("uppercase and lowercase use the full and conditional mappings, tailor
 
 TEST_CASE("full-width and full-size-kana apply after the case transform") {
     CHECK(transformed("abc", PrTextTransform(PrTextTransform_Uppercase | PrTextTransformFlag_FullWidth)) == "ＡＢＣ");
-    CHECK(transformed("ｧｨｩ", PrTextTransform(PrTextTransformFlag_FullWidth | PrTextTransformFlag_FullSizeKana))
-          == "アイウ");
+    CHECK(transformed("ｧｨｩ", PrTextTransform(PrTextTransformFlag_FullWidth | PrTextTransformFlag_FullSizeKana)) == "アイウ");
     CHECK(transformed("A B", PrTextTransformFlag_FullWidth) == "Ａ　Ｂ");
     CHECK(transformed("AéB", PrTextTransformFlag_FullWidth) == "ＡéＢ");
     CHECK(transformed("ぁゃっ", PrTextTransformFlag_FullSizeKana) == "あやつ");

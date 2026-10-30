@@ -124,8 +124,7 @@ PR_FORCE_INLINE Word atomicMsvcCompareExchange(Word* target, Word expected, Word
         const char compare = __builtin_bit_cast(char, expected);
 #if defined(_M_ARM64) || defined(_M_ARM64EC)
         if constexpr (Relaxed)
-            return __builtin_bit_cast(Word,
-                                      _InterlockedCompareExchange8_nf(address, wanted, compare));
+            return __builtin_bit_cast(Word, _InterlockedCompareExchange8_nf(address, wanted, compare));
 #endif
         return __builtin_bit_cast(Word, _InterlockedCompareExchange8(address, wanted, compare));
     } else if constexpr (sizeof(Word) == 2) {
@@ -134,8 +133,7 @@ PR_FORCE_INLINE Word atomicMsvcCompareExchange(Word* target, Word expected, Word
         const short compare = __builtin_bit_cast(short, expected);
 #if defined(_M_ARM64) || defined(_M_ARM64EC)
         if constexpr (Relaxed)
-            return __builtin_bit_cast(Word,
-                                      _InterlockedCompareExchange16_nf(address, wanted, compare));
+            return __builtin_bit_cast(Word, _InterlockedCompareExchange16_nf(address, wanted, compare));
 #endif
         return __builtin_bit_cast(Word, _InterlockedCompareExchange16(address, wanted, compare));
     } else if constexpr (sizeof(Word) == 4) {
@@ -144,8 +142,7 @@ PR_FORCE_INLINE Word atomicMsvcCompareExchange(Word* target, Word expected, Word
         const long compare = __builtin_bit_cast(long, expected);
 #if defined(_M_ARM64) || defined(_M_ARM64EC)
         if constexpr (Relaxed)
-            return __builtin_bit_cast(Word,
-                                      _InterlockedCompareExchange_nf(address, wanted, compare));
+            return __builtin_bit_cast(Word, _InterlockedCompareExchange_nf(address, wanted, compare));
 #endif
         return __builtin_bit_cast(Word, _InterlockedCompareExchange(address, wanted, compare));
     } else if constexpr (sizeof(Word) == 8) {
@@ -154,8 +151,7 @@ PR_FORCE_INLINE Word atomicMsvcCompareExchange(Word* target, Word expected, Word
         const __int64 compare = __builtin_bit_cast(__int64, expected);
 #if defined(_M_ARM64) || defined(_M_ARM64EC)
         if constexpr (Relaxed)
-            return __builtin_bit_cast(Word,
-                                      _InterlockedCompareExchange64_nf(address, wanted, compare));
+            return __builtin_bit_cast(Word, _InterlockedCompareExchange64_nf(address, wanted, compare));
 #endif
         return __builtin_bit_cast(Word, _InterlockedCompareExchange64(address, wanted, compare));
     }
@@ -171,30 +167,25 @@ PR_FORCE_INLINE Word atomicMsvcLoad(const Word* target) {
         if constexpr (!Relaxed)
             return Word(__load_acquire8(reinterpret_cast<const volatile unsigned char*>(target)));
 #endif
-        value = __builtin_bit_cast(
-            Word, __iso_volatile_load8(reinterpret_cast<const volatile char*>(target)));
+        value = __builtin_bit_cast(Word, __iso_volatile_load8(reinterpret_cast<const volatile char*>(target)));
     } else if constexpr (sizeof(Word) == 2) {
 #if !defined(__clang__)
         if constexpr (!Relaxed)
             return Word(__load_acquire16(reinterpret_cast<const volatile unsigned short*>(target)));
 #endif
-        value = __builtin_bit_cast(
-            Word, __iso_volatile_load16(reinterpret_cast<const volatile short*>(target)));
+        value = __builtin_bit_cast(Word, __iso_volatile_load16(reinterpret_cast<const volatile short*>(target)));
     } else if constexpr (sizeof(Word) == 4) {
 #if !defined(__clang__)
         if constexpr (!Relaxed)
             return Word(__load_acquire32(reinterpret_cast<const volatile unsigned int*>(target)));
 #endif
-        value = __builtin_bit_cast(
-            Word, __iso_volatile_load32(reinterpret_cast<const volatile int*>(target)));
+        value = __builtin_bit_cast(Word, __iso_volatile_load32(reinterpret_cast<const volatile int*>(target)));
     } else if constexpr (sizeof(Word) == 8) {
 #if !defined(__clang__)
         if constexpr (!Relaxed)
-            return Word(
-                __load_acquire64(reinterpret_cast<const volatile unsigned __int64*>(target)));
+            return Word(__load_acquire64(reinterpret_cast<const volatile unsigned __int64*>(target)));
 #endif
-        value = __builtin_bit_cast(
-            Word, __iso_volatile_load64(reinterpret_cast<const volatile __int64*>(target)));
+        value = __builtin_bit_cast(Word, __iso_volatile_load64(reinterpret_cast<const volatile __int64*>(target)));
     }
 #if defined(__clang__)
     if constexpr (!Relaxed)
@@ -274,8 +265,7 @@ PR_FORCE_INLINE Word atomicMsvcExchangeAdd(Word* target, Word operand) {
     if constexpr (sizeof(Word) == 8) {
         Word expected = atomicMsvcLoad<true>(target);
         for (;;) {
-            const Word previous =
-                atomicMsvcCompareExchange<Relaxed>(target, expected, Word(expected + operand));
+            const Word previous = atomicMsvcCompareExchange<Relaxed>(target, expected, Word(expected + operand));
             if (previous == expected)
                 return previous;
             expected = previous;
@@ -331,43 +321,35 @@ PR_FORCE_INLINE void atomicMsvcStore(Word* target, Word desired) {
     if constexpr (sizeof(Word) == 1) {
 #if !defined(__clang__)
         if constexpr (!Relaxed) {
-            __stlr8(reinterpret_cast<volatile unsigned char*>(target),
-                    static_cast<unsigned char>(desired));
+            __stlr8(reinterpret_cast<volatile unsigned char*>(target), static_cast<unsigned char>(desired));
             return;
         }
 #endif
-        __iso_volatile_store8(reinterpret_cast<volatile char*>(target),
-                              __builtin_bit_cast(char, desired));
+        __iso_volatile_store8(reinterpret_cast<volatile char*>(target), __builtin_bit_cast(char, desired));
     } else if constexpr (sizeof(Word) == 2) {
 #if !defined(__clang__)
         if constexpr (!Relaxed) {
-            __stlr16(reinterpret_cast<volatile unsigned short*>(target),
-                     static_cast<unsigned short>(desired));
+            __stlr16(reinterpret_cast<volatile unsigned short*>(target), static_cast<unsigned short>(desired));
             return;
         }
 #endif
-        __iso_volatile_store16(reinterpret_cast<volatile short*>(target),
-                               __builtin_bit_cast(short, desired));
+        __iso_volatile_store16(reinterpret_cast<volatile short*>(target), __builtin_bit_cast(short, desired));
     } else if constexpr (sizeof(Word) == 4) {
 #if !defined(__clang__)
         if constexpr (!Relaxed) {
-            __stlr32(reinterpret_cast<volatile unsigned int*>(target),
-                     static_cast<unsigned int>(desired));
+            __stlr32(reinterpret_cast<volatile unsigned int*>(target), static_cast<unsigned int>(desired));
             return;
         }
 #endif
-        __iso_volatile_store32(reinterpret_cast<volatile int*>(target),
-                               __builtin_bit_cast(int, desired));
+        __iso_volatile_store32(reinterpret_cast<volatile int*>(target), __builtin_bit_cast(int, desired));
     } else if constexpr (sizeof(Word) == 8) {
 #if !defined(__clang__)
         if constexpr (!Relaxed) {
-            __stlr64(reinterpret_cast<volatile unsigned __int64*>(target),
-                     static_cast<unsigned __int64>(desired));
+            __stlr64(reinterpret_cast<volatile unsigned __int64*>(target), static_cast<unsigned __int64>(desired));
             return;
         }
 #endif
-        __iso_volatile_store64(reinterpret_cast<volatile __int64*>(target),
-                               __builtin_bit_cast(__int64, desired));
+        __iso_volatile_store64(reinterpret_cast<volatile __int64*>(target), __builtin_bit_cast(__int64, desired));
     }
 #else
 #if defined(_M_IX86)

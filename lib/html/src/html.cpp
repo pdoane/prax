@@ -70,16 +70,15 @@ void dropMessage(void* data) {
 void deliverMessage(void* data) {
     PostedMessage* posted = static_cast<PostedMessage*>(data);
     PrString origin = htmlWindowOrigin(posted->target);
-    bool matches = prStringIsNull(&posted->targetOrigin)
-        || prStringView(&origin) == prStringView(&posted->targetOrigin);
+    bool matches = prStringIsNull(&posted->targetOrigin) ||
+        prStringView(&origin) == prStringView(&posted->targetOrigin);
     prStringReset(&origin);
     if (matches) {
         PrHtmlMessageEvent* event =
             domEventCreate<PrHtmlMessageEvent>("message", prDomEventInitDefault(), PrDomEventKind_Message);
         event->trusted = true;
         event->message = allocZeroed<DomMessageEventData>();
-        *event->message = DomMessageEventData{posted->data, posted->sourceOrigin, prStringEmpty(),
-                                              posted->source};
+        *event->message = DomMessageEventData{posted->data, posted->sourceOrigin, prStringEmpty(), posted->source};
         posted->data = prStringNull();
         posted->sourceOrigin = prStringNull();
         domEventDispatch(posted->target, event);
@@ -98,15 +97,10 @@ PrDomNode* renderedTextFragment(PrDomDocument* document, PrStringView input) {
         while (at < input.size && input.data[at] != '\n' && input.data[at] != '\r')
             ++at;
         if (at != start)
-            domAttach(fragment,
-                      domTextCreate(document, PrStringView{input.data + start, at - start}),
-                      nullptr);
+            domAttach(fragment, domTextCreate(document, PrStringView{input.data + start, at - start}), nullptr);
         while (at < input.size && (input.data[at] == '\n' || input.data[at] == '\r')) {
-            at +=
-                input.data[at] == '\r' && at + 1 < input.size && input.data[at + 1] == '\n' ? 2 : 1;
-            domAttach(fragment,
-                      domElementCreate(document, PrDomNamespace_Html, PrDomTag_Br, PrStringView{}),
-                      nullptr);
+            at += input.data[at] == '\r' && at + 1 < input.size && input.data[at + 1] == '\n' ? 2 : 1;
+            domAttach(fragment, domElementCreate(document, PrDomNamespace_Html, PrDomTag_Br, PrStringView{}), nullptr);
         }
     }
     return fragment;
@@ -123,8 +117,7 @@ PrDomNode* parseFragment(PrDomElement* context, PrStringView markup) {
 }
 
 // Parses a fragment as parseFragment does in `context`, or in a body element of the document if `context` is null.
-PrDomNode* parseFragmentOrBody(PrDomDocument* document, PrDomElement* PR_NULLABLE context,
-                               PrStringView markup) {
+PrDomNode* parseFragmentOrBody(PrDomDocument* document, PrDomElement* PR_NULLABLE context, PrStringView markup) {
     if (context != nullptr)
         return parseFragment(context, markup);
     PrDomElement* body = domElementCreate(document, PrDomNamespace_Html, PrDomTag_Body, PrStringView{});
@@ -143,21 +136,19 @@ struct PreferenceFeature {
 };
 
 constexpr PreferenceFeature kPreferences[PrHtmlPreference_Count] = {
-    {PrCssDescriptor_MediaPrefersColorScheme,
-     {PrHtmlPreferenceValue_Light, PrHtmlPreferenceValue_Dark},
-     2},
-    {PrCssDescriptor_MediaPrefersContrast,
-     {PrHtmlPreferenceValue_More, PrHtmlPreferenceValue_Less, PrHtmlPreferenceValue_NoPreference},
-     3},
-    {PrCssDescriptor_MediaPrefersReducedMotion,
-     {PrHtmlPreferenceValue_Reduce, PrHtmlPreferenceValue_NoPreference},
-     2},
-    {PrCssDescriptor_MediaPrefersReducedTransparency,
-     {PrHtmlPreferenceValue_Reduce, PrHtmlPreferenceValue_NoPreference},
-     2},
-    {PrCssDescriptor_MediaPrefersReducedData,
-     {PrHtmlPreferenceValue_Reduce, PrHtmlPreferenceValue_NoPreference},
-     2},
+    {PrCssDescriptor_MediaPrefersColorScheme, {PrHtmlPreferenceValue_Light, PrHtmlPreferenceValue_Dark}, 2},
+    {
+        PrCssDescriptor_MediaPrefersContrast,
+        {PrHtmlPreferenceValue_More, PrHtmlPreferenceValue_Less, PrHtmlPreferenceValue_NoPreference},
+        3,
+    },
+    {PrCssDescriptor_MediaPrefersReducedMotion, {PrHtmlPreferenceValue_Reduce, PrHtmlPreferenceValue_NoPreference}, 2},
+    {
+        PrCssDescriptor_MediaPrefersReducedTransparency,
+        {PrHtmlPreferenceValue_Reduce, PrHtmlPreferenceValue_NoPreference},
+        2,
+    },
+    {PrCssDescriptor_MediaPrefersReducedData, {PrHtmlPreferenceValue_Reduce, PrHtmlPreferenceValue_NoPreference}, 2},
 };
 
 // The keyword of each value.
@@ -244,7 +235,7 @@ PrUrl* PR_NULLABLE hyperlinkUrl(const PrHtmlElement* element) {
 // Sets the element that a document's pointer designates or activates, or null for none. The element must be connected
 // in the document. `state` is the pseudo-class that the designated element matches.
 void setPointed(PrDomElement* PR_NULLABLE* PR_NONNULL pointed, PrDomDocument* document,
-                PrDomElement* PR_NULLABLE element, CssPseudoClass state) {
+        PrDomElement* PR_NULLABLE element, CssPseudoClass state) {
     PR_ASSERT(element == nullptr || (element->document == document && domIsConnected(element)));
     PrDomElement* from = *pointed;
     *pointed = element;
@@ -265,13 +256,10 @@ bool dispatchReport(PrHtmlWindow* window, PrDomEvent* event) {
 constexpr PrCssUserAgentSheet kUserAgentSheets[] = {
     {.source = kHtmlStyle, .conditions = 0},
     {.source = kHtmlStyleBase, .conditions = 0, .appearance = PrCssSheetAppearance_Base},
-    {.source = kHtmlStyleQuirks,
-     .conditions = PrCssSheetCondition_Quirks},
-    {.source = kHtmlStyleHtmlDocument,
-     .conditions = PrCssSheetCondition_HtmlDocument},
+    {.source = kHtmlStyleQuirks, .conditions = PrCssSheetCondition_Quirks},
+    {.source = kHtmlStyleHtmlDocument, .conditions = PrCssSheetCondition_HtmlDocument},
     {.source = kHtmlStyleMarkers, .conditions = 0},
-    {.source = kHtmlStyleMarkdown,
-     .conditions = PrCssSheetCondition_Markdown},
+    {.source = kHtmlStyleMarkdown, .conditions = PrCssSheetCondition_Markdown},
     {.source = kSvgStyle, .conditions = 0},
     {.source = kMathMlStyle, .conditions = 0},
 };
@@ -291,8 +279,7 @@ using namespace pr_impl;
 // C opaque types
 struct PrHtmlDocumentTimeline : HtmlDocumentTimeline {};
 
-PrDomDocument* prHtmlDomParserParseFromString(PrStringView source,
-                                              PrHtmlDomParserSupportedType type) {
+PrDomDocument* prHtmlDomParserParseFromString(PrStringView source, PrHtmlDomParserSupportedType type) {
     if (type == PrHtmlDomParserSupportedType_TextHtml) {
         PrDomDocument* document = domDocumentCreate(DomDocumentKind_Html);
         prCssEnable(document);
@@ -353,10 +340,8 @@ PrStatus prHtmlSetOuterHtml(PrDomElement* element, PrStringView markup) {
     return status;
 }
 
-PrStatus prHtmlInsertAdjacentHtml(PrDomElement* element, PrDomInsertPosition where,
-                                  PrStringView markup) {
-    bool outside =
-        where == PrDomInsertPosition_BeforeBegin || where == PrDomInsertPosition_AfterEnd;
+PrStatus prHtmlInsertAdjacentHtml(PrDomElement* element, PrDomInsertPosition where, PrStringView markup) {
+    bool outside = where == PrDomInsertPosition_BeforeBegin || where == PrDomInsertPosition_AfterEnd;
     PrDomNode* context = outside ? domNodeParent(element) : element;
     if (context == nullptr || context->type == PrDomNodeType_Document)
         return PrStatus_NotAllowed;
@@ -378,9 +363,11 @@ PrStatus prHtmlInsertAdjacentHtml(PrDomElement* element, PrDomInsertPosition whe
 
 void prHtmlFocus(PrDomElement* element, const PrHtmlFocusOptions* PR_NULLABLE options) {
     PrHtmlFocusOptions values = options != nullptr ? *options : prHtmlFocusOptionsDefault();
-    HtmlFocusIndication indication = !values.hasFocusVisible ? HtmlFocusIndication_Script
-                                     : values.focusVisible   ? HtmlFocusIndication_Shown
-                                                             : HtmlFocusIndication_Hidden;
+    HtmlFocusIndication indication = HtmlFocusIndication_Hidden;
+    if (!values.hasFocusVisible)
+        indication = HtmlFocusIndication_Script;
+    else if (values.focusVisible)
+        indication = HtmlFocusIndication_Shown;
     htmlFocus(element, indication);
 }
 
@@ -411,8 +398,7 @@ PrHtmlWindow* PR_NULLABLE prHtmlDocumentDefaultView(PrDomDocument* document) {
 
 PrDomElement* PR_NULLABLE prHtmlDocumentCurrentScript(PrDomDocument* document) {
     PrHtmlWindow* window = prHtmlDocumentDefaultView(document);
-    return window != nullptr ? window->currentScript
-                             : nullptr;
+    return window != nullptr ? window->currentScript : nullptr;
 }
 
 PrStatus prHtmlDocumentOpen(PrDomDocument* document) {
@@ -487,21 +473,17 @@ void prHtmlElementSetDir(PrHtmlElement* self, PrStringView value) {
 }
 
 PrHtmlHidden prHtmlElementHidden(const PrHtmlElement* self) {
-    const PrDomAttr* hidden =
-        domAttribute(self, PrDomNamespace_None, "hidden");
+    const PrDomAttr* hidden = domAttribute(self, PrDomNamespace_None, "hidden");
     if (hidden == nullptr)
         return PrHtmlHidden_NotHidden;
-    return asciiEqualsFold(prStringView(&hidden->value), "until-found")
-               ? PrHtmlHidden_UntilFound
-               : PrHtmlHidden_Hidden;
+    return asciiEqualsFold(prStringView(&hidden->value), "until-found") ? PrHtmlHidden_UntilFound : PrHtmlHidden_Hidden;
 }
 
 void prHtmlElementSetHidden(PrHtmlElement* self, PrHtmlHidden value) {
     if (value == PrHtmlHidden_NotHidden)
         domRemoveAttribute(self, PrDomNamespace_None, "hidden");
     else
-        domSetAttribute(self, PrDomNamespace_None, "hidden",
-                        value == PrHtmlHidden_UntilFound ? "until-found" : "");
+        domSetAttribute(self, PrDomNamespace_None, "hidden", value == PrHtmlHidden_UntilFound ? "until-found" : "");
 }
 
 PrString prHtmlElementInnerText(const PrHtmlElement* self) {
@@ -538,25 +520,27 @@ PrString prHtmlElementReflectedUrl(const PrHtmlElement* self, PrStringView name)
     if (attribute == nullptr)
         return prStringEmpty();
     PrUrl* url = nullptr;
-    PrString out = domDocumentParseUrl(self->document, prStringView(&attribute->value), &url) == PrStatus_Ok
-        ? prUrlSerialize(url, PrUrlSerialization_Whole) : prStringClone(&attribute->value);
+    PrString out;
+    if (domDocumentParseUrl(self->document, prStringView(&attribute->value), &url) == PrStatus_Ok)
+        out = prUrlSerialize(url, PrUrlSerialization_Whole);
+    else
+        out = prStringClone(&attribute->value);
     prUrlDestroy(url);
     return out;
 }
 
 int64_t prHtmlElementReflectedInteger(const PrHtmlElement* self, PrStringView name, PrHtmlReflectedInteger kind,
-                                      int64_t fallback) {
+        int64_t fallback) {
     int64_t value = 0;
-    if (!domParseInteger(domAttributeValue(self, name), &value) || value < 0 || value > 2147483647
-        || (kind == PrHtmlReflectedInteger_Positive && value == 0))
+    if (!domParseInteger(domAttributeValue(self, name), &value) || value < 0 || value > 2147483647 ||
+            (kind == PrHtmlReflectedInteger_Positive && value == 0))
         return fallback;
     return value;
 }
 
 PrStatus prHtmlElementSetReflectedInteger(PrHtmlElement* self, PrStringView name, PrHtmlReflectedInteger kind,
-                                          int64_t value, int64_t fallback) {
-    if ((kind == PrHtmlReflectedInteger_NonNegative && value < 0)
-        || (kind == PrHtmlReflectedInteger_Positive && value == 0))
+        int64_t value, int64_t fallback) {
+    if ((kind == PrHtmlReflectedInteger_NonNegative && value < 0) || (kind == PrHtmlReflectedInteger_Positive && value == 0))
         return PrStatus_OutOfRange;
     TextBuffer text;
     int64_t set = value >= 0 && value <= 2147483647 ? value : fallback;
@@ -568,12 +552,11 @@ PrStatus prHtmlElementSetReflectedInteger(PrHtmlElement* self, PrStringView name
     return PrStatus_Ok;
 }
 
-uint32_t prHtmlDatasetNames(const PrDomElement* element, PrString* PR_NULLABLE items,
-                            uint32_t capacity) {
+uint32_t prHtmlDatasetNames(const PrDomElement* element, PrString* PR_NULLABLE items, uint32_t capacity) {
     uint32_t count = 0;
     TextBuffer name;
     for (const PrDomAttr* attribute = firstAttribute(element);
-         attribute != nullptr; attribute = nextAttribute(attribute)) {
+            attribute != nullptr; attribute = nextAttribute(attribute)) {
         if (!datasetName(attribute, &name))
             continue;
         if (count < capacity)
@@ -588,7 +571,7 @@ PrStringView prHtmlDatasetGet(const PrDomElement* element, PrStringView name) {
     PrStringView value = {};
     TextBuffer candidate;
     for (const PrDomAttr* attribute = firstAttribute(element);
-         attribute != nullptr; attribute = nextAttribute(attribute)) {
+            attribute != nullptr; attribute = nextAttribute(attribute)) {
         if (datasetName(attribute, &candidate) && textView(&candidate) == name) {
             value = prStringView(&attribute->value);
             break;
@@ -607,8 +590,7 @@ PrStatus prHtmlDatasetSet(PrDomElement* element, PrStringView name, PrStringView
     attributeName(name, &attribute);
     PrStatus status = PrStatus_InvalidData;
     if (domIsValidAttributeLocalName(textView(&attribute))) {
-        domSetAttribute(element, PrDomNamespace_None, textView(&attribute),
-                        value);
+        domSetAttribute(element, PrDomNamespace_None, textView(&attribute), value);
         status = PrStatus_Ok;
     }
     textReset(&attribute);
@@ -762,9 +744,11 @@ bool prHtmlImageElementImageSource(PrHtmlImageElement* self, PrCanvasImageSource
     if (state == nullptr || state->image != PrDomImageState_CompletelyAvailable || state->picture == nullptr)
         return false;
     prDrawImageRetain(state->picture);
-    *out = PrCanvasImageSource{.image = state->picture,
-                               .extent = PrVec2{float(state->naturalWidth), float(state->naturalHeight)},
-                               .originClean = true};
+    *out = PrCanvasImageSource{
+        .image = state->picture,
+        .extent = PrVec2{float(state->naturalWidth), float(state->naturalHeight)},
+        .originClean = true,
+    };
     return true;
 }
 
@@ -800,7 +784,7 @@ PrHtmlCanvasContextMode prHtmlCanvasElementContextMode(const PrHtmlCanvasElement
 }
 
 PrStatus prHtmlCanvasElementGetContext2D(PrHtmlCanvasElement* self, const PrCanvasSettings* PR_NULLABLE settings,
-                                         PrCanvas* PR_NULLABLE* PR_NONNULL out) {
+        PrCanvas* PR_NULLABLE* PR_NONNULL out) {
     *out = nullptr;
     HtmlCanvas* canvas = htmlCanvasFromElement(self);
     switch (canvas->mode) {
@@ -1011,8 +995,7 @@ void prHtmlMediaElementSetPreservesPitch(PrHtmlMediaElement* self, bool preserve
 }
 
 uint32_t prHtmlMediaElementRanges(PrHtmlMediaElement* self, PrHtmlMediaRanges which,
-                                  double* PR_NULLABLE starts, double* PR_NULLABLE ends,
-                                  uint32_t capacity) {
+        double* PR_NULLABLE starts, double* PR_NULLABLE ends, uint32_t capacity) {
     HtmlMedia* media = mediaOf(self);
     if (media == nullptr)
         return 0;
@@ -1091,9 +1074,8 @@ PrHtmlSlotElement* PR_NULLABLE prHtmlSlotElementQuery(PrDomEventTarget* PR_NULLA
     return node != nullptr && domIsSlot(node) ? static_cast<PrHtmlSlotElement*>(domElementFromNode(node)) : nullptr;
 }
 
-uint32_t prHtmlSlotElementAssignedNodes(PrHtmlSlotElement* self, bool flatten,
-                                        PrDomNode* PR_NONNULL* PR_NULLABLE items,
-                                        uint32_t capacity) {
+uint32_t prHtmlSlotElementAssignedNodes(PrHtmlSlotElement* self, bool flatten, PrDomNode* PR_NONNULL* PR_NULLABLE items,
+        uint32_t capacity) {
     Array<PrDomNode* PR_NONNULL> nodes;
     domSlotAssignedNodes(self, flatten, &nodes);
     for (uint32_t i = 0; items != nullptr && i < nodes.count && i < capacity; ++i)
@@ -1103,8 +1085,7 @@ uint32_t prHtmlSlotElementAssignedNodes(PrHtmlSlotElement* self, bool flatten,
     return count;
 }
 
-void prHtmlSlotElementAssign(PrHtmlSlotElement* self,
-                             PrDomNode* const PR_NONNULL* PR_NULLABLE nodes, uint32_t count) {
+void prHtmlSlotElementAssign(PrHtmlSlotElement* self, PrDomNode* const PR_NONNULL* PR_NULLABLE nodes, uint32_t count) {
     domSlotAssign(self, reinterpret_cast<PrDomNode* const*>(nodes), count);
 }
 
@@ -1145,8 +1126,7 @@ PrCssStyleSheet* PR_NULLABLE prHtmlStyleElementSheet(PrHtmlStyleElement* self) {
     return cssElementSheet(self);
 }
 
-PrHtmlTemplateElement* PR_NULLABLE
-prHtmlTemplateElementQuery(PrDomEventTarget* PR_NULLABLE object) {
+PrHtmlTemplateElement* PR_NULLABLE prHtmlTemplateElementQuery(PrDomEventTarget* PR_NULLABLE object) {
     return htmlElementQuery<PrHtmlTemplateElement>(object, PrDomTag_Template);
 }
 
@@ -1154,8 +1134,7 @@ PrDomDocumentFragment* prHtmlTemplateElementContent(PrHtmlTemplateElement* self)
     return static_cast<PrDomDocumentFragment*>(domElementContents(self));
 }
 
-bool prHtmlTemplateElementShadowRootMode(const PrHtmlTemplateElement* self,
-                                         PrDomShadowRootMode* out) {
+bool prHtmlTemplateElementShadowRootMode(const PrHtmlTemplateElement* self, PrDomShadowRootMode* out) {
     PrStringView mode = domAttributeValue(self, "shadowrootmode");
     if (asciiEqualsFold(mode, "open"))
         *out = PrDomShadowRootMode_Open;
@@ -1166,10 +1145,8 @@ bool prHtmlTemplateElementShadowRootMode(const PrHtmlTemplateElement* self,
     return true;
 }
 
-PrDomSlotAssignmentMode
-prHtmlTemplateElementShadowRootSlotAssignment(const PrHtmlTemplateElement* self) {
-    PrStringView value =
-        domAttributeValue(self, "shadowrootslotassignment");
+PrDomSlotAssignmentMode prHtmlTemplateElementShadowRootSlotAssignment(const PrHtmlTemplateElement* self) {
+    PrStringView value = domAttributeValue(self, "shadowrootslotassignment");
     return asciiEqualsFold(value, "manual") ? PrDomSlotAssignmentMode_Manual : PrDomSlotAssignmentMode_Named;
 }
 
@@ -1177,8 +1154,7 @@ PrHtmlErrorEvent* PR_NULLABLE prHtmlErrorEventQuery(PrDomEvent* PR_NULLABLE obje
     return object != nullptr && object->error != nullptr ? static_cast<PrHtmlErrorEvent*>(object) : nullptr;
 }
 
-PrHtmlErrorEvent* prHtmlErrorEventCreate(PrStringView type,
-                                         const PrHtmlErrorEventInit* PR_NULLABLE init) {
+PrHtmlErrorEvent* prHtmlErrorEventCreate(PrStringView type, const PrHtmlErrorEventInit* PR_NULLABLE init) {
     PrHtmlErrorEventInit values = init != nullptr ? *init : prHtmlErrorEventInitDefault();
     PrHtmlErrorEvent* event = domEventCreate<PrHtmlErrorEvent>(type, values.event, PrDomEventKind_Error);
     domEventSetError(event, values.message, values.filename, values.lineno, values.colno);
@@ -1202,19 +1178,18 @@ uint32_t prHtmlErrorEventColno(const PrHtmlErrorEvent* self) {
 }
 
 PrHtmlMessageEvent* PR_NULLABLE prHtmlMessageEventQuery(PrDomEvent* PR_NULLABLE object) {
-    return object != nullptr && object->kind == PrDomEventKind_Message
-               ? static_cast<PrHtmlMessageEvent*>(object)
-               : nullptr;
+    return object != nullptr && object->kind == PrDomEventKind_Message ? static_cast<PrHtmlMessageEvent*>(object) : nullptr;
 }
 
-PrHtmlMessageEvent* prHtmlMessageEventCreate(PrStringView type,
-                                             const PrHtmlMessageEventInit* PR_NULLABLE init) {
+PrHtmlMessageEvent* prHtmlMessageEventCreate(PrStringView type, const PrHtmlMessageEventInit* PR_NULLABLE init) {
     PrHtmlMessageEventInit values = init != nullptr ? *init : prHtmlMessageEventInitDefault();
     PrHtmlMessageEvent* event = domEventCreate<PrHtmlMessageEvent>(type, values.event, PrDomEventKind_Message);
     event->message = allocZeroed<DomMessageEventData>();
-    *event->message = DomMessageEventData{prStringNull(), prStringCopy(values.origin),
-                                          prStringCopy(values.lastEventId),
-                                          values.source};
+    *event->message = DomMessageEventData{
+        prStringNull(), prStringCopy(values.origin),
+        prStringCopy(values.lastEventId),
+        values.source,
+    };
     return event;
 }
 
@@ -1236,26 +1211,21 @@ PrDomEventTarget* PR_NULLABLE prHtmlMessageEventSource(PrHtmlMessageEvent* self)
 }
 
 PrHtmlPageRevealEvent* PR_NULLABLE prHtmlPageRevealEventQuery(PrDomEvent* PR_NULLABLE object) {
-    return object != nullptr && object->kind == PrDomEventKind_PageReveal
-               ? static_cast<PrHtmlPageRevealEvent*>(object)
-               : nullptr;
+    return object != nullptr && object->kind == PrDomEventKind_PageReveal ? static_cast<PrHtmlPageRevealEvent*>(object) : nullptr;
 }
 
-PrHtmlPageRevealEvent* prHtmlPageRevealEventCreate(PrStringView type,
-                                                   const PrDomEventInit* PR_NULLABLE init) {
+PrHtmlPageRevealEvent* prHtmlPageRevealEventCreate(PrStringView type, const PrDomEventInit* PR_NULLABLE init) {
     return domEventCreate<PrHtmlPageRevealEvent>(type, init != nullptr ? *init : prDomEventInitDefault(),
-                                                 PrDomEventKind_PageReveal);
+        PrDomEventKind_PageReveal);
 }
 
-PrHtmlPromiseRejectionEvent* PR_NULLABLE
-prHtmlPromiseRejectionEventQuery(PrDomEvent* PR_NULLABLE object) {
-    return object != nullptr && object->kind == PrDomEventKind_PromiseRejection
-               ? static_cast<PrHtmlPromiseRejectionEvent*>(object)
-               : nullptr;
+PrHtmlPromiseRejectionEvent* PR_NULLABLE prHtmlPromiseRejectionEventQuery(PrDomEvent* PR_NULLABLE object) {
+    if (object != nullptr && object->kind == PrDomEventKind_PromiseRejection)
+        return static_cast<PrHtmlPromiseRejectionEvent*>(object);
+    return nullptr;
 }
 
-PrHtmlPromiseRejectionEvent*
-prHtmlPromiseRejectionEventCreate(PrStringView type, const PrDomEventInit* PR_NULLABLE init) {
+PrHtmlPromiseRejectionEvent* prHtmlPromiseRejectionEventCreate(PrStringView type, const PrDomEventInit* PR_NULLABLE init) {
     PrDomEventInit values = init != nullptr ? *init : prDomEventInitDefault();
     return domEventCreate<PrHtmlPromiseRejectionEvent>(type, values, PrDomEventKind_PromiseRejection);
 }
@@ -1269,32 +1239,24 @@ PrHtmlPreferenceValue prHtmlPreferenceValueFromName(PrStringView text) {
     // values.
     PrCssKeyword keyword = cssKeywordFromText(text);
     PrHtmlPreferenceValue value = preferenceValueOf(keyword);
-    return value != PrHtmlPreferenceValue_None && text == cssKeywordName(keyword)
-               ? value
-               : PrHtmlPreferenceValue_None;
+    return value != PrHtmlPreferenceValue_None && text == cssKeywordName(keyword) ? value : PrHtmlPreferenceValue_None;
 }
 
-PrHtmlPreferenceObject* PR_NULLABLE
-prHtmlPreferenceObjectQuery(PrDomEventTarget* PR_NULLABLE object) {
-    return object != nullptr && object->type == DomTargetType_Preference
-               ? static_cast<PrHtmlPreferenceObject*>(object)
-               : nullptr;
+PrHtmlPreferenceObject* PR_NULLABLE prHtmlPreferenceObjectQuery(PrDomEventTarget* PR_NULLABLE object) {
+    return object != nullptr && object->type == DomTargetType_Preference ? static_cast<PrHtmlPreferenceObject*>(object) : nullptr;
 }
 
 PrHtmlPreferenceValue prHtmlPreferenceObjectOverride(const PrHtmlPreferenceObject* self) {
     PrCssDescriptor feature = kPreferences[self->preference].feature;
-    return preferenceValueOf(
-        environmentOf(self)->overrides[feature - kCssDescriptorMediaFirst].keyword);
+    return preferenceValueOf(environmentOf(self)->overrides[feature - kCssDescriptorMediaFirst].keyword);
 }
 
 PrHtmlPreferenceValue prHtmlPreferenceObjectValue(const PrHtmlPreferenceObject* self) {
-    return preferenceValueOf(cssMediaEnvironmentKeyword(
-        environmentOf(self), kPreferences[self->preference].feature));
+    return preferenceValueOf(cssMediaEnvironmentKeyword(environmentOf(self), kPreferences[self->preference].feature));
 }
 
-uint32_t prHtmlPreferenceObjectValidValues(const PrHtmlPreferenceObject* self,
-                                           PrHtmlPreferenceValue* PR_NULLABLE items,
-                                           uint32_t capacity) {
+uint32_t prHtmlPreferenceObjectValidValues(const PrHtmlPreferenceObject* self, PrHtmlPreferenceValue* PR_NULLABLE items,
+        uint32_t capacity) {
     const PreferenceFeature& feature = kPreferences[self->preference];
     for (uint32_t i = 0; items != nullptr && i < feature.count && i < capacity; ++i)
         items[i] = feature.values[i];
@@ -1312,8 +1274,7 @@ void prHtmlPreferenceObjectClearOverride(PrHtmlPreferenceObject* self) {
     domEventFire(preference, "change");
 }
 
-PrStatus prHtmlPreferenceObjectRequestOverride(PrHtmlPreferenceObject* self,
-                                               PrHtmlPreferenceValue value) {
+PrStatus prHtmlPreferenceObjectRequestOverride(PrHtmlPreferenceObject* self, PrHtmlPreferenceValue value) {
     if (value == PrHtmlPreferenceValue_None) {
         prHtmlPreferenceObjectClearOverride(self);
         return PrStatus_Ok;
@@ -1322,8 +1283,7 @@ PrStatus prHtmlPreferenceObjectRequestOverride(PrHtmlPreferenceObject* self,
     const PreferenceFeature& feature = kPreferences[preference->preference];
     for (uint32_t i = 0; i < feature.count; ++i) {
         if (value == feature.values[i]) {
-            cssMediaEnvironmentOverride(&preference->window->media, feature.feature,
-                                        kPreferenceKeywords[value]);
+            cssMediaEnvironmentOverride(&preference->window->media, feature.feature, kPreferenceKeywords[value]);
             cssPresentationDocumentMediaChanged(preference->window->document);
             domEventFire(preference, "change");
             return PrStatus_Ok;
@@ -1333,9 +1293,7 @@ PrStatus prHtmlPreferenceObjectRequestOverride(PrHtmlPreferenceObject* self,
 }
 
 PrHtmlPerformance* PR_NULLABLE prHtmlPerformanceQuery(PrDomEventTarget* PR_NULLABLE object) {
-    return object != nullptr && object->type == DomTargetType_Performance
-               ? static_cast<PrHtmlPerformance*>(object)
-               : nullptr;
+    return object != nullptr && object->type == DomTargetType_Performance ? static_cast<PrHtmlPerformance*>(object) : nullptr;
 }
 
 double prHtmlPerformanceNow(const PrHtmlPerformance* self) {
@@ -1376,8 +1334,7 @@ PrDomAgent* prHtmlWindowAgent(PrHtmlWindow* self) {
     return self->agent;
 }
 
-void prHtmlWindowSetCustomElementRegistry(PrHtmlWindow* self,
-                                          const PrDomCustomElementRegistry* PR_NULLABLE registry) {
+void prHtmlWindowSetCustomElementRegistry(PrHtmlWindow* self, const PrDomCustomElementRegistry* PR_NULLABLE registry) {
     self->customElements = registry;
     self->document->customElements = registry;
 }
@@ -1395,7 +1352,7 @@ PrHtmlWindow* PR_NULLABLE prHtmlWindowParent(PrHtmlWindow* self) {
 }
 
 PrStatus prHtmlWindowPostMessage(PrHtmlWindow* self, PrHtmlWindow* source, PrStringView serialized,
-                                 PrStringView targetOrigin) {
+        PrStringView targetOrigin) {
     PrString origin = prStringNull();
     if (targetOrigin == "/") {
         origin = htmlWindowOrigin(source);
@@ -1417,7 +1374,7 @@ PrString prHtmlWindowLocation(const PrHtmlWindow* self, PrUrlComponent component
 }
 
 PrStatus prHtmlWindowSetLocation(PrHtmlWindow* self, PrUrlComponent component, PrStringView value,
-                                 PrHtmlHistoryHandling handling) {
+        PrHtmlHistoryHandling handling) {
     PrDomDocument* document = self->document;
     PrUrl* copy = nullptr;
     if (component == PrUrlComponent_Href) {
@@ -1438,8 +1395,7 @@ PrStatus prHtmlWindowSetLocation(PrHtmlWindow* self, PrUrlComponent component, P
     }
     PrString before = prUrlSerialize(document->url, PrUrlSerialization_ExcludeFragment);
     PrString after = prUrlSerialize(copy, PrUrlSerialization_ExcludeFragment);
-    bool fragment = prStringView(&before) == prStringView(&after)
-        && (component == PrUrlComponent_Hash || now.data != nullptr);
+    bool fragment = prStringView(&before) == prStringView(&after) && (component == PrUrlComponent_Hash || now.data != nullptr);
     prStringReset(&before);
     prStringReset(&after);
     if (!fragment) {
@@ -1477,17 +1433,21 @@ PrCssMediaQueryList* prHtmlWindowMatchMedia(PrHtmlWindow* self, PrStringView que
 
 int32_t prHtmlWindowInnerWidth(PrHtmlWindow* self) {
     PrLayoutVec extent = cssViewViewportExtent(self->document);
-    double width = extent.x.raw != 0 || extent.y.raw != 0
-                       ? prLayoutUnitToPxDouble(extent.x)
-                       : self->media.features[PrCssDescriptor_MediaWidth - kCssDescriptorMediaFirst].number;
+    double width;
+    if (extent.x.raw != 0 || extent.y.raw != 0)
+        width = prLayoutUnitToPxDouble(extent.x);
+    else
+        width = self->media.features[PrCssDescriptor_MediaWidth - kCssDescriptorMediaFirst].number;
     return isFiniteF64(width) ? int32_t(floorF64(width + 0.5)) : 0;
 }
 
 int32_t prHtmlWindowInnerHeight(PrHtmlWindow* self) {
     PrLayoutVec extent = cssViewViewportExtent(self->document);
-    double height = extent.x.raw != 0 || extent.y.raw != 0
-                        ? prLayoutUnitToPxDouble(extent.y)
-                        : self->media.features[PrCssDescriptor_MediaHeight - kCssDescriptorMediaFirst].number;
+    double height;
+    if (extent.x.raw != 0 || extent.y.raw != 0)
+        height = prLayoutUnitToPxDouble(extent.y);
+    else
+        height = self->media.features[PrCssDescriptor_MediaHeight - kCssDescriptorMediaFirst].number;
     return isFiniteF64(height) ? int32_t(floorF64(height + 0.5)) : 0;
 }
 
@@ -1519,19 +1479,22 @@ void prHtmlWindowScroll(PrHtmlWindow* self, const PrCssScrollToOptions* options)
     PrDomDocument* document = self->document;
     PrLayoutVec at = cssViewViewportScroll(document);
     auto units = [](double px) { return prLayoutUnitFromPxDouble(isFiniteF64(px) ? px : 0); };
-    cssViewScrollViewport(document, PrLayoutVec{options->hasLeft ? units(options->left) : at.x,
-                                                options->hasTop ? units(options->top) : at.y});
+    cssViewScrollViewport(document, PrLayoutVec{
+        options->hasLeft ? units(options->left) : at.x,
+        options->hasTop ? units(options->top) : at.y,
+    });
 }
 
 void prHtmlWindowScrollBy(PrHtmlWindow* self, const PrCssScrollToOptions* options) {
     auto units = [](double px) { return prLayoutUnitFromPxDouble(isFiniteF64(px) ? px : 0); };
-    PrLayoutVec delta{options->hasLeft ? units(options->left) : PrLayoutUnit{0},
-                      options->hasTop ? units(options->top) : PrLayoutUnit{0}};
+    PrLayoutVec delta{
+        options->hasLeft ? units(options->left) : PrLayoutUnit{0},
+        options->hasTop ? units(options->top) : PrLayoutUnit{0},
+    };
     cssViewScrollViewportBy(self->document, delta);
 }
 
-int32_t prHtmlWindowSetTimeout(PrHtmlWindow* self, const PrHtmlTimerHandler* handler, int32_t timeout,
-                               bool repeats) {
+int32_t prHtmlWindowSetTimeout(PrHtmlWindow* self, const PrHtmlTimerHandler* handler, int32_t timeout, bool repeats) {
     return htmlWindowSetTimeout(self, handler, timeout, repeats, false);
 }
 
@@ -1543,8 +1506,7 @@ void prHtmlWindowRunAfterTimeout(PrHtmlWindow* self, const PrHtmlTimerHandler* h
     htmlWindowRunAfterTimeout(self, handler, milliseconds);
 }
 
-uint32_t prHtmlWindowRequestAnimationFrame(PrHtmlWindow* self,
-                                           const PrHtmlFrameRequestCallback* callback) {
+uint32_t prHtmlWindowRequestAnimationFrame(PrHtmlWindow* self, const PrHtmlFrameRequestCallback* callback) {
     return htmlWindowRequestAnimationFrame(self, callback);
 }
 

@@ -141,14 +141,14 @@ TEST_CASE("a use's instances follow the first element with its ID as elements ga
     REQUIRE(d.instanceOf(use) != nullptr);
     CHECK(domElementName(d.instanceOf(use)) == "rect");
     // The circle moves before the rectangle, within the tree.
-    REQUIRE(prDomNodeInsertBefore(prDomElementAsNode(d.svg), prDomElementAsNode(circle), prDomElementAsNode(rect))
-            == PrStatus_Ok);
+    REQUIRE(prDomNodeInsertBefore(prDomElementAsNode(d.svg), prDomElementAsNode(circle), prDomElementAsNode(rect)) ==
+        PrStatus_Ok);
     CHECK(domElementName(d.instanceOf(use)) == "circle");
     // An ellipse that is inserted first.
     PrDomElement* ellipse = d.make("ellipse");
     prDomElementSetAttribute(ellipse, "id", "a");
-    REQUIRE(prDomNodeInsertBefore(prDomElementAsNode(d.svg), prDomElementAsNode(ellipse), prDomElementAsNode(circle))
-            == PrStatus_Ok);
+    REQUIRE(prDomNodeInsertBefore(prDomElementAsNode(d.svg), prDomElementAsNode(ellipse), prDomElementAsNode(circle)) ==
+        PrStatus_Ok);
     CHECK(domElementName(d.instanceOf(use)) == "ellipse");
     REQUIRE(prDomNodeRemoveChild(prDomElementAsNode(d.svg), prDomElementAsNode(ellipse)) == PrStatus_Ok);
     CHECK(domElementName(d.instanceOf(use)) == "circle");
@@ -163,8 +163,7 @@ TEST_CASE("a use's instances follow the first element with its ID as elements ga
 TEST_CASE("a use of an element that is not in SVG instances nothing, and a script is not instanced") {
     UseDocument d;
     PrDomElement* html = nullptr;
-    REQUIRE(prDomElementCreateNs(d.document, "http://www.w3.org/1999/xhtml", "div", nullptr, &html)
-            == PrStatus_Ok);
+    REQUIRE(prDomElementCreateNs(d.document, "http://www.w3.org/1999/xhtml", "div", nullptr, &html) == PrStatus_Ok);
     prDomElementSetAttribute(html, "id", "h");
     REQUIRE(prDomNodeAppendChild(prDomElementAsNode(d.svg), prDomElementAsNode(html)) == PrStatus_Ok);
     PrDomElement* use = d.add(d.svg, "use");

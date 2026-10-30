@@ -45,8 +45,7 @@ PrLayoutRect hitBounds(const LayoutTree* tree, const LayoutFragment* fragment) {
         queries.hitEffects = tree->effects;
     }
     uint32_t hash = hashPointer(fragment, 0);
-    uint32_t at =
-        queries.hitIndex.find(hash, [&](uint32_t i) { return queries.hitBounds.data[i].fragment == fragment; });
+    uint32_t at = queries.hitIndex.find(hash, [&](uint32_t i) { return queries.hitBounds.data[i].fragment == fragment; });
     if (at != kHashMissing)
         return queries.hitBounds.data[at].bounds;
     PrLayoutRect own = bounds;
@@ -112,8 +111,8 @@ struct HitTester : LayoutWalkVisitor {
 
     // A box that takes no pointer is not hit (css-ui-4/#pointer-events-control).
     void test(LayoutNodeIndex node, PrLayoutRect rect, bool visible) {
-        bool takes = layoutColorStyle(tree->styles, layoutNodeStyle(tree, node)).pointerEvents
-                     != PrLayoutPointerEvents_None;
+        bool takes = layoutColorStyle(tree->styles, layoutNodeStyle(tree, node)).pointerEvents !=
+            PrLayoutPointerEvents_None;
         if (visible && takes && !excluded() && layoutRectContains(rect, point()))
             out->push(node);
     }
@@ -156,9 +155,8 @@ struct HitTester : LayoutWalkVisitor {
     // A clip path clips where a box is hit (css-masking-1/#clipping-paths).
     void pushClipPath(const LayoutFragment* fragment, PrLayoutVec offset) {
         PrLayoutVec at = point() - offset;
-        bool inside =
-            excluded() || layoutEffectsContain(tree, fragment->node, fragment, PrVec2{prLayoutUnitToPx(at.x),
-                                                                                     prLayoutUnitToPx(at.y)});
+        bool inside = excluded() || layoutEffectsContain(tree, fragment->node, fragment, PrVec2{prLayoutUnitToPx(at.x),
+            prLayoutUnitToPx(at.y)});
         outside.push(excluded() || !inside);
     }
     void popClipPath() { outside.pop(); }
@@ -171,7 +169,7 @@ struct HitTester : LayoutWalkVisitor {
             const PrLayoutBoxStyle& box = layoutBoxStyle(tree->styles, layoutTreeNode(tree, fragment->node).style);
             PrLayoutVec corner{padding.left - box.border[PrRectSide_Left], padding.top - box.border[PrRectSide_Top]};
             padding = layoutRectIntersect(padding,
-                                          layoutClipRect(tree, fragment->node, layoutRectAt(corner, fragment->extent)));
+                layoutClipRect(tree, fragment->node, layoutRectAt(corner, fragment->extent)));
         }
         pushClip(fragment, padding);
         return scroll;
@@ -206,7 +204,7 @@ struct HitTester : LayoutWalkVisitor {
 // Writes up to `capacity` of the nodes that a hit test found, in painting order, to `out`, topmost first and each once,
 // and returns their number.
 uint32_t topmostOnce(const LayoutTree* tree, const Array<uint32_t>& hits, PrLayoutNode* PR_NULLABLE out,
-                     uint32_t capacity) {
+        uint32_t capacity) {
     uint32_t count = 0;
     for (uint32_t i = hits.count; i-- != 0;) {
         bool seen = false;
@@ -361,8 +359,8 @@ void eachText(LayoutNodeIndex node, const LayoutFragment* container, LayoutPiece
         const LayoutChild& line = container->children[i];
         if (line.fragment->kind == LayoutFragmentKind_Line)
             scan(line.fragment, line.offset);
-        else if (line.fragment->kind == LayoutFragmentKind_Around
-                 || (line.fragment->kind == LayoutFragmentKind_Box && line.fragment->node == kPrLayoutNodeNone))
+        else if (line.fragment->kind == LayoutFragmentKind_Around ||
+                (line.fragment->kind == LayoutFragmentKind_Box && line.fragment->node == kPrLayoutNodeNone))
             return;
     }
 }
@@ -470,8 +468,8 @@ const LayoutFragment* PR_NULLABLE placedBoxOf(const PrLayoutTree* tree, PrLayout
         return nullptr;
     LayoutNodeIndex index = uint32_t(node);
     const LayoutTreeNode& n = layoutTreeNode(t, index);
-    bool inlineBox = layoutKindIsElement(n.kind)
-                     && prLayoutDisplayIsInlineBox(layoutBoxStyle(t->styles, n.style).display);
+    bool inlineBox = layoutKindIsElement(n.kind) &&
+        prLayoutDisplayIsInlineBox(layoutBoxStyle(t->styles, n.style).display);
     if (n.kind == PrLayoutNodeKind_Text || n.kind == PrLayoutNodeKind_LineBreak || inlineBox)
         return nullptr;
     uint32_t top = index;
@@ -492,7 +490,7 @@ bool layoutNodeLaidOut(const LayoutTree* tree, LayoutNodeIndex node) {
 }
 
 const LayoutFragment* PR_NULLABLE layoutCaretFragment(const LayoutTree* tree, LayoutNodeIndex node, uint32_t offset,
-                                                      PrLayoutTextAffinity affinity) {
+        PrLayoutTextAffinity affinity) {
     Mapping m{.transform = prDAffine2Identity()};
     const LayoutFragment* best = nullptr;
     uint32_t nearest = UINT32_MAX;
@@ -557,9 +555,9 @@ bool layoutQueriesVerify(LayoutTree* tree, uint32_t* node) {
             bool unplaced = layoutTreeNode(tree, at).kind == PrLayoutNodeKind_Text && found.parent == kPrLayoutNodeNone;
             // A box in the final tree is placed with the fragment the tree holds of it.
             bool box = layoutTreeNode(tree, at).kind != PrLayoutNodeKind_Text && !layoutIsInlineBox(tree, at);
-            same = unplaced
-                   || (kept.parent == found.parent && memEquals(&kept.offset, &found.offset, sizeof(PrLayoutVec))
-                       && kept.fragment == found.fragment && (!box || found.fragment != nullptr));
+            same = unplaced ||
+                (kept.parent == found.parent && memEquals(&kept.offset, &found.offset, sizeof(PrLayoutVec)) &&
+                    kept.fragment == found.fragment && (!box || found.fragment != nullptr));
         }
         if (!same)
             *node = at;
@@ -573,7 +571,7 @@ bool layoutQueriesVerify(LayoutTree* tree, uint32_t* node) {
 using namespace pr_impl;
 
 uint32_t prLayoutNodeBoxes(PrLayoutTree* tree, PrLayoutNode node, PrLayoutCoordinates coordinates,
-                           PrLayoutRect* PR_NULLABLE out, uint32_t capacity) {
+        PrLayoutRect* PR_NULLABLE out, uint32_t capacity) {
     Array<PrLayoutRect>& boxes = tree->queries.boxes;
     boxes.clear();
     if (prLayoutNodeIsValid(tree, node))
@@ -613,7 +611,7 @@ PrLayoutRect prLayoutNodeShownBounds(PrLayoutTree* tree, PrLayoutNode node) {
         return PrLayoutRect{};
     // Each box that the node's placements pass through clips them, in the axes in which it clips, to its padding box.
     for (LayoutNodeIndex at = layoutCachePlacement(tree->cache, uint32_t(node)).parent; at != kPrLayoutNodeNone;
-         at = layoutCachePlacement(tree->cache, at).parent) {
+            at = layoutCachePlacement(tree->cache, at).parent) {
         const LayoutFragment* fragment = layoutCachePlaced(tree->cache, at);
         if (fragment == nullptr)
             break;
@@ -624,8 +622,7 @@ PrLayoutRect prLayoutNodeShownBounds(PrLayoutTree* tree, PrLayoutNode node) {
         Mapping m{.transform = prDAffine2Identity(), .painted = true};
         fromBox(tree, at, m);
         if (clipped) {
-            PrLayoutRect rect =
-                mapped(m, layoutClipRect(tree, at, layoutRectAt(kLayoutVecZero, fragment->extent)));
+            PrLayoutRect rect = mapped(m, layoutClipRect(tree, at, layoutRectAt(kLayoutVecZero, fragment->extent)));
             shown = layoutRectIntersect(shown, rect);
             if (empty(shown))
                 return PrLayoutRect{};
@@ -669,8 +666,10 @@ bool prLayoutNodeLocalPoint(PrLayoutTree* tree, PrLayoutNode node, PrLayoutVec p
     }
     if (reached) {
         PrLayoutRect first = boxes.data[0];
-        *out = PrLayoutVec{prLayoutUnitFromPxRoundDouble(at.x - prLayoutUnitToPxDouble(first.left)),
-                           prLayoutUnitFromPxRoundDouble(at.y - prLayoutUnitToPxDouble(first.top))};
+        *out = PrLayoutVec{
+            prLayoutUnitFromPxRoundDouble(at.x - prLayoutUnitToPxDouble(first.left)),
+            prLayoutUnitFromPxRoundDouble(at.y - prLayoutUnitToPxDouble(first.top)),
+        };
     }
     stages.reset();
     return reached;
@@ -714,11 +713,11 @@ PrLayoutVec prLayoutNodeContentExtent(const PrLayoutTree* tree, PrLayoutNode nod
     PrLayoutUnit base = layoutUnitMax(kLayoutUnitZero, fragment->box.containingInline);
     PrLayoutUnit edges[PrRectSide_Count];
     for (uint32_t side = 0; side < PrRectSide_Count; ++side)
-        edges[side] = box.border[side]
-                      + layoutUnitMax(kLayoutUnitZero, layoutResolve(t->styles, box.padding[side], base));
+        edges[side] = box.border[side] + layoutUnitMax(kLayoutUnitZero, layoutResolve(t->styles, box.padding[side], base));
     return PrLayoutVec{
         layoutUnitMax(kLayoutUnitZero, fragment->extent.x - edges[PrRectSide_Left] - edges[PrRectSide_Right]),
-        layoutUnitMax(kLayoutUnitZero, fragment->extent.y - edges[PrRectSide_Top] - edges[PrRectSide_Bottom])};
+        layoutUnitMax(kLayoutUnitZero, fragment->extent.y - edges[PrRectSide_Top] - edges[PrRectSide_Bottom]),
+    };
 }
 
 PrLayoutUnit prLayoutNodeContainingInlineSize(const PrLayoutTree* tree, PrLayoutNode node) {
@@ -729,7 +728,7 @@ PrLayoutUnit prLayoutNodeContainingInlineSize(const PrLayoutTree* tree, PrLayout
 }
 
 uint32_t prLayoutNodeGridTrackSizes(const PrLayoutTree* tree, PrLayoutNode node, PrLayoutGridAxis axis,
-                                    PrLayoutUnit* PR_NULLABLE out, uint32_t capacity) {
+        PrLayoutUnit* PR_NULLABLE out, uint32_t capacity) {
     const LayoutFragment* fragment = placedBoxOf(tree, node);
     if (fragment == nullptr || (fragment->flags & LayoutFragmentFlag_Grid) == 0)
         return 0;
@@ -740,7 +739,7 @@ uint32_t prLayoutNodeGridTrackSizes(const PrLayoutTree* tree, PrLayoutNode node,
 }
 
 uint32_t prLayoutNodeGridLineNames(const PrLayoutTree* tree, PrLayoutNode node, PrLayoutGridAxis axis,
-                                   PrLayoutGridLineName* PR_NULLABLE out, uint32_t capacity) {
+        PrLayoutGridLineName* PR_NULLABLE out, uint32_t capacity) {
     const LayoutTree* t = tree;
     const LayoutFragment* fragment = placedBoxOf(tree, node);
     if (fragment == nullptr || (fragment->flags & LayoutFragmentFlag_Grid) == 0)
@@ -793,7 +792,7 @@ PrLayoutUnit prLayoutNodeBorderWidth(const PrLayoutTree* tree, PrLayoutNode node
 }
 
 bool prLayoutNodeTextCaret(PrLayoutTree* tree, PrLayoutNode text, uint32_t offset, PrLayoutTextAffinity affinity,
-                           PrLayoutCoordinates coordinates, PrLayoutRect* out) {
+        PrLayoutCoordinates coordinates, PrLayoutRect* out) {
     if (!prLayoutNodeIsValid(tree, text))
         return false;
     Mapping m{.transform = prDAffine2Identity(), .painted = coordinates == PrLayoutCoordinates_Viewport};
@@ -814,7 +813,7 @@ bool prLayoutNodeTextCaret(PrLayoutTree* tree, PrLayoutNode text, uint32_t offse
 }
 
 uint32_t prLayoutNodeTextRangeBoxes(PrLayoutTree* tree, PrLayoutNode text, uint32_t start, uint32_t end,
-                                    PrLayoutCoordinates coordinates, PrLayoutRect* PR_NULLABLE out, uint32_t capacity) {
+        PrLayoutCoordinates coordinates, PrLayoutRect* PR_NULLABLE out, uint32_t capacity) {
     Array<PrLayoutRect>& boxes = tree->queries.boxes;
     boxes.clear();
     if (!prLayoutNodeIsValid(tree, text))
@@ -829,7 +828,7 @@ uint32_t prLayoutNodeTextRangeBoxes(PrLayoutTree* tree, PrLayoutNode text, uint3
         if (from >= to || (fragment->flags & LayoutFragmentFlag_Break) != 0)
             return;
         boxes.push(layoutTextSpanRect(tree, fragment, piece.offset, layoutTextCaretAlong(tree, fragment, from),
-                                      layoutTextCaretAlong(tree, fragment, to)));
+            layoutTextCaretAlong(tree, fragment, to)));
     });
     for (uint32_t i = 0; i < boxes.count; ++i)
         boxes.data[i] = mapped(m, boxes.data[i]);
@@ -838,8 +837,7 @@ uint32_t prLayoutNodeTextRangeBoxes(PrLayoutTree* tree, PrLayoutNode text, uint3
     return boxes.count;
 }
 
-bool prLayoutTextPositionFromPoint(PrLayoutTree* tree, PrLayoutNode root, PrLayoutVec point,
-                                   PrLayoutTextPosition* out) {
+bool prLayoutTextPositionFromPoint(PrLayoutTree* tree, PrLayoutNode root, PrLayoutVec point, PrLayoutTextPosition* out) {
     if (!prLayoutNodeIsValid(tree, root))
         return false;
     // The nearest piece so far: how far the point is from its line across the line, and from the piece along it.
@@ -873,17 +871,23 @@ bool prLayoutTextPositionFromPoint(PrLayoutTree* tree, PrLayoutNode root, PrLayo
                 double high = prLayoutUnitToPxDouble(hi);
                 return v < low ? low - v : v > high ? v - high : 0.0;
             };
-            double across = vertical ? outside(p.x, piece.line.left, piece.line.right)
-                                     : outside(p.y, piece.line.top, piece.line.bottom);
+            double across;
+            if (vertical)
+                across = outside(p.x, piece.line.left, piece.line.right);
+            else
+                across = outside(p.y, piece.line.top, piece.line.bottom);
             double along = vertical ? outside(p.y, box.top, box.bottom) : outside(p.x, box.left, box.right);
             if (across > nearestAcross || (across == nearestAcross && along >= nearestAlong))
                 continue;
             nearestAcross = across;
             nearestAlong = along;
-            double into = !vertical ? p.x - prLayoutUnitToPxDouble(box.left)
-                          : fragment->turn == LayoutTextTurn_CounterClockwise
-                              ? prLayoutUnitToPxDouble(box.bottom) - p.y
-                              : p.y - prLayoutUnitToPxDouble(box.top);
+            double into;
+            if (!vertical)
+                into = p.x - prLayoutUnitToPxDouble(box.left);
+            else if (fragment->turn == LayoutTextTurn_CounterClockwise)
+                into = prLayoutUnitToPxDouble(box.bottom) - p.y;
+            else
+                into = p.y - prLayoutUnitToPxDouble(box.top);
             *out = PrLayoutTextPosition{layoutNodeName(tree, at), layoutTextOffsetAt(tree, fragment, float(into))};
             found = true;
         }
@@ -925,7 +929,7 @@ uint32_t prLayoutTreeHitTest(PrLayoutTree* tree, PrLayoutVec point, PrLayoutNode
 }
 
 uint32_t prLayoutNodeHitTest(PrLayoutTree* tree, PrLayoutNode root, PrLayoutVec point,
-                             PrLayoutNode* PR_NULLABLE out, uint32_t capacity) {
+        PrLayoutNode* PR_NULLABLE out, uint32_t capacity) {
     LayoutNodeIndex index = layoutNodeIndex(tree, root);
     const LayoutFragment* fragment = nullptr;
     for (uint32_t i = 0; i < tree->roots.count && fragment == nullptr; ++i) {
@@ -957,9 +961,11 @@ bool prLayoutNodeScrollInfo(PrLayoutTree* tree, PrLayoutNode element, PrLayoutSc
         info.content = viewport != nullptr ? viewport->overflow : layoutRectAt(kLayoutVecZero, t->viewport);
         info.range = layoutScrollRange(info.portExtent, info.content);
         info.offset = layoutScrollClamp(t->viewportScroll, info.range);
-        PrLayoutBoxStyle overflow = t->root != kPrLayoutNodeNone
-                                        ? layoutBoxStyle(t->styles, layoutTreeNode(t, t->root).style)
-                                        : prLayoutBoxStyleDefault();
+        PrLayoutBoxStyle overflow;
+        if (t->root != kPrLayoutNodeNone)
+            overflow = layoutBoxStyle(t->styles, layoutTreeNode(t, t->root).style);
+        else
+            overflow = prLayoutBoxStyleDefault();
         // A root that clips an axis makes that axis of the viewport hidden (css-overflow-3/#overflow-propagation).
         bool x = overflow.overflowX != PrLayoutOverflow_Hidden && overflow.overflowX != PrLayoutOverflow_Clip;
         bool y = overflow.overflowY != PrLayoutOverflow_Hidden && overflow.overflowY != PrLayoutOverflow_Clip;
@@ -973,20 +979,16 @@ bool prLayoutNodeScrollInfo(PrLayoutTree* tree, PrLayoutNode element, PrLayoutSc
         return true;
     }
     const LayoutTreeNode& n = layoutTreeNode(t, index);
-    const LayoutFragment* fragment =
-        n.kind != PrLayoutNodeKind_Text ? layoutCachePlaced(t->cache, index) : nullptr;
+    const LayoutFragment* fragment = n.kind != PrLayoutNodeKind_Text ? layoutCachePlaced(t->cache, index) : nullptr;
     if (fragment == nullptr)
         return false;
     const PrLayoutBoxStyle& box = layoutBoxStyle(t->styles, n.style);
     PrLayoutScrollInfo info{};
-    PrLayoutUnit width = fragment->extent.x - box.border[PrRectSide_Left]
-                         - box.border[PrRectSide_Right];
-    PrLayoutUnit height = fragment->extent.y - box.border[PrRectSide_Top]
-                          - box.border[PrRectSide_Bottom];
+    PrLayoutUnit width = fragment->extent.x - box.border[PrRectSide_Left] - box.border[PrRectSide_Right];
+    PrLayoutUnit height = fragment->extent.y - box.border[PrRectSide_Top] - box.border[PrRectSide_Bottom];
     info.portExtent = PrLayoutVec{layoutUnitMax(kLayoutUnitZero, width), layoutUnitMax(kLayoutUnitZero, height)};
     // A replaced element's content is not scrolled (css-overflow-3/#overflow-control).
-    info.scrollContainer =
-        n.parent != kPrLayoutNodeNone && layoutKindIsElement(n.kind) && layoutIsScrollContainer(box);
+    info.scrollContainer = n.parent != kPrLayoutNodeNone && layoutKindIsElement(n.kind) && layoutIsScrollContainer(box);
     if (info.scrollContainer) {
         info.content = layoutScrollContent(fragment, box);
         info.range = layoutScrollRange(info.portExtent, info.content);

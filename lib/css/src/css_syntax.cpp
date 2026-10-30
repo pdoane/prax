@@ -539,8 +539,7 @@ PrCssUnit unitOf(const Source* s, uint32_t start, uint32_t end, CssTokenFlags fl
 
     char decoded[kCssUnitMaxLength];
     uint32_t size = cssValue(text, decoded, uint32_t(sizeof(decoded)));
-    return size <= sizeof(decoded) ? cssUnitFromText(PrStringView{decoded, size})
-                                   : PrCssUnit_Unknown;
+    return size <= sizeof(decoded) ? cssUnitFromText(PrStringView{decoded, size}) : PrCssUnit_Unknown;
 }
 
 // Consumes a numeric token (css-syntax-3/#consume-numeric-token, css-syntax-3/#consume-number). The source must start
@@ -693,8 +692,7 @@ bool isUrl(const Source* s, uint32_t start, uint32_t end, CssTokenFlags flags) {
 
 // Consumes the function or url token that the ident sequence from `start` to `end` starts, with the '(' at `end`
 // (css-syntax-3/#consume-ident-like-token).
-PR_NOINLINE Consumed consumeFunction(const Source* s, uint32_t start, uint32_t end,
-                                     CssTokenFlags flags) {
+PR_NOINLINE Consumed consumeFunction(const Source* s, uint32_t start, uint32_t end, CssTokenFlags flags) {
     if (!isUrl(s, start, end, flags))
         return consumed(end + 1, CssTokenKind_Function, verbatimWhenPlain(flags));
 
@@ -707,8 +705,7 @@ PR_NOINLINE Consumed consumeFunction(const Source* s, uint32_t start, uint32_t e
 
 // Consumes an ident-like token at `start`, whose bytes before `pos` are ASCII name bytes
 // (css-syntax-3/#consume-ident-like-token). Writes the byte after the token, or kEnd, to `next`.
-PR_FORCE_INLINE Consumed consumeIdentLike(const Source* s, uint32_t start, uint32_t pos,
-                                          uint32_t* next) {
+PR_FORCE_INLINE Consumed consumeIdentLike(const Source* s, uint32_t start, uint32_t pos, uint32_t* next) {
     CssTokenFlags flags = CssTokenFlag_PlainText;
     NameEnd name = consumeName(s, pos, &flags);
     if (name.byte != '(') {
@@ -769,8 +766,7 @@ uint32_t unicodeRangeEnd(const Source* s, uint32_t pos, uint32_t* first, uint32_
 
 // Consumes a run of whitespace from `pos`, whose first byte is `byte`. The run serializes as one space. Its bytes are
 // its value unless preprocessing rewrites one of them. Writes the byte after the run, or kEnd, to `next`.
-PR_FORCE_INLINE Consumed consumeWhitespace(const Source* s, uint32_t pos, uint32_t byte,
-                                           uint32_t* next) {
+PR_FORCE_INLINE Consumed consumeWhitespace(const Source* s, uint32_t pos, uint32_t byte, uint32_t* next) {
     const char* text = s->text;
     uint32_t size = s->size;
     CssByteFlags seen = kCssByte.of[byte];
@@ -829,7 +825,7 @@ PR_NOINLINE Consumed consumeUnicodeRange(const Source* s, uint32_t pos) {
     uint32_t first = 0;
     uint32_t last = 0;
     return consumed(unicodeRangeEnd(s, pos, &first, &last), CssTokenKind_UnicodeRange,
-                    CssTokenFlag_PlainText);   // not Verbatim: a range serializes in hex
+        CssTokenFlag_PlainText);   // not Verbatim: a range serializes in hex
 }
 
 // Returns the position one past the `*/` that closes the comment whose body begins at `pos`, or the end of the source
@@ -880,13 +876,12 @@ PR_NOINLINE Consumed consumeToken(const Source* s, uint32_t pos, uint32_t byte) 
 
 // Returns true if a token of the kind opens a block, or closes one.
 constexpr bool opensBlock(CssTokenKind kind) {
-    return kind == CssTokenKind_Function || kind == CssTokenKind_OpenParen
-        || kind == CssTokenKind_OpenBracket || kind == CssTokenKind_OpenBrace;
+    return kind == CssTokenKind_Function || kind == CssTokenKind_OpenParen ||
+        kind == CssTokenKind_OpenBracket || kind == CssTokenKind_OpenBrace;
 }
 
 constexpr bool closesBlock(CssTokenKind kind) {
-    return kind == CssTokenKind_CloseParen || kind == CssTokenKind_CloseBracket
-        || kind == CssTokenKind_CloseBrace;
+    return kind == CssTokenKind_CloseParen || kind == CssTokenKind_CloseBracket || kind == CssTokenKind_CloseBrace;
 }
 
 // The kinds that open or close a block, one bit each.
@@ -915,10 +910,10 @@ void pairBracket(CssTokenArray* tokens, Array<uint32_t>* open, uint32_t index, C
     if (depth != 0) {
         uint32_t opener = open->data[depth - 1];
         CssTokenKind opened = tokens->kinds.data[opener];
-        bool closes = (kind == CssTokenKind_CloseParen
-                       && (opened == CssTokenKind_OpenParen || opened == CssTokenKind_Function))
-            || (kind == CssTokenKind_CloseBracket && opened == CssTokenKind_OpenBracket)
-            || (kind == CssTokenKind_CloseBrace && opened == CssTokenKind_OpenBrace);
+        bool closes = (kind == CssTokenKind_CloseParen &&
+            (opened == CssTokenKind_OpenParen || opened == CssTokenKind_Function)) ||
+            (kind == CssTokenKind_CloseBracket && opened == CssTokenKind_OpenBracket) ||
+            (kind == CssTokenKind_CloseBrace && opened == CssTokenKind_OpenBrace);
         if (closes) {
             tokens->closers.data[opener] = index;
             open->count = depth - 1;
@@ -1098,8 +1093,7 @@ bool isIdentKeyword(const CssTokenStream* ts, PrCssKeyword keyword) {
 }
 
 bool isIntegerNumber(const CssTokenStream* ts) {
-    return cssPeek(ts) == CssTokenKind_Number
-        && (cssTokenFlags(ts->tokens, ts->pos) & CssTokenFlag_Integer) != 0;
+    return cssPeek(ts) == CssTokenKind_Number && (cssTokenFlags(ts->tokens, ts->pos) & CssTokenFlag_Integer) != 0;
 }
 
 bool isSigned(const CssTokenStream* ts) {
@@ -1182,8 +1176,7 @@ bool readTrailingSignless(CssTokenStream* ts, int32_t* b) {
 // ---------------------------------------------------------------------------------------------------------------------
 // Tokenizing
 
-void cssTokenize(CssTokenArray* tokens, CssTokenScratch* scratch, PrStringView source,
-                 CssTokenizeFlags flags) {
+void cssTokenize(CssTokenArray* tokens, CssTokenScratch* scratch, PrStringView source, CssTokenizeFlags flags) {
     PR_ASSERT(source.size < 0xffffffffu);
     uint32_t size = uint32_t(source.size);
 
@@ -1200,8 +1193,7 @@ void cssTokenize(CssTokenArray* tokens, CssTokenScratch* scratch, PrStringView s
 
     Source reader = {source.data, size};
     scratch->open.count = 0;
-    uint32_t count = tokenizeAll(tokens, &scratch->open, &reader,
-                                 (flags & CssTokenizeFlag_UnicodeRanges) != 0);
+    uint32_t count = tokenizeAll(tokens, &scratch->open, &reader, (flags & CssTokenizeFlag_UnicodeRanges) != 0);
 
     // The entry past the last token, and the blocks that the input never closed, which end at the end of the input.
     tokens->starts.data[count] = size;
@@ -1371,8 +1363,7 @@ bool cssTokenIsDashedIdent(const CssTokenArray* tokens, uint32_t index) {
         return stringStartsWith(text, "--");
 
     char decoded[2];
-    return cssValue(text, decoded, uint32_t(sizeof(decoded))) >= 2 && decoded[0] == '-'
-        && decoded[1] == '-';
+    return cssValue(text, decoded, uint32_t(sizeof(decoded))) >= 2 && decoded[0] == '-' && decoded[1] == '-';
 }
 
 double cssTokenNumber(const CssTokenArray* tokens, uint32_t index) {
@@ -1390,8 +1381,7 @@ PrStringView cssTokenUnitText(const CssTokenArray* tokens, uint32_t index) {
     return PrStringView{tokens->source.data + unit, end - unit};
 }
 
-void cssTokenRange(const CssTokenArray* tokens, uint32_t index, uint32_t* first,
-                   uint32_t* last) {
+void cssTokenRange(const CssTokenArray* tokens, uint32_t index, uint32_t* first, uint32_t* last) {
     Source s = {tokens->source.data, tokens->ends.data[index]};
     unicodeRangeEnd(&s, tokens->starts.data[index], first, last);
 }
@@ -1436,8 +1426,7 @@ uint32_t cssBlockEnd(const CssTokenStream* ts) {
     CssTokenStream scan = *ts;
     while (scan.pos < scan.end) {
         CssTokenKind kind = cssPeek(&scan);
-        if (kind == CssTokenKind_CloseParen || kind == CssTokenKind_CloseBracket
-            || kind == CssTokenKind_CloseBrace)
+        if (kind == CssTokenKind_CloseParen || kind == CssTokenKind_CloseBracket || kind == CssTokenKind_CloseBrace)
             break;
         CssTokenSpan ignored;
         cssConsumeComponentValue(&scan, &ignored);
@@ -1450,8 +1439,7 @@ CssTokenSpan cssTrimWhitespace(const CssTokenArray* tokens, CssTokenSpan span) {
         ++span.start;
         --span.count;
     }
-    while (span.count != 0
-           && tokens->kinds.data[span.start + span.count - 1] == CssTokenKind_Whitespace)
+    while (span.count != 0 && tokens->kinds.data[span.start + span.count - 1] == CssTokenKind_Whitespace)
         --span.count;
     return span;
 }

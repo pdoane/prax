@@ -87,10 +87,10 @@ JSValue getBBox(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv)
     if (!JS_IsUndefined(dictionary) && !JS_IsNull(dictionary)) {
         if (!JS_IsObject(dictionary))
             return JS_ThrowTypeError(ctx, "Expected an SVGBoundingBoxOptions");
-        if (!readMember(ctx, dictionary, "clipped", false, &options.clipped)
-            || !readMember(ctx, dictionary, "fill", true, &options.fill)
-            || !readMember(ctx, dictionary, "markers", false, &options.markers)
-            || !readMember(ctx, dictionary, "stroke", false, &options.stroke))
+        if (!readMember(ctx, dictionary, "clipped", false, &options.clipped) ||
+                !readMember(ctx, dictionary, "fill", true, &options.fill) ||
+                !readMember(ctx, dictionary, "markers", false, &options.markers) ||
+                !readMember(ctx, dictionary, "stroke", false, &options.stroke))
             return JS_EXCEPTION;
     }
     return prJsDomRectNew(ctx, prSvgGraphicsElementGetBBox(element, &options));
@@ -102,8 +102,7 @@ JSValue getCtm(JSContext* ctx, JSValueConst self, int, JSValueConst*, int magic)
     if (element == nullptr)
         return JS_EXCEPTION;
     PrDomMatrix matrix = prDomMatrixIdentity();
-    bool found = magic == 0 ? prSvgGraphicsElementGetCtm(element, &matrix)
-                            : prSvgGraphicsElementGetScreenCtm(element, &matrix);
+    bool found = magic == 0 ? prSvgGraphicsElementGetCtm(element, &matrix) : prSvgGraphicsElementGetScreenCtm(element, &matrix);
     return found ? prJsDomMatrixNew(ctx, matrix) : JS_NULL;
 }
 
@@ -126,8 +125,11 @@ JSValue isPointIn(JSContext* ctx, JSValueConst self, int argc, JSValueConst* arg
     if (element == nullptr || !prJsDomPointInitRead(ctx, argc > 0 ? argv[0] : JS_UNDEFINED, &point))
         return JS_EXCEPTION;
     bool inside = false;
-    PrStatus status = magic == 0 ? prSvgGeometryElementIsPointInFill(element, point, &inside)
-                                 : prSvgGeometryElementIsPointInStroke(element, point, &inside);
+    PrStatus status;
+    if (magic == 0)
+        status = prSvgGeometryElementIsPointInFill(element, point, &inside);
+    else
+        status = prSvgGeometryElementIsPointInStroke(element, point, &inside);
     return orInvalidState(ctx, status, JS_NewBool(ctx, inside));
 }
 
@@ -196,8 +198,9 @@ JSValue setLengthNumber(JSContext* ctx, JSValueConst self, JSValueConst input, i
     float value = 0;
     if (length == nullptr || !floatOf(ctx, input, &value))
         return JS_EXCEPTION;
-    return lengthResult(ctx, magic == 0 ? prSvgLengthSetValue(length, value)
-                                        : prSvgLengthSetValueInSpecifiedUnits(length, value));
+    if (magic == 0)
+        return lengthResult(ctx, prSvgLengthSetValue(length, value));
+    return lengthResult(ctx, prSvgLengthSetValueInSpecifiedUnits(length, value));
 }
 
 JSValue lengthValue(JSContext* ctx, JSValueConst self, int magic) {
@@ -220,13 +223,14 @@ JSValue specifyUnits(JSContext* ctx, JSValueConst self, int argc, JSValueConst* 
     PrSvgLength* length = jsThis<PrSvgLength>(ctx, self, prJsSvgLengthClass);
     uint32_t type = 0;
     float value = 0;
-    if (length == nullptr || !indexOf(ctx, argc, argv, 0, &type)
-        || (magic == 0 && (!jsArgCount(ctx, argc, 2) || !floatOf(ctx, argv[1], &value))))
+    if (length == nullptr || !indexOf(ctx, argc, argv, 0, &type) ||
+            (magic == 0 && (!jsArgCount(ctx, argc, 2) || !floatOf(ctx, argv[1], &value))))
         return JS_EXCEPTION;
     // An unsigned short wraps; a value past the constants is not a unit type.
     PrSvgLengthType unit = PrSvgLengthType(type & 0xffff);
-    return lengthResult(ctx, magic == 0 ? prSvgLengthNewValueSpecifiedUnits(length, unit, value)
-                                        : prSvgLengthConvertToSpecifiedUnits(length, unit));
+    if (magic == 0)
+        return lengthResult(ctx, prSvgLengthNewValueSpecifiedUnits(length, unit, value));
+    return lengthResult(ctx, prSvgLengthConvertToSpecifiedUnits(length, unit));
 }
 
 // Implements baseVal and animVal, selected by the magic, each the same object every time.
@@ -235,8 +239,7 @@ JSValue animatedLengthValue(JSContext* ctx, JSValueConst self, int magic) {
     if (animated == nullptr)
         return JS_EXCEPTION;
     return jsSameObject(ctx, self, magic == 0 ? "baseVal" : "animVal", [&] {
-        PrSvgLength* length =
-            magic == 0 ? prSvgAnimatedLengthBaseVal(animated) : prSvgAnimatedLengthAnimVal(animated);
+        PrSvgLength* length = magic == 0 ? prSvgAnimatedLengthBaseVal(animated) : prSvgAnimatedLengthAnimVal(animated);
         JSValue object = jsWrap(ctx, prJsSvgLengthClass, self, length, true);
         if (JS_IsException(object))
             prSvgLengthDestroy(length);
@@ -326,8 +329,9 @@ JSValue getNumberOfChars(JSContext* ctx, JSValueConst self, int, JSValueConst*) 
 
 JSValue getComputedTextLength(JSContext* ctx, JSValueConst self, int, JSValueConst*) {
     PrSvgElement* element = textContentOf(ctx, self);
-    return element != nullptr ? JS_NewFloat64(ctx, double(prSvgTextContentElementGetComputedTextLength(element)))
-                              : JS_EXCEPTION;
+    if (element == nullptr)
+        return JS_EXCEPTION;
+    return JS_NewFloat64(ctx, double(prSvgTextContentElementGetComputedTextLength(element)));
 }
 
 JSValue getSubStringLength(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv) {
@@ -348,8 +352,11 @@ JSValue getPositionOfChar(JSContext* ctx, JSValueConst self, int argc, JSValueCo
     if (element == nullptr || !indexOf(ctx, argc, argv, 0, &index))
         return JS_EXCEPTION;
     PrDomPoint point{0, 0, 0, 1};
-    PrStatus status = magic == 0 ? prSvgTextContentElementGetStartPositionOfChar(element, index, &point)
-                                 : prSvgTextContentElementGetEndPositionOfChar(element, index, &point);
+    PrStatus status;
+    if (magic == 0)
+        status = prSvgTextContentElementGetStartPositionOfChar(element, index, &point);
+    else
+        status = prSvgTextContentElementGetEndPositionOfChar(element, index, &point);
     if (status != PrStatus_Ok)
         return jsDomExceptionThrow(ctx, "IndexSizeError");
     return prJsDomPointNew(ctx, point);
@@ -413,7 +420,7 @@ JSValue createSvgRect(JSContext* ctx, JSValueConst self, int, JSValueConst*) {
 constexpr JSCFunctionListEntry kElementProto[] = {
     PR_JS_TAG("SVGElement"),
     PR_JS_GET("ownerSVGElement",
-              (jsObjectGetter<&prJsSvgElementClass, prSvgElementOwnerSvgElement, &prJsDomElementClass>)),
+        (jsObjectGetter<&prJsSvgElementClass, prSvgElementOwnerSvgElement, &prJsDomElementClass>)),
     PR_JS_CSS_INLINE_STYLE,
 };
 
@@ -453,17 +460,11 @@ constexpr JSCFunctionListEntry kLineElementProto[] = {
     PR_SVG_LENGTH("x1", 9), PR_SVG_LENGTH("y1", 10), PR_SVG_LENGTH("x2", 11), PR_SVG_LENGTH("y2", 12),
 };
 
-constexpr JSCFunctionListEntry kPathElementProto[] = {
-    PR_JS_TAG("SVGPathElement"),
-};
+constexpr JSCFunctionListEntry kPathElementProto[] = {PR_JS_TAG("SVGPathElement")};
 
-constexpr JSCFunctionListEntry kPolylineElementProto[] = {
-    PR_JS_TAG("SVGPolylineElement"),
-};
+constexpr JSCFunctionListEntry kPolylineElementProto[] = {PR_JS_TAG("SVGPolylineElement")};
 
-constexpr JSCFunctionListEntry kPolygonElementProto[] = {
-    PR_JS_TAG("SVGPolygonElement"),
-};
+constexpr JSCFunctionListEntry kPolygonElementProto[] = {PR_JS_TAG("SVGPolygonElement")};
 
 constexpr JSCFunctionListEntry kSvgElementProto[] = {
     PR_JS_TAG("SVGSVGElement"),
@@ -498,22 +499,16 @@ constexpr JSCFunctionListEntry kUseElementProto[] = {
     PR_SVG_LENGTH("x", 0), PR_SVG_LENGTH("y", 1), PR_SVG_LENGTH("width", 2), PR_SVG_LENGTH("height", 3),
 };
 
-constexpr JSCFunctionListEntry kSwitchElementProto[] = {
-    PR_JS_TAG("SVGSwitchElement"),
-};
+constexpr JSCFunctionListEntry kSwitchElementProto[] = {PR_JS_TAG("SVGSwitchElement")};
 
-constexpr JSCFunctionListEntry kSymbolElementProto[] = {
-    PR_JS_TAG("SVGSymbolElement"),
-};
+constexpr JSCFunctionListEntry kSymbolElementProto[] = {PR_JS_TAG("SVGSymbolElement")};
 
 constexpr JSCFunctionListEntry kScriptElementProto[] = {
     PR_JS_TAG("SVGScriptElement"),
     PR_JS_MAGIC_GET("href", animatedString, 0),
 };
 
-constexpr JSCFunctionListEntry kViewElementProto[] = {
-    PR_JS_TAG("SVGViewElement"),
-};
+constexpr JSCFunctionListEntry kViewElementProto[] = {PR_JS_TAG("SVGViewElement")};
 
 constexpr JSCFunctionListEntry kImageElementProto[] = {
     PR_JS_TAG("SVGImageElement"),
@@ -526,25 +521,15 @@ constexpr JSCFunctionListEntry kForeignObjectElementProto[] = {
     PR_SVG_LENGTH("x", 0), PR_SVG_LENGTH("y", 1), PR_SVG_LENGTH("width", 2), PR_SVG_LENGTH("height", 3),
 };
 
-constexpr JSCFunctionListEntry kAnimationElementProto[] = {
-    PR_JS_TAG("SVGAnimationElement"),
-};
+constexpr JSCFunctionListEntry kAnimationElementProto[] = {PR_JS_TAG("SVGAnimationElement")};
 
-constexpr JSCFunctionListEntry kAnimateElementProto[] = {
-    PR_JS_TAG("SVGAnimateElement"),
-};
+constexpr JSCFunctionListEntry kAnimateElementProto[] = {PR_JS_TAG("SVGAnimateElement")};
 
-constexpr JSCFunctionListEntry kSetElementProto[] = {
-    PR_JS_TAG("SVGSetElement"),
-};
+constexpr JSCFunctionListEntry kSetElementProto[] = {PR_JS_TAG("SVGSetElement")};
 
-constexpr JSCFunctionListEntry kAnimateMotionElementProto[] = {
-    PR_JS_TAG("SVGAnimateMotionElement"),
-};
+constexpr JSCFunctionListEntry kAnimateMotionElementProto[] = {PR_JS_TAG("SVGAnimateMotionElement")};
 
-constexpr JSCFunctionListEntry kAnimateTransformElementProto[] = {
-    PR_JS_TAG("SVGAnimateTransformElement"),
-};
+constexpr JSCFunctionListEntry kAnimateTransformElementProto[] = {PR_JS_TAG("SVGAnimateTransformElement")};
 
 constexpr JSCFunctionListEntry kLengthProto[] = {
     PR_JS_TAG("SVGLength"),
@@ -576,7 +561,7 @@ constexpr JsClassDefinition kClasses[] = {
     PR_SVG_ELEMENT("SVGElement", prJsSvgElementClass, kElementProto, prJsDomElementClass),
     PR_SVG_ELEMENT("SVGGraphicsElement", prJsSvgGraphicsElementClass, kGraphicsElementProto, prJsSvgElementClass),
     PR_SVG_ELEMENT("SVGGeometryElement", prJsSvgGeometryElementClass, kGeometryElementProto,
-                   prJsSvgGraphicsElementClass),
+        prJsSvgGraphicsElementClass),
     PR_SVG_ELEMENT("SVGRectElement", svgRectElementClass, kRectElementProto, prJsSvgGeometryElementClass),
     PR_SVG_ELEMENT("SVGCircleElement", svgCircleElementClass, kCircleElementProto, prJsSvgGeometryElementClass),
     PR_SVG_ELEMENT("SVGEllipseElement", svgEllipseElementClass, kEllipseElementProto, prJsSvgGeometryElementClass),
@@ -586,7 +571,7 @@ constexpr JsClassDefinition kClasses[] = {
     PR_SVG_ELEMENT("SVGPolygonElement", svgPolygonElementClass, kPolygonElementProto, prJsSvgGeometryElementClass),
     PR_SVG_ELEMENT("SVGSVGElement", prJsSvgSvgElementClass, kSvgElementProto, prJsSvgGraphicsElementClass),
     PR_SVG_ELEMENT("SVGTextContentElement", prJsSvgTextContentElementClass, kTextContentElementProto,
-                   prJsSvgGraphicsElementClass),
+        prJsSvgGraphicsElementClass),
     PR_SVG_ELEMENT("SVGAElement", prJsSvgAElementClass, kAElementProto, prJsSvgGraphicsElementClass),
     PR_SVG_ELEMENT("SVGUseElement", prJsSvgUseElementClass, kUseElementProto, prJsSvgGraphicsElementClass),
     PR_SVG_ELEMENT("SVGSwitchElement", prJsSvgSwitchElementClass, kSwitchElementProto, prJsSvgGraphicsElementClass),
@@ -595,20 +580,27 @@ constexpr JsClassDefinition kClasses[] = {
     PR_SVG_ELEMENT("SVGViewElement", prJsSvgViewElementClass, kViewElementProto, prJsSvgElementClass),
     PR_SVG_ELEMENT("SVGImageElement", prJsSvgImageElementClass, kImageElementProto, prJsSvgGraphicsElementClass),
     PR_SVG_ELEMENT("SVGForeignObjectElement", prJsSvgForeignObjectElementClass, kForeignObjectElementProto,
-                   prJsSvgGraphicsElementClass),
+        prJsSvgGraphicsElementClass),
     PR_SVG_ELEMENT("SVGAnimationElement", prJsSvgAnimationElementClass, kAnimationElementProto, prJsSvgElementClass),
     PR_SVG_ELEMENT("SVGAnimateElement", prJsSvgAnimateElementClass, kAnimateElementProto, prJsSvgAnimationElementClass),
     PR_SVG_ELEMENT("SVGSetElement", prJsSvgSetElementClass, kSetElementProto, prJsSvgAnimationElementClass),
     PR_SVG_ELEMENT("SVGAnimateMotionElement", prJsSvgAnimateMotionElementClass, kAnimateMotionElementProto,
-                   prJsSvgAnimationElementClass),
+        prJsSvgAnimationElementClass),
     PR_SVG_ELEMENT("SVGAnimateTransformElement", prJsSvgAnimateTransformElementClass, kAnimateTransformElementProto,
-                   prJsSvgAnimationElementClass),
-    {PR_JS_CLASS("SVGLength", prJsSvgLengthClass, (jsFinalizer<&prJsSvgLengthClass, prSvgLengthDestroy>), kLengthProto),
-     PR_JS_CONSTANTS(kLengthConstants)},
-    {PR_JS_CLASS("SVGAnimatedLength", prJsSvgAnimatedLengthClass,
-                 (jsFinalizer<&prJsSvgAnimatedLengthClass, prSvgAnimatedLengthDestroy>), kAnimatedLengthProto)},
-    {PR_JS_CLASS("SVGAnimatedString", prJsSvgAnimatedStringClass,
-                 (jsFinalizer<&prJsSvgAnimatedStringClass, prSvgAnimatedStringDestroy>), kAnimatedStringProto)},
+        prJsSvgAnimationElementClass),
+    {
+        PR_JS_CLASS("SVGLength", prJsSvgLengthClass, (jsFinalizer<&prJsSvgLengthClass, prSvgLengthDestroy>),
+            kLengthProto),
+        PR_JS_CONSTANTS(kLengthConstants)
+    },
+    {
+        PR_JS_CLASS("SVGAnimatedLength", prJsSvgAnimatedLengthClass,
+            (jsFinalizer<&prJsSvgAnimatedLengthClass, prSvgAnimatedLengthDestroy>), kAnimatedLengthProto)
+    },
+    {
+        PR_JS_CLASS("SVGAnimatedString", prJsSvgAnimatedStringClass,
+            (jsFinalizer<&prJsSvgAnimatedStringClass, prSvgAnimatedStringDestroy>), kAnimatedStringProto)
+    },
 };
 
 } // namespace

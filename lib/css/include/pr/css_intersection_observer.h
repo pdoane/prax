@@ -88,8 +88,7 @@ typedef struct PrCssIntersectionCallback {
 // (intersection-observer/#initialize-new-intersection-observer). Returns Syntax for a margin that is not one, and
 // OutOfRange for a threshold outside 0 to 1. On failure, `*out` is null.
 PrStatus prCssIntersectionObserverCreate(PrDomDocument* document, const PrCssIntersectionObserverInit* init,
-                                         const PrCssIntersectionCallback* callback,
-                                         PrCssIntersectionObserver* PR_NULLABLE* PR_NONNULL out);
+    const PrCssIntersectionCallback* callback, PrCssIntersectionObserver* PR_NULLABLE* PR_NONNULL out);
 
 // Adds or releases a reference. The last release frees the observer and its queued entries.
 void prCssIntersectionObserverRetain(PrCssIntersectionObserver* self);
@@ -122,7 +121,7 @@ void prCssIntersectionObserverDisconnect(PrCssIntersectionObserver* self);
 // (intersection-observer/#dom-intersectionobserver-takerecords). Each entry taken holds a reference to its target,
 // which the caller releases. A caller takes them all by calling until it takes none.
 uint32_t prCssIntersectionObserverTakeRecords(PrCssIntersectionObserver* self, PrCssIntersectionObserverEntry* out,
-                                              uint32_t capacity);
+    uint32_t capacity);
 
 // Returns true if an observer of the document observes an element whose intersection no rendering update has computed
 // yet (intersection-observer/#pending-initial-observation), so that the next rendering update must run.

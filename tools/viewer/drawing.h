@@ -49,7 +49,7 @@ constexpr float kCaptionBand = 16;
 // Draws the drawing for `display`, with its text shaped by `shaper` and its hinted fonts hinted by `hinter`, or drawn
 // in their design outlines without one, and the captions of its cases over what it draws, without the drawing's state.
 void drawDrawing(const Drawing& drawing, PrDrawList* list, PrTextShaper* shaper, PrFontHinter* PR_NULLABLE hinter,
-                 const PrAppDisplay& display, float width, float height, double time);
+    const PrAppDisplay& display, float width, float height, double time);
 
 // Returns the shaper and the hinter of the drawing that is being drawn on this thread, and the display that it is drawn
 // for.
@@ -67,8 +67,7 @@ inline PrColor withAlpha(PrColor color, float alpha) {
 }
 
 // Returns a default stroke of `width`, with `join`, and with `cap` at both ends and on dashes.
-inline PrDrawStroke strokeOf(float width, PrPathJoin join = PrPathJoin_Miter,
-                             PrPathCap cap = PrPathCap_Butt) {
+inline PrDrawStroke strokeOf(float width, PrPathJoin join = PrPathJoin_Miter, PrPathCap cap = PrPathCap_Butt) {
     PrDrawStroke stroke = prDrawStrokeDefault();
     stroke.shape.width = width;
     stroke.shape.join = join;
@@ -97,16 +96,14 @@ struct Grid {
     PrRect slot(uint32_t column, uint32_t row) const {
         float w = width / float(columns);
         float h = height / float(rows);
-        return PrRect{float(column) * w, float(row) * h, float(column + 1) * w,
-                      float(row + 1) * h};
+        return PrRect{float(column) * w, float(row) * h, float(column + 1) * w, float(row + 1) * h};
     }
 
     // Returns the rectangle that the case at `column` and `row` draws into: the slot inset by `inset`, above the
     // caption band.
     PrRect cell(uint32_t column, uint32_t row, float inset = 16) const {
         PrRect s = slot(column, row);
-        return PrRect{s.left + inset, s.top + inset, s.right - inset,
-                      s.bottom - inset - kCaptionBand};
+        return PrRect{s.left + inset, s.top + inset, s.right - inset, s.bottom - inset - kCaptionBand};
     }
 
     // Returns the cell at `index`, counted along the rows.
@@ -117,9 +114,7 @@ struct Grid {
     // Captions the cell in the band under it, with the cell's `inset`.
     void caption(uint32_t column, uint32_t row, const char* text, float inset = 16) const {
         PrRect s = slot(column, row);
-        viewer::caption(
-            PrRect{s.left + 4, s.bottom - inset - kCaptionBand, s.right - 4, s.bottom - inset},
-            text);
+        viewer::caption(PrRect{s.left + 4, s.bottom - inset - kCaptionBand, s.right - 4, s.bottom - inset}, text);
     }
 
     // Captions the cell at `index`, counted along the rows.
@@ -164,7 +159,7 @@ inline PrPath* star(PrVec2 center, float radius, uint32_t points, uint32_t step)
 // Records the image's texels in `source` drawn over `destination`, at `opacity`, as a rectangle filled with the image's
 // brush.
 inline void drawImage(PrDrawList* list, const PrDrawImage* image, PrRect source, PrRect destination,
-                      PrDrawSampling sampling, float opacity) {
+        PrDrawSampling sampling, float opacity) {
     PrDrawSource from = prDrawSourceImage(image, source);
     PrDrawBrush brush = prDrawBrushImage(from, destination, sampling);
     brush.opacity = opacity;
@@ -173,7 +168,7 @@ inline void drawImage(PrDrawList* list, const PrDrawImage* image, PrRect source,
 
 // Records the whole image as a nine-slice over `destination`.
 inline void drawNineSlice(PrDrawList* list, const PrDrawImage* image, const PrDrawNineSlice* slices,
-                          PrRect destination, PrDrawSampling sampling, PrColor tint) {
+        PrRect destination, PrDrawSampling sampling, PrColor tint) {
     PrRect whole{0, 0, float(prDrawImageExtent(image).x), float(prDrawImageExtent(image).y)};
     PrDrawSource from = prDrawSourceImage(image, whole);
     prDrawListNineSlice(list, from, slices, destination, sampling, {.color = tint});

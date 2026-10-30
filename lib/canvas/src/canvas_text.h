@@ -82,8 +82,7 @@ void canvasTextReset(CanvasText* text);
 
 // Sets `source` in `style`, in the families of `set` and shaped with `shaper`. Returns false, and leaves the text
 // empty, if the font has no face.
-bool canvasTextSet(CanvasText* text, PrStringView source, const CanvasTextStyle& style, PrFontSet* set,
-                   PrTextShaper* shaper);
+bool canvasTextSet(CanvasText* text, PrStringView source, const CanvasTextStyle& style, PrFontSet* set, PrTextShaper* shaper);
 
 } // namespace pr_impl
 

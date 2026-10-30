@@ -46,17 +46,18 @@ void runReactions(PrDomElement* element) {
         DomCustomReactionEntry reaction = custom->reactions.data[0];
         custom->reactions.erase(0);
         if (reaction.upgrade != nullptr) {
-            upgrade(element, reaction.upgrade,
-                    custom->registry != nullptr ? custom->registry
-                                                : element->document->customElements);
+            const PrDomCustomElementRegistry* registry =
+                custom->registry != nullptr ? custom->registry : element->document->customElements;
+            upgrade(element, reaction.upgrade, registry);
         } else if (custom->definition != nullptr && custom->registry != nullptr) {
-            PrDomCustomReaction arguments = {reaction.callback, viewOf(&reaction.name),
-                                             viewOf(&reaction.oldValue), viewOf(&reaction.value),
-                                             viewOf(&reaction.space),
-                                             reaction.oldDocument,
-                                             reaction.newDocument};
-            custom->registry->invoke(custom->registry->context, element,
-                                     custom->definition, &arguments);
+            PrDomCustomReaction arguments = {
+                reaction.callback, viewOf(&reaction.name),
+                viewOf(&reaction.oldValue), viewOf(&reaction.value),
+                viewOf(&reaction.space),
+                reaction.oldDocument,
+                reaction.newDocument,
+            };
+            custom->registry->invoke(custom->registry->context, element, custom->definition, &arguments);
         }
         resetReaction(&reaction);
         // A reaction may have destroyed the element's custom element state.
@@ -100,27 +101,27 @@ void enqueueElement(PrDomElement* element, const PrDomCustomElementRegistry* reg
 // html/#enqueue-a-custom-element-callback-reaction, for a custom element whose definition has the callback. For
 // attributeChanged, enqueues the reaction only if the definition observes the attribute.
 void enqueueCallback(PrDomElement* element, PrDomCustomCallback callback, PrStringView name = {},
-                     PrStringView oldValue = {}, PrStringView value = {}, PrStringView space = {},
-                     PrDomDocument* PR_NULLABLE oldDocument = nullptr,
-                     PrDomDocument* PR_NULLABLE newDocument = nullptr) {
+        PrStringView oldValue = {}, PrStringView value = {}, PrStringView space = {},
+        PrDomDocument* PR_NULLABLE oldDocument = nullptr, PrDomDocument* PR_NULLABLE newDocument = nullptr) {
     DomCustomElement* custom = domCustomElementFromElement(element);
     const PrDomCustomElementRegistry* registry = custom->registry;
-    if (custom->definition == nullptr || registry == nullptr
-        || !registry->observes(registry->context, custom->definition, callback, name))
+    if (custom->definition == nullptr || registry == nullptr ||
+            !registry->observes(registry->context, custom->definition, callback, name))
         return;
     if (oldDocument != nullptr)
         domDocumentRetain(oldDocument);
     if (newDocument != nullptr)
         domDocumentRetain(newDocument);
-    custom->reactions.push(DomCustomReactionEntry{nullptr, callback, prStringCopy(name),
-                                             prStringCopy(oldValue), prStringCopy(value),
-                                             prStringCopy(space), oldDocument, newDocument});
+    custom->reactions.push(DomCustomReactionEntry{
+        nullptr, callback, prStringCopy(name),
+        prStringCopy(oldValue), prStringCopy(value),
+        prStringCopy(space), oldDocument, newDocument,
+    });
     enqueueElement(element, registry);
 }
 
 // html/#enqueue-a-custom-element-upgrade-reaction
-void enqueueUpgrade(PrDomElement* element, void* definition,
-                    const PrDomCustomElementRegistry* registry) {
+void enqueueUpgrade(PrDomElement* element, void* definition, const PrDomCustomElementRegistry* registry) {
     DomCustomElement* custom = domCustomElementFromElement(element);
     DomCustomReactionEntry reaction = {};
     reaction.upgrade = definition;
@@ -132,21 +133,19 @@ void enqueueUpgrade(PrDomElement* element, void* definition,
 
 // html/#concept-upgrade-an-element: the element takes the definition, its attributes and its connection enqueue their
 // callbacks, and the definition's constructor runs over the element.
-void upgrade(PrDomElement* element, void* definition,
-             const PrDomCustomElementRegistry* PR_NULLABLE registry) {
-    if (registry == nullptr
-        || (element->customState != PrDomCustomElementState_Undefined
-            && element->customState != PrDomCustomElementState_Uncustomized))
+void upgrade(PrDomElement* element, void* definition, const PrDomCustomElementRegistry* PR_NULLABLE registry) {
+    if (registry == nullptr || (element->customState != PrDomCustomElementState_Undefined &&
+            element->customState != PrDomCustomElementState_Uncustomized))
         return;
     DomCustomElement* custom = domCustomElementFromElement(element);
     custom->definition = definition;
     custom->registry = registry;
     element->customState = PrDomCustomElementState_Failed;
     for (PrDomAttr* attribute = element->firstAttribute; attribute != nullptr;
-         attribute = static_cast<PrDomAttr*>(attribute->next)) {
+            attribute = static_cast<PrDomAttr*>(attribute->next)) {
         enqueueCallback(element, PrDomCustomCallback_AttributeChanged,
-                        prStringView(&attribute->name), {}, prStringView(&attribute->value),
-                        domNamespaceUrl(element->document, attribute->space));
+            prStringView(&attribute->name), {}, prStringView(&attribute->value),
+            domNamespaceUrl(element->document, attribute->space));
     }
     if (domIsConnected(element))
         enqueueCallback(element, PrDomCustomCallback_Connected);
@@ -164,13 +163,13 @@ void upgrade(PrDomElement* element, void* definition,
 
 // Returns true if the code point is a PCENChar (html/#valid-custom-element-name).
 bool isPcenChar(uint32_t c) {
-    return c == '-' || c == '.' || (c >= '0' && c <= '9') || c == '_' || (c >= 'a' && c <= 'z')
-           || c == 0xb7 || (c >= 0xc0 && c <= 0xd6) || (c >= 0xd8 && c <= 0xf6)
-           || (c >= 0xf8 && c <= 0x37d) || (c >= 0x37f && c <= 0x1fff)
-           || (c >= 0x200c && c <= 0x200d) || (c >= 0x203f && c <= 0x2040)
-           || (c >= 0x2070 && c <= 0x218f) || (c >= 0x2c00 && c <= 0x2fef)
-           || (c >= 0x3001 && c <= 0xd7ff) || (c >= 0xf900 && c <= 0xfdcf)
-           || (c >= 0xfdf0 && c <= 0xfffd) || (c >= 0x10000 && c <= 0xeffff);
+    return c == '-' || c == '.' || (c >= '0' && c <= '9') || c == '_' || (c >= 'a' && c <= 'z') ||
+        c == 0xb7 || (c >= 0xc0 && c <= 0xd6) || (c >= 0xd8 && c <= 0xf6) || (c >= 0xf8 && c <= 0x37d) ||
+        (c >= 0x37f && c <= 0x1fff) ||
+        (c >= 0x200c && c <= 0x200d) || (c >= 0x203f && c <= 0x2040) || (c >= 0x2070 && c <= 0x218f) ||
+        (c >= 0x2c00 && c <= 0x2fef) ||
+        (c >= 0x3001 && c <= 0xd7ff) || (c >= 0xf900 && c <= 0xfdcf) || (c >= 0xfdf0 && c <= 0xfffd) ||
+        (c >= 0x10000 && c <= 0xeffff);
 }
 
 // Visits the shadow-including descendants of `root` that are elements, in shadow-including tree order, including root
@@ -190,11 +189,10 @@ void eachShadowIncluding(PrDomNode* root, bool inclusive, Visit visit) {
 } // namespace
 
 PrDomElement* domElementCreateHtml(PrDomDocument* document, PrDomTag tag, PrStringView name,
-                                   PrStringView is, bool synchronous, bool* held) {
+        PrStringView is, bool synchronous, bool* held) {
     *held = false;
     const PrDomCustomElementRegistry* registry = document->customElements;
-    void* definition =
-        registry != nullptr ? registry->lookup(registry->context, name, is) : nullptr;
+    void* definition = registry != nullptr ? registry->lookup(registry->context, name, is) : nullptr;
     if (definition != nullptr && synchronous) {
         // The element that the constructor creates is held from then on, which keeps its script object and the state
         // that the constructor gave it. If this function returns the element, it stays held for the caller.
@@ -213,9 +211,8 @@ PrDomElement* domElementCreateHtml(PrDomDocument* document, PrDomTag tag, PrStri
             domNodeRelease(made);
             if (made->space != PrDomNamespace_Html) {
                 registry->report(registry->context, "TypeError");
-            } else if (made->firstAttribute != nullptr || made->first != nullptr
-                       || made->parent != nullptr || made->document != document
-                       || domElementName(made) != name) {
+            } else if (made->firstAttribute != nullptr || made->first != nullptr ||
+                    made->parent != nullptr || made->document != document || domElementName(made) != name) {
                 registry->report(registry->context, "NotSupportedError");
             } else {
                 *held = true;
@@ -232,8 +229,7 @@ PrDomElement* domElementCreateHtml(PrDomDocument* document, PrDomTag tag, PrStri
     if (is.data != nullptr)
         domCustomElementFromElement(element)->is = prStringCopy(is);
     // No element that a spec defines has a valid custom element name.
-    if (definition != nullptr || is.data != nullptr
-        || (tag == PrDomTag_Unknown && domIsValidCustomElementName(name)))
+    if (definition != nullptr || is.data != nullptr || (tag == PrDomTag_Unknown && domIsValidCustomElementName(name)))
         element->customState = PrDomCustomElementState_Undefined;
     if (definition != nullptr)
         enqueueUpgrade(element, definition, registry);
@@ -275,21 +271,20 @@ void domCustomConnectionChanged(PrDomElement* element) {
 
 void domCustomAdopted(PrDomElement* element, PrDomDocument* from) {
     if (element->customState == PrDomCustomElementState_Custom)
-        enqueueCallback(element, PrDomCustomCallback_Adopted, {}, {}, {}, {}, from,
-                        element->document);
+        enqueueCallback(element, PrDomCustomCallback_Adopted, {}, {}, {}, {}, from, element->document);
 }
 
 void domCustomAttributeChanged(PrDomElement* element, DomNamespaceId space, PrStringView name,
-                               PrStringView oldValue, PrStringView value) {
+        PrStringView oldValue, PrStringView value) {
     if (element->customState == PrDomCustomElementState_Custom)
         enqueueCallback(element, PrDomCustomCallback_AttributeChanged, name, oldValue, value,
-                        domNamespaceUrl(element->document, space));
+            domNamespaceUrl(element->document, space));
 }
 
 void domCustomTryUpgrade(PrDomElement* element) {
     const PrDomCustomElementRegistry* registry = element->document->customElements;
-    if (registry == nullptr || element->space != PrDomNamespace_Html
-        || element->customState != PrDomCustomElementState_Undefined)
+    if (registry == nullptr || element->space != PrDomNamespace_Html ||
+            element->customState != PrDomCustomElementState_Undefined)
         return;
     const DomCustomElement* custom = element->state != nullptr ? element->state->custom : nullptr;
     PrStringView is = custom != nullptr ? viewOf(&custom->is) : PrStringView{};
@@ -303,8 +298,8 @@ void domCustomUpgradeCandidates(PrDomDocument* document, PrStringView name, void
     if (registry == nullptr)
         return;
     eachShadowIncluding(document, false, [&](PrDomElement* element) {
-        if (element->space == PrDomNamespace_Html && domElementName(element) == name
-            && element->customState == PrDomCustomElementState_Undefined)
+        if (element->space == PrDomNamespace_Html && domElementName(element) == name &&
+                element->customState == PrDomCustomElementState_Undefined)
             enqueueUpgrade(element, definition, registry);
     });
 }

@@ -44,7 +44,7 @@ bool layoutNodeLaidOut(const LayoutTree* tree, LayoutNodeIndex node);
 // Returns the text fragment of the text `node` in the last layout that a caret before `offset` stands in, where
 // `affinity` places it (prLayoutNodeTextCaret), or null if the layout drew none of the node's text.
 const LayoutFragment* PR_NULLABLE layoutCaretFragment(const LayoutTree* tree, LayoutNodeIndex node, uint32_t offset,
-                                                      PrLayoutTextAffinity affinity);
+    PrLayoutTextAffinity affinity);
 
 // Frees the queries' caches.
 void layoutQueriesReset(LayoutQueries& queries);

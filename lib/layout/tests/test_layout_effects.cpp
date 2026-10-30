@@ -37,8 +37,8 @@ struct Stage {
     // Adds a box under `parent` styled by `box`, a background of `color`, corners of `radius`, and `compositing`, if
     // given.
     PrLayoutNode add(PrLayoutNode parent, PrLayoutBoxStyle box, PrColor color,
-                     const PrLayoutCompositingStyle* PR_NULLABLE compositing = nullptr,
-                     const PrLayoutEffectStyle* PR_NULLABLE effects = nullptr) {
+            const PrLayoutCompositingStyle* PR_NULLABLE compositing = nullptr,
+            const PrLayoutEffectStyle* PR_NULLABLE effects = nullptr) {
         PrLayoutStyle record = prLayoutStyleDefault();
         record.groups[PrLayoutGroup_Box] = prLayoutBoxStyleIntern(f.tree, &box);
         PrLayoutDecorationStyle decoration = background(color);
@@ -68,7 +68,7 @@ PrLayoutBoxStyle sized(float width, float height) {
 
 // Returns an absolutely positioned box `width` by `height` at `left`, `top`.
 PrLayoutBoxStyle absolute(float left, float top, float width, float height,
-                          PrLayoutPosition position = PrLayoutPosition_Absolute) {
+        PrLayoutPosition position = PrLayoutPosition_Absolute) {
     PrLayoutBoxStyle box = sized(width, height);
     box.position = position;
     box.inset[PrRectSide_Left] = prLayoutLengthPx(left);
@@ -95,8 +95,8 @@ PrRect outlineOf(const PrLayoutShape& shape, PrRect box) {
 }
 
 bool near(PrRect a, PrRect b) {
-    bool same = std::fabs(a.left - b.left) < 0.05f && std::fabs(a.top - b.top) < 0.05f
-                && std::fabs(a.right - b.right) < 0.05f && std::fabs(a.bottom - b.bottom) < 0.05f;
+    bool same = std::fabs(a.left - b.left) < 0.05f && std::fabs(a.top - b.top) < 0.05f &&
+        std::fabs(a.right - b.right) < 0.05f && std::fabs(a.bottom - b.bottom) < 0.05f;
     if (!same)
         MESSAGE("{" << a.left << ", " << a.top << ", " << a.right << ", " << a.bottom << "}");
     return same;
@@ -157,7 +157,7 @@ PrLayoutBackgroundLayer redLayer(float width, float height) {
 
 // Adds a box under `parent` styled by `box`, with a background of `color` under `count` layers, top layer first.
 PrLayoutNode addLayered(Stage& s, PrLayoutNode parent, PrLayoutBoxStyle box, PrColor color,
-                        const PrLayoutBackgroundLayer* layers, uint32_t count) {
+        const PrLayoutBackgroundLayer* layers, uint32_t count) {
     PrLayoutStyle record = prLayoutStyleDefault();
     record.groups[PrLayoutGroup_Box] = prLayoutBoxStyleIntern(s.f.tree, &box);
     PrLayoutDecorationStyle decoration = background(color);

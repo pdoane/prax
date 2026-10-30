@@ -101,8 +101,7 @@ struct Renderers {
 
 // Renders `list` into `pixels`, `extent` of RGBA, with the renderer of `backend` on the device. Returns false if there
 // is no device that it renders on.
-bool renderOnDevice(Renderers& r, PrDrawRendererBackend backend, const PrDrawList* list, PrUVec2 extent,
-                    uint8_t* pixels) {
+bool renderOnDevice(Renderers& r, PrDrawRendererBackend backend, const PrDrawList* list, PrUVec2 extent, uint8_t* pixels) {
     if (r.deviceBackend != backend) {
         deviceRenderDestroy(r.device);
         r.device = deviceRenderCreate(backend);
@@ -122,7 +121,7 @@ struct Render {
 // Renders the page in its current state, over its canvas, as WPT's reftests capture it. Returns false, saying why on
 // stderr, if the page has not finished or has no rendering.
 bool renderPage(PageHost& host, Page* page, PrVec2 viewport, float pixelRatio, PrDrawRendererBackend backend,
-                Renderers& renderers, Render* out) {
+        Renderers& renderers, Render* out) {
     const std::string pathText = PageHost::pageName(page);
     const char* file = pathText.c_str();
     if (!PageHost::finished(page)) {
@@ -155,11 +154,12 @@ bool renderPage(PageHost& host, Page* page, PrVec2 viewport, float pixelRatio, P
 
 // Writes the render as a PNG to `path`. Returns false, saying why on stderr, if it cannot.
 bool writePng(const Render& render, Page* page, const std::string& path) {
-    bool ok = harnessWritePng(path.c_str(), PrPixelView{render.rgba.data(), size_t(render.width) * 4,
-                                                        {render.width, render.height}});
+    bool ok = harnessWritePng(path.c_str(), PrPixelView{
+        render.rgba.data(), size_t(render.width) * 4,
+        {render.width, render.height},
+    });
     if (!ok)
-        fprintf(stderr, "%s: cannot write the screenshot %s\n", PageHost::pageName(page).c_str(),
-                path.c_str());
+        fprintf(stderr, "%s: cannot write the screenshot %s\n", PageHost::pageName(page).c_str(), path.c_str());
     return ok;
 }
 
@@ -175,7 +175,7 @@ struct Request {
 // Renders the request's page and writes its screenshot, and compares it with each of its references. Returns false,
 // saying why on stderr, if a page cannot be rendered or the screenshot written.
 bool answer(PageHost& host, const Request& request, PrVec2 viewport, float pixelRatio, PrDrawRendererBackend backend,
-            Renderers& renderers) {
+        Renderers& renderers) {
     if (request.screenshot.empty() && request.references.empty() && request.write.empty())
         return true;
     Render render;
@@ -195,16 +195,15 @@ bool answer(PageHost& host, const Request& request, PrVec2 viewport, float pixel
             std::string number = r == 0 ? "" : std::to_string(r + 1);
             Render diff{render.width, render.height, std::vector<uint8_t>(render.rgba.size())};
             compareImages(expected.rgba.data(), render.rgba.data(), render.width, render.height, stride,
-                          ImageComparison{}, diff.rgba.data());
-            if (!writePng(expected, reference, request.write + "-ref" + number + ".png")
-                || !writePng(diff, request.page, request.write + "-diff" + number + ".png"))
+                ImageComparison{}, diff.rgba.data());
+            if (!writePng(expected, reference, request.write + "-ref" + number + ".png") ||
+                    !writePng(diff, request.page, request.write + "-diff" + number + ".png"))
                 return false;
         }
-        PixelDifference d = countDifferences(expected.rgba.data(), render.rgba.data(), render.width, render.height,
-                                             stride);
+        PixelDifference d = countDifferences(expected.rgba.data(), render.rgba.data(), render.width, render.height, stride);
         bool blank = !imageDrawsAnything(expected.rgba.data(), expected.width, expected.height, stride);
         printf("REFTEST {\"maxDifference\":%u,\"differingPixels\":%llu,\"blank\":%s}\n", d.maxDifference,
-               static_cast<unsigned long long>(d.differingPixels), blank ? "true" : "false");
+            static_cast<unsigned long long>(d.differingPixels), blank ? "true" : "false");
     }
     return true;
 }
@@ -240,11 +239,11 @@ void parse(PageHost& host, const std::vector<std::string>& args, Run& run) {
     for (size_t i = 0; run.ok && i < args.size(); ++i) {
         const std::string& option = args[i];
         bool takesTwo = option == "--resolve";
-        bool takesOne = option == "--prelude" || option == "--font" || option == "--screenshot"
-                        || option == "--write" || option == "--reference" || option == "--html"
-                        || option == "--viewport" || option == "--pixel-ratio" || option == "--renderer"
-                        || option == "--timeout" || option == "--restyle-threads" || option == "--shaper"
-                        || option == "--hinting" || option == "--ca" || option == "--capture-wait";
+        bool takesOne = option == "--prelude" || option == "--font" || option == "--screenshot" ||
+            option == "--write" || option == "--reference" || option == "--html" ||
+            option == "--viewport" || option == "--pixel-ratio" || option == "--renderer" ||
+            option == "--timeout" || option == "--restyle-threads" || option == "--shaper" ||
+            option == "--hinting" || option == "--ca" || option == "--capture-wait";
         if ((takesOne && i + 1 >= args.size()) || (takesTwo && i + 2 >= args.size())) {
             fprintf(stderr, "%s needs %s\n", option.c_str(), takesTwo ? "two arguments" : "an argument");
             run.ok = false;
@@ -323,9 +322,9 @@ void parse(PageHost& host, const std::vector<std::string>& args, Run& run) {
                 if (std::filesystem::path(page).extension() == ".json")
                     run.ok = host.addCapture(value, &page);
                 // A page that is captured, or compared with references, waits until it is ready, as a reftest does.
-                PageHost::Capture capture = !run.screenshot.empty() || !run.references.empty() || !run.write.empty()
-                                                ? PageHost::Capture::Wait
-                                                : PageHost::Capture::None;
+                PageHost::Capture capture = PageHost::Capture::None;
+                if (!run.screenshot.empty() || !run.references.empty() || !run.write.empty())
+                    capture = PageHost::Capture::Wait;
                 Request request{run.ok ? host.load(page, capture) : nullptr, run.screenshot, {}, run.write};
                 run.ok = request.page != nullptr && PageHost::pageOk(request.page);
                 for (size_t r = 0; run.ok && r < run.references.size(); ++r) {
@@ -425,13 +424,12 @@ int main(int argc, char** argv) {
     prCrashHandler();
     harnessStreamsBinary();
     if (argc < 2) {
-        fprintf(stderr,
-                "usage: pr_shell [--network] [--resolve <host> <address>]... [--ca <pem>]... "
-                "[--prelude <script>] [--font <file>] [--capture-wait <script>] [--virtual-time] [--verify] [--no-scripts] [--dark] "
-                "[--viewport WxH] [--pixel-ratio <target pixels per px>] [--renderer <name>] "
-                "[--timeout <ms>] [--restyle-threads <n>] [--shaper <name>] [--hinting none|light|full] [--serve] "
-                "<script | [--screenshot <png>] [--reference <page>]... [--write <stem>] "
-                "--html <url | page.html | capture.json>>...\n");
+        fprintf(stderr, "usage: pr_shell [--network] [--resolve <host> <address>]... [--ca <pem>]... "
+            "[--prelude <script>] [--font <file>] [--capture-wait <script>] [--virtual-time] [--verify] [--no-scripts] [--dark] "
+            "[--viewport WxH] [--pixel-ratio <target pixels per px>] [--renderer <name>] "
+            "[--timeout <ms>] [--restyle-threads <n>] [--shaper <name>] [--hinting none|light|full] [--serve] "
+            "<script | [--screenshot <png>] [--reference <page>]... [--write <stem>] "
+            "--html <url | page.html | capture.json>>...\n");
         return 2;
     }
     std::vector<std::string> args(argv + 1, argv + argc);
@@ -453,7 +451,7 @@ int main(int argc, char** argv) {
         }
     }
     std::unique_ptr<PrTextShaper, decltype(&prTextShaperDestroy)> shaper(prTextShaperCreate(chosen),
-                                                                         prTextShaperDestroy);
+        prTextShaperDestroy);
     PageHost host(shaper.get());
     // The hinter lives as long as the process, because the fonts that name it are kept.
     host.setHinting(hinting, hinting != PrFontHinting_None ? prFontHinterCreate(PrFontHinterBackend_Default) : nullptr);

@@ -56,13 +56,9 @@ constexpr uint32_t kChunk = 4096;
 // The page's own rules, beside the large stylesheet.
 constexpr char kRules[] =
     ".card { display: block; margin: 4px; padding: 4px 8px; border: 1px solid rgb(200, 200, 200); max-width: 600px }"
-    ".card h2 { font-size: 15px; margin: 0 0 4px 0 }"
-    ".card p { margin: 2px 0; line-height: 1.4 }"
-    ".card span { color: rgb(0, 0, 200); padding: 0 2px }"
-    ".card.active { background-color: rgb(255, 255, 200) }"
-    ".card.tall p { font-size: 20px }"
-    ".card.faded { opacity: 0.5 }"
-    ".card.raised { position: relative; margin-top: -8px }"
+    ".card h2 { font-size: 15px; margin: 0 0 4px 0 }.card p { margin: 2px 0; line-height: 1.4 }"
+    ".card span { color: rgb(0, 0, 200); padding: 0 2px }.card.active { background-color: rgb(255, 255, 200) }"
+    ".card.tall p { font-size: 20px }.card.faded { opacity: 0.5 }.card.raised { position: relative; margin-top: -8px }"
     ".scroller { height: 120px; overflow: auto }";
 
 // The markup of the page's content: `cards` cards, the last few in a scroll container.
@@ -73,7 +69,7 @@ void markup(TextBuffer* out, uint32_t cards) {
         textAppend(out, "<div class=\"card\"><h2>Card ");
         textAppendU64(out, i);
         textAppend(out, "</h2><p>Some text with <span>an inline span</span> in a paragraph of a card, long "
-                              "enough to break across a line or two at the width a card has.</p></div>");
+            "enough to break across a line or two at the width a card has.</p></div>");
     }
     textAppend(out, "</div>");
 }
@@ -142,64 +138,84 @@ struct Case {
 constexpr Case kCases[] = {
     {"frame unchanged", [](Work*) {}},
     {"frame class on leaf", [](Work* w) { toggle(w->middle, "active"); }},
-    {"frame background",
-     [](Work* w) {
-         w->flip = !w->flip;
-         prDomElementSetAttribute(w->middle, "style", w->flip ? "background-color: rgb(200, 230, 255)" : "");
-     }},
+    {
+        "frame background",
+        [](Work* w) {
+            w->flip = !w->flip;
+            prDomElementSetAttribute(w->middle, "style", w->flip ? "background-color: rgb(200, 230, 255)" : "");
+        },
+    },
     {"frame font size", [](Work* w) { toggle(w->middle, "tall"); }},
-    {"frame width",
-     [](Work* w) {
-         w->flip = !w->flip;
-         prDomElementSetAttribute(w->middle, "style", w->flip ? "width: 300px" : "width: 320px");
-     }},
-    {"frame text",
-     [](Work* w) {
-         w->flip = !w->flip;
-         prDomNodeSetTextContent(prDomElementAsNode(w->middleText),
-                                 w->flip ? "Other text, of about the same length as the paragraph had."
-                                         : "Some text of about the same length as the paragraph had, too.");
-     }},
-    {"frame opacity on layer",
-     [](Work* w) {
-         w->flip = !w->flip;
-         prDomElementSetAttribute(w->faded, "style", w->flip ? "opacity: 0.6" : "");
-     }},
-    {"frame transform",
-     [](Work* w) {
-         w->flip = !w->flip;
-         prDomElementSetAttribute(w->middle, "style", w->flip ? "transform: translate(4px, 0)" : "transform: none");
-     }},
-    {"frame z-index",
-     [](Work* w) {
-         w->flip = !w->flip;
-         prDomElementSetAttribute(w->raised, "style", w->flip ? "z-index: 2" : "z-index: 1");
-     }},
-    {"frame z-index auto",
-     [](Work* w) {
-         w->flip = !w->flip;
-         prDomElementSetAttribute(w->raised, "style", w->flip ? "z-index: 1" : "");
-     }},
-    {"frame scroll",
-     [](Work* w) {
-         w->flip = !w->flip;
-         prCssElementSetScrollTop(w->scroller, w->flip ? 40 : 0);
-     }},
-    {"frame append",
-     [](Work* w) {
-         PrDomNode* body = prDomElementAsNode(prDomDocumentBody(w->document));
-         if (prDomNodeParentNode(prDomElementAsNode(w->added)) == nullptr)
-             prDomNodeAppendChild(body, prDomElementAsNode(w->added));
-         else
-             prDomNodeRemove(prDomElementAsNode(w->added));
-     }},
+    {
+        "frame width",
+        [](Work* w) {
+            w->flip = !w->flip;
+            prDomElementSetAttribute(w->middle, "style", w->flip ? "width: 300px" : "width: 320px");
+        },
+    },
+    {
+        "frame text",
+        [](Work* w) {
+            w->flip = !w->flip;
+            prDomNodeSetTextContent(prDomElementAsNode(w->middleText),
+                w->flip ? "Other text, of about the same length as the paragraph had." :
+                    "Some text of about the same length as the paragraph had, too.");
+        },
+    },
+    {
+        "frame opacity on layer",
+        [](Work* w) {
+            w->flip = !w->flip;
+            prDomElementSetAttribute(w->faded, "style", w->flip ? "opacity: 0.6" : "");
+        },
+    },
+    {
+        "frame transform",
+        [](Work* w) {
+            w->flip = !w->flip;
+            prDomElementSetAttribute(w->middle, "style", w->flip ? "transform: translate(4px, 0)" : "transform: none");
+        },
+    },
+    {
+        "frame z-index",
+        [](Work* w) {
+            w->flip = !w->flip;
+            prDomElementSetAttribute(w->raised, "style", w->flip ? "z-index: 2" : "z-index: 1");
+        },
+    },
+    {
+        "frame z-index auto",
+        [](Work* w) {
+            w->flip = !w->flip;
+            prDomElementSetAttribute(w->raised, "style", w->flip ? "z-index: 1" : "");
+        },
+    },
+    {
+        "frame scroll",
+        [](Work* w) {
+            w->flip = !w->flip;
+            prCssElementSetScrollTop(w->scroller, w->flip ? 40 : 0);
+        },
+    },
+    {
+        "frame append",
+        [](Work* w) {
+            PrDomNode* body = prDomElementAsNode(prDomDocumentBody(w->document));
+            if (prDomNodeParentNode(prDomElementAsNode(w->added)) == nullptr)
+                prDomNodeAppendChild(body, prDomElementAsNode(w->added));
+            else
+                prDomNodeRemove(prDomElementAsNode(w->added));
+        },
+    },
     // This case runs last, because it may leave the narrower viewport in place for the code that follows. Every box is
     // laid out again in another width.
-    {"frame resize",
-     [](Work* w) {
-         w->narrowed = !w->narrowed;
-         w->viewport = w->narrowed ? kNarrowViewport : kViewport;
-     }},
+    {
+        "frame resize",
+        [](Work* w) {
+            w->narrowed = !w->narrowed;
+            w->viewport = w->narrowed ? kNarrowViewport : kViewport;
+        },
+    },
 };
 
 // Creates the set of the checkout's Tinos and Arimo fonts, a shaper, and the default text font over the set, and
@@ -231,8 +247,7 @@ PrTextFont* makeFont(PrFontSet** fonts, PrTextShaper** shaper) {
 
 // Loads the page in pieces, with a frame between pieces as a host's event loop runs them, until the page first renders
 // and until its load ends. Writes the milliseconds that each took.
-void load(PrTextFont* font, PrTextShaper* shaper, PrStringView document, HarnessCounters* firstFrame,
-          HarnessCounters* end) {
+void load(PrTextFont* font, PrTextShaper* shaper, PrStringView document, HarnessCounters* firstFrame, HarnessCounters* end) {
     PrHtmlHost host = prHtmlHostDefault();
     host.font = font;
     host.shaper = shaper;
@@ -308,8 +323,7 @@ int main(int argc, char** argv) {
     prHtmlPageLoad(work.page, textView(&document), "about:blank", nullptr);
     work.presentation = prHtmlPagePresentation(work.page);
     work.document = prHtmlWindowDocument(prHtmlPageWindow(work.page));
-    PrDomHtmlCollection* cards =
-        prDomHtmlCollectionCreateByClassName(prDomDocumentAsNode(work.document), "card");
+    PrDomHtmlCollection* cards = prDomHtmlCollectionCreateByClassName(prDomDocumentAsNode(work.document), "card");
     for (uint32_t i = 0; i < cardCount; ++i)
         work.cards.push_back(prDomHtmlCollectionElementAt(cards, i));
     prDomHtmlCollectionDestroy(cards);
@@ -320,8 +334,7 @@ int main(int argc, char** argv) {
     toggle(work.raised, "raised");
     prDomElementSetAttribute(work.raised, "style", "z-index: 1");
     work.middleText = firstNamed(work.middle, "p");
-    PrDomHtmlCollection* scrollers =
-        prDomHtmlCollectionCreateByClassName(prDomDocumentAsNode(work.document), "scroller");
+    PrDomHtmlCollection* scrollers = prDomHtmlCollectionCreateByClassName(prDomDocumentAsNode(work.document), "scroller");
     work.scroller = prDomHtmlCollectionElementAt(scrollers, 0);
     prDomHtmlCollectionDestroy(scrollers);
     prDomElementCreate(work.document, "div", nullptr, &work.added);
@@ -354,15 +367,14 @@ int main(int argc, char** argv) {
         }
         prStringReset(&report);
         TextBuffer row{};
-        harnessAppendFormat(&row,
-                            "%s\n  {\"name\": \"%s\", \"time\": %.6f, \"visited\": %u, \"styled\": %u, "
-                            "\"cached\": %u, \"unchanged\": %u, \"blocks\": %u, \"lines\": %u, \"shaped\": %u, "
-                            "\"layers\": %u, \"commands\": %u, \"repainted\": %u",
-                            first ? "" : ",", c.name, cost.millis, work.styled.elementsVisited,
-                            work.styled.elementsStyled, work.styled.elementsStyledCached,
-                            work.styled.elementsStyledUnchanged, work.laid.blocksLaidOut,
-                            work.laid.linesLaidOut, work.laid.inlinesShaped, work.laid.layersRecorded,
-                            work.laid.commandsRecorded, work.laid.boxesRepaintedUnchanged);
+        harnessAppendFormat(&row, "%s\n  {\"name\": \"%s\", \"time\": %.6f, \"visited\": %u, \"styled\": %u, "
+            "\"cached\": %u, \"unchanged\": %u, \"blocks\": %u, \"lines\": %u, \"shaped\": %u, "
+            "\"layers\": %u, \"commands\": %u, \"repainted\": %u",
+            first ? "" : ",", c.name, cost.millis, work.styled.elementsVisited,
+            work.styled.elementsStyled, work.styled.elementsStyledCached,
+            work.styled.elementsStyledUnchanged, work.laid.blocksLaidOut,
+            work.laid.linesLaidOut, work.laid.inlinesShaped, work.laid.layersRecorded,
+            work.laid.commandsRecorded, work.laid.boxesRepaintedUnchanged);
         HarnessCounts counts{};
         harnessCountsAdd(&counts, "time", cost);
         harnessCountsWrite(&counts, &row);

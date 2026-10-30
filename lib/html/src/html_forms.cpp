@@ -169,7 +169,7 @@ DomEntryList* PR_NULLABLE constructEntryList(PrHtmlFormElement* form, PrHtmlElem
     DomEntryList* clone = domEntryListCreate();
     for (uint32_t i = 0; i < list->entries.count; ++i)
         domEntryListAppend(clone, prStringView(&list->entries.data[i].name),
-                           prStringView(&list->entries.data[i].value));
+            prStringView(&list->entries.data[i].value));
     domEntryListRelease(list);
     return clone;
 }
@@ -239,8 +239,7 @@ using namespace pr_impl;
 PrHtmlFormElement* PR_NULLABLE prHtmlElementForm(PrHtmlElement* self) {
     if (domIsHtml(self, PrDomTag_Legend)) {
         PrDomElement* parent = domElementFromNode(self->parent);
-        return domIsHtml(parent, PrDomTag_Fieldset) ? static_cast<PrHtmlFormElement*>(domFormOwner(parent))
-                                                    : nullptr;
+        return domIsHtml(parent, PrDomTag_Fieldset) ? static_cast<PrHtmlFormElement*>(domFormOwner(parent)) : nullptr;
     }
     return static_cast<PrHtmlFormElement*>(domFormOwner(self));
 }
@@ -256,9 +255,11 @@ PrString prHtmlElementFormActionUrl(const PrHtmlElement* self, PrStringView name
     if (action.size == 0)
         return prUrlSerialize(self->document->url, PrUrlSerialization_Whole);
     PrUrl* url = nullptr;
-    PrString out = domDocumentParseUrl(self->document, action, &url) == PrStatus_Ok
-                       ? prUrlSerialize(url, PrUrlSerialization_Whole)
-                       : prStringCopy(action);
+    PrString out;
+    if (domDocumentParseUrl(self->document, action, &url) == PrStatus_Ok)
+        out = prUrlSerialize(url, PrUrlSerialization_Whole);
+    else
+        out = prStringCopy(action);
     prUrlDestroy(url);
     return out;
 }
@@ -278,8 +279,7 @@ PrDomNodeList* prHtmlFormElementRadioNodeList(PrHtmlFormElement* self, PrStringV
     return domNodeListCreateFiltered(self, images ? DomNodeListFilter_FormImages : DomNodeListFilter_Radio, name);
 }
 
-uint32_t prHtmlFormElementNamedItem(PrHtmlFormElement* self, PrStringView name,
-                                    PrDomElement* PR_NULLABLE* PR_NONNULL out) {
+uint32_t prHtmlFormElementNamedItem(PrHtmlFormElement* self, PrStringView name, PrDomElement* PR_NULLABLE* PR_NONNULL out) {
     *out = nullptr;
     if (name.size == 0)
         return 0;
@@ -317,8 +317,8 @@ uint32_t prHtmlFormElementNames(PrHtmlFormElement* self, PrString* PR_NULLABLE i
         PrDomElement* element = domElementFromNode(node);
         if (element == nullptr || domFormOwner(element) != self)
             continue;
-        bool listed = domIsListed(element)
-                      && !(domIsHtml(element, PrDomTag_Input) && domElementInputType(element) == PrDomInputType_Image);
+        bool listed = domIsListed(element) &&
+            !(domIsHtml(element, PrDomTag_Input) && domElementInputType(element) == PrDomInputType_Image);
         if (!listed && !domIsHtml(element, PrDomTag_Img))
             continue;
         sources.push(Source{domElementId(element), element, 0, sources.count});
@@ -326,8 +326,10 @@ uint32_t prHtmlFormElementNames(PrHtmlFormElement* self, PrString* PR_NULLABLE i
     }
     if (const DomForm* record = self->state != nullptr ? self->state->form : nullptr) {
         for (uint32_t i = 0; i < record->pastNames.count; ++i)
-            sources.push(Source{prStringView(&record->pastNames.data[i].name), record->pastNames.data[i].element, 2,
-                                sources.count});
+            sources.push(Source{
+                prStringView(&record->pastNames.data[i].name), record->pastNames.data[i].element, 2,
+                sources.count,
+            });
     }
     sortItems(sources.data, sources.count, [](const Source& a, const Source& b) {
         if (a.element != b.element)
@@ -641,9 +643,8 @@ PrHtmlMeterValues prHtmlMeterElementValues(const PrHtmlMeterElement* self) {
     values.high = parsedOr(self, "high", values.max);
     values.high = values.high < values.low ? values.low : values.high > values.max ? values.max : values.high;
     values.optimum = parsedOr(self, "optimum", values.min + (values.max - values.min) / 2);
-    values.optimum = values.optimum < values.min   ? values.min
-                     : values.optimum > values.max ? values.max
-                                                   : values.optimum;
+    values.optimum =
+        values.optimum < values.min   ? values.min : values.optimum > values.max ? values.max : values.optimum;
     return values;
 }
 
@@ -671,7 +672,7 @@ PrHtmlDetailsElement* PR_NULLABLE prHtmlDetailsElementQuery(PrDomEventTarget* PR
 // FormData
 
 PrStatus prHtmlFormDataCreate(PrHtmlFormElement* PR_NULLABLE form, PrHtmlElement* PR_NULLABLE submitter,
-                              PrHtmlFormData* PR_NULLABLE* PR_NONNULL out) {
+        PrHtmlFormData* PR_NULLABLE* PR_NONNULL out) {
     *out = nullptr;
     if (form == nullptr) {
         *out = static_cast<PrHtmlFormData*>(domEntryListCreate());
@@ -720,7 +721,7 @@ PrStringView prHtmlFormDataGet(const PrHtmlFormData* self, PrStringView name) {
 }
 
 uint32_t prHtmlFormDataGetAll(const PrHtmlFormData* self, PrStringView name, PrStringView* PR_NULLABLE items,
-                              uint32_t capacity) {
+        uint32_t capacity) {
     uint32_t count = 0;
     for (uint32_t i = 0; i < self->entries.count; ++i) {
         if (prStringView(&self->entries.data[i].name) != name)
@@ -791,7 +792,7 @@ PrHtmlCommandEvent* PR_NULLABLE prHtmlCommandEventQuery(PrDomEvent* PR_NULLABLE 
 }
 
 PrHtmlSubmitEvent* prHtmlSubmitEventCreate(PrStringView type, const PrDomEventInit* PR_NULLABLE init,
-                                           PrHtmlElement* PR_NULLABLE submitter) {
+        PrHtmlElement* PR_NULLABLE submitter) {
     PrHtmlSubmitEvent* event = domEventCreate<PrHtmlSubmitEvent>(
         type, init != nullptr ? *init : prDomEventInitDefault(), PrDomEventKind_Submit);
     if (submitter != nullptr)
@@ -800,7 +801,7 @@ PrHtmlSubmitEvent* prHtmlSubmitEventCreate(PrStringView type, const PrDomEventIn
 }
 
 PrHtmlFormDataEvent* prHtmlFormDataEventCreate(PrStringView type, const PrDomEventInit* PR_NULLABLE init,
-                                               PrHtmlFormData* formData) {
+        PrHtmlFormData* formData) {
     PrHtmlFormDataEvent* event = domEventCreate<PrHtmlFormDataEvent>(
         type, init != nullptr ? *init : prDomEventInitDefault(), PrDomEventKind_FormData);
     domEntryListRetain(formData);
@@ -809,8 +810,7 @@ PrHtmlFormDataEvent* prHtmlFormDataEventCreate(PrStringView type, const PrDomEve
 }
 
 PrHtmlToggleEvent* prHtmlToggleEventCreate(PrStringView type, const PrDomEventInit* PR_NULLABLE init,
-                                           PrStringView oldState, PrStringView newState,
-                                           PrDomElement* PR_NULLABLE source) {
+        PrStringView oldState, PrStringView newState, PrDomElement* PR_NULLABLE source) {
     PrHtmlToggleEvent* event = domEventCreate<PrHtmlToggleEvent>(
         type, init != nullptr ? *init : prDomEventInitDefault(), PrDomEventKind_Toggle);
     DomControlEventData* data = controlDataOf(event);
@@ -822,7 +822,7 @@ PrHtmlToggleEvent* prHtmlToggleEventCreate(PrStringView type, const PrDomEventIn
 }
 
 PrHtmlCommandEvent* prHtmlCommandEventCreate(PrStringView type, const PrDomEventInit* PR_NULLABLE init,
-                                             PrStringView command, PrDomElement* PR_NULLABLE source) {
+        PrStringView command, PrDomElement* PR_NULLABLE source) {
     PrHtmlCommandEvent* event = domEventCreate<PrHtmlCommandEvent>(
         type, init != nullptr ? *init : prDomEventInitDefault(), PrDomEventKind_Command);
     DomControlEventData* data = controlDataOf(event);

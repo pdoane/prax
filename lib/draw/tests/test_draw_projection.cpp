@@ -196,8 +196,10 @@ TEST_CASE("a projected group is copied, dumped and bounded by its projected plan
     // Contents far outside the plane's bounds, and pixels written into the layer, do not reach the list's bounds.
     prDrawListRect(list, PrRect{-1000, -1000, 1000, 1000}, {.color = PrColor{1, 0, 0, 1}});
     const uint8_t texels[4] = {255, 0, 0, 255};
-    PrDrawImageDesc desc{PrPixelView{texels, 4, {1, 1}}, PrPixelFormat_Rgba8, PrDrawAlpha_Premultiplied,
-                         PrColorSpace_Srgb};
+    PrDrawImageDesc desc{
+        PrPixelView{texels, 4, {1, 1}}, PrPixelFormat_Rgba8, PrDrawAlpha_Premultiplied,
+        PrColorSpace_Srgb,
+    };
     const PrDrawImage* image = nullptr;
     REQUIRE(prDrawImageCreate(&desc, &image) == PrStatus_Ok);
     prDrawListWritePixels(list, image, PrIVec2{500, 500});

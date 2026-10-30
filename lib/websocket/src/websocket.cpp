@@ -67,15 +67,15 @@ PrStringView prWebSocketNetworkBackendName(PrWebSocketNetworkBackend backend) {
 
 bool prWebSocketNetworkBackendIsBuilt(PrWebSocketNetworkBackend backend) {
     for (PrWebSocketNetworkBackend built : kBuilt) {
-        if (built != PrWebSocketNetworkBackend_Default
-            && (built == backend || backend == PrWebSocketNetworkBackend_Default))
+        if (built != PrWebSocketNetworkBackend_Default &&
+                (built == backend || backend == PrWebSocketNetworkBackend_Default))
             return true;
     }
     return false;
 }
 
 PrWebSocketNetwork* PR_NULLABLE prWebSocketNetworkCreate(PrWebSocketNetworkBackend backend,
-                                                         const PrWebSocketNetworkDesc* desc) {
+        const PrWebSocketNetworkDesc* desc) {
     switch (backend == PrWebSocketNetworkBackend_Default ? kBuilt[0] : backend) {
 #if defined(PR_WEBSOCKET_HAS_BUILTIN)
         case PrWebSocketNetworkBackend_Builtin: return prWebSocketBuiltinCreate(desc);
@@ -90,7 +90,7 @@ void prWebSocketNetworkDestroy(PrWebSocketNetwork* PR_NULLABLE network) {
 }
 
 PrStatus prWebSocketCreate(PrWebSocketNetwork* network, const PrWebSocketDesc* desc,
-                           PrWebSocket* PR_NULLABLE* PR_NONNULL out) {
+        PrWebSocket* PR_NULLABLE* PR_NONNULL out) {
     PR_ASSERT(desc->protocols != nullptr || desc->protocolCount == 0);
     *out = nullptr;
     if (!areProtocols(desc->protocols, desc->protocolCount))

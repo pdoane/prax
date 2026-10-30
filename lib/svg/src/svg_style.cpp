@@ -110,8 +110,9 @@ bool svgStyleIs(const CssComputedStyle* style, PrCssProperty property, PrCssKeyw
 
 PrCssKeyword svgStyleKeyword(const CssComputedStyle* style, PrCssProperty property) {
     CssValueRun run = cssComputedValue(style, property);
-    return run.count != 0 && run.values[0].kind == PrCssValueKind_Keyword ? cssValueKeyword(run.values)
-                                                                         : PrCssKeyword_Count;
+    if (run.count != 0 && run.values[0].kind == PrCssValueKind_Keyword)
+        return cssValueKeyword(run.values);
+    return PrCssKeyword_Count;
 }
 
 float svgStyleNumber(const CssComputedStyle* style, PrCssProperty property, float fallback) {
@@ -122,8 +123,7 @@ float svgStyleNumber(const CssComputedStyle* style, PrCssProperty property, floa
     if (value->kind == PrCssValueKind_Number || value->kind == PrCssValueKind_Integer)
         return float(value->number);
     double number = 0;
-    return value->kind == PrCssValueKind_Math && cssMathTo(run, 0, PrCssUnit_Number, &number) ? float(number)
-                                                                                              : fallback;
+    return value->kind == PrCssValueKind_Math && cssMathTo(run, 0, PrCssUnit_Number, &number) ? float(number) : fallback;
 }
 
 PrColor svgStyleColor(const CssComputedStyle* style, PrCssProperty property, const CssColorEnvironment& environment) {
@@ -133,13 +133,14 @@ PrColor svgStyleColor(const CssComputedStyle* style, PrCssProperty property, con
 }
 
 SvgPaintStyle svgStylePaint(const CssComputedStyle* style, PrCssProperty property,
-                            const CssColorEnvironment& environment) {
+        const CssColorEnvironment& environment) {
     CssValueRun run = cssComputedValue(style, property);
     SvgPaintStyle paint{};
     if (run.count == 0)
         return paint;
-    PrCssKeyword keyword = run.values[0].kind == PrCssValueKind_Keyword ? cssValueKeyword(run.values)
-                                                                         : PrCssKeyword_Count;
+    PrCssKeyword keyword = PrCssKeyword_Count;
+    if (run.values[0].kind == PrCssValueKind_Keyword)
+        keyword = cssValueKeyword(run.values);
     if (keyword == PrCssKeyword_None)
         return paint;
     if (keyword == PrCssKeyword_ContextFill || keyword == PrCssKeyword_ContextStroke) {
@@ -230,10 +231,12 @@ SvgLineFlags svgStyleLines(const CssComputedStyle* style) {
         if (run.values[i].kind != PrCssValueKind_Keyword)
             continue;
         PrCssKeyword keyword = cssValueKeyword(&run.values[i]);
-        lines |= keyword == PrCssKeyword_Underline     ? SvgLineFlag_Underline
-                 : keyword == PrCssKeyword_Overline    ? SvgLineFlag_Overline
-                 : keyword == PrCssKeyword_LineThrough ? SvgLineFlag_LineThrough
-                                                       : 0;
+        if (keyword == PrCssKeyword_Underline)
+            lines |= SvgLineFlag_Underline;
+        else if (keyword == PrCssKeyword_Overline)
+            lines |= SvgLineFlag_Overline;
+        else if (keyword == PrCssKeyword_LineThrough)
+            lines |= SvgLineFlag_LineThrough;
     }
     return lines;
 }
@@ -276,8 +279,8 @@ SvgTransformStyle svgStyleTransform(const CssComputedStyle* style) {
     transform.origin[0] = originAt(origin, 0);
     uint32_t second = origin.values[0].next;
     // A single vertical keyword sets the y of the origin, and leaves x at the center.
-    bool vertical = cssValueIsKeyword(origin.values, PrCssKeyword_Top)
-                    || cssValueIsKeyword(origin.values, PrCssKeyword_Bottom);
+    bool vertical = cssValueIsKeyword(origin.values, PrCssKeyword_Top) ||
+        cssValueIsKeyword(origin.values, PrCssKeyword_Bottom);
     if (second >= origin.count && vertical) {
         transform.origin[1] = transform.origin[0];
         transform.origin[0] = SvgLengthPercentage{0, 50};
@@ -318,10 +321,14 @@ PrAffine2 svgTransformMatrix(const SvgTransformStyle& transform, PrRect box) {
     PrMatrix4 matrix = prLayoutTransformListMatrix(&transform.list, extent);
     PrAffine2 functions = prAffine2Identity();
     if (!prAffine2FromMatrix4(&matrix, &functions))
-        functions = PrAffine2{matrix.m[0][0], matrix.m[1][0], matrix.m[0][1], matrix.m[1][1], matrix.m[0][3],
-                              matrix.m[1][3]};
-    PrVec2 origin{box.left + svgLengthResolve(transform.origin[0], extent.x),
-                  box.top + svgLengthResolve(transform.origin[1], extent.y)};
+        functions = PrAffine2{
+            matrix.m[0][0], matrix.m[1][0], matrix.m[0][1], matrix.m[1][1], matrix.m[0][3],
+            matrix.m[1][3],
+        };
+    PrVec2 origin{
+        box.left + svgLengthResolve(transform.origin[0], extent.x),
+        box.top + svgLengthResolve(transform.origin[1], extent.y),
+    };
     return prAffine2Concat(prAffine2Concat(prAffine2Translate(-origin), functions), prAffine2Translate(origin));
 }
 

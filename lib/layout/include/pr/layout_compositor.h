@@ -95,8 +95,7 @@ void prLayoutCompositorCommit(PrLayoutCompositor* compositor, const PrLayoutComm
 // the frames after the call, with no new scene. `scrollsApplied` has the same meaning as for a commit. Callable from
 // any thread.
 void prLayoutCompositorSetScrolls(PrLayoutCompositor* compositor, uint64_t embed,
-                                  const PrLayoutSceneScroll* PR_NULLABLE scrolls, uint32_t count,
-                                  uint32_t scrollsApplied);
+    const PrLayoutSceneScroll* PR_NULLABLE scrolls, uint32_t count, uint32_t scrollsApplied);
 
 // Drops what was committed for the embedded content `embed`, whose slots then show nothing, and its scroll offsets.
 void prLayoutCompositorRemove(PrLayoutCompositor* compositor, uint64_t embed);
@@ -105,8 +104,7 @@ void prLayoutCompositorRemove(PrLayoutCompositor* compositor, uint64_t embed);
 // viewport for kPrLayoutNodeNone, by `delta` in the scene's units, within its range. Returns how far it moved, or zero
 // if nothing is committed or the scene has no such container. Callable from any thread. The frames made after the call
 // show the offset.
-PrLayoutVec prLayoutCompositorScroll(PrLayoutCompositor* compositor, uint64_t embed, PrLayoutNode node,
-                                     PrLayoutVec delta);
+PrLayoutVec prLayoutCompositorScroll(PrLayoutCompositor* compositor, uint64_t embed, PrLayoutNode node, PrLayoutVec delta);
 
 // Scrolls in the same way as a user's scroll by `delta` at `point`, both in the presented scene's units. The innermost
 // scroll container at that point that the user may scroll along an axis takes what it can, and passes the rest on to

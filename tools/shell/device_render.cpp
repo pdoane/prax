@@ -16,8 +16,8 @@ struct DeviceRender {
 DeviceRender* PR_NULLABLE deviceRenderCreate(PrDrawRendererBackend backend) {
     PrGpuDevice* device = nullptr;
     PrDrawRenderer* renderer = nullptr;
-    if (prGpuDeviceCreate(PrGpuBackend_Default, nullptr, &device) != PrStatus_Ok
-        || prDrawRendererCreate(backend, device, nullptr, &renderer) != PrStatus_Ok) {
+    if (prGpuDeviceCreate(PrGpuBackend_Default, nullptr, &device) != PrStatus_Ok ||
+            prDrawRendererCreate(backend, device, nullptr, &renderer) != PrStatus_Ok) {
         prGpuDeviceDestroy(device);
         return nullptr;
     }
@@ -35,7 +35,7 @@ void deviceRenderDestroy(DeviceRender* PR_NULLABLE render) {
 
 bool deviceRenderPixels(DeviceRender* render, const PrDrawList* list, PrUVec2 extent, uint8_t* rgba) {
     PrGpuTextureDesc desc = prGpuTextureDesc2d(PrGpuFormat_Rgba8, extent,
-                                               PrGpuTextureUsageFlag_Sampled | PrGpuTextureUsageFlag_RenderTarget);
+        PrGpuTextureUsageFlag_Sampled | PrGpuTextureUsageFlag_RenderTarget);
     PrGpuTexture texture{};
     if (prGpuTextureCreate(render->device, &desc, &texture) != PrStatus_Ok)
         return false;

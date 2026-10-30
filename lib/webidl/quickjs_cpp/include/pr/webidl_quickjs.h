@@ -54,8 +54,7 @@ struct Uint32Sequence {
 
 // Writes to `*names` the own property names of an object with `length` indexed properties, which are its indexes, each
 // enumerable (webidl/#legacy-platform-object-ownpropertykeys). Returns -1 if QuickJS could not allocate them.
-int jsIndexNames(JSContext* ctx, JSPropertyEnum* PR_NULLABLE* PR_NONNULL names, uint32_t* count,
-                 uint32_t length);
+int jsIndexNames(JSContext* ctx, JSPropertyEnum* PR_NULLABLE* PR_NONNULL names, uint32_t* count, uint32_t length);
 
 // The part of each entry that a map iterator returns (webidl/#js-map-iterator).
 enum {
@@ -71,10 +70,8 @@ void jsPairIteratorBind(JSContext* ctx, JSClassID* id, const char* name);
 // jsPairIterator returns a pair iterator of class `id` over `owner`, and jsPairForEach runs the forEach of the pair
 // iterable `owner`. The iterator keeps `owner` alive. `entryAt` returns the [key, value] pair at an index, or undefined
 // past the end.
-JSValue jsPairIterator(JSContext* ctx, JSClassID id, JSValueConst owner, JSCFunction* entryAt,
-                       JsMapPart part);
-JSValue jsPairForEach(JSContext* ctx, JSValueConst owner, JSCFunction* entryAt, int argc,
-                      JSValueConst* argv);
+JSValue jsPairIterator(JSContext* ctx, JSClassID id, JSValueConst owner, JSCFunction* entryAt, JsMapPart part);
+JSValue jsPairForEach(JSContext* ctx, JSValueConst owner, JSCFunction* entryAt, int argc, JSValueConst* argv);
 
 // Returns the array [key, value]. Takes ownership of both.
 JSValue jsEntry(JSContext* ctx, JSValue key, JSValue value);
@@ -84,8 +81,7 @@ JSValue jsMapIterate(JSContext* ctx, JSValue entries, JsMapPart part);
 
 // Runs the forEach of a maplike (webidl/#js-maplike). Calls the callback `argv[0]` with each value, its key and `map`,
 // with `argv[1]` as `this`. Iterates `entries`, an array of [key, value] arrays, and takes ownership of it.
-JSValue jsMapForEach(JSContext* ctx, JSValueConst map, JSValue entries, int argc,
-                     JSValueConst* argv);
+JSValue jsMapForEach(JSContext* ctx, JSValueConst map, JSValue entries, int argc, JSValueConst* argv);
 
 // A (DOMString or sequence<unrestricted double>) argument, as the string or the values. An object with @@iterator is
 // the sequence (webidl/#js-union).
@@ -133,8 +129,7 @@ bool jsArgCount(JSContext* ctx, int argc, int required);
 
 // Converts argument `index` by ToNumber (webidl/#js-unrestricted-double), or uses `fallback` if the argument is not
 // given. Returns false if the conversion threw.
-bool jsArgNumber(JSContext* ctx, int argc, JSValueConst* argv, int index, double fallback,
-                 double* out);
+bool jsArgNumber(JSContext* ctx, int argc, JSValueConst* argv, int index, double fallback, double* out);
 
 // The largest integer that a JS number holds exactly, which bounds the 64-bit integer types
 // (webidl/#abstract-opdef-converttoint).
@@ -152,23 +147,19 @@ bool jsDictionary(JSContext* ctx, JSValueConst value, bool* present);
 // Reads member `name` of a dictionary, and whether it is given. `*out` is unchanged if it is not given. Returns false
 // if reading or converting the member threw. Members are read in the order of webidl/#js-dictionary: the inherited
 // dictionary's members first, and each dictionary's members in lexicographic order.
-bool jsDictNumber(JSContext* ctx, JSValueConst dictionary, const char* name, double* out,
-                  bool* PR_NULLABLE given = nullptr);
-bool jsDictBool(JSContext* ctx, JSValueConst dictionary, const char* name, bool* out,
-                bool* PR_NULLABLE given = nullptr);
+bool jsDictNumber(JSContext* ctx, JSValueConst dictionary, const char* name, double* out, bool* PR_NULLABLE given = nullptr);
+bool jsDictBool(JSContext* ctx, JSValueConst dictionary, const char* name, bool* out, bool* PR_NULLABLE given = nullptr);
 
 // Reads an unsigned long member (webidl/#js-unsigned-long).
-bool jsDictUint32(JSContext* ctx, JSValueConst dictionary, const char* name, uint32_t* out,
-                  bool* PR_NULLABLE given = nullptr);
+bool jsDictUint32(JSContext* ctx, JSValueConst dictionary, const char* name, uint32_t* out, bool* PR_NULLABLE given = nullptr);
 
 // Reads a DOMString member, whose view stays valid until `out` is destroyed.
 bool jsDictString(JSContext* ctx, JSValueConst dictionary, const char* name, StringArgument* out,
-                  bool* PR_NULLABLE given = nullptr);
+    bool* PR_NULLABLE given = nullptr);
 
 // Reads the bytes of `value` if it is a BufferSource (webidl/#BufferSource): an ArrayBuffer, or a view of one. Returns
 // false, with nothing thrown, for any other value.
-bool jsBufferSource(JSContext* ctx, JSValueConst value, const uint8_t* PR_NULLABLE* PR_NONNULL data,
-                    size_t* size);
+bool jsBufferSource(JSContext* ctx, JSValueConst value, const uint8_t* PR_NULLABLE* PR_NONNULL data, size_t* size);
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Interfaces
@@ -178,8 +169,7 @@ bool jsBufferSource(JSContext* ctx, JSValueConst value, const uint8_t* PR_NULLAB
 struct JsIndexed {
     uint32_t (*length)(void* handle);
     JSValue (*item)(JSContext* ctx, JSValueConst self, void* handle, uint32_t index);
-    bool (*PR_NULLABLE setItem)(JSContext* ctx, JSValueConst self, void* handle, uint32_t index,
-                                JSValueConst value);
+    bool (*PR_NULLABLE setItem)(JSContext* ctx, JSValueConst self, void* handle, uint32_t index, JSValueConst value);
 };
 
 // How a class's named properties behave: whether they are found before the prototype's properties
@@ -198,8 +188,7 @@ struct JsNamed {
     // Returns the value of `name`, or undefined for a name that is not supported.
     JSValue (*item)(JSContext* ctx, JSValueConst self, void* handle, PrStringView name);
 
-    bool (*PR_NULLABLE setItem)(JSContext* ctx, JSValueConst self, void* handle, PrStringView name,
-                                JSValueConst value);
+    bool (*PR_NULLABLE setItem)(JSContext* ctx, JSValueConst self, void* handle, PrStringView name, JSValueConst value);
     void (*PR_NULLABLE deleteItem)(void* handle, PrStringView name);
     JsNamedFlags flags;
 };

@@ -23,8 +23,7 @@ Decoded decode(const std::string& text, uint32_t offset = 0) {
 
 Decoded decodeScalar(const std::string& text, uint32_t offset = 0) {
     Decoded out = {0, 0};
-    out.width = prUtf8DecodeScalar(text, offset,
-                                   &out.codePoint);
+    out.width = prUtf8DecodeScalar(text, offset, &out.codePoint);
     return out;
 }
 
@@ -117,7 +116,7 @@ TEST_CASE("validating stops at the first ill-formed sequence") {
 TEST_CASE("validating finds a sequence wherever it falls in a long text") {
     // A well-formed sequence at each offset of text long enough for several blocks, followed by an ill-formed one.
     for (const std::string sequence :
-         {"\xc3\xa9", "\xe2\x82\xac", "\xf0\x9f\x98\x80", "\xed\xa0\x80"}) {
+            {"\xc3\xa9", "\xe2\x82\xac", "\xf0\x9f\x98\x80", "\xed\xa0\x80"}) {
         for (size_t at = 0; at < 150; ++at) {
             std::string text(200, 'a');
             text.replace(at, sequence.size(), sequence);
@@ -125,8 +124,7 @@ TEST_CASE("validating finds a sequence wherever it falls in a long text") {
             CHECK(prUtf8Validate(text) == text.size());
 
             text[at + sequence.size() + 7] = '\x80';
-            CHECK(prUtf8Validate(text)
-                  == at + sequence.size() + 7);
+            CHECK(prUtf8Validate(text) == at + sequence.size() + 7);
 
             // If the sequence is cut short, the text stops being well formed at the sequence.
             text.replace(at, sequence.size(), sequence.substr(0, sequence.size() - 1) + "a");

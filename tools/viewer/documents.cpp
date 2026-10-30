@@ -134,8 +134,7 @@ std::shared_ptr<Loaded> load(const Source& source, TextBackends text, PrGpuDevic
             loaded->html = loadHtml(source.path, textShaper, text.hinting, hinterOf(text.hinting), device);
             break;
         case SourceType_Lottie:
-            loaded->lottie = loadLottie(source.path, source.settings, textShaper, text.hinting,
-                                        hinterOf(text.hinting));
+            loaded->lottie = loadLottie(source.path, source.settings, textShaper, text.hinting, hinterOf(text.hinting));
             break;
         case SourceType_Rlottie:
             loaded->rlottie = loadRlottie(source.path);
@@ -194,8 +193,8 @@ bool pixels(Loaded& loaded, uint32_t width, uint32_t height, std::vector<uint8_t
         case SourceType_Image:
             return loaded.image != nullptr && imagePixels(*loaded.image, width, height, bgra);
         case SourceType_Snapshots:
-            return loaded.snapshot < loaded.snapshots.size() && loaded.snapshots[loaded.snapshot] != nullptr
-                   && imagePixels(*loaded.snapshots[loaded.snapshot], width, height, bgra);
+            return loaded.snapshot < loaded.snapshots.size() && loaded.snapshots[loaded.snapshot] != nullptr &&
+                imagePixels(*loaded.snapshots[loaded.snapshot], width, height, bgra);
         case SourceType_Drawing:
         case SourceType_Svg:
         case SourceType_Html:
@@ -210,12 +209,12 @@ bool pixelsOnly(const Loaded& loaded) {
 }
 
 void draw(Loaded& loaded, PrDrawList* list, float width, float height, const PrAppDisplay& display,
-          const PrAppUserPreferences& preferences) {
+        const PrAppUserPreferences& preferences) {
     std::lock_guard<std::mutex> lock(loaded.mutex);
     switch (loaded.source.type) {
         case SourceType_Drawing:
             drawDrawing(*loaded.source.drawing, list, loaded.shaper.get(), hinterOf(loaded.hinting),
-                        display, width, height, loaded.time);
+                display, width, height, loaded.time);
             break;
         case SourceType_Svg:
             if (loaded.svg != nullptr)
@@ -262,8 +261,7 @@ const std::vector<Collection>& allCollections() {
     static const std::vector<Collection> collections = [] {
         std::vector<Collection> all = drawingCollections();
         for (std::vector<Collection> (*suite)() :
-             {praxCollections, wptCollections, svgCollections, lottieCollections,
-              markdownCollections}) {
+                {praxCollections, wptCollections, svgCollections, lottieCollections, markdownCollections}) {
             for (Collection& c : suite())
                 all.push_back(std::move(c));
         }
@@ -276,8 +274,8 @@ std::string queryEscaped(const std::string& text) {
     std::string out;
     for (char c : text) {
         uint8_t byte = uint8_t(c);
-        bool plain = (byte >= 'a' && byte <= 'z') || (byte >= 'A' && byte <= 'Z') || (byte >= '0' && byte <= '9')
-                     || c == '/' || c == '-' || c == '_' || c == '.' || c == '~' || c == ':';
+        bool plain = (byte >= 'a' && byte <= 'z') || (byte >= 'A' && byte <= 'Z') || (byte >= '0' && byte <= '9') ||
+            c == '/' || c == '-' || c == '_' || c == '.' || c == '~' || c == ':';
         if (plain) {
             out += c;
         } else {
@@ -314,10 +312,7 @@ std::string htmlTitle(const std::filesystem::path& path) {
 std::string fileNameOf(const std::string& name) {
     std::string out = name;
     for (char& c : out)
-        c = c >= 'A' && c <= 'Z'   ? char(c - 'A' + 'a')
-            : c >= 'a' && c <= 'z' ? c
-            : c >= '0' && c <= '9' ? c
-                                   : '-';
+        c = c >= 'A' && c <= 'Z'   ? char(c - 'A' + 'a') : c >= 'a' && c <= 'z' ? c : c >= '0' && c <= '9' ? c : '-';
     return out;
 }
 

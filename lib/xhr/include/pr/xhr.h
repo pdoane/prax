@@ -112,7 +112,7 @@ typedef struct PrXhrClient {
     // this call. A response with the status Lost says that the client went away. Returns a status other than Ok, and
     // never calls `done`, if the client cannot fetch the request.
     PrStatus (*fetch)(void* PR_NULLABLE context, const PrFetchClientRequest* request, PrFetchClientFn done,
-                      void* PR_NULLABLE doneContext);
+        void* PR_NULLABLE doneContext);
 
     // Cancels the fetch that `fetch` started with `doneContext`, whose `done` is then never called.
     void (*cancelFetch)(void* PR_NULLABLE context, void* PR_NULLABLE doneContext);

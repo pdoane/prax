@@ -60,8 +60,8 @@ bool readChunk(PrByteView png, size_t* at, Chunk* out) {
 bool hasHeader(PrByteView png) {
     size_t at = sizeof(kSignature);
     Chunk header;
-    return png.size >= sizeof(kSignature) && memEquals(png.data, kSignature, sizeof(kSignature))
-           && readChunk(png, &at, &header) && isType(header, "IHDR");
+    return png.size >= sizeof(kSignature) && memEquals(png.data, kSignature, sizeof(kSignature)) &&
+        readChunk(png, &at, &header) && isType(header, "IHDR");
 }
 
 bool isTextType(const Chunk& chunk) {
@@ -107,8 +107,8 @@ bool inflate(PrCompressCodec* codec, PrByteView input, Array<uint8_t>* out) {
         }
         PrCompressRead read{};
         PrByteView rest{input.data + consumed, input.size - consumed};
-        if (prCompressDecoderRead(decoder, rest, true, out->data + out->count, out->capacity - out->count, &read)
-            != PrStatus_Ok)
+        if (prCompressDecoderRead(decoder, rest, true, out->data + out->count, out->capacity - out->count, &read) !=
+                PrStatus_Ok)
             break;
         consumed += read.consumed;
         out->count += uint32_t(read.written);
@@ -141,8 +141,8 @@ bool readText(const Chunk& chunk, PrCompressCodec* PR_NULLABLE codec, PrImagePng
         text.text = textView(&converted);
     } else if (isType(chunk, "zTXt")) {
         // The one compression method is zlib (png-3/#11zTXt).
-        ok = codec != nullptr && at < chunk.data.size && chunk.data.data[at] == 0
-             && inflate(codec, PrByteView{chunk.data.data + at + 1, chunk.data.size - at - 1}, &inflated);
+        ok = codec != nullptr && at < chunk.data.size && chunk.data.data[at] == 0 &&
+            inflate(codec, PrByteView{chunk.data.data + at + 1, chunk.data.size - at - 1}, &inflated);
         if (ok) {
             appendLatin1(&converted, PrByteView{inflated.data, inflated.count});
             text.text = textView(&converted);
@@ -166,8 +166,8 @@ bool readText(const Chunk& chunk, PrCompressCodec* PR_NULLABLE codec, PrImagePng
                 rest = PrByteView{inflated.data, inflated.count};
             }
             text.text = PrStringView{reinterpret_cast<const char*>(rest.data), rest.size};
-            ok = ok && prUtf8Validate(text.text) == text.text.size
-                 && prUtf8Validate(text.translatedKeyword) == text.translatedKeyword.size;
+            ok = ok && prUtf8Validate(text.text) == text.text.size &&
+                prUtf8Validate(text.translatedKeyword) == text.translatedKeyword.size;
         }
     }
     if (ok)
@@ -215,8 +215,8 @@ void writeText(Output* out, PrStringView keyword, PrStringView text) {
 }
 
 bool isKeyword(PrStringView keyword) {
-    if (keyword.size == 0 || keyword.size > kPrImagePngKeywordMaxBytes || keyword.data[0] == ' '
-        || keyword.data[keyword.size - 1] == ' ')
+    if (keyword.size == 0 || keyword.size > kPrImagePngKeywordMaxBytes || keyword.data[0] == ' ' ||
+            keyword.data[keyword.size - 1] == ' ')
         return false;
     for (size_t i = 0; i < keyword.size; ++i) {
         char c = keyword.data[i];
@@ -233,7 +233,7 @@ bool isKeyword(PrStringView keyword) {
 using namespace pr_impl;
 
 PrStatus prImagePngEachText(PrByteView png, PrCompressCodec* PR_NULLABLE compress, PrImagePngTextFn fn,
-                            void* PR_NULLABLE context) {
+        void* PR_NULLABLE context) {
     if (!hasHeader(png))
         return PrStatus_InvalidData;
     size_t at = sizeof(kSignature);
@@ -248,7 +248,7 @@ PrStatus prImagePngEachText(PrByteView png, PrCompressCodec* PR_NULLABLE compres
 }
 
 PrStatus prImagePngSetText(PrByteView png, PrStringView keyword, PrStringView text, uint8_t* PR_NULLABLE out,
-                           size_t capacity, size_t* size) {
+        size_t capacity, size_t* size) {
     PR_ASSERT(isKeyword(keyword));
     *size = 0;
     if (!hasHeader(png))

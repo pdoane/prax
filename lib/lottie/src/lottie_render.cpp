@@ -64,8 +64,11 @@ bool cameraProjection(const LottieRender& r, const LottieComp& comp, double fram
             continue;
         float zoom = lottieScalar(a, camera.zoom, frame, 0);
         PrMatrix4 view = lottieCameraView(a, a.transforms.data[camera.transform], frame, extent, zoom);
-        PrMatrix4 parents =
-            camera.parent != kLottieNone ? layerChain(r, comp, camera.parent, frame) : prMatrix4Identity();
+        PrMatrix4 parents;
+        if (camera.parent != kLottieNone)
+            parents = layerChain(r, comp, camera.parent, frame);
+        else
+            parents = prMatrix4Identity();
         PrMatrix4 toParents = prMatrix4Identity();
         prMatrix4Invert(&parents, &toParents);
         PrMatrix4 toCenter = prMatrix4Translate(PrVec3{-extent.x / 2, -extent.y / 2, 0});
@@ -82,7 +85,7 @@ bool cameraProjection(const LottieRender& r, const LottieComp& comp, double fram
 
 // Returns the depth of the layer's anchor in the camera's space, before perspective: larger is nearer the eye.
 float cameraDepth(const LottieRender& r, const LottieComp& comp, uint32_t index, double frame,
-                  const PrMatrix4& projection) {
+        const PrMatrix4& projection) {
     const LottieAnimation& a = *r.a;
     const LottieLayer& layer = a.layers.data[comp.layers + index];
     PrVec2 anchor = lottiePoint(a, a.transforms.data[layer.transform].anchor, frame, PrVec2{0, 0});
@@ -93,8 +96,7 @@ float cameraDepth(const LottieRender& r, const LottieComp& comp, uint32_t index,
     return w > 0 ? z / w : -kInfinityF32;
 }
 
-void drawLayer(LottieRender& r, uint32_t compIndex, uint32_t index, double frame,
-               const PrMatrix4* PR_NULLABLE camera);
+void drawLayer(LottieRender& r, uint32_t compIndex, uint32_t index, double frame, const PrMatrix4* PR_NULLABLE camera);
 
 // Returns the visible part of the root composition, in the space that `toCurrent` maps into the drawing space. It is
 // the area that a mask or matte covers when it covers everything, as an inverted mask can.
@@ -108,7 +110,7 @@ PrRect visibleArea(const LottieRender& r, PrAffine2 toCurrent) {
 
 // Returns a draw list of the matte layer as it plays. The layer that it mattes is masked by this list.
 PrDrawList* PR_NULLABLE matteList(LottieRender& r, uint32_t compIndex, uint32_t index, double frame,
-                                  const PrMatrix4* PR_NULLABLE camera) {
+        const PrMatrix4* PR_NULLABLE camera) {
     PrDrawList* list = prDrawListCreate();
     PrDrawList* outer = r.list;
     r.list = list;
@@ -219,9 +221,9 @@ MaskPush pushMasks(LottieRender& r, const LottieLayer& layer, double frame, PrRe
     }
     if (used == 0)
         return MaskPush_None;
-    if (used == 1 && only->mode != LottieMaskMode_Subtract && only->mode != LottieMaskMode_Intersect
-        && !only->inverted && lottieScalar(a, only->opacity, frame, 100) >= 100
-        && lottieScalar(a, only->expansion, frame, 0) == 0) {
+    if (used == 1 && only->mode != LottieMaskMode_Subtract && only->mode != LottieMaskMode_Intersect &&
+            !only->inverted && lottieScalar(a, only->opacity, frame, 100) >= 100 &&
+            lottieScalar(a, only->expansion, frame, 0) == 0) {
         PrPath* path = prPathCreate();
         maskPath(r, *only, frame, path);
         prDrawListPushClipPath(r.list, path, PrPathFillRule_NonZero, PrDrawEdges_Antialiased);
@@ -292,8 +294,8 @@ void drawContent(LottieRender& r, const LottieLayer& layer, double frame) {
         }
         case LottieLayerKind_Precomp: {
             // A composition that draws itself, directly or through other precomps, draws nothing at that point.
-            if (layer.comp == kLottieNone || layer.comp == 0 || r.comps.count >= kLottieMaxDepth
-                || r.comps.find(layer.comp) != kArrayMissing)
+            if (layer.comp == kLottieNone || layer.comp == 0 || r.comps.count >= kLottieMaxDepth ||
+                    r.comps.find(layer.comp) != kArrayMissing)
                 break;
             double inner = (frame - layer.startTime) / layer.stretch;
             if (layer.timeRemap != kLottieNone) {
@@ -316,7 +318,7 @@ void drawContent(LottieRender& r, const LottieLayer& layer, double frame) {
 // Draws a 3D layer under a camera: a projected group of the layer's plane, whose bounds are those of its content. The
 // layer's opacity is the group's, and its clip, masks and effects stay in its plane.
 void drawProjectedLayer(LottieRender& r, const LottieComp& comp, uint32_t index, double frame, float opacity,
-                        const PrMatrix4& camera) {
+        const PrMatrix4& camera) {
     const LottieAnimation& a = *r.a;
     const LottieLayer& layer = a.layers.data[comp.layers + index];
     PrMatrix4 chain = layerChain(r, comp, index, frame);
@@ -344,8 +346,8 @@ void drawProjectedLayer(LottieRender& r, const LottieComp& comp, uint32_t index,
     bool clipped = layer.kind == LottieLayerKind_Precomp;
     PrRect bounds = prDrawListBounds(content);
     // Content that covers its whole plane, as an unbounded operator does, covers the composition.
-    if (!(isFiniteF32(bounds.left) && isFiniteF32(bounds.top) && isFiniteF32(bounds.right)
-          && isFiniteF32(bounds.bottom)))
+    if (!(isFiniteF32(bounds.left) && isFiniteF32(bounds.top) && isFiniteF32(bounds.right) &&
+            isFiniteF32(bounds.bottom)))
         bounds = clipped ? PrRect{0, 0, layer.width, layer.height} : PrRect{0, 0, comp.width, comp.height};
     if (clipped)
         bounds = prRectIntersect(bounds, PrRect{0, 0, layer.width, layer.height});
@@ -370,8 +372,7 @@ void drawProjectedLayer(LottieRender& r, const LottieComp& comp, uint32_t index,
     prDrawListRelease(content);
 }
 
-void drawLayer(LottieRender& r, uint32_t compIndex, uint32_t index, double frame,
-               const PrMatrix4* PR_NULLABLE camera) {
+void drawLayer(LottieRender& r, uint32_t compIndex, uint32_t index, double frame, const PrMatrix4* PR_NULLABLE camera) {
     const LottieAnimation& a = *r.a;
     const LottieComp& comp = a.comps.data[compIndex];
     const LottieLayer& layer = a.layers.data[comp.layers + index];
@@ -391,9 +392,8 @@ void drawLayer(LottieRender& r, uint32_t compIndex, uint32_t index, double frame
         PrDrawSource source = prDrawSourceList(matte, area);
         PrDrawBrush brush = prDrawBrushImage(source, area, PrDrawSampling_Linear);
         mask = prDrawMaskDefault(&brush);
-        mask.mode = layer.matte == LottieMatte_Luma || layer.matte == LottieMatte_LumaInverted
-                        ? PrDrawMaskMode_Luminance
-                        : PrDrawMaskMode_Alpha;
+        bool luma = layer.matte == LottieMatte_Luma || layer.matte == LottieMatte_LumaInverted;
+        mask.mode = luma ? PrDrawMaskMode_Luminance : PrDrawMaskMode_Alpha;
         mask.space = PrColorSpace_Srgb;
         mask.invert = layer.matte == LottieMatte_AlphaInverted || layer.matte == LottieMatte_LumaInverted;
     }

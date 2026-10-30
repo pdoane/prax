@@ -45,12 +45,12 @@ struct TestFetcher {
 
     // Answers the waiting request whose URL ends in `suffix` with `body`, and returns false if none waits.
     bool respond(const std::string& suffix, const std::string& body, uint16_t status = 200,
-                 PrStringView contentType = PrStringView{nullptr, 0});
+        PrStringView contentType = PrStringView{nullptr, 0});
 
     // Answers `request` with `body`, and takes it out of `held`. A `url` other than the null view is the response's
     // URL, as redirects would leave it.
     void respondTo(PrFetchInterceptRequest* request, const std::string& body, uint16_t status = 200,
-                   PrStringView contentType = PrStringView{nullptr, 0}, PrStringView url = PrStringView{nullptr, 0});
+        PrStringView contentType = PrStringView{nullptr, 0}, PrStringView url = PrStringView{nullptr, 0});
 
     // Answers `request` with a network error, and takes it out of `held`.
     void failTo(PrFetchInterceptRequest* request);

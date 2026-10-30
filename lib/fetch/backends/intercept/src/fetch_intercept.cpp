@@ -148,8 +148,8 @@ PrStatus createFetch(PrFetchNetwork* base, const PrFetchRequestDesc* desc, PrFet
     if (prUrlCreate(desc->url, nullptr, PrCharset_Utf8, &url) != PrStatus_Ok)
         return PrStatus_InvalidData;
     PrUrl* referrer = nullptr;
-    if (desc->referrer.data != nullptr
-        && prUrlCreate(desc->referrer, nullptr, PrCharset_Utf8, &referrer) != PrStatus_Ok) {
+    if (desc->referrer.data != nullptr &&
+            prUrlCreate(desc->referrer, nullptr, PrCharset_Utf8, &referrer) != PrStatus_Ok) {
         prUrlDestroy(url);
         return PrStatus_InvalidData;
     }
@@ -273,9 +273,10 @@ PrFetchNetwork* prFetchInterceptCreate(const PrFetchInterceptDesc* desc) {
     fetcher->context = desc->context;
     fetcher->next = desc->next;
     PrStringView userAgent = desc->userAgent;
-    if (userAgent.data == nullptr)
-        userAgent = desc->next != nullptr ? prFetchNetworkUserAgent(desc->next)
-                                          : PrStringView{kPrFetchDefaultUserAgent};
+    if (userAgent.data == nullptr && desc->next != nullptr)
+        userAgent = prFetchNetworkUserAgent(desc->next);
+    else if (userAgent.data == nullptr)
+        userAgent = kPrFetchDefaultUserAgent;
     fetcher->userAgentStorage = prStringCopy(userAgent);
     fetcher->userAgent = prStringView(&fetcher->userAgentStorage);
     PR_ASSERT(desc->next == nullptr || desc->next->net == desc->net);

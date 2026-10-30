@@ -49,16 +49,23 @@ PrCssProperty svgPresentationOf(const PrDomElement* element, PrStringView name) 
     static constexpr PrDomTag kCentered[] = {PrDomTag_Circle, PrDomTag_Ellipse};
     static constexpr PrDomTag kRounded[] = {PrDomTag_Ellipse, PrDomTag_Rect};
     static constexpr PrDomTag kPlaced[] = {PrDomTag_ForeignObject, PrDomTag_Image, PrDomTag_Rect};
-    static constexpr PrDomTag kPositioned[] = {PrDomTag_ForeignObject, PrDomTag_Image, PrDomTag_Rect, PrDomTag_Svg,
-                                               PrDomTag_Symbol};
+    static constexpr PrDomTag kPositioned[] = {
+        PrDomTag_ForeignObject, PrDomTag_Image, PrDomTag_Rect, PrDomTag_Svg,
+        PrDomTag_Symbol,
+    };
     static constexpr PrDomTag kGradients[] = {PrDomTag_LinearGradient, PrDomTag_RadialGradient};
-    static constexpr PrDomTag kAnimations[] = {PrDomTag_Animate, PrDomTag_AnimateMotion, PrDomTag_AnimateTransform,
-                                               PrDomTag_Set};
-    static constexpr PrDomTag kShapes[] = {PrDomTag_Circle, PrDomTag_Ellipse, PrDomTag_Line, PrDomTag_Path,
-                                           PrDomTag_Polygon, PrDomTag_Polyline, PrDomTag_Rect};
+    static constexpr PrDomTag kAnimations[] = {
+        PrDomTag_Animate, PrDomTag_AnimateMotion, PrDomTag_AnimateTransform,
+        PrDomTag_Set,
+    };
+    static constexpr PrDomTag kShapes[] = {
+        PrDomTag_Circle, PrDomTag_Ellipse, PrDomTag_Line, PrDomTag_Path,
+        PrDomTag_Polygon, PrDomTag_Polyline, PrDomTag_Rect,
+    };
+    if (name == "transform" && element->tag != PrDomTag_Pattern && !isSvgTag(element, kGradients))
+        return PrCssProperty_Transform;
     if (name == "transform")
-        return element->tag != PrDomTag_Pattern && !isSvgTag(element, kGradients) ? PrCssProperty_Transform
-                                                                                   : PrCssProperty_Count;
+        return PrCssProperty_Count;
     if (name == "patternTransform")
         return element->tag == PrDomTag_Pattern ? PrCssProperty_Transform : PrCssProperty_Count;
     if (name == "gradientTransform")
@@ -146,8 +153,8 @@ int32_t svgTransformArguments(PrStringView text, size_t* pos, double* out) {
                 ++*pos;
         }
         size_t start = *pos;
-        while (*pos < text.size && (asciiIsDigit(text.data[*pos]) || text.data[*pos] == '.' || text.data[*pos] == '-'
-                                    || text.data[*pos] == '+' || text.data[*pos] == 'e' || text.data[*pos] == 'E'))
+        while (*pos < text.size && (asciiIsDigit(text.data[*pos]) || text.data[*pos] == '.' || text.data[*pos] == '-' ||
+                text.data[*pos] == '+' || text.data[*pos] == 'e' || text.data[*pos] == 'E'))
             ++*pos;
         if (count == 6 || *pos == start || !decimalToF64(PrStringView{text.data + start, *pos - start}, &out[count]))
             return -1;
@@ -243,16 +250,19 @@ void addSvgFilter(TextBuffer* out, PrStringView value) {
         }
         if (asciiIsLetter(c)) {
             size_t end = i;
-            while (end < value.size
-                   && (asciiIsLetter(value.data[end]) || asciiIsDigit(value.data[end]) || value.data[end] == '-'))
+            while (end < value.size &&
+                    (asciiIsLetter(value.data[end]) || asciiIsDigit(value.data[end]) || value.data[end] == '-'))
                 ++end;
             PrStringView name{value.data + i, end - i};
             textAppend(&rewritten, name);
             if (end < value.size && value.data[end] == '(') {
-                PrCssKeyword keyword = asciiEqualsFold(name, "blur")          ? PrCssKeyword_Blur
-                                       : asciiEqualsFold(name, "drop-shadow") ? PrCssKeyword_DropShadow
-                                       : asciiEqualsFold(name, "hue-rotate")  ? PrCssKeyword_HueRotate
-                                                                              : PrCssKeyword_Count;
+                PrCssKeyword keyword = PrCssKeyword_Count;
+                if (asciiEqualsFold(name, "blur"))
+                    keyword = PrCssKeyword_Blur;
+                else if (asciiEqualsFold(name, "drop-shadow"))
+                    keyword = PrCssKeyword_DropShadow;
+                else if (asciiEqualsFold(name, "hue-rotate"))
+                    keyword = PrCssKeyword_HueRotate;
                 if (depth < 8)
                     functions[depth] = keyword;
                 ++depth;
@@ -262,8 +272,8 @@ void addSvgFilter(TextBuffer* out, PrStringView value) {
             i = end;
             continue;
         }
-        bool sign = (c == '+' || c == '-') && i + 1 < value.size
-                    && (asciiIsDigit(value.data[i + 1]) || value.data[i + 1] == '.');
+        bool sign =
+            (c == '+' || c == '-') && i + 1 < value.size && (asciiIsDigit(value.data[i + 1]) || value.data[i + 1] == '.');
         if (asciiIsDigit(c) || c == '.' || sign) {
             size_t end = i + (sign ? 1 : 0);
             while (end < value.size && (asciiIsDigit(value.data[end]) || value.data[end] == '.'))
@@ -347,11 +357,7 @@ CssHintReach mapped(const PrDomElement* element, PrStringView name) {
     return svgPresentationOf(element, name) != PrCssProperty_Count ? CssHintReach_Self : CssHintReach_None;
 }
 
-constexpr CssHintProvider kProvider = {
-    .hasOwn = hasOwn,
-    .own = addSvg,
-    .mapped = mapped,
-};
+constexpr CssHintProvider kProvider = {.hasOwn = hasOwn, .own = addSvg, .mapped = mapped};
 
 } // namespace
 

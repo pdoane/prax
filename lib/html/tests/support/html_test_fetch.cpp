@@ -56,8 +56,7 @@ void TestFetcher::settle(PrDomAgent* agent) {
     }
 }
 
-bool TestFetcher::respond(const std::string& suffix, const std::string& body, uint16_t status,
-                          PrStringView contentType) {
+bool TestFetcher::respond(const std::string& suffix, const std::string& body, uint16_t status, PrStringView contentType) {
     for (PrFetchInterceptRequest* request : held) {
         if (urlOf(request).ends_with(suffix)) {
             respondTo(request, body, status, contentType);
@@ -68,7 +67,7 @@ bool TestFetcher::respond(const std::string& suffix, const std::string& body, ui
 }
 
 void TestFetcher::respondTo(PrFetchInterceptRequest* request, const std::string& body, uint16_t status,
-                            PrStringView contentType, PrStringView url) {
+        PrStringView contentType, PrStringView url) {
     PrFetchHeader header{"Content-Type", contentType};
     PrFetchInterceptResponse response{
         .status = status,
@@ -91,8 +90,7 @@ std::string TestFetcher::urlOf(const PrFetchInterceptRequest* request) {
     return std::string(url.data, url.size);
 }
 
-uint32_t TestModules::parse(const PrHtmlScript* script, PrHtmlModuleRequestFn request,
-                            void* PR_NULLABLE requestContext) {
+uint32_t TestModules::parse(const PrHtmlScript* script, PrHtmlModuleRequestFn request, void* PR_NULLABLE requestContext) {
     std::string source(script->source.data, script->source.size);
     PrUrl* base = nullptr;
     if (prUrlCreate(script->baseUrl, nullptr, PrCharset_Utf8, &base) == PrStatus_Ok) {
@@ -101,8 +99,8 @@ uint32_t TestModules::parse(const PrHtmlScript* script, PrHtmlModuleRequestFn re
             size_t end = std::min(source.find('\n', start), source.size());
             std::string line = source.substr(start, end - start);
             PrUrl* imported = nullptr;
-            if (line.starts_with("import ")
-                && prUrlCreate(line.substr(7), base, PrCharset_Utf8, &imported) == PrStatus_Ok) {
+            if (line.starts_with("import ") &&
+                    prUrlCreate(line.substr(7), base, PrCharset_Utf8, &imported) == PrStatus_Ok) {
                 PrString url = prUrlSerialize(imported, PrUrlSerialization_Whole);
                 request(requestContext, prStringView(&url));
                 prStringReset(&url);

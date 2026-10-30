@@ -141,8 +141,8 @@ PrStatus decodeWoff(PrByteView woff, PrCompressCodec* codec, Array<uint8_t>* out
         return PrStatus_InvalidData;
     const uint16_t tables = readBeU16(in + 12);
     const uint32_t size = readBeU32(in + 16);
-    if (woff.size < kWoffHeaderSize + size_t(tables) * kWoffEntrySize
-        || size < kOffsetTableSize + uint64_t(tables) * kTableRecordSize || size > kMaxFontSize)
+    if (woff.size < kWoffHeaderSize + size_t(tables) * kWoffEntrySize ||
+            size < kOffsetTableSize + uint64_t(tables) * kTableRecordSize || size > kMaxFontSize)
         return PrStatus_InvalidData;
     out->resize(size);
     uint8_t* font = out->data;
@@ -166,8 +166,7 @@ PrStatus decodeWoff(PrByteView woff, PrCompressCodec* codec, Array<uint8_t>* out
         } else {
             PrCompressRead read{};
             const PrByteView input{in + offset, compressed};
-            const PrStatus status =
-                prCompressCodecDecode(codec, PrCompressFormat_Zlib, input, font + at, length, &read);
+            const PrStatus status = prCompressCodecDecode(codec, PrCompressFormat_Zlib, input, font + at, length, &read);
             if (status == PrStatus_NotSupported)
                 return status;
             if (status != PrStatus_Ok || read.progress != PrCompressProgress_Done || read.written != length)
@@ -392,12 +391,11 @@ PrStatus decompress(PrByteView compressed, PrCompressCodec* codec, Woff2File& fi
     // Room for one byte past the tables reveals a block that is too long.
     file.block.resize(size + 1);
     PrCompressRead read{};
-    const PrStatus status =
-        prCompressCodecDecode(codec, PrCompressFormat_Brotli, compressed, file.block.data, size + 1, &read);
+    const PrStatus status = prCompressCodecDecode(codec, PrCompressFormat_Brotli, compressed, file.block.data, size + 1, &read);
     if (status == PrStatus_NotSupported)
         return status;
-    if (status != PrStatus_Ok || read.progress != PrCompressProgress_Done || read.written != size
-        || read.consumed != compressed.size)
+    if (status != PrStatus_Ok || read.progress != PrCompressProgress_Done || read.written != size ||
+            read.consumed != compressed.size)
         return PrStatus_InvalidData;
     file.block.count = size;
     return PrStatus_Ok;
@@ -523,7 +521,7 @@ void resetPoints(GlyphPoints& points) {
 
 // Appends the simple glyph `glyph` of `contours` contours to `glyf` and sets `xMin` to the x of its box.
 bool rebuildSimpleGlyph(GlyfStreams& s, uint32_t glyph, int16_t contours, GlyphPoints& points, Array<uint8_t>& glyf,
-                        int16_t* xMin) {
+        int16_t* xMin) {
     const uint32_t header = glyf.count;
     glyf.resize(header + 10 + 2 * uint32_t(contours));
     uint32_t pointCount = 0;
@@ -657,7 +655,7 @@ bool rebuildCompositeGlyph(GlyfStreams& s, uint32_t glyph, Array<uint8_t>& glyf,
 // glyph's x minimum to `file.xMins`. `locaLength` is the origLength of the loca table, which the glyph count and the
 // loca format determine.
 bool rebuildGlyf(Woff2File& file, const uint8_t* data, uint32_t size, uint32_t locaLength, Array<uint8_t>& glyf,
-                 Array<uint8_t>& loca) {
+        Array<uint8_t>& loca) {
     Reader header = readerOf(data, size);
     readU16(header); // reserved
     const uint16_t options = readU16(header);
@@ -779,8 +777,8 @@ void keepRebuilt(Woff2File& file, Woff2Table& table, const Array<uint8_t>& bytes
 bool rebuildHmtx(Woff2File& file, const Woff2Font& font, const Woff2Table& glyf, Woff2Table& hmtx) {
     const Woff2TableIndex maxp = findTable(file, font, kTagMaxp);
     const Woff2TableIndex hhea = findTable(file, font, kTagHhea);
-    if (maxp == kWoff2TableNone || hhea == kWoff2TableNone || file.tables.data[maxp].size < 6
-        || file.tables.data[hhea].size < 36)
+    if (maxp == kWoff2TableNone || hhea == kWoff2TableNone || file.tables.data[maxp].size < 6 ||
+            file.tables.data[hhea].size < 36)
         return false;
     const uint16_t glyphCount = readBeU16(bytesOf(file, file.tables.data[maxp]) + 4);
     const uint16_t metricCount = readBeU16(bytesOf(file, file.tables.data[hhea]) + 34);
@@ -794,8 +792,7 @@ bool rebuildHmtx(Woff2File& file, const Woff2Font& font, const Woff2Table& glyf,
         return false;
     const uint8_t* advances = readBytes(r, 2 * size_t(metricCount));
     const uint8_t* bearings = (flags & 1) != 0 ? nullptr : readBytes(r, 2 * size_t(metricCount));
-    const uint8_t* monospaced =
-        (flags & 2) != 0 ? nullptr : readBytes(r, 2 * (size_t(glyphCount) - metricCount));
+    const uint8_t* monospaced = (flags & 2) != 0 ? nullptr : readBytes(r, 2 * (size_t(glyphCount) - metricCount));
     if (r.failed || r.at != r.size)
         return false;
 
@@ -824,8 +821,8 @@ bool rebuildHmtx(Woff2File& file, const Woff2Font& font, const Woff2Table& glyf,
 bool readFontXMins(Woff2File& file, const Woff2Font& font, Woff2Table& glyf, const Woff2Table& loca) {
     const Woff2TableIndex head = findTable(file, font, kTagHead);
     const Woff2TableIndex maxp = findTable(file, font, kTagMaxp);
-    if (head == kWoff2TableNone || maxp == kWoff2TableNone || file.tables.data[head].size < 54
-        || file.tables.data[maxp].size < 6)
+    if (head == kWoff2TableNone || maxp == kWoff2TableNone || file.tables.data[head].size < 54 ||
+            file.tables.data[maxp].size < 6)
         return false;
     // The indexToLocFormat of head, and the numGlyphs of maxp (OpenType head, maxp).
     const bool longLoca = readBeU16(bytesOf(file, file.tables.data[head]) + 50) != 0;
@@ -856,8 +853,7 @@ bool rebuildFont(Woff2File& file, const Woff2Font& font, Array<uint8_t>& glyf, A
             glyf.clear();
             loca.clear();
             glyfTable.xMinsStart = file.xMins.count;
-            if (!rebuildGlyf(file, file.block.data + glyfTable.source, glyfTable.length, locaTable.origLength, glyf,
-                             loca))
+            if (!rebuildGlyf(file, file.block.data + glyfTable.source, glyfTable.length, locaTable.origLength, glyf, loca))
                 return false;
             glyfTable.xMinsCount = file.xMins.count - glyfTable.xMinsStart;
             keepRebuilt(file, glyfTable, glyf);
@@ -870,8 +866,8 @@ bool rebuildFont(Woff2File& file, const Woff2Font& font, Array<uint8_t>& glyf, A
     if (glyfIndex == kWoff2TableNone)
         return false;
     Woff2Table& glyfTable = file.tables.data[glyfIndex];
-    if (!glyfTable.transformed && glyfTable.xMinsCount == 0
-        && !readFontXMins(file, font, glyfTable, file.tables.data[locaIndex]))
+    if (!glyfTable.transformed && glyfTable.xMinsCount == 0 &&
+            !readFontXMins(file, font, glyfTable, file.tables.data[locaIndex]))
         return false;
     return rebuildHmtx(file, font, glyfTable, file.tables.data[hmtxIndex]);
 }

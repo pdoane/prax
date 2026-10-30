@@ -115,7 +115,7 @@ PrGpuDeviceOptions prGpuDeviceOptionsDefault(void);
 // header creates one over the host's native device. Returns NotSupported if the build does not have the backend or the
 // system has no adapter that it supports.
 PrStatus prGpuDeviceCreate(PrGpuBackend backend, const PrGpuDeviceOptions* PR_NULLABLE options,
-                           PrGpuDevice* PR_NULLABLE* PR_NONNULL out);
+    PrGpuDevice* PR_NULLABLE* PR_NONNULL out);
 
 // Waits for the device's work to finish, then frees the device. Every object of the device must be destroyed first.
 void prGpuDeviceDestroy(PrGpuDevice* PR_NULLABLE device);
@@ -332,7 +332,7 @@ PrStatus prGpuTextureCreate(PrGpuDevice* device, const PrGpuTextureDesc* desc, P
 // Creates a view of `subresources` of `texture`, of shape `kind`. A view has handles and may be an attachment, and it
 // shares its texture's memory. A view may outlive the destruction of its texture, which keeps the memory.
 PrStatus prGpuTextureCreateView(PrGpuDevice* device, PrGpuTexture texture, PrGpuTextureKind kind,
-                                PrGpuSubresources subresources, PrGpuTexture* out);
+    PrGpuSubresources subresources, PrGpuTexture* out);
 
 // Destroys the texture or view. The work submitted before the call may still use it, and work submitted after must not.
 void prGpuTextureDestroy(PrGpuDevice* device, PrGpuTexture texture);
@@ -439,7 +439,7 @@ PrGpuTextureRegion prGpuTextureRegion2d(PrUVec2 origin, PrUVec2 extent);
 // The texture is in the accesses of PrGpuAccessFlag_ShaderRead before and after the upload: work that left it in any
 // other access ends with a barrier to them.
 void prGpuTextureUpload(PrGpuDevice* device, PrGpuTexture texture, const PrGpuTextureRegion* region,
-                        const void* data, uint32_t rowBytes, uint32_t layerBytes);
+    const void* data, uint32_t rowBytes, uint32_t layerBytes);
 
 // Writes `texels` into the first level of a 2D texture at `origin`, in the texture's format, as an upload. Texels
 // outside the texture are dropped.
@@ -461,7 +461,7 @@ typedef struct PrGpuShaderLibrary PrGpuShaderLibrary;
 // Creates a library from `bytes`, which stay owned by the caller and must outlive the library. Returns InvalidData if
 // the bytes are not a library, and NotSupported if it has no code for the device's backend.
 PrStatus prGpuShaderLibraryCreate(PrGpuDevice* device, const void* bytes, uint64_t size,
-                                  PrGpuShaderLibrary* PR_NULLABLE* PR_NONNULL out);
+    PrGpuShaderLibrary* PR_NULLABLE* PR_NONNULL out);
 
 // Destroys the library. Pipelines created from it keep what they need.
 void prGpuShaderLibraryDestroy(PrGpuShaderLibrary* PR_NULLABLE library);
@@ -620,7 +620,7 @@ PrGpuGraphicsPipelineDesc prGpuGraphicsPipelineDescDefault(const PrGpuShaderLibr
 // stage, and NotSupported for a state that the device does not have. On failure, `*out` is zero.
 PrStatus prGpuPipelineCreateGraphics(PrGpuDevice* device, const PrGpuGraphicsPipelineDesc* desc, PrGpuPipeline* out);
 PrStatus prGpuPipelineCreateCompute(PrGpuDevice* device, const PrGpuShaderLibrary* library, PrStringView compute,
-                                    PrStringView name, PrGpuPipeline* out);
+    PrStringView name, PrGpuPipeline* out);
 
 // Destroys the pipeline. The work submitted before the call may still use it.
 void prGpuPipelineDestroy(PrGpuDevice* device, PrGpuPipeline pipeline);
@@ -648,7 +648,7 @@ PrGpuCommandsOptions prGpuCommandsOptionsDefault(void);
 // Begins an empty command buffer. A null `options` means the defaults. Returns false if the device is lost. On failure,
 // `*out` is null.
 bool prGpuCommandsBegin(PrGpuDevice* device, const PrGpuCommandsOptions* PR_NULLABLE options,
-                        PrGpuCommands* PR_NULLABLE* PR_NONNULL out);
+    PrGpuCommands* PR_NULLABLE* PR_NONNULL out);
 
 // Returns the device that the command buffer records for.
 PrGpuDevice* prGpuCommandsDevice(const PrGpuCommands* commands);
@@ -733,15 +733,14 @@ typedef struct PrGpuDispatchIndirect {
 // laid out as `rowBytes` and `layerBytes` say. Copies are ordered with other work only by barriers: the source is in
 // PrGpuAccessFlag_CopyRead and the target in PrGpuAccessFlag_CopyWrite.
 void prGpuCommandsCopyBuffer(PrGpuCommands* commands, PrGpuBuffer source, uint64_t sourceOffset, PrGpuBuffer target,
-                             uint64_t targetOffset, uint64_t size);
+    uint64_t targetOffset, uint64_t size);
 void prGpuCommandsCopyTexture(PrGpuCommands* commands, PrGpuTexture source, const PrGpuTextureRegion* sourceRegion,
-                              PrGpuTexture target, const PrGpuTextureRegion* targetRegion);
+    PrGpuTexture target, const PrGpuTextureRegion* targetRegion);
 void prGpuCommandsCopyBufferToTexture(PrGpuCommands* commands, PrGpuBuffer source, uint64_t sourceOffset,
-                                      uint32_t rowBytes, uint32_t layerBytes, PrGpuTexture target,
-                                      const PrGpuTextureRegion* targetRegion);
+    uint32_t rowBytes, uint32_t layerBytes, PrGpuTexture target, const PrGpuTextureRegion* targetRegion);
 void prGpuCommandsCopyTextureToBuffer(PrGpuCommands* commands, PrGpuTexture source,
-                                      const PrGpuTextureRegion* sourceRegion, PrGpuBuffer target,
-                                      uint64_t targetOffset, uint32_t rowBytes, uint32_t layerBytes);
+    const PrGpuTextureRegion* sourceRegion, PrGpuBuffer target, uint64_t targetOffset, uint32_t rowBytes,
+    uint32_t layerBytes);
 
 // Records filling each mip level of a 2D texture after the first from the level before it, outside any pass. Each texel
 // of a level is the average of the texels that it covers in the level before. The texture must have
@@ -763,7 +762,7 @@ typedef void (*PrGpuReadFn)(void* PR_NULLABLE context, PrPixelView texels);
 // Records a read of the first level of a 2D texture, outside any pass, and calls `read` with its texels once the
 // command buffer's work is done. The texture is in `access` before and after the read.
 void prGpuCommandsReadTexture(PrGpuCommands* commands, PrGpuTexture texture, uint32_t access, PrGpuReadFn read,
-                              void* PR_NULLABLE context);
+    void* PR_NULLABLE context);
 
 // Opens or closes a named group of commands for debuggers and captures. Groups nest.
 void prGpuCommandsPushGroup(PrGpuCommands* commands, PrStringView name);
@@ -794,19 +793,18 @@ enum {
     // say what the barrier waits for.
     PrGpuAccessFlag_Discard = 1u << 14,
 
-    PrGpuAccessFlag_ShaderRead = PrGpuAccessFlag_VertexRead | PrGpuAccessFlag_FragmentRead
-                                 | PrGpuAccessFlag_ComputeRead,
-    PrGpuAccessFlag_ShaderWrite = PrGpuAccessFlag_VertexWrite | PrGpuAccessFlag_FragmentWrite
-                                  | PrGpuAccessFlag_ComputeWrite,
+    PrGpuAccessFlag_ShaderRead = PrGpuAccessFlag_VertexRead | PrGpuAccessFlag_FragmentRead |
+        PrGpuAccessFlag_ComputeRead,
+    PrGpuAccessFlag_ShaderWrite = PrGpuAccessFlag_VertexWrite | PrGpuAccessFlag_FragmentWrite |
+        PrGpuAccessFlag_ComputeWrite,
 };
 typedef uint32_t PrGpuAccessFlags;
 
 // Records a barrier on a buffer, or on subresources of a texture, outside any pass. The caller knows each resource's
 // accesses and states them.
-void prGpuCommandsBufferBarrier(PrGpuCommands* commands, PrGpuBuffer buffer, PrGpuAccessFlags before,
-                                PrGpuAccessFlags after);
+void prGpuCommandsBufferBarrier(PrGpuCommands* commands, PrGpuBuffer buffer, PrGpuAccessFlags before, PrGpuAccessFlags after);
 void prGpuCommandsTextureBarrier(PrGpuCommands* commands, PrGpuTexture texture, PrGpuSubresources subresources,
-                                 PrGpuAccessFlags before, PrGpuAccessFlags after);
+    PrGpuAccessFlags before, PrGpuAccessFlags after);
 
 // Records a barrier on all memory outside any pass. It changes no texture's layout.
 void prGpuCommandsGlobalBarrier(PrGpuCommands* commands, PrGpuAccessFlags before, PrGpuAccessFlags after);
@@ -901,12 +899,11 @@ void prGpuPassSetIndexBuffer(PrGpuPass* pass, PrGpuBuffer buffer, uint64_t offse
 // Record draws with the pass's pipeline and root data, which are set through the pass's command buffer. An indirect
 // draw reads `count` arguments, `stride` bytes apart, from `buffer` at `offset`.
 void prGpuPassDraw(PrGpuPass* pass, uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex,
-                   uint32_t firstInstance);
+    uint32_t firstInstance);
 void prGpuPassDrawIndexed(PrGpuPass* pass, uint32_t indexCount, uint32_t instanceCount, uint32_t firstIndex,
-                          int32_t vertexOffset, uint32_t firstInstance);
+    int32_t vertexOffset, uint32_t firstInstance);
 void prGpuPassDrawIndirect(PrGpuPass* pass, PrGpuBuffer buffer, uint64_t offset, uint32_t count, uint32_t stride);
-void prGpuPassDrawIndexedIndirect(PrGpuPass* pass, PrGpuBuffer buffer, uint64_t offset, uint32_t count,
-                                  uint32_t stride);
+void prGpuPassDrawIndexedIndirect(PrGpuPass* pass, PrGpuBuffer buffer, uint64_t offset, uint32_t count, uint32_t stride);
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Swap chains
@@ -975,7 +972,7 @@ typedef struct PrGpuSwapChainInfo {
 // (PrAppHandler::frame), so that a resize shows each frame at the window's size. Returns NotSupported for a kind of
 // surface the device cannot present to, and Lost if the device is lost. On failure, `*out` is null.
 PrStatus prGpuSwapChainCreate(PrGpuDevice* device, const PrAppSurface* surface, const PrGpuSwapChainDesc* desc,
-                              PrGpuSwapChain* PR_NULLABLE* PR_NONNULL out);
+    PrGpuSwapChain* PR_NULLABLE* PR_NONNULL out);
 
 // Waits for the frames in flight, then frees the swap chain and the textures of its images.
 void prGpuSwapChainDestroy(PrGpuSwapChain* PR_NULLABLE swapChain);

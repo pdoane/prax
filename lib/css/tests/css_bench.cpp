@@ -106,8 +106,7 @@ PrStringView rowName(PrStringView file) {
     return file;
 }
 
-void report(PrStringView name, Work* work, uint32_t rules, uint32_t declarations, uint32_t out,
-            bool first) {
+void report(PrStringView name, Work* work, uint32_t rules, uint32_t declarations, uint32_t out, bool first) {
     HarnessCounters parse = harnessMeasure([&] { parseOnly(work); });
     HarnessCounters ready = harnessMeasure([&] { parseAndWalk(work); });
     HarnessCounters write = harnessMeasure([&] { writeOnly(work); });
@@ -120,12 +119,10 @@ void report(PrStringView name, Work* work, uint32_t rules, uint32_t declarations
     harnessCountsAdd(&counts, "tokenize", tokenize);
     harnessCountsAdd(&counts, "bound", bound);
     TextBuffer row{};
-    harnessAppendFormat(&row,
-                        "%s\n  {\"name\": \"%.*s\", \"bytes\": %u, \"out\": %u, \"rules\": %u,"
-                        " \"declarations\": %u, \"parse\": %.6f, \"ready\": %.6f, \"write\": %.6f,"
-                        " \"tokenize\": %.6f, \"bound\": %.6f",
-                        first ? "" : ",", int(name.size), name.data, uint32_t(work->text.size), out, rules,
-                        declarations, parse.millis, ready.millis, write.millis, tokenize.millis, bound.millis);
+    harnessAppendFormat(&row, "%s\n  {\"name\": \"%.*s\", \"bytes\": %u, \"out\": %u, \"rules\": %u,"
+        " \"declarations\": %u, \"parse\": %.6f, \"ready\": %.6f, \"write\": %.6f, \"tokenize\": %.6f, \"bound\": %.6f",
+        first ? "" : ",", int(name.size), name.data, uint32_t(work->text.size), out, rules,
+        declarations, parse.millis, ready.millis, write.millis, tokenize.millis, bound.millis);
     harnessCountsWrite(&counts, &row);
     textAppend(&row, "}");
     fwrite(row.text.data, 1, row.text.count, stdout);
@@ -153,7 +150,7 @@ int main(int argc, char** argv) {
         contents(prCssStyleSheetCssRules(sheet), &counts);
 
         report(rowName(harnessFileName(argv[i])), &work, counts.rules, counts.declarations,
-               serializeAll(prCssStyleSheetCssRules(sheet)), i == 1);
+            serializeAll(prCssStyleSheetCssRules(sheet)), i == 1);
 
         cssTokenArrayReset(&work.tokens);
         cssTokenScratchReset(&work.scratch);

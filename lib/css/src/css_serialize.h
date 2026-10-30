@@ -61,7 +61,7 @@ void cssSerializeValues(TextBuffer* out, CssValueRun run);
 // (cssom-1/#serialize-a-css-rule). The prelude's complex selectors are written from their compiled records, `selectors`
 // from `first` on, in order (cssCompilePreludeSelectors, cssom-1/#serialize-a-selector).
 void cssSerializePreludeValues(TextBuffer* out, CssValueRun run, bool urls,
-                               const PrCssSelectors* PR_NULLABLE selectors, uint32_t first);
+    const PrCssSelectors* PR_NULLABLE selectors, uint32_t first);
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Tokens

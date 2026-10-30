@@ -40,8 +40,7 @@ struct WeightEdit {
 
 // Writes to `out` the edit that adding `delta` to the weight of the run between `selectionStart` and `selectionEnd`
 // makes. Returns false if there is nothing to weight: an empty run, or bare text whose weight would stay at 1.
-bool promptWeightAdjust(PrStringView text, uint32_t selectionStart, uint32_t selectionEnd, double delta,
-                        WeightEdit* out);
+bool promptWeightAdjust(PrStringView text, uint32_t selectionStart, uint32_t selectionEnd, double delta, WeightEdit* out);
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Lines
@@ -67,8 +66,7 @@ PrStringView embeddingName(PrStringView filename);
 
 // Returns the text that inserting the embedding over the selection writes: its token, with a space on each side that
 // meets text rather than whitespace or an end of the prompt.
-std::string embeddingInsertText(PrStringView text, uint32_t selectionStart, uint32_t selectionEnd,
-                                PrStringView filename);
+std::string embeddingInsertText(PrStringView text, uint32_t selectionStart, uint32_t selectionEnd, PrStringView filename);
 
 } // namespace alchemy
 

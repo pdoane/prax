@@ -137,7 +137,7 @@ void chooseFamily(PaneChoice& pane, const std::vector<RendererConfig>& configs, 
 
 // Returns the pane's name: Prax's configuration, or the reference's name. `references` are the shown document's.
 std::string paneName(const PaneChoice& pane, const std::vector<RendererConfig>& configs,
-                     const std::vector<Reference>& references);
+    const std::vector<Reference>& references);
 
 // Creates controls drawn on the device, a device of prGpuDeviceCreate, which renders them into the frame after the
 // documents.
@@ -153,8 +153,8 @@ bool uiEvent(Ui* ui, const PrAppEvent& event);
 // pixel. `delta` is the time in seconds since the last layout. Applies what the controls changed to `choices`.
 // `references` are the shown document's own references. Returns the rectangle left for documents, in logical pixels.
 PrRect uiLayout(Ui* ui, float width, float height, float pixelRatio, double delta,
-                const std::vector<RendererConfig>& configs, const std::vector<Reference>& references,
-                const Figures& figures, Choices& choices);
+    const std::vector<RendererConfig>& configs, const std::vector<Reference>& references,
+    const Figures& figures, Choices& choices);
 
 // Draws the texture into the frame at `destination`, clipped to `clip`, under the controls laid out last. Both
 // rectangles are in logical pixels. If `nearest` is true, the texture is sampled by nearest texel, and zoomed pixels

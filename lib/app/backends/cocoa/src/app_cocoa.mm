@@ -222,19 +222,15 @@ void run(PrApp* app, const PrAppHandler* handler) {
         NSApplication* application = NSApplication.sharedApplication;
         if (!host.headless)
             [application setActivationPolicy:NSApplicationActivationPolicyRegular];
-        NSWindowStyleMask style = NSWindowStyleMaskTitled | NSWindowStyleMaskClosable
-                                  | NSWindowStyleMaskResizable | NSWindowStyleMaskMiniaturizable;
+        NSWindowStyleMask style = NSWindowStyleMaskTitled | NSWindowStyleMaskClosable |
+            NSWindowStyleMaskResizable | NSWindowStyleMaskMiniaturizable;
         NSRect content = NSMakeRect(0, 0, host.size.width, host.size.height);
         if (!host.headless) {
-            NSRect available = [NSWindow contentRectForFrameRect:NSScreen.mainScreen.visibleFrame
-                                                        styleMask:style];
+            NSRect available = [NSWindow contentRectForFrameRect:NSScreen.mainScreen.visibleFrame styleMask:style];
             content.size.width = MIN(content.size.width, available.size.width);
             content.size.height = MIN(content.size.height, available.size.height);
         }
-        host.window = [[NSWindow alloc] initWithContentRect:content
-                                                  styleMask:style
-                                                    backing:NSBackingStoreBuffered
-                                                      defer:NO];
+        host.window = [[NSWindow alloc] initWithContentRect:content styleMask:style backing:NSBackingStoreBuffered defer:NO];
         host.window.title = host.title;
         host.window.releasedWhenClosed = NO;
         host.view = [[PrCocoaView alloc] initWithFrame:host.window.contentView.bounds];
@@ -291,11 +287,11 @@ void wake(PrApp* app) {
     if (cocoa->wakePending.exchange(true))
         return;
     dispatch_async(dispatch_get_main_queue(), ^{
-      cocoa->wakePending.store(false);
-      PrAppEvent event{};
-      event.kind = PrAppEventKind_Wake;
-      event.time = NSProcessInfo.processInfo.systemUptime;
-      [(__bridge PrCocoaHost*)cocoa->host deliver:event];
+        cocoa->wakePending.store(false);
+        PrAppEvent event{};
+        event.kind = PrAppEventKind_Wake;
+        event.time = NSProcessInfo.processInfo.systemUptime;
+        [(__bridge PrCocoaHost*)cocoa->host deliver:event];
     });
 }
 
@@ -330,9 +326,7 @@ PrStatus surface(PrApp* app, PrAppSurface* out) {
 }
 
 PrStatus openUrl(PrApp*, PrStringView url) {
-    NSString* string = [[NSString alloc] initWithBytes:url.data
-                                                length:url.size
-                                              encoding:NSUTF8StringEncoding];
+    NSString* string = [[NSString alloc] initWithBytes:url.data length:url.size encoding:NSUTF8StringEncoding];
     NSURL* address = string != nil ? [NSURL URLWithString:string] : nil;
     if (address == nil)
         return PrStatus_Syntax;
@@ -342,20 +336,18 @@ PrStatus openUrl(PrApp*, PrStringView url) {
 void requestClipboardText(PrApp* app) {
     CocoaApp* cocoa = static_cast<CocoaApp*>(app);
     dispatch_async(dispatch_get_main_queue(), ^{
-      NSString* string = [NSPasteboard.generalPasteboard stringForType:NSPasteboardTypeString];
-      NSData* bytes = [string != nil ? string : @"" dataUsingEncoding:NSUTF8StringEncoding];
-      PrAppEvent event{};
-      event.kind = PrAppEventKind_Clipboard;
-      event.time = NSProcessInfo.processInfo.systemUptime;
-      event.text = viewOf(bytes);
-      [(__bridge PrCocoaHost*)cocoa->host deliver:event];
+        NSString* string = [NSPasteboard.generalPasteboard stringForType:NSPasteboardTypeString];
+        NSData* bytes = [string != nil ? string : @"" dataUsingEncoding:NSUTF8StringEncoding];
+        PrAppEvent event{};
+        event.kind = PrAppEventKind_Clipboard;
+        event.time = NSProcessInfo.processInfo.systemUptime;
+        event.text = viewOf(bytes);
+        [(__bridge PrCocoaHost*)cocoa->host deliver:event];
     });
 }
 
 PrStatus setClipboardText(PrApp*, PrStringView text) {
-    NSString* string = [[NSString alloc] initWithBytes:text.data
-                                                length:text.size
-                                              encoding:NSUTF8StringEncoding];
+    NSString* string = [[NSString alloc] initWithBytes:text.data length:text.size encoding:NSUTF8StringEncoding];
     NSPasteboard* board = NSPasteboard.generalPasteboard;
     [board clearContents];
     return [board setString:string forType:NSPasteboardTypeString] ? PrStatus_Ok : PrStatus_Io;
@@ -390,12 +382,9 @@ using namespace pr_impl;
 - (void)updateTrackingAreas {
     for (NSTrackingArea* area in self.trackingAreas)
         [self removeTrackingArea:area];
-    NSTrackingAreaOptions options = NSTrackingMouseMoved | NSTrackingCursorUpdate
-                                    | NSTrackingActiveInKeyWindow | NSTrackingInVisibleRect;
-    [self addTrackingArea:[[NSTrackingArea alloc] initWithRect:NSZeroRect
-                                                       options:options
-                                                         owner:self
-                                                      userInfo:nil]];
+    NSTrackingAreaOptions options = NSTrackingMouseMoved | NSTrackingCursorUpdate |
+        NSTrackingActiveInKeyWindow | NSTrackingInVisibleRect;
+    [self addTrackingArea:[[NSTrackingArea alloc] initWithRect:NSZeroRect options:options owner:self userInfo:nil]];
     [super updateTrackingAreas];
 }
 - (void)resetCursorRects {
@@ -507,8 +496,10 @@ using namespace pr_impl;
     event.time = NSProcessInfo.processInfo.systemUptime;
     event.text = viewOf(bytes);
     if (selection.location != NSNotFound)
-        event.selection = PrAppTextRange{utf8Length(text, selection.location),
-                                         utf8Length(text, selection.location + selection.length)};
+        event.selection = PrAppTextRange{
+            utf8Length(text, selection.location),
+            utf8Length(text, selection.location + selection.length),
+        };
     [self.host deliver:event];
 }
 // Ends the composition, if there is one, committing `text`, which follows as a Text event.
@@ -605,8 +596,10 @@ using namespace pr_impl;
     for (uint32_t i = 0; i < _held.count && self.running; ++i) {
         // An event that its delivery holds goes to the end of the array, which may move the array but not the text.
         PrAppEvent event = _held.data[i].event;
-        event.text = PrStringView{_held.data[i].text.data != nullptr ? _held.data[i].text.data : "",
-                                  _held.data[i].text.count};
+        event.text = PrStringView{
+            _held.data[i].text.data != nullptr ? _held.data[i].text.data : "",
+            _held.data[i].text.count,
+        };
         [self callEvent:event];
     }
     for (uint32_t i = 0; i < _held.count; ++i)
@@ -735,13 +728,11 @@ using namespace pr_impl;
         if (self.timer != nil)
             return;
         __weak PrCocoaHost* weak = self;
-        self.timer = [NSTimer timerWithTimeInterval:1.0 / 60.0
-                                            repeats:NO
-                                              block:^(NSTimer*) {
-                                                PrCocoaHost* host = weak;
-                                                host.timer = nil;
-                                                [host frame];
-                                              }];
+        self.timer = [NSTimer timerWithTimeInterval:1.0 / 60.0 repeats:NO block:^(NSTimer*) {
+            PrCocoaHost* host = weak;
+            host.timer = nil;
+            [host frame];
+        }];
         [NSRunLoop.mainRunLoop addTimer:self.timer forMode:NSRunLoopCommonModes];
         return;
     }
@@ -761,16 +752,8 @@ using namespace pr_impl;
     [self.timer invalidate];
     self.timer = nil;
     [NSApp stop:nil];
-    [NSApp postEvent:[NSEvent otherEventWithType:NSEventTypeApplicationDefined
-                                        location:NSZeroPoint
-                                   modifierFlags:0
-                                       timestamp:0
-                                    windowNumber:0
-                                         context:nil
-                                         subtype:0
-                                           data1:0
-                                           data2:0]
-             atStart:YES];
+    [NSApp postEvent:[NSEvent otherEventWithType:NSEventTypeApplicationDefined location:NSZeroPoint modifierFlags:0
+        timestamp:0 windowNumber:0 context:nil subtype:0 data1:0 data2:0] atStart:YES];
 }
 - (void)windowDidResignKey:(NSNotification*)note {
     (void)note;
@@ -825,9 +808,8 @@ PrApp* prAppCocoaCreate(const PrAppDesc* desc) {
     app->browserProcesses = cocoaBrowserProcesses;
     PrCocoaHost* host = [[PrCocoaHost alloc] init];
     host.app = app;
-    host.title = [[NSString alloc] initWithBytes:desc->title.data
-                                          length:desc->title.size
-                                        encoding:NSUTF8StringEncoding];
+    host.title = [[NSString alloc] initWithBytes:desc->title.data length:desc->title.size
+        encoding:NSUTF8StringEncoding];
     host.size = NSMakeSize(desc->extent.x, desc->extent.y);
     host.headless = desc->headless;
     app->host = (__bridge_retained void*)host;

@@ -86,8 +86,7 @@ void urlAppendPercentEncodedIn(TextBuffer* out, PrStringView text, PrCharset cha
 
 using namespace pr_impl;
 
-size_t prUrlPercentEncode(PrStringView input, PrUrlPercentEncodeSet set, char* PR_NULLABLE out,
-                          size_t capacity) {
+size_t prUrlPercentEncode(PrStringView input, PrUrlPercentEncodeSet set, char* PR_NULLABLE out, size_t capacity) {
     PR_ASSERT(set < PrUrlPercentEncodeSet_Count);
     if (out == nullptr)
         capacity = 0;
@@ -116,8 +115,7 @@ size_t prUrlPercentDecode(PrStringView input, char* PR_NULLABLE out, size_t capa
     size_t size = 0;
     for (size_t i = 0; i < input.size; ++i, ++size) {
         char byte = input.data[i];
-        if (byte == '%' && input.size - i > 2 && asciiIsHexDigit(input.data[i + 1])
-            && asciiIsHexDigit(input.data[i + 2])) {
+        if (byte == '%' && input.size - i > 2 && asciiIsHexDigit(input.data[i + 1]) && asciiIsHexDigit(input.data[i + 2])) {
             byte = char(asciiHexValue(input.data[i + 1]) << 4 | asciiHexValue(input.data[i + 2]));
             i += 2;
         }

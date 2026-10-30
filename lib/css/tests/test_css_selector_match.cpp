@@ -23,13 +23,11 @@ struct Spec {
     const char* text = "";
 };
 
-Spec E(const char* name, std::vector<std::pair<std::string, std::string>> attributes = {},
-       std::vector<Spec> children = {}) {
+Spec E(const char* name, std::vector<std::pair<std::string, std::string>> attributes = {}, std::vector<Spec> children = {}) {
     return Spec{name, std::move(attributes), std::move(children)};
 }
 
-Spec Svg(const char* name, std::vector<std::pair<std::string, std::string>> attributes = {},
-         std::vector<Spec> children = {}) {
+Spec Svg(const char* name, std::vector<std::pair<std::string, std::string>> attributes = {}, std::vector<Spec> children = {}) {
     Spec spec = E(name, std::move(attributes), std::move(children));
     spec.space = PrDomNamespace_Svg;
     return spec;
@@ -51,16 +49,16 @@ PrDomNode* build(PrDomDocument* document, PrDomNode* parent, const Spec& spec) {
     PrStringView name = spec.name;
     bool held = false;
     PrDomElement* element = nullptr;
-    element = spec.space == PrDomNamespace_Html
-                  ? domElementCreateHtml(document, domTagFromText(name), name, {}, false, &held)
-                  : domElementCreate(document, spec.space, domTagFromText(name), name);
+    if (spec.space == PrDomNamespace_Html)
+        element = domElementCreateHtml(document, domTagFromText(name), name, {}, false, &held);
+    else
+        element = domElementCreate(document, spec.space, domTagFromText(name), name);
     domAttach(parent, element, nullptr);
     for (const auto& [attribute, value] : spec.attributes) {
         // An `xml:` name is the attribute in the XML namespace.
         bool xml = attribute.rfind("xml:", 0) == 0;
         std::string local = xml ? attribute.substr(4) : attribute;
-        domSetAttribute(element, xml ? PrDomNamespace_Xml : PrDomNamespace_None, local,
-                        value);
+        domSetAttribute(element, xml ? PrDomNamespace_Xml : PrDomNamespace_None, local, value);
     }
     for (const Spec& child : spec.children)
         build(document, element, child);
@@ -72,8 +70,7 @@ struct Doc {
     PrDomDocument* document;
     PrDomElement* root;
 
-    explicit Doc(const Spec& spec, DomQuirks quirks = DomQuirks_No)
-        : document(domDocumentCreate(DomDocumentKind_Html)) {
+    explicit Doc(const Spec& spec, DomQuirks quirks = DomQuirks_No) : document(domDocumentCreate(DomDocumentKind_Html)) {
         document->quirks = quirks;
         root = static_cast<PrDomElement*>(build(document, document, spec));
     }
@@ -96,7 +93,7 @@ std::string select(PrDomNode* root, const char* text) {
     CssSelectorMatcher matcher;
     cssSelectorMatcherInit(&matcher, selectors, domElementFromNode(root), root->document, root);
     for (PrDomElement* element = cssSelectorMatcherNext(&matcher, root, root); element != nullptr;
-         element = cssSelectorMatcherNext(&matcher, root, element)) {
+            element = cssSelectorMatcherNext(&matcher, root, element)) {
         PrStringView id = domElementId(element);
         out += (out.empty() ? "" : " ") + (id.size != 0 ? textOf(id) : std::string("-"));
     }
@@ -109,8 +106,7 @@ std::string select(const Doc& doc, const char* text) {
     return select(doc.document, text);
 }
 
-bool matches(const PrDomElement* element, const char* text,
-             const PrDomElement* PR_NULLABLE scope = nullptr) {
+bool matches(const PrDomElement* element, const char* text, const PrDomElement* PR_NULLABLE scope = nullptr) {
     PrCssSelectors* selectors = cssParseDomSelectors(text);
     REQUIRE(selectors != nullptr);
     bool result = cssSelectorsMatch(selectors, element, scope);
@@ -139,10 +135,7 @@ TEST_CASE("type selectors compare an HTML element's name in lowercase and a fore
     Doc doc(E("html", {{"id", "html"}}, {
         E("div", {{"id", "div"}}),
         E("my-el", {{"id", "custom"}}),
-        Svg("svg", {{"id", "svg"}}, {
-            Svg("foreignObject", {{"id", "fo"}}),
-            Svg("div", {{"id", "svgdiv"}}),
-        }),
+        Svg("svg", {{"id", "svg"}}, {Svg("foreignObject", {{"id", "fo"}}), Svg("div", {{"id", "svgdiv"}})}),
     }));
     CHECK(select(doc, "div") == "div svgdiv");
     CHECK(select(doc, "DIV") == "div");
@@ -155,10 +148,7 @@ TEST_CASE("type selectors compare an HTML element's name in lowercase and a fore
 }
 
 TEST_CASE("a sheet's namespaces decide the elements and attributes its prefixes take") {
-    Doc doc(E("html", {}, {
-        E("a", {{"id", "html"}, {"xml:lang", "en"}}),
-        Svg("a", {{"id", "svg"}}),
-    }));
+    Doc doc(E("html", {}, {E("a", {{"id", "html"}, {"xml:lang", "en"}}), Svg("a", {{"id", "svg"}})}));
     CssTestSheet sheet("@namespace url(http://www.w3.org/2000/svg); @namespace x url(http://www.w3.org/XML/1998/namespace);");
     CssParser parser;
     cssParserInit(&parser);
@@ -333,14 +323,12 @@ TEST_CASE(":is, :where and :not take a list, and :has searches from its element"
 }
 
 TEST_CASE(":has searches only where its argument's combinators reach") {
-    Doc doc(E("html", {},
-              {
-                  E("div", {{"id", "a"}},
-                    {E("p", {{"id", "b"}}, {E("em", {{"id", "c"}})}), E("span", {{"id", "d"}})}),
-                  E("div", {{"id", "e"}}, {E("em", {{"id", "f"}, {"class", "x"}})}),
-                  E("section", {{"id", "g"}}, {E("p", {{"id", "h"}})}),
-                  E("p", {{"id", "i"}, {"class", "x"}}),
-              }));
+    Doc doc(E("html", {}, {
+        E("div", {{"id", "a"}}, {E("p", {{"id", "b"}}, {E("em", {{"id", "c"}})}), E("span", {{"id", "d"}})}),
+        E("div", {{"id", "e"}}, {E("em", {{"id", "f"}, {"class", "x"}})}),
+        E("section", {{"id", "g"}}, {E("p", {{"id", "h"}})}),
+        E("p", {{"id", "i"}, {"class", "x"}}),
+    }));
     // A child combinator puts the subject at one depth, and sibling combinators after it keep it there.
     CHECK(select(doc, ":has(> em)") == "b e");
     CHECK(select(doc, "div:has(> * > em)") == "a");
@@ -362,15 +350,13 @@ TEST_CASE(":has searches only where its argument's combinators reach") {
 }
 
 TEST_CASE("an ID left of the subject limits the search to its element's descendants") {
-    Doc doc(E("html", {},
-              {
-                  E("div", {{"id", "a"}},
-                    {E("p", {{"id", "b"}}), E("section", {{"id", "c"}}, {E("p", {{"id", "d"}})}),
-                     E("p", {{"id", "e"}})}),
-                  E("div", {{"id", "f"}}, {E("p", {{"id", "g"}})}),
-                  E("div", {{"class", "dup"}, {"id", "dup"}}, {E("p", {{"id", "h"}})}),
-                  E("div", {{"class", "dup"}, {"id", "dup"}}, {E("p", {{"id", "i"}})}),
-              }));
+    Doc doc(E("html", {}, {
+        E("div", {{"id", "a"}},
+            {E("p", {{"id", "b"}}), E("section", {{"id", "c"}}, {E("p", {{"id", "d"}})}), E("p", {{"id", "e"}})}),
+        E("div", {{"id", "f"}}, {E("p", {{"id", "g"}})}),
+        E("div", {{"class", "dup"}, {"id", "dup"}}, {E("p", {{"id", "h"}})}),
+        E("div", {{"class", "dup"}, {"id", "dup"}}, {E("p", {{"id", "i"}})}),
+    }));
     CHECK(select(doc, "#a p") == "b d e");
     CHECK(select(doc, "#a > p") == "b e");
     CHECK(select(doc, "#a section > p, #f p") == "d g");
@@ -425,18 +411,18 @@ TEST_CASE("a matcher answers each element as a matcher of its own would") {
     for (int i = 0; i < 24; ++i) {
         std::string id = "i" + std::to_string(i);
         items.push_back(E(i % 3 == 2 ? "p" : "li", {{"id", id}, {"class", i % 4 == 0 ? "a" : "b"}},
-                          {E("em", {{"id", id + "e"}})}));
+            {E("em", {{"id", id + "e"}})}));
     }
     // A list longer than the distance a count walks back, queried out of order by a :has() and a sibling combinator.
     std::vector<Spec> longer;
     for (int i = 0; i < 80; ++i) {
         std::string id = "o" + std::to_string(i);
-        longer.push_back(
-            E(i % 5 == 1 ? "dt" : "dd", {{"id", id}, {"class", i % 3 == 0 ? "c" : "d"}}));
+        longer.push_back(E(i % 5 == 1 ? "dt" : "dd", {{"id", id}, {"class", i % 3 == 0 ? "c" : "d"}}));
     }
-    Doc doc(E("html", {{"id", "root"}},
-              {E("ul", {{"id", "list"}}, items), E("div", {{"id", "d"}}, {E("p", {{"id", "x"}})}),
-               E("dl", {{"id", "long"}}, longer)}));
+    Doc doc(E("html", {{"id", "root"}}, {
+        E("ul", {{"id", "list"}}, items), E("div", {{"id", "d"}}, {E("p", {{"id", "x"}})}),
+        E("dl", {{"id", "long"}}, longer)
+    }));
 
     const char* lists[] = {
         ":nth-child(3n+1), :nth-last-child(2n), li:nth-of-type(odd)",
@@ -455,7 +441,7 @@ TEST_CASE("a matcher answers each element as a matcher of its own would") {
         REQUIRE(selectors != nullptr);
         std::string expected;
         for (PrDomNode* node = domNodeNext(doc.document, doc.document); node != nullptr;
-             node = domNodeNext(doc.document, node)) {
+                node = domNodeNext(doc.document, node)) {
             PrDomElement* element = domElementFromNode(node);
             if (element != nullptr && cssSelectorsMatch(selectors, element, nullptr))
                 expected += (expected.empty() ? "" : " ") + textOf(domElementId(element));
@@ -468,10 +454,7 @@ TEST_CASE("a matcher answers each element as a matcher of its own would") {
 
 TEST_CASE("a selector list parsed once answers every query that takes one") {
     Doc doc(E("html", {{"id", "root"}},
-              {
-                  E("div", {{"id", "a"}},
-                    {E("p", {{"id", "b"}}), E("p", {{"id", "c"}}), E("p", {{"id", "d"}})}),
-              }));
+        {E("div", {{"id", "a"}}, {E("p", {{"id", "b"}}), E("p", {{"id", "c"}}), E("p", {{"id", "d"}})})}));
     PrCssSelectors* bad = nullptr;
     CHECK(prCssSelectorsCreate("p,", &bad) == PrStatus_Syntax);
     CHECK(bad == nullptr);
@@ -491,11 +474,8 @@ TEST_CASE("a selector list parsed once answers every query that takes one") {
     // :scope is the element that the query is made on.
     PrCssSelectors* scoped = nullptr;
     REQUIRE(prCssSelectorsCreate(":scope > p, div:not(:scope)", &scoped) == PrStatus_Ok);
-    CHECK(prCssNodeQuerySelectorCompiled((static_cast<PrDomNode*>(doc.byId("a"))),
-                                         scoped)
-          == (doc.byId("b")));
-    CHECK(prCssElementClosestCompiled((doc.byId("c")), scoped)
-          == (doc.byId("a")));
+    CHECK(prCssNodeQuerySelectorCompiled((static_cast<PrDomNode*>(doc.byId("a"))), scoped) == (doc.byId("b")));
+    CHECK(prCssElementClosestCompiled((doc.byId("c")), scoped) == (doc.byId("a")));
     prCssSelectorsDestroy(scoped);
 }
 
@@ -537,8 +517,7 @@ TEST_CASE("a document keeps the selector lists its queries parse") {
 }
 
 TEST_CASE(":scope is the scoping root, and :root where there is none") {
-    Doc doc(E("html", {{"id", "root"}},
-              {E("div", {{"id", "a"}}, {E("div", {{"id", "b"}}, {E("p", {{"id", "c"}})})})}));
+    Doc doc(E("html", {{"id", "root"}}, {E("div", {{"id", "a"}}, {E("div", {{"id", "b"}}, {E("p", {{"id", "c"}})})})}));
     PrDomElement* a = doc.byId("a");
     CHECK(select(a, ":scope") == "");
     CHECK(select(a, ":scope > div") == "b");
@@ -645,48 +624,35 @@ TEST_CASE("a form attribute names a form of the element's own tree") {
 }
 
 TEST_CASE("HTML defines the form and link pseudo-classes by attributes") {
-    Doc doc(E(
-        "html", {},
-        {
-            E("a", {{"id", "link"}, {"href", ""}}),
-            E("a", {{"id", "anchor"}}),
-            E("form", {{"id", "form"}},
-              {
-                  E("input", {{"id", "checkbox"}, {"type", "CHECKBOX"}, {"checked", ""}}),
-                  E("input", {{"id", "radio1"}, {"type", "radio"}, {"name", "r"}}),
-                  E("input", {{"id", "radio2"}, {"type", "radio"}, {"name", "r"}, {"checked", ""}}),
-                  E("input", {{"id", "radio3"}, {"type", "radio"}, {"name", "s"}}),
-                  E("input", {{"id", "required"}, {"required", ""}, {"placeholder", "p"}}),
-                  E("input", {{"id", "hidden"}, {"type", "hidden"}, {"required", ""}}),
-                  E("input",
-                    {{"id", "readonly"}, {"readonly", ""}, {"value", "v"}, {"placeholder", "p"}}),
-                  E("button", {{"id", "reset"}, {"type", "reset"}}),
-                  E("button", {{"id", "submit"}}),
-                  E("input", {{"id", "submit2"}, {"type", "submit"}}),
-                  E("fieldset", {{"id", "fieldset"}, {"disabled", ""}},
-                    {
-                        E("legend", {{"id", "legend"}},
-                          {E("input", {{"id", "inlegend"}, {"type", "button"}})}),
-                        E("select", {{"id", "select"}},
-                          {
-                              E("option", {{"id", "option"}, {"selected", ""}}),
-                          }),
-                    }),
-                  E("select", {{"id", "select2"}},
-                    {
-                        E("optgroup", {{"id", "group"}, {"disabled", ""}},
-                          {E("option", {{"id", "grouped"}})}),
-                    }),
-                  E("textarea", {{"id", "area"}, {"placeholder", ""}}),
-              }),
-            E("progress", {{"id", "progress"}}),
-            E("details", {{"id", "details"}, {"open", ""}}),
-            E("div", {{"id", "editable"}, {"contenteditable", ""}},
-              {E("p", {{"id", "p"}, {"contenteditable", "false"}})}),
-            E("h1", {{"id", "h1"}}),
-            E("h6", {{"id", "h6"}}),
-            E("dialog", {{"id", "dialog"}}),
-        }));
+    Doc doc(E("html", {}, {
+        E("a", {{"id", "link"}, {"href", ""}}),
+        E("a", {{"id", "anchor"}}),
+        E("form", {{"id", "form"}}, {
+            E("input", {{"id", "checkbox"}, {"type", "CHECKBOX"}, {"checked", ""}}),
+            E("input", {{"id", "radio1"}, {"type", "radio"}, {"name", "r"}}),
+            E("input", {{"id", "radio2"}, {"type", "radio"}, {"name", "r"}, {"checked", ""}}),
+            E("input", {{"id", "radio3"}, {"type", "radio"}, {"name", "s"}}),
+            E("input", {{"id", "required"}, {"required", ""}, {"placeholder", "p"}}),
+            E("input", {{"id", "hidden"}, {"type", "hidden"}, {"required", ""}}),
+            E("input", {{"id", "readonly"}, {"readonly", ""}, {"value", "v"}, {"placeholder", "p"}}),
+            E("button", {{"id", "reset"}, {"type", "reset"}}),
+            E("button", {{"id", "submit"}}),
+            E("input", {{"id", "submit2"}, {"type", "submit"}}),
+            E("fieldset", {{"id", "fieldset"}, {"disabled", ""}}, {
+                E("legend", {{"id", "legend"}}, {E("input", {{"id", "inlegend"}, {"type", "button"}})}),
+                E("select", {{"id", "select"}}, {E("option", {{"id", "option"}, {"selected", ""}})}),
+            }),
+            E("select", {{"id", "select2"}},
+                {E("optgroup", {{"id", "group"}, {"disabled", ""}}, {E("option", {{"id", "grouped"}})})}),
+            E("textarea", {{"id", "area"}, {"placeholder", ""}}),
+        }),
+        E("progress", {{"id", "progress"}}),
+        E("details", {{"id", "details"}, {"open", ""}}),
+        E("div", {{"id", "editable"}, {"contenteditable", ""}}, {E("p", {{"id", "p"}, {"contenteditable", "false"}})}),
+        E("h1", {{"id", "h1"}}),
+        E("h6", {{"id", "h6"}}),
+        E("dialog", {{"id", "dialog"}}),
+    }));
     CHECK(select(doc, ":link") == "link");
     CHECK(select(doc, ":any-link") == "link");
     CHECK(select(doc, ":visited, :hover, :focus, :active, :target, :playing") == "");
@@ -695,14 +661,12 @@ TEST_CASE("HTML defines the form and link pseudo-classes by attributes") {
     CHECK(select(doc, ":indeterminate") == "radio3 progress");
     CHECK(select(doc, ":default") == "checkbox radio2 submit option");
     CHECK(select(doc, ":disabled") == "fieldset select option group grouped");
-    CHECK(
-        select(doc, "form :enabled")
-        == "checkbox radio1 radio2 radio3 required hidden readonly reset submit submit2 inlegend select2 area");
+    CHECK(select(doc, "form :enabled") ==
+        "checkbox radio1 radio2 radio3 required hidden readonly reset submit submit2 inlegend select2 area");
     CHECK(select(doc, ":required") == "required");
     CHECK(select(doc, "input:optional") == "checkbox radio1 radio2 radio3 readonly");
     CHECK(select(doc, ":read-write") == "required area editable");
-    CHECK(select(doc, "input:read-only")
-          == "checkbox radio1 radio2 radio3 hidden readonly submit2 inlegend");
+    CHECK(select(doc, "input:read-only") == "checkbox radio1 radio2 radio3 hidden readonly submit2 inlegend");
     CHECK(select(doc, ":placeholder-shown") == "required area");
     CHECK(select(doc, ":open") == "details");
     CHECK(select(doc, ":heading") == "h1 h6");
@@ -710,14 +674,11 @@ TEST_CASE("HTML defines the form and link pseudo-classes by attributes") {
 }
 
 TEST_CASE("a link the host knows is visited is visited to the style, and unvisited to a script") {
-    Doc doc(E("div", {},
-              {E("a", {{"id", "seen"}, {"href", "x"}}), E("a", {{"id", "new"}, {"href", "y"}})}));
+    Doc doc(E("div", {}, {E("a", {{"id", "seen"}, {"href", "x"}}), E("a", {{"id", "new"}, {"href", "y"}})}));
     DomDocumentHost host = {};
     host.context = doc.byId("seen");
-    host.elementState = [](void* context, const PrDomElement* element,
-                           PrDomHostState wanted) -> PrDomHostState {
-        return element == context ? PrDomHostState(wanted & PrDomHostState_Visited)
-                                  : PrDomHostState(0);
+    host.elementState = [](void* context, const PrDomElement* element, PrDomHostState wanted) -> PrDomHostState {
+        return element == context ? PrDomHostState(wanted & PrDomHostState_Visited) : PrDomHostState(0);
     };
     doc.document->host = &host;
     PrCssSelectors* selectors = cssParseDomSelectors(":visited");

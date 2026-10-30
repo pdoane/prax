@@ -18,12 +18,12 @@ PrDomNode* parentNode(Builder* b) {
 }
 
 bool isScript(const PrDomElement* element) {
-    return (element->space == PrDomNamespace_Html || element->space == PrDomNamespace_Svg)
-           && element->tag == PrDomTag_Script;
+    return (element->space == PrDomNamespace_Html || element->space == PrDomNamespace_Svg) &&
+        element->tag == PrDomTag_Script;
 }
 
 PrStatus startElement(void* context, PrXmlParser* parser, const PrXmlName* name,
-                      const PrXmlAttribute* PR_NULLABLE attributes, uint32_t attributeCount) {
+        const PrXmlAttribute* PR_NULLABLE attributes, uint32_t attributeCount) {
     Builder* b = static_cast<Builder*>(context);
     DomNamespaceId space = PrDomNamespace_None;
     if (!domNamespaceFromUrl(b->document, name->space, &space))
@@ -106,7 +106,7 @@ PrStringView entity(void* context, PrStringView publicId, PrStringView name) {
 } // namespace
 
 void domXmlBuilderInit(DomXmlBuilder* builder, PrDomDocument* document, DomXmlScripting scripting,
-                       const DomXmlEntities* PR_NULLABLE entities) {
+        const DomXmlEntities* PR_NULLABLE entities) {
     *builder = DomXmlBuilder{.document = document, .scripting = scripting, .entities = entities};
     builder->handler = PrXmlHandler{
         .context = builder,
@@ -131,7 +131,7 @@ void domXmlBuilderReset(DomXmlBuilder* builder) {
 }
 
 PrStatus domXmlParse(PrDomDocument* document, PrStringView source, DomXmlScripting scripting,
-                     const DomXmlEntities* PR_NULLABLE entities, PrXmlError* PR_NULLABLE error) {
+        const DomXmlEntities* PR_NULLABLE entities, PrXmlError* PR_NULLABLE error) {
     DomXmlBuilder builder;
     domXmlBuilderInit(&builder, document, scripting, entities);
     prXmlParserAppend(builder.parser, source);

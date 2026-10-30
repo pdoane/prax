@@ -131,11 +131,7 @@ PrNetError tlsSharedError(const PrNetStream* stream) {
 
 PrTlsSessionInfo tlsSharedInfo(const PrTlsSession* tlsSession) {
     const TlsSharedSession* session = static_cast<const TlsSharedSession*>(tlsSession);
-    return PrTlsSessionInfo{
-        .version = session->version,
-        .failure = session->failure,
-        .protocol = session->protocol,
-    };
+    return PrTlsSessionInfo{.version = session->version, .failure = session->failure, .protocol = session->protocol};
 }
 
 } // namespace pr_impl

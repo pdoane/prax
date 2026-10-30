@@ -133,7 +133,7 @@ struct Tinted {
 
 // Adds the font file `file` to `set` as the family that it names, or as `family` with `ranges` if they are given.
 void addFace(PrFontSet* set, const char* file, const char* PR_NULLABLE family = nullptr,
-             const PrFontCodePointRange* PR_NULLABLE ranges = nullptr, uint32_t rangeCount = 0) {
+        const PrFontCodePointRange* PR_NULLABLE ranges = nullptr, uint32_t rangeCount = 0) {
     PrFontFaceDescriptor d = prFontFaceDescriptorDefault();
     if (family != nullptr) {
         d.automatic &= PrFontFaceAutoFlags(~PrFontFaceAutoFlag_Family);
@@ -152,7 +152,7 @@ PrFontSet* fallbackSet() {
         return set;
     set = prFontSetCreate(nullptr);
     for (const char* file : {"NotoSans.ttf", "NotoSansArabic.ttf", "NotoSansDevanagari.ttf", "NotoSansJP.ttf",
-                             "Twemoji.ttf"})
+        "Twemoji.ttf"})
         addFace(set, file);
     static const PrFontCodePointRange digits{0x30, 0x39};
     addFace(set, "NotoSerif.ttf", "Digits", &digits, 1);
@@ -200,8 +200,12 @@ PrTextFont* textFontOf(const Families& families, float size) {
     }
     PrFontStyle style = prFontStyleDefault();
     style.size = size;
-    PrTextFontDesc desc{.set = fallbackSet(), .families = families.data(), .familyCount = uint32_t(families.size()),
-                        .style = style};
+    PrTextFontDesc desc{
+        .set = fallbackSet(),
+        .families = families.data(),
+        .familyCount = uint32_t(families.size()),
+        .style = style,
+    };
     made.push_back(Made{key, prTextFontCreate(&desc)});
     return made.back().font;
 }
@@ -215,10 +219,14 @@ PrTextLayout* fallbackLayout() {
 // Sets `text` in `families` at `size` on one line in `fallbackLayout`, with its baseline's start at `origin`. Draws
 // each run in the tint of its font's family if `tinted` gives one. Returns the line's advance.
 float drawByFace(PrDrawList* list, const Families& families, const std::vector<Tinted>& tinted, const char* text,
-                 float size, PrVec2 origin, PrTextDirection direction = PrTextDirection_Ltr) {
+        float size, PrVec2 origin, PrTextDirection direction = PrTextDirection_Ltr) {
     PrTextLayout* layout = fallbackLayout();
-    PrTextLayoutDesc desc{.text = text, .font = textFontOf(families, size), .shaper = drawingShaper(),
-                          .direction = direction};
+    PrTextLayoutDesc desc{
+        .text = text,
+        .font = textFontOf(families, size),
+        .shaper = drawingShaper(),
+        .direction = direction,
+    };
     prTextLayoutSet(layout, &desc);
     PrTextLine line = prTextLayoutLine(layout, 0);
     prDrawListPushTransformAffine2(list, prAffine2Translate(PrVec2{origin.x, origin.y - line.baseline}));
@@ -247,8 +255,7 @@ void fontMatching(PrDrawList* list, float, float, double) {
 
     // The weights that a family of three static faces returns, with css-fonts-4's order deciding between them, and bold
     // synthesized if the face is lighter than requested.
-    label("\"Three Weights\": Noto Sans described as three static faces, 300, 400 and 700",
-          PrVec2{30, 30}, 12, kInk);
+    label("\"Three Weights\": Noto Sans described as three static faces, 300, 400 and 700", PrVec2{30, 30}, 12, kInk);
     float x = 30;
     for (float weight = 100; weight <= 900; weight += 100) {
         Asked r = requestOf("Three Weights");
@@ -261,13 +268,11 @@ void fontMatching(PrDrawList* list, float, float, double) {
         std::snprintf(text, sizeof(text), "%g", double(weight));
         drawText(list, style, "Ag", PrVec2{x, 80});
         label(text, PrVec2{x, 102}, 11, kInk);
-        std::snprintf(text, sizeof(text), "%g%s", double(valueOf(font, kWght)),
-                      prFontEmbolden(font) > 0 ? "+b" : "");
+        std::snprintf(text, sizeof(text), "%g%s", double(valueOf(font, kWght)), prFontEmbolden(font) > 0 ? "+b" : "");
         label(text, PrVec2{x, 116}, 11, prFontEmbolden(font) > 0 ? kRed : kGray);
         x += 110;
     }
-    label("under each: the weight asked, and the face's weight given (+b: synthetic bold)",
-          PrVec2{500, 30});
+    label("under each: the weight asked, and the face's weight given (+b: synthetic bold)", PrVec2{500, 30});
 
     // A variable family: every weight and width is an instance.
     label("\"Noto Sans\" variable: the request sets wght and wdth", PrVec2{30, 160}, 12, kInk);
@@ -289,8 +294,7 @@ void fontMatching(PrDrawList* list, float, float, double) {
     }
 
     // Slopes: an axis if the font has one, synthesized if it does not.
-    label("Slopes: slnt where the font varies it, synthesized oblique where it does not",
-          PrVec2{30, 340}, 12, kInk);
+    label("Slopes: slnt where the font varies it, synthesized oblique where it does not", PrVec2{30, 340}, 12, kInk);
     struct Slope {
         const char* family;
         PrFontSlope slope;
@@ -319,9 +323,8 @@ void fontMatching(PrDrawList* list, float, float, double) {
     }
 
     // Optical sizing: opsz follows the size, or stays at the default.
-    label("Optical sizing: Literata with opsz following the size (above), fixed at its default "
-          "12 (below)",
-          PrVec2{30, 540}, 12, kInk);
+    label("Optical sizing: Literata with opsz following the size (above), fixed at its default 12 (below)",
+        PrVec2{30, 540}, 12, kInk);
     x = 30;
     for (float size : {9.0f, 14.0f, 24.0f, 40.0f, 72.0f}) {
         Asked r = requestOf("Literata", size);
@@ -348,34 +351,29 @@ void fallback(PrDrawList* list, float width, float, double) {
         x += 170;
     }
     label("The default family, then the fallback families; each glyph drawn in the tint of the family that serves it",
-          PrVec2{30, 50});
+        PrVec2{30, 50});
 
     // Latin, Han, Devanagari, emoji, a ZWJ sequence, a flag and accents.
-    drawByFace(list, Families{}, tinted,
-               "Hello, \xe4\xb8\x96\xe7\x95\x8c! \xe0\xa4\xa8\xe0\xa4\xae\xe0\xa4\xb8"
-               "\xe0\xa5\x8d\xe0\xa4\xa4\xe0\xa5\x87 \xf0\x9f\x98\x80 \xf0\x9f\x91\xa9"
-               "\xe2\x80\x8d\xf0\x9f\x9a\x80 \xf0\x9f\x87\xaf\xf0\x9f\x87\xb5 \xc3\x80"
-               "\xc3\x89\xc3\x8e",
-               34, PrVec2{30, 110});
+    drawByFace(list, Families{}, tinted, "Hello, \xe4\xb8\x96\xe7\x95\x8c! \xe0\xa4\xa8\xe0\xa4\xae\xe0\xa4\xb8"
+        "\xe0\xa5\x8d\xe0\xa4\xa4\xe0\xa5\x87 \xf0\x9f\x98\x80 \xf0\x9f\x91\xa9"
+        "\xe2\x80\x8d\xf0\x9f\x9a\x80 \xf0\x9f\x87\xaf\xf0\x9f\x87\xb5 \xc3\x80" "\xc3\x89\xc3\x8e", 34, PrVec2{30, 110});
     // Arabic and an emoji.
-    drawByFace(list, Families{}, tinted,
-               "\xd9\x85\xd8\xb1\xd8\xad\xd8\xa8\xd8\xa7 \xd8\xa8\xd8\xa7\xd9\x84\xd8\xb9"
-               "\xd8\xa7\xd9\x84\xd9\x85 \xf0\x9f\x98\x80",
-               34, PrVec2{30, 170}, PrTextDirection_Rtl);
-    label("right to left: the runs itemization gives, ordered by their levels, each joined across them",
-          PrVec2{30, 195});
+    drawByFace(list, Families{}, tinted, "\xd9\x85\xd8\xb1\xd8\xad\xd8\xa8\xd8\xa7 \xd8\xa8\xd8\xa7\xd9\x84\xd8\xb9"
+        "\xd8\xa7\xd9\x84\xd9\x85 \xf0\x9f\x98\x80", 34, PrVec2{30, 170}, PrTextDirection_Rtl);
+    label("right to left: the runs itemization gives, ordered by their levels, each joined across them", PrVec2{30, 195});
 
     // Presentation: text by default or if requested with U+FE0E, and emoji if U+FE0F requests it.
     label("Presentation: each pair as text (default or VS15), then emoji (default or VS16); a "
-          "text request no text face serves falls through to emoji",
-          PrVec2{30, 250}, 12, kInk);
+        "text request no text face serves falls through to emoji", PrVec2{30, 250}, 12, kInk);
     // Heart suit, copyright, arrow and number sign as text then emoji, and a grinning face requested as text, which no
     // text face has.
-    const char* pairs[][2] = {{"\xe2\x99\xa5", "\xe2\x99\xa5\xef\xb8\x8f"},
-                              {"\xc2\xa9", "\xc2\xa9\xef\xb8\x8f"},
-                              {"\xe2\x86\x94", "\xe2\x86\x94\xef\xb8\x8f"},
-                              {"#", "#\xef\xb8\x8f\xe2\x83\xa3"},
-                              {"\xf0\x9f\x98\x80\xef\xb8\x8e", "\xf0\x9f\x98\x80"}};
+    const char* pairs[][2] = {
+        {"\xe2\x99\xa5", "\xe2\x99\xa5\xef\xb8\x8f"},
+        {"\xc2\xa9", "\xc2\xa9\xef\xb8\x8f"},
+        {"\xe2\x86\x94", "\xe2\x86\x94\xef\xb8\x8f"},
+        {"#", "#\xef\xb8\x8f\xe2\x83\xa3"},
+        {"\xf0\x9f\x98\x80\xef\xb8\x8e", "\xf0\x9f\x98\x80"},
+    };
     x = 30;
     for (const char* const* pair : pairs) {
         x += drawByFace(list, Families{}, tinted, pair[0], 40, PrVec2{x, 310}) + 8;
@@ -385,10 +383,9 @@ void fallback(PrDrawList* list, float width, float, double) {
     // Unicode ranges: a family that serves only the digits, named first.
     const std::vector<Tinted> ranged = {{"Noto Serif", kRed}, {"Noto Sans", kInk}};
     label("unicode-range: \"Digits\", Noto Serif for U+0030-0039 only, named before the default family",
-          PrVec2{30, 370},
-          12, kInk);
+        PrVec2{30, 370}, 12, kInk);
     drawByFace(list, Families{prFontFamilyFromName("Digits")}, ranged, "Order 1234 shipped 56 items on 7/8/9", 34,
-               PrVec2{30, 420});
+        PrVec2{30, 420});
 
     // The system's fonts, as the platform lists them: the families of macOS and of Windows, of which those the platform
     // lacks are left out.
@@ -396,8 +393,10 @@ void fallback(PrDrawList* list, float width, float, double) {
     char text[96];
     std::snprintf(text, sizeof(text), "System fonts: %u families", prFontSetFamilyCount(system));
     label(text, PrVec2{30, 490}, 12, kInk);
-    const char* families[] = {"Helvetica", "Times", "Menlo", "Avenir Next", "Futura", "Hiragino Sans", "Gill Sans",
-                              "Georgia", "Segoe UI", "Times New Roman", "Consolas", "Arial", "Calibri", "Cambria"};
+    const char* families[] = {
+        "Helvetica", "Times", "Menlo", "Avenir Next", "Futura", "Hiragino Sans", "Gill Sans",
+        "Georgia", "Segoe UI", "Times New Roman", "Consolas", "Arial", "Calibri", "Cambria",
+    };
     float y = 530;
     float column = 30;
     for (const char* family : families) {
@@ -443,8 +442,7 @@ float drawColumn(PrDrawList* list, const TextStyle& style, const char* text, PrV
         for (uint32_t i = 0; i < prTextGlyphBufferGlyphCount(buffer); ++i) {
             const PrTextGlyph& g = prTextGlyphBufferGlyphs(buffer)[i];
             bool isForm = std::find(across.begin(), across.end(), std::make_pair(g.cluster, g.id)) == across.end();
-            kinds[isForm ? 1 : 0].glyphs.push_back(
-                PrFontGlyph{g.id, pen + g.offset * style.size});
+            kinds[isForm ? 1 : 0].glyphs.push_back(PrFontGlyph{g.id, pen + g.offset * style.size});
             pen.y += g.advance.y * style.size;
         }
     }
@@ -463,16 +461,15 @@ void verticalText(PrDrawList* list, float width, float, double) {
     // A page of manuscript paper: columns right to left, a square an em high for each character, and the vertical forms
     // the font substitutes for punctuation, brackets, the long vowel mark and small kana.
     const char* page[] = {
-        "\xe3\x80\x8c\xe7\xb8\xa6\xe6\x9b\xb8\xe3\x81\x8d\xe3\x81\xae\xe6\x97\xa5\xe6\x9c\xac\xe8\xaa\x9e"
-        "\xe3\x80\x81",
+        "\xe3\x80\x8c\xe7\xb8\xa6\xe6\x9b\xb8\xe3\x81\x8d\xe3\x81\xae\xe6\x97\xa5\xe6\x9c\xac\xe8\xaa\x9e" "\xe3\x80\x81",
         "\xe5\x8f\xa5\xe8\xaa\xad\xe7\x82\xb9\xe3\x82\x84\xe6\x8b\xac\xe5\xbc\xa7\xef\xbc\x88\xe3\x81\x8b"
-        "\xe3\x81\xa3\xe3\x81\x93\xef\xbc\x89\xe3\x81\xaf",
+            "\xe3\x81\xa3\xe3\x81\x93\xef\xbc\x89\xe3\x81\xaf",
         "\xe7\xb8\xa6\xe3\x81\xae\xe5\xad\x97\xe5\xbd\xa2\xe3\x81\xab\xe3\x81\xaa\xe3\x82\x8b\xe3\x80\x82"
-        "\xe3\x83\xbc\xe3\x80\x9c",
+            "\xe3\x83\xbc\xe3\x80\x9c",
         "\xe5\xb0\x8f\xe6\x9b\xb8\xe3\x81\x8d\xe3\x81\xae\xe3\x80\x8c\xe3\x81\x81\xe3\x80\x8d\xe3\x80\x8c"
-        "\xe3\x81\xa3\xe3\x80\x8d\xe3\x82\x82",
+            "\xe3\x81\xa3\xe3\x80\x8d\xe3\x82\x82",
         "\xe5\xad\x97\xe3\x81\xae\xe5\x8f\xb3\xe4\xb8\x8a\xe3\x81\xab\xe5\xaf\x84\xe3\x82\x8b\xe2\x80\xa6"
-        "\xe2\x80\xa6\xe3\x80\x82",
+            "\xe2\x80\xa6\xe3\x80\x82",
     };
     const float em = 34;
     const float pitch = 58;
@@ -494,10 +491,9 @@ void verticalText(PrDrawList* list, float width, float, double) {
         drawColumn(list, jp, page[c], PrVec2{center, top}, kRed);
     }
     label("a page set top to bottom, columns right to left, an em square for each character",
-          PrVec2{paper.left, paper.bottom + 24}, 12, kInk);
+        PrVec2{paper.left, paper.bottom + 24}, 12, kInk);
     label("red: the vertical forms the font substitutes (vert), for punctuation, brackets, the long vowel mark "
-          "and small kana",
-          PrVec2{paper.left, paper.bottom + 44});
+        "and small kana", PrVec2{paper.left, paper.bottom + 44});
 
     // The four vertical orientations of UAX #50, each a column of its characters.
     struct Orientation {
@@ -526,7 +522,7 @@ void verticalText(PrDrawList* list, float width, float, double) {
     // the font's proportional vertical metrics (vpal). A shaper that sets each character across leaves the kana on the
     // grid.
     const char* kana = "\xe3\x83\x81\xe3\x83\xa7\xe3\x82\xb3\xe3\x83\xac\xe3\x83\xbc\xe3\x83\x88"
-                       "\xe3\x81\xa3\xe3\x81\xbd\xe3\x81\x84";
+        "\xe3\x81\xa3\xe3\x81\xbd\xe3\x81\x84";
     const PrTextFeature vpal{PR_FONT_TAG('v', 'p', 'a', 'l'), 1, 0, ~0u};
     float spaced = width * 0.86f;
     label("vertical positioning", PrVec2{spaced - 40, top - 24}, 12, kInk);
@@ -542,7 +538,7 @@ void verticalText(PrDrawList* list, float width, float, double) {
         label(i == 0 ? "em grid" : "vpal", PrVec2{center - 14, top + 12}, 12, kInk);
     }
     label("vpal moves and narrows each kana down the line: HarfBuzz and CoreText, which shape down, apply it, and",
-          PrVec2{spaced - 120, top + 330});
+        PrVec2{spaced - 120, top + 330});
     label("kb, which sets each character across, leaves the kana on the em grid", PrVec2{spaced - 120, top + 346});
 
     // One glyph's vertical metrics, large: its advance down, and its vertical origin on the line's center beside its
@@ -555,10 +551,9 @@ void verticalText(PrDrawList* list, float width, float, double) {
     float across = prFontGlyphAdvance(font, glyph, 0) * big;
     float down = prFontGlyphVerticalAdvance(font, glyph) * big;
     PrVec2 horizontal{at.x - origin.x * big, at.y - origin.y * big};
+    prDrawListRect(list, PrRect{at.x - across / 2, at.y, at.x + across / 2, at.y + down}, {.color = withAlpha(kTeal, 0.12f)});
     prDrawListRect(list, PrRect{at.x - across / 2, at.y, at.x + across / 2, at.y + down},
-                   {.color = withAlpha(kTeal, 0.12f)});
-    prDrawListRect(list, PrRect{at.x - across / 2, at.y, at.x + across / 2, at.y + down},
-                   {.color = withAlpha(kTeal, 0.8f), .stroke = &hairline});
+        {.color = withAlpha(kTeal, 0.8f), .stroke = &hairline});
     guide(list, PrVec2{at.x, at.y - 24}, PrVec2{at.x, at.y + down + 24}, withAlpha(kRed, 0.6f));
     TextStyle large = styleOf("NotoSansJP.ttf", big);
     drawText(list, large, "\xe6\xbc\xa2", horizontal);
@@ -567,10 +562,9 @@ void verticalText(PrDrawList* list, float width, float, double) {
     char text[96];
     std::snprintf(text, sizeof(text), "advance %.2f em down, %.2f across", double(down / big), double(across / big));
     label(text, PrVec2{at.x - 110, at.y + down + 44}, 11, kInk);
-    label("red: the vertical origin on the line's center; blue: the horizontal origin",
-          PrVec2{at.x - 110, at.y + down + 62});
+    label("red: the vertical origin on the line's center; blue: the horizontal origin", PrVec2{at.x - 110, at.y + down + 62});
     label("kb, which cannot shape down, sets each character across with vert, placed the same way",
-          PrVec2{at.x - 110, at.y + down + 80});
+        PrVec2{at.x - 110, at.y + down + 80});
 }
 
 void metricsAndBaselines(PrDrawList* list, float width, float, double) {
@@ -586,17 +580,13 @@ void metricsAndBaselines(PrDrawList* list, float width, float, double) {
         {"cap height", &PrFontMetrics::capHeight, PrFontMetricFlag_CapHeight, kGold, true},
         {"x-height", &PrFontMetrics::xHeight, PrFontMetricFlag_XHeight, kGreen, true},
         {"hanging", &PrFontMetrics::hangingBaseline, PrFontMetricFlag_Hanging, kPurple, false},
-        {"ideographic over", &PrFontMetrics::ideographicOver, PrFontMetricFlag_Ideographic, kTeal,
-         false},
-        {"ink over", &PrFontMetrics::ideographicInkOver, PrFontMetricFlag_IdeographicInk, kBlue,
-         false},
+        {"ideographic over", &PrFontMetrics::ideographicOver, PrFontMetricFlag_Ideographic, kTeal, false},
+        {"ink over", &PrFontMetrics::ideographicInkOver, PrFontMetricFlag_IdeographicInk, kBlue, false},
         {"central", &PrFontMetrics::centralBaseline, PrFontMetricFlag_Ideographic, kGray, false},
         {"math", &PrFontMetrics::mathBaseline, PrFontMetricFlag_Math, kPurple, false},
         {"alphabetic", &PrFontMetrics::alphabeticBaseline, 0, kInk, false},
-        {"ink under", &PrFontMetrics::ideographicInkUnder, PrFontMetricFlag_IdeographicInk,
-         kBlue, false},
-        {"ideographic under", &PrFontMetrics::ideographicUnder, PrFontMetricFlag_Ideographic,
-         kTeal, false},
+        {"ink under", &PrFontMetrics::ideographicInkUnder, PrFontMetricFlag_IdeographicInk, kBlue, false},
+        {"ideographic under", &PrFontMetrics::ideographicUnder, PrFontMetricFlag_Ideographic, kTeal, false},
         {"descent", &PrFontMetrics::descent, 0, kRed, false},
     };
     struct Sample {
@@ -622,28 +612,23 @@ void metricsAndBaselines(PrDrawList* list, float width, float, double) {
             float value = m.*line.position;
             placed.push_back(Placed{origin.y + (line.up ? -value : value) * size, &line});
         }
-        std::stable_sort(placed.begin(), placed.end(),
-                         [](const Placed& a, const Placed& b) { return a.at < b.at; });
+        std::stable_sort(placed.begin(), placed.end(), [](const Placed& a, const Placed& b) { return a.at < b.at; });
         float right = origin.x + advance + 10;
         float labelY = 0;
         for (const Placed& p : placed) {
             const Line& line = *p.line;
-            guide(list, PrVec2{origin.x - 10, p.at}, PrVec2{right, p.at},
-                  withAlpha(line.tint, 0.8f));
+            guide(list, PrVec2{origin.x - 10, p.at}, PrVec2{right, p.at}, withAlpha(line.tint, 0.8f));
             labelY = std::max(p.at, labelY + 13);
-            guide(list, PrVec2{right, p.at}, PrVec2{right + 14, labelY},
-                  withAlpha(line.tint, 0.8f));
+            guide(list, PrVec2{right, p.at}, PrVec2{right + 14, labelY}, withAlpha(line.tint, 0.8f));
             float value = m.*line.position + 0.0f;
             bool synthesized = line.flag != 0 && (m.fromFont & line.flag) == 0;
             char text[64];
-            std::snprintf(text, sizeof(text), "%s %.3f%s", line.name, double(value),
-                          synthesized ? " (synthesized)" : "");
+            std::snprintf(text, sizeof(text), "%s %.3f%s", line.name, double(value), synthesized ? " (synthesized)" : "");
             label(text, PrVec2{right + 18, labelY + 4}, 10, line.tint);
         }
         PrString family = prFontFamilyName(font);
         PrStringView name = prStringView(&family);
-        label(std::string(name.data != nullptr ? name.data : "", name.size).c_str(),
-              PrVec2{origin.x, 60}, 13, kInk);
+        label(std::string(name.data != nullptr ? name.data : "", name.size).c_str(), PrVec2{origin.x, 60}, 13, kInk);
         prStringReset(&family);
 
         // Subscript and superscript where the font puts them, and its line's extent.
@@ -658,7 +643,7 @@ void metricsAndBaselines(PrDrawList* list, float width, float, double) {
         label("subscript and superscript as the metrics place them", PrVec2{at.x, 600});
         char text[96];
         std::snprintf(text, sizeof(text), "line: ascent %.3f + descent %.3f + gap %.3f",
-                      double(m.ascent), double(m.descent), double(m.lineGap));
+            double(m.ascent), double(m.descent), double(m.lineGap));
         label(text, PrVec2{at.x, 640}, 11, kInk);
     }
 
@@ -672,11 +657,9 @@ void metricsAndBaselines(PrDrawList* list, float width, float, double) {
         adjusted = prFontCreateDerived(base, &d);
     float x = 30;
     x += drawText(list, styleOf(base, 40), "Noto Sans ", PrVec2{x, 740});
-    drawText(list, styleOf(adjusted, 40), "size-adjust 80%, ascent-override 120%",
-             PrVec2{x, 740});
+    drawText(list, styleOf(adjusted, 40), "size-adjust 80%, ascent-override 120%", PrVec2{x, 740});
     PrFontMetrics m = prFontMetrics(adjusted);
-    guide(list, PrVec2{x, 740 - m.ascent * 40}, PrVec2{width - 30, 740 - m.ascent * 40},
-          withAlpha(kRed, 0.8f));
+    guide(list, PrVec2{x, 740 - m.ascent * 40}, PrVec2{width - 30, 740 - m.ascent * 40}, withAlpha(kRed, 0.8f));
     label("its ascent", PrVec2{width - 100, 740 - m.ascent * 40 - 4}, 10, kRed);
 }
 
@@ -686,8 +669,7 @@ struct Piece {
     PrTextPosition position;
 };
 
-float drawPieces(PrDrawList* list, TextStyle style, const Piece* pieces, uint32_t count,
-                 PrVec2 origin) {
+float drawPieces(PrDrawList* list, TextStyle style, const Piece* pieces, uint32_t count, PrVec2 origin) {
     float x = origin.x;
     for (uint32_t i = 0; i < count; ++i) {
         style.position = pieces[i].position;
@@ -706,15 +688,16 @@ void synthesis(PrDrawList* list, float width, float, double) {
         PrTextCaps caps;
         const char* text;
     };
-    const Row rows[] = {{"small caps", PrTextCaps_Small, "Small Capitals Stra\xc3\x9f" "e"},
-                        {"all small caps", PrTextCaps_AllSmall, "NASA and FBI"},
-                        {"petite caps", PrTextCaps_Petite, "Petite Capitals"}};
+    const Row rows[] = {
+        {"small caps", PrTextCaps_Small, "Small Capitals Stra\xc3\x9f" "e"},
+        {"all small caps", PrTextCaps_AllSmall, "NASA and FBI"},
+        {"petite caps", PrTextCaps_Petite, "Petite Capitals"},
+    };
     float y = 90;
     for (const char* file : fonts) {
         PrString family = prFontFamilyName(fontNamed(file));
         PrStringView name = prStringView(&family);
-        label(std::string(name.data != nullptr ? name.data : "", name.size).c_str(),
-              PrVec2{20, y}, 13, kInk);
+        label(std::string(name.data != nullptr ? name.data : "", name.size).c_str(), PrVec2{20, y}, 13, kInk);
         prStringReset(&family);
         for (const Row& row : rows) {
             label(row.name, PrVec2{40, y + 24});
@@ -727,10 +710,12 @@ void synthesis(PrDrawList* list, float width, float, double) {
             y += 34;
         }
         label("sub and superscripts", PrVec2{40, y + 24});
-        const Piece pieces[] = {{"H", PrTextPosition_Normal},      {"2", PrTextPosition_Subscript},
-                                {"O and E=mc", PrTextPosition_Normal},
-                                {"2", PrTextPosition_Superscript}, {" x", PrTextPosition_Normal},
-                                {"i+1", PrTextPosition_Subscript}};
+        const Piece pieces[] = {
+            {"H", PrTextPosition_Normal},      {"2", PrTextPosition_Subscript},
+            {"O and E=mc", PrTextPosition_Normal},
+            {"2", PrTextPosition_Superscript}, {" x", PrTextPosition_Normal},
+            {"i+1", PrTextPosition_Subscript},
+        };
         for (uint32_t on = 0; on < 2; ++on) {
             TextStyle style = styleOf(file, 26);
             style.synthesis = on != 0 ? PrTextSynthesisFlag_Position : 0;
@@ -739,8 +724,7 @@ void synthesis(PrDrawList* list, float width, float, double) {
         y += 60;
     }
     label("where the font has the feature both columns match; where it lacks it, synthesis "
-          "scales capitals to the x-height and places scripts by the metrics",
-          PrVec2{20, y + 20});
+        "scales capitals to the x-height and places scripts by the metrics", PrVec2{20, y + 20});
 }
 
 void palettesAndHinting(PrDrawList* list, float width, float, double) {
@@ -802,21 +786,18 @@ void palettesAndHinting(PrDrawList* list, float width, float, double) {
         // The pixel grid.
         for (int i = 0; i <= 22; ++i) {
             float at = origin.x + float(i) * kZoom;
-            guide(list, PrVec2{at, origin.y - 12 * kZoom}, PrVec2{at, origin.y + 4 * kZoom},
-                  withAlpha(kInk, 0.12f));
+            guide(list, PrVec2{at, origin.y - 12 * kZoom}, PrVec2{at, origin.y + 4 * kZoom}, withAlpha(kInk, 0.12f));
         }
         for (int j = -12; j <= 4; ++j) {
             float at = origin.y + float(j) * kZoom;
-            guide(list, PrVec2{origin.x, at}, PrVec2{origin.x + 22 * kZoom, at},
-                  withAlpha(kInk, j == 0 ? 0.5f : 0.12f));
+            guide(list, PrVec2{origin.x, at}, PrVec2{origin.x + 22 * kZoom, at}, withAlpha(kInk, j == 0 ? 0.5f : 0.12f));
         }
         const PrFont* sans = hinted(mode);
         float pen = 0;
         for (const char* c = letters; *c != 0; ++c) {
             uint16_t glyph = prFontCodePointGlyph(sans, uint32_t(*c));
             PrPath* path = prPathCreate();
-            PrAffine2 t = prAffine2Concat(
-                prAffine2Scale(PrVec2{kPixelsPerEm * kZoom, kPixelsPerEm * kZoom}),
+            PrAffine2 t = prAffine2Concat(prAffine2Scale(PrVec2{kPixelsPerEm * kZoom, kPixelsPerEm * kZoom}),
                 prAffine2Translate(PrVec2{origin.x + std::round(pen) * kZoom, origin.y}));
             prFontGlyphOutline(sans, glyph, kPixelsPerEm, t, path);
             prDrawListPath(list, path, PrPathFillRule_NonZero, {.color = withAlpha(kBlue, 0.6f)});
@@ -824,8 +805,7 @@ void palettesAndHinting(PrDrawList* list, float width, float, double) {
             pen += prFontGlyphAdvance(sans, glyph, kPixelsPerEm) * kPixelsPerEm;
         }
         char text[48];
-        std::snprintf(text, sizeof(text), "%s, at %g pixels an em", modes[mode],
-                      double(kPixelsPerEm));
+        std::snprintf(text, sizeof(text), "%s, at %g pixels an em", modes[mode], double(kPixelsPerEm));
         label(text, PrVec2{origin.x, origin.y + 5 * kZoom});
     }
 
@@ -842,8 +822,7 @@ void palettesAndHinting(PrDrawList* list, float width, float, double) {
         }
     }
     label("full hinting fits advances to whole pixels as well, at the page's size: on a display "
-          "that scales the page, the fit is for the wrong size",
-          PrVec2{30, 800});
+        "that scales the page, the fit is for the wrong size", PrVec2{30, 800});
 }
 
 void contextAndGraphemes(PrDrawList* list, float, float, double) {
@@ -852,8 +831,7 @@ void contextAndGraphemes(PrDrawList* list, float, float, double) {
     const char* word = "\xd9\x85\xd8\xb1\xd8\xad\xd8\xa8\xd8\xa7";
     size_t split = 6;  // after the dual-joining hah, which joins the beh after it
     const PrFont* arabic = fontNamed("NotoSansArabic.ttf");
-    label("An Arabic word split between two runs of different colors", PrVec2{30, 40}, 12,
-          kInk);
+    label("An Arabic word split between two runs of different colors", PrVec2{30, 40}, 12, kInk);
     float y = 110;
     for (uint32_t withContext = 0; withContext < 2; ++withContext) {
         PrTextGlyphBuffer* glyphs = prTextGlyphBufferCreate();
@@ -864,8 +842,7 @@ void contextAndGraphemes(PrDrawList* list, float, float, double) {
             PrTextRun run{};
             run.font = arabic;
             run.direction = PrTextDirection_Rtl;
-            run.text = half == 0 ? PrStringView{word, split}
-                                 : PrStringView{word + split, std::strlen(word) - split};
+            run.text = half == 0 ? PrStringView{word, split} : PrStringView{word + split, std::strlen(word) - split};
             if (withContext != 0) {
                 if (half == 0)
                     run.after = PrStringView{word + split, std::strlen(word) - split};
@@ -877,8 +854,7 @@ void contextAndGraphemes(PrDrawList* list, float, float, double) {
             std::vector<PrFontGlyph> placed;
             const PrTextGlyph* data = prTextGlyphBufferGlyphs(glyphs);
             for (uint32_t i = 0; i < prTextGlyphBufferGlyphCount(glyphs); ++i) {
-                placed.push_back(PrFontGlyph{
-                    data[i].id, PrVec2{x + data[i].offset.x * 48, y + data[i].offset.y * 48}});
+                placed.push_back(PrFontGlyph{data[i].id, PrVec2{x + data[i].offset.x * 48, y + data[i].offset.y * 48}});
                 x += data[i].advance.x * 48;
             }
             PrFontGlyphRun r{};
@@ -893,14 +869,12 @@ void contextAndGraphemes(PrDrawList* list, float, float, double) {
     }
 
     // Grapheme clusters: a caret stops before each glyph that starts one.
-    label("Grapheme clusters: a caret mark before each glyph that starts one", PrVec2{30, 240},
-          12, kInk);
+    label("Grapheme clusters: a caret mark before each glyph that starts one", PrVec2{30, 240}, 12, kInk);
     const char* samples[] = {
         ("e\xcc\x81 n\xcc\x83 a\xcc\x8a\xcc\x81 \xf0\x9f\x91\xa9\xe2\x80\x8d\xf0\x9f\x9a\x80 "
-         "\xf0\x9f\x91\x8d\xf0\x9f\x8f\xbd \xf0\x9f\x87\xaf\xf0\x9f\x87\xb5\xf0\x9f\x87\xab"
-         "\xf0\x9f\x87\xb7"),
+            "\xf0\x9f\x91\x8d\xf0\x9f\x8f\xbd \xf0\x9f\x87\xaf\xf0\x9f\x87\xb5\xf0\x9f\x87\xab" "\xf0\x9f\x87\xb7"),
         ("\xe0\xa4\xa8\xe0\xa4\xae\xe0\xa4\xb8\xe0\xa5\x8d\xe0\xa4\xa4\xe0\xa5\x87 \xe0\xa4\x95"
-         "\xe0\xa5\x8d\xe0\xa4\xb7\xe0\xa4\xa4\xe0\xa5\x8d\xe0\xa4\xb0\xe0\xa4\xbf\xe0\xa4\xaf"),
+            "\xe0\xa5\x8d\xe0\xa4\xb7\xe0\xa4\xa4\xe0\xa5\x8d\xe0\xa4\xb0\xe0\xa4\xbf\xe0\xa4\xaf"),
     };
     y = 320;
     for (const char* sample : samples) {
@@ -919,8 +893,7 @@ void contextAndGraphemes(PrDrawList* list, float, float, double) {
 
 void bitmapGlyphs(PrDrawList* list, float, float, double) {
     // One sbix strike of 109 pixels per em, at sizes around it: scaled down, and scaled up past it.
-    label("sbix (Twemoji smiley): one strike of 109 pixels an em, drawn at each size",
-          PrVec2{30, 30}, 12, kInk);
+    label("sbix (Twemoji smiley): one strike of 109 pixels an em, drawn at each size", PrVec2{30, 30}, 12, kInk);
     const PrFont* smiley = fontNamed("TwemojiSmileySbix.ttf");
     float x = 30;
     for (float size : {16.0f, 32.0f, 64.0f, 109.0f, 180.0f}) {
@@ -940,24 +913,20 @@ void bitmapGlyphs(PrDrawList* list, float, float, double) {
     // Regional indicator pairs that the font's GSUB joins into flags.
     label("sbix (Noto flags): regional indicators shaped into flags", PrVec2{30, 320}, 12, kInk);
     TextStyle flags = styleOf("NotoFlagsSbix.ttf", 56);
-    drawText(list, flags,
-        "\xf0\x9f\x87\xaf\xf0\x9f\x87\xb5\xf0\x9f\x87\xab\xf0\x9f\x87\xb7\xf0\x9f"
+    drawText(list, flags, "\xf0\x9f\x87\xaf\xf0\x9f\x87\xb5\xf0\x9f\x87\xab\xf0\x9f\x87\xb7\xf0\x9f"
         "\x87\xa7\xf0\x9f\x87\xb7\xf0\x9f\x87\xb0\xf0\x9f\x87\xaa\xf0\x9f\x87\xa8"
         "\xf0\x9f\x87\xa6\xf0\x9f\x87\xba\xf0\x9f\x87\xa6", PrVec2{30, 395});
 
     // CBDT: one strike of 109 pixels per em, shaped, with keycaps, flags and ZWJ sequences.
-    label("CBDT (Noto Color Emoji): one strike of 109 pixels an em, drawn at each size",
-          PrVec2{30, 450}, 12, kInk);
+    label("CBDT (Noto Color Emoji): one strike of 109 pixels an em, drawn at each size", PrVec2{30, 450}, 12, kInk);
     float y = 490;
     for (float size : {16.0f, 28.0f, 52.0f}) {
         TextStyle emoji = styleOf("NotoColorEmoji.ttf", size);
         y += size * 1.3f;
-        drawText(list, emoji,
-                 "\xf0\x9f\x98\x80\xf0\x9f\x9a\x80\xf0\x9f\x90\x99"
-                 "8\xef\xb8\x8f\xe2\x83\xa3#\xef\xb8\x8f\xe2\x83\xa3"
-                 "\xf0\x9f\x87\xaf\xf0\x9f\x87\xb5\xf0\x9f\x87\xb0\xf0\x9f\x87\xaa"
-                 "\xf0\x9f\x91\xa9\xe2\x80\x8d\xf0\x9f\x9a\x80",
-                 PrVec2{90, y});
+        drawText(list, emoji, "\xf0\x9f\x98\x80\xf0\x9f\x9a\x80\xf0\x9f\x90\x99"
+            "8\xef\xb8\x8f\xe2\x83\xa3#\xef\xb8\x8f\xe2\x83\xa3"
+            "\xf0\x9f\x87\xaf\xf0\x9f\x87\xb5\xf0\x9f\x87\xb0\xf0\x9f\x87\xaa"
+            "\xf0\x9f\x91\xa9\xe2\x80\x8d\xf0\x9f\x9a\x80", PrVec2{90, y});
         char text[24];
         std::snprintf(text, sizeof(text), "%gpx", double(size));
         label(text, PrVec2{30, y});
@@ -968,10 +937,8 @@ void bitmapGlyphs(PrDrawList* list, float, float, double) {
     label("Apple Color Emoji, from the system's fonts", PrVec2{30, 700}, 12, kInk);
     if (apple != nullptr) {
         TextStyle emoji = styleOf(apple, 48);
-        drawText(list, emoji,
-            "\xf0\x9f\x98\x80\xf0\x9f\x9a\x80\xf0\x9f\x8c\x88\xf0\x9f\x90\x99\xf0\x9f"
-            "\x8e\x89\xf0\x9f\x91\xa9\xe2\x80\x8d\xf0\x9f\x9a\x80\xf0\x9f\x87\xaf\xf0"
-            "\x9f\x87\xb5", PrVec2{30, 770});
+        drawText(list, emoji, "\xf0\x9f\x98\x80\xf0\x9f\x9a\x80\xf0\x9f\x8c\x88\xf0\x9f\x90\x99\xf0\x9f"
+            "\x8e\x89\xf0\x9f\x91\xa9\xe2\x80\x8d\xf0\x9f\x9a\x80\xf0\x9f\x87\xaf\xf0" "\x9f\x87\xb5", PrVec2{30, 770});
     } else {
         label("(not installed here)", PrVec2{30, 760});
     }
@@ -982,8 +949,7 @@ void svgGlyphs(PrDrawList* list, float, float, double) {
     if (svgDecoder == nullptr)
         svgDecoder = prSvgGlyphDecoderCreate(nullptr, nullptr);
     const PrFont* nabla = fontNamed("Nabla.ttf");
-    label("Nabla: its COLR layers, then the same glyphs drawn from its SVG documents, in two palettes",
-          PrVec2{30, 30}, 12, kInk);
+    label("Nabla: its COLR layers, then the same glyphs drawn from its SVG documents, in two palettes", PrVec2{30, 30}, 12, kInk);
     float y = 140;
     for (uint32_t palette : {0u, 1u}) {
         TextStyle style = styleOf(nabla, 72);
@@ -1110,7 +1076,7 @@ void webFonts(PrDrawList* list, float, float, double) {
         prDrawListRect(list, PrRect{200, y - 10, 200 + part, y + 8}, {.color = row.tint});
         char text[96];
         std::snprintf(text, sizeof(text), "%zu bytes, %.0f%% of its font file's %zu", row.size,
-                      100.0 * double(row.size) / double(row.decoded), row.decoded);
+            100.0 * double(row.size) / double(row.decoded), row.decoded);
         label(text, PrVec2{200, y + 24});
         drawText(list, styleOf(row.font, 40, row.tint), "Hamburgefonstiv", PrVec2{30, y + 74});
     }
@@ -1120,8 +1086,8 @@ void webFonts(PrDrawList* list, float, float, double) {
     label("What WOFF2 rebuilds from its transformed tables", PrVec2{600, 40}, 13, kInk);
     char listed[160];
     std::snprintf(listed, sizeof(listed), "%u tables; glyf and loca %s; hmtx %s", transforms.tables,
-                  transforms.glyf ? "transformed, rebuilt point by point" : "stored",
-                  transforms.hmtx ? "transformed, bearings from the boxes" : "stored");
+        transforms.glyf ? "transformed, rebuilt point by point" : "stored",
+        transforms.hmtx ? "transformed, bearings from the boxes" : "stored");
     label(listed, PrVec2{600, 62});
     const float size = 260;
     const PrVec2 origin{680, 330};
@@ -1154,15 +1120,16 @@ void webFonts(PrDrawList* list, float, float, double) {
     }
     prPathDestroy(outline);
     const PrRect bounds = prFontGlyphBounds(fromWoff2, glyph);
-    const PrRect box{origin.x + bounds.left * size, origin.y + bounds.top * size, origin.x + bounds.right * size,
-                     origin.y + bounds.bottom * size};
+    const PrRect box{
+        origin.x + bounds.left * size, origin.y + bounds.top * size, origin.x + bounds.right * size,
+        origin.y + bounds.bottom * size,
+    };
     PrDrawStroke boxStroke = strokeOf(1.5f);
     prDrawListRect(list, box, {.color = kGold, .stroke = &boxStroke});
     const float advance = prFontGlyphAdvance(fromWoff2, glyph, 0) * size;
     guide(list, PrVec2{origin.x - 40, origin.y}, PrVec2{origin.x + advance + 40, origin.y}, withAlpha(kInk, 0.5f));
     guide(list, PrVec2{origin.x, box.top - 20}, PrVec2{origin.x, box.bottom + 40}, withAlpha(kInk, 0.5f));
-    guide(list, PrVec2{origin.x + advance, box.top - 20}, PrVec2{origin.x + advance, box.bottom + 40},
-          withAlpha(kInk, 0.5f));
+    guide(list, PrVec2{origin.x + advance, box.top - 20}, PrVec2{origin.x + advance, box.bottom + 40}, withAlpha(kInk, 0.5f));
     const float bearingY = box.bottom + 24;
     guide(list, PrVec2{origin.x, bearingY}, PrVec2{box.left, bearingY}, kPurple);
     label("on-curve points", PrVec2{900, 120}, 12, kInk);
@@ -1170,8 +1137,7 @@ void webFonts(PrDrawList* list, float, float, double) {
     label("control points", PrVec2{900, 142}, 12, kRed);
     dot(list, PrVec2{890, 138}, 3, kRed, true);
     label("box: computed from the points", PrVec2{900, 164}, 12, kGold);
-    label(transforms.hmtx ? "left side bearing: the box's left" : "left side bearing: from hmtx",
-          PrVec2{900, 186}, 12, kPurple);
+    label(transforms.hmtx ? "left side bearing: the box's left" : "left side bearing: from hmtx", PrVec2{900, 186}, 12, kPurple);
     label("origin and advance", PrVec2{900, 208}, 12, kInk);
 
     // A variable font in WOFF2: its axes and their variation tables come through, so each instance draws.
@@ -1184,12 +1150,12 @@ void webFonts(PrDrawList* list, float, float, double) {
         char text[64];
         const char tag[5] = {char(axis.tag >> 24), char(axis.tag >> 16), char(axis.tag >> 8), char(axis.tag), 0};
         std::snprintf(text, sizeof(text), "%s%s %g to %g", axes.empty() ? "" : ", ", tag, double(axis.min),
-                      double(axis.max));
+            double(axis.max));
         axes += text;
     }
     char described[160];
     std::snprintf(described, sizeof(described), "%zu bytes of WOFF2; axes %s", fileBytes(variableFile).size(),
-                  axes.c_str());
+        axes.c_str());
     label(described, PrVec2{30, 352});
     const float sizes[] = {8, 18, 48};
     const float weights[] = {200, 400, 600, 900};
@@ -1215,8 +1181,7 @@ void webFonts(PrDrawList* list, float, float, double) {
     if (collectionFaces[0] == nullptr) {
         const std::vector<uint8_t> bytes = fileBytes("woff2/available-002.woff2");
         for (uint32_t index = 0; index < 2; ++index)
-            prFontCreateWoff(bytes, index, nullptr, prCompressBuiltinCreate(),
-                             &collectionFaces[index]);
+            prFontCreateWoff(bytes, index, nullptr, prCompressBuiltinCreate(), &collectionFaces[index]);
     }
     for (uint32_t index = 0; index < 2; ++index) {
         const PrFont* face = collectionFaces[index];
@@ -1229,7 +1194,7 @@ void webFonts(PrDrawList* list, float, float, double) {
         PrStringView name = prStringView(&family);
         char text[128];
         std::snprintf(text, sizeof(text), "font %u of %u: %.*s, %u glyphs", index, prFontCount(prFontData(face)),
-                      int(name.size), name.data, prFontGlyphCount(face));
+            int(name.size), name.data, prFontGlyphCount(face));
         prStringReset(&family);
         label(text, PrVec2{600, y - 50}, 12, kInk);
         drawText(list, styleOf(face, 72, index == 0 ? kBlue : kTeal), "P", PrVec2{600, y + 30});
@@ -1258,27 +1223,22 @@ void releaseDrawingFonts() {
 
 const std::vector<Drawing>& fontFeatures() {
     static const std::vector<Drawing> features = {
-        {"Font matching", "Font sets: weights, widths, slopes and optical sizes matched to faces.",
-         fontMatching},
-        {"Fallback", "Faces falling back per grapheme cluster, emoji presentation, and system "
-                     "fonts.",
-         fallback},
+        {"Font matching", "Font sets: weights, widths, slopes and optical sizes matched to faces.", fontMatching},
+        {"Fallback", "Faces falling back per grapheme cluster, emoji presentation, and system " "fonts.", fallback},
         {"Vertical text", "Top-to-bottom runs with vertical forms and metrics.", verticalText},
-        {"Metrics and baselines", "Every metric and baseline a font gives or synthesizes.",
-         metricsAndBaselines},
-        {"Synthesized variants", "Small capitals and sub- and superscripts, from the font or "
-                                 "synthesized.",
-         synthesis},
-        {"Bitmap glyphs", "Color glyphs as images in strikes of set sizes: sbix and CBDT.",
-         bitmapGlyphs},
+        {"Metrics and baselines", "Every metric and baseline a font gives or synthesizes.", metricsAndBaselines},
+        {"Synthesized variants", "Small capitals and sub- and superscripts, from the font or synthesized.", synthesis},
+        {"Bitmap glyphs", "Color glyphs as images in strikes of set sizes: sbix and CBDT.", bitmapGlyphs},
         {"SVG glyphs", "Color glyphs as SVG documents, beside the same glyphs' color layers.", svgGlyphs},
-        {"Palettes and hinting", "Light and dark palettes, color overrides, and outlines fitted to "
-                                 "the pixel grid.",
-         palettesAndHinting},
-        {"Context and graphemes", "Runs shaped with their context, and grapheme cluster starts.",
-         contextAndGraphemes},
-        {"Web fonts", "WOFF and WOFF2: a font in each, what WOFF2 rebuilds, a variable font and a collection.",
-         webFonts},
+        {
+            "Palettes and hinting", "Light and dark palettes, color overrides, and outlines fitted to the pixel grid.",
+            palettesAndHinting,
+        },
+        {"Context and graphemes", "Runs shaped with their context, and grapheme cluster starts.", contextAndGraphemes},
+        {
+            "Web fonts", "WOFF and WOFF2: a font in each, what WOFF2 rebuilds, a variable font and a collection.",
+            webFonts,
+        },
     };
     return features;
 }

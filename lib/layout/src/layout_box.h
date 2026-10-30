@@ -59,15 +59,15 @@ inline bool layoutDisplayIsTablePart(PrLayoutDisplay display) {
 
 // Returns true if a box of `display` is a row group of any kind: a body, a header or a footer.
 inline bool layoutDisplayIsRowGroup(PrLayoutDisplay display) {
-    return display == PrLayoutDisplay_TableRowGroup || display == PrLayoutDisplay_TableHeaderGroup
-           || display == PrLayoutDisplay_TableFooterGroup;
+    return display == PrLayoutDisplay_TableRowGroup || display == PrLayoutDisplay_TableHeaderGroup ||
+        display == PrLayoutDisplay_TableFooterGroup;
 }
 
 // Returns true if a box of `display` is a table-track or table-track-group box: a row, a column or a group of them.
 // Such a box paints no decoration of its own. The table paints its background behind the cells in it.
 inline bool layoutDisplayIsTrack(PrLayoutDisplay display) {
-    return layoutDisplayIsRowGroup(display) || display == PrLayoutDisplay_TableRow
-           || display == PrLayoutDisplay_TableColumnGroup || display == PrLayoutDisplay_TableColumn;
+    return layoutDisplayIsRowGroup(display) || display == PrLayoutDisplay_TableRow ||
+        display == PrLayoutDisplay_TableColumnGroup || display == PrLayoutDisplay_TableColumn;
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -131,7 +131,7 @@ void layoutFragmentSetOverflow(const LayoutTree* tree, LayoutFragment* fragment)
 // the extent of its in-flow content and the margins it holds. Nothing past the block-start or inline-start edge of its
 // padding box, which are the sides of its origin, is reached.
 void layoutScrollerSetOverflow(const LayoutTree* tree, LayoutFragment* fragment, const PrLayoutBoxStyle& box,
-                               const PrLayoutUnit* padding, LayoutMode mode, PrLayoutRect flow);
+    const PrLayoutUnit* padding, LayoutMode mode, PrLayoutRect flow);
 
 // Returns the scrollable overflow of a scroll container `fragment` styled by `box`, from the top left of its padding
 // box, which is the unscrolled position of the scrollport.
@@ -144,7 +144,7 @@ inline PrLayoutRect layoutScrollContent(const LayoutFragment* fragment, const Pr
 // padding box and what its children add to its overflow, cut at the sides of its origin in the same way as the area of
 // a scroll container.
 PrLayoutRect layoutScrollingArea(const LayoutTree* tree, const LayoutFragment* fragment, const PrLayoutBoxStyle& box,
-                                 LayoutMode mode);
+    LayoutMode mode);
 
 // layoutScrollRange returns the scroll offsets that a port of `portExtent` can take over `content`, its scrollable
 // overflow from its unscrolled top left, as a rectangle from the least offset to the greatest. layoutScrollClamp
@@ -209,8 +209,8 @@ inline LayoutChildren layoutChildrenFromBox(const PrLayoutBoxStyle& box) {
         return LayoutChildren_Flex;
     if (layoutIsGridContainer(box))
         return LayoutChildren_Grid;
-    if (layoutIsTable(box) || layoutDisplayIsRowGroup(box.display) || box.display == PrLayoutDisplay_TableRow
-        || box.display == PrLayoutDisplay_TableColumnGroup || box.display == PrLayoutDisplay_TableColumn)
+    if (layoutIsTable(box) || layoutDisplayIsRowGroup(box.display) || box.display == PrLayoutDisplay_TableRow ||
+            box.display == PrLayoutDisplay_TableColumnGroup || box.display == PrLayoutDisplay_TableColumn)
         return LayoutChildren_Table;
     return LayoutChildren_Flow;
 }
@@ -258,8 +258,8 @@ bool layoutIsInColumn(const LayoutTree* tree, LayoutNodeIndex node);
 // has one. A child of a table column has no box, and neither has a child of a column group that is not a column.
 inline bool layoutIsAbsent(const LayoutTree* tree, LayoutNodeIndex node) {
     const LayoutTreeNode& n = layoutTreeNode(tree, node);
-    if (n.parent != kPrLayoutNodeNone && layoutTreeNode(tree, n.parent).children == LayoutChildren_Table
-        && layoutIsInColumn(tree, node))
+    if (n.parent != kPrLayoutNodeNone && layoutTreeNode(tree, n.parent).children == LayoutChildren_Table &&
+            layoutIsInColumn(tree, node))
         return true;
     if (n.kind == PrLayoutNodeKind_Text || n.kind == PrLayoutNodeKind_LineBreak)
         return false;
@@ -281,7 +281,7 @@ double layoutNaturalRatio(const LayoutTree* tree, LayoutNodeIndex node);
 // Returns the preferred aspect ratio of `node`, styled by `box`, in `mode`. A replaced box with a natural ratio uses it
 // if its aspect-ratio is auto or is auto with a ratio. Any other box has the ratio that its aspect-ratio gives, if any.
 inline LayoutAspect layoutNodeAspect(const LayoutTree* tree, LayoutNodeIndex node, const PrLayoutBoxStyle& box,
-                                     LayoutMode mode) {
+        LayoutMode mode) {
     LayoutAspect aspect{};
     double ratio = 0;
     bool defers = box.aspectRatio == 0 || box.aspectRatioAuto;
@@ -303,15 +303,21 @@ inline LayoutAspect layoutNodeAspect(const LayoutTree* tree, LayoutNodeIndex nod
 // with the padding and borders `edgesInline` and `edgesBlock` across each axis. The result is never less than
 // `edgesBlock`. layoutAspectInline returns the inline size that a block size gives in the same way.
 inline PrLayoutUnit layoutAspectBlock(const LayoutAspect& aspect, PrLayoutUnit size, PrLayoutUnit edgesInline,
-                                      PrLayoutUnit edgesBlock) {
-    double raw = aspect.borderBox ? double(size.raw) / aspect.ratio - double(edgesBlock.raw)
-                                  : double(layoutUnitMax(kLayoutUnitZero, size - edgesInline).raw) / aspect.ratio;
+        PrLayoutUnit edgesBlock) {
+    double raw;
+    if (aspect.borderBox)
+        raw = double(size.raw) / aspect.ratio - double(edgesBlock.raw);
+    else
+        raw = double(layoutUnitMax(kLayoutUnitZero, size - edgesInline).raw) / aspect.ratio;
     return prLayoutUnitClamped(int64_t(raw > 0 ? raw + 0.5 : 0)) + edgesBlock;
 }
 inline PrLayoutUnit layoutAspectInline(const LayoutAspect& aspect, PrLayoutUnit size, PrLayoutUnit edgesInline,
-                                       PrLayoutUnit edgesBlock) {
-    double raw = aspect.borderBox ? double(size.raw) * aspect.ratio - double(edgesInline.raw)
-                                  : double(layoutUnitMax(kLayoutUnitZero, size - edgesBlock).raw) * aspect.ratio;
+        PrLayoutUnit edgesBlock) {
+    double raw;
+    if (aspect.borderBox)
+        raw = double(size.raw) * aspect.ratio - double(edgesInline.raw);
+    else
+        raw = double(layoutUnitMax(kLayoutUnitZero, size - edgesBlock).raw) * aspect.ratio;
     return prLayoutUnitClamped(int64_t(raw > 0 ? raw + 0.5 : 0)) + edgesInline;
 }
 
@@ -323,8 +329,8 @@ inline bool layoutIsFloat(const LayoutTree* tree, LayoutNodeIndex node) {
     if (n.kind == PrLayoutNodeKind_Text || n.kind == PrLayoutNodeKind_LineBreak || node == tree->root)
         return false;
     const PrLayoutBoxStyle& box = layoutBoxStyle(tree->styles, n.style);
-    return box.floating != PrLayoutFloat_None && box.display != PrLayoutDisplay_None
-           && !layoutPositionIsOutOfFlow(box.position) && !layoutInItemContainer(tree, node);
+    return box.floating != PrLayoutFloat_None && box.display != PrLayoutDisplay_None &&
+        !layoutPositionIsOutOfFlow(box.position) && !layoutInItemContainer(tree, node);
 }
 
 // Returns true if the node takes part in an inline formatting context. It does if it is text or a line break, or if its
@@ -363,13 +369,13 @@ constexpr uint32_t kLayoutFontGroupNone = 0xffffffffu;
 // `outer`. The content of a flex or grid container or a table is independent of its context
 // (css-flexbox-2/#flex-containers, css-grid-1/#grid-containers, css-tables-3/#fixup-algorithm).
 inline bool layoutEstablishesContext(const LayoutTree* tree, LayoutNodeIndex node, const PrLayoutBoxStyle& box,
-                                     LayoutOuterMode outer) {
-    if (node == tree->root || box.floating != PrLayoutFloat_None || layoutPositionIsOutOfFlow(box.position)
-        || layoutIsScrollContainer(box)
-        || box.display == PrLayoutDisplay_FlowRoot || box.display == PrLayoutDisplay_InlineBlock
-        || box.display == PrLayoutDisplay_Marker || layoutIsFlexContainer(box) || layoutIsGridContainer(box)
-        || layoutIsTable(box)
-        || box.display == PrLayoutDisplay_TableCell || box.display == PrLayoutDisplay_TableCaption)
+        LayoutOuterMode outer) {
+    if (node == tree->root || box.floating != PrLayoutFloat_None || layoutPositionIsOutOfFlow(box.position) ||
+            layoutIsScrollContainer(box) ||
+            box.display == PrLayoutDisplay_FlowRoot || box.display == PrLayoutDisplay_InlineBlock ||
+            box.display == PrLayoutDisplay_Marker || layoutIsFlexContainer(box) || layoutIsGridContainer(box) ||
+            layoutIsTable(box) || box.display == PrLayoutDisplay_TableCell ||
+            box.display == PrLayoutDisplay_TableCaption)
         return true;
     PrLayoutStyleIndex style = layoutTreeNode(tree, node).style;
     if (layoutStyle(tree->styles, style).groups[PrLayoutGroup_Font] == outer.font)
@@ -380,9 +386,8 @@ inline bool layoutEstablishesContext(const LayoutTree* tree, LayoutNodeIndex nod
 // Returns true if the in-flow block-level box of `node`, styled by `box`, must not overlap the floats in the context of
 // its parent (CSS2/#floats). This is a replaced box, or a box that establishes a context of its own.
 inline bool layoutAvoidsFloats(const LayoutTree* tree, LayoutNodeIndex node, const PrLayoutBoxStyle& box,
-                               LayoutOuterMode outer) {
-    return layoutTreeNode(tree, node).kind == PrLayoutNodeKind_Replaced
-           || layoutEstablishesContext(tree, node, box, outer);
+        LayoutOuterMode outer) {
+    return layoutTreeNode(tree, node).kind == PrLayoutNodeKind_Replaced || layoutEstablishesContext(tree, node, box, outer);
 }
 
 // Returns the mode that the box of `node` gives its content, which is its own mode, together with its font group.
@@ -400,7 +405,7 @@ LayoutLineSides layoutLineSides(bool left, bool right, bool start, bool end, PrT
 inline LayoutLineSides layoutFloatSide(const PrLayoutBoxStyle& box, PrTextDirection direction) {
     PrLayoutFloat floating = box.floating;
     return layoutLineSides(floating == PrLayoutFloat_Left, floating == PrLayoutFloat_Right,
-                           floating == PrLayoutFloat_InlineStart, floating == PrLayoutFloat_InlineEnd, direction);
+        floating == PrLayoutFloat_InlineStart, floating == PrLayoutFloat_InlineEnd, direction);
 }
 
 // Returns the sides of the floats that a box styled by `box` clears in a containing block of `direction`, or zero.
@@ -409,8 +414,8 @@ inline LayoutLineSides layoutClearSides(const PrLayoutBoxStyle& box, PrTextDirec
     if (clear == PrLayoutClear_None)
         return 0;
     return layoutLineSides(clear == PrLayoutClear_Left || clear == PrLayoutClear_Both,
-                           clear == PrLayoutClear_Right || clear == PrLayoutClear_Both,
-                           clear == PrLayoutClear_InlineStart, clear == PrLayoutClear_InlineEnd, direction);
+        clear == PrLayoutClear_Right || clear == PrLayoutClear_Both,
+        clear == PrLayoutClear_InlineStart, clear == PrLayoutClear_InlineEnd, direction);
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -438,7 +443,7 @@ inline bool layoutChildKindIsBlock(LayoutChildKind kind) {
 // Returns how a node of `kind` takes part in the layout of its parent, if it is not the root. `box` is its style if it
 // is not text. `positioned` is its LayoutTreeNode::positioned.
 inline LayoutChildKind layoutChildKindFromStyle(PrLayoutNodeKind kind, const PrLayoutBoxStyle* PR_NULLABLE box,
-                                                bool positioned) {
+        bool positioned) {
     if (kind == PrLayoutNodeKind_Text)
         return LayoutChildKind_Inline;
     if (box->display == PrLayoutDisplay_None || box->display == PrLayoutDisplay_Marker)
@@ -458,9 +463,10 @@ inline LayoutChildKind layoutChildKindFromStyle(PrLayoutNodeKind kind, const PrL
 inline LayoutChildKind layoutChildKind(const LayoutTree* tree, LayoutNodeIndex node) {
     const LayoutTreeNode& n = layoutTreeNode(tree, node);
     LayoutChildKind kind = n.childKind;
-    if ((kind == LayoutChildKind_OutOfFlow || kind == LayoutChildKind_Float) && node == tree->root)
-        return prLayoutDisplayIsInlineLevel(layoutBoxStyle(tree->styles, n.style).display) ? LayoutChildKind_Inline
-                                                                                            : LayoutChildKind_Block;
+    if ((kind == LayoutChildKind_OutOfFlow || kind == LayoutChildKind_Float) && node == tree->root) {
+        bool inlineLevel = prLayoutDisplayIsInlineLevel(layoutBoxStyle(tree->styles, n.style).display);
+        return inlineLevel ? LayoutChildKind_Inline : LayoutChildKind_Block;
+    }
     return kind;
 }
 
@@ -487,8 +493,8 @@ inline bool layoutOutOfFlowStartsRun(const LayoutTree* tree, LayoutNodeIndex nod
 // Returns true if the node is the content of an anonymous item when its parent makes items of its children: text, or a
 // line break whose display is not none (css-flexbox-2/#flex-items, css-grid-1/#grid-items).
 inline bool layoutIsRunContent(const LayoutTreeNode& n) {
-    return (n.kind == PrLayoutNodeKind_Text || n.kind == PrLayoutNodeKind_LineBreak)
-           && n.childKind != LayoutChildKind_None;
+    return (n.kind == PrLayoutNodeKind_Text || n.kind == PrLayoutNodeKind_LineBreak) &&
+        n.childKind != LayoutChildKind_None;
 }
 
 // Returns the first content of the run of children of a flex or grid container that holds `node`. Searches back from
@@ -564,8 +570,8 @@ inline LayoutNodeIndex layoutNodeMarker(const LayoutTree* tree, LayoutNodeIndex 
     if (first == kPrLayoutNodeNone)
         return kPrLayoutNodeNone;
     const LayoutTreeNode& n = layoutTreeNode(tree, first);
-    if (n.childKind != LayoutChildKind_None || n.kind != PrLayoutNodeKind_Element
-        || layoutBoxStyle(tree->styles, n.style).display != PrLayoutDisplay_Marker)
+    if (n.childKind != LayoutChildKind_None || n.kind != PrLayoutNodeKind_Element ||
+            layoutBoxStyle(tree->styles, n.style).display != PrLayoutDisplay_Marker)
         return kPrLayoutNodeNone;
     return first;
 }
@@ -590,7 +596,7 @@ LayoutNodeIndex layoutTablePartRunLast(const LayoutTree* tree, LayoutNodeIndex f
 // and the children out of flow that follow it. A child out of flow never makes an anonymous block box of its own.
 template <typename Block, typename Inlines, typename Table>
 void layoutEachChildIn(const LayoutTree* tree, LayoutNodeIndex first, LayoutNodeIndex last, Block block,
-                       Inlines inlines, Table table) {
+        Inlines inlines, Table table) {
     LayoutNodeIndex end = layoutTreeNode(tree, last).next;
     bool blocks = false;
     for (uint32_t c = first; c != end && !blocks; c = layoutTreeNode(tree, c).next)
@@ -612,8 +618,8 @@ void layoutEachChildIn(const LayoutTree* tree, LayoutNodeIndex first, LayoutNode
             c = runLast;
             continue;
         }
-        if (kind != LayoutChildKind_Inline
-            && !(kind == LayoutChildKind_OutOfFlow && layoutOutOfFlowStartsRun(tree, c, noRunLast))) {
+        if (kind != LayoutChildKind_Inline &&
+                !(kind == LayoutChildKind_OutOfFlow && layoutOutOfFlowStartsRun(tree, c, noRunLast))) {
             block(c, layoutBoxStyle(tree->styles, layoutTreeNode(tree, c).style));
             continue;
         }
@@ -750,8 +756,7 @@ inline PrLayoutPosition layoutNodePositionScheme(const LayoutTree* tree, LayoutN
 // box whose edges it is placed against (css-position-3/#def-cb), which is the nearest ancestor that holds it. If that
 // ancestor is a positioned inline box, the block container of the inline box lays the box out. Returns
 // kPrLayoutNodeNone if no ancestor holds it, in which case the viewport holds it.
-LayoutNodeIndex layoutNodeHolder(const LayoutTree* tree, LayoutNodeIndex node,
-                                 LayoutNodeIndex* PR_NULLABLE containing = nullptr);
+LayoutNodeIndex layoutNodeHolder(const LayoutTree* tree, LayoutNodeIndex node, LayoutNodeIndex* PR_NULLABLE containing = nullptr);
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Positions of boxes

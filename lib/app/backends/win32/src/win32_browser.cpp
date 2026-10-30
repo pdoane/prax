@@ -48,15 +48,15 @@ constexpr wchar_t kDataFolder[] = L"PrAppWebView2";
 // runs its timers at full speed in a window that no one sees. Pages render in sRGB, whatever the display's profile, so
 // that captures are in sRGB.
 constexpr wchar_t kArguments[] = L"--allow-file-access-from-files --disable-background-timer-throttling "
-                                 L"--disable-renderer-backgrounding --disable-backgrounding-occluded-windows "
-                                 L"--disable-features=CalculateNativeWinOcclusion --force-color-profile=srgb";
+    L"--disable-renderer-backgrounding --disable-backgrounding-occluded-windows "
+    L"--disable-features=CalculateNativeWinOcclusion --force-color-profile=srgb";
 
 // The two halves of the expression that runs a script as global code, with the script between them as a string. The
 // expression awaits the result, so that a promise answers once it settles. It returns the result as JSON, or the
 // message of the script's error.
 constexpr char kEvaluateBefore[] = "(async () => { try { const value = await (0, eval)(";
 constexpr char kEvaluateAfter[] = "); return value === undefined ? {} : {json: JSON.stringify(value)}; } catch (error) "
-                                  "{ return {error: String(error instanceof Error ? error.message : error)}; } })()";
+    "{ return {error: String(error instanceof Error ? error.message : error)}; } })()";
 
 enum {
     RequestKind_Load,
@@ -281,9 +281,11 @@ void layOut(Win32Browser* b) {
         LONG left = rounded(clip.left * scale);
         LONG top = rounded(clip.top * scale);
         SetWindowPos(b->clip, HWND_TOP, left, top, rounded(clip.right * scale) - left,
-                     rounded(clip.bottom * scale) - top, SWP_NOACTIVATE | SWP_SHOWWINDOW);
-        bounds = RECT{rounded(frame.left * scale) - left, rounded(frame.top * scale) - top,
-                      rounded(frame.right * scale) - left, rounded(frame.bottom * scale) - top};
+            rounded(clip.bottom * scale) - top, SWP_NOACTIVATE | SWP_SHOWWINDOW);
+        bounds = RECT{
+            rounded(frame.left * scale) - left, rounded(frame.top * scale) - top,
+            rounded(frame.right * scale) - left, rounded(frame.bottom * scale) - top,
+        };
         parent = b->clip;
     } else {
         LONG width = rounded(float(b->viewport.x) * ratio);
@@ -291,7 +293,7 @@ void layOut(Win32Browser* b) {
         width = width > 0 ? width : 1;
         height = height > 0 ? height : 1;
         SetWindowPos(b->window, nullptr, GetSystemMetrics(SM_XVIRTUALSCREEN) - width,
-                     GetSystemMetrics(SM_YVIRTUALSCREEN), width, height, SWP_NOZORDER | SWP_NOACTIVATE);
+            GetSystemMetrics(SM_YVIRTUALSCREEN), width, height, SWP_NOZORDER | SWP_NOACTIVATE);
         bounds = RECT{0, 0, width, height};
     }
     if (b->controller == nullptr)
@@ -382,15 +384,13 @@ void evaluate(Win32Browser* b, Request& request) {
     request.text.reset();
     PrAppBrowserResultFn done = request.result;
     void* context = request.context;
-    HRESULT called = b->view->CallDevToolsProtocolMethod(
-        L"Runtime.evaluate", b->utf16.data,
+    HRESULT called = b->view->CallDevToolsProtocolMethod(L"Runtime.evaluate", b->utf16.data,
         Callback<ICoreWebView2CallDevToolsProtocolMethodCompletedHandler>(
             [b = hold(b), done, context](HRESULT error, LPCWSTR json) -> HRESULT {
                 if (unhold(b))
                     answer(b, error, json, done, context);
                 return S_OK;
-            })
-            .Get());
+            }) .Get());
     if (FAILED(called)) {
         unhold(b);
         fail(b, request, PrStatus_Io);
@@ -404,19 +404,18 @@ bool decodePng(IWICImagingFactory* imaging, const Array<char>& png, PrUVec2 exte
     IWICBitmapFrameDecode* frame = nullptr;
     IWICFormatConverter* converter = nullptr;
     IWICBitmapScaler* scaler = nullptr;
-    bool ok = SUCCEEDED(imaging->CreateStream(&stream))
-              && SUCCEEDED(stream->InitializeFromMemory(reinterpret_cast<BYTE*>(png.data), png.count))
-              && SUCCEEDED(imaging->CreateDecoderFromStream(stream, nullptr, WICDecodeMetadataCacheOnDemand, &decoder))
-              && SUCCEEDED(decoder->GetFrame(0, &frame)) && SUCCEEDED(imaging->CreateFormatConverter(&converter))
-              && SUCCEEDED(converter->Initialize(frame, GUID_WICPixelFormat32bppPBGRA, WICBitmapDitherTypeNone,
-                                                 nullptr, 0.0, WICBitmapPaletteTypeCustom));
+    bool ok = SUCCEEDED(imaging->CreateStream(&stream)) &&
+        SUCCEEDED(stream->InitializeFromMemory(reinterpret_cast<BYTE*>(png.data), png.count)) &&
+        SUCCEEDED(imaging->CreateDecoderFromStream(stream, nullptr, WICDecodeMetadataCacheOnDemand, &decoder)) &&
+        SUCCEEDED(decoder->GetFrame(0, &frame)) && SUCCEEDED(imaging->CreateFormatConverter(&converter)) &&
+        SUCCEEDED(converter->Initialize(frame, GUID_WICPixelFormat32bppPBGRA, WICBitmapDitherTypeNone,
+            nullptr, 0.0, WICBitmapPaletteTypeCustom));
     IWICBitmapSource* source = converter;
     UINT width = 0;
     UINT height = 0;
     if (ok && SUCCEEDED(converter->GetSize(&width, &height)) && (width != extent.x || height != extent.y)) {
-        ok = SUCCEEDED(imaging->CreateBitmapScaler(&scaler))
-             && SUCCEEDED(
-                 scaler->Initialize(converter, extent.x, extent.y, WICBitmapInterpolationModeHighQualityCubic));
+        ok = SUCCEEDED(imaging->CreateBitmapScaler(&scaler)) && SUCCEEDED(
+            scaler->Initialize(converter, extent.x, extent.y, WICBitmapInterpolationModeHighQualityCubic));
         source = scaler;
     }
     if (ok) {
@@ -433,15 +432,17 @@ bool decodePng(IWICImagingFactory* imaging, const Array<char>& png, PrUVec2 exte
 
 // Calls `done` with the pixels of a capture, from the engine's answer to Page.captureScreenshot.
 void deliverCapture(Win32Browser* b, HRESULT error, LPCWSTR json, PrUVec2 size, PrAppBrowserCaptureFn done,
-                    void* PR_NULLABLE context) {
+        void* PR_NULLABLE context) {
     Array<char> png;
     Array<uint8_t> pixels;
     bool ok = SUCCEEDED(error) && json != nullptr && size.x > 0 && size.y > 0;
     if (ok) {
         PrJson* document = prJsonCreate();
-        PrStringView data = prJsonParse(document, win32Narrow(json, lstrlenW(json), b->utf8), nullptr)
-                                ? prJsonString(document, prJsonMember(document, 0, "data"))
-                                : PrStringView{};
+        PrStringView data;
+        if (prJsonParse(document, win32Narrow(json, lstrlenW(json), b->utf8), nullptr))
+            data = prJsonString(document, prJsonMember(document, 0, "data"));
+        else
+            data = PrStringView{};
         size_t decoded = 0;
         png.resize(uint32_t(base64DecodedCapacity(data.size)));
         ok = data.data != nullptr && base64Decode(data, png.data, png.count, &decoded);
@@ -450,7 +451,7 @@ void deliverCapture(Win32Browser* b, HRESULT error, LPCWSTR json, PrUVec2 size, 
     }
     if (ok && b->imaging == nullptr)
         ok = SUCCEEDED(CoCreateInstance(CLSID_WICImagingFactory, nullptr, CLSCTX_INPROC_SERVER,
-                                        IID_PPV_ARGS(&b->imaging)));
+            IID_PPV_ARGS(&b->imaging)));
     ok = ok && decodePng(b->imaging, png, size, pixels);
     png.reset();
     if (ok)
@@ -474,15 +475,13 @@ bool screenshot(Win32Browser* b, PrRect rect, PrUVec2 size, PrAppBrowserCaptureF
     textAppend(&params, ",\"scale\":1}}");
     win32Widen(textView(&params), b->utf16);
     textReset(&params);
-    HRESULT called = b->view->CallDevToolsProtocolMethod(
-        L"Page.captureScreenshot", b->utf16.data,
+    HRESULT called = b->view->CallDevToolsProtocolMethod(L"Page.captureScreenshot", b->utf16.data,
         Callback<ICoreWebView2CallDevToolsProtocolMethodCompletedHandler>(
             [b = hold(b), size, done, context](HRESULT error, LPCWSTR json) -> HRESULT {
                 if (unhold(b))
                     deliverCapture(b, error, json, size, done, context);
                 return S_OK;
-            })
-            .Get());
+            }) .Get());
     if (FAILED(called))
         unhold(b);
     return SUCCEEDED(called);
@@ -495,8 +494,10 @@ bool scrollOf(Win32Browser* b, LPCWSTR json, PrVec2* out) {
     bool ok = prJsonParse(document, win32Narrow(json, lstrlenW(json), b->utf8), nullptr);
     PrJsonValueIndex viewport = prJsonMember(document, 0, "cssVisualViewport");
     ok = ok && viewport != kPrJsonMissing;
-    *out = PrVec2{float(prJsonNumber(document, prJsonMember(document, viewport, "pageX"), 0)),
-                  float(prJsonNumber(document, prJsonMember(document, viewport, "pageY"), 0))};
+    *out = PrVec2{
+        float(prJsonNumber(document, prJsonMember(document, viewport, "pageX"), 0)),
+        float(prJsonNumber(document, prJsonMember(document, viewport, "pageY"), 0)),
+    };
     prJsonDestroy(document);
     return ok;
 }
@@ -508,8 +509,7 @@ void capture(Win32Browser* b, Request& request) {
     PrUVec2 size = request.size;
     PrAppBrowserCaptureFn done = request.capture;
     void* context = request.context;
-    HRESULT called = b->view->CallDevToolsProtocolMethod(
-        L"Page.getLayoutMetrics", L"{}",
+    HRESULT called = b->view->CallDevToolsProtocolMethod(L"Page.getLayoutMetrics", L"{}",
         Callback<ICoreWebView2CallDevToolsProtocolMethodCompletedHandler>(
             [b = hold(b), rect, size, done, context](HRESULT error, LPCWSTR json) -> HRESULT {
                 if (!unhold(b))
@@ -520,8 +520,7 @@ void capture(Win32Browser* b, Request& request) {
                 if (!ok || !screenshot(b, moved, size, done, context))
                     done(context, PrStatus_Io, PrPixelView{});
                 return S_OK;
-            })
-            .Get());
+            }) .Get());
     if (FAILED(called)) {
         unhold(b);
         fail(b, request, PrStatus_Io);
@@ -533,9 +532,9 @@ void print(Win32Browser* b, Request& request) {
     ICoreWebView2Environment6* environment = nullptr;
     ICoreWebView2PrintSettings* settings = nullptr;
     Array<wchar_t> path;
-    bool ok = SUCCEEDED(b->view->QueryInterface(IID_PPV_ARGS(&view)))
-              && SUCCEEDED(b->environment->QueryInterface(IID_PPV_ARGS(&environment)))
-              && SUCCEEDED(environment->CreatePrintSettings(&settings));
+    bool ok = SUCCEEDED(b->view->QueryInterface(IID_PPV_ARGS(&view))) &&
+        SUCCEEDED(b->environment->QueryInterface(IID_PPV_ARGS(&environment))) &&
+        SUCCEEDED(environment->CreatePrintSettings(&settings));
     if (ok) {
         // A CSS px is a 96th of an inch.
         PrVec2 paper = request.paper;
@@ -632,28 +631,23 @@ void start(Win32Browser* b, ICoreWebView2Controller* controller) {
     release(profile);
     release(profiled);
     b->view->add_NavigationStarting(Callback<ICoreWebView2NavigationStartingEventHandler>(
-                                        [b](ICoreWebView2*, ICoreWebView2NavigationStartingEventArgs* args) -> HRESULT {
-                                            UINT64 id = 0;
-                                            if (SUCCEEDED(args->get_NavigationId(&id)))
-                                                b->navigation = id;
-                                            return S_OK;
-                                        })
-                                        .Get(),
-                                    &b->starting);
+        [b](ICoreWebView2*, ICoreWebView2NavigationStartingEventArgs* args) -> HRESULT {
+            UINT64 id = 0;
+            if (SUCCEEDED(args->get_NavigationId(&id)))
+                b->navigation = id;
+            return S_OK;
+        }) .Get(), &b->starting);
     // A navigation that a later one replaced completes after the later one starts, and is not the pending load's.
-    b->view->add_NavigationCompleted(
-        Callback<ICoreWebView2NavigationCompletedEventHandler>(
-            [b](ICoreWebView2*, ICoreWebView2NavigationCompletedEventArgs* args) -> HRESULT {
-                UINT64 id = 0;
-                BOOL success = FALSE;
-                if (FAILED(args->get_NavigationId(&id)) || id != b->navigation)
-                    return S_OK;
-                args->get_IsSuccess(&success);
-                finishLoad(b, success ? PrStatus_Ok : PrStatus_NotFound);
+    b->view->add_NavigationCompleted(Callback<ICoreWebView2NavigationCompletedEventHandler>(
+        [b](ICoreWebView2*, ICoreWebView2NavigationCompletedEventArgs* args) -> HRESULT {
+            UINT64 id = 0;
+            BOOL success = FALSE;
+            if (FAILED(args->get_NavigationId(&id)) || id != b->navigation)
                 return S_OK;
-            })
-            .Get(),
-        &b->completed);
+            args->get_IsSuccess(&success);
+            finishLoad(b, success ? PrStatus_Ok : PrStatus_NotFound);
+            return S_OK;
+        }) .Get(), &b->completed);
     b->started = true;
     layOut(b);
     controller->put_IsVisible(TRUE);
@@ -684,8 +678,8 @@ void createController(Win32Browser* b) {
     ICoreWebView2Environment10* environment = nullptr;
     ICoreWebView2ControllerOptions* options = nullptr;
     HRESULT called = E_FAIL;
-    if (SUCCEEDED(b->environment->QueryInterface(IID_PPV_ARGS(&environment)))
-        && SUCCEEDED(environment->CreateCoreWebView2ControllerOptions(&options))) {
+    if (SUCCEEDED(b->environment->QueryInterface(IID_PPV_ARGS(&environment))) &&
+            SUCCEEDED(environment->CreateCoreWebView2ControllerOptions(&options))) {
         options->put_IsInPrivateModeEnabled(TRUE);
         called = environment->CreateCoreWebView2ControllerWithOptions(
             b->window, options, Callback<ICoreWebView2CreateCoreWebView2ControllerCompletedHandler>(created).Get());
@@ -738,7 +732,7 @@ void win32BrowserShow(PrApp*, PrAppBrowser* browser, PrRect clip, PrRect frame) 
         return;
     if (b->clip == nullptr)
         b->clip = CreateWindowExW(0, kClassName, L"", WS_CHILD | WS_CLIPSIBLINGS | WS_CLIPCHILDREN, 0, 0, 0, 0,
-                                  b->host, nullptr, GetModuleHandleW(nullptr), nullptr);
+            b->host, nullptr, GetModuleHandleW(nullptr), nullptr);
     if (b->clip == nullptr)
         return;
     b->shown = true;
@@ -756,8 +750,7 @@ void win32BrowserHide(PrApp*, PrAppBrowser* browser) {
     ShowWindow(b->clip, SW_HIDE);
 }
 
-void win32BrowserLoad(PrApp*, PrAppBrowser* browser, PrStringView url, PrAppBrowserDoneFn done,
-                      void* PR_NULLABLE context) {
+void win32BrowserLoad(PrApp*, PrAppBrowser* browser, PrStringView url, PrAppBrowserDoneFn done, void* PR_NULLABLE context) {
     Request request = requestOf(RequestKind_Load, context);
     request.done = done;
     copyText(request, url);
@@ -765,7 +758,7 @@ void win32BrowserLoad(PrApp*, PrAppBrowser* browser, PrStringView url, PrAppBrow
 }
 
 void win32BrowserEvaluate(PrApp*, PrAppBrowser* browser, PrStringView script, PrAppBrowserResultFn done,
-                          void* PR_NULLABLE context) {
+        void* PR_NULLABLE context) {
     Request request = requestOf(RequestKind_Evaluate, context);
     request.result = done;
     copyText(request, script);
@@ -775,7 +768,7 @@ void win32BrowserEvaluate(PrApp*, PrAppBrowser* browser, PrStringView script, Pr
 // The engine's screenshot renders a frame of the page's latest changes and copies it, so it shows what the page's
 // scripts have changed.
 void win32BrowserCapture(PrApp*, PrAppBrowser* browser, PrRect rect, PrUVec2 size, PrAppBrowserCaptureFn done,
-                         void* PR_NULLABLE context) {
+        void* PR_NULLABLE context) {
     Request request = requestOf(RequestKind_Capture, context);
     request.capture = done;
     request.rect = rect;
@@ -784,7 +777,7 @@ void win32BrowserCapture(PrApp*, PrAppBrowser* browser, PrRect rect, PrUVec2 siz
 }
 
 void win32BrowserPrint(PrApp*, PrAppBrowser* browser, PrStringView path, PrVec2 paper, PrAppBrowserDoneFn done,
-                       void* PR_NULLABLE context) {
+        void* PR_NULLABLE context) {
     Request request = requestOf(RequestKind_Print, context);
     request.done = done;
     request.paper = paper;
@@ -794,15 +787,14 @@ void win32BrowserPrint(PrApp*, PrAppBrowser* browser, PrStringView path, PrVec2 
 
 // The engine names the kind of each process that it runs, but not which service a utility process runs, so the network
 // process is left out.
-uint32_t win32BrowserProcesses(PrApp*, PrAppBrowser* browser, PrAppBrowserProcess* PR_NULLABLE out,
-                               uint32_t capacity) {
+uint32_t win32BrowserProcesses(PrApp*, PrAppBrowser* browser, PrAppBrowserProcess* PR_NULLABLE out, uint32_t capacity) {
     Win32Browser* b = static_cast<Win32Browser*>(browser);
     ICoreWebView2Environment8* environment = nullptr;
     ICoreWebView2ProcessInfoCollection* processes = nullptr;
     UINT total = 0;
-    if (b->environment == nullptr || FAILED(b->environment->QueryInterface(IID_PPV_ARGS(&environment)))
-        || FAILED(environment->GetProcessInfos(&processes)) || FAILED(processes->get_Count(&total)))
-        total = 0;
+    if (b->environment == nullptr || FAILED(b->environment->QueryInterface(IID_PPV_ARGS(&environment))) ||
+        FAILED(environment->GetProcessInfos(&processes)) || FAILED(processes->get_Count(&total)))
+    total = 0;
     uint32_t count = 0;
     for (UINT i = 0; i < total; ++i) {
         ICoreWebView2ProcessInfo* process = nullptr;
@@ -833,7 +825,7 @@ uint32_t win32BrowserProcesses(PrApp*, PrAppBrowser* browser, PrAppBrowserProces
 }
 
 PrStatus win32BrowserCreate(PrApp* app, void* PR_NULLABLE host, const PrAppBrowserDesc* desc,
-                            PrAppBrowser* PR_NULLABLE* PR_NONNULL out) {
+        PrAppBrowser* PR_NULLABLE* PR_NONNULL out) {
     *out = nullptr;
     LPWSTR version = nullptr;
     HRESULT found = GetAvailableCoreWebView2BrowserVersionString(nullptr, &version);
@@ -849,13 +841,13 @@ PrStatus win32BrowserCreate(PrApp* app, void* PR_NULLABLE host, const PrAppBrows
     b->viewport = desc->viewport;
     b->pixelRatio = desc->pixelRatio;
     b->colorScheme = COREWEBVIEW2_PREFERRED_COLOR_SCHEME_AUTO;
-    if (desc->preferences != nullptr)
-        b->colorScheme = desc->preferences->colorScheme == PrAppColorScheme_Dark
-                             ? COREWEBVIEW2_PREFERRED_COLOR_SCHEME_DARK
-                             : COREWEBVIEW2_PREFERRED_COLOR_SCHEME_LIGHT;
+    if (desc->preferences != nullptr) {
+        bool dark = desc->preferences->colorScheme == PrAppColorScheme_Dark;
+        b->colorScheme = dark ? COREWEBVIEW2_PREFERRED_COLOR_SCHEME_DARK : COREWEBVIEW2_PREFERRED_COLOR_SCHEME_LIGHT;
+    }
     // The window is shown, so that the page renders, and never activates, so that the application keeps the focus.
     b->window = CreateWindowExW(WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE, kClassName, L"", WS_POPUP, 0, 0, 1, 1, nullptr,
-                                nullptr, instance, b);
+        nullptr, instance, b);
     if (b->window == nullptr) {
         prMemoryFree(b);
         return PrStatus_Io;
@@ -871,8 +863,7 @@ PrStatus win32BrowserCreate(PrApp* app, void* PR_NULLABLE host, const PrAppBrows
     b->creating = true;
     ComPtr<CoreWebView2EnvironmentOptions> options = Make<CoreWebView2EnvironmentOptions>();
     options->put_AdditionalBrowserArguments(kArguments);
-    HRESULT called = CreateCoreWebView2EnvironmentWithOptions(
-        nullptr, folder.data, options.Get(),
+    HRESULT called = CreateCoreWebView2EnvironmentWithOptions(nullptr, folder.data, options.Get(),
         Callback<ICoreWebView2CreateCoreWebView2EnvironmentCompletedHandler>(
             [b = hold(b)](HRESULT error, ICoreWebView2Environment* environment) -> HRESULT {
                 bool alive = unhold(b);
@@ -888,8 +879,7 @@ PrStatus win32BrowserCreate(PrApp* app, void* PR_NULLABLE host, const PrAppBrows
                 b->environment = environment;
                 createController(b);
                 return S_OK;
-            })
-            .Get());
+            }) .Get());
     folder.reset();
     if (FAILED(called)) {
         b->creating = false;

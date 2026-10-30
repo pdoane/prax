@@ -80,8 +80,7 @@ PrJsonValueIndex prJsonElement(const PrJson* document, PrJsonValueIndex array, u
 //
 //     for (PrJsonValueIndex i = prJsonFirst(d, a); i != kPrJsonMissing; i = prJsonAfter(d, a, i))
 PrJsonValueIndex prJsonFirst(const PrJson* document, PrJsonValueIndex container);
-PrJsonValueIndex prJsonAfter(const PrJson* document, PrJsonValueIndex container,
-                             PrJsonValueIndex index);
+PrJsonValueIndex prJsonAfter(const PrJson* document, PrJsonValueIndex container, PrJsonValueIndex index);
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Writers

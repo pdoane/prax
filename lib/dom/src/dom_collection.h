@@ -62,8 +62,7 @@ struct DomHtmlCollection {
 };
 
 // Creates a collection of the elements under `root` that `filter` accepts, with `text` as the filter's argument.
-PrDomHtmlCollection* domHtmlCollectionCreate(PrDomNode* root, DomCollectionFilter filter,
-                                             PrStringView text);
+PrDomHtmlCollection* domHtmlCollectionCreate(PrDomNode* root, DomCollectionFilter filter, PrStringView text);
 
 // Return the number of elements in the collection, and the element at `index` or null past the end.
 uint32_t domHtmlCollectionLength(const PrDomHtmlCollection* collection);
@@ -71,8 +70,7 @@ PrDomElement* PR_NULLABLE domHtmlCollectionItem(const PrDomHtmlCollection* colle
 
 // Returns the first element whose ID is `name` or, for an HTML element, whose name attribute is `name`. Returns null
 // for the empty string (dom/#dom-htmlcollection-nameditem-key).
-PrDomElement* PR_NULLABLE domHtmlCollectionNamedItem(const PrDomHtmlCollection* collection,
-                                                     PrStringView name);
+PrDomElement* PR_NULLABLE domHtmlCollectionNamedItem(const PrDomHtmlCollection* collection, PrStringView name);
 
 // Appends the collection's supported property names (dom/#ref-for-dfn-supported-property-names) to `out`: for each
 // element in order, its ID, then its name attribute if it is an HTML element, each name once and none empty. The views
@@ -145,19 +143,15 @@ PrStringView domTokenListItem(const PrDomTokenList* list, uint32_t index);
 bool domTokenListContains(const PrDomTokenList* list, PrStringView token);
 
 // Add each of `tokens` that the set lacks to its end, or remove each of `tokens` from the set.
-PrStatus domTokenListAdd(PrDomTokenList* list, const PrStringView* PR_NULLABLE tokens,
-                         uint32_t count);
-PrStatus domTokenListRemove(PrDomTokenList* list, const PrStringView* PR_NULLABLE tokens,
-                            uint32_t count);
+PrStatus domTokenListAdd(PrDomTokenList* list, const PrStringView* PR_NULLABLE tokens, uint32_t count);
+PrStatus domTokenListRemove(PrDomTokenList* list, const PrStringView* PR_NULLABLE tokens, uint32_t count);
 
 // Adds `token` if the set lacks it, and removes it otherwise (dom/#dom-domtokenlist-toggle). A non-null `force` adds
 // the token if true and removes it if false. Writes true if the token is present afterward.
-PrStatus domTokenListToggle(PrDomTokenList* list, PrStringView token, const bool* PR_NULLABLE force,
-                            bool* out);
+PrStatus domTokenListToggle(PrDomTokenList* list, PrStringView token, const bool* PR_NULLABLE force, bool* out);
 
 // Replaces `token` with `newToken` (dom/#dom-domtokenlist-replace). Writes true if `token` was present.
-PrStatus domTokenListReplace(PrDomTokenList* list, PrStringView token, PrStringView newToken,
-                             bool* out);
+PrStatus domTokenListReplace(PrDomTokenList* list, PrStringView token, PrStringView newToken, bool* out);
 
 // Returns the attribute's value, or the empty string if the element has no such attribute.
 PrStringView domTokenListValue(const PrDomTokenList* list);

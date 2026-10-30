@@ -24,9 +24,9 @@ extern "C" {
 struct PrFontHinter {
     void (*PR_NULLABLE destroy)(PrFontHinter* hinter);
     bool (*outline)(PrFontHinter* hinter, const PrFont* font, uint16_t glyph, float pixelsPerEm, PrFontHinting hinting,
-                    float embolden, PrPath* out);
+        float embolden, PrPath* out);
     bool (*advance)(PrFontHinter* hinter, const PrFont* font, uint16_t glyph, float pixelsPerEm, PrFontHinting hinting,
-                    float* out);
+        float* out);
     void (*PR_NULLABLE forget)(PrFontHinter* hinter, uint64_t fontId);
 };
 
@@ -60,12 +60,12 @@ void prFontHinterDestroy(PrFontHinter* PR_NULLABLE hinter);
 // that many ems on each side, after it is fitted. Returns false if the hinter fits no outline for the glyph, and
 // appends nothing; the font then draws its design outline. `hinting` is not None, and `pixelsPerEm` is above zero.
 bool prFontHinterOutline(PrFontHinter* hinter, const PrFont* font, uint16_t glyph, float pixelsPerEm,
-                         PrFontHinting hinting, float embolden, PrPath* out);
+    PrFontHinting hinting, float embolden, PrPath* out);
 
 // Gets the advance of the glyph fitted by `hinting` to `pixelsPerEm` pixels per em of the design, in pixels. Returns
 // false if the hinter fits no advance for the glyph.
 bool prFontHinterAdvance(PrFontHinter* hinter, const PrFont* font, uint16_t glyph, float pixelsPerEm,
-                         PrFontHinting hinting, float* out);
+    PrFontHinting hinting, float* out);
 
 // Drops what the hinter keeps for the font of `fontId` (prFontId), which is being freed.
 void prFontHinterForget(PrFontHinter* hinter, uint64_t fontId);

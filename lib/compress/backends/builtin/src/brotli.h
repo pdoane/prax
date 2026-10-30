@@ -40,7 +40,7 @@ void brotliDestroy(Brotli* PR_NULLABLE decoder);
 //
 // Bytes after the stream's end are left unread. Output may have been written before an Invalid or Truncated result.
 BrotliResult brotliRead(Brotli* decoder, PrByteView bytes, bool final, size_t* consumed,
-                        uint8_t* PR_NULLABLE output, size_t capacity, size_t* written);
+    uint8_t* PR_NULLABLE output, size_t capacity, size_t* written);
 
 } // namespace pr_impl
 

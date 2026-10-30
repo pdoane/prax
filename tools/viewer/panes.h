@@ -51,9 +51,9 @@ void releaseSlot(Slot& slot);
 // Makes the texture, or the slot's texture, `width` by `height` target pixels in `format`: Bgra8, or RgbaF16 for HDR,
 // like the swap chain's textures. Resizing a slot or changing its format releases what the slot held.
 PrStatus sizeTexture(PrGpuDevice* device, PrGpuTexture& texture, uint32_t width, uint32_t height,
-                     PrPixelFormat format = PrPixelFormat_Bgra8);
+    PrPixelFormat format = PrPixelFormat_Bgra8);
 PrStatus sizeSlot(PrGpuDevice* device, Slot& slot, uint32_t width, uint32_t height,
-                  PrPixelFormat format = PrPixelFormat_Bgra8);
+    PrPixelFormat format = PrPixelFormat_Bgra8);
 
 // Returns `count` premultiplied pixels of the color in `format`, Bgra8 or RgbaF16.
 std::vector<uint8_t> pixelsOf(PrColor color, size_t count, PrPixelFormat format = PrPixelFormat_Bgra8);
@@ -74,7 +74,7 @@ struct PaneOutput {
 // memory renders into pixels filled with the background, which are then written to the texture. The result's `ms` is
 // how long preparation or rendering took.
 Rendered renderSlot(Slot& slot, const std::vector<RendererConfig>& configs, uint32_t config, const PrDrawList* list,
-                    PrColor background, PrGpuCommands* commands, PaneOutput output);
+    PrColor background, PrGpuCommands* commands, PaneOutput output);
 
 // The time that documents draw at. Every pane reads the clock when it starts a render, and the panes of one document
 // start together. The clock holds a fixed time, or runs on from when it was set.

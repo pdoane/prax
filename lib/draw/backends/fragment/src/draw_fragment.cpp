@@ -373,11 +373,13 @@ uint32_t textureOfImage(Walk& w, const PrDrawImage* image, bool mipmapped = fals
     prDrawImageWritePixels(image, pixels, format, PrIVec2{0, 0});
     uint32_t texture = ++f->nextTexture;
     uint32_t index = w.b->requests.count;
-    request(w, FragmentTextureRequest{.op = FragmentTextureOp_Create,
-                                            .format = format,
-                                            .mipmapped = mipmapped,
-                                            .texture = texture,
-                                            .texels = PrPixelView{nullptr, stride, {width, height}}});
+    request(w, FragmentTextureRequest{
+        .op = FragmentTextureOp_Create,
+        .format = format,
+        .mipmapped = mipmapped,
+        .texture = texture,
+        .texels = PrPixelView{nullptr, stride, {width, height}},
+    });
     w.b->pending.push(PendingTexels{index, offset});
     f->imageIndex.insert(key, f->images.count);
     f->images.push(CachedImage{id, mipmapped, texture, f->build});
@@ -400,8 +402,8 @@ uint32_t rampOf(Walk& w, const PrDrawBrush* brush, PrColor color) {
     pieces.resize(first + prDrawGradientRampMaxPieces(brush->stopCount));
     Array<PrColor>& colors = w.rampColors;
     colors.resize(prDrawGradientRampMaxColors(brush->stopCount, kFragmentRampResolution));
-    uint32_t count = prDrawGradientRamp(brush, color, PrColorSpace_Srgb, kFragmentRampResolution,
-                                        pieces.data + first, colors.data);
+    uint32_t count =
+        prDrawGradientRamp(brush, color, PrColorSpace_Srgb, kFragmentRampResolution, pieces.data + first, colors.data);
     pieces.resize(first + count);
     colors.resize(prDrawRampColorCount(pieces.data + first, count));
     // The table holds the colors at its steps. A step that two pieces meet within, or at the end of, is marked with the
@@ -469,8 +471,7 @@ uint32_t tableEntry(Walk& w, uint32_t texture, uint32_t under, PrColor16 color) 
     uint32_t hash = uint32_t(hashFold(uint64_t(texture) | uint64_t(under) << 32, colorBits(color)));
     uint32_t found = w.f->tableIndex.find(hash, [&](uint32_t i) {
         const FragmentTexture& e = table.data[i];
-        return e.hostTexture == 0 && e.texture == texture && e.under == under
-               && colorBits(e.color) == colorBits(color);
+        return e.hostTexture == 0 && e.texture == texture && e.under == under && colorBits(e.color) == colorBits(color);
     });
     if (found != kHashMissing)
         return found + 1;
@@ -539,7 +540,7 @@ Ink fadedInk(Ink ink, float factor) {
 // Computes the paint of a brush times a color, for a command whose fill geometry has `bounds` in the current space, and
 // the premultiplied color that its instances carry. Returns false if it paints nothing.
 bool makePaint(Walk& w, const PrDrawBrush* PR_NULLABLE brush, PrColor color, PrRect bounds,
-               FragmentPaint* out, float premultiplied[4], const PrVec2* PR_NULLABLE unitPixels = nullptr);
+    FragmentPaint* out, float premultiplied[4], const PrVec2* PR_NULLABLE unitPixels = nullptr);
 
 uint32_t enterLayer(Walk& w, PrIRect box, bool clipped, bool precise = false);
 PrIRect leaveLayer(Walk& w);
@@ -565,25 +566,28 @@ void mipmapLayer(Walk& w, uint32_t texture);
 // of `tile` at `scale` pixels per unit along each axis. An image or a list sampled by Mipmap gets every mip level. A
 // host texture has the levels that the host gave it. Returns false if the source has no texture.
 bool sourceTexture(Walk& w, const PrDrawSource& source, PrRect tile, PrVec2 scale, PrDrawSampling sampling,
-                   SourceTexture* out) {
+        SourceTexture* out) {
     bool mipmapped = (sampling & PrDrawSamplingFlag_Kind) == PrDrawSampling_Mipmap;
     if (source.kind == PrDrawSourceKind_Texture) {
-        *out = SourceTexture{0, source.texture, float(source.extent.x), float(source.extent.y), source.rect,
-                             source.alpha};
+        *out = SourceTexture{
+            0, source.texture, float(source.extent.x), float(source.extent.y), source.rect,
+            source.alpha,
+        };
         return true;
     }
     if (source.kind == PrDrawSourceKind_Image) {
         uint32_t texture = textureOfImage(w, source.image, mipmapped);
-        *out = SourceTexture{texture, 0, float(prDrawImageExtent(source.image).x),
-                             float(prDrawImageExtent(source.image).y), source.rect, PrDrawAlpha_Premultiplied};
+        *out = SourceTexture{
+            texture, 0, float(prDrawImageExtent(source.image).x),
+            float(prDrawImageExtent(source.image).y), source.rect, PrDrawAlpha_Premultiplied,
+        };
         return texture != 0;
     }
-    if (source.kind != PrDrawSourceKind_List || source.list == nullptr || !(scale.x > 0) || !(scale.y > 0)
-        || !isFiniteF32(scale.x) || !isFiniteF32(scale.y))
+    if (source.kind != PrDrawSourceKind_List || source.list == nullptr || !(scale.x > 0) || !(scale.y > 0) ||
+            !isFiniteF32(scale.x) || !isFiniteF32(scale.y))
         return false;
     const PrRect& area = source.rect;
-    PrUVec2 layer =
-        prDrawLayerExtent(PrVec2{prRectWidth(tile), prRectHeight(tile)}, scale, kListTextureMaxSize);
+    PrUVec2 layer = prDrawLayerExtent(PrVec2{prRectWidth(tile), prRectHeight(tile)}, scale, kListTextureMaxSize);
     if (layer.x == 0 || !(area.right > area.left && area.bottom > area.top))
         return false;
     float width = float(layer.x);
@@ -594,8 +598,7 @@ bool sourceTexture(Walk& w, const PrDrawSource& source, PrRect tile, PrVec2 scal
     w.composite = PrDrawComposite_SourceOver;
     w.blendMode = PrDrawBlendMode_Normal;
     uint32_t texture = enterLayer(w, PrIRect{0, 0, int32_t(width), int32_t(height)}, false);
-    w.transforms.push(prDrawTransformFromAffine2(prAffine2Concat(
-        prAffine2Translate(PrVec2{-area.left, -area.top}),
+    w.transforms.push(prDrawTransformFromAffine2(prAffine2Concat(prAffine2Translate(PrVec2{-area.left, -area.top}),
         prAffine2Scale(PrVec2{width / prRectWidth(area), height / prRectHeight(area)}))));
     runCommands(w, prDrawListCommands(source.list), prDrawListCommandCount(source.list));
     w.transforms.pop();
@@ -617,15 +620,14 @@ bool sourceTexture(Walk& w, const PrDrawSource& source, PrRect tile, PrVec2 scal
 // that is filtered on its own (PrDrawTileFlag_Clamped) is read as a tile that extends by Pad. The shader leaves the
 // gaps between such copies empty.
 FragmentImageRead imageRead(PrDrawSampling sampling, PrDrawAlpha alpha, const PrDrawTiles& tiles,
-                            PrRect texels, float width, float height) {
+        PrRect texels, float width, float height) {
     PrDrawSampling kind = PrDrawSampling(sampling & PrDrawSamplingFlag_Kind);
     if (kind == PrDrawSampling_Nearest)
         return FragmentImageRead_Sampler;
     bool gutter = (sampling & PrDrawSamplingFlag_Gutter) != 0;
     bool clamped = (tiles.flags & PrDrawTileFlag_Clamped) != 0;
     auto copied = [&](PrDrawExtend mode) -> PrDrawExtend {
-        return clamped && (mode == PrDrawExtend_Repeat || mode == PrDrawExtend_Reflect) ? PrDrawExtend(PrDrawExtend_Pad)
-                                                                                         : mode;
+        return clamped && (mode == PrDrawExtend_Repeat || mode == PrDrawExtend_Reflect) ? PrDrawExtend(PrDrawExtend_Pad) : mode;
     };
     const PrDrawExtend modes[2] = {copied(tiles.x), copied(tiles.y)};
     const bool spaced[2] = {!clamped && tiles.spacing.x > 0, !clamped && tiles.spacing.y > 0};
@@ -655,7 +657,7 @@ uint32_t tableOfSource(Walk& w, const SourceTexture& source) {
 }
 
 bool makePaint(Walk& w, const PrDrawBrush* PR_NULLABLE brush, PrColor color, PrRect bounds,
-               FragmentPaint* out, float premultiplied[4], const PrVec2* PR_NULLABLE unitPixels) {
+        FragmentPaint* out, float premultiplied[4], const PrVec2* PR_NULLABLE unitPixels) {
     FragmentPaint& r = *out;
     r = plainPaint(w);
     float opacity = opacityOf(w);
@@ -708,8 +710,8 @@ bool makePaint(Walk& w, const PrDrawBrush* PR_NULLABLE brush, PrColor color, PrR
                 return false;
             r.kind = FragmentPaintKind_Image;
             r.sampling = brush->image.sampling & PrDrawSamplingFlag_Kind;
-            r.read = imageRead(brush->image.sampling, texture.alpha, tiles, texture.texels, texture.width,
-                               texture.height);
+            r.read =
+                imageRead(brush->image.sampling, texture.alpha, tiles, texture.texels, texture.width, texture.height);
             r.alpha = texture.alpha;
             r.limit = brush->image.limit;
             r.tileX = tiles.x;
@@ -729,8 +731,10 @@ bool makePaint(Walk& w, const PrDrawBrush* PR_NULLABLE brush, PrColor color, PrR
         }
         case PrDrawBrushKind_Radial: {
             r.kind = FragmentPaintKind_Radial;
-            float g[6] = {brush->radial.end.x, brush->radial.end.y, brush->radial.endRadius,
-                          brush->radial.start.x,  brush->radial.start.y,  brush->radial.startRadius};
+            float g[6] = {
+                brush->radial.end.x, brush->radial.end.y, brush->radial.endRadius,
+                brush->radial.start.x,  brush->radial.start.y,  brush->radial.startRadius,
+            };
             memCopy(r.gradient, g, sizeof(g));
             break;
         }
@@ -742,8 +746,10 @@ bool makePaint(Walk& w, const PrDrawBrush* PR_NULLABLE brush, PrColor color, PrR
         }
         default: {
             r.kind = FragmentPaintKind_Diamond;
-            float g[6] = {brush->diamond.center.x, brush->diamond.center.y, brush->diamond.radii.x,
-                          brush->diamond.radii.y,  0,                        0};
+            float g[6] = {
+                brush->diamond.center.x, brush->diamond.center.y, brush->diamond.radii.x,
+                brush->diamond.radii.y,  0,                        0,
+            };
             memCopy(r.gradient, g, sizeof(g));
             break;
         }
@@ -814,8 +820,7 @@ void drawSolid(Walk& w, PrIRect box, const Ink& ink) {
 // Adds an instance of a shape kind over `bounds` in local space, which `toDevice` maps to target pixels. The instance
 // reads the record from the values.
 template <typename Record>
-void drawShaped(Walk& w, FragmentCoverage kind, PrAffine2 toDevice, PrRect bounds, const Record& record,
-                const Ink& ink) {
+void drawShaped(Walk& w, FragmentCoverage kind, PrAffine2 toDevice, PrRect bounds, const Record& record, const Ink& ink) {
     static_assert(sizeof(Record) % sizeof(float) == 0);
     FragmentInstance i{};
     i.transform = toDevice;
@@ -917,8 +922,7 @@ float toleranceOf(const Walk& w, bool antialias) {
 
 // Flattens the path into `out` in target pixels, under the current transform, within `tolerance`, and returns `out`. A
 // fill's curves keep their area.
-const PrPathPolyline& land(Walk& w, const PrPath* path, float tolerance, PrPathFlattening flattening,
-                           PrPathPolyline& out) {
+const PrPathPolyline& land(Walk& w, const PrPath* path, float tolerance, PrPathFlattening flattening, PrPathPolyline& out) {
     const PrDrawTransform& x = w.transforms.last();
     prPathPolylineClear(&out);
     prPathFlatten(path, x.affine, tolerance, flattening, &out);
@@ -976,7 +980,7 @@ void strokePath(Walk& w, const PrPath* shape, const PrDrawStroke* stroke, bool a
         PrPathPolylineOp op =
             s.align == PrDrawStrokeAlign_Inside ? PrPathPolylineOp_Intersect : PrPathPolylineOp_Difference;
         prPathPolylineCombine(&f->aligned, PrPathFillRule_NonZero, &f->strokeRegion, PrPathFillRule_NonZero, op,
-                          &f->combined);
+            &f->combined);
         fillDevice(w, f->combined, PrPathFillRule_NonZero, antialias, ink);
     }
     if (f->fill.pointCount != 0)
@@ -1069,10 +1073,8 @@ bool localShapeOf(const Walk& w, const PrDrawCommand& c, LocalShape* out) {
             float r = c.capsule.radius;
             if (!(r > 0))
                 return false;
-            out->toDevice = prAffine2Concat(
-                prAffine2Concat(prAffine2Rotate(atan2F32(d.y, d.x)),
-                                prAffine2Translate(c.capsule.start)),
-                x.affine);
+            out->toDevice = prAffine2Concat(prAffine2Concat(prAffine2Rotate(atan2F32(d.y, d.x)),
+                prAffine2Translate(c.capsule.start)), x.affine);
             out->rect = PrRect{-r, -r, length + r, r};
             for (float& radius : out->radii)
                 radius = r;
@@ -1081,10 +1083,8 @@ bool localShapeOf(const Walk& w, const PrDrawCommand& c, LocalShape* out) {
         case PrDrawCommandKind_Ellipse: {
             // The ellipse's own frame is turned by its rotation about its center.
             PrVec2 r = c.ellipse.radii;
-            out->toDevice = prAffine2Concat(
-                prAffine2Concat(prAffine2Rotate(c.ellipse.rotation),
-                                prAffine2Translate(c.ellipse.center)),
-                x.affine);
+            out->toDevice = prAffine2Concat(prAffine2Concat(prAffine2Rotate(c.ellipse.rotation),
+                prAffine2Translate(c.ellipse.center)), x.affine);
             out->rect = PrRect{-r.x, -r.y, r.x, r.y};
             PrCorner round = prCornerRound(r);
             return fittedRadii(PrCornerRect{out->rect, {round, round, round, round}}, out->radii);
@@ -1116,8 +1116,7 @@ void drawLocalShape(Walk& w, const LocalShape& shape, const Ink& ink) {
             w.b->values.append(values, 4);
         return;
     }
-    drawShaped(w, FragmentCoverage_Shape, shape.toDevice, grownByPixels(shape.rect, shape.toDevice, 1),
-               recordOf(shape), ink);
+    drawShaped(w, FragmentCoverage_Shape, shape.toDevice, grownByPixels(shape.rect, shape.toDevice, 1), recordOf(shape), ink);
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -1125,7 +1124,7 @@ void drawLocalShape(Walk& w, const LocalShape& shape, const Ink& ink) {
 
 // Draws the outer rounded rectangle less the inner one, if there is one, within the three half planes, or outside them.
 void drawRing(Walk& w, PrAffine2 toDevice, const InstanceCornerRect& outer, const InstanceCornerRect* PR_NULLABLE inner,
-              const float planes[9], bool outside, const Ink& ink) {
+        const float planes[9], bool outside, const Ink& ink) {
     FragmentRing ring{};
     ring.outer = recordOf(outer);
     // Without an inner rectangle, the record uses one far away, which covers nothing.
@@ -1164,11 +1163,13 @@ bool drawSidedRing(Walk& w, const PrDrawCommand& c) {
     PrCornerRect within = prDrawBorderContour(&border, 1);
     ring.outer = recordOf(outer);
     // Without an inner rectangle, the record uses one far away, which covers nothing.
-    ring.inner = recordOf(prRectIsEmpty(within.rect) ? InstanceCornerRect{PrRect{1e9f, 1e9f, 1e9f, 1e9f}, {}}
-                                                     : fittedCorners(within));
+    InstanceCornerRect inner = InstanceCornerRect{PrRect{1e9f, 1e9f, 1e9f, 1e9f}, {}};
+    if (!prRectIsEmpty(within.rect))
+        inner = fittedCorners(within);
+    ring.inner = recordOf(inner);
     const PrAffine2& toDevice = w.transforms.last().affine;
     drawShaped(w, FragmentCoverage_SidedRing, toDevice, grownByPixels(outer.rect, toDevice, 1), ring,
-               inkOf(w, paint, ring.colors[0][1]));
+        inkOf(w, paint, ring.colors[0][1]));
     return true;
 }
 
@@ -1229,8 +1230,10 @@ bool drawBorderRings(Walk& w, const PrDrawCommand& c) {
         const PrDrawBorderSide& s = border.sides[side];
         widths[side] = s.width > 0 && prDrawBorderStylePaints(s.style) ? s.width : 0;
     }
-    PrRect inner{rect.left + widths[PrRectSide_Left], rect.top + widths[PrRectSide_Top],
-                 rect.right - widths[PrRectSide_Right], rect.bottom - widths[PrRectSide_Bottom]};
+    PrRect inner{
+        rect.left + widths[PrRectSide_Left], rect.top + widths[PrRectSide_Top],
+        rect.right - widths[PrRectSide_Right], rect.bottom - widths[PrRectSide_Bottom],
+    };
     // Where the bands of opposite sides part. Each side's band reaches inward by its width or by its corners' radii,
     // whichever is greater. Bands that overlap there draw nothing here.
     const PrCornerRect fittedShape = prCornerRectFit(border.shape);
@@ -1299,8 +1302,8 @@ bool strokeRingOf(const Walk& w, const PrDrawCommand& c, StrokeRing* out) {
     const PrDrawStroke& stroke = *c.stroke;
     const PrPathStroke& s = stroke.shape;
     LocalShape shape{};
-    if (!c.antialias || !(s.width > 0) || (s.dashes != nullptr && s.dashCount != 0)
-        || (s.profile != nullptr && s.profileCount != 0) || !localShapeOf(w, c, &shape))
+    if (!c.antialias || !(s.width > 0) || (s.dashes != nullptr && s.dashCount != 0) ||
+            (s.profile != nullptr && s.profileCount != 0) || !localShapeOf(w, c, &shape))
         return false;
     // Offsetting keeps the shape of a circular corner, and of no other corner.
     bool square = false;
@@ -1327,9 +1330,8 @@ bool strokeRingOf(const Walk& w, const PrDrawCommand& c, StrokeRing* out) {
         out->fade = width * scale;
         width = 1 / scale;
     }
-    float outward = stroke.align == PrDrawStrokeAlign_Inside    ? 0
-                    : stroke.align == PrDrawStrokeAlign_Outside ? width
-                                                                : width / 2;
+    float outward =
+        stroke.align == PrDrawStrokeAlign_Inside    ? 0 : stroke.align == PrDrawStrokeAlign_Outside ? width : width / 2;
     float inward = width - outward;
     const InstanceCornerRect& base = shape;
     out->toDevice = shape.toDevice;
@@ -1345,9 +1347,8 @@ bool strokeRingOf(const Walk& w, const PrDrawCommand& c, StrokeRing* out) {
 bool lineShapeOf(const Walk& w, const PrDrawCommand& c, LocalShape* out, float* fade) {
     const PrDrawTransform& x = w.transforms.last();
     const PrPathStroke& s = c.stroke->shape;
-    if (!c.antialias || !(s.width > 0) || (s.dashes != nullptr && s.dashCount != 0)
-        || (s.profile != nullptr && s.profileCount != 0) || s.startCap != s.endCap
-        || s.startCap == PrPathCap_Triangle)
+    if (!c.antialias || !(s.width > 0) || (s.dashes != nullptr && s.dashCount != 0) ||
+            (s.profile != nullptr && s.profileCount != 0) || s.startCap != s.endCap || s.startCap == PrPathCap_Triangle)
         return false;
     PrVec2 d{c.line.end.x - c.line.start.x, c.line.end.y - c.line.start.y};
     float length = sqrtF32(d.x * d.x + d.y * d.y);
@@ -1355,8 +1356,7 @@ bool lineShapeOf(const Walk& w, const PrDrawCommand& c, LocalShape* out, float* 
         return false;
     *out = LocalShape{};
     out->toDevice = prAffine2Concat(prAffine2Concat(prAffine2Rotate(atan2F32(d.y, d.x)),
-                                                    prAffine2Translate(c.line.start)),
-                                    x.affine);
+        prAffine2Translate(c.line.start)), x.affine);
     float scale = prAffine2MaxScale(out->toDevice);
     bool device = c.stroke->nonScaling;
     if (!(scale > 0) || (device && !prAffine2IsSimilarity(out->toDevice)))
@@ -1404,7 +1404,7 @@ bool clipShapeOf(const Walk& w, const PrDrawCommand& c, FragmentClipShape* out, 
             // The ellipse's own frame is centered on the ellipse and turned back by its rotation.
             PrVec2 r = c.ellipse.radii;
             PrAffine2 local = prAffine2Concat(prAffine2Translate(-c.ellipse.center),
-                                              prAffine2Rotate(-c.ellipse.rotation));
+                prAffine2Rotate(-c.ellipse.rotation));
             PrCorner round = prCornerRound(r);
             PrCornerRect rect{PrRect{-r.x, -r.y, r.x, r.y}, {round, round, round, round}};
             prPathClear(w.f->region);
@@ -1531,8 +1531,10 @@ bool mapStroke(Walk& w, const PrDrawCommand& c, StrokeMapping* out) {
                 continue;
             float segment[6] = {a.x, a.y, b.x, b.y, along, length};
             data.append(segment, 6);
-            bounds = PrRect{minF32(bounds.left, minF32(a.x, b.x)), minF32(bounds.top, minF32(a.y, b.y)),
-                            maxF32(bounds.right, maxF32(a.x, b.x)), maxF32(bounds.bottom, maxF32(a.y, b.y))};
+            bounds = PrRect{
+                minF32(bounds.left, minF32(a.x, b.x)), minF32(bounds.top, minF32(a.y, b.y)),
+                maxF32(bounds.right, maxF32(a.x, b.x)), maxF32(bounds.bottom, maxF32(a.y, b.y)),
+            };
             along += span;
         }
     }
@@ -1552,9 +1554,10 @@ bool mapStroke(Walk& w, const PrDrawCommand& c, StrokeMapping* out) {
     float across = maxF32(stroke.shape.width * scale, 1);
     uint32_t map = w.b->maps.count + 1;
     w.b->maps.push(m);
-    *out = StrokeMapping{map, unitToBrush,
-                         stroke.mapping == PrDrawStrokeMapping_Along ? PrVec2{longest, across}
-                                                                     : PrVec2{across, longest}};
+    *out = StrokeMapping{
+        map, unitToBrush,
+        stroke.mapping == PrDrawStrokeMapping_Along ? PrVec2{longest, across} : PrVec2{across, longest},
+    };
     return true;
 }
 
@@ -1592,7 +1595,7 @@ void drawShape(Walk& w, const PrDrawCommand& c) {
     if (c.stroke != nullptr && !mapped && c.kind != PrDrawCommandKind_Line && strokeRingOf(w, c, &ring)) {
         float none[9] = {};
         drawRing(w, ring.toDevice, ring.outer, ring.hasInner ? &ring.inner : nullptr, none, false,
-                 fadedInk(inkOf(w, r, color), ring.fade));
+            fadedInk(inkOf(w, r, color), ring.fade));
         return;
     }
     if (mapped) {
@@ -1616,7 +1619,7 @@ struct BorderDraw {
 };
 
 void drawBorderPiece(void* PR_NULLABLE context, const PrDrawBorderPiece* piece, const PrPathPolyline* shape,
-                     const PrPathPolyline* PR_NULLABLE cut) {
+        const PrPathPolyline* PR_NULLABLE cut) {
     BorderDraw& d = *static_cast<BorderDraw*>(context);
     Walk& w = *d.w;
     const PrDrawCommand& c = *d.command;
@@ -1637,7 +1640,7 @@ void drawBorderPiece(void* PR_NULLABLE context, const PrDrawBorderPiece* piece, 
     prPathPolylineAddPolyline(&w.f->cut, cut, x.affine);
     prPathPolylineClear(&w.f->combined);
     prPathPolylineCombine(&w.f->polyline, piece->rule, &w.f->cut, PrPathFillRule_NonZero, PrPathPolylineOp_Intersect,
-                      &w.f->combined);
+        &w.f->combined);
     fillDevice(w, w.f->combined, PrPathFillRule_NonZero, c.antialias, ink);
 }
 
@@ -1717,11 +1720,12 @@ void drawShadow(Walk& w, const PrDrawCommand& c) {
     values.sigma = sigma * scale < 0.5f ? 0 : sigma;
     values.inner = kind == PrDrawShadowKind_Inner ? 1 : 0;
     float reach = kShadowReach * sigma;
-    PrRect bounds =
-        kind == PrDrawShadowKind_Inner ? caster : PrRect{shape.left - reach, shape.top - reach, shape.right + reach,
-                                                         shape.bottom + reach};
-    drawShaped(w, FragmentCoverage_Shadow, shifted, grownByPixels(bounds, shifted, 1), values,
-               inkOf(w, r, color));
+    PrRect bounds;
+    if (kind == PrDrawShadowKind_Inner)
+        bounds = caster;
+    else
+        bounds = PrRect{shape.left - reach, shape.top - reach, shape.right + reach, shape.bottom + reach};
+    drawShaped(w, FragmentCoverage_Shadow, shifted, grownByPixels(bounds, shifted, 1), values, inkOf(w, r, color));
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -1734,20 +1738,18 @@ void drawNineSlice(Walk& w, const PrDrawCommand& c) {
     const PrRect& area = source.rect;
     const PrDrawTransform& x = w.transforms.last();
     uint32_t count = prDrawNineSliceRects(c.nineSlice.slices, PrVec2{prRectWidth(area), prRectHeight(area)},
-                                          c.nineSlice.destination, nullptr, 0);
+        c.nineSlice.destination, nullptr, 0);
     if (count == 0 || prIRectIsEmpty(clipOf(w).box))
         return;
     Array<PrDrawImageRect> rects;
     rects.reserve(count);
     rects.count = prDrawNineSliceRects(c.nineSlice.slices, PrVec2{prRectWidth(area), prRectHeight(area)},
-                                       c.nineSlice.destination, rects.data, count);
+        c.nineSlice.destination, rects.data, count);
     float most = 0;
     for (uint32_t i = 0; i < rects.count; ++i) {
         const PrDrawImageRect& p = rects.data[i];
-        most = maxF32(most, prRectWidth(p.destination)
-                                / maxF32(prRectWidth(p.source), 1e-6f));
-        most = maxF32(most, prRectHeight(p.destination)
-                                / maxF32(prRectHeight(p.source), 1e-6f));
+        most = maxF32(most, prRectWidth(p.destination) / maxF32(prRectWidth(p.source), 1e-6f));
+        most = maxF32(most, prRectHeight(p.destination) / maxF32(prRectHeight(p.source), 1e-6f));
     }
     float device = prAffine2MaxScale(x.affine);
     SourceTexture texture{};
@@ -1757,15 +1759,14 @@ void drawNineSlice(Walk& w, const PrDrawCommand& c) {
     PrAffine2 inverse{};
     bool placed = prAffine2Invert(x.affine, &inverse);
     PrMatrix3 fromDevice = prMatrix3FromAffine2(inverse);
-    if (placed && sourceTexture(w, source, area, PrVec2{device * most, device * most}, c.sampling, &texture)
-        && makePaint(w, nullptr, c.color, c.nineSlice.destination, &r, color)) {
+    if (placed && sourceTexture(w, source, area, PrVec2{device * most, device * most}, c.sampling, &texture) &&
+            makePaint(w, nullptr, c.color, c.nineSlice.destination, &r, color)) {
         r.brush = fromDevice;
         r.kind = FragmentPaintKind_Image;
         r.sampling = c.sampling & PrDrawSamplingFlag_Kind;
         // Each piece clamps to its texels, which pad as a tile does.
         PrDrawTiles padded{.tile = {0, 0, 1, 1}, .x = PrDrawExtend_Pad, .y = PrDrawExtend_Pad};
-        r.read = imageRead(c.sampling, texture.alpha, padded, PrRect{0, 0, 0, 0},
-                           texture.width, texture.height);
+        r.read = imageRead(c.sampling, texture.alpha, padded, PrRect{0, 0, 0, 0}, texture.width, texture.height);
         r.alpha = texture.alpha;
         r.pieces = w.b->pieces.count;
         r.pieceCount = rects.count;
@@ -1778,9 +1779,13 @@ void drawNineSlice(Walk& w, const PrDrawCommand& c) {
             const PrDrawImageRect& piece = rects.data[i];
             const PrRect& d = piece.destination;
             const PrRect& t = texture.texels;
-            FragmentPiece p{{d.left, d.top, d.right, d.bottom},
-                                  {t.left + piece.source.left * kx, t.top + piece.source.top * ky,
-                                   t.left + piece.source.right * kx, t.top + piece.source.bottom * ky}};
+            FragmentPiece p{
+                {d.left, d.top, d.right, d.bottom},
+                {
+                    t.left + piece.source.left * kx, t.top + piece.source.top * ky,
+                    t.left + piece.source.right * kx, t.top + piece.source.bottom * ky,
+                },
+            };
             w.b->pieces.push(p);
             prPathAddRect(w.f->shape, d);
         }
@@ -1816,8 +1821,10 @@ void writePixels(Walk& w, const PrDrawCommand& c) {
     everywhere.rect = PrRect{float(into.left), float(into.top), float(into.right), float(into.bottom)};
     everywhere.whole = true;
     w.clips.push(everywhere);
-    PrIRect box{c.writePixels.origin.x, c.writePixels.origin.y, c.writePixels.origin.x + int32_t(width),
-                    c.writePixels.origin.y + int32_t(height)};
+    PrIRect box{
+        c.writePixels.origin.x, c.writePixels.origin.y, c.writePixels.origin.x + int32_t(width),
+        c.writePixels.origin.y + int32_t(height),
+    };
     drawSolid(w, box, ink);
     w.clips.pop();
 }
@@ -1900,8 +1907,8 @@ void drawGlyphs(Walk& w, const PrDrawCommand& c) {
     for (uint32_t i = 0; i < run.glyphCount; ++i) {
         if (c.stroke == nullptr) {
             float pixelsPerEm = prDrawGlyphPixelsPerEm(&run, i, w.transforms.last().affine);
-            PrDrawList* drawn = prDrawGlyphCacheList(w.f->lists, run.font, run.glyphs[i].id, pixelsPerEm,
-                                                          &run.palette, foreground);
+            PrDrawList* drawn =
+                prDrawGlyphCacheList(w.f->lists, run.font, run.glyphs[i].id, pixelsPerEm, &run.palette, foreground);
             if (drawn != nullptr) {
                 PrDrawGroup group{};
                 PrDrawCommand commands[kPrDrawGlyphMaxCommands];
@@ -1931,8 +1938,7 @@ void drawGlyphs(Walk& w, const PrDrawCommand& c) {
 void beginPass(Walk& w, uint32_t layer, bool clear) {
     if (w.b->passes.count != 0) {
         FragmentPass& last = w.b->passes.last();
-        if (last.count == 0 && last.filter == 0 && !last.beneath && !last.mipmaps
-            && (!last.clear || last.layer == layer)) {
+        if (last.count == 0 && last.filter == 0 && !last.beneath && !last.mipmaps && (!last.clear || last.layer == layer)) {
             last.clear = last.clear || clear;
             last.layer = layer;
             last.first = w.b->instances.count;
@@ -1966,10 +1972,12 @@ uint32_t enterLayer(Walk& w, PrIRect box, bool clipped, bool precise) {
     uint32_t texture = ++w.f->nextTexture;
     uint32_t layer = w.b->layers.count + 1;
     w.f->layerIndex.insert(texture, w.b->layers.count);
-    w.b->layers.push(FragmentLayer{.texture = texture,
-                                         .origin = {box.left, box.top},
-                                         .extent = {uint32_t(prIRectWidth(box)), uint32_t(prIRectHeight(box))},
-                                         .precise = precise || w.extended});
+    w.b->layers.push(FragmentLayer{
+        .texture = texture,
+        .origin = {box.left, box.top},
+        .extent = {uint32_t(prIRectWidth(box)), uint32_t(prIRectHeight(box))},
+        .precise = precise || w.extended,
+    });
     w.layers.push(layer);
     w.knockouts.push(false);
     w.tracks.push(false);
@@ -2051,8 +2059,7 @@ bool beneathDrawn(const Walk& w) {
 
 // Returns true if a color lies beneath the target. The frame draws that color itself.
 bool beneathColored(const Walk& w) {
-    return w.beneath != nullptr && w.beneath->kind == PrDrawBeneathKind_Color
-           && prFloat16ToFloat(w.beneath->color.a) > 0;
+    return w.beneath != nullptr && w.beneath->kind == PrDrawBeneathKind_Color && prFloat16ToFloat(w.beneath->color.a) > 0;
 }
 
 // Draws the color that lies beneath the target over the box of the current layer.
@@ -2072,8 +2079,7 @@ uint32_t beneathTexture(Walk& w) {
         w.b->beneath = w.b->layers.count + 1;
         w.f->layerIndex.insert(texture, w.b->layers.count);
         w.b->layers.push(
-            FragmentLayer{.texture = texture,
-                                .extent = {uint32_t(w.target.right), uint32_t(w.target.bottom)}});
+            FragmentLayer{.texture = texture, .extent = {uint32_t(w.target.right), uint32_t(w.target.bottom)}});
     }
     return w.b->layers.data[w.b->beneath - 1].texture;
 }
@@ -2232,7 +2238,7 @@ FragmentFilter stepOf(FragmentFilterOp op, uint32_t flags = 0) {
 
 // Draws the step into a new precise layer over the run's box, over `region` within it, and returns the layer's texture.
 uint32_t filterStep(Walk& w, const FilterRun& run, PrIRect region, FragmentFilter step, uint32_t a,
-                    uint32_t b = 0, uint32_t c = 0) {
+        uint32_t b = 0, uint32_t c = 0) {
     uint32_t texture = enterLayer(w, run.box, false, true);
     region = prIRectIntersect(region, run.box);
     if (!prIRectIsEmpty(region)) {
@@ -2279,7 +2285,7 @@ PrIRect inputRegion(const FilterRun& run, int32_t which) {
 // Blurs the layer by a Gaussian with sigmas in target pixels, as two steps, reading beyond `edges` by the edge mode.
 // `first` holds the flags for the first step's reading, and `last` the flags for the second step's writing.
 uint32_t blurSteps(Walk& w, const FilterRun& run, PrIRect region, uint32_t in, float sigmaX, float sigmaY,
-                   PrImageEdgeMode edge, PrIRect edges, uint32_t first, uint32_t last) {
+        PrImageEdgeMode edge, PrIRect edges, uint32_t first, uint32_t last) {
     FragmentFilter x = stepOf(FragmentFilterOp_BlurX, first);
     x.values[0] = maxF32(sigmaX, 0);
     x.values[1] = float(edge);
@@ -2294,7 +2300,7 @@ uint32_t blurSteps(Walk& w, const FilterRun& run, PrIRect region, uint32_t in, f
 
 // Takes each channel's largest or smallest value within radii in target pixels, as two steps.
 uint32_t morphologySteps(Walk& w, const FilterRun& run, PrIRect region, uint32_t in, float radiusX, float radiusY,
-                         PrDrawMorphologyOp op) {
+        PrDrawMorphologyOp op) {
     FragmentFilter x = stepOf(FragmentFilterOp_MorphologyX);
     x.values[0] = minF32(floorF32(maxF32(radiusX, 0)), 256);
     x.values[1] = float(op);
@@ -2401,8 +2407,10 @@ uint32_t filterNode(Walk& w, FilterRun& run, const PrDrawFilterNode& node, PrIRe
             for (const PrDrawTransfer& t : node.transfer) {
                 bool tabled = t.kind == PrDrawTransferKind_Table || t.kind == PrDrawTransferKind_Discrete;
                 uint32_t count = tabled ? t.valueCount : 0;
-                float head[7] = {float(t.kind), t.slope,  t.intercept, t.amplitude,
-                                 t.exponent,    t.offset, float(count)};
+                float head[7] = {
+                    float(t.kind), t.slope,  t.intercept, t.amplitude,
+                    t.exponent,    t.offset, float(count),
+                };
                 data.append(head, 7);
                 if (count != 0)
                     data.append(t.values, count);
@@ -2414,8 +2422,8 @@ uint32_t filterNode(Walk& w, FilterRun& run, const PrDrawFilterNode& node, PrIRe
         case PrDrawFilterKind_Composite:
         case PrDrawFilterKind_Blend: {
             FragmentFilter step = stepOf(FragmentFilterOp_Composite, flags);
-            PrDrawComposite composite =
-                node.kind == PrDrawFilterKind_Composite ? node.composite : PrDrawComposite(PrDrawComposite_SourceOver);
+            PrDrawComposite composite;
+            composite = node.kind == PrDrawFilterKind_Composite ? node.composite : PrDrawComposite_SourceOver;
             step.values[0] = float(composite);
             step.values[1] = float(node.kind == PrDrawFilterKind_Blend ? node.blend : PrDrawBlendMode_Normal);
             return filterStep(w, run, region, step, in(0), in(1));
@@ -2432,7 +2440,7 @@ uint32_t filterNode(Walk& w, FilterRun& run, const PrDrawFilterNode& node, PrIRe
                 uint32_t stepFlags = firstIn | (k + 1 == node.merge.inputCount ? lastOut : 0);
                 FragmentFilter step = stepOf(FragmentFilterOp_Over, stepFlags);
                 made = filterStep(w, run, k + 1 == node.merge.inputCount ? region : run.box, step,
-                                  filterInput(w, run, node.merge.inputs[k]), made);
+                    filterInput(w, run, node.merge.inputs[k]), made);
             }
             if (node.merge.inputCount == 0)
                 return filterStep(w, run, region, stepOf(FragmentFilterOp_Flood), 0);
@@ -2440,7 +2448,7 @@ uint32_t filterNode(Walk& w, FilterRun& run, const PrDrawFilterNode& node, PrIRe
         }
         case PrDrawFilterKind_Blur:
             return blurSteps(w, run, region, in(0), node.blur.sigma.x * sx, node.blur.sigma.y * sy, node.blur.edge,
-                             inputRegion(run, node.inputs[0]), firstIn, lastOut);
+                inputRegion(run, node.inputs[0]), firstIn, lastOut);
         case PrDrawFilterKind_ProgressiveBlur: {
             // The brush's alpha selects a sigma. Mixing between levels of blur that double in sigma reaches that sigma.
             uint32_t source = in(0);
@@ -2459,7 +2467,7 @@ uint32_t filterNode(Walk& w, FilterRun& run, const PrDrawFilterNode& node, PrIRe
                 float high = 1 / float(1u << (kProgressiveLevels - 1 - i));
                 float sigma = node.progressive.sigma * high;
                 uint32_t level = blurSteps(w, run, run.box, source, sigma * sx, sigma * sy, PrImageEdgeMode_None,
-                                           run.box, firstIn, lastOut);
+                    run.box, firstIn, lastOut);
                 FragmentFilter step = stepOf(FragmentFilterOp_Mix, flags);
                 step.values[0] = low;
                 step.values[1] = high;
@@ -2470,15 +2478,17 @@ uint32_t filterNode(Walk& w, FilterRun& run, const PrDrawFilterNode& node, PrIRe
         }
         case PrDrawFilterKind_Morphology: {
             uint32_t made = morphologySteps(w, run, run.box, in(0), node.morphology.radius.x * sx,
-                                            node.morphology.radius.y * sy, node.morphology.op);
+                node.morphology.radius.y * sy, node.morphology.op);
             return filterStep(w, run, region, stepOf(FragmentFilterOp_Offset), made);
         }
         case PrDrawFilterKind_Convolution: {
             const PrDrawFilterConvolution& k = node.convolution;
             FragmentFilter step = stepOf(FragmentFilterOp_Convolution, flags);
-            float values[12] = {float(k.extent.x), float(k.extent.y),     k.divisor,
-                                k.bias,           float(k.target.x),  float(k.target.y),
-                                float(k.edge),    k.preserveAlpha ? 1.0f : 0.0f};
+            float values[12] = {
+                float(k.extent.x), float(k.extent.y),     k.divisor,
+                k.bias,           float(k.target.x),  float(k.target.y),
+                float(k.edge),    k.preserveAlpha ? 1.0f : 0.0f,
+            };
             edgeRect(inputRegion(run, node.inputs[0]), values + 8);
             memCopy(step.values, values, sizeof(values));
             addData(w, step, k.kernel, k.extent.x * k.extent.y);
@@ -2492,21 +2502,23 @@ uint32_t filterNode(Walk& w, FilterRun& run, const PrDrawFilterNode& node, PrIRe
             // A stitched tile is the node's region in the group's space, or the graph's.
             PrRect tile = prRectIsEmpty(node.region) ? run.graph : node.region;
             const PrDrawFilterTurbulence& t = node.turbulence;
-            float head[15] = {fromDevice.a,
-                              fromDevice.b,
-                              fromDevice.c,
-                              fromDevice.d,
-                              fromDevice.e,
-                              fromDevice.f,
-                              t.baseFrequency.x,
-                              t.baseFrequency.y,
-                              float(t.octaves),
-                              float(t.kind),
-                              t.stitch ? 1.0f : 0.0f,
-                              tile.left,
-                              tile.top,
-                              tile.right,
-                              tile.bottom};
+            float head[15] = {
+                fromDevice.a,
+                fromDevice.b,
+                fromDevice.c,
+                fromDevice.d,
+                fromDevice.e,
+                fromDevice.f,
+                t.baseFrequency.x,
+                t.baseFrequency.y,
+                float(t.octaves),
+                float(t.kind),
+                t.stitch ? 1.0f : 0.0f,
+                tile.left,
+                tile.top,
+                tile.right,
+                tile.bottom,
+            };
             PrImageNoise* noise = alloc<PrImageNoise>();
             prImageNoise(t.seed, noise);
             Array<float> data;
@@ -2523,8 +2535,7 @@ uint32_t filterNode(Walk& w, FilterRun& run, const PrDrawFilterNode& node, PrIRe
             return imageNode(w, run, node, region);
         case PrDrawFilterKind_Tile: {
             FragmentFilter step = stepOf(FragmentFilterOp_Tile);
-            PrIRect tile = prIRectIntersect(prIRectRoundOut(prAffine2MapRect(run.transform.affine, node.tile)),
-                                            run.box);
+            PrIRect tile = prIRectIntersect(prIRectRoundOut(prAffine2MapRect(run.transform.affine, node.tile)), run.box);
             float values[4] = {float(tile.left), float(tile.top), float(tile.right), float(tile.bottom)};
             memCopy(step.values, values, sizeof(values));
             return filterStep(w, run, region, step, in(0));
@@ -2533,7 +2544,7 @@ uint32_t filterNode(Walk& w, FilterRun& run, const PrDrawFilterNode& node, PrIRe
             uint32_t source = in(0);
             uint32_t alpha = filterStep(w, run, run.box, stepOf(FragmentFilterOp_Alpha), source);
             uint32_t blurred = blurSteps(w, run, run.box, alpha, node.shadow.sigma.x * sx, node.shadow.sigma.y * sy,
-                                         PrImageEdgeMode_None, run.box, 0, 0);
+                PrImageEdgeMode_None, run.box, 0, 0);
             FragmentFilter move = stepOf(FragmentFilterOp_Offset);
             PrVec2 d = deviceOffset(run, node.shadow.offset);
             move.values[0] = d.x;
@@ -2553,52 +2564,42 @@ uint32_t filterNode(Walk& w, FilterRun& run, const PrDrawFilterNode& node, PrIRe
             move.values[1] = d.y;
             uint32_t moved = filterStep(w, run, run.box, move, empty);
             uint32_t blurred = blurSteps(w, run, run.box, moved, node.shadow.sigma.x * sx, node.shadow.sigma.y * sy,
-                                         PrImageEdgeMode_Duplicate, run.box, 0, 0);
+                PrImageEdgeMode_Duplicate, run.box, 0, 0);
             FragmentFilter color = stepOf(FragmentFilterOp_Colorize);
             colorValues(w, node.shadow.color, color.values);
             uint32_t shadow = filterStep(w, run, run.box, color, blurred);
-            return filterStep(w, run, region,
-                              stepOf(FragmentFilterOp_Atop,
-                                     (linear ? uint32_t(FragmentFilterFlag_LinearInputs)
-                                                                          : 0) | lastOut),
-                              shadow, source);
+            return filterStep(w, run, region, stepOf(FragmentFilterOp_Atop,
+                (linear ? uint32_t(FragmentFilterFlag_LinearInputs) : 0) | lastOut), shadow, source);
         }
         case PrDrawFilterKind_OuterGlow:
         case PrDrawFilterKind_InnerGlow: {
             bool outer = node.kind == PrDrawFilterKind_OuterGlow;
             uint32_t source = in(0);
             uint32_t alpha = filterStep(
-                w, run, run.box, stepOf(outer ? FragmentFilterOp_Alpha : FragmentFilterOp_InverseAlpha),
-                source);
-            uint32_t grown = morphologySteps(w, run, run.box, alpha, node.glow.spread * sx, node.glow.spread * sy,
-                                             true);
+                w, run, run.box, stepOf(outer ? FragmentFilterOp_Alpha : FragmentFilterOp_InverseAlpha), source);
+            uint32_t grown = morphologySteps(w, run, run.box, alpha, node.glow.spread * sx, node.glow.spread * sy, true);
             uint32_t blurred = blurSteps(w, run, run.box, grown, node.glow.sigma * sx, node.glow.sigma * sy,
-                                         outer ? PrImageEdgeMode_None : PrImageEdgeMode_Duplicate, run.box, 0, 0);
+                outer ? PrImageEdgeMode_None : PrImageEdgeMode_Duplicate, run.box, 0, 0);
             FragmentFilter color = stepOf(FragmentFilterOp_Colorize);
             colorValues(w, node.glow.color, color.values);
             uint32_t glow = filterStep(w, run, run.box, color, blurred);
             if (outer)
                 return filterStep(w, run, region, stepOf(FragmentFilterOp_Over, firstIn | lastOut), source, glow);
-            return filterStep(w, run, region,
-                              stepOf(FragmentFilterOp_Atop,
-                                     (linear ? uint32_t(FragmentFilterFlag_LinearInputs)
-                                                                          : 0) | lastOut),
-                              glow, source);
+            return filterStep(w, run, region, stepOf(FragmentFilterOp_Atop,
+                (linear ? uint32_t(FragmentFilterFlag_LinearInputs) : 0) | lastOut), glow, source);
         }
         case PrDrawFilterKind_Feather: {
             uint32_t source = in(0);
             float half = node.feather / 2;
             uint32_t alpha = filterStep(w, run, run.box, stepOf(FragmentFilterOp_Alpha), source);
             uint32_t shrunk = morphologySteps(w, run, run.box, alpha, half * sx, half * sy, false);
-            uint32_t soft =
-                blurSteps(w, run, run.box, shrunk, half * sx, half * sy, PrImageEdgeMode_None, run.box, 0, 0);
+            uint32_t soft = blurSteps(w, run, run.box, shrunk, half * sx, half * sy, PrImageEdgeMode_None, run.box, 0, 0);
             return filterStep(w, run, region, stepOf(FragmentFilterOp_Mask, firstIn | lastOut), source, soft);
         }
         case PrDrawFilterKind_DisplacementMap: {
             // The map is read in the node's space, and the first input's pixels move unconverted.
             uint32_t flagsIn = linear ? uint32_t(FragmentFilterFlag_LinearInputs) : 0;
-            FragmentFilter step =
-                stepOf(FragmentFilterOp_Displacement, flagsIn | FragmentFilterFlag_RawFirst);
+            FragmentFilter step = stepOf(FragmentFilterOp_Displacement, flagsIn | FragmentFilterFlag_RawFirst);
             step.values[0] = node.displacement.scale * sx;
             step.values[1] = node.displacement.scale * sy;
             step.values[2] = float(node.displacement.x);
@@ -2611,25 +2612,27 @@ uint32_t filterNode(Walk& w, FilterRun& run, const PrDrawFilterNode& node, PrIRe
             float scale = sqrtF32(sx * sy);
             PrVec2 at = prAffine2MapPoint(run.transform.affine, PrVec2{l.light.position.x, l.light.position.y});
             PrVec2 target = prAffine2MapPoint(run.transform.affine, PrVec2{l.light.pointsAt.x, l.light.pointsAt.y});
-            float values[19] = {float(l.kind),
-                                l.surfaceScale,
-                                l.constant,
-                                l.specularExponent,
-                                prFloat16ToFloat(l.color.r),
-                                prFloat16ToFloat(l.color.g),
-                                prFloat16ToFloat(l.color.b),
-                                float(l.light.kind),
-                                l.light.azimuth,
-                                l.light.elevation,
-                                at.x,
-                                at.y,
-                                l.light.position.z * scale,
-                                target.x,
-                                target.y,
-                                l.light.pointsAt.z * scale,
-                                l.light.spotExponent,
-                                l.light.coneAngle > 0 ? cosF32(l.light.coneAngle) : -1,
-                                scale};
+            float values[19] = {
+                float(l.kind),
+                l.surfaceScale,
+                l.constant,
+                l.specularExponent,
+                prFloat16ToFloat(l.color.r),
+                prFloat16ToFloat(l.color.g),
+                prFloat16ToFloat(l.color.b),
+                float(l.light.kind),
+                l.light.azimuth,
+                l.light.elevation,
+                at.x,
+                at.y,
+                l.light.position.z * scale,
+                target.x,
+                target.y,
+                l.light.pointsAt.z * scale,
+                l.light.spotExponent,
+                l.light.coneAngle > 0 ? cosF32(l.light.coneAngle) : -1,
+                scale,
+            };
             addData(w, step, values, 19);
             return filterStep(w, run, region, step, in(0));
         }
@@ -2641,7 +2644,7 @@ uint32_t filterNode(Walk& w, FilterRun& run, const PrDrawFilterNode& node, PrIRe
 // Evaluates the filter over the layer that `source` names, and returns the layer of its result. `transform` maps the
 // group's space to target pixels. `bounds` is the group's bounds, used for a filter without a region.
 uint32_t runFilter(Walk& w, const PrDrawFilter* filter, uint32_t source, uint32_t backdrop, PrIRect box,
-                   const PrDrawTransform& transform, PrRect bounds) {
+        const PrDrawTransform& transform, PrRect bounds) {
     FilterRun run{};
     run.box = box;
     run.transform = transform;
@@ -2653,9 +2656,10 @@ uint32_t runFilter(Walk& w, const PrDrawFilter* filter, uint32_t source, uint32_
     PrRect region = prDrawFilterRegion(filter);
     if (prRectIsEmpty(region))
         region = bounds;
-    run.region = prRectIsEmpty(region)
-                     ? box
-                     : prIRectIntersect(box, prIRectRoundOut(prAffine2MapRect(run.transform.affine, region)));
+    if (prRectIsEmpty(region))
+        run.region = box;
+    else
+        run.region = prIRectIntersect(box, prIRectRoundOut(prAffine2MapRect(run.transform.affine, region)));
     run.graph = region;
     PrAffine2 fromDevice{};
     if (prRectIsEmpty(region) && prAffine2Invert(run.transform.affine, &fromDevice))
@@ -2665,7 +2669,7 @@ uint32_t runFilter(Walk& w, const PrDrawFilter* filter, uint32_t source, uint32_
         PrIRect nodeRegion = run.region;
         if (!prRectIsEmpty(nodes[i].region))
             nodeRegion = prIRectIntersect(run.region,
-                                          prIRectRoundOut(prAffine2MapRect(run.transform.affine, nodes[i].region)));
+                prIRectRoundOut(prAffine2MapRect(run.transform.affine, nodes[i].region)));
         run.results.push(filterNode(w, run, nodes[i], nodeRegion));
         run.regions.push(nodeRegion);
     }
@@ -2754,9 +2758,8 @@ bool pushLocalGroup(Walk& w, const PrDrawCommand& c, GroupFrame& frame, PrIRect 
 bool pushProjectedGroup(Walk& w, GroupFrame& frame, PrIRect visible) {
     const PrDrawGroup& g = *frame.group;
     const PrDrawTransform& x = w.transforms.last();
-    if (prIRectIsEmpty(visible)
-        || !prDrawProjectionPlace(g.projection, x.affine, g.bounds, prRectFromIRect(visible),
-                                  float(kListTextureMaxSize), &frame.projection))
+    if (prIRectIsEmpty(visible) || !prDrawProjectionPlace(g.projection, x.affine, g.bounds, prRectFromIRect(visible),
+            float(kListTextureMaxSize), &frame.projection))
         return false;
     float scale = frame.projection.scale;
     frame.toLocal = prAffine2Scale(PrVec2{scale, scale});
@@ -2817,8 +2820,8 @@ bool pushHostGroup(Walk& w, GroupFrame& frame) {
     PrAffine2 inverse{};
     float width = prRectWidth(g.bounds);
     float height = prRectHeight(g.bounds);
-    if (layer.extent.x == 0 || layer.extent.y == 0 || !(width > 0) || !(height > 0)
-        || !prAffine2Invert(w.transforms.last().affine, &inverse))
+    if (layer.extent.x == 0 || layer.extent.y == 0 || !(width > 0) || !(height > 0) ||
+            !prAffine2Invert(w.transforms.last().affine, &inverse))
         return false;
     // The group's space to the texture's texels.
     float sx = float(layer.extent.x) / width;
@@ -2840,11 +2843,13 @@ bool pushHostGroup(Walk& w, GroupFrame& frame) {
     uint32_t index = w.b->layers.count + 1;
     w.f->layerIndex.insert(texture, w.b->layers.count);
     PrIRect box{0, 0, int32_t(layer.extent.x), int32_t(layer.extent.y)};
-    w.b->layers.push(FragmentLayer{.texture = texture,
-                                         .extent = layer.extent,
-                                         .precise = w.extended,
-                                         .exact = true,
-                                         .hostTexture = w.b->hostTextures.count});
+    w.b->layers.push(FragmentLayer{
+        .texture = texture,
+        .extent = layer.extent,
+        .precise = w.extended,
+        .exact = true,
+        .hostTexture = w.b->hostTextures.count,
+    });
     w.layers.push(index);
     w.knockouts.push(g.knockout);
     w.tracks.push(false);
@@ -2976,8 +2981,10 @@ uint32_t drawGroupMask(Walk& w, const GroupFrame& frame, PrIRect box) {
     PrRect area = frame.group->bounds;
     PrAffine2 fromDevice{};
     if (prRectIsEmpty(area) && prAffine2Invert(frame.transform.affine, &fromDevice))
-        area = prAffine2MapRect(fromDevice, PrRect{float(box.left), float(box.top), float(box.right),
-                                                  float(box.bottom)});
+        area = prAffine2MapRect(fromDevice, PrRect{
+            float(box.left), float(box.top), float(box.right),
+            float(box.bottom),
+        });
     if (!prRectIsEmpty(area)) {
         PrDrawCommand fill{};
         fill.kind = PrDrawCommandKind_Rect;
@@ -2996,7 +3003,7 @@ uint32_t drawGroupMask(Walk& w, const GroupFrame& frame, PrIRect box) {
 // whose compositing is set, times the color. Each target pixel samples the layer at its point of the plane, from the
 // mip level that its footprint selects.
 void compositeProjected(Walk& w, const GroupFrame& frame, uint32_t texture, PrIRect box, PrIRect drawn,
-                        FragmentPaint& r, const float color[4]) {
+        FragmentPaint& r, const float color[4]) {
     mipmapLayer(w, texture);
     placeLayer(w, r, layerOf(w, texture), frame.projection.targetToLayer);
     r.sampling = PrDrawSampling_Mipmap;
@@ -3028,9 +3035,11 @@ void popLocalGroup(Walk& w, const GroupFrame& frame, uint32_t texture, PrIRect b
     }
     if (g.mask != nullptr) {
         uint32_t mask = drawGroupMask(w, frame, box);
-        uint32_t maskMode = g.mask->mode == PrDrawMaskMode_Alpha ? FragmentMask_Alpha
-                            : g.mask->space == PrColorSpace_SrgbLinear ? FragmentMask_LinearLuminance
-                                                                       : FragmentMask_Luminance;
+        uint32_t maskMode = FragmentMask_Luminance;
+        if (g.mask->mode == PrDrawMaskMode_Alpha)
+            maskMode = FragmentMask_Alpha;
+        else if (g.mask->space == PrColorSpace_SrgbLinear)
+            maskMode = FragmentMask_LinearLuminance;
         if (g.mask->invert)
             maskMode |= FragmentMaskFlag_Invert;
         uint32_t masked = enterLayer(w, box, false);
@@ -3063,7 +3072,7 @@ void popLocalGroup(Walk& w, const GroupFrame& frame, uint32_t texture, PrIRect b
             float inverse = 1 / frame.toLocal.a;
             prPathClear(w.f->region);
             prPathAddRect(w.f->region, PrRect{float(box.left) * inverse, float(box.top) * inverse,
-                                              float(box.right) * inverse, float(box.bottom) * inverse});
+                float(box.right) * inverse, float(box.bottom) * inverse});
             fillPath(w, w.f->region, PrPathFillRule_NonZero, true, ink);
         }
     }
@@ -3102,9 +3111,12 @@ void popGroup(Walk& w) {
     uint32_t maskMode = FragmentMask_None;
     if (g.mask != nullptr) {
         mask = drawGroupMask(w, frame, box);
-        maskMode = g.mask->mode == PrDrawMaskMode_Alpha ? FragmentMask_Alpha
-                   : g.mask->space == PrColorSpace_SrgbLinear ? FragmentMask_LinearLuminance
-                                                              : FragmentMask_Luminance;
+        if (g.mask->mode == PrDrawMaskMode_Alpha)
+            maskMode = FragmentMask_Alpha;
+        else if (g.mask->space == PrColorSpace_SrgbLinear)
+            maskMode = FragmentMask_LinearLuminance;
+        else
+            maskMode = FragmentMask_Luminance;
         if (g.mask->invert)
             maskMode |= FragmentMaskFlag_Invert;
     }
@@ -3159,13 +3171,12 @@ void pushClip(Walk& w, const PrDrawCommand& c) {
     bool square = true;
     for (PrVec2 radius : shape.shape.radii)
         square = square && radius.x <= 0 && radius.y <= 0;
-    bool aligned =
-        c.kind == PrDrawCommandKind_PushClipTargetRect || prAffine2IsAxisAligned(x.affine);
+    bool aligned = c.kind == PrDrawCommandKind_PushClipTargetRect || prAffine2IsAxisAligned(x.affine);
     if (analytic && square && aligned) {
         PrRect device = c.antialias ? rect : centersOf(rect);
         PrIRect into = targetBox(w);
-        clip.whole = clip.whole && device.left <= float(into.left) && device.top <= float(into.top)
-                     && device.right >= float(into.right) && device.bottom >= float(into.bottom);
+        clip.whole = clip.whole && device.left <= float(into.left) && device.top <= float(into.top) &&
+            device.right >= float(into.right) && device.bottom >= float(into.bottom);
         clip.rect = prRectIntersect(clip.rect, device);
         clip.box = prIRectIntersect(clip.box, prIRectRoundOut(clip.rect));
         w.clips.push(clip);
@@ -3196,7 +3207,7 @@ void pushClip(Walk& w, const PrDrawCommand& c) {
             prPathClear(w.f->shape);
             prDrawShapePath(&c, w.f->shape);
             fillPath(w, w.f->shape, c.kind == PrDrawCommandKind_PushClipPath ? c.rule : PrPathFillRule_NonZero,
-                     c.antialias, ink);
+                c.antialias, ink);
         }
         leaveLayer(w);
         // The mask holds every clip pushed so far.
@@ -3257,8 +3268,8 @@ bool missesClip(const Walk& w, const PrDrawList* embedded) {
     PrRect bounds = prDrawListBounds(embedded);
     if (prRectIsEmpty(bounds))
         return true;
-    if (!isFiniteF32(bounds.left) || !isFiniteF32(bounds.top) || !isFiniteF32(bounds.right)
-        || !isFiniteF32(bounds.bottom))
+    if (!isFiniteF32(bounds.left) || !isFiniteF32(bounds.top) || !isFiniteF32(bounds.right) ||
+            !isFiniteF32(bounds.bottom))
         return false;
     const PrDrawTransform& x = w.transforms.last();
     if (x.degenerate)
@@ -3297,12 +3308,14 @@ struct Counts {
 // Returns the counts of the frame's arrays.
 Counts countsOf(const Walk& w) {
     const FrameStorage& b = *w.b;
-    return Counts{b.instances.count,    b.values.count,       b.coverage.count,     b.tileData.count,
-                  b.paints.count,       b.clips.count,        b.clipShapes.count,   b.shapes.count,
-                  b.pieces.count,       b.maps.count,         b.mapData.count,      b.mapIndices.count,
-                  b.rampTables.count,   b.rampCells.count,    b.rampPieces.count,   b.rampColors.count,
-                  b.textures.count,     b.hostTextures.count, b.layers.count,       b.passes.count,
-                  b.filters.count,      b.filterData.count,   b.requests.count,     w.stacked.count};
+    return Counts{
+        b.instances.count,    b.values.count,       b.coverage.count,     b.tileData.count,
+        b.paints.count,       b.clips.count,        b.clipShapes.count,   b.shapes.count,
+        b.pieces.count,       b.maps.count,         b.mapData.count,      b.mapIndices.count,
+        b.rampTables.count,   b.rampCells.count,    b.rampPieces.count,   b.rampColors.count,
+        b.textures.count,     b.hostTextures.count, b.layers.count,       b.passes.count,
+        b.filters.count,      b.filterData.count,   b.requests.count,     w.stacked.count,
+    };
 }
 
 // Writes the walk's state as an embed's key. Returns false where no records are kept: under a clip of shapes or a mask.
@@ -3310,24 +3323,25 @@ bool keyOf(const Walk& w, PreparedKey* out) {
     const Clip& c = clipOf(w);
     if (c.count != 0 || c.mask != 0)
         return false;
-    *out = PreparedKey{.transform = w.transforms.last().affine,
-                       .clipBox = c.box,
-                       .clipRect = c.rect,
-                       .opacity = opacityOf(w),
-                       .layer = w.layers.last(),
-                       .composite = w.composite,
-                       .blendMode = w.blendMode,
-                       .knockout = w.knockouts.last()};
+    *out = PreparedKey{
+        .transform = w.transforms.last().affine,
+        .clipBox = c.box,
+        .clipRect = c.rect,
+        .opacity = opacityOf(w),
+        .layer = w.layers.last(),
+        .composite = w.composite,
+        .blendMode = w.blendMode,
+        .knockout = w.knockouts.last(),
+    };
     return true;
 }
 
 // Returns true if two keys are the same state.
 bool sameKey(const PreparedKey& a, const PreparedKey& b) {
-    bool placed = memEquals(&a.transform, &b.transform, sizeof a.transform)
-                  && memEquals(&a.clipBox, &b.clipBox, sizeof a.clipBox)
-                  && memEquals(&a.clipRect, &b.clipRect, sizeof a.clipRect);
-    return placed && a.opacity == b.opacity && a.layer == b.layer && a.composite == b.composite
-           && a.blendMode == b.blendMode && a.knockout == b.knockout;
+    bool placed = memEquals(&a.transform, &b.transform, sizeof a.transform) &&
+        memEquals(&a.clipBox, &b.clipBox, sizeof a.clipBox) && memEquals(&a.clipRect, &b.clipRect, sizeof a.clipRect);
+    return placed && a.opacity == b.opacity && a.layer == b.layer && a.composite == b.composite &&
+        a.blendMode == b.blendMode && a.knockout == b.knockout;
 }
 
 // Frees the kept records of every list, and makes the table `count` entries, a power of two.
@@ -3359,8 +3373,8 @@ bool readsAtlas(uint32_t flags) {
 // Returns true if the list, under `transform`, lies inside the clip's box.
 bool liesInside(const Walk& w, const PrDrawList* list, PrAffine2 transform) {
     PrRect bounds = prDrawListBounds(list);
-    if (prDrawListWritesPixels(list) || !isFiniteF32(bounds.left) || !isFiniteF32(bounds.right)
-        || !isFiniteF32(bounds.top) || !isFiniteF32(bounds.bottom))
+    if (prDrawListWritesPixels(list) || !isFiniteF32(bounds.left) || !isFiniteF32(bounds.right) ||
+            !isFiniteF32(bounds.top) || !isFiniteF32(bounds.bottom))
         return false;
     PrIRect box = prIRectRoundOut(prAffine2MapRect(transform, bounds));
     PrIRect clip = clipOf(w).box;
@@ -3449,8 +3463,10 @@ void copyPrepared(Walk& w, const PreparedList& p, PrVec2 offset = PrVec2{0, 0}) 
     if (w.tracks.last()) {
         PrIRect drawn = p.drawn;
         if (!prIRectIsEmpty(drawn))
-            drawn = PrIRect{drawn.left + int32_t(offset.x), drawn.top + int32_t(offset.y),
-                            drawn.right + int32_t(offset.x), drawn.bottom + int32_t(offset.y)};
+            drawn = PrIRect{
+                drawn.left + int32_t(offset.x), drawn.top + int32_t(offset.y),
+                drawn.right + int32_t(offset.x), drawn.bottom + int32_t(offset.y),
+            };
         w.drawn.last() = prIRectUnion(w.drawn.last(), drawn);
     }
 }
@@ -3458,14 +3474,14 @@ void copyPrepared(Walk& w, const PreparedList& p, PrVec2 offset = PrVec2{0, 0}) 
 // Keeps the records that the frame added since `before` for the list, if they can be copied to a later frame. Returns
 // false if they cannot.
 bool keepPrepared(Walk& w, PreparedList& p, const Counts& before, const Counts& after) {
-    if (after.coverage != before.coverage || after.tileData != before.tileData || after.clipShapes != before.clipShapes
-        || after.shapes != before.shapes || after.pieces != before.pieces || after.maps != before.maps
-        || after.mapData != before.mapData || after.mapIndices != before.mapIndices
-        || after.rampTables != before.rampTables || after.rampCells != before.rampCells
-        || after.rampPieces != before.rampPieces || after.rampColors != before.rampColors
-        || after.hostTextures != before.hostTextures || after.layers != before.layers
-        || after.passes != before.passes || after.filters != before.filters || after.filterData != before.filterData
-        || after.requests != before.requests || after.stacked != before.stacked)
+    if (after.coverage != before.coverage || after.tileData != before.tileData || after.clipShapes != before.clipShapes ||
+            after.shapes != before.shapes || after.pieces != before.pieces || after.maps != before.maps ||
+            after.mapData != before.mapData || after.mapIndices != before.mapIndices ||
+            after.rampTables != before.rampTables || after.rampCells != before.rampCells ||
+            after.rampPieces != before.rampPieces || after.rampColors != before.rampColors ||
+            after.hostTextures != before.hostTextures || after.layers != before.layers ||
+            after.passes != before.passes || after.filters != before.filters || after.filterData != before.filterData ||
+            after.requests != before.requests || after.stacked != before.stacked)
         return false;
     const FrameStorage& b = *w.b;
     p.instances.clear();
@@ -3548,8 +3564,8 @@ void embed(Walk& w, const PrDrawList* list) {
     entry->build = f->build;
     if (entry->id == id && entry->kept && entry->clears == prDrawAtlasInfo(f->atlas).clears) {
         PrVec2 offset{};
-        if (sameKey(entry->key, key)
-            || (entry->whole && movedKey(entry->key, key, &offset) && liesInside(w, list, key.transform))) {
+        if (sameKey(entry->key, key) ||
+                (entry->whole && movedKey(entry->key, key, &offset) && liesInside(w, list, key.transform))) {
             copyPrepared(w, *entry, offset);
             return;
         }
@@ -3673,12 +3689,12 @@ void finishRequests(Walk& w) {
         const uint8_t* texels = pageTexels.data + size_t(top) * pageTexels.stride + left;
         FragmentTextureOp op = create ? FragmentTextureOp_Create : FragmentTextureOp_Update;
         request(w, FragmentTextureRequest{
-                       .op = op,
-                       .format = PrPixelFormat_R8,
-                       .texture = texture,
-                       .origin = {left, top},
-                       .texels = PrPixelView{texels, pageTexels.stride,
-                                             {prIRectWidth(region), prIRectHeight(region)}}});
+            .op = op,
+            .format = PrPixelFormat_R8,
+            .texture = texture,
+            .origin = {left, top},
+            .texels = PrPixelView{texels, pageTexels.stride, {prIRectWidth(region), prIRectHeight(region)}},
+        });
     }
     f->pagesCreated = prDrawAtlasPageCount(f->atlas);
     uint32_t kept = 0;
@@ -3688,13 +3704,14 @@ void finishRequests(Walk& w) {
             f->images.data[kept++] = image;
             continue;
         }
-        request(w, FragmentTextureRequest{.op = FragmentTextureOp_Destroy,
-                                                .format = PrPixelFormat_Rgba8,
-                                                .texture = image.texture});
+        request(w, FragmentTextureRequest{
+            .op = FragmentTextureOp_Destroy,
+            .format = PrPixelFormat_Rgba8,
+            .texture = image.texture,
+        });
     }
     f->images.count = kept;
-    f->imageIndex.rebuild(kept,
-                          [&](uint32_t i) { return imageKey(f->images.data[i].id, f->images.data[i].mipmapped); });
+    f->imageIndex.rebuild(kept, [&](uint32_t i) { return imageKey(f->images.data[i].id, f->images.data[i].mipmapped); });
     for (uint32_t i = 0; i < w.b->pending.count; ++i) {
         const PendingTexels& pending = w.b->pending.data[i];
         w.b->requests.data[pending.request].texels.data = w.b->texels.data + pending.offset;
@@ -3845,8 +3862,7 @@ void storageDestroy(FrameStorage* b) {
 // host's texture in the frame's beneath layer, or the host's drawing at the start of the passes marked for it. Without
 // it, what lies beneath is transparent. The frame stays valid until the storage's next build. The requests' texels stay
 // valid until the next build with any storage.
-void fragmentBuild(Fragment* f, const PrDrawList* list, const PrDrawTarget& target, FrameStorage* b,
-                   FragmentFrame* out) {
+void fragmentBuild(Fragment* f, const PrDrawList* list, const PrDrawTarget& target, FrameStorage* b, FragmentFrame* out) {
     uint32_t width = target.extent.x;
     uint32_t height = target.extent.y;
     b->instances.clear();
@@ -3970,8 +3986,7 @@ void destroyFrame(PrDrawRenderer* renderer, PrDrawFrame* handle) {
     prMemoryFree(frame);
 }
 
-PrStatus prepare(PrDrawRenderer* renderer, PrDrawFrame* handle, const PrDrawList* list,
-                 const PrDrawTarget* target) {
+PrStatus prepare(PrDrawRenderer* renderer, PrDrawFrame* handle, const PrDrawList* list, const PrDrawTarget* target) {
     FragmentRenderer* r = static_cast<FragmentRenderer*>(renderer);
     FragmentDrawFrame* frame = static_cast<FragmentDrawFrame*>(handle);
     fragmentBuild(r->fragment, list, *target, frame->storage, &frame->built);
@@ -4012,20 +4027,16 @@ void stats(PrDrawRenderer*, const PrDrawFrame* handle, PrDrawStats* out) {
     out->primitives = f.instanceCount;
     out->records = f.paintCount + f.clipCount;
     out->pathFills = frame->storage->pathFills;
-    uint64_t bytes = uint64_t(f.instanceCount) * sizeof(FragmentInstance) + uint64_t(f.valueCount) * 4
-                     + f.coverageCount + uint64_t(f.tileDataCount) * 4
-                     + uint64_t(f.paintCount) * sizeof(FragmentPaint)
-                     + uint64_t(f.clipCount) * sizeof(FragmentClip) + uint64_t(f.clipShapeCount) * 4
-                     + uint64_t(f.shapeCount) * sizeof(FragmentClipShape)
-                     + uint64_t(f.pieceCount) * sizeof(FragmentPiece)
-                     + uint64_t(f.mapCount) * sizeof(FragmentMap) + uint64_t(f.mapDataCount) * 4
-                     + uint64_t(f.mapIndexCount) * 4
-                     + uint64_t(f.rampCount) * (kFragmentRampResolution + 1) * sizeof(PrColor16)
-                     + uint64_t(f.rampCount) * (kFragmentRampResolution + 2) * 4
-                     + uint64_t(f.rampPieceCount) * sizeof(PrDrawRampPiece)
-                     + uint64_t(f.rampColorCount) * sizeof(PrColor16)
-                     + uint64_t(f.textureCount) * sizeof(FragmentTexture)
-                     + uint64_t(f.filterCount) * sizeof(FragmentFilter) + uint64_t(f.filterDataCount) * 4;
+    uint64_t bytes = uint64_t(f.instanceCount) * sizeof(FragmentInstance) + uint64_t(f.valueCount) * 4 +
+        f.coverageCount + uint64_t(f.tileDataCount) * 4 + uint64_t(f.paintCount) * sizeof(FragmentPaint) +
+        uint64_t(f.clipCount) * sizeof(FragmentClip) + uint64_t(f.clipShapeCount) * 4 +
+        uint64_t(f.shapeCount) * sizeof(FragmentClipShape) + uint64_t(f.pieceCount) * sizeof(FragmentPiece) +
+        uint64_t(f.mapCount) * sizeof(FragmentMap) + uint64_t(f.mapDataCount) * 4 + uint64_t(f.mapIndexCount) * 4 +
+        uint64_t(f.rampCount) * (kFragmentRampResolution + 1) * sizeof(PrColor16) +
+        uint64_t(f.rampCount) * (kFragmentRampResolution + 2) * 4 +
+        uint64_t(f.rampPieceCount) * sizeof(PrDrawRampPiece) + uint64_t(f.rampColorCount) * sizeof(PrColor16) +
+        uint64_t(f.textureCount) * sizeof(FragmentTexture) +
+        uint64_t(f.filterCount) * sizeof(FragmentFilter) + uint64_t(f.filterDataCount) * 4;
     for (uint32_t i = 0; i < f.requestCount; ++i) {
         const FragmentTextureRequest& r = f.requests[i];
         if (r.op != FragmentTextureOp_Destroy)
@@ -4069,7 +4080,7 @@ PrDrawFragmentOptions prDrawFragmentOptionsDefault(void) {
 }
 
 PrStatus prDrawFragmentCreate(PrGpuDevice* device, const PrDrawFragmentOptions* PR_NULLABLE options,
-                              PrDrawRenderer* PR_NULLABLE* PR_NONNULL out) {
+        PrDrawRenderer* PR_NULLABLE* PR_NONNULL out) {
     *out = nullptr;
     FragmentDevice* state = nullptr;
     PrStatus status = fragmentDeviceCreate(device, &state);

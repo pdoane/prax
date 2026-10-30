@@ -29,8 +29,7 @@ constexpr char kInterfacesKey = 0;
 
 Array<Interface*>* interfacesOf(JSRuntime* runtime) {
     return static_cast<Array<Interface*>*>(jsRuntimeOwned(
-        runtime, &kInterfacesKey, []() -> void* { return allocZeroed<Array<Interface*>>(); },
-        [](void* list) {
+        runtime, &kInterfacesKey, []() -> void* { return allocZeroed<Array<Interface*>>(); }, [](void* list) {
             Array<Interface*>* interfaces = static_cast<Array<Interface*>*>(list);
             for (uint32_t i = 0; i < interfaces->count; ++i)
                 prMemoryFree(interfaces->data[i]);
@@ -49,7 +48,7 @@ const Interface* PR_NULLABLE interfaceOf(JSRuntime* runtime, JSClassID id) {
 void defineUnforgeable(JSContext* ctx, JSValueConst object, void*) {
     JSRuntime* runtime = JS_GetRuntime(ctx);
     for (const Interface* at = interfaceOf(runtime, JS_GetClassID(object)); at != nullptr;
-         at = at->base != 0 ? interfaceOf(runtime, at->base) : nullptr) {
+            at = at->base != 0 ? interfaceOf(runtime, at->base) : nullptr) {
         if (at->unforgeable != nullptr)
             JS_SetPropertyFunctionList(ctx, object, at->unforgeable, at->unforgeableCount);
     }
@@ -128,8 +127,7 @@ int shadowed(JSContext* ctx, JSValueConst object, const Platform& platform, JSAt
 // undefined if it is not visible, and an exception if one was thrown. A name that a prototype shadows is resolved from
 // the prototype alone, since most reads of such an object are of its members. Its text is read into `name` only when
 // the object must be queried for it.
-JSValue visibleNamed(JSContext* ctx, JSValueConst object, const Platform& platform, JSAtom atom,
-                     JsString* name) {
+JSValue visibleNamed(JSContext* ctx, JSValueConst object, const Platform& platform, JSAtom atom, JsString* name) {
     int hidden = shadowed(ctx, object, platform, atom);
     if (hidden != 0)
         return hidden < 0 ? JS_EXCEPTION : JS_UNDEFINED;
@@ -140,8 +138,7 @@ JSValue visibleNamed(JSContext* ctx, JSValueConst object, const Platform& platfo
 
 // The exotic methods of a legacy platform object (webidl/#js-legacy-platform-objects). They reach its JsIndexed and
 // JsNamed through the runtime. QuickJS calls them for a property that the object does not hold as its own.
-int platformOwnProperty(JSContext* ctx, JSPropertyDescriptor* PR_NULLABLE desc, JSValueConst object,
-                        JSAtom atom) {
+int platformOwnProperty(JSContext* ctx, JSPropertyDescriptor* PR_NULLABLE desc, JSValueConst object, JSAtom atom) {
     Platform platform = {};
     if (!platformOf(ctx, object, &platform))
         return 0;
@@ -168,8 +165,7 @@ int platformOwnProperty(JSContext* ctx, JSPropertyDescriptor* PR_NULLABLE desc, 
         JS_FreeValue(ctx, value);
         return 1;
     }
-    desc->flags = JS_PROP_CONFIGURABLE | (writable ? JS_PROP_WRITABLE : 0)
-                  | (enumerable ? JS_PROP_ENUMERABLE : 0);
+    desc->flags = JS_PROP_CONFIGURABLE | (writable ? JS_PROP_WRITABLE : 0) | (enumerable ? JS_PROP_ENUMERABLE : 0);
     desc->value = value;
     desc->getter = JS_UNDEFINED;
     desc->setter = JS_UNDEFINED;
@@ -177,7 +173,7 @@ int platformOwnProperty(JSContext* ctx, JSPropertyDescriptor* PR_NULLABLE desc, 
 }
 
 int platformOwnPropertyNames(JSContext* ctx, JSPropertyEnum* PR_NULLABLE* PR_NONNULL names,
-                             uint32_t* count, JSValueConst object) {
+        uint32_t* count, JSValueConst object) {
     Platform platform = {};
     platformOf(ctx, object, &platform);
     uint32_t length = platform.indexed != nullptr ? platform.indexed->length(platform.handle) : 0;
@@ -186,8 +182,7 @@ int platformOwnPropertyNames(JSContext* ctx, JSPropertyEnum* PR_NULLABLE* PR_NON
         freeAtoms(ctx, &named);
         return -1;
     }
-    JSPropertyEnum* list = static_cast<JSPropertyEnum*>(
-        js_malloc(ctx, sizeof(JSPropertyEnum) * (length + named.count + 1)));
+    JSPropertyEnum* list = static_cast<JSPropertyEnum*>(js_malloc(ctx, sizeof(JSPropertyEnum) * (length + named.count + 1)));
     if (list == nullptr) {
         freeAtoms(ctx, &named);
         return -1;
@@ -197,8 +192,7 @@ int platformOwnPropertyNames(JSContext* ctx, JSPropertyEnum* PR_NULLABLE* PR_NON
     // A named property that a prototype shadows is not the object's own. An index of its indexed properties is not a
     // name.
     uint32_t total = length;
-    bool enumerable =
-        platform.named != nullptr && (platform.named->flags & JsNamedFlag_Unenumerable) == 0;
+    bool enumerable = platform.named != nullptr && (platform.named->flags & JsNamedFlag_Unenumerable) == 0;
     for (uint32_t i = 0; i < named.count; ++i) {
         uint32_t index = 0;
         int isIndex = platform.indexed != nullptr ? jsIndexOf(ctx, named.data[i], &index) : 0;
@@ -212,12 +206,11 @@ int platformOwnPropertyNames(JSContext* ctx, JSPropertyEnum* PR_NULLABLE* PR_NON
 }
 
 int platformDefineProperty(JSContext* ctx, JSValueConst object, JSAtom atom, JSValueConst value,
-                           JSValueConst getter, JSValueConst setter, int flags) {
+        JSValueConst getter, JSValueConst setter, int flags) {
     Platform platform = {};
     uint32_t index = 0;
     JsString name = {};
-    int kind = platformOf(ctx, object, &platform) ? nameKind(ctx, platform, atom, &index)
-                                                  : PlatformName_Ordinary;
+    int kind = platformOf(ctx, object, &platform) ? nameKind(ctx, platform, atom, &index) : PlatformName_Ordinary;
     if (kind == PlatformName_Name && !readName(ctx, atom, &name))
         kind = -1;
     if (kind < 0)
@@ -226,8 +219,12 @@ int platformDefineProperty(JSContext* ctx, JSValueConst object, JSAtom atom, JSV
     JSValueConst given = (flags & JS_PROP_HAS_VALUE) != 0 ? value : JS_UNDEFINED;
     int result = -2;   // the ordinary definition
     if (kind == PlatformName_Index) {
-        result = platform.indexed->setItem == nullptr || accessor ? 0
-            : platform.indexed->setItem(ctx, object, platform.handle, index, given) ? 1 : -1;
+        if (platform.indexed->setItem == nullptr || accessor)
+            result = 0;
+        else if (platform.indexed->setItem(ctx, object, platform.handle, index, given))
+            result = 1;
+        else
+            result = -1;
     } else if (kind == PlatformName_Name) {
         // webidl/#legacy-platform-object-defineownproperty: a supported name, or any name if the interface has a named
         // setter.
@@ -235,18 +232,17 @@ int platformDefineProperty(JSContext* ctx, JSValueConst object, JSAtom atom, JSV
         bool supported = !JS_IsUndefined(current);
         if (JS_IsException(current))
             result = -1;
-        else if (supported || platform.named->setItem != nullptr)
-            result =
-                platform.named->setItem == nullptr || accessor ? 0
-                : platform.named->setItem(ctx, object, platform.handle, jsStringView(&name), given)
-                    ? 1
-                    : -1;
+        else if (supported || platform.named->setItem != nullptr) {
+            if (platform.named->setItem == nullptr || accessor)
+                result = 0;
+            else
+                result = platform.named->setItem(ctx, object, platform.handle, jsStringView(&name), given) ? 1 : -1;
+        }
         JS_FreeValue(ctx, current);
     }
     jsStringReset(ctx, &name);
     if (result == -2)
-        return JS_DefineProperty(ctx, object, atom, value, getter, setter,
-                                 flags | JS_PROP_NO_EXOTIC);
+        return JS_DefineProperty(ctx, object, atom, value, getter, setter, flags | JS_PROP_NO_EXOTIC);
     if (result == 0 && (flags & JS_PROP_THROW) != 0) {
         JS_ThrowTypeError(ctx, "Cannot define the property of a platform object");
         return -1;
@@ -258,8 +254,7 @@ int platformDeleteProperty(JSContext* ctx, JSValueConst object, JSAtom atom) {
     Platform platform = {};
     uint32_t index = 0;
     JsString name = {};
-    int kind = platformOf(ctx, object, &platform) ? nameKind(ctx, platform, atom, &index)
-                                                  : PlatformName_Ordinary;
+    int kind = platformOf(ctx, object, &platform) ? nameKind(ctx, platform, atom, &index) : PlatformName_Ordinary;
     int result = kind < 0 ? -1 : 1;
     if (kind == PlatformName_Index) {
         result = index < platform.indexed->length(platform.handle) ? 0 : 1;
@@ -281,11 +276,10 @@ int platformDeleteProperty(JSContext* ctx, JSValueConst object, JSAtom atom) {
 // webidl/#legacy-platform-object-set: an array index or a name set on the object itself, rather than on an object that
 // inherits from it, goes to its indexed or named setter, before any prototype's property. Anything else is the ordinary
 // [[Set]], which QuickJS continues with, reading the object's own property through platformOwnProperty.
-int platformSetProperty(JSContext* ctx, JSValueConst object, JSAtom atom, JSValueConst value,
-                        JSValueConst receiver, int) {
+int platformSetProperty(JSContext* ctx, JSValueConst object, JSAtom atom, JSValueConst value, JSValueConst receiver, int) {
     Platform platform = {};
-    if (!JS_IsObject(receiver) || JS_VALUE_GET_PTR(receiver) != JS_VALUE_GET_PTR(object)
-        || !platformOf(ctx, object, &platform))
+    if (!JS_IsObject(receiver) || JS_VALUE_GET_PTR(receiver) != JS_VALUE_GET_PTR(object) ||
+            !platformOf(ctx, object, &platform))
         return JS_SET_PROPERTY_ORDINARY;
     uint32_t index = 0;
     int kind = nameKind(ctx, platform, atom, &index);
@@ -296,19 +290,20 @@ int platformSetProperty(JSContext* ctx, JSValueConst object, JSAtom atom, JSValu
     if (kind != PlatformName_Name || platform.named->setItem == nullptr)
         return JS_SET_PROPERTY_ORDINARY;
     JsString name = {};
-    bool set = readName(ctx, atom, &name)
-               && platform.named->setItem(ctx, object, platform.handle, jsStringView(&name), value);
+    bool set = readName(ctx, atom, &name) && platform.named->setItem(ctx, object, platform.handle, jsStringView(&name), value);
     jsStringReset(ctx, &name);
     return set ? 1 : -1;
 }
 
-JSClassExoticMethods kPlatformExotic = {JsCallScoped<platformOwnProperty>::call,
-                                        JsCallScoped<platformOwnPropertyNames>::call,
-                                        JsCallScoped<platformDeleteProperty>::call,
-                                        JsCallScoped<platformDefineProperty>::call,
-                                        nullptr,
-                                        nullptr,
-                                        JsCallScoped<platformSetProperty>::call};
+JSClassExoticMethods kPlatformExotic = {
+    JsCallScoped<platformOwnProperty>::call,
+    JsCallScoped<platformOwnPropertyNames>::call,
+    JsCallScoped<platformDeleteProperty>::call,
+    JsCallScoped<platformDefineProperty>::call,
+    nullptr,
+    nullptr,
+    JsCallScoped<platformSetProperty>::call,
+};
 
 // webidl/#dfn-default-iterator-object: the object being iterated, the part of each entry returned, and the index of the
 // next entry.
@@ -344,8 +339,7 @@ JSValue pairNext(JSContext* ctx, JSValueConst self, int, JSValueConst*, int id) 
     if (iterator == nullptr)
         return JS_EXCEPTION;
     JSValue index = JS_NewUint32(ctx, iterator->index);
-    JSValue value =
-        iterator->done ? JS_UNDEFINED : iterator->entryAt(ctx, iterator->owner, 1, &index);
+    JSValue value = iterator->done ? JS_UNDEFINED : iterator->entryAt(ctx, iterator->owner, 1, &index);
     JS_FreeValue(ctx, index);
     if (JS_IsException(value))
         return value;
@@ -353,8 +347,7 @@ JSValue pairNext(JSContext* ctx, JSValueConst self, int, JSValueConst*, int id) 
     if (!iterator->done) {
         ++iterator->index;
         if (iterator->part != JsMapPart_Entries) {
-            JSValue part =
-                JS_GetPropertyUint32(ctx, value, iterator->part == JsMapPart_Keys ? 0 : 1);
+            JSValue part = JS_GetPropertyUint32(ctx, value, iterator->part == JsMapPart_Keys ? 0 : 1);
             JS_FreeValue(ctx, value);
             value = part;
         }
@@ -367,8 +360,7 @@ JSValue pairNext(JSContext* ctx, JSValueConst self, int, JSValueConst*, int id) 
 
 // Reads member `name` of a dictionary, converted by `convert` if given.
 template <typename Convert>
-bool dictMember(JSContext* ctx, JSValueConst dictionary, const char* name, bool* PR_NULLABLE given,
-                Convert convert) {
+bool dictMember(JSContext* ctx, JSValueConst dictionary, const char* name, bool* PR_NULLABLE given, Convert convert) {
     JSValue member = JS_GetPropertyStr(ctx, dictionary, name);
     if (JS_IsException(member))
         return false;
@@ -414,8 +406,7 @@ constexpr char kBackingVersion[] = "[[BackingVersion]]";
 
 // Returns the backing of `self`, or an exception. The backing is refilled if the platform object's version differs from
 // the version that the backing last synchronized with.
-JSValue backingOf(JSContext* ctx, JSValueConst self, void* handle, const JsCollection& collection,
-                  JSValueConst* data) {
+JSValue backingOf(JSContext* ctx, JSValueConst self, void* handle, const JsCollection& collection, JSValueConst* data) {
     JSValue backing = jsSameObject(ctx, self, kBacking);
     if (JS_IsUndefined(backing)) {
         backing = JS_CallConstructor(ctx, data[CollectionData_Constructor], 0, nullptr);
@@ -440,9 +431,9 @@ JSValue backingOf(JSContext* ctx, JSValueConst self, void* handle, const JsColle
         JSValue entry = JS_GetPropertyInt64(ctx, entries, i);
         JSValue arguments[2] = {
             collection.map ? JS_GetPropertyUint32(ctx, entry, 0) : JS_DupValue(ctx, entry),
-            collection.map ? JS_GetPropertyUint32(ctx, entry, 1) : JS_UNDEFINED};
-        JSValue added =
-            JS_Call(ctx, data[CollectionData_Add], backing, collection.map ? 2 : 1, arguments);
+            collection.map ? JS_GetPropertyUint32(ctx, entry, 1) : JS_UNDEFINED,
+        };
+        JSValue added = JS_Call(ctx, data[CollectionData_Add], backing, collection.map ? 2 : 1, arguments);
         ok = !JS_IsException(added);
         JS_FreeValue(ctx, added);
         JS_FreeValue(ctx, arguments[0]);
@@ -465,15 +456,12 @@ void tookChange(JSContext* ctx, JSValueConst self, void* handle, const JsCollect
 
 // webidl/#js-set-forEach and webidl/#js-map-forEach. The callback receives the value, the key and the platform object.
 // The function's data are the callback, the this value and the platform object.
-JSValue forEachCallback(JSContext* ctx, JSValueConst, int argc, JSValueConst* argv, int,
-                        JSValueConst* data) {
-    JSValueConst arguments[] = {argc > 0 ? argv[0] : JS_UNDEFINED,
-                                argc > 1 ? argv[1] : JS_UNDEFINED, data[2]};
+JSValue forEachCallback(JSContext* ctx, JSValueConst, int argc, JSValueConst* argv, int, JSValueConst* data) {
+    JSValueConst arguments[] = {argc > 0 ? argv[0] : JS_UNDEFINED, argc > 1 ? argv[1] : JS_UNDEFINED, data[2]};
     return JS_Call(ctx, data[0], data[1], 3, arguments);
 }
 
-JSValue collectionMember(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv, int magic,
-                         JSValueConst* data) {
+JSValue collectionMember(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv, int magic, JSValueConst* data) {
     uint32_t id = 0;
     JS_ToUint32(ctx, &id, data[CollectionData_Class]);
     const JsCollection& collection = *interfaceOf(JS_GetRuntime(ctx), id)->collection;
@@ -482,8 +470,8 @@ JSValue collectionMember(JSContext* ctx, JSValueConst self, int argc, JSValueCon
         return JS_EXCEPTION;
     JSValue key = JS_UNDEFINED;
     JSValue value = JS_UNDEFINED;
-    bool keyed = magic == CollectionMember_Has || magic == CollectionMember_Get
-                 || magic == CollectionMember_Add || magic == CollectionMember_Delete;
+    bool keyed = magic == CollectionMember_Has || magic == CollectionMember_Get ||
+        magic == CollectionMember_Add || magic == CollectionMember_Delete;
     if (keyed) {
         key = collection.key(ctx, argc > 0 ? argv[0] : JS_UNDEFINED);
         if (JS_IsException(key))
@@ -512,8 +500,7 @@ JSValue collectionMember(JSContext* ctx, JSValueConst self, int argc, JSValueCon
             break;
         case CollectionMember_ForEach: {
             JSValueConst callbackData[] = {argv[0], argc > 1 ? argv[1] : JS_UNDEFINED, self};
-            JSValue callback = JS_NewCFunctionData(ctx, JsCallScoped<forEachCallback>::call, 2, 0, 3,
-                                                   callbackData);
+            JSValue callback = JS_NewCFunctionData(ctx, JsCallScoped<forEachCallback>::call, 2, 0, 3, callbackData);
             result = JS_Call(ctx, data[CollectionData_Member], backing, 1, &callback);
             JS_FreeValue(ctx, callback);
             break;
@@ -563,13 +550,12 @@ JSValue collectionMember(JSContext* ctx, JSValueConst self, int argc, JSValueCon
 // Defines @@iterator on `proto` as the method `name`.
 void defineIteratorAlias(JSContext* ctx, JSValueConst proto, const char* name) {
     JS_DefinePropertyValue(ctx, proto, JS_ATOM_Symbol_iterator, JS_GetPropertyStr(ctx, proto, name),
-                           JS_PROP_CONFIGURABLE | JS_PROP_WRITABLE);
+        JS_PROP_CONFIGURABLE | JS_PROP_WRITABLE);
 }
 
 // Defines the members on the prototype of a setlike or maplike class. Each is a function that calls `member` of the
 // realm's Set or Map prototype.
-void defineCollection(JSContext* ctx, JSValueConst proto, JSClassID id,
-                      const JsCollection& collection) {
+void defineCollection(JSContext* ctx, JSValueConst proto, JSClassID id, const JsCollection& collection) {
     JSValue global = JS_GetGlobalObject(ctx);
     JSValue constructor = JS_GetPropertyStr(ctx, global, collection.map ? "Map" : "Set");
     JSValue prototype = JS_GetPropertyStr(ctx, constructor, "prototype");
@@ -580,12 +566,11 @@ void defineCollection(JSContext* ctx, JSValueConst proto, JSClassID id,
         JS_GetPropertyStr(ctx, prototype, "clear"),
         JS_GetPropertyStr(ctx, prototype, "has"),
         JS_GetPropertyStr(ctx, prototype, "delete"),
-        JS_UNDEFINED,
+        JS_UNDEFINED
     };
     auto function = [&](const char* name, int length, int member, JSValue method) {
         data[CollectionData_Member] = method;
-        JSValue made = JS_NewCFunctionData(ctx, JsScoped<collectionMember>::call, length, member,
-                                           CollectionData_Count, data);
+        JSValue made = JS_NewCFunctionData(ctx, JsScoped<collectionMember>::call, length, member, CollectionData_Count, data);
         JS_FreeValue(ctx, method);
         data[CollectionData_Member] = JS_UNDEFINED;
         JS_DefinePropertyValueStr(ctx, made, "name", JS_NewString(ctx, name), JS_PROP_CONFIGURABLE);
@@ -601,9 +586,8 @@ void defineCollection(JSContext* ctx, JSValueConst proto, JSClassID id,
     if (JS_GetOwnProperty(ctx, &size, prototype, sizeAtom) > 0) {
         JS_FreeValue(ctx, size.value);
         JS_FreeValue(ctx, size.setter);
-        JS_DefinePropertyGetSet(ctx, proto, sizeAtom,
-                                function("get size", 0, CollectionMember_Size, size.getter),
-                                JS_UNDEFINED, JS_PROP_CONFIGURABLE | JS_PROP_ENUMERABLE);
+        JS_DefinePropertyGetSet(ctx, proto, sizeAtom, function("get size", 0, CollectionMember_Size, size.getter),
+            JS_UNDEFINED, JS_PROP_CONFIGURABLE | JS_PROP_ENUMERABLE);
     }
     JS_FreeAtom(ctx, sizeAtom);
     constexpr const char* kIterations[] = {"entries", "keys", "values"};
@@ -613,8 +597,7 @@ void defineCollection(JSContext* ctx, JSValueConst proto, JSClassID id,
     define("has", 1, CollectionMember_Has, JS_GetPropertyStr(ctx, prototype, "has"));
     if (collection.map)
         define("get", 1, CollectionMember_Get, JS_GetPropertyStr(ctx, prototype, "get"));
-    define(collection.map ? "set" : "add", collection.map ? 2 : 1, CollectionMember_Add,
-           JS_UNDEFINED);
+    define(collection.map ? "set" : "add", collection.map ? 2 : 1, CollectionMember_Add, JS_UNDEFINED);
     define("delete", 1, CollectionMember_Delete, JS_UNDEFINED);
     define("clear", 0, CollectionMember_Clear, JS_UNDEFINED);
     // webidl/#js-setlike: @@iterator is values; webidl/#js-maplike: it is entries.
@@ -639,27 +622,24 @@ void installArrayIteration(JSContext* ctx, JSValueConst proto, bool methods) {
     }
 
     // The iterator is the values function itself.
-    JS_DefinePropertyValue(ctx, proto, JS_ATOM_Symbol_iterator,
-                           JS_GetPropertyStr(ctx, arrayProto, "values"),
-                           JS_PROP_CONFIGURABLE | JS_PROP_WRITABLE);
+    JS_DefinePropertyValue(ctx, proto, JS_ATOM_Symbol_iterator, JS_GetPropertyStr(ctx, arrayProto, "values"),
+        JS_PROP_CONFIGURABLE | JS_PROP_WRITABLE);
     JS_FreeValue(ctx, arrayProto);
     JS_FreeValue(ctx, array);
     JS_FreeValue(ctx, global);
 }
 
-void defineConstants(JSContext* ctx, JSValueConst constructor, JSValueConst proto,
-                     const JsConstant* constants, int count) {
+void defineConstants(JSContext* ctx, JSValueConst constructor, JSValueConst proto, const JsConstant* constants, int count) {
     for (int i = 0; i < count; ++i) {
         JS_DefinePropertyValueStr(ctx, constructor, constants[i].name,
-                                  JS_NewUint32(ctx, constants[i].value), JS_PROP_ENUMERABLE);
+            JS_NewUint32(ctx, constants[i].value), JS_PROP_ENUMERABLE);
         JS_DefinePropertyValueStr(ctx, proto, constants[i].name,
-                                  JS_NewUint32(ctx, constants[i].value), JS_PROP_ENUMERABLE);
+            JS_NewUint32(ctx, constants[i].value), JS_PROP_ENUMERABLE);
     }
 }
 
 // The interface object of a class. It runs the class's constructor in a call's scope. The magic is the class.
-JSValue constructInScope(JSContext* ctx, JSValueConst newTarget, int argc, JSValueConst* argv,
-                         int magic) {
+JSValue constructInScope(JSContext* ctx, JSValueConst newTarget, int argc, JSValueConst* argv, int magic) {
     const Interface* interface = interfaceOf(JS_GetRuntime(ctx), JSClassID(magic));
     if (interface == nullptr || interface->constructor == nullptr)
         return jsIllegalConstructor(ctx, newTarget, argc, argv);
@@ -690,7 +670,7 @@ DomException* PR_NULLABLE exceptionOf(JSContext* ctx, JSValueConst self) {
 }
 
 JSValue newException(JSContext* ctx, JSClassID id, PrStringView message, PrStringView name,
-                     double quota = kNanF64, double requested = kNanF64) {
+        double quota = kNanF64, double requested = kNanF64) {
     DomException exception = {prStringCopy(name), prStringCopy(message), quota, requested};
     JSValue object = jsNewValue(ctx, id, exception);
     if (JS_IsException(object)) {
@@ -713,11 +693,9 @@ void finalizer(JSRuntime* runtime, JSValue self) {
 JSValue construct(JSContext* ctx, JSValueConst newTarget, int argc, JSValueConst* argv) {
     StringArgument message = {ctx};
     StringArgument name = {ctx, "Error"};
-    if ((jsArgGiven(argc, argv, 0) && !message.read(argv[0]))
-        || (jsArgGiven(argc, argv, 1) && !name.read(argv[1])))
+    if ((jsArgGiven(argc, argv, 0) && !message.read(argv[0])) || (jsArgGiven(argc, argv, 1) && !name.read(argv[1])))
         return JS_EXCEPTION;
-    return jsConstructed(ctx, newTarget,
-                         newException(ctx, domExceptionClass, message.value(), name.value()));
+    return jsConstructed(ctx, newTarget, newException(ctx, domExceptionClass, message.value(), name.value()));
 }
 
 JSValue nameGet(JSContext* ctx, JSValueConst self) {
@@ -732,9 +710,7 @@ JSValue messageGet(JSContext* ctx, JSValueConst self) {
 
 JSValue codeGet(JSContext* ctx, JSValueConst self) {
     DomException* exception = exceptionOf(ctx, self);
-    return exception != nullptr
-               ? JS_NewUint32(ctx, prWebIdlErrorCode(prStringView(&exception->name)))
-               : JS_EXCEPTION;
+    return exception != nullptr ? JS_NewUint32(ctx, prWebIdlErrorCode(prStringView(&exception->name))) : JS_EXCEPTION;
 }
 
 // Reads a member of QuotaExceededErrorOptions, a double, which is not NaN or an infinity (webidl/#js-double). `*out`
@@ -759,24 +735,20 @@ JSValue constructQuota(JSContext* ctx, JSValueConst newTarget, int argc, JSValue
     bool present = false;
     double quota = kNanF64;
     double requested = kNanF64;
-    if (!jsDictionary(ctx, options, &present)
-        || (present
-            && (!readQuotaMember(ctx, options, "quota", &quota)
-                || !readQuotaMember(ctx, options, "requested", &requested))))
+    if (!jsDictionary(ctx, options, &present) || (present && (!readQuotaMember(ctx, options, "quota", &quota) ||
+            !readQuotaMember(ctx, options, "requested", &requested))))
         return JS_EXCEPTION;
     if (quota < 0 || requested < 0)
         return JS_ThrowRangeError(ctx, "A quota or a requested amount is negative");
     if (requested < quota)
         return JS_ThrowRangeError(ctx, "The requested amount is less than the quota");
-    return jsConstructed(ctx, newTarget,
-                         newException(ctx, quotaExceededErrorClass, message.value(),
-                                      "QuotaExceededError", quota, requested));
+    return jsConstructed(ctx, newTarget, newException(ctx, quotaExceededErrorClass, message.value(),
+        "QuotaExceededError", quota, requested));
 }
 
 // The quota and requested getters, whose magic is 0 and 1.
 JSValue quotaGet(JSContext* ctx, JSValueConst self, int magic) {
-    DomException* exception =
-        jsValueOf<DomException>(ctx, self, quotaExceededErrorClass, "QuotaExceededError");
+    DomException* exception = jsValueOf<DomException>(ctx, self, quotaExceededErrorClass, "QuotaExceededError");
     if (exception == nullptr)
         return JS_EXCEPTION;
     double value = magic == 0 ? exception->quota : exception->requested;
@@ -901,10 +873,8 @@ bool Uint32Sequence::read(JSValueConst input) {
     return read;
 }
 
-int jsIndexNames(JSContext* ctx, JSPropertyEnum* PR_NULLABLE* PR_NONNULL names, uint32_t* count,
-                 uint32_t length) {
-    JSPropertyEnum* indexes =
-        static_cast<JSPropertyEnum*>(js_malloc(ctx, sizeof(JSPropertyEnum) * (length + 1)));
+int jsIndexNames(JSContext* ctx, JSPropertyEnum* PR_NULLABLE* PR_NONNULL names, uint32_t* count, uint32_t length) {
+    JSPropertyEnum* indexes = static_cast<JSPropertyEnum*>(js_malloc(ctx, sizeof(JSPropertyEnum) * (length + 1)));
     if (indexes == nullptr)
         return -1;
     for (uint32_t i = 0; i < length; ++i)
@@ -925,12 +895,9 @@ void jsPairIteratorBind(JSContext* ctx, JSClassID* id, const char* name) {
     JSValue arrayProto = JS_GetPrototype(ctx, iterator);
     JSValue base = JS_GetPrototype(ctx, arrayProto);
     JSValue proto = JS_NewObjectProto(ctx, base);
-    JS_DefinePropertyValueStr(ctx, proto, "next",
-                              JS_NewCFunctionMagic(ctx, JsCallScoped<pairNext>::call, "next", 0,
-                                                   JS_CFUNC_generic_magic, int(*id)),
-                              JS_PROP_CONFIGURABLE | JS_PROP_WRITABLE);
-    JS_DefinePropertyValue(ctx, proto, JS_ATOM_Symbol_toStringTag, JS_NewString(ctx, name),
-                           JS_PROP_CONFIGURABLE);
+    JS_DefinePropertyValueStr(ctx, proto, "next", JS_NewCFunctionMagic(ctx, JsCallScoped<pairNext>::call, "next", 0,
+        JS_CFUNC_generic_magic, int(*id)), JS_PROP_CONFIGURABLE | JS_PROP_WRITABLE);
+    JS_DefinePropertyValue(ctx, proto, JS_ATOM_Symbol_toStringTag, JS_NewString(ctx, name), JS_PROP_CONFIGURABLE);
     JS_SetClassProto(ctx, *id, proto);
     JS_FreeValue(ctx, base);
     JS_FreeValue(ctx, arrayProto);
@@ -939,8 +906,7 @@ void jsPairIteratorBind(JSContext* ctx, JSClassID* id, const char* name) {
     JS_FreeValue(ctx, array);
 }
 
-JSValue jsPairIterator(JSContext* ctx, JSClassID id, JSValueConst owner, JSCFunction* entryAt,
-                       JsMapPart part) {
+JSValue jsPairIterator(JSContext* ctx, JSClassID id, JSValueConst owner, JSCFunction* entryAt, JsMapPart part) {
     JSValue value = JS_NewObjectClass(ctx, int(id));
     if (JS_IsException(value))
         return value;
@@ -953,8 +919,7 @@ JSValue jsPairIterator(JSContext* ctx, JSClassID id, JSValueConst owner, JSCFunc
 }
 
 // forEach (webidl/#js-iterable). Calls the callback with (value, key, owner) for each entry.
-JSValue jsPairForEach(JSContext* ctx, JSValueConst owner, JSCFunction* entryAt, int argc,
-                      JSValueConst* argv) {
+JSValue jsPairForEach(JSContext* ctx, JSValueConst owner, JSCFunction* entryAt, int argc, JSValueConst* argv) {
     if (argc == 0 || !JS_IsFunction(ctx, argv[0]))
         return JS_ThrowTypeError(ctx, "forEach needs a function");
     for (uint32_t i = 0;; ++i) {
@@ -963,8 +928,10 @@ JSValue jsPairForEach(JSContext* ctx, JSValueConst owner, JSCFunction* entryAt, 
         JS_FreeValue(ctx, index);
         if (JS_IsException(entry) || JS_IsUndefined(entry))
             return entry;
-        JSValue args[] = {JS_GetPropertyUint32(ctx, entry, 1), JS_GetPropertyUint32(ctx, entry, 0),
-                          JS_DupValue(ctx, owner)};
+        JSValue args[] = {
+            JS_GetPropertyUint32(ctx, entry, 1), JS_GetPropertyUint32(ctx, entry, 0),
+            JS_DupValue(ctx, owner),
+        };
         JSValue result = JS_Call(ctx, argv[0], argc > 1 ? argv[1] : JS_UNDEFINED, 3, args);
         for (JSValue value : args)
             JS_FreeValue(ctx, value);
@@ -997,8 +964,7 @@ JSValue jsMapIterate(JSContext* ctx, JSValue entries, JsMapPart part) {
         JS_FreeValue(ctx, length);
         for (uint32_t i = 0; i < count; ++i) {
             JSValue entry = JS_GetPropertyUint32(ctx, entries, i);
-            JS_SetPropertyUint32(ctx, items, i,
-                                 JS_GetPropertyUint32(ctx, entry, part == JsMapPart_Keys ? 0 : 1));
+            JS_SetPropertyUint32(ctx, items, i, JS_GetPropertyUint32(ctx, entry, part == JsMapPart_Keys ? 0 : 1));
             JS_FreeValue(ctx, entry);
         }
         JS_FreeValue(ctx, entries);
@@ -1010,8 +976,7 @@ JSValue jsMapIterate(JSContext* ctx, JSValue entries, JsMapPart part) {
     return iterator;
 }
 
-JSValue jsMapForEach(JSContext* ctx, JSValueConst map, JSValue entries, int argc,
-                     JSValueConst* argv) {
+JSValue jsMapForEach(JSContext* ctx, JSValueConst map, JSValue entries, int argc, JSValueConst* argv) {
     if (JS_IsException(entries))
         return entries;
     if (argc < 1 || !JS_IsFunction(ctx, argv[0])) {
@@ -1027,8 +992,10 @@ JSValue jsMapForEach(JSContext* ctx, JSValueConst map, JSValue entries, int argc
     JSValue result = JS_UNDEFINED;
     for (uint32_t i = 0; i < count && !JS_IsException(result); ++i) {
         JSValue entry = JS_GetPropertyUint32(ctx, entries, i);
-        JSValue arguments[] = {JS_GetPropertyUint32(ctx, entry, 1),
-                               JS_GetPropertyUint32(ctx, entry, 0), JS_DupValue(ctx, map)};
+        JSValue arguments[] = {
+            JS_GetPropertyUint32(ctx, entry, 1),
+            JS_GetPropertyUint32(ctx, entry, 0), JS_DupValue(ctx, map),
+        };
         result = JS_Call(ctx, argv[0], thisArg, 3, arguments);
         for (JSValue argument : arguments)
             JS_FreeValue(ctx, argument);
@@ -1049,8 +1016,7 @@ bool jsArgCount(JSContext* ctx, int argc, int required) {
     return false;
 }
 
-bool jsArgNumber(JSContext* ctx, int argc, JSValueConst* argv, int index, double fallback,
-                 double* out) {
+bool jsArgNumber(JSContext* ctx, int argc, JSValueConst* argv, int index, double fallback, double* out) {
     *out = fallback;
     return !jsArgGiven(argc, argv, index) || JS_ToFloat64(ctx, out, argv[index]) >= 0;
 }
@@ -1077,36 +1043,30 @@ bool jsDictionary(JSContext* ctx, JSValueConst value, bool* present) {
     return true;
 }
 
-bool jsDictNumber(JSContext* ctx, JSValueConst dictionary, const char* name, double* out,
-                  bool* PR_NULLABLE given) {
+bool jsDictNumber(JSContext* ctx, JSValueConst dictionary, const char* name, double* out, bool* PR_NULLABLE given) {
     return dictMember(ctx, dictionary, name, given, [&](JSValueConst member) {
         return JS_ToFloat64(ctx, out, member) >= 0;
     });
 }
 
-bool jsDictBool(JSContext* ctx, JSValueConst dictionary, const char* name, bool* out,
-                bool* PR_NULLABLE given) {
+bool jsDictBool(JSContext* ctx, JSValueConst dictionary, const char* name, bool* out, bool* PR_NULLABLE given) {
     return dictMember(ctx, dictionary, name, given, [&](JSValueConst member) {
         *out = JS_ToBool(ctx, member) != 0;
         return true;
     });
 }
 
-bool jsDictUint32(JSContext* ctx, JSValueConst dictionary, const char* name, uint32_t* out,
-                  bool* PR_NULLABLE given) {
+bool jsDictUint32(JSContext* ctx, JSValueConst dictionary, const char* name, uint32_t* out, bool* PR_NULLABLE given) {
     return dictMember(ctx, dictionary, name, given, [&](JSValueConst member) {
         return JS_ToUint32(ctx, out, member) >= 0;
     });
 }
 
-bool jsDictString(JSContext* ctx, JSValueConst dictionary, const char* name, StringArgument* out,
-                  bool* PR_NULLABLE given) {
-    return dictMember(ctx, dictionary, name, given,
-                      [&](JSValueConst member) { return out->read(member); });
+bool jsDictString(JSContext* ctx, JSValueConst dictionary, const char* name, StringArgument* out, bool* PR_NULLABLE given) {
+    return dictMember(ctx, dictionary, name, given, [&](JSValueConst member) { return out->read(member); });
 }
 
-bool jsBufferSource(JSContext* ctx, JSValueConst value, const uint8_t* PR_NULLABLE* PR_NONNULL data,
-                    size_t* size) {
+bool jsBufferSource(JSContext* ctx, JSValueConst value, const uint8_t* PR_NULLABLE* PR_NONNULL data, size_t* size) {
     *data = nullptr;
     *size = 0;
     if (JS_IsArrayBuffer(value)) {
@@ -1142,12 +1102,14 @@ JSValue jsDefineClass(JSContext* ctx, const JsClassDefinition& definition) {
         interfacesOf(runtime)->push(interface);
     }
     const Interface* parent = definition.base != nullptr ? interfaceOf(runtime, *definition.base) : nullptr;
-    *interface = {definition.base != nullptr ? *definition.base : 0, definition.indexed, definition.named,
-                  definition.unforgeable, definition.unforgeableCount, definition.collection,
-                  definition.constructor};
+    *interface = {
+        definition.base != nullptr ? *definition.base : 0, definition.indexed, definition.named,
+        definition.unforgeable, definition.unforgeableCount, definition.collection,
+        definition.constructor,
+    };
     bool unforgeable = definition.unforgeable != nullptr;
     for (const Interface* at = parent; at != nullptr && !unforgeable;
-         at = at->base != 0 ? interfaceOf(runtime, at->base) : nullptr)
+            at = at->base != 0 ? interfaceOf(runtime, at->base) : nullptr)
         unforgeable = at->unforgeable != nullptr;
     JsClass declared = {
         .name = definition.name,
@@ -1174,7 +1136,7 @@ JSValue jsDefineClass(JSContext* ctx, const JsClassDefinition& definition) {
     JSCFunctionType construct;
     construct.constructor_magic = constructInScope;
     JSValue constructor = JS_NewCFunction2(ctx, construct.generic, definition.name,
-                                           definition.length, JS_CFUNC_constructor_magic, int(id));
+        definition.length, JS_CFUNC_constructor_magic, int(id));
     // The prototype inherits from the base's prototype, and the interface object from the base's interface object
     // (webidl/#interface-object).
     if (definition.base != nullptr) {
@@ -1198,20 +1160,22 @@ JSValue jsDefineClass(JSContext* ctx, const JsClassDefinition& definition) {
 
     JSValue global = JS_GetGlobalObject(ctx);
     JS_DefinePropertyValueStr(ctx, global, definition.name, JS_DupValue(ctx, constructor),
-                              JS_PROP_WRITABLE | JS_PROP_CONFIGURABLE);
+        JS_PROP_WRITABLE | JS_PROP_CONFIGURABLE);
     JS_FreeValue(ctx, global);
     return constructor;
 }
 
 void jsWebidlBind(JSContext* ctx) {
-    JS_FreeValue(ctx, jsDefineClass(ctx, {.name = "DOMException",
-                                          .id = &domExceptionClass,
-                                          .finalizer = finalizer<&domExceptionClass>,
-                                          .mark = jsValueMark,
-                                          .proto = kDomExceptionProto,
-                                          .protoCount = int(countOf(kDomExceptionProto)),
-                                          PR_JS_CONSTANTS(kConstants),
-                                          .constructor = construct}));
+    JS_FreeValue(ctx, jsDefineClass(ctx, {
+        .name = "DOMException",
+        .id = &domExceptionClass,
+        .finalizer = finalizer<&domExceptionClass>,
+        .mark = jsValueMark,
+        .proto = kDomExceptionProto,
+        .protoCount = int(countOf(kDomExceptionProto)),
+        PR_JS_CONSTANTS(kConstants),
+        .constructor = construct,
+    }));
     JSValue proto = JS_GetClassProto(ctx, domExceptionClass);
     // webidl/#js-DOMException-specialness: the prototype's prototype is %Error.prototype%.
     JSValue global = JS_GetGlobalObject(ctx);
@@ -1222,14 +1186,16 @@ void jsWebidlBind(JSContext* ctx) {
     JS_FreeValue(ctx, error);
     JS_FreeValue(ctx, global);
     JS_FreeValue(ctx, proto);
-    JS_FreeValue(ctx, jsDefineClass(ctx, {.name = "QuotaExceededError",
-                                          .id = &quotaExceededErrorClass,
-                                          .finalizer = finalizer<&quotaExceededErrorClass>,
-                                          .mark = jsValueMark,
-                                          .proto = kQuotaExceededErrorProto,
-                                          .protoCount = int(countOf(kQuotaExceededErrorProto)),
-                                          .constructor = constructQuota,
-                                          .base = &domExceptionClass}));
+    JS_FreeValue(ctx, jsDefineClass(ctx, {
+        .name = "QuotaExceededError",
+        .id = &quotaExceededErrorClass,
+        .finalizer = finalizer<&quotaExceededErrorClass>,
+        .mark = jsValueMark,
+        .proto = kQuotaExceededErrorProto,
+        .protoCount = int(countOf(kQuotaExceededErrorProto)),
+        .constructor = constructQuota,
+        .base = &domExceptionClass,
+    }));
 }
 
 JSValue jsDomExceptionNew(JSContext* ctx, PrStringView name) {
@@ -1242,8 +1208,7 @@ JSValue jsDomExceptionThrow(JSContext* ctx, PrStringView name) {
 }
 
 JSValue jsQuotaExceededErrorThrow(JSContext* ctx, double quota, double requested) {
-    JSValue exception =
-        newException(ctx, quotaExceededErrorClass, "", "QuotaExceededError", quota, requested);
+    JSValue exception = newException(ctx, quotaExceededErrorClass, "", "QuotaExceededError", quota, requested);
     return JS_IsException(exception) ? exception : JS_Throw(ctx, exception);
 }
 

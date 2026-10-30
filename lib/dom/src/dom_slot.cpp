@@ -123,8 +123,7 @@ void signalSlotChange(PrDomElement* slot) {
 
 // Returns the position of `node` in the document's list of slotted nodes, or kHashMissing.
 uint32_t slottedAt(const DomSlots* slots, const PrDomNode* node) {
-    return slots->slottedIndex.find(hashPointer(node, 0),
-                                    [&](uint32_t i) { return slots->slotted.data[i].node == node; });
+    return slots->slottedIndex.find(hashPointer(node, 0), [&](uint32_t i) { return slots->slotted.data[i].node == node; });
 }
 
 // Records that `slot` is the assigned slot of `node`.
@@ -160,8 +159,7 @@ void assignSlottables(PrDomElement* slot) {
     Array<PrDomNode* PR_NONNULL> slottables;
     findSlottables(slot, &slottables);
     DomSlot* state = slotOf(slot);
-    bool same =
-        state != nullptr ? slottables.count == state->assigned.count : slottables.count == 0;
+    bool same = state != nullptr ? slottables.count == state->assigned.count : slottables.count == 0;
     for (uint32_t i = 0; same && i < slottables.count; ++i)
         same = state->assigned.data[i] == slottables.data[i];
     if (!same) {
@@ -361,8 +359,7 @@ void domSlotsInserted(PrDomNode* parent, PrDomNode* node) {
     // slot that had only fallback content signals its change. The shadow tree that the node joins assigns its slots
     // again.
     PrDomShadowRoot* shadow = hostedShadow(parent);
-    if (shadow != nullptr && shadow->slotAssignment == PrDomSlotAssignmentMode_Named
-        && isSlottable(node))
+    if (shadow != nullptr && shadow->slotAssignment == PrDomSlotAssignmentMode_Named && isSlottable(node))
         assignSlot(node);
     fallbackChanged(parent);
     if (PrDomShadowRoot* root = shadowOf(node))

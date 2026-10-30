@@ -9,9 +9,11 @@
 namespace pr_impl {
 
 void win32Widen(PrStringView text, Array<wchar_t>& out) {
-    int count = text.size == 0 || text.size > size_t(INT32_MAX)
-                    ? 0
-                    : MultiByteToWideChar(CP_UTF8, 0, text.data, int(text.size), nullptr, 0);
+    int count;
+    if (text.size == 0 || text.size > size_t(INT32_MAX))
+        count = 0;
+    else
+        count = MultiByteToWideChar(CP_UTF8, 0, text.data, int(text.size), nullptr, 0);
     out.resize(uint32_t(count) + 1);
     if (count != 0)
         MultiByteToWideChar(CP_UTF8, 0, text.data, int(text.size), out.data, count);

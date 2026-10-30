@@ -28,8 +28,11 @@ Cluster clusterAt(const LayoutFragment* fragment, uint32_t i, float length) {
     const LayoutCaretStop* stops = layoutFragmentTextStops(fragment);
     uint32_t count = fragment->text.stopCount;
     bool reversed = (fragment->flags & LayoutFragmentFlag_Reversed) != 0;
-    uint32_t after = reversed ? (i > 0 ? stops[i - 1].byte : fragment->text.end)
-                              : (i + 1 < count ? stops[i + 1].byte : fragment->text.end);
+    uint32_t after;
+    if (reversed)
+        after = (i > 0 ? stops[i - 1].byte : fragment->text.end);
+    else
+        after = (i + 1 < count ? stops[i + 1].byte : fragment->text.end);
     float right = i + 1 < count ? stops[i + 1].along : length;
     return Cluster{stops[i].byte, after, stops[i].along, right > stops[i].along ? right : stops[i].along};
 }
@@ -82,7 +85,7 @@ uint32_t layoutTextOffsetAt(const LayoutTree* tree, const LayoutFragment* fragme
 }
 
 PrLayoutRect layoutTextSpanRect(const LayoutTree* tree, const LayoutFragment* fragment, PrLayoutVec at, float from,
-                                float to) {
+        float to) {
     float lo = from < to ? from : to;
     float hi = from < to ? to : from;
     PrLayoutRect rect = layoutRectAt(at, fragment->extent);

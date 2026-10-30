@@ -183,7 +183,7 @@ Flow startFlow(const Container& c) {
 //
 // Relative positioning moves neither baseline.
 void pushChild(LayoutState& state, const Container& c, Flow& flow, const LayoutResult& result, LayoutLogicalOffset at,
-               LayoutLogicalOffset relative) {
+        LayoutLogicalOffset relative) {
     state.scratch->children.push(LayoutLogicalChild{result.fragment, c.origin + at + relative});
     PrLayoutUnit by = c.origin.blockOffset + at.blockOffset;
     if ((result.flags & LayoutResultFlag_FirstBaseline) != 0 && !flow.first.present)
@@ -222,7 +222,7 @@ LayoutLineExtent markerFor(const Container& c, const Flow& flow) {
 // read of the context from that position, in the context that childContext last gave. Relative positioning moves no
 // baseline. Returns false if the layout of the container stops when its margins resolve.
 PR_FORCE_INLINE bool placeBlock(LayoutState& state, Container& c, Flow& flow, const LayoutResult& result,
-                                LayoutLogicalOffset relative) {
+        LayoutLogicalOffset relative) {
     PrLayoutUnit size = layoutLogicalSize(c.content->mode, result.fragment->extent).blockSize;
     PrLayoutUnit offset = kLayoutUnitZero;
     if (result.cleared) {
@@ -265,9 +265,13 @@ PR_FORCE_INLINE bool placeBlock(LayoutState& state, Container& c, Flow& flow, co
     // before it end.
     if (result.readLo.raw < result.readHi.raw) {
         const LayoutMarginChain& chain = c.child.chain;
-        PrLayoutUnit top = flow.edge != Edge_Open             ? flow.contentTop + offset
-                           : chain.resolved != kLayoutOffsetNone ? chain.resolved
-                                                               : layoutMarginChainEnd(chain, result.start);
+        PrLayoutUnit top;
+        if (flow.edge != Edge_Open)
+            top = flow.contentTop + offset;
+        else if (chain.resolved != kLayoutOffsetNone)
+            top = chain.resolved;
+        else
+            top = layoutMarginChainEnd(chain, result.start);
         layoutReadsRange(*c.containing.reads, result.readLo + top, result.readHi + top);
     }
     pushChild(state, c, flow, result, LayoutLogicalOffset{result.marginInlineStart, offset}, relative);
@@ -293,8 +297,7 @@ LayoutBfc& childContext(Container& c, const Flow& flow, LayoutLineSides clears) 
 
 // Lays out a float among the block-level children. The float is placed at the point where layout reaches it or, if the
 // margins of the container have not resolved, waits for them (CSS2/#float-position).
-PR_NOINLINE void floatChild(LayoutState& state, const Container& c, Flow& flow, uint32_t child,
-                            const PrLayoutBoxStyle& box) {
+PR_NOINLINE void floatChild(LayoutState& state, const Container& c, Flow& flow, uint32_t child, const PrLayoutBoxStyle& box) {
     LayoutMode mode = c.content->mode;
     LayoutAtomic f = layoutFloat(state, child, *c.content);
     LayoutLineSides side = layoutFloatSide(box, mode.direction);
@@ -320,13 +323,11 @@ PR_NOINLINE void outOfFlowChild(LayoutState& state, const Container& c, const Fl
     PrLayoutUnit offset = collapsing(flow) ? kLayoutUnitZero : flow.cursor + layoutStrutSize(flow.pending);
     LayoutFragment* placeholder =
         layoutFragmentCreatePlaceholder(child, layoutStaticEdges(c.content->mode), layoutIsFixed(state.tree, child));
-    state.scratch->children.push(
-        LayoutLogicalChild{placeholder, c.origin + LayoutLogicalOffset{kLayoutUnitZero, offset}});
+    state.scratch->children.push(LayoutLogicalChild{placeholder, c.origin + LayoutLogicalOffset{kLayoutUnitZero, offset}});
 }
 
 // Lays out a block-level child in flow that does not avoid floats. Returns false if the layout of the container stops.
-PR_FORCE_INLINE bool flowChild(LayoutState& state, Container& c, Flow& flow, uint32_t child,
-                               const PrLayoutBoxStyle& box) {
+PR_FORCE_INLINE bool flowChild(LayoutState& state, Container& c, Flow& flow, uint32_t child, const PrLayoutBoxStyle& box) {
     LayoutLineSides clears = layoutClearSides(box, c.content->mode.direction);
     // A child that clears floats adjoining its position has clearance. The margins before it resolve without its own
     // margin, and the floats are placed there.
@@ -366,7 +367,7 @@ PR_FORCE_INLINE bool flowChild(LayoutState& state, Container& c, Flow& flow, uin
 // adjoining them. If it does not fit, they resolve without that margin, and the margin then takes no room, as with
 // clearance. Returns false if the layout of the container stops.
 PR_NOINLINE bool avoiderChild(LayoutState& state, Container& c, Flow& flow, uint32_t child,
-                              const PrLayoutBoxStyle& box, LayoutNodeIndex runLast = kPrLayoutNodeNone) {
+        const PrLayoutBoxStyle& box, LayoutNodeIndex runLast = kPrLayoutNodeNone) {
     LayoutMode mode = c.content->mode;
     LayoutEdges e = layoutEdgesFromBox(state.styles, layoutLogicalBox(box, mode), c.content->containing.inlineSize);
     LayoutStrut marginStart = layoutStrut(e.margin[LayoutSide_BlockStart]);
@@ -428,8 +429,9 @@ PR_NOINLINE bool avoiderChild(LayoutState& state, Container& c, Flow& flow, uint
     const LayoutResult& result = placed.result;
     LayoutLogicalSize size = layoutLogicalSize(mode, result.fragment->extent);
     PrLayoutUnit offset = placed.top - flow.contentTop;
-    LayoutLogicalOffset at{layoutInlineStartFromLeft(c.containing, mode.direction, placed.left,
-                                                     size.inlineSize), offset};
+    LayoutLogicalOffset at{
+        layoutInlineStartFromLeft(c.containing, mode.direction, placed.left, size.inlineSize), offset,
+    };
     flow.cursor = offset + size.blockSize;
     flow.pending = result.end;
     flow.content = true;
@@ -441,15 +443,17 @@ PR_NOINLINE bool avoiderChild(LayoutState& state, Container& c, Flow& flow, uint
 // Lays out segment `segment` of `run` as an inline formatting context. It is either alone, as the content of the
 // container, or in an anonymous block box among block-level children (css-display-4/#anonymous).
 PR_NOINLINE void inlineSegment(LayoutState& state, Container& c, Flow& flow, LayoutInlineRun& run, uint32_t segment,
-                               bool alone, bool firstFormatted) {
+        bool alone, bool firstFormatted) {
     PrLayoutUnit end = nextEdge(c, flow);
-    LayoutInlineBfc bfc{.containing = c.containing,
-                        .top = end,
-                        .topFinal = true,
-                        .mayResolve = true,
-                        .firstFormatted = firstFormatted,
-                        .marker = markerFor(c, flow),
-                        .reuses = alone && !c.inContext};
+    LayoutInlineBfc bfc{
+        .containing = c.containing,
+        .top = end,
+        .topFinal = true,
+        .mayResolve = true,
+        .firstFormatted = firstFormatted,
+        .marker = markerFor(c, flow),
+        .reuses = alone && !c.inContext,
+    };
     if (flow.edge == Edge_Open) {
         // Its first line would resolve the margins of the container, either there or at the floor it clears.
         bfc.top = layoutMarginChainResolve(c.chain, end, false).top;
@@ -490,9 +494,7 @@ PR_NOINLINE void inlineSegment(LayoutState& state, Container& c, Flow& flow, Lay
     if (children.count == mark)
         return;
     LayoutFragment* anonymous = layoutFragmentBuild(children, mark, LayoutFragmentKind_Box, kPrLayoutNodeNone,
-                                                    c.content->mode,
-                                                    LayoutLogicalSize{c.content->containing.inlineSize,
-                                                                      lines.blockSize});
+        c.content->mode, LayoutLogicalSize{c.content->containing.inlineSize, lines.blockSize});
     ++state.stats->boxFragmentsMade;
     layoutFragmentSetOverflow(state.tree, anonymous);
     LayoutResult result{};
@@ -500,7 +502,7 @@ PR_NOINLINE void inlineSegment(LayoutState& state, Container& c, Flow& flow, Lay
     if (lines.hasBaselines) {
         result.flags |= LayoutResultFlag_FirstBaseline | LayoutResultFlag_LastBaseline;
         layoutFragmentSetBaselines(anonymous, layoutBaselineAt(lines.firstBaseline, c.children.font),
-                                   layoutBaselineAt(lines.lastBaseline, c.children.font));
+            layoutBaselineAt(lines.lastBaseline, c.children.font));
     }
     if (!lines.hasLines)
         result.flags |= LayoutResultFlag_CollapsedThrough;
@@ -522,14 +524,15 @@ PR_NOINLINE void wrapInRows(LayoutState& state, const Container& c, uint32_t blo
     LayoutMode mode = c.content->mode;
     LayoutLogicalOffset relative = layoutRelativeOffset(state.styles, box, *c.content);
     LayoutLogicalOffset row{c.origin.inlineOffset, placed.offset.blockOffset - relative.blockOffset};
-    LayoutLogicalSize size{c.content->containing.inlineSize,
-                           layoutLogicalSize(mode, placed.fragment->extent).blockSize};
+    LayoutLogicalSize size{
+        c.content->containing.inlineSize,
+        layoutLogicalSize(mode, placed.fragment->extent).blockSize,
+    };
     LayoutLogicalChild inner{placed.fragment, placed.offset - row};
-    for (uint32_t at = layoutTreeNode(state.tree, block).parent; at != c.node;
-         at = layoutTreeNode(state.tree, at).parent) {
+    for (uint32_t at = layoutTreeNode(state.tree, block).parent; at != c.node; at =
+            layoutTreeNode(state.tree, at).parent) {
         children.push(inner);
-        LayoutFragment* around = layoutFragmentBuild(children, children.count - 1, LayoutFragmentKind_Around, at, mode,
-                                                     size);
+        LayoutFragment* around = layoutFragmentBuild(children, children.count - 1, LayoutFragmentKind_Around, at, mode, size);
         layoutFragmentSetOverflow(state.tree, around);
         const PrLayoutBoxStyle& inlineBox = layoutBoxStyle(state.styles, layoutTreeNode(state.tree, at).style);
         inner = LayoutLogicalChild{around, layoutRelativeOffset(state.styles, inlineBox, *c.content)};
@@ -541,8 +544,7 @@ PR_NOINLINE void wrapInRows(LayoutState& state, const Container& c, uint32_t blo
 // inline formatting context. Between segments, the block-level boxes in flow inside its inline boxes are laid out as
 // block-level children wrapped in the rows of their inline boxes (CSS2/#anonymous-block-level). A run with one segment
 // is alone if `alone` says so.
-PR_NOINLINE void inlineChildren(LayoutState& state, Container& c, Flow& flow, uint32_t first, uint32_t last,
-                                bool alone) {
+PR_NOINLINE void inlineChildren(LayoutState& state, Container& c, Flow& flow, uint32_t first, uint32_t last, bool alone) {
     LayoutInlineRun run = layoutInlineBegin(state, c.node, first, last, *c.content);
     uint32_t segments = layoutInlineSegmentCount(run);
     for (uint32_t k = 0; k < segments && flow.edge != Edge_Stopped; ++k) {
@@ -552,8 +554,11 @@ PR_NOINLINE void inlineChildren(LayoutState& state, Container& c, Flow& flow, ui
         uint32_t block = layoutInlineBlockAfter(run, k);
         const PrLayoutBoxStyle& box = layoutBoxStyle(state.styles, layoutTreeNode(state.tree, block).style);
         flow.blocks = true;
-        bool placed = layoutAvoidsFloats(state.tree, block, box, c.children) ? avoiderChild(state, c, flow, block, box)
-                                                                              : flowChild(state, c, flow, block, box);
+        bool placed;
+        if (layoutAvoidsFloats(state.tree, block, box, c.children))
+            placed = avoiderChild(state, c, flow, block, box);
+        else
+            placed = flowChild(state, c, flow, block, box);
         if (placed)
             wrapInRows(state, c, block, box);
     }
@@ -620,9 +625,10 @@ PR_NOINLINE Marker layOutMarker(LayoutState& state, const Container& c, LayoutNo
     Marker marker{.fragment = result.fragment, .inlineEnd = e.margin[LayoutSide_InlineEnd]};
     if (first.present)
         marker.baseline = first.offset;
+    else if (overIsStart)
+        marker.baseline = blockSize + e.margin[LayoutSide_BlockEnd];
     else
-        marker.baseline = overIsStart ? blockSize + e.margin[LayoutSide_BlockEnd]
-                                      : kLayoutUnitZero - e.margin[LayoutSide_BlockStart];
+        marker.baseline = kLayoutUnitZero - e.margin[LayoutSide_BlockStart];
     PrLayoutUnit before = marker.baseline + e.margin[LayoutSide_BlockStart];
     PrLayoutUnit after = blockSize - marker.baseline + e.margin[LayoutSide_BlockEnd];
     marker.extent = overIsStart ? LayoutLineExtent{before, after} : LayoutLineExtent{after, before};
@@ -665,7 +671,7 @@ PR_NOINLINE void markerLine(LayoutState& state, const Container& c, Flow& flow) 
 // the container, the first `floats` of the context's, push a line at the marker past the content box's start. A list
 // beside a float so keeps its markers beside its lines. The floats in the container do not move the marker.
 void placeMarker(LayoutState& state, const Container& c, const Flow& flow, const Marker& marker,
-                 const LayoutBaseline& first, uint32_t floats, uint32_t mark) {
+        const LayoutBaseline& first, uint32_t floats, uint32_t mark) {
     PrLayoutUnit baseline = first.offset;
     if (!first.present) {
         PrLayoutUnit alphabetic = kLayoutUnitZero;
@@ -676,10 +682,12 @@ void placeMarker(LayoutState& state, const Container& c, const Flow& flow, const
     LayoutLogicalSize size = layoutLogicalSize(mode, marker.fragment->extent);
     LayoutLogicalOffset at{kLayoutUnitZero - size.inlineSize - marker.inlineEnd, baseline - marker.baseline};
     if (c.inContext && flow.edge != Edge_Open && floats != 0) {
-        LayoutSpan span =
-            layoutExclusionsAvailableAmong(c.containing, flow.top + at.blockOffset, size.blockSize, floats);
-        PrLayoutUnit moved = mode.direction == PrTextDirection_Ltr ? span.left - c.containing.lineLeft
-                                                                   : c.containing.lineRight - span.right;
+        LayoutSpan span = layoutExclusionsAvailableAmong(c.containing, flow.top + at.blockOffset, size.blockSize, floats);
+        PrLayoutUnit moved;
+        if (mode.direction == PrTextDirection_Ltr)
+            moved = span.left - c.containing.lineLeft;
+        else
+            moved = c.containing.lineRight - span.right;
         at.inlineOffset += layoutUnitMax(kLayoutUnitZero, moved);
     }
     Array<LayoutLogicalChild>& children = state.scratch->children;
@@ -722,7 +730,7 @@ Ending endFlow(const LayoutState& state, const LayoutFlowInput& in, const Contai
     PrLayoutUnit contentSize = ending.contentBlock + axis.edges;
     PrLayoutUnit grown = c.contentEndCollapses ? flow.cursor + axis.edges : contentSize;
     ending.blockSize = layoutContentBlockSize(state.styles, *in.box, *in.sizing, axis, in.space->percentBlock,
-                                              in.clamps, contentSize, grown);
+        in.clamps, contentSize, grown);
     ending.collapsedThrough =
         !flow.content && c.startCollapses && c.endCollapses && ending.blockSize == kLayoutUnitZero;
     PrLayoutUnit end = layoutMarginChainEnd(c.chain, flow.escaped);
@@ -759,8 +767,7 @@ LayoutBaseline setOf(const FlowBaseline& flow, LayoutBaselineEdge edge) {
 // establishes its own formatting context. A distributed alignment falls back to its single-subject alignment, and a
 // baseline alignment falls back to start. Content that does not fit is not moved.
 PR_NOINLINE PrLayoutUnit contentShift(const LayoutState& state, const Container& c, const LayoutSpace& space,
-                                      const PrLayoutBoxStyle& box, PrLayoutUnit free, const LayoutBaseline& first,
-                                      PrLayoutUnit contentEnd) {
+        const PrLayoutBoxStyle& box, PrLayoutUnit free, const LayoutBaseline& first, PrLayoutUnit contentEnd) {
     if (box.display == PrLayoutDisplay_TableCell) {
         switch (layoutCellAlignFromBox(box)) {
             case LayoutCellAlign_Middle: return layoutUnitMax(kLayoutUnitZero, free / 2);
@@ -815,10 +822,12 @@ LayoutFlowOutcome layoutFlowContent(LayoutState& state, const LayoutFlowInput& i
     if (c.inContext) {
         const LayoutBfc& bfc = *space.bfc;
         PrLayoutUnit left = layoutLineLeftFromInlineStart(bfc.containing, space.mode.direction,
-                                                          e.margin[LayoutSide_InlineStart], input.inlineSize);
+            e.margin[LayoutSide_InlineStart], input.inlineSize);
         PrLayoutUnit lineLeftEdge = layoutEdgesContent(inner, layoutLineLeft(c.content->mode));
-        c.containing = LayoutContainingBlock{bfc.containing.exclusions, input.reads, left + lineLeftEdge,
-                                             left + lineLeftEdge + contentInline};
+        c.containing = LayoutContainingBlock{
+            bfc.containing.exclusions, input.reads, left + lineLeftEdge,
+            left + lineLeftEdge + contentInline,
+        };
         c.chain = bfc.chain;
         c.chain.strut += layoutStrut(e.margin[LayoutSide_BlockStart]);
         c.clears = input.box->clear != PrLayoutClear_None;
@@ -884,7 +893,7 @@ LayoutFlowOutcome layoutFlowContent(LayoutState& state, const LayoutFlowInput& i
     if (input.fixedBlock) {
         PrLayoutUnit free = ending.blockSize - input.axis.edges - ending.contentBlock;
         outcome.shift = contentShift(state, c, space, *input.box, free, outcome.first,
-                                     c.origin.blockOffset + ending.contentBlock);
+            c.origin.blockOffset + ending.contentBlock);
     }
     if (outcome.shift != kLayoutUnitZero) {
         for (uint32_t i = mark; i < children.count; ++i)

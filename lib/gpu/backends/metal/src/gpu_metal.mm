@@ -403,13 +403,13 @@ MTLPrimitiveTopologyClass topologyClassOf(PrGpuTopology topology) {
 // The stages of the work that makes accesses.
 MTLStages stagesOf(PrGpuAccessFlags access) {
     MTLStages stages = 0;
-    if (access & (PrGpuAccessFlag_IndexRead | PrGpuAccessFlag_IndirectRead | PrGpuAccessFlag_VertexRead
-                  | PrGpuAccessFlag_VertexWrite))
+    if (access & (PrGpuAccessFlag_IndexRead | PrGpuAccessFlag_IndirectRead | PrGpuAccessFlag_VertexRead |
+            PrGpuAccessFlag_VertexWrite))
         stages |= MTLStageVertex;
     if (access & (PrGpuAccessFlag_IndirectRead | PrGpuAccessFlag_ComputeRead | PrGpuAccessFlag_ComputeWrite))
         stages |= MTLStageDispatch;
-    if (access & (PrGpuAccessFlag_FragmentRead | PrGpuAccessFlag_FragmentWrite | PrGpuAccessFlag_ColorAttachment
-                  | PrGpuAccessFlag_DepthStencilRead | PrGpuAccessFlag_DepthStencilWrite))
+    if (access & (PrGpuAccessFlag_FragmentRead | PrGpuAccessFlag_FragmentWrite | PrGpuAccessFlag_ColorAttachment |
+            PrGpuAccessFlag_DepthStencilRead | PrGpuAccessFlag_DepthStencilWrite))
         stages |= MTLStageFragment;
     if (access & (PrGpuAccessFlag_CopyRead | PrGpuAccessFlag_CopyWrite))
         stages |= MTLStageBlit;
@@ -552,10 +552,8 @@ MetalBlock takeBlock(MetalDevice* d, Array<MetalBlock>& free, uint64_t blockSize
         }
     }
     uint64_t length = size > blockSize ? alignUp(size, kStreamAlignment) : blockSize;
-    id<MTLBuffer> buffer = [d->device newBufferWithLength:length
-                                                  options:MTLResourceStorageModeShared
-                                                          | MTLResourceCPUCacheModeWriteCombined
-                                                          | MTLResourceHazardTrackingModeUntracked];
+    id<MTLBuffer> buffer = [d->device newBufferWithLength:length options:MTLResourceStorageModeShared |
+        MTLResourceCPUCacheModeWriteCombined | MTLResourceHazardTrackingModeUntracked];
     if (buffer == nil)
         return MetalBlock{};
     uint32_t slot = addResourceLocked(d, MetalSlot_Buffer, buffer, buffer.gpuAddress);
@@ -579,7 +577,7 @@ id<MTLTexture> textureOf(const MetalDevice* d, uint32_t slot) {
 // Commits a command buffer, which reaches `fence` once it is done and the functions that wait for it have run. Takes
 // the copied `dones`. The caller holds the mutex.
 void commit(MetalDevice* d, id<MTL4CommandBuffer> buffer, PrGpuFence fence, MetalDone* PR_NULLABLE dones,
-            uint32_t doneCount) {
+        uint32_t doneCount) {
     MTL4CommitOptions* options = [[MTL4CommitOptions new] autorelease];
     MetalDevice* owner = d;
     [options addFeedbackHandler:^(id<MTL4CommitFeedback> feedback) {
@@ -619,9 +617,8 @@ void openUploads(MetalDevice* d) {
     [d->uploads beginCommandBufferWithAllocator:d->uploadAllocator];
     d->uploads.label = @"uploads";
     d->uploadEncoder = [[d->uploads computeCommandEncoder] retain];
-    [d->uploadEncoder barrierAfterQueueStages:kAllStages
-                                 beforeStages:MTLStageBlit
-                            visibilityOptions:MTL4VisibilityOptionDevice];
+    [d->uploadEncoder barrierAfterQueueStages:kAllStages beforeStages:MTLStageBlit
+        visibilityOptions:MTL4VisibilityOptionDevice];
     d->uploadSerial = d->serial++;
     d->inFlight.push(MetalInFlight{d->uploadSerial, 0});
 }
@@ -635,15 +632,11 @@ void submitUploads(MetalDevice* d) {
     for (uint32_t i = 0; i < copies.count; ++i) {
         const GpuSharedUploadCopy& c = copies.data[i];
         if (c.size != 0)
-            [d->uploadEncoder copyFromBuffer:d->uploadBlocks.data[c.block].buffer
-                                sourceOffset:c.source
-                                    toBuffer:bufferOf(d, c.buffer)
-                           destinationOffset:c.target
-                                        size:c.size];
+            [d->uploadEncoder copyFromBuffer:d->uploadBlocks.data[c.block].buffer sourceOffset:c.source
+                toBuffer:bufferOf(d, c.buffer) destinationOffset:c.target size:c.size];
     }
-    [d->uploadEncoder barrierAfterStages:MTLStageBlit
-                       beforeQueueStages:kAllStages
-                       visibilityOptions:MTL4VisibilityOptionDevice];
+    [d->uploadEncoder barrierAfterStages:MTLStageBlit beforeQueueStages:kAllStages
+        visibilityOptions:MTL4VisibilityOptionDevice];
     [d->uploadEncoder endEncoding];
     [d->uploadEncoder release];
     d->uploadEncoder = nil;
@@ -710,7 +703,7 @@ void bufferUpload(PrGpuDevice* device, PrGpuBuffer buffer, uint64_t offset, cons
 }
 
 void textureUpload(PrGpuDevice* device, PrGpuTexture texture, const PrGpuTextureRegion* region, const void* data,
-                   uint32_t rowBytes, uint32_t layerBytes) {
+        uint32_t rowBytes, uint32_t layerBytes) {
     MetalDevice* d = metalOf(device);
     @autoreleasepool {
         id<MTLTexture> t = textureOf(d, texture.id);
@@ -734,25 +727,21 @@ void textureUpload(PrGpuDevice* device, PrGpuTexture texture, const PrGpuTexture
         for (uint32_t s = 0; s < slices; ++s) {
             for (uint32_t y = 0; y < rows; ++y)
                 memCopy(to + s * sliceBytes + uint64_t(y) * row,
-                        from + uint64_t(s) * layerBytes + uint64_t(y) * rowBytes, row);
+                    from + uint64_t(s) * layerBytes + uint64_t(y) * rowBytes, row);
         }
         if (gpuSharedUploadNeedsTextureBarrier(&d->uploadBatch, texture.id))
-            [d->uploadEncoder barrierAfterEncoderStages:MTLStageBlit
-                                    beforeEncoderStages:MTLStageBlit
-                                      visibilityOptions:MTL4VisibilityOptionDevice];
+            [d->uploadEncoder barrierAfterEncoderStages:MTLStageBlit beforeEncoderStages:MTLStageBlit
+                visibilityOptions:MTL4VisibilityOptionDevice];
         bool is3d = desc.kind == PrGpuTextureKind_3d;
         uint32_t images = is3d ? 1 : slices;
         for (uint32_t i = 0; i < images; ++i) {
-            [d->uploadEncoder copyFromBuffer:staging
-                                sourceOffset:at + i * sliceBytes
-                           sourceBytesPerRow:row
-                         sourceBytesPerImage:sliceBytes
-                                  sourceSize:MTLSizeMake(region->extent.width, region->extent.height,
-                                                         is3d ? slices : 1)
-                                   toTexture:t
-                            destinationSlice:is3d ? 0 : region->firstLayer + i
-                            destinationLevel:region->level
-                           destinationOrigin:MTLOriginMake(region->x, region->y, is3d ? region->z : 0)];
+            NSUInteger depth = is3d ? slices : 1;
+            NSUInteger slice = is3d ? 0 : region->firstLayer + i;
+            [d->uploadEncoder copyFromBuffer:staging sourceOffset:at + i * sliceBytes sourceBytesPerRow:row
+                sourceBytesPerImage:sliceBytes
+                sourceSize:MTLSizeMake(region->extent.width, region->extent.height, depth) toTexture:t
+                destinationSlice:slice destinationLevel:region->level
+                destinationOrigin:MTLOriginMake(region->x, region->y, is3d ? region->z : 0)];
         }
         prMutexUnlock(&d->mutex);
     }
@@ -960,20 +949,25 @@ PrStatus textureCreate(PrGpuDevice* device, const PrGpuTextureDesc* desc, PrGpuT
 }
 
 PrStatus textureCreateView(PrGpuDevice* device, PrGpuTexture texture, PrGpuTextureKind kind,
-                           PrGpuSubresources subresources, PrGpuTexture* out) {
+        PrGpuSubresources subresources, PrGpuTexture* out) {
     MetalDevice* d = metalOf(device);
     @autoreleasepool {
         id<MTLTexture> t = textureOf(d, texture.id);
         PrGpuTextureDesc desc = d->resources[texture.id].texture;
-        uint8_t levels =
-            subresources.levels != 0 ? subresources.levels : uint8_t(desc.levels - subresources.firstLevel);
+        uint8_t levels;
+        if (subresources.levels != 0)
+            levels = subresources.levels;
+        else
+            levels = uint8_t(desc.levels - subresources.firstLevel);
         uint32_t layerCount = desc.kind == PrGpuTextureKind_3d ? 1 : desc.extent.depth;
-        uint16_t layers = subresources.layers != 0 ? subresources.layers
-                                                   : uint16_t(layerCount - subresources.firstLayer);
+        uint16_t layers;
+        if (subresources.layers != 0)
+            layers = subresources.layers;
+        else
+            layers = uint16_t(layerCount - subresources.firstLayer);
         id<MTLTexture> view = [t newTextureViewWithPixelFormat:t.pixelFormat
-                                                   textureType:textureTypeOf(kind, desc.samples)
-                                                        levels:NSMakeRange(subresources.firstLevel, levels)
-                                                        slices:NSMakeRange(subresources.firstLayer, layers)];
+            textureType:textureTypeOf(kind, desc.samples) levels:NSMakeRange(subresources.firstLevel, levels)
+            slices:NSMakeRange(subresources.firstLayer, layers)];
         if (view == nil)
             return PrStatus_Limit;
         uint32_t slot = addResource(d, MetalSlot_Texture, view, view.gpuResourceID._impl);
@@ -1015,10 +1009,10 @@ PrStatus samplerCreate(PrGpuDevice* device, const PrGpuSamplerDesc* desc, PrGpuS
     MetalDevice* d = metalOf(device);
     @autoreleasepool {
         MTLSamplerDescriptor* sd = [[MTLSamplerDescriptor new] autorelease];
-        sd.magFilter = desc->magnify == PrGpuFilter_Linear ? MTLSamplerMinMagFilterLinear
-                                                           : MTLSamplerMinMagFilterNearest;
-        sd.minFilter = desc->minify == PrGpuFilter_Linear ? MTLSamplerMinMagFilterLinear
-                                                          : MTLSamplerMinMagFilterNearest;
+        sd.magFilter =
+            desc->magnify == PrGpuFilter_Linear ? MTLSamplerMinMagFilterLinear : MTLSamplerMinMagFilterNearest;
+        sd.minFilter =
+            desc->minify == PrGpuFilter_Linear ? MTLSamplerMinMagFilterLinear : MTLSamplerMinMagFilterNearest;
         sd.mipFilter = desc->mip == PrGpuFilter_Linear ? MTLSamplerMipFilterLinear : MTLSamplerMipFilterNearest;
         sd.sAddressMode = addressOf(desc->address[0]);
         sd.tAddressMode = addressOf(desc->address[1]);
@@ -1053,14 +1047,13 @@ PrStatus samplerCreate(PrGpuDevice* device, const PrGpuSamplerDesc* desc, PrGpuS
 // Shader libraries and pipelines
 
 PrStatus shaderLibraryCreate(PrGpuDevice* device, PrGpuShaderEntry* entries, uint32_t entryCount,
-                             PrGpuShaderLibrary* PR_NULLABLE* PR_NONNULL out) {
+        PrGpuShaderLibrary* PR_NULLABLE* PR_NONNULL out) {
     MetalDevice* d = metalOf(device);
     @autoreleasepool {
         if (entryCount == 0)
             return PrStatus_InvalidData;
         // Every entry point shares the one metallib, which the library's bytes hold until the library is destroyed.
-        dispatch_data_t data = dispatch_data_create(entries[0].code, entries[0].codeSize, nullptr,
-                                                    ^{});
+        dispatch_data_t data = dispatch_data_create(entries[0].code, entries[0].codeSize, nullptr, ^{});
         NSError* error = nil;
         id<MTLLibrary> library = [d->device newLibraryWithData:data error:&error];
         dispatch_release(data);
@@ -1105,8 +1098,7 @@ uint32_t addPipeline(MetalDevice* d, const MetalPipeline& pipeline) {
 }
 
 PrStatus graphicsPipelineCreate(PrGpuDevice* device, const PrGpuGraphicsPipelineDesc* desc,
-                                const PrGpuShaderEntry* vertex, const PrGpuShaderEntry* PR_NULLABLE fragment,
-                                PrGpuPipeline* out) {
+        const PrGpuShaderEntry* vertex, const PrGpuShaderEntry* PR_NULLABLE fragment, PrGpuPipeline* out) {
     MetalDevice* d = metalOf(device);
     @autoreleasepool {
         MTL4RenderPipelineDescriptor* pd = [[MTL4RenderPipelineDescriptor new] autorelease];
@@ -1129,15 +1121,14 @@ PrStatus graphicsPipelineCreate(PrGpuDevice* device, const PrGpuGraphicsPipeline
             a.destinationAlphaBlendFactor = blendFactorOf(blend.alphaTarget, true);
             a.alphaBlendOperation = blendOpOf(blend.alphaOp);
             PrGpuColorWriteFlags write = blend.write != 0 ? blend.write : PrGpuColorWriteFlag_All;
-            a.writeMask = ((write & PrGpuColorWriteFlag_Red) ? MTLColorWriteMaskRed : 0)
-                          | ((write & PrGpuColorWriteFlag_Green) ? MTLColorWriteMaskGreen : 0)
-                          | ((write & PrGpuColorWriteFlag_Blue) ? MTLColorWriteMaskBlue : 0)
-                          | ((write & PrGpuColorWriteFlag_Alpha) ? MTLColorWriteMaskAlpha : 0);
+            a.writeMask = ((write & PrGpuColorWriteFlag_Red) ? MTLColorWriteMaskRed : 0) |
+                ((write & PrGpuColorWriteFlag_Green) ? MTLColorWriteMaskGreen : 0) |
+                ((write & PrGpuColorWriteFlag_Blue) ? MTLColorWriteMaskBlue : 0) |
+                ((write & PrGpuColorWriteFlag_Alpha) ? MTLColorWriteMaskAlpha : 0);
         }
         NSError* error = nil;
-        id<MTLRenderPipelineState> state = [d->compiler newRenderPipelineStateWithDescriptor:pd
-                                                                         compilerTaskOptions:nil
-                                                                                       error:&error];
+        id<MTLRenderPipelineState> state =
+            [d->compiler newRenderPipelineStateWithDescriptor:pd compilerTaskOptions:nil error:&error];
         if (state == nil) {
             NSLog(@"lib/gpu: Metal made no pipeline for %@: %@", pd.vertexFunctionDescriptor, error);
             return PrStatus_NotSupported;
@@ -1146,8 +1137,10 @@ PrStatus graphicsPipelineCreate(PrGpuDevice* device, const PrGpuGraphicsPipeline
         dd.depthCompareFunction = desc->depthTest ? compareOf(desc->depthCompare) : MTLCompareFunctionAlways;
         dd.depthWriteEnabled = desc->depthWrite;
         if (desc->stencilTest) {
-            MTLStencilDescriptor* faces[2] = {[[MTLStencilDescriptor new] autorelease],
-                                              [[MTLStencilDescriptor new] autorelease]};
+            MTLStencilDescriptor* faces[2] = {
+                [[MTLStencilDescriptor new] autorelease],
+                [[MTLStencilDescriptor new] autorelease],
+            };
             const PrGpuStencilFace* from[2] = {&desc->stencilFront, &desc->stencilBack};
             for (int f = 0; f < 2; ++f) {
                 faces[f].stencilFailureOperation = stencilOpOf(from[f]->fail);
@@ -1164,9 +1157,12 @@ PrStatus graphicsPipelineCreate(PrGpuDevice* device, const PrGpuGraphicsPipeline
         p.state = state;
         p.depthStencil = [d->device newDepthStencilStateWithDescriptor:dd];
         p.primitive = primitiveOf(desc->topology);
-        p.cull = desc->cull == PrGpuCull_Front ? MTLCullModeFront
-                 : desc->cull == PrGpuCull_Back ? MTLCullModeBack
-                                                : MTLCullModeNone;
+        if (desc->cull == PrGpuCull_Front)
+            p.cull = MTLCullModeFront;
+        else if (desc->cull == PrGpuCull_Back)
+            p.cull = MTLCullModeBack;
+        else
+            p.cull = MTLCullModeNone;
         p.winding = desc->frontClockwise ? MTLWindingClockwise : MTLWindingCounterClockwise;
         p.depthBias = desc->depthBias;
         p.depthBiasSlope = desc->depthBiasSlope;
@@ -1183,7 +1179,7 @@ PrStatus graphicsPipelineCreate(PrGpuDevice* device, const PrGpuGraphicsPipeline
 }
 
 PrStatus computePipelineCreate(PrGpuDevice* device, const PrGpuShaderLibrary* library, const PrGpuShaderEntry* compute,
-                               PrStringView name, PrGpuPipeline* out) {
+        PrStringView name, PrGpuPipeline* out) {
     MetalDevice* d = metalOf(device);
     @autoreleasepool {
         MTL4ComputePipelineDescriptor* pd = [[MTL4ComputePipelineDescriptor new] autorelease];
@@ -1192,8 +1188,7 @@ PrStatus computePipelineCreate(PrGpuDevice* device, const PrGpuShaderLibrary* li
             pd.label = stringOf(name);
         NSError* error = nil;
         id<MTLComputePipelineState> state = [d->compiler newComputePipelineStateWithDescriptor:pd
-                                                                           compilerTaskOptions:nil
-                                                                                         error:&error];
+            compilerTaskOptions:nil error:&error];
         if (state == nil) {
             NSLog(@"lib/gpu: Metal made no compute pipeline: %@", error);
             return PrStatus_NotSupported;
@@ -1258,8 +1253,7 @@ id<MTL4ComputeCommandEncoder> computeEncoder(MetalCommands* c) {
     return c->compute;
 }
 
-bool commandsBegin(PrGpuDevice* device, const PrGpuCommandsOptions* options,
-                   PrGpuCommands* PR_NULLABLE* PR_NONNULL out) {
+bool commandsBegin(PrGpuDevice* device, const PrGpuCommandsOptions* options, PrGpuCommands* PR_NULLABLE* PR_NONNULL out) {
     MetalDevice* d = metalOf(device);
     @autoreleasepool {
         MetalCommands* c = allocZeroed<MetalCommands>();
@@ -1325,8 +1319,7 @@ void* stream(MetalDevice* d, MetalCommands* c, uint64_t size, uint32_t* slot, ui
     return static_cast<uint8_t*>(last->buffer.contents) + at;
 }
 
-void* commandsStream(PrGpuDevice* device, PrGpuCommands* commands, uint64_t size, PrGpuBuffer* buffer,
-                     uint64_t* offset) {
+void* commandsStream(PrGpuDevice* device, PrGpuCommands* commands, uint64_t size, PrGpuBuffer* buffer, uint64_t* offset) {
     uint32_t slot = 0;
     void* bytes = stream(metalOf(device), commandsOf(commands), size, &slot, offset);
     buffer->id = slot;
@@ -1342,8 +1335,7 @@ void setRoot(PrGpuDevice* device, PrGpuCommands* commands, const void* data, uin
     void* bytes = stream(d, c, size != 0 ? size : 16, &slot, &offset);
     memCopy(bytes, data, size);
     if (slot != 0)
-        [c->table setAddress:static_cast<id<MTLBuffer>>(d->resources[slot].object).gpuAddress + offset
-                     atIndex:binding];
+        [c->table setAddress:static_cast<id<MTLBuffer>>(d->resources[slot].object).gpuAddress + offset atIndex:binding];
 }
 
 void commandsSetPush(PrGpuDevice* device, PrGpuCommands* commands, const void* data, uint32_t size) {
@@ -1390,80 +1382,68 @@ void commandsDispatchIndirect(PrGpuDevice* device, PrGpuCommands* commands, PrGp
     id<MTL4ComputeCommandEncoder> e = computeEncoder(c);
     [e setComputePipelineState:p.state];
     [e dispatchThreadgroupsWithIndirectBuffer:bufferOf(d, buffer.id).gpuAddress + offset
-                        threadsPerThreadgroup:p.groupSize];
+        threadsPerThreadgroup:p.groupSize];
 }
 
 void commandsCopyBuffer(PrGpuDevice* device, PrGpuCommands* commands, PrGpuBuffer source, uint64_t sourceOffset,
-                        PrGpuBuffer target, uint64_t targetOffset, uint64_t size) {
+        PrGpuBuffer target, uint64_t targetOffset, uint64_t size) {
     MetalDevice* d = metalOf(device);
-    [computeEncoder(commandsOf(commands)) copyFromBuffer:bufferOf(d, source.id)
-                                            sourceOffset:sourceOffset
-                                                toBuffer:bufferOf(d, target.id)
-                                       destinationOffset:targetOffset
-                                                    size:size];
+    [computeEncoder(commandsOf(commands)) copyFromBuffer:bufferOf(d, source.id) sourceOffset:sourceOffset
+        toBuffer:bufferOf(d, target.id) destinationOffset:targetOffset size:size];
 }
 
 void commandsCopyTexture(PrGpuDevice* device, PrGpuCommands* commands, PrGpuTexture source,
-                         const PrGpuTextureRegion* sourceRegion, PrGpuTexture target,
-                         const PrGpuTextureRegion* targetRegion) {
+        const PrGpuTextureRegion* sourceRegion, PrGpuTexture target, const PrGpuTextureRegion* targetRegion) {
     MetalDevice* d = metalOf(device);
     id<MTL4ComputeCommandEncoder> e = computeEncoder(commandsOf(commands));
     bool is3d = d->resources[source.id].texture.kind == PrGpuTextureKind_3d;
     uint32_t images = is3d ? 1 : sourceRegion->extent.depth;
     for (uint32_t i = 0; i < images; ++i) {
-        [e copyFromTexture:textureOf(d, source.id)
-                    sourceSlice:is3d ? 0 : sourceRegion->firstLayer + i
-                    sourceLevel:sourceRegion->level
-                   sourceOrigin:MTLOriginMake(sourceRegion->x, sourceRegion->y, is3d ? sourceRegion->z : 0)
-                     sourceSize:MTLSizeMake(sourceRegion->extent.width, sourceRegion->extent.height,
-                                            is3d ? sourceRegion->extent.depth : 1)
-                      toTexture:textureOf(d, target.id)
-               destinationSlice:is3d ? 0 : targetRegion->firstLayer + i
-               destinationLevel:targetRegion->level
-              destinationOrigin:MTLOriginMake(targetRegion->x, targetRegion->y, is3d ? targetRegion->z : 0)];
+        NSUInteger depth = is3d ? sourceRegion->extent.depth : 1;
+        NSUInteger sourceSlice = is3d ? 0 : sourceRegion->firstLayer + i;
+        NSUInteger targetSlice = is3d ? 0 : targetRegion->firstLayer + i;
+        [e copyFromTexture:textureOf(d, source.id) sourceSlice:sourceSlice sourceLevel:sourceRegion->level
+            sourceOrigin:MTLOriginMake(sourceRegion->x, sourceRegion->y, is3d ? sourceRegion->z : 0)
+            sourceSize:MTLSizeMake(sourceRegion->extent.width, sourceRegion->extent.height, depth)
+            toTexture:textureOf(d, target.id) destinationSlice:targetSlice destinationLevel:targetRegion->level
+            destinationOrigin:MTLOriginMake(targetRegion->x, targetRegion->y, is3d ? targetRegion->z : 0)];
     }
 }
 
 void commandsCopyBufferToTexture(PrGpuDevice* device, PrGpuCommands* commands, PrGpuBuffer source,
-                                 uint64_t sourceOffset, uint32_t rowBytes, uint32_t layerBytes, PrGpuTexture target,
-                                 const PrGpuTextureRegion* targetRegion) {
+        uint64_t sourceOffset, uint32_t rowBytes, uint32_t layerBytes, PrGpuTexture target,
+        const PrGpuTextureRegion* targetRegion) {
     MetalDevice* d = metalOf(device);
     id<MTL4ComputeCommandEncoder> e = computeEncoder(commandsOf(commands));
     bool is3d = d->resources[target.id].texture.kind == PrGpuTextureKind_3d;
     uint32_t images = is3d ? 1 : targetRegion->extent.depth;
     uint64_t imageBytes = layerBytes != 0 ? layerBytes : uint64_t(rowBytes) * targetRegion->extent.height;
     for (uint32_t i = 0; i < images; ++i) {
-        [e copyFromBuffer:bufferOf(d, source.id)
-                   sourceOffset:sourceOffset + i * imageBytes
-              sourceBytesPerRow:rowBytes
+        NSUInteger depth = is3d ? targetRegion->extent.depth : 1;
+        NSUInteger targetSlice = is3d ? 0 : targetRegion->firstLayer + i;
+        [e copyFromBuffer:bufferOf(d, source.id) sourceOffset:sourceOffset + i * imageBytes sourceBytesPerRow:rowBytes
             sourceBytesPerImage:imageBytes
-                     sourceSize:MTLSizeMake(targetRegion->extent.width, targetRegion->extent.height,
-                                            is3d ? targetRegion->extent.depth : 1)
-                      toTexture:textureOf(d, target.id)
-               destinationSlice:is3d ? 0 : targetRegion->firstLayer + i
-               destinationLevel:targetRegion->level
-              destinationOrigin:MTLOriginMake(targetRegion->x, targetRegion->y, is3d ? targetRegion->z : 0)];
+            sourceSize:MTLSizeMake(targetRegion->extent.width, targetRegion->extent.height, depth)
+            toTexture:textureOf(d, target.id) destinationSlice:targetSlice destinationLevel:targetRegion->level
+            destinationOrigin:MTLOriginMake(targetRegion->x, targetRegion->y, is3d ? targetRegion->z : 0)];
     }
 }
 
 void commandsCopyTextureToBuffer(PrGpuDevice* device, PrGpuCommands* commands, PrGpuTexture source,
-                                 const PrGpuTextureRegion* sourceRegion, PrGpuBuffer target, uint64_t targetOffset,
-                                 uint32_t rowBytes, uint32_t layerBytes) {
+        const PrGpuTextureRegion* sourceRegion, PrGpuBuffer target, uint64_t targetOffset, uint32_t rowBytes,
+        uint32_t layerBytes) {
     MetalDevice* d = metalOf(device);
     id<MTL4ComputeCommandEncoder> e = computeEncoder(commandsOf(commands));
     bool is3d = d->resources[source.id].texture.kind == PrGpuTextureKind_3d;
     uint32_t images = is3d ? 1 : sourceRegion->extent.depth;
     uint64_t imageBytes = layerBytes != 0 ? layerBytes : uint64_t(rowBytes) * sourceRegion->extent.height;
     for (uint32_t i = 0; i < images; ++i) {
-        [e copyFromTexture:textureOf(d, source.id)
-                         sourceSlice:is3d ? 0 : sourceRegion->firstLayer + i
-                         sourceLevel:sourceRegion->level
-                        sourceOrigin:MTLOriginMake(sourceRegion->x, sourceRegion->y, is3d ? sourceRegion->z : 0)
-                          sourceSize:MTLSizeMake(sourceRegion->extent.width, sourceRegion->extent.height,
-                                                 is3d ? sourceRegion->extent.depth : 1)
-                            toBuffer:bufferOf(d, target.id)
-                   destinationOffset:targetOffset + i * imageBytes
-              destinationBytesPerRow:rowBytes
+        NSUInteger depth = is3d ? sourceRegion->extent.depth : 1;
+        NSUInteger sourceSlice = is3d ? 0 : sourceRegion->firstLayer + i;
+        [e copyFromTexture:textureOf(d, source.id) sourceSlice:sourceSlice sourceLevel:sourceRegion->level
+            sourceOrigin:MTLOriginMake(sourceRegion->x, sourceRegion->y, is3d ? sourceRegion->z : 0)
+            sourceSize:MTLSizeMake(sourceRegion->extent.width, sourceRegion->extent.height, depth) toBuffer:bufferOf(d, target.id)
+            destinationOffset:targetOffset + i * imageBytes destinationBytesPerRow:rowBytes
             destinationBytesPerImage:imageBytes];
     }
 }
@@ -1498,13 +1478,12 @@ void barrier(MetalCommands* c, PrGpuAccessFlags before, PrGpuAccessFlags after) 
     [c->tail barrierAfterStages:wait beforeQueueStages:hold visibilityOptions:MTL4VisibilityOptionDevice];
 }
 
-void commandsBufferBarrier(PrGpuDevice*, PrGpuCommands* commands, PrGpuBuffer, PrGpuAccessFlags before,
-                           PrGpuAccessFlags after) {
+void commandsBufferBarrier(PrGpuDevice*, PrGpuCommands* commands, PrGpuBuffer, PrGpuAccessFlags before, PrGpuAccessFlags after) {
     barrier(commandsOf(commands), before, after);
 }
 
 void commandsTextureBarrier(PrGpuDevice*, PrGpuCommands* commands, PrGpuTexture, PrGpuSubresources,
-                            PrGpuAccessFlags before, PrGpuAccessFlags after) {
+        PrGpuAccessFlags before, PrGpuAccessFlags after) {
     barrier(commandsOf(commands), before, after);
 }
 
@@ -1512,8 +1491,7 @@ void commandsGlobalBarrier(PrGpuDevice*, PrGpuCommands* commands, PrGpuAccessFla
     barrier(commandsOf(commands), before, after);
 }
 
-void commandsGenerateMipmaps(PrGpuDevice* device, PrGpuCommands* commands, PrGpuTexture texture,
-                             PrGpuAccessFlags before) {
+void commandsGenerateMipmaps(PrGpuDevice* device, PrGpuCommands* commands, PrGpuTexture texture, PrGpuAccessFlags before) {
     MetalCommands* c = commandsOf(commands);
     barrier(c, before, PrGpuAccessFlag_CopyRead | PrGpuAccessFlag_CopyWrite);
     [computeEncoder(c) generateMipmapsForTexture:textureOf(metalOf(device), texture.id)];
@@ -1603,9 +1581,12 @@ PrGpuPass* passBegin(PrGpuDevice* device, PrGpuCommands* commands, const PrGpuPa
                 ca.texture = textureOf(d, a.texture.id);
                 ca.level = a.level;
                 ca.slice = a.layer;
-                ca.loadAction = a.load == PrGpuLoad_Clear  ? MTLLoadActionClear
-                                : a.load == PrGpuLoad_Keep ? MTLLoadActionLoad
-                                                           : MTLLoadActionDontCare;
+                if (a.load == PrGpuLoad_Clear)
+                    ca.loadAction = MTLLoadActionClear;
+                else if (a.load == PrGpuLoad_Keep)
+                    ca.loadAction = MTLLoadActionLoad;
+                else
+                    ca.loadAction = MTLLoadActionDontCare;
                 const PrColor& clear = desc->clearColor[i];
                 ca.clearColor = MTLClearColorMake(double(clear.r), double(clear.g), double(clear.b), double(clear.a));
                 if (a.store == PrGpuStore_Resolve) {
@@ -1628,9 +1609,12 @@ PrGpuPass* passBegin(PrGpuDevice* device, PrGpuCommands* commands, const PrGpuPa
                 da.texture = textureOf(d, a.texture.id);
                 da.level = a.level;
                 da.slice = a.layer;
-                da.loadAction = a.load == PrGpuLoad_Clear  ? MTLLoadActionClear
-                                : a.load == PrGpuLoad_Keep ? MTLLoadActionLoad
-                                                           : MTLLoadActionDontCare;
+                if (a.load == PrGpuLoad_Clear)
+                    da.loadAction = MTLLoadActionClear;
+                else if (a.load == PrGpuLoad_Keep)
+                    da.loadAction = MTLLoadActionLoad;
+                else
+                    da.loadAction = MTLLoadActionDontCare;
                 da.storeAction = a.store == PrGpuStore_Keep ? MTLStoreActionStore : MTLStoreActionDontCare;
                 da.clearDepth = double(desc->clearDepth);
                 if (t.format == PrGpuFormat_D32FS8) {
@@ -1638,11 +1622,14 @@ PrGpuPass* passBegin(PrGpuDevice* device, PrGpuCommands* commands, const PrGpuPa
                     sa.texture = da.texture;
                     sa.level = a.level;
                     sa.slice = a.layer;
-                    sa.loadAction = desc->stencilLoad == PrGpuLoad_Clear  ? MTLLoadActionClear
-                                    : desc->stencilLoad == PrGpuLoad_Keep ? MTLLoadActionLoad
-                                                                          : MTLLoadActionDontCare;
-                    sa.storeAction = desc->stencilStore == PrGpuStore_Keep ? MTLStoreActionStore
-                                                                           : MTLStoreActionDontCare;
+                    if (desc->stencilLoad == PrGpuLoad_Clear)
+                        sa.loadAction = MTLLoadActionClear;
+                    else if (desc->stencilLoad == PrGpuLoad_Keep)
+                        sa.loadAction = MTLLoadActionLoad;
+                    else
+                        sa.loadAction = MTLLoadActionDontCare;
+                    sa.storeAction =
+                        desc->stencilStore == PrGpuStore_Keep ? MTLStoreActionStore : MTLStoreActionDontCare;
                     sa.clearStencil = desc->clearStencil;
                 }
                 pass->formats.depthStencil = t.format;
@@ -1684,8 +1671,8 @@ void passEnd(PrGpuDevice*, PrGpuPass* handle) {
 void passSetViewport(PrGpuDevice*, PrGpuPass* handle, PrRect viewport, float minDepth, float maxDepth) {
     MetalPass* pass = static_cast<MetalPass*>(handle);
     [pass->encoder setViewport:MTLViewport{double(viewport.left), double(viewport.top),
-                                           double(viewport.right - viewport.left),
-                                           double(viewport.bottom - viewport.top), double(minDepth), double(maxDepth)}];
+        double(viewport.right - viewport.left),
+        double(viewport.bottom - viewport.top), double(minDepth), double(maxDepth)}];
     changed(pass, PrGpuHostStateFlag_Viewport);
 }
 
@@ -1701,7 +1688,7 @@ void passSetScissor(PrGpuDevice*, PrGpuPass* handle, PrIRect scissor) {
     if (bottom < top)
         bottom = top;
     [pass->encoder setScissorRect:MTLScissorRect{NSUInteger(left), NSUInteger(top), NSUInteger(right - left),
-                                                 NSUInteger(bottom - top)}];
+        NSUInteger(bottom - top)}];
     changed(pass, PrGpuHostStateFlag_Scissor);
 }
 
@@ -1729,33 +1716,25 @@ const MetalPipeline& passPipeline(PrGpuDevice* device, MetalPass* pass) {
 }
 
 void passDraw(PrGpuDevice* device, PrGpuPass* handle, uint32_t vertexCount, uint32_t instanceCount,
-              uint32_t firstVertex, uint32_t firstInstance) {
+        uint32_t firstVertex, uint32_t firstInstance) {
     MetalPass* pass = static_cast<MetalPass*>(handle);
-    [pass->encoder drawPrimitives:passPipeline(device, pass).primitive
-                      vertexStart:firstVertex
-                      vertexCount:vertexCount
-                    instanceCount:instanceCount
-                     baseInstance:firstInstance];
+    [pass->encoder drawPrimitives:passPipeline(device, pass).primitive vertexStart:firstVertex vertexCount:vertexCount
+        instanceCount:instanceCount baseInstance:firstInstance];
 }
 
 void passDrawIndexed(PrGpuDevice* device, PrGpuPass* handle, uint32_t indexCount, uint32_t instanceCount,
-                     uint32_t firstIndex, int32_t vertexOffset, uint32_t firstInstance) {
+        uint32_t firstIndex, int32_t vertexOffset, uint32_t firstInstance) {
     MetalDevice* d = metalOf(device);
     MetalPass* pass = static_cast<MetalPass*>(handle);
     id<MTLBuffer> indices = bufferOf(d, pass->indexBuffer.id);
     uint64_t at = pass->indexOffset + uint64_t(firstIndex) * (pass->indexType == MTLIndexTypeUInt32 ? 4 : 2);
-    [pass->encoder drawIndexedPrimitives:passPipeline(device, pass).primitive
-                              indexCount:indexCount
-                               indexType:pass->indexType
-                             indexBuffer:indices.gpuAddress + at
-                       indexBufferLength:indices.length - at
-                           instanceCount:instanceCount
-                              baseVertex:vertexOffset
-                            baseInstance:firstInstance];
+    [pass->encoder drawIndexedPrimitives:passPipeline(device, pass).primitive indexCount:indexCount
+        indexType:pass->indexType indexBuffer:indices.gpuAddress + at indexBufferLength:indices.length - at
+        instanceCount:instanceCount baseVertex:vertexOffset baseInstance:firstInstance];
 }
 
 void passDrawIndirect(PrGpuDevice* device, PrGpuPass* handle, PrGpuBuffer buffer, uint64_t offset, uint32_t count,
-                      uint32_t stride) {
+        uint32_t stride) {
     MetalDevice* d = metalOf(device);
     MetalPass* pass = static_cast<MetalPass*>(handle);
     uint64_t address = bufferOf(d, buffer.id).gpuAddress + offset;
@@ -1764,24 +1743,22 @@ void passDrawIndirect(PrGpuDevice* device, PrGpuPass* handle, PrGpuBuffer buffer
 }
 
 void passDrawIndexedIndirect(PrGpuDevice* device, PrGpuPass* handle, PrGpuBuffer buffer, uint64_t offset,
-                             uint32_t count, uint32_t stride) {
+        uint32_t count, uint32_t stride) {
     MetalDevice* d = metalOf(device);
     MetalPass* pass = static_cast<MetalPass*>(handle);
     id<MTLBuffer> indices = bufferOf(d, pass->indexBuffer.id);
     uint64_t address = bufferOf(d, buffer.id).gpuAddress + offset;
     for (uint32_t i = 0; i < count; ++i)
-        [pass->encoder drawIndexedPrimitives:passPipeline(device, pass).primitive
-                                   indexType:pass->indexType
-                                 indexBuffer:indices.gpuAddress + pass->indexOffset
-                           indexBufferLength:indices.length - pass->indexOffset
-                              indirectBuffer:address + i * stride];
+        [pass->encoder drawIndexedPrimitives:passPipeline(device, pass).primitive indexType:pass->indexType
+            indexBuffer:indices.gpuAddress + pass->indexOffset indexBufferLength:indices.length - pass->indexOffset
+            indirectBuffer:address + i * stride];
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Swap chains
 
 PrStatus swapChainCreate(PrGpuDevice* device, const PrAppSurface* surface, const PrGpuSwapChainDesc* desc,
-                         PrGpuSwapChain* PR_NULLABLE* PR_NONNULL out) {
+        PrGpuSwapChain* PR_NULLABLE* PR_NONNULL out) {
     MetalDevice* d = metalOf(device);
     @autoreleasepool {
         if (surface->kind != PrAppSurfaceKind_NsView)
@@ -1789,13 +1766,15 @@ PrStatus swapChainCreate(PrGpuDevice* device, const PrAppSurface* surface, const
         NSView* view = (NSView*)surface->handle;
         // A view that backs itself with a Metal layer keeps that layer, so that AppKit asks the view to display as it
         // resizes. Any other view hosts a new Metal layer.
-        CAMetalLayer* layer = [view.layer isKindOfClass:CAMetalLayer.class] ? (CAMetalLayer*)view.layer
-                                                                            : [CAMetalLayer layer];
+        CAMetalLayer* layer = [view.layer isKindOfClass:CAMetalLayer.class] ? (CAMetalLayer*)view.layer : [CAMetalLayer layer];
         layer.device = d->device;
         // HDR presents extended sRGB, encoded, in half floats, which the layer shows past SDR white.
         bool hdr = desc->intent == PrGpuSwapChainIntent_Hdr;
-        PrGpuSwapChainInfo info = hdr ? PrGpuSwapChainInfo{PrGpuFormat_Rgba16F, PrColorSpace_Srgb}
-                                      : PrGpuSwapChainInfo{PrGpuFormat_Bgra8, PrColorSpace_Srgb};
+        PrGpuSwapChainInfo info;
+        if (hdr)
+            info = PrGpuSwapChainInfo{PrGpuFormat_Rgba16F, PrColorSpace_Srgb};
+        else
+            info = PrGpuSwapChainInfo{PrGpuFormat_Bgra8, PrColorSpace_Srgb};
         layer.pixelFormat = formatOf(info.format);
         CGColorSpaceRef space = CGColorSpaceCreateWithName(hdr ? kCGColorSpaceExtendedSRGB : kCGColorSpaceSRGB);
         layer.colorspace = space;
@@ -1813,11 +1792,14 @@ PrStatus swapChainCreate(PrGpuDevice* device, const PrAppSurface* surface, const
         // view hosts is the swap chain's to set. A gravity's top is the layer's greatest y, which is the window's
         // bottom where the layer's geometry is flipped.
         bool stretch = desc->anchor == PrGpuSwapChainAnchor_Stretch;
-        view.layerContentsPlacement = stretch ? NSViewLayerContentsPlacementScaleAxesIndependently
-                                              : NSViewLayerContentsPlacementTopLeft;
-        layer.contentsGravity = stretch                     ? kCAGravityResize
-                                : [layer contentsAreFlipped] ? kCAGravityBottomLeft
-                                                             : kCAGravityTopLeft;
+        view.layerContentsPlacement =
+            stretch ? NSViewLayerContentsPlacementScaleAxesIndependently : NSViewLayerContentsPlacementTopLeft;
+        if (stretch)
+            layer.contentsGravity = kCAGravityResize;
+        else if ([layer contentsAreFlipped])
+            layer.contentsGravity = kCAGravityBottomLeft;
+        else
+            layer.contentsGravity = kCAGravityTopLeft;
         [d->queue addResidencySet:layer.residencySet];
         MetalSwapChain* sc = allocZeroed<MetalSwapChain>();
         sc->device = device;
@@ -1876,12 +1858,13 @@ PrStatus swapChainAcquire(PrGpuDevice* device, PrGpuSwapChain* handle, PrUVec2 e
         prMutexLock(&d->mutex);
         [d->residency removeAllocation:texture];
         prMutexUnlock(&d->mutex);
-        d->resources[slot].texture = PrGpuTextureDesc{.format = sc->info.format,
-                                                      .usage = PrGpuTextureUsageFlag_RenderTarget
-                                                               | PrGpuTextureUsageFlag_Sampled,
-                                                      .levels = 1,
-                                                      .samples = 1,
-                                                      .extent = {uint32_t(texture.width), uint32_t(texture.height), 1}};
+        d->resources[slot].texture = PrGpuTextureDesc{
+            .format = sc->info.format,
+            .usage = PrGpuTextureUsageFlag_RenderTarget | PrGpuTextureUsageFlag_Sampled,
+            .levels = 1,
+            .samples = 1,
+            .extent = {uint32_t(texture.width), uint32_t(texture.height), 1},
+        };
         sc->drawable = [drawable retain];
         sc->texture = PrGpuTexture{slot};
         *out = sc->texture;
@@ -1911,8 +1894,11 @@ PrStatus prGpuMetalCreate(const PrGpuMetalOptions* PR_NULLABLE options, PrGpuDev
     *out = nullptr;
     PrGpuMetalOptions o = options != nullptr ? *options : prGpuMetalOptionsDefault();
     @autoreleasepool {
-        id<MTLDevice> device = o.device != nullptr ? [static_cast<id<MTLDevice>>(o.device) retain]
-                                                   : MTLCreateSystemDefaultDevice();
+        id<MTLDevice> device;
+        if (o.device != nullptr)
+            device = [static_cast<id<MTLDevice>>(o.device) retain];
+        else
+            device = MTLCreateSystemDefaultDevice();
         if (device == nil)
             return PrStatus_NotSupported;
         if (![device supportsFamily:MTLGPUFamilyMetal4]) {
@@ -1938,11 +1924,9 @@ PrStatus prGpuMetalCreate(const PrGpuMetalOptions* PR_NULLABLE options, PrGpuDev
         rd.initialCapacity = 256;
         d->residency = [device newResidencySetWithDescriptor:rd error:nil];
         d->resourceHeap = [device newBufferWithLength:kMaxResources * sizeof(uint64_t)
-                                              options:MTLResourceStorageModeShared
-                                                      | MTLResourceHazardTrackingModeUntracked];
+            options:MTLResourceStorageModeShared | MTLResourceHazardTrackingModeUntracked];
         d->samplerHeap = [device newBufferWithLength:kMaxSamplers * sizeof(uint64_t)
-                                             options:MTLResourceStorageModeShared
-                                                     | MTLResourceHazardTrackingModeUntracked];
+            options:MTLResourceStorageModeShared | MTLResourceHazardTrackingModeUntracked];
         [d->residency addAllocation:d->resourceHeap];
         [d->residency addAllocation:d->samplerHeap];
         [d->residency commit];
@@ -2025,9 +2009,9 @@ PrStatus prGpuMetalCreate(const PrGpuMetalOptions* PR_NULLABLE options, PrGpuDev
         d->info.adapter = PrStringView{d->adapter, strlen(d->adapter)};
         d->info.backend = "Metal";
         // Framebuffer fetch on Apple's GPUs reads in raster order.
-        d->info.features = PrGpuFeatureFlag_Timestamps | PrGpuFeatureFlag_TextureCompressionAstc
-                           | PrGpuFeatureFlag_OrderedTargetReads
-                           | (device.supportsBCTextureCompression ? PrGpuFeatureFlag_TextureCompressionBc : 0);
+        d->info.features = PrGpuFeatureFlag_Timestamps | PrGpuFeatureFlag_TextureCompressionAstc |
+            PrGpuFeatureFlag_OrderedTargetReads |
+            (device.supportsBCTextureCompression ? PrGpuFeatureFlag_TextureCompressionBc : 0);
         d->info.maxTextureSize = 16384;
         d->info.maxResourceHandles = kMaxResources - 1;
         d->info.maxSamplerHandles = kMaxSamplers - 1;
@@ -2059,12 +2043,13 @@ PrStatus prGpuMetalTextureWrap(PrGpuDevice* device, void* texture, PrGpuTextureU
     uint32_t slot = addResource(d, MetalSlot_Texture, t, t.gpuResourceID._impl);
     if (slot == 0)
         return PrStatus_Limit;
-    d->resources[slot].texture = PrGpuTextureDesc{.format = gpuFormatOf(t.pixelFormat),
-                                                  .usage = usage,
-                                                  .levels = uint8_t(t.mipmapLevelCount),
-                                                  .samples = uint8_t(t.sampleCount),
-                                                  .extent = {uint32_t(t.width), uint32_t(t.height),
-                                                             uint32_t(t.arrayLength)}};
+    d->resources[slot].texture = PrGpuTextureDesc{
+        .format = gpuFormatOf(t.pixelFormat),
+        .usage = usage,
+        .levels = uint8_t(t.mipmapLevelCount),
+        .samples = uint8_t(t.sampleCount),
+        .extent = {uint32_t(t.width), uint32_t(t.height), uint32_t(t.arrayLength)},
+    };
     out->id = slot;
     return PrStatus_Ok;
 }

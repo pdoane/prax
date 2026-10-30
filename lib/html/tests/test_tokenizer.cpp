@@ -17,9 +17,8 @@ struct Reader {
     HtmlTokenizer tokenizer = {};
     Array<HtmlError> errors;
 
-    explicit Reader(std::string text, HtmlState state = HtmlState_Data,
-                    PrStringView lastStartTag = PrStringView{})
-        : source(std::move(text)) {
+    explicit Reader(std::string text, HtmlState state = HtmlState_Data, PrStringView lastStartTag = PrStringView{}) :
+            source(std::move(text)) {
         htmlTokenizerStart(&tokenizer, source, &errors);
         htmlTokenizerSetState(&tokenizer, state, lastStartTag);
     }
@@ -109,8 +108,7 @@ std::string join(const std::vector<std::string>& parts) {
 }
 
 // Returns every token in `text`, read in `state` for an element named `lastStartTag`.
-std::string tokens(std::string text, HtmlState state = HtmlState_Data,
-                   PrStringView lastStartTag = PrStringView{}) {
+std::string tokens(std::string text, HtmlState state = HtmlState_Data, PrStringView lastStartTag = PrStringView{}) {
     Reader reader(std::move(text), state, lastStartTag);
     std::vector<std::string> out;
     while (reader.next())
@@ -120,8 +118,7 @@ std::string tokens(std::string text, HtmlState state = HtmlState_Data,
 
 // Returns every character token in `text`, one entry each, with the flags that it carries, which the tree builder
 // branches on.
-std::string runs(std::string text, HtmlState state = HtmlState_Data,
-                 PrStringView lastStartTag = PrStringView{}) {
+std::string runs(std::string text, HtmlState state = HtmlState_Data, PrStringView lastStartTag = PrStringView{}) {
     Reader reader(std::move(text), state, lastStartTag);
     std::vector<std::string> out;
     while (reader.next()) {
@@ -160,8 +157,7 @@ std::string errorsOf(std::string text, HtmlState state = HtmlState_Data) {
     std::vector<std::string> out;
     for (uint32_t i = 0; i < reader.errors.count; ++i) {
         PrStringView name = kHtmlErrorName[reader.errors.data[i].code];
-        out.push_back(std::string(name.data, name.size) + "@"
-                      + std::to_string(reader.errors.data[i].at));
+        out.push_back(std::string(name.data, name.size) + "@" + std::to_string(reader.errors.data[i].at));
     }
     return join(out);
 }
@@ -190,8 +186,7 @@ std::string written(const std::string& text) {
     reader.tokenizer.open = true;
     std::vector<std::string> out;
     auto drain = [&] {
-        while (htmlTokenizerNext(&reader.tokenizer)
-               && reader.tokenizer.token.kind != HtmlTokenKind_Eof)
+        while (htmlTokenizerNext(&reader.tokenizer) && reader.tokenizer.token.kind != HtmlTokenKind_Eof)
             append(&out, reader);
     };
     for (char c : text) {
@@ -276,7 +271,7 @@ TEST_CASE("an attribute reports what is written oddly") {
     CHECK(tokens("<a b='c'd='e'>") == "start a b=c d=e");
     CHECK(errorsOf("<a b='c'd='e'>") == "missing-whitespace-between-attributes@8");
     CHECK(errorsOf("<a b=`c`>") == "unexpected-character-in-unquoted-attribute-value@5 | "
-                                   "unexpected-character-in-unquoted-attribute-value@7");
+        "unexpected-character-in-unquoted-attribute-value@7");
     CHECK(errorsOf("<a =b>") == "unexpected-equals-sign-before-attribute-name@3");
     CHECK(errorsOf("<a/ b>") == "unexpected-solidus-in-tag@3");
 }
@@ -393,8 +388,7 @@ TEST_CASE("script data runs through comment-like text") {
     CHECK(tokens("<!--<b>--></script>", HtmlState_ScriptData, "script") == "chars <!--<b>--> | end script");
 
     // A nested <script> inside the comment-like text keeps the end tag from closing until its own end tag.
-    CHECK(tokens("<!--<script></script>--></script>", HtmlState_ScriptData, "script")
-          == "chars <!--<script></script>--> | end script");
+    CHECK(tokens("<!--<script></script>--></script>", HtmlState_ScriptData, "script") == "chars <!--<script></script>--> | end script");
     CHECK(errorsOf("<!--", HtmlState_ScriptData) == "eof-in-script-html-comment-like-text@4");
 }
 

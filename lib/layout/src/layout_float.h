@@ -27,14 +27,13 @@ LayoutAtomic layoutFloat(LayoutState& state, LayoutNodeIndex node, const LayoutS
 // Places a float that is styled by `box` and laid out as `f` in `mode` among the floats of `cb`. The float goes at or
 // below `top`, and below the floats it clears (CSS2/#float-position). Returns its margin box.
 LayoutExclusion layoutFloatPlace(const PrLayoutBoxStyle& box, const LayoutAtomic& f, const LayoutContainingBlock& cb,
-                                 LayoutMode mode, PrLayoutUnit top);
+    LayoutMode mode, PrLayoutUnit top);
 
 // Returns the offset of the border box of a float, laid out as `f` and placed at `placed`, in the content box of its
 // containing block `cb`. The block-start edge of that content box is at `contentTop` in the context. The offset
 // includes the relative positioning of the float.
 LayoutLogicalOffset layoutFloatOffset(const LayoutAtomic& f, const LayoutExclusion& placed,
-                                      const LayoutContainingBlock& cb, LayoutMode mode,
-                                      PrLayoutUnit contentTop);
+    const LayoutContainingBlock& cb, LayoutMode mode, PrLayoutUnit contentTop);
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Boxes that avoid floats
@@ -52,8 +51,7 @@ struct LayoutAvoider {
 // block size, or at which no float meets it (CSS2/#floats). Its inline size fills the space beside the floats at that
 // offset. `margin` holds the margins of the box, indexed by LayoutSide.
 LayoutAvoider layoutAvoiderPlace(LayoutState& state, LayoutNodeIndex node, LayoutNodeIndex runLast,
-                                 const LayoutSpace& content, const LayoutContainingBlock& cb, PrLayoutUnit top,
-                                 const PrLayoutUnit* margin);
+    const LayoutSpace& content, const LayoutContainingBlock& cb, PrLayoutUnit top, const PrLayoutUnit* margin);
 
 } // namespace pr_impl
 

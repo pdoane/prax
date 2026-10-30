@@ -30,8 +30,7 @@ struct DomResources;
 // without its fragment. It is absolute, or as the reference writes it if it does not resolve against the base URL of
 // `from`. Returns null if nothing loads. The returned document must stay alive until the call returns, and the
 // resources take a reference to it.
-typedef PrDomDocument* PR_NULLABLE (*DomResourceLoadFn)(void* PR_NULLABLE context, PrDomDocument* from,
-                                                        PrStringView url);
+typedef PrDomDocument* PR_NULLABLE (*DomResourceLoadFn)(void* PR_NULLABLE context, PrDomDocument* from, PrStringView url);
 
 // A reference split into the document that it names and the fragment that names an element there.
 struct DomReference {

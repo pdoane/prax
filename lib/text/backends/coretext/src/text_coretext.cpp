@@ -70,7 +70,7 @@ void createFont(PrTextShaper*, void* face, const PrFont* font, void* state) {
         CFArrayRef axes = CGFontCopyVariationAxes(graphics);
         CFIndex axisCount = axes != nullptr ? CFArrayGetCount(axes) : 0;
         CFMutableDictionaryRef values = CFDictionaryCreateMutable(nullptr, axisCount, &kCFTypeDictionaryKeyCallBacks,
-                                                                  &kCFTypeDictionaryValueCallBacks);
+            &kCFTypeDictionaryValueCallBacks);
         for (CFIndex i = 0; i < axisCount && i < CFIndex(prFontAxisCount(font)); ++i) {
             CFDictionaryRef axis = static_cast<CFDictionaryRef>(CFArrayGetValueAtIndex(axes, i));
             double value = double(prFontAxisValue(font, uint32_t(i)));
@@ -163,13 +163,12 @@ CTFontRef featuredFont(CtBackend* c, const PrTextRun* run, CTFontRef font, uint6
         const PrTextFeature& f = run->features[i];
         char tag[4] = {char(f.tag >> 24), char(f.tag >> 16), char(f.tag >> 8), char(f.tag)};
         CFStringRef name = CFStringCreateWithBytes(nullptr, reinterpret_cast<const UInt8*>(tag), 4,
-                                                   kCFStringEncodingASCII, false);
+            kCFStringEncodingASCII, false);
         CFNumberRef value = numberOf(f.value);
         const void* keys[] = {kCTFontOpenTypeFeatureTag, kCTFontOpenTypeFeatureValue};
         const void* values[] = {name, value};
-        CFDictionaryRef setting =
-            CFDictionaryCreate(nullptr, keys, values, 2, &kCFTypeDictionaryKeyCallBacks,
-                               &kCFTypeDictionaryValueCallBacks);
+        CFDictionaryRef setting = CFDictionaryCreate(nullptr, keys, values, 2, &kCFTypeDictionaryKeyCallBacks,
+            &kCFTypeDictionaryValueCallBacks);
         CFArrayAppendValue(settings, setting);
         CFRelease(setting);
         CFRelease(value);
@@ -177,9 +176,8 @@ CTFontRef featuredFont(CtBackend* c, const PrTextRun* run, CTFontRef font, uint6
     }
     const void* attributeKeys[] = {kCTFontFeatureSettingsAttribute};
     const void* attributeValues[] = {settings};
-    CFDictionaryRef attributes =
-        CFDictionaryCreate(nullptr, attributeKeys, attributeValues, 1,
-                           &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks);
+    CFDictionaryRef attributes = CFDictionaryCreate(nullptr, attributeKeys, attributeValues, 1,
+        &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks);
     CTFontDescriptorRef descriptor = CTFontDescriptorCreateWithAttributes(attributes);
     CTFontRef featured = CTFontCreateCopyWithAttributes(font, 0, nullptr, descriptor);
     CFRelease(descriptor);
@@ -190,22 +188,19 @@ CTFontRef featuredFont(CtBackend* c, const PrTextRun* run, CTFontRef font, uint6
 }
 
 CFAttributedStringRef createText(CtBackend* c, const PrTextRun* run, CTFontRef font) {
-    CFStringRef string = CFStringCreateWithCharactersNoCopy(nullptr, c->utf16.data,
-                                                            CFIndex(c->utf16.count),
-                                                            kCFAllocatorNull);
+    CFStringRef string = CFStringCreateWithCharactersNoCopy(nullptr, c->utf16.data, CFIndex(c->utf16.count),
+        kCFAllocatorNull);
     CFMutableAttributedStringRef text = CFAttributedStringCreateMutable(nullptr, 0);
     CFAttributedStringReplaceString(text, CFRangeMake(0, 0), string);
     CFRelease(string);
     CFRange all = CFRangeMake(0, CFIndex(c->utf16.count));
     CFAttributedStringSetAttribute(text, all, kCTFontAttributeName, font);
     // The run already has one direction, so this overrides what the bidi algorithm would resolve.
-    int32_t level = int32_t(run->direction == PrTextDirection_Rtl
-                                ? kCTWritingDirectionRightToLeft
-                                : kCTWritingDirectionLeftToRight)
-                    | int32_t(kCTWritingDirectionOverride);
+    bool rtl = run->direction == PrTextDirection_Rtl;
+    int32_t level = int32_t(rtl ? kCTWritingDirectionRightToLeft : kCTWritingDirectionLeftToRight) |
+        int32_t(kCTWritingDirectionOverride);
     CFNumberRef number = CFNumberCreate(nullptr, kCFNumberSInt32Type, &level);
-    CFArrayRef levels = CFArrayCreate(nullptr, reinterpret_cast<const void**>(&number), 1,
-                                      &kCFTypeArrayCallBacks);
+    CFArrayRef levels = CFArrayCreate(nullptr, reinterpret_cast<const void**>(&number), 1, &kCFTypeArrayCallBacks);
     CFAttributedStringSetAttribute(text, all, kCTWritingDirectionAttributeName, levels);
     // A run down the line takes vertical forms and vertical metrics, which CoreText applies in its vertical layout.
     if (run->axis == PrTextAxis_Vertical)
@@ -216,7 +211,7 @@ CFAttributedStringRef createText(CtBackend* c, const PrTextRun* run, CTFontRef f
         char tag[kPrLocaleMaxTag];
         uint32_t size = prLocaleTag(run->locale, tag);
         CFStringRef language = CFStringCreateWithBytes(nullptr, reinterpret_cast<const UInt8*>(tag), CFIndex(size),
-                                                       kCFStringEncodingUTF8, false);
+            kCFStringEncodingUTF8, false);
         CFAttributedStringSetAttribute(text, all, kCTLanguageAttributeName, language);
         CFRelease(language);
     }
@@ -242,7 +237,7 @@ CFAttributedStringRef createText(CtBackend* c, const PrTextRun* run, CTFontRef f
         }
         if (mask != 0)
             CFAttributedStringSetAttribute(text, CFRangeMake(from, to - from), kCTFontAttributeName,
-                                           featuredFont(c, run, font, mask));
+                featuredFont(c, run, font, mask));
     }
     return text;
 }
@@ -259,8 +254,7 @@ void destroyBackend(PrTextShaper* shaper) {
     prMemoryFree(c);
 }
 
-PrStatus shape(PrTextShaper* shaper, void*, void* fontState, const PrTextRun* run,
-               PrTextGlyphBuffer* out) {
+PrStatus shape(PrTextShaper* shaper, void*, void* fontState, const PrTextRun* run, PrTextGlyphBuffer* out) {
     CtBackend* c = static_cast<CtBackend*>(shaper);
     CtFont* font = static_cast<CtFont*>(fontState);
     bool vertical = run->axis == PrTextAxis_Vertical;
@@ -299,8 +293,7 @@ PrStatus shape(PrTextShaper* shaper, void*, void* fontState, const PrTextRun* ru
             fallback = !CFEqual(name, font->name);
             CFRelease(name);
         }
-        double runEnd = runStart + CTRunGetTypographicBounds(glyphRun, CFRangeMake(0, 0), nullptr,
-                                                             nullptr, nullptr);
+        double runEnd = runStart + CTRunGetTypographicBounds(glyphRun, CFRangeMake(0, 0), nullptr, nullptr, nullptr);
         PrTextGlyph* glyphs = prTextGlyphBufferAppend(out, uint32_t(count));
         double pen = runStart;
         for (CFIndex i = 0; i < count; ++i) {

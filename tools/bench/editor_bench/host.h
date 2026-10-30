@@ -70,7 +70,7 @@ void hostEvent(Host& host, const PrAppEvent& event);
 // Runs a frame of up to `rounds` rounds over a viewport of `extent` logical pixels, for `display` and `preferences`,
 // and paints it into the host's list at the display's pixel ratio.
 void hostFrame(Host& host, double time, double delta, PrVec2 extent, const PrAppDisplay& display,
-               const PrAppUserPreferences& preferences, uint32_t rounds);
+    const PrAppUserPreferences& preferences, uint32_t rounds);
 
 // Returns the clear color of a pass that fills the last frame's canvas, premultiplied.
 PrColor hostClearColor(const Host& host);

@@ -69,8 +69,7 @@ struct PrHttpExchange {
 // implements the public function of the same name. Callers use the functions below, never these members.
 struct PrHttp {
     void (*destroy)(PrHttp* http);
-    PrStatus (*exchangeCreate)(PrHttp* http, const PrHttpRequestDesc* desc,
-                               PrHttpExchange* PR_NULLABLE* PR_NONNULL out);
+    PrStatus (*exchangeCreate)(PrHttp* http, const PrHttpRequestDesc* desc, PrHttpExchange* PR_NULLABLE* PR_NONNULL out);
     void (*exchangeDestroy)(PrHttp* http, PrHttpExchange* exchange);
     uint16_t (*exchangeStatus)(const PrHttp* http, const PrHttpExchange* exchange);
     uint32_t (*exchangeHeaderCount)(const PrHttp* http, const PrHttpExchange* exchange);
@@ -143,8 +142,7 @@ void prHttpDestroy(PrHttp* PR_NULLABLE http);
 // Starts the exchange that `desc` describes, and writes it to `*out`. The exchange delivers Response once the final
 // response's head arrives, then its content, or Fail. Returns InvalidData for a URL that does not parse or a method
 // that is not a token, and NotSupported for a URL whose scheme is not http or https. On failure, `*out` is null.
-PrStatus prHttpExchangeCreate(PrHttp* http, const PrHttpRequestDesc* desc,
-                              PrHttpExchange* PR_NULLABLE* PR_NONNULL out);
+PrStatus prHttpExchangeCreate(PrHttp* http, const PrHttpRequestDesc* desc, PrHttpExchange* PR_NULLABLE* PR_NONNULL out);
 
 // Abandons the exchange if it has not ended, and frees it. Its callback is not called again. An exchange may be
 // destroyed during its own callback.

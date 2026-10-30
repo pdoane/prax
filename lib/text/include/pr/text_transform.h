@@ -56,7 +56,7 @@ typedef struct PrTextTransformRun {
 // Writes the transform of the code point at byte `at` of the run, which must start a code point in [start, end), to
 // `out`. Returns how many code points it wrote, which is zero if the transform removes the code point.
 uint32_t prTextTransformAt(const PrTextTransformRun* run, size_t at,
-                           uint32_t out[PR_NONNULL kPrTextTransformMaxCodePoints]);
+    uint32_t out[PR_NONNULL kPrTextTransformMaxCodePoints]);
 
 #if defined(__cplusplus)
 }

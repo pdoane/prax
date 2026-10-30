@@ -132,7 +132,7 @@ VkStencilOpState stencilOf(const PrGpuStencilFace& face, uint8_t readMask, uint8
 
 // Stores a created pipeline under a new id. Returns Limit, and destroys the pipeline, if no id is left.
 PrStatus pipelineAdd(VulkanDevice* d, VkPipeline pipeline, VkPipelineBindPoint bindPoint, PrGpuExtent groupSize,
-                     bool readsTarget, PrGpuPipeline* out) {
+        bool readsTarget, PrGpuPipeline* out) {
     prMutexLock(&d->mutex);
     uint32_t id = 0;
     if (d->freePipelines.count != 0) {
@@ -158,7 +158,7 @@ PrStatus pipelineAdd(VulkanDevice* d, VkPipeline pipeline, VkPipelineBindPoint b
 
 // Every entry point shares the one module, which the library's bytes hold.
 PrStatus shaderLibraryCreate(PrGpuDevice* device, PrGpuShaderEntry* entries, uint32_t entryCount,
-                             PrGpuShaderLibrary* PR_NULLABLE* PR_NONNULL out) {
+        PrGpuShaderLibrary* PR_NULLABLE* PR_NONNULL out) {
     VulkanDevice* d = vulkanDevice(device);
     if (entryCount == 0 || entries[0].codeSize % 4 != 0)
         return PrStatus_InvalidData;
@@ -191,8 +191,7 @@ void shaderLibraryDestroy(PrGpuDevice* device, PrGpuShaderLibrary* library) {
 // Pipelines
 
 PrStatus graphicsPipelineCreate(PrGpuDevice* device, const PrGpuGraphicsPipelineDesc* desc,
-                                const PrGpuShaderEntry* vertex, const PrGpuShaderEntry* PR_NULLABLE fragment,
-                                PrGpuPipeline* out) {
+        const PrGpuShaderEntry* vertex, const PrGpuShaderEntry* PR_NULLABLE fragment, PrGpuPipeline* out) {
     VulkanDevice* d = vulkanDevice(device);
     const VulkanLibrary* library = libraryOf(desc->library);
     VkPipelineShaderStageCreateInfo stages[2] = {};
@@ -251,9 +250,12 @@ PrStatus graphicsPipelineCreate(PrGpuDevice* device, const PrGpuGraphicsPipeline
     VkPipelineRasterizationStateCreateInfo rasterization{};
     rasterization.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
     rasterization.polygonMode = VK_POLYGON_MODE_FILL;
-    rasterization.cullMode = desc->cull == PrGpuCull_Front  ? VK_CULL_MODE_FRONT_BIT
-                             : desc->cull == PrGpuCull_Back ? VK_CULL_MODE_BACK_BIT
-                                                            : VK_CULL_MODE_NONE;
+    if (desc->cull == PrGpuCull_Front)
+        rasterization.cullMode = VK_CULL_MODE_FRONT_BIT;
+    else if (desc->cull == PrGpuCull_Back)
+        rasterization.cullMode = VK_CULL_MODE_BACK_BIT;
+    else
+        rasterization.cullMode = VK_CULL_MODE_NONE;
     rasterization.frontFace = desc->frontClockwise ? VK_FRONT_FACE_CLOCKWISE : VK_FRONT_FACE_COUNTER_CLOCKWISE;
     rasterization.depthBiasEnable = desc->depthBias != 0 || desc->depthBiasSlope != 0;
     rasterization.depthBiasConstantFactor = desc->depthBias;
@@ -276,8 +278,10 @@ PrStatus graphicsPipelineCreate(PrGpuDevice* device, const PrGpuGraphicsPipeline
     colorBlend.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
     colorBlend.attachmentCount = desc->formats.colorCount;
     colorBlend.pAttachments = blends;
-    VkDynamicState dynamics[] = {VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR,
-                                 VK_DYNAMIC_STATE_BLEND_CONSTANTS, VK_DYNAMIC_STATE_STENCIL_REFERENCE};
+    VkDynamicState dynamics[] = {
+        VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR,
+        VK_DYNAMIC_STATE_BLEND_CONSTANTS, VK_DYNAMIC_STATE_STENCIL_REFERENCE
+    };
     VkPipelineDynamicStateCreateInfo dynamic{};
     dynamic.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
     dynamic.dynamicStateCount = countOf(dynamics);
@@ -306,7 +310,7 @@ PrStatus graphicsPipelineCreate(PrGpuDevice* device, const PrGpuGraphicsPipeline
 }
 
 PrStatus computePipelineCreate(PrGpuDevice* device, const PrGpuShaderLibrary* library, const PrGpuShaderEntry* compute,
-                               PrStringView name, PrGpuPipeline* out) {
+        PrStringView name, PrGpuPipeline* out) {
     VulkanDevice* d = vulkanDevice(device);
     char entry[kEntryNameMaxBytes];
     entryName(compute, entry);

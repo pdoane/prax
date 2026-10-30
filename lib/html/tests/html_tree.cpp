@@ -47,7 +47,7 @@ PrStringView namespacePrefix(DomNamespaceId space) {
 void writeAttributes(TextBuffer* out, const PrDomElement* element, uint32_t depth) {
     Array<const PrDomAttr* PR_NONNULL> order;
     for (const PrDomAttr* attribute = element->firstAttribute; attribute != nullptr;
-         attribute = static_cast<const PrDomAttr*>(attribute->next)) {
+            attribute = static_cast<const PrDomAttr*>(attribute->next)) {
         uint32_t at = order.count;
         while (at != 0) {
             const PrDomAttr* before = order.data[at - 1];
@@ -114,8 +114,7 @@ void writeNode(TextBuffer* out, const PrDomNode* node, uint32_t depth) {
             return;
 
         case PrDomNodeType_ProcessingInstruction: {
-            const PrDomProcessingInstruction* instruction =
-                static_cast<const PrDomProcessingInstruction*>(node);
+            const PrDomProcessingInstruction* instruction = static_cast<const PrDomProcessingInstruction*>(node);
             writeIndent(out, depth);
             textAppend(out, "<?");
             textAppend(out, prStringView(&instruction->target));
@@ -130,8 +129,7 @@ void writeNode(TextBuffer* out, const PrDomNode* node, uint32_t depth) {
             writeIndent(out, depth);
             textAppend(out, "<!DOCTYPE ");
             textAppend(out, prStringView(&doctype->name));
-            if (prStringView(&doctype->publicId).size != 0
-                || prStringView(&doctype->systemId).size != 0) {
+            if (prStringView(&doctype->publicId).size != 0 || prStringView(&doctype->systemId).size != 0) {
                 textAppend(out, " \"");
                 textAppend(out, prStringView(&doctype->publicId));
                 textAppend(out, "\" \"");
@@ -174,8 +172,7 @@ void run(TextBuffer* out, const HarnessCase& test) {
     if (space == "-") {
         htmlParse(&parser, input);
     } else {
-        PrDomElement* context =
-            domElementCreate(document, namespaceFromName(space), domTagFromText(name), name);
+        PrDomElement* context = domElementCreate(document, namespaceFromName(space), domTagFromText(name), name);
         printed = htmlParseFragment(&parser, context, input);
     }
 

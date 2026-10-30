@@ -71,8 +71,7 @@ void prDomMatrixPreMultiply(PrDomMatrix* self, const PrDomMatrix* other);
 void prDomMatrixTranslate(PrDomMatrix* self, double tx, double ty, double tz);
 
 // Scales about the origin (ox, oy, oz) (geometry-1/#dom-dommatrix-scaleself).
-void prDomMatrixScale(PrDomMatrix* self, double sx, double sy, double sz, double ox, double oy,
-                      double oz);
+void prDomMatrixScale(PrDomMatrix* self, double sx, double sy, double sz, double ox, double oy, double oz);
 
 // Rotates about z, then y, then x, by angles in degrees (geometry-1/#dom-dommatrix-rotateself).
 void prDomMatrixRotate(PrDomMatrix* self, double x, double y, double z);

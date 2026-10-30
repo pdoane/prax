@@ -78,22 +78,30 @@ struct PanelText {
 };
 
 constexpr PanelText kPanelText[kPanels] = {
-    {"LAYOUT", "Boxes the engine placed",
-     "Every panel is laid out flat by the layout engine: a heading, a picture, a paragraph that wraps to the width it "
-     "was given, and controls. Nothing in its layout knows that it will be turned.",
-     "Measure"},
-    {"DRAW", "One projection to the target",
-     "A panel is a projected group. Its content is drawn flat into a layer, and the layer is composited through the "
-     "projection, sampled from mip levels so that the far edge stays smooth.",
-     "Record"},
-    {"INPUT", "The pointer takes the same map",
-     "Hit testing maps the pointer back through the projection into the panel's plane, so a click lands where the "
-     "panel is drawn. The button and the slider below answer under the turn.",
-     "Route"},
-    {"MOTION", "Tweened to the front",
-     "Clicking a panel tweens its depth, its turn and its scale toward new targets, and raises its level so that it "
-     "paints over its neighbors, while the pointer keeps turning the row.",
-     "Replay"},
+    {
+        "LAYOUT", "Boxes the engine placed",
+        "Every panel is laid out flat by the layout engine: a heading, a picture, a paragraph that wraps to the width it "
+            "was given, and controls. Nothing in its layout knows that it will be turned.",
+        "Measure",
+    },
+    {
+        "DRAW", "One projection to the target",
+        "A panel is a projected group. Its content is drawn flat into a layer, and the layer is composited through the "
+            "projection, sampled from mip levels so that the far edge stays smooth.",
+        "Record",
+    },
+    {
+        "INPUT", "The pointer takes the same map",
+        "Hit testing maps the pointer back through the projection into the panel's plane, so a click lands where the "
+            "panel is drawn. The button and the slider below answer under the turn.",
+        "Route",
+    },
+    {
+        "MOTION", "Tweened to the front",
+        "Clicking a panel tweens its depth, its turn and its scale toward new targets, and raises its level so that it "
+            "paints over its neighbors, while the pointer keeps turning the row.",
+        "Replay",
+    },
 };
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -105,7 +113,8 @@ constexpr float kCell = 64;
 constexpr float kGap = 8;
 constexpr float kDrift[2] = {18, 10};       // px per second
 constexpr float kPalette[4][3] = {
-    {0.20f, 0.45f, 0.95f}, {0.85f, 0.25f, 0.55f}, {0.95f, 0.62f, 0.18f}, {0.15f, 0.75f, 0.65f}};
+    {0.20f, 0.45f, 0.95f}, {0.85f, 0.25f, 0.55f}, {0.95f, 0.62f, 0.18f}, {0.15f, 0.75f, 0.65f},
+};
 constexpr float kTop[3] = {0.06f, 0.07f, 0.15f};
 constexpr float kBottom[3] = {0.20f, 0.09f, 0.24f};
 
@@ -176,7 +185,8 @@ void buildPanel(PrKit* kit, PrLayoutNode row, uint32_t index, Panels& p, const P
     PrKitPlaneStyle plane{
         .box = {.place = {.height = prKitPx(kPanelHeight), .minWidth = prKitPx(210), .flex = PrKitFlex_Fill}},
         .zIndex = p.chosen == index ? 1 : 0,
-        .backfaceHidden = true};
+        .backfaceHidden = true,
+    };
     PrLayoutNode panel = prKitPlane(kit, row, {.transform = &transform}, plane);
     prUiSetFlags(ui, panel, PrUiFlag_Pressable);
     prUiSetCursor(ui, panel, PrAppCursor_Hand);
@@ -219,7 +229,7 @@ void buildPanel(PrKit* kit, PrLayoutNode row, uint32_t index, Panels& p, const P
     prKitSlider(kit, line, {.value = prKitScalarF32(&p.sliders[index]), .min = 0, .max = 1}, {});
     char counted[64];
     int written = snprintf(counted, sizeof counted, "%s x%u, slider %.2f", text.action, p.presses[index],
-                           double(p.sliders[index]));
+        double(p.sliders[index]));
     PrKitTextStyle meta{.role = PrKitTextRole_Meta, .tone = PrKitTone_Muted};
     prKitLabel(kit, content, {.text = PrStringView{counted, size_t(written > 0 ? written : 0)}}, meta);
 }
@@ -232,12 +242,16 @@ void buildApp(void* context, PrKit* kit, PrLayoutNode ground) {
     p.rim = palette.line2;
     PrUi* ui = prKitUi(kit);
 
-    PrKitSurfaceStyle header{.box = {.direction = PrKitDirection_Row,
-                                     .align = PrKitAlign_Center,
-                                     .gap = 16,
-                                     .padding = prKitEdgesXY(10, 14)},
-                             .ground = PrKitGround_Hud,
-                             .rules = PrKitRuleFlag_All};
+    PrKitSurfaceStyle header{
+        .box = {
+            .direction = PrKitDirection_Row,
+            .align = PrKitAlign_Center,
+            .gap = 16,
+            .padding = prKitEdgesXY(10, 14),
+        },
+        .ground = PrKitGround_Hud,
+        .rules = PrKitRuleFlag_All,
+    };
     // The header stands at a level above the row, so that a panel tweened to the front passes under it.
     PrLayoutNode bar = prKitSurface(kit, prKitPlane(kit, ground, {}, {.zIndex = 1}), {}, header);
     PrLayoutNode titles = prKitBox(kit, bar, {}, {.gap = 4});
@@ -248,16 +262,22 @@ void buildApp(void* context, PrKit* kit, PrLayoutNode ground) {
     PrKitTextStyle title{.role = PrKitTextRole_Title};
     prKitLabel(kit, titles, {.text = "A user interface that the layout engine placed, standing in 3D"}, title);
     PrKitTextStyle secondary{.tone = PrKitTone_Secondary};
-    prKitLabel(kit, titles, {.text = "Move the pointer to turn the row. Click a panel to bring it forward. The panels blur the "
-                     "host's background through their projection."}, secondary);
+    prKitLabel(kit, titles, {
+        .text = "Move the pointer to turn the row. Click a panel to bring it forward. The panels blur the "
+            "host's background through their projection.",
+    }, secondary);
     prKitToggle(kit, bar, {.value = &p.redraw, .label = "Backdrop redrawn by the host"}, {});
 
-    PrKitPlaneStyle stage{.box = {.direction = PrKitDirection_Row,
-                                  .align = PrKitAlign_Center,
-                                  .gap = 24,
-                                  .padding = prKitEdgesXY(24, 8),
-                                  .place = {.flex = PrKitFlex_Fill}},
-                          .perspective = kEye};
+    PrKitPlaneStyle stage{
+        .box = {
+            .direction = PrKitDirection_Row,
+            .align = PrKitAlign_Center,
+            .gap = 24,
+            .padding = prKitEdgesXY(24, 8),
+            .place = {.flex = PrKitFlex_Fill},
+        },
+        .perspective = kEye,
+    };
     PrLayoutNode row = prKitPlane(kit, ground, {}, stage);
 
     PrVec2 extent{};
@@ -347,9 +367,10 @@ struct Window {
 // Declares a round: a surface on no ground, so that the background shows beneath the UI, and the panels under it.
 void build(void* context, PrUi*, const PrUiRound*) {
     Window& w = *static_cast<Window*>(context);
-    PrKitSurfaceStyle style{.box = {.overflow = PrKitOverflow_Clip,
-                                    .place = {.width = prKitPercent(100), .height = prKitPercent(100)}},
-                            .ground = PrKitGround_None};
+    PrKitSurfaceStyle style{
+        .box = {.overflow = PrKitOverflow_Clip, .place = {.width = prKitPercent(100), .height = prKitPercent(100)}},
+        .ground = PrKitGround_None,
+    };
     buildApp(&w.panels, w.kit, prKitSurface(w.kit, kPrLayoutNodeNone, {}, style));
 }
 
@@ -405,11 +426,11 @@ void closeDevice(Window& w) {
 bool openDevice(Window& w) {
     PrAppSurface surface{};
     PrGpuSwapChainDesc desc{.intent = PrGpuSwapChainIntent_Sdr};
-    if (prGpuDeviceCreate(PrGpuBackend_Default, nullptr, &w.device) != PrStatus_Ok
-        || prAppSurface(w.app, &surface) != PrStatus_Ok
-        || prGpuSwapChainCreate(w.device, &surface, &desc, &w.swapChain) != PrStatus_Ok
-        || prDrawRendererCreate(PrDrawRendererBackend_Default, w.device, nullptr, &w.renderer) != PrStatus_Ok
-        || (w.pipelines = pipelinesCreate(w.device)) == nullptr) {
+    if (prGpuDeviceCreate(PrGpuBackend_Default, nullptr, &w.device) != PrStatus_Ok ||
+            prAppSurface(w.app, &surface) != PrStatus_Ok ||
+            prGpuSwapChainCreate(w.device, &surface, &desc, &w.swapChain) != PrStatus_Ok ||
+            prDrawRendererCreate(PrDrawRendererBackend_Default, w.device, nullptr, &w.renderer) != PrStatus_Ok ||
+            (w.pipelines = pipelinesCreate(w.device)) == nullptr) {
         closeDevice(w);
         return false;
     }
@@ -423,7 +444,7 @@ PrGpuTexture textureFor(PrGpuDevice* device, PrGpuTexture* texture, PrGpuFormat 
     if (texture->id == 0 || held.x != extent.x || held.y != extent.y) {
         prGpuTextureDestroy(device, *texture);
         PrGpuTextureDesc desc = prGpuTextureDesc2d(format, extent,
-                                                   PrGpuTextureUsageFlag_Sampled | PrGpuTextureUsageFlag_RenderTarget);
+            PrGpuTextureUsageFlag_Sampled | PrGpuTextureUsageFlag_RenderTarget);
         *texture = PrGpuTexture{};
         prGpuTextureCreate(device, &desc, texture);
     }
@@ -434,8 +455,8 @@ PrGpuTexture textureFor(PrGpuDevice* device, PrGpuTexture* texture, PrGpuFormat 
 void render(Window& w, PrUVec2 extent) {
     PrGpuTexture drawable{};
     PrGpuCommands* commands = nullptr;
-    if (prGpuSwapChainAcquire(w.swapChain, extent, &drawable) != PrStatus_Ok
-        || !prGpuCommandsBegin(w.device, nullptr, &commands))
+    if (prGpuSwapChainAcquire(w.swapChain, extent, &drawable) != PrStatus_Ok ||
+            !prGpuCommandsBegin(w.device, nullptr, &commands))
         return;
     PrGpuFormat format = prGpuSwapChainInfo(w.swapChain).format;
     PrGpuSubresources all{};
@@ -444,13 +465,13 @@ void render(Window& w, PrUVec2 extent) {
         // The background, rendered into a texture of the example's own before the UI is prepared over it.
         PrGpuTexture background = textureFor(w.device, &w.background, format, extent);
         prGpuCommandsTextureBarrier(commands, background, all, PrGpuAccessFlag_ShaderRead,
-                                    PrGpuAccessFlag_ColorAttachment);
+            PrGpuAccessFlag_ColorAttachment);
         PrGpuPassDesc first = prGpuPassDescColor(background, PrGpuLoad_Clear, PrColor{0, 0, 0, 1});
         PrGpuPass* pass = prGpuPassBegin(commands, &first);
         drawBackground(w, pass, PrIVec2{0, 0});
         prGpuPassEnd(pass);
         prGpuCommandsTextureBarrier(commands, background, all, PrGpuAccessFlag_ColorAttachment,
-                                    PrGpuAccessFlag_ShaderRead);
+            PrGpuAccessFlag_ShaderRead);
         beneath.kind = PrDrawBeneathKind_Texture;
         beneath.texture = prDrawGpuTexture(background);
         beneath.extent = extent;
@@ -502,12 +523,14 @@ void frame(void* context, PrApp* app, const PrAppFrame* f) {
     w.pixelRatio = f->display.pixelRatio;
     w.height = f->extent.y;
 
-    PrUiFrameDesc desc{.time = f->time,
-                       .delta = f->delta,
-                       .extent = f->extent,
-                       .maxRounds = 4,
-                       .display = f->display,
-                       .preferences = f->preferences};
+    PrUiFrameDesc desc{
+        .time = f->time,
+        .delta = f->delta,
+        .extent = f->extent,
+        .maxRounds = 4,
+        .display = f->display,
+        .preferences = f->preferences,
+    };
     prUiFrame(w.ui, &desc, build, &w);
 
     // The tree's scene plays into the list in target pixels, each scroll container at the tree's offset for it. The
@@ -525,8 +548,10 @@ void frame(void* context, PrApp* app, const PrAppFrame* f) {
     prLayoutScenePlay(scene, w.list, &options);
     prDrawListPopTransform(w.list);
 
-    PrUVec2 extent{uint32_t(std::lround(f->extent.x * w.pixelRatio)),
-                   uint32_t(std::lround(f->extent.y * w.pixelRatio))};
+    PrUVec2 extent{
+        uint32_t(std::lround(f->extent.x * w.pixelRatio)),
+        uint32_t(std::lround(f->extent.y * w.pixelRatio)),
+    };
     if (extent.x != 0 && extent.y != 0)
         render(w, extent);
     prAppSetCursor(app, prUiCursor(w.ui));

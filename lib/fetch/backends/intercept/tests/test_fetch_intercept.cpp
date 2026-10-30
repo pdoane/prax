@@ -75,8 +75,8 @@ void probeEvent(void* PR_NULLABLE context, PrFetch* fetch, PrFetchEvent event) {
         probe->url.assign(url.data, url.size);
     }
     uint8_t chunk[64];
-    for (size_t got = prFetchRead(fetch, chunk, sizeof(chunk)); got != 0;
-         got = prFetchRead(fetch, chunk, sizeof(chunk)))
+    for (size_t got = prFetchRead(fetch, chunk, sizeof(chunk)); got != 0; got =
+            prFetchRead(fetch, chunk, sizeof(chunk)))
         probe->body.append(reinterpret_cast<const char*>(chunk), got);
     if (event == PrFetchEvent_End || event == PrFetchEvent_Fail) {
         probe->error = prFetchError(fetch);

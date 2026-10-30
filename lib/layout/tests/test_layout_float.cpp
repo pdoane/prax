@@ -22,7 +22,7 @@ struct Stage {
     PrLayoutNode stage = kPrLayoutNodeNone;
 
     explicit Stage(float width = 200, PrLayoutWritingMode writingMode = PrLayoutWritingMode_HorizontalTb,
-                   PrTextDirection direction = PrTextDirection_Ltr) {
+            PrTextDirection direction = PrTextDirection_Ltr) {
         // The root takes the stage's writing mode, so that the stage is in its root's flow.
         PrLayoutFontStyle rootFont = font0();
         rootFont.writingMode = writingMode;
@@ -47,8 +47,7 @@ struct Stage {
     }
 
     // Creates an element under `parent`, in the stage's font if `font` is null.
-    PrLayoutNode add(PrLayoutNode parent, const PrLayoutBoxStyle& box,
-                     const PrLayoutFontStyle* PR_NULLABLE font = nullptr) {
+    PrLayoutNode add(PrLayoutNode parent, const PrLayoutBoxStyle& box, const PrLayoutFontStyle* PR_NULLABLE font = nullptr) {
         PrLayoutFontStyle zero = font0();
         return f.element(parent, box, nullptr, nullptr, font != nullptr ? font : &zero);
     }
@@ -71,8 +70,10 @@ struct Stage {
     PrRect at(PrLayoutNode node) {
         PrRect stageRect = f.bounds(stage);
         PrRect rect = f.bounds(node);
-        return PrRect{rect.left - stageRect.left, rect.top - stageRect.top, rect.right - stageRect.left,
-                      rect.bottom - stageRect.top};
+        return PrRect{
+            rect.left - stageRect.left, rect.top - stageRect.top, rect.right - stageRect.left,
+            rect.bottom - stageRect.top,
+        };
     }
     double top(PrLayoutNode node) { return double(at(node).top); }
     double left(PrLayoutNode node) { return double(at(node).left); }
@@ -158,10 +159,12 @@ TEST_CASE("a box that collapses through holding a float is placed after its bloc
         int empty;                  // an empty box with margins 20 in E: 0 none, 1 before the float, 2 after
         double e, f, g;
     };
-    const Case cases[] = {{"no block-end margin", 0, 0, 30, 30, 50},
-                          {"a block-end margin", 25, 0, 30, 30, 50},
-                          {"an empty box before the float", 0, 1, 40, 40, 50},
-                          {"an empty box after the float", 0, 2, 40, 40, 50}};
+    const Case cases[] = {
+        {"no block-end margin", 0, 0, 30, 30, 50},
+        {"a block-end margin", 25, 0, 30, 30, 50},
+        {"an empty box before the float", 0, 1, 40, 40, 50},
+        {"an empty box after the float", 0, 2, 40, 40, 50},
+    };
     for (const Case& c : cases) {
         CAPTURE(c.name);
         Stage s;
@@ -202,11 +205,13 @@ TEST_CASE("the margins after a cleared box that collapses through start its bloc
         bool child;                 // true if its margins are an empty child's, with margins 10
         double e, b;
     };
-    const Case cases[] = {{"margins on both sides", 10, 10, 20, false, 70, 80},
-                          {"no block-start margin", 0, 10, 20, false, 70, 90},
-                          {"a block-start margin past the floats", 30, 10, 20, false, 70, 70},
-                          {"an empty child's margins", 0, 0, 20, true, 70, 80},
-                          {"a negative margin after it", 30, 0, -10, false, 70, 60}};
+    const Case cases[] = {
+        {"margins on both sides", 10, 10, 20, false, 70, 80},
+        {"no block-start margin", 0, 10, 20, false, 70, 90},
+        {"a block-start margin past the floats", 30, 10, 20, false, 70, 70},
+        {"an empty child's margins", 0, 0, 20, true, 70, 80},
+        {"a negative margin after it", 30, 0, -10, false, 70, 60},
+    };
     for (const Case& c : cases) {
         CAPTURE(c.name);
         Stage s;
@@ -352,13 +357,15 @@ TEST_CASE("a box that avoids floats keeps its border box beside them, its margin
         float value;
         double left, width;
     };
-    const Case cases[] = {{"a left margin under a left float", PrLayoutFloat_Left, PrRectSide_Left, 20, 60, 140},
-                          {"a left margin past a left float", PrLayoutFloat_Left, PrRectSide_Left, 80, 80, 120},
-                          {"a right margin under a right float", PrLayoutFloat_Right, PrRectSide_Right, 30, 0, 140},
-                          {"negative left, no float", PrLayoutFloat_None, PrRectSide_Left, -20, -20, 220},
-                          {"negative left, a right float", PrLayoutFloat_Right, PrRectSide_Left, -20, 0, 140},
-                          {"negative left, a left float", PrLayoutFloat_Left, PrRectSide_Left, -20, 60, 140},
-                          {"negative right, a left float", PrLayoutFloat_Left, PrRectSide_Right, -20, 60, 140}};
+    const Case cases[] = {
+        {"a left margin under a left float", PrLayoutFloat_Left, PrRectSide_Left, 20, 60, 140},
+        {"a left margin past a left float", PrLayoutFloat_Left, PrRectSide_Left, 80, 80, 120},
+        {"a right margin under a right float", PrLayoutFloat_Right, PrRectSide_Right, 30, 0, 140},
+        {"negative left, no float", PrLayoutFloat_None, PrRectSide_Left, -20, -20, 220},
+        {"negative left, a right float", PrLayoutFloat_Right, PrRectSide_Left, -20, 0, 140},
+        {"negative left, a left float", PrLayoutFloat_Left, PrRectSide_Left, -20, 60, 140},
+        {"negative right, a left float", PrLayoutFloat_Left, PrRectSide_Right, -20, 60, 140},
+    };
     for (const Case& c : cases) {
         CAPTURE(c.name);
         Stage s;
@@ -496,12 +503,14 @@ TEST_CASE("a box that avoids floats clear of a float below it is laid out as any
         float marginLeft, marginRight, width, minWidth, height;
         double top, left, boxWidth;
     };
-    const Case cases[] = {{"a negative left margin", -20, 0, -1, -1, 20, 0, -20, 220},
-                          {"a negative right margin", 0, -20, -1, -1, 20, 0, 0, 220},
-                          {"wider than its containing block", 0, 0, 300, -1, 20, 0, 0, 300},
-                          {"a minimum wider than its containing block", 0, 0, -1, 300, 20, 0, 0, 300},
-                          {"wider, and tall enough to meet the float", 0, 0, 300, -1, 110, 140, 0, 300},
-                          {"a width that fits", 0, 0, 100, -1, 20, 0, 0, 100}};
+    const Case cases[] = {
+        {"a negative left margin", -20, 0, -1, -1, 20, 0, -20, 220},
+        {"a negative right margin", 0, -20, -1, -1, 20, 0, 0, 220},
+        {"wider than its containing block", 0, 0, 300, -1, 20, 0, 0, 300},
+        {"a minimum wider than its containing block", 0, 0, -1, 300, 20, 0, 0, 300},
+        {"wider, and tall enough to meet the float", 0, 0, 300, -1, 110, 140, 0, 300},
+        {"a width that fits", 0, 0, 100, -1, 20, 0, 0, 100},
+    };
     for (const Case& c : cases) {
         CAPTURE(c.name);
         Stage s;
@@ -539,9 +548,11 @@ TEST_CASE("a float in a line goes on it where it fits, and after it where it doe
         float first, floatWidth, next;
         double floatTop, floatLeft, firstLeft, nextLeft;
     };
-    const Case cases[] = {{"a float too wide for what the line leaves", 100, 150, 40, 20, 0, 0, 100},
-                          {"a float that fits beside the line", 100, 60, 40, 0, 0, 60, 160},
-                          {"a float past a full line", 150, 60, 30, 20, 0, 0, 150}};
+    const Case cases[] = {
+        {"a float too wide for what the line leaves", 100, 150, 40, 20, 0, 0, 100},
+        {"a float that fits beside the line", 100, 60, 40, 0, 0, 60, 160},
+        {"a float past a full line", 150, 60, 30, 20, 0, 0, 150},
+    };
     for (const Case& c : cases) {
         CAPTURE(c.name);
         Stage s;
@@ -716,9 +727,11 @@ TEST_CASE("clearance level with a float's bottom is clearance, and one unit past
         float floatHeight;
         double parent, next;
     };
-    const Case cases[] = {{"level with the float's bottom", 10, 60, 60},
-                          {"one unit past it", 11, 61, 61},
-                          {"short of it", 9, 20, 60}};
+    const Case cases[] = {
+        {"level with the float's bottom", 10, 60, 60},
+        {"one unit past it", 11, 61, 61},
+        {"short of it", 9, 20, 60},
+    };
     for (const Case& c : cases) {
         CAPTURE(c.name);
         Stage s;
@@ -784,9 +797,11 @@ TEST_CASE("a formatting context root grows to contain its floats, and only its o
         float floatHeight, floatMargin, child, childMargin;
         double height;
     };
-    const Case cases[] = {{"a float with a negative block-end margin", 40, -10, 0, 0, 30},
-                          {"a float shorter than a block after it", 10, 0, 20, 0, 20},
-                          {"a float taller than a block with a margin", 40, 0, 20, 30, 50}};
+    const Case cases[] = {
+        {"a float with a negative block-end margin", 40, -10, 0, 0, 30},
+        {"a float shorter than a block after it", 10, 0, 20, 0, 20},
+        {"a float taller than a block with a margin", 40, 0, 20, 30, 50},
+    };
     for (const Case& c : cases) {
         CAPTURE(c.name);
         Stage s;
@@ -904,8 +919,7 @@ TEST_CASE("a float placed later beside the lower part of a tall line laid out wi
     PrLayoutNode word = s.word(paragraph, 100, 100);
     s.layout();
     CHECK(s.top(word) == 0);
-    PrLayoutNode f =
-        prLayoutNodeCreateElement(s.f.tree, overflowing, s.f.style(left(150, 40), nullptr, nullptr, nullptr));
+    PrLayoutNode f = prLayoutNodeCreateElement(s.f.tree, overflowing, s.f.style(left(150, 40), nullptr, nullptr, nullptr));
     s.layout();
     CHECK(s.top(f) == 50);
     CHECK(s.top(word) == 90);

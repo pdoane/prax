@@ -98,6 +98,13 @@ YGValue limitOf(FlexLength length) {
     return length.kind == FlexLengthKind_Auto ? YGValueUndefined : valueOf(length);
 }
 
+// Returns Yoga's position type for a box's.
+YGPositionType positionOf(FlexPosition position) {
+    if (position == FlexPosition_Absolute)
+        return YGPositionTypeAbsolute;
+    return position == FlexPosition_Relative ? YGPositionTypeRelative : YGPositionTypeStatic;
+}
+
 YogaStyle projectStyle(const FlexStyle& style) {
     YogaStyle out{
         .display = style.display == FlexDisplay_None ? YGDisplayNone : YGDisplayFlex,
@@ -119,9 +126,7 @@ YogaStyle projectStyle(const FlexStyle& style) {
         .marginAuto = style.marginAuto,
         .gap = style.gap,
         .aspectRatio = style.aspectRatio > 0 ? style.aspectRatio : YGUndefined,
-        .position = style.position == FlexPosition_Absolute   ? YGPositionTypeAbsolute
-                    : style.position == FlexPosition_Relative ? YGPositionTypeRelative
-                                                              : YGPositionTypeStatic,
+        .position = positionOf(style.position),
         .overflow = style.overflow == FlexOverflow_Scroll ? YGOverflowScroll : YGOverflowVisible,
     };
     for (int side = 0; side < 4; ++side) {
@@ -179,8 +184,7 @@ void applyStyle(YGNodeRef node, const YogaStyle& style) {
             YGNodeStyleSetMargin(node, edges[side], style.margin[side]);
         YGNodeStyleSetPadding(node, edges[side], style.padding[side]);
         YGNodeStyleSetBorder(node, edges[side], style.border[side]);
-        setLength(
-            node, style.inset[side], [&](YGNodeRef n, float v) { YGNodeStyleSetPosition(n, edges[side], v); },
+        setLength(node, style.inset[side], [&](YGNodeRef n, float v) { YGNodeStyleSetPosition(n, edges[side], v); },
             [&](YGNodeRef n, float v) { YGNodeStyleSetPositionPercent(n, edges[side], v); },
             [&](YGNodeRef n) { YGNodeStyleSetPositionAuto(n, edges[side]); });
     }
@@ -233,9 +237,7 @@ public:
 
     Shape stopCounting() override {
         Event::reset();
-        return Shape{.laidOut = last_.layouts,
-                     .reused = last_.cachedLayouts,
-                     .measured = last_.measures};
+        return Shape{.laidOut = last_.layouts, .reused = last_.cachedLayouts, .measured = last_.measures};
     }
 
     Box box(uint32_t index) override {

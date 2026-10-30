@@ -108,7 +108,7 @@ PrDrawBrush prDrawBrushLinear(PrVec2 start, PrVec2 end, const PrDrawColorStop* s
 }
 
 PrDrawBrush prDrawBrushRadial(PrVec2 start, float startRadius, PrVec2 end, float endRadius,
-                              const PrDrawColorStop* stops, uint32_t stopCount) {
+        const PrDrawColorStop* stops, uint32_t stopCount) {
     PrDrawBrush brush = gradient(PrDrawBrushKind_Radial, stops, stopCount);
     brush.radial.start = start;
     brush.radial.startRadius = startRadius;
@@ -160,11 +160,10 @@ PrDrawGroup prDrawGroupDefault(void) {
 }
 
 bool prDrawGroupHasEffect(const PrDrawGroup* group) {
-    return !(group->opacity >= 1) || group->composite != PrDrawComposite_SourceOver
-           || group->blendMode != PrDrawBlendMode_Normal || group->filter != nullptr
-           || group->backdrop != nullptr || group->mask != nullptr || group->isolated
-           || group->knockout || group->projection != nullptr || group->space != PrColorSpace_Srgb
-           || group->layer != nullptr;
+    return !(group->opacity >= 1) || group->composite != PrDrawComposite_SourceOver ||
+        group->blendMode != PrDrawBlendMode_Normal || group->filter != nullptr ||
+        group->backdrop != nullptr || group->mask != nullptr || group->isolated ||
+        group->knockout || group->projection != nullptr || group->space != PrColorSpace_Srgb || group->layer != nullptr;
 }
 
 bool prDrawGroupIsBackdropRoot(const PrDrawGroup* group) {

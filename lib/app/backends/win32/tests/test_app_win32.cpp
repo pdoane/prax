@@ -160,16 +160,13 @@ std::string fileUrl(const char* name, const char* contents) {
 
 // Evaluates `script`, records its answer, and stops the application.
 void answerAndStop(Browse& b, const char* script) {
-    prAppBrowserEvaluate(
-        b.browser, script,
-        [](void* context, PrStatus status, PrStringView json) {
-            Browse& b = browseOf(context);
-            b.status = status;
-            b.null = json.data == nullptr;
-            b.result.assign(json.data != nullptr ? json.data : "", json.size);
-            prAppStop(b.app);
-        },
-        &b);
+    prAppBrowserEvaluate(b.browser, script, [](void* context, PrStatus status, PrStringView json) {
+        Browse& b = browseOf(context);
+        b.status = status;
+        b.null = json.data == nullptr;
+        b.result.assign(json.data != nullptr ? json.data : "", json.size);
+        prAppStop(b.app);
+    }, &b);
 }
 
 // What a run saw: its events in order, and whether one arrived while the start callback ran.
@@ -185,10 +182,12 @@ Nesting& nestingOf(void* context) {
 }
 
 Seen seenOf(const PrAppEvent* event) {
-    return Seen{event->kind,     event->key,        event->code,
-                event->repeat,   event->button,     event->scrollUnit,
-                event->position, event->delta,
-                std::string(event->text.data != nullptr ? event->text.data : "", event->text.size)};
+    return Seen{
+        event->kind,     event->key,        event->code,
+        event->repeat,   event->button,     event->scrollUnit,
+        event->position, event->delta,
+        std::string(event->text.data != nullptr ? event->text.data : "", event->text.size),
+    };
 }
 
 } // namespace
@@ -263,11 +262,13 @@ TEST_CASE("a resize runs a frame at the new extent without a request") {
                 RECT outer{0, 0, MulDiv(100, int(dpi), 96), MulDiv(50, int(dpi), 96)};
                 DWORD style = DWORD(GetWindowLongW(window, GWL_STYLE));
                 AdjustWindowRectExForDpi(&outer, style, FALSE, 0, dpi);
-                r.expected = PrVec2{float(MulDiv(100, int(dpi), 96)) * 96.0f / float(dpi),
-                                    float(MulDiv(50, int(dpi), 96)) * 96.0f / float(dpi)};
+                r.expected = PrVec2{
+                    float(MulDiv(100, int(dpi), 96)) * 96.0f / float(dpi),
+                    float(MulDiv(50, int(dpi), 96)) * 96.0f / float(dpi),
+                };
                 r.helper = std::thread([window, outer] {
                     SetWindowPos(window, nullptr, 0, 0, outer.right - outer.left, outer.bottom - outer.top,
-                                 SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE);
+                        SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE);
                 });
                 return;
             }
@@ -332,9 +333,11 @@ TEST_CASE("keys, text, pointers and wheels translate to events") {
                 prAppStop(app);
                 return;
             }
-            Seen seen{event->kind, event->key, event->code, event->repeat, event->button, event->scrollUnit,
-                      event->position, event->delta, std::string(event->text.data != nullptr ? event->text.data : "",
-                                                                 event->text.size)};
+            Seen seen{
+                event->kind, event->key, event->code, event->repeat, event->button, event->scrollUnit,
+                event->position, event->delta, std::string(event->text.data != nullptr ? event->text.data : "",
+                    event->text.size),
+            };
             in.events.push_back(seen);
         },
         [](void*, PrApp*) {},
@@ -600,19 +603,17 @@ TEST_CASE("a browser loads a page, runs a script in it and captures it at two pi
     browse.desc.pixelRatio = 2;
     browse.begin = [](Browse& b) {
         std::string url = fileUrl("pr-browser.svg", "<svg xmlns='http://www.w3.org/2000/svg' width='40' height='20'>"
-                                                    "<rect width='40' height='20' fill='#ff0000'/></svg>");
+            "<rect width='40' height='20' fill='#ff0000'/></svg>");
         prAppBrowserLoad(b.browser, url, [](void* context, PrStatus status) {
             Browse& b = browseOf(context);
             b.loaded = status;
             b.processes = prAppBrowserProcesses(b.browser, nullptr, 0);
-            prAppBrowserEvaluate(
-                b.browser, "document.documentElement.getAttribute('width')",
+            prAppBrowserEvaluate(b.browser, "document.documentElement.getAttribute('width')",
                 [](void* context, PrStatus status, PrStringView json) {
                     Browse& b = browseOf(context);
                     b.status = status;
                     b.result.assign(json.data != nullptr ? json.data : "", json.size);
-                    prAppBrowserCapture(
-                        b.browser, PrRect{0, 0, 40, 20}, PrUVec2{80, 40},
+                    prAppBrowserCapture(b.browser, PrRect{0, 0, 40, 20}, PrUVec2{80, 40},
                         [](void* context, PrStatus status, PrPixelView pixels) {
                             Browse& b = browseOf(context);
                             if (status == PrStatus_Ok) {
@@ -622,10 +623,8 @@ TEST_CASE("a browser loads a page, runs a script in it and captures it at two pi
                                 b.center.assign(at, at + 4);
                             }
                             prAppStop(b.app);
-                        },
-                        &b);
-                },
-                &b);
+                        }, &b);
+                }, &b);
         }, &b);
     };
     runBrowser(browse);
@@ -653,8 +652,7 @@ TEST_CASE("a page from a file reads the files beside it, and a promise answers o
             Browse& b = browseOf(context);
             b.loaded = status;
             answerAndStop(b, "var request = new XMLHttpRequest(); request.open('GET', 'pr-browser-read.txt', false);"
-                             " request.send(); new Promise(resolve => setTimeout(() => resolve(request.responseText),"
-                             " 10))");
+                " request.send(); new Promise(resolve => setTimeout(() => resolve(request.responseText), 10))");
         }, &b);
     };
     runBrowser(browse);
@@ -667,15 +665,13 @@ TEST_CASE("a page from a file reads the files beside it, and a promise answers o
 TEST_CASE("a script's error gives its message, and a script with no result answers the null view") {
     Browse browse;
     browse.begin = [](Browse& b) {
-        prAppBrowserEvaluate(
-            b.browser, "throw new Error('no such thing')",
+        prAppBrowserEvaluate(b.browser, "throw new Error('no such thing')",
             [](void* context, PrStatus status, PrStringView json) {
                 Browse& b = browseOf(context);
                 b.thrown = status;
                 b.message.assign(json.data != nullptr ? json.data : "", json.size);
                 answerAndStop(b, "var declared = 1;");
-            },
-            &b);
+            }, &b);
     };
     runBrowser(browse);
     if (!browse.supported)
@@ -690,13 +686,11 @@ TEST_CASE("a browser renders at the pixel ratio that it is created with, and a c
     Browse browse;
     browse.desc.pixelRatio = 3;
     browse.begin = [](Browse& b) {
-        std::string url = fileUrl("pr-browser-ratio.html",
-                                  "<!doctype html><style>body { margin: 0; background: #0000ff; }</style>");
+        std::string url = fileUrl("pr-browser-ratio.html", "<!doctype html><style>body { margin: 0; background: #0000ff; }</style>");
         prAppBrowserLoad(b.browser, url, [](void* context, PrStatus status) {
             Browse& b = browseOf(context);
             b.loaded = status;
-            prAppBrowserCapture(
-                b.browser, PrRect{10, 5, 30, 15}, PrUVec2{10, 5},
+            prAppBrowserCapture(b.browser, PrRect{10, 5, 30, 15}, PrUVec2{10, 5},
                 [](void* context, PrStatus status, PrPixelView pixels) {
                     Browse& b = browseOf(context);
                     if (status == PrStatus_Ok) {
@@ -706,8 +700,7 @@ TEST_CASE("a browser renders at the pixel ratio that it is created with, and a c
                         b.center.assign(at, at + 4);
                     }
                     answerAndStop(b, "[devicePixelRatio, innerWidth, innerHeight]");
-                },
-                &b);
+                }, &b);
         }, &b);
     };
     runBrowser(browse);
@@ -731,14 +724,11 @@ TEST_CASE("a browser prints its page to a PDF") {
             b.loaded = status;
             std::string path = (std::filesystem::temp_directory_path() / "pr-browser-print.pdf").string();
             std::remove(path.c_str());
-            PrStatus printing = prAppBrowserPrint(
-                b.browser, path, PrVec2{384, 288},
-                [](void* context, PrStatus status) {
-                    Browse& b = browseOf(context);
-                    b.status = status;
-                    prAppStop(b.app);
-                },
-                &b);
+            PrStatus printing = prAppBrowserPrint(b.browser, path, PrVec2{384, 288}, [](void* context, PrStatus status) {
+                Browse& b = browseOf(context);
+                b.status = status;
+                prAppStop(b.app);
+            }, &b);
             REQUIRE(printing == PrStatus_Ok);
         }, &b);
     };
@@ -759,30 +749,24 @@ TEST_CASE("a browser prints its page to a PDF") {
 TEST_CASE("a capture shows the viewport where the page has scrolled to") {
     Browse browse;
     browse.begin = [](Browse& b) {
-        std::string url = fileUrl("pr-browser-scroll.html",
-                                  "<!doctype html><style>body { margin: 0; } div { height: 50px; }</style>"
-                                  "<div style='background: #ff0000'></div><div style='background: #0000ff'></div>");
+        std::string url = fileUrl("pr-browser-scroll.html", "<!doctype html><style>body { margin: 0; } div { height: 50px; }</style>"
+            "<div style='background: #ff0000'></div><div style='background: #0000ff'></div>");
         prAppBrowserLoad(b.browser, url, [](void* context, PrStatus status) {
             Browse& b = browseOf(context);
             b.loaded = status;
-            prAppBrowserEvaluate(
-                b.browser, "scrollTo(0, 50); scrollY",
-                [](void* context, PrStatus, PrStringView json) {
-                    Browse& b = browseOf(context);
-                    b.result.assign(json.data != nullptr ? json.data : "", json.size);
-                    prAppBrowserCapture(
-                        b.browser, PrRect{0, 0, 40, 20}, PrUVec2{40, 20},
-                        [](void* context, PrStatus status, PrPixelView pixels) {
-                            Browse& b = browseOf(context);
-                            if (status == PrStatus_Ok) {
-                                const uint8_t* at = pixels.data + pixels.stride * 10 + 20 * 4;
-                                b.center.assign(at, at + 4);
-                            }
-                            prAppStop(b.app);
-                        },
-                        &b);
-                },
-                &b);
+            prAppBrowserEvaluate(b.browser, "scrollTo(0, 50); scrollY", [](void* context, PrStatus, PrStringView json) {
+                Browse& b = browseOf(context);
+                b.result.assign(json.data != nullptr ? json.data : "", json.size);
+                prAppBrowserCapture(b.browser, PrRect{0, 0, 40, 20}, PrUVec2{40, 20},
+                    [](void* context, PrStatus status, PrPixelView pixels) {
+                        Browse& b = browseOf(context);
+                        if (status == PrStatus_Ok) {
+                            const uint8_t* at = pixels.data + pixels.stride * 10 + 20 * 4;
+                            b.center.assign(at, at + 4);
+                        }
+                        prAppStop(b.app);
+                    }, &b);
+            }, &b);
         }, &b);
     };
     runBrowser(browse);
@@ -797,31 +781,25 @@ TEST_CASE("a capture shows the viewport where the page has scrolled to") {
 TEST_CASE("a page shown in the window keeps its viewport, captures as it does hidden, and hides again") {
     Browse browse;
     browse.begin = [](Browse& b) {
-        std::string url = fileUrl("pr-browser-shown.html",
-                                  "<!doctype html><style>body { margin: 0; background: #00ff00; }</style>");
+        std::string url = fileUrl("pr-browser-shown.html", "<!doctype html><style>body { margin: 0; background: #00ff00; }</style>");
         prAppBrowserShow(b.browser, PrRect{8, 4, 48, 24}, PrRect{0, 0, 80, 40});
         prAppBrowserLoad(b.browser, url, [](void* context, PrStatus status) {
             Browse& b = browseOf(context);
             b.loaded = status;
-            prAppBrowserEvaluate(
-                b.browser, "[innerWidth, innerHeight]",
-                [](void* context, PrStatus, PrStringView json) {
-                    Browse& b = browseOf(context);
-                    b.message.assign(json.data != nullptr ? json.data : "", json.size);
-                    prAppBrowserCapture(
-                        b.browser, PrRect{0, 0, 40, 20}, PrUVec2{40, 20},
-                        [](void* context, PrStatus status, PrPixelView pixels) {
-                            Browse& b = browseOf(context);
-                            if (status == PrStatus_Ok) {
-                                const uint8_t* at = pixels.data + pixels.stride * 10 + 20 * 4;
-                                b.center.assign(at, at + 4);
-                            }
-                            prAppBrowserHide(b.browser);
-                            answerAndStop(b, "[innerWidth, innerHeight]");
-                        },
-                        &b);
-                },
-                &b);
+            prAppBrowserEvaluate(b.browser, "[innerWidth, innerHeight]", [](void* context, PrStatus, PrStringView json) {
+                Browse& b = browseOf(context);
+                b.message.assign(json.data != nullptr ? json.data : "", json.size);
+                prAppBrowserCapture(b.browser, PrRect{0, 0, 40, 20}, PrUVec2{40, 20},
+                    [](void* context, PrStatus status, PrPixelView pixels) {
+                        Browse& b = browseOf(context);
+                        if (status == PrStatus_Ok) {
+                            const uint8_t* at = pixels.data + pixels.stride * 10 + 20 * 4;
+                            b.center.assign(at, at + 4);
+                        }
+                        prAppBrowserHide(b.browser);
+                        answerAndStop(b, "[innerWidth, innerHeight]");
+                    }, &b);
+            }, &b);
         }, &b);
     };
     runBrowser(browse);
@@ -839,8 +817,7 @@ TEST_CASE("a browser destroyed while its calls are pending calls none of them") 
     Browse browse;
     browse.begin = [](Browse& b) {
         prAppBrowserLoad(b.browser, "about:blank", [](void* context, PrStatus) { browseOf(context).stale = true; }, &b);
-        prAppBrowserEvaluate(
-            b.browser, "1", [](void* context, PrStatus, PrStringView) { browseOf(context).stale = true; }, &b);
+        prAppBrowserEvaluate(b.browser, "1", [](void* context, PrStatus, PrStringView) { browseOf(context).stale = true; }, &b);
         prAppBrowserDestroy(b.browser);
         // A second browser runs while the engine finishes with the first, and ends the run once its page loads.
         PrAppBrowserDesc desc{.viewport = PrUVec2{40, 20}};

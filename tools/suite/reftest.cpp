@@ -84,8 +84,7 @@ bool readPng(PrImageCodec* imageCodec, const std::string& path, Image* out) {
     return ok;
 }
 
-bool writePng(const std::string& path, const std::vector<uint8_t>& rgba, uint32_t width,
-              uint32_t height) {
+bool writePng(const std::string& path, const std::vector<uint8_t>& rgba, uint32_t width, uint32_t height) {
     return harnessWritePng(path.c_str(), PrPixelView{rgba.data(), size_t(width) * 4, {width, height}});
 }
 
@@ -106,8 +105,7 @@ struct Documents {
         TextBuffer source;
         if (!harnessReadFile(&source, path.c_str()))
             return nullptr;
-        PrDomDocument* document =
-            prDomParseXml(textView(&source), "image/svg+xml", nullptr);
+        PrDomDocument* document = prDomParseXml(textView(&source), "image/svg+xml", nullptr);
         prSvgEnable(document);
         textReset(&source);
         loaded.emplace_back(document, path);
@@ -134,7 +132,7 @@ bool gunzip(PrCompressCodec* codec, std::string* bytes) {
         std::string output(capacity, '\0');
         PrCompressRead read{};
         PrStatus status = prCompressCodecDecode(codec, PrCompressFormat_Gzip, input,
-                                                reinterpret_cast<uint8_t*>(output.data()), capacity, &read);
+            reinterpret_cast<uint8_t*>(output.data()), capacity, &read);
         if (status != PrStatus_Ok)
             return false;
         if (read.progress == PrCompressProgress_Output)
@@ -203,8 +201,7 @@ bool loadImage(void* PR_NULLABLE context, PrDomDocument* from, PrStringView url,
     return false;
 }
 
-PrDomDocument* PR_NULLABLE loadReferenced(void* PR_NULLABLE context, PrDomDocument* from,
-                                          PrStringView url) {
+PrDomDocument* PR_NULLABLE loadReferenced(void* PR_NULLABLE context, PrDomDocument* from, PrStringView url) {
     Documents* documents = static_cast<Images*>(context)->documents;
     for (auto& [document, path] : documents->loaded) {
         if (document != from)
@@ -260,8 +257,7 @@ PrFontSet* lottieFonts() {
 // the suite's background, with its text set in the suite's fonts and shaped by `shaper`. The animation is a JSON file,
 // or a dotLottie archive's first animation.
 PrStatus recordLottie(PrCompressCodec* compressCodec, PrImageCodec* imageCodec, const SuiteRender& suite,
-                      PrTextShaper* shaper, const std::string& path, float width, float height, double frame,
-                      PrDrawList* list) {
+        PrTextShaper* shaper, const std::string& path, float width, float height, double frame, PrDrawList* list) {
     TextBuffer source;
     if (!harnessReadFile(&source, path.c_str()))
         return PrStatus_NotFound;
@@ -279,10 +275,10 @@ PrStatus recordLottie(PrCompressCodec* compressCodec, PrImageCodec* imageCodec, 
         PrStringView bytes = textView(&source);
         PrLottieArchive* archive = prLottieArchiveCreate(compressCodec);
         status = prLottieArchiveOpen(archive, PrByteView{reinterpret_cast<const uint8_t*>(bytes.data), bytes.size});
-        if (status == PrStatus_Ok)
-            status = prLottieArchiveAnimationCount(archive) > 0
-                         ? prLottieAnimationCreateFromArchive(archive, 0, &options, &animation)
-                         : PrStatus_NotFound;
+        if (status == PrStatus_Ok && prLottieArchiveAnimationCount(archive) > 0)
+            status = prLottieAnimationCreateFromArchive(archive, 0, &options, &animation);
+        else if (status == PrStatus_Ok)
+            status = PrStatus_NotFound;
         prLottieArchiveDestroy(archive);
     } else {
         status = prLottieAnimationCreate(textView(&source), &options, &animation);
@@ -294,8 +290,10 @@ PrStatus recordLottie(PrCompressCodec* compressCodec, PrImageCodec* imageCodec, 
     // Drawn over the background that the reference draws over, because blend modes blend with it.
     prDrawListClearRect(list, PrRect{0, 0, width, height}, suite.background);
     float scale = info.extent.x > 0 && info.extent.y > 0 ? std::fmin(width / info.extent.x, height / info.extent.y) : 1;
-    prDrawListPushTransformAffine2(list, PrAffine2{scale, 0, 0, scale, (width - info.extent.x * scale) / 2,
-                                                 (height - info.extent.y * scale) / 2});
+    prDrawListPushTransformAffine2(list, PrAffine2{
+        scale, 0, 0, scale, (width - info.extent.x * scale) / 2,
+        (height - info.extent.y * scale) / 2,
+    });
     prLottieAnimationDraw(animation, info.inPoint + frame, list);
     prDrawListPopTransform(list);
     prLottieAnimationDestroy(animation);
@@ -305,8 +303,8 @@ PrStatus recordLottie(PrCompressCodec* compressCodec, PrImageCodec* imageCodec, 
 // Renders the document onto transparent pixels of the given size, as straight RGBA. `time` is a time in seconds for an
 // SVG document, and a frame for a Lottie animation.
 PrStatus render(PrDrawRenderer* renderer, PrCompressCodec* compressCodec, PrImageCodec* imageCodec,
-                const SuiteRender& suite, PrTextShaper* shaper, const std::string& path, uint32_t width,
-                uint32_t height, double time, std::vector<uint8_t>* rgba) {
+        const SuiteRender& suite, PrTextShaper* shaper, const std::string& path, uint32_t width,
+        uint32_t height, double time, std::vector<uint8_t>* rgba) {
     rgba->assign(size_t(width) * height * 4, 0);
     if (path.ends_with(".png")) {
         Image image;
@@ -335,8 +333,7 @@ PrStatus render(PrDrawRenderer* renderer, PrCompressCodec* compressCodec, PrImag
     if (document == nullptr)
         return PrStatus_NotFound;
     PrDomElement* root = prDomDocumentElement(document);
-    PrSvgElement* svg =
-        root != nullptr ? prSvgElementQuery(prDomElementAsEventTarget(root)) : nullptr;
+    PrSvgElement* svg = root != nullptr ? prSvgElementQuery(prDomElementAsEventTarget(root)) : nullptr;
     PrStatus status = PrStatus_NotSupported;
     PrDrawList* list = prDrawListCreate();
     Images images{compressCodec, imageCodec, &documents};
@@ -426,7 +423,7 @@ int main(int argc, char** argv) {
             reference.width = width;
             reference.height = height;
             status = render(renderer, compressCodec, imageCodec, suite, textShaper, paths[1], width, height, time,
-                            &reference.rgba);
+                &reference.rgba);
             if (status != PrStatus_Ok)
                 reference.rgba.clear();
         } else if (!readPng(imageCodec, paths[1], &reference)) {
@@ -438,27 +435,24 @@ int main(int argc, char** argv) {
         double started = prTimeMonotonicMilliseconds();
         if (status == PrStatus_Ok)
             status = render(renderer, compressCodec, imageCodec, suite, textShaper, paths[0], reference.width,
-                            reference.height, time, &rendered);
+                reference.height, time, &rendered);
         double ms = prTimeMonotonicMilliseconds() - started;
         textAppend(&out, "{\"status\":");
         harnessWriteString(&out, prStatusName(status));
         if (!rendered.empty()) {
             std::vector<uint8_t> diff(rendered.size());
             size_t stride = size_t(reference.width) * 4;
-            ImageDifference d =
-                compareImages(reference.rgba.data(), rendered.data(), reference.width,
-                              reference.height, stride, ImageComparison{}, diff.data());
+            ImageDifference d = compareImages(reference.rgba.data(), rendered.data(), reference.width,
+                reference.height, stride, ImageComparison{}, diff.data());
             writeFigure(&out, "changed", d.changedRatio);
             writeFigure(&out, "content", d.contentChangedRatio);
             writeFigure(&out, "mae", d.mae);
-            PixelDifference p =
-                countDifferences(reference.rgba.data(), rendered.data(), reference.width,
-                                 reference.height, stride);
+            PixelDifference p = countDifferences(reference.rgba.data(), rendered.data(), reference.width,
+                reference.height, stride);
             writeFigure(&out, "maxDifference", double(p.maxDifference));
             writeFigure(&out, "differingPixels", double(p.differingPixels));
-            textAppend(&out, imageDrawsAnything(reference.rgba.data(), reference.width, reference.height, stride)
-                                 ? ",\"blank\":false"
-                                 : ",\"blank\":true");
+            bool drawn = imageDrawsAnything(reference.rgba.data(), reference.width, reference.height, stride);
+            textAppend(&out, drawn ? ",\"blank\":false" : ",\"blank\":true");
             if (paths[3] != "-")
                 writePng(paths[3], rendered, reference.width, reference.height);
             if (paths[5] != "-")

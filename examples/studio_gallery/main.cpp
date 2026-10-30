@@ -74,9 +74,10 @@ PrAppColorScheme chosenScheme(const GalleryState& state, const PrAppUserPreferen
 // Declares a round: a surface on the app's ground that fills the viewport, and the gallery under it.
 void build(void* context, PrUi*, const PrUiRound*) {
     Window& w = *static_cast<Window*>(context);
-    PrKitSurfaceStyle style{.box = {.overflow = PrKitOverflow_Clip,
-                                    .place = {.width = prKitPercent(100), .height = prKitPercent(100)}},
-                            .ground = PrKitGround_App};
+    PrKitSurfaceStyle style{
+        .box = {.overflow = PrKitOverflow_Clip, .place = {.width = prKitPercent(100), .height = prKitPercent(100)}},
+        .ground = PrKitGround_App,
+    };
     buildGallery(w.kit, prKitSurface(w.kit, kPrLayoutNodeNone, {}, style), w.state);
 }
 
@@ -104,11 +105,11 @@ void closeDevice(Window& w) {
 bool openDevice(Window& w) {
     PrAppSurface surface{};
     PrGpuSwapChainDesc desc{.intent = PrGpuSwapChainIntent_Hdr};
-    if (prGpuDeviceCreate(PrGpuBackend_Default, nullptr, &w.device) != PrStatus_Ok
-        || prAppSurface(w.app, &surface) != PrStatus_Ok
-        || prGpuSwapChainCreate(w.device, &surface, &desc, &w.swapChain) != PrStatus_Ok
-        || prDrawRendererCreate(PrDrawRendererBackend_Default, w.device, nullptr, &w.renderer) != PrStatus_Ok
-        || prDrawDisplayCreate(w.device, &w.display) != PrStatus_Ok) {
+    if (prGpuDeviceCreate(PrGpuBackend_Default, nullptr, &w.device) != PrStatus_Ok ||
+            prAppSurface(w.app, &surface) != PrStatus_Ok ||
+            prGpuSwapChainCreate(w.device, &surface, &desc, &w.swapChain) != PrStatus_Ok ||
+            prDrawRendererCreate(PrDrawRendererBackend_Default, w.device, nullptr, &w.renderer) != PrStatus_Ok ||
+            prDrawDisplayCreate(w.device, &w.display) != PrStatus_Ok) {
         closeDevice(w);
         return false;
     }
@@ -128,7 +129,7 @@ PrGpuTexture renderedFor(Window& w, PrUVec2 extent) {
     if (w.rendered.id == 0 || extent.x > held.x || extent.y > held.y) {
         prGpuTextureDestroy(w.device, w.rendered);
         PrGpuTextureDesc desc = prGpuTextureDesc2d(PrGpuFormat_Rgba16F, extent,
-                                                   PrGpuTextureUsageFlag_Sampled | PrGpuTextureUsageFlag_RenderTarget);
+            PrGpuTextureUsageFlag_Sampled | PrGpuTextureUsageFlag_RenderTarget);
         w.rendered = PrGpuTexture{};
         prGpuTextureCreate(w.device, &desc, &w.rendered);
     }
@@ -139,8 +140,8 @@ PrGpuTexture renderedFor(Window& w, PrUVec2 extent) {
 void render(Window& w, PrUVec2 extent, PrColor canvas, const PrAppDisplay& display) {
     PrGpuTexture drawable{};
     PrGpuCommands* commands = nullptr;
-    if (prGpuSwapChainAcquire(w.swapChain, extent, &drawable) != PrStatus_Ok
-        || !prGpuCommandsBegin(w.device, nullptr, &commands))
+    if (prGpuSwapChainAcquire(w.swapChain, extent, &drawable) != PrStatus_Ok ||
+            !prGpuCommandsBegin(w.device, nullptr, &commands))
         return;
     bool mapped = mapsToDisplay(w);
     PrGpuTexture target = mapped ? renderedFor(w, extent) : drawable;
@@ -150,16 +151,14 @@ void render(Window& w, PrUVec2 extent, PrColor canvas, const PrAppDisplay& displ
     // The half floats rest in the accesses of shader reads between frames, and the drawable holds nothing yet.
     PrGpuSubresources all{};
     prGpuCommandsTextureBarrier(commands, target, all, mapped ? PrGpuAccessFlag_ShaderRead : PrGpuAccessFlag_Discard,
-                                PrGpuAccessFlag_ColorAttachment);
+        PrGpuAccessFlag_ColorAttachment);
     PrGpuPassDesc pass = prGpuPassDescColor(target, PrGpuLoad_Clear, canvas);
     PrGpuPass* encoder = prGpuPassBegin(commands, &pass);
     prDrawFrameRender(w.frame, encoder, PrIVec2{0, 0});
     prGpuPassEnd(encoder);
     if (mapped) {
-        prGpuCommandsTextureBarrier(commands, target, all, PrGpuAccessFlag_ColorAttachment,
-                                    PrGpuAccessFlag_ShaderRead);
-        prGpuCommandsTextureBarrier(commands, drawable, all, PrGpuAccessFlag_Discard,
-                                    PrGpuAccessFlag_ColorAttachment);
+        prGpuCommandsTextureBarrier(commands, target, all, PrGpuAccessFlag_ColorAttachment, PrGpuAccessFlag_ShaderRead);
+        prGpuCommandsTextureBarrier(commands, drawable, all, PrGpuAccessFlag_Discard, PrGpuAccessFlag_ColorAttachment);
         PrGpuSwapChainInfo info = prGpuSwapChainInfo(w.swapChain);
         PrGpuPassDesc shown = prGpuPassDescColor(drawable, PrGpuLoad_Discard, PrColor{});
         encoder = prGpuPassBegin(commands, &shown);
@@ -200,12 +199,14 @@ void frame(void* context, PrApp* app, const PrAppFrame* f) {
         PrKitTheme theme = prKitThemeStudio(variantOf(scheme), w.fonts);
         prKitSetTheme(w.kit, &theme);
     }
-    PrUiFrameDesc desc{.time = f->time,
-                       .delta = f->delta,
-                       .extent = f->extent,
-                       .maxRounds = 4,
-                       .display = f->display,
-                       .preferences = f->preferences};
+    PrUiFrameDesc desc{
+        .time = f->time,
+        .delta = f->delta,
+        .extent = f->extent,
+        .maxRounds = 4,
+        .display = f->display,
+        .preferences = f->preferences,
+    };
     prUiFrame(w.ui, &desc, build, &w);
 
     // The tree's scene plays into the list in target pixels, each scroll container at the tree's offset for it. The
@@ -228,8 +229,7 @@ void frame(void* context, PrApp* app, const PrAppFrame* f) {
 
     PrUVec2 extent{uint32_t(f->extent.x * ratio + 0.5f), uint32_t(f->extent.y * ratio + 0.5f)};
     if (extent.x != 0 && extent.y != 0)
-        render(w, extent, PrColor{canvas.r * canvas.a, canvas.g * canvas.a, canvas.b * canvas.a, canvas.a},
-               f->display);
+        render(w, extent, PrColor{canvas.r * canvas.a, canvas.g * canvas.a, canvas.b * canvas.a, canvas.a}, f->display);
     prAppSetCursor(app, prUiCursor(w.ui));
     if (prUiWantsFrame(w.ui))
         prAppRequestFrame(app);

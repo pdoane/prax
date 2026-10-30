@@ -57,9 +57,12 @@ void calc(PrCssValue* value, PrCssCalc calc) {
 
 void unit(PrCssValue* value, double number, PrCssUnit unit) {
     PrCssValueFields fields = {};
-    fields.kind = unit == PrCssUnit_Number ? PrCssValueKind_Number
-                : unit == PrCssUnit_Percent ? PrCssValueKind_Percentage
-                                            : PrCssValueKind_Dimension;
+    if (unit == PrCssUnit_Number)
+        fields.kind = PrCssValueKind_Number;
+    else if (unit == PrCssUnit_Percent)
+        fields.kind = PrCssValueKind_Percentage;
+    else
+        fields.kind = PrCssValueKind_Dimension;
     fields.number.value = number;
     fields.number.unit = unit;
     prCssValueAdd(value, &fields);
@@ -139,116 +142,168 @@ struct Case {
 void none(Work*) {}
 
 constexpr Case kCases[] = {
-    {"unit factory", none,
-     [](Work* w) {
-         prCssValueClear(w->scratch);
-         unit(w->scratch, 1, PrCssUnit_Px);
-     }},
-    {"math construct", none,
-     [](Work* w) {
-         prCssValueClear(w->scratch);
-         buildSum(w->scratch);
-     }},
+    {
+        "unit factory",
+        none,
+        [](Work* w) {
+            prCssValueClear(w->scratch);
+            unit(w->scratch, 1, PrCssUnit_Px);
+        },
+    },
+    {
+        "math construct",
+        none,
+        [](Work* w) {
+            prCssValueClear(w->scratch);
+            buildSum(w->scratch);
+        },
+    },
     {"math toString", none, [](Work* w) { serialize(w->sum); }},
-    {"math type", none,
-     [](Work* w) {
-         PrCssNumericType type;
-         prCssValueNumericType(w->sum, 0, &type);
-     }},
-    {"numeric add", none,
-     [](Work*) {
-         PrCssNumericType px;
-         PrCssNumericType em;
-         PrCssNumericType sum;
-         prCssNumericTypeFromUnit(PrCssUnit_Px, &px);
-         prCssNumericTypeFromUnit(PrCssUnit_Em, &em);
-         prCssNumericTypeAdd(&px, &em, &sum);
-         prCssNumericTypeAdd(&sum, &px, &sum);
-     }},
-    {"numeric to", none,
-     [](Work* w) {
-         prCssValueClear(w->scratch);
-         unit(w->scratch, 1, PrCssUnit_In);
-         double number;
-         prCssValueTo(w->scratch, 0, PrCssUnit_Px, &number);
-     }},
-    {"numeric toSum", none,
-     [](Work* w) {
-         const PrCssUnit units[] = {PrCssUnit_Px, PrCssUnit_Percent, PrCssUnit_Em};
-         prCssValueClear(w->result);
-         prCssValueToSum(w->sum, 0, units, 3, w->result);
-     }},
-    {"numeric equals", none,
-     [](Work* w) {
-         prCssValueClear(w->scratch);
-         buildSum(w->scratch);
-         buildSum(w->scratch);
-         prCssValueEquals(w->scratch, 0, w->scratch, prCssValueNext(w->scratch, 0));
-     }},
-    {"numeric parse", none,
-     [](Work* w) {
-         prCssValueClear(w->result);
-         prCssValueParseNumeric("calc(1px + 2em * 3 - 50%)", w->result);
-     }},
-    {"style parse transform", none,
-     [](Work* w) {
-         PrCssDeclarationName name = prCssDeclarationNameFromProperty(PrCssProperty_Transform);
-         prCssValueClear(w->result);
-         prCssValueParse(&name, "translate(10px, 20px) rotate(45deg) scale(2, 3)", w->result);
-     }},
-    {"transform construct", none,
-     [](Work* w) {
-         prCssValueClear(w->scratch);
-         buildTransform(w->scratch);
-     }},
+    {
+        "math type",
+        none,
+        [](Work* w) {
+            PrCssNumericType type;
+            prCssValueNumericType(w->sum, 0, &type);
+        },
+    },
+    {
+        "numeric add",
+        none,
+        [](Work*) {
+            PrCssNumericType px;
+            PrCssNumericType em;
+            PrCssNumericType sum;
+            prCssNumericTypeFromUnit(PrCssUnit_Px, &px);
+            prCssNumericTypeFromUnit(PrCssUnit_Em, &em);
+            prCssNumericTypeAdd(&px, &em, &sum);
+            prCssNumericTypeAdd(&sum, &px, &sum);
+        },
+    },
+    {
+        "numeric to",
+        none,
+        [](Work* w) {
+            prCssValueClear(w->scratch);
+            unit(w->scratch, 1, PrCssUnit_In);
+            double number;
+            prCssValueTo(w->scratch, 0, PrCssUnit_Px, &number);
+        },
+    },
+    {
+        "numeric toSum",
+        none,
+        [](Work* w) {
+            const PrCssUnit units[] = {PrCssUnit_Px, PrCssUnit_Percent, PrCssUnit_Em};
+            prCssValueClear(w->result);
+            prCssValueToSum(w->sum, 0, units, 3, w->result);
+        },
+    },
+    {
+        "numeric equals",
+        none,
+        [](Work* w) {
+            prCssValueClear(w->scratch);
+            buildSum(w->scratch);
+            buildSum(w->scratch);
+            prCssValueEquals(w->scratch, 0, w->scratch, prCssValueNext(w->scratch, 0));
+        },
+    },
+    {
+        "numeric parse",
+        none,
+        [](Work* w) {
+            prCssValueClear(w->result);
+            prCssValueParseNumeric("calc(1px + 2em * 3 - 50%)", w->result);
+        },
+    },
+    {
+        "style parse transform",
+        none,
+        [](Work* w) {
+            PrCssDeclarationName name = prCssDeclarationNameFromProperty(PrCssProperty_Transform);
+            prCssValueClear(w->result);
+            prCssValueParse(&name, "translate(10px, 20px) rotate(45deg) scale(2, 3)", w->result);
+        },
+    },
+    {
+        "transform construct",
+        none,
+        [](Work* w) {
+            prCssValueClear(w->scratch);
+            buildTransform(w->scratch);
+        },
+    },
     {"transform toString", none, [](Work* w) { serialize(w->transform); }},
-    {"transform toMatrix", none,
-     [](Work* w) {
-         PrDomMatrix matrix = prDomMatrixIdentity();
-         for (uint32_t node = 0; node < prCssValueSize(w->transform);
-              node = prCssValueNext(w->transform, node)) {
-             PrDomMatrix next;
-             prCssValueTransformMatrix(w->transform, node, &next);
-             prDomMatrixMultiply(&matrix, &next);
-         }
-     }},
-    {"unparsed construct", none,
-     [](Work* w) {
-         PrCssValueFields fields = {};
-         fields.kind = PrCssValueKind_Tokens;
-         fields.text = "1px var(--a) 2px";
-         prCssValueClear(w->scratch);
-         prCssValueAdd(w->scratch, &fields);
-     }},
-    {"map set", none,
-     [](Work* w) {
-         w->flip = !w->flip;
-         prCssValueClear(w->scratch);
-         unit(w->scratch, w->flip ? 10 : 50, w->flip ? PrCssUnit_Px : PrCssUnit_Percent);
-         setValue(w, PrCssProperty_Width, w->scratch);
-     }},
-    {"map set transform", none,
-     [](Work* w) { setValue(w, PrCssProperty_Transform, w->transform); }},
-    {"map get",
-     [](Work* w) {
-         prCssValueClear(w->scratch);
-         unit(w->scratch, 4, PrCssUnit_Px);
-         setValue(w, PrCssProperty_MarginLeft, w->scratch);
-     },
-     [](Work* w) { getValue(w, PrCssProperty_MarginLeft); }},
-    {"map get transform", [](Work* w) { setValue(w, PrCssProperty_Transform, w->transform); },
-     [](Work* w) { getValue(w, PrCssProperty_Transform); }},
-    {"deep construct", none,
-     [](Work* w) {
-         prCssValueClear(w->scratch);
-         buildDeep(w->scratch);
-     }},
+    {
+        "transform toMatrix",
+        none,
+        [](Work* w) {
+            PrDomMatrix matrix = prDomMatrixIdentity();
+            for (uint32_t node = 0; node < prCssValueSize(w->transform); node = prCssValueNext(w->transform, node)) {
+                PrDomMatrix next;
+                prCssValueTransformMatrix(w->transform, node, &next);
+                prDomMatrixMultiply(&matrix, &next);
+            }
+        },
+    },
+    {
+        "unparsed construct",
+        none,
+        [](Work* w) {
+            PrCssValueFields fields = {};
+            fields.kind = PrCssValueKind_Tokens;
+            fields.text = "1px var(--a) 2px";
+            prCssValueClear(w->scratch);
+            prCssValueAdd(w->scratch, &fields);
+        },
+    },
+    {
+        "map set",
+        none,
+        [](Work* w) {
+            w->flip = !w->flip;
+            prCssValueClear(w->scratch);
+            unit(w->scratch, w->flip ? 10 : 50, w->flip ? PrCssUnit_Px : PrCssUnit_Percent);
+            setValue(w, PrCssProperty_Width, w->scratch);
+        },
+    },
+    {
+        "map set transform",
+        none,
+        [](Work* w) { setValue(w, PrCssProperty_Transform, w->transform); },
+    },
+    {
+        "map get",
+        [](Work* w) {
+            prCssValueClear(w->scratch);
+            unit(w->scratch, 4, PrCssUnit_Px);
+            setValue(w, PrCssProperty_MarginLeft, w->scratch);
+        },
+        [](Work* w) { getValue(w, PrCssProperty_MarginLeft); },
+    },
+    {
+        "map get transform",
+        [](Work* w) { setValue(w, PrCssProperty_Transform, w->transform); },
+        [](Work* w) { getValue(w, PrCssProperty_Transform); },
+    },
+    {
+        "deep construct",
+        none,
+        [](Work* w) {
+            prCssValueClear(w->scratch);
+            buildDeep(w->scratch);
+        },
+    },
     {"deep toString", none, [](Work* w) { serialize(w->deep); }},
-    {"deep to", none,
-     [](Work* w) {
-         double number;
-         prCssValueTo(w->deep, 0, PrCssUnit_Px, &number);
-     }},
+    {
+        "deep to",
+        none,
+        [](Work* w) {
+            double number;
+            prCssValueTo(w->deep, 0, PrCssUnit_Px, &number);
+        },
+    },
 };
 
 } // namespace
@@ -270,8 +325,7 @@ int main(int argc, char** argv) {
     buildDeep(work.deep);
     work.sheet = prCssStyleSheetCreate(nullptr);
     prCssStyleSheetReplaceSync(work.sheet, "div {}");
-    PrCssStyleRule* rule =
-        prCssStyleRuleQuery(prCssRuleListRuleAt(prCssStyleSheetCssRules(work.sheet), 0));
+    PrCssStyleRule* rule = prCssStyleRuleQuery(prCssRuleListRuleAt(prCssStyleSheetCssRules(work.sheet), 0));
     work.map = prCssStylePropertiesAsCssStyleDeclaration(prCssStyleRuleStyle(rule));
 
     PrStringView only = argc == 2 ? argv[1] : PrStringView{};

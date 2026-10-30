@@ -26,22 +26,22 @@ bool isIsolateInitiator(PrUnicodeBidiClass c) {
 }
 
 bool isRemoved(PrUnicodeBidiClass c) {
-    return c == PrUnicodeBidiClass_BN || c == PrUnicodeBidiClass_RLE || c == PrUnicodeBidiClass_LRE
-           || c == PrUnicodeBidiClass_RLO || c == PrUnicodeBidiClass_LRO || c == PrUnicodeBidiClass_PDF;
+    return c == PrUnicodeBidiClass_BN || c == PrUnicodeBidiClass_RLE || c == PrUnicodeBidiClass_LRE ||
+        c == PrUnicodeBidiClass_RLO || c == PrUnicodeBidiClass_LRO || c == PrUnicodeBidiClass_PDF;
 }
 
 // Returns true if `c` is a neutral or isolate formatting character (NI, of N1).
 bool isNeutral(PrUnicodeBidiClass c) {
-    return c == PrUnicodeBidiClass_B || c == PrUnicodeBidiClass_S || c == PrUnicodeBidiClass_WS
-           || c == PrUnicodeBidiClass_ON || isIsolateInitiator(c) || c == PrUnicodeBidiClass_PDI;
+    return c == PrUnicodeBidiClass_B || c == PrUnicodeBidiClass_S || c == PrUnicodeBidiClass_WS ||
+        c == PrUnicodeBidiClass_ON || isIsolateInitiator(c) || c == PrUnicodeBidiClass_PDI;
 }
 
 // Returns the direction that a strong type or number contributes to rules N0 and N1. Numbers count as R.
 PrUnicodeBidiClass strongOf(PrUnicodeBidiClass c) {
     if (c == PrUnicodeBidiClass_L)
         return PrUnicodeBidiClass_L;
-    if (c == PrUnicodeBidiClass_R || c == PrUnicodeBidiClass_AL || c == PrUnicodeBidiClass_EN
-        || c == PrUnicodeBidiClass_AN)
+    if (c == PrUnicodeBidiClass_R || c == PrUnicodeBidiClass_AL || c == PrUnicodeBidiClass_EN ||
+            c == PrUnicodeBidiClass_AN)
         return PrUnicodeBidiClass_R;
     return PrUnicodeBidiClass_ON;
 }
@@ -54,7 +54,7 @@ PrUnicodeBidiClass directionOf(uint8_t level) {
 // search skips characters between an isolate initiator and its matching PDI. If `isolate` is set, an unmatched PDI ends
 // the search, because the text of an FSI ends there.
 uint8_t firstStrongLevel(const PrUnicodeBidiClass* classes, uint32_t start, uint32_t end, bool isolate,
-                         uint8_t fallback) {
+        uint8_t fallback) {
     uint32_t depth = 0;
     for (uint32_t i = start; i < end; ++i) {
         PrUnicodeBidiClass c = classes[i];
@@ -117,9 +117,11 @@ void explicitLevels(Paragraph& p, uint32_t start, uint32_t end) {
                 uint8_t level = rtl ? uint8_t((top.level + 1) | 1) : uint8_t((top.level + 2) & ~1);
                 p.levels[i] = top.level;
                 if (level <= kPrUnicodeBidiMaxDepth && overflowIsolates == 0 && overflowEmbeddings == 0) {
-                    PrUnicodeBidiClass override = c == PrUnicodeBidiClass_RLO   ? PrUnicodeBidiClass_R
-                                         : c == PrUnicodeBidiClass_LRO ? PrUnicodeBidiClass_L
-                                                              : PrUnicodeBidiClass_ON;
+                    PrUnicodeBidiClass override = PrUnicodeBidiClass_ON;
+                    if (c == PrUnicodeBidiClass_RLO)
+                        override = PrUnicodeBidiClass_R;
+                    else if (c == PrUnicodeBidiClass_LRO)
+                        override = PrUnicodeBidiClass_L;
                     stack[depth++] = DirectionalStatus{level, override, false};
                 } else if (overflowIsolates == 0) {
                     ++overflowEmbeddings;
@@ -132,9 +134,8 @@ void explicitLevels(Paragraph& p, uint32_t start, uint32_t end) {
                 p.levels[i] = top.level;
                 if (top.override != PrUnicodeBidiClass_ON)
                     p.types.data[i - start] = top.override;
-                bool rtl = c == PrUnicodeBidiClass_RLI
-                           || (c == PrUnicodeBidiClass_FSI
-                               && firstStrongLevel(p.classes, i + 1, end, true, 0) == 1);
+                bool rtl = c == PrUnicodeBidiClass_RLI || (c == PrUnicodeBidiClass_FSI &&
+                    firstStrongLevel(p.classes, i + 1, end, true, 0) == 1);
                 uint8_t level = rtl ? uint8_t((top.level + 1) | 1) : uint8_t((top.level + 2) & ~1);
                 if (level <= kPrUnicodeBidiMaxDepth && overflowIsolates == 0 && overflowEmbeddings == 0) {
                     ++validIsolates;
@@ -195,8 +196,7 @@ void resolveWeak(Paragraph& p, uint32_t start, PrUnicodeBidiClass sos) {
         if (i == 0)
             t(i) = sos;
         else
-            t(i) = isIsolateInitiator(t(i - 1)) || t(i - 1) == PrUnicodeBidiClass_PDI ? PrUnicodeBidiClass_ON
-                                                                             : t(i - 1);
+            t(i) = isIsolateInitiator(t(i - 1)) || t(i - 1) == PrUnicodeBidiClass_PDI ? PrUnicodeBidiClass_ON : t(i - 1);
     }
     PrUnicodeBidiClass strong = sos;
     for (uint32_t i = 0; i < n; ++i) {
@@ -327,7 +327,7 @@ void resolveBrackets(Paragraph& p, uint32_t start, PrUnicodeBidiClass sos, PrUni
 
 // Resolves the neutral types of an isolating run sequence (N1, N2), then its levels (I1, I2).
 void resolveNeutralsAndLevels(Paragraph& p, uint32_t start, PrUnicodeBidiClass sos, PrUnicodeBidiClass eos,
-                              PrUnicodeBidiClass embedding) {
+        PrUnicodeBidiClass embedding) {
     uint32_t n = p.sequence.count;
     auto index = [&](uint32_t i) { return p.kept.data[p.sequence.data[i]]; };
     auto t = [&](uint32_t i) -> PrUnicodeBidiClass& { return p.types.data[index(i) - start]; };
@@ -415,8 +415,7 @@ void resolveParagraph(Paragraph& p, uint32_t start, uint32_t end) {
             for (uint32_t k = runStart; k < runEnd; ++k)
                 p.sequence.push(k);
             uint32_t last = runEnd - 1;
-            if (!isIsolateInitiator(p.classes[p.kept.data[last]])
-                || p.matching.data[last] == kArrayMissing)
+            if (!isIsolateInitiator(p.classes[p.kept.data[last]]) || p.matching.data[last] == kArrayMissing)
                 break;
             run = p.runOf.data[p.matching.data[last]];
         }
@@ -424,9 +423,11 @@ void resolveParagraph(Paragraph& p, uint32_t start, uint32_t end) {
         uint32_t lastKept = p.sequence.last();
         uint8_t level = p.embedding.data[firstKept];
         uint8_t before = firstKept == 0 ? p.level : p.embedding.data[firstKept - 1];
-        uint8_t after = lastKept + 1 == count || isIsolateInitiator(p.classes[p.kept.data[lastKept]])
-                            ? p.level
-                            : p.embedding.data[lastKept + 1];
+        uint8_t after;
+        if (lastKept + 1 == count || isIsolateInitiator(p.classes[p.kept.data[lastKept]]))
+            after = p.level;
+        else
+            after = p.embedding.data[lastKept + 1];
         PrUnicodeBidiClass sos = directionOf(level > before ? level : before);
         PrUnicodeBidiClass eos = directionOf(level > after ? level : after);
         PrUnicodeBidiClass embedding = directionOf(level);
@@ -470,7 +471,7 @@ PrUnicodeBidiStrong prUnicodeBidiFirstStrong(PrStringView text) {
 }
 
 uint8_t prUnicodeBidiResolve(const PrUnicodeBidiClass* classes, const uint32_t* PR_NULLABLE codePoints,
-                             uint32_t count, PrUnicodeBidiDirection direction, uint8_t* levels) {
+        uint32_t count, PrUnicodeBidiDirection direction, uint8_t* levels) {
     Paragraph p{};
     p.classes = classes;
     p.codePoints = codePoints;
@@ -502,8 +503,7 @@ uint8_t prUnicodeBidiResolve(const PrUnicodeBidiClass* classes, const uint32_t* 
     return p.level;
 }
 
-void prUnicodeBidiLineLevels(const PrUnicodeBidiClass* classes, uint32_t count, uint8_t paragraphLevel,
-                             uint8_t* levels) {
+void prUnicodeBidiLineLevels(const PrUnicodeBidiClass* classes, uint32_t count, uint8_t paragraphLevel, uint8_t* levels) {
     bool trailing = true;
     for (uint32_t i = count; i-- > 0;) {
         PrUnicodeBidiClass c = classes[i];

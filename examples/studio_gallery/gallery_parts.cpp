@@ -64,7 +64,7 @@ PrLayoutNode captionRow(PrKit* kit, PrLayoutNode parent, PrStringView text, floa
 }
 
 PrLayoutNode sectionFrame(PrKit* kit, PrLayoutNode parent, PrStringView number, PrStringView title, PrStringView lede,
-                          PrStringView description) {
+        PrStringView description) {
     PrLayoutNode section = prKitBox(kit, parent, {}, {.gap = kPrKitSpace3});
     PrKitSurfaceStyle header{.rules = PrKitRuleFlag_Bottom};
     header.box.direction = PrKitDirection_Row;
@@ -106,7 +106,7 @@ PrLayoutNode demoPanel(PrKit* kit, PrLayoutNode parent, PrStringView title, PrSt
 }
 
 PrLayoutNode segmented(PrKit* kit, PrLayoutNode parent, const PrKitChoice* items, uint32_t count, uint32_t* selected,
-                       PrKitChoiceStyle style) {
+        PrKitChoiceStyle style) {
     PrLayoutNode control = prKitSegmented(kit, parent, {}, style);
     for (uint32_t i = 0; i < count; ++i) {
         PrKitChoice item = items[i];

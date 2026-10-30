@@ -32,18 +32,24 @@ constexpr uint8_t kDynamic[] = {
     0xcb, 0xb2, 0x2c, 0xcb, 0xb2, 0x2c, 0xcb, 0xb2, 0x2c, 0xcb, 0xb2, 0x2c, 0xcb, 0xb2, 0x2c, 0xcb,
     0xb2, 0x2c, 0xcb, 0xb2, 0x2c, 0xcb, 0xb2, 0x2c, 0xcb, 0xb2, 0x2c, 0xcb, 0xb2, 0x2c, 0xcb, 0xb2,
     0x2c, 0xcb, 0xb2, 0x2c, 0xcb, 0xb2, 0x2c, 0xcb, 0xb2, 0x2c, 0xcb, 0xb2, 0x2c, 0xcb, 0xb2, 0x2c,
-    0xcb, 0xb2, 0x2c, 0xcb, 0xb2, 0x2c, 0xcb, 0xb2, 0xfc, 0x2f, 0x79, 0x3};
+    0xcb, 0xb2, 0x2c, 0xcb, 0xb2, 0x2c, 0xcb, 0xb2, 0xfc, 0x2f, 0x79, 0x3,
+};
 
-constexpr uint8_t kZlib[] = {0x78, 0x9c, 0xcb, 0x48, 0xcd, 0xc9, 0xc9, 0x57, 0xc8,
-                        0x40, 0x90, 0x8a, 0x5c, 0x00, 0x47, 0x74, 0x06, 0xa8};
-constexpr uint8_t kGzip[] = {0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff,
-                        0xcb, 0x48, 0xcd, 0xc9, 0xc9, 0x57, 0xc8, 0x40, 0x90, 0x8a,
-                        0x5c, 0x00, 0xa2, 0x98, 0x73, 0xf5, 0x13, 0x00, 0x00, 0x00};
-constexpr uint8_t kWithDictionary[] = {0x78, 0xbb, 0x24, 0x29, 0x33, 0x45, 0x1b, 0x0d, 0xab, 0xd1, 0xb0,
-                                  0x1a, 0x0d, 0xab, 0x81, 0x0d, 0x2b, 0x00, 0x29, 0x4c, 0x95, 0xa3};
+constexpr uint8_t kZlib[] = {
+    0x78, 0x9c, 0xcb, 0x48, 0xcd, 0xc9, 0xc9, 0x57, 0xc8,
+    0x40, 0x90, 0x8a, 0x5c, 0x00, 0x47, 0x74, 0x06, 0xa8,
+};
+constexpr uint8_t kGzip[] = {
+    0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff,
+    0xcb, 0x48, 0xcd, 0xc9, 0xc9, 0x57, 0xc8, 0x40, 0x90, 0x8a,
+    0x5c, 0x00, 0xa2, 0x98, 0x73, 0xf5, 0x13, 0x00, 0x00, 0x00,
+};
+constexpr uint8_t kWithDictionary[] = {
+    0x78, 0xbb, 0x24, 0x29, 0x33, 0x45, 0x1b, 0x0d, 0xab, 0xd1, 0xb0,
+    0x1a, 0x0d, 0xab, 0x81, 0x0d, 0x2b, 0x00, 0x29, 0x4c, 0x95, 0xa3,
+};
 
-std::string decode(PrByteView input, size_t inputChunk, size_t outputChunk,
-                   InflateFormat format = InflateFormat_Raw) {
+std::string decode(PrByteView input, size_t inputChunk, size_t outputChunk, InflateFormat format = InflateFormat_Raw) {
     Inflate* parser = inflateCreate(format);
     std::string result;
     size_t at = 0;
@@ -51,9 +57,8 @@ std::string decode(PrByteView input, size_t inputChunk, size_t outputChunk,
     for (;;) {
         const size_t size = std::min(inputChunk, input.size - at);
         size_t consumed = 0, written = 0;
-        const InflateResult status =
-            inflateRead(parser, {input.data + at, size}, at + size == input.size, &consumed,
-                        output.data(), output.size(), &written);
+        const InflateResult status = inflateRead(parser, {input.data + at, size}, at + size == input.size, &consumed,
+            output.data(), output.size(), &written);
         CHECK(consumed <= size);
         CHECK(written <= output.size());
         result.append(reinterpret_cast<const char*>(output.data()), written);
@@ -105,11 +110,15 @@ struct FixedEncoder {
     }
 
     void match(uint32_t length, uint32_t distance) {
-        static const uint16_t kLengthBase[] = {3,  4,  5,  6,  7,  8,  9,  10, 11,  13,  15,  17,  19,  23, 27,
-                                               31, 35, 43, 51, 59, 67, 83, 99, 115, 131, 163, 195, 227, 258};
-        static const uint16_t kDistanceBase[] = {1,    2,    3,    4,    5,    7,     9,     13,    17,   25,
-                                                 33,   49,   65,   97,   129,  193,   257,   385,   513,  769,
-                                                 1025, 1537, 2049, 3073, 4097, 6145, 8193, 12289, 16385, 24577};
+        static const uint16_t kLengthBase[] = {
+            3,  4,  5,  6,  7,  8,  9,  10, 11,  13,  15,  17,  19,  23, 27,
+            31, 35, 43, 51, 59, 67, 83, 99, 115, 131, 163, 195, 227, 258,
+        };
+        static const uint16_t kDistanceBase[] = {
+            1,    2,    3,    4,    5,    7,     9,     13,    17,   25,
+            33,   49,   65,   97,   129,  193,   257,   385,   513,  769,
+            1025, 1537, 2049, 3073, 4097, 6145, 8193, 12289, 16385, 24577,
+        };
         uint32_t l = 28;
         while (length != 258 && (l == 28 || kLengthBase[l] > length))
             --l;
@@ -173,8 +182,7 @@ TEST_CASE("Deflate resumes fixed and dynamic codes across input and output bound
         expected += "The quick brown fox jumps over the lazy dog.\n";
     for (size_t inputChunk : {size_t(1), size_t(2), size_t(7), size_t(4096)}) {
         for (size_t outputChunk : {size_t(1), size_t(3), size_t(257), size_t(8192)}) {
-            CHECK(decode({kFixed, sizeof(kFixed)}, inputChunk, outputChunk)
-                  == "hello hello hello!\n");
+            CHECK(decode({kFixed, sizeof(kFixed)}, inputChunk, outputChunk) == "hello hello hello!\n");
             CHECK(decode({kDynamic, sizeof(kDynamic)}, inputChunk, outputChunk) == expected);
         }
     }
@@ -189,25 +197,21 @@ TEST_CASE("Deflate terminal state, trailing bytes, zero output and reset are exp
     Inflate* parser = inflateCreate(InflateFormat_Raw);
     uint8_t output[32];
     size_t consumed, written;
-    CHECK(inflateRead(parser, {kFixed, sizeof(kFixed)}, true, &consumed, nullptr, 0, &written)
-          == InflateResult_Output);
+    CHECK(inflateRead(parser, {kFixed, sizeof(kFixed)}, true, &consumed, nullptr, 0, &written) == InflateResult_Output);
     CHECK(written == 0);
     const size_t first = consumed;
     CHECK(inflateRead(parser, {kFixed + first, sizeof(kFixed) - first}, true, &consumed, output,
-                      sizeof(output), &written)
-          == InflateResult_Done);
+        sizeof(output), &written) == InflateResult_Done);
     CHECK(std::string(reinterpret_cast<char*>(output), written) == "hello hello hello!\n");
     CHECK(consumed + first == sizeof(kFixed));
-    CHECK(inflateRead(parser, {kFixed, sizeof(kFixed)}, true, &consumed, output, sizeof(output),
-                      &written)
-          == InflateResult_Done);
+    CHECK(inflateRead(parser, {kFixed, sizeof(kFixed)}, true, &consumed, output, sizeof(output), &written) ==
+        InflateResult_Done);
     CHECK(consumed == 0);
     CHECK(written == 0);
     inflateReset(parser, InflateFormat_Raw);
     const uint8_t emptyWithTrailing[] = {3, 0, 0xaa, 0xbb};
-    CHECK(inflateRead(parser, {emptyWithTrailing, sizeof(emptyWithTrailing)}, true, &consumed,
-                      nullptr, 0, &written)
-          == InflateResult_Done);
+    CHECK(inflateRead(parser, {emptyWithTrailing, sizeof(emptyWithTrailing)}, true, &consumed, nullptr, 0, &written) ==
+        InflateResult_Done);
     CHECK(consumed == 2);
     CHECK(written == 0);
     inflateDestroy(parser);
@@ -220,21 +224,18 @@ TEST_CASE("Deflate reports truncated and malformed input without losing terminal
     size_t consumed, written;
     for (size_t size = 0; size < sizeof(kFixed); ++size) {
         inflateReset(parser, InflateFormat_Raw);
-        CHECK(inflateRead(parser, {kFixed, size}, true, &consumed, output, sizeof(output), &written)
-              == InflateResult_Truncated);
+        CHECK(inflateRead(parser, {kFixed, size}, true, &consumed, output, sizeof(output), &written) ==
+            InflateResult_Truncated);
         CHECK(consumed <= size);
-        CHECK(inflateRead(parser, {kFixed, sizeof(kFixed)}, true, &consumed, output, sizeof(output),
-                          &written)
-              == InflateResult_Invalid);
+        CHECK(inflateRead(parser, {kFixed, sizeof(kFixed)}, true, &consumed, output, sizeof(output), &written) ==
+            InflateResult_Invalid);
         CHECK(consumed == 0);
     }
-    const std::vector<std::vector<uint8_t>> bad = {
-        {7}, {1, 1, 0, 0, 0, 'a'}, {5, 0, 0, 0}, {3, 2, 0}};
+    const std::vector<std::vector<uint8_t>> bad = {{7}, {1, 1, 0, 0, 0, 'a'}, {5, 0, 0, 0}, {3, 2, 0}};
     for (const std::vector<uint8_t>& input : bad) {
         inflateReset(parser, InflateFormat_Raw);
-        CHECK(inflateRead(parser, {input.data(), input.size()}, true, &consumed, output,
-                          sizeof(output), &written)
-              == InflateResult_Invalid);
+        CHECK(inflateRead(parser, {input.data(), input.size()}, true, &consumed, output, sizeof(output), &written) ==
+            InflateResult_Invalid);
     }
     inflateDestroy(parser);
 }
@@ -247,8 +248,7 @@ TEST_CASE("Deflate back references span stored blocks at the full window distanc
         expected += char(i % 251);
     }
     // Final fixed block: length 3, distance 32768, then end-of-block.
-    uint64_t packed =
-        uint64_t(3) | (uint64_t(64) << 3) | (uint64_t(23) << 10) | (uint64_t(8191) << 15);
+    uint64_t packed = uint64_t(3) | (uint64_t(64) << 3) | (uint64_t(23) << 10) | (uint64_t(8191) << 15);
     for (unsigned i = 0; i < 5; ++i) {
         input.push_back(uint8_t(packed));
         packed >>= 8;
@@ -261,29 +261,28 @@ TEST_CASE("Deflate back references span stored blocks at the full window distanc
     Inflate* parser = inflateCreate(InflateFormat_Zlib);
     std::vector<uint8_t> output(expected.size());
     size_t consumed, written;
-    CHECK(inflateRead(parser, {input.data(), input.size()}, true, &consumed, output.data(),
-                      output.size(), &written)
-          == InflateResult_Invalid);
+    CHECK(inflateRead(parser, {input.data(), input.size()}, true, &consumed, output.data(), output.size(), &written) ==
+        InflateResult_Invalid);
     CHECK(written == 32768);
     CHECK(consumed < input.size());
     inflateDestroy(parser);
 }
 
 TEST_CASE("Deflate permits a literal-only dynamic block without distance codes") {
-    const uint8_t input[] = {0x5, 0xc0, 0x1, 0x4, 0x0, 0x0, 0x0, 0x0,  0x10, 0x0, 0x0,
-                             0x0, 0x0,  0x0, 0x0, 0x0, 0x0, 0x1, 0x0,  0x0,  0x0, 0x0,
-                             0x0, 0x0,  0x0, 0x0, 0x0, 0x0, 0x0, 0x0,  0x0,  0x0, 0x0,
-                             0x0, 0x0,  0x0, 0x0, 0x0, 0x0, 0x0, 0x80, 0x4};
+    const uint8_t input[] = {
+        0x5, 0xc0, 0x1, 0x4, 0x0, 0x0, 0x0, 0x0,  0x10, 0x0, 0x0,
+        0x0, 0x0,  0x0, 0x0, 0x0, 0x0, 0x1, 0x0,  0x0,  0x0, 0x0,
+        0x0, 0x0,  0x0, 0x0, 0x0, 0x0, 0x0, 0x0,  0x0,  0x0, 0x0,
+        0x0, 0x0,  0x0, 0x0, 0x0, 0x0, 0x0, 0x80, 0x4,
+    };
     CHECK(decode({input, sizeof(input)}, 1, 1) == "A");
 }
 
 TEST_CASE("Zlib and gzip resume headers, data and checksums across span boundaries") {
     for (size_t inputChunk : {size_t(1), size_t(2), size_t(7), size_t(4096)}) {
         for (size_t outputChunk : {size_t(1), size_t(3), size_t(32)}) {
-            CHECK(decode({kZlib, sizeof(kZlib)}, inputChunk, outputChunk, InflateFormat_Zlib)
-                  == "hello hello hello!\n");
-            CHECK(decode({kGzip, sizeof(kGzip)}, inputChunk, outputChunk, InflateFormat_Gzip)
-                  == "hello hello hello!\n");
+            CHECK(decode({kZlib, sizeof(kZlib)}, inputChunk, outputChunk, InflateFormat_Zlib) == "hello hello hello!\n");
+            CHECK(decode({kGzip, sizeof(kGzip)}, inputChunk, outputChunk, InflateFormat_Gzip) == "hello hello hello!\n");
         }
     }
 }
@@ -299,16 +298,14 @@ TEST_CASE("Gzip validates optional headers and consecutive members without retai
     input.push_back(uint8_t(crc >> 8));
     input.insert(input.end(), kGzip + 10, kGzip + sizeof(kGzip));
     input.insert(input.end(), kGzip, kGzip + sizeof(kGzip));
-    CHECK(decode({input.data(), input.size()}, 1, 3, InflateFormat_Gzip)
-          == "hello hello hello!\nhello hello hello!\n");
+    CHECK(decode({input.data(), input.size()}, 1, 3, InflateFormat_Gzip) == "hello hello hello!\nhello hello hello!\n");
 
     Inflate* parser = inflateCreate(InflateFormat_Gzip);
     uint8_t output[64];
     size_t consumed, written;
     input[10] ^= 1;
-    CHECK(inflateRead(parser, {input.data(), input.size()}, true, &consumed, output, sizeof(output),
-                      &written)
-          == InflateResult_Invalid);
+    CHECK(inflateRead(parser, {input.data(), input.size()}, true, &consumed, output, sizeof(output), &written) ==
+        InflateResult_Invalid);
     CHECK(written == 0);
     inflateDestroy(parser);
 }
@@ -321,19 +318,17 @@ TEST_CASE("Framed Deflate rejects truncated fields and corrupt checksums") {
         const PrByteView bytes = format == InflateFormat_Zlib ? PrByteView(kZlib) : PrByteView(kGzip);
         for (size_t size = 0; size < bytes.size; ++size) {
             inflateReset(parser, format);
-            CHECK(inflateRead(parser, {bytes.data, size}, true, &consumed, output, sizeof(output),
-                              &written)
-                  == InflateResult_Truncated);
+            CHECK(inflateRead(parser, {bytes.data, size}, true, &consumed, output, sizeof(output), &written) ==
+                InflateResult_Truncated);
         }
         for (size_t index : {size_t(0), bytes.size - 1, bytes.size - 4}) {
             std::vector<uint8_t> bad(bytes.data, bytes.data + bytes.size);
             bad[index] ^= 1;
             inflateReset(parser, format);
-            CHECK(inflateRead(parser, {bad.data(), bad.size()}, true, &consumed, output,
-                              sizeof(output), &written)
-                  == InflateResult_Invalid);
-            CHECK(inflateRead(parser, bytes, true, &consumed, output, sizeof(output), &written)
-                  == InflateResult_Invalid);
+            CHECK(inflateRead(parser, {bad.data(), bad.size()}, true, &consumed, output, sizeof(output), &written) ==
+                InflateResult_Invalid);
+            CHECK(inflateRead(parser, bytes, true, &consumed, output, sizeof(output), &written) ==
+                InflateResult_Invalid);
             CHECK(consumed == 0);
             CHECK(written == 0);
         }
@@ -345,25 +340,22 @@ TEST_CASE("Gzip awaits a final member boundary while zlib leaves trailing bytes 
     Inflate* parser = inflateCreate(InflateFormat_Gzip);
     uint8_t output[32];
     size_t consumed, written;
-    CHECK(inflateRead(parser, {kGzip, sizeof(kGzip)}, false, &consumed, output, sizeof(output),
-                      &written)
-          == InflateResult_Input);
+    CHECK(inflateRead(parser, {kGzip, sizeof(kGzip)}, false, &consumed, output, sizeof(output), &written) ==
+        InflateResult_Input);
     CHECK(consumed == sizeof(kGzip));
     CHECK(written == 19);
     CHECK(inflateRead(parser, {}, true, &consumed, nullptr, 0, &written) == InflateResult_Done);
     std::vector<uint8_t> input(kZlib, kZlib + sizeof(kZlib));
     input.push_back(0xaa);
     inflateReset(parser, InflateFormat_Zlib);
-    CHECK(inflateRead(parser, {input.data(), input.size()}, true, &consumed, output, sizeof(output),
-                      &written)
-          == InflateResult_Done);
+    CHECK(inflateRead(parser, {input.data(), input.size()}, true, &consumed, output, sizeof(output), &written) ==
+        InflateResult_Done);
     CHECK(consumed == sizeof(kZlib));
     inflateReset(parser, InflateFormat_Gzip);
     input.assign(kGzip, kGzip + sizeof(kGzip));
     input.push_back(0xaa);
-    CHECK(inflateRead(parser, {input.data(), input.size()}, true, &consumed, output, sizeof(output),
-                      &written)
-          == InflateResult_Truncated);
+    CHECK(inflateRead(parser, {input.data(), input.size()}, true, &consumed, output, sizeof(output), &written) ==
+        InflateResult_Truncated);
     inflateDestroy(parser);
 }
 
@@ -373,8 +365,7 @@ TEST_CASE("Zlib requests and validates preset dictionaries and retains their his
         dictionary.push_back(uint8_t(i % 251));
     std::string expected;
     for (size_t i = 0; i < 3; ++i)
-        expected.append(reinterpret_cast<const char*>(dictionary.data() + dictionary.size() - 300),
-                        300);
+        expected.append(reinterpret_cast<const char*>(dictionary.data() + dictionary.size() - 300), 300);
     Inflate* parser = inflateCreate(InflateFormat_Zlib);
     size_t at = 0;
     std::string result;
@@ -384,16 +375,14 @@ TEST_CASE("Zlib requests and validates preset dictionaries and retains their his
         const size_t count = at < sizeof(kWithDictionary) ? 1 : 0;
         const InflateResult status =
             inflateRead(parser, {kWithDictionary + at, count}, at + count == sizeof(kWithDictionary),
-                        &consumed, output, sizeof(output), &written);
+                &consumed, output, sizeof(output), &written);
         at += consumed;
         result.append(reinterpret_cast<const char*>(output), written);
         if (status == InflateResult_Dictionary) {
             CHECK(at == 6);
-            CHECK(inflateDictionaryChecksum(parser)
-                  == adler32Update(1, {dictionary.data(), dictionary.size()}));
+            CHECK(inflateDictionaryChecksum(parser) == adler32Update(1, {dictionary.data(), dictionary.size()}));
             CHECK_FALSE(inflateSetDictionary(parser, {}));
-            CHECK(inflateRead(parser, {}, true, &consumed, nullptr, 0, &written)
-                  == InflateResult_Dictionary);
+            CHECK(inflateRead(parser, {}, true, &consumed, nullptr, 0, &written) == InflateResult_Dictionary);
             REQUIRE(inflateSetDictionary(parser, {dictionary.data(), dictionary.size()}));
         } else if (status == InflateResult_Done || status == InflateResult_Invalid) {
             CHECK(status == InflateResult_Done);

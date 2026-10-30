@@ -35,8 +35,7 @@ PrDomRange* PR_NULLABLE domSelectionRange(const PrDomSelection* selection);
 
 // Makes `range`, which may be null, the selection's range. Schedules a selectionchange event if the range changes
 // (selection-api/#scheduling-selectionchange-event).
-void domSelectionSetRange(PrDomSelection* selection, PrDomRange* PR_NULLABLE range,
-                          PrDomSelectionDirection direction);
+void domSelectionSetRange(PrDomSelection* selection, PrDomRange* PR_NULLABLE range, PrDomSelectionDirection direction);
 
 // Reports a change that a script made to the range. If the range is the range of its document's selection, schedules a
 // selectionchange event.

@@ -113,8 +113,7 @@ void buildBands(const Array<PathGridPiece>& pieces, bool vertical, Bands& bands)
 
 // Writes how much each region winds on the side of piece `self` from which a ray from its midpoint exits. The ray runs
 // toward +x, or toward +y for a horizontal piece. Coordinates are doubled, so that the midpoint is on the grid.
-void windingBeside(const Array<PathGridPiece>& pieces, const Bands& bands, uint32_t self, bool vertical,
-                   int32_t* out) {
+void windingBeside(const Array<PathGridPiece>& pieces, const Bands& bands, uint32_t self, bool vertical, int32_t* out) {
     const PathGridPiece& s = pieces.data[self];
     PathGridPoint m{s.lo.x + s.hi.x, s.lo.y + s.hi.y};
     int64_t along = vertical ? m.x : m.y;
@@ -171,10 +170,9 @@ bool result(PrPathPolylineOp op, bool a, bool b) {
 // Chains the boundary into contours, with a point wherever the direction turns.
 void chain(const PathGrid& g, Array<Boundary>& boundary, PrPathPolyline& out) {
     sortItems(boundary.data, boundary.count,
-              [](const Boundary& a, const Boundary& b) { return pathGridBeforeX(a.from, b.from); });
+        [](const Boundary& a, const Boundary& b) { return pathGridBeforeX(a.from, b.from); });
     auto next = [&](PathGridPoint from) -> Boundary* {
-        uint32_t lo =
-            partitionPoint(0, boundary.count, [&](uint32_t i) { return pathGridBeforeX(boundary.data[i].from, from); });
+        uint32_t lo = partitionPoint(0, boundary.count, [&](uint32_t i) { return pathGridBeforeX(boundary.data[i].from, from); });
         for (uint32_t i = lo; i < boundary.count && boundary.data[i].from == from; ++i) {
             if (!boundary.data[i].used)
                 return &boundary.data[i];
@@ -193,17 +191,14 @@ void chain(const PathGrid& g, Array<Boundary>& boundary, PrPathPolyline& out) {
             edge->used = true;
             PathGridPoint to = edge->to;
             // A point on the line through the two before it is not a corner.
-            if (contour.count >= 2
-                && pathGridOrient(contour.data[contour.count - 2], contour.last(), to)
-                       == 0)
+            if (contour.count >= 2 && pathGridOrient(contour.data[contour.count - 2], contour.last(), to) == 0)
                 contour.pop();
             if (to == start)
                 break;
             contour.push(to);
             edge = next(to);
         }
-        if (contour.count >= 3
-            && pathGridOrient(contour.last(), start, contour.data[1]) == 0) {
+        if (contour.count >= 3 && pathGridOrient(contour.last(), start, contour.data[1]) == 0) {
             // The start may also be on the line through its neighbors.
             contour.data[0] = contour.last();
             contour.pop();
@@ -242,7 +237,7 @@ void addPolygon(const PrVec2* points, uint32_t count, PrPathPolyline& out) {
 // Adds every point within `distance` of the edges of the rings: a band along each edge, and, at each corner, the area
 // that the join fills on the side that the two bands leave open.
 void boundaryBand(const Array<PrVec2>& points, const Array<uint32_t>& ends, float distance,
-                  PrPathJoin join, float miterLimit, float tolerance, PrPathPolyline& out) {
+        PrPathJoin join, float miterLimit, float tolerance, PrPathPolyline& out) {
     auto normal = [](PrVec2 a, PrVec2 b) {
         float dx = b.x - a.x;
         float dy = b.y - a.y;
@@ -254,8 +249,7 @@ void boundaryBand(const Array<PrVec2>& points, const Array<uint32_t>& ends, floa
     };
     // A circle approximated as a polygon within the tolerance.
     uint32_t steps = 8;
-    while (steps < 256
-           && distance * (1 - cosF32(kPiF32 / float(steps))) > tolerance)
+    while (steps < 256 && distance * (1 - cosF32(kPiF32 / float(steps))) > tolerance)
         steps *= 2;
     uint32_t start = 0;
     for (uint32_t r = 0; r < ends.count; ++r) {
@@ -268,8 +262,10 @@ void boundaryBand(const Array<PrVec2>& points, const Array<uint32_t>& ends, floa
             PrVec2 n1 = normal(a, b);
             if (n1.x == 0 && n1.y == 0)
                 continue;
-            PrVec2 band[4] = {along(a, n1, distance), along(b, n1, distance),
-                               along(b, n1, -distance), along(a, n1, -distance)};
+            PrVec2 band[4] = {
+                along(a, n1, distance), along(b, n1, distance),
+                along(b, n1, -distance), along(a, n1, -distance),
+            };
             addPolygon(band, 4, out);
             // The corner at b, toward the next edge with nonzero length.
             PrVec2 n2 = normal(b, c);
@@ -282,8 +278,7 @@ void boundaryBand(const Array<PrVec2>& points, const Array<uint32_t>& ends, floa
                 PrVec2 circle[256];
                 for (uint32_t k = 0; k < steps; ++k) {
                     float angle = 2 * kPiF32 * float(k) / float(steps);
-                    circle[k] = PrVec2{b.x + distance * cosF32(angle),
-                                        b.y + distance * sinF32(angle)};
+                    circle[k] = PrVec2{b.x + distance * cosF32(angle), b.y + distance * sinF32(angle)};
                 }
                 addPolygon(circle, steps, out);
                 continue;
@@ -334,9 +329,11 @@ struct HomogeneousPoint {
 // Returns `p` on the z = 0 plane, mapped through `matrix`, before the divide by w.
 HomogeneousPoint homogeneousLift(const PrMatrix4* matrix, PrVec2 p) {
     const float (*m)[4] = matrix->m;
-    return HomogeneousPoint{m[0][0] * p.x + m[0][1] * p.y + m[0][3],
-                            m[1][0] * p.x + m[1][1] * p.y + m[1][3],
-                            m[3][0] * p.x + m[3][1] * p.y + m[3][3]};
+    return HomogeneousPoint{
+        m[0][0] * p.x + m[0][1] * p.y + m[0][3],
+        m[1][0] * p.x + m[1][1] * p.y + m[1][3],
+        m[3][0] * p.x + m[3][1] * p.y + m[3][3],
+    };
 }
 
 // Returns the point `h` divided by its w.
@@ -347,7 +344,7 @@ PrVec2 homogeneousDivide(HomogeneousPoint h) {
 // Appends to `out` the closed contour `polygon` of the plane, projected through `matrix`. The contour is first clipped
 // to the part in which w is at least a small fraction of its largest w. `clipped` is scratch storage.
 void polylineAddProjected(PrPathPolyline& out, const PrMatrix4* matrix, const Array<PrVec2>& polygon,
-                          Array<HomogeneousPoint>& clipped) {
+        Array<HomogeneousPoint>& clipped) {
     clipped.clear();
     float largest = 0;
     for (uint32_t i = 0; i < polygon.count; ++i)
@@ -470,7 +467,7 @@ void prPathPolylineProject(const PrPathPolyline* polyline, const PrMatrix4* matr
 }
 
 void prPathPolylineCombine(const PrPathPolyline* a, PrPathFillRule aRule, const PrPathPolyline* b, PrPathFillRule bRule,
-                           PrPathPolylineOp op, PrPathPolyline* out) {
+        PrPathPolylineOp op, PrPathPolyline* out) {
     if (!finite(*a) || !finite(*b))
         return;
     Array<PrVec2> points[2];
@@ -510,7 +507,7 @@ void prPathPolylineCombine(const PrPathPolyline* a, PrPathFillRule aRule, const 
         int direction = horizontal ? -1 : (p.hi.y > p.lo.y ? 1 : -1);
         bool near = result(op, inside(beside[0], rules[0]), inside(beside[1], rules[1]));
         bool far = result(op, inside(beside[0] + direction * p.winding[0], rules[0]),
-                          inside(beside[1] + direction * p.winding[1], rules[1]));
+            inside(beside[1] + direction * p.winding[1], rules[1]));
         if (near == far)
             continue;
         // The result is to the left of each boundary piece, with y up. The side of the ray is left of the piece, run
@@ -529,7 +526,7 @@ void prPathPolylineCombine(const PrPathPolyline* a, PrPathFillRule aRule, const 
 }
 
 void prPathPolylineOffset(const PrPathPolyline* polyline, PrPathFillRule rule, float distance, PrPathJoin join,
-                          float miterLimit, float tolerance, PrPathPolyline* out) {
+        float miterLimit, float tolerance, PrPathPolyline* out) {
     PrPathPolyline band{};
     if (distance != 0 && isFiniteF32(distance) && tolerance > 0 && isFiniteF32(tolerance)) {
         Array<PrVec2> points;
@@ -540,6 +537,6 @@ void prPathPolylineOffset(const PrPathPolyline* polyline, PrPathFillRule rule, f
         ends.reset();
     }
     prPathPolylineCombine(polyline, rule, &band, PrPathFillRule_NonZero,
-                          distance > 0 ? PrPathPolylineOp_Union : PrPathPolylineOp_Difference, out);
+        distance > 0 ? PrPathPolylineOp_Union : PrPathPolylineOp_Difference, out);
     prPathPolylineReset(&band);
 }

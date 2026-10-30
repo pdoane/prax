@@ -55,8 +55,7 @@ BoxSizes measure(PrCssPresentation* PR_NULLABLE presentation, const PrDomElement
     PrLayoutStyle record = prLayoutStyleRecord(tree, prLayoutNodeStyle(tree, node));
     PrLayoutBoxStyle box = prLayoutBoxStyleRecord(tree, record.groups[PrLayoutGroup_Box]);
     PrLayoutRect border{};
-    if (box.display == PrLayoutDisplay_Inline
-        || prLayoutNodeBoxes(tree, node, PrLayoutCoordinates_Layout, &border, 1) == 0)
+    if (box.display == PrLayoutDisplay_Inline || prLayoutNodeBoxes(tree, node, PrLayoutCoordinates_Layout, &border, 1) == 0)
         return sizes;
     PrLayoutVec content = prLayoutNodeContentExtent(tree, node);
     // The padding resolves against the containing block's inline size that the box's layout read.
@@ -66,8 +65,8 @@ BoxSizes measure(PrCssPresentation* PR_NULLABLE presentation, const PrDomElement
     };
     PrLayoutUnit left = prLayoutNodeBorderWidth(tree, node, PrRectSide_Left) + padding(PrRectSide_Left);
     PrLayoutUnit top = prLayoutNodeBorderWidth(tree, node, PrRectSide_Top) + padding(PrRectSide_Top);
-    bool vertical = prLayoutFontStyleRecord(tree, record.groups[PrLayoutGroup_Font]).writingMode
-                    != PrLayoutWritingMode_HorizontalTb;
+    bool vertical = prLayoutFontStyleRecord(tree, record.groups[PrLayoutGroup_Font]).writingMode !=
+        PrLayoutWritingMode_HorizontalTb;
     sizes.border = logical(px(border.right - border.left), px(border.bottom - border.top), vertical);
     sizes.content = logical(px(content.x), px(content.y), vertical);
     // The content box in device pixels covers the whole pixels between its edges, each rounded to the nearest pixel.
@@ -76,8 +75,10 @@ BoxSizes measure(PrCssPresentation* PR_NULLABLE presentation, const PrDomElement
     double x1 = roundF64(px(border.left + left + content.x) * pixelRatio);
     double y1 = roundF64(px(border.top + top + content.y) * pixelRatio);
     sizes.devicePixelContent = logical(x1 - x0, y1 - y0, vertical);
-    sizes.contentRect = PrDomRect{px(padding(PrRectSide_Left)), px(padding(PrRectSide_Top)), px(content.x),
-                                  px(content.y)};
+    sizes.contentRect = PrDomRect{
+        px(padding(PrRectSide_Left)), px(padding(PrRectSide_Top)), px(content.x),
+        px(content.y),
+    };
     return sizes;
 }
 
@@ -116,7 +117,7 @@ void removeObservation(PrCssResizeObserver* observer, uint32_t index) {
 // Marks the observations whose observed sizes changed as active if they are deeper than `depth`, and notes the others
 // as skipped (resize-observer-1/#gather-active-observations-h). Returns true if any is active.
 bool gather(const Array<PrCssResizeObserver* PR_NONNULL>& observers, PrCssPresentation* PR_NULLABLE presentation,
-            uint32_t depth, double pixelRatio) {
+        uint32_t depth, double pixelRatio) {
     bool any = false;
     for (uint32_t i = 0; i < observers.count; ++i) {
         PrCssResizeObserver* observer = observers.data[i];
@@ -124,7 +125,7 @@ bool gather(const Array<PrCssResizeObserver* PR_NONNULL>& observers, PrCssPresen
         for (uint32_t j = 0; j < observer->observations.count; ++j) {
             CssResizeObservation& observation = observer->observations.data[j];
             PrCssResizeObserverSize size = observedSize(measure(presentation, observation.target, pixelRatio),
-                                                        observation.box);
+                observation.box);
             observation.active = false;
             if (sameSize(size, observation.lastReported))
                 continue;
@@ -142,7 +143,7 @@ bool gather(const Array<PrCssResizeObserver* PR_NONNULL>& observers, PrCssPresen
 // Calls each observer with the entries of its active observations, which then record the sizes delivered
 // (resize-observer-1/#broadcast-active-resize-observations). Returns the depth of the shallowest target delivered.
 uint32_t broadcast(const Array<PrCssResizeObserver* PR_NONNULL>& observers,
-                   PrCssPresentation* PR_NULLABLE presentation, double pixelRatio) {
+        PrCssPresentation* PR_NULLABLE presentation, double pixelRatio) {
     uint32_t shallowest = UINT32_MAX;
     Array<PrCssResizeObserverEntry> entries;
     for (uint32_t i = 0; i < observers.count; ++i) {
@@ -157,11 +158,13 @@ uint32_t broadcast(const Array<PrCssResizeObserver* PR_NONNULL>& observers,
             observation.lastReported = observedSize(sizes, observation.box);
             uint32_t depth = depthOf(observation.target);
             shallowest = depth < shallowest ? depth : shallowest;
-            entries.push(PrCssResizeObserverEntry{.target = observation.target,
-                                                  .contentRect = sizes.contentRect,
-                                                  .borderBoxSize = sizes.border,
-                                                  .contentBoxSize = sizes.content,
-                                                  .devicePixelContentBoxSize = sizes.devicePixelContent});
+            entries.push(PrCssResizeObserverEntry{
+                .target = observation.target,
+                .contentRect = sizes.contentRect,
+                .borderBoxSize = sizes.border,
+                .contentBoxSize = sizes.content,
+                .devicePixelContentBoxSize = sizes.devicePixelContent,
+            });
         }
         if (entries.count == 0)
             continue;

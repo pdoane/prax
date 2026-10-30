@@ -44,15 +44,16 @@ JSClassID htmlCommandEventClass;
 
 // The keywords of the enumerated attributes that reflect limited to only known values.
 constexpr PrStringView kAutocompleteKeywords[] = {"on", "off"};
-constexpr PrStringView kEnctypeKeywords[] = {"application/x-www-form-urlencoded", "multipart/form-data",
-                                             "text/plain"};
+constexpr PrStringView kEnctypeKeywords[] = {"application/x-www-form-urlencoded", "multipart/form-data", "text/plain"};
 constexpr PrStringView kMethodKeywords[] = {"get", "post", "dialog"};
 constexpr PrStringView kColorSpaceKeywords[] = {"limited-srgb", "display-p3"};
 
 // A form's attributes default to their first state, and a submitter's override nothing while they are missing.
 constexpr JsReflectedKeywords kAutocomplete = {kAutocompleteKeywords, 2, "on", "on"};
-constexpr JsReflectedKeywords kEnctype = {kEnctypeKeywords, 3, "application/x-www-form-urlencoded",
-                                          "application/x-www-form-urlencoded"};
+constexpr JsReflectedKeywords kEnctype = {
+    kEnctypeKeywords, 3, "application/x-www-form-urlencoded",
+    "application/x-www-form-urlencoded",
+};
 constexpr JsReflectedKeywords kFormEnctype = {kEnctypeKeywords, 3, "", "application/x-www-form-urlencoded"};
 constexpr JsReflectedKeywords kMethod = {kMethodKeywords, 3, "get", "get"};
 constexpr JsReflectedKeywords kFormMethod = {kMethodKeywords, 3, "", "get"};
@@ -304,8 +305,10 @@ JSValue formNamed(JSContext* ctx, JSValueConst self, void* handle, PrStringView 
 constexpr JsIndexed kFormIndexed = {formLength, formItem, nullptr};
 
 // [LegacyOverrideBuiltIns] and [LegacyUnenumerableNamedProperties].
-constexpr JsNamed kFormNamed = {formNames, formNamed, nullptr, nullptr,
-                                JsNamedFlag_OverrideBuiltIns | JsNamedFlag_Unenumerable};
+constexpr JsNamed kFormNamed = {
+    formNames, formNamed, nullptr, nullptr,
+    JsNamedFlag_OverrideBuiltIns | JsNamedFlag_Unenumerable,
+};
 
 // relList, the same DOMTokenList of the rel attribute at each read.
 JSValue formRelList(JSContext* ctx, JSValueConst self) {
@@ -342,9 +345,9 @@ JSValue setInputValue(JSContext* ctx, JSValueConst self, JSValueConst input) {
     StringArgument value = {ctx};
     if (element == nullptr || !value.readNullable(input))
         return JS_EXCEPTION;
-    return prHtmlInputElementSetValue(element, value.value()) == PrStatus_Ok
-               ? JS_UNDEFINED
-               : jsDomExceptionThrow(ctx, "InvalidStateError");
+    if (prHtmlInputElementSetValue(element, value.value()) == PrStatus_Ok)
+        return JS_UNDEFINED;
+    return jsDomExceptionThrow(ctx, "InvalidStateError");
 }
 
 JSValue setInputChecked(JSContext* ctx, JSValueConst self, JSValueConst input) {
@@ -401,9 +404,9 @@ JSValue setInputValueAsDate(JSContext* ctx, JSValueConst self, JSValueConst inpu
         if (JS_ToFloat64(ctx, &time, input) < 0)
             return JS_EXCEPTION;
     }
-    return prHtmlInputElementSetValueAsDate(element, time) == PrStatus_Ok
-               ? JS_UNDEFINED
-               : jsDomExceptionThrow(ctx, "InvalidStateError");
+    if (prHtmlInputElementSetValueAsDate(element, time) == PrStatus_Ok)
+        return JS_UNDEFINED;
+    return jsDomExceptionThrow(ctx, "InvalidStateError");
 }
 
 // stepUp and stepDown, selected by the magic, which take an optional long that defaults to 1.
@@ -418,8 +421,9 @@ JSValue inputStep(JSContext* ctx, JSValueConst self, int argc, JSValueConst* arg
 
 JSValue inputList(JSContext* ctx, JSValueConst self) {
     PrHtmlInputElement* element = inputThis(ctx, self);
-    return element != nullptr ? jsWrapAs(ctx, prJsDomElementClass, JS_UNDEFINED, prHtmlInputElementList(element), false)
-                              : JS_EXCEPTION;
+    if (element == nullptr)
+        return JS_EXCEPTION;
+    return jsWrapAs(ctx, prJsDomElementClass, JS_UNDEFINED, prHtmlInputElementList(element), false);
 }
 
 // files, which is null until the File API comes, and whose setter ignores null.
@@ -457,8 +461,9 @@ JSValue fieldSetElements(JSContext* ctx, JSValueConst self) {
 
 JSValue labelControl(JSContext* ctx, JSValueConst self) {
     PrHtmlLabelElement* label = jsThis<PrHtmlLabelElement>(ctx, self, htmlLabelElementClass);
-    return label != nullptr ? jsWrapAs(ctx, prJsDomElementClass, JS_UNDEFINED, prHtmlLabelElementControl(label), false)
-                            : JS_EXCEPTION;
+    if (label == nullptr)
+        return JS_EXCEPTION;
+    return jsWrapAs(ctx, prJsDomElementClass, JS_UNDEFINED, prHtmlLabelElementControl(label), false);
 }
 
 // form, the form owner of the labeled control (html/#dom-label-form).
@@ -519,9 +524,9 @@ JSValue setReflectedDouble(JSContext* ctx, JSValueConst self, JSValueConst input
     double value = 0;
     if (element == nullptr || JS_ToFloat64(ctx, &value, input) < 0)
         return JS_EXCEPTION;
-    return prHtmlElementSetReflectedDouble(element, Name.text, value) == PrStatus_Ok
-               ? JS_UNDEFINED
-               : JS_ThrowTypeError(ctx, "The value is not finite");
+    if (prHtmlElementSetReflectedDouble(element, Name.text, value) == PrStatus_Ok)
+        return JS_UNDEFINED;
+    return JS_ThrowTypeError(ctx, "The value is not finite");
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -584,8 +589,8 @@ JSValue formDataMethod(JSContext* ctx, JSValueConst self, int argc, JSValueConst
     bool pair = magic == FormDataMethod_Append || magic == FormDataMethod_Set;
     StringArgument name = {ctx};
     StringArgument value = {ctx};
-    if (data == nullptr || !jsArgCount(ctx, argc, pair ? 2 : 1) || !name.read(argv[0])
-        || (pair && !value.read(argv[1])))
+    if (data == nullptr || !jsArgCount(ctx, argc, pair ? 2 : 1) || !name.read(argv[0]) ||
+            (pair && !value.read(argv[1])))
         return JS_EXCEPTION;
     switch (FormDataMethod(magic)) {
         case FormDataMethod_Append: prHtmlFormDataAppend(data, name.value(), value.value()); break;
@@ -642,7 +647,7 @@ JSValue formDataForEach(JSContext* ctx, JSValueConst self, int argc, JSValueCons
 // Reads the nullable element member `name` of a dictionary, which must be of class `id` or derived from it.
 template <typename Handle>
 bool readElementMember(JSContext* ctx, JSValueConst dictionary, const char* name, JSClassID id,
-                       Handle* PR_NULLABLE* PR_NONNULL out) {
+        Handle* PR_NULLABLE* PR_NONNULL out) {
     JSValue value = JS_GetPropertyStr(ctx, dictionary, name);
     if (JS_IsException(value))
         return false;
@@ -659,11 +664,10 @@ bool readElementMember(JSContext* ctx, JSValueConst dictionary, const char* name
 }
 
 // Reads the event's type and its init dictionary, and the EventInit members of the dictionary if it is present.
-bool readEventArguments(JSContext* ctx, int argc, JSValueConst* argv, StringArgument* type, PrDomEventInit* init,
-                        bool* present) {
+bool readEventArguments(JSContext* ctx, int argc, JSValueConst* argv, StringArgument* type, PrDomEventInit* init, bool* present) {
     JSValueConst dictionary = argc > 1 ? argv[1] : JS_UNDEFINED;
-    return jsArgCount(ctx, argc, 1) && type->read(argv[0]) && jsDictionary(ctx, dictionary, present)
-           && (!*present || prJsDomEventInitRead(ctx, dictionary, init));
+    return jsArgCount(ctx, argc, 1) && type->read(argv[0]) && jsDictionary(ctx, dictionary, present) &&
+        (!*present || prJsDomEventInitRead(ctx, dictionary, init));
 }
 
 template <typename Event>
@@ -680,8 +684,8 @@ JSValue submitConstruct(JSContext* ctx, JSValueConst newTarget, int argc, JSValu
     PrDomEventInit init = prDomEventInitDefault();
     bool present = false;
     PrHtmlElement* submitter = nullptr;
-    if (!readEventArguments(ctx, argc, argv, &type, &init, &present)
-        || (present && !readElementMember(ctx, argv[1], "submitter", htmlElementClass, &submitter)))
+    if (!readEventArguments(ctx, argc, argv, &type, &init, &present) ||
+            (present && !readElementMember(ctx, argv[1], "submitter", htmlElementClass, &submitter)))
         return JS_EXCEPTION;
     return wrapEvent(ctx, newTarget, htmlSubmitEventClass, prHtmlSubmitEventCreate(type.value(), &init, submitter));
 }
@@ -692,8 +696,8 @@ JSValue formDataEventConstruct(JSContext* ctx, JSValueConst newTarget, int argc,
     PrDomEventInit init = prDomEventInitDefault();
     bool present = false;
     PrHtmlFormData* data = nullptr;
-    if (!readEventArguments(ctx, argc, argv, &type, &init, &present)
-        || (present && !readElementMember(ctx, argv[1], "formData", htmlFormDataClass, &data)))
+    if (!readEventArguments(ctx, argc, argv, &type, &init, &present) ||
+            (present && !readElementMember(ctx, argv[1], "formData", htmlFormDataClass, &data)))
         return JS_EXCEPTION;
     if (data == nullptr)
         return JS_ThrowTypeError(ctx, "The formData member is required");
@@ -708,13 +712,12 @@ JSValue toggleConstruct(JSContext* ctx, JSValueConst newTarget, int argc, JSValu
     PrDomEventInit init = prDomEventInitDefault();
     bool present = false;
     PrDomElement* source = nullptr;
-    if (!readEventArguments(ctx, argc, argv, &type, &init, &present)
-        || (present
-            && (!jsDictString(ctx, argv[1], "newState", &newState) || !jsDictString(ctx, argv[1], "oldState", &oldState)
-                || !readElementMember(ctx, argv[1], "source", prJsDomElementClass, &source))))
+    if (!readEventArguments(ctx, argc, argv, &type, &init, &present) || (present &&
+            (!jsDictString(ctx, argv[1], "newState", &newState) || !jsDictString(ctx, argv[1], "oldState", &oldState) ||
+                !readElementMember(ctx, argv[1], "source", prJsDomElementClass, &source))))
         return JS_EXCEPTION;
     return wrapEvent(ctx, newTarget, htmlToggleEventClass,
-                     prHtmlToggleEventCreate(type.value(), &init, oldState.value(), newState.value(), source));
+        prHtmlToggleEventCreate(type.value(), &init, oldState.value(), newState.value(), source));
 }
 
 // CommandEventInit, after EventInit: command and source.
@@ -724,13 +727,12 @@ JSValue commandConstruct(JSContext* ctx, JSValueConst newTarget, int argc, JSVal
     PrDomEventInit init = prDomEventInitDefault();
     bool present = false;
     PrDomElement* source = nullptr;
-    if (!readEventArguments(ctx, argc, argv, &type, &init, &present)
-        || (present
-            && (!jsDictString(ctx, argv[1], "command", &command)
-                || !readElementMember(ctx, argv[1], "source", prJsDomElementClass, &source))))
+    if (!readEventArguments(ctx, argc, argv, &type, &init, &present) || (present &&
+            (!jsDictString(ctx, argv[1], "command", &command) ||
+                !readElementMember(ctx, argv[1], "source", prJsDomElementClass, &source))))
         return JS_EXCEPTION;
     return wrapEvent(ctx, newTarget, htmlCommandEventClass,
-                     prHtmlCommandEventCreate(type.value(), &init, command.value(), source));
+        prHtmlCommandEventCreate(type.value(), &init, command.value(), source));
 }
 
 JSValue submitter(JSContext* ctx, JSValueConst self) {
@@ -748,8 +750,7 @@ JSValue eventFormData(JSContext* ctx, JSValueConst self) {
     if (event == nullptr)
         return JS_EXCEPTION;
     return jsSameObject(ctx, self, "formData",
-                        [&] { return jsWrap(ctx, htmlFormDataClass, JS_UNDEFINED, prHtmlFormDataEventFormData(event),
-                                            false); });
+        [&] { return jsWrap(ctx, htmlFormDataClass, JS_UNDEFINED, prHtmlFormDataEventFormData(event), false); });
 }
 
 // source, of a ToggleEvent or a CommandEvent, selected by the magic.
@@ -817,9 +818,9 @@ constexpr JSCFunctionListEntry kInputElementProto[] = {
     PR_JS_GET_SET("files", inputFiles, setInputFiles),
     PR_SUBMITTER_ATTRIBUTES,
     PR_JS_GET_SET("height", (jsNumberGetter<&htmlInputElementClass, prHtmlInputElementHeight>),
-                  (jsUint32Setter<&htmlInputElementClass, prHtmlInputElementSetHeight>)),
+        (jsUint32Setter<&htmlInputElementClass, prHtmlInputElementSetHeight>)),
     PR_JS_GET_SET("indeterminate", (jsBoolGetter<&htmlInputElementClass, prHtmlInputElementIndeterminate>),
-                  setInputIndeterminate),
+        setInputIndeterminate),
     PR_JS_GET("list", inputList),
     PR_REFLECT_STRING("max", "max"),
     PR_REFLECT_INTEGER("maxLength", "maxlength", PrHtmlReflectedInteger_NonNegative, -1),
@@ -840,7 +841,7 @@ constexpr JSCFunctionListEntry kInputElementProto[] = {
     PR_JS_GET_SET("valueAsDate", inputValueAsDate, setInputValueAsDate),
     PR_JS_GET_SET("valueAsNumber", inputValueAsNumber, setInputValueAsNumber),
     PR_JS_GET_SET("width", (jsNumberGetter<&htmlInputElementClass, prHtmlInputElementWidth>),
-                  (jsUint32Setter<&htmlInputElementClass, prHtmlInputElementSetWidth>)),
+        (jsUint32Setter<&htmlInputElementClass, prHtmlInputElementSetWidth>)),
     PR_JS_MAGIC("stepUp", 0, inputStep, 0),
     PR_JS_MAGIC("stepDown", 0, inputStep, 1),
     PR_LABELABLE,
@@ -874,12 +875,11 @@ constexpr JSCFunctionListEntry kTextAreaElementProto[] = {
     PR_REFLECT_INTEGER("rows", "rows", PrHtmlReflectedInteger_Positive, 2),
     PR_REFLECT_STRING("wrap", "wrap"),
     PR_JS_GET("type", fixedType<"textarea">),
-    PR_JS_GET_SET("defaultValue",
-                  (jsStringGetter<&htmlTextAreaElementClass, prHtmlTextAreaElementDefaultValue>),
-                  (jsStringSetter<&htmlTextAreaElementClass, prHtmlTextAreaElementSetDefaultValue>)),
+    PR_JS_GET_SET("defaultValue", (jsStringGetter<&htmlTextAreaElementClass, prHtmlTextAreaElementDefaultValue>),
+        (jsStringSetter<&htmlTextAreaElementClass, prHtmlTextAreaElementSetDefaultValue>)),
     // value's setter treats null as the empty string ([LegacyNullToEmptyString]).
     PR_JS_GET_SET("value", (jsStringGetter<&htmlTextAreaElementClass, prHtmlTextAreaElementValue>),
-                  (jsStringSetter<&htmlTextAreaElementClass, prHtmlTextAreaElementSetValue, true>)),
+        (jsStringSetter<&htmlTextAreaElementClass, prHtmlTextAreaElementSetValue, true>)),
     PR_JS_GET("textLength", (jsNumberGetter<&htmlTextAreaElementClass, prHtmlTextAreaElementTextLength>)),
     PR_LABELABLE,
 };
@@ -913,9 +913,9 @@ constexpr JSCFunctionListEntry kOutputElementProto[] = {
     PR_REFLECT_STRING("name", "name"),
     PR_JS_GET("type", fixedType<"output">),
     PR_JS_GET_SET("defaultValue", (jsStringGetter<&htmlOutputElementClass, prHtmlOutputElementDefaultValue>),
-                  (jsStringSetter<&htmlOutputElementClass, prHtmlOutputElementSetDefaultValue>)),
+        (jsStringSetter<&htmlOutputElementClass, prHtmlOutputElementSetDefaultValue>)),
     PR_JS_GET_SET("value", (jsStringGetter<&htmlOutputElementClass, prHtmlOutputElementValue>),
-                  (jsStringSetter<&htmlOutputElementClass, prHtmlOutputElementSetValue>)),
+        (jsStringSetter<&htmlOutputElementClass, prHtmlOutputElementSetValue>)),
     PR_LABELABLE,
 };
 
@@ -923,7 +923,7 @@ constexpr JSCFunctionListEntry kProgressElementProto[] = {
     PR_JS_TAG("HTMLProgressElement"),
     PR_JS_GET_SET("value", progressValue, setReflectedDouble<"value">),
     PR_JS_GET_SET("max", (jsNumberGetter<&htmlProgressElementClass, prHtmlProgressElementMax>),
-                  setReflectedDouble<"max">),
+        setReflectedDouble<"max">),
     PR_JS_GET("position", (jsNumberGetter<&htmlProgressElementClass, prHtmlProgressElementPosition>)),
     PR_LABELABLE,
 };
@@ -959,10 +959,7 @@ constexpr JSCFunctionListEntry kFormDataProto[] = {
     PR_JS_METHOD("forEach", 1, formDataForEach),
 };
 
-constexpr JSCFunctionListEntry kSubmitEventProto[] = {
-    PR_JS_TAG("SubmitEvent"),
-    PR_JS_GET("submitter", submitter),
-};
+constexpr JSCFunctionListEntry kSubmitEventProto[] = {PR_JS_TAG("SubmitEvent"), PR_JS_GET("submitter", submitter)};
 
 constexpr JSCFunctionListEntry kFormDataEventProto[] = {
     PR_JS_TAG("FormDataEvent"),
@@ -986,16 +983,26 @@ constexpr JSCFunctionListEntry kCommandEventProto[] = {
     {PR_JS_CLASS(interface, id, jsViewFinalizer<&id>, proto), .base = &htmlElementClass}
 
 constexpr JsClassDefinition kClasses[] = {
-    {PR_JS_CLASS("HTMLFormElement", htmlFormElementClass, jsViewFinalizer<&htmlFormElementClass>,
-                 kFormElementProto),
-     .base = &htmlElementClass, .indexed = &kFormIndexed, .named = &kFormNamed},
-    {PR_JS_CLASS("HTMLFormControlsCollection", htmlFormControlsCollectionClass,
-                 (jsFinalizer<&htmlFormControlsCollectionClass, prDomHtmlCollectionDestroy>),
-                 kFormControlsCollectionProto),
-     .base = &prJsDomHtmlCollectionClass, .indexed = &kControlsIndexed, .named = &kControlsNamed},
-    {PR_JS_CLASS("RadioNodeList", htmlRadioNodeListClass,
-                 (jsFinalizer<&htmlRadioNodeListClass, prDomNodeListDestroy>), kRadioNodeListProto),
-     .base = &prJsDomNodeListClass, .indexed = &kRadioIndexed, .iterable = true},
+    {
+        PR_JS_CLASS("HTMLFormElement", htmlFormElementClass, jsViewFinalizer<&htmlFormElementClass>, kFormElementProto),
+        .base = &htmlElementClass,
+        .indexed = &kFormIndexed,
+        .named = &kFormNamed,
+    },
+    {
+        PR_JS_CLASS("HTMLFormControlsCollection", htmlFormControlsCollectionClass,
+            (jsFinalizer<&htmlFormControlsCollectionClass, prDomHtmlCollectionDestroy>), kFormControlsCollectionProto),
+        .base = &prJsDomHtmlCollectionClass,
+        .indexed = &kControlsIndexed,
+        .named = &kControlsNamed,
+    },
+    {
+        PR_JS_CLASS("RadioNodeList", htmlRadioNodeListClass,
+            (jsFinalizer<&htmlRadioNodeListClass, prDomNodeListDestroy>), kRadioNodeListProto),
+        .base = &prJsDomNodeListClass,
+        .indexed = &kRadioIndexed,
+        .iterable = true,
+    },
     PR_ELEMENT_CLASS("HTMLInputElement", htmlInputElementClass, kInputElementProto),
     PR_ELEMENT_CLASS("HTMLButtonElement", htmlButtonElementClass, kButtonElementProto),
     PR_ELEMENT_CLASS("HTMLTextAreaElement", htmlTextAreaElementClass, kTextAreaElementProto),
@@ -1006,19 +1013,38 @@ constexpr JsClassDefinition kClasses[] = {
     PR_ELEMENT_CLASS("HTMLProgressElement", htmlProgressElementClass, kProgressElementProto),
     PR_ELEMENT_CLASS("HTMLMeterElement", htmlMeterElementClass, kMeterElementProto),
     PR_ELEMENT_CLASS("HTMLDetailsElement", htmlDetailsElementClass, kDetailsElementProto),
-    {PR_JS_CLASS("FormData", htmlFormDataClass, (jsFinalizer<&htmlFormDataClass, prHtmlFormDataRelease>),
-                 kFormDataProto),
-     .constructor = formDataConstruct, .iterator = "entries", .references = &kFormDataReferences},
-    {PR_JS_CLASS("SubmitEvent", htmlSubmitEventClass, jsViewFinalizer<&htmlSubmitEventClass>, kSubmitEventProto),
-     .constructor = submitConstruct, .length = 1, .base = &prJsDomEventClass},
-    {PR_JS_CLASS("FormDataEvent", htmlFormDataEventClass, jsViewFinalizer<&htmlFormDataEventClass>,
-                 kFormDataEventProto),
-     .constructor = formDataEventConstruct, .length = 2, .base = &prJsDomEventClass},
-    {PR_JS_CLASS("ToggleEvent", htmlToggleEventClass, jsViewFinalizer<&htmlToggleEventClass>, kToggleEventProto),
-     .constructor = toggleConstruct, .length = 1, .base = &prJsDomEventClass},
-    {PR_JS_CLASS("CommandEvent", htmlCommandEventClass, jsViewFinalizer<&htmlCommandEventClass>,
-                 kCommandEventProto),
-     .constructor = commandConstruct, .length = 1, .base = &prJsDomEventClass},
+    {
+        PR_JS_CLASS("FormData", htmlFormDataClass, (jsFinalizer<&htmlFormDataClass, prHtmlFormDataRelease>),
+            kFormDataProto),
+        .constructor = formDataConstruct,
+        .iterator = "entries",
+        .references = &kFormDataReferences,
+    },
+    {
+        PR_JS_CLASS("SubmitEvent", htmlSubmitEventClass, jsViewFinalizer<&htmlSubmitEventClass>, kSubmitEventProto),
+        .constructor = submitConstruct,
+        .length = 1,
+        .base = &prJsDomEventClass,
+    },
+    {
+        PR_JS_CLASS("FormDataEvent", htmlFormDataEventClass, jsViewFinalizer<&htmlFormDataEventClass>,
+            kFormDataEventProto),
+        .constructor = formDataEventConstruct,
+        .length = 2,
+        .base = &prJsDomEventClass,
+    },
+    {
+        PR_JS_CLASS("ToggleEvent", htmlToggleEventClass, jsViewFinalizer<&htmlToggleEventClass>, kToggleEventProto),
+        .constructor = toggleConstruct,
+        .length = 1,
+        .base = &prJsDomEventClass,
+    },
+    {
+        PR_JS_CLASS("CommandEvent", htmlCommandEventClass, jsViewFinalizer<&htmlCommandEventClass>, kCommandEventProto),
+        .constructor = commandConstruct,
+        .length = 1,
+        .base = &prJsDomEventClass,
+    },
 };
 
 } // namespace

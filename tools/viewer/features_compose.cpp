@@ -7,16 +7,17 @@
 namespace viewer {
 namespace {
 
-constexpr PrDrawColorStop kSunset[] = {{.offset = 0, .color = PrColor{0.95f, 0.75f, 0.2f, 1}},
-                              {.offset = 0.5f, .color = PrColor{0.9f, 0.3f, 0.35f, 1}},
-                              {.offset = 1, .color = PrColor{0.25f, 0.2f, 0.6f, 1}}};
+constexpr PrDrawColorStop kSunset[] = {
+    {.offset = 0, .color = PrColor{0.95f, 0.75f, 0.2f, 1}},
+    {.offset = 0.5f, .color = PrColor{0.9f, 0.3f, 0.35f, 1}},
+    {.offset = 1, .color = PrColor{0.25f, 0.2f, 0.6f, 1}},
+};
 
 // Draws diagonal stripes over the rectangle, to show what shows through.
 void stripes(PrDrawList* list, PrRect c, PrColor color) {
     prDrawListPushClipRect(list, c, PrDrawEdges_Antialiased);
     for (float x = c.left - 200; x < c.right + 200; x += 24) {
-        PrVec2 band[] = {
-            {x, c.top}, {x + 12, c.top}, {x + 12 + 200, c.bottom}, {x + 200, c.bottom}};
+        PrVec2 band[] = {{x, c.top}, {x + 12, c.top}, {x + 12 + 200, c.bottom}, {x + 200, c.bottom}};
         prDrawListPolylineContour(list, band, 4, PrDrawContour_Closed, PrPathFillRule_NonZero, {.color = color});
     }
     prDrawListPopClip(list);
@@ -50,8 +51,7 @@ void clips(PrDrawList* list, float width, float height, double) {
     c = grid.at(2, 30);
     frameCell(list, c);
     center = prRectCenter(c);
-    PrAffine2 rotated =
-        prAffine2Concat(prAffine2Rotate(0.3f), prAffine2Translate(center));
+    PrAffine2 rotated = prAffine2Concat(prAffine2Rotate(0.3f), prAffine2Translate(center));
     PrAffine2 back = prAffine2Identity();
     prAffine2Invert(rotated, &back);
     prDrawListPushTransformAffine2(list, rotated);
@@ -66,10 +66,11 @@ void clips(PrDrawList* list, float width, float height, double) {
     c = grid.at(3, 30);
     frameCell(list, c);
     center = prRectCenter(c);
-    prDrawListPushTransformAffine2(list, prAffine2Concat(prAffine2Rotate(0.6f),
-                                                         prAffine2Translate(center)));
-    prDrawListPushClipTargetRect(list, PrRect{c.left + 30, c.top + 30, c.right - 30,
-                                               c.bottom - 30}, PrDrawEdges_Antialiased);
+    prDrawListPushTransformAffine2(list, prAffine2Concat(prAffine2Rotate(0.6f), prAffine2Translate(center)));
+    prDrawListPushClipTargetRect(list, PrRect{
+        c.left + 30, c.top + 30, c.right - 30,
+        c.bottom - 30,
+    }, PrDrawEdges_Antialiased);
     prDrawListRect(list, PrRect{-200, -200, 200, 200}, {.color = kGreen});
     stripes(list, PrRect{-200, -200, 200, 200}, kGold);
     prDrawListPopClip(list);
@@ -92,12 +93,14 @@ void clips(PrDrawList* list, float width, float height, double) {
     prDrawListPushClipCornerRect(list, prCornerRectInset(rounds, insets), PrDrawEdges_Antialiased);
     stripes(list, c, kTeal);
     prDrawListPopClip(list);
-    const char* captions[] = {"rect",
-                              "circle, then an evenodd star",
-                              "aliased rect in a rotated space",
-                              "target rect under a rotation",
-                              "shaped corners",
-                              "padding box, inset 10 30 20 50 from gold"};
+    const char* captions[] = {
+        "rect",
+        "circle, then an evenodd star",
+        "aliased rect in a rotated space",
+        "target rect under a rotation",
+        "shaped corners",
+        "padding box, inset 10 30 20 50 from gold",
+    };
     for (uint32_t i = 0; i < 6; ++i)
         grid.captionAt(i, captions[i], 30);
 }
@@ -113,20 +116,23 @@ void operatorCell(PrDrawList* list, PrRect c, PrDrawComposite op, PrDrawBlendMod
     float r = extentOf(c) * 0.3f;
     PrVec2 center = prRectCenter(c);
     prDrawListEllipse(list, PrVec2{center.x - r * 0.4f, center.y - r * 0.4f}, PrVec2{r, r}, 0,
-                      {.color = withAlpha(kBlue, 0.9f)});
-    prDrawListRect(list,
-                   PrRect{center.x - r * 0.2f, center.y - r * 0.2f, center.x + r * 1.2f,
-                          center.y + r * 1.2f}, {.color = withAlpha(kRed, 0.9f), .composite = op, .blendMode = blend});
+        {.color = withAlpha(kBlue, 0.9f)});
+    prDrawListRect(list, PrRect{
+        center.x - r * 0.2f, center.y - r * 0.2f, center.x + r * 1.2f,
+        center.y + r * 1.2f,
+    }, {.color = withAlpha(kRed, 0.9f), .composite = op, .blendMode = blend});
     prDrawListPopGroup(list);
 }
 
 void composites(PrDrawList* list, float width, float height, double) {
     Grid grid{width, height, 5, 3};
-    const char* names[] = {"source-over",      "clear",          "copy",
-                           "source-in",        "source-out",     "source-atop",
-                           "destination-over", "destination-in", "destination-out",
-                           "destination-atop", "xor",            "plus-lighter",
-                           "plus-darker"};
+    const char* names[] = {
+        "source-over",      "clear",          "copy",
+        "source-in",        "source-out",     "source-atop",
+        "destination-over", "destination-in", "destination-out",
+        "destination-atop", "xor",            "plus-lighter",
+        "plus-darker",
+    };
     for (uint32_t op = 0; op < PrDrawComposite_Count; ++op) {
         operatorCell(list, grid.at(op, 10), PrDrawComposite(op), PrDrawBlendMode_Normal);
         grid.captionAt(op, names[op], 10);
@@ -139,16 +145,20 @@ void blendModes(PrDrawList* list, float width, float height, double) {
         PrRect c = grid.at(mode, 8);
         PrDrawBrush back = prDrawBrushLinear(PrVec2{c.left, 0}, PrVec2{c.right, 0}, kSunset, 3);
         prDrawListRect(list, c, {.brush = &back});
-        const PrDrawColorStop cool[] = {{.offset = 0, .color = PrColor{0.1f, 0.7f, 0.9f, 1}},
-                                        {.offset = 1, .color = PrColor{0.2f, 0.9f, 0.3f, 1}}};
+        const PrDrawColorStop cool[] = {
+            {.offset = 0, .color = PrColor{0.1f, 0.7f, 0.9f, 1}},
+            {.offset = 1, .color = PrColor{0.2f, 0.9f, 0.3f, 1}},
+        };
         PrDrawBrush front = prDrawBrushLinear(PrVec2{0, c.top}, PrVec2{0, c.bottom}, cool, 2);
         prDrawListEllipse(list, prRectCenter(c), PrVec2{extentOf(c) * 0.4f, extentOf(c) * 0.4f}, 0,
-                          {.brush = &front, .blendMode = PrDrawBlendMode(mode)});
-        const char* names[] = {"normal",     "multiply",   "screen",     "overlay",
-                               "darken",     "lighten",    "color-dodge", "color-burn",
-                               "hard-light", "soft-light", "difference", "exclusion",
-                               "hard-mix",   "hue",        "saturation", "color",
-                               "luminosity"};
+            {.brush = &front, .blendMode = PrDrawBlendMode(mode)});
+        const char* names[] = {
+            "normal",     "multiply",   "screen",     "overlay",
+            "darken",     "lighten",    "color-dodge", "color-burn",
+            "hard-light", "soft-light", "difference", "exclusion",
+            "hard-mix",   "hue",        "saturation", "color",
+            "luminosity",
+        };
         grid.captionAt(mode, names[mode], 8);
     }
 }
@@ -215,14 +225,16 @@ void groups(PrDrawList* list, float width, float height, double) {
     prDrawListPushGroup(list, &group);
     threeCircles(list, c, 1);
     prDrawListPopGroup(list);
-    const char* captions[] = {"translucent circles",
-                              "opaque circles, a group at half opacity",
-                              "multiply reaching the stripes",
-                              "multiply kept to an isolated group",
-                              "knockout",
-                              "a group blended by difference",
-                              "destination-out through gold",
-                              "a group bounded to its left half"};
+    const char* captions[] = {
+        "translucent circles",
+        "opaque circles, a group at half opacity",
+        "multiply reaching the stripes",
+        "multiply kept to an isolated group",
+        "knockout",
+        "a group blended by difference",
+        "destination-out through gold",
+        "a group bounded to its left half",
+    };
     for (uint32_t i = 0; i < 8; ++i)
         grid.captionAt(i, captions[i], 10);
 }
@@ -234,8 +246,10 @@ void masks(PrDrawList* list, float width, float height, double) {
     for (uint32_t i = 0; i < 2; ++i) {
         PrRect c = grid.at(i, 20);
         stripes(list, c, withAlpha(kInk, 0.15f));
-        const PrDrawColorStop fade[] = {{.offset = 0, .color = withAlpha(kWhite, 1)},
-                                        {.offset = 1, .color = withAlpha(kWhite, 0)}};
+        const PrDrawColorStop fade[] = {
+            {.offset = 0, .color = withAlpha(kWhite, 1)},
+            {.offset = 1, .color = withAlpha(kWhite, 0)},
+        };
         PrDrawBrush brush = prDrawBrushLinear(PrVec2{c.left, 0}, PrVec2{c.right, 0}, fade, 2);
         PrDrawMask mask = prDrawMaskDefault(&brush);
         mask.invert = i == 1;
@@ -276,10 +290,12 @@ void masks(PrDrawList* list, float width, float height, double) {
     prDrawListPopGroup(list);
     // A mask with a translucent tint.
     c = grid.at(5, 20);
-    const PrDrawColorStop bars[] = {{.offset = 0, .color = kWhite},
-                                    {.offset = 0.5f, .color = kWhite},
-                                    {.offset = 0.5f, .color = withAlpha(kWhite, 0)},
-                                    {.offset = 1, .color = withAlpha(kWhite, 0)}};
+    const PrDrawColorStop bars[] = {
+        {.offset = 0, .color = kWhite},
+        {.offset = 0.5f, .color = kWhite},
+        {.offset = 0.5f, .color = withAlpha(kWhite, 0)},
+        {.offset = 1, .color = withAlpha(kWhite, 0)},
+    };
     PrDrawBrush repeating = prDrawBrushLinear(PrVec2{c.left, 0}, PrVec2{c.left + 40, 0}, bars, 4);
     repeating.extend = PrDrawExtend_Repeat;
     mask = prDrawMaskDefault(&repeating);
@@ -289,9 +305,11 @@ void masks(PrDrawList* list, float width, float height, double) {
     prDrawListPushGroup(list, &group);
     threeCircles(list, c, 1);
     prDrawListPopGroup(list);
-    const char* captions[] = {"alpha mask fading right", "the same inverted",
-                              "luminance of a radial, sRGB", "the same in linear light",
-                              "a list tiled as the mask", "repeating bars, 60% tint"};
+    const char* captions[] = {
+        "alpha mask fading right", "the same inverted",
+        "luminance of a radial, sRGB", "the same in linear light",
+        "a list tiled as the mask", "repeating bars, 60% tint",
+    };
     for (uint32_t i = 0; i < 6; ++i)
         grid.captionAt(i, captions[i], 20);
 }
@@ -302,11 +320,11 @@ void lists(PrDrawList* list, float width, float height, double) {
     for (uint32_t i = 0; i < 24; ++i) {
         float angle = 2 * kPi * float(i) / 24;
         float s = 0.6f + 0.05f * float(i % 6);
-        PrAffine2 t = prAffine2Concat(
-            prAffine2Concat(prAffine2Translate(PrVec2{-20, -20}), prAffine2Scale(PrVec2{s * 2, s * 2})),
-            prAffine2Concat(prAffine2Rotate(angle),
-                            prAffine2Translate(PrVec2{width * 0.25f + 180 * std::cos(angle),
-                                                      height * 0.5f + 180 * std::sin(angle)})));
+        PrAffine2 t = prAffine2Concat(prAffine2Concat(prAffine2Translate(PrVec2{-20, -20}), prAffine2Scale(PrVec2{s * 2, s * 2})),
+            prAffine2Concat(prAffine2Rotate(angle), prAffine2Translate(PrVec2{
+                width * 0.25f + 180 * std::cos(angle),
+                height * 0.5f + 180 * std::sin(angle),
+            })));
         prDrawListPushTransformAffine2(list, t);
         prDrawListEmbed(list, drawn, PrDVec2{0, 0});
         prDrawListPopTransform(list);
@@ -330,16 +348,11 @@ void lists(PrDrawList* list, float width, float height, double) {
     brush.image.tiles.spacing = PrVec2{0, 0};
     brush.image.tiles.x = PrDrawExtend_Reflect;
     brush.image.tiles.y = PrDrawExtend_Reflect;
-    brush.transform = prAffine2Concat(prAffine2Rotate(0.25f),
-                                      prAffine2Translate(PrVec2{c.left, c.top}));
-    prDrawListEllipse(list, prRectCenter(c), PrVec2{prRectWidth(c) / 2, prRectHeight(c) / 2},
-                      0, {.brush = &brush});
-    caption(PrRect{0, height - 30, width * 0.5f, height - 12},
-            "one list embedded in a ring, and at 4x");
-    caption(PrRect{width * 0.55f, height / 2 - 18, width - 40, height / 2},
-            "as a brush: spaced repeats");
-    caption(PrRect{width * 0.55f, height - 36, width - 40, height - 18},
-            "as a brush: rotated reflections");
+    brush.transform = prAffine2Concat(prAffine2Rotate(0.25f), prAffine2Translate(PrVec2{c.left, c.top}));
+    prDrawListEllipse(list, prRectCenter(c), PrVec2{prRectWidth(c) / 2, prRectHeight(c) / 2}, 0, {.brush = &brush});
+    caption(PrRect{0, height - 30, width * 0.5f, height - 12}, "one list embedded in a ring, and at 4x");
+    caption(PrRect{width * 0.55f, height / 2 - 18, width - 40, height / 2}, "as a brush: spaced repeats");
+    caption(PrRect{width * 0.55f, height - 36, width - 40, height - 18}, "as a brush: rotated reflections");
 }
 
 } // namespace
@@ -347,13 +360,13 @@ void lists(PrDrawList* list, float width, float height, double) {
 const std::vector<Drawing>& composeFeatures() {
     static const std::vector<Drawing> features = {
         {"Clips", "Clips of each kind, nested and under transforms.", clips},
-        {"Composite operators",
-         "The red square onto the blue circle by each operator, inside an isolated group.",
-         composites},
-        {"Blend modes", "A cool gradient circle over a warm gradient by each blend mode.",
-         blendModes},
-        {"Groups", "Opacity, isolation, knockout, blending, operators and bounds on groups.",
-         groups},
+        {
+            "Composite operators",
+            "The red square onto the blue circle by each operator, inside an isolated group.",
+            composites,
+        },
+        {"Blend modes", "A cool gradient circle over a warm gradient by each blend mode.", blendModes},
+        {"Groups", "Opacity, isolation, knockout, blending, operators and bounds on groups.", groups},
         {"Masks", "Alpha and luminance masks from gradients and lists.", masks},
         {"Embedded lists", "One list embedded under many transforms, and as a brush.", lists},
     };

@@ -20,18 +20,18 @@ PrDrawBorder borderOf(float width, PrDrawBorderStyle style, PrColor color, float
 
 void borderStyles(PrDrawList* list, float width, float height, double) {
     Grid grid{width, height, 4, 2};
-    PrDrawBorderStyle styles[] = {PrDrawBorderStyle_Solid,  PrDrawBorderStyle_Double,
-                                  PrDrawBorderStyle_Dashed, PrDrawBorderStyle_Dotted,
-                                  PrDrawBorderStyle_Groove, PrDrawBorderStyle_Ridge,
-                                  PrDrawBorderStyle_Inset,  PrDrawBorderStyle_Outset};
+    PrDrawBorderStyle styles[] = {
+        PrDrawBorderStyle_Solid,  PrDrawBorderStyle_Double,
+        PrDrawBorderStyle_Dashed, PrDrawBorderStyle_Dotted,
+        PrDrawBorderStyle_Groove, PrDrawBorderStyle_Ridge,
+        PrDrawBorderStyle_Inset,  PrDrawBorderStyle_Outset,
+    };
     for (uint32_t i = 0; i < 8; ++i) {
         PrRect c = grid.at(i, 30);
-        PrDrawBorder border = borderOf(18, styles[i], i < 4 ? kBlue : PrColor{0.4f, 0.6f, 0.9f, 1},
-                                       i % 2 == 0 ? 0 : 36);
+        PrDrawBorder border = borderOf(18, styles[i], i < 4 ? kBlue : PrColor{0.4f, 0.6f, 0.9f, 1}, i % 2 == 0 ? 0 : 36);
         border.shape.rect = c;
         prDrawListBorder(list, &border, {});
-        const char* names[] = {"solid", "double", "dashed", "dotted", "groove",
-                               "ridge", "inset",  "outset"};
+        const char* names[] = {"solid", "double", "dashed", "dotted", "groove", "ridge", "inset",  "outset"};
         grid.captionAt(i, names[i], 30);
     }
 }
@@ -45,8 +45,7 @@ void borderSides(PrDrawList* list, float width, float height, double) {
         PrDrawBorder border{};
         for (uint32_t i = 0; i < 4; ++i) {
             border.shape.corners[i] = cornerOf(k == 0 ? 0 : 50, 1);
-            border.sides[i] =
-                PrDrawBorderSide{widthsOf[i], PrDrawBorderStyle_Solid, colors[i], nullptr, 0};
+            border.sides[i] = PrDrawBorderSide{widthsOf[i], PrDrawBorderStyle_Solid, colors[i], nullptr, 0};
         }
         border.shape.rect = grid.at(k, 30);
         prDrawListBorder(list, &border, {});
@@ -90,14 +89,16 @@ void borderSides(PrDrawList* list, float width, float height, double) {
     brushed.sides[2].width = 70;
     brushed.shape.rect = c;
     prDrawListBorder(list, &brushed, {});
-    const char* captions[] = {"sides 10 30 20 4, square",
-                              "the same, round",
-                              "squircle, bevel, scoop, notch",
-                              "styles mixed",
-                              "dashes around round corners",
-                              "dots around round corners",
-                              "three dashes a side",
-                              "gradient sides, bottom past the box"};
+    const char* captions[] = {
+        "sides 10 30 20 4, square",
+        "the same, round",
+        "squircle, bevel, scoop, notch",
+        "styles mixed",
+        "dashes around round corners",
+        "dots around round corners",
+        "three dashes a side",
+        "gradient sides, bottom past the box",
+    };
     for (uint32_t i = 0; i < 8; ++i)
         grid.captionAt(i, captions[i], 30);
 }
@@ -122,12 +123,10 @@ void shadows(PrDrawList* list, float width, float height, double) {
         float blur;
         float spread;
     };
-    const Case drops[] = {{0, {8, 8}, 0, 0}, {16, {6, 10}, 12, 0}, {40, {0, 0}, 40, 0},
-                          {24, {12, 12}, 20, 16}};
+    const Case drops[] = {{0, {8, 8}, 0, 0}, {16, {6, 10}, 12, 0}, {40, {0, 0}, 40, 0}, {24, {12, 12}, 20, 16}};
     for (uint32_t i = 0; i < 4; ++i) {
         PrRect c = inset(grid.at(i, 20), 50);
-        PrDrawShadow shadow = shadowOf(c, drops[i].radius, drops[i].offset, drops[i].blur,
-                                       drops[i].spread);
+        PrDrawShadow shadow = shadowOf(c, drops[i].radius, drops[i].offset, drops[i].blur, drops[i].spread);
         prDrawListDropShadow(list, &shadow, {.color = shade});
         prDrawListCornerRect(list, prCornerRectRound(c, drops[i].radius), {.color = kWhite});
     }
@@ -150,7 +149,7 @@ void shadows(PrDrawList* list, float width, float height, double) {
     // Under a scale of 2, shadows that scale and one measured in target pixels.
     c = grid.at(7, 20);
     prDrawListPushTransformAffine2(list, prAffine2Concat(prAffine2Scale(PrVec2{2, 2}),
-                                                         prAffine2Translate(PrVec2{c.left + 20, c.top + 20})));
+        prAffine2Translate(PrVec2{c.left + 20, c.top + 20})));
     shadow = shadowOf(PrRect{0, 0, 40, 40}, 8, PrVec2{4, 4}, 8, 0);
     prDrawListDropShadow(list, &shadow, {.color = shade});
     prDrawListCornerRect(list, prCornerRectRound(shadow.shape.rect, 8), {.color = kWhite});
@@ -159,22 +158,26 @@ void shadows(PrDrawList* list, float width, float height, double) {
     prDrawListDropShadow(list, &shadow, {.color = shade});
     prDrawListCornerRect(list, prCornerRectRound(shadow.shape.rect, 8), {.color = kWhite});
     prDrawListPopTransform(list);
-    const char* captions[] = {"hard offset",
-                              "blur 12",
-                              "blur 40, centered",
-                              "spread 16",
-                              "translucent caster over stripes",
-                              "inner, offset",
-                              "inner, spread",
-                              "at 2x: scaling, then non-scaling"};
+    const char* captions[] = {
+        "hard offset",
+        "blur 12",
+        "blur 40, centered",
+        "spread 16",
+        "translucent caster over stripes",
+        "inner, offset",
+        "inner, spread",
+        "at 2x: scaling, then non-scaling",
+    };
     for (uint32_t i = 0; i < 8; ++i)
         grid.captionAt(i, captions[i], 20);
 }
 
 void decorations(PrDrawList* list, float width, float height, double) {
-    PrDrawDecorationStyle styles[] = {PrDrawDecorationStyle_Solid, PrDrawDecorationStyle_Double,
-                                      PrDrawDecorationStyle_Dotted, PrDrawDecorationStyle_Dashed,
-                                      PrDrawDecorationStyle_Wavy};
+    PrDrawDecorationStyle styles[] = {
+        PrDrawDecorationStyle_Solid, PrDrawDecorationStyle_Double,
+        PrDrawDecorationStyle_Dotted, PrDrawDecorationStyle_Dashed,
+        PrDrawDecorationStyle_Wavy,
+    };
     float thicknesses[] = {1, 2, 4};
     float y = 60;
     for (uint32_t s = 0; s < 5; ++s) {
@@ -188,8 +191,7 @@ void decorations(PrDrawList* list, float width, float height, double) {
             d.amplitude = d.thickness * 1.5f + 1;
             prDrawListDecoration(list, &d, {.color = kInk});
             const char* names[] = {"solid", "double", "dotted", "dashed", "wavy"};
-            std::string text = std::string(names[s]) + ", thickness " +
-                               std::to_string(int(thicknesses[t]));
+            std::string text = std::string(names[s]) + ", thickness " + std::to_string(int(thicknesses[t]));
             caption(PrRect{d.origin.x, y + 12, d.origin.x + d.length, y + 32}, text.c_str());
         }
         y += 110;
@@ -217,14 +219,14 @@ void decorations(PrDrawList* list, float width, float height, double) {
 
 const std::vector<Drawing>& boxFeatures() {
     static const std::vector<Drawing> features = {
-        {"Border styles", "Each border style at width 18, square and round corners alternating.",
-         borderStyles},
-        {"Border sides and corners",
-         "Sides of different widths, colors and styles, shaped corners, patterns and brushes.",
-         borderSides},
+        {"Border styles", "Each border style at width 18, square and round corners alternating.", borderStyles},
+        {
+            "Border sides and corners",
+            "Sides of different widths, colors and styles, shaped corners, patterns and brushes.",
+            borderSides,
+        },
         {"Shadows", "Drop and inner shadows: offsets, blurs, spreads and scaling.", shadows},
-        {"Decorations", "Each decoration style at three thicknesses, and wavy fragments.",
-         decorations},
+        {"Decorations", "Each decoration style at three thicknesses, and wavy fragments.", decorations},
     };
     return features;
 }

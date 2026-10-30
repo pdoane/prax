@@ -17,19 +17,16 @@ using namespace pr_impl;
 
 TEST_CASE("an SVG document's elements are SVG elements, each owned by the svg element nearest it") {
     PrXmlError error = {};
-    PrDomDocument* document = prDomParseXml(
-        "<svg xmlns='http://www.w3.org/2000/svg'><g><svg><rect/></svg></g></svg>",
+    PrDomDocument* document = prDomParseXml("<svg xmlns='http://www.w3.org/2000/svg'><g><svg><rect/></svg></g></svg>",
         "image/svg+xml", &error);
     CHECK(error.message.data == nullptr);
-    PrSvgElement* root =
-        prSvgElementQuery(prDomElementAsEventTarget(prDomDocumentElement(document)));
+    PrSvgElement* root = prSvgElementQuery(prDomElementAsEventTarget(prDomDocumentElement(document)));
     REQUIRE(root != nullptr);
     CHECK(prSvgElementOwnerSvgElement(root) == nullptr);
 
     PrDomElement* rect = nullptr;
     REQUIRE(prCssNodeQuerySelector(prDomDocumentAsNode(document), "rect", &rect) == PrStatus_Ok);
-    PrSvgElement* inner =
-        prSvgElementOwnerSvgElement(prSvgElementQuery(prDomElementAsEventTarget(rect)));
+    PrSvgElement* inner = prSvgElementOwnerSvgElement(prSvgElementQuery(prDomElementAsEventTarget(rect)));
     REQUIRE(inner != nullptr);
     PrSvgElement* outer = prSvgElementOwnerSvgElement(inner);
     CHECK(outer == root);
@@ -40,18 +37,14 @@ TEST_CASE("an SVG document's elements are SVG elements, each owned by the svg el
 }
 
 TEST_CASE("an element in another namespace is not an SVG element") {
-    PrDomDocument* document =
-        prDomParseXml("<math xmlns='http://www.w3.org/1998/Math/MathML'/>",
-                           "application/xml", nullptr);
+    PrDomDocument* document = prDomParseXml("<math xmlns='http://www.w3.org/1998/Math/MathML'/>", "application/xml", nullptr);
     CHECK(prSvgElementQuery(prDomElementAsEventTarget(prDomDocumentElement(document))) == nullptr);
     prDomDocumentRelease(document);
 }
 
 TEST_CASE("a standalone SVG document has its style sheets, selectors and inline styles") {
-    PrDomDocument* document = prDomParseXml(
-        "<svg xmlns='http://www.w3.org/2000/svg'><style>rect { fill: green }</style>"
-              "<rect id='r' style='stroke: blue'/></svg>",
-        "image/svg+xml", nullptr);
+    PrDomDocument* document = prDomParseXml("<svg xmlns='http://www.w3.org/2000/svg'><style>rect { fill: green }</style>"
+        "<rect id='r' style='stroke: blue'/></svg>", "image/svg+xml", nullptr);
     prCssEnable(document);
     prSvgEnable(document);
     PrCssStyleSheetList* sheets = prCssDocumentStyleSheets(document);
@@ -65,8 +58,7 @@ TEST_CASE("a standalone SVG document has its style sheets, selectors and inline 
     PrDomElement* rect = nullptr;
     REQUIRE(prCssNodeQuerySelector(prDomDocumentAsNode(document), "svg > rect#r", &rect) == PrStatus_Ok);
     REQUIRE(rect != nullptr);
-    PrCssStyleDeclaration* style =
-        prCssStylePropertiesAsCssStyleDeclaration(prCssElementStyle(rect));
+    PrCssStyleDeclaration* style = prCssStylePropertiesAsCssStyleDeclaration(prCssElementStyle(rect));
     const PrCssDeclarationName strokeName = prCssDeclarationNameFromProperty(PrCssProperty_Stroke);
     PrString stroke = prCssStyleDeclarationGetPropertyValue(style, &strokeName);
     CHECK(prStringView(&stroke) == "blue");
@@ -77,7 +69,7 @@ TEST_CASE("a standalone SVG document has its style sheets, selectors and inline 
 TEST_CASE("use elements that multiply each other's content draw a bounded number of elements") {
     // Each level uses the one below it ten times, so the last level is a million rectangles.
     std::string source = "<svg xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'><defs>"
-                         "<rect id='l0' width='1' height='1'/>";
+        "<rect id='l0' width='1' height='1'/>";
     for (int level = 1; level <= 6; ++level) {
         source += "<g id='l" + std::to_string(level) + "'>";
         for (int i = 0; i < 10; ++i)
@@ -85,15 +77,14 @@ TEST_CASE("use elements that multiply each other's content draw a bounded number
         source += "</g>";
     }
     source += "</defs><use href='#l6'/></svg>";
-    PrDomDocument* document =
-        prDomParseXml(source, "image/svg+xml", nullptr);
+    PrDomDocument* document = prDomParseXml(source, "image/svg+xml", nullptr);
     PrSvgElement* root = prSvgElementQuery(prDomElementAsEventTarget(prDomDocumentElement(document)));
     PrDrawList* list = prDrawListCreate();
     prSvgElementDraw(root, PrVec2{100, 100}, nullptr, list);
     uint32_t rects = 0;
     for (uint32_t i = 0; i < prDrawListCommandCount(list); ++i)
-        rects += prDrawListCommands(list)[i].kind != PrDrawCommandKind_PushTransformAffine2
-                 && prDrawListCommands(list)[i].kind != PrDrawCommandKind_PopTransform;
+        rects += prDrawListCommands(list)[i].kind != PrDrawCommandKind_PushTransformAffine2 &&
+            prDrawListCommands(list)[i].kind != PrDrawCommandKind_PopTransform;
     CHECK(rects > 0);
     CHECK(rects <= 100000);
     prDrawListRelease(list);
@@ -101,10 +92,8 @@ TEST_CASE("use elements that multiply each other's content draw a bounded number
 }
 
 TEST_CASE("a fill resolves for the display's headroom, beyond the sRGB gamut") {
-    PrDomDocument* document =
-        prDomParseXml("<svg xmlns='http://www.w3.org/2000/svg'><rect width='10' height='10' "
-                           "fill='color-hdr(color(rec2100-linear 1 1 1) 0, color(rec2100-linear 4 4 4) 2)'/></svg>",
-                           "image/svg+xml", nullptr);
+    PrDomDocument* document = prDomParseXml("<svg xmlns='http://www.w3.org/2000/svg'><rect width='10' height='10' "
+        "fill='color-hdr(color(rec2100-linear 1 1 1) 0, color(rec2100-linear 4 4 4) 2)'/></svg>", "image/svg+xml", nullptr);
     prSvgEnable(document);
     PrSvgElement* root = prSvgElementQuery(prDomElementAsEventTarget(prDomDocumentElement(document)));
     // Returns the green channel of the first painting command, drawn for `headroom` stops.

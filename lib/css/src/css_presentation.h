@@ -550,8 +550,7 @@ struct CssPresentation {
 // Returns the entry of `node`, or kHashMissing if the presentation has none.
 inline uint32_t cssPresentationNodeEntry(const CssPresentation* presentation, const PrDomNode* node) {
     uint32_t at = node->presentationEntry - 1;
-    bool own =
-        node->presentationEntry != 0 && at < presentation->entries.count && presentation->entries.data[at].node == node;
+    bool own = node->presentationEntry != 0 && at < presentation->entries.count && presentation->entries.data[at].node == node;
     return own ? at : kHashMissing;
 }
 
@@ -590,20 +589,18 @@ void cssPresentationResourceLoaded(PrCssPresentation* presentation);
 void cssPresentationInserted(PrCssPresentation* presentation, PrDomNode* node);
 void cssPresentationRemoving(PrCssPresentation* presentation, PrDomNode* node);
 void cssPresentationAttributeChanged(PrCssPresentation* presentation, PrDomElement* element, DomNamespaceId space,
-                                     PrStringView name,
-                                     PrStringView oldValue, PrStringView value);
+    PrStringView name, PrStringView oldValue, PrStringView value);
 void cssPresentationDataChanged(PrCssPresentation* presentation, PrDomNode* node);
 void cssPresentationContentChanged(PrCssPresentation* presentation, PrDomElement* element);
 void cssPresentationStateChanged(PrCssPresentation* presentation, PrDomElement* element, const CssPseudoClass* states,
-                                 uint32_t count);
+    uint32_t count);
 
 // Notify the presentation of changes to the flat tree (css-shadow-1/#flattening), each of a node that is connected. A
 // slot's assigned nodes changed from `before`: the nodes that it lost leave the flat tree unless another slot took
 // them, and its fallback content leaves or returns. An element became a shadow host, and its children left the flat
 // tree.
 void cssPresentationSlotChanged(PrCssPresentation* presentation, PrDomElement* slot,
-                                PrDomNode* const PR_NONNULL* PR_NULLABLE before,
-                                uint32_t beforeCount);
+    PrDomNode* const PR_NONNULL* PR_NULLABLE before, uint32_t beforeCount);
 void cssPresentationShadowAttached(PrCssPresentation* presentation, PrDomElement* host);
 
 // Projects the record of the element's box again, because the element gained or lost a wheel listener that is not
@@ -633,8 +630,8 @@ bool cssPresentationSvgsResized(PrCssPresentation* presentation);
 // Returns true if lib/svg has nothing to bring up to date in the presentation: it keeps no state for it, or the
 // presentation has no outermost svg element with a box, no notes, and nothing invalidated.
 inline bool cssPresentationSvgIdle(const CssPresentation* presentation) {
-    return presentation->svgState == nullptr
-           || (presentation->svgs.count == 0 && presentation->svgNotes.count == 0 && !presentation->svgInvalid);
+    return presentation->svgState == nullptr ||
+        (presentation->svgs.count == 0 && presentation->svgNotes.count == 0 && !presentation->svgInvalid);
 }
 
 // Returns the layout node that presents `node`, which is an element or a text node, as of the last update, or
@@ -651,8 +648,7 @@ PrDomNode* PR_NULLABLE cssPresentationNodeFromLayout(const PrCssPresentation* pr
 void cssPresentationHits(PrCssPresentation* presentation, PrLayoutVec point, uint32_t limit, Array<PrDomNode*>* out);
 
 // Returns the element's computed style as of the last update, or null if the presentation did not style it.
-const CssComputedStyle* PR_NULLABLE cssPresentationStyle(const PrCssPresentation* presentation,
-                                                         const PrDomElement* element);
+const CssComputedStyle* PR_NULLABLE cssPresentationStyle(const PrCssPresentation* presentation, const PrDomElement* element);
 
 // Returns true if the element is being rendered (html/#being-rendered) and the user can interact with it: it generates
 // a box, is an element of display contents, or is SVG content or a canvas's fallback content that is displayed, its
@@ -664,14 +660,12 @@ bool cssPresentationIsInteractive(PrCssPresentation* presentation, const PrDomEl
 // shadow tree inherits (SVG2/struct.html#UseElement). `element` may be outside the document, as such a tree's elements
 // are. The caller holds one reference. Called on the presentation's thread, outside a restyle.
 const CssComputedStyle* cssPresentationStyleUnder(PrCssPresentation* presentation, const PrDomElement* element,
-                                                  const CssComputedStyle* PR_NULLABLE parent);
+    const CssComputedStyle* PR_NULLABLE parent);
 
 // Returns the style of the ::first-line or ::first-letter `pseudo` of `element`, inheriting from `parent`, or null if
 // no rule styles it. The caller owns a reference to the style. Called on the presentation's thread, outside a restyle.
 const CssComputedStyle* PR_NULLABLE cssPresentationPseudoStyleUnder(PrCssPresentation* presentation,
-                                                                    const PrDomElement* element,
-                                                                    CssPseudo pseudo,
-                                                                    const CssComputedStyle* PR_NULLABLE parent);
+    const PrDomElement* element, CssPseudo pseudo, const CssComputedStyle* PR_NULLABLE parent);
 
 // Projects again, at the next update, the boxes that name a source of the references (CssPresentationReferences),
 // because what a source draws may have changed.
@@ -690,8 +684,7 @@ CssColorContext cssPresentationColorContext(PrCssPresentation* presentation, con
 // Returns the element's computed style once the presentation's styles are brought up to date, as a query of computed
 // values brings them, or null for an element that the presentation does not style. The style is valid until the
 // presentation next restyles. Called on the presentation's thread, outside a restyle.
-const CssComputedStyle* PR_NULLABLE cssPresentationStyleCurrent(PrCssPresentation* presentation,
-                                                                const PrDomElement* element);
+const CssComputedStyle* PR_NULLABLE cssPresentationStyleCurrent(PrCssPresentation* presentation, const PrDomElement* element);
 
 // Returns the tree, which the caller's thread owns until the presentation next starts a worker.
 PrLayoutTree* cssPresentationOwnTree(PrCssPresentation* presentation);
@@ -700,7 +693,7 @@ PrLayoutTree* cssPresentationOwnTree(PrCssPresentation* presentation);
 // viewport coordinates as of the last layout, through every transform and scroll offset around the box. Points are in
 // CSS pixels. Returns false if the element has no box, or a projection puts a point behind the eye.
 bool cssPresentationMapFromContent(PrCssPresentation* presentation, const PrDomElement* element, PrDVec2* points,
-                                   uint32_t count);
+    uint32_t count);
 
 // Scrolls the scroll container `node`, or the viewport for kPrLayoutNodeNone, to `offset` within its range as the last
 // layout left it (cssom-view-1/#perform-a-scroll). If the offset changes, scroll and scrollend events are due at the
@@ -740,16 +733,14 @@ void cssPresentationUpdateStyle(PrCssPresentation* presentation);
 // after updating the presentation. Leaves `out` unchanged if `*filler` and `*version` say that this presentation filled
 // it at its current version. Otherwise records them.
 void cssPresentationComputedBlock(PrCssPresentation* presentation, const PrDomElement* element, CssPseudo pseudo,
-                                  CssDeclarationBlock* out, const void* PR_NULLABLE* PR_NONNULL filler,
-                                  uint64_t* version);
+    CssDeclarationBlock* out, const void* PR_NULLABLE* PR_NONNULL filler, uint64_t* version);
 
 // Serializes the resolved value of the longhand `property` of the computed style of the element, or of its
 // pseudo-element `pseudo`, to `out`, after updating the presentation's styles, and also its layout if the value is a
 // used value. The result matches the declaration of the property in cssPresentationComputedBlock. Writes nothing for a
 // property that the engine does not render, or an element that it did not style.
 bool cssPresentationComputedValue(PrCssPresentation* presentation, const PrDomElement* element, CssPseudo pseudo,
-                                  PrCssProperty property,
-                                  TextBuffer* out);
+    PrCssProperty property, TextBuffer* out);
 
 // The two halves of prCssPresentationStart. The first brings the styles and the tree up to date and waits for the
 // agent's layout thread. The second posts the job, and then restyles the next job's content ahead. A host that presents

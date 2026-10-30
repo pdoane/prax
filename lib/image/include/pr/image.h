@@ -161,18 +161,16 @@ struct PrImageCodec {
 
     // Opens an image, and creates a reader if the status is Ok or Truncated.
     PrStatus (*decoderOpen)(PrImageCodec* codec, const PrImageSource* source,
-                            const PrImageLimits* limits, PrImageReader* PR_NULLABLE* PR_NONNULL out,
-                            PrImageInfo* info);
+        const PrImageLimits* limits, PrImageReader* PR_NULLABLE* PR_NONNULL out, PrImageInfo* info);
     void (*decoderClose)(PrImageCodec* codec, PrImageReader* reader);
-    PrStatus (*decoderFrameInfo)(PrImageCodec* codec, PrImageReader* reader, uint32_t frame,
-                                 PrImageFrameInfo* info);
+    PrStatus (*decoderFrameInfo)(PrImageCodec* codec, PrImageReader* reader, uint32_t frame, PrImageFrameInfo* info);
 
     // Decodes a frame into pixels of the format and size that the reader reported.
     PrStatus (*decoderRead)(PrImageCodec* codec, PrImageReader* reader, uint32_t frame, PrPixels output);
 
     // Null for a codec that encodes nothing.
     PrStatus (*PR_NULLABLE encode)(PrImageCodec* codec, PrStringView type, PrPixelView pixels,
-                                   uint8_t* PR_NULLABLE out, size_t capacity, size_t* size);
+        uint8_t* PR_NULLABLE out, size_t capacity, size_t* size);
 };
 
 // The assumptions a conversion may make when color is uncharacterized.
@@ -217,7 +215,7 @@ bool prImageCodecSupportsType(PrImageCodec* codec, PrStringView type);
 // the whole encoding. `out` may be null if `capacity` is zero. Returns NotSupported for a type the codec does not
 // encode.
 PrStatus prImageCodecEncode(PrImageCodec* codec, PrStringView type, PrPixelView pixels, uint8_t* PR_NULLABLE out,
-                            size_t capacity, size_t* size);
+    size_t capacity, size_t* size);
 
 // Returns the default limits, which bound the resources that the images of a page can reasonably use.
 PrImageLimits prImageLimitsDefault(void);
@@ -227,8 +225,7 @@ uint64_t prImageSourceSize(const PrImageSource* source);
 
 // Reads exactly `size` bytes at `offset` of `source` into `out`. Returns Io for a range past the end, or if `readAt`
 // fails.
-PrStatus prImageSourceRead(const PrImageSource* source, uint64_t offset, void* PR_NULLABLE out,
-                           size_t size);
+PrStatus prImageSourceRead(const PrImageSource* source, uint64_t offset, void* PR_NULLABLE out, size_t size);
 
 // Creates a decoder that opens images with `codec`. The decoder keeps its storage from one image to the next.
 PrImageDecoder* prImageDecoderCreate(PrImageCodec* codec);
@@ -263,7 +260,7 @@ PrStatus prImageDecoderRead(PrImageDecoder* decoder, uint32_t frame, PrPixels ou
 // and height of `output` are those of the frame, swapped if the orientation transposes. Uncharacterized color is taken
 // as sRGB, and CMYK is approximated. Returns NotSupported for color or alpha that it cannot convert.
 PrStatus prImageDecoderReadRgba8(PrImageDecoder* decoder, uint32_t frame, PrImageAlpha alpha,
-                                 PrImageOrientation orientation, PrPixels output);
+    PrImageOrientation orientation, PrPixels output);
 
 // Returns the number of bytes that one pixel of `format` occupies. Returns zero for a format whose fields are not valid
 // together, such as one whose color names a space of another model.
@@ -273,7 +270,7 @@ uint32_t prImageFormatSize(const PrImageFormat* format);
 // overlap. Independent alpha is unchanged. `flags` allow assumptions for converting between spaces when color is
 // uncharacterized. Returns NotSupported for formats it cannot convert between.
 PrStatus prImageConvert(PrPixelView source, const PrImageFormat* sourceFormat, PrPixels destination,
-                        const PrImageFormat* destinationFormat, PrImageConversionFlags flags);
+    const PrImageFormat* destinationFormat, PrImageConversionFlags flags);
 
 // Returns true if `orientation` exchanges the width and height of an image, as a transpose or a quarter turn does.
 bool prImageOrientationSwapsAxes(PrImageOrientation orientation);

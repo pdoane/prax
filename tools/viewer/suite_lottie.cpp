@@ -152,31 +152,37 @@ struct Corpus {
 
 // Returns a collection of every animation under the corpus's root, in path order.
 Collection collectionOf(const Corpus& c) {
-    return Collection{c.name, 512, 512, 0, [c] {
-        std::vector<fs::path> files;
-        std::error_code error;
-        for (fs::recursive_directory_iterator it(c.root, error), end; it != end; it.increment(error)) {
-            if (error)
-                break;
-            if (it->is_regular_file() && it->path().extension() == ".json")
-                files.push_back(it->path());
-        }
-        std::sort(files.begin(), files.end());
-        fs::path settings = fs::path(kSuites) / c.suite / "render.txt";
-        std::vector<Document> documents;
-        for (const fs::path& path : files) {
-            Document d{fs::relative(path, c.root).string(), c.description, fileSource(path, settings)};
-            d.references = referencesOf(c.player, path, c.root);
-            for (Player other : kPlayers) {
-                if (other == c.player)
-                    continue;
-                for (Reference& reference : referencesOf(other, path, c.root))
-                    d.references.push_back(std::move(reference));
+    return Collection{
+        c.name,
+        512,
+        512,
+        0,
+        [c] {
+            std::vector<fs::path> files;
+            std::error_code error;
+            for (fs::recursive_directory_iterator it(c.root, error), end; it != end; it.increment(error)) {
+                if (error)
+                    break;
+                if (it->is_regular_file() && it->path().extension() == ".json")
+                    files.push_back(it->path());
             }
-            documents.push_back(std::move(d));
-        }
-        return documents;
-    }};
+            std::sort(files.begin(), files.end());
+            fs::path settings = fs::path(kSuites) / c.suite / "render.txt";
+            std::vector<Document> documents;
+            for (const fs::path& path : files) {
+                Document d{fs::relative(path, c.root).string(), c.description, fileSource(path, settings)};
+                d.references = referencesOf(c.player, path, c.root);
+                for (Player other : kPlayers) {
+                    if (other == c.player)
+                        continue;
+                    for (Reference& reference : referencesOf(other, path, c.root))
+                        d.references.push_back(std::move(reference));
+                }
+                documents.push_back(std::move(d));
+            }
+            return documents;
+        },
+    };
 }
 
 } // namespace
@@ -184,11 +190,15 @@ Collection collectionOf(const Corpus& c) {
 std::vector<Collection> lottieCollections() {
     fs::path lottie = fs::path(kThirdParty) / "lottie";
     const Corpus corpora[] = {
-        {"Lottie: lottie-ios", "lottie-ios", lottie / "lottie-ios" / "Tests" / "Samples", "lottie-ios's samples",
-         Player_LottieIos},
+        {
+            "Lottie: lottie-ios", "lottie-ios", lottie / "lottie-ios" / "Tests" / "Samples", "lottie-ios's samples",
+            Player_LottieIos,
+        },
         {"Lottie: Skottie", "skottie", lottie / "skia" / "resources" / "skottie", "Skottie's tests", Player_Skottie},
-        {"Lottie: rlottie", "rlottie", lottie / "rlottie" / "example" / "resource", "rlottie's examples",
-         Player_Rlottie},
+        {
+            "Lottie: rlottie", "rlottie", lottie / "rlottie" / "example" / "resource", "rlottie's examples",
+            Player_Rlottie,
+        },
         {"Lottie: lottie-web", "lottie-web", lottie / "lottie-web", "lottie-web's animations", Player_LottieWeb},
     };
     std::vector<Collection> collections;

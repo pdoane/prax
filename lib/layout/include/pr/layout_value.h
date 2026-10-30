@@ -70,9 +70,7 @@ PR_CONSTEXPR PrLayoutWordKind prLayoutWordKind(uint32_t word) {
 // point, which is how a length becomes layout's unit, and saturate at the ends of their kind's range, and a NaN is
 // zero. A number drops its three lowest mantissa bits, toward zero, -0 is 0, and a NaN is zero.
 PR_CONSTEXPR uint32_t prLayoutWordPxUnits(int32_t units) {
-    int32_t raw = units > kPrLayoutWordPxMax ? kPrLayoutWordPxMax
-                  : units < kPrLayoutWordPxMin ? kPrLayoutWordPxMin
-                                                  : units;
+    int32_t raw = units > kPrLayoutWordPxMax ? kPrLayoutWordPxMax : units < kPrLayoutWordPxMin ? kPrLayoutWordPxMin : units;
     return PR_VALUE_CAST(uint32_t, raw) << 1;
 }
 // The conversion of pixels and percentages saturates at run time without testing for the range or NaN. On arm64 under
@@ -96,10 +94,15 @@ PR_CONSTEXPR uint32_t prLayoutWordPx(float px) {
         return prLayoutWordPxUnits(_cvt_ftoi_sat(units));
 #endif
     }
-    int32_t raw = units != units ? 0
-                  : units >= PR_VALUE_CAST(float, kPrLayoutWordPxMax) ? kPrLayoutWordPxMax
-                  : units <= PR_VALUE_CAST(float, kPrLayoutWordPxMin) ? kPrLayoutWordPxMin
-                                                                       : PR_VALUE_CAST(int32_t, units);
+    int32_t raw;
+    if (units != units)
+        raw = 0;
+    else if (units >= PR_VALUE_CAST(float, kPrLayoutWordPxMax))
+        raw = kPrLayoutWordPxMax;
+    else if (units <= PR_VALUE_CAST(float, kPrLayoutWordPxMin))
+        raw = kPrLayoutWordPxMin;
+    else
+        raw = PR_VALUE_CAST(int32_t, units);
     return PR_VALUE_CAST(uint32_t, raw) << 1;
 }
 PR_CONSTEXPR uint32_t prLayoutWordPercent(float percent) {
@@ -114,16 +117,23 @@ PR_CONSTEXPR uint32_t prLayoutWordPercent(float percent) {
         return (PR_VALUE_CAST(uint32_t, narrowed) & ~3u) | 1u;
 #elif defined(_MSC_VER) && !defined(__clang__)
         int32_t converted = _cvt_ftoi_sat(fixed);
-        int32_t raw = converted > kPrLayoutWordPercentMax ? kPrLayoutWordPercentMax
-                      : converted < kPrLayoutWordPercentMin ? kPrLayoutWordPercentMin
-                                                             : converted;
+        int32_t raw = converted;
+        if (converted > kPrLayoutWordPercentMax)
+            raw = kPrLayoutWordPercentMax;
+        else if (converted < kPrLayoutWordPercentMin)
+            raw = kPrLayoutWordPercentMin;
         return PR_VALUE_CAST(uint32_t, raw) << 2 | 1u;
 #endif
     }
-    int32_t raw = fixed != fixed ? 0
-                  : fixed >= PR_VALUE_CAST(float, kPrLayoutWordPercentMax) ? kPrLayoutWordPercentMax
-                  : fixed <= PR_VALUE_CAST(float, kPrLayoutWordPercentMin) ? kPrLayoutWordPercentMin
-                                                                            : PR_VALUE_CAST(int32_t, fixed);
+    int32_t raw;
+    if (fixed != fixed)
+        raw = 0;
+    else if (fixed >= PR_VALUE_CAST(float, kPrLayoutWordPercentMax))
+        raw = kPrLayoutWordPercentMax;
+    else if (fixed <= PR_VALUE_CAST(float, kPrLayoutWordPercentMin))
+        raw = kPrLayoutWordPercentMin;
+    else
+        raw = PR_VALUE_CAST(int32_t, fixed);
     return PR_VALUE_CAST(uint32_t, raw) << 2 | 1u;
 }
 PR_CONSTEXPR uint32_t prLayoutWordNumber(float number) {

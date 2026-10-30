@@ -88,7 +88,7 @@ void fireStyleError(void* data) {
 void queueStyleEvent(const DomDocumentHost* host, PrDomElement* element, bool loaded) {
     domNodeHold(element);
     host->queueDelayingTask(host->context, loaded ? fireStyleLoad : fireStyleError, element,
-                            [](void* data) { domNodeUnhold(static_cast<PrDomElement*>(data)); });
+        [](void* data) { domNodeUnhold(static_cast<PrDomElement*>(data)); });
 }
 
 void setBlocking(PrDomElement* element, bool blocking) {
@@ -163,7 +163,7 @@ void fetchDone(PrDomElement* element, bool loaded) {
 // itself or into a sheet that imports it. `importing` holds the URLs of those importing sheets. A URL that does not
 // parse or load makes the element's event an error.
 void fetchImports(PrDomElement* element, CssSheetData* sheet, const PrUrl* base, const Array<PrString>& importing,
-                  PrCharset environment) {
+        PrCharset environment) {
     const DomDocumentHost* host = element->document->host;
     CssElementStyle* style = cssElementStyle(element);
     // Each fetch below may arrive immediately. This count holds the element's sheets open until all have started.
@@ -224,9 +224,11 @@ void sheetFetched(void* PR_NULLABLE data, const DomFetchResult* result) {
     // (css-syntax-3/#determine-the-fallback-encoding). An imported sheet decodes in that charset too, in place of its
     // parent sheet's.
     PrString decoded = {};
-    PrStringView text = loaded ? cssDecodeBytes(result->body, domMimeTypeCharset(result->contentType),
-                                                fetch->environment, &decoded)
-                               : PrStringView{};
+    PrStringView text;
+    if (loaded)
+        text = cssDecodeBytes(result->body, domMimeTypeCharset(result->contentType), fetch->environment, &decoded);
+    else
+        text = PrStringView{};
     CssSheetData* sheet = nullptr;
     if (loaded && fetch->rule != nullptr && fetch->rule->imported == nullptr) {
         sheet = cssSheetDataCreate();
@@ -287,8 +289,7 @@ void instructionSheetFetched(void* PR_NULLABLE data, const DomFetchResult* resul
     if (result->status != PrStatus_Ok || instruction->parent == nullptr)
         return;
     PrString decoded = {};
-    PrStringView text = cssDecodeBytes(result->body, domMimeTypeCharset(result->contentType), document->charset,
-                                       &decoded);
+    PrStringView text = cssDecodeBytes(result->body, domMimeTypeCharset(result->contentType), document->charset, &decoded);
     PrCssStyleSheet* sheet = cssStyleSheetCreate(cssSheetDataCreate());
     sheet->href = prStringClone(&fetch->href);
     sheet->data->href = prStringClone(&fetch->href);
@@ -390,8 +391,8 @@ PrCssStyleSheet* PR_NULLABLE cssElementSheet(const PrDomElement* element) {
 }
 
 void cssStyleBlockUpdate(PrDomElement* element, DomInsertedBy by) {
-    if ((element->space != PrDomNamespace_Html && element->space != PrDomNamespace_Svg)
-        || element->tag != PrDomTag_Style)
+    if ((element->space != PrDomNamespace_Html && element->space != PrDomNamespace_Svg) ||
+            element->tag != PrDomTag_Style)
         return;
     PrDomDocument* document = element->document;
     cssOwnerReset(element);
@@ -449,7 +450,7 @@ void cssOwnerSetBlocking(PrDomElement* element, bool blocking) {
 }
 
 void cssOwnerFetch(PrDomElement* element, const PrUrl* url, DomCorsSettings cors, PrCharset environment,
-                   bool alternate, CssOwnerSettledFn* settled) {
+        bool alternate, CssOwnerSettledFn* settled) {
     const DomDocumentHost* host = element->document->host;
     PR_ASSERT(host != nullptr);
     CssElementStyle* style = cssElementStyle(element);

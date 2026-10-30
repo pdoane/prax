@@ -137,13 +137,11 @@ void setParameters(Shell& s, const PrCommandArgs* args) {
     if (prCommandArgsHas(args, "negative"))
         p.negativePrompt = stringOf(prCommandArgsString(args, "negative", ""));
     if (prCommandArgsHas(args, "checkpoint"))
-        p.checkpoint = matchName(st.catalog.checkpoints, prCommandArgsString(args, "checkpoint", ""),
-                                 p.checkpoint);
+        p.checkpoint = matchName(st.catalog.checkpoints, prCommandArgsString(args, "checkpoint", ""), p.checkpoint);
     if (prCommandArgsHas(args, "sampler"))
         p.sampler = matchName(st.catalog.samplers, prCommandArgsString(args, "sampler", ""), p.sampler);
     if (prCommandArgsHas(args, "scheduler"))
-        p.scheduler = matchName(st.catalog.schedulers, prCommandArgsString(args, "scheduler", ""),
-                                p.scheduler);
+        p.scheduler = matchName(st.catalog.schedulers, prCommandArgsString(args, "scheduler", ""), p.scheduler);
     if (prCommandArgsHas(args, "steps"))
         p.steps = uint32_t(std::clamp(prCommandArgsNumber(args, "steps", p.steps), 1.0, 150.0));
     if (prCommandArgsHas(args, "cfg"))
@@ -158,8 +156,7 @@ void setParameters(Shell& s, const PrCommandArgs* args) {
     if (prCommandArgsHas(args, "width") || prCommandArgsHas(args, "height")) {
         setCustomSize(st.dims, true);
         st.dims.size.width = uint32_t(std::clamp(prCommandArgsNumber(args, "width", st.dims.size.width), 64.0, 4096.0));
-        st.dims.size.height =
-            uint32_t(std::clamp(prCommandArgsNumber(args, "height", st.dims.size.height), 64.0, 4096.0));
+        st.dims.size.height = uint32_t(std::clamp(prCommandArgsNumber(args, "height", st.dims.size.height), 64.0, 4096.0));
     }
 }
 
@@ -185,106 +182,265 @@ void reportStatus(Shell& s, const PrCommandArgs* args) {
 
 constexpr CommandSpec kSpecs[] = {
     // Runs.
-    {.id = "alchemy.generate", .title = "Generate", .category = "Run",
-     .run = [](Shell& s, const PrCommandArgs*) { generate(*s.state); }, .state = whenConnected,
-     .chord = "Cmd Enter"},
-    {.id = "alchemy.interrupt", .title = "Stop the Run", .category = "Run",
-     .run = [](Shell& s, const PrCommandArgs*) { interruptRun(*s.state); },
-     .state = [](Shell& s) { return disabledUnless(runsInFlight(*s.state) != 0); }, .chord = "Cmd ."},
-    {.id = "alchemy.connect", .title = "Connect to the Server", .category = "Server",
-     .run = [](Shell& s, const PrCommandArgs*) { connectServer(*s.state); }, .chord = "Cmd Shift C"},
-    {.id = "alchemy.disconnect", .title = "Disconnect", .category = "Server",
-     .run = [](Shell& s, const PrCommandArgs*) { disconnectServer(*s.state); }, .state = whenConnected},
-    {.id = "alchemy.mode.generate", .title = "Generate Mode", .category = "Mode",
-     .run = [](Shell& s, const PrCommandArgs*) { setMode(s, OperationMode_Generate); },
-     .state = [](Shell& s) { return checkedIf(s.state->mode == OperationMode_Generate); }, .chord = "Cmd 1"},
-    {.id = "alchemy.mode.upscale", .title = "Upscale Mode", .category = "Mode",
-     .run = [](Shell& s, const PrCommandArgs*) { setMode(s, OperationMode_Upscale); },
-     .state = [](Shell& s) { return checkedIf(s.state->mode == OperationMode_Upscale); }, .chord = "Cmd 2"},
-    {.id = "alchemy.mode.outpaint", .title = "Outpaint Mode", .category = "Mode",
-     .run = [](Shell& s, const PrCommandArgs*) { setMode(s, OperationMode_Outpaint); },
-     .state = [](Shell& s) { return checkedIf(s.state->mode == OperationMode_Outpaint); }, .chord = "Cmd 3"},
-    {.id = "alchemy.mode.detail", .title = "Detail Mode", .category = "Mode",
-     .run = [](Shell& s, const PrCommandArgs*) { setMode(s, OperationMode_Detail); },
-     .state = [](Shell& s) { return checkedIf(s.state->mode == OperationMode_Detail); }, .chord = "Cmd 4"},
+    {
+        .id = "alchemy.generate",
+        .title = "Generate",
+        .category = "Run",
+        .run = [](Shell& s, const PrCommandArgs*) { generate(*s.state); },
+        .state = whenConnected,
+        .chord = "Cmd Enter",
+    },
+    {
+        .id = "alchemy.interrupt",
+        .title = "Stop the Run",
+        .category = "Run",
+        .run = [](Shell& s, const PrCommandArgs*) { interruptRun(*s.state); },
+        .state = [](Shell& s) { return disabledUnless(runsInFlight(*s.state) != 0); },
+        .chord = "Cmd .",
+    },
+    {
+        .id = "alchemy.connect",
+        .title = "Connect to the Server",
+        .category = "Server",
+        .run = [](Shell& s, const PrCommandArgs*) { connectServer(*s.state); },
+        .chord = "Cmd Shift C",
+    },
+    {
+        .id = "alchemy.disconnect",
+        .title = "Disconnect",
+        .category = "Server",
+        .run = [](Shell& s, const PrCommandArgs*) { disconnectServer(*s.state); },
+        .state = whenConnected,
+    },
+    {
+        .id = "alchemy.mode.generate",
+        .title = "Generate Mode",
+        .category = "Mode",
+        .run = [](Shell& s, const PrCommandArgs*) { setMode(s, OperationMode_Generate); },
+        .state = [](Shell& s) { return checkedIf(s.state->mode == OperationMode_Generate); },
+        .chord = "Cmd 1",
+    },
+    {
+        .id = "alchemy.mode.upscale",
+        .title = "Upscale Mode",
+        .category = "Mode",
+        .run = [](Shell& s, const PrCommandArgs*) { setMode(s, OperationMode_Upscale); },
+        .state = [](Shell& s) { return checkedIf(s.state->mode == OperationMode_Upscale); },
+        .chord = "Cmd 2",
+    },
+    {
+        .id = "alchemy.mode.outpaint",
+        .title = "Outpaint Mode",
+        .category = "Mode",
+        .run = [](Shell& s, const PrCommandArgs*) { setMode(s, OperationMode_Outpaint); },
+        .state = [](Shell& s) { return checkedIf(s.state->mode == OperationMode_Outpaint); },
+        .chord = "Cmd 3",
+    },
+    {
+        .id = "alchemy.mode.detail",
+        .title = "Detail Mode",
+        .category = "Mode",
+        .run = [](Shell& s, const PrCommandArgs*) { setMode(s, OperationMode_Detail); },
+        .state = [](Shell& s) { return checkedIf(s.state->mode == OperationMode_Detail); },
+        .chord = "Cmd 4",
+    },
 
     // Parameters.
-    {.id = "alchemy.newSeed", .title = "New Seed", .category = "Parameters",
-     .run = [](Shell& s, const PrCommandArgs*) {
-         s.state->params.seed = drawSeed(*s.state);
-         s.state->params.seedLocked = true;
-     }},
-    {.id = "alchemy.lockSeed", .title = "Lock the Seed", .category = "Parameters",
-     .run = [](Shell& s, const PrCommandArgs*) { s.state->params.seedLocked = !s.state->params.seedLocked; },
-     .state = [](Shell& s) { return checkedIf(s.state->params.seedLocked); }},
-    {.id = "alchemy.swapDimensions", .title = "Swap Width and Height", .category = "Parameters",
-     .run = [](Shell& s, const PrCommandArgs*) { swapDimensions(s.state->dims); }},
-    {.id = "alchemy.clearSource", .title = "Clear the Source Image", .category = "Parameters",
-     .run = [](Shell& s, const PrCommandArgs*) { clearSource(*s.state); },
-     .state = [](Shell& s) { return disabledUnless(!s.state->params.sourcePath.empty()); }},
-    {.id = "alchemy.increaseWeight", .title = "Increase Attention", .category = "Prompt",
-     .run = [](Shell& s, const PrCommandArgs*) { adjustWeight(s, 1); }, .chord = "Cmd Alt Up",
-     .context = kContextParameters, .flags = PrCommandFlag_Hidden},
-    {.id = "alchemy.decreaseWeight", .title = "Decrease Attention", .category = "Prompt",
-     .run = [](Shell& s, const PrCommandArgs*) { adjustWeight(s, -1); }, .chord = "Cmd Alt Down",
-     .context = kContextParameters, .flags = PrCommandFlag_Hidden},
-    {.id = "alchemy.setParameters", .title = "Set Parameters", .category = "Parameters", .run = setParameters,
-     .params = kParameters, .paramCount = uint32_t(countOf(kParameters)),
-     .description = "Sets the parameters of the next run. Each argument that is given replaces one parameter."},
-    {.id = "alchemy.status", .title = "Status", .category = "Server", .run = reportStatus,
-     .flags = PrCommandFlag_Hidden | PrCommandFlag_Query,
-     .description = "Reports the connection, the status line, the runs in flight and the selected image."},
+    {
+        .id = "alchemy.newSeed",
+        .title = "New Seed",
+        .category = "Parameters",
+        .run = [](Shell& s, const PrCommandArgs*) {
+            s.state->params.seed = drawSeed(*s.state);
+            s.state->params.seedLocked = true;
+        },
+    },
+    {
+        .id = "alchemy.lockSeed",
+        .title = "Lock the Seed",
+        .category = "Parameters",
+        .run = [](Shell& s, const PrCommandArgs*) { s.state->params.seedLocked = !s.state->params.seedLocked; },
+        .state = [](Shell& s) { return checkedIf(s.state->params.seedLocked); },
+    },
+    {
+        .id = "alchemy.swapDimensions",
+        .title = "Swap Width and Height",
+        .category = "Parameters",
+        .run = [](Shell& s, const PrCommandArgs*) { swapDimensions(s.state->dims); },
+    },
+    {
+        .id = "alchemy.clearSource",
+        .title = "Clear the Source Image",
+        .category = "Parameters",
+        .run = [](Shell& s, const PrCommandArgs*) { clearSource(*s.state); },
+        .state = [](Shell& s) { return disabledUnless(!s.state->params.sourcePath.empty()); },
+    },
+    {
+        .id = "alchemy.increaseWeight",
+        .title = "Increase Attention",
+        .category = "Prompt",
+        .run = [](Shell& s, const PrCommandArgs*) { adjustWeight(s, 1); },
+        .chord = "Cmd Alt Up",
+        .context = kContextParameters,
+        .flags = PrCommandFlag_Hidden,
+    },
+    {
+        .id = "alchemy.decreaseWeight",
+        .title = "Decrease Attention",
+        .category = "Prompt",
+        .run = [](Shell& s, const PrCommandArgs*) { adjustWeight(s, -1); },
+        .chord = "Cmd Alt Down",
+        .context = kContextParameters,
+        .flags = PrCommandFlag_Hidden,
+    },
+    {
+        .id = "alchemy.setParameters",
+        .title = "Set Parameters",
+        .category = "Parameters",
+        .run = setParameters,
+        .params = kParameters,
+        .paramCount = uint32_t(countOf(kParameters)),
+        .description = "Sets the parameters of the next run. Each argument that is given replaces one parameter.",
+    },
+    {
+        .id = "alchemy.status",
+        .title = "Status",
+        .category = "Server",
+        .run = reportStatus,
+        .flags = PrCommandFlag_Hidden | PrCommandFlag_Query,
+        .description = "Reports the connection, the status line, the runs in flight and the selected image.",
+    },
 
     // The gallery.
-    {.id = "alchemy.back", .title = "Back", .category = "Image",
-     .run = [](Shell& s, const PrCommandArgs*) { historyBack(*s.state); },
-     .state = [](Shell& s) { return disabledUnless(canGoBack(*s.state)); }, .chord = "Cmd ["},
-    {.id = "alchemy.forward", .title = "Forward", .category = "Image",
-     .run = [](Shell& s, const PrCommandArgs*) { historyForward(*s.state); },
-     .state = [](Shell& s) { return disabledUnless(canGoForward(*s.state)); }, .chord = "Cmd ]"},
-    {.id = "alchemy.previousImage", .title = "Previous Image", .category = "Image",
-     .run = [](Shell& s, const PrCommandArgs*) { galleryStep(s.state->gallery, -1); }, .chord = "Left",
-     .context = kContextGallery},
-    {.id = "alchemy.nextImage", .title = "Next Image", .category = "Image",
-     .run = [](Shell& s, const PrCommandArgs*) { galleryStep(s.state->gallery, 1); }, .chord = "Right",
-     .context = kContextGallery},
-    {.id = "alchemy.useAsSource", .title = "Use as Source", .category = "Image",
-     .run = [](Shell& s, const PrCommandArgs*) { useAsSource(*s.state); }, .state = whenSelected},
-    {.id = "alchemy.usePrompt", .title = "Use Prompt", .category = "Image",
-     .run = [](Shell& s, const PrCommandArgs*) { usePrompt(*s.state); }, .state = whenRecorded},
-    {.id = "alchemy.useSeed", .title = "Use Seed", .category = "Image",
-     .run = [](Shell& s, const PrCommandArgs*) { useSeed(*s.state); }, .state = whenRecorded},
-    {.id = "alchemy.useAspect", .title = "Use Aspect Ratio", .category = "Image",
-     .run = [](Shell& s, const PrCommandArgs*) { useAspect(*s.state); }, .state = whenRecorded},
-    {.id = "alchemy.useAll", .title = "Use All Settings", .category = "Image",
-     .run = [](Shell& s, const PrCommandArgs*) { useAll(*s.state); }, .state = whenRecorded},
-    {.id = "alchemy.deleteImage", .title = "Delete Image...", .category = "Image",
-     .run = [](Shell& s, const PrCommandArgs*) { requestDelete(*s.state); }, .state = whenSelected,
-     .chord = "Cmd Backspace", .kind = PrCommandBindingKind_Override},
-    {.id = "alchemy.rescan", .title = "Rescan the Gallery", .category = "Image",
-     .run = [](Shell& s, const PrCommandArgs*) { galleryRescan(s.state->gallery); }},
-    {.id = "alchemy.openGallery", .title = "Open the Gallery Folder", .category = "Image",
-     .run = [](Shell& s, const PrCommandArgs*) {
-         if (s.app != nullptr)
-             prAppOpenUrl(s.app, "file://" + s.state->gallery.dir);
-     }},
+    {
+        .id = "alchemy.back",
+        .title = "Back",
+        .category = "Image",
+        .run = [](Shell& s, const PrCommandArgs*) { historyBack(*s.state); },
+        .state = [](Shell& s) { return disabledUnless(canGoBack(*s.state)); },
+        .chord = "Cmd [",
+    },
+    {
+        .id = "alchemy.forward",
+        .title = "Forward",
+        .category = "Image",
+        .run = [](Shell& s, const PrCommandArgs*) { historyForward(*s.state); },
+        .state = [](Shell& s) { return disabledUnless(canGoForward(*s.state)); },
+        .chord = "Cmd ]",
+    },
+    {
+        .id = "alchemy.previousImage",
+        .title = "Previous Image",
+        .category = "Image",
+        .run = [](Shell& s, const PrCommandArgs*) { galleryStep(s.state->gallery, -1); },
+        .chord = "Left",
+        .context = kContextGallery,
+    },
+    {
+        .id = "alchemy.nextImage",
+        .title = "Next Image",
+        .category = "Image",
+        .run = [](Shell& s, const PrCommandArgs*) { galleryStep(s.state->gallery, 1); },
+        .chord = "Right",
+        .context = kContextGallery,
+    },
+    {
+        .id = "alchemy.useAsSource",
+        .title = "Use as Source",
+        .category = "Image",
+        .run = [](Shell& s, const PrCommandArgs*) { useAsSource(*s.state); },
+        .state = whenSelected,
+    },
+    {
+        .id = "alchemy.usePrompt",
+        .title = "Use Prompt",
+        .category = "Image",
+        .run = [](Shell& s, const PrCommandArgs*) { usePrompt(*s.state); },
+        .state = whenRecorded,
+    },
+    {
+        .id = "alchemy.useSeed",
+        .title = "Use Seed",
+        .category = "Image",
+        .run = [](Shell& s, const PrCommandArgs*) { useSeed(*s.state); },
+        .state = whenRecorded,
+    },
+    {
+        .id = "alchemy.useAspect",
+        .title = "Use Aspect Ratio",
+        .category = "Image",
+        .run = [](Shell& s, const PrCommandArgs*) { useAspect(*s.state); },
+        .state = whenRecorded,
+    },
+    {
+        .id = "alchemy.useAll",
+        .title = "Use All Settings",
+        .category = "Image",
+        .run = [](Shell& s, const PrCommandArgs*) { useAll(*s.state); },
+        .state = whenRecorded,
+    },
+    {
+        .id = "alchemy.deleteImage",
+        .title = "Delete Image...",
+        .category = "Image",
+        .run = [](Shell& s, const PrCommandArgs*) { requestDelete(*s.state); },
+        .state = whenSelected,
+        .chord = "Cmd Backspace",
+        .kind = PrCommandBindingKind_Override,
+    },
+    {
+        .id = "alchemy.rescan",
+        .title = "Rescan the Gallery",
+        .category = "Image",
+        .run = [](Shell& s, const PrCommandArgs*) { galleryRescan(s.state->gallery); },
+    },
+    {
+        .id = "alchemy.openGallery",
+        .title = "Open the Gallery Folder",
+        .category = "Image",
+        .run = [](Shell& s, const PrCommandArgs*) {
+            if (s.app != nullptr)
+                prAppOpenUrl(s.app, "file://" + s.state->gallery.dir);
+        },
+    },
 
     // The view.
-    {.id = "alchemy.toggleInfo", .title = "Show the Record", .category = "View",
-     .run = [](Shell& s, const PrCommandArgs*) { s.state->showInfo = !s.state->showInfo; },
-     .state = [](Shell& s) { return checkedIf(s.state->showInfo); }, .chord = "I", .context = kContextGallery},
-    {.id = "alchemy.togglePreview", .title = "Show Previews", .category = "View",
-     .run = [](Shell& s, const PrCommandArgs*) { s.state->showPreview = !s.state->showPreview; },
-     .state = [](Shell& s) { return checkedIf(s.state->showPreview); }, .chord = "P", .context = kContextGallery},
-    {.id = "view.palette", .title = "Command Palette...", .category = "View",
-     .run = [](Shell& s, const PrCommandArgs*) { s.paletteRequested = true; }, .chord = "Cmd Shift P",
-     .flags = PrCommandFlag_Hidden},
-    {.id = "app.quit", .title = "Quit", .category = "App",
-     .run = [](Shell& s, const PrCommandArgs*) {
-         if (s.app != nullptr)
-             prAppStop(s.app);
-     },
-     .chord = "Cmd Q"},
+    {
+        .id = "alchemy.toggleInfo",
+        .title = "Show the Record",
+        .category = "View",
+        .run = [](Shell& s, const PrCommandArgs*) { s.state->showInfo = !s.state->showInfo; },
+        .state = [](Shell& s) { return checkedIf(s.state->showInfo); },
+        .chord = "I",
+        .context = kContextGallery,
+    },
+    {
+        .id = "alchemy.togglePreview",
+        .title = "Show Previews",
+        .category = "View",
+        .run = [](Shell& s, const PrCommandArgs*) { s.state->showPreview = !s.state->showPreview; },
+        .state = [](Shell& s) { return checkedIf(s.state->showPreview); },
+        .chord = "P",
+        .context = kContextGallery,
+    },
+    {
+        .id = "view.palette",
+        .title = "Command Palette...",
+        .category = "View",
+        .run = [](Shell& s, const PrCommandArgs*) { s.paletteRequested = true; },
+        .chord = "Cmd Shift P",
+        .flags = PrCommandFlag_Hidden,
+    },
+    {
+        .id = "app.quit",
+        .title = "Quit",
+        .category = "App",
+        .run = [](Shell& s, const PrCommandArgs*) {
+            if (s.app != nullptr)
+                prAppStop(s.app);
+        },
+        .chord = "Cmd Q",
+    },
 };
 
 constexpr size_t kSpecCount = countOf(kSpecs);
@@ -307,16 +463,18 @@ Commands* commandsCreate(Shell* shell) {
     for (size_t i = 0; i < kSpecCount; ++i) {
         const CommandSpec& spec = kSpecs[i];
         contexts[i] = CommandContext{shell, &spec};
-        PrCommandDesc desc{.id = spec.id,
-                           .title = spec.title,
-                           .category = spec.category,
-                           .description = spec.description,
-                           .flags = spec.flags,
-                           .params = spec.params,
-                           .paramCount = spec.paramCount,
-                           .run = runBinding,
-                           .state = stateBinding,
-                           .context = &contexts[i]};
+        PrCommandDesc desc{
+            .id = spec.id,
+            .title = spec.title,
+            .category = spec.category,
+            .description = spec.description,
+            .flags = spec.flags,
+            .params = spec.params,
+            .paramCount = spec.paramCount,
+            .run = runBinding,
+            .state = stateBinding,
+            .context = &contexts[i],
+        };
         prCommandRegistryAdd(commands->registry, &desc);
         PrCommandChord chord{};
         if (spec.chord != nullptr && prCommandChordParse(spec.chord, &chord))

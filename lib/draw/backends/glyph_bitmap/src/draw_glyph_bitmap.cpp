@@ -17,7 +17,7 @@ void destroyDecoder(PrDrawGlyphDecoder* decoder) {
 }
 
 bool decode(PrDrawGlyphDecoder* decoder, const PrFont* font, uint16_t glyph, float pixelsPerEm,
-            const PrFontPalette* PR_NULLABLE, PrColor, PrDrawList* list) {
+        const PrFontPalette* PR_NULLABLE, PrColor, PrDrawList* list) {
     PrFontGlyphSvg svg{};
     if (prFontGlyphSvg(font, glyph, &svg))
         return false;

@@ -461,8 +461,7 @@ void loadedHtml(void* context, PrHtmlPage* htmlPage, PrStatus status) {
     const std::string& wait = run->host->captureWait;
     if (run->capture == PageHost::Capture::Wait && !wait.empty() && run->ok && run->ctx != nullptr) {
         std::string waiter = "(function () {\n" + wait + "\n}).call(window, location.href, stopRun);";
-        run->ok = prJsHtmlEngineRun(run->ctx, PrStringView{waiter.data(), waiter.size()}, "capture-wait", 1, 1)
-                  && run->ok;
+        run->ok = prJsHtmlEngineRun(run->ctx, PrStringView{waiter.data(), waiter.size()}, "capture-wait", 1, 1) && run->ok;
     }
 }
 
@@ -499,12 +498,14 @@ void openNetwork(HostState& s) {
         s.anchorViews.clear();
         for (const std::string& anchor : s.anchors)
             s.anchorViews.push_back(PrByteView{reinterpret_cast<const uint8_t*>(anchor.data()), anchor.size()});
-        PrHttpDesc http{.net = s.net,
-                        .tls = s.tls,
-                        .anchors = s.anchorViews.data(),
-                        .anchorCount = uint32_t(s.anchorViews.size()),
-                        .hostRules = rules.data(),
-                        .hostRuleCount = uint32_t(rules.size())};
+        PrHttpDesc http{
+            .net = s.net,
+            .tls = s.tls,
+            .anchors = s.anchorViews.data(),
+            .anchorCount = uint32_t(s.anchorViews.size()),
+            .hostRules = rules.data(),
+            .hostRuleCount = uint32_t(rules.size()),
+        };
         s.http = prHttpCreate(PrHttpBackend_Default, &http);
         s.cache = prStorageMemoryCreate(kCacheBytes, PrStorageEviction_LeastRecentlyUsed);
     }
@@ -715,15 +716,11 @@ JSValue jsSendInput(JSContext* ctx, JSValueConst, int argc, JSValueConst* argv) 
 // Gives a realm the shell's functions. A page's realm also runs the preludes, once its global is its window.
 void realmOpened(void* context, JSContext* ctx, PrHtmlPage* PR_NULLABLE htmlPage) {
     JSValue global = JS_GetGlobalObject(ctx);
-    JS_SetPropertyStr(ctx, global, "print",
-                      JS_NewCFunction(ctx, JsCallScoped<print>::call, "print", 1));
-    JS_SetPropertyStr(ctx, global, "readFile",
-                      JS_NewCFunction(ctx, JsCallScoped<jsReadFile>::call, "readFile", 1));
+    JS_SetPropertyStr(ctx, global, "print", JS_NewCFunction(ctx, JsCallScoped<print>::call, "print", 1));
+    JS_SetPropertyStr(ctx, global, "readFile", JS_NewCFunction(ctx, JsCallScoped<jsReadFile>::call, "readFile", 1));
     JS_SetPropertyStr(ctx, global, "stopRun", JS_NewCFunction(ctx, JsCallScoped<jsStopRun>::call, "stopRun", 0));
-    JS_SetPropertyStr(ctx, global, "sendInput",
-                      JS_NewCFunction(ctx, JsCallScoped<jsSendInput>::call, "sendInput", 1));
-    JS_SetPropertyStr(ctx, global, "counters",
-                      JS_NewCFunction(ctx, JsCallScoped<jsCounters>::call, "counters", 0));
+    JS_SetPropertyStr(ctx, global, "sendInput", JS_NewCFunction(ctx, JsCallScoped<jsSendInput>::call, "sendInput", 1));
+    JS_SetPropertyStr(ctx, global, "counters", JS_NewCFunction(ctx, JsCallScoped<jsCounters>::call, "counters", 0));
     JS_FreeValue(ctx, global);
     Page* run = static_cast<Page*>(prJsHtmlEngineHostContext(ctx));
     if (run == nullptr)
@@ -848,8 +845,10 @@ void addCaptured(HostState& s, PrStringView location, const std::filesystem::pat
     PrString serialized = prUrlSerialize(url, PrUrlSerialization_ExcludeFragment);
     PrStringView href = prStringView(&serialized);
     std::lock_guard<std::mutex> lock(s.servedLock);
-    s.captured[std::string(href.data, href.size)] = {file,
-                                                     std::string(type.data != nullptr ? type.data : "", type.size)};
+    s.captured[std::string(href.data, href.size)] = {
+        file,
+        std::string(type.data != nullptr ? type.data : "", type.size),
+    };
     prStringReset(&serialized);
     prUrlDestroy(url);
 }
@@ -863,8 +862,7 @@ bool renderFetches(HostState& s, bool* started) {
     uint64_t posts = postsOf(s);
     bool network = waitsForNetwork(s);
     for (const std::unique_ptr<Page>& page : s.pages) {
-        PrCssPresentation* presentation = page->htmlPage != nullptr ? prHtmlPagePresentation(page->htmlPage)
-                                                               : nullptr;
+        PrCssPresentation* presentation = page->htmlPage != nullptr ? prHtmlPagePresentation(page->htmlPage) : nullptr;
         if (presentation != nullptr)
             prHtmlPresentationUpdate(presentation, prLayoutVecFromPx(page->viewport));
     }
@@ -923,8 +921,7 @@ void PageHost::reset() {
     startRun(s);
 }
 
-bool PageHost::addCapture(const std::filesystem::path& capture, std::string* pageUrl,
-                          const std::filesystem::path& page) {
+bool PageHost::addCapture(const std::filesystem::path& capture, std::string* pageUrl, const std::filesystem::path& page) {
     TextBuffer text;
     PrJson* json = prJsonCreate();
     bool ok = harnessReadFile(&text, capture.string().c_str()) && prJsonParse(json, textView(&text), nullptr);
@@ -947,8 +944,7 @@ bool PageHost::addCapture(const std::filesystem::path& capture, std::string* pag
         PrStringView file = prJsonString(json, prJsonMember(json, entry, "file"));
         if (file.data != nullptr)
             addCaptured(*state_, prJsonString(json, prJsonMember(json, entry, "url")),
-                        capture.parent_path() / std::string(file.data, file.size),
-                        prJsonString(json, prJsonMember(json, entry, "type")));
+                capture.parent_path() / std::string(file.data, file.size), prJsonString(json, prJsonMember(json, entry, "type")));
     }
     textReset(&text);
     prJsonDestroy(json);
@@ -962,8 +958,7 @@ void PageHost::addPrelude(const std::filesystem::path& script) {
 bool PageHost::addFont(const std::filesystem::path& file) {
     std::string path = file.string();
     const PrFont* font = nullptr;
-    if (prFontCreateFromFile(path, 0, nullptr, &font)
-        != PrStatus_Ok) {
+    if (prFontCreateFromFile(path, 0, nullptr, &font) != PrStatus_Ok) {
         fprintf(stderr, "cannot load the font %s\n", path.c_str());
         return false;
     }
@@ -1216,8 +1211,7 @@ bool PageHost::signalRendered(PrVec2 viewport) {
         PrDrawList* list = prDrawListCreate();
         paint(page.get(), viewport, prAppDisplayDefault(), state_->preferences, list);
         prDrawListRelease(list);
-        PrDomElement* root =
-            prDomDocumentElement(prHtmlWindowDocument(prHtmlPageWindow(page->htmlPage)));
+        PrDomElement* root = prDomDocumentElement(prHtmlWindowDocument(prHtmlPageWindow(page->htmlPage)));
         PrDomEventInit init = prDomEventInitDefault();
         init.bubbles = true;
         PrDomEvent* event = prDomEventCreate("TestRendered", &init);
@@ -1229,7 +1223,7 @@ bool PageHost::signalRendered(PrVec2 viewport) {
 }
 
 bool PageHost::paint(Page* page, PrVec2 viewport, const PrAppDisplay& display, const PrAppUserPreferences& preferences,
-                     PrDrawList* list) {
+        PrDrawList* list) {
     if (page->htmlPage == nullptr || prHtmlPagePresentation(page->htmlPage) == nullptr)
         return false;
     PrHtmlView* view = viewOf(page);

@@ -113,7 +113,9 @@ TEST_CASE("a timer's handler can clear and set timers, and cannot run one itself
             prHtmlWindowSetTimeout(value->window, value->callback, 0, false);
             CHECK_FALSE(prDomAgentRunTask(prHtmlPageAgent(value->page)));
         },
-        &mutation, nullptr, nullptr,
+        &mutation,
+        nullptr,
+        nullptr,
     };
     prHtmlWindowSetTimeout(window, &mutator, 0, false);
     mutation.cancelled = prHtmlWindowSetTimeout(window, &callback, 0, false);
@@ -131,9 +133,7 @@ TEST_CASE("a timer's handler can clear and set timers, and cannot run one itself
 TEST_CASE("a Window clears only its own timers, and a new document releases the old one's") {
     PrHtmlPage* first = prHtmlPageCreate(nullptr);
     PrHtmlPage* second = prHtmlPageCreate(nullptr);
-    CHECK(prHtmlPageLoad(first, "<p>first", "about:blank",
-                         nullptr)
-          == PrStatus_Ok);
+    CHECK(prHtmlPageLoad(first, "<p>first", "about:blank", nullptr) == PrStatus_Ok);
     State state;
     PrHtmlTimerHandler handler = handlerFor(&state);
     PrHtmlWindow* window = prHtmlPageWindow(first);
@@ -147,9 +147,7 @@ TEST_CASE("a Window clears only its own timers, and a new document releases the 
     CHECK(state.calls == 1);
     prHtmlWindowSetTimeout(window, &handler, 100000, false);
     CHECK(state.references == 1);
-    CHECK(prHtmlPageLoad(first, "<p>second", "about:blank",
-                         nullptr)
-          == PrStatus_Ok);
+    CHECK(prHtmlPageLoad(first, "<p>second", "about:blank", nullptr) == PrStatus_Ok);
     CHECK(state.references == 0);
     // What remains is the new document's reveal, at the next rendering opportunity.
     double delay = prDomAgentNextTaskDelay(prHtmlPageAgent(first));
@@ -163,8 +161,7 @@ TEST_CASE("no timer runs while the parser is running a script") {
     State state;
     PrHtmlHost scripting = prHtmlHostDefault();
     scripting.context = &state;
-    scripting.execute = [](void* data, PrHtmlPage* page,
-                           const PrHtmlScript*) -> PrStatus {
+    scripting.execute = [](void* data, PrHtmlPage* page, const PrHtmlScript*) -> PrStatus {
         State* value = static_cast<State*>(data);
         PrHtmlTimerHandler handler = handlerFor(value);
         prHtmlWindowSetTimeout(prHtmlPageWindow(page), &handler, 0, false);
@@ -173,9 +170,7 @@ TEST_CASE("no timer runs while the parser is running a script") {
         return PrStatus_Ok;
     };
     PrHtmlPage* page = prHtmlPageCreate(&scripting);
-    CHECK(prHtmlPageLoad(page, "<script>0</script>", "about:blank",
-                         nullptr)
-          == PrStatus_Ok);
+    CHECK(prHtmlPageLoad(page, "<script>0</script>", "about:blank", nullptr) == PrStatus_Ok);
     CHECK(prDomAgentRunTask(prHtmlPageAgent(page)));
     CHECK(state.calls == 1);
     CHECK(state.references == 0);
@@ -221,9 +216,7 @@ TEST_CASE("frame requests run together at a rendering opportunity, and a cancele
 TEST_CASE("an iframe's tasks run on its parent's agent, until the iframe is removed") {
     PrHtmlPage* page = prHtmlPageCreate(nullptr);
     PrDomAgent* agent = prHtmlPageAgent(page);
-    REQUIRE(prHtmlPageLoad(page, "<iframe id=f srcdoc='<p>inner'></iframe>",
-                                      "about:blank", nullptr)
-            == PrStatus_Ok);
+    REQUIRE(prHtmlPageLoad(page, "<iframe id=f srcdoc='<p>inner'></iframe>", "about:blank", nullptr) == PrStatus_Ok);
     while (prDomAgentNextTaskDelay(agent) == 0 && prDomAgentRunTask(agent)) {
     }
     PrDomDocument* document = prHtmlWindowDocument(prHtmlPageWindow(page));

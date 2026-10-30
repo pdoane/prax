@@ -42,8 +42,8 @@ TEST_CASE("SHA-1 matches the digests of rfc 3174 and FIPS 180") {
     CHECK(hex("") == "da39a3ee5e6b4b0d3255bfef95601890afd80709");
     CHECK(hex("abc") == "a9993e364706816aba3e25717850c26c9cd0d89d");
     // 56 bytes, whose padding needs a second block.
-    CHECK(hex("abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq")
-          == "84983e441c3bd26ebaae4aa1f95129e5e54670f1");
+    CHECK(hex("abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq") ==
+        "84983e441c3bd26ebaae4aa1f95129e5e54670f1");
     CHECK(hex(std::string(1000000, 'a')) == "34aa973cd4c4daa4f61eeb2bdbad27316534016f");
 }
 
@@ -53,7 +53,7 @@ TEST_CASE("checksum updates retain state across arbitrary chunk boundaries") {
     const uint32_t crc = crc32Update(0, input);
     const uint32_t adler = adler32Update(1, input);
     for (size_t split :
-         {size_t(0), size_t(1), size_t(5551), size_t(5552), size_t(5553), data.size()}) {
+            {size_t(0), size_t(1), size_t(5551), size_t(5552), size_t(5553), data.size()}) {
         const PrByteView first{data.data(), split};
         const PrByteView second{data.data() + split, data.size() - split};
         CHECK(crc32Update(crc32Update(0, first), second) == crc);

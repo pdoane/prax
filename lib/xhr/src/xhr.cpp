@@ -142,8 +142,10 @@ void receive(Xhr* request, const PrFetchClientResponse* response) {
     request->status = response->responseStatus;
     request->responseUrl = prStringCopy(response->url);
     for (uint32_t i = 0; i < response->headerCount; ++i)
-        request->responseHeaders.push(XhrHeader{prStringCopy(response->headers[i].name),
-                                                prStringCopy(response->headers[i].value)});
+        request->responseHeaders.push(XhrHeader{
+            prStringCopy(response->headers[i].name),
+            prStringCopy(response->headers[i].value),
+        });
     if (response->body.size != 0)
         request->body.append(response->body.data, uint32_t(response->body.size));
     if (!request->uploadComplete) {
@@ -258,18 +260,19 @@ using namespace pr_impl;
 // ProgressEvent
 
 PrXhrProgressEvent* PR_NULLABLE prXhrProgressEventQuery(PrDomEvent* PR_NULLABLE object) {
-    return object != nullptr && object->kind == PrDomEventKind_Progress ? static_cast<PrXhrProgressEvent*>(object)
-                                                                        : nullptr;
+    return object != nullptr && object->kind == PrDomEventKind_Progress ? static_cast<PrXhrProgressEvent*>(object) : nullptr;
 }
 
 PrXhrProgressEvent* prXhrProgressEventCreate(PrStringView type, const PrXhrProgressEventInit* PR_NULLABLE init) {
     PrXhrProgressEventInit values = init != nullptr ? *init : prXhrProgressEventInitDefault();
     PrXhrProgressEvent* event = domEventCreate<PrXhrProgressEvent>(type, values.event, PrDomEventKind_Progress);
     XhrProgressData* data = allocZeroed<XhrProgressData>();
-    *data = XhrProgressData{{[](DomEventExtra* extra) { prMemoryFree(extra); }},
-                             values.lengthComputable,
-                             values.loaded,
-                             values.total};
+    *data = XhrProgressData{
+        {[](DomEventExtra* extra) { prMemoryFree(extra); }},
+        values.lengthComputable,
+        values.loaded,
+        values.total,
+    };
     event->extra = data;
     return event;
 }
@@ -290,18 +293,14 @@ double prXhrProgressEventTotal(const PrXhrProgressEvent* self) {
 // XMLHttpRequestUpload
 
 PrXhrUpload* PR_NULLABLE prXhrUploadQuery(PrDomEventTarget* PR_NULLABLE object) {
-    return object != nullptr && object->type == DomTargetType_XmlHttpRequestUpload
-               ? static_cast<PrXhrUpload*>(object)
-               : nullptr;
+    return object != nullptr && object->type == DomTargetType_XmlHttpRequestUpload ? static_cast<PrXhrUpload*>(object) : nullptr;
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
 // XMLHttpRequest
 
 PrXhr* PR_NULLABLE prXhrQuery(PrDomEventTarget* PR_NULLABLE object) {
-    return object != nullptr && object->type == DomTargetType_XmlHttpRequest
-               ? static_cast<PrXhr*>(object)
-               : nullptr;
+    return object != nullptr && object->type == DomTargetType_XmlHttpRequest ? static_cast<PrXhr*>(object) : nullptr;
 }
 
 PrXhr* prXhrCreate(const PrXhrDesc* desc) {
@@ -404,8 +403,7 @@ bool prXhrWithCredentials(const PrXhr* self) {
 }
 
 PrStatus prXhrSetWithCredentials(PrXhr* self, bool withCredentials) {
-    if ((self->state != PrXhrState_Unsent && self->state != PrXhrState_Opened)
-        || self->sendFlag)
+    if ((self->state != PrXhrState_Unsent && self->state != PrXhrState_Opened) || self->sendFlag)
         return PrStatus_InvalidState;
     self->withCredentials = withCredentials;
     return PrStatus_Ok;
@@ -417,8 +415,8 @@ PrStatus prXhrSend(PrXhr* self, PrByteView body, PrStringView contentType) {
     PrStringView method = prStringIsNull(&self->method) ? PrStringView("GET") : prStringView(&self->method);
     if (method == "GET" || method == "HEAD")
         body = PrByteView{nullptr, 0};
-    if (body.data != nullptr && contentType.data != nullptr
-        && findHeader(self->requestHeaders, "Content-Type") == kArrayMissing)
+    if (body.data != nullptr && contentType.data != nullptr &&
+            findHeader(self->requestHeaders, "Content-Type") == kArrayMissing)
         self->requestHeaders.push(XhrHeader{prStringCopy("Content-Type"), prStringCopy(contentType)});
     self->requestBytes = body.size;
     self->uploadComplete = body.size == 0;
@@ -436,17 +434,22 @@ PrStatus prXhrSend(PrXhr* self, PrByteView body, PrStringView contentType) {
     }
     Array<PrFetchHeader> headers;
     for (uint32_t i = 0; i < self->requestHeaders.count; ++i)
-        headers.push(PrFetchHeader{prStringView(&self->requestHeaders.data[i].name),
-                                   prStringView(&self->requestHeaders.data[i].value)});
-    PrFetchClientRequest request{.url = prStringView(&self->url),
-                               .method = prStringView(&self->method),
-                               .headers = headers.data,
-                               .headerCount = headers.count,
-                               .body = body,
-                               .mode = PrFetchMode_Cors,
-                               .credentials = PrFetchCredentials(self->withCredentials ? PrFetchCredentials_Include
-                                                                                       : PrFetchCredentials_SameOrigin),
-                               .redirect = PrFetchRedirect_Follow};
+        headers.push(PrFetchHeader{
+            prStringView(&self->requestHeaders.data[i].name),
+            prStringView(&self->requestHeaders.data[i].value),
+        });
+    PrFetchClientRequest request{
+        .url = prStringView(&self->url),
+        .method = prStringView(&self->method),
+        .headers = headers.data,
+        .headerCount = headers.count,
+        .body = body,
+        .mode = PrFetchMode_Cors,
+        .credentials = PrFetchCredentials_SameOrigin,
+        .redirect = PrFetchRedirect_Follow,
+    };
+    if (self->withCredentials)
+        request.credentials = PrFetchCredentials_Include;
     if (self->client.fetch(self->client.context, &request, fetched, self) == PrStatus_Ok) {
         retainRequest(self);
         self->fetching = true;
@@ -461,9 +464,8 @@ PrStatus prXhrSend(PrXhr* self, PrByteView body, PrStringView contentType) {
 
 void prXhrAbort(PrXhr* self) {
     stopFetch(self);
-    bool inFlight = (self->state == PrXhrState_Opened && self->sendFlag)
-                    || self->state == PrXhrState_HeadersReceived
-                    || self->state == PrXhrState_Loading;
+    bool inFlight = (self->state == PrXhrState_Opened && self->sendFlag) || self->state == PrXhrState_HeadersReceived ||
+        self->state == PrXhrState_Loading;
     ++self->generation;
     if (inFlight)
         requestError(self, "abort");

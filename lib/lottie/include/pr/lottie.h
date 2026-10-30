@@ -63,7 +63,7 @@ PrLottieOptions prLottieOptionsDefault(void);
 //
 // In a build with PR_JS, an animation whose properties have expressions is drawn by one thread at a time.
 PrStatus prLottieAnimationCreate(PrStringView json, const PrLottieOptions* PR_NULLABLE options,
-                                 PrLottieAnimation* PR_NULLABLE* PR_NONNULL out);
+    PrLottieAnimation* PR_NULLABLE* PR_NONNULL out);
 
 // Frees the animation.
 void prLottieAnimationDestroy(PrLottieAnimation* PR_NULLABLE animation);

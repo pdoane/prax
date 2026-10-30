@@ -48,8 +48,8 @@ struct Fixture {
             return;
         }
         REQUIRE(status == PrStatus_Ok);
-        REQUIRE(prGpuShaderLibraryCreate(device, kTestGpuHostShaders, sizeof(kTestGpuHostShaders), &library)
-                == PrStatus_Ok);
+        REQUIRE(prGpuShaderLibraryCreate(device, kTestGpuHostShaders, sizeof(kTestGpuHostShaders), &library) ==
+            PrStatus_Ok);
     }
 
     ~Fixture() {
@@ -92,7 +92,7 @@ struct Fixture {
         PrGpuCommands* commands = nullptr;
         REQUIRE(prGpuCommandsBegin(device, nullptr, &commands));
         prGpuCommandsBufferBarrier(commands, buffer, PrGpuAccessFlag_ShaderWrite | PrGpuAccessFlag_CopyWrite,
-                                   PrGpuAccessFlag_CopyRead);
+            PrGpuAccessFlag_CopyRead);
         prGpuCommandsCopyBuffer(commands, buffer, 0, readback, 0, uint64_t(count) * 4);
         prGpuDeviceWait(device, prGpuCommandsSubmit(commands));
         std::vector<uint32_t> out(count);
@@ -166,7 +166,7 @@ TEST_CASE("metal draws into the host's pass, and says which of the pass's state 
     PrGpuCommands* commands = nullptr;
     REQUIRE(prGpuCommandsBegin(f.device, &options, &commands));
     prGpuCommandsTextureBarrier(commands, target, PrGpuSubresources{}, PrGpuAccessFlag_Discard,
-                                PrGpuAccessFlag_ColorAttachment);
+        PrGpuAccessFlag_ColorAttachment);
     prGpuHostStateSync(commands);
 
     // The host begins its pass, which clears the target to blue, and the device draws the upper half red into it.
@@ -196,13 +196,13 @@ TEST_CASE("metal draws into the host's pass, and says which of the pass's state 
     [encoder endEncoding];
 
     prGpuCommandsTextureBarrier(commands, target, PrGpuSubresources{}, PrGpuAccessFlag_ColorAttachment,
-                                PrGpuAccessFlag_CopyRead);
+        PrGpuAccessFlag_CopyRead);
     prGpuHostStateSync(commands);
     [host.buffer endCommandBuffer];
     prGpuDeviceWait(f.device, prGpuCommandsSubmit(commands));
     uint32_t pixels[8 * 8]{};
     prGpuTextureRead(f.device, target, PrGpuAccessFlag_CopyRead, PrIVec2{0, 0},
-                     PrPixels{reinterpret_cast<uint8_t*>(pixels), 8 * 4, PrUVec2{8, 8}});
+        PrPixels{reinterpret_cast<uint8_t*>(pixels), 8 * 4, PrUVec2{8, 8}});
     CHECK(pixels[0] == 0xff0000ffu);
     CHECK(pixels[7 * 8 + 7] == 0xffff0000u);
     prGpuPipelineDestroy(f.device, pipeline);

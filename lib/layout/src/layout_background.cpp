@@ -38,8 +38,10 @@ void appendKey(Array<uint8_t>& key, const T& value) {
 void backgroundKey(Array<uint8_t>& key, const PrLayoutBackgroundLayer* layers, uint32_t count) {
     for (uint32_t i = 0; i < count; ++i) {
         const PrLayoutBackgroundLayer& l = layers[i];
-        uint8_t bytes[] = {l.kind,   l.rendering, l.repeatX, l.repeatY,   l.attachment,
-                           l.origin, l.clip,      l.size,    l.blendMode, l.composite};
+        uint8_t bytes[] = {
+            l.kind,   l.rendering, l.repeatX, l.repeatY,   l.attachment,
+            l.origin, l.clip,      l.size,    l.blendMode, l.composite,
+        };
         appendKey(key, bytes);
         uint32_t words[] = {l.sizeX.bits, l.sizeY.bits, l.positionX.bits, l.positionY.bits};
         appendKey(key, words);
@@ -53,9 +55,11 @@ void backgroundKey(Array<uint8_t>& key, const PrLayoutBackgroundLayer* layers, u
                 appendKey(key, natural);
                 appendKey(key, l.natural.ratio);
                 appendKey(key, l.limit);
-                const void* address = l.kind == PrLayoutImageKind_Image  ? static_cast<const void*>(l.image)
-                                      : l.kind == PrLayoutImageKind_List ? static_cast<const void*>(l.list)
-                                                                         : l.painter.context;
+                const void* address = l.painter.context;
+                if (l.kind == PrLayoutImageKind_Image)
+                    address = l.image;
+                else if (l.kind == PrLayoutImageKind_List)
+                    address = l.list;
                 appendKey(key, address);
                 if (l.kind == PrLayoutImageKind_Painter)
                     appendKey(key, l.painter.paint);
@@ -194,7 +198,7 @@ struct TileAxis {
 // Places one axis of a layer in a positioning area from `low` to `low + extent`, for an image of `size` that its
 // repetition has already rounded (css-backgrounds-3/#background-repeat, #background-position).
 TileAxis placeAxis(const LayoutCompounds* compounds, PrLayoutBackgroundRepeat repeat, PrLayoutLength position,
-                   float low, float extent, float size) {
+        float low, float extent, float size) {
     TileAxis axis{.start = low + resolvePx(compounds, position, extent - size), .size = size};
     switch (repeat) {
         case PrLayoutBackgroundRepeat_Repeat:
@@ -256,11 +260,12 @@ void resolveStops(const LayoutCompounds* compounds, const PrLayoutGradient& g, f
         }
         Stop stop{.hint = s.kind == PrLayoutColorStopKind_Hint, .paint = paintOf(s)};
         stop.positioned = !layoutLengthIsAuto(s.position);
-        if (stop.positioned)
-            stop.position = length > 0 ? resolvePx(compounds, s.position, length) / length
-                                       : prLayoutWordKind(s.position.bits) == PrLayoutWordKind_Percent
-                                             ? prLayoutWordPercentValue(s.position.bits) / 100
-                                             : 0;
+        if (stop.positioned && length > 0)
+            stop.position = resolvePx(compounds, s.position, length) / length;
+        else if (stop.positioned && prLayoutWordKind(s.position.bits) == PrLayoutWordKind_Percent)
+            stop.position = prLayoutWordPercentValue(s.position.bits) / 100;
+        else if (stop.positioned)
+            stop.position = 0;
         // A hint must lie between color stops. One that does not is dropped.
         if (stop.hint && (stops.count == 0 || stops.last().hint || !stop.positioned))
             continue;
@@ -426,7 +431,7 @@ PrVec2 radialRadii(const LayoutCompounds* compounds, const PrLayoutGradient& g, 
 // spans its line and its stops beyond the line, a radial gradient spans its ray from the center, and a conic gradient
 // spans its turn. A repeating gradient spans one period instead.
 bool gradientBrush(const LayoutCompounds* compounds, const PrLayoutGradient& g, PrRect tile, ResolvedStops* resolved,
-                   PrDrawBrush* out, PrColor16* solid) {
+        PrDrawBrush* out, PrColor16* solid) {
     PrVec2 size{tile.right - tile.left, tile.bottom - tile.top};
     PrVec2 origin{tile.left, tile.top};
     float length = 1;
@@ -499,12 +504,11 @@ bool gradientBrush(const LayoutCompounds* compounds, const PrLayoutGradient& g, 
             normalize(resolved, low, high);
             PrVec2 at = origin + center;
             brush = prDrawBrushRadial(at, radii.x * low, at, radii.x * high, resolved->stops.data,
-                                      resolved->stops.count);
+                resolved->stops.count);
             // An ellipse is the circle of its horizontal radius, scaled vertically about its center.
             if (radii.y != radii.x)
                 brush.transform = prAffine2Concat(prAffine2Concat(prAffine2Translate(PrVec2{-at.x, -at.y}),
-                                                                  prAffine2Scale(PrVec2{1, radii.y / radii.x})),
-                                                  prAffine2Translate(at));
+                    prAffine2Scale(PrVec2{1, radii.y / radii.x})), prAffine2Translate(at));
             break;
         }
         default:
@@ -514,7 +518,7 @@ bool gradientBrush(const LayoutCompounds* compounds, const PrLayoutGradient& g, 
             }
             // The turn starts up, at the gradient's angle.
             brush = prDrawBrushConic(origin + center, (degrees - 90) * kPiF32 / 180, resolved->stops.data,
-                                     resolved->stops.count);
+                resolved->stops.count);
             break;
     }
     brush.extend = g.repeating && g.kind != PrLayoutGradientKind_Conic ? PrDrawExtend_Repeat : PrDrawExtend_Pad;
@@ -527,8 +531,8 @@ bool gradientBrush(const LayoutCompounds* compounds, const PrLayoutGradient& g, 
 // Records one tile of a gradient into `list` over `rect`, drawn as it is over `tile`, with `rect`'s edges as `edges`
 // says, compositing by `blendMode` and `composite`.
 void drawGradient(const LayoutCompounds* PR_NULLABLE compounds, const PrLayoutGradient& g, PrRect tile, PrRect rect,
-                  PrDrawEdges edges, PrDrawList* list, PrDrawBlendMode blendMode = PrDrawBlendMode_Normal,
-                  PrDrawComposite composite = PrDrawComposite_SourceOver) {
+        PrDrawEdges edges, PrDrawList* list, PrDrawBlendMode blendMode = PrDrawBlendMode_Normal,
+        PrDrawComposite composite = PrDrawComposite_SourceOver) {
     ResolvedStops resolved{};
     PrDrawBrush brush{};
     PrColor16 solid{};
@@ -541,15 +545,15 @@ void drawGradient(const LayoutCompounds* PR_NULLABLE compounds, const PrLayoutGr
 
 // Returns how a layer's image is sampled where it is drawn at another size.
 PrDrawSampling samplingOf(const PrLayoutBackgroundLayer& layer) {
-    return layer.rendering == PrLayoutImageRendering_Auto || layer.kind == PrLayoutImageKind_Gradient
-               ? PrDrawSampling_Linear
-               : PrDrawSampling_Nearest;
+    if (layer.rendering == PrLayoutImageRendering_Auto || layer.kind == PrLayoutImageKind_Gradient)
+        return PrDrawSampling_Linear;
+    return PrDrawSampling_Nearest;
 }
 
 // Returns the source of a layer's image drawn at `size`, before its filter list. A list that the source reads may be
 // written to `drawn`, which the caller releases.
 PrDrawSource unfilteredSource(const LayoutCompounds* PR_NULLABLE compounds, const PrLayoutBackgroundLayer& layer,
-                              PrVec2 size, PrDrawList* PR_NULLABLE* PR_NONNULL drawn) {
+        PrVec2 size, PrDrawList* PR_NULLABLE* PR_NONNULL drawn) {
     PrRect own{0, 0, size.x, size.y};
     switch (layer.kind) {
         case PrLayoutImageKind_Image: {
@@ -617,7 +621,7 @@ bool isEmpty(PrRect r) {
 
 // Records one layer. Returns true if it drew.
 bool paintLayer(const LayoutCompounds* compounds, const PrLayoutBackgroundLayer& layer,
-                const LayoutBackgroundBoxes& boxes, PrDrawList* list) {
+        const LayoutBackgroundBoxes& boxes, PrDrawList* list) {
     if (layer.kind == PrLayoutImageKind_None)
         return false;
     PrRect area = boxes.boxes[layer.origin];
@@ -660,11 +664,11 @@ bool paintLayer(const LayoutCompounds* compounds, const PrLayoutBackgroundLayer&
     if (isEmpty(rect))
         return false;
     // A tile that covers what paints draws once, without tiling.
-    bool once = tile.left <= rect.left && tile.right >= rect.right && tile.top <= rect.top
-                && tile.bottom >= rect.bottom;
+    bool once =
+        tile.left <= rect.left && tile.right >= rect.right && tile.top <= rect.top && tile.bottom >= rect.bottom;
     if (layer.kind == PrLayoutImageKind_Gradient && layer.filterCount == 0 && once) {
         drawGradient(compounds, layer.gradient, tile, rect, PrDrawEdges_Snapped, list, layer.blendMode,
-                     layer.composite);
+            layer.composite);
         return true;
     }
     PrDrawList* drawn = nullptr;
@@ -681,10 +685,7 @@ bool paintLayer(const LayoutCompounds* compounds, const PrLayoutBackgroundLayer&
     if (layer.kind == PrLayoutImageKind_Image && layer.filterCount == 0)
         brush.image.limit = layer.limit;
     prDrawListRect(list, rect,
-                   {.brush = &brush,
-                    .composite = layer.composite,
-                    .blendMode = layer.blendMode,
-                    .edges = PrDrawEdges_Snapped});
+        {.brush = &brush, .composite = layer.composite, .blendMode = layer.blendMode, .edges = PrDrawEdges_Snapped});
     prDrawListRelease(drawn);
     return true;
 }
@@ -696,7 +697,7 @@ void layoutBackgroundsInit(LayoutBackgrounds* backgrounds) {
 }
 
 PrLayoutBackgroundIndex layoutBackgroundsIntern(LayoutBackgrounds* backgrounds, LayoutCompounds* compounds,
-                                                const PrLayoutBackgroundLayer* layers, uint32_t count) {
+        const PrLayoutBackgroundLayer* layers, uint32_t count) {
     if (count == 0)
         return kPrLayoutBackgroundNone;
     Array<uint8_t> key;
@@ -729,12 +730,10 @@ PrLayoutBackgroundIndex layoutBackgroundsIntern(LayoutBackgrounds* backgrounds, 
     entry.layers = static_cast<PrLayoutBackgroundLayer*>(prMemoryAlloc(sizeof(PrLayoutBackgroundLayer) * count));
     memCopy(entry.layers, layers, sizeof(PrLayoutBackgroundLayer) * count);
     entry.count = count;
-    entry.stops = stopCount != 0
-                      ? static_cast<PrLayoutColorStop*>(prMemoryAlloc(sizeof(PrLayoutColorStop) * stopCount))
-                      : nullptr;
-    entry.filters = filterCount != 0
-                        ? static_cast<PrLayoutFilter*>(prMemoryAlloc(sizeof(PrLayoutFilter) * filterCount))
-                        : nullptr;
+    entry.stops =
+        stopCount != 0 ? static_cast<PrLayoutColorStop*>(prMemoryAlloc(sizeof(PrLayoutColorStop) * stopCount)) : nullptr;
+    entry.filters =
+        filterCount != 0 ? static_cast<PrLayoutFilter*>(prMemoryAlloc(sizeof(PrLayoutFilter) * filterCount)) : nullptr;
     uint32_t nextStop = 0;
     uint32_t nextFilter = 0;
     for (uint32_t i = 0; i < count; ++i) {
@@ -816,7 +815,7 @@ void layoutBackgroundKey(Array<uint8_t>& key, const PrLayoutBackgroundLayer* lay
 }
 
 void layoutBackgroundCountLayers(LayoutCompounds* compounds, const PrLayoutBackgroundLayer* layers, uint32_t count,
-                                 uint32_t delta) {
+        uint32_t delta) {
     for (uint32_t i = 0; delta == 1 && i < count; ++i) {
         if (layers[i].kind == PrLayoutImageKind_List)
             prDrawListFreeze(layers[i].list);
@@ -825,7 +824,7 @@ void layoutBackgroundCountLayers(LayoutCompounds* compounds, const PrLayoutBackg
 }
 
 void layoutBackgroundDrawGradient(const LayoutCompounds* PR_NULLABLE compounds, const PrLayoutGradient& g, PrRect box,
-                                  PrRect rect, PrDrawEdges edges, PrDrawList* list) {
+        PrRect rect, PrDrawEdges edges, PrDrawList* list) {
     drawGradient(compounds, g, box, rect, edges, list);
 }
 
@@ -836,15 +835,17 @@ void layoutBackgroundRound(LayoutBackgroundBoxes& boxes, const PrCornerRect& bor
         if ((used & (1u << b)) == 0)
             continue;
         const PrRect& inner = boxes.boxes[b];
-        float insets[PrRectSide_Count] = {inner.top - outer.top, outer.right - inner.right,
-                                          outer.bottom - inner.bottom, inner.left - outer.left};
+        float insets[PrRectSide_Count] = {
+            inner.top - outer.top, outer.right - inner.right,
+            outer.bottom - inner.bottom, inner.left - outer.left,
+        };
         bool same = insets[0] == 0 && insets[1] == 0 && insets[2] == 0 && insets[3] == 0;
         boxes.shapes[b] = same ? border : prCornerRectInset(border, insets);
     }
 }
 
 bool layoutBackgroundPaintLayer(const LayoutCompounds* compounds, const PrLayoutBackgroundLayer& layer,
-                                const LayoutBackgroundBoxes& boxes, PrDrawList* list) {
+        const LayoutBackgroundBoxes& boxes, PrDrawList* list) {
     if (!boxes.rounded || !isEmpty(boxes.area))
         return paintLayer(compounds, layer, boxes, list);
     // The layer is clipped to the curve of its box as well as to the box. The clip is recorded whether or not the layer
@@ -866,7 +867,7 @@ void layoutImageTakeFilters(PrLayoutBackgroundLayer& image, PrLayoutFilter* PR_N
 }
 
 PrDrawSource layoutImageSource(const LayoutCompounds* PR_NULLABLE compounds, const PrLayoutBackgroundLayer& layer,
-                               PrVec2 size, PrDrawList* PR_NULLABLE* PR_NONNULL drawn) {
+        PrVec2 size, PrDrawList* PR_NULLABLE* PR_NONNULL drawn) {
     *drawn = nullptr;
     PrDrawSource source = unfilteredSource(compounds, layer, size, drawn);
     if (layer.filterCount == 0)

@@ -223,7 +223,7 @@ PrLayoutNode hudPanel(Hud* hud, PrLayoutNode layer, HudPanel panel) {
 
 PrLayoutNode hudReadout(Hud* hud, PrLayoutNode parent, HudReadout readout) {
     PrLayoutNode row = prLayoutTreeFrameElement(hud->tree, parent, readout.key,
-                                                uiStyle(hud->ui, *hud, RowBox{}, Flow{.row = true}));
+        uiStyle(hud->ui, *hud, RowBox{}, Flow{.row = true}));
     textBlock(*hud, row, 0, readout.label, kDim);
     textBlock(*hud, row, 0, readout.value, kLit);
     return row;
@@ -242,9 +242,8 @@ PrLayoutNode hudSwitch(Hud* hud, PrLayoutNode parent, HudSwitch control) {
     bool on = *control.value;
     bool ring = prUiIsFocusVisible(ui) && prUiFocus(ui) == node;
     PrColor background = on ? kLitFill : prUiIsHovered(ui, node) ? kHoverFill : kClear;
-    prLayoutTreeFrameSetStyle(hud->tree, node,
-                              uiStyle(ui, *hud, SwitchBox{}, Type{}, Ink{.color = on ? kLit : kDim},
-                                      Fill{background, ring ? kLit : kEdge}));
+    prLayoutTreeFrameSetStyle(hud->tree, node, uiStyle(ui, *hud, SwitchBox{}, Type{}, Ink{.color = on ? kLit : kDim},
+        Fill{background, ring ? kLit : kEdge}));
     prUiSetCursor(ui, node, PrAppCursor_Hand);
     prLayoutTreeFrameText(hud->tree, node, 0, control.label);
     return node;

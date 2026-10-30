@@ -41,10 +41,16 @@ double strokedArea(const PrPath* path, const PrPathStroke& stroke) {
     return sum / (kScale * kScale);
 }
 
-PrPathStroke style(float width, PrPathJoin join = PrPathJoin_Miter,
-                   PrPathCap cap = PrPathCap_Butt) {
-    return PrPathStroke{.width = width, .miterLimit = 4, .join = join, .startCap = cap, .endCap = cap, .dashCap = cap,
-                        .zeroLengthDirection = PrVec2{1, 0}};
+PrPathStroke style(float width, PrPathJoin join = PrPathJoin_Miter, PrPathCap cap = PrPathCap_Butt) {
+    return PrPathStroke{
+        .width = width,
+        .miterLimit = 4,
+        .join = join,
+        .startCap = cap,
+        .endCap = cap,
+        .dashCap = cap,
+        .zeroLengthDirection = PrVec2{1, 0},
+    };
 }
 
 PrPath* polyline(std::initializer_list<PrVec2> points, bool closed = false) {
@@ -88,10 +94,9 @@ using namespace pr_impl;
 TEST_CASE("caps extend a line by nothing, a half square or a half circle") {
     PrPath* line = polyline({{10, 10}, {30, 10}});
     CHECK(strokedArea(line, style(4)) == doctest::Approx(80).epsilon(0.001));
-    CHECK(strokedArea(line, style(4, PrPathJoin_Miter, PrPathCap_Square))
-          == doctest::Approx(96).epsilon(0.001));
-    CHECK(strokedArea(line, style(4, PrPathJoin_Miter, PrPathCap_Round))
-          == doctest::Approx(80 + kPi * 4).epsilon(0.002));
+    CHECK(strokedArea(line, style(4, PrPathJoin_Miter, PrPathCap_Square)) == doctest::Approx(96).epsilon(0.001));
+    CHECK(strokedArea(line, style(4, PrPathJoin_Miter, PrPathCap_Round)) ==
+        doctest::Approx(80 + kPi * 4).epsilon(0.002));
     prPathDestroy(line);
 }
 
@@ -100,8 +105,7 @@ TEST_CASE("joins fill the outer corner with a point, a triangle or an arc") {
     // The two segments cover 156 together, with the corner square overlapping.
     CHECK(strokedArea(corner, style(4, PrPathJoin_Miter)) == doctest::Approx(160).epsilon(0.001));
     CHECK(strokedArea(corner, style(4, PrPathJoin_Bevel)) == doctest::Approx(158).epsilon(0.001));
-    CHECK(strokedArea(corner, style(4, PrPathJoin_Round))
-          == doctest::Approx(156 + kPi).epsilon(0.002));
+    CHECK(strokedArea(corner, style(4, PrPathJoin_Round)) == doctest::Approx(156 + kPi).epsilon(0.002));
     prPathDestroy(corner);
 }
 
@@ -118,8 +122,8 @@ TEST_CASE("a miter past the limit is beveled") {
 
 TEST_CASE("a closed contour joins its ends and takes no caps") {
     PrPath* square = polyline({{10, 10}, {30, 10}, {30, 30}, {10, 30}}, true);
-    CHECK(strokedArea(square, style(2, PrPathJoin_Miter, PrPathCap_Round))
-          == doctest::Approx(22 * 22 - 18 * 18).epsilon(0.001));
+    CHECK(strokedArea(square, style(2, PrPathJoin_Miter, PrPathCap_Round)) ==
+        doctest::Approx(22 * 22 - 18 * 18).epsilon(0.001));
     prPathDestroy(square);
 }
 
@@ -156,10 +160,8 @@ TEST_CASE("an odd pattern repeats and a negative one strokes solid") {
 TEST_CASE("a segment of no length is a dot where its caps give it area") {
     PrPath* dot = polyline({{20, 20}, {20, 20}});
     CHECK(strokedArea(dot, style(6)) == doctest::Approx(0));
-    CHECK(strokedArea(dot, style(6, PrPathJoin_Miter, PrPathCap_Square))
-          == doctest::Approx(36).epsilon(0.001));
-    CHECK(strokedArea(dot, style(6, PrPathJoin_Miter, PrPathCap_Round))
-          == doctest::Approx(kPi * 9).epsilon(0.002));
+    CHECK(strokedArea(dot, style(6, PrPathJoin_Miter, PrPathCap_Square)) == doctest::Approx(36).epsilon(0.001));
+    CHECK(strokedArea(dot, style(6, PrPathJoin_Miter, PrPathCap_Round)) == doctest::Approx(kPi * 9).epsilon(0.002));
     prPathDestroy(dot);
 
     PrPath* move = prPathCreate();
@@ -171,10 +173,8 @@ TEST_CASE("a segment of no length is a dot where its caps give it area") {
 TEST_CASE("a contour that closes at once is a segment of no length") {
     PrPath* path = polyline({{20, 20}}, true);
     CHECK(strokedArea(path, style(6)) == doctest::Approx(0));
-    CHECK(strokedArea(path, style(6, PrPathJoin_Miter, PrPathCap_Square))
-          == doctest::Approx(36).epsilon(0.001));
-    CHECK(strokedArea(path, style(6, PrPathJoin_Miter, PrPathCap_Round))
-          == doctest::Approx(kPi * 9).epsilon(0.002));
+    CHECK(strokedArea(path, style(6, PrPathJoin_Miter, PrPathCap_Square)) == doctest::Approx(36).epsilon(0.001));
+    CHECK(strokedArea(path, style(6, PrPathJoin_Miter, PrPathCap_Round)) == doctest::Approx(kPi * 9).epsilon(0.002));
     prPathDestroy(path);
 }
 
@@ -214,8 +214,7 @@ TEST_CASE("curves stroke to within the tolerance") {
     PrPath* circle = prPathCreate();
     prPathAddEllipse(circle, PrVec2{32, 32}, PrVec2{20, 20}, 0);
     // An annulus from radius 19 to 21.
-    CHECK(strokedArea(circle, style(2))
-          == doctest::Approx(kPi * (21 * 21 - 19 * 19)).epsilon(0.005));
+    CHECK(strokedArea(circle, style(2)) == doctest::Approx(kPi * (21 * 21 - 19 * 19)).epsilon(0.005));
     prPathDestroy(circle);
 }
 
@@ -241,8 +240,7 @@ TEST_CASE("an open contour strokes as one loop and a closed one as two") {
 
 TEST_CASE("a triangle cap is a point half the width past the end") {
     PrPath* line = polyline({{10, 10}, {30, 10}});
-    CHECK(strokedArea(line, style(4, PrPathJoin_Miter, PrPathCap_Triangle))
-          == doctest::Approx(88).epsilon(0.001));
+    CHECK(strokedArea(line, style(4, PrPathJoin_Miter, PrPathCap_Triangle)) == doctest::Approx(88).epsilon(0.001));
     prPathDestroy(line);
 }
 
@@ -263,8 +261,8 @@ TEST_CASE("a clipped miter lies between the bevel and the whole miter") {
 
 TEST_CASE("an arcs join between lines is a miter") {
     PrPath* corner = polyline({{10, 10}, {30, 10}, {20, 30}});
-    CHECK(strokedArea(corner, style(4, PrPathJoin_Arcs))
-          == doctest::Approx(strokedArea(corner, style(4, PrPathJoin_Miter))).epsilon(0.001));
+    CHECK(strokedArea(corner, style(4, PrPathJoin_Arcs)) ==
+        doctest::Approx(strokedArea(corner, style(4, PrPathJoin_Miter))).epsilon(0.001));
     prPathDestroy(corner);
 }
 
@@ -342,8 +340,10 @@ TEST_CASE("a stroke that turns back on itself stays within its width of the path
         prPathCubicTo(path, c, a, a);
         prPathCubicTo(path, a, a, a);
         prPathClose(path);
-        prPathTransform(path, PrAffine2{0.9999831914901733f, 0.005801171530038118f, -0.005801171530038118f,
-                                       0.9999831914901733f, 39.26332092285156f, 94.71268463134766f});
+        prPathTransform(path, PrAffine2{
+            0.9999831914901733f, 0.005801171530038118f, -0.005801171530038118f,
+            0.9999831914901733f, 39.26332092285156f, 94.71268463134766f,
+        });
         PrPathStroke stroke = prPathStrokeDefault();
         stroke.width = 5;
         stroke.join = join;
@@ -366,8 +366,7 @@ TEST_CASE("a stroke's outline lies within its reach of the path") {
     // The tip turns through a miter 1 / sin(atan(1 / 2)) = sqrt(5) widths long.
     PrPath* path = polyline({{10, 50}, {30, 10}, {50, 50}});
     PrPath* outline = prPathCreate();
-    PrPathJoin joins[] = {PrPathJoin_Miter, PrPathJoin_MiterClip, PrPathJoin_Arcs, PrPathJoin_Round,
-                          PrPathJoin_Bevel};
+    PrPathJoin joins[] = {PrPathJoin_Miter, PrPathJoin_MiterClip, PrPathJoin_Arcs, PrPathJoin_Round, PrPathJoin_Bevel};
     PrPathCap caps[] = {PrPathCap_Butt, PrPathCap_Round, PrPathCap_Square, PrPathCap_Triangle};
     for (PrPathJoin join : joins) {
         for (PrPathCap cap : caps) {

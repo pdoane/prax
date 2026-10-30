@@ -231,9 +231,11 @@ void EditorState::toggleLevel(PrKitLogLevel level) {
 void EditorState::projectLogs() {
     visibleLogs.clear();
     for (const LogEntry& entry : logs) {
-        const bool shown = entry.level == PrKitLogLevel_Info      ? showInfo
-                           : entry.level == PrKitLogLevel_Warning ? showWarn
-                                                                  : showError;
+        bool shown = showError;
+        if (entry.level == PrKitLogLevel_Info)
+            shown = showInfo;
+        else if (entry.level == PrKitLogLevel_Warning)
+            shown = showWarn;
         if (shown) {
             visibleLogs.push_back(&entry);
         }

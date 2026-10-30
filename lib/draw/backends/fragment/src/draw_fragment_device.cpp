@@ -204,12 +204,11 @@ uint32_t takeLayer(FragmentDevice* d, const FragmentLayer& layer, PrGpuFormat fo
     uint32_t best = kArrayMissing;
     for (uint32_t i = 0; i < d->pool.count; ++i) {
         const FragmentPooledLayer& l = d->pool.data[i];
-        if (l.texture.id == 0 || l.taken || l.format != format || l.width < width || l.height < height
-            || l.exact != exact || l.mipmapped != layer.mipmapped
-            || (exact && (l.width != width || l.height != height)))
+        if (l.texture.id == 0 || l.taken || l.format != format || l.width < width || l.height < height ||
+                l.exact != exact || l.mipmapped != layer.mipmapped || (exact && (l.width != width || l.height != height)))
             continue;
-        if (best == kArrayMissing
-            || uint64_t(l.width) * l.height < uint64_t(d->pool.data[best].width) * d->pool.data[best].height)
+        if (best == kArrayMissing ||
+                uint64_t(l.width) * l.height < uint64_t(d->pool.data[best].width) * d->pool.data[best].height)
             best = i;
     }
     if (best == kArrayMissing) {
@@ -228,12 +227,14 @@ uint32_t takeLayer(FragmentDevice* d, const FragmentLayer& layer, PrGpuFormat fo
         best = 0;
         while (best < d->pool.count && d->pool.data[best].texture.id != 0)
             ++best;
-        FragmentPooledLayer added{.texture = texture,
-                                  .width = w,
-                                  .height = h,
-                                  .format = format,
-                                  .exact = exact,
-                                  .mipmapped = layer.mipmapped};
+        FragmentPooledLayer added{
+            .texture = texture,
+            .width = w,
+            .height = h,
+            .format = format,
+            .exact = exact,
+            .mipmapped = layer.mipmapped,
+        };
         if (best == d->pool.count)
             d->pool.push(added);
         else
@@ -279,8 +280,10 @@ bool rectsOverlap(const PrIRect& a, const PrIRect& b) {
 }
 
 PrIRect intersection(const PrIRect& a, const PrIRect& b) {
-    PrIRect c{a.left > b.left ? a.left : b.left, a.top > b.top ? a.top : b.top,
-              a.right < b.right ? a.right : b.right, a.bottom < b.bottom ? a.bottom : b.bottom};
+    PrIRect c{
+        a.left > b.left ? a.left : b.left, a.top > b.top ? a.top : b.top,
+        a.right < b.right ? a.right : b.right, a.bottom < b.bottom ? a.bottom : b.bottom,
+    };
     if (c.right < c.left)
         c.right = c.left;
     if (c.bottom < c.top)
@@ -318,8 +321,10 @@ PrIRect instancePixels(const FragmentInstance& i, const float offset[2], const P
             hi[axis] = p[axis] > hi[axis] ? p[axis] : hi[axis];
         }
     }
-    PrIRect box{int32_t(floorF32(lo[0] + offset[0])) - 1, int32_t(floorF32(lo[1] + offset[1])) - 1,
-                int32_t(ceilF32(hi[0] + offset[0])) + 1, int32_t(ceilF32(hi[1] + offset[1])) + 1};
+    PrIRect box{
+        int32_t(floorF32(lo[0] + offset[0])) - 1, int32_t(floorF32(lo[1] + offset[1])) - 1,
+        int32_t(ceilF32(hi[0] + offset[0])) + 1, int32_t(ceilF32(hi[1] + offset[1])) + 1,
+    };
     return intersection(box, limit);
 }
 
@@ -327,7 +332,7 @@ PrIRect instancePixels(const FragmentInstance& i, const float offset[2], const P
 // each run of instances that either all read the destination or all do not, or runs the pass's filter step over them.
 // The target's pixel (0, 0) is at `at` of the attachment, and `scissor` limits the draws.
 void encodePass(FragmentDevice* d, const FragmentFrame* frame, const FragmentPass& fp, PrGpuPass* pass,
-                PrIVec2 at, PrIRect scissor) {
+        PrIVec2 at, PrIRect scissor) {
     if (fp.count == 0)
         return;
     PrGpuCommands* commands = prGpuPassCommands(pass);
@@ -345,10 +350,12 @@ void encodePass(FragmentDevice* d, const FragmentFrame* frame, const FragmentPas
     }
     prGpuPassSetViewport(pass, PrRect{view[0], view[1], view[0] + into[2], view[1] + into[3]}, 0, 1);
     prGpuPassSetScissor(pass, scissor);
-    FragmentPush push{{into[0], into[1], into[2], into[3]},
-                      {into[0] - view[0], into[1] - view[1]},
-                      fp.filter != 0 ? fp.filter - 1 : 0,
-                      fp.first};
+    FragmentPush push{
+        {into[0], into[1], into[2], into[3]},
+        {into[0] - view[0], into[1] - view[1]},
+        fp.filter != 0 ? fp.filter - 1 : 0,
+        fp.first,
+    };
     if (fp.filter != 0) {
         PrGpuPipeline pipeline = pipelineFor(d, format, FragmentMode_Filter);
         if (pipeline.id == 0)
@@ -359,9 +366,10 @@ void encodePass(FragmentDevice* d, const FragmentFrame* frame, const FragmentPas
         return;
     }
     // The pixels that a draw may touch, which bound the batches of a run that reads the destination.
-    PrIRect limit = intersection(PrIRect{int32_t(view[0]), int32_t(view[1]), int32_t(view[0] + into[2]),
-                                         int32_t(view[1] + into[3])},
-                                 scissor);
+    PrIRect limit = intersection(PrIRect{
+        int32_t(view[0]), int32_t(view[1]), int32_t(view[0] + into[2]),
+        int32_t(view[1] + into[3]),
+    }, scissor);
     const float offset[2] = {view[0] - into[0], view[1] - into[1]};
     constexpr uint32_t kReadBatchMax = 64;
     PrIRect rects[kReadBatchMax];
@@ -399,11 +407,15 @@ void encodePass(FragmentDevice* d, const FragmentFrame* frame, const FragmentPas
                     overlaps = rectsOverlap(rect, rects[k]);
                 if (overlaps)
                     break;
-                bounds = count == 0 ? rect
-                                    : PrIRect{bounds.left < rect.left ? bounds.left : rect.left,
-                                              bounds.top < rect.top ? bounds.top : rect.top,
-                                              bounds.right > rect.right ? bounds.right : rect.right,
-                                              bounds.bottom > rect.bottom ? bounds.bottom : rect.bottom};
+                if (count == 0)
+                    bounds = rect;
+                else
+                    bounds = PrIRect{
+                        bounds.left < rect.left ? bounds.left : rect.left,
+                        bounds.top < rect.top ? bounds.top : rect.top,
+                        bounds.right > rect.right ? bounds.right : rect.right,
+                        bounds.bottom > rect.bottom ? bounds.bottom : rect.bottom,
+                    };
                 rects[count++] = rect;
                 ++batch;
             }
@@ -427,15 +439,15 @@ void runRequests(FragmentDevice* d, const FragmentFrame* frame, PrGpuCommands* c
         switch (q.op) {
             case FragmentTextureOp_Create: {
                 PrGpuTextureDesc desc = prGpuTextureDesc2d(gpuFormatOf(q.format), q.texels.extent,
-                                                           PrGpuTextureUsageFlag_Sampled);
+                    PrGpuTextureUsageFlag_Sampled);
                 desc.name = "fragment texture";
                 if (q.mipmapped) {
                     desc.usage |= PrGpuTextureUsageFlag_RenderTarget;
                     desc.levels = prGpuMipLevels(q.texels.extent);
                 }
                 PrGpuTexture texture{};
-                if (q.texels.extent.x == 0 || q.texels.extent.y == 0
-                    || prGpuTextureCreate(d->device, &desc, &texture) != PrStatus_Ok)
+                if (q.texels.extent.x == 0 || q.texels.extent.y == 0 ||
+                        prGpuTextureCreate(d->device, &desc, &texture) != PrStatus_Ok)
                     break;
                 prGpuTextureWrite(d->device, texture, PrIVec2{0, 0}, q.texels);
                 d->textureIds.insert(q.texture, d->textures.count);
@@ -447,7 +459,7 @@ void runRequests(FragmentDevice* d, const FragmentFrame* frame, PrGpuCommands* c
             case FragmentTextureOp_Update:
                 if (at != kArrayMissing)
                     prGpuTextureWrite(d->device, d->textures.data[at].texture,
-                                      PrIVec2{int32_t(q.origin.x), int32_t(q.origin.y)}, q.texels);
+                        PrIVec2{int32_t(q.origin.x), int32_t(q.origin.y)}, q.texels);
                 break;
             case FragmentTextureOp_Destroy:
                 if (at != kArrayMissing) {
@@ -474,7 +486,7 @@ void runRequests(FragmentDevice* d, const FragmentFrame* frame, PrGpuCommands* c
 // Copies the frame's arrays into the stream of `commands`, with the table of texture handles, and fills the uniforms
 // with where they are.
 void writeData(const FragmentFrame* frame, const PrDrawBeneath* PR_NULLABLE beneath, PrGpuTexture hostBeneath,
-               uint32_t beneathId, PrGpuCommands* commands, FragmentFrameState* state) {
+        uint32_t beneathId, PrGpuCommands* commands, FragmentFrameState* state) {
     struct Source {
         const void* PR_NULLABLE bytes;
         size_t size;
@@ -572,7 +584,7 @@ void fragmentDeviceDestroy(FragmentDevice* PR_NULLABLE device) {
 }
 
 void fragmentDevicePrepare(FragmentDevice* d, const FragmentFrame* frame, PrGpuCommands* commands,
-                           PrPixelFormat format, const PrDrawBeneath* PR_NULLABLE beneath) {
+        PrPixelFormat format, const PrDrawBeneath* PR_NULLABLE beneath) {
     PrGpuFormat target = gpuFormatOf(format);
     prGpuCommandsPushGroup(commands, "fragment prepare");
     runRequests(d, frame, commands);
@@ -588,15 +600,17 @@ void fragmentDevicePrepare(FragmentDevice* d, const FragmentFrame* frame, PrGpuC
     }
     trimPool(d);
     // The beneath layer is the host's texture.
-    PrGpuTexture hostBeneath = beneath != nullptr && beneath->kind == PrDrawBeneathKind_Texture
-                                   ? PrGpuTexture{uint32_t(beneath->texture)}
-                                   : PrGpuTexture{};
+    PrGpuTexture hostBeneath;
+    if (beneath != nullptr && beneath->kind == PrDrawBeneathKind_Texture)
+        hostBeneath = PrGpuTexture{uint32_t(beneath->texture)};
+    else
+        hostBeneath = PrGpuTexture{};
     uint32_t beneathId = frame->beneath != 0 ? frame->layers[frame->beneath - 1].texture : 0;
     state->hostLayers.clear();
     for (uint32_t i = 0; i < frame->layerCount; ++i) {
         const FragmentLayer& l = frame->layers[i];
-        PrGpuTexture hostLayer = l.hostTexture != 0 ? PrGpuTexture{uint32_t(frame->hostTextures[l.hostTexture - 1])}
-                                                    : PrGpuTexture{};
+        PrGpuTexture hostLayer =
+            l.hostTexture != 0 ? PrGpuTexture{uint32_t(frame->hostTextures[l.hostTexture - 1])} : PrGpuTexture{};
         bool host = (i + 1 == frame->beneath && hostBeneath.id != 0) || hostLayer.id != 0;
         state->layers.push(host ? kArrayMissing : takeLayer(d, l, layerFormat(frame, i, target)));
         state->hostLayers.push(hostLayer);
@@ -607,8 +621,8 @@ void fragmentDevicePrepare(FragmentDevice* d, const FragmentFrame* frame, PrGpuC
     for (uint32_t i = 0; i < frame->textureCount; ++i) {
         uint32_t id = frame->textures[i].texture;
         uint32_t hostIndex = frame->textures[i].hostTexture;
-        PrGpuTexture texture = hostIndex != 0 ? PrGpuTexture{uint32_t(frame->hostTextures[hostIndex - 1])}
-                                              : PrGpuTexture{};
+        PrGpuTexture texture =
+            hostIndex != 0 ? PrGpuTexture{uint32_t(frame->hostTextures[hostIndex - 1])} : PrGpuTexture{};
         if (texture.id == 0 && id == beneathId && beneathId != 0)
             texture = hostBeneath;
         if (texture.id == 0) {
@@ -640,7 +654,7 @@ void fragmentDevicePrepare(FragmentDevice* d, const FragmentFrame* frame, PrGpuC
             continue;
         }
         prGpuCommandsTextureBarrier(commands, layer, all, PrGpuAccessFlag_FragmentRead,
-                                    PrGpuAccessFlag_ColorAttachment);
+            PrGpuAccessFlag_ColorAttachment);
         PrGpuPassDesc desc = prGpuPassDescColor(layer, fp.clear ? PrGpuLoad_Clear : PrGpuLoad_Keep, PrColor{});
         desc.name = "fragment layer";
         PrGpuPass* pass = prGpuPassBegin(commands, &desc);
@@ -655,7 +669,7 @@ void fragmentDevicePrepare(FragmentDevice* d, const FragmentFrame* frame, PrGpuC
         encodePass(d, frame, fp, pass, PrIVec2{0, 0}, whole);
         prGpuPassEnd(pass);
         prGpuCommandsTextureBarrier(commands, layer, all, PrGpuAccessFlag_ColorAttachment,
-                                    PrGpuAccessFlag_FragmentRead);
+            PrGpuAccessFlag_FragmentRead);
     }
     prGpuCommandsPopGroup(commands);
 }
@@ -667,9 +681,10 @@ void fragmentDeviceRender(FragmentDevice* d, const FragmentFrame* frame, PrGpuPa
     PrUVec2 extent = prGpuPassExtent(pass);
     // The scissor keeps the render within its rectangle, and within the attachments.
     PrIRect whole{0, 0, int32_t(extent.x), int32_t(extent.y)};
-    PrIRect scissor = intersection(PrIRect{origin.x, origin.y, int32_t(int64_t(origin.x) + frame->extent.x),
-                                           int32_t(int64_t(origin.y) + frame->extent.y)},
-                                   whole);
+    PrIRect scissor = intersection(PrIRect{
+        origin.x, origin.y, int32_t(int64_t(origin.x) + frame->extent.x),
+        int32_t(int64_t(origin.y) + frame->extent.y),
+    }, whole);
     if (scissor.right <= scissor.left || scissor.bottom <= scissor.top)
         return;
     prGpuCommandsSetUniforms(prGpuPassCommands(pass), &state->uniforms, sizeof(state->uniforms));

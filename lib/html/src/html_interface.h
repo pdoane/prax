@@ -79,7 +79,7 @@ inline uint32_t htmlImageDimension(const PrDomElement* element, bool width) {
 // Sets a content attribute that an unsigned long with the default `fallback` reflects.
 inline void htmlSetReflectedUnsigned(PrDomElement* element, PrStringView name, uint32_t value, uint32_t fallback = 0) {
     prHtmlElementSetReflectedInteger(static_cast<PrHtmlElement*>(element), name, PrHtmlReflectedInteger_Unsigned, value,
-                                     fallback);
+        fallback);
 }
 
 } // namespace pr_impl

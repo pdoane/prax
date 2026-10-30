@@ -246,8 +246,10 @@ bool drawsEmoji(const PrFont* font) {
 
 // Returns true if the face has a table of color glyphs. Every font for which drawsEmoji returns true has one.
 bool hasColorGlyphs(const Sfnt& sfnt) {
-    const uint32_t tags[] = {PR_FONT_TAG('C', 'O', 'L', 'R'), PR_FONT_TAG('s', 'b', 'i', 'x'),
-                             PR_FONT_TAG('C', 'B', 'D', 'T')};
+    const uint32_t tags[] = {
+        PR_FONT_TAG('C', 'O', 'L', 'R'), PR_FONT_TAG('s', 'b', 'i', 'x'),
+        PR_FONT_TAG('C', 'B', 'D', 'T')
+    };
     for (uint32_t tag : tags) {
         if (sfntTable(sfnt, tag).size != 0)
             return true;
@@ -269,7 +271,7 @@ void faceAdded(FontSet* set, uint32_t index) {
 // Returns a face described by the descriptor, whose automatic descriptors come from the info of the face, the family,
 // and whether it draws emoji, ranked after the faces of the set.
 Face describedFace(FontSet* set, const PrFontFaceDescriptor* descriptor, const PrFontInfo& info, PrStringView family,
-                   bool emoji) {
+        bool emoji) {
     Face face{};
     PrFontFaceAutoFlags flags = descriptor->automatic;
     face.family = prStringCopy((flags & PrFontFaceAutoFlag_Family) != 0 ? family : descriptor->family);
@@ -305,8 +307,7 @@ Face describedFace(FontSet* set, const PrFontFaceDescriptor* descriptor, const P
 }
 
 // Adds a face described by the descriptor, as describedFace describes it.
-uint32_t addFace(FontSet* set, const PrFontFaceDescriptor* descriptor, const PrFontInfo& info,
-                 PrStringView family, bool emoji) {
+uint32_t addFace(FontSet* set, const PrFontFaceDescriptor* descriptor, const PrFontInfo& info, PrStringView family, bool emoji) {
     uint32_t index = set->faces.count;
     set->faces.push(describedFace(set, descriptor, info, family, emoji));
     faceAdded(set, index);
@@ -317,12 +318,12 @@ uint32_t addFace(FontSet* set, const PrFontFaceDescriptor* descriptor, const PrF
 // family `family`. A face that may draw emoji is opened to find out, and keeps the font for matching. The font of any
 // other face is created when a match first needs it.
 Face fileFace(FontSet* set, const PrFontFaceDescriptor* descriptor, const Sfnt& sfnt, PrStringView path, uint32_t index,
-              PrStringView family) {
+        PrStringView family) {
     PrFontInfo info;
     sfntDescribe(sfnt, &info);
     const PrFont* font = nullptr;
-    if ((descriptor->automatic & PrFontFaceAutoFlag_Emoji) != 0 && hasColorGlyphs(sfnt)
-        && prFontCreateFromFile(path, index, nullptr, &font) != PrStatus_Ok)
+    if ((descriptor->automatic & PrFontFaceAutoFlag_Emoji) != 0 && hasColorGlyphs(sfnt) &&
+            prFontCreateFromFile(path, index, nullptr, &font) != PrStatus_Ok)
         font = nullptr;
     Face face = describedFace(set, descriptor, info, family, font != nullptr && drawsEmoji(font));
     face.path = prStringCopy(path);
@@ -393,8 +394,7 @@ void readFile(FontSet* set, uint32_t at) {
 const PrFont* PR_NULLABLE fontOfFace(Face& face) {
     if (face.font == nullptr && !face.unreadable) {
         const PrFont* font = nullptr;
-        PrStatus status =
-            prFontCreateFromFile(prStringView(&face.path), face.index, nullptr, &font);
+        PrStatus status = prFontCreateFromFile(prStringView(&face.path), face.index, nullptr, &font);
         if (status == PrStatus_Ok)
             face.font = font;
         else
@@ -517,8 +517,7 @@ bool givesKind(const Face& face, SlopeKind kind) {
 }
 
 // Narrows the candidates by slope, and returns the kind they provide.
-SlopeKind keepSlope(const FontSet* set, Array<Candidate>& candidates,
-                    const PrFontStyle* style) {
+SlopeKind keepSlope(const FontSet* set, Array<Candidate>& candidates, const PrFontStyle* style) {
     SlopeKind order[3];
     slopeOrder(style, order);
     for (SlopeKind kind : order) {
@@ -531,9 +530,11 @@ SlopeKind keepSlope(const FontSet* set, Array<Candidate>& candidates,
             continue;
         candidates.count = kept;
         if (kind == SlopeKind_Oblique) {
-            float asked = style->slope == PrFontSlope_Oblique ? style->obliqueAngle
-                          : style->slope == PrFontSlope_Italic ? kPrFontSetObliqueAngle
-                                                                  : 0;
+            float asked = 0;
+            if (style->slope == PrFontSlope_Oblique)
+                asked = style->obliqueAngle;
+            else if (style->slope == PrFontSlope_Italic)
+                asked = kPrFontSetObliqueAngle;
             for (uint32_t i = 0; i < candidates.count; ++i) {
                 const Face& face = set->faces.data[candidates.data[i].face];
                 candidates.data[i].value = clampF32(asked, face.obliqueMin, face.obliqueMax);
@@ -554,12 +555,12 @@ AxisKey instanceAxes(const Face& face, const PrFontStyle* style, SlopeKind kind)
     bool slopeFree = (face.unclamped & PrFontFaceAutoFlag_Slope) != 0;
     if (d.weightMin != d.weightMax) {
         float weight = clampF32(style->weight, weightFree ? d.weightMin : face.weightMin,
-                                weightFree ? d.weightMax : face.weightMax);
+            weightFree ? d.weightMax : face.weightMax);
         setAxis(axes, 0, weight);
     }
     if (d.widthMin != d.widthMax) {
-        float width = clampF32(style->width, widthFree ? d.widthMin : face.widthMin,
-                               widthFree ? d.widthMax : face.widthMax);
+        float width =
+            clampF32(style->width, widthFree ? d.widthMin : face.widthMin, widthFree ? d.widthMax : face.widthMax);
         setAxis(axes, 1, width);
     }
     if (d.obliqueMin != d.obliqueMax) {
@@ -567,12 +568,11 @@ AxisKey instanceAxes(const Face& face, const PrFontStyle* style, SlopeKind kind)
         if (kind == SlopeKind_Oblique || (slopeFree && style->slope == PrFontSlope_Oblique))
             angle = style->slope == PrFontSlope_Oblique ? style->obliqueAngle : kPrFontSetObliqueAngle;
         setAxis(axes, 2, -clampF32(angle, slopeFree ? d.obliqueMin : face.obliqueMin,
-                                   slopeFree ? d.obliqueMax : face.obliqueMax));
+            slopeFree ? d.obliqueMax : face.obliqueMax));
     }
     if (d.italicAxis)
         setAxis(axes, 3, kind == SlopeKind_Italic ? 1 : 0);
-    if (d.opticalSizeMin != d.opticalSizeMax
-        && (style->flags & PrFontStyleFlag_OpticalSizing) != 0)
+    if (d.opticalSizeMin != d.opticalSizeMax && (style->flags & PrFontStyleFlag_OpticalSizing) != 0)
         setAxis(axes, 4, style->size);
     return axes;
 }
@@ -586,8 +586,8 @@ const PrFont* PR_NULLABLE instanceOf(FontSet* set, uint32_t faceIndex, const Axi
         hinting = SetHinting{PrFontHinting_None, nullptr};
     for (uint32_t i = 0; i < set->instances.count; ++i) {
         const Instance& instance = set->instances.data[i];
-        if (instance.face == face.id && memEquals(&instance.axes, &axes, sizeof(AxisKey))
-            && instance.hinting == hinting.hinting && instance.hinter == hinting.hinter)
+        if (instance.face == face.id && memEquals(&instance.axes, &axes, sizeof(AxisKey)) &&
+                instance.hinting == hinting.hinting && instance.hinter == hinting.hinter)
             return instance.font;
     }
     const PrFont* base = fontOfFace(face);
@@ -612,9 +612,8 @@ const PrFont* PR_NULLABLE instanceOf(FontSet* set, uint32_t faceIndex, const Axi
         derivation.hinter = hinting.hinter;
         derivation.overrides |= PrFontOverrideFlag_Hinting;
     }
-    bool plain = variations.count == 0 && face.features.count == 0
-                 && derivation.sizeAdjust == 1 && derivation.overrides == 0
-                 && derivation.embolden == 0 && derivation.oblique == 0;
+    bool plain = variations.count == 0 && face.features.count == 0 &&
+        derivation.sizeAdjust == 1 && derivation.overrides == 0 && derivation.embolden == 0 && derivation.oblique == 0;
     const PrFont* font = base;
     if (plain)
         prFontRetain(base);
@@ -724,17 +723,15 @@ void matchIn(FontSet* set, const PrFontStyle* style, PrStringView family, SetHin
         if (face.state == FaceState_Ready) {
             float weight = candidates.data[i].value;
             AxisKey axes = instanceAxes(face, style, kind);
-            if ((style->flags & PrFontStyleFlag_SynthesizeWeight) != 0 && style->weight >= kBoldWeight
-                && weight < kBoldWeight)
+            if ((style->flags & PrFontStyleFlag_SynthesizeWeight) != 0 && style->weight >= kBoldWeight &&
+                    weight < kBoldWeight)
                 axes.embolden = kEmbolden;
             bool slanted = style->slope != PrFontSlope_Normal;
             // A face whose slope leaves its slant axis free slants along that axis, and is not sheared as well.
-            bool slants = (face.unclamped & PrFontFaceAutoFlag_Slope) != 0
-                          && style->slope == PrFontSlope_Oblique && face.info.obliqueMin != face.info.obliqueMax;
-            if ((style->flags & PrFontStyleFlag_SynthesizeStyle) != 0 && slanted && kind == SlopeKind_Normal
-                && !slants) {
-                float angle =
-                    style->slope == PrFontSlope_Oblique ? style->obliqueAngle : kPrFontSetObliqueAngle;
+            bool slants = (face.unclamped & PrFontFaceAutoFlag_Slope) != 0 &&
+                style->slope == PrFontSlope_Oblique && face.info.obliqueMin != face.info.obliqueMax;
+            if ((style->flags & PrFontStyleFlag_SynthesizeStyle) != 0 && slanted && kind == SlopeKind_Normal && !slants) {
+                float angle = style->slope == PrFontSlope_Oblique ? style->obliqueAngle : kPrFontSetObliqueAngle;
                 axes.oblique = tanF32(angle * (kPiF32 / 180));
             }
             font = instanceOf(set, faceIndex, axes, hinting);
@@ -746,7 +743,8 @@ void matchIn(FontSet* set, const PrFontStyle* style, PrStringView family, SetHin
             prFontRetain(font);
         out.faces.push(MatchedFace{
             PrFontFace{font, nullptr, kept.ranges.count, kept.flags, kept.state == FaceState_Pending ? kept.key : 0},
-            out.ranges.count});
+            out.ranges.count,
+        });
         out.ranges.append(kept.ranges.data, kept.ranges.count);
     }
     candidates.reset();
@@ -806,8 +804,7 @@ PrStringView prFontGenericName(PrFontGeneric generic) {
 }
 
 bool prFontFaceServes(const PrFontFace* face, uint32_t codePoint) {
-    return face->font != nullptr && prFontFaceInRanges(face, codePoint)
-           && prFontCodePointGlyph(face->font, codePoint) != 0;
+    return face->font != nullptr && prFontFaceInRanges(face, codePoint) && prFontCodePointGlyph(face->font, codePoint) != 0;
 }
 
 bool prFontFaceInRanges(const PrFontFace* face, uint32_t codePoint) {
@@ -918,8 +915,8 @@ void prFontSetAddFileFamily(PrFontSet* set, PrStringView family, PrStringView pa
     for (uint32_t i = 0; i < set->faces.count; ++i) {
         const Face& face = set->faces.data[i];
         PrStringView added = prStringView(&face.path);
-        if (face.state == FaceState_Unread && added.size == path.size && memEquals(added.data, path.data, path.size)
-            && asciiEqualsFold(prStringView(&face.family), family))
+        if (face.state == FaceState_Unread && added.size == path.size && memEquals(added.data, path.data, path.size) &&
+                asciiEqualsFold(prStringView(&face.family), family))
             return;
     }
     PrFontFaceDescriptor descriptor = prFontFaceDescriptorDefault();
@@ -1181,8 +1178,10 @@ PrFontFallbackFamily prFontSetFallbackFamily(const PrFontSet* set, uint32_t inde
     const FontSet* root = fallbackSet(set);
     Locked locked(root);
     PR_ASSERT(index < root->fallback.count);
-    return PrFontFallbackFamily{prStringView(&root->fallback.data[index]), root->fallbackLocales.data[index],
-                                root->fallbackGenerics.data[index]};
+    return PrFontFallbackFamily{
+        prStringView(&root->fallback.data[index]), root->fallbackLocales.data[index],
+        root->fallbackGenerics.data[index],
+    };
 }
 
 uint32_t prFontSetFamilyCount(const PrFontSet* set) {

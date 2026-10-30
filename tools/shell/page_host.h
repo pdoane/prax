@@ -60,8 +60,7 @@ public:
     // request for a captured URL is answered from its file with its type, whatever its host, and the page loads at its
     // URL with its type. The page's URL is answered from `page`, or from the HTML file beside the JSON if `page` is
     // empty. Writes the page's URL to `pageUrl`. Returns false, saying why on stderr, if the file cannot be read.
-    bool addCapture(const std::filesystem::path& capture, std::string* pageUrl,
-                    const std::filesystem::path& page = {});
+    bool addCapture(const std::filesystem::path& capture, std::string* pageUrl, const std::filesystem::path& page = {});
 
     // Runs `script` in each window that the pages loaded afterward open, before its document's own scripts.
     void addPrelude(const std::filesystem::path& script);
@@ -200,7 +199,7 @@ public:
     // paint that starts fetches, as the first style that names an image does, waits for them and paints again. Returns
     // false if the page has no rendering.
     bool paint(Page* page, PrVec2 viewport, const PrAppDisplay& display, const PrAppUserPreferences& preferences,
-               PrDrawList* list);
+        PrDrawList* list);
 
 private:
     std::unique_ptr<HostState> state_;

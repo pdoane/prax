@@ -19,8 +19,8 @@ namespace {
 // that value is added as is. Otherwise the text of each value is added, with a space between each two.
 void addGivenTokens(CssValuePool* pool, const CssTokenStream* ts, CssTokenSpan span) {
     const CssTokenArray* tokens = ts->tokens;
-    if (span.count == 1 && cssTokenKind(tokens, span.start) == CssTokenKind_Value
-        && cssTokenValue(tokens, span.start).values->kind == PrCssValueKind_Tokens) {
+    if (span.count == 1 && cssTokenKind(tokens, span.start) == CssTokenKind_Value &&
+            cssTokenValue(tokens, span.start).values->kind == PrCssValueKind_Tokens) {
         cssValuePoolAddRun(pool, cssTokenValue(tokens, span.start));
         return;
     }
@@ -45,8 +45,8 @@ void addGivenTokens(CssValuePool* pool, const CssTokenStream* ts, CssTokenSpan s
 
 // Returns true if `value` can be a color's channel: a numeric value, a keyword or a calculation.
 bool isChannel(const CssValueNode* value) {
-    return cssValueIsNumeric(value->kind) || value->kind == PrCssValueKind_Keyword
-           || value->kind == PrCssValueKind_Math;
+    return cssValueIsNumeric(value->kind) || value->kind == PrCssValueKind_Keyword ||
+        value->kind == PrCssValueKind_Math;
 }
 
 // The state for writing the tokens of a run.
@@ -87,8 +87,7 @@ void closeFunction(TokenWriter* w, uint32_t function) {
 // Adds a literal character.
 void addLiteral(TokenWriter* w, uint32_t character) {
     char byte = char(character);
-    CssTokenKind kind =
-        character < 0x80 ? kCssPunctuation.kindOf[uint8_t(byte)] : CssTokenKind_Delim;
+    CssTokenKind kind = character < 0x80 ? kCssPunctuation.kindOf[uint8_t(byte)] : CssTokenKind_Delim;
     addToken(w, kind, PrStringView{&byte, 1});
 }
 
@@ -127,8 +126,7 @@ void writeTree(TokenWriter* w, uint32_t index);
 
 void writeChildren(TokenWriter* w, uint32_t index) {
     const CssValueNode* value = &w->run.values[index];
-    for (uint32_t child = index + 1; child < index + value->next;
-         child += w->run.values[child].next)
+    for (uint32_t child = index + 1; child < index + value->next; child += w->run.values[child].next)
         writeTree(w, child);
 }
 
@@ -141,8 +139,7 @@ void writeColor(TokenWriter* w, uint32_t index) {
     if (function == PrCssKeyword_Color)
         addToken(w, CssTokenKind_Ident, prColorSpaceName(space));
     uint32_t channel = 0;
-    for (uint32_t child = index + 1; child < index + color->next;
-         child += w->run.values[child].next) {
+    for (uint32_t child = index + 1; child < index + color->next; child += w->run.values[child].next) {
         if (channel++ == 3)
             addLiteral(w, '/');
         writeTree(w, child);
@@ -221,8 +218,7 @@ bool cssValueRunEquals(CssValueRun a, CssValueRun b) {
         } else if (cssValueIsNumeric(x->kind)) {
             if (x->number != y->number)
                 return false;
-        } else if (x->kind != PrCssValueKind_Production
-                   && !memEquals(&x->number, &y->number, sizeof(double))) {
+        } else if (x->kind != PrCssValueKind_Production && !memEquals(&x->number, &y->number, sizeof(double))) {
             return false;
         }
     }
@@ -268,8 +264,7 @@ CssValueList cssValueListCopy(CssValueRun run) {
     uint32_t start = 0;
     cssValueRunText(run, &start, &list.textSize);
     list.count = run.count;
-    list.values =
-        static_cast<CssValueNode*>(prMemoryAlloc(sizeof(CssValueNode) * run.count + list.textSize));
+    list.values = static_cast<CssValueNode*>(prMemoryAlloc(sizeof(CssValueNode) * run.count + list.textSize));
     cssValueRunCopy(run, list.values, reinterpret_cast<char*>(list.values + run.count), 0);
     return list;
 }
@@ -299,7 +294,7 @@ CssValueSpan cssValuePoolAddRun(CssValuePool* pool, CssValueRun run) {
 
     CssValueSpan span = {pool->values.count, run.count};
     uint32_t copied = cssValueRunCopy(run, pool->values.data + span.start,
-                                      pool->text.data + pool->text.count, pool->text.count);
+        pool->text.data + pool->text.count, pool->text.count);
     pool->values.count += run.count;
     pool->text.count += copied;
     return span;
@@ -322,8 +317,7 @@ uint32_t cssValuePoolAddText(CssValuePool* pool, PrStringView text) {
     return start;
 }
 
-uint32_t cssValuePoolAddTokenText(CssValuePool* pool, const CssTokenStream* ts, uint32_t index,
-                                  uint32_t* length) {
+uint32_t cssValuePoolAddTokenText(CssValuePool* pool, const CssTokenStream* ts, uint32_t index, uint32_t* length) {
     PrStringView text = cssTokenValueText(ts->tokens, index);
     if ((cssTokenFlags(ts->tokens, index) & CssTokenFlag_PlainText) == 0)
         return cssValuePoolAddValueText(pool, text, length);
@@ -363,8 +357,8 @@ void cssValuePoolAddTokens(CssValuePool* pool, const CssTokenStream* ts, CssToke
     uint32_t text = pool->text.count;
     if (span.count != 0) {
         uint32_t last = span.start + span.count - 1;
-        bool cut = tokens->ends.data[last] == tokens->source.size
-                   && (cssTokenFlags(tokens, last) & CssTokenFlag_Verbatim) == 0;
+        bool cut = tokens->ends.data[last] == tokens->source.size &&
+            (cssTokenFlags(tokens, last) & CssTokenFlag_Verbatim) == 0;
         uint32_t written = cut ? span.count - 1 : span.count;
         if (written != 0)
             cssValuePoolAddText(pool, cssSpanText(tokens, CssTokenSpan{span.start, written}));
@@ -405,17 +399,15 @@ bool cssValueShapeValid(CssValueRun run, uint32_t index) {
     }
     switch (value->kind) {
         case PrCssValueKind_Dimension:
-            return count == 0
-                   || (value->unit == PrCssUnit_Unknown && count == 1
-                       && run.values[index + 1].kind == PrCssValueKind_Ident);
+            return count == 0 || (value->unit == PrCssUnit_Unknown && count == 1 &&
+                run.values[index + 1].kind == PrCssValueKind_Ident);
         case PrCssValueKind_Color:
             return count == 4 && channels;
         case PrCssValueKind_Math:
             return count == 1;
         case PrCssValueKind_Calc: {
             PrCssCalc op = cssValueCalcOperator(value);
-            return op == PrCssCalc_Negate || op == PrCssCalc_Invert ? count == 1
-                                                                                : count != 0;
+            return op == PrCssCalc_Negate || op == PrCssCalc_Invert ? count == 1 : count != 0;
         }
         case PrCssValueKind_Function:
         case PrCssValueKind_Longhand:

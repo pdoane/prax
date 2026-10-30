@@ -21,8 +21,8 @@ namespace pr_impl {
 
 // Returns true if the element is an input in the Image Button state, whose type is image.
 inline bool domElementIsImageButton(const PrDomElement* element) {
-    return domIsHtml(element, PrDomTag_Input)
-           && domInputType(domAttributeValue(element, "type")) == PrDomInputType_Image;
+    return domIsHtml(element, PrDomTag_Input) &&
+        domInputType(domAttributeValue(element, "type")) == PrDomInputType_Image;
 }
 
 // ---------------------------------------------------------------------------------------------------------------------

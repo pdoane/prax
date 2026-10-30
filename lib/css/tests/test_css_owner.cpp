@@ -22,8 +22,7 @@ namespace pr_impl {
 namespace {
 
 PrDomElement* styleElement(PrDomDocument* document, PrStringView text) {
-    PrDomElement* element =
-        domElementCreate(document, PrDomNamespace_Html, PrDomTag_Style, "style");
+    PrDomElement* element = domElementCreate(document, PrDomNamespace_Html, PrDomTag_Style, "style");
     domAttach(element, domTextCreate(document, text), nullptr);
     return element;
 }
@@ -53,8 +52,7 @@ struct SharedSheets {
 
 void setColor(PrCssRule* rule, PrStringView value) {
     PrCssDeclarationName color = prCssDeclarationNameFromProperty(PrCssProperty_Color);
-    prCssStyleDeclarationSetProperty((&rule->style), &color, value,
-                                     false);
+    prCssStyleDeclarationSetProperty((&rule->style), &color, value, false);
 }
 
 std::string ruleText(const CssRuleData* rule) {
@@ -249,8 +247,7 @@ TEST_CASE("a change through a shared sheet copies the rules on its way and share
     CHECK(one->rules.data[1]->children.data[0] != two->rules.data[1]->children.data[0]);
     CHECK(one->rules.data[1]->children.data[1] == two->rules.data[1]->children.data[1]);
     CHECK(media->data == one->rules.data[1]);
-    CHECK(ruleText(two->rules.data[1])
-          == "@media screen {\n  b { color: red; }\n  c { color: red; }\n}");
+    CHECK(ruleText(two->rules.data[1]) == "@media screen {\n  b { color: red; }\n  c { color: red; }\n}");
 
     // The data that the change made its own is written in place, and a rule beside it is copied alone.
     const CssRuleData* copied = one->rules.data[1];
@@ -258,8 +255,7 @@ TEST_CASE("a change through a shared sheet copies the rules on its way and share
     CHECK(sheets.one->data->rules.data[1] == copied);
     CHECK(copied->children.data[1] != two->rules.data[1]->children.data[1]);
     CHECK(ruleText(copied) == "@media screen {\n  b { color: blue; }\n  c { color: green; }\n}");
-    CHECK(ruleText(two->rules.data[1])
-          == "@media screen {\n  b { color: red; }\n  c { color: red; }\n}");
+    CHECK(ruleText(two->rules.data[1]) == "@media screen {\n  b { color: red; }\n  c { color: red; }\n}");
 }
 
 TEST_CASE("a rule taken out of a shared sheet is copied as it is changed") {
@@ -292,26 +288,23 @@ TEST_CASE("a style rule's new selectors change its nested rules' specificity in 
 TEST_CASE("a flow-relative longhand maps to the physical one on its side, axis or corner in each writing mode") {
     constexpr PrCssKeyword kLtr = PrCssKeyword_Ltr;
     constexpr PrCssKeyword kRtl = PrCssKeyword_Rtl;
-    CHECK(cssPhysicalProperty(PrCssProperty_PaddingInlineEnd, PrCssKeyword_HorizontalTb, kLtr)
-          == PrCssProperty_PaddingRight);
-    CHECK(cssPhysicalProperty(PrCssProperty_PaddingInlineEnd, PrCssKeyword_HorizontalTb, kRtl)
-          == PrCssProperty_PaddingLeft);
+    CHECK(cssPhysicalProperty(PrCssProperty_PaddingInlineEnd, PrCssKeyword_HorizontalTb, kLtr) ==
+        PrCssProperty_PaddingRight);
+    CHECK(cssPhysicalProperty(PrCssProperty_PaddingInlineEnd, PrCssKeyword_HorizontalTb, kRtl) ==
+        PrCssProperty_PaddingLeft);
     CHECK(cssPhysicalProperty(PrCssProperty_InsetBlockStart, PrCssKeyword_VerticalRl, kLtr) == PrCssProperty_Right);
     CHECK(cssPhysicalProperty(PrCssProperty_InsetBlockStart, PrCssKeyword_SidewaysLr, kLtr) == PrCssProperty_Left);
-    CHECK(cssPhysicalProperty(PrCssProperty_InsetInlineStart, PrCssKeyword_SidewaysLr, kLtr)
-          == PrCssProperty_Bottom);
-    CHECK(cssPhysicalProperty(PrCssProperty_InsetInlineStart, PrCssKeyword_SidewaysRl, kRtl)
-          == PrCssProperty_Bottom);
+    CHECK(cssPhysicalProperty(PrCssProperty_InsetInlineStart, PrCssKeyword_SidewaysLr, kLtr) == PrCssProperty_Bottom);
+    CHECK(cssPhysicalProperty(PrCssProperty_InsetInlineStart, PrCssKeyword_SidewaysRl, kRtl) == PrCssProperty_Bottom);
     CHECK(cssPhysicalProperty(PrCssProperty_BlockSize, PrCssKeyword_VerticalLr, kLtr) == PrCssProperty_Width);
-    CHECK(cssPhysicalProperty(PrCssProperty_OverflowInline, PrCssKeyword_VerticalRl, kLtr)
-          == PrCssProperty_OverflowY);
+    CHECK(cssPhysicalProperty(PrCssProperty_OverflowInline, PrCssKeyword_VerticalRl, kLtr) == PrCssProperty_OverflowY);
     // A corner is named by its block-axis side, then its inline-axis side.
-    CHECK(cssPhysicalProperty(PrCssProperty_BorderStartStartRadius, PrCssKeyword_HorizontalTb, kRtl)
-          == PrCssProperty_BorderTopRightRadius);
-    CHECK(cssPhysicalProperty(PrCssProperty_BorderStartEndRadius, PrCssKeyword_VerticalRl, kLtr)
-          == PrCssProperty_BorderBottomRightRadius);
-    CHECK(cssPhysicalProperty(PrCssProperty_BorderEndStartRadius, PrCssKeyword_VerticalLr, kLtr)
-          == PrCssProperty_BorderTopRightRadius);
+    CHECK(cssPhysicalProperty(PrCssProperty_BorderStartStartRadius, PrCssKeyword_HorizontalTb, kRtl) ==
+        PrCssProperty_BorderTopRightRadius);
+    CHECK(cssPhysicalProperty(PrCssProperty_BorderStartEndRadius, PrCssKeyword_VerticalRl, kLtr) ==
+        PrCssProperty_BorderBottomRightRadius);
+    CHECK(cssPhysicalProperty(PrCssProperty_BorderEndStartRadius, PrCssKeyword_VerticalLr, kLtr) ==
+        PrCssProperty_BorderTopRightRadius);
     // A physical property maps to itself.
     CHECK(!cssIsFlowRelative(PrCssProperty_MarginLeft));
     CHECK(cssPhysicalProperty(PrCssProperty_MarginLeft, PrCssKeyword_VerticalRl, kRtl) == PrCssProperty_MarginLeft);
@@ -326,8 +319,7 @@ TEST_CASE("an xml-stylesheet instruction in the prolog fetches its CSS sheet, wh
     std::vector<HeldFetch> fetches;
     DomDocumentHost host{};
     host.context = &fetches;
-    host.fetch = [](void* context, const DomFetchRequest* request, DomFetchFn done, void* data,
-                    void (*)(void*)) {
+    host.fetch = [](void* context, const DomFetchRequest* request, DomFetchFn done, void* data, void (*)(void*)) {
         static_cast<std::vector<HeldFetch>*>(context)->push_back(
             HeldFetch{std::string(request->url.data, request->url.size), done, data});
     };
@@ -338,12 +330,10 @@ TEST_CASE("an xml-stylesheet instruction in the prolog fetches its CSS sheet, wh
     document->url = nullptr;
     REQUIRE(prUrlCreate("https://example.test/dir/a.svg", nullptr, PrCharset_Utf8, &document->url) == PrStatus_Ok);
     document->host = &host;
-    REQUIRE(domXmlParse(document,
-                        "<?xml-stylesheet href='blue.css' type='text/css' media='print' title='t'?>"
-                        "<?xml-stylesheet href='x.xsl' type='text/xsl'?><?xml-stylesheet href='alt.css' "
-                        "alternate='yes'?><svg xmlns='http://www.w3.org/2000/svg'/><?xml-stylesheet href='late.css'?>",
-                        {}, nullptr, nullptr)
-            == PrStatus_Ok);
+    REQUIRE(domXmlParse(document, "<?xml-stylesheet href='blue.css' type='text/css' media='print' title='t'?>"
+        "<?xml-stylesheet href='x.xsl' type='text/xsl'?><?xml-stylesheet href='alt.css' "
+        "alternate='yes'?><svg xmlns='http://www.w3.org/2000/svg'/><?xml-stylesheet href='late.css'?>",
+        {}, nullptr, nullptr) == PrStatus_Ok);
     REQUIRE(fetches.size() == 1);
     CHECK(fetches[0].url == "https://example.test/dir/blue.css");
     DomFetchResult result{.status = PrStatus_Ok, .responseStatus = 200, .body = "rect { fill: blue }"};

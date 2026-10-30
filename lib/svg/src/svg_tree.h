@@ -690,15 +690,13 @@ struct SvgStyleSource {
 
     // Returns the style of an element of a use element's shadow tree, which inherits from `parent`. The caller holds
     // one reference.
-    const CssComputedStyle* PR_NONNULL (*PR_NONNULL styleUnder)(void* PR_NULLABLE context,
-                                                                const PrDomElement* element,
-                                                                const CssComputedStyle* PR_NULLABLE parent);
+    const CssComputedStyle* PR_NONNULL (*PR_NONNULL styleUnder)(void* PR_NULLABLE context, const PrDomElement* element,
+        const CssComputedStyle* PR_NULLABLE parent);
 
     // Returns the style of the ::first-line or ::first-letter `pseudo` of an element, which inherits from `parent`, or
     // null if no rule styles it. The caller holds one reference.
     const CssComputedStyle* PR_NULLABLE (*PR_NONNULL pseudoUnder)(void* PR_NULLABLE context,
-                                                                  const PrDomElement* element, CssPseudo pseudo,
-                                                                  const CssComputedStyle* PR_NULLABLE parent);
+        const PrDomElement* element, CssPseudo pseudo, const CssComputedStyle* PR_NULLABLE parent);
     void* PR_NULLABLE context;
 };
 
@@ -708,8 +706,7 @@ struct SvgImageSource {
     // Writes the image that `url`, the href of the image element `element`, names to `out`, with a reference for the
     // caller. Returns false if no image is available: the reference loads nothing, or has not loaded yet. A load that
     // completes is a change at the element (SvgChange_Image).
-    bool (*PR_NULLABLE load)(void* PR_NULLABLE context, const PrDomElement* element, PrStringView url,
-                             SvgPicture* out);
+    bool (*PR_NULLABLE load)(void* PR_NULLABLE context, const PrDomElement* element, PrStringView url, SvgPicture* out);
     void* PR_NULLABLE context;
 };
 
@@ -763,8 +760,7 @@ SvgNodeIndex svgTreeNodeFromElement(const SvgTree* tree, const PrDomElement* ele
 // Reads the geometry of a basic shape or a path from its element and computed style: a rect's, a circle's, an ellipse's
 // or a line's into `node`, or the commands of a path, a polyline or a polygon into `commands`, and sets the node's
 // kind. Returns false for any other element, and for a path, a polyline or a polygon with no commands.
-bool svgReadShape(const PrDomElement* element, const CssComputedStyle* style, SvgNode* node,
-                  Array<PrPathDataCommand>* commands);
+bool svgReadShape(const PrDomElement* element, const CssComputedStyle* style, SvgNode* node, Array<PrPathDataCommand>* commands);
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Updates
@@ -808,9 +804,8 @@ struct SvgChanges {
 // Notes a change at `element`: the work on the nodes and resources whose references read it, and on its own node or its
 // nearest ancestor's if `under` says that it is under the element that built the tree. `name` is the attribute's local
 // name for Attribute. Returns true if the tree needs an update.
-bool svgTreeNoteChange(const SvgTree* tree, const PrDomElement* element, SvgChange change,
-                       PrStringView name,
-                       bool under, SvgChanges* changes);
+bool svgTreeNoteChange(const SvgTree* tree, const PrDomElement* element, SvgChange change, PrStringView name,
+    bool under, SvgChanges* changes);
 
 // Notes that what the document's IDs name may have changed, as it may when an element with an ID enters or leaves the
 // document. Returns true if the tree needs an update.
@@ -837,7 +832,7 @@ void svgChangesReset(SvgChanges* changes);
 // Returns the resource of `kind` that `url`, a fragment in an effect of `from`, names in the tree of `from` or in its
 // document: built the first time that it is named, and kSvgResourceNone if the URL names no element of that kind.
 SvgResourceIndex svgTreeResourceFor(SvgTree* tree, const PrDomElement* from, PrStringView url, SvgResourceKind kind,
-                                    const SvgBuild& build);
+    const SvgBuild& build);
 
 // Brings the resources of a tree that holds no node up to date with the changes, and empties them: every resource if
 // all changed, and otherwise each resource whose references reach a change, or whose IDs name other elements of
@@ -903,7 +898,7 @@ void svgTreeFreeStroke(SvgTree* tree, const SvgPaints& paints);
 // Returns true if two paints paint the same, each with the strokes and servers of its own tree. Otherwise writes what
 // differs to `difference`.
 bool svgPaintsSame(const SvgTree* tree, const SvgPaints& paints, const SvgTree* expectedTree, const SvgPaints& expected,
-                   TextBuffer* difference);
+    TextBuffer* difference);
 
 // Returns true if two paths have the same verbs and points.
 bool svgPathSame(const PrPath* path, const PrPath* expected);
@@ -918,21 +913,19 @@ void svgMarkerVertices(const PrPathDataCommand* PR_NULLABLE commands, uint32_t c
 // ID. A URL of another document names an element of that document by its fragment, or its root without one, once the
 // document has loaded (SVG2/linking.html#processingURL). `content` is true if what is built reads the element's
 // subtree, and not only which element the URL names.
-const PrDomElement* PR_NULLABLE svgBuildReference(SvgBuilder& b, const PrDomElement* from, PrStringView url,
-                                                  bool content);
+const PrDomElement* PR_NULLABLE svgBuildReference(SvgBuilder& b, const PrDomElement* from, PrStringView url, bool content);
 
 // Returns the computed style of `e`, as svgBuildElement styles an element of the document and svgBuildInstanceChildren
 // an element of a shadow tree that inherits from `parent`. An element of another document, which a reference names, is
 // styled by a cascade of its own document. The tree or the source holds the reference that svgBuildStyle returns, and
 // the caller holds the one that svgBuildStyleUnder returns.
 const CssComputedStyle* PR_NULLABLE svgBuildStyle(SvgBuilder& b, const PrDomElement* e);
-const CssComputedStyle* svgBuildStyleUnder(SvgBuilder& b, const PrDomElement* e,
-                                           const CssComputedStyle* PR_NULLABLE parent);
+const CssComputedStyle* svgBuildStyleUnder(SvgBuilder& b, const PrDomElement* e, const CssComputedStyle* PR_NULLABLE parent);
 
 // Returns the style of the ::first-line or ::first-letter `pseudo` of `e`, inheriting from `parent`, or null if no rule
 // styles it (SvgStyleSource::pseudoUnder). The caller holds the reference.
 const CssComputedStyle* PR_NULLABLE svgBuildPseudoStyleUnder(SvgBuilder& b, const PrDomElement* e, CssPseudo pseudo,
-                                                             const CssComputedStyle* PR_NULLABLE parent);
+    const CssComputedStyle* PR_NULLABLE parent);
 
 // Returns the element that the href or xlink:href of `from` names, as svgBuildReference does.
 const PrDomElement* PR_NULLABLE svgBuildHref(SvgBuilder& b, const PrDomElement* from, bool content);
@@ -943,14 +936,13 @@ const PrDomElement* PR_NULLABLE svgBuildHref(SvgBuilder& b, const PrDomElement* 
 bool svgParseLength(PrStringView text, const CssComputedStyle* PR_NULLABLE style, SvgLengthPercentage* out);
 
 // Builds the children of `element` as the elements of a shadow tree, which inherit from `style`, under `parent`.
-void svgBuildInstanceChildren(SvgBuilder& b, const PrDomElement* element, const CssComputedStyle* style,
-                              SvgNodeIndex parent);
+void svgBuildInstanceChildren(SvgBuilder& b, const PrDomElement* element, const CssComputedStyle* style, SvgNodeIndex parent);
 
 // Returns the length of an attribute, such as a line's x1 or a gradient's cx, in the units that SVG gives it: a number
 // in user units, a length with a CSS unit, or a percentage. A font-relative unit is of the style's font. Returns
 // `fallback` if the attribute is missing or does not parse.
 SvgLengthPercentage svgAttributeLength(const PrDomElement* element, PrStringView name, SvgLengthPercentage fallback,
-                                       const CssComputedStyle* PR_NULLABLE style);
+    const CssComputedStyle* PR_NULLABLE style);
 
 // Returns the element's attribute `name` in no namespace, without surrounding white space, or the null view.
 PrStringView svgAttribute(const PrDomElement* element, PrStringView name);

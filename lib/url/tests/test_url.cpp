@@ -16,7 +16,7 @@ std::string take(PrString value) {
     return result;
 }
 std::string parse(const char* text, const char* base = nullptr,
-                  PrUrlSerialization serialization = PrUrlSerialization_Whole) {
+        PrUrlSerialization serialization = PrUrlSerialization_Whole) {
     PrUrl* parent = nullptr;
     if (base != nullptr) REQUIRE(urlParse(base, nullptr, PrCharset_Utf8, &parent) == PrStatus_Ok);
     PrUrl* result = nullptr;
@@ -38,8 +38,7 @@ std::string parse(const char* text, const char* base = nullptr,
 using namespace pr_impl;
 
 TEST_CASE("URL parsing resolves references without filesystem semantics") {
-    CHECK(parse("../m.js?x#y", "https://EXAMPLE.org:443/a/b/main.js")
-          == "https://example.org/a/m.js?x#y");
+    CHECK(parse("../m.js?x#y", "https://EXAMPLE.org:443/a/b/main.js") == "https://example.org/a/m.js?x#y");
     CHECK(parse("/a/%2e%2e/b", "https://example.org/c") == "https://example.org/b");
     CHECK(parse("//other.test/x", "https://example.org/c") == "https://other.test/x");
     CHECK(parse("https:next", "https://example.org/a/main") == "https://example.org/a/next");
@@ -52,8 +51,8 @@ TEST_CASE("URL parsing resolves references without filesystem semantics") {
 
 TEST_CASE("URL hosts and credentials are normalized independently") {
     CHECK(parse("https://u@x:p@EXAMPLE.org:443/a?q#f") == "https://u%40x:p@example.org/a?q#f");
-    CHECK(parse("https://u:p@example.org:8443/a?q#f", nullptr, PrUrlSerialization_ExcludeFragment)
-          == "https://u:p@example.org:8443/a?q");
+    CHECK(parse("https://u:p@example.org:8443/a?q#f", nullptr, PrUrlSerialization_ExcludeFragment) ==
+        "https://u:p@example.org:8443/a?q");
     CHECK(parse("http://0x7f.1/") == "http://127.0.0.1/");
     CHECK(parse("http://2130706433/") == "http://127.0.0.1/");
     CHECK(parse("http://[2001:0db8:0:0:0:0:0:1]/") == "http://[2001:db8::1]/");

@@ -51,8 +51,9 @@ const PrDomElement* originOf(const PrDomNode* target) {
 
 // Returns the pseudo-element that `target` is, or CssPseudo_None for an element.
 CssPseudo pseudoOf(const PrDomNode* target) {
-    return target->type == DomTargetType_PseudoElement ? static_cast<const CssPresentationPseudo*>(target)->pseudo
-                                                       : CssPseudo_None;
+    if (target->type != DomTargetType_PseudoElement)
+        return CssPseudo_None;
+    return static_cast<const CssPresentationPseudo*>(target)->pseudo;
 }
 
 bool displaysNone(const CssComputedStyle* style) {
@@ -120,13 +121,15 @@ double intervalStart(double delay, double active) {
 // Queues an event of an animation of `target` for the next rendering update, if a window fires the presentation's
 // events.
 void queueEvent(CssAnimateState& a, const PrDomNode* target, PrStringView type, PrStringView name,
-                double elapsedMilliseconds, double scheduled, bool transition) {
+        double elapsedMilliseconds, double scheduled, bool transition) {
     if (!a.recordsEvents)
         return;
     const PrDomElement* element = originOf(target);
     domNodeHold(const_cast<PrDomElement*>(element));
-    a.events.push(CssAnimateEvent{element, pseudoOf(target), type, prStringCopy(name),
-                                       elapsedMilliseconds / 1000, scheduled, transition});
+    a.events.push(CssAnimateEvent{
+        element, pseudoOf(target), type, prStringCopy(name),
+        elapsedMilliseconds / 1000, scheduled, transition,
+    });
 }
 
 // Queues transitioncancel for a transition that is canceled before it ends.
@@ -140,8 +143,8 @@ void cancelTransition(CssAnimateState& a, const CssRunningTransition& t) {
 // Queues animationcancel for a CSS animation that is canceled before it ends.
 void cancelAnimation(CssAnimateState& a, const CssRunningAnimation& animation) {
     double iteration = 0;
-    if (animation.phase == AnimationPhase_Idle || animation.phase == AnimationPhase_After
-        || animationPhase(animation.timing, a.time, &iteration) == AnimationPhase_After)
+    if (animation.phase == AnimationPhase_Idle || animation.phase == AnimationPhase_After ||
+            animationPhase(animation.timing, a.time, &iteration) == AnimationPhase_After)
         return;
     const PrLayoutTiming& timing = animation.timing;
     double since = (timing.paused ? timing.hold : a.time - timing.start) - timing.delay;
@@ -186,9 +189,13 @@ int32_t transitionItem(CssValueRun list, const CssListItems& items, PrCssPropert
             found = int32_t(i);
             continue;
         }
-        PrStringView name = value->kind == PrCssValueKind_Keyword ? cssKeywordName(cssValueKeyword(value))
-                            : value->kind == PrCssValueKind_Ident ? cssValueText(item, value)
-                                                                : PrStringView{};
+        PrStringView name;
+        if (value->kind == PrCssValueKind_Keyword)
+            name = cssKeywordName(cssValueKeyword(value));
+        else if (value->kind == PrCssValueKind_Ident)
+            name = cssValueText(item, value);
+        else
+            name = PrStringView{};
         PrCssProperty named = cssPropertyFromText(name);
         if (named == property)
             found = int32_t(i);
@@ -241,8 +248,7 @@ KeyframeContext keyframeContext(const CssComputedStyle* base, const CssAnimateCo
     context.font = c.parent != nullptr ? cssStyleFontBases(c.parent) : kCssInitialFontBases;
     context.root = c.parent != nullptr ? c.rootFont : kCssInitialFontBases;
     context.parentWeight = c.parent != nullptr ? cssStyleFontWeight(c.parent) : 400;
-    context.parentColor =
-        c.parent != nullptr ? cssStyleColor(c.parent, kCssDefaultColorEnvironment) : PrColor{0, 0, 0, 1};
+    context.parentColor = c.parent != nullptr ? cssStyleColor(c.parent, kCssDefaultColorEnvironment) : PrColor{0, 0, 0, 1};
     context.viewport = c.viewport;
     KeyframeContext contexts{context, context, context, c.parent, nullptr, nullptr, c, nullptr};
     contexts.lineHeight.font = cssFontBases(cssStyleFontSize(base), context.font.lh);
@@ -259,12 +265,17 @@ KeyframeContext keyframeContext(const CssComputedStyle* base, const CssAnimateCo
 const CssComputedStyle* revertedStyle(KeyframeContext& context) {
     if (context.reverted == nullptr) {
         PrCssPresentation* r = context.presentation;
-        CssCascadeInput input{.element = originOf(context.target), .parent = context.animation.parent,
-                              .rootFont = context.animation.rootFont, .viewport = context.animation.viewport,
-                              .fresh = true, .matched = nullptr, .pseudo = pseudoOf(context.target),
-                              .userAgentOnly = true};
-        context.reverted =
-            cssCascadeStyle(&r->rules, &r->threads.data[0].builder, &r->threads.data[0].scratch, input);
+        CssCascadeInput input{
+            .element = originOf(context.target),
+            .parent = context.animation.parent,
+            .rootFont = context.animation.rootFont,
+            .viewport = context.animation.viewport,
+            .fresh = true,
+            .matched = nullptr,
+            .pseudo = pseudoOf(context.target),
+            .userAgentOnly = true,
+        };
+        context.reverted = cssCascadeStyle(&r->rules, &r->threads.data[0].builder, &r->threads.data[0].scratch, input);
     }
     return context.reverted;
 }
@@ -272,7 +283,7 @@ const CssComputedStyle* revertedStyle(KeyframeContext& context) {
 // Computes the keyframes of `rule` for the target into the animation (css-animations-1/#keyframes). A keyframe that
 // declares no animation-composition takes `composite`, the animation's (css-animations-2/#animation-composition).
 void computeKeyframes(CssRunningAnimation& animation, const CssRuleData* rule, KeyframeContext& context,
-                      CssComposite composite) {
+        CssComposite composite) {
     cssValuePoolReset(&animation.values);
     animation.keyframes.clear();
     animation.inheritsReset = false;
@@ -299,13 +310,13 @@ void computeKeyframes(CssRunningAnimation& animation, const CssRuleData* rule, K
                 return;
             uint32_t start = animation.values.values.count;
             bool base = false;
-            if (run.count == 1 && run.values[0].kind == PrCssValueKind_Keyword
-                && cssIsCssWideKeyword(cssValueKeyword(run.values))) {
+            if (run.count == 1 && run.values[0].kind == PrCssValueKind_Keyword &&
+                    cssIsCssWideKeyword(cssValueKeyword(run.values))) {
                 // initial, inherit and unset give the values that they give in a declaration. revert gives the user
                 // agent's value, and revert-layer and revert-rule the base value.
                 PrCssKeyword keyword = cssValueKeyword(run.values);
-                bool inherits = keyword == PrCssKeyword_Inherit
-                                || (keyword == PrCssKeyword_Unset && bitsetTest(kCssPropertyInherited, property));
+                bool inherits = keyword == PrCssKeyword_Inherit ||
+                    (keyword == PrCssKeyword_Unset && bitsetTest(kCssPropertyInherited, property));
                 if (keyword == PrCssKeyword_RevertLayer || keyword == PrCssKeyword_RevertRule) {
                     base = true;
                 } else if (keyword == PrCssKeyword_Revert) {
@@ -347,8 +358,8 @@ void computeKeyframes(CssRunningAnimation& animation, const CssRuleData* rule, K
             CssPropertySpan longhands = kCssPropertyLonghands[property];
             if (longhands.count == 0) {
                 addValue(property, run);
-            } else if (run.count == 1 && run.values[0].kind == PrCssValueKind_Keyword
-                       && cssIsCssWideKeyword(cssValueKeyword(run.values))) {
+            } else if (run.count == 1 && run.values[0].kind == PrCssValueKind_Keyword &&
+                    cssIsCssWideKeyword(cssValueKeyword(run.values))) {
                 for (uint32_t l = 0; l < longhands.count; ++l)
                     addValue(kCssPropertyRuns[longhands.start + l], run);
             }
@@ -369,7 +380,7 @@ void computeKeyframes(CssRunningAnimation& animation, const CssRuleData* rule, K
 // interpolate (web-animations-1/#the-effect-value-of-a-keyframe-animation-effect). Returns false if no keyframe gives
 // the property.
 bool addAnimationValue(CssValuePool* out, const CssRunningAnimation& a, PrCssProperty property, double progress,
-                       CssValueRun base, const CssColorContext& colors) {
+        CssValueRun base, const CssColorContext& colors) {
     // The property's keyframes, with the implicit ones at 0 and 1. A composited value is a span of `composited`, and
     // its run is read once every value is in place.
     struct Frame {
@@ -391,8 +402,10 @@ bool addAnimationValue(CssValuePool* out, const CssRunningAnimation& a, PrCssPro
         if (!any && k.offset > 0)
             frames[count++] = Frame{0, base, none, {}, false};
         any = true;
-        Frame frame{k.offset, k.base ? base : cssValuePoolRun(&a.values, k.value), cssValuePoolRun(&a.values, k.easing),
-                    {}, false};
+        Frame frame{
+            k.offset, k.base ? base : cssValuePoolRun(&a.values, k.value), cssValuePoolRun(&a.values, k.easing),
+            {}, false,
+        };
         if (k.composite != CssComposite_Replace) {
             uint32_t start = composited.values.count;
             cssComposite(&composited, property, base, frame.value, k.composite, colors);
@@ -451,9 +464,8 @@ bool composites(const PrDomNode* target) {
 } // namespace
 
 void cssAnimateRestyled(PrCssPresentation* presentation, const PrDomNode* target,
-                        const CssComputedStyle* PR_NULLABLE oldBase, const CssComputedStyle* PR_NULLABLE old,
-                        const CssComputedStyle* base,
-                        const CssAnimateContext& context, const CssColorEnvironment& environment) {
+        const CssComputedStyle* PR_NULLABLE oldBase, const CssComputedStyle* PR_NULLABLE old, const CssComputedStyle* base,
+        const CssAnimateContext& context, const CssColorEnvironment& environment) {
     CssAnimateState& a = presentation->animations;
     double time = a.time;
     CssColorContext colors = cssStyleColorContext(base, environment);
@@ -501,9 +513,8 @@ void cssAnimateRestyled(PrCssPresentation* presentation, const PrDomNode* target
             // (css-transitions-2/#transition-behavior-property).
             CssValueRun behavior = cssListItem(behaviors, behaviorItems, uint32_t(item));
             bool discrete = behavior.count == 1 && cssValueIsKeyword(behavior.values, PrCssKeyword_AllowDiscrete);
-            bool starts = (duration > 0 ? duration : 0) + delay > 0
-                          && (cssInterpolable(property, start, end, colors)
-                              || (discrete && !cssValueRunEquals(start, end)));
+            bool starts = (duration > 0 ? duration : 0) + delay > 0 && (cssInterpolable(property, start, end, colors) ||
+                (discrete && !cssValueRunEquals(start, end)));
             if (!starts) {
                 if (running != a.transitions.count)
                     removeTransition(a, running);
@@ -572,9 +583,12 @@ void cssAnimateRestyled(PrCssPresentation* presentation, const PrDomNode* target
         timing.duration = cssTimeMilliseconds(item(PrCssProperty_AnimationDuration), 0);
         timing.delay = cssTimeMilliseconds(item(PrCssProperty_AnimationDelay), 0);
         CssValueRun count = item(PrCssProperty_AnimationIterationCount);
-        timing.iterations = cssValueRunKeyword(count) == PrCssKeyword_Infinite ? kInfinityF64
-                            : count.count == 1 && cssValueIsNumeric(count.values[0].kind) ? count.values[0].number
-                                                                                         : 1;
+        if (cssValueRunKeyword(count) == PrCssKeyword_Infinite)
+            timing.iterations = kInfinityF64;
+        else if (count.count == 1 && cssValueIsNumeric(count.values[0].kind))
+            timing.iterations = count.values[0].number;
+        else
+            timing.iterations = 1;
         if (timing.iterations < 0)
             timing.iterations = 1;
         switch (cssValueRunKeyword(item(PrCssProperty_AnimationDirection))) {
@@ -604,9 +618,9 @@ void cssAnimateRestyled(PrCssPresentation* presentation, const PrDomNode* target
         // compositor would not know.
         for (uint32_t k = 0; k < animation.keyframes.count; ++k) {
             PrCssProperty property = animation.keyframes.data[k].property;
-            animation.composited = animation.composited
-                                   && (property == PrCssProperty_Opacity || property == PrCssProperty_Transform)
-                                   && !cssStyleIsImportant(base, property);
+            animation.composited = animation.composited &&
+                (property == PrCssProperty_Opacity || property == PrCssProperty_Transform) &&
+                !cssStyleIsImportant(base, property);
         }
     }
     cssComputedStyleRelease(keyframes.reverted);
@@ -623,8 +637,7 @@ void cssAnimateRestyled(PrCssPresentation* presentation, const PrDomNode* target
 }
 
 const CssComputedStyle* cssAnimateApply(PrCssPresentation* presentation, const PrDomNode* target,
-                                        const CssComputedStyle* base, bool composited,
-                                        const CssColorEnvironment& environment) {
+        const CssComputedStyle* base, bool composited, const CssColorEnvironment& environment) {
     CssAnimateState& a = presentation->animations;
     a.scratch.values.count = 0;
     a.scratch.text.count = 0;
@@ -654,8 +667,7 @@ const CssComputedStyle* cssAnimateApply(PrCssPresentation* presentation, const P
             if (seen)
                 continue;
             uint32_t start = a.scratch.values.count;
-            if (addAnimationValue(&a.scratch, animation, property, progress, cssComputedValue(base, property),
-                                  colors))
+            if (addAnimationValue(&a.scratch, animation, property, progress, cssComputedValue(base, property), colors))
                 override(a, property, CssValueSpan{start, a.scratch.values.count - start});
         }
     }
@@ -741,22 +753,21 @@ bool cssAnimateComposited(const PrCssPresentation* presentation, const PrDomNode
 }
 
 const Array<PrLayoutTrack>& cssAnimateTracks(PrCssPresentation* presentation, AnimationNodeFn layoutNode,
-                                             AnimationBaseFn baseOf) {
+        AnimationBaseFn baseOf) {
     CssAnimateState& a = presentation->animations;
     a.tracks.clear();
     a.keyframes.clear();
     // A keyframe of a composited effect, from a computed value. A transform's keyframe holds the base's individual
     // transforms before the animated list, which interpolate as equal functions.
     auto frame = [](double offset, PrCssProperty property, CssValueRun value, PrLayoutEasing easing,
-                    const CssComputedStyle* PR_NULLABLE base) {
+            const CssComputedStyle* PR_NULLABLE base) {
         PrLayoutKeyframe made{};
         made.offset = offset;
         made.easing = easing;
         made.opacity = value.count == 1 && cssValueIsNumeric(value.values[0].kind) ? float(value.values[0].number) : 1;
         if (property == PrCssProperty_Transform && base != nullptr)
             made.transform = cssTransformFunctions(cssComputedValue(base, PrCssProperty_Translate),
-                                                   cssComputedValue(base, PrCssProperty_Rotate),
-                                                   cssComputedValue(base, PrCssProperty_Scale), value);
+                cssComputedValue(base, PrCssProperty_Rotate), cssComputedValue(base, PrCssProperty_Scale), value);
         else if (property == PrCssProperty_Transform)
             made.transform = cssTransformFunctions(CssValueRun{}, CssValueRun{}, CssValueRun{}, value);
         return made;
@@ -792,8 +803,11 @@ const Array<PrLayoutTrack>& cssAnimateTracks(PrCssPresentation* presentation, An
     }
     for (uint32_t i = 0; i < a.animations.count; ++i) {
         const CssRunningAnimation& animation = a.animations.data[i];
-        PrLayoutNode node =
-            animation.composited ? layoutNode(presentation, animation.target) : PrLayoutNode(kPrLayoutNodeNone);
+        PrLayoutNode node;
+        if (animation.composited)
+            node = layoutNode(presentation, animation.target);
+        else
+            node = PrLayoutNode(kPrLayoutNodeNone);
         const CssComputedStyle* base = node != kPrLayoutNodeNone ? baseOf(presentation, animation.target) : nullptr;
         if (base == nullptr)
             continue;
@@ -811,7 +825,7 @@ const Array<PrLayoutTrack>& cssAnimateTracks(PrCssPresentation* presentation, An
                     a.keyframes.push(frame(0, property, underlying, easing, base));
                 CssValueRun own = cssValuePoolRun(&animation.values, key.easing);
                 a.keyframes.push(frame(key.offset, property, cssValuePoolRun(&animation.values, key.value),
-                                       own.count != 0 ? cssEasing(own) : easing, base));
+                    own.count != 0 ? cssEasing(own) : easing, base));
             }
             if (a.keyframes.count == start)
                 continue;
@@ -894,7 +908,7 @@ void cssAnimateFindEvents(PrCssPresentation* presentation) {
             queueEvent(a, animation.target, "animationstart", name, from, start + from, false);
         if (was == AnimationPhase_Active && now == AnimationPhase_Active && iteration != animation.iteration)
             queueEvent(a, animation.target, "animationiteration", name, iteration * timing.duration,
-                       start + iteration * timing.duration, false);
+                start + iteration * timing.duration, false);
         if (now == AnimationPhase_After && was != AnimationPhase_After)
             queueEvent(a, animation.target, "animationend", name, active, start + active, false);
         animation.phase = now;
@@ -913,8 +927,8 @@ bool cssAnimateHaveEventsAhead(const CssAnimateState* animations) {
         // An animation that has not started has its start ahead. A finite animation that has not ended has its end
         // ahead.
         AnimationPhase phase = animationPhase(animation.timing, animations->time, &iteration);
-        if (phase == AnimationPhase_Before
-            || (isFiniteF64(activeDuration(animation.timing)) && phase != AnimationPhase_After))
+        if (phase == AnimationPhase_Before ||
+                (isFiniteF64(activeDuration(animation.timing)) && phase != AnimationPhase_After))
             return true;
     }
     return false;

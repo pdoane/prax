@@ -25,8 +25,8 @@ int prTestLayoutCApi(void) {
     PrLayoutNumber number = prLayoutNumber(1.5f);
     PrLayoutDecorationStyle decoration = prLayoutDecorationStyleDefault();
     decoration.background = PR_COLOR16(0, 0.5f, 1, 1);
-    int result = prLayoutWordNumberValue(number.bits) != 1.5f || prLayoutLengthPx(2).bits != 2u * 64 << 1
-                 || prColorFromColor16(decoration.background).g != 0.5f;
+    int result = prLayoutWordNumberValue(number.bits) != 1.5f || prLayoutLengthPx(2).bits != 2u * 64 << 1 ||
+        prColorFromColor16(decoration.background).g != 0.5f;
     PrLayoutStyle style = prLayoutStyleDefault();
     style.groups[PrLayoutGroup_Box] = prLayoutBoxStyleIntern(tree, &box);
     uint32_t record = prLayoutStyleIntern(tree, &style);

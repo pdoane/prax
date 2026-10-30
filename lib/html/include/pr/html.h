@@ -67,8 +67,7 @@ typedef uint8_t PrHtmlDomParserSupportedType;
 // Creates a document from `source` parsed as `type`, without running its scripts (html/#dom-domparser-parsefromstring).
 // The caller holds the one reference. If an XML source is not well-formed, the document holds a parsererror element
 // that describes the error.
-PrDomDocument* prHtmlDomParserParseFromString(PrStringView source,
-                                              PrHtmlDomParserSupportedType type);
+PrDomDocument* prHtmlDomParserParseFromString(PrStringView source, PrHtmlDomParserSupportedType type);
 
 // ---------------------------------------------------------------------------------------------------------------------
 // DOM parsing and serialization (html)
@@ -93,8 +92,7 @@ PrStatus prHtmlSetOuterHtml(PrDomElement* element, PrStringView markup);
 // Parses `markup` as a fragment and inserts it at `where` (html/#dom-element-insertadjacenthtml). Returns NotAllowed if
 // `where` is outside the element and the element's parent is null or a document. Otherwise returns any failure of the
 // mutation algorithms.
-PrStatus prHtmlInsertAdjacentHtml(PrDomElement* element, PrDomInsertPosition where,
-                                  PrStringView markup);
+PrStatus prHtmlInsertAdjacentHtml(PrDomElement* element, PrDomInsertPosition where, PrStringView markup);
 
 // ---------------------------------------------------------------------------------------------------------------------
 // HTMLOrSVGElement (html)
@@ -282,13 +280,13 @@ typedef uint8_t PrHtmlReflectedInteger;
 // parsed as an integer, or `fallback` if there is no attribute, it does not parse, or its integer is outside the kind's
 // range. Every kind's range ends at 2147483647.
 int64_t prHtmlElementReflectedInteger(const PrHtmlElement* self, PrStringView name, PrHtmlReflectedInteger kind,
-                                      int64_t fallback);
+    int64_t fallback);
 
 // Sets the content attribute that prHtmlElementReflectedInteger reads to `value`, or to `fallback` for a value past
 // 2147483647. Returns OutOfRange, and sets nothing, for a negative value of a NonNegative attribute or zero for a
 // Positive one.
 PrStatus prHtmlElementSetReflectedInteger(PrHtmlElement* self, PrStringView name, PrHtmlReflectedInteger kind,
-                                          int64_t value, int64_t fallback);
+    int64_t value, int64_t fallback);
 
 // ---------------------------------------------------------------------------------------------------------------------
 // DOMStringMap (html)
@@ -299,8 +297,7 @@ PrStatus prHtmlElementSetReflectedInteger(PrHtmlElement* self, PrStringView name
 
 // Writes up to `capacity` names of the element's custom data attributes to `items`, in the order of its attributes
 // (html/#concept-domstringmap-pairs). Returns the total number of names.
-uint32_t prHtmlDatasetNames(const PrDomElement* element, PrString* PR_NULLABLE items,
-                            uint32_t capacity);
+uint32_t prHtmlDatasetNames(const PrDomElement* element, PrString* PR_NULLABLE items, uint32_t capacity);
 
 // Returns the value of the attribute that `name` refers to, or the null view if the element has no such attribute.
 PrStringView prHtmlDatasetGet(const PrDomElement* element, PrStringView name);
@@ -447,7 +444,7 @@ PrHtmlCanvasContextMode prHtmlCanvasElementContextMode(const PrHtmlCanvasElement
 // context (html/#dom-canvas-getcontext). Null `settings` means the defaults. Writes null for a canvas with a context of
 // another kind, and returns InvalidState, writing null, for a placeholder canvas.
 PrStatus prHtmlCanvasElementGetContext2D(PrHtmlCanvasElement* self, const PrCanvasSettings* PR_NULLABLE settings,
-                                         PrCanvas* PR_NULLABLE* PR_NONNULL out);
+    PrCanvas* PR_NULLABLE* PR_NONNULL out);
 
 // Writes a data: URL of the bitmap serialized as an image of the MIME type `type`, or as PNG if the window's codec does
 // not encode that type (html/#dom-canvas-todataurl). A bitmap without pixels is "data:,". Returns NotAllowed, and
@@ -681,8 +678,7 @@ void prHtmlMediaElementSetPreservesPitch(PrHtmlMediaElement* self, bool preserve
 // Writes up to `capacity` of the ranges of `which` to `starts` and `ends`, in seconds. Returns the total number of
 // ranges.
 uint32_t prHtmlMediaElementRanges(PrHtmlMediaElement* self, PrHtmlMediaRanges which,
-                                  double* PR_NULLABLE starts, double* PR_NULLABLE ends,
-                                  uint32_t capacity);
+    double* PR_NULLABLE starts, double* PR_NULLABLE ends, uint32_t capacity);
 
 // Starts playback, and takes ownership of `promise` (html/#dom-media-play). A failure that the element reports settles
 // the promise immediately. The element reports NotSupported if its source is not supported.
@@ -724,14 +720,12 @@ PrHtmlSlotElement* PR_NULLABLE prHtmlSlotElementQuery(PrDomEventTarget* PR_NULLA
 // Writes up to `capacity` of the nodes assigned to the slot to `items` (html/#dom-slot-assignednodes). If `flatten` is
 // set, each slot among them is replaced by its own assigned nodes, and a slot with none by its fallback content
 // (dom/#find-flattened-slotables). Returns the total number of nodes.
-uint32_t prHtmlSlotElementAssignedNodes(PrHtmlSlotElement* self, bool flatten,
-                                        PrDomNode* PR_NONNULL* PR_NULLABLE items,
-                                        uint32_t capacity);
+uint32_t prHtmlSlotElementAssignedNodes(PrHtmlSlotElement* self, bool flatten, PrDomNode* PR_NONNULL* PR_NULLABLE items,
+    uint32_t capacity);
 
 // Sets the nodes that a manually assigning shadow root assigns to the slot (html/#dom-slot-assign). Each node must be
 // an element or a text node. A node is removed from any other slot that it was assigned to.
-void prHtmlSlotElementAssign(PrHtmlSlotElement* self,
-                             PrDomNode* const PR_NONNULL* PR_NULLABLE nodes, uint32_t count);
+void prHtmlSlotElementAssign(PrHtmlSlotElement* self, PrDomNode* const PR_NONNULL* PR_NULLABLE nodes, uint32_t count);
 
 // ---------------------------------------------------------------------------------------------------------------------
 // HTMLScriptElement : HTMLElement (html)
@@ -789,13 +783,11 @@ PrDomDocumentFragment* prHtmlTemplateElementContent(PrHtmlTemplateElement* self)
 
 // Writes the state of the shadowrootmode attribute to `out` (html/#dom-template-shadowrootmode). Returns false if the
 // attribute names neither open nor closed.
-bool prHtmlTemplateElementShadowRootMode(const PrHtmlTemplateElement* self,
-                                         PrDomShadowRootMode* out);
+bool prHtmlTemplateElementShadowRootMode(const PrHtmlTemplateElement* self, PrDomShadowRootMode* out);
 
 // Returns the shadowrootslotassignment attribute, limited to its known values
 // (html/#dom-template-shadowrootslotassignment). Returns Named for a missing or invalid attribute.
-PrDomSlotAssignmentMode
-prHtmlTemplateElementShadowRootSlotAssignment(const PrHtmlTemplateElement* self);
+PrDomSlotAssignmentMode prHtmlTemplateElementShadowRootSlotAssignment(const PrHtmlTemplateElement* self);
 
 // ---------------------------------------------------------------------------------------------------------------------
 // ErrorEvent : Event (html)
@@ -828,8 +820,7 @@ static inline PrHtmlErrorEventInit prHtmlErrorEventInitDefault(void) {
 PrHtmlErrorEvent* PR_NULLABLE prHtmlErrorEventQuery(PrDomEvent* PR_NULLABLE object);
 
 // Creates an ErrorEvent of `type`. The caller holds the one reference. The event copies the strings of `init`.
-PrHtmlErrorEvent* prHtmlErrorEventCreate(PrStringView type,
-                                         const PrHtmlErrorEventInit* PR_NULLABLE init);
+PrHtmlErrorEvent* prHtmlErrorEventCreate(PrStringView type, const PrHtmlErrorEventInit* PR_NULLABLE init);
 
 // Returns the members that the event was initialized with (PrHtmlErrorEventInit).
 PrStringView prHtmlErrorEventMessage(const PrHtmlErrorEvent* self);
@@ -872,8 +863,7 @@ PrHtmlMessageEvent* PR_NULLABLE prHtmlMessageEventQuery(PrDomEvent* PR_NULLABLE 
 
 // Creates a MessageEvent of `type` that carries no bytes. The caller holds the one reference. The event copies the
 // strings of `init`.
-PrHtmlMessageEvent* prHtmlMessageEventCreate(PrStringView type,
-                                             const PrHtmlMessageEventInit* PR_NULLABLE init);
+PrHtmlMessageEvent* prHtmlMessageEventCreate(PrStringView type, const PrHtmlMessageEventInit* PR_NULLABLE init);
 
 // Returns the bytes that the message was serialized to, or the null view if the event carries none.
 PrStringView prHtmlMessageEventSerializedData(const PrHtmlMessageEvent* self);
@@ -895,8 +885,7 @@ PR_HANDLE_UPCAST(HtmlPageRevealEvent, DomEvent, Event)
 PrHtmlPageRevealEvent* PR_NULLABLE prHtmlPageRevealEventQuery(PrDomEvent* PR_NULLABLE object);
 
 // Creates a PageRevealEvent of `type`. The caller holds the one reference.
-PrHtmlPageRevealEvent* prHtmlPageRevealEventCreate(PrStringView type,
-                                                   const PrDomEventInit* PR_NULLABLE init);
+PrHtmlPageRevealEvent* prHtmlPageRevealEventCreate(PrStringView type, const PrDomEventInit* PR_NULLABLE init);
 
 // ---------------------------------------------------------------------------------------------------------------------
 // PromiseRejectionEvent : Event (html)
@@ -907,12 +896,10 @@ PrHtmlPageRevealEvent* prHtmlPageRevealEventCreate(PrStringView type,
 PR_HANDLE_UPCAST(HtmlPromiseRejectionEvent, DomEvent, Event)
 
 // Returns `object` as a PromiseRejectionEvent, or null if it is not one.
-PrHtmlPromiseRejectionEvent* PR_NULLABLE
-prHtmlPromiseRejectionEventQuery(PrDomEvent* PR_NULLABLE object);
+PrHtmlPromiseRejectionEvent* PR_NULLABLE prHtmlPromiseRejectionEventQuery(PrDomEvent* PR_NULLABLE object);
 
 // Creates a PromiseRejectionEvent of `type`. The caller holds the one reference.
-PrHtmlPromiseRejectionEvent*
-prHtmlPromiseRejectionEventCreate(PrStringView type, const PrDomEventInit* PR_NULLABLE init);
+PrHtmlPromiseRejectionEvent* prHtmlPromiseRejectionEventCreate(PrStringView type, const PrDomEventInit* PR_NULLABLE init);
 
 // ---------------------------------------------------------------------------------------------------------------------
 // TimerHandler (html)
@@ -985,8 +972,7 @@ PrHtmlPreferenceValue prHtmlPreferenceValueFromName(PrStringView text);
 PR_HANDLE_UPCAST(HtmlPreferenceObject, DomEventTarget, EventTarget)
 
 // Returns `object` as a PreferenceObject, or null if it is not one.
-PrHtmlPreferenceObject* PR_NULLABLE
-prHtmlPreferenceObjectQuery(PrDomEventTarget* PR_NULLABLE object);
+PrHtmlPreferenceObject* PR_NULLABLE prHtmlPreferenceObjectQuery(PrDomEventTarget* PR_NULLABLE object);
 
 // Returns the override, or None if there is none.
 PrHtmlPreferenceValue prHtmlPreferenceObjectOverride(const PrHtmlPreferenceObject* self);
@@ -995,9 +981,8 @@ PrHtmlPreferenceValue prHtmlPreferenceObjectOverride(const PrHtmlPreferenceObjec
 PrHtmlPreferenceValue prHtmlPreferenceObjectValue(const PrHtmlPreferenceObject* self);
 
 // Writes up to `capacity` of the values that an override may take to `items`. Returns the total number of values.
-uint32_t prHtmlPreferenceObjectValidValues(const PrHtmlPreferenceObject* self,
-                                           PrHtmlPreferenceValue* PR_NULLABLE items,
-                                           uint32_t capacity);
+uint32_t prHtmlPreferenceObjectValidValues(const PrHtmlPreferenceObject* self, PrHtmlPreferenceValue* PR_NULLABLE items,
+    uint32_t capacity);
 
 // Removes any override and fires change (mediaqueries-5/#dom-preferenceobject-clearoverride).
 void prHtmlPreferenceObjectClearOverride(PrHtmlPreferenceObject* self);
@@ -1005,8 +990,7 @@ void prHtmlPreferenceObjectClearOverride(PrHtmlPreferenceObject* self);
 // Overrides the preference with `value` and fires change, or clears the override for None
 // (mediaqueries-5/#dom-preferenceobject-requestoverride). Returns InvalidData for a value that is not one of the valid
 // values, and changes nothing.
-PrStatus prHtmlPreferenceObjectRequestOverride(PrHtmlPreferenceObject* self,
-                                               PrHtmlPreferenceValue value);
+PrStatus prHtmlPreferenceObjectRequestOverride(PrHtmlPreferenceObject* self, PrHtmlPreferenceValue value);
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Performance : EventTarget (hr-time)
@@ -1062,8 +1046,7 @@ PrDomAgent* prHtmlWindowAgent(PrHtmlWindow* self);
 // Sets the custom element registry of the window's scripts (html/#dom-window-customelements), or null for none. The
 // registry defines the custom elements of each document that the window holds. The window refers to the registry from
 // then on.
-void prHtmlWindowSetCustomElementRegistry(PrHtmlWindow* self,
-                                          const PrDomCustomElementRegistry* PR_NULLABLE registry);
+void prHtmlWindowSetCustomElementRegistry(PrHtmlWindow* self, const PrDomCustomElementRegistry* PR_NULLABLE registry);
 
 // Returns the window's object for `preference`.
 PrHtmlPreferenceObject* prHtmlWindowPreference(PrHtmlWindow* self, PrHtmlPreference preference);
@@ -1080,7 +1063,7 @@ PrHtmlWindow* PR_NULLABLE prHtmlWindowParent(PrHtmlWindow* self);
 // origin of `source`, or a URL whose origin the window's document must have. The event is dropped if the document's
 // origin does not match. Returns Syntax if `targetOrigin` is none of those.
 PrStatus prHtmlWindowPostMessage(PrHtmlWindow* self, PrHtmlWindow* source, PrStringView serialized,
-                                 PrStringView targetOrigin);
+    PrStringView targetOrigin);
 
 // Returns a component of the URL of the window's document (html/#the-location-interface).
 PrString prHtmlWindowLocation(const PrHtmlWindow* self, PrUrlComponent component);
@@ -1100,7 +1083,7 @@ typedef uint8_t PrHtmlHistoryHandling;
 // document's URL. Returns Syntax if it does not parse, and NotSupported for a URL of another document if the window's
 // host does not navigate.
 PrStatus prHtmlWindowSetLocation(PrHtmlWindow* self, PrUrlComponent component, PrStringView value,
-                                 PrHtmlHistoryHandling handling);
+    PrHtmlHistoryHandling handling);
 
 // Returns the first element in tree order that is a named object for `name` (html/#named-access-on-the-window-object),
 // or null if there is none.
@@ -1142,8 +1125,7 @@ void prHtmlWindowScrollBy(PrHtmlWindow* self, const PrCssScrollToOptions* option
 // a copy of it (html/#dom-settimeout, html/#dom-setinterval). Returns the timer's id. prHtmlWindowClearTimeout cancels
 // the timer with that id and releases its handler, and does nothing if there is none. An interval that its handler
 // cancels does not run again.
-int32_t prHtmlWindowSetTimeout(PrHtmlWindow* self, const PrHtmlTimerHandler* handler,
-                               int32_t timeout, bool repeats);
+int32_t prHtmlWindowSetTimeout(PrHtmlWindow* self, const PrHtmlTimerHandler* handler, int32_t timeout, bool repeats);
 void prHtmlWindowClearTimeout(PrHtmlWindow* self, int32_t id);
 
 // Runs `handler` after `milliseconds`, and retains a copy of it until then (html/#run-steps-after-a-timeout). No id
@@ -1155,8 +1137,7 @@ void prHtmlWindowRunAfterTimeout(PrHtmlWindow* self, const PrHtmlTimerHandler* h
 // (html/#dom-animationframeprovider-requestanimationframe). The callbacks run together, one frame after the last
 // opportunity. Returns the request's handle. prHtmlWindowCancelAnimationFrame cancels the request with that handle and
 // releases its callback.
-uint32_t prHtmlWindowRequestAnimationFrame(PrHtmlWindow* self,
-                                           const PrHtmlFrameRequestCallback* callback);
+uint32_t prHtmlWindowRequestAnimationFrame(PrHtmlWindow* self, const PrHtmlFrameRequestCallback* callback);
 void prHtmlWindowCancelAnimationFrame(PrHtmlWindow* self, uint32_t handle);
 
 // Dispatches `event` at the window as a trusted event (html/#report-an-exception). `event` must be an ErrorEvent that

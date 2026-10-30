@@ -17,8 +17,7 @@ namespace {
 
 // Returns a font for text on 20px lines, with white space and wrapping as given. A record inherits nothing, so each
 // inline box takes one.
-PrLayoutFontStyle textFont(PrLayoutWhiteSpaceCollapse collapse,
-                           PrLayoutTextWrapMode wrap = PrLayoutTextWrapMode_Wrap) {
+PrLayoutFontStyle textFont(PrLayoutWhiteSpaceCollapse collapse, PrLayoutTextWrapMode wrap = PrLayoutTextWrapMode_Wrap) {
     PrLayoutFontStyle font = prLayoutFontStyleDefault();
     font.lineHeight = prLayoutLineHeightPx(20);
     font.whiteSpaceCollapse = collapse;
@@ -132,10 +131,8 @@ TEST_CASE("preserved spaces take room, and collapsible ones around a preserved s
 
 TEST_CASE("text that does not wrap stays on its line past the container's edge, but for a forced break") {
     CHECK(heightOf(textFont(PrLayoutWhiteSpaceCollapse_Collapse), "aaa bbb ccc", 30) == 60.0f);
-    CHECK(heightOf(textFont(PrLayoutWhiteSpaceCollapse_Collapse, PrLayoutTextWrapMode_Nowrap), "aaa bbb ccc", 30)
-          == 20.0f);
-    CHECK(heightOf(textFont(PrLayoutWhiteSpaceCollapse_Preserve, PrLayoutTextWrapMode_Nowrap), "aaa bbb\nccc", 30)
-          == 40.0f);
+    CHECK(heightOf(textFont(PrLayoutWhiteSpaceCollapse_Collapse, PrLayoutTextWrapMode_Nowrap), "aaa bbb ccc", 30) == 20.0f);
+    CHECK(heightOf(textFont(PrLayoutWhiteSpaceCollapse_Preserve, PrLayoutTextWrapMode_Nowrap), "aaa bbb\nccc", 30) == 40.0f);
 }
 
 TEST_CASE("whether text wraps between two boxes is the nearest box's that holds both") {
@@ -428,8 +425,11 @@ TEST_CASE("text is shaped with its font group's feature set") {
     f.text(span, "small capitals");
     f.layout(px(400, 600));
     float plain = f.bounds(span).right - f.bounds(span).left;
-    PrTextFeatureSetDesc desc{.caps = PrTextCaps_AllSmall, .kerning = PrTextKerning_Auto,
-                              .synthesis = PrTextSynthesisFlag_SmallCaps};
+    PrTextFeatureSetDesc desc{
+        .caps = PrTextCaps_AllSmall,
+        .kerning = PrTextKerning_Auto,
+        .synthesis = PrTextSynthesisFlag_SmallCaps,
+    };
     PrTextFeatureSet* caps = prTextFeatureSetCreate(&desc);
     PrLayoutFontStyle capped = normal;
     capped.features = caps;
@@ -456,8 +456,7 @@ TEST_CASE("text is transformed after its white space collapses and before it is 
     // A full mapping lengthens the text: the sharp s is two capitals.
     CHECK(transformedWidth("straße", PrTextTransform_Uppercase) == doctest::Approx(widthOf("STRASSE")));
     CHECK(transformedWidth("MiXeD", PrTextTransform_Lowercase) == doctest::Approx(widthOf("mixed")));
-    CHECK(transformedWidth("the miXed text", PrTextTransform_Capitalize)
-          == doctest::Approx(widthOf("The MiXed Text")));
+    CHECK(transformedWidth("the miXed text", PrTextTransform_Capitalize) == doctest::Approx(widthOf("The MiXed Text")));
     CHECK(transformedWidth("a   b", PrTextTransform_Uppercase) == doctest::Approx(widthOf("A B")));
 }
 

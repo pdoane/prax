@@ -105,8 +105,7 @@ struct Renderer {
 };
 
 CGAffineTransform affineOf(PrAffine2 t) {
-    return CGAffineTransformMake(CGFloat(t.a), CGFloat(t.b), CGFloat(t.c), CGFloat(t.d),
-                                 CGFloat(t.e), CGFloat(t.f));
+    return CGAffineTransformMake(CGFloat(t.a), CGFloat(t.b), CGFloat(t.c), CGFloat(t.d), CGFloat(t.e), CGFloat(t.f));
 }
 
 CGAffineTransform affineOf(PrDAffine2 t) {
@@ -114,8 +113,7 @@ CGAffineTransform affineOf(PrDAffine2 t) {
 }
 
 CGRect cgRect(PrRect r) {
-    return CGRectMake(CGFloat(r.left), CGFloat(r.top), CGFloat(prRectWidth(r)),
-                      CGFloat(prRectHeight(r)));
+    return CGRectMake(CGFloat(r.left), CGFloat(r.top), CGFloat(prRectWidth(r)), CGFloat(prRectHeight(r)));
 }
 
 // Returns the current space's transform to target pixels.
@@ -234,8 +232,7 @@ void endPaint(Renderer& r, const PrDrawCommand&) {
 }
 
 void setFillColor(Renderer& r, PrColor color) {
-    CGFloat components[4] = {CGFloat(color.r), CGFloat(color.g), CGFloat(color.b),
-                             CGFloat(clampF32(color.a, 0, 1))};
+    CGFloat components[4] = {CGFloat(color.r), CGFloat(color.g), CGFloat(color.b), CGFloat(clampF32(color.a, 0, 1))};
     CGContextSetFillColorSpace(r.context, r.cg->srgb);
     CGContextSetFillColor(r.context, components);
 }
@@ -264,30 +261,31 @@ CGImageRef imageOf(CgBackend* cg, const PrDrawImage* image) {
     CGDataProviderRef provider = CGDataProviderCreateWithData(
         const_cast<PrDrawImage*>(image), pixels.data, stride * height, releaseImageData);
     PrDrawAlpha alpha = prDrawImageAlpha(image);
-    CGImageAlphaInfo info = alpha == PrDrawAlpha_Opaque     ? kCGImageAlphaNoneSkipLast
-                            : alpha == PrDrawAlpha_Straight ? kCGImageAlphaLast
-                                                            : kCGImageAlphaPremultipliedLast;
+    CGImageAlphaInfo info = kCGImageAlphaPremultipliedLast;
+    if (alpha == PrDrawAlpha_Opaque)
+        info = kCGImageAlphaNoneSkipLast;
+    else if (alpha == PrDrawAlpha_Straight)
+        info = kCGImageAlphaLast;
     CGImageRef made = nullptr;
     switch (prDrawImageFormat(image)) {
         case PrPixelFormat_Rgba8:
             made = CGImageCreate(width, height, 8, 32, stride, cg->srgb,
-                                 CGBitmapInfo(info) | kCGBitmapByteOrder32Big, provider, nullptr,
-                                 false, kCGRenderingIntentDefault);
+                CGBitmapInfo(info) | kCGBitmapByteOrder32Big, provider, nullptr, false, kCGRenderingIntentDefault);
             break;
         case PrPixelFormat_Bgra8: {
-            CGImageAlphaInfo first = alpha == PrDrawAlpha_Opaque     ? kCGImageAlphaNoneSkipFirst
-                                     : alpha == PrDrawAlpha_Straight ? kCGImageAlphaFirst
-                                                                     : kCGImageAlphaPremultipliedFirst;
+            CGImageAlphaInfo first = kCGImageAlphaPremultipliedFirst;
+            if (alpha == PrDrawAlpha_Opaque)
+                first = kCGImageAlphaNoneSkipFirst;
+            else if (alpha == PrDrawAlpha_Straight)
+                first = kCGImageAlphaFirst;
             made = CGImageCreate(width, height, 8, 32, stride, cg->srgb,
-                                 CGBitmapInfo(first) | kCGBitmapByteOrder32Little, provider, nullptr,
-                                 false, kCGRenderingIntentDefault);
+                CGBitmapInfo(first) | kCGBitmapByteOrder32Little, provider, nullptr, false, kCGRenderingIntentDefault);
             break;
         }
         case PrPixelFormat_RgbaF16:
             made = CGImageCreate(width, height, 16, 64, stride, cg->extended,
-                                 CGBitmapInfo(info) | kCGBitmapByteOrder16Little
-                                     | kCGBitmapFloatComponents,
-                                 provider, nullptr, false, kCGRenderingIntentDefault);
+                CGBitmapInfo(info) | kCGBitmapByteOrder16Little | kCGBitmapFloatComponents,
+                provider, nullptr, false, kCGRenderingIntentDefault);
             break;
         default:
             break;
@@ -310,8 +308,8 @@ CGInterpolationQuality qualityOf(PrDrawSampling sampling) {
 }
 
 // Draws the image's `source` texels onto `destination` in the current space, reflected in either axis if requested.
-void drawImageMapped(CGContextRef context, CGImageRef image, PrRect source, PrRect destination,
-                     bool reflectX, bool reflectY) {
+void drawImageMapped(CGContextRef context, CGImageRef image, PrRect source, PrRect destination, bool reflectX,
+        bool reflectY) {
     float sx = prRectWidth(destination) / prRectWidth(source);
     float sy = prRectHeight(destination) / prRectHeight(source);
     float width = float(CGImageGetWidth(image)) * sx;
@@ -329,9 +327,8 @@ void drawImageMapped(CGContextRef context, CGImageRef image, PrRect source, PrRe
         CGContextTranslateCTM(context, 0, CGFloat(prRectHeight(destination)));
         CGContextScaleCTM(context, 1, -1);
     }
-    CGRect rect = CGRectMake(CGFloat(-source.left * sx),
-                             CGFloat((source.bottom - float(CGImageGetHeight(image))) * sy),
-                             CGFloat(width), CGFloat(height));
+    CGRect rect = CGRectMake(CGFloat(-source.left * sx), CGFloat((source.bottom - float(CGImageGetHeight(image))) * sy),
+        CGFloat(width), CGFloat(height));
     CGContextDrawImage(context, rect, image);
     CGContextRestoreGState(context);
 }
@@ -364,16 +361,17 @@ void evaluateRamp(void* PR_NULLABLE info, const CGFloat* in, CGFloat* out) {
 
 // Draws a shading of the ramp over the parameter's range [t0, t1].
 void drawShading(Renderer& r, const Ramp& ramp, bool radial, CGPoint start, CGFloat startRadius,
-                 CGPoint end, CGFloat endRadius, float t0, float t1) {
+        CGPoint end, CGFloat endRadius, float t0, float t1) {
     CGFloat domain[2] = {CGFloat(t0), CGFloat(t1)};
     CGFloat range[8] = {0, 1, 0, 1, 0, 1, 0, 1};
     CGFunctionCallbacks callbacks{0, evaluateRamp, nullptr};
-    CGFunctionRef function = CGFunctionCreate(const_cast<Ramp*>(&ramp), 1, domain, 4, range,
-                                              &callbacks);
+    CGFunctionRef function = CGFunctionCreate(const_cast<Ramp*>(&ramp), 1, domain, 4, range, &callbacks);
     bool extends = ramp.extend != PrDrawExtend_None;
-    CGShadingRef shading =
-        radial ? CGShadingCreateRadial(r.cg->srgb, start, startRadius, end, endRadius, function, extends, extends)
-               : CGShadingCreateAxial(r.cg->srgb, start, end, function, extends, extends);
+    CGShadingRef shading;
+    if (radial)
+        shading = CGShadingCreateRadial(r.cg->srgb, start, startRadius, end, endRadius, function, extends, extends);
+    else
+        shading = CGShadingCreateAxial(r.cg->srgb, start, end, function, extends, extends);
     CGContextDrawShading(r.context, shading);
     CGShadingRelease(shading);
     CGFunctionRelease(function);
@@ -392,7 +390,7 @@ void drawGradient(Renderer& r, const PrDrawBrush* brush, PrColor color) {
     r.rampPieces.resize(prDrawGradientRampMaxPieces(brush->stopCount));
     r.ramp.resize(prDrawGradientRampMaxColors(brush->stopCount, kRampResolution));
     r.rampPieces.resize(prDrawGradientRamp(brush, color, PrColorSpace_Srgb, kRampResolution, r.rampPieces.data,
-                                           r.ramp.data));
+        r.ramp.data));
     Ramp ramp{r.rampPieces.data, r.ramp.data, brush->extend};
     PrVec2 corners[4];
     clipCorners(r.context, corners);
@@ -431,12 +429,10 @@ void drawGradient(Renderer& r, const PrDrawBrush* brush, PrColor color) {
                         t1 = maxF32(t1, t);
                 }
             }
-            PrVec2 c1{g.start.x + (g.end.x - g.start.x) * t1,
-                       g.start.y + (g.end.y - g.start.y) * t1};
+            PrVec2 c1{g.start.x + (g.end.x - g.start.x) * t1, g.start.y + (g.end.y - g.start.y) * t1};
             float r1 = g.startRadius + (g.endRadius - g.startRadius) * t1;
             drawShading(r, ramp, true, CGPointMake(CGFloat(g.start.x), CGFloat(g.start.y)),
-                        CGFloat(g.startRadius), CGPointMake(CGFloat(c1.x), CGFloat(c1.y)),
-                        CGFloat(maxF32(r1, 0)), 0, t1);
+                CGFloat(g.startRadius), CGPointMake(CGFloat(c1.x), CGFloat(c1.y)), CGFloat(maxF32(r1, 0)), 0, t1);
             break;
         }
         case PrDrawBrushKind_Diamond: {
@@ -472,17 +468,16 @@ void drawGradient(Renderer& r, const PrDrawBrush* brush, PrColor color) {
                         r.components.push(CGFloat(c.a > 0 ? c.g / c.a : 0));
                         r.components.push(CGFloat(c.a > 0 ? c.b / c.a : 0));
                         r.components.push(CGFloat(c.a));
-                        r.locations.push(CGFloat(piece.start)
-                                         + CGFloat(piece.end - piece.start) * CGFloat(k) / CGFloat(ends - 1));
+                        r.locations.push(CGFloat(piece.start) +
+                            CGFloat(piece.end - piece.start) * CGFloat(k) / CGFloat(ends - 1));
                     }
                 }
                 CGGradientRef gradient = CGGradientCreateWithColorComponents(
                     r.cg->srgb, r.components.data, r.locations.data, r.locations.count);
                 // Quartz turns clockwise if y points down, which matches the brush.
                 const PrDrawConicGradient& g = brush->conic;
-                CGContextDrawConicGradient(r.context, gradient,
-                                           CGPointMake(CGFloat(g.center.x), CGFloat(g.center.y)),
-                                           CGFloat(g.angle));
+                CGContextDrawConicGradient(r.context, gradient, CGPointMake(CGFloat(g.center.x), CGFloat(g.center.y)),
+                    CGFloat(g.angle));
                 CGGradientRelease(gradient);
             }
             break;
@@ -493,8 +488,7 @@ void drawGradient(Renderer& r, const PrDrawBrush* brush, PrColor color) {
 }
 
 // Draws the image brush's tiles over the clip, in brush space.
-void drawTiles(Renderer& r, CGImageRef image, PrRect source, const PrDrawTiles& tiles,
-               PrDrawSampling sampling) {
+void drawTiles(Renderer& r, CGImageRef image, PrRect source, const PrDrawTiles& tiles, PrDrawSampling sampling) {
     PrRect tile = tiles.tile;
     float stepX = prRectWidth(tile) + tiles.spacing.x;
     float stepY = prRectHeight(tile) + tiles.spacing.y;
@@ -503,8 +497,7 @@ void drawTiles(Renderer& r, CGImageRef image, PrRect source, const PrDrawTiles& 
     PrVec2 corners[4];
     clipCorners(r.context, corners);
     PrRect bounds{corners[0].x, corners[0].y, corners[2].x, corners[2].y};
-    auto range = [](PrDrawExtend mode, float low, float high, float origin, float step,
-                    int32_t* from, int32_t* to) {
+    auto range = [](PrDrawExtend mode, float low, float high, float origin, float step, int32_t* from, int32_t* to) {
         if (mode == PrDrawExtend_Repeat || mode == PrDrawExtend_Reflect) {
             *from = int32_t(floorF32((low - origin) / step));
             *to = int32_t(floorF32((high - origin) / step));
@@ -522,8 +515,10 @@ void drawTiles(Renderer& r, CGImageRef image, PrRect source, const PrDrawTiles& 
     CGContextSetShouldAntialias(r.context, false);
     for (int32_t y = y0; y <= y1; ++y) {
         for (int32_t x = x0; x <= x1; ++x) {
-            PrRect at{tile.left + float(x) * stepX, tile.top + float(y) * stepY,
-                      tile.right + float(x) * stepX, tile.bottom + float(y) * stepY};
+            PrRect at{
+                tile.left + float(x) * stepX, tile.top + float(y) * stepY,
+                tile.right + float(x) * stepX, tile.bottom + float(y) * stepY,
+            };
             bool reflectX = tiles.x == PrDrawExtend_Reflect && (x & 1) != 0;
             bool reflectY = tiles.y == PrDrawExtend_Reflect && (y & 1) != 0;
             drawImageMapped(r.context, image, source, at, reflectX, reflectY);
@@ -536,8 +531,7 @@ void drawTiles(Renderer& r, CGImageRef image, PrRect source, const PrDrawTiles& 
 void paintBrush(Renderer& r, const PrDrawBrush* brush, PrColor color, PrRect bounds) {
     PrAffine2 fromSpace{};
     PrAffine2 toSpace{};
-    if (!prDrawBrushFromTarget(brush, prAffine2Identity(), bounds, &fromSpace)
-        || !prAffine2Invert(fromSpace, &toSpace))
+    if (!prDrawBrushFromTarget(brush, prAffine2Identity(), bounds, &fromSpace) || !prAffine2Invert(fromSpace, &toSpace))
         return;
     CGContextSaveGState(r.context);
     if (brush->space == PrDrawBrushSpace_Target)
@@ -548,8 +542,7 @@ void paintBrush(Renderer& r, const PrDrawBrush* brush, PrColor color, PrRect bou
             const PrDrawSource& source = brush->image.source;
             if (source.kind == PrDrawSourceKind_Image) {
                 CGContextSetAlpha(r.context, CGFloat(clampF32(color.a, 0, 1)));
-                drawTiles(r, imageOf(r.cg, source.image), source.rect, brush->image.tiles,
-                          brush->image.sampling);
+                drawTiles(r, imageOf(r.cg, source.image), source.rect, brush->image.tiles, brush->image.sampling);
             }
             break;
         }
@@ -561,8 +554,7 @@ void paintBrush(Renderer& r, const PrDrawBrush* brush, PrColor color, PrRect bou
 }
 
 // Fills the context's current path with the command's paint: its color, or its brush under a clip to the path.
-void fillCurrentPath(Renderer& r, PrPathFillRule rule, const PrDrawBrush* PR_NULLABLE brush,
-                     PrColor color, PrRect bounds) {
+void fillCurrentPath(Renderer& r, PrPathFillRule rule, const PrDrawBrush* PR_NULLABLE brush, PrColor color, PrRect bounds) {
     if (brush == nullptr) {
         setFillColor(r, color);
         if (rule == PrPathFillRule_EvenOdd)
@@ -647,8 +639,10 @@ void drawShapePath(Renderer& r, const PrDrawCommand& c, PrRect bounds) {
         entered = enterTarget(r);
     setStroke(r, c.stroke->shape);
     if (c.brush == nullptr) {
-        CGFloat components[4] = {CGFloat(c.color.r), CGFloat(c.color.g), CGFloat(c.color.b),
-                                 CGFloat(clampF32(prFloat16ToFloat(c.color.a), 0, 1))};
+        CGFloat components[4] = {
+            CGFloat(c.color.r), CGFloat(c.color.g), CGFloat(c.color.b),
+            CGFloat(clampF32(prFloat16ToFloat(c.color.a), 0, 1)),
+        };
         CGContextSetStrokeColorSpace(r.context, r.cg->srgb);
         CGContextSetStrokeColor(r.context, components);
         CGContextStrokePath(r.context);
@@ -680,7 +674,7 @@ struct BorderDraw {
 };
 
 void drawBorderPiece(void* PR_NULLABLE context, const PrDrawBorderPiece* piece,
-                     const PrPathPolyline* shape, const PrPathPolyline* PR_NULLABLE cut) {
+        const PrPathPolyline* shape, const PrPathPolyline* PR_NULLABLE cut) {
     BorderDraw& d = *static_cast<BorderDraw*>(context);
     Renderer& r = *d.r;
     const PrDrawCommand& c = *d.command;
@@ -725,13 +719,10 @@ void castShadow(Renderer& r, PrColor color, PrVec2 offset, float sigma, PrPathFi
     CGContextTranslateCTM(r.context, CGFloat(away), 0);
     CGContextAddPath(r.context, shape);
     CGPathRelease(shape);
-    CGFloat components[4] = {CGFloat(color.r), CGFloat(color.g), CGFloat(color.b),
-                             CGFloat(clampF32(color.a, 0, 1))};
+    CGFloat components[4] = {CGFloat(color.r), CGFloat(color.g), CGFloat(color.b), CGFloat(clampF32(color.a, 0, 1))};
     CGColorRef shadow = CGColorCreate(r.cg->srgb, components);
     // A shadow's offset is in the context's base space, where y points up. Its blur is twice the Gaussian's sigma.
-    CGContextSetShadowWithColor(r.context,
-                                CGSizeMake(CGFloat(offset.x - away), CGFloat(-offset.y)),
-                                CGFloat(2 * sigma), shadow);
+    CGContextSetShadowWithColor(r.context, CGSizeMake(CGFloat(offset.x - away), CGFloat(-offset.y)), CGFloat(2 * sigma), shadow);
     CGColorRelease(shadow);
     setFillColor(r, PrColor{0, 0, 0, 1});
     if (rule == PrPathFillRule_EvenOdd)
@@ -765,8 +756,8 @@ void drawShadow(Renderer& r, const PrDrawCommand& c) {
     prPathAddCornerRect(r.shape, g.shape);
     addPath(r.context, r.shape);
     castShadow(r, c.color, offset, g.sigma * scale,
-               kind == PrDrawShadowKind_Inner ? PrPathFillRule_EvenOdd : PrPathFillRule_NonZero,
-               kind == PrDrawShadowKind_Inner);
+        kind == PrDrawShadowKind_Inner ? PrPathFillRule_EvenOdd : PrPathFillRule_NonZero,
+        kind == PrDrawShadowKind_Inner);
     endPaint(r, c);
 }
 
@@ -799,8 +790,10 @@ void drawImageRects(Renderer& r, const PrDrawCommand& c, const PrDrawImageRect* 
     CGContextSetInterpolationQuality(r.context, qualityOf(c.sampling));
     for (uint32_t i = 0; i < count; ++i) {
         const PrRect& s = rects[i].source;
-        PrRect texels{source.rect.left + s.left, source.rect.top + s.top, source.rect.left + s.right,
-                      source.rect.top + s.bottom};
+        PrRect texels{
+            source.rect.left + s.left, source.rect.top + s.top, source.rect.left + s.right,
+            source.rect.top + s.bottom,
+        };
         drawImageMapped(r.context, image, texels, rects[i].destination, false, false);
     }
     endPaint(r, c);
@@ -810,12 +803,10 @@ void drawNineSlice(Renderer& r, const PrDrawCommand& c) {
     const PrRect& area = c.nineSlice.source.rect;
     float width = prRectWidth(area);
     float height = prRectHeight(area);
-    uint32_t count =
-        prDrawNineSliceRects(c.nineSlice.slices, PrVec2{width, height}, c.nineSlice.destination, nullptr, 0);
+    uint32_t count = prDrawNineSliceRects(c.nineSlice.slices, PrVec2{width, height}, c.nineSlice.destination, nullptr, 0);
     Array<PrDrawImageRect> pieces;
     pieces.reserve(count);
-    pieces.count = prDrawNineSliceRects(c.nineSlice.slices, PrVec2{width, height}, c.nineSlice.destination,
-                                        pieces.data, count);
+    pieces.count = prDrawNineSliceRects(c.nineSlice.slices, PrVec2{width, height}, c.nineSlice.destination, pieces.data, count);
     drawImageRects(r, c, pieces.data, pieces.count);
     pieces.reset();
 }
@@ -885,8 +876,8 @@ CGFontRef PR_NULLABLE graphicsFontOf(CgBackend* cg, const PrFont* font) {
             const void* name = CFDictionaryGetValue(axis, kCGFontVariationAxisName);
             for (uint32_t k = 0; k < prFontAxisCount(font) && name != nullptr; ++k) {
                 PrFontAxis a = prFontAxis(font, k);
-                if (absF32(a.min - minimum) < 0.01f && absF32(a.max - maximum) < 0.01f
-                    && absF32(a.defaultValue - fallback) < 0.01f) {
+                if (absF32(a.min - minimum) < 0.01f && absF32(a.max - maximum) < 0.01f &&
+                        absF32(a.defaultValue - fallback) < 0.01f) {
                     double value = double(prFontAxisValue(font, k));
                     CFNumberRef number = CFNumberCreate(nullptr, kCFNumberDoubleType, &value);
                     CFDictionarySetValue(values, name, number);
@@ -968,8 +959,10 @@ void drawGlyphs(Renderer& r, const PrDrawCommand& c) {
             float embolden = prFontEmbolden(font);
             if (embolden > 0) {
                 // Strokes with the fill color, at twice the growth.
-                CGFloat components[4] = {CGFloat(c.color.r), CGFloat(c.color.g), CGFloat(c.color.b),
-                                         CGFloat(clampF32(prFloat16ToFloat(c.color.a), 0, 1))};
+                CGFloat components[4] = {
+                    CGFloat(c.color.r), CGFloat(c.color.g), CGFloat(c.color.b),
+                    CGFloat(clampF32(prFloat16ToFloat(c.color.a), 0, 1)),
+                };
                 CGContextSetStrokeColorSpace(r.context, r.cg->srgb);
                 CGContextSetStrokeColor(r.context, components);
                 CGContextSetLineWidth(r.context, CGFloat(2 * embolden * run->size));
@@ -1013,7 +1006,7 @@ void clipToMask(Renderer& r, const PrDrawMask* mask, PrRect bounds) {
     }
     uint8_t* values = static_cast<uint8_t*>(prMemoryAllocZeroed(width * height));
     CGContextRef layer = CGBitmapContextCreate(values, width, height, 8, width, nullptr,
-                                               CGBitmapInfo(kCGImageAlphaOnly));
+        CGBitmapInfo(kCGImageAlphaOnly));
     // Maps target pixels, with y down, over the box.
     CGContextTranslateCTM(layer, 0, CGFloat(height));
     CGContextScaleCTM(layer, 1, -1);
@@ -1032,12 +1025,10 @@ void clipToMask(Renderer& r, const PrDrawMask* mask, PrRect bounds) {
     r.target = target;
     CGContextRelease(layer);
     // The layer's alpha, read as a gray image, clips as alpha. It is drawn upright, because y points up.
-    CGDataProviderRef provider = CGDataProviderCreateWithData(
-        nullptr, values, width * height,
+    CGDataProviderRef provider = CGDataProviderCreateWithData(nullptr, values, width * height,
         [](void*, const void* data, size_t) { prMemoryFree(const_cast<void*>(data)); });
     CGImageRef image = CGImageCreate(width, height, 8, 8, width, r.cg->gray,
-                                     CGBitmapInfo(kCGImageAlphaNone), provider, nullptr, false,
-                                     kCGRenderingIntentDefault);
+        CGBitmapInfo(kCGImageAlphaNone), provider, nullptr, false, kCGRenderingIntentDefault);
     CGDataProviderRelease(provider);
     CGContextTranslateCTM(r.context, box.origin.x, box.origin.y + box.size.height);
     CGContextScaleCTM(r.context, 1, -1);
@@ -1055,9 +1046,14 @@ bool enterPlane(Renderer& r, const PrDrawGroup* g) {
     PrAffine2 space = toTarget(r);
     enterTarget(r);
     CGRect clip = CGContextGetClipBoundingBox(r.context);
-    PrRect visible = CGRectIsNull(clip) ? PrRect{0, 0, 0, 0}
-                                        : PrRect{float(CGRectGetMinX(clip)), float(CGRectGetMinY(clip)),
-                                                 float(CGRectGetMaxX(clip)), float(CGRectGetMaxY(clip))};
+    PrRect visible;
+    if (CGRectIsNull(clip))
+        visible = PrRect{0, 0, 0, 0};
+    else
+        visible = PrRect{
+            float(CGRectGetMinX(clip)), float(CGRectGetMinY(clip)), float(CGRectGetMaxX(clip)),
+            float(CGRectGetMaxY(clip)),
+        };
     PrDrawProjection p{};
     if (!prDrawProjectionPlace(g->projection, space, g->bounds, visible, float(kPrDrawRenderMaxSize), &p))
         return false;
@@ -1081,21 +1077,23 @@ void pushGroup(Renderer& r, const PrDrawCommand& c) {
         CGContextSetAlpha(r.context, CGFloat(clampF32(g->opacity, 0, 1)));
         CGContextSetBlendMode(r.context, blendOf(g->composite, g->blendMode));
         // A filter that is one drop shadow becomes Quartz's shadow on the layer.
-        if (g->filter != nullptr && prDrawFilterNodeCount(g->filter) == 1
-            && prDrawFilterNodes(g->filter)[0].kind == PrDrawFilterKind_DropShadow) {
+        if (g->filter != nullptr && prDrawFilterNodeCount(g->filter) == 1 &&
+                prDrawFilterNodes(g->filter)[0].kind == PrDrawFilterKind_DropShadow) {
             const PrDrawFilterNode& node = prDrawFilterNodes(g->filter)[0];
             PrAffine2 near = toTarget(r);
-            PrVec2 offset{near.a * node.shadow.offset.x + near.c * node.shadow.offset.y,
-                           near.b * node.shadow.offset.x + near.d * node.shadow.offset.y};
-            float sigma = maxF32(node.shadow.sigma.x, node.shadow.sigma.y)
-                          * prAffine2MaxScale(near);
+            PrVec2 offset{
+                near.a * node.shadow.offset.x + near.c * node.shadow.offset.y,
+                near.b * node.shadow.offset.x + near.d * node.shadow.offset.y,
+            };
+            float sigma = maxF32(node.shadow.sigma.x, node.shadow.sigma.y) * prAffine2MaxScale(near);
             PrColor shadow = node.shadow.color;
-            CGFloat components[4] = {CGFloat(shadow.r), CGFloat(shadow.g), CGFloat(shadow.b),
-                                     CGFloat(clampF32(shadow.a, 0, 1))};
+            CGFloat components[4] = {
+                CGFloat(shadow.r), CGFloat(shadow.g), CGFloat(shadow.b),
+                CGFloat(clampF32(shadow.a, 0, 1)),
+            };
             CGColorRef color = CGColorCreate(r.cg->srgb, components);
-            CGContextSetShadowWithColor(r.context,
-                                        CGSizeMake(CGFloat(offset.x), CGFloat(-offset.y)),
-                                        CGFloat(2 * sigma), color);
+            CGContextSetShadowWithColor(r.context, CGSizeMake(CGFloat(offset.x), CGFloat(-offset.y)),
+                CGFloat(2 * sigma), color);
             CGColorRelease(color);
         }
         bool bounded = !prRectIsEmpty(g->bounds) && !prDrawCompositeIsUnbounded(g->composite);
@@ -1103,8 +1101,10 @@ void pushGroup(Renderer& r, const PrDrawCommand& c) {
             PrRect bounds = g->bounds;
             if (prRectIsEmpty(bounds)) {
                 CGRect clip = CGContextGetClipBoundingBox(r.context);
-                bounds = PrRect{float(CGRectGetMinX(clip)), float(CGRectGetMinY(clip)), float(CGRectGetMaxX(clip)),
-                                float(CGRectGetMaxY(clip))};
+                bounds = PrRect{
+                    float(CGRectGetMinX(clip)), float(CGRectGetMinY(clip)), float(CGRectGetMaxX(clip)),
+                    float(CGRectGetMaxY(clip)),
+                };
             }
             clipToMask(r, g->mask, bounds);
         }
@@ -1121,8 +1121,7 @@ void pushGroup(Renderer& r, const PrDrawCommand& c) {
 
 void runCommands(Renderer& r, const PrDrawCommand* commands, uint32_t count);
 
-void initRenderer(Renderer& r, CgBackend* cg, CGContextRef context, const PrPixels* PR_NULLABLE pixels,
-                  PrPixelFormat format) {
+void initRenderer(Renderer& r, CgBackend* cg, CGContextRef context, const PrPixels* PR_NULLABLE pixels, PrPixelFormat format) {
     r.cg = cg;
     r.context = context;
     r.pixels = pixels;
@@ -1146,13 +1145,13 @@ void finishRenderer(Renderer& r) {
 
 // Creates a bitmap context over the pixels, with y down from its top left, matching the list's device space.
 CGContextRef PR_NULLABLE contextOver(CgBackend* cg, PrPixels pixels, PrPixelFormat format) {
-    CGBitmapInfo info = format == PrPixelFormat_Bgra8
-                            ? CGBitmapInfo(kCGImageAlphaPremultipliedFirst)
-                                  | kCGBitmapByteOrder32Little
-                            : CGBitmapInfo(kCGImageAlphaPremultipliedLast)
-                                  | kCGBitmapByteOrder32Big;
-    CGContextRef context = CGBitmapContextCreate(pixels.data, pixels.extent.x, pixels.extent.y, 8,
-                                                 pixels.stride, cg->srgb, info);
+    CGBitmapInfo info;
+    if (format == PrPixelFormat_Bgra8)
+        info = CGBitmapInfo(kCGImageAlphaPremultipliedFirst) | kCGBitmapByteOrder32Little;
+    else
+        info = CGBitmapInfo(kCGImageAlphaPremultipliedLast) | kCGBitmapByteOrder32Big;
+    CGContextRef context =
+        CGBitmapContextCreate(pixels.data, pixels.extent.x, pixels.extent.y, 8, pixels.stride, cg->srgb, info);
     if (context == nullptr)
         return nullptr;
     CGContextTranslateCTM(context, 0, CGFloat(pixels.extent.y));
@@ -1205,8 +1204,7 @@ void runCommands(Renderer& r, const PrDrawCommand* commands, uint32_t count) {
         const PrDrawCommand& c = commands[i];
         if (r.collapsed != 0 && prDrawCommandSkipsCollapsed(&c)) {
             // A push still opens a scope that its pop closes.
-            if (c.kind >= PrDrawCommandKind_PushClipRect
-                && c.kind <= PrDrawCommandKind_PushClipPath) {
+            if (c.kind >= PrDrawCommandKind_PushClipRect && c.kind <= PrDrawCommandKind_PushClipPath) {
                 CGContextSaveGState(r.context);
                 CGContextClipToRect(r.context, CGRectZero);
                 r.pushes.push(Push{c.kind, true, false, false});
@@ -1254,8 +1252,8 @@ void runCommands(Renderer& r, const PrDrawCommand* commands, uint32_t count) {
                 PrDAffine2 pushed = c.affine;
                 Push push{c.kind, true, false, false};
                 CGContextSaveGState(r.context);
-                push.collapsed = r.collapsed != 0
-                                 || prDrawAffine2Collapses(prAffine2Concat(prAffine2FromDAffine2(pushed), toTarget(r)));
+                push.collapsed = r.collapsed != 0 ||
+                    prDrawAffine2Collapses(prAffine2Concat(prAffine2FromDAffine2(pushed), toTarget(r)));
                 if (push.collapsed)
                     ++r.collapsed;
                 else

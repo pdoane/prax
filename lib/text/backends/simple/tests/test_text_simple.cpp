@@ -41,7 +41,7 @@ std::vector<PrTextGlyph> shape(PrTextShaper* shaper, const PrTextRun& run) {
     PrTextGlyphBuffer* glyphs = prTextGlyphBufferCreate();
     REQUIRE(prTextShaperShape(shaper, &run, glyphs) == PrStatus_Ok);
     std::vector<PrTextGlyph> out(prTextGlyphBufferGlyphs(glyphs),
-                                 prTextGlyphBufferGlyphs(glyphs) + prTextGlyphBufferGlyphCount(glyphs));
+        prTextGlyphBufferGlyphs(glyphs) + prTextGlyphBufferGlyphCount(glyphs));
     prTextGlyphBufferDestroy(glyphs);
     return out;
 }
@@ -89,11 +89,13 @@ std::vector<uint8_t> withKernTable(const std::vector<uint8_t>& font, uint16_t le
     auto uint16At = [&](size_t at) { return uint32_t(font[at]) << 8 | font[at + 1]; };
     auto uint32At = [&](size_t at) { return uint16At(at) << 16 | uint16At(at + 2); };
     uint32_t count = uint16At(4);
-    std::vector<uint8_t> kern = {0, 0, 0, 1,                                    // version 0, one subtable
-                                 0, 0, 0, 20, 0, 1,                             // version, length, horizontal
-                                 0, 1, 0, 6, 0, 0, 0, 0,                        // one pair
-                                 uint8_t(left >> 8), uint8_t(left), uint8_t(right >> 8), uint8_t(right),
-                                 uint8_t(uint16_t(value) >> 8), uint8_t(uint16_t(value))};
+    std::vector<uint8_t> kern = {
+        0, 0, 0, 1,                                    // version 0, one subtable
+        0, 0, 0, 20, 0, 1,                             // version, length, horizontal
+        0, 1, 0, 6, 0, 0, 0, 0,                        // one pair
+        uint8_t(left >> 8), uint8_t(left), uint8_t(right >> 8), uint8_t(right),
+        uint8_t(uint16_t(value) >> 8), uint8_t(uint16_t(value)),
+    };
     std::vector<uint8_t> out(font.begin(), font.begin() + 12);
     out[4] = uint8_t((count + 1) >> 8);
     out[5] = uint8_t(count + 1);

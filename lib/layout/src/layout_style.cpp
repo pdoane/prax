@@ -50,8 +50,7 @@ uint32_t tableHash(const PrLayoutStyle& value) {
     uint32_t last = 0;
     memCopy(words, &value, sizeof words);
     memCopy(&last, value.groups + 8, sizeof last);
-    return uint32_t(
-        hashFold((words[0] * kMix) ^ words[1], (words[2] ^ kMix) + (words[3] + uint64_t(last) * kMix) * kMix));
+    return uint32_t(hashFold((words[0] * kMix) ^ words[1], (words[2] ^ kMix) + (words[3] + uint64_t(last) * kMix) * kMix));
 }
 
 // Adds an entry of `value` with no references, which the next collect frees unless something names it. An interned
@@ -214,16 +213,17 @@ void countGroups(LayoutStyles* c, const PrLayoutStyle& style, uint32_t delta) {
 // Adds `delta` to the references of the compounds that a group's words name, and checks in debug builds that each word
 // is of a kind that its type accepts.
 void countCompounds(LayoutStyles* c, const PrLayoutLength& length, uint32_t delta) {
-    PR_ASSERT(prLayoutWordKind(length.bits) != PrLayoutWordKind_Number
-              && prLayoutWordKind(length.bits) != PrLayoutWordKind_Integer
-              && (prLayoutWordKind(length.bits) != PrLayoutWordKind_Keyword || layoutLengthIsAuto(length)
-                  || layoutLengthIsNone(length) || layoutLengthIsStretch(length)
-                  || layoutLengthIsContentBased(length)));
+    PR_ASSERT(prLayoutWordKind(length.bits) != PrLayoutWordKind_Number &&
+        prLayoutWordKind(length.bits) != PrLayoutWordKind_Integer &&
+        (prLayoutWordKind(length.bits) != PrLayoutWordKind_Keyword || layoutLengthIsAuto(length) ||
+            layoutLengthIsNone(length) || layoutLengthIsStretch(length) || layoutLengthIsContentBased(length)));
     layoutCompoundsCount(&c->compounds, length.bits, delta);
 }
 void countCompounds(LayoutStyles* c, const PrLayoutBoxStyle& box, uint32_t delta) {
-    const PrLayoutLength* sizes[] = {&box.width, &box.height, &box.minWidth, &box.minHeight, &box.maxWidth,
-                                     &box.maxHeight};
+    const PrLayoutLength* sizes[] = {
+        &box.width, &box.height, &box.minWidth, &box.minHeight, &box.maxWidth,
+        &box.maxHeight,
+    };
     for (const PrLayoutLength* length : sizes)
         countCompounds(c, *length, delta);
     for (uint32_t side = 0; side < PrRectSide_Count; ++side) {
@@ -231,12 +231,12 @@ void countCompounds(LayoutStyles* c, const PrLayoutBoxStyle& box, uint32_t delta
         countCompounds(c, box.padding[side], delta);
         countCompounds(c, box.inset[side], delta);
     }
-    PR_ASSERT(prLayoutWordKind(box.baselineShift.bits) != PrLayoutWordKind_Number
-              && prLayoutWordKind(box.baselineShift.bits) != PrLayoutWordKind_Integer
-              && (prLayoutWordKind(box.baselineShift.bits) != PrLayoutWordKind_Keyword
-                  || layoutBaselineShiftIsKeyword(box.baselineShift)));
-    PR_ASSERT(box.alignmentBaseline <= PrLayoutAlignmentBaseline_Hanging
-              && box.baselineSource <= PrLayoutBaselineSource_Last);
+    PR_ASSERT(prLayoutWordKind(box.baselineShift.bits) != PrLayoutWordKind_Number &&
+        prLayoutWordKind(box.baselineShift.bits) != PrLayoutWordKind_Integer &&
+        (prLayoutWordKind(box.baselineShift.bits) != PrLayoutWordKind_Keyword ||
+            layoutBaselineShiftIsKeyword(box.baselineShift)));
+    PR_ASSERT(box.alignmentBaseline <= PrLayoutAlignmentBaseline_Hanging &&
+        box.baselineSource <= PrLayoutBaselineSource_Last);
     layoutCompoundsCount(&c->compounds, box.baselineShift.bits, delta);
 }
 void countCompounds(LayoutStyles* c, const PrLayoutFontStyle& font, uint32_t delta) {
@@ -278,14 +278,14 @@ void countCompounds(LayoutStyles* c, const PrLayoutCompositingStyle& compositing
 }
 void countCompounds(LayoutStyles* c, const PrLayoutFlexStyle& flex, uint32_t delta) {
     // A basis may be content, and a gap may be normal; no other length may be either.
-    PR_ASSERT(flex.basis.bits == prLayoutLengthContent().bits || layoutLengthIsAuto(flex.basis)
-              || layoutLengthIsContentBased(flex.basis) || prLayoutWordKind(flex.basis.bits) < PrLayoutWordKind_Number
-              || prLayoutWordKind(flex.basis.bits) == PrLayoutWordKind_Compound);
+    PR_ASSERT(flex.basis.bits == prLayoutLengthContent().bits || layoutLengthIsAuto(flex.basis) ||
+        layoutLengthIsContentBased(flex.basis) || prLayoutWordKind(flex.basis.bits) < PrLayoutWordKind_Number ||
+        prLayoutWordKind(flex.basis.bits) == PrLayoutWordKind_Compound);
     layoutCompoundsCount(&c->compounds, flex.basis.bits, delta);
     const PrLayoutLength gaps[] = {flex.rowGap, flex.columnGap};
     for (PrLayoutLength gap : gaps) {
-        PR_ASSERT(gap.bits == prLayoutLengthNormal().bits || prLayoutWordKind(gap.bits) < PrLayoutWordKind_Number
-                  || prLayoutWordKind(gap.bits) == PrLayoutWordKind_Compound);
+        PR_ASSERT(gap.bits == prLayoutLengthNormal().bits || prLayoutWordKind(gap.bits) < PrLayoutWordKind_Number ||
+            prLayoutWordKind(gap.bits) == PrLayoutWordKind_Compound);
         layoutCompoundsCount(&c->compounds, gap.bits, delta);
     }
 }
@@ -297,10 +297,10 @@ void countCompounds(LayoutStyles* c, const PrLayoutGridStyle& grid, uint32_t del
 
 // Returns true if a table group's values are in their ranges.
 bool isValid(const PrLayoutTableStyle& table) {
-    return table.borderSpacing[0] >= kLayoutUnitZero && table.borderSpacing[1] >= kLayoutUnitZero
-           && table.columnSpan >= 1 && table.columnSpan <= kPrLayoutTableMaxColumnSpan
-           && table.rowSpan <= kPrLayoutTableMaxRowSpan && table.borderCollapse <= PrLayoutBorderCollapse_Collapse
-           && table.captionSide <= PrLayoutCaptionSide_Bottom && table.tableLayout <= PrLayoutTableLayout_Fixed;
+    return table.borderSpacing[0] >= kLayoutUnitZero && table.borderSpacing[1] >= kLayoutUnitZero &&
+        table.columnSpan >= 1 && table.columnSpan <= kPrLayoutTableMaxColumnSpan &&
+        table.rowSpan <= kPrLayoutTableMaxRowSpan && table.borderCollapse <= PrLayoutBorderCollapse_Collapse &&
+        table.captionSide <= PrLayoutCaptionSide_Bottom && table.tableLayout <= PrLayoutTableLayout_Fixed;
 }
 
 // Interns a group whose words may name compounds. An entry that it adds holds references to them.
@@ -341,7 +341,7 @@ void collect(LayoutTable<T>& table, Freeing freeing) {
 template <typename T>
 bool covered(const LayoutTable<T>& table) {
     return layoutCandidatesCover(table.candidates, table.references.count,
-                                 [&](uint32_t i) { return table.references.data[i] == 0; });
+        [&](uint32_t i) { return table.references.data[i] == 0; });
 }
 
 // Sets the tree's target pixels per px, and the units of one target pixel if they are whole. Writes the box group at
@@ -562,8 +562,7 @@ void layoutFontRelease(LayoutStyles* styles, PrLayoutGroupIndex font) {
     tableCount(styles->font, font, 0xffffffffu);
 }
 
-LayoutStyles* layoutStylesCreate(PrTextFont* PR_NULLABLE font, PrTextShaper* PR_NULLABLE shaper,
-                                 float targetPixelRatio) {
+LayoutStyles* layoutStylesCreate(PrTextFont* PR_NULLABLE font, PrTextShaper* PR_NULLABLE shaper, float targetPixelRatio) {
     LayoutStyles* c = allocZeroed<LayoutStyles>();
     if (font != nullptr) {
         prTextFontRetain(font);
@@ -630,8 +629,8 @@ void layoutStylesDestroy(LayoutStyles* PR_NULLABLE styles) {
     tableReset(c->table);
     for (uint32_t i = 1; i < c->compositing.references.count; ++i) {
         const PrLayoutCompositingStyle& compositing = layoutTableAt(c->compositing, i);
-        if (c->compositing.references.data[i] != kLayoutFreed && compositing.clipKind == PrLayoutClipKind_Source
-            && compositing.clipSource.functions != nullptr && compositing.clipSource.functions->release != nullptr)
+        if (c->compositing.references.data[i] != kLayoutFreed && compositing.clipKind == PrLayoutClipKind_Source &&
+                compositing.clipSource.functions != nullptr && compositing.clipSource.functions->release != nullptr)
             compositing.clipSource.functions->release(compositing.clipSource.context);
     }
     tableReset(c->compositing);
@@ -684,11 +683,10 @@ void layoutStylesCollect(LayoutStyles* styles) {
 
 bool layoutStylesVerify(const LayoutStyles* styles) {
     const LayoutStyles* c = styles;
-    return covered(c->style) && covered(c->font) && covered(c->color) && covered(c->box) && covered(c->decoration)
-           && covered(c->effects) && covered(c->flex) && covered(c->table) && covered(c->compositing)
-           && covered(c->grid) && layoutBackgroundsVerify(&c->backgrounds) && layoutEffectListsVerify(&c->effectLists)
-           && layoutGridTemplatesVerify(&c->grids)
-           && layoutCompoundsVerify(&c->compounds);
+    return covered(c->style) && covered(c->font) && covered(c->color) && covered(c->box) && covered(c->decoration) &&
+        covered(c->effects) && covered(c->flex) && covered(c->table) && covered(c->compositing) &&
+        covered(c->grid) && layoutBackgroundsVerify(&c->backgrounds) && layoutEffectListsVerify(&c->effectLists) &&
+        layoutGridTemplatesVerify(&c->grids) && layoutCompoundsVerify(&c->compounds);
 }
 
 } // namespace pr_impl
@@ -803,9 +801,9 @@ PrLayoutColorStyle prLayoutColorStyleRecord(const PrLayoutTree* tree, uint32_t i
 }
 
 bool prLayoutDisplayIsInlineLevel(PrLayoutDisplay display) {
-    return display == PrLayoutDisplay_Inline || display == PrLayoutDisplay_InlineBlock
-           || display == PrLayoutDisplay_InlineFlex || display == PrLayoutDisplay_InlineGrid
-           || display == PrLayoutDisplay_InlineTable;
+    return display == PrLayoutDisplay_Inline || display == PrLayoutDisplay_InlineBlock ||
+        display == PrLayoutDisplay_InlineFlex || display == PrLayoutDisplay_InlineGrid ||
+        display == PrLayoutDisplay_InlineTable;
 }
 
 bool prLayoutDisplayIsInlineBox(PrLayoutDisplay display) {
@@ -887,7 +885,7 @@ PrLayoutDecorationStyle prLayoutDecorationStyleRecord(const PrLayoutTree* tree, 
 }
 
 PrDrawFilterInput prLayoutFilterAppend(const PrLayoutFilter* filter, PrDrawFilterInput input, PrImageEdgeMode edge,
-                                       PrDrawFilterBuilder* builder) {
+        PrDrawFilterBuilder* builder) {
     return layoutFilterAppend(*filter, input, edge, builder);
 }
 
@@ -951,8 +949,7 @@ PrLayoutBackgroundLayer prLayoutBackgroundLayerDefault(void) {
     return layer;
 }
 
-PrLayoutBackgroundIndex prLayoutBackgroundIntern(PrLayoutTree* tree, const PrLayoutBackgroundLayer* layers,
-                                                 uint32_t count) {
+PrLayoutBackgroundIndex prLayoutBackgroundIntern(PrLayoutTree* tree, const PrLayoutBackgroundLayer* layers, uint32_t count) {
     return layoutBackgroundsIntern(&tree->styles->backgrounds, &tree->styles->compounds, layers, count);
 }
 
@@ -960,8 +957,7 @@ uint32_t prLayoutBackgroundLayerCount(const PrLayoutTree* tree, PrLayoutBackgrou
     return layoutBackgroundAt(&tree->styles->backgrounds, index).count;
 }
 
-PrLayoutBackgroundLayer prLayoutBackgroundLayer(const PrLayoutTree* tree, PrLayoutBackgroundIndex index,
-                                                uint32_t layer) {
+PrLayoutBackgroundLayer prLayoutBackgroundLayer(const PrLayoutTree* tree, PrLayoutBackgroundIndex index, uint32_t layer) {
     const LayoutBackground& b = layoutBackgroundAt(&tree->styles->backgrounds, index);
     PR_ASSERT(layer < b.count);
     return b.layers[layer];

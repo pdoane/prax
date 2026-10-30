@@ -185,8 +185,7 @@ bool sharedRule(const CssRuleData* rule, bool listed, bool presented) {
 
 // Returns a copy of the rule at `index` of `list`, or of the rule of `object` if the rule is in no list. The copy
 // replaces the original in both the list and the object.
-CssRuleData* copyInto(Array<CssRuleData* PR_NONNULL>* PR_NULLABLE list, uint32_t index,
-                      PrCssRule* PR_NULLABLE object) {
+CssRuleData* copyInto(Array<CssRuleData* PR_NONNULL>* PR_NULLABLE list, uint32_t index, PrCssRule* PR_NULLABLE object) {
     PR_ASSERT(list != nullptr || object != nullptr);
     CssRuleData* copy = cssRuleDataCopy(list != nullptr ? list->data[index] : object->data);
     if (object != nullptr) {
@@ -285,8 +284,7 @@ PrCssRule* allocRule(const CssRuleData* data) {
     }
 }
 
-PrCssRule* makeRule(CssRuleData* data, PrCssStyleSheet* PR_NULLABLE sheet,
-                    PrCssRule* PR_NULLABLE parent) {
+PrCssRule* makeRule(CssRuleData* data, PrCssStyleSheet* PR_NULLABLE sheet, PrCssRule* PR_NULLABLE parent) {
     PrCssRule* rule = allocRule(data);
     rule->data = data;
     cssRuleDataRetain(data);
@@ -382,8 +380,9 @@ PrCssRuleKind cssRuleKind(const CssRuleData* rule) {
             return PrCssRuleKind_Keyframe;
         case CssRuleDataKind_NestedDeclarations:
             // The declarations of an @function body are CSSFunctionDeclarations rules instead.
-            return rule->style.rule == CssAtRule_Function ? PrCssRuleKind_FunctionDeclarations
-                                                          : PrCssRuleKind_NestedDeclarations;
+            if (rule->style.rule == CssAtRule_Function)
+                return PrCssRuleKind_FunctionDeclarations;
+            return PrCssRuleKind_NestedDeclarations;
         case CssRuleDataKind_At:
             break;
     }
@@ -440,8 +439,7 @@ const Array<CssRuleData* PR_NONNULL>& cssRuleListData(const PrCssRuleList* list)
 }
 
 PrCssRule* cssRuleListItem(PrCssRuleList* list, uint32_t index) {
-    return list->sheet != nullptr ? cssStyleSheetRule(list->sheet, index)
-                                  : cssRuleChild(list->rule, index);
+    return list->sheet != nullptr ? cssStyleSheetRule(list->sheet, index) : cssRuleChild(list->rule, index);
 }
 
 PrCssStyleSheet* PR_NULLABLE cssImportRuleSheet(PrCssRule* rule) {
@@ -461,8 +459,7 @@ CssParserSlot cssRuleParser(PrCssRule* rule) {
     return rule->sheet != nullptr ? &rule->sheet->parser : nullptr;
 }
 
-const CssRuleChain* PR_NULLABLE cssRuleChain(const PrCssRule* PR_NULLABLE rule,
-                                             Array<CssRuleChain>* out) {
+const CssRuleChain* PR_NULLABLE cssRuleChain(const PrCssRule* PR_NULLABLE rule, Array<CssRuleChain>* out) {
     uint32_t depth = 0;
     for (const PrCssRule* at = rule; at != nullptr; at = at->parent)
         ++depth;
@@ -478,8 +475,7 @@ const CssRuleChain* PR_NULLABLE cssRuleChain(const PrCssRule* PR_NULLABLE rule,
 const CssDeclarationBlock* cssStyleDeclarationBlock(const PrCssStyleDeclaration* declaration) {
     if (declaration->refresh != nullptr)
         declaration->refresh(declaration);
-    return declaration->parentRule != nullptr ? &declaration->parentRule->data->style
-                                              : declaration->block;
+    return declaration->parentRule != nullptr ? &declaration->parentRule->data->style : declaration->block;
 }
 
 CssAtRule cssStyleDeclarationAtRule(const PrCssStyleDeclaration* declaration) {
@@ -580,14 +576,12 @@ PrStatus cssRuleInsertRule(PrCssRule* rule, PrStringView text, uint32_t index) {
     CssEdit edit;
     cssEditBegin(&edit, cssRuleParser(rule));
     Array<CssRuleChain> chain;
-    PrStatus status =
-        cssRuleListPrepareInsert(&edit, rule->sheet != nullptr ? rule->sheet->data : nullptr,
-                                 cssRuleChain(rule, &chain), text, index);
+    PrStatus status = cssRuleListPrepareInsert(&edit, rule->sheet != nullptr ? rule->sheet->data : nullptr,
+        cssRuleChain(rule, &chain), text, index);
     chain.reset();
     if (status == PrStatus_Ok) {
         CssRuleData* parent = ownRule(rule, Notify_Caller);
-        cssRuleListCommitInsert(&edit, rule->sheet != nullptr ? rule->sheet->data : nullptr,
-                                parent);
+        cssRuleListCommitInsert(&edit, rule->sheet != nullptr ? rule->sheet->data : nullptr, parent);
         rule->children.insert(index, nullptr);
         cssDocumentRuleChanged(documentOf(rule), parent->children.data[index]);
     }
@@ -610,8 +604,7 @@ PrStatus cssStyleSheetDeleteRule(PrCssStyleSheet* sheet, uint32_t index) {
 }
 
 PrStatus cssRuleDeleteRule(PrCssRule* rule, uint32_t index) {
-    PrStatus status = cssRuleListRemovable(rule->sheet != nullptr ? rule->sheet->data : nullptr,
-                                           rule->data, index);
+    PrStatus status = cssRuleListRemovable(rule->sheet != nullptr ? rule->sheet->data : nullptr, rule->data, index);
     if (status != PrStatus_Ok)
         return status;
     CssRuleData* parent = ownRule(rule, Notify_Caller);

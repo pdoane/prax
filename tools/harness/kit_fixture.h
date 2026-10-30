@@ -78,26 +78,29 @@ struct KitFixture {
     // Runs a frame `delta` seconds after the previous one, in a viewport of 800 by 600 px.
     uint32_t frame(double delta = 1.0 / 60, uint32_t rounds = 4) {
         time += delta;
-        PrUiFrameDesc desc{.time = time,
-                           .delta = delta,
-                           .extent = PrVec2{800, 600},
-                           .maxRounds = rounds,
-                           .display = display,
-                           .preferences = preferences};
-        return prUiFrame(
-            ui, &desc,
-            [](void* context, PrUi*, const PrUiRound*) {
-                KitFixture* f = static_cast<KitFixture*>(context);
-                PrKitSurfaceStyle style{.box = {.overflow = PrKitOverflow_Clip,
-                                                .place = {.width = prKitPercent(100), .height = prKitPercent(100)}},
-                                        .ground = f->ground};
-                f->root = prKitSurface(f->kit, kPrLayoutNodeNone, {}, style);
-                if (f->edit != nullptr)
-                    prUiSetEditSink(f->ui, f->root, f->edit, f->editContext);
-                if (f->build)
-                    f->build(f->root);
-            },
-            this);
+        PrUiFrameDesc desc{
+            .time = time,
+            .delta = delta,
+            .extent = PrVec2{800, 600},
+            .maxRounds = rounds,
+            .display = display,
+            .preferences = preferences,
+        };
+        return prUiFrame(ui, &desc, [](void* context, PrUi*, const PrUiRound*) {
+            KitFixture* f = static_cast<KitFixture*>(context);
+            PrKitSurfaceStyle style{
+                .box = {
+                    .overflow = PrKitOverflow_Clip,
+                    .place = {.width = prKitPercent(100), .height = prKitPercent(100)},
+                },
+                .ground = f->ground,
+            };
+            f->root = prKitSurface(f->kit, kPrLayoutNodeNone, {}, style);
+            if (f->edit != nullptr)
+                prUiSetEditSink(f->ui, f->root, f->edit, f->editContext);
+            if (f->build)
+                f->build(f->root);
+        }, this);
     }
 
     // Returns the border box of a node, in viewport px, at the last layout.

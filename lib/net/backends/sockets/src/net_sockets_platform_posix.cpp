@@ -143,8 +143,8 @@ SocketsHandle socketsConnect(const SocketsAddress& address, PrNetError* error) {
 #if defined(SO_NOSIGPIPE)
     setsockopt(descriptor, SOL_SOCKET, SO_NOSIGPIPE, &on, sizeof(on));
 #endif
-    if (::connect(descriptor, reinterpret_cast<const sockaddr*>(storage), socklen_t(address.length)) == 0
-        || errno == EINPROGRESS)
+    if (::connect(descriptor, reinterpret_cast<const sockaddr*>(storage), socklen_t(address.length)) == 0 ||
+            errno == EINPROGRESS)
         return descriptor;
     *error = errorOfErrno(errno);
     close(descriptor);

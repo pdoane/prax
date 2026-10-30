@@ -107,9 +107,7 @@ bool matrixFromInit(JSContext* ctx, JSValueConst value, PrDomMatrix* out) {
             JS_ThrowTypeError(ctx, "%s and %s disagree", kAliased[i].alias, kAliased[i].element);
             return false;
         }
-        out->m[kAliased[i].index] = elementGiven[i] ? elements[i]
-                                    : aliasGiven[i] ? aliases[i]
-                                                    : kAliased[i].fallback;
+        out->m[kAliased[i].index] = elementGiven[i] ? elements[i] : aliasGiven[i] ? aliases[i] : kAliased[i].fallback;
     }
     if (is2DGiven && is2D && !flat) {
         JS_ThrowTypeError(ctx, "A 2D matrix has only the identity's 3D elements");
@@ -129,8 +127,7 @@ struct Arguments {
 };
 
 // Reads arguments 0 to `count`, each by ToNumber, or as its default if it is not given.
-bool readNumbers(JSContext* ctx, int argc, JSValueConst* argv, const double* defaults,
-                 uint32_t count, Arguments* out) {
+bool readNumbers(JSContext* ctx, int argc, JSValueConst* argv, const double* defaults, uint32_t count, Arguments* out) {
     for (uint32_t i = 0; i < count; ++i) {
         if (!jsArgNumber(ctx, argc, argv, int(i), defaults[i], &out->n[i]))
             return false;
@@ -196,28 +193,45 @@ typedef uint8_t OperationKind;
 
 // geometry-1/#dommatrixreadonly and #dommatrix. Each read-only method applies its Self counterpart to a copy.
 constexpr Operation kOperations[] = {
-    {readDefaults<3>,
-     [](PrDomMatrix* m, const Arguments* a) {
-         prDomMatrixTranslate(m, a->n[0], a->n[1], a->n[2]);
-     }},
-    {readScale,
-     [](PrDomMatrix* m, const Arguments* a) {
-         prDomMatrixScale(m, a->n[0], a->n[1], a->n[2], a->n[3], a->n[4], a->n[5]);
-     }},
-    {readDefaults<4, 1>,
-     [](PrDomMatrix* m, const Arguments* a) {
-         prDomMatrixScale(m, a->n[0], a->n[0], a->n[0], a->n[1], a->n[2], a->n[3]);
-     }},
-    {readDefaults<2, 1, 1>,
-     [](PrDomMatrix* m, const Arguments* a) { prDomMatrixScale(m, a->n[0], a->n[1], 1, 0, 0, 0); }},
-    {readRotate,
-     [](PrDomMatrix* m, const Arguments* a) { prDomMatrixRotate(m, a->n[0], a->n[1], a->n[2]); }},
-    {readDefaults<2>,
-     [](PrDomMatrix* m, const Arguments* a) { prDomMatrixRotateFromVector(m, a->n[0], a->n[1]); }},
-    {readDefaults<4>,
-     [](PrDomMatrix* m, const Arguments* a) {
-         prDomMatrixRotateAxisAngle(m, a->n[0], a->n[1], a->n[2], a->n[3]);
-     }},
+    {
+        readDefaults<3>,
+        [](PrDomMatrix* m, const Arguments* a) {
+            prDomMatrixTranslate(m, a->n[0], a->n[1], a->n[2]);
+        },
+    },
+    {
+        readScale,
+        [](PrDomMatrix* m, const Arguments* a) {
+            prDomMatrixScale(m, a->n[0], a->n[1], a->n[2], a->n[3], a->n[4], a->n[5]);
+        },
+    },
+    {
+        readDefaults<4,
+        1>,
+        [](PrDomMatrix* m, const Arguments* a) {
+            prDomMatrixScale(m, a->n[0], a->n[0], a->n[0], a->n[1], a->n[2], a->n[3]);
+        },
+    },
+    {
+        readDefaults<2,
+        1,
+        1>,
+        [](PrDomMatrix* m, const Arguments* a) { prDomMatrixScale(m, a->n[0], a->n[1], 1, 0, 0, 0); },
+    },
+    {
+        readRotate,
+        [](PrDomMatrix* m, const Arguments* a) { prDomMatrixRotate(m, a->n[0], a->n[1], a->n[2]); },
+    },
+    {
+        readDefaults<2>,
+        [](PrDomMatrix* m, const Arguments* a) { prDomMatrixRotateFromVector(m, a->n[0], a->n[1]); },
+    },
+    {
+        readDefaults<4>,
+        [](PrDomMatrix* m, const Arguments* a) {
+            prDomMatrixRotateAxisAngle(m, a->n[0], a->n[1], a->n[2], a->n[3]);
+        },
+    },
     {readDefaults<1>, [](PrDomMatrix* m, const Arguments* a) { prDomMatrixSkewX(m, a->n[0]); }},
     {readDefaults<1>, [](PrDomMatrix* m, const Arguments* a) { prDomMatrixSkewY(m, a->n[0]); }},
     {readOther, [](PrDomMatrix* m, const Arguments* a) { prDomMatrixMultiply(m, &a->matrix); }},
@@ -256,9 +270,13 @@ JSValue construct(JSContext* ctx, JSValueConst newTarget, int argc, JSValueConst
     if (jsArgGiven(argc, argv, 0)) {
         JsDoubleSequenceOrString init = {};
         bool read = init.read(ctx, argv[0]);
-        PrStatus status = !read ? PrStatus_Ok
-            : init.sequence ? prDomMatrixFromValues(init.values.data, init.values.count, &matrix)
-            : parseMatrix(ctx, jsStringView(&init.string), &matrix);
+        PrStatus status;
+        if (!read)
+            status = PrStatus_Ok;
+        else if (init.sequence)
+            status = prDomMatrixFromValues(init.values.data, init.values.count, &matrix);
+        else
+            status = parseMatrix(ctx, jsStringView(&init.string), &matrix);
         init.reset(ctx);
         if (!read)
             return JS_EXCEPTION;
@@ -325,8 +343,7 @@ JSValue toFloatArray(JSContext* ctx, JSValueConst self, int, JSValueConst*, int 
     PrDomMatrix* matrix = readOnlyOf(ctx, self);
     if (matrix == nullptr)
         return JS_EXCEPTION;
-    return jsNewFloatArray(ctx, magic != 0 ? JS_TYPED_ARRAY_FLOAT64 : JS_TYPED_ARRAY_FLOAT32,
-                           matrix->m, 16);
+    return jsNewFloatArray(ctx, magic != 0 ? JS_TYPED_ARRAY_FLOAT64 : JS_TYPED_ARRAY_FLOAT32, matrix->m, 16);
 }
 
 // The attributes, in the order in which the interface declares them.
@@ -348,8 +365,7 @@ JSValue toJson(JSContext* ctx, JSValueConst self, int, JSValueConst*) {
         return JS_EXCEPTION;
     JSValue result = JS_NewObject(ctx);
     for (const MatrixAttribute& attribute : kAttributes)
-        JS_SetPropertyStr(ctx, result, attribute.name,
-                          JS_NewFloat64(ctx, matrix->m[attribute.index]));
+        JS_SetPropertyStr(ctx, result, attribute.name, JS_NewFloat64(ctx, matrix->m[attribute.index]));
     JS_SetPropertyStr(ctx, result, "is2D", JS_NewBool(ctx, matrix->is2D));
     JS_SetPropertyStr(ctx, result, "isIdentity", JS_NewBool(ctx, prDomMatrixIsIdentity(matrix)));
     return result;
@@ -371,10 +387,8 @@ PrDomPoint* PR_NULLABLE pointOf(JSContext* ctx, JSValueConst self) {
 template <int Magic>
 JSValue constructPoint(JSContext* ctx, JSValueConst newTarget, int argc, JSValueConst* argv) {
     PrDomPoint point;
-    if (!jsArgNumber(ctx, argc, argv, 0, 0, &point.x)
-        || !jsArgNumber(ctx, argc, argv, 1, 0, &point.y)
-        || !jsArgNumber(ctx, argc, argv, 2, 0, &point.z)
-        || !jsArgNumber(ctx, argc, argv, 3, 1, &point.w))
+    if (!jsArgNumber(ctx, argc, argv, 0, 0, &point.x) || !jsArgNumber(ctx, argc, argv, 1, 0, &point.y) ||
+            !jsArgNumber(ctx, argc, argv, 2, 0, &point.z) || !jsArgNumber(ctx, argc, argv, 3, 1, &point.w))
         return JS_EXCEPTION;
     return jsConstructed(ctx, newTarget, jsNewValue(ctx, pointClassOf(Magic), point));
 }
@@ -405,8 +419,7 @@ JSValue pointSet(JSContext* ctx, JSValueConst self, JSValueConst input, int magi
 // geometry-1/#dom-dompointreadonly-matrixtransform
 JSValue matrixTransform(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv) {
     PrDomMatrix matrix;
-    if (pointOf(ctx, self) == nullptr
-        || !matrixFromInit(ctx, argc > 0 ? argv[0] : JS_UNDEFINED, &matrix))
+    if (pointOf(ctx, self) == nullptr || !matrixFromInit(ctx, argc > 0 ? argv[0] : JS_UNDEFINED, &matrix))
         return JS_EXCEPTION;
     return jsNewValue(ctx, domPointClass, prDomPointMatrixTransform(pointOf(ctx, self), &matrix));
 }
@@ -414,8 +427,7 @@ JSValue matrixTransform(JSContext* ctx, JSValueConst self, int argc, JSValueCons
 // geometry-1/#dom-dommatrixreadonly-transformpoint
 JSValue transformPoint(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv) {
     PrDomPoint point;
-    if (readOnlyOf(ctx, self) == nullptr
-        || !prJsDomPointInitRead(ctx, argc > 0 ? argv[0] : JS_UNDEFINED, &point))
+    if (readOnlyOf(ctx, self) == nullptr || !prJsDomPointInitRead(ctx, argc > 0 ? argv[0] : JS_UNDEFINED, &point))
         return JS_EXCEPTION;
     return jsNewValue(ctx, domPointClass, prDomPointMatrixTransform(&point, readOnlyOf(ctx, self)));
 }
@@ -442,10 +454,9 @@ bool rectFromInit(JSContext* ctx, JSValueConst value, PrDomRect* out) {
     bool present = false;
     if (!jsDictionary(ctx, value, &present))
         return false;
-    return !present
-           || (jsDictNumber(ctx, value, "height", &out->height)
-               && jsDictNumber(ctx, value, "width", &out->width)
-               && jsDictNumber(ctx, value, "x", &out->x) && jsDictNumber(ctx, value, "y", &out->y));
+    return !present ||
+        (jsDictNumber(ctx, value, "height", &out->height) && jsDictNumber(ctx, value, "width", &out->width) &&
+            jsDictNumber(ctx, value, "x", &out->x) && jsDictNumber(ctx, value, "y", &out->y));
 }
 
 JSClassID rectClassOf(int magic) {
@@ -460,9 +471,8 @@ PrDomRect* PR_NULLABLE rectOf(JSContext* ctx, JSValueConst self) {
 template <int Magic>
 JSValue constructRect(JSContext* ctx, JSValueConst newTarget, int argc, JSValueConst* argv) {
     PrDomRect rect;
-    if (!jsArgNumber(ctx, argc, argv, 0, 0, &rect.x) || !jsArgNumber(ctx, argc, argv, 1, 0, &rect.y)
-        || !jsArgNumber(ctx, argc, argv, 2, 0, &rect.width)
-        || !jsArgNumber(ctx, argc, argv, 3, 0, &rect.height))
+    if (!jsArgNumber(ctx, argc, argv, 0, 0, &rect.x) || !jsArgNumber(ctx, argc, argv, 1, 0, &rect.y) ||
+            !jsArgNumber(ctx, argc, argv, 2, 0, &rect.width) || !jsArgNumber(ctx, argc, argv, 3, 0, &rect.height))
         return JS_EXCEPTION;
     return jsConstructed(ctx, newTarget, jsNewValue(ctx, rectClassOf(Magic), rect));
 }
@@ -491,8 +501,7 @@ JSValue rectSet(JSContext* ctx, JSValueConst self, JSValueConst input, int magic
 }
 
 // The functions that compute the edges, in the order in which the interface declares them.
-constexpr double (*kEdges[])(const PrDomRect*) = {prDomRectTop, prDomRectRight, prDomRectBottom,
-                                                  prDomRectLeft};
+constexpr double (*kEdges[])(const PrDomRect*) = {prDomRectTop, prDomRectRight, prDomRectBottom, prDomRectLeft};
 
 JSValue edgeGet(JSContext* ctx, JSValueConst self, int magic) {
     PrDomRect* rect = rectOf(ctx, self);
@@ -719,8 +728,7 @@ constexpr JSCFunctionListEntry kDomPointProto[] = {
     PR_JS_MAGIC_GET_SET("w", pointGet, pointSet, 3),
 };
 
-constexpr JSCFunctionListEntry kDomPointReadOnlyStatic[] = {
-    PR_JS_MAGIC("fromPoint", 0, fromPoint, 0)};
+constexpr JSCFunctionListEntry kDomPointReadOnlyStatic[] = {PR_JS_MAGIC("fromPoint", 0, fromPoint, 0)};
 constexpr JSCFunctionListEntry kDomPointStatic[] = {PR_JS_MAGIC("fromPoint", 0, fromPoint, 1)};
 
 constexpr JSCFunctionListEntry kDomRectReadOnlyProto[] = {
@@ -824,91 +832,107 @@ JSClassID prJsDomMatrixReadOnlyClass;
 JSClassID prJsDomMatrixClass;
 
 void prJsDomGeometryBind(JSContext* ctx) {
-    JSValue readOnly = jsDefineClass(ctx, {.name = "DOMMatrixReadOnly",
-                                           .id = &prJsDomMatrixReadOnlyClass,
-                                           .finalizer = jsValueFinalizer,
-                                           .mark = jsValueMark,
-                                           .proto = kDomMatrixReadOnlyProto,
-                                           .protoCount = int(countOf(kDomMatrixReadOnlyProto)),
-                                           .statics = kDomMatrixReadOnlyStatic,
-                                           .staticCount = int(countOf(kDomMatrixReadOnlyStatic)),
-                                           .constructor = construct<0>});
+    JSValue readOnly = jsDefineClass(ctx, {
+        .name = "DOMMatrixReadOnly",
+        .id = &prJsDomMatrixReadOnlyClass,
+        .finalizer = jsValueFinalizer,
+        .mark = jsValueMark,
+        .proto = kDomMatrixReadOnlyProto,
+        .protoCount = int(countOf(kDomMatrixReadOnlyProto)),
+        .statics = kDomMatrixReadOnlyStatic,
+        .staticCount = int(countOf(kDomMatrixReadOnlyStatic)),
+        .constructor = construct<0>,
+    });
     JS_FreeValue(ctx, readOnly);
-    JSValue matrix = jsDefineClass(ctx, {.name = "DOMMatrix",
-                                         .id = &prJsDomMatrixClass,
-                                         .finalizer = jsValueFinalizer,
-                                         .mark = jsValueMark,
-                                         .proto = kDomMatrixProto,
-                                         .protoCount = int(countOf(kDomMatrixProto)),
-                                         .statics = kDomMatrixStatic,
-                                         .staticCount = int(countOf(kDomMatrixStatic)),
-                                         .constructor = construct<1>,
-                                         .base = &prJsDomMatrixReadOnlyClass});
+    JSValue matrix = jsDefineClass(ctx, {
+        .name = "DOMMatrix",
+        .id = &prJsDomMatrixClass,
+        .finalizer = jsValueFinalizer,
+        .mark = jsValueMark,
+        .proto = kDomMatrixProto,
+        .protoCount = int(countOf(kDomMatrixProto)),
+        .statics = kDomMatrixStatic,
+        .staticCount = int(countOf(kDomMatrixStatic)),
+        .constructor = construct<1>,
+        .base = &prJsDomMatrixReadOnlyClass,
+    });
     // geometry-1/#dommatrix: [LegacyWindowAlias=(SVGMatrix, WebKitCSSMatrix)]
     JSValue global = JS_GetGlobalObject(ctx);
     constexpr const char* kAliases[] = {"SVGMatrix", "WebKitCSSMatrix"};
     for (const char* alias : kAliases)
         JS_DefinePropertyValueStr(ctx, global, alias, JS_DupValue(ctx, matrix),
-                                  JS_PROP_WRITABLE | JS_PROP_CONFIGURABLE);
+            JS_PROP_WRITABLE | JS_PROP_CONFIGURABLE);
     JS_FreeValue(ctx, global);
     JS_FreeValue(ctx, matrix);
 
     const JsClassDefinition kClasses[] = {
-        {.name = "DOMPointReadOnly",
-         .id = &domPointReadOnlyClass,
-         .finalizer = jsValueFinalizer,
-         .mark = jsValueMark,
-         .proto = kDomPointReadOnlyProto,
-         .protoCount = int(countOf(kDomPointReadOnlyProto)),
-         .statics = kDomPointReadOnlyStatic,
-         .staticCount = int(countOf(kDomPointReadOnlyStatic)),
-         .constructor = constructPoint<0>},
-        {.name = "DOMPoint",
-         .id = &domPointClass,
-         .finalizer = jsValueFinalizer,
-         .mark = jsValueMark,
-         .proto = kDomPointProto,
-         .protoCount = int(countOf(kDomPointProto)),
-         .statics = kDomPointStatic,
-         .staticCount = int(countOf(kDomPointStatic)),
-         .constructor = constructPoint<1>,
-         .base = &domPointReadOnlyClass},
-        {.name = "DOMRectReadOnly",
-         .id = &domRectReadOnlyClass,
-         .finalizer = jsValueFinalizer,
-         .mark = jsValueMark,
-         .proto = kDomRectReadOnlyProto,
-         .protoCount = int(countOf(kDomRectReadOnlyProto)),
-         .statics = kDomRectReadOnlyStatic,
-         .staticCount = int(countOf(kDomRectReadOnlyStatic)),
-         .constructor = constructRect<0>},
-        {.name = "DOMRect",
-         .id = &domRectClass,
-         .finalizer = jsValueFinalizer,
-         .mark = jsValueMark,
-         .proto = kDomRectProto,
-         .protoCount = int(countOf(kDomRectProto)),
-         .statics = kDomRectStatic,
-         .staticCount = int(countOf(kDomRectStatic)),
-         .constructor = constructRect<1>,
-         .base = &domRectReadOnlyClass},
-        {.name = "DOMQuad",
-         .id = &domQuadClass,
-         .finalizer = jsValueFinalizer,
-         .mark = jsValueMark,
-         .proto = kDomQuadProto,
-         .protoCount = int(countOf(kDomQuadProto)),
-         .statics = kDomQuadStatic,
-         .staticCount = int(countOf(kDomQuadStatic)),
-         .constructor = constructQuad},
-        {.name = "DOMRectList",
-         .id = &domRectListClass,
-         .finalizer = jsValueFinalizer,
-         .mark = jsValueMark,
-         .proto = kDomRectListProto,
-         .protoCount = int(countOf(kDomRectListProto)),
-         .indexed = &kRectListIndexed,
-         .iterable = true},
+        {
+            .name = "DOMPointReadOnly",
+            .id = &domPointReadOnlyClass,
+            .finalizer = jsValueFinalizer,
+            .mark = jsValueMark,
+            .proto = kDomPointReadOnlyProto,
+            .protoCount = int(countOf(kDomPointReadOnlyProto)),
+            .statics = kDomPointReadOnlyStatic,
+            .staticCount = int(countOf(kDomPointReadOnlyStatic)),
+            .constructor = constructPoint<0>,
+        },
+        {
+            .name = "DOMPoint",
+            .id = &domPointClass,
+            .finalizer = jsValueFinalizer,
+            .mark = jsValueMark,
+            .proto = kDomPointProto,
+            .protoCount = int(countOf(kDomPointProto)),
+            .statics = kDomPointStatic,
+            .staticCount = int(countOf(kDomPointStatic)),
+            .constructor = constructPoint<1>,
+            .base = &domPointReadOnlyClass,
+        },
+        {
+            .name = "DOMRectReadOnly",
+            .id = &domRectReadOnlyClass,
+            .finalizer = jsValueFinalizer,
+            .mark = jsValueMark,
+            .proto = kDomRectReadOnlyProto,
+            .protoCount = int(countOf(kDomRectReadOnlyProto)),
+            .statics = kDomRectReadOnlyStatic,
+            .staticCount = int(countOf(kDomRectReadOnlyStatic)),
+            .constructor = constructRect<0>,
+        },
+        {
+            .name = "DOMRect",
+            .id = &domRectClass,
+            .finalizer = jsValueFinalizer,
+            .mark = jsValueMark,
+            .proto = kDomRectProto,
+            .protoCount = int(countOf(kDomRectProto)),
+            .statics = kDomRectStatic,
+            .staticCount = int(countOf(kDomRectStatic)),
+            .constructor = constructRect<1>,
+            .base = &domRectReadOnlyClass,
+        },
+        {
+            .name = "DOMQuad",
+            .id = &domQuadClass,
+            .finalizer = jsValueFinalizer,
+            .mark = jsValueMark,
+            .proto = kDomQuadProto,
+            .protoCount = int(countOf(kDomQuadProto)),
+            .statics = kDomQuadStatic,
+            .staticCount = int(countOf(kDomQuadStatic)),
+            .constructor = constructQuad,
+        },
+        {
+            .name = "DOMRectList",
+            .id = &domRectListClass,
+            .finalizer = jsValueFinalizer,
+            .mark = jsValueMark,
+            .proto = kDomRectListProto,
+            .protoCount = int(countOf(kDomRectListProto)),
+            .indexed = &kRectListIndexed,
+            .iterable = true,
+        },
     };
     for (const JsClassDefinition& definition : kClasses)
         JS_FreeValue(ctx, jsDefineClass(ctx, definition));
@@ -946,9 +970,7 @@ bool prJsDomMatrix2DInitRead(JSContext* ctx, JSValueConst value, PrDomMatrix* ou
             JS_ThrowTypeError(ctx, "%s and %s disagree", kAliased[i].alias, kAliased[i].element);
             return false;
         }
-        out->m[kAliased[i].index] = elementGiven[i] ? elements[i]
-                                    : aliasGiven[i] ? aliases[i]
-                                                    : kAliased[i].fallback;
+        out->m[kAliased[i].index] = elementGiven[i] ? elements[i] : aliasGiven[i] ? aliases[i] : kAliased[i].fallback;
     }
     return true;
 }
@@ -959,9 +981,8 @@ bool prJsDomPointInitRead(JSContext* ctx, JSValueConst value, PrDomPoint* out) {
     if (!jsDictionary(ctx, value, &present))
         return false;
     // The members are read in lexicographic order.
-    return !present
-        || (jsDictNumber(ctx, value, "w", &out->w) && jsDictNumber(ctx, value, "x", &out->x)
-            && jsDictNumber(ctx, value, "y", &out->y) && jsDictNumber(ctx, value, "z", &out->z));
+    return !present || (jsDictNumber(ctx, value, "w", &out->w) && jsDictNumber(ctx, value, "x", &out->x) &&
+        jsDictNumber(ctx, value, "y", &out->y) && jsDictNumber(ctx, value, "z", &out->z));
 }
 
 JSValue prJsDomPointNew(JSContext* ctx, PrDomPoint point) {

@@ -94,14 +94,12 @@ inline uint32_t cpuDivide255(uint32_t x) {
 void cpuSourceOver(uint8_t* p, CpuPixel color, uint32_t coverage);
 
 // Blends the premultiplied RGBA source with the destination and composites it onto the destination.
-void cpuCompositeColors(const float* s, const float* d, PrDrawComposite op, PrDrawBlendMode blend,
-                        float* out);
+void cpuCompositeColors(const float* s, const float* d, PrDrawComposite op, PrDrawBlendMode blend, float* out);
 
 // Returns a coverage's values for `count` pixels of row `y` from `x`. Returns null if every value is 255, and the
 // coverage's own row if it holds all the values. Otherwise returns `scratch`, filled with zero outside the coverage's
 // box, and with 255 inside it if the coverage has no data.
-const uint8_t* PR_NULLABLE cpuCoverageSpan(const CpuCoverage& coverage, int32_t x, int32_t y,
-                                           uint32_t count, uint8_t* scratch);
+const uint8_t* PR_NULLABLE cpuCoverageSpan(const CpuCoverage& coverage, int32_t x, int32_t y, uint32_t count, uint8_t* scratch);
 
 // Composites premultiplied RGBA sources into `count` pixels in `format` from `p`. Each source is blended with its pixel
 // and composited by the operator, and the product of the two coverages mixes the result with the pixel. A null coverage
@@ -112,15 +110,14 @@ const uint8_t* PR_NULLABLE cpuCoverageSpan(const CpuCoverage& coverage, int32_t 
 // then composites a transparent source. With `knockout`, each source composites over transparent instead of its pixel,
 // and the product of the two coverages mixes the result with the pixel, also for a layer.
 void cpuCompositeSpan(uint8_t* p, PrPixelFormat format, const float* source,
-                      uint32_t sourceStride, const uint8_t* PR_NULLABLE shape,
-                      const uint8_t* PR_NULLABLE clip, uint32_t count, PrDrawComposite op,
-                      PrDrawBlendMode blend, bool knockout, bool layer);
+    uint32_t sourceStride, const uint8_t* PR_NULLABLE shape,
+    const uint8_t* PR_NULLABLE clip, uint32_t count, PrDrawComposite op, PrDrawBlendMode blend, bool knockout, bool layer);
 
 // Composites a layer as cpuCompositeSpan does, with sources that are the layer's pixels in the target's format. There
 // are at most kShadeSpan sources.
 void cpuCompositePixels(uint8_t* p, PrPixelFormat format, const uint8_t* source,
-                        const uint8_t* PR_NULLABLE shape, const uint8_t* PR_NULLABLE clip,
-                        uint32_t count, PrDrawComposite op, PrDrawBlendMode blend, bool knockout);
+    const uint8_t* PR_NULLABLE shape, const uint8_t* PR_NULLABLE clip,
+    uint32_t count, PrDrawComposite op, PrDrawBlendMode blend, bool knockout);
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Textures
@@ -156,7 +153,7 @@ CpuTexture* cpuTextureFromImage(CpuTextureCache& cache, const PrDrawImage* image
 // Returns a list's texture of an area of its space at a size, in `format`. The caller renders the texture unless it is
 // ready.
 CpuTexture* cpuListTexture(CpuTextureCache& cache, uint64_t id, PrRect region, uint32_t width, uint32_t height,
-                           PrPixelFormat format);
+    PrPixelFormat format);
 
 // Creates every level down to one pixel, if the sampling uses them.
 void cpuPrepareMips(CpuTexture& texture, PrDrawSampling sampling);

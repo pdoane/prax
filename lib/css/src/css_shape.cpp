@@ -89,7 +89,7 @@ void cornersOf(CssValueRun run, uint32_t from, uint32_t end, const CssShapeLengt
             list[3] = list[1];
         for (uint32_t c = 0; c < 4; ++c)
             radii[2 * c + a] = lengths.length(lengths.context, cssValueSubtree(run, list[c]),
-                                              a == 0 ? CssShapeAxis_X : CssShapeAxis_Y);
+                a == 0 ? CssShapeAxis_X : CssShapeAxis_Y);
     }
 }
 
@@ -111,7 +111,7 @@ void insetOf(CssValueRun run, uint32_t index, const CssShapeLengths& lengths, Pr
         items[3] = items[1];
     for (uint32_t side = 0; side < PrRectSide_Count; ++side)
         out->inset[side] = lengths.length(lengths.context, cssValueSubtree(run, items[side]),
-                                          side % 2 == 0 ? CssShapeAxis_Y : CssShapeAxis_X);
+            side % 2 == 0 ? CssShapeAxis_Y : CssShapeAxis_X);
     if (round != kArrayMissing)
         cornersOf(run, round + 1, args.end, lengths, out->radii);
 }
@@ -154,7 +154,7 @@ void ellipseOf(CssValueRun run, uint32_t index, bool circle, const CssShapeLengt
 // Converts polygon( <'fill-rule'>? [ round <length> ]? , [ <length-percentage> <length-percentage> ]# )
 // (css-shapes-1/#funcdef-basic-shape-polygon).
 void polygonOf(CssValueRun run, uint32_t index, const CssShapeLengths& lengths, Array<PrLayoutLength>& points,
-               PrLayoutShape* out) {
+        PrLayoutShape* out) {
     uint32_t end = index + run.values[index].next;
     uint32_t i = index + 1;
     // The prelude, if the shape has one, before the first comma.
@@ -217,8 +217,7 @@ PrLayoutLength boxLength(void* PR_NULLABLE context, CssValueRun run, CssShapeAxi
     return prLayoutLengthPx(cssResolveLength(run, 0, double(baseOf(b, axis)), &px) ? float(px) * b.scale : 0);
 }
 
-PrLayoutLength boxPosition(void* PR_NULLABLE context, CssValueRun run, uint32_t index, uint32_t offset,
-                           CssShapeAxis axis) {
+PrLayoutLength boxPosition(void* PR_NULLABLE context, CssValueRun run, uint32_t index, uint32_t offset, CssShapeAxis axis) {
     const BoxLengths& b = *static_cast<const BoxLengths*>(context);
     float whole = baseOf(b, axis);
     PrCssKeyword keyword = keywordAt(run, index);
@@ -269,18 +268,19 @@ bool cssIsBasicShape(CssValueRun run, uint32_t index) {
 }
 
 bool cssShapeFromValue(CssValueRun run, uint32_t index, const CssShapeLengths& lengths, Array<PrLayoutLength>& points,
-                       PrPath* path, PrLayoutShape* out) {
+        PrPath* path, PrLayoutShape* out) {
     *out = prLayoutShapeDefault();
     if (!cssIsBasicShape(run, index))
         return false;
     switch (cssValueKeyword(&run.values[index])) {
         case PrCssKeyword_Inset: insetOf(run, index, lengths, out); return true;
         case PrCssKeyword_Circle:
-        case PrCssKeyword_Ellipse:
-            out->kind = cssValueKeyword(&run.values[index]) == PrCssKeyword_Circle ? PrLayoutShapeKind_Circle
-                                                                                  : PrLayoutShapeKind_Ellipse;
-            ellipseOf(run, index, out->kind == PrLayoutShapeKind_Circle, lengths, out);
+        case PrCssKeyword_Ellipse: {
+            bool circle = cssValueKeyword(&run.values[index]) == PrCssKeyword_Circle;
+            out->kind = circle ? PrLayoutShapeKind_Circle : PrLayoutShapeKind_Ellipse;
+            ellipseOf(run, index, circle, lengths, out);
             return true;
+        }
         case PrCssKeyword_Polygon:
             out->kind = PrLayoutShapeKind_Polygon;
             polygonOf(run, index, lengths, points, out);
@@ -308,8 +308,7 @@ bool cssShapePath(CssValueRun run, uint32_t index, PrRect box, PrPath* out, PrPa
     Array<PrLayoutLength> points;
     PrPath* path = prPathCreate();
     PrLayoutShape shape{};
-    bool drawn =
-        cssShapeFromValue(run, index, CssShapeLengths{boxLength, boxPosition, &lengths}, points, path, &shape);
+    bool drawn = cssShapeFromValue(run, index, CssShapeLengths{boxLength, boxPosition, &lengths}, points, path, &shape);
     if (drawn) {
         shape.points = points.data;
         prPathTransform(path, prAffine2Scale(PrVec2{scale, scale}));
@@ -330,8 +329,8 @@ bool cssShapePath(CssValueRun run, uint32_t index, PrRect box, PrPath* out, PrPa
 // Corner shapes
 
 bool cssIsCornerShape(PrCssProperty property) {
-    return property == PrCssProperty_CornerTopLeftShape || property == PrCssProperty_CornerTopRightShape
-           || property == PrCssProperty_CornerBottomRightShape || property == PrCssProperty_CornerBottomLeftShape;
+    return property == PrCssProperty_CornerTopLeftShape || property == PrCssProperty_CornerTopRightShape ||
+        property == PrCssProperty_CornerBottomRightShape || property == PrCssProperty_CornerBottomLeftShape;
 }
 
 double cssCornerShapeParameter(CssValueRun run) {
@@ -375,8 +374,7 @@ void cssCornerShapeInterpolate(CssValuePool* out, CssValueRun from, CssValueRun 
         double convex = powF64(0.5, 1 / powF64(2, absF64(k)));
         return k < 0 ? 1 - convex : convex;
     };
-    double half = halfCorner(cssCornerShapeParameter(from)) * (1 - progress)
-                  + halfCorner(cssCornerShapeParameter(to)) * progress;
+    double half = halfCorner(cssCornerShapeParameter(from)) * (1 - progress) + halfCorner(cssCornerShapeParameter(to)) * progress;
     if (half <= 0 || half >= 1) {
         cssValuePoolAddSuperellipse(out, half <= 0 ? -kInfinityF64 : kInfinityF64);
         return;

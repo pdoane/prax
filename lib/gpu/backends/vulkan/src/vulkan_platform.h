@@ -23,7 +23,7 @@ const char* PR_NULLABLE vulkanSurfaceExtension(void);
 
 // Creates a surface over a native one, for a swap chain that `desc` describes.
 VkResult vulkanSurfaceCreate(VulkanDevice* d, const PrAppSurface* surface, const PrGpuSwapChainDesc* desc,
-                             VkSurfaceKHR PR_NULLABLE* PR_NONNULL out);
+    VkSurfaceKHR PR_NULLABLE* PR_NONNULL out);
 
 #if defined(__APPLE__)
 // Returns the CAMetalLayer that an NSView presents. The layer is the view's backing layer if that is a CAMetalLayer,

@@ -53,8 +53,8 @@ bool allDigits(PrStringView text) {
 bool privateScript(PrStringView code) {
     char third = asciiLower(code.data[2]);
     char fourth = asciiLower(code.data[3]);
-    return asciiLower(code.data[0]) == 'q' && asciiLower(code.data[1]) == 'a'
-           && (third == 'a' || (third == 'b' && fourth <= 'x'));
+    return asciiLower(code.data[0]) == 'q' && asciiLower(code.data[1]) == 'a' &&
+        (third == 'a' || (third == 'b' && fourth <= 'x'));
 }
 
 // Returns true if a region subtag is one of the registry's private-use ranges, QM through QZ and XA through XZ.
@@ -72,10 +72,12 @@ bool privateRegion(PrStringView subtag) {
 // subtags. The locale's own subtags take precedence over those of the match.
 PrLocale maximize(PrLanguage language, PrScript script, PrRegion region) {
     static const PrLanguage undetermined = languageFromSubtag("und");
-    const PrLocale keys[] = {prLocaleMake(language, script, region), prLocaleMake(language, PrScript_Zzzz, region),
-                             prLocaleMake(language, script, PrRegion_None),
-                             prLocaleMake(language, PrScript_Zzzz, PrRegion_None),
-                             script != PrScript_Zzzz ? prLocaleMake(undetermined, script, PrRegion_None) : 0};
+    const PrLocale keys[] = {
+        prLocaleMake(language, script, region), prLocaleMake(language, PrScript_Zzzz, region),
+        prLocaleMake(language, script, PrRegion_None),
+        prLocaleMake(language, PrScript_Zzzz, PrRegion_None),
+        script != PrScript_Zzzz ? prLocaleMake(undetermined, script, PrRegion_None) : 0,
+    };
     for (PrLocale key : keys) {
         if (key == 0)
             continue;
@@ -83,8 +85,8 @@ PrLocale maximize(PrLanguage language, PrScript script, PrRegion region) {
         if (match == 0)
             continue;
         return prLocaleMake(language != undetermined ? language : prLocaleLanguage(match),
-                            script != PrScript_Zzzz ? script : prLocaleScript(match),
-                            region != PrRegion_None ? region : prLocaleRegion(match));
+            script != PrScript_Zzzz ? script : prLocaleScript(match),
+            region != PrRegion_None ? region : prLocaleRegion(match));
     }
     return prLocaleMake(language, script, region);
 }
@@ -210,10 +212,13 @@ uint32_t prLocaleOpenTypeLanguages(PrLocale locale, uint32_t* PR_NULLABLE out, u
         for (uint32_t i = first; i < end; ++i) {
             PrScript forScript = prLocaleScript(kSystemQualifier[i]);
             PrRegion forRegion = prLocaleRegion(kSystemQualifier[i]);
-            bool applies = pass == 0   ? forScript != PrScript_Zzzz && forRegion != PrRegion_None
-                                             && forScript == script && forRegion == region
-                           : pass == 1 ? forScript != PrScript_Zzzz && forRegion == PrRegion_None && forScript == script
-                                       : forScript == PrScript_Zzzz;
+            bool applies;
+            if (pass == 0)
+                applies = forScript != PrScript_Zzzz && forRegion != PrRegion_None && forScript == script && forRegion == region;
+            else if (pass == 1)
+                applies = forScript != PrScript_Zzzz && forRegion == PrRegion_None && forScript == script;
+            else
+                applies = forScript == PrScript_Zzzz;
             if (!applies)
                 continue;
             if (out != nullptr && total < capacity)

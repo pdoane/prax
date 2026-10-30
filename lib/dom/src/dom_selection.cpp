@@ -22,15 +22,15 @@ void schedule(PrDomSelection* selection) {
     selection->scheduled = true;
     domNodeRetain(document);
     host->queueTask(host->context, fireSelectionChange, document,
-                    [](void* data) { domNodeRelease(static_cast<PrDomDocument*>(data)); });
+        [](void* data) { domNodeRelease(static_cast<PrDomDocument*>(data)); });
 }
 
 // Returns the selection's range if both its boundary points are in the document tree (dom/#in-a-document-tree), or null
 // otherwise.
 const PrDomRange* PR_NULLABLE rangeInTree(const PrDomSelection* selection) {
     const PrDomRange* range = domSelectionRange(selection);
-    if (range == nullptr || domNodeRoot(range->start.node) != selection->document
-        || domNodeRoot(range->end.node) != selection->document)
+    if (range == nullptr || domNodeRoot(range->start.node) != selection->document ||
+            domNodeRoot(range->end.node) != selection->document)
         return nullptr;
     return range;
 }
@@ -56,8 +56,7 @@ PrDomRange* PR_NULLABLE domSelectionRange(const PrDomSelection* selection) {
     return weakGet<PrDomRange>(selection->range);
 }
 
-void domSelectionSetRange(PrDomSelection* selection, PrDomRange* PR_NULLABLE range,
-                          PrDomSelectionDirection direction) {
+void domSelectionSetRange(PrDomSelection* selection, PrDomRange* PR_NULLABLE range, PrDomSelectionDirection direction) {
     bool changed = range != domSelectionRange(selection) || direction != selection->direction;
     weakSet(&selection->range, range != nullptr ? &range->weak : nullptr, range);
     selection->direction = direction;
@@ -67,8 +66,7 @@ void domSelectionSetRange(PrDomSelection* selection, PrDomRange* PR_NULLABLE ran
 
 void domSelectionRangeChanged(PrDomRange* range) {
     PrDomDocument* document = range->document;
-    if (document != nullptr && document->selection != nullptr
-        && domSelectionRange(document->selection) == range)
+    if (document != nullptr && document->selection != nullptr && domSelectionRange(document->selection) == range)
         schedule(document->selection);
 }
 

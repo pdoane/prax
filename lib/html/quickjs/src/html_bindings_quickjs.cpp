@@ -225,8 +225,8 @@ bool readSupportedType(JSContext* ctx, JSValueConst value, PrHtmlDomParserSuppor
 JSValue parseFromString(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv) {
     StringArgument source = {ctx};
     PrHtmlDomParserSupportedType type = {};
-    if (jsThis<uint8_t>(ctx, self, htmlDomParserClass) == nullptr || !jsArgCount(ctx, argc, 2)
-        || !source.read(argv[0]) || !readSupportedType(ctx, argv[1], &type))
+    if (jsThis<uint8_t>(ctx, self, htmlDomParserClass) == nullptr || !jsArgCount(ctx, argc, 2) ||
+            !source.read(argv[0]) || !readSupportedType(ctx, argv[1], &type))
         return JS_EXCEPTION;
     PrDomDocument* document = prHtmlDomParserParseFromString(source.value(), type);
     JSValue object = jsWrapAs(ctx, prJsDomDocumentClass, JS_UNDEFINED, document, true);
@@ -243,8 +243,7 @@ JSValue markup(JSContext* ctx, JSValueConst self, int magic) {
     PrDomElement* element = jsThis<PrDomElement>(ctx, self, prJsDomElementClass);
     if (element == nullptr)
         return JS_EXCEPTION;
-    return jsTakeString(ctx, magic == 0 ? prHtmlInnerHtml(prDomElementAsNode(element))
-                                        : prHtmlOuterHtml(element));
+    return jsTakeString(ctx, magic == 0 ? prHtmlInnerHtml(prDomElementAsNode(element)) : prHtmlOuterHtml(element));
 }
 
 // The setters, which treat null as the empty string ([LegacyNullToEmptyString]).
@@ -265,8 +264,8 @@ JSValue insertAdjacentHtml(JSContext* ctx, JSValueConst self, int argc, JSValueC
     PrDomElement* element = jsThis<PrDomElement>(ctx, self, prJsDomElementClass);
     PrDomInsertPosition where = PrDomInsertPosition_BeforeBegin;
     StringArgument markup = {ctx};
-    if (element == nullptr || !jsArgCount(ctx, argc, 2)
-        || !prJsDomInsertPositionRead(ctx, argv[0], &where) || !markup.read(argv[1]))
+    if (element == nullptr || !jsArgCount(ctx, argc, 2) ||
+            !prJsDomInsertPositionRead(ctx, argv[0], &where) || !markup.read(argv[1]))
         return JS_EXCEPTION;
     PrStatus status = prHtmlInsertAdjacentHtml(element, where, markup.value());
     if (status == PrStatus_NotAllowed)
@@ -312,9 +311,9 @@ JSValue setDir(JSContext* ctx, JSValueConst self, JSValueConst input) {
 // offsetParent (cssom-view-1/#dom-htmlelement-offsetparent).
 JSValue offsetParent(JSContext* ctx, JSValueConst self) {
     PrHtmlElement* element = jsThis<PrHtmlElement>(ctx, self, htmlElementClass);
-    return element != nullptr
-               ? jsWrapAs(ctx, prJsDomElementClass, JS_UNDEFINED, prHtmlElementOffsetParent(element), false)
-               : JS_EXCEPTION;
+    if (element != nullptr)
+        return jsWrapAs(ctx, prJsDomElementClass, JS_UNDEFINED, prHtmlElementOffsetParent(element), false);
+    return JS_EXCEPTION;
 }
 
 // offsetTop, offsetLeft, offsetWidth and offsetHeight, selected by the magic.
@@ -322,8 +321,10 @@ JSValue offsetGet(JSContext* ctx, JSValueConst self, int magic) {
     PrHtmlElement* element = jsThis<PrHtmlElement>(ctx, self, htmlElementClass);
     if (element == nullptr)
         return JS_EXCEPTION;
-    int32_t (*const offsets[])(PrHtmlElement*) = {prHtmlElementOffsetTop, prHtmlElementOffsetLeft,
-                                                  prHtmlElementOffsetWidth, prHtmlElementOffsetHeight};
+    int32_t (*const offsets[])(PrHtmlElement*) = {
+        prHtmlElementOffsetTop, prHtmlElementOffsetLeft,
+        prHtmlElementOffsetWidth, prHtmlElementOffsetHeight,
+    };
     return JS_NewInt32(ctx, offsets[magic](element));
 }
 
@@ -333,8 +334,9 @@ JSValue hidden(JSContext* ctx, JSValueConst self) {
     if (element == nullptr)
         return JS_EXCEPTION;
     PrHtmlHidden state = prHtmlElementHidden(element);
-    return state == PrHtmlHidden_UntilFound ? jsFixedString(ctx, "until-found")
-                                            : JS_NewBool(ctx, state == PrHtmlHidden_Hidden);
+    if (state == PrHtmlHidden_UntilFound)
+        return jsFixedString(ctx, "until-found");
+    return JS_NewBool(ctx, state == PrHtmlHidden_Hidden);
 }
 
 JSValue setHidden(JSContext* ctx, JSValueConst self, JSValueConst input) {
@@ -362,11 +364,9 @@ JSValue elementFocus(JSContext* ctx, JSValueConst self, int argc, JSValueConst* 
     bool present = false;
     PrHtmlFocusOptions options = prHtmlFocusOptionsDefault();
     JSValueConst dictionary = argc > 0 ? argv[0] : JS_UNDEFINED;
-    if (element == nullptr || !jsDictionary(ctx, dictionary, &present)
-        || (present
-            && (!jsDictBool(ctx, dictionary, "focusVisible", &options.focusVisible,
-                            &options.hasFocusVisible)
-                || !jsDictBool(ctx, dictionary, "preventScroll", &options.preventScroll))))
+    if (element == nullptr || !jsDictionary(ctx, dictionary, &present) || (present &&
+            (!jsDictBool(ctx, dictionary, "focusVisible", &options.focusVisible, &options.hasFocusVisible) ||
+                !jsDictBool(ctx, dictionary, "preventScroll", &options.preventScroll))))
         return JS_EXCEPTION;
     prHtmlFocus(element, &options);
     return JS_UNDEFINED;
@@ -401,8 +401,7 @@ JSValue datasetItem(JSContext* ctx, JSValueConst, void* handle, PrStringView nam
     return value.data != nullptr ? jsNewStringView(ctx, value) : JS_UNDEFINED;
 }
 
-bool datasetSetItem(JSContext* ctx, JSValueConst, void* handle, PrStringView name,
-                    JSValueConst input) {
+bool datasetSetItem(JSContext* ctx, JSValueConst, void* handle, PrStringView name, JSValueConst input) {
     StringArgument value = {ctx};
     if (!value.read(input))
         return false;
@@ -418,24 +417,25 @@ void datasetDeleteItem(void* handle, PrStringView name) {
 }
 
 // [LegacyOverrideBuiltIns], with a named setter and deleter.
-constexpr JsNamed kDataset = {datasetNames, datasetItem, datasetSetItem, datasetDeleteItem,
-                              JsNamedFlag_OverrideBuiltIns};
+constexpr JsNamed kDataset = {
+    datasetNames, datasetItem, datasetSetItem, datasetDeleteItem,
+    JsNamedFlag_OverrideBuiltIns,
+};
 
 // html/#dom-dataset, of an HTML, SVG or MathML element.
 JSValue dataset(JSContext* ctx, JSValueConst self) {
     PrDomElement* element = jsThis<PrDomElement>(ctx, self, prJsDomElementClass);
     if (element == nullptr)
         return JS_EXCEPTION;
-    return jsSameObject(ctx, self, "dataset",
-                        [&] { return jsWrap(ctx, htmlDomStringMapClass, self, element, false); });
+    return jsSameObject(ctx, self, "dataset", [&] { return jsWrap(ctx, htmlDomStringMapClass, self, element, false); });
 }
 
 // activeElement, of a Document or a ShadowRoot.
 JSValue activeElement(JSContext* ctx, JSValueConst self) {
     PrDomNode* root = jsThis<PrDomNode>(ctx, self, prJsDomNodeClass);
-    return root != nullptr
-               ? jsWrapAs(ctx, prJsDomElementClass, JS_UNDEFINED, prHtmlActiveElement(root), false)
-               : JS_EXCEPTION;
+    if (root == nullptr)
+        return JS_EXCEPTION;
+    return jsWrapAs(ctx, prJsDomElementClass, JS_UNDEFINED, prHtmlActiveElement(root), false);
 }
 
 // The getter of a document's collection of the PrHtmlDocumentCollection `magic`, which returns the same object at each
@@ -481,8 +481,7 @@ JSValue dialogShow(JSContext* ctx, JSValueConst self, int, JSValueConst*, int ma
     PrHtmlDialogElement* dialog = jsThis<PrHtmlDialogElement>(ctx, self, htmlDialogElementClass);
     if (dialog == nullptr)
         return JS_EXCEPTION;
-    PrStatus status =
-        magic == 0 ? prHtmlDialogElementShow(dialog) : prHtmlDialogElementShowModal(dialog);
+    PrStatus status = magic == 0 ? prHtmlDialogElementShow(dialog) : prHtmlDialogElementShowModal(dialog);
     return status == PrStatus_Ok ? JS_UNDEFINED : jsDomExceptionThrow(ctx, "InvalidStateError");
 }
 
@@ -541,8 +540,7 @@ JSValue imageFactory(JSContext* ctx, JSValueConst, int argc, JSValueConst* argv)
     JSValue object = jsWrapAs(ctx, prJsDomElementClass, JS_UNDEFINED, element, false);
     prDomNodeRelease(prDomElementAsNode(element));
     PrHtmlImageElement* image = prHtmlImageElementQuery(prDomElementAsEventTarget(element));
-    void (*const kSetters[])(PrHtmlImageElement*, uint32_t) = {prHtmlImageElementSetWidth,
-                                                               prHtmlImageElementSetHeight};
+    void (*const kSetters[])(PrHtmlImageElement*, uint32_t) = {prHtmlImageElementSetWidth, prHtmlImageElementSetHeight};
     for (int i = 0; i < 2 && i < argc; ++i) {
         uint32_t value = 0;
         if (JS_IsUndefined(argv[i]))
@@ -559,13 +557,10 @@ JSValue imageFactory(JSContext* ctx, JSValueConst, int argc, JSValueConst* argv)
 // Defines Image on the global. Its prototype is that of `constructor`, which is HTMLImageElement
 // (webidl/#create-a-legacy-factory-function).
 void defineImageFactory(JSContext* ctx, JSValueConst constructor) {
-    JSValue factory = JS_NewCFunction2(ctx, JsCallScoped<imageFactory>::call, "Image", 0,
-                                       JS_CFUNC_constructor, 0);
-    JS_DefinePropertyValueStr(ctx, factory, "prototype",
-                              JS_GetPropertyStr(ctx, constructor, "prototype"), 0);
+    JSValue factory = JS_NewCFunction2(ctx, JsCallScoped<imageFactory>::call, "Image", 0, JS_CFUNC_constructor, 0);
+    JS_DefinePropertyValueStr(ctx, factory, "prototype", JS_GetPropertyStr(ctx, constructor, "prototype"), 0);
     JSValue global = JS_GetGlobalObject(ctx);
-    JS_DefinePropertyValueStr(ctx, global, "Image", factory,
-                              JS_PROP_CONFIGURABLE | JS_PROP_WRITABLE);
+    JS_DefinePropertyValueStr(ctx, global, "Image", factory, JS_PROP_CONFIGURABLE | JS_PROP_WRITABLE);
     JS_FreeValue(ctx, global);
 }
 
@@ -578,8 +573,7 @@ JSValue setCanvasDimension(JSContext* ctx, JSValueConst self, JSValueConst input
     uint32_t value = 0;
     if (canvas == nullptr || JS_ToUint32(ctx, &value, input) < 0)
         return JS_EXCEPTION;
-    PrStatus status = magic == 0 ? prHtmlCanvasElementSetWidth(canvas, value)
-                                 : prHtmlCanvasElementSetHeight(canvas, value);
+    PrStatus status = magic == 0 ? prHtmlCanvasElementSetWidth(canvas, value) : prHtmlCanvasElementSetHeight(canvas, value);
     return status == PrStatus_Ok ? JS_UNDEFINED : jsDomExceptionThrow(ctx, "InvalidStateError");
 }
 
@@ -603,8 +597,8 @@ JSValue canvasGetContext(JSContext* ctx, JSValueConst self, int argc, JSValueCon
     if (id.value() != "2d")
         return JS_NULL;
     PrCanvasSettings settings = prCanvasSettingsDefault();
-    if (mode == PrHtmlCanvasContextMode_None
-        && !prJsCanvasSettingsRead(ctx, argc > 1 ? argv[1] : JS_UNDEFINED, &settings))
+    if (mode == PrHtmlCanvasContextMode_None &&
+            !prJsCanvasSettingsRead(ctx, argc > 1 ? argv[1] : JS_UNDEFINED, &settings))
         return JS_EXCEPTION;
     PrCanvas* context = nullptr;
     if (prHtmlCanvasElementGetContext2D(canvas, &settings, &context) != PrStatus_Ok || context == nullptr)
@@ -724,8 +718,7 @@ JSValue timeRangesLength(JSContext* ctx, JSValueConst self) {
 }
 
 // start and end, selected by the magic. Throws IndexSizeError for an index past the last range.
-JSValue timeRangesBound(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv,
-                        int magic) {
+JSValue timeRangesBound(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv, int magic) {
     TimeRangesValue* ranges = jsThis<TimeRangesValue>(ctx, self, htmlTimeRangesClass);
     uint32_t index = 0;
     if (ranges == nullptr || !jsArgCount(ctx, argc, 1) || JS_ToUint32(ctx, &index, argv[0]) < 0)
@@ -740,8 +733,7 @@ JSValue mediaState(JSContext* ctx, JSValueConst self, int magic) {
     PrHtmlMediaElement* media = mediaThis(ctx, self);
     if (media == nullptr)
         return JS_EXCEPTION;
-    return JS_NewUint32(ctx, magic == 0 ? prHtmlMediaElementNetworkState(media)
-                                        : prHtmlMediaElementReadyState(media));
+    return JS_NewUint32(ctx, magic == 0 ? prHtmlMediaElementNetworkState(media) : prHtmlMediaElementReadyState(media));
 }
 
 // The boolean attributes, selected by the magic: seeking, paused, ended, muted and preservesPitch.
@@ -888,8 +880,10 @@ JSValue mediaPlay(JSContext* ctx, JSValueConst self, int, JSValueConst*) {
     if (JS_IsException(promise))
         return promise;
     PlayPromise* play = alloc<PlayPromise>();
-    *play = PlayPromise{ctx, jsCallbackCreate(ctx, functions[0], JS_UNDEFINED),
-                        jsCallbackCreate(ctx, functions[1], JS_UNDEFINED)};
+    *play = PlayPromise{
+        ctx, jsCallbackCreate(ctx, functions[0], JS_UNDEFINED),
+        jsCallbackCreate(ctx, functions[1], JS_UNDEFINED),
+    };
     JS_FreeValue(ctx, functions[0]);
     JS_FreeValue(ctx, functions[1]);
     PrHtmlPlayPromise callback = {play, settlePlay, releasePlay};
@@ -917,8 +911,7 @@ JSValue mediaEnumerated(JSContext* ctx, JSValueConst self, int magic) {
     PrStringView text = prDomElementGetAttribute(element, kMediaEnumerated[magic]);
     const char* result = nullptr;
     if (magic == 0) {
-        result = text.data == nullptr ? nullptr
-            : asciiEqualsFold(text, "use-credentials") ? "use-credentials" : "anonymous";
+        result = text.data == nullptr ? nullptr : asciiEqualsFold(text, "use-credentials") ? "use-credentials" : "anonymous";
     } else if (magic == 1) {
         result = asciiEqualsFold(text, "none") ? "none" : asciiEqualsFold(text, "metadata") ? "metadata" : "auto";
     } else {
@@ -947,8 +940,7 @@ JSValue videoSize(JSContext* ctx, JSValueConst self, int magic) {
     PrHtmlMediaElement* media = mediaThis(ctx, self);
     if (media == nullptr)
         return JS_EXCEPTION;
-    return JS_NewUint32(ctx, magic == 0 ? prHtmlMediaElementVideoWidth(media)
-                                        : prHtmlMediaElementVideoHeight(media));
+    return JS_NewUint32(ctx, magic == 0 ? prHtmlMediaElementVideoWidth(media) : prHtmlMediaElementVideoHeight(media));
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -960,8 +952,8 @@ JSValue slotAssigned(JSContext* ctx, JSValueConst self, int argc, JSValueConst* 
     bool present = false;
     bool flatten = false;
     JSValueConst options = argc > 0 ? argv[0] : JS_UNDEFINED;
-    if (slot == nullptr || !jsDictionary(ctx, options, &present)
-        || (present && !jsDictBool(ctx, options, "flatten", &flatten)))
+    if (slot == nullptr || !jsDictionary(ctx, options, &present) ||
+            (present && !jsDictBool(ctx, options, "flatten", &flatten)))
         return JS_EXCEPTION;
     Array<PrDomNode* PR_NONNULL> nodes;
     nodes.reserve(prHtmlSlotElementAssignedNodes(slot, flatten, nullptr, 0));
@@ -971,8 +963,7 @@ JSValue slotAssigned(JSContext* ctx, JSValueConst self, int argc, JSValueConst* 
     for (uint32_t i = 0; i < nodes.count; ++i) {
         if (magic != 0 && prDomNodeType(nodes.data[i]) != PrDomNodeType_Element)
             continue;
-        JS_SetPropertyUint32(ctx, array, length++,
-                             jsWrapAs(ctx, prJsDomNodeClass, JS_UNDEFINED, nodes.data[i], false));
+        JS_SetPropertyUint32(ctx, array, length++, jsWrapAs(ctx, prJsDomNodeClass, JS_UNDEFINED, nodes.data[i], false));
     }
     nodes.reset();
     return array;
@@ -1002,8 +993,7 @@ JSValue slotAssign(JSContext* ctx, JSValueConst self, int argc, JSValueConst* ar
 // HTMLTemplateElement's shadow root attributes (html/#dom-template-shadowrootmode)
 
 JSValue shadowRootMode(JSContext* ctx, JSValueConst self, int) {
-    PrHtmlTemplateElement* element =
-        jsThis<PrHtmlTemplateElement>(ctx, self, htmlTemplateElementClass);
+    PrHtmlTemplateElement* element = jsThis<PrHtmlTemplateElement>(ctx, self, htmlTemplateElementClass);
     if (element == nullptr)
         return JS_EXCEPTION;
     PrDomShadowRootMode mode = PrDomShadowRootMode_Open;
@@ -1013,12 +1003,10 @@ JSValue shadowRootMode(JSContext* ctx, JSValueConst self, int) {
 }
 
 JSValue shadowRootSlotAssignment(JSContext* ctx, JSValueConst self, int) {
-    PrHtmlTemplateElement* element =
-        jsThis<PrHtmlTemplateElement>(ctx, self, htmlTemplateElementClass);
+    PrHtmlTemplateElement* element = jsThis<PrHtmlTemplateElement>(ctx, self, htmlTemplateElementClass);
     if (element == nullptr)
         return JS_EXCEPTION;
-    bool manual =
-        prHtmlTemplateElementShadowRootSlotAssignment(element) == PrDomSlotAssignmentMode_Manual;
+    bool manual = prHtmlTemplateElementShadowRootSlotAssignment(element) == PrDomSlotAssignmentMode_Manual;
     return jsFixedString(ctx, manual ? "manual" : "named");
 }
 
@@ -1092,8 +1080,7 @@ JSValue sheet(JSContext* ctx, JSValueConst self) {
 // HTMLTemplateElement (html/#htmltemplateelement)
 
 JSValue content(JSContext* ctx, JSValueConst self) {
-    PrHtmlTemplateElement* element =
-        jsThis<PrHtmlTemplateElement>(ctx, self, htmlTemplateElementClass);
+    PrHtmlTemplateElement* element = jsThis<PrHtmlTemplateElement>(ctx, self, htmlTemplateElementClass);
     if (element == nullptr)
         return JS_EXCEPTION;
     PrDomDocumentFragment* fragment = prHtmlTemplateElementContent(element);
@@ -1115,18 +1102,16 @@ JSValue errorEventConstruct(JSContext* ctx, JSValueConst newTarget, int argc, JS
     JSValue error = JS_UNDEFINED;
     bool present = false;
     // html/#erroreventinit, after EventInit. The object holds its `error`.
-    bool read =
-        jsArgCount(ctx, argc, 1) && type.read(argv[0]) && jsDictionary(ctx, dictionary, &present);
+    bool read = jsArgCount(ctx, argc, 1) && type.read(argv[0]) && jsDictionary(ctx, dictionary, &present);
     if (read && present) {
-        read = prJsDomEventInitRead(ctx, dictionary, &init.event)
-               && jsDictUint32(ctx, dictionary, "colno", &init.colno);
+        read =
+            prJsDomEventInitRead(ctx, dictionary, &init.event) && jsDictUint32(ctx, dictionary, "colno", &init.colno);
         if (read) {
             error = JS_GetPropertyStr(ctx, dictionary, "error");
             read = !JS_IsException(error);
         }
-        read = read && jsDictString(ctx, dictionary, "filename", &filename)
-               && jsDictUint32(ctx, dictionary, "lineno", &init.lineno)
-               && jsDictString(ctx, dictionary, "message", &message);
+        read = read && jsDictString(ctx, dictionary, "filename", &filename) &&
+            jsDictUint32(ctx, dictionary, "lineno", &init.lineno) && jsDictString(ctx, dictionary, "message", &message);
     }
     if (!read) {
         JS_FreeValue(ctx, error);
@@ -1171,15 +1156,13 @@ void reportException(JSContext* ctx, JSValueConst error) {
         PrStringView frame = stringTrim(PrStringView{text.data, end < text.size ? end : text.size});
         if (frame.size != 0 && frame.data[frame.size - 1] == ')') {
             size_t open = stringFindLast(frame, '(');
-            frame = open < frame.size ? PrStringView{frame.data + open + 1, frame.size - open - 2}
-                                      : PrStringView{};
+            frame = open < frame.size ? PrStringView{frame.data + open + 1, frame.size - open - 2} : PrStringView{};
         } else if (stringStartsWith(frame, "at ")) {
             frame = PrStringView{frame.data + 3, frame.size - 3};
         }
         size_t columnColon = stringFindLast(frame, ':');
-        size_t lineColon = columnColon < frame.size
-                               ? stringFindLast(PrStringView{frame.data, columnColon}, ':')
-                               : frame.size;
+        size_t lineColon =
+            columnColon < frame.size ? stringFindLast(PrStringView{frame.data, columnColon}, ':') : frame.size;
         if (lineColon < frame.size) {
             init.filename = PrStringView{frame.data, lineColon};
             uint64_t line = 0;
@@ -1232,8 +1215,7 @@ JSValue messageConstruct(JSContext* ctx, JSValueConst newTarget, int argc, JSVal
     PrHtmlMessageEventInit init = prHtmlMessageEventInitDefault();
     bool present = false;
     JSValueConst dictionary = argc > 1 ? argv[1] : JS_UNDEFINED;
-    if (!jsArgCount(ctx, argc, 1) || !type.read(argv[0])
-        || !jsDictionary(ctx, dictionary, &present))
+    if (!jsArgCount(ctx, argc, 1) || !type.read(argv[0]) || !jsDictionary(ctx, dictionary, &present))
         return JS_EXCEPTION;
     JSValue data = JS_NULL;
     if (present) {
@@ -1245,8 +1227,7 @@ JSValue messageConstruct(JSContext* ctx, JSValueConst newTarget, int argc, JSVal
         if (JS_IsUndefined(data))
             data = JS_NULL;
         JSValue source = JS_UNDEFINED;
-        bool ok = jsDictString(ctx, dictionary, "lastEventId", &lastEventId)
-                  && jsDictString(ctx, dictionary, "origin", &origin);
+        bool ok = jsDictString(ctx, dictionary, "lastEventId", &lastEventId) && jsDictString(ctx, dictionary, "origin", &origin);
         if (ok) {
             source = JS_GetPropertyStr(ctx, dictionary, "source");
             ok = !JS_IsException(source);
@@ -1292,8 +1273,7 @@ JSValue messageData(JSContext* ctx, JSValueConst self) {
     PrStringView bytes = prHtmlMessageEventSerializedData(event);
     if (bytes.data == nullptr)
         return JS_NULL;
-    data = JS_ReadObject(ctx, reinterpret_cast<const uint8_t*>(bytes.data), bytes.size,
-                         kSerializeFlags);
+    data = JS_ReadObject(ctx, reinterpret_cast<const uint8_t*>(bytes.data), bytes.size, kSerializeFlags);
     if (JS_IsException(data))
         return data;
     jsSetReference(ctx, self, MessageSlot_Data, data);
@@ -1342,8 +1322,7 @@ JSValue postMessage(JSContext* ctx, JSValueConst self, int argc, JSValueConst* a
         JS_FreeValue(ctx, JS_GetException(ctx));
         return jsDomExceptionThrow(ctx, "DataCloneError");
     }
-    PrStatus status = prHtmlWindowPostMessage(
-        window, source, PrStringView{reinterpret_cast<const char*>(bytes), size},
+    PrStatus status = prHtmlWindowPostMessage(window, source, PrStringView{reinterpret_cast<const char*>(bytes), size},
         targetOrigin.value());
     js_free(ctx, bytes);
     return status == PrStatus_Ok ? JS_UNDEFINED : jsDomExceptionThrow(ctx, "SyntaxError");
@@ -1358,8 +1337,7 @@ JSValue pageRevealConstruct(JSContext* ctx, JSValueConst newTarget, int argc, JS
     PrDomEventInit init = prDomEventInitDefault();
     bool present = false;
     JSValueConst dictionary = argc > 1 ? argv[1] : JS_UNDEFINED;
-    if (!jsArgCount(ctx, argc, 1) || !type.read(argv[0])
-        || !jsDictionary(ctx, dictionary, &present))
+    if (!jsArgCount(ctx, argc, 1) || !type.read(argv[0]) || !jsDictionary(ctx, dictionary, &present))
         return JS_EXCEPTION;
     if (present) {
         if (!prJsDomEventInitRead(ctx, dictionary, &init))
@@ -1380,9 +1358,7 @@ JSValue pageRevealConstruct(JSContext* ctx, JSValueConst newTarget, int argc, JS
 }
 
 JSValue pageRevealViewTransition(JSContext* ctx, JSValueConst self) {
-    return jsThis<PrHtmlPageRevealEvent>(ctx, self, htmlPageRevealEventClass) != nullptr
-               ? JS_NULL
-               : JS_EXCEPTION;
+    return jsThis<PrHtmlPageRevealEvent>(ctx, self, htmlPageRevealEventClass) != nullptr ? JS_NULL : JS_EXCEPTION;
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -1396,8 +1372,7 @@ enum {
 typedef uint8_t RejectionSlot;
 
 // Creates a PromiseRejectionEvent object that holds `promise` and `reason`.
-JSValue rejectionEvent(JSContext* ctx, PrStringView type, const PrDomEventInit* init,
-                       JSValueConst promise, JSValueConst reason) {
+JSValue rejectionEvent(JSContext* ctx, PrStringView type, const PrDomEventInit* init, JSValueConst promise, JSValueConst reason) {
     PrHtmlPromiseRejectionEvent* event = prHtmlPromiseRejectionEventCreate(type, init);
     JSValue object = jsWrap(ctx, htmlPromiseRejectionEventClass, JS_UNDEFINED, event, true);
     if (JS_IsException(object)) {
@@ -1416,8 +1391,8 @@ JSValue rejectionConstruct(JSContext* ctx, JSValueConst newTarget, int argc, JSV
     JSValueConst dictionary = argc > 1 ? argv[1] : JS_UNDEFINED;
     // PromiseRejectionEventInit (html/#promiserejectioneventinit), after EventInit: promise, which is required, then
     // reason.
-    if (!jsArgCount(ctx, argc, 2) || !type.read(argv[0]) || !jsDictionary(ctx, dictionary, &present)
-        || !prJsDomEventInitRead(ctx, dictionary, &init))
+    if (!jsArgCount(ctx, argc, 2) || !type.read(argv[0]) || !jsDictionary(ctx, dictionary, &present) ||
+            !prJsDomEventInitRead(ctx, dictionary, &init))
         return JS_EXCEPTION;
     JSValue promise = JS_GetPropertyStr(ctx, dictionary, "promise");
     if (JS_IsException(promise))
@@ -1446,8 +1421,7 @@ JSValue rejectionMember(JSContext* ctx, JSValueConst self, int magic) {
 
 // html/#the-hostpromiserejectiontracker-implementation: a promise rejected with no handler is added to the window's
 // list. A promise that gets a handler before the notification is removed from the list.
-void trackRejection(JSContext* ctx, JSValueConst promise, JSValueConst reason, bool handled,
-                    void*) {
+void trackRejection(JSContext* ctx, JSValueConst promise, JSValueConst reason, bool handled, void*) {
     PrHtmlWindow* window = globalWindow(ctx);
     if (window == nullptr)
         return;
@@ -1460,8 +1434,7 @@ void trackRejection(JSContext* ctx, JSValueConst promise, JSValueConst reason, b
     int64_t length = 0;
     JS_GetLength(ctx, list, &length);
     if (!handled) {
-        JS_SetPropertyUint32(ctx, list, uint32_t(length),
-                             jsEntry(ctx, JS_DupValue(ctx, promise), JS_DupValue(ctx, reason)));
+        JS_SetPropertyUint32(ctx, list, uint32_t(length), jsEntry(ctx, JS_DupValue(ctx, promise), JS_DupValue(ctx, reason)));
     } else {
         // The list is rebuilt without the promise, which appears in it at most once.
         JSValue kept = JS_NewArray(ctx);
@@ -1492,9 +1465,11 @@ JSValue document(JSContext* ctx, JSValueConst self) {
         return JS_EXCEPTION;
     // The receiver may be the global, whose prototype is the window's object.
     JSValue holder = jsWrap(ctx, htmlWindowClass, JS_NULL, window, false);
-    JSValue object = JS_IsException(holder) ? JS_EXCEPTION
-                                            : jsWrapAs(ctx, prJsDomDocumentClass, holder,
-                                                       prHtmlWindowDocument(window), false);
+    JSValue object;
+    if (JS_IsException(holder))
+        object = JS_EXCEPTION;
+    else
+        object = jsWrapAs(ctx, prJsDomDocumentClass, holder, prHtmlWindowDocument(window), false);
     // The window's object holds its document's object, which changes only when a new document loads.
     if (!JS_IsException(object)) {
         JSValue held = jsReference(ctx, holder, WindowSlot_Document);
@@ -1520,8 +1495,7 @@ JSValue getComputedStyle(JSContext* ctx, JSValueConst self, int argc, JSValueCon
     StringArgument pseudoElement = {ctx};
     if (argc > 1 && !JS_IsUndefined(argv[1]) && !pseudoElement.readNullable(argv[1]))
         return JS_EXCEPTION;
-    return jsWrap(ctx, prJsCssStylePropertiesClass, argv[0],
-                  prCssElementComputedStyle(element, pseudoElement.value()), false);
+    return jsWrap(ctx, prJsCssStylePropertiesClass, argv[0], prCssElementComputedStyle(element, pseudoElement.value()), false);
 }
 
 JSValue matchMedia(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv) {
@@ -1539,8 +1513,7 @@ JSValue matchMedia(JSContext* ctx, JSValueConst self, int argc, JSValueConst* ar
 // html/#dom-btoa: the base64 of the bytes that the string's code units are. A code unit above U+00FF is not a byte.
 JSValue btoa(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv) {
     StringArgument data = {ctx};
-    if (jsThis<PrHtmlWindow>(ctx, self, htmlWindowClass) == nullptr || !jsArgCount(ctx, argc, 1)
-        || !data.read(argv[0]))
+    if (jsThis<PrHtmlWindow>(ctx, self, htmlWindowClass) == nullptr || !jsArgCount(ctx, argc, 1) || !data.read(argv[0]))
         return JS_EXCEPTION;
     PrStringView text = data.value();
     TextBuffer bytes;
@@ -1566,8 +1539,7 @@ JSValue btoa(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv) {
 // html/#dom-atob: the bytes that the forgiving-base64 decode of the string gives, each as a code unit.
 JSValue atob(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv) {
     StringArgument data = {ctx};
-    if (jsThis<PrHtmlWindow>(ctx, self, htmlWindowClass) == nullptr || !jsArgCount(ctx, argc, 1)
-        || !data.read(argv[0]))
+    if (jsThis<PrHtmlWindow>(ctx, self, htmlWindowClass) == nullptr || !jsArgCount(ctx, argc, 1) || !data.read(argv[0]))
         return JS_EXCEPTION;
     PrStringView text = data.value();
     size_t capacity = base64DecodedCapacity(text.size);
@@ -1703,9 +1675,7 @@ JSValue abortSignalTimeout(JSContext* ctx, JSValueConst, int argc, JSValueConst*
     return object;
 }
 
-constexpr JSCFunctionListEntry kAbortSignalStatic[] = {
-    PR_JS_METHOD("timeout", 1, abortSignalTimeout),
-};
+constexpr JSCFunctionListEntry kAbortSignalStatic[] = {PR_JS_METHOD("timeout", 1, abortSignalTimeout)};
 
 // The frame's time is on the same clock as performance.now().
 void invokeFrame(void* PR_NULLABLE context, double now) {
@@ -1717,8 +1687,7 @@ void invokeFrame(void* PR_NULLABLE context, double now) {
 JSValue requestAnimationFrame(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv) {
     PrHtmlWindow* window = jsThis<PrHtmlWindow>(ctx, self, htmlWindowClass);
     CallbackArgument<PrHtmlFrameRequestCallback> callback = {ctx, JS_UNDEFINED};
-    if (window == nullptr || !jsArgCount(ctx, argc, 1)
-        || !callback.readFunction(argv[0], invokeFrame))
+    if (window == nullptr || !jsArgCount(ctx, argc, 1) || !callback.readFunction(argv[0], invokeFrame))
         return JS_EXCEPTION;
     return JS_NewUint32(ctx, prHtmlWindowRequestAnimationFrame(window, callback.get()));
 }
@@ -1741,8 +1710,7 @@ JSValue ancestor(JSContext* ctx, JSValueConst self, int magic) {
     PrHtmlWindow* window = jsThis<PrHtmlWindow>(ctx, self, htmlWindowClass);
     if (window == nullptr)
         return JS_EXCEPTION;
-    for (PrHtmlWindow* parent = prHtmlWindowParent(window); parent != nullptr;
-         parent = prHtmlWindowParent(window)) {
+    for (PrHtmlWindow* parent = prHtmlWindowParent(window); parent != nullptr; parent = prHtmlWindowParent(window)) {
         window = parent;
         if (magic == kParentMagic)
             break;
@@ -1762,7 +1730,7 @@ JSValue performance(JSContext* ctx, JSValueConst self, int) {
     JSValue object = jsReference(ctx, holder, WindowSlot_Performance);
     if (JS_IsUndefined(object)) {
         object = jsWrapAs(ctx, htmlPerformanceClass, JS_UNDEFINED,
-                          prHtmlPerformanceAsEventTarget(prHtmlWindowPerformance(window)), false);
+            prHtmlPerformanceAsEventTarget(prHtmlWindowPerformance(window)), false);
         if (!JS_IsException(object))
             jsSetReference(ctx, holder, WindowSlot_Performance, object);
     }
@@ -1773,11 +1741,12 @@ JSValue performance(JSContext* ctx, JSValueConst self, int) {
 // A [Replaceable] attribute's setter (webidl/#Replaceable): the value becomes an own property of the receiver, named by
 // the attribute that the magic selects.
 JSValue setReplaceable(JSContext* ctx, JSValueConst self, JSValueConst input, int magic) {
-    constexpr const char* kNames[] = {"performance", "innerWidth",  "innerHeight", "scrollX",
-                                      "scrollY",     "pageXOffset", "pageYOffset", "parent",
-                                      "devicePixelRatio"};
-    if (JS_DefinePropertyValueStr(ctx, self, kNames[magic], JS_DupValue(ctx, input), JS_PROP_C_W_E)
-        < 0)
+    constexpr const char* kNames[] = {
+        "performance", "innerWidth",  "innerHeight", "scrollX",
+        "scrollY",     "pageXOffset", "pageYOffset", "parent",
+        "devicePixelRatio",
+    };
+    if (JS_DefinePropertyValueStr(ctx, self, kNames[magic], JS_DupValue(ctx, input), JS_PROP_C_W_E) < 0)
         return JS_EXCEPTION;
     return JS_UNDEFINED;
 }
@@ -1814,8 +1783,7 @@ JSValue windowScroll(JSContext* ctx, JSValueConst self, int argc, JSValueConst* 
 
 JSValue performanceNow(JSContext* ctx, JSValueConst self, int, JSValueConst*) {
     PrHtmlPerformance* performance = jsThis<PrHtmlPerformance>(ctx, self, htmlPerformanceClass);
-    return performance != nullptr ? JS_NewFloat64(ctx, prHtmlPerformanceNow(performance))
-                                  : JS_EXCEPTION;
+    return performance != nullptr ? JS_NewFloat64(ctx, prHtmlPerformanceNow(performance)) : JS_EXCEPTION;
 }
 
 // hr-time-3/#dom-performance-tojson: an object of its attributes, of which there is only timeOrigin.
@@ -1824,8 +1792,7 @@ JSValue performanceToJson(JSContext* ctx, JSValueConst self, int, JSValueConst*)
     if (performance == nullptr)
         return JS_EXCEPTION;
     JSValue object = JS_NewObject(ctx);
-    JS_SetPropertyStr(ctx, object, "timeOrigin",
-                      JS_NewFloat64(ctx, prHtmlPerformanceTimeOrigin(performance)));
+    JS_SetPropertyStr(ctx, object, "timeOrigin", JS_NewFloat64(ctx, prHtmlPerformanceTimeOrigin(performance)));
     return object;
 }
 
@@ -1833,8 +1800,7 @@ JSValue performanceToJson(JSContext* ctx, JSValueConst self, int, JSValueConst*)
 // AnimationTimeline and DocumentTimeline (web-animations-1/#the-animationtimeline-interface)
 
 JSValue timelineCurrentTime(JSContext* ctx, JSValueConst self) {
-    PrHtmlDocumentTimeline* timeline =
-        jsThis<PrHtmlDocumentTimeline>(ctx, self, htmlAnimationTimelineClass);
+    PrHtmlDocumentTimeline* timeline = jsThis<PrHtmlDocumentTimeline>(ctx, self, htmlAnimationTimelineClass);
     if (timeline == nullptr)
         return JS_EXCEPTION;
     double time = 0;
@@ -1843,14 +1809,11 @@ JSValue timelineCurrentTime(JSContext* ctx, JSValueConst self) {
 
 // duration (web-animations-2/#dom-animationtimeline-duration). A document timeline has none.
 JSValue timelineDuration(JSContext* ctx, JSValueConst self) {
-    return jsThis<PrHtmlDocumentTimeline>(ctx, self, htmlAnimationTimelineClass) != nullptr
-               ? JS_NULL
-               : JS_EXCEPTION;
+    return jsThis<PrHtmlDocumentTimeline>(ctx, self, htmlAnimationTimelineClass) != nullptr ? JS_NULL : JS_EXCEPTION;
 }
 
 // Creates a timeline of `document`, whose object keeps the document's object alive.
-JSValue timelineOf(JSContext* ctx, JSValueConst documentObject, PrDomDocument* document,
-                   double originTime) {
+JSValue timelineOf(JSContext* ctx, JSValueConst documentObject, PrDomDocument* document, double originTime) {
     PrHtmlDocumentTimeline* timeline = prHtmlDocumentTimelineCreate(document, originTime);
     JSValue object = jsWrap(ctx, htmlDocumentTimelineClass, documentObject, timeline, true);
     if (JS_IsException(object))
@@ -1863,8 +1826,8 @@ JSValue timelineConstruct(JSContext* ctx, JSValueConst newTarget, int argc, JSVa
     bool present = false;
     double originTime = 0;
     JSValueConst dictionary = argc > 0 ? argv[0] : JS_UNDEFINED;
-    if (!jsDictionary(ctx, dictionary, &present)
-        || (present && !jsDictNumber(ctx, dictionary, "originTime", &originTime)))
+    if (!jsDictionary(ctx, dictionary, &present) ||
+            (present && !jsDictNumber(ctx, dictionary, "originTime", &originTime)))
         return JS_EXCEPTION;
     PrDomDocument* document = prJsDomGlobalDocument(ctx);
     if (document == nullptr)
@@ -2091,8 +2054,7 @@ JSValue currentScript(JSContext* ctx, JSValueConst self) {
     PrDomDocument* document = jsThis<PrDomDocument>(ctx, self, prJsDomDocumentClass);
     if (document == nullptr)
         return JS_EXCEPTION;
-    return jsWrapAs(ctx, prJsDomElementClass, JS_UNDEFINED, prHtmlDocumentCurrentScript(document),
-                    false);
+    return jsWrapAs(ctx, prJsDomElementClass, JS_UNDEFINED, prHtmlDocumentCurrentScript(document), false);
 }
 
 // The attributes, selected by the magic, which is the PrUrlComponent.
@@ -2108,15 +2070,13 @@ JSValue locationSet(JSContext* ctx, JSValueConst self, JSValueConst input, int m
     StringArgument value = {ctx};
     if (window == nullptr || !value.read(input))
         return JS_EXCEPTION;
-    return locationStatus(ctx,
-                          prHtmlWindowSetLocation(window, PrUrlComponent(magic), value.value(),
-                                                  PrHtmlHistoryHandling_Push));
+    return locationStatus(ctx, prHtmlWindowSetLocation(window, PrUrlComponent(magic), value.value(),
+        PrHtmlHistoryHandling_Push));
 }
 
 // assign and replace, which navigate in the same way as setting href, and reload, which loads the document again.
 // Selected by the magic.
-JSValue locationNavigate(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv,
-                         int magic) {
+JSValue locationNavigate(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv, int magic) {
     PrHtmlWindow* window = jsThis<PrHtmlWindow>(ctx, self, htmlLocationClass);
     if (window == nullptr)
         return JS_EXCEPTION;
@@ -2180,9 +2140,11 @@ JSValue historyStateOf(JSContext* ctx, JSValueConst history, PrHtmlWindow* windo
     JS_FreeValue(ctx, held);
     if (current)
         return jsReference(ctx, history, HistorySlot_State);
-    JSValue state = bytes.data == nullptr
-                        ? JS_NULL
-                        : JS_ReadObject(ctx, reinterpret_cast<const uint8_t*>(bytes.data), bytes.size, kSerializeFlags);
+    JSValue state;
+    if (bytes.data == nullptr)
+        state = JS_NULL;
+    else
+        state = JS_ReadObject(ctx, reinterpret_cast<const uint8_t*>(bytes.data), bytes.size, kSerializeFlags);
     if (JS_IsException(state))
         return state;
     jsSetReference(ctx, history, HistorySlot_State, state);
@@ -2242,8 +2204,8 @@ JSValue historyPushState(JSContext* ctx, JSValueConst self, int argc, JSValueCon
     PrHtmlWindow* window = jsThis<PrHtmlWindow>(ctx, self, htmlHistoryClass);
     StringArgument unused = {ctx};
     StringArgument url = {ctx, PrStringView{}};
-    if (window == nullptr || !jsArgCount(ctx, argc, 2) || !unused.read(argv[1])
-        || (jsArgGiven(argc, argv, 2) && !url.readNullable(argv[2])))
+    if (window == nullptr || !jsArgCount(ctx, argc, 2) || !unused.read(argv[1]) ||
+            (jsArgGiven(argc, argv, 2) && !url.readNullable(argv[2])))
         return JS_EXCEPTION;
     size_t size = 0;
     uint8_t* bytes = nullptr;
@@ -2280,8 +2242,8 @@ JSValue popStateConstruct(JSContext* ctx, JSValueConst newTarget, int argc, JSVa
         return JS_EXCEPTION;
     JSValue state = JS_NULL;
     if (present) {
-        if (!prJsDomEventInitRead(ctx, dictionary, &init)
-            || !jsDictBool(ctx, dictionary, "hasUAVisualTransition", &transition))
+        if (!prJsDomEventInitRead(ctx, dictionary, &init) ||
+                !jsDictBool(ctx, dictionary, "hasUAVisualTransition", &transition))
             return JS_EXCEPTION;
         state = JS_GetPropertyStr(ctx, dictionary, "state");
         if (JS_IsException(state))
@@ -2332,9 +2294,8 @@ JSValue hashChangeConstruct(JSContext* ctx, JSValueConst newTarget, int argc, JS
     JSValueConst dictionary = argc > 1 ? argv[1] : JS_UNDEFINED;
     if (!jsArgCount(ctx, argc, 1) || !type.read(argv[0]) || !jsDictionary(ctx, dictionary, &present))
         return JS_EXCEPTION;
-    if (present
-        && (!prJsDomEventInitRead(ctx, dictionary, &init) || !jsDictString(ctx, dictionary, "newURL", &newUrl)
-            || !jsDictString(ctx, dictionary, "oldURL", &oldUrl)))
+    if (present && (!prJsDomEventInitRead(ctx, dictionary, &init) || !jsDictString(ctx, dictionary, "newURL", &newUrl) ||
+            !jsDictString(ctx, dictionary, "oldURL", &oldUrl)))
         return JS_EXCEPTION;
     PrHtmlHashChangeEvent* event = prHtmlHashChangeEventCreate(type.value(), &init, oldUrl.value(), newUrl.value());
     JSValue object = jsWrap(ctx, htmlHashChangeEventClass, JS_UNDEFINED, event, true);
@@ -2519,43 +2480,36 @@ JSValue preference(JSContext* ctx, JSValueConst self, int magic) {
 }
 
 JSValue preferenceOverride(JSContext* ctx, JSValueConst self) {
-    PrHtmlPreferenceObject* object =
-        jsThis<PrHtmlPreferenceObject>(ctx, self, htmlPreferenceObjectClass);
+    PrHtmlPreferenceObject* object = jsThis<PrHtmlPreferenceObject>(ctx, self, htmlPreferenceObjectClass);
     if (object == nullptr)
         return JS_EXCEPTION;
     PrHtmlPreferenceValue value = prHtmlPreferenceObjectOverride(object);
-    return value != PrHtmlPreferenceValue_None
-               ? jsFixedString(ctx, prHtmlPreferenceValueName(value))
-               : JS_NULL;
+    return value != PrHtmlPreferenceValue_None ? jsFixedString(ctx, prHtmlPreferenceValueName(value)) : JS_NULL;
 }
 
 JSValue preferenceValue(JSContext* ctx, JSValueConst self) {
-    PrHtmlPreferenceObject* object =
-        jsThis<PrHtmlPreferenceObject>(ctx, self, htmlPreferenceObjectClass);
-    return object != nullptr
-               ? jsFixedString(ctx, prHtmlPreferenceValueName(prHtmlPreferenceObjectValue(object)))
-               : JS_EXCEPTION;
+    PrHtmlPreferenceObject* object = jsThis<PrHtmlPreferenceObject>(ctx, self, htmlPreferenceObjectClass);
+    if (object == nullptr)
+        return JS_EXCEPTION;
+    return jsFixedString(ctx, prHtmlPreferenceValueName(prHtmlPreferenceObjectValue(object)));
 }
 
 JSValue validValues(JSContext* ctx, JSValueConst self) {
-    PrHtmlPreferenceObject* object =
-        jsThis<PrHtmlPreferenceObject>(ctx, self, htmlPreferenceObjectClass);
+    PrHtmlPreferenceObject* object = jsThis<PrHtmlPreferenceObject>(ctx, self, htmlPreferenceObjectClass);
     if (object == nullptr)
         return JS_EXCEPTION;
     PrHtmlPreferenceValue items[PrHtmlPreferenceValue_Count];
     uint32_t count = prHtmlPreferenceObjectValidValues(object, items, uint32_t(countOf(items)));
     JSValue array = JS_NewArray(ctx);
     for (uint32_t i = 0; i < count && i < countOf(items); ++i)
-        JS_SetPropertyUint32(ctx, array, i,
-                             jsFixedString(ctx, prHtmlPreferenceValueName(items[i])));
+        JS_SetPropertyUint32(ctx, array, i, jsFixedString(ctx, prHtmlPreferenceValueName(items[i])));
     // A FrozenArray (webidl/#js-frozen-array).
     JS_FreezeObject(ctx, array);
     return array;
 }
 
 JSValue clearOverride(JSContext* ctx, JSValueConst self, int, JSValueConst*) {
-    PrHtmlPreferenceObject* object =
-        jsThis<PrHtmlPreferenceObject>(ctx, self, htmlPreferenceObjectClass);
+    PrHtmlPreferenceObject* object = jsThis<PrHtmlPreferenceObject>(ctx, self, htmlPreferenceObjectClass);
     if (object == nullptr)
         return JS_EXCEPTION;
     prHtmlPreferenceObjectClearOverride(object);
@@ -2564,18 +2518,18 @@ JSValue clearOverride(JSContext* ctx, JSValueConst self, int, JSValueConst*) {
 
 // requestOverride. Its promise rejects with a NotSupportedError for a value that the preference does not accept.
 JSValue requestOverride(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv) {
-    PrHtmlPreferenceObject* object =
-        jsThis<PrHtmlPreferenceObject>(ctx, self, htmlPreferenceObjectClass);
+    PrHtmlPreferenceObject* object = jsThis<PrHtmlPreferenceObject>(ctx, self, htmlPreferenceObjectClass);
     StringArgument value = {ctx, PrStringView{}};
     if (object == nullptr || !jsArgCount(ctx, argc, 1) || !value.readNullable(argv[0]))
         return JS_EXCEPTION;
     // A value that is not a preference keyword is not valid, and the empty string clears the override.
     PrHtmlPreferenceValue named = prHtmlPreferenceValueFromName(value.value());
-    PrStatus status = named == PrHtmlPreferenceValue_None && value.value().size != 0
-        ? PrStatus_InvalidData
-        : prHtmlPreferenceObjectRequestOverride(object, named);
-    JSValue settled =
-        status == PrStatus_Ok ? JS_UNDEFINED : jsDomExceptionNew(ctx, "NotSupportedError");
+    PrStatus status;
+    if (named == PrHtmlPreferenceValue_None && value.value().size != 0)
+        status = PrStatus_InvalidData;
+    else
+        status = prHtmlPreferenceObjectRequestOverride(object, named);
+    JSValue settled = status == PrStatus_Ok ? JS_UNDEFINED : jsDomExceptionNew(ctx, "NotSupportedError");
     JSValue promise = jsSettledPromise(ctx, settled, status != PrStatus_Ok);
     JS_FreeValue(ctx, settled);
     return promise;
@@ -2583,8 +2537,7 @@ JSValue requestOverride(JSContext* ctx, JSValueConst self, int argc, JSValueCons
 
 // The Window's named properties object (html/#named-access-on-the-window-object). Its own properties are the elements
 // that the global's window names.
-int namedProperty(JSContext* ctx, JSPropertyDescriptor* PR_NULLABLE desc, JSValueConst,
-                  JSAtom atom) {
+int namedProperty(JSContext* ctx, JSPropertyDescriptor* PR_NULLABLE desc, JSValueConst, JSAtom atom) {
     PrHtmlWindow* window = globalWindow(ctx);
     JSValue key = JS_AtomToValue(ctx, atom);
     if (window == nullptr || !JS_IsString(key)) {
@@ -2598,8 +2551,7 @@ int namedProperty(JSContext* ctx, JSPropertyDescriptor* PR_NULLABLE desc, JSValu
         return -1;
 
     JSValue global = JS_GetGlobalObject(ctx);
-    JSValue value =
-        jsWrapAs(ctx, prJsDomElementClass, global, prHtmlWindowNamedItem(window, name.value()), false);
+    JSValue value = jsWrapAs(ctx, prJsDomElementClass, global, prHtmlWindowNamedItem(window, name.value()), false);
     JS_FreeValue(ctx, global);
     if (JS_IsException(value))
         return -1;
@@ -2619,14 +2571,12 @@ int namedProperty(JSContext* ctx, JSPropertyDescriptor* PR_NULLABLE desc, JSValu
     return 1;
 }
 
-JSClassExoticMethods kNamedPropertiesExotic = {
-    .get_own_property = JsCallScoped<namedProperty>::call};
+JSClassExoticMethods kNamedPropertiesExotic = {.get_own_property = JsCallScoped<namedProperty>::call};
 
 // Puts the named properties object between Window.prototype and EventTarget.prototype.
 void defineNamedProperties(JSContext* ctx) {
     JSRuntime* runtime = JS_GetRuntime(ctx);
-    JSClassDef definition = {"WindowProperties",      nullptr, nullptr, nullptr,
-                             &kNamedPropertiesExotic, nullptr};
+    JSClassDef definition = {"WindowProperties",      nullptr, nullptr, nullptr, &kNamedPropertiesExotic, nullptr};
     jsRegisterClass(runtime, &htmlWindowPropertiesClass, definition);
     JSValue proto = JS_GetClassProto(ctx, htmlWindowClass);
     JSValue properties = JS_NewObjectClass(ctx, int(htmlWindowPropertiesClass));
@@ -2672,9 +2622,8 @@ JSValue windowStorage(JSContext* ctx, JSValueConst self, int magic) {
     if (storage == nullptr)
         return jsDomExceptionThrow(ctx, "SecurityError");
     JSValue object = jsWrap(ctx, htmlWindowClass, JS_NULL, window, false);
-    JSValue result =
-        jsSameObject(ctx, object, magic == PrHtmlStorageKind_Local ? "localStorage" : "sessionStorage",
-                     [&] { return jsWrap(ctx, htmlStorageClass, object, storage, false); });
+    JSValue result = jsSameObject(ctx, object, magic == PrHtmlStorageKind_Local ? "localStorage" : "sessionStorage",
+        [&] { return jsWrap(ctx, htmlStorageClass, object, storage, false); });
     JS_FreeValue(ctx, object);
     return result;
 }
@@ -2812,9 +2761,7 @@ constexpr JSCFunctionListEntry kDocumentProto[] = {
     PR_JS_METHOD("close", 0, documentClose),
 };
 
-constexpr JSCFunctionListEntry kDomStringMapProto[] = {
-    PR_JS_TAG("DOMStringMap"),
-};
+constexpr JSCFunctionListEntry kDomStringMapProto[] = {PR_JS_TAG("DOMStringMap")};
 
 constexpr JSCFunctionListEntry kStorageProto[] = {
     PR_JS_TAG("Storage"),
@@ -2846,7 +2793,7 @@ constexpr JSCFunctionListEntry kElementProto[] = {
     PR_JS_METHOD("attachInternals", 0, jsCustomElementsAttachInternals),
     // html/#dom-innertext, whose setter treats null as the empty string.
     PR_JS_GET_SET("innerText", (jsStringGetter<&htmlElementClass, prHtmlElementInnerText>),
-                  (jsStringSetter<&htmlElementClass, prHtmlElementSetInnerText, true>)),
+        (jsStringSetter<&htmlElementClass, prHtmlElementSetInnerText, true>)),
     PR_REFLECT_STRING("title", "title"),
     PR_REFLECT_STRING("lang", "lang"),
     PR_JS_GET_SET("dir", dir, setDir),
@@ -2861,16 +2808,13 @@ constexpr JSCFunctionListEntry kElementProto[] = {
 };
 
 // The members HTML adds to the classes of SVG and MathML elements.
-constexpr JSCFunctionListEntry kForeignElementProto[] = {
-    PR_HTML_OR_SVG_ELEMENT
-};
+constexpr JSCFunctionListEntry kForeignElementProto[] = {PR_HTML_OR_SVG_ELEMENT};
 
 constexpr JSCFunctionListEntry kDialogElementProto[] = {
     PR_JS_TAG("HTMLDialogElement"),
     PR_JS_GET_SET("open", dialogOpen, setDialogOpen),
-    PR_JS_GET_SET("returnValue",
-                  (jsStringGetter<&htmlDialogElementClass, prHtmlDialogElementReturnValue>),
-                  (jsStringSetter<&htmlDialogElementClass, prHtmlDialogElementSetReturnValue>)),
+    PR_JS_GET_SET("returnValue", (jsStringGetter<&htmlDialogElementClass, prHtmlDialogElementReturnValue>),
+        (jsStringSetter<&htmlDialogElementClass, prHtmlDialogElementSetReturnValue>)),
     PR_JS_MAGIC("show", 0, dialogShow, 0),
     PR_JS_MAGIC("showModal", 0, dialogShow, 1),
     PR_JS_MAGIC("close", 0, dialogClose, 0),
@@ -2895,13 +2839,11 @@ constexpr JSCFunctionListEntry kImageElementProto[] = {
     PR_REFLECT_STRING("srcset", "srcset"),
     PR_REFLECT_STRING("sizes", "sizes"),
     PR_JS_GET_SET("width", (jsNumberGetter<&htmlImageElementClass, prHtmlImageElementWidth>),
-                  (jsUint32Setter<&htmlImageElementClass, prHtmlImageElementSetWidth>)),
+        (jsUint32Setter<&htmlImageElementClass, prHtmlImageElementSetWidth>)),
     PR_JS_GET_SET("height", (jsNumberGetter<&htmlImageElementClass, prHtmlImageElementHeight>),
-                  (jsUint32Setter<&htmlImageElementClass, prHtmlImageElementSetHeight>)),
-    PR_JS_GET("naturalWidth",
-              (jsNumberGetter<&htmlImageElementClass, prHtmlImageElementNaturalWidth>)),
-    PR_JS_GET("naturalHeight",
-              (jsNumberGetter<&htmlImageElementClass, prHtmlImageElementNaturalHeight>)),
+        (jsUint32Setter<&htmlImageElementClass, prHtmlImageElementSetHeight>)),
+    PR_JS_GET("naturalWidth", (jsNumberGetter<&htmlImageElementClass, prHtmlImageElementNaturalWidth>)),
+    PR_JS_GET("naturalHeight", (jsNumberGetter<&htmlImageElementClass, prHtmlImageElementNaturalHeight>)),
     PR_JS_GET("complete", (jsBoolGetter<&htmlImageElementClass, prHtmlImageElementComplete>)),
     PR_JS_GET("currentSrc", (jsStringGetter<&htmlImageElementClass, prHtmlImageElementCurrentSrc>)),
     PR_JS_METHOD("decode", 0, imageDecode),
@@ -2937,7 +2879,7 @@ constexpr JSCFunctionListEntry kAnchorElementProto[] = {
     PR_REFLECT_STRING("type", "type"),
     PR_REFLECT_STRING("referrerPolicy", "referrerpolicy"),
     PR_JS_GET_SET("text", (jsStringGetter<&prJsDomNodeClass, prDomNodeTextContent>),
-                  (jsStringSetter<&prJsDomNodeClass, prDomNodeSetTextContent, true>)),
+        (jsStringSetter<&prJsDomNodeClass, prDomNodeSetTextContent, true>)),
     PR_HYPERLINK_UTILS,
 };
 
@@ -2970,9 +2912,7 @@ constexpr JSCFunctionListEntry kLinkElementProto[] = {
     PR_JS_GET("sheet", linkSheet),
 };
 
-constexpr JSCFunctionListEntry kPictureElementProto[] = {
-    PR_JS_TAG("HTMLPictureElement"),
-};
+constexpr JSCFunctionListEntry kPictureElementProto[] = {PR_JS_TAG("HTMLPictureElement")};
 
 // html/#htmlsourceelement
 constexpr JSCFunctionListEntry kSourceElementProto[] = {
@@ -3070,9 +3010,7 @@ constexpr JSCFunctionListEntry kTimeRangesProto[] = {
     PR_JS_MAGIC("end", 1, timeRangesBound, 1),
 };
 
-constexpr JSCFunctionListEntry kAudioElementProto[] = {
-    PR_JS_TAG("HTMLAudioElement"),
-};
+constexpr JSCFunctionListEntry kAudioElementProto[] = {PR_JS_TAG("HTMLAudioElement")};
 
 constexpr JSCFunctionListEntry kSlotElementProto[] = {
     PR_JS_TAG("HTMLSlotElement"),
@@ -3095,17 +3033,12 @@ constexpr JSCFunctionListEntry kScriptElementProto[] = {
     PR_REFLECT_STRING("event", "event"),
     PR_REFLECT_STRING("htmlFor", "for"),
     PR_JS_GET_SET("text", (jsStringGetter<&htmlScriptElementClass, prHtmlScriptElementText>),
-                  (jsStringSetter<&htmlScriptElementClass, prHtmlScriptElementSetText>)),
+        (jsStringSetter<&htmlScriptElementClass, prHtmlScriptElementSetText>)),
 };
 
-constexpr JSCFunctionListEntry kScriptElementStatics[] = {
-    PR_JS_METHOD("supports", 1, scriptSupports),
-};
+constexpr JSCFunctionListEntry kScriptElementStatics[] = {PR_JS_METHOD("supports", 1, scriptSupports)};
 
-constexpr JSCFunctionListEntry kStyleElementProto[] = {
-    PR_JS_TAG("HTMLStyleElement"),
-    PR_JS_GET("sheet", sheet),
-};
+constexpr JSCFunctionListEntry kStyleElementProto[] = {PR_JS_TAG("HTMLStyleElement"), PR_JS_GET("sheet", sheet)};
 
 constexpr JSCFunctionListEntry kTemplateElementProto[] = {
     PR_JS_TAG("HTMLTemplateElement"),
@@ -3114,8 +3047,7 @@ constexpr JSCFunctionListEntry kTemplateElementProto[] = {
     PR_REFLECT_BOOL("shadowRootDelegatesFocus", "shadowrootdelegatesfocus"),
     PR_REFLECT_BOOL("shadowRootClonable", "shadowrootclonable"),
     PR_REFLECT_BOOL("shadowRootSerializable", "shadowrootserializable"),
-    PR_JS_MAGIC_GET_SET("shadowRootSlotAssignment", shadowRootSlotAssignment, setAttributeString,
-                        1),
+    PR_JS_MAGIC_GET_SET("shadowRootSlotAssignment", shadowRootSlotAssignment, setAttributeString, 1),
 };
 
 #define PR_LOCATION(name, component) PR_JS_MAGIC_GET_SET(name, locationGet, locationSet, component)
@@ -3155,7 +3087,7 @@ constexpr JSCFunctionListEntry kPopStateEventProto[] = {
     PR_JS_TAG("PopStateEvent"),
     PR_JS_GET("state", popStateState),
     PR_JS_GET("hasUAVisualTransition",
-              (jsBoolGetter<&htmlPopStateEventClass, prHtmlPopStateEventHasUAVisualTransition>)),
+        (jsBoolGetter<&htmlPopStateEventClass, prHtmlPopStateEventHasUAVisualTransition>)),
 };
 
 constexpr JSCFunctionListEntry kHashChangeEventProto[] = {
@@ -3245,8 +3177,7 @@ constexpr JSCFunctionListEntry kMessageEventProto[] = {
     PR_JS_TAG("MessageEvent"),
     PR_JS_GET("data", messageData),
     PR_JS_GET("origin", (jsStringGetter<&htmlMessageEventClass, prHtmlMessageEventOrigin>)),
-    PR_JS_GET("lastEventId",
-              (jsStringGetter<&htmlMessageEventClass, prHtmlMessageEventLastEventId>)),
+    PR_JS_GET("lastEventId", (jsStringGetter<&htmlMessageEventClass, prHtmlMessageEventLastEventId>)),
     PR_JS_GET("source", messageSource),
     PR_JS_GET("ports", messagePorts),
 };
@@ -3264,9 +3195,7 @@ constexpr JSCFunctionListEntry kAnimationTimelineProto[] = {
     PR_JS_GET("duration", timelineDuration),
 };
 
-constexpr JSCFunctionListEntry kDocumentTimelineProto[] = {
-    PR_JS_TAG("DocumentTimeline"),
-};
+constexpr JSCFunctionListEntry kDocumentTimelineProto[] = {PR_JS_TAG("DocumentTimeline")};
 
 constexpr JSCFunctionListEntry kWindowProto[] = {
     PR_JS_TAG("Window"),
@@ -3304,127 +3233,201 @@ constexpr JSCFunctionListEntry kWindowProto[] = {
     PR_JS_METHOD("clearInterval", 0, clearTimeout),
     PR_JS_METHOD("requestAnimationFrame", 1, requestAnimationFrame),
     PR_JS_METHOD("cancelAnimationFrame", 1, cancelAnimationFrame),
-    PR_JS_DOM_GLOBAL_EVENT_HANDLERS(PR_JS_DOM_EVENT_HANDLER)
-    PR_JS_DOM_WINDOW_EVENT_HANDLERS(PR_JS_DOM_EVENT_HANDLER)
+    PR_JS_DOM_GLOBAL_EVENT_HANDLERS(PR_JS_DOM_EVENT_HANDLER) PR_JS_DOM_WINDOW_EVENT_HANDLERS(PR_JS_DOM_EVENT_HANDLER)
 };
 
 constexpr JsClassDefinition kClasses[] = {
-    {.name = "DOMParser",
-     .id = &htmlDomParserClass,
-     .finalizer = jsValueFinalizer,
-     .mark = jsValueMark,
-     .proto = kDomParserProto,
-     .protoCount = int(countOf(kDomParserProto)),
-     .constructor = parserConstruct},
-    {PR_JS_CLASS("HTMLElement", htmlElementClass, jsViewFinalizer<&htmlElementClass>,
-                 kElementProto),
-     .constructor = jsCustomElementsConstruct, .base = &prJsDomElementClass},
-    {PR_JS_CLASS("HTMLDialogElement", htmlDialogElementClass,
-                 jsViewFinalizer<&htmlDialogElementClass>, kDialogElementProto),
-     .base = &htmlElementClass},
-    {PR_JS_CLASS("HTMLIFrameElement", htmlIFrameElementClass,
-                 jsViewFinalizer<&htmlIFrameElementClass>, kIFrameElementProto),
-     .base = &htmlElementClass},
-    {PR_JS_CLASS("HTMLImageElement", htmlImageElementClass, jsViewFinalizer<&htmlImageElementClass>,
-                 kImageElementProto),
-     .base = &htmlElementClass},
-    {PR_JS_CLASS("HTMLCanvasElement", htmlCanvasElementClass, jsViewFinalizer<&htmlCanvasElementClass>,
-                 kCanvasElementProto),
-     .base = &htmlElementClass},
-    {PR_JS_CLASS("HTMLAnchorElement", htmlAnchorElementClass, jsViewFinalizer<&htmlAnchorElementClass>,
-                 kAnchorElementProto),
-     .base = &htmlElementClass},
-    {PR_JS_CLASS("HTMLAreaElement", htmlAreaElementClass, jsViewFinalizer<&htmlAreaElementClass>,
-                 kAreaElementProto),
-     .base = &htmlElementClass},
-    {PR_JS_CLASS("HTMLBaseElement", htmlBaseElementClass, jsViewFinalizer<&htmlBaseElementClass>,
-                 kBaseElementProto),
-     .base = &htmlElementClass},
-    {PR_JS_CLASS("HTMLLinkElement", htmlLinkElementClass, jsViewFinalizer<&htmlLinkElementClass>,
-                 kLinkElementProto),
-     .base = &htmlElementClass},
-    {PR_JS_CLASS("HTMLMetaElement", htmlMetaElementClass, jsViewFinalizer<&htmlMetaElementClass>,
-                 kMetaElementProto),
-     .base = &htmlElementClass},
-    {PR_JS_CLASS("HTMLPictureElement", htmlPictureElementClass, jsViewFinalizer<&htmlPictureElementClass>,
-                 kPictureElementProto),
-     .base = &htmlElementClass},
-    {PR_JS_CLASS("HTMLSourceElement", htmlSourceElementClass, jsViewFinalizer<&htmlSourceElementClass>,
-                 kSourceElementProto),
-     .base = &htmlElementClass},
-    {PR_JS_CLASS("HTMLMediaElement", htmlMediaElementClass, jsViewFinalizer<&htmlMediaElementClass>,
-                 kMediaElementProto),
-     PR_JS_CONSTANTS(kMediaElementConstants), .base = &htmlElementClass},
-    {PR_JS_CLASS("HTMLVideoElement", htmlVideoElementClass, jsViewFinalizer<&htmlVideoElementClass>,
-                 kVideoElementProto),
-     .base = &htmlMediaElementClass},
-    {PR_JS_CLASS("HTMLAudioElement", htmlAudioElementClass, jsViewFinalizer<&htmlAudioElementClass>,
-                 kAudioElementProto),
-     .base = &htmlMediaElementClass},
-    {PR_JS_CLASS("MediaError", htmlMediaErrorClass,
-                 (jsFinalizer<&htmlMediaErrorClass, mediaErrorDestroy>), kMediaErrorProto),
-     PR_JS_CONSTANTS(kMediaErrorConstants)},
-    {PR_JS_CLASS("TimeRanges", htmlTimeRangesClass,
-                 (jsFinalizer<&htmlTimeRangesClass, timeRangesDestroy>), kTimeRangesProto)},
-    {PR_JS_CLASS("HTMLSlotElement", htmlSlotElementClass, jsViewFinalizer<&htmlSlotElementClass>,
-                 kSlotElementProto),
-     .base = &htmlElementClass},
-    {PR_JS_CLASS("HTMLScriptElement", htmlScriptElementClass, jsViewFinalizer<&htmlScriptElementClass>,
-                 kScriptElementProto),
-     .statics = kScriptElementStatics, .staticCount = int(countOf(kScriptElementStatics)), .base = &htmlElementClass},
-    {PR_JS_CLASS("HTMLStyleElement", htmlStyleElementClass, jsViewFinalizer<&htmlStyleElementClass>,
-                 kStyleElementProto),
-     .base = &htmlElementClass},
-    {PR_JS_CLASS("HTMLTemplateElement", htmlTemplateElementClass,
-                 jsViewFinalizer<&htmlTemplateElementClass>, kTemplateElementProto),
-     .base = &htmlElementClass},
-    {PR_JS_CLASS("ErrorEvent", htmlErrorEventClass, jsViewFinalizer<&htmlErrorEventClass>,
-                 kErrorEventProto),
-     .constructor = errorEventConstruct, .length = 1, .base = &prJsDomEventClass},
-    {PR_JS_CLASS("MessageEvent", htmlMessageEventClass, jsViewFinalizer<&htmlMessageEventClass>,
-                 kMessageEventProto),
-     .constructor = messageConstruct, .length = 1, .base = &prJsDomEventClass},
-    {PR_JS_CLASS("PageRevealEvent", htmlPageRevealEventClass,
-                 jsViewFinalizer<&htmlPageRevealEventClass>, kPageRevealEventProto),
-     .constructor = pageRevealConstruct, .length = 1, .base = &prJsDomEventClass},
-    {PR_JS_CLASS("PromiseRejectionEvent", htmlPromiseRejectionEventClass,
-                 jsViewFinalizer<&htmlPromiseRejectionEventClass>, kPromiseRejectionEventProto),
-     .constructor = rejectionConstruct, .length = 2, .base = &prJsDomEventClass},
-    {PR_JS_CLASS("DOMStringMap", htmlDomStringMapClass, jsViewFinalizer<&htmlDomStringMapClass>,
-                 kDomStringMapProto),
-     .named = &kDataset},
-    {PR_JS_CLASS("Storage", htmlStorageClass, jsViewFinalizer<&htmlStorageClass>, kStorageProto),
-     .named = &kStorageNamed},
-    {PR_JS_CLASS("Location", htmlLocationClass, jsViewFinalizer<&htmlLocationClass>,
-                 kLocationProto)},
+    {
+        .name = "DOMParser",
+        .id = &htmlDomParserClass,
+        .finalizer = jsValueFinalizer,
+        .mark = jsValueMark,
+        .proto = kDomParserProto,
+        .protoCount = int(countOf(kDomParserProto)),
+        .constructor = parserConstruct,
+    },
+    {
+        PR_JS_CLASS("HTMLElement", htmlElementClass, jsViewFinalizer<&htmlElementClass>, kElementProto),
+        .constructor = jsCustomElementsConstruct,
+        .base = &prJsDomElementClass,
+    },
+    {
+        PR_JS_CLASS("HTMLDialogElement", htmlDialogElementClass,
+            jsViewFinalizer<&htmlDialogElementClass>, kDialogElementProto),
+        .base = &htmlElementClass,
+    },
+    {
+        PR_JS_CLASS("HTMLIFrameElement", htmlIFrameElementClass,
+            jsViewFinalizer<&htmlIFrameElementClass>, kIFrameElementProto),
+        .base = &htmlElementClass,
+    },
+    {
+        PR_JS_CLASS("HTMLImageElement", htmlImageElementClass, jsViewFinalizer<&htmlImageElementClass>,
+            kImageElementProto),
+        .base = &htmlElementClass,
+    },
+    {
+        PR_JS_CLASS("HTMLCanvasElement", htmlCanvasElementClass, jsViewFinalizer<&htmlCanvasElementClass>,
+            kCanvasElementProto),
+        .base = &htmlElementClass,
+    },
+    {
+        PR_JS_CLASS("HTMLAnchorElement", htmlAnchorElementClass, jsViewFinalizer<&htmlAnchorElementClass>,
+            kAnchorElementProto),
+        .base = &htmlElementClass,
+    },
+    {
+        PR_JS_CLASS("HTMLAreaElement", htmlAreaElementClass, jsViewFinalizer<&htmlAreaElementClass>, kAreaElementProto),
+        .base = &htmlElementClass,
+    },
+    {
+        PR_JS_CLASS("HTMLBaseElement", htmlBaseElementClass, jsViewFinalizer<&htmlBaseElementClass>, kBaseElementProto),
+        .base = &htmlElementClass,
+    },
+    {
+        PR_JS_CLASS("HTMLLinkElement", htmlLinkElementClass, jsViewFinalizer<&htmlLinkElementClass>, kLinkElementProto),
+        .base = &htmlElementClass,
+    },
+    {
+        PR_JS_CLASS("HTMLMetaElement", htmlMetaElementClass, jsViewFinalizer<&htmlMetaElementClass>, kMetaElementProto),
+        .base = &htmlElementClass,
+    },
+    {
+        PR_JS_CLASS("HTMLPictureElement", htmlPictureElementClass, jsViewFinalizer<&htmlPictureElementClass>,
+            kPictureElementProto),
+        .base = &htmlElementClass,
+    },
+    {
+        PR_JS_CLASS("HTMLSourceElement", htmlSourceElementClass, jsViewFinalizer<&htmlSourceElementClass>,
+            kSourceElementProto),
+        .base = &htmlElementClass,
+    },
+    {
+        PR_JS_CLASS("HTMLMediaElement", htmlMediaElementClass, jsViewFinalizer<&htmlMediaElementClass>,
+            kMediaElementProto),
+        PR_JS_CONSTANTS(kMediaElementConstants),
+        .base = &htmlElementClass,
+    },
+    {
+        PR_JS_CLASS("HTMLVideoElement", htmlVideoElementClass, jsViewFinalizer<&htmlVideoElementClass>,
+            kVideoElementProto),
+        .base = &htmlMediaElementClass,
+    },
+    {
+        PR_JS_CLASS("HTMLAudioElement", htmlAudioElementClass, jsViewFinalizer<&htmlAudioElementClass>,
+            kAudioElementProto),
+        .base = &htmlMediaElementClass,
+    },
+    {
+        PR_JS_CLASS("MediaError", htmlMediaErrorClass,
+            (jsFinalizer<&htmlMediaErrorClass, mediaErrorDestroy>), kMediaErrorProto),
+        PR_JS_CONSTANTS(kMediaErrorConstants)
+    },
+    {
+        PR_JS_CLASS("TimeRanges", htmlTimeRangesClass,
+            (jsFinalizer<&htmlTimeRangesClass, timeRangesDestroy>), kTimeRangesProto)
+    },
+    {
+        PR_JS_CLASS("HTMLSlotElement", htmlSlotElementClass, jsViewFinalizer<&htmlSlotElementClass>, kSlotElementProto),
+        .base = &htmlElementClass,
+    },
+    {
+        PR_JS_CLASS("HTMLScriptElement", htmlScriptElementClass, jsViewFinalizer<&htmlScriptElementClass>,
+            kScriptElementProto),
+        .statics = kScriptElementStatics,
+        .staticCount = int(countOf(kScriptElementStatics)),
+        .base = &htmlElementClass,
+    },
+    {
+        PR_JS_CLASS("HTMLStyleElement", htmlStyleElementClass, jsViewFinalizer<&htmlStyleElementClass>,
+            kStyleElementProto),
+        .base = &htmlElementClass,
+    },
+    {
+        PR_JS_CLASS("HTMLTemplateElement", htmlTemplateElementClass,
+            jsViewFinalizer<&htmlTemplateElementClass>, kTemplateElementProto),
+        .base = &htmlElementClass,
+    },
+    {
+        PR_JS_CLASS("ErrorEvent", htmlErrorEventClass, jsViewFinalizer<&htmlErrorEventClass>, kErrorEventProto),
+        .constructor = errorEventConstruct,
+        .length = 1,
+        .base = &prJsDomEventClass,
+    },
+    {
+        PR_JS_CLASS("MessageEvent", htmlMessageEventClass, jsViewFinalizer<&htmlMessageEventClass>, kMessageEventProto),
+        .constructor = messageConstruct,
+        .length = 1,
+        .base = &prJsDomEventClass,
+    },
+    {
+        PR_JS_CLASS("PageRevealEvent", htmlPageRevealEventClass,
+            jsViewFinalizer<&htmlPageRevealEventClass>, kPageRevealEventProto),
+        .constructor = pageRevealConstruct,
+        .length = 1,
+        .base = &prJsDomEventClass,
+    },
+    {
+        PR_JS_CLASS("PromiseRejectionEvent", htmlPromiseRejectionEventClass,
+            jsViewFinalizer<&htmlPromiseRejectionEventClass>, kPromiseRejectionEventProto),
+        .constructor = rejectionConstruct,
+        .length = 2,
+        .base = &prJsDomEventClass,
+    },
+    {
+        PR_JS_CLASS("DOMStringMap", htmlDomStringMapClass, jsViewFinalizer<&htmlDomStringMapClass>, kDomStringMapProto),
+        .named = &kDataset,
+    },
+    {
+        PR_JS_CLASS("Storage", htmlStorageClass, jsViewFinalizer<&htmlStorageClass>, kStorageProto),
+        .named = &kStorageNamed,
+    },
+    {PR_JS_CLASS("Location", htmlLocationClass, jsViewFinalizer<&htmlLocationClass>, kLocationProto)},
     {PR_JS_CLASS("History", htmlHistoryClass, jsViewFinalizer<&htmlHistoryClass>, kHistoryProto)},
-    {PR_JS_CLASS("PopStateEvent", htmlPopStateEventClass, jsViewFinalizer<&htmlPopStateEventClass>,
-                 kPopStateEventProto),
-     .constructor = popStateConstruct, .length = 1, .base = &prJsDomEventClass},
-    {PR_JS_CLASS("HashChangeEvent", htmlHashChangeEventClass, jsViewFinalizer<&htmlHashChangeEventClass>,
-                 kHashChangeEventProto),
-     .constructor = hashChangeConstruct, .length = 1, .base = &prJsDomEventClass},
-    {PR_JS_CLASS("Navigator", htmlNavigatorClass, jsViewFinalizer<&htmlNavigatorClass>,
-                 kNavigatorProto)},
+    {
+        PR_JS_CLASS("PopStateEvent", htmlPopStateEventClass, jsViewFinalizer<&htmlPopStateEventClass>,
+            kPopStateEventProto),
+        .constructor = popStateConstruct,
+        .length = 1,
+        .base = &prJsDomEventClass,
+    },
+    {
+        PR_JS_CLASS("HashChangeEvent", htmlHashChangeEventClass, jsViewFinalizer<&htmlHashChangeEventClass>,
+            kHashChangeEventProto),
+        .constructor = hashChangeConstruct,
+        .length = 1,
+        .base = &prJsDomEventClass,
+    },
+    {PR_JS_CLASS("Navigator", htmlNavigatorClass, jsViewFinalizer<&htmlNavigatorClass>, kNavigatorProto)},
     {PR_JS_CLASS("Screen", htmlScreenClass, jsViewFinalizer<&htmlScreenClass>, kScreenProto)},
     {PR_JS_CLASS("Crypto", htmlCryptoClass, jsViewFinalizer<&htmlCryptoClass>, kCryptoProto)},
-    {PR_JS_CLASS("PreferenceManager", htmlPreferenceManagerClass,
-                 jsViewFinalizer<&htmlPreferenceManagerClass>, kPreferenceManagerProto)},
-    {PR_JS_CLASS("PreferenceObject", htmlPreferenceObjectClass,
-                 jsViewFinalizer<&htmlPreferenceObjectClass>, kPreferenceObjectProto),
-     .base = &prJsDomEventTargetClass},
-    {PR_JS_CLASS("Performance", htmlPerformanceClass, jsViewFinalizer<&htmlPerformanceClass>,
-                 kPerformanceProto),
-     .base = &prJsDomEventTargetClass},
-    {PR_JS_CLASS("AnimationTimeline", htmlAnimationTimelineClass,
-                 (jsFinalizer<&htmlAnimationTimelineClass, prHtmlDocumentTimelineDestroy>),
-                 kAnimationTimelineProto)},
-    {PR_JS_CLASS("DocumentTimeline", htmlDocumentTimelineClass,
-                 (jsFinalizer<&htmlDocumentTimelineClass, prHtmlDocumentTimelineDestroy>),
-                 kDocumentTimelineProto),
-     .constructor = timelineConstruct, .base = &htmlAnimationTimelineClass},
-    {PR_JS_CLASS("Window", htmlWindowClass, jsViewFinalizer<&htmlWindowClass>, kWindowProto),
-     .base = &prJsDomEventTargetClass},
+    {
+        PR_JS_CLASS("PreferenceManager", htmlPreferenceManagerClass,
+            jsViewFinalizer<&htmlPreferenceManagerClass>, kPreferenceManagerProto)
+    },
+    {
+        PR_JS_CLASS("PreferenceObject", htmlPreferenceObjectClass,
+            jsViewFinalizer<&htmlPreferenceObjectClass>, kPreferenceObjectProto),
+        .base = &prJsDomEventTargetClass,
+    },
+    {
+        PR_JS_CLASS("Performance", htmlPerformanceClass, jsViewFinalizer<&htmlPerformanceClass>, kPerformanceProto),
+        .base = &prJsDomEventTargetClass,
+    },
+    {
+        PR_JS_CLASS("AnimationTimeline", htmlAnimationTimelineClass,
+            (jsFinalizer<&htmlAnimationTimelineClass, prHtmlDocumentTimelineDestroy>), kAnimationTimelineProto),
+    },
+    {
+        PR_JS_CLASS("DocumentTimeline", htmlDocumentTimelineClass,
+            (jsFinalizer<&htmlDocumentTimelineClass, prHtmlDocumentTimelineDestroy>), kDocumentTimelineProto),
+        .constructor = timelineConstruct,
+        .base = &htmlAnimationTimelineClass,
+    },
+    {
+        PR_JS_CLASS("Window", htmlWindowClass, jsViewFinalizer<&htmlWindowClass>, kWindowProto),
+        .base = &prJsDomEventTargetClass,
+    },
 };
 
 } // namespace
@@ -3504,12 +3507,8 @@ bool jsHtmlSetGlobal(JSContext* ctx, PrHtmlWindow* handle) {
     // html/#dom-window, html/#dom-self and html/#dom-frames, for a browsing context that no script opened.
     constexpr const char* kSelves[] = {"window", "self", "frames"};
     for (const char* name : kSelves)
-        ok &= JS_DefinePropertyValueStr(ctx, global, name, JS_DupValue(ctx, global),
-                                        JS_PROP_CONFIGURABLE)
-              >= 0;
-    ok &= JS_DefinePropertyValueStr(ctx, global, "opener", JS_NULL,
-                                    JS_PROP_CONFIGURABLE | JS_PROP_WRITABLE)
-          >= 0;
+        ok &= JS_DefinePropertyValueStr(ctx, global, name, JS_DupValue(ctx, global), JS_PROP_CONFIGURABLE) >= 0;
+    ok &= JS_DefinePropertyValueStr(ctx, global, "opener", JS_NULL, JS_PROP_CONFIGURABLE | JS_PROP_WRITABLE) >= 0;
     // The engine's own performance object would hide the window's.
     JSAtom performance = JS_NewAtom(ctx, "performance");
     ok &= JS_DeleteProperty(ctx, global, performance, 0) >= 0;
@@ -3552,19 +3551,18 @@ bool jsHtmlNotifyRejectedPromises(JSContext* ctx) {
 }
 
 bool jsHtmlCompileEventHandler(JSContext* ctx, PrDomEventTarget* target, PrDomElement* element,
-                               PrDomEventHandler handler, PrStringView body,
-                               PrDomEventHandlerCallback* out) {
+        PrDomEventHandler handler, PrStringView body, PrDomEventHandlerCallback* out) {
     // If the handler belongs to an element, the scope is the element and its document. If it belongs to the Window, the
     // scope is the global alone, and the Window's onerror receives an ErrorEvent's members.
     bool scoped = prDomElementAsEventTarget(element) == target;
     bool error = !scoped && handler == PrDomEventHandler_onerror;
     TextBuffer source;
-    textAppend(
-        &source,
-        scoped
-            ? "(function(document__, element__) { with (document__) with (element__) return function(event) {\n"
-        : error ? "(function() { return function(event, source, lineno, colno, error) {\n"
-                : "(function() { return function(event) {\n");
+    const char* opening = "(function() { return function(event) {\n";
+    if (scoped)
+        opening = "(function(document__, element__) { with (document__) with (element__) return function(event) {\n";
+    else if (error)
+        opening = "(function() { return function(event, source, lineno, colno, error) {\n";
+    textAppend(&source, opening);
     // An SVG element's handler also names its event evt (SVG2/interact.html#EventAttributes).
     if (scoped && prDomElementNamespace(element) == PrDomNamespace_Svg)
         textAppend(&source, "var evt = event;\n");
@@ -3584,18 +3582,17 @@ bool jsHtmlCompileEventHandler(JSContext* ctx, PrDomEventTarget* target, PrDomEl
             args[0] = jsWrapAs(ctx, prJsDomDocumentClass, global, prDomNodeOwnerDocument(node), false);
             args[1] = jsWrapAs(ctx, prJsDomElementClass, global, element, false);
         }
-        function = JS_IsException(args[0]) || JS_IsException(args[1])
-                       ? JS_EXCEPTION
-                       : JS_Call(ctx, outer, global, scoped ? 2 : 0, args);
+        if (JS_IsException(args[0]) || JS_IsException(args[1]))
+            function = JS_EXCEPTION;
+        else
+            function = JS_Call(ctx, outer, global, scoped ? 2 : 0, args);
         JS_FreeValue(ctx, args[0]);
         JS_FreeValue(ctx, args[1]);
         JS_FreeValue(ctx, global);
     }
     JS_FreeValue(ctx, outer);
-    JSValue owner =
-        JS_IsException(function) ? JS_UNDEFINED : prJsDomWrapEventTarget(ctx, JS_UNDEFINED, target);
-    bool ok = !JS_IsException(function) && !JS_IsException(owner)
-              && prJsDomEventHandlerCallback(ctx, function, owner, out);
+    JSValue owner = JS_IsException(function) ? JS_UNDEFINED : prJsDomWrapEventTarget(ctx, JS_UNDEFINED, target);
+    bool ok = !JS_IsException(function) && !JS_IsException(owner) && prJsDomEventHandlerCallback(ctx, function, owner, out);
     JS_FreeValue(ctx, owner);
     JS_FreeValue(ctx, function);
     if (!ok)

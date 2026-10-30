@@ -60,16 +60,14 @@ typedef uint8_t CssCountingWalk;
 // Called with each pseudo-element whose content reads counters or quotes, in tree order, and the texts that they give
 // it: one for each counter(), counters(), open-quote and close-quote, in order. The texts are valid only during the
 // call.
-typedef void (*CssCountingTextsFn)(void* PR_NULLABLE context, CssPresentationPseudo* pseudo,
-                                   const CssCountingTexts* texts);
+typedef void (*CssCountingTextsFn)(void* PR_NULLABLE context, CssPresentationPseudo* pseudo, const CssCountingTexts* texts);
 
 // Computes the counters of the presentation's boxes in tree order, as the last restyle left them, and calls `fn` with
 // the texts of each pseudo-element whose content reads them. With CssCountingWalk_Participants, `fn` is not called for
 // a marker whose marker string the pass made for the same list-item value, unless a restyle of the marker cleared it
 // since (CssPresentationPseudo::markerKept). Such a run starts at the deepest point of the last run (CssCountingResume)
 // that every change it was told of follows, and calls `fn` only for what follows that point.
-void cssCountersRun(PrCssPresentation* presentation, CssCountingWalk walk, CssCountingTextsFn fn,
-                    void* PR_NULLABLE context);
+void cssCountersRun(PrCssPresentation* presentation, CssCountingWalk walk, CssCountingTextsFn fn, void* PR_NULLABLE context);
 
 } // namespace pr_impl
 

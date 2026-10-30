@@ -142,9 +142,7 @@ struct MenuDef {
     uint32_t count;
 };
 
-constexpr CommandDef kEditMenu[] = {
-    {"Command Palette...", "Cmd K", Command_Palette, PrKitIconKind_Search},
-};
+constexpr CommandDef kEditMenu[] = {{"Command Palette...", "Cmd K", Command_Palette, PrKitIconKind_Search}};
 constexpr CommandDef kViewMenu[] = {
     {"Grid", "Cmd '", Command_ToggleGrid, PrKitIconKind_Grid},
     {"Snap", "Cmd ;", Command_ToggleSnap, PrKitIconKind_Magnet},
@@ -163,13 +161,15 @@ constexpr MenuDef menu(const char* text, const CommandDef (&items)[N]) {
     return MenuDef{text, items, N};
 }
 
-constexpr MenuDef kMenus[] = {menu("Edit", kEditMenu), menu("View", kViewMenu), menu("Entity", kEntityMenu),
-                              menu("Run", kRunMenu)};
+constexpr MenuDef kMenus[] = {
+    menu("Edit", kEditMenu), menu("View", kViewMenu), menu("Entity", kEntityMenu),
+    menu("Run", kRunMenu),
+};
 
 // Returns true if the command's menu item shows a check.
 bool checked(const EditorState& editor, Command command) {
-    return (command == Command_ToggleGrid && editor.grid) || (command == Command_ToggleSnap && editor.snap)
-           || (command == Command_Play && editor.playing);
+    return (command == Command_ToggleGrid && editor.grid) || (command == Command_ToggleSnap && editor.snap) ||
+        (command == Command_Play && editor.playing);
 }
 
 void buildMenuBar(PrKit* kit, PrLayoutNode parent, EditorState& editor) {
@@ -182,10 +182,12 @@ void buildMenuBar(PrKit* kit, PrLayoutNode parent, EditorState& editor) {
         PrLayoutNode items = prKitMenu(kit, popover, {}, {.minWidth = 220});
         for (uint32_t i = 0; i < def.count; ++i) {
             const CommandDef& command = def.items[i];
-            PrKitMenuItem item{.text = command.text,
-                               .shortcut = command.shortcut,
-                               .checked = checked(editor, command.command),
-                               .disabled = command.command == Command_DeleteSelected && editor.selected == 0};
+            PrKitMenuItem item{
+                .text = command.text,
+                .shortcut = command.shortcut,
+                .checked = checked(editor, command.command),
+                .disabled = command.command == Command_DeleteSelected && editor.selected == 0,
+            };
             if (prKitActivated(kit, prKitMenuItem(kit, items, item, {})))
                 run(editor, command.command);
         }
@@ -214,7 +216,11 @@ void buildPalette(PrKit* kit, PrLayoutNode root, EditorState& editor) {
         for (uint32_t i = 0; i < def.count; ++i) {
             const CommandDef& command = def.items[i];
             PrKitCommandItem item{
-                .text = command.text, .category = def.text, .shortcut = command.shortcut, .icon = command.icon};
+                .text = command.text,
+                .category = def.text,
+                .shortcut = command.shortcut,
+                .icon = command.icon,
+            };
             if (prKitActivated(kit, prKitCommandItem(kit, list, item))) {
                 editor.paletteOpen = false;
                 prKitSetOpen(kit, root, false);
@@ -242,8 +248,7 @@ void buildToolbar(PrKit* kit, PrLayoutNode parent, EditorState& editor) {
         {Tool_Scale, PrKitIconKind_Scale, "Scale"},
     };
     for (const ToolDef& tool : kTools) {
-        PrLayoutNode button = prKitButton(kit, toolbar, {.icon = tool.icon, .selected = editor.tool == tool.tool},
-                                          kGhostMd);
+        PrLayoutNode button = prKitButton(kit, toolbar, {.icon = tool.icon, .selected = editor.tool == tool.tool}, kGhostMd);
         if (prKitActivated(kit, button))
             editor.tool = tool.tool;
         prKitTooltip(kit, button, {.text = tool.name});
@@ -257,11 +262,15 @@ void buildToolbar(PrKit* kit, PrLayoutNode parent, EditorState& editor) {
     if (iconButton(kit, toolbar, PrKitIconKind_Grid, editor.grid, kGhostMd))
         editor.grid = !editor.grid;
     prKitSpacer(kit, toolbar, {});
-    PrKitButton play{.text = editor.playing ? "Pause" : "Play",
-                     .icon = PrKitIconKind(editor.playing ? PrKitIconKind_Pause : PrKitIconKind_Play),
-                     .selected = editor.playing};
-    if (prKitActivated(kit, prKitButton(kit, toolbar, play, {.variant = PrKitButtonVariant_Primary,
-                                                             .size = PrKitControlSize_Sm})))
+    PrKitButton play{
+        .text = editor.playing ? "Pause" : "Play",
+        .icon = PrKitIconKind(editor.playing ? PrKitIconKind_Pause : PrKitIconKind_Play),
+        .selected = editor.playing,
+    };
+    if (prKitActivated(kit, prKitButton(kit, toolbar, play, {
+            .variant = PrKitButtonVariant_Primary,
+            .size = PrKitControlSize_Sm,
+    })))
         editor.playing = !editor.playing;
     if (prKitActivated(kit, prKitButton(kit, toolbar, {.icon = PrKitIconKind_Stop}, {.size = PrKitControlSize_Sm})))
         editor.playing = false;
@@ -279,8 +288,10 @@ void buildStatusBar(PrKit* kit, PrLayoutNode parent, const EditorState& editor) 
         prKitLabel(kit, status, {.text = item}, kCaption);
     }
     prKitSpacer(kit, status, {});
-    PrKitTextStyle mode{.role = PrKitTextRole_Caption,
-                        .tone = PrKitTone(editor.playing ? PrKitTone_Success : PrKitTone_Muted)};
+    PrKitTextStyle mode{
+        .role = PrKitTextRole_Caption,
+        .tone = PrKitTone(editor.playing ? PrKitTone_Success : PrKitTone_Muted),
+    };
     prKitLabel(kit, status, {.text = editor.playing ? "PLAYING" : "EDITING"}, mode);
 }
 
@@ -306,17 +317,22 @@ void sceneRows(EditorState& editor) {
             continue;
         closedDepth = entity.hasChildren && !entity.open ? entity.depth : UINT32_MAX;
         editor.sceneRows.push_back(entity.id);
-        editor.sceneItems.push_back(
-            PrKitTreeItem{.depth = entity.depth, .hasChildren = entity.hasChildren, .open = entity.open});
+        editor.sceneItems.push_back(PrKitTreeItem{
+            .depth = entity.depth,
+            .hasChildren = entity.hasChildren,
+            .open = entity.open,
+        });
     }
 }
 
 void buildScenePanel(PrKit* kit, PrLayoutNode panel, EditorState& editor) {
     PrLayoutNode actions = actionBar(kit, panel);
-    PrKitTextField filter{.text = textBufferOf(editor.sceneFilter),
-                          .placeholder = "Filter",
-                          .icon = PrKitIconKind_Search,
-                          .clearable = true};
+    PrKitTextField filter{
+        .text = textBufferOf(editor.sceneFilter),
+        .placeholder = "Filter",
+        .icon = PrKitIconKind_Search,
+        .clearable = true,
+    };
     PrLayoutNode field = prKitTextField(kit, actions, filter, {.size = PrKitControlSize_Sm});
     PrKitPlace fill{.flex = PrKitFlex_Fill};
     prKitPlace(kit, field, &fill);
@@ -326,22 +342,26 @@ void buildScenePanel(PrKit* kit, PrLayoutNode panel, EditorState& editor) {
     prKitTooltip(kit, add, {.text = "Add Entity", .shortcut = "Shift Cmd N"});
 
     sceneRows(editor);
-    PrKitTreeView content{.count = uint32_t(editor.sceneRows.size()),
-                          .selection = &editor.sceneCursor,
-                          .items = editor.sceneItems.data(),
-                          .dragKind = kDragEntity};
+    PrKitTreeView content{
+        .count = uint32_t(editor.sceneRows.size()),
+        .selection = &editor.sceneCursor,
+        .items = editor.sceneItems.data(),
+        .dragKind = kDragEntity,
+    };
     PrLayoutNode view = prKitTreeView(kit, panel, content, {.place = {.flex = PrKitFlex_Fill}});
     PrUi* ui = prKitUi(kit);
     PrKitWindow window = prKitListWindow(kit, view);
     for (uint32_t i = window.first; i < window.first + window.count; ++i) {
         Entity& entity = *editor.find(editor.sceneRows[i]);
-        PrKitRow row{.index = i,
-                     .item = entity.id,
-                     .icon = entity.icon,
-                     .tone = PrKitTone(entity.hidden ? PrKitTone_Faint : PrKitTone_Primary),
-                     .selected = editor.selected == entity.id,
-                     .label = entity.name,
-                     .meta = entity.type};
+        PrKitRow row{
+            .index = i,
+            .item = entity.id,
+            .icon = entity.icon,
+            .tone = PrKitTone(entity.hidden ? PrKitTone_Faint : PrKitTone_Primary),
+            .selected = editor.selected == entity.id,
+            .label = entity.name,
+            .meta = entity.type,
+        };
         PrLayoutNode node = prKitTreeRow(kit, view, row);
         PrKitVisibilityToggle toggle{.hidden = entity.hidden, .revealed = prUiIsHovered(ui, node)};
         if (prKitActivated(kit, prKitVisibilityToggle(kit, node, toggle)))
@@ -357,9 +377,11 @@ void buildScenePanel(PrKit* kit, PrLayoutNode panel, EditorState& editor) {
         editor.selected = editor.sceneRows[editor.sceneCursor.lead];
     PrKitTreeDrop drop{};
     if (prKitRowDropped(kit, view, &drop) && drop.row < editor.sceneRows.size()) {
-        TreePlacement placement = drop.zone == PrKitDropZone_Before  ? TreePlacement_Before
-                                  : drop.zone == PrKitDropZone_After ? TreePlacement_After
-                                                                     : TreePlacement_Into;
+        TreePlacement placement = TreePlacement_Into;
+        if (drop.zone == PrKitDropZone_Before)
+            placement = TreePlacement_Before;
+        else if (drop.zone == PrKitDropZone_After)
+            placement = TreePlacement_After;
         editor.moveEntity(EntityId(drop.item), editor.sceneRows[drop.row], placement);
     }
 }
@@ -387,13 +409,15 @@ void buildProjectPanel(PrKit* kit, PrLayoutNode panel, EditorState& editor) {
             prKitLabel(kit, crumbs, {.text = "/"}, kMeta);
         bool last = i + 1 == countOf(path);
         prKitLabel(kit, crumbs, {.text = path[i]},
-                   {.role = PrKitTextRole_MonoStrong, .tone = PrKitTone(last ? PrKitTone_Primary : PrKitTone_Muted)});
+            {.role = PrKitTextRole_MonoStrong, .tone = PrKitTone(last ? PrKitTone_Primary : PrKitTone_Muted)});
     }
     PrLayoutNode body = scrolling(kit, panel);
-    PrKitBoxStyle grid{.direction = PrKitDirection_Row,
-                       .wrap = true,
-                       .gap = kPrKitSpace1,
-                       .padding = prKitEdgesAll(kPrKitSpace3)};
+    PrKitBoxStyle grid{
+        .direction = PrKitDirection_Row,
+        .wrap = true,
+        .gap = kPrKitSpace1,
+        .padding = prKitEdgesAll(kPrKitSpace3),
+    };
     PrLayoutNode cells = prKitBox(kit, body, {}, grid);
     PrUi* ui = prKitUi(kit);
     for (uint32_t i = 0; i < countOf(kAssets); ++i) {
@@ -471,7 +495,7 @@ void paintViewport(void* context, PrVec2 size, PrDrawList* list) {
     prDrawListRect(list, PrRect{0, 0, size.x, size.y}, {.color = kVoid});
     PrRect ground{center.x - 13 * scale, center.y - 10 * scale, center.x + 13 * scale, center.y + 10 * scale};
     solid(editor.renderMode, kGround,
-          [&](PrDrawPaint paint) { prDrawListCornerRect(list, prCornerRectRound(ground, scale), paint); });
+        [&](PrDrawPaint paint) { prDrawListCornerRect(list, prCornerRectRound(ground, scale), paint); });
     if (editor.grid) {
         for (float x = std::fmod(center.x, scale); x < size.x; x += scale)
             prDrawListRect(list, PrRect{x, 0, x + 1, size.y}, {.color = kGridLine});
@@ -485,10 +509,10 @@ void paintViewport(void* context, PrVec2 size, PrDrawList* list) {
         float r = scale * 0.6f;
         if (entity.icon == PrKitIconKind_Sphere) {
             solid(editor.renderMode, kWater,
-                  [&](PrDrawPaint paint) { prDrawListEllipse(list, at, PrVec2{3 * scale, 2.2f * scale}, 0, paint); });
+                [&](PrDrawPaint paint) { prDrawListEllipse(list, at, PrVec2{3 * scale, 2.2f * scale}, 0, paint); });
         } else if (entity.type == "Light") {
             solid(editor.renderMode, kLight,
-                  [&](PrDrawPaint paint) { prDrawListEllipse(list, at, PrVec2{r, r}, 0, paint); });
+                [&](PrDrawPaint paint) { prDrawListEllipse(list, at, PrVec2{r, r}, 0, paint); });
         } else if (entity.type == "Camera") {
             PrVec2 points[] = {{at.x, at.y - r}, {at.x + r, at.y + r}, {at.x - r, at.y + r}};
             solid(editor.renderMode, kCamera, [&](PrDrawPaint paint) {
@@ -497,7 +521,7 @@ void paintViewport(void* context, PrVec2 size, PrDrawList* list) {
         } else {
             PrRect box{at.x - r, at.y - r, at.x + r, at.y + r};
             solid(editor.renderMode, kSolid,
-                  [&](PrDrawPaint paint) { prDrawListCornerRect(list, prCornerRectRound(box, 2), paint); });
+                [&](PrDrawPaint paint) { prDrawListCornerRect(list, prCornerRectRound(box, 2), paint); });
         }
         if (entity.id == editor.selected) {
             PrDrawStroke ring = prDrawStrokeDefault();
@@ -584,9 +608,9 @@ void buildViewport(PrKit* kit, PrLayoutNode panel, EditorState& editor) {
     hudReadout(hud, status, {.label = "AT", .value = selected != nullptr ? PrStringView(at) : "-"});
     // The switches bind what the toolbar's buttons bind, and their gestures reach the editor's edit sink.
     prKitTooltip(kit, hudSwitch(hud, status, {.label = "GRID", .value = &editor.grid}),
-                 {.text = "Show the grid", .shortcut = "Cmd '"});
+        {.text = "Show the grid", .shortcut = "Cmd '"});
     prKitTooltip(kit, hudSwitch(hud, status, {.label = "SNAP", .value = &editor.snap}),
-                 {.text = "Snap to the grid", .shortcut = "Cmd ;"});
+        {.text = "Snap to the grid", .shortcut = "Cmd ;"});
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -602,7 +626,8 @@ void buildConsole(PrKit* kit, PrLayoutNode panel, EditorState& editor) {
         bool* shown;
     };
     LevelDef levels[] = {
-        {"Info", &editor.showInfo}, {"Warnings", &editor.showWarnings}, {"Errors", &editor.showErrors}};
+        {"Info", &editor.showInfo}, {"Warnings", &editor.showWarnings}, {"Errors", &editor.showErrors},
+    };
     for (uint32_t i = 0; i < 3; ++i) {
         char label[32];
         snprintf(label, sizeof label, "%s %u", levels[i].name, counts[i]);
@@ -616,7 +641,7 @@ void buildConsole(PrKit* kit, PrLayoutNode panel, EditorState& editor) {
     for (const LogEntry& log : editor.logs) {
         if (editor.shows(log.level))
             prKitLogLine(kit, lines,
-                         {.time = log.time, .message = log.message, .source = log.source, .level = log.level});
+                {.time = log.time, .message = log.message, .source = log.source, .level = log.level});
     }
 }
 
@@ -629,7 +654,7 @@ void buildInspector(PrKit* kit, PrLayoutNode panel, EditorState& editor) {
     if (entity != nullptr)
         prKitCheckbox(kit, identity, {.value = &entity->enabled}, {});
     prKitIcon(kit, identity, {.icon = PrKitIconKind(entity != nullptr ? entity->icon : PrKitIconKind_Cube)},
-              {.size = 14, .tone = PrKitTone(entity != nullptr ? PrKitTone_Secondary : PrKitTone_Faint)});
+        {.size = 14, .tone = PrKitTone(entity != nullptr ? PrKitTone_Secondary : PrKitTone_Faint)});
     prKitLabel(kit, identity, {.text = entity != nullptr ? PrStringView(entity->name) : "No selection"}, kBody);
     prKitSpacer(kit, identity, {});
     if (entity != nullptr)
@@ -647,12 +672,12 @@ void buildInspector(PrKit* kit, PrLayoutNode panel, EditorState& editor) {
     if (transform != kPrLayoutNodeNone) {
         PrKitNumberRange meters{.step = editor.snap ? 0.5 : 0.05};
         prKitVectorField(kit, prKitInspectorRow(kit, transform, {.label = "Position"}, {}),
-                         {.value = prKitScalarF32(&entity->position.x), .count = 3, .range = meters}, {});
+            {.value = prKitScalarF32(&entity->position.x), .count = 3, .range = meters}, {});
         prKitVectorField(kit, prKitInspectorRow(kit, transform, {.label = "Rotation"}, {}),
-                         {.value = prKitScalarF32(&entity->rotation.x), .count = 3, .range = {.step = 0.5}}, {});
+            {.value = prKitScalarF32(&entity->rotation.x), .count = 3, .range = {.step = 0.5}}, {});
         PrKitNumberRange scale{.step = 0.01, .min = 0, .hasMin = true};
         prKitVectorField(kit, prKitInspectorRow(kit, transform, {.label = "Scale"}, {}),
-                         {.value = prKitScalarF32(&entity->scale.x), .count = 3, .range = scale}, {});
+            {.value = prKitScalarF32(&entity->scale.x), .count = 3, .range = scale}, {});
     }
     PrLayoutNode mesh = prKitInspectorGroup(kit, body, {.name = "Mesh Renderer", .open = &editor.openMesh});
     if (mesh != kPrLayoutNodeNone) {
@@ -670,9 +695,11 @@ void buildInspector(PrKit* kit, PrLayoutNode panel, EditorState& editor) {
     }
     PrLayoutNode rigidbody = prKitInspectorGroup(kit, body, {.name = "Rigidbody", .open = &editor.openRigidbody});
     if (rigidbody != kPrLayoutNodeNone) {
-        PrKitNumber mass{.value = prKitScalarF32(&entity->mass),
-                         .range = {.step = 0.05, .min = 0, .hasMin = true},
-                         .unit = "kg"};
+        PrKitNumber mass{
+            .value = prKitScalarF32(&entity->mass),
+            .range = {.step = 0.05, .min = 0, .hasMin = true},
+            .unit = "kg",
+        };
         prKitNumberField(kit, prKitInspectorRow(kit, rigidbody, {.label = "Mass"}, {}), mass, {});
         PrLayoutNode drag = prKitInspectorRow(kit, rigidbody, {.label = "Drag"}, {});
         prKitSlider(kit, drag, {.value = prKitScalarF32(&editor.drag), .min = 0, .max = 1}, {});
@@ -680,20 +707,21 @@ void buildInspector(PrKit* kit, PrLayoutNode panel, EditorState& editor) {
         PrLayoutNode number = prKitNumberField(kit, drag, {.value = prKitScalarF32(&editor.drag), .range = unit}, {});
         PrKitPlace narrow{.width = prKitPx(56), .flex = PrKitFlex_Fixed};
         prKitPlace(kit, number, &narrow);
-        prKitToggle(kit, prKitInspectorRow(kit, rigidbody, {.label = "Gravity"}, {}), {.value = &entity->gravity},
-                    {});
+        prKitToggle(kit, prKitInspectorRow(kit, rigidbody, {.label = "Gravity"}, {}), {.value = &entity->gravity}, {});
     }
-    PrKitInspectorGroup scriptGroup{.name = "Controller Script",
-                                    .badge = "COMPILED",
-                                    .badgeVariant = PrKitBadgeVariant_Success,
-                                    .open = &editor.openScript};
+    PrKitInspectorGroup scriptGroup{
+        .name = "Controller Script",
+        .badge = "COMPILED",
+        .badgeVariant = PrKitBadgeVariant_Success,
+        .open = &editor.openScript,
+    };
     PrLayoutNode script = prKitInspectorGroup(kit, body, scriptGroup);
     if (script != kPrLayoutNodeNone) {
         PrKitNumberRange positive{.step = 0.05, .min = 0, .hasMin = true};
         prKitNumberField(kit, prKitInspectorRow(kit, script, {.label = "Speed"}, {}),
-                         {.value = prKitScalarF32(&editor.scriptSpeed), .range = positive}, {});
+            {.value = prKitScalarF32(&editor.scriptSpeed), .range = positive}, {});
         prKitNumberField(kit, prKitInspectorRow(kit, script, {.label = "Jump"}, {}),
-                         {.value = prKitScalarF32(&editor.scriptJump), .range = positive}, {});
+            {.value = prKitScalarF32(&editor.scriptJump), .range = positive}, {});
     }
 }
 

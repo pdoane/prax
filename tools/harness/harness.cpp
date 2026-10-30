@@ -25,14 +25,12 @@ constexpr size_t kReadChunk = 64 * 1024;
 
 // Returns true if the bytes at `at` encode a surrogate in UTF-8 form: ED, then A0 through BF.
 bool isSurrogate(PrStringView text, size_t at) {
-    return at + 2 < text.size && uint8_t(text.data[at]) == 0xed
-        && (uint8_t(text.data[at + 1]) & 0xe0) == 0xa0
-        && (uint8_t(text.data[at + 2]) & 0xc0) == 0x80;
+    return at + 2 < text.size && uint8_t(text.data[at]) == 0xed && (uint8_t(text.data[at + 1]) & 0xe0) == 0xa0 &&
+        (uint8_t(text.data[at + 2]) & 0xc0) == 0x80;
 }
 
 uint32_t surrogateAt(PrStringView text, size_t at) {
-    return 0xd000u | uint32_t(uint8_t(text.data[at + 1]) & 0x3f) << 6
-                   | uint32_t(uint8_t(text.data[at + 2]) & 0x3f);
+    return 0xd000u | uint32_t(uint8_t(text.data[at + 1]) & 0x3f) << 6 | uint32_t(uint8_t(text.data[at + 2]) & 0x3f);
 }
 
 void writeEscape(TextBuffer* out, uint32_t unit) {
@@ -200,28 +198,36 @@ uint8_t harnessReadBound(PrStringView text) {
 
 HarnessCounters harnessCounters() {
     CpuCounters cpu = cpuCounters();
-    return HarnessCounters{cpu.instructions, cpu.cycles, cpu.performanceInstructions, cpu.performanceCycles,
-                           cpu.energy, prTimeMonotonicMilliseconds(), 0, cpu.cpuMillis};
+    return HarnessCounters{
+        cpu.instructions, cpu.cycles, cpu.performanceInstructions, cpu.performanceCycles,
+        cpu.energy, prTimeMonotonicMilliseconds(), 0, cpu.cpuMillis,
+    };
 }
 
 HarnessCounters harnessSpent(const HarnessCounters& from, const HarnessCounters& to) {
-    return HarnessCounters{to.instructions - from.instructions, to.cycles - from.cycles,
-                           to.performanceInstructions - from.performanceInstructions,
-                           to.performanceCycles - from.performanceCycles, to.energy - from.energy,
-                           to.millis - from.millis, to.gpu - from.gpu, to.cpu - from.cpu};
+    return HarnessCounters{
+        to.instructions - from.instructions, to.cycles - from.cycles,
+        to.performanceInstructions - from.performanceInstructions,
+        to.performanceCycles - from.performanceCycles, to.energy - from.energy,
+        to.millis - from.millis, to.gpu - from.gpu, to.cpu - from.cpu,
+    };
 }
 
 HarnessCounters harnessSum(const HarnessCounters& a, const HarnessCounters& b) {
-    return HarnessCounters{a.instructions + b.instructions, a.cycles + b.cycles,
-                           a.performanceInstructions + b.performanceInstructions,
-                           a.performanceCycles + b.performanceCycles, a.energy + b.energy, a.millis + b.millis,
-                           a.gpu + b.gpu, a.cpu + b.cpu};
+    return HarnessCounters{
+        a.instructions + b.instructions, a.cycles + b.cycles,
+        a.performanceInstructions + b.performanceInstructions,
+        a.performanceCycles + b.performanceCycles, a.energy + b.energy, a.millis + b.millis,
+        a.gpu + b.gpu, a.cpu + b.cpu,
+    };
 }
 
 HarnessCounters harnessEach(const HarnessCounters& spent, double count) {
-    return HarnessCounters{spent.instructions / count, spent.cycles / count, spent.performanceInstructions / count,
-                           spent.performanceCycles / count, spent.energy / count, spent.millis / count,
-                           spent.gpu / count, spent.cpu / count};
+    return HarnessCounters{
+        spent.instructions / count, spent.cycles / count, spent.performanceInstructions / count,
+        spent.performanceCycles / count, spent.energy / count, spent.millis / count,
+        spent.gpu / count, spent.cpu / count,
+    };
 }
 
 void harnessCountsAdd(HarnessCounts* counts, PrStringView name, const HarnessCounters& cost) {
@@ -229,11 +235,9 @@ void harnessCountsAdd(HarnessCounts* counts, PrStringView name, const HarnessCou
     if (out->text.count != 0)
         textAppend(out, ", ");
     harnessWriteString(out, name);
-    harnessAppendFormat(out,
-                        ": {\"instructions\": %.0f, \"cycles\": %.0f, \"performanceInstructions\": %.0f, "
-                        "\"performanceCycles\": %.0f, \"energy\": %.4f, \"time\": %.6f",
-                        cost.instructions, cost.cycles, cost.performanceInstructions, cost.performanceCycles,
-                        cost.energy, cost.millis);
+    harnessAppendFormat(out, ": {\"instructions\": %.0f, \"cycles\": %.0f, \"performanceInstructions\": %.0f, "
+        "\"performanceCycles\": %.0f, \"energy\": %.4f, \"time\": %.6f",
+        cost.instructions, cost.cycles, cost.performanceInstructions, cost.performanceCycles, cost.energy, cost.millis);
     if (cost.gpu > 0)
         harnessAppendFormat(out, ", \"gpu\": %.6f", cost.gpu);
     textAppend(out, "}");

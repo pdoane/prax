@@ -287,8 +287,8 @@ TEST_CASE("closing a tab removes its panel at the next build") {
         PrLayoutVec at{prLayoutUnitFromPx(x), prLayoutUnitFromPx(tab.y)};
         uint32_t count = prLayoutTreeHitTest(f.tree, at, hits.data(), uint32_t(hits.size()));
         for (uint32_t i = 0; i < count && !found; ++i) {
-            if ((prUiFlags(f.ui, hits[i]) & PrUiFlag_Focusable) != 0
-                && width(f.bounds(hits[i])) == doctest::Approx(double(kPrKitHeightXs))) {
+            if ((prUiFlags(f.ui, hits[i]) & PrUiFlag_Focusable) != 0 &&
+                    width(f.bounds(hits[i])) == doctest::Approx(double(kPrKitHeightXs))) {
                 close = f.center(hits[i]);
                 found = true;
             }

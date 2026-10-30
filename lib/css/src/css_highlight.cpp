@@ -100,8 +100,7 @@ uint32_t cssHighlightRegistryFind(const PrCssHighlightRegistry* registry, PrStri
     return kArrayMissing;
 }
 
-void cssHighlightRegistrySet(PrCssHighlightRegistry* registry, PrStringView name,
-                             PrCssHighlight* highlight) {
+void cssHighlightRegistrySet(PrCssHighlightRegistry* registry, PrStringView name, PrCssHighlight* highlight) {
     uint32_t at = cssHighlightRegistryFind(registry, name);
     CssHighlightEntry* entry = nullptr;
     if (at != kArrayMissing) {

@@ -37,8 +37,12 @@ struct Rows {
 // container, which is the view, at the last commit.
 Rows rowsOf(KitFixture& f, PrLayoutNode view) {
     PrKitWindow window = prKitListWindow(f.kit, view);
-    return Rows{.view = view, .content = prLayoutNodeFirstChild(f.tree, view), .first = window.first,
-                .count = window.count};
+    return Rows{
+        .view = view,
+        .content = prLayoutNodeFirstChild(f.tree, view),
+        .first = window.first,
+        .count = window.count,
+    };
 }
 
 // A list over a large set. It holds its membership by row, and its cursor in the selection that the view edits.
@@ -59,8 +63,7 @@ struct ListScene {
 
     void build(PrLayoutNode ground) {
         PrKitListView list{.key = 1, .count = count, .selection = bound ? &selection : nullptr};
-        PrLayoutNode view = prKitListView(
-            f.kit, ground, list,
+        PrLayoutNode view = prKitListView(f.kit, ground, list,
             {.rowHeight = kRowHeight, .place = {.height = prKitPx(kViewHeight), .flex = PrKitFlex_Fixed}});
         rows = rowsOf(f, view);
         if (focus) {
@@ -69,8 +72,14 @@ struct ListScene {
         }
         for (uint32_t i = 0; i < rows.count; ++i) {
             uint32_t index = rows.first + i;
-            PrKitRow row{.index = index, .item = index, .icon = PrKitIconKind_Cube, .selected = selected[index],
-                         .label = "Entity", .meta = "mesh"};
+            PrKitRow row{
+                .index = index,
+                .item = index,
+                .icon = PrKitIconKind_Cube,
+                .selected = selected[index],
+                .label = "Entity",
+                .meta = "mesh",
+            };
             cells[index] = prKitListRow(f.kit, rows.view, row);
         }
         if (prKitSelectionEdited(f.kit, rows.view, &rows.edit))
@@ -133,13 +142,14 @@ struct TreeScene {
 
     void build(PrLayoutNode ground) {
         order();
-        PrKitTreeView tree{.key = 2,
-                           .count = uint32_t(items.size()),
-                           .selection = &selection,
-                           .items = items.data(),
-                           .dragKind = kRowKind};
-        PrLayoutNode view = prKitTreeView(
-            f.kit, ground, tree,
+        PrKitTreeView tree{
+            .key = 2,
+            .count = uint32_t(items.size()),
+            .selection = &selection,
+            .items = items.data(),
+            .dragKind = kRowKind,
+        };
+        PrLayoutNode view = prKitTreeView(f.kit, ground, tree,
             {.rowHeight = kRowHeight, .place = {.height = prKitPx(kViewHeight), .flex = PrKitFlex_Fixed}});
         rows = rowsOf(f, view);
         nodes.assign(items.size(), kPrLayoutNodeNone);
@@ -147,8 +157,13 @@ struct TreeScene {
         for (uint32_t i = 0; i < rows.count; ++i) {
             uint32_t index = rows.first + i;
             uint64_t id = ids[index];
-            PrKitRow row{.index = index, .item = id, .icon = PrKitIconKind_Cube, .selected = id == selectedId,
-                         .label = "Entity"};
+            PrKitRow row{
+                .index = index,
+                .item = id,
+                .icon = PrKitIconKind_Cube,
+                .selected = id == selectedId,
+                .label = "Entity",
+            };
             nodes[index] = prKitTreeRow(f.kit, view, row);
             if (items[index].depth == 0) {
                 uint32_t group = uint32_t(id / 10 - 1);
@@ -208,11 +223,18 @@ struct TableScene {
             {.label = "TYPE", .width = 80, .sortable = true},
             {.label = "SIZE", .width = 60, .align = PrKitTextAlign_End},
         };
-        PrKitTable table{.key = 1, .count = kRows, .selection = &selection, .columns = columns, .columnCount = 3,
-                         .sort = &sort};
+        PrKitTable table{
+            .key = 1,
+            .count = kRows,
+            .selection = &selection,
+            .columns = columns,
+            .columnCount = 3,
+            .sort = &sort,
+        };
         PrKitListViewStyle style{
             .rowHeight = kRowHeight,
-            .place = {.width = prKitPx(width), .height = prKitPx(kViewHeight), .flex = PrKitFlex_Fixed}};
+            .place = {.width = prKitPx(width), .height = prKitPx(kViewHeight), .flex = PrKitFlex_Fixed},
+        };
         if (limited)
             style.place = {.height = prKitPx(kViewHeight), .maxWidth = prKitPx(width), .flex = PrKitFlex_Fixed};
         PrLayoutNode view = prKitTable(f.kit, prKitBox(f.kit, ground, {}, {.gap = 0}), table, style);
@@ -223,10 +245,7 @@ struct TableScene {
             order[i] = sort.column != kPrKitColumnNone && sort.descending ? kRows - 1 - i : i;
         for (uint32_t i = rows.first; i < rows.first + rows.count; ++i) {
             PrLayoutNode row = prKitTableRow(f.kit, view, {.index = i, .item = order[i], .selected = selected[i]});
-            cells[i][0] = prKitTableCell(f.kit, row,
-                                         {.column = 0,
-                                          .text = "Entity",
-                                          .icon = PrKitIconKind_Cube});
+            cells[i][0] = prKitTableCell(f.kit, row, {.column = 0, .text = "Entity", .icon = PrKitIconKind_Cube});
             cells[i][1] = prKitTableCell(f.kit, row, {.column = 1, .text = "mesh", .role = PrKitTextRole_Mono});
             cells[i][2] = prKitTableCell(f.kit, row, {.column = 2, .text = "12 KB", .role = PrKitTextRole_Mono});
         }
@@ -266,12 +285,18 @@ struct GridScene {
         PrKitListViewStyle style{
             .rowHeight = 80,
             .tileWidth = 100,
-            .place = {.width = prKitPx(410), .height = prKitPx(kViewHeight), .flex = PrKitFlex_Fixed}};
+            .place = {.width = prKitPx(410), .height = prKitPx(kViewHeight), .flex = PrKitFlex_Fixed},
+        };
         PrLayoutNode view = prKitListView(f.kit, ground, {.key = 1, .count = kTiles, .selection = &selection}, style);
         rows = rowsOf(f, view);
         for (uint32_t i = rows.first; i < rows.first + rows.count; ++i) {
-            PrKitTile tile{.index = i, .item = i, .icon = PrKitIconKind_Cube, .selected = selected[i],
-                           .label = "Entity"};
+            PrKitTile tile{
+                .index = i,
+                .item = i,
+                .icon = PrKitIconKind_Cube,
+                .selected = selected[i],
+                .label = "Entity",
+            };
             tiles[i] = prKitListTile(f.kit, view, tile);
         }
         if (prKitSelectionEdited(f.kit, view, &rows.edit))
@@ -651,9 +676,7 @@ TEST_CASE("an empty state shows its icon over its title and hint") {
     PrLayoutNode column = kPrLayoutNodeNone;
     f.build = [&](PrLayoutNode ground) {
         column = prKitEmptyState(f.kit, ground,
-                                 {.icon = PrKitIconKind_Search,
-                                  .title = "NO ASSETS",
-                                  .hint = "Clear the filter to see them all"});
+            {.icon = PrKitIconKind_Search, .title = "NO ASSETS", .hint = "Clear the filter to see them all"});
     };
     f.frame();
     PrRect box = f.bounds(column);
@@ -761,17 +784,27 @@ TEST_CASE("a grid's tiles fill rows of as many as fit, and its window holds whol
 TEST_CASE("a tile's image fills its thumbnail in place of its icon") {
     KitFixture f;
     std::vector<uint8_t> pixels(16 * 8 * 4, 255);
-    PrDrawImageDesc desc{PrPixelView{pixels.data(), 16 * 4, {16, 8}}, PrPixelFormat_Rgba8, PrDrawAlpha_Straight,
-                         PrColorSpace_Srgb};
+    PrDrawImageDesc desc{
+        PrPixelView{pixels.data(), 16 * 4, {16, 8}}, PrPixelFormat_Rgba8, PrDrawAlpha_Straight,
+        PrColorSpace_Srgb,
+    };
     const PrDrawImage* image = nullptr;
     REQUIRE(prDrawImageCreate(&desc, &image) == PrStatus_Ok);
     PrLayoutNode tile = kPrLayoutNodeNone;
     f.build = [&](PrLayoutNode ground) {
-        PrKitListViewStyle style{.rowHeight = 80, .tileWidth = 100,
-                                 .place = {.width = prKitPx(200), .height = prKitPx(200), .flex = PrKitFlex_Fixed}};
+        PrKitListViewStyle style{
+            .rowHeight = 80,
+            .tileWidth = 100,
+            .place = {.width = prKitPx(200), .height = prKitPx(200), .flex = PrKitFlex_Fixed},
+        };
         PrLayoutNode view = prKitListView(f.kit, ground, {.key = 1, .count = 1}, style);
-        tile = prKitListTile(f.kit, view, {.index = 0, .item = 7, .image = image, .icon = PrKitIconKind_Cube,
-                                           .label = "fox.png"});
+        tile = prKitListTile(f.kit, view, {
+            .index = 0,
+            .item = 7,
+            .image = image,
+            .icon = PrKitIconKind_Cube,
+            .label = "fox.png",
+        });
     };
     f.frame();
     f.frame();

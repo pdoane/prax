@@ -75,7 +75,7 @@ PrCssStyleSheetList* cssDocumentStyleSheets(PrDomDocument* document) {
 }
 
 PrStatus cssRegisterProperty(PrDomDocument* document, PrStringView name, PrStringView syntax,
-                             bool inherits, PrStringView initialValue) {
+        bool inherits, PrStringView initialValue) {
     // css-variables-1/#custom-property: a custom property's name starts with two dashes.
     if (!stringStartsWith(name, "--"))
         return PrStatus_Syntax;
@@ -130,7 +130,7 @@ namespace {
 // too, and must not outlive the attribute that they were built from. An element without style data has neither to bring
 // up to date.
 void attributeChanged(void* PR_NULLABLE, PrDomElement* element, DomNamespaceId space, PrStringView name, PrStringView,
-                      PrStringView value) {
+        PrStringView value) {
     if (space != PrDomNamespace_None || element->style == nullptr)
         return;
     if (name == "style")
@@ -147,20 +147,18 @@ const DomDocumentHooks* cssDocumentHooks() {
         .languageChanged = [](void*, PrDomDocument* document) { cssDocumentStyleChanged(document); },
         .styleBlockUpdate = [](void*, PrDomElement* element, DomInsertedBy by) { cssStyleBlockUpdate(element, by); },
         .instructionInserted = [](void*, PrDomNode* node) { cssXmlStylesheetInserted(node); },
-        .ownerAttributeChanged =
-            [](void*, PrDomElement* element, PrStringView name, PrStringView value) {
-                if (name == "media")
-                    cssOwnerMediaChanged(element, value);
-            },
+        .ownerAttributeChanged = [](void*, PrDomElement* element, PrStringView name, PrStringView value) {
+            if (name == "media")
+                cssOwnerMediaChanged(element, value);
+        },
         .instructionRemoving = [](void*, PrDomNode* node) { cssInstructionRemoving(node); },
         .documentCreated = [](void*, PrDomDocument* created) { prCssEnable(created); },
         .elementDestroyed = [](void*, PrDomElement* element) { cssElementStyleDestroy(element->style); },
         .shadowRootDestroyed = [](void*, PrDomShadowRoot* shadow) { cssRootDestroy(shadow->style); },
-        .documentDestroyed =
-            [](void*, PrDomDocument* document) {
-                cssRootDestroy(document->style);
-                cssSelectorCacheDestroy(document->selectors);
-            },
+        .documentDestroyed = [](void*, PrDomDocument* document) {
+            cssRootDestroy(document->style);
+            cssSelectorCacheDestroy(document->selectors);
+        },
     };
     return &kHooks;
 }

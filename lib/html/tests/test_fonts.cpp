@@ -82,12 +82,14 @@ PrDomEventListener recorder(Heard* heard) {
     return PrDomEventListener{
         [](void* context, PrDomEvent* event) {
             PrCssFontFaceSetLoadEvent* load = prCssFontFaceSetLoadEventQuery(event);
-            uint32_t faces =
-                load != nullptr ? prCssFontFaceSetLoadEventFontFaces(load, nullptr, 0) : 0;
-            static_cast<Heard*>(context)->said.push_back(textOf(prDomEventType(event)) + " "
-                                                         + std::to_string(faces));
+            uint32_t faces = load != nullptr ? prCssFontFaceSetLoadEventFontFaces(load, nullptr, 0) : 0;
+            static_cast<Heard*>(context)->said.push_back(textOf(prDomEventType(event)) + " " + std::to_string(faces));
         },
-        heard, 0, nullptr, nullptr};
+        heard,
+        0,
+        nullptr,
+        nullptr,
+    };
 }
 
 // A browsing context whose host serves the checkout's font files by the last segment of their URL. It renders in a font
@@ -167,8 +169,7 @@ struct Served {
         host.fetcher = fetcher.fetcher;
         PrHtmlPage* page = prHtmlPageCreate(&host);
         PrHtmlResponseHeaders headers = {"text/html; charset=utf-8", PrStringView{nullptr, 0}};
-        REQUIRE(prHtmlPageLoad(page, html, "https://fonts.test/page.html", &headers)
-                == PrStatus_Ok);
+        REQUIRE(prHtmlPageLoad(page, html, "https://fonts.test/page.html", &headers) == PrStatus_Ok);
         return page;
     }
 };
@@ -189,15 +190,15 @@ float widthOf(PrHtmlPage* page, const char* id) {
     REQUIRE(element != nullptr);
     PrLayoutNode node = prCssPresentationLayoutNode(presentation, prDomElementAsNode(element));
     PrRect bounds = prLayoutRectToPx(prLayoutNodeBounds(prCssPresentationTree(presentation), node,
-                                                        PrLayoutCoordinates_Viewport));
+        PrLayoutCoordinates_Viewport));
     return bounds.right - bounds.left;
 }
 
 // Spans of the same text in the family `web`, in serif and in sans-serif.
 constexpr const char kSpans[] = "<style>span { display: inline-block }</style>"
-                                "<span id=web style='font-family: Web, serif'>Hamburgefonstiv</span>"
-                                "<span id=serif style='font-family: serif'>Hamburgefonstiv</span>"
-                                "<span id=sans style='font-family: sans-serif'>Hamburgefonstiv</span>";
+    "<span id=web style='font-family: Web, serif'>Hamburgefonstiv</span>"
+    "<span id=serif style='font-family: serif'>Hamburgefonstiv</span>"
+    "<span id=sans style='font-family: sans-serif'>Hamburgefonstiv</span>";
 
 // Records the set's status as the font callback reports it, and its load events. It holds a reference to the document,
 // so that it stops listening whether or not the browsing context outlives it.
@@ -206,8 +207,7 @@ struct SetHeard {
     PrDomEventListener listener = recorder(&heard);
     PrDomDocument* document;
 
-    explicit SetHeard(PrHtmlPage* page)
-        : document(prHtmlWindowDocument(prHtmlPageWindow(page))) {
+    explicit SetHeard(PrHtmlPage* page) : document(prHtmlWindowDocument(prHtmlPageWindow(page))) {
         prDomNodeRetain(prDomDocumentAsNode(document));
         PrCssFontCallback callback = {
             nullptr,
@@ -220,14 +220,14 @@ struct SetHeard {
         prCssDocumentSetFontCallback(document, &callback);
         for (PrStringView type : {"loadingdone", "loadingerror"})
             prDomEventTargetAddEventListener(prCssFontFaceSetAsEventTarget(prCssDocumentFonts(document)), type,
-                                             &listener, nullptr);
+                &listener, nullptr);
     }
 
     ~SetHeard() {
         prCssDocumentSetFontCallback(document, nullptr);
         for (PrStringView type : {"loadingdone", "loadingerror"})
             prDomEventTargetRemoveEventListener(prCssFontFaceSetAsEventTarget(prCssDocumentFonts(document)), type,
-                                                &listener, nullptr);
+                &listener, nullptr);
         prDomNodeRelease(prDomDocumentAsNode(document));
     }
 };
@@ -266,22 +266,17 @@ using namespace pr_impl;
 
 TEST_CASE("a style sheet's @font-face rules are the document's faces, before those added") {
     PrHtmlPage* page = prHtmlPageCreate(nullptr);
-    std::string source = std::string("<style>@font-face { font-family: A; src: ") + fontUrl()
-                         + "; } @layer x { @font-face { font-family: B; src: url(b) } } "
-                           "@media print { @font-face { font-family: C; src: url(c) } }</style>";
-    CHECK(prHtmlPageLoad(page, source,
-                                    "about:blank", nullptr)
-          == PrStatus_Ok);
-    PrCssFontFaceSet* fonts =
-        prCssDocumentFonts(prHtmlWindowDocument(prHtmlPageWindow(page)));
+    std::string source = std::string("<style>@font-face { font-family: A; src: ") + fontUrl() +
+        "; } @layer x { @font-face { font-family: B; src: url(b) } } "
+        "@media print { @font-face { font-family: C; src: url(c) } }</style>";
+    CHECK(prHtmlPageLoad(page, source, "about:blank", nullptr) == PrStatus_Ok);
+    PrCssFontFaceSet* fonts = prCssDocumentFonts(prHtmlWindowDocument(prHtmlPageWindow(page)));
     // A face in a conditional group rule is left to the cascade.
     REQUIRE(prCssFontFaceSetSize(fonts) == 2);
     PrCssFontFace* first = prCssFontFaceSetAt(fonts, 0);
     CHECK(prCssFontFaceIsCssConnected(first));
     CHECK(take(prCssFontFaceDescriptor(first, PrCssFontFaceDescriptor_Family)) == "A");
-    CHECK(
-        take(prCssFontFaceDescriptor(prCssFontFaceSetAt(fonts, 1), PrCssFontFaceDescriptor_Family))
-        == "B");
+    CHECK(take(prCssFontFaceDescriptor(prCssFontFaceSetAt(fonts, 1), PrCssFontFaceDescriptor_Family)) == "B");
 
     PrCssFontFace* added = prCssFontFaceCreate("D", "url(d)", nullptr);
     CHECK(prCssFontFaceSetAdd(fonts, added) == PrStatus_Ok);
@@ -300,8 +295,7 @@ TEST_CASE("a face loads in a task, and its set switches to loading and back") {
     PrCssFontCallback callback = {
         [](void* context, PrDomDocument*, PrCssFontFace* face) {
             constexpr const char* kStatuses[] = {"unloaded", "loading", "loaded", "error"};
-            static_cast<Heard*>(context)->said.push_back(std::string("face ")
-                                                         + kStatuses[prCssFontFaceStatus(face)]);
+            static_cast<Heard*>(context)->said.push_back(std::string("face ") + kStatuses[prCssFontFaceStatus(face)]);
         },
         [](void* context, PrDomDocument*, PrCssFontFaceSet* set) {
             bool loading = prCssFontFaceSetStatus(set) == PrCssFontFaceSetLoadStatus_Loading;
@@ -310,16 +304,13 @@ TEST_CASE("a face loads in a task, and its set switches to loading and back") {
         &heard,
     };
     PrHtmlPage* page = prHtmlPageCreate(nullptr);
-    CHECK(prHtmlPageLoad(page, "<p>text", "about:blank",
-                         nullptr)
-          == PrStatus_Ok);
+    CHECK(prHtmlPageLoad(page, "<p>text", "about:blank", nullptr) == PrStatus_Ok);
     PrDomDocument* document = prHtmlWindowDocument(prHtmlPageWindow(page));
     prCssDocumentSetFontCallback(document, &callback);
     PrCssFontFaceSet* fonts = prCssDocumentFonts(document);
     PrDomEventListener listener = recorder(&heard);
     for (PrStringView type : {"loading", "loadingdone", "loadingerror"})
-        prDomEventTargetAddEventListener(prCssFontFaceSetAsEventTarget(fonts), type, &listener,
-                                         nullptr);
+        prDomEventTargetAddEventListener(prCssFontFaceSetAsEventTarget(fonts), type, &listener, nullptr);
 
     std::string url = fontUrl();
     PrCssFontFace* good = prCssFontFaceCreate("Good", url, nullptr);
@@ -334,10 +325,11 @@ TEST_CASE("a face loads in a task, and its set switches to loading and back") {
     CHECK(prCssFontFaceStatus(bad) == PrCssFontFaceStatus_Error);
     CHECK_FALSE(prCssFontFaceFailedToParse(bad));
     CHECK(prCssFontFaceSetStatus(fonts) == PrCssFontFaceSetLoadStatus_Loaded);
-    CHECK(heard.said
-          == std::vector<std::string>{"face loading", "set loading", "face loading", "loading 0",
-                                      "face loaded", "face error", "loadingdone 1",
-                                      "loadingerror 1", "set loaded"});
+    CHECK(heard.said == std::vector<std::string>{
+        "face loading", "set loading", "face loading", "loading 0",
+        "face loaded", "face error", "loadingdone 1",
+        "loadingerror 1", "set loaded",
+    });
     prCssDocumentSetFontCallback(document, nullptr);
     prCssFontFaceRelease(good);
     prCssFontFaceRelease(bad);
@@ -372,8 +364,7 @@ TEST_CASE("a FontFaceSetLoadEvent holds the faces it names") {
 
 TEST_CASE("text in a family of @font-face falls back while its face loads, then takes the face") {
     Served served;
-    std::string html = std::string("<style>@font-face { font-family: Web; src: url(fonts/Arimo.ttf) }</style>")
-                       + kSpans;
+    std::string html = std::string("<style>@font-face { font-family: Web; src: url(fonts/Arimo.ttf) }</style>") + kSpans;
     PrHtmlPage* page = served.load(html.c_str());
     prHtmlPresentationUpdate(prHtmlPagePresentation(page), prLayoutVecFromPx(PrVec2{800, 600}));
     CHECK(widthOf(page, "web") == widthOf(page, "serif"));
@@ -388,8 +379,8 @@ TEST_CASE("a family whose faces all failed hides the installed family of its nam
     Served served;
     PrHtmlPage* page = served.load(
         "<style>@font-face { font-family: Arimo; src: url(Missing.ttf) } span { display: inline-block }</style>"
-        "<span id=arimo style='font-family: Arimo, serif'>Hamburgefonstiv</span>"
-        "<span id=serif style='font-family: serif'>Hamburgefonstiv</span>");
+            "<span id=arimo style='font-family: Arimo, serif'>Hamburgefonstiv</span>"
+            "<span id=serif style='font-family: serif'>Hamburgefonstiv</span>");
     settle(page);
     CHECK(served.fetched == std::vector<std::string>{"Missing.ttf"});
     CHECK(widthOf(page, "arimo") == widthOf(page, "serif"));
@@ -398,11 +389,8 @@ TEST_CASE("a family whose faces all failed hides the installed family of its nam
 
 TEST_CASE("a face whose unicode-range holds none of the text is not fetched") {
     Served served;
-    std::string html = std::string("<style>@font-face { font-family: Web; src: url(Arimo.ttf); "
-                                   "unicode-range: U+0-7F }"
-                                   "@font-face { font-family: Web; src: url(Cousine.ttf); "
-                                   "unicode-range: U+400-4FF }</style>")
-                       + kSpans;
+    std::string html = std::string("<style>@font-face { font-family: Web; src: url(Arimo.ttf); unicode-range: U+0-7F }"
+        "@font-face { font-family: Web; src: url(Cousine.ttf); unicode-range: U+400-4FF }</style>") + kSpans;
     PrHtmlPage* page = served.load(html.c_str());
     settle(page);
     CHECK(served.fetched == std::vector<std::string>{"Arimo.ttf"});
@@ -450,7 +438,7 @@ TEST_CASE("a document's set is loading until its text is laid out and the faces 
         &heard,
     };
     PrHtmlPage* page = served.load("<style>@font-face { font-family: A; src: url(Arimo.ttf) }</style>"
-                                                 "<p style='font-family: A'>text");
+        "<p style='font-family: A'>text");
     PrDomDocument* document = prHtmlWindowDocument(prHtmlPageWindow(page));
     PrCssFontFaceSet* fonts = prCssDocumentFonts(document);
     // The document has loaded, and the set waits for a layout of its text, which may request the face.
@@ -469,8 +457,7 @@ TEST_CASE("a document's set is loading until its text is laid out and the faces 
 
 TEST_CASE("a document's set whose text uses none of its faces is loaded once laid out") {
     Served served;
-    PrHtmlPage* page =
-        served.load("<style>@font-face { font-family: A; src: url(Arimo.ttf) }</style><p>text");
+    PrHtmlPage* page = served.load("<style>@font-face { font-family: A; src: url(Arimo.ttf) }</style><p>text");
     PrCssFontFaceSet* fonts = prCssDocumentFonts(prHtmlWindowDocument(prHtmlPageWindow(page)));
     CHECK(prCssFontFaceSetStatus(fonts) == PrCssFontFaceSetLoadStatus_Loading);
     prHtmlPresentationUpdate(prHtmlPagePresentation(page), prLayoutVecFromPx(PrVec2{800, 600}));
@@ -526,9 +513,10 @@ TEST_CASE("a face deleted while it loads and added again settles the set it rejo
     runTasks(page);
     update(page);
     CHECK(prCssFontFaceSetStatus(fonts) == PrCssFontFaceSetLoadStatus_Loaded);
-    CHECK(heard.heard.said
-          == std::vector<std::string>{"set loading", "loadingdone 0", "set loaded", "set loading", "loadingdone 1",
-                                      "set loaded"});
+    CHECK(heard.heard.said == std::vector<std::string>{
+        "set loading", "loadingdone 0", "set loaded", "set loading", "loadingdone 1",
+        "set loaded",
+    });
     prCssFontFaceRelease(face);
     prHtmlPageDestroy(page);
 }
@@ -536,9 +524,8 @@ TEST_CASE("a face deleted while it loads and added again settles the set it rejo
 TEST_CASE("a face whose sheet leaves the document while it loads leaves the set loaded") {
     Served served;
     served.hold = true;
-    PrHtmlPage* page =
-        served.load("<style id=s>@font-face { font-family: A; src: url(Arimo.ttf) }</style>"
-                    "<p style='font-family: A'>text");
+    PrHtmlPage* page = served.load("<style id=s>@font-face { font-family: A; src: url(Arimo.ttf) }</style>"
+        "<p style='font-family: A'>text");
     PrDomDocument* document = prHtmlWindowDocument(prHtmlPageWindow(page));
     PrCssFontFaceSet* fonts = prCssDocumentFonts(document);
     update(page);
@@ -559,7 +546,7 @@ TEST_CASE("a face whose sheet leaves the document while it loads leaves the set 
 TEST_CASE("a presentation awaits font requests while a change since its last sync may add a face") {
     Served served;
     PrHtmlPage* page = served.load("<style>@font-face { font-family: Unused; src: url(Arimo.ttf) }"
-                                                 "</style><p style='font-family: A'>text");
+        "</style><p style='font-family: A'>text");
     PrDomDocument* document = prHtmlWindowDocument(prHtmlPageWindow(page));
     PrCssPresentation* presentation = prHtmlPagePresentation(page);
     settle(page);
@@ -571,16 +558,15 @@ TEST_CASE("a presentation awaits font requests while a change since its last syn
         PrDomElement* style = nullptr;
         REQUIRE(prDomElementCreate(document, "style", nullptr, &style) == PrStatus_Ok);
         prDomNodeSetTextContent(prDomElementAsNode(style), "@font-face { font-family: A; src: url(Arimo.ttf) }");
-        REQUIRE(prDomNodeAppendChild(prDomElementAsNode(prDomDocumentHead(document)), prDomElementAsNode(style))
-                == PrStatus_Ok);
+        REQUIRE(prDomNodeAppendChild(prDomElementAsNode(prDomDocumentHead(document)), prDomElementAsNode(style)) ==
+            PrStatus_Ok);
         prDomNodeRelease(prDomElementAsNode(style));
     }
     SUBCASE("a rule inserted") {
         PrCssStyleSheet* sheet = prCssStyleSheetListStyleSheetAt(prCssDocumentStyleSheets(document), 0);
         REQUIRE(sheet != nullptr);
-        REQUIRE(prCssStyleSheetInsertRule(sheet, "@font-face { font-family: A; src: url(Arimo.ttf) }", 0,
-                                          nullptr)
-                == PrStatus_Ok);
+        REQUIRE(prCssStyleSheetInsertRule(sheet, "@font-face { font-family: A; src: url(Arimo.ttf) }", 0, nullptr) ==
+            PrStatus_Ok);
     }
     SUBCASE("a face added") {
         PrCssFontFace* face = prCssFontFaceCreate("A", "url(Arimo.ttf)", nullptr);
@@ -596,12 +582,10 @@ TEST_CASE("a presentation awaits font requests while a change since its last syn
 
 TEST_CASE("a family whose matched face failed falls back to the next family, not to another of its faces") {
     Served served;
-    PrHtmlPage* page =
-        served.load("<style>@font-face { font-family: Web; font-weight: 400; src: url(Missing.ttf) }"
-                    "@font-face { font-family: Web; font-weight: 300; src: url(Arimo.ttf) }"
-                    "span { display: inline-block }</style>"
-                    "<span id=web style='font-family: Web, serif'>Hamburgefonstiv</span>"
-                    "<span id=serif style='font-family: serif'>Hamburgefonstiv</span>");
+    PrHtmlPage* page = served.load("<style>@font-face { font-family: Web; font-weight: 400; src: url(Missing.ttf) }"
+        "@font-face { font-family: Web; font-weight: 300; src: url(Arimo.ttf) }span { display: inline-block }</style>"
+        "<span id=web style='font-family: Web, serif'>Hamburgefonstiv</span>"
+        "<span id=serif style='font-family: serif'>Hamburgefonstiv</span>");
     settle(page);
     CHECK(served.fetched == std::vector<std::string>{"Missing.ttf"});
     CHECK(widthOf(page, "web") == widthOf(page, "serif"));
@@ -611,8 +595,7 @@ TEST_CASE("a family whose matched face failed falls back to the next family, not
 TEST_CASE("a failed face gives way to an earlier face of the same style") {
     Served served;
     std::string html = std::string("<style>@font-face { font-family: Web; src: url(Arimo.ttf) }"
-                                   "@font-face { font-family: Web; src: url(Missing.ttf) }</style>")
-                       + kSpans;
+        "@font-face { font-family: Web; src: url(Missing.ttf) }</style>") + kSpans;
     PrHtmlPage* page = served.load(html.c_str());
     settle(page);
     CHECK(served.fetched == std::vector<std::string>{"Missing.ttf", "Arimo.ttf"});
@@ -622,12 +605,10 @@ TEST_CASE("a failed face gives way to an earlier face of the same style") {
 
 TEST_CASE("a rule put back where it was ranks where its rule is, not as the newest face") {
     Served served;
-    PrHtmlPage* page =
-        served.load("<style id=first>@font-face { font-family: Web; src: url(Arimo.ttf) }</style>"
-                    "<style id=second>@font-face { font-family: Web; src: url(Cousine.ttf) }</style>"
-                    "<style>span { display: inline-block }</style>"
-                    "<span id=web style='font-family: Web'>Hamburgefonstiv</span>"
-                    "<span id=mono style='font-family: Cousine'>Hamburgefonstiv</span>");
+    PrHtmlPage* page = served.load("<style id=first>@font-face { font-family: Web; src: url(Arimo.ttf) }</style>"
+        "<style id=second>@font-face { font-family: Web; src: url(Cousine.ttf) }</style>"
+        "<style>span { display: inline-block }</style><span id=web style='font-family: Web'>Hamburgefonstiv</span>"
+        "<span id=mono style='font-family: Cousine'>Hamburgefonstiv</span>");
     PrDomDocument* document = prHtmlWindowDocument(prHtmlPageWindow(page));
     settle(page);
     CHECK(widthOf(page, "web") != widthOf(page, "mono"));
@@ -647,12 +628,10 @@ TEST_CASE("a rule put back where it was ranks where its rule is, not as the newe
 
 TEST_CASE("a face's size-adjust scales its font once") {
     Served served;
-    PrHtmlPage* page =
-        served.load("<style>@font-face { font-family: Web; src: url(Arimo.ttf) }"
-                    "@font-face { font-family: Half; src: url(Arimo.ttf); size-adjust: 50% }"
-                    "span { display: inline-block }</style>"
-                    "<span id=web style='font-family: Web'>Hamburgefonstiv</span>"
-                    "<span id=half style='font-family: Half'>Hamburgefonstiv</span>");
+    PrHtmlPage* page = served.load("<style>@font-face { font-family: Web; src: url(Arimo.ttf) }"
+        "@font-face { font-family: Half; src: url(Arimo.ttf); size-adjust: 50% }span { display: inline-block }</style>"
+        "<span id=web style='font-family: Web'>Hamburgefonstiv</span>"
+        "<span id=half style='font-family: Half'>Hamburgefonstiv</span>");
     settle(page);
     CHECK(widthOf(page, "half") == doctest::Approx(widthOf(page, "web") / 2).epsilon(0.02));
     // The two rules name one source, which is fetched once.
@@ -693,11 +672,9 @@ TEST_CASE("a rule put back whose source the document decoded sets its face at on
 
 TEST_CASE("a face tries its sources in order, fetching an earlier one before a decoded later one") {
     Served served;
-    PrHtmlPage* page =
-        served.load("<style>@font-face { font-family: First; src: url(Arimo.ttf) }"
-                    "@font-face { font-family: Second; src: url(Cousine.ttf), url(Arimo.ttf) }"
-                    "span { display: inline-block }</style>"
-                    "<span id=first style='font-family: First'>Hamburgefonstiv</span>");
+    PrHtmlPage* page = served.load("<style>@font-face { font-family: First; src: url(Arimo.ttf) }"
+        "@font-face { font-family: Second; src: url(Cousine.ttf), url(Arimo.ttf) }"
+        "span { display: inline-block }</style><span id=first style='font-family: First'>Hamburgefonstiv</span>");
     settle(page);
     CHECK(served.fetched == std::vector<std::string>{"Arimo.ttf"});
     PrDomDocument* document = prHtmlWindowDocument(prHtmlPageWindow(page));
@@ -705,8 +682,8 @@ TEST_CASE("a face tries its sources in order, fetching an earlier one before a d
     REQUIRE(prDomElementCreate(document, "span", nullptr, &span) == PrStatus_Ok);
     REQUIRE(prDomElementSetAttribute(span, "style", "font-family: Second") == PrStatus_Ok);
     prDomNodeSetTextContent(prDomElementAsNode(span), "Hamburgefonstiv");
-    REQUIRE(prDomNodeAppendChild(prDomElementAsNode(prDomDocumentBody(document)), prDomElementAsNode(span))
-            == PrStatus_Ok);
+    REQUIRE(prDomNodeAppendChild(prDomElementAsNode(prDomDocumentBody(document)), prDomElementAsNode(span)) ==
+        PrStatus_Ok);
     prDomNodeRelease(prDomElementAsNode(span));
     settle(page);
     CHECK(served.fetched == std::vector<std::string>{"Arimo.ttf", "Cousine.ttf"});
@@ -716,15 +693,13 @@ TEST_CASE("a face tries its sources in order, fetching an earlier one before a d
 TEST_CASE("fonts that load one at a time, and leave and come back, lay out as a full recomputation does") {
     Served served;
     served.hold = true;
-    PrHtmlPage* page = served.load(
-        "<style id=fonts>@font-face { font-family: Web; src: url(Arimo.ttf) }"
+    PrHtmlPage* page = served.load("<style id=fonts>@font-face { font-family: Web; src: url(Arimo.ttf) }"
         "@font-face { font-family: Web; src: url(Cousine.ttf); unicode-range: U+30-39 }"
         "@font-face { font-family: Web; src: url(Twemoji.ttf); unicode-range: U+1F600-1F64F }</style>"
         "<style>body { font-family: Web, serif; width: 600px } .empty { display: inline-block }"
         ".float { float: left } td { border: 1px solid }</style>"
         "<p id=text>Hamburgefonstiv e\xcc\x81 2026 \xf0\x9f\x98\x80 \xd0\x96</p>"
-        "<p><span class=empty id=empty></span></p>"
-        "<div class=float id=float>shrink to fit 123</div>"
+        "<p><span class=empty id=empty></span></p><div class=float id=float>shrink to fit 123</div>"
         "<table><tr><td id=cell>a cell 456</td><td>\xf0\x9f\x98\x83</td></tr></table>"
         "<p style='font-family: sans-serif' id=plain>set in the default family</p>");
     PrDomDocument* document = prHtmlWindowDocument(prHtmlPageWindow(page));
@@ -844,9 +819,8 @@ TEST_CASE("sources no face uses are bounded as they become unused, whether or no
 
 TEST_CASE("a length in ch measures the face that loads once it has loaded") {
     Served served;
-    PrHtmlPage* page =
-        served.load("<style>@font-face { font-family: Web; src: url(Ahem.ttf) }</style>"
-                    "<div id=box style='font: 20px Web, serif; width: 2ch'>x</div>");
+    PrHtmlPage* page = served.load("<style>@font-face { font-family: Web; src: url(Ahem.ttf) }</style>"
+        "<div id=box style='font: 20px Web, serif; width: 2ch'>x</div>");
     prHtmlPresentationUpdate(prHtmlPagePresentation(page), prLayoutVecFromPx(PrVec2{800, 600}));
     float before = widthOf(page, "box");
     CHECK(before < 30);

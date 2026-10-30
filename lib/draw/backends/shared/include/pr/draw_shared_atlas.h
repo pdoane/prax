@@ -76,7 +76,7 @@ void prDrawAtlasKeepPage(PrDrawAtlas* atlas, uint32_t page);
 // on first use. Returns false if the glyph is not drawn from the atlas because it is rotated, skewed, mirrored or too
 // large, or fits on no page.
 bool prDrawAtlasGlyph(PrDrawAtlas* atlas, const PrFontGlyphRun* run, uint32_t index, PrAffine2 transform,
-                      PrDrawAtlasEntry* out);
+    PrDrawAtlasEntry* out);
 
 // Finds the coverage of `path`, with `transform` mapping it to target pixels. The path is filled by `rule`, or stroked
 // by `stroke` (prDrawLowerStroke) and filled by the nonzero rule. Rasterizes the coverage on first use. The entry is
@@ -85,7 +85,7 @@ bool prDrawAtlasGlyph(PrDrawAtlas* atlas, const PrFontGlyphRun* run, uint32_t in
 // That is the case if it is rotated, skewed, mirrored or too large, if it fits on no page, or if an aligned stroke has
 // both open and closed contours, which composite as two fills.
 bool prDrawAtlasPath(PrDrawAtlas* atlas, const PrPath* path, PrPathFillRule rule,
-                     const PrDrawStroke* PR_NULLABLE stroke, PrAffine2 transform, PrDrawAtlasEntry* out);
+    const PrDrawStroke* PR_NULLABLE stroke, PrAffine2 transform, PrDrawAtlasEntry* out);
 
 // Returns what the atlas holds and has done.
 PrDrawAtlasInfo prDrawAtlasInfo(const PrDrawAtlas* atlas);

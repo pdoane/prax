@@ -64,8 +64,7 @@ void prHttpDestroy(PrHttp* PR_NULLABLE http) {
         http->destroy(http);
 }
 
-PrStatus prHttpExchangeCreate(PrHttp* http, const PrHttpRequestDesc* desc,
-                              PrHttpExchange* PR_NULLABLE* PR_NONNULL out) {
+PrStatus prHttpExchangeCreate(PrHttp* http, const PrHttpRequestDesc* desc, PrHttpExchange* PR_NULLABLE* PR_NONNULL out) {
     PR_ASSERT(desc->headers != nullptr || desc->headerCount == 0);
     PR_ASSERT(desc->body.data != nullptr || desc->body.size == 0);
     *out = nullptr;

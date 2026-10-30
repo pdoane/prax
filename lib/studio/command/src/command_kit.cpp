@@ -30,8 +30,8 @@ PrString shortcutOf(const PrCommandKeymap* keymap, PrStringView commandId) {
 // Returns true if the palette lists the command at `index` for `query`.
 bool isListed(const PrCommandRegistry* registry, PrCommandIndex index, PrStringView query) {
     PrCommandDesc command = prCommandRegistryCommand(registry, index);
-    return (command.flags & PrCommandFlag_Hidden) == 0 && prCommandRegistryIsDirect(registry, index)
-           && prCommandMatches(query, command.title, command.category);
+    return (command.flags & PrCommandFlag_Hidden) == 0 && prCommandRegistryIsDirect(registry, index) &&
+        prCommandMatches(query, command.title, command.category);
 }
 
 } // namespace
@@ -41,7 +41,7 @@ bool isListed(const PrCommandRegistry* registry, PrCommandIndex index, PrStringV
 using namespace pr_impl;
 
 void prCommandScope(PrUi* ui, PrLayoutNode node, const PrCommandRegistry* registry, const PrCommandKeymap* keymap,
-                    PrStringView context) {
+        PrStringView context) {
     for (uint32_t i = 0; i < prCommandKeymapCount(keymap); ++i) {
         PrCommandBinding binding = prCommandKeymapBinding(keymap, i);
         if (binding.context != context)
@@ -49,27 +49,31 @@ void prCommandScope(PrUi* ui, PrLayoutNode node, const PrCommandRegistry* regist
         PrCommandIndex index = prCommandRegistryFind(registry, binding.commandId);
         if (!isOffered(registry, index))
             continue;
-        bool pressed = binding.kind == PrCommandBindingKind_Override
-                           ? prUiKeyCaptured(ui, node, binding.chord.key, binding.chord.modifiers)
-                           : prUiKeyPressed(ui, node, binding.chord.key, binding.chord.modifiers);
+        bool pressed;
+        if (binding.kind == PrCommandBindingKind_Override)
+            pressed = prUiKeyCaptured(ui, node, binding.chord.key, binding.chord.modifiers);
+        else
+            pressed = prUiKeyPressed(ui, node, binding.chord.key, binding.chord.modifiers);
         if (pressed)
             runFromSurface(registry, index);
     }
 }
 
 PrLayoutNode prCommandMenuItem(PrKit* kit, PrLayoutNode menu, const PrCommandRegistry* registry,
-                               const PrCommandKeymap* keymap, PrStringView commandId) {
+        const PrCommandKeymap* keymap, PrStringView commandId) {
     PrCommandIndex index = prCommandRegistryFind(registry, commandId);
     if (index == kPrCommandMissing)
         return kPrLayoutNodeNone;
     PrCommandDesc command = prCommandRegistryCommand(registry, index);
     PrCommandStateFlags state = prCommandRegistryState(registry, index);
     PrString shortcut = shortcutOf(keymap, commandId);
-    PrKitMenuItem item{.key = prUiKey(prKitUi(kit), menu, commandId),
-                       .text = command.title,
-                       .shortcut = prStringView(&shortcut),
-                       .checked = (state & PrCommandStateFlag_Checked) != 0,
-                       .disabled = (state & PrCommandStateFlag_Disabled) != 0 || !isOffered(registry, index)};
+    PrKitMenuItem item{
+        .key = prUiKey(prKitUi(kit), menu, commandId),
+        .text = command.title,
+        .shortcut = prStringView(&shortcut),
+        .checked = (state & PrCommandStateFlag_Checked) != 0,
+        .disabled = (state & PrCommandStateFlag_Disabled) != 0 || !isOffered(registry, index),
+    };
     PrLayoutNode node = prKitMenuItem(kit, menu, item, {});
     prStringReset(&shortcut);
     if (prKitActivated(kit, node))
@@ -94,7 +98,7 @@ bool prCommandMatches(PrStringView query, PrStringView title, PrStringView categ
 }
 
 PrLayoutNode prCommandPalette(PrKit* kit, PrLayoutNode trigger, const PrCommandRegistry* registry,
-                              const PrCommandKeymap* keymap, PrUiTextBuffer query) {
+        const PrCommandKeymap* keymap, PrUiTextBuffer query) {
     PrStringView text = query.read != nullptr ? query.read(query.context) : PrStringView{};
     uint32_t count = 0;
     for (PrCommandIndex i = 0; i < prCommandRegistryCount(registry); ++i)
@@ -111,11 +115,13 @@ PrLayoutNode prCommandPalette(PrKit* kit, PrLayoutNode trigger, const PrCommandR
             continue;
         PrCommandDesc command = prCommandRegistryCommand(registry, i);
         PrString shortcut = shortcutOf(keymap, command.id);
-        PrKitCommandItem item{.key = prUiKey(prKitUi(kit), list, command.id),
-                              .text = command.title,
-                              .category = command.category,
-                              .shortcut = prStringView(&shortcut),
-                              .disabled = (prCommandRegistryState(registry, i) & PrCommandStateFlag_Disabled) != 0};
+        PrKitCommandItem item{
+            .key = prUiKey(prKitUi(kit), list, command.id),
+            .text = command.title,
+            .category = command.category,
+            .shortcut = prStringView(&shortcut),
+            .disabled = (prCommandRegistryState(registry, i) & PrCommandStateFlag_Disabled) != 0,
+        };
         if (prKitActivated(kit, prKitCommandItem(kit, list, item)))
             chosen = i;
         prStringReset(&shortcut);

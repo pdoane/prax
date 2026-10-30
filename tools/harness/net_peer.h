@@ -61,7 +61,7 @@ void netRunOnLoop(PrNet* net, void (*fn)(void* PR_NULLABLE context), void* PR_NU
 
 // Makes the stream that a probe drives, on the loop, with the probe's callback and context.
 typedef PrStatus (*NetProbeOpenFn)(void* PR_NULLABLE context, PrNet* net, PrNetStreamFn event, void* eventContext,
-                                   PrNetStream* PR_NULLABLE* PR_NONNULL out);
+    PrNetStream* PR_NULLABLE* PR_NONNULL out);
 
 // Called on the loop with the probe's stream, once it opens and once it ends or fails.
 typedef void (*NetProbeInspectFn)(void* PR_NULLABLE context, PrNetStream* stream);

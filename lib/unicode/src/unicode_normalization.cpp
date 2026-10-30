@@ -77,8 +77,8 @@ bool composes(uint32_t first, uint32_t second, uint32_t* composite) {
         *composite = kSyllableFirst + ((first - kLeadFirst) * kVowelCount + second - kVowelFirst) * kTrailCount;
         return true;
     }
-    if (first - kSyllableFirst < kSyllableCount && (first - kSyllableFirst) % kTrailCount == 0
-        && second - kTrailBase - 1 < kTrailCount - 1) {
+    if (first - kSyllableFirst < kSyllableCount && (first - kSyllableFirst) % kTrailCount == 0 &&
+            second - kTrailBase - 1 < kTrailCount - 1) {
         *composite = first + second - kTrailBase;
         return true;
     }
@@ -96,8 +96,8 @@ void compose(Array<uint32_t>* text) {
         uint32_t codePoint = text->data[i];
         uint8_t combining = prUnicodeCombiningClass(codePoint);
         uint32_t composite;
-        if (starter != kStarterNone && (lastCombining == 0 || lastCombining < combining)
-            && composes(text->data[starter], codePoint, &composite)) {
+        if (starter != kStarterNone && (lastCombining == 0 || lastCombining < combining) &&
+                composes(text->data[starter], codePoint, &composite)) {
             text->data[starter] = composite;
             continue;
         }

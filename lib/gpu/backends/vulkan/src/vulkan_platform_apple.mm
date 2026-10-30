@@ -14,8 +14,7 @@ void* vulkanMetalLayer(void* view, PrGpuSwapChainAnchor anchor) {
         // A view that is backed by a CAMetalLayer keeps that layer, so that AppKit asks the view to display as it
         // resizes. Any other view hosts a new layer. The driver sets the layer's device, format, color space and
         // drawable size from the swap chain.
-        CAMetalLayer* layer = [v.layer isKindOfClass:CAMetalLayer.class] ? (CAMetalLayer*)v.layer
-                                                                         : [CAMetalLayer layer];
+        CAMetalLayer* layer = [v.layer isKindOfClass:CAMetalLayer.class] ? (CAMetalLayer*)v.layer : [CAMetalLayer layer];
         layer.contentsScale = v.window != nil ? v.window.backingScaleFactor : 1;
         if (v.layer != layer) {
             v.layer = layer;
@@ -25,11 +24,14 @@ void* vulkanMetalLayer(void* view, PrGpuSwapChainAnchor anchor) {
         // gravity of a layer that the view hosts. A gravity's top is the layer's greatest y, which is the window's
         // bottom if the layer's geometry is flipped.
         bool stretch = anchor == PrGpuSwapChainAnchor_Stretch;
-        v.layerContentsPlacement = stretch ? NSViewLayerContentsPlacementScaleAxesIndependently
-                                           : NSViewLayerContentsPlacementTopLeft;
-        layer.contentsGravity = stretch                     ? kCAGravityResize
-                                : [layer contentsAreFlipped] ? kCAGravityBottomLeft
-                                                             : kCAGravityTopLeft;
+        v.layerContentsPlacement =
+            stretch ? NSViewLayerContentsPlacementScaleAxesIndependently : NSViewLayerContentsPlacementTopLeft;
+        if (stretch)
+            layer.contentsGravity = kCAGravityResize;
+        else if ([layer contentsAreFlipped])
+            layer.contentsGravity = kCAGravityBottomLeft;
+        else
+            layer.contentsGravity = kCAGravityTopLeft;
         return (__bridge void*)layer;
     }
 }

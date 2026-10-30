@@ -258,7 +258,7 @@ PrVec2 prTextGlyphBufferAdvance(const PrTextGlyphBuffer* buffer);
 // origin. Returns the pen position after the last glyph. `out` and `transforms` hold prTextGlyphBufferGlyphCount
 // entries.
 PrVec2 prTextGlyphBufferPlace(const PrTextGlyphBuffer* buffer, float size, PrVec2 origin, PrFontGlyph* out,
-                              PrAffine2* PR_NULLABLE transforms);
+    PrAffine2* PR_NULLABLE transforms);
 
 #if defined(__cplusplus)
 }

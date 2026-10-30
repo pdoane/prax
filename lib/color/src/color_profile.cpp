@@ -22,8 +22,8 @@ double readS15Fixed16(const uint8_t* p) {
 }
 
 constexpr uint32_t signature(const char (&text)[5]) {
-    return uint32_t(uint8_t(text[0])) << 24 | uint32_t(uint8_t(text[1])) << 16 | uint32_t(uint8_t(text[2])) << 8
-           | uint32_t(uint8_t(text[3]));
+    return uint32_t(uint8_t(text[0])) << 24 | uint32_t(uint8_t(text[1])) << 16 | uint32_t(uint8_t(text[2])) << 8 |
+        uint32_t(uint8_t(text[3]));
 }
 
 double clamp01(double v) {
@@ -245,8 +245,7 @@ bool readLut(const uint8_t* bytes, uint32_t offset, uint32_t length, uint32_t ch
             points *= lut->grid[i];
         }
         lut->precision = clut[16];
-        if ((lut->precision != 1 && lut->precision != 2)
-            || offsets[3] + 20 + points * lut->outputs * lut->precision > length)
+        if ((lut->precision != 1 && lut->precision != 2) || offsets[3] + 20 + points * lut->outputs * lut->precision > length)
             return false;
         lut->clut = offset + offsets[3] + 20;
     }
@@ -300,8 +299,11 @@ void labToXyz(const double lab[3], double out[3]) {
     double f[3] = {fx, fy, fz};
     for (uint32_t i = 0; i < 3; ++i) {
         double cube = f[i] * f[i] * f[i];
-        double linear = i == 1 ? (lab[0] > kKappa * kEpsilon ? cube : lab[0] / kKappa)
-                               : (cube > kEpsilon ? cube : (116 * f[i] - 16) / kKappa);
+        double linear;
+        if (i == 1)
+            linear = (lab[0] > kKappa * kEpsilon ? cube : lab[0] / kKappa);
+        else
+            linear = (cube > kEpsilon ? cube : (116 * f[i] - 16) / kKappa);
         out[i] = linear * kD50[i];
     }
 }
@@ -325,20 +327,20 @@ void evaluateLut(const ColorProfile* profile, const Lut& lut, const double* in, 
             for (uint32_t i = 0; i < 3; ++i)
                 m[i] = evaluateCurve(bytes, lut.m[i], pcs[i]);
             for (uint32_t r = 0; r < 3; ++r)
-                pcs[r] = lut.matrix[3 * r] * m[0] + lut.matrix[3 * r + 1] * m[1] + lut.matrix[3 * r + 2] * m[2]
-                         + lut.matrix[9 + r];
+                pcs[r] = lut.matrix[3 * r] * m[0] + lut.matrix[3 * r + 1] * m[1] + lut.matrix[3 * r + 2] * m[2] +
+                    lut.matrix[9 + r];
         }
         for (uint32_t i = 0; i < 3; ++i)
             pcs[i] = evaluateCurve(bytes, lut.b[i], pcs[i]);
     } else {
         for (uint32_t i = 0; i < lut.inputs; ++i)
             values[i] = interpolateTable(bytes, lut.inputTables + i * lut.inputEntries * lut.precision,
-                                         lut.inputEntries, lut.precision, in[i]);
+                lut.inputEntries, lut.precision, in[i]);
         double grid[3];
         interpolateGrid(bytes, lut, values, grid);
         for (uint32_t o = 0; o < 3; ++o)
             pcs[o] = interpolateTable(bytes, lut.outputTables + o * lut.outputEntries * lut.precision,
-                                      lut.outputEntries, lut.precision, grid[o]);
+                lut.outputEntries, lut.precision, grid[o]);
     }
     if (profile->labConnection) {
         // Lab's encodings: mAB and 8-bit tables span L* from 0 to 100 and a* and b* from -128 to 127 across [0, 1]. A
@@ -382,8 +384,8 @@ struct PrColorProfile : ColorProfile {};
 
 PrStatus prColorProfileCreate(PrByteView bytes, PrColorProfile* PR_NULLABLE* PR_NONNULL out) {
     *out = nullptr;
-    if (bytes.size < 132 || bytes.size > 0xffffffffu || readBeU32(bytes.data + 36) != signature("acsp")
-        || readBeU32(bytes.data) > bytes.size)
+    if (bytes.size < 132 || bytes.size > 0xffffffffu || readBeU32(bytes.data + 36) != signature("acsp") ||
+            readBeU32(bytes.data) > bytes.size)
         return PrStatus_InvalidData;
     uint32_t size = uint32_t(bytes.size);
     uint32_t space = readBeU32(bytes.data + 16);
@@ -437,8 +439,8 @@ PrStatus prColorProfileCreate(PrByteView bytes, PrColorProfile* PR_NULLABLE* PR_
         any = any || profile->hasLut[intent];
     }
     // A gray or RGB profile without a lookup table maps by its curves and, for RGB, its colorants' matrix.
-    if (!any && model == PrColorModel_Gray
-        && readCurveTag(profile->bytes, size, signature("kTRC"), &profile->curves[0])) {
+    if (!any && model == PrColorModel_Gray &&
+            readCurveTag(profile->bytes, size, signature("kTRC"), &profile->curves[0])) {
         profile->hasMatrix = true;
         any = true;
     }
@@ -447,8 +449,8 @@ PrStatus prColorProfileCreate(PrByteView bytes, PrColorProfile* PR_NULLABLE* PR_
         const uint32_t kCurves[3] = {signature("rTRC"), signature("gTRC"), signature("bTRC")};
         bool complete = true;
         for (uint32_t c = 0; c < 3 && complete; ++c) {
-            complete = readXyz(profile->bytes, size, kColumns[c], &profile->columns[3 * c])
-                       && readCurveTag(profile->bytes, size, kCurves[c], &profile->curves[c]);
+            complete = readXyz(profile->bytes, size, kColumns[c], &profile->columns[3 * c]) &&
+                readCurveTag(profile->bytes, size, kCurves[c], &profile->curves[c]);
         }
         profile->hasMatrix = complete;
         any = complete;
@@ -476,8 +478,7 @@ uint32_t prColorProfileChannels(const PrColorProfile* profile) {
     return profile->channels;
 }
 
-void prColorProfileToXyzD50(const PrColorProfile* profile, PrColorIntent intent, const double* in,
-                            double out[PR_NONNULL 3]) {
+void prColorProfileToXyzD50(const PrColorProfile* profile, PrColorIntent intent, const double* in, double out[PR_NONNULL 3]) {
     // Absolute colorimetric is relative colorimetric scaled from the connection space's white to the media's.
     bool absolute = intent == PrColorIntent_AbsoluteColorimetric;
     uint32_t table = intent <= PrColorIntent_AbsoluteColorimetric ? intent : PrColorIntent_Perceptual;
@@ -494,8 +495,7 @@ void prColorProfileToXyzD50(const PrColorProfile* profile, PrColorIntent intent,
         for (uint32_t c = 0; c < 3; ++c)
             linear[c] = evaluateCurve(profile->bytes, profile->curves[c], in[c]);
         for (uint32_t r = 0; r < 3; ++r)
-            out[r] = profile->columns[r] * linear[0] + profile->columns[3 + r] * linear[1]
-                     + profile->columns[6 + r] * linear[2];
+            out[r] = profile->columns[r] * linear[0] + profile->columns[3 + r] * linear[1] + profile->columns[6 + r] * linear[2];
     }
     if (absolute) {
         for (uint32_t i = 0; i < 3; ++i)
@@ -508,15 +508,19 @@ PrColorSpace prColorProfileNamedSpace(const PrColorProfile* profile) {
         return PrColorSpace_Count;
     // The spaces of RGB images, the most common first. A profile matches if a grid of colors converts through it to
     // within a fraction of an 8-bit step of the space's own conversion, measured in the space.
-    constexpr PrColorSpace kCandidates[] = {PrColorSpace_Srgb, PrColorSpace_DisplayP3, PrColorSpace_A98Rgb,
-                                            PrColorSpace_Rec2020, PrColorSpace_ProPhotoRgb};
+    constexpr PrColorSpace kCandidates[] = {
+        PrColorSpace_Srgb, PrColorSpace_DisplayP3, PrColorSpace_A98Rgb,
+        PrColorSpace_Rec2020, PrColorSpace_ProPhotoRgb,
+    };
     constexpr uint32_t kGrid = 5;
     constexpr double kTolerance = 0.6 / 255;
     for (PrColorSpace space : kCandidates) {
         bool matches = true;
         for (uint32_t index = 0; index < kGrid * kGrid * kGrid && matches; ++index) {
-            double in[3] = {double(index / (kGrid * kGrid)) / (kGrid - 1), double(index / kGrid % kGrid) / (kGrid - 1),
-                            double(index % kGrid) / (kGrid - 1)};
+            double in[3] = {
+                double(index / (kGrid * kGrid)) / (kGrid - 1), double(index / kGrid % kGrid) / (kGrid - 1),
+                double(index % kGrid) / (kGrid - 1),
+            };
             if (profile->model == PrColorModel_Gray)
                 in[1] = in[2] = in[0];
             double xyz[3];

@@ -29,21 +29,29 @@ constexpr CssColorChannelSyntax kChannels[PrColorSpace_Count][3] = {
     {kUnbounded, kUnbounded, kUnbounded},                                          // rec2020
     {kUnbounded, kUnbounded, kUnbounded},                                          // xyz-d50
     {kUnbounded, kUnbounded, kUnbounded},                                          // xyz-d65
-    {{1.0, 1.0, 0.0, 100.0, false}, {1.0, 1.25, -kF64Max, kF64Max, false},
-     {1.0, 1.25, -kF64Max, kF64Max, false}},                                       // lab
-    {{1.0, 1.0, 0.0, 100.0, false}, {1.0, 1.5, 0.0, kF64Max, false}, kHue},        // lch
-    {{1.0, 0.01, 0.0, 1.0, false}, {1.0, 0.004, -kF64Max, kF64Max, false},
-     {1.0, 0.004, -kF64Max, kF64Max, false}},                                      // oklab
+    {                                                                              // lab
+        {1.0, 1.0, 0.0, 100.0, false}, {1.0, 1.25, -kF64Max, kF64Max, false},
+        {1.0, 1.25, -kF64Max, kF64Max, false},
+    },
+    {{1.0, 1.0, 0.0, 100.0, false}, {1.0, 1.5, 0.0, kF64Max, false}, kHue}, // lch
+    {                                                                       // oklab
+        {1.0, 0.01, 0.0, 1.0, false}, {1.0, 0.004, -kF64Max, kF64Max, false},
+        {1.0, 0.004, -kF64Max, kF64Max, false},
+    },
     {{1.0, 0.01, 0.0, 1.0, false}, {1.0, 0.004, 0.0, kF64Max, false}, kHue},            // oklch
     {kHue, {1.0, 1.0, 0.0, kF64Max, false}, {1.0, 1.0, -kF64Max, kF64Max, false}},      // hsl
     {kHue, {1.0, 1.0, -kF64Max, kF64Max, false}, {1.0, 1.0, -kF64Max, kF64Max, false}}, // hwb
     {kUnbounded, kUnbounded, kUnbounded},                                               // rec2100-pq
     {kUnbounded, kUnbounded, kUnbounded},                                               // rec2100-hlg
     {kUnbounded, kUnbounded, kUnbounded},                                               // rec2100-linear
-    {kUnbounded, {1.0, 0.005, -kF64Max, kF64Max, false},
-     {1.0, 0.005, -kF64Max, kF64Max, false}},                                      // ictcp
-    {kUnbounded, {1.0, 0.0021, -kF64Max, kF64Max, false},
-     {1.0, 0.0021, -kF64Max, kF64Max, false}},                                     // jzazbz
+    {                                                                                   // ictcp
+        kUnbounded, {1.0, 0.005, -kF64Max, kF64Max, false},
+        {1.0, 0.005, -kF64Max, kF64Max, false},
+    },
+    { // jzazbz
+        kUnbounded, {1.0, 0.0021, -kF64Max, kF64Max, false},
+        {1.0, 0.0021, -kF64Max, kF64Max, false},
+    },
     {kUnbounded, {1.0, 0.0026, 0.0, kF64Max, false}, kHue},                       // jzczhz
 };
 
@@ -75,10 +83,13 @@ CssColorChannels cssColorChannelsFromValue(CssValueRun run, uint32_t index) {
 }
 
 double cssColorChannelValue(const CssValueNode* value, const CssColorChannelSyntax& channel) {
-    double number = value->kind == PrCssValueKind_Percentage ? value->number * channel.percent
-                    : value->kind == PrCssValueKind_Dimension
-                        ? value->number * cssUnitScale(value->unit)
-                        : value->number * channel.number;
+    double number;
+    if (value->kind == PrCssValueKind_Percentage)
+        number = value->number * channel.percent;
+    else if (value->kind == PrCssValueKind_Dimension)
+        number = value->number * cssUnitScale(value->unit);
+    else
+        number = value->number * channel.number;
     if (channel.hue)
         return isFiniteF64(number) ? prColorHue(number) : 0.0;
     if (isNanF64(number))
@@ -138,8 +149,7 @@ bool cssColorsAreLegacy(const CssValueNode* values, uint32_t first, uint32_t end
         const CssValueNode* value = &values[i];
         if (value->kind == PrCssValueKind_Color) {
             PrColorSpace space = cssValueColorSpace(value);
-            if (!cssValueColorLegacy(value) && space != PrColorSpace_Hsl
-                && space != PrColorSpace_Hwb) {
+            if (!cssValueColorLegacy(value) && space != PrColorSpace_Hsl && space != PrColorSpace_Hwb) {
                 return false;
             }
             // A missing component is written in the modern syntax, which the legacy syntax cannot write.
@@ -147,9 +157,9 @@ bool cssColorsAreLegacy(const CssValueNode* values, uint32_t first, uint32_t end
                 if (values[c].kind == PrCssValueKind_Keyword)
                     return false;
             }
-        } else if (value->kind == PrCssValueKind_Function
-                   && (cssColorSpaceFromKeyword(cssValueKeyword(value)) != PrColorSpace_Count
-                       || cssIsColorFunction(cssValueKeyword(value)))) {
+        } else if (value->kind == PrCssValueKind_Function &&
+                (cssColorSpaceFromKeyword(cssValueKeyword(value)) != PrColorSpace_Count ||
+                    cssIsColorFunction(cssValueKeyword(value)))) {
             return false;
         }
     }
@@ -192,9 +202,13 @@ void cssValuePoolAddLegacyColor(CssValuePool* pool, const CssColor& color) {
     uint32_t parent = cssValuePoolAdd(pool, value);
     const CssColorChannelSyntax* syntax = cssColorChannels(PrColorSpace_Srgb, true);
     for (uint32_t i = 0; i < 4; ++i) {
-        double channel = (color.missing & (1u << i)) != 0 ? 0
-                         : i < 3                          ? color.c[i] / syntax[i].number
-                                                          : color.alpha / kCssColorAlpha.number;
+        double channel;
+        if ((color.missing & (1u << i)) != 0)
+            channel = 0;
+        else if (i < 3)
+            channel = color.c[i] / syntax[i].number;
+        else
+            channel = color.alpha / kCssColorAlpha.number;
         cssValuePoolAdd(pool, cssNumberValue(PrCssValueKind_Number, PrCssUnit_Number, channel));
     }
     pool->values.data[parent].next = pool->values.count - parent;

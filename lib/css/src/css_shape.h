@@ -37,7 +37,7 @@ struct CssShapeLengths {
     // Returns the layout length of one axis of a computed <position>, `run`, from the value at `index`. If that value
     // is an edge keyword, `offset` is the index of its offset, or kArrayMissing if it has none (cssPositionAxes).
     PrLayoutLength (*PR_NONNULL position)(void* PR_NULLABLE context, CssValueRun run, uint32_t index, uint32_t offset,
-                                          CssShapeAxis axis);
+        CssShapeAxis axis);
 
     void* PR_NULLABLE context;
 };
@@ -55,7 +55,7 @@ bool cssIsBasicShape(CssValueRun run, uint32_t index);
 // (css-shapes-1/#basic-shape-computed-values), so they are not converted here. Returns false if the value is not a
 // basic shape that the engine draws, such as shape().
 bool cssShapeFromValue(CssValueRun run, uint32_t index, const CssShapeLengths& lengths, Array<PrLayoutLength>& points,
-                       PrPath* path, PrLayoutShape* out);
+    PrPath* path, PrLayoutShape* out);
 
 // Appends the outline of the computed basic shape at `index` of `run`, resolved in the reference box `box`, to `out`,
 // and writes the rule that fills it to `rule`: the shape's own fill rule for polygon() and path(), and nonzero for the

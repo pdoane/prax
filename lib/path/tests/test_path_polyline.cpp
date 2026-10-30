@@ -68,7 +68,7 @@ uint32_t contours(const PrPath* path) {
 
 // Appends to `out` the combination of the regions of the paths, flattened within `tolerance`.
 void combinePaths(const PrPath* a, PrPathFillRule aRule, const PrPath* b, PrPathFillRule bRule, PrPathPolylineOp op,
-                  float tolerance, PrPath* out) {
+        float tolerance, PrPath* out) {
     PrPathPolyline flatA{};
     PrPathPolyline flatB{};
     PrPathPolyline result{};
@@ -83,7 +83,7 @@ void combinePaths(const PrPath* a, PrPathFillRule aRule, const PrPath* b, PrPath
 
 // Appends to `out` the offset region of the path, flattened within `tolerance`.
 void offsetPath(const PrPath* path, PrPathFillRule rule, float distance, PrPathJoin join, float miterLimit,
-                float tolerance, PrPath* out) {
+        float tolerance, PrPath* out) {
     PrPathPolyline flat{};
     PrPathPolyline result{};
     prPathFlatten(path, prAffine2Identity(), tolerance, PrPathFlattening_Inside, &flat);
@@ -93,8 +93,7 @@ void offsetPath(const PrPath* path, PrPathFillRule rule, float distance, PrPathJ
     prPathPolylineReset(&result);
 }
 
-double combined(const PrPath* a, const PrPath* b, PrPathPolylineOp op,
-                PrPathFillRule rule = PrPathFillRule_NonZero) {
+double combined(const PrPath* a, const PrPath* b, PrPathPolylineOp op, PrPathFillRule rule = PrPathFillRule_NonZero) {
     PrPath* out = prPathCreate();
     combinePaths(a, rule, b, rule, op, 0.01f, out);
     double result = area(out);
@@ -309,8 +308,10 @@ TEST_CASE("a region grows and shrinks by its joins") {
 
 TEST_CASE("random self-intersecting polygons combine as their windings say") {
     uint32_t state = 7;
-    const PrPathPolylineOp ops[] = {PrPathPolylineOp_Union, PrPathPolylineOp_Intersect, PrPathPolylineOp_Difference,
-                            PrPathPolylineOp_Xor};
+    const PrPathPolylineOp ops[] = {
+        PrPathPolylineOp_Union, PrPathPolylineOp_Intersect, PrPathPolylineOp_Difference,
+        PrPathPolylineOp_Xor,
+    };
     for (uint32_t trial = 0; trial < 12; ++trial) {
         PrPath* a = randomPolygon(state, 12 + trial);
         PrPath* b = randomPolygon(state, 9 + trial);
@@ -327,10 +328,15 @@ TEST_CASE("random self-intersecting polygons combine as their windings say") {
                     };
                     bool ia = in(winding(a, p));
                     bool ib = in(winding(b, p));
-                    bool expected = op == PrPathPolylineOp_Union       ? ia || ib
-                                    : op == PrPathPolylineOp_Intersect ? ia && ib
-                                    : op == PrPathPolylineOp_Difference ? ia && !ib
-                                                                : ia != ib;
+                    bool expected;
+                    if (op == PrPathPolylineOp_Union)
+                        expected = ia || ib;
+                    else if (op == PrPathPolylineOp_Intersect)
+                        expected = ia && ib;
+                    else if (op == PrPathPolylineOp_Difference)
+                        expected = ia && !ib;
+                    else
+                        expected = ia != ib;
                     int w = winding(out, p);
                     // The result winds once around what it covers, in either direction.
                     CHECK((w == 0 || w == 1 || w == -1));
@@ -364,8 +370,7 @@ TEST_CASE("a contour of no area leaves nothing where it is intersected") {
         prPathAddRect(shapes, PrRect{10, 10, 20, 20});
         PrPath* region = rect(0, 0, 100, 100);
         PrPath* out = prPathCreate();
-        combinePaths(shapes, PrPathFillRule_NonZero, region, PrPathFillRule_NonZero, PrPathPolylineOp_Intersect, 0.1f,
-                     out);
+        combinePaths(shapes, PrPathFillRule_NonZero, region, PrPathFillRule_NonZero, PrPathPolylineOp_Intersect, 0.1f, out);
         PrRect bounds = prPathBounds(out);
         CHECK(bounds.right <= 20.0f);
         CHECK(area(out) == doctest::Approx(100));
@@ -390,7 +395,7 @@ TEST_CASE("polylines with points that are not finite combine to nothing") {
         prPathLineTo(broken, PrVec2{5, 10});
         prPathClose(broken);
         for (PrPathPolylineOp op :
-             {PrPathPolylineOp_Union, PrPathPolylineOp_Intersect, PrPathPolylineOp_Difference, PrPathPolylineOp_Xor}) {
+                {PrPathPolylineOp_Union, PrPathPolylineOp_Intersect, PrPathPolylineOp_Difference, PrPathPolylineOp_Xor}) {
             PrPath* out = prPathCreate();
             combinePaths(square, PrPathFillRule_NonZero, broken, PrPathFillRule_NonZero, op, 0.1f, out);
             CHECK(prPathVerbCount(out) == 0);

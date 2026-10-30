@@ -95,13 +95,12 @@ typedef uint8_t PrUnicodeBidiDirection;
 // in `codePoints` (N0), and no brackets pair if `codePoints` is null. A paragraph separator ends a paragraph, and each
 // paragraph resolves on its own. Returns the level of the last paragraph.
 uint8_t prUnicodeBidiResolve(const PrUnicodeBidiClass* classes, const uint32_t* PR_NULLABLE codePoints,
-                             uint32_t count, PrUnicodeBidiDirection direction, uint8_t* levels);
+    uint32_t count, PrUnicodeBidiDirection direction, uint8_t* levels);
 
 // Resets the levels of one line of a paragraph whose level is `paragraphLevel` (L1). `classes` and `levels` cover the
 // line. Segment and paragraph separators get the paragraph level, as do the white space and isolates before one of them
 // or before the end of the line.
-void prUnicodeBidiLineLevels(const PrUnicodeBidiClass* classes, uint32_t count, uint8_t paragraphLevel,
-                             uint8_t* levels);
+void prUnicodeBidiLineLevels(const PrUnicodeBidiClass* classes, uint32_t count, uint8_t paragraphLevel, uint8_t* levels);
 
 // Writes to `order` the indices of the `count` characters of a line in visual order, left to right, reversing runs by
 // level (L2). A removed character stays with the one before it, or at the start of the line.

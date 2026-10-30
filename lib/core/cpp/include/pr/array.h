@@ -62,8 +62,7 @@ struct Array {
         PR_ASSERT(index <= count && removedCount <= count - index);
         if (removedCount == 0)
             return;
-        memMove(data + index, data + index + removedCount,
-                size_t(count - index - removedCount) * sizeof(T));
+        memMove(data + index, data + index + removedCount, size_t(count - index - removedCount) * sizeof(T));
         count -= removedCount;
     }
 

@@ -83,7 +83,7 @@ void layoutGridTemplatesInit(LayoutGridTemplates* templates);
 // Interns a track list as prLayoutGridTracksIntern defines. An entry that it adds holds references to the compounds
 // that its breadths and limits name.
 PrLayoutGridTracksIndex layoutGridTemplatesInternTracks(LayoutGridTemplates* templates, LayoutCompounds* compounds,
-                                                        const PrLayoutGridTrackList& list);
+    const PrLayoutGridTrackList& list);
 
 // Interns a template's areas as prLayoutGridAreasIntern defines.
 PrLayoutGridAreasIndex layoutGridTemplatesInternAreas(LayoutGridTemplates* templates, const PrLayoutGridAreas& areas);
@@ -92,15 +92,13 @@ PrLayoutGridAreasIndex layoutGridTemplatesInternAreas(LayoutGridTemplates* templ
 PrLayoutGridName layoutGridTemplatesInternName(LayoutGridTemplates* templates, PrStringView name);
 
 // Returns the track list at `index`.
-inline const LayoutGridTracksEntry& layoutGridTracksAt(const LayoutGridTemplates* templates,
-                                                       PrLayoutGridTracksIndex index) {
+inline const LayoutGridTracksEntry& layoutGridTracksAt(const LayoutGridTemplates* templates, PrLayoutGridTracksIndex index) {
     PR_ASSERT(index < templates->tracks.entries.count);
     return templates->tracks.entries.data[index];
 }
 
 // Returns the template areas at `index`.
-inline const LayoutGridAreasEntry& layoutGridAreasAt(const LayoutGridTemplates* templates,
-                                                     PrLayoutGridAreasIndex index) {
+inline const LayoutGridAreasEntry& layoutGridAreasAt(const LayoutGridTemplates* templates, PrLayoutGridAreasIndex index) {
     PR_ASSERT(index < templates->areas.entries.count);
     return templates->areas.entries.data[index];
 }

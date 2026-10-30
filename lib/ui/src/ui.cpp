@@ -442,8 +442,8 @@ void deliver(Ui* ui, PrLayoutNode node, const PrAppEvent& event) {
 }
 
 bool isPointerEvent(PrAppEventKind kind) {
-    return kind == PrAppEventKind_PointerMove || kind == PrAppEventKind_PointerDown
-           || kind == PrAppEventKind_PointerUp || kind == PrAppEventKind_Scroll;
+    return kind == PrAppEventKind_PointerMove || kind == PrAppEventKind_PointerDown ||
+        kind == PrAppEventKind_PointerUp || kind == PrAppEventKind_Scroll;
 }
 
 // Returns true if an event of this kind changes the answers to a round's queries, so that a second such event in the
@@ -534,8 +534,10 @@ void scroll(Ui* ui, PrLayoutNode node, PrVec2 delta, const PrAppEvent& event) {
             continue;
         prLayoutNodeSetScroll(ui->tree, at, want);
         deliver(ui, at, event);
-        PrVec2 took = prLayoutVecToPx(PrLayoutVec{PrLayoutUnit{want.x.raw - offset.x.raw},
-                                                  PrLayoutUnit{want.y.raw - offset.y.raw}});
+        PrVec2 took = prLayoutVecToPx(PrLayoutVec{
+            PrLayoutUnit{want.x.raw - offset.x.raw},
+            PrLayoutUnit{want.y.raw - offset.y.raw},
+        });
         delta.x -= took.x;
         delta.y -= took.y;
     }
@@ -559,7 +561,7 @@ PrLayoutNode stepPreorder(const Ui* ui, PrLayoutNode node, PrLayoutNode scope, b
     if (node == scope) {
         PrLayoutNode last = scope;
         for (PrLayoutNode child = prLayoutNodeLastChild(tree, last); child != kPrLayoutNodeNone;
-             child = prLayoutNodeLastChild(tree, last))
+                child = prLayoutNodeLastChild(tree, last))
             last = child;
         return last;
     }
@@ -567,7 +569,7 @@ PrLayoutNode stepPreorder(const Ui* ui, PrLayoutNode node, PrLayoutNode scope, b
     if (previous == kPrLayoutNodeNone)
         return prLayoutNodeParent(tree, node);
     for (PrLayoutNode child = prLayoutNodeLastChild(tree, previous); child != kPrLayoutNodeNone;
-         child = prLayoutNodeLastChild(tree, previous))
+            child = prLayoutNodeLastChild(tree, previous))
         previous = child;
     return previous;
 }
@@ -613,8 +615,8 @@ const UiClaim* PR_NULLABLE claimOf(const Ui* ui, PrLayoutNode at, const PrAppEve
 // on them, then to focus traversal, then to activation.
 void routeKey(Ui* ui, const PrAppEvent& e) {
     // A modifier key alone does not show the focus.
-    bool modifier = e.key == PrAppKey_Shift || e.key == PrAppKey_Control || e.key == PrAppKey_Alt
-                    || e.key == PrAppKey_Meta || e.key == PrAppKey_CapsLock || e.key == PrAppKey_Fn;
+    bool modifier = e.key == PrAppKey_Shift || e.key == PrAppKey_Control || e.key == PrAppKey_Alt ||
+        e.key == PrAppKey_Meta || e.key == PrAppKey_CapsLock || e.key == PrAppKey_Fn;
     ui->focusVisible = ui->focusVisible || !modifier;
     PrLayoutNode start = ui->focus != kPrLayoutNodeNone ? ui->focus : prLayoutTreeRoot(ui->tree);
     const UiClaim* captured = nullptr;
@@ -691,20 +693,22 @@ void route(Ui* ui, const PrAppEvent& e) {
             UiButton& b = ui->buttons[e.button];
             float dx = e.position.x - b.origin.x;
             float dy = e.position.y - b.origin.y;
-            bool sequence = b.presses != 0 && target != kPrLayoutNodeNone && target == b.pressed
-                            && ui->time - b.pressTime <= kMultiPressSeconds
-                            && dx * dx + dy * dy <= kMultiPressDistance * kMultiPressDistance;
+            bool sequence = b.presses != 0 && target != kPrLayoutNodeNone && target == b.pressed &&
+                ui->time - b.pressTime <= kMultiPressSeconds &&
+                dx * dx + dy * dy <= kMultiPressDistance * kMultiPressDistance;
             uint32_t presses = sequence ? b.presses + 1 : 1;
-            b = UiButton{.capture = target,
-                         .node = target,
-                         .pressed = target,
-                         .pressTime = ui->time,
-                         .repeatTime = ui->time,
-                         .origin = e.position,
-                         .position = e.position,
-                         .modifiers = e.modifiers,
-                         .presses = presses,
-                         .dragging = target != kPrLayoutNodeNone};
+            b = UiButton{
+                .capture = target,
+                .node = target,
+                .pressed = target,
+                .pressTime = ui->time,
+                .repeatTime = ui->time,
+                .origin = e.position,
+                .position = e.position,
+                .modifiers = e.modifiers,
+                .presses = presses,
+                .dragging = target != kPrLayoutNodeNone,
+            };
             if (e.button == 0)
                 ui->focus = innermost(ui, ui->hovered, PrUiFlag_Focusable);
             deliver(ui, target != kPrLayoutNodeNone ? target : ui->hovered, e);
@@ -789,13 +793,15 @@ UiState& stateOf(Ui* ui, PrLayoutNode node, const void* owner, uint64_t key, uin
         ui->states.emplace();
     }
     UiSlot& entry = slotOf(ui, node);
-    ui->states.data[index] = UiState{.node = node,
-                                     .owner = owner,
-                                     .key = key,
-                                     .size = size,
-                                     .round = ui->roundId,
-                                     .next = entry.state,
-                                     .data = prMemoryAllocZeroed(size < 16 ? 16 : size)};
+    ui->states.data[index] = UiState{
+        .node = node,
+        .owner = owner,
+        .key = key,
+        .size = size,
+        .round = ui->roundId,
+        .next = entry.state,
+        .data = prMemoryAllocZeroed(size < 16 ? 16 : size),
+    };
     entry.state = index;
     return ui->states.data[index];
 }
@@ -1066,8 +1072,7 @@ void routeQueue(Ui* ui) {
 void endRound(Ui* ui) {
     auto declaredTaking = [&](PrLayoutNode node, PrUiFlags flag) {
         const UiSlot* s = findSlot(ui, node);
-        return s != nullptr && s->flagsRound == ui->roundId && (s->flags & flag) != 0
-               && (s->flags & PrUiFlag_Disabled) == 0;
+        return s != nullptr && s->flagsRound == ui->roundId && (s->flags & flag) != 0 && (s->flags & PrUiFlag_Disabled) == 0;
     };
     if (ui->focusRequested) {
         ui->focus = declaredTaking(ui->focusRequest, PrUiFlag_Focusable) ? ui->focusRequest : kPrLayoutNodeNone;
@@ -1281,8 +1286,7 @@ void prUiRequestFrame(PrUi* ui) {
 }
 
 bool prUiWantsFrame(const PrUi* ui) {
-    return ui->frameRequested || ui->tweening || ui->repeating || ui->nextActivations.count != 0
-           || ui->queue.count != 0;
+    return ui->frameRequested || ui->tweening || ui->repeating || ui->nextActivations.count != 0 || ui->queue.count != 0;
 }
 
 void prUiRequestMotion(PrUi* ui, PrLayoutNode node) {
@@ -1346,7 +1350,7 @@ void* prUiProvide(PrUi* ui, PrLayoutNode node, const void* owner, uint64_t key, 
 }
 
 void* PR_NULLABLE prUiContext(const PrUi* ui, PrLayoutNode node, const void* owner, uint64_t key,
-                              PrLayoutNode* PR_NULLABLE provider) {
+        PrLayoutNode* PR_NULLABLE provider) {
     PR_ASSERT(ui->building);
     for (PrLayoutNode at = node; at != kPrLayoutNodeNone; at = prLayoutTreeFrameParent(ui->tree, at)) {
         const UiSlot* s = findSlot(ui, at);
@@ -1478,13 +1482,15 @@ bool prUiDrag(const PrUi* ui, PrLayoutNode node, uint8_t button, float threshold
     const UiButton& b = ui->buttons[button];
     if (!b.dragging && !b.released && !b.cancelled)
         return false;
-    *out = PrUiDrag{.origin = b.origin,
-                    .position = b.position,
-                    .delta = b.delta,
-                    .active = b.dragging,
-                    .moved = b.reach > threshold * threshold,
-                    .released = b.released,
-                    .cancelled = b.cancelled};
+    *out = PrUiDrag{
+        .origin = b.origin,
+        .position = b.position,
+        .delta = b.delta,
+        .active = b.dragging,
+        .moved = b.reach > threshold * threshold,
+        .released = b.released,
+        .cancelled = b.cancelled,
+    };
     return true;
 }
 
@@ -1502,9 +1508,11 @@ bool prUiWheel(const PrUi* ui, PrLayoutNode node, PrVec2* out) {
 void prUiDragStart(PrUi* ui, PrLayoutNode source, float threshold, uint64_t kind, uint64_t value) {
     if (!prUiIsPressed(ui, source, 0) || ui->payload.armed)
         return;
-    ui->payload = UiCarry{.payload = {.kind = kind, .value = value, .source = source},
-                            .threshold = threshold,
-                            .armed = true};
+    ui->payload = UiCarry{
+        .payload = {.kind = kind, .value = value, .source = source},
+        .threshold = threshold,
+        .armed = true,
+    };
     carry(ui);
 }
 
@@ -1524,15 +1532,15 @@ const PrUiPayload* PR_NULLABLE prUiDropped(const PrUi* ui, PrLayoutNode node) {
 bool prUiKeyPressed(PrUi* ui, PrLayoutNode node, PrAppKey key, PrAppModifierFlags modifiers) {
     PR_ASSERT(ui->building);
     ui->claims.push(UiClaim{node, key, modifiers, false});
-    return ui->keyed.node == node && node != kPrLayoutNodeNone && ui->keyed.key == key
-           && ui->keyed.modifiers == modifiers && !ui->keyed.capture;
+    return ui->keyed.node == node && node != kPrLayoutNodeNone && ui->keyed.key == key &&
+        ui->keyed.modifiers == modifiers && !ui->keyed.capture;
 }
 
 bool prUiKeyCaptured(PrUi* ui, PrLayoutNode node, PrAppKey key, PrAppModifierFlags modifiers) {
     PR_ASSERT(ui->building);
     ui->claims.push(UiClaim{node, key, modifiers, true});
-    return ui->keyed.node == node && node != kPrLayoutNodeNone && ui->keyed.key == key
-           && ui->keyed.modifiers == modifiers && ui->keyed.capture;
+    return ui->keyed.node == node && node != kPrLayoutNodeNone && ui->keyed.key == key &&
+        ui->keyed.modifiers == modifiers && ui->keyed.capture;
 }
 
 PrUiEvents prUiEvents(const PrUi* ui, PrLayoutNode node) {
@@ -1581,7 +1589,7 @@ void* prUiState(PrUi* ui, PrLayoutNode node, const void* owner, uint64_t key, ui
 }
 
 float prUiTween(PrUi* ui, PrLayoutNode node, const void* owner, uint64_t key, float target, double duration,
-                const PrLayoutEasing* PR_NULLABLE easing) {
+        const PrLayoutEasing* PR_NULLABLE easing) {
     UiTween* t = static_cast<UiTween*>(stateOf(ui, node, owner, key, sizeof(UiTween)).data);
     if (!t->started || duration <= 0) {
         *t = UiTween{.from = target, .target = target, .value = target, .start = ui->time, .started = true};
@@ -1607,15 +1615,16 @@ float prUiTween(PrUi* ui, PrLayoutNode node, const void* owner, uint64_t key, fl
 void prUiSetEditSink(PrUi* ui, PrLayoutNode node, PrUiEditFn PR_NULLABLE fn, void* PR_NULLABLE context) {
     PrLayoutNode provider = kPrLayoutNodeNone;
     void* found = prUiContext(ui, node, &kUiOwner, UiContextKey_EditSink, &provider);
-    void* data = found != nullptr && provider == node
-                     ? found
-                     : prUiProvide(ui, node, &kUiOwner, UiContextKey_EditSink, uint32_t(sizeof(UiEditSink)));
+    void* data;
+    if (found != nullptr && provider == node)
+        data = found;
+    else
+        data = prUiProvide(ui, node, &kUiOwner, UiContextKey_EditSink, uint32_t(sizeof(UiEditSink)));
     *static_cast<UiEditSink*>(data) = UiEditSink{.fn = fn, .context = fn != nullptr ? context : nullptr};
 }
 
 void prUiEdit(PrUi* ui, PrLayoutNode control, PrUiEditPhase phase) {
-    const UiEditSink* sink =
-        static_cast<const UiEditSink*>(prUiContext(ui, control, &kUiOwner, UiContextKey_EditSink, nullptr));
+    const UiEditSink* sink = static_cast<const UiEditSink*>(prUiContext(ui, control, &kUiOwner, UiContextKey_EditSink, nullptr));
     if (sink != nullptr && sink->fn != nullptr)
         sink->fn(sink->context, control, phase);
 }
@@ -1626,8 +1635,8 @@ PrLayoutGroupIndex prUiGroup(PrUi* ui, const PrUiGroupRecipe* recipe) {
     uint32_t hash = uint32_t(hashBytes(recipe->bytes, recipe->size, seed));
     uint32_t at = groups.index.find(hash, [&](uint32_t i) {
         const UiGroupEntry& e = groups.entries.data[i];
-        return e.type == recipe->type && e.owner == recipe->owner && e.size == recipe->size
-               && memEquals(groups.bytes.data + e.offset, recipe->bytes, recipe->size);
+        return e.type == recipe->type && e.owner == recipe->owner && e.size == recipe->size &&
+            memEquals(groups.bytes.data + e.offset, recipe->bytes, recipe->size);
     });
     if (at != kHashMissing) {
         UiGroupEntry& e = groups.entries.data[at];
@@ -1641,20 +1650,21 @@ PrLayoutGroupIndex prUiGroup(PrUi* ui, const PrUiGroupRecipe* recipe) {
     uint32_t offset = groups.bytes.count;
     groups.bytes.append(static_cast<const uint8_t*>(recipe->bytes), recipe->size);
     groups.index.insert(hash, groups.entries.count);
-    groups.entries.push(UiGroupEntry{.type = recipe->type,
-                                     .owner = recipe->owner,
-                                     .hash = hash,
-                                     .offset = offset,
-                                     .size = recipe->size,
-                                     .used = ui->roundId,
-                                     .group = group,
-                                     .base = recipe->base,
-                                     .kind = recipe->kind});
+    groups.entries.push(UiGroupEntry{
+        .type = recipe->type,
+        .owner = recipe->owner,
+        .hash = hash,
+        .offset = offset,
+        .size = recipe->size,
+        .used = ui->roundId,
+        .group = group,
+        .base = recipe->base,
+        .kind = recipe->kind,
+    });
     return group;
 }
 
-const void* PR_NULLABLE prUiMemoFind(PrUi* ui, const void* type, const void* PR_NULLABLE owner,
-                                     PrLayoutStyleIndex* out) {
+const void* PR_NULLABLE prUiMemoFind(PrUi* ui, const void* type, const void* PR_NULLABLE owner, PrLayoutStyleIndex* out) {
     PR_ASSERT(ui->building);
     UiMemo& memo = ui->memo;
     uint32_t slot = prLayoutTreeFrameCursor(ui->tree);
@@ -1719,7 +1729,7 @@ void prUiRevealRect(PrUi* ui, PrLayoutNode node, PrLayoutRect rect) {
     if (!prLayoutNodeIsValid(ui->tree, node))
         return;
     for (PrLayoutNode at = prLayoutNodeParent(ui->tree, node); at != kPrLayoutNodeNone;
-         at = prLayoutNodeParent(ui->tree, at)) {
+            at = prLayoutNodeParent(ui->tree, at)) {
         PrLayoutScrollInfo info{};
         if (!prLayoutNodeScrollInfo(ui->tree, at, &info) || !info.scrollContainer)
             continue;
@@ -1741,8 +1751,10 @@ void prUiRevealRect(PrUi* ui, PrLayoutNode node, PrLayoutRect rect) {
         if (dx == 0 && dy == 0)
             continue;
         auto clamp = [](int32_t v, int32_t lo, int32_t hi) { return v < lo ? lo : v > hi ? hi : v; };
-        PrLayoutVec offset{PrLayoutUnit{clamp(info.offset.x.raw + dx, info.range.left.raw, info.range.right.raw)},
-                           PrLayoutUnit{clamp(info.offset.y.raw + dy, info.range.top.raw, info.range.bottom.raw)}};
+        PrLayoutVec offset{
+            PrLayoutUnit{clamp(info.offset.x.raw + dx, info.range.left.raw, info.range.right.raw)},
+            PrLayoutUnit{clamp(info.offset.y.raw + dy, info.range.top.raw, info.range.bottom.raw)},
+        };
         prLayoutNodeSetScroll(ui->tree, at, offset);
         // The rectangle moves with the content that the container scrolled, for the containers around it.
         int32_t movedX = offset.x.raw - info.offset.x.raw;

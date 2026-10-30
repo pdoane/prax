@@ -61,7 +61,7 @@ bool hasKind(PrJsonKind kind, PrCommandParamKind param) {
 // Writes to `error`, if it is not null, the sentence "The command <id> <problem> "<name>"<detail>.", leaving out the
 // name if it is null.
 void explain(PrString* PR_NULLABLE error, PrStringView id, PrStringView problem, PrStringView name = {},
-             PrStringView detail = {}) {
+        PrStringView detail = {}) {
     if (error == nullptr)
         return;
     TextBuffer text{};
@@ -107,7 +107,7 @@ PrStatus checkArgs(const Command& command, const PrCommandArgs* args, PrString* 
             return PrStatus_InvalidData;
         }
         for (PrJsonValueIndex i = prJsonFirst(document, args->object); i != kPrJsonMissing;
-             i = prJsonAfter(document, args->object, i)) {
+                i = prJsonAfter(document, args->object, i)) {
             PrStringView name = prJsonString(document, i);
             const PrCommandParam* param = paramOf(command, name);
             if (param == nullptr) {
@@ -192,10 +192,12 @@ void prCommandRegistryAdd(PrCommandRegistry* registry, const PrCommandDesc* desc
             PR_ASSERT(desc->params[k].name != param.name);
         command->paramText[2 * i] = prStringCopy(param.name);
         command->paramText[2 * i + 1] = prStringCopy(param.description);
-        command->params[i] = PrCommandParam{.name = viewOf(command->paramText[2 * i]),
-                                            .kind = param.kind,
-                                            .required = param.required,
-                                            .description = viewOf(command->paramText[2 * i + 1])};
+        command->params[i] = PrCommandParam{
+            .name = viewOf(command->paramText[2 * i]),
+            .kind = param.kind,
+            .required = param.required,
+            .description = viewOf(command->paramText[2 * i + 1]),
+        };
     }
     registry->commands.push(command);
 }
@@ -206,16 +208,18 @@ uint32_t prCommandRegistryCount(const PrCommandRegistry* registry) {
 
 PrCommandDesc prCommandRegistryCommand(const PrCommandRegistry* registry, PrCommandIndex index) {
     const Command& command = commandAt(registry, index);
-    return PrCommandDesc{.id = viewOf(command.id),
-                         .title = viewOf(command.title),
-                         .category = viewOf(command.category),
-                         .description = viewOf(command.description),
-                         .flags = command.flags,
-                         .params = command.params,
-                         .paramCount = command.paramCount,
-                         .run = command.run,
-                         .state = command.state,
-                         .context = command.context};
+    return PrCommandDesc{
+        .id = viewOf(command.id),
+        .title = viewOf(command.title),
+        .category = viewOf(command.category),
+        .description = viewOf(command.description),
+        .flags = command.flags,
+        .params = command.params,
+        .paramCount = command.paramCount,
+        .run = command.run,
+        .state = command.state,
+        .context = command.context,
+    };
 }
 
 PrCommandIndex prCommandRegistryFind(const PrCommandRegistry* registry, PrStringView id) {
@@ -241,7 +245,7 @@ bool prCommandRegistryIsDirect(const PrCommandRegistry* registry, PrCommandIndex
 }
 
 PrStatus prCommandRegistryRun(const PrCommandRegistry* registry, PrStringView id, const PrCommandArgs* PR_NULLABLE args,
-                              PrString* PR_NULLABLE error) {
+        PrString* PR_NULLABLE error) {
     PrCommandIndex index = prCommandRegistryFind(registry, id);
     if (index == kPrCommandMissing) {
         explain(error, id, "does not exist");

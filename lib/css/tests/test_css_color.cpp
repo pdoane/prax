@@ -33,8 +33,8 @@ bool resolved(PrStringView value, const CssColorContext& context, PrColor* out) 
     CssValuePool pool = {};
     CssMatchState match = {};
     CssValueSpan span;
-    bool ok = cssParsePropertyValue(PrCssProperty_Color, &source.ts, &pool, &match, &span)
-              && cssResolveColor(cssValuePoolRun(&pool, span), 0, context, out);
+    bool ok = cssParsePropertyValue(PrCssProperty_Color, &source.ts, &pool, &match, &span) &&
+        cssResolveColor(cssValuePoolRun(&pool, span), 0, context, out);
     cssValuePoolReset(&pool);
     cssMatchStateReset(&match);
     return ok;
@@ -88,8 +88,7 @@ TEST_CASE("a color in another space serializes its components as numbers") {
 }
 
 TEST_CASE("a relative color keeps its arguments") {
-    CHECK(color("rgba(from rgb(20%, 40%, 60%, 80%) b alpha r / g)")
-          == "rgb(from rgba(51, 102, 153, 0.8) b alpha r / g)");
+    CHECK(color("rgba(from rgb(20%, 40%, 60%, 80%) b alpha r / g)") == "rgb(from rgba(51, 102, 153, 0.8) b alpha r / g)");
     CHECK(color("color(from red xyz x y z / alpha)") == "color(from red xyz-d65 x y z / alpha)");
     CHECK(color("alpha(from currentcolor / alpha)") == "alpha(from currentcolor / alpha)");
     CHECK(color("lab(from red r a b)") == "invalid");

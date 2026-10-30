@@ -127,8 +127,7 @@ TEST_CASE("a keyword set holds bare keywords, no two the same") {
             CHECK(modifier->range == CssGrammarRange_None);
 
             for (uint32_t other = 0; other < slot; ++other)
-                CHECK(cssGrammarValue(kCssGrammarNodes[childAt(i, other)])
-                      != cssGrammarValue(node));
+                CHECK(cssGrammarValue(kCssGrammarNodes[childAt(i, other)]) != cssGrammarValue(node));
         }
     }
 }
@@ -160,11 +159,12 @@ TEST_CASE("a subtree ends inside the array") {
 TEST_CASE("prose terminals resolve to a terminal node") {
     // The productions that need hand-written parsers.
     for (CssValueDef def :
-         {CssValueDef_Length, CssValueDef_String, CssValueDef_Integer, CssValueDef_Number,
-          CssValueDef_CustomIdent, CssValueDef_HexColor, CssValueDef_DeclarationValue}) {
+            {
+                CssValueDef_Length, CssValueDef_String, CssValueDef_Integer, CssValueDef_Number,
+                CssValueDef_CustomIdent, CssValueDef_HexColor, CssValueDef_DeclarationValue,
+            }) {
         INFO(textOf(kCssValueDefName[def]));
-        CHECK(cssGrammarType(kCssGrammarNodes[kCssValueDefGrammarRoot[def]])
-              == CssGrammarType_Terminal);
+        CHECK(cssGrammarType(kCssGrammarNodes[kCssValueDefGrammarRoot[def]]) == CssGrammarType_Terminal);
     }
     // <color> is not one of them: it resolves through css-color-5 down to <hex-color>.
     CHECK(kCssValueDefGrammarRoot[CssValueDef_Color] != CssGrammarRoot_None);
@@ -231,7 +231,7 @@ TEST_CASE("<line-width> is a one-of over a bounded length and keywords") {
 
 TEST_CASE("range 0 is unbounded") {
     CHECK(kCssGrammarRanges[CssGrammarRange_None].flags ==
-          (CssGrammarRangeFlag_MinUnbounded | CssGrammarRangeFlag_MaxUnbounded));
+        (CssGrammarRangeFlag_MinUnbounded | CssGrammarRangeFlag_MaxUnbounded));
 }
 
 TEST_CASE("keyword names are unique and sorted") {

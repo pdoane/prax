@@ -70,9 +70,9 @@ PrColorSpace gamutOf(PrColorSpace gamut) {
 
 // Returns the space of a gamut of gamutOf in linear light.
 PrColorSpace linearOf(PrColorSpace gamut) {
-    return gamut == PrColorSpace_Srgb        ? PrColorSpace_SrgbLinear
-           : gamut == PrColorSpace_DisplayP3 ? PrColorSpace_DisplayP3Linear
-                                             : PrColorSpace_Rec2100Linear;
+    if (gamut == PrColorSpace_Srgb)
+        return PrColorSpace_SrgbLinear;
+    return gamut == PrColorSpace_DisplayP3 ? PrColorSpace_DisplayP3Linear : PrColorSpace_Rec2100Linear;
 }
 
 // Writes the rows of the matrix from the RGB space `from` to `to`, both in linear light.
@@ -91,7 +91,7 @@ void writeMatrix(PrColorSpace from, PrColorSpace to, float rows[3][4]) {
 // Returns the table of the most chroma that the gamut holds, or zero if the device cannot make it.
 PrGpuTexture createTable(PrGpuDevice* device, PrColorSpace gamut) {
     PrGpuTextureDesc desc = prGpuTextureDesc2d(PrGpuFormat_Rgba16F, PrUVec2{kTableHues, kTableLightnesses},
-                                               PrGpuTextureUsageFlag_Sampled);
+        PrGpuTextureUsageFlag_Sampled);
     desc.name = "display gamut";
     PrGpuTexture table{};
     if (prGpuTextureCreate(device, &desc, &table) != PrStatus_Ok)
@@ -105,8 +105,10 @@ PrGpuTexture createTable(PrGpuDevice* device, PrColorSpace gamut) {
             texels.data[(y * kTableHues + x) * 4] = prFloat16FromFloat(prColorGamutMaxChroma(gamut, lightness, hue));
         }
     }
-    PrPixelView view{reinterpret_cast<const uint8_t*>(texels.data), size_t(kTableHues) * 8,
-                     {kTableHues, kTableLightnesses}};
+    PrPixelView view{
+        reinterpret_cast<const uint8_t*>(texels.data), size_t(kTableHues) * 8,
+        {kTableHues, kTableLightnesses},
+    };
     prGpuTextureWrite(device, table, PrIVec2{0, 0}, view);
     texels.reset();
     return table;
@@ -172,9 +174,12 @@ void prDrawDisplayDraw(PrDrawDisplay* self, PrGpuPass* pass, PrGpuTexture frame,
     writeMatrix(linearOf(gamut), PrColorSpace_SrgbLinear, arguments.fromGamut);
     writeMatrix(PrColorSpace_SrgbLinear, PrColorSpace_Rec2100Linear, arguments.toOutput);
     arguments.limit = desc->headroom > 1 ? desc->headroom : 1;
-    arguments.output = desc->target == PrColorSpace_Rec2100Pq    ? DisplayOutput_Pq
-                       : desc->target == PrColorSpace_SrgbLinear ? DisplayOutput_Linear
-                                                                 : DisplayOutput_Encoded;
+    if (desc->target == PrColorSpace_Rec2100Pq)
+        arguments.output = DisplayOutput_Pq;
+    else if (desc->target == PrColorSpace_SrgbLinear)
+        arguments.output = DisplayOutput_Linear;
+    else
+        arguments.output = DisplayOutput_Encoded;
     arguments.pqWhite = kPqWhite;
     arguments.frame = frame.id;
     arguments.table = self->tables[index].id;

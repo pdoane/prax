@@ -21,7 +21,7 @@ void writeStack(ULONG skip) {
         HMODULE module = nullptr;
         char name[MAX_PATH] = "?";
         if (GetModuleHandleExA(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
-                               static_cast<LPCSTR>(frames[i]), &module))
+                static_cast<LPCSTR>(frames[i]), &module))
             GetModuleFileNameA(module, name, MAX_PATH);
         uintptr_t offset = reinterpret_cast<uintptr_t>(frames[i]) - reinterpret_cast<uintptr_t>(module);
         fprintf(stderr, "%-3u %s+0x%llx\n", unsigned(i), name, static_cast<unsigned long long>(offset));

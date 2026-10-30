@@ -73,7 +73,7 @@ void prCommandKeymapDestroy(PrCommandKeymap* PR_NULLABLE keymap);
 // Binds `chord` to the command `commandId` in `context`. A later binding of the same chord in the same context replaces
 // the earlier one, so that a user's bindings, made after the application's, win. The keymap copies the views.
 void prCommandKeymapBind(PrCommandKeymap* keymap, PrCommandChord chord, PrStringView commandId, PrStringView context,
-                         PrCommandBindingKind kind);
+    PrCommandBindingKind kind);
 
 // Return the number of bindings, and the binding at `index`, in the order that they were made.
 uint32_t prCommandKeymapCount(const PrCommandKeymap* keymap);

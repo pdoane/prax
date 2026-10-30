@@ -79,8 +79,7 @@ PrDomAgentOptions withPool(HostPool& pool) {
 
 // Returns the pixels of a length that is in pixels, and NaN for any other length.
 float px(PrLayoutLength length) {
-    return prLayoutWordKind(length.bits) == PrLayoutWordKind_Px ? prLayoutUnitToPx(prLayoutWordPxValue(length.bits))
-                                                                : kNanF32;
+    return prLayoutWordKind(length.bits) == PrLayoutWordKind_Px ? prLayoutUnitToPx(prLayoutWordPxValue(length.bits)) : kNanF32;
 }
 
 const PrFont* load(const char* name) {
@@ -101,8 +100,7 @@ struct Page {
 
     // `sheets` follow HTML's user agent sheets.
     explicit Page(const char* html, PrVec2 viewport = PrVec2{800, 600},
-                  PrDomAgentOptions agentOptions = prDomAgentOptionsDefault(),
-                  const std::vector<PrCssUserAgentSheet>& sheets = {}) {
+            PrDomAgentOptions agentOptions = prDomAgentOptionsDefault(), const std::vector<PrCssUserAgentSheet>& sheets = {}) {
         const char* files[] = {"Tinos.ttf", "Arimo.ttf", "Ahem.ttf"};
         for (const char* file : files) {
             const PrFont* font = load(file);
@@ -121,12 +119,14 @@ struct Page {
         const PrCssUserAgentSheet* htmlSheets = prHtmlUserAgentSheets(&htmlCount);
         std::vector<PrCssUserAgentSheet> all(htmlSheets, htmlSheets + htmlCount);
         all.insert(all.end(), sheets.begin(), sheets.end());
-        PrCssPresentationDesc renderDesc{.document = document,
-                                   .font = defaultFont,
-                                   .shaper = shaper,
-                                   .agent = agent,
-                                   .userAgentSheets = all.data(),
-                                   .userAgentSheetCount = uint32_t(all.size())};
+        PrCssPresentationDesc renderDesc{
+            .document = document,
+            .font = defaultFont,
+            .shaper = shaper,
+            .agent = agent,
+            .userAgentSheets = all.data(),
+            .userAgentSheetCount = uint32_t(all.size()),
+        };
         presentation = prCssPresentationCreate(&renderDesc);
         prHtmlPresentationUpdate(presentation, prLayoutVecFromPx(viewport));
     }
@@ -149,7 +149,7 @@ struct Page {
 
     PrRect bounds(const char* id) {
         return prLayoutRectToPx(prLayoutNodeBounds(prCssPresentationTree(presentation), node(id),
-                                                   PrLayoutCoordinates_Viewport));
+            PrLayoutCoordinates_Viewport));
     }
 
     PrLayoutStyle style(const char* id) {
@@ -275,34 +275,40 @@ Observed observeAnimation(PrHtmlAnimationFrames frames) {
     host.animationFrames = frames;
     PrHtmlPage* page = prHtmlPageCreate(&host);
     REQUIRE(prHtmlPageLoad(page, "<style>@keyframes grow { to { width: 300px } }"
-                                                      "#a { width: 100px; animation: grow 10s linear 500ms 2 }"
-                                                      "</style><div id=a></div>",
-                                      "about:blank", nullptr)
-            == PrStatus_Ok);
+        "#a { width: 100px; animation: grow 10s linear 500ms 2 }</style><div id=a></div>", "about:blank", nullptr) ==
+        PrStatus_Ok);
     PrHtmlWindow* window = prHtmlPageWindow(page);
     PrDomDocument* document = prHtmlWindowDocument(window);
     PrDomElement* a = prDomNodeGetElementById(prDomDocumentAsNode(document), "a");
     REQUIRE(a != nullptr);
     seen.timeline = prHtmlDocumentTimelineCreate(document, 0);
-    PrDomEventListener record{[](void* PR_NULLABLE c, PrDomEvent* event) {
-        Observed* o = static_cast<Observed*>(c);
-        PrStringView type = prDomEventType(event);
-        double time = -1;
-        prHtmlDocumentTimelineCurrentTime(o->timeline, &time);
-        char line[128];
-        snprintf(line, sizeof(line), "%.*s %.3f at %.1f", int(type.size), type.data,
-                 prCssAnimationEventElapsedTime(prCssAnimationEventQuery(event)), time);
-        o->events.push_back(line);
-    },
-                              &seen, 1, nullptr, nullptr};
+    PrDomEventListener record{
+        [](void* PR_NULLABLE c, PrDomEvent* event) {
+            Observed* o = static_cast<Observed*>(c);
+            PrStringView type = prDomEventType(event);
+            double time = -1;
+            prHtmlDocumentTimelineCurrentTime(o->timeline, &time);
+            char line[128];
+            snprintf(line, sizeof(line), "%.*s %.3f at %.1f", int(type.size), type.data,
+                prCssAnimationEventElapsedTime(prCssAnimationEventQuery(event)), time);
+            o->events.push_back(line);
+        },
+        &seen,
+        1,
+        nullptr,
+        nullptr,
+    };
     for (const char* type : {"animationstart", "animationiteration", "animationend"})
-        prDomEventTargetAddEventListener(prDomNodeAsEventTarget(prDomElementAsNode(a)), type, &record,
-                                         nullptr);
-    PrHtmlTimerHandler timer{[](void* PR_NULLABLE c) {
-        Observed* o = static_cast<Observed*>(c);
-        prHtmlDocumentTimelineCurrentTime(o->timeline, &o->timerSaw);
-    },
-                             &seen, nullptr, nullptr};
+        prDomEventTargetAddEventListener(prDomNodeAsEventTarget(prDomElementAsNode(a)), type, &record, nullptr);
+    PrHtmlTimerHandler timer{
+        [](void* PR_NULLABLE c) {
+            Observed* o = static_cast<Observed*>(c);
+            prHtmlDocumentTimelineCurrentTime(o->timeline, &o->timerSaw);
+        },
+        &seen,
+        nullptr,
+        nullptr,
+    };
     prHtmlWindowSetTimeout(window, &timer, 12345, false);
     PrDomAgent* agent = prHtmlPageAgent(page);
     for (uint32_t step = 0; step < 100000 && !prDomAgentIsIdle(agent); ++step) {
@@ -322,8 +328,7 @@ Observed observeAnimation(PrHtmlAnimationFrames frames) {
 // in brackets, joined by nothing.
 std::string boxesUnder(PrLayoutTree* tree, PrLayoutNode node, const char* separator) {
     std::string out;
-    for (PrLayoutNode c = prLayoutNodeFirstChild(tree, node); c != kPrLayoutNodeNone;
-         c = prLayoutNodeNextSibling(tree, c)) {
+    for (PrLayoutNode c = prLayoutNodeFirstChild(tree, node); c != kPrLayoutNodeNone; c = prLayoutNodeNextSibling(tree, c)) {
         if (c != prLayoutNodeFirstChild(tree, node))
             out += separator;
         if (prLayoutNodeKind(tree, c) == PrLayoutNodeKind_Text) {
@@ -456,13 +461,10 @@ TEST_CASE("the user agent sheet styles HTML's elements") {
 }
 
 TEST_CASE("author rules apply in order of specificity, importance and appearance") {
-    Page page("<style>"
-              "#a { width: 10px } .c { width: 20px } div { width: 30px }"
-              ".i { width: 40px !important } #i { width: 50px }"
-              "div.late { height: 1px } div.late { height: 2px }"
-              "</style>"
-              "<div id=a class=c></div><div id=i class=i></div><div id=late class=late></div>"
-              "<div id=inline style='width: 60px' class=c></div>");
+    Page page("<style>#a { width: 10px } .c { width: 20px } div { width: 30px }"
+        ".i { width: 40px !important } #i { width: 50px }div.late { height: 1px } div.late { height: 2px }</style>"
+        "<div id=a class=c></div><div id=i class=i></div><div id=late class=late></div>"
+        "<div id=inline style='width: 60px' class=c></div>");
     CHECK(px(page.box("a").width) == 10.0f);
     CHECK(px(page.box("i").width) == 40.0f);
     CHECK(px(page.box("late").height) == 2.0f);
@@ -470,16 +472,11 @@ TEST_CASE("author rules apply in order of specificity, importance and appearance
 }
 
 TEST_CASE("a pseudo-element's rules style it, under its originating element's features, and it inherits from it") {
-    Page page("<style>"
-              "#a { color: rgb(255, 0, 0); width: 10px; list-style-type: square }"
-              "#a::before { content: 'x'; width: 20px }"
-              "div.c::after { content: counter(n) ' ' }"
-              "section > div::marker { color: rgb(0, 0, 255) }"
-              "#a:before { font-size: 30px }"
-              "#a::before::marker { content: 'm' }"
-              "#a::before:hover { width: 40px }"
-              "</style>"
-              "<section><div id=a class=c></div></section><div id=b></div>");
+    Page page("<style>#a { color: rgb(255, 0, 0); width: 10px; list-style-type: square }"
+        "#a::before { content: 'x'; width: 20px }div.c::after { content: counter(n) ' ' }"
+        "section > div::marker { color: rgb(0, 0, 255) }#a:before { font-size: 30px }"
+        "#a::before::marker { content: 'm' }#a::before:hover { width: 40px }</style>"
+        "<section><div id=a class=c></div></section><div id=b></div>");
     CHECK(resolved(page, "a", PrCssProperty_Width) == "10px");
     CHECK(resolved(page, "a", PrCssProperty_Content) == "normal");
     CHECK(resolved(page, "a", PrCssProperty_Width, "::before") == "20px");
@@ -506,11 +503,9 @@ TEST_CASE("a pseudo-element's rules style it, under its originating element's fe
 }
 
 TEST_CASE("::first-line and ::first-letter take their rules, and the first letter inherits from the first line") {
-    Page page("<style>"
-              "#a { color: rgb(255, 0, 0); font-size: 10px; width: 10px }"
-              "#a::first-line { color: rgb(0, 0, 255); font-size: 20px; direction: rtl; writing-mode: vertical-rl }"
-              "#a::first-letter { font-weight: 700 }"
-              "</style><p id=a>text</p><p id=b>text</p>");
+    Page page("<style>#a { color: rgb(255, 0, 0); font-size: 10px; width: 10px }"
+        "#a::first-line { color: rgb(0, 0, 255); font-size: 20px; direction: rtl; writing-mode: vertical-rl }"
+        "#a::first-letter { font-weight: 700 }</style><p id=a>text</p><p id=b>text</p>");
     CHECK(resolved(page, "a", PrCssProperty_Color, "::first-line") == "rgb(0, 0, 255)");
     CHECK(resolved(page, "a", PrCssProperty_FontSize, "::first-line") == "20px");
     // A property that does not inherit takes its initial value.
@@ -525,9 +520,8 @@ TEST_CASE("::first-line and ::first-letter take their rules, and the first lette
 }
 
 TEST_CASE("::first-line and ::first-letter ignore the properties that do not apply to them") {
-    Page page("<style>"
-              "#a::first-line, #a::first-letter { margin-top: 5px; position: absolute; order: 2; opacity: 0.5 }"
-              "</style><p id=a>text</p>");
+    Page page("<style>#a::first-line, #a::first-letter { margin-top: 5px; position: absolute; order: 2; opacity: 0.5 }"
+        "</style><p id=a>text</p>");
     CHECK(resolved(page, "a", PrCssProperty_Opacity, "::first-line") == "0.5");
     CHECK(resolved(page, "a", PrCssProperty_MarginTop, "::first-line") == "0px");
     CHECK(resolved(page, "a", PrCssProperty_Position, "::first-line") == "static");
@@ -537,13 +531,11 @@ TEST_CASE("::first-line and ::first-letter ignore the properties that do not app
 }
 
 TEST_CASE("::before and ::after boxes take their content, first and last among the element's children") {
-    Page page("<!doctype html><style>"
-              ".g::before { content: 'B' attr(id) } .g::after { content: \"A\" / 'alt' }"
-              ".n::before { content: none } .d::after { display: none }"
-              "img::before, br::before { content: 'x' } .contents { display: contents }"
-              "</style>"
-              "<p id=p class=g>text</p><p id=n class='g n d'>t</p><img class=g id=i>"
-              "<div id=outer><span class='g contents' id=c>in</span></div><div id=plain>y</div>");
+    Page page("<!doctype html><style>.g::before { content: 'B' attr(id) } .g::after { content: \"A\" / 'alt' }"
+        ".n::before { content: none } .d::after { display: none }"
+        "img::before, br::before { content: 'x' } .contents { display: contents }</style>"
+        "<p id=p class=g>text</p><p id=n class='g n d'>t</p><img class=g id=i>"
+        "<div id=outer><span class='g contents' id=c>in</span></div><div id=plain>y</div>");
     CHECK(childBoxes(page, "p") == "[Bp] text [A]");
     CHECK(childBoxes(page, "n") == "t");
     CHECK(childBoxes(page, "plain") == "y");
@@ -569,12 +561,10 @@ TEST_CASE("::before and ::after boxes take their content, first and last among t
 
 TEST_CASE("a list item's inside marker is the first of its boxes, and shows its list-item counter") {
     Page page("<!doctype html><style>.in { list-style-position: inside } .gone { display: none }</style>"
-              "<ol class=in><li id=a>x</li><li id=b value=5>y<p id=p>z</p></li><li id=hidden class=gone></li>"
-              "<li id=c>z</li></ol>"
-              "<ol class=in reversed><li id=r1>a</li><li id=r2>b</li><li id=r3>c</li></ol>"
-              "<ul><li id=outside>t</li><li id=disc class=in>u</li></ul>"
-              "<ol class=in type=i start=3><li id=roman>v</li></ol>"
-              "<ol class=in><li>x</li><li>y</li><ol><li>n</li></ol><li id=afterNested>z</li></ol>");
+        "<ol class=in><li id=a>x</li><li id=b value=5>y<p id=p>z</p></li><li id=hidden class=gone></li>"
+        "<li id=c>z</li></ol><ol class=in reversed><li id=r1>a</li><li id=r2>b</li><li id=r3>c</li></ol>"
+        "<ul><li id=outside>t</li><li id=disc class=in>u</li></ul><ol class=in type=i start=3><li id=roman>v</li></ol>"
+        "<ol class=in><li>x</li><li>y</li><ol><li>n</li></ol><li id=afterNested>z</li></ol>");
     CHECK(childBoxes(page, "a") == "[1. ] x");
     CHECK(childBoxes(page, "b") == "[5. ] y [z]");
     // An element with no box increments no counter.
@@ -591,26 +581,24 @@ TEST_CASE("a list item's inside marker is the first of its boxes, and shows its 
     CHECK(resolved(page, "a", PrCssProperty_Content, "::marker") == "normal");
     // A point on an outside marker, left of its item's content, hits the item.
     PrRect item = page.bounds("outside");
-    PrDomNode* hit =
-        prCssPresentationHitTest(page.presentation, prLayoutVecFromPx(PrVec2{item.left - 4, item.top + 4}));
+    PrDomNode* hit = prCssPresentationHitTest(page.presentation, prLayoutVecFromPx(PrVec2{item.left - 4, item.top + 4}));
     CHECK(hit == prDomElementAsNode(byId(page, "outside")));
     // A marker that moves inside its item takes its place on the item's line, and one that moves out leaves it.
     prDomElementSetAttribute(byId(page, "outside"), "class", "in");
     update(page);
-    CHECK(prCssPresentationHitTest(page.presentation, prLayoutVecFromPx(PrVec2{item.left - 4, item.top + 4}))
-          != prDomElementAsNode(byId(page, "outside")));
+    CHECK(prCssPresentationHitTest(page.presentation, prLayoutVecFromPx(PrVec2{item.left - 4, item.top + 4})) !=
+        prDomElementAsNode(byId(page, "outside")));
     prDomElementSetAttribute(byId(page, "disc"), "class", "");
     update(page);
     PrRect disc = page.bounds("disc");
-    CHECK(prCssPresentationHitTest(page.presentation, prLayoutVecFromPx(PrVec2{disc.left - 4, disc.top + 4}))
-          == prDomElementAsNode(byId(page, "disc")));
+    CHECK(prCssPresentationHitTest(page.presentation, prLayoutVecFromPx(PrVec2{disc.left - 4, disc.top + 4})) ==
+        prDomElementAsNode(byId(page, "disc")));
 }
 
 TEST_CASE("a ::before or ::after that is a list item increments list-item, and has a marker of its own") {
-    Page page("<!doctype html><style>li { list-style-position: inside }"
-              ".b::before, .a::after { display: list-item; content: 'B' }"
-              ".b::before::marker { content: counter(list-item) ':' }</style>"
-              "<ol><li id=one class=b>x</li><li id=two class=a>y</li><li id=three>z</li></ol>");
+    Page page("<!doctype html><style>li { list-style-position: inside }.b::before, .a::after { display: list-item; content: 'B' }"
+        ".b::before::marker { content: counter(list-item) ':' }</style>"
+        "<ol><li id=one class=b>x</li><li id=two class=a>y</li><li id=three>z</li></ol>");
     // The first item is 1, its ::before 2, the second item 3 and its ::after 4.
     CHECK(childBoxes(page, "one") == "[1. ] [[2:]B] x");
     CHECK(childBoxes(page, "two") == "[3. ] y [[4. ]B]");
@@ -626,7 +614,7 @@ TEST_CASE("a ::before or ::after that is a list item increments list-item, and h
 
 TEST_CASE("the counter pass walks only what follows the last pass when the changes all follow it") {
     Page page("<!doctype html><style>li { list-style-position: inside } ol ol { counter-reset: none }</style>"
-              "<body><ol id=list><li>a</li><li>b<ol id=inner><li id=deep>c</li></ol></li></ol></body>");
+        "<body><ol id=list><li>a</li><li>b<ol id=inner><li id=deep>c</li></ol></li></ol></body>");
     CHECK(childBoxes(page, "deep") == "[3. ] c");
     auto append = [&](const char* parent, const char* id) {
         PrDomElement* item = nullptr;
@@ -666,8 +654,8 @@ TEST_CASE("the counter pass walks only what follows the last pass when the chang
 
 TEST_CASE("open-quote and close-quote insert the marks of the quote depth, which steps in tree order") {
     Page page("<!doctype html><p id=p><q id=a>a <q id=b>b <q id=c>c</q></q></q> <q id=d>d</q></p>"
-              "<p style='quotes: \"<\" \">\" \"(\" \")\"'><q id=e>e <q id=f>f <q id=g>g</q></q></q></p>"
-              "<p style='quotes: none'><q id=h>h</q></p>");
+        "<p style='quotes: \"<\" \">\" \"(\" \")\"'><q id=e>e <q id=f>f <q id=g>g</q></q></q></p>"
+        "<p style='quotes: none'><q id=h>h</q></p>");
     CHECK(childBoxes(page, "a") == "[“] a  [[‘]b [[‘]c[’]][’]] [”]");
     CHECK(childBoxes(page, "d") == "[“] d [”]");
     // Past the last pair, the last pair repeats.
@@ -680,9 +668,8 @@ TEST_CASE("open-quote and close-quote insert the marks of the quote depth, which
 
 TEST_CASE("a closing quote at depth 0 inserts nothing, and the no- quotes step the depth without marks") {
     Page page("<!doctype html><style>.c::after { content: close-quote 'x' } .n::before { content: no-open-quote }"
-              ".m::after { content: no-close-quote } span::before { content: open-quote }</style>"
-              "<div id=a class=c>a</div><div id=b class=n></div><span id=c>c</span><div id=d class=m></div>"
-              "<span id=e>e</span>");
+        ".m::after { content: no-close-quote } span::before { content: open-quote }</style>"
+        "<div id=a class=c>a</div><div id=b class=n></div><span id=c>c</span><div id=d class=m></div><span id=e>e</span>");
     CHECK(childBoxes(page, "a") == "a [x]");
     // After no-open-quote, the open quote is at depth 1, and after no-close-quote at depth 1 again.
     CHECK(childBoxes(page, "c") == "[‘] c");
@@ -692,7 +679,7 @@ TEST_CASE("a closing quote at depth 0 inserts nothing, and the no- quotes step t
 
 TEST_CASE("quotes: auto takes the marks of the language of the q's parent, which a change of language reaches") {
     Page page("<!doctype html><html lang=en><p id=p><q id=a>a <q id=b lang=ja>b <q id=c lang=fr>c</q></q></q></p>"
-              "<p lang=fr-XX><q id=d>d</q></p><p lang=zz><q id=e>e</q></p></html>");
+        "<p lang=fr-XX><q id=d>d</q></p><p lang=zz><q id=e>e</q></p></html>");
     // b is in Japanese inside English text, so it takes English marks, and c takes Japanese ones.
     CHECK(childBoxes(page, "b") == "[‘] b  [[『]c[』]] [’]");
     // A region that the registry does not list leaves the language, and an unknown language takes CLDR's root marks.
@@ -706,7 +693,7 @@ TEST_CASE("quotes: auto takes the marks of the language of the q's parent, which
 
 TEST_CASE("quotes: match-parent takes its parent's quotes, or the marks of its parent's language for auto") {
     Page page("<!doctype html><html lang=en><div lang=fr style='quotes: match-parent'><p lang=de><q id=a>a</q></p></div>"
-              "<div style='quotes: \"[\" \"]\"'><q id=b style='quotes: match-parent'>b</q></div></html>");
+        "<div style='quotes: \"[\" \"]\"'><q id=b style='quotes: match-parent'>b</q></div></html>");
     // The div declares match-parent, so it and what inherits from it quote in its parent's language.
     CHECK(childBoxes(page, "a") == "[“] a [”]");
     CHECK(childBoxes(page, "b") == "[[] b []]");
@@ -715,7 +702,7 @@ TEST_CASE("quotes: match-parent takes its parent's quotes, or the marks of its p
 
 TEST_CASE("an open quote added before others, or a change of quotes, gives the later quotes their new marks") {
     Page page("<!doctype html><style>.o::before { content: open-quote }</style>"
-              "<p id=p><span id=s></span><q id=a>a</q></p>");
+        "<p id=p><span id=s></span><q id=a>a</q></p>");
     auto update = [&]() { prHtmlPresentationUpdate(page.presentation, prLayoutVecFromPx(PrVec2{800, 600})); };
     auto element = [&](const char* id) { return prDomNodeGetElementById(prDomDocumentAsNode(page.document), id); };
     CHECK(childBoxes(page, "a") == "[“] a [”]");
@@ -736,8 +723,7 @@ TEST_CASE("an open quote added before others, or a change of quotes, gives the l
 
 TEST_CASE("a gradient marker image is a replaced box of 0.4em square that paints the gradient, followed by a space") {
     Page page("<!doctype html><ul style='font-size: 20px; list-style: inside linear-gradient(red, blue)'>"
-              "<li id=a>a</li></ul>"
-              "<ul style='list-style: outside radial-gradient(red, blue)'><li id=b>b</li></ul>");
+        "<li id=a>a</li></ul><ul style='list-style: outside radial-gradient(red, blue)'><li id=b>b</li></ul>");
     CHECK(childBoxes(page, "a") == "[[] ] a");
     CHECK(childBoxes(page, "b") == "[[] ] b");
     PrLayoutTree* tree = prCssPresentationTree(page.presentation);
@@ -754,8 +740,7 @@ TEST_CASE("a gradient marker image is a replaced box of 0.4em square that paints
 
 TEST_CASE("a filter() marker image and a filter() in a content list are replaced boxes that paint the filtered image") {
     Page page("<!doctype html><ul style='list-style: inside filter(linear-gradient(red, blue), invert(1))'>"
-              "<li id=a>a</li></ul>"
-              "<p id=b>b</p><style>#b::before { content: 'x' filter(linear-gradient(red, blue), sepia(1)) }</style>");
+        "<li id=a>a</li></ul><p id=b>b</p><style>#b::before { content: 'x' filter(linear-gradient(red, blue), sepia(1)) }</style>");
     CHECK(childBoxes(page, "a") == "[[] ] a");
     PrLayoutTree* tree = prCssPresentationTree(page.presentation);
     auto layerOf = [&](PrLayoutNode image) {
@@ -780,25 +765,22 @@ TEST_CASE("a filter() marker image and a filter() in a content list are replaced
 
 TEST_CASE("a document's @counter-style rules define counter styles, resolved by extends, in place of predefined ones") {
     Page page("<!doctype html><style>li { list-style-position: inside }"
-              "@counter-style stars { system: cyclic; symbols: '*' '+'; suffix: ' ' }"
-              "@counter-style corners { system: fixed; symbols: \u25f0 \u25f3; suffix: ' ' }"
-              "@counter-style paren { system: extends decimal; prefix: '('; suffix: ') '; pad: 3 '0' }"
-              "@counter-style lower-roman { system: cyclic; symbols: X; suffix: '' }"
-              "@counter-style decimal { system: cyclic; symbols: D }"
-              "@counter-style few { system: alphabetic; symbols: a }"
-              "@counter-style loop-a { system: extends loop-b } @counter-style loop-b { system: extends loop-a }"
-              "@counter-style small { system: fixed 1; symbols: one two; fallback: stars }"
-              "@counter-style neg { system: extends decimal; negative: '(' ')'; suffix: '' }"
-              "</style>"
-              "<ol style='list-style-type: stars'><li id=s1>a</li><li id=s2>b</li><li id=s3>c</li></ol>"
-              "<ol style='list-style-type: corners'><li>a</li><li id=c2>b</li></ol>"
-              "<ol style='list-style-type: paren'><li id=p>a</li></ol>"
-              "<ol style='list-style-type: LOWER-ROMAN'><li id=r>a</li></ol>"
-              "<ol style='list-style-type: decimal'><li id=d>a</li></ol>"
-              "<ol style='list-style-type: few'><li id=f>a</li></ol>"
-              "<ol style='list-style-type: loop-a'><li id=l>a</li></ol>"
-              "<ol style='list-style-type: small'><li>a</li><li>b</li><li id=fb>c</li></ol>"
-              "<ol style='list-style-type: neg' start=-2><li id=n>a</li></ol><div id=late></div>");
+        "@counter-style stars { system: cyclic; symbols: '*' '+'; suffix: ' ' }"
+        "@counter-style corners { system: fixed; symbols: \u25f0 \u25f3; suffix: ' ' }"
+        "@counter-style paren { system: extends decimal; prefix: '('; suffix: ') '; pad: 3 '0' }"
+        "@counter-style lower-roman { system: cyclic; symbols: X; suffix: '' }"
+        "@counter-style decimal { system: cyclic; symbols: D }@counter-style few { system: alphabetic; symbols: a }"
+        "@counter-style loop-a { system: extends loop-b } @counter-style loop-b { system: extends loop-a }"
+        "@counter-style small { system: fixed 1; symbols: one two; fallback: stars }"
+        "@counter-style neg { system: extends decimal; negative: '(' ')'; suffix: '' }</style>"
+        "<ol style='list-style-type: stars'><li id=s1>a</li><li id=s2>b</li><li id=s3>c</li></ol>"
+        "<ol style='list-style-type: corners'><li>a</li><li id=c2>b</li></ol>"
+        "<ol style='list-style-type: paren'><li id=p>a</li></ol>"
+        "<ol style='list-style-type: LOWER-ROMAN'><li id=r>a</li></ol>"
+        "<ol style='list-style-type: decimal'><li id=d>a</li></ol><ol style='list-style-type: few'><li id=f>a</li></ol>"
+        "<ol style='list-style-type: loop-a'><li id=l>a</li></ol>"
+        "<ol style='list-style-type: small'><li>a</li><li>b</li><li id=fb>c</li></ol>"
+        "<ol style='list-style-type: neg' start=-2><li id=n>a</li></ol><div id=late></div>");
     CHECK(childBoxes(page, "s1") == "[* ] a");
     CHECK(childBoxes(page, "s3") == "[* ] c");
     // A symbol may be an ident of any code point above ASCII.
@@ -826,12 +808,12 @@ TEST_CASE("a document's @counter-style rules define counter styles, resolved by 
 
 TEST_CASE("a @counter-style descriptor's calculation resolves its lengths against the initial font") {
     Page page("<!doctype html><style>li { list-style-position: inside }"
-              "@counter-style a { system: extends upper-roman; pad: calc(3 + sign(100em - 1px)) '*' }"
-              "@counter-style b { system: fixed calc(1 + sign(100em - 1px)); symbols: g h }"
-              "@counter-style c { system: additive; additive-symbols: calc(2 + sign(100em - 1px)) c, 2 b, 1 a }"
-              "</style><ol style='list-style-type: a'><li id=a></li></ol>"
-              "<ol style='list-style-type: b'><li id=b1></li><li id=b2></li></ol>"
-              "<ol style='list-style-type: c' start=3><li id=c></li></ol>");
+        "@counter-style a { system: extends upper-roman; pad: calc(3 + sign(100em - 1px)) '*' }"
+        "@counter-style b { system: fixed calc(1 + sign(100em - 1px)); symbols: g h }"
+        "@counter-style c { system: additive; additive-symbols: calc(2 + sign(100em - 1px)) c, 2 b, 1 a }"
+        "</style><ol style='list-style-type: a'><li id=a></li></ol>"
+        "<ol style='list-style-type: b'><li id=b1></li><li id=b2></li></ol>"
+        "<ol style='list-style-type: c' start=3><li id=c></li></ol>");
     CHECK(childBoxes(page, "a") == "[***I. ]");
     CHECK(childBoxes(page, "b1") == "[1. ]");
     CHECK(childBoxes(page, "b2") == "[g. ]");
@@ -842,8 +824,8 @@ TEST_CASE("a reversed list starts from the items whose increments reach its coun
     // The items in a subtree with style containment increment a counter of their own
     // (css-contain-2/#containment-style).
     Page page("<!doctype html><style>li { list-style-position: inside }</style>"
-              "<ol reversed><li id=a>A</li><li>B</li><div style='contain: style'><li id=x>X</li><li id=y>Y</li></div>"
-              "<li id=c>C</li><li id=d>D</li></ol>");
+        "<ol reversed><li id=a>A</li><li>B</li><div style='contain: style'><li id=x>X</li><li id=y>Y</li></div>"
+        "<li id=c>C</li><li id=d>D</li></ol>");
     CHECK(childBoxes(page, "a") == "[4. ] A");
     CHECK(childBoxes(page, "x") == "[1. ] X");
     CHECK(childBoxes(page, "y") == "[2. ] Y");
@@ -853,7 +835,7 @@ TEST_CASE("a reversed list starts from the items whose increments reach its coun
 
 TEST_CASE("the counter pass numbers the items again as items come and go and as their counters change") {
     Page page("<!doctype html><style>li { list-style-position: inside }</style>"
-              "<ol id=list><li id=a>a</li><li id=b>b</li></ol>");
+        "<ol id=list><li id=a>a</li><li id=b>b</li></ol>");
     CHECK(childBoxes(page, "b") == "[2. ] b");
     PrDomElement* item = nullptr;
     REQUIRE(prDomElementCreate(page.document, "li", nullptr, &item) == PrStatus_Ok);
@@ -878,15 +860,12 @@ TEST_CASE("the counter pass numbers the items again as items come and go and as 
 }
 
 TEST_CASE("counter() and counters() in content read the counters in the pseudo-element's scope") {
-    Page page("<!doctype html><style>"
-              "section { counter-reset: s } h2 { counter-increment: s }"
-              "h2::before { content: counters(s, '.') ': ' counter(s, lower-roman) }"
-              "p::after { content: '[' counter(none-yet) ']' }"
-              "li::marker { content: 'Item ' counter(list-item) ' of ' }"
-              "</style>"
-              "<section><h2 id=one>A</h2><div><section><h2 id=inner>B</h2><h2 id=inner2>C</h2></section></div>"
-              "<h2 id=two>D</h2><section><h2 id=sibling>E</h2></section><h2 id=after>F</h2></section><p id=p>x</p>"
-              "<ol><li id=item style='list-style-position: inside'>y</li></ol>");
+    Page page("<!doctype html><style>section { counter-reset: s } h2 { counter-increment: s }"
+        "h2::before { content: counters(s, '.') ': ' counter(s, lower-roman) }"
+        "p::after { content: '[' counter(none-yet) ']' }li::marker { content: 'Item ' counter(list-item) ' of ' }"
+        "</style><section><h2 id=one>A</h2><div><section><h2 id=inner>B</h2><h2 id=inner2>C</h2></section></div>"
+        "<h2 id=two>D</h2><section><h2 id=sibling>E</h2></section><h2 id=after>F</h2></section><p id=p>x</p>"
+        "<ol><li id=item style='list-style-position: inside'>y</li></ol>");
     CHECK(childBoxes(page, "one") == "[1: i] A");
     CHECK(childBoxes(page, "inner") == "[1.1: i] B");
     CHECK(childBoxes(page, "inner2") == "[1.2: ii] C");
@@ -900,12 +879,11 @@ TEST_CASE("counter() and counters() in content read the counters in the pseudo-e
 }
 
 TEST_CASE("attr() substitutes an attribute as a string, a number, a dimension or a syntax, or its fallback") {
-    Page page("<!doctype html><style>"
-              "#a { width: attr(data-w px); height: attr(data-missing px, 7px); content: attr(data-s) }"
-              "#a::before { content: attr(data-s) ' ' attr(data-missing) }"
-              "#b { width: attr(data-w type(<length>), 3px); background-image: url(attr(data-s)) }"
-              "#b::after { content: attr(DATA-S raw-string) }"
-              "</style><div id=a data-w=12 data-s='x\"y'></div><div id=b data-w=5em data-s=z></div>");
+    Page page("<!doctype html><style>#a { width: attr(data-w px); height: attr(data-missing px, 7px); content: attr(data-s) }"
+        "#a::before { content: attr(data-s) ' ' attr(data-missing) }"
+        "#b { width: attr(data-w type(<length>), 3px); background-image: url(attr(data-s)) }"
+        "#b::after { content: attr(DATA-S raw-string) }"
+        "</style><div id=a data-w=12 data-s='x\"y'></div><div id=b data-w=5em data-s=z></div>");
     CHECK(resolved(page, "a", PrCssProperty_Width) == "12px");
     CHECK(resolved(page, "a", PrCssProperty_Height) == "7px");
     CHECK(resolved(page, "a", PrCssProperty_Content) == "\"x\\\"y\"");
@@ -919,10 +897,9 @@ TEST_CASE("attr() substitutes an attribute as a string, a number, a dimension or
 }
 
 TEST_CASE("a list's type, start, reversed and value attributes map to its list style and counters") {
-    Page page("<!doctype html>"
-              "<ol id=a type=a start=10><li id=v value=' 7x' type=I></li></ol>"
-              "<ol id=r reversed start=20></ol><ol id=n reversed></ol><ol id=o type=CIRCLE></ol>"
-              "<ul id=u type=SQUARE><li id=nested></li><ul><li id=deep><ul id=third></ul></li></ul></ul>");
+    Page page("<!doctype html><ol id=a type=a start=10><li id=v value=' 7x' type=I></li></ol>"
+        "<ol id=r reversed start=20></ol><ol id=n reversed></ol><ol id=o type=CIRCLE></ol>"
+        "<ul id=u type=SQUARE><li id=nested></li><ul><li id=deep><ul id=third></ul></li></ul></ul>");
     CHECK(resolved(page, "a", PrCssProperty_ListStyleType) == "lower-alpha");
     CHECK(resolved(page, "a", PrCssProperty_CounterReset) == "list-item 9");
     CHECK(resolved(page, "v", PrCssProperty_ListStyleType) == "upper-roman");
@@ -949,7 +926,7 @@ TEST_CASE("in quirks mode, a list item's marker is inside unless a list holds th
 
 TEST_CASE("the user agent's rules for quirks mode apply in quirks mode alone") {
     const char* body = "<b><form id=f></form><table id=t></table><textarea id=a></textarea>"
-                       "<input id=i><input id=m type=image></b>";
+        "<input id=i><input id=m type=image></b>";
     Page quirks(body);
     CHECK(resolved(quirks, "f", PrCssProperty_MarginBottom) == "16px");
     CHECK(resolved(quirks, "t", PrCssProperty_FontWeight) == "400");
@@ -964,7 +941,7 @@ TEST_CASE("the user agent's rules for quirks mode apply in quirks mode alone") {
 
 TEST_CASE("the rules of presentational hints precede every author rule, whatever their specificity") {
     Page page("<!doctype html><style>p { text-align: right }</style>"
-              "<p id=a align=center></p><h1 id=b align=center></h1><td><br id=c clear=all></td>");
+        "<p id=a align=center></p><h1 id=b align=center></h1><td><br id=c clear=all></td>");
     CHECK(resolved(page, "a", PrCssProperty_TextAlign) == "right");
     CHECK(resolved(page, "b", PrCssProperty_TextAlign) == "center");
     CHECK(resolved(page, "c", PrCssProperty_Clear) == "both");
@@ -975,7 +952,7 @@ TEST_CASE("the rules of presentational hints precede every author rule, whatever
 
 TEST_CASE("a table's border attribute styles its cells unless it is equivalent to zero") {
     Page page("<!doctype html><table id=t border><tr><td id=c></table>"
-              "<table id=z border=0><tr><td id=d></table><table id=e border=x><tr><td id=f></table>");
+        "<table id=z border=0><tr><td id=d></table><table id=e border=x><tr><td id=f></table>");
     CHECK(resolved(page, "t", PrCssProperty_BorderTopStyle) == "outset");
     CHECK(resolved(page, "t", PrCssProperty_BorderTopWidth) == "1px");
     CHECK(resolved(page, "c", PrCssProperty_BorderTopStyle) == "inset");
@@ -990,9 +967,9 @@ TEST_CASE("a table's border attribute styles its cells unless it is equivalent t
 
 TEST_CASE("will-change makes the containing block and the stacking context that the properties it names would") {
     Page page("<!doctype html><style>body { margin: 0 }</style>"
-              "<div id=t style='will-change: transform; margin-left: 50px; height: 10px'>"
-              "<div id=f style='position: fixed; left: 0; width: 5px; height: 5px'></div></div>"
-              "<div id=o style='will-change: opacity'></div><div id=n style='will-change: scroll-position'></div>");
+        "<div id=t style='will-change: transform; margin-left: 50px; height: 10px'>"
+        "<div id=f style='position: fixed; left: 0; width: 5px; height: 5px'></div></div>"
+        "<div id=o style='will-change: opacity'></div><div id=n style='will-change: scroll-position'></div>");
     CHECK(page.bounds("f").left == 50.0f);
     CHECK(page.box("t").transformed);
     CHECK(page.effects("o").layer);
@@ -1002,9 +979,9 @@ TEST_CASE("will-change makes the containing block and the stacking context that 
 
 TEST_CASE("presentational hints map the legacy attributes of each element") {
     Page page("<!doctype html><font id=f size=+2 face=Arimo color=red>x</font><div id=d align=middle></div>"
-              "<hr id=h noshade size=4 align=left><img id=i border=2 hspace=3 width=40 height=20>"
-              "<canvas id=c width=4 height=2></canvas><textarea id=t wrap=off></textarea><pre id=p wrap></pre>"
-              "<caption id=cap align=bottom></caption>");
+        "<hr id=h noshade size=4 align=left><img id=i border=2 hspace=3 width=40 height=20>"
+        "<canvas id=c width=4 height=2></canvas><textarea id=t wrap=off></textarea><pre id=p wrap></pre>"
+        "<caption id=cap align=bottom></caption>");
     CHECK(resolved(page, "f", PrCssProperty_FontSize) == "24px");
     CHECK(resolved(page, "f", PrCssProperty_FontFamily) == "Arimo");
     CHECK(resolved(page, "f", PrCssProperty_Color) == "rgb(255, 0, 0)");
@@ -1046,7 +1023,7 @@ TEST_CASE("a body's link colors style the document's links") {
 
 TEST_CASE("only the engine's own sheets name its private pseudo-classes") {
     Page page("<!doctype html><style>:-pr-list-box, #s:not(:-pr-list-box) { color: red }</style>"
-              "<select id=s></select><select id=l size=3></select>");
+        "<select id=s></select><select id=l size=3></select>");
     // The author's rule is dropped whole, and the user agent's rules tell a drop-down box from a list box.
     CHECK(resolved(page, "s", PrCssProperty_Color) != "rgb(255, 0, 0)");
     CHECK(resolved(page, "l", PrCssProperty_Color) != "rgb(255, 0, 0)");
@@ -1059,8 +1036,7 @@ TEST_CASE("only the engine's own sheets name its private pseudo-classes") {
 
 TEST_CASE("appearance computes to its keyword, which -webkit-appearance sets too") {
     Page page("<!doctype html><input id=i><meter id=m></meter><progress id=p></progress><div id=d></div>"
-              "<input id=h type=hidden><input id=w style='-webkit-appearance: none'>"
-              "<input id=c style='appearance: checkbox'>");
+        "<input id=h type=hidden><input id=w style='-webkit-appearance: none'><input id=c style='appearance: checkbox'>");
     CHECK(resolved(page, "i", PrCssProperty_Appearance) == "auto");
     CHECK(resolved(page, "m", PrCssProperty_Appearance) == "auto");
     CHECK(resolved(page, "p", PrCssProperty_Appearance) == "auto");
@@ -1073,18 +1049,16 @@ TEST_CASE("appearance computes to its keyword, which -webkit-appearance sets too
 }
 
 TEST_CASE("the used appearance follows appearance, the kind of widget, and the author's devolving declarations") {
-    Page page("<!doctype html><style>"
-              ".bg { background-color: red } .logical { border-inline-start-color: red }"
-              ".reverted { background-color: red } .reverted { background-color: revert }"
-              ".none { appearance: none } .base { appearance: base } .select { appearance: base-select }"
-              "</style>"
-              "<input id=text><input id=none class=none><input id=bg class=bg><input id=logical class=logical>"
-              "<input id=reverted class=reverted><input id=inline style='border-top-width: 0'>"
-              "<input id=check type=checkbox class=bg><input id=range type=range class=none>"
-              "<meter id=meter class=base></meter><select id=select class=select></select>"
-              "<button id=button class=select></button><input id=compat style='appearance: textfield'>"
-              "<div id=div style='appearance: auto'></div>"
-              "<div class=none><input id=inherit style='appearance: inherit'></div>");
+    Page page("<!doctype html><style>.bg { background-color: red } .logical { border-inline-start-color: red }"
+        ".reverted { background-color: red } .reverted { background-color: revert }"
+        ".none { appearance: none } .base { appearance: base } .select { appearance: base-select }</style>"
+        "<input id=text><input id=none class=none><input id=bg class=bg><input id=logical class=logical>"
+        "<input id=reverted class=reverted><input id=inline style='border-top-width: 0'>"
+        "<input id=check type=checkbox class=bg><input id=range type=range class=none>"
+        "<meter id=meter class=base></meter><select id=select class=select></select>"
+        "<button id=button class=select></button><input id=compat style='appearance: textfield'>"
+        "<div id=div style='appearance: auto'></div>"
+        "<div class=none><input id=inherit style='appearance: inherit'></div>");
     update(page);
     CHECK(usedAppearance(page, "text") == CssAppearance_Native);
     CHECK(usedAppearance(page, "none") == CssAppearance_Primitive);
@@ -1109,16 +1083,18 @@ TEST_CASE("the used appearance follows appearance, the kind of widget, and the a
 
 TEST_CASE("a sheet for one appearance styles the widgets rendered with it, in its place in the cascade") {
     std::vector<PrCssUserAgentSheet> sheets{
-        {.source = "input { margin-left: 7px } div, .a::before { color: rgb(0, 128, 0) }",
-         .appearance = PrCssSheetAppearance_Native},
+        {
+            .source = "input { margin-left: 7px } div, .a::before { color: rgb(0, 128, 0) }",
+            .appearance = PrCssSheetAppearance_Native,
+        },
         {.source = "input { margin-left: 9px }", .appearance = PrCssSheetAppearance_Base},
     };
     Page page("<!doctype html><style>.pad { margin-left: 5px } .none { appearance: none } .base { appearance: base }"
-              ".bg { background-color: red } .a::before { content: 'x' }</style>"
-              "<input id=native><input id=pad class=pad><input id=none class=none><input id=base class=base>"
-              "<input id=bg class=bg><div id=div style='appearance: auto'></div>"
-              "<button id=button class=a></button><div id=plain class=a></div>",
-              PrVec2{800, 600}, prDomAgentOptionsDefault(), sheets);
+        ".bg { background-color: red } .a::before { content: 'x' }</style>"
+        "<input id=native><input id=pad class=pad><input id=none class=none><input id=base class=base>"
+        "<input id=bg class=bg><div id=div style='appearance: auto'></div>"
+        "<button id=button class=a></button><div id=plain class=a></div>",
+        PrVec2{800, 600}, prDomAgentOptionsDefault(), sheets);
     CHECK(resolved(page, "native", PrCssProperty_MarginLeft) == "7px");
     CHECK(resolved(page, "pad", PrCssProperty_MarginLeft) == "5px");
     CHECK(resolved(page, "none", PrCssProperty_MarginLeft) == "0px");
@@ -1135,8 +1111,7 @@ TEST_CASE("a sheet for one appearance styles the widgets rendered with it, in it
 }
 
 TEST_CASE("controls take a font of 10pt") {
-    Page page("<!doctype html><input id=i><button id=b>x</button><select id=s></select><textarea id=t></textarea>"
-              "<p id=p>");
+    Page page("<!doctype html><input id=i><button id=b>x</button><select id=s></select><textarea id=t></textarea><p id=p>");
     // 10pt is 13.333px, which a length holds as 853/64.
     for (const char* id : {"i", "b", "s", "t"})
         CHECK(page.fontStyle(id).size == 13.328125f);
@@ -1145,7 +1120,7 @@ TEST_CASE("controls take a font of 10pt") {
 
 TEST_CASE("a control rendered with its base appearance takes its colors and font from the page") {
     Page page("<!doctype html><style>body { color: rgb(0, 128, 0); font-size: 20px } .base { appearance: base }"
-              "</style><input id=text class=base><button id=button class=base>x</button><input id=native>");
+        "</style><input id=text class=base><button id=button class=base>x</button><input id=native>");
     for (const char* id : {"text", "button"}) {
         CHECK(resolved(page, id, PrCssProperty_Color) == "rgb(0, 128, 0)");
         CHECK(resolved(page, id, PrCssProperty_FontSize) == "20px");
@@ -1159,14 +1134,14 @@ TEST_CASE("a control rendered with its base appearance takes its colors and font
 
 TEST_CASE("light-dark() resolves to the color that the scheme chooses, written as that color is") {
     Page page("<!doctype html><div id=legacy style='background-color: light-dark(transparent, red)'></div>"
-              "<div id=modern style='background-color: light-dark(color(srgb 1 0 0), red)'></div>");
+        "<div id=modern style='background-color: light-dark(color(srgb 1 0 0), red)'></div>");
     CHECK(resolved(page, "legacy", PrCssProperty_BackgroundColor) == "rgba(0, 0, 0, 0)");
     CHECK(resolved(page, "modern", PrCssProperty_BackgroundColor) == "color(srgb 1 0 0)");
 }
 
 TEST_CASE("pseudo-elements that match the same entries share a style only under the same appearance") {
     Page page("<!doctype html><style>.a::before { content: 'x' }</style>"
-              "<div id=d class=a></div><button id=b class=a></button><div id=e class=a></div>");
+        "<div id=d class=a></div><button id=b class=a></button><div id=e class=a></div>");
     update(page);
     CHECK(usedAppearance(page, "d", true) == CssAppearance_None);
     CHECK(usedAppearance(page, "b", true) == CssAppearance_Native);
@@ -1196,11 +1171,9 @@ TEST_CASE("a change to a feature that a pseudo-element's selector reads restyles
 }
 
 TEST_CASE("inherited properties inherit, and relative values compute against the parent") {
-    Page page("<style>"
-              "#outer { color: rgb(255, 0, 0); font-size: 20px; line-height: 1.5 }"
-              "#inner { font-size: 2em; padding-left: 1em; border-color: currentcolor }"
-              "</style>"
-              "<div id=outer><div id=inner>text</div></div>");
+    Page page("<style>#outer { color: rgb(255, 0, 0); font-size: 20px; line-height: 1.5 }"
+        "#inner { font-size: 2em; padding-left: 1em; border-color: currentcolor }</style>"
+        "<div id=outer><div id=inner>text</div></div>");
     CHECK(sameColor(page.color("inner").color, PrColor{1, 0, 0, 1}));
     CHECK(page.fontStyle("inner").size == 40.0f);
     CHECK(page.font("inner").lineHeight.bits == prLayoutLineHeightNumber(1.5f).bits);
@@ -1209,13 +1182,9 @@ TEST_CASE("inherited properties inherit, and relative values compute against the
 }
 
 TEST_CASE("custom properties substitute into values") {
-    Page page("<style>"
-              ":root { --w: 25px; --c: blue }"
-              "#a { width: var(--w); background-color: var(--c) }"
-              "#b { width: var(--missing, 7px) }"
-              "#c { --w: 3px; width: calc(var(--w) * 2) }"
-              "</style>"
-              "<div id=a></div><div id=b></div><div id=c></div>");
+    Page page("<style>:root { --w: 25px; --c: blue }#a { width: var(--w); background-color: var(--c) }"
+        "#b { width: var(--missing, 7px) }#c { --w: 3px; width: calc(var(--w) * 2) }</style>"
+        "<div id=a></div><div id=b></div><div id=c></div>");
     CHECK(px(page.box("a").width) == 25.0f);
     CHECK(sameColor(page.decoration("a").background, PrColor{0, 0, 1, 1}));
     CHECK(px(page.box("b").width) == 7.0f);
@@ -1227,18 +1196,12 @@ TEST_CASE("custom properties layer over the root's, and hide, inherit and overri
     std::string html = "<style>:root {";
     for (int i = 0; i < 100; ++i)
         html += " --r" + std::to_string(i) + ": " + std::to_string(i) + "px;";
-    html += " --w: 10px }"
-            "#outer { --a: 4px; --w: 20px }"
-            "#hide { --w: initial; width: var(--w, 1px) }"
-            "#cycle { --w: var(--w); width: var(--w, 2px) }"
-            "#inherit { --w: inherit; width: var(--w) }"
-            "#inner { --b: calc(var(--a) + var(--r5)); width: var(--b) }"
-            "#deep { --c: 1px; width: calc(var(--w) + var(--a) + var(--c) + var(--r99)) }"
-            "#root-only { width: var(--w) }"
-            "</style>"
-            "<div id=root-only></div>"
-            "<div id=outer><div id=hide></div><div id=cycle></div><div id=inherit></div>"
-            "<div id=inner><div id=deep></div></div></div>";
+    html += " --w: 10px }#outer { --a: 4px; --w: 20px }#hide { --w: initial; width: var(--w, 1px) }"
+        "#cycle { --w: var(--w); width: var(--w, 2px) }#inherit { --w: inherit; width: var(--w) }"
+        "#inner { --b: calc(var(--a) + var(--r5)); width: var(--b) }"
+        "#deep { --c: 1px; width: calc(var(--w) + var(--a) + var(--c) + var(--r99)) }#root-only { width: var(--w) }"
+        "</style><div id=root-only></div><div id=outer><div id=hide></div><div id=cycle></div><div id=inherit></div>"
+        "<div id=inner><div id=deep></div></div></div>";
     Page page(html.c_str());
     CHECK(px(page.box("root-only").width) == 10.0f);
     CHECK(px(page.box("hide").width) == 1.0f);
@@ -1260,8 +1223,8 @@ TEST_CASE("custom properties layer over the root's, and hide, inherit and overri
 
 TEST_CASE("the width and height attributes of an image map to its width and height, under author rules") {
     Page page("<style>#ruled { width: 7px }</style>"
-              "<img id=sized width=40 height='25.5'><img id=percent width='50%'><img id=ruled width=40>"
-              "<div id=plain width=40></div>");
+        "<img id=sized width=40 height='25.5'><img id=percent width='50%'><img id=ruled width=40>"
+        "<div id=plain width=40></div>");
     CHECK(px(page.box("sized").width) == 40.0f);
     CHECK(px(page.box("sized").height) == 25.5f);
     CHECK(prLayoutWordKind(page.box("percent").width.bits) == PrLayoutWordKind_Percent);
@@ -1281,16 +1244,11 @@ TEST_CASE("the width and height attributes of an image map to its width and heig
 }
 
 TEST_CASE("invalidation reaches custom states, xml:lang, an input's type and the text that decides direction") {
-    Page page("<style>"
-              "#host:has(:state(--on)) { width: 1px }"
-              ":lang(en) > #lang { width: 2px }"
-              "input:checked + #after { width: 3px }"
-              "#auto:dir(rtl) + #ruled { width: 4px }"
-              "</style>"
-              "<div id=host><x-custom id=custom></x-custom></div>"
-              "<div id=outer><div id=lang></div></div>"
-              "<input id=input type=checkbox checked><div id=after></div>"
-              "<div id=auto dir=auto><span id=text>abc</span></div><div id=ruled></div>");
+    Page page("<style>#host:has(:state(--on)) { width: 1px }:lang(en) > #lang { width: 2px }"
+        "input:checked + #after { width: 3px }#auto:dir(rtl) + #ruled { width: 4px }</style>"
+        "<div id=host><x-custom id=custom></x-custom></div><div id=outer><div id=lang></div></div>"
+        "<input id=input type=checkbox checked><div id=after></div>"
+        "<div id=auto dir=auto><span id=text>abc</span></div><div id=ruled></div>");
     auto element = [&](const char* id) {
         return prDomNodeGetElementById(prDomDocumentAsNode(page.document), id);
     };
@@ -1302,9 +1260,8 @@ TEST_CASE("invalidation reaches custom states, xml:lang, an input's type and the
     CHECK(px(page.box("host").width) == 1.0f);
     CHECK(verified(page.presentation));
 
-    REQUIRE(prDomElementSetAttributeNs(element("outer"), "http://www.w3.org/XML/1998/namespace",
-                                       "xml:lang", "en")
-            == PrStatus_Ok);
+    REQUIRE(prDomElementSetAttributeNs(element("outer"), "http://www.w3.org/XML/1998/namespace", "xml:lang", "en") ==
+        PrStatus_Ok);
     update();
     CHECK(px(page.box("lang").width) == 2.0f);
     CHECK(verified(page.presentation));
@@ -1331,7 +1288,7 @@ TEST_CASE("invalidation reaches custom states, xml:lang, an input's type and the
 
 TEST_CASE("an element's locale is that of the tag it declares, or its parent's, and a change restyles its subtree") {
     Page page("<html id=root lang=ja><div id=a></div><div id=b lang=en-GB><span id=c>text</span></div>"
-              "<div id=d lang=''></div><div id=e lang='not a tag'></div>");
+        "<div id=d lang=''></div><div id=e lang='not a tag'></div>");
     auto element = [&](const char* id) {
         return prDomNodeGetElementById(prDomDocumentAsNode(page.document), id);
     };
@@ -1356,9 +1313,8 @@ TEST_CASE("an element's locale is that of the tag it declares, or its parent's, 
 
     // xml:lang is the language over lang.
     prDomElementSetAttribute(element("b"), "lang", "fr");
-    REQUIRE(prDomElementSetAttributeNs(element("b"), "http://www.w3.org/XML/1998/namespace",
-                                       "xml:lang", "ko")
-            == PrStatus_Ok);
+    REQUIRE(prDomElementSetAttributeNs(element("b"), "http://www.w3.org/XML/1998/namespace", "xml:lang", "ko") ==
+        PrStatus_Ok);
     update();
     CHECK(page.locale("c") == prLocaleFromTag("ko"));
     CHECK(verified(page.presentation));
@@ -1395,9 +1351,7 @@ TEST_CASE("a document's default language is its content-language pragma's, or el
         std::string text = std::string("<style>#a:lang(ko) { width: 1px }</style>") + source;
         PrHtmlResponseHeaders headers{};
         headers.contentLanguage = language != nullptr ? language : PrStringView{nullptr, 0};
-        REQUIRE(prHtmlPageLoad(htmlPage, text, "about:blank",
-                                          &headers)
-                == PrStatus_Ok);
+        REQUIRE(prHtmlPageLoad(htmlPage, text, "about:blank", &headers) == PrStatus_Ok);
         return answer();
     };
     PrLocale ko = prLocaleFromTag("ko");
@@ -1424,8 +1378,8 @@ TEST_CASE("a document's default language is its content-language pragma's, or el
     REQUIRE(prDomElementCreate(document, "meta", nullptr, &meta) == PrStatus_Ok);
     prDomElementSetAttribute(meta, "http-equiv", "content-language");
     prDomElementSetAttribute(meta, "content", "ko");
-    REQUIRE(prDomNodeAppendChild(prDomElementAsNode(prDomDocumentHead(document)), prDomElementAsNode(meta))
-            == PrStatus_Ok);
+    REQUIRE(prDomNodeAppendChild(prDomElementAsNode(prDomDocumentHead(document)), prDomElementAsNode(meta)) ==
+        PrStatus_Ok);
     prDomNodeRelease(prDomElementAsNode(meta));
     Answer inserted = answer();
     CHECK(inserted.locale == ko);
@@ -1482,15 +1436,13 @@ TEST_CASE("an element with no border style takes no room for a border") {
 }
 
 TEST_CASE("line-height is of the element's own font size, a calculation computes, and the resolved value is a length") {
-    Page page("<style>body { font: 20px/40px Arimo }</style>"
-              "<div id=pct style='font-size: 40px; line-height: 150%'>x</div>"
-              "<div id=em style='font-size: 40px; line-height: 1.5em'>x</div>"
-              "<div id=short style='font: 40px/150% Arimo'>x</div>"
-              "<div id=mixed style='line-height: calc(10% + 30px)'>x</div>"
-              "<div id=num style='line-height: calc(1.5 * 2)'>x<div id=child style='font-size: 10px'>x</div></div>"
-              "<div id=neg style='line-height: calc(10px - 1em)'>x</div>"
-              "<div id=two style='line-height: 2'>x</div><div id=zero style='line-height: 0'>x</div>"
-              "<div id=normal style='line-height: normal'>x</div>");
+    Page page("<style>body { font: 20px/40px Arimo }</style><div id=pct style='font-size: 40px; line-height: 150%'>x</div>"
+        "<div id=em style='font-size: 40px; line-height: 1.5em'>x</div>"
+        "<div id=short style='font: 40px/150% Arimo'>x</div><div id=mixed style='line-height: calc(10% + 30px)'>x</div>"
+        "<div id=num style='line-height: calc(1.5 * 2)'>x<div id=child style='font-size: 10px'>x</div></div>"
+        "<div id=neg style='line-height: calc(10px - 1em)'>x</div>"
+        "<div id=two style='line-height: 2'>x</div><div id=zero style='line-height: 0'>x</div>"
+        "<div id=normal style='line-height: normal'>x</div>");
     CHECK(resolved(page, "pct", PrCssProperty_LineHeight) == "60px");
     CHECK(resolved(page, "em", PrCssProperty_LineHeight) == "60px");
     CHECK(resolved(page, "short", PrCssProperty_LineHeight) == "60px");
@@ -1507,13 +1459,13 @@ TEST_CASE("line-height is of the element's own font size, a calculation computes
 
 TEST_CASE("lh and rlh are of the computed line height, the parent's in font-size and line-height, and zero is one") {
     Page page("<style>html { font: 16px/25px Arimo } body { font: 20px/40px Arimo }</style>"
-              "<div style='line-height: 30px'><div id=px style='height: 2lh'></div>"
-              "<div id=lhlh style='line-height: 2lh; height: 1lh'></div></div>"
-              "<div style='line-height: 1.5'><div id=own style='font-size: 40px; height: 1lh'></div></div>"
-              "<div style='font-size: 10px; line-height: 3'><div id=fs style='font-size: 1lh'>x</div></div>"
-              "<div style='line-height: 0'><div id=zero style='height: 1lh'></div>"
-              "<div id=sum style='height: calc(1lh + 10px)'></div><div id=zfs style='font-size: 1lh'>x</div></div>"
-              "<div id=rlh style='height: 2rlh'></div>");
+        "<div style='line-height: 30px'><div id=px style='height: 2lh'></div>"
+        "<div id=lhlh style='line-height: 2lh; height: 1lh'></div></div>"
+        "<div style='line-height: 1.5'><div id=own style='font-size: 40px; height: 1lh'></div></div>"
+        "<div style='font-size: 10px; line-height: 3'><div id=fs style='font-size: 1lh'>x</div></div>"
+        "<div style='line-height: 0'><div id=zero style='height: 1lh'></div>"
+        "<div id=sum style='height: calc(1lh + 10px)'></div><div id=zfs style='font-size: 1lh'>x</div></div>"
+        "<div id=rlh style='height: 2rlh'></div>");
     CHECK(resolved(page, "px", PrCssProperty_Height) == "60px");
     CHECK(resolved(page, "lhlh", PrCssProperty_LineHeight) == "60px");
     CHECK(resolved(page, "lhlh", PrCssProperty_Height) == "60px");
@@ -1535,9 +1487,9 @@ TEST_CASE("lh and rlh are of the computed line height, the parent's in font-size
 
 TEST_CASE("the root's own rem and rlh are of its font size and line height past them, and of the initial font in them") {
     Page page("<style>@keyframes indent { from, to { text-indent: 2rem } }"
-              "html { font-size: calc(1rem + 24px); line-height: 2rlh; text-indent: 1rem }"
-              "html.moving { font-size: 30px; animation: indent 1s paused }</style>"
-              "<div id=child></div><div id=rlh style='text-indent: 1rlh'></div>");
+        "html { font-size: calc(1rem + 24px); line-height: 2rlh; text-indent: 1rem }"
+        "html.moving { font-size: 30px; animation: indent 1s paused }</style>"
+        "<div id=child></div><div id=rlh style='text-indent: 1rlh'></div>");
     PrDomElement* root = prDomDocumentElement(page.document);
     prDomElementSetAttribute(root, "id", "root");
     update(page);
@@ -1556,13 +1508,13 @@ TEST_CASE("the root's own rem and rlh are of its font size and line height past 
 
 TEST_CASE("text-align is a shorthand of text-align-all and text-align-last, and match-parent reads the parent") {
     Page page("<style>.rtl { direction: rtl; text-align-all: start; text-align-last: center }</style>"
-              "<div id=reset style='text-align-last: right; text-align: center'></div>"
-              "<div id=all style='text-align: justify-all'></div>"
-              "<div class=rtl><div id=match style='direction: ltr; text-align: match-parent'></div>"
-              "<div id=last style='direction: ltr; text-align-last: match-parent'></div></div>"
-              "<div style='text-align: center'><div id=center style='text-align: match-parent'></div></div>"
-              "<div style='direction: rtl; text-align-last: end'><div id=end style='text-align-last: match-parent'>"
-              "</div></div>");
+        "<div id=reset style='text-align-last: right; text-align: center'></div>"
+        "<div id=all style='text-align: justify-all'></div>"
+        "<div class=rtl><div id=match style='direction: ltr; text-align: match-parent'></div>"
+        "<div id=last style='direction: ltr; text-align-last: match-parent'></div></div>"
+        "<div style='text-align: center'><div id=center style='text-align: match-parent'></div></div>"
+        "<div style='direction: rtl; text-align-last: end'><div id=end style='text-align-last: match-parent'>"
+        "</div></div>");
     CHECK(resolved(page, "reset", PrCssProperty_TextAlignLast) == "auto");
     CHECK(resolved(page, "reset", PrCssProperty_TextAlign) == "center");
     CHECK(resolved(page, "all", PrCssProperty_TextAlignAll) == "justify");
@@ -1582,7 +1534,7 @@ TEST_CASE("text-align is a shorthand of text-align-all and text-align-last, and 
 
 TEST_CASE("the root's used writing mode and direction are the body's, the principal writing mode") {
     Page page("<html id=r style='writing-mode: horizontal-tb'><body id=b style='writing-mode: vertical-rl; "
-              "direction: rtl'><p id=p>x</p></body></html>");
+        "direction: rtl'><p id=p>x</p></body></html>");
     CHECK(page.font("r").writingMode == PrLayoutWritingMode_VerticalRl);
     CHECK(page.font("r").direction == PrTextDirection_Rtl);
     CHECK(page.font("b").writingMode == PrLayoutWritingMode_VerticalRl);
@@ -1595,8 +1547,8 @@ TEST_CASE("containment on the root or the body keeps the body's writing mode and
     for (const char* on : {"r", "b"}) {
         CAPTURE(on);
         std::string root = std::string("<html id=r") + (on[0] == 'r' ? " style='contain: layout'" : "") + ">";
-        std::string body = std::string("<body id=b style='writing-mode: vertical-rl; overflow: hidden")
-                           + (on[0] == 'b' ? "; contain: paint'" : "'") + "><p>x</p></body></html>";
+        std::string body = std::string("<body id=b style='writing-mode: vertical-rl; overflow: hidden") +
+            (on[0] == 'b' ? "; contain: paint'" : "'") + "><p>x</p></body></html>";
         Page page((root + body).c_str());
         CHECK(page.font("r").writingMode == PrLayoutWritingMode_HorizontalTb);
         CHECK(page.box("b").overflowX == PrLayoutOverflow_Hidden);
@@ -1611,8 +1563,8 @@ TEST_CASE("containment on the root or the body keeps the body's writing mode and
 
 TEST_CASE("writing-mode, text-orientation, dominant-baseline and unicode-bidi reach layout") {
     Page page("<div id=s style='writing-mode: sideways-lr'></div>"
-              "<div id=u style='writing-mode: vertical-lr; text-orientation: upright; dominant-baseline: central'>"
-              "</div><span id=o style='unicode-bidi: bidi-override'></span>");
+        "<div id=u style='writing-mode: vertical-lr; text-orientation: upright; dominant-baseline: central'>"
+        "</div><span id=o style='unicode-bidi: bidi-override'></span>");
     CHECK(page.font("s").writingMode == PrLayoutWritingMode_SidewaysLr);
     CHECK(page.font("u").textOrientation == PrLayoutTextOrientation_Upright);
     CHECK(page.font("u").dominantBaseline == PrLayoutDominantBaseline_Central);
@@ -1621,13 +1573,10 @@ TEST_CASE("writing-mode, text-orientation, dominant-baseline and unicode-bidi re
 
 TEST_CASE("glyph-orientation-vertical is a shorthand of text-orientation") {
     // Its angles and numbers are values, not keywords: 0.0 is 0, and 100grad is 90deg.
-    Page page("<div id=a style='glyph-orientation-vertical: 0deg'></div>"
-              "<div id=b style='glyph-orientation-vertical: 90'></div>"
-              "<div id=c style='text-orientation: upright; glyph-orientation-vertical: auto'></div>"
-              "<div id=d style='glyph-orientation-vertical: 45deg'></div>"
-              "<div id=e style='glyph-orientation-vertical: 0.0'></div>"
-              "<div id=f style='glyph-orientation-vertical: 100grad'></div>"
-              "<div id=g style='glyph-orientation-vertical: 0px'></div>");
+    Page page("<div id=a style='glyph-orientation-vertical: 0deg'></div><div id=b style='glyph-orientation-vertical: 90'></div>"
+        "<div id=c style='text-orientation: upright; glyph-orientation-vertical: auto'></div>"
+        "<div id=d style='glyph-orientation-vertical: 45deg'></div><div id=e style='glyph-orientation-vertical: 0.0'></div>"
+        "<div id=f style='glyph-orientation-vertical: 100grad'></div><div id=g style='glyph-orientation-vertical: 0px'></div>");
     CHECK(resolved(page, "a", PrCssProperty_TextOrientation) == "upright");
     CHECK(resolved(page, "a", PrCssProperty_GlyphOrientationVertical) == "0deg");
     CHECK(resolved(page, "b", PrCssProperty_TextOrientation) == "sideways");
@@ -1641,7 +1590,7 @@ TEST_CASE("glyph-orientation-vertical is a shorthand of text-orientation") {
 
 TEST_CASE("the user agent sheet isolates blocks, bdi and dir, overrides bdo, and sets pre dir=auto as plaintext") {
     Page page("<div id=d></div><p id=p></p><span id=s></span><bdi id=i></bdi><span id=dir dir=rtl></span>"
-              "<bdo id=o dir=rtl></bdo><pre id=pre dir=auto></pre><pre id=plain></pre>");
+        "<bdo id=o dir=rtl></bdo><pre id=pre dir=auto></pre><pre id=plain></pre>");
     CHECK(page.box("d").unicodeBidi == PrTextBidi_Isolate);
     CHECK(page.box("p").unicodeBidi == PrTextBidi_Isolate);
     CHECK(page.box("s").unicodeBidi == PrTextBidi_Normal);
@@ -1654,10 +1603,9 @@ TEST_CASE("the user agent sheet isolates blocks, bdi and dir, overrides bdo, and
 
 TEST_CASE("scrollLeft and scrollTop are below zero from a right or bottom scroll origin") {
     Page page("<style>.s { width: 100px; height: 50px; overflow: scroll } .w { width: 300px; height: 10px }"
-              " .t { width: 10px; height: 300px }</style>"
-              "<div id=rtl class=s style='direction: rtl'><div class=w></div></div>"
-              "<div id=vrl class=s style='writing-mode: vertical-rl'><div class=w></div></div>"
-              "<div id=up class=s style='writing-mode: vertical-rl; direction: rtl'><div class=t></div></div>");
+        " .t { width: 10px; height: 300px }</style><div id=rtl class=s style='direction: rtl'><div class=w></div></div>"
+        "<div id=vrl class=s style='writing-mode: vertical-rl'><div class=w></div></div>"
+        "<div id=up class=s style='writing-mode: vertical-rl; direction: rtl'><div class=t></div></div>");
     for (const char* id : {"rtl", "vrl"}) {
         CAPTURE(id);
         PrDomElement* element = byId(page, id);
@@ -1677,13 +1625,12 @@ TEST_CASE("scrollLeft and scrollTop are below zero from a right or bottom scroll
 
 TEST_CASE("scrollWidth and scrollHeight are a box's scrolling area, whether or not it scrolls") {
     Page page("<style>body { margin: 0 } .w { width: 90px; border: 10px solid } .i { margin: -10px; width: 100px;"
-              " height: 100px } .c { width: 100px; height: 101px } .k { width: 200px; height: 201px }"
-              " .t { height: 200px; overflow: hidden; font-size: 100px } .t div { height: 200px } .t p { height: 1px }"
-              "</style>"
-              "<div id=visible class=w><div class=i></div></div>"
-              "<div id=hidden class=w style='overflow: hidden'><div class=i></div></div>"
-              "<div id=clip class=c style='overflow: clip'><div class=k></div></div>"
-              "<div id=scroller class=t><div><div></div><p></p></div></div>");
+        " height: 100px } .c { width: 100px; height: 101px } .k { width: 200px; height: 201px }"
+        " .t { height: 200px; overflow: hidden; font-size: 100px } .t div { height: 200px } .t p { height: 1px }"
+        "</style><div id=visible class=w><div class=i></div></div>"
+        "<div id=hidden class=w style='overflow: hidden'><div class=i></div></div>"
+        "<div id=clip class=c style='overflow: clip'><div class=k></div></div>"
+        "<div id=scroller class=t><div><div></div><p></p></div></div>");
     // A child that reaches the padding box's far edges adds nothing, and a scroll container's own border is not
     // scrolled to.
     for (const char* id : {"visible", "hidden"}) {
@@ -1702,7 +1649,7 @@ TEST_CASE("scrollWidth and scrollHeight are a box's scrolling area, whether or n
 
 TEST_CASE("elements that match the same rules under the same inherited style take one computed style") {
     Page page("<style>.card { color: green; --gap: 4px } .card p { margin-top: var(--gap) }</style>"
-              "<div id=a class=card><p id=pa>a</p></div><div id=b class=card><p id=pb>b</p></div>");
+        "<div id=a class=card><p id=pa>a</p></div><div id=b class=card><p id=pb>b</p></div>");
     CHECK(verified(page.presentation));
     // The second card and its paragraph reuse the styles computed for the first card and its paragraph.
     CHECK(prCssPresentationStats(page.presentation).elementsStyledCached >= 2);
@@ -1748,8 +1695,8 @@ TEST_CASE("an element restyled from the same inputs keeps its style, however man
 
 TEST_CASE("a kept style is not taken where what it was computed from differs") {
     Page page("<style>.big { font-size: 20px; --gap: 1px } .c { margin-top: 1em; padding-top: var(--gap, 3px) }</style>"
-              "<div id=a class=big><p id=pa class=c>a</p></div><div id=b><p id=pb class=c>b</p></div>"
-              "<p id=s class=c style='color: red'>s</p><p id=t class=c>t</p>");
+        "<div id=a class=big><p id=pa class=c>a</p></div><div id=b><p id=pb class=c>b</p></div>"
+        "<p id=s class=c style='color: red'>s</p><p id=t class=c>t</p>");
     CHECK(verified(page.presentation));
     // Under a parent of another font size and other custom properties.
     CHECK(resolved(page, "pa", PrCssProperty_MarginTop) == "20px");
@@ -1772,8 +1719,7 @@ TEST_CASE("a change to a rule's declarations reaches the elements whose styles w
     PrCssRule* rule = prCssRuleListRuleAt(prCssStyleSheetCssRules(sheet), 0);
     PrCssDeclarationName color = prCssDeclarationNameFromProperty(PrCssProperty_Color);
     prCssStyleDeclarationSetProperty(prCssStylePropertiesAsCssStyleDeclaration(
-                                         prCssStyleRuleStyle(prCssStyleRuleQuery(rule))),
-                                     &color, "blue", false);
+        prCssStyleRuleStyle(prCssStyleRuleQuery(rule))), &color, "blue", false);
     update(page);
     CHECK(resolved(page, "a", PrCssProperty_Color) == "rgb(0, 0, 255)");
     CHECK(resolved(page, "b", PrCssProperty_Color) == "rgb(0, 0, 255)");
@@ -1781,7 +1727,7 @@ TEST_CASE("a change to a rule's declarations reaches the elements whose styles w
 
 TEST_CASE("a change only its parent's style makes restyles an element from what it matched, and one of its own matches") {
     Page page("<style>:root { --c: red } p { color: var(--c) } .x p { margin-top: 3px } .x p.y { margin-top: 5px }"
-              "</style><div class=x><p id=p>p</p><p id=q>q</p></div>");
+        "</style><div class=x><p id=p>p</p><p id=q>q</p></div>");
     CHECK(verified(page.presentation));
     PrDomElement* root = prDomDocumentElement(page.document);
     prDomElementSetAttribute(root, "style", "--c: blue");
@@ -1806,11 +1752,10 @@ TEST_CASE("a change only its parent's style makes restyles an element from what 
 
 TEST_CASE("a selector's ancestors are matched through their ids, classes and types, and only those that carry them") {
     Page page("<style>#r .a > section.b em { color: green } .x span { color: blue } .y + div em { color: red }</style>"
-              "<div id=r><div class=a><section class=b><p><em id=yes>e</em></p></section></div>"
-              "<div class=a><div class=b><em id=type>e</em></div></div>"
-              "<section class=b><em id=child>e</em></section></div>"
-              "<div id=other class=a><section class=b><em id=root>e</em></section></div>"
-              "<div id=late><span id=s>s</span></div><p class=y></p><div><em id=sibling>e</em></div>");
+        "<div id=r><div class=a><section class=b><p><em id=yes>e</em></p></section></div>"
+        "<div class=a><div class=b><em id=type>e</em></div></div><section class=b><em id=child>e</em></section></div>"
+        "<div id=other class=a><section class=b><em id=root>e</em></section></div>"
+        "<div id=late><span id=s>s</span></div><p class=y></p><div><em id=sibling>e</em></div>");
     CHECK(verified(page.presentation));
     CHECK(resolved(page, "yes", PrCssProperty_Color) == "rgb(0, 128, 0)");
     CHECK(resolved(page, "type", PrCssProperty_Color) == "rgb(0, 0, 0)");
@@ -1827,8 +1772,8 @@ TEST_CASE("a selector's ancestors are matched through their ids, classes and typ
 
 TEST_CASE("flow-root and inline-block reach layout in their legacy and two-keyword forms, with used sizes") {
     Page page("<style>body { margin: 0 } #fr { display: flow-root } #fr2 { display: block flow-root }"
-              "#ib { display: inline-block; width: 30px; height: 10px } #ib2 { display: inline flow-root }</style>"
-              "<div id=fr><p>x</p></div><div id=fr2></div><span id=ib></span><span id=ib2>x</span><span id=s>x</span>");
+        "#ib { display: inline-block; width: 30px; height: 10px } #ib2 { display: inline flow-root }</style>"
+        "<div id=fr><p>x</p></div><div id=fr2></div><span id=ib></span><span id=ib2>x</span><span id=s>x</span>");
     CHECK(page.box("fr").display == PrLayoutDisplay_FlowRoot);
     CHECK(page.box("fr2").display == PrLayoutDisplay_FlowRoot);
     CHECK(page.box("ib").display == PrLayoutDisplay_InlineBlock);
@@ -1850,10 +1795,10 @@ TEST_CASE("resolved sizes take the padding layout resolved against the containin
     // The containing block is 200px wide inside its own padding and border, which percentages do not read, and the
     // inline wrappers around each box are no containing blocks: 10% is 20px on every side, and 5% is 10px.
     Page page("<style>body { margin: 0 } #cb { width: 200px; padding: 0 30px; border-left: 7px solid }"
-              "#ib, #img { width: 20px; height: 10px; padding: 10% 5% }"
-              "#bb { display: inline-block; box-sizing: border-box; width: 60px; height: 50px; padding: 10% }"
-              "#ib { display: inline-block }</style>"
-              "<div id=cb><span><span id=ib></span></span><span><img id=img></span><span><span id=bb></span></span></div>");
+        "#ib, #img { width: 20px; height: 10px; padding: 10% 5% }"
+        "#bb { display: inline-block; box-sizing: border-box; width: 60px; height: 50px; padding: 10% }"
+        "#ib { display: inline-block }</style>"
+        "<div id=cb><span><span id=ib></span></span><span><img id=img></span><span><span id=bb></span></span></div>");
     CHECK(page.bounds("ib").right - page.bounds("ib").left == 40.0f);
     CHECK(page.bounds("ib").bottom - page.bounds("ib").top == 50.0f);
     for (const char* id : {"ib", "img"}) {
@@ -1868,14 +1813,12 @@ TEST_CASE("resolved sizes take the padding layout resolved against the containin
 
 TEST_CASE("a flow-relative property computes onto its physical counterpart by the element's own writing mode") {
     Page page("<div id=ltr style='margin-inline-start: 1px; margin-inline-end: 2px; margin-block-start: 3px'>x</div>"
-              "<div id=rtl style='direction: rtl; margin-inline-start: 1px; padding-inline-end: 4px'>x</div>"
-              "<div id=vrl style='writing-mode: vertical-rl; margin-block-start: 5px; inset-inline-start: 6px;"
-              " position: relative'>x</div>"
-              "<div id=vlr style='writing-mode: vertical-lr; direction: rtl; margin-block-end: 7px;"
-              " margin-inline-start: 8px'>x</div>"
-              "<div id=slr style='writing-mode: sideways-lr; margin-inline-start: 9px'>x</div>"
-              "<div id=sizes style='writing-mode: vertical-rl; inline-size: 40px; block-size: 30px;"
-              " min-inline-size: 10px; max-block-size: 50px'>x</div>");
+        "<div id=rtl style='direction: rtl; margin-inline-start: 1px; padding-inline-end: 4px'>x</div>"
+        "<div id=vrl style='writing-mode: vertical-rl; margin-block-start: 5px; inset-inline-start: 6px;"
+        " position: relative'>x</div><div id=vlr style='writing-mode: vertical-lr; direction: rtl; margin-block-end: 7px;"
+        " margin-inline-start: 8px'>x</div><div id=slr style='writing-mode: sideways-lr; margin-inline-start: 9px'>x</div>"
+        "<div id=sizes style='writing-mode: vertical-rl; inline-size: 40px; block-size: 30px;"
+        " min-inline-size: 10px; max-block-size: 50px'>x</div>");
     CHECK(resolved(page, "ltr", PrCssProperty_MarginLeft) == "1px");
     CHECK(resolved(page, "ltr", PrCssProperty_MarginRight) == "2px");
     CHECK(resolved(page, "ltr", PrCssProperty_MarginTop) == "3px");
@@ -1905,13 +1848,11 @@ TEST_CASE("a flow-relative property computes onto its physical counterpart by th
 
 TEST_CASE("a flow-relative declaration and its physical counterpart cascade together, the later winning") {
     Page page("<style>#sheet { margin-left: 5px } #sheet { margin-inline-start: 7px }"
-              "#important { margin-inline-start: 7px !important }</style>"
-              "<div id=logical style='margin-left: 5px; margin-inline-start: 7px'>x</div>"
-              "<div id=physical style='margin-inline-start: 7px; margin-left: 5px'>x</div>"
-              "<div id=sheet>x</div>"
-              "<div id=important style='margin-left: 5px'>x</div>"
-              "<div id=shorthand style='margin: 1px; margin-inline: 2px 3px'>x</div>"
-              "<div id=custom style='--m: 4px; margin-inline: var(--m) 6px'>x</div>");
+        "#important { margin-inline-start: 7px !important }</style>"
+        "<div id=logical style='margin-left: 5px; margin-inline-start: 7px'>x</div>"
+        "<div id=physical style='margin-inline-start: 7px; margin-left: 5px'>x</div><div id=sheet>x</div>"
+        "<div id=important style='margin-left: 5px'>x</div><div id=shorthand style='margin: 1px; margin-inline: 2px 3px'>x</div>"
+        "<div id=custom style='--m: 4px; margin-inline: var(--m) 6px'>x</div>");
     CHECK(resolved(page, "logical", PrCssProperty_MarginLeft) == "7px");
     CHECK(resolved(page, "physical", PrCssProperty_MarginLeft) == "5px");
     CHECK(resolved(page, "sheet", PrCssProperty_MarginLeft) == "7px");
@@ -1928,7 +1869,7 @@ TEST_CASE("a flow-relative property inherits its parent's physical counterpart's
     // csswg-drafts#3029: the child's inline-start is its left, so it inherits the parent's margin-left, though the
     // parent's own inline-start is its right.
     Page page("<div id=parent style='direction: rtl; margin-left: 11px; margin-right: 22px'>"
-              "<div id=child style='direction: ltr; margin-inline-start: inherit'>x</div></div>");
+        "<div id=child style='direction: ltr; margin-inline-start: inherit'>x</div></div>");
     CHECK(resolved(page, "child", PrCssProperty_MarginLeft) == "11px");
     CHECK(resolved(page, "child", PrCssProperty_MarginRight) == "0px");
     CHECK(verified(page.presentation));
@@ -1936,7 +1877,7 @@ TEST_CASE("a flow-relative property inherits its parent's physical counterpart's
 
 TEST_CASE("a border with no style keeps its computed width, which a child inherits, and its used width is 0") {
     Page page("<style>#p { border-width: 20px; border-style: none } #c { border-style: solid; border-width: inherit }"
-              "#m { border-style: solid }</style><div id=p><div id=c></div></div><div id=m></div>");
+        "#m { border-style: solid }</style><div id=p><div id=c></div></div><div id=m></div>");
     CHECK(prLayoutUnitToPx(page.box("p").border[PrRectSide_Top]) == 0.0f);
     CHECK(prLayoutUnitToPx(page.box("c").border[PrRectSide_Top]) == 20.0f);
     CHECK(resolved(page, "p", PrCssProperty_BorderTopWidth) == "0px");
@@ -1948,8 +1889,8 @@ TEST_CASE("a border with no style keeps its computed width, which a child inheri
 
 TEST_CASE("z-index computes to auto or an integer, clamped into 32 bits, and projects as a bit and its integer") {
     Page page("<div id=auto></div><div id=one style='z-index: 1'></div><div id=neg style='z-index: -7'></div>"
-              "<div id=huge style='z-index: 99999999999'></div><div id=low style='z-index: -99999999999'></div>"
-              "<div id=calc style='z-index: calc(5 / 2)'></div><div id=tie style='z-index: calc(-5 / 2)'></div>");
+        "<div id=huge style='z-index: 99999999999'></div><div id=low style='z-index: -99999999999'></div>"
+        "<div id=calc style='z-index: calc(5 / 2)'></div><div id=tie style='z-index: calc(-5 / 2)'></div>");
     CHECK(resolved(page, "auto", PrCssProperty_ZIndex) == "auto");
     CHECK(resolved(page, "one", PrCssProperty_ZIndex) == "1");
     CHECK(resolved(page, "neg", PrCssProperty_ZIndex) == "-7");
@@ -1972,12 +1913,9 @@ TEST_CASE("border widths resolve snapped to whole target pixels, and one under a
     host.font = page.defaultFont;
     host.shaper = page.shaper;
     PrHtmlPage* htmlPage = prHtmlPageCreate(&host);
-    REQUIRE(prHtmlPageLoad(htmlPage,
-                                      "<style>div { border-style: solid }</style><div id=hair style='border-width:"
-                                            " 0.1px'></div><div id=part style='border-width: 1.7px'></div><div id=m>"
-                                            "</div><div id=o style='outline-offset: -0.1px'></div>",
-                                      "about:blank", nullptr)
-            == PrStatus_Ok);
+    REQUIRE(prHtmlPageLoad(htmlPage, "<style>div { border-style: solid }</style><div id=hair style='border-width:"
+        " 0.1px'></div><div id=part style='border-width: 1.7px'></div><div id=m>"
+        "</div><div id=o style='outline-offset: -0.1px'></div>", "about:blank", nullptr) == PrStatus_Ok);
     PrCssPresentation* presentation = prHtmlPagePresentation(htmlPage);
     PrDomDocument* document = prHtmlWindowDocument(prHtmlPageWindow(htmlPage));
     auto width = [&](const char* id, PrCssProperty property) {
@@ -2017,12 +1955,9 @@ TEST_CASE("color-hdr() resolves for the display's headroom, which projects again
     host.font = page.defaultFont;
     host.shaper = page.shaper;
     PrHtmlPage* htmlPage = prHtmlPageCreate(&host);
-    REQUIRE(prHtmlPageLoad(htmlPage,
-                                      "<div id=hdr style='background: color-hdr(color(rec2100-linear 1 1 1) 0, "
-                                      "color(rec2100-linear 4 4 4) 2)'></div><div id=sdr style='background: red'>"
-                                      "</div>",
-                                      "about:blank", nullptr)
-            == PrStatus_Ok);
+    REQUIRE(prHtmlPageLoad(htmlPage, "<div id=hdr style='background: color-hdr(color(rec2100-linear 1 1 1) 0, "
+        "color(rec2100-linear 4 4 4) 2)'></div><div id=sdr style='background: red'></div>", "about:blank", nullptr) ==
+        PrStatus_Ok);
     PrCssPresentation* presentation = prHtmlPagePresentation(htmlPage);
     PrDomDocument* document = prHtmlWindowDocument(prHtmlPageWindow(htmlPage));
     auto background = [&](const char* id) {
@@ -2051,8 +1986,7 @@ TEST_CASE("color-hdr() resolves for the display's headroom, which projects again
     CHECK(sameColor(background("sdr"), PrColor{1, 0, 0, 1}));
     CHECK(verified(presentation));
     // A document that reads no headroom does no work when it changes.
-    REQUIRE(prHtmlPageLoad(htmlPage, "<div style='background: red'></div>", "about:blank", nullptr)
-            == PrStatus_Ok);
+    REQUIRE(prHtmlPageLoad(htmlPage, "<div style='background: red'></div>", "about:blank", nullptr) == PrStatus_Ok);
     presentation = prHtmlPagePresentation(htmlPage);
     prHtmlPresentationUpdate(presentation, prLayoutVecFromPx(PrVec2{800, 600}));
     setHeadroom(htmlPage, 8);
@@ -2067,14 +2001,10 @@ TEST_CASE("an inherited currentcolor and an animated color resolve for the displ
     host.font = page.defaultFont;
     host.shaper = page.shaper;
     PrHtmlPage* htmlPage = prHtmlPageCreate(&host);
-    REQUIRE(prHtmlPageLoad(htmlPage,
-                                      "<style>@keyframes glow { from, to { color: color-hdr(color(rec2100-linear 1 1 "
-                                      "1) 0, color(rec2100-linear 4 4 4) 2) } }</style>"
-                                      "<div style='color: color-hdr(color(rec2100-linear 1 1 1) 0, "
-                                      "color(rec2100-linear 4 4 4) 2)'><div id=inherits style='color: currentcolor'>"
-                                      "</div></div><div id=animated style='animation: glow 100s'></div>",
-                                      "about:blank", nullptr)
-            == PrStatus_Ok);
+    REQUIRE(prHtmlPageLoad(htmlPage, "<style>@keyframes glow { from, to { color: color-hdr(color(rec2100-linear 1 1 "
+        "1) 0, color(rec2100-linear 4 4 4) 2) } }</style><div style='color: color-hdr(color(rec2100-linear 1 1 1) 0, "
+        "color(rec2100-linear 4 4 4) 2)'><div id=inherits style='color: currentcolor'>"
+        "</div></div><div id=animated style='animation: glow 100s'></div>", "about:blank", nullptr) == PrStatus_Ok);
     PrCssPresentation* presentation = prHtmlPagePresentation(htmlPage);
     PrDomDocument* document = prHtmlWindowDocument(prHtmlPageWindow(htmlPage));
     auto color = [&](const char* id) {
@@ -2103,17 +2033,11 @@ TEST_CASE("the color-gamut and dynamic-range media features describe the display
     host.font = page.defaultFont;
     host.shaper = page.shaper;
     PrHtmlPage* htmlPage = prHtmlPageCreate(&host);
-    REQUIRE(prHtmlPageLoad(htmlPage,
-                                      "<style>div { width: 1px }"
-                                      "@media (color-gamut: srgb) { #srgb { width: 2px } }"
-                                      "@media (color-gamut: p3) { #p3 { width: 2px } }"
-                                      "@media (color-gamut: rec2020) { #rec2020 { width: 2px } }"
-                                      "@media (dynamic-range: standard) { #standard { width: 2px } }"
-                                      "@media (dynamic-range: high) { #high { width: 2px } }</style>"
-                                      "<div id=srgb></div><div id=p3></div><div id=rec2020></div>"
-                                      "<div id=standard></div><div id=high></div>",
-                                      "about:blank", nullptr)
-            == PrStatus_Ok);
+    REQUIRE(prHtmlPageLoad(htmlPage, "<style>div { width: 1px }@media (color-gamut: srgb) { #srgb { width: 2px } }"
+        "@media (color-gamut: p3) { #p3 { width: 2px } }@media (color-gamut: rec2020) { #rec2020 { width: 2px } }"
+        "@media (dynamic-range: standard) { #standard { width: 2px } }@media (dynamic-range: high) { #high { width: 2px } }</style>"
+        "<div id=srgb></div><div id=p3></div><div id=rec2020></div>"
+        "<div id=standard></div><div id=high></div>", "about:blank", nullptr) == PrStatus_Ok);
     PrCssPresentation* presentation = prHtmlPagePresentation(htmlPage);
     PrDomDocument* document = prHtmlWindowDocument(prHtmlPageWindow(htmlPage));
     // Returns true if the query that the element's id names matches.
@@ -2160,14 +2084,10 @@ TEST_CASE("the used color scheme follows the user's preference where an element 
     host.font = page.defaultFont;
     host.shaper = page.shaper;
     PrHtmlPage* htmlPage = prHtmlPageCreate(&host);
-    REQUIRE(prHtmlPageLoad(htmlPage,
-                                      "<style>div { background: light-dark(rgb(255, 0, 0), rgb(0, 0, 255)) }</style>"
-                                      "<div id=both style='color-scheme: light dark'></div>"
-                                      "<div id=light style='color-scheme: light'></div>"
-                                      "<div id=dark style='color-scheme: dark'></div><div id=normal></div>"
-                                      "<div id=unknown style='color-scheme: sepia'></div>",
-                                      "about:blank", nullptr)
-            == PrStatus_Ok);
+    REQUIRE(prHtmlPageLoad(htmlPage, "<style>div { background: light-dark(rgb(255, 0, 0), rgb(0, 0, 255)) }</style>"
+        "<div id=both style='color-scheme: light dark'></div><div id=light style='color-scheme: light'></div>"
+        "<div id=dark style='color-scheme: dark'></div><div id=normal></div>"
+        "<div id=unknown style='color-scheme: sepia'></div>", "about:blank", nullptr) == PrStatus_Ok);
     PrCssPresentation* presentation = prHtmlPagePresentation(htmlPage);
     PrDomDocument* document = prHtmlWindowDocument(prHtmlPageWindow(htmlPage));
     // Returns true if the element's background resolved for a dark scheme.
@@ -2190,8 +2110,7 @@ TEST_CASE("the used color scheme follows the user's preference where an element 
     CHECK_FALSE(dark("light"));
     CHECK(dark("dark"));
     CHECK_FALSE(dark("normal"));
-    CHECK(sameColor(prColorFromColor16(prLayoutTreeCanvasColor(prCssPresentationTree(presentation))),
-                    PrColor{1, 1, 1, 1}));
+    CHECK(sameColor(prColorFromColor16(prLayoutTreeCanvasColor(prCssPresentationTree(presentation))), PrColor{1, 1, 1, 1}));
     // A dark preference reaches only the element that allows both schemes, which alone projects again.
     CHECK_FALSE(dark("unknown"));
     prefer(PrAppColorScheme_Dark);
@@ -2202,13 +2121,10 @@ TEST_CASE("the used color scheme follows the user's preference where an element 
     CHECK(verified(presentation));
 
     // The page's supported schemes apply where color-scheme is normal, and the canvas follows the root's scheme.
-    REQUIRE(prHtmlPageLoad(htmlPage,
-                                      "<meta name=color-scheme content='light dark'>"
-                                      "<style>div { background: light-dark(rgb(255, 0, 0), rgb(0, 0, 255)) }</style>"
-                                      "<div id=normal></div><div id=light style='color-scheme: light'></div>"
-                                      "<div id=unknown style='color-scheme: sepia'></div>",
-                                      "about:blank", nullptr)
-            == PrStatus_Ok);
+    REQUIRE(prHtmlPageLoad(htmlPage, "<meta name=color-scheme content='light dark'>"
+        "<style>div { background: light-dark(rgb(255, 0, 0), rgb(0, 0, 255)) }</style>"
+        "<div id=normal></div><div id=light style='color-scheme: light'></div>"
+        "<div id=unknown style='color-scheme: sepia'></div>", "about:blank", nullptr) == PrStatus_Ok);
     presentation = prHtmlPagePresentation(htmlPage);
     document = prHtmlWindowDocument(prHtmlPageWindow(htmlPage));
     prHtmlPresentationUpdate(presentation, prLayoutVecFromPx(PrVec2{800, 600}));
@@ -2221,8 +2137,7 @@ TEST_CASE("the used color scheme follows the user's preference where an element 
     CHECK(canvas.a == 1.0f);
     prefer(PrAppColorScheme_Light);
     CHECK_FALSE(dark("normal"));
-    CHECK(sameColor(prColorFromColor16(prLayoutTreeCanvasColor(prCssPresentationTree(presentation))),
-                    PrColor{1, 1, 1, 1}));
+    CHECK(sameColor(prColorFromColor16(prLayoutTreeCanvasColor(prCssPresentationTree(presentation))), PrColor{1, 1, 1, 1}));
     // A meta that changes its schemes reaches every box.
     PrDomElement* meta = prDomNodeFirstElementChild(prDomElementAsNode(prDomDocumentHead(document)));
     REQUIRE(meta != nullptr);
@@ -2238,8 +2153,8 @@ TEST_CASE("the used color scheme follows the user's preference where an element 
     REQUIRE(prDomElementCreate(document, "meta", nullptr, &later) == PrStatus_Ok);
     prDomElementSetAttribute(later, "name", "color-scheme");
     prDomElementSetAttribute(later, "content", "dark");
-    REQUIRE(prDomNodeAppendChild(prDomElementAsNode(prDomDocumentBody(document)), prDomElementAsNode(later))
-            == PrStatus_Ok);
+    REQUIRE(prDomNodeAppendChild(prDomElementAsNode(prDomDocumentBody(document)), prDomElementAsNode(later)) ==
+        PrStatus_Ok);
     prHtmlPresentationUpdate(presentation, prLayoutVecFromPx(PrVec2{800, 600}));
     CHECK(dark("normal"));
     CHECK(verified(presentation));
@@ -2256,8 +2171,7 @@ TEST_CASE("a frame's document sees its parent's display and user preferences, be
     host.font = page.defaultFont;
     host.shaper = page.shaper;
     PrHtmlPage* htmlPage = prHtmlPageCreate(&host);
-    REQUIRE(prHtmlPageLoad(htmlPage, "<iframe id=early srcdoc='x'></iframe>", "about:blank", nullptr)
-            == PrStatus_Ok);
+    REQUIRE(prHtmlPageLoad(htmlPage, "<iframe id=early srcdoc='x'></iframe>", "about:blank", nullptr) == PrStatus_Ok);
     PrDomDocument* document = prHtmlWindowDocument(prHtmlPageWindow(htmlPage));
     // Returns true if the query matches in the window of the iframe whose id is `id`.
     auto matches = [&](const char* id, const char* query) {
@@ -2276,14 +2190,18 @@ TEST_CASE("a frame's document sees its parent's display and user preferences, be
 
     PrAppDisplay display{.pixelRatio = 2, .headroom = 4, .potentialHeadroom = 8, .gamut = PrColorSpace_DisplayP3};
     prHtmlPageSetDisplay(htmlPage, &display);
-    PrAppUserPreferences preferences{.colorScheme = PrAppColorScheme_Dark,
-                                  .contrast = PrAppContrast_More,
-                                  .reducedMotion = true,
-                                  .reducedTransparency = true};
+    PrAppUserPreferences preferences{
+        .colorScheme = PrAppColorScheme_Dark,
+        .contrast = PrAppContrast_More,
+        .reducedMotion = true,
+        .reducedTransparency = true,
+    };
     prHtmlPageSetUserPreferences(htmlPage, &preferences);
-    const char* const shared[] = {"(resolution: 2dppx)", "(dynamic-range: high)", "(color-gamut: p3)",
-                                  "(prefers-contrast: more)", "(prefers-reduced-motion: reduce)",
-                                  "(prefers-reduced-transparency: reduce)"};
+    const char* const shared[] = {
+        "(resolution: 2dppx)", "(dynamic-range: high)", "(color-gamut: p3)",
+        "(prefers-contrast: more)", "(prefers-reduced-motion: reduce)",
+        "(prefers-reduced-transparency: reduce)",
+    };
     for (const char* query : shared) {
         CAPTURE(query);
         CHECK(matches("early", query));
@@ -2311,15 +2229,11 @@ TEST_CASE("dynamic-range-limit caps an element's colors, and a mix follows the d
     host.font = page.defaultFont;
     host.shaper = page.shaper;
     PrHtmlPage* htmlPage = prHtmlPageCreate(&host);
-    REQUIRE(prHtmlPageLoad(htmlPage,
-                                      "<style>div { background: color(rec2100-linear 4 4 4) }</style>"
-                                      "<div id=standard style='dynamic-range-limit: standard'></div>"
-                                      "<div id=constrained style='dynamic-range-limit: constrained'></div>"
-                                      "<div id=open></div>"
-                                      "<div id=mix style='dynamic-range-limit: dynamic-range-limit-mix(standard 50%,"
-                                      " no-limit 50%)'></div>",
-                                      "about:blank", nullptr)
-            == PrStatus_Ok);
+    REQUIRE(prHtmlPageLoad(htmlPage, "<style>div { background: color(rec2100-linear 4 4 4) }</style>"
+        "<div id=standard style='dynamic-range-limit: standard'></div>"
+        "<div id=constrained style='dynamic-range-limit: constrained'></div><div id=open></div>"
+        "<div id=mix style='dynamic-range-limit: dynamic-range-limit-mix(standard 50%,"
+        " no-limit 50%)'></div>", "about:blank", nullptr) == PrStatus_Ok);
     PrCssPresentation* presentation = prHtmlPagePresentation(htmlPage);
     PrDomDocument* document = prHtmlWindowDocument(prHtmlPageWindow(htmlPage));
     auto decoration = [&](const char* id) {
@@ -2347,7 +2261,7 @@ TEST_CASE("dynamic-range-limit caps an element's colors, and a mix follows the d
 
 TEST_CASE("a br breaks its line whatever its own white space, and what it holds has no boxes") {
     Page page("<style>div { width: 400px; line-height: 20px }</style><div id=d>a<br id=b style='white-space: normal'>b"
-              "</div><pre id=p style='margin: 0; line-height: 20px'>a\n  b</pre>");
+        "</div><pre id=p style='margin: 0; line-height: 20px'>a\n  b</pre>");
     CHECK(double(page.bounds("d").bottom - page.bounds("d").top) == doctest::Approx(40.0));
     CHECK(double(page.bounds("p").bottom - page.bounds("p").top) == doctest::Approx(40.0));
     CHECK(resolved(page, "p", PrCssProperty_WhiteSpaceCollapse) == "preserve");
@@ -2371,11 +2285,10 @@ TEST_CASE("a br's own font and alignment take no part in its line, but its clear
     // A br of a larger font, or of taller lines, leaves its line as tall as the text around it. Alone in a block, the
     // br gives the block the strut's height.
     Page page("<style>body { margin: 0; font: 5px/1 Arimo } div { width: 200px }</style>"
-              "<div id=fs>XXX<br style='font-size: 25px'>XX</div>"
-              "<div id=lh>XXX<br style='line-height: 5'>XX</div>"
-              "<div id=only><br style='font-size: 40px'></div>"
-              "<div id=va style='font: 20px/40px Arimo'>a<br style='vertical-align: 30px'>b</div>"
-              "<div id=span>XXX<span style='font-size: 25px'><br></span>XX</div>");
+        "<div id=fs>XXX<br style='font-size: 25px'>XX</div><div id=lh>XXX<br style='line-height: 5'>XX</div>"
+        "<div id=only><br style='font-size: 40px'></div>"
+        "<div id=va style='font: 20px/40px Arimo'>a<br style='vertical-align: 30px'>b</div>"
+        "<div id=span>XXX<span style='font-size: 25px'><br></span>XX</div>");
     auto height = [&](const char* id) { return double(page.bounds(id).bottom - page.bounds(id).top); };
     CHECK(height("fs") == doctest::Approx(10.0));
     CHECK(height("lh") == doctest::Approx(10.0));
@@ -2386,8 +2299,8 @@ TEST_CASE("a br's own font and alignment take no part in its line, but its clear
 
     // Clearing puts the line after it below the float, and at the end of the content its block ends there too.
     Page clears("<style>body { margin: 0; font: 20px/40px Arimo } .f { float: left; width: 10px; height: 60px }"
-                "</style><div id=c><span class=f></span>a<br style='clear: left'>b</div>"
-                "<div id=e><span class=f></span>a<br style='clear: left'></div>");
+        "</style><div id=c><span class=f></span>a<br style='clear: left'>b</div>"
+        "<div id=e><span class=f></span>a<br style='clear: left'></div>");
     CHECK(double(clears.bounds("c").bottom - clears.bounds("c").top) == doctest::Approx(100.0));
     CHECK(double(clears.bounds("e").bottom - clears.bounds("e").top) == doctest::Approx(60.0));
     CHECK(verified(clears.presentation));
@@ -2402,9 +2315,9 @@ TEST_CASE("the root's display is blockified, and its block box fills the viewpor
     // A table shrinks to fit its content even as the root (css-tables-3/#layout-principles). Its width is the body's
     // margins around an x.
     for (Case c : {Case{"inline", "block", "800px"}, Case{"inline-block", "block", "800px"},
-                   Case{"inline flow-root", "block", "800px"}, Case{"inline-table", "table", "24px"},
-                   Case{"inline list-item", "list-item", "800px"}, Case{"initial", "block", "800px"},
-                   Case{"inherit", "block", "800px"}}) {
+        Case{"inline flow-root", "block", "800px"}, Case{"inline-table", "table", "24px"},
+                Case{"inline list-item", "list-item", "800px"}, Case{"initial", "block", "800px"},
+                Case{"inherit", "block", "800px"}}) {
         CAPTURE(c.display);
         std::string html = std::string("<html id=r style='display: ") + c.display + "'><body>x</body></html>";
         Page page(html.c_str());
@@ -2417,12 +2330,12 @@ TEST_CASE("the root's display is blockified, and its block box fills the viewpor
 
 TEST_CASE("float and clear reach layout, and a floated element's display is blockified") {
     Page page("<style>body { margin: 0; width: 200px } .f { width: 60px; height: 20px }</style>"
-              "<span id=l class=f style='float: left'></span><div id=r class=f style='float: right'></div>"
-              "<div id=s class=f style='float: inline-start'></div><div id=e class=f style='float: inline-end'></div>"
-              "<div id=a class=f style='float: left; position: absolute'></div>"
-              "<div id=c style='clear: both; height: 5px'></div><div id=cs style='clear: inline-start'></div>"
-              "<span id=i style='float: left; display: inline-block'></span>"
-              "<span id=n style='float: inherit'><span id=inherit style='float: inherit; display: inherit'></span></span>");
+        "<span id=l class=f style='float: left'></span><div id=r class=f style='float: right'></div>"
+        "<div id=s class=f style='float: inline-start'></div><div id=e class=f style='float: inline-end'></div>"
+        "<div id=a class=f style='float: left; position: absolute'></div>"
+        "<div id=c style='clear: both; height: 5px'></div><div id=cs style='clear: inline-start'></div>"
+        "<span id=i style='float: left; display: inline-block'></span>"
+        "<span id=n style='float: inherit'><span id=inherit style='float: inherit; display: inherit'></span></span>");
     CHECK(page.box("l").floating == PrLayoutFloat_Left);
     CHECK(page.box("r").floating == PrLayoutFloat_Right);
     CHECK(page.box("s").floating == PrLayoutFloat_InlineStart);
@@ -2445,10 +2358,10 @@ TEST_CASE("float and clear reach layout, and a floated element's display is bloc
 
 TEST_CASE("absolute and fixed positions reach layout, blockified, their float none, keeping whether they were inline") {
     Page page("<style>body { margin: 0 } .a { position: absolute }</style>"
-              "<span id=a class=a>a</span><span id=ib class=a style='display: inline-block'>b</span>"
-              "<div id=d class=a></div><div id=x style='position: fixed'></div><div id=f class=a style='float: left'>"
-              "</div><div id=s style='position: sticky'></div><div id=r style='position: relative'></div>"
-              "<span id=t style='transform: translateX(0)'>t</span><div id=n></div>");
+        "<span id=a class=a>a</span><span id=ib class=a style='display: inline-block'>b</span>"
+        "<div id=d class=a></div><div id=x style='position: fixed'></div><div id=f class=a style='float: left'>"
+        "</div><div id=s style='position: sticky'></div><div id=r style='position: relative'></div>"
+        "<span id=t style='transform: translateX(0)'>t</span><div id=n></div>");
     CHECK(page.box("a").position == PrLayoutPosition_Absolute);
     CHECK(page.box("x").position == PrLayoutPosition_Fixed);
     CHECK(page.box("s").position == PrLayoutPosition_Sticky);
@@ -2475,11 +2388,11 @@ TEST_CASE("absolute and fixed positions reach layout, blockified, their float no
 
 TEST_CASE("flex containers and the flex longhands reach layout, and flex items are blockified") {
     Page page("<style>body { margin: 0; font: 20px/20px Arimo } span { width: 50px }</style>"
-              "<div id=c style='display: flex; flex-direction: column-reverse; flex-wrap: wrap; row-gap: 5px; "
-              "justify-content: safe center; align-items: last baseline; align-content: space-evenly'>"
-              "<span id=i style='flex: 2 0 10px; order: 3; align-self: flex-end'>a</span><span id=j>b</span>"
-              "<div style='display: contents'><span id=k style='display: inline-block'>c</span></div></div>"
-              "<span id=n style='display: inline-flex; flex-basis: content'><b id=b>d</b></span>");
+        "<div id=c style='display: flex; flex-direction: column-reverse; flex-wrap: wrap; row-gap: 5px; "
+        "justify-content: safe center; align-items: last baseline; align-content: space-evenly'>"
+        "<span id=i style='flex: 2 0 10px; order: 3; align-self: flex-end'>a</span><span id=j>b</span>"
+        "<div style='display: contents'><span id=k style='display: inline-block'>c</span></div></div>"
+        "<span id=n style='display: inline-flex; flex-basis: content'><b id=b>d</b></span>");
     CHECK(page.box("c").display == PrLayoutDisplay_Flex);
     CHECK(page.box("n").display == PrLayoutDisplay_InlineFlex);
     PrLayoutFlexStyle c = page.flex("c");
@@ -2523,10 +2436,10 @@ TEST_CASE("flex containers and the flex longhands reach layout, and flex items a
 
 TEST_CASE("grid containers and the grid longhands reach layout, and the track lists resolve to their used sizes") {
     Page page("<style>body { margin: 0; font: 20px/20px Arimo }</style>"
-              "<div id=c style='display: grid; width: 300px; grid-template-columns: [a] 100px repeat(2, [b] 1fr); "
-              "grid-auto-rows: 30px; grid-auto-flow: column dense; column-gap: 10px'>"
-              "<i id=i style='grid-column: b 2 / span 1; grid-row: 2'></i><i id=j></i></div>"
-              "<span id=n style='display: inline-grid'></span>");
+        "<div id=c style='display: grid; width: 300px; grid-template-columns: [a] 100px repeat(2, [b] 1fr); "
+        "grid-auto-rows: 30px; grid-auto-flow: column dense; column-gap: 10px'>"
+        "<i id=i style='grid-column: b 2 / span 1; grid-row: 2'></i><i id=j></i></div>"
+        "<span id=n style='display: inline-grid'></span>");
     CHECK(page.box("c").display == PrLayoutDisplay_Grid);
     CHECK(page.box("n").display == PrLayoutDisplay_InlineGrid);
     PrLayoutGridStyle c = page.grid("c");
@@ -2549,9 +2462,8 @@ TEST_CASE("grid containers and the grid longhands reach layout, and the track li
 
 TEST_CASE("grid-template-areas folds its strings, and strings that form no template are invalid") {
     Page page("<div id=a style='grid-template-areas: \"a   a ...\" \"b b  .\"'></div>"
-              "<div id=b style='grid-template-areas: \"a b\" \"b a\"'></div>"
-              "<div id=c style='grid-template-areas: \"a\" \"b c\"'></div>"
-              "<div id=d style='grid-template-areas: \"a !\"'></div>");
+        "<div id=b style='grid-template-areas: \"a b\" \"b a\"'></div><div id=c style='grid-template-areas: \"a\" \"b c\"'></div>"
+        "<div id=d style='grid-template-areas: \"a !\"'></div>");
     CHECK(resolved(page, "a", PrCssProperty_GridTemplateAreas) == "\"a a .\" \"b b .\"");
     CHECK(resolved(page, "b", PrCssProperty_GridTemplateAreas) == "none");
     CHECK(resolved(page, "c", PrCssProperty_GridTemplateAreas) == "none");
@@ -2560,8 +2472,8 @@ TEST_CASE("grid-template-areas folds its strings, and strings that form no templ
 
 TEST_CASE("percentage margins and padding resolve to their used lengths") {
     Page page("<style>body { margin: 0 }</style>"
-              "<div style='width: 200px'><div id=a style='padding-left: 10%; margin-top: 25%; margin-left: auto'>"
-              "</div></div><span id=s style='padding-left: 10%'></span>");
+        "<div style='width: 200px'><div id=a style='padding-left: 10%; margin-top: 25%; margin-left: auto'>"
+        "</div></div><span id=s style='padding-left: 10%'></span>");
     CHECK(resolved(page, "a", PrCssProperty_PaddingLeft) == "20px");
     CHECK(resolved(page, "a", PrCssProperty_MarginTop) == "50px");
     CHECK(resolved(page, "a", PrCssProperty_MarginLeft) == "auto");
@@ -2571,13 +2483,13 @@ TEST_CASE("percentage margins and padding resolve to their used lengths") {
 
 TEST_CASE("an element of display contents gives its parent's box its children's boxes") {
     Page page("<style>body { margin: 0 } i { width: 10px; height: 10px } .w { width: 20px }</style>"
-              "<div id=c style='display: flex'><i id=a></i><div id=w style='display: contents'><i id=b class=w></i>"
-              "t<span id=s>x</span><i id=d></i></div><i id=e></i></div>");
+        "<div id=c style='display: flex'><i id=a></i><div id=w style='display: contents'><i id=b class=w></i>"
+        "t<span id=s>x</span><i id=d></i></div><i id=e></i></div>");
     PrLayoutTree* tree = prCssPresentationTree(page.presentation);
     auto count = [&](PrLayoutNode box) {
         uint32_t n = 0;
         for (PrLayoutNode c = prLayoutNodeFirstChild(tree, box); c != kPrLayoutNodeNone;
-             c = prLayoutNodeNextSibling(tree, c))
+                c = prLayoutNodeNextSibling(tree, c))
             ++n;
         return n;
     };
@@ -2627,7 +2539,7 @@ TEST_CASE("an element of display contents gives its parent's box its children's 
 
 TEST_CASE("text in an element of display contents inherits from it") {
     Page page("<style>body { margin: 0; font: 20px/20px Arimo } .w { display: contents; white-space: pre; "
-              "font-size: 40px; line-height: 40px }</style><div id=c><div id=w class=w>a\nb</div></div>");
+        "font-size: 40px; line-height: 40px }</style><div id=c><div id=w class=w>a\nb</div></div>");
     // The text is the container's, set in the wrapper's record: two lines of 40px.
     CHECK(page.node("w") == kPrLayoutNodeNone);
     CHECK(double(page.bounds("c").bottom) == doctest::Approx(80.0));
@@ -2647,12 +2559,12 @@ TEST_CASE("text in an element of display contents inherits from it") {
 
 TEST_CASE("offsetParent is the nearest containing block of a box out of flow's kind, or of absolute boxes") {
     Page page("<style>body { margin: 0 } .a { position: absolute }</style>"
-              "<div id=ops style='position: relative; padding-top: 5px'><div style='margin-top: 10px'>"
-              "<i id=opa class=a style='top: 20px'></i></div></div>"
-              "<div id=tr style='transform: translateX(0)'><div id=rel style='position: relative; margin-top: 10px'>"
-              "<i id=held style='position: fixed; top: 20px'></i></div></div><i id=free style='position: fixed'></i>"
-              "<div>x<span id=opis style='position: relative; padding-left: 10px'>yy<i id=opi class=a style='left: 0'>"
-              "</i></span></div>");
+        "<div id=ops style='position: relative; padding-top: 5px'><div style='margin-top: 10px'>"
+        "<i id=opa class=a style='top: 20px'></i></div></div>"
+        "<div id=tr style='transform: translateX(0)'><div id=rel style='position: relative; margin-top: 10px'>"
+        "<i id=held style='position: fixed; top: 20px'></i></div></div><i id=free style='position: fixed'></i>"
+        "<div>x<span id=opis style='position: relative; padding-left: 10px'>yy<i id=opi class=a style='left: 0'>"
+        "</i></span></div>");
     auto html = [&](const char* id) {
         return prHtmlElementQuery(prDomNodeAsEventTarget(prDomElementAsNode(byId(page, id))));
     };
@@ -2688,13 +2600,13 @@ TEST_CASE("the overflow pair computes together: visible and clip beside a scroll
         const char* computedY;
     };
     for (Case c : {Case{"visible", "hidden", "auto", "hidden"}, Case{"clip", "scroll", "hidden", "scroll"},
-                   Case{"auto", "visible", "auto", "auto"}, Case{"clip", "visible", "clip", "visible"},
-                   Case{"visible", "clip", "visible", "clip"}, Case{"hidden", "clip", "hidden", "hidden"},
-                   Case{"inherit", "visible", "scroll", "auto"}}) {
+        Case{"auto", "visible", "auto", "auto"}, Case{"clip", "visible", "clip", "visible"},
+                Case{"visible", "clip", "visible", "clip"}, Case{"hidden", "clip", "hidden", "hidden"},
+                Case{"inherit", "visible", "scroll", "auto"}}) {
         CAPTURE(c.x);
         CAPTURE(c.y);
-        std::string html = std::string("<div style='overflow-x: scroll; overflow-y: hidden'><div id=e style='overflow-x: ")
-                           + c.x + "; overflow-y: " + c.y + "'></div></div>";
+        std::string html = std::string("<div style='overflow-x: scroll; overflow-y: hidden'><div id=e style='overflow-x: ") +
+            c.x + "; overflow-y: " + c.y + "'></div></div>";
         Page page(html.c_str());
         CHECK(resolved(page, "e", PrCssProperty_OverflowX) == c.computedX);
         CHECK(resolved(page, "e", PrCssProperty_OverflowY) == c.computedY);
@@ -2705,8 +2617,8 @@ TEST_CASE("the overflow pair computes together: visible and clip beside a scroll
 TEST_CASE("a scroll container with visible in one axis clips both, and is hit in neither past its edge") {
     for (const char* axis : {"overflow-y", "overflow-x"}) {
         CAPTURE(axis);
-        std::string html = std::string("<style>body { margin: 0 }</style><div id=p style='width: 20px; height: 20px; ")
-                           + axis + ": hidden'><div id=c style='width: 40px; height: 40px'></div></div>";
+        std::string html = std::string("<style>body { margin: 0 }</style><div id=p style='width: 20px; height: 20px; ") +
+            axis + ": hidden'><div id=c style='width: 40px; height: 40px'></div></div>";
         Page page(html.c_str());
         PrLayoutTree* tree = prCssPresentationTree(page.presentation);
         PrLayoutNode hit = kPrLayoutNodeNone;
@@ -2722,8 +2634,8 @@ TEST_CASE("a scroll container with visible in one axis clips both, and is hit in
 
 TEST_CASE("overflow clip clips without making a scroll container or a formatting context") {
     Page page("<style>body { margin: 0 } p { margin: 20px 0 }</style>"
-              "<div id=clip style='overflow: clip; height: 50px'><p id=p>x</p><div style='height: 200px'></div></div>"
-              "<div id=hidden style='overflow: hidden; height: 50px'><p id=q>x</p></div>");
+        "<div id=clip style='overflow: clip; height: 50px'><p id=p>x</p><div style='height: 200px'></div></div>"
+        "<div id=hidden style='overflow: hidden; height: 50px'><p id=q>x</p></div>");
     CHECK(page.box("clip").overflowY == PrLayoutOverflow_Clip);
     // Its child's margin collapses through it, as through a block whose overflow is visible.
     CHECK(page.bounds("clip").top == 20.0f);
@@ -2738,7 +2650,7 @@ TEST_CASE("overflow clip clips without making a scroll container or a formatting
 
 TEST_CASE("an update restyles what changed, and keeps the rest") {
     Page page("<style>.x { color: red } .wide { width: 50px } .gone { display: none }</style>"
-              "<div id=outer><div id=a>a</div><div id=b>b</div><p id=c>c</p></div>");
+        "<div id=outer><div id=a>a</div><div id=b>b</div><p id=c>c</p></div>");
     CHECK(verified(page.presentation));
 
     // Nothing changed.
@@ -2793,7 +2705,7 @@ TEST_CASE("an update restyles what changed, and keeps the rest") {
 TEST_CASE("a change to the root's font size restyles what reads rem, whichever size it changes from") {
     // #r's parent computes the same values whatever the root's size, so only rem reaches #r.
     Page page("<style>html { font-size: 2rem } #fixed { font-size: 10px } #r { padding-left: 1rem }</style>"
-              "<div id=fixed><div id=r>text</div></div>");
+        "<div id=fixed><div id=r>text</div></div>");
     // rem in the root's own font-size is relative to the initial size.
     CHECK(px(page.box("r").padding[PrRectSide_Left]) == 32.0f);
     PrDomElement* root = prDomDocumentElement(page.document);
@@ -2811,7 +2723,7 @@ TEST_CASE("a change to the root's font size restyles what reads rem, whichever s
 
 TEST_CASE("a rule inserted, removed or edited restyles the elements its selectors file under") {
     Page page("<style>.x { color: red }</style><style id=own></style>"
-              "<div id=a class=card><span id=s>s</span><p>p</p></div><div id=b><span>t</span></div><em>e</em>");
+        "<div id=a class=card><span id=s>s</span><p>p</p></div><div id=b><span>t</span></div><em>e</em>");
     PrCssStyleSheetList* sheets = prCssDocumentStyleSheets(page.document);
     REQUIRE(prCssStyleSheetListLength(sheets) == 2);
     PrCssStyleSheet* own = prCssStyleSheetListStyleSheetAt(sheets, 1);
@@ -2832,7 +2744,7 @@ TEST_CASE("a rule inserted, removed or edited restyles the elements its selector
     REQUIRE(rule != nullptr);
     PrCssDeclarationName color = prCssDeclarationNameFromProperty(PrCssProperty_Color);
     prCssStyleDeclarationSetProperty(prCssStylePropertiesAsCssStyleDeclaration(prCssStyleRuleStyle(rule)), &color,
-                                     "green", false);
+        "green", false);
     CHECK(update(page).elementsStyled == 1);
 
     // A rule that a selector with no feature can match restyles every element.
@@ -2842,7 +2754,7 @@ TEST_CASE("a rule inserted, removed or edited restyles the elements its selector
 
 TEST_CASE("selectors that combine elements restyle what a change reaches") {
     Page page("<style>.on .inner { color: red } .on + p { color: blue } li:first-child { color: green }</style>"
-              "<div id=d><span class=inner id=i>x</span></div><p id=p>p</p><ul id=u><li id=l1>1</li></ul>");
+        "<div id=d><span class=inner id=i>x</span></div><p id=p>p</p><ul id=u><li id=l1>1</li></ul>");
     // A class on an ancestor restyles its descendants, and on a sibling its later siblings.
     prDomElementSetAttribute(byId(page, "d"), "class", "on");
     update(page);
@@ -2851,8 +2763,7 @@ TEST_CASE("selectors that combine elements restyle what a change reaches") {
     // A child added before another changes which is first.
     PrDomElement* first = nullptr;
     REQUIRE(prDomElementCreate(page.document, "li", nullptr, &first) == PrStatus_Ok);
-    prDomNodeInsertBefore(prDomElementAsNode(byId(page, "u")), prDomElementAsNode(first),
-                          prDomElementAsNode(byId(page, "l1")));
+    prDomNodeInsertBefore(prDomElementAsNode(byId(page, "u")), prDomElementAsNode(first), prDomElementAsNode(byId(page, "l1")));
     update(page);
     CHECK(prColorFromColor16(page.color("l1").color).g == 0.0f);
 }
@@ -2870,19 +2781,20 @@ TEST_CASE("a scroll set while the layout thread lays out applies as the presenta
 TEST_CASE("the presentations of an agent's documents lay out in turn on the agent's one layout thread") {
     Page page("<style>body { margin: 0 }</style><div id=a style='height: 10px'></div>");
     PrDomDocument* other = prHtmlDomParserParseFromString("<div style='height: 20px'>other</div>",
-                                                          PrHtmlDomParserSupportedType_TextHtml);
+        PrHtmlDomParserSupportedType_TextHtml);
     uint32_t sheetCount = 0;
     const PrCssUserAgentSheet* sheets = prHtmlUserAgentSheets(&sheetCount);
-    PrCssPresentationDesc desc{.document = other,
-                         .font = page.defaultFont,
-                         .shaper = page.shaper,
-                         .agent = page.agent,
-                         .userAgentSheets = sheets,
-                         .userAgentSheetCount = sheetCount};
+    PrCssPresentationDesc desc{
+        .document = other,
+        .font = page.defaultFont,
+        .shaper = page.shaper,
+        .agent = page.agent,
+        .userAgentSheets = sheets,
+        .userAgentSheetCount = sheetCount,
+    };
     PrCssPresentation* presentation = prCssPresentationCreate(&desc);
     std::atomic<uint32_t> done{0};
-    prDomAgentSetLayoutDone(
-        page.agent, [](void* context) { static_cast<std::atomic<uint32_t>*>(context)->fetch_add(1); }, &done);
+    prDomAgentSetLayoutDone(page.agent, [](void* context) { static_cast<std::atomic<uint32_t>*>(context)->fetch_add(1); }, &done);
     for (uint32_t frame = 0; frame < 10; ++frame) {
         prDomElementSetAttribute(byId(page, "a"), "style", (frame % 2 == 0 ? "height: 30px" : "height: 10px"));
         prHtmlPresentationStart(page.presentation, prLayoutVecFromPx(PrVec2{800, 600}));
@@ -2915,8 +2827,7 @@ TEST_CASE("a job budget takes new content in in steps, and changes to the conten
         prDomNodeAppendChild(list, prDomElementAsNode(item));
     }
     std::atomic<uint32_t> done{0};
-    prDomAgentSetLayoutDone(
-        page.agent, [](void* context) { static_cast<std::atomic<uint32_t>*>(context)->fetch_add(1); }, &done);
+    prDomAgentSetLayoutDone(page.agent, [](void* context) { static_cast<std::atomic<uint32_t>*>(context)->fetch_add(1); }, &done);
     // The smallest budget takes in the fewest elements that a job takes.
     prCssPresentationSetJobBudget(page.presentation, 1e-6);
     auto job = [&] {
@@ -2965,7 +2876,7 @@ TEST_CASE("a presentation lays out and records on its own thread while the docum
         // The paragraphs added at frames 0, 5, 10... are taken out again two frames later.
         if (frame % 5 == 2)
             prDomNodeRemoveChild(prDomElementAsNode(byId(page, "outer")),
-                                 prDomNodeLastChild(prDomElementAsNode(byId(page, "outer"))));
+                prDomNodeLastChild(prDomElementAsNode(byId(page, "outer"))));
         const PrLayoutScene* scene = prCssPresentationTakeScene(page.presentation);
         REQUIRE(scene != nullptr);
         prDrawListClear(list);
@@ -2995,8 +2906,8 @@ TEST_CASE("queries between a removal and the next update answer no node that lef
 
 TEST_CASE("a child added restyles a sibling's subtree only where a selector reads the sibling's place from below it") {
     Page page("<style>.s:last-child { background-color: blue } .t:last-child p { color: red }</style>"
-              "<div id=a><div class=s id=s1><p>1</p><p>2</p><p>3</p></div></div>"
-              "<div id=b><div class=t id=t1><p id=p1>1</p><p>2</p><p>3</p></div></div>");
+        "<div id=a><div class=s id=s1><p>1</p><p>2</p><p>3</p></div></div>"
+        "<div id=b><div class=t id=t1><p id=p1>1</p><p>2</p><p>3</p></div></div>");
     CHECK(prColorFromColor16(page.color("p1").color).r > 0.0f);
 
     // The section that was last is restyled, but not its paragraphs, which no selector reaches through the section's
@@ -3018,11 +2929,10 @@ TEST_CASE("a child added restyles a sibling's subtree only where a selector read
 
 TEST_CASE("a child added restyles its siblings only where a selector read their places") {
     Page page("<style>li:last-child { color: green } .c { --a: 1 } .c.z { background-color: blue } p:empty { color: red }"
-              "h1 + p { color: red } h2 ~ i { color: blue } b:nth-last-child(3) { color: green }</style><p id=e></p>"
-              "<div id=s><p id=s1>1</p><p id=s2>2</p></div><div id=t><i id=t1>1</i><i id=t2>2</i></div>"
-              "<div id=n><b id=n1>1</b><b id=n2>2</b></div>"
-              "<div id=d><span>a</span><span>b</span><span>c</span></div>"
-              "<ul id=u><li id=l1>1</li><li id=l2>2</li></ul><div id=c class=c><b>x</b><b>y</b></div>");
+        "h1 + p { color: red } h2 ~ i { color: blue } b:nth-last-child(3) { color: green }</style><p id=e></p>"
+        "<div id=s><p id=s1>1</p><p id=s2>2</p></div><div id=t><i id=t1>1</i><i id=t2>2</i></div>"
+        "<div id=n><b id=n1>1</b><b id=n2>2</b></div><div id=d><span>a</span><span>b</span><span>c</span></div>"
+        "<ul id=u><li id=l1>1</li><li id=l2>2</li></ul><div id=c class=c><b>x</b><b>y</b></div>");
     PrDomElement* added = nullptr;
     REQUIRE(prDomElementCreate(page.document, "span", nullptr, &added) == PrStatus_Ok);
     prDomNodeAppendChild(prDomElementAsNode(byId(page, "d")), prDomElementAsNode(added));
@@ -3043,13 +2953,13 @@ TEST_CASE("a child added restyles its siblings only where a selector read their 
     PrDomElement* heading = nullptr;
     REQUIRE(prDomElementCreate(page.document, "h1", nullptr, &heading) == PrStatus_Ok);
     prDomNodeInsertBefore(prDomElementAsNode(byId(page, "s")), prDomElementAsNode(heading),
-                          prDomElementAsNode(byId(page, "s1")));
+        prDomElementAsNode(byId(page, "s1")));
     CHECK(update(page).elementsStyled == 2);
     CHECK(prColorFromColor16(page.color("s1").color).r > 0.0f);
     CHECK(prColorFromColor16(page.color("s2").color).r == 0.0f);
     REQUIRE(prDomElementCreate(page.document, "h2", nullptr, &heading) == PrStatus_Ok);
     prDomNodeInsertBefore(prDomElementAsNode(byId(page, "t")), prDomElementAsNode(heading),
-                          prDomElementAsNode(byId(page, "t1")));
+        prDomElementAsNode(byId(page, "t1")));
     CHECK(update(page).elementsStyled == 3);
     CHECK(prColorFromColor16(page.color("t2").color).b > 0.0f);
     REQUIRE(prDomElementCreate(page.document, "b", nullptr, &added) == PrStatus_Ok);
@@ -3081,10 +2991,8 @@ TEST_CASE("a new viewport restyles only where a style reads it, and new media on
     host.font = page.defaultFont;
     host.shaper = page.shaper;
     PrHtmlPage* htmlPage = prHtmlPageCreate(&host);
-    REQUIRE(prHtmlPageLoad(htmlPage,
-                                      "<style>@media (min-width: 500px) { p { color: red } }</style><p>a</p>",
-                                      "about:blank", nullptr)
-            == PrStatus_Ok);
+    REQUIRE(prHtmlPageLoad(htmlPage, "<style>@media (min-width: 500px) { p { color: red } }</style><p>a</p>",
+        "about:blank", nullptr) == PrStatus_Ok);
     PrCssPresentation* presentation = prHtmlPagePresentation(htmlPage);
     prHtmlPageSetMediaFeature(htmlPage, PrCssDescriptor_MediaWidth, "800px");
     prHtmlPresentationUpdate(presentation, prLayoutVecFromPx(PrVec2{800, 600}));
@@ -3099,12 +3007,12 @@ TEST_CASE("a new viewport restyles only where a style reads it, and new media on
 
 TEST_CASE("a change restyles the elements whose selectors read the feature that changed") {
     Page page("<style>.on .inner { color: red } .on > b { color: blue } .lead ~ p { color: green }"
-              "#key { width: 5px } #key[data-x] { width: 6px } .menu:hover .item { color: red }"
-              ".self { color: blue } li:nth-child(odd of .pick) { color: red }</style>"
-              "<div id=d><span class=inner id=i>x</span><span>y</span><b id=b>z</b><i><span class=inner>w</span></i>"
-              "</div><p id=p1>p</p><p id=p2>p</p><p id=p3>p</p>"
-              "<div id=m class=menu><span class=item id=item>a</span><span>b</span></div>"
-              "<ul id=u><li id=l1>1</li><li id=l2>2</li><li id=l3>3</li></ul>");
+        "#key { width: 5px } #key[data-x] { width: 6px } .menu:hover .item { color: red }"
+        ".self { color: blue } li:nth-child(odd of .pick) { color: red }</style>"
+        "<div id=d><span class=inner id=i>x</span><span>y</span><b id=b>z</b><i><span class=inner>w</span></i>"
+        "</div><p id=p1>p</p><p id=p2>p</p><p id=p3>p</p>"
+        "<div id=m class=menu><span class=item id=item>a</span><span>b</span></div>"
+        "<ul id=u><li id=l1>1</li><li id=l2>2</li><li id=l3>3</li></ul>");
 
     // A class on an ancestor restyles the descendants that its selectors name, and not the ancestor or the rest.
     prDomElementSetAttribute(byId(page, "d"), "class", "on");
@@ -3156,9 +3064,9 @@ TEST_CASE("a change restyles the elements whose selectors read the feature that 
 
 TEST_CASE("a restyle of whole subtrees divides its work among a pool's threads, and gives the styles one thread does") {
     std::string html = "<style>.row:nth-child(odd) { color: blue } .row .cell { padding-left: 2px }"
-                       ".dark * { color: white; background-color: black } :root { --gap: 3px }"
-                       ".cell { margin-top: var(--gap) } :disabled { color: gray } input:default { width: 3px }"
-                       "</style><form id=f></form><div id=top>";
+        ".dark * { color: white; background-color: black } :root { --gap: 3px }"
+        ".cell { margin-top: var(--gap) } :disabled { color: gray } input:default { width: 3px }"
+        "</style><form id=f></form><div id=top>";
     for (uint32_t row = 0; row < 100; ++row) {
         // States that the selectors read, one of which looks up the form by ID.
         html += "<div class=row><input type=submit form=f>";
@@ -3191,7 +3099,7 @@ TEST_CASE("a parallel restyle under an element with a running transition inherit
     // The threads compute each style under its parent's style from the cascade, which a running transition is not part
     // of.
     std::string html = "<style>.x { color: black; transition: color 1s linear } .x.on { color: red }"
-                       " .dark * { padding-left: 1px }</style><div id=top><div id=a class=x>";
+        " .dark * { padding-left: 1px }</style><div id=top><div id=a class=x>";
     for (uint32_t i = 0; i < 600; ++i)
         html += "<span>x</span>";
     html += "</div></div>";
@@ -3213,10 +3121,9 @@ TEST_CASE("a parallel restyle under an element with a running transition inherit
 
 TEST_CASE("a transition repaints, relayouts or composites as its property says, frame by frame") {
     Page page("<style>body { margin: 0 } div { height: 10px; transition: all 1s linear }"
-              "#paint { background-color: rgb(255, 0, 0) } #paint.on { background-color: rgb(0, 0, 255) }"
-              "#size { width: 100px } #size.on { width: 200px }"
-              "#fade { opacity: 0.8 } #fade.on { opacity: 0.2 }</style>"
-              "<div id=paint></div><div id=size></div><div id=fade>text</div>");
+        "#paint { background-color: rgb(255, 0, 0) } #paint.on { background-color: rgb(0, 0, 255) }"
+        "#size { width: 100px } #size.on { width: 200px }#fade { opacity: 0.8 } #fade.on { opacity: 0.2 }</style>"
+        "<div id=paint></div><div id=size></div><div id=fade>text</div>");
     frame(page, 0);
 
     // A background color repaints its box's stacking context, and lays out nothing.
@@ -3283,8 +3190,7 @@ TEST_CASE("a transition repaints, relayouts or composites as its property says, 
 
 TEST_CASE("a CSS animation runs its keyframes, iterations and direction") {
     Page page("<style>@keyframes grow { from { width: 10px } 50% { width: 60px } to { width: 110px } }"
-              "#a { height: 5px; animation: grow 1s linear 2 alternate } #b { width: 7px }</style>"
-              "<div id=a></div><div id=b></div>");
+        "#a { height: 5px; animation: grow 1s linear 2 alternate } #b { width: 7px }</style><div id=a></div><div id=b></div>");
     CHECK(prCssPresentationIsAnimating(page.presentation));
     frame(page, 250);
     CHECK(px(page.box("a").width) == doctest::Approx(35));
@@ -3305,9 +3211,9 @@ TEST_CASE("a CSS animation runs its keyframes, iterations and direction") {
 
 TEST_CASE("a keyframe of initial, inherit or unset takes the value that the keyword gives in a declaration") {
     Page page("<style>@keyframes k { from { width: inherit; padding-left: initial; margin-left: unset } "
-              "to { width: 110px; padding-left: 40px; margin-left: 40px } }"
-              "#p { width: 50px } #a { padding-left: 20px; margin-left: 20px; animation: k 1s linear }</style>"
-              "<div id=p><div id=a></div></div>");
+        "to { width: 110px; padding-left: 40px; margin-left: 40px } }"
+        "#p { width: 50px } #a { padding-left: 20px; margin-left: 20px; animation: k 1s linear }</style>"
+        "<div id=p><div id=a></div></div>");
     frame(page, 250);
     PrLayoutBoxStyle box = page.box("a");
     CHECK(px(box.width) == doctest::Approx(65));
@@ -3322,10 +3228,8 @@ TEST_CASE("a keyframe of initial, inherit or unset takes the value that the keyw
 
 TEST_CASE("a keyframe that adds or accumulates is composited onto the underlying value before interpolating") {
     Page page("<style>@keyframes k { from { width: 100px; animation-composition: replace } to { width: 200px } "
-              "to { scale: 2 } }"
-              "#a { width: 100px; scale: 3; animation: k 1s linear; animation-composition: add }"
-              "#b { scale: 3; animation: k 1s linear; animation-composition: accumulate }</style>"
-              "<div id=a></div><div id=b></div>");
+        "to { scale: 2 } }#a { width: 100px; scale: 3; animation: k 1s linear; animation-composition: add }"
+        "#b { scale: 3; animation: k 1s linear; animation-composition: accumulate }</style><div id=a></div><div id=b></div>");
     frame(page, 250);
     // From 100px, which replaces, to 100px plus 200px.
     CHECK(px(page.box("a").width) == doctest::Approx(150));
@@ -3336,9 +3240,9 @@ TEST_CASE("a keyframe that adds or accumulates is composited onto the underlying
 
 TEST_CASE("revert in a keyframe takes the user agent's value, and revert-layer the element's base value") {
     Page page("<style>@keyframes r { from, to { margin-top: 0px } 50% { margin-top: revert } }"
-              "@keyframes l { from, to { width: 0px } 50% { width: revert-layer } }"
-              "#r { margin-top: 0px; animation: r 1s linear } #l { width: 100px; animation: l 1s linear }</style>"
-              "<h1 id=r></h1><h1 id=ref></h1><div id=l></div>");
+        "@keyframes l { from, to { width: 0px } 50% { width: revert-layer } }"
+        "#r { margin-top: 0px; animation: r 1s linear } #l { width: 100px; animation: l 1s linear }</style>"
+        "<h1 id=r></h1><h1 id=ref></h1><div id=l></div>");
     frame(page, 500);
     CHECK(resolved(page, "r", PrCssProperty_MarginTop) == resolved(page, "ref", PrCssProperty_MarginTop));
     CHECK(resolved(page, "r", PrCssProperty_MarginTop) != "0px");
@@ -3349,18 +3253,15 @@ TEST_CASE("revert in a keyframe takes the user agent's value, and revert-layer t
 
 TEST_CASE("path data interpolates argument by argument between paths of the same commands") {
     Page page("<style>@keyframes rise { from { d: path('M 20 50 L 80 50') } to { d: path('M 20 50 L 80 10') } }"
-              "@keyframes mixed { from { d: path('m 10 20 l 40 50 z l 40 60') } "
-              "to { d: path('M 210 220 L 170 190 Z L 90 120') } }"
-              "@keyframes sweep { from { d: path('M 0 0 A 5 5 0 0 0 10 0') } to { d: path('M 0 0 A 5 5 0 0 1 10 0') } }"
-              "@keyframes close { from { d: path('M 0 0 L 10 0') } to { d: path('M 0 0 L 10 0 Z') } }"
-              "@keyframes down { from { d: path('M 0 10') } to { d: path('M 0 -10') } }"
-              "@keyframes add { from { d: path('M 1 2 L 3 4'); animation-composition: add } "
-              "to { d: path('M 1 2 L 3 4'); animation-composition: add } }"
-              "path { animation: 1s linear }</style>"
-              "<svg><path id=rise style='animation-name: rise'/><path id=mixed style='animation-name: mixed'/>"
-              "<path id=sweep style='animation-name: sweep'/><path id=close style='animation-name: close'/>"
-              "<path id=add d='M 10 20 L 30 40' style='animation-name: add'/>"
-              "<path id=down style='animation-name: down'/></svg>");
+        "@keyframes mixed { from { d: path('m 10 20 l 40 50 z l 40 60') } to { d: path('M 210 220 L 170 190 Z L 90 120') } }"
+        "@keyframes sweep { from { d: path('M 0 0 A 5 5 0 0 0 10 0') } to { d: path('M 0 0 A 5 5 0 0 1 10 0') } }"
+        "@keyframes close { from { d: path('M 0 0 L 10 0') } to { d: path('M 0 0 L 10 0 Z') } }"
+        "@keyframes down { from { d: path('M 0 10') } to { d: path('M 0 -10') } }"
+        "@keyframes add { from { d: path('M 1 2 L 3 4'); animation-composition: add } "
+        "to { d: path('M 1 2 L 3 4'); animation-composition: add } }path { animation: 1s linear }</style>"
+        "<svg><path id=rise style='animation-name: rise'/><path id=mixed style='animation-name: mixed'/>"
+        "<path id=sweep style='animation-name: sweep'/><path id=close style='animation-name: close'/>"
+        "<path id=add d='M 10 20 L 30 40' style='animation-name: add'/><path id=down style='animation-name: down'/></svg>");
     frame(page, 250);
     CHECK(resolved(page, "rise", PrCssProperty_D) == "path(\"M 20 50 L 80 40\")");
     // Paths interpolate in absolute coordinates, whether their commands are relative or not.
@@ -3379,20 +3280,17 @@ TEST_CASE("path data interpolates argument by argument between paths of the same
 
 TEST_CASE("filter lists interpolate function by function, padding the shorter list with initial values") {
     Page page("<style>@keyframes pad { from { filter: blur(10px) } to { filter: blur(20px) sepia(1) } }"
-              "@keyframes grow { from { filter: none } to { filter: opacity(0.5) drop-shadow(red 10px 0px) } }"
-              "@keyframes other { from { filter: blur(10px) } to { filter: sepia(1) } }"
-              "@keyframes add { to { filter: sepia(1); animation-composition: add } }"
-              "@keyframes acc { from, to { filter: blur(4px); animation-composition: accumulate } }"
-              "div { animation: 1s linear }"
-              "#pad { animation-name: pad } #grow { animation-name: grow } #other { animation-name: other }"
-              "#add { filter: blur(4px); animation-name: add } #acc { filter: blur(6px); animation-name: acc }"
-              "</style><div id=pad></div><div id=grow></div><div id=other></div><div id=add></div>"
-              "<div id=acc></div>");
+        "@keyframes grow { from { filter: none } to { filter: opacity(0.5) drop-shadow(red 10px 0px) } }"
+        "@keyframes other { from { filter: blur(10px) } to { filter: sepia(1) } }"
+        "@keyframes add { to { filter: sepia(1); animation-composition: add } }"
+        "@keyframes acc { from, to { filter: blur(4px); animation-composition: accumulate } }div { animation: 1s linear }"
+        "#pad { animation-name: pad } #grow { animation-name: grow } #other { animation-name: other }"
+        "#add { filter: blur(4px); animation-name: add } #acc { filter: blur(6px); animation-name: acc }"
+        "</style><div id=pad></div><div id=grow></div><div id=other></div><div id=add></div><div id=acc></div>");
     frame(page, 250);
     CHECK(resolved(page, "pad", PrCssProperty_Filter) == "blur(12.5px) sepia(0.25)");
     // none stands for the initial values of the other list's functions. A shadow's initial color is transparent.
-    CHECK(resolved(page, "grow", PrCssProperty_Filter)
-          == "opacity(0.875) drop-shadow(rgba(255, 0, 0, 0.25) 2.5px 0px 0px)");
+    CHECK(resolved(page, "grow", PrCssProperty_Filter) == "opacity(0.875) drop-shadow(rgba(255, 0, 0, 0.25) 2.5px 0px 0px)");
     // Lists of other functions switch halfway.
     CHECK(resolved(page, "other", PrCssProperty_Filter) == "blur(10px)");
     // Addition appends the keyframe's list to the underlying list. Accumulation sums functions of the same name.
@@ -3402,32 +3300,27 @@ TEST_CASE("filter lists interpolate function by function, padding the shorter li
 
 TEST_CASE("filter() images of one input interpolate by their filter lists, and other images switch halfway") {
     Page page("<style>@keyframes gray { from { background-image: filter(linear-gradient(red, blue), grayscale(0)), "
-              "none } to { background-image: filter(linear-gradient(red, blue), grayscale(1)), none } }"
-              "@keyframes other { from { background-image: filter(linear-gradient(red, blue), grayscale(0)) } "
-              "to { background-image: filter(linear-gradient(red, lime), grayscale(1)) } }"
-              "@keyframes mask { from { mask-image: filter(url(a.png), blur(0px)) } "
-              "to { mask-image: filter(url(a.png), blur(8px)) } }"
-              "div { animation: 1s linear } #gray { animation-name: gray } #other { animation-name: other }"
-              "#mask { animation-name: mask }</style><div id=gray></div><div id=other></div><div id=mask></div>");
+        "none } to { background-image: filter(linear-gradient(red, blue), grayscale(1)), none } }"
+        "@keyframes other { from { background-image: filter(linear-gradient(red, blue), grayscale(0)) } "
+        "to { background-image: filter(linear-gradient(red, lime), grayscale(1)) } }"
+        "@keyframes mask { from { mask-image: filter(url(a.png), blur(0px)) } to { mask-image: filter(url(a.png), blur(8px)) } }"
+        "div { animation: 1s linear } #gray { animation-name: gray } #other { animation-name: other }"
+        "#mask { animation-name: mask }</style><div id=gray></div><div id=other></div><div id=mask></div>");
     frame(page, 250);
-    CHECK(resolved(page, "gray", PrCssProperty_BackgroundImage)
-          == "filter(linear-gradient(red, blue), grayscale(0.25)), none");
-    CHECK(resolved(page, "other", PrCssProperty_BackgroundImage)
-          == "filter(linear-gradient(red, blue), grayscale(0))");
+    CHECK(resolved(page, "gray", PrCssProperty_BackgroundImage) == "filter(linear-gradient(red, blue), grayscale(0.25)), none");
+    CHECK(resolved(page, "other", PrCssProperty_BackgroundImage) == "filter(linear-gradient(red, blue), grayscale(0))");
     CHECK(resolved(page, "mask", PrCssProperty_MaskImage) == "filter(url(\"a.png\"), blur(2px))");
 }
 
 TEST_CASE("basic shapes interpolate where their kinds agree, and clip interpolates each edge") {
-    Page page("<style>@keyframes circle { from { clip-path: circle(10px at 0px 0px) } "
-              "to { clip-path: circle(50px at 100% 40px) } }"
-              "@keyframes inset { from { clip-path: inset(0px) } to { clip-path: xywh(10px 20px 50% 40px) } }"
-              "@keyframes box { from { clip-path: circle(10px) } to { clip-path: circle(10px) padding-box } }"
-              "@keyframes rect { from { clip: rect(0px, 100px, 50px, 0px) } "
-              "to { clip: rect(20px, 140px, 90px, 40px) } }"
-              "div { position: absolute; animation: 1s linear }"
-              "#circle { animation-name: circle } #inset { animation-name: inset } #box { animation-name: box }"
-              "#rect { animation-name: rect }</style>"
-              "<div id=circle></div><div id=inset></div><div id=box></div><div id=rect></div>");
+    Page page("<style>@keyframes circle { from { clip-path: circle(10px at 0px 0px) } to { clip-path: circle(50px at 100% 40px) } }"
+        "@keyframes inset { from { clip-path: inset(0px) } to { clip-path: xywh(10px 20px 50% 40px) } }"
+        "@keyframes box { from { clip-path: circle(10px) } to { clip-path: circle(10px) padding-box } }"
+        "@keyframes rect { from { clip: rect(0px, 100px, 50px, 0px) } to { clip: rect(20px, 140px, 90px, 40px) } }"
+        "div { position: absolute; animation: 1s linear }"
+        "#circle { animation-name: circle } #inset { animation-name: inset } #box { animation-name: box }"
+        "#rect { animation-name: rect }</style>"
+        "<div id=circle></div><div id=inset></div><div id=box></div><div id=rect></div>");
     frame(page, 250);
     CHECK(resolved(page, "circle", PrCssProperty_ClipPath) == "circle(20px at 25% 10px)");
     CHECK(resolved(page, "inset", PrCssProperty_ClipPath) == "inset(5px calc(12.5% - 2.5px) calc(25% - 15px) 2.5px)");
@@ -3438,17 +3331,16 @@ TEST_CASE("basic shapes interpolate where their kinds agree, and clip interpolat
 
 TEST_CASE("xywh() and rect() compute to inset(), and a shadow's current color to the element's color") {
     Page page("<div id=xywh style='clip-path: xywh(10px 20px 30% 40px round 5px)'></div>"
-              "<div id=rect style='clip-path: rect(10px auto 30px 5px)'></div>"
-              "<div id=shadow style='color: blue; filter: drop-shadow(1px 2px)'></div>");
-    CHECK(resolved(page, "xywh", PrCssProperty_ClipPath)
-          == "inset(20px calc(70% - 10px) calc(100% - 60px) 10px round 5px)");
+        "<div id=rect style='clip-path: rect(10px auto 30px 5px)'></div>"
+        "<div id=shadow style='color: blue; filter: drop-shadow(1px 2px)'></div>");
+    CHECK(resolved(page, "xywh", PrCssProperty_ClipPath) == "inset(20px calc(70% - 10px) calc(100% - 60px) 10px round 5px)");
     CHECK(resolved(page, "rect", PrCssProperty_ClipPath) == "inset(10px 0% calc(100% - 30px) 5px)");
     CHECK(resolved(page, "shadow", PrCssProperty_Filter) == "drop-shadow(rgb(0, 0, 255) 1px 2px 0px)");
 }
 
 TEST_CASE("the filter attribute takes lengths and angles without units, as SVG numbers") {
     Page page("<svg><rect id=shadow filter='drop-shadow(4 5 6) blur(2)' /><rect id=turn filter='hue-rotate(90)' />"
-              "<rect id=css filter='blur(2px)' /></svg>");
+        "<rect id=css filter='blur(2px)' /></svg>");
     CHECK(resolved(page, "shadow", PrCssProperty_Filter) == "drop-shadow(rgb(0, 0, 0) 4px 5px 6px) blur(2px)");
     CHECK(resolved(page, "turn", PrCssProperty_Filter) == "hue-rotate(90deg)");
     CHECK(resolved(page, "css", PrCssProperty_Filter) == "blur(2px)");
@@ -3456,8 +3348,8 @@ TEST_CASE("the filter attribute takes lengths and angles without units, as SVG n
 
 TEST_CASE("a mask border's slices, widths and outsets interpolate side by side, and keep fill") {
     Page page("<style>@keyframes k { from { mask-border-slice: 10 fill; mask-border-width: 2px } "
-              "to { mask-border-slice: 20 30 fill; mask-border-width: 6px 10px 2px } }"
-              "#a { animation: k 1s linear }</style><div id=a></div>");
+        "to { mask-border-slice: 20 30 fill; mask-border-width: 6px 10px 2px } }"
+        "#a { animation: k 1s linear }</style><div id=a></div>");
     frame(page, 250);
     CHECK(resolved(page, "a", PrCssProperty_MaskBorderSlice) == "12.5 15 fill");
     CHECK(resolved(page, "a", PrCssProperty_MaskBorderWidth) == "3px 4px 2px");
@@ -3465,15 +3357,12 @@ TEST_CASE("a mask border's slices, widths and outsets interpolate side by side, 
 
 TEST_CASE("lists of a repeatable list repeat to a common length before they add or interpolate") {
     Page page("<style>@keyframes k { from { background-size: 60px 60px, 260px 260px; animation-composition: add } "
-              "to { background-size: 160px 160px; animation-composition: add } }"
-              "@keyframes w { from { background-size: 10px 10px } to { background-size: 20px 20px, 0px 0px } }"
-              "@keyframes n { from { background-size: 100px 150px; animation-composition: add } "
-              "to { background-size: 200px 250px } }"
-              "div { background-image: url(), url() }"
-              "#a { background-size: 40px 40px; animation: k 1s linear }"
-              "#b { animation: w 1s linear }"
-              "#c { background-size: auto, contain; animation: n 1s linear }</style>"
-              "<div id=a></div><div id=b></div><div id=c></div>");
+        "to { background-size: 160px 160px; animation-composition: add } }"
+        "@keyframes w { from { background-size: 10px 10px } to { background-size: 20px 20px, 0px 0px } }"
+        "@keyframes n { from { background-size: 100px 150px; animation-composition: add } "
+        "to { background-size: 200px 250px } }div { background-image: url(), url() }"
+        "#a { background-size: 40px 40px; animation: k 1s linear }#b { animation: w 1s linear }"
+        "#c { background-size: auto, contain; animation: n 1s linear }</style><div id=a></div><div id=b></div><div id=c></div>");
     frame(page, 0);
     // The underlying value and the last keyframe repeat to two items each.
     CHECK(resolved(page, "a", PrCssProperty_BackgroundSize) == "100px 100px, 300px 300px");
@@ -3486,12 +3375,12 @@ TEST_CASE("lists of a repeatable list repeat to a common length before they add 
 
 TEST_CASE("pseudo-elements run transitions and CSS animations as elements do") {
     Page page("<style>@keyframes blue { from { color: rgb(0, 0, 0) } to { color: rgb(0, 0, 255) } }"
-              "@keyframes gone { from, to { content: none } } @keyframes fade { to { opacity: 0 } }"
-              "#a::before { content: 'B'; display: inline-block; width: 10px; transition: width 1s linear }"
-              "#a.on::before { width: 110px } #a.none::before { content: none }"
-              "#a::after { content: 'A' } #a.gone::after { animation: gone 1s }"
-              "#a.fade::after { animation: fade 1s linear } li::marker { animation: blue 1s linear }</style>"
-              "<div id=a>t</div><ul><li id=li>i</li></ul>");
+        "@keyframes gone { from, to { content: none } } @keyframes fade { to { opacity: 0 } }"
+        "#a::before { content: 'B'; display: inline-block; width: 10px; transition: width 1s linear }"
+        "#a.on::before { width: 110px } #a.none::before { content: none }"
+        "#a::after { content: 'A' } #a.gone::after { animation: gone 1s }"
+        "#a.fade::after { animation: fade 1s linear } li::marker { animation: blue 1s linear }</style>"
+        "<div id=a>t</div><ul><li id=li>i</li></ul>");
     frame(page, 0);
     CHECK(resolved(page, "li", PrCssProperty_Color, "::marker") == "rgb(0, 0, 0)");
     prDomElementSetAttribute(byId(page, "a"), "class", "on");
@@ -3537,9 +3426,7 @@ TEST_CASE("a host that steps its own clock runs transitions frame by frame") {
     host.shaper = fonts.shaper;
     PrHtmlPage* page = prHtmlPageCreate(&host);
     REQUIRE(prHtmlPageLoad(page, "<style>#a { width: 100px; transition: width 1s linear }"
-                                                      "#a.wide { width: 300px }</style><div id=a></div>",
-                                      "about:blank", nullptr)
-            == PrStatus_Ok);
+        "#a.wide { width: 300px }</style><div id=a></div>", "about:blank", nullptr) == PrStatus_Ok);
     PrCssPresentation* presentation = prHtmlPagePresentation(page);
     PrDomDocument* document = prHtmlWindowDocument(prHtmlPageWindow(page));
     PrDomElement* a = prDomNodeGetElementById(prDomDocumentAsNode(document), "a");
@@ -3599,12 +3486,9 @@ TEST_CASE("a click on a link to a fragment scrolls to the element it names, whic
     host.font = fonts.defaultFont;
     host.shaper = fonts.shaper;
     PrHtmlPage* page = prHtmlPageCreate(&host);
-    REQUIRE(prHtmlPageLoad(page,
-                                      "<!doctype html><style>body { margin: 0 } div { height: 1000px }</style>"
-                                            "<a id=link href='#x'>x</a><a id=held href='#y'>y</a><div></div>"
-                                            "<p id=x>x</p><div></div><a name=y>y</a><div></div>",
-                                      "about:blank", nullptr)
-            == PrStatus_Ok);
+    REQUIRE(prHtmlPageLoad(page, "<!doctype html><style>body { margin: 0 } div { height: 1000px }</style>"
+        "<a id=link href='#x'>x</a><a id=held href='#y'>y</a><div></div>"
+        "<p id=x>x</p><div></div><a name=y>y</a><div></div>", "about:blank", nullptr) == PrStatus_Ok);
     PrHtmlWindow* window = prHtmlPageWindow(page);
     PrDomDocument* document = prHtmlWindowDocument(window);
     auto byId = [&](const char* id) {
@@ -3616,9 +3500,11 @@ TEST_CASE("a click on a link to a fragment scrolls to the element it names, whic
         PrDomMouseEventInit init = prDomMouseEventInitDefault();
         init.ui.event.bubbles = true;
         init.ui.event.cancelable = true;
-        PrDomEvent* event = kind == PrDomEventKind_Mouse
-                                ? prDomMouseEventAsEvent(prDomMouseEventCreate("click", &init))
-                                : prDomEventCreate("click", &init.ui.event);
+        PrDomEvent* event;
+        if (kind == PrDomEventKind_Mouse)
+            event = prDomMouseEventAsEvent(prDomMouseEventCreate("click", &init));
+        else
+            event = prDomEventCreate("click", &init.ui.event);
         prDomEventTargetDispatchEvent(prDomNodeAsEventTarget(prDomElementAsNode(element)), event, nullptr);
         prDomEventRelease(event);
     };
@@ -3645,8 +3531,13 @@ TEST_CASE("a click on a link to a fragment scrolls to the element it names, whic
     prStringReset(&hash);
 
     // A click that a listener cancels follows nothing.
-    PrDomEventListener cancel{[](void* PR_NULLABLE, PrDomEvent* event) { prDomEventPreventDefault(event); }, nullptr,
-                              1, nullptr, nullptr};
+    PrDomEventListener cancel{
+        [](void* PR_NULLABLE, PrDomEvent* event) { prDomEventPreventDefault(event); },
+        nullptr,
+        1,
+        nullptr,
+        nullptr,
+    };
     PrDomEventTarget* held = prDomNodeAsEventTarget(prDomElementAsNode(byId("held")));
     prDomEventTargetAddEventListener(held, "click", &cancel, nullptr);
     click(byId("held"), PrDomEventKind_Mouse);
@@ -3671,14 +3562,11 @@ TEST_CASE("geometry reads lay out what changed, and a scroll's events fire at th
     host.font = fonts.defaultFont;
     host.shaper = fonts.shaper;
     PrHtmlPage* page = prHtmlPageCreate(&host);
-    REQUIRE(prHtmlPageLoad(page,
-                                      "<!doctype html><style>body { margin: 8px } div { height: 50px }"
-                                            "#s { height: 100px; overflow: auto; border: 2px solid }"
-                                            "#t { transform: translate(10px, 0); position: relative; top: 5px }"
-                                            "</style><div id=a></div><div id=s><div></div><div></div><div id=in>"
-                                            "</div></div><div id=t></div><div id=end style='height: 1000px'></div>",
-                                      "about:blank", nullptr)
-            == PrStatus_Ok);
+    REQUIRE(prHtmlPageLoad(page, "<!doctype html><style>body { margin: 8px } div { height: 50px }"
+        "#s { height: 100px; overflow: auto; border: 2px solid }#t { transform: translate(10px, 0); position: relative; top: 5px }"
+        "</style><div id=a></div><div id=s><div></div><div></div><div id=in>"
+        "</div></div><div id=t></div><div id=end style='height: 1000px'></div>", "about:blank", nullptr) ==
+        PrStatus_Ok);
     PrHtmlWindow* window = prHtmlPageWindow(page);
     PrDomDocument* document = prHtmlWindowDocument(window);
     auto byId = [&](const char* id) {
@@ -3711,10 +3599,20 @@ TEST_CASE("geometry reads lay out what changed, and a scroll's events fire at th
         uint32_t scrolls = 0;
         uint32_t ends = 0;
     } heard;
-    PrDomEventListener scrolls{[](void* PR_NULLABLE c, PrDomEvent*) { ++static_cast<Heard*>(c)->scrolls; }, &heard, 1,
-                               nullptr, nullptr};
-    PrDomEventListener ends{[](void* PR_NULLABLE c, PrDomEvent*) { ++static_cast<Heard*>(c)->ends; }, &heard, 2,
-                            nullptr, nullptr};
+    PrDomEventListener scrolls{
+        [](void* PR_NULLABLE c, PrDomEvent*) { ++static_cast<Heard*>(c)->scrolls; },
+        &heard,
+        1,
+        nullptr,
+        nullptr,
+    };
+    PrDomEventListener ends{
+        [](void* PR_NULLABLE c, PrDomEvent*) { ++static_cast<Heard*>(c)->ends; },
+        &heard,
+        2,
+        nullptr,
+        nullptr,
+    };
     PrDomEventTarget* scroller = prDomNodeAsEventTarget(prDomElementAsNode(byId("s")));
     prDomEventTargetAddEventListener(scroller, "scroll", &scrolls, nullptr);
     prDomEventTargetAddEventListener(scroller, "scrollend", &ends, nullptr);
@@ -3797,13 +3695,10 @@ TEST_CASE("a resize observer reports the boxes that changed, deeper ones in the 
     host.font = fonts.defaultFont;
     host.shaper = fonts.shaper;
     PrHtmlPage* page = prHtmlPageCreate(&host);
-    REQUIRE(prHtmlPageLoad(page,
-                           "<!doctype html><div id=a style='width: 100px; height: 50px; padding: 5px 7px; border: 3px "
-                           "solid'><div id=in style='width: 50%; height: 10px'></div></div>"
-                           "<div id=b style='writing-mode: vertical-rl; width: 20px; height: 40px'></div>"
-                           "<span id=c>text</span>",
-                           "about:blank", nullptr)
-            == PrStatus_Ok);
+    REQUIRE(prHtmlPageLoad(page, "<!doctype html><div id=a style='width: 100px; height: 50px; padding: 5px 7px; border: 3px "
+        "solid'><div id=in style='width: 50%; height: 10px'></div></div>"
+        "<div id=b style='writing-mode: vertical-rl; width: 20px; height: 40px'></div>"
+        "<span id=c>text</span>", "about:blank", nullptr) == PrStatus_Ok);
     PrHtmlWindow* window = prHtmlPageWindow(page);
     PrDomDocument* document = prHtmlWindowDocument(window);
     auto byId = [&](const char* id) {
@@ -3821,7 +3716,7 @@ TEST_CASE("a resize observer reports the boxes that changed, deeper ones in the 
     PrCssResizeCallback callback{};
     callback.context = &observed;
     callback.invoke = [](void* PR_NULLABLE context, PrCssResizeObserver*, const PrCssResizeObserverEntry* entries,
-                         uint32_t count) {
+            uint32_t count) {
         Observed& o = *static_cast<Observed*>(context);
         o.calls.emplace_back(entries, entries + count);
         if (o.widen != nullptr) {
@@ -3829,8 +3724,13 @@ TEST_CASE("a resize observer reports the boxes that changed, deeper ones in the 
             o.widen = nullptr;
         }
     };
-    PrDomEventListener errors{[](void* PR_NULLABLE c, PrDomEvent*) { ++static_cast<Observed*>(c)->errors; }, &observed,
-                              1, nullptr, nullptr};
+    PrDomEventListener errors{
+        [](void* PR_NULLABLE c, PrDomEvent*) { ++static_cast<Observed*>(c)->errors; },
+        &observed,
+        1,
+        nullptr,
+        nullptr,
+    };
     prDomEventTargetAddEventListener(prHtmlWindowAsEventTarget(window), "error", &errors, nullptr);
     PrCssResizeObserver* observer = prCssResizeObserverCreate(document, &callback);
     prCssResizeObserverObserve(observer, byId("a"), PrCssResizeObserverBox_ContentBox);
@@ -3900,12 +3800,9 @@ TEST_CASE("an intersection observer reports a target's crossings of its threshol
     host.font = fonts.defaultFont;
     host.shaper = fonts.shaper;
     PrHtmlPage* page = prHtmlPageCreate(&host);
-    REQUIRE(prHtmlPageLoad(page,
-                           "<!doctype html><style>body { margin: 0 }</style>"
-                           "<div style='height: 650px'></div><div id=t style='width: 100px; height: 100px'></div>"
-                           "<div style='height: 2000px'></div>",
-                           "about:blank", nullptr)
-            == PrStatus_Ok);
+    REQUIRE(prHtmlPageLoad(page, "<!doctype html><style>body { margin: 0 }</style>"
+        "<div style='height: 650px'></div><div id=t style='width: 100px; height: 100px'></div>"
+        "<div style='height: 2000px'></div>", "about:blank", nullptr) == PrStatus_Ok);
     PrHtmlWindow* window = prHtmlPageWindow(page);
     PrDomDocument* document = prHtmlWindowDocument(window);
     PrDomElement* target = prDomNodeGetElementById(prDomDocumentAsNode(document), "t");
@@ -3983,11 +3880,8 @@ TEST_CASE("an infinite animation keeps its page from idling until it starts") {
     host.font = fonts.defaultFont;
     host.shaper = fonts.shaper;
     PrHtmlPage* page = prHtmlPageCreate(&host);
-    REQUIRE(prHtmlPageLoad(page,
-                                      "<style>@keyframes k { to { opacity: 0 } }"
-                                            "#a { animation: k 1s linear infinite 100ms }</style><div id=a></div>",
-                                      "about:blank", nullptr)
-            == PrStatus_Ok);
+    REQUIRE(prHtmlPageLoad(page, "<style>@keyframes k { to { opacity: 0 } }"
+        "#a { animation: k 1s linear infinite 100ms }</style><div id=a></div>", "about:blank", nullptr) == PrStatus_Ok);
     clock.now = 20;
     runDue(page);
     CHECK_FALSE(prDomAgentIsIdle(prHtmlPageAgent(page)));
@@ -3999,12 +3893,11 @@ TEST_CASE("an infinite animation keeps its page from idling until it starts") {
 
 TEST_CASE("transforms compute in 3D, with the individual transforms, percentages and the reference box") {
     Page page("<style>body { margin: 0 } div { width: 100px; height: 50px }</style>"
-              "<div id=p style='transform: translate(50%, 10px)'></div>"
-              "<div id=i style='translate: 10px 20px; rotate: 90deg; scale: 2; transform: translateX(5px)'></div>"
-              "<div id=r style='rotate: y 60deg'></div>"
-              "<div id=z style='transform: perspective(100px) translateZ(10px); transform-origin: 0 0 5px;"
-              " transform-box: content-box'></div>"
-              "<div id=q style='transform: translate(50%) perspective(100px)'></div><div id=n></div>");
+        "<div id=p style='transform: translate(50%, 10px)'></div>"
+        "<div id=i style='translate: 10px 20px; rotate: 90deg; scale: 2; transform: translateX(5px)'></div>"
+        "<div id=r style='rotate: y 60deg'></div>"
+        "<div id=z style='transform: perspective(100px) translateZ(10px); transform-origin: 0 0 5px;"
+        " transform-box: content-box'></div><div id=q style='transform: translate(50%) perspective(100px)'></div><div id=n></div>");
     // A percentage is a fraction of the reference box, which painting applies.
     PrLayoutEffectStyle p = page.effects("p");
     CHECK(double(p.transform.perWidth[0]) == doctest::Approx(0.5));
@@ -4032,10 +3925,10 @@ TEST_CASE("transforms compute in 3D, with the individual transforms, percentages
 
 TEST_CASE("perspective, its origin and backface-visibility project onto the effects group") {
     Page page("<style>body { margin: 0 } div { width: 200px; height: 100px }</style>"
-              "<div id=p style='perspective: 50px; perspective-origin: right 20% bottom 10px'></div>"
-              "<div id=z style='perspective: 0; perspective-origin: top; backface-visibility: hidden;"
-              " transform: rotateY(10deg)'></div><div id=b style='backface-visibility: hidden'></div>"
-              "<div id=t style='transform-origin: bottom'></div><div id=n></div>");
+        "<div id=p style='perspective: 50px; perspective-origin: right 20% bottom 10px'></div>"
+        "<div id=z style='perspective: 0; perspective-origin: top; backface-visibility: hidden;"
+        " transform: rotateY(10deg)'></div><div id=b style='backface-visibility: hidden'></div>"
+        "<div id=t style='transform-origin: bottom'></div><div id=n></div>");
     // A perspective makes a containing block for all descendants, as a transform does.
     CHECK(page.box("p").transformed == 1);
     CHECK(page.box("n").transformed == 0);
@@ -4065,7 +3958,7 @@ TEST_CASE("perspective, its origin and backface-visibility project onto the effe
 
 TEST_CASE("a composited transform keeps the individual transforms before it") {
     Page page("<style>#m { width: 100px; height: 50px; translate: 10px; transition: transform 1s linear }"
-              "#m.on { transform: translateX(50%) }</style><div id=m></div>");
+        "#m.on { transform: translateX(50%) }</style><div id=m></div>");
     frame(page, 0);
     prDomElementSetAttribute(byId(page, "m"), "class", "on");
     frame(page, 0);
@@ -4086,12 +3979,10 @@ TEST_CASE("transitions and animations fire their events at the rendering updates
     host.font = fonts.defaultFont;
     host.shaper = fonts.shaper;
     PrHtmlPage* page = prHtmlPageCreate(&host);
-    REQUIRE(prHtmlPageLoad(page,
-                                      "<style>#t { width: 10px; transition: width 100ms linear 50ms }"
-                                            "#t.wide { width: 20px } @keyframes k { to { opacity: 0 } }"
-                                            "#a { animation: k 100ms linear 2 }</style><div id=t></div><div id=a></div>",
-                                      "about:blank", nullptr)
-            == PrStatus_Ok);
+    REQUIRE(prHtmlPageLoad(page, "<style>#t { width: 10px; transition: width 100ms linear 50ms }"
+        "#t.wide { width: 20px } @keyframes k { to { opacity: 0 } }"
+        "#a { animation: k 100ms linear 2 }</style><div id=t></div><div id=a></div>", "about:blank", nullptr) ==
+        PrStatus_Ok);
     PrDomDocument* document = prHtmlWindowDocument(prHtmlPageWindow(page));
     std::string log;
     PrDomEventListener listener{
@@ -4105,10 +3996,14 @@ TEST_CASE("transitions and animations fire their events at the rendering updates
                 *log += "@" + std::to_string(int(prCssAnimationEventElapsedTime(animation) * 1000));
             *log += " ";
         },
-        &log, 1, nullptr, nullptr};
+        &log,
+        1,
+        nullptr,
+        nullptr,
+    };
     PrDomEventTarget* target = prDomNodeAsEventTarget(prDomDocumentAsNode(document));
     for (const char* type : {"transitionrun", "transitionstart", "transitionend", "transitioncancel", "animationstart",
-                             "animationiteration", "animationend", "animationcancel"})
+        "animationiteration", "animationend", "animationcancel"})
         prDomEventTargetAddEventListener(target, type, &listener, nullptr);
     PrDomElement* t = prDomNodeGetElementById(prDomDocumentAsNode(document), "t");
 
@@ -4355,9 +4250,9 @@ TEST_CASE("a restyle divides its work among no more threads than the agent asks 
 
 TEST_CASE("a change under a :has() anchor restyles the anchor, not the document") {
     Page page("<style>.card { color: rgb(0, 0, 0) } .card:has(.flag) { color: rgb(255, 0, 0) }"
-              ".row:has(+ .picked) { width: 10px }</style>"
-              "<div class=card id=a><p><span id=s>x</span></p></div><div class=card id=b><p>y</p></div>"
-              "<div class=row id=r1></div><div class=row id=r2></div><div id=other><p>z</p></div>");
+        ".row:has(+ .picked) { width: 10px }</style>"
+        "<div class=card id=a><p><span id=s>x</span></p></div><div class=card id=b><p>y</p></div>"
+        "<div class=row id=r1></div><div class=row id=r2></div><div id=other><p>z</p></div>");
     // A class deep in an anchor restyles the anchor, and what inherits its color.
     prDomElementSetAttribute(byId(page, "s"), "class", "flag");
     PrCssPresentationStats stats = update(page);
@@ -4383,8 +4278,8 @@ TEST_CASE("a change under a :has() anchor restyles the anchor, not the document"
 
 TEST_CASE("a width of min() over a percentage resolves against each containing block") {
     Page page("<div style='width: 300px'><div id=a style='width: min(50%, 100px); height: 1px'></div></div>"
-              "<div style='width: 150px'><div id=b style='width: calc(50% + 10px); height: 1px'></div></div>"
-              "<div style='width: 150px'><div id=c style='width: clamp(10px, 50%, 200px); height: 1px'></div></div>");
+        "<div style='width: 150px'><div id=b style='width: calc(50% + 10px); height: 1px'></div></div>"
+        "<div style='width: 150px'><div id=c style='width: clamp(10px, 50%, 200px); height: 1px'></div></div>");
     CHECK(page.bounds("a").right - page.bounds("a").left == 100.0f);
     CHECK(page.bounds("b").right - page.bounds("b").left == 85.0f);
     CHECK(page.bounds("c").right - page.bounds("c").left == 75.0f);
@@ -4392,7 +4287,7 @@ TEST_CASE("a width of min() over a percentage resolves against each containing b
 
 TEST_CASE("visibility: collapse projects as a box that collapses, and as hidden for painting") {
     Page page("<div id=c style='visibility: collapse'><span id=inherits></span></div><div id=h style='visibility: "
-              "hidden'></div><div id=v></div>");
+        "hidden'></div><div id=v></div>");
     CHECK(page.box("c").collapsed == 1);
     CHECK(page.box("inherits").collapsed == 1);
     CHECK(page.box("h").collapsed == 0);
@@ -4402,7 +4297,7 @@ TEST_CASE("visibility: collapse projects as a box that collapses, and as hidden 
 
 TEST_CASE("aspect-ratio projects as a ratio of width over height, with whether auto was given with it") {
     Page page("<div id=a style='aspect-ratio: 16 / 9'></div><div id=b style='aspect-ratio: 2 auto'></div><div id=c "
-              "style='aspect-ratio: auto'></div><div id=d style='aspect-ratio: 0 / 1'></div><div id=e></div>");
+        "style='aspect-ratio: auto'></div><div id=d style='aspect-ratio: 0 / 1'></div><div id=e></div>");
     CHECK(page.box("a").aspectRatio == doctest::Approx(16.0 / 9.0));
     CHECK(page.box("a").aspectRatioAuto == 0);
     CHECK(page.box("b").aspectRatio == 2.0f);
@@ -4416,7 +4311,7 @@ TEST_CASE("aspect-ratio projects as a ratio of width over height, with whether a
 
 TEST_CASE("a button is a semi-replaced element, a flow root or inline-block by button layout") {
     Page page("<button id=a style='all: unset; display: block'></button><button id=b style='all: unset'></button>"
-              "<button id=c style='display: flex'></button><div id=d></div>");
+        "<button id=c style='display: flex'></button><div id=d></div>");
     CHECK(page.box("a").display == PrLayoutDisplay_FlowRoot);
     CHECK(page.box("a").width.bits == prLayoutLengthAuto().bits);
     CHECK(page.box("b").display == PrLayoutDisplay_InlineBlock);
@@ -4429,7 +4324,7 @@ TEST_CASE("a button is a semi-replaced element, a flow root or inline-block by b
 
 TEST_CASE("justify-self and justify-items project onto the alignment fields") {
     Page page("<div id=p style='justify-items: legacy center'><div id=a style='justify-self: safe end'></div>"
-              "<div id=b></div></div>");
+        "<div id=b></div></div>");
     CHECK(page.flex("a").justifySelf == (PrLayoutAlignment_End | PrLayoutAlignmentFlag_Safe));
     CHECK(page.flex("p").justifyItems == PrLayoutAlignment_Center);
     CHECK(page.flex("b").justifySelf == PrLayoutAlignment_Auto);
@@ -4439,9 +4334,9 @@ TEST_CASE("a block-level button is as wide as its content, and its ratio sizes i
     // A button's auto inline size is its fit-content size, so in a stretched flex item its block size transfers from
     // the width its min-height gives it, not from the item's.
     Page page("<div style='display: flex'><div id=item><div style='height: 50px; width: 100px'></div><button id=b "
-              "style='all: unset; display: block; height: 100%; aspect-ratio: 1; min-height: 50px'></button></div></div>"
-              "<button id=w style='all: unset; display: block'><span style='display: inline-block; width: 40px; "
-              "height: 10px'></span></button>");
+        "style='all: unset; display: block; height: 100%; aspect-ratio: 1; min-height: 50px'></button></div></div>"
+        "<button id=w style='all: unset; display: block'><span style='display: inline-block; width: 40px; "
+        "height: 10px'></span></button>");
     CHECK(page.bounds("item").bottom - page.bounds("item").top == 100.0f);
     CHECK(page.bounds("b").right - page.bounds("b").left == 100.0f);
     CHECK(page.bounds("w").right - page.bounds("w").left == 40.0f);
@@ -4449,7 +4344,7 @@ TEST_CASE("a block-level button is as wide as its content, and its ratio sizes i
 
 TEST_CASE("object-fit projects onto the decoration group") {
     Page page("<img id=a style='object-fit: contain'><img id=b style='object-fit: scale-down'><img id=c "
-              "style='object-fit: cover'><img id=d>");
+        "style='object-fit: cover'><img id=d>");
     CHECK(page.decoration("a").objectFit == PrLayoutObjectFit_Contain);
     CHECK(page.decoration("b").objectFit == PrLayoutObjectFit_ScaleDown);
     CHECK(page.decoration("c").objectFit == PrLayoutObjectFit_Cover);
@@ -4458,9 +4353,8 @@ TEST_CASE("object-fit projects onto the decoration group") {
 
 TEST_CASE("background layers project in order, each taking its item of every background list property") {
     Page page("<div id=a style='background: linear-gradient(90deg, red, blue) 10px 20% / 30px auto no-repeat "
-              "content-box padding-box, conic-gradient(from 90deg at 0 0, white 0 25%, black 0 50%) repeat-x, "
-              "lime'></div><div id=b style='background-image: radial-gradient(circle 10px at right, red, "
-              "blue)'></div><div id=c></div>");
+        "content-box padding-box, conic-gradient(from 90deg at 0 0, white 0 25%, black 0 50%) repeat-x, "
+        "lime'></div><div id=b style='background-image: radial-gradient(circle 10px at right, red, blue)'></div><div id=c></div>");
     PrLayoutTree* tree = prCssPresentationTree(page.presentation);
     PrLayoutDecorationStyle a = page.decoration("a");
     CHECK(sameColor(a.background, PrColor{0, 1, 0, 1}));
@@ -4505,8 +4399,8 @@ TEST_CASE("background layers project in order, each taking its item of every bac
 
 TEST_CASE("background-blend-mode gives each layer its blend mode, repeating its list over the layers") {
     Page page("<div id=a style='background-image: linear-gradient(red, red), linear-gradient(blue, blue), "
-              "linear-gradient(lime, lime); background-blend-mode: multiply, plus-lighter'></div>"
-              "<div id=b style='background-image: linear-gradient(red, red)'></div>");
+        "linear-gradient(lime, lime); background-blend-mode: multiply, plus-lighter'></div>"
+        "<div id=b style='background-image: linear-gradient(red, red)'></div>");
     PrLayoutTree* tree = prCssPresentationTree(page.presentation);
     PrLayoutBackgroundIndex a = page.decoration("a").backgroundLayers;
     REQUIRE(prLayoutBackgroundLayerCount(tree, a) == 3);
@@ -4522,11 +4416,10 @@ TEST_CASE("background-blend-mode gives each layer its blend mode, repeating its 
 
 TEST_CASE("filter() images project as their input filtered by the lists of each filter() around it, innermost first") {
     Page page("<div id=a style='background-image: filter(filter(linear-gradient(red, blue), sepia(1)), "
-              "invert(1) blur(2px))'></div>"
-              "<div id=b style='background-image: filter(linear-gradient(red, blue), url(#missing) invert(1))'></div>"
-              "<div id=c style='background-image: filter(url(missing.png), invert(1))'></div>"
-              "<div id=d style='background-image: filter(linear-gradient(red, blue), grayscale() "
-              "drop-shadow(1px 2px))'></div>");
+        "invert(1) blur(2px))'></div>"
+        "<div id=b style='background-image: filter(linear-gradient(red, blue), url(#missing) invert(1))'></div>"
+        "<div id=c style='background-image: filter(url(missing.png), invert(1))'></div>"
+        "<div id=d style='background-image: filter(linear-gradient(red, blue), grayscale() drop-shadow(1px 2px))'></div>");
     PrLayoutTree* tree = prCssPresentationTree(page.presentation);
     PrLayoutBackgroundLayer a = prLayoutBackgroundLayer(tree, page.decoration("a").backgroundLayers, 0);
     CHECK(a.kind == PrLayoutImageKind_Gradient);
@@ -4543,8 +4436,8 @@ TEST_CASE("filter() images project as their input filtered by the lists of each 
     PrLayoutBackgroundLayer c = prLayoutBackgroundLayer(tree, page.decoration("c").backgroundLayers, 0);
     CHECK(c.kind == PrLayoutImageKind_None);
     // The list computes as the filter property's does: omitted arguments take their defaults.
-    CHECK(resolved(page, "d", PrCssProperty_BackgroundImage)
-          == "filter(linear-gradient(red, blue), grayscale(1) drop-shadow(currentcolor 1px 2px 0px))");
+    CHECK(resolved(page, "d", PrCssProperty_BackgroundImage) ==
+        "filter(linear-gradient(red, blue), grayscale(1) drop-shadow(currentcolor 1px 2px 0px))");
 }
 
 TEST_CASE("light-dark() of images picks the image or none of the element's used color scheme") {
@@ -4553,14 +4446,10 @@ TEST_CASE("light-dark() of images picks the image or none of the element's used 
     host.font = page.defaultFont;
     host.shaper = page.shaper;
     PrHtmlPage* htmlPage = prHtmlPageCreate(&host);
-    REQUIRE(prHtmlPageLoad(htmlPage,
-                                      "<style>div { background-image: light-dark(linear-gradient(red, blue), none), "
-                                      "light-dark(none, radial-gradient(red, blue)) }</style>"
-                                      "<div id=light style='color-scheme: light'></div>"
-                                      "<div id=dark style='color-scheme: dark'></div>"
-                                      "<div id=both style='color-scheme: light dark'></div>",
-                                      "about:blank", nullptr)
-            == PrStatus_Ok);
+    REQUIRE(prHtmlPageLoad(htmlPage, "<style>div { background-image: light-dark(linear-gradient(red, blue), none), "
+        "light-dark(none, radial-gradient(red, blue)) }</style><div id=light style='color-scheme: light'></div>"
+        "<div id=dark style='color-scheme: dark'></div>"
+        "<div id=both style='color-scheme: light dark'></div>", "about:blank", nullptr) == PrStatus_Ok);
     PrCssPresentation* presentation = prHtmlPagePresentation(htmlPage);
     PrDomDocument* document = prHtmlWindowDocument(prHtmlPageWindow(htmlPage));
     // Returns the kinds of the element's two layers.
@@ -4573,8 +4462,10 @@ TEST_CASE("light-dark() of images picks the image or none of the element's used 
         PrLayoutBackgroundIndex layers =
             prLayoutDecorationStyleRecord(tree, record.groups[PrLayoutGroup_Decoration]).backgroundLayers;
         REQUIRE(prLayoutBackgroundLayerCount(tree, layers) == 2);
-        return std::pair<PrLayoutImageKind, PrLayoutImageKind>{prLayoutBackgroundLayer(tree, layers, 0).kind,
-                                                               prLayoutBackgroundLayer(tree, layers, 1).kind};
+        return std::pair<PrLayoutImageKind, PrLayoutImageKind>{
+            prLayoutBackgroundLayer(tree, layers, 0).kind,
+            prLayoutBackgroundLayer(tree, layers, 1).kind,
+        };
     };
     auto prefer = [&](PrAppColorScheme scheme) {
         PrAppUserPreferences preferences{.colorScheme = scheme};
@@ -4597,15 +4488,13 @@ TEST_CASE("light-dark() of images picks the image or none of the element's used 
     prHtmlPageDestroy(htmlPage);
 }
 
-TEST_CASE("a gradient interpolates in Oklab unless its colors are all legacy, and a missing component takes its "
-          "neighbor's") {
+TEST_CASE("a gradient interpolates in Oklab unless its colors are all legacy, and a missing component takes its neighbor's") {
     Page page("<div id=a style='background-image: linear-gradient(red, color(srgb 0 0 1))'></div>"
-              "<div id=b style='background-image: linear-gradient(in oklch longer hue, red, blue)'></div>"
-              "<div id=c style='background-image: linear-gradient(in srgb, color(srgb 1 0 0), "
-              "color(srgb none 0.5 0.5), color(srgb 0 0 1))'></div>");
+        "<div id=b style='background-image: linear-gradient(in oklch longer hue, red, blue)'></div>"
+        "<div id=c style='background-image: linear-gradient(in srgb, color(srgb 1 0 0), "
+        "color(srgb none 0.5 0.5), color(srgb 0 0 1))'></div>");
     PrLayoutTree* tree = prCssPresentationTree(page.presentation);
-    CHECK(prLayoutBackgroundLayer(tree, page.decoration("a").backgroundLayers, 0).gradient.space
-          == PrColorSpace_Oklab);
+    CHECK(prLayoutBackgroundLayer(tree, page.decoration("a").backgroundLayers, 0).gradient.space == PrColorSpace_Oklab);
     PrLayoutGradient b = prLayoutBackgroundLayer(tree, page.decoration("b").backgroundLayers, 0).gradient;
     CHECK(b.space == PrColorSpace_Oklch);
     CHECK(b.hueMethod == PrColorHueMethod_Longer);
@@ -4619,8 +4508,8 @@ TEST_CASE("a gradient interpolates in Oklab unless its colors are all legacy, an
 
 TEST_CASE("a gradient's stop keeps a hue that it states in the interpolation space, even where it is powerless") {
     Page page("<div id=a style='background-image: linear-gradient(in hsl, hsl(30 0% 100%), blue)'></div>"
-              "<div id=b style='background-image: linear-gradient(in oklch, hsl(30 0% 100%), blue)'></div>"
-              "<div id=c style='background-image: linear-gradient(in hsl, red, white)'></div>");
+        "<div id=b style='background-image: linear-gradient(in oklch, hsl(30 0% 100%), blue)'></div>"
+        "<div id=c style='background-image: linear-gradient(in hsl, red, white)'></div>");
     PrLayoutTree* tree = prCssPresentationTree(page.presentation);
     PrLayoutGradient a = prLayoutBackgroundLayer(tree, page.decoration("a").backgroundLayers, 0).gradient;
     REQUIRE(a.stopCount == 2);
@@ -4653,10 +4542,10 @@ TEST_CASE("the root takes the body's background layers when its own background i
 
 TEST_CASE("system colors and light-dark() resolve in the element's color scheme") {
     Page page("<div id=light style='background: Canvas; color: light-dark(red, blue)'></div>"
-              "<div id=dark style='color-scheme: dark; background: Canvas; color: light-dark(red, blue)'></div>"
-              "<div id=both style='color-scheme: light dark; background: CanvasText'></div>"
-              "<div id=accent style='accent-color: rgb(255 128 0); background: AccentColor; "
-              "border: solid ThreeDDarkShadow'></div><mark id=mark>x</mark>");
+        "<div id=dark style='color-scheme: dark; background: Canvas; color: light-dark(red, blue)'></div>"
+        "<div id=both style='color-scheme: light dark; background: CanvasText'></div>"
+        "<div id=accent style='accent-color: rgb(255 128 0); background: AccentColor; "
+        "border: solid ThreeDDarkShadow'></div><mark id=mark>x</mark>");
     CHECK(sameColor(page.decoration("light").background, PrColor{1, 1, 1, 1}));
     CHECK(sameColor(page.color("light").color, PrColor{1, 0, 0, 1}));
     CHECK(sameColor(page.color("dark").color, PrColor{0, 0, 1, 1}));
@@ -4671,15 +4560,14 @@ TEST_CASE("system colors and light-dark() resolve in the element's color scheme"
 
 TEST_CASE("color functions resolve: color-mix(), relative colors, contrast-color() and device-cmyk()") {
     Page page("<div id=mix style='background: color-mix(in srgb, red, blue)'></div>"
-              "<div id=share style='background: color-mix(in srgb, red 20%, blue 20%)'></div>"
-              "<div id=three style='background: color-mix(in srgb, red, lime, blue)'></div>"
-              "<div id=relative style='background: rgb(from red r 255 b / calc(alpha / 2))'></div>"
-              "<div id=hue style='background: hsl(from red calc(h + 120) s l)'></div>"
-              "<div id=contrast style='background: contrast-color(navy)'></div>"
-              "<div id=cmyk style='background: device-cmyk(0 0.5 1 0)'></div>"
-              "<div id=none style='background: rgb(0 0 255 / none)'></div>"
-              "<div id=parent style='color: rgb(0 0 255)'><div id=child style='border: solid; border-color: "
-              "color-mix(in srgb, currentcolor, white)'></div></div>");
+        "<div id=share style='background: color-mix(in srgb, red 20%, blue 20%)'></div>"
+        "<div id=three style='background: color-mix(in srgb, red, lime, blue)'></div>"
+        "<div id=relative style='background: rgb(from red r 255 b / calc(alpha / 2))'></div>"
+        "<div id=hue style='background: hsl(from red calc(h + 120) s l)'></div>"
+        "<div id=contrast style='background: contrast-color(navy)'></div>"
+        "<div id=cmyk style='background: device-cmyk(0 0.5 1 0)'></div><div id=none style='background: rgb(0 0 255 / none)'></div>"
+        "<div id=parent style='color: rgb(0 0 255)'><div id=child style='border: solid; border-color: "
+        "color-mix(in srgb, currentcolor, white)'></div></div>");
     CHECK(sameColor(page.decoration("mix").background, PrColor{0.5f, 0, 0.5f, 1}));
     // Percentages that sum below 100% scale the alpha.
     CHECK(sameColor(page.decoration("share").background, PrColor{0.5f, 0, 0.5f, 0.4f}));
@@ -4696,8 +4584,8 @@ TEST_CASE("color functions resolve: color-mix(), relative colors, contrast-color
 
 TEST_CASE("outline and background-clip project onto the decoration group, an outline of style none with no width") {
     Page page("<div id=a style='outline: 3px dashed blue; outline-offset: 2px; background-clip: content-box'></div>"
-              "<div id=b style='outline-style: auto; outline-width: 1px; outline-offset: -0.1px'></div><div id=c "
-              "style='outline-width: 4px'></div>");
+        "<div id=b style='outline-style: auto; outline-width: 1px; outline-offset: -0.1px'></div><div id=c "
+        "style='outline-width: 4px'></div>");
     CHECK(page.decoration("a").outlineStyle == PrDrawBorderStyle_Dashed);
     CHECK(page.decoration("a").outlineWidth.raw == prLayoutUnitFromPx(3).raw);
     CHECK(page.decoration("a").outlineOffset.raw == prLayoutUnitFromPx(2).raw);
@@ -4714,8 +4602,7 @@ TEST_CASE("outline and background-clip project onto the decoration group, an out
 TEST_CASE("a calculation that folds into a length inside a function leaves the function's computed value whole") {
     Page page("<!doctype html><style>#t { font-size: 40px }</style><div id=t></div>");
     prDomElementSetAttribute(byId(page, "t"), "style",
-                             "background-image: radial-gradient(circle calc(-0.5em + 10px) at calc(-1em + 10px)"
-                             " calc(-2em + 10px), red, blue)");
+        "background-image: radial-gradient(circle calc(-0.5em + 10px) at calc(-1em + 10px) calc(-2em + 10px), red, blue)");
     update(page);
     std::string value = resolved(page, "t", PrCssProperty_BackgroundImage);
     CHECK(value.find("at -30px -70px, ") != std::string::npos);
@@ -4723,18 +4610,20 @@ TEST_CASE("a calculation that folds into a length inside a function leaves the f
 }
 
 TEST_CASE("an element that loses its box before its children's boxes are made gives them none, and gives them boxes "
-          "again once it has a box") {
+        "again once it has a box") {
     // A query restyles the page before its first update, which queues the boxes of the div's text.
     Page page("<!doctype html><div id=div>hello world</div>");
     prCssPresentationDestroy(page.presentation);
     uint32_t sheetCount = 0;
     const PrCssUserAgentSheet* sheets = prHtmlUserAgentSheets(&sheetCount);
-    PrCssPresentationDesc desc{.document = page.document,
-                         .font = page.defaultFont,
-                         .shaper = page.shaper,
-                         .agent = page.agent,
-                         .userAgentSheets = sheets,
-                         .userAgentSheetCount = sheetCount};
+    PrCssPresentationDesc desc{
+        .document = page.document,
+        .font = page.defaultFont,
+        .shaper = page.shaper,
+        .agent = page.agent,
+        .userAgentSheets = sheets,
+        .userAgentSheetCount = sheetCount,
+    };
     page.presentation = prCssPresentationCreate(&desc);
     prDomElementSetAttribute(byId(page, "div"), "hidden", "until-found");
     resolved(page, "div", PrCssProperty_Display);
@@ -4764,10 +4653,10 @@ TEST_CASE("an attribute that changes while its element is out of the document gi
 TEST_CASE("a CSS animation in a marker's content moves the marker frame by frame") {
     std::pair<std::string, std::string> painted = paintedAtTwoTimes(
         "<!doctype html><style>.turn { animation: turn 4s linear infinite }"
-        " @keyframes turn { to { transform: rotate(90deg) } }</style>"
-        "<svg width=0 height=0><marker id=m viewBox='-10 -10 20 20' markerWidth=20 markerHeight=20"
-        " markerUnits=userSpaceOnUse><rect id=r class=turn x=-6 y=-6 width=12 height=12 /></marker></svg>"
-        "<svg width=160 height=60><path d='M 20 30 H 140' stroke=black marker-start='url(#m)' /></svg>");
+            " @keyframes turn { to { transform: rotate(90deg) } }</style>"
+            "<svg width=0 height=0><marker id=m viewBox='-10 -10 20 20' markerWidth=20 markerHeight=20"
+            " markerUnits=userSpaceOnUse><rect id=r class=turn x=-6 y=-6 width=12 height=12 /></marker></svg>"
+            "<svg width=160 height=60><path d='M 20 30 H 140' stroke=black marker-start='url(#m)' /></svg>");
     CHECK(painted.first != painted.second);
 }
 
@@ -4776,9 +4665,8 @@ TEST_CASE("a CSS animation of an instance's transform in a use element's shadow 
     // compositor runs, so the presentation applies the animation.
     std::pair<std::string, std::string> painted = paintedAtTwoTimes(
         "<!doctype html><style>.move { animation: move 4s linear infinite }"
-        " @keyframes move { to { transform: translateX(80px) } }</style>"
-        "<svg width=160 height=60><defs><rect id=r class=move x=20 y=20 width=20 height=20 /></defs>"
-        "<use href='#r' /></svg>");
+            " @keyframes move { to { transform: translateX(80px) } }</style>"
+            "<svg width=160 height=60><defs><rect id=r class=move x=20 y=20 width=20 height=20 /></defs><use href='#r' /></svg>");
     CHECK(painted.first != painted.second);
 }
 
@@ -4807,26 +4695,25 @@ TEST_CASE("a slot shows its children while nothing is assigned to it, and a slot
     Page page("<div id=host style='color: red'><span id=light slot=x>a</span></div>");
     PrDomShadowRoot* shadow =
         attachShadow(page, "host", "<style>slot { color: rgb(0, 128, 0) }</style><slot><em id=fallback>f</em></slot>"
-                                   "<slot name=x></slot>");
+            "<slot name=x></slot>");
     update(page);
     CHECK(resolvedOf(byId(page, "light"), PrCssProperty_Color) == "rgb(0, 128, 0)");
     CHECK(prCssPresentationLayoutNode(page.presentation, prDomElementAsNode(inShadow(shadow,
-                                                                               "#fallback"))) != kPrLayoutNodeNone);
+        "#fallback"))) != kPrLayoutNodeNone);
     // Assigning a node to the slot replaces its fallback content.
     prDomElementSetAttribute(byId(page, "light"), "slot", "");
     update(page);
     CHECK(prCssPresentationLayoutNode(page.presentation, prDomElementAsNode(inShadow(shadow,
-                                                                               "#fallback"))) == kPrLayoutNodeNone);
+        "#fallback"))) == kPrLayoutNodeNone);
     CHECK(page.node("light") != kPrLayoutNodeNone);
 }
 
 TEST_CASE("a tree's rules match its own elements, its host through :host and its slotted elements through ::slotted") {
     Page page("<style>p { width: 1px } #host { width: 10px } #host { height: 1px }</style>"
-              "<div id=host class=on><span id=light class=s></span></div><p id=outer></p>");
-    PrDomShadowRoot* shadow =
-        attachShadow(page, "host", "<style>p { width: 2px } :host { width: 20px; height: 5px !important }"
-                                   ":host(.on) p { height: 3px } ::slotted(.s) { display: block; width: 4px }"
-                                   "</style><p id=inner></p><slot></slot>");
+        "<div id=host class=on><span id=light class=s></span></div><p id=outer></p>");
+    PrDomShadowRoot* shadow = attachShadow(page, "host", "<style>p { width: 2px } :host { width: 20px; height: 5px !important }"
+        ":host(.on) p { height: 3px } ::slotted(.s) { display: block; width: 4px }"
+        "</style><p id=inner></p><slot></slot>");
     update(page);
     CHECK(px(page.box("outer").width) == 1.0f);
     PrDomElement* inner = inShadow(shadow, "#inner");
@@ -4846,8 +4733,7 @@ TEST_CASE("a tree's rules match its own elements, its host through :host and its
 TEST_CASE("a sheet's default namespace does not keep :host from matching its featureless host, but :host(*) obeys it") {
     Page page("<div id=bare></div><div id=argument></div>");
     attachShadow(page, "bare", "<style>@namespace url(http://www.w3.org/2000/svg); :host { width: 20px }</style>");
-    attachShadow(page, "argument",
-                 "<style>@namespace url(http://www.w3.org/2000/svg); :host(*) { width: 20px }</style>");
+    attachShadow(page, "argument", "<style>@namespace url(http://www.w3.org/2000/svg); :host(*) { width: 20px }</style>");
     update(page);
     CHECK(resolvedOf(byId(page, "bare"), PrCssProperty_Width) == "20px");
     CHECK(resolvedOf(byId(page, "argument"), PrCssProperty_Width) != "20px");
@@ -4856,8 +4742,8 @@ TEST_CASE("a sheet's default namespace does not keep :host from matching its fea
 TEST_CASE("an inherited group whose declarations restate its initial values is the initial group") {
     using namespace pr_impl;
     Page page("<style>.reset { font: 12px serif } .tabular { font-variant-numeric: tabular-nums }"
-              ".normal { font-kerning: auto; font-variant-caps: initial }</style>"
-              "<p id=a class=reset>a</p><p id=b class=tabular>b</p><p id=c class=normal>c</p>");
+        ".normal { font-kerning: auto; font-variant-caps: initial }</style>"
+        "<p id=a class=reset>a</p><p id=b class=tabular>b</p><p id=c class=normal>c</p>");
     auto group = [&](const char* id) {
         PrDomElement* element = prDomNodeGetElementById(prDomDocumentAsNode(page.document), id);
         const CssComputedStyle* style = cssPresentationStyle(page.presentation, element);
@@ -4872,12 +4758,10 @@ TEST_CASE("ex, cap, ch and ic measure the element's font, and their root forms t
     // Ahem's x-height and cap height are 0.8em, and every glyph is an em square. It has no water ideograph, and no face
     // of the page has one, so ic is an em.
     Page page("<html style='font: 10px Ahem'><body style='font: 20px Tinos'>"
-              "<div id=a style='font: 20px Ahem; width: 2ex; height: 3cap'></div>"
-              "<div id=b style='font: 20px Ahem; width: 3ch; height: 1ic'></div>"
-              "<div id=c style='width: 1rch; height: 2rex'></div>"
-              "<div id=d style='font: 20px Ahem; writing-mode: vertical-rl; text-orientation: upright; width: 1ch; "
-              "height: 1ch'></div>"
-              "<div id=e style='width: 2ex'></div>");
+        "<div id=a style='font: 20px Ahem; width: 2ex; height: 3cap'></div>"
+        "<div id=b style='font: 20px Ahem; width: 3ch; height: 1ic'></div><div id=c style='width: 1rch; height: 2rex'></div>"
+        "<div id=d style='font: 20px Ahem; writing-mode: vertical-rl; text-orientation: upright; width: 1ch; "
+        "height: 1ch'></div><div id=e style='width: 2ex'></div>");
     auto size = [&](const char* id) {
         PrRect r = page.bounds(id);
         return PrVec2{r.right - r.left, r.bottom - r.top};

@@ -174,7 +174,8 @@ struct Message {
 
 constexpr Message kChat[] = {
     {true, "How do I stream Markdown into a page?"},
-    {false, R"md(Create a stream on the element that holds the message, then append each piece as it arrives:
+    {
+        false, R"md(Create a stream on the element that holds the message, then append each piece as it arrives:
 
 ```c
 PrHtmlMarkdownStream* stream = prHtmlMarkdownStreamCreate(message, NULL);
@@ -186,9 +187,11 @@ The element's children for the **final** blocks are kept, and only the rest is b
 knowing:
 
 - The stream retains the element, so the element outlives a page that drops it while the answer is still arriving.
-- Ending the stream settles every block. Until then, the last block may still change its kind.)md"},
+- Ending the stream settles every block. Until then, the last block may still change its kind.)md",
+    },
     {true, "What does a table cost while it streams?"},
-    {false, R"md(Until its delimiter row arrives, the header is a paragraph:
+    {
+        false, R"md(Until its delimiter row arrives, the header is a paragraph:
 
 | Lines so far | Parsed as |
 | --- | --- |
@@ -199,9 +202,11 @@ knowing:
 Each row after that adds to the open table, which stays *tentative* until a line ends it.[^rows] So a long table is
 parsed again with each piece, and its layout is redone too; neither is noticeable at a reading pace.
 
-[^rows]: A footnote is numbered once its first reference arrives, and the list of footnotes follows the answer.)md"},
+[^rows]: A footnote is numbered once its first reference arrives, and the list of footnotes follows the answer.)md",
+    },
     {true, "Can an answer use math?"},
-    {false, R"md(Yes. With GitHub's extensions, TeX between dollar signs is math: $e^{i\pi} + 1 = 0$ inline, and
+    {
+        false, R"md(Yes. With GitHub's extensions, TeX between dollar signs is math: $e^{i\pi} + 1 = 0$ inline, and
 
 $$\sum_{k=1}^{n} k = \frac{n(n+1)}{2}$$
 
@@ -209,9 +214,11 @@ on its own. Until a typesetter lays it out, the TeX shows as it is written, in a
 out.
 
 > [!WARNING]
-> A dollar sign followed by a digit, as in $5, does not start math, so prices read as text.)md"},
+> A dollar sign followed by a digit, as in $5, does not start math, so prices read as text.)md",
+    },
     {true, "How do lists behave while they stream?"},
-    {false, R"md(A list stays open for as long as its items keep coming, so the whole list is the tentative block:
+    {
+        false, R"md(A list stays open for as long as its items keep coming, so the whole list is the tentative block:
 
 1. Each new item is parsed with the items before it.
 2. A blank line between two items makes the list *loose*, and every item becomes a paragraph.
@@ -226,9 +233,11 @@ Nested lists work the same way, one level inside another:
   - [x] carrots
   - [ ] leeks
 
-A list item can also hold a code block, a quote or a table; each is part of the item until the item ends.)md"},
+A list item can also hold a code block, a quote or a table; each is part of the item until the item ends.)md",
+    },
     {true, "And when the reference to a link comes last?"},
-    {false, R"md(The link reads as plain text until its definition arrives. Here is [the specification][cm] and
+    {
+        false, R"md(The link reads as plain text until its definition arrives. Here is [the specification][cm] and
 [GitHub's flavor][gfm] of it; both resolve only once the lines below them do.
 
 1. The paragraph that uses a label is final long before the definition.
@@ -236,7 +245,8 @@ A list item can also hold a code block, a quote or a table; each is part of the 
 3. Nothing else on the page moves.
 
 [cm]: https://spec.commonmark.org/
-[gfm]: https://github.github.com/gfm/)md"},
+[gfm]: https://github.github.com/gfm/)md",
+    },
 };
 
 // A page that a slow network delivers.
@@ -574,9 +584,10 @@ void deliverPiece(Stream& s, size_t size) {
         prHtmlMarkdownStreamEnd(s.markdownStream);
     } else if (s.element != nullptr) {
         PrMarkdownOptions options = chatOptions();
-        prHtmlSetMarkdown(s.element, PrStringView{s.text.data() + end - std::strlen(kChat[s.message].markdown),
-                                                  std::strlen(kChat[s.message].markdown)},
-                          &options);
+        prHtmlSetMarkdown(s.element, PrStringView{
+            s.text.data() + end - std::strlen(kChat[s.message].markdown),
+            std::strlen(kChat[s.message].markdown),
+        }, &options);
     }
     prHtmlMarkdownStreamDestroy(s.markdownStream);
     s.markdownStream = nullptr;
@@ -651,14 +662,13 @@ void releasePage(void* PR_NULLABLE context) {
 std::string statusOf(const Stream& s) {
     char line[256];
     int written = std::snprintf(line, sizeof line, "%zu of %zu bytes in %u pieces%s", s.delivered, s.text.size(),
-                                s.pieces, s.paused ? ", paused" : finished(s) ? ", done" : "");
+        s.pieces, s.paused ? ", paused" : finished(s) ? ", done" : "");
     std::string status(line, size_t(std::max(written, 0)));
     if (s.mirror != nullptr) {
         written = std::snprintf(line, sizeof line,
-                                ".  Markdown: %u blocks, %u final; the last change replaced %u blocks at %u with %u; "
-                                "%u blocks built in all",
-                                prMarkdownBlockCount(s.mirror), prMarkdownFinalCount(s.mirror),
-                                s.lastChange.removedCount, s.lastChange.first, s.lastChange.insertedCount, s.rebuilt);
+            ".  Markdown: %u blocks, %u final; the last change replaced %u blocks at %u with %u; "
+                "%u blocks built in all", prMarkdownBlockCount(s.mirror), prMarkdownFinalCount(s.mirror),
+            s.lastChange.removedCount, s.lastChange.first, s.lastChange.insertedCount, s.rebuilt);
         status.append(line, size_t(std::max(written, 0)));
     }
     return status;
@@ -668,12 +678,16 @@ std::string statusOf(const Stream& s) {
 void buildApp(void* context, PrKit* kit, PrLayoutNode ground) {
     Stream& s = *static_cast<Stream*>(context);
     PrLayoutTree* tree = prKitTree(kit);
-    PrKitSurfaceStyle header{.box = {.direction = PrKitDirection_Row,
-                                     .align = PrKitAlign_Center,
-                                     .gap = 14,
-                                     .padding = prKitEdgesXY(10, 14)},
-                             .ground = PrKitGround_Hud,
-                             .rules = PrKitRuleFlag_Bottom};
+    PrKitSurfaceStyle header{
+        .box = {
+            .direction = PrKitDirection_Row,
+            .align = PrKitAlign_Center,
+            .gap = 14,
+            .padding = prKitEdgesXY(10, 14),
+        },
+        .ground = PrKitGround_Hud,
+        .rules = PrKitRuleFlag_Bottom,
+    };
     PrLayoutNode bar = prKitSurface(kit, ground, {}, header);
     PrKitTextStyle title{.role = PrKitTextRole_Heading};
     prKitLabel(kit, bar, {.text = "Incremental"}, title);
@@ -698,17 +712,23 @@ void buildApp(void* context, PrKit* kit, PrLayoutNode ground) {
     char label[64];
     int written = std::snprintf(label, sizeof label, "%.0f bytes/s", double(s.rate));
     prKitLabel(kit, bar, {.text = PrStringView{label, size_t(std::max(written, 0))}}, meta);
-    PrLayoutNode rate = prKitSlider(
-        kit, bar, {.key = 2, .value = prKitScalarF32(&s.rate), .min = kMinRate, .max = kMaxRate,
-                   .scale = PrKitSliderScale_Ratio},
-        {});
+    PrLayoutNode rate = prKitSlider(kit, bar, {
+        .key = 2,
+        .value = prKitScalarF32(&s.rate),
+        .min = kMinRate,
+        .max = kMaxRate,
+        .scale = PrKitSliderScale_Ratio,
+    }, {});
     prKitPlace(kit, rate, &slider);
     written = std::snprintf(label, sizeof label, "%.0f bytes a piece", double(std::round(s.chunk)));
     prKitLabel(kit, bar, {.text = PrStringView{label, size_t(std::max(written, 0))}}, meta);
-    PrLayoutNode chunk = prKitSlider(
-        kit, bar, {.key = 3, .value = prKitScalarF32(&s.chunk), .min = kMinChunk, .max = kMaxChunk,
-                   .scale = PrKitSliderScale_Ratio},
-        {});
+    PrLayoutNode chunk = prKitSlider(kit, bar, {
+        .key = 3,
+        .value = prKitScalarF32(&s.chunk),
+        .min = kMinChunk,
+        .max = kMaxChunk,
+        .scale = PrKitSliderScale_Ratio,
+    }, {});
     prKitPlace(kit, chunk, &slider);
     PrLayoutNode progress = prKitProgress(
         kit, bar, {.value = s.text.empty() ? 0.0f : float(s.delivered) / float(s.text.size())});
@@ -728,8 +748,11 @@ void buildApp(void* context, PrKit* kit, PrLayoutNode ground) {
     if (bounds.right - bounds.left >= 1 && bounds.bottom - bounds.top >= 1)
         s.pane = bounds;
 
-    PrKitSurfaceStyle footer{.box = {.padding = prKitEdgesXY(6, 14)}, .ground = PrKitGround_Hud,
-                             .rules = PrKitRuleFlag_Top};
+    PrKitSurfaceStyle footer{
+        .box = {.padding = prKitEdgesXY(6, 14)},
+        .ground = PrKitGround_Hud,
+        .rules = PrKitRuleFlag_Top,
+    };
     PrLayoutNode status = prKitSurface(kit, ground, {}, footer);
     std::string line = statusOf(s);
     prKitLabel(kit, status, {.text = PrStringView{line.data(), line.size()}}, meta);
@@ -762,9 +785,10 @@ struct Window {
 // Declares a round: a surface on the app's ground that fills the viewport, and the example under it.
 void build(void* context, PrUi*, const PrUiRound*) {
     Window& w = *static_cast<Window*>(context);
-    PrKitSurfaceStyle style{.box = {.overflow = PrKitOverflow_Clip,
-                                    .place = {.width = prKitPercent(100), .height = prKitPercent(100)}},
-                            .ground = PrKitGround_App};
+    PrKitSurfaceStyle style{
+        .box = {.overflow = PrKitOverflow_Clip, .place = {.width = prKitPercent(100), .height = prKitPercent(100)}},
+        .ground = PrKitGround_App,
+    };
     buildApp(&w.stream, w.kit, prKitSurface(w.kit, kPrLayoutNodeNone, {}, style));
 }
 
@@ -787,10 +811,10 @@ void closeDevice(Window& w) {
 bool openDevice(Window& w) {
     PrAppSurface surface{};
     PrGpuSwapChainDesc desc{.intent = PrGpuSwapChainIntent_Sdr};
-    if (prGpuDeviceCreate(PrGpuBackend_Default, nullptr, &w.device) != PrStatus_Ok
-        || prAppSurface(w.app, &surface) != PrStatus_Ok
-        || prGpuSwapChainCreate(w.device, &surface, &desc, &w.swapChain) != PrStatus_Ok
-        || prDrawRendererCreate(PrDrawRendererBackend_Default, w.device, nullptr, &w.renderer) != PrStatus_Ok) {
+    if (prGpuDeviceCreate(PrGpuBackend_Default, nullptr, &w.device) != PrStatus_Ok ||
+            prAppSurface(w.app, &surface) != PrStatus_Ok ||
+            prGpuSwapChainCreate(w.device, &surface, &desc, &w.swapChain) != PrStatus_Ok ||
+            prDrawRendererCreate(PrDrawRendererBackend_Default, w.device, nullptr, &w.renderer) != PrStatus_Ok) {
         closeDevice(w);
         return false;
     }
@@ -802,8 +826,8 @@ bool openDevice(Window& w) {
 void render(Window& w, PrUVec2 extent, PrColor canvas) {
     PrGpuTexture drawable{};
     PrGpuCommands* commands = nullptr;
-    if (prGpuSwapChainAcquire(w.swapChain, extent, &drawable) != PrStatus_Ok
-        || !prGpuCommandsBegin(w.device, nullptr, &commands))
+    if (prGpuSwapChainAcquire(w.swapChain, extent, &drawable) != PrStatus_Ok ||
+            !prGpuCommandsBegin(w.device, nullptr, &commands))
         return;
     PrDrawTarget into{.extent = extent, .format = PrPixelFormat_Bgra8, .commands = commands};
     prDrawFramePrepare(w.frame, w.list, &into);
@@ -841,12 +865,14 @@ void frame(void* context, PrApp* app, const PrAppFrame* f) {
     w.stream.preferences = f->preferences;
     advance(w.stream, f->delta);
 
-    PrUiFrameDesc desc{.time = f->time,
-                       .delta = f->delta,
-                       .extent = f->extent,
-                       .maxRounds = 4,
-                       .display = f->display,
-                       .preferences = f->preferences};
+    PrUiFrameDesc desc{
+        .time = f->time,
+        .delta = f->delta,
+        .extent = f->extent,
+        .maxRounds = 4,
+        .display = f->display,
+        .preferences = f->preferences,
+    };
     prUiFrame(w.ui, &desc, build, &w);
 
     // The tree's scene plays into the list in target pixels, each scroll container at the tree's offset for it. The
@@ -887,8 +913,8 @@ void event(void* context, PrApp* app, const PrAppEvent* e) {
         w.pointer = e->position;
     // The wheel over the pane scrolls the page, and scrolling up stops it following the end.
     const PrRect& pane = w.stream.pane;
-    bool overPane = w.pointer.x >= pane.left && w.pointer.x < pane.right && w.pointer.y >= pane.top
-        && w.pointer.y < pane.bottom;
+    bool overPane =
+        w.pointer.x >= pane.left && w.pointer.x < pane.right && w.pointer.y >= pane.top && w.pointer.y < pane.bottom;
     if (e->kind == PrAppEventKind_Scroll && overPane) {
         float delta = prAppEventScrollPixels(e, kLineHeight).y;
         w.stream.scrollBy += double(delta);

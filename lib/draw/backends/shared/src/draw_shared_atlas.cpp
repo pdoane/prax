@@ -307,8 +307,10 @@ bool phaseOf(PrVec2 point, PrVec2* pixel, uint8_t* phaseX, uint8_t* phaseY) {
 
 // Returns the entry drawn from the atlas. Its texels are placed relative to the pixel that contains the entry's origin.
 PrDrawAtlasEntry entryOf(const Entry& e, PrVec2 pixel) {
-    return PrDrawAtlasEntry{e.page, {e.x, e.y}, {e.width, e.height},
-                            {int32_t(pixel.x) + e.left, int32_t(pixel.y) + e.top}};
+    return PrDrawAtlasEntry{
+        e.page, {e.x, e.y}, {e.width, e.height},
+        {int32_t(pixel.x) + e.left, int32_t(pixel.y) + e.top},
+    };
 }
 
 // Returns true if the path has both an open contour and a closed contour. An aligned stroke of such a path composites
@@ -410,7 +412,7 @@ void prDrawAtlasKeepPage(PrDrawAtlas* atlas, uint32_t page) {
 }
 
 bool prDrawAtlasGlyph(PrDrawAtlas* atlas, const PrFontGlyphRun* run, uint32_t index, PrAffine2 transform,
-                      PrDrawAtlasEntry* out) {
+        PrDrawAtlasEntry* out) {
     // The atlas holds a glyph at its phase (prDrawGlyphPlace).
     PrDrawGlyphPlacement placement = prDrawGlyphPlace(run, index, transform);
     if (!placement.phased)
@@ -453,7 +455,7 @@ bool prDrawAtlasGlyph(PrDrawAtlas* atlas, const PrFontGlyphRun* run, uint32_t in
 }
 
 bool prDrawAtlasPath(PrDrawAtlas* atlas, const PrPath* path, PrPathFillRule rule,
-                     const PrDrawStroke* PR_NULLABLE stroke, PrAffine2 transform, PrDrawAtlasEntry* out) {
+        const PrDrawStroke* PR_NULLABLE stroke, PrAffine2 transform, PrDrawAtlasEntry* out) {
     if (transform.b != 0 || transform.c != 0 || !(transform.a > 0) || !(transform.d > 0))
         return false;
     if (stroke != nullptr && !(stroke->shape.width > 0))
@@ -519,11 +521,11 @@ bool prDrawAtlasPath(PrDrawAtlas* atlas, const PrPath* path, PrPathFillRule rule
             if (atlas->aligned.pointCount != 0) {
                 // Cuts the aligned outline to the region's interior or exterior. The path's contours are all closed, so
                 // the centered outline is empty.
-                PrPathPolylineOp op = stroke->align == PrDrawStrokeAlign_Inside ? PrPathPolylineOp_Intersect
-                                                                                : PrPathPolylineOp_Difference;
+                bool inside = stroke->align == PrDrawStrokeAlign_Inside;
+                PrPathPolylineOp op = inside ? PrPathPolylineOp_Intersect : PrPathPolylineOp_Difference;
                 prPathPolylineClear(&atlas->outline);
                 prPathPolylineCombine(&atlas->aligned, PrPathFillRule_NonZero, &atlas->region, PrPathFillRule_NonZero,
-                                      op, &atlas->outline);
+                    op, &atlas->outline);
             }
             rule = PrPathFillRule_NonZero;
         }

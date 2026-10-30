@@ -37,9 +37,8 @@ constexpr uint32_t kNameMaxBytes = 254;
 constexpr uint32_t kProtocolMaxBytes = 255;
 
 // What every call to InitializeSecurityContextW asks for. The session verifies the server's certificate itself.
-constexpr ULONG kContextRequest = (ISC_REQ_SEQUENCE_DETECT | ISC_REQ_REPLAY_DETECT | ISC_REQ_CONFIDENTIALITY
-                                   | ISC_REQ_ALLOCATE_MEMORY | ISC_REQ_STREAM | ISC_REQ_EXTENDED_ERROR
-                                   | ISC_REQ_MANUAL_CRED_VALIDATION);
+constexpr ULONG kContextRequest = (ISC_REQ_SEQUENCE_DETECT | ISC_REQ_REPLAY_DETECT | ISC_REQ_CONFIDENTIALITY |
+    ISC_REQ_ALLOCATE_MEMORY | ISC_REQ_STREAM | ISC_REQ_EXTENDED_ERROR | ISC_REQ_MANUAL_CRED_VALIDATION);
 
 struct Session;
 
@@ -131,8 +130,7 @@ SECURITY_STATUS stepContext(Session* session, SecBufferDesc* PR_NULLABLE input) 
     SecBufferDesc outputDesc{SECBUFFER_VERSION, 1, &output};
     ULONG attributes = 0;
     SECURITY_STATUS status = InitializeSecurityContextW(&session->tls->credentials, &session->context,
-                                                        session->name, kContextRequest, 0, 0, input, 0, nullptr,
-                                                        &outputDesc, &attributes, nullptr);
+        session->name, kContextRequest, 0, 0, input, 0, nullptr, &outputDesc, &attributes, nullptr);
     sendToken(session, &output);
     return status;
 }
@@ -179,27 +177,26 @@ void sendCloseNotify(Session* session) {
 
 // Returns true if `certificate` is the one that the session verified.
 bool isVerifiedCertificate(const Session* session, PCCERT_CONTEXT certificate) {
-    return session->certificate != nullptr
-           && CertCompareCertificate(X509_ASN_ENCODING, session->certificate->pCertInfo, certificate->pCertInfo);
+    return session->certificate != nullptr &&
+        CertCompareCertificate(X509_ASN_ENCODING, session->certificate->pCertInfo, certificate->pCertInfo);
 }
 
 // Reads what the handshake negotiated, and hands the server's certificate to the verifier.
 void completeHandshake(Session* session) {
     SecPkgContext_ConnectionInfo connection{};
     QueryContextAttributesW(&session->context, SECPKG_ATTR_CONNECTION_INFO, &connection);
-    session->version = (connection.dwProtocol & SP_PROT_TLS1_3_CLIENT) != 0 ? PrTlsVersion_Tls13
-                                                                             : PrTlsVersion_Tls12;
+    session->version = (connection.dwProtocol & SP_PROT_TLS1_3_CLIENT) != 0 ? PrTlsVersion_Tls13 : PrTlsVersion_Tls12;
     SecPkgContext_ApplicationProtocol protocol{};
-    if (QueryContextAttributesW(&session->context, SECPKG_ATTR_APPLICATION_PROTOCOL, &protocol) == SEC_E_OK
-        && protocol.ProtoNegoStatus == SecApplicationProtocolNegotiationStatus_Success
-        && protocol.ProtoNegoExt == SecApplicationProtocolNegotiationExt_ALPN && protocol.ProtocolIdSize != 0) {
+    if (QueryContextAttributesW(&session->context, SECPKG_ATTR_APPLICATION_PROTOCOL, &protocol) == SEC_E_OK &&
+            protocol.ProtoNegoStatus == SecApplicationProtocolNegotiationStatus_Success &&
+            protocol.ProtoNegoExt == SecApplicationProtocolNegotiationExt_ALPN && protocol.ProtocolIdSize != 0) {
         memCopy(session->protocolBytes, protocol.ProtocolId, protocol.ProtocolIdSize);
         session->protocol = PrStringView{session->protocolBytes, protocol.ProtocolIdSize};
     }
     PCCERT_CONTEXT certificate = nullptr;
-    if (QueryContextAttributesW(&session->context, SECPKG_ATTR_STREAM_SIZES, &session->sizes) != SEC_E_OK
-        || QueryContextAttributesW(&session->context, SECPKG_ATTR_REMOTE_CERT_CONTEXT, &certificate) != SEC_E_OK
-        || certificate == nullptr) {
+    if (QueryContextAttributesW(&session->context, SECPKG_ATTR_STREAM_SIZES, &session->sizes) != SEC_E_OK ||
+            QueryContextAttributesW(&session->context, SECPKG_ATTR_REMOTE_CERT_CONTEXT, &certificate) != SEC_E_OK ||
+            certificate == nullptr) {
         tlsSharedFail(session, PrNetError_Protocol, PrTlsFailure_Handshake);
         return;
     }
@@ -221,8 +218,8 @@ void completeHandshake(Session* session) {
 // Checks the certificate that a renegotiation presented, which must be the one that the session verified.
 void completeRenegotiation(Session* session) {
     PCCERT_CONTEXT certificate = nullptr;
-    if (QueryContextAttributesW(&session->context, SECPKG_ATTR_REMOTE_CERT_CONTEXT, &certificate) == SEC_E_OK
-        && certificate != nullptr) {
+    if (QueryContextAttributesW(&session->context, SECPKG_ATTR_REMOTE_CERT_CONTEXT, &certificate) == SEC_E_OK &&
+            certificate != nullptr) {
         bool same = isVerifiedCertificate(session, certificate);
         CertFreeCertificateContext(certificate);
         if (!same) {
@@ -240,8 +237,10 @@ void negotiate(Session* session) {
     bool retried = false;
     while (session->incomingStart < session->incoming.count) {
         SecBuffer input[2] = {
-            {session->incoming.count - session->incomingStart, SECBUFFER_TOKEN,
-             session->incoming.data + session->incomingStart},
+            {
+                session->incoming.count - session->incomingStart, SECBUFFER_TOKEN,
+                session->incoming.data + session->incomingStart,
+            },
             {0, SECBUFFER_EMPTY, nullptr},
         };
         SecBufferDesc inputDesc{SECBUFFER_VERSION, 2, input};
@@ -285,8 +284,10 @@ void decrypt(Session* session) {
             session->receivedStart = 0;
         }
         SecBuffer buffers[4] = {
-            {session->incoming.count - session->incomingStart, SECBUFFER_DATA,
-             session->incoming.data + session->incomingStart},
+            {
+                session->incoming.count - session->incomingStart, SECBUFFER_DATA,
+                session->incoming.data + session->incomingStart,
+            },
             {0, SECBUFFER_EMPTY, nullptr},
             {0, SECBUFFER_EMPTY, nullptr},
             {0, SECBUFFER_EMPTY, nullptr},
@@ -355,9 +356,10 @@ void drainTransport(Session* session) {
         if (session->dead || session->state == TlsSharedState_Failed)
             return;
     }
-    if (session->transportEnded && takesBytes(session) && !session->ended)
-        tlsSharedFail(session, PrNetError_Protocol, session->state == TlsSharedState_Handshaking
-                                               ? PrTlsFailure_Handshake : PrTlsFailure_Truncated);
+    if (session->transportEnded && takesBytes(session) && !session->ended) {
+        bool handshaking = session->state == TlsSharedState_Handshaking;
+        tlsSharedFail(session, PrNetError_Protocol, handshaking ? PrTlsFailure_Handshake : PrTlsFailure_Truncated);
+    }
 }
 
 // Opens the session once its certificate is verified: sends what the client wrote before, delivers Open, and then reads
@@ -401,8 +403,7 @@ void verified(void* PR_NULLABLE context) {
 
 // Returns true if `certificate` is one of `anchors`.
 bool isAnchor(HCERTSTORE anchors, PCCERT_CONTEXT certificate) {
-    PCCERT_CONTEXT found = CertFindCertificateInStore(anchors, X509_ASN_ENCODING, 0, CERT_FIND_EXISTING, certificate,
-                                                      nullptr);
+    PCCERT_CONTEXT found = CertFindCertificateInStore(anchors, X509_ASN_ENCODING, 0, CERT_FIND_EXISTING, certificate, nullptr);
     if (found == nullptr)
         return false;
     CertFreeCertificateContext(found);
@@ -534,8 +535,7 @@ bool copyName(PrStringView name, wchar_t* out) {
         if (name.data[i] == 0)
             return false;
     }
-    int written = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, name.data, int(name.size), out,
-                                      int(kNameMaxBytes - 1));
+    int written = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, name.data, int(name.size), out, int(kNameMaxBytes - 1));
     if (written <= 0)
         return false;
     out[written] = 0;
@@ -553,9 +553,9 @@ PrStatus openAnchors(const PrTlsSessionDesc* desc, HCERTSTORE PR_NULLABLE* PR_NO
         PR_FATAL("tls_schannel: no memory store for the anchors");
     for (uint32_t i = 0; i < desc->anchorCount; ++i) {
         PrByteView anchor = desc->anchors[i];
-        if (anchor.size > UINT32_MAX
-            || !CertAddEncodedCertificateToStore(store, X509_ASN_ENCODING, anchor.data, DWORD(anchor.size),
-                                                 CERT_STORE_ADD_ALWAYS, nullptr)) {
+        if (anchor.size > UINT32_MAX ||
+                !CertAddEncodedCertificateToStore(store, X509_ASN_ENCODING, anchor.data, DWORD(anchor.size),
+                    CERT_STORE_ADD_ALWAYS, nullptr)) {
             CertCloseStore(store, 0);
             return PrStatus_InvalidData;
         }
@@ -601,9 +601,8 @@ void startHandshake(Session* session, const PrTlsSessionDesc* desc) {
     SecBufferDesc outputDesc{SECBUFFER_VERSION, 1, &output};
     ULONG attributes = 0;
     SECURITY_STATUS status = InitializeSecurityContextW(&session->tls->credentials, nullptr, session->name,
-                                                        kContextRequest, 0, 0,
-                                                        desc->protocolCount != 0 ? &inputDesc : nullptr, 0,
-                                                        &session->context, &outputDesc, &attributes, nullptr);
+        kContextRequest, 0, 0, desc->protocolCount != 0 ? &inputDesc : nullptr, 0,
+        &session->context, &outputDesc, &attributes, nullptr);
     protocols.reset();
     if (status == SEC_I_CONTINUE_NEEDED) {
         session->hasContext = true;
@@ -687,8 +686,7 @@ PrTls* prTlsSchannelCreate(PrNet* net) {
     credentials.cTlsParameters = 1;
     credentials.pTlsParameters = &parameters;
     SECURITY_STATUS status = AcquireCredentialsHandleW(nullptr, const_cast<wchar_t*>(UNISP_NAME_W),
-                                                       SECPKG_CRED_OUTBOUND, nullptr, &credentials, nullptr, nullptr,
-                                                       &tls->credentials, nullptr);
+        SECPKG_CRED_OUTBOUND, nullptr, &credentials, nullptr, nullptr, &tls->credentials, nullptr);
     if (status != SEC_E_OK)
         PR_FATAL("tls_schannel: no SChannel credentials for TLS 1.2 and 1.3");
     prMutexInit(&tls->mutex);

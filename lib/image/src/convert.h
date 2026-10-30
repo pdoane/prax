@@ -14,7 +14,7 @@ uint32_t imagePixelBytes(const PrImageFormat& format);
 // Converts `source` in format `from` into `destination` in format `to`. The two are the same size and do not overlap.
 // `policy` holds the assumptions that the conversion may make about uncharacterized color.
 PrStatus imageConvert(PrPixelView source, const PrImageFormat& from, PrPixels destination,
-                      const PrImageFormat& to, PrImageConversionFlags policy);
+    const PrImageFormat& to, PrImageConversionFlags policy);
 
 } // namespace pr_impl
 

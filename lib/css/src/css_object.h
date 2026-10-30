@@ -129,8 +129,7 @@ CssParserSlot cssRuleParser(PrCssRule* rule);
 
 // Links in `out` the data that `rule` and the objects of its enclosing rules present, one link per level from `rule`
 // outward. Returns the first link, or null if `rule` is null.
-const CssRuleChain* PR_NULLABLE cssRuleChain(const PrCssRule* PR_NULLABLE rule,
-                                             Array<CssRuleChain>* out);
+const CssRuleChain* PR_NULLABLE cssRuleChain(const PrCssRule* PR_NULLABLE rule, Array<CssRuleChain>* out);
 
 // Returns the declarations of a declaration block.
 const CssDeclarationBlock* cssStyleDeclarationBlock(const PrCssStyleDeclaration* declaration);

@@ -48,8 +48,7 @@ TEST_CASE("constant and runtime name hashes agree across word boundaries") {
 
 TEST_CASE("a folded word is every ASCII uppercase byte lowered, and nothing else") {
     for (uint32_t byte = 0; byte < 256; ++byte) {
-        char text[8] = {char(byte), char(byte), char(byte), char(byte),
-                        char(byte), char(byte), char(byte), char(byte)};
+        char text[8] = {char(byte), char(byte), char(byte), char(byte), char(byte), char(byte), char(byte), char(byte)};
         char lowered[8];
         for (uint32_t i = 0; i < 8; ++i)
             lowered[i] = asciiLower(text[i]);
@@ -86,8 +85,10 @@ TEST_CASE("a mask covers the low bytes of a size and no others") {
 
 TEST_CASE("a hash is the same however the name is read") {
     // The two paths meet at eight bytes, where the partial read gives way to the word read.
-    const char* names[] = {"", "a", "div", "quot;", "abcdefg", "abcdefgh", "abcdefghi",
-                           "CounterClockwiseContourIntegral;"};
+    const char* names[] = {
+        "", "a", "div", "quot;", "abcdefg", "abcdefgh", "abcdefghi",
+        "CounterClockwiseContourIntegral;",
+    };
     for (const char* name : names) {
         size_t size = PrStringView(name).size;
         uint64_t word;
@@ -101,8 +102,8 @@ TEST_CASE("a hash is the same however the name is read") {
 TEST_CASE("a folded hash is the same whatever case the name was written in") {
     uint64_t word;
     CHECK(nameHashLower("DIV", 3, kSeed, &word) == nameHashLower("div", 3, kSeed, &word));
-    CHECK(nameHashLower("Border-Top-Left-Radius", 22, kSeed, &word)
-          == nameHashLower("border-top-left-radius", 22, kSeed, &word));
+    CHECK(nameHashLower("Border-Top-Left-Radius", 22, kSeed, &word) ==
+        nameHashLower("border-top-left-radius", 22, kSeed, &word));
 }
 
 TEST_CASE("a name the hash reached is compared against the text") {

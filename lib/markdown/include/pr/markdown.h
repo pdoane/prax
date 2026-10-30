@@ -39,13 +39,12 @@ enum {
     // source that starts with "---" is open and has no closing line, no block of it is final.
     PrMarkdownExtensionFlag_FrontMatter = 1u << 11,
 
-    PrMarkdownExtensionFlag_Gfm = PrMarkdownExtensionFlag_Tables | PrMarkdownExtensionFlag_TaskLists
-                                  | PrMarkdownExtensionFlag_Strikethrough | PrMarkdownExtensionFlag_Autolinks,
+    PrMarkdownExtensionFlag_Gfm = PrMarkdownExtensionFlag_Tables | PrMarkdownExtensionFlag_TaskLists |
+        PrMarkdownExtensionFlag_Strikethrough | PrMarkdownExtensionFlag_Autolinks,
 
     // What GitHub renders: GFM, footnotes, alerts, heading ids and math
-    PrMarkdownExtensionFlag_GitHub = PrMarkdownExtensionFlag_Gfm | PrMarkdownExtensionFlag_Footnotes
-                                     | PrMarkdownExtensionFlag_Alerts | PrMarkdownExtensionFlag_HeadingIds
-                                     | PrMarkdownExtensionFlag_Math,
+    PrMarkdownExtensionFlag_GitHub = PrMarkdownExtensionFlag_Gfm | PrMarkdownExtensionFlag_Footnotes |
+        PrMarkdownExtensionFlag_Alerts | PrMarkdownExtensionFlag_HeadingIds | PrMarkdownExtensionFlag_Math,
 };
 typedef uint32_t PrMarkdownExtensionFlags;
 
@@ -131,8 +130,7 @@ typedef struct PrMarkdownChange {
 // Writes up to `capacity` of the changes since the last call to `out`, and returns how many it wrote. A client calls it
 // until it writes none. Applying the changes in order to the blocks that the client last read gives the document's
 // blocks. A block whose late reference resolved is reported as one block replaced by one.
-uint32_t prMarkdownTakeChanges(PrMarkdown* document, PrMarkdownChange* PR_NULLABLE out,
-                               uint32_t capacity);
+uint32_t prMarkdownTakeChanges(PrMarkdown* document, PrMarkdownChange* PR_NULLABLE out, uint32_t capacity);
 
 // Returns true if the footnotes that prMarkdownWalkFootnotes walks changed since the last call.
 bool prMarkdownTakeFootnotesChanged(PrMarkdown* document);
@@ -272,13 +270,11 @@ typedef void (*PrMarkdownStepFn)(void* PR_NULLABLE context, const PrMarkdownStep
 // Walks the `count` top-level blocks at `first`, which must be blocks of the document, and calls `fn` with each step.
 // Footnote definitions are not walked with the blocks. A reference to a footnote that no definition has is walked as
 // the Text that it is written as.
-void prMarkdownWalk(const PrMarkdown* document, uint32_t first, uint32_t count, PrMarkdownStepFn fn,
-                    void* PR_NULLABLE context);
+void prMarkdownWalk(const PrMarkdown* document, uint32_t first, uint32_t count, PrMarkdownStepFn fn, void* PR_NULLABLE context);
 
 // Walks the definitions of the footnotes that the document references, in the order of their numbers, and calls `fn`
 // with each step.
-void prMarkdownWalkFootnotes(const PrMarkdown* document, PrMarkdownStepFn fn,
-                             void* PR_NULLABLE context);
+void prMarkdownWalkFootnotes(const PrMarkdown* document, PrMarkdownStepFn fn, void* PR_NULLABLE context);
 
 #if defined(__cplusplus)
 }

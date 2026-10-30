@@ -36,7 +36,7 @@ void appendChunk(std::vector<uint8_t>* out, const char* type, const std::string&
 // Returns a PNG file of a header, the chunks of `before`, image data, the chunks of `after`, and an end. The chunks are
 // well formed, and the pixels are not.
 std::vector<uint8_t> pngWith(const std::vector<std::pair<const char*, std::string>>& before,
-                             const std::vector<std::pair<const char*, std::string>>& after = {}) {
+        const std::vector<std::pair<const char*, std::string>>& after = {}) {
     std::vector<uint8_t> png{0x89, 'P', 'N', 'G', 0x0D, 0x0A, 0x1A, 0x0A};
     appendChunk(&png, "IHDR", std::string(13, '\1'));
     for (const auto& [type, data] : before)
@@ -58,9 +58,11 @@ std::string stringOf(PrStringView view) {
 
 PrStatus textsOf(const std::vector<uint8_t>& png, PrCompressCodec* compress, std::vector<Text>* out) {
     auto collect = [](void* context, const PrImagePngText* text) {
-        static_cast<std::vector<Text>*>(context)->push_back({stringOf(text->keyword), stringOf(text->text),
-                                                             stringOf(text->language),
-                                                             stringOf(text->translatedKeyword)});
+        static_cast<std::vector<Text>*>(context)->push_back({
+            stringOf(text->keyword), stringOf(text->text),
+            stringOf(text->language),
+            stringOf(text->translatedKeyword),
+        });
     };
     return prImagePngEachText(viewOf(png), compress, collect, out);
 }
@@ -69,8 +71,8 @@ std::string zlibOf(PrCompressCodec* codec, const std::string& text) {
     std::vector<uint8_t> out(prCompressCodecEncodeBound(codec, PrCompressFormat_Zlib, text.size()));
     size_t written = 0;
     PrByteView input{reinterpret_cast<const uint8_t*>(text.data()), text.size()};
-    REQUIRE(prCompressCodecEncode(codec, PrCompressFormat_Zlib, PrCompressLevel_Default, input, out.data(), &written)
-            == PrStatus_Ok);
+    REQUIRE(prCompressCodecEncode(codec, PrCompressFormat_Zlib, PrCompressLevel_Default, input, out.data(), &written) ==
+        PrStatus_Ok);
     return std::string(reinterpret_cast<const char*>(out.data()), written);
 }
 
@@ -95,10 +97,11 @@ TEST_CASE("each kind of text chunk reads as UTF-8, with Latin-1 converted") {
     REQUIRE(codec != nullptr);
     std::string itxt = std::string("Title\0\0\0fr\0Titre\0", 17) + "caf\xC3\xA9";
     std::string compressed = std::string("Note\0\1\0\0\0", 9) + zlibOf(codec, "long \xE2\x9C\x93");
-    std::vector<uint8_t> png = pngWith({{"tEXt", std::string("Author\0Ren\xE9", 11)},
-                                        {"zTXt", std::string("Comment\0\0", 9) + zlibOf(codec, "squeezed")},
-                                        {"iTXt", itxt}},
-                                       {{"iTXt", compressed}});
+    std::vector<uint8_t> png = pngWith({
+        {"tEXt", std::string("Author\0Ren\xE9", 11)},
+        {"zTXt", std::string("Comment\0\0", 9) + zlibOf(codec, "squeezed")},
+        {"iTXt", itxt},
+    }, {{"iTXt", compressed}});
     std::vector<Text> texts;
     REQUIRE(textsOf(png, codec, &texts) == PrStatus_Ok);
     REQUIRE(texts.size() == 4);
@@ -121,9 +124,11 @@ TEST_CASE("each kind of text chunk reads as UTF-8, with Latin-1 converted") {
 }
 
 TEST_CASE("a malformed text chunk is skipped, and a file that is not a PNG fails") {
-    std::vector<uint8_t> png = pngWith({{"tEXt", std::string("NoTerminator")},
-                                        {"iTXt", std::string("Bad\0\0\0\0\0\xFF", 9)},
-                                        {"tEXt", std::string("Good\0yes", 8)}});
+    std::vector<uint8_t> png = pngWith({
+        {"tEXt", std::string("NoTerminator")},
+        {"iTXt", std::string("Bad\0\0\0\0\0\xFF", 9)},
+        {"tEXt", std::string("Good\0yes", 8)},
+    });
     // A chunk whose CRC does not match.
     std::vector<uint8_t> corrupt = pngWith({{"tEXt", std::string("Flipped\0bits", 12)}});
     corrupt[8 + 25 + 8 + 9] ^= 1;
@@ -142,9 +147,10 @@ TEST_CASE("a malformed text chunk is skipped, and a file that is not a PNG fails
 }
 
 TEST_CASE("a set text replaces every chunk of its keyword, where the first was, and keeps the rest") {
-    std::vector<uint8_t> png = pngWith({{"tEXt", std::string("Other\0kept", 10)},
-                                        {"tEXt", std::string("Record\0old", 10)}},
-                                       {{"tEXt", std::string("Record\0older", 12)}});
+    std::vector<uint8_t> png = pngWith({
+        {"tEXt", std::string("Other\0kept", 10)},
+        {"tEXt", std::string("Record\0old", 10)},
+    }, {{"tEXt", std::string("Record\0older", 12)}});
     std::vector<uint8_t> out = withText(png, "Record", "new \xE2\x9C\x93");
     std::vector<Text> texts;
     REQUIRE(textsOf(out, nullptr, &texts) == PrStatus_Ok);

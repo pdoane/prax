@@ -25,8 +25,12 @@ constexpr float kFrameSize = 148;
 // Creates a square frame for a picture on the viewport's ground, which shows where a fit leaves room.
 PrLayoutNode framed(PrKit* kit, PrLayoutNode parent) {
     PrKitSurfaceStyle surface{.ground = PrKitGround_Viewport};
-    surface.box.place = {.width = prKitPx(kFrameSize), .height = prKitPx(kFrameSize), .flex = PrKitFlex_Fixed,
-                         .align = PrKitAlign_Start};
+    surface.box.place = {
+        .width = prKitPx(kFrameSize),
+        .height = prKitPx(kFrameSize),
+        .flex = PrKitFlex_Fixed,
+        .align = PrKitAlign_Start,
+    };
     return prKitSurface(kit, parent, {}, surface);
 }
 
@@ -48,12 +52,9 @@ constexpr PrKitLogLine kLog[] = {
     {0, "12:04:18.2", "Scene Level_01 loaded", "SceneManager", PrKitLogLevel_Info},
     {0, "12:04:18.3", "Compiling 142 shaders", "ShaderCache", PrKitLogLevel_Info},
     {0, "12:04:19.4", "Compilation complete in 1.1 s", "ShaderCache", PrKitLogLevel_Info},
-    {0, "12:04:21.0", "Texture env_diffuse.ktx2 has non-power-of-two dimensions", "AssetImport",
-     PrKitLogLevel_Warning},
-    {0, "12:04:25.6", "Entity Enemy_04 is missing a Rigidbody", "PhysicsSystem",
-     PrKitLogLevel_Error},
-    {0, "12:04:25.7", "LOD group reports no levels for tree_pine_03.mesh", "Renderer",
-     PrKitLogLevel_Warning},
+    {0, "12:04:21.0", "Texture env_diffuse.ktx2 has non-power-of-two dimensions", "AssetImport", PrKitLogLevel_Warning},
+    {0, "12:04:25.6", "Entity Enemy_04 is missing a Rigidbody", "PhysicsSystem", PrKitLogLevel_Error},
+    {0, "12:04:25.7", "LOD group reports no levels for tree_pine_03.mesh", "Renderer", PrKitLogLevel_Warning},
     {0, "12:04:26.0", "Autosave complete", "Autosave", PrKitLogLevel_Info},
 };
 
@@ -73,17 +74,16 @@ void fill(PrKit* kit, PrLayoutNode node) {
 
 void sectionProgress(PrKit* kit, PrLayoutNode parent, GalleryState& state) {
     ProgressState& progress = state.progress;
-    PrLayoutNode section = sectionFrame(
-        kit, parent, "15", "Progress", "Work in flight, and a reading against a budget.",
+    PrLayoutNode section = sectionFrame(kit, parent, "15", "Progress", "Work in flight, and a reading against a budget.",
         "A determinate bar states a fraction, an indeterminate one states only that work is running, and a meter "
-              "lights the segments its value covers. Each of the moving ones asks for the frames that move it.");
+            "lights the segments its value covers. Each of the moving ones asks for the frames that move it.");
     {
         PrLayoutNode panel = demoPanel(kit, section, "PROGRESS", "DETERMINATE . INDETERMINATE", false);
         PrLayoutNode bake = captionRow(kit, panel, "BAKE", 92);
         fill(kit, prKitProgress(kit, bake, {.value = progress.bake}));
         char percent[16];
         prKitLabel(kit, bake, {.text = format(percent, sizeof percent, "%.0f%%", double(progress.bake * 100))},
-                   kMonoMuted);
+            kMonoMuted);
         PrLayoutNode scan = captionRow(kit, panel, "SCANNING", 92);
         fill(kit, prKitProgress(kit, scan, {.indeterminate = true}));
         prKitLabel(kit, scan, {.text = "no fraction to state"}, kBodySmall);
@@ -98,11 +98,11 @@ void sectionProgress(PrKit* kit, PrLayoutNode parent, GalleryState& state) {
     {
         PrLayoutNode panel = demoPanel(kit, section, "METERS", "SEGMENTS . TONE", false);
         fill(kit, prKitMeter(kit, captionRow(kit, panel, "MEMORY", 92), {.value = progress.memory},
-                             {.tone = PrKitTone_Accent}));
+            {.tone = PrKitTone_Accent}));
         fill(kit, prKitMeter(kit, captionRow(kit, panel, "FRAME MS", 92),
-                             {.value = progress.budget, .low = 0, .high = 16.6f}, {.tone = PrKitTone_Warning}));
+            {.value = progress.budget, .low = 0, .high = 16.6f}, {.tone = PrKitTone_Warning}));
         fill(kit, prKitMeter(kit, captionRow(kit, panel, "ERRORS", 92), {.value = 1, .low = 0, .high = 8},
-                             {.tone = PrKitTone_Danger}));
+            {.tone = PrKitTone_Danger}));
     }
     {
         PrLayoutNode panel = demoPanel(kit, section, "SPINNER", "SIZES", false);
@@ -120,10 +120,9 @@ void sectionProgress(PrKit* kit, PrLayoutNode parent, GalleryState& state) {
 }
 
 void sectionTooltips(PrKit* kit, PrLayoutNode parent) {
-    PrLayoutNode section = sectionFrame(
-        kit, parent, "16", "Tooltips", "A name and its chord, after a short rest.",
+    PrLayoutNode section = sectionFrame(kit, parent, "16", "Tooltips", "A name and its chord, after a short rest.",
         "A tooltip shows once the pointer has rested on its anchor, places itself from that anchor's last box "
-              "and stays inside the frame. The anatomy beside it is the same chip, drawn in the flow.");
+            "and stays inside the frame. The anatomy beside it is the same chip, drawn in the flow.");
     {
         PrLayoutNode panel = demoPanel(kit, section, "ANATOMY", "IN THE FLOW", false);
         PrLayoutNode row = specimenRow(kit, panel, kPrKitSpace3);
@@ -151,10 +150,9 @@ void sectionTooltips(PrKit* kit, PrLayoutNode parent) {
 }
 
 void sectionDialogs(PrKit* kit, PrLayoutNode parent, GalleryState& state) {
-    PrLayoutNode section = sectionFrame(
-        kit, parent, "17", "Dialogs", "A blocking surface for what cannot be undone.",
+    PrLayoutNode section = sectionFrame(kit, parent, "17", "Dialogs", "A blocking surface for what cannot be undone.",
         "A dialog is a modal carrying a titled card: the scrim dims the page and takes the presses that miss "
-              "it, the close control and Escape take it down, and the footer holds the buttons that answer it.");
+            "it, the close control and Escape take it down, and the footer holds the buttons that answer it.");
     {
         PrLayoutNode panel = demoPanel(kit, section, "CONFIRM", "CENTER", false);
         PrLayoutNode row = specimenRow(kit, panel, kPrKitSpace3);
@@ -165,22 +163,23 @@ void sectionDialogs(PrKit* kit, PrLayoutNode parent, GalleryState& state) {
         PrKitDialog dialog{.title = "Delete the selected entities?"};
         PrLayoutNode body = prKitDialog(kit, trigger, dialog, {});
         if (body != kPrLayoutNodeNone) {
-            prKitLabel(kit, body, {.text = "Three entities and their children go with this. References from other scenes are left "
-                             "broken."}, kBodySecondary);
+            prKitLabel(kit, body, {
+                .text = "Three entities and their children go with this. References from other scenes are left broken.",
+            }, kBodySecondary);
             PrKitSurfaceStyle callout{.ground = PrKitGround_Header};
             callout.box.gap = kPrKitSpace1;
             callout.box.padding = prKitEdgesXY(kPrKitSpace2, kPrKitSpace4);
             PrLayoutNode lines = prKitSurface(kit, body, {}, callout);
-            const char* const names[] = {"Player . 0x7FF8_A2B0", "Enemy_04 . 0x7FF8_B001",
-                                         "LightProbe_Grid . 0x7FF8_B112"};
+            const char* const names[] = {
+                "Player . 0x7FF8_A2B0", "Enemy_04 . 0x7FF8_B001",
+                "LightProbe_Grid . 0x7FF8_B112",
+            };
             for (const char* name : names)
                 prKitLabel(kit, lines, {.text = name}, kMonoSecondary);
-            prKitCheckbox(kit, body, {.value = &state.dialog.deleteOrphans, .label = "Also delete orphaned assets"},
-                          {});
+            prKitCheckbox(kit, body, {.value = &state.dialog.deleteOrphans, .label = "Also delete orphaned assets"}, {});
             PrLayoutNode footer = prKitDialogFooter(kit, body);
             bool cancelled = prKitActivated(kit, prKitButton(kit, footer, {.text = "Cancel"}, {}));
-            bool confirmed =
-                prKitActivated(kit, prKitButton(kit, footer, {.text = "Delete 3 Entities"}, kDanger));
+            bool confirmed = prKitActivated(kit, prKitButton(kit, footer, {.text = "Delete 3 Entities"}, kDanger));
             if (cancelled || confirmed)
                 prKitSetOpen(kit, trigger, false);
         }
@@ -191,14 +190,14 @@ void sectionDialogs(PrKit* kit, PrLayoutNode parent, GalleryState& state) {
         PrLayoutNode trigger = prKitButton(kit, row, {.text = "Open Top Sheet..."}, {});
         if (prKitActivated(kit, trigger))
             prKitSetOpen(kit, trigger, true);
-        prKitLabel(kit, row, {.text = "a topped dialog drops from the top edge, as a launcher does"},
-                   kBodySecondary);
+        prKitLabel(kit, row, {.text = "a topped dialog drops from the top edge, as a launcher does"}, kBodySecondary);
         PrKitDialog dialog{.title = "Go to File"};
         PrKitDialogStyle top{.modal = {.placement = PrKitModalPlacement_Top}};
         PrLayoutNode body = prKitDialog(kit, trigger, dialog, top);
         if (body != kPrLayoutNodeNone) {
-            prKitLabel(kit, body, {.text = "A top-placed card reads as a launcher rather than a question, which is the shape the "
-                             "command palette takes."}, kBodySecondary);
+            prKitLabel(kit, body, {
+                .text = "A top-placed card reads as a launcher rather than a question, which is the shape the command palette takes.",
+            }, kBodySecondary);
             PrLayoutNode footer = prKitDialogFooter(kit, body);
             if (prKitActivated(kit, prKitButton(kit, footer, {.text = "Close"}, {})))
                 prKitSetOpen(kit, trigger, false);
@@ -211,8 +210,7 @@ void sectionDialogs(PrKit* kit, PrLayoutNode parent, GalleryState& state) {
         PrLayoutNode trigger = prKitButton(kit, row, {.text = "Open Modal..."}, {});
         if (prKitActivated(kit, trigger))
             prKitSetOpen(kit, trigger, true);
-        prKitLabel(kit, row, {.text = "no header and no footer: the content is the caller's own"},
-                   kBodySecondary);
+        prKitLabel(kit, row, {.text = "no header and no footer: the content is the caller's own"}, kBodySecondary);
         PrLayoutNode content = prKitModal(kit, trigger, {}, {});
         if (content != kPrLayoutNodeNone) {
             PrKitBoxStyle box{.gap = kPrKitSpace4, .padding = prKitEdgesAll(kPrKitSpace8)};
@@ -222,7 +220,7 @@ void sectionDialogs(PrKit* kit, PrLayoutNode parent, GalleryState& state) {
             prKitIcon(kit, heading, {.icon = PrKitIconKind_Info}, {.size = 16, .tone = PrKitTone_Accent});
             prKitLabel(kit, heading, {.text = "A frame of the caller's own"}, kStrong);
             prKitLabel(kit, frame, {.text = "The modal places and dims; everything inside it is declared here."},
-                       kBodySecondary);
+                kBodySecondary);
             PrKitBoxStyle actions{.direction = PrKitDirection_Row, .justify = PrKitJustify_End, .gap = kPrKitSpace3};
             if (prKitActivated(kit, prKitButton(kit, prKitBox(kit, frame, {}, actions), {.text = "Close"}, {})))
                 prKitSetOpen(kit, trigger, false);
@@ -231,8 +229,7 @@ void sectionDialogs(PrKit* kit, PrLayoutNode parent, GalleryState& state) {
 }
 
 void sectionStatus(PrKit* kit, PrLayoutNode parent) {
-    PrLayoutNode section = sectionFrame(kit, parent, "18", "Status Bar & Console",
-                                        "The two places the engine talks back.", {});
+    PrLayoutNode section = sectionFrame(kit, parent, "18", "Status Bar & Console", "The two places the engine talks back.", {});
     PrLayoutNode panel = demoPanel(kit, section, "STATUS BAR", "BOTTOM CHROME", true);
     PrKitSurfaceStyle strip{.ground = PrKitGround_Header, .rules = PrKitRuleFlag_Top};
     strip.box.direction = PrKitDirection_Row;
@@ -273,10 +270,8 @@ void sectionStatus(PrKit* kit, PrLayoutNode parent) {
     const PrKitStatTile stats[] = {
         {.label = "FRAME", .value = "16.6 ms", .note = "60 fps target"},
         {.label = "DRAW CALLS", .value = "1,412", .note = "248 entities"},
-        {.label = "GPU", .value = "11.2 ms", .note = "of the 16.6 budget",
-         .noteTone = PrKitTone_Warning},
-        {.label = "ERRORS", .value = "1", .note = "since the last build",
-         .noteTone = PrKitTone_Danger},
+        {.label = "GPU", .value = "11.2 ms", .note = "of the 16.6 budget", .noteTone = PrKitTone_Warning},
+        {.label = "ERRORS", .value = "1", .note = "since the last build", .noteTone = PrKitTone_Danger},
     };
     for (const PrKitStatTile& stat : stats)
         prKitStatTile(kit, readouts, stat);
@@ -301,10 +296,9 @@ void sectionStatus(PrKit* kit, PrLayoutNode parent) {
 }
 
 void sectionImages(PrKit* kit, PrLayoutNode parent, GalleryState& state) {
-    PrLayoutNode section = sectionFrame(
-        kit, parent, "21", "Images", "One wide picture in four bounded frames.",
+    PrLayoutNode section = sectionFrame(kit, parent, "21", "Images", "One wide picture in four bounded frames.",
         "A fit places the picture inside the box that layout already sized; it never sizes the box. The "
-              "alignment slides the picture within the box, which moves the part of a cropped picture that shows.");
+            "alignment slides the picture within the box, which moves the part of a cropped picture that shows.");
     const PrDrawImage* picture = galleryPicture(state);
     struct Specimen {
         const char* title;
@@ -342,13 +336,11 @@ void sectionImages(PrKit* kit, PrLayoutNode parent, GalleryState& state) {
 }
 
 void sectionKeys(PrKit* kit, PrLayoutNode parent, GalleryState& state) {
-    PrLayoutNode section = sectionFrame(
-        kit, parent, "23", "Duplicate Keys", "A key names one node of a round.",
+    PrLayoutNode section = sectionFrame(kit, parent, "23", "Duplicate Keys", "A key names one node of a round.",
         "Two widgets of one round that share a key are a caller's error. Layout makes the second node without the "
-              "key, so the tree stays whole, and lib/ui outlines both nodes in the next round.");
+            "key, so the tree stays whole, and lib/ui outlines both nodes in the next round.");
     PrLayoutNode panel = demoPanel(kit, section, "ROWS", "LIVE", false);
-    prKitToggle(kit, panel, {.value = &state.keys.duplicate, .label = "Give the third row the first row's key"},
-                {});
+    prKitToggle(kit, panel, {.value = &state.keys.duplicate, .label = "Give the third row the first row's key"}, {});
     PrLayoutNode rows = prKitBox(kit, panel, {}, {.gap = kPrKitSpace2});
     const char* const names[] = {"row-a", "row-b", "row-c"};
     const char* const labels[] = {"Transform", "Mesh Renderer", "Rigidbody"};

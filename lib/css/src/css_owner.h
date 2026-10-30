@@ -56,7 +56,7 @@ void cssOwnerSetBlocking(PrDomElement* element, bool blocking);
 // arrives, it joins its tree's list with the element as its owner, starting disabled if `alternate` and it has a title
 // (cssom-1/#css-style-sheet-set). Once every sheet has arrived or failed, `settled` runs.
 void cssOwnerFetch(PrDomElement* element, const PrUrl* url, DomCorsSettings cors, PrCharset environment,
-                   bool alternate, CssOwnerSettledFn* settled);
+    bool alternate, CssOwnerSettledFn* settled);
 
 // Returns true if the element's type attribute names CSS, or if the element has no type attribute or an empty one.
 bool cssOwnerTypeIsCss(const PrDomElement* element);

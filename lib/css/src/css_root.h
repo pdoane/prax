@@ -172,7 +172,7 @@ PrCssStyleSheetList* cssDocumentStyleSheets(PrDomDocument* document);
 // does not accept. Returns NotAllowed for a name that is already registered. A null `initialValue` means that none was
 // given.
 PrStatus cssRegisterProperty(PrDomDocument* document, PrStringView name, PrStringView syntax,
-                             bool inherits, PrStringView initialValue);
+    bool inherits, PrStringView initialValue);
 
 // Tells the presentation of the document that something that every element's style depends on has changed: its sheets,
 // or its default language. Brings the document's FontFaceSet up to date with its sheets.

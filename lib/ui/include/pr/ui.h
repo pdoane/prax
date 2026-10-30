@@ -197,7 +197,7 @@ void* prUiProvide(PrUi* ui, PrLayoutNode node, const void* owner, uint64_t key, 
 // Returns the context under `owner` and `key` that `node` or the nearest node it was created under provides in the
 // current round, or null if none does. Writes the node that provides it to `provider`, if `provider` is not null.
 void* PR_NULLABLE prUiContext(const PrUi* ui, PrLayoutNode node, const void* owner, uint64_t key,
-                              PrLayoutNode* PR_NULLABLE provider);
+    PrLayoutNode* PR_NULLABLE provider);
 
 // Marks `signals`, bits that `owner` defines, as having happened to the node in the current round. A node takes the
 // signals of one owner in a round.
@@ -374,7 +374,7 @@ void* prUiState(PrUi* ui, PrLayoutNode node, const void* owner, uint64_t key, ui
 // the first call, or if `duration` is zero or less, the value is the target. The value persists under the same rules as
 // prUiState.
 float prUiTween(PrUi* ui, PrLayoutNode node, const void* owner, uint64_t key, float target, double duration,
-                const PrLayoutEasing* PR_NULLABLE easing);
+    const PrLayoutEasing* PR_NULLABLE easing);
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Edit gestures
@@ -457,8 +457,7 @@ typedef struct PrUiPart {
 // returns that part's bytes, which stay valid until the next lookup. The caller compares them with its part's, which it
 // knows the size of. Otherwise, returns null. If the bytes differ, or the result is null, the caller makes the record
 // and passes it to prUiMemoKeep before its next lookup. Valid only during a build.
-const void* PR_NULLABLE prUiMemoFind(PrUi* ui, const void* type, const void* PR_NULLABLE owner,
-                                     PrLayoutStyleIndex* out);
+const void* PR_NULLABLE prUiMemoFind(PrUi* ui, const void* type, const void* PR_NULLABLE owner, PrLayoutStyleIndex* out);
 
 // Stores `style` as the record of `part` at the position of the last prUiMemoFind, which did not find it, and returns
 // `style`. `base` is a record whose index the part's bytes contain, as when the part restyles another record, or 0. The

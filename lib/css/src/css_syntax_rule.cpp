@@ -35,8 +35,7 @@ CssSyntaxRule consumeAtRule(CssTokenStream* ts, uint32_t name, bool nested) {
 
     uint32_t start = ts->pos;
     for (;;) {
-        if (cssPeek(ts) == CssTokenKind_Eof
-            || (cssPeek(ts) == CssTokenKind_CloseBrace && nested)) {
+        if (cssPeek(ts) == CssTokenKind_Eof || (cssPeek(ts) == CssTokenKind_CloseBrace && nested)) {
             rule.flags |= CssSyntaxRuleFlag_EofTerminated;
             break;
         }
@@ -153,8 +152,8 @@ CssTokenSpan takeImportant(const CssTokenStream* ts, CssTokenSpan value, bool* i
         return value;
 
     uint32_t keyword = last - 1;
-    if (cssTokenKind(ts->tokens, keyword) != CssTokenKind_Ident
-        || cssTokenKeyword(ts->tokens, keyword) != PrCssKeyword_Important) {
+    if (cssTokenKind(ts->tokens, keyword) != CssTokenKind_Ident ||
+            cssTokenKeyword(ts->tokens, keyword) != PrCssKeyword_Important) {
         return value;
     }
 
@@ -253,9 +252,7 @@ bool cssParseDeclaration(CssTokenStream* ts, CssSyntaxDeclaration* out) {
 }
 
 void cssParseBlockContents(CssTokenStream* ts, CssParser* parser, CssBlock* out) {
-    *out = CssBlock{{parser->items.count, 0},
-                    {parser->declarations.count, 0},
-                    {parser->rules.count, 0}};
+    *out = CssBlock{{parser->items.count, 0}, {parser->declarations.count, 0}, {parser->rules.count, 0}};
 
     for (;;) {
         CssTokenKind kind = cssPeek(ts);
@@ -315,16 +312,13 @@ bool cssParseRule(CssTokenStream* ts, CssSyntaxRule* out) {
 }
 
 void cssParseStylesheetContents(CssTokenStream* ts, CssParser* parser, CssBlock* out) {
-    *out = CssBlock{{parser->items.count, 0},
-                    {parser->declarations.count, 0},
-                    {parser->rules.count, 0}};
+    *out = CssBlock{{parser->items.count, 0}, {parser->declarations.count, 0}, {parser->rules.count, 0}};
 
     for (;;) {
         if (cssPeek(ts) == CssTokenKind_Eof)
             return;
         CssTokenKind kind = cssPeek(ts);
-        if (kind == CssTokenKind_Whitespace || kind == CssTokenKind_Cdo
-            || cssPeek(ts) == CssTokenKind_Cdc) {
+        if (kind == CssTokenKind_Whitespace || kind == CssTokenKind_Cdo || cssPeek(ts) == CssTokenKind_Cdc) {
             ++ts->pos;
             continue;
         }

@@ -22,7 +22,7 @@ std::string shape(PrLayoutTree* tree, PrLayoutNode node) {
     }
     std::string out = "[";
     for (PrLayoutNode child = prLayoutNodeFirstChild(tree, node); child != kPrLayoutNodeNone;
-         child = prLayoutNodeNextSibling(tree, child)) {
+            child = prLayoutNodeNextSibling(tree, child)) {
         if (out.size() > 1)
             out += " ";
         out += shape(tree, child);

@@ -80,11 +80,10 @@ void layoutEffectListsInit(LayoutEffectLists* lists);
 // An entry that they add holds references to the compounds that its lengths name, and to its images, lists, painters
 // and sources.
 PrLayoutShapeIndex layoutEffectListsInternShape(LayoutEffectLists* lists, LayoutCompounds* compounds,
-                                                const PrLayoutShape& shape);
-PrLayoutMaskIndex layoutEffectListsInternMask(LayoutEffectLists* lists, LayoutCompounds* compounds,
-                                              const PrLayoutMask& mask);
+    const PrLayoutShape& shape);
+PrLayoutMaskIndex layoutEffectListsInternMask(LayoutEffectLists* lists, LayoutCompounds* compounds, const PrLayoutMask& mask);
 PrLayoutFilterIndex layoutEffectListsInternFilter(LayoutEffectLists* lists, LayoutCompounds* compounds,
-                                                  const PrLayoutFilter* filters, uint32_t count);
+    const PrLayoutFilter* filters, uint32_t count);
 
 // Returns the entry of `kind` at `index`.
 inline const LayoutEffectEntry& layoutEffectAt(const LayoutEffectLists* lists, LayoutEffectKind kind, uint32_t index) {
@@ -95,7 +94,7 @@ inline const LayoutEffectEntry& layoutEffectAt(const LayoutEffectLists* lists, L
 // Adds `delta` to the references of the entries that a compositing group names, and checks in debug builds that each of
 // its lengths is of a kind that its type accepts. A group that names a source holds a reference to its context.
 void layoutEffectListsCount(LayoutEffectLists* lists, LayoutCompounds* compounds,
-                            const PrLayoutCompositingStyle& compositing, uint32_t delta);
+    const PrLayoutCompositingStyle& compositing, uint32_t delta);
 
 // Frees the entries that no group names, of those listed as candidates, and releases what they hold.
 void layoutEffectListsCollect(LayoutEffectLists* lists, LayoutCompounds* compounds);
@@ -130,14 +129,14 @@ bool layoutHasCorners(const PrLayoutDecorationStyle& decoration);
 // (css-backgrounds-3/#corner-overlap). A corner at a side in `broken`, a mask of PrRectSide bits at which a fragment
 // breaks, is square before the others are fitted, since slicing cuts the box there (css-break-4/#break-decoration).
 PrCornerRect layoutBorderShape(const LayoutStyles* styles, const PrLayoutDecorationStyle& decoration, PrRect border,
-                               uint8_t broken = 0);
+    uint8_t broken = 0);
 
 // Returns true if the container `fragment` clips its content to curves, and writes its clip's corners, by PrRectCorner,
 // to `out`. `clip` is the clip that the container's walk gives it. The clip is curved at the corners of the padding box
 // (css-backgrounds-3/#corner-clipping), so only where it is the padding box: in both axes, and not cut by a clip
 // rectangle.
 bool layoutClipCorners(const LayoutTree* tree, const LayoutFragment* fragment, PrLayoutRect clip,
-                       PrCorner out[PR_NONNULL PrRectCorner_Count]);
+    PrCorner out[PR_NONNULL PrRectCorner_Count]);
 
 // Returns true if the point `at`, in the same space as `border`, is inside the border box `border` of the box styled by
 // `style`, within the curves of its corners.
@@ -153,12 +152,11 @@ bool layoutCompositingIsBackdropRoot(const PrLayoutCompositingStyle& compositing
 
 // Appends the nodes of a filter function to `builder` (prLayoutFilterAppend).
 PrDrawFilterInput layoutFilterAppend(const PrLayoutFilter& filter, PrDrawFilterInput input, PrImageEdgeMode edge,
-                                     PrDrawFilterBuilder* builder);
+    PrDrawFilterBuilder* builder);
 
 // Appends the outline of `shape` in the reference box `box` to `out` (prLayoutShapePath), with its compounds read from
 // `compounds`, if it names any.
-void layoutShapePath(const LayoutCompounds* PR_NULLABLE compounds, const PrLayoutShape& shape, PrRect box,
-                     PrPath* out);
+void layoutShapePath(const LayoutCompounds* PR_NULLABLE compounds, const PrLayoutShape& shape, PrRect box, PrPath* out);
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Resolving a box's effects
@@ -208,7 +206,7 @@ struct LayoutResolvedEffects {
 // The box's ink overflow, `ink`, bounds what an unclipped mask layer covers. Returns false, leaving `out` empty, if its
 // compositing group is the default.
 bool layoutEffectsResolve(const LayoutTree* tree, LayoutNodeIndex node, const LayoutFragment* fragment,
-                          LayoutPieceAt opening, PrRect ink, LayoutResolvedEffects* out);
+    LayoutPieceAt opening, PrRect ink, LayoutResolvedEffects* out);
 
 // Releases what the resolved effects hold, and leaves them empty.
 void layoutEffectsReset(LayoutResolvedEffects* effects);
@@ -223,8 +221,7 @@ struct LayoutEffectsPushed {
 // (compositing-1/#isolation). A box without an effect that needs a group gets no group unless `isolate` is set, as it
 // is for a box in which something blends. The effects of a box that draws nothing must not be pushed. The caller skips
 // such a box.
-LayoutEffectsPushed layoutEffectsPush(const LayoutResolvedEffects& effects, float opacity, bool isolate,
-                                      PrDrawList* list);
+LayoutEffectsPushed layoutEffectsPush(const LayoutResolvedEffects& effects, float opacity, bool isolate, PrDrawList* list);
 void layoutEffectsPop(LayoutEffectsPushed pushed, PrDrawList* list);
 
 // Returns true if the point `at`, in the border box space of the box of `node` whose fragment is `fragment`, is inside

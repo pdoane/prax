@@ -20,8 +20,7 @@ struct Fill {
 
 // Fills `path` into a mask of the given size at (left, top), under the transform.
 Fill fill(const PrPath* path, uint32_t width, uint32_t height, PrPathFillRule rule = PrPathFillRule_NonZero,
-          bool antialias = true, PrAffine2 transform = prAffine2Identity(), int32_t left = 0,
-          int32_t top = 0) {
+        bool antialias = true, PrAffine2 transform = prAffine2Identity(), int32_t left = 0, int32_t top = 0) {
     Fill result;
     result.coverage.assign(size_t(width) * height, 0xaa);
     result.mask = PrPixels{result.coverage.data(), width, {width, height}};
@@ -29,7 +28,7 @@ Fill fill(const PrPath* path, uint32_t width, uint32_t height, PrPathFillRule ru
     PrPathPolyline polyline{};
     prPathFlatten(path, transform, 0.05f, PrPathFlattening_Balanced, &polyline);
     prPathRasterizerFill(rasterizer, &polyline, rule, antialias ? PrPathCoverage_Area : PrPathCoverage_Center,
-                         PrIVec2{left, top}, result.mask);
+        PrIVec2{left, top}, result.mask);
     prPathPolylineReset(&polyline);
     prPathRasterizerDestroy(rasterizer);
     return result;
@@ -85,8 +84,10 @@ double areaInPixel(std::vector<std::pair<double, double>> points, uint32_t x, ui
         double edge;
         bool above;
     };
-    const Side sides[] = {{0, double(x), true}, {0, double(x + 1), false}, {1, double(y), true},
-                          {1, double(y + 1), false}};
+    const Side sides[] = {
+        {0, double(x), true}, {0, double(x + 1), false}, {1, double(y), true},
+        {1, double(y + 1), false},
+    };
     for (const Side& side : sides) {
         auto coordinate = [&](const std::pair<double, double>& p) { return side.axis == 0 ? p.first : p.second; };
         auto keeps = [&](const std::pair<double, double>& p) {
@@ -355,16 +356,13 @@ TEST_CASE("a path with points or a transform that are not finite fills without f
         prPathClose(path);
         prPathPolylineClear(&polyline);
         prPathFlatten(path, prAffine2Identity(), 0.05f, PrPathFlattening_Balanced, &polyline);
-        prPathRasterizerFill(rasterizer, &polyline, PrPathFillRule_NonZero, PrPathCoverage_Area, PrIVec2{0, 0},
-                             mask);
-        prPathRasterizerFill(rasterizer, &polyline, PrPathFillRule_EvenOdd, PrPathCoverage_Center, PrIVec2{0, 0},
-                             mask);
+        prPathRasterizerFill(rasterizer, &polyline, PrPathFillRule_NonZero, PrPathCoverage_Area, PrIVec2{0, 0}, mask);
+        prPathRasterizerFill(rasterizer, &polyline, PrPathFillRule_EvenOdd, PrPathCoverage_Center, PrIVec2{0, 0}, mask);
         PrPath* circle = prPathCreate();
         prPathAddEllipse(circle, PrVec2{5, 5}, PrVec2{3, 3}, 0);
         prPathPolylineClear(&polyline);
         prPathFlatten(circle, PrAffine2{bad, 0, 0, 1, 0, 0}, 0.05f, PrPathFlattening_Balanced, &polyline);
-        prPathRasterizerFill(rasterizer, &polyline, PrPathFillRule_NonZero, PrPathCoverage_Area, PrIVec2{0, 0},
-                             mask);
+        prPathRasterizerFill(rasterizer, &polyline, PrPathFillRule_NonZero, PrPathCoverage_Area, PrIVec2{0, 0}, mask);
         prPathDestroy(circle);
         prPathDestroy(path);
     }

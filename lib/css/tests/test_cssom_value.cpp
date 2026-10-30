@@ -54,9 +54,12 @@ struct Value {
 
     Value& number(double number, PrCssUnit unit) {
         PrCssValueFields fields = {};
-        fields.kind = unit == PrCssUnit_Number ? PrCssValueKind_Number
-                    : unit == PrCssUnit_Percent ? PrCssValueKind_Percentage
-                                                : PrCssValueKind_Dimension;
+        if (unit == PrCssUnit_Number)
+            fields.kind = PrCssValueKind_Number;
+        else if (unit == PrCssUnit_Percent)
+            fields.kind = PrCssValueKind_Percentage;
+        else
+            fields.kind = PrCssValueKind_Dimension;
         fields.number.value = number;
         fields.number.unit = unit;
         REQUIRE(prCssValueAdd(value, &fields) == PrStatus_Ok);
@@ -116,8 +119,7 @@ PrCssValueKind kindAt(const PrCssValue* value, uint32_t node) {
 PrCssStyleDeclaration* newBlock(PrCssStyleSheet** sheet) {
     *sheet = prCssStyleSheetCreate(nullptr);
     REQUIRE(prCssStyleSheetReplaceSync(*sheet, "a {}") == PrStatus_Ok);
-    PrCssStyleRule* rule =
-        prCssStyleRuleQuery(prCssRuleListRuleAt(prCssStyleSheetCssRules(*sheet), 0));
+    PrCssStyleRule* rule = prCssStyleRuleQuery(prCssRuleListRuleAt(prCssStyleSheetCssRules(*sheet), 0));
     return prCssStylePropertiesAsCssStyleDeclaration(prCssStyleRuleStyle(rule));
 }
 
@@ -383,8 +385,7 @@ TEST_CASE("parsing gives the value a declaration of the text holds") {
     CHECK(serializeAll(values) == std::vector<std::string>{"1px"});
 
     // A descriptor is not a property, and these values are for properties.
-    const PrCssDeclarationName src = {PrCssProperty_Count, PrCssDescriptor_FontFaceSrc,
-                                      prStringNull()};
+    const PrCssDeclarationName src = {PrCssProperty_Count, PrCssDescriptor_FontFaceSrc, prStringNull()};
     CHECK(prCssValueParse(&src, "1px", values) == PrStatus_InvalidData);
     CHECK(prCssValueParseNumeric("auto", values) == PrStatus_Syntax);
     REQUIRE(prCssValueParseNumeric(" 1px ", values) == PrStatus_Ok);
@@ -400,8 +401,7 @@ TEST_CASE("the var() references of tokens are found at their top level") {
     CHECK(std::string(references[0].name.data, references[0].name.size) == "--b");
     REQUIRE(references[0].hasFallback);
     CHECK(std::string(text.data + references[0].fallbackStart,
-                      references[0].fallbackEnd - references[0].fallbackStart)
-          == " var(--c)");
+        references[0].fallbackEnd - references[0].fallbackStart) == " var(--c)");
     CHECK(std::string(references[1].name.data, references[1].name.size) == "--e");
     CHECK_FALSE(references[1].hasFallback);
     CHECK(prCssVariableReferences("var(x)", nullptr, 0) == 0);
@@ -414,24 +414,20 @@ TEST_CASE("a value declared is matched by its type, not by the text it would be 
     // A number is not a length, though a zero written without a unit is.
     Value zero;
     zero.number(0, PrCssUnit_Number);
-    CHECK(prCssStyleDeclarationSetValue(block, Prop(PrCssProperty_Width), zero, false)
-          == PrStatus_InvalidData);
+    CHECK(prCssStyleDeclarationSetValue(block, Prop(PrCssProperty_Width), zero, false) == PrStatus_InvalidData);
     CHECK(property(block, PrCssProperty_Width).empty());
-    REQUIRE(prCssStyleDeclarationSetValue(block, Prop(PrCssProperty_LineHeight), zero, false)
-            == PrStatus_Ok);
+    REQUIRE(prCssStyleDeclarationSetValue(block, Prop(PrCssProperty_LineHeight), zero, false) == PrStatus_Ok);
     CHECK(property(block, PrCssProperty_LineHeight) == "0");
 
     // A number outside the range that its place accepts is wrapped in a calculation, and so is a non-integer if its
     // place requires an integer.
     Value negative;
     negative.number(-1, PrCssUnit_In);
-    REQUIRE(prCssStyleDeclarationSetValue(block, Prop(PrCssProperty_Width), negative, false)
-            == PrStatus_Ok);
+    REQUIRE(prCssStyleDeclarationSetValue(block, Prop(PrCssProperty_Width), negative, false) == PrStatus_Ok);
     CHECK(property(block, PrCssProperty_Width) == "calc(-96px)");
     Value fraction;
     fraction.number(1.5, PrCssUnit_Number);
-    REQUIRE(prCssStyleDeclarationSetValue(block, Prop(PrCssProperty_ZIndex), fraction, false)
-            == PrStatus_Ok);
+    REQUIRE(prCssStyleDeclarationSetValue(block, Prop(PrCssProperty_ZIndex), fraction, false) == PrStatus_Ok);
     CHECK(property(block, PrCssProperty_ZIndex) == "calc(1.5)");
 
     // A calculation is simplified as it is declared.
@@ -441,24 +437,20 @@ TEST_CASE("a value declared is matched by its type, not by the text it would be 
     sum.number(1, PrCssUnit_Px).number(2, PrCssUnit_Px);
     sum.close();
     sum.close();
-    REQUIRE(prCssStyleDeclarationSetValue(block, Prop(PrCssProperty_Width), sum, false)
-            == PrStatus_Ok);
+    REQUIRE(prCssStyleDeclarationSetValue(block, Prop(PrCssProperty_Width), sum, false) == PrStatus_Ok);
     CHECK(property(block, PrCssProperty_Width) == "calc(3px)");
 
     // An ident is a keyword only for the grammar that has it.
     Value lemon;
     lemon.ident("lemon");
-    CHECK(prCssStyleDeclarationSetValue(block, Prop(PrCssProperty_Width), lemon, false)
-          == PrStatus_InvalidData);
-    REQUIRE(prCssStyleDeclarationSetValue(block, Prop(PrCssProperty_AnimationName), lemon, false)
-            == PrStatus_Ok);
+    CHECK(prCssStyleDeclarationSetValue(block, Prop(PrCssProperty_Width), lemon, false) == PrStatus_InvalidData);
+    REQUIRE(prCssStyleDeclarationSetValue(block, Prop(PrCssProperty_AnimationName), lemon, false) == PrStatus_Ok);
     CHECK(property(block, PrCssProperty_AnimationName) == "lemon");
 
     // A shorthand accepts a value that its grammar accepts, and sets its longhands.
     Value length;
     length.number(4, PrCssUnit_Px);
-    REQUIRE(prCssStyleDeclarationSetValue(block, Prop(PrCssProperty_Margin), length, false)
-            == PrStatus_Ok);
+    REQUIRE(prCssStyleDeclarationSetValue(block, Prop(PrCssProperty_Margin), length, false) == PrStatus_Ok);
     CHECK(property(block, PrCssProperty_MarginLeft) == "4px");
     Value got;
     REQUIRE(prCssStyleDeclarationValue(block, Prop(PrCssProperty_Margin), got) == PrStatus_Ok);
@@ -468,16 +460,11 @@ TEST_CASE("a value declared is matched by its type, not by the text it would be 
     // A list is its items and the commas between them. Appending adds to it.
     Value times;
     times.number(1, PrCssUnit_S).literal(',').number(2, PrCssUnit_S);
-    CHECK(prCssStyleDeclarationSetValue(block, Prop(PrCssProperty_Width), times, false)
-          == PrStatus_InvalidData);
-    REQUIRE(
-        prCssStyleDeclarationSetValue(block, Prop(PrCssProperty_TransitionDuration), times, false)
-        == PrStatus_Ok);
-    REQUIRE(prCssStyleDeclarationAppendValue(block, Prop(PrCssProperty_TransitionDuration), times)
-            == PrStatus_Ok);
+    CHECK(prCssStyleDeclarationSetValue(block, Prop(PrCssProperty_Width), times, false) == PrStatus_InvalidData);
+    REQUIRE(prCssStyleDeclarationSetValue(block, Prop(PrCssProperty_TransitionDuration), times, false) == PrStatus_Ok);
+    REQUIRE(prCssStyleDeclarationAppendValue(block, Prop(PrCssProperty_TransitionDuration), times) == PrStatus_Ok);
     CHECK(property(block, PrCssProperty_TransitionDuration) == "1s, 2s, 1s, 2s");
-    CHECK(prCssStyleDeclarationAppendValue(block, Prop(PrCssProperty_Width), length)
-          == PrStatus_InvalidData);
+    CHECK(prCssStyleDeclarationAppendValue(block, Prop(PrCssProperty_Width), length) == PrStatus_InvalidData);
 
     // A color given by its channels becomes the color function that it folds from.
     Value color;
@@ -486,13 +473,10 @@ TEST_CASE("a value declared is matched by its type, not by the text it would be 
     rgb.color.space = PrColorSpace_Srgb;
     rgb.color.legacy = true;
     REQUIRE(prCssValueOpen(color, &rgb) == PrStatus_Ok);
-    color.number(255, PrCssUnit_Number)
-        .number(0, PrCssUnit_Number)
-        .number(0, PrCssUnit_Number)
+    color.number(255, PrCssUnit_Number) .number(0, PrCssUnit_Number) .number(0, PrCssUnit_Number)
         .number(50, PrCssUnit_Percent);
     REQUIRE(color.close() == PrStatus_Ok);
-    REQUIRE(prCssStyleDeclarationSetValue(block, Prop(PrCssProperty_Color), color, false)
-            == PrStatus_Ok);
+    REQUIRE(prCssStyleDeclarationSetValue(block, Prop(PrCssProperty_Color), color, false) == PrStatus_Ok);
     CHECK(property(block, PrCssProperty_Color) == "rgba(255, 0, 0, 0.5)");
 
     // A custom property's value is the tokens that the value is written as.
@@ -503,8 +487,7 @@ TEST_CASE("a value declared is matched by its type, not by the text it would be 
     CHECK(serialize(got) == "calc(1px + 2px)");
     prCssValueClear(got);
 
-    const PrCssDeclarationName src = {PrCssProperty_Count, PrCssDescriptor_FontFaceSrc,
-                                      prStringNull()};
+    const PrCssDeclarationName src = {PrCssProperty_Count, PrCssDescriptor_FontFaceSrc, prStringNull()};
     CHECK(prCssStyleDeclarationValue(block, &src, got) == PrStatus_InvalidData);
     prCssStyleSheetRelease(sheet);
 }

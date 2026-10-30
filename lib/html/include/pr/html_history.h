@@ -64,8 +64,7 @@ PrStatus prHtmlHistoryState(const PrHtmlWindow* self, PrStringView* out, uint32_
 // html/#dom-history-pushstate and html/#dom-history-replacestate: `serialized` is the state, or the null view for null,
 // and `url` the URL to change to, or the null view or the empty string for the document's. Returns Syntax for a URL
 // that does not parse, and NotAllowed for one that the document cannot have (html/#can-have-its-url-rewritten).
-PrStatus prHtmlHistoryPushState(PrHtmlWindow* self, PrStringView serialized, PrStringView url,
-                                PrHtmlHistoryHandling handling);
+PrStatus prHtmlHistoryPushState(PrHtmlWindow* self, PrStringView serialized, PrStringView url, PrHtmlHistoryHandling handling);
 
 // html/#dom-history-go: traverses the session history by `delta` in a task, as prHtmlPageTraverse does.
 PrStatus prHtmlHistoryGo(PrHtmlWindow* self, int32_t delta);
@@ -89,7 +88,7 @@ PrHtmlPopStateEvent* PR_NULLABLE prHtmlPopStateEventQuery(PrDomEvent* PR_NULLABL
 
 // Creates a PopStateEvent of `type`, whose state the caller's binding holds. The caller holds the one reference.
 PrHtmlPopStateEvent* prHtmlPopStateEventCreate(PrStringView type, const PrDomEventInit* PR_NULLABLE init,
-                                               bool hasUAVisualTransition);
+    bool hasUAVisualTransition);
 
 // Returns true if the engine fired the event, which then carries its window's history state.
 bool prHtmlPopStateEventCarriesHistoryState(const PrHtmlPopStateEvent* self);
@@ -108,7 +107,7 @@ PrHtmlHashChangeEvent* PR_NULLABLE prHtmlHashChangeEventQuery(PrDomEvent* PR_NUL
 
 // Creates a HashChangeEvent of `type` from `oldUrl` to `newUrl`. The caller holds the one reference.
 PrHtmlHashChangeEvent* prHtmlHashChangeEventCreate(PrStringView type, const PrDomEventInit* PR_NULLABLE init,
-                                                   PrStringView oldUrl, PrStringView newUrl);
+    PrStringView oldUrl, PrStringView newUrl);
 
 // html/#dom-hashchangeevent-oldurl and html/#dom-hashchangeevent-newurl
 PrStringView prHtmlHashChangeEventOldUrl(const PrHtmlHashChangeEvent* self);

@@ -133,7 +133,7 @@ struct BenchTarget {
 // the list for backdrops. On a device, `frame` holds the render's frame, which it keeps for the next render with the
 // same renderer.
 Times render(PrDrawRenderer* renderer, PrDrawFrame* PR_NULLABLE& frame, BenchTarget& target, PrColor color,
-             const std::vector<uint8_t>& background, const PrDrawList* list, PrStatus* status) {
+        const std::vector<uint8_t>& background, const PrDrawList* list, PrStatus* status) {
     if (!prDrawRendererIsOnDevice(renderer)) {
         target.pixels = background;
         PrPixels into{target.pixels.data(), size_t(target.width) * 4, {target.width, target.height}};
@@ -149,25 +149,29 @@ Times render(PrDrawRenderer* renderer, PrDrawFrame* PR_NULLABLE& frame, BenchTar
     }
     PrDrawBeneath beneath{};
     beneath.color = color;
-    PrDrawTarget prepared{.extent = {target.width, target.height},
-                          .format = target.output.format,
-                          .commands = commands,
-                          .beneath = &beneath};
+    PrDrawTarget prepared{
+        .extent = {target.width, target.height},
+        .format = target.output.format,
+        .commands = commands,
+        .beneath = &beneath,
+    };
     *status = prDrawFramePrepare(frameFor(frame, renderer), list, &prepared);
     if (*status == PrStatus_Ok) {
         // The pass clears to the background: the color of its first pixel, which is premultiplied BGRA, reordered as
         // RGBA.
         PrGpuSubresources all{};
         prGpuCommandsTextureBarrier(commands, target.texture, all, PrGpuAccessFlag_ShaderRead,
-                                    PrGpuAccessFlag_ColorAttachment);
-        PrColor clear{float(background[2]) / 255, float(background[1]) / 255, float(background[0]) / 255,
-                      float(background[3]) / 255};
+            PrGpuAccessFlag_ColorAttachment);
+        PrColor clear{
+            float(background[2]) / 255, float(background[1]) / 255, float(background[0]) / 255,
+            float(background[3]) / 255,
+        };
         PrGpuPassDesc desc = prGpuPassDescColor(target.texture, PrGpuLoad_Clear, clear);
         PrGpuPass* pass = prGpuPassBegin(commands, &desc);
         prDrawFrameRender(frame, pass, PrIVec2{0, 0});
         prGpuPassEnd(pass);
         prGpuCommandsTextureBarrier(commands, target.texture, all, PrGpuAccessFlag_ColorAttachment,
-                                    PrGpuAccessFlag_ShaderRead);
+            PrGpuAccessFlag_ShaderRead);
     }
     double submitted = nowMillis();
     double gpu = prGpuCommandsSubmitAndWait(commands) * 1000;
@@ -192,7 +196,7 @@ void writeImage(PrImageCodec* codec, const BenchTarget& target, const std::strin
         uint32_t bytes = prPixelFormatSize(target.output.format);
         std::vector<uint8_t> texels(count * bytes);
         prGpuTextureRead(target.device, target.texture, PrGpuAccessFlag_ShaderRead, PrIVec2{0, 0},
-                         PrPixels{texels.data(), size_t(target.width) * bytes, {target.width, target.height}});
+            PrPixels{texels.data(), size_t(target.width) * bytes, {target.width, target.height}});
         for (size_t i = 0; i < count; ++i) {
             uint8_t* to = &rgba[i * 4];
             if (target.output.format == PrPixelFormat_Bgra8) {
@@ -242,8 +246,8 @@ int main(int argc, char** argv) {
             images = argv[++i];
         else if (std::strcmp(argv[i], "--pixel-ratio") == 0 && i + 1 < argc)
             pixelRatio = std::strtof(argv[++i], nullptr);
-        else if (std::strcmp(argv[i], "--shaper") == 0 && i + 1 < argc
-                 && prTextShaperBackendIsBuilt(prTextShaperBackendFromName(argv[i + 1])))
+        else if (std::strcmp(argv[i], "--shaper") == 0 && i + 1 < argc &&
+                prTextShaperBackendIsBuilt(prTextShaperBackendFromName(argv[i + 1])))
             text.shaper = prTextShaperBackendFromName(argv[++i]);
         else
             drawings.push_back(argv[i]);
@@ -275,19 +279,17 @@ int main(int argc, char** argv) {
         for (uint32_t d = 0; d < uint32_t(collection.documents().size()); ++d) {
             if (!named(collection, d, drawings))
                 continue;
-            std::string name = fileNameOf(collection.name) + " " + (d < 9 ? "0" : "") + std::to_string(d + 1) + " "
-                               + fileNameOf(collection.documents()[d].name);
+            std::string name = fileNameOf(collection.name) + " " + (d < 9 ? "0" : "") + std::to_string(d + 1) + " " +
+                fileNameOf(collection.documents()[d].name);
             std::shared_ptr<Loaded> document = load(collection.documents()[d].source, text, nullptr);
             PrColor clear = background(*document);
             std::vector<uint8_t> backgroundPixels = pixelsOf(clear, size_t(width) * height);
             Times recordTimes{};
-            HarnessCounters recorded = measure(
-                [&] {
-                    double started = nowMillis();
-                    record(list, *document, collection, pixelRatio);
-                    return Times{nowMillis() - started, 0};
-                },
-                &recordTimes);
+            HarnessCounters recorded = measure([&] {
+                double started = nowMillis();
+                record(list, *document, collection, pixelRatio);
+                return Times{nowMillis() - started, 0};
+            }, &recordTimes);
             bool first = true;
             for (const RendererConfig& config : configs) {
                 bool asked = false;
@@ -305,24 +307,20 @@ int main(int argc, char** argv) {
                     HarnessCounters rendering{};
                     bool ready = !(onDevice && target.texture.id == 0);
                     if (ready) {
-                        rendering = measure(
-                            [&] {
-                                return render(config.renderer, frame, target, clear, backgroundPixels, list,
-                                              &rendered);
-                            },
-                            &t);
+                        rendering = measure([&] {
+                            return render(config.renderer, frame, target, clear, backgroundPixels, list, &rendered);
+                        }, &t);
                     }
                     if (!ready || rendered != PrStatus_Ok) {
                         std::fprintf(stderr, "draw_bench: %s failed on %s%s\n", name.c_str(), config.name,
-                                     target.output.suffix);
+                            target.output.suffix);
                         prDrawFrameDestroy(frame);
                         status = 1;
                         continue;
                     }
                     if (imageCodec != nullptr)
                         writeImage(imageCodec, target,
-                                   std::string(images) + "/" + name + " - " + config.name + target.output.suffix
-                                       + ".png");
+                            std::string(images) + "/" + name + " - " + config.name + target.output.suffix + ".png");
                     double frameMillis = rendering.millis;
                     rendering.gpu = t.gpu;
                     HarnessCounts counts{};
@@ -339,19 +337,16 @@ int main(int argc, char** argv) {
                     char timing[96];
                     if (onDevice)
                         std::snprintf(timing, sizeof(timing), "\"cpu\": %.4f, \"gpu\": %.4f, \"render\": %.4f",
-                                      t.cpu, t.gpu, frameMillis);
+                            t.cpu, t.gpu, frameMillis);
                     else
-                        std::snprintf(timing, sizeof(timing), "\"cpu\": %.4f, \"render\": %.4f", t.cpu,
-                                      frameMillis);
+                        std::snprintf(timing, sizeof(timing), "\"cpu\": %.4f, \"render\": %.4f", t.cpu, frameMillis);
                     TextBuffer row{};
-                    harnessAppendFormat(
-                        &row,
+                    harnessAppendFormat(&row,
                         "{\"name\": \"%s / %s%s\", \"commands\": %u%s, %s, \"passes\": %u, \"layers\": %u, "
-                        "\"draws\": %u, \"primitives\": %u, \"records\": %u, \"paths\": %u, \"upload\": %llu",
+                            "\"draws\": %u, \"primitives\": %u, \"records\": %u, \"paths\": %u, \"upload\": %llu",
                         name.c_str(), config.name, target.output.suffix, prDrawListCommandCount(list), recording,
                         timing, stats.passes, stats.layers, stats.draws, stats.primitives, stats.records,
-                        stats.pathFills,
-                        static_cast<unsigned long long>(stats.uploadBytes));
+                        stats.pathFills, static_cast<unsigned long long>(stats.uploadBytes));
                     harnessCountsWrite(&counts, &row);
                     textAppend(&row, "}");
                     harnessWriteLine(textView(&row));

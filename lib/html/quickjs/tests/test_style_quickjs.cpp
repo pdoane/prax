@@ -44,10 +44,8 @@ TEST_CASE("a script reads and changes a style element's sheet through document.s
     prJsMathMlBind(ctx);
     jsHtmlBind(ctx);
     PrHtmlPage* page = prHtmlPageCreate(nullptr);
-    CHECK(prHtmlPageLoad(page,
-                                    "<style>foo { color: blue; }</style><style></style>",
-                                    "about:blank", nullptr)
-          == PrStatus_Ok);
+    CHECK(prHtmlPageLoad(page, "<style>foo { color: blue; }</style><style></style>", "about:blank", nullptr) ==
+        PrStatus_Ok);
     CHECK(jsHtmlSetGlobal(ctx, prHtmlPageWindow(page)));
     const char source[] = R"JS((function() {
         const list = document.styleSheets;
@@ -77,11 +75,8 @@ TEST_CASE("a script reaches the rule interfaces, their media lists and their map
     prJsMathMlBind(ctx);
     jsHtmlBind(ctx);
     PrHtmlPage* page = prHtmlPageCreate(nullptr);
-    CHECK(prHtmlPageLoad(page,
-                                    "<style media=print>@media screen {} @layer a, b;"
-                                          "@font-feature-values F { @swash { x: 1 } }</style>",
-                                    "about:blank", nullptr)
-          == PrStatus_Ok);
+    CHECK(prHtmlPageLoad(page, "<style media=print>@media screen {} @layer a, b;"
+        "@font-feature-values F { @swash { x: 1 } }</style>", "about:blank", nullptr) == PrStatus_Ok);
     CHECK(jsHtmlSetGlobal(ctx, prHtmlPageWindow(page)));
     const char source[] = R"JS((function() {
         const sheet = document.styleSheets[0];
@@ -121,8 +116,7 @@ TEST_CASE("a script matches media queries against the environment the host sets"
     prJsMathMlBind(ctx);
     jsHtmlBind(ctx);
     PrHtmlPage* page = prHtmlPageCreate(nullptr);
-    CHECK(prHtmlPageLoad(page, "<style>@media (min-width: 1000px) {}</style>",
-                                    "about:blank", nullptr) == PrStatus_Ok);
+    CHECK(prHtmlPageLoad(page, "<style>@media (min-width: 1000px) {}</style>", "about:blank", nullptr) == PrStatus_Ok);
     CHECK(prHtmlPageSetMediaFeature(page, PrCssDescriptor_MediaWidth, "1024px"));
     CHECK_FALSE(prHtmlPageSetMediaFeature(page, PrCssDescriptor_MediaWidth, "wide"));
     CHECK(jsHtmlSetGlobal(ctx, prHtmlPageWindow(page)));
@@ -171,8 +165,7 @@ TEST_CASE("devicePixelRatio is the display's pixel ratio, not a resolution a que
     PrAppDisplay display = prAppDisplayDefault();
     display.pixelRatio = 2;
     prHtmlPageSetDisplay(page, &display);
-    run("if (window.devicePixelRatio !== 2) throw new Error('the display');"
-        "devicePixelRatio = 'x';"
+    run("if (window.devicePixelRatio !== 2) throw new Error('the display');devicePixelRatio = 'x';"
         "if (devicePixelRatio !== 'x') throw new Error('replaceable');");
     JS_FreeContext(ctx);
     jsRuntimeDestroy(runtime);
@@ -201,11 +194,9 @@ TEST_CASE("a face's object made while it loads is held until the load settles it
     base64Encode(bytes, encoded.data(), encoded.size());
     std::string html = "<style>@font-face { font-family: A; src: url(data:font/otf;base64," + encoded + ") }</style>";
     // FontFaceSet.load starts loading the face, which settles only in a task.
-    CHECK(prHtmlPageLoad(page, html, "about:blank", nullptr)
-          == PrStatus_Ok);
+    CHECK(prHtmlPageLoad(page, html, "about:blank", nullptr) == PrStatus_Ok);
     CHECK(jsHtmlSetGlobal(ctx, prHtmlPageWindow(page)));
-    const char source[] =
-        R"JS(document.fonts.load('10px A').then(faces => { globalThis.loaded = faces.length; }))JS";
+    const char source[] = R"JS(document.fonts.load('10px A').then(faces => { globalThis.loaded = faces.length; }))JS";
     JSValue result = JS_Eval(ctx, source, sizeof(source) - 1, "fonts", JS_EVAL_TYPE_GLOBAL);
     CHECK(!JS_IsException(result));
     JS_FreeValue(ctx, result);
@@ -260,15 +251,11 @@ TEST_CASE("the ready promise taken while the last loading face loads resolves wh
         CHECK(!JS_IsException(result));
         JS_FreeValue(ctx, result);
     };
-    run("globalThis.face = new FontFace('B', 'url(b.ttf)');"
-        "document.fonts.add(face);"
-        "face.load();");
+    run("globalThis.face = new FontFace('B', 'url(b.ttf)');document.fonts.add(face);face.load();");
     settle();
     REQUIRE(held.size() == 1);
-    run("if (document.fonts.status !== 'loading') throw new Error('loading');"
-        "globalThis.ready = false;"
-        "document.fonts.ready.then(() => { globalThis.ready = true; });"
-        "document.fonts.delete(face);");
+    run("if (document.fonts.status !== 'loading') throw new Error('loading');globalThis.ready = false;"
+        "document.fonts.ready.then(() => { globalThis.ready = true; });document.fonts.delete(face);");
     settle();
     JSValue global = JS_GetGlobalObject(ctx);
     JSValue ready = JS_GetPropertyStr(ctx, global, "ready");

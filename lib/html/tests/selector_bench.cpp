@@ -191,10 +191,10 @@ int main(int argc, char** argv) {
             continue;
         work.current = &c;
         PrStringView on = c.on;
-        work.target =
-            on == "document"
-                ? prDomDocumentAsNode(document)
-                : prDomElementAsNode(prDomNodeGetElementById(prDomDocumentAsNode(document), on));
+        if (on == "document")
+            work.target = prDomDocumentAsNode(document);
+        else
+            work.target = prDomElementAsNode(prDomNodeGetElementById(prDomDocumentAsNode(document), on));
         if (only.data != nullptr) {
             harnessRepeat([&] { run(&work); });
         }

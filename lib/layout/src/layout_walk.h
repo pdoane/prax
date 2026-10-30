@@ -87,8 +87,7 @@ struct LayoutResolvedTransform {
 };
 
 // Returns the transform of the box `node`, whose fragment is `fragment`.
-LayoutResolvedTransform layoutNodeTransform(const LayoutTree* tree, LayoutNodeIndex node,
-                                            const LayoutFragment* fragment);
+LayoutResolvedTransform layoutNodeTransform(const LayoutTree* tree, LayoutNodeIndex node, const LayoutFragment* fragment);
 
 // Returns the map from a box's plane into the plane that it paints on, its parent's, both with the box's border box's
 // top left at the origin: T(p) * perspective(d) * T(-p) * T(o) * matrix * T(-o), where `matrix` stands for the resolved
@@ -103,8 +102,7 @@ PrDMatrix3 layoutPlaneHomography(const PrDMatrix4& map, PrLayoutVec offset);
 // Returns the map that painting applies for the transform of the box `fragment` at `offset`, with its parent's
 // perspective and scroll offset as the tree holds it, in coordinates in which the box's top left is at `offset`. Sets
 // `*hidden` to true if the box hides its back and shows it.
-PrDMatrix3 layoutBoxPlane(const LayoutTree* tree, const LayoutFragment* fragment, PrLayoutVec offset,
-                          bool* PR_NULLABLE hidden);
+PrDMatrix3 layoutBoxPlane(const LayoutTree* tree, const LayoutFragment* fragment, PrLayoutVec offset, bool* PR_NULLABLE hidden);
 
 // Returns true if the box `fragment` paints whole, from its stacking context's list (layoutPaintsWholeAs).
 bool layoutFragmentPaintsWhole(const LayoutTree* tree, const LayoutFragment* fragment);
@@ -377,7 +375,7 @@ struct LayoutWalk {
     // in. Returns how far that moves what the context places, relative to where `origin` puts it, whatever containers
     // an earlier box of the list left the walk in.
     PrLayoutVec enterChain(const Array<LayoutNodeIndex>& to, const Array<LayoutWalkContainer>& base, PrLayoutVec origin,
-                           PrLayoutVec reference) {
+            PrLayoutVec reference) {
         uint32_t kept = 0;
         while (kept < containers.count && kept < to.count && containers.data[kept].node == to.data[kept])
             ++kept;
@@ -433,8 +431,8 @@ struct LayoutWalk {
                 visitor.box(c, layoutRectAt(at, c->extent), visible, false);
                 continue;
             }
-            if ((c->kind == LayoutFragmentKind_Replaced || c->kind == LayoutFragmentKind_Box)
-                && layoutFragmentPaintsWhole(tree, c))
+            if ((c->kind == LayoutFragmentKind_Replaced || c->kind == LayoutFragmentKind_Box) &&
+                    layoutFragmentPaintsWhole(tree, c))
                 continue;
             if (c->kind == LayoutFragmentKind_Box) {
                 inlineBlock(c, at);
@@ -459,9 +457,9 @@ struct LayoutWalk {
                 continue;
             }
             LayoutChild floated{};
-            if (c->kind != LayoutFragmentKind_FloatAnchor || !anchored(c, place, &floated)
-                || layoutFragmentPaintsWhole(tree, floated.fragment)
-                || !visitor.enters(floated.fragment, floated.offset))
+            if (c->kind != LayoutFragmentKind_FloatAnchor || !anchored(c, place, &floated) ||
+                    layoutFragmentPaintsWhole(tree, floated.fragment) ||
+                    !visitor.enters(floated.fragment, floated.offset))
                 continue;
             atomic(floated.fragment, floated.offset);
         }
@@ -557,7 +555,7 @@ struct LayoutWalk {
     // Visits the box `node` of a stacking context's list, whose reference box is at `origin` in the containers the list
     // is painted in and at `reference` in the viewport's content as laid out, whole in its own containers.
     void paintEntry(LayoutNodeIndex node, const Array<LayoutWalkContainer>& base, PrLayoutVec origin,
-                    PrLayoutVec reference) {
+            PrLayoutVec reference) {
         bool inlineBox = layoutIsInlineBox(tree, node);
         LayoutPositioned positioned = inlineBox ? layoutNodePositioned(tree, node) : layoutBoxPositioned(tree, node);
         chain.clear();
@@ -623,7 +621,7 @@ struct LayoutWalk {
                     for (uint32_t k = piece.first; k < piece.parts; ++k) {
                         const LayoutChild& part = line->children[k];
                         visitor.box(part.fragment, layoutRectAt(piece.offset + part.offset, part.fragment->extent),
-                                    visible, false);
+                            visible, false);
                     }
                     lineRange(line, piece.offset, piece.parts, piece.end);
                 }
@@ -681,8 +679,8 @@ struct LayoutWalk {
         // Only a fragment with lines has floats anchored on them. A flex or grid container's children in flow are its
         // items.
         bool lines = (fragment->flags & LayoutFragmentFlag_Lines) != 0;
-        bool items = fragment->kind == LayoutFragmentKind_Box && fragment->node != kPrLayoutNodeNone
-                     && layoutChildrenAreItems(layoutTreeNode(tree, fragment->node).children);
+        bool items = fragment->kind == LayoutFragmentKind_Box && fragment->node != kPrLayoutNodeNone &&
+            layoutChildrenAreItems(layoutTreeNode(tree, fragment->node).children);
         // The floats phase visits the runs that hold the children that are floats or that hold floats. The boxes out of
         // flow that a holder holds, which are its last children, paint from their stacking contexts' lists.
         uint32_t first = 0;
@@ -721,8 +719,8 @@ struct LayoutWalk {
         if (phase == LayoutPhase_Floats && (c->flags & LayoutFragmentFlag_Float) == 0 && !layoutFragmentHoldsFloats(c))
             return;
         // A box out of flow, and therefore its placeholder, paints from a list, as does a box that paints whole.
-        if ((c->flags & LayoutFragmentFlag_OutOfFlow) != 0 || c->kind == LayoutFragmentKind_Placeholder
-            || layoutFragmentPaintsWhole(tree, c))
+        if ((c->flags & LayoutFragmentFlag_OutOfFlow) != 0 || c->kind == LayoutFragmentKind_Placeholder ||
+                layoutFragmentPaintsWhole(tree, c))
             return;
         // A float anchored on a line is a piece of an inline box around it that paints whole.
         if (lines && (c->flags & LayoutFragmentFlag_Float) != 0 && layoutInOwningInline(tree, c->node))

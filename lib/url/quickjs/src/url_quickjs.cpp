@@ -86,8 +86,7 @@ JSValue parseStatic(JSContext* ctx, JSValueConst, int argc, JSValueConst* argv, 
 // The getter steps of url/#url-class for the component that the magic names.
 JSValue componentGet(JSContext* ctx, JSValueConst self, int magic) {
     PrUrl* url = urlOf(ctx, self);
-    return url != nullptr ? jsTakeString(ctx, prUrlComponent(url, PrUrlComponent(magic)))
-                          : JS_EXCEPTION;
+    return url != nullptr ? jsTakeString(ctx, prUrlComponent(url, PrUrlComponent(magic))) : JS_EXCEPTION;
 }
 
 // The setter steps of url/#url-class. href's setter throws a TypeError for a URL that does not parse.
@@ -153,12 +152,15 @@ struct InitArgument {
         if (JS_IsException(method))
             return false;
         bool paired = true;
-        bool ok = JS_IsNull(method) || JS_IsUndefined(method) ? readRecord(ctx, input)
-            : jsIterate(ctx, input, method, [&](JSValue item) {
-                  bool read = readPair(ctx, item, &paired);
-                  JS_FreeValue(ctx, item);
-                  return read;
-              });
+        bool ok;
+        if (JS_IsNull(method) || JS_IsUndefined(method))
+            ok = readRecord(ctx, input);
+        else
+            ok = jsIterate(ctx, input, method, [&](JSValue item) {
+                bool read = readPair(ctx, item, &paired);
+                JS_FreeValue(ctx, item);
+                return read;
+            });
         JS_FreeValue(ctx, method);
         // The initializer checks each pair once all are converted.
         if (ok && !paired) {
@@ -192,9 +194,7 @@ struct InitArgument {
     bool readRecord(JSContext* ctx, JSValueConst input) {
         JSPropertyEnum* properties = nullptr;
         uint32_t count = 0;
-        if (JS_GetOwnPropertyNames(ctx, &properties, &count, input,
-                                   JS_GPN_STRING_MASK | JS_GPN_ENUM_ONLY)
-            < 0)
+        if (JS_GetOwnPropertyNames(ctx, &properties, &count, input, JS_GPN_STRING_MASK | JS_GPN_ENUM_ONLY) < 0)
             return false;
         bool ok = true;
         for (uint32_t i = 0; ok && i < count; ++i) {
@@ -254,8 +254,7 @@ struct NameValue {
             JS_ThrowTypeError(ctx, "Not enough arguments");
             return false;
         }
-        return name.read(argv[0])
-               && (!withValue || !jsArgGiven(argc, argv, 1) || value.read(argv[1]));
+        return name.read(argv[0]) && (!withValue || !jsArgGiven(argc, argv, 1) || value.read(argv[1]));
     }
 };
 
@@ -288,8 +287,7 @@ JSValue nameMethod(JSContext* ctx, JSValueConst self, int argc, JSValueConst* ar
             uint32_t count = 0;
             for (uint32_t i = 0; i < prUrlSearchParamsSize(params); ++i) {
                 if (prUrlSearchParamsNameAt(params, i) == name)
-                    JS_SetPropertyUint32(ctx, all, count++,
-                                         stringOf(ctx, prUrlSearchParamsValueAt(params, i)));
+                    JS_SetPropertyUint32(ctx, all, count++, stringOf(ctx, prUrlSearchParamsValueAt(params, i)));
             }
             return all;
         }
@@ -321,7 +319,7 @@ JSValue entryAt(JSContext* ctx, JSValueConst self, int, JSValueConst* argv) {
     if (index >= prUrlSearchParamsSize(params))
         return JS_UNDEFINED;
     return jsEntry(ctx, stringOf(ctx, prUrlSearchParamsNameAt(params, index)),
-                   stringOf(ctx, prUrlSearchParamsValueAt(params, index)));
+        stringOf(ctx, prUrlSearchParamsValueAt(params, index)));
 }
 
 // entries, keys and values, selected by the part of each entry that the magic names.
@@ -397,30 +395,33 @@ constexpr JSCFunctionListEntry kUrlSearchParamsProto[] = {
 using namespace pr_impl;
 
 void prJsUrlBind(JSContext* ctx) {
-    JSValue url = jsDefineClass(ctx, {.name = "URL",
-                                      .id = &urlClass,
-                                      .finalizer = urlFinalizer,
-                                      .mark = urlMark,
-                                      .proto = kUrlProto,
-                                      .protoCount = int(countOf(kUrlProto)),
-                                      .statics = kUrlStatic,
-                                      .staticCount = int(countOf(kUrlStatic)),
-                                      .constructor = construct,
-                                      .length = 1});
+    JSValue url = jsDefineClass(ctx, {
+        .name = "URL",
+        .id = &urlClass,
+        .finalizer = urlFinalizer,
+        .mark = urlMark,
+        .proto = kUrlProto,
+        .protoCount = int(countOf(kUrlProto)),
+        .statics = kUrlStatic,
+        .staticCount = int(countOf(kUrlStatic)),
+        .constructor = construct,
+        .length = 1,
+    });
     // url/#url-class: [LegacyWindowAlias=webkitURL]
     JSValue global = JS_GetGlobalObject(ctx);
-    JS_DefinePropertyValueStr(ctx, global, "webkitURL", url,
-                              JS_PROP_WRITABLE | JS_PROP_CONFIGURABLE);
+    JS_DefinePropertyValueStr(ctx, global, "webkitURL", url, JS_PROP_WRITABLE | JS_PROP_CONFIGURABLE);
     JS_FreeValue(ctx, global);
 
-    JSValue params = jsDefineClass(ctx, {.name = "URLSearchParams",
-                                         .id = &urlSearchParamsClass,
-                                         .finalizer = paramsFinalizer,
-                                         .mark = paramsMark,
-                                         .proto = kUrlSearchParamsProto,
-                                         .protoCount = int(countOf(kUrlSearchParamsProto)),
-                                         .constructor = constructParams,
-                                         .iterator = "entries"});
+    JSValue params = jsDefineClass(ctx, {
+        .name = "URLSearchParams",
+        .id = &urlSearchParamsClass,
+        .finalizer = paramsFinalizer,
+        .mark = paramsMark,
+        .proto = kUrlSearchParamsProto,
+        .protoCount = int(countOf(kUrlSearchParamsProto)),
+        .constructor = constructParams,
+        .iterator = "entries",
+    });
     JS_FreeValue(ctx, params);
     jsPairIteratorBind(ctx, &urlSearchParamsIteratorClass, "URLSearchParams Iterator");
 }

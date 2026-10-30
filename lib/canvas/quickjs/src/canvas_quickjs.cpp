@@ -127,10 +127,14 @@ constexpr const char* kTextAligns[] = {"start", "end", "left", "right", "center"
 constexpr const char* kTextBaselines[] = {"top", "hanging", "middle", "alphabetic", "ideographic", "bottom"};
 constexpr const char* kDirections[] = {"ltr", "rtl", "inherit"};
 constexpr const char* kFontKernings[] = {"auto", "normal", "none"};
-constexpr const char* kFontStretches[] = {"ultra-condensed", "extra-condensed", "condensed", "semi-condensed",
-                                          "normal", "semi-expanded", "expanded", "extra-expanded", "ultra-expanded"};
-constexpr const char* kFontVariantCaps[] = {"normal", "small-caps", "all-small-caps", "petite-caps",
-                                            "all-petite-caps", "unicase", "titling-caps"};
+constexpr const char* kFontStretches[] = {
+    "ultra-condensed", "extra-condensed", "condensed", "semi-condensed",
+    "normal", "semi-expanded", "expanded", "extra-expanded", "ultra-expanded",
+};
+constexpr const char* kFontVariantCaps[] = {
+    "normal", "small-caps", "all-small-caps", "petite-caps",
+    "all-petite-caps", "unicase", "titling-caps",
+};
 constexpr const char* kTextRenderings[] = {"auto", "optimizeSpeed", "optimizeLegibility", "geometricPrecision"};
 
 // The PredefinedColorSpace enumeration (html/#predefinedcolorspace).
@@ -184,8 +188,10 @@ bool readImageDataSettings(JSContext* ctx, JSValueConst value, ImageDataSettings
         if (!JS_IsUndefined(member)) {
             bool space = name[0] == 'c';
             int32_t index = 0;
-            ok = space ? requireEnum(ctx, member, kColorSpaceNames, countOf(kColorSpaceNames), &index)
-                       : requireEnum(ctx, member, kPixelFormats, countOf(kPixelFormats), &index);
+            if (space)
+                ok = requireEnum(ctx, member, kColorSpaceNames, countOf(kColorSpaceNames), &index);
+            else
+                ok = requireEnum(ctx, member, kPixelFormats, countOf(kPixelFormats), &index);
             if (ok && space) {
                 out->colorSpace = kColorSpaces[index];
                 out->hasColorSpace = true;
@@ -203,8 +209,7 @@ bool readImageDataSettings(JSContext* ctx, JSValueConst value, ImageDataSettings
 // Returns a new ImageData of `extent` pixels in `settings`' format and color space, or `space` if the settings name
 // none (html/#initialize-an-imagedata-object). Its pixels are `array`, or new transparent black pixels if `array` is
 // undefined. Takes ownership of `array`.
-JSValue newImageData(JSContext* ctx, PrUVec2 extent, const ImageDataSettings& settings, PrColorSpace space,
-                     JSValue array) {
+JSValue newImageData(JSContext* ctx, PrUVec2 extent, const ImageDataSettings& settings, PrColorSpace space, JSValue array) {
     if (JS_IsUndefined(array)) {
         uint64_t elements = uint64_t(extent.x) * extent.y * 4;
         if (elements > 0x7fffffffu) {
@@ -212,14 +217,19 @@ JSValue newImageData(JSContext* ctx, PrUVec2 extent, const ImageDataSettings& se
             return JS_EXCEPTION;
         }
         JSValue length = JS_NewFloat64(ctx, double(elements));
-        array = JS_NewTypedArray(ctx, 1, &length, settings.format == PrCanvasPixelFormat_RgbaUnorm8
-                                                      ? JS_TYPED_ARRAY_UINT8C
-                                                      : JS_TYPED_ARRAY_FLOAT16);
+        JSTypedArrayEnum type =
+            settings.format == PrCanvasPixelFormat_RgbaUnorm8 ? JS_TYPED_ARRAY_UINT8C : JS_TYPED_ARRAY_FLOAT16;
+        array = JS_NewTypedArray(ctx, 1, &length, type);
         if (JS_IsException(array))
             return array;
     }
-    ImageDataValue value{.data = PrCanvasImageData{.extent = extent, .format = settings.format,
-                                                   .colorSpace = settings.hasColorSpace ? settings.colorSpace : space}};
+    ImageDataValue value{
+        .data = PrCanvasImageData{
+            .extent = extent,
+            .format = settings.format,
+            .colorSpace = settings.hasColorSpace ? settings.colorSpace : space,
+        },
+    };
     JSValue object = jsNewValue(ctx, imageDataClass, value);
     if (JS_IsException(object)) {
         JS_FreeValue(ctx, array);
@@ -265,8 +275,8 @@ JSValue imageDataConstruct(JSContext* ctx, JSValueConst newTarget, int argc, JSV
         uint32_t height = 0;
         ImageDataSettings settings{};
         bool heightGiven = jsArgGiven(argc, argv, 2);
-        if (JS_ToUint32(ctx, &width, argv[1]) < 0 || (heightGiven && JS_ToUint32(ctx, &height, argv[2]) < 0)
-            || !readImageDataSettings(ctx, argc > 3 ? argv[3] : JS_UNDEFINED, &settings))
+        if (JS_ToUint32(ctx, &width, argv[1]) < 0 || (heightGiven && JS_ToUint32(ctx, &height, argv[2]) < 0) ||
+                !readImageDataSettings(ctx, argc > 3 ? argv[3] : JS_UNDEFINED, &settings))
             return JS_EXCEPTION;
         size_t offset = 0;
         size_t length = 0;
@@ -285,19 +295,19 @@ JSValue imageDataConstruct(JSContext* ctx, JSValueConst newTarget, int argc, JSV
         if (bytes != (settings.format == PrCanvasPixelFormat_RgbaUnorm8))
             return jsDomExceptionThrow(ctx, "InvalidStateError");
         JSValue object = newImageData(ctx, PrUVec2{width, uint32_t(pixels / width)}, settings, PrColorSpace_Srgb,
-                                      JS_DupValue(ctx, argv[0]));
+            JS_DupValue(ctx, argv[0]));
         return jsConstructed(ctx, newTarget, object);
     }
     uint32_t width = 0;
     uint32_t height = 0;
     ImageDataSettings settings{};
-    if (JS_ToUint32(ctx, &width, argv[0]) < 0 || JS_ToUint32(ctx, &height, argv[1]) < 0
-        || !readImageDataSettings(ctx, argc > 2 ? argv[2] : JS_UNDEFINED, &settings))
+    if (JS_ToUint32(ctx, &width, argv[0]) < 0 || JS_ToUint32(ctx, &height, argv[1]) < 0 ||
+            !readImageDataSettings(ctx, argc > 2 ? argv[2] : JS_UNDEFINED, &settings))
         return JS_EXCEPTION;
     if (width == 0 || height == 0)
         return jsDomExceptionThrow(ctx, "IndexSizeError");
     return jsConstructed(ctx, newTarget,
-                         newImageData(ctx, PrUVec2{width, height}, settings, PrColorSpace_Srgb, JS_UNDEFINED));
+        newImageData(ctx, PrUVec2{width, height}, settings, PrColorSpace_Srgb, JS_UNDEFINED));
 }
 
 // Implements width and height, selected by the magic.
@@ -631,8 +641,8 @@ Usability imageSourceOf(JSContext* ctx, JSValueConst value, PrCanvasImageSource*
     }
     if (PrHtmlCanvasElement* canvas = prHtmlCanvasElementQuery(target))
         return prHtmlCanvasElementImageSource(canvas, out) ? Usability_Good : Usability_Broken;
-    if (element != nullptr && prDomElementNamespace(element) == PrDomNamespace_Html
-        && (prDomElementTag(element) == PrDomTag_Video))
+    if (element != nullptr && prDomElementNamespace(element) == PrDomNamespace_Html &&
+            (prDomElementTag(element) == PrDomTag_Video))
         return Usability_Bad;
     JS_ThrowTypeError(ctx, "Expected a CanvasImageSource");
     return Usability_Exception;
@@ -671,7 +681,8 @@ JSValue noArguments(JSContext* ctx, JSValueConst self, int, JSValueConst*, int m
         return JS_EXCEPTION;
     void (*const kMethods[])(PrCanvas*) = {
         prCanvasSave, prCanvasRestore, prCanvasReset,
-        prCanvasBeginPath, prCanvasResetTransform};
+        prCanvasBeginPath, prCanvasResetTransform,
+    };
     kMethods[magic](canvas);
     return JS_UNDEFINED;
 }
@@ -859,8 +870,7 @@ JSValue setStringAttribute(JSContext* ctx, JSValueConst self, JSValueConst input
 
 JSValue imageSmoothingEnabled(JSContext* ctx, JSValueConst self) {
     PrCanvas* canvas = contextOf(ctx, self);
-    return canvas != nullptr ? JS_NewBool(ctx, prCanvasImageSmoothingEnabled(canvas))
-                              : JS_EXCEPTION;
+    return canvas != nullptr ? JS_NewBool(ctx, prCanvasImageSmoothingEnabled(canvas)) : JS_EXCEPTION;
 }
 
 JSValue setImageSmoothingEnabled(JSContext* ctx, JSValueConst self, JSValueConst input) {
@@ -932,8 +942,7 @@ JSValue enumAttribute(JSContext* ctx, JSValueConst self, int magic) {
 JSValue setEnumAttribute(JSContext* ctx, JSValueConst self, JSValueConst input, int magic) {
     PrCanvas* canvas = contextOf(ctx, self);
     int32_t value = 0;
-    if (canvas == nullptr
-        || !readEnum(ctx, input, kEnumAttributes[magic].names, kEnumAttributes[magic].count, &value))
+    if (canvas == nullptr || !readEnum(ctx, input, kEnumAttributes[magic].names, kEnumAttributes[magic].count, &value))
         return JS_EXCEPTION;
     if (value < 0)
         return JS_UNDEFINED;
@@ -1076,7 +1085,8 @@ JSValue rectangle(JSContext* ctx, JSValueConst self, int argc, JSValueConst* arg
         return JS_EXCEPTION;
     void (*const kMethods[])(PrCanvas*, double, double, double, double) = {
         prCanvasClearRect, prCanvasFillRect,
-        prCanvasStrokeRect};
+        prCanvasStrokeRect,
+    };
     kMethods[magic](canvas, n[0], n[1], n[2], n[3]);
     return JS_UNDEFINED;
 }
@@ -1166,14 +1176,12 @@ JSValue drawText(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv
     PrCanvas* canvas = contextOf(ctx, self);
     StringArgument text = {ctx};
     double n[3];
-    if (canvas == nullptr || !jsArgCount(ctx, argc, 3) || !text.read(argv[0])
-        || !readNumbers(ctx, argc, argv, 1, 2, n))
+    if (canvas == nullptr || !jsArgCount(ctx, argc, 3) || !text.read(argv[0]) || !readNumbers(ctx, argc, argv, 1, 2, n))
         return JS_EXCEPTION;
     bool limited = jsArgGiven(argc, argv, 3);
     if (limited && JS_ToFloat64(ctx, &n[2], argv[3]) < 0)
         return JS_EXCEPTION;
-    (magic == 0 ? prCanvasFillText : prCanvasStrokeText)(
-        canvas, text.value(), n[0], n[1], limited ? &n[2] : nullptr);
+    (magic == 0 ? prCanvasFillText : prCanvasStrokeText)(canvas, text.value(), n[0], n[1], limited ? &n[2] : nullptr);
     return JS_UNDEFINED;
 }
 
@@ -1264,14 +1272,17 @@ JSValue createImageData(JSContext* ctx, JSValueConst self, int argc, JSValueCons
         ImageDataValue* from = imageDataOf(ctx, argv[0]);
         if (from == nullptr)
             return JS_EXCEPTION;
-        ImageDataSettings settings{.colorSpace = contextSpace(canvas), .format = PrCanvasPixelFormat_RgbaUnorm8,
-                                   .hasColorSpace = true};
+        ImageDataSettings settings{
+            .colorSpace = contextSpace(canvas),
+            .format = PrCanvasPixelFormat_RgbaUnorm8,
+            .hasColorSpace = true,
+        };
         return newImageData(ctx, from->data.extent, settings, settings.colorSpace, JS_UNDEFINED);
     }
     int32_t n[2];
     ImageDataSettings settings{};
-    if (!enforceLongs(ctx, argc, argv, 0, 2, n)
-        || !readImageDataSettings(ctx, argc > 2 ? argv[2] : JS_UNDEFINED, &settings))
+    if (!enforceLongs(ctx, argc, argv, 0, 2, n) ||
+            !readImageDataSettings(ctx, argc > 2 ? argv[2] : JS_UNDEFINED, &settings))
         return JS_EXCEPTION;
     if (n[0] == 0 || n[1] == 0)
         return jsDomExceptionThrow(ctx, "IndexSizeError");
@@ -1283,8 +1294,8 @@ JSValue getImageData(JSContext* ctx, JSValueConst self, int argc, JSValueConst* 
     PrCanvas* canvas = contextOf(ctx, self);
     int32_t n[4];
     ImageDataSettings settings{};
-    if (canvas == nullptr || !enforceLongs(ctx, argc, argv, 0, 4, n)
-        || !readImageDataSettings(ctx, argc > 4 ? argv[4] : JS_UNDEFINED, &settings))
+    if (canvas == nullptr || !enforceLongs(ctx, argc, argv, 0, 4, n) ||
+            !readImageDataSettings(ctx, argc > 4 ? argv[4] : JS_UNDEFINED, &settings))
         return JS_EXCEPTION;
     if (n[2] == 0 || n[3] == 0)
         return jsDomExceptionThrow(ctx, "IndexSizeError");
@@ -1398,10 +1409,9 @@ constexpr JSCFunctionListEntry kContextProto[] = {
     PR_JS_MAGIC("resetTransform", 0, noArguments, 4),
     PR_JS_MAGIC_GET_SET("globalAlpha", numberAttribute, setNumberAttribute, NumberAttribute_GlobalAlpha),
     PR_JS_MAGIC_GET_SET("globalCompositeOperation", stringAttribute, setStringAttribute,
-                        StringAttribute_GlobalCompositeOperation),
+        StringAttribute_GlobalCompositeOperation),
     PR_JS_GET_SET("imageSmoothingEnabled", imageSmoothingEnabled, setImageSmoothingEnabled),
-    PR_JS_MAGIC_GET_SET("imageSmoothingQuality", enumAttribute, setEnumAttribute,
-                        EnumAttribute_ImageSmoothingQuality),
+    PR_JS_MAGIC_GET_SET("imageSmoothingQuality", enumAttribute, setEnumAttribute, EnumAttribute_ImageSmoothingQuality),
     PR_JS_MAGIC_GET_SET("strokeStyle", style, setStyle, PrCanvasStyleRole_Stroke),
     PR_JS_MAGIC_GET_SET("fillStyle", style, setStyle, PrCanvasStyleRole_Fill),
     PR_JS_METHOD("createLinearGradient", 4, createLinearGradient),
@@ -1494,28 +1504,37 @@ constexpr JSCFunctionListEntry kImageDataProto[] = {
 
 constexpr JsClassDefinition kClasses[] = {
     {PR_JS_CLASS("CanvasRenderingContext2D", contextClass, jsViewFinalizer<&contextClass>, kContextProto)},
-    {PR_JS_CLASS("CanvasGradient", gradientClass, (jsFinalizer<&gradientClass, prCanvasGradientRelease>),
-                 kGradientProto),
-     .references = &kGradientReferences},
-    {PR_JS_CLASS("CanvasPattern", patternClass, (jsFinalizer<&patternClass, prCanvasPatternRelease>),
-                 kPatternProto),
-     .references = &kPatternReferences},
-    {PR_JS_CLASS("Path2D", path2DClass, (jsFinalizer<&path2DClass, prCanvasPath2DDestroy>), kPath2DProto),
-     .constructor = path2DConstruct},
-    {.name = "ImageData",
-     .id = &imageDataClass,
-     .finalizer = jsValueFinalizer,
-     .mark = jsValueMark,
-     .proto = kImageDataProto,
-     .protoCount = int(countOf(kImageDataProto)),
-     .constructor = imageDataConstruct,
-     .length = 2},
-    {.name = "TextMetrics",
-     .id = &textMetricsClass,
-     .finalizer = jsValueFinalizer,
-     .mark = jsValueMark,
-     .proto = kTextMetricsProto,
-     .protoCount = int(countOf(kTextMetricsProto))},
+    {
+        PR_JS_CLASS("CanvasGradient", gradientClass, (jsFinalizer<&gradientClass, prCanvasGradientRelease>),
+            kGradientProto),
+        .references = &kGradientReferences,
+    },
+    {
+        PR_JS_CLASS("CanvasPattern", patternClass, (jsFinalizer<&patternClass, prCanvasPatternRelease>), kPatternProto),
+        .references = &kPatternReferences,
+    },
+    {
+        PR_JS_CLASS("Path2D", path2DClass, (jsFinalizer<&path2DClass, prCanvasPath2DDestroy>), kPath2DProto),
+        .constructor = path2DConstruct,
+    },
+    {
+        .name = "ImageData",
+        .id = &imageDataClass,
+        .finalizer = jsValueFinalizer,
+        .mark = jsValueMark,
+        .proto = kImageDataProto,
+        .protoCount = int(countOf(kImageDataProto)),
+        .constructor = imageDataConstruct,
+        .length = 2,
+    },
+    {
+        .name = "TextMetrics",
+        .id = &textMetricsClass,
+        .finalizer = jsValueFinalizer,
+        .mark = jsValueMark,
+        .proto = kTextMetricsProto,
+        .protoCount = int(countOf(kTextMetricsProto)),
+    },
 };
 
 } // namespace
@@ -1545,8 +1564,10 @@ bool prJsCanvasSettingsRead(JSContext* ctx, JSValueConst value, PrCanvasSettings
         if (!JS_IsUndefined(member)) {
             int32_t index = 0;
             bool space = name[5] == 'S';
-            ok = space ? requireEnum(ctx, member, kColorSpaceNames, countOf(kColorSpaceNames), &index)
-                       : requireEnum(ctx, member, kColorTypes, countOf(kColorTypes), &index);
+            if (space)
+                ok = requireEnum(ctx, member, kColorSpaceNames, countOf(kColorSpaceNames), &index);
+            else
+                ok = requireEnum(ctx, member, kColorTypes, countOf(kColorTypes), &index);
             if (ok && space)
                 out->colorSpace = kColorSpaces[index];
             else if (ok)
@@ -1556,8 +1577,8 @@ bool prJsCanvasSettingsRead(JSContext* ctx, JSValueConst value, PrCanvasSettings
         if (!ok)
             return false;
     }
-    return jsDictBool(ctx, value, "desynchronized", &out->desynchronized)
-           && jsDictBool(ctx, value, "willReadFrequently", &out->willReadFrequently);
+    return jsDictBool(ctx, value, "desynchronized", &out->desynchronized) &&
+        jsDictBool(ctx, value, "willReadFrequently", &out->willReadFrequently);
 }
 
 JSValue prJsCanvasRenderingContext2DNew(JSContext* ctx, PrCanvas* context, JSValueConst canvas) {

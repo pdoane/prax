@@ -76,7 +76,7 @@ PrLayoutLength pxLength(float px) {
 }
 
 PrLayoutStyleIndex intern(PrLayoutTree* tree, const PrLayoutBoxStyle& box, const PrLayoutFlexStyle* PR_NULLABLE flex,
-                          const PrLayoutDecorationStyle* PR_NULLABLE decoration) {
+        const PrLayoutDecorationStyle* PR_NULLABLE decoration) {
     PrLayoutStyle record = prLayoutStyleDefault();
     record.groups[PrLayoutGroup_Box] = prLayoutBoxStyleIntern(tree, &box);
     if (flex != nullptr)
@@ -321,16 +321,14 @@ int main(int argc, char** argv) {
             std::string name = std::to_string(nodes) + " nodes " + label;
             PrLayoutTreeStats stats = prLayoutTreeStats(w.tree);
             TextBuffer row{};
-            harnessAppendFormat(&row,
-                                "%s\n  {\"name\": \"%s\", \"time\": %.6f, \"nodes\": %u, \"kept\": %u, \"made\": %u, "
-                                "\"gone\": %u, \"relinked\": %u, \"blocks\": %u, \"lines\": %u, \"layers\": %u, "
-                                "\"commands\": %u, \"flex laid out\": %u, \"measured\": %u, \"handoffs\": %u, "
-                                "\"per node\": %.1f",
-                                first ? "" : ",", name.c_str(), cost.millis, nodes, stats.frameNodesKept,
-                                stats.frameNodesMade, stats.frameNodesGone, stats.frameParentsRelinked,
-                                stats.blocksLaidOut, stats.linesLaidOut, stats.layersRecorded,
-                                stats.commandsRecorded, stats.flexLaidOut, stats.measuresComputed,
-                                stats.handoffsTaken, cost.instructions / nodes);
+            harnessAppendFormat(&row, "%s\n  {\"name\": \"%s\", \"time\": %.6f, \"nodes\": %u, \"kept\": %u, \"made\": %u, "
+                "\"gone\": %u, \"relinked\": %u, \"blocks\": %u, \"lines\": %u, \"layers\": %u, "
+                "\"commands\": %u, \"flex laid out\": %u, \"measured\": %u, \"handoffs\": %u, "
+                "\"per node\": %.1f", first ? "" : ",", name.c_str(), cost.millis, nodes, stats.frameNodesKept,
+                stats.frameNodesMade, stats.frameNodesGone, stats.frameParentsRelinked,
+                stats.blocksLaidOut, stats.linesLaidOut, stats.layersRecorded,
+                stats.commandsRecorded, stats.flexLaidOut, stats.measuresComputed,
+                stats.handoffsTaken, cost.instructions / nodes);
             HarnessCounts counts{};
             harnessCountsAdd(&counts, "time", cost);
             harnessCountsWrite(&counts, &row);

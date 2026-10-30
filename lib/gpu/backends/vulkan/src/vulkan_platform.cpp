@@ -40,8 +40,10 @@ void* PR_NULLABLE vulkanLoaderOpen(PFN_vkGetInstanceProcAddr PR_NULLABLE* PR_NON
     // loader, the one that the environment's library paths find, and the ones that the Vulkan SDK and Homebrew install.
     // dyld does not search the directories of the last two by default. The backend does not enumerate portability
     // drivers, so the loader does not list MoltenVK.
-    const char* names[] = {"@rpath/libvulkan.1.dylib", "libvulkan.1.dylib", "/usr/local/lib/libvulkan.1.dylib",
-                           "/opt/homebrew/lib/libvulkan.1.dylib"};
+    const char* names[] = {
+        "@rpath/libvulkan.1.dylib", "libvulkan.1.dylib", "/usr/local/lib/libvulkan.1.dylib",
+        "/opt/homebrew/lib/libvulkan.1.dylib",
+    };
 #else
     const char* names[] = {"libvulkan.so.1", "libvulkan.so"};
 #endif
@@ -105,7 +107,7 @@ const char* PR_NULLABLE vulkanSurfaceExtension(void) {
 }
 
 VkResult vulkanSurfaceCreate(VulkanDevice* d, const PrAppSurface* surface, const PrGpuSwapChainDesc* desc,
-                             VkSurfaceKHR PR_NULLABLE* PR_NONNULL out) {
+        VkSurfaceKHR PR_NULLABLE* PR_NONNULL out) {
     *out = VK_NULL_HANDLE;
 #if defined(_WIN32)
     (void)desc;

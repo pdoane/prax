@@ -23,7 +23,7 @@ PrLayoutUnit lineRightMargin(const PrLayoutUnit* margin, PrTextDirection directi
 // border box over [y, y + h). The span lies within the containing block less the margins. If any floats meet the range,
 // the span also lies beside them, but never past the containing block.
 LayoutSpan borderBoxSpan(const LayoutContainingBlock& cb, PrLayoutUnit y, PrLayoutUnit h, PrLayoutUnit marginLeft,
-                         PrLayoutUnit marginRight) {
+        PrLayoutUnit marginRight) {
     LayoutSpan span = layoutExclusionsAvailable(cb, y, h);
     PrLayoutUnit left = cb.lineLeft + marginLeft;
     PrLayoutUnit right = cb.lineRight - marginRight;
@@ -36,8 +36,8 @@ LayoutSpan borderBoxSpan(const LayoutContainingBlock& cb, PrLayoutUnit y, PrLayo
 
 // Returns true if `inner` is narrower than `outer` and within it.
 bool narrows(const LayoutSpan& inner, const LayoutSpan& outer) {
-    return inner.left.raw >= outer.left.raw && inner.right.raw <= outer.right.raw
-           && (inner.left.raw > outer.left.raw || inner.right.raw < outer.right.raw);
+    return inner.left.raw >= outer.left.raw && inner.right.raw <= outer.right.raw &&
+        (inner.left.raw > outer.left.raw || inner.right.raw < outer.right.raw);
 }
 
 } // namespace
@@ -57,26 +57,25 @@ LayoutAtomic layoutFloat(LayoutState& state, LayoutNodeIndex node, const LayoutS
 }
 
 LayoutExclusion layoutFloatPlace(const PrLayoutBoxStyle& box, const LayoutAtomic& f, const LayoutContainingBlock& cb,
-                                 LayoutMode mode, PrLayoutUnit top) {
+        LayoutMode mode, PrLayoutUnit top) {
     LayoutLogicalSize size = layoutAtomicMarginBox(f, mode);
     return layoutExclusionsPlace(cb, size.inlineSize, size.blockSize, layoutFloatSide(box, mode.direction),
-                                 layoutClearSides(box, mode.direction), top);
+        layoutClearSides(box, mode.direction), top);
 }
 
 LayoutLogicalOffset layoutFloatOffset(const LayoutAtomic& f, const LayoutExclusion& placed,
-                                      const LayoutContainingBlock& cb, LayoutMode mode,
-                                      PrLayoutUnit contentTop) {
+        const LayoutContainingBlock& cb, LayoutMode mode, PrLayoutUnit contentTop) {
     LayoutLogicalSize size = layoutLogicalSize(mode, f.fragment->extent);
     LayoutLogicalOffset at{
         layoutInlineStartFromLeft(cb, mode.direction, placed.left + lineLeftMargin(f.margin, mode.direction),
-                                  size.inlineSize),
-        placed.top + f.margin[LayoutSide_BlockStart] - contentTop};
+            size.inlineSize),
+        placed.top + f.margin[LayoutSide_BlockStart] - contentTop,
+    };
     return at + f.relative;
 }
 
 LayoutAvoider layoutAvoiderPlace(LayoutState& state, LayoutNodeIndex node, LayoutNodeIndex runLast,
-                                 const LayoutSpace& content, const LayoutContainingBlock& cb, PrLayoutUnit top,
-                                 const PrLayoutUnit* margin) {
+        const LayoutSpace& content, const LayoutContainingBlock& cb, PrLayoutUnit top, const PrLayoutUnit* margin) {
     PrTextDirection direction = content.mode.direction;
     PrLayoutUnit marginLeft = lineLeftMargin(margin, direction);
     PrLayoutUnit marginRight = lineRightMargin(margin, direction);
@@ -88,13 +87,16 @@ LayoutAvoider layoutAvoiderPlace(LayoutState& state, LayoutNodeIndex node, Layou
         for (;;) {
             LayoutSpace space = content;
             space.available = span.right - span.left + marginLeft + marginRight;
-            LayoutResult result = runLast != kPrLayoutNodeNone ? layoutAnonymousTable(state, node, runLast, space)
-                                                               : layoutBlock(state, node, space);
+            LayoutResult result;
+            if (runLast != kPrLayoutNodeNone)
+                result = layoutAnonymousTable(state, node, runLast, space);
+            else
+                result = layoutBlock(state, node, space);
             LayoutLogicalSize size = layoutLogicalSize(content.mode, result.fragment->extent);
-            PrLayoutUnit left = span.left - marginLeft
-                                + (direction == PrTextDirection_Ltr
-                                       ? result.marginInlineStart
-                                       : space.available - result.marginInlineStart - size.inlineSize);
+            PrLayoutUnit inlineOffset = space.available - result.marginInlineStart - size.inlineSize;
+            if (direction == PrTextDirection_Ltr)
+                inlineOffset = result.marginInlineStart;
+            PrLayoutUnit left = span.left - marginLeft + inlineOffset;
             LayoutSpan need = borderBoxSpan(cb, y, size.blockSize, marginLeft, marginRight);
             if (need.free || (left.raw >= need.left.raw && (left + size.inlineSize).raw <= need.right.raw))
                 return LayoutAvoider{result, y, left};

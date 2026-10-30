@@ -41,8 +41,7 @@ inline PrDomNode* PR_NULLABLE domElementContents(const PrDomElement* element) {
 // Returns the number of the element's attributes.
 inline uint32_t domElementAttributeCount(const PrDomElement* element) {
     uint32_t count = 0;
-    for (const PrDomNode* attribute = element->firstAttribute; attribute != nullptr;
-         attribute = attribute->next)
+    for (const PrDomNode* attribute = element->firstAttribute; attribute != nullptr; attribute = attribute->next)
         ++count;
     return count;
 }
@@ -114,8 +113,7 @@ inline void domDropTree(PrDomNode* PR_NULLABLE root) {
 // Returns the owner of the event handler `handler` of `target`. The WindowEventHandlers of a body or frameset element,
 // and the handlers that the Window reflects (html/#window-reflecting-body-element-event-handler-set), belong to the
 // element's Window. Their owner is null if the element has no Window. Every other handler belongs to the target.
-PrDomEventTarget* PR_NULLABLE domEventHandlerTarget(PrDomEventTarget* target,
-                                                    PrDomEventHandler handler);
+PrDomEventTarget* PR_NULLABLE domEventHandlerTarget(PrDomEventTarget* target, PrDomEventHandler handler);
 
 // Calls `visit` with the node, its shadow-including descendants, and the attributes of those that are elements.
 void domVisitSubtree(PrDomNode* root, void (*visit)(void* context, PrDomNode* node), void* context);
@@ -134,28 +132,24 @@ PrStatus domDocumentParseUrl(const PrDomDocument* document, PrStringView text, P
 // Creates the element that `tag` names in `space`, or that `name` names for PrDomTag_Unknown. The element's tag comes
 // from the tag table if the table holds the name in a namespace that it names elements of. Otherwise the tag is an atom
 // of the document.
-PrDomElement* domElementCreate(PrDomDocument* document, DomNamespaceId space, PrDomTag tag,
-                               PrStringView name);
+PrDomElement* domElementCreate(PrDomDocument* document, DomNamespaceId space, PrDomTag tag, PrStringView name);
 
 // Creates the element that `local` names in `space`, with `prefix` unless it is the null view. This is how
 // dom/#concept-create-element creates an element from an already validated namespace and qualified name.
-PrDomElement* domElementCreateNs(PrDomDocument* document, DomNamespaceId space, PrStringView prefix,
-                                 PrStringView local);
+PrDomElement* domElementCreateNs(PrDomDocument* document, DomNamespaceId space, PrStringView prefix, PrStringView local);
 
 // Create a node of `document` of the kind that each function names, from the given data or names.
 PrDomText* domTextCreate(PrDomDocument* document, PrStringView data);
 PrDomText* domTextCreateCdataSection(PrDomDocument* document, PrStringView data);
 PrDomComment* domCommentCreate(PrDomDocument* document, PrStringView data);
-PrDomProcessingInstruction* domProcessingInstructionCreate(PrDomDocument* document,
-                                                           PrStringView target, PrStringView data);
+PrDomProcessingInstruction* domProcessingInstructionCreate(PrDomDocument* document, PrStringView target, PrStringView data);
 PrDomDocumentType* domDocumentTypeCreate(PrDomDocument* document, PrStringView name, PrStringView publicId,
-                                         PrStringView systemId);
+    PrStringView systemId);
 PrDomDocumentFragment* domDocumentFragmentCreate(PrDomDocument* document);
 
 // Attaches a shadow root to `host` (dom/#concept-attach-a-shadow-root). Returns NotSupported if `host` is not an
 // element that a shadow root can be attached to, or if it already hosts one.
-PrStatus domAttachShadow(PrDomElement* host, const PrDomShadowRootInit* init,
-                         PrDomShadowRoot* PR_NULLABLE* PR_NONNULL out);
+PrStatus domAttachShadow(PrDomElement* host, const PrDomShadowRootInit* init, PrDomShadowRoot* PR_NULLABLE* PR_NONNULL out);
 
 // Attaches the closed shadow root of a use element in the SVG namespace (SVG2/struct.html#UseShadowTree), which script
 // cannot attach. The use must host no shadow root.
@@ -247,8 +241,9 @@ inline PrDomNode* domNodeRoot(PrDomNode* node) {
 
 // Returns `node` as a shadow root, or null for any other node.
 inline PrDomShadowRoot* PR_NULLABLE domNodeShadowRoot(const PrDomNode* PR_NULLABLE node) {
-    return node != nullptr && (node->flags & DomNodeFlag_ShadowRoot) != 0
-        ? static_cast<PrDomShadowRoot*>(const_cast<PrDomNode*>(node)) : nullptr;
+    if (node != nullptr && (node->flags & DomNodeFlag_ShadowRoot) != 0)
+        return static_cast<PrDomShadowRoot*>(const_cast<PrDomNode*>(node));
+    return nullptr;
 }
 
 // Returns the node's shadow-including root (dom/#concept-shadow-including-root). This is its root or, if the root is a
@@ -332,7 +327,7 @@ void domAutofocusInserted(PrDomElement* element);
 // it first. If `stepped` is given, the elements that the attachment connects and that have insertion steps are added to
 // it, for the caller to run.
 void domAttach(PrDomNode* parent, PrDomNode* child, PrDomNode* PR_NULLABLE before,
-               Array<PrDomElement* PR_NONNULL>* PR_NULLABLE stepped = nullptr);
+    Array<PrDomElement* PR_NONNULL>* PR_NULLABLE stepped = nullptr);
 
 // Unlinks `child` from its parent and siblings, and keeps its descendants. The child becomes the root of its own tree,
 // which takes the references to it. Neither tree is freed, whatever references it is left with. If `stepped` is given,
@@ -387,8 +382,7 @@ PrStatus domPrepend(PrDomNode* parent, const PrDomNodeOrString* PR_NULLABLE node
 PrStatus domAppend(PrDomNode* parent, const PrDomNodeOrString* PR_NULLABLE nodes, uint32_t count);
 
 // Replaces the children of `parent` with `nodes` (dom/#dom-parentnode-replacechildren).
-PrStatus domReplaceChildren(PrDomNode* parent, const PrDomNodeOrString* PR_NULLABLE nodes,
-                            uint32_t count);
+PrStatus domReplaceChildren(PrDomNode* parent, const PrDomNodeOrString* PR_NULLABLE nodes, uint32_t count);
 
 // Inserts `nodes` before `node` (dom/#dom-childnode-before).
 PrStatus domBefore(PrDomNode* node, const PrDomNodeOrString* PR_NULLABLE nodes, uint32_t count);
@@ -422,12 +416,11 @@ void domAppendData(PrDomCharacterData* node, PrStringView data);
 // Attributes
 
 // Returns the element's attribute in `space` whose local name is `name`, or null if it has none.
-const PrDomAttr* PR_NULLABLE domAttribute(const PrDomElement* element, DomNamespaceId space,
-                                          PrStringView name);
+const PrDomAttr* PR_NULLABLE domAttribute(const PrDomElement* element, DomNamespaceId space, PrStringView name);
 
 // Returns the attribute that domAttribute finds, given `hash`, which is domAttributeHash(name).
-const PrDomAttr* PR_NULLABLE domAttributeHashed(const PrDomElement* element, DomNamespaceId space,
-                                                PrStringView name, uint32_t hash);
+const PrDomAttr* PR_NULLABLE domAttributeHashed(const PrDomElement* element, DomNamespaceId space, PrStringView name,
+    uint32_t hash);
 
 // Returns the value of the element's attribute `name` in no namespace, or the null view if it has none.
 PrStringView domAttributeValue(const PrDomElement* element, PrStringView name);
@@ -438,17 +431,15 @@ inline bool domHasAttribute(const PrDomElement* element, PrStringView name) {
 }
 
 // Adds the attribute in `space` whose local name is `name`, or replaces the value of the existing one.
-void domSetAttribute(PrDomElement* element, DomNamespaceId space, PrStringView name,
-                     PrStringView value);
+void domSetAttribute(PrDomElement* element, DomNamespaceId space, PrStringView name, PrStringView value);
 
 // Sets an attribute's value in the same way as domSetAttribute (dom/#concept-element-attributes-set-value). An
 // attribute that it adds has `prefix` unless `prefix` is the null view.
-void domSetAttributeNs(PrDomElement* element, DomNamespaceId space, PrStringView prefix,
-                       PrStringView name, PrStringView value);
+void domSetAttributeNs(PrDomElement* element, DomNamespaceId space, PrStringView prefix, PrStringView name, PrStringView value);
 
 // Creates an attribute of `document` on no element, as a detached root, with `prefix` unless `prefix` is the null view.
 PrDomAttr* domAttrCreate(PrDomDocument* document, DomNamespaceId space, PrStringView prefix,
-                         PrStringView name, PrStringView value);
+    PrStringView name, PrStringView value);
 
 // Appends `attribute`, which is on no element, to the element's attributes (dom/#concept-element-attributes-append).
 // The attribute is first adopted into the element's document.
@@ -507,8 +498,7 @@ uint32_t domCharacterDataLength(const PrDomCharacterData* node);
 
 // Writes `count` code units of the data from `offset`, or as many as there are (dom/#concept-cd-substring). Returns
 // OutOfRange if `offset` is past the data's length.
-PrStatus domSubstringData(const PrDomCharacterData* node, uint32_t offset, uint32_t count,
-                          PrString* out);
+PrStatus domSubstringData(const PrDomCharacterData* node, uint32_t offset, uint32_t count, PrString* out);
 
 // Replaces `count` code units of the data from `offset` with `data` (dom/#concept-cd-replace). Returns OutOfRange if
 // `offset` is past the data's length.
@@ -523,8 +513,7 @@ PrDomText* PR_NULLABLE domSplitText(PrDomText* node, uint32_t offset);
 void domNormalize(PrDomNode* node);
 
 // Checks that `node` can be inserted into `parent` before `child` (dom/#concept-node-ensure-pre-insertion-validity).
-PrStatus domValidateInsertion(const PrDomNode* parent, const PrDomNode* node,
-                              const PrDomNode* PR_NULLABLE child);
+PrStatus domValidateInsertion(const PrDomNode* parent, const PrDomNode* node, const PrDomNode* PR_NULLABLE child);
 
 // Returns true if an element's tag is an atom of its document's local names rather than a PrDomTag.
 inline bool domTagIsAtom(DomTagId tag) {
@@ -545,8 +534,7 @@ inline PrStringView domElementName(const PrDomElement* element) {
 
 // Returns `target` as a node, or null if `target` is not a node.
 inline PrDomNode* PR_NULLABLE domNodeFromTarget(PrDomEventTarget* PR_NULLABLE target) {
-    bool node = target != nullptr && target->type >= PrDomNodeType_Element
-                && target->type <= PrDomNodeType_Notation;
+    bool node = target != nullptr && target->type >= PrDomNodeType_Element && target->type <= PrDomNodeType_Notation;
     return node ? static_cast<PrDomNode*>(target) : nullptr;
 }
 
@@ -565,8 +553,7 @@ inline bool domIsText(const PrDomNode* node) {
 
 // Returns `node` as an element, or null for any other kind of node.
 inline const PrDomElement* PR_NULLABLE domElementFromNode(const PrDomNode* PR_NULLABLE node) {
-    return node != nullptr && node->type == PrDomNodeType_Element
-        ? static_cast<const PrDomElement*>(node) : nullptr;
+    return node != nullptr && node->type == PrDomNodeType_Element ? static_cast<const PrDomElement*>(node) : nullptr;
 }
 inline PrDomElement* PR_NULLABLE domElementFromNode(PrDomNode* PR_NULLABLE node) {
     return const_cast<PrDomElement*>(domElementFromNode(static_cast<const PrDomNode*>(node)));

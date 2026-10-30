@@ -35,10 +35,8 @@ using namespace pr_impl;
 
 TEST_CASE("a parsed XML document holds its elements, attributes, text and doctype") {
     PrXmlError error = {};
-    PrDomDocument* document =
-        prDomParseXml("<!DOCTYPE svg PUBLIC \"-//W3C//DTD SVG 1.1//EN\" \"x\">"
-                      "<svg xmlns='http://www.w3.org/2000/svg' xmlns:x='urn:x' x:a='1'>&#65;b</svg>",
-                      "image/svg+xml", &error);
+    PrDomDocument* document = prDomParseXml("<!DOCTYPE svg PUBLIC \"-//W3C//DTD SVG 1.1//EN\" \"x\">"
+        "<svg xmlns='http://www.w3.org/2000/svg' xmlns:x='urn:x' x:a='1'>&#65;b</svg>", "image/svg+xml", &error);
     CHECK(error.message.data == nullptr);
     CHECK(textOf(prDomDocumentContentType(document)) == "image/svg+xml");
     PrDomDocumentType* doctype = prDomDocumentDoctype(document);

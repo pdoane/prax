@@ -91,10 +91,23 @@ constexpr PrKitType kTypes[PrKitTextRole_Count] = {
     {.size = 16, .weight = 500, .lineHeight = 20},                                     // Heading
     {.size = 22, .weight = 500, .lineHeight = 28, .letterSpacing = -0.22f},            // Title
     {.size = 40, .weight = 600, .lineHeight = 48, .letterSpacing = -0.8f},             // Display
-    {.mono = true, .tone = PrKitTone_Muted, .wrap = PrKitWrap_Nowrap, .size = 10, .weight = 500, .lineHeight = 12,
-     .letterSpacing = 1},                                                              // Caption
-    {.mono = true, .tone = PrKitTone_Faint, .wrap = PrKitWrap_Nowrap, .size = 10, .weight = 400,
-     .lineHeight = 12},                                                                // Meta
+    {                                                                                  // Caption
+        .mono = true,
+        .tone = PrKitTone_Muted,
+        .wrap = PrKitWrap_Nowrap,
+        .size = 10,
+        .weight = 500,
+        .lineHeight = 12,
+        .letterSpacing = 1,
+    },
+    { // Meta
+        .mono = true,
+        .tone = PrKitTone_Faint,
+        .wrap = PrKitWrap_Nowrap,
+        .size = 10,
+        .weight = 400,
+        .lineHeight = 12,
+    },
     {.mono = true, .wrap = PrKitWrap_Nowrap, .size = 11, .weight = 400, .lineHeight = 14},     // Mono
     {.mono = true, .wrap = PrKitWrap_Nowrap, .size = 11, .weight = 500, .lineHeight = 14},     // MonoStrong
     {.mono = true, .wrap = PrKitWrap_Nowrap, .size = 22, .weight = 500, .lineHeight = 26},     // MonoNum

@@ -202,8 +202,7 @@ struct CssSelectorMatcher {
 // Initializes a matcher for a script's query, which matches in the tree of `tree`: in a shadow tree's context if its
 // root is a shadow root (css-shadow-1/#selectors-data-model). A null `tree` matches in the document's tree.
 void cssSelectorMatcherInit(CssSelectorMatcher* matcher, const PrCssSelectors* selectors,
-                            const PrDomElement* PR_NULLABLE scope, const PrDomDocument* document,
-                            const PrDomNode* PR_NULLABLE tree);
+    const PrDomElement* PR_NULLABLE scope, const PrDomDocument* document, const PrDomNode* PR_NULLABLE tree);
 
 // Frees what the matcher caches.
 void cssSelectorMatcherReset(CssSelectorMatcher* matcher);
@@ -222,18 +221,16 @@ bool cssSelectorMatcherMatchesComplex(CssSelectorMatcher* matcher, uint32_t comp
 // `complex`, whose subject ends in ::slotted() (css-shadow-1/#slotted-pseudo): `slot` matches the rest of the selector
 // in the matcher's tree, and `element` matches the argument of ::slotted().
 bool cssSelectorMatcherMatchesSlotted(CssSelectorMatcher* matcher, uint32_t complex, const PrDomElement* element,
-                                      const PrDomElement* slot);
+    const PrDomElement* slot);
 
 // Returns the first element after `after` in tree order, among the descendants of `root`, that matches a selector of
 // the list. Returns null if none does (dom/#scope-match-a-selectors-string). `after` is `root` or one of its
 // descendants.
-PrDomElement* PR_NULLABLE cssSelectorMatcherNext(CssSelectorMatcher* matcher, PrDomNode* root,
-                                                 PrDomNode* after);
+PrDomElement* PR_NULLABLE cssSelectorMatcherNext(CssSelectorMatcher* matcher, PrDomNode* root, PrDomNode* after);
 
 // Returns true if `element` matches a selector of the list, using a matcher of its own. :scope is `scope`, or :root if
 // `scope` is null.
-bool cssSelectorsMatch(const PrCssSelectors* selectors, const PrDomElement* element,
-                       const PrDomElement* PR_NULLABLE scope);
+bool cssSelectorsMatch(const PrCssSelectors* selectors, const PrDomElement* element, const PrDomElement* PR_NULLABLE scope);
 
 } // namespace pr_impl
 

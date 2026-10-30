@@ -39,8 +39,7 @@ bool skipsChildren(const PrDomElement* element) {
 // elements that the parser reads as raw text. noscript is among them if scripting is enabled, which no serialization
 // here assumes.
 bool isRawText(const PrDomNode* PR_NULLABLE parent) {
-    if (parent == nullptr || parent->type != PrDomNodeType_Element
-        || parent->space != PrDomNamespace_Html)
+    if (parent == nullptr || parent->type != PrDomNodeType_Element || parent->space != PrDomNamespace_Html)
         return false;
     switch (static_cast<const PrDomElement*>(parent)->tag) {
         case PrDomTag_Style:
@@ -114,7 +113,7 @@ void htmlSerializeNode(TextBuffer* out, const PrDomNode* node) {
             textAppend(out, "<");
             textAppend(out, name);
             for (const PrDomAttr* attribute = element->firstAttribute; attribute != nullptr;
-                 attribute = static_cast<const PrDomAttr*>(attribute->next)) {
+                    attribute = static_cast<const PrDomAttr*>(attribute->next)) {
                 textAppend(out, " ");
                 appendAttributeName(out, attribute);
                 textAppend(out, "=\"");

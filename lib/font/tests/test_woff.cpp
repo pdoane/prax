@@ -215,7 +215,7 @@ PrStatus refuseDecoder(PrCompressCodec*, PrCompressFormat, PrCompressDecoder* PR
 }
 void destroyNothing(PrCompressCodec*, PrCompressDecoder*) {}
 PrStatus readNothing(PrCompressCodec*, PrCompressDecoder*, PrByteView, bool, uint8_t* PR_NULLABLE, size_t,
-                     PrCompressRead*) {
+        PrCompressRead*) {
     return PrStatus_NotSupported;
 }
 
@@ -266,7 +266,7 @@ TEST_CASE("a WOFF2 file holds its font's tables, with their checksums and the fo
         CHECK(record.offset % 4 == 0);
         std::vector<uint8_t> table(decoded.data + record.offset, decoded.data + record.offset + record.length);
         std::vector<uint8_t> expected(ttf.data() + original[i].offset,
-                                      ttf.data() + original[i].offset + original[i].length);
+            ttf.data() + original[i].offset + original[i].length);
         if (record.tag == 0x68656164) {
             // The checksum adjustment of head counts as zero in the checksum of head.
             for (int k = 8; k < 12; ++k)
@@ -339,7 +339,7 @@ TEST_CASE("a WOFF2 file that breaks the format's rules is not a font") {
     // A composite glyph without a bounding box, table data in zlib instead of Brotli, a length field that is not the
     // length of the file, and a collection whose glyf and loca tables are not paired.
     for (const char* name : {"woff2/tabledata-glyf-bbox-002.woff2", "woff2/tabledata-brotli-001.woff2",
-                             "woff2/header-length-001.woff2", "woff2/directory-mismatched-tables-001.woff2"}) {
+        "woff2/header-length-001.woff2", "woff2/directory-mismatched-tables-001.woff2"}) {
         CAPTURE(name);
         const PrFont* font = nullptr;
         CHECK(loadWoff(name, 0, &font) == PrStatus_InvalidData);

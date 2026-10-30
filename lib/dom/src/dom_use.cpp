@@ -98,8 +98,8 @@ bool matches(const PrDomNode* node, const PrDomNode* original) {
 // and is left out.
 bool instanced(const PrDomNode* original) {
     const PrDomElement* e = domElementFromNode(original);
-    return e == nullptr || e->tag != PrDomTag_Script
-           || (e->space != PrDomNamespace_Html && e->space != PrDomNamespace_Svg);
+    return e == nullptr || e->tag != PrDomTag_Script ||
+        (e->space != PrDomNamespace_Html && e->space != PrDomNamespace_Svg);
 }
 
 // The state of one use's synchronization: the uses being synchronized, outermost first, and what it has instanced.
@@ -269,7 +269,7 @@ bool domIsUseShadowRoot(const PrDomNode* root) {
 
 bool domInUseShadowTree(const PrDomNode* node) {
     for (const PrDomNode* root = domNodeRoot(node); domNodeShadowRoot(root) != nullptr;
-         root = domNodeRoot(domNodeShadowRoot(root)->host)) {
+            root = domNodeRoot(domNodeShadowRoot(root)->host)) {
         if (domIsUseShadowRoot(root))
             return true;
     }

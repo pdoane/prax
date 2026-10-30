@@ -13,6 +13,7 @@ from types import SimpleNamespace
 import unittest
 from unittest.mock import patch
 
+from tools.lint import layout
 from tools.lint import lint
 from tools.lint import rewrap
 
@@ -1316,23 +1317,138 @@ class UniqueNames(unittest.TestCase):
                          ["dom.cpp shares its name with lib/dom/quickjs/src/dom.cpp"])
 
 
-class Continuations(unittest.TestCase):
+class Indentation(unittest.TestCase):
     def problems(self, text):
         report = lint.Report()
-        lint.check_continuations(report, 'x.cpp', text)
+        lint.check_indentation(report, 'x.cpp', text)
         return [line for _, line, _, _ in report.problems]
 
-    def test_arguments_continue_past_their_parenthesis(self):
-        self.assertEqual(self.problems('void f(int a,\n       int b);\n'), [])
-        self.assertEqual(self.problems('void f(int a,\n        int b);\n'), [2])
+    def test_a_continuation_is_one_level_past_the_line_it_continues(self):
+        self.assertEqual(self.problems('void f(int a,\n    int b);\n'), [])
+        self.assertEqual(self.problems('void f(int a,\n       int b);\n'), [2])
+        self.assertEqual(self.problems('void f() {\n    bool ok = a\n        && b;\n}\n'), [])
 
-    def test_a_parenthesis_that_ends_its_line_indents(self):
-        self.assertEqual(self.problems('f(\n    a, b);\n'), [])
+    def test_a_closing_bracket_returns_to_its_opening_line(self):
+        self.assertEqual(self.problems('void f() {\n    g(\n        a,\n        b\n    );\n}\n'), [])
+        self.assertEqual(self.problems('void f() {\n    g(\n        a\n        );\n}\n'), [4])
 
-    def test_braces_and_operators_are_free(self):
-        self.assertEqual(self.problems('f(a, [&] {\n    g();\n});\n'), [])
-        self.assertEqual(self.problems('f(a ? b\n      : c);\n'), [])
-        self.assertEqual(self.problems('f("one "\n  "two");\n'), [])
+    def test_a_lambda_body_is_one_level_past_the_line_that_opens_it(self):
+        self.assertEqual(self.problems('void f() {\n    g(a, [&] {\n        h();\n    }, b);\n}\n'), [])
+        self.assertEqual(self.problems('void f() {\n    g(a,\n        [&] {\n            h();\n        });\n}\n'),
+                         [])
+        self.assertEqual(self.problems('void f() {\n    g(a, [&] {\n            h();\n        }, b);\n}\n'), [3, 4])
+
+    def test_an_initializer_list_is_data(self):
+        self.assertEqual(self.problems('void f() {\n    PrX x{\n        .a = 1,\n        .b = 2,\n    };\n}\n'), [])
+        self.assertEqual(self.problems('enum {\n    A,\n    B,\n};\n'), [])
+
+    def test_blocks_switches_and_linkage(self):
+        self.assertEqual(self.problems('void f() {\n    switch (x) {\n        case 1:\n            g();\n'
+                                       '            break;\n    }\n}\n'), [])
+        self.assertEqual(self.problems('extern "C" {\nvoid f();\n}\n'), [])
+        self.assertEqual(self.problems('PR_ASSUME_NONNULL_BEGIN\nvoid f();\n'), [])
+
+    def test_a_raw_string_keeps_its_text(self):
+        self.assertEqual(self.problems('const char* k = R"(\n  text\n)";\nvoid f();\n'), [])
+
+    def test_tabs_are_not_indentation(self):
+        self.assertEqual(self.problems('void f() {\n\tg();\n}\n'), [2, 2])
+
+    def test_a_continued_item_is_one_level_past_the_item(self):
+        self.assertEqual(self.problems('X x{\n    .a = "b"\n        "c",\n    .d = 1,\n};\n'), [])
+        self.assertEqual(self.problems('f("a"\n    "b"\n    "c");\n'), [])
+
+
+class Ternaries(unittest.TestCase):
+    def problems(self, text):
+        report = lint.Report()
+        lint.check_ternaries(report, 'x.cpp', text)
+        return [line for _, line, _, _ in report.problems]
+
+    def test_a_conditional_on_one_line_passes(self):
+        self.assertEqual(self.problems('int f(bool a) {\n    int x = a ? 1 : 2;\n    return a ? x : 3;\n}\n'), [])
+        self.assertEqual(self.problems('void f() {\n    if (a) {\n        g();\n    }\n    x += a ? 1 : 2;\n}\n'), [])
+        self.assertEqual(self.problems('int f() {\n    if (a)\n        return b ? 1 : 2;\n    return 0;\n}\n'), [])
+        self.assertEqual(self.problems('void f() {\n    g(a,\n        b ? 1 : 2);\n}\n'), [])
+
+    def test_a_conditional_that_spans_lines_is_flagged_at_its_condition(self):
+        self.assertEqual(self.problems('int f() {\n    return a ?\n        1 : 2;\n}\n'), [2])
+        self.assertEqual(self.problems('void f() {\n    g(a,\n        b ? 1 :\n            c ? 2 : 3);\n}\n'), [3])
+        self.assertEqual(self.problems('int x = a\n    && b ? 1 : 2;\n'), [1])
+
+
+class LineBreaks(unittest.TestCase):
+    def problems(self, text):
+        return [(number, check) for number, check, _, _ in lint.layout_problems(text)]
+
+    def laid_out(self, text):
+        return layout.laid_out_text(text)
+
+    def test_a_line_that_fits_on_the_line_before_joins_it(self):
+        self.assertEqual(self.problems('void f() {\n    g(a,\n        b);\n}\n'), [(3, 'wrap')])
+        self.assertEqual(self.laid_out('for (int i = 0;\n    i < n;) {\n}\n'), 'for (int i = 0; i < n;) {\n}\n')
+
+    def test_a_line_that_does_not_fit_stays(self):
+        text = 'void f() {\n    g(' + 'a' * 112 + ',\n        ' + 'b' * 20 + ');\n}\n'
+        self.assertEqual(self.problems(text), [])
+
+    def test_a_short_tail_joins_the_line_before_past_the_limit(self):
+        text = 'void f() {\n    g(' + 'a' * 112 + ',\n        b);\n}\n'
+        self.assertEqual(self.problems(text), [(3, 'wrap')])
+        report = lint.Report()
+        lint.check_line_length(report, 'x.cpp', 'g(' + 'a' * 117 + ', b);\n', ())
+        self.assertEqual(report.problems, [])
+
+    def test_a_wrapped_head_is_indented_past_its_body(self):
+        indented = layout.indented_text('void f(int a,\n    int b) {\n    g();\n    if (a &&\n        b)\n        h();\n}\n')
+        self.assertEqual(indented, 'void f(int a,\n        int b) {\n    g();\n    if (a &&\n            b)\n        h();\n}\n')
+
+    def test_a_statement_continues_past_an_initializer_that_ends_a_line(self):
+        self.assertEqual(layout.indented_text('void f() {\n    p = PrX{a}\n    + q;\n}\n'),
+                         'void f() {\n    p = PrX{a}\n        + q;\n}\n')
+
+    def test_a_body_and_an_item_and_a_commented_line_stay(self):
+        self.assertEqual(self.problems('void f() {\n    if (a)\n        b();\n}\n'), [])
+        self.assertEqual(self.problems('int k[] = {\n    1,\n    2, // two\n    3,\n    ' + '4, ' * 40 + '\n};\n'), [])
+        self.assertEqual(self.problems('void f() {\n    g(a, // a\n        b);\n}\n'), [])
+
+    def test_an_operator_ends_the_line_it_breaks(self):
+        self.assertEqual(self.laid_out('bool b = c\n    && d(' + 'e' * 120 + ');\n'),
+                         'bool b = c &&\n    d(' + 'e' * 120 + ');\n')
+
+    def test_an_operator_runs_past_the_limit_as_a_short_tail(self):
+        long = 'x' * 104
+        tail = 'd' * 20
+        self.assertEqual(self.laid_out('bool b = c && ' + long + '\n    && ' + tail + ';\n'),
+                         'bool b = c && ' + long + ' &&\n    ' + tail + ';\n')
+
+    def test_a_line_that_runs_too_long_breaks_where_it_nests_least(self):
+        a, b, c = 'a' * 50, 'b' * 40, 'c' * 50
+        self.assertEqual(self.laid_out('bool x = f(' + a + ' == 1 || ' + b + ' == 2) && ' + c + ';\n'),
+                         'bool x = f(' + a + ' == 1 || ' + b + ' == 2) &&\n    ' + c + ';\n')
+
+    def test_a_line_breaks_before_a_literal_and_keeps_it(self):
+        call = '    f(' + 'a' * 100 + ', &color, "green", false);\n'
+        self.assertEqual(self.laid_out('void g() {\n' + call + '}\n'),
+                         'void g() {\n    f(' + 'a' * 100 + ', &color,\n        "green", false);\n}\n')
+
+    def test_a_continued_string_joins_as_one_literal(self):
+        self.assertEqual(self.laid_out('const char* s = "a"\n    "b";\n'), 'const char* s = "ab";\n')
+        self.assertEqual(self.laid_out('const char* s = "a\\n"\n    "b";\n'), 'const char* s = "a\\n"\n    "b";\n')
+        self.assertEqual(self.laid_out('const char* s = "\\x1"\n    "2";\n'), 'const char* s = "\\x1" "2";\n')
+
+    def test_an_initializer_that_fits_is_one_line(self):
+        self.assertEqual(self.laid_out('X x{\n    .a = 1,\n    .b = 2,\n};\n'), 'X x{.a = 1, .b = 2};\n')
+
+    def test_a_designated_initializer_that_wraps_has_an_item_a_line(self):
+        long = 'y' * 60
+        self.assertEqual(self.laid_out('X x{.a = ' + long + ',\n    .b = ' + long + ', .c = 1};\n'),
+                         'X x{\n    .a = ' + long + ',\n    .b = ' + long + ',\n    .c = 1,\n};\n')
+
+    def test_a_positional_initializer_that_wraps_keeps_its_rows(self):
+        row = ', '.join(['{512, 2048}'] * 9)
+        self.assertEqual(self.laid_out('int k[][2] = {' + row + ',\n    ' + row + '};\n'),
+                         'int k[][2] = {\n    ' + row + ',\n    ' + row + ',\n};\n')
 
 
 class BlankLines(unittest.TestCase):

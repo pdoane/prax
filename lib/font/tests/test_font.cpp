@@ -126,7 +126,7 @@ void put32(std::vector<uint8_t>& out, uint32_t value) {
 // Returns the font file with its sbix table replaced by one strike of `ppem` pixels per em, in which glyph `glyph` is
 // `image` of the sbix graphic type `type`, with its bottom left corner at the origin.
 std::vector<uint8_t> withSbixImage(std::vector<uint8_t> font, uint16_t glyph, uint16_t glyphCount, uint32_t type,
-                                   const std::vector<uint8_t>& image, uint16_t ppem) {
+        const std::vector<uint8_t>& image, uint16_t ppem) {
     std::vector<uint8_t> sbix;
     put16(sbix, 1);
     put16(sbix, 1);
@@ -170,11 +170,13 @@ TEST_CASE("the public headers compile as C") {
 }
 
 TEST_CASE("the Unicode cmap subtable is the one FreeType chooses, and maps every code point as FreeType does") {
-    const char* names[] = {"Arimo.ttf",    "BungeeSpice.ttf",     "ColrTestGlyphs.ttf", "Cousine.ttf",
-                           "HandwritingCff2.otf", "KalniaGlaze.ttf", "Literata.ttf",   "Nabla.ttf",
-                           "NotoColorEmoji.ttf",  "NotoFlagsSbix.ttf", "NotoSans.ttf",  "NotoSansArabic.ttf",
-                           "NotoSansDevanagari.ttf", "NotoSansJP.ttf", "RobotoFlex.ttf", "Tinos.ttf",
-                           "Twemoji.ttf",         "TwemojiSmileySbix.ttf"};
+    const char* names[] = {
+        "Arimo.ttf",    "BungeeSpice.ttf",     "ColrTestGlyphs.ttf", "Cousine.ttf",
+        "HandwritingCff2.otf", "KalniaGlaze.ttf", "Literata.ttf",   "Nabla.ttf",
+        "NotoColorEmoji.ttf",  "NotoFlagsSbix.ttf", "NotoSans.ttf",  "NotoSansArabic.ttf",
+        "NotoSansDevanagari.ttf", "NotoSansJP.ttf", "RobotoFlex.ttf", "Tinos.ttf",
+        "Twemoji.ttf",         "TwemojiSmileySbix.ttf",
+    };
     FT_Library library = nullptr;
     REQUIRE(FT_Init_FreeType(&library) == 0);
     for (const char* name : names) {
@@ -202,9 +204,11 @@ TEST_CASE("the Unicode cmap subtable is the one FreeType chooses, and maps every
 }
 
 TEST_CASE("a font's design advances are FreeType's unhinted ones") {
-    const char* names[] = {"Arimo.ttf",           "Cousine.ttf",     "HandwritingCff2.otf", "Literata.ttf",
-                           "NotoSans.ttf",        "NotoSansJP.ttf",  "NotoSansArabic.ttf",  "RobotoFlex.ttf",
-                           "Tinos.ttf",           "Twemoji.ttf",     "NotoColorEmoji.ttf",  "TwemojiSmileySbix.ttf"};
+    const char* names[] = {
+        "Arimo.ttf",           "Cousine.ttf",     "HandwritingCff2.otf", "Literata.ttf",
+        "NotoSans.ttf",        "NotoSansJP.ttf",  "NotoSansArabic.ttf",  "RobotoFlex.ttf",
+        "Tinos.ttf",           "Twemoji.ttf",     "NotoColorEmoji.ttf",  "TwemojiSmileySbix.ttf",
+    };
     FT_Library library = nullptr;
     REQUIRE(FT_Init_FreeType(&library) == 0);
     for (const char* name : names) {
@@ -214,8 +218,7 @@ TEST_CASE("a font's design advances are FreeType's unhinted ones") {
         REQUIRE(FT_New_Memory_Face(library, bytes.data(), FT_Long(bytes.size()), 0, &face) == 0);
         const PrFont* font = nullptr;
         REQUIRE(prFontCreate(bytes, 0, nullptr, &font) == PrStatus_Ok);
-        bool scalable =
-            FT_IS_SCALABLE(face) && FT_Set_Char_Size(face, 0, FT_F26Dot6(face->units_per_EM) << 6, 72, 72) == 0;
+        bool scalable = FT_IS_SCALABLE(face) && FT_Set_Char_Size(face, 0, FT_F26Dot6(face->units_per_EM) << 6, 72, 72) == 0;
         uint32_t differ = 0;
         uint32_t first = 0;
         for (FT_Long g = 0; scalable && g < face->num_glyphs; ++g) {
@@ -259,8 +262,7 @@ TEST_CASE("a font reads its names, metrics and glyphs") {
     uint16_t h = prFontCodePointGlyph(font, 'H');
     CHECK(h != 0);
     CHECK(prFontCodePointGlyph(font, 0x10ffff) == 0);
-    CHECK(prFontGlyphAdvance(font, h, 0)
-          == doctest::Approx(0.742).epsilon(0.01));
+    CHECK(prFontGlyphAdvance(font, h, 0) == doctest::Approx(0.742).epsilon(0.01));
     // H stands on the baseline and reaches up to the cap height. y is down.
     PrRect bounds = prFontGlyphBounds(font, h);
     CHECK(bounds.bottom == doctest::Approx(0));
@@ -269,8 +271,7 @@ TEST_CASE("a font reads its names, metrics and glyphs") {
     CHECK(prFontGlyphOutline(font, h, 0, prAffine2Scale(PrVec2{100, 100}), path));
     CHECK(prPathBounds(path).top == doctest::Approx(-71.4));
     prPathClear(path);
-    CHECK_FALSE(
-        prFontGlyphOutline(font, prFontCodePointGlyph(font, ' '), 0, prAffine2Identity(), path));
+    CHECK_FALSE(prFontGlyphOutline(font, prFontCodePointGlyph(font, ' '), 0, prAffine2Identity(), path));
     CHECK(prPathVerbCount(path) == 0);
     CHECK_FALSE(prFontGlyphOutline(font, 0xffff, 0, prAffine2Identity(), path));
     // Synthetic bold grows every side, and the bounds, by the given amount. Synthetic oblique is applied by the code
@@ -286,8 +287,7 @@ TEST_CASE("a font reads its names, metrics and glyphs") {
     PrRect bold = prPathBounds(path);
     CHECK(bold.top == doctest::Approx(bounds.top - 0.05f).epsilon(0.01));
     CHECK(bold.left == doctest::Approx(bounds.left - 0.05f).epsilon(0.01));
-    CHECK(prFontGlyphBounds(bolder, h).left
-          == doctest::Approx(prFontGlyphBounds(font, h).left - 0.05f));
+    CHECK(prFontGlyphBounds(bolder, h).left == doctest::Approx(prFontGlyphBounds(font, h).left - 0.05f));
     CHECK(prFontGlyphAdvance(bolder, h, 0) == prFontGlyphAdvance(font, h, 0));
     prFontRelease(bolder);
     prPathDestroy(path);
@@ -313,8 +313,7 @@ TEST_CASE("a variation is a font of its own, sharing the bytes") {
     CHECK(prFontId(black) != prFontId(font));
     CHECK(prFontData(black).data == prFontData(font).data);
     uint16_t o = prFontCodePointGlyph(font, 'o');
-    CHECK(prFontGlyphAdvance(black, o, 0)
-          > prFontGlyphAdvance(font, o, 0));
+    CHECK(prFontGlyphAdvance(black, o, 0) > prFontGlyphAdvance(font, o, 0));
     PrRect regular = prFontGlyphBounds(font, o);
     PrRect bold = prFontGlyphBounds(black, o);
     CHECK(prRectWidth(bold) > prRectWidth(regular));
@@ -510,8 +509,7 @@ TEST_CASE("subscripts, superscripts and heights come from OS/2, varied by MVAR")
     d.variationCount = 1;
     const PrFont* large = derived(font, d);
     CHECK(prFontMetrics(large).xHeight == doctest::Approx(0.513).epsilon(0.002));
-    PrFontVariation heavy[2] = {{PR_FONT_TAG('o', 'p', 's', 'z'), 12},
-                                {PR_FONT_TAG('w', 'g', 'h', 't'), 900}};
+    PrFontVariation heavy[2] = {{PR_FONT_TAG('o', 'p', 's', 'z'), 12}, {PR_FONT_TAG('w', 'g', 'h', 't'), 900}};
     d.variations = heavy;
     d.variationCount = 2;
     const PrFont* bold = derived(font, d);
@@ -533,8 +531,7 @@ TEST_CASE("size-adjust scales outlines and metrics, and overrides replace metric
     d.featureCount = 1;
     const PrFont* half = derived(font, d);
     CHECK(prFontSizeAdjust(half) == 0.5f);
-    CHECK(prFontGlyphAdvance(half, x, 0)
-          == doctest::Approx(prFontGlyphAdvance(font, x, 0) / 2));
+    CHECK(prFontGlyphAdvance(half, x, 0) == doctest::Approx(prFontGlyphAdvance(font, x, 0) / 2));
     CHECK(prFontGlyphBounds(half, x).top == doctest::Approx(prFontGlyphBounds(font, x).top / 2));
     PrFontMetrics m = prFontMetrics(half);
     CHECK(m.xHeight == doctest::Approx(prFontMetrics(font).xHeight / 2));
@@ -732,12 +729,16 @@ TEST_CASE("an sbix strike's JPEG and TIFF images are sized from their headers") 
     uint16_t glyphs = uint16_t(prFontGlyphCount(original));
     prFontRelease(original);
     // The start of image and the frame header of a JPEG, 64 wide and 48 tall.
-    std::vector<uint8_t> jpeg = {0xff, 0xd8, 0xff, 0xe0, 0x00, 0x04, 0x00, 0x00, 0xff, 0xc0, 0x00, 0x0b,
-                                 0x08, 0x00, 0x30, 0x00, 0x40, 0x01, 0x01, 0x11, 0x00};
+    std::vector<uint8_t> jpeg = {
+        0xff, 0xd8, 0xff, 0xe0, 0x00, 0x04, 0x00, 0x00, 0xff, 0xc0, 0x00, 0x0b,
+        0x08, 0x00, 0x30, 0x00, 0x40, 0x01, 0x01, 0x11, 0x00,
+    };
     // The header of a little-endian TIFF and a directory of its width, 20, and length, 10.
-    std::vector<uint8_t> tiff = {'I', 'I', 42, 0, 8, 0, 0, 0, 2, 0,
-                                 0, 1, 3, 0, 1, 0, 0, 0, 20, 0, 0, 0,
-                                 1, 1, 4, 0, 1, 0, 0, 0, 10, 0, 0, 0, 0, 0, 0, 0};
+    std::vector<uint8_t> tiff = {
+        'I', 'I', 42, 0, 8, 0, 0, 0, 2, 0,
+        0, 1, 3, 0, 1, 0, 0, 0, 20, 0, 0, 0,
+        1, 1, 4, 0, 1, 0, 0, 0, 10, 0, 0, 0, 0, 0, 0, 0,
+    };
     struct Case {
         uint32_t type;
         const std::vector<uint8_t>& bytes;
@@ -775,8 +776,7 @@ TEST_CASE("a CBDT glyph's image comes from the strike best for the size") {
     CHECK(image.pixelsPerEm == 210.0f);
     // Whether or not the image is wider than tall, its extent in ems is its pixels over the pixels per em of the
     // strike.
-    CHECK(prRectWidth(image.bounds)
-          == doctest::Approx(float(image.extent.x) / 210));
+    CHECK(prRectWidth(image.bounds) == doctest::Approx(float(image.extent.x) / 210));
     CHECK(image.bounds.top < 0.0f);
     CHECK_FALSE(prFontGlyphHasColor(font, nine));
     prFontRelease(font);

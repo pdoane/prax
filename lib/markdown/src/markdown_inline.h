@@ -61,8 +61,7 @@ void markdownInlineParserReset(MarkdownInlineParser* parser);
 // Parses `content`, the text of a paragraph or a heading, and appends its inlines to `parent` in `tree`. Lines in the
 // content end with '\n'. `resolve` looks up the references in the content.
 void markdownParseInlines(MarkdownInlineParser* parser, const PrMarkdownOptions& options, MarkdownTree* tree,
-                          MarkdownNodeIndex parent, PrStringView content, MarkdownResolveFn resolve,
-                          void* PR_NULLABLE context);
+    MarkdownNodeIndex parent, PrStringView content, MarkdownResolveFn resolve, void* PR_NULLABLE context);
 
 } // namespace pr_impl
 

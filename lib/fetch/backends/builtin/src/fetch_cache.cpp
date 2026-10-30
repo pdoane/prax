@@ -21,8 +21,10 @@ constexpr uint32_t kNullValue = 0xffffffffu;
 // The fraction of the time since a response's Last-Modified that it stays fresh by heuristic (rfc 9111 section 4.2.2).
 constexpr double kHeuristicFraction = 0.1;
 
-constexpr const char* kMonths[12] = {"jan", "feb", "mar", "apr", "may", "jun",
-                                     "jul", "aug", "sep", "oct", "nov", "dec"};
+constexpr const char* kMonths[12] = {
+    "jan", "feb", "mar", "apr", "may", "jun",
+    "jul", "aug", "sep", "oct", "nov", "dec",
+};
 
 // Calls `fn` with each element of the comma-separated list `value`, trimmed.
 template <typename Fn>
@@ -123,10 +125,11 @@ FetchCacheControl fetchCacheControlFromHeaders(const PrFetchHeader* PR_NULLABLE 
         eachElement(headers[i].value, [&](PrStringView element) {
             size_t equals = stringFind(element, '=');
             PrStringView name = stringTrim(stringSlice(element, 0, equals), asciiIsTabOrSpace);
-            PrStringView value = equals < element.size
-                                     ? stringTrim(stringSlice(element, equals + 1, element.size - equals - 1),
-                                                  asciiIsTabOrSpace)
-                                     : PrStringView{nullptr, 0};
+            PrStringView value;
+            if (equals < element.size)
+                value = stringTrim(stringSlice(element, equals + 1, element.size - equals - 1), asciiIsTabOrSpace);
+            else
+                value = PrStringView{nullptr, 0};
             if (asciiEqualsFold(name, "no-store")) {
                 control.noStore = true;
             } else if (asciiEqualsFold(name, "no-cache")) {
@@ -218,8 +221,8 @@ bool fetchCacheIsStorable(uint16_t status, const PrFetchHeader* PR_NULLABLE head
         return false;
     // A response is storable with explicit freshness, or with a status that is heuristically cacheable (rfc 9110
     // section 15.1).
-    bool heuristic = status == 200 || status == 203 || status == 204 || status == 300 || status == 301 || status == 308
-                     || status == 404 || status == 405 || status == 410 || status == 414 || status == 501;
+    bool heuristic = status == 200 || status == 203 || status == 204 || status == 300 || status == 301 || status ==
+        308 || status == 404 || status == 405 || status == 410 || status == 414 || status == 501;
     return heuristic || control.hasMaxAge || fetchCacheHeader(headers, count, "expires").data != nullptr;
 }
 
@@ -257,8 +260,7 @@ double fetchCacheAge(const FetchCachedResponse* response, double now) {
     return initial + resident;
 }
 
-bool fetchCacheVaryMatches(const FetchCachedResponse* response, const PrFetchHeader* PR_NULLABLE request,
-                           uint32_t count) {
+bool fetchCacheVaryMatches(const FetchCachedResponse* response, const PrFetchHeader* PR_NULLABLE request, uint32_t count) {
     for (uint32_t i = 0; i < response->varied.count; ++i) {
         const PrFetchHeader& varied = response->varied.data[i];
         if (varied.name == "*")
@@ -267,7 +269,7 @@ bool fetchCacheVaryMatches(const FetchCachedResponse* response, const PrFetchHea
         if ((value.data == nullptr) != (varied.value.data == nullptr))
             return false;
         if (value.data != nullptr && stringTrim(value,
-                                                asciiIsTabOrSpace) != stringTrim(varied.value, asciiIsTabOrSpace))
+                asciiIsTabOrSpace) != stringTrim(varied.value, asciiIsTabOrSpace))
             return false;
     }
     return true;
@@ -300,9 +302,9 @@ bool fetchCacheRead(PrByteView bytes, FetchCachedResponse* out) {
     uint32_t version = 0;
     uint32_t status = 0;
     uint32_t headers = 0;
-    if (!reader.take(magic, 4) || !memEquals(magic, kRecordMagic, 4) || !reader.take(&version, 4)
-        || version != kRecordVersion || !reader.take(&status, 4) || !reader.take(&out->requested, 8)
-        || !reader.take(&out->received, 8) || !reader.take(&headers, 4))
+    if (!reader.take(magic, 4) || !memEquals(magic, kRecordMagic, 4) || !reader.take(&version, 4) ||
+            version != kRecordVersion || !reader.take(&status, 4) || !reader.take(&out->requested, 8) ||
+            !reader.take(&out->received, 8) || !reader.take(&headers, 4))
         return false;
     out->status = uint16_t(status);
     for (uint32_t i = 0; i < headers; ++i) {

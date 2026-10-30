@@ -134,8 +134,10 @@ TEST_CASE("a set hints the faces that it matches, and a set over it hints them t
         PrFontHinting hinting;
         PrFontHinter* hinter;
     };
-    const Expected cases[] = {{host, PrFontHinting_Full, hinter}, {document, PrFontHinting_Full, hinter},
-                              {designed, PrFontHinting_None, nullptr}};
+    const Expected cases[] = {
+        {host, PrFontHinting_Full, hinter}, {document, PrFontHinting_Full, hinter},
+        {designed, PrFontHinting_None, nullptr},
+    };
     for (const Expected& expected : cases) {
         prFontMatchClear(match);
         prFontSetMatch(expected.set, prFontFamilyFromName("Noto Sans"), &style, match);

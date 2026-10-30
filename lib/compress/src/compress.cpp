@@ -65,7 +65,7 @@ void prCompressCodecDestroy(PrCompressCodec* PR_NULLABLE codec) {
 }
 
 PrStatus prCompressDecoderCreate(PrCompressCodec* codec, PrCompressFormat format,
-                                 PrCompressDecoder* PR_NULLABLE* PR_NONNULL out) {
+        PrCompressDecoder* PR_NULLABLE* PR_NONNULL out) {
     PR_ASSERT(format <= PrCompressFormat_Brotli);
     *out = nullptr;
     PrStatus status = codec->decoderCreate(codec, format, out);
@@ -79,7 +79,7 @@ void prCompressDecoderDestroy(PrCompressDecoder* PR_NULLABLE decoder) {
 }
 
 PrStatus prCompressDecoderRead(PrCompressDecoder* decoder, PrByteView input, bool final,
-                               uint8_t* PR_NULLABLE output, size_t capacity, PrCompressRead* out) {
+        uint8_t* PR_NULLABLE output, size_t capacity, PrCompressRead* out) {
     PR_ASSERT(input.data != nullptr || input.size == 0);
     PR_ASSERT(output != nullptr || capacity == 0);
     *out = PrCompressRead{0, 0, PrCompressProgress_Input};
@@ -87,7 +87,7 @@ PrStatus prCompressDecoderRead(PrCompressDecoder* decoder, PrByteView input, boo
 }
 
 PrStatus prCompressCodecDecode(PrCompressCodec* codec, PrCompressFormat format, PrByteView input,
-                               uint8_t* PR_NULLABLE output, size_t capacity, PrCompressRead* out) {
+        uint8_t* PR_NULLABLE output, size_t capacity, PrCompressRead* out) {
     *out = PrCompressRead{0, 0, PrCompressProgress_Input};
     PrCompressDecoder* decoder = nullptr;
     PrStatus status = prCompressDecoderCreate(codec, format, &decoder);
@@ -104,7 +104,7 @@ size_t prCompressCodecEncodeBound(PrCompressCodec* codec, PrCompressFormat forma
 }
 
 PrStatus prCompressCodecEncode(PrCompressCodec* codec, PrCompressFormat format, PrCompressLevel level,
-                               PrByteView input, uint8_t* output, size_t* written) {
+        PrByteView input, uint8_t* output, size_t* written) {
     PR_ASSERT(format <= PrCompressFormat_Brotli && level <= PrCompressLevel_Small);
     PR_ASSERT(input.data != nullptr || input.size == 0);
     *written = 0;

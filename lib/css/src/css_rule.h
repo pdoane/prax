@@ -95,16 +95,13 @@ inline const CssDeclaration* PR_NULLABLE cssDeclarations(const CssDeclarationBlo
 }
 
 // Returns the text that the declaration's values and name reference.
-const char* PR_NULLABLE cssDeclarationText(const CssDeclarationBlock* block,
-                                           const CssDeclaration* declaration);
+const char* PR_NULLABLE cssDeclarationText(const CssDeclarationBlock* block, const CssDeclaration* declaration);
 
 // Returns the declaration's name: the name of the property, of the descriptor, or the author's name.
-PrStringView cssDeclarationName(const CssDeclarationBlock* block,
-                                const CssDeclaration* declaration);
+PrStringView cssDeclarationName(const CssDeclarationBlock* block, const CssDeclaration* declaration);
 
 // Returns the run of values that the declaration declares.
-CssValueRun cssDeclarationValue(const CssDeclarationBlock* block,
-                                const CssDeclaration* declaration);
+CssValueRun cssDeclarationValue(const CssDeclarationBlock* block, const CssDeclaration* declaration);
 
 // A declaration as the block lists it (cssom-1/#dom-cssstyledeclaration-item): the block's declaration, and the
 // longhand that it declares. The longhand is the declaration's own property, except for a shared declaration.
@@ -268,14 +265,13 @@ void cssSheetDataParse(CssSheetData* sheet, PrStringView text, CssParserSlot slo
 // rules that `outer` starts at (cssom-1/#dom-cssstylerule-selectortext, css-nesting-1/#nesting). The selectors use the
 // prefixes that the @namespace rules of `sheet` declare. Rejected for text that is not a selector list.
 CssEditResult cssStyleRulePrepareSelectorText(CssEdit* edit, const CssRuleChain* PR_NULLABLE outer,
-                                              const CssSheetData* PR_NULLABLE sheet,
-                                              PrStringView text);
+    const CssSheetData* PR_NULLABLE sheet, PrStringView text);
 
 // Prepares setting an at-rule's prelude, or a keyframe rule's selectors, to the contents of `text`
 // (cssom-1/#dom-csspagerule-selectortext, css-animations-1/#dom-csskeyframerule-keytext). Rejected for text that is not
 // a prelude the rule accepts.
 CssEditResult cssRulePreparePrelude(CssEdit* edit, const CssRuleData* rule,
-                                    const CssSheetData* PR_NULLABLE sheet, PrStringView text);
+    const CssSheetData* PR_NULLABLE sheet, PrStringView text);
 
 // Commits a prepared change to a rule's selectors or prelude.
 void cssRuleCommit(CssEdit* edit, CssRuleData* rule);
@@ -297,18 +293,15 @@ uint32_t cssKeyframesFind(const CssRuleData* rule, PrStringView select, CssParse
 void cssMediaListParse(CssMediaQueries* list, PrStringView text);
 
 // Prepares the change that cssMediaListParse makes.
-CssEditResult cssMediaListPrepareText(CssEdit* edit, const CssMediaQueries* list,
-                                      PrStringView text);
+CssEditResult cssMediaListPrepareText(CssEdit* edit, const CssMediaQueries* list, PrStringView text);
 
 // Prepares appending the media query in `text`. Unchanged if `text` holds no media query, or holds one that the list
 // already has (cssom-1/#dom-medialist-appendmedium).
-CssEditResult cssMediaListPrepareAppend(CssEdit* edit, const CssMediaQueries* list,
-                                        PrStringView text);
+CssEditResult cssMediaListPrepareAppend(CssEdit* edit, const CssMediaQueries* list, PrStringView text);
 
 // Prepares removing each query of the list that equals the media query in `text` (cssom-1/#dom-medialist-deletemedium).
 // Unchanged if `text` does not hold exactly one query. Rejected if the list holds no matching query.
-CssEditResult cssMediaListPrepareDelete(CssEdit* edit, const CssMediaQueries* list,
-                                        PrStringView text);
+CssEditResult cssMediaListPrepareDelete(CssEdit* edit, const CssMediaQueries* list, PrStringView text);
 
 // Commits a prepared change to a media list.
 void cssMediaListCommit(CssEdit* edit, CssMediaQueries* list);
@@ -360,8 +353,7 @@ bool cssDeclarationSupported(const CssDeclaredName& name, PrStringView value);
 
 // Serializes the value of `name`. A shorthand's value comes from its longhands. Writes nothing if the block holds no
 // value for the name (cssom-1/#dom-cssstyledeclaration-getpropertyvalue).
-void cssSerializePropertyValue(TextBuffer* out, const CssDeclarationBlock* block,
-                               const CssDeclaredName& name);
+void cssSerializePropertyValue(TextBuffer* out, const CssDeclarationBlock* block, const CssDeclaredName& name);
 
 // Returns true if `name` is important. For a shorthand, every longhand must be important
 // (cssom-1/#dom-cssstyledeclaration-getpropertypriority).
@@ -372,8 +364,7 @@ bool cssDeclarationBlockImportant(const CssDeclarationBlock* block, const CssDec
 // block does not support, or an importance its rule does not accept. Unchanged if each declaration it sets already has
 // that value and importance. An empty value prepares removing the declarations instead.
 CssEditResult cssDeclarationBlockPrepareSet(CssEdit* edit, const CssDeclarationBlock* block,
-                                            const CssDeclaredName& name, PrStringView value,
-                                            bool important);
+    const CssDeclaredName& name, PrStringView value, bool important);
 
 // Prepares declaring `name` with the value in `run` rather than a written one. The value is matched in the same way as
 // its written tokens (cssValueTokens). With `append`, prepares appending `run` to the list that the declaration of
@@ -381,37 +372,32 @@ CssEditResult cssDeclarationBlockPrepareSet(CssEdit* edit, const CssDeclarationB
 // Rejected in the same cases as cssDeclarationBlockPrepareSet, and also if appending to a declaration that holds no
 // list.
 CssEditResult cssDeclarationBlockPrepareSetValue(CssEdit* edit, const CssDeclarationBlock* block,
-                                                 const CssDeclaredName& name, CssValueRun run,
-                                                 bool important, bool append);
+    const CssDeclaredName& name, CssValueRun run, bool important, bool append);
 
 // Prepares removing the declaration of `name`, or of each longhand of a shorthand, and writes its value to `out`
 // (cssom-1/#dom-cssstyledeclaration-removeproperty). Unchanged if the block holds none.
 CssEditResult cssDeclarationBlockPrepareRemove(CssEdit* edit, const CssDeclarationBlock* block,
-                                               const CssDeclaredName& name,
-                                               PrString* PR_NULLABLE out);
+    const CssDeclaredName& name, PrString* PR_NULLABLE out);
 
 // Commits a prepared change to a block's declarations.
 void cssDeclarationBlockCommit(CssEdit* edit, CssDeclarationBlock* block);
 
 // Prepares a change and commits it to the block it was prepared against. For a block the caller owns.
 CssEditResult cssDeclarationBlockSet(CssDeclarationBlock* block, const CssDeclaredName& name,
-                                     PrStringView value, bool important, CssParserSlot slot);
+    PrStringView value, bool important, CssParserSlot slot);
 CssEditResult cssDeclarationBlockSetValue(CssDeclarationBlock* block, const CssDeclaredName& name,
-                                          CssValueRun run, bool important, bool append,
-                                          CssParserSlot slot);
-CssEditResult cssDeclarationBlockRemove(CssDeclarationBlock* block, const CssDeclaredName& name,
-                                        PrString* PR_NULLABLE out);
+    CssValueRun run, bool important, bool append, CssParserSlot slot);
+CssEditResult cssDeclarationBlockRemove(CssDeclarationBlock* block, const CssDeclaredName& name, PrString* PR_NULLABLE out);
 
 // Adds the value of `name` to `out`. Adds nothing if the block holds no value, or holds a value that is pending on the
 // substitution of its shorthand. A shorthand's value is the serialization of its longhands, matched as a value of the
 // shorthand. A value pending on the shorthand is added as its tokens.
 void cssDeclarationBlockValue(const CssDeclarationBlock* block, const CssDeclaredName& name,
-                              CssValuePool* out, CssParserSlot slot);
+    CssValuePool* out, CssParserSlot slot);
 
 // Adds the value that `text` holds for `name` to `out`. Returns false if `text` holds none. A shorthand's value is the
 // one that a block declaring it would hold (cssDeclarationBlockValue).
-bool cssParseDeclaredValue(const CssDeclaredName& name, PrStringView text, CssValuePool* out,
-                           CssParserSlot slot);
+bool cssParseDeclaredValue(const CssDeclaredName& name, PrStringView text, CssValuePool* out, CssParserSlot slot);
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Rule lists
@@ -421,29 +407,24 @@ bool cssParseDeclaredValue(const CssDeclaredName& name, PrStringView text, CssVa
 // with the prefixes that the @namespace rules of `sheet` declare. `sheet` may be null for a rule taken out of its
 // sheet. PrStatus_Ok means a change is staged, and any other status stages nothing.
 PrStatus cssRuleListPrepareInsert(CssEdit* edit, const CssSheetData* PR_NULLABLE sheet,
-                                  const CssRuleChain* PR_NULLABLE parent, PrStringView text,
-                                  uint32_t index);
+    const CssRuleChain* PR_NULLABLE parent, PrStringView text, uint32_t index);
 
 // Commits a prepared insertion into the block of `parent`, or into the rules of `sheet` if `parent` is null.
-void cssRuleListCommitInsert(CssEdit* edit, CssSheetData* PR_NULLABLE sheet,
-                             CssRuleData* PR_NULLABLE parent);
+void cssRuleListCommitInsert(CssEdit* edit, CssSheetData* PR_NULLABLE sheet, CssRuleData* PR_NULLABLE parent);
 
 // Prepares an insertion and commits it to the list it was prepared against. For a list the caller owns: the block of
 // `parent`, in the rules that `outer` starts at.
 PrStatus cssRuleListInsert(CssSheetData* PR_NULLABLE sheet, CssRuleData* PR_NULLABLE parent,
-                           const CssRuleChain* PR_NULLABLE outer, PrStringView text, uint32_t index,
-                           CssParserSlot slot);
+    const CssRuleChain* PR_NULLABLE outer, PrStringView text, uint32_t index, CssParserSlot slot);
 
 // Checks whether the rule at `index` of the block of `parent`, or of the rules of `sheet` if `parent` is null, may be
 // removed (cssom-1/#remove-a-css-rule). Returns OutOfRange past the end, and InvalidState for an @namespace rule while
 // the list holds other rules.
-PrStatus cssRuleListRemovable(const CssSheetData* PR_NULLABLE sheet,
-                              const CssRuleData* PR_NULLABLE parent, uint32_t index);
+PrStatus cssRuleListRemovable(const CssSheetData* PR_NULLABLE sheet, const CssRuleData* PR_NULLABLE parent, uint32_t index);
 
 // Takes the rule at `index` out of the block of `parent`, or out of the rules of `sheet` if `parent` is null, and
 // releases the list's reference to it.
-void cssRuleListRemove(CssSheetData* PR_NULLABLE sheet, CssRuleData* PR_NULLABLE parent,
-                       uint32_t index);
+void cssRuleListRemove(CssSheetData* PR_NULLABLE sheet, CssRuleData* PR_NULLABLE parent, uint32_t index);
 
 // Puts `rule` at `index` of a rule list, in place of the rule there. The list takes over the caller's reference to
 // `rule` and releases its reference to the old rule.
@@ -458,8 +439,7 @@ void cssSerializeDeclarationBlock(TextBuffer* out, const CssDeclarationBlock* bl
 
 // Serializes a declaration's value (cssom-1/#serialize-a-css-value). A value pending on a shorthand serializes as
 // nothing.
-void cssSerializeDeclarationValue(TextBuffer* out, const CssDeclarationBlock* block,
-                                  const CssDeclaration* declaration);
+void cssSerializeDeclarationValue(TextBuffer* out, const CssDeclarationBlock* block, const CssDeclaration* declaration);
 
 // Serializes a style rule's selectors (cssom-1/#dom-cssstylerule-selectortext).
 void cssSerializeSelectorText(TextBuffer* out, const CssRuleData* rule);

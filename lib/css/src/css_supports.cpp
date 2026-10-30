@@ -34,13 +34,11 @@ bool featureSupported(CssValueRun run, uint32_t index) {
             // (css-conditional-4/#dfn-support-selector).
             return true;
         case CssValueDef_SupportsFontTechFn:
-            return cssFontTechSupported(
-                cssValueKeyword(&values[findIn(run, index, PrCssValueKind_Keyword)]));
+            return cssFontTechSupported(cssValueKeyword(&values[findIn(run, index, PrCssValueKind_Keyword)]));
         case CssValueDef_SupportsFontFormatFn: {
             // css-conditional-5/#dfn-support-font-format: a format written as a <string> is not supported.
             uint32_t format = findIn(run, index, PrCssValueKind_Keyword);
-            return format != index + values[index].next
-                   && cssFontFormatSupported(cssValueKeyword(&values[format]));
+            return format != index + values[index].next && cssFontFormatSupported(cssValueKeyword(&values[format]));
         }
         case CssValueDef_SupportsAtRuleFn: {
             // css-conditional-5/#dfn-support-at-rule: an at-rule is supported if it is known.
@@ -88,9 +86,8 @@ bool evaluateText(CssParser* parser, PrStringView text) {
     parser->pool.values.count = 0;
     parser->pool.text.count = 0;
     CssValueSpan matched;
-    return cssParseProduction(CssValueDef_SupportsCondition, &ts, &context, &parser->pool,
-                              &parser->match, &matched)
-           && cssSupportsEvaluate(cssValuePoolRun(&parser->pool, matched));
+    return cssParseProduction(CssValueDef_SupportsCondition, &ts, &context, &parser->pool, &parser->match, &matched) &&
+        cssSupportsEvaluate(cssValuePoolRun(&parser->pool, matched));
 }
 
 } // namespace

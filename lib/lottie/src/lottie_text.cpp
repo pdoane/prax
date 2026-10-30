@@ -66,10 +66,12 @@ PrTextFont* PR_NULLABLE textFontOf(LottieAnimation& a, const LottieFont& font, c
     PrFontStyle style = prFontStyleDefault();
     styleOf(lottieString(a, font.style), &style.weight, &style.slope);
     PrFontFamily family = prFontFamilyFromName(lottieString(a, font.family));
-    PrTextFontDesc desc{.set = options.fonts,
-                        .families = &family,
-                        .familyCount = family.name.size != 0 ? 1u : 0u,
-                        .style = style};
+    PrTextFontDesc desc{
+        .set = options.fonts,
+        .families = &family,
+        .familyCount = family.name.size != 0 ? 1u : 0u,
+        .style = style,
+    };
     return prTextFontCreate(&desc);
 }
 
@@ -115,15 +117,13 @@ struct Layout {
 
 // Returns the glyph shape that the animation provides for the character in the font, taking the first one listed. If
 // the font has none, a shape from any font is used.
-const LottieCharShape* PR_NULLABLE charShapeFor(const Layout& t, PrStringView character,
-                                                const LottieFont* PR_NULLABLE font) {
+const LottieCharShape* PR_NULLABLE charShapeFor(const Layout& t, PrStringView character, const LottieFont* PR_NULLABLE font) {
     const LottieAnimation& a = *t.a;
     for (uint32_t at = lowerBound(t.shapes.data, t.shapes.count, character);
-         at < t.shapes.count && t.shapes.data[at].character == character; ++at) {
+            at < t.shapes.count && t.shapes.data[at].character == character; ++at) {
         const LottieCharShape& c = a.charShapes.data[t.shapes.data[at].shape];
-        if (font == nullptr
-            || (lottieString(a, c.style) == lottieString(a, font->style)
-                && lottieString(a, c.family) == lottieString(a, font->family)))
+        if (font == nullptr || (lottieString(a, c.style) == lottieString(a, font->style) &&
+                lottieString(a, c.family) == lottieString(a, font->family)))
             return &c;
     }
     return nullptr;
@@ -182,8 +182,7 @@ void measureCharacters(Layout& t, const LottieTextDocument& d, PrStringView text
         while (end < chars.count && !isNewline(charAt(end)))
             ++end;
         uint32_t start = chars.data[first].offset;
-        PrStringView paragraph =
-            stringSlice(text, start, chars.data[end - 1].offset + chars.data[end - 1].size - start);
+        PrStringView paragraph = stringSlice(text, start, chars.data[end - 1].offset + chars.data[end - 1].size - start);
         // The paragraph's runs (pr/text_itemize.h), set left to right, which is how the animation places its
         // characters.
         PrTextPiece piece{};
@@ -229,8 +228,9 @@ void measureCharacters(Layout& t, const LottieTextDocument& d, PrStringView text
                     m.glyphs = t.measuredGlyphs.count;
                     m.font = faceFont;
                 }
-                t.measuredGlyphs.push(PrFontGlyph{glyphs[g].id, PrVec2{(pen - m.origin + glyphs[g].offset.x) * d.size,
-                                                                        glyphs[g].offset.y * d.size}});
+                t.measuredGlyphs.push(PrFontGlyph{
+                    glyphs[g].id, PrVec2{(pen - m.origin + glyphs[g].offset.x) * d.size, glyphs[g].offset.y * d.size},
+                });
                 t.measuredTransforms.push(prAffine2Scale(PrVec2{glyphs[g].scale, glyphs[g].scale}));
                 m.scaled = m.scaled || glyphs[g].scale != 1;
                 ++m.glyphCount;
@@ -400,10 +400,15 @@ void layoutDocument(Layout& t, LottieTextDocument& d, const LottieLayer& layer) 
         for (uint32_t i = 0; i < d.letterCount; ++i) {
             const LottieLetter& letter = a.letters.data[d.letters + i];
             a.letterIndexes.data[d.indexes + j * d.letterCount + i] = index;
-            bool counts = animator.basedOn == 2   ? !letter.newline && !letter.space
-                          : animator.basedOn == 3 ? letter.newline || letter.space || i == d.letterCount - 1
-                          : animator.basedOn == 4 ? letter.newline || i == d.letterCount - 1
-                                                  : !letter.newline;
+            bool counts;
+            if (animator.basedOn == 2)
+                counts = !letter.newline && !letter.space;
+            else if (animator.basedOn == 3)
+                counts = letter.newline || letter.space || i == d.letterCount - 1;
+            else if (animator.basedOn == 4)
+                counts = letter.newline || i == d.letterCount - 1;
+            else
+                counts = !letter.newline;
             if (counts)
                 ++index;
         }
@@ -419,7 +424,7 @@ void layoutDocument(Layout& t, LottieTextDocument& d, const LottieLayer& layer) 
 // Returns the share of its animator that a letter receives from the range selector, according to the selector's shape,
 // ease and smoothness.
 float selectorMult(const LottieTextAnimator& t, float s, float e, float easeLow, float easeHigh, float smoothness,
-                   float amount, float index) {
+        float amount, float index) {
     double x1 = 0;
     double y1 = 0;
     double x2 = 1;
@@ -609,9 +614,11 @@ void lottieDrawText(LottieRender& r, const LottieLayer& layer, double frame) {
         v.total = float(a.letterIndexes.data[d.totals + j]);
         float divisor = t.units == 2 ? 1 : (v.total > 0 ? 100 / v.total : 1);
         float offset = lottieScalar(a, t.offset, frame, 0) / divisor;
-        float end = t.end != kLottieNone ? lottieScalar(a, t.end, frame, 100)
-                    : t.units == 2       ? float(d.letterCount)
-                                         : 100;
+        float end = 100;
+        if (t.end != kLottieNone)
+            end = lottieScalar(a, t.end, frame, 100);
+        else if (t.units == 2)
+            end = float(d.letterCount);
         v.s = lottieScalar(a, t.start, frame, 0) / divisor + offset;
         v.e = end / divisor + offset;
         if (v.s > v.e) {
@@ -629,7 +636,7 @@ void lottieDrawText(LottieRender& r, const LottieLayer& layer, double frame) {
         const Animated& v = animated.data[j];
         float index = float(a.letterIndexes.data[d.indexes + j * d.letterCount + letter]);
         return selectorMult(a.animators.data[layer.animators + j], v.s, v.e, v.easeLow, v.easeHigh, v.smoothness,
-                            v.amount, index);
+            v.amount, index);
     };
     PrVec2 alignment = lottiePoint(a, layer.alignment, frame, PrVec2{0, 0});
     float tracking = d.tracking * 0.001f * d.size;

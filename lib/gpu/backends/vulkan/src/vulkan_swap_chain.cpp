@@ -151,9 +151,11 @@ void chooseFormat(VulkanDevice* d, VulkanSwapChain* s, PrGpuSwapChainIntent inte
         {VK_FORMAT_B8G8R8A8_UNORM, VK_COLOR_SPACE_SRGB_NONLINEAR_KHR, PrColorSpace_Srgb},
         {VK_FORMAT_R8G8B8A8_UNORM, VK_COLOR_SPACE_SRGB_NONLINEAR_KHR, PrColorSpace_Srgb},
     };
-    Choice chosen = {formats.count != 0 ? formats.data[0].format : VK_FORMAT_B8G8R8A8_UNORM,
-                     formats.count != 0 ? formats.data[0].colorSpace : VK_COLOR_SPACE_SRGB_NONLINEAR_KHR,
-                     PrColorSpace_Srgb};
+    Choice chosen = {
+        formats.count != 0 ? formats.data[0].format : VK_FORMAT_B8G8R8A8_UNORM,
+        formats.count != 0 ? formats.data[0].colorSpace : VK_COLOR_SPACE_SRGB_NONLINEAR_KHR,
+        PrColorSpace_Srgb,
+    };
     bool found = false;
     if (intent == PrGpuSwapChainIntent_Hdr) {
         for (const Choice& choice : hdr) {
@@ -181,7 +183,7 @@ void chooseFormat(VulkanDevice* d, VulkanSwapChain* s, PrGpuSwapChainIntent inte
 }
 
 PrStatus swapChainCreate(PrGpuDevice* device, const PrAppSurface* surface, const PrGpuSwapChainDesc* desc,
-                         PrGpuSwapChain* PR_NULLABLE* PR_NONNULL out) {
+        PrGpuSwapChain* PR_NULLABLE* PR_NONNULL out) {
     VulkanDevice* d = vulkanDevice(device);
     if (d->vk.CreateSwapchainKHR == nullptr || d->vk.GetPhysicalDeviceSurfaceSupportKHR == nullptr)
         return PrStatus_NotSupported;
@@ -204,8 +206,8 @@ PrStatus swapChainCreate(PrGpuDevice* device, const PrAppSurface* surface, const
     // The images may be copied from and into, because a draw that reads its target may copy it. They are also sampled
     // and read as input attachments if the surface allows it.
     constexpr VkImageUsageFlags kOptional = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT;
-    s->usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT
-               | (capabilities.supportedUsageFlags & kOptional);
+    s->usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT |
+        (capabilities.supportedUsageFlags & kOptional);
     chooseFormat(d, s, desc->intent);
     for (VkSemaphore& acquired : s->acquired) {
         VkSemaphoreCreateInfo info{};
@@ -253,7 +255,7 @@ PrStatus swapChainAcquire(PrGpuDevice* device, PrGpuSwapChain* swapChain, PrUVec
         }
         uint32_t image = 0;
         VkResult result = d->vk.AcquireNextImageKHR(d->device, s->swapChain, UINT64_MAX, s->acquired[s->frame],
-                                                    VK_NULL_HANDLE, &image);
+            VK_NULL_HANDLE, &image);
         if (result == VK_ERROR_OUT_OF_DATE_KHR) {
             s->extent = VkExtent2D{0, 0};
             continue;

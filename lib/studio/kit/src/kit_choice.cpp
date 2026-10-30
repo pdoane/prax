@@ -440,7 +440,7 @@ KitLookId checkLook(bool rail, bool on, bool disabled) {
 PrLayoutStyleIndex rowStyle(Kit& kit, PrKitControlSize size, bool disabled) {
     const PrKitPalette& p = kit.theme.palette;
     return kitStyle(kit, RowBox{.size = size}, RowFlex{}, choiceFont(PrKitTextRole_Body),
-                    KitInk{.color = disabled ? p.text4 : p.text1});
+        KitInk{.color = disabled ? p.text4 : p.text1});
 }
 
 // Creates the row of a checkbox or a toggle, and flips its flag if the row is activated.
@@ -453,9 +453,12 @@ PrLayoutNode checkRow(PrKit* kit, PrLayoutNode parent, const PrKitCheck& check, 
     // The glyph is drawn in the row's state, so that it fades as the pointer comes over the row.
     KitFill fill = kitDress(k, row, checkLook(rail, on, row.disabled)).fill;
     GlyphBox glyph{
-        .width = rail ? kRailWidth : kGlyph, .height = kGlyph, .padding = rail ? 1.0f : 0.0f, .bordered = true};
-    PrLayoutNode box =
-        prLayoutTreeFrameElement(k.tree, row.node, 0, kitStyle(k, glyph, GlyphFlex{.atStart = rail}, fill));
+        .width = rail ? kRailWidth : kGlyph,
+        .height = kGlyph,
+        .padding = rail ? 1.0f : 0.0f,
+        .bordered = true,
+    };
+    PrLayoutNode box = prLayoutTreeFrameElement(k.tree, row.node, 0, kitStyle(k, glyph, GlyphFlex{.atStart = rail}, fill));
     if (!rail && on)
         prKitIcon(kit, box, {.icon = PrKitIconKind_Check}, {.size = 10, .tone = PrKitTone_Inverse});
     if (rail) {
@@ -464,8 +467,7 @@ PrLayoutNode checkRow(PrKit* kit, PrLayoutNode parent, const PrKitCheck& check, 
         float travel = prUiTween(k.ui, box, &kKitOwner, ChoiceStateKey_Knob, on ? 1.0f : 0.0f, kKnobSeconds, nullptr);
         const PrKitPalette& p = k.theme.palette;
         PrLayoutStyleIndex knob = kitStyle(k, GlyphBox{.width = kKnob, .height = kKnob}, GlyphFlex{},
-                                           KitColors{.background = on ? p.accentText : p.text2},
-                                           KnobEffects{.travel = travel});
+            KitColors{.background = on ? p.accentText : p.text2}, KnobEffects{.travel = travel});
         prLayoutTreeFrameElement(k.tree, box, 0, knob);
     }
     if (check.label.size != 0)
@@ -480,7 +482,7 @@ PrLayoutNode tabClose(PrKit* kit, PrLayoutNode cell) {
     Kit& k = *kit;
     KitControl close = kitControl(k, cell, 0, PrUiFlag_Pressable, false);
     PrLayoutStyleIndex record = kitStyle(k, GlyphBox{.width = kPrKitHeightXxs, .height = kPrKitHeightXxs}, GlyphFlex{},
-                                         kitDress(k, close, KitLookId_Quiet).fill);
+        kitDress(k, close, KitLookId_Quiet).fill);
     prLayoutTreeFrameSetStyle(k.tree, close.node, record);
     PrKitTone tone = close.over ? PrKitTone_Primary : PrKitTone_Muted;
     prKitIcon(kit, close.node, {.icon = PrKitIconKind_Close}, {.size = 10, .tone = tone});
@@ -513,7 +515,7 @@ PrLayoutNode prKitSegmented(PrKit* kit, PrLayoutNode parent, PrKitChoices choice
     PrLayoutStyleIndex record =
         kitStyle(k, TrackBox{.size = style.size}, TrackFlex{}, KitColors{.background = p.bg2, .border = p.line2});
     PrLayoutNode track = kitBoxNode(k, parent, PrKitBox{.key = choices.key, .disabled = choices.disabled},
-                                    PrKitOverflow_Visible, record);
+        PrKitOverflow_Visible, record);
     provideStrip(k, track, StripKind_Segmented, style);
     return track;
 }
@@ -522,13 +524,15 @@ PrLayoutNode prKitSegment(PrKit* kit, PrLayoutNode segmented, PrKitChoice choice
     Kit& k = *kit;
     Strip& strip = stripOf(k, segmented, StripKind_Segmented);
     KitControl cell = kitControl(k, segmented, itemKey(k, segmented, choice.key),
-                                 PrUiFlag_Pressable | PrUiFlag_Focusable, choice.disabled);
+        PrUiFlag_Pressable | PrUiFlag_Focusable, choice.disabled);
     bool on = choice.selected;
-    KitLookId look = cell.disabled ? (on ? KitLookId_SegmentChosenDisabled : KitLookId_SegmentDisabled)
-                                   : (on ? KitLookId_SegmentChosen : KitLookId_Segment);
+    KitLookId look;
+    if (cell.disabled)
+        look = (on ? KitLookId_SegmentChosenDisabled : KitLookId_SegmentDisabled);
+    else
+        look = (on ? KitLookId_SegmentChosen : KitLookId_Segment);
     KitDress dress = kitDress(k, cell, look);
-    prLayoutTreeFrameSetStyle(
-        k.tree, cell.node,
+    prLayoutTreeFrameSetStyle(k.tree, cell.node,
         kitStyle(k, SegmentBox{}, SegmentFlex{}, choiceFont(PrKitTextRole_BodySmall), dress.fill, dress.ink));
     if (choice.icon != PrKitIconKind_None) {
         PrKitTone tone = cell.disabled ? PrKitTone_Faint : on ? PrKitTone_Primary : PrKitTone_Secondary;
@@ -543,8 +547,7 @@ PrLayoutNode prKitSegment(PrKit* kit, PrLayoutNode segmented, PrKitChoice choice
 PrLayoutNode prKitRadioGroup(PrKit* kit, PrLayoutNode parent, PrKitChoices choices, PrKitChoiceStyle style) {
     Kit& k = *kit;
     PrLayoutNode group = kitBoxNode(k, parent, PrKitBox{.key = choices.key, .disabled = choices.disabled},
-                                    PrKitOverflow_Visible,
-                                    kitStyle(k, FlexBox{}, GroupFlex{.direction = style.direction}));
+        PrKitOverflow_Visible, kitStyle(k, FlexBox{}, GroupFlex{.direction = style.direction}));
     provideStrip(k, group, StripKind_Radios, style);
     return group;
 }
@@ -554,23 +557,25 @@ PrLayoutNode prKitRadio(PrKit* kit, PrLayoutNode group, PrKitChoice choice) {
     const PrKitPalette& p = k.theme.palette;
     Strip& strip = stripOf(k, group, StripKind_Radios);
     KitControl option = kitControl(k, group, itemKey(k, group, choice.key), PrUiFlag_Pressable | PrUiFlag_Focusable,
-                                   choice.disabled);
+        choice.disabled);
     prLayoutTreeFrameSetStyle(k.tree, option.node, rowStyle(k, strip.style.size, option.disabled));
     bool on = choice.selected;
-    KitLookId look = option.disabled ? (on ? KitLookId_RadioOnDisabled : KitLookId_CheckDisabled)
-                                     : (on ? KitLookId_RadioOn : KitLookId_Radio);
+    KitLookId look;
+    if (option.disabled)
+        look = (on ? KitLookId_RadioOnDisabled : KitLookId_CheckDisabled);
+    else
+        look = (on ? KitLookId_RadioOn : KitLookId_Radio);
     PrLayoutStyleIndex ringRecord = kitStyle(k, GlyphBox{.width = kGlyph, .height = kGlyph, .bordered = true},
-                                             GlyphFlex{}, kitDress(k, option, look).fill);
+        GlyphFlex{}, kitDress(k, option, look).fill);
     PrLayoutNode ring = prLayoutTreeFrameElement(k.tree, option.node, 0, ringRecord);
     if (on) {
         PrColor mark = option.disabled ? p.bg4 : p.accent;
         prLayoutTreeFrameElement(k.tree, ring, 0,
-                                 kitStyle(k, GlyphBox{.width = kPrKitSpace3, .height = kPrKitSpace3}, GlyphFlex{},
-                                          KitColors{.background = mark}));
+            kitStyle(k, GlyphBox{.width = kPrKitSpace3, .height = kPrKitSpace3}, GlyphFlex{}, KitColors{.background = mark}));
     }
     if (choice.icon != PrKitIconKind_None)
         prKitIcon(kit, option.node, {.icon = choice.icon},
-                  {.size = 12, .tone = PrKitTone(option.disabled ? PrKitTone_Faint : PrKitTone_Secondary)});
+            {.size = 12, .tone = PrKitTone(option.disabled ? PrKitTone_Faint : PrKitTone_Secondary)});
     if (choice.label.size != 0)
         prLayoutTreeFrameText(k.tree, option.node, 0, choice.label);
     stripItem(k, strip, option);
@@ -591,7 +596,7 @@ PrLayoutNode prKitTabStrip(PrKit* kit, PrLayoutNode parent, PrKitTabStrip strip,
     PrUi* ui = k.ui;
     PrLayoutNode node =
         kitBoxNode(k, parent, PrKitBox{.key = strip.key, .disabled = strip.disabled}, PrKitOverflow_Visible,
-                   kitStyle(k, StripBox{}, KitColors{.background = p.bg1, .border = p.line2}));
+            kitStyle(k, StripBox{}, KitColors{.background = p.bg1, .border = p.line2}));
     Strip& context = provideStrip(k, node, StripKind_Tabs, style);
     TabStripState& state = kitState<TabStripState>(k, node, ChoiceStateKey_TabStrip);
     context.reorders = strip.reorderable && !disabledUnder(k, node);
@@ -613,7 +618,7 @@ PrLayoutNode prKitTabStrip(PrKit* kit, PrLayoutNode parent, PrKitTabStrip strip,
     if ((ours || drop) && prUiPointer(ui, &pointer)) {
         PrRect stripBox = prLayoutRectToPx(prLayoutNodeBounds(k.tree, node, PrLayoutCoordinates_Layout));
         for (PrLayoutNode tab = prLayoutNodeFirstChild(k.tree, node); tab != kPrLayoutNodeNone;
-             tab = prLayoutNodeNextSibling(k.tree, tab)) {
+                tab = prLayoutNodeNextSibling(k.tree, tab)) {
             if (tab == state.caret)
                 continue;
             if (!found) {
@@ -635,7 +640,7 @@ PrLayoutNode prKitTabStrip(PrKit* kit, PrLayoutNode parent, PrKitTabStrip strip,
     state.caret = kPrLayoutNodeNone;
     if (ours && prUiIsDropTarget(ui, node)) {
         state.caret = prLayoutTreeFrameElement(k.tree, node, kCaretKey,
-                                               kitStyle(k, CaretBox{.left = caret}, KitColors{.background = p.accent}));
+            kitStyle(k, CaretBox{.left = caret}, KitColors{.background = p.accent}));
     }
     if (drop && dropped->value < tabs) {
         uint32_t from = uint32_t(dropped->value);
@@ -654,11 +659,13 @@ PrLayoutNode prKitTab(PrKit* kit, PrLayoutNode strip, PrKitTab tab) {
     KitControl cell =
         kitControl(k, strip, itemKey(k, strip, tab.key), PrUiFlag_Pressable | PrUiFlag_Focusable, tab.disabled);
     bool on = tab.selected;
-    KitLookId look = cell.disabled ? (on ? KitLookId_TabChosenDisabled : KitLookId_TabDisabled)
-                                   : (on ? KitLookId_TabChosen : KitLookId_Tab);
+    KitLookId look;
+    if (cell.disabled)
+        look = (on ? KitLookId_TabChosenDisabled : KitLookId_TabDisabled);
+    else
+        look = (on ? KitLookId_TabChosen : KitLookId_Tab);
     KitDress dress = kitDress(k, cell, look);
-    prLayoutTreeFrameSetStyle(
-        k.tree, cell.node,
+    prLayoutTreeFrameSetStyle(k.tree, cell.node,
         kitStyle(k, TabBox{.size = s.style.size}, TabFlex{}, choiceFont(PrKitTextRole_Body), dress.fill, dress.ink));
     prLayoutTreeFrameText(k.tree, cell.node, 0, tab.label);
     if (tab.badge.size != 0)
@@ -688,8 +695,7 @@ PrLayoutNode prKitProgress(PrKit* kit, PrLayoutNode parent, PrKitProgress progre
     Kit& k = *kit;
     const PrKitPalette& p = k.theme.palette;
     KitColors fill{.background = disabledUnder(k, parent) ? p.text4 : p.accent};
-    PrLayoutStyleIndex barRecord =
-        kitStyle(k, BarBox{.clips = true}, BarFlex{}, KitColors{.background = p.bg4});
+    PrLayoutStyleIndex barRecord = kitStyle(k, BarBox{.clips = true}, BarFlex{}, KitColors{.background = p.bg4});
     PrLayoutNode bar = prLayoutTreeFrameElement(k.tree, parent, progress.key, barRecord);
     prUiSetFlags(k.ui, bar, PrUiFlag_SubtreeTransparent);
     if (!progress.indeterminate) {
@@ -716,8 +722,7 @@ PrLayoutNode prKitMeter(PrKit* kit, PrLayoutNode parent, PrKitMeter meter, PrKit
     float span = high - meter.low;
     float fraction = span != 0 ? unitClamp((meter.value - meter.low) / span) : 0;
     uint32_t lit = uint32_t(fraction * float(kPrKitMeterSegments));
-    PrLayoutNode bar =
-        prLayoutTreeFrameElement(k.tree, parent, meter.key, kitStyle(k, BarBox{}, BarFlex{.gap = 1}));
+    PrLayoutNode bar = prLayoutTreeFrameElement(k.tree, parent, meter.key, kitStyle(k, BarBox{}, BarFlex{.gap = 1}));
     prUiSetFlags(k.ui, bar, PrUiFlag_SubtreeTransparent);
     PrColor on = disabled ? p.text4 : kitToneColor(k, style.tone);
     for (uint32_t i = 0; i < kPrKitMeterSegments; ++i) {
@@ -735,10 +740,8 @@ PrLayoutNode prKitSpinner(PrKit* kit, PrLayoutNode parent, PrKitSpinner spinner,
     float phase = phaseOf(prUiCurrentRound(k.ui)->time, kSpinSeconds);
     uint32_t step = uint32_t(phase * float(kSpinSteps)) % kSpinSteps;
     PrKitTone tone = disabledUnder(k, parent) ? PrKitTone_Faint : PrKitTone_Accent;
-    PrLayoutNode node =
-        prKitIcon(kit, parent, {.key = spinner.key, .icon = PrKitIconKind_Spinner}, {.size = size, .tone = tone});
-    prLayoutTreeFrameSetStyle(k.tree, node,
-                              kitStyle(k, SpinnerBox{.size = size}, KitFixed{}, SpinnerEffects{.step = step}));
+    PrLayoutNode node = prKitIcon(kit, parent, {.key = spinner.key, .icon = PrKitIconKind_Spinner}, {.size = size, .tone = tone});
+    prLayoutTreeFrameSetStyle(k.tree, node, kitStyle(k, SpinnerBox{.size = size}, KitFixed{}, SpinnerEffects{.step = step}));
     prUiRequestMotion(k.ui, node);
     return node;
 }

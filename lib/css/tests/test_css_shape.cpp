@@ -68,8 +68,8 @@ Outline outlineOf(PrStringView value, PrRect box) {
 }
 
 bool near(PrRect a, PrRect b) {
-    bool same = std::fabs(a.left - b.left) < 1e-3f && std::fabs(a.top - b.top) < 1e-3f
-                && std::fabs(a.right - b.right) < 1e-3f && std::fabs(a.bottom - b.bottom) < 1e-3f;
+    bool same = std::fabs(a.left - b.left) < 1e-3f && std::fabs(a.top - b.top) < 1e-3f &&
+        std::fabs(a.right - b.right) < 1e-3f && std::fabs(a.bottom - b.bottom) < 1e-3f;
     if (!same)
         MESSAGE("{" << a.left << ", " << a.top << ", " << a.right << ", " << a.bottom << "}");
     return same;
@@ -100,10 +100,10 @@ TEST_CASE("clip's rect() separates its edges with commas or with spaces, but not
 
 TEST_CASE("clip paths, mask layers, filters and blending are computed in a group of their own, which does not inherit") {
     for (PrCssProperty property : {PrCssProperty_ClipPath, PrCssProperty_Clip, PrCssProperty_MaskImage,
-                                   PrCssProperty_MaskMode, PrCssProperty_MaskRepeat, PrCssProperty_MaskPosition,
-                                   PrCssProperty_MaskSize, PrCssProperty_MaskOrigin, PrCssProperty_MaskClip,
-                                   PrCssProperty_MaskComposite, PrCssProperty_Filter, PrCssProperty_BackdropFilter,
-                                   PrCssProperty_MixBlendMode, PrCssProperty_Isolation})
+        PrCssProperty_MaskMode, PrCssProperty_MaskRepeat, PrCssProperty_MaskPosition,
+                PrCssProperty_MaskSize, PrCssProperty_MaskOrigin, PrCssProperty_MaskClip,
+                PrCssProperty_MaskComposite, PrCssProperty_Filter, PrCssProperty_BackdropFilter,
+                PrCssProperty_MixBlendMode, PrCssProperty_Isolation})
         CHECK(cssStyleSlot(property).group == CssStyleGroup_Compositing);
     CHECK(!cssStyleGroupInherited(CssStyleGroup_Compositing));
 }

@@ -37,16 +37,12 @@ constexpr uint32_t kItems = 50;
 // The rules whose matches the cases change, as in bench.js.
 constexpr char kRules[] =
     ".card { display: block; margin: 4px; padding: 4px 8px; border: 1px solid rgb(200, 200, 200); max-width: 600px }"
-    ".card h2 { font-size: 15px; margin: 0 0 4px 0 }"
-    ".card p { margin: 2px 0; color: var(--text); line-height: 1.4 }"
+    ".card h2 { font-size: 15px; margin: 0 0 4px 0 }.card p { margin: 2px 0; color: var(--text); line-height: 1.4 }"
     ".card span { color: rgb(0, 0, 200); padding: 0 2px }"
     ".theme-dark .card { background-color: rgb(20, 20, 20); color: rgb(240, 240, 240) }"
-    ".card.active { background-color: rgb(255, 255, 200) }"
-    ".card[data-state=open] p { font-weight: 700 }"
-    ".card:has(.flag) { border-color: rgb(200, 0, 0) }"
-    ".list li { display: block; height: 12px }"
-    ".list li:nth-child(odd) { color: rgb(120, 120, 120) }"
-    ":root { --text: rgb(51, 51, 51) }";
+    ".card.active { background-color: rgb(255, 255, 200) }.card[data-state=open] p { font-weight: 700 }"
+    ".card:has(.flag) { border-color: rgb(200, 0, 0) }.list li { display: block; height: 12px }"
+    ".list li:nth-child(odd) { color: rgb(120, 120, 120) }:root { --text: rgb(51, 51, 51) }";
 
 // The number of :has() rules in the sheet of anchors, and how many of them have an argument that reaches a later
 // sibling, as in bench.js.
@@ -166,110 +162,134 @@ void toggle(PrDomElement* element, PrStringView token) {
 }
 
 constexpr Case kCases[] = {
-    {"style page build",
-     [](Work* w) {
-         build(w);
-         read(prDomElementQuery(prDomNodeAsEventTarget(prDomNodeLastChild(w->list))), PrCssProperty_Color);
-     }},
-    {"style class on root",
-     [](Work* w) {
-         toggle(w->root, "theme-dark");
-         read(w->lastText, PrCssProperty_Color);
-     }},
-    {"style class on leaf",
-     [](Work* w) {
-         toggle(w->cards[kCards >> 1], "active");
-         read(w->cards[kCards >> 1], PrCssProperty_BackgroundColor);
-     }},
-    {"style attribute",
-     [](Work* w) {
-         w->flip = !w->flip;
-         prDomElementSetAttribute(w->cards[kCards >> 1], "data-state", w->flip ? "open" : "closed");
-         read(w->middleText, PrCssProperty_FontWeight);
-     }},
-    {"style custom property",
-     [](Work* w) {
-         w->flip = !w->flip;
-         PrCssDeclarationName name = prCssDeclarationNameFromProperty(PrCssProperty_Count);
-         name.author = prStringExternal("--text");
-         prCssStyleDeclarationSetProperty(prCssStylePropertiesAsCssStyleDeclaration(prCssElementStyle(w->root)), &name,
-                                          w->flip ? "rgb(200, 0, 0)" : "rgb(51, 51, 51)", false);
-         read(w->lastText, PrCssProperty_Color);
-     }},
-    {"style nth-child insert",
-     [](Work* w) {
-         if (prDomNodeParentNode(w->extra) == nullptr)
-             prDomNodeInsertBefore(w->list, w->extra, prDomNodeFirstChild(w->list));
-         else
-             prDomNodeRemove(w->extra);
-         read(prDomElementQuery(prDomNodeAsEventTarget(prDomNodeLastChild(w->list))), PrCssProperty_Color);
-     }},
-    {"style :has",
-     [](Work* w) {
-         toggle(w->middleSpan, "flag");
-         read(w->cards[kCards >> 1], PrCssProperty_BorderTopColor);
-     }},
-    {"style insertRule",
-     [](Work* w) {
-         uint32_t count = prCssRuleListLength(prCssStyleSheetCssRules(w->own));
-         prCssStyleSheetInsertRule(w->own, ".card span { color: rgb(0, 120, 0) }", count, nullptr);
-         read(w->middleSpan, PrCssProperty_Color);
-         prCssStyleSheetDeleteRule(w->own, count);
-     }},
-    {"style write read loop",
-     [](Work* w) {
-         PrCssDeclarationName width = prCssDeclarationNameFromProperty(PrCssProperty_Width);
-         PrCssStyleDeclaration* style =
-             prCssStylePropertiesAsCssStyleDeclaration(prCssElementStyle(w->cards[kCards - 1]));
-         char text[16];
-         for (uint32_t i = 0; i < 10; ++i) {
-             int size = snprintf(text, sizeof(text), "%upx", 300 + i);
-             prCssStyleDeclarationSetProperty(style, &width, PrStringView{text, size_t(size)}, false);
-             read(w->cards[kCards - 1], PrCssProperty_Width);
-         }
-     }},
-    {"style geometry loop",
-     [](Work* w) {
-         PrCssDeclarationName width = prCssDeclarationNameFromProperty(PrCssProperty_Width);
-         PrCssStyleDeclaration* style =
-             prCssStylePropertiesAsCssStyleDeclaration(prCssElementStyle(w->cards[kCards - 2]));
-         PrHtmlElement* text = prHtmlElementQuery(
-             prDomNodeAsEventTarget(prDomElementAsNode(firstNamed(w->cards[kCards - 2], "p"))));
-         char value[16];
-         for (uint32_t i = 0; i < 10; ++i) {
-             int size = snprintf(value, sizeof(value), "%upx", 200 + 10 * i);
-             prCssStyleDeclarationSetProperty(style, &width, PrStringView{value, size_t(size)}, false);
-             w->height += prHtmlElementOffsetHeight(text);
-         }
-     }},
-    {"style :has anchors page build",
-     [](Work* w) {
-         build(w);
-         read(prDomElementQuery(prDomNodeAsEventTarget(prDomNodeLastChild(w->list))), PrCssProperty_Color);
-     },
-     [](Work* w) {
-         TextBuffer rules = {};
-         anchorRules(&rules);
-         addStyle(w, textView(&rules));
-         textReset(&rules);
-         read(prDomElementQuery(prDomNodeAsEventTarget(prDomNodeLastChild(w->list))), PrCssProperty_Color);
-     }},
-    {"style :has anchors insert",
-     [](Work* w) {
-         if (prDomNodeParentNode(w->inserted) == nullptr)
-             prDomNodeAppendChild(prDomElementAsNode(w->middleText), w->inserted);
-         else
-             prDomNodeRemove(w->inserted);
-         read(w->lastText, PrCssProperty_Color);
-     }},
-    {"style :has anchors text",
-     [](Work* w) {
-         w->flip = !w->flip;
-         PrDomNode* text = prDomNodeFirstChild(prDomElementAsNode(w->middleSpan));
-         prDomCharacterDataSetData(prDomCharacterDataQuery(prDomNodeAsEventTarget(text)),
-                                   w->flip ? "a changed span" : "an inline span");
-         read(w->lastText, PrCssProperty_Color);
-     }},
+    {
+        "style page build",
+        [](Work* w) {
+            build(w);
+            read(prDomElementQuery(prDomNodeAsEventTarget(prDomNodeLastChild(w->list))), PrCssProperty_Color);
+        },
+    },
+    {
+        "style class on root",
+        [](Work* w) {
+            toggle(w->root, "theme-dark");
+            read(w->lastText, PrCssProperty_Color);
+        },
+    },
+    {
+        "style class on leaf",
+        [](Work* w) {
+            toggle(w->cards[kCards >> 1], "active");
+            read(w->cards[kCards >> 1], PrCssProperty_BackgroundColor);
+        },
+    },
+    {
+        "style attribute",
+        [](Work* w) {
+            w->flip = !w->flip;
+            prDomElementSetAttribute(w->cards[kCards >> 1], "data-state", w->flip ? "open" : "closed");
+            read(w->middleText, PrCssProperty_FontWeight);
+        },
+    },
+    {
+        "style custom property",
+        [](Work* w) {
+            w->flip = !w->flip;
+            PrCssDeclarationName name = prCssDeclarationNameFromProperty(PrCssProperty_Count);
+            name.author = prStringExternal("--text");
+            PrCssStyleDeclaration* style = prCssStylePropertiesAsCssStyleDeclaration(prCssElementStyle(w->root));
+            prCssStyleDeclarationSetProperty(style, &name, w->flip ? "rgb(200, 0, 0)" : "rgb(51, 51, 51)", false);
+            read(w->lastText, PrCssProperty_Color);
+        },
+    },
+    {
+        "style nth-child insert",
+        [](Work* w) {
+            if (prDomNodeParentNode(w->extra) == nullptr)
+                prDomNodeInsertBefore(w->list, w->extra, prDomNodeFirstChild(w->list));
+            else
+                prDomNodeRemove(w->extra);
+            read(prDomElementQuery(prDomNodeAsEventTarget(prDomNodeLastChild(w->list))), PrCssProperty_Color);
+        },
+    },
+    {
+        "style :has",
+        [](Work* w) {
+            toggle(w->middleSpan, "flag");
+            read(w->cards[kCards >> 1], PrCssProperty_BorderTopColor);
+        },
+    },
+    {
+        "style insertRule",
+        [](Work* w) {
+            uint32_t count = prCssRuleListLength(prCssStyleSheetCssRules(w->own));
+            prCssStyleSheetInsertRule(w->own, ".card span { color: rgb(0, 120, 0) }", count, nullptr);
+            read(w->middleSpan, PrCssProperty_Color);
+            prCssStyleSheetDeleteRule(w->own, count);
+        },
+    },
+    {
+        "style write read loop",
+        [](Work* w) {
+            PrCssDeclarationName width = prCssDeclarationNameFromProperty(PrCssProperty_Width);
+            PrCssStyleDeclaration* style = prCssStylePropertiesAsCssStyleDeclaration(prCssElementStyle(w->cards[kCards - 1]));
+            char text[16];
+            for (uint32_t i = 0; i < 10; ++i) {
+                int size = snprintf(text, sizeof(text), "%upx", 300 + i);
+                prCssStyleDeclarationSetProperty(style, &width, PrStringView{text, size_t(size)}, false);
+                read(w->cards[kCards - 1], PrCssProperty_Width);
+            }
+        },
+    },
+    {
+        "style geometry loop",
+        [](Work* w) {
+            PrCssDeclarationName width = prCssDeclarationNameFromProperty(PrCssProperty_Width);
+            PrCssStyleDeclaration* style = prCssStylePropertiesAsCssStyleDeclaration(prCssElementStyle(w->cards[kCards - 2]));
+            PrHtmlElement* text = prHtmlElementQuery(
+                prDomNodeAsEventTarget(prDomElementAsNode(firstNamed(w->cards[kCards - 2], "p"))));
+            char value[16];
+            for (uint32_t i = 0; i < 10; ++i) {
+                int size = snprintf(value, sizeof(value), "%upx", 200 + 10 * i);
+                prCssStyleDeclarationSetProperty(style, &width, PrStringView{value, size_t(size)}, false);
+                w->height += prHtmlElementOffsetHeight(text);
+            }
+        },
+    },
+    {
+        "style :has anchors page build",
+        [](Work* w) {
+            build(w);
+            read(prDomElementQuery(prDomNodeAsEventTarget(prDomNodeLastChild(w->list))), PrCssProperty_Color);
+        },
+        [](Work* w) {
+            TextBuffer rules = {};
+            anchorRules(&rules);
+            addStyle(w, textView(&rules));
+            textReset(&rules);
+            read(prDomElementQuery(prDomNodeAsEventTarget(prDomNodeLastChild(w->list))), PrCssProperty_Color);
+        },
+    },
+    {
+        "style :has anchors insert",
+        [](Work* w) {
+            if (prDomNodeParentNode(w->inserted) == nullptr)
+                prDomNodeAppendChild(prDomElementAsNode(w->middleText), w->inserted);
+            else
+                prDomNodeRemove(w->inserted);
+            read(w->lastText, PrCssProperty_Color);
+        },
+    },
+    {
+        "style :has anchors text",
+        [](Work* w) {
+            w->flip = !w->flip;
+            PrDomNode* text = prDomNodeFirstChild(prDomElementAsNode(w->middleSpan));
+            prDomCharacterDataSetData(prDomCharacterDataQuery(prDomNodeAsEventTarget(text)),
+                w->flip ? "a changed span" : "an inline span");
+            read(w->lastText, PrCssProperty_Color);
+        },
+    },
 };
 
 PrCssStyleSheet* addStyle(Work* work, PrStringView text) {

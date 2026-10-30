@@ -110,21 +110,18 @@ private:
 #if defined(_MSC_VER)
         const Word previous = atomicMsvcExchange<Relaxed>(&bits, word);
 #else
-        const Word previous =
-            __atomic_exchange_n(&bits, word, Relaxed ? __ATOMIC_RELAXED : __ATOMIC_ACQ_REL);
+        const Word previous = __atomic_exchange_n(&bits, word, Relaxed ? __ATOMIC_RELAXED : __ATOMIC_ACQ_REL);
 #endif
         return __builtin_bit_cast(T, previous);
     }
 
     template <bool Relaxed>
-    PR_FORCE_INLINE T addImpl(Word operand)
-        requires(kAtomicIntegral<T>)
+    PR_FORCE_INLINE T addImpl(Word operand) requires(kAtomicIntegral<T>)
     {
 #if defined(_MSC_VER)
         const Word previous = atomicMsvcExchangeAdd<Relaxed>(&bits, operand);
 #else
-        const Word previous =
-            __atomic_fetch_add(&bits, operand, Relaxed ? __ATOMIC_RELAXED : __ATOMIC_ACQ_REL);
+        const Word previous = __atomic_fetch_add(&bits, operand, Relaxed ? __ATOMIC_RELAXED : __ATOMIC_ACQ_REL);
 #endif
         return __builtin_bit_cast(T, previous);
     }
@@ -187,28 +184,24 @@ public:
 
     // Adds `value` to the stored value, wrapping on overflow, and returns the previous value. The operand is a variable
     // because MSVC does not parse a bit cast in the arguments of a call with template arguments.
-    PR_FORCE_INLINE T fetchAdd(T value)
-        requires(kAtomicIntegral<T>)
+    PR_FORCE_INLINE T fetchAdd(T value) requires(kAtomicIntegral<T>)
     {
         const Word operand = __builtin_bit_cast(Word, value);
         return addImpl<false>(operand);
     }
-    PR_FORCE_INLINE T fetchAddRelaxed(T value)
-        requires(kAtomicIntegral<T>)
+    PR_FORCE_INLINE T fetchAddRelaxed(T value) requires(kAtomicIntegral<T>)
     {
         const Word operand = __builtin_bit_cast(Word, value);
         return addImpl<true>(operand);
     }
 
     // Subtracts `value` from the stored value, wrapping on underflow, and returns the previous value.
-    PR_FORCE_INLINE T fetchSub(T value)
-        requires(kAtomicIntegral<T>)
+    PR_FORCE_INLINE T fetchSub(T value) requires(kAtomicIntegral<T>)
     {
         const Word operand = Word(0) - __builtin_bit_cast(Word, value);
         return addImpl<false>(operand);
     }
-    PR_FORCE_INLINE T fetchSubRelaxed(T value)
-        requires(kAtomicIntegral<T>)
+    PR_FORCE_INLINE T fetchSubRelaxed(T value) requires(kAtomicIntegral<T>)
     {
         const Word operand = Word(0) - __builtin_bit_cast(Word, value);
         return addImpl<true>(operand);

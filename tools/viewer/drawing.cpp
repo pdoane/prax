@@ -37,16 +37,17 @@ const PrDrawImage* cachedDecoded = nullptr;
 PrDrawList* cachedMotif = nullptr;
 
 const PrDrawImage* imageOf(const std::vector<uint8_t>& rgba, uint32_t width, uint32_t height,
-                           PrDrawAlpha alpha = PrDrawAlpha_Straight) {
-    PrDrawImageDesc desc{PrPixelView{rgba.data(), size_t(width) * 4, {width, height}}, PrPixelFormat_Rgba8, alpha,
-                         PrColorSpace_Srgb};
+        PrDrawAlpha alpha = PrDrawAlpha_Straight) {
+    PrDrawImageDesc desc{
+        PrPixelView{rgba.data(), size_t(width) * 4, {width, height}}, PrPixelFormat_Rgba8, alpha,
+        PrColorSpace_Srgb,
+    };
     const PrDrawImage* image = nullptr;
     prDrawImageCreate(&desc, &image);
     return image;
 }
 
-void put(std::vector<uint8_t>& rgba, uint32_t width, uint32_t x, uint32_t y, uint8_t r, uint8_t g,
-         uint8_t b, uint8_t a) {
+void put(std::vector<uint8_t>& rgba, uint32_t width, uint32_t x, uint32_t y, uint8_t r, uint8_t g, uint8_t b, uint8_t a) {
     uint8_t* p = rgba.data() + (size_t(y) * width + x) * 4;
     p[0] = r;
     p[1] = g;
@@ -107,8 +108,7 @@ std::string keyOf(const char* file, const PrFontDerivation& d) {
     std::string key = file;
     char text[64];
     for (uint32_t i = 0; i < d.variationCount; ++i) {
-        std::snprintf(text, sizeof(text), " %08x=%g", d.variations[i].tag,
-                      double(d.variations[i].value));
+        std::snprintf(text, sizeof(text), " %08x=%g", d.variations[i].tag, double(d.variations[i].value));
         key += text;
     }
     for (uint32_t i = 0; i < d.featureCount; ++i) {
@@ -116,8 +116,8 @@ std::string keyOf(const char* file, const PrFontDerivation& d) {
         key += text;
     }
     std::snprintf(text, sizeof(text), " %g %g %g %g %u %u %g %g %p", double(d.sizeAdjust),
-                  double(d.ascent), double(d.descent), double(d.lineGap), uint32_t(d.hinting),
-                  uint32_t(d.overrides), double(d.embolden), double(d.oblique), static_cast<void*>(d.hinter));
+        double(d.ascent), double(d.descent), double(d.lineGap), uint32_t(d.hinting),
+        uint32_t(d.overrides), double(d.embolden), double(d.oblique), static_cast<void*>(d.hinter));
     return key + text;
 }
 
@@ -148,7 +148,7 @@ void drawCaptions(PrDrawList* list) {
 } // namespace
 
 void drawDrawing(const Drawing& drawing, PrDrawList* list, PrTextShaper* shaper, PrFontHinter* PR_NULLABLE hinter,
-                 const PrAppDisplay& display, float width, float height, double time) {
+        const PrAppDisplay& display, float width, float height, double time) {
     currentShaper = shaper;
     currentHinter = hinter;
     currentDisplay = display;
@@ -220,8 +220,7 @@ const PrDrawImage* smallTile() {
             float dy = float(y) - 4.5f;
             bool dot = dx * dx + dy * dy < 9;
             bool corner = x < 6 && y > 9;
-            put(rgba, size, x, y, dot ? 220 : corner ? 30 : 90, dot ? 50 : corner ? 140 : 160,
-                dot ? 40 : corner ? 60 : 210, 255);
+            put(rgba, size, x, y, dot ? 220 : corner ? 30 : 90, dot ? 50 : corner ? 140 : 160, dot ? 40 : corner ? 60 : 210, 255);
         }
     }
     cachedTile = imageOf(rgba, size, size);
@@ -243,10 +242,9 @@ const PrDrawImage* PR_NULLABLE decodedCard() {
     source.memory = png;
     PrImageDecoder* decoder = prImageDecoderCreate(imageCodec);
     std::vector<uint8_t> decoded(kTestCardSize * kTestCardSize * 4);
-    if (prImageDecoderOpen(decoder, source, nullptr) == PrStatus_Ok
-        && prImageDecoderReadRgba8(decoder, 0, PrImageAlpha_Premultiplied, PrImageOrientation_Identity,
-                                   PrPixels{decoded.data(), kTestCardSize * 4, {kTestCardSize, kTestCardSize}})
-               == PrStatus_Ok)
+    if (prImageDecoderOpen(decoder, source, nullptr) == PrStatus_Ok &&
+            prImageDecoderReadRgba8(decoder, 0, PrImageAlpha_Premultiplied, PrImageOrientation_Identity,
+                PrPixels{decoded.data(), kTestCardSize * 4, {kTestCardSize, kTestCardSize}}) == PrStatus_Ok)
         cachedDecoded = imageOf(decoded, kTestCardSize, kTestCardSize, PrDrawAlpha_Premultiplied);
     prImageDecoderDestroy(decoder);
     prImageCodecDestroy(imageCodec);
@@ -311,8 +309,11 @@ const PrFont* fontDerived(const char* file, const PrFontDerivation& derivation) 
         // A WOFF or WOFF2 file decodes through the built-in codec.
         const PrByteView view{bytes.data(), bytes.size()};
         const bool woff = bytes.size() >= 4 && bytes[0] == 'w' && bytes[1] == 'O' && bytes[2] == 'F';
-        const PrStatus status = woff ? prFontCreateWoff(view, 0, nullptr, prCompressBuiltinCreate(), &font)
-                                     : prFontCreate(view, 0, nullptr, &font);
+        PrStatus status;
+        if (woff)
+            status = prFontCreateWoff(view, 0, nullptr, prCompressBuiltinCreate(), &font);
+        else
+            status = prFontCreate(view, 0, nullptr, &font);
         if (status != PrStatus_Ok) {
             std::fprintf(stderr, "viewer: no font at %s; ./dev.sh fetch fonts\n", path.c_str());
             std::exit(1);
@@ -382,8 +383,10 @@ float drawText(PrDrawList* list, const TextStyle& style, const char* text, PrVec
 }
 
 void label(const char* text, PrVec2 origin, float size, PrColor tint) {
-    pendingCaptions().push_back(Caption{PrRect{origin.x, origin.y - size, origin.x, origin.y + 4},
-                                        text, false, size, tint});
+    pendingCaptions().push_back(Caption{
+        PrRect{origin.x, origin.y - size, origin.x, origin.y + 4},
+        text, false, size, tint,
+    });
 }
 
 void releaseDrawingText() {

@@ -29,8 +29,8 @@ PR_NO_PADDING_END
 PrLayoutStyleIndex labelStyle(Kit& kit, const PrKitTextStyle& style) {
     PrKitWrap wrap = kitTextWrap(kit, style.role, style.wrap);
     return kitStyle(kit, LabelBox{.clips = wrap == PrKitWrap_Clip},
-                    KitFont{.role = style.role, .wrap = wrap, .align = style.align, .preserve = style.preserve},
-                    KitToneInk{.tone = kitTextTone(kit, style.role, style.tone)});
+        KitFont{.role = style.role, .wrap = wrap, .align = style.align, .preserve = style.preserve},
+        KitToneInk{.tone = kitTextTone(kit, style.role, style.tone)});
 }
 
 } // namespace

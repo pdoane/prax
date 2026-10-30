@@ -50,8 +50,8 @@ void eachBox(const uint8_t* data, const uint8_t* end, Visit visit) {
 }
 
 constexpr uint32_t fourCc(const char (&code)[5]) {
-    return uint32_t(uint8_t(code[0])) << 24 | uint32_t(uint8_t(code[1])) << 16
-           | uint32_t(uint8_t(code[2])) << 8 | uint32_t(uint8_t(code[3]));
+    return uint32_t(uint8_t(code[0])) << 24 | uint32_t(uint8_t(code[1])) << 16 |
+        uint32_t(uint8_t(code[2])) << 8 | uint32_t(uint8_t(code[3]));
 }
 
 // Reads the duration of a movie (its mvhd box) and the size of its first video track (a trak whose handler is vide,
@@ -79,22 +79,19 @@ bool readMp4(PrStringView resource, Metadata* out) {
                 uint32_t width = 0;
                 uint32_t height = 0;
                 bool video = false;
-                eachBox(body, body + length,
-                        [&](uint32_t part, const uint8_t* bytes, size_t count) {
-                            if (part == fourCc("tkhd")) {
-                                size_t at = bytes[0] == 1 ? 88 : 76;
-                                if (count >= at + 8) {
-                                    width = readBeU32(bytes + at) >> 16;
-                                    height = readBeU32(bytes + at + 4) >> 16;
-                                }
-                            } else if (part == fourCc("mdia")) {
-                                eachBox(bytes, bytes + count,
-                                        [&](uint32_t inner, const uint8_t* handler, size_t n) {
-                                            video |= inner == fourCc("hdlr") && n >= 12
-                                                     && readBeU32(handler + 8) == fourCc("vide");
-                                        });
-                            }
+                eachBox(body, body + length, [&](uint32_t part, const uint8_t* bytes, size_t count) {
+                    if (part == fourCc("tkhd")) {
+                        size_t at = bytes[0] == 1 ? 88 : 76;
+                        if (count >= at + 8) {
+                            width = readBeU32(bytes + at) >> 16;
+                            height = readBeU32(bytes + at + 4) >> 16;
+                        }
+                    } else if (part == fourCc("mdia")) {
+                        eachBox(bytes, bytes + count, [&](uint32_t inner, const uint8_t* handler, size_t n) {
+                            video |= inner == fourCc("hdlr") && n >= 12 && readBeU32(handler + 8) == fourCc("vide");
                         });
+                    }
+                });
                 if (video) {
                     out->width = width;
                     out->height = height;
@@ -203,9 +200,9 @@ void queueSettle(HtmlMedia* media, PrStringView event, PrStringView rejection) {
 // Returns true if the element is potentially playing (html/#potentially-playing). A seek pauses the timeline of a
 // potentially playing element.
 bool potentiallyPlaying(const HtmlMedia* media) {
-    return !media->paused && media->error == PrHtmlMediaError_None
-        && media->readyState >= PrHtmlMediaReadyState_HaveFutureData && !media->seeking
-        && !(media->position >= media->duration && media->rate > 0 && !isNanF64(media->duration));
+    return !media->paused && media->error == PrHtmlMediaError_None &&
+        media->readyState >= PrHtmlMediaReadyState_HaveFutureData && !media->seeking &&
+        !(media->position >= media->duration && media->rate > 0 && !isNanF64(media->duration));
 }
 
 // Adds [start, end] to the played ranges (html/#dom-media-played), merging it with each range that it touches.
@@ -229,8 +226,7 @@ void addPlayed(HtmlMedia* media, double start, double end) {
 double currentPosition(const HtmlMedia* media) {
     if (!potentiallyPlaying(media))
         return media->position;
-    double position =
-        media->position + (prTimeMonotonicMilliseconds() - media->since) / 1000 * media->rate;
+    double position = media->position + (prTimeMonotonicMilliseconds() - media->since) / 1000 * media->rate;
     if (!isNanF64(media->duration) && position > media->duration)
         position = media->duration;
     return position < 0 ? 0 : position;
@@ -241,7 +237,7 @@ void settlePosition(HtmlMedia* media) {
     double position = currentPosition(media);
     if (position != media->position)
         addPlayed(media, media->position < position ? media->position : position,
-                  media->position < position ? position : media->position);
+            media->position < position ? position : media->position);
     media->position = position;
     media->since = prTimeMonotonicMilliseconds();
 }
@@ -249,9 +245,7 @@ void settlePosition(HtmlMedia* media) {
 // Returns true if the element is muted: as a script last set it, or else as its muted attribute says
 // (html/#dom-media-muted).
 bool isMuted(const HtmlMedia* media) {
-    return media->mutedSet
-               ? media->muted
-               : domAttribute(media->element, PrDomNamespace_None, "muted") != nullptr;
+    return media->mutedSet ? media->muted : domAttribute(media->element, PrDomNamespace_None, "muted") != nullptr;
 }
 
 // Updates the pseudo-classes of the element's state (DomMediaFlags).
@@ -263,8 +257,8 @@ void updateFlags(HtmlMedia* media) {
         flags |= DomMediaFlag_Playing;
     if (media->seeking)
         flags |= DomMediaFlag_Seeking;
-    if (!media->paused && media->networkState == PrHtmlMediaNetworkState_Loading
-        && media->readyState <= PrHtmlMediaReadyState_HaveCurrentData)
+    if (!media->paused && media->networkState == PrHtmlMediaNetworkState_Loading &&
+            media->readyState <= PrHtmlMediaReadyState_HaveCurrentData)
         flags |= DomMediaFlag_Buffering;
     if (isMuted(media))
         flags |= DomMediaFlag_Muted;
@@ -321,9 +315,11 @@ void schedule(HtmlMedia* media) {
     }
     // The timer holds the element.
     PrHtmlTimerHandler handler = {
-        timerFired, media,
+        timerFired,
+        media,
         [](void* context) { domNodeHold(static_cast<HtmlMedia*>(context)->element); },
-        [](void* context) { domNodeUnhold(static_cast<HtmlMedia*>(context)->element); }};
+        [](void* context) { domNodeUnhold(static_cast<HtmlMedia*>(context)->element); },
+    };
     // Playing in a loop never ends, so its time updates do not keep the window from being idle. Playing to the end
     // does, because the end fires events.
     bool loops = domAttribute(media->element, PrDomNamespace_None, "loop") != nullptr;
@@ -339,23 +335,20 @@ void notifyPlaying(HtmlMedia* media) {
 void setReadyState(HtmlMedia* media, PrHtmlMediaReadyState state) {
     PrHtmlMediaReadyState was = media->readyState;
     media->readyState = state;
-    if (was < PrHtmlMediaReadyState_HaveCurrentData
-        && state >= PrHtmlMediaReadyState_HaveCurrentData && !media->loadedData) {
+    if (was < PrHtmlMediaReadyState_HaveCurrentData &&
+            state >= PrHtmlMediaReadyState_HaveCurrentData && !media->loadedData) {
         media->loadedData = true;
         queueEvent(media, "loadeddata");
     }
-    if (was < PrHtmlMediaReadyState_HaveFutureData
-        && state >= PrHtmlMediaReadyState_HaveFutureData) {
+    if (was < PrHtmlMediaReadyState_HaveFutureData && state >= PrHtmlMediaReadyState_HaveFutureData) {
         queueEvent(media, "canplay");
         if (!media->paused)
             notifyPlaying(media);
     }
-    if (was < PrHtmlMediaReadyState_HaveEnoughData
-        && state == PrHtmlMediaReadyState_HaveEnoughData) {
+    if (was < PrHtmlMediaReadyState_HaveEnoughData && state == PrHtmlMediaReadyState_HaveEnoughData) {
         // html/#eligible-for-autoplay: the autoplay attribute plays a paused element that no script has paused or
         // played.
-        if (media->paused && media->autoplaying
-            && domAttribute(media->element, PrDomNamespace_None, "autoplay") != nullptr) {
+        if (media->paused && media->autoplaying && domAttribute(media->element, PrDomNamespace_None, "autoplay") != nullptr) {
             media->paused = false;
             media->since = prTimeMonotonicMilliseconds();
             queueEvent(media, "play");
@@ -439,8 +432,8 @@ void candidateFailed(MediaTask* fetch) {
 // holds the element, and holds the source child that it belongs to as its target.
 void candidateFetched(void* PR_NULLABLE data, const DomFetchResult* result) {
     MediaTask* fetch = static_cast<MediaTask*>(data);
-    if (fetch->load == fetch->media->load
-        && (result->status != PrStatus_Ok || !resourceArrived(fetch->media, result->body)))
+    if (fetch->load == fetch->media->load &&
+            (result->status != PrStatus_Ok || !resourceArrived(fetch->media, result->body)))
         candidateFailed(fetch);
     dropTask(fetch);
 }
@@ -461,8 +454,10 @@ void fetchCandidate(HtmlMedia* media, const PrUrl* url, PrDomElement* PR_NULLABL
         return;
     }
     PrString request = prUrlSerialize(url, PrUrlSerialization_ExcludeFragment);
-    DomFetchRequest asked{prStringView(&request), DomFetchDestination_Media,
-                          domCorsSettings(domAttributeValue(media->element, "crossorigin"))};
+    DomFetchRequest asked{
+        prStringView(&request), DomFetchDestination_Media,
+        domCorsSettings(domAttributeValue(media->element, "crossorigin")),
+    };
     host->fetch(host->context, &asked, candidateFetched, fetch, dropTask);
     prStringReset(&request);
 }
@@ -476,10 +471,11 @@ void trySources(HtmlMedia* media, const PrDomNode* PR_NULLABLE from) {
         if (!domIsHtml(source, PrDomTag_Source))
             continue;
         const PrDomAttr* type = domAttribute(source, PrDomNamespace_None, "type");
-        PrUrl* url =
-            type != nullptr && htmlCanPlayType(prStringView(&type->value)) == PrHtmlCanPlay_No
-                ? nullptr
-                : candidateUrl(media, domAttributeValue(source, "src"));
+        PrUrl* url;
+        if (type != nullptr && htmlCanPlayType(prStringView(&type->value)) == PrHtmlCanPlay_No)
+            url = nullptr;
+        else
+            url = candidateUrl(media, domAttributeValue(source, "src"));
         if (url != nullptr) {
             fetchCandidate(media, url, source);
             prUrlDestroy(url);
@@ -503,8 +499,7 @@ void selectResource(MediaTask* task) {
     PrDomElement* element = media->element;
     const PrDomAttr* src = domAttribute(element, PrDomNamespace_None, "src");
     const PrDomElement* firstSource = nullptr;
-    for (const PrDomNode* child = element->first; child != nullptr && firstSource == nullptr;
-         child = child->next) {
+    for (const PrDomNode* child = element->first; child != nullptr && firstSource == nullptr; child = child->next) {
         const PrDomElement* candidate = domElementFromNode(child);
         if (domIsHtml(candidate, PrDomTag_Source))
             firstSource = candidate;
@@ -622,8 +617,7 @@ void removedTask(void* data) {
 
 HtmlMedia* PR_NULLABLE htmlMediaFromElement(PrDomElement* element) {
     PrHtmlWindow* window = static_cast<PrHtmlWindow*>(element->document->global);
-    if (window == nullptr || window->document != element->document
-        || element->document->host == nullptr)
+    if (window == nullptr || window->document != element->document || element->document->host == nullptr)
         return nullptr;
     DomElementState* state = domElementState(element);
     if (state->forgetEmbedded == forgetMedia)
@@ -687,8 +681,7 @@ void htmlMediaChanged(PrDomElement* element, PrStringView attribute) {
 void htmlMediaLoad(HtmlMedia* media) {
     ++media->load;
     media->played.clear();
-    if (media->networkState == PrHtmlMediaNetworkState_Loading
-        || media->networkState == PrHtmlMediaNetworkState_Idle)
+    if (media->networkState == PrHtmlMediaNetworkState_Loading || media->networkState == PrHtmlMediaNetworkState_Idle)
         queueEvent(media, "abort");
     if (media->networkState != PrHtmlMediaNetworkState_Empty) {
         queueEvent(media, "emptied");
@@ -762,9 +755,9 @@ void htmlMediaSeek(HtmlMedia* media, double seconds) {
 
 bool htmlMediaEnded(HtmlMedia* media) {
     // html/#ended-playback, playing forwards.
-    return media->readyState >= PrHtmlMediaReadyState_HaveMetadata && !isNanF64(media->duration)
-        && currentPosition(media) >= media->duration && media->rate >= 0
-        && domAttribute(media->element, PrDomNamespace_None, "loop") == nullptr;
+    return media->readyState >= PrHtmlMediaReadyState_HaveMetadata && !isNanF64(media->duration) &&
+        currentPosition(media) >= media->duration && media->rate >= 0 &&
+        domAttribute(media->element, PrDomNamespace_None, "loop") == nullptr;
 }
 
 void htmlMediaPlay(HtmlMedia* media, const PrHtmlPlayPromise& promise) {

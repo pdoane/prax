@@ -25,8 +25,8 @@ bool pngSize(const fs::path& path, float* width, float* height) {
     if (header.size() < 24)
         return false;
     auto word = [&](size_t at) {
-        return uint32_t(uint8_t(header[at])) << 24 | uint32_t(uint8_t(header[at + 1])) << 16
-               | uint32_t(uint8_t(header[at + 2])) << 8 | uint32_t(uint8_t(header[at + 3]));
+        return uint32_t(uint8_t(header[at])) << 24 | uint32_t(uint8_t(header[at + 1])) << 16 |
+            uint32_t(uint8_t(header[at + 2])) << 8 | uint32_t(uint8_t(header[at + 3]));
     };
     *width = float(word(16));
     *height = float(word(20));
@@ -57,8 +57,8 @@ std::vector<fs::path> filesUnder(const fs::path& root, const char* extension) {
 bool undefinedBehavior(const std::string& text) {
     size_t title = text.find("<title>");
     size_t end = text.find("</title>", title);
-    return title != std::string::npos && end != std::string::npos
-           && text.substr(title, end - title).find("(UB)") != std::string::npos;
+    return title != std::string::npos && end != std::string::npos &&
+        text.substr(title, end - title).find("(UB)") != std::string::npos;
 }
 
 // Returns resvg's tests, each against its PNG, at the PNG's size.
@@ -70,8 +70,10 @@ std::vector<Document> resvg() {
         png.replace_extension(".png");
         if (!fs::exists(png) || undefinedBehavior(readFile(svg)))
             continue;
-        Document d{fs::relative(svg, root).string(), "the resvg test suite, against its PNG",
-                   fileSource(svg, settingsOf("resvg"))};
+        Document d{
+            fs::relative(svg, root).string(), "the resvg test suite, against its PNG",
+            fileSource(svg, settingsOf("resvg")),
+        };
         d.references.push_back(Reference{"corpus", fileSource(png)});
         pngSize(png, &d.width, &d.height);
         documents.push_back(std::move(d));

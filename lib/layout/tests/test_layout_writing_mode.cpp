@@ -16,7 +16,7 @@ struct Page {
 
     // Returns a font of 20px on 40px lines, in `mode` and `direction`.
     static PrLayoutFontStyle font(PrLayoutWritingMode mode = PrLayoutWritingMode_HorizontalTb,
-                                  PrTextDirection direction = PrTextDirection_Ltr) {
+            PrTextDirection direction = PrTextDirection_Ltr) {
         PrLayoutFontStyle font = prLayoutFontStyleDefault();
         font.font = textFontOf(20);
         font.lineHeight = prLayoutLineHeightPx(40);
@@ -32,15 +32,15 @@ struct Page {
 
     // Creates an element under `parent` styled by `box`, in `mode` and `direction`.
     PrLayoutNode add(PrLayoutNode parent, const PrLayoutBoxStyle& box,
-                     PrLayoutWritingMode mode = PrLayoutWritingMode_HorizontalTb,
-                     PrTextDirection direction = PrTextDirection_Ltr) {
+            PrLayoutWritingMode mode = PrLayoutWritingMode_HorizontalTb,
+            PrTextDirection direction = PrTextDirection_Ltr) {
         PrLayoutFontStyle style = font(mode, direction);
         return f.element(parent, box, nullptr, nullptr, &style);
     }
 
     // Creates a flow-root stage under the root, `width` wide and `height` tall, each auto if negative.
     PrLayoutNode stage(float width, float height, PrLayoutWritingMode mode = PrLayoutWritingMode_HorizontalTb,
-                       PrTextDirection direction = PrTextDirection_Ltr) {
+            PrTextDirection direction = PrTextDirection_Ltr) {
         PrLayoutBoxStyle box = block();
         box.display = PrLayoutDisplay_FlowRoot;
         if (width >= 0)
@@ -89,7 +89,7 @@ constexpr PrLayoutWritingMode kLr = PrLayoutWritingMode_VerticalLr;
 
 // Text long enough to wrap at any measure a case uses.
 constexpr const char* kLong = "aaa bbb ccc ddd eee fff ggg hhh iii jjj kkk lll mmm nnn ooo ppp qqq rrr sss ttt uuu "
-                              "vvv www xxx yyy zzz";
+    "vvv www xxx yyy zzz";
 
 // Returns a scroll container `width` by `height` with `padding` on each side.
 PrLayoutBoxStyle scroller(float width, float height, float padding = 0) {
@@ -134,9 +134,11 @@ void appendPainted(const PrDrawList* list, PrDAffine2 transform, std::vector<Pai
             case PrDrawCommandKind_Embed: appendPainted(command.embed.list, t, out); break;
             case PrDrawCommandKind_PushTransformAffine2: {
                 const PrDAffine2& m = command.affine;
-                stack.push_back(PrDAffine2{t.a * m.a + t.c * m.b, t.b * m.a + t.d * m.b, t.a * m.c + t.c * m.d,
-                                           t.b * m.c + t.d * m.d, t.a * m.e + t.c * m.f + t.e,
-                                           t.b * m.e + t.d * m.f + t.f});
+                stack.push_back(PrDAffine2{
+                    t.a * m.a + t.c * m.b, t.b * m.a + t.d * m.b, t.a * m.c + t.c * m.d,
+                    t.b * m.c + t.d * m.d, t.a * m.e + t.c * m.f + t.e,
+                    t.b * m.e + t.d * m.f + t.f,
+                });
                 break;
             }
             case PrDrawCommandKind_PopTransform: stack.pop_back(); break;
@@ -145,9 +147,11 @@ void appendPainted(const PrDrawList* list, PrDAffine2 transform, std::vector<Pai
                     PrVec2 p = command.glyphs->glyphs[g].position;
                     double x = double(p.x);
                     double y = double(p.y);
-                    out.push_back(Painted{command.glyphs->glyphs[g].id, t.a * x + t.c * y + t.e,
-                                          t.b * x + t.d * y + t.f,
-                                          t.b != 0});
+                    out.push_back(Painted{
+                        command.glyphs->glyphs[g].id, t.a * x + t.c * y + t.e,
+                        t.b * x + t.d * y + t.f,
+                        t.b != 0,
+                    });
                 }
                 break;
             default: break;
@@ -636,8 +640,8 @@ TEST_CASE("a scroll container scrolls from its writing mode's start corner, with
         PrLayoutNode box = p.add(p.root, scroller(100, 100), c.mode, c.direction);
         bool horizontal = c.mode == PrLayoutWritingMode_HorizontalTb;
         bool inlineOverflow = horizontal || c.direction == PrTextDirection_Rtl;
-        PrLayoutNode child = p.add(box, inlineOverflow == horizontal ? sized(300, 10) : sized(10, 300), c.mode,
-                                   c.direction);
+        PrLayoutNode child =
+            p.add(box, inlineOverflow == horizontal ? sized(300, 10) : sized(10, 300), c.mode, c.direction);
         p.layout();
         Scroll s = scrollOf(p, box);
         CHECK(s.range.left == c.range.left);
@@ -695,8 +699,7 @@ TEST_CASE("a clipping child's content stays clipped, and its whole border box re
             CAPTURE(int(direction));
             Page p;
             PrLayoutNode box = p.add(p.root, scroller(100, 100), PrLayoutWritingMode_HorizontalTb, direction);
-            PrLayoutNode parent =
-                wrapped ? p.add(box, sized(100, -1), PrLayoutWritingMode_HorizontalTb, direction) : box;
+            PrLayoutNode parent = wrapped ? p.add(box, sized(100, -1), PrLayoutWritingMode_HorizontalTb, direction) : box;
             PrLayoutBoxStyle clipping = sized(300, 40);
             clipping.boxSizing = PrLayoutBoxSizing_BorderBox;
             clipping.overflowX = PrLayoutOverflow_Hidden;
@@ -1058,9 +1061,11 @@ TEST_CASE("an orthogonal flow root's min block size resolves a cyclic percentage
         outer.floating = PrLayoutFloat_Left;
         PrLayoutNode wrapper = p.add(p.root, outer);
         PrLayoutBoxStyle inner = sized(40, 20);
-        PrLayoutCalcNode nodes[] = {prLayoutCalcOperation(PrLayoutCalcOp_Sum, 2),
-                                    prLayoutCalcLeaf(PrLayoutCalcLeaf_Px, 160),
-                                    prLayoutCalcLeaf(PrLayoutCalcLeaf_Percent, 0)};
+        PrLayoutCalcNode nodes[] = {
+            prLayoutCalcOperation(PrLayoutCalcOp_Sum, 2),
+            prLayoutCalcLeaf(PrLayoutCalcLeaf_Px, 160),
+            prLayoutCalcLeaf(PrLayoutCalcLeaf_Percent, 0),
+        };
         inner.minWidth = raw ? prLayoutLengthPercent(200) : prLayoutLengthIntern(p.f.tree, nodes, 3);
         PrLayoutNode box = p.add(wrapper, inner, kRl);
         p.layout();

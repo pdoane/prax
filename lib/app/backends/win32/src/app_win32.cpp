@@ -272,7 +272,7 @@ KeyText translateKey(UINT message, WPARAM virtualKey, LPARAM flags) {
     HKL layout = GetKeyboardLayout(0);
     if ((state[VK_RMENU] & 0x80) != 0) {
         text.count = ToUnicodeEx(UINT(virtualKey), scan, state, text.units, int(countOf(text.units)),
-                                 kToUnicodeKeepState, layout);
+            kToUnicodeKeepState, layout);
         if (text.count < 0 || isPrintable(text.units, text.count)) {
             text.dead = text.count < 0;
             text.count = text.dead ? 0 : text.count;
@@ -281,8 +281,7 @@ KeyText translateKey(UINT message, WPARAM virtualKey, LPARAM flags) {
     }
     state[VK_CONTROL] = state[VK_LCONTROL] = state[VK_RCONTROL] = 0;
     state[VK_MENU] = state[VK_LMENU] = state[VK_RMENU] = 0;
-    text.count = ToUnicodeEx(UINT(virtualKey), scan, state, text.units, int(countOf(text.units)), kToUnicodeKeepState,
-                             layout);
+    text.count = ToUnicodeEx(UINT(virtualKey), scan, state, text.units, int(countOf(text.units)), kToUnicodeKeepState, layout);
     text.dead = text.count < 0;
     if (text.dead || !isPrintable(text.units, text.count))
         text.count = 0;
@@ -303,8 +302,10 @@ void endCallback(Win32App* app) {
     for (uint32_t i = 0; i < app->held.count && app->running; ++i) {
         // An event that its delivery holds goes to the end of the array, which may move the array but not the text.
         PrAppEvent event = app->held.data[i].event;
-        event.text = PrStringView{app->held.data[i].text.data != nullptr ? app->held.data[i].text.data : "",
-                                  app->held.data[i].text.count};
+        event.text = PrStringView{
+            app->held.data[i].text.data != nullptr ? app->held.data[i].text.data : "",
+            app->held.data[i].text.count,
+        };
         callEvent(app, event);
     }
     for (uint32_t i = 0; i < app->held.count; ++i)
@@ -355,16 +356,16 @@ float sdrWhiteNits(HMONITOR monitor) {
     info.cbSize = sizeof(info);
     UINT32 pathCount = 0;
     UINT32 modeCount = 0;
-    if (!GetMonitorInfoW(monitor, &info)
-        || GetDisplayConfigBufferSizes(QDC_ONLY_ACTIVE_PATHS, &pathCount, &modeCount) != ERROR_SUCCESS)
+    if (!GetMonitorInfoW(monitor, &info) ||
+            GetDisplayConfigBufferSizes(QDC_ONLY_ACTIVE_PATHS, &pathCount, &modeCount) != ERROR_SUCCESS)
         return kDefaultSdrWhiteNits;
     Array<DISPLAYCONFIG_PATH_INFO> paths;
     Array<DISPLAYCONFIG_MODE_INFO> modes;
     paths.resize(pathCount);
     modes.resize(modeCount);
     float nits = kDefaultSdrWhiteNits;
-    if (QueryDisplayConfig(QDC_ONLY_ACTIVE_PATHS, &pathCount, paths.data, &modeCount, modes.data, nullptr)
-        == ERROR_SUCCESS) {
+    if (QueryDisplayConfig(QDC_ONLY_ACTIVE_PATHS, &pathCount, paths.data, &modeCount, modes.data, nullptr) ==
+            ERROR_SUCCESS) {
         for (uint32_t i = 0; i < pathCount; ++i) {
             const DISPLAYCONFIG_PATH_INFO& path = paths.data[i];
             DISPLAYCONFIG_SOURCE_DEVICE_NAME source{};
@@ -372,8 +373,8 @@ float sdrWhiteNits(HMONITOR monitor) {
             source.header.size = sizeof(source);
             source.header.adapterId = path.sourceInfo.adapterId;
             source.header.id = path.sourceInfo.id;
-            if (DisplayConfigGetDeviceInfo(&source.header) != ERROR_SUCCESS
-                || CompareStringOrdinal(source.viewGdiDeviceName, -1, info.szDevice, -1, TRUE) != CSTR_EQUAL)
+            if (DisplayConfigGetDeviceInfo(&source.header) != ERROR_SUCCESS ||
+                    CompareStringOrdinal(source.viewGdiDeviceName, -1, info.szDevice, -1, TRUE) != CSTR_EQUAL)
                 continue;
             DISPLAYCONFIG_SDR_WHITE_LEVEL white{};
             white.header.type = DISPLAYCONFIG_DEVICE_INFO_GET_SDR_WHITE_LEVEL;
@@ -405,8 +406,10 @@ constexpr Primaries kGamuts[] = {
 
 // The RGB space whose primaries are nearest the display's.
 PrColorSpace gamutOf(const DXGI_OUTPUT_DESC1& desc) {
-    const float display[6] = {desc.RedPrimary[0],   desc.RedPrimary[1],  desc.GreenPrimary[0],
-                              desc.GreenPrimary[1], desc.BluePrimary[0], desc.BluePrimary[1]};
+    const float display[6] = {
+        desc.RedPrimary[0],   desc.RedPrimary[1],  desc.GreenPrimary[0],
+        desc.GreenPrimary[1], desc.BluePrimary[0], desc.BluePrimary[1],
+    };
     PrColorSpace nearest = PrColorSpace_Srgb;
     float nearestDistance = 0;
     for (uint32_t g = 0; g < countOf(kGamuts); ++g) {
@@ -446,9 +449,9 @@ void refreshDisplay(Win32App* app, double now) {
         if (app->output != nullptr)
             app->output->Release();
         app->output = nullptr;
-        if (app->factory == nullptr
-            && FAILED(CreateDXGIFactory1(__uuidof(IDXGIFactory1), reinterpret_cast<void**>(&app->factory))))
-            app->factory = nullptr;
+        if (app->factory == nullptr &&
+            FAILED(CreateDXGIFactory1(__uuidof(IDXGIFactory1), reinterpret_cast<void**>(&app->factory))))
+        app->factory = nullptr;
         if (app->factory != nullptr)
             app->output = outputOf(app->factory, monitor);
         app->monitor = monitor;
@@ -456,8 +459,8 @@ void refreshDisplay(Win32App* app, double now) {
     PrAppDisplay& display = app->display;
     display = prAppDisplayDefault();
     DXGI_OUTPUT_DESC1 desc;
-    if (app->output != nullptr && SUCCEEDED(app->output->GetDesc1(&desc))
-        && desc.ColorSpace == DXGI_COLOR_SPACE_RGB_FULL_G2084_NONE_P2020) {
+    if (app->output != nullptr && SUCCEEDED(app->output->GetDesc1(&desc)) &&
+            desc.ColorSpace == DXGI_COLOR_SPACE_RGB_FULL_G2084_NONE_P2020) {
         float headroom = desc.MaxLuminance / sdrWhiteNits(monitor);
         display.headroom = headroom > 1 ? headroom : 1;
         display.potentialHeadroom = display.headroom;
@@ -468,8 +471,8 @@ void refreshDisplay(Win32App* app, double now) {
 DWORD personalizeValue(const wchar_t* name, DWORD fallback) {
     DWORD value = 0;
     DWORD size = sizeof(value);
-    if (RegGetValueW(HKEY_CURRENT_USER, kPersonalizeKey, name, RRF_RT_REG_DWORD, nullptr, &value, &size)
-        != ERROR_SUCCESS)
+    if (RegGetValueW(HKEY_CURRENT_USER, kPersonalizeKey, name, RRF_RT_REG_DWORD, nullptr, &value, &size) !=
+            ERROR_SUCCESS)
         return fallback;
     return value;
 }
@@ -483,8 +486,8 @@ void refreshPreferences(Win32App* app) {
         preferences.colorScheme = PrAppColorScheme_Dark;
     HIGHCONTRASTW contrast{};
     contrast.cbSize = sizeof(contrast);
-    if (SystemParametersInfoW(SPI_GETHIGHCONTRAST, sizeof(contrast), &contrast, 0)
-        && (contrast.dwFlags & HCF_HIGHCONTRASTON) != 0) {
+    if (SystemParametersInfoW(SPI_GETHIGHCONTRAST, sizeof(contrast), &contrast, 0) &&
+            (contrast.dwFlags & HCF_HIGHCONTRASTON) != 0) {
         preferences.contrast = PrAppContrast_More;
         COLORREF background = GetSysColor(COLOR_WINDOW);
         uint32_t luma = 2126u * GetRValue(background) + 7152u * GetGValue(background) + 722u * GetBValue(background);
@@ -608,8 +611,8 @@ PrVec2 positionOf(Win32App* app, int x, int y) {
 // Returns true if the key state of a pointer message has a button down.
 bool anyButtonDown(WPARAM keyState) {
     WORD buttons = LOWORD(keyState);
-    return (buttons & MK_LBUTTON) != 0 || (buttons & MK_RBUTTON) != 0 || (buttons & MK_MBUTTON) != 0
-           || (buttons & MK_XBUTTON1) != 0 || (buttons & MK_XBUTTON2) != 0;
+    return (buttons & MK_LBUTTON) != 0 || (buttons & MK_RBUTTON) != 0 || (buttons & MK_MBUTTON) != 0 ||
+        (buttons & MK_XBUTTON1) != 0 || (buttons & MK_XBUTTON2) != 0;
 }
 
 void deliverPointer(Win32App* app, UINT message, WPARAM wParam, LPARAM lParam) {
@@ -644,8 +647,7 @@ void deliverPointer(Win32App* app, UINT message, WPARAM wParam, LPARAM lParam) {
     // the window. The buttons are recorded first, since a release of the capture reports a loss of it.
     if (event.kind == PrAppEventKind_PointerDown && GetCapture() != app->window)
         SetCapture(app->window);
-    else if (event.kind == PrAppEventKind_PointerUp && !anyButtonDown(wParam)
-             && GetCapture() == app->window)
+    else if (event.kind == PrAppEventKind_PointerUp && !anyButtonDown(wParam) && GetCapture() == app->window)
         ReleaseCapture();
     deliver(app, event);
 }
@@ -696,8 +698,8 @@ void deliverScroll(Win32App* app, WPARAM wParam, LPARAM lParam, bool horizontal)
     UINT lines = 3;
     SystemParametersInfoW(horizontal ? SPI_GETWHEELSCROLLCHARS : SPI_GETWHEELSCROLLLINES, 0, &lines, 0);
     PrVec2 extent = extentOf(app);
-    float perNotch = lines == WHEEL_PAGESCROLL ? (horizontal ? extent.x : extent.y) / kPrAppScrollLineHeight
-                                               : float(lines);
+    float perNotch =
+        lines == WHEEL_PAGESCROLL ? (horizontal ? extent.x : extent.y) / kPrAppScrollLineHeight : float(lines);
     float notches = float(GET_WHEEL_DELTA_WPARAM(wParam)) / float(WHEEL_DELTA);
     PrAppEvent event{};
     event.kind = PrAppEventKind_Scroll;
@@ -739,9 +741,11 @@ void deliverKey(Win32App* app, UINT message, WPARAM virtualKey, LPARAM flags) {
     }
     if (event.key == PrAppKey_Unknown) {
         const KeyText& stashed = app->keyText;
-        KeyText text = stashed.message == message && stashed.virtualKey == virtualKey && stashed.flags == flags
-                           ? stashed
-                           : translateKey(message, virtualKey, flags);
+        KeyText text;
+        if (stashed.message == message && stashed.virtualKey == virtualKey && stashed.flags == flags)
+            text = stashed;
+        else
+            text = translateKey(message, virtualKey, flags);
         if (text.dead) {
             event.key = PrAppKey_Dead;
         } else if (text.count != 0) {
@@ -888,7 +892,7 @@ void deliverComposition(Win32App* app, LPARAM flags) {
             PrAppTextRange selection{win32Utf8Length(app->utf16.data, start), win32Utf8Length(app->utf16.data, end)};
             app->composing = true;
             deliverText(app, PrAppEventKind_CompositionUpdate, win32Narrow(app->utf16.data, count, app->utf8),
-                        selection);
+                selection);
         }
     }
     ImmReleaseContext(app->window, context);
@@ -978,7 +982,7 @@ LRESULT CALLBACK windowProc(HWND window, UINT message, WPARAM wParam, LPARAM lPa
             app->dpi = HIWORD(wParam);
             const RECT* suggested = reinterpret_cast<const RECT*>(lParam);
             SetWindowPos(window, nullptr, suggested->left, suggested->top, suggested->right - suggested->left,
-                         suggested->bottom - suggested->top, SWP_NOZORDER | SWP_NOACTIVATE);
+                suggested->bottom - suggested->top, SWP_NOZORDER | SWP_NOACTIVATE);
             app->requestFrame(app);
             return 0;
         }
@@ -1168,7 +1172,7 @@ void run(PrApp* base, const PrAppHandler* handler) {
     HINSTANCE instance = GetModuleHandleW(nullptr);
     registerClass(instance);
     app->window = CreateWindowExW(0, kClassName, app->title, styleOf(app), CW_USEDEFAULT, CW_USEDEFAULT,
-                                  CW_USEDEFAULT, CW_USEDEFAULT, nullptr, nullptr, instance, app);
+        CW_USEDEFAULT, CW_USEDEFAULT, nullptr, nullptr, instance, app);
     if (app->window == nullptr)
         PR_FATAL("the application's window could not be created");
     app->dpi = GetDpiForWindow(app->window);
@@ -1295,8 +1299,8 @@ void setCursor(PrApp* base, PrAppCursor cursor) {
     // WM_SETCURSOR applies the shape on the pointer's next move, and a pointer that rests over the window takes it now.
     POINT point;
     RECT client;
-    if (GetCursorPos(&point) && WindowFromPoint(point) == app->window && ScreenToClient(app->window, &point)
-        && GetClientRect(app->window, &client) && PtInRect(&client, point))
+    if (GetCursorPos(&point) && WindowFromPoint(point) == app->window && ScreenToClient(app->window, &point) &&
+            GetClientRect(app->window, &client) && PtInRect(&client, point))
         SetCursor(selected);
 }
 
@@ -1326,8 +1330,8 @@ bool isUrl(PrStringView text) {
     }
     for (size_t i = colon + 1; i < text.size; ++i) {
         unsigned char c = static_cast<unsigned char>(text.data[i]);
-        if (c <= 0x20 || c == 0x7F || c == '"' || c == '<' || c == '>' || c == '\\' || c == '^' || c == '`'
-            || c == '{' || c == '|' || c == '}')
+        if (c <= 0x20 || c == 0x7F || c == '"' || c == '<' || c == '>' || c == '\\' || c == '^' || c == '`' ||
+                c == '{' || c == '|' || c == '}')
             return false;
     }
     return true;

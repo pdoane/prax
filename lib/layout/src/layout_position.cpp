@@ -59,7 +59,7 @@ struct InsetAxis {
 // (css-position-3/#resolving-inset-auto). The size of the inset-modified containing block is floored at zero by moving
 // the inset that is not the anchor (csswg-drafts#11478).
 InsetAxis insetAxis(const LayoutStyles* styles, const PrLayoutBoxStyle& box, const LayoutPending& pending,
-                    const LayoutAbsoluteBlock& containing, uint32_t axis) {
+        const LayoutAbsoluteBlock& containing, uint32_t axis) {
     InsetAxis a{};
     PrLayoutLength low = box.inset[kLow[axis]];
     PrLayoutLength high = box.inset[kHigh[axis]];
@@ -115,7 +115,7 @@ InsetAxis insetAxis(const LayoutStyles* styles, const PrLayoutBoxStyle& box, con
 // or is centered in the inset-modified containing block if the anchor is its center, or goes to its start edge if the
 // box of a safe static position overflows it.
 PrLayoutUnit place(const InsetAxis& a, PrLayoutUnit size, PrLayoutUnit low, PrLayoutUnit high, bool autoLow,
-                   bool autoHigh) {
+        bool autoHigh) {
     if (a.safe && size + low + high > a.high - a.low)
         return a.start == AxisEdge_High ? a.high - high - size : a.low + low;
     if (a.anchor == AxisEdge_Center)
@@ -171,8 +171,7 @@ int64_t startward(PrLayoutRect rect, LayoutMode mode) {
 // Adds the parts of the inline box `node` among the children of `fragment`, at `at` from the container's top-left
 // corner. Parts on its lines are found through anonymous boxes, and its rows through the rows around them. On a line,
 // the first and last parts are visual, in the box's own direction (csswg-drafts#7917).
-void findParts(const LayoutFragment* fragment, PrLayoutVec at, LayoutNodeIndex node, LayoutMode mode,
-               InlineParts& found) {
+void findParts(const LayoutFragment* fragment, PrLayoutVec at, LayoutNodeIndex node, LayoutMode mode, InlineParts& found) {
     for (uint32_t i = 0; i < fragment->childCount; ++i) {
         const LayoutChild& child = fragment->children[i];
         const LayoutFragment* f = child.fragment;
@@ -236,7 +235,7 @@ void findParts(const LayoutFragment* fragment, PrLayoutVec at, LayoutNodeIndex n
 // and its inline size is at least zero (csswg-drafts#8284). The box's rows around blocks count as first or last only if
 // it has no part on a line.
 PrLayoutRect inlineBlockOf(const LayoutState& state, const LayoutFragment* fragment, PrLayoutVec at,
-                           LayoutNodeIndex node, LayoutMode mode) {
+        LayoutNodeIndex node, LayoutMode mode) {
     InlineParts found{};
     findParts(fragment, at, node, mode, found);
     if (!found.parts && !found.rows)
@@ -280,7 +279,7 @@ PrLayoutRect inlineBlockOf(const LayoutState& state, const LayoutFragment* fragm
 LayoutNodeIndex inlineHolderOf(const LayoutTree* tree, LayoutNodeIndex node, LayoutNodeIndex container) {
     PrLayoutPosition position = layoutNodePositionScheme(tree, node);
     for (LayoutNodeIndex at = layoutTreeNode(tree, node).parent; at != container && at != kPrLayoutNodeNone;
-         at = layoutTreeNode(tree, at).parent) {
+            at = layoutTreeNode(tree, at).parent) {
         if (layoutIsInlineBox(tree, at) && layoutHoldsPosition(tree, at, position))
             return at;
     }
@@ -294,7 +293,7 @@ LayoutNodeIndex inlineHolderOf(const LayoutTree* tree, LayoutNodeIndex node, Lay
 // kPrLayoutNodeNone. The holder has laid out the change, and a reused ancestor's descendants keep their marks.
 void clearOutOfFlow(LayoutTree* tree, LayoutNodeIndex node, LayoutNodeIndex holder) {
     for (LayoutNodeIndex at = layoutTreeNode(tree, node).parent; at != holder && at != kPrLayoutNodeNone;
-         at = layoutTreeNode(tree, at).parent)
+            at = layoutTreeNode(tree, at).parent)
         tree->nodes.data[at].dirty &= LayoutDirtyFlags(~LayoutDirtyFlag_OutOfFlow);
 }
 
@@ -334,15 +333,19 @@ void holdPending(LayoutState& state, LayoutNodeIndex holder, uint32_t pendingMar
 
 // Lays out the box out of flow that `pending` names against `containing`, and caches its position.
 PR_NOINLINE LayoutChild layOutAbsolute(LayoutState& state, const LayoutPending& pending,
-                                       const LayoutAbsoluteBlock& containing) {
+        const LayoutAbsoluteBlock& containing) {
     LayoutNodeIndex node = pending.node;
     const LayoutTreeNode& n = layoutTreeNode(state.tree, node);
     const PrLayoutBoxStyle& box = layoutBoxStyle(state.styles, n.style);
     bool replaced = n.kind == PrLayoutNodeKind_Replaced;
-    InsetAxis axes[kAxes] = {insetAxis(state.styles, box, pending, containing, 0),
-                             insetAxis(state.styles, box, pending, containing, 1)};
-    PrLayoutVec extent{layoutUnitMax(kLayoutUnitZero, containing.rect.right - containing.rect.left),
-                       layoutUnitMax(kLayoutUnitZero, containing.rect.bottom - containing.rect.top)};
+    InsetAxis axes[kAxes] = {
+        insetAxis(state.styles, box, pending, containing, 0),
+        insetAxis(state.styles, box, pending, containing, 1),
+    };
+    PrLayoutVec extent{
+        layoutUnitMax(kLayoutUnitZero, containing.rect.right - containing.rect.left),
+        layoutUnitMax(kLayoutUnitZero, containing.rect.bottom - containing.rect.top),
+    };
 
     // The space is in the box's own axes, which are crossed if it is an orthogonal flow root. Its percentages resolve
     // against the containing block's sizes, and its automatic sizes fill the inset-modified containing block
@@ -395,9 +398,8 @@ PR_NOINLINE LayoutChild layOutAbsolute(LayoutState& state, const LayoutPending& 
         bool autoLow = layoutLengthIsAuto(low);
         bool autoHigh = layoutLengthIsAuto(high);
         PrLayoutUnit placed = place(axes[axis], along(result.fragment->extent, axis),
-                                    autoLow ? kLayoutUnitZero : layoutResolve(state.styles, low, base),
-                                    autoHigh ? kLayoutUnitZero : layoutResolve(state.styles, high, base), autoLow,
-                                    autoHigh);
+            autoLow ? kLayoutUnitZero : layoutResolve(state.styles, low, base),
+            autoHigh ? kLayoutUnitZero : layoutResolve(state.styles, high, base), autoLow, autoHigh);
         (axis == 0 ? at.x : at.y) = placed;
     }
     layoutCacheStoreAbsolute(state, node, containing, pending.at, pending.edges, at);
@@ -420,7 +422,7 @@ LayoutStaticEdges layoutStaticEdges(LayoutMode mode) {
 }
 
 LayoutStaticEdges layoutStaticEdgesAligned(LayoutMode mode, LayoutStaticAlign inlineAlign,
-                                           LayoutStaticAlign blockAlign, bool inlineSafe, bool blockSafe) {
+        LayoutStaticAlign blockAlign, bool inlineSafe, bool blockSafe) {
     LayoutStaticEdges edges = 0;
     const LayoutSide starts[] = {LayoutSide_InlineStart, LayoutSide_BlockStart};
     const LayoutStaticAlign aligns[] = {inlineAlign, blockAlign};
@@ -452,10 +454,8 @@ LayoutChild layoutAbsolute(LayoutState& state, const LayoutPending& pending, con
 }
 
 LayoutFragment* layoutHolderBuild(LayoutState& state, LayoutNodeIndex node, uint32_t mark, LayoutMode mode,
-                                  LayoutLogicalSize size, PrLayoutVec fallback,
-                                  const LayoutGridLines* PR_NULLABLE grid) {
-    LayoutFragment* built =
-        layoutFragmentBuild(state.scratch->children, mark, LayoutFragmentKind_Box, node, mode, size);
+        LayoutLogicalSize size, PrLayoutVec fallback, const LayoutGridLines* PR_NULLABLE grid) {
+    LayoutFragment* built = layoutFragmentBuild(state.scratch->children, mark, LayoutFragmentKind_Box, node, mode, size);
     if ((built->flags & LayoutFragmentFlag_Pending) == 0)
         return built;
     // What it may hold: the boxes that its position makes it the containing block of, and the absolutely positioned
@@ -479,12 +479,14 @@ LayoutFragment* layoutHolderBuild(LayoutState& state, LayoutNodeIndex node, uint
     s.pending.append(list.entries, list.count);
     const PrLayoutBoxStyle& box = layoutBoxStyle(state.styles, layoutTreeNode(state.tree, node).style);
     PrLayoutVec extent = built->extent;
-    LayoutAbsoluteBlock own{PrLayoutRect{box.border[PrRectSide_Left], box.border[PrRectSide_Top],
-                                         layoutUnitMax(box.border[PrRectSide_Left],
-                                                       extent.x - box.border[PrRectSide_Right]),
-                                         layoutUnitMax(box.border[PrRectSide_Top],
-                                                       extent.y - box.border[PrRectSide_Bottom])},
-                            mode, fallback};
+    LayoutAbsoluteBlock own{
+        PrLayoutRect{
+            box.border[PrRectSide_Left], box.border[PrRectSide_Top],
+            layoutUnitMax(box.border[PrRectSide_Left], extent.x - box.border[PrRectSide_Right]),
+            layoutUnitMax(box.border[PrRectSide_Top], extent.y - box.border[PrRectSide_Bottom]),
+        },
+        mode, fallback,
+    };
     // The containing block of the boxes that a table holds is the table's wrapper box, inside its margins
     // (css-tables-3/#abspos-boxes-in-table-root).
     if (layoutIsTable(box))
@@ -496,8 +498,10 @@ LayoutFragment* layoutHolderBuild(LayoutState& state, LayoutNodeIndex node, uint
                 return s.inlineBlocks.data[i].block;
         }
         LayoutMode inlineMode = layoutOwnMode(state.tree, inlineBox);
-        LayoutAbsoluteBlock block{inlineBlockOf(state, built, kLayoutVecZero, inlineBox, inlineMode), inlineMode,
-                                  fallback};
+        LayoutAbsoluteBlock block{
+            inlineBlockOf(state, built, kLayoutVecZero, inlineBox, inlineMode), inlineMode,
+            fallback,
+        };
         s.inlineBlocks.push(LayoutInlineBlock{inlineBox, block});
         return block;
     };
@@ -526,14 +530,14 @@ LayoutFragment* layoutHolderBuild(LayoutState& state, LayoutNodeIndex node, uint
         return built;
     }
     LayoutFragment* fragment = layoutFragmentHold(built, s.held.data + heldMark, s.held.count - heldMark,
-                                                  s.pending.data + pendingMark, s.pending.count - pendingMark);
+        s.pending.data + pendingMark, s.pending.count - pendingMark);
     s.held.count = heldMark;
     s.pending.count = pendingMark;
     return fragment;
 }
 
 void layoutViewportHold(LayoutState& state, const LayoutFragment* root, PrLayoutVec at, PrLayoutVec extent,
-                        LayoutMode mode, Array<LayoutChild>& out) {
+        LayoutMode mode, Array<LayoutChild>& out) {
     LayoutScratch& s = *state.scratch;
     LayoutPendingList list = layoutFragmentPending(root);
     if (list.count == 0)

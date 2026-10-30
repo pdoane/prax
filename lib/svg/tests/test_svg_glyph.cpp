@@ -199,7 +199,7 @@ TEST_CASE("a glyph with no document is an image, and without an image codec noth
     PrDrawGlyphDecoder* decoder = prSvgGlyphDecoderCreate(nullptr, nullptr);
     PrDrawList* list = prDrawListCreate();
     CHECK_FALSE(prDrawGlyphDecoderDecode(decoder, sans, prFontCodePointGlyph(sans, 'A'), 70, nullptr,
-                                         PrColor{0, 0, 0, 1}, list));
+        PrColor{0, 0, 0, 1}, list));
     CHECK(prDrawListCommandCount(list) == 0);
     prDrawGlyphDecoderDestroy(decoder);
     // With an image codec, a bitmap glyph draws its strike's image.

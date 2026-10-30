@@ -26,7 +26,7 @@ void writeTree(std::string* out, const PrDomNode* node) {
                 *out += '<';
                 out->append(name.data, name.size);
                 for (const PrDomAttr* attribute = element->firstAttribute; attribute != nullptr;
-                     attribute = static_cast<const PrDomAttr*>(attribute->next)) {
+                        attribute = static_cast<const PrDomAttr*>(attribute->next)) {
                     PrStringView text = prStringView(&attribute->name);
                     *out += ' ';
                     out->append(text.data, text.size);
@@ -241,8 +241,7 @@ TEST_CASE("a text/markdown load parses the variant that its content type names")
         PrHtmlPage* page = prHtmlPageCreate(nullptr);
         PrHtmlResponseHeaders headers{};
         headers.contentType = variant.contentType;
-        REQUIRE(prHtmlPageLoad(page, "# Hi\n\n~~x~~\n", "https://example.com/a.md", &headers)
-                == PrStatus_Ok);
+        REQUIRE(prHtmlPageLoad(page, "# Hi\n\n~~x~~\n", "https://example.com/a.md", &headers) == PrStatus_Ok);
         PrDomDocument* document = prHtmlWindowDocument(prHtmlPageWindow(page));
         PrString body = prHtmlInnerHtml(prDomElementAsNode(prDomDocumentBody(document)));
         CHECK(prStringView(&body) == variant.body);
@@ -255,8 +254,8 @@ TEST_CASE("a browsing context loads text/markdown as a document that runs no scr
     PrHtmlPage* page = prHtmlPageCreate(nullptr);
     PrHtmlResponseHeaders headers{};
     headers.contentType = "text/markdown; charset=utf-8";
-    REQUIRE(prHtmlPageLoad(page, "# Hi\n\n<script>x()</script>\n", "https://example.com/a.md", &headers)
-            == PrStatus_Ok);
+    REQUIRE(prHtmlPageLoad(page, "# Hi\n\n<script>x()</script>\n", "https://example.com/a.md", &headers) ==
+        PrStatus_Ok);
     PrDomDocument* document = prHtmlWindowDocument(prHtmlPageWindow(page));
     PrString body = prHtmlInnerHtml(prDomElementAsNode(prDomDocumentBody(document)));
     CHECK(prStringView(&body) == "<h1 id=\"hi\">Hi</h1>\n<script>x()</script>\n");

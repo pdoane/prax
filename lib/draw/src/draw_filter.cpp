@@ -111,8 +111,8 @@ void holdSource(Graph& g, const PrDrawSource& source) {
 }
 
 bool validInput(PrDrawFilterInput input, uint32_t index) {
-    return (input >= 0 && uint32_t(input) < index) || input == PrDrawFilterInput_Source
-           || input == PrDrawFilterInput_SourceAlpha || input == PrDrawFilterInput_Backdrop;
+    return (input >= 0 && uint32_t(input) < index) || input == PrDrawFilterInput_Source ||
+        input == PrDrawFilterInput_SourceAlpha || input == PrDrawFilterInput_Backdrop;
 }
 
 bool finite(float value) {
@@ -175,8 +175,10 @@ PrRect nodeOutset(const PrDrawFilterNode& n) {
         default:
             break;
     }
-    return PrRect{-reach.x - maxF32(shift.x, 0), -reach.y - maxF32(shift.y, 0),
-                  reach.x - minF32(shift.x, 0), reach.y - minF32(shift.y, 0)};
+    return PrRect{
+        -reach.x - maxF32(shift.x, 0), -reach.y - maxF32(shift.y, 0),
+        reach.x - minF32(shift.x, 0), reach.y - minF32(shift.y, 0),
+    };
 }
 
 } // namespace
@@ -217,8 +219,7 @@ PrDrawFilterInput prDrawFilterBuilderAdd(PrDrawFilterBuilder* builder, const PrD
         case PrDrawFilterKind_ComponentTransfer:
             for (PrDrawTransfer& t : copy.transfer) {
                 PR_ASSERT(t.kind <= PrDrawTransferKind_Gamma);
-                bool table =
-                    t.kind == PrDrawTransferKind_Table || t.kind == PrDrawTransferKind_Discrete;
+                bool table = t.kind == PrDrawTransferKind_Table || t.kind == PrDrawTransferKind_Discrete;
                 if (table && (t.values == nullptr || t.valueCount == 0))
                     t.kind = PrDrawTransferKind_Identity;
             }
@@ -357,8 +358,7 @@ const PrDrawFilter* prDrawFilterCreate(PrDrawFilterBuilder* builder) {
     PrRect outset{0, 0, 0, 0};
     for (uint32_t i = 0; i < filter->graph.nodes.count; ++i) {
         PrRect o = nodeOutset(filter->graph.nodes.data[i]);
-        outset = PrRect{outset.left + o.left, outset.top + o.top, outset.right + o.right,
-                        outset.bottom + o.bottom};
+        outset = PrRect{outset.left + o.left, outset.top + o.top, outset.right + o.right, outset.bottom + o.bottom};
     }
     filter->outset = outset;
     return filter;

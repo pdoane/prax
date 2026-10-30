@@ -81,7 +81,7 @@ TEST_CASE("what is not JSON fails where it stops") {
     PrJson* d = prJsonCreate();
     size_t at = 0;
     for (const char* text : {"", "[1,]", "{\"a\" 1}", "[1 2]", "01", "1.", "\"a", "\"\t\"", "[}",
-                             "{1: 2}", "tru", "[1] x", "\"\\x\""})
+        "{1: 2}", "tru", "[1] x", "\"\\x\""})
         CHECK_FALSE(prJsonParse(d, text, &at));
     CHECK_FALSE(prJsonParse(d, "[1, 2 x", &at));
     CHECK(at == 6);
@@ -133,8 +133,7 @@ TEST_CASE("a writer escapes strings and writes numbers in their shortest form") 
         prJsonWriterNumber(w, number);
     prJsonWriterNumber(w, kInfinityF64);
     prJsonWriterEndArray(w);
-    CHECK(prJsonWriterText(w)
-          == "[\"q\\\"b\\\\n\\n\\u0001\xC3\xA9\xEF\xBF\xBD\",0.1,-2.5,1e+21,1e-7,123456789,null]");
+    CHECK(prJsonWriterText(w) == "[\"q\\\"b\\\\n\\n\\u0001\xC3\xA9\xEF\xBF\xBD\",0.1,-2.5,1e+21,1e-7,123456789,null]");
     prJsonWriterDestroy(w);
 }
 

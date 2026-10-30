@@ -242,8 +242,7 @@ TEST_CASE("matching narrows weights as css-fonts-4 orders them") {
         float asked;
         float expected;
     };
-    WeightCase cases[] = {{450, 400}, {400, 400}, {500, 400}, {600, 700}, {350, 300}, {200, 300},
-                          {900, 700}};
+    WeightCase cases[] = {{450, 400}, {400, 400}, {500, 400}, {600, 700}, {350, 300}, {200, 300}, {900, 700}};
     for (const WeightCase& c : cases) {
         CAPTURE(c.asked);
         Asked r = request("noto sans");

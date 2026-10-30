@@ -12,15 +12,21 @@ namespace {
 
 // Returns a collection of drawings, laid out for `width` by `height`.
 Collection drawings(const char* name, float width, float height, const std::vector<Drawing>& (*all)()) {
-    return Collection{name, width, height, 0, [all] {
-        std::vector<Document> documents;
-        for (const Drawing& drawing : all()) {
-            Document d{drawing.name, drawing.description, Source{}};
-            d.source.drawing = &drawing;
-            documents.push_back(std::move(d));
-        }
-        return documents;
-    }};
+    return Collection{
+        name,
+        width,
+        height,
+        0,
+        [all] {
+            std::vector<Document> documents;
+            for (const Drawing& drawing : all()) {
+                Document d{drawing.name, drawing.description, Source{}};
+                d.source.drawing = &drawing;
+                documents.push_back(std::move(d));
+            }
+            return documents;
+        },
+    };
 }
 
 } // namespace

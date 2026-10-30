@@ -48,8 +48,10 @@ void cssFilterFunctions(CssValueRun run, const CssColorContext& colors, Array<Cs
         bool given = first < end;
         if (name == PrCssKeyword_Url) {
             f.kind = PrLayoutFilterKind_Source;
-            item.url = given && run.values[first].kind == PrCssValueKind_String ? cssValueText(run, &run.values[first])
-                                                                                : PrStringView{};
+            if (given && run.values[first].kind == PrCssValueKind_String)
+                item.url = cssValueText(run, &run.values[first]);
+            else
+                item.url = PrStringView{};
             out->push(item);
             continue;
         }
@@ -95,13 +97,13 @@ void cssFilterFunctions(CssValueRun run, const CssColorContext& colors, Array<Cs
             case PrCssKeyword_Sepia: f.kind = PrLayoutFilterKind_Sepia; break;
             default: continue;
         }
-        if (f.kind != PrLayoutFilterKind_Blur && f.kind != PrLayoutFilterKind_DropShadow
-            && f.kind != PrLayoutFilterKind_HueRotate) {
+        if (f.kind != PrLayoutFilterKind_Blur && f.kind != PrLayoutFilterKind_DropShadow &&
+                f.kind != PrLayoutFilterKind_HueRotate) {
             // An omitted amount is 1. An amount over 1 is clamped for a function whose effect is complete at 1
             // (filter-effects-1/#supported-filter-functions).
             f.amount = maxF32(given ? amountAt(run, first, 1) : 1, 0);
-            bool clamps = f.kind == PrLayoutFilterKind_Grayscale || f.kind == PrLayoutFilterKind_Invert
-                          || f.kind == PrLayoutFilterKind_Opacity || f.kind == PrLayoutFilterKind_Sepia;
+            bool clamps = f.kind == PrLayoutFilterKind_Grayscale || f.kind == PrLayoutFilterKind_Invert ||
+                f.kind == PrLayoutFilterKind_Opacity || f.kind == PrLayoutFilterKind_Sepia;
             if (clamps)
                 f.amount = minF32(f.amount, 1);
         }

@@ -112,21 +112,20 @@ PrFontDerivation prFontDerivationDefault(void);
 // copies the bytes. A null `derivation` gives the default instance. Returns InvalidData if the bytes are not a font or
 // the file has no font `index`. On failure, `*out` is null.
 PrStatus prFontCreate(PrByteView bytes, uint32_t index, const PrFontDerivation* PR_NULLABLE derivation,
-                      const PrFont* PR_NULLABLE* PR_NONNULL out);
+    const PrFont* PR_NULLABLE* PR_NONNULL out);
 
 // Creates a font in the same way as prFontCreate, from a WOFF or WOFF2 file in `bytes`, whose tables `codec`
 // decompresses: zlib for WOFF and Brotli for WOFF2. A WOFF2 file of a collection decodes to the collection, and `index`
 // picks its font. Returns NotSupported if `codec` does not decode the compression of the file. Returns InvalidData in
 // the same cases as prFontCreate, and for a file that the rules of the format reject.
 PrStatus prFontCreateWoff(PrByteView bytes, uint32_t index, const PrFontDerivation* PR_NULLABLE derivation,
-                          PrCompressCodec* codec, const PrFont* PR_NULLABLE* PR_NONNULL out);
+    PrCompressCodec* codec, const PrFont* PR_NULLABLE* PR_NONNULL out);
 
 // Creates a font in the same way as prFontCreate, for the file at the UTF-8 `path`. The file is mapped instead of
 // copied. Returns Io if the file cannot be read, and InvalidData in the same cases as prFontCreate. On failure, `*out`
 // is null.
-PrStatus prFontCreateFromFile(PrStringView path, uint32_t index,
-                              const PrFontDerivation* PR_NULLABLE derivation,
-                              const PrFont* PR_NULLABLE* PR_NONNULL out);
+PrStatus prFontCreateFromFile(PrStringView path, uint32_t index, const PrFontDerivation* PR_NULLABLE derivation,
+    const PrFont* PR_NULLABLE* PR_NONNULL out);
 
 // Creates a font of the same file and index as `font`, derived as `derivation` specifies. The two fonts share their
 // bytes. The size-adjust is finite and above zero, and the synthesis is finite. A variation whose tag names no axis of
@@ -316,8 +315,7 @@ PrRect prFontGlyphBounds(const PrFont* font, uint16_t glyph);
 // nonzero rule. Returns false for a glyph with no outline, such as a space. A hinted font fits the outline to
 // `pixelsPerEm` pixels per em. It lands on the pixel grid if `transform` scales an em to that size and puts the origin
 // of the glyph on a pixel. A `pixelsPerEm` of zero gives the unhinted outline.
-bool prFontGlyphOutline(const PrFont* font, uint16_t glyph, float pixelsPerEm,
-                        PrAffine2 transform, PrPath* out);
+bool prFontGlyphOutline(const PrFont* font, uint16_t glyph, float pixelsPerEm, PrAffine2 transform, PrPath* out);
 
 // Returns the horizontal advance of the glyph in ems, drawn at `pixelsPerEm` pixels per em. With Full hinting, it is a
 // whole number of pixels. Other hinting, and a `pixelsPerEm` of zero, give the design advance. Returns zero for a glyph
@@ -480,7 +478,7 @@ bool prFontGlyphHasColor(const PrFont* font, uint16_t glyph);
 // glyph with no color layers. The font holds none of its locks while it calls the painter, so the painter may use the
 // font.
 bool prFontGlyphPaint(const PrFont* font, uint16_t glyph, const PrFontPalette* PR_NULLABLE palette,
-                      PrColor foreground, const PrFontPainter* painter);
+    PrColor foreground, const PrFontPainter* painter);
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Bitmap glyphs
@@ -497,8 +495,7 @@ typedef struct PrFontGlyphImage {
 
 // Writes to `out` the image of the glyph from the strike for drawing at `pixelsPerEm` pixels per em. That is the
 // smallest strike at least that large, or else the largest. Returns false for a glyph with no image.
-bool prFontGlyphImage(const PrFont* font, uint16_t glyph, float pixelsPerEm,
-                      PrFontGlyphImage* out);
+bool prFontGlyphImage(const PrFont* font, uint16_t glyph, float pixelsPerEm, PrFontGlyphImage* out);
 
 // ---------------------------------------------------------------------------------------------------------------------
 // SVG glyphs

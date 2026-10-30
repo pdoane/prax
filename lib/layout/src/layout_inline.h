@@ -71,7 +71,7 @@ struct LayoutInlineRun {
 // for layout in `space`, the content box of the container. Takes their shaping, and lays out each atomic inline and
 // float in the run through its own cache.
 LayoutInlineRun layoutInlineBegin(LayoutState& state, uint32_t container, uint32_t first, uint32_t last,
-                                  const LayoutSpace& space);
+    const LayoutSpace& space);
 
 // Opens the inline-level siblings from `first` through `last` for measurement: takes their shaping.
 LayoutInlineRun layoutInlineMeasureBegin(LayoutState& state, uint32_t first, uint32_t last);
@@ -96,14 +96,14 @@ uint32_t layoutInlineBlockAfter(const LayoutInlineRun& run, uint32_t segment);
 // last layout made, if they are still valid. They are kept for the next layout if nothing on them read the block size
 // of the container: no float, and no relative offset that is a percentage of the block size.
 LayoutInlineResult layoutInlineSegment(LayoutState& state, LayoutInlineRun& run, uint32_t segment,
-                                       const LayoutInlineBfc& bfc);
+    const LayoutInlineBfc& bfc);
 
 // Returns the intrinsic sizes of segment `segment` of the run (css-sizing-3/#intrinsic-sizes): its widest piece between
 // break opportunities, and its widest line between forced breaks. Each piece or line is widened by the indent of the
 // line it starts. Atomic inlines count as their contributions in `input`, and floats count as beside the line they are
 // on. `firstFormatted` says whether the first line of the segment is the first formatted line of its container.
 LayoutIntrinsicSizes layoutInlineSegmentIntrinsic(LayoutState& state, LayoutInlineRun& run, uint32_t segment,
-                                                  const LayoutIntrinsicInput& input, bool firstFormatted);
+    const LayoutIntrinsicInput& input, bool firstFormatted);
 
 // Frees the scratch memory of inline layout.
 void layoutInlineScratchDestroy(LayoutInlineScratch* PR_NULLABLE scratch);

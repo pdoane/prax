@@ -45,14 +45,23 @@ void record(Probe* probe) {
 }
 
 void listen(PrDomAbortSignal* signal, Probe* probe) {
-    PrDomEventListener callback = {[](void* context, PrDomEvent*) { record(static_cast<Probe*>(context)); }, probe,
-                                   uint64_t(uintptr_t(probe)), nullptr, nullptr};
+    PrDomEventListener callback = {
+        [](void* context, PrDomEvent*) { record(static_cast<Probe*>(context)); },
+        probe,
+        uint64_t(uintptr_t(probe)),
+        nullptr,
+        nullptr,
+    };
     prDomEventTargetAddEventListener(prDomAbortSignalAsEventTarget(signal), "abort", &callback, nullptr);
 }
 
 PrDomAbortAlgorithm algorithm(Probe* probe) {
-    return PrDomAbortAlgorithm{[](void* context, PrDomAbortSignal*) { record(static_cast<Probe*>(context)); }, probe,
-                               nullptr, nullptr};
+    return PrDomAbortAlgorithm{
+        [](void* context, PrDomAbortSignal*) { record(static_cast<Probe*>(context)); },
+        probe,
+        nullptr,
+        nullptr,
+    };
 }
 
 } // namespace
@@ -151,8 +160,13 @@ TEST_CASE("a listener with a signal is removed when the signal aborts, and not a
     PrDomEventTarget* freed = prDomEventTargetCreate();
     Log log;
     Probe heard = {&log, 'h', {}, 0};
-    PrDomEventListener callback = {[](void* context, PrDomEvent*) { record(static_cast<Probe*>(context)); }, &heard,
-                                   uint64_t(uintptr_t(&heard)), nullptr, nullptr};
+    PrDomEventListener callback = {
+        [](void* context, PrDomEvent*) { record(static_cast<Probe*>(context)); },
+        &heard,
+        uint64_t(uintptr_t(&heard)),
+        nullptr,
+        nullptr,
+    };
     PrDomAddEventListenerOptions options = prDomAddEventListenerOptionsDefault(target, "test");
     options.signal = signal;
     prDomEventTargetAddEventListener(target, "test", &callback, &options);

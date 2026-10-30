@@ -28,6 +28,7 @@ COMMANDS = {
     "package": "tools.package.commands",
     "rewrap": "tools.lint.commands",
     "includes": "tools.lint.commands",
+    "layout": "tools.lint.commands",
     "prose": "tools.lint.commands",
     "viewer": "tools.viewer.commands",
     "example": "tools.build.commands",

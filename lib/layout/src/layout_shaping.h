@@ -81,7 +81,7 @@ struct LayoutInlineItem {
 // Returns the box style of the atomic inline or inline box of `item`, whose record is `style`. An anonymous inline
 // table has the initial box style.
 inline const PrLayoutBoxStyle& layoutInlineItemBox(const LayoutStyles* styles, const LayoutInlineItem& item,
-                                                   PrLayoutStyleIndex style) {
+        PrLayoutStyleIndex style) {
     return item.wraps ? layoutAnonymousTableStyle() : layoutBoxStyle(styles, style);
 }
 
@@ -283,7 +283,7 @@ struct LayoutWordScratch {
 // that ends at `end` and starts no later than `start`, so that the lines that break one long word find it once. A
 // layout of other text must first set `s.end` to 0.
 void layoutWordBreaks(const LayoutStyles* styles, const LayoutInlineShaping& t, uint32_t start, uint32_t end,
-                      LayoutWordScratch& s);
+    LayoutWordScratch& s);
 
 // Frees the memory.
 void layoutWordScratchReset(LayoutWordScratch& s);
@@ -295,8 +295,7 @@ void layoutWordScratchReset(LayoutWordScratch& s);
 // Otherwise collects and shapes the run into the cache, or into `fresh` if `state` does not cache. Clears the dirty
 // flags of the run's nodes, because the run's layout lays out what changed in them. Atomic inlines, floats and
 // block-level boxes keep their flags, which their own layouts read.
-const LayoutInlineShaping& layoutShaping(LayoutState& state, LayoutInlineShaping& fresh, uint32_t first,
-                                         uint32_t last);
+const LayoutInlineShaping& layoutShaping(LayoutState& state, LayoutInlineShaping& fresh, uint32_t first, uint32_t last);
 
 // Shapes the inline formatting contexts that the next layout of the tree from `root` lays out again and whose shaping
 // is not current, so that the layout finds each current.

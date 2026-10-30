@@ -224,8 +224,10 @@ void walkPaint(Walker& w, SfntTable paint, uint32_t depth) {
             break;
         }
         case PaintFormat_RadialGradient: {
-            float p[6] = {float(paint.int16At(4)), float(paint.int16At(6)), float(paint.uint16At(8)),
-                          float(paint.int16At(10)), float(paint.int16At(12)), float(paint.uint16At(14))};
+            float p[6] = {
+                float(paint.int16At(4)), float(paint.int16At(6)), float(paint.uint16At(8)),
+                float(paint.int16At(10)), float(paint.int16At(12)), float(paint.uint16At(14)),
+            };
             if (variable) {
                 deltasOf(w, paint.uint32At(16), 6, d);
                 for (uint32_t i = 0; i < 6; ++i)
@@ -486,8 +488,10 @@ PrColor colrPaletteEntry(const ColrFace& face, uint32_t palette, uint32_t index)
     if (record >= cpal.uint16At(6))
         return PrColor{0, 0, 0, 0};
     uint32_t at = cpal.uint32At(8) + record * 4;
-    return PrColor{float(cpal.uint8At(at + 2)) / 255, float(cpal.uint8At(at + 1)) / 255, float(cpal.uint8At(at)) / 255,
-                   float(cpal.uint8At(at + 3)) / 255};
+    return PrColor{
+        float(cpal.uint8At(at + 2)) / 255, float(cpal.uint8At(at + 1)) / 255, float(cpal.uint8At(at)) / 255,
+        float(cpal.uint8At(at + 3)) / 255,
+    };
 }
 
 } // namespace pr_impl

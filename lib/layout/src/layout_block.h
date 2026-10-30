@@ -28,24 +28,22 @@ LayoutResult layoutBlock(LayoutState& state, LayoutNodeIndex node, const LayoutS
 // If that layout is not the one held in the item's layout entry, it is handed to the item's final layout in the running
 // layout (layoutFinal) instead of being kept in the entry, so that a measurement never evicts a final result.
 LayoutMeasurement layoutMeasure(LayoutState& state, LayoutNodeIndex node, const LayoutSpace& space,
-                                const LayoutRequests& requests, LayoutMeasureKind kind);
+    const LayoutRequests& requests, LayoutMeasureKind kind);
 
 // Lays out the flex item `node` in `space` at its final `requests`, as layoutBlock does. If a measurement in the
 // running layout already laid the item out at the same space and requests, takes that layout instead and keeps it in
 // the item's layout entry.
-LayoutResult layoutFinal(LayoutState& state, LayoutNodeIndex node, const LayoutSpace& space,
-                         const LayoutRequests& requests);
+LayoutResult layoutFinal(LayoutState& state, LayoutNodeIndex node, const LayoutSpace& space, const LayoutRequests& requests);
 
 // Lays out the anonymous table cell that wraps the siblings from `first` through `last`
 // (css-tables-3/#fixup-algorithm), in `space` at `requests`. The cell's style is the initial style of a table cell, and
 // it inherits from the parent of its content. Its result is not cached.
 LayoutResult layoutAnonymousBlock(LayoutState& state, LayoutNodeIndex first, LayoutNodeIndex last,
-                                  const LayoutSpace& space, const LayoutRequests& requests);
+    const LayoutSpace& space, const LayoutRequests& requests);
 
 // Lays out the anonymous table that wraps the run of table parts from `first` through `last` in a block container's
 // flow (css-tables-3/#fixup-algorithm), in `space`. Its result is not cached.
-LayoutResult layoutAnonymousTable(LayoutState& state, LayoutNodeIndex first, LayoutNodeIndex last,
-                                  const LayoutSpace& space);
+LayoutResult layoutAnonymousTable(LayoutState& state, LayoutNodeIndex first, LayoutNodeIndex last, const LayoutSpace& space);
 
 // Releases the layouts made by measurements that no final layout took, and the measurements remembered by a layout that
 // keeps no records. Called when a layout ends.

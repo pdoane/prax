@@ -141,10 +141,9 @@ void markdownTreeFlatten(const MarkdownTree* tree, Array<MarkdownNode>* out) {
         if (stored) {
             const MarkdownValues& values = current.values;
             MarkdownNode* previous = out->count != first ? &out->last() : nullptr;
-            bool merges = values.kind == PrMarkdownNodeKind_Text && previous != nullptr
-                && previous->values.kind == PrMarkdownNodeKind_Text && previous->values.textKind == values.textKind
-                && previous->values.text.start + previous->values.text.size == values.text.start
-                && closedAt != out->count;
+            bool merges = values.kind == PrMarkdownNodeKind_Text && previous != nullptr &&
+                previous->values.kind == PrMarkdownNodeKind_Text && previous->values.textKind == values.textKind &&
+                previous->values.text.start + previous->values.text.size == values.text.start && closedAt != out->count;
             if (merges) {
                 previous->values.text.size += values.text.size;
             } else {

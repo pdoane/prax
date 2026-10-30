@@ -138,8 +138,7 @@ bool svgParseTransform(PrStringView text, PrAffine2* out) {
             f = prAffine2Scale(PrVec2{n[0], count == 2 ? n[1] : n[0]});
         else if (function == "rotate" && (count == 1 || count == 3))
             f = prAffine2Concat(prAffine2Concat(prAffine2Translate(PrVec2{-n[1], -n[2]}),
-                                                prAffine2Rotate(n[0] * kRadians)),
-                                prAffine2Translate(PrVec2{n[1], n[2]}));
+                prAffine2Rotate(n[0] * kRadians)), prAffine2Translate(PrVec2{n[1], n[2]}));
         else if (function == "skewX" && count == 1)
             f = PrAffine2{1, 0, tanF32(n[0] * kRadians), 1, 0, 0};
         else if (function == "skewY" && count == 1)

@@ -102,7 +102,7 @@ TEST_CASE("the HDR spaces convert with SDR white at 203 cd/m2, and back") {
     // Each space converts back to the color it came from.
     const double color[3] = {0.8, 0.3, 1.6};
     for (PrColorSpace space : {PrColorSpace_Rec2100Pq, PrColorSpace_Rec2100Hlg, PrColorSpace_Rec2100Linear,
-                               PrColorSpace_Ictcp, PrColorSpace_Jzazbz, PrColorSpace_Jzczhz}) {
+        PrColorSpace_Ictcp, PrColorSpace_Jzazbz, PrColorSpace_Jzczhz}) {
         CAPTURE(space);
         double there[3];
         double back[3];
@@ -131,9 +131,13 @@ TEST_CASE("scRGB converts to HDR10's PQ by Rec. 2020's primaries, then PQ's tran
 }
 
 TEST_CASE("an HDR color resolves to the geometric mean of its colors in absolute XYZ, weighted by headroom") {
-    PrColorHdr hdr{.colors = {prColor16FromColor(srgbOf(PrColorSpace_Rec2100Linear, 0.9, 1.0, 0.8)),
-                              prColor16FromColor(srgbOf(PrColorSpace_Rec2100Linear, 1.8, 2.0, 1.5))},
-                   .headrooms = {0, 2}};
+    PrColorHdr hdr{
+        .colors = {
+            prColor16FromColor(srgbOf(PrColorSpace_Rec2100Linear, 0.9, 1.0, 0.8)),
+            prColor16FromColor(srgbOf(PrColorSpace_Rec2100Linear, 1.8, 2.0, 1.5)),
+        },
+        .headrooms = {0, 2},
+    };
     PrColor mixed = prColorHdrResolve(&hdr, 1);
     double xyz[3];
     absoluteXyz(PrColorSpace_Srgb, double(mixed.r), double(mixed.g), double(mixed.b), xyz);
@@ -174,8 +178,10 @@ TEST_CASE("gamut mapping keeps a color within the gamut, and reduces the chroma 
     CHECK(prColorGamutMap(p3Red, PrColorSpace_DisplayP3, 1).r == p3Red.r);
 
     // Outside it, the color lands within it, at nearly the same OKLCH lightness and hue, with less chroma.
-    const PrColor outside[] = {p3Red, srgbOf(PrColorSpace_Rec2020, 0, 1, 0), srgbOf(PrColorSpace_Oklch, 0.7, 0.4, 250),
-                               srgbOf(PrColorSpace_Oklch, 0.95, 0.3, 100)};
+    const PrColor outside[] = {
+        p3Red, srgbOf(PrColorSpace_Rec2020, 0, 1, 0), srgbOf(PrColorSpace_Oklch, 0.7, 0.4, 250),
+        srgbOf(PrColorSpace_Oklch, 0.95, 0.3, 100),
+    };
     for (PrColor color : outside) {
         PrColor mapped = prColorGamutMap(color, PrColorSpace_Srgb, 1);
         CAPTURE(color.r);

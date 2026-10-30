@@ -49,7 +49,7 @@ struct Session {
 };
 
 PrStatus openSession(void* PR_NULLABLE context, PrNet* net, PrNetStreamFn event, void* eventContext,
-                     PrNetStream* PR_NULLABLE* PR_NONNULL out) {
+        PrNetStream* PR_NULLABLE* PR_NONNULL out) {
     Session* session = static_cast<Session*>(context);
     PrTlsSessionDesc desc = session->desc;
     desc.event = event;
@@ -76,7 +76,7 @@ void inspect(void* PR_NULLABLE context, PrNetStream* stream) {
     Session* session = static_cast<Session*>(context);
     session->info = prTlsSessionInfo(reinterpret_cast<PrTlsSession*>(stream));
     session->protocol.assign(session->info.protocol.data != nullptr ? session->info.protocol.data : "",
-                             session->info.protocol.size);
+        session->info.protocol.size);
 }
 
 const PrStringView kProtocols[] = {"h2", "http/1.1"};
@@ -127,8 +127,13 @@ typedef uint8_t Ending;
 
 // Runs a session that writes `payload`, ends as `ending` says, and reads until it ends or fails.
 void run(NetProbe* probe, Fixture* fixture, Session* session, PrByteView payload, Ending ending) {
-    NetProbeScript script{.open = openSession, .context = session, .payload = payload,
-                          .finish = ending == Ending_Finish, .inspect = inspect};
+    NetProbeScript script{
+        .open = openSession,
+        .context = session,
+        .payload = payload,
+        .finish = ending == Ending_Finish,
+        .inspect = inspect,
+    };
     netProbeRun(probe, fixture->net, &script);
 }
 
@@ -218,8 +223,11 @@ TEST_CASE("tls: a session runs over a transport that it is given, or the backend
         Fixture fixture{};
         if (!open(&fixture, backend))
             return;
-        Session session{.tls = fixture.tls, .desc = trusting(fixture, "localhost", fixture.peer.tlsEcho),
-                        .overTransport = true};
+        Session session{
+            .tls = fixture.tls,
+            .desc = trusting(fixture, "localhost", fixture.peer.tlsEcho),
+            .overTransport = true,
+        };
         NetProbe probe{};
         run(&probe, &fixture, &session, bytesOf("layered<bye>"), Ending_Wait);
         if (backend.overTransport) {

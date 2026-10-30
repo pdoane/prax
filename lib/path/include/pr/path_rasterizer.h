@@ -33,7 +33,7 @@ void prPathRasterizerDestroy(PrPathRasterizer* PR_NULLABLE rasterizer);
 // Pixel (0, 0) of `mask` is the pixel at `origin`. The points of `polyline` are in pixels, and every contour counts as
 // closed. Curves flattened with PrPathFlattening_Balanced keep their area.
 void prPathRasterizerFill(PrPathRasterizer* rasterizer, const PrPathPolyline* polyline, PrPathFillRule rule,
-                          PrPathCoverage coverage, PrIVec2 origin, PrPixels mask);
+    PrPathCoverage coverage, PrIVec2 origin, PrPixels mask);
 
 #if defined(__cplusplus)
 }

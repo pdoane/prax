@@ -12,8 +12,7 @@ TEST_CASE("hash collisions survive growth and backward-shift deletion") {
         index.erase(15, i);
     CHECK(index.count == 200);
     for (uint32_t i = 0; i < 300; ++i) {
-        CHECK(index.find(15, [i](uint32_t at) { return at == i; })
-              == (i % 3 == 0 ? kHashMissing : i));
+        CHECK(index.find(15, [i](uint32_t at) { return at == i; }) == (i % 3 == 0 ? kHashMissing : i));
     }
     index.erase(15, 900);
     CHECK(index.count == 200);
@@ -40,8 +39,7 @@ TEST_CASE("hash deletion preserves interleaved probe chains across the table bou
             index.erase(hashes[i], i);
             present[i] = false;
             for (uint32_t j = 0; j < 10; ++j) {
-                CHECK(index.find(hashes[j], [j](uint32_t at) { return at == j; })
-                      == (present[j] ? j : kHashMissing));
+                CHECK(index.find(hashes[j], [j](uint32_t at) { return at == j; }) == (present[j] ? j : kHashMissing));
             }
         }
     }

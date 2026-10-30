@@ -83,8 +83,10 @@ bool readLine(SuiteRender* out, PrStringView line, PrStringView root) {
     }
     if (setting == "default") {
         PrFontGeneric generic = prFontGenericFromName(value);
-        prFontSetSetDefaultFamily(out->fonts, generic != PrFontGeneric_None ? prFontFamilyGeneric(generic)
-                                                                                    : prFontFamilyFromName(value));
+        if (generic != PrFontGeneric_None)
+            prFontSetSetDefaultFamily(out->fonts, prFontFamilyGeneric(generic));
+        else
+            prFontSetSetDefaultFamily(out->fonts, prFontFamilyFromName(value));
         return true;
     }
     if (setting == "background" && value == "white") {

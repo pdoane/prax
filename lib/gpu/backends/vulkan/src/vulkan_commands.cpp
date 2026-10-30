@@ -74,8 +74,8 @@ bool slotTake(VulkanDevice* d, VulkanCommandSlot* out) {
     queryInfo.sType = VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO;
     queryInfo.queryType = VK_QUERY_TYPE_TIMESTAMP;
     queryInfo.queryCount = 2;
-    if (!vulkanCheck(d, d->vk.AllocateCommandBuffers(d->device, &bufferInfo, &slot.buffer))
-        || !vulkanCheck(d, d->vk.CreateQueryPool(d->device, &queryInfo, nullptr, &slot.queries))) {
+    if (!vulkanCheck(d, d->vk.AllocateCommandBuffers(d->device, &bufferInfo, &slot.buffer)) ||
+            !vulkanCheck(d, d->vk.CreateQueryPool(d->device, &queryInfo, nullptr, &slot.queries))) {
         d->vk.DestroyCommandPool(d->device, slot.pool, nullptr);
         return false;
     }
@@ -171,11 +171,14 @@ void flushPush(VulkanDevice* d, VulkanCommands* c, uint32_t point) {
     }
     VkDescriptorImageInfo target{};
     if (point == 0 && c->inPass && (c->pass.localRead || c->pass.copied)) {
-        target = c->pass.localRead
-                     ? VkDescriptorImageInfo{VK_NULL_HANDLE, c->pass.targetView,
-                                             VK_IMAGE_LAYOUT_RENDERING_LOCAL_READ_KHR}
-                     : VkDescriptorImageInfo{VK_NULL_HANDLE, vulkanResourceAt(d, c->targetCopy.id).view,
-                                             VK_IMAGE_LAYOUT_READ_ONLY_OPTIMAL};
+        if (c->pass.localRead)
+            target =
+                VkDescriptorImageInfo{VK_NULL_HANDLE, c->pass.targetView, VK_IMAGE_LAYOUT_RENDERING_LOCAL_READ_KHR};
+        else
+            target = VkDescriptorImageInfo{
+                VK_NULL_HANDLE, vulkanResourceAt(d, c->targetCopy.id).view,
+                VK_IMAGE_LAYOUT_READ_ONLY_OPTIMAL
+            };
         VkWriteDescriptorSet& write = writes[count++];
         write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
         write.dstBinding = 1;
@@ -260,9 +263,8 @@ Scope scopeOf(PrGpuAccessFlags access) {
 // Returns the accesses of a barrier's source scope, which are writes only: a barrier makes earlier writes visible, and
 // waits for earlier reads by its stages alone.
 VkAccessFlags2 writesOf(VkAccessFlags2 accesses) {
-    constexpr VkAccessFlags2 writes = VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT | VK_ACCESS_2_TRANSFER_WRITE_BIT
-                                      | VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT
-                                      | VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+    constexpr VkAccessFlags2 writes = VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT | VK_ACCESS_2_TRANSFER_WRITE_BIT |
+        VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
     return accesses & writes;
 }
 
@@ -294,9 +296,8 @@ uint8_t* PR_NULLABLE streamTake(VulkanDevice* d, VulkanCommands* c, uint64_t siz
         info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
         info.size = chunkSize;
         // The stream holds any data of a frame: uniforms, what shaders read by handle, indices and indirect arguments.
-        info.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT
-                     | VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT
-                     | VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+        info.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT |
+            VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
         VkBuffer buffer = VK_NULL_HANDLE;
         VulkanMemory memory{};
         uint32_t taken = 0;
@@ -305,8 +306,8 @@ uint8_t* PR_NULLABLE streamTake(VulkanDevice* d, VulkanCommands* c, uint64_t siz
             VkMemoryRequirements requirements;
             d->vk.GetBufferMemoryRequirements(d->device, buffer, &requirements);
             made = vulkanMemoryAllocate(d, requirements,
-                                        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-                                        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &memory);
+                VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+                VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &memory);
         }
         if (made) {
             d->vk.BindBufferMemory(d->device, buffer, memory.memory, memory.offset);
@@ -364,8 +365,7 @@ void waitIdle(PrGpuDevice* device) {
 // ---------------------------------------------------------------------------------------------------------------------
 // Command buffers
 
-bool commandsBegin(PrGpuDevice* device, const PrGpuCommandsOptions* options,
-                   PrGpuCommands* PR_NULLABLE* PR_NONNULL out) {
+bool commandsBegin(PrGpuDevice* device, const PrGpuCommandsOptions* options, PrGpuCommands* PR_NULLABLE* PR_NONNULL out) {
     VulkanDevice* d = vulkanDevice(device);
     prMutexLock(&d->mutex);
     VulkanCommandSlot slot{};
@@ -455,8 +455,7 @@ PrGpuFence commandsSubmit(PrGpuDevice* device, PrGpuCommands* commands) {
     return fence;
 }
 
-void* commandsStream(PrGpuDevice* device, PrGpuCommands* commands, uint64_t size, PrGpuBuffer* buffer,
-                     uint64_t* offset) {
+void* commandsStream(PrGpuDevice* device, PrGpuCommands* commands, uint64_t size, PrGpuBuffer* buffer, uint64_t* offset) {
     VulkanDevice* d = vulkanDevice(device);
     VulkanCommands* c = vulkanCommands(commands);
     uint32_t slot = 0;
@@ -524,19 +523,18 @@ void commandsDispatchIndirect(PrGpuDevice* device, PrGpuCommands* commands, PrGp
 }
 
 void commandsCopyBuffer(PrGpuDevice* device, PrGpuCommands* commands, PrGpuBuffer source, uint64_t sourceOffset,
-                        PrGpuBuffer target, uint64_t targetOffset, uint64_t size) {
+        PrGpuBuffer target, uint64_t targetOffset, uint64_t size) {
     VulkanDevice* d = vulkanDevice(device);
     VkBufferCopy copy{sourceOffset, targetOffset, size};
     d->vk.CmdCopyBuffer(vulkanCommands(commands)->buffer, vulkanResourceAt(d, source.id).buffer,
-                        vulkanResourceAt(d, target.id).buffer, 1, &copy);
+        vulkanResourceAt(d, target.id).buffer, 1, &copy);
 }
 
 // The subresource of a copy into or out of `r`, and the offset and extent of its texels.
 VkImageSubresourceLayers layersOf(const VulkanResource& r, const PrGpuTextureRegion& region) {
     bool is3d = r.textureDesc.kind == PrGpuTextureKind_3d;
     VkImageSubresourceLayers layers{};
-    layers.aspectMask =
-        (r.aspect & VK_IMAGE_ASPECT_DEPTH_BIT) != 0 ? VkImageAspectFlags(VK_IMAGE_ASPECT_DEPTH_BIT) : r.aspect;
+    layers.aspectMask = (r.aspect & VK_IMAGE_ASPECT_DEPTH_BIT) != 0 ? VkImageAspectFlags(VK_IMAGE_ASPECT_DEPTH_BIT) : r.aspect;
     layers.mipLevel = r.firstLevel + region.level;
     layers.baseArrayLayer = r.firstLayer + (is3d ? 0 : region.firstLayer);
     layers.layerCount = is3d ? 1 : region.extent.depth;
@@ -554,8 +552,7 @@ VkExtent3D extentOf(const VulkanResource& r, const PrGpuTextureRegion& region) {
 }
 
 void commandsCopyTexture(PrGpuDevice* device, PrGpuCommands* commands, PrGpuTexture source,
-                         const PrGpuTextureRegion* sourceRegion, PrGpuTexture target,
-                         const PrGpuTextureRegion* targetRegion) {
+        const PrGpuTextureRegion* sourceRegion, PrGpuTexture target, const PrGpuTextureRegion* targetRegion) {
     VulkanDevice* d = vulkanDevice(device);
     const VulkanResource& from = vulkanResourceAt(d, source.id);
     const VulkanResource& to = vulkanResourceAt(d, target.id);
@@ -566,11 +563,11 @@ void commandsCopyTexture(PrGpuDevice* device, PrGpuCommands* commands, PrGpuText
     copy.dstOffset = offsetOf(to, *targetRegion);
     copy.extent = extentOf(from, *sourceRegion);
     d->vk.CmdCopyImage(vulkanCommands(commands)->buffer, from.image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, to.image,
-                       VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &copy);
+        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &copy);
 }
 
 VkBufferImageCopy bufferCopyOf(const VulkanResource& texture, const PrGpuTextureRegion& region, uint64_t offset,
-                               uint32_t rowBytes, uint32_t layerBytes) {
+        uint32_t rowBytes, uint32_t layerBytes) {
     PrGpuFormatBlock block = prGpuFormatBlock(texture.textureDesc.format);
     VkBufferImageCopy copy{};
     copy.bufferOffset = offset;
@@ -583,23 +580,23 @@ VkBufferImageCopy bufferCopyOf(const VulkanResource& texture, const PrGpuTexture
 }
 
 void commandsCopyBufferToTexture(PrGpuDevice* device, PrGpuCommands* commands, PrGpuBuffer source,
-                                 uint64_t sourceOffset, uint32_t rowBytes, uint32_t layerBytes, PrGpuTexture target,
-                                 const PrGpuTextureRegion* targetRegion) {
+        uint64_t sourceOffset, uint32_t rowBytes, uint32_t layerBytes, PrGpuTexture target,
+        const PrGpuTextureRegion* targetRegion) {
     VulkanDevice* d = vulkanDevice(device);
     const VulkanResource& to = vulkanResourceAt(d, target.id);
     VkBufferImageCopy copy = bufferCopyOf(to, *targetRegion, sourceOffset, rowBytes, layerBytes);
     d->vk.CmdCopyBufferToImage(vulkanCommands(commands)->buffer, vulkanResourceAt(d, source.id).buffer, to.image,
-                               VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &copy);
+        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &copy);
 }
 
 void commandsCopyTextureToBuffer(PrGpuDevice* device, PrGpuCommands* commands, PrGpuTexture source,
-                                 const PrGpuTextureRegion* sourceRegion, PrGpuBuffer target, uint64_t targetOffset,
-                                 uint32_t rowBytes, uint32_t layerBytes) {
+        const PrGpuTextureRegion* sourceRegion, PrGpuBuffer target, uint64_t targetOffset, uint32_t rowBytes,
+        uint32_t layerBytes) {
     VulkanDevice* d = vulkanDevice(device);
     const VulkanResource& from = vulkanResourceAt(d, source.id);
     VkBufferImageCopy copy = bufferCopyOf(from, *sourceRegion, targetOffset, rowBytes, layerBytes);
     d->vk.CmdCopyImageToBuffer(vulkanCommands(commands)->buffer, from.image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-                               vulkanResourceAt(d, target.id).buffer, 1, &copy);
+        vulkanResourceAt(d, target.id).buffer, 1, &copy);
 }
 
 void commandsOnDone(PrGpuDevice*, PrGpuCommands* commands, PrGpuDoneFn done, void* PR_NULLABLE context) {
@@ -630,7 +627,7 @@ void commandsPopGroup(PrGpuDevice* device, PrGpuCommands* commands) {
 // Barriers
 
 void commandsBufferBarrier(PrGpuDevice* device, PrGpuCommands* commands, PrGpuBuffer buffer, PrGpuAccessFlags before,
-                           PrGpuAccessFlags after) {
+        PrGpuAccessFlags after) {
     VulkanDevice* d = vulkanDevice(device);
     Scope source = scopeOf(before);
     Scope target = scopeOf(after);
@@ -665,7 +662,7 @@ VkImageSubresourceRange rangeOf(const VulkanResource& r, PrGpuSubresources s) {
 }
 
 void commandsTextureBarrier(PrGpuDevice* device, PrGpuCommands* commands, PrGpuTexture texture,
-                            PrGpuSubresources subresources, PrGpuAccessFlags before, PrGpuAccessFlags after) {
+        PrGpuSubresources subresources, PrGpuAccessFlags before, PrGpuAccessFlags after) {
     VulkanDevice* d = vulkanDevice(device);
     const VulkanResource& r = vulkanResourceAt(d, texture.id);
     Scope source = scopeOf(before);
@@ -676,8 +673,10 @@ void commandsTextureBarrier(PrGpuDevice* device, PrGpuCommands* commands, PrGpuT
     barrier.srcAccessMask = writesOf(source.accesses);
     barrier.dstStageMask = target.stages;
     barrier.dstAccessMask = target.accesses;
-    barrier.oldLayout =
-        (before & PrGpuAccessFlag_Discard) != 0 ? VK_IMAGE_LAYOUT_UNDEFINED : vulkanLayoutFromAccess(before);
+    if ((before & PrGpuAccessFlag_Discard) != 0)
+        barrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    else
+        barrier.oldLayout = vulkanLayoutFromAccess(before);
     barrier.newLayout = vulkanLayoutFromAccess(after);
     barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
     barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
@@ -690,8 +689,7 @@ void commandsTextureBarrier(PrGpuDevice* device, PrGpuCommands* commands, PrGpuT
     d->vk.CmdPipelineBarrier2(vulkanCommands(commands)->buffer, &dependency);
 }
 
-void commandsGlobalBarrier(PrGpuDevice* device, PrGpuCommands* commands, PrGpuAccessFlags before,
-                           PrGpuAccessFlags after) {
+void commandsGlobalBarrier(PrGpuDevice* device, PrGpuCommands* commands, PrGpuAccessFlags before, PrGpuAccessFlags after) {
     VulkanDevice* d = vulkanDevice(device);
     Scope source = scopeOf(before);
     Scope target = scopeOf(after);
@@ -746,8 +744,7 @@ void coverPass(VulkanDevice* d, VulkanCommands* c, PrUVec2 extent) {
     changed(c, PrGpuHostStateFlag_Viewport | PrGpuHostStateFlag_Scissor);
 }
 
-VkRenderingAttachmentInfo attachmentOf(VulkanDevice* d, const PrGpuAttachment& attachment, PrGpuLoad load,
-                                       PrGpuStore store) {
+VkRenderingAttachmentInfo attachmentOf(VulkanDevice* d, const PrGpuAttachment& attachment, PrGpuLoad load, PrGpuStore store) {
     VkRenderingAttachmentInfo info{};
     info.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
     info.imageView = vulkanAttachmentView(d, attachment.texture.id, attachment.level, attachment.layer);
@@ -805,8 +802,10 @@ PrGpuPass* passBegin(PrGpuDevice* device, PrGpuCommands* commands, const PrGpuPa
         pass.colors[i].clearValue.color = VkClearColorValue{{clear.r, clear.g, clear.b, clear.a}};
         pass.formats.color[i] = r.textureDesc.format;
         pass.formats.samples = r.textureDesc.samples;
-        extent = PrUVec2{r.textureDesc.extent.width >> attachment.level,
-                         r.textureDesc.extent.height >> attachment.level};
+        extent = PrUVec2{
+            r.textureDesc.extent.width >> attachment.level,
+            r.textureDesc.extent.height >> attachment.level,
+        };
     }
     pass.target = desc->colorCount != 0 ? desc->color[0] : PrGpuAttachment{};
     pass.targetView = desc->colorCount != 0 ? pass.colors[0].imageView : VK_NULL_HANDLE;
@@ -826,8 +825,10 @@ PrGpuPass* passBegin(PrGpuDevice* device, PrGpuCommands* commands, const PrGpuPa
         pass.formats.depthStencil = r.textureDesc.format;
         pass.formats.samples = r.textureDesc.samples;
         if (desc->colorCount == 0)
-            extent = PrUVec2{r.textureDesc.extent.width >> attachment.level,
-                             r.textureDesc.extent.height >> attachment.level};
+            extent = PrUVec2{
+                r.textureDesc.extent.width >> attachment.level,
+                r.textureDesc.extent.height >> attachment.level,
+            };
     }
     pass.extent = PrUVec2{extent.x != 0 ? extent.x : 1, extent.y != 0 ? extent.y : 1};
     beginRendering(d, c);
@@ -847,8 +848,8 @@ void moveTarget(VulkanDevice* d, VulkanCommands* c, bool toLocalRead) {
     barrier.srcStageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT;
     barrier.srcAccessMask = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT;
     barrier.dstStageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT;
-    barrier.dstAccessMask = VK_ACCESS_2_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT
-                            | VK_ACCESS_2_INPUT_ATTACHMENT_READ_BIT;
+    barrier.dstAccessMask = VK_ACCESS_2_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT |
+        VK_ACCESS_2_INPUT_ATTACHMENT_READ_BIT;
     barrier.oldLayout = toLocalRead ? VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL : VK_IMAGE_LAYOUT_RENDERING_LOCAL_READ_KHR;
     barrier.newLayout = toLocalRead ? VK_IMAGE_LAYOUT_RENDERING_LOCAL_READ_KHR : VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL;
     barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
@@ -900,8 +901,8 @@ void prepareLocalRead(VulkanDevice* d, VulkanCommands* c) {
 
 // Returns a barrier that moves `range` of `image` from one layout, stage and access to another.
 VkImageMemoryBarrier2 imageBarrier(VkImage image, VkImageSubresourceRange range, VkImageLayout oldLayout,
-                                   VkPipelineStageFlags2 srcStage, VkAccessFlags2 srcAccess, VkImageLayout newLayout,
-                                   VkPipelineStageFlags2 dstStage, VkAccessFlags2 dstAccess) {
+        VkPipelineStageFlags2 srcStage, VkAccessFlags2 srcAccess, VkImageLayout newLayout,
+        VkPipelineStageFlags2 dstStage, VkAccessFlags2 dstAccess) {
     VkImageMemoryBarrier2 barrier{};
     barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2;
     barrier.srcStageMask = srcStage;
@@ -969,38 +970,39 @@ void copyTarget(VulkanDevice* d, VulkanCommands* c) {
         return;
     const VulkanResource& target = vulkanResourceAt(d, pass.target.texture.id);
     const VulkanResource& copy = vulkanResourceAt(d, c->targetCopy.id);
-    VkImageSubresourceRange targetRange =
-        rangeOf(target, PrGpuSubresources{pass.target.level, 1, pass.target.layer, 1});
+    VkImageSubresourceRange targetRange = rangeOf(target, PrGpuSubresources{pass.target.level, 1, pass.target.layer, 1});
     VkImageSubresourceRange copyRange = rangeOf(copy, PrGpuSubresources{0, 1, 0, 1});
     d->vk.CmdEndRendering(c->buffer);
     const VkImageMemoryBarrier2 before[2] = {
         imageBarrier(target.image, targetRange, VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL,
-                     VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT, VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
-                     VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_PIPELINE_STAGE_2_COPY_BIT,
-                     VK_ACCESS_2_TRANSFER_READ_BIT),
+            VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT, VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
+            VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_PIPELINE_STAGE_2_COPY_BIT, VK_ACCESS_2_TRANSFER_READ_BIT),
         imageBarrier(copy.image, copyRange, VK_IMAGE_LAYOUT_READ_ONLY_OPTIMAL, VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
-                     VK_ACCESS_2_NONE, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_PIPELINE_STAGE_2_COPY_BIT,
-                     VK_ACCESS_2_TRANSFER_WRITE_BIT),
+            VK_ACCESS_2_NONE, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_PIPELINE_STAGE_2_COPY_BIT,
+            VK_ACCESS_2_TRANSFER_WRITE_BIT),
     };
     imageBarriers(d, c, before, 2);
     VkImageCopy region{};
-    region.srcSubresource = VkImageSubresourceLayers{targetRange.aspectMask, targetRange.baseMipLevel,
-                                                     targetRange.baseArrayLayer, 1};
+    region.srcSubresource = VkImageSubresourceLayers{
+        targetRange.aspectMask, targetRange.baseMipLevel,
+        targetRange.baseArrayLayer, 1,
+    };
     region.srcOffset = VkOffset3D{s.offset.x, s.offset.y, 0};
-    region.dstSubresource = VkImageSubresourceLayers{copyRange.aspectMask, copyRange.baseMipLevel,
-                                                     copyRange.baseArrayLayer, 1};
+    region.dstSubresource = VkImageSubresourceLayers{
+        copyRange.aspectMask, copyRange.baseMipLevel,
+        copyRange.baseArrayLayer, 1,
+    };
     region.dstOffset = region.srcOffset;
     region.extent = VkExtent3D{s.extent.width, s.extent.height, 1};
     d->vk.CmdCopyImage(c->buffer, target.image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, copy.image,
-                       VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
+        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
     const VkImageMemoryBarrier2 after[2] = {
         imageBarrier(target.image, targetRange, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_PIPELINE_STAGE_2_COPY_BIT,
-                     VK_ACCESS_2_NONE, VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL,
-                     VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
-                     VK_ACCESS_2_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT),
+            VK_ACCESS_2_NONE, VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL, VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+            VK_ACCESS_2_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT),
         imageBarrier(copy.image, copyRange, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_PIPELINE_STAGE_2_COPY_BIT,
-                     VK_ACCESS_2_TRANSFER_WRITE_BIT, VK_IMAGE_LAYOUT_READ_ONLY_OPTIMAL,
-                     VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT, VK_ACCESS_2_SHADER_SAMPLED_READ_BIT),
+            VK_ACCESS_2_TRANSFER_WRITE_BIT, VK_IMAGE_LAYOUT_READ_ONLY_OPTIMAL,
+            VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT, VK_ACCESS_2_SHADER_SAMPLED_READ_BIT),
     };
     imageBarriers(d, c, after, 2);
     resumeRendering(d, c);
@@ -1075,7 +1077,7 @@ void passSetIndexBuffer(PrGpuDevice* device, PrGpuPass* pass, PrGpuBuffer buffer
     VulkanDevice* d = vulkanDevice(device);
     VulkanCommands* c = commandsOfPass(pass);
     d->vk.CmdBindIndexBuffer(c->buffer, vulkanResourceAt(d, buffer.id).buffer, offset,
-                             wide ? VK_INDEX_TYPE_UINT32 : VK_INDEX_TYPE_UINT16);
+        wide ? VK_INDEX_TYPE_UINT32 : VK_INDEX_TYPE_UINT16);
     changed(c, PrGpuHostStateFlag_IndexBuffer);
 }
 
@@ -1087,7 +1089,7 @@ void prepareDraw(VulkanDevice* d, VulkanCommands* c) {
 }
 
 void passDraw(PrGpuDevice* device, PrGpuPass* pass, uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex,
-              uint32_t firstInstance) {
+        uint32_t firstInstance) {
     VulkanDevice* d = vulkanDevice(device);
     VulkanCommands* c = commandsOfPass(pass);
     prepareDraw(d, c);
@@ -1095,7 +1097,7 @@ void passDraw(PrGpuDevice* device, PrGpuPass* pass, uint32_t vertexCount, uint32
 }
 
 void passDrawIndexed(PrGpuDevice* device, PrGpuPass* pass, uint32_t indexCount, uint32_t instanceCount,
-                     uint32_t firstIndex, int32_t vertexOffset, uint32_t firstInstance) {
+        uint32_t firstIndex, int32_t vertexOffset, uint32_t firstInstance) {
     VulkanDevice* d = vulkanDevice(device);
     VulkanCommands* c = commandsOfPass(pass);
     prepareDraw(d, c);
@@ -1103,7 +1105,7 @@ void passDrawIndexed(PrGpuDevice* device, PrGpuPass* pass, uint32_t indexCount, 
 }
 
 void passDrawIndirect(PrGpuDevice* device, PrGpuPass* pass, PrGpuBuffer buffer, uint64_t offset, uint32_t count,
-                      uint32_t stride) {
+        uint32_t stride) {
     VulkanDevice* d = vulkanDevice(device);
     VulkanCommands* c = commandsOfPass(pass);
     prepareDraw(d, c);
@@ -1111,7 +1113,7 @@ void passDrawIndirect(PrGpuDevice* device, PrGpuPass* pass, PrGpuBuffer buffer, 
 }
 
 void passDrawIndexedIndirect(PrGpuDevice* device, PrGpuPass* pass, PrGpuBuffer buffer, uint64_t offset, uint32_t count,
-                             uint32_t stride) {
+        uint32_t stride) {
     VulkanDevice* d = vulkanDevice(device);
     VulkanCommands* c = commandsOfPass(pass);
     prepareDraw(d, c);
@@ -1124,7 +1126,7 @@ void retire(VulkanDevice* d, VulkanCommands* c, bool lost) {
     if (c->timed && !lost) {
         uint64_t ticks[2] = {};
         VkResult result = d->vk.GetQueryPoolResults(d->device, c->slot.queries, 0, 2, sizeof(ticks), ticks,
-                                                    sizeof(uint64_t), VK_QUERY_RESULT_64_BIT);
+            sizeof(uint64_t), VK_QUERY_RESULT_64_BIT);
         if (result == VK_SUCCESS && ticks[1] >= ticks[0])
             seconds = double(ticks[1] - ticks[0]) * double(d->limits.timestampPeriod) * 1e-9;
     }

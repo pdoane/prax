@@ -66,7 +66,7 @@ struct PathGridEdge {
 // Appends to `edges` the edges of the rings in `points`, snapped to `grid` and marked with `owner`. Each entry of
 // `ends` is the end of a ring in `points`. An edge that snaps to a point is left out.
 void pathGridAddEdges(const PathGrid& grid, const Array<PrVec2>& points, const Array<uint32_t>& ends,
-                      uint8_t owner, Array<PathGridEdge>& edges);
+    uint8_t owner, Array<PathGridEdge>& edges);
 
 // Splits each edge where another edge meets it, other than at a shared end. A split rounds its point to the grid, which
 // can move an edge onto another, so splitting repeats a bounded number of times.

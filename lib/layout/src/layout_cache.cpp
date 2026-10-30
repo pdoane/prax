@@ -39,7 +39,7 @@ PrLayoutUnit at(PrLayoutUnit value, PrLayoutUnit top) {
 // clipped to that range and made relative to `top` and `lineLeft`.
 template <typename Visit>
 void eachViewed(const LayoutExclusions& exclusions, uint32_t count, PrLayoutUnit top, PrLayoutUnit lineLeft,
-                PrLayoutUnit lo, PrLayoutUnit hi, Visit visit) {
+        PrLayoutUnit lo, PrLayoutUnit hi, Visit visit) {
     if (lo.raw >= hi.raw)
         return;
     PrLayoutUnit start = top + lo;
@@ -48,8 +48,10 @@ void eachViewed(const LayoutExclusions& exclusions, uint32_t count, PrLayoutUnit
         const LayoutExclusion& e = exclusions.floats.data[i];
         if (e.top.raw >= e.bottom.raw || e.top.raw >= end.raw || e.bottom.raw <= start.raw)
             continue;
-        visit(LayoutExclusion{e.left - lineLeft, e.right - lineLeft, layoutUnitMax(e.top, start) - top,
-                              layoutUnitMin(e.bottom, end) - top, e.side});
+        visit(LayoutExclusion{
+            e.left - lineLeft, e.right - lineLeft, layoutUnitMax(e.top, start) - top,
+            layoutUnitMin(e.bottom, end) - top, e.side,
+        });
     }
 }
 
@@ -83,7 +85,7 @@ void freeContext(LayoutCache& cache, LayoutCacheEntry& entry) {
 // Records what a box read of its context `bfc` and placed in it, relative to `top`, the block-start edge of its border
 // box.
 void recordContext(LayoutCache& cache, LayoutCacheEntry& entry, const LayoutBfc& bfc, const LayoutReads& reads,
-                   PrLayoutUnit top, bool cleared) {
+        PrLayoutUnit top, bool cleared) {
     const LayoutExclusions& exclusions = *bfc.containing.exclusions;
     PrLayoutUnit lineLeft = bfc.containing.lineLeft;
     entry.flags |= LayoutCacheFlag_InContext;
@@ -113,11 +115,13 @@ void recordContext(LayoutCache& cache, LayoutCacheEntry& entry, const LayoutBfc&
     context.view.clear();
     context.placed.clear();
     eachViewed(exclusions, prefix, top, lineLeft, entry.readLo, entry.readHi,
-               [&](const LayoutExclusion& e) { context.view.push(e); });
+        [&](const LayoutExclusion& e) { context.view.push(e); });
     for (uint32_t i = prefix; i < exclusions.floats.count; ++i) {
         const LayoutExclusion& e = exclusions.floats.data[i];
-        context.placed.push(LayoutExclusion{e.left - lineLeft, e.right - lineLeft, e.top - top, e.bottom - top,
-                                            e.side});
+        context.placed.push(LayoutExclusion{
+            e.left - lineLeft, e.right - lineLeft, e.top - top, e.bottom - top,
+            e.side,
+        });
     }
     if (!floorRead && !cleared && context.view.count == 0 && context.placed.count == 0)
         entry.flags |= LayoutCacheFlag_Plain;
@@ -145,18 +149,17 @@ bool sameFloor(const LayoutFloorRead& cached, PrLayoutUnit now) {
 // Returns true if what a cached result read of its context, relative to `top`, is what it would read from there now.
 // Compares the floats in its range and the floors it read.
 bool readsSame(const LayoutCacheEntry& entry, const LayoutCacheContext* PR_NULLABLE cached, const LayoutBfc& bfc,
-               PrLayoutUnit top) {
+        PrLayoutUnit top) {
     const LayoutExclusions& exclusions = *bfc.containing.exclusions;
     // If the context has no floats and the result saw none, it saw what there is.
     if (exclusions.floats.count != 0 || cached != nullptr) {
         uint32_t viewed = 0;
         bool same = true;
         eachViewed(exclusions, exclusions.floats.count, top, bfc.containing.lineLeft, entry.readLo, entry.readHi,
-                   [&](const LayoutExclusion& e) {
-                       same = same && cached != nullptr && viewed < cached->view.count
-                              && cached->view.data[viewed] == e;
-                       ++viewed;
-                   });
+            [&](const LayoutExclusion& e) {
+                same = same && cached != nullptr && viewed < cached->view.count && cached->view.data[viewed] == e;
+                ++viewed;
+            });
         if (!same || viewed != (cached != nullptr ? cached->view.count : 0))
             return false;
     }
@@ -171,7 +174,7 @@ bool readsSame(const LayoutCacheEntry& entry, const LayoutCacheContext* PR_NULLA
 
 // Adds what a cached result read to the reads of its parent, and places its floats again, relative to `top`.
 void replay(const LayoutCacheEntry& entry, const LayoutCacheContext* PR_NULLABLE cached, const LayoutBfc& bfc,
-            PrLayoutUnit top) {
+        PrLayoutUnit top) {
     LayoutReads& reads = *bfc.containing.reads;
     if (entry.readLo.raw < entry.readHi.raw)
         layoutReadsRange(reads, entry.readLo + top, entry.readHi + top);
@@ -197,7 +200,7 @@ void replay(const LayoutCacheEntry& entry, const LayoutCacheContext* PR_NULLABLE
 // the same values there. Sets its position in `out`, or the point where it stops. Kept out of line from
 // layoutCacheFind: most reuse in most layouts is of results that have nothing to read, and this keeps that path cheap.
 PR_NOINLINE Placement placeInContext(const LayoutCache& cache, const LayoutCacheEntry& entry,
-                                     const LayoutBfc& bfc, LayoutResult* out) {
+        const LayoutBfc& bfc, LayoutResult* out) {
     bool collapsedThrough = (entry.flags & LayoutResultFlag_CollapsedThrough) != 0;
     bool plain = (entry.flags & LayoutCacheFlag_Plain) != 0;
     const LayoutCacheContext* cached = plain ? nullptr : &cache.contexts.data[entry.context];
@@ -236,14 +239,17 @@ PR_NOINLINE bool readsContainingInline(const LayoutState& state, LayoutNodeIndex
     if (n.kind == PrLayoutNodeKind_Text || n.kind == PrLayoutNodeKind_LineBreak)
         return false;
     const PrLayoutBoxStyle& box = layoutBoxStyle(state.styles, n.style);
-    if (n.kind == PrLayoutNodeKind_Replaced || layoutIsScrollContainer(box) || layoutSpaceIsOutOfFlow(space)
-        || layoutIsOrthogonalRoot(state.tree, node, space.mode))
+    if (n.kind == PrLayoutNodeKind_Replaced || layoutIsScrollContainer(box) || layoutSpaceIsOutOfFlow(space) ||
+            layoutIsOrthogonalRoot(state.tree, node, space.mode))
         return true;
     bool horizontal = layoutIsHorizontal(space.mode);
-    bool reads = horizontal ? layoutLengthReadsBase(box.width) || layoutLengthReadsBase(box.minWidth)
-                                  || layoutLengthReadsBase(box.maxWidth)
-                            : layoutLengthReadsBase(box.height) || layoutLengthReadsBase(box.minHeight)
-                                  || layoutLengthReadsBase(box.maxHeight);
+    bool reads;
+    if (horizontal)
+        reads = layoutLengthReadsBase(box.width) || layoutLengthReadsBase(box.minWidth) ||
+            layoutLengthReadsBase(box.maxWidth);
+    else
+        reads = layoutLengthReadsBase(box.height) || layoutLengthReadsBase(box.minHeight) ||
+            layoutLengthReadsBase(box.maxHeight);
     for (uint32_t side = 0; side < PrRectSide_Count; ++side)
         reads = reads || layoutLengthReadsBase(box.margin[side]) || layoutLengthReadsBase(box.padding[side]);
     return reads;
@@ -267,36 +273,36 @@ PR_FORCE_INLINE LayoutCacheFlags requestFlags(const LayoutRequests* PR_NULLABLE 
 // Returns what an entry keeps of `space` and `requests` as its available size: a fixed inline size, or the available
 // size.
 PR_FORCE_INLINE PrLayoutUnit availableKey(const LayoutSpace& space, const LayoutRequests* PR_NULLABLE requests) {
-    return requests != nullptr && requests->inlineAxis.kind == LayoutRequestKind_Fixed ? requests->inlineAxis.size
-                                                                                       : space.available;
+    if (requests != nullptr && requests->inlineAxis.kind == LayoutRequestKind_Fixed)
+        return requests->inlineAxis.size;
+    return space.available;
 }
 
 // Returns what an entry keeps of `space` and `requests` as the size it stretches to: a fixed block size, or that size.
 PR_FORCE_INLINE PrLayoutUnit stretchKey(const LayoutSpace& space, const LayoutRequests* PR_NULLABLE requests) {
-    return requests != nullptr && requests->blockAxis.kind == LayoutRequestKind_Fixed ? requests->blockAxis.size
-                                                                                      : space.stretchBlock;
+    if (requests != nullptr && requests->blockAxis.kind == LayoutRequestKind_Fixed)
+        return requests->blockAxis.size;
+    return space.stretchBlock;
 }
 
 // Returns true if a result laid out when a different size was available would be the same if the box resolves to the
 // same inline size. This holds for an in-flow block container that, if it is in a context, saw no floats. A box whose
 // inline size fills the available size resolves to a different size, and is not compared.
 bool mayResize(const LayoutCacheEntry& entry, const LayoutSpace& space) {
-    return entry.fragment->kind == LayoutFragmentKind_Box && !layoutSpaceIsOutOfFlow(space)
-           && (entry.flags & LayoutResultFlag_FillsAvailable) == 0 && (entry.flags & LayoutCacheFlag_InlineFixed) == 0
-           && ((entry.flags & LayoutCacheFlag_InContext) == 0 || (entry.flags & LayoutCacheFlag_Plain) != 0);
+    return entry.fragment->kind == LayoutFragmentKind_Box && !layoutSpaceIsOutOfFlow(space) &&
+        (entry.flags & LayoutResultFlag_FillsAvailable) == 0 && (entry.flags & LayoutCacheFlag_InlineFixed) == 0 &&
+        ((entry.flags & LayoutCacheFlag_InContext) == 0 || (entry.flags & LayoutCacheFlag_Plain) != 0);
 }
 
 // Returns the entry of `node`, laid out at an available or containing inline size different from that of `space`, if it
 // is the result of the box in `space` at `requests` by the rules of entryFor. Otherwise returns null. Kept out of line
 // from entryFor, because most lookups return before reaching it.
 PR_NOINLINE const LayoutCacheEntry* PR_NULLABLE resizedEntry(const LayoutState& state, LayoutNodeIndex node,
-                                                             const LayoutCacheEntry& entry, const LayoutSpace& space,
-                                                             const LayoutRequests* PR_NULLABLE requests,
-                                                             const LayoutResolvedInline* PR_NULLABLE resolved) {
+        const LayoutCacheEntry& entry, const LayoutSpace& space, const LayoutRequests* PR_NULLABLE requests,
+        const LayoutResolvedInline* PR_NULLABLE resolved) {
     bool availableDiffers = entry.available != availableKey(space, requests);
-    if (availableDiffers && (resolved == nullptr || !mayResize(entry, space)
-                             || layoutLogicalSize(space.mode, entry.fragment->extent).inlineSize
-                                    != resolved->inlineSize))
+    if (availableDiffers && (resolved == nullptr || !mayResize(entry, space) ||
+            layoutLogicalSize(space.mode, entry.fragment->extent).inlineSize != resolved->inlineSize))
         return nullptr;
     if (entry.containingInline != space.containing.inlineSize && readsContainingInline(state, node, space))
         return nullptr;
@@ -319,24 +325,26 @@ bool sameExtras(const LayoutCacheContext& context, const LayoutSpace& space) {
 // or null otherwise. An entry that differs in the available size is valid only if `resolved` gives the inline size of
 // its result.
 const LayoutCacheEntry* PR_NULLABLE entryFor(const LayoutState& state, LayoutNodeIndex node, const LayoutSpace& space,
-                                             const LayoutRequests* PR_NULLABLE requests,
-                                             const LayoutResolvedInline* PR_NULLABLE resolved) {
+        const LayoutRequests* PR_NULLABLE requests, const LayoutResolvedInline* PR_NULLABLE resolved) {
     const LayoutCache& cache = state.tree->cache;
     const LayoutCacheEntry& entry = cache.entries.data[node];
-    if (!state.reuse || (layoutTreeNode(state.tree, node).dirty & ~LayoutDirtyFlag_OutOfFlow) != 0
-        || entry.fragment == nullptr
-        || (entry.flags & LayoutCacheFlag_Requests) != requestFlags(requests)
-        || (((entry.flags & LayoutResultFlag_ReadsBlockBase) != 0 || (entry.flags & LayoutCacheFlag_BlockFixed) != 0)
-            && entry.stretchBlock != stretchKey(space, requests))
-        || ((entry.flags & LayoutResultFlag_ReadsBlockBase) != 0 && entry.containingBlock != space.containing.blockSize)
-        || entry.mode != space.mode
-        || ((entry.flags & LayoutCacheFlag_InContext) != 0) != (space.bfc != nullptr))
+    if (!state.reuse || (layoutTreeNode(state.tree, node).dirty & ~LayoutDirtyFlag_OutOfFlow) != 0 ||
+            entry.fragment == nullptr || (entry.flags & LayoutCacheFlag_Requests) != requestFlags(requests) ||
+            (((entry.flags & LayoutResultFlag_ReadsBlockBase) != 0 || (entry.flags & LayoutCacheFlag_BlockFixed) != 0) &&
+                entry.stretchBlock != stretchKey(space, requests)) ||
+            ((entry.flags & LayoutResultFlag_ReadsBlockBase) != 0 &&
+                entry.containingBlock != space.containing.blockSize) ||
+            entry.mode != space.mode || ((entry.flags & LayoutCacheFlag_InContext) != 0) != (space.bfc != nullptr))
         return nullptr;
-    if ((entry.flags & LayoutResultFlag_ReadsFallback) != 0
-        && cache.contexts.data[entry.context].fallback != space.fallback)
+    if ((entry.flags & LayoutResultFlag_ReadsFallback) != 0 &&
+            cache.contexts.data[entry.context].fallback != space.fallback)
         return nullptr;
-    if ((entry.flags & LayoutCacheFlag_SpaceExtras) != 0 ? !sameExtras(cache.contexts.data[entry.context], space)
-                                                         : hasExtras(space))
+    bool extrasDiffer;
+    if ((entry.flags & LayoutCacheFlag_SpaceExtras) != 0)
+        extrasDiffer = !sameExtras(cache.contexts.data[entry.context], space);
+    else
+        extrasDiffer = hasExtras(space);
+    if (extrasDiffer)
         return nullptr;
     bool availableDiffers = entry.available != availableKey(space, requests);
     if (!availableDiffers && entry.containingInline == space.containing.inlineSize)
@@ -363,7 +371,7 @@ LayoutPlacement& placementOf(LayoutCache& cache, LayoutNodeIndex node) {
 // Records that `node` is a box with the fragment `fragment` at `offset` in the fragment of its parent. A box that moves
 // makes every memoized position stale. A new fragment retires the old one, and the boxes in it are placed in turn.
 void placeBox(LayoutCache& cache, LayoutNodeIndex node, LayoutNodeIndex parent, const LayoutFragment* fragment,
-              PrLayoutVec offset) {
+        PrLayoutVec offset) {
     ++cache.published;
     LayoutPlacement& placement = placementOf(cache, node);
     if (placement.parent != parent || placement.offset != offset) {
@@ -417,7 +425,7 @@ void placeNone(LayoutCache& cache, LayoutNodeIndex node) {
 }
 
 void placeWithin(LayoutCache& cache, LayoutNodeIndex parent, const LayoutFragment* fragment, PrLayoutVec offset,
-                 uint32_t child, bool nested);
+    uint32_t child, bool nested);
 
 // Records the boxes on the line `line`, which is at `offset` in the fragment of `parent` and at `at` among its
 // children. These are the atomic inlines, the inline boxes that open on the line, and the texts on it. The children are
@@ -428,7 +436,7 @@ void placeWithin(LayoutCache& cache, LayoutNodeIndex parent, const LayoutFragmen
 // their offsets, and its inline boxes and texts are recorded as placed by no layout. The boxes in an anonymous inline
 // table on the line are recorded as those of an anonymous box.
 void placeLine(LayoutCache& cache, LayoutNodeIndex parent, const LayoutFragment* line, PrLayoutVec offset,
-               LayoutPieceAt at, bool nested = false) {
+        LayoutPieceAt at, bool nested = false) {
     for (uint32_t i = line->childCount; i-- > 0;) {
         const LayoutChild& child = line->children[i];
         const LayoutFragment* c = child.fragment;
@@ -461,7 +469,7 @@ void placeLine(LayoutCache& cache, LayoutNodeIndex parent, const LayoutFragment*
 // `parent` and within the child `child` of the container. These are the boxes with fragments of their own, and the
 // lines of an anonymous box.
 void placeWithin(LayoutCache& cache, LayoutNodeIndex parent, const LayoutFragment* fragment, PrLayoutVec offset,
-                 uint32_t child, bool nested = false) {
+        uint32_t child, bool nested = false) {
     for (uint32_t i = fragment->childCount; i-- > 0;) {
         const LayoutChild& inner = fragment->children[i];
         const LayoutFragment* c = inner.fragment;
@@ -474,16 +482,15 @@ void placeWithin(LayoutCache& cache, LayoutNodeIndex parent, const LayoutFragmen
             placeWithin(cache, parent, c, at, child, nested);
         else if (c->kind == LayoutFragmentKind_Box && c->node == kPrLayoutNodeNone)
             placeWithin(cache, parent, c, at, child, true);
-        else if ((c->kind == LayoutFragmentKind_Box || c->kind == LayoutFragmentKind_Replaced)
-                 && c->node != kPrLayoutNodeNone)
+        else if ((c->kind == LayoutFragmentKind_Box || c->kind == LayoutFragmentKind_Replaced) &&
+                c->node != kPrLayoutNodeNone)
             placeBox(cache, c->node, parent, c, at);
     }
 }
 
 // Takes the result for layoutCacheFind and layoutCacheFindResized, as each function describes.
 PR_FORCE_INLINE bool find(LayoutState& state, LayoutNodeIndex node, const LayoutSpace& space,
-                          const LayoutRequests* PR_NULLABLE requests, const LayoutResolvedInline* PR_NULLABLE resolved,
-                          LayoutResult* out) {
+        const LayoutRequests* PR_NULLABLE requests, const LayoutResolvedInline* PR_NULLABLE resolved, LayoutResult* out) {
     const LayoutCacheEntry* entry = entryFor(state, node, space, requests, resolved);
     if (entry == nullptr)
         return false;
@@ -493,8 +500,8 @@ PR_FORCE_INLINE bool find(LayoutState& state, LayoutNodeIndex node, const Layout
         // If it read nothing and there is nothing to read, with no floats, no floor and no floats waiting, it reads the
         // same values wherever it is.
         const LayoutMarginChain& chain = bfc->chain;
-        bool nothing = (entry->flags & LayoutCacheFlag_Plain) != 0 && chain.floor == kLayoutOffsetNone
-                       && chain.adjoining == 0 && bfc->containing.exclusions->floats.count == 0;
+        bool nothing = (entry->flags & LayoutCacheFlag_Plain) != 0 && chain.floor == kLayoutOffsetNone &&
+            chain.adjoining == 0 && bfc->containing.exclusions->floats.count == 0;
         Placement placement = Placement_Placed;
         if (nothing) {
             out->readLo = entry->readLo;
@@ -530,15 +537,15 @@ PR_FORCE_INLINE bool find(LayoutState& state, LayoutNodeIndex node, const Layout
 // Returns true if the record `r` of `node` answers a measurement in `space` at `requests`. It must hold an answer, and
 // its space must be the same in everything its result read.
 bool recordHolds(const LayoutState& state, LayoutNodeIndex node, const LayoutMeasureRecord& r,
-                 const LayoutSpace& space, const LayoutRequests& requests, LayoutMeasureKind kind) {
-    if ((r.flags & LayoutCacheFlag_Measured) == 0 || (r.flags & LayoutCacheFlag_Requests) != requestFlags(&requests)
-        || r.mode != space.mode || r.available != availableKey(space, &requests)
-        || (kind == LayoutMeasureKind_Baselines && (r.flags & LayoutCacheFlag_SizeOnly) != 0)
-        || !layoutCellSpacesEqual(r.cell, layoutCellSpaceFromSpace(space)))
+        const LayoutSpace& space, const LayoutRequests& requests, LayoutMeasureKind kind) {
+    if ((r.flags & LayoutCacheFlag_Measured) == 0 || (r.flags & LayoutCacheFlag_Requests) != requestFlags(&requests) ||
+            r.mode != space.mode || r.available != availableKey(space, &requests) ||
+            (kind == LayoutMeasureKind_Baselines && (r.flags & LayoutCacheFlag_SizeOnly) != 0) ||
+            !layoutCellSpacesEqual(r.cell, layoutCellSpaceFromSpace(space)))
         return false;
     bool readsBlockBase = (r.flags & LayoutResultFlag_ReadsBlockBase) != 0;
-    if ((readsBlockBase || (r.flags & LayoutCacheFlag_BlockFixed) != 0)
-        && r.stretchBlock != stretchKey(space, &requests))
+    if ((readsBlockBase || (r.flags & LayoutCacheFlag_BlockFixed) != 0) &&
+            r.stretchBlock != stretchKey(space, &requests))
         return false;
     if (readsBlockBase && r.containingBlock != space.containing.blockSize)
         return false;
@@ -647,8 +654,8 @@ void layoutCacheRetire(LayoutCache& cache, const LayoutFragment* PR_NULLABLE fra
     // as an anonymous box or the content of a line, retires with it.
     for (uint32_t i = 0; i < fragment->childCount; ++i) {
         const LayoutFragment* child = fragment->children[i].fragment;
-        bool placed = child->node != kPrLayoutNodeNone
-                      && (child->kind == LayoutFragmentKind_Box || child->kind == LayoutFragmentKind_Replaced);
+        bool placed = child->node != kPrLayoutNodeNone &&
+            (child->kind == LayoutFragmentKind_Box || child->kind == LayoutFragmentKind_Replaced);
         if (!placed)
             layoutCacheRetire(cache, child);
     }
@@ -669,7 +676,7 @@ void layoutCacheInvalidate(LayoutCache& cache, LayoutNodeIndex node) {
 }
 
 bool layoutCacheFindAbsolute(LayoutState& state, LayoutNodeIndex node, const LayoutAbsoluteBlock& containing,
-                             PrLayoutVec at, LayoutStaticEdges edges, LayoutChild* out) {
+        PrLayoutVec at, LayoutStaticEdges edges, LayoutChild* out) {
     if (!state.reuse || layoutTreeNode(state.tree, node).dirty != 0)
         return false;
     const LayoutCache& cache = state.tree->cache;
@@ -677,8 +684,8 @@ bool layoutCacheFindAbsolute(LayoutState& state, LayoutNodeIndex node, const Lay
     if (entry.fragment == nullptr || entry.absolute == kLayoutCacheAbsoluteNone)
         return false;
     const LayoutAbsoluteEntry& a = cache.absolutes.data[entry.absolute];
-    if (!memEquals(&a.containing, &containing.rect, sizeof(PrLayoutRect)) || a.mode != containing.mode || a.at != at
-        || a.edges != edges)
+    if (!memEquals(&a.containing, &containing.rect, sizeof(PrLayoutRect)) || a.mode != containing.mode || a.at != at ||
+            a.edges != edges)
         return false;
     bool readsFallback = (entry.flags & LayoutResultFlag_ReadsFallback) != 0;
     if (readsFallback && cache.contexts.data[entry.context].fallback != containing.fallback)
@@ -691,7 +698,7 @@ bool layoutCacheFindAbsolute(LayoutState& state, LayoutNodeIndex node, const Lay
 }
 
 void layoutCacheStoreAbsolute(LayoutState& state, LayoutNodeIndex node, const LayoutAbsoluteBlock& containing,
-                              PrLayoutVec at, LayoutStaticEdges edges, PrLayoutVec offset) {
+        PrLayoutVec at, LayoutStaticEdges edges, PrLayoutVec offset) {
     if (!state.reuse)
         return;
     LayoutCache& cache = state.tree->cache;
@@ -700,12 +707,14 @@ void layoutCacheStoreAbsolute(LayoutState& state, LayoutNodeIndex node, const La
         entry.absolute = cache.absolutes.count;
         cache.absolutes.emplace();
     }
-    cache.absolutes.data[entry.absolute] = LayoutAbsoluteEntry{.node = node,
-                                                               .containing = containing.rect,
-                                                               .at = at,
-                                                               .offset = offset,
-                                                               .mode = containing.mode,
-                                                               .edges = edges};
+    cache.absolutes.data[entry.absolute] = LayoutAbsoluteEntry{
+        .node = node,
+        .containing = containing.rect,
+        .at = at,
+        .offset = offset,
+        .mode = containing.mode,
+        .edges = edges,
+    };
 }
 
 void layoutCachePlace(LayoutCache& cache, LayoutNodeIndex node, const LayoutFragment* fragment) {
@@ -714,8 +723,8 @@ void layoutCachePlace(LayoutCache& cache, LayoutNodeIndex node, const LayoutFrag
         const LayoutFragment* c = child.fragment;
         if (c->kind == LayoutFragmentKind_Line)
             placeLine(cache, node, c, child.offset, LayoutPieceAt{i, kLayoutPieceNone});
-        else if (c->kind == LayoutFragmentKind_Around
-                 || (c->kind == LayoutFragmentKind_Box && c->node == kPrLayoutNodeNone))
+        else if (c->kind == LayoutFragmentKind_Around ||
+                (c->kind == LayoutFragmentKind_Box && c->node == kPrLayoutNodeNone))
             placeWithin(cache, node, c, child.offset, i);
         else if (c->kind == LayoutFragmentKind_Box || c->kind == LayoutFragmentKind_Replaced)
             placeBox(cache, c->node, node, c, child.offset);
@@ -723,27 +732,25 @@ void layoutCachePlace(LayoutCache& cache, LayoutNodeIndex node, const LayoutFrag
 }
 
 bool layoutCacheFind(LayoutState& state, LayoutNodeIndex node, const LayoutSpace& space,
-                     const LayoutRequests* PR_NULLABLE requests, LayoutResult* out) {
+        const LayoutRequests* PR_NULLABLE requests, LayoutResult* out) {
     return find(state, node, space, requests, nullptr, out);
 }
 
 bool layoutCacheMayResize(const LayoutState& state, LayoutNodeIndex node, const LayoutSpace& space,
-                          const LayoutRequests* PR_NULLABLE requests) {
+        const LayoutRequests* PR_NULLABLE requests) {
     const LayoutCacheEntry& entry = state.tree->cache.entries.data[node];
-    return state.reuse && entry.fragment != nullptr && entry.available != availableKey(space, requests)
-           && (layoutTreeNode(state.tree, node).dirty & ~LayoutDirtyFlag_OutOfFlow) == 0 && mayResize(entry, space)
-           && !layoutIsOrthogonalRoot(state.tree, node, space.mode);
+    return state.reuse && entry.fragment != nullptr && entry.available != availableKey(space, requests) &&
+        (layoutTreeNode(state.tree, node).dirty & ~LayoutDirtyFlag_OutOfFlow) == 0 && mayResize(entry, space) &&
+        !layoutIsOrthogonalRoot(state.tree, node, space.mode);
 }
 
 bool layoutCacheFindResized(LayoutState& state, LayoutNodeIndex node, const LayoutSpace& space,
-                            const LayoutRequests* PR_NULLABLE requests, const LayoutResolvedInline& resolved,
-                            LayoutResult* out) {
+        const LayoutRequests* PR_NULLABLE requests, const LayoutResolvedInline& resolved, LayoutResult* out) {
     return find(state, node, space, requests, &resolved, out);
 }
 
 void layoutCacheStore(LayoutState& state, LayoutNodeIndex node, const LayoutSpace& space,
-                      const LayoutRequests* PR_NULLABLE requests, const LayoutResult& result,
-                      const LayoutReads* PR_NULLABLE reads) {
+        const LayoutRequests* PR_NULLABLE requests, const LayoutResult& result, const LayoutReads* PR_NULLABLE reads) {
     if (!state.reuse)
         return;
     LayoutTree* tree = state.tree;
@@ -753,20 +760,22 @@ void layoutCacheStore(LayoutState& state, LayoutNodeIndex node, const LayoutSpac
     layoutFragmentRelease(entry.fragment);
     uint32_t context = entry.context;
     uint32_t absolute = entry.absolute;
-    entry = LayoutCacheEntry{.available = availableKey(space, requests),
-                             .containingInline = space.containing.inlineSize,
-                             .containingBlock = space.containing.blockSize,
-                             .context = context,
-                             .fragment = result.fragment,
-                             .startPositive = result.start.positive,
-                             .startNegative = result.start.negative,
-                             .endPositive = result.end.positive,
-                             .endNegative = result.end.negative,
-                             .marginInlineStart = result.marginInlineStart,
-                             .stretchBlock = stretchKey(space, requests),
-                             .mode = space.mode,
-                             .flags = LayoutCacheFlags(result.flags | requestFlags(requests)),
-                             .absolute = absolute};
+    entry = LayoutCacheEntry{
+        .available = availableKey(space, requests),
+        .containingInline = space.containing.inlineSize,
+        .containingBlock = space.containing.blockSize,
+        .context = context,
+        .fragment = result.fragment,
+        .startPositive = result.start.positive,
+        .startNegative = result.start.negative,
+        .endPositive = result.end.positive,
+        .endNegative = result.end.negative,
+        .marginInlineStart = result.marginInlineStart,
+        .stretchBlock = stretchKey(space, requests),
+        .mode = space.mode,
+        .flags = LayoutCacheFlags(result.flags | requestFlags(requests)),
+        .absolute = absolute,
+    };
     if ((result.flags & LayoutResultFlag_ReadsFallback) != 0)
         contextOf(tree->cache, entry).fallback = space.fallback;
     if (hasExtras(space)) {
@@ -783,8 +792,7 @@ void layoutCacheStore(LayoutState& state, LayoutNodeIndex node, const LayoutSpac
 }
 
 bool layoutCacheFindMeasure(LayoutState& state, LayoutNodeIndex node, const LayoutSpace& space,
-                            const LayoutRequests& requests, LayoutMeasureKind kind, PrLayoutUnit* blockSize,
-                            LayoutBaselines* baselines) {
+        const LayoutRequests& requests, LayoutMeasureKind kind, PrLayoutUnit* blockSize, LayoutBaselines* baselines) {
     const LayoutCache& cache = state.tree->cache;
     if (!state.reuse || node >= cache.intrinsics.count || !cache.intrinsics.data[node].measured)
         return false;
@@ -802,8 +810,8 @@ bool layoutCacheFindMeasure(LayoutState& state, LayoutNodeIndex node, const Layo
 }
 
 void layoutCacheStoreMeasure(LayoutState& state, LayoutNodeIndex node, const LayoutSpace& space,
-                             const LayoutRequests& requests, LayoutMeasureKind kind, LayoutResultFlags flags,
-                             PrLayoutUnit blockSize, const LayoutBaseline& first, const LayoutBaseline& last) {
+        const LayoutRequests& requests, LayoutMeasureKind kind, LayoutResultFlags flags,
+        PrLayoutUnit blockSize, const LayoutBaseline& first, const LayoutBaseline& last) {
     if (!state.reuse)
         return;
     LayoutCache& cache = state.tree->cache;
@@ -834,8 +842,8 @@ void layoutCacheStoreMeasure(LayoutState& state, LayoutNodeIndex node, const Lay
             break;
         }
     }
-    if (measured && replaced == kLayoutMeasureSlots - 1 && (slots[replaced].flags & LayoutCacheFlag_Measured) != 0
-        && !recordHolds(state, node, slots[replaced], space, requests, LayoutMeasureKind_Size))
+    if (measured && replaced == kLayoutMeasureSlots - 1 && (slots[replaced].flags & LayoutCacheFlag_Measured) != 0 &&
+            !recordHolds(state, node, slots[replaced], space, requests, LayoutMeasureKind_Size))
         ++state.stats->measuresReplaced;
     if (measured) {
         clearRecord(slots[replaced]);
@@ -846,17 +854,18 @@ void layoutCacheStoreMeasure(LayoutState& state, LayoutNodeIndex node, const Lay
     measured = true;
     for (uint32_t i = replaced; i > 0; --i)
         slots[i] = slots[i - 1];
-    slots[0] = LayoutMeasureRecord{.available = availableKey(space, &requests),
-                                   .containingInline = space.containing.inlineSize,
-                                   .containingBlock = space.containing.blockSize,
-                                   .stretchBlock = stretchKey(space, &requests),
-                                   .fallback = space.fallback,
-                                   .mode = space.mode,
-                                   .flags = LayoutCacheFlags(
-                                       flags | requestFlags(&requests) | LayoutCacheFlag_Measured
-                                       | (kind == LayoutMeasureKind_Size ? LayoutCacheFlag_SizeOnly : 0)),
-                                   .blockSize = blockSize,
-                                   .cell = layoutCellSpaceFromSpace(space)};
+    slots[0] = LayoutMeasureRecord{
+        .available = availableKey(space, &requests),
+        .containingInline = space.containing.inlineSize,
+        .containingBlock = space.containing.blockSize,
+        .stretchBlock = stretchKey(space, &requests),
+        .fallback = space.fallback,
+        .mode = space.mode,
+        .flags = LayoutCacheFlags(flags | requestFlags(&requests) | LayoutCacheFlag_Measured |
+            (kind == LayoutMeasureKind_Size ? LayoutCacheFlag_SizeOnly : 0)),
+        .blockSize = blockSize,
+        .cell = layoutCellSpaceFromSpace(space),
+    };
     layoutBaselinesKeep(slots[0].baselines, first, last);
 }
 
@@ -877,42 +886,46 @@ void layoutLineRecordClear(LayoutLineRecord& record) {
 }
 
 bool layoutCacheFindIntrinsic(LayoutState& state, LayoutNodeIndex node, const LayoutIntrinsicInput& input,
-                              LayoutIntrinsicSizes* out) {
+        LayoutIntrinsicSizes* out) {
     const LayoutCache& cache = state.tree->cache;
     if (!state.reuse || node >= cache.intrinsics.count)
         return false;
     const LayoutIntrinsicEntry& entry = cache.intrinsics.data[node];
-    if (!entry.valid || entry.mode != input.mode
-        || (entry.readsPercentBlock && entry.percentBlock != input.percentBlock)
-        || (entry.readsFallback && entry.fallback != input.fallback))
+    if (!entry.valid || entry.mode != input.mode ||
+            (entry.readsPercentBlock && entry.percentBlock != input.percentBlock) ||
+            (entry.readsFallback && entry.fallback != input.fallback))
         return false;
     ++state.stats->intrinsicsReused;
-    *out = LayoutIntrinsicSizes{.minContent = entry.minContent,
-                                .maxContent = entry.maxContent,
-                                .readsPercentBlock = entry.readsPercentBlock,
-                                .readsFallback = entry.readsFallback,
-                                .fillsAvailable = entry.fillsAvailable};
+    *out = LayoutIntrinsicSizes{
+        .minContent = entry.minContent,
+        .maxContent = entry.maxContent,
+        .readsPercentBlock = entry.readsPercentBlock,
+        .readsFallback = entry.readsFallback,
+        .fillsAvailable = entry.fillsAvailable,
+    };
     state.readsFallback = state.readsFallback || entry.readsFallback;
     return true;
 }
 
 void layoutCacheStoreIntrinsic(LayoutState& state, LayoutNodeIndex node, const LayoutIntrinsicInput& input,
-                               const LayoutIntrinsicSizes& sizes) {
+        const LayoutIntrinsicSizes& sizes) {
     if (!state.reuse)
         return;
     LayoutCache& cache = state.tree->cache;
     while (cache.intrinsics.count < state.tree->nodes.count)
         cache.intrinsics.push(LayoutIntrinsicEntry{});
-    cache.intrinsics.data[node] = LayoutIntrinsicEntry{.minContent = sizes.minContent,
-                                                       .maxContent = sizes.maxContent,
-                                                       .percentBlock = input.percentBlock,
-                                                       .fallback = input.fallback,
-                                                       .mode = input.mode,
-                                                       .valid = true,
-                                                       .measured = cache.intrinsics.data[node].measured,
-                                                       .readsPercentBlock = sizes.readsPercentBlock,
-                                                       .readsFallback = sizes.readsFallback,
-                                                       .fillsAvailable = sizes.fillsAvailable};
+    cache.intrinsics.data[node] = LayoutIntrinsicEntry{
+        .minContent = sizes.minContent,
+        .maxContent = sizes.maxContent,
+        .percentBlock = input.percentBlock,
+        .fallback = input.fallback,
+        .mode = input.mode,
+        .valid = true,
+        .measured = cache.intrinsics.data[node].measured,
+        .readsPercentBlock = sizes.readsPercentBlock,
+        .readsFallback = sizes.readsFallback,
+        .fillsAvailable = sizes.fillsAvailable,
+    };
 }
 
 } // namespace pr_impl

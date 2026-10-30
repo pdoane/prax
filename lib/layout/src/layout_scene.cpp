@@ -19,7 +19,7 @@ namespace {
 // `base` (LayoutPaintContainerRef), or kPaintScrollNone if it names none. A recording's own space is in the container
 // that its layer is placed in, and a recording around it belongs to an ancestor layer.
 uint32_t resolve(const LayoutTree* tree, const LayoutScene* scene, uint32_t layer, uint32_t base,
-                 LayoutPaintContainerRef ref) {
+        LayoutPaintContainerRef ref) {
     switch (ref.kind) {
         case PaintRefKind_Own:
             return ref.value == kPaintScrollNone ? scene->layers.data[layer].placement : base + ref.value;
@@ -27,7 +27,7 @@ uint32_t resolve(const LayoutTree* tree, const LayoutScene* scene, uint32_t laye
         case PaintRefKind_Space: {
             PrLayoutNode node = layoutNodeName(tree, ref.value);
             for (uint32_t at = scene->layers.data[layer].parent; at != kPaintScrollNone;
-                 at = scene->layers.data[at].parent) {
+                    at = scene->layers.data[at].parent) {
                 const LayoutSceneLayer& l = scene->layers.data[at];
                 if (ref.kind == PaintRefKind_Space) {
                     if (l.node == node)
@@ -57,8 +57,10 @@ PrRect inkOf(const LayoutTree* tree, LayoutNodeIndex node, const LayoutFragment*
     const PrLayoutDecorationStyle& decoration = layoutDecorationStyle(tree->styles, layoutTreeNode(tree, node).style);
     PrLayoutUnit outline = decoration.outlineWidth + decoration.outlineOffset;
     if (decoration.outlineStyle != PrDrawBorderStyle_None && outline > kLayoutUnitZero)
-        ink = layoutRectUnion(ink, PrLayoutRect{kLayoutUnitZero - outline, kLayoutUnitZero - outline,
-                                                fragment->extent.x + outline, fragment->extent.y + outline});
+        ink = layoutRectUnion(ink, PrLayoutRect{
+            kLayoutUnitZero - outline, kLayoutUnitZero - outline,
+            fragment->extent.x + outline, fragment->extent.y + outline,
+        });
     return prLayoutRectToPx(ink);
 }
 
@@ -73,16 +75,16 @@ bool layerFramed(const LayoutSceneLayer& layer, const LayoutResolvedEffects* PR_
         return true;
     if (fx == nullptr)
         return false;
-    bool spaced = fx->clipsRect || fx->clipPath != nullptr || fx->coverage != nullptr || fx->mask != nullptr
-                  || fx->backdrop != nullptr;
+    bool spaced = fx->clipsRect || fx->clipPath != nullptr || fx->coverage != nullptr || fx->mask != nullptr ||
+        fx->backdrop != nullptr;
     return layer.parent != kPaintScrollNone || spaced;
 }
 
 // Adds the layer of a box with a layer of its own, at `offset` in its parent layer's space and in the scene's container
 // `placement`, after `segmentsBefore` of its parent's segments. Then adds the layers that its chunk names.
 void addLayer(LayoutTree* tree, LayoutScene* scene, LayoutNodeIndex node, const LayoutFragment* fragment,
-              LayoutPieceAt opening, PrLayoutVec offset, bool root, uint32_t parent, uint32_t placement,
-              uint32_t segmentsBefore, uint32_t order) {
+        LayoutPieceAt opening, PrLayoutVec offset, bool root, uint32_t parent, uint32_t placement,
+        uint32_t segmentsBefore, uint32_t order) {
     uint32_t index = scene->layers.count;
     LayoutSceneLayer& made = scene->layers.emplace();
     made = LayoutSceneLayer{};
@@ -99,13 +101,15 @@ void addLayer(LayoutTree* tree, LayoutScene* scene, LayoutNodeIndex node, const 
     if (node == fragment->node && (effects.layer || layoutHasTransform(effects))) {
         LayoutResolvedTransform transform = layoutNodeTransform(tree, node, fragment);
         // The container of a scrolling parent is in the recording of a layer around this one, which is already added.
-        uint32_t scroll = transform.scroller != kPrLayoutNodeNone
-                              ? layoutSceneNodeScroll(scene, layoutNodeName(tree, transform.scroller))
-                              : kPaintScrollNone;
+        uint32_t scroll = kPaintScrollNone;
+        if (transform.scroller != kPrLayoutNodeNone)
+            scroll = layoutSceneNodeScroll(scene, layoutNodeName(tree, transform.scroller));
         made.transform = scene->transforms.count;
-        scene->transforms.push(LayoutSceneTransform{.resolved = transform,
-                                              .perspectiveScroll = scroll,
-                                              .transformed = !matrixIsIdentity(transform.matrix)});
+        scene->transforms.push(LayoutSceneTransform{
+            .resolved = transform,
+            .perspectiveScroll = scroll,
+            .transformed = !matrixIsIdentity(transform.matrix),
+        });
     }
     made.opacity = effects.opacity;
     made.effects = kPaintScrollNone;
@@ -115,8 +119,8 @@ void addLayer(LayoutTree* tree, LayoutScene* scene, LayoutNodeIndex node, const 
             made.effects = scene->effects.count;
             scene->effects.push(resolved);
             // A layer that blends is isolated by the group of the layer it is in.
-            bool blends = resolved.blendMode != PrDrawBlendMode_Normal
-                          || resolved.composite != PrDrawComposite_SourceOver;
+            bool blends = resolved.blendMode != PrDrawBlendMode_Normal ||
+                resolved.composite != PrDrawComposite_SourceOver;
             if (blends && parent != kPaintScrollNone)
                 scene->layers.data[parent].isolates = true;
         }
@@ -127,18 +131,20 @@ void addLayer(LayoutTree* tree, LayoutScene* scene, LayoutNodeIndex node, const 
     uint32_t base = scene->scrolls.count;
     for (uint32_t i = 0; i < chunk->scrolls.count; ++i) {
         const LayoutPaintScroll& s = chunk->scrolls.data[i];
-        LayoutSceneContainer scroll{.node = layoutNodeName(tree, s.node),
-                           .parent = resolve(tree, scene, index, base, s.parent),
-                           .layer = index,
-                           .segment = s.segment,
-                           .clip = s.clip,
-                           .range = s.range,
-                           .portExtent = s.portExtent,
-                           .content = s.content,
-                           .userAxes = s.userAxes,
-                           .chainAxes = s.chainAxes,
-                           .scrolls = s.scrolls,
-                           .curved = s.curved};
+        LayoutSceneContainer scroll{
+            .node = layoutNodeName(tree, s.node),
+            .parent = resolve(tree, scene, index, base, s.parent),
+            .layer = index,
+            .segment = s.segment,
+            .clip = s.clip,
+            .range = s.range,
+            .portExtent = s.portExtent,
+            .content = s.content,
+            .userAxes = s.userAxes,
+            .chainAxes = s.chainAxes,
+            .scrolls = s.scrolls,
+            .curved = s.curved,
+        };
         memCopy(scroll.corners, s.corners, sizeof(s.corners));
         scene->scrolls.push(scroll);
     }
@@ -156,15 +162,19 @@ void addLayer(LayoutTree* tree, LayoutScene* scene, LayoutNodeIndex node, const 
             scene->fixedClips.push(chunk->fixed.data[fixedAt++].clip);
             fixed = scene->fixedClips.count;
         }
-        scene->segments.push(LayoutSceneSegment{segment.list, resolve(tree, scene, index, base, segment.scroll),
-                                          segment.offset, fixed});
+        scene->segments.push(LayoutSceneSegment{
+            segment.list, resolve(tree, scene, index, base, segment.scroll),
+            segment.offset, fixed,
+        });
     }
     layer.slotStart = scene->slots.count;
     layer.slotCount = chunk->slots.count;
     for (uint32_t i = 0; i < chunk->slots.count; ++i) {
         const LayoutPaintSlot& s = chunk->slots.data[i];
-        scene->slots.push(LayoutSceneSlot{s.embed, layoutNodeName(tree, s.node), index,
-                                    resolve(tree, scene, index, base, s.scroll), s.segment, s.order, s.box});
+        scene->slots.push(LayoutSceneSlot{
+            s.embed, layoutNodeName(tree, s.node), index,
+            resolve(tree, scene, index, base, s.scroll), s.segment, s.order, s.box,
+        });
     }
     layer.regionStart = scene->regions.count;
     layer.regionCount = chunk->regions.count;
@@ -176,8 +186,7 @@ void addLayer(LayoutTree* tree, LayoutScene* scene, LayoutNodeIndex node, const 
         const LayoutPaintChunk& named = tree->paint.chunks.data[at];
         LayoutPaintLayer l = named.layers.data[i];
         addLayer(tree, scene, l.node, l.fragment, l.opening, l.offset, false, index,
-                 resolve(tree, scene, index, base, l.scroll),
-                 l.segment, l.order);
+            resolve(tree, scene, index, base, l.scroll), l.segment, l.order);
     }
     scene->layers.data[index].end = scene->layers.count;
 }
@@ -251,10 +260,9 @@ struct LayerEffects {
 };
 
 LayerEffects layerEffects(const LayoutScene* scene, const LayoutSceneLayer& layer,
-                          const PrLayoutSceneEffect* PR_NULLABLE effects, uint32_t count) {
+        const PrLayoutSceneEffect* PR_NULLABLE effects, uint32_t count) {
     LayerEffects out{.opacity = layer.opacity};
-    const LayoutSceneTransform* t =
-        layer.transform != kPaintScrollNone ? &scene->transforms.data[layer.transform] : nullptr;
+    const LayoutSceneTransform* t = layer.transform != kPaintScrollNone ? &scene->transforms.data[layer.transform] : nullptr;
     if (t != nullptr && t->transformed)
         out.transform = &t->resolved.matrix;
     for (uint32_t i = 0; i < count; ++i) {
@@ -283,8 +291,10 @@ LayerPlane planeOf(const LayerEffects& e, const PrLayoutVec* offsets) {
     const LayoutSceneTransform& t = *e.resolved;
     PrLayoutVec scroll = t.perspectiveScroll != kPaintScrollNone ? offsets[t.perspectiveScroll] : kLayoutVecZero;
     PrDMatrix4 map = layoutPlaneMap(t.resolved, *e.transform, scroll);
-    return LayerPlane{map, layoutPlaneHomography(map, kLayoutVecZero),
-                      t.resolved.backfaceHidden && prDMatrix4ShowsBack(&map)};
+    return LayerPlane{
+        map, layoutPlaneHomography(map, kLayoutVecZero),
+        t.resolved.backfaceHidden && prDMatrix4ShowsBack(&map),
+    };
 }
 
 // The largest extent of a projected layer's plane, in pixels: the bounds of content that is unbounded, as the content
@@ -293,8 +303,8 @@ constexpr float kPlaneMaxExtent = 1 << 24;
 
 // Returns true if the slot plays before the child layer, both named by one layer's recording.
 bool slotFirst(const LayoutSceneSlot& slot, const LayoutSceneLayer& child) {
-    return slot.segmentsBefore < child.segmentsBefore
-           || (slot.segmentsBefore == child.segmentsBefore && slot.order < child.order);
+    return slot.segmentsBefore < child.segmentsBefore ||
+        (slot.segmentsBefore == child.segmentsBefore && slot.order < child.order);
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -357,11 +367,10 @@ struct Player {
     void enter(uint32_t scroll, uint32_t frame) {
         chain.clear();
         for (uint32_t at = scroll; at != kPaintScrollNone && frames.contains(frame, at);
-             at = scene->scrolls.data[at].parent)
+                at = scene->scrolls.data[at].parent)
             chain.push(at);
         uint32_t kept = scope;
-        while (kept < open.count && kept - scope < chain.count
-               && open.data[kept] == chain.data[chain.count - 1 - (kept - scope)])
+        while (kept < open.count && kept - scope < chain.count && open.data[kept] == chain.data[chain.count - 1 - (kept - scope)])
             ++kept;
         closeTo(kept);
         for (uint32_t i = chain.count - (kept - scope); i-- > 0;)
@@ -438,8 +447,7 @@ struct Player {
         // which may draw from nothing, as a flood or an image does, and a backdrop filter, which draws what lies
         // beneath it.
         bool draws = fx != nullptr && (fx->filter != nullptr || fx->backdrop != nullptr);
-        if ((l.segmentCount == 0 && l.slotCount == 0 && l.end == index + 1 && !draws)
-            || (fx != nullptr && fx->hidden))
+        if ((l.segmentCount == 0 && l.slotCount == 0 && l.end == index + 1 && !draws) || (fx != nullptr && fx->hidden))
             return;
         LayerEffects e = layerEffects(scene, l, options.effects, options.effectCount);
         float opacity = e.opacity;
@@ -574,8 +582,7 @@ struct ScrollFinder {
     bool enterChain(uint32_t scroll, uint32_t frame, PrLayoutVec* point) {
         if (scroll == kPaintScrollNone || !frames.contains(frame, scroll))
             return true;
-        if (!enterChain(scene->scrolls.data[scroll].parent, frame, point)
-            || !frames.clipContains(scroll, *point))
+        if (!enterChain(scene->scrolls.data[scroll].parent, frame, point) || !frames.clipContains(scroll, *point))
             return false;
         *point += offsets[scroll];
         return true;
@@ -607,8 +614,8 @@ struct ScrollFinder {
         uint32_t frame = frames.frame.data[index];
         if (transformed) {
             PrDMatrix3 inverse{};
-            if (!enterChain(l.placement, outer, &point) || !prDMatrix3Invert(&plane.homography, &inverse)
-                || !layoutVecProjected(inverse, point - at, &point))
+            if (!enterChain(l.placement, outer, &point) || !prDMatrix3Invert(&plane.homography, &inverse) ||
+                    !layoutVecProjected(inverse, point - at, &point))
                 return;
         } else if (framed) {
             if (!enterChain(l.placement, outer, &point))
@@ -616,14 +623,14 @@ struct ScrollFinder {
             point = point - at;
         }
         PrLayoutVec own = point;
-        if ((framed || enterChain(l.placement, frame, &own))
-            && layoutRectContains(layoutRectAt(frames.origin.data[index], l.extent), own))
+        if ((framed || enterChain(l.placement, frame, &own)) &&
+                layoutRectContains(layoutRectAt(frames.origin.data[index], l.extent), own))
             foundIn(l.placement);
         for (uint32_t r = l.regionStart; r < l.regionStart + l.regionCount && !blocks; ++r) {
             const LayoutSceneRegion& region = scene->regions.data[r];
             PrLayoutVec in = point;
-            blocks = enterChain(region.scroll, frame, &in)
-                     && layoutRectContains(layoutRectMoved(region.rect, frames.origin.data[index]), in);
+            blocks = enterChain(region.scroll, frame, &in) &&
+                layoutRectContains(layoutRectMoved(region.rect, frames.origin.data[index]), in);
         }
         // The layer's scroll containers, its slots and its children, in the order they play.
         uint32_t next = 0;
@@ -665,12 +672,12 @@ struct ScrollFinder {
 // draw nothing. A background whose layers blend is one run: an isolated group of the root's background color and its
 // layers (compositing-1/#background-blend-mode), in which a fixed layer is placed as if it scrolled.
 void canvasLayers(LayoutTree* tree, const LayoutFragment* root, PrLayoutRect border, PrLayoutRect canvas,
-                  PrLayoutVec viewport, Array<LayoutSceneCanvasRun>& runs) {
+        PrLayoutVec viewport, Array<LayoutSceneCanvasRun>& runs) {
     PrLayoutStyleIndex style = layoutTreeNode(tree, root->node).style;
     const PrLayoutDecorationStyle& decoration = layoutDecorationStyle(tree->styles, style);
     const LayoutBackground& layers = layoutBackgroundAt(&tree->styles->backgrounds, decoration.backgroundLayers);
     LayoutBackgroundBoxes boxes = layoutBackgroundBoxes(tree->styles, root, layoutBoxStyle(tree->styles, style),
-                                                        prLayoutRectToPx(border));
+        prLayoutRectToPx(border));
     boxes.area = prLayoutRectToPx(canvas);
     if (layers.blends) {
         PrDrawList* list = prDrawListCreate();
@@ -721,14 +728,16 @@ PrDrawList* drawRoot(LayoutTree* tree, const LayoutLaidRoot& root) {
     // What the root draws outside its containing block is the painter's to clip.
     PrLayoutUnit far = kLayoutClipUnbounded;
     PrLayoutRect unbounded{PrLayoutUnit{-far.raw}, PrLayoutUnit{-far.raw}, far, far};
-    scene->scrolls.push(LayoutSceneContainer{.node = kPrLayoutNodeNone,
-                                    .parent = kPaintScrollNone,
-                                    .layer = kPaintScrollNone,
-                                    .clip = unbounded,
-                                    .portExtent = viewport->extent,
-                                    .content = viewport->overflow});
+    scene->scrolls.push(LayoutSceneContainer{
+        .node = kPrLayoutNodeNone,
+        .parent = kPaintScrollNone,
+        .layer = kPaintScrollNone,
+        .clip = unbounded,
+        .portExtent = viewport->extent,
+        .content = viewport->overflow,
+    });
     addLayer(tree, scene, top.fragment->node, top.fragment, LayoutPieceAt{kLayoutPieceNone, kLayoutPieceNone},
-             top.offset, false, kPaintScrollNone, 0, 0, 0);
+        top.offset, false, kPaintScrollNone, 0, 0, 0);
     Array<PrLayoutSceneScroll> scrolls;
     scrolls.resize(prLayoutSceneScrolls(static_cast<const PrLayoutTree*>(tree), scene, nullptr, 0));
     prLayoutSceneScrolls(static_cast<const PrLayoutTree*>(tree), scene, scrolls.data, scrolls.count);
@@ -821,18 +830,17 @@ const PrLayoutScene* layoutScene(LayoutTree* tree) {
             scene->canvasBorder = layoutRectAt(root.offset, root.fragment->extent);
             scene->canvasViewport = viewport->extent;
             const LayoutScene* previous = tree->scene;
-            if (previous != nullptr && previous->canvasBorder == scene->canvasBorder
-                && previous->canvas == scene->canvas && previous->canvasLayersHash == scene->canvasLayersHash
-                && previous->canvasViewport == scene->canvasViewport
-                && memEquals(&previous->canvasDecoration, &scene->canvasDecoration,
-                             sizeof(PrLayoutDecorationStyle))) {
+            if (previous != nullptr && previous->canvasBorder == scene->canvasBorder &&
+                    previous->canvas == scene->canvas && previous->canvasLayersHash == scene->canvasLayersHash &&
+                    previous->canvasViewport == scene->canvasViewport &&
+                    memEquals(&previous->canvasDecoration, &scene->canvasDecoration, sizeof(PrLayoutDecorationStyle))) {
                 for (uint32_t i = 0; i < previous->canvasRuns.count; ++i) {
                     prDrawListRetain(previous->canvasRuns.data[i].list);
                     scene->canvasRuns.push(previous->canvasRuns.data[i]);
                 }
             } else {
                 canvasLayers(tree, root.fragment, scene->canvasBorder, scene->canvas, scene->canvasViewport,
-                             scene->canvasRuns);
+                    scene->canvasRuns);
             }
         }
         // The viewport scrolls the document as the root's overflow says. An axis in which the root's overflow is
@@ -843,18 +851,20 @@ const PrLayoutScene* layoutScene(LayoutTree* tree) {
         if (overflow.overflowY == PrLayoutOverflow_Visible)
             overflow.overflowY = PrLayoutOverflow_Scroll;
         PrLayoutRect range = layoutScrollRange(viewport->extent, viewport->overflow);
-        scene->scrolls.push(LayoutSceneContainer{.node = kPrLayoutNodeNone,
-                                        .parent = kPaintScrollNone,
-                                        .layer = kPaintScrollNone,
-                                        .clip = layoutRectAt(kLayoutVecZero, viewport->extent),
-                                        .range = range,
-                                        .portExtent = viewport->extent,
-                                        .content = viewport->overflow,
-                                        .userAxes = layoutUserAxes(overflow),
-                                        .chainAxes = layoutChainAxes(overflow),
-                                        .scrolls = true});
+        scene->scrolls.push(LayoutSceneContainer{
+            .node = kPrLayoutNodeNone,
+            .parent = kPaintScrollNone,
+            .layer = kPaintScrollNone,
+            .clip = layoutRectAt(kLayoutVecZero, viewport->extent),
+            .range = range,
+            .portExtent = viewport->extent,
+            .content = viewport->overflow,
+            .userAxes = layoutUserAxes(overflow),
+            .chainAxes = layoutChainAxes(overflow),
+            .scrolls = true,
+        });
         addLayer(tree, scene, root.fragment->node, root.fragment, LayoutPieceAt{kLayoutPieceNone, kLayoutPieceNone},
-                 root.offset, true, kPaintScrollNone, 0, 0, 0);
+            root.offset, true, kPaintScrollNone, 0, 0, 0);
     }
     layoutPaintSweep(tree);
     prLayoutSceneRelease(tree->scene);
@@ -878,11 +888,16 @@ void layoutScenePlay(const LayoutScene* scene, PrDrawList* list, const PrLayoutS
         offset.y = prLayoutUnitFromPxRoundDouble(floorF64(prLayoutUnitToPxDouble(offset.y) * ratio + 0.5) / ratio);
     }
     Player player{
-        .scene = scene, .list = list, .options = options, .offsets = offsets.data, .frames = {.scene = scene}};
+        .scene = scene,
+        .list = list,
+        .options = options,
+        .offsets = offsets.data,
+        .frames = {.scene = scene},
+    };
     if (scene->canvasColor.a > 0 && !options.canvasFilled) {
         player.enter(0, kPaintScrollNone);
         prDrawListRect(list, prLayoutRectToPx(scene->canvas),
-                       {.color = scene->canvasColor, .edges = PrDrawEdges_Snapped});
+            {.color = scene->canvasColor, .edges = PrDrawEdges_Snapped});
     }
     player.canvas();
     player.layer(0);
@@ -912,7 +927,7 @@ void layoutSceneDestroy(LayoutScene* scene) {
 }
 
 uint32_t layoutSceneSampleTracks(const LayoutScene* scene, const PrLayoutTrack* PR_NULLABLE tracks, uint32_t count,
-                                 double time, Array<PrLayoutSceneEffect>& out) {
+        double time, Array<PrLayoutSceneEffect>& out) {
     uint32_t start = out.count;
     uint32_t sampled = 0;
     for (uint32_t i = 0; i < count; ++i) {
@@ -963,7 +978,7 @@ uint32_t layoutSceneNodeScroll(const LayoutScene* scene, PrLayoutNode node) {
 }
 
 void layoutSceneScrollOffsets(const LayoutScene* scene, const PrLayoutSceneScroll* PR_NULLABLE scrolls, uint32_t count,
-                              Array<PrLayoutVec>& out) {
+        Array<PrLayoutVec>& out) {
     out.resize(scene->scrolls.count);
     // Offsets given in the scene's order are each found at the next position. Offsets in any other order are searched
     // for.
@@ -984,19 +999,20 @@ void layoutSceneScrollOffsets(const LayoutScene* scene, const PrLayoutSceneScrol
 }
 
 LayoutScrollHit layoutSceneScrollAt(const LayoutScene* scene, PrLayoutVec point,
-                                    const PrLayoutSceneEffect* PR_NULLABLE effects, uint32_t count,
-                                    const PrLayoutVec* offsets) {
+        const PrLayoutSceneEffect* PR_NULLABLE effects, uint32_t count, const PrLayoutVec* offsets) {
     if (scene->layers.count == 0 || !layoutRectContains(scene->scrolls.data[0].clip, point))
         return LayoutScrollHit{kPaintScrollNone, kPaintScrollNone, kLayoutVecZero, false};
-    ScrollFinder finder{.scene = scene,
-                        .effects = effects,
-                        .count = count,
-                        .offsets = offsets,
-                        .found = 0,
-                        .slot = kPaintScrollNone,
-                        .slotPoint = kLayoutVecZero,
-                        .blocks = scene->viewportWheelEvents == PrLayoutWheelEvents_Blocking,
-                        .frames = Frames{scene, {}, {}}};
+    ScrollFinder finder{
+        .scene = scene,
+        .effects = effects,
+        .count = count,
+        .offsets = offsets,
+        .found = 0,
+        .slot = kPaintScrollNone,
+        .slotPoint = kLayoutVecZero,
+        .blocks = scene->viewportWheelEvents == PrLayoutWheelEvents_Blocking,
+        .frames = Frames{scene, {}, {}},
+    };
     finder.layer(0, point);
     finder.frames.reset();
     return LayoutScrollHit{scrollerOf(scene, finder.found), finder.slot, finder.slotPoint, finder.blocks};
@@ -1039,8 +1055,7 @@ PrLayoutScenePlayOptions prLayoutScenePlayOptionsDefault(void) {
 }
 
 uint32_t prLayoutSceneSampleTracks(const PrLayoutScene* scene, const PrLayoutTrack* PR_NULLABLE tracks,
-                                   uint32_t trackCount, double time, PrLayoutSceneEffect* PR_NULLABLE out,
-                                   uint32_t capacity) {
+        uint32_t trackCount, double time, PrLayoutSceneEffect* PR_NULLABLE out, uint32_t capacity) {
     Array<PrLayoutSceneEffect> effects;
     layoutSceneSampleTracks(scene, tracks, trackCount, time, effects);
     for (uint32_t i = 0; i < effects.count && i < capacity; ++i)
@@ -1050,8 +1065,7 @@ uint32_t prLayoutSceneSampleTracks(const PrLayoutScene* scene, const PrLayoutTra
     return total;
 }
 
-void prLayoutScenePlay(const PrLayoutScene* scene, PrDrawList* list,
-                       const PrLayoutScenePlayOptions* PR_NULLABLE options) {
+void prLayoutScenePlay(const PrLayoutScene* scene, PrDrawList* list, const PrLayoutScenePlayOptions* PR_NULLABLE options) {
     PrLayoutScenePlayOptions played = options != nullptr ? *options : prLayoutScenePlayOptionsDefault();
     layoutScenePlay(scene, list, played);
 }
@@ -1063,8 +1077,10 @@ PrColor16 prLayoutSceneCanvasColor(const PrLayoutScene* scene) {
 uint32_t prLayoutSceneEmbeds(const PrLayoutScene* scene, PrLayoutSceneEmbed* PR_NULLABLE out, uint32_t capacity) {
     for (uint32_t i = 0; i < scene->slots.count && i < capacity; ++i) {
         const LayoutSceneSlot& slot = scene->slots.data[i];
-        out[i] = PrLayoutSceneEmbed{slot.embed, slot.node,
-                                    PrLayoutVec{layoutRectWidth(slot.box), layoutRectHeight(slot.box)}};
+        out[i] = PrLayoutSceneEmbed{
+            slot.embed, slot.node,
+            PrLayoutVec{layoutRectWidth(slot.box), layoutRectHeight(slot.box)},
+        };
     }
     return scene->slots.count;
 }
@@ -1086,14 +1102,14 @@ bool prLayoutSceneHasScroll(const PrLayoutScene* scene, PrLayoutNode node) {
 }
 
 uint32_t prLayoutSceneScrollAdjustments(const PrLayoutScene* scene, PrLayoutScrollAdjustment* PR_NULLABLE out,
-                                        uint32_t capacity) {
+        uint32_t capacity) {
     for (uint32_t i = 0; i < scene->adjustments.count && i < capacity; ++i)
         out[i] = scene->adjustments.data[i];
     return scene->adjustments.count;
 }
 
 uint32_t prLayoutSceneScrolls(const PrLayoutTree* tree, const PrLayoutScene* scene,
-                              PrLayoutSceneScroll* PR_NULLABLE out, uint32_t capacity) {
+        PrLayoutSceneScroll* PR_NULLABLE out, uint32_t capacity) {
     uint32_t total = 0;
     for (uint32_t i = 0; i < scene->scrolls.count; ++i) {
         const LayoutSceneContainer& s = scene->scrolls.data[i];

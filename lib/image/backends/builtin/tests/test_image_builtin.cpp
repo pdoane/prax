@@ -11,8 +11,10 @@ namespace pr_impl {
 namespace {
 
 std::vector<uint8_t> pngHeader(uint32_t width, uint32_t height) {
-    std::vector<uint8_t> bytes = {0x89, 'P', 'N', 'G', '\r', '\n', 0x1A, '\n',
-                                  0,    0,   0,   13,  'I',  'H',  'D',  'R'};
+    std::vector<uint8_t> bytes = {
+        0x89, 'P', 'N', 'G', '\r', '\n', 0x1A, '\n',
+        0,    0,   0,   13,  'I',  'H',  'D',  'R',
+    };
     for (int shift = 24; shift >= 0; shift -= 8) {
         bytes.push_back(uint8_t((width >> shift) & 0xFF));
     }
@@ -158,15 +160,12 @@ TEST_CASE("bytes of no known encoding read as none") {
 TEST_CASE("an encoding only the header reader knows decodes nothing") {
     std::vector<uint8_t> pixels(size_t(48) * 32 * 4, 0);
     const std::vector<uint8_t> jpeg = jpegHeader(0xC0, 48, 32);
-    CHECK(!decodeImage(jpeg.data(), jpeg.size(), Orientation_FromImage, pixels.data(),
-                       pixels.size()));
+    CHECK(!decodeImage(jpeg.data(), jpeg.size(), Orientation_FromImage, pixels.data(), pixels.size()));
 
     const std::vector<uint8_t> gif = gifHeader(48, 32);
-    CHECK(
-        !decodeImage(gif.data(), gif.size(), Orientation_FromImage, pixels.data(), pixels.size()));
+    CHECK(!decodeImage(gif.data(), gif.size(), Orientation_FromImage, pixels.data(), pixels.size()));
 
     const std::vector<uint8_t> webp = {'R', 'I', 'F', 'F', 0, 0, 0, 0, 'W', 'E', 'B', 'P'};
-    CHECK(!decodeImage(webp.data(), webp.size(), Orientation_FromImage, pixels.data(),
-                       pixels.size()));
+    CHECK(!decodeImage(webp.data(), webp.size(), Orientation_FromImage, pixels.data(), pixels.size()));
     CHECK(!decodeImage(nullptr, 0, Orientation_FromImage, pixels.data(), pixels.size()));
 }

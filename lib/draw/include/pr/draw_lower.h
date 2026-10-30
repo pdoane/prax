@@ -47,7 +47,7 @@ float prDrawStrokeReach(const PrDrawStroke* stroke);
 // Curves and round parts flatten to within `tolerance` target pixels. Width, dashes and caps scale with the transform
 // unless the stroke is non-scaling.
 void prDrawLowerStroke(const PrPath* path, const PrDrawStroke* stroke, PrAffine2 transform, float tolerance,
-                       PrPathPolyline* fill, PrPathPolyline* aligned, PrPathPolyline* region);
+    PrPathPolyline* fill, PrPathPolyline* aligned, PrPathPolyline* region);
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Brushes
@@ -96,7 +96,7 @@ uint32_t prDrawGradientRampMaxColors(uint32_t stopCount, uint32_t resolution);
 // ends. Each color is the brush's color times `color` (a command's, straight alpha), premultiplied, with channels in
 // `space`, which is sRGB or sRGB-linear.
 uint32_t prDrawGradientRamp(const PrDrawBrush* brush, PrColor color, PrColorSpace space, uint32_t resolution,
-                            PrDrawRampPiece* pieces, PrColor* colors);
+    PrDrawRampPiece* pieces, PrColor* colors);
 
 // The number of colors in a ramp of `count` pieces.
 uint32_t prDrawRampColorCount(const PrDrawRampPiece* PR_NULLABLE pieces, uint32_t count);
@@ -125,14 +125,13 @@ typedef struct PrDrawBorderPiece {
 // Called with each piece of a border, in order. The piece's area is `shape`, in the border's space. If `cut` is not
 // null, the area is limited to the nonzero interior of `cut`. The polylines are valid only during the call.
 typedef void (*PrDrawBorderEmitFn)(void* PR_NULLABLE context, const PrDrawBorderPiece* piece,
-                                   const PrPathPolyline* shape, const PrPathPolyline* PR_NULLABLE cut);
+    const PrPathPolyline* shape, const PrPathPolyline* PR_NULLABLE cut);
 
 // Lowers a border into pieces, in order, and passes each piece to `emit`. The bands between the contours that each
 // style names come first. The sides divide the bands along the lines from the outer corners to the inner ones, unless
 // the border is uniform (prDrawBorderUniformSide). Dashes and dots come next, placed along each side's length on the
 // outer contour. Curves flatten to within `tolerance` in the border's space.
-void prDrawBorderLower(const PrDrawBorder* border, float tolerance, PrDrawBorderEmitFn emit,
-                       void* PR_NULLABLE context);
+void prDrawBorderLower(const PrDrawBorder* border, float tolerance, PrDrawBorderEmitFn emit, void* PR_NULLABLE context);
 
 // The factor by which a shaded band scales its color channels.
 static const float kPrDrawBorderShade = 0.55f;
@@ -151,7 +150,7 @@ enum { kPrDrawBorderMaxBands = 2 };
 // Writes the bands that `side` paints to `out`, in order, and returns the number of bands. Returns zero for a side that
 // paints nothing, or for a side that is dashed or dotted.
 uint32_t prDrawBorderBands(const PrDrawBorder* border, PrRectSide side,
-                           PrDrawBorderBand out[PR_NONNULL kPrDrawBorderMaxBands]);
+    PrDrawBorderBand out[PR_NONNULL kPrDrawBorderMaxBands]);
 
 // Returns the side whose style and paint every side shares, if the border is one area: every side paints, and every one
 // is solid, or every one double, in one paint. A side that paints nothing, of no width or no style, makes the border
@@ -217,7 +216,7 @@ PrDrawShadowGeometry prDrawShadowGeometry(const PrDrawShadow* shadow, PrDrawShad
 // `shape` instead, and is cut to inside `caster`. Both polylines are in target pixels. A sigma above
 // kPrDrawBlurMaxSigma blurs at a lower resolution, and is sampled back between its pixels. `rasterizer` is scratch.
 void prDrawShadowCoverage(PrPathRasterizer* rasterizer, const PrPathPolyline* shape, const PrPathPolyline* caster,
-                          PrDrawShadowKind kind, float sigma, PrPathCoverage coverage, PrIVec2 origin, PrPixels out);
+    PrDrawShadowKind kind, float sigma, PrPathCoverage coverage, PrIVec2 origin, PrPixels out);
 
 // Appends the decoration's area to `out`, as a polyline that fills with the nonzero rule. Curves flatten to within
 // `tolerance` in the decoration's space. A decoration has no area unless its length and thickness are finite and above
@@ -236,7 +235,7 @@ typedef struct PrDrawImageRect {
 // Computes the rectangles that a nine-slice draws, in order: the corners, the edges tiled by their modes, then the
 // center if it paints. Writes up to `capacity` rectangles to `out` and returns the total number.
 uint32_t prDrawNineSliceRects(const PrDrawNineSlice* slices, PrVec2 imageExtent, PrRect destination,
-                              PrDrawImageRect* PR_NULLABLE out, uint32_t capacity);
+    PrDrawImageRect* PR_NULLABLE out, uint32_t capacity);
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Layers

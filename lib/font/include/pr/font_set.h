@@ -115,8 +115,8 @@ enum {
     PrFontFaceAutoFlag_Emoji = 1u << 4,
 
     // Every descriptor.
-    PrFontFaceAutoFlag_All = PrFontFaceAutoFlag_Family | PrFontFaceAutoFlag_Weight | PrFontFaceAutoFlag_Width
-                             | PrFontFaceAutoFlag_Slope | PrFontFaceAutoFlag_Emoji,
+    PrFontFaceAutoFlag_All = PrFontFaceAutoFlag_Family | PrFontFaceAutoFlag_Weight | PrFontFaceAutoFlag_Width |
+        PrFontFaceAutoFlag_Slope | PrFontFaceAutoFlag_Emoji,
 };
 typedef uint8_t PrFontFaceAutoFlags;
 

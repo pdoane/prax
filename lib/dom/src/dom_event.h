@@ -236,7 +236,7 @@ Event* PR_NONNULL domEventCreateUninitialized(PrDomEventKind kind) {
 // Creates an event of the interface `Event` with the steps of its constructor. The event is initialized and untrusted.
 template <typename Event = PrDomEvent>
 Event* PR_NONNULL domEventCreate(PrStringView type, const PrDomEventInit& init,
-                                 PrDomEventKind kind = PrDomEventKind_Event) {
+        PrDomEventKind kind = PrDomEventKind_Event) {
     Event* event = domEventCreateUninitialized<Event>(kind);
     domEventConstruct(event, type, init);
     return event;
@@ -255,8 +255,7 @@ void domEventCancel(PrDomEvent* event);
 // Dispatches `event` at `target` (dom/#concept-event-dispatch). Returns true if the event was not canceled. A non-null
 // `targetOverride` replaces `target` as the event's target. For example, a Window's document is the target override for
 // the Window's load event.
-bool domEventDispatch(PrDomEventTarget* target, PrDomEvent* event,
-                      PrDomEventTarget* PR_NULLABLE targetOverride = nullptr);
+bool domEventDispatch(PrDomEventTarget* target, PrDomEvent* event, PrDomEventTarget* PR_NULLABLE targetOverride = nullptr);
 
 // Returns `target` retargeted against `other` (dom/#retarget): `target`, or the host of the outermost shadow root that
 // holds `target` and does not hold `other`. A null `other` is in no tree.
@@ -265,7 +264,7 @@ PrDomEventTarget* PR_NULLABLE domRetarget(PrDomEventTarget* PR_NULLABLE target, 
 // Fires a new trusted event of `type` at `target` (dom/#concept-event-fire). Returns true if the event was not
 // canceled.
 bool domEventFire(PrDomEventTarget* target, PrStringView type, const PrDomEventInit& init = {},
-                  PrDomEventTarget* PR_NULLABLE targetOverride = nullptr);
+    PrDomEventTarget* PR_NULLABLE targetOverride = nullptr);
 
 // Frees the listeners and handlers, and releases the references that their callbacks hold.
 void domListenersDestroy(DomListeners* PR_NULLABLE listeners);
@@ -286,11 +285,10 @@ bool domWheelPathBlocks(PrDomEventTarget* target);
 // Adds `callback` as a listener for `type` (dom/#add-an-event-listener). Adds nothing if a listener with the same type,
 // callback and capture already exists.
 void domListenerAdd(PrDomEventTarget* target, PrStringView type, const PrDomEventListener* callback,
-                    const PrDomAddEventListenerOptions* PR_NULLABLE options);
+    const PrDomAddEventListenerOptions* PR_NULLABLE options);
 
 // Removes the listener for `type` with `callback` and `capture`, if there is one (dom/#remove-an-event-listener).
-void domListenerRemove(PrDomEventTarget* target, PrStringView type,
-                       const PrDomEventListener* callback, bool capture);
+void domListenerRemove(PrDomEventTarget* target, PrStringView type, const PrDomEventListener* callback, bool capture);
 
 // Returns the value of the event handler `handler` of `target` (html/#getting-the-current-value-of-the-event-handler).
 // Compiles an internal raw uncompiled handler through the host of the element's document. Returns a null invoke if the
@@ -300,12 +298,11 @@ PrDomEventHandlerCallback domEventHandler(PrDomEventTarget* target, PrDomEventHa
 // Sets the event handler `handler` of `target` with the steps of the setter in html/#event-handler-attributes. A null
 // `callback` deactivates the handler, and a non-null callback activates it if it was not active.
 void domSetEventHandler(PrDomEventTarget* target, PrDomEventHandler handler,
-                        const PrDomEventHandlerCallback* PR_NULLABLE callback);
+    const PrDomEventHandlerCallback* PR_NULLABLE callback);
 
 // Sets the event handler `handler` of `target` to an internal raw uncompiled handler of `text`, and activates it.
 // `text` is the value of the content attribute of `element` (html/#event-handler-attributes).
-void domSetEventHandlerRaw(PrDomEventTarget* target, PrDomEventHandler handler, PrStringView text,
-                           PrDomElement* element);
+void domSetEventHandlerRaw(PrDomEventTarget* target, PrDomEventHandler handler, PrStringView text, PrDomElement* element);
 
 } // namespace pr_impl
 

@@ -26,8 +26,7 @@ std::string describe(const PrPath* path) {
             text += ' ';
         text += kLetter[verbs[i]];
         for (uint32_t j = 0; j < kPoints[verbs[i]]; ++j, ++next)
-            text += " " + std::to_string(int(points[next].x)) + "," +
-                    std::to_string(int(points[next].y));
+            text += " " + std::to_string(int(points[next].x)) + "," + std::to_string(int(points[next].y));
     }
     return text;
 }

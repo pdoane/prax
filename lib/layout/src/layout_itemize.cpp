@@ -29,16 +29,14 @@ PrTextDirection directionOf(const LayoutStyles* styles, const LayoutInlineItem& 
 
 } // namespace
 
-bool layoutIsUpright(const PrLayoutFontStyle& container, const PrLayoutFontStyle& font, uint32_t codePoint,
-                     PrScript script) {
+bool layoutIsUpright(const PrLayoutFontStyle& container, const PrLayoutFontStyle& font, uint32_t codePoint, PrScript script) {
     return prTextIsUpright(orientationOf(container, font), codePoint, script);
 }
 
 bool layoutSameShapingStyle(const LayoutStyles* styles, uint32_t a, uint32_t b) {
     if (a == b)
         return true;
-    return layoutTextFont(styles, layoutTableAt(styles->font, a))
-           == layoutTextFont(styles, layoutTableAt(styles->font, b));
+    return layoutTextFont(styles, layoutTableAt(styles->font, a)) == layoutTextFont(styles, layoutTableAt(styles->font, b));
 }
 
 bool layoutItemize(LayoutStyles* styles, LayoutInlineShaping& t, LayoutShapingScratch& s) {
@@ -106,15 +104,17 @@ bool layoutItemize(LayoutStyles* styles, LayoutInlineShaping& t, LayoutShapingSc
         const PrTextItemRun& run = runs[r];
         PrLayoutGroupIndex font = s.pieces.data[run.piece].style;
         layoutFontFacesMeasureNew(styles, font);
-        t.runs.push(LayoutShapingRun{.start = run.start,
-                                     .end = run.end,
-                                     .contextStart = run.contextStart,
-                                     .contextEnd = run.contextEnd,
-                                     .font = font,
-                                     .face = run.face != kPrTextMatchNone ? LayoutFaceIndex(run.face) : kLayoutFaceNone,
-                                     .script = run.script,
-                                     .level = run.level,
-                                     .upright = run.upright});
+        t.runs.push(LayoutShapingRun{
+            .start = run.start,
+            .end = run.end,
+            .contextStart = run.contextStart,
+            .contextEnd = run.contextEnd,
+            .font = font,
+            .face = run.face != kPrTextMatchNone ? LayoutFaceIndex(run.face) : kLayoutFaceNone,
+            .script = run.script,
+            .level = run.level,
+            .upright = run.upright,
+        });
     }
     t.bidi = false;
     t.levels.clear();

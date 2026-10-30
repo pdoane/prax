@@ -157,10 +157,12 @@ PrString prCommandChordText(PrCommandChord chord) {
     if ((chord.modifiers & PrAppModifierFlag_Super) != 0)
         textAppend(&text, "\xE2\x8C\x98");
 #else
-    static const ModifierWord kNames[] = {{"Ctrl+", PrAppModifierFlag_Control},
-                                          {"Alt+", PrAppModifierFlag_Alt},
-                                          {"Shift+", PrAppModifierFlag_Shift},
-                                          {"Win+", PrAppModifierFlag_Super}};
+    static const ModifierWord kNames[] = {
+        {"Ctrl+", PrAppModifierFlag_Control},
+        {"Alt+", PrAppModifierFlag_Alt},
+        {"Shift+", PrAppModifierFlag_Shift},
+        {"Win+", PrAppModifierFlag_Super},
+    };
     for (const ModifierWord& named : kNames) {
         if ((chord.modifiers & named.modifier) != 0)
             textAppend(&text, named.word);
@@ -190,12 +192,12 @@ void prCommandKeymapDestroy(PrCommandKeymap* PR_NULLABLE keymap) {
 }
 
 void prCommandKeymapBind(PrCommandKeymap* keymap, PrCommandChord chord, PrStringView commandId, PrStringView context,
-                         PrCommandBindingKind kind) {
+        PrCommandBindingKind kind) {
     PR_ASSERT(chord.key != PrAppKey_Unknown && commandId.size != 0);
     for (uint32_t i = 0; i < keymap->bindings.count; ++i) {
         Binding* binding = keymap->bindings.data[i];
-        if (binding->chord.key == chord.key && binding->chord.modifiers == chord.modifiers
-            && viewOf(binding->context) == context) {
+        if (binding->chord.key == chord.key && binding->chord.modifiers == chord.modifiers &&
+                viewOf(binding->context) == context) {
             prStringReplace(&binding->commandId, commandId);
             binding->kind = kind;
             return;

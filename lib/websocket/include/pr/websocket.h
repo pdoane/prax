@@ -102,13 +102,12 @@ struct PrWebSocket {
 struct PrWebSocketNetwork {
     void (*destroy)(PrWebSocketNetwork* network);
     PrStatus (*socketCreate)(PrWebSocketNetwork* network, const PrWebSocketDesc* desc,
-                             PrWebSocket* PR_NULLABLE* PR_NONNULL out);
+        PrWebSocket* PR_NULLABLE* PR_NONNULL out);
     void (*socketDestroy)(PrWebSocketNetwork* network, PrWebSocket* socket);
     PrWebSocketState (*socketState)(const PrWebSocketNetwork* network, const PrWebSocket* socket);
     PrStringView (*socketProtocol)(const PrWebSocketNetwork* network, const PrWebSocket* socket);
     size_t (*socketBufferedAmount)(const PrWebSocketNetwork* network, const PrWebSocket* socket);
-    PrStatus (*socketSend)(PrWebSocketNetwork* network, PrWebSocket* socket, PrWebSocketMessageKind kind,
-                           PrByteView data);
+    PrStatus (*socketSend)(PrWebSocketNetwork* network, PrWebSocket* socket, PrWebSocketMessageKind kind, PrByteView data);
     void (*socketClose)(PrWebSocketNetwork* network, PrWebSocket* socket, uint16_t code, PrStringView reason);
     PrWebSocketMessage (*socketMessage)(const PrWebSocketNetwork* network, const PrWebSocket* socket);
     PrWebSocketCloseInfo (*socketCloseInfo)(const PrWebSocketNetwork* network, const PrWebSocket* socket);
@@ -150,7 +149,7 @@ typedef struct PrWebSocketNetworkDesc {
 // Creates a source by the backend, as `desc` describes. A backend's own header documents how it connects. Returns null
 // if the build does not have the backend. `desc`'s network and TLS source must outlive the source.
 PrWebSocketNetwork* PR_NULLABLE prWebSocketNetworkCreate(PrWebSocketNetworkBackend backend,
-                                                         const PrWebSocketNetworkDesc* desc);
+    const PrWebSocketNetworkDesc* desc);
 
 // Frees the source. Its sockets must be destroyed first. Called on the network's loop, outside the callbacks of its
 // sockets.
@@ -161,7 +160,7 @@ void prWebSocketNetworkDestroy(PrWebSocketNetwork* PR_NULLABLE network);
 // URL that does not parse, has a fragment, or offers a subprotocol that is not a token or repeats, and NotSupported for
 // a URL whose scheme is not ws or wss. On failure, `*out` is null.
 PrStatus prWebSocketCreate(PrWebSocketNetwork* network, const PrWebSocketDesc* desc,
-                           PrWebSocket* PR_NULLABLE* PR_NONNULL out);
+    PrWebSocket* PR_NULLABLE* PR_NONNULL out);
 
 // Closes the connection at once if it is not closed, and frees the socket. Its callback is not called again. A socket
 // may be destroyed during its own callback.

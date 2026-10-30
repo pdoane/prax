@@ -43,21 +43,18 @@ PrVec2 lottieTransformPosition(const LottieAnimation& a, const LottieTransform& 
 // about z, y and x and by the orientation, and moves to the position. Negative z points toward the viewer, as in After
 // Effects. With `autoOrient`, the matrix also rotates to the direction of motion, as in lottieTransformAffine. The
 // matrix has no perspective, so it flattens to an affine transform of the plane (prAffine2FromMatrix4).
-PrMatrix4 lottieTransformMatrix4(const LottieAnimation& a, const LottieTransform& t, double frame,
-                                 bool autoOrient = false);
+PrMatrix4 lottieTransformMatrix4(const LottieAnimation& a, const LottieTransform& t, double frame, bool autoOrient = false);
 
 // Returns the view of a camera layer whose transform is `t`, for a composition of `extent`: the matrix from the
 // composition's 3D space to the camera's, in which the eye looks down -z from `zoom` above the composition's center. A
 // camera at its default place, centered `zoom` in front of the composition and aimed at its center, gives the identity.
 // The camera turns to face its point of interest, which its transform holds as the anchor, then by its rotations and
 // orientation.
-PrMatrix4 lottieCameraView(const LottieAnimation& a, const LottieTransform& t, double frame, PrVec2 extent,
-                           float zoom);
+PrMatrix4 lottieCameraView(const LottieAnimation& a, const LottieTransform& t, double frame, PrVec2 extent, float zoom);
 
 // Returns the transform's matrix in two dimensions. The matrix moves the anchor to the origin, scales, skews, rotates
 // and moves to the position. With `autoOrient`, it also rotates to the direction that the position moves in at `frame`.
-PrAffine2 lottieTransformAffine(const LottieAnimation& a, const LottieTransform& t, double frame,
-                                bool autoOrient = false);
+PrAffine2 lottieTransformAffine(const LottieAnimation& a, const LottieTransform& t, double frame, bool autoOrient = false);
 
 // Returns the transform's opacity, as a fraction.
 float lottieTransformOpacity(const LottieAnimation& a, const LottieTransform& t, double frame);

@@ -39,8 +39,10 @@ PrVec2 cubicAt(const Cubic& c, float t) {
     float b = 3 * u * u * t;
     float d = 3 * u * t * t;
     float e = t * t * t;
-    return PrVec2{a * c.p[0].x + b * c.p[1].x + d * c.p[2].x + e * c.p[3].x,
-                   a * c.p[0].y + b * c.p[1].y + d * c.p[2].y + e * c.p[3].y};
+    return PrVec2{
+        a * c.p[0].x + b * c.p[1].x + d * c.p[2].x + e * c.p[3].x,
+        a * c.p[0].y + b * c.p[1].y + d * c.p[2].y + e * c.p[3].y,
+    };
 }
 
 PrVec2 cubicDerivative(const Cubic& c, float t) {
@@ -193,7 +195,7 @@ void measureShape(const LottieRender& r, const Array<uint32_t>& contours, Trimme
 // the builder's open contour if there is one. A contour taken whole stays closed. `keepOpen` leaves the last contour
 // open so that more can join it.
 void trimShape(LottieRender& r, const Array<uint32_t>& contours, const Trimmed& t, float start, float end,
-               bool keepOpen, Builder& b) {
+        bool keepOpen, Builder& b) {
     float added = 0;
     uint32_t segment = 0;
     for (uint32_t i = 0; i < contours.count; ++i) {
@@ -366,21 +368,25 @@ void puckerBloat(LottieGeometry& g, const LottieContour& c, float amount) {
     g.contours.push(LottieContour{g.vertices.count, c.count, c.closed});
     for (uint32_t i = 0; i < c.count; ++i) {
         LottieVertex v = g.vertices.data[c.first + i];
-        g.vertices.push(LottieVertex{prVec2Lerp(v.point, center, percent), prVec2Lerp(v.in, center, -percent),
-                                     prVec2Lerp(v.out, center, -percent)});
+        g.vertices.push(LottieVertex{
+            prVec2Lerp(v.point, center, percent), prVec2Lerp(v.in, center, -percent),
+            prVec2Lerp(v.out, center, -percent),
+        });
     }
 }
 
 // Appends a zig-zag vertex `amplitude` away from `point` across `angle`.
 void zigZagPoint(LottieGeometry& g, PrVec2 point, float angle, float direction, float amplitude, float outAmplitude,
-                 float inAmplitude) {
+        float inAmplitude) {
     float angleOut = angle - kPiF32 / 2;
     float angleIn = angle + kPiF32 / 2;
     float px = point.x + cosF32(angle) * direction * amplitude;
     float py = point.y - sinF32(angle) * direction * amplitude;
-    g.vertices.push(LottieVertex{PrVec2{px, py},
-                                 PrVec2{px + cosF32(angleIn) * inAmplitude, py - sinF32(angleIn) * inAmplitude},
-                                 PrVec2{px + cosF32(angleOut) * outAmplitude, py - sinF32(angleOut) * outAmplitude}});
+    g.vertices.push(LottieVertex{
+        PrVec2{px, py},
+        PrVec2{px + cosF32(angleIn) * inAmplitude, py - sinF32(angleIn) * inAmplitude},
+        PrVec2{px + cosF32(angleOut) * outAmplitude, py - sinF32(angleOut) * outAmplitude},
+    });
 }
 
 void zigZag(LottieGeometry& g, const LottieContour& c, float amplitude, float frequency, float pointType) {
@@ -403,8 +409,7 @@ void zigZag(LottieGeometry& g, const LottieContour& c, float amplitude, float fr
         float angle = -atan2F32(rotated.y, rotated.x);
         float prevDist = smooth ? distance(point, prev) : 0;
         float nextDist = smooth ? distance(point, next) : 0;
-        zigZagPoint(g, point, angle, direction, amplitude, nextDist / ((frequency + 1) * 2),
-                    prevDist / ((frequency + 1) * 2));
+        zigZagPoint(g, point, angle, direction, amplitude, nextDist / ((frequency + 1) * 2), prevDist / ((frequency + 1) * 2));
     };
     float direction = -1;
     corner(0, direction);
@@ -423,7 +428,7 @@ void zigZag(LottieGeometry& g, const LottieContour& c, float amplitude, float fr
             PrVec2 d = cubicDerivative(seg, t);
             float angle = atan2F32(d.x, d.y);
             zigZagPoint(g, cubicAt(seg, t), angle, direction, amplitude, dist / ((frequency + 1) * 2),
-                        dist / ((frequency + 1) * 2));
+                dist / ((frequency + 1) * 2));
             direction = -direction;
         }
         corner(i + 1, direction);
@@ -487,8 +492,11 @@ void appendPath(LottieGeometry& g, const PrPath* path) {
                 break;
             case PrPathVerb_Quad:
                 b.add(Cubic{
-                    {last, prVec2Lerp(last, points[p],
-                                      2.0f / 3), prVec2Lerp(points[p + 1], points[p], 2.0f / 3), points[p + 1]}});
+                    {
+                        last, prVec2Lerp(last, points[p], 2.0f / 3), prVec2Lerp(points[p + 1], points[p], 2.0f / 3),
+                        points[p + 1],
+                    },
+                });
                 last = points[p + 1];
                 p += 2;
                 break;
@@ -515,8 +523,7 @@ void offsetShape(LottieRender& r, LottieShapeEntry& shape, const LottieItem& ite
     float miter = lottieScalar(a, item.props[LottieProp_MiterLimit], frame, 4);
     prPathClear(r.path);
     for (uint32_t i = 0; i < shape.contourCount; ++i)
-        lottieAddContour(r.geometry, r.geometry.contours.data[r.refs.data[shape.contours + i]], prAffine2Identity(),
-                         r.path);
+        lottieAddContour(r.geometry, r.geometry.contours.data[r.refs.data[shape.contours + i]], prAffine2Identity(), r.path);
     PrPathPolyline flat{};
     PrPathPolyline out{};
     prPathFlatten(r.path, prAffine2Identity(), kModifierTolerance, PrPathFlattening_Inside, &flat);
@@ -533,10 +540,13 @@ void offsetShape(LottieRender& r, LottieShapeEntry& shape, const LottieItem& ite
 // other modes, each shape is combined with the result so far by the mode's operation. The first shape then lies in the
 // merge's group, and the others are left empty.
 void merge(LottieRender& r, const LottieItem& item, uint32_t group, Array<uint32_t>& shapes) {
-    PrPathPolylineOp op = item.mode == 2   ? PrPathPolylineOp_Union
-                  : item.mode == 3 ? PrPathPolylineOp_Difference
-                  : item.mode == 4 ? PrPathPolylineOp_Intersect
-                                   : PrPathPolylineOp_Xor;
+    PrPathPolylineOp op = PrPathPolylineOp_Xor;
+    if (item.mode == 2)
+        op = PrPathPolylineOp_Union;
+    else if (item.mode == 3)
+        op = PrPathPolylineOp_Difference;
+    else if (item.mode == 4)
+        op = PrPathPolylineOp_Intersect;
     // The merge mode appends paths, including their curves. The other modes combine regions, which are polylines, once
     // there is a second shape to combine.
     bool append = item.mode <= 1;

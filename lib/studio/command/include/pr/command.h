@@ -125,7 +125,7 @@ bool prCommandRegistryIsDirect(const PrCommandRegistry* registry, PrCommandIndex
 // failure, the command does not run, and `error`, if not null, receives a sentence that says why, which the caller
 // releases with prStringReset.
 PrStatus prCommandRegistryRun(const PrCommandRegistry* registry, PrStringView id, const PrCommandArgs* PR_NULLABLE args,
-                              PrString* PR_NULLABLE error);
+    PrString* PR_NULLABLE error);
 
 // Return the argument named `name` of a run, or `fallback` if the run has no such argument. The registry checked each
 // argument's kind before the run. A string is valid while the arguments' document is unchanged.

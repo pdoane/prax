@@ -153,14 +153,14 @@ bool brushesEqual(const PrDrawBrush& a, const PrDrawBrush& b) {
     PrDrawBrush bWithStops = b;
     bWithStops.stops = a.stops;
     bWithStops.stopCount = a.stopCount;
-    return memEquals(&a, &bWithStops, sizeof(PrDrawBrush))
-           && (count == 0 || memEquals(a.stops, b.stops, sizeof(PrDrawColorStop) * count));
+    return memEquals(&a, &bWithStops, sizeof(PrDrawBrush)) &&
+        (count == 0 || memEquals(a.stops, b.stops, sizeof(PrDrawColorStop) * count));
 }
 
 // Drops the brush's source if it is the list that the brush is recorded into. Such a list would draw itself forever.
 void withoutSelf(const DrawList* list, PrDrawBrush& brush) {
-    if (brush.kind == PrDrawBrushKind_Image && brush.image.source.kind == PrDrawSourceKind_List
-        && brush.image.source.list == list)
+    if (brush.kind == PrDrawBrushKind_Image && brush.image.source.kind == PrDrawSourceKind_List &&
+            brush.image.source.list == list)
         brush.image.source.list = nullptr;
 }
 
@@ -177,15 +177,13 @@ bool strokesEqual(const PrDrawStroke& a, const PrDrawStroke& b) {
     const PrPathStroke& y = b.shape;
     uint32_t dashes = x.dashes != nullptr ? x.dashCount : 0;
     uint32_t profile = x.profile != nullptr ? x.profileCount : 0;
-    return a.nonScaling == b.nonScaling && a.align == b.align && a.mapping == b.mapping && x.width == y.width
-           && x.miterLimit == y.miterLimit && x.dashOffset == y.dashOffset && x.join == y.join
-           && x.startCap == y.startCap && x.endCap == y.endCap && x.dashCap == y.dashCap
-           && x.zeroLengthDirection.x == y.zeroLengthDirection.x
-           && x.zeroLengthDirection.y == y.zeroLengthDirection.y
-           && dashes == (y.dashes != nullptr ? y.dashCount : 0)
-           && profile == (y.profile != nullptr ? y.profileCount : 0)
-           && (dashes == 0 || memEquals(x.dashes, y.dashes, sizeof(float) * dashes))
-           && (profile == 0 || memEquals(x.profile, y.profile, sizeof(PrPathWidthPoint) * profile));
+    return a.nonScaling == b.nonScaling && a.align == b.align && a.mapping == b.mapping && x.width == y.width &&
+        x.miterLimit == y.miterLimit && x.dashOffset == y.dashOffset && x.join == y.join &&
+        x.startCap == y.startCap && x.endCap == y.endCap && x.dashCap == y.dashCap &&
+        x.zeroLengthDirection.x == y.zeroLengthDirection.x && x.zeroLengthDirection.y == y.zeroLengthDirection.y &&
+        dashes == (y.dashes != nullptr ? y.dashCount : 0) && profile == (y.profile != nullptr ? y.profileCount : 0) &&
+        (dashes == 0 || memEquals(x.dashes, y.dashes, sizeof(float) * dashes)) &&
+        (profile == 0 || memEquals(x.profile, y.profile, sizeof(PrPathWidthPoint) * profile));
 }
 
 const PrDrawStroke* copyStroke(DrawRecording& r, const PrDrawStroke* stroke) {
@@ -292,8 +290,7 @@ PrRect outset(PrRect r, float by) {
 }
 
 bool unbounded(PrRect r) {
-    return r.left == -kInfinityF32 || r.top == -kInfinityF32 || r.right == kInfinityF32
-           || r.bottom == kInfinityF32;
+    return r.left == -kInfinityF32 || r.top == -kInfinityF32 || r.right == kInfinityF32 || r.bottom == kInfinityF32;
 }
 
 PrRect mapBounds(PrAffine2 t, PrRect r) {
@@ -379,8 +376,10 @@ PrRect recordingBounds(const DrawRecording& r) {
             case PrDrawCommandKind_DropShadow: {
                 const PrDrawShadow* s = c.shadow;
                 const PrRect& rect = s->shape.rect;
-                PrRect caster = PrRect{rect.left + s->offset.x, rect.top + s->offset.y, rect.right + s->offset.x,
-                                       rect.bottom + s->offset.y};
+                PrRect caster = PrRect{
+                    rect.left + s->offset.x, rect.top + s->offset.y, rect.right + s->offset.x,
+                    rect.bottom + s->offset.y,
+                };
                 float reach = maxF32(s->spread, 0) + 4 * maxF32(s->sigma, 0);
                 if (s->nonScaling) {
                     local = rect;
@@ -396,8 +395,7 @@ PrRect recordingBounds(const DrawRecording& r) {
             case PrDrawCommandKind_Decoration: {
                 const PrDrawDecoration* d = c.decoration;
                 float half = d->thickness * 2 + maxF32(d->amplitude, 0);
-                local = PrRect{d->origin.x, d->origin.y - half, d->origin.x + d->length,
-                               d->origin.y + half};
+                local = PrRect{d->origin.x, d->origin.y - half, d->origin.x + d->length, d->origin.y + half};
                 break;
             }
             case PrDrawCommandKind_NineSlice:
@@ -482,29 +480,37 @@ PrRect recordingBounds(const DrawRecording& r) {
                         break;
                     case PrDrawCommandKind_Ellipse: {
                         float radius = maxF32(c.ellipse.radii.x, c.ellipse.radii.y);
-                        local = PrRect{c.ellipse.center.x - radius, c.ellipse.center.y - radius,
-                                       c.ellipse.center.x + radius, c.ellipse.center.y + radius};
+                        local = PrRect{
+                            c.ellipse.center.x - radius, c.ellipse.center.y - radius,
+                            c.ellipse.center.x + radius, c.ellipse.center.y + radius,
+                        };
                         break;
                     }
                     case PrDrawCommandKind_Sector: {
                         float radius = c.sector.outerRadius;
-                        local = PrRect{c.sector.center.x - radius, c.sector.center.y - radius,
-                                       c.sector.center.x + radius, c.sector.center.y + radius};
+                        local = PrRect{
+                            c.sector.center.x - radius, c.sector.center.y - radius,
+                            c.sector.center.x + radius, c.sector.center.y + radius,
+                        };
                         break;
                     }
                     case PrDrawCommandKind_Capsule: {
                         float radius = c.capsule.radius;
                         PrVec2 a = c.capsule.start;
                         PrVec2 b = c.capsule.end;
-                        local = PrRect{minF32(a.x, b.x) - radius, minF32(a.y, b.y) - radius,
-                                       maxF32(a.x, b.x) + radius, maxF32(a.y, b.y) + radius};
+                        local = PrRect{
+                            minF32(a.x, b.x) - radius, minF32(a.y, b.y) - radius,
+                            maxF32(a.x, b.x) + radius, maxF32(a.y, b.y) + radius,
+                        };
                         break;
                     }
                     case PrDrawCommandKind_Line:
-                        local = PrRect{minF32(c.line.start.x, c.line.end.x),
-                                       minF32(c.line.start.y, c.line.end.y),
-                                       maxF32(c.line.start.x, c.line.end.x),
-                                       maxF32(c.line.start.y, c.line.end.y)};
+                        local = PrRect{
+                            minF32(c.line.start.x, c.line.end.x),
+                            minF32(c.line.start.y, c.line.end.y),
+                            maxF32(c.line.start.x, c.line.end.x),
+                            maxF32(c.line.start.y, c.line.end.y),
+                        };
                         break;
                     case PrDrawCommandKind_Polyline: {
                         const PrVec2* p = c.polyline->points;
@@ -570,8 +576,7 @@ bool readsBackdrop(const PrDrawFilter* PR_NULLABLE filter) {
 bool commandsReadBackdrop(const PrDrawCommand* commands, uint32_t count) {
     for (uint32_t i = 0; i < count; ++i) {
         const PrDrawCommand& c = commands[i];
-        if (c.kind == PrDrawCommandKind_PushGroup
-            && (c.group->backdrop != nullptr || readsBackdrop(c.group->filter)))
+        if (c.kind == PrDrawCommandKind_PushGroup && (c.group->backdrop != nullptr || readsBackdrop(c.group->filter)))
             return true;
         if (c.kind == PrDrawCommandKind_Embed && prDrawListReadsBackdrop(c.embed.list))
             return true;
@@ -588,8 +593,8 @@ bool commandsWritePixels(const PrDrawCommand* commands, uint32_t count) {
             i = prDrawCommandGroupEnd(commands, count, i);
             continue;
         }
-        if (c.kind == PrDrawCommandKind_WritePixels
-            || (c.kind == PrDrawCommandKind_Embed && prDrawListWritesPixels(c.embed.list)))
+        if (c.kind == PrDrawCommandKind_WritePixels ||
+                (c.kind == PrDrawCommandKind_Embed && prDrawListWritesPixels(c.embed.list)))
             return true;
     }
     return false;
@@ -629,8 +634,10 @@ void recordGroup(DrawList* list, const PrDrawGroup* group) {
 // the group's other effects, and is left out if it has none.
 void pushLinearGroup(DrawList* list, const PrDrawGroup* group) {
     PR_ASSERT(group->backdrop == nullptr);
-    PrDrawFilterNode node{.space = PrColorSpace_SrgbLinear,
-                          .inputs = {PrDrawFilterInput_Source, PrDrawFilterInput_Backdrop}};
+    PrDrawFilterNode node{
+        .space = PrColorSpace_SrgbLinear,
+        .inputs = {PrDrawFilterInput_Source, PrDrawFilterInput_Backdrop},
+    };
     if (group->composite == PrDrawComposite_SourceOver) {
         node.kind = PrDrawFilterKind_Blend;
         node.blend = group->blendMode;
@@ -757,7 +764,7 @@ void prDrawListEllipse(PrDrawList* list, PrVec2 center, PrVec2 radii, float rota
 }
 
 void prDrawListSector(PrDrawList* list, PrVec2 center, float innerRadius, float outerRadius, float startAngle,
-                      float sweep, PrDrawPaint paint) {
+        float sweep, PrDrawPaint paint) {
     bool area = outerRadius > 0 && sweep != 0 && innerRadius < outerRadius;
     if (PrDrawCommand* c = addShape(list, PrDrawCommandKind_Sector, area, paint)) {
         c->sector.center = center;
@@ -804,7 +811,7 @@ void prDrawListPolyline(PrDrawList* list, const PrPathPolyline* polyline, PrPath
 }
 
 void prDrawListPolylineContour(PrDrawList* list, const PrVec2* points, uint32_t pointCount, PrDrawContour contour,
-                               PrPathFillRule rule, PrDrawPaint paint) {
+        PrPathFillRule rule, PrDrawPaint paint) {
     uint32_t start = 0;
     uint64_t closedBits = contour == PrDrawContour_Closed ? 1 : 0;
     PrPathPolyline polyline{const_cast<PrVec2*>(points), &start, &closedBits, pointCount, pointCount, 1, 1};
@@ -829,10 +836,8 @@ void prDrawListBorder(PrDrawList* list, const PrDrawBorder* border, PrDrawPaint 
             brushes[i] = *side.brush;
             withoutSelf(list, brushes[i]);
         }
-        paints = paints
-                 || (side.width > 0 && prDrawBorderStylePaints(side.style)
-                     && (side.brush != nullptr ? brushPaints(&brushes[i]) && brushes[i].opacity > 0
-                                               : prFloat16ToFloat(side.color.a) > 0));
+        paints = paints || (side.width > 0 && prDrawBorderStylePaints(side.style) &&
+            (side.brush != nullptr ? brushPaints(&brushes[i]) && brushes[i].opacity > 0 : prFloat16ToFloat(side.color.a) > 0));
     }
     if (prRectIsEmpty(border->shape.rect) || !paints)
         return;
@@ -873,10 +878,10 @@ void prDrawListDecoration(PrDrawList* list, const PrDrawDecoration* decoration, 
 }
 
 void prDrawListNineSlice(PrDrawList* list, PrDrawSource source, const PrDrawNineSlice* slices, PrRect destination,
-                         PrDrawSampling sampling, PrDrawPaint paint) {
+        PrDrawSampling sampling, PrDrawPaint paint) {
     PR_ASSERT(paint.brush == nullptr && paint.stroke == nullptr);
-    if (!prDrawSourceIsValid(source) || prRectIsEmpty(destination)
-        || (source.kind == PrDrawSourceKind_List && source.list == list))
+    if (!prDrawSourceIsValid(source) || prRectIsEmpty(destination) ||
+            (source.kind == PrDrawSourceKind_List && source.list == list))
         return;
     if (PrDrawCommand* c = addPainting(list, PrDrawCommandKind_NineSlice, paint)) {
         holdSource(list->recording, source);
@@ -947,7 +952,7 @@ void prDrawListPopTransform(PrDrawList* list) {
 
 void prDrawListPushTransformSnapped(PrDrawList* list, PrDAffine2 transform, PrDrawSnapFlags flags) {
     PrDrawCommand* c = push(list, PrDrawCommandKind_PushTransformAffine2, PrDrawCommandKind_PushTransformAffine2,
-                            PrDrawEdges_Antialiased);
+        PrDrawEdges_Antialiased);
     c->affine = transform;
     c->snap = flags;
 }
@@ -1004,13 +1009,15 @@ PrRect prDrawListBounds(const PrDrawList* list) {
 }
 
 bool prDrawListReadsBackdrop(const PrDrawList* list) {
-    return list->frozen ? list->readsBackdrop
-                        : commandsReadBackdrop(list->recording.commands.data, list->recording.commands.count);
+    if (list->frozen)
+        return list->readsBackdrop;
+    return commandsReadBackdrop(list->recording.commands.data, list->recording.commands.count);
 }
 
 bool prDrawListWritesPixels(const PrDrawList* list) {
-    return list->frozen ? list->writesPixels
-                        : commandsWritePixels(list->recording.commands.data, list->recording.commands.count);
+    if (list->frozen)
+        return list->writesPixels;
+    return commandsWritePixels(list->recording.commands.data, list->recording.commands.count);
 }
 
 uint64_t prDrawListId(const PrDrawList* list) {

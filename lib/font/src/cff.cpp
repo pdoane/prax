@@ -335,11 +335,13 @@ struct Interpreter {
 Interpreter interpreterFor(const CffFace& face, SfntCoords coords, FontGlyphOutline* out, uint32_t glyph) {
     uint32_t fd = fontDictOf(face, glyph);
     const CffPrivate* p = fd < face.privates.count ? &face.privates.data[fd] : nullptr;
-    return Interpreter{.face = face,
-                       .coords = coords,
-                       .out = out,
-                       .localSubrs = p != nullptr ? p->subrs : CffIndex{},
-                       .vsindex = p != nullptr ? p->vsindex : 0};
+    return Interpreter{
+        .face = face,
+        .coords = coords,
+        .out = out,
+        .localSubrs = p != nullptr ? p->subrs : CffIndex{},
+        .vsindex = p != nullptr ? p->vsindex : 0,
+    };
 }
 
 void closeContour(Interpreter& in) {
@@ -349,8 +351,8 @@ void closeContour(Interpreter& in) {
     uint32_t first = o.ends.count != 0 ? o.ends.last() : 0;
     // The closing line ends on the first point, which is not repeated.
     uint32_t last = o.points.count - 1;
-    if (last > first && o.kinds.data[last] == OutlinePoint_On && o.points.data[last].x == o.points.data[first].x
-        && o.points.data[last].y == o.points.data[first].y) {
+    if (last > first && o.kinds.data[last] == OutlinePoint_On && o.points.data[last].x == o.points.data[first].x &&
+            o.points.data[last].y == o.points.data[first].y) {
         o.points.pop();
         o.kinds.pop();
     }
@@ -397,10 +399,11 @@ void readScalars(Interpreter& in) {
     if (in.scalarsRead)
         return;
     in.scalarsRead = true;
-    in.regionCount = in.face.variations.size != 0
-                         ? sfntVariationScalars(in.face.variations, uint16_t(in.vsindex), in.coords, in.scalars,
-                                                kMaxRegions)
-                         : 0;
+    if (in.face.variations.size != 0)
+        in.regionCount =
+            sfntVariationScalars(in.face.variations, uint16_t(in.vsindex), in.coords, in.scalars, kMaxRegions);
+    else
+        in.regionCount = 0;
     if (in.regionCount > kMaxRegions)
         in.regionCount = kMaxRegions;
 }
@@ -553,8 +556,7 @@ bool run(Interpreter& in, SfntTable code, uint32_t depth) {
                     i = 1;
                 }
                 for (; i + 3 < n; i += 4) {
-                    PrVec2 c1 = vertical ? PrVec2{p.x + first, p.y + float(s[i])}
-                                         : PrVec2{p.x + float(s[i]), p.y + first};
+                    PrVec2 c1 = vertical ? PrVec2{p.x + first, p.y + float(s[i])} : PrVec2{p.x + float(s[i]), p.y + first};
                     PrVec2 c2{c1.x + float(s[i + 1]), c1.y + float(s[i + 2])};
                     PrVec2 to = vertical ? PrVec2{c2.x, c2.y + float(s[i + 3])} : PrVec2{c2.x + float(s[i + 3]), c2.y};
                     curveTo(in, c1, c2, to);
@@ -572,8 +574,11 @@ bool run(Interpreter& in, SfntTable code, uint32_t depth) {
                     float extra = n - i == 5 ? float(s[i + 4]) : 0;
                     PrVec2 c1 = horizontal ? PrVec2{p.x + float(s[i]), p.y} : PrVec2{p.x, p.y + float(s[i])};
                     PrVec2 c2{c1.x + float(s[i + 1]), c1.y + float(s[i + 2])};
-                    PrVec2 to = horizontal ? PrVec2{c2.x + extra, c2.y + float(s[i + 3])}
-                                           : PrVec2{c2.x + float(s[i + 3]), c2.y + extra};
+                    PrVec2 to;
+                    if (horizontal)
+                        to = PrVec2{c2.x + extra, c2.y + float(s[i + 3])};
+                    else
+                        to = PrVec2{c2.x + float(s[i + 3]), c2.y + extra};
                     curveTo(in, c1, c2, to);
                 }
                 in.count = 0;
@@ -669,8 +674,10 @@ bool run(Interpreter& in, SfntTable code, uint32_t depth) {
                             }
                             float dx = points[4].x - origin.x;
                             float dy = points[4].y - origin.y;
-                            points[5] = absF32(dx) > absF32(dy) ? PrVec2{at2.x + float(s[10]), origin.y}
-                                                                : PrVec2{origin.x, at2.y + float(s[10])};
+                            if (absF32(dx) > absF32(dy))
+                                points[5] = PrVec2{at2.x + float(s[10]), origin.y};
+                            else
+                                points[5] = PrVec2{origin.x, at2.y + float(s[10])};
                         } else {
                             in.count = 0;
                             break;
@@ -707,11 +714,14 @@ bool run(Interpreter& in, SfntTable code, uint32_t depth) {
                         if (n >= 2) {
                             double a = s[n - 2];
                             double b = s[n - 1];
-                            s[n - 2] = b1 == EscapeOp_Add   ? a + b
-                                       : b1 == EscapeOp_Sub ? a - b
-                                       : b1 == EscapeOp_Mul ? a * b
-                                       : b != 0             ? a / b
-                                                            : 0;
+                            if (b1 == EscapeOp_Add)
+                                s[n - 2] = a + b;
+                            else if (b1 == EscapeOp_Sub)
+                                s[n - 2] = a - b;
+                            else if (b1 == EscapeOp_Mul)
+                                s[n - 2] = a * b;
+                            else
+                                s[n - 2] = b != 0 ? a / b : 0;
                             --in.count;
                         }
                         break;

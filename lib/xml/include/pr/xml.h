@@ -57,8 +57,7 @@ typedef struct PrXmlHandler {
 
     // An element's start tag, whose attributes are in source order. An empty-element tag is a start and an end.
     PrStatus (*PR_NULLABLE startElement)(void* PR_NULLABLE context, PrXmlParser* parser,
-                                         const PrXmlName* name, const PrXmlAttribute* PR_NULLABLE attributes,
-                                         uint32_t attributeCount);
+        const PrXmlName* name, const PrXmlAttribute* PR_NULLABLE attributes, uint32_t attributeCount);
 
     // The end of the element that the latest unended start began (prXmlParserContentStart).
     PrStatus (*PR_NULLABLE endElement)(void* PR_NULLABLE context, PrXmlParser* parser, const PrXmlName* name);
@@ -70,11 +69,11 @@ typedef struct PrXmlHandler {
     PrStatus (*PR_NULLABLE cdataSection)(void* PR_NULLABLE context, PrXmlParser* parser, PrStringView data);
     PrStatus (*PR_NULLABLE comment)(void* PR_NULLABLE context, PrXmlParser* parser, PrStringView data);
     PrStatus (*PR_NULLABLE processingInstruction)(void* PR_NULLABLE context, PrXmlParser* parser,
-                                                  PrStringView target, PrStringView data);
+        PrStringView target, PrStringView data);
 
     // The document type declaration. Its identifiers are the empty view where it has none.
     PrStatus (*PR_NULLABLE doctype)(void* PR_NULLABLE context, PrXmlParser* parser, PrStringView name,
-                                    PrStringView publicId, PrStringView systemId);
+        PrStringView publicId, PrStringView systemId);
 
     // Returns the replacement text of the entity `name` in the external subset that `publicId` identifies, which the
     // parser does not read, or the null view if it knows no such entity. A reference to an entity that neither the

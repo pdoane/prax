@@ -50,8 +50,7 @@ PrStringView prLottieArchiveAnimationId(const PrLottieArchive* archive, uint32_t
 // regardless of the options' loader. Returns InvalidData if its entry cannot be read, and otherwise the status of
 // reading the animation.
 PrStatus prLottieAnimationCreateFromArchive(const PrLottieArchive* archive, uint32_t index,
-                                            const PrLottieOptions* PR_NULLABLE options,
-                                            PrLottieAnimation* PR_NULLABLE* PR_NONNULL out);
+    const PrLottieOptions* PR_NULLABLE options, PrLottieAnimation* PR_NULLABLE* PR_NONNULL out);
 
 #if defined(__cplusplus)
 }

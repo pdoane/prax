@@ -75,15 +75,15 @@ void layoutLineAlignerReset(LayoutLineAligner& aligner);
 // Returns the dominant baseline of a box whose font group is `font` (css-inline-3/#dominant-baseline-property). Auto
 // resolves to central in a vertical typographic mode unless text-orientation is sideways, and to alphabetic otherwise.
 inline PrLayoutAlignmentBaseline layoutDominantBaseline(const PrLayoutFontStyle& font) {
-    static_assert(PrLayoutAlignmentBaseline_Hanging - PrLayoutAlignmentBaseline_Baseline
-                      == PrLayoutDominantBaseline_Hanging - PrLayoutDominantBaseline_Auto,
-                  "the named baselines are in one order");
+    static_assert(PrLayoutAlignmentBaseline_Hanging - PrLayoutAlignmentBaseline_Baseline ==
+        PrLayoutDominantBaseline_Hanging - PrLayoutDominantBaseline_Auto, "the named baselines are in one order");
     if (font.dominantBaseline != PrLayoutDominantBaseline_Auto)
-        return PrLayoutAlignmentBaseline(font.dominantBaseline - PrLayoutDominantBaseline_Auto
-                                         + PrLayoutAlignmentBaseline_Baseline);
+        return PrLayoutAlignmentBaseline(font.dominantBaseline - PrLayoutDominantBaseline_Auto +
+            PrLayoutAlignmentBaseline_Baseline);
     bool vertical = layoutIsVerticalTypographic(LayoutMode{font.writingMode, font.direction});
-    return vertical && font.textOrientation != PrLayoutTextOrientation_Sideways ? PrLayoutAlignmentBaseline_Central
-                                                                                : PrLayoutAlignmentBaseline_Alphabetic;
+    if (vertical && font.textOrientation != PrLayoutTextOrientation_Sideways)
+        return PrLayoutAlignmentBaseline_Central;
+    return PrLayoutAlignmentBaseline_Alphabetic;
 }
 
 // Returns the `name` baseline of a face, below its alphabetic baseline (css-inline-3/#baseline-types). Text-top and
@@ -105,10 +105,9 @@ LayoutLineExtent layoutTextExtent(LayoutState& state, PrLayoutStyleIndex style);
 // as the dominant baseline, and that baseline sits on the item's dominant baseline. Most text uses only its first face,
 // which needs no search.
 LayoutLineExtent layoutTextOnLineSearch(LayoutState& state, const LayoutInlineShaping& t, const LayoutInlineItem& item,
-                                        PrLayoutStyleIndex style, uint32_t from, uint32_t to, LayoutLineExtent extent);
+    PrLayoutStyleIndex style, uint32_t from, uint32_t to, LayoutLineExtent extent);
 inline LayoutLineExtent layoutTextOnLine(LayoutState& state, const LayoutInlineShaping& t, const LayoutInlineItem& item,
-                                         PrLayoutStyleIndex style, uint32_t from, uint32_t to,
-                                         LayoutLineExtent extent) {
+        PrLayoutStyleIndex style, uint32_t from, uint32_t to, LayoutLineExtent extent) {
     if (!item.fallback)
         return extent;
     return layoutTextOnLineSearch(state, t, item, style, from, to, extent);
@@ -117,8 +116,8 @@ inline LayoutLineExtent layoutTextOnLine(LayoutState& state, const LayoutInlineS
 // Finds how each item of the run aligns. `styles` and `atomics` are indexed by item. The root inline box is styled by
 // `containerStyle` and reaches `strut`. Atomic inlines align in `mode`.
 void layoutAlignItems(LayoutState& state, LayoutLineAligner& aligner, const LayoutInlineShaping& t,
-                      const PrLayoutStyleIndex* styles, const LayoutAtomic* atomics, PrLayoutStyleIndex containerStyle,
-                      LayoutLineExtent strut, LayoutMode mode);
+    const PrLayoutStyleIndex* styles, const LayoutAtomic* atomics, PrLayoutStyleIndex containerStyle,
+    LayoutLineExtent strut, LayoutMode mode);
 
 // Returns true if each item sits at its own shift on every line, because no item roots an aligned subtree and no box is
 // line-dependent. The line then reaches as far as its items reach about their shifts, which the caller finds as it
@@ -131,8 +130,7 @@ inline bool layoutAlignsByShift(const LayoutLineAligner& aligner) {
 // `strut`. Then each subtree at top, center or bottom grows the line if it is taller, in the order the line meets it:
 // below the baseline for top, and above it for center and bottom. CSS2/#line-height does not say on which side.
 LayoutLineExtent layoutAlignLine(LayoutState& state, LayoutLineAligner& aligner, const LayoutInlineShaping& t,
-                                 const PrLayoutStyleIndex* styles, const LayoutLineContent& line,
-                                 LayoutLineExtent strut);
+    const PrLayoutStyleIndex* styles, const LayoutLineContent& line, LayoutLineExtent strut);
 
 // Returns the baseline of `item` below the line's baseline, on the line that layoutAlignLine aligned last, or on any
 // line if layoutAlignsByShift returns true.

@@ -52,7 +52,7 @@ PrDrawFragmentOptions prDrawFragmentOptionsDefault(void);
 // Creates a renderer that renders on `device` into textures. Null options mean the defaults. Returns NotSupported if
 // the device cannot run the renderer's shaders, and Lost if the device is lost. On failure, `*out` is null.
 PrStatus prDrawFragmentCreate(PrGpuDevice* device, const PrDrawFragmentOptions* PR_NULLABLE options,
-                              PrDrawRenderer* PR_NULLABLE* PR_NONNULL out);
+    PrDrawRenderer* PR_NULLABLE* PR_NONNULL out);
 
 #if defined(__cplusplus)
 }

@@ -17,6 +17,6 @@ void prCorePosixRandomBytes(void* out, size_t size) {
         size_t chunk = size - at < kMaxChunk ? size - at : kMaxChunk;
         if (getentropy(bytes + at, chunk) != 0)
             prCorePosixFailed("the system's random generator is unavailable", PrStringView(__FILE__),
-                              uint32_t(__LINE__));
+                uint32_t(__LINE__));
     }
 }

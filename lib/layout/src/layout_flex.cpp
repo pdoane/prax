@@ -128,8 +128,8 @@ bool isRow(PrLayoutFlexDirection direction) {
 // falls back to safe self-start or safe self-end (css-align-3/#baseline-values). `left` and `right` are not values of
 // align-self, and are treated as start.
 LayoutFlexPlace crossPlaceOf(PrLayoutAlignment alignSelf, PrLayoutAlignment alignItems, bool stretches,
-                             bool crossReverse, LayoutMode container, LayoutSide crossStart, const LayoutTree* tree,
-                             LayoutNodeIndex node, bool* safe) {
+        bool crossReverse, LayoutMode container, LayoutSide crossStart, const LayoutTree* tree, LayoutNodeIndex node,
+        bool* safe) {
     PrLayoutAlignment align = alignSelf;
     if ((align & kPrLayoutAlignmentValueMask) == PrLayoutAlignment_Auto)
         align = alignItems;
@@ -150,8 +150,8 @@ LayoutFlexPlace crossPlaceOf(PrLayoutAlignment alignSelf, PrLayoutAlignment alig
     // The item's own start along the cross axis: its inline-start if its inline axis is the cross axis, and otherwise
     // its block-start.
     bool crossIsInline = crossStart == LayoutSide_InlineStart;
-    LayoutSide own = layoutIsOrthogonal(mode, container) != crossIsInline ? LayoutSide_InlineStart
-                                                                          : LayoutSide_BlockStart;
+    LayoutSide own =
+        layoutIsOrthogonal(mode, container) != crossIsInline ? LayoutSide_InlineStart : LayoutSide_BlockStart;
     bool sameStart = layoutPhysicalSide(mode, own) == layoutPhysicalSide(container, crossStart);
     LayoutFlexPlace selfStart = sameStart ? start : end;
     LayoutFlexPlace selfEnd = sameStart ? end : start;
@@ -232,10 +232,11 @@ LayoutIntrinsicSizes intrinsicOf(Flex& f, const LayoutFlexItem& it) {
 // Returns a measurement of `kind` of the item `node` at the border-box inline size `inlineSize`, with `block` as the
 // request for its block size.
 LayoutMeasurement measureItem(Flex& f, LayoutNodeIndex node, PrLayoutUnit inlineSize, LayoutRequest block,
-                              LayoutMeasureKind kind) {
+        LayoutMeasureKind kind) {
     LayoutRequests requests{
         .inlineAxis = LayoutRequest{.size = inlineSize, .kind = LayoutRequestKind_Fixed, .definite = true},
-        .blockAxis = block};
+        .blockAxis = block,
+    };
     return layoutMeasure(f.state, node, f.content, requests, kind);
 }
 
@@ -287,7 +288,7 @@ PrLayoutUnit provisionalCross(Flex& f, const LayoutFlexItem& it) {
     else
         size = keyword(layoutLengthIsContentBased(it.crossSize) ? it.crossSize : prLayoutLengthFitContent());
     return layoutClampSize(f.state.styles, *it.box, size, it.minCrossSize, it.maxCrossSize, base, it.edgesCross,
-                           stretch, keyword);
+        stretch, keyword);
 }
 
 // Returns the preferred aspect ratio of the item, in the writing mode whose inline axis is its own. That is the item's
@@ -300,12 +301,14 @@ LayoutAspect aspectOf(const Flex& f, const LayoutFlexItem& it) {
 // mainThrough returns the border-box main size that the border-box cross size `cross` gives through the ratio `aspect`
 // of the item. crossThrough returns the cross size that a main size gives.
 PrLayoutUnit mainThrough(const LayoutFlexItem& it, const LayoutAspect& aspect, PrLayoutUnit cross) {
-    return it.mainInline ? layoutAspectInline(aspect, cross, it.edgesMain, it.edgesCross)
-                         : layoutAspectBlock(aspect, cross, it.edgesCross, it.edgesMain);
+    if (it.mainInline)
+        return layoutAspectInline(aspect, cross, it.edgesMain, it.edgesCross);
+    return layoutAspectBlock(aspect, cross, it.edgesCross, it.edgesMain);
 }
 PrLayoutUnit crossThrough(const LayoutFlexItem& it, const LayoutAspect& aspect, PrLayoutUnit main) {
-    return it.mainInline ? layoutAspectBlock(aspect, main, it.edgesMain, it.edgesCross)
-                         : layoutAspectInline(aspect, main, it.edgesCross, it.edgesMain);
+    if (it.mainInline)
+        return layoutAspectBlock(aspect, main, it.edgesMain, it.edgesCross);
+    return layoutAspectInline(aspect, main, it.edgesCross, it.edgesMain);
 }
 
 // Returns the cross size of a main-block item at its main size (css-flexbox-2/#hypothetical-cross-size). An item with a
@@ -319,7 +322,7 @@ PrLayoutUnit hypotheticalCross(Flex& f, const LayoutFlexItem& it) {
         return it.cross;
     PrLayoutUnit base = f.row ? f.content.percentBlock : f.inlineSize;
     return layoutClampSize(f.state.styles, *it.box, crossThrough(it, aspect, it.main), it.minCrossSize,
-                           it.maxCrossSize, base, it.edgesCross, layoutUnit(-1), layoutNoKeyword);
+        it.maxCrossSize, base, it.edgesCross, layoutUnit(-1), layoutNoKeyword);
 }
 
 // The main sizes that the preferred aspect ratio of an item gives, as content-box main sizes. Each is negative if the
@@ -353,9 +356,8 @@ struct MainSizes {
 // percentages against zero (css-sizing-3/#replaced-percentage-min-contribution).
 template <typename Content>
 MainSizes mainSizesOf(const LayoutStyles* styles, const PrLayoutBoxStyle& box, const PrLayoutFlexStyle& flex,
-                      PrLayoutLength mainLength, PrLayoutLength minLength, PrLayoutLength maxLength,
-                      PrLayoutUnit base, PrLayoutUnit edges, const RatioSizes& ratio, bool compressible,
-                      Content content) {
+        PrLayoutLength mainLength, PrLayoutLength minLength, PrLayoutLength maxLength,
+        PrLayoutUnit base, PrLayoutUnit edges, const RatioSizes& ratio, bool compressible, Content content) {
     auto resolved = [&](PrLayoutLength length) { return contentOf(box, layoutResolve(styles, length, base), edges); };
     MainSizes out{};
     PrLayoutLength basis = flex.basis;
@@ -368,8 +370,10 @@ MainSizes mainSizesOf(const LayoutStyles* styles, const PrLayoutBoxStyle& box, c
         out.contentBased = false;
         out.base = ratio.base;
     } else {
-        out.base = out.contentBased ? content(layoutLengthIsContentBased(basis) ? basis : prLayoutLengthMaxContent())
-                                    : resolved(basis);
+        if (out.contentBased)
+            out.base = content(layoutLengthIsContentBased(basis) ? basis : prLayoutLengthMaxContent());
+        else
+            out.base = resolved(basis);
     }
     out.max = 1e18;
     if (layoutLengthIsContentBased(maxLength))
@@ -413,18 +417,20 @@ RatioSizes ratioSizesOf(Flex& f, const LayoutFlexItem& it) {
     auto inner = [&](PrLayoutUnit cross) { return double((mainThrough(it, aspect, cross) - it.edgesMain).raw); };
     auto clamped = [&](PrLayoutUnit cross) {
         return layoutClampSize(f.state.styles, *it.box, cross, it.minCrossSize, it.maxCrossSize, base, it.edgesCross,
-                               layoutUnit(-1), layoutNoKeyword);
+            layoutUnit(-1), layoutNoKeyword);
     };
     auto limit = [&](PrLayoutLength length) {
         if (!layoutResolves(length, base))
             return -1.0;
         return inner(layoutBorderSize(*it.box, layoutResolve(f.state.styles, length, base), it.edgesCross));
     };
-    RatioSizes sizes{.base = -1,
-                     .transferred = -1,
-                     .least = limit(it.minCrossSize),
-                     .most = limit(it.maxCrossSize),
-                     .replaced = layoutTreeNode(f.state.tree, it.node).kind == PrLayoutNodeKind_Replaced};
+    RatioSizes sizes{
+        .base = -1,
+        .transferred = -1,
+        .least = limit(it.minCrossSize),
+        .most = limit(it.maxCrossSize),
+        .replaced = layoutTreeNode(f.state.tree, it.node).kind == PrLayoutNodeKind_Replaced,
+    };
     if (layoutResolves(it.crossSize, base)) {
         PrLayoutUnit cross =
             layoutBorderSize(*it.box, layoutResolve(f.state.styles, it.crossSize, base), it.edgesCross);
@@ -463,7 +469,7 @@ void sizeMain(Flex& f, LayoutFlexItem& it) {
                 sizes = intrinsicOf(f, it);
             else
                 content = measureItem(f, it.node, it.cross, LayoutRequest{.kind = LayoutRequestKind_Content},
-                                      LayoutMeasureKind_Size);
+                    LayoutMeasureKind_Size);
         }
         measured = true;
         if (!it.mainInline)
@@ -475,7 +481,7 @@ void sizeMain(Flex& f, LayoutFlexItem& it) {
     };
     bool compressible = layoutTreeNode(f.state.tree, it.node).kind == PrLayoutNodeKind_SemiReplaced;
     MainSizes main = mainSizesOf(f.state.styles, *it.box, *it.flex, it.mainSize, it.minMainSize, it.maxMainSize, base,
-                                 it.edgesMain, ratioSizesOf(f, it), compressible, ofContent);
+        it.edgesMain, ratioSizesOf(f, it), compressible, ofContent);
     it.base = main.base;
     it.minMain = main.min;
     it.maxMain = main.max;
@@ -823,7 +829,7 @@ void sizeLine(Flex& f, uint32_t l, LayoutContentGoal goal) {
             cross = before.styledCross;
         } else if (!before.stretched || !layoutIsDefinite(definite)) {
             LayoutMeasurement m = measureItem(f, before.node, before.main, LayoutRequest{},
-                                              baselines ? LayoutMeasureKind_Baselines : LayoutMeasureKind_Size);
+                baselines ? LayoutMeasureKind_Baselines : LayoutMeasureKind_Size);
             cross = m.blockSize;
             f.item(i).first = m.first;
             f.item(i).last = m.last;
@@ -847,7 +853,7 @@ void sizeLine(Flex& f, uint32_t l, LayoutContentGoal goal) {
         line.cross = definite;
     } else {
         line.cross = layoutUnitMax(layoutUnitMax(largest, line.ascent + line.descent),
-                                   line.lastAscent + line.lastDescent);
+            line.lastAscent + line.lastDescent);
         if (f.singleLine && layoutIsDefinite(f.maxBlock))
             line.cross = layoutUnitMin(line.cross, f.maxBlock);
         if (f.singleLine)
@@ -897,7 +903,7 @@ void stretchItems(Flex& f, const LayoutFlexLine& line) {
             continue;
         PrLayoutUnit stretch = layoutUnitMax(line.cross - it.marginsCross, it.edgesCross);
         it.cross = layoutClampSize(f.state.styles, *it.box, stretch, it.minCrossSize, it.maxCrossSize, base,
-                                   it.edgesCross, stretch, layoutNoKeyword);
+            it.edgesCross, stretch, layoutNoKeyword);
     }
 }
 
@@ -965,8 +971,10 @@ void placeCross(Flex& f, const LayoutFlexLine& line) {
                 }
                 case LayoutFlexPlace_LastBaseline: {
                     PrLayoutUnit above = baselineAbove(it, LayoutBaselineEdge_Last);
-                    offset = f.crossReverse ? line.cross - (line.lastAscent - above) - outer
-                                            : line.cross - line.lastDescent - above;
+                    if (f.crossReverse)
+                        offset = line.cross - (line.lastAscent - above) - outer;
+                    else
+                        offset = line.cross - line.lastDescent - above;
                     break;
                 }
                 default: break;
@@ -1027,53 +1035,50 @@ void placeOutOfFlow(Flex& f, LayoutLogicalOffset origin, double main, PrLayoutUn
     if (f.reverse && mainAlign != LayoutStaticAlign_Center)
         mainAlign = mainAlign == LayoutStaticAlign_Start ? LayoutStaticAlign_End : LayoutStaticAlign_Start;
     PrLayoutUnit mainSize = unitOf(main);
-    layoutEachItem(
-        tree, f.node,
-        [&](uint32_t c, const PrLayoutBoxStyle&) {
-            if (!layoutIsOutOfFlow(tree, c))
-                return;
+    layoutEachItem(tree, f.node, [&](uint32_t c, const PrLayoutBoxStyle&) {
+        if (!layoutIsOutOfFlow(tree, c))
+            return;
             // Baseline alignment acts as start, and last-baseline alignment as end.
-            bool safe = false;
-            PrLayoutAlignment align = layoutFlexStyle(f.state.styles, layoutTreeNode(tree, c).style).alignSelf;
-            if ((align & kPrLayoutAlignmentValueMask) == PrLayoutAlignment_Auto)
-                align = f.flex.alignItems;
-            PrLayoutAlignment value = PrLayoutAlignment(align & kPrLayoutAlignmentValueMask);
-            if (value == PrLayoutAlignment_Baseline)
-                align = PrLayoutAlignment_Start;
-            else if (value == PrLayoutAlignment_LastBaseline)
-                align = PrLayoutAlignment_End;
-            LayoutFlexPlace place =
-                crossPlaceOf(align, align, false, f.crossReverse, f.content.mode, crossStart, tree, c, &safe);
-            LayoutStaticAlign crossAlign = LayoutStaticAlign_Start;
-            if (place == LayoutFlexPlace_Center)
-                crossAlign = LayoutStaticAlign_Center;
-            else if (place == LayoutFlexPlace_End || place == LayoutFlexPlace_LastBaseline)
-                crossAlign = LayoutStaticAlign_End;
+        bool safe = false;
+        PrLayoutAlignment align = layoutFlexStyle(f.state.styles, layoutTreeNode(tree, c).style).alignSelf;
+        if ((align & kPrLayoutAlignmentValueMask) == PrLayoutAlignment_Auto)
+            align = f.flex.alignItems;
+        PrLayoutAlignment value = PrLayoutAlignment(align & kPrLayoutAlignmentValueMask);
+        if (value == PrLayoutAlignment_Baseline)
+            align = PrLayoutAlignment_Start;
+        else if (value == PrLayoutAlignment_LastBaseline)
+            align = PrLayoutAlignment_End;
+        LayoutFlexPlace place = crossPlaceOf(align, align, false, f.crossReverse, f.content.mode, crossStart, tree, c, &safe);
+        LayoutStaticAlign crossAlign = LayoutStaticAlign_Start;
+        if (place == LayoutFlexPlace_Center)
+            crossAlign = LayoutStaticAlign_Center;
+        else if (place == LayoutFlexPlace_End || place == LayoutFlexPlace_LastBaseline)
+            crossAlign = LayoutStaticAlign_End;
             // Cross-start is the axis's end in a wrap-reverse container.
-            if (f.crossReverse && crossAlign != LayoutStaticAlign_Center)
-                crossAlign = crossAlign == LayoutStaticAlign_Start ? LayoutStaticAlign_End : LayoutStaticAlign_Start;
-            auto at = [](LayoutStaticAlign align, PrLayoutUnit size) {
-                return align == LayoutStaticAlign_Start ? kLayoutUnitZero
-                       : align == LayoutStaticAlign_End ? size
-                                                        : layoutUnit(size.raw / 2);
-            };
-            LayoutStaticAlign inlineAlign = f.row ? mainAlign : crossAlign;
-            LayoutStaticAlign blockAlign = f.row ? crossAlign : mainAlign;
-            LayoutLogicalOffset offset{at(inlineAlign, f.row ? mainSize : cross),
-                                       at(blockAlign, f.row ? cross : mainSize)};
-            bool mainSafe = (f.flex.justifyContent & PrLayoutAlignmentFlag_Safe) != 0;
-            LayoutStaticEdges edges = layoutStaticEdgesAligned(f.content.mode, inlineAlign, blockAlign,
-                                                               f.row ? mainSafe : safe, f.row ? safe : mainSafe);
-            LayoutFragment* placeholder = layoutFragmentCreatePlaceholder(c, edges, layoutIsFixed(tree, c));
-            f.state.scratch->children.push(LayoutLogicalChild{placeholder, origin + offset});
-        },
-        [](uint32_t, uint32_t) {});
+        if (f.crossReverse && crossAlign != LayoutStaticAlign_Center)
+            crossAlign = crossAlign == LayoutStaticAlign_Start ? LayoutStaticAlign_End : LayoutStaticAlign_Start;
+        auto at = [](LayoutStaticAlign align, PrLayoutUnit size) {
+            if (align == LayoutStaticAlign_Start)
+                return kLayoutUnitZero;
+            if (align == LayoutStaticAlign_End)
+                return size;
+            return layoutUnit(size.raw / 2);
+        };
+        LayoutStaticAlign inlineAlign = f.row ? mainAlign : crossAlign;
+        LayoutStaticAlign blockAlign = f.row ? crossAlign : mainAlign;
+        LayoutLogicalOffset offset{at(inlineAlign, f.row ? mainSize : cross), at(blockAlign, f.row ? cross : mainSize)};
+        bool mainSafe = (f.flex.justifyContent & PrLayoutAlignmentFlag_Safe) != 0;
+        LayoutStaticEdges edges = layoutStaticEdgesAligned(f.content.mode, inlineAlign, blockAlign,
+            f.row ? mainSafe : safe, f.row ? safe : mainSafe);
+        LayoutFragment* placeholder = layoutFragmentCreatePlaceholder(c, edges, layoutIsFixed(tree, c));
+        f.state.scratch->children.push(LayoutLogicalChild{placeholder, origin + offset});
+    }, [](uint32_t, uint32_t) {});
 }
 
 // Solves the flex container `node` as layoutFlexContent does, and sets `*linesCross` to the cross sizes of its lines
 // and the gaps between them.
 LayoutContentOutcome solve(LayoutState& state, LayoutNodeIndex node, const LayoutContentInput& input,
-                           PrLayoutUnit* linesCross) {
+        PrLayoutUnit* linesCross) {
     LayoutContentGoal goal = input.goal;
     LayoutLogicalOffset origin = input.origin;
     bool builds = goal == LayoutContentGoal_Build;
@@ -1088,28 +1093,29 @@ LayoutContentOutcome solve(LayoutState& state, LayoutNodeIndex node, const Layou
     // A gap resolves against the size of the content box in its axis, which may be indefinite in the block axis.
     PrLayoutUnit columnGap = layoutGapResolve(state.styles, flex.columnGap, inlineSize);
     PrLayoutUnit rowGap = layoutGapResolve(state.styles, flex.rowGap, input.content->percentBlock);
-    Flex f{.state = state,
-           .node = node,
-           .flex = flex,
-           .content = *input.content,
-           .row = row,
-           .reverse = direction == PrLayoutFlexDirection_RowReverse
-                      || direction == PrLayoutFlexDirection_ColumnReverse,
-           .crossReverse = flex.wrap == PrLayoutFlexWrap_WrapReverse,
-           .singleLine = flex.wrap == PrLayoutFlexWrap_NoWrap,
-           .inlineSize = inlineSize,
-           .blockSize = input.blockSize,
-           .minBlock = input.minBlock,
-           .maxBlock = input.maxBlock,
-           .mainGap = row ? columnGap : rowGap,
-           .crossGap = row ? rowGap : columnGap,
-           .mark = items.count,
-           .count = 0,
-           .collapsed = 0,
-           .lineMark = 0,
-           .lineCount = 0,
-           .firstBaseline = 0,
-           .lastBaseline = 0};
+    Flex f{
+        .state = state,
+        .node = node,
+        .flex = flex,
+        .content = *input.content,
+        .row = row,
+        .reverse = direction == PrLayoutFlexDirection_RowReverse || direction == PrLayoutFlexDirection_ColumnReverse,
+        .crossReverse = flex.wrap == PrLayoutFlexWrap_WrapReverse,
+        .singleLine = flex.wrap == PrLayoutFlexWrap_NoWrap,
+        .inlineSize = inlineSize,
+        .blockSize = input.blockSize,
+        .minBlock = input.minBlock,
+        .maxBlock = input.maxBlock,
+        .mainGap = row ? columnGap : rowGap,
+        .crossGap = row ? rowGap : columnGap,
+        .mark = items.count,
+        .count = 0,
+        .collapsed = 0,
+        .lineMark = 0,
+        .lineCount = 0,
+        .firstBaseline = 0,
+        .lastBaseline = 0,
+    };
     LayoutSide crossStart = row ? LayoutSide_BlockStart : LayoutSide_InlineStart;
     LayoutSide crossEnd = row ? LayoutSide_BlockEnd : LayoutSide_InlineEnd;
 
@@ -1124,8 +1130,7 @@ LayoutContentOutcome solve(LayoutState& state, LayoutNodeIndex node, const Layou
         it.flex = &childFlex;
         it.orthogonal = layoutIsOrthogonalRoot(tree, c, f.content.mode);
         it.mainInline = row != it.orthogonal;
-        it.collapsed =
-            layoutKindIsElement(layoutTreeNode(tree, c).kind) && layoutIsCollapsedItem(tree, c, child);
+        it.collapsed = layoutKindIsElement(layoutTreeNode(tree, c).kind) && layoutIsCollapsedItem(tree, c, child);
         f.collapsed += uint32_t(it.collapsed);
         it.order = childFlex.order;
         LayoutLogicalBox logical = layoutLogicalBox(child, f.content.mode);
@@ -1148,29 +1153,29 @@ LayoutContentOutcome solve(LayoutState& state, LayoutNodeIndex node, const Layou
         // stretches nor takes part in baseline alignment (css-flexbox-2/#align-items-property).
         bool autoCross = it.e.marginAuto[crossStart] || it.e.marginAuto[crossEnd];
         bool stretches = layoutLengthIsAuto(it.crossSize) && !autoCross;
-        it.place = autoCross ? LayoutFlexPlace_Start
-                             : crossPlaceOf(childFlex.alignSelf, flex.alignItems, stretches, f.crossReverse,
-                                            f.content.mode, crossStart, tree, c, &it.safe);
+        if (autoCross)
+            it.place = LayoutFlexPlace_Start;
+        else
+            it.place = crossPlaceOf(childFlex.alignSelf, flex.alignItems, stretches, f.crossReverse, f.content.mode,
+                crossStart, tree, c, &it.safe);
         it.stretched = it.place == LayoutFlexPlace_Stretch;
         it.styledCross = layoutUnit(-1);
         auto limitFixed = [](PrLayoutLength limit) {
             return !layoutLengthIsContentBased(limit) && !layoutLengthIsStretch(limit);
         };
-        if (row && !it.orthogonal && !it.stretched && layoutResolves(logical.blockSize, f.content.percentBlock)
-            && limitFixed(logical.minBlockSize) && limitFixed(logical.maxBlockSize))
+        if (row && !it.orthogonal && !it.stretched && layoutResolves(logical.blockSize, f.content.percentBlock) &&
+                limitFixed(logical.minBlockSize) && limitFixed(logical.maxBlockSize))
             it.styledCross = layoutBlockBase(state.styles, child, logical, it.e, f.content.percentBlock).size;
         items.push(it);
         ++f.count;
     };
-    layoutEachItem(
-        tree, node,
-        [&](uint32_t c, const PrLayoutBoxStyle& child) {
-            if (!layoutIsOutOfFlow(tree, c)) {
-                addItem(c, child, layoutFlexStyle(state.styles, layoutTreeNode(tree, c).style));
-            } else if (builds) {
-                ++outOfFlow;
-            }
-        },
+    layoutEachItem(tree, node, [&](uint32_t c, const PrLayoutBoxStyle& child) {
+        if (!layoutIsOutOfFlow(tree, c)) {
+            addItem(c, child, layoutFlexStyle(state.styles, layoutTreeNode(tree, c).style));
+        } else if (builds) {
+            ++outOfFlow;
+        }
+    },
         // A run of text is an anonymous item (css-flexbox-2/#flex-items).
         [&](uint32_t first, uint32_t) { addItem(first, layoutAnonymousBoxStyle(), layoutAnonymousFlexStyle()); });
     // A stable sort by order, which leaves the items of most containers unchanged.
@@ -1257,21 +1262,32 @@ LayoutContentOutcome solve(LayoutState& state, LayoutNodeIndex node, const Layou
         if (builds) {
             LayoutResult result = layoutFinal(state, it.node, f.content, finalRequests(it));
             LayoutLogicalOffset relative = layoutRelativeOffset(state.styles, *it.box, f.content);
-            LayoutLogicalOffset at = row ? LayoutLogicalOffset{it.mainOffset, it.crossOffset}
-                                         : LayoutLogicalOffset{it.crossOffset, it.mainOffset};
+            LayoutLogicalOffset at;
+            if (row)
+                at = LayoutLogicalOffset{it.mainOffset, it.crossOffset};
+            else
+                at = LayoutLogicalOffset{it.crossOffset, it.mainOffset};
             children.push(LayoutLogicalChild{result.fragment, origin + at + relative});
             if (input.scrolls) {
                 PrLayoutUnit itemInline = row ? it.main : it.cross;
                 PrLayoutUnit itemBlock = row ? it.cross : it.main;
-                LayoutLogicalOffset start{at.inlineOffset - it.e.margin[LayoutSide_InlineStart],
-                                          at.blockOffset - it.e.margin[LayoutSide_BlockStart]};
-                LayoutLogicalOffset end{at.inlineOffset + itemInline + it.e.margin[LayoutSide_InlineEnd],
-                                        at.blockOffset + itemBlock + it.e.margin[LayoutSide_BlockEnd]};
+                LayoutLogicalOffset start{
+                    at.inlineOffset - it.e.margin[LayoutSide_InlineStart],
+                    at.blockOffset - it.e.margin[LayoutSide_BlockStart],
+                };
+                LayoutLogicalOffset end{
+                    at.inlineOffset + itemInline + it.e.margin[LayoutSide_InlineEnd],
+                    at.blockOffset + itemBlock + it.e.margin[LayoutSide_BlockEnd],
+                };
                 if (built++ != 0) {
-                    start = {layoutUnitMin(start.inlineOffset, outcome.itemsStart.inlineOffset),
-                             layoutUnitMin(start.blockOffset, outcome.itemsStart.blockOffset)};
-                    end = {layoutUnitMax(end.inlineOffset, outcome.itemsEnd.inlineOffset),
-                           layoutUnitMax(end.blockOffset, outcome.itemsEnd.blockOffset)};
+                    start = {
+                        layoutUnitMin(start.inlineOffset, outcome.itemsStart.inlineOffset),
+                        layoutUnitMin(start.blockOffset, outcome.itemsStart.blockOffset),
+                    };
+                    end = {
+                        layoutUnitMax(end.inlineOffset, outcome.itemsEnd.inlineOffset),
+                        layoutUnitMax(end.blockOffset, outcome.itemsEnd.blockOffset),
+                    };
                 }
                 outcome.itemsStart = start;
                 outcome.itemsEnd = end;
@@ -1327,8 +1343,8 @@ LayoutIntrinsicSizes layoutFlexIntrinsic(LayoutState& state, LayoutNodeIndex nod
     // css-flexbox-2/#intrinsic-main-sizes-multiline, css-flexbox-2/#intrinsic-cross-sizes).
     auto add = [&](PrLayoutUnit minContent, PrLayoutUnit maxContent, bool reads) {
         sizes.maxContent = row ? sizes.maxContent + maxContent : layoutUnitMax(sizes.maxContent, maxContent);
-        sizes.minContent = row && singleLine ? sizes.minContent + minContent
-                                             : layoutUnitMax(sizes.minContent, minContent);
+        sizes.minContent =
+            row && singleLine ? sizes.minContent + minContent : layoutUnitMax(sizes.minContent, minContent);
         sizes.readsPercentBlock = sizes.readsPercentBlock || reads;
         ++count;
     };
@@ -1365,7 +1381,7 @@ LayoutIntrinsicSizes layoutFlexIntrinsic(LayoutState& state, LayoutNodeIndex nod
                 return double(size.raw - edges.raw);
             };
             MainSizes main = mainSizesOf(state.styles, box, itemFlex, logical.inlineSize, logical.minInlineSize,
-                                         logical.maxInlineSize, layoutUnit(-1), edges, kNoRatio, false, ofContent);
+                logical.maxInlineSize, layoutUnit(-1), edges, kNoRatio, false, ofContent);
             double hypothetical = maxF64(0, maxF64(minF64(main.base, main.max), main.min));
             PrLayoutUnit outer = layoutUnitMax(unitOf(hypothetical) + edges, edges) + margins;
             if (itemFlex.grow == 0)
@@ -1376,20 +1392,18 @@ LayoutIntrinsicSizes layoutFlexIntrinsic(LayoutState& state, LayoutNodeIndex nod
         add(result[0], layoutUnitMax(result[0], result[1]),
             contribution.readsPercentBlock || content.readsPercentBlock);
     };
-    layoutEachItem(
-        tree, node,
-        [&](uint32_t child, const PrLayoutBoxStyle& childBox) {
+    layoutEachItem(tree, node, [&](uint32_t child, const PrLayoutBoxStyle& childBox) {
             // A collapsed item takes no part in a main size (css-flexbox-2/#intrinsic-main-sizes). Its strut keeps its
             // part in a cross size.
-            if (layoutPositionIsOutOfFlow(childBox.position) || (row && layoutIsCollapsedItem(tree, child, childBox)))
-                return;
-            if (row && !layoutIsOrthogonalRoot(tree, child, input.mode)) {
-                rowItem(child, childBox, layoutFlexStyle(state.styles, layoutTreeNode(tree, child).style));
-                return;
-            }
-            LayoutIntrinsicSizes contribution = layoutContribution(state, child, input);
-            add(contribution.minContent, contribution.maxContent, contribution.readsPercentBlock);
-        },
+        if (layoutPositionIsOutOfFlow(childBox.position) || (row && layoutIsCollapsedItem(tree, child, childBox)))
+            return;
+        if (row && !layoutIsOrthogonalRoot(tree, child, input.mode)) {
+            rowItem(child, childBox, layoutFlexStyle(state.styles, layoutTreeNode(tree, child).style));
+            return;
+        }
+        LayoutIntrinsicSizes contribution = layoutContribution(state, child, input);
+        add(contribution.minContent, contribution.maxContent, contribution.readsPercentBlock);
+    },
         // The contribution of an anonymous item is its intrinsic sizes, because it has no sizes or edges of its own.
         [&](uint32_t first, uint32_t) {
             LayoutIntrinsicSizes anonymous = layoutIntrinsicSizes(state, first, input);
@@ -1399,7 +1413,7 @@ LayoutIntrinsicSizes layoutFlexIntrinsic(LayoutState& state, LayoutNodeIndex nod
     // (css-gaps-1/#gap-percent). A multi-line min-content size has no gaps.
     if (row && count > 1) {
         PrLayoutUnit gaps = layoutUnit(layoutGapResolve(state.styles, flex.columnGap,
-                                                        kLayoutUnitZero).raw * int32_t(count - 1));
+            kLayoutUnitZero).raw * int32_t(count - 1));
         sizes.maxContent = sizes.maxContent + gaps;
         if (singleLine)
             sizes.minContent = sizes.minContent + gaps;
@@ -1408,20 +1422,24 @@ LayoutIntrinsicSizes layoutFlexIntrinsic(LayoutState& state, LayoutNodeIndex nod
     // (css-flexbox-2/#intrinsic-cross-sizes). The lines are laid out with the largest max-content contribution as the
     // cross space of each item, if the block size or its limit breaks the column into lines. Its min-content size is
     // its largest contribution, as for a single line.
-    if (!row && !singleLine && count > 1
-        && (layoutIsDefinite(input.percentBlock) || layoutIsDefinite(input.blockLimit))) {
-        LayoutSpace content{.mode = input.mode,
-                            .available = sizes.maxContent,
-                            .percentInline = sizes.maxContent,
-                            .percentBlock = input.percentBlock,
-                            .containing = LayoutLogicalSize{sizes.maxContent, input.percentBlock},
-                            .blockLimit = input.blockLimit,
-                            .fallback = input.fallback};
-        LayoutContentInput columns{.content = &content,
-                                   .blockSize = input.percentBlock,
-                                   .minBlock = kLayoutUnitZero,
-                                   .maxBlock = input.blockLimit,
-                                   .goal = LayoutContentGoal_Size};
+    if (!row && !singleLine && count > 1 &&
+            (layoutIsDefinite(input.percentBlock) || layoutIsDefinite(input.blockLimit))) {
+        LayoutSpace content{
+            .mode = input.mode,
+            .available = sizes.maxContent,
+            .percentInline = sizes.maxContent,
+            .percentBlock = input.percentBlock,
+            .containing = LayoutLogicalSize{sizes.maxContent, input.percentBlock},
+            .blockLimit = input.blockLimit,
+            .fallback = input.fallback,
+        };
+        LayoutContentInput columns{
+            .content = &content,
+            .blockSize = input.percentBlock,
+            .minBlock = kLayoutUnitZero,
+            .maxBlock = input.blockLimit,
+            .goal = LayoutContentGoal_Size,
+        };
         solve(state, node, columns, &sizes.maxContent);
         ++state.stats->flexSolved;
         sizes.readsPercentBlock = true;

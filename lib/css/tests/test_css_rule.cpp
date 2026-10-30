@@ -51,7 +51,7 @@ TEST_CASE("a declaration value is trimmed at both ends") {
 
 TEST_CASE("important is recognized however it is spelled and spaced") {
     for (PrStringView text : {"a: b !important", "a: b!IMPORTANT",
-                              "a: b ! /**/ Important  "}) {
+        "a: b ! /**/ Important  "}) {
         INFO(textOf(text));
         Source s(text);
         CssSyntaxDeclaration declaration;
@@ -71,7 +71,7 @@ TEST_CASE("a bang that is not important stays in the value") {
 
 TEST_CASE("a declaration needs a name and a colon") {
     for (PrStringView text : {"", ";", "color", "color red",
-                              "#foo: red", "@foo: red"}) {
+        "#foo: red", "@foo: red"}) {
         INFO(textOf(text));
         Source s(text);
         CssSyntaxDeclaration declaration;

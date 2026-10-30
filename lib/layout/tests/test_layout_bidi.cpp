@@ -29,8 +29,7 @@ struct Page {
     }
 
     // Creates a stage `width` wide, styled by `style` and `bidi`.
-    PrLayoutNode stage(const PrLayoutFontStyle& style, float width = 200,
-                       PrTextBidi bidi = PrTextBidi_Normal) {
+    PrLayoutNode stage(const PrLayoutFontStyle& style, float width = 200, PrTextBidi bidi = PrTextBidi_Normal) {
         PrLayoutBoxStyle box = block();
         box.display = PrLayoutDisplay_FlowRoot;
         box.width = prLayoutLengthPx(width);
@@ -40,7 +39,7 @@ struct Page {
 
     // Creates a span under `parent` holding `text`, in `direction` with `bidi`.
     PrLayoutNode span(PrLayoutNode parent, const char* text, PrTextDirection direction = PrTextDirection_Ltr,
-                      PrTextBidi bidi = PrTextBidi_Normal) {
+            PrTextBidi bidi = PrTextBidi_Normal) {
         PrLayoutBoxStyle box = inlineBox();
         box.unicodeBidi = bidi;
         PrLayoutNode node = add(parent, box, font(direction));
@@ -67,8 +66,10 @@ struct Page {
         std::vector<PrRect> rects;
         for (uint32_t i = 0; i < count && i < 16; ++i) {
             PrRect r = prLayoutRectToPx(out[i]);
-            rects.push_back(PrRect{r.left - origin.left, r.top - origin.top, r.right - origin.left,
-                                   r.bottom - origin.top});
+            rects.push_back(PrRect{
+                r.left - origin.left, r.top - origin.top, r.right - origin.left,
+                r.bottom - origin.top,
+            });
         }
         return rects;
     }
@@ -115,8 +116,7 @@ TEST_CASE("a Hebrew word among English reads right to left, in either paragraph 
 }
 
 TEST_CASE("unicode-bidi on a span: normal changes nothing, embed embeds, bidi-override reverses every character") {
-    const PrTextBidi values[] = {PrTextBidi_Normal, PrTextBidi_Embed,
-                                          PrTextBidi_BidiOverride};
+    const PrTextBidi values[] = {PrTextBidi_Normal, PrTextBidi_Embed, PrTextBidi_BidiOverride};
     for (uint32_t k = 0; k < 3; ++k) {
         PrTextBidi bidi = values[k];
         CAPTURE(int(bidi));

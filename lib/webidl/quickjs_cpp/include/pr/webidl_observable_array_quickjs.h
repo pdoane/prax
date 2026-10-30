@@ -22,8 +22,7 @@ struct JsObservableArrayHooks {
     // Runs the steps of webidl/#observable-array-attribute-delete-an-indexed-value for `value`, which the backing list
     // holds at `index`. Returns false, with an exception pending, if the steps threw. The hook is null for an attribute
     // with no steps.
-    bool (*PR_NULLABLE remove)(JSContext* ctx, JSValueConst owner, JSValueConst value,
-                               uint32_t index);
+    bool (*PR_NULLABLE remove)(JSContext* ctx, JSValueConst owner, JSValueConst value, uint32_t index);
 };
 
 // Prepares the realm for observable arrays, before any script in it runs. The arrays are proxies made with the realm's
@@ -33,8 +32,7 @@ void jsObservableArrayBind(JSContext* ctx);
 // Creates an empty observable array for an attribute of `owner`, which the array keeps alive
 // (webidl/#creating-an-observable-array-exotic-object). The array is a proxy over an array whose indexed properties are
 // the backing list. `hooks` see each change to the list.
-JSValue jsObservableArrayNew(JSContext* ctx, JSValueConst owner,
-                             const JsObservableArrayHooks* hooks);
+JSValue jsObservableArrayNew(JSContext* ctx, JSValueConst owner, const JsObservableArrayHooks* hooks);
 
 // Return the size of the backing list of the observable array `array`, and the value that the list holds at an `index`
 // below that size.

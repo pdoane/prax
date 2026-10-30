@@ -61,7 +61,7 @@ CssColor filledFrom(const CssColor& color, const CssColor& other) {
 // with (css-color-4/#interpolation-missing). A stop that mixes with two stops that differ there becomes two stops at
 // its position, one for each side.
 void gradientStopsOf(const CssLayoutLengths& lengths, CssValueRun run, uint32_t first, uint32_t end, bool conic,
-                     PrColorSpace space, const CssColorContext& colors, float cap, Array<PrLayoutColorStop>& out) {
+        PrColorSpace space, const CssColorContext& colors, float cap, Array<PrLayoutColorStop>& out) {
     struct Stop {
         PrLayoutColorStop stop;
         CssColor color;
@@ -73,11 +73,12 @@ void gradientStopsOf(const CssLayoutLengths& lengths, CssValueRun run, uint32_t 
         while (itemEnd < end && !cssValueIsLiteral(&run.values[itemEnd], ','))
             itemEnd += run.values[itemEnd].next;
         const CssValueNode* head = &run.values[i];
-        bool hint = head->kind == PrCssValueKind_Percentage || head->kind == PrCssValueKind_Math
-                    || (head->kind == PrCssValueKind_Dimension && head->unit != PrCssUnit_Unknown);
+        bool hint = head->kind == PrCssValueKind_Percentage || head->kind == PrCssValueKind_Math ||
+            (head->kind == PrCssValueKind_Dimension && head->unit != PrCssUnit_Unknown);
         if (hint) {
-            stops.push(Stop{.stop = {.position = stopPositionOf(lengths, run, i, conic),
-                                     .kind = PrLayoutColorStopKind_Hint}});
+            stops.push(Stop{
+                .stop = {.position = stopPositionOf(lengths, run, i, conic), .kind = PrLayoutColorStopKind_Hint},
+            });
         } else {
             Stop stop{.stop = {.position = prLayoutLengthAuto()}};
             if (cssResolveColorComponents(run, i, colors, &stop.color))
@@ -131,8 +132,8 @@ void gradientStopsOf(const CssLayoutLengths& lengths, CssValueRun run, uint32_t 
         CssColor left = filledFrom(s.color, before != nullptr ? *before : after != nullptr ? *after : s.color);
         CssColor right = filledFrom(s.color, after != nullptr ? *after : before != nullptr ? *before : s.color);
         emit(s.stop, left);
-        bool differs = left.missing != right.missing || left.alpha != right.alpha || left.c[0] != right.c[0]
-                       || left.c[1] != right.c[1] || left.c[2] != right.c[2];
+        bool differs = left.missing != right.missing || left.alpha != right.alpha || left.c[0] != right.c[0] ||
+            left.c[1] != right.c[1] || left.c[2] != right.c[2];
         if (differs)
             emit(PrLayoutColorStop{.position = prLayoutLengthNone()}, right);
     }
@@ -143,9 +144,9 @@ void gradientStopsOf(const CssLayoutLengths& lengths, CssValueRun run, uint32_t 
 // keywords, or a number, which no color starts with.
 bool startsPrelude(const CssValueNode* value) {
     if (value->kind != PrCssValueKind_Keyword)
-        return value->kind == PrCssValueKind_Dimension || value->kind == PrCssValueKind_Math
-               || value->kind == PrCssValueKind_Percentage || value->kind == PrCssValueKind_Number
-               || value->kind == PrCssValueKind_Integer;
+        return value->kind == PrCssValueKind_Dimension || value->kind == PrCssValueKind_Math ||
+            value->kind == PrCssValueKind_Percentage || value->kind == PrCssValueKind_Number ||
+            value->kind == PrCssValueKind_Integer;
     switch (cssValueKeyword(value)) {
         case PrCssKeyword_To:
         case PrCssKeyword_From:
@@ -166,7 +167,7 @@ bool startsPrelude(const CssValueNode* value) {
 } // namespace
 
 void cssGradientFromValue(CssValueRun run, uint32_t index, const CssColorContext& colors, float cap,
-                          const CssLayoutLengths& lengths, Array<PrLayoutColorStop>& stops, PrLayoutGradient* out) {
+        const CssLayoutLengths& lengths, Array<PrLayoutColorStop>& stops, PrLayoutGradient* out) {
     PrLayoutGradient g = prLayoutGradientDefault();
     PrCssKeyword function = cssValueKeyword(&run.values[index]);
     switch (function) {
@@ -203,17 +204,18 @@ void cssGradientFromValue(CssValueRun run, uint32_t index, const CssColorContext
             bool left = false, right = false, top = false, bottom = false;
             for (i += 1; i < end && run.values[i].kind == PrCssValueKind_Keyword; ++i) {
                 PrCssKeyword side = cssValueKeyword(&run.values[i]);
-                if (side != PrCssKeyword_Left && side != PrCssKeyword_Right && side != PrCssKeyword_Top
-                    && side != PrCssKeyword_Bottom)
+                if (side != PrCssKeyword_Left && side != PrCssKeyword_Right && side != PrCssKeyword_Top &&
+                        side != PrCssKeyword_Bottom)
                     break;
                 left = left || side == PrCssKeyword_Left;
                 right = right || side == PrCssKeyword_Right;
                 top = top || side == PrCssKeyword_Top;
                 bottom = bottom || side == PrCssKeyword_Bottom;
             }
-            if ((left || right) && (top || bottom))
-                g.corner = top ? (left ? PrLayoutGradientCorner_TopLeft : PrLayoutGradientCorner_TopRight)
-                               : (left ? PrLayoutGradientCorner_BottomLeft : PrLayoutGradientCorner_BottomRight);
+            if ((left || right) && top)
+                g.corner = left ? PrLayoutGradientCorner_TopLeft : PrLayoutGradientCorner_TopRight;
+            else if ((left || right) && bottom)
+                g.corner = left ? PrLayoutGradientCorner_BottomLeft : PrLayoutGradientCorner_BottomRight;
             else
                 g.angle = top ? 0 : right ? 90 : bottom ? 180 : 270;
             continue;
@@ -226,8 +228,8 @@ void cssGradientFromValue(CssValueRun run, uint32_t index, const CssColorContext
         if (keyword == PrCssKeyword_At) {
             uint32_t from = i + 1;
             uint32_t to = from;
-            while (to < end && !cssValueIsLiteral(&run.values[to], ',')
-                   && !cssValueIsKeyword(&run.values[to], PrCssKeyword_In))
+            while (to < end && !cssValueIsLiteral(&run.values[to], ',') &&
+                    !cssValueIsKeyword(&run.values[to], PrCssKeyword_In))
                 to += run.values[to].next;
             CssValueRun position{run.values + from, to - from, run.text};
             cssPositionAxes(position, [&](bool vertical, uint32_t at, uint32_t offset) {
@@ -239,9 +241,9 @@ void cssGradientFromValue(CssValueRun run, uint32_t index, const CssColorContext
         if (keyword == PrCssKeyword_In) {
             interpolates = true;
             const CssValueNode* named = &run.values[i + 1];
-            PrColorSpace space = named->kind == PrCssValueKind_Keyword
-                                     ? cssColorSpaceFromKeyword(cssValueKeyword(named))
-                                     : PrColorSpace_Count;
+            PrColorSpace space = PrColorSpace_Count;
+            if (named->kind == PrCssValueKind_Keyword)
+                space = cssColorSpaceFromKeyword(cssValueKeyword(named));
             // A custom color space parses but is not supported, so the gradient interpolates in Oklab.
             g.space = space != PrColorSpace_Count ? space : PrColorSpace_Oklab;
             i += 2;

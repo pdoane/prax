@@ -59,7 +59,7 @@ extern "C" {
 // any thread. The memory that the host's processor maps, for uploads, the stream and readback, the backend allocates
 // itself.
 typedef bool (*PrGpuVulkanAllocateFn)(void* PR_NULLABLE context, uint64_t size, uint64_t alignment,
-                                      uint32_t memoryTypeBits, uint64_t* memory, uint64_t* offset);
+    uint32_t memoryTypeBits, uint64_t* memory, uint64_t* offset);
 typedef void (*PrGpuVulkanFreeFn)(void* PR_NULLABLE context, uint64_t memory, uint64_t offset);
 
 // The host's bindless set and pipeline layout, and the ranges of the set's arrays that the backend writes. Slots

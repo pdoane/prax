@@ -136,8 +136,9 @@ PrLayoutUnit unitOf(double raw) {
 
 // Returns the box style of the table part `node`, or that of an anonymous cell for kPrLayoutNodeNone.
 const PrLayoutBoxStyle& boxOf(const LayoutTree* tree, LayoutNodeIndex node) {
-    return node != kPrLayoutNodeNone ? layoutBoxStyle(tree->styles, layoutTreeNode(tree, node).style)
-                                     : layoutAnonymousCellStyle();
+    if (node != kPrLayoutNodeNone)
+        return layoutBoxStyle(tree->styles, layoutTreeNode(tree, node).style);
+    return layoutAnonymousCellStyle();
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -211,35 +212,37 @@ Table beginTable(LayoutState& state, LayoutNodeIndex node, LayoutNodeIndex runLa
         inherited.borderCollapse = style.borderCollapse;
         style = inherited;
     }
-    Table t{.state = state,
-            .node = anonymous ? kPrLayoutNodeNone : node,
-            .first = anonymous ? node : n.first,
-            .last = anonymous ? runLast : n.last,
-            .boxStyle = anonymous ? &layoutAnonymousTableStyle() : &layoutBoxStyle(state.styles, n.style),
-            .mode = layoutOwnMode(state.tree, parent),
-            .style = style,
-            .collapsed = false,
-            .fixed = false,
-            .inlineSpacing = kLayoutUnitZero,
-            .blockSpacing = kLayoutUnitZero,
-            .edges = {},
-            .cellInput = {},
-            .cellMark = s.cells.count,
-            .cellCount = 0,
-            .columnMark = s.columns.count,
-            .columnCount = 0,
-            .rowMark = s.rows.count,
-            .rowCount = 0,
-            .groupMark = s.groups.count,
-            .groupCount = 0,
-            .boxMark = s.boxes.count,
-            .boxCount = 0,
-            .captionMark = s.captions.count,
-            .captionCount = 0,
-            .outOfFlowMark = s.outOfFlow.count,
-            .outOfFlowCount = 0,
-            .orderMark = s.order.count,
-            .borderMark = s.borders.count};
+    Table t{
+        .state = state,
+        .node = anonymous ? kPrLayoutNodeNone : node,
+        .first = anonymous ? node : n.first,
+        .last = anonymous ? runLast : n.last,
+        .boxStyle = anonymous ? &layoutAnonymousTableStyle() : &layoutBoxStyle(state.styles, n.style),
+        .mode = layoutOwnMode(state.tree, parent),
+        .style = style,
+        .collapsed = false,
+        .fixed = false,
+        .inlineSpacing = kLayoutUnitZero,
+        .blockSpacing = kLayoutUnitZero,
+        .edges = {},
+        .cellInput = {},
+        .cellMark = s.cells.count,
+        .cellCount = 0,
+        .columnMark = s.columns.count,
+        .columnCount = 0,
+        .rowMark = s.rows.count,
+        .rowCount = 0,
+        .groupMark = s.groups.count,
+        .groupCount = 0,
+        .boxMark = s.boxes.count,
+        .boxCount = 0,
+        .captionMark = s.captions.count,
+        .captionCount = 0,
+        .outOfFlowMark = s.outOfFlow.count,
+        .outOfFlowCount = 0,
+        .orderMark = s.order.count,
+        .borderMark = s.borders.count,
+    };
     t.collapsed = t.style.borderCollapse == PrLayoutBorderCollapse_Collapse;
     // Border spacing is physical: its first length is horizontal (css-tables-3/#border-spacing-property).
     if (!t.collapsed) {
@@ -249,8 +252,8 @@ Table beginTable(LayoutState& state, LayoutNodeIndex node, LayoutNodeIndex runLa
     }
     // A table is laid out in fixed mode if its table-layout is fixed and its width is neither auto nor max-content.
     PrLayoutLength width = layoutLogicalBox(*t.boxStyle, t.mode).inlineSize;
-    t.fixed = t.style.tableLayout == PrLayoutTableLayout_Fixed && !layoutLengthIsAuto(width)
-              && width.bits != prLayoutLengthMaxContent().bits;
+    t.fixed = t.style.tableLayout == PrLayoutTableLayout_Fixed && !layoutLengthIsAuto(width) &&
+        width.bits != prLayoutLengthMaxContent().bits;
     return t;
 }
 
@@ -329,10 +332,12 @@ struct Collector {
             openGroup(kPrLayoutNodeNone, PrLayoutDisplay_TableRowGroup);
         LayoutTableScratch& s = t.scratch();
         row = t.rowCount++;
-        s.rows.push(LayoutTableRow{.node = node,
-                                   .group = group,
-                                   .firstCell = t.cellCount,
-                                   .collapsed = collapses(node) || collapses(t.group(group).node)});
+        s.rows.push(LayoutTableRow{
+            .node = node,
+            .group = group,
+            .firstCell = t.cellCount,
+            .collapsed = collapses(node) || collapses(t.group(group).node),
+        });
         t.group(group).rowCount += 1;
         implicitRow = node == kPrLayoutNodeNone;
     }
@@ -393,8 +398,8 @@ struct Collector {
         LayoutNodeIndex end = layoutTreeNode(tree, last).next;
         for (uint32_t c = first; c != end; c = layoutTreeNode(tree, c).next) {
             LayoutTablePart part = layoutTablePartFromDisplay(tree, display, c);
-            bool extends = runFirst != kPrLayoutNodeNone
-                           && (part == LayoutTablePart_None || part == LayoutTablePart_OutOfFlow);
+            bool extends = runFirst != kPrLayoutNodeNone &&
+                (part == LayoutTablePart_None || part == LayoutTablePart_OutOfFlow);
             if (part == LayoutTablePart_Other || extends) {
                 if (runFirst == kPrLayoutNodeNone)
                     runFirst = c;
@@ -406,8 +411,8 @@ struct Collector {
                 runFirst = kPrLayoutNodeNone;
             }
             // A caption or a column ends the anonymous row of the cells and other content before it.
-            if (implicitRow && (part == LayoutTablePart_Caption || part == LayoutTablePart_ColumnGroup
-                                || part == LayoutTablePart_Column))
+            if (implicitRow && (part == LayoutTablePart_Caption || part == LayoutTablePart_ColumnGroup ||
+                    part == LayoutTablePart_Column))
                 row = kNone;
             switch (part) {
                 case LayoutTablePart_Caption:
@@ -477,7 +482,11 @@ struct Collector {
         LayoutTableScratch& s = t.scratch();
         uint32_t span = layoutTableStyle(tree->styles, layoutTreeNode(tree, node).style).columnSpan;
         s.boxes.push(LayoutTableColumnBox{
-            .node = node, .group = groupBox, .firstColumn = t.columnCount, .columnCount = span});
+            .node = node,
+            .group = groupBox,
+            .firstColumn = t.columnCount,
+            .columnCount = span,
+        });
         ++t.boxCount;
         LayoutNodeIndex groupNode = groupBox != kNone ? t.box(groupBox).node : kPrLayoutNodeNone;
         for (uint32_t i = 0; i < span; ++i)
@@ -575,8 +584,8 @@ void mergeColumns(Table& t) {
     uint32_t next = 0;
     uint32_t previous = 0;
     for (uint32_t c = 0; c < t.columnCount; ++c) {
-        bool merges = c != 0 && t.column(c).node == kPrLayoutNodeNone && t.column(c).group == kPrLayoutNodeNone
-                      && (flags.data[mark + c] & 1) == 0 && (previous & 2) == 0;
+        bool merges = c != 0 && t.column(c).node == kPrLayoutNodeNone && t.column(c).group == kPrLayoutNodeNone &&
+            (flags.data[mark + c] & 1) == 0 && (previous & 2) == 0;
         previous = flags.data[mark + c];
         if (!merges)
             t.column(next) = t.column(c);
@@ -657,11 +666,13 @@ struct Resolution {
         }
         if (borderStyle == PrDrawBorderStyle_None)
             return;
-        Candidate c{.width = layoutBoxStyle(tree->styles, style).border[side],
-                    .style = borderStyle,
-                    .color = decoration.borderColor[side]};
-        if (!any || c.width > winner.width
-            || (c.width == winner.width && stylePrecedence(c.style) > stylePrecedence(winner.style)))
+        Candidate c{
+            .width = layoutBoxStyle(tree->styles, style).border[side],
+            .style = borderStyle,
+            .color = decoration.borderColor[side],
+        };
+        if (!any || c.width > winner.width ||
+                (c.width == winner.width && stylePrecedence(c.style) > stylePrecedence(winner.style)))
             winner = c;
         any = true;
     }
@@ -670,9 +681,11 @@ struct Resolution {
         if (!any || hidden)
             return LayoutTableBorder{.width = kLayoutUnitZero, .style = PrDrawBorderStyle_None};
         // In a collapsing table, inset is drawn as ridge and outset as groove (css-tables-3/#border-style-overrides).
-        PrDrawBorderStyle style = winner.style == PrDrawBorderStyle_Inset    ? PrDrawBorderStyle_Ridge
-                                  : winner.style == PrDrawBorderStyle_Outset ? PrDrawBorderStyle_Groove
-                                                                             : winner.style;
+        PrDrawBorderStyle style = winner.style;
+        if (winner.style == PrDrawBorderStyle_Inset)
+            style = PrDrawBorderStyle_Ridge;
+        else if (winner.style == PrDrawBorderStyle_Outset)
+            style = PrDrawBorderStyle_Groove;
         return LayoutTableBorder{.width = winner.width, .style = style, .color = winner.color};
     }
 };
@@ -709,8 +722,9 @@ void resolveBorders(Table& t) {
     PrRectSide blockEnd = layoutPhysicalSide(t.mode, LayoutSide_BlockEnd);
     PrRectSide inlineStart = layoutPhysicalSide(t.mode, LayoutSide_InlineStart);
     PrRectSide inlineEnd = layoutPhysicalSide(t.mode, LayoutSide_InlineEnd);
-    auto cellNode = [&](uint32_t i) { return i == kNone || t.cell(i).runLast != kPrLayoutNodeNone ? kPrLayoutNodeNone
-                                                                                                : t.cell(i).node; };
+    auto cellNode = [&](uint32_t i) {
+        return i == kNone || t.cell(i).runLast != kPrLayoutNodeNone ? kPrLayoutNodeNone : t.cell(i).node;
+    };
     // The lines across the inline axis, at the block-start edge of each row and the block-end edge of the last.
     for (uint32_t line = 0; line <= t.rowCount; ++line) {
         for (uint32_t c = 0; c < t.columnCount; ++c) {
@@ -861,7 +875,7 @@ double percentOf(const LayoutStyles* styles, PrLayoutLength length) {
 // boxes (css-sizing-3/#min-size-properties). css-tables-3 does not clamp the width, but a width outside the cell's own
 // limits would otherwise size its column.
 Widths widthsOf(const LayoutStyles* styles, const PrLayoutBoxStyle& box, const LayoutLogicalBox& logical,
-                PrLayoutUnit edges, bool cell) {
+        PrLayoutUnit edges, bool cell) {
     Widths w{.maxWidth = layoutUnit(-1)};
     auto border = [&](PrLayoutLength length) {
         PrLayoutUnit size = layoutResolve(styles, length, kLayoutUnitZero);
@@ -900,7 +914,7 @@ LayoutEdges cellEdgesOf(const Table& t, const LayoutTableCell& cell, PrLayoutUni
     if (cell.runLast != kPrLayoutNodeNone)
         return LayoutEdges{};
     LayoutEdges e = layoutEdgesFromBox(t.state.styles, layoutLogicalBox(boxOf(t.state.tree, cell.node), t.mode),
-                                       containingInline);
+        containingInline);
     if (t.collapsed) {
         for (LayoutSide side = 0; side < LayoutSide_Count; ++side)
             e.border[side] = cell.border[layoutPhysicalSide(t.mode, side)];
@@ -931,8 +945,10 @@ void measureCells(Table& t) {
             LayoutLogicalBox logical = layoutLogicalBox(box, t.mode);
             PrLayoutUnit styleEdges = layoutEdgesInline(layoutEdgesFromBox(styles, logical, layoutUnit(-1)));
             PrLayoutUnit edges = layoutEdgesInline(cellEdgesOf(t, cell, layoutUnit(-1)));
-            content = cell.orthogonal ? layoutContribution(t.state, cell.node, t.cellInput)
-                                      : layoutIntrinsicSizes(t.state, cell.node, t.cellInput);
+            if (cell.orthogonal)
+                content = layoutContribution(t.state, cell.node, t.cellInput);
+            else
+                content = layoutIntrinsicSizes(t.state, cell.node, t.cellInput);
             content = layoutWithEdges(content, styleEdges, edges);
             w = widthsOf(styles, box, logical, edges, true);
         }
@@ -1067,7 +1083,7 @@ void measureColumns(Table& t) {
                 t.column(c).minContent = layoutUnitMax(t.column(c).minContent, contribution);
             }
             shareOut(maxF64(cellMax - baseMax, 0), first, span,
-                     [&](uint32_t c) { return double(before(c).maxContent.raw); }, shares);
+                [&](uint32_t c) { return double(before(c).maxContent.raw); }, shares);
             for (uint32_t c = first; c < first + span; ++c) {
                 PrLayoutUnit contribution = unitOf(double(before(c).maxContent.raw) + shares[c - first]);
                 t.column(c).maxContent = layoutUnitMax(t.column(c).maxContent, contribution);
@@ -1079,8 +1095,8 @@ void measureColumns(Table& t) {
                 for (uint32_t c = first; c < first + span; ++c) {
                     if (before(c).percent != 0)
                         continue;
-                    double share = freeMax > 0 ? percent * double(before(c).spanningMax.raw) / freeMax
-                                               : percent / double(free);
+                    double share =
+                        freeMax > 0 ? percent * double(before(c).spanningMax.raw) / freeMax : percent / double(free);
                     t.column(c).percent = maxF64(t.column(c).percent, share);
                 }
             }
@@ -1146,9 +1162,11 @@ GridWidths gridWidths(const Table& t) {
     }
     PrLayoutUnit spacing = spacingAcross(t.inlineSpacing, visibleColumns(t, 0, t.columnCount));
     double fixed = double((spacing + layoutEdgesInline(t.edges)).raw);
-    return GridWidths{.minContent = unitOf(min + fixed),
-                      .maxContent = unitOf(minF64(max, double(kColumnMax)) + fixed),
-                      .unbounded = unbounded};
+    return GridWidths{
+        .minContent = unitOf(min + fixed),
+        .maxContent = unitOf(minF64(max, double(kColumnMax)) + fixed),
+        .unbounded = unbounded,
+    };
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -1262,9 +1280,7 @@ void distributeFixed(Table& t, double width) {
         else
             ++autos;
     }
-    double scale = percents > 0 && lengths + percents * width > width
-                       ? maxF64(0, width - lengths) / (percents * width)
-                       : 1;
+    double scale = percents > 0 && lengths + percents * width > width ? maxF64(0, width - lengths) / (percents * width) : 1;
     double left = width - lengths - percents * width * scale;
     double sum = 0;
     PrLayoutUnit placed = kLayoutUnitZero;
@@ -1324,15 +1340,16 @@ PrLayoutUnit spannedWidth(const Table& t, const LayoutTableCell& cell) {
 
 // Returns the space that the table's cells are laid out in: its grid's content box, of inline size `contentInline` and
 // of block size `contentBlock` if that is definite.
-LayoutSpace cellSpace(const Table& t, const LayoutSpace& space, PrLayoutUnit contentInline,
-                      PrLayoutUnit contentBlock) {
-    return LayoutSpace{.mode = t.mode,
-                       .available = contentInline,
-                       .percentInline = contentInline,
-                       .percentBlock = contentBlock,
-                       .containing = LayoutLogicalSize{contentInline, contentBlock},
-                       .blockLimit = layoutUnit(-1),
-                       .fallback = space.fallback};
+LayoutSpace cellSpace(const Table& t, const LayoutSpace& space, PrLayoutUnit contentInline, PrLayoutUnit contentBlock) {
+    return LayoutSpace{
+        .mode = t.mode,
+        .available = contentInline,
+        .percentInline = contentInline,
+        .percentBlock = contentBlock,
+        .containing = LayoutLogicalSize{contentInline, contentBlock},
+        .blockLimit = layoutUnit(-1),
+        .fallback = space.fallback,
+    };
 }
 
 // Returns the inputs that the table gives a cell beyond its size requests: its collapsed borders, if the table
@@ -1348,7 +1365,8 @@ LayoutCellSpace cellInputs(const Table& t, const LayoutTableCell& cell) {
 LayoutRequests contentRequests(PrLayoutUnit inlineSize) {
     return LayoutRequests{
         .inlineAxis = LayoutRequest{.size = inlineSize, .kind = LayoutRequestKind_Fixed, .definite = true},
-        .blockAxis = LayoutRequest{.kind = LayoutRequestKind_Content}};
+        .blockAxis = LayoutRequest{.kind = LayoutRequestKind_Content},
+    };
 }
 
 // Returns the requests that lay out an orthogonal cell whose width in the table's inline axis is `inlineSize`. The
@@ -1357,7 +1375,8 @@ LayoutRequests contentRequests(PrLayoutUnit inlineSize) {
 LayoutRequests orthogonalRequests(PrLayoutUnit inlineSize) {
     return LayoutRequests{
         .inlineAxis = LayoutRequest{.kind = LayoutRequestKind_Own},
-        .blockAxis = LayoutRequest{.size = inlineSize, .kind = LayoutRequestKind_Fixed, .definite = true}};
+        .blockAxis = LayoutRequest{.size = inlineSize, .kind = LayoutRequestKind_Fixed, .definite = true},
+    };
 }
 
 // Returns the block size that the style of the cell or row `node` gives its border box, with `edges` as its block-axis
@@ -1404,8 +1423,7 @@ void measureRows(Table& t, const LayoutSpace& cells) {
             m.blockSize = layoutLogicalSize(t.mode, result.fragment->extent).blockSize;
             layoutFragmentRelease(result.fragment);
         } else if (cell.runLast == kPrLayoutNodeNone) {
-            m = layoutMeasure(t.state, cell.node, space, contentRequests(cell.inlineSize),
-                              LayoutMeasureKind_Baselines);
+            m = layoutMeasure(t.state, cell.node, space, contentRequests(cell.inlineSize), LayoutMeasureKind_Baselines);
         } else {
             // An anonymous cell has no cache, and keeps the layout that it is measured with.
             LayoutResult result =
@@ -1420,7 +1438,7 @@ void measureRows(Table& t, const LayoutSpace& cells) {
         cell.blockEdgeEnd = layoutEdgesContent(e, LayoutSide_BlockEnd);
         cell.blockPercent = 0;
         cell.styledBlock = styledBlockOf(t, cell.runLast == kPrLayoutNodeNone ? cell.node : kPrLayoutNodeNone,
-                                         layoutEdgesBlock(e), &cell.blockPercent);
+            layoutEdgesBlock(e), &cell.blockPercent);
         cell.baseline = m.first.present ? m.first.offset : m.blockSize - cell.blockEdgeEnd;
         if (!m.first.present && cell.align == LayoutCellAlign_Baseline && cell.runLast == kPrLayoutNodeNone) {
             const LayoutTreeNode& n = layoutTreeNode(t.state.tree, cell.node);
@@ -1518,8 +1536,10 @@ void sizeRows(Table& t) {
                 LayoutTableRow& row = t.gridRow(r);
                 if (!takes(row))
                     continue;
-                sum += total > 0 ? double(excess.raw) * double(row.blockSize.raw) / total
-                                 : double(excess.raw) / double(count);
+                if (total > 0)
+                    sum += double(excess.raw) * double(row.blockSize.raw) / total;
+                else
+                    sum += double(excess.raw) / double(count);
                 PrLayoutUnit end = unitOf(sum);
                 row.blockSize = row.blockSize + end - placed;
                 placed = end;
@@ -1649,8 +1669,7 @@ void layOutCells(Table& t, const LayoutSpace& cells, bool definiteTable) {
             requests = orthogonalRequests(cell.inlineSize);
             requests.inlineAxis = LayoutRequest{.size = blockSize, .kind = LayoutRequestKind_Fixed, .definite = true};
         } else if (definite || blockSize != cell.measured || shifts) {
-            requests.blockAxis =
-                LayoutRequest{.size = blockSize, .kind = LayoutRequestKind_Fixed, .definite = definite};
+            requests.blockAxis = LayoutRequest{.size = blockSize, .kind = LayoutRequestKind_Fixed, .definite = definite};
             inputs.aligned = cell.align == LayoutCellAlign_Baseline;
             inputs.baseline = inputs.aligned ? rowAscent : kLayoutUnitZero;
         } else if (cell.runLast != kPrLayoutNodeNone) {
@@ -1658,9 +1677,11 @@ void layOutCells(Table& t, const LayoutSpace& cells, bool definiteTable) {
             continue;
         }
         space.cell = inputs.collapsed || inputs.aligned ? &inputs : nullptr;
-        LayoutResult result = cell.runLast != kPrLayoutNodeNone
-                                  ? layoutAnonymousBlock(t.state, cell.node, cell.runLast, space, requests)
-                                  : layoutFinal(t.state, cell.node, space, requests);
+        LayoutResult result;
+        if (cell.runLast != kPrLayoutNodeNone)
+            result = layoutAnonymousBlock(t.state, cell.node, cell.runLast, space, requests);
+        else
+            result = layoutFinal(t.state, cell.node, space, requests);
         layoutFragmentRelease(t.cell(i).fragment);
         t.cell(i).fragment = result.fragment;
     }
@@ -1704,7 +1725,7 @@ void placeOutOfFlow(Table& t, LayoutNodeIndex container, LayoutLogicalOffset at)
         if (aside.container != container)
             continue;
         LayoutFragment* placeholder = layoutFragmentCreatePlaceholder(aside.node, layoutStaticEdges(t.mode),
-                                                                      layoutIsFixed(t.state.tree, aside.node));
+            layoutIsFixed(t.state.tree, aside.node));
         t.state.scratch->children.push(LayoutLogicalChild{placeholder, at});
     }
 }
@@ -1712,7 +1733,7 @@ void placeOutOfFlow(Table& t, LayoutNodeIndex container, LayoutLogicalOffset at)
 // Returns the fragment of the table part `node`, of `size`, made from the scratch children from `mark`. The part holds
 // the boxes out of flow that it is the containing block of, laid out in `fallback`.
 const LayoutFragment* buildPart(Table& t, LayoutNodeIndex node, uint32_t mark, LayoutLogicalSize size,
-                                PrLayoutVec fallback) {
+        PrLayoutVec fallback) {
     ++t.state.stats->boxFragmentsMade;
     LayoutFragment* fragment = layoutHolderBuild(t.state, node, mark, t.mode, size, fallback);
     layoutFragmentSetOverflow(t.state.tree, fragment);
@@ -1767,15 +1788,16 @@ uint32_t collectSegments(Table& t, LayoutLogicalSize size, LayoutLogicalOffset g
     auto startHalf = [&](PrLayoutUnit width) { return width - endHalf(width); };
     PrRectSide across = layoutPhysicalSide(t.mode, LayoutSide_BlockStart);
     PrRectSide along = layoutPhysicalSide(t.mode, LayoutSide_InlineStart);
-    auto push = [&](const LayoutTableBorder& border, LayoutLogicalOffset offset, LayoutLogicalSize extent,
-                    PrRectSide side) {
+    auto push = [&](const LayoutTableBorder& border, LayoutLogicalOffset offset, LayoutLogicalSize extent, PrRectSide side) {
         if (border.width <= kLayoutUnitZero || !prDrawBorderStylePaints(border.style))
             return;
         PrLayoutVec at = layoutPhysicalOffset(t.mode, grid + offset, extent, size);
-        segments.push(LayoutGridBorder{.rect = layoutRectAt(at, layoutPhysicalSize(t.mode, extent)),
-                                       .color = border.color,
-                                       .style = border.style,
-                                       .side = side});
+        segments.push(LayoutGridBorder{
+            .rect = layoutRectAt(at, layoutPhysicalSize(t.mode, extent)),
+            .color = border.color,
+            .style = border.style,
+            .side = side,
+        });
     };
     // The block offset of each line across the inline axis, and the inline offset of each line along the block axis.
     auto acrossAt = [&](uint32_t line) {
@@ -1807,7 +1829,7 @@ uint32_t collectSegments(Table& t, LayoutLogicalSize size, LayoutLogicalOffset g
             const LayoutTableBorder& border = t.alongBorder(line, row);
             const LayoutTableRow& r = t.gridRow(row);
             push(border, LayoutLogicalOffset{x - startHalf(border.width), r.offset},
-                 LayoutLogicalSize{border.width, r.blockSize}, along);
+                LayoutLogicalSize{border.width, r.blockSize}, along);
         }
     }
     for (uint32_t line = 0; line <= t.rowCount; ++line) {
@@ -1817,7 +1839,7 @@ uint32_t collectSegments(Table& t, LayoutLogicalSize size, LayoutLogicalOffset g
             PrLayoutUnit start = alongAt(c) - startHalf(alongWidth(c, line));
             PrLayoutUnit end = alongAt(c + 1) + endHalf(alongWidth(c + 1, line));
             push(border, LayoutLogicalOffset{start, y - startHalf(border.width)},
-                 LayoutLogicalSize{end - start, border.width}, across);
+                LayoutLogicalSize{end - start, border.width}, across);
         }
     }
     return segments.count - mark;
@@ -1855,12 +1877,13 @@ void pushParts(Table& t, LayoutLogicalOffset at, const LayoutSpace& cells, PrLay
         pushRows(t, g, area.offset, cells, fallback);
         placeOutOfFlow(t, group.node, kLayoutLogicalOffsetZero);
         const LayoutFragment* fragment = buildPart(t, group.node, groupMark, area.size, fallback);
-        LayoutLogicalOffset relative =
-            layoutRelativeOffset(t.state.styles, boxOf(t.state.tree, group.node), cells);
+        LayoutLogicalOffset relative = layoutRelativeOffset(t.state.styles, boxOf(t.state.tree, group.node), cells);
         children.push(LayoutLogicalChild{fragment, at + area.offset + relative});
     }
-    placeOutOfFlow(t, t.node, at + LayoutLogicalOffset{layoutEdgesContent(t.edges, LayoutSide_InlineStart),
-                                                       layoutEdgesContent(t.edges, LayoutSide_BlockStart)});
+    placeOutOfFlow(t, t.node, at + LayoutLogicalOffset{
+        layoutEdgesContent(t.edges, LayoutSide_InlineStart),
+        layoutEdgesContent(t.edges, LayoutSide_BlockStart),
+    });
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -1868,13 +1891,15 @@ void pushParts(Table& t, LayoutLogicalOffset at, const LayoutSpace& cells, PrLay
 
 // Returns the space that the table's captions are laid out in: the table's border box, of inline size `inlineSize`.
 LayoutSpace captionSpace(const Table& t, const LayoutSpace& space, PrLayoutUnit inlineSize) {
-    return LayoutSpace{.mode = t.mode,
-                       .available = inlineSize,
-                       .percentInline = inlineSize,
-                       .percentBlock = layoutUnit(-1),
-                       .containing = LayoutLogicalSize{inlineSize, layoutUnit(-1)},
-                       .blockLimit = layoutUnit(-1),
-                       .fallback = space.fallback};
+    return LayoutSpace{
+        .mode = t.mode,
+        .available = inlineSize,
+        .percentInline = inlineSize,
+        .percentBlock = layoutUnit(-1),
+        .containing = LayoutLogicalSize{inlineSize, layoutUnit(-1)},
+        .blockLimit = layoutUnit(-1),
+        .fallback = space.fallback,
+    };
 }
 
 // Lays out the captions on `side` and appends them to the scratch children, starting at the block offset `at`. Each
@@ -1923,7 +1948,7 @@ void layoutTableScratchDestroy(LayoutTableScratch* PR_NULLABLE scratch) {
 }
 
 LayoutTableOutcome layoutTableContent(LayoutState& state, LayoutNodeIndex node, LayoutNodeIndex runLast,
-                                      const LayoutTableInput& input) {
+        const LayoutTableInput& input) {
     const LayoutSpace& space = *input.space;
     Table t = beginTable(state, node, runLast);
     ++state.stats->tablesLaidOut;
@@ -1998,8 +2023,8 @@ LayoutTableOutcome layoutTableContent(LayoutState& state, LayoutNodeIndex node, 
     outcome.blockSize = gridEnd + bottoms;
     LayoutLogicalSize size{input.inlineSize, outcome.blockSize};
     LayoutLogicalSize gridSize{input.inlineSize, gridBlock};
-    outcome.grid = layoutRectAt(layoutPhysicalOffset(t.mode, gridAt, gridSize, size),
-                                layoutPhysicalSize(t.mode, gridSize));
+    outcome.grid =
+        layoutRectAt(layoutPhysicalOffset(t.mode, gridAt, gridSize, size), layoutPhysicalSize(t.mode, gridSize));
     outcome.borderMark = s.segments.count;
     outcome.borderCount = t.collapsed ? collectSegments(t, size, gridAt) : 0;
     // The table's baselines are those of its first and last rows that cells start in (css-tables-3/#row-layout).
@@ -2020,7 +2045,7 @@ LayoutTableOutcome layoutTableContent(LayoutState& state, LayoutNodeIndex node, 
 }
 
 LayoutFragment* PR_NULLABLE layoutTableFinish(LayoutState& state, LayoutFragment* PR_NULLABLE built,
-                                              const LayoutTableOutcome& outcome) {
+        const LayoutTableOutcome& outcome) {
     Array<LayoutGridBorder>& segments = state.scratch->table->segments;
     LayoutFragment* fragment = built;
     if (built != nullptr)
@@ -2030,7 +2055,7 @@ LayoutFragment* PR_NULLABLE layoutTableFinish(LayoutState& state, LayoutFragment
 }
 
 LayoutIntrinsicSizes layoutTableIntrinsic(LayoutState& state, LayoutNodeIndex node, LayoutNodeIndex runLast,
-                                          const LayoutIntrinsicInput& input) {
+        const LayoutIntrinsicInput& input) {
     Table t = beginTable(state, node, runLast);
     buildGrid(t);
     findEdges(t, layoutUnit(-1));
@@ -2039,7 +2064,10 @@ LayoutIntrinsicSizes layoutTableIntrinsic(LayoutState& state, LayoutNodeIndex no
     measureColumns(t);
     GridWidths grid = gridWidths(t);
     LayoutIntrinsicSizes sizes{
-        .minContent = grid.minContent, .maxContent = grid.maxContent, .fillsAvailable = grid.unbounded};
+        .minContent = grid.minContent,
+        .maxContent = grid.maxContent,
+        .fillsAvailable = grid.unbounded,
+    };
     // The captions' min-content contributions floor both sizes (css-tables-3/#computing-the-table-width).
     LayoutIntrinsicInput captions{t.mode, layoutUnit(-1), layoutUnit(-1), input.fallback};
     for (uint32_t i = 0; i < t.captionCount; ++i) {
@@ -2067,7 +2095,7 @@ bool layoutTableCellIsEmpty(const LayoutFragment* fragment) {
 
 bool layoutTableCellCollapses(const LayoutTree* tree, LayoutNodeIndex node) {
     for (LayoutNodeIndex at = layoutCachePlacement(tree->cache, node).parent; at != kPrLayoutNodeNone;
-         at = layoutCachePlacement(tree->cache, at).parent) {
+            at = layoutCachePlacement(tree->cache, at).parent) {
         PrLayoutStyleIndex style = layoutTreeNode(tree, at).style;
         PrLayoutDisplay display = layoutBoxStyle(tree->styles, style).display;
         if (display == PrLayoutDisplay_Table || display == PrLayoutDisplay_InlineTable)
@@ -2091,8 +2119,7 @@ LayoutTablePart layoutTablePartFromDisplay(const LayoutTree* tree, PrLayoutDispl
         case PrLayoutDisplay_TableCaption: return root ? LayoutTablePart_Caption : LayoutTablePart_Other;
         case PrLayoutDisplay_TableColumnGroup: return root ? LayoutTablePart_ColumnGroup : LayoutTablePart_Other;
         case PrLayoutDisplay_TableColumn:
-            return root || display == PrLayoutDisplay_TableColumnGroup ? LayoutTablePart_Column
-                                                                       : LayoutTablePart_Other;
+            return root || display == PrLayoutDisplay_TableColumnGroup ? LayoutTablePart_Column : LayoutTablePart_Other;
         case PrLayoutDisplay_TableRowGroup:
         case PrLayoutDisplay_TableHeaderGroup:
         case PrLayoutDisplay_TableFooterGroup: return root ? LayoutTablePart_RowGroup : LayoutTablePart_Other;
@@ -2105,9 +2132,12 @@ LayoutTablePart layoutTablePartFromDisplay(const LayoutTree* tree, PrLayoutDispl
 bool layoutTableRunIsBlank(const LayoutTree* tree, LayoutNodeIndex first, LayoutNodeIndex last) {
     for (uint32_t c = first;; c = layoutTreeNode(tree, c).next) {
         LayoutChildKind kind = layoutChildKind(tree, c);
-        if (layoutTreeNode(tree, c).kind == PrLayoutNodeKind_Text ? !layoutIsBlankText(tree, c)
-                                                                  : kind != LayoutChildKind_None
-                                                                        && kind != LayoutChildKind_OutOfFlow)
+        bool blank;
+        if (layoutTreeNode(tree, c).kind == PrLayoutNodeKind_Text)
+            blank = layoutIsBlankText(tree, c);
+        else
+            blank = kind == LayoutChildKind_None || kind == LayoutChildKind_OutOfFlow;
+        if (!blank)
             return false;
         if (c == last)
             return true;

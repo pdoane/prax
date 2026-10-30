@@ -50,12 +50,14 @@ PrLayoutStyleIndex widthStyle(PrUi* ui, Maker& owner, float width) {
         return style;
     PrUiPart part{.type = &kPartType, .owner = &owner, .bytes = &width, .size = uint32_t(sizeof width)};
     ++owner.missed;
-    PrUiGroupRecipe recipe{.type = &kWidthType,
-                           .bytes = &width,
-                           .size = uint32_t(sizeof width),
-                           .kind = PrLayoutGroup_Box,
-                           .make = makeBox,
-                           .owner = &owner};
+    PrUiGroupRecipe recipe{
+        .type = &kWidthType,
+        .bytes = &width,
+        .size = uint32_t(sizeof width),
+        .kind = PrLayoutGroup_Box,
+        .make = makeBox,
+        .owner = &owner,
+    };
     PrLayoutStyle record = prLayoutStyleDefault();
     record.groups[PrLayoutGroup_Box] = prUiGroup(ui, &recipe);
     return prUiMemoKeep(ui, &part, prLayoutStyleIntern(prUiTree(ui), &record), 0);
@@ -392,10 +394,16 @@ TEST_CASE("a click reports the modifiers its press was made with") {
             seen = prUiPressModifiers(f.ui, 0);
     };
     f.frame();
-    f.push(PrAppEvent{.kind = PrAppEventKind_PointerDown, .modifiers = PrAppModifierFlag_Shift,
-                      .position = PrVec2{10, 10}});
-    f.push(PrAppEvent{.kind = PrAppEventKind_PointerUp, .modifiers = PrAppModifierFlag_Shift,
-                      .position = PrVec2{10, 10}});
+    f.push(PrAppEvent{
+        .kind = PrAppEventKind_PointerDown,
+        .modifiers = PrAppModifierFlag_Shift,
+        .position = PrVec2{10, 10},
+    });
+    f.push(PrAppEvent{
+        .kind = PrAppEventKind_PointerUp,
+        .modifiers = PrAppModifierFlag_Shift,
+        .position = PrVec2{10, 10},
+    });
     f.frame();
     CHECK(seen == PrAppModifierFlag_Shift);
 }
@@ -703,8 +711,12 @@ TEST_CASE("a wheel that turns by lines scrolls by lines of the default line heig
     PrLayoutNode scroller = kPrLayoutNodeNone;
     f.build = [&] { scroller = f.scroller(f.root, 0, 0, 400, 400, 400, 1000); };
     f.frame();
-    f.push(PrAppEvent{.kind = PrAppEventKind_Scroll, .scrollUnit = PrAppScrollUnit_Line, .position = PrVec2{50, 50},
-                      .delta = PrVec2{0, 2}});
+    f.push(PrAppEvent{
+        .kind = PrAppEventKind_Scroll,
+        .scrollUnit = PrAppScrollUnit_Line,
+        .position = PrVec2{50, 50},
+        .delta = PrVec2{0, 2},
+    });
     f.frame();
     CHECK(prLayoutNodeScroll(f.tree, scroller).y.raw == prLayoutUnitFromPx(2 * kPrAppScrollLineHeight).raw);
 }
@@ -1023,8 +1035,8 @@ TEST_CASE("records are found by place in the round and groups by recipe, apart f
     CHECK(a.made == 1);
     CHECK(b.made == 1);
     CHECK(styles[0] == styles[2]);
-    CHECK(prLayoutStyleRecord(f.tree, styles[0]).groups[PrLayoutGroup_Box]
-          != prLayoutStyleRecord(f.tree, styles[1]).groups[PrLayoutGroup_Box]);
+    CHECK(prLayoutStyleRecord(f.tree, styles[0]).groups[PrLayoutGroup_Box] !=
+        prLayoutStyleRecord(f.tree, styles[1]).groups[PrLayoutGroup_Box]);
     // The first frame has no committed tree to place its lookups by, so the memo keeps them from the second.
     PrLayoutStyleIndex before[3] = {styles[0], styles[1], styles[2]};
     f.frame(1.0 / 60, 1);
@@ -1053,11 +1065,11 @@ TEST_CASE("a key that a frame gives twice is outlined on both nodes in the next 
     auto outlines = [&] {
         uint32_t count = 0;
         for (PrLayoutNode layer = prLayoutNodeFirstChild(f.tree, f.root); layer != kPrLayoutNodeNone;
-             layer = prLayoutNodeNextSibling(f.tree, layer)) {
+                layer = prLayoutNodeNextSibling(f.tree, layer)) {
             if (layer == rows[0] || layer == rows[1])
                 continue;
             for (PrLayoutNode n = prLayoutNodeFirstChild(f.tree, layer); n != kPrLayoutNodeNone;
-                 n = prLayoutNodeNextSibling(f.tree, n))
+                    n = prLayoutNodeNextSibling(f.tree, n))
                 ++count;
         }
         return count;

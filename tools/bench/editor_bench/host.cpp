@@ -15,9 +15,10 @@ namespace {
 // under it.
 void buildRound(void* context, PrUi*, const PrUiRound*) {
     Host& host = *static_cast<Host*>(context);
-    PrKitSurfaceStyle style{.box = {.overflow = PrKitOverflow_Clip,
-                                    .place = {.width = prKitPercent(100), .height = prKitPercent(100)}},
-                            .ground = PrKitGround_App};
+    PrKitSurfaceStyle style{
+        .box = {.overflow = PrKitOverflow_Clip, .place = {.width = prKitPercent(100), .height = prKitPercent(100)}},
+        .ground = PrKitGround_App,
+    };
     PrLayoutNode root = prKitSurface(host.kit, kPrLayoutNodeNone, {}, style);
     if (host.build != nullptr)
         host.build(host.context, host.kit, root);
@@ -74,14 +75,16 @@ void hostEvent(Host& host, const PrAppEvent& event) {
 }
 
 void hostFrame(Host& host, double time, double delta, PrVec2 extent, const PrAppDisplay& display,
-               const PrAppUserPreferences& preferences, uint32_t rounds) {
+        const PrAppUserPreferences& preferences, uint32_t rounds) {
     host.display = display;
-    PrUiFrameDesc desc{.time = time,
-                       .delta = delta,
-                       .extent = extent,
-                       .maxRounds = rounds,
-                       .display = display,
-                       .preferences = preferences};
+    PrUiFrameDesc desc{
+        .time = time,
+        .delta = delta,
+        .extent = extent,
+        .maxRounds = rounds,
+        .display = display,
+        .preferences = preferences,
+    };
     if (!host.attached && host.attach != nullptr)
         host.attach(host.context, host);
     host.attached = true;

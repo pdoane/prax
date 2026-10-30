@@ -107,8 +107,7 @@ struct Stage {
     }
 
     // Creates an element under `parent` styled by `box`, with `effects` if given, in the stage's font.
-    PrLayoutNode add(PrLayoutNode parent, const PrLayoutBoxStyle& box,
-                     const PrLayoutEffectStyle* PR_NULLABLE effects = nullptr) {
+    PrLayoutNode add(PrLayoutNode parent, const PrLayoutBoxStyle& box, const PrLayoutEffectStyle* PR_NULLABLE effects = nullptr) {
         return f.element(parent, box, nullptr, effects, &style);
     }
     // Creates an element at z-index `z`.
@@ -150,8 +149,10 @@ struct Stage {
         std::vector<std::vector<double>> out;
         for (const PrLayoutRect& box : boxes) {
             PrRect r = prLayoutRectToPx(box);
-            out.push_back({double(r.left - origin.left), double(r.top - origin.top), double(r.right - r.left),
-                           double(r.bottom - r.top)});
+            out.push_back({
+                double(r.left - origin.left), double(r.top - origin.top), double(r.right - r.left),
+                double(r.bottom - r.top),
+            });
         }
         return out;
     }
@@ -571,10 +572,16 @@ TEST_CASE("a float is in tree order at its anchor on its line") {
     for (int32_t z : {0, 1}) {
         CAPTURE(z);
         Stage s;
-        PrLayoutNode fl = z != 0 ? s.at(s.stage, positioned(floatLeft(60, 40)), z)
-                                 : s.add(s.stage, positioned(floatLeft(60, 40)));
-        PrLayoutNode span =
-            z != 0 ? s.at(s.stage, positioned(inlineBox()), z) : s.add(s.stage, positioned(inlineBox()));
+        PrLayoutNode fl;
+        if (z != 0)
+            fl = s.at(s.stage, positioned(floatLeft(60, 40)), z);
+        else
+            fl = s.add(s.stage, positioned(floatLeft(60, 40)));
+        PrLayoutNode span;
+        if (z != 0)
+            span = s.at(s.stage, positioned(inlineBox()), z);
+        else
+            span = s.add(s.stage, positioned(inlineBox()));
         PrLayoutBoxStyle pulled = inlineBlock(40, 40);
         pulled.margin[PrRectSide_Left] = prLayoutLengthPx(-30);
         PrLayoutNode i = s.add(span, pulled);
@@ -1275,8 +1282,7 @@ TEST_CASE("the worked trace: a stacking context's list, its painting order, and 
     CHECK(verified(f.tree));
     CHECK(levelsOfS() == std::vector<int32_t>{-2, -1, 1, 5});
     // Text before I lays S's content out again, which changes no list: S's is the one found before.
-    prLayoutNodeSetText(f.tree, prLayoutNodeFirstChild(f.tree, s) == c ? prLayoutNodeNextSibling(f.tree, c) : c,
-                        "more text ");
+    prLayoutNodeSetText(f.tree, prLayoutNodeFirstChild(f.tree, s) == c ? prLayoutNodeNextSibling(f.tree, c) : c, "more text ");
     f.layout(px(400, 400));
     render(f.tree, 400, 400);
     CHECK(prLayoutTreeStats(f.tree).stackingListsFound == 0);
@@ -1404,8 +1410,11 @@ TEST_CASE("a static float holding a relative box, before a relative span on its 
             Stage s(60);
             PrLayoutNode parent = inWhole ? s.add(s.stage, positioned(inlineBox())) : s.stage;
             PrLayoutNode fl = s.add(parent, floatLeft(60, 40));
-            PrLayoutNode a = z != 0 ? s.at(fl, positioned(sized(block(), 60, 40)), z)
-                                    : s.add(fl, positioned(sized(block(), 60, 40)));
+            PrLayoutNode a;
+            if (z != 0)
+                a = s.at(fl, positioned(sized(block(), 60, 40)), z);
+            else
+                a = s.add(fl, positioned(sized(block(), 60, 40)));
             s.add(fl, absolute(0, 0, 10, 10));
             PrLayoutNode b = z != 0 ? s.at(parent, positioned(inlineBox()), z) : s.add(parent, positioned(inlineBox()));
             PrLayoutBoxStyle pulled = inlineBlock(40, 40);

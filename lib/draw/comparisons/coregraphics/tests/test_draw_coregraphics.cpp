@@ -27,8 +27,7 @@ const PrFont* load(const char* name) {
     return font;
 }
 
-std::vector<uint8_t> render(PrDrawRenderer* renderer, const PrDrawList* list, uint32_t width,
-                            uint32_t height) {
+std::vector<uint8_t> render(PrDrawRenderer* renderer, const PrDrawList* list, uint32_t width, uint32_t height) {
     std::vector<uint8_t> bytes(size_t(width) * height * 4, 0);
     PrPixels into{bytes.data(), size_t(width) * 4, {width, height}};
     REQUIRE(prDrawRendererRenderPixels(renderer, list, into, PrPixelFormat_Bgra8) == PrStatus_Ok);
@@ -44,8 +43,7 @@ double inkOf(const std::vector<uint8_t>& pixels) {
 }
 
 // Records one glyph of the font at `size`, painted with `brush` if it is not null.
-void recordGlyph(PrDrawList* list, const PrFont* font, uint16_t glyph, float size,
-                 const PrDrawBrush* brush = nullptr) {
+void recordGlyph(PrDrawList* list, const PrFont* font, uint16_t glyph, float size, const PrDrawBrush* brush = nullptr) {
     PrFontGlyph g{glyph, {10, size * 1.2f}};
     PrFontGlyphRun run{};
     run.font = font;
@@ -85,14 +83,15 @@ TEST_CASE("a glyph with a brush fills its outline as cpu does") {
     PrDrawRenderer* cg = prDrawCoreGraphicsCreate(nullptr);
     PrDrawRenderer* cpu = prDrawCpuCreate(nullptr);
     PrDrawList* list = prDrawListCreate();
-    const PrDrawColorStop stops[] = {{.offset = 0, .color = PrColor{0, 0, 0, 1}},
-                                     {.offset = 1, .color = PrColor{0, 0, 0, 1}}};
+    const PrDrawColorStop stops[] = {
+        {.offset = 0, .color = PrColor{0, 0, 0, 1}},
+        {.offset = 1, .color = PrColor{0, 0, 0, 1}},
+    };
     PrDrawBrush brush = prDrawBrushLinear(PrVec2{0, 0}, PrVec2{100, 0}, stops, 2);
     for (char c : std::string("AVTRWEyoSMLPI")) {
         recordGlyph(list, font, prFontCodePointGlyph(font, uint32_t(c)), 60, &brush);
         INFO("glyph ", c);
-        CHECK(inkOf(render(cg, list, 100, 100))
-              == doctest::Approx(inkOf(render(cpu, list, 100, 100))).epsilon(0.03));
+        CHECK(inkOf(render(cg, list, 100, 100)) == doctest::Approx(inkOf(render(cpu, list, 100, 100))).epsilon(0.03));
     }
     prDrawListRelease(list);
     prDrawRendererDestroy(cg);
@@ -121,8 +120,8 @@ TEST_CASE("native text draws each glyph of a font at its defaults") {
         for (float size : {11.0f, 26.0f, 60.0f}) {
             recordGlyph(list, font, glyph, size);
             INFO("glyph ", glyph, " at ", size);
-            CHECK(inkOf(render(native, list, 100, 100))
-                  == doctest::Approx(inkOf(render(cpu, list, 100, 100))).epsilon(0.1));
+            CHECK(inkOf(render(native, list, 100, 100)) ==
+                doctest::Approx(inkOf(render(cpu, list, 100, 100))).epsilon(0.1));
         }
     }
     prDrawListRelease(list);
@@ -142,9 +141,10 @@ TEST_CASE("native text draws each glyph of a variation") {
     PrDrawRenderer* native = prDrawCoreGraphicsCreate(&options);
     PrDrawRenderer* cpu = prDrawCpuCreate(nullptr);
     PrDrawList* list = prDrawListCreate();
-    const PrFontVariation points[][2] = {{{PR_FONT_TAG('w', 'g', 'h', 't'), 700}, {0, 0}},
-                                         {{PR_FONT_TAG('w', 'g', 'h', 't'), 300},
-                                          {PR_FONT_TAG('w', 'd', 't', 'h'), 75}}};
+    const PrFontVariation points[][2] = {
+        {{PR_FONT_TAG('w', 'g', 'h', 't'), 700}, {0, 0}},
+        {{PR_FONT_TAG('w', 'g', 'h', 't'), 300}, {PR_FONT_TAG('w', 'd', 't', 'h'), 75}},
+    };
     for (const PrFontVariation* point : points) {
         const PrFont* varied = nullptr;
         PrFontDerivation derivation = prFontDerivationDefault();
@@ -154,8 +154,8 @@ TEST_CASE("native text draws each glyph of a variation") {
         for (char c : std::string("AVTRWEyoSMLPIacegn")) {
             recordGlyph(list, varied, prFontCodePointGlyph(varied, uint32_t(c)), 40);
             INFO("glyph ", c, " at wght ", point[0].value);
-            CHECK(inkOf(render(native, list, 100, 100))
-                  == doctest::Approx(inkOf(render(cpu, list, 100, 100))).epsilon(0.1));
+            CHECK(inkOf(render(native, list, 100, 100)) ==
+                doctest::Approx(inkOf(render(cpu, list, 100, 100))).epsilon(0.1));
         }
         prFontRelease(varied);
     }
@@ -190,8 +190,10 @@ TEST_CASE("an operator acts where its shape covers, and a group's across the cli
 }
 
 TEST_CASE("a group is masked by a gradient's alpha, or by its inverse, as cpu does") {
-    PrDrawColorStop stops[2] = {{.offset = 0, .color = PrColor{0, 0, 0, 1}},
-                                {.offset = 1, .color = PrColor{0, 0, 0, 0}}};
+    PrDrawColorStop stops[2] = {
+        {.offset = 0, .color = PrColor{0, 0, 0, 1}},
+        {.offset = 1, .color = PrColor{0, 0, 0, 0}},
+    };
     PrDrawBrush fade = prDrawBrushLinear(PrVec2{8, 0}, PrVec2{56, 0}, stops, 2);
     PrDrawRenderer* cg = prDrawCoreGraphicsCreate(nullptr);
     PrDrawRenderer* cpu = prDrawCpuCreate(nullptr);

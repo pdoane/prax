@@ -67,7 +67,7 @@ typedef struct PrDrawGlyphDecoder PrDrawGlyphDecoder;
 struct PrDrawGlyphDecoder {
     void (*PR_NULLABLE destroy)(PrDrawGlyphDecoder* decoder);
     bool (*decode)(PrDrawGlyphDecoder* decoder, const PrFont* font, uint16_t glyph, float pixelsPerEm,
-                   const PrFontPalette* PR_NULLABLE palette, PrColor foreground, PrDrawList* list);
+        const PrFontPalette* PR_NULLABLE palette, PrColor foreground, PrDrawList* list);
 };
 
 // Frees the decoder.
@@ -78,7 +78,7 @@ void prDrawGlyphDecoderDestroy(PrDrawGlyphDecoder* PR_NULLABLE decoder);
 // image from the strike for that size. An SVG document takes its colors from the palette's entries, and its text color
 // from `foreground`. Returns false, and appends nothing, for a glyph with no picture that the decoder draws.
 bool prDrawGlyphDecoderDecode(PrDrawGlyphDecoder* decoder, const PrFont* font, uint16_t glyph, float pixelsPerEm,
-                              const PrFontPalette* PR_NULLABLE palette, PrColor foreground, PrDrawList* list);
+    const PrFontPalette* PR_NULLABLE palette, PrColor foreground, PrDrawList* list);
 
 // Appends the glyph's image from the strike for `pixelsPerEm` (prFontGlyphImage) to `list`, decoded by `codec`, in ems
 // with y down from the glyph's origin. Returns false for a glyph with no image, or an image the codec cannot decode.
@@ -106,8 +106,7 @@ void prDrawGlyphCacheEnd(PrDrawGlyphCache* cache);
 // the text color. Otherwise the list holds the glyph's picture from the decoder (prDrawGlyphDecoderDecode). Returns
 // null for a glyph that has neither. The list stays valid until the end of the use that requested it.
 PrDrawList* PR_NULLABLE prDrawGlyphCacheList(PrDrawGlyphCache* cache, const PrFont* font, uint16_t glyph,
-                                             float pixelsPerEm, const PrFontPalette* PR_NULLABLE palette,
-                                             PrColor foreground);
+    float pixelsPerEm, const PrFontPalette* PR_NULLABLE palette, PrColor foreground);
 
 // The maximum number of commands that play one glyph's list.
 enum { kPrDrawGlyphMaxCommands = 5 };
@@ -118,7 +117,7 @@ enum { kPrDrawGlyphMaxCommands = 5 };
 // the command's operator and blend mode. It is needed unless the alpha is one, the operator is source-over and the
 // blend mode is normal. The pushed group is written to `group`.
 uint32_t prDrawGlyphListCommands(const PrDrawCommand* glyphs, uint32_t index, PrDrawList* glyphList,
-                                 PrDrawGroup* group, PrDrawCommand out[PR_NONNULL kPrDrawGlyphMaxCommands]);
+    PrDrawGroup* group, PrDrawCommand out[PR_NONNULL kPrDrawGlyphMaxCommands]);
 
 #if defined(__cplusplus)
 }

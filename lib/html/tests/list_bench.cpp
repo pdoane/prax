@@ -83,27 +83,33 @@ struct Case {
 // Each case changes the list on one run, and undoes the change on the next, so that the list does not grow.
 const Case kCases[] = {
     {"list unchanged", [](Work*) {}},
-    {"list insert at start",
-     [](Work* w) {
-         if (prDomNodeParentNode(prDomElementAsNode(w->added)) == nullptr)
-             prDomNodeInsertBefore(w->list, prDomElementAsNode(w->added), prDomNodeFirstChild(w->list));
-         else
-             prDomNodeRemove(prDomElementAsNode(w->added));
-     }},
-    {"list append",
-     [](Work* w) {
-         if (prDomNodeParentNode(prDomElementAsNode(w->added)) == nullptr)
-             prDomNodeAppendChild(w->list, prDomElementAsNode(w->added));
-         else
-             prDomNodeRemove(prDomElementAsNode(w->added));
-     }},
-    {"list restyle without counters",
-     [](Work* w) {
-         bool on = false;
-         PrDomTokenList* classes = prDomTokenListCreate(w->middle, "class");
-         prDomTokenListToggle(classes, "marked", nullptr, &on);
-         prDomTokenListDestroy(classes);
-     }},
+    {
+        "list insert at start",
+        [](Work* w) {
+            if (prDomNodeParentNode(prDomElementAsNode(w->added)) == nullptr)
+                prDomNodeInsertBefore(w->list, prDomElementAsNode(w->added), prDomNodeFirstChild(w->list));
+            else
+                prDomNodeRemove(prDomElementAsNode(w->added));
+        },
+    },
+    {
+        "list append",
+        [](Work* w) {
+            if (prDomNodeParentNode(prDomElementAsNode(w->added)) == nullptr)
+                prDomNodeAppendChild(w->list, prDomElementAsNode(w->added));
+            else
+                prDomNodeRemove(prDomElementAsNode(w->added));
+        },
+    },
+    {
+        "list restyle without counters",
+        [](Work* w) {
+            bool on = false;
+            PrDomTokenList* classes = prDomTokenListCreate(w->middle, "class");
+            prDomTokenListToggle(classes, "marked", nullptr, &on);
+            prDomTokenListDestroy(classes);
+        },
+    },
 };
 
 // Creates the set of the checkout's Tinos font, a shaper, and the default text font over the set, and returns the font.

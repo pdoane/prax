@@ -69,8 +69,7 @@ bool isEmptyHost(const PrString* host) {
 
 // url/#windows-drive-letter
 bool isDriveLetter(PrStringView text) {
-    return text.size == 2 && asciiIsLetter(text.data[0])
-           && (text.data[1] == ':' || text.data[1] == '|');
+    return text.size == 2 && asciiIsLetter(text.data[0]) && (text.data[1] == ':' || text.data[1] == '|');
 }
 
 bool isNormalizedDriveLetter(PrStringView text) {
@@ -94,15 +93,14 @@ bool isSingleDot(PrStringView segment) {
 
 // url/#double-dot-path-segment
 bool isDoubleDot(PrStringView segment) {
-    return segment == ".." || asciiEqualsFold(segment, ".%2e")
-           || asciiEqualsFold(segment, "%2e.") || asciiEqualsFold(segment, "%2e%2e");
+    return segment == ".." || asciiEqualsFold(segment, ".%2e") ||
+        asciiEqualsFold(segment, "%2e.") || asciiEqualsFold(segment, "%2e%2e");
 }
 
 // url/#forbidden-host-code-point
 bool isForbiddenHost(char c) {
-    return c == '\0' || c == '\t' || c == '\n' || c == '\r' || c == ' ' || c == '#' || c == '/'
-           || c == ':' || c == '<' || c == '>' || c == '?' || c == '@' || c == '[' || c == '\\'
-           || c == ']' || c == '^' || c == '|';
+    return c == '\0' || c == '\t' || c == '\n' || c == '\r' || c == ' ' || c == '#' || c == '/' ||
+        c == ':' || c == '<' || c == '>' || c == '?' || c == '@' || c == '[' || c == '\\' || c == ']' || c == '^' || c == '|';
 }
 
 // url/#forbidden-domain-code-point
@@ -328,8 +326,7 @@ PrStatus parseHost(PrStringView input, bool opaque, PrString* out) {
     PrStatus status = PrStatus_Ok;
     if (input.size != 0 && input.data[0] == '[') {
         uint16_t address[8];
-        status = input.data[input.size - 1] != ']' ? PrStatus_Syntax
-            : parseIpv6(stringSlice(input, 1, input.size - 2), address);
+        status = input.data[input.size - 1] != ']' ? PrStatus_Syntax : parseIpv6(stringSlice(input, 1, input.size - 2), address);
         if (status == PrStatus_Ok)
             serializeIpv6(&host, address);
     } else if (opaque) {
@@ -417,8 +414,7 @@ PrStringView firstSegment(PrStringView path) {
 // url/#shorten-a-urls-path
 void shorten(Parser* p) {
     PrStringView path = textView(&p->path);
-    if (p->scheme == UrlScheme_File && path.size == 3
-        && isNormalizedDriveLetter(stringSlice(path, 1, 2)))
+    if (p->scheme == UrlScheme_File && path.size == 3 && isNormalizedDriveLetter(stringSlice(path, 1, 2)))
         return;
     uint32_t end = p->path.text.count;
     while (end != 0 && p->path.text.data[end - 1] != '/')
@@ -458,9 +454,7 @@ PrStatus run(Parser* p) {
                 break;
 
             case UrlState_Scheme:
-                if (c != kEof
-                    && (asciiIsLetter(char(c)) || asciiIsDigit(char(c)) || c == '+' || c == '-'
-                        || c == '.')) {
+                if (c != kEof && (asciiIsLetter(char(c)) || asciiIsDigit(char(c)) || c == '+' || c == '-' || c == '.')) {
                     textAppendChar(&p->buffer, asciiLower(char(c)));
                 } else if (c == ':') {
                     PrStringView scheme = textView(&p->buffer);
@@ -482,8 +476,8 @@ PrStatus run(Parser* p) {
                     textClear(&p->buffer);
                     if (p->scheme == UrlScheme_File) {
                         p->state = UrlState_File;
-                    } else if (isSpecial(p) && p->base != nullptr
-                               && prStringView(&p->base->scheme) == prStringView(&url->scheme)) {
+                    } else if (isSpecial(p) && p->base != nullptr &&
+                            prStringView(&p->base->scheme) == prStringView(&url->scheme)) {
                         p->state = UrlState_SpecialRelativeOrAuthority;
                     } else if (isSpecial(p)) {
                         p->state = UrlState_SpecialAuthoritySlashes;
@@ -591,17 +585,16 @@ PrStatus run(Parser* p) {
                 if (c == '@') {
                     if (p->atSignSeen)
                         appendEncoded(p->passwordTokenSeen ? &url->password : &url->username,
-                                      "%40", PrUrlPercentEncodeSet_Userinfo);
+                            "%40", PrUrlPercentEncodeSet_Userinfo);
                     p->atSignSeen = true;
                     PrStringView credentials = textView(&p->buffer);
                     if (!p->passwordTokenSeen) {
                         size_t colon = stringFind(credentials, ':');
                         appendEncoded(&url->username, stringSlice(credentials, 0, colon),
-                                      PrUrlPercentEncodeSet_Userinfo);
+                            PrUrlPercentEncodeSet_Userinfo);
                         p->passwordTokenSeen = colon != credentials.size;
-                        credentials = p->passwordTokenSeen ? stringSlice(credentials, colon + 1,
-                                                                         credentials.size - colon - 1)
-                                                           : "";
+                        credentials =
+                            p->passwordTokenSeen ? stringSlice(credentials, colon + 1, credentials.size - colon - 1) : "";
                     }
                     if (p->passwordTokenSeen)
                         appendEncoded(&url->password, credentials, PrUrlPercentEncodeSet_Userinfo);
@@ -636,8 +629,7 @@ PrStatus run(Parser* p) {
                     --p->pointer;
                     if (special && p->buffer.text.count == 0)
                         return PrStatus_Syntax;
-                    if (p->hasOverride && p->buffer.text.count == 0
-                        && (includesCredentials(url) || url->hasPort))
+                    if (p->hasOverride && p->buffer.text.count == 0 && (includesCredentials(url) || url->hasPort))
                         return PrStatus_Syntax;
                     PrStatus status = parseHost(textView(&p->buffer), !special, &url->host);
                     if (status != PrStatus_Ok)
@@ -684,8 +676,7 @@ PrStatus run(Parser* p) {
                 prStringReplace(&url->host, "");
                 if (c == '/' || c == '\\') {
                     p->state = UrlState_FileSlash;
-                } else if (p->base != nullptr
-                           && urlScheme(prStringView(&p->base->scheme)) == UrlScheme_File) {
+                } else if (p->base != nullptr && urlScheme(prStringView(&p->base->scheme)) == UrlScheme_File) {
                     assign(&url->host, &p->base->host);
                     takePath(p);
                     assign(&url->query, &p->base->query);
@@ -779,8 +770,7 @@ PrStatus run(Parser* p) {
                         if (!slash)
                             appendSegment(p, "");
                     } else {
-                        if (p->scheme == UrlScheme_File && p->path.text.count == 0
-                            && isDriveLetter(segment))
+                        if (p->scheme == UrlScheme_File && p->path.text.count == 0 && isDriveLetter(segment))
                             p->buffer.text.data[1] = ':';
                         appendSegment(p, segment);
                     }
@@ -791,7 +781,7 @@ PrStatus run(Parser* p) {
                         startFragment(p);
                 } else {
                     urlAppendPercentEncoded(&p->buffer, stringSlice(p->input, p->pointer, 1),
-                                            PrUrlPercentEncodeSet_Path);
+                        PrUrlPercentEncodeSet_Path);
                 }
                 break;
 
@@ -805,7 +795,7 @@ PrStatus run(Parser* p) {
                     textAppend(&p->path, delimited ? "%20" : " ");
                 } else if (c != kEof) {
                     urlAppendPercentEncoded(&p->path, stringSlice(p->input, p->pointer, 1),
-                                            PrUrlPercentEncodeSet_C0Control);
+                        PrUrlPercentEncodeSet_C0Control);
                 }
                 break;
 
@@ -815,8 +805,7 @@ PrStatus run(Parser* p) {
                     bool utf8 = !special || p->scheme == UrlScheme_Ws || p->scheme == UrlScheme_Wss;
                     TextBuffer encoded;
                     urlAppendPercentEncodedIn(&encoded, textView(&p->buffer), utf8 ? PrCharset_Utf8 : p->charset,
-                                              special ? PrUrlPercentEncodeSet_SpecialQuery
-                                                      : PrUrlPercentEncodeSet_Query);
+                        special ? PrUrlPercentEncodeSet_SpecialQuery : PrUrlPercentEncodeSet_Query);
                     prStringAppend(&url->query, textView(&encoded));
                     textReset(&encoded);
                     textClear(&p->buffer);
@@ -831,7 +820,7 @@ PrStatus run(Parser* p) {
                 // The buffer holds the encoded text so far, which becomes the fragment at the end.
                 if (c != kEof)
                     urlAppendPercentEncoded(&p->buffer, stringSlice(p->input, p->pointer, 1),
-                                            PrUrlPercentEncodeSet_Fragment);
+                        PrUrlPercentEncodeSet_Fragment);
                 else
                     prStringAppend(&url->fragment, textView(&p->buffer));
                 break;
@@ -845,8 +834,7 @@ bool isTabOrNewline(char c) {
     return c == '\t' || c == '\n' || c == '\r';
 }
 
-PrStatus parse(Url* url, PrStringView input, const Url* PR_NULLABLE base, UrlState state,
-               bool hasOverride, PrCharset charset) {
+PrStatus parse(Url* url, PrStringView input, const Url* PR_NULLABLE base, UrlState state, bool hasOverride, PrCharset charset) {
     size_t first = 0;
     while (first < input.size && !isTabOrNewline(input.data[first]))
         ++first;
@@ -888,8 +876,7 @@ PrString formDecode(TextBuffer* bytes, PrStringView text) {
         if (bytes->text.data[i] == '+')
             bytes->text.data[i] = ' ';
     }
-    bytes->text.count =
-        uint32_t(prUrlPercentDecode(textView(bytes), bytes->text.data, bytes->text.count));
+    bytes->text.count = uint32_t(prUrlPercentDecode(textView(bytes), bytes->text.data, bytes->text.count));
     TextBuffer decoded;
     textAppendUtf8(&decoded, textView(bytes));
     return textTake(&decoded);
@@ -909,13 +896,11 @@ void formEncode(TextBuffer* out, PrStringView text) {
 
 } // namespace
 
-PrStatus urlParse(PrStringView input, const Url* PR_NULLABLE base, PrCharset charset,
-                  PrUrl* PR_NULLABLE* PR_NONNULL out) {
+PrStatus urlParse(PrStringView input, const Url* PR_NULLABLE base, PrCharset charset, PrUrl* PR_NULLABLE* PR_NONNULL out) {
     PR_ASSERT(prCharsetOutput(charset) == charset);
     *out = nullptr;
     PrUrl* url = allocZeroed<PrUrl>();
-    PrStatus status =
-        parse(url, stringTrim(input, isC0ControlOrSpace), base, UrlState_SchemeStart, false, charset);
+    PrStatus status = parse(url, stringTrim(input, isC0ControlOrSpace), base, UrlState_SchemeStart, false, charset);
     if (status == PrStatus_Ok)
         *out = url;
     else
@@ -1002,10 +987,12 @@ PrString urlOrigin(const Url* self) {
     if (prStringView(&self->scheme) == "blob") {
         PrUrl* pathUrl = nullptr;
         urlParse(prStringView(&self->path), nullptr, PrCharset_Utf8, &pathUrl);
-        UrlScheme inner =
-            pathUrl != nullptr ? urlScheme(prStringView(&pathUrl->scheme)) : UrlScheme_None;
-        PrString origin = inner == UrlScheme_Http || inner == UrlScheme_Https
-            ? urlOrigin(pathUrl) : prStringCopy("null");
+        UrlScheme inner = pathUrl != nullptr ? urlScheme(prStringView(&pathUrl->scheme)) : UrlScheme_None;
+        PrString origin;
+        if (inner == UrlScheme_Http || inner == UrlScheme_Https)
+            origin = urlOrigin(pathUrl);
+        else
+            origin = prStringCopy("null");
         urlDestroy(pathUrl);
         return origin;
     }
@@ -1033,8 +1020,7 @@ void urlSearchParamsParse(UrlSearchParams* self, PrStringView input) {
         if (sequence.size == 0)
             continue;
         size_t equals = stringFind(sequence, '=');
-        PrStringView value = equals != sequence.size
-            ? stringSlice(sequence, equals + 1, sequence.size - equals - 1) : "";
+        PrStringView value = equals != sequence.size ? stringSlice(sequence, equals + 1, sequence.size - equals - 1) : "";
         PrString name = formDecode(&bytes, stringSlice(sequence, 0, equals));
         self->pairs.push(UrlPair{name, formDecode(&bytes, value)});
     }

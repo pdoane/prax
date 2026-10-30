@@ -59,7 +59,7 @@ PrString windowBaseUrl(void* PR_NULLABLE context) {
 
 // A window whose document its browsing context no longer shows fetches nothing.
 PrStatus windowFetch(void* PR_NULLABLE context, const PrFetchClientRequest* request, PrFetchClientFn done,
-                     void* PR_NULLABLE doneContext) {
+        void* PR_NULLABLE doneContext) {
     PrHtmlPage* page = prHtmlWindowPage(static_cast<PrHtmlWindow*>(context));
     return page != nullptr ? prHtmlPageFetch(page, request, done, doneContext) : PrStatus_Lost;
 }
@@ -71,7 +71,11 @@ void windowCancelFetch(void* PR_NULLABLE context, void* PR_NULLABLE doneContext)
 
 int32_t windowSetTimeout(void* PR_NULLABLE context, const PrXhrTask* task, uint32_t milliseconds) {
     PrHtmlTimerHandler handler{
-        .invoke = task->invoke, .context = task->context, .retain = task->retain, .release = task->release};
+        .invoke = task->invoke,
+        .context = task->context,
+        .retain = task->retain,
+        .release = task->release,
+    };
     return prHtmlWindowSetTimeout(static_cast<PrHtmlWindow*>(context), &handler, int32_t(milliseconds), false);
 }
 
@@ -98,11 +102,10 @@ JSValue progressConstruct(JSContext* ctx, JSValueConst newTarget, int argc, JSVa
         return JS_EXCEPTION;
     // The members of ProgressEventInit are read after those of EventInit, in lexicographic order
     // (webidl/#js-dictionary).
-    if (present
-        && (!prJsDomEventInitRead(ctx, dictionary, &init.event)
-            || !jsDictBool(ctx, dictionary, "lengthComputable", &init.lengthComputable)
-            || !jsDictNumber(ctx, dictionary, "loaded", &init.loaded)
-            || !jsDictNumber(ctx, dictionary, "total", &init.total)))
+    if (present && (!prJsDomEventInitRead(ctx, dictionary, &init.event) ||
+            !jsDictBool(ctx, dictionary, "lengthComputable", &init.lengthComputable) ||
+            !jsDictNumber(ctx, dictionary, "loaded", &init.loaded) ||
+            !jsDictNumber(ctx, dictionary, "total", &init.total)))
         return JS_EXCEPTION;
     PrDomEvent* event = prXhrProgressEventAsEvent(prXhrProgressEventCreate(type.value(), &init));
     JSValue object = jsWrap(ctx, xhrProgressEventClass, JS_UNDEFINED, event, true);
@@ -138,12 +141,16 @@ JSValue xhrConstruct(JSContext* ctx, JSValueConst newTarget, int, JSValueConst*)
     PrHtmlWindow* window = document != nullptr ? prHtmlDocumentDefaultView(document) : nullptr;
     if (window == nullptr)
         return JS_ThrowTypeError(ctx, "XMLHttpRequest needs a window");
-    PrXhrDesc desc{.client = {.context = window,
-                              .baseUrl = windowBaseUrl,
-                              .fetch = windowFetch,
-                              .cancelFetch = windowCancelFetch,
-                              .setTimeout = windowSetTimeout,
-                              .clearTimeout = windowClearTimeout}};
+    PrXhrDesc desc{
+        .client = {
+            .context = window,
+            .baseUrl = windowBaseUrl,
+            .fetch = windowFetch,
+            .cancelFetch = windowCancelFetch,
+            .setTimeout = windowSetTimeout,
+            .clearTimeout = windowClearTimeout,
+        },
+    };
     PrXhr* request = prXhrCreate(&desc);
     JSValue object = jsWrap(ctx, xhrClass, JS_UNDEFINED, prXhrAsEventTarget(request), true);
     if (JS_IsException(object)) {
@@ -337,7 +344,7 @@ JSValue responseObject(JSContext* ctx, PrXhr* request) {
     switch (prXhrResponseType(request)) {
         case PrXhrResponseType_ArrayBuffer:
             return JS_NewArrayBufferCopy(ctx, body.data != nullptr ? body.data : reinterpret_cast<const uint8_t*>(""),
-                                         body.size);
+                body.size);
         case PrXhrResponseType_Json: {
             // A JSON response is UTF-8 whatever its charset (xhr/#json-response), and is null if it does not parse.
             if (body.size == 0)
@@ -387,8 +394,9 @@ JSClassID classifyTarget(void* handle) {
 }
 
 JSClassID classifyEvent(void* handle) {
-    return prXhrProgressEventQuery(static_cast<PrDomEvent*>(handle)) != nullptr ? xhrProgressEventClass
-                                                                                 : prJsDomEventClass;
+    if (prXhrProgressEventQuery(static_cast<PrDomEvent*>(handle)) != nullptr)
+        return xhrProgressEventClass;
+    return prJsDomEventClass;
 }
 
 // Releases the object's reference to its request. A request that is still active, as one whose fetch the runtime's
@@ -415,23 +423,16 @@ constexpr JSCFunctionListEntry kProgressEventProto[] = {
 
 constexpr JSCFunctionListEntry kEventTargetProto[] = {
     PR_JS_TAG("XMLHttpRequestEventTarget"),
-    PR_JS_DOM_EVENT_HANDLER(onloadstart)
-    PR_JS_DOM_EVENT_HANDLER(onprogress)
-    PR_JS_DOM_EVENT_HANDLER(onabort)
-    PR_JS_DOM_EVENT_HANDLER(onerror)
-    PR_JS_DOM_EVENT_HANDLER(onload)
-    PR_JS_DOM_EVENT_HANDLER(ontimeout)
-    PR_JS_DOM_EVENT_HANDLER(onloadend)
+    PR_JS_DOM_EVENT_HANDLER(onloadstart) PR_JS_DOM_EVENT_HANDLER(onprogress) PR_JS_DOM_EVENT_HANDLER(onabort)
+        PR_JS_DOM_EVENT_HANDLER(onerror) PR_JS_DOM_EVENT_HANDLER(onload) PR_JS_DOM_EVENT_HANDLER(ontimeout)
+        PR_JS_DOM_EVENT_HANDLER(onloadend)
 };
 
-constexpr JSCFunctionListEntry kUploadProto[] = {
-    PR_JS_TAG("XMLHttpRequestUpload"),
-};
+constexpr JSCFunctionListEntry kUploadProto[] = {PR_JS_TAG("XMLHttpRequestUpload")};
 
 constexpr JSCFunctionListEntry kRequestProto[] = {
     PR_JS_TAG("XMLHttpRequest"),
-    PR_JS_DOM_EVENT_HANDLER(onreadystatechange)
-    PR_JS_GET("readyState", xhrReadyState),
+    PR_JS_DOM_EVENT_HANDLER(onreadystatechange) PR_JS_GET("readyState", xhrReadyState),
     PR_JS_METHOD("open", 2, xhrOpen),
     PR_JS_METHOD("setRequestHeader", 2, xhrSetRequestHeader),
     PR_JS_GET_SET("timeout", xhrTimeout, xhrSetTimeout),
@@ -459,18 +460,29 @@ constexpr JsConstant kRequestConstants[] = {
 };
 
 constexpr JsClassDefinition kClasses[] = {
-    {PR_JS_CLASS("ProgressEvent", xhrProgressEventClass, jsViewFinalizer<&xhrProgressEventClass>,
-                 kProgressEventProto),
-     .constructor = progressConstruct, .length = 1, .base = &prJsDomEventClass},
-    {PR_JS_CLASS("XMLHttpRequestEventTarget", xhrEventTargetClass, jsViewFinalizer<&xhrEventTargetClass>,
-                 kEventTargetProto),
-     .base = &prJsDomEventTargetClass, .references = &kTargetReferences},
-    {PR_JS_CLASS("XMLHttpRequestUpload", xhrUploadClass, jsViewFinalizer<&xhrUploadClass>, kUploadProto),
-     .base = &xhrEventTargetClass},
-    {PR_JS_CLASS("XMLHttpRequest", xhrClass,
-                 (jsFinalizer<&xhrClass, releaseRequest>),
-                 kRequestProto),
-     PR_JS_CONSTANTS(kRequestConstants), .constructor = xhrConstruct, .base = &xhrEventTargetClass},
+    {
+        PR_JS_CLASS("ProgressEvent", xhrProgressEventClass, jsViewFinalizer<&xhrProgressEventClass>,
+            kProgressEventProto),
+        .constructor = progressConstruct,
+        .length = 1,
+        .base = &prJsDomEventClass,
+    },
+    {
+        PR_JS_CLASS("XMLHttpRequestEventTarget", xhrEventTargetClass, jsViewFinalizer<&xhrEventTargetClass>,
+            kEventTargetProto),
+        .base = &prJsDomEventTargetClass,
+        .references = &kTargetReferences,
+    },
+    {
+        PR_JS_CLASS("XMLHttpRequestUpload", xhrUploadClass, jsViewFinalizer<&xhrUploadClass>, kUploadProto),
+        .base = &xhrEventTargetClass,
+    },
+    {
+        PR_JS_CLASS("XMLHttpRequest", xhrClass, (jsFinalizer<&xhrClass, releaseRequest>), kRequestProto),
+        PR_JS_CONSTANTS(kRequestConstants),
+        .constructor = xhrConstruct,
+        .base = &xhrEventTargetClass,
+    },
 };
 
 } // namespace

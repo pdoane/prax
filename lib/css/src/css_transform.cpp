@@ -29,9 +29,8 @@ bool absolute(CssValueRun run, uint32_t index, double* out) {
             return scale != 0;
         }
         case PrCssValueKind_Math:
-            return cssMathTo(run, index, PrCssUnit_Number, out)
-                   || cssMathTo(run, index, PrCssUnit_Px, out)
-                   || cssMathTo(run, index, PrCssUnit_Deg, out);
+            return cssMathTo(run, index, PrCssUnit_Number, out) || cssMathTo(run, index, PrCssUnit_Px, out) ||
+                cssMathTo(run, index, PrCssUnit_Deg, out);
         default:
             return false;
     }
@@ -49,8 +48,8 @@ bool cssTransformMatrix(CssValueRun function, PrDomMatrix* out) {
         if (function.values[i].kind == PrCssValueKind_Literal)
             continue;
         // perspective(none) is the identity.
-        if (cssValueIsKeyword(&function.values[i], PrCssKeyword_None)
-            && cssValueKeyword(node) == PrCssKeyword_Perspective) {
+        if (cssValueIsKeyword(&function.values[i], PrCssKeyword_None) &&
+                cssValueKeyword(node) == PrCssKeyword_Perspective) {
             *out = prDomMatrixIdentity();
             out->is2D = false;
             return true;

@@ -56,9 +56,11 @@ std::vector<RendererConfig> createConfigs(PrGpuDevice* PR_NULLABLE device) {
             const char* name;
             PrDrawFragmentPaths paths;
         };
-        const FragmentVariant fragments[] = {{"fragment-tiles", PrDrawFragmentPaths_Tiles},
-                                             {"fragment-strips", PrDrawFragmentPaths_Strips},
-                                             {"fragment", PrDrawFragmentPaths_Tessellate}};
+        const FragmentVariant fragments[] = {
+            {"fragment-tiles", PrDrawFragmentPaths_Tiles},
+            {"fragment-strips", PrDrawFragmentPaths_Strips},
+            {"fragment", PrDrawFragmentPaths_Tessellate},
+        };
         PrDrawFragmentPaths standard = prDrawFragmentOptionsDefault().paths;
         bool anyFragment = false;
         for (bool first : {true, false}) {

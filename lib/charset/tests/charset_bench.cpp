@@ -59,9 +59,8 @@ void measure(PrStringView name, PrStringView bytes) {
     TextBuffer row{};
     textAppend(&row, "{\"name\": ");
     harnessWriteString(&row, name);
-    harnessAppendFormat(&row,
-                        ", \"bytes\": %zu, \"utf8\": %.4f, \"view\": %.4f, \"windows1252\": %.4f, \"bound\": %.4f",
-                        bytes.size, utf8.millis, view.millis, windows1252.millis, bound.millis);
+    harnessAppendFormat(&row, ", \"bytes\": %zu, \"utf8\": %.4f, \"view\": %.4f, \"windows1252\": %.4f, \"bound\": %.4f",
+        bytes.size, utf8.millis, view.millis, windows1252.millis, bound.millis);
     harnessCountsWrite(&counts, &row);
     textAppend(&row, "}");
     harnessWriteLine(textView(&row));

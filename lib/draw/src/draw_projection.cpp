@@ -79,7 +79,7 @@ void cutBy(Corners& p, float a, float b, float c, float d) {
 using namespace pr_impl;
 
 bool prDrawProjectionPlace(const PrMatrix4* projection, PrAffine2 toTarget, PrRect bounds, PrRect visible,
-                           float maxLayerSide, PrDrawProjection* out) {
+        float maxLayerSide, PrDrawProjection* out) {
     if (!isFiniteMatrix(*projection) || prRectIsEmpty(bounds) || prRectIsEmpty(visible) || !(maxLayerSide >= 1))
         return false;
     const PrMatrix3 plane = prMatrix3FromMatrix4(projection);
@@ -92,10 +92,12 @@ bool prDrawProjectionPlace(const PrMatrix4* projection, PrAffine2 toTarget, PrRe
     // The bounds in homogeneous target coordinates, cut behind the eye and then to the visible box. Homogeneous
     // coordinates keep each cut linear.
     Corners p{};
-    const PrVec2 corners[4] = {{bounds.left, bounds.top},
-                               {bounds.right, bounds.top},
-                               {bounds.right, bounds.bottom},
-                               {bounds.left, bounds.bottom}};
+    const PrVec2 corners[4] = {
+        {bounds.left, bounds.top},
+        {bounds.right, bounds.top},
+        {bounds.right, bounds.bottom},
+        {bounds.left, bounds.bottom},
+    };
     float largest = 0;
     for (PrVec2 c : corners) {
         p.x[p.count] = h.m[0][0] * c.x + h.m[0][1] * c.y + h.m[0][2];
@@ -122,8 +124,10 @@ bool prDrawProjectionPlace(const PrMatrix4* projection, PrAffine2 toTarget, PrRe
     PrVec2 q[kMaxCorners];
     for (uint32_t i = 0; i < p.count; ++i) {
         q[i] = PrVec2{p.x[i] / p.w[i], p.y[i] / p.w[i]};
-        landed = PrRect{minF32(landed.left, q[i].x), minF32(landed.top, q[i].y), maxF32(landed.right, q[i].x),
-                        maxF32(landed.bottom, q[i].y)};
+        landed = PrRect{
+            minF32(landed.left, q[i].x), minF32(landed.top, q[i].y), maxF32(landed.right, q[i].x),
+            maxF32(landed.bottom, q[i].y),
+        };
         PrVec2 u{};
         if (!prMatrix3MapPoint(&back, q[i], &u))
             return false;

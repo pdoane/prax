@@ -130,8 +130,8 @@ uint32_t previousGrapheme(PrStringView text, uint32_t at) {
 // Returns true if the byte belongs to a word: an ASCII letter, digit or underscore, or a byte of a non-ASCII character.
 bool isWordByte(char byte) {
     uint8_t value = uint8_t(byte);
-    return value >= 0x80 || (value >= '0' && value <= '9') || (value >= 'A' && value <= 'Z')
-           || (value >= 'a' && value <= 'z') || value == '_';
+    return value >= 0x80 || (value >= '0' && value <= '9') || (value >= 'A' && value <= 'Z') ||
+        (value >= 'a' && value <= 'z') || value == '_';
 }
 
 // Returns where a word motion leftward from `at` ends: past the bytes outside words before it, then past the word.
@@ -255,8 +255,8 @@ struct TextEditor {
         *affinity = PrLayoutTextAffinity_Downstream;
         PrRect down{};
         PrRect up{};
-        if (caretAt(*out, PrLayoutTextAffinity_Downstream, &down) && caretAt(*out, PrLayoutTextAffinity_Upstream, &up)
-            && down.top != up.top) {
+        if (caretAt(*out, PrLayoutTextAffinity_Downstream, &down) && caretAt(*out, PrLayoutTextAffinity_Upstream,
+                &up) && down.top != up.top) {
             float downDistance = absF32((down.top + down.bottom) / 2 - point.y);
             float upDistance = absF32((up.top + up.bottom) / 2 - point.y);
             if (upDistance < downDistance)
@@ -283,8 +283,8 @@ struct TextEditor {
         uint32_t a = 0;
         uint32_t b = 0;
         PrLayoutTextAffinity ignored = 0;
-        if (!positionAt(PrVec2{rect.left - kLineReach, y}, &a, &ignored)
-            || !positionAt(PrVec2{rect.left + kLineReach, y}, &b, &ignored))
+        if (!positionAt(PrVec2{rect.left - kLineReach, y}, &a, &ignored) ||
+                !positionAt(PrVec2{rect.left + kLineReach, y}, &b, &ignored))
             return false;
         *start = a < b ? a : b;
         *end = a < b ? b : a;
@@ -339,7 +339,7 @@ struct TextEditor {
                 uint32_t end = 0;
                 if (command && multiline && lineEnds(&start, &end))
                     moveTo(right ? end : start, extend,
-                           right ? PrLayoutTextAffinity_Upstream : PrLayoutTextAffinity_Downstream);
+                        right ? PrLayoutTextAffinity_Upstream : PrLayoutTextAffinity_Downstream);
                 else if (command)
                     moveTo(right ? lineEnd(t, caret) : lineStart(t, caret), extend);
                 else if (byWord)
@@ -360,7 +360,7 @@ struct TextEditor {
                     last = lineEnd(t, caret);
                 }
                 moveTo(end ? last : first, extend,
-                       end ? PrLayoutTextAffinity_Upstream : PrLayoutTextAffinity_Downstream);
+                    end ? PrLayoutTextAffinity_Upstream : PrLayoutTextAffinity_Downstream);
                 return;
             }
             case PrAppKey_Up:
@@ -455,10 +455,14 @@ struct TextEditor {
             return;
         }
         uint32_t presses = prUiPressCount(ui, 0);
-        state.unit = presses <= 1   ? TextUnit_Character
-                     : presses == 2 ? TextUnit_Word
-                     : presses == 3 && multiline ? TextUnit_Line
-                                                 : TextUnit_All;
+        if (presses <= 1)
+            state.unit = TextUnit_Character;
+        else if (presses == 2)
+            state.unit = TextUnit_Word;
+        else if (presses == 3 && multiline)
+            state.unit = TextUnit_Line;
+        else
+            state.unit = TextUnit_All;
         unitAround(t, at, state.unit, &state.unitLow, &state.unitHigh);
         state.anchor = state.unitLow;
         moveTo(state.unit == TextUnit_Character ? at : state.unitHigh, true, affinity);
@@ -486,8 +490,10 @@ struct TextEditor {
 
     // Claims the keys that the edit takes, so that they come to it before any node that holds it.
     void claim() {
-        static const PrAppKey kMoves[] = {PrAppKey_Left, PrAppKey_Right, PrAppKey_Home, PrAppKey_End,
-                                          PrAppKey_Backspace, PrAppKey_Delete};
+        static const PrAppKey kMoves[] = {
+            PrAppKey_Left, PrAppKey_Right, PrAppKey_Home, PrAppKey_End,
+            PrAppKey_Backspace, PrAppKey_Delete,
+        };
         static const PrAppModifierFlags kMoveModifiers[] = {
             0, PrAppModifierFlag_Alt, PrAppModifierFlag_Control, PrAppModifierFlag_Super,
         };
@@ -536,12 +542,14 @@ using namespace pr_impl;
 PrLayoutNode prUiTextEdit(PrUi* ui, const PrUiTextEditDesc* desc) {
     PR_ASSERT(desc->buffer.read != nullptr && desc->buffer.replace != nullptr);
     TextEditState& state = stateOf(ui, desc->control);
-    TextEditor editor{.ui = ui,
-                      .tree = prUiTree(ui),
-                      .desc = *desc,
-                      .node = kPrLayoutNodeNone,
-                      .state = state,
-                      .multiline = (desc->flags & PrUiTextEditFlag_Multiline) != 0};
+    TextEditor editor{
+        .ui = ui,
+        .tree = prUiTree(ui),
+        .desc = *desc,
+        .node = kPrLayoutNodeNone,
+        .state = state,
+        .multiline = (desc->flags & PrUiTextEditFlag_Multiline) != 0,
+    };
     double time = prUiCurrentRound(ui)->time;
     bool disabled = prUiIsDisabled(ui, desc->control);
     bool focused = !disabled && prUiFocus(ui) == desc->control;
@@ -556,8 +564,7 @@ PrLayoutNode prUiTextEdit(PrUi* ui, const PrUiTextEditDesc* desc) {
     if (state.reveal) {
         state.reveal = false;
         PrLayoutRect caret{};
-        if (prLayoutNodeTextCaret(editor.tree, editor.node, state.caret, state.affinity, PrLayoutCoordinates_Viewport,
-                                  &caret)) {
+        if (prLayoutNodeTextCaret(editor.tree, editor.node, state.caret, state.affinity, PrLayoutCoordinates_Viewport, &caret)) {
             caret.right = caret.left + prLayoutUnitFromPx(1);
             prUiRevealRect(ui, editor.node, caret);
         }
@@ -625,7 +632,10 @@ PrLayoutNode prUiTextEdit(PrUi* ui, const PrUiTextEditDesc* desc) {
         bool on = still || phase - kBlinkSeconds * floorF64(phase / kBlinkSeconds) < kBlinkSeconds / 2;
         if (on && state.anchor == state.caret) {
             PrLayoutCaret caret{
-                .position = {editor.node, state.caret}, .affinity = state.affinity, .color = desc->caret};
+                .position = {editor.node, state.caret},
+                .affinity = state.affinity,
+                .color = desc->caret,
+            };
             prLayoutTreeFrameSetCaret(editor.tree, &caret);
         }
         if (!still)

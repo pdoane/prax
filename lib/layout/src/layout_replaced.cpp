@@ -42,8 +42,7 @@ struct ReplacedPolicy {
 // Returns the size of the replaced box of `node` in `space` under `policy` (CSS2/#inline-replaced-width,
 // CSS2/#inline-replaced-height, CSS2/#min-max-widths). Sets `reads` if finding it read the space's block-axis
 // percentage base, whether or not that base was resolved.
-ReplacedBox replacedBox(LayoutState& state, LayoutNodeIndex node, const LayoutSpace& space, ReplacedPolicy policy,
-                        bool& reads) {
+ReplacedBox replacedBox(LayoutState& state, LayoutNodeIndex node, const LayoutSpace& space, ReplacedPolicy policy, bool& reads) {
     const PrLayoutBoxStyle& box = layoutBoxStyle(state.styles, layoutTreeNode(state.tree, node).style);
     LayoutLogicalBox logical = layoutLogicalBox(box, space.mode);
     LayoutEdges e = layoutEdgesFromBox(state.styles, logical, space.containing.inlineSize);
@@ -61,8 +60,7 @@ ReplacedBox replacedBox(LayoutState& state, LayoutNodeIndex node, const LayoutSp
         layoutStretchFit(space.percentBlock, e.margin[LayoutSide_BlockStart], e.margin[LayoutSide_BlockEnd]);
 
     // Sizes of the content box in units, or below zero if the style leaves the size to the content.
-    auto contentSize = [&](PrLayoutLength length, PrLayoutUnit base, PrLayoutUnit stretch,
-                           PrLayoutUnit edges) -> double {
+    auto contentSize = [&](PrLayoutLength length, PrLayoutUnit base, PrLayoutUnit stretch, PrLayoutUnit edges) -> double {
         if (layoutLengthIsStretch(length))
             return layoutIsDefinite(stretch) ? double(layoutUnitMax(kLayoutUnitZero, stretch - edges).raw) : -1;
         if (!layoutResolves(length, base))
@@ -76,7 +74,7 @@ ReplacedBox replacedBox(LayoutState& state, LayoutNodeIndex node, const LayoutSp
     auto keywordInline = [&](PrLayoutLength length) -> double {
         LayoutIntrinsicSizes sizes =
             layoutWithEdges(layoutIntrinsicSizes(state, node, layoutIntrinsicInputFromSpace(space)),
-                            layoutEdgesInline(layoutEdgesFromBox(state.styles, logical, layoutUnit(-1))), edgesInline);
+                layoutEdgesInline(layoutEdgesFromBox(state.styles, logical, layoutUnit(-1))), edgesInline);
         reads = reads || sizes.readsPercentBlock;
         PrLayoutUnit size = layoutKeywordSize(length, sizes, stretchInline) - edgesInline;
         return double(layoutUnitMax(kLayoutUnitZero, size).raw);
@@ -105,9 +103,10 @@ ReplacedBox replacedBox(LayoutState& state, LayoutNodeIndex node, const LayoutSp
     if (fixedInline) {
         inlineSize = double(layoutUnitMax(kLayoutUnitZero, inlineRequest.size - edgesInline).raw);
     } else if (!intrinsic) {
-        inlineSize = layoutLengthIsContentBased(logical.inlineSize)
-                         ? keywordInline(logical.inlineSize)
-                         : contentSize(logical.inlineSize, space.percentInline, stretchInline, edgesInline);
+        if (layoutLengthIsContentBased(logical.inlineSize))
+            inlineSize = keywordInline(logical.inlineSize);
+        else
+            inlineSize = contentSize(logical.inlineSize, space.percentInline, stretchInline, edgesInline);
     }
     double blockSize = -1;
     if (fixedBlock) {
@@ -145,19 +144,22 @@ ReplacedBox replacedBox(LayoutState& state, LayoutNodeIndex node, const LayoutSp
     // they meet the limits (CSS2/#min-max-widths), and other sizes meet each limit independently. Intrinsic sizes have
     // no inline limits, and a block size measured for a block limit that is a keyword has no block limits.
     auto limit = [&](PrLayoutLength length, PrLayoutUnit base, PrLayoutUnit stretch, PrLayoutUnit edges,
-                     double otherwise, bool inlineAxis) {
+            double otherwise, bool inlineAxis) {
         if ((inlineAxis && (intrinsic || fixedInline)) || (!inlineAxis && (policy.autoBlock || requestsBlock)))
             return otherwise;
-        double size = !layoutLengthIsContentBased(length) ? contentSize(length, base, stretch, edges)
-                      : inlineAxis                         ? keywordInline(length)
-                                                           : keywordBlock(length);
+        double size;
+        if (!layoutLengthIsContentBased(length))
+            size = contentSize(length, base, stretch, edges);
+        else if (inlineAxis)
+            size = keywordInline(length);
+        else
+            size = keywordBlock(length);
         return size >= 0 ? size : otherwise;
     };
     constexpr double kNoLimit = 1e18;
     double minInline = limit(logical.minInlineSize, space.percentInline, stretchInline, edgesInline, 0, true);
-    double maxInline =
-        maxF64(minInline,
-               limit(logical.maxInlineSize, space.percentInline, stretchInline, edgesInline, kNoLimit, true));
+    double maxInline = maxF64(minInline,
+        limit(logical.maxInlineSize, space.percentInline, stretchInline, edgesInline, kNoLimit, true));
     double minBlock = limit(logical.minBlockSize, space.percentBlock, stretchBlock, edgesBlock, 0, false);
     double maxBlock =
         maxF64(minBlock, limit(logical.maxBlockSize, space.percentBlock, stretchBlock, edgesBlock, kNoLimit, false));
@@ -185,16 +187,17 @@ ReplacedBox replacedBox(LayoutState& state, LayoutNodeIndex node, const LayoutSp
             } else if (policy.fit == ReplacedFit_MaxContent) {
                 double fromBlock = lengthMinimum(logical.minBlockSize, edgesBlock);
                 inlineSize = maxF64(lengthMinimum(logical.minInlineSize, edgesInline),
-                                    fromBlock >= 0 ? toInline(fromBlock) : -1);
+                    fromBlock >= 0 ? toInline(fromBlock) : -1);
                 if (inlineSize < 0) {
                     inlineSize = double(layoutLogicalSize(space.mode, state.viewport).inlineSize.raw);
                     if (state.reuse)
                         layoutTreeReadViewport(state.tree, node);
                 }
             } else {
-                inlineSize = layoutIsDefinite(stretchInline)
-                                 ? double(layoutUnitMax(kLayoutUnitZero, stretchInline - edgesInline).raw)
-                                 : defaultInline;
+                if (layoutIsDefinite(stretchInline))
+                    inlineSize = double(layoutUnitMax(kLayoutUnitZero, stretchInline - edgesInline).raw);
+                else
+                    inlineSize = defaultInline;
             }
             blockSize = toBlock(inlineSize);
         } else {
@@ -259,8 +262,10 @@ ReplacedBox replacedBox(LayoutState& state, LayoutNodeIndex node, const LayoutSp
     }
 
     // Sizing computed counts of units in doubles, each rounded to the nearest unit.
-    r.contentSize = LayoutLogicalSize{prLayoutUnitFromPxRoundDouble(inlineSize / double(kPrLayoutUnitsPerPx)),
-                                      prLayoutUnitFromPxRoundDouble(blockSize / double(kPrLayoutUnitsPerPx))};
+    r.contentSize = LayoutLogicalSize{
+        prLayoutUnitFromPxRoundDouble(inlineSize / double(kPrLayoutUnitsPerPx)),
+        prLayoutUnitFromPxRoundDouble(blockSize / double(kPrLayoutUnitsPerPx)),
+    };
     r.size = LayoutLogicalSize{r.contentSize.inlineSize + edgesInline, r.contentSize.blockSize + edgesBlock};
     return r;
 }
@@ -269,8 +274,10 @@ ReplacedBox replacedBox(LayoutState& state, LayoutNodeIndex node, const LayoutSp
 LayoutFragment* replacedFragment(LayoutNodeIndex node, const ReplacedBox& box, LayoutMode mode) {
     LayoutFragment* fragment = layoutFragmentCreate(LayoutFragmentKind_Replaced, node, 0);
     fragment->extent = layoutPhysicalSize(mode, box.size);
-    PrLayoutVec origin{box.contentEdge[layoutLogicalSide(mode, PrRectSide_Left)],
-                       box.contentEdge[layoutLogicalSide(mode, PrRectSide_Top)]};
+    PrLayoutVec origin{
+        box.contentEdge[layoutLogicalSide(mode, PrRectSide_Left)],
+        box.contentEdge[layoutLogicalSide(mode, PrRectSide_Top)],
+    };
     fragment->replaced.content = layoutRectAt(origin, layoutPhysicalSize(mode, box.contentSize));
     return fragment;
 }
@@ -278,13 +285,13 @@ LayoutFragment* replacedFragment(LayoutNodeIndex node, const ReplacedBox& box, L
 } // namespace
 
 LayoutResult layoutReplacedBlock(LayoutState& state, LayoutNodeIndex node, const LayoutSpace& space,
-                                 const LayoutRequests* PR_NULLABLE requests) {
+        const LayoutRequests* PR_NULLABLE requests) {
     bool reads = false;
     ReplacedPolicy policy{.fit = ReplacedFit_Layout, .requests = requests};
     ReplacedBox r = replacedBox(state, node, space, policy, reads);
     bool floats = layoutIsFloat(state.tree, node);
-    PrLayoutUnit remaining = space.available - r.size.inlineSize - r.margin[LayoutSide_InlineStart]
-                             - r.margin[LayoutSide_InlineEnd];
+    PrLayoutUnit remaining = space.available - r.size.inlineSize - r.margin[LayoutSide_InlineStart] -
+        r.margin[LayoutSide_InlineEnd];
     PrLayoutUnit start = r.margin[LayoutSide_InlineStart];
     if (!floats && layoutInlineRequest(requests).kind != LayoutRequestKind_Fixed) {
         if (r.marginAuto[LayoutSide_InlineStart] && r.marginAuto[LayoutSide_InlineEnd])
@@ -308,29 +315,29 @@ LayoutResult layoutReplacedBlock(LayoutState& state, LayoutNodeIndex node, const
     return result;
 }
 
-LayoutIntrinsicSizes layoutReplacedIntrinsic(LayoutState& state, LayoutNodeIndex node,
-                                             const LayoutIntrinsicInput& input) {
-    LayoutSpace space{.mode = input.mode,
-                      .available = layoutUnit(-1),
-                      .percentInline = layoutUnit(-1),
-                      .percentBlock = input.percentBlock,
-                      .containing = LayoutLogicalSize{layoutUnit(-1), input.percentBlock},
-                      .blockLimit = input.blockLimit,
-                      .fallback = input.fallback};
+LayoutIntrinsicSizes layoutReplacedIntrinsic(LayoutState& state, LayoutNodeIndex node, const LayoutIntrinsicInput& input) {
+    LayoutSpace space{
+        .mode = input.mode,
+        .available = layoutUnit(-1),
+        .percentInline = layoutUnit(-1),
+        .percentBlock = input.percentBlock,
+        .containing = LayoutLogicalSize{layoutUnit(-1), input.percentBlock},
+        .blockLimit = input.blockLimit,
+        .fallback = input.fallback,
+    };
     LayoutIntrinsicSizes sizes{};
     sizes.minContent = replacedBox(state, node, space, ReplacedPolicy{.fit = ReplacedFit_MinContent},
-                                   sizes.readsPercentBlock).size.inlineSize;
+        sizes.readsPercentBlock).size.inlineSize;
     sizes.maxContent = replacedBox(state, node, space, ReplacedPolicy{.fit = ReplacedFit_MaxContent},
-                                   sizes.readsPercentBlock).size.inlineSize;
+        sizes.readsPercentBlock).size.inlineSize;
     return sizes;
 }
 
 bool layoutReplacedHasUnsizedRatio(const LayoutState& state, LayoutNodeIndex node, const LayoutLogicalBox& logical,
-                                   const LayoutIntrinsicInput& input, bool& reads) {
+        const LayoutIntrinsicInput& input, bool& reads) {
     const PrLayoutNaturalSize& natural = layoutReplaced(state.tree, node).natural;
     const PrLayoutBoxStyle& box = layoutBoxStyle(state.styles, layoutTreeNode(state.tree, node).style);
-    if (natural.width.raw >= 0 || natural.height.raw >= 0
-        || layoutNodeAspect(state.tree, node, box, input.mode).ratio <= 0)
+    if (natural.width.raw >= 0 || natural.height.raw >= 0 || layoutNodeAspect(state.tree, node, box, input.mode).ratio <= 0)
         return false;
     reads = reads || layoutLengthReadsBase(logical.blockSize) || layoutLengthIsStretch(logical.blockSize);
     bool stretch = layoutLengthIsStretch(logical.blockSize) && layoutIsDefinite(input.percentBlock);

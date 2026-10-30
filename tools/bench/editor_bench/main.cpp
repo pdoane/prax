@@ -165,19 +165,21 @@ void runFrame(Run& r) {
         exit(1);
     }
     float ratio = r.display.pixelRatio;
-    PrDrawTarget target{.extent = {uint32_t(r.extent.x * ratio), uint32_t(r.extent.y * ratio)},
-                        .format = PrPixelFormat_Bgra8,
-                        .commands = commands};
+    PrDrawTarget target{
+        .extent = {uint32_t(r.extent.x * ratio), uint32_t(r.extent.y * ratio)},
+        .format = PrPixelFormat_Bgra8,
+        .commands = commands,
+    };
     prDrawFramePrepare(r.drawFrame, r.host.list, &target);
     lap(Stage_Prepare);
     prGpuCommandsTextureBarrier(commands, r.target, PrGpuSubresources{}, PrGpuAccessFlag_ShaderRead,
-                                PrGpuAccessFlag_ColorAttachment);
+        PrGpuAccessFlag_ColorAttachment);
     PrGpuPassDesc pass = prGpuPassDescColor(r.target, PrGpuLoad_Clear, hostClearColor(r.host));
     PrGpuPass* encoder = prGpuPassBegin(commands, &pass);
     prDrawFrameRender(r.drawFrame, encoder, PrIVec2{0, 0});
     prGpuPassEnd(encoder);
     prGpuCommandsTextureBarrier(commands, r.target, PrGpuSubresources{},
-                                PrGpuAccessFlag_ColorAttachment, PrGpuAccessFlag_ShaderRead);
+        PrGpuAccessFlag_ColorAttachment, PrGpuAccessFlag_ShaderRead);
     prGpuCommandsSubmitAndWait(commands);
     lap(Stage_Render);
     ++r.runs;
@@ -185,14 +187,14 @@ void runFrame(Run& r) {
 
 bool open(Run& r, float pixelRatio) {
     r.display.pixelRatio = pixelRatio;
-    if (!hostOpen(r.host, PR_FONT_BUNDLE_DIR)
-        || prGpuDeviceCreate(PrGpuBackend_Default, nullptr, &r.device) != PrStatus_Ok
-        || prDrawFragmentCreate(r.device, nullptr, &r.renderer) != PrStatus_Ok)
+    if (!hostOpen(r.host, PR_FONT_BUNDLE_DIR) ||
+            prGpuDeviceCreate(PrGpuBackend_Default, nullptr, &r.device) != PrStatus_Ok ||
+            prDrawFragmentCreate(r.device, nullptr, &r.renderer) != PrStatus_Ok)
         return false;
     r.drawFrame = prDrawFrameCreate(r.renderer);
     PrUVec2 extent{uint32_t(kExtent.x * pixelRatio), uint32_t(kExtent.y * pixelRatio)};
     PrGpuTextureDesc desc = prGpuTextureDesc2d(PrGpuFormat_Bgra8, extent,
-                                               PrGpuTextureUsageFlag_Sampled | PrGpuTextureUsageFlag_RenderTarget);
+        PrGpuTextureUsageFlag_Sampled | PrGpuTextureUsageFlag_RenderTarget);
     if (prGpuTextureCreate(r.device, &desc, &r.target) != PrStatus_Ok)
         return false;
     r.state = new EditorState{};
@@ -257,11 +259,10 @@ int main(int argc, char** argv) {
         HarnessCounters cost = harnessMeasure(run);
         PrLayoutTreeStats stats = prLayoutTreeStats(r.host.tree);
         TextBuffer row{};
-        harnessAppendFormat(&row,
-                            "%s\n  {\"name\": \"%s\", \"time\": %.6f, \"rounds\": %u, \"blocks\": %u, \"layers\": %u, "
-                            "\"commands\": %u, \"made\": %u",
-                            first ? "" : ",", c.name, cost.millis, r.host.rounds, stats.blocksLaidOut,
-                            stats.layersRecorded, stats.commandsRecorded, stats.frameNodesMade);
+        harnessAppendFormat(&row, "%s\n  {\"name\": \"%s\", \"time\": %.6f, \"rounds\": %u, \"blocks\": %u, \"layers\": %u, "
+            "\"commands\": %u, \"made\": %u",
+            first ? "" : ",", c.name, cost.millis, r.host.rounds, stats.blocksLaidOut, stats.layersRecorded,
+            stats.commandsRecorded, stats.frameNodesMade);
         for (uint32_t s = 0; s < Stage_Count; ++s)
             harnessAppendFormat(&row, ", \"%s\": %.0f", kStageNames[s], r.stages[s] / double(r.runs));
         HarnessCounts counts{};

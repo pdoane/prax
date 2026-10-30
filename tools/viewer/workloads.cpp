@@ -13,9 +13,16 @@ namespace {
 
 // Returns a color from a small palette, by index.
 PrColor paletteColor(uint32_t i) {
-    static const PrColor colors[] = {{.95f, .45f, .35f, 1}, {.30f, .62f, .92f, 1}, {.40f, .78f, .48f, 1},
-                                     {.96f, .76f, .25f, 1}, {.66f, .48f, .90f, 1}, {.25f, .75f, .78f, 1},
-                                     {.92f, .48f, .70f, 1}, {.55f, .58f, .62f, 1}};
+    static const PrColor colors[] = {
+        {.95f, .45f, .35f, 1},
+        {.30f, .62f, .92f, 1},
+        {.40f, .78f, .48f, 1},
+        {.96f, .76f, .25f, 1},
+        {.66f, .48f, .90f, 1},
+        {.25f, .75f, .78f, 1},
+        {.92f, .48f, .70f, 1},
+        {.55f, .58f, .62f, 1},
+    };
     return colors[i % 8];
 }
 
@@ -98,9 +105,11 @@ void borders(PrDrawList* list, float, float, double) {
             // Most borders are one width and color. Some differ by side, and a few are dashed.
             bool perSide = i % 5 == 4;
             PrDrawBorderStyle style = i % 11 == 10 ? PrDrawBorderStyle_Dashed : PrDrawBorderStyle_Solid;
-            border.sides[side] = PrDrawBorderSide{perSide ? float(1 + side) : 1.5f,
-                                                  style,
-                                                  perSide ? paletteColor(i + side) : paletteColor(i), nullptr, 0};
+            border.sides[side] = PrDrawBorderSide{
+                perSide ? float(1 + side) : 1.5f,
+                style,
+                perSide ? paletteColor(i + side) : paletteColor(i), nullptr, 0,
+            };
         }
         border.shape.rect = r;
         prDrawListBorder(list, &border, {});
@@ -112,10 +121,10 @@ void hairlineGrid(PrDrawList* list, float, float, double) {
     const float spacing = 4;
     for (float x = kArea.left; x <= kArea.right; x += spacing)
         prDrawListLine(list, PrVec2{x + .5f, kArea.top}, PrVec2{x + .5f, kArea.bottom},
-                       {.color = withAlpha(kInk, .35f), .stroke = &hairline});
+            {.color = withAlpha(kInk, .35f), .stroke = &hairline});
     for (float y = kArea.top; y <= kArea.bottom; y += spacing)
         prDrawListLine(list, PrVec2{kArea.left, y + .5f}, PrVec2{kArea.right, y + .5f},
-                       {.color = withAlpha(kInk, .35f), .stroke = &hairline});
+            {.color = withAlpha(kInk, .35f), .stroke = &hairline});
 }
 
 void angledLines(PrDrawList* list, float, float, double time) {
@@ -149,7 +158,7 @@ void polylines(PrDrawList* list, float, float, double time) {
             points.push_back(PrVec2{x, y + 10 * std::sin(float(i) * .35f + float(k) + float(time))});
         }
         prDrawListPolylineContour(list, points.data(), uint32_t(points.size()), PrDrawContour_Open,
-                                  PrPathFillRule_NonZero, {.color = paletteColor(k), .stroke = &stroke});
+            PrPathFillRule_NonZero, {.color = paletteColor(k), .stroke = &stroke});
     }
 }
 
@@ -187,8 +196,7 @@ void denseText(PrDrawList* list, float, float, double) {
 void clippedCells(PrDrawList* list, float, float, double time) {
     float scroll = std::fmod(float(time) * 20, 26.0f);
     for (uint32_t column = 0; column < 4; ++column) {
-        PrRect view{kArea.left + float(column) * 266, kArea.top, kArea.left + float(column) * 266 + 256,
-                    kArea.bottom};
+        PrRect view{kArea.left + float(column) * 266, kArea.top, kArea.left + float(column) * 266 + 256, kArea.bottom};
         prDrawListRect(list, view, {.color = kWhite});
         prDrawListPushClipRect(list, view, PrDrawEdges_Antialiased);
         for (uint32_t row = 0; row < 31; ++row) {
@@ -303,8 +311,10 @@ void opacityGroups(PrDrawList* list, float, float, double time) {
 
 void gradients(PrDrawList* list, float, float, double) {
     cells(kArea, PrVec2{80, 32}, 8, [&](PrRect r, uint32_t i, uint32_t, uint32_t) {
-        PrDrawColorStop stops[2] = {{.offset = 0, .color = paletteColor(i)},
-                                    {.offset = 1, .color = paletteColor(i + 3)}};
+        PrDrawColorStop stops[2] = {
+            {.offset = 0, .color = paletteColor(i)},
+            {.offset = 1, .color = paletteColor(i + 3)},
+        };
         PrDrawBrush brush = prDrawBrushLinear(PrVec2{r.left, r.top}, PrVec2{r.left, r.bottom}, stops, 2);
         if (i % 4 == 3) {
             brush = prDrawBrushRadial(prRectCenter(r), 0, prRectCenter(r), 40, stops, 2);
@@ -365,14 +375,13 @@ void interface(PrDrawList* list, float, float, double time) {
         for (uint32_t row = 0; row < 4; ++row) {
             float ry = r.top + 44 + float(row) * 30;
             prDrawListLine(list, PrVec2{r.left + 16, ry + .5f}, PrVec2{r.right - 16, ry + .5f},
-                           {.color = withAlpha(kInk, .08f), .stroke = &rule});
+                {.color = withAlpha(kInk, .08f), .stroke = &rule});
             drawText(list, uiText(13), "Option label", PrVec2{r.left + 16, ry + 20});
             drawText(list, uiText(12, kGray), "Detail", PrVec2{r.left + 200, ry + 20});
             // A toggle.
             bool on = (card + row) % 3 != 0;
             PrRect track{r.right - 56, ry + 6, r.right - 16, ry + 26};
-            prDrawListCornerRect(list, prCornerRectRound(track, 10),
-                                 {.color = on ? kGreen : PrColor{.8f, .8f, .82f, 1}});
+            prDrawListCornerRect(list, prCornerRectRound(track, 10), {.color = on ? kGreen : PrColor{.8f, .8f, .82f, 1}});
             float knob = on ? track.right - 10 : track.left + 10;
             prDrawListEllipse(list, PrVec2{knob, ry + 16}, PrVec2{8, 8}, 0, {.color = kWhite});
         }

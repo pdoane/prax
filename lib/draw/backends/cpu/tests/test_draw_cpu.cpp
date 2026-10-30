@@ -46,8 +46,7 @@ PrStatus render(Target& t, const PrDrawList* list) {
 // Returns one pixel's bytes as "r g b a".
 std::string pixel(const Target& t, uint32_t x, uint32_t y) {
     const uint8_t* p = t.bytes.data() + y * t.pixels.stride + x * 4;
-    return std::to_string(p[0]) + " " + std::to_string(p[1]) + " " + std::to_string(p[2]) + " " +
-           std::to_string(p[3]);
+    return std::to_string(p[0]) + " " + std::to_string(p[1]) + " " + std::to_string(p[2]) + " " + std::to_string(p[3]);
 }
 
 // Returns the alpha of each pixel of a row, as text.
@@ -215,7 +214,7 @@ TEST_CASE("paths, rounded rectangles and ellipses fill, clipped to the target") 
     prDrawListPath(list, path, PrPathFillRule_NonZero, {.color = PrColor{1, 0, 0, 1}});
     prPathDestroy(path);
     prDrawListCornerRect(list, PrCornerRect{PrRect{4, 4, 8, 8}, {prCornerRound(PrVec2{4, 4}), {}, {}, {}}},
-                         {.color = PrColor{0, 0, 1, 1}});
+        {.color = PrColor{0, 0, 1, 1}});
     render(t, list);
     CHECK(pixel(t, 0, 0) == "0 0 255 255");
     CHECK(pixel(t, 2, 2) == "0 0 0 0");
@@ -354,7 +353,7 @@ TEST_CASE("a shape's coverage mixes its operator's result with what lies beneath
     PrDrawList* list = prDrawListCreate();
     prDrawListClearRect(list, PrRect{0, 0, 64, 64}, kWhite);
     prDrawListRect(list, PrRect{0, 0, 1.5f, 1},
-                   {.color = PrColor{0, 0, 0, 0.5f}, .composite = PrDrawComposite_DestinationIn});
+        {.color = PrColor{0, 0, 0, 0.5f}, .composite = PrDrawComposite_DestinationIn});
     render(t, list);
     CHECK(pixel(t, 0, 0) == "128 128 128 128");
     CHECK(pixel(t, 1, 0) == "191 191 191 191");
@@ -383,7 +382,7 @@ TEST_CASE("blend modes mix the colors before compositing") {
     prDrawListRect(list, PrRect{0, 0, 1, 1}, {.color = PrColor{1, 0, 0.5f, 1}, .blendMode = PrDrawBlendMode_Multiply});
     prDrawListRect(list, PrRect{1, 0, 2, 1}, {.color = PrColor{1, 0, 0.5f, 1}, .blendMode = PrDrawBlendMode_Screen});
     prDrawListRect(list, PrRect{2, 0, 3, 1},
-                   {.color = PrColor{1, 0, 0.5f, 1}, .blendMode = PrDrawBlendMode_Difference});
+        {.color = PrColor{1, 0, 0.5f, 1}, .blendMode = PrDrawBlendMode_Difference});
     render(t, list);
     CHECK(pixel(t, 0, 0) == "128 0 64 255");
     CHECK(pixel(t, 1, 0) == "255 128 192 255");
@@ -442,8 +441,7 @@ TEST_CASE("a gradient brush paints each pixel at its center's parameter") {
 TEST_CASE("an image maps its texels onto the destination") {
     Target t = target(4, 2);
     const uint8_t texels[8] = {255, 0, 0, 255, 0, 0, 255, 255};
-    PrDrawImageDesc desc{PrPixelView{texels, 8, {2, 1}}, PrPixelFormat_Rgba8, PrDrawAlpha_Straight,
-                               PrColorSpace_Srgb};
+    PrDrawImageDesc desc{PrPixelView{texels, 8, {2, 1}}, PrPixelFormat_Rgba8, PrDrawAlpha_Straight, PrColorSpace_Srgb};
     const PrDrawImage* image = nullptr;
     REQUIRE(prDrawImageCreate(&desc, &image) == PrStatus_Ok);
     PrDrawList* list = prDrawListCreate();
@@ -459,15 +457,17 @@ TEST_CASE("an image maps its texels onto the destination") {
 TEST_CASE("copies filtered on their own read their own edge texels, and paint nothing between them") {
     // Red and blue texels, magnified so that the filter at each copy's edge reaches past it.
     const uint8_t texels[8] = {255, 0, 0, 255, 0, 0, 255, 255};
-    PrDrawImageDesc desc{PrPixelView{texels, 8, {2, 1}}, PrPixelFormat_Rgba8, PrDrawAlpha_Premultiplied,
-                         PrColorSpace_Srgb};
+    PrDrawImageDesc desc{
+        PrPixelView{texels, 8, {2, 1}}, PrPixelFormat_Rgba8, PrDrawAlpha_Premultiplied,
+        PrColorSpace_Srgb,
+    };
     const PrDrawImage* image = nullptr;
     REQUIRE(prDrawImageCreate(&desc, &image) == PrStatus_Ok);
     auto draw = [&](PrDrawTileFlags flags, float spacing) {
         Target t = target(12, 1);
         PrDrawList* list = prDrawListCreate();
         PrDrawBrush brush = prDrawBrushImage(prDrawSourceImage(image, PrRect{0, 0, 2, 1}), PrRect{0, 0, 4, 1},
-                                             PrDrawSampling_Linear);
+            PrDrawSampling_Linear);
         brush.image.tiles.x = PrDrawExtend_Repeat;
         brush.image.tiles.spacing = PrVec2{spacing, 0};
         brush.image.tiles.flags = flags;
@@ -575,10 +575,12 @@ TEST_CASE("knockout lets each child replace those before it") {
 TEST_CASE("a mask multiplies the group's result by its value") {
     Target t = target(2, 1);
     PrDrawList* list = prDrawListCreate();
-    PrDrawColorStop stops[] = {{.offset = 0, .color = kWhite},
-                               {.offset = 0.5f, .color = kWhite},
-                               {.offset = 0.5f, .color = PrColor{1, 1, 1, 0}},
-                               {.offset = 1, .color = PrColor{1, 1, 1, 0}}};
+    PrDrawColorStop stops[] = {
+        {.offset = 0, .color = kWhite},
+        {.offset = 0.5f, .color = kWhite},
+        {.offset = 0.5f, .color = PrColor{1, 1, 1, 0}},
+        {.offset = 1, .color = PrColor{1, 1, 1, 0}},
+    };
     PrDrawBrush brush = prDrawBrushLinear(PrVec2{0, 0}, PrVec2{2, 0}, stops, 4);
     PrDrawMask mask = prDrawMaskDefault(&brush);
     PrDrawGroup group = prDrawGroupDefault();
@@ -658,8 +660,10 @@ TEST_CASE("a filter moves a group's contents") {
 TEST_CASE("written pixels ignore transforms, clips and compositing") {
     Target t = target(3, 1);
     const uint8_t texels[4] = {10, 20, 30, 40};
-    PrDrawImageDesc desc{PrPixelView{texels, 4, {1, 1}}, PrPixelFormat_Rgba8, PrDrawAlpha_Premultiplied,
-                         PrColorSpace_Srgb};
+    PrDrawImageDesc desc{
+        PrPixelView{texels, 4, {1, 1}}, PrPixelFormat_Rgba8, PrDrawAlpha_Premultiplied,
+        PrColorSpace_Srgb,
+    };
     const PrDrawImage* image = nullptr;
     REQUIRE(prDrawImageCreate(&desc, &image) == PrStatus_Ok);
     PrDrawList* list = prDrawListCreate();
@@ -734,8 +738,7 @@ TEST_CASE("a backdrop filter under a rotation computes in the group's space") {
     const PrDrawFilter* filter = nullptr;
     filter = prDrawFilterCreate(builder);
     prDrawFilterBuilderDestroy(builder);
-    PrAffine2 turn = prAffine2Concat(
-        prAffine2Concat(prAffine2Translate(PrVec2{-10, -10}), prAffine2Rotate(3.14159265f / 2)),
+    PrAffine2 turn = prAffine2Concat(prAffine2Concat(prAffine2Translate(PrVec2{-10, -10}), prAffine2Rotate(3.14159265f / 2)),
         prAffine2Translate(PrVec2{10, 10}));
     prDrawListPushTransformAffine2(list, turn);
     PrDrawGroup group = prDrawGroupDefault();
@@ -757,9 +760,9 @@ TEST_CASE("hard mix sets each channel whole where the two sum to one or more") {
     PrDrawList* list = prDrawListCreate();
     prDrawListRect(list, PrRect{0, 0, 2, 1}, {.color = PrColor{0.6f, 0.6f, 0.2f, 1}});
     prDrawListRect(list, PrRect{0, 0, 1, 1},
-                   {.color = PrColor{0.5f, 0.3f, 0.9f, 1}, .blendMode = PrDrawBlendMode_HardMix});
+        {.color = PrColor{0.5f, 0.3f, 0.9f, 1}, .blendMode = PrDrawBlendMode_HardMix});
     prDrawListRect(list, PrRect{1, 0, 2, 1},
-                   {.color = PrColor{0.39f, 0.41f, 0.7f, 1}, .blendMode = PrDrawBlendMode_HardMix});
+        {.color = PrColor{0.39f, 0.41f, 0.7f, 1}, .blendMode = PrDrawBlendMode_HardMix});
     CHECK(render(t, list) == PrStatus_Ok);
     CHECK(pixel(t, 0, 0) == "255 0 255 255");
     CHECK(pixel(t, 1, 0) == "0 255 0 255");
@@ -861,8 +864,7 @@ TEST_CASE("a displacement map reads its map in the node's space and moves its in
         map.space = space;
         Target t = target(12, 1);
         PrDrawList* list = prDrawListCreate();
-        drawFiltered(list, graphOf({map, displace}, PrRect{0, 0, 12, 1}), PrRect{0, 0, 4, 1},
-                     PrColor{0.5f, 0.5f, 0.5f, 1});
+        drawFiltered(list, graphOf({map, displace}, PrRect{0, 0, 12, 1}), PrRect{0, 0, 4, 1}, PrColor{0.5f, 0.5f, 0.5f, 1});
         render(t, list);
         prDrawListRelease(list);
         bool linear = space == PrColorSpace_SrgbLinear;
@@ -875,8 +877,13 @@ TEST_CASE("stitched turbulence tiles the node's region, whatever the graph's reg
     PrDrawFilterNode noise{};
     noise.kind = PrDrawFilterKind_Turbulence;
     noise.region = PrRect{0, 0, 16, 16};
-    noise.turbulence = PrDrawFilterTurbulence{.baseFrequency = PrVec2{0.1f, 0.1f}, .octaves = 2, .seed = 3,
-                                              .kind = PrDrawTurbulenceKind_FractalNoise, .stitch = true};
+    noise.turbulence = PrDrawFilterTurbulence{
+        .baseFrequency = PrVec2{0.1f, 0.1f},
+        .octaves = 2,
+        .seed = 3,
+        .kind = PrDrawTurbulenceKind_FractalNoise,
+        .stitch = true,
+    };
     auto noiseIn = [&](PrRect graph) {
         Target t = target(16, 16);
         PrDrawList* list = prDrawListCreate();
@@ -897,8 +904,12 @@ TEST_CASE("stitched turbulence joins its tile's last column to its first, and it
     PrDrawFilterNode noise{};
     noise.kind = PrDrawFilterKind_Turbulence;
     noise.region = PrRect{0, 0, 32, 32};
-    noise.turbulence = PrDrawFilterTurbulence{.baseFrequency = PrVec2{0.1f, 0.1f}, .octaves = 2, .seed = 3,
-                                              .kind = PrDrawTurbulenceKind_FractalNoise};
+    noise.turbulence = PrDrawFilterTurbulence{
+        .baseFrequency = PrVec2{0.1f, 0.1f},
+        .octaves = 2,
+        .seed = 3,
+        .kind = PrDrawTurbulenceKind_FractalNoise,
+    };
     // Returns the mean difference in alpha across the seam where a copy of the tile would follow it, and the mean
     // difference between neighbors within the tile, along x.
     auto steps = [&](bool stitch, bool across) {
@@ -1324,17 +1335,21 @@ TEST_CASE("a half-float render keeps colors past white through paint, groups and
     PrDrawList* list = prDrawListCreate();
     const PrColor bright{4, 2, 0.5f, 1};
     prDrawListRect(list, PrRect{0, 0, 8, 8}, {.color = bright});
-    PrDrawColorStop stops[2] = {{.offset = 0, .color = PrColor{3, 3, 3, 1}},
-                                {.offset = 1, .color = PrColor{3, 3, 3, 1}}};
+    PrDrawColorStop stops[2] = {
+        {.offset = 0, .color = PrColor{3, 3, 3, 1}},
+        {.offset = 1, .color = PrColor{3, 3, 3, 1}},
+    };
     PrDrawBrush gradient = prDrawBrushLinear(PrVec2{8, 0}, PrVec2{16, 0}, stops, 2);
     prDrawListRect(list, PrRect{8, 0, 16, 8}, {.brush = &gradient});
     PrFloat16 texels[4 * 4];
     for (uint32_t i = 0; i < 16; ++i)
         texels[i] = prFloat16FromFloat(i % 4 < 3 ? 2.0f : 1.0f);
-    PrDrawImageDesc desc{.pixels = PrPixelView{reinterpret_cast<const uint8_t*>(texels), 16, {2, 2}},
-                         .format = PrPixelFormat_RgbaF16,
-                         .alpha = PrDrawAlpha_Premultiplied,
-                         .space = PrColorSpace_Srgb};
+    PrDrawImageDesc desc{
+        .pixels = PrPixelView{reinterpret_cast<const uint8_t*>(texels), 16, {2, 2}},
+        .format = PrPixelFormat_RgbaF16,
+        .alpha = PrDrawAlpha_Premultiplied,
+        .space = PrColorSpace_Srgb,
+    };
     const PrDrawImage* image = nullptr;
     REQUIRE(prDrawImageCreate(&desc, &image) == PrStatus_Ok);
     drawImageRect(list, prDrawSourceImage(image, PrRect{0, 0, 2, 2}), PrRect{16, 0, 24, 8}, PrDrawSampling_Nearest);
@@ -1366,8 +1381,8 @@ TEST_CASE("a half-float render keeps colors past white through paint, groups and
         return PrColor(PrColor16{p[0], p[1], p[2], p[3]});
     };
     auto near = [](PrColor a, PrColor b) {
-        return std::abs(a.r - b.r) < 0.02f && std::abs(a.g - b.g) < 0.02f && std::abs(a.b - b.b) < 0.02f
-               && std::abs(a.a - b.a) < 0.02f;
+        return std::abs(a.r - b.r) < 0.02f && std::abs(a.g - b.g) < 0.02f && std::abs(a.b - b.b) < 0.02f &&
+            std::abs(a.a - b.a) < 0.02f;
     };
     REQUIRE(prDrawRendererRenderPixels(renderer, list, pixels, PrPixelFormat_RgbaF16) == PrStatus_Ok);
     CHECK(near(at(0), bright));
@@ -1392,7 +1407,7 @@ TEST_CASE("a half-float render keeps colors past white through paint, groups and
     // An image brush with a limit scales its texels down to it in linear light.
     PrDrawList* limited = prDrawListCreate();
     PrDrawBrush capped = prDrawBrushImage(prDrawSourceImage(image, PrRect{0, 0, 2, 2}), PrRect{0, 0, 48, 8},
-                                          PrDrawSampling_Nearest);
+        PrDrawSampling_Nearest);
     capped.image.limit = 1.5f;
     prDrawListRect(limited, PrRect{0, 0, 48, 8}, {.brush = &capped});
     std::fill(wide.begin(), wide.end(), PrFloat16{});
@@ -1415,8 +1430,12 @@ TEST_CASE("a group draws into the host's pixels, which keep each revision's cont
     Target held = target(4, 4);
     PrDrawCpuTexture texture{held.pixels, held.format};
     uint64_t drawn = 0;
-    PrDrawGroupLayer layer{.texture = prDrawCpuTexture(&texture), .extent = {4, 4}, .drawn = &drawn,
-                           .sampling = PrDrawSampling_Nearest};
+    PrDrawGroupLayer layer{
+        .texture = prDrawCpuTexture(&texture),
+        .extent = {4, 4},
+        .drawn = &drawn,
+        .sampling = PrDrawSampling_Nearest,
+    };
     // A list of revisions `first` to `last` of a group whose bounds cover the target. Revision 1 replaces the pixels
     // with red, and each later one draws half-opaque blue over the left half, which would darken if it drew twice.
     auto list = [&](uint64_t first, uint64_t last) {
@@ -1432,7 +1451,7 @@ TEST_CASE("a group draws into the host's pixels, which keep each revision's cont
             prDrawListPushGroup(l, &segment);
             if (revision == 1)
                 prDrawListRect(l, PrRect{0, 0, 8, 8},
-                               {.color = PrColor{1, 0, 0, 1}, .composite = PrDrawComposite_Copy});
+                    {.color = PrColor{1, 0, 0, 1}, .composite = PrDrawComposite_Copy});
             else
                 prDrawListRect(l, PrRect{0, 0, 4, 8}, {.color = PrColor{0, 0, 1, 0.5f}});
             prDrawListPopGroup(l);

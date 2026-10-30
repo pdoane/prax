@@ -69,8 +69,7 @@ PrDomNode* build(Work* work, PrDomNode* root, uint32_t depth, uint32_t fanout) {
         if (depth > 1)
             build(work, prDomElementAsNode(child), depth - 1, fanout);
         else
-            adopt(prDomElementAsNode(child),
-                  prDomTextAsNode(prDomTextCreate(work->document, "text")));
+            adopt(prDomElementAsNode(child), prDomTextAsNode(prDomTextCreate(work->document, "text")));
         adopt(root, prDomElementAsNode(child));
     }
     return root;
@@ -85,8 +84,7 @@ volatile uint32_t walked;
 
 uint32_t walk(PrDomNode* node) {
     uint32_t count = 1;
-    for (PrDomNode* child = prDomNodeFirstChild(node); child != nullptr;
-         child = prDomNodeNextSibling(child))
+    for (PrDomNode* child = prDomNodeFirstChild(node); child != nullptr; child = prDomNodeNextSibling(child))
         count += walk(child);
     return count;
 }
@@ -139,8 +137,7 @@ PrCssStyleSheet* sheetOf(PrStringView text) {
 }
 
 PrCssStyleDeclaration* ruleStyle(PrCssRule* rule) {
-    return prCssStylePropertiesAsCssStyleDeclaration(
-        prCssStyleRuleStyle(prCssStyleRuleQuery(rule)));
+    return prCssStylePropertiesAsCssStyleDeclaration(prCssStyleRuleStyle(prCssStyleRuleQuery(rule)));
 }
 
 // Creates a style element that holds the large stylesheet, whose data the document's cache shares.
@@ -175,229 +172,279 @@ struct Case {
 
 constexpr Case kCases[] = {
     {"node build detached", [](Work*) {}, [](Work* w) { prDomNodeRelease(tree(w)); }},
-    {"node build insert remove", [](Work*) {},
-     [](Work* w) {
-         PrDomNode* made = tree(w);
-         prDomNodeAppendChild(w->host, made);
-         prDomNodeRemove(made);
-         prDomNodeRelease(made);
-     }},
-    {"node move detached",
-     [](Work* w) {
-         w->subtree = tree(w);
-         w->detached[0] = prDomElementAsNode(element(w, "div"));
-         w->detached[1] = prDomElementAsNode(element(w, "div"));
-     },
-     [](Work* w) {
-         w->flip = !w->flip;
-         prDomNodeAppendChild(w->detached[w->flip ? 1 : 0], w->subtree);
-     }},
-    {"node move connected",
-     [](Work* w) {
-         w->subtree = tree(w);
-         prDomNodeAppendChild(w->host, w->subtree);
-     },
-     [](Work* w) {
-         w->flip = !w->flip;
-         prDomNodeAppendChild(w->flip ? w->other : w->host, w->subtree);
-     }},
-    {"node walk",
-     [](Work* w) {
-         w->subtree = tree(w);
-         prDomNodeAppendChild(w->host, w->subtree);
-     },
-     [](Work* w) { walked = walk(w->subtree); }},
-    {"node clone", [](Work* w) { w->subtree = tree(w); },
-     [](Work* w) {
-         PrDomNode* copy = nullptr;
-         prDomNodeCloneNode(w->subtree, true, &copy);
-         prDomNodeRelease(copy);
-     }},
+    {
+        "node build insert remove",
+        [](Work*) {},
+        [](Work* w) {
+            PrDomNode* made = tree(w);
+            prDomNodeAppendChild(w->host, made);
+            prDomNodeRemove(made);
+            prDomNodeRelease(made);
+        },
+    },
+    {
+        "node move detached",
+        [](Work* w) {
+            w->subtree = tree(w);
+            w->detached[0] = prDomElementAsNode(element(w, "div"));
+            w->detached[1] = prDomElementAsNode(element(w, "div"));
+        },
+        [](Work* w) {
+            w->flip = !w->flip;
+            prDomNodeAppendChild(w->detached[w->flip ? 1 : 0], w->subtree);
+        },
+    },
+    {
+        "node move connected",
+        [](Work* w) {
+            w->subtree = tree(w);
+            prDomNodeAppendChild(w->host, w->subtree);
+        },
+        [](Work* w) {
+            w->flip = !w->flip;
+            prDomNodeAppendChild(w->flip ? w->other : w->host, w->subtree);
+        },
+    },
+    {
+        "node walk",
+        [](Work* w) {
+            w->subtree = tree(w);
+            prDomNodeAppendChild(w->host, w->subtree);
+        },
+        [](Work* w) { walked = walk(w->subtree); },
+    },
+    {
+        "node clone",
+        [](Work* w) { w->subtree = tree(w); },
+        [](Work* w) {
+            PrDomNode* copy = nullptr;
+            prDomNodeCloneNode(w->subtree, true, &copy);
+            prDomNodeRelease(copy);
+        },
+    },
     {"node innerHTML", [](Work*) {}, [](Work* w) { prHtmlSetInnerHtml(w->host, w->html); }},
-    {"node attributes",
-     [](Work* w) {
-         w->subtree = prDomElementAsNode(element(w, "div"));
-         prDomNodeAppendChild(w->host, w->subtree);
-     },
-     [](Work* w) {
-         PrDomElement* e = prDomElementQuery(prDomNodeAsEventTarget(w->subtree));
-         prDomElementSetAttribute(e, "data-x", "1");
-         prDomElementSetAttribute(e, "title", "t");
-         prDomElementRemoveAttribute(e, "data-x");
-         prDomElementRemoveAttribute(e, "title");
-     }},
-    {"node range extract",
-     [](Work* w) {
-         w->subtree = tree(w);
-         prDomNodeAppendChild(w->host, w->subtree);
-     },
-     [](Work* w) {
-         PrDomRange* range = prDomRangeCreate(w->document);
-         prDomRangeSelectNodeContents(range, w->subtree);
-         PrDomDocumentFragment* fragment = nullptr;
-         prDomRangeExtractContents(range, &fragment);
-         adopt(w->subtree, prDomDocumentFragmentAsNode(fragment));
-         prDomRangeRelease(range);
-     }},
-    {"node shadow build", [](Work*) {},
-     [](Work* w) {
-         PrDomElement* hostElement = element(w, "div");
-         PrDomShadowRootInit init = prDomShadowRootInitDefault(PrDomShadowRootMode_Open);
-         PrDomShadowRoot* shadow = nullptr;
-         prDomElementAttachShadow(hostElement, &init, &shadow);
-         build(w, prDomShadowRootAsNode(shadow), 2, 10);
-         prDomNodeRelease(prDomElementAsNode(hostElement));
-     }},
-    {"node textContent", [](Work* w) { prHtmlSetInnerHtml(w->host, w->html); },
-     [](Work* w) {
-         prDomNodeSetTextContent(w->host, "");
-         prHtmlSetInnerHtml(w->host, w->html);
-     }},
-    {"sheet replaceSync", [](Work* w) { w->sheet = sheetOf(w->small); },
-     [](Work* w) { prCssStyleSheetReplaceSync(w->sheet, unique(w, w->small)); }},
-    {"sheet replaceSync read", [](Work* w) { w->sheet = sheetOf(w->small); },
-     [](Work* w) {
-         prCssStyleSheetReplaceSync(w->sheet, unique(w, w->small));
-         PrCssRuleList* rules = prCssStyleSheetCssRules(w->sheet);
-         for (uint32_t i = 0; i < prCssRuleListLength(rules); ++i) {
-             PrString text = prCssRuleCssText(prCssRuleListRuleAt(rules, i));
-             prStringReset(&text);
-         }
-     }},
-    {"sheet insert delete", [](Work* w) { w->sheet = sheetOf(w->large); },
-     [](Work* w) {
-         prCssStyleSheetInsertRule(w->sheet, ".item > span:hover { color: red; margin: 1px 2px }", 0, nullptr);
-         prCssStyleSheetDeleteRule(w->sheet, 0);
-     }},
-    {"sheet insert delete read", [](Work* w) { w->sheet = sheetOf(w->large); },
-     [](Work* w) {
-         prCssStyleSheetInsertRule(w->sheet, ".item > span:hover { color: red; margin: 1px 2px }", 0, nullptr);
-         PrCssRule* rule = prCssRuleListRuleAt(prCssStyleSheetCssRules(w->sheet), 0);
-         PrString text = prCssStyleRuleSelectorText(prCssStyleRuleQuery(rule));
-         prStringReset(&text);
-         prCssStyleSheetDeleteRule(w->sheet, 0);
-     }},
-    {"sheet style text",
-     [](Work* w) {
-         w->style = prDomElementAsNode(element(w, "style"));
-         prDomNodeAppendChild(prDomElementAsNode(prDomDocumentHead(w->document)), w->style);
-         prDomNodeSetTextContent(w->style, w->small);
-     },
-     [](Work* w) { prDomNodeSetTextContent(w->style, unique(w, w->small)); }},
-    {"sheet style insert remove",
-     [](Work* w) {
-         w->style = prDomElementAsNode(element(w, "style"));
-         prDomNodeSetTextContent(w->style, w->small);
-         prDomNodeAppendChild(prDomElementAsNode(prDomDocumentHead(w->document)), w->style);
-         prDomNodeRemove(w->style);
-     },
-     [](Work* w) {
-         prDomNodeAppendChild(prDomElementAsNode(prDomDocumentHead(w->document)), w->style);
-         prDomNodeRemove(w->style);
-     }},
-    {"sheet cached text", [](Work* w) { w->style = cachedStyle(w); },
-     [](Work* w) { prDomNodeSetTextContent(w->style, w->large); }},
-    {"sheet cached edit",
-     [](Work* w) {
-         w->style = cachedStyle(w);
-         PrCssRuleList* rules = cachedRules(w);
-         w->index = prCssRuleListLength(rules) >> 1;
-         while (prCssStyleRuleQuery(prCssRuleListRuleAt(rules, w->index)) == nullptr)
-             ++w->index;
-     },
-     [](Work* w) { editCached(w, false); }},
-    {"sheet cached nested edit",
-     [](Work* w) {
-         w->style = cachedStyle(w);
-         PrCssRuleList* rules = cachedRules(w);
-         w->index = 0;
-         for (;; ++w->index) {
-             PrCssMediaRule* media = prCssMediaRuleQuery(prCssRuleListRuleAt(rules, w->index));
-             if (media == nullptr)
-                 continue;
-             PrCssRuleList* inner = prCssGroupingRuleCssRules(
-                 prCssGroupingRuleQuery(prCssRuleListRuleAt(rules, w->index)));
-             if (prCssRuleListLength(inner) != 0
-                 && prCssStyleRuleQuery(prCssRuleListRuleAt(inner, 0)) != nullptr)
-                 break;
-         }
-     },
-     [](Work* w) { editCached(w, true); }},
-    {"sheet nested insert delete",
-     [](Work* w) {
-         w->sheet = sheetOf("@media print { a { color: red } }");
-         w->rule = prCssRuleListRuleAt(prCssStyleSheetCssRules(w->sheet), 0);
-     },
-     [](Work* w) {
-         PrCssGroupingRule* group = prCssGroupingRuleQuery(w->rule);
-         prCssGroupingRuleInsertRule(group, ".item b { margin: 1px }", 0, nullptr);
-         PrCssDeclarationName margin = prCssDeclarationNameFromProperty(PrCssProperty_Margin);
-         PrString value = prCssStyleDeclarationGetPropertyValue(
-             ruleStyle(prCssRuleListRuleAt(prCssGroupingRuleCssRules(group), 0)), &margin);
-         prStringReset(&value);
-         prCssGroupingRuleDeleteRule(group, 0);
-     }},
-    {"rule selectorText",
-     [](Work* w) {
-         w->sheet = sheetOf(".item { color: red }");
-         w->rule = prCssRuleListRuleAt(prCssStyleSheetCssRules(w->sheet), 0);
-     },
-     [](Work* w) {
-         w->flip = !w->flip;
-         prCssStyleRuleSetSelectorText(prCssStyleRuleQuery(w->rule), w->flip ? ".item > span:hover" : ".item");
-     }},
-    {"rule cssText",
-     [](Work* w) {
-         w->sheet = sheetOf(".item { color: red }");
-         w->rule = prCssRuleListRuleAt(prCssStyleSheetCssRules(w->sheet), 0);
-     },
-     [](Work* w) {
-         w->flip = !w->flip;
-         prCssStyleDeclarationSetCssText(ruleStyle(w->rule),
-                                         w->flip ? "margin: 1px 2px; color: red"
-                                                 : "padding: 3px; display: block");
-     }},
-    {"rule setProperty",
-     [](Work* w) {
-         w->sheet = sheetOf(".item { color: red; margin: 1px 2px; display: block }");
-         w->rule = prCssRuleListRuleAt(prCssStyleSheetCssRules(w->sheet), 0);
-     },
-     [](Work* w) {
-         w->flip = !w->flip;
-         PrCssDeclarationName margin = prCssDeclarationNameFromProperty(PrCssProperty_Margin);
-         prCssStyleDeclarationSetProperty(ruleStyle(w->rule), &margin, w->flip ? "3px 4px" : "1px 2px", false);
-     }},
-    {"rule setProperty large",
-     [](Work* w) {
-         w->sheet = sheetOf(".item { --payload: "
-                                 "[a b c d e f g h i j k l m n o p q r s t u v w x y z] "
-                                 "[a b c d e f g h i j k l m n o p q r s t u v w x y z] "
-                                 "[a b c d e f g h i j k l m n o p q r s t u v w x y z] "
-                                 "[a b c d e f g h i j k l m n o p q r s t u v w x y z]; "
-                                 "background: linear-gradient(red, blue), "
-                                 "linear-gradient(45deg, rgb(1, 2, 3) 10%, transparent 90%), "
-                                 "radial-gradient(circle at 20% 30%, green, yellow 40%, blue), "
-                                 "url(tile.png) repeat-x; color: red; opacity: 1 }");
-         w->rule = prCssRuleListRuleAt(prCssStyleSheetCssRules(w->sheet), 0);
-     },
-     [](Work* w) {
-         w->flip = !w->flip;
-         PrCssDeclarationName opacity = prCssDeclarationNameFromProperty(PrCssProperty_Opacity);
-         prCssStyleDeclarationSetProperty(ruleStyle(w->rule), &opacity, w->flip ? "0.5" : "1", false);
-     }},
-    {"inline setProperty",
-     [](Work* w) {
-         w->subtree = prDomElementAsNode(element(w, "div"));
-         prDomNodeAppendChild(w->host, w->subtree);
-     },
-     [](Work* w) {
-         w->flip = !w->flip;
-         PrDomElement* e = prDomElementQuery(prDomNodeAsEventTarget(w->subtree));
-         PrCssDeclarationName margin = prCssDeclarationNameFromProperty(PrCssProperty_Margin);
-         prCssStyleDeclarationSetProperty(
-             prCssStylePropertiesAsCssStyleDeclaration(prCssElementStyle(e)), &margin,
-             w->flip ? "3px 4px" : "1px 2px", false);
-     }},
+    {
+        "node attributes",
+        [](Work* w) {
+            w->subtree = prDomElementAsNode(element(w, "div"));
+            prDomNodeAppendChild(w->host, w->subtree);
+        },
+        [](Work* w) {
+            PrDomElement* e = prDomElementQuery(prDomNodeAsEventTarget(w->subtree));
+            prDomElementSetAttribute(e, "data-x", "1");
+            prDomElementSetAttribute(e, "title", "t");
+            prDomElementRemoveAttribute(e, "data-x");
+            prDomElementRemoveAttribute(e, "title");
+        },
+    },
+    {
+        "node range extract",
+        [](Work* w) {
+            w->subtree = tree(w);
+            prDomNodeAppendChild(w->host, w->subtree);
+        },
+        [](Work* w) {
+            PrDomRange* range = prDomRangeCreate(w->document);
+            prDomRangeSelectNodeContents(range, w->subtree);
+            PrDomDocumentFragment* fragment = nullptr;
+            prDomRangeExtractContents(range, &fragment);
+            adopt(w->subtree, prDomDocumentFragmentAsNode(fragment));
+            prDomRangeRelease(range);
+        },
+    },
+    {
+        "node shadow build",
+        [](Work*) {},
+        [](Work* w) {
+            PrDomElement* hostElement = element(w, "div");
+            PrDomShadowRootInit init = prDomShadowRootInitDefault(PrDomShadowRootMode_Open);
+            PrDomShadowRoot* shadow = nullptr;
+            prDomElementAttachShadow(hostElement, &init, &shadow);
+            build(w, prDomShadowRootAsNode(shadow), 2, 10);
+            prDomNodeRelease(prDomElementAsNode(hostElement));
+        },
+    },
+    {
+        "node textContent",
+        [](Work* w) { prHtmlSetInnerHtml(w->host, w->html); },
+        [](Work* w) {
+            prDomNodeSetTextContent(w->host, "");
+            prHtmlSetInnerHtml(w->host, w->html);
+        },
+    },
+    {
+        "sheet replaceSync",
+        [](Work* w) { w->sheet = sheetOf(w->small); },
+        [](Work* w) { prCssStyleSheetReplaceSync(w->sheet, unique(w, w->small)); },
+    },
+    {
+        "sheet replaceSync read",
+        [](Work* w) { w->sheet = sheetOf(w->small); },
+        [](Work* w) {
+            prCssStyleSheetReplaceSync(w->sheet, unique(w, w->small));
+            PrCssRuleList* rules = prCssStyleSheetCssRules(w->sheet);
+            for (uint32_t i = 0; i < prCssRuleListLength(rules); ++i) {
+                PrString text = prCssRuleCssText(prCssRuleListRuleAt(rules, i));
+                prStringReset(&text);
+            }
+        },
+    },
+    {
+        "sheet insert delete",
+        [](Work* w) { w->sheet = sheetOf(w->large); },
+        [](Work* w) {
+            prCssStyleSheetInsertRule(w->sheet, ".item > span:hover { color: red; margin: 1px 2px }", 0, nullptr);
+            prCssStyleSheetDeleteRule(w->sheet, 0);
+        },
+    },
+    {
+        "sheet insert delete read",
+        [](Work* w) { w->sheet = sheetOf(w->large); },
+        [](Work* w) {
+            prCssStyleSheetInsertRule(w->sheet, ".item > span:hover { color: red; margin: 1px 2px }", 0, nullptr);
+            PrCssRule* rule = prCssRuleListRuleAt(prCssStyleSheetCssRules(w->sheet), 0);
+            PrString text = prCssStyleRuleSelectorText(prCssStyleRuleQuery(rule));
+            prStringReset(&text);
+            prCssStyleSheetDeleteRule(w->sheet, 0);
+        },
+    },
+    {
+        "sheet style text",
+        [](Work* w) {
+            w->style = prDomElementAsNode(element(w, "style"));
+            prDomNodeAppendChild(prDomElementAsNode(prDomDocumentHead(w->document)), w->style);
+            prDomNodeSetTextContent(w->style, w->small);
+        },
+        [](Work* w) { prDomNodeSetTextContent(w->style, unique(w, w->small)); },
+    },
+    {
+        "sheet style insert remove",
+        [](Work* w) {
+            w->style = prDomElementAsNode(element(w, "style"));
+            prDomNodeSetTextContent(w->style, w->small);
+            prDomNodeAppendChild(prDomElementAsNode(prDomDocumentHead(w->document)), w->style);
+            prDomNodeRemove(w->style);
+        },
+        [](Work* w) {
+            prDomNodeAppendChild(prDomElementAsNode(prDomDocumentHead(w->document)), w->style);
+            prDomNodeRemove(w->style);
+        },
+    },
+    {
+        "sheet cached text",
+        [](Work* w) { w->style = cachedStyle(w); },
+        [](Work* w) { prDomNodeSetTextContent(w->style, w->large); },
+    },
+    {
+        "sheet cached edit",
+        [](Work* w) {
+            w->style = cachedStyle(w);
+            PrCssRuleList* rules = cachedRules(w);
+            w->index = prCssRuleListLength(rules) >> 1;
+            while (prCssStyleRuleQuery(prCssRuleListRuleAt(rules, w->index)) == nullptr)
+                ++w->index;
+        },
+        [](Work* w) { editCached(w, false); },
+    },
+    {
+        "sheet cached nested edit",
+        [](Work* w) {
+            w->style = cachedStyle(w);
+            PrCssRuleList* rules = cachedRules(w);
+            w->index = 0;
+            for (;; ++w->index) {
+                PrCssMediaRule* media = prCssMediaRuleQuery(prCssRuleListRuleAt(rules, w->index));
+                if (media == nullptr)
+                    continue;
+                PrCssRuleList* inner =
+                    prCssGroupingRuleCssRules(prCssGroupingRuleQuery(prCssRuleListRuleAt(rules, w->index)));
+                if (prCssRuleListLength(inner) != 0 && prCssStyleRuleQuery(prCssRuleListRuleAt(inner, 0)) != nullptr)
+                    break;
+            }
+        },
+        [](Work* w) { editCached(w, true); },
+    },
+    {
+        "sheet nested insert delete",
+        [](Work* w) {
+            w->sheet = sheetOf("@media print { a { color: red } }");
+            w->rule = prCssRuleListRuleAt(prCssStyleSheetCssRules(w->sheet), 0);
+        },
+        [](Work* w) {
+            PrCssGroupingRule* group = prCssGroupingRuleQuery(w->rule);
+            prCssGroupingRuleInsertRule(group, ".item b { margin: 1px }", 0, nullptr);
+            PrCssDeclarationName margin = prCssDeclarationNameFromProperty(PrCssProperty_Margin);
+            PrString value = prCssStyleDeclarationGetPropertyValue(
+                ruleStyle(prCssRuleListRuleAt(prCssGroupingRuleCssRules(group), 0)), &margin);
+            prStringReset(&value);
+            prCssGroupingRuleDeleteRule(group, 0);
+        },
+    },
+    {
+        "rule selectorText",
+        [](Work* w) {
+            w->sheet = sheetOf(".item { color: red }");
+            w->rule = prCssRuleListRuleAt(prCssStyleSheetCssRules(w->sheet), 0);
+        },
+        [](Work* w) {
+            w->flip = !w->flip;
+            prCssStyleRuleSetSelectorText(prCssStyleRuleQuery(w->rule), w->flip ? ".item > span:hover" : ".item");
+        },
+    },
+    {
+        "rule cssText",
+        [](Work* w) {
+            w->sheet = sheetOf(".item { color: red }");
+            w->rule = prCssRuleListRuleAt(prCssStyleSheetCssRules(w->sheet), 0);
+        },
+        [](Work* w) {
+            w->flip = !w->flip;
+            prCssStyleDeclarationSetCssText(ruleStyle(w->rule), w->flip ? "margin: 1px 2px; color: red" :
+                "padding: 3px; display: block");
+        },
+    },
+    {
+        "rule setProperty",
+        [](Work* w) {
+            w->sheet = sheetOf(".item { color: red; margin: 1px 2px; display: block }");
+            w->rule = prCssRuleListRuleAt(prCssStyleSheetCssRules(w->sheet), 0);
+        },
+        [](Work* w) {
+            w->flip = !w->flip;
+            PrCssDeclarationName margin = prCssDeclarationNameFromProperty(PrCssProperty_Margin);
+            prCssStyleDeclarationSetProperty(ruleStyle(w->rule), &margin, w->flip ? "3px 4px" : "1px 2px", false);
+        },
+    },
+    {
+        "rule setProperty large",
+        [](Work* w) {
+            w->sheet = sheetOf(".item { --payload: [a b c d e f g h i j k l m n o p q r s t u v w x y z] "
+                "[a b c d e f g h i j k l m n o p q r s t u v w x y z] [a b c d e f g h i j k l m n o p q r s t u v w x y z] "
+                "[a b c d e f g h i j k l m n o p q r s t u v w x y z]; background: linear-gradient(red, blue), "
+                "linear-gradient(45deg, rgb(1, 2, 3) 10%, transparent 90%), "
+                "radial-gradient(circle at 20% 30%, green, yellow 40%, blue), url(tile.png) repeat-x; color: red; opacity: 1 }");
+            w->rule = prCssRuleListRuleAt(prCssStyleSheetCssRules(w->sheet), 0);
+        },
+        [](Work* w) {
+            w->flip = !w->flip;
+            PrCssDeclarationName opacity = prCssDeclarationNameFromProperty(PrCssProperty_Opacity);
+            prCssStyleDeclarationSetProperty(ruleStyle(w->rule), &opacity, w->flip ? "0.5" : "1", false);
+        },
+    },
+    {
+        "inline setProperty",
+        [](Work* w) {
+            w->subtree = prDomElementAsNode(element(w, "div"));
+            prDomNodeAppendChild(w->host, w->subtree);
+        },
+        [](Work* w) {
+            w->flip = !w->flip;
+            PrDomElement* e = prDomElementQuery(prDomNodeAsEventTarget(w->subtree));
+            PrCssDeclarationName margin = prCssDeclarationNameFromProperty(PrCssProperty_Margin);
+            prCssStyleDeclarationSetProperty(prCssStylePropertiesAsCssStyleDeclaration(prCssElementStyle(e)), &margin,
+                w->flip ? "3px 4px" : "1px 2px", false);
+        },
+    },
 };
 
 } // namespace

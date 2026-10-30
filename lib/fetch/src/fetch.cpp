@@ -49,8 +49,8 @@ bool isHttpTabOrSpace(char c) {
 bool hasUnsafeHeaderByte(PrStringView value) {
     for (size_t i = 0; i < value.size; ++i) {
         uint8_t c = uint8_t(value.data[i]);
-        if ((c < 0x20 && c != '\t') || c == '"' || c == '(' || c == ')' || c == ':' || c == '<' || c == '>' || c == '?'
-            || c == '@' || c == '[' || c == '\\' || c == ']' || c == '{' || c == '}' || c == 0x7f)
+        if ((c < 0x20 && c != '\t') || c == '"' || c == '(' || c == ')' || c == ':' || c == '<' || c == '>' ||
+                c == '?' || c == '@' || c == '[' || c == '\\' || c == ']' || c == '{' || c == '}' || c == 0x7f)
             return true;
     }
     return false;
@@ -263,8 +263,8 @@ bool prFetchIsForbiddenRequestHeader(PrStringView name, PrStringView value) {
     }
     if (asciiStartsWithFold(name, "proxy-") || asciiStartsWithFold(name, "sec-"))
         return true;
-    if (asciiEqualsFold(name, "x-http-method") || asciiEqualsFold(name, "x-http-method-override")
-        || asciiEqualsFold(name, "x-method-override"))
+    if (asciiEqualsFold(name, "x-http-method") || asciiEqualsFold(name, "x-http-method-override") ||
+            asciiEqualsFold(name, "x-method-override"))
         return anyListItem(value, prFetchIsForbiddenMethod);
     return false;
 }
@@ -282,8 +282,8 @@ bool prFetchIsCorsSafelistedRequestHeader(PrStringView name, PrStringView value)
     if (asciiEqualsFold(name, "accept-language") || asciiEqualsFold(name, "content-language")) {
         for (size_t i = 0; i < value.size; ++i) {
             char c = value.data[i];
-            if (!asciiIsDigit(c) && !asciiIsLetter(c) && c != ' ' && c != '*' && c != ',' && c != '-' && c != '.'
-                && c != ';' && c != '=')
+            if (!asciiIsDigit(c) && !asciiIsLetter(c) && c != ' ' && c != '*' && c != ',' && c != '-' && c != '.' &&
+                    c != ';' && c != '=')
                 return false;
         }
         return true;
@@ -292,8 +292,8 @@ bool prFetchIsCorsSafelistedRequestHeader(PrStringView name, PrStringView value)
         if (hasUnsafeHeaderByte(value))
             return false;
         PrStringView essence = stringTrim(stringSlice(value, 0, stringFind(value, ';')));
-        return asciiEqualsFold(essence, "application/x-www-form-urlencoded")
-               || asciiEqualsFold(essence, "multipart/form-data") || asciiEqualsFold(essence, "text/plain");
+        return asciiEqualsFold(essence, "application/x-www-form-urlencoded") ||
+            asciiEqualsFold(essence, "multipart/form-data") || asciiEqualsFold(essence, "text/plain");
     }
     if (asciiEqualsFold(name, "range"))
         return isSimpleRange(value);
@@ -301,8 +301,8 @@ bool prFetchIsCorsSafelistedRequestHeader(PrStringView name, PrStringView value)
 }
 
 bool prFetchIsNoCorsSafelistedRequestHeaderName(PrStringView name) {
-    return asciiEqualsFold(name, "accept") || asciiEqualsFold(name, "accept-language")
-           || asciiEqualsFold(name, "content-language") || asciiEqualsFold(name, "content-type");
+    return asciiEqualsFold(name, "accept") || asciiEqualsFold(name, "accept-language") ||
+        asciiEqualsFold(name, "content-language") || asciiEqualsFold(name, "content-type");
 }
 
 bool prFetchIsNoCorsSafelistedRequestHeader(PrStringView name, PrStringView value) {

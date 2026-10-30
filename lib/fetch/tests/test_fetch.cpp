@@ -46,7 +46,11 @@ bool open(Fixture* fixture, PrStorage* PR_NULLABLE cache = nullptr) {
     fixture->cache = cache;
     PrFetchNetworkDesc desc{
         .net = fixture->net,
-        .http = fixture->http, .compress = fixture->compress, .cache = cache, .userAgent = "Prax tests"};
+        .http = fixture->http,
+        .compress = fixture->compress,
+        .cache = cache,
+        .userAgent = "Prax tests",
+    };
     fixture->fetcher = prFetchNetworkCreate(PrFetchNetworkBackend_Default, &desc);
     return true;
 }
@@ -102,8 +106,8 @@ void probeEvent(void* PR_NULLABLE context, PrFetch* fetch, PrFetchEvent event) {
         probe->type.assign(type.data != nullptr ? type.data : "", type.size);
     }
     uint8_t chunk[4096];
-    for (size_t got = prFetchRead(fetch, chunk, sizeof(chunk)); got != 0;
-         got = prFetchRead(fetch, chunk, sizeof(chunk)))
+    for (size_t got = prFetchRead(fetch, chunk, sizeof(chunk)); got != 0; got =
+            prFetchRead(fetch, chunk, sizeof(chunk)))
         probe->received.append(reinterpret_cast<const char*>(chunk), got);
     if (event == PrFetchEvent_End || event == PrFetchEvent_Fail) {
         probe->error = prFetchError(fetch);
@@ -136,7 +140,7 @@ void startProbe(void* PR_NULLABLE context) {
 
 // Fetches `url` with `method` and `redirect`, and waits until the fetch ends or fails.
 void run(Fixture* fixture, Probe* probe, const std::string& url, PrFetchRedirect redirect = PrFetchRedirect_Follow,
-         const std::string& method = "") {
+        const std::string& method = "") {
     probe->fetcher = fixture->fetcher;
     probe->url = url;
     probe->method = method;
@@ -485,12 +489,10 @@ TEST_CASE("fetch: a CORS request that is not simple is sent only if its prefligh
     CHECK(allowed.status == 200);
     CHECK(allowed.received == "PUT PUT;x-probe");
     Probe wildcard{.headers = headers, .mode = PrFetchMode_Cors, .origin = origin};
-    run(&fixture, &wildcard, otherUrlOf(fixture, "/cors?methods=*&headers=*&origin=" + origin),
-        PrFetchRedirect_Follow, "PUT");
+    run(&fixture, &wildcard, otherUrlOf(fixture, "/cors?methods=*&headers=*&origin=" + origin), PrFetchRedirect_Follow, "PUT");
     CHECK(wildcard.status == 200);
     Probe method{.headers = headers, .mode = PrFetchMode_Cors, .origin = origin};
-    run(&fixture, &method, otherUrlOf(fixture, "/cors?headers=x-probe&origin=" + origin), PrFetchRedirect_Follow,
-        "PUT");
+    run(&fixture, &method, otherUrlOf(fixture, "/cors?headers=x-probe&origin=" + origin), PrFetchRedirect_Follow, "PUT");
     CHECK(method.error == PrNetError_Blocked);
     Probe header{.headers = headers, .mode = PrFetchMode_Cors, .origin = origin};
     run(&fixture, &header, otherUrlOf(fixture, "/cors?methods=PUT&origin=" + origin), PrFetchRedirect_Follow, "PUT");

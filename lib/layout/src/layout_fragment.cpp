@@ -29,8 +29,8 @@ static_assert(sizeof(uint32_t) % alignof(LayoutPending) == 0);
 // Returns the size of the allocation of a box, line or row fragment: the fragment, its children and its list.
 size_t boxBytes(const LayoutFragment* fragment) {
     if ((fragment->flags & LayoutFragmentFlag_Pending) != 0)
-        return pendingOffset(fragment->childCount) + sizeof(uint32_t)
-               + sizeof(LayoutPending) * layoutFragmentPending(fragment).count;
+        return pendingOffset(fragment->childCount) + sizeof(uint32_t) +
+            sizeof(LayoutPending) * layoutFragmentPending(fragment).count;
     return alignedFor<LayoutChild>(sizeof(LayoutFragment)) + sizeof(LayoutChild) * fragment->childCount;
 }
 
@@ -53,8 +53,8 @@ static_assert(sizeof(uint32_t) % alignof(LayoutGridBorder) == 0);
 
 // Returns true if the fragment `child` adds a placeholder to its parent's subtree.
 bool addsPlaceholders(const LayoutFragment* child) {
-    return (child->flags & (LayoutFragmentFlag_Placeholders | LayoutFragmentFlag_OutOfFlow))
-           == LayoutFragmentFlag_Placeholders;
+    return (child->flags & (LayoutFragmentFlag_Placeholders | LayoutFragmentFlag_OutOfFlow)) ==
+        LayoutFragmentFlag_Placeholders;
 }
 
 } // namespace
@@ -90,7 +90,7 @@ void layoutBaselinesReset(LayoutBaselines& kept) {
 }
 
 LayoutFragment* layoutFragmentCreate(LayoutFragmentKind kind, LayoutNodeIndex node, uint32_t childCount,
-                                     uint32_t pendingCount) {
+        uint32_t pendingCount) {
     size_t children = alignedFor<LayoutChild>(sizeof(LayoutFragment));
     size_t bytesNeeded = children + sizeof(LayoutChild) * childCount;
     if (pendingCount != 0)
@@ -144,13 +144,13 @@ static_assert(sizeof(LayoutFragmentFontRange) % alignof(PrFontGlyph) == 0);
 static_assert(sizeof(PrFontGlyph) % alignof(LayoutCaretStop) == 0);
 
 LayoutFragment* layoutFragmentCreateText(LayoutNodeIndex node, float size, const PrFont* const* PR_NULLABLE fonts,
-                                         uint32_t fontCount, const LayoutFragmentFontRange* PR_NULLABLE ranges,
-                                         uint32_t rangeCount, uint32_t glyphCount, uint32_t stopCount) {
-    PR_ASSERT(glyphCount == 0 ? fontCount == 0 && rangeCount == 0
-                              : fontCount != 0 && rangeCount != 0 && ranges[rangeCount - 1].glyphEnd == glyphCount);
+        uint32_t fontCount, const LayoutFragmentFontRange* PR_NULLABLE ranges,
+        uint32_t rangeCount, uint32_t glyphCount, uint32_t stopCount) {
+    PR_ASSERT(glyphCount != 0 || (fontCount == 0 && rangeCount == 0));
+    PR_ASSERT(glyphCount == 0 || (fontCount != 0 && rangeCount != 0 && ranges[rangeCount - 1].glyphEnd == glyphCount));
     // The maker writes every glyph and stop, so only the fragment is zeroed.
-    uint8_t* bytes = static_cast<uint8_t*>(
-        prMemoryAlloc(layoutFragmentTextBytes(fontCount, rangeCount, glyphCount, stopCount)));
+    uint8_t* bytes =
+        static_cast<uint8_t*>(prMemoryAlloc(layoutFragmentTextBytes(fontCount, rangeCount, glyphCount, stopCount)));
     memZero(bytes, sizeof(LayoutFragment));
     LayoutFragment* fragment = reinterpret_cast<LayoutFragment*>(bytes);
     fragment->references.storeRelaxed(1);
@@ -206,8 +206,10 @@ LayoutPendingList layoutFragmentPending(const LayoutFragment* fragment) {
     if ((fragment->flags & LayoutFragmentFlag_Pending) == 0)
         return LayoutPendingList{0, nullptr};
     const uint8_t* bytes = reinterpret_cast<const uint8_t*>(fragment) + pendingOffset(fragment->childCount);
-    return LayoutPendingList{*reinterpret_cast<const uint32_t*>(bytes),
-                             reinterpret_cast<const LayoutPending*>(bytes + sizeof(uint32_t))};
+    return LayoutPendingList{
+        *reinterpret_cast<const uint32_t*>(bytes),
+        reinterpret_cast<const LayoutPending*>(bytes + sizeof(uint32_t)),
+    };
 }
 
 void layoutFragmentRetain(const LayoutFragment* fragment) {
@@ -242,7 +244,7 @@ void layoutFragmentRelease(const LayoutFragment* PR_NULLABLE fragment) {
 }
 
 LayoutFragment* layoutFragmentTable(LayoutFragment* built, PrLayoutRect rect,
-                                    const LayoutGridBorder* PR_NULLABLE borders, uint32_t count) {
+        const LayoutGridBorder* PR_NULLABLE borders, uint32_t count) {
     size_t base = boxBytes(built);
     size_t tail = alignedFor<PrLayoutRect>(base);
     size_t bytesNeeded = tail + sizeof(PrLayoutRect) + sizeof(uint32_t) + sizeof(LayoutGridBorder) * count;
@@ -306,8 +308,10 @@ LayoutGridAxisTracks layoutFragmentGridTracks(const LayoutFragment* grid, PrLayo
         memCopy(&header, bytes, sizeof header);
         bytes += sizeof header;
         if (a == axis)
-            return LayoutGridAxisTracks{header.count, header.explicitStart, header.repetitions,
-                                        header.count != 0 ? reinterpret_cast<const PrLayoutUnit*>(bytes) : nullptr};
+            return LayoutGridAxisTracks{
+                header.count, header.explicitStart, header.repetitions,
+                header.count != 0 ? reinterpret_cast<const PrLayoutUnit*>(bytes) : nullptr,
+            };
         bytes += sizeof(PrLayoutUnit) * header.count;
     }
 }
@@ -347,8 +351,13 @@ bool layoutPiecesNext(LayoutPieces& pieces, LayoutPiece* out) {
             }
             if (f->kind != LayoutFragmentKind_Around || f->node != pieces.node)
                 continue;
-            *out = LayoutPiece{.kind = LayoutPieceKind_Row, .fragment = f, .offset = offset, .at = here,
-                               .depth = depth};
+            *out = LayoutPiece{
+                .kind = LayoutPieceKind_Row,
+                .fragment = f,
+                .offset = offset,
+                .at = here,
+                .depth = depth,
+            };
             return true;
         } else {
             ++at.child;
@@ -361,8 +370,15 @@ bool layoutPiecesNext(LayoutPieces& pieces, LayoutPiece* out) {
             uint32_t parts = 0;
             uint32_t end = layoutGroupEnd(line, k, &parts);
             pieces.done = line->children[parts - 1].fragment->part.closes;
-            *out = LayoutPiece{.kind = LayoutPieceKind_Group, .fragment = line, .offset = offset, .at = here,
-                               .first = k, .parts = parts, .end = end};
+            *out = LayoutPiece{
+                .kind = LayoutPieceKind_Group,
+                .fragment = line,
+                .offset = offset,
+                .at = here,
+                .first = k,
+                .parts = parts,
+                .end = end,
+            };
             return true;
         }
     }
@@ -372,15 +388,15 @@ bool layoutPiecesNext(LayoutPieces& pieces, LayoutPiece* out) {
 uint32_t layoutGroupEnd(const LayoutFragment* line, uint32_t first, uint32_t* parts) {
     LayoutNodeIndex node = line->children[first].fragment->node;
     uint32_t end = first + 1;
-    while (end < line->childCount && line->children[end].fragment->kind == LayoutFragmentKind_Inline
-           && line->children[end].fragment->node == node)
+    while (end < line->childCount && line->children[end].fragment->kind == LayoutFragmentKind_Inline &&
+            line->children[end].fragment->node == node)
         ++end;
     *parts = end;
     return end + line->children[end - 1].fragment->part.enclosed;
 }
 
 LayoutFragment* layoutFragmentBuild(Array<LayoutLogicalChild>& children, uint32_t mark, LayoutFragmentKind kind,
-                                    LayoutNodeIndex node, LayoutMode mode, LayoutLogicalSize size) {
+        LayoutNodeIndex node, LayoutMode mode, LayoutLogicalSize size) {
     uint32_t count = children.count - mark;
     const LayoutLogicalChild* from = children.data + mark;
     LayoutFragment* fragment = layoutFragmentCreate(kind, node, count);
@@ -421,14 +437,16 @@ LayoutFragment* layoutFragmentBuild(Array<LayoutLogicalChild>& children, uint32_
             const LayoutChild& child = fragment->children[i];
             const LayoutFragment* f = child.fragment;
             if (f->kind == LayoutFragmentKind_Placeholder) {
-                pending[listed++] = LayoutPending{.node = f->node,
-                                                  .at = child.offset,
-                                                  .edges = f->edges,
-                                                  .fixed = f->placeholder.fixed};
+                pending[listed++] = LayoutPending{
+                    .node = f->node,
+                    .at = child.offset,
+                    .edges = f->edges,
+                    .fixed = f->placeholder.fixed,
+                };
                 continue;
             }
-            bool inLines = f->kind == LayoutFragmentKind_Line || f->kind == LayoutFragmentKind_Around
-                           || (f->kind == LayoutFragmentKind_Box && f->node == kPrLayoutNodeNone);
+            bool inLines = f->kind == LayoutFragmentKind_Line || f->kind == LayoutFragmentKind_Around ||
+                (f->kind == LayoutFragmentKind_Box && f->node == kPrLayoutNodeNone);
             LayoutPendingList list = layoutFragmentPending(f);
             for (uint32_t k = 0; k < list.count; ++k) {
                 LayoutPending entry = list.entries[k];
@@ -451,7 +469,7 @@ LayoutFragment* layoutFragmentBuild(Array<LayoutLogicalChild>& children, uint32_
 }
 
 LayoutFragment* layoutFragmentHold(LayoutFragment* built, const LayoutChild* PR_NULLABLE held, uint32_t heldCount,
-                                   const LayoutPending* PR_NULLABLE pending, uint32_t pendingCount) {
+        const LayoutPending* PR_NULLABLE pending, uint32_t pendingCount) {
     uint32_t count = built->childCount;
     LayoutFragment* fragment = layoutFragmentCreate(built->kind, built->node, count + heldCount, pendingCount);
     memCopy(fragment->children, built->children, sizeof(LayoutChild) * count);
@@ -462,8 +480,7 @@ LayoutFragment* layoutFragmentHold(LayoutFragment* built, const LayoutChild* PR_
         memCopy(layoutFragmentPendingStorage(fragment), pending, sizeof(LayoutPending) * pendingCount);
     fragment->floatsFirst = built->floatsFirst;
     fragment->floatsEnd = built->floatsEnd;
-    fragment->flags |=
-        LayoutFragmentFlags(built->flags & (LayoutFragmentFlag_Placeholders | LayoutFragmentFlag_Lines));
+    fragment->flags |= LayoutFragmentFlags(built->flags & (LayoutFragmentFlag_Placeholders | LayoutFragmentFlag_Lines));
     if (heldCount != 0)
         fragment->flags |= LayoutFragmentFlag_Holds;
     fragment->extent = built->extent;

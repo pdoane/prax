@@ -93,9 +93,7 @@ typedef struct PrHtmlHost {
     // Runs a script. A module script runs the module that `parseModule` made of it, once every module that its graph
     // imports is parsed: the host reports the first parse error in the graph, or else links and evaluates it. A failure
     // aborts the load with its status. Null disables scripting.
-    PrStatus (*PR_NULLABLE execute)(void* PR_NULLABLE context,
-                                    PrHtmlPage* page,
-                                    const PrHtmlScript* script);
+    PrStatus (*PR_NULLABLE execute)(void* PR_NULLABLE context, PrHtmlPage* page, const PrHtmlScript* script);
 
     // Parses `script`, a module script, into a module of the page's realm without evaluating it
     // (html/#creating-a-javascript-module-script), and returns the host's number for the module (PrHtmlScript::module).
@@ -104,39 +102,33 @@ typedef struct PrHtmlHost {
     // that does not resolve, keeps its error and imports nothing. The page fetches and parses each module of the
     // window's module map once (html/#module-map). Null runs no module scripts.
     uint32_t (*PR_NULLABLE parseModule)(void* PR_NULLABLE context, PrHtmlPage* page,
-                                        const PrHtmlScript* script, PrHtmlModuleRequestFn request,
-                                        void* PR_NULLABLE requestContext);
+        const PrHtmlScript* script, PrHtmlModuleRequestFn request, void* PR_NULLABLE requestContext);
 
     // Runs after the deferred scripts and before the load event, and may run the window's timers. A failure aborts the
     // load with its status.
-    PrStatus (*PR_NULLABLE settle)(void* PR_NULLABLE context,
-                                   PrHtmlPage* page);
+    PrStatus (*PR_NULLABLE settle)(void* PR_NULLABLE context, PrHtmlPage* page);
 
     // Compiles `body` into the callback of the event handler `handler` of `target`
     // (html/#getting-the-current-value-of-the-event-handler). `body` is the text of the event handler content attribute
     // of `element`. Writes the callback to `out` with one reference. If `body` does not compile, reports the error and
     // returns false. Null leaves every such handler null.
     bool (*PR_NULLABLE compile)(void* PR_NULLABLE context, PrHtmlPage* page,
-                                PrDomEventTarget* target, PrDomElement* element,
-                                PrDomEventHandler handler, PrStringView body,
-                                PrDomEventHandlerCallback* out);
+        PrDomEventTarget* target, PrDomElement* element, PrDomEventHandler handler, PrStringView body,
+        PrDomEventHandlerCallback* out);
 
     // Queues `run`, called with `data`, as a microtask (html/#queue-a-microtask). The host runs it along with its
     // script engine's jobs. If null, no microtasks run.
-    void (*PR_NULLABLE microtask)(void* PR_NULLABLE context, PrHtmlPage* page,
-                                  void (*PR_NONNULL run)(void* data), void* data);
+    void (*PR_NULLABLE microtask)(void* PR_NULLABLE context, PrHtmlPage* page, void (*PR_NONNULL run)(void* data), void* data);
 
     // Sets `child` to the host of a page that is about to be created for an iframe of `parent`. `child` starts as the
     // default host. Null gives each such page the default host, which runs no scripts.
-    void (*PR_NULLABLE frame)(void* PR_NULLABLE context, PrHtmlPage* parent,
-                              struct PrHtmlHost* child);
+    void (*PR_NULLABLE frame)(void* PR_NULLABLE context, PrHtmlPage* parent, struct PrHtmlHost* child);
 
     // Navigates the page to the document at `url` (html/#navigate), as a hyperlink or a script that sets the location
     // asks. `url` is absolute, and may have a fragment. The call comes from a task of the page. After the call returns,
     // the host navigates this page to it, or a page that replaces this one (prHtmlPageNavigate). If null, a navigation
     // to another document does nothing.
-    void (*PR_NULLABLE navigate)(void* PR_NULLABLE context, PrHtmlPage* page,
-                                 PrStringView url);
+    void (*PR_NULLABLE navigate)(void* PR_NULLABLE context, PrHtmlPage* page, PrStringView url);
 
     // Called once the host's page is created, before anything loads in it.
     void (*PR_NULLABLE opened)(void* PR_NULLABLE context, PrHtmlPage* page);
@@ -151,9 +143,8 @@ typedef struct PrHtmlHost {
     // Returns the states among `wanted` that `element` is in. These are the states that the application knows and the
     // engine does not (PrDomHostState). If null, no states are reported. A restyle may call it from several threads at
     // once, while the document does not change.
-    PrDomHostState (*PR_NULLABLE elementState)(void* PR_NULLABLE context,
-                                               PrHtmlPage* page,
-                                               const PrDomElement* element, PrDomHostState wanted);
+    PrDomHostState (*PR_NULLABLE elementState)(void* PR_NULLABLE context, PrHtmlPage* page,
+        const PrDomElement* element, PrDomHostState wanted);
 
     // The agent whose event loop runs the page, and whose threads run its rendering. It must outlive the page. If null,
     // a top-level page gets a new agent, and an iframe's page uses the agent of its parent.
@@ -283,15 +274,14 @@ PrDomAgent* prHtmlPageAgent(PrHtmlPage* self);
 // delays it, as for a streamed load. A document that fetches nothing loads within this call. If the URL parser rejects
 // `url`, returns its status and leaves the current Document in place. Returns InvalidState during another load.
 PrStatus prHtmlPageLoad(PrHtmlPage* self, PrStringView source, PrStringView url,
-                        const PrHtmlResponseHeaders* PR_NULLABLE headers);
+    const PrHtmlResponseHeaders* PR_NULLABLE headers);
 
 // Starts loading a new Document at `url` whose source arrives in pieces, as a network delivers it
 // (html/#navigate-html). prHtmlPageAppendLoad delivers each piece, and prHtmlPageEndLoad marks the end of the source.
 // Tasks of the event loop parse what has arrived, one slice at a time. Rendering opportunities come between those
 // tasks, so the document renders as it arrives. The parse stops (html/#the-end) in the task that parses the end of the
 // source. A media document is made at once, and ignores the pieces. Returns the same statuses as prHtmlPageLoad.
-PrStatus prHtmlPageBeginLoad(PrHtmlPage* self, PrStringView url,
-                             const PrHtmlResponseHeaders* PR_NULLABLE headers);
+PrStatus prHtmlPageBeginLoad(PrHtmlPage* self, PrStringView url, const PrHtmlResponseHeaders* PR_NULLABLE headers);
 void prHtmlPageAppendLoad(PrHtmlPage* self, PrStringView bytes);
 void prHtmlPageEndLoad(PrHtmlPage* self);
 
@@ -310,8 +300,7 @@ PrStatus prHtmlPageNavigate(PrHtmlPage* self, PrStringView url);
 // have. Calls `done` with `context` in a task, with Ok once every module of the graph is parsed, or with the status of
 // a fetch that failed. If the window's document is replaced or the page destroyed first, `done` is called with Lost
 // during that call.
-void prHtmlPageImportModule(PrHtmlPage* self, PrStringView url, PrHtmlImportFn done,
-                            void* PR_NULLABLE context);
+void prHtmlPageImportModule(PrHtmlPage* self, PrStringView url, PrHtmlImportFn done, void* PR_NULLABLE context);
 
 // Fetches what `request` asks for a script of the window, through the host's fetcher. The window's document is the
 // request's client: the request has its origin, its URL as the referrer, and its base URL. Calls `done` with `context`
@@ -319,8 +308,7 @@ void prHtmlPageImportModule(PrHtmlPage* self, PrStringView url, PrHtmlImportFn d
 // destroyed first. The body is read whole before the response is passed. The fetch does not delay the document's load
 // event. Returns InvalidData, and never calls `done`, for a URL that does not parse or that has a username or a
 // password (fetch/#dom-request).
-PrStatus prHtmlPageFetch(PrHtmlPage* self, const PrFetchClientRequest* request, PrFetchClientFn done,
-                         void* PR_NULLABLE context);
+PrStatus prHtmlPageFetch(PrHtmlPage* self, const PrFetchClientRequest* request, PrFetchClientFn done, void* PR_NULLABLE context);
 
 // Cancels the fetch that prHtmlPageFetch started with `context` and has not answered (fetch/#fetch-controller-abort).
 // The fetch stops if it still runs, and its `done` is never called. Does nothing if no such fetch waits.

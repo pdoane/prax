@@ -10,10 +10,19 @@ int prTestDrawCApi(void) {
     PrDrawList* list = prDrawListCreate();
     PrRect rect = {0, 0, 1, 1};
     PrColor16 red = PR_COLOR16(1, 0, 0, 1);
-    PrDrawStroke stroke = {.shape = {.width = 1, .miterLimit = 4, .join = PrPathJoin_Round, .startCap = PrPathCap_Round,
-                                     .endCap = PrPathCap_Round, .dashCap = PrPathCap_Round,
-                                     .zeroLengthDirection = {1, 0}},
-                           .align = PrDrawStrokeAlign_Center, .mapping = PrDrawStrokeMapping_Plain};
+    PrDrawStroke stroke = {
+        .shape = {
+            .width = 1,
+            .miterLimit = 4,
+            .join = PrPathJoin_Round,
+            .startCap = PrPathCap_Round,
+            .endCap = PrPathCap_Round,
+            .dashCap = PrPathCap_Round,
+            .zeroLengthDirection = {1, 0},
+        },
+        .align = PrDrawStrokeAlign_Center,
+        .mapping = PrDrawStrokeMapping_Plain,
+    };
     prDrawListPushTransformAffine2(list, prAffine2Scale((PrVec2){2, 2}));
     prDrawListRect(list, rect, (PrDrawPaint){.color = red});
     prDrawListRect(list, rect, (PrDrawPaint){.color = red, .stroke = &stroke});

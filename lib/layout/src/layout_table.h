@@ -67,20 +67,20 @@ struct LayoutTableOutcome {
 // the table is the anonymous table that wraps the run of table parts from `node` through `runLast`
 // (layoutTablePartRunLast), in the writing mode of their parent.
 LayoutTableOutcome layoutTableContent(LayoutState& state, LayoutNodeIndex node, LayoutNodeIndex runLast,
-                                      const LayoutTableInput& input);
+    const LayoutTableInput& input);
 
 // Makes the table's fragment from `built`, which the function takes, with the grid that `outcome` describes
 // (layoutFragmentTable), and returns it. Frees the scratch memory that holds the collapsed borders. A layout that
 // builds no fragment, such as a measurement, passes null, and the function only frees the memory.
 LayoutFragment* PR_NULLABLE layoutTableFinish(LayoutState& state, LayoutFragment* PR_NULLABLE built,
-                                              const LayoutTableOutcome& outcome);
+    const LayoutTableOutcome& outcome);
 
 // Returns the intrinsic inline sizes of the border box of the table `node` (css-tables-3/#computing-the-table-width).
 // If `runLast` is not kPrLayoutNodeNone, the table is the anonymous table that wraps the run from `node` through
 // `runLast`. The table's parts are measured in `input`. The sizes are those of the grid, from the sizes of its columns,
 // its border spacing and the table's edges, and are at least the min-content contributions of the captions.
 LayoutIntrinsicSizes layoutTableIntrinsic(LayoutState& state, LayoutNodeIndex node, LayoutNodeIndex runLast,
-                                          const LayoutIntrinsicInput& input);
+    const LayoutIntrinsicInput& input);
 
 // Returns true if a table cell laid out as `fragment` is empty, as empty-cells defines it: the cell has no float, and
 // no content in flow other than collapsed white space (css-tables-3/#empty-cell-rendering).
@@ -131,8 +131,8 @@ void layoutEachTableBox(const LayoutTree* tree, LayoutNodeIndex node, Box box, R
     };
     for (uint32_t c = container.first; c != kPrLayoutNodeNone; c = layoutTreeNode(tree, c).next) {
         LayoutTablePart part = layoutTablePartFromDisplay(tree, display, c);
-        bool extends = runFirst != kPrLayoutNodeNone
-                       && (part == LayoutTablePart_None || part == LayoutTablePart_OutOfFlow);
+        bool extends = runFirst != kPrLayoutNodeNone &&
+            (part == LayoutTablePart_None || part == LayoutTablePart_OutOfFlow);
         if (part == LayoutTablePart_Other || extends) {
             if (runFirst == kPrLayoutNodeNone)
                 runFirst = c;

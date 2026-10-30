@@ -200,8 +200,7 @@ PrLayoutVec prCssPresentationScrollFrom(PrCssPresentation* presentation, PrLayou
 // Writes to `out` up to `capacity` of the offsets that the document's own scrolls set since the last call, one for each
 // container, for the host to give its compositor (prLayoutCompositorSetScrolls). Returns the number written. The host
 // calls it until it writes none. Offsets that the host set (prCssPresentationSetScroll) are not included.
-uint32_t prCssPresentationTakeScrolls(PrCssPresentation* presentation, PrLayoutSceneScroll* PR_NULLABLE out,
-                                      uint32_t capacity);
+uint32_t prCssPresentationTakeScrolls(PrCssPresentation* presentation, PrLayoutSceneScroll* PR_NULLABLE out, uint32_t capacity);
 
 // Hit tests `point` in viewport coordinates against the last layout, in paint order. Returns the deepest element or
 // text node whose box is topmost at the point, or null if there is none. A point on an anonymous box hits the node of

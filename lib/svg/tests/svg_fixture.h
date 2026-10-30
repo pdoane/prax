@@ -62,7 +62,7 @@ struct Drawing {
 
     // Draws the document `source` in a viewport of `viewport`, with `options`, or the defaults if null.
     explicit Drawing(const std::string& source, PrVec2 viewport = PrVec2{100, 100},
-                     const PrSvgDrawOptions* PR_NULLABLE options = nullptr) {
+            const PrSvgDrawOptions* PR_NULLABLE options = nullptr) {
         document = prDomParseXml(source, "image/svg+xml", nullptr);
         prCssEnable(document);
         prSvgEnable(document);
@@ -103,7 +103,7 @@ struct Drawing {
         std::vector<uint8_t> bytes(size_t(width) * height * 4, 255);
         PrDrawRenderer* renderer = prDrawCpuCreate(nullptr);
         prDrawRendererRenderPixels(renderer, list, PrPixels{bytes.data(), size_t(width) * 4, {width, height}},
-                                   PrPixelFormat_Rgba8);
+            PrPixelFormat_Rgba8);
         prDrawRendererDestroy(renderer);
         const uint8_t* p = bytes.data() + (size_t(y) * width + x) * 4;
         return std::to_string(p[0]) + " " + std::to_string(p[1]) + " " + std::to_string(p[2]);
@@ -150,22 +150,30 @@ struct Drawing {
                     d.radii = c.cornerRect->corners[0].radii;
                     break;
                 case PrDrawCommandKind_Ellipse:
-                    local = PrRect{c.ellipse.center.x - c.ellipse.radii.x, c.ellipse.center.y - c.ellipse.radii.y,
-                                   c.ellipse.center.x + c.ellipse.radii.x, c.ellipse.center.y + c.ellipse.radii.y};
+                    local = PrRect{
+                        c.ellipse.center.x - c.ellipse.radii.x, c.ellipse.center.y - c.ellipse.radii.y,
+                        c.ellipse.center.x + c.ellipse.radii.x, c.ellipse.center.y + c.ellipse.radii.y,
+                    };
                     d.radii = c.ellipse.radii;
                     break;
                 case PrDrawCommandKind_Line:
-                    local = PrRect{std::fmin(c.line.start.x, c.line.end.x), std::fmin(c.line.start.y, c.line.end.y),
-                                   std::fmax(c.line.start.x, c.line.end.x), std::fmax(c.line.start.y, c.line.end.y)};
+                    local = PrRect{
+                        std::fmin(c.line.start.x, c.line.end.x), std::fmin(c.line.start.y, c.line.end.y),
+                        std::fmax(c.line.start.x, c.line.end.x), std::fmax(c.line.start.y, c.line.end.y),
+                    };
                     break;
                 case PrDrawCommandKind_Path: {
                     // The bounds of the points, which a path with no area, such as a line, has too.
                     const PrVec2* points = prPathPoints(c.path);
                     for (uint32_t p = 0; p < prPathPointCount(c.path); ++p) {
                         PrVec2 at = points[p];
-                        local = p == 0 ? PrRect{at.x, at.y, at.x, at.y}
-                                       : PrRect{std::fmin(local.left, at.x), std::fmin(local.top, at.y),
-                                                std::fmax(local.right, at.x), std::fmax(local.bottom, at.y)};
+                        if (p == 0)
+                            local = PrRect{at.x, at.y, at.x, at.y};
+                        else
+                            local = PrRect{
+                                std::fmin(local.left, at.x), std::fmin(local.top, at.y),
+                                std::fmax(local.right, at.x), std::fmax(local.bottom, at.y),
+                            };
                     }
                     const PrPathVerb* verbs = prPathVerbs(c.path);
                     for (uint32_t v = 0; v < prPathVerbCount(c.path); ++v)
@@ -200,14 +208,20 @@ struct Drawing {
 private:
     // Returns the bounds of the corners of `rect` mapped through `transform`, which keeps a rectangle with no area.
     static PrRect mapped(PrAffine2 transform, PrRect rect) {
-        PrVec2 corners[] = {{rect.left, rect.top}, {rect.right, rect.top}, {rect.left, rect.bottom},
-                            {rect.right, rect.bottom}};
+        PrVec2 corners[] = {
+            {rect.left, rect.top}, {rect.right, rect.top}, {rect.left, rect.bottom},
+            {rect.right, rect.bottom},
+        };
         PrRect out{};
         for (uint32_t i = 0; i < 4; ++i) {
             PrVec2 at = prAffine2MapPoint(transform, corners[i]);
-            out = i == 0 ? PrRect{at.x, at.y, at.x, at.y}
-                         : PrRect{std::fmin(out.left, at.x), std::fmin(out.top, at.y), std::fmax(out.right, at.x),
-                                  std::fmax(out.bottom, at.y)};
+            if (i == 0)
+                out = PrRect{at.x, at.y, at.x, at.y};
+            else
+                out = PrRect{
+                    std::fmin(out.left, at.x), std::fmin(out.top, at.y), std::fmax(out.right, at.x),
+                    std::fmax(out.bottom, at.y),
+                };
         }
         return out;
     }
@@ -229,11 +243,11 @@ inline bool near(float a, float b, float tolerance = 1e-3f) {
 
 // Returns true if two rectangles are within `tolerance` on each side. Reports both if they are not.
 inline bool near(PrRect a, PrRect b, float tolerance = 1e-3f) {
-    bool same = near(a.left, b.left, tolerance) && near(a.top, b.top, tolerance) && near(a.right, b.right, tolerance)
-                && near(a.bottom, b.bottom, tolerance);
+    bool same = near(a.left, b.left, tolerance) && near(a.top, b.top, tolerance) && near(a.right, b.right, tolerance) &&
+        near(a.bottom, b.bottom, tolerance);
     if (!same)
-        MESSAGE("{" << a.left << ", " << a.top << ", " << a.right << ", " << a.bottom << "} is not {" << b.left
-                    << ", " << b.top << ", " << b.right << ", " << b.bottom << "}");
+        MESSAGE("{" << a.left << ", " << a.top << ", " << a.right << ", " << a.bottom << "} is not {" << b.left <<
+            ", " << b.top << ", " << b.right << ", " << b.bottom << "}");
     return same;
 }
 

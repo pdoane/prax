@@ -35,13 +35,13 @@ bool fontGlyphMetricsVariesVertical(const FontGlyphMetricTables& tables);
 // Gets the horizontal advance and left side bearing of the glyph. HVAR's delta moves the advance by whole units, as
 // FreeType rounds it.
 void fontGlyphMetricsHorizontal(const FontGlyphMetricTables& tables, SfntCoords coords, uint32_t glyph,
-                                int32_t* advance, int32_t* lsb);
+    int32_t* advance, int32_t* lsb);
 
 // Gets the vertical advance and top side bearing of the glyph, whose top is at `yMax`. A face without vertical metrics
 // gives every glyph its vertical extent as its advance, with the glyph's top at the ascender. VVAR's delta moves the
 // advance by whole units.
 void fontGlyphMetricsVertical(const FontGlyphMetricTables& tables, SfntCoords coords, uint32_t glyph, int32_t yMax,
-                              int32_t* advance, int32_t* tsb);
+    int32_t* advance, int32_t* tsb);
 
 } // namespace pr_impl
 

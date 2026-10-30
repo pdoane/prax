@@ -19,25 +19,25 @@ bool isLetter(uint32_t codePoint) {
 // punctuation such as a low line.
 bool isWordPart(uint32_t codePoint) {
     PrUnicodeGeneralCategory category = prUnicodeGeneralCategory(codePoint);
-    return isLetter(codePoint)
-           || (category >= PrUnicodeGeneralCategory_DecimalNumber && category <= PrUnicodeGeneralCategory_OtherNumber)
-           || category == PrUnicodeGeneralCategory_ConnectorPunctuation;
+    return isLetter(codePoint) ||
+        (category >= PrUnicodeGeneralCategory_DecimalNumber && category <= PrUnicodeGeneralCategory_OtherNumber) ||
+        category == PrUnicodeGeneralCategory_ConnectorPunctuation;
 }
 
 // Returns true if `codePoint` is passed over in finding the code point before another: a mark or a format character,
 // which belongs to the character before it.
 bool isPassedOver(uint32_t codePoint) {
-    return (prUnicodeFlags(codePoint) & PrUnicodeFlag_Mark) != 0
-           || prUnicodeGeneralCategory(codePoint) == PrUnicodeGeneralCategory_Format;
+    return (prUnicodeFlags(codePoint) & PrUnicodeFlag_Mark) != 0 ||
+        prUnicodeGeneralCategory(codePoint) == PrUnicodeGeneralCategory_Format;
 }
 
 // Returns true if `codePoint` is punctuation that stays inside a word between two letters, as an apostrophe, a period,
 // a colon or a middle dot does (UAX #29's MidLetter, MidNumLet and Single_Quote, which are case-ignorable).
 bool isMidWord(uint32_t codePoint) {
     PrUnicodeGeneralCategory category = prUnicodeGeneralCategory(codePoint);
-    return (prUnicodeFlags(codePoint) & PrUnicodeFlag_CaseIgnorable) != 0
-           && category >= PrUnicodeGeneralCategory_ConnectorPunctuation
-           && category <= PrUnicodeGeneralCategory_OtherPunctuation;
+    return (prUnicodeFlags(codePoint) & PrUnicodeFlag_CaseIgnorable) != 0 &&
+        category >= PrUnicodeGeneralCategory_ConnectorPunctuation &&
+        category <= PrUnicodeGeneralCategory_OtherPunctuation;
 }
 
 // Finds the code point before byte `*end` of `text`, past marks and format characters, writes it to `*codePoint`, and
@@ -93,8 +93,8 @@ uint32_t prTextTransformAt(const PrTextTransformRun* run, size_t at, uint32_t ou
     PrLanguage language = prLocaleLanguage(run->locale);
     switch (run->transform & kPrTextTransformValueMask) {
         case PrTextTransform_Capitalize:
-            if (isLetter(codePoint) && (prUnicodeFlags(codePoint) & PrUnicodeFlag_Lowercase) != 0
-                && beginsWord(run->text, at))
+            if (isLetter(codePoint) && (prUnicodeFlags(codePoint) & PrUnicodeFlag_Lowercase) != 0 &&
+                    beginsWord(run->text, at))
                 count = prUnicodeMapCase(run->text, at, PrUnicodeCase_Title, language, out);
             break;
         case PrTextTransform_Uppercase:

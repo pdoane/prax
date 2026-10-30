@@ -209,7 +209,7 @@ void flush(Stream* stream) {
     while (stream->unsentStart < stream->unsent.count) {
         PrNetError error = PrNetError_None;
         int64_t sent = socketsSend(stream->socket, stream->unsent.data + stream->unsentStart,
-                                   stream->unsent.count - stream->unsentStart, &error);
+            stream->unsent.count - stream->unsentStart, &error);
         if (sent < 0) {
             if (error != PrNetError_None)
                 fail(stream, error);

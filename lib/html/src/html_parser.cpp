@@ -30,22 +30,21 @@ namespace {
 
 bool isMathMlTextIntegrationPoint(const PrDomElement* element) {
     PrDomTag tag = domElementTag(element);
-    return element->space == PrDomNamespace_MathMl
-        && (tag == PrDomTag_Mi || tag == PrDomTag_Mo || tag == PrDomTag_Mn || tag == PrDomTag_Ms
-            || tag == PrDomTag_Mtext);
+    return element->space == PrDomNamespace_MathMl &&
+        (tag == PrDomTag_Mi || tag == PrDomTag_Mo || tag == PrDomTag_Mn || tag == PrDomTag_Ms || tag == PrDomTag_Mtext);
 }
 
 // Returns true if the element is an SVG element that is an HTML integration point regardless of its attributes.
 bool isSvgIntegrationPoint(const PrDomElement* element) {
     PrDomTag tag = domElementTag(element);
-    return element->space == PrDomNamespace_Svg
-        && (tag == PrDomTag_ForeignObject || tag == PrDomTag_Desc || tag == PrDomTag_Title);
+    return element->space == PrDomNamespace_Svg &&
+        (tag == PrDomTag_ForeignObject || tag == PrDomTag_Desc || tag == PrDomTag_Title);
 }
 
 // Returns true if the element is a foreign element that is special and ends every scope except table scope.
 bool isForeignBoundary(const PrDomElement* element) {
-    return isMathMlTextIntegrationPoint(element) || isSvgIntegrationPoint(element)
-        || (element->space == PrDomNamespace_MathMl && element->tag == PrDomTag_AnnotationXml);
+    return isMathMlTextIntegrationPoint(element) || isSvgIntegrationPoint(element) ||
+        (element->space == PrDomNamespace_MathMl && element->tag == PrDomTag_AnnotationXml);
 }
 
 // Returns true if the element has its own parsing rules, so that an ordinary end tag stops at it.
@@ -92,8 +91,8 @@ typedef uint8_t Scope;
 bool endsScope(const PrDomElement* element, Scope scope) {
     PrDomTag tag = domElementTag(element);
     if (scope == Scope_Table) {
-        return element->space == PrDomNamespace_Html
-            && (tag == PrDomTag_Html || tag == PrDomTag_Table || tag == PrDomTag_Template);
+        return element->space == PrDomNamespace_Html &&
+            (tag == PrDomTag_Html || tag == PrDomTag_Table || tag == PrDomTag_Template);
     }
     if (element->space != PrDomNamespace_Html)
         return isForeignBoundary(element);
@@ -160,9 +159,9 @@ bool mayEndOpen(const PrDomElement* element) {
 
 bool isHeading(const PrDomElement* element) {
     PrDomTag tag = domElementTag(element);
-    return element->space == PrDomNamespace_Html
-        && (tag == PrDomTag_H1 || tag == PrDomTag_H2 || tag == PrDomTag_H3 || tag == PrDomTag_H4
-            || tag == PrDomTag_H5 || tag == PrDomTag_H6);
+    return element->space == PrDomNamespace_Html &&
+        (tag == PrDomTag_H1 || tag == PrDomTag_H2 || tag == PrDomTag_H3 || tag == PrDomTag_H4 ||
+            tag == PrDomTag_H5 || tag == PrDomTag_H6);
 }
 
 // Returns true if the start tag leaves foreign content for HTML (html/#parsing-main-inforeign). A font start tag also
@@ -254,34 +253,29 @@ constexpr PrStringView kQuirksPrefix[] = {
 };
 
 DomQuirks quirksOf(PrStringView name, PrStringView publicId, PrStringView systemId,
-                   bool forceQuirks, bool hasPublicId, bool hasSystemId) {
+        bool forceQuirks, bool hasPublicId, bool hasSystemId) {
     if (forceQuirks || name != "html")
         return DomQuirks_Yes;
 
     if (hasPublicId) {
-        if (asciiEqualsFold(publicId, "-//W3O//DTD W3 HTML Strict 3.0//EN//")
-            || asciiEqualsFold(publicId, "-/W3C/DTD HTML 4.0 Transitional/EN")
-            || asciiEqualsFold(publicId, "HTML"))
+        if (asciiEqualsFold(publicId, "-//W3O//DTD W3 HTML Strict 3.0//EN//") ||
+                asciiEqualsFold(publicId, "-/W3C/DTD HTML 4.0 Transitional/EN") || asciiEqualsFold(publicId, "HTML"))
             return DomQuirks_Yes;
         for (PrStringView prefix : kQuirksPrefix) {
             if (asciiStartsWithFold(publicId, prefix))
                 return DomQuirks_Yes;
         }
     }
-    if (hasSystemId
-        && asciiEqualsFold(systemId,
-                           "http://www.ibm.com/data/dtd/v11/ibmxhtml1-transitional.dtd"))
+    if (hasSystemId && asciiEqualsFold(systemId, "http://www.ibm.com/data/dtd/v11/ibmxhtml1-transitional.dtd"))
         return DomQuirks_Yes;
 
     bool emptySystem = !hasSystemId || systemId.size == 0;
-    if (hasPublicId
-        && (asciiStartsWithFold(publicId, "-//W3C//DTD HTML 4.01 Frameset//")
-            || asciiStartsWithFold(publicId, "-//W3C//DTD HTML 4.01 Transitional//")))
+    if (hasPublicId && (asciiStartsWithFold(publicId, "-//W3C//DTD HTML 4.01 Frameset//") ||
+            asciiStartsWithFold(publicId, "-//W3C//DTD HTML 4.01 Transitional//")))
         return emptySystem ? DomQuirks_Yes : DomQuirks_Limited;
 
-    if (hasPublicId
-        && (asciiStartsWithFold(publicId, "-//W3C//DTD XHTML 1.0 Frameset//")
-            || asciiStartsWithFold(publicId, "-//W3C//DTD XHTML 1.0 Transitional//")))
+    if (hasPublicId && (asciiStartsWithFold(publicId, "-//W3C//DTD XHTML 1.0 Frameset//") ||
+            asciiStartsWithFold(publicId, "-//W3C//DTD XHTML 1.0 Transitional//")))
         return DomQuirks_Limited;
 
     return DomQuirks_No;
@@ -394,8 +388,7 @@ bool hasOpen(const Tree* t, PrDomTag which) {
 // Returns true if the parser is parsing template contents (html/#the-element-pointers). The form rules test this rather
 // than the stack, because a fragment whose context is a template is inside a template without holding it open.
 bool parsingTemplateContents(const Tree* t) {
-    return hasOpen(t, PrDomTag_Template)
-        || (domIsHtml(t->p->context, PrDomTag_Template));
+    return hasOpen(t, PrDomTag_Template) || (domIsHtml(t->p->context, PrDomTag_Template));
 }
 
 bool inScope(const Tree* t, PrDomTag which, Scope scope) {
@@ -472,9 +465,8 @@ void clearToTableContext(Tree* t) {
 
 // html/#clear-the-stack-back-to-a-table-body-context
 void clearToTableBodyContext(Tree* t) {
-    while (t->p->open.count != 0 && !domIsHtml(current(t), PrDomTag_Tbody)
-           && !domIsHtml(current(t), PrDomTag_Tfoot) && !domIsHtml(current(t), PrDomTag_Thead)
-           && !atContextRoot(t))
+    while (t->p->open.count != 0 && !domIsHtml(current(t), PrDomTag_Tbody) &&
+            !domIsHtml(current(t), PrDomTag_Tfoot) && !domIsHtml(current(t), PrDomTag_Thead) && !atContextRoot(t))
         pop(t);
 }
 
@@ -519,8 +511,8 @@ bool attributesEquals(const HtmlFormatting& a, const HtmlFormatting& b) {
         bool found = false;
         for (uint32_t j = 0; j < b.attributeCount && !found; ++j) {
             const HtmlTokenAttribute& two = b.attributes[j];
-            found = prStringView(&one.name) == prStringView(&two.name)
-                    && prStringView(&one.value) == prStringView(&two.value);
+            found = prStringView(&one.name) == prStringView(&two.name) &&
+                prStringView(&one.value) == prStringView(&two.value);
         }
         if (!found)
             return false;
@@ -534,19 +526,19 @@ void pushFormatting(Tree* t, PrDomElement* element) {
     const Array<HtmlAttribute>& given = t->p->tokenizer.attributes;
     HtmlFormatting entry = {element, nullptr, given.count};
     if (given.count != 0) {
-        entry.attributes = static_cast<HtmlTokenAttribute*>(
-            prMemoryAlloc(sizeof(HtmlTokenAttribute) * given.count));
+        entry.attributes = static_cast<HtmlTokenAttribute*>(prMemoryAlloc(sizeof(HtmlTokenAttribute) * given.count));
         for (uint32_t i = 0; i < given.count; ++i)
-            entry.attributes[i] = HtmlTokenAttribute{prStringCopy(text(t, given.data[i].name)),
-                                                     prStringCopy(text(t, given.data[i].value))};
+            entry.attributes[i] = HtmlTokenAttribute{
+                prStringCopy(text(t, given.data[i].name)),
+                prStringCopy(text(t, given.data[i].value)),
+            };
     }
     uint32_t seen = 0;
     for (uint32_t i = t->p->formatting.count; i-- != 0;) {
         const HtmlFormatting& other = t->p->formatting.data[i];
         if (other.element == nullptr)
             break;
-        if (other.element->tag != element->tag || other.element->space != element->space
-            || !attributesEquals(other, entry))
+        if (other.element->tag != element->tag || other.element->space != element->space || !attributesEquals(other, entry))
             continue;
         if (++seen == 3) {
             eraseFormatting(t->p, i);
@@ -607,10 +599,9 @@ PrDomNode* templateContents(PrDomElement* element) {
 void placeIn(Tree* t, PrDomElement* target, PrDomNode** parent, PrDomNode* PR_NULLABLE* before) {
     *before = nullptr;
 
-    if (t->p->fosterParenting && target->space == PrDomNamespace_Html
-        && (target->tag == PrDomTag_Table || target->tag == PrDomTag_Tbody
-            || target->tag == PrDomTag_Tfoot || target->tag == PrDomTag_Thead
-            || target->tag == PrDomTag_Tr)) {
+    if (t->p->fosterParenting && target->space == PrDomNamespace_Html &&
+            (target->tag == PrDomTag_Table || target->tag == PrDomTag_Tbody ||
+                target->tag == PrDomTag_Tfoot || target->tag == PrDomTag_Thead || target->tag == PrDomTag_Tr)) {
         PrDomElement* PR_NULLABLE lastTable = nullptr;
         uint32_t tableIndex = 0;
         for (uint32_t i = t->p->open.count; i-- != 0;) {
@@ -721,13 +712,13 @@ void addAttributes(Tree* t, PrDomElement* element, DomNamespaceId space) {
 // `parent`, which an empty node cannot be, or a second element for a document.
 void insertAt(PrDomNode* parent, PrDomNode* node, PrDomNode* PR_NULLABLE before) {
     const PrDomElement* element = domElementFromNode(node);
-    bool holds =
-        node->first != nullptr
-        || (element != nullptr
-            && (domElementContents(element) != nullptr || domShadowRootOfHost(element) != nullptr));
-    bool possible = parent->type == PrDomNodeType_Document
-                        ? domValidateInsertion(parent, node, before) == PrStatus_Ok
-                        : !holds || !domIsHostIncludingInclusiveAncestor(node, parent);
+    bool holds = node->first != nullptr || (element != nullptr &&
+        (domElementContents(element) != nullptr || domShadowRootOfHost(element) != nullptr));
+    bool possible;
+    if (parent->type == PrDomNodeType_Document)
+        possible = domValidateInsertion(parent, node, before) == PrStatus_Ok;
+    else
+        possible = !holds || !domIsHostIncludingInclusiveAncestor(node, parent);
     if (!possible) {
         domDetach(node);
         return;
@@ -739,18 +730,17 @@ void insertAt(PrDomNode* parent, PrDomNode* node, PrDomNode* PR_NULLABLE before)
 // of the entry's element and the tag's attributes.
 PrDomElement* remake(HtmlParser* p, const HtmlFormatting& entry) {
     const PrDomElement* like = entry.element;
-    PrDomElement* element =
-        domElementCreate(p->document, like->space, domElementTag(like), domElementName(like));
+    PrDomElement* element = domElementCreate(p->document, like->space, domElementTag(like), domElementName(like));
     for (uint32_t i = 0; i < entry.attributeCount; ++i)
         domSetAttribute(element, PrDomNamespace_None, prStringView(&entry.attributes[i].name),
-                        prStringView(&entry.attributes[i].value));
+            prStringView(&entry.attributes[i].value));
     return element;
 }
 
 // Creates an element for the token, or for the start tag of `entry` if one is being recreated
 // (html/#creating-and-inserting-nodes). The element is held until the stack holds it.
 PrDomElement* insertElement(Tree* t, DomNamespaceId space, PrDomTag tag, PrStringView local,
-                            const HtmlFormatting* PR_NULLABLE entry) {
+        const HtmlFormatting* PR_NULLABLE entry) {
     PrDomElement* element = nullptr;
     bool constructed = false;
     if (entry != nullptr) {
@@ -761,17 +751,14 @@ PrDomElement* insertElement(Tree* t, DomNamespaceId space, PrDomTag tag, PrStrin
         // constructed immediately, and its reactions run before the parser continues.
         PrStringView is = tokenAttribute(t, "is");
         const PrDomCustomElementRegistry* registry = t->p->document->customElements;
-        bool script = registry != nullptr && t->p->context == nullptr
-                      && registry->lookup(registry->context,
-                                          local.data != nullptr ? local : domTagName(tag), is)
-                             != nullptr;
+        bool script = registry != nullptr && t->p->context == nullptr && registry->lookup(registry->context,
+            local.data != nullptr ? local : domTagName(tag), is) != nullptr;
         if (script) {
             ++t->p->document->throwOnDynamicMarkupInsertion;
             domCustomReactionsPush(registry->agent);
         }
-        element = domElementCreateHtml(t->p->document, tag,
-                                       local.data != nullptr ? local : domTagName(tag), is, script,
-                                       &constructed);
+        element = domElementCreateHtml(t->p->document, tag, local.data != nullptr ? local : domTagName(tag), is, script,
+            &constructed);
         domNodeRetain(element);
         addAttributes(t, element, space);
         if (script) {
@@ -792,9 +779,9 @@ PrDomElement* insertElement(Tree* t, DomNamespaceId space, PrDomTag tag, PrStrin
     // html/#create-an-element-for-the-token: a form-associated element takes the form element pointer as its form owner
     // if no template is open, it has no form attribute to name another form, and it goes into the form's tree.
     PrDomElement* form = t->p->form;
-    if (form != nullptr && domIsFormAssociated(element) && !hasOpen(t, PrDomTag_Template)
-        && (!domIsListed(element) || domAttributeValue(element, "form").data == nullptr)
-        && domNodeRoot(parent) == domNodeRoot(form))
+    if (form != nullptr && domIsFormAssociated(element) && !hasOpen(t, PrDomTag_Template) &&
+            (!domIsListed(element) || domAttributeValue(element, "form").data == nullptr) &&
+            domNodeRoot(parent) == domNodeRoot(form))
         domFormAssociateParserInserted(element, form);
     insertAt(parent, element, before);
     // A constructed element is held until its tree holds its object.
@@ -831,8 +818,8 @@ PrDomElement* insertHtmlElement(Tree* t) {
 void declareCharset(Tree* t, PrDomElement* meta) {
     HtmlParser* p = t->p;
     uint32_t at = t->token.span.start;
-    if (p->host.changeEncoding == nullptr || p->mode != HtmlInsertionMode_InHead
-        || (at >= p->writtenStart && at < p->writtenEnd))
+    if (p->host.changeEncoding == nullptr || p->mode != HtmlInsertionMode_InHead ||
+            (at >= p->writtenStart && at < p->writtenEnd))
         return;
     PrCharset charset = PrCharset_None;
     PrStringView label = domAttributeValue(meta, "charset");
@@ -853,8 +840,7 @@ void declareCharset(Tree* t, PrDomElement* meta) {
 bool attachDeclarativeShadow(Tree* t) {
     PrStringView mode = tokenAttribute(t, "shadowrootmode");
     PrDomElement* host = adjustedCurrent(t);
-    if ((t->p->flags & HtmlParseFlag_DeclarativeShadowRoots) == 0 || mode.data == nullptr
-        || host == t->p->open.data[0])
+    if ((t->p->flags & HtmlParseFlag_DeclarativeShadowRoots) == 0 || mode.data == nullptr || host == t->p->open.data[0])
         return false;
     PrDomShadowRootInit init = prDomShadowRootInitDefault(PrDomShadowRootMode_Open);
     if (asciiEqualsFold(mode, "closed"))
@@ -874,8 +860,7 @@ bool attachDeclarativeShadow(Tree* t) {
         return false;
     }
     shadow->declarative = true;
-    PrDomElement* element = domElementCreate(t->p->document, PrDomNamespace_Html, PrDomTag_Template,
-                                             PrStringView{});
+    PrDomElement* element = domElementCreate(t->p->document, PrDomNamespace_Html, PrDomTag_Template, PrStringView{});
     addAttributes(t, element, PrDomNamespace_Html);
     domTemplateNameShadow(element, shadow);
     pushHeld(&t->p->open, element);
@@ -884,8 +869,7 @@ bool attachDeclarativeShadow(Tree* t) {
 
 void reconstructFormatting(Tree* t) {
     const Array<HtmlFormatting>& list = t->p->formatting;
-    if (list.count == 0 || list.last().element == nullptr
-        || isOpen(t, list.last().element))
+    if (list.count == 0 || list.last().element == nullptr || isOpen(t, list.last().element))
         return;
 
     uint32_t entry = list.count - 1;
@@ -899,7 +883,7 @@ void reconstructFormatting(Tree* t) {
     for (; entry < list.count; ++entry) {
         const PrDomElement* held = list.data[entry].element;
         PrDomElement* made = insertElement(t, PrDomNamespace_Html, domElementTag(held),
-                                           domElementName(held), &list.data[entry]);
+            domElementName(held), &list.data[entry]);
         replaceFormatting(t->p, entry, made);
     }
 }
@@ -909,9 +893,11 @@ void reconstructFormatting(Tree* t) {
 // tokenizer lowercased, so this is the one case that looks up a tag rather than using the token's tag.
 PrDomElement* insertForeignElement(Tree* t, DomNamespaceId space) {
     PrStringView spelled = htmlAdjustedTag(space, t->name);
-    PrDomElement* element = spelled.data == nullptr
-                                ? insertElement(t, space, t->tag, t->name, nullptr)
-                                : insertElement(t, space, domTagFromText(spelled), spelled, nullptr);
+    PrDomElement* element;
+    if (spelled.data == nullptr)
+        element = insertElement(t, space, t->tag, t->name, nullptr);
+    else
+        element = insertElement(t, space, domTagFromText(spelled), spelled, nullptr);
     if ((t->token.flags & HtmlTokenFlag_SelfClosing) != 0)
         pop(t);
     return element;
@@ -988,10 +974,7 @@ void insertComment(Tree* t, PrDomNode* PR_NULLABLE into) {
 }
 
 void insertProcessingInstruction(Tree* t, PrDomNode* PR_NULLABLE into) {
-    insertNode(t,
-               domProcessingInstructionCreate(t->p->document, text(t, t->token.name),
-                                              text(t, t->token.data)),
-               into);
+    insertNode(t, domProcessingInstructionCreate(t->p->document, text(t, t->token.name), text(t, t->token.data)), into);
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -1042,9 +1025,7 @@ void resetInsertionMode(Tree* t) {
                 case PrDomTag_Colgroup: t->p->mode = HtmlInsertionMode_InColumnGroup; return;
                 case PrDomTag_Table:   t->p->mode = HtmlInsertionMode_InTable; return;
                 case PrDomTag_Template:
-                    t->p->mode = t->p->templateModes.count != 0
-                                  ? t->p->templateModes.last()
-                                  : HtmlInsertionMode_InBody;
+                    t->p->mode = t->p->templateModes.count != 0 ? t->p->templateModes.last() : HtmlInsertionMode_InBody;
                     return;
                 case PrDomTag_Head:
                     t->p->mode = last ? HtmlInsertionMode_InBody : HtmlInsertionMode_InHead;
@@ -1052,8 +1033,7 @@ void resetInsertionMode(Tree* t) {
                 case PrDomTag_Body:    t->p->mode = HtmlInsertionMode_InBody; return;
                 case PrDomTag_Frameset: t->p->mode = HtmlInsertionMode_InFrameset; return;
                 case PrDomTag_Html:
-                    t->p->mode = t->p->head == nullptr ? HtmlInsertionMode_BeforeHead
-                                                       : HtmlInsertionMode_AfterHead;
+                    t->p->mode = t->p->head == nullptr ? HtmlInsertionMode_BeforeHead : HtmlInsertionMode_AfterHead;
                     return;
                 default:
                     break;
@@ -1072,9 +1052,8 @@ void resetInsertionMode(Tree* t) {
 bool isHtmlIntegrationPoint(const PrDomElement* element) {
     if (element->space == PrDomNamespace_MathMl && element->tag == PrDomTag_AnnotationXml) {
         const PrDomAttr* encoding = domAttribute(element, PrDomNamespace_None, "encoding");
-        return encoding != nullptr
-            && (asciiEqualsFold(prStringView(&encoding->value), "text/html")
-                || asciiEqualsFold(prStringView(&encoding->value), "application/xhtml+xml"));
+        return encoding != nullptr && (asciiEqualsFold(prStringView(&encoding->value), "text/html") ||
+            asciiEqualsFold(prStringView(&encoding->value), "application/xhtml+xml"));
     }
     return isSvgIntegrationPoint(element);
 }
@@ -1086,26 +1065,21 @@ bool inForeignContent(const Tree* t) {
     const PrDomElement* adjusted = adjustedCurrent(t);
     if (adjusted->space == PrDomNamespace_Html)
         return false;
-    if (isMathMlTextIntegrationPoint(adjusted)
-        && (kind(t) == HtmlTokenKind_Character
-            || (kind(t) == HtmlTokenKind_StartTag && t->tag != PrDomTag_Mglyph
-                && t->tag != PrDomTag_Malignmark)))
+    if (isMathMlTextIntegrationPoint(adjusted) && (kind(t) == HtmlTokenKind_Character ||
+            (kind(t) == HtmlTokenKind_StartTag && t->tag != PrDomTag_Mglyph && t->tag != PrDomTag_Malignmark)))
         return false;
-    if (adjusted->space == PrDomNamespace_MathMl
-        && adjusted->tag == PrDomTag_AnnotationXml && kind(t) == HtmlTokenKind_StartTag
-        && t->tag == PrDomTag_Svg)
+    if (adjusted->space == PrDomNamespace_MathMl &&
+            adjusted->tag == PrDomTag_AnnotationXml && kind(t) == HtmlTokenKind_StartTag && t->tag == PrDomTag_Svg)
         return false;
-    if (isHtmlIntegrationPoint(adjusted)
-        && (kind(t) == HtmlTokenKind_StartTag || kind(t) == HtmlTokenKind_Character))
+    if (isHtmlIntegrationPoint(adjusted) && (kind(t) == HtmlTokenKind_StartTag || kind(t) == HtmlTokenKind_Character))
         return false;
     return true;
 }
 
 // Pops until the current node is one against which an HTML token can be handled (html/#parsing-main-inforeign).
 void breakOutOfForeign(Tree* t) {
-    while (t->p->open.count != 0 && current(t)->space != PrDomNamespace_Html
-           && !isMathMlTextIntegrationPoint(current(t))
-           && !isHtmlIntegrationPoint(current(t)))
+    while (t->p->open.count != 0 && current(t)->space != PrDomNamespace_Html &&
+            !isMathMlTextIntegrationPoint(current(t)) && !isHtmlIntegrationPoint(current(t)))
         pop(t);
 }
 
@@ -1123,8 +1097,7 @@ bool processMode(Tree* t) { return processIn(t, t->p->mode); }
 bool inBodyEnd(Tree* t);
 
 void adoptionAgency(Tree* t, PrDomTag subject) {
-    if (domIsHtml(current(t), subject)
-        && formattingIndex(t, current(t)) == t->p->formatting.count) {
+    if (domIsHtml(current(t), subject) && formattingIndex(t, current(t)) == t->p->formatting.count) {
         pop(t);
         return;
     }
@@ -1250,8 +1223,7 @@ void adoptionAgency(Tree* t, PrDomTag subject) {
 bool inBodyEnd(Tree* t) {
     for (uint32_t i = t->p->open.count; i-- != 0;) {
         PrDomElement* node = t->p->open.data[i];
-        if (node->space == PrDomNamespace_Html && domElementTag(node) == t->tag
-            && domElementName(node) == t->name) {
+        if (node->space == PrDomNamespace_Html && domElementTag(node) == t->tag && domElementName(node) == t->name) {
             generateImpliedEndTagsExcept(t, t->tag);
             if (node != current(t))
                 error(t);
@@ -1269,8 +1241,8 @@ bool inBodyEnd(Tree* t) {
 // Returns true if the open element ends the search that the li, dd and dt start tags make for an element to close. Such
 // an element is a special element other than address, div and p.
 bool endsListItemSearch(const PrDomElement* element) {
-    return isSpecial(element) && !domIsHtml(element, PrDomTag_Address)
-           && !domIsHtml(element, PrDomTag_Div) && !domIsHtml(element, PrDomTag_P);
+    return isSpecial(element) && !domIsHtml(element, PrDomTag_Address) &&
+        !domIsHtml(element, PrDomTag_Div) && !domIsHtml(element, PrDomTag_P);
 }
 
 bool inBodyStart(Tree* t) {
@@ -1289,8 +1261,7 @@ bool inBodyStart(Tree* t) {
 
         case PrDomTag_Body: {
             error(t);
-            if (t->p->open.count < 2 || !domIsHtml(t->p->open.data[1], PrDomTag_Body)
-                || hasOpen(t, PrDomTag_Template))
+            if (t->p->open.count < 2 || !domIsHtml(t->p->open.data[1], PrDomTag_Body) || hasOpen(t, PrDomTag_Template))
                 return false;
             t->p->framesetOk = false;
             mergeAttributes(t, t->p->open.data[1]);
@@ -1299,8 +1270,7 @@ bool inBodyStart(Tree* t) {
 
         case PrDomTag_Frameset: {
             error(t);
-            if (t->p->open.count < 2 || !domIsHtml(t->p->open.data[1], PrDomTag_Body)
-                || !t->p->framesetOk)
+            if (t->p->open.count < 2 || !domIsHtml(t->p->open.data[1], PrDomTag_Body) || !t->p->framesetOk)
                 return false;
             PrDomNode* body = t->p->open.data[1];
             if (body->parent != nullptr)
@@ -1503,8 +1473,7 @@ bool inBodyStart(Tree* t) {
                 closeParagraph(t);
             if (inScope(t, PrDomTag_Select, Scope_Default)) {
                 generateImpliedEndTags(t);
-                if (inScope(t, PrDomTag_Option, Scope_Default)
-                    || inScope(t, PrDomTag_Optgroup, Scope_Default))
+                if (inScope(t, PrDomTag_Option, Scope_Default) || inScope(t, PrDomTag_Optgroup, Scope_Default))
                     error(t);
             }
             insertHtmlElement(t);
@@ -1583,8 +1552,7 @@ bool inBodyStart(Tree* t) {
         case PrDomTag_Optgroup:
             if (inScope(t, PrDomTag_Select, Scope_Default)) {
                 generateImpliedEndTags(t);
-                if (inScope(t, PrDomTag_Option, Scope_Default)
-                    || inScope(t, PrDomTag_Optgroup, Scope_Default))
+                if (inScope(t, PrDomTag_Option, Scope_Default) || inScope(t, PrDomTag_Optgroup, Scope_Default))
                     error(t);
             } else if (domIsHtml(current(t), PrDomTag_Option)) {
                 pop(t);
@@ -1853,9 +1821,9 @@ void closeTemplate(Tree* t) {
 bool inTable(Tree* t) {
     switch (kind(t)) {
         case HtmlTokenKind_Character:
-            if (domIsHtml(current(t), PrDomTag_Table) || domIsHtml(current(t), PrDomTag_Tbody)
-                || domIsHtml(current(t), PrDomTag_Template) || domIsHtml(current(t), PrDomTag_Tfoot)
-                || domIsHtml(current(t), PrDomTag_Thead) || domIsHtml(current(t), PrDomTag_Tr)) {
+            if (domIsHtml(current(t), PrDomTag_Table) || domIsHtml(current(t), PrDomTag_Tbody) ||
+                    domIsHtml(current(t), PrDomTag_Template) || domIsHtml(current(t), PrDomTag_Tfoot) ||
+                    domIsHtml(current(t), PrDomTag_Thead) || domIsHtml(current(t), PrDomTag_Tr)) {
                 textClear(&t->p->pending);
                 t->p->pendingText = false;
                 t->p->original = t->p->mode;
@@ -2008,9 +1976,7 @@ bool processForeign(Tree* t) {
             if (!breakOut && t->tag == PrDomTag_Font) {
                 for (uint32_t i = 0; i < t->p->tokenizer.attributes.count; ++i) {
                     PrStringView attribute = text(t, t->p->tokenizer.attributes.data[i].name);
-                    breakOut = breakOut || attribute == "color"
-                               || attribute == "face"
-                               || attribute == "size";
+                    breakOut = breakOut || attribute == "color" || attribute == "face" || attribute == "size";
                 }
             }
 
@@ -2039,8 +2005,8 @@ bool processForeign(Tree* t) {
             }
 
             PrDomElement* currentNode = current(t);
-            if (t->tag == PrDomTag_Script && currentNode->space == PrDomNamespace_Svg
-                && currentNode->tag == PrDomTag_Script) {
+            if (t->tag == PrDomTag_Script && currentNode->space == PrDomNamespace_Svg &&
+                    currentNode->tag == PrDomTag_Script) {
                 pop(t);
                 processSvgScript(t, currentNode);
                 return false;
@@ -2085,18 +2051,15 @@ bool processIn(Tree* t, HtmlInsertionMode mode) {
                     insertProcessingInstruction(t, t->p->document);
                     return false;
                 case HtmlTokenKind_Doctype: {
-                    PrStringView doctypeName = (t->token.flags & HtmlTokenFlag_NoName) != 0
-                                                   ? PrStringView{""}
-                                                   : text(t, t->token.name);
+                    PrStringView doctypeName =
+                        (t->token.flags & HtmlTokenFlag_NoName) != 0 ? PrStringView{""} : text(t, t->token.name);
                     bool hasPublic = (t->token.flags & HtmlTokenFlag_NoPublicId) == 0;
                     bool hasSystem = (t->token.flags & HtmlTokenFlag_NoSystemId) == 0;
                     PrStringView publicId = hasPublic ? text(t, t->token.publicId) : PrStringView{""};
                     PrStringView systemId = hasSystem ? text(t, t->token.systemId) : PrStringView{""};
-                    domAttach(t->p->document,
-                              domDocumentTypeCreate(t->p->document, doctypeName, publicId, systemId), nullptr);
-                    t->p->document->quirks =
-                        quirksOf(doctypeName, publicId, systemId,
-                                 (t->token.flags & HtmlTokenFlag_ForceQuirks) != 0, hasPublic, hasSystem);
+                    domAttach(t->p->document, domDocumentTypeCreate(t->p->document, doctypeName, publicId, systemId), nullptr);
+                    t->p->document->quirks = quirksOf(doctypeName, publicId, systemId,
+                        (t->token.flags & HtmlTokenFlag_ForceQuirks) != 0, hasPublic, hasSystem);
                     t->p->mode = HtmlInsertionMode_BeforeHtml;
                     return false;
                 }
@@ -2124,8 +2087,7 @@ bool processIn(Tree* t, HtmlInsertionMode mode) {
                     break;
                 case HtmlTokenKind_StartTag:
                     if (t->tag == PrDomTag_Html) {
-                        PrDomElement* html = domElementCreate(t->p->document, PrDomNamespace_Html,
-                                                              t->tag, t->name);
+                        PrDomElement* html = domElementCreate(t->p->document, PrDomNamespace_Html, t->tag, t->name);
                         addAttributes(t, html, PrDomNamespace_Html);
                         domAttach(t->p->document, html, nullptr);
                         pushHeld(&t->p->open, html);
@@ -2134,8 +2096,8 @@ bool processIn(Tree* t, HtmlInsertionMode mode) {
                     }
                     break;
                 case HtmlTokenKind_EndTag:
-                    if (t->tag != PrDomTag_Head && t->tag != PrDomTag_Body && t->tag != PrDomTag_Html
-                        && t->tag != PrDomTag_Br) {
+                    if (t->tag != PrDomTag_Head && t->tag != PrDomTag_Body && t->tag != PrDomTag_Html &&
+                            t->tag != PrDomTag_Br) {
                         error(t);
                         return false;
                     }
@@ -2144,8 +2106,8 @@ bool processIn(Tree* t, HtmlInsertionMode mode) {
                     break;
             }
             {
-                PrDomElement* html = domElementCreate(t->p->document, PrDomNamespace_Html,
-                                                      PrDomTag_Html, PrStringView{});
+                PrDomElement* html =
+                    domElementCreate(t->p->document, PrDomNamespace_Html, PrDomTag_Html, PrStringView{});
                 domAttach(t->p->document, html, nullptr);
                 pushHeld(&t->p->open, html);
             }
@@ -2177,8 +2139,8 @@ bool processIn(Tree* t, HtmlInsertionMode mode) {
                     }
                     break;
                 case HtmlTokenKind_EndTag:
-                    if (t->tag != PrDomTag_Head && t->tag != PrDomTag_Body && t->tag != PrDomTag_Html
-                        && t->tag != PrDomTag_Br) {
+                    if (t->tag != PrDomTag_Head && t->tag != PrDomTag_Body && t->tag != PrDomTag_Html &&
+                            t->tag != PrDomTag_Br) {
                         error(t);
                         return false;
                     }
@@ -2288,9 +2250,8 @@ bool processIn(Tree* t, HtmlInsertionMode mode) {
                 case HtmlTokenKind_StartTag:
                     if (t->tag == PrDomTag_Html)
                         return inBody(t);
-                    if (t->tag == PrDomTag_Basefont || t->tag == PrDomTag_Bgsound || t->tag == PrDomTag_Link
-                        || t->tag == PrDomTag_Meta || t->tag == PrDomTag_Noframes
-                        || t->tag == PrDomTag_Style) {
+                    if (t->tag == PrDomTag_Basefont || t->tag == PrDomTag_Bgsound || t->tag == PrDomTag_Link ||
+                            t->tag == PrDomTag_Meta || t->tag == PrDomTag_Noframes || t->tag == PrDomTag_Style) {
                         return processIn(t, HtmlInsertionMode_InHead);
                     }
                     if (t->tag == PrDomTag_Head || t->tag == PrDomTag_Noscript) {
@@ -2452,17 +2413,17 @@ bool processIn(Tree* t, HtmlInsertionMode mode) {
                 closeCaption(t);
                 return false;
             }
-            if ((kind(t) == HtmlTokenKind_StartTag
-                 && (t->tag == PrDomTag_Caption || t->tag == PrDomTag_Col || t->tag == PrDomTag_Colgroup
-                     || t->tag == PrDomTag_Tbody || t->tag == PrDomTag_Td || t->tag == PrDomTag_Tfoot
-                     || t->tag == PrDomTag_Th || t->tag == PrDomTag_Thead || t->tag == PrDomTag_Tr))
-                || (kind(t) == HtmlTokenKind_EndTag && t->tag == PrDomTag_Table))
+            if ((kind(t) == HtmlTokenKind_StartTag &&
+                    (t->tag == PrDomTag_Caption || t->tag == PrDomTag_Col || t->tag == PrDomTag_Colgroup ||
+                        t->tag == PrDomTag_Tbody || t->tag == PrDomTag_Td || t->tag == PrDomTag_Tfoot ||
+                        t->tag == PrDomTag_Th || t->tag == PrDomTag_Thead || t->tag == PrDomTag_Tr)) ||
+                    (kind(t) == HtmlTokenKind_EndTag && t->tag == PrDomTag_Table))
                 return closeCaption(t);
-            if (kind(t) == HtmlTokenKind_EndTag
-                && (t->tag == PrDomTag_Body || t->tag == PrDomTag_Col || t->tag == PrDomTag_Colgroup
-                    || t->tag == PrDomTag_Html || t->tag == PrDomTag_Tbody || t->tag == PrDomTag_Td
-                    || t->tag == PrDomTag_Tfoot || t->tag == PrDomTag_Th || t->tag == PrDomTag_Thead
-                    || t->tag == PrDomTag_Tr)) {
+            if (kind(t) == HtmlTokenKind_EndTag &&
+                    (t->tag == PrDomTag_Body || t->tag == PrDomTag_Col || t->tag == PrDomTag_Colgroup ||
+                        t->tag == PrDomTag_Html || t->tag == PrDomTag_Tbody || t->tag == PrDomTag_Td ||
+                        t->tag == PrDomTag_Tfoot || t->tag == PrDomTag_Th || t->tag == PrDomTag_Thead ||
+                        t->tag == PrDomTag_Tr)) {
                 error(t);
                 return false;
             }
@@ -2542,8 +2503,8 @@ bool processIn(Tree* t, HtmlInsertionMode mode) {
                         t->p->mode = HtmlInsertionMode_InRow;
                         return true;
                     }
-                    if (t->tag == PrDomTag_Caption || t->tag == PrDomTag_Col || t->tag == PrDomTag_Colgroup
-                        || t->tag == PrDomTag_Tbody || t->tag == PrDomTag_Tfoot || t->tag == PrDomTag_Thead)
+                    if (t->tag == PrDomTag_Caption || t->tag == PrDomTag_Col || t->tag == PrDomTag_Colgroup ||
+                            t->tag == PrDomTag_Tbody || t->tag == PrDomTag_Tfoot || t->tag == PrDomTag_Thead)
                         break;
                     return inTable(t);
                 case HtmlTokenKind_EndTag:
@@ -2557,9 +2518,9 @@ bool processIn(Tree* t, HtmlInsertionMode mode) {
                     }
                     if (t->tag == PrDomTag_Table)
                         break;
-                    if (t->tag == PrDomTag_Body || t->tag == PrDomTag_Caption || t->tag == PrDomTag_Col
-                        || t->tag == PrDomTag_Colgroup || t->tag == PrDomTag_Html || t->tag == PrDomTag_Td
-                        || t->tag == PrDomTag_Th || t->tag == PrDomTag_Tr) {
+                    if (t->tag == PrDomTag_Body || t->tag == PrDomTag_Caption || t->tag == PrDomTag_Col ||
+                            t->tag == PrDomTag_Colgroup || t->tag == PrDomTag_Html || t->tag == PrDomTag_Td ||
+                            t->tag == PrDomTag_Th || t->tag == PrDomTag_Tr) {
                         error(t);
                         return false;
                     }
@@ -2567,8 +2528,8 @@ bool processIn(Tree* t, HtmlInsertionMode mode) {
                 default:
                     return inTable(t);
             }
-            if (!inScope(t, PrDomTag_Tbody, Scope_Table) && !inScope(t, PrDomTag_Tfoot, Scope_Table)
-                && !inScope(t, PrDomTag_Thead, Scope_Table)) {
+            if (!inScope(t, PrDomTag_Tbody, Scope_Table) && !inScope(t, PrDomTag_Tfoot, Scope_Table) &&
+                    !inScope(t, PrDomTag_Thead, Scope_Table)) {
                 error(t);
                 return false;
             }
@@ -2585,9 +2546,9 @@ bool processIn(Tree* t, HtmlInsertionMode mode) {
                         pushMarker(t->p);
                         return false;
                     }
-                    if (t->tag == PrDomTag_Caption || t->tag == PrDomTag_Col || t->tag == PrDomTag_Colgroup
-                        || t->tag == PrDomTag_Tbody || t->tag == PrDomTag_Tfoot || t->tag == PrDomTag_Thead
-                        || t->tag == PrDomTag_Tr)
+                    if (t->tag == PrDomTag_Caption || t->tag == PrDomTag_Col || t->tag == PrDomTag_Colgroup ||
+                            t->tag == PrDomTag_Tbody || t->tag == PrDomTag_Tfoot || t->tag == PrDomTag_Thead ||
+                            t->tag == PrDomTag_Tr)
                         break;
                     return inTable(t);
                 case HtmlTokenKind_EndTag:
@@ -2611,9 +2572,9 @@ bool processIn(Tree* t, HtmlInsertionMode mode) {
                         closeRow(t);
                         return true;
                     }
-                    if (t->tag == PrDomTag_Body || t->tag == PrDomTag_Caption || t->tag == PrDomTag_Col
-                        || t->tag == PrDomTag_Colgroup || t->tag == PrDomTag_Html || t->tag == PrDomTag_Td
-                        || t->tag == PrDomTag_Th) {
+                    if (t->tag == PrDomTag_Body || t->tag == PrDomTag_Caption || t->tag == PrDomTag_Col ||
+                            t->tag == PrDomTag_Colgroup || t->tag == PrDomTag_Html || t->tag == PrDomTag_Td ||
+                            t->tag == PrDomTag_Th) {
                         error(t);
                         return false;
                     }
@@ -2633,25 +2594,25 @@ bool processIn(Tree* t, HtmlInsertionMode mode) {
                 closeCell(t, t->tag);
                 return false;
             }
-            if (kind(t) == HtmlTokenKind_StartTag
-                && (t->tag == PrDomTag_Caption || t->tag == PrDomTag_Col || t->tag == PrDomTag_Colgroup
-                    || t->tag == PrDomTag_Tbody || t->tag == PrDomTag_Td || t->tag == PrDomTag_Tfoot
-                    || t->tag == PrDomTag_Th || t->tag == PrDomTag_Thead || t->tag == PrDomTag_Tr)) {
+            if (kind(t) == HtmlTokenKind_StartTag &&
+                    (t->tag == PrDomTag_Caption || t->tag == PrDomTag_Col || t->tag == PrDomTag_Colgroup ||
+                        t->tag == PrDomTag_Tbody || t->tag == PrDomTag_Td || t->tag == PrDomTag_Tfoot ||
+                        t->tag == PrDomTag_Th || t->tag == PrDomTag_Thead || t->tag == PrDomTag_Tr)) {
                 if (!inScope(t, PrDomTag_Td, Scope_Table) && !inScope(t, PrDomTag_Th, Scope_Table)) {
                     error(t);
                     return false;
                 }
                 return closeCell(t, inScope(t, PrDomTag_Td, Scope_Table) ? PrDomTag_Td : PrDomTag_Th);
             }
-            if (kind(t) == HtmlTokenKind_EndTag
-                && (t->tag == PrDomTag_Body || t->tag == PrDomTag_Caption || t->tag == PrDomTag_Col
-                    || t->tag == PrDomTag_Colgroup || t->tag == PrDomTag_Html)) {
+            if (kind(t) == HtmlTokenKind_EndTag &&
+                    (t->tag == PrDomTag_Body || t->tag == PrDomTag_Caption || t->tag == PrDomTag_Col ||
+                        t->tag == PrDomTag_Colgroup || t->tag == PrDomTag_Html)) {
                 error(t);
                 return false;
             }
-            if (kind(t) == HtmlTokenKind_EndTag
-                && (t->tag == PrDomTag_Table || t->tag == PrDomTag_Tbody || t->tag == PrDomTag_Tfoot
-                    || t->tag == PrDomTag_Thead || t->tag == PrDomTag_Tr)) {
+            if (kind(t) == HtmlTokenKind_EndTag &&
+                    (t->tag == PrDomTag_Table || t->tag == PrDomTag_Tbody || t->tag == PrDomTag_Tfoot ||
+                        t->tag == PrDomTag_Thead || t->tag == PrDomTag_Tr)) {
                 if (!inScope(t, t->tag, Scope_Table)) {
                     error(t);
                     return false;
@@ -2879,12 +2840,12 @@ bool process(Tree* t) {
 // Reads tokens until the end of the input, passing each to the tree builder. An abandoned parse reads nothing.
 void run(HtmlParser* p) {
     while (!p->abandoned) {
-        PrDomElement* PR_NULLABLE adjusted =
-            p->context != nullptr && p->open.count == 1 ? p->context
-            : p->open.count != 0                        ? p->open.last()
-                                                        : nullptr;
-        p->tokenizer.foreign =
-            adjusted != nullptr && adjusted->space != PrDomNamespace_Html;
+        PrDomElement* PR_NULLABLE adjusted = nullptr;
+        if (p->context != nullptr && p->open.count == 1)
+            adjusted = p->context;
+        else if (p->open.count != 0)
+            adjusted = p->open.last();
+        p->tokenizer.foreign = adjusted != nullptr && adjusted->space != PrDomNamespace_Html;
 
         // If an open input ends before a complete token, the parser waits for more.
         if (!htmlTokenizerNext(&p->tokenizer))
@@ -2967,25 +2928,21 @@ PrDomElement* htmlParserBeginFragment(HtmlParser* parser, PrDomElement* context)
                 htmlTokenizerSetState(&parser->tokenizer, HtmlState_Rawtext, PrStringView{});
                 break;
             case PrDomTag_Script:
-                htmlTokenizerSetState(&parser->tokenizer, HtmlState_ScriptData,
-                                      PrStringView{});
+                htmlTokenizerSetState(&parser->tokenizer, HtmlState_ScriptData, PrStringView{});
                 break;
             case PrDomTag_Noscript:
                 if ((parser->flags & HtmlParseFlag_Scripting) != 0)
-                    htmlTokenizerSetState(&parser->tokenizer, HtmlState_Rawtext,
-                                          PrStringView{});
+                    htmlTokenizerSetState(&parser->tokenizer, HtmlState_Rawtext, PrStringView{});
                 break;
             case PrDomTag_Plaintext:
-                htmlTokenizerSetState(&parser->tokenizer, HtmlState_Plaintext,
-                                      PrStringView{});
+                htmlTokenizerSetState(&parser->tokenizer, HtmlState_Plaintext, PrStringView{});
                 break;
             default:
                 break;
         }
     }
 
-    PrDomElement* html = domElementCreate(parser->document, PrDomNamespace_Html, PrDomTag_Html,
-                                          PrStringView{});
+    PrDomElement* html = domElementCreate(parser->document, PrDomNamespace_Html, PrDomTag_Html, PrStringView{});
     pushHeld(&parser->open, html);
 
     if (domIsHtml(context, PrDomTag_Template))
@@ -3017,9 +2974,11 @@ void htmlParserProcess(HtmlParser* parser) {
 
     if (p->skipNewline) {
         p->skipNewline = false;
-        PrStringView opening = tree.token.kind == HtmlTokenKind_Character
-            ? htmlSpanText(&p->tokenizer, tree.token.data)
-            : PrStringView{};
+        PrStringView opening;
+        if (tree.token.kind == HtmlTokenKind_Character)
+            opening = htmlSpanText(&p->tokenizer, tree.token.data);
+        else
+            opening = PrStringView{};
         if (opening.size != 0 && opening.data[0] == '\n') {
             htmlTokenAdvance(&p->tokenizer, &tree.token, 1);
             if (htmlSpanEmpty(tree.token.data))
@@ -3047,10 +3006,10 @@ HtmlParserRest htmlParserRest(const HtmlParser* parser) {
 }
 
 bool htmlParserIsAtRest(const HtmlParser* parser, const HtmlParserRest& rest) {
-    return parser->open.count == rest.depth && parser->templateModes.count == rest.templates
-        && parser->mode == rest.mode && parser->form == rest.form && parser->formatting.count == 0
-        && parser->pending.text.count == 0 && !parser->skipNewline && !parser->fosterParenting && !parser->paused
-        && !parser->stopped && htmlTokenizerIsIdle(&parser->tokenizer);
+    return parser->open.count == rest.depth && parser->templateModes.count == rest.templates &&
+        parser->mode == rest.mode && parser->form == rest.form && parser->formatting.count == 0 &&
+        parser->pending.text.count == 0 && !parser->skipNewline && !parser->fosterParenting && !parser->paused &&
+        !parser->stopped && htmlTokenizerIsIdle(&parser->tokenizer);
 }
 
 void htmlParserRestore(HtmlParser* parser, const HtmlParserRest& rest) {

@@ -69,13 +69,13 @@ void timed(void* context, PrStatus status, PrStringView message) {
     Capturing& c = *static_cast<Capturing*>(context);
     if (status != PrStatus_Ok) {
         std::fprintf(stderr, "lottie_reference: %s: %.*s\n", c.cases[c.next].url.c_str(), int(message.size),
-                     message.data);
+            message.data);
         captured(context, status, PrPixelView{});
         return;
     }
     const Case& now = c.cases[c.next];
     prAppBrowserCapture(c.browser, PrRect{0, 0, float(now.width), float(now.height)}, PrUVec2{now.width, now.height},
-                        captured, context);
+        captured, context);
 }
 
 void seek(Capturing& c) {

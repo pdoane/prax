@@ -411,21 +411,21 @@ struct PrApp {
     void (*requestClipboardText)(PrApp* app);
     PrStatus (*setClipboardText)(PrApp* app, PrStringView text);
     PrStatus (*PR_NULLABLE browserCreate)(PrApp* app, const PrAppBrowserDesc* desc,
-                                          PrAppBrowser* PR_NULLABLE* PR_NONNULL out);
+        PrAppBrowser* PR_NULLABLE* PR_NONNULL out);
     void (*PR_NULLABLE browserDestroy)(PrApp* app, PrAppBrowser* browser);
     void (*PR_NULLABLE browserResize)(PrApp* app, PrAppBrowser* browser, PrUVec2 viewport);
     void (*PR_NULLABLE browserLoad)(PrApp* app, PrAppBrowser* browser, PrStringView url,
-                                    PrAppBrowserDoneFn done, void* PR_NULLABLE context);
+        PrAppBrowserDoneFn done, void* PR_NULLABLE context);
     void (*PR_NULLABLE browserEvaluate)(PrApp* app, PrAppBrowser* browser, PrStringView script,
-                                        PrAppBrowserResultFn done, void* PR_NULLABLE context);
+        PrAppBrowserResultFn done, void* PR_NULLABLE context);
     void (*PR_NULLABLE browserCapture)(PrApp* app, PrAppBrowser* browser, PrRect rect, PrUVec2 size,
-                                       PrAppBrowserCaptureFn done, void* PR_NULLABLE context);
+        PrAppBrowserCaptureFn done, void* PR_NULLABLE context);
     void (*PR_NULLABLE browserShow)(PrApp* app, PrAppBrowser* browser, PrRect clip, PrRect frame);
     void (*PR_NULLABLE browserHide)(PrApp* app, PrAppBrowser* browser);
     void (*PR_NULLABLE browserPrint)(PrApp* app, PrAppBrowser* browser, PrStringView path, PrVec2 paper,
-                                     PrAppBrowserDoneFn done, void* PR_NULLABLE context);
+        PrAppBrowserDoneFn done, void* PR_NULLABLE context);
     uint32_t (*PR_NULLABLE browserProcesses)(PrApp* app, PrAppBrowser* browser, PrAppBrowserProcess* PR_NULLABLE out,
-                                             uint32_t capacity);
+        uint32_t capacity);
 };
 
 // Creates an application by the backend, as `desc` describes. A backend's own header documents what its windows and
@@ -484,18 +484,15 @@ void prAppBrowserResize(PrAppBrowser* browser, PrUVec2 viewport);
 
 // Loads the page at `url`, and calls `done` once it has loaded or failed. A page from a file URL, and its scripts, may
 // read the files beside it.
-void prAppBrowserLoad(PrAppBrowser* browser, PrStringView url, PrAppBrowserDoneFn done,
-                      void* PR_NULLABLE context);
+void prAppBrowserLoad(PrAppBrowser* browser, PrStringView url, PrAppBrowserDoneFn done, void* PR_NULLABLE context);
 
 // Runs `script` in the page as global code, and calls `done` with its result. If the result is a promise, `done` is
 // called once the promise settles.
-void prAppBrowserEvaluate(PrAppBrowser* browser, PrStringView script, PrAppBrowserResultFn done,
-                          void* PR_NULLABLE context);
+void prAppBrowserEvaluate(PrAppBrowser* browser, PrStringView script, PrAppBrowserResultFn done, void* PR_NULLABLE context);
 
 // Captures `rect` of the viewport, in CSS pixels, as the page is displayed once its latest changes have rendered, at
 // `size` pixels in sRGB, and calls `done` with the pixels.
-void prAppBrowserCapture(PrAppBrowser* browser, PrRect rect, PrUVec2 size, PrAppBrowserCaptureFn done,
-                         void* PR_NULLABLE context);
+void prAppBrowserCapture(PrAppBrowser* browser, PrRect rect, PrUVec2 size, PrAppBrowserCaptureFn done, void* PR_NULLABLE context);
 
 // Shows the page live in the application's window, over what the program presents. The viewport is scaled to fill
 // `frame` and clipped to `clip`, both in the window's logical pixels. The platform renders and composites the page on
@@ -510,7 +507,7 @@ void prAppBrowserHide(PrAppBrowser* browser);
 // `paper` is zero, as the page's print styles lay it out with backgrounds drawn, and calls `done` once the file is
 // written or the print failed. Returns NotSupported, and calls nothing, if the engine does not print.
 PrStatus prAppBrowserPrint(PrAppBrowser* browser, PrStringView path, PrVec2 paper, PrAppBrowserDoneFn done,
-                           void* PR_NULLABLE context);
+    void* PR_NULLABLE context);
 
 // Writes up to `capacity` of the processes that the engine runs the page in, other than the application's own, to
 // `out`, and returns how many it runs. Processes appear as the engine starts them, once a page begins to load, and an

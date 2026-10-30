@@ -25,8 +25,7 @@ constexpr InflateFormat kInflateFormat[] = {
     InflateFormat_Gzip, // PrCompressFormat_Gzip
 };
 
-PrStatus createDecoder(PrCompressCodec* codec, PrCompressFormat format,
-                       PrCompressDecoder* PR_NULLABLE* PR_NONNULL out) {
+PrStatus createDecoder(PrCompressCodec* codec, PrCompressFormat format, PrCompressDecoder* PR_NULLABLE* PR_NONNULL out) {
     BuiltinDecoder* decoder = alloc<BuiltinDecoder>();
     decoder->codec = codec;
     decoder->inflate = nullptr;
@@ -47,7 +46,7 @@ void destroyDecoder(PrCompressCodec*, PrCompressDecoder* decoder) {
 }
 
 PrStatus read(PrCompressCodec*, PrCompressDecoder* decoder, PrByteView input, bool final,
-              uint8_t* PR_NULLABLE output, size_t capacity, PrCompressRead* out) {
+        uint8_t* PR_NULLABLE output, size_t capacity, PrCompressRead* out) {
     BuiltinDecoder* builtin = static_cast<BuiltinDecoder*>(decoder);
     if (builtin->brotli != nullptr) {
         switch (brotliRead(builtin->brotli, input, final, &out->consumed, output, capacity, &out->written)) {
@@ -66,8 +65,7 @@ PrStatus read(PrCompressCodec*, PrCompressDecoder* decoder, PrByteView input, bo
                 return PrStatus_InvalidData;
         }
     }
-    InflateResult result = inflateRead(builtin->inflate, input, final, &out->consumed, output, capacity,
-                                       &out->written);
+    InflateResult result = inflateRead(builtin->inflate, input, final, &out->consumed, output, capacity, &out->written);
     switch (result) {
         case InflateResult_Input:
             out->progress = PrCompressProgress_Input;
@@ -92,7 +90,7 @@ size_t encodeBound(PrCompressCodec*, PrCompressFormat format, size_t size) {
 }
 
 PrStatus encode(PrCompressCodec*, PrCompressFormat format, PrCompressLevel level, PrByteView input, uint8_t* output,
-                size_t* written) {
+        size_t* written) {
     if (format == PrCompressFormat_Brotli)
         return PrStatus_NotSupported;
     *written = deflateEncode(kInflateFormat[format], level, input, output);

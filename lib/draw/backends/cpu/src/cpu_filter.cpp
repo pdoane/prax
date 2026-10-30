@@ -89,9 +89,10 @@ Image imageOf(const Evaluation& e, const CpuTarget& target) {
 PrIRect pixelsOf(const Evaluation& e, PrRect rect) {
     PrIRect device = prIRectRoundOut(prAffine2MapRect(e.inputs->transform, rect));
     const PrIRect& box = e.layer->box;
-    return prIRectIntersect(PrIRect{device.left - box.left, device.top - box.top, device.right - box.left,
-                         device.bottom - box.top},
-                            PrIRect{0, 0, int32_t(e.width), int32_t(e.height)});
+    return prIRectIntersect(PrIRect{
+        device.left - box.left, device.top - box.top, device.right - box.left,
+        device.bottom - box.top,
+    }, PrIRect{0, 0, int32_t(e.width), int32_t(e.height)});
 }
 
 // Makes the image transparent outside the box.
@@ -119,9 +120,10 @@ void convertSpace(const Evaluation& e, Image& image, bool linear) {
             continue;
         for (uint32_t c = 0; c < 3; ++c) {
             float straight = p[c] / p[3];
-            p[c] = (linear ? prColorTransferDecode(PrColorTransfer_Srgb, straight)
-                           : prColorTransferEncode(PrColorTransfer_Srgb, straight))
-                   * p[3];
+            if (linear)
+                p[c] = prColorTransferDecode(PrColorTransfer_Srgb, straight) * p[3];
+            else
+                p[c] = prColorTransferEncode(PrColorTransfer_Srgb, straight) * p[3];
         }
     }
 }
@@ -163,7 +165,7 @@ void extend(const Evaluation& e, Image& image, PrIRect region, PrImageEdgeMode e
                 continue;
             }
             memCopy(p, image.data + (size_t(region.top + sy) * e.width + uint32_t(region.left + sx)) * 4,
-                    4 * sizeof(float));
+                4 * sizeof(float));
         }
     }
 }
@@ -180,8 +182,7 @@ void blurImage(Evaluation& e, Image& image, float sigmaX, float sigmaY, PrImageE
 }
 
 // Replaces each value with the smallest or largest of its channel within `radius` pixels along one axis.
-void morphLine(float* values, uint32_t count, size_t stride, int32_t radius, PrDrawMorphologyOp op,
-               Array<float>& scratch) {
+void morphLine(float* values, uint32_t count, size_t stride, int32_t radius, PrDrawMorphologyOp op, Array<float>& scratch) {
     scratch.clear();
     scratch.reserve(count);
     for (uint32_t i = 0; i < count; ++i)
@@ -208,8 +209,7 @@ void morphImage(Evaluation& e, Image& image, float radiusX, float radiusY, PrDra
         }
         if (ry > 0) {
             for (uint32_t x = 0; x < e.width; ++x)
-                morphLine(image.data + size_t(x) * 4 + c, e.height, size_t(e.width) * 4, ry, op,
-                          e.scratch);
+                morphLine(image.data + size_t(x) * 4 + c, e.height, size_t(e.width) * 4, ry, op, e.scratch);
         }
     }
 }
@@ -252,7 +252,7 @@ Image tiled(const Evaluation& e, const Image& from, PrIRect tile) {
         for (uint32_t x = 0; x < e.width; ++x) {
             int32_t tx = tile.left + ((int32_t(x) - tile.left) % w + w) % w;
             memCopy(image.data + (size_t(y) * e.width + x) * 4,
-                    from.data + (size_t(ty) * e.width + uint32_t(tx)) * 4, 4 * sizeof(float));
+                from.data + (size_t(ty) * e.width + uint32_t(tx)) * 4, 4 * sizeof(float));
         }
     }
     return image;
@@ -386,7 +386,7 @@ float noise2(const PrImageNoise& n, uint32_t channel, float vx, float vy, const 
 
 // Returns the turbulence of one channel at a point of the group's space, stitched over the tile.
 float turbulence(const PrImageNoise& n, uint32_t channel, PrVec2 point, PrVec2 frequency,
-                 uint32_t octaves, PrDrawTurbulenceKind kind, bool stitching, PrRect tile) {
+        uint32_t octaves, PrDrawTurbulenceKind kind, bool stitching, PrRect tile) {
     Stitch stitch{};
     const Stitch* s = nullptr;
     if (stitching) {
@@ -445,8 +445,7 @@ const Image& inputOf(Evaluation& e, int32_t which) {
             return e.sourceAlpha;
         case PrDrawFilterInput_Backdrop:
             if (e.backdrop.data == nullptr)
-                e.backdrop = e.inputs->backdrop != nullptr ? imageOf(e, *e.inputs->backdrop)
-                                                           : newImage(e);
+                e.backdrop = e.inputs->backdrop != nullptr ? imageOf(e, *e.inputs->backdrop) : newImage(e);
             return e.backdrop;
         default:
             return e.results.data[which];
@@ -473,8 +472,7 @@ float transfer(const PrDrawTransfer& t, float c) {
             if (t.valueCount == 1)
                 return t.values[0];
             float at = c * float(t.valueCount - 1);
-            uint32_t k =
-                minF32(at, float(t.valueCount - 2)) < 0 ? 0 : uint32_t(minF32(at, float(t.valueCount - 2)));
+            uint32_t k = minF32(at, float(t.valueCount - 2)) < 0 ? 0 : uint32_t(minF32(at, float(t.valueCount - 2)));
             return t.values[k] + (at - float(k)) * (t.values[k + 1] - t.values[k]);
         }
         case PrDrawTransferKind_Discrete: {
@@ -554,8 +552,10 @@ void convolve(Evaluation& e, const PrDrawFilterNode& node, const Image& in, PrIm
             float* o = out.data + (size_t(y) * e.width + uint32_t(x)) * 4;
             const float* original = in.data + (size_t(y) * e.width + uint32_t(x)) * 4;
             if (k.preserveAlpha) {
-                float result[4] = {sum[0] / divisor + k.bias, sum[1] / divisor + k.bias,
-                                   sum[2] / divisor + k.bias, original[3]};
+                float result[4] = {
+                    sum[0] / divisor + k.bias, sum[1] / divisor + k.bias,
+                    sum[2] / divisor + k.bias, original[3],
+                };
                 premultiply(result, o);
             } else {
                 o[3] = clampF32(sum[3] / divisor + k.bias, 0, 1);
@@ -566,8 +566,7 @@ void convolve(Evaluation& e, const PrDrawFilterNode& node, const Image& in, PrIm
     }
 }
 
-void displace(const Evaluation& e, const PrDrawFilterNode& node, const Image& in,
-              const Image& map, Image& out) {
+void displace(const Evaluation& e, const PrDrawFilterNode& node, const Image& in, const Image& map, Image& out) {
     float scaleX = node.displacement.scale * e.scaleX;
     float scaleY = node.displacement.scale * e.scaleY;
     for (uint32_t y = 0; y < e.height; ++y) {
@@ -608,14 +607,10 @@ void light(const Evaluation& e, const PrDrawFilterNode& node, const Image& in, I
     float coneCos = l.light.coneAngle > 0 ? cosF32(l.light.coneAngle) : -1;
     for (int32_t y = 0; y < int32_t(e.height); ++y) {
         for (int32_t x = 0; x < int32_t(e.width); ++x) {
-            float nx =
-                -surface / 4
-                * ((alphaAt(x + 1, y - 1) + 2 * alphaAt(x + 1, y) + alphaAt(x + 1, y + 1))
-                   - (alphaAt(x - 1, y - 1) + 2 * alphaAt(x - 1, y) + alphaAt(x - 1, y + 1)));
-            float ny =
-                -surface / 4
-                * ((alphaAt(x - 1, y + 1) + 2 * alphaAt(x, y + 1) + alphaAt(x + 1, y + 1))
-                   - (alphaAt(x - 1, y - 1) + 2 * alphaAt(x, y - 1) + alphaAt(x + 1, y - 1)));
+            float nx = -surface / 4 * ((alphaAt(x + 1, y - 1) + 2 * alphaAt(x + 1, y) + alphaAt(x + 1, y + 1)) -
+                (alphaAt(x - 1, y - 1) + 2 * alphaAt(x - 1, y) + alphaAt(x - 1, y + 1)));
+            float ny = -surface / 4 * ((alphaAt(x - 1, y + 1) + 2 * alphaAt(x, y + 1) + alphaAt(x + 1, y + 1)) -
+                (alphaAt(x - 1, y - 1) + 2 * alphaAt(x, y - 1) + alphaAt(x + 1, y - 1)));
             float nLength = sqrtF32(nx * nx + ny * ny + 1);
             float n[3] = {nx / nLength, ny / nLength, 1 / nLength};
             float z = surface * alphaAt(x, y) * scale;
@@ -635,8 +630,7 @@ void light(const Evaluation& e, const PrDrawFilterNode& node, const Image& in, I
                     c = length > 0 ? c / length : 0;
                 if (l.light.kind == PrDrawLightKind_Spot) {
                     float along = -(lv[0] * spot[0] + lv[1] * spot[1] + lv[2] * spot[2]);
-                    float factor =
-                        along < coneCos ? 0 : powF32(maxF32(along, 0), l.light.spotExponent);
+                    float factor = along < coneCos ? 0 : powF32(maxF32(along, 0), l.light.spotExponent);
                     for (float& c : color)
                         c *= factor;
                 }
@@ -677,10 +671,8 @@ void imageNode(Evaluation& e, const PrDrawFilterNode& node, Image& out) {
     // A list renders at the size in pixels that its rect covers.
     PrRect covered = prAffine2MapRect(e.inputs->transform, r);
     PrRect texels{};
-    const CpuTexture* texture = e.inputs->sourceTexture(
-        e.inputs->context, &node.image.source,
-        uint32_t(ceilF32(prRectWidth(covered))),
-        uint32_t(ceilF32(prRectHeight(covered))), &texels);
+    const CpuTexture* texture = e.inputs->sourceTexture(e.inputs->context, &node.image.source,
+        uint32_t(ceilF32(prRectWidth(covered))), uint32_t(ceilF32(prRectHeight(covered))), &texels);
     if (texture == nullptr)
         return;
     const CpuTextureLevel& level = texture->levels.data[0];
@@ -688,20 +680,19 @@ void imageNode(Evaluation& e, const PrDrawFilterNode& node, Image& out) {
         x = x < 0 ? 0 : x >= int32_t(level.width) ? int32_t(level.width) - 1 : x;
         y = y < 0 ? 0 : y >= int32_t(level.height) ? int32_t(level.height) - 1 : y;
         float texel[4];
-        cpuReadPixel(level.data + (size_t(y) * level.width + uint32_t(x)) * cpuPixelBytes(level.format), level.format,
-                     texel);
+        cpuReadPixel(level.data + (size_t(y) * level.width + uint32_t(x)) * cpuPixelBytes(level.format), level.format, texel);
         return texel[c];
     };
     for (uint32_t y = 0; y < e.height; ++y) {
         for (uint32_t x = 0; x < e.width; ++x) {
-            PrVec2 p = prAffine2MapPoint(back, PrVec2{float(x) + 0.5f + float(e.layer->box.left),
-                                                       float(y) + 0.5f + float(e.layer->box.top)});
+            PrVec2 p = prAffine2MapPoint(back, PrVec2{
+                float(x) + 0.5f + float(e.layer->box.left),
+                float(y) + 0.5f + float(e.layer->box.top),
+            });
             if (p.x < r.left || p.x >= r.right || p.y < r.top || p.y >= r.bottom)
                 continue;
-            float u = texels.left
-                      + (p.x - r.left) / prRectWidth(r) * prRectWidth(texels) - 0.5f;
-            float v = texels.top
-                      + (p.y - r.top) / prRectHeight(r) * prRectHeight(texels) - 0.5f;
+            float u = texels.left + (p.x - r.left) / prRectWidth(r) * prRectWidth(texels) - 0.5f;
+            float v = texels.top + (p.y - r.top) / prRectHeight(r) * prRectHeight(texels) - 0.5f;
             float* o = out.data + (size_t(y) * e.width + x) * 4;
             if ((node.image.sampling & PrDrawSamplingFlag_Kind) == PrDrawSampling_Nearest) {
                 for (uint32_t c = 0; c < 4; ++c)
@@ -736,7 +727,7 @@ void turbulenceNode(const Evaluation& e, const PrDrawFilterNode& node, PrRect gr
             float s[4];
             for (uint32_t c = 0; c < 4; ++c) {
                 float value = turbulence(*noise, c, p, node.turbulence.baseFrequency, node.turbulence.octaves,
-                                         node.turbulence.kind, node.turbulence.stitch, tile);
+                    node.turbulence.kind, node.turbulence.stitch, tile);
                 s[c] = node.turbulence.kind == PrDrawTurbulenceKind_FractalNoise ? (value + 1) / 2 : value;
             }
             premultiply(s, out.data + (size_t(y) * e.width + uint32_t(x)) * 4);
@@ -750,8 +741,7 @@ void progressiveBlur(Evaluation& e, const PrDrawFilterNode& node, const Image& i
     alpha.reserve(uint32_t(pixelCount(e)));
     alpha.count = uint32_t(pixelCount(e));
     const PrIRect& box = e.layer->box;
-    e.inputs->brushAlpha(e.inputs->context, &node.progressive.brush, e.inputs->transform, box,
-                         alpha.data);
+    e.inputs->brushAlpha(e.inputs->context, &node.progressive.brush, e.inputs->transform, box, alpha.data);
     // Levels of blur from no sigma to the largest sigma, mixed by the brush's alpha.
     Image levels[kProgressiveLevels];
     float sigmas[kProgressiveLevels];
@@ -769,8 +759,7 @@ void progressiveBlur(Evaluation& e, const PrDrawFilterNode& node, const Image& i
         float span = sigmas[k + 1] - sigmas[k];
         float t = span > 0 ? clampF32((wanted - sigmas[k]) / span, 0, 1) : 0;
         for (uint32_t c = 0; c < 4; ++c)
-            out.data[i * 4 + c] = levels[k].data[i * 4 + c]
-                                  + (levels[k + 1].data[i * 4 + c] - levels[k].data[i * 4 + c]) * t;
+            out.data[i * 4 + c] = levels[k].data[i * 4 + c] + (levels[k + 1].data[i * 4 + c] - levels[k].data[i * 4 + c]) * t;
     }
     for (Image& level : levels)
         release(level);
@@ -816,8 +805,7 @@ Image evaluate(Evaluation& e, const PrDrawFilterNode& node, PrIRect region) {
     float sy = e.scaleY;
     switch (node.kind) {
         case PrDrawFilterKind_Offset:
-            out = shifted(e, in[0], node.offset.x * e.inputs->transform.a,
-                          node.offset.y * e.inputs->transform.d);
+            out = shifted(e, in[0], node.offset.x * e.inputs->transform.a, node.offset.y * e.inputs->transform.d);
             break;
         case PrDrawFilterKind_Flood: {
             out = newImage(e);
@@ -853,10 +841,8 @@ Image evaluate(Evaluation& e, const PrDrawFilterNode& node, PrIRect region) {
         case PrDrawFilterKind_Composite:
         case PrDrawFilterKind_Blend: {
             out = newImage(e);
-            PrDrawComposite op =
-                node.kind == PrDrawFilterKind_Composite ? node.composite : PrDrawComposite_SourceOver;
-            PrDrawBlendMode blend =
-                node.kind == PrDrawFilterKind_Blend ? node.blend : PrDrawBlendMode_Normal;
+            PrDrawComposite op = node.kind == PrDrawFilterKind_Composite ? node.composite : PrDrawComposite_SourceOver;
+            PrDrawBlendMode blend = node.kind == PrDrawFilterKind_Blend ? node.blend : PrDrawBlendMode_Normal;
             for (size_t i = 0; i < count; ++i)
                 cpuCompositeColors(in[0].data + i * 4, in[1].data + i * 4, op, blend, out.data + i * 4);
             break;
@@ -867,12 +853,9 @@ Image evaluate(Evaluation& e, const PrDrawFilterNode& node, PrIRect region) {
                 const float* a = in[0].data + i * 4;
                 const float* b = in[1].data + i * 4;
                 float* o = out.data + i * 4;
-                o[3] = clampF32(
-                    node.k[0] * a[3] * b[3] + node.k[1] * a[3] + node.k[2] * b[3] + node.k[3], 0, 1);
+                o[3] = clampF32(node.k[0] * a[3] * b[3] + node.k[1] * a[3] + node.k[2] * b[3] + node.k[3], 0, 1);
                 for (uint32_t c = 0; c < 3; ++c)
-                    o[c] = clampF32(node.k[0] * a[c] * b[c] + node.k[1] * a[c] + node.k[2] * b[c]
-                                        + node.k[3],
-                                    0, o[3]);
+                    o[c] = clampF32(node.k[0] * a[c] * b[c] + node.k[1] * a[c] + node.k[2] * b[c] + node.k[3], 0, o[3]);
             }
             break;
         case PrDrawFilterKind_Merge:
@@ -896,8 +879,7 @@ Image evaluate(Evaluation& e, const PrDrawFilterNode& node, PrIRect region) {
             break;
         case PrDrawFilterKind_Morphology:
             out = copyImage(e, in[0]);
-            morphImage(e, out, node.morphology.radius.x * sx, node.morphology.radius.y * sy,
-                       node.morphology.op);
+            morphImage(e, out, node.morphology.radius.x * sx, node.morphology.radius.y * sy, node.morphology.op);
             break;
         case PrDrawFilterKind_Convolution: {
             Image extended = copyImage(e, in[0]);
@@ -915,9 +897,10 @@ Image evaluate(Evaluation& e, const PrDrawFilterNode& node, PrIRect region) {
             // The tile in the offscreen's pixels, clipped to the offscreen.
             PrIRect device = prIRectRoundOut(prAffine2MapRect(e.inputs->transform, node.tile));
             const PrIRect& box = e.layer->box;
-            PrIRect tile = prIRectIntersect(PrIRect{device.left - box.left, device.top - box.top,
-                                     device.right - box.left, device.bottom - box.top},
-                                            PrIRect{0, 0, int32_t(e.width), int32_t(e.height)});
+            PrIRect tile = prIRectIntersect(PrIRect{
+                device.left - box.left, device.top - box.top,
+                device.right - box.left, device.bottom - box.top,
+            }, PrIRect{0, 0, int32_t(e.width), int32_t(e.height)});
             out = tiled(e, in[0], tile);
             break;
         }
@@ -929,10 +912,9 @@ Image evaluate(Evaluation& e, const PrDrawFilterNode& node, PrIRect region) {
             break;
         case PrDrawFilterKind_DropShadow: {
             Image alpha = alphaOf(e, in[0]);
-            blurImage(e, alpha, node.shadow.sigma.x * sx, node.shadow.sigma.y * sy,
-                      PrImageEdgeMode_None);
+            blurImage(e, alpha, node.shadow.sigma.x * sx, node.shadow.sigma.y * sy, PrImageEdgeMode_None);
             out = shifted(e, alpha, node.shadow.offset.x * e.inputs->transform.a,
-                          node.shadow.offset.y * e.inputs->transform.d);
+                node.shadow.offset.y * e.inputs->transform.d);
             release(alpha);
             colorize(e, out, node.shadow.color, linear);
             over(e, in[0], out);
@@ -941,10 +923,9 @@ Image evaluate(Evaluation& e, const PrDrawFilterNode& node, PrIRect region) {
         case PrDrawFilterKind_InnerShadow: {
             Image empty = inverseAlphaOf(e, in[0]);
             Image moved = shifted(e, empty, node.shadow.offset.x * e.inputs->transform.a,
-                                  node.shadow.offset.y * e.inputs->transform.d);
+                node.shadow.offset.y * e.inputs->transform.d);
             release(empty);
-            blurImage(e, moved, node.shadow.sigma.x * sx, node.shadow.sigma.y * sy,
-                      PrImageEdgeMode_Duplicate);
+            blurImage(e, moved, node.shadow.sigma.x * sx, node.shadow.sigma.y * sy, PrImageEdgeMode_Duplicate);
             colorize(e, moved, node.shadow.color, linear);
             out = copyImage(e, in[0]);
             atop(e, moved, out);
@@ -1034,9 +1015,11 @@ void cpuApplyFilter(const PrDrawFilter* filter, const CpuFilterInputs& inputs, c
     e.source = imageOf(e, layer);
     const PrDrawFilterNode* nodes = prDrawFilterNodes(filter);
     for (uint32_t i = 0; i < prDrawFilterNodeCount(filter); ++i) {
-        PrIRect nodeRegion = prRectIsEmpty(nodes[i].region)
-                             ? e.region
-                             : prIRectIntersect(e.region, pixelsOf(e, nodes[i].region));
+        PrIRect nodeRegion;
+        if (prRectIsEmpty(nodes[i].region))
+            nodeRegion = e.region;
+        else
+            nodeRegion = prIRectIntersect(e.region, pixelsOf(e, nodes[i].region));
         e.results.push(evaluate(e, nodes[i], nodeRegion));
         e.regions.push(nodeRegion);
     }
@@ -1045,7 +1028,7 @@ void cpuApplyFilter(const PrDrawFilter* filter, const CpuFilterInputs& inputs, c
         uint8_t* row = cpuTargetRow(layer, layer.box.top + int32_t(y));
         for (uint32_t x = 0; x < e.width; ++x)
             cpuWritePixel(row + size_t(x) * cpuPixelBytes(layer.format), layer.format,
-                          result.data + (size_t(y) * e.width + x) * 4);
+                result.data + (size_t(y) * e.width + x) * 4);
     }
     for (uint32_t i = 0; i < e.results.count; ++i)
         release(e.results.data[i]);
@@ -1074,8 +1057,7 @@ void cpuBlurCoverage(const CpuCoverage& coverage, float sigmaX, float sigmaY) {
     prImageBlur(pixels, PrPixelFormat_RF32, PrVec2{sigmaX, sigmaY}, PrImageEdgeMode_None);
     for (uint32_t y = 0; y < height; ++y) {
         for (uint32_t x = 0; x < width; ++x)
-            coverage.data[y * coverage.stride + x] =
-                uint8_t(clampF32(values.data[y * width + x], 0, 255) + 0.5f);
+            coverage.data[y * coverage.stride + x] = uint8_t(clampF32(values.data[y * width + x], 0, 255) + 0.5f);
     }
     values.reset();
 }

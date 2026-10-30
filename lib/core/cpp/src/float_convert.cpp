@@ -85,8 +85,7 @@ uint64_t mulShift(uint64_t m, const Pow5* factor, int32_t shift) {
 // Computes the shortest decimal that identifies a binary float, using the Ryu tables. Their precision covers every
 // binary format. `mantissaBits` and `bias` identify the format.
 
-ShortestDecimal shortestDecimal(uint32_t mantissaBits, int32_t bias, uint64_t ieeeMantissa,
-                                uint32_t ieeeExponent) {
+ShortestDecimal shortestDecimal(uint32_t mantissaBits, int32_t bias, uint64_t ieeeMantissa, uint32_t ieeeExponent) {
     int32_t e2;
     uint64_t m2;
     if (ieeeExponent == 0) {
@@ -125,8 +124,7 @@ ShortestDecimal shortestDecimal(uint32_t mantissaBits, int32_t bias, uint64_t ie
             // The loop below removes a digit even if it does not run. This computes that digit, using the power one
             // lower.
             int32_t l = kRyuPow5InvBitcount + pow5Bits(int32_t(q - 1)) - 1;
-            lastRemovedDigit =
-                uint8_t(mulShift(mv, &kRyuPow5InvSplit[q - 1], -e2 + int32_t(q) - 1 + l) % 10);
+            lastRemovedDigit = uint8_t(mulShift(mv, &kRyuPow5InvSplit[q - 1], -e2 + int32_t(q) - 1 + l) % 10);
         }
         // Above 24, 5^q exceeds mv and divides none of the three.
         if (q <= 24) {
@@ -286,8 +284,7 @@ AdjustedMantissa eiselLemire(const BinaryFormat* format, int32_t q, uint64_t w) 
         return {mantissa, power2};
     }
 
-    if (low <= 1 && q >= format->minRoundToEven && q <= format->maxRoundToEven
-        && (mantissa & 3) == 1) {
+    if (low <= 1 && q >= format->minRoundToEven && q <= format->maxRoundToEven && (mantissa & 3) == 1) {
         // Exactly halfway between two floats, which rounds to even.
         if (mantissa << (upperBit + 64 - format->mantissaBits - 3) == high)
             mantissa &= ~1ull;
@@ -580,8 +577,7 @@ PR_NOINLINE AdjustedMantissa exactDecimalToBinary(const BinaryFormat* format, Pr
     // lowBit is the exponent of the mantissa's least significant bit. The operands' widths estimate it to within one
     // bit either way, and the correction never overshoots.
     int32_t floorBit = minLowBit(format);
-    int32_t lowBit =
-        int32_t(bitLength(&num)) - int32_t(bitLength(&den)) + scale - int32_t(format->mantissaBits);
+    int32_t lowBit = int32_t(bitLength(&num)) - int32_t(bitLength(&den)) + scale - int32_t(format->mantissaBits);
 
     uint64_t mantissa = 0;
     BigUint<kParseLimbs> remainder;
@@ -768,8 +764,7 @@ bool exactF64(const DecimalScan* scan, double* out) {
 }
 
 // Converts every value that the exact small-value path does not handle.
-PR_NOINLINE AdjustedMantissa decimalToBinary(const BinaryFormat* format, const DecimalScan* scan,
-                                             PrStringView input) {
+PR_NOINLINE AdjustedMantissa decimalToBinary(const BinaryFormat* format, const DecimalScan* scan, PrStringView input) {
     AdjustedMantissa adjusted = eiselLemire(format, scan->exponent10, scan->mantissa);
     if (scan->truncated && adjusted.power2 != kApproximationFailed) {
         // The dropped digits increase the value. The approximation holds if adding one to the significand gives the

@@ -136,11 +136,11 @@ struct LayoutContainingBlock {
 // Returns the inline-start offset, in the containing block of `direction`, of a box `size` long whose line-left edge is
 // at `left`. layoutLineLeftFromInlineStart does the reverse.
 inline PrLayoutUnit layoutInlineStartFromLeft(const LayoutContainingBlock& cb, PrTextDirection direction,
-                                              PrLayoutUnit left, PrLayoutUnit size) {
+        PrLayoutUnit left, PrLayoutUnit size) {
     return direction == PrTextDirection_Ltr ? left - cb.lineLeft : cb.lineRight - (left + size);
 }
 inline PrLayoutUnit layoutLineLeftFromInlineStart(const LayoutContainingBlock& cb, PrTextDirection direction,
-                                                  PrLayoutUnit inlineStart, PrLayoutUnit size) {
+        PrLayoutUnit inlineStart, PrLayoutUnit size) {
     return direction == PrTextDirection_Ltr ? cb.lineLeft + inlineStart : cb.lineRight - inlineStart - size;
 }
 
@@ -163,8 +163,7 @@ struct LayoutFit {
 // Returns the space within the containing block between the floats that meet [y, y + h): past the line-right edge of
 // every left float and before the line-left edge of every right float. A range of no size meets the floats that hold y.
 // The Among form considers only the first `count` floats, those placed before a mark.
-LayoutSpan layoutExclusionsAvailableAmong(const LayoutContainingBlock& cb, PrLayoutUnit y, PrLayoutUnit h,
-                                          uint32_t count);
+LayoutSpan layoutExclusionsAvailableAmong(const LayoutContainingBlock& cb, PrLayoutUnit y, PrLayoutUnit h, uint32_t count);
 inline LayoutSpan layoutExclusionsAvailable(const LayoutContainingBlock& cb, PrLayoutUnit y, PrLayoutUnit h) {
     return layoutExclusionsAvailableAmong(cb, y, h, cb.exclusions->floats.count);
 }
@@ -177,7 +176,7 @@ PrLayoutUnit layoutExclusionsNextEdge(const LayoutContainingBlock& cb, PrLayoutU
 // or no float meets that range, together with the space at that offset. Each step moves down to a distinct float
 // block-end, so the search takes at most one step for each float.
 LayoutFit layoutExclusionsFirstFit(const LayoutContainingBlock& cb, PrLayoutUnit y, PrLayoutUnit h,
-                                   PrLayoutUnit inlineSize);
+    PrLayoutUnit inlineSize);
 
 // Returns the greatest block-end of the floats on `sides`, or kLayoutOffsetNone if there is none. Records the read as a
 // floor compared with `limit`.
@@ -186,8 +185,7 @@ PrLayoutUnit layoutExclusionsClearance(const LayoutContainingBlock& cb, LayoutLi
 // Places a float whose margin box is `inlineSize` by `blockSize` on `side`, at or below `top` and below the floats on
 // `clears` (CSS2/#float-position). Adds the float and returns its margin box.
 LayoutExclusion layoutExclusionsPlace(const LayoutContainingBlock& cb, PrLayoutUnit inlineSize,
-                                      PrLayoutUnit blockSize, LayoutLineSides side, LayoutLineSides clears,
-                                      PrLayoutUnit top);
+    PrLayoutUnit blockSize, LayoutLineSides side, LayoutLineSides clears, PrLayoutUnit top);
 
 } // namespace pr_impl
 

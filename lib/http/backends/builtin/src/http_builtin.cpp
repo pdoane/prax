@@ -184,7 +184,7 @@ bool listHas(PrStringView value, PrStringView token) {
 PrStringView listLast(PrStringView value) {
     size_t comma = stringFindLast(value, ',');
     return stringTrim(comma == value.size ? value : stringSlice(value, comma + 1, value.size - comma - 1),
-                      asciiIsTabOrSpace);
+        asciiIsTabOrSpace);
 }
 
 void hold(Held* held) {
@@ -350,8 +350,8 @@ bool parseHead(Connection* connection, Exchange* exchange) {
         }
         PrStringView head = stringSlice(input, 0, at);
         lineAt(head, 0, &line, &next);
-        if (line.size < 12 || !stringStartsWith(line, "HTTP/1.") || line.data[8] != ' '
-            || !asciiIsDigit(line.data[9]) || !asciiIsDigit(line.data[10]) || !asciiIsDigit(line.data[11])) {
+        if (line.size < 12 || !stringStartsWith(line, "HTTP/1.") || line.data[8] != ' ' ||
+                !asciiIsDigit(line.data[9]) || !asciiIsDigit(line.data[10]) || !asciiIsDigit(line.data[11])) {
             failExchange(exchange, PrNetError_Protocol);
             return false;
         }
@@ -386,8 +386,10 @@ bool parseHead(Connection* connection, Exchange* exchange) {
                 return false;
             }
             PrStringView value = stringTrim(stringSlice(line, colon + 1, line.size - colon - 1), asciiIsTabOrSpace);
-            exchange->fields.push(FieldSpan{lineStart, uint32_t(name.size), uint32_t(value.data - stored.data),
-                                            uint32_t(value.size)});
+            exchange->fields.push(FieldSpan{
+                lineStart, uint32_t(name.size), uint32_t(value.data - stored.data),
+                uint32_t(value.size),
+            });
             if (asciiEqualsFold(name, "transfer-encoding")) {
                 encoded = true;
                 chunked = asciiEqualsFold(listLast(value), "chunked");
@@ -483,8 +485,8 @@ bool parseContent(Connection* connection, Exchange* exchange) {
                     size = size * 16 + asciiHexValue(line.data[digits]);
                     ++digits;
                 }
-                if (digits == 0 || (digits < line.size && line.data[digits] != ';' && line.data[digits] != ' '
-                                    && line.data[digits] != '\t')) {
+                if (digits == 0 || (digits < line.size && line.data[digits] != ';' && line.data[digits] != ' ' &&
+                        line.data[digits] != '\t')) {
                     failExchange(exchange, PrNetError_Protocol);
                     return false;
                 }
@@ -585,8 +587,7 @@ void streamEnded(Connection* connection, PrNetError error) {
         return;
     }
     BuiltinHttp* http = connection->http;
-    if (exchange->state == ExchangeState_Head && !connection->arrived && connection->served != 0
-        && !exchange->retried) {
+    if (exchange->state == ExchangeState_Head && !connection->arrived && connection->served != 0 && !exchange->retried) {
         // A kept connection that the server closed before it answered. The request is sent again on a new one.
         exchange->retried = true;
         exchange->state = ExchangeState_Queued;
@@ -619,8 +620,8 @@ void connectionEvent(void* PR_NULLABLE context, PrNetStream* stream, PrNetStream
             if (!connection->held.dead) {
                 // Content that the exchange has no room for yet is parsed as the client reads.
                 Exchange* exchange = connection->exchange;
-                if (exchange != nullptr && exchange->state == ExchangeState_Content && roomOf(exchange) == 0
-                    && connection->inputStart != connection->input.count)
+                if (exchange != nullptr && exchange->state == ExchangeState_Content && roomOf(exchange) == 0 &&
+                        connection->inputStart != connection->input.count)
                     connection->ended = true;
                 else
                     streamEnded(connection, PrNetError_None);
@@ -781,8 +782,8 @@ PrStatus serializeRequest(const PrHttpRequestDesc* desc, const PrUrl* url, TextB
         const PrHttpHeader& field = desc->headers[i];
         if (!isToken(field.name) || !isFieldValue(field.value))
             return PrStatus_InvalidData;
-        if (asciiEqualsFold(field.name, "host") || asciiEqualsFold(field.name, "content-length")
-            || asciiEqualsFold(field.name, "transfer-encoding") || asciiEqualsFold(field.name, "connection"))
+        if (asciiEqualsFold(field.name, "host") || asciiEqualsFold(field.name, "content-length") ||
+                asciiEqualsFold(field.name, "transfer-encoding") || asciiEqualsFold(field.name, "connection"))
             continue;
         textAppend(out, field.name);
         textAppend(out, ": ");
@@ -899,8 +900,10 @@ PrHttpHeader exchangeHeader(const PrHttp*, const PrHttpExchange* handle, uint32_
     const Exchange* exchange = static_cast<const Exchange*>(handle);
     PrStringView stored = viewOf(exchange->response);
     const FieldSpan& span = exchange->fields.data[index];
-    return PrHttpHeader{stringSlice(stored, span.nameStart, span.nameSize),
-                        stringSlice(stored, span.valueStart, span.valueSize)};
+    return PrHttpHeader{
+        stringSlice(stored, span.nameStart, span.nameSize),
+        stringSlice(stored, span.valueStart, span.valueSize),
+    };
 }
 
 size_t exchangeRead(PrHttp* base, PrHttpExchange* handle, uint8_t* output, size_t capacity) {
@@ -915,8 +918,8 @@ size_t exchangeRead(PrHttp* base, PrHttpExchange* handle, uint8_t* output, size_
     }
     // Input that waited for room is parsed in a task, so that its events come after this call.
     Connection* connection = exchange->connection;
-    if (connection != nullptr && !connection->resumePosted
-        && (connection->inputStart != connection->input.count || connection->stalled || connection->ended)) {
+    if (connection != nullptr && !connection->resumePosted &&
+            (connection->inputStart != connection->input.count || connection->stalled || connection->ended)) {
         connection->resumePosted = true;
         hold(&connection->held);
         prNetPost(base->net, resume, connection);

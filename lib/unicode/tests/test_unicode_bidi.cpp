@@ -12,9 +12,11 @@ namespace pr_impl {
 
 namespace {
 
-const char* const kClassNames[] = {"L",   "R",   "AL",  "EN",  "ES",  "ET",  "AN",  "CS",
-                                   "NSM", "BN",  "B",   "S",   "WS",  "ON",  "LRE", "LRO",
-                                   "RLE", "RLO", "PDF", "LRI", "RLI", "FSI", "PDI"};
+const char* const kClassNames[] = {
+    "L",   "R",   "AL",  "EN",  "ES",  "ET",  "AN",  "CS",
+    "NSM", "BN",  "B",   "S",   "WS",  "ON",  "LRE", "LRO",
+    "RLE", "RLO", "PDF", "LRI", "RLI", "FSI", "PDI",
+};
 
 PrUnicodeBidiClass classNamed(const std::string& name) {
     for (uint32_t i = 0; i < countOf(kClassNames); ++i)
@@ -42,11 +44,11 @@ struct Line {
 
 // Resolves the text as one line of a paragraph in the given direction.
 Line resolveLine(const std::vector<PrUnicodeBidiClass>& classes, const std::vector<uint32_t>* codePoints,
-                 PrUnicodeBidiDirection direction, uint8_t* paragraphLevel) {
+        PrUnicodeBidiDirection direction, uint8_t* paragraphLevel) {
     uint32_t count = uint32_t(classes.size());
     std::vector<uint8_t> levels(count);
-    *paragraphLevel = prUnicodeBidiResolve(classes.data(), codePoints ? codePoints->data() : nullptr,
-                                           count, direction, levels.data());
+    *paragraphLevel = prUnicodeBidiResolve(classes.data(), codePoints ? codePoints->data() : nullptr, count, direction,
+        levels.data());
     prUnicodeBidiLineLevels(classes.data(), count, *paragraphLevel, levels.data());
     std::vector<uint32_t> order(count);
     prUnicodeBidiReorder(levels.data(), count, order.data());
@@ -125,8 +127,10 @@ TEST_CASE("levels and orders are as every case of BidiTest.txt says") {
         while (in >> name)
             classes.push_back(classNamed(name));
         int directions = std::stoi(parts[1]);
-        const PrUnicodeBidiDirection kBits[3] = {PrUnicodeBidiDirection_Auto, PrUnicodeBidiDirection_LeftToRight,
-                                        PrUnicodeBidiDirection_RightToLeft};
+        const PrUnicodeBidiDirection kBits[3] = {
+            PrUnicodeBidiDirection_Auto, PrUnicodeBidiDirection_LeftToRight,
+            PrUnicodeBidiDirection_RightToLeft,
+        };
         for (int bit = 0; bit < 3; ++bit) {
             if ((directions & (1 << bit)) == 0)
                 continue;
@@ -168,13 +172,15 @@ TEST_CASE("levels and orders are as every case of BidiCharacterTest.txt says") {
             codePoints.push_back(uint32_t(std::stoul(hex, nullptr, 16)));
             classes.push_back(prUnicodeBidiClass(codePoints.back()));
         }
-        const PrUnicodeBidiDirection kDirections[3] = {PrUnicodeBidiDirection_LeftToRight,
-                                              PrUnicodeBidiDirection_RightToLeft, PrUnicodeBidiDirection_Auto};
+        const PrUnicodeBidiDirection kDirections[3] = {
+            PrUnicodeBidiDirection_LeftToRight,
+            PrUnicodeBidiDirection_RightToLeft, PrUnicodeBidiDirection_Auto,
+        };
         uint8_t paragraph = 0;
         Line line = resolveLine(classes, &codePoints, kDirections[std::stoi(parts[1])], &paragraph);
         ++cases;
-        bool ok = paragraph == std::stoi(parts[2]) && line.levels == trimmed(parts[3])
-                  && line.order == trimmed(parts.size() > 4 ? parts[4] : std::string());
+        bool ok = paragraph == std::stoi(parts[2]) && line.levels == trimmed(parts[3]) &&
+            line.order == trimmed(parts.size() > 4 ? parts[4] : std::string());
         if (!ok && ++failures <= 20) {
             INFO(data);
             CHECK(int(paragraph) == std::stoi(parts[2]));

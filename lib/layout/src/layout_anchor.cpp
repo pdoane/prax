@@ -25,8 +25,8 @@ LayoutAnchor* anchorOf(LayoutAnchoring& anchoring, PrLayoutNode container) {
 // Returns true if `node` names a live node of the tree.
 bool isLive(const LayoutTree* tree, PrLayoutNode node) {
     LayoutNodeIndex index = LayoutNodeIndex(node);
-    return index != kPrLayoutNodeNone && index < tree->nodes.count && tree->nodes.data[index].live
-        && tree->nodes.data[index].generation == uint32_t(node >> 32);
+    return index != kPrLayoutNodeNone && index < tree->nodes.count && tree->nodes.data[index].live &&
+        tree->nodes.data[index].generation == uint32_t(node >> 32);
 }
 
 // The axis and the edge that a container's block-start edge is at.
@@ -138,15 +138,19 @@ Candidate candidateOf(const LayoutTree* tree, LayoutNodeIndex node, const Contai
     if (n.kind == PrLayoutNodeKind_Text)
         return Candidate_Selectable;
     const PrLayoutBoxStyle& box = layoutBoxStyle(tree->styles, n.style);
-    if (box.overflowAnchor == PrLayoutOverflowAnchor_None || box.position == PrLayoutPosition_Fixed
-        || box.position == PrLayoutPosition_Sticky)
+    if (box.overflowAnchor == PrLayoutOverflowAnchor_None || box.position == PrLayoutPosition_Fixed ||
+            box.position == PrLayoutPosition_Sticky)
         return Candidate_Skipped;
     // A box out of flow whose containing block is outside the container does not move with its content.
     if (box.position == PrLayoutPosition_Absolute && layoutIsOutOfFlow(tree, node)) {
         LayoutNodeIndex containing = kPrLayoutNodeNone;
         layoutNodeHolder(tree, node, &containing);
-        if (containing == kPrLayoutNodeNone ? container.node != kPrLayoutNodeNone
-                                            : !isWithin(tree, containing, container.node))
+        bool outside;
+        if (containing == kPrLayoutNodeNone)
+            outside = container.node != kPrLayoutNodeNone;
+        else
+            outside = !isWithin(tree, containing, container.node);
+        if (outside)
             return Candidate_Skipped;
     }
     if (layoutIsInlineBox(tree, node) || layoutCachePlaced(tree->cache, node) == nullptr)
@@ -178,8 +182,10 @@ PrLayoutRect boundsOf(LayoutTree* tree, LayoutNodeIndex node, BlockStart start, 
     if (fragment->kind != LayoutFragmentKind_Box)
         return bounds;
     PrLayoutRect overflow = fragment->overflow;
-    PrLayoutRect rect{bounds.left + overflow.left, bounds.top + overflow.top, bounds.left + overflow.right,
-                      bounds.top + overflow.bottom};
+    PrLayoutRect rect{
+        bounds.left + overflow.left, bounds.top + overflow.top, bounds.left + overflow.right,
+        bounds.top + overflow.bottom,
+    };
     // The start edges are the block axis's and the inline axis's, which is the top in a vertical writing mode.
     if (start == BlockStart_Right)
         rect.right = layoutUnitMin(rect.right, bounds.right);
@@ -194,8 +200,7 @@ bool fullyVisible(PrLayoutRect rect, PrLayoutRect shown) {
 }
 
 bool fullyClipped(PrLayoutRect rect, PrLayoutRect shown) {
-    return rect.right <= shown.left || rect.left >= shown.right || rect.bottom <= shown.top
-        || rect.top >= shown.bottom;
+    return rect.right <= shown.left || rect.left >= shown.right || rect.bottom <= shown.top || rect.top >= shown.bottom;
 }
 
 // Chooses the anchor among `first` and its following siblings for `container`, by the candidate examination algorithm
@@ -374,8 +379,7 @@ void layoutAnchoringScrolled(LayoutTree* tree, LayoutNodeIndex container, PrLayo
     anchor->node = kPrLayoutNodeNone;
 }
 
-void layoutAnchoringStyleChanged(LayoutTree* tree, LayoutNodeIndex node, PrLayoutStyleIndex was,
-                                 PrLayoutStyleIndex style) {
+void layoutAnchoringStyleChanged(LayoutTree* tree, LayoutNodeIndex node, PrLayoutStyleIndex was, PrLayoutStyleIndex style) {
     if (tree->anchoring.anchors.count == 0)
         return;
     const PrLayoutStyle& before = layoutStyle(tree->styles, was);
@@ -389,12 +393,12 @@ void layoutAnchoringStyleChanged(LayoutTree* tree, LayoutNodeIndex node, PrLayou
         const PrLayoutBoxStyle& a = layoutBoxStyle(tree->styles, was);
         const PrLayoutBoxStyle& b = layoutBoxStyle(tree->styles, style);
         auto same = [](PrLayoutLength x, PrLayoutLength y) { return x.bits == y.bits; };
-        suppresses = !same(a.width, b.width) || !same(a.height, b.height) || !same(a.minWidth, b.minWidth)
-            || !same(a.minHeight, b.minHeight) || !same(a.maxWidth, b.maxWidth) || !same(a.maxHeight, b.maxHeight)
-            || a.position != b.position || a.transformed != b.transformed;
+        suppresses = !same(a.width, b.width) || !same(a.height, b.height) || !same(a.minWidth, b.minWidth) ||
+            !same(a.minHeight, b.minHeight) || !same(a.maxWidth, b.maxWidth) || !same(a.maxHeight, b.maxHeight) ||
+            a.position != b.position || a.transformed != b.transformed;
         for (uint32_t side = 0; side < PrRectSide_Count; ++side) {
-            suppresses = suppresses || !same(a.margin[side], b.margin[side]) || !same(a.padding[side], b.padding[side])
-                || !same(a.inset[side], b.inset[side]);
+            suppresses = suppresses || !same(a.margin[side], b.margin[side]) || !same(a.padding[side],
+                b.padding[side]) || !same(a.inset[side], b.inset[side]);
         }
         bool absoluteBefore = layoutPositionIsOutOfFlow(a.position);
         bool absoluteAfter = layoutPositionIsOutOfFlow(b.position);
@@ -419,8 +423,8 @@ void layoutAnchoringChoose(LayoutTree* tree) {
         return;
     for (uint32_t i = 0; i < anchoring.anchors.count; ++i) {
         LayoutAnchor& anchor = anchoring.anchors.data[i];
-        if (anchor.node != kPrLayoutNodeNone && isLive(tree, anchor.node)
-            && layoutNodeLaidOut(tree, layoutNodeIndex(tree, anchor.node)))
+        if (anchor.node != kPrLayoutNodeNone && isLive(tree, anchor.node) &&
+                layoutNodeLaidOut(tree, layoutNodeIndex(tree, anchor.node)))
             continue;
         choose(tree, anchor);
     }
@@ -434,9 +438,9 @@ void layoutAnchoringAdjust(LayoutTree* tree, bool resized) {
             continue;
         LayoutNodeIndex node = isLive(tree, anchor.node) ? layoutNodeIndex(tree, anchor.node) : kPrLayoutNodeNone;
         Container container{};
-        bool measured = node != kPrLayoutNodeNone && layoutNodeLaidOut(tree, node)
-            && (anchor.container == kPrLayoutNodeNone || isLive(tree, anchor.container))
-            && measure(tree, anchor.container, &container);
+        bool measured = node != kPrLayoutNodeNone && layoutNodeLaidOut(tree, node) &&
+            (anchor.container == kPrLayoutNodeNone || isLive(tree, anchor.container)) &&
+            measure(tree, anchor.container, &container);
         // An anchor that is no longer laid out, or whose move a change suppresses, is dropped without an adjustment,
         // and so is an anchor of a container at its origin. The suppression triggers are for pages that move content as
         // they scroll. A new viewport extent changes the values that trigger them on any page that adapts to its width,
@@ -449,11 +453,11 @@ void layoutAnchoringAdjust(LayoutTree* tree, bool resized) {
             continue;
         }
         // An anchor that a change excluded, as by overflow-anchor: none on it or on a box around it, is dropped too.
-        bool excluded = container.node != kPrLayoutNodeNone
-            && layoutBoxStyle(tree->styles, layoutTreeNode(tree, container.node).style).overflowAnchor
-                   == PrLayoutOverflowAnchor_None;
+        bool excluded = container.node != kPrLayoutNodeNone &&
+            layoutBoxStyle(tree->styles, layoutTreeNode(tree, container.node).style).overflowAnchor ==
+            PrLayoutOverflowAnchor_None;
         for (LayoutNodeIndex at = node; at != container.node && at != kPrLayoutNodeNone && !excluded;
-             at = layoutTreeNode(tree, at).parent)
+                at = layoutTreeNode(tree, at).parent)
             excluded = candidateOf(tree, at, container) == Candidate_Skipped;
         if (excluded) {
             anchor.node = kPrLayoutNodeNone;

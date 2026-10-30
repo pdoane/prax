@@ -262,8 +262,7 @@ struct InputBox {
                 if (recipe.part == Part_AreaFrame) {
                     // The tone holds the area's rows, which give its height at the line height of its role.
                     float rows = float(recipe.tone != 0 ? recipe.tone : 3);
-                    box.height =
-                        prLayoutLengthPx(rows * kit.theme.types[textRole(recipe)].lineHeight + 2 * kAreaPadding + 2);
+                    box.height = prLayoutLengthPx(rows * kit.theme.types[textRole(recipe)].lineHeight + 2 * kAreaPadding + 2);
                     box.overflowX = PrLayoutOverflow_Hidden;
                     box.overflowY = PrLayoutOverflow_Scroll;
                     kitSetPadding(box, prKitEdgesXY(kAreaPadding, kPrKitSpace3));
@@ -405,9 +404,7 @@ struct InputFill {
         bool disabled = (recipe.flags & PartFlag_Disabled) != 0;
         bool ring = (recipe.flags & PartFlag_Ring) != 0;
         // A frame's border is the accent while it is active, and brighter while the pointer is over it.
-        PrColor frameBorder = recipe.state == PartState_Active ? p.accent
-                              : recipe.state == PartState_Rest ? p.line2
-                                                               : p.line3;
+        PrColor frameBorder = recipe.state == PartState_Active ? p.accent : recipe.state == PartState_Rest ? p.line2 : p.line3;
         const PrColor quiet[] = {clear, p.bg3, p.bg4, p.bg3};
         switch (recipe.part) {
             case Part_NumberFrame:
@@ -437,9 +434,12 @@ struct InputFill {
                 break;
             case Part_AssetFrame: {
                 bool drop = recipe.state == PartState_Active;
-                kitSetBorderColor(decoration, drop                                   ? p.accent
-                                              : (recipe.flags & PartFlag_Missing) != 0 ? p.danger
-                                                                                       : p.line2);
+                if (drop)
+                    kitSetBorderColor(decoration, p.accent);
+                else if ((recipe.flags & PartFlag_Missing) != 0)
+                    kitSetBorderColor(decoration, p.danger);
+                else
+                    kitSetBorderColor(decoration, p.line2);
                 decoration.background = kitColor16(drop ? p.accentWeak : p.bg2);
                 break;
             }
@@ -903,8 +903,7 @@ struct NumberState {
 };
 
 // Applies the round's scrub to `number`.
-void scrub(const Kit& kit, PrLayoutNode node, const PrKitNumber& number, const NumberBounds& bounds,
-           NumberState& state) {
+void scrub(const Kit& kit, PrLayoutNode node, const PrKitNumber& number, const NumberBounds& bounds, NumberState& state) {
     PrUiDrag drag{};
     bool dragging = prUiDrag(kit.ui, node, 0, kScrubThreshold, &drag);
     if (dragging && drag.moved && (drag.active || drag.released)) {
@@ -916,8 +915,8 @@ void scrub(const Kit& kit, PrLayoutNode node, const PrKitNumber& number, const N
             from = drag.origin;
             beginEdit(kit, node, &state.live);
         }
-        state.accum = clampF64(state.accum + scrubbed(kit, node, from, drag.position) * bounds.step, bounds.min,
-                               bounds.max);
+        state.accum =
+            clampF64(state.accum + scrubbed(kit, node, from, drag.position) * bounds.step, bounds.min, bounds.max);
         scalarWrite(kit, node, number.value, state.accum);
     }
     if (dragging && drag.cancelled && state.scrubbing)
@@ -958,7 +957,7 @@ PrLayoutNode numberField(Kit& kit, PrLayoutNode parent, const PrKitNumber& numbe
     PrUiFlags interest = editFlags(PrUiFlag_Pressable | PrUiFlag_Focusable, number.disabled);
     PrLayoutNode node = control(kit, parent, number.key, interest, &disabled);
     NumberState* state = static_cast<NumberState*>(prUiState(kit.ui, node, &kKitOwner, StateKey_Number,
-                                                             sizeof(NumberState)));
+        sizeof(NumberState)));
     NumberBounds bounds = boundsOf(number.range, number.value.kind);
     if (!disabled) {
         scrub(kit, node, number, bounds, *state);
@@ -968,24 +967,27 @@ PrLayoutNode numberField(Kit& kit, PrLayoutNode parent, const PrKitNumber& numbe
         state->scrubbing = false;
         commitEdit(kit, node, &state->live);
     }
-    uint8_t look = state->scrubbing || prUiFocus(kit.ui) == node ? PartState_Active
-                   : !disabled && prUiIsHovered(kit.ui, node)          ? PartState_Hover
-                                                                      : PartState_Rest;
+    uint8_t look = PartState_Rest;
+    if (state->scrubbing || prUiFocus(kit.ui) == node)
+        look = PartState_Active;
+    else if (!disabled && prUiIsHovered(kit.ui, node))
+        look = PartState_Hover;
     uint8_t flags = uint8_t((disabled ? PartFlag_Disabled : 0) | (inRow ? PartFlag_InRow : 0));
     prLayoutTreeFrameSetStyle(kit.tree, node,
-                              partStyle(kit, PartRecipe{.part = Part_NumberFrame, .size = style.size, .state = look,
-                                                        .flags = flags}));
+        partStyle(kit, PartRecipe{.part = Part_NumberFrame, .size = style.size, .state = look, .flags = flags}));
     if (number.axis.size != 0) {
         PrKitTone tone = style.axisTone != PrKitTone_Auto ? style.axisTone : PrKitTone_Muted;
         textPart(kit, node, 0, PartRecipe{.part = Part_NumberAxis, .tone = tone}, number.axis);
     }
     char text[64];
-    uint32_t precision = isIntegral(number.value.kind) ? 0
-                         : number.precision != 0      ? number.precision
-                                                      : kDefaultPrecision;
+    uint32_t precision = kDefaultPrecision;
+    if (isIntegral(number.value.kind))
+        precision = 0;
+    else if (number.precision != 0)
+        precision = number.precision;
     uint32_t size = formatNumber(scalarLoad(number.value), precision, text);
     textPart(kit, node, 0, PartRecipe{.part = Part_NumberValue, .flags = uint8_t(disabled ? PartFlag_Disabled : 0)},
-             PrStringView{text, size});
+        PrStringView{text, size});
     if (number.unit.size != 0)
         textPart(kit, node, 0, PartRecipe{.part = Part_NumberUnit}, number.unit);
     return node;
@@ -1030,29 +1032,30 @@ void recall(Kit& kit, PrLayoutNode node, const PrKitTextField& field, TextState&
 // Creates the element that holds the text of an edit on `control`, runs the edit, and creates the placeholder after the
 // text while the text is empty.
 void editedText(Kit& kit, PrLayoutNode control, const PrUiTextBuffer& buffer, PrStringView placeholder,
-                const PrKitFieldStyle& style, bool disabled, bool area, PrUiTextEditFlags flags) {
+        const PrKitFieldStyle& style, bool disabled, bool area, PrUiTextEditFlags flags) {
     const PrKitPalette& p = kit.theme.palette;
-    uint8_t textFlags = uint8_t((disabled ? PartFlag_Disabled : 0) | (style.mono ? PartFlag_Mono : 0)
-                                | (area ? PartFlag_Wraps : 0));
+    uint8_t textFlags = uint8_t((disabled ? PartFlag_Disabled : 0) | (style.mono ? PartFlag_Mono : 0) |
+        (area ? PartFlag_Wraps : 0));
     PrLayoutNode value = part(kit, control, 0,
-                              PartRecipe{.part = area ? Part_AreaValue : Part_TextValue, .size = style.size,
-                                         .flags = textFlags});
-    PrUiTextEditDesc edit{.control = control,
-                          .parent = value,
-                          .buffer = buffer,
-                          .flags = PrUiTextEditFlags(flags | (area ? PrUiTextEditFlag_Multiline : 0)),
-                          .selection = kitColor16(p.accentWeak),
-                          .caret = kitColor16(p.text1)};
+        PartRecipe{.part = area ? Part_AreaValue : Part_TextValue, .size = style.size, .flags = textFlags});
+    PrUiTextEditDesc edit{
+        .control = control,
+        .parent = value,
+        .buffer = buffer,
+        .flags = PrUiTextEditFlags(flags | (area ? PrUiTextEditFlag_Multiline : 0)),
+        .selection = kitColor16(p.accentWeak),
+        .caret = kitColor16(p.text1),
+    };
     prUiTextEdit(kit.ui, &edit);
     if (buffer.read(buffer.context).size == 0 && placeholder.size != 0)
         textPart(kit, value, 0, PartRecipe{.part = Part_TextPlaceholder, .size = style.size, .flags = textFlags},
-                 placeholder);
+            placeholder);
 }
 
 // Creates a text field's frame and content, and writes to `arrived` whether focus came to it in the round. Returns the
 // frame.
 PrLayoutNode textField(PrKit* kit, PrLayoutNode parent, const PrKitTextField& field, const PrKitFieldStyle& style,
-                       bool* arrived) {
+        bool* arrived) {
     PR_ASSERT(field.text.read != nullptr && field.text.replace != nullptr);
     bool inRow = isRow(*kit, parent);
     bool disabled = false;
@@ -1069,28 +1072,25 @@ PrLayoutNode textField(PrKit* kit, PrLayoutNode parent, const PrKitTextField& fi
     }
     if (!focused)
         state->recalled = field.historyCount;
-    uint8_t look = focused ? PartState_Active : pointerState(*kit, node, disabled) != PartState_Rest ? PartState_Hover
-                                                                                                     : PartState_Rest;
-    uint8_t flags = uint8_t((disabled ? PartFlag_Disabled : 0) | (inRow ? PartFlag_InRow : 0)
-                            | (ringed(*kit, node) ? PartFlag_Ring : 0) | (style.mono ? PartFlag_Mono : 0)
-                            | (style.bare ? PartFlag_Bare : 0));
+    uint8_t look = PartState_Active;
+    if (!focused)
+        look = pointerState(*kit, node, disabled) != PartState_Rest ? PartState_Hover : PartState_Rest;
+    uint8_t flags = uint8_t((disabled ? PartFlag_Disabled : 0) | (inRow ? PartFlag_InRow : 0) |
+        (ringed(*kit, node) ? PartFlag_Ring : 0) | (style.mono ? PartFlag_Mono : 0) | (style.bare ? PartFlag_Bare : 0));
     prLayoutTreeFrameSetStyle(kit->tree, node,
-                              partStyle(*kit, PartRecipe{.part = Part_TextFrame, .size = style.size, .state = look,
-                                                        .flags = flags}));
+        partStyle(*kit, PartRecipe{.part = Part_TextFrame, .size = style.size, .state = look, .flags = flags}));
     if (field.icon != PrKitIconKind_None)
         prKitIcon(kit, node, {.icon = field.icon},
-                  {.size = 12, .tone = PrKitTone(disabled ? PrKitTone_Faint : PrKitTone_Muted)});
+            {.size = 12, .tone = PrKitTone(disabled ? PrKitTone_Faint : PrKitTone_Muted)});
     editedText(*kit, node, field.text, field.placeholder, style, disabled, false,
-               field.selectOnFocus ? PrUiTextEditFlag_SelectOnFocus : 0);
+        field.selectOnFocus ? PrUiTextEditFlag_SelectOnFocus : 0);
     if (field.clearable && field.text.read(field.text.context).size != 0 && !disabled) {
         PrLayoutNode clear = prLayoutTreeFrameElement(kit->tree, node, 0, 0);
         prUiSetFlags(kit->ui, clear, PrUiFlag_Pressable);
         prUiSetCursor(kit->ui, clear, PrAppCursor_Hand);
         prLayoutTreeFrameSetStyle(kit->tree, clear,
-                                  partStyle(*kit, PartRecipe{.part = Part_TextClear,
-                                                            .state = pointerState(*kit, clear, false)}));
-        prKitIcon(kit, clear, {.icon = PrKitIconKind_Close},
-                  {.size = 10, .tone = PrKitTone_Muted});
+            partStyle(*kit, PartRecipe{.part = Part_TextClear, .state = pointerState(*kit, clear, false)}));
+        prKitIcon(kit, clear, {.icon = PrKitIconKind_Close}, {.size = 10, .tone = PrKitTone_Muted});
         if (prUiActivated(kit->ui, clear)) {
             replaceText(*kit, node, field.text, PrStringView{});
             prUiSetFocus(kit->ui, node);
@@ -1122,7 +1122,7 @@ double sliderFractionAt(double low, double high, bool ratio, double value) {
 
 // Applies the round's key presses to a slider at `fraction` of its track, each as its own gesture.
 void sliderKeys(const Kit& kit, PrLayoutNode node, const PrKitSlider& slider, double low, double high, bool ratio,
-                double fraction) {
+        double fraction) {
     if (prUiFocus(kit.ui) != node)
         return;
     double step = slider.step > 0 ? double(slider.step) : 0.01;
@@ -1159,10 +1159,10 @@ PrLayoutNode sliderControl(Kit& kit, PrLayoutNode parent, const PrKitSlider& con
     bool inRow = isRow(kit, parent);
     bool disabled = false;
     PrLayoutNode node = control(kit, parent, content.key,
-                                editFlags(PrUiFlag_Pressable | PrUiFlag_Focusable, content.disabled), &disabled);
+        editFlags(PrUiFlag_Pressable | PrUiFlag_Focusable, content.disabled), &disabled);
     PrLayoutNode track = part(kit, node, 0, PartRecipe{.part = Part_SliderTrack});
     SliderState* state = static_cast<SliderState*>(prUiState(kit.ui, node, &kKitOwner, StateKey_Slider,
-                                                             sizeof(SliderState)));
+        sizeof(SliderState)));
     PrUiDrag drag{};
     bool dragging = !disabled && prUiDrag(kit.ui, node, 0, 0, &drag);
     if (dragging && (drag.active || drag.released)) {
@@ -1178,14 +1178,12 @@ PrLayoutNode sliderControl(Kit& kit, PrLayoutNode parent, const PrKitSlider& con
     if (!dragging || !drag.active)
         commitEdit(kit, node, &state->live);
     if (!disabled) {
-        sliderKeys(kit, node, content, low, high, ratio,
-                   sliderFractionAt(low, high, ratio, scalarLoad(content.value)));
+        sliderKeys(kit, node, content, low, high, ratio, sliderFractionAt(low, high, ratio, scalarLoad(content.value)));
         prUiSetCursor(kit.ui, node, PrAppCursor_Hand);
     }
     uint8_t flags = uint8_t((inRow ? PartFlag_InRow : 0) | (ringed(kit, node) ? PartFlag_Ring : 0));
     prLayoutTreeFrameSetStyle(kit.tree, node,
-                              partStyle(kit, PartRecipe{.part = Part_SliderFrame, .size = style.size,
-                                                        .flags = flags}));
+        partStyle(kit, PartRecipe{.part = Part_SliderFrame, .size = style.size, .flags = flags}));
     float percent = float(sliderFractionAt(low, high, ratio, scalarLoad(content.value)) * 100);
     KitColors runFill{.background = disabled ? p.bg4 : p.accent};
     prLayoutTreeFrameElement(kit.tree, track, 0, kitStyle(kit, SliderRunBox{.percent = percent}, runFill));
@@ -1207,12 +1205,10 @@ PrLayoutNode assetAction(PrKit* kit, PrLayoutNode gutter, PrKitIconKind icon, Pr
     bool disabled = false;
     PrLayoutNode cell = control(*kit, gutter, 0, PrUiFlag_Pressable, &disabled);
     prLayoutTreeFrameSetStyle(kit->tree, cell,
-                              partStyle(*kit, PartRecipe{.part = Part_AssetAction,
-                                                        .state = pointerState(*kit, cell, disabled)}));
+        partStyle(*kit, PartRecipe{.part = Part_AssetAction, .state = pointerState(*kit, cell, disabled)}));
     if (!disabled)
         prUiSetCursor(kit->ui, cell, PrAppCursor_Hand);
-    prKitIcon(kit, cell, {.icon = icon},
-              {.size = 11, .tone = PrKitTone(disabled ? PrKitTone_Faint : tone)});
+    prKitIcon(kit, cell, {.icon = icon}, {.size = 11, .tone = PrKitTone(disabled ? PrKitTone_Faint : tone)});
     return cell;
 }
 
@@ -1260,15 +1256,20 @@ PrLayoutNode prKitTextArea(PrKit* kit, PrLayoutNode parent, PrKitTextArea area, 
     if (!disabled)
         prUiSetCursor(k.ui, node, PrAppCursor_Text);
     bool focused = prUiFocus(k.ui) == node;
-    uint8_t look = focused ? PartState_Active : pointerState(k, node, disabled) != PartState_Rest ? PartState_Hover
-                                                                                                  : PartState_Rest;
-    uint8_t flags = uint8_t((disabled ? PartFlag_Disabled : 0) | (inRow ? PartFlag_InRow : 0)
-                            | (ringed(k, node) ? PartFlag_Ring : 0) | (style.mono ? PartFlag_Mono : 0));
+    uint8_t look = PartState_Active;
+    if (!focused)
+        look = pointerState(k, node, disabled) != PartState_Rest ? PartState_Hover : PartState_Rest;
+    uint8_t flags = uint8_t((disabled ? PartFlag_Disabled : 0) | (inRow ? PartFlag_InRow : 0) |
+        (ringed(k, node) ? PartFlag_Ring : 0) | (style.mono ? PartFlag_Mono : 0));
     // The area's rows ride in the recipe's tone, up to the tone's range.
     uint8_t rows = uint8_t(area.rows < 255 ? area.rows : 255);
-    prLayoutTreeFrameSetStyle(k.tree, node,
-                              partStyle(k, PartRecipe{.part = Part_AreaFrame, .size = style.size, .state = look,
-                                                      .tone = rows, .flags = flags}));
+    prLayoutTreeFrameSetStyle(k.tree, node, partStyle(k, PartRecipe{
+        .part = Part_AreaFrame,
+        .size = style.size,
+        .state = look,
+        .tone = rows,
+        .flags = flags,
+    }));
     editedText(k, node, area.text, area.placeholder, style, disabled, true, 0);
     prUiAddFlags(k.ui, node, PrUiFlag_Scrollable);
     return node;
@@ -1323,14 +1324,15 @@ PrLayoutNode prKitInspectorGroup(PrKit* kit, PrLayoutNode parent, PrKitInspector
     }
     bool shown = open != nullptr ? *open : kept->open;
     bool ring = ringed(*kit, header) ? PartFlag_Ring : 0;
-    prLayoutTreeFrameSetStyle(kit->tree, header,
-                              partStyle(*kit, PartRecipe{.part = Part_GroupHeader,
-                                                         .state = pointerState(*kit, header, disabled),
-                                                         .flags = ring}));
+    prLayoutTreeFrameSetStyle(kit->tree, header, partStyle(*kit, PartRecipe{
+        .part = Part_GroupHeader,
+        .state = pointerState(*kit, header, disabled),
+        .flags = ring,
+    }));
     if (!disabled)
         prUiSetCursor(kit->ui, header, PrAppCursor_Hand);
     prKitIcon(kit, header, {.icon = PrKitIconKind(shown ? PrKitIconKind_ChevronDown : PrKitIconKind_ChevronRight)},
-              {.size = 10, .tone = PrKitTone_Muted});
+        {.size = 10, .tone = PrKitTone_Muted});
     PrKitTextStyle name{.role = PrKitTextRole_Strong, .tone = PrKitTone_Secondary, .wrap = PrKitWrap_Clip};
     prKitLabel(kit, header, {.text = group.name}, name);
     prKitSpacer(kit, header, {});
@@ -1347,7 +1349,7 @@ PrLayoutNode prKitInspectorRow(PrKit* kit, PrLayoutNode parent, PrKitInspectorRo
     prLayoutTreeFrameSetStyle(kit->tree, node, partStyle(*kit, PartRecipe{.part = Part_RowFrame, .state = state}));
     PrLayoutNode cell = part(*kit, node, 0, PartRecipe{.part = Part_RowLabelCell});
     textPart(*kit, cell, 0, PartRecipe{.part = Part_RowLabel, .flags = uint8_t(style.mono ? PartFlag_Mono : 0)},
-             row.label);
+        row.label);
     return part(*kit, node, 0, PartRecipe{.part = Part_RowControls});
 }
 
@@ -1369,15 +1371,18 @@ PrLayoutNode prKitAssetField(PrKit* kit, PrLayoutNode parent, PrKitAssetField fi
         kitProvide<AssetDrop>(k, node, KitContext_AssetDrop).value = dropped->value;
     }
     uint8_t flags = uint8_t((inRow ? PartFlag_InRow : 0) | (field.missing ? PartFlag_Missing : 0));
-    prLayoutTreeFrameSetStyle(k.tree, node,
-                              partStyle(k, PartRecipe{.part = Part_AssetFrame,
-                                                      .state = over ? PartState_Active : PartState_Rest,
-                                                      .flags = flags}));
+    prLayoutTreeFrameSetStyle(k.tree, node, partStyle(k, PartRecipe{
+        .part = Part_AssetFrame,
+        .state = over ? PartState_Active : PartState_Rest,
+        .flags = flags,
+    }));
     bool tinted = field.tint.a > 0;
     PartRecipe thumbPart{.part = Part_AssetThumb};
-    PrLayoutStyleIndex thumbStyle = tinted ? kitStyle(k, InputBox{thumbPart}, InputFlex{thumbPart},
-                                                      TintFill{.tint = field.tint})
-                                           : partStyle(k, thumbPart);
+    PrLayoutStyleIndex thumbStyle;
+    if (tinted)
+        thumbStyle = kitStyle(k, InputBox{thumbPart}, InputFlex{thumbPart}, TintFill{.tint = field.tint});
+    else
+        thumbStyle = partStyle(k, thumbPart);
     PrLayoutNode thumb = prLayoutTreeFrameElement(k.tree, node, 0, thumbStyle);
     if (!tinted && field.icon != PrKitIconKind_None)
         prKitIcon(kit, thumb, {.icon = field.icon}, {.size = 11, .tone = PrKitTone_Muted});

@@ -45,7 +45,7 @@ TEST_CASE("a mip level is the rounded mean of each block, repeating the last row
     const uint8_t above[3 * 4] = {0, 10, 20, 255, 100, 30, 40, 255, 200, 50, 60, 255};
     uint8_t level[4] = {};
     prImageMipLevel(PrPixelView{above, sizeof(above), {3, 1}}, PrPixels{level, sizeof(level), {1, 1}},
-                    PrPixelFormat_Rgba8);
+        PrPixelFormat_Rgba8);
     CHECK(level[0] == 50);
     CHECK(level[1] == 20);
     CHECK(level[2] == 30);

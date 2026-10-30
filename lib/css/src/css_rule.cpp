@@ -42,11 +42,12 @@ bool isCustomProperty(PrStringView name) {
 // property's <declaration-value> (css-variables-1/#syntax). Returns false if the block accepts no author's names.
 bool authorName(CssAtRule rule, PrStringView name, CssDeclaredName* out) {
     CssGrammarIndex named = kCssAtRuleNamedValue[rule];
-    if (named == CssGrammarRoot_None
-        && (!isCustomProperty(name) || kCssAtRuleProperties[rule] == CssPropertiesIn_None))
+    if (named == CssGrammarRoot_None && (!isCustomProperty(name) || kCssAtRuleProperties[rule] == CssPropertiesIn_None))
         return false;
-    *out = CssDeclaredName{PrCssProperty_Count, PrCssDescriptor_None, named, name,
-                           uint32_t(nameHash(name.data, name.size, kNameSeed)), false};
+    *out = CssDeclaredName{
+        PrCssProperty_Count, PrCssDescriptor_None, named, name,
+        uint32_t(nameHash(name.data, name.size, kNameSeed)), false,
+    };
     return true;
 }
 
@@ -78,7 +79,7 @@ bool resolveName(CssAtRule rule, PrStringView name, CssDeclaredName* out) {
 // Returns true if two declarations have the same name. Each comes with the text that holds its author's name. Authors'
 // names are compared exactly. Other names are compared by hash, which decides unless there is a collision.
 bool declarationNameEquals(const CssDeclaration* a, const char* PR_NULLABLE aText, const CssDeclaration* b,
-                           const char* PR_NULLABLE bText) {
+        const char* PR_NULLABLE bText) {
     if (a->hash != b->hash || a->property != b->property || a->descriptor != b->descriptor)
         return false;
     if (a->property != PrCssProperty_Count || a->descriptor != PrCssDescriptor_None)
@@ -102,8 +103,7 @@ bool isShared(const CssDeclaration& declaration) {
 
 // Returns true if the declaration is for a longhand that `shorthand` sets.
 bool setBy(const CssDeclaration& declaration, PrCssProperty shorthand) {
-    return declaration.property != PrCssProperty_Count
-           && cssShorthandSets(shorthand, declaration.property);
+    return declaration.property != PrCssProperty_Count && cssShorthandSets(shorthand, declaration.property);
 }
 
 // Returns `declaration` as the declaration of the longhand `property`.
@@ -132,15 +132,14 @@ bool overlaps(PrCssProperty a, PrCssProperty b) {
 }
 
 // Returns the index of the declaration in `declarations` that declares `longhand`, or `count` if there is none.
-uint32_t declarerOf(const CssDeclaration* PR_NULLABLE declarations, uint32_t count,
-                    PrCssProperty longhand) {
+uint32_t declarerOf(const CssDeclaration* PR_NULLABLE declarations, uint32_t count, PrCssProperty longhand) {
     uint32_t shared = count;
     for (uint32_t i = 0; i < count; ++i) {
         const CssDeclaration& declaration = declarations[i];
         if (declaration.property == longhand)
             return i;
-        if (isShared(declaration) && cssShorthandSets(declaration.property, longhand)
-            && (shared == count || precedes(declaration, declarations[shared], true)))
+        if (isShared(declaration) && cssShorthandSets(declaration.property, longhand) &&
+                (shared == count || precedes(declaration, declarations[shared], true)))
             shared = i;
     }
     return shared;
@@ -148,8 +147,7 @@ uint32_t declarerOf(const CssDeclaration* PR_NULLABLE declarations, uint32_t cou
 
 // Writes to `out` the longhands of the shared declaration at `index` of `declarations` that another declaration
 // declares.
-void takenFrom(const CssDeclaration* declarations, uint32_t count, uint32_t index,
-               PropertySet* out) {
+void takenFrom(const CssDeclaration* declarations, uint32_t count, uint32_t index, PropertySet* out) {
     memZero(out, sizeof(PropertySet));
     for (uint32_t i = 0; i < count; ++i) {
         const CssDeclaration& declaration = declarations[i];
@@ -168,8 +166,7 @@ void takenFrom(const CssDeclaration* declarations, uint32_t count, uint32_t inde
 // Calls `visit` with each longhand that the declaration at `index` of `declarations` lists, in order. A declaration
 // lists its own property. A shared declaration lists those of its longhands that no other declaration declares.
 template <typename Visit>
-void forEachListed(const CssDeclaration* declarations, uint32_t count, uint32_t index,
-                   Visit visit) {
+void forEachListed(const CssDeclaration* declarations, uint32_t count, uint32_t index, Visit visit) {
     const CssDeclaration& declaration = declarations[index];
     if (!isShared(declaration)) {
         visit(declaration.property);
@@ -215,8 +212,7 @@ struct Stage {
 };
 
 Stage beginStage(const CssParser* parser) {
-    return Stage{parser->declared.count, parser->pool.values.count, parser->pool.text.count,
-                 parser->filter.count};
+    return Stage{parser->declared.count, parser->pool.values.count, parser->pool.text.count, parser->filter.count};
 }
 
 void endStage(CssParser* parser, Stage stage) {
@@ -256,7 +252,7 @@ bool nameSeen(CssParser* parser, NameFilter filter, uint32_t hash) {
 
 // Matches `span` as a value of `name`, and adds it to the pool.
 bool matchValue(const CssDeclaredName& name, CssParser* parser, const CssTokenStream* ts,
-                CssTokenSpan span, CssValueSpan* out) {
+        CssTokenSpan span, CssValueSpan* out) {
     CssTokenStream value = cssSubStream(ts, span);
     if (name.property != PrCssProperty_Count)
         return cssParsePropertyValue(name.property, &value, &parser->pool, &parser->match, out);
@@ -270,11 +266,10 @@ bool matchValue(const CssDeclaredName& name, CssParser* parser, const CssTokenSt
 // Adds to the parser's `incoming` the declarations that `declaration` of `shorthand` makes for `value`. For a CSS-wide
 // keyword or a pending value, that is one shared declaration. Otherwise it is a declaration for each longhand that the
 // value expands to (css-cascade-5/#shorthand-property). Returns false if the value expands to no longhands.
-bool declareLonghands(CssParser* parser, PrCssProperty shorthand, CssValueSpan value,
-                      CssDeclaration declaration) {
+bool declareLonghands(CssParser* parser, PrCssProperty shorthand, CssValueSpan value, CssDeclaration declaration) {
     const CssValueNode* first = &parser->pool.values.data[value.start];
-    bool wide = value.count == 1 && first->kind == PrCssValueKind_Keyword
-                && cssIsCssWideKeyword(cssValueKeyword(first));
+    bool wide = value.count == 1 && first->kind == PrCssValueKind_Keyword &&
+        cssIsCssWideKeyword(cssValueKeyword(first));
     if (wide || cssShorthandPending(shorthand, cssValuePoolRun(&parser->pool, value))) {
         declaration.shorthand = wide ? PrCssProperty_Count : shorthand;
         parser->incoming.push(declaration);
@@ -298,7 +293,7 @@ bool declareLonghands(CssParser* parser, PrCssProperty shorthand, CssValueSpan v
 // declarations of a shorthand's longhands. Their values and names are in the parser's pool. Returns false if `name`
 // does not accept the value. If `given` is set, the tokens are those of a given value (cssValueTokens).
 bool declare(CssParser* parser, const CssDeclaredName& name, const CssTokenStream* ts,
-             CssTokenSpan span, bool important, bool given = false) {
+        CssTokenSpan span, bool important, bool given = false) {
     parser->incoming.count = 0;
     CssValueSpan matched;
     if (!name.unicodeRanges || given) {
@@ -307,10 +302,9 @@ bool declare(CssParser* parser, const CssDeclaredName& name, const CssTokenStrea
     } else {
         // css-syntax-3/#parse-list-of-component-values reads the value again with unicode ranges allowed.
         cssTokenize(&parser->asideTokens, &parser->asideScratch, cssSpanText(ts->tokens, span),
-                    CssTokenizeFlag_UnicodeRanges);
+            CssTokenizeFlag_UnicodeRanges);
         CssTokenStream ranged = cssStream(&parser->asideTokens);
-        if (!matchValue(name, parser, &ranged, cssStreamTrimmed(&ranged),
-                        &matched)) {
+        if (!matchValue(name, parser, &ranged, cssStreamTrimmed(&ranged), &matched)) {
             return false;
         }
     }
@@ -338,8 +332,7 @@ bool declare(CssParser* parser, const CssDeclaredName& name, const CssTokenStrea
 // is an important declaration: a later declaration that is not important does not replace it
 // (css-cascade-5/#importance). If two shared declarations set the same longhand, both stay, and the block's order
 // decides which one declares it.
-void stageLast(CssParser* parser, uint32_t first, NameFilter filter,
-               const CssDeclaration& declaration) {
+void stageLast(CssParser* parser, uint32_t first, NameFilter filter, const CssDeclaration& declaration) {
     const char* text = parser->pool.text.data;
     bool seen = nameSeen(parser, filter, declaration.hash);
     if (isShared(declaration)) {
@@ -351,18 +344,16 @@ void stageLast(CssParser* parser, uint32_t first, NameFilter filter,
         for (uint32_t i = first; i < parser->declared.count; ++i) {
             const CssDeclaration& earlier = parser->declared.data[i];
             bool stands = earlier.important && !declaration.important;
-            if (stands
-                && (declarationNameEquals(&earlier, text, &declaration, text)
-                    || setBy(declaration, earlier.property)))
+            if (stands && (declarationNameEquals(&earlier, text, &declaration, text) ||
+                    setBy(declaration, earlier.property)))
                 return;
         }
         uint32_t kept = first;
         for (uint32_t i = first; i < parser->declared.count; ++i) {
             const CssDeclaration& earlier = parser->declared.data[i];
             bool stands = earlier.important && !declaration.important;
-            if (stands
-                || !(declarationNameEquals(&earlier, text, &declaration, text)
-                     || setBy(earlier, declaration.property)))
+            if (stands || !(declarationNameEquals(&earlier, text, &declaration, text) ||
+                    setBy(earlier, declaration.property)))
                 parser->declared.data[kept++] = earlier;
         }
         parser->declared.count = kept;
@@ -395,9 +386,8 @@ CssValueNode* PR_NULLABLE packedHeld(const CssDeclarationBlock* block) {
 void write(CssDeclarationBlock* block, CssParser* parser, uint32_t first) {
     const CssValuePool* pool = &parser->pool;
     for (uint32_t i = first; i < parser->declared.count; ++i) {
-        if (isShared(parser->declared.data[i])
-            && listedBy(parser->declared.data + first, parser->declared.count - first, i - first)
-                   == 0)
+        if (isShared(parser->declared.data[i]) &&
+                listedBy(parser->declared.data + first, parser->declared.count - first, i - first) == 0)
             parser->declared.erase(i--);
     }
     uint32_t count = parser->declared.count - first;
@@ -448,8 +438,7 @@ void write(CssDeclarationBlock* block, CssParser* parser, uint32_t first) {
 // Allocates the storage for a declaration of a mutable block that declares `run` under `name`. The storage holds the
 // values, then the text that they reference, then the name. `declaration` is set to index into it. Returns null if
 // there is nothing to store.
-CssValueNode* PR_NULLABLE storeDeclaration(CssValueRun run, PrStringView name,
-                                           CssDeclaration* declaration) {
+CssValueNode* PR_NULLABLE storeDeclaration(CssValueRun run, PrStringView name, CssDeclaration* declaration) {
     uint32_t start = 0;
     uint32_t size = 0;
     cssValueRunText(run, &start, &size);
@@ -472,22 +461,19 @@ CssValueNode* PR_NULLABLE storeDeclaration(CssValueRun run, PrStringView name,
 PrStringView authorText(const CssDeclarationBlock* block, const CssDeclaration* declaration) {
     if (declaration->nameSize == 0)
         return PrStringView{};
-    return PrStringView{cssDeclarationText(block, declaration) + declaration->name,
-                        declaration->nameSize};
+    return PrStringView{cssDeclarationText(block, declaration) + declaration->name, declaration->nameSize};
 }
 
 // Copies the declarations of `from`, in either form, into `out` in the mutable form, with room for `capacity` of them.
 void copyMutable(CssDeclarationBlock* out, const CssDeclarationBlock* from, uint32_t capacity) {
     PR_ASSERT(capacity >= from->count && capacity != 0);
-    CssDeclaration* declarations =
-        static_cast<CssDeclaration*>(prMemoryAlloc(sizeof(CssDeclaration) * capacity));
-    CssValueNode** stored =
-        static_cast<CssValueNode**>(prMemoryAlloc(sizeof(CssValueNode*) * capacity));
+    CssDeclaration* declarations = static_cast<CssDeclaration*>(prMemoryAlloc(sizeof(CssDeclaration) * capacity));
+    CssValueNode** stored = static_cast<CssValueNode**>(prMemoryAlloc(sizeof(CssValueNode*) * capacity));
     for (uint32_t i = 0; i < from->count; ++i) {
         const CssDeclaration* declaration = &from->declarations[i];
         declarations[i] = *declaration;
         stored[i] = storeDeclaration(cssDeclarationValue(from, declaration),
-                                     authorText(from, declaration), &declarations[i]);
+            authorText(from, declaration), &declarations[i]);
     }
     out->declarations = declarations;
     out->stored = stored;
@@ -522,10 +508,8 @@ void splice(CssDeclarationBlock* block, uint32_t index, uint32_t removed, uint32
             prMemoryRealloc(block->stored, sizeof(CssValueNode*) * block->capacity));
     }
     uint32_t tail = block->count - index - removed;
-    memMove(block->declarations + index + added, block->declarations + index + removed,
-            sizeof(CssDeclaration) * tail);
-    memMove(block->stored + index + added, block->stored + index + removed,
-            sizeof(CssValueNode*) * tail);
+    memMove(block->declarations + index + added, block->declarations + index + removed, sizeof(CssDeclaration) * tail);
+    memMove(block->stored + index + added, block->stored + index + removed, sizeof(CssValueNode*) * tail);
     for (uint32_t i = 0; i < added; ++i)
         block->stored[index + i] = nullptr;
     block->count = count;
@@ -538,8 +522,7 @@ void eraseDeclaration(CssDeclarationBlock* block, uint32_t index) {
 }
 
 // Sets the declaration at `index` of a mutable block to `declaration` declaring `run` under `name`.
-void storeAt(CssDeclarationBlock* block, uint32_t index, CssValueRun run, PrStringView name,
-             CssDeclaration declaration) {
+void storeAt(CssDeclarationBlock* block, uint32_t index, CssValueRun run, PrStringView name, CssDeclaration declaration) {
     CssValueNode* held = storeDeclaration(run, name, &declaration);
     prMemoryFree(block->stored[index]);
     block->stored[index] = held;
@@ -561,20 +544,17 @@ void unshare(CssDeclarationBlock* block, uint32_t index) {
     splice(block, index, 1, listed);
     for (uint32_t i = 0; i < longhands.count; ++i) {
         if (!bitsetTest(taken.words, longhands.data[i]))
-            storeAt(block, index++, run, PrStringView{},
-                    asLonghand(shared, longhands.data[i]));
+            storeAt(block, index++, run, PrStringView{}, asLonghand(shared, longhands.data[i]));
     }
     prMemoryFree(held);
 }
 
 // Returns the index of the block's declaration with the same name as `staged`, or the block's count if there is none.
 // `text` holds the name of `staged`.
-uint32_t indexOfName(const CssDeclarationBlock* block, const CssDeclaration& staged,
-                     const char* text) {
+uint32_t indexOfName(const CssDeclarationBlock* block, const CssDeclaration& staged, const char* text) {
     uint32_t index = 0;
-    while (index < block->count
-           && !declarationNameEquals(&block->declarations[index],
-                                     cssDeclarationText(block, &block->declarations[index]), &staged, text)) {
+    while (index < block->count && !declarationNameEquals(&block->declarations[index],
+            cssDeclarationText(block, &block->declarations[index]), &staged, text)) {
         ++index;
     }
     return index;
@@ -586,16 +566,14 @@ uint32_t indexOfName(const CssDeclarationBlock* block, const CssDeclaration& sta
 // lists it is first rewritten as its longhands. A shared declaration takes over the longhands that it sets. Their own
 // declarations take its value, and another shared declaration that sets one of them is first rewritten as its
 // longhands.
-void setDeclaration(CssDeclarationBlock* block, const CssParser* parser,
-                    const CssDeclaration& staged) {
+void setDeclaration(CssDeclarationBlock* block, const CssParser* parser, const CssDeclaration& staged) {
     const CssValuePool* pool = &parser->pool;
     CssValueRun run = cssValuePoolRun(pool, {staged.value, staged.valueCount});
     PrStringView name = {pool->text.data + staged.name, staged.nameSize};
     if (isShared(staged)) {
         for (uint32_t i = 0; i < block->count; ++i) {
             const CssDeclaration& held = block->declarations[i];
-            if (isShared(held) && held.property != staged.property
-                && overlaps(held.property, staged.property))
+            if (isShared(held) && held.property != staged.property && overlaps(held.property, staged.property))
                 unshare(block, i--);
             else if (setBy(held, staged.property))
                 storeAt(block, i, run, name, asLonghand(staged, held.property));
@@ -625,8 +603,11 @@ void removeDeclarations(CssDeclarationBlock* block, const CssDeclaredName& name)
         return;
     }
 
-    CssPropertyList longhands = cssIsShorthand(name.property) ? cssPropertyLonghands(name.property)
-                                                              : CssPropertyList{&name.property, 1};
+    CssPropertyList longhands;
+    if (cssIsShorthand(name.property))
+        longhands = cssPropertyLonghands(name.property);
+    else
+        longhands = CssPropertyList{&name.property, 1};
     PropertySet removed = {};
     for (uint32_t i = 0; i < longhands.count; ++i)
         bitsetSet(removed.words, longhands.data[i]);
@@ -634,8 +615,7 @@ void removeDeclarations(CssDeclarationBlock* block, const CssDeclaredName& name)
         PrCssProperty held = block->declarations[i].property;
         if (held == PrCssProperty_Count)
             continue;
-        CssPropertyList sets =
-            cssIsShorthand(held) ? cssPropertyLonghands(held) : CssPropertyList{&held, 1};
+        CssPropertyList sets = cssIsShorthand(held) ? cssPropertyLonghands(held) : CssPropertyList{&held, 1};
         uint32_t count = 0;
         for (uint32_t l = 0; l < sets.count; ++l)
             count += bitsetTest(removed.words, sets.data[l]) ? 1 : 0;
@@ -649,14 +629,12 @@ void removeDeclarations(CssDeclarationBlock* block, const CssDeclaredName& name)
 
 // Returns true if the block's declaration at `index` has the value, the importance and the pending shorthand of
 // `staged`. The value of `staged` is in `pool`.
-bool holds(const CssDeclarationBlock* block, uint32_t index, const CssDeclaration& staged,
-           const CssValuePool* pool) {
+bool holds(const CssDeclarationBlock* block, uint32_t index, const CssDeclaration& staged, const CssValuePool* pool) {
     if (index == block->count)
         return false;
     const CssDeclaration* held = &cssDeclarations(block)[index];
-    return held->important == staged.important && held->shorthand == staged.shorthand
-           && cssValueRunEquals(cssDeclarationValue(block, held),
-                                cssValuePoolRun(pool, {staged.value, staged.valueCount}));
+    return held->important == staged.important && held->shorthand == staged.shorthand &&
+        cssValueRunEquals(cssDeclarationValue(block, held), cssValuePoolRun(pool, {staged.value, staged.valueCount}));
 }
 
 // Returns true if setting the parser's `incoming` declarations in the block changes the block. It does if a declaration
@@ -671,11 +649,13 @@ bool incomingChanges(const CssDeclarationBlock* block, const CssParser* parser) 
                 return true;
             continue;
         }
-        CssPropertyList longhands = isShared(staged) ? cssPropertyLonghands(staged.property)
-                                                     : CssPropertyList{&staged.property, 1};
+        CssPropertyList longhands;
+        if (isShared(staged))
+            longhands = cssPropertyLonghands(staged.property);
+        else
+            longhands = CssPropertyList{&staged.property, 1};
         for (uint32_t i = 0; i < longhands.count; ++i) {
-            if (!holds(block, declarerOf(cssDeclarations(block), block->count, longhands.data[i]),
-                       staged, pool))
+            if (!holds(block, declarerOf(cssDeclarations(block), block->count, longhands.data[i]), staged, pool))
                 return true;
         }
     }
@@ -697,8 +677,7 @@ bool isTokens(CssValueRun run) {
 
 // Adds the declarations of `from` to those of `into`. The last declaration of each name wins, at the place where it was
 // written.
-void mergeDeclarations(CssParser* parser, CssDeclarationBlock* into,
-                       const CssDeclarationBlock* from) {
+void mergeDeclarations(CssParser* parser, CssDeclarationBlock* into, const CssDeclarationBlock* from) {
     Stage stage = beginStage(parser);
     NameFilter filter = makeNameFilter(parser, into->count + from->count);
     for (uint32_t i = 0; i < into->count; ++i)
@@ -712,7 +691,7 @@ void mergeDeclarations(CssParser* parser, CssDeclarationBlock* into,
 // Stages the declarations among a parsed block's items in [first, end), for a declaration block of `rule`. A
 // declaration is staged only if the block supports its name and accepts its value.
 void stageDeclarations(CssParser* parser, CssAtRule rule, const CssTokenStream* ts, uint32_t first,
-                       uint32_t end, uint32_t runFirst, NameFilter filter) {
+        uint32_t end, uint32_t runFirst, NameFilter filter) {
     bool important = bitsetTest(kCssAtRuleImportant, rule);
     for (uint32_t i = first; i < end; ++i) {
         CssItem item = parser->items.data[i];
@@ -748,7 +727,7 @@ void parseDeclarations(CssParser* parser, CssDeclarationBlock* block, PrStringVi
     Stage stage = beginStage(parser);
     NameFilter filter = makeNameFilter(parser, parsed.declarations.count);
     stageDeclarations(parser, block->rule, &ts, parsed.items.start,
-                      parsed.items.start + parsed.items.count, stage.declared, filter);
+        parsed.items.start + parsed.items.count, stage.declared, filter);
     write(block, parser, stage.declared);
     endStage(parser, stage);
     cssParserDrop(parser, parsed);
@@ -826,8 +805,7 @@ CssContents contentsOf(const CssRuleChain* chain) {
             return kCssAtRuleQualifiedContents[rule->style.rule];
         default: {
             CssAtRule atRule = resolved(rule);
-            if (bitsetTest(kCssAtRuleNests, atRule) && kCssAtRuleContents[atRule] != 0
-                && nested(chain->outer))
+            if (bitsetTest(kCssAtRuleNests, atRule) && kCssAtRuleContents[atRule] != 0 && nested(chain->outer))
                 return CssContents_BlockContents;
             if (functionBody(chain))
                 return kCssAtRuleContents[CssAtRule_Function];
@@ -920,8 +898,7 @@ void addFeatureBlocks(CssRuleData* rule) {
 // Adds the declarations of `written` to `earlier`. `earlier` is the block of the same at-rule, in the block of `rule`,
 // that `written` merges into (kCssAtRuleMerged). The blocks that hold declarations come first, in the order in which
 // their at-rules were first written.
-void mergeBlock(CssParser* parser, CssRuleData* rule, CssRuleData* earlier,
-                const CssRuleData* written) {
+void mergeBlock(CssParser* parser, CssRuleData* rule, CssRuleData* earlier, const CssRuleData* written) {
     if (earlier->style.count == 0 && written->style.count != 0) {
         Array<CssRuleData* PR_NONNULL>* blocks = &rule->children;
         uint32_t held = 0;
@@ -940,8 +917,7 @@ void mergeBlock(CssParser* parser, CssRuleData* rule, CssRuleData* earlier,
 // and `&` represents the nearest style rule's selectors (css-nesting-1/#nesting). Directly inside @scope, they are
 // relative to an implied :scope (css-nesting-1/#nesting-at-scope).
 PrCssSelectors* PR_NULLABLE parseSelectors(CssParser* parser, const CssTokenStream* ts,
-                                           CssTokenSpan span, const CssSheetData* PR_NULLABLE sheet,
-                                           const CssRuleChain* PR_NULLABLE parent) {
+        CssTokenSpan span, const CssSheetData* PR_NULLABLE sheet, const CssRuleChain* PR_NULLABLE parent) {
     CssSelectorContext context = {};
     context.sheet = sheet;
     const CssRuleData* style = styleAncestor(parent);
@@ -957,8 +933,7 @@ PrCssSelectors* PR_NULLABLE parseSelectors(CssParser* parser, const CssTokenStre
 CssGrammarIndex preludeRoot(const CssRuleData* rule) {
     if (rule->kind == CssRuleDataKind_Keyframe)
         return kCssAtRuleQualifiedPrelude[rule->style.rule];
-    return rule->block ? kCssAtRuleBlockPrelude[resolved(rule)]
-                       : kCssAtRuleStatementPrelude[resolved(rule)];
+    return rule->block ? kCssAtRuleBlockPrelude[resolved(rule)] : kCssAtRuleStatementPrelude[resolved(rule)];
 }
 
 // Returns true if `name` is one of the counter styles that no @counter-style rule may define
@@ -985,8 +960,7 @@ bool preludeFits(const CssRuleData* rule, CssValueRun run) {
         return !isNonOverridable(cssKeywordFromText(cssValueText(run, run.values)));
     if (isAt(rule, CssAtRule_CustomMedia)) {
         for (uint32_t i = 0; i < run.count; i += run.values[i].next) {
-            if (cssValueIsProduction(&run.values[i], CssValueDef_MediaQuery)
-                && run.values[i].next == 1)
+            if (cssValueIsProduction(&run.values[i], CssValueDef_MediaQuery) && run.values[i].next == 1)
                 return false;
         }
     }
@@ -1002,9 +976,8 @@ void holdPrelude(CssRuleData* rule, CssValueRun run) {
         media = 0;
         queries = 0;
     }
-    if (isAt(rule, CssAtRule_CustomMedia) && run.count > 1
-        && !cssValueIsKeyword(&run.values[1], PrCssKeyword_True)
-        && !cssValueIsKeyword(&run.values[1], PrCssKeyword_False)) {
+    if (isAt(rule, CssAtRule_CustomMedia) && run.count > 1 && !cssValueIsKeyword(&run.values[1], PrCssKeyword_True) &&
+            !cssValueIsKeyword(&run.values[1], PrCssKeyword_False)) {
         media = 1;
         queries = 1;
     }
@@ -1023,8 +996,7 @@ void holdPrelude(CssRuleData* rule, CssValueRun run) {
 // Matches `span` as the prelude that `rule` accepts, onto the parser's pool, and writes it to `out`. Returns false if
 // `span` is not such a prelude. A root of CssGrammarRoot_None accepts no tokens.
 bool matchPrelude(CssParser* parser, const CssTokenStream* ts, CssTokenSpan span,
-                  const CssRuleData* rule, const CssSheetData* PR_NULLABLE sheet,
-                  CssValueSpan* out) {
+        const CssRuleData* rule, const CssSheetData* PR_NULLABLE sheet, CssValueSpan* out) {
     span = cssTrimWhitespace(ts->tokens, span);
     CssGrammarIndex root = preludeRoot(rule);
     if (root == CssGrammarRoot_None) {
@@ -1035,8 +1007,8 @@ bool matchPrelude(CssParser* parser, const CssTokenStream* ts, CssTokenSpan span
     CssTokenStream prelude = cssSubStream(ts, span);
     CssParseContext context = {sheet};
     CssValueSpan matched;
-    bool parsed = cssParsePrelude(root, &prelude, &context, &parser->pool, &parser->match, &matched)
-                  && preludeFits(rule, cssValuePoolRun(&parser->pool, matched));
+    bool parsed = cssParsePrelude(root, &prelude, &context, &parser->pool, &parser->match, &matched) &&
+        preludeFits(rule, cssValuePoolRun(&parser->pool, matched));
     if (parsed && isAt(rule, CssAtRule_CustomMedia)) {
         // The media-query alternative also accepts these as media types. Custom media instead gives a lone true/false
         // its boolean meaning (mediaqueries-5/#custom-mq).
@@ -1056,7 +1028,7 @@ bool matchPrelude(CssParser* parser, const CssTokenStream* ts, CssTokenSpan span
 }
 
 bool parsePrelude(CssParser* parser, const CssTokenStream* ts, CssTokenSpan span, CssRuleData* rule,
-                  const CssSheetData* PR_NULLABLE sheet) {
+        const CssSheetData* PR_NULLABLE sheet) {
     uint32_t values = parser->pool.values.count;
     uint32_t text = parser->pool.text.count;
     CssValueSpan matched;
@@ -1071,7 +1043,7 @@ bool parsePrelude(CssParser* parser, const CssTokenStream* ts, CssTokenSpan span
 }
 
 void buildBlock(CssParser* parser, const CssTokenStream* ts, CssTokenSpan span, CssRuleData* rule,
-                const CssRuleChain* PR_NULLABLE outer, const CssSheetData* PR_NULLABLE sheet);
+    const CssRuleChain* PR_NULLABLE outer, const CssSheetData* PR_NULLABLE sheet);
 
 // Returns true if a built at-rule's block holds what its spec requires of it. An @property rule declares its syntax and
 // whether it inherits. It also declares an initial value, unless its syntax is the universal syntax definition
@@ -1080,12 +1052,9 @@ bool blockFits(const CssRuleData* rule) {
     if (!isAt(rule, CssAtRule_Property))
         return true;
     const CssDeclarationBlock* block = &rule->style;
-    uint32_t syntax =
-        cssDeclarationBlockFind(block, cssDescriptorDeclaredName(PrCssDescriptor_PropertySyntax));
-    uint32_t inherits =
-        cssDeclarationBlockFind(block, cssDescriptorDeclaredName(PrCssDescriptor_PropertyInherits));
-    uint32_t initial = cssDeclarationBlockFind(
-        block, cssDescriptorDeclaredName(PrCssDescriptor_PropertyInitialValue));
+    uint32_t syntax = cssDeclarationBlockFind(block, cssDescriptorDeclaredName(PrCssDescriptor_PropertySyntax));
+    uint32_t inherits = cssDeclarationBlockFind(block, cssDescriptorDeclaredName(PrCssDescriptor_PropertyInherits));
+    uint32_t initial = cssDeclarationBlockFind(block, cssDescriptorDeclaredName(PrCssDescriptor_PropertyInitialValue));
     if (syntax == block->count || inherits == block->count)
         return false;
     CssValueRun definition = cssDeclarationValue(block, &cssDeclarations(block)[syntax]);
@@ -1114,8 +1083,7 @@ CssRuleData* PR_NULLABLE mergedInto(CssRuleData* parent, const CssRuleData* chil
 // `out`. Returns PrStatus_Syntax if the rule is invalid anywhere (cssom-1/#parse-a-css-rule), and PrStatus_NotAllowed
 // if it is valid, but not in that block.
 PrStatus buildRule(CssParser* parser, const CssTokenStream* ts, CssSyntaxRule syntax,
-                   const CssSheetData* PR_NULLABLE sheet, const CssRuleChain* PR_NULLABLE parent,
-                   CssRuleData* PR_NULLABLE* out) {
+        const CssSheetData* PR_NULLABLE sheet, const CssRuleChain* PR_NULLABLE parent, CssRuleData* PR_NULLABLE* out) {
     bool block = (syntax.flags & CssSyntaxRuleFlag_HasBlock) != 0;
     if (syntax.type == CssSyntaxRuleType_Qualified) {
         // A qualified rule is a style rule, or the rule that the block's at-rule holds instead
@@ -1124,9 +1092,8 @@ PrStatus buildRule(CssParser* parser, const CssTokenStream* ts, CssSyntaxRule sy
             return PrStatus_Syntax;
         if (parent != nullptr && (contentsOf(parent) & CssContents_QualifiedRules) == 0)
             return PrStatus_NotAllowed;
-        CssAtRule holder = parent != nullptr && parent->rule->kind == CssRuleDataKind_At
-                               ? resolved(parent->rule)
-                               : CssAtRule_None;
+        CssAtRule holder =
+            parent != nullptr && parent->rule->kind == CssRuleDataKind_At ? resolved(parent->rule) : CssAtRule_None;
         if (holder != CssAtRule_None && kCssAtRuleQualifiedContents[holder] != 0) {
             CssRuleData* rule = newRule(CssRuleDataKind_Keyframe);
             rule->style.rule = holder;
@@ -1139,8 +1106,7 @@ PrStatus buildRule(CssParser* parser, const CssTokenStream* ts, CssSyntaxRule sy
             return PrStatus_Ok;
         }
 
-        PrCssSelectors* selectors = parseSelectors(
-            parser, ts, cssTrimWhitespace(ts->tokens, syntax.prelude), sheet, parent);
+        PrCssSelectors* selectors = parseSelectors(parser, ts, cssTrimWhitespace(ts->tokens, syntax.prelude), sheet, parent);
         if (selectors == nullptr)
             return PrStatus_Syntax;
         CssRuleData* rule = newRule(CssRuleDataKind_Style);
@@ -1152,8 +1118,7 @@ PrStatus buildRule(CssParser* parser, const CssTokenStream* ts, CssSyntaxRule sy
 
     CssAtRule written = writtenAtRule(parser, ts, syntax);
     CssAtRule atRule = kCssAtRuleAlias[written];
-    if (atRule == CssAtRule_None
-        || (block ? kCssAtRuleContents[atRule] == 0 : !bitsetTest(kCssAtRuleStatement, atRule)))
+    if (atRule == CssAtRule_None || (block ? kCssAtRuleContents[atRule] == 0 : !bitsetTest(kCssAtRuleStatement, atRule)))
         return PrStatus_Syntax;
     if (!atRuleFits(atRule, parent))
         return PrStatus_NotAllowed;
@@ -1203,7 +1168,7 @@ void endRun(CssParser* parser, CssRuleData* rule, uint32_t first, CssAtRule decl
 // A child's block is parsed after this one, onto the same arrays, so this block's items are read by index rather than
 // kept.
 void buildBlock(CssParser* parser, const CssTokenStream* ts, CssTokenSpan span, CssRuleData* rule,
-                const CssRuleChain* PR_NULLABLE outer, const CssSheetData* PR_NULLABLE sheet) {
+        const CssRuleChain* PR_NULLABLE outer, const CssSheetData* PR_NULLABLE sheet) {
     CssRuleChain here = {rule, outer};
     CssTokenStream contents = cssSubStream(ts, span);
     CssBlock parsed = {};
@@ -1213,8 +1178,8 @@ void buildBlock(CssParser* parser, const CssTokenStream* ts, CssTokenSpan span, 
     CssContents holds = contentsOf(&here);
     bool declares = (holds & CssContents_Declarations) != 0;
     bool body = functionBody(&here);
-    bool nests = holds == CssContents_BlockContents || body
-                 || isAt(rule, CssAtRule_Apply) || isAt(rule, CssAtRule_Contents);
+    bool nests = holds == CssContents_BlockContents || body ||
+        isAt(rule, CssAtRule_Apply) || isAt(rule, CssAtRule_Contents);
     bool own = !nests || rule->kind == CssRuleDataKind_Style;    // true if the next run is the rule's own
     CssAtRule runs = body ? CssAtRule_Function : CssAtRule_None; // the at-rule whose declarations a nested run holds
 
@@ -1230,18 +1195,15 @@ void buildBlock(CssParser* parser, const CssTokenStream* ts, CssTokenSpan span, 
         if (type != CssItemType_Rule)
             continue;
         CssRuleData* child = nullptr;
-        if (i < end
-            && buildRule(parser, ts, parser->rules.data[parser->items.data[i].index], sheet, &here,
-                         &child)
-                   != PrStatus_Ok) {
+        if (i < end && buildRule(parser, ts, parser->rules.data[parser->items.data[i].index], sheet, &here, &child) !=
+                PrStatus_Ok) {
             continue;
         }
 
         // The run ends here if it holds declarations. Outside a nested context, the rule's own declarations continue
         // past the rules among them, to the end.
         if (declares && written != 0 && (nests || i == end)) {
-            stageDeclarations(parser, own ? rule->style.rule : runs, ts, run, i,
-                              stage.declared, filter);
+            stageDeclarations(parser, own ? rule->style.rule : runs, ts, run, i, stage.declared, filter);
             if (own) {
                 write(&rule->style, parser, stage.declared);
                 parser->declared.count = stage.declared;
@@ -1271,8 +1233,7 @@ void buildBlock(CssParser* parser, const CssTokenStream* ts, CssTokenSpan span, 
 
 // Adds the rules of a style sheet, in order. Drops each rule that is out of the order that css-cascade-5/#at-import and
 // css-namespaces-3/#declaration require.
-void addSheetRules(CssSheetData* sheet, CssParser* parser, const CssTokenStream* ts,
-                   CssBlock parsed) {
+void addSheetRules(CssSheetData* sheet, CssParser* parser, const CssTokenStream* ts, CssBlock parsed) {
     sheet->rules.reserve(sheet->rules.count + parsed.rules.count);
     Order order = Order_Import;
     for (uint32_t i = 0; i < parsed.items.count; ++i) {
@@ -1280,8 +1241,7 @@ void addSheetRules(CssSheetData* sheet, CssParser* parser, const CssTokenStream*
         if (item.type != CssItemType_Rule)
             continue;
         CssRuleData* rule = nullptr;
-        if (buildRule(parser, ts, parser->rules.data[item.index], sheet, nullptr, &rule)
-            != PrStatus_Ok)
+        if (buildRule(parser, ts, parser->rules.data[item.index], sheet, nullptr, &rule) != PrStatus_Ok)
             continue;
 
         // An @layer statement may stand among the @import rules without ending them.
@@ -1311,8 +1271,7 @@ void respecify(const Array<CssRuleData* PR_NONNULL>& rules, const PrCssSelectors
 // Serialization
 
 // Returns the declaration of the longhand `property`, or null if there is none.
-const CssDeclaration* PR_NULLABLE findProperty(const CssDeclarationBlock* block,
-                                               PrCssProperty property) {
+const CssDeclaration* PR_NULLABLE findProperty(const CssDeclarationBlock* block, PrCssProperty property) {
     uint32_t index = declarerOf(cssDeclarations(block), block->count, property);
     return index != block->count ? &cssDeclarations(block)[index] : nullptr;
 }
@@ -1410,7 +1369,7 @@ struct LonghandValues {
 // Gathers the values of the longhands of `shorthand`, using the block's listing if there is one. Returns false if a
 // longhand is not declared, or if their importance differs.
 bool gatherLonghands(const CssDeclarationBlock* block, const Listing* PR_NULLABLE listing,
-                     PrCssProperty shorthand, LonghandValues* out) {
+        PrCssProperty shorthand, LonghandValues* out) {
     CssPropertyList longhands = cssPropertyLonghands(shorthand);
     CssValueRun* values = out->held;
     if (longhands.count > kLonghandsHeld) {
@@ -1459,8 +1418,7 @@ void serializeGathered(TextBuffer* out, PrCssProperty shorthand, const LonghandV
 }
 
 // Serializes a shorthand's value from its longhands' values (cssom-1/#dom-cssstyledeclaration-getpropertyvalue).
-void serializeShorthand(TextBuffer* out, const CssDeclarationBlock* block,
-                        PrCssProperty shorthand) {
+void serializeShorthand(TextBuffer* out, const CssDeclarationBlock* block, PrCssProperty shorthand) {
     LonghandValues gathered = {};
     if (gatherLonghands(block, nullptr, shorthand, &gathered))
         serializeGathered(out, shorthand, &gathered);
@@ -1472,7 +1430,7 @@ void serializeShorthand(TextBuffer* out, const CssDeclarationBlock* block,
 // at `first` or already `written`. Their importance must be the same, and the shorthand must be able to write their
 // values. Returns false otherwise.
 bool serializeAsShorthand(TextBuffer* out, const CssDeclarationBlock* block, const Listing* listing,
-                          PrCssProperty shorthand, uint32_t first, PropertySet* written) {
+        PrCssProperty shorthand, uint32_t first, PropertySet* written) {
     CssPropertyList longhands = cssPropertyLonghands(shorthand);
     if (longhands.count > listing->count - first)
         return false;
@@ -1493,8 +1451,7 @@ bool serializeAsShorthand(TextBuffer* out, const CssDeclarationBlock* block, con
         bool flowRelative = bitsetTest(kCssPropertyFlowRelative, property);
         for (uint32_t j = 0; j < longhands.count; ++j) {
             PrCssProperty other = longhands.data[j];
-            if (group == kCssPropertyLogicalGroup[other]
-                && flowRelative != bitsetTest(kCssPropertyFlowRelative, other)) {
+            if (group == kCssPropertyLogicalGroup[other] && flowRelative != bitsetTest(kCssPropertyFlowRelative, other)) {
                 writes = false;
                 break;
             }
@@ -1529,16 +1486,15 @@ uint32_t boundsWritten(CssValueRun run) {
         return run.count;
     const CssValueNode* upper = &run.values[run.count - 1];
     const CssValueNode* lower = upper - 1;
-    bool same = lower->next == 1 && lower->kind == upper->kind && lower->unit == upper->unit
-                && lower->aux == upper->aux && lower->number == upper->number;
+    bool same = lower->next == 1 && lower->kind == upper->kind && lower->unit == upper->unit &&
+        lower->aux == upper->aux && lower->number == upper->number;
     return same ? run.count - 1 : run.count;
 }
 
 // Serializes one declaration as `name: value`, with `!important` if set, and a closing semicolon
 // (cssom-1/#serialize-a-css-declaration). A feature value's name is escaped as an identifier
 // (css-fonts-4/#font-feature-values-syntax).
-void serializeDeclaration(TextBuffer* out, const CssDeclarationBlock* block,
-                          CssDeclarationItem item) {
+void serializeDeclaration(TextBuffer* out, const CssDeclarationBlock* block, CssDeclarationItem item) {
     const CssDeclaration* declaration = item.declaration;
     if (item.property != PrCssProperty_Count)
         textAppend(out, cssPropertyName(item.property));
@@ -1583,8 +1539,7 @@ void serializeDeclarations(TextBuffer* out, const CssRuleData* rule) {
     for (uint32_t i = 0; i < rule->children.count; ++i) {
         const CssRuleData* child = rule->children.data[i];
         // A block that others merge into serializes only if it holds declarations.
-        if (child->kind == CssRuleDataKind_At && bitsetTest(kCssAtRuleMerged, resolved(child))
-            && child->style.count == 0)
+        if (child->kind == CssRuleDataKind_At && bitsetTest(kCssAtRuleMerged, resolved(child)) && child->style.count == 0)
             continue;
         textAppendChar(out, ' ');
         cssSerializeRule(out, child);
@@ -1595,17 +1550,17 @@ void serializeDeclarations(TextBuffer* out, const CssRuleData* rule) {
 // Writes `{ `, the declarations of an @property rule in the order syntax, inherits and initial-value, and ` }`
 // (css-properties-values-api-1/#serialize-a-csspropertyrule).
 void serializePropertyDeclarations(TextBuffer* out, const CssRuleData* rule) {
-    static constexpr PrCssDescriptor kOrder[] = {PrCssDescriptor_PropertySyntax,
-                                                 PrCssDescriptor_PropertyInherits,
-                                                 PrCssDescriptor_PropertyInitialValue};
+    static constexpr PrCssDescriptor kOrder[] = {
+        PrCssDescriptor_PropertySyntax,
+        PrCssDescriptor_PropertyInherits,
+        PrCssDescriptor_PropertyInitialValue,
+    };
     textAppend(out, " {");
     for (PrCssDescriptor descriptor : kOrder) {
-        uint32_t index =
-            cssDeclarationBlockFind(&rule->style, cssDescriptorDeclaredName(descriptor));
+        uint32_t index = cssDeclarationBlockFind(&rule->style, cssDescriptorDeclaredName(descriptor));
         if (index != rule->style.count) {
             textAppendChar(out, ' ');
-            serializeDeclaration(
-                out, &rule->style,
+            serializeDeclaration(out, &rule->style,
                 CssDeclarationItem{&cssDeclarations(&rule->style)[index], PrCssProperty_Count});
         }
     }
@@ -1642,8 +1597,7 @@ CssValueSpan parseMediaQueries(CssParser* parser, PrStringView text) {
     CssTokenStream ts = cssParserTokenize(parser, text);
     CssParseContext context = {};
     CssValueSpan matched = {parser->pool.values.count, 0};
-    cssParseProduction(CssValueDef_MediaQueryList, &ts, &context, &parser->pool, &parser->match,
-                       &matched);
+    cssParseProduction(CssValueDef_MediaQueryList, &ts, &context, &parser->pool, &parser->match, &matched);
     return matched;
 }
 
@@ -1685,8 +1639,7 @@ void copyBlock(CssDeclarationBlock* out, const CssDeclarationBlock* block) {
         out->declarations = nullptr;
         return;
     }
-    size_t size = sizeof(CssValueNode) * block->valueCount + sizeof(CssDeclaration) * block->count
-                  + block->textSize;
+    size_t size = sizeof(CssValueNode) * block->valueCount + sizeof(CssDeclaration) * block->count + block->textSize;
     CssValueNode* held = static_cast<CssValueNode*>(prMemoryAlloc(size));
     memCopy(held, packedHeld(block), size);
     out->declarations = reinterpret_cast<CssDeclaration*>(held + block->valueCount);
@@ -1697,16 +1650,14 @@ void copyBlock(CssDeclarationBlock* out, const CssDeclarationBlock* block) {
 // ---------------------------------------------------------------------------------------------------------------------
 // Declarations
 
-const char* PR_NULLABLE cssDeclarationText(const CssDeclarationBlock* block,
-                                           const CssDeclaration* declaration) {
+const char* PR_NULLABLE cssDeclarationText(const CssDeclarationBlock* block, const CssDeclaration* declaration) {
     if (block->stored == nullptr)
         return reinterpret_cast<const char*>(block->declarations + block->count);
     const CssValueNode* held = block->stored[declaration - block->declarations];
     return reinterpret_cast<const char*>(held + declaration->valueCount);
 }
 
-PrStringView cssDeclarationName(const CssDeclarationBlock* block,
-                                const CssDeclaration* declaration) {
+PrStringView cssDeclarationName(const CssDeclarationBlock* block, const CssDeclaration* declaration) {
     if (declaration->property != PrCssProperty_Count)
         return cssPropertyName(declaration->property);
     if (declaration->descriptor != PrCssDescriptor_None)
@@ -1714,13 +1665,13 @@ PrStringView cssDeclarationName(const CssDeclarationBlock* block,
     return authorText(block, declaration);
 }
 
-CssValueRun cssDeclarationValue(const CssDeclarationBlock* block,
-                                const CssDeclaration* declaration) {
-    const CssValueNode* values = block->stored != nullptr
-                                     ? block->stored[declaration - block->declarations]
-                                     : packedHeld(block);
-    return CssValueRun{values + declaration->value, declaration->valueCount,
-                       cssDeclarationText(block, declaration)};
+CssValueRun cssDeclarationValue(const CssDeclarationBlock* block, const CssDeclaration* declaration) {
+    const CssValueNode* values;
+    if (block->stored != nullptr)
+        values = block->stored[declaration - block->declarations];
+    else
+        values = packedHeld(block);
+    return CssValueRun{values + declaration->value, declaration->valueCount, cssDeclarationText(block, declaration)};
 }
 
 uint32_t cssDeclarationBlockLength(const CssDeclarationBlock* block) {
@@ -1942,8 +1893,7 @@ void cssSheetDataParse(CssSheetData* sheet, PrStringView text, CssParserSlot slo
 }
 
 CssEditResult cssStyleRulePrepareSelectorText(CssEdit* edit, const CssRuleChain* PR_NULLABLE outer,
-                                              const CssSheetData* PR_NULLABLE sheet,
-                                              PrStringView text) {
+        const CssSheetData* PR_NULLABLE sheet, PrStringView text) {
     CssParser* parser = edit->scope.parser;
     CssTokenStream ts = cssParserTokenize(parser, text);
     edit->selectors = parseSelectors(parser, &ts, cssStreamTrimmed(&ts), sheet, outer);
@@ -1954,7 +1904,7 @@ CssEditResult cssStyleRulePrepareSelectorText(CssEdit* edit, const CssRuleChain*
 }
 
 CssEditResult cssRulePreparePrelude(CssEdit* edit, const CssRuleData* rule,
-                                    const CssSheetData* PR_NULLABLE sheet, PrStringView text) {
+        const CssSheetData* PR_NULLABLE sheet, PrStringView text) {
     CssParser* parser = edit->scope.parser;
     CssTokenStream ts = cssParserTokenize(parser, text);
     if (!matchPrelude(parser, &ts, cssStreamAll(&ts), rule, sheet, &edit->staged))
@@ -2007,9 +1957,7 @@ bool cssSheetNamespace(const CssSheetData* sheet, PrStringView prefix, PrStringV
         PrStringView declared;
         PrStringView declaredUrl;
         cssNamespaceRuleParts(rule, &declared, &declaredUrl);
-        bool matches = prefix.data == nullptr
-                           ? declared.data == nullptr
-                           : declared.data != nullptr && declared == prefix;
+        bool matches = prefix.data == nullptr ? declared.data == nullptr : declared.data != nullptr && declared == prefix;
         if (matches) {
             *url = declaredUrl;
             found = true;
@@ -2029,8 +1977,8 @@ uint32_t cssKeyframesFind(const CssRuleData* rule, PrStringView select, CssParse
     uint32_t text = parser->pool.text.count;
     CssValueSpan matched;
     uint32_t found = rule->children.count;
-    if (cssParsePrelude(kCssAtRuleQualifiedPrelude[resolved(rule)], &selectors, &context,
-                        &parser->pool, &parser->match, &matched)) {
+    if (cssParsePrelude(kCssAtRuleQualifiedPrelude[resolved(rule)], &selectors, &context, &parser->pool, &parser->match,
+            &matched)) {
         // Two selector lists are equal if their serializations are.
         TextBuffer wanted;
         TextBuffer held;
@@ -2060,18 +2008,15 @@ void cssMediaListParse(CssMediaQueries* list, PrStringView text) {
     cssEditEnd(&edit);
 }
 
-CssEditResult cssMediaListPrepareText(CssEdit* edit, const CssMediaQueries* list,
-                                      PrStringView text) {
+CssEditResult cssMediaListPrepareText(CssEdit* edit, const CssMediaQueries* list, PrStringView text) {
     CssParser* parser = edit->scope.parser;
     edit->staged = parseMediaQueries(parser, text);
     edit->kind = CssEditKind_Media;
-    bool same = cssValueRunEquals(cssValuePoolRun(&parser->pool, edit->staged),
-                                  cssValueListRun(&list->queries));
+    bool same = cssValueRunEquals(cssValuePoolRun(&parser->pool, edit->staged), cssValueListRun(&list->queries));
     return same ? CssEditResult_Unchanged : CssEditResult_Changed;
 }
 
-CssEditResult cssMediaListPrepareAppend(CssEdit* edit, const CssMediaQueries* list,
-                                        PrStringView text) {
+CssEditResult cssMediaListPrepareAppend(CssEdit* edit, const CssMediaQueries* list, PrStringView text) {
     CssParser* parser = edit->scope.parser;
     CssValuePool* pool = &parser->pool;
 
@@ -2088,8 +2033,7 @@ CssEditResult cssMediaListPrepareAppend(CssEdit* edit, const CssMediaQueries* li
     return CssEditResult_Changed;
 }
 
-CssEditResult cssMediaListPrepareDelete(CssEdit* edit, const CssMediaQueries* list,
-                                        PrStringView text) {
+CssEditResult cssMediaListPrepareDelete(CssEdit* edit, const CssMediaQueries* list, PrStringView text) {
     CssParser* parser = edit->scope.parser;
     CssValuePool* pool = &parser->pool;
     CssValueSpan parsed = parseMediaQueries(parser, text);
@@ -2148,8 +2092,8 @@ bool cssDeclaredNameFromName(CssAtRule rule, const PrCssDeclarationName* name, C
         return authorName(rule, author, out);
     if (name->descriptor != PrCssDescriptor_None) {
         // The block does not declare a descriptor of another rule.
-        if (name->descriptor >= PrCssDescriptor_Count
-            || cssDescriptorFromText(rule, cssDescriptorName(name->descriptor)) != name->descriptor)
+        if (name->descriptor >= PrCssDescriptor_Count ||
+                cssDescriptorFromText(rule, cssDescriptorName(name->descriptor)) != name->descriptor)
             return false;
         *out = cssDescriptorDeclaredName(kCssDescriptorAlias[name->descriptor]);
         return true;
@@ -2161,25 +2105,25 @@ bool cssDeclaredNameFromName(CssAtRule rule, const PrCssDeclarationName* name, C
 }
 
 CssDeclaredName cssPropertyDeclaredName(PrCssProperty property) {
-    return CssDeclaredName{
-        property, PrCssDescriptor_None, CssGrammarRoot_None, PrStringView{}, property,
-        false};
+    return CssDeclaredName{property, PrCssDescriptor_None, CssGrammarRoot_None, PrStringView{}, property, false};
 }
 
 CssDeclaredName cssDescriptorDeclaredName(PrCssDescriptor descriptor) {
-    return CssDeclaredName{PrCssProperty_Count,
-                           descriptor,
-                           CssGrammarRoot_None,
-                           PrStringView{},
-                           uint32_t(PrCssProperty_Count + descriptor),
-                           bitsetTest(kCssDescriptorUnicodeRanges, descriptor)};
+    return CssDeclaredName{
+        PrCssProperty_Count,
+        descriptor,
+        CssGrammarRoot_None,
+        PrStringView{},
+        uint32_t(PrCssProperty_Count + descriptor),
+        bitsetTest(kCssDescriptorUnicodeRanges, descriptor),
+    };
 }
 
 uint32_t cssDeclarationBlockFind(const CssDeclarationBlock* block, const CssDeclaredName& name) {
+    if (name.property != PrCssProperty_Count && cssIsShorthand(name.property))
+        return block->count;
     if (name.property != PrCssProperty_Count)
-        return cssIsShorthand(name.property)
-                   ? block->count
-                   : declarerOf(cssDeclarations(block), block->count, name.property);
+        return declarerOf(cssDeclarations(block), block->count, name.property);
     CssDeclaration key = {};
     key.hash = name.hash;
     key.property = name.property;
@@ -2187,8 +2131,7 @@ uint32_t cssDeclarationBlockFind(const CssDeclarationBlock* block, const CssDecl
     key.nameSize = uint32_t(name.text.size);
     const CssDeclaration* declarations = cssDeclarations(block);
     for (uint32_t i = 0; i < block->count; ++i) {
-        if (declarationNameEquals(&declarations[i], cssDeclarationText(block, &declarations[i]), &key,
-                                  name.text.data))
+        if (declarationNameEquals(&declarations[i], cssDeclarationText(block, &declarations[i]), &key, name.text.data))
             return i;
     }
     return block->count;
@@ -2202,14 +2145,12 @@ bool cssDeclarationSupported(const CssDeclaredName& name, PrStringView value) {
     CssTokenSpan span = cssStreamTrimmed(&ts);
 
     // css-variables-1/#defining-variables: a custom property's value may be empty, and no other property's may.
-    bool supported = (span.count != 0 || name.text.data != nullptr)
-                     && declare(parser, name, &ts, span, false);
+    bool supported = (span.count != 0 || name.text.data != nullptr) && declare(parser, name, &ts, span, false);
     cssParserEnd(&scope);
     return supported;
 }
 
-void cssSerializePropertyValue(TextBuffer* out, const CssDeclarationBlock* block,
-                               const CssDeclaredName& name) {
+void cssSerializePropertyValue(TextBuffer* out, const CssDeclarationBlock* block, const CssDeclaredName& name) {
     if (name.property != PrCssProperty_Count && cssIsShorthand(name.property)) {
         serializeShorthand(out, block, name.property);
         return;
@@ -2234,8 +2175,7 @@ bool cssDeclarationBlockImportant(const CssDeclarationBlock* block, const CssDec
 }
 
 CssEditResult cssDeclarationBlockPrepareSet(CssEdit* edit, const CssDeclarationBlock* block,
-                                            const CssDeclaredName& name, PrStringView value,
-                                            bool important) {
+        const CssDeclaredName& name, PrStringView value, bool important) {
     if (important && !bitsetTest(kCssAtRuleImportant, block->rule))
         return CssEditResult_Rejected;
 
@@ -2255,8 +2195,7 @@ CssEditResult cssDeclarationBlockPrepareSet(CssEdit* edit, const CssDeclarationB
 }
 
 CssEditResult cssDeclarationBlockPrepareSetValue(CssEdit* edit, const CssDeclarationBlock* block,
-                                                 const CssDeclaredName& name, CssValueRun run,
-                                                 bool important, bool append) {
+        const CssDeclaredName& name, CssValueRun run, bool important, bool append) {
     if (run.count == 0 || (important && !bitsetTest(kCssAtRuleImportant, block->rule)))
         return CssEditResult_Rejected;
 
@@ -2288,8 +2227,7 @@ CssEditResult cssDeclarationBlockPrepareSetValue(CssEdit* edit, const CssDeclara
             cssSerializeValues(&text, run);
         CssTokenStream ts = cssParserTokenize(parser, textView(&text));
         CssTokenSpan span = cssStreamTrimmed(&ts);
-        takes = (span.count != 0 || name.text.data != nullptr)
-                && declare(parser, name, &ts, span, important);
+        takes = (span.count != 0 || name.text.data != nullptr) && declare(parser, name, &ts, span, important);
     } else {
         // A number that its position does not accept as is, because it is out of range or not an integer, is wrapped in
         // a calculation if the value matches no other way (css-typed-om-1/#create-an-internal-representation).
@@ -2311,8 +2249,7 @@ CssEditResult cssDeclarationBlockPrepareSetValue(CssEdit* edit, const CssDeclara
 }
 
 CssEditResult cssDeclarationBlockPrepareRemove(CssEdit* edit, const CssDeclarationBlock* block,
-                                               const CssDeclaredName& name,
-                                               PrString* PR_NULLABLE out) {
+        const CssDeclaredName& name, PrString* PR_NULLABLE out) {
     if (out != nullptr) {
         TextBuffer text;
         cssSerializePropertyValue(&text, block, name);
@@ -2342,7 +2279,7 @@ void cssDeclarationBlockCommit(CssEdit* edit, CssDeclarationBlock* block) {
 }
 
 CssEditResult cssDeclarationBlockSet(CssDeclarationBlock* block, const CssDeclaredName& name,
-                                     PrStringView value, bool important, CssParserSlot slot) {
+        PrStringView value, bool important, CssParserSlot slot) {
     CssEdit edit;
     cssEditBegin(&edit, slot);
     CssEditResult result = cssDeclarationBlockPrepareSet(&edit, block, name, value, important);
@@ -2352,9 +2289,8 @@ CssEditResult cssDeclarationBlockSet(CssDeclarationBlock* block, const CssDeclar
     return result;
 }
 
-CssEditResult cssDeclarationBlockSetValue(CssDeclarationBlock* block,
-                                          const CssDeclaredName& name, CssValueRun run,
-                                          bool important, bool append, CssParserSlot slot) {
+CssEditResult cssDeclarationBlockSetValue(CssDeclarationBlock* block, const CssDeclaredName& name, CssValueRun run,
+        bool important, bool append, CssParserSlot slot) {
     CssEdit edit;
     cssEditBegin(&edit, slot);
     CssEditResult result = cssDeclarationBlockPrepareSetValue(&edit, block, name, run, important, append);
@@ -2364,8 +2300,7 @@ CssEditResult cssDeclarationBlockSetValue(CssDeclarationBlock* block,
     return result;
 }
 
-CssEditResult cssDeclarationBlockRemove(CssDeclarationBlock* block, const CssDeclaredName& name,
-                                        PrString* PR_NULLABLE out) {
+CssEditResult cssDeclarationBlockRemove(CssDeclarationBlock* block, const CssDeclaredName& name, PrString* PR_NULLABLE out) {
     CssEdit edit;
     cssEditBegin(&edit, nullptr);
     CssEditResult result = cssDeclarationBlockPrepareRemove(&edit, block, name, out);
@@ -2376,7 +2311,7 @@ CssEditResult cssDeclarationBlockRemove(CssDeclarationBlock* block, const CssDec
 }
 
 void cssDeclarationBlockValue(const CssDeclarationBlock* block, const CssDeclaredName& name,
-                              CssValuePool* out, CssParserSlot slot) {
+        CssValuePool* out, CssParserSlot slot) {
     if (name.property == PrCssProperty_Count || !cssIsShorthand(name.property)) {
         uint32_t index = cssDeclarationBlockFind(block, name);
         // A longhand pending on its shorthand's substitution has no value of its own.
@@ -2402,8 +2337,7 @@ void cssDeclarationBlockValue(const CssDeclarationBlock* block, const CssDeclare
         uint32_t size = parser->pool.text.count;
         CssValueSpan matched;
         CssTokenSpan span = {value.pos, value.end - value.pos};
-        bool parsed = pending ? cssParseTokens(&value, &parser->pool, &matched)
-                              : matchValue(name, parser, &ts, span, &matched);
+        bool parsed = pending ? cssParseTokens(&value, &parser->pool, &matched) : matchValue(name, parser, &ts, span, &matched);
         if (parsed)
             cssValuePoolAddRun(out, cssValuePoolRun(&parser->pool, matched));
         parser->pool.values.count = values;
@@ -2413,8 +2347,7 @@ void cssDeclarationBlockValue(const CssDeclarationBlock* block, const CssDeclare
     textReset(&text);
 }
 
-bool cssParseDeclaredValue(const CssDeclaredName& name, PrStringView text, CssValuePool* out,
-                           CssParserSlot slot) {
+bool cssParseDeclaredValue(const CssDeclaredName& name, PrStringView text, CssValuePool* out, CssParserSlot slot) {
     uint32_t mark = out->values.count;
     // A shorthand's value is spread over its longhands. A block of those longhands gathers it back.
     if (name.property != PrCssProperty_Count && cssIsShorthand(name.property)) {
@@ -2434,8 +2367,7 @@ bool cssParseDeclaredValue(const CssDeclaredName& name, PrStringView text, CssVa
     uint32_t size = parser->pool.text.count;
     CssValueSpan matched;
     // css-variables-1/#defining-variables: a custom property's value may be empty, and no other property's may.
-    bool parsed = (span.count != 0 || name.text.data != nullptr)
-                  && matchValue(name, parser, &ts, span, &matched);
+    bool parsed = (span.count != 0 || name.text.data != nullptr) && matchValue(name, parser, &ts, span, &matched);
     if (parsed)
         cssValuePoolAddRun(out, cssValuePoolRun(&parser->pool, matched));
     parser->pool.values.count = values;
@@ -2448,10 +2380,8 @@ bool cssParseDeclaredValue(const CssDeclaredName& name, PrStringView text, CssVa
 // Rule lists
 
 PrStatus cssRuleListPrepareInsert(CssEdit* edit, const CssSheetData* PR_NULLABLE sheet,
-                                  const CssRuleChain* PR_NULLABLE parent, PrStringView text,
-                                  uint32_t index) {
-    const Array<CssRuleData* PR_NONNULL>* list =
-        parent != nullptr ? &parent->rule->children : &sheet->rules;
+        const CssRuleChain* PR_NULLABLE parent, PrStringView text, uint32_t index) {
+    const Array<CssRuleData* PR_NONNULL>* list = parent != nullptr ? &parent->rule->children : &sheet->rules;
     if (index > list->count)
         return PrStatus_OutOfRange;
 
@@ -2523,16 +2453,14 @@ PrStatus cssRuleListPrepareInsert(CssEdit* edit, const CssSheetData* PR_NULLABLE
     return PrStatus_Ok;
 }
 
-void cssRuleListCommitInsert(CssEdit* edit, CssSheetData* PR_NULLABLE sheet,
-                             CssRuleData* PR_NULLABLE parent) {
+void cssRuleListCommitInsert(CssEdit* edit, CssSheetData* PR_NULLABLE sheet, CssRuleData* PR_NULLABLE parent) {
     Array<CssRuleData* PR_NONNULL>* list = parent != nullptr ? &parent->children : &sheet->rules;
     list->insert(edit->index, edit->rule);
     edit->rule = nullptr;
 }
 
 PrStatus cssRuleListInsert(CssSheetData* PR_NULLABLE sheet, CssRuleData* PR_NULLABLE parent,
-                           const CssRuleChain* PR_NULLABLE outer, PrStringView text, uint32_t index,
-                           CssParserSlot slot) {
+        const CssRuleChain* PR_NULLABLE outer, PrStringView text, uint32_t index, CssParserSlot slot) {
     CssRuleChain chain = {parent, outer};
     CssEdit edit;
     cssEditBegin(&edit, slot);
@@ -2543,10 +2471,8 @@ PrStatus cssRuleListInsert(CssSheetData* PR_NULLABLE sheet, CssRuleData* PR_NULL
     return status;
 }
 
-PrStatus cssRuleListRemovable(const CssSheetData* PR_NULLABLE sheet,
-                              const CssRuleData* PR_NULLABLE parent, uint32_t index) {
-    const Array<CssRuleData* PR_NONNULL>& list =
-        parent != nullptr ? parent->children : sheet->rules;
+PrStatus cssRuleListRemovable(const CssSheetData* PR_NULLABLE sheet, const CssRuleData* PR_NULLABLE parent, uint32_t index) {
+    const Array<CssRuleData* PR_NONNULL>& list = parent != nullptr ? parent->children : sheet->rules;
     if (index >= list.count)
         return PrStatus_OutOfRange;
 
@@ -2560,8 +2486,7 @@ PrStatus cssRuleListRemovable(const CssSheetData* PR_NULLABLE sheet,
     return PrStatus_Ok;
 }
 
-void cssRuleListRemove(CssSheetData* PR_NULLABLE sheet, CssRuleData* PR_NULLABLE parent,
-                       uint32_t index) {
+void cssRuleListRemove(CssSheetData* PR_NULLABLE sheet, CssRuleData* PR_NULLABLE parent, uint32_t index) {
     Array<CssRuleData* PR_NONNULL>* list = parent != nullptr ? &parent->children : &sheet->rules;
     CssRuleData* rule = list->data[index];
     list->erase(index);
@@ -2589,9 +2514,11 @@ void cssSerializeDeclarationBlock(TextBuffer* out, const CssDeclarationBlock* bl
             continue;
         if (out->text.count != start)
             textAppendChar(out, ' ');
-        CssPropertyList shorthands = item.property != PrCssProperty_Count
-                                         ? cssPropertyShorthands(item.property)
-                                         : CssPropertyList{nullptr, 0};
+        CssPropertyList shorthands;
+        if (item.property != PrCssProperty_Count)
+            shorthands = cssPropertyShorthands(item.property);
+        else
+            shorthands = CssPropertyList{nullptr, 0};
         bool writes = false;
         for (uint32_t s = 0; s < shorthands.count && !writes; ++s) {
             PrCssProperty shorthand = shorthands.data[s];
@@ -2606,15 +2533,13 @@ void cssSerializeDeclarationBlock(TextBuffer* out, const CssDeclarationBlock* bl
     listingReset(&listing);
 }
 
-void cssSerializeDeclarationValue(TextBuffer* out, const CssDeclarationBlock* block,
-                                  const CssDeclaration* declaration) {
+void cssSerializeDeclarationValue(TextBuffer* out, const CssDeclarationBlock* block, const CssDeclaration* declaration) {
     // css-values-5/#pending-substitution-value: a value pending on a shorthand serializes as nothing.
     if (declaration->shorthand != PrCssProperty_Count)
         return;
 
     CssValueRun run = cssDeclarationValue(block, declaration);
-    if (declaration->descriptor != PrCssDescriptor_None
-        && bitsetTest(kCssDescriptorBounded, declaration->descriptor))
+    if (declaration->descriptor != PrCssDescriptor_None && bitsetTest(kCssDescriptorBounded, declaration->descriptor))
         run.count = boundsWritten(run);
 
     // css-variables-1/#serializing-custom-props: an empty custom property is a single space.
@@ -2631,8 +2556,8 @@ void cssSerializeSelectorText(TextBuffer* out, const CssRuleData* rule) {
 void cssSerializePrelude(TextBuffer* out, const CssRuleData* rule) {
     CssValueRun prelude = cssValueListRun(&rule->prelude);
     // An empty parameter/argument list is omitted (css-mixins-1/#cssom).
-    if ((isAt(rule, CssAtRule_Mixin) || isAt(rule, CssAtRule_Apply)) && prelude.count == 3
-        && cssValueIsLiteral(&prelude.values[1], '(') && cssValueIsLiteral(&prelude.values[2], ')'))
+    if ((isAt(rule, CssAtRule_Mixin) || isAt(rule, CssAtRule_Apply)) && prelude.count == 3 &&
+            cssValueIsLiteral(&prelude.values[1], '(') && cssValueIsLiteral(&prelude.values[2], ')'))
         prelude.count = 1;
     // cssom-1/#serialize-a-css-rule writes the <string> of @import and @namespace as a URL.
     bool urls = isAt(rule, CssAtRule_Import) || isAt(rule, CssAtRule_Namespace);

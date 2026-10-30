@@ -61,9 +61,10 @@ PrKitThemeVariant variantOf(PrAppColorScheme scheme) {
 // Declares a round: a surface on the app's ground that fills the viewport, and the editor under it.
 void build(void* context, PrUi*, const PrUiRound*) {
     Window& w = *static_cast<Window*>(context);
-    PrKitSurfaceStyle style{.box = {.overflow = PrKitOverflow_Clip,
-                                    .place = {.width = prKitPercent(100), .height = prKitPercent(100)}},
-                            .ground = PrKitGround_App};
+    PrKitSurfaceStyle style{
+        .box = {.overflow = PrKitOverflow_Clip, .place = {.width = prKitPercent(100), .height = prKitPercent(100)}},
+        .ground = PrKitGround_App,
+    };
     buildEditor(w.kit, prKitSurface(w.kit, kPrLayoutNodeNone, {}, style), w.state);
 }
 
@@ -86,10 +87,10 @@ void closeDevice(Window& w) {
 bool openDevice(Window& w) {
     PrAppSurface surface{};
     PrGpuSwapChainDesc desc{.intent = PrGpuSwapChainIntent_Sdr};
-    if (prGpuDeviceCreate(PrGpuBackend_Default, nullptr, &w.device) != PrStatus_Ok
-        || prAppSurface(w.app, &surface) != PrStatus_Ok
-        || prGpuSwapChainCreate(w.device, &surface, &desc, &w.swapChain) != PrStatus_Ok
-        || prDrawRendererCreate(PrDrawRendererBackend_Default, w.device, nullptr, &w.renderer) != PrStatus_Ok) {
+    if (prGpuDeviceCreate(PrGpuBackend_Default, nullptr, &w.device) != PrStatus_Ok ||
+            prAppSurface(w.app, &surface) != PrStatus_Ok ||
+            prGpuSwapChainCreate(w.device, &surface, &desc, &w.swapChain) != PrStatus_Ok ||
+            prDrawRendererCreate(PrDrawRendererBackend_Default, w.device, nullptr, &w.renderer) != PrStatus_Ok) {
         closeDevice(w);
         return false;
     }
@@ -101,8 +102,8 @@ bool openDevice(Window& w) {
 void render(Window& w, PrUVec2 extent, PrColor canvas) {
     PrGpuTexture drawable{};
     PrGpuCommands* commands = nullptr;
-    if (prGpuSwapChainAcquire(w.swapChain, extent, &drawable) != PrStatus_Ok
-        || !prGpuCommandsBegin(w.device, nullptr, &commands))
+    if (prGpuSwapChainAcquire(w.swapChain, extent, &drawable) != PrStatus_Ok ||
+            !prGpuCommandsBegin(w.device, nullptr, &commands))
         return;
     PrDrawTarget into{.extent = extent, .format = PrPixelFormat_Bgra8, .commands = commands};
     prDrawFramePrepare(w.frame, w.list, &into);
@@ -146,12 +147,14 @@ void frame(void* context, PrApp* app, const PrAppFrame* f) {
         PrKitTheme theme = prKitThemeStudio(variantOf(scheme), w.fonts);
         prKitSetTheme(w.kit, &theme);
     }
-    PrUiFrameDesc desc{.time = f->time,
-                       .delta = f->delta,
-                       .extent = f->extent,
-                       .maxRounds = 4,
-                       .display = f->display,
-                       .preferences = f->preferences};
+    PrUiFrameDesc desc{
+        .time = f->time,
+        .delta = f->delta,
+        .extent = f->extent,
+        .maxRounds = 4,
+        .display = f->display,
+        .preferences = f->preferences,
+    };
     prUiFrame(w.ui, &desc, build, &w);
 
     // The tree's scene plays into the list in target pixels, each scroll container at the tree's offset for it. The

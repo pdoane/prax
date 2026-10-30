@@ -37,12 +37,8 @@ bool runAgent(const PrCssSelectors* shared) {
     prJsMathMlBind(ctx);
     jsHtmlBind(ctx);
     PrHtmlPage* page = prHtmlPageCreate(nullptr);
-    bool ok = prHtmlPageLoad(
-                  page,
-                  "<style>p { color: red }</style><ul><li class=a>1<li>2<li class=a>3</ul>",
-                  "about:blank", nullptr)
-                  == PrStatus_Ok
-              && jsHtmlSetGlobal(ctx, prHtmlPageWindow(page));
+    bool ok = prHtmlPageLoad(page, "<style>p { color: red }</style><ul><li class=a>1<li>2<li class=a>3</ul>",
+        "about:blank", nullptr) == PrStatus_Ok && jsHtmlSetGlobal(ctx, prHtmlPageWindow(page));
 
     const char source[] = R"JS((function() {
         const before = document.querySelectorAll('li.a').length;
@@ -64,8 +60,7 @@ bool runAgent(const PrCssSelectors* shared) {
         JS_FreeValue(ctx, result);
     }
 
-    PrDomNode* document =
-        prDomDocumentAsNode(prHtmlWindowDocument(prHtmlPageWindow(page)));
+    PrDomNode* document = prDomDocumentAsNode(prHtmlWindowDocument(prHtmlPageWindow(page)));
     PrDomNodeList* found = prDomNodeListCreate();
     prCssNodeQuerySelectorAllCompiled(document, shared, found);
     ok = ok && prDomNodeListLength(found) == 2 + kRounds * 10;

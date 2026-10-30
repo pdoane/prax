@@ -40,7 +40,7 @@ typedef void (*PrImagePngTextFn)(void* PR_NULLABLE context, const PrImagePngText
 // match, is skipped. Returns InvalidData, before calling `fn`, if `png` does not start with the PNG signature and a
 // header chunk, and Truncated if the chunks end before the image's end chunk.
 PrStatus prImagePngEachText(PrByteView png, PrCompressCodec* PR_NULLABLE compress, PrImagePngTextFn fn,
-                            void* PR_NULLABLE context);
+    void* PR_NULLABLE context);
 
 // Writes the PNG file `png` with `text` under `keyword` as an uncompressed iTXt chunk with no language, in place of
 // every text chunk of that keyword that the file has. The new chunk is placed where the first of those was, or before
@@ -51,7 +51,7 @@ PrStatus prImagePngEachText(PrByteView png, PrCompressCodec* PR_NULLABLE compres
 // `capacity` is zero. Returns InvalidData, and sets `*size` to zero, if `png` is not a PNG file whose chunks are whole
 // up to its image data.
 PrStatus prImagePngSetText(PrByteView png, PrStringView keyword, PrStringView text, uint8_t* PR_NULLABLE out,
-                           size_t capacity, size_t* size);
+    size_t capacity, size_t* size);
 
 #if defined(__cplusplus)
 }

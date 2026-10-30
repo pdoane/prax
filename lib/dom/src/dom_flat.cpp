@@ -33,8 +33,8 @@ PrDomNode* PR_NULLABLE domFlatParentShadowed(const PrDomNode* node) {
     if ((parent->flags & DomNodeFlag_ShadowRoot) != 0)
         return static_cast<PrDomShadowRoot*>(parent)->host;
     const PrDomElement* element = domElementFromNode(parent);
-    if (element != nullptr && (domShadowRootOfHost(element) != nullptr
-                               || (domIsSlot(element) && domSlotAssignedCount(element) != 0)))
+    if (element != nullptr && (domShadowRootOfHost(element) != nullptr ||
+            (domIsSlot(element) && domSlotAssignedCount(element) != 0)))
         return nullptr;
     return parent;
 }
@@ -83,8 +83,7 @@ PrDomNode* PR_NULLABLE domFlatFollowing(const PrDomNode* node) {
     return nullptr;
 }
 
-PrDomNode* PR_NULLABLE domFlatWalkNextShadowed(DomFlatWalk& walk, const PrDomNode* root, const PrDomNode* node,
-                                               bool skip) {
+PrDomNode* PR_NULLABLE domFlatWalkNextShadowed(DomFlatWalk& walk, const PrDomNode* root, const PrDomNode* node, bool skip) {
     if (node == root)
         walk.open.clear();
     if (!skip)

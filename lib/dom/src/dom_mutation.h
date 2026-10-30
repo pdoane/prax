@@ -66,8 +66,7 @@ void domMutationObserverRelease(PrDomMutationObserver* PR_NULLABLE observer);
 // (dom/#dom-mutationobserver-observe). Returns InvalidData for options that ask for nothing, or for old values or a
 // filter of a kind that the options do not observe.
 PrStatus domMutationObserverObserve(PrDomMutationObserver* observer, PrDomNode* target,
-                                    const PrDomMutationObserverInit* options,
-                                    const PrStringView* PR_NULLABLE filter, uint32_t filterCount);
+    const PrDomMutationObserverInit* options, const PrStringView* PR_NULLABLE filter, uint32_t filterCount);
 
 // Removes the observer's registrations and drops its records (dom/#dom-mutationobserver-disconnect).
 void domMutationObserverDisconnect(PrDomMutationObserver* observer);
@@ -92,8 +91,7 @@ void domMutationObserversAdopted(PrDomDocument* from, PrDomDocument* to);
 
 // Queues a mutation record for an attribute of `target`, before the attribute changes from `oldValue`
 // (dom/#queue-a-mutation-record).
-void domQueueAttributeRecord(PrDomNode* target, PrStringView name, PrStringView space,
-                             PrStringView oldValue);
+void domQueueAttributeRecord(PrDomNode* target, PrStringView name, PrStringView space, PrStringView oldValue);
 
 // Queues a mutation record for the data of `target`, before the data changes from `oldValue` (dom/#concept-cd-replace).
 void domQueueCharacterDataRecord(PrDomNode* target, PrStringView oldValue);
@@ -101,16 +99,15 @@ void domQueueCharacterDataRecord(PrDomNode* target, PrStringView oldValue);
 // Queues a mutation record for a change to the children of `target` (dom/#queue-a-tree-mutation-record). `added` and
 // `removed` are the nodes that the change added and removed, between `previous` and `next`.
 void domQueueTreeRecord(PrDomNode* target, PrDomNode* const PR_NONNULL* PR_NULLABLE added,
-                        uint32_t addedCount, PrDomNode* const PR_NONNULL* PR_NULLABLE removed,
-                        uint32_t removedCount, PrDomNode* PR_NULLABLE previous,
-                        PrDomNode* PR_NULLABLE next);
+    uint32_t addedCount, PrDomNode* const PR_NONNULL* PR_NULLABLE removed,
+    uint32_t removedCount, PrDomNode* PR_NULLABLE previous, PrDomNode* PR_NULLABLE next);
 
 // Returns true if a record of a change to the document's nodes could reach an observer, which means that some node of
 // the document is observed and records are not suppressed. A mutation algorithm checks this before it gathers the
 // contents of a record.
 inline bool domMutationsObserved(const PrDomDocument* document) {
-    return document->observers != nullptr && document->observers->observers.count != 0
-        && document->observers->suppressed == 0;
+    return document->observers != nullptr && document->observers->observers.count != 0 &&
+        document->observers->suppressed == 0;
 }
 
 // Returns true if records of the document's changes are suppressed. A mutation algorithm that is built from other

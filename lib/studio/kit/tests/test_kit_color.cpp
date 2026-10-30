@@ -45,8 +45,7 @@ struct PickerScene {
         f.edit = Edits::record;
         f.editContext = &edits;
         f.build = [this](PrLayoutNode ground) {
-            PrKitColorPicker content{
-                .color = &color, .mode = mode, .gamut = prUiDisplay(f.ui).gamut, .opaque = opaque};
+            PrKitColorPicker content{.color = &color, .mode = mode, .gamut = prUiDisplay(f.ui).gamut, .opaque = opaque};
             picker = prKitColorPicker(f.kit, ground, content);
         };
     }
@@ -242,7 +241,7 @@ TEST_CASE("a color picker reads a color that its caller changes, and an opaque p
     CHECK(scene.color.r < 0.02f);
     uint32_t strips = 0;
     for (PrLayoutNode n = prLayoutNodeFirstChild(f.tree, scene.child(scene.picker, 1)); n != kPrLayoutNodeNone;
-         n = prLayoutNodeNextSibling(f.tree, n))
+            n = prLayoutNodeNextSibling(f.tree, n))
         ++strips;
     CHECK(strips == 2);
     CHECK(kitVerified(f.tree));

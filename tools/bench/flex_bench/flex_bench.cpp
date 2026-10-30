@@ -179,12 +179,18 @@ Tree superDeepHierarchy(const Styler& styler, uint32_t depth, uint32_t perLevel)
 Styler aligned() {
     auto container = [](Random& random) {
         FlexStyle style = flexStyleDefault();
-        const FlexDirection directions[] = {FlexDirection_Row, FlexDirection_Column, FlexDirection_RowReverse,
-                                            FlexDirection_ColumnReverse};
-        const FlexAlign justifies[] = {FlexAlign_Normal, FlexAlign_FlexEnd, FlexAlign_Center, FlexAlign_SpaceBetween,
-                                       FlexAlign_SpaceAround, FlexAlign_SpaceEvenly};
-        const FlexAlign aligns[] = {FlexAlign_Normal, FlexAlign_FlexStart, FlexAlign_FlexEnd, FlexAlign_Center,
-                                    FlexAlign_Baseline};
+        const FlexDirection directions[] = {
+            FlexDirection_Row, FlexDirection_Column, FlexDirection_RowReverse,
+            FlexDirection_ColumnReverse,
+        };
+        const FlexAlign justifies[] = {
+            FlexAlign_Normal, FlexAlign_FlexEnd, FlexAlign_Center, FlexAlign_SpaceBetween,
+            FlexAlign_SpaceAround, FlexAlign_SpaceEvenly,
+        };
+        const FlexAlign aligns[] = {
+            FlexAlign_Normal, FlexAlign_FlexStart, FlexAlign_FlexEnd, FlexAlign_Center,
+            FlexAlign_Baseline,
+        };
         const float gaps[] = {0, 0, 4, 10};
         style.direction = directions[random.between(0, 3)];
         style.justifyContent = justifies[random.between(0, 5)];
@@ -199,8 +205,10 @@ Styler aligned() {
         style.height = px(float(random.between(10, 60)));
         style.grow = float(random.between(0, 2));
         if (random.unit() < 0.25f) {
-            const FlexAlign selves[] = {FlexAlign_FlexStart, FlexAlign_FlexEnd, FlexAlign_Center, FlexAlign_Stretch,
-                                        FlexAlign_Baseline};
+            const FlexAlign selves[] = {
+                FlexAlign_FlexStart, FlexAlign_FlexEnd, FlexAlign_Center, FlexAlign_Stretch,
+                FlexAlign_Baseline,
+            };
             style.alignSelf = selves[random.between(0, 4)];
         }
         if (random.unit() < 0.15f)
@@ -245,8 +253,10 @@ Tree wrappingHierarchy(uint32_t nodes) {
     tree.styles[tree.root].direction = FlexDirection_Column;
     tree.styles[tree.root].alignItems = FlexAlign_FlexStart;
     std::vector<uint32_t> containers;
-    const FlexAlign contents[] = {FlexAlign_Normal, FlexAlign_FlexStart, FlexAlign_FlexEnd, FlexAlign_Center,
-                                  FlexAlign_SpaceBetween, FlexAlign_SpaceAround, FlexAlign_SpaceEvenly};
+    const FlexAlign contents[] = {
+        FlexAlign_Normal, FlexAlign_FlexStart, FlexAlign_FlexEnd, FlexAlign_Center,
+        FlexAlign_SpaceBetween, FlexAlign_SpaceAround, FlexAlign_SpaceEvenly,
+    };
     const float gaps[] = {0, 0, 4, 10};
     while (tree.styles.size() < nodes) {
         uint32_t count = random.between(8, 30);
@@ -535,8 +545,8 @@ std::vector<Box> boxesOf(Engine& engine, const Tree& tree) {
 }
 
 bool same(const Box& a, const Box& b) {
-    return std::fabs(a.x - b.x) <= 1 && std::fabs(a.y - b.y) <= 1 && std::fabs(a.width - b.width) <= 1
-           && std::fabs(a.height - b.height) <= 1;
+    return std::fabs(a.x - b.x) <= 1 && std::fabs(a.y - b.y) <= 1 && std::fabs(a.width - b.width) <= 1 &&
+        std::fabs(a.height - b.height) <= 1;
 }
 
 uint32_t agreeing(const std::vector<Box>& a, const std::vector<Box>& b) {
@@ -561,8 +571,8 @@ const char* styleText(const FlexStyle& style, size_t children, char* buffer, siz
     char width[32];
     char height[32];
     int at = snprintf(buffer, size, "%zu children, width %s, height %s, grow %g", children,
-                      lengthText(style.width, width, sizeof width), lengthText(style.height, height, sizeof height),
-                      double(style.grow));
+        lengthText(style.width, width, sizeof width), lengthText(style.height, height, sizeof height),
+        double(style.grow));
     auto add = [&](const char* name, int value) {
         if (value != 0 && at >= 0 && size_t(at) < size)
             at += snprintf(buffer + at, size - size_t(at), ", %s %d", name, value);
@@ -589,8 +599,10 @@ void writeHtml(const Tree& tree, uint32_t node, std::string& out) {
     auto lengthOf = [&](FlexLength l) { return std::string(lengthText(l, length, sizeof length)); };
     const char* directions[] = {"row", "column", "row-reverse", "column-reverse"};
     const char* wraps[] = {"nowrap", "wrap", "wrap-reverse"};
-    const char* aligns[] = {"normal", "flex-start", "flex-end", "center", "stretch", "space-between", "space-around",
-                            "space-evenly", "baseline"};
+    const char* aligns[] = {
+        "normal", "flex-start", "flex-end", "center", "stretch", "space-between", "space-around",
+        "space-evenly", "baseline",
+    };
     add("flex-direction", directions[style.direction]);
     add("flex-wrap", wraps[style.wrap]);
     add("align-items", aligns[style.alignItems]);
@@ -651,10 +663,10 @@ void printHtml(const Case& c, uint32_t node) {
     each(node);
     measures.pop_back();
     printf("<!doctype html>\n<meta charset=utf-8>\n<style>body { margin: 0; } div { background: #9dc4f933; "
-           "outline: 1px solid #2c5a8f; outline-offset: -1px; }</style>\n");
+        "outline: 1px solid #2c5a8f; outline-offset: -1px; }</style>\n");
     printf("<figure style=\"margin:0\" data-case=N%u data-what=\"%s node %u\" data-measure=\"%s\">\n<div "
-           "style=\"display:flow-root;position:relative;width:%gpx\">%s</div></figure>\n",
-           node, c.name, node, measures.c_str(), double(kViewportWidth), boxes.c_str());
+        "style=\"display:flow-root;position:relative;width:%gpx\">%s</div></figure>\n",
+        node, c.name, node, measures.c_str(), double(kViewportWidth), boxes.c_str());
     // The probe page's script. It collects each case's measures and posts them to the URL that the page's query names.
     printf("%s", R"(<pre id=out></pre>
 <script>
@@ -684,7 +696,7 @@ addEventListener('load', () => requestAnimationFrame(() => requestAnimationFrame
 // Prints the boxes of `engine` where each difference starts: the first boxes, in the order that the tree made them,
 // that are not where Taffy places them although their parents are. Each is printed with its parent's style and box.
 void printDifferences(const Engine& engine, const char* tree, const Tree& nodes, const std::vector<Box>& boxes,
-                      const std::vector<Box>& reference) {
+        const std::vector<Box>& reference) {
     std::vector<uint32_t> parents(boxes.size(), UINT32_MAX);
     for (uint32_t parent = 0; parent < nodes.children.size(); ++parent) {
         for (uint32_t child : nodes.children[parent])
@@ -698,18 +710,18 @@ void printDifferences(const Engine& engine, const char* tree, const Tree& nodes,
             continue;
         char own[256];
         fprintf(stderr, "%s %s node %u (%s): %g,%g %gx%g; taffy %g,%g %gx%g\n", engine.name(), tree, i,
-                styleText(nodes.styles[i], nodes.children[i].size(), own, sizeof own), double(boxes[i].x),
-                double(boxes[i].y), double(boxes[i].width), double(boxes[i].height), double(reference[i].x),
-                double(reference[i].y), double(reference[i].width), double(reference[i].height));
+            styleText(nodes.styles[i], nodes.children[i].size(), own, sizeof own), double(boxes[i].x),
+            double(boxes[i].y), double(boxes[i].width), double(boxes[i].height), double(reference[i].x),
+            double(reference[i].y), double(reference[i].width), double(reference[i].height));
         if (parents[i] != UINT32_MAX) {
             uint32_t parent = parents[i];
             const std::vector<uint32_t>& children = nodes.children[parent];
             char style[256];
             fprintf(stderr, "    in node %u (%s): %g,%g %gx%g; taffy %g,%g %gx%g\n", parent,
-                    styleText(nodes.styles[parent], children.size(), style, sizeof style), double(boxes[parent].x),
-                    double(boxes[parent].y), double(boxes[parent].width), double(boxes[parent].height),
-                    double(reference[parent].x), double(reference[parent].y), double(reference[parent].width),
-                    double(reference[parent].height));
+                styleText(nodes.styles[parent], children.size(), style, sizeof style), double(boxes[parent].x),
+                double(boxes[parent].y), double(boxes[parent].width), double(boxes[parent].height),
+                double(reference[parent].x), double(reference[parent].y), double(reference[parent].width),
+                double(reference[parent].height));
         }
         ++shown;
     }
@@ -718,20 +730,22 @@ void printDifferences(const Engine& engine, const char* tree, const Tree& nodes,
 void appendShape(TextBuffer* row, const Shape& shape) {
     textAppend(row, ", \"shape\": {");
     const char* separator = "";
-    const std::pair<const char*, int64_t> fields[] = {{"laidOut", shape.laidOut},
-                                                      {"reused", shape.reused},
-                                                      {"measured", shape.measured},
-                                                      {"measures", shape.measures},
-                                                      {"measureHits", shape.measureHits},
-                                                      {"measuresReplaced", shape.measuresReplaced},
-                                                      {"handoffs", shape.handoffs},
-                                                      {"solved", shape.solved},
-                                                      {"flexLaidOut", shape.flexLaidOut},
-                                                      {"flexed", shape.flexed},
-                                                      {"lines", shape.lines},
-                                                      {"linesReused", shape.linesReused},
-                                                      {"fragments", shape.fragments},
-                                                      {"published", shape.published}};
+    const std::pair<const char*, int64_t> fields[] = {
+        {"laidOut", shape.laidOut},
+        {"reused", shape.reused},
+        {"measured", shape.measured},
+        {"measures", shape.measures},
+        {"measureHits", shape.measureHits},
+        {"measuresReplaced", shape.measuresReplaced},
+        {"handoffs", shape.handoffs},
+        {"solved", shape.solved},
+        {"flexLaidOut", shape.flexLaidOut},
+        {"flexed", shape.flexed},
+        {"lines", shape.lines},
+        {"linesReused", shape.linesReused},
+        {"fragments", shape.fragments},
+        {"published", shape.published},
+    };
     for (const auto& [name, value] : fields) {
         if (value < 0)
             continue;
@@ -744,7 +758,7 @@ void appendShape(TextBuffer* row, const Shape& shape) {
 bool firstRow = true;
 
 void writeRow(const Engine& engine, const Case& c, const char* measure, const HarnessCounters& cost,
-              const Shape* shape, int64_t agrees) {
+        const Shape* shape, int64_t agrees) {
     TextBuffer row{};
     textAppend(&row, firstRow ? "\n  {\"engine\": " : ",\n  {\"engine\": ");
     firstRow = false;

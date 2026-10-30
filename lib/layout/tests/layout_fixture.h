@@ -115,7 +115,7 @@ struct Fixture {
     // Returns the text font of `families`, then the set's default family, at `size` px, `weight` and `locale`. It is
     // made once for its inputs and held until the fixture ends.
     PrTextFont* textFont(float size, std::vector<PrFontFamily> families = {}, PrLocale locale = 0,
-                         float weight = kPrFontWeightNormal) {
+            float weight = kPrFontWeightNormal) {
         std::string key = keyOf(size, families, locale, weight);
         for (const Made& m : made) {
             if (m.key == key)
@@ -124,19 +124,20 @@ struct Fixture {
         PrFontStyle style = prFontStyleDefault();
         style.size = size;
         style.weight = weight;
-        PrTextFontDesc desc{.set = fonts,
-                            .families = families.data(),
-                            .familyCount = uint32_t(families.size()),
-                            .style = style,
-                            .locale = locale};
+        PrTextFontDesc desc{
+            .set = fonts,
+            .families = families.data(),
+            .familyCount = uint32_t(families.size()),
+            .style = style,
+            .locale = locale,
+        };
         made.push_back(Made{key, prTextFontCreate(&desc)});
         return made.back().font;
     }
 
     uint32_t style(const PrLayoutBoxStyle& box, const PrLayoutDecorationStyle* PR_NULLABLE decoration = nullptr,
-                   const PrLayoutEffectStyle* PR_NULLABLE effects = nullptr,
-                   const PrLayoutFontStyle* PR_NULLABLE font = nullptr,
-                   const PrLayoutFlexStyle* PR_NULLABLE flex = nullptr) {
+            const PrLayoutEffectStyle* PR_NULLABLE effects = nullptr, const PrLayoutFontStyle* PR_NULLABLE font = nullptr,
+            const PrLayoutFlexStyle* PR_NULLABLE flex = nullptr) {
         PrLayoutStyle record = prLayoutStyleDefault();
         record.groups[PrLayoutGroup_Box] = prLayoutBoxStyleIntern(tree, &box);
         if (decoration != nullptr)
@@ -151,10 +152,9 @@ struct Fixture {
     }
 
     PrLayoutNode element(PrLayoutNode parent, const PrLayoutBoxStyle& box,
-                         const PrLayoutDecorationStyle* PR_NULLABLE decoration = nullptr,
-                         const PrLayoutEffectStyle* PR_NULLABLE effects = nullptr,
-                         const PrLayoutFontStyle* PR_NULLABLE font = nullptr,
-                         const PrLayoutFlexStyle* PR_NULLABLE flex = nullptr) {
+            const PrLayoutDecorationStyle* PR_NULLABLE decoration = nullptr,
+            const PrLayoutEffectStyle* PR_NULLABLE effects = nullptr, const PrLayoutFontStyle* PR_NULLABLE font = nullptr,
+            const PrLayoutFlexStyle* PR_NULLABLE flex = nullptr) {
         PrLayoutNode node = prLayoutNodeCreateElement(tree, parent, style(box, decoration, effects, font, flex));
         if (parent == kPrLayoutNodeNone)
             root = node;
@@ -185,7 +185,7 @@ struct Fixture {
 
 // Returns the current fixture's text font of `families` at `size` px, `weight` and `locale` (Fixture::textFont).
 inline PrTextFont* textFontOf(float size, std::vector<PrFontFamily> families = {}, PrLocale locale = 0,
-                              float weight = kPrFontWeightNormal) {
+        float weight = kPrFontWeightNormal) {
     Fixture* PR_NULLABLE f = currentFixture();
     REQUIRE(f != nullptr);
     return f->textFont(size, std::move(families), locale, weight);
@@ -237,7 +237,7 @@ inline PrLayoutNaturalSize natural(float width, float height, float ratio = 0) {
 
 // Creates a replaced element under `parent` styled by `box`, with the natural dimensions `size`.
 inline PrLayoutNode replaced(Fixture& f, PrLayoutNode parent, const PrLayoutBoxStyle& box, PrLayoutNaturalSize size,
-                             const PrLayoutDecorationStyle* PR_NULLABLE decoration = nullptr) {
+        const PrLayoutDecorationStyle* PR_NULLABLE decoration = nullptr) {
     PrLayoutNode node = prLayoutNodeCreateReplaced(f.tree, parent, f.style(box, decoration));
     prLayoutNodeSetNaturalSize(f.tree, node, size);
     return node;
@@ -289,8 +289,10 @@ inline void appendGlyphs(const PrDrawList* list, PrDrawTransform transform, std:
                     PrVec2 p = command.glyphs->glyphs[g].position;
                     double x = double(p.x);
                     double y = double(p.y);
-                    out.push_back(DrawnGlyph{command.glyphs->glyphs[g].id, t.a * x + t.c * y + t.e,
-                                             t.b * x + t.d * y + t.f});
+                    out.push_back(DrawnGlyph{
+                        command.glyphs->glyphs[g].id, t.a * x + t.c * y + t.e,
+                        t.b * x + t.d * y + t.f,
+                    });
                 }
                 break;
             default: break;
@@ -338,8 +340,7 @@ inline std::vector<uint8_t> render(PrLayoutTree* tree, uint32_t width, uint32_t 
 // Returns the RGBA bytes of the pixel at `x`, `y` of `bytes`, which is `width` pixels wide, as text.
 inline std::string pixel(const std::vector<uint8_t>& bytes, uint32_t width, uint32_t x, uint32_t y) {
     const uint8_t* p = bytes.data() + (size_t(y) * width + x) * 4;
-    return std::to_string(p[0]) + " " + std::to_string(p[1]) + " " + std::to_string(p[2]) + " " +
-           std::to_string(p[3]);
+    return std::to_string(p[0]) + " " + std::to_string(p[1]) + " " + std::to_string(p[2]) + " " + std::to_string(p[3]);
 }
 
 } // namespace pr_impl

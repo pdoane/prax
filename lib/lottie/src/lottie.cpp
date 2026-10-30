@@ -20,7 +20,7 @@ PrLottieOptions prLottieOptionsDefault(void) {
 }
 
 PrStatus prLottieAnimationCreate(PrStringView json, const PrLottieOptions* PR_NULLABLE options,
-                                 PrLottieAnimation* PR_NULLABLE* PR_NONNULL out) {
+        PrLottieAnimation* PR_NULLABLE* PR_NONNULL out) {
     *out = nullptr;
     PrLottieAnimation* a = allocZeroed<PrLottieAnimation>();
     PrStatus status = lottieParse(json, options != nullptr ? *options : prLottieOptionsDefault(), *a);
@@ -57,7 +57,7 @@ void prLottieAnimationDraw(const PrLottieAnimation* animation, double frame, PrD
     LottieRender r{};
     lottieRenderInit(r, *animation, list);
     prDrawListPushClipRect(list, PrRect{0, 0, animation->info.extent.x, animation->info.extent.y},
-                           PrDrawEdges_Antialiased);
+        PrDrawEdges_Antialiased);
     lottieDrawComp(r, 0, frame, animation->info.extent);
     prDrawListPopClip(list);
     lottieRenderReset(r);

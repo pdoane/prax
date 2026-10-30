@@ -60,8 +60,7 @@ void takeGivenNumber(CssTokenStream* ts, CssValuePool* pool, PrCssValueKind kind
 // Shared shapes
 
 // Matches one token whose value is text and copies it into the pool, or a given value of `kind`.
-bool textToken(CssTokenStream* ts, CssValuePool* pool, CssTokenKind tokenType,
-               PrCssValueKind kind) {
+bool textToken(CssTokenStream* ts, CssValuePool* pool, CssTokenKind tokenType, PrCssValueKind kind) {
     if (const CssValueNode* given = givenValue(ts)) {
         if (given->kind != kind)
             return false;
@@ -96,8 +95,7 @@ bool dimension(CssTokenStream* ts, CssValuePool* pool, CssUnitCategory category)
         return false;
 
     ++ts->pos;
-    cssValuePoolAdd(pool,
-                    cssNumberValue(PrCssValueKind_Dimension, unit, cssTokenNumber(ts->tokens, at)));
+    cssValuePoolAdd(pool, cssNumberValue(PrCssValueKind_Dimension, unit, cssTokenNumber(ts->tokens, at)));
     return true;
 }
 
@@ -112,8 +110,7 @@ bool number(CssTokenStream* ts, CssValuePool* pool, bool integerOnly, bool calcu
         bool whole = given->number == floorF64(given->number) && isFiniteF64(given->number);
         if (integerOnly && !whole && !calculate)
             return false;
-        takeGivenNumber(ts, pool, integerOnly && whole ? PrCssValueKind_Integer : PrCssValueKind_Number,
-                        integerOnly && !whole);
+        takeGivenNumber(ts, pool, integerOnly && whole ? PrCssValueKind_Integer : PrCssValueKind_Number, integerOnly && !whole);
         return true;
     }
     if (cssPeek(ts) != CssTokenKind_Number)
@@ -123,7 +120,7 @@ bool number(CssTokenStream* ts, CssValuePool* pool, bool integerOnly, bool calcu
 
     ++ts->pos;
     cssValuePoolAdd(pool, cssNumberValue(integerOnly ? PrCssValueKind_Integer : PrCssValueKind_Number,
-                                         PrCssUnit_Number, cssTokenNumber(ts->tokens, at)));
+        PrCssUnit_Number, cssTokenNumber(ts->tokens, at)));
     return true;
 }
 
@@ -149,8 +146,7 @@ bool takesKeyword(CssGrammarIndex index, PrCssKeyword keyword) {
         case CssGrammarType_Keyword:
             return value == keyword;
         case CssGrammarType_Type:
-            return kCssValueDefGrammarRoot[value] != CssGrammarRoot_None
-                   && takesKeyword(kCssValueDefGrammarRoot[value], keyword);
+            return kCssValueDefGrammarRoot[value] != CssGrammarRoot_None && takesKeyword(kCssValueDefGrammarRoot[value], keyword);
         case CssGrammarType_OneOf:
         case CssGrammarType_AnyOf:
         case CssGrammarType_AllOf:
@@ -158,8 +154,7 @@ bool takesKeyword(CssGrammarIndex index, PrCssKeyword keyword) {
         case CssGrammarType_KeywordSet:
         case CssGrammarType_Longhand: {
             CssGrammarIndex end = cssGrammarAfter(index);
-            for (CssGrammarIndex child = CssGrammarIndex(index + 1); child < end;
-                 child = cssGrammarAfter(child)) {
+            for (CssGrammarIndex child = CssGrammarIndex(index + 1); child < end; child = cssGrammarAfter(child)) {
                 if (takesKeyword(child, keyword))
                     return true;
             }
@@ -214,8 +209,8 @@ CssValueNode randomUaIdent(const CssMatcher* m, uint32_t at, bool indexed) {
     if (indexed) {
         uint64_t index = 0;
         for (uint32_t i = m->start; i <= at; ++i) {
-            index += cssTokenKind(m->ts->tokens, i) == CssTokenKind_Function
-                     && cssTokenKeyword(m->ts->tokens, i) == PrCssKeyword_Random;
+            index += cssTokenKind(m->ts->tokens, i) == CssTokenKind_Function &&
+                cssTokenKeyword(m->ts->tokens, i) == PrCssKeyword_Random;
         }
         char digits[kU64TextMaxBytes];
         size_t count = formatU64(index, digits, 10);
@@ -242,8 +237,7 @@ bool canonicalRandomKey(const CssMatcher* m, uint32_t function, uint32_t at) {
     const CssValueNode* dashed = nullptr;
     const CssValueNode* named = nullptr;
     bool element = omitted;
-    PrCssKeyword scoped = omitted ? PrCssKeyword_PropertyIndexScoped
-                                  : PrCssKeyword_Unknown;
+    PrCssKeyword scoped = omitted ? PrCssKeyword_PropertyIndexScoped : PrCssKeyword_Unknown;
     for (uint32_t i = first; i < end; i += pool->values.data[i].next) {
         const CssValueNode* part = &pool->values.data[i];
         if (part->kind == PrCssValueKind_Ident) {
@@ -356,8 +350,8 @@ bool operatorsSpaced(const CssTokenStream* ts, CssTokenSpan span) {
         uint32_t delim = cssTokenDelim(ts->tokens, i);
         if (delim != '+' && delim != '-')
             continue;
-        spaced = spaced && cssTokenKind(ts->tokens, i - 1) == CssTokenKind_Whitespace
-                 && cssTokenKind(ts->tokens, i + 1) == CssTokenKind_Whitespace;
+        spaced = spaced && cssTokenKind(ts->tokens, i - 1) == CssTokenKind_Whitespace &&
+            cssTokenKind(ts->tokens, i + 1) == CssTokenKind_Whitespace;
     }
     return spaced;
 }
@@ -381,8 +375,8 @@ bool numericFunction(const CssMatcher* m, CssMathSlot slot) {
     }
     if (!matchNumericFunction(m))
         return false;
-    if ((m->depth != 0 || operatorsSpaced(m->ts, CssTokenSpan{pos, m->ts->pos - pos}))
-        && cssMathReplace(m->pool, values, slot, &m->match->math)) {
+    if ((m->depth != 0 || operatorsSpaced(m->ts, CssTokenSpan{pos, m->ts->pos - pos})) &&
+            cssMathReplace(m->pool, values, slot, &m->match->math)) {
         return true;
     }
     m->ts->pos = pos;
@@ -412,8 +406,7 @@ bool percentage(CssTokenStream* ts, CssValuePool* pool) {
         return false;
 
     ++ts->pos;
-    cssValuePoolAdd(pool, cssNumberValue(PrCssValueKind_Percentage, PrCssUnit_Number,
-                                         cssTokenNumber(ts->tokens, at)));
+    cssValuePoolAdd(pool, cssNumberValue(PrCssValueKind_Percentage, PrCssUnit_Number, cssTokenNumber(ts->tokens, at)));
     return true;
 }
 
@@ -433,15 +426,14 @@ bool length(CssTokenStream* ts, CssValuePool* pool) {
 
 // Matches a dimension of `category`, or a numeric function in its place.
 bool dimensionOf(const CssMatcher* m, CssUnitCategory category) {
-    return dimension(m->ts, m->pool, category)
-           || numericFunction(m, CssMathSlot{category, CssUnitCategory_Unknown});
+    return dimension(m->ts, m->pool, category) || numericFunction(m, CssMathSlot{category, CssUnitCategory_Unknown});
 }
 
 // Matches a dimension of `category` or a percentage of one (css-values-4/#mixed-percentages), or a numeric function in
 // its place.
 bool dimensionPercentage(const CssMatcher* m, CssUnitCategory category) {
-    return dimension(m->ts, m->pool, category) || percentage(m->ts, m->pool)
-           || numericFunction(m, CssMathSlot{category, category});
+    return dimension(m->ts, m->pool, category) || percentage(m->ts, m->pool) ||
+        numericFunction(m, CssMathSlot{category, category});
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -483,8 +475,7 @@ typedef bool (*FamilyNamesFn)(PrCssKeyword first, uint32_t count);
 bool isFontFamilyName(PrCssKeyword first, uint32_t count) {
     if (count == 1 && (first == PrCssKeyword_Default || cssIsCssWideKeyword(first)))
         return false;
-    return first == PrCssKeyword_Unknown
-           || !takesKeyword(kCssPropertyGrammarRoot[PrCssProperty_FontFamily], first);
+    return first == PrCssKeyword_Unknown || !takesKeyword(kCssPropertyGrammarRoot[PrCssProperty_FontFamily], first);
 }
 
 // Returns true if `count` identifiers, starting with `first`, form a voice name. A single identifier must not be a
@@ -545,8 +536,7 @@ bool familyName(const CssMatcher* m, FamilyNamesFn names, bool converted) {
         uint32_t start = ts->pos;
         uint32_t words = 0;
         name.text.start = pool->text.count;
-        for (CssTokenStream scan = *ts; cssPeek(&scan) == CssTokenKind_Ident;
-             cssSkipWhitespace(&scan)) {
+        for (CssTokenStream scan = *ts; cssPeek(&scan) == CssTokenKind_Ident; cssSkipWhitespace(&scan)) {
             if (words++ != 0)
                 cssValuePoolAddText(pool, " ");
             uint32_t length;
@@ -575,9 +565,8 @@ bool fontFormatSupported(const CssValuePool* pool, const CssValueNode* format) {
         return cssFontFormatSupported(cssValueKeyword(format));
     PrCssKeyword keyword;
     bool variations;
-    return cssFontFormatFromString(cssValuePoolText(pool, format), &keyword, &variations)
-           && cssFontFormatSupported(keyword)
-           && (!variations || cssFontTechSupported(PrCssKeyword_Variations));
+    return cssFontFormatFromString(cssValuePoolText(pool, format), &keyword, &variations) &&
+        cssFontFormatSupported(keyword) && (!variations || cssFontTechSupported(PrCssKeyword_Variations));
 }
 
 // Returns true if the UA supports the format and every tech of a <font-src>, whose values are the pool's values from
@@ -638,8 +627,7 @@ bool featureDeclaration(const CssMatcher* m, CssValueDef production) {
     CssValueNode ident = {};
     ident.kind = PrCssValueKind_Ident;
     ident.text.start = cssValuePoolAddTokenText(pool, ts, name, &ident.text.length);
-    PrCssDescriptor descriptor =
-        cssDescriptorFromText(CssAtRule_Container, cssValuePoolText(pool, &ident));
+    PrCssDescriptor descriptor = cssDescriptorFromText(CssAtRule_Container, cssValuePoolText(pool, &ident));
     ident.aux = CssValueAuxFlags(descriptor);
     cssValuePoolAdd(pool, ident);
     closeNode(pool, nameNode);
@@ -647,9 +635,8 @@ bool featureDeclaration(const CssMatcher* m, CssValueDef production) {
     uint32_t valueNode = addProduction(pool, CssValueDef_MfValue, span);
     CssTokenStream value = cssSubStream(ts, span);
     CssValueSpan matched;
-    if (descriptor == PrCssDescriptor_None || kCssDescriptorFeature[descriptor] != production
-        || span.count == 0
-        || !cssParseDescriptorValue(descriptor, &value, pool, m->match, &matched)) {
+    if (descriptor == PrCssDescriptor_None || kCssDescriptorFeature[descriptor] != production || span.count == 0 ||
+            !cssParseDescriptorValue(descriptor, &value, pool, m->match, &matched)) {
         pool->values.count = values;
         pool->text.count = text;
         return false;
@@ -669,8 +656,8 @@ bool featureDeclaration(const CssMatcher* m, CssValueDef production) {
 // block.
 bool unbrace(const CssTokenStream* ts, CssTokenSpan* span, bool* needed) {
     *needed = false;
-    if (span->count == 0 || cssTokenKind(ts->tokens, span->start) != CssTokenKind_OpenBrace
-        || cssTokenBlockEnd(ts->tokens, span->start) != span->start + span->count) {
+    if (span->count == 0 || cssTokenKind(ts->tokens, span->start) != CssTokenKind_OpenBrace ||
+            cssTokenBlockEnd(ts->tokens, span->start) != span->start + span->count) {
         return false;
     }
     uint32_t closer = cssTokenCloser(ts->tokens, span->start);
@@ -679,8 +666,7 @@ bool unbrace(const CssTokenStream* ts, CssTokenSpan* span, bool* needed) {
     CssTokenStream inner = cssSubStream(ts, *span);
     CssTokenSpan component;
     while (inner.pos < inner.end && !*needed) {
-        *needed =
-            cssPeek(&inner) == CssTokenKind_Comma || cssPeek(&inner) == CssTokenKind_OpenBrace;
+        *needed = cssPeek(&inner) == CssTokenKind_Comma || cssPeek(&inner) == CssTokenKind_OpenBrace;
         if (!cssConsumeComponentValue(&inner, &component))
             break;
     }
@@ -758,10 +744,9 @@ bool queryKnown(const CssValuePool* pool, uint32_t first, CssValueDef production
             return false;
         if (!cssValueIsProduction(value, CssValueDef_MfName))
             continue;
-        PrCssDescriptor feature =
-            cssValueFeature(&pool->values.data[i + 1]);
-        if (feature == PrCssDescriptor_None
-            || (production != CssValueDef_Count && kCssDescriptorFeature[feature] != production)) {
+        PrCssDescriptor feature = cssValueFeature(&pool->values.data[i + 1]);
+        if (feature == PrCssDescriptor_None ||
+                (production != CssValueDef_Count && kCssDescriptorFeature[feature] != production)) {
             return false;
         }
     }
@@ -783,8 +768,7 @@ bool containerFeature(const CssMatcher* m, CssValueDef production) {
     uint32_t end = cssBlockEnd(ts);
     uint32_t values = m->pool->values.count;
     uint32_t text = m->pool->text.count;
-    if (!cssMatchQuery(m, CssTokenSpan{ts->pos, end - ts->pos}, CssValueDef_MediaFeature,
-                       CssAtRule_Container)) {
+    if (!cssMatchQuery(m, CssTokenSpan{ts->pos, end - ts->pos}, CssValueDef_MediaFeature, CssAtRule_Container)) {
         return false;
     }
     if (!queryKnown(m->pool, values, production)) {
@@ -826,7 +810,7 @@ bool scopeSelectors(const CssMatcher* m, CssValueDef production) {
     CssTokenStream* ts = m->ts;
     uint32_t end = cssBlockEnd(ts);
     if (!cssMatchArgument(m, CssTokenSpan{ts->pos, end - ts->pos}, CssGrammarRoot_None, production,
-                          CssMatchArgument{CssPseudoClass_None, CssPseudoElement_None, false})) {
+            CssMatchArgument{CssPseudoClass_None, CssPseudoElement_None, false})) {
         return false;
     }
     ts->pos = end;
@@ -840,20 +824,20 @@ bool scopeSelectors(const CssMatcher* m, CssValueDef production) {
 
 // <number>
 bool cssParseNumber(const CssMatcher* m) {
-    return number(m->ts, m->pool, false)
-           || numericFunction(m, CssMathSlot{CssUnitCategory_Number, CssUnitCategory_Unknown});
+    return number(m->ts, m->pool, false) ||
+        numericFunction(m, CssMathSlot{CssUnitCategory_Number, CssUnitCategory_Unknown});
 }
 
 // <integer>
 bool cssParseInteger(const CssMatcher* m) {
-    return number(m->ts, m->pool, true, m->match->calculate)
-           || numericFunction(m, CssMathSlot{CssUnitCategory_Number, CssUnitCategory_Unknown});
+    return number(m->ts, m->pool, true, m->match->calculate) ||
+        numericFunction(m, CssMathSlot{CssUnitCategory_Number, CssUnitCategory_Unknown});
 }
 
 // <percentage>
 bool cssParsePercentage(const CssMatcher* m) {
-    return percentage(m->ts, m->pool)
-           || numericFunction(m, CssMathSlot{CssUnitCategory_Percent, CssUnitCategory_Percent});
+    return percentage(m->ts, m->pool) ||
+        numericFunction(m, CssMathSlot{CssUnitCategory_Percent, CssUnitCategory_Percent});
 }
 
 // <zero>
@@ -881,14 +865,13 @@ bool cssParseDimension(const CssMatcher* m) {
     ++m->ts->pos;
     PrCssUnit unit = cssTokenUnit(m->ts->tokens, at);
     uint32_t dimension = cssValuePoolAdd(m->pool, cssNumberValue(PrCssValueKind_Dimension, unit,
-                                                                 cssTokenNumber(m->ts->tokens, at)));
+        cssTokenNumber(m->ts->tokens, at)));
     if (unit != PrCssUnit_Unknown)
         return true;
 
     CssValueNode text = {};
     text.kind = PrCssValueKind_Ident;
-    text.text.start = cssValuePoolAddValueText(m->pool, cssTokenUnitText(m->ts->tokens, at),
-                                               &text.text.length);
+    text.text.start = cssValuePoolAddValueText(m->pool, cssTokenUnitText(m->ts->tokens, at), &text.text.length);
     cssValuePoolAdd(m->pool, text);
     m->pool->values.data[dimension].next = 2;
     return true;
@@ -902,8 +885,11 @@ bool cssParseNumberToken(const CssMatcher* m) {
 bool cssParseNumberLiteral(const CssMatcher* m, CssGrammarNumber literal) {
     uint32_t at = m->ts->pos;
     uint32_t values = m->pool->values.count;
-    bool matched = literal.unit == PrCssUnit_Number ? number(m->ts, m->pool, false)
-                                                : dimension(m->ts, m->pool, cssUnitCategory(literal.unit));
+    bool matched;
+    if (literal.unit == PrCssUnit_Number)
+        matched = number(m->ts, m->pool, false);
+    else
+        matched = dimension(m->ts, m->pool, cssUnitCategory(literal.unit));
     if (matched) {
         // A unit with a fixed ratio to its category's canonical unit compares by its value in the canonical unit. Any
         // other unit matches only the same unit.
@@ -911,9 +897,11 @@ bool cssParseNumberLiteral(const CssMatcher* m, CssGrammarNumber literal) {
         double scale = literal.unit == PrCssUnit_Number ? 1 : cssUnitScale(value.unit);
         double literalScale = literal.unit == PrCssUnit_Number ? 1 : cssUnitScale(literal.unit);
         double canonical = literal.value * literalScale;
-        bool same = scale != 0 && literalScale != 0
-                        ? absF64(value.number * scale - canonical) <= 1e-9 * absF64(canonical)
-                        : value.unit == literal.unit && value.number == literal.value;
+        bool same;
+        if (scale != 0 && literalScale != 0)
+            same = absF64(value.number * scale - canonical) <= 1e-9 * absF64(canonical);
+        else
+            same = value.unit == literal.unit && value.number == literal.value;
         if (same)
             return true;
     }
@@ -940,14 +928,13 @@ bool cssParseNumericFunction(const CssMatcher* m) {
 
 // <length>
 bool cssParseLength(const CssMatcher* m) {
-    return length(m->ts, m->pool)
-           || numericFunction(m, CssMathSlot{CssUnitCategory_Length, CssUnitCategory_Unknown});
+    return length(m->ts, m->pool) || numericFunction(m, CssMathSlot{CssUnitCategory_Length, CssUnitCategory_Unknown});
 }
 
 // <length-percentage> (css-values-4/#mixed-percentages)
 bool cssParseLengthPercentage(const CssMatcher* m) {
-    return length(m->ts, m->pool) || percentage(m->ts, m->pool)
-           || numericFunction(m, CssMathSlot{CssUnitCategory_Length, CssUnitCategory_Length});
+    return length(m->ts, m->pool) || percentage(m->ts, m->pool) ||
+        numericFunction(m, CssMathSlot{CssUnitCategory_Length, CssUnitCategory_Length});
 }
 
 // <angle>
@@ -1071,8 +1058,7 @@ bool cssParsePathData(const CssMatcher* m) {
 // <counter-name>: a <custom-ident> other than `none` (css-lists-3/#typedef-counter-name). It names a counter, either an
 // author's or one CSS defines, such as list-item.
 bool cssParseCounterName(const CssMatcher* m) {
-    if (cssPeek(m->ts) == CssTokenKind_Ident
-        && cssTokenKeyword(m->ts->tokens, m->ts->pos) == PrCssKeyword_None)
+    if (cssPeek(m->ts) == CssTokenKind_Ident && cssTokenKeyword(m->ts->tokens, m->ts->pos) == PrCssKeyword_None)
         return false;
     return cssParseCustomIdent(m);
 }
@@ -1104,8 +1090,7 @@ bool cssParseSizeKeyword(const CssMatcher* m) {
 // (selectors-4/#id-selectors), stored as an <id-selector>.
 bool cssParseId(const CssMatcher* m) {
     CssTokenStream* ts = m->ts;
-    if (cssPeek(ts) != CssTokenKind_Hash
-        || (cssTokenFlags(ts->tokens, ts->pos) & CssTokenFlag_Id) == 0)
+    if (cssPeek(ts) != CssTokenKind_Hash || (cssTokenFlags(ts->tokens, ts->pos) & CssTokenFlag_Id) == 0)
         return false;
     uint32_t selector = addProduction(m->pool, CssValueDef_IdSelector, CssTokenSpan{ts->pos, 1});
     textToken(ts, m->pool, CssTokenKind_Hash, PrCssValueKind_Ident);
@@ -1116,8 +1101,7 @@ bool cssParseId(const CssMatcher* m) {
 // <view-transition-type>: a <custom-ident> that is not `none` and does not start with `-ua-`
 // (css-view-transitions-2/#typedef-view-transition-type).
 bool cssParseViewTransitionType(const CssMatcher* m) {
-    if (cssPeek(m->ts) == CssTokenKind_Ident
-        && cssTokenKeyword(m->ts->tokens, m->ts->pos) == PrCssKeyword_None)
+    if (cssPeek(m->ts) == CssTokenKind_Ident && cssTokenKeyword(m->ts->tokens, m->ts->pos) == PrCssKeyword_None)
         return false;
     uint32_t text = m->pool->text.count;
     if (!cssParseCustomIdent(m))
@@ -1134,8 +1118,7 @@ bool cssParseViewTransitionType(const CssMatcher* m) {
 // <outline-line-style>: a <line-style> other than `hidden` (css-ui-4/#typedef-outline-line-style).
 bool cssParseOutlineLineStyle(const CssMatcher* m) {
     return keywordOf(m, [](PrCssKeyword keyword) {
-        return keyword != PrCssKeyword_Hidden
-               && takesKeyword(kCssValueDefGrammarRoot[CssValueDef_LineStyle], keyword);
+        return keyword != PrCssKeyword_Hidden && takesKeyword(kCssValueDefGrammarRoot[CssValueDef_LineStyle], keyword);
     });
 }
 
@@ -1147,8 +1130,8 @@ bool cssParseOutlineLineStyle(const CssMatcher* m) {
 // (css-fonts-4/#local-font-fallback).
 bool cssParseFontFamilyName(const CssMatcher* m) {
     const CssMatchFrame& outer = m->match->frames.data[m->frame];
-    bool local = outer.kind == CssMatchFrameKind_Function
-                 && cssValueIsFunction(&m->pool->values.data[outer.anchor], PrCssKeyword_Local);
+    bool local = outer.kind == CssMatchFrameKind_Function &&
+        cssValueIsFunction(&m->pool->values.data[outer.anchor], PrCssKeyword_Local);
     return familyName(m, isFontFamilyName, local);
 }
 
@@ -1168,10 +1151,8 @@ bool cssParseFontSrcList(const CssMatcher* m) {
         if (item != values)
             cssValuePoolAdd(pool, cssLiteralValue(','));
         uint32_t first = pool->values.count;
-        if (!cssMatchArgument(m, entry, kCssValueDefGrammarRoot[CssValueDef_FontSrc],
-                              CssValueDef_Count,
-                              CssMatchArgument{CssPseudoClass_None, CssPseudoElement_None, false})
-            || !fontSrcSupported(pool, first)) {
+        if (!cssMatchArgument(m, entry, kCssValueDefGrammarRoot[CssValueDef_FontSrc], CssValueDef_Count,
+                CssMatchArgument{CssPseudoClass_None, CssPseudoElement_None, false}) || !fontSrcSupported(pool, first)) {
             pool->values.count = item;
             pool->text.count = text;
         }
@@ -1216,8 +1197,7 @@ bool cssParseHexColor(const CssMatcher* m) {
         return false;
 
     char digits[8];
-    uint32_t count = cssValue(cssTokenValueText(m->ts->tokens, m->ts->pos), digits,
-                              uint32_t(sizeof(digits)));
+    uint32_t count = cssValue(cssTokenValueText(m->ts->tokens, m->ts->pos), digits, uint32_t(sizeof(digits)));
     if (count != 3 && count != 4 && count != 6 && count != 8)
         return false;
     for (uint32_t i = 0; i < count; ++i) {
@@ -1276,8 +1256,8 @@ bool cssParseUrlToken(const CssMatcher* m) {
 // start, is not a valid range.
 bool cssParseUnicodeRangeToken(const CssMatcher* m) {
     if (const CssValueNode* given = givenValue(m->ts)) {
-        if (given->kind != PrCssValueKind_UnicodeRange || given->range.last > kPrUtf8MaxCodePoint
-            || given->range.first > given->range.last)
+        if (given->kind != PrCssValueKind_UnicodeRange || given->range.last > kPrUtf8MaxCodePoint ||
+                given->range.first > given->range.last)
             return false;
         takeGiven(m->ts, m->pool);
         return true;
@@ -1399,12 +1379,10 @@ bool cssParseDeclaration(const CssMatcher* m) {
 
     CssTokenStream value = cssSubStream(ts, declaration.value);
     CssValueSpan matched;
-    bool parsed = property != PrCssProperty_Count
-                  && cssParsePropertyValue(property, &value, pool, m->match, &matched);
+    bool parsed = property != PrCssProperty_Count && cssParsePropertyValue(property, &value, pool, m->match, &matched);
     if (!parsed)
         cssValuePoolAddTokens(pool, ts, declaration.value);
-    if (parsed
-        || (property == PrCssProperty_Count && cssTokenIsDashedIdent(ts->tokens, declaration.name)))
+    if (parsed || (property == PrCssProperty_Count && cssTokenIsDashedIdent(ts->tokens, declaration.name)))
         pool->values.data[nameAt].aux = CssValueAuxFlag_Supported;
     if (declaration.important) {
         cssValuePoolAdd(pool, cssLiteralValue('!'));
@@ -1420,8 +1398,7 @@ bool cssParseDashedFunction(const CssMatcher* m) {
     if (cssPeek(ts) != CssTokenKind_Function)
         return false;
     char prefix[2];
-    uint32_t length =
-        cssValue(cssTokenValueText(ts->tokens, ts->pos), prefix, uint32_t(sizeof(prefix)));
+    uint32_t length = cssValue(cssTokenValueText(ts->tokens, ts->pos), prefix, uint32_t(sizeof(prefix)));
     if (length <= 2 || prefix[0] != '-' || prefix[1] != '-')
         return false;
 
@@ -1518,8 +1495,7 @@ bool cssParseScrollStateFeature(const CssMatcher* m) {
 // name, a ':' and a value of more than one token, which an <mf-value> cannot hold but the feature's grammar accepts, as
 // in `fallback: --a flip-block` (css-anchor-position-2/#anchored-container).
 bool cssParseAnchoredFeature(const CssMatcher* m) {
-    return containerFeature(m, CssValueDef_AnchoredFeature)
-           || featureDeclaration(m, CssValueDef_AnchoredFeature);
+    return containerFeature(m, CssValueDef_AnchoredFeature) || featureDeclaration(m, CssValueDef_AnchoredFeature);
 }
 
 // <style-feature-name>: a property that the UA supports, or a <custom-property-name>
@@ -1532,8 +1508,8 @@ bool cssParseStyleFeatureName(const CssMatcher* m) {
     if (!textToken(ts, m->pool, CssTokenKind_Ident, PrCssValueKind_Ident))
         return false;
     const CssValueNode* name = &m->pool->values.last();
-    if (cssTokenIsDashedIdent(ts->tokens, ts->pos - 1)
-        || cssPropertyFromText(cssValuePoolText(m->pool, name)) != PrCssProperty_Count) {
+    if (cssTokenIsDashedIdent(ts->tokens, ts->pos - 1) ||
+            cssPropertyFromText(cssValuePoolText(m->pool, name)) != PrCssProperty_Count) {
         return true;
     }
     m->pool->values.pop();

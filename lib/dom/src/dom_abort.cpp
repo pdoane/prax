@@ -88,8 +88,7 @@ using namespace pr_impl;
 struct PrDomAbortController : DomAbortController {};
 
 PrDomAbortSignal* PR_NULLABLE prDomAbortSignalQuery(PrDomEventTarget* PR_NULLABLE object) {
-    return object != nullptr && object->type == DomTargetType_AbortSignal ? static_cast<PrDomAbortSignal*>(object)
-                                                                          : nullptr;
+    return object != nullptr && object->type == DomTargetType_AbortSignal ? static_cast<PrDomAbortSignal*>(object) : nullptr;
 }
 
 PrDomAbortSignal* prDomAbortSignalCreate(void) {
@@ -102,8 +101,7 @@ PrDomAbortSignal* prDomAbortSignalCreateAborted(void) {
     return signal;
 }
 
-PrDomAbortSignal* prDomAbortSignalCreateDependent(PrDomAbortSignal* PR_NONNULL const* PR_NULLABLE signals,
-                                                  uint32_t count) {
+PrDomAbortSignal* prDomAbortSignalCreateDependent(PrDomAbortSignal* PR_NONNULL const* PR_NULLABLE signals, uint32_t count) {
     PrDomAbortSignal* result = createSignal();
     for (uint32_t i = 0; i < count; ++i) {
         if (signals[i]->aborted) {
@@ -139,8 +137,7 @@ bool prDomAbortSignalAborted(const PrDomAbortSignal* self) {
     return self->aborted;
 }
 
-void prDomAbortSignalSetReasonHandler(PrDomAbortSignal* self, PrDomAbortReasonFn PR_NULLABLE invoke,
-                                      void* PR_NULLABLE context) {
+void prDomAbortSignalSetReasonHandler(PrDomAbortSignal* self, PrDomAbortReasonFn PR_NULLABLE invoke, void* PR_NULLABLE context) {
     self->reasonHandler = invoke;
     self->reasonContext = context;
 }

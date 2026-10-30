@@ -37,17 +37,15 @@ bool adjacent(const CssTokenArray* tokens, uint32_t index) {
 }
 
 bool isDelim(const CssTokenArray* tokens, uint32_t index, uint32_t codePoint) {
-    return cssTokenKind(tokens, index) == CssTokenKind_Delim
-           && cssTokenDelim(tokens, index) == codePoint;
+    return cssTokenKind(tokens, index) == CssTokenKind_Delim && cssTokenDelim(tokens, index) == codePoint;
 }
 
 // Consumes a data type name from the '<' at `*pos` (css-properties-values-api-1/#consume-a-data-type-name).
-bool consumeDataTypeName(const CssTokenArray* tokens, uint32_t* pos, uint32_t end,
-                         CssValueDef* out) {
+bool consumeDataTypeName(const CssTokenArray* tokens, uint32_t* pos, uint32_t end, CssValueDef* out) {
     uint32_t at = *pos + 1;
-    if (at + 1 >= end || cssTokenKind(tokens, at) != CssTokenKind_Ident || !adjacent(tokens, at)
-        || (cssTokenFlags(tokens, at) & CssTokenFlag_PlainText) == 0
-        || !isDelim(tokens, at + 1, '>') || !adjacent(tokens, at + 1))
+    if (at + 1 >= end || cssTokenKind(tokens, at) != CssTokenKind_Ident || !adjacent(tokens, at) ||
+            (cssTokenFlags(tokens, at) & CssTokenFlag_PlainText) == 0 ||
+            !isDelim(tokens, at + 1, '>') || !adjacent(tokens, at + 1))
         return false;
     PrStringView name = cssTokenValueText(tokens, at);
     for (const SupportedName& supported : kSupportedNames) {
@@ -61,8 +59,7 @@ bool consumeDataTypeName(const CssTokenArray* tokens, uint32_t* pos, uint32_t en
 }
 
 // Consumes a syntax component at `*pos` (css-properties-values-api-1/#consume-a-syntax-component).
-bool consumeComponent(const CssTokenArray* tokens, uint32_t* pos, uint32_t end,
-                      CssSyntaxDefinition* out) {
+bool consumeComponent(const CssTokenArray* tokens, uint32_t* pos, uint32_t end, CssSyntaxDefinition* out) {
     CssSyntaxComponent component = {CssValueDef_Count, CssSyntaxMultiplier_None, 0, 0};
     if (isDelim(tokens, *pos, '<')) {
         if (!consumeDataTypeName(tokens, pos, end, &component.type))
@@ -79,13 +76,11 @@ bool consumeComponent(const CssTokenArray* tokens, uint32_t* pos, uint32_t end,
     } else {
         return false;
     }
-    if (*pos < end && adjacent(tokens, *pos)
-        && (isDelim(tokens, *pos, '+') || isDelim(tokens, *pos, '#'))) {
+    if (*pos < end && adjacent(tokens, *pos) && (isDelim(tokens, *pos, '+') || isDelim(tokens, *pos, '#'))) {
         // A list type is already multiplied (css-properties-values-api-1/#pre-multiplied-data-type-name).
         if (component.type == CssValueDef_TransformList)
             return false;
-        component.multiplier =
-            isDelim(tokens, *pos, '+') ? CssSyntaxMultiplier_Space : CssSyntaxMultiplier_Comma;
+        component.multiplier = isDelim(tokens, *pos, '+') ? CssSyntaxMultiplier_Space : CssSyntaxMultiplier_Comma;
         ++*pos;
     }
     out->components.push(component);
@@ -103,8 +98,7 @@ bool computationallyIndependent(const CssTokenArray* tokens, CssTokenSpan span) 
                 return false;
         } else if (kind == CssTokenKind_Dimension) {
             PrCssUnit unit = cssTokenUnit(tokens, i);
-            if ((unit >= PrCssUnit_Em && unit <= PrCssUnit_Rlh)
-                || (unit >= PrCssUnit_Cqw && unit <= PrCssUnit_Cqmax))
+            if ((unit >= PrCssUnit_Em && unit <= PrCssUnit_Rlh) || (unit >= PrCssUnit_Cqw && unit <= PrCssUnit_Cqmax))
                 return false;
         }
     }
@@ -113,7 +107,7 @@ bool computationallyIndependent(const CssTokenArray* tokens, CssTokenSpan span) 
 
 // Returns true if the whole of `span` is one `component`, matched once.
 bool matchesOnce(CssParser* parser, const CssSyntaxDefinition* definition,
-                 const CssSyntaxComponent& component, CssTokenSpan span) {
+        const CssSyntaxComponent& component, CssTokenSpan span) {
     const CssTokenArray* tokens = &parser->tokens;
     if (span.count == 0)
         return false;
@@ -122,8 +116,7 @@ bool matchesOnce(CssParser* parser, const CssSyntaxDefinition* definition,
             return false;
         TextBuffer value;
         cssValueAppend(&value, cssTokenValueText(tokens, span.start));
-        PrStringView ident = {definition->idents.text.data + component.identStart,
-                              component.identSize};
+        PrStringView ident = {definition->idents.text.data + component.identStart, component.identSize};
         bool equal = textView(&value) == ident;
         textReset(&value);
         return equal;
@@ -133,16 +126,14 @@ bool matchesOnce(CssParser* parser, const CssSyntaxDefinition* definition,
     uint32_t values = parser->pool.values.count;
     uint32_t text = parser->pool.text.count;
     CssValueSpan out = {};
-    bool matched =
-        cssParseProduction(component.type, &stream, &context, &parser->pool, &parser->match, &out);
+    bool matched = cssParseProduction(component.type, &stream, &context, &parser->pool, &parser->match, &out);
     parser->pool.values.count = values;
     parser->pool.text.count = text;
     return matched;
 }
 
 // Returns true if the whole of `span` matches `component` under its multiplier.
-bool matches(CssParser* parser, const CssSyntaxDefinition* definition,
-             const CssSyntaxComponent& component, CssTokenSpan span) {
+bool matches(CssParser* parser, const CssSyntaxDefinition* definition, const CssSyntaxComponent& component, CssTokenSpan span) {
     const CssTokenArray* tokens = &parser->tokens;
     if (component.multiplier == CssSyntaxMultiplier_None)
         return matchesOnce(parser, definition, component, span);
@@ -215,8 +206,7 @@ bool cssSyntaxDefinitionParse(CssParser* parser, PrStringView text, CssSyntaxDef
     return false;
 }
 
-bool cssSyntaxInitialValueValid(CssParser* parser, const CssSyntaxDefinition* definition,
-                                PrStringView value) {
+bool cssSyntaxInitialValueValid(CssParser* parser, const CssSyntaxDefinition* definition, PrStringView value) {
     cssTokenize(&parser->tokens, &parser->scratch, value);
     const CssTokenArray* tokens = &parser->tokens;
     CssTokenSpan span = cssTrimWhitespace(tokens, CssTokenSpan{0, cssTokenCount(tokens)});
@@ -227,8 +217,8 @@ bool cssSyntaxValueMatches(CssParser* parser, const CssSyntaxDefinition* definit
     cssTokenize(&parser->tokens, &parser->scratch, value);
     const CssTokenArray* tokens = &parser->tokens;
     CssTokenSpan span = cssTrimWhitespace(tokens, CssTokenSpan{0, cssTokenCount(tokens)});
-    if (span.count == 1 && cssTokenKind(tokens, span.start) == CssTokenKind_Ident
-        && cssIsCssWideKeyword(cssTokenKeyword(tokens, span.start)))
+    if (span.count == 1 && cssTokenKind(tokens, span.start) == CssTokenKind_Ident &&
+            cssIsCssWideKeyword(cssTokenKeyword(tokens, span.start)))
         return false;
     if (definition->universal) {
         // css-syntax-3/#typedef-declaration-value, with nothing left over and no bad token.
@@ -238,8 +228,8 @@ bool cssSyntaxValueMatches(CssParser* parser, const CssSyntaxDefinition* definit
             return false;
         for (uint32_t i = span.start; i < span.start + span.count; ++i) {
             CssTokenKind kind = cssTokenKind(tokens, i);
-            if (kind == CssTokenKind_BadString || kind == CssTokenKind_BadUrl
-                || (cssTokenFlags(tokens, i) & CssTokenFlag_Unmatched) != 0)
+            if (kind == CssTokenKind_BadString || kind == CssTokenKind_BadUrl ||
+                    (cssTokenFlags(tokens, i) & CssTokenFlag_Unmatched) != 0)
                 return false;
         }
         return true;

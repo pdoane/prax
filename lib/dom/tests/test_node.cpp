@@ -25,13 +25,12 @@ size_t treeCount(PrDomDocument* document, PrDomNode* node) {
     CHECK(node->last == previous);
     if (PrDomElement* element = domElementFromNode(node)) {
         for (PrDomAttr* attribute = element->firstAttribute; attribute != nullptr;
-             attribute = static_cast<PrDomAttr*>(attribute->next)) {
+                attribute = static_cast<PrDomAttr*>(attribute->next)) {
             CHECK(attribute->document == document);
             CHECK(attribute->parent == node);
             ++count;
         }
-        if (domElementContents(element) != nullptr
-            && domNodeOwner(domElementContents(element)) == element)
+        if (domElementContents(element) != nullptr && domNodeOwner(domElementContents(element)) == element)
             count += treeCount(document, domElementContents(element));
     }
     return count;
@@ -167,8 +166,7 @@ TEST_CASE("an adopted subtree keeps its addresses after its old document is gone
     PrDomElement* element = domElementCreate(source, PrDomNamespace_Html, PrDomTag_Template, "");
     PrDomNode* contents = domElementContents(element);
     REQUIRE(contents != nullptr);
-    PrDomText* text =
-        domTextCreate(source, "a text payload longer than inline string storage");
+    PrDomText* text = domTextCreate(source, "a text payload longer than inline string storage");
     domAttach(contents, text, nullptr);
     domSetAttribute(element, PrDomNamespace_None, "name", "a value longer than inline string storage");
     const PrDomAttr* attribute = domAttribute(element, PrDomNamespace_None, "name");
@@ -250,8 +248,7 @@ TEST_CASE("a node adopted back and forth is the same node") {
 TEST_CASE("a reference to an attribute keeps its element's tree") {
     size_t before = prMemoryLiveCount();
     PrDomDocument* document = domDocumentCreate(DomDocumentKind_Html);
-    PrDomElement* element =
-        domElementCreate(document, PrDomNamespace_Html, PrDomTag_Template, "");
+    PrDomElement* element = domElementCreate(document, PrDomNamespace_Html, PrDomTag_Template, "");
     domSetAttribute(element, PrDomNamespace_None, "first", "one");
     PrDomAttr* first = element->firstAttribute;
     domNodeRetain(first);
@@ -295,7 +292,7 @@ TEST_CASE("a document takes its deep trees with it, attached or not") {
         detached = child;
     }
     PrDomDocumentType* doctype = domDocumentTypeCreate(document, "html", "a public identifier longer than inline storage",
-                                                  "system");
+        "system");
     domAttach(attached, doctype, nullptr);
     PrDomProcessingInstruction* instruction = domProcessingInstructionCreate(
         document, "target", "processing instruction data longer than inline storage");
@@ -360,8 +357,7 @@ TEST_CASE("head and body are children of the html element, and nowhere else") {
 
     PrDomElement* html = domElementCreate(document, PrDomNamespace_Html, PrDomTag_Html, "");
     PrDomElement* head = domElementCreate(document, PrDomNamespace_Html, PrDomTag_Head, "");
-    PrDomElement* frameset =
-        domElementCreate(document, PrDomNamespace_Html, PrDomTag_Frameset, "");
+    PrDomElement* frameset = domElementCreate(document, PrDomNamespace_Html, PrDomTag_Frameset, "");
     PrDomElement* body = domElementCreate(document, PrDomNamespace_Html, PrDomTag_Body, "");
     PrDomElement* nested = domElementCreate(document, PrDomNamespace_Html, PrDomTag_Head, "");
     domAttach(document, html, nullptr);
@@ -490,8 +486,7 @@ TEST_CASE("references counted together are counted as each would be alone") {
         domAttach(html, group, nullptr);
         all.push_back(group);
         for (int j = 0; j < 3; ++j) {
-            PrDomElement* leaf =
-                domElementCreate(document, PrDomNamespace_Html, PrDomTag_Span, "");
+            PrDomElement* leaf = domElementCreate(document, PrDomNamespace_Html, PrDomTag_Span, "");
             domAttach(group, leaf, nullptr);
             all.push_back(leaf);
         }
@@ -504,8 +499,7 @@ TEST_CASE("references counted together are counted as each would be alone") {
     all.push_back(inside);
 
     // In tree order, out of it, across trees, and with a node twice.
-    std::vector<PrDomNode*> nodes = {all[3], all[4], all[5], all[2], all[9],
-                                   inside, all[7], all[1], inside, all[4]};
+    std::vector<PrDomNode*> nodes = {all[3], all[4], all[5], all[2], all[9], inside, all[7], all[1], inside, all[4]};
     auto counts = [&] {
         std::vector<std::pair<uint32_t, uint32_t>> out;
         for (PrDomNode* node : all)
@@ -590,10 +584,8 @@ TEST_CASE("a tree keeps its elements by ID as they connect, move, change and lea
 TEST_CASE("an HTML element's tag name is uppercase, and a foreign one's is as written") {
     PrDomDocument* document = domDocumentCreate(DomDocumentKind_Html);
     PrDomElement* div = domElementCreate(document, PrDomNamespace_Html, PrDomTag_Div, "");
-    PrDomElement* custom =
-        domElementCreate(document, PrDomNamespace_Html, PrDomTag_Unknown, "my-el");
-    PrDomElement* path =
-        domElementCreate(document, PrDomNamespace_Svg, PrDomTag_Unknown, "textPath");
+    PrDomElement* custom = domElementCreate(document, PrDomNamespace_Html, PrDomTag_Unknown, "my-el");
+    PrDomElement* path = domElementCreate(document, PrDomNamespace_Svg, PrDomTag_Unknown, "textPath");
 
     PrString name = domElementTagName(div);
     CHECK(prStringView(&name) == "DIV");
@@ -781,13 +773,11 @@ TEST_CASE("nodes and strings are converted into one node and placed around a chi
     CHECK(middle->previous != nullptr);
 
     // A node among the arguments is not its own viable sibling.
-    PrDomNodeOrString self[] = {
-        {middle, PrStringView{}}};
+    PrDomNodeOrString self[] = {{middle, PrStringView{}}};
     CHECK(domReplaceWith(middle, self, 1) == PrStatus_Ok);
     CHECK(middle->parent == parent);
 
-    PrDomNodeOrString doc[] = {
-        {document, PrStringView{}}};
+    PrDomNodeOrString doc[] = {{document, PrStringView{}}};
     CHECK(domPrepend(parent, doc, 1) == PrStatus_NotAllowed);
     CHECK(domReplaceChildren(parent, nullptr, 0) == PrStatus_Ok);
     CHECK(parent->first == nullptr);
@@ -859,9 +849,7 @@ TEST_CASE("a processing instruction's target is an XML name and its data holds n
     PrDomDocument* document = domDocumentCreate(DomDocumentKind_Html);
     PrDomDocument* handle = document;
     PrDomProcessingInstruction* instruction = nullptr;
-    CHECK(prDomProcessingInstructionCreate(handle, "xml-stylesheet", "a",
-                                                   &instruction)
-          == PrStatus_Ok);
+    CHECK(prDomProcessingInstructionCreate(handle, "xml-stylesheet", "a", &instruction) == PrStatus_Ok);
     CHECK(instruction != nullptr);
     CHECK(prDomProcessingInstructionCreate(handle, "1x", "a", &instruction) == PrStatus_InvalidData);
     CHECK(prDomProcessingInstructionCreate(handle, "x", "a?>b", &instruction) == PrStatus_InvalidData);

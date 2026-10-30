@@ -130,8 +130,8 @@ bool string(Reader& r) {
     uint32_t offset = uint32_t(text.count);
     while (true) {
         size_t run = r.at;
-        while (r.at < r.size && r.text[r.at] != '"' && r.text[r.at] != '\\'
-               && uint8_t(r.text[r.at]) >= 0x20 && uint8_t(r.text[r.at]) < 0x80)
+        while (r.at < r.size && r.text[r.at] != '"' && r.text[r.at] != '\\' &&
+                uint8_t(r.text[r.at]) >= 0x20 && uint8_t(r.text[r.at]) < 0x80)
             ++r.at;
         text.append(r.text + run, uint32_t(r.at - run));
         if (r.at >= r.size)
@@ -178,8 +178,7 @@ bool string(Reader& r) {
                 if (unit < 0)
                     return false;
                 uint32_t codePoint = uint32_t(unit);
-                if (unit >= 0xd800 && unit < 0xdc00 && r.size - r.at >= 6 && r.text[r.at] == '\\'
-                    && r.text[r.at + 1] == 'u') {
+                if (unit >= 0xd800 && unit < 0xdc00 && r.size - r.at >= 6 && r.text[r.at] == '\\' && r.text[r.at + 1] == 'u') {
                     size_t back = r.at;
                     r.at += 2;
                     int32_t low = hexUnit(r);
@@ -359,8 +358,8 @@ void quote(JsonWriter* w, PrStringView value) {
     size_t i = 0;
     while (i < value.size) {
         size_t run = i;
-        while (i < value.size && value.data[i] != '"' && value.data[i] != '\\' && uint8_t(value.data[i]) >= 0x20
-               && uint8_t(value.data[i]) < 0x80)
+        while (i < value.size && value.data[i] != '"' && value.data[i] != '\\' && uint8_t(value.data[i]) >= 0x20 &&
+                uint8_t(value.data[i]) < 0x80)
             ++i;
         textAppend(out, value.data + run, uint32_t(i - run));
         if (i >= value.size)
@@ -486,8 +485,7 @@ PrJsonValueIndex prJsonMember(const PrJson* document, PrJsonValueIndex object, P
     if (prJsonKind(document, object) != PrJsonKind_Object)
         return kPrJsonMissing;
     PrJsonValueIndex found = kPrJsonMissing;
-    for (PrJsonValueIndex i = prJsonFirst(document, object); i != kPrJsonMissing;
-         i = prJsonAfter(document, object, i)) {
+    for (PrJsonValueIndex i = prJsonFirst(document, object); i != kPrJsonMissing; i = prJsonAfter(document, object, i)) {
         if (prJsonString(document, i) == key)
             found = i + 1;
     }
@@ -507,8 +505,7 @@ PrJsonValueIndex prJsonFirst(const PrJson* document, PrJsonValueIndex container)
     return prJsonCount(document, container) > 0 ? container + 1 : kPrJsonMissing;
 }
 
-PrJsonValueIndex prJsonAfter(const PrJson* document, PrJsonValueIndex container,
-                             PrJsonValueIndex index) {
+PrJsonValueIndex prJsonAfter(const PrJson* document, PrJsonValueIndex container, PrJsonValueIndex index) {
     PrJsonValueIndex next = prJsonNext(document, index);
     if (document->values.data[container].kind == PrJsonKind_Object)
         next = prJsonNext(document, next);
@@ -550,8 +547,8 @@ void prJsonWriterEndObject(PrJsonWriter* writer) {
 }
 
 void prJsonWriterKey(PrJsonWriter* writer, PrStringView key) {
-    PR_ASSERT(writer->open.count != 0 && writer->open.last().kind == PrJsonKind_Object
-              && !writer->open.last().awaitsValue);
+    PR_ASSERT(writer->open.count != 0 && writer->open.last().kind == PrJsonKind_Object &&
+        !writer->open.last().awaitsValue);
     JsonWriterOpen& open = writer->open.last();
     if (open.hasValue)
         textAppendChar(&writer->text, ',');
@@ -604,15 +601,14 @@ void prJsonWriterValue(PrJsonWriter* writer, const PrJson* document, PrJsonValue
             break;
         case PrJsonKind_Array:
             prJsonWriterBeginArray(writer);
-            for (PrJsonValueIndex i = prJsonFirst(document, index); i != kPrJsonMissing;
-                 i = prJsonAfter(document, index, i))
+            for (PrJsonValueIndex i = prJsonFirst(document, index); i != kPrJsonMissing; i = prJsonAfter(document, index, i))
                 prJsonWriterValue(writer, document, i);
             prJsonWriterEndArray(writer);
             break;
         case PrJsonKind_Object:
             prJsonWriterBeginObject(writer);
-            for (PrJsonValueIndex i = prJsonFirst(document, index); i != kPrJsonMissing;
-                 i = prJsonAfter(document, index, i)) {
+            for (PrJsonValueIndex i = prJsonFirst(document, index); i != kPrJsonMissing; i =
+                    prJsonAfter(document, index, i)) {
                 prJsonWriterKey(writer, prJsonString(document, i));
                 prJsonWriterValue(writer, document, i + 1);
             }

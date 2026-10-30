@@ -106,13 +106,12 @@ struct DomFlatWalk {
 };
 
 // The walk of a document that has had a shadow root, apart from its light tree.
-PrDomNode* PR_NULLABLE domFlatWalkNextShadowed(DomFlatWalk& walk, const PrDomNode* root, const PrDomNode* node,
-                                               bool skip);
+PrDomNode* PR_NULLABLE domFlatWalkNextShadowed(DomFlatWalk& walk, const PrDomNode* root, const PrDomNode* node, bool skip);
 
 // Returns the next descendant of `root` after `node`, which is `root` itself or a descendant that the walk returned
 // last, in tree order. The descendants of `node` are skipped if `skip` is true. Returns null after the last.
 PR_FORCE_INLINE PrDomNode* PR_NULLABLE domFlatWalkNext(DomFlatWalk& walk, const PrDomNode* root,
-                                                       const PrDomNode* node, bool skip = false) {
+        const PrDomNode* node, bool skip = false) {
     if (root->document->slots == nullptr)
         return const_cast<PrDomNode*>(skip ? domNodeNextSkipping(root, node) : domNodeNext(root, node));
     return domFlatWalkNextShadowed(walk, root, node, skip);

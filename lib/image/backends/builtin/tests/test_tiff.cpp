@@ -97,8 +97,7 @@ std::vector<uint8_t> writeTiff(const TiffLayout& layout, const std::vector<uint8
     return out;
 }
 
-std::vector<uint8_t> readRgba8(const std::vector<uint8_t>& file, PrImageAlpha alpha, uint32_t* width,
-                               uint32_t* height) {
+std::vector<uint8_t> readRgba8(const std::vector<uint8_t>& file, PrImageAlpha alpha, uint32_t* width, uint32_t* height) {
     PrImageDecoder* decoder = testImageOpen(file.data(), file.size());
     REQUIRE(decoder != nullptr);
     const PrImageInfo& info = *prImageDecoderInfo(decoder);

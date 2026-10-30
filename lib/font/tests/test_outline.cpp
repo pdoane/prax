@@ -108,27 +108,27 @@ uint32_t compare(Face& f, const std::vector<float>& coords, const std::string& n
             continue;
         }
         const FT_Outline& ft = f.face->glyph->outline;
-        bool same = loaded && uint32_t(ft.n_points) == outline.points.count
-                    && uint32_t(ft.n_contours) == outline.ends.count;
+        bool same = loaded && uint32_t(ft.n_points) == outline.points.count &&
+            uint32_t(ft.n_contours) == outline.ends.count;
         for (uint32_t c = 0; same && c < outline.ends.count; ++c)
             same = uint32_t(ft.contours[c]) + 1 == outline.ends.data[c];
         uint32_t point = 0;
         for (; same && point < outline.points.count; ++point) {
             PrVec2 p = outline.points.data[point];
             bool on = (ft.tags[point] & 1) != 0;
-            same = std::fabs(float(ft.points[point].x) / 64 - p.x) <= kTolerance
-                   && std::fabs(float(ft.points[point].y) / 64 - p.y) <= kTolerance
-                   && on == (outline.kinds.data[point] == OutlinePoint_On);
+            same = std::fabs(float(ft.points[point].x) / 64 - p.x) <= kTolerance &&
+                std::fabs(float(ft.points[point].y) / 64 - p.y) <= kTolerance &&
+                on == (outline.kinds.data[point] == OutlinePoint_On);
         }
         float ftAdvance = float(f.face->glyph->metrics.horiAdvance) / 64;
         same = same && std::fabs(advance - ftAdvance) <= kTolerance;
         if (!same) {
             if (differing == 0) {
-                MESSAGE(name << " glyph " << glyph << ": " << outline.points.count << " points against "
-                              << ft.n_points << ", advance " << advance << " against " << ftAdvance
-                              << (point > 0 && point <= outline.points.count
-                                      ? ", first differing point " + std::to_string(point - 1)
-                                      : std::string()));
+                std::string first;
+                if (point > 0 && point <= outline.points.count)
+                    first = ", first differing point " + std::to_string(point - 1);
+                MESSAGE(name << " glyph " << glyph << ": " << outline.points.count << " points against " <<
+                    ft.n_points << ", advance " << advance << " against " << ftAdvance << first);
             }
             ++differing;
         }
@@ -185,22 +185,22 @@ using namespace pr_impl;
 
 TEST_CASE("TrueType outlines load as FreeType loads them") {
     for (const char* file : {"Ahem.ttf", "Tinos.ttf", "Tinos-Bold.ttf", "Cousine.ttf", "NotoSansMath.ttf",
-                             "host/LastResort-Regular.ttf", "NotoSansSymbols2.ttf", "BungeeSpice.ttf", "Twemoji.ttf"})
+        "host/LastResort-Regular.ttf", "NotoSansSymbols2.ttf", "BungeeSpice.ttf", "Twemoji.ttf"})
         compareFont(file);
 }
 
 TEST_CASE("TrueType outlines vary as FreeType varies them") {
     for (const char* file : {"NotoSans.ttf", "NotoSans-Italic.ttf", "NotoSerif.ttf", "NotoSansMono.ttf", "Arimo.ttf",
-                             "Literata.ttf", "RobotoFlex.ttf", "Nabla.ttf", "KalniaGlaze.ttf", "NotoSansArabic.ttf",
-                             "NotoSansDevanagari.ttf", "NotoSansTaiTham.ttf"})
+        "Literata.ttf", "RobotoFlex.ttf", "Nabla.ttf", "KalniaGlaze.ttf", "NotoSansArabic.ttf",
+                "NotoSansDevanagari.ttf", "NotoSansTaiTham.ttf"})
         compareFont(file);
 }
 
 TEST_CASE("CFF outlines load as FreeType loads them") {
     // The fonts of the web platform tests, if the checkout has them, hold CID-keyed CFF.
     for (const char* file : {"woff2/SFNT-CFF-Reference.otf", "../wpt/fonts/adobe-fonts/CSSHWOrientationTest.otf",
-                             "../wpt/fonts/adobe-fonts/CSSFWOrientationTest.otf",
-                             "../wpt/fonts/noto/cjk-kr/NotoSansCJKkr-Regular-subset.otf"})
+        "../wpt/fonts/adobe-fonts/CSSFWOrientationTest.otf",
+                "../wpt/fonts/noto/cjk-kr/NotoSansCJKkr-Regular-subset.otf"})
         compareFont(file);
 }
 

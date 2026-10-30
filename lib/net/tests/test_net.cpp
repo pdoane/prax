@@ -21,14 +21,9 @@ struct Target {
 };
 
 PrStatus openTcp(void* PR_NULLABLE context, PrNet* net, PrNetStreamFn event, void* eventContext,
-                 PrNetStream* PR_NULLABLE* PR_NONNULL out) {
+        PrNetStream* PR_NULLABLE* PR_NONNULL out) {
     const Target* target = static_cast<const Target*>(context);
-    PrNetConnectDesc desc{
-        .host = target->host,
-        .port = target->port,
-        .event = event,
-        .context = eventContext,
-    };
+    PrNetConnectDesc desc{.host = target->host, .port = target->port, .event = event, .context = eventContext};
     return prNetConnect(net, &desc, out);
 }
 
@@ -68,8 +63,12 @@ TEST_CASE("net: a stream sends, finishes, and reads to the peer's end") {
         return;
     Target target{"127.0.0.1", fixture.peer.tcpEcho};
     NetProbe probe{};
-    NetProbeScript script{.open = openTcp, .context = &target, .payload = PrByteView{
-        reinterpret_cast<const uint8_t*>("hello"), 5}, .finish = true};
+    NetProbeScript script{
+        .open = openTcp,
+        .context = &target,
+        .payload = PrByteView{reinterpret_cast<const uint8_t*>("hello"), 5},
+        .finish = true,
+    };
     netProbeRun(&probe, fixture.net, &script);
     CHECK(probe.status == PrStatus_Ok);
     CHECK(netProbeReceived(&probe, "hello<eof:clean>"));
@@ -89,8 +88,12 @@ TEST_CASE("net: a name that resolves to several addresses connects to the one th
     // The peer listens on 127.0.0.1 alone, so a resolver that gives ::1 first is refused there.
     Target target{"localhost", fixture.peer.tcpEcho};
     NetProbe probe{};
-    NetProbeScript script{.open = openTcp, .context = &target, .payload = PrByteView{
-        reinterpret_cast<const uint8_t*>("x"), 1}, .finish = true};
+    NetProbeScript script{
+        .open = openTcp,
+        .context = &target,
+        .payload = PrByteView{reinterpret_cast<const uint8_t*>("x"), 1},
+        .finish = true,
+    };
     netProbeRun(&probe, fixture.net, &script);
     CHECK(netProbeReceived(&probe, "x<eof:clean>"));
     CHECK(probe.error == PrNetError_None);
@@ -107,8 +110,12 @@ TEST_CASE("net: bytes beyond the buffers flow both ways") {
         payload += "line " + std::to_string(i) + "\n";
     Target target{"127.0.0.1", fixture.peer.tcpEcho};
     NetProbe probe{};
-    NetProbeScript script{.open = openTcp, .context = &target, .payload = PrByteView{
-        reinterpret_cast<const uint8_t*>(payload.data()), payload.size()}, .finish = true};
+    NetProbeScript script{
+        .open = openTcp,
+        .context = &target,
+        .payload = PrByteView{reinterpret_cast<const uint8_t*>(payload.data()), payload.size()},
+        .finish = true,
+    };
     netProbeRun(&probe, fixture.net, &script);
     CHECK(netProbeReceived(&probe, payload + "<eof:clean>"));
     CHECK(netProbeEventCount(&probe, PrNetStreamEvent_Writable) >= 1);

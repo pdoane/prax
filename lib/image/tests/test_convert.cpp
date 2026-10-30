@@ -16,10 +16,7 @@ namespace pr_impl {
 namespace {
 
 PrImageFormat format(PrImageSample sample, PrImageAlpha alpha = PrImageAlpha_None) {
-    return {PrColorModel_Rgb,
-            sample,
-            alpha,
-            {PrImageColorEncoding_Named, PrColorSpace_Srgb, {nullptr, 0}}};
+    return {PrColorModel_Rgb, sample, alpha, {PrImageColorEncoding_Named, PrColorSpace_Srgb, {nullptr, 0}}};
 }
 
 // Pixels and their format. Rows are `stride` bytes apart, or else divide the storage evenly.
@@ -29,15 +26,13 @@ struct Buffer {
 };
 
 template <typename T, size_t N>
-Buffer buffer(T (&data)[N], PrImageFormat pixelFormat, uint32_t width = 1, uint32_t height = 1,
-              size_t stride = 0) {
+Buffer buffer(T (&data)[N], PrImageFormat pixelFormat, uint32_t width = 1, uint32_t height = 1, size_t stride = 0) {
     uint8_t* bytes = reinterpret_cast<uint8_t*>(const_cast<std::remove_const_t<T>*>(data));
     return {{bytes, stride != 0 ? stride : sizeof(data) / height, {width, height}}, pixelFormat};
 }
 
 PrStatus convert(const Buffer& source, const Buffer& destination, PrImageConversionFlags policy) {
-    return prImageConvert(prPixelsView(source.pixels), &source.format, destination.pixels, &destination.format,
-                          policy);
+    return prImageConvert(prPixelsView(source.pixels), &source.format, destination.pixels, &destination.format, policy);
 }
 
 } // namespace
@@ -163,8 +158,10 @@ TEST_CASE("image RGB and Lab conversions round trip characterized color") {
 
 TEST_CASE("image hue models use degrees and percentage channels") {
     for (PrColorSpace space : {PrColorSpace_Hsl, PrColorSpace_Hwb}) {
-        float original[] = {120.0f, space == PrColorSpace_Hsl ? 100.0f : 0.0f,
-                            space == PrColorSpace_Hsl ? 50.0f : 0.0f};
+        float original[] = {
+            120.0f, space == PrColorSpace_Hsl ? 100.0f : 0.0f,
+            space == PrColorSpace_Hsl ? 50.0f : 0.0f,
+        };
         float result[3] = {};
         PrImageFormat hue = format(PrImageSample_F32);
         hue.model = prColorSpaceModel(space);
@@ -228,8 +225,7 @@ TEST_CASE("independent alpha does not weight color at zero or fractional values"
     PrImageFormat inputFormat = format(PrImageSample_F32, PrImageAlpha_Independent);
     inputFormat.color.space = PrColorSpace_SrgbLinear;
     Buffer source = buffer(original, inputFormat, 2);
-    Buffer destination =
-        buffer(result, format(PrImageSample_F32, PrImageAlpha_Independent), 2);
+    Buffer destination = buffer(result, format(PrImageSample_F32, PrImageAlpha_Independent), 2);
     REQUIRE(convert(source, destination, 0) == PrStatus_Ok);
     CHECK(result[0] == doctest::Approx(0.5370987));
     CHECK(result[1] == doctest::Approx(0.735357));
@@ -243,16 +239,13 @@ TEST_CASE("independent alpha cannot be dropped introduced or reinterpreted as op
     float original[] = {0.2f, 0.3f, 0.4f, 0.0f};
     float result[4] = {};
     for (PrImageAlpha alpha :
-         {PrImageAlpha_None, PrImageAlpha_Straight, PrImageAlpha_Premultiplied}) {
-        Buffer source =
-            buffer(original, format(PrImageSample_F32, PrImageAlpha_Independent));
+            {PrImageAlpha_None, PrImageAlpha_Straight, PrImageAlpha_Premultiplied}) {
+        Buffer source = buffer(original, format(PrImageSample_F32, PrImageAlpha_Independent));
         Buffer destination = buffer(result, format(PrImageSample_F32, alpha));
-        CHECK(convert(source, destination, 0)
-              == PrStatus_NotSupported);
+        CHECK(convert(source, destination, 0) == PrStatus_NotSupported);
         source.format.alpha = alpha;
         destination.format.alpha = PrImageAlpha_Independent;
-        CHECK(convert(source, destination, 0)
-              == PrStatus_NotSupported);
+        CHECK(convert(source, destination, 0) == PrStatus_NotSupported);
     }
 }
 
@@ -261,10 +254,8 @@ TEST_CASE("independent alpha preserves sample precision in representation conver
     float result[4] = {};
     uint16_t restored[4] = {};
     Buffer source = buffer(original, format(PrImageSample_U16, PrImageAlpha_Independent));
-    Buffer intermediate =
-        buffer(result, format(PrImageSample_F32, PrImageAlpha_Independent));
-    Buffer destination =
-        buffer(restored, format(PrImageSample_U16, PrImageAlpha_Independent));
+    Buffer intermediate = buffer(result, format(PrImageSample_F32, PrImageAlpha_Independent));
+    Buffer destination = buffer(restored, format(PrImageSample_U16, PrImageAlpha_Independent));
     REQUIRE(convert(source, intermediate, 0) == PrStatus_Ok);
     REQUIRE(convert(intermediate, destination, 0) == PrStatus_Ok);
     for (size_t channel = 0; channel < 4; ++channel) {
@@ -277,8 +268,7 @@ TEST_CASE("straight and premultiplied alpha conversion associates stored color")
     float associated[4] = {};
     float restored[4] = {};
     Buffer source = buffer(original, format(PrImageSample_F32, PrImageAlpha_Straight));
-    Buffer intermediate =
-        buffer(associated, format(PrImageSample_F32, PrImageAlpha_Premultiplied));
+    Buffer intermediate = buffer(associated, format(PrImageSample_F32, PrImageAlpha_Premultiplied));
     Buffer destination = buffer(restored, format(PrImageSample_F32, PrImageAlpha_Straight));
     REQUIRE(convert(source, intermediate, 0) == PrStatus_Ok);
     CHECK(associated[0] == 0.125f);
@@ -421,9 +411,11 @@ TEST_CASE("identical floating image formats preserve NaN payload and signed zero
 }
 
 TEST_CASE("nonfinite floating image samples do not undergo undefined integer casts") {
-    float original[] = {std::numeric_limits<float>::quiet_NaN(),
-                        std::numeric_limits<float>::infinity(),
-                        -std::numeric_limits<float>::infinity()};
+    float original[] = {
+        std::numeric_limits<float>::quiet_NaN(),
+        std::numeric_limits<float>::infinity(),
+        -std::numeric_limits<float>::infinity(),
+    };
     uint8_t result[3] = {};
     Buffer source = buffer(original, format(PrImageSample_F32));
     Buffer destination = buffer(result, format(PrImageSample_U8));
@@ -459,8 +451,7 @@ TEST_CASE("eight-bit premultiplying and unpremultiplying round the exact value h
             const uint32_t expected = uint32_t(std::floor(value * alpha / 255.0 + 0.5));
             wrong += p[0] != expected || p[3] != alpha;
             // Unpremultiplying the premultiplied value, clamped to one.
-            const uint32_t unpremultiplied =
-                alpha == 0 ? 0 : std::min(255u, uint32_t(std::floor(p[0] * 255.0 / alpha + 0.5)));
+            const uint32_t unpremultiplied = alpha == 0 ? 0 : std::min(255u, uint32_t(std::floor(p[0] * 255.0 / alpha + 0.5)));
             wrong += restored[(alpha * 256 + value) * 4] != unpremultiplied;
         }
     }

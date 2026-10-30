@@ -15,8 +15,7 @@ constexpr PrKitChoice kItems[] = {{.label = "Local"}, {.label = "World"}, {.labe
 
 // Creates the tabs of `items` under `strip`, the tab at `*selected` selected, writes each tab's node to `nodes`, and
 // chooses a tab that is activated.
-void tabs(KitFixture& f, PrLayoutNode strip, const PrKitTab* items, uint32_t count, uint32_t* selected,
-          PrLayoutNode* nodes) {
+void tabs(KitFixture& f, PrLayoutNode strip, const PrKitTab* items, uint32_t count, uint32_t* selected, PrLayoutNode* nodes) {
     for (uint32_t i = 0; i < count; ++i) {
         PrKitTab tab = items[i];
         tab.selected = *selected == i;
@@ -381,7 +380,7 @@ TEST_CASE("a meter lights the segments up to its reading, within its range") {
     f.frame();
     uint32_t segments = 0;
     for (PrLayoutNode n = prLayoutNodeFirstChild(f.tree, bar); n != kPrLayoutNodeNone;
-         n = prLayoutNodeNextSibling(f.tree, n))
+            n = prLayoutNodeNextSibling(f.tree, n))
         ++segments;
     CHECK(segments == kPrKitMeterSegments);
     PrLayoutStyleIndex lit = prLayoutNodeStyle(f.tree, childOf(f, bar, 5));

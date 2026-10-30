@@ -75,8 +75,7 @@ void layoutReadsMerge(LayoutReads& outer, const LayoutReads& inner) {
         layoutReadsFloor(outer.lastTop, inner.lastTop.limit);
 }
 
-LayoutSpan layoutExclusionsAvailableAmong(const LayoutContainingBlock& cb, PrLayoutUnit y, PrLayoutUnit h,
-                                          uint32_t count) {
+LayoutSpan layoutExclusionsAvailableAmong(const LayoutContainingBlock& cb, PrLayoutUnit y, PrLayoutUnit h, uint32_t count) {
     readRange(*cb.reads, y, h);
     LayoutSpan span{cb.lineLeft, cb.lineRight, true};
     const Array<LayoutExclusion>& floats = cb.exclusions->floats;
@@ -107,7 +106,7 @@ PrLayoutUnit layoutExclusionsNextEdge(const LayoutContainingBlock& cb, PrLayoutU
 }
 
 LayoutFit layoutExclusionsFirstFit(const LayoutContainingBlock& cb, PrLayoutUnit y, PrLayoutUnit h,
-                                   PrLayoutUnit inlineSize) {
+        PrLayoutUnit inlineSize) {
     for (;;) {
         LayoutSpan span = layoutExclusionsAvailable(cb, y, h);
         if (inlineSize.raw <= (span.right - span.left).raw || span.free)
@@ -131,8 +130,7 @@ PrLayoutUnit layoutExclusionsClearance(const LayoutContainingBlock& cb, LayoutLi
 }
 
 LayoutExclusion layoutExclusionsPlace(const LayoutContainingBlock& cb, PrLayoutUnit inlineSize,
-                                      PrLayoutUnit blockSize, LayoutLineSides side, LayoutLineSides clears,
-                                      PrLayoutUnit top) {
+        PrLayoutUnit blockSize, LayoutLineSides side, LayoutLineSides clears, PrLayoutUnit top) {
     // Rule 5: the float goes no higher than an earlier float. It also goes below the floats it clears.
     layoutReadsFloor(cb.reads->lastTop, top);
     PrLayoutUnit y = layoutUnitMax(top, cb.exclusions->mark.lastTop);

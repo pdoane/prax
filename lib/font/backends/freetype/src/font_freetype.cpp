@@ -80,8 +80,7 @@ Face* faceOf(FreeTypeHinter* hinter, const PrFont* font) {
     Face* face = allocZeroed<Face>();
     face->fontId = id;
     PrByteView bytes = prFontData(font);
-    if (FT_New_Memory_Face(hinter->library, bytes.data, FT_Long(bytes.size), FT_Long(prFontIndex(font)), &face->face)
-        != 0) {
+    if (FT_New_Memory_Face(hinter->library, bytes.data, FT_Long(bytes.size), FT_Long(prFontIndex(font)), &face->face) != 0) {
         face->face = nullptr;
         closeFace(face);
         return nullptr;
@@ -95,8 +94,8 @@ Face* faceOf(FreeTypeHinter* hinter, const PrFont* font) {
         coords.reset();
     }
     FT_ULong length = 0;
-    face->instructed = FT_Load_Sfnt_Table(face->face, FT_MAKE_TAG('f', 'p', 'g', 'm'), 0, nullptr, &length) == 0
-                       && length != 0;
+    face->instructed =
+        FT_Load_Sfnt_Table(face->face, FT_MAKE_TAG('f', 'p', 'g', 'm'), 0, nullptr, &length) == 0 && length != 0;
     hinter->faces.push(face);
     return face;
 }
@@ -149,11 +148,10 @@ bool activate(Face* face, float pixelsPerEm, PrFontHinting hinting, FT_Int32* fl
 
 // Loads the glyph hinted at the size. Returns false if FreeType cannot load it. The mutex is held.
 bool loadHinted(FreeTypeHinter* hinter, const PrFont* font, uint16_t glyph, float pixelsPerEm, PrFontHinting hinting,
-                Face** out) {
+        Face** out) {
     Face* face = faceOf(hinter, font);
     FT_Int32 flags = 0;
-    if (face == nullptr || !activate(face, pixelsPerEm, hinting, &flags)
-        || FT_Load_Glyph(face->face, glyph, flags) != 0)
+    if (face == nullptr || !activate(face, pixelsPerEm, hinting, &flags) || FT_Load_Glyph(face->face, glyph, flags) != 0)
         return false;
     *out = face;
     return true;
@@ -209,7 +207,7 @@ void destroyHinter(PrFontHinter* base) {
 }
 
 bool hintOutline(PrFontHinter* base, const PrFont* font, uint16_t glyph, float pixelsPerEm, PrFontHinting hinting,
-                 float embolden, PrPath* out) {
+        float embolden, PrPath* out) {
     FreeTypeHinter* hinter = static_cast<FreeTypeHinter*>(base);
     prMutexLock(&hinter->mutex);
     Face* face = nullptr;
@@ -235,7 +233,7 @@ bool hintOutline(PrFontHinter* base, const PrFont* font, uint16_t glyph, float p
 }
 
 bool hintAdvance(PrFontHinter* base, const PrFont* font, uint16_t glyph, float pixelsPerEm, PrFontHinting hinting,
-                 float* out) {
+        float* out) {
     FreeTypeHinter* hinter = static_cast<FreeTypeHinter*>(base);
     prMutexLock(&hinter->mutex);
     Face* face = nullptr;

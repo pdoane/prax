@@ -138,7 +138,7 @@ struct DomDocumentHost {
     // waits for the fetch, except for a font or media. If the browsing context drops the fetch first, it calls `drop`
     // with `data` instead, if `drop` is given.
     void (*PR_NONNULL fetch)(void* PR_NULLABLE context, const DomFetchRequest* request, DomFetchFn done,
-                             void* PR_NULLABLE data, void (*PR_NULLABLE drop)(void* PR_NULLABLE data));
+        void* PR_NULLABLE data, void (*PR_NULLABLE drop)(void* PR_NULLABLE data));
 
     // The codec that decompresses the compressed fonts that the document loads, or null for none.
     PrCompressCodec* PR_NULLABLE compress;
@@ -148,8 +148,7 @@ struct DomDocumentHost {
     // without its `#`, or the null view, which an SVG image takes its view from. Writes its natural dimensions, which
     // an SVG image may lack. Returns false if the bytes are not an image that the browsing context decodes. Null if the
     // browsing context decodes no images.
-    bool (*PR_NULLABLE decodeImage)(void* PR_NULLABLE context, PrByteView bytes, PrStringView fragment,
-                                    DomDecodedImage* out);
+    bool (*PR_NULLABLE decodeImage)(void* PR_NULLABLE context, PrByteView bytes, PrStringView fragment, DomDecodedImage* out);
 
     // Brings the document's presentation up to date, as a read of its layout needs: its styles and boxes, the content
     // that the browsing context draws in them, such as that of svg elements, and their layout. Null if the
@@ -169,31 +168,27 @@ struct DomDocumentHost {
     // Runs `run` with `data` in a task of its own, after the current one. If the task is discarded without running,
     // calls `drop` with `data` instead. If `drop` is null, nothing is done in that case.
     void (*PR_NONNULL queueTask)(void* PR_NULLABLE context, void (*PR_NONNULL run)(void* data),
-                                 void* data, void (*PR_NULLABLE drop)(void* data));
+        void* data, void (*PR_NULLABLE drop)(void* data));
 
     // Runs `run` in the same way as queueTask, in a task that the document's load event waits for
     // (html/#delay-the-load-event).
-    void (*PR_NONNULL queueDelayingTask)(void* PR_NULLABLE context,
-                                         void (*PR_NONNULL run)(void* data), void* data,
-                                         void (*PR_NULLABLE drop)(void* data));
+    void (*PR_NONNULL queueDelayingTask)(void* PR_NULLABLE context, void (*PR_NONNULL run)(void* data), void* data,
+        void (*PR_NULLABLE drop)(void* data));
 
     // Runs `run` with `data` in a microtask (html/#queue-a-microtask). Returns false, and leaves `data` with the
     // caller, if the host runs no microtasks.
-    bool (*PR_NONNULL queueMicrotask)(void* PR_NULLABLE context, void (*PR_NONNULL run)(void* data),
-                                      void* data);
+    bool (*PR_NONNULL queueMicrotask)(void* PR_NULLABLE context, void (*PR_NONNULL run)(void* data), void* data);
 
     // Compiles `body` into the callback of the event handler `handler` of `target`
     // (html/#getting-the-current-value-of-the-event-handler). `body` is the text of the event handler content attribute
     // of `element`. `out` holds one reference to the callback. Returns false, with the error reported, if `body` does
     // not compile.
     bool (*PR_NONNULL compile)(void* PR_NULLABLE context, PrDomEventTarget* target,
-                               PrDomElement* element, PrDomEventHandler handler, PrStringView body,
-                               PrDomEventHandlerCallback* out);
+        PrDomElement* element, PrDomEventHandler handler, PrStringView body, PrDomEventHandlerCallback* out);
 
     // Called when an element for which domEmbeds is true is connected or disconnected, with the null view for
     // `attribute`, or when the element's attribute `attribute` changes.
-    void (*PR_NONNULL embedChanged)(void* PR_NULLABLE context, PrDomElement* element,
-                                    PrStringView attribute);
+    void (*PR_NONNULL embedChanged)(void* PR_NULLABLE context, PrDomElement* element, PrStringView attribute);
 
     // Prepares a script element that is not parser-inserted (html/#prepare-the-script-element), as its post-connection
     // steps do: once an insertion that connects it ends, when its children change while it is connected, and when its
@@ -203,8 +198,7 @@ struct DomDocumentHost {
 
     // Returns the states among `wanted` that the element is in, as the application knows them. Null if the application
     // reports no states.
-    PrDomHostState (*PR_NULLABLE elementState)(void* PR_NULLABLE context, const PrDomElement* element,
-                                               PrDomHostState wanted);
+    PrDomHostState (*PR_NULLABLE elementState)(void* PR_NULLABLE context, const PrDomElement* element, PrDomHostState wanted);
 
     // Returns true if the element has activation behavior (dom/#eventtarget-activation-behavior), which a click
     // dispatched at it or at a descendant runs. Null if no element has activation behavior.

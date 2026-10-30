@@ -23,8 +23,8 @@ uint32_t slotOf(const AtomTable* table, PrStringView text, uint32_t hash) {
         if (at.atom == kAtomNone)
             return slot;
         const AtomEntry& entry = table->atoms.data[at.atom];
-        if (at.hash == hash && entry.size == text.size
-            && (text.size == 0 || memEquals(entry.text, text.data, text.size)))
+        if (at.hash == hash && entry.size == text.size &&
+                (text.size == 0 || memEquals(entry.text, text.data, text.size)))
             return slot;
     }
 }
@@ -98,8 +98,7 @@ Atom atomTableFind(const AtomTable* table, PrStringView text) {
 }
 
 uint32_t atomTableBytes(const AtomTable* table) {
-    uint32_t paged =
-        table->page < table->pages.count ? table->page * kAtomPageSize + table->used : 0;
+    uint32_t paged = table->page < table->pages.count ? table->page * kAtomPageSize + table->used : 0;
     return paged + table->largeBytes;
 }
 

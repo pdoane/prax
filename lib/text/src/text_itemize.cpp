@@ -93,8 +93,11 @@ void resolveScripts(TextItems& t, PrStringView whole, uint32_t start, uint32_t e
     for (uint32_t at = start; at < end;) {
         uint32_t next = clusterEnd(text, at);
         PrStringView cluster{whole.data + at, next - at};
-        PrScript script = cluster.size == 1 ? (asciiIsLetter(cluster.data[0]) ? PrScript_Latn : PrScript_Zyyy)
-                                            : clusterScript(cluster);
+        PrScript script;
+        if (cluster.size == 1)
+            script = (asciiIsLetter(cluster.data[0]) ? PrScript_Latn : PrScript_Zyyy);
+        else
+            script = clusterScript(cluster);
         if (cluster.data[0] == '\n') {
             endParagraph(at);
             pending = next;
@@ -180,9 +183,9 @@ bool mayTurnRight(const TextItems& t, PrStringView whole, uint32_t start, uint32
         uint32_t codePoint = 0;
         uint32_t size = uint32_t(prUtf8Decode(text, at, &codePoint));
         PrUnicodeBidiClass c = prUnicodeBidiClass(codePoint);
-        if (!t.upright.data[at]
-            && (c == PrUnicodeBidiClass_R || c == PrUnicodeBidiClass_AL || c == PrUnicodeBidiClass_RLE
-                || c == PrUnicodeBidiClass_RLO || c == PrUnicodeBidiClass_RLI))
+        if (!t.upright.data[at] &&
+                (c == PrUnicodeBidiClass_R || c == PrUnicodeBidiClass_AL || c == PrUnicodeBidiClass_RLE ||
+                    c == PrUnicodeBidiClass_RLO || c == PrUnicodeBidiClass_RLI))
             return true;
         at += size;
     }
@@ -204,8 +207,8 @@ bool mayHaveOddLevels(const TextItems& t, const PrTextItemizeDesc& d) {
                     return true;
                 break;
             case PrTextPieceKind_Object:
-                if ((piece.bidi == PrTextBidi_Embed || piece.bidi == PrTextBidi_BidiOverride)
-                    && piece.direction == PrTextDirection_Rtl)
+                if ((piece.bidi == PrTextBidi_Embed || piece.bidi == PrTextBidi_BidiOverride) &&
+                        piece.direction == PrTextDirection_Rtl)
                     return true;
                 break;
             case PrTextPieceKind_Text:
@@ -341,12 +344,16 @@ bool resolveLevels(TextItems& t, const PrTextItemizeDesc& d) {
     memFill(t.marks.data, kPrTextLevelNone, d.pieceCount);
     bool overrides = d.bidi == PrTextBidi_BidiOverride || d.bidi == PrTextBidi_IsolateOverride;
     bool rightToLeft = d.direction == PrTextDirection_Rtl;
-    PrUnicodeBidiDirection direction = d.bidi == PrTextBidi_Plaintext ? PrUnicodeBidiDirection_Auto
-                              : rightToLeft                  ? PrUnicodeBidiDirection_RightToLeft
-                                                             : PrUnicodeBidiDirection_LeftToRight;
-    PrUnicodeBidiClass override = !overrides    ? PrUnicodeBidiClass_PDF
-                                  : rightToLeft ? PrUnicodeBidiClass_RLO
-                                                : PrUnicodeBidiClass_LRO;
+    PrUnicodeBidiDirection direction = PrUnicodeBidiDirection_LeftToRight;
+    if (d.bidi == PrTextBidi_Plaintext)
+        direction = PrUnicodeBidiDirection_Auto;
+    else if (rightToLeft)
+        direction = PrUnicodeBidiDirection_RightToLeft;
+    PrUnicodeBidiClass override = PrUnicodeBidiClass_LRO;
+    if (!overrides)
+        override = PrUnicodeBidiClass_PDF;
+    else if (rightToLeft)
+        override = PrUnicodeBidiClass_RLO;
     Resolver r{.t = t, .d = d, .direction = direction, .override = override, .start = 0};
     t.open.clear();
     r.begin(0);
@@ -379,9 +386,11 @@ bool resolveLevels(TextItems& t, const PrTextItemizeDesc& d) {
                 break;
             case PrTextPieceKind_Object: {
                 bool strong = piece.bidi == PrTextBidi_Embed || piece.bidi == PrTextBidi_BidiOverride;
-                PrUnicodeBidiClass c = !strong                                ? PrUnicodeBidiClass_ON
-                              : piece.direction == PrTextDirection_Rtl ? PrUnicodeBidiClass_R
-                                                                       : PrUnicodeBidiClass_L;
+                PrUnicodeBidiClass c = PrUnicodeBidiClass_L;
+                if (!strong)
+                    c = PrUnicodeBidiClass_ON;
+                else if (piece.direction == PrTextDirection_Rtl)
+                    c = PrUnicodeBidiClass_R;
                 r.add(c, 0xFFFC, piece.start);
                 break;
             }
@@ -473,18 +482,20 @@ struct Runs {
                 continue;
             }
             uint32_t end = at + 1;
-            while (end < spanEnd && !unshaped(end) && face[end] == face[at] && scripts[end] == scripts[at]
-                   && upright[end] == upright[at] && levelAt(end) == levelAt(at))
+            while (end < spanEnd && !unshaped(end) && face[end] == face[at] && scripts[end] == scripts[at] &&
+                    upright[end] == upright[at] && levelAt(end) == levelAt(at))
                 ++end;
-            t.runs.push(PrTextItemRun{.start = at,
-                                      .end = end,
-                                      .contextStart = contextStart,
-                                      .contextEnd = 0,
-                                      .piece = spanPiece,
-                                      .face = face[at],
-                                      .script = scripts[at],
-                                      .level = levelAt(at),
-                                      .upright = upright[at]});
+            t.runs.push(PrTextItemRun{
+                .start = at,
+                .end = end,
+                .contextStart = contextStart,
+                .contextEnd = 0,
+                .piece = spanPiece,
+                .face = face[at],
+                .script = scripts[at],
+                .level = levelAt(at),
+                .upright = upright[at],
+            });
             at = end;
         }
     }
@@ -601,8 +612,16 @@ void prTextItemsItemize(PrTextItems* items, const PrTextItemizeDesc* desc) {
             orient(*items, d.text, d.pieces[i]);
     }
     items->leveled = resolveLevels(*items, d);
-    Runs runs{.t = *items, .d = d, .spanStart = 0, .spanEnd = 0, .spanPiece = 0, .spanOpen = false, .contextStart = 0,
-              .contextRuns = 0};
+    Runs runs{
+        .t = *items,
+        .d = d,
+        .spanStart = 0,
+        .spanEnd = 0,
+        .spanPiece = 0,
+        .spanOpen = false,
+        .contextStart = 0,
+        .contextRuns = 0,
+    };
     for (uint32_t i = 0; i < d.pieceCount; ++i) {
         const PrTextPiece& piece = d.pieces[i];
         switch (piece.kind) {

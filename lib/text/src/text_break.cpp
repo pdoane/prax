@@ -39,16 +39,16 @@ bool isLetterUnit(PrUnicodeLineBreakClass c) {
 // Returns true if a code point of class `c` is East Asian text, between whose letters KeepAll removes the
 // opportunities.
 bool isEastAsian(PrUnicodeLineBreakClass c) {
-    return c == PrUnicodeLineBreakClass_ID || c == PrUnicodeLineBreakClass_CJ || c == PrUnicodeLineBreakClass_H2
-           || c == PrUnicodeLineBreakClass_H3 || c == PrUnicodeLineBreakClass_JL || c == PrUnicodeLineBreakClass_JV
-           || c == PrUnicodeLineBreakClass_JT;
+    return c == PrUnicodeLineBreakClass_ID || c == PrUnicodeLineBreakClass_CJ || c == PrUnicodeLineBreakClass_H2 ||
+        c == PrUnicodeLineBreakClass_H3 || c == PrUnicodeLineBreakClass_JL || c == PrUnicodeLineBreakClass_JV ||
+        c == PrUnicodeLineBreakClass_JT;
 }
 
 // Returns true if a code point of class `c` separates words, so that overflow-wrap adds nothing after it: white space
 // and the breaks.
 bool separates(PrUnicodeLineBreakClass c) {
-    return c == PrUnicodeLineBreakClass_SP || c == PrUnicodeLineBreakClass_BK || c == PrUnicodeLineBreakClass_CR
-           || c == PrUnicodeLineBreakClass_LF || c == PrUnicodeLineBreakClass_NL || c == PrUnicodeLineBreakClass_ZW;
+    return c == PrUnicodeLineBreakClass_SP || c == PrUnicodeLineBreakClass_BK || c == PrUnicodeLineBreakClass_CR ||
+        c == PrUnicodeLineBreakClass_LF || c == PrUnicodeLineBreakClass_NL || c == PrUnicodeLineBreakClass_ZW;
 }
 
 // The classes of grapheme clusters that finding the initial letter reads.
@@ -64,8 +64,8 @@ enum {
 typedef uint8_t LetterClass;
 
 LetterClass letterClassOf(uint32_t codePoint) {
-    if (codePoint == 0x20 || codePoint == 0xa0 || codePoint == 0x1361 || codePoint == 0x10100 || codePoint == 0x10101
-        || codePoint == 0x1039f || codePoint == 0x1091f)
+    if (codePoint == 0x20 || codePoint == 0xa0 || codePoint == 0x1361 || codePoint == 0x10100 || codePoint == 0x10101 ||
+            codePoint == 0x1039f || codePoint == 0x1091f)
         return LetterClass_Separator;
     if (codePoint == '\t' || codePoint == '\n' || codePoint == '\r' || codePoint == '\f')
         return LetterClass_White;
@@ -101,15 +101,15 @@ LetterClass letterClassOf(uint32_t codePoint) {
 
 using namespace pr_impl;
 
-void prTextBreaksTailor(const PrTextBreakDesc* desc, PrUnicodeLineBreak* breaks,
-                        PrTextEmergency* PR_NULLABLE emergency) {
+void prTextBreaksTailor(const PrTextBreakDesc* desc, PrUnicodeLineBreak* breaks, PrTextEmergency* PR_NULLABLE emergency) {
     const PrTextBreakDesc& d = *desc;
     // The byte at which the grapheme cluster after the code point being read starts. A code point ends its cluster if
     // its end reaches this byte.
     size_t cluster = 0;
     PrUnicodeLineBreakFlags flags = 0;
-    PrUnicodeLineBreakClass before =
-        d.count != 0 ? prUnicodeLineBreakClass(d.codePoints[0], &flags) : PrUnicodeLineBreakClass_XX;
+    PrUnicodeLineBreakClass before = PrUnicodeLineBreakClass_XX;
+    if (d.count != 0)
+        before = prUnicodeLineBreakClass(d.codePoints[0], &flags);
     for (uint32_t i = 0; i < d.count; ++i) {
         if (emergency != nullptr)
             emergency[i] = PrTextEmergency_None;
@@ -122,13 +122,12 @@ void prTextBreaksTailor(const PrTextBreakDesc* desc, PrUnicodeLineBreak* breaks,
         bool ends = d.ends[i] >= cluster;   // the code point ends its cluster
         const PrTextBreakStyle& own = d.styles[i];
         const PrTextBreakStyle& next = d.styles[i + 1];
-        PrTextWordBreak shared = own.wordBreak == next.wordBreak ? own.wordBreak
-                                                                 : PrTextWordBreak(PrTextWordBreak_Normal);
+        PrTextWordBreak shared = own.wordBreak == next.wordBreak ? own.wordBreak : PrTextWordBreak_Normal;
         bool letters = isLetterUnit(before) && isLetterUnit(after);
         if (shared == PrTextWordBreak_BreakAll && ends && letters && breaks[i] == PrUnicodeLineBreak_Prohibited)
             breaks[i] = PrUnicodeLineBreak_Allowed;
-        else if (shared == PrTextWordBreak_KeepAll && letters && (isEastAsian(before) || isEastAsian(after))
-                 && breaks[i] == PrUnicodeLineBreak_Allowed)
+        else if (shared == PrTextWordBreak_KeepAll && letters && (isEastAsian(before) || isEastAsian(after)) &&
+                breaks[i] == PrUnicodeLineBreak_Allowed)
             breaks[i] = PrUnicodeLineBreak_Prohibited;
         // A word may also break before the white space after it, which a line keeps if its spaces do not hang.
         if (emergency != nullptr && ends && breaks[i] == PrUnicodeLineBreak_Prohibited && !separates(before)) {
@@ -150,14 +149,14 @@ bool prTextFirstLetter(PrStringView text, size_t* start, size_t* end) {
         return letterClassOf(codePoint);
     };
     size_t at = 0;
-    while (at < text.size && (classAt(at) == LetterClass_Space || classAt(at) == LetterClass_Separator
-                              || classAt(at) == LetterClass_White))
+    while (at < text.size && (classAt(at) == LetterClass_Space || classAt(at) == LetterClass_Separator ||
+            classAt(at) == LetterClass_White))
         at = prUnicodeGraphemeNext(text, at);
     *start = at;
     // Punctuation, and the spaces after it, before the letter.
     if (at < text.size && (classAt(at) == LetterClass_Punctuation || classAt(at) == LetterClass_Leading)) {
-        while (at < text.size && classAt(at) != LetterClass_Letter && classAt(at) != LetterClass_Other
-               && classAt(at) != LetterClass_White)
+        while (at < text.size && classAt(at) != LetterClass_Letter && classAt(at) != LetterClass_Other &&
+                classAt(at) != LetterClass_White)
             at = prUnicodeGraphemeNext(text, at);
     }
     if (at >= text.size || classAt(at) != LetterClass_Letter)

@@ -106,7 +106,7 @@ bool restoreCleanPoint(HtmlMarkdownBuilder* b, uint32_t index) {
         uint32_t length = textLengthOf(point.lastChildren[t]);
         if (length != kNotText && length > point.lastTextLengths[t])
             domReplaceData(static_cast<PrDomCharacterData*>(point.lastChildren[t]), point.lastTextLengths[t],
-                           length - point.lastTextLengths[t], "");
+                length - point.lastTextLengths[t], "");
     }
     HtmlParserRest rest = b->base;
     rest.framesetOk = point.framesetOk;
@@ -202,7 +202,7 @@ void initBuilder(HtmlMarkdownBuilder* b, const PrMarkdownOptions* PR_NULLABLE op
 } // namespace
 
 void htmlMarkdownBuilderInitDocument(HtmlMarkdownBuilder* builder, PrDomDocument* document, HtmlParseFlags flags,
-                                     const PrMarkdownOptions* PR_NULLABLE options) {
+        const PrMarkdownOptions* PR_NULLABLE options) {
     *builder = HtmlMarkdownBuilder{};
     domNodeRetain(document);
     builder->document = document;
@@ -211,7 +211,7 @@ void htmlMarkdownBuilderInitDocument(HtmlMarkdownBuilder* builder, PrDomDocument
 }
 
 void htmlMarkdownBuilderInitElement(HtmlMarkdownBuilder* builder, PrDomElement* element,
-                                    const PrMarkdownOptions* PR_NULLABLE options) {
+        const PrMarkdownOptions* PR_NULLABLE options) {
     *builder = HtmlMarkdownBuilder{};
     domNodeRetain(element);
     builder->element = element;

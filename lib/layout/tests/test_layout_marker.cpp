@@ -43,14 +43,13 @@ struct List {
         list = f.element(root, box, nullptr, nullptr, &style);
     }
 
-    PrLayoutNode add(PrLayoutNode parent, const PrLayoutBoxStyle& box,
-                     const PrLayoutFontStyle* PR_NULLABLE withFont = nullptr) {
+    PrLayoutNode add(PrLayoutNode parent, const PrLayoutBoxStyle& box, const PrLayoutFontStyle* PR_NULLABLE withFont = nullptr) {
         return f.element(parent, box, nullptr, nullptr, withFont != nullptr ? withFont : &style);
     }
 
     // Adds a list item under `parent` that opens with a marker of `text`, set in `markerFont` if one is given.
     PrLayoutNode item(PrLayoutNode parent, const char* text, PrLayoutNode* PR_NULLABLE marker = nullptr,
-                      const PrLayoutFontStyle* PR_NULLABLE markerFont = nullptr) {
+            const PrLayoutFontStyle* PR_NULLABLE markerFont = nullptr) {
         PrLayoutNode node = add(parent, block());
         PrLayoutNode made = add(node, markerBox(), markerFont);
         f.text(made, text);

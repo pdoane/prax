@@ -26,9 +26,8 @@ enum {
     PrUnicodeIdnaFlag_IgnoreInvalidPunycode = 1u << 6, // keep a label whose Punycode does not decode instead of failing
 
     // Every check, as UTS #46's conformance tests and the URL Standard's strict domain parser set them.
-    PrUnicodeIdnaFlag_Strict = PrUnicodeIdnaFlag_CheckHyphens | PrUnicodeIdnaFlag_CheckBidi
-                               | PrUnicodeIdnaFlag_CheckJoiners | PrUnicodeIdnaFlag_UseStd3AsciiRules
-                               | PrUnicodeIdnaFlag_VerifyDnsLength,
+    PrUnicodeIdnaFlag_Strict = PrUnicodeIdnaFlag_CheckHyphens | PrUnicodeIdnaFlag_CheckBidi |
+        PrUnicodeIdnaFlag_CheckJoiners | PrUnicodeIdnaFlag_UseStd3AsciiRules | PrUnicodeIdnaFlag_VerifyDnsLength,
 };
 typedef uint8_t PrUnicodeIdnaFlags;
 

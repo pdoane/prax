@@ -19,8 +19,14 @@ constexpr float kStrokeTolerance = 0.01f;
 
 // Returns a drawer for a query, which records nothing. It owns a scratch path and a list, which queryDrawerEnd frees.
 SvgDrawer queryDrawer(const SvgTree* tree, PrVec2 viewport, const SvgRootView* PR_NULLABLE view, SvgTiles* tiles) {
-    SvgDrawer d{.tree = tree, .list = prDrawListCreate(), .viewport = viewport, .scratch = prPathCreate(),
-                .space = prAffine2Identity(), .tiles = tiles};
+    SvgDrawer d{
+        .tree = tree,
+        .list = prDrawListCreate(),
+        .viewport = viewport,
+        .scratch = prPathCreate(),
+        .space = prAffine2Identity(),
+        .tiles = tiles,
+    };
     d.host.view = view;
     return d;
 }
@@ -100,8 +106,8 @@ bool fillHolds(const SvgDrawer& d, const SvgNode& node, PrVec2 point, PrPathFill
 
 // Returns true if pointer events over an element with `events` need it to be visible.
 bool readsVisibility(SvgPointerEvents events) {
-    return events == SvgPointerEvents_VisiblePainted || events == SvgPointerEvents_VisibleFill
-           || events == SvgPointerEvents_VisibleStroke || events == SvgPointerEvents_Visible;
+    return events == SvgPointerEvents_VisiblePainted || events == SvgPointerEvents_VisibleFill ||
+        events == SvgPointerEvents_VisibleStroke || events == SvgPointerEvents_Visible;
 }
 
 // Returns true if pointer events over an element with `events` need what is under the pointer to be painted.
@@ -218,8 +224,8 @@ void hitText(Hitter& h, const SvgNode& node) {
     if (found == nullptr)
         return;
     SvgPointerEvents events = found->pointerEvents;
-    if (events == SvgPointerEvents_None || (readsVisibility(events) && !found->visible)
-        || (readsPaint(events) && !found->painted))
+    if (events == SvgPointerEvents_None || (readsVisibility(events) && !found->visible) ||
+            (readsPaint(events) && !found->painted))
         return;
     addHit(h, found->element);
 }
@@ -252,9 +258,11 @@ void hitBody(Hitter& h, SvgNodeIndex index) {
             PrRect rect = svgGeometryBounds(h.d, node);
             if (!(prRectWidth(rect) > 0) || !(prRectHeight(rect) > 0) || !rectangleHit(node, rect, h.point))
                 break;
-            h.hits.push(CssPresentationSvgHit{.element = node.element,
-                               .root = node.foreign.root,
-                               .rootPoint = PrVec2{h.point.x - rect.left, h.point.y - rect.top}});
+            h.hits.push(CssPresentationSvgHit{
+                .element = node.element,
+                .root = node.foreign.root,
+                .rootPoint = PrVec2{h.point.x - rect.left, h.point.y - rect.top},
+            });
             break;
         }
         case SvgNodeKind_Free: break;
@@ -265,8 +273,8 @@ void hitBody(Hitter& h, SvgNodeIndex index) {
     }
     // A container whose pointer-events is bounding-box is hit over its bounding box where none of its content is.
     bool container = node.kind == SvgNodeKind_Group || node.kind == SvgNodeKind_Viewport;
-    if (container && node.pointerEvents == SvgPointerEvents_BoundingBox && index != 0 && h.hits.count == before
-        && rectHolds(svgEffectBounds(h.d, index, 0), h.point))
+    if (container && node.pointerEvents == SvgPointerEvents_BoundingBox && index != 0 && h.hits.count == before &&
+            rectHolds(svgEffectBounds(h.d, index, 0), h.point))
         addHit(h, node.element);
 }
 
@@ -283,8 +291,8 @@ void hitNode(Hitter& h, SvgNodeIndex index) {
         SvgViewportShape v = svgViewportFromNode(d, index);
         PrRect area{};
         PrAffine2 place{};
-        reached = svgPlaceViewport(d, v, &area, &place) && (!v.clips || rectHolds(area, h.point))
-                  && inside(place, h.point, &h.point);
+        reached = svgPlaceViewport(d, v, &area, &place) && (!v.clips || rectHolds(area, h.point)) &&
+            inside(place, h.point, &h.point);
         if (reached) {
             d.space = prAffine2Concat(place, d.space);
             d.viewport = svgViewportContentExtent(v, area);
@@ -334,7 +342,7 @@ void pathTo(const SvgTree* tree, SvgNodeIndex index, Array<SvgNodeIndex>* out) {
 } // namespace
 
 uint32_t svgTreeHitTest(const SvgTree* tree, PrVec2 viewport, const SvgRootView* PR_NULLABLE view, PrVec2 point,
-                        CssPresentationSvgHit* PR_NULLABLE out, uint32_t capacity) {
+        CssPresentationSvgHit* PR_NULLABLE out, uint32_t capacity) {
     if (tree->nodes.count == 0)
         return 0;
     SvgTiles tiles{};
@@ -351,14 +359,16 @@ uint32_t svgTreeHitTest(const SvgTree* tree, PrVec2 viewport, const SvgRootView*
 bool svgClipContains(const SvgTree* tree, SvgResourceIndex index, PrRect box, PrVec2 viewport, PrVec2 point) {
     const SvgClipPath& clip = tree->resources.data[index].clipPath;
     // A clip path in objectBoundingBox units on a box with no width or height clips everything away.
-    if (clip.content == kSvgNodeNone
-        || (clip.boundingBox && !(prRectWidth(box) > 0 && prRectHeight(box) > 0)))
+    if (clip.content == kSvgNodeNone || (clip.boundingBox && !(prRectWidth(box) > 0 && prRectHeight(box) > 0)))
         return false;
     SvgTiles tiles{};
     SvgDrawer d = queryDrawer(tree, viewport, nullptr, &tiles);
-    PrAffine2 space = clip.boundingBox ? prAffine2Concat(prAffine2Scale(PrVec2{prRectWidth(box), prRectHeight(box)}),
-                                                         prAffine2Translate(PrVec2{box.left, box.top}))
-                                       : prAffine2Identity();
+    PrAffine2 space;
+    if (clip.boundingBox)
+        space = prAffine2Concat(prAffine2Scale(PrVec2{prRectWidth(box), prRectHeight(box)}),
+            prAffine2Translate(PrVec2{box.left, box.top}));
+    else
+        space = prAffine2Identity();
     space = prAffine2Concat(clip.transform, space);
     SvgDrawer inner = svgEffectDrawer(d, index, d.list);
     PrVec2 local{};
@@ -417,8 +427,8 @@ PrRect svgNodeBox(const SvgTree* tree, const SvgPlace& place, SvgNodeIndex index
     SvgDrawer d = queryDrawer(tree, place.viewport, nullptr, &tiles);
     d.space = place.toTree;
     PrRect box{};
-    SvgBoundsFlags parts = SvgBoundsFlags((options.stroke ? SvgBoundsFlag_Stroke : 0)
-                                          | (options.markers ? SvgBoundsFlag_Markers : 0));
+    SvgBoundsFlags parts = SvgBoundsFlags((options.stroke ? SvgBoundsFlag_Stroke : 0) |
+        (options.markers ? SvgBoundsFlag_Markers : 0));
     if (options.fill || parts != 0)
         box = svgEffectBounds(d, index, parts);
     const SvgNode& node = tree->nodes.data[index];
@@ -428,13 +438,14 @@ PrRect svgNodeBox(const SvgTree* tree, const SvgPlace& place, SvgNodeIndex index
         if (effects->clip == SvgClipKind_Url) {
             const SvgClipPath& clipPath = tree->resources.data[effects->clipPath].clipPath;
             PrRect bounds = svgEffectBounds(d, index, 0);
-            PrAffine2 space = clipPath.boundingBox
-                                  ? prAffine2Concat(prAffine2Scale(PrVec2{prRectWidth(bounds), prRectHeight(bounds)}),
-                                                    prAffine2Translate(PrVec2{bounds.left, bounds.top}))
-                                  : prAffine2Identity();
+            PrAffine2 space;
+            if (clipPath.boundingBox)
+                space = prAffine2Concat(prAffine2Scale(PrVec2{prRectWidth(bounds), prRectHeight(bounds)}),
+                    prAffine2Translate(PrVec2{bounds.left, bounds.top}));
+            else
+                space = prAffine2Identity();
             if (clipPath.content != kSvgNodeNone)
-                clip = prAffine2MapRect(prAffine2Concat(clipPath.transform, space),
-                                        svgNodeBounds(d, clipPath.content, 0));
+                clip = prAffine2MapRect(prAffine2Concat(clipPath.transform, space), svgNodeBounds(d, clipPath.content, 0));
         } else {
             PrPath* path = prPathCreate();
             PrPathFillRule rule = PrPathFillRule_NonZero;
@@ -482,9 +493,13 @@ PrVec2 svgShapePointAtLength(const SvgTree* tree, const SvgPlace& place, SvgNode
     svgShapePath(d, tree->nodes.data[index], path);
     PrPathMeasure* measure = prPathMeasureCreate();
     prPathMeasureSetPath(measure, path, prAffine2Identity(), kStrokeTolerance);
-    PrVec2 point = prPathMeasureLength(measure) > 0 ? prPathMeasurePosition(measure, distance).point
-                   : prPathVerbCount(path) != 0     ? prPathPoints(path)[0]
-                                                    : PrVec2{0, 0};
+    PrVec2 point;
+    if (prPathMeasureLength(measure) > 0)
+        point = prPathMeasurePosition(measure, distance).point;
+    else if (prPathVerbCount(path) != 0)
+        point = prPathPoints(path)[0];
+    else
+        point = PrVec2{0, 0};
     prPathMeasureDestroy(measure);
     prPathDestroy(path);
     queryDrawerEnd(d);

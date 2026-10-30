@@ -81,17 +81,19 @@ void updateTexture(ImGuiGpu* g, ImTextureData* tex) {
         PrGpuTexture texture{};
         if (prGpuTextureCreate(g->device, &desc, &texture) != PrStatus_Ok)
             return;
-        prGpuTextureWrite(g->device, texture, PrIVec2{0, 0},
-                          PrPixelView{static_cast<const uint8_t*>(tex->GetPixels()), size_t(tex->Width) * 4,
-                                            {uint32_t(tex->Width), uint32_t(tex->Height)}});
+        prGpuTextureWrite(g->device, texture, PrIVec2{0, 0}, PrPixelView{
+            static_cast<const uint8_t*>(tex->GetPixels()), size_t(tex->Width) * 4,
+            {uint32_t(tex->Width), uint32_t(tex->Height)},
+        });
         tex->SetTexID(ImTextureID(texture.id));
         tex->SetStatus(ImTextureStatus_OK);
     } else if (tex->Status == ImTextureStatus_WantUpdates) {
         PrGpuTexture texture{uint32_t(tex->TexID)};
         for (const ImTextureRect& r : tex->Updates) {
-            prGpuTextureWrite(g->device, texture, PrIVec2{r.x, r.y},
-                              PrPixelView{static_cast<const uint8_t*>(tex->GetPixelsAt(r.x, r.y)),
-                                                size_t(tex->Width) * 4, {r.w, r.h}});
+            prGpuTextureWrite(g->device, texture, PrIVec2{r.x, r.y}, PrPixelView{
+                static_cast<const uint8_t*>(tex->GetPixelsAt(r.x, r.y)),
+                size_t(tex->Width) * 4, {r.w, r.h},
+            });
         }
         tex->SetStatus(ImTextureStatus_OK);
     } else if (tex->Status == ImTextureStatus_WantDestroy && tex->UnusedFrames > 0) {
@@ -115,9 +117,9 @@ bool imguiGpuInit(PrGpuDevice* device) {
     g->device = device;
     PrGpuSamplerDesc linear = prGpuSamplerDescDefault(PrGpuFilter_Linear, PrGpuAddress_Clamp);
     PrGpuSamplerDesc nearest = prGpuSamplerDescDefault(PrGpuFilter_Nearest, PrGpuAddress_Clamp);
-    if (prGpuShaderLibraryCreate(device, kImGuiGpuShaders, sizeof(kImGuiGpuShaders), &g->library) != PrStatus_Ok
-        || prGpuSamplerIntern(device, &linear, &g->linear) != PrStatus_Ok
-        || prGpuSamplerIntern(device, &nearest, &g->nearest) != PrStatus_Ok) {
+    if (prGpuShaderLibraryCreate(device, kImGuiGpuShaders, sizeof(kImGuiGpuShaders), &g->library) != PrStatus_Ok ||
+            prGpuSamplerIntern(device, &linear, &g->linear) != PrStatus_Ok ||
+            prGpuSamplerIntern(device, &nearest, &g->nearest) != PrStatus_Ok) {
         prGpuShaderLibraryDestroy(g->library);
         prMemoryFree(g);
         return false;
@@ -194,13 +196,14 @@ void imguiGpuRender(ImDrawData* data, PrGpuPass* pass) {
     prGpuPassSetIndexBuffer(pass, buffer, offset + indexAt, sizeof(ImDrawIdx) == 4);
     prGpuPassSetViewport(pass, PrRect{0, 0, float(width), float(height)}, 0, 1);
     // Clip space from the display's coordinates, with y up.
-    ImGuiGpuPush push{{2 / data->DisplaySize.x, -2 / data->DisplaySize.y},
-                      {-1 - data->DisplayPos.x * 2 / data->DisplaySize.x,
-                       1 + data->DisplayPos.y * 2 / data->DisplaySize.y},
-                      buffer.id,
-                      0,
-                      0,
-                      0};
+    ImGuiGpuPush push{
+        {2 / data->DisplaySize.x, -2 / data->DisplaySize.y},
+        {-1 - data->DisplayPos.x * 2 / data->DisplaySize.x, 1 + data->DisplayPos.y * 2 / data->DisplaySize.y},
+        buffer.id,
+        0,
+        0,
+        0,
+    };
     g->sampler = g->linear.id;
     ImVec2 clipOffset = data->DisplayPos;
     ImVec2 clipScale = data->FramebufferScale;

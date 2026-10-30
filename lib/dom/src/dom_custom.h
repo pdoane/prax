@@ -50,7 +50,7 @@ struct DomCustomElement {
 // hold (domNodeHold) that keeps the script's object for it, and the caller releases the hold. Writes true to `held` if
 // the element comes with a hold. Any other element belongs to its creator.
 PrDomElement* domElementCreateHtml(PrDomDocument* document, PrDomTag tag, PrStringView name,
-                                   PrStringView is, bool synchronous, bool* held);
+    PrStringView is, bool synchronous, bool* held);
 
 // Returns true if `name` is a valid custom element name (html/#valid-custom-element-name).
 bool domIsValidCustomElementName(PrStringView name);
@@ -61,7 +61,7 @@ bool domIsValidCustomElementName(PrStringView name);
 void domCustomConnectionChanged(PrDomElement* element);
 void domCustomAdopted(PrDomElement* element, PrDomDocument* from);
 void domCustomAttributeChanged(PrDomElement* element, DomNamespaceId space, PrStringView name,
-                               PrStringView oldValue, PrStringView value);
+    PrStringView oldValue, PrStringView value);
 
 // Tries to upgrade the element (html/#concept-try-upgrade).
 void domCustomTryUpgrade(PrDomElement* element);

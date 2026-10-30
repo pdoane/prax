@@ -40,20 +40,19 @@ struct UiFixture {
     // calls the test's build function. Returns the number of rounds run.
     uint32_t frame(double delta = 1.0 / 60, uint32_t rounds = 4) {
         time += delta;
-        PrUiFrameDesc desc{.time = time,
-                           .delta = delta,
-                           .extent = PrVec2{800, 600},
-                           .maxRounds = rounds,
-                           .display = prAppDisplayDefault()};
-        return prUiFrame(
-            ui, &desc,
-            [](void* context, PrUi*, const PrUiRound*) {
-                UiFixture* f = static_cast<UiFixture*>(context);
-                f->root = prLayoutTreeFrameElement(f->tree, kPrLayoutNodeNone, 0, f->rootStyle());
-                if (f->build)
-                    f->build();
-            },
-            this);
+        PrUiFrameDesc desc{
+            .time = time,
+            .delta = delta,
+            .extent = PrVec2{800, 600},
+            .maxRounds = rounds,
+            .display = prAppDisplayDefault(),
+        };
+        return prUiFrame(ui, &desc, [](void* context, PrUi*, const PrUiRound*) {
+            UiFixture* f = static_cast<UiFixture*>(context);
+            f->root = prLayoutTreeFrameElement(f->tree, kPrLayoutNodeNone, 0, f->rootStyle());
+            if (f->build)
+                f->build();
+        }, this);
     }
 
     PrLayoutStyleIndex rootStyle() {
@@ -80,7 +79,7 @@ struct UiFixture {
 
     // Creates an absolutely positioned box of `w` by `h` px at `x`, `y` in its parent, with `flags`.
     PrLayoutNode box(PrLayoutNode parent, float x, float y, float w, float h, PrUiFlags flags = 0, uint64_t key = 0,
-                     int32_t zIndex = 0, bool zIndexed = false) {
+            int32_t zIndex = 0, bool zIndexed = false) {
         PrLayoutBoxStyle b = prLayoutBoxStyleDefault();
         b.display = PrLayoutDisplay_Block;
         b.position = PrLayoutPosition_Absolute;
@@ -93,7 +92,7 @@ struct UiFixture {
 
     // Creates a scroll container of `w` by `h` px at `x`, `y` that holds a block of `contentW` by `contentH` px.
     PrLayoutNode scroller(PrLayoutNode parent, float x, float y, float w, float h, float contentW, float contentH,
-                          PrLayoutNode* PR_NULLABLE content = nullptr) {
+            PrLayoutNode* PR_NULLABLE content = nullptr) {
         PrLayoutBoxStyle b = prLayoutBoxStyleDefault();
         b.display = PrLayoutDisplay_Block;
         b.position = PrLayoutPosition_Absolute;

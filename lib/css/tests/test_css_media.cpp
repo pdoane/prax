@@ -38,8 +38,7 @@ struct TestEnvironment {
     TestEnvironment() { cssMediaEnvironmentInit(&media, false); }
 
     bool set(const char* name, const char* value) {
-        PrCssDescriptor feature =
-            cssDescriptorFromText(CssAtRule_Media, name);
+        PrCssDescriptor feature = cssDescriptorFromText(CssAtRule_Media, name);
         return cssMediaEnvironmentSet(&media, feature, value);
     }
 
@@ -57,8 +56,7 @@ using namespace pr_impl;
 
 TEST_CASE("a change to a media list that writes what it holds leaves it unchanged") {
     TestList list("screen, print");
-    auto prepared = [&](CssEditResult (*prepare)(CssEdit*, const CssMediaQueries*, PrStringView),
-                        const char* text) {
+    auto prepared = [&](CssEditResult (*prepare)(CssEdit*, const CssMediaQueries*, PrStringView), const char* text) {
         CssEdit edit;
         cssEditBegin(&edit, nullptr);
         CssEditResult result = prepare(&edit, &list.list, text);
@@ -80,16 +78,14 @@ TEST_CASE("a media feature's value is held as its grammar matches it") {
     CHECK(serialized("(resolution: calc(2x))") == "(resolution: calc(2dppx))");
     CHECK(serialized("(width >= calc(1px + 2em))") == "(width >= calc(2em + 1px))");
     CHECK(serialized("(aspect-ratio: 16/9)") == "(aspect-ratio: 16 / 9)");
-    CHECK(serialized("(MIN-WIDTH: 5PX) AND (orientation: PORTRAIT)")
-          == "(min-width: 5px) and (orientation: portrait)");
+    CHECK(serialized("(MIN-WIDTH: 5PX) AND (orientation: PORTRAIT)") == "(min-width: 5px) and (orientation: portrait)");
     CHECK(serialized("(400px < width <= 1000px)") == "(400px < width <= 1000px)");
     // An unknown feature or value makes the query unknown, and the query is kept as written (csswg-drafts#7595).
     CHECK(serialized("(width: portrait)") == "(width: portrait)");
     CHECK(serialized("(orientation: 1px)") == "(orientation: 1px)");
     CHECK(serialized("(min-orientation: portrait)") == "(min-orientation: portrait)");
     CHECK(serialized("(orientation > portrait)") == "(orientation > portrait)");
-    CHECK(serialized("(max-weight: 3kg) and (color), (color)")
-          == "(max-weight: 3kg) and (color), (color)");
+    CHECK(serialized("(max-weight: 3kg) and (color), (color)") == "(max-weight: 3kg) and (color), (color)");
     // A <dashed-ident> keeps its case.
     CHECK(serialized("(--FOO: bar)") == "(--FOO: bar)");
 }
@@ -197,8 +193,7 @@ TEST_CASE("the environment's features are set as a query writes them") {
 TEST_CASE("a media query list is its query and its environment") {
     CssMediaEnvironment media;
     cssMediaEnvironmentInit(&media, true);
-    PrCssMediaQueryList* list =
-        cssMediaQueryListCreate(&media, " (SCRIPTING: enabled) , print");
+    PrCssMediaQueryList* list = cssMediaQueryListCreate(&media, " (SCRIPTING: enabled) , print");
     TextBuffer out = {};
     cssSerializeMediaList(&out, &list->media);
     CHECK(take(&out) == "(scripting: enabled), print");

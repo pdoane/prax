@@ -22,8 +22,13 @@ struct Filters : CssTestSource {
     explicit Filters(PrStringView value) : CssTestSource(value) {
         CssValueSpan span{};
         REQUIRE(cssParsePropertyValue(PrCssProperty_Filter, &ts, &parsed, &match, &span));
-        CssStyleContext context{.font = cssFontBases(10, 12), .root = kCssInitialFontBases, .parentWeight = 400,
-                                .parentColor = PrColor{0, 0, 1, 1}, .viewport = CssViewport{800, 600}};
+        CssStyleContext context{
+            .font = cssFontBases(10, 12),
+            .root = kCssInitialFontBases,
+            .parentWeight = 400,
+            .parentColor = PrColor{0, 0, 1, 1},
+            .viewport = CssViewport{800, 600},
+        };
         cssStyleComputeValue(&computed, PrCssProperty_Filter, cssValuePoolRun(&parsed, span), context);
         CssValueRun run = cssValuePoolRun(&computed, CssValueSpan{0, computed.values.count});
         cssFilterFunctions(run, CssColorContext{.current = PrColor{0, 0, 1, 1}}, &items);

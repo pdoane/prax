@@ -79,8 +79,7 @@ bool isSpecial(const Subject& s, char c) {
         case '!':
             return true;
         case '~':
-            return (s.options->extensions
-                    & (PrMarkdownExtensionFlag_Strikethrough | PrMarkdownExtensionFlag_Scripts)) != 0;
+            return (s.options->extensions & (PrMarkdownExtensionFlag_Strikethrough | PrMarkdownExtensionFlag_Scripts)) != 0;
         case '^':
             return (s.options->extensions & PrMarkdownExtensionFlag_Scripts) != 0;
         case '=':
@@ -107,7 +106,7 @@ MarkdownNodeIndex append(Subject& s, PrMarkdownNodeKind kind) {
 
 // Creates a Text node of `text` under `parent`.
 MarkdownNodeIndex appendText(Subject& s, MarkdownNodeIndex parent, PrStringView text,
-                             PrMarkdownTextKind kind = PrMarkdownTextKind_Plain) {
+        PrMarkdownTextKind kind = PrMarkdownTextKind_Plain) {
     MarkdownRange range = markdownTreeAddText(s.tree, text);
     MarkdownNodeIndex node = markdownTreeAppend(s.tree, parent, PrMarkdownNodeKind_Text);
     nodeOf(s, node).values.textKind = kind;
@@ -366,9 +365,8 @@ void processEmphasis(Subject& s, uint32_t bottom) {
         openersBottom[i] = bottom;
 
     uint32_t closer = kDelimiterNone;
-    for (uint32_t candidate = s.lastDelimiter;
-         candidate != kDelimiterNone && delimiters.data[candidate].position >= bottom;
-         candidate = delimiters.data[candidate].previous)
+    for (uint32_t candidate = s.lastDelimiter; candidate != kDelimiterNone && delimiters.data[candidate].position >= bottom;
+            candidate = delimiters.data[candidate].previous)
         closer = candidate;
 
     while (closer != kDelimiterNone) {
@@ -387,8 +385,7 @@ void processEmphasis(Subject& s, uint32_t bottom) {
                 // If the closer can open or the opener can close, the runs match only if the sum of their lengths is
                 // not a multiple of 3, unless both lengths are (commonmark/#can-open-emphasis).
                 uint32_t openerLength = open.length;
-                if (!(close.canOpen || open.canClose) || closerLength % 3 == 0
-                    || (openerLength + closerLength) % 3 != 0) {
+                if (!(close.canOpen || open.canClose) || closerLength % 3 == 0 || (openerLength + closerLength) % 3 != 0) {
                     found = true;
                     break;
                 }
@@ -558,8 +555,8 @@ void appendRawHtml(Subject& s, PrStringView html) {
 
 // Returns `destination`, or an empty destination if the options keep only safe destinations and it is not safe.
 MarkdownRange checkedDestination(Subject& s, MarkdownRange destination) {
-    if (s.options->destinations == PrMarkdownDestinations_Safe
-        && markdownIsUnsafeDestination(markdownTreeText(s.tree, destination)))
+    if (s.options->destinations == PrMarkdownDestinations_Safe &&
+            markdownIsUnsafeDestination(markdownTreeText(s.tree, destination)))
         return MarkdownRange{destination.start, 0};
     return destination;
 }
@@ -676,7 +673,7 @@ void handleDollar(Subject& s) {
         }
     } else if (peek(s, start + 1) == '$') {
         size_t end = findCloser(s, start + 2, "$$", &s.missingMath[1],
-                                [&](size_t at) { return at == 0 || s.text.data[at - 1] != '\\'; });
+            [&](size_t at) { return at == 0 || s.text.data[at - 1] != '\\'; });
         if (end < s.text.size && end > start + 2) {
             appendMath(s, stringSlice(s.text, start + 2, end - start - 2), true, end + 2);
             return;
@@ -687,8 +684,8 @@ void handleDollar(Subject& s) {
     } else if (!markdownIsSpaceOrTab(peek(s, start + 1)) && peek(s, start + 1) != '\n' && start + 1 < s.text.size) {
         size_t end = findCloser(s, start + 1, "$", &s.missingMath[2], [&](size_t at) {
             char before = s.text.data[at - 1];
-            return at > start + 1 && before != '\\' && !markdownIsSpaceOrTab(before) && before != '\n'
-                && !asciiIsDigit(peek(s, at + 1));
+            return at > start + 1 && before != '\\' && !markdownIsSpaceOrTab(before) && before != '\n' &&
+                !asciiIsDigit(peek(s, at + 1));
         });
         if (end < s.text.size) {
             appendMath(s, stringSlice(s.text, start + 1, end - start - 1), false, end + 1);
@@ -795,12 +792,12 @@ bool footnoteReference(Subject& s, const MarkdownBracket& opener, size_t initial
     if ((s.options->extensions & PrMarkdownExtensionFlag_Footnotes) == 0)
         return false;
     MarkdownNodeIndex first = nodeOf(s, opener.node).next;
-    if (first == kMarkdownNodeNone || nodeOf(s, first).values.kind != PrMarkdownNodeKind_Text
-        || nodeOf(s, first).values.textKind != PrMarkdownTextKind_Plain)
+    if (first == kMarkdownNodeNone || nodeOf(s, first).values.kind != PrMarkdownNodeKind_Text ||
+            nodeOf(s, first).values.textKind != PrMarkdownTextKind_Plain)
         return false;
     MarkdownRange caret = nodeOf(s, first).values.text;
-    if (caret.size == 0 || s.tree->text.data[caret.start] != '^'
-        || (caret.size == 1 && nodeOf(s, first).next == kMarkdownNodeNone))
+    if (caret.size == 0 || s.tree->text.data[caret.start] != '^' ||
+            (caret.size == 1 && nodeOf(s, first).next == kMarkdownNodeNone))
         return false;
     s.pos = initial;
     // The reference's text is "[^label]", which the walk shows if no definition has the label.
@@ -1012,8 +1009,7 @@ void appendAutolink(Subject& s, PrStringView prefix, PrStringView text) {
     s.tree->text.append(prefix.data, uint32_t(prefix.size));
     s.tree->text.append(text.data, uint32_t(text.size));
     MarkdownNodeIndex link = append(s, PrMarkdownNodeKind_Link);
-    nodeOf(s, link).values.destination =
-        checkedDestination(s, MarkdownRange{mark, s.tree->text.count - mark});
+    nodeOf(s, link).values.destination = checkedDestination(s, MarkdownRange{mark, s.tree->text.count - mark});
     MarkdownNodeIndex child = markdownTreeAppend(s.tree, link, PrMarkdownNodeKind_Text);
     nodeOf(s, child).values.text = MarkdownRange{mark + uint32_t(prefix.size), uint32_t(text.size)};
 }
@@ -1094,8 +1090,7 @@ bool urlAutolink(Subject& s) {
 // Returns true if `protocol` ends at `end` in `text`, starts at or after `start`, and either starts at `start` or
 // follows a character that is not a letter or a digit.
 bool endsWithProtocol(PrStringView text, size_t end, PrStringView protocol, size_t start) {
-    if (protocol.size > end - start
-        || !stringStartsWith(stringSlice(text, end - protocol.size, protocol.size), protocol))
+    if (protocol.size > end - start || !stringStartsWith(stringSlice(text, end - protocol.size, protocol.size), protocol))
         return false;
     if (protocol.size == end - start)
         return true;
@@ -1153,8 +1148,8 @@ void emailAutolinks(Subject& s, MarkdownNodeIndex node) {
                     restart = true;
                     break;
                 }
-                if (c == '.' && base + end + 1 < text.size
-                    && (asciiIsLetter(text.data[base + end + 1]) || asciiIsDigit(text.data[base + end + 1])))
+                if (c == '.' && base + end + 1 < text.size &&
+                        (asciiIsLetter(text.data[base + end + 1]) || asciiIsDigit(text.data[base + end + 1])))
                     ++dots;
                 else if (c == '/' && xmpp)
                     continue;
@@ -1224,13 +1219,13 @@ void postprocessAutolinks(Subject& s, MarkdownNodeIndex parent) {
                 node = next;
                 continue;
             }
-            bool joins = next != kMarkdownNodeNone && nodeOf(s, next).values.kind == PrMarkdownNodeKind_Text
-                && nodeOf(s, next).values.textKind == PrMarkdownTextKind_Plain;
+            bool joins = next != kMarkdownNodeNone && nodeOf(s, next).values.kind == PrMarkdownNodeKind_Text &&
+                nodeOf(s, next).values.textKind == PrMarkdownTextKind_Plain;
             if (joins) {
                 uint32_t mark = s.tree->text.count;
                 MarkdownNodeIndex run = node;
-                while (run != kMarkdownNodeNone && nodeOf(s, run).values.kind == PrMarkdownNodeKind_Text
-                       && nodeOf(s, run).values.textKind == PrMarkdownTextKind_Plain) {
+                while (run != kMarkdownNodeNone && nodeOf(s, run).values.kind == PrMarkdownNodeKind_Text &&
+                        nodeOf(s, run).values.textKind == PrMarkdownTextKind_Plain) {
                     markdownTreeCopyText(s.tree, nodeOf(s, run).values.text);
                     MarkdownNodeIndex after = nodeOf(s, run).next;
                     if (run != node)
@@ -1257,8 +1252,7 @@ void markdownInlineParserReset(MarkdownInlineParser* parser) {
 }
 
 void markdownParseInlines(MarkdownInlineParser* parser, const PrMarkdownOptions& options, MarkdownTree* tree,
-                          MarkdownNodeIndex parent, PrStringView content, MarkdownResolveFn resolve,
-                          void* PR_NULLABLE context) {
+        MarkdownNodeIndex parent, PrStringView content, MarkdownResolveFn resolve, void* PR_NULLABLE context) {
     Subject s;
     s.parser = parser;
     s.options = &options;
@@ -1296,8 +1290,7 @@ void markdownParseInlines(MarkdownInlineParser* parser, const PrMarkdownOptions&
             handleLessThan(s);
         } else if (c == '$' && isSpecial(s, c)) {
             handleDollar(s);
-        } else if (c == '*' || c == '_'
-                   || ((c == '~' || c == '\'' || c == '"' || c == '^' || c == '=') && isSpecial(s, c))) {
+        } else if (c == '*' || c == '_' || ((c == '~' || c == '\'' || c == '"' || c == '^' || c == '=') && isSpecial(s, c))) {
             handleDelimiter(s, c);
         } else if (c == '-' && isSpecial(s, c)) {
             handleHyphens(s);
@@ -1307,16 +1300,16 @@ void markdownParseInlines(MarkdownInlineParser* parser, const PrMarkdownOptions&
             MarkdownNodeIndex node = appendText(s, "[");
             ++s.pos;
             pushBracket(s, false, node);
-        } else if (c == '!' && peek(s, s.pos + 1) == '['
-                   && !((options.extensions & PrMarkdownExtensionFlag_Footnotes) != 0 && peek(s, s.pos + 2) == '^')) {
+        } else if (c == '!' && peek(s, s.pos + 1) == '[' &&
+                !((options.extensions & PrMarkdownExtensionFlag_Footnotes) != 0 && peek(s, s.pos + 2) == '^')) {
             // With footnotes, "![^" is a '!' before a footnote reference rather than the start of an image.
             MarkdownNodeIndex node = appendText(s, "![");
             s.pos += 2;
             pushBracket(s, true, node);
         } else if (c == ']') {
             handleCloseBracket(s);
-        } else if ((c == 'w' || c == ':') && isSpecial(s, c) && parser->brackets.count == 0
-                   && (c == 'w' ? wwwAutolink(s) : urlAutolink(s))) {
+        } else if ((c == 'w' || c == ':') && isSpecial(s, c) && parser->brackets.count == 0 &&
+                (c == 'w' ? wwwAutolink(s) : urlAutolink(s))) {
             // The autolink is appended. None is looked for within brackets, which may become a link's text.
         } else {
             size_t end = s.pos + 1;

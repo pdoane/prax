@@ -90,12 +90,16 @@ void imageReadExif(const uint8_t* tiff, size_t size, ImageMetadata* out) {
     }
     if (unit == 2 || unit == 3) {
         if (resolutionX > 0) {
-            out->pixelsPerMeterX =
-                unit == 3 ? imagePixelsPerMeterFromCm(resolutionX) : imagePixelsPerMeterFromInch(resolutionX);
+            if (unit == 3)
+                out->pixelsPerMeterX = imagePixelsPerMeterFromCm(resolutionX);
+            else
+                out->pixelsPerMeterX = imagePixelsPerMeterFromInch(resolutionX);
         }
         if (resolutionY > 0) {
-            out->pixelsPerMeterY =
-                unit == 3 ? imagePixelsPerMeterFromCm(resolutionY) : imagePixelsPerMeterFromInch(resolutionY);
+            if (unit == 3)
+                out->pixelsPerMeterY = imagePixelsPerMeterFromCm(resolutionY);
+            else
+                out->pixelsPerMeterY = imagePixelsPerMeterFromInch(resolutionY);
         }
     }
 }

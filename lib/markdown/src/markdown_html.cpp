@@ -310,8 +310,7 @@ void writeStep(void* PR_NULLABLE context, const PrMarkdownStep* step) {
                     attribute(w, &tag, "title", step->title);
                 writeTag(w, tag);
             }
-        } else if (enter
-                   && (step->node == PrMarkdownNodeKind_SoftBreak || step->node == PrMarkdownNodeKind_HardBreak)) {
+        } else if (enter && (step->node == PrMarkdownNodeKind_SoftBreak || step->node == PrMarkdownNodeKind_HardBreak)) {
             textAppendChar(&w->description, ' ');
         }
         return;
@@ -714,7 +713,7 @@ void writeText(void* PR_NULLABLE context, const PrMarkdownHtmlEvent* event) {
 using namespace pr_impl;
 
 void prMarkdownWriteHtml(const PrMarkdown* document, uint32_t first, uint32_t count,
-                         PrMarkdownHtmlFn fn, void* PR_NULLABLE context) {
+        PrMarkdownHtmlFn fn, void* PR_NULLABLE context) {
     Writer w{};
     w.fn = fn;
     w.context = context;
@@ -723,8 +722,7 @@ void prMarkdownWriteHtml(const PrMarkdown* document, uint32_t first, uint32_t co
     writerReset(&w);
 }
 
-void prMarkdownWriteFootnotesHtml(const PrMarkdown* document, PrMarkdownHtmlFn fn,
-                                  void* PR_NULLABLE context) {
+void prMarkdownWriteFootnotesHtml(const PrMarkdown* document, PrMarkdownHtmlFn fn, void* PR_NULLABLE context) {
     // The section is written only if a footnote is walked.
     struct Section {
         Writer writer;
@@ -734,24 +732,21 @@ void prMarkdownWriteFootnotesHtml(const PrMarkdown* document, PrMarkdownHtmlFn f
     section.writer.fn = fn;
     section.writer.context = context;
     section.writer.atLineStart = true;
-    prMarkdownWalkFootnotes(
-        document,
-        [](void* PR_NULLABLE sectionContext, const PrMarkdownStep* step) {
-            Section* s = static_cast<Section*>(sectionContext);
-            if (!s->open) {
-                s->open = true;
-                Writer* w = &s->writer;
-                Tag tag = startTag(w, "section");
-                attribute(w, &tag, "class", "footnotes");
-                attribute(w, &tag, "data-footnotes", PrStringView{});
-                writeTag(w, tag);
-                text(w, "\n");
-                start(w, "ol");
-                text(w, "\n");
-            }
-            writeStep(&s->writer, step);
-        },
-        &section);
+    prMarkdownWalkFootnotes(document, [](void* PR_NULLABLE sectionContext, const PrMarkdownStep* step) {
+        Section* s = static_cast<Section*>(sectionContext);
+        if (!s->open) {
+            s->open = true;
+            Writer* w = &s->writer;
+            Tag tag = startTag(w, "section");
+            attribute(w, &tag, "class", "footnotes");
+            attribute(w, &tag, "data-footnotes", PrStringView{});
+            writeTag(w, tag);
+            text(w, "\n");
+            start(w, "ol");
+            text(w, "\n");
+        }
+        writeStep(&s->writer, step);
+    }, &section);
     if (section.open) {
         end(&section.writer, "ol");
         text(&section.writer, "\n");

@@ -59,10 +59,12 @@ bool textSourceOf(void* PR_NULLABLE data, PrCanvasTextSource* out) {
     if (presentation == nullptr)
         return false;
     bool rtl = domElementRtl(element);
-    *out = PrCanvasTextSource{.fonts = presentation->fonts,
-                              .shaper = presentation->shaper,
-                              .language = prLocaleFromTag(domElementLanguage(element)),
-                              .direction = PrTextDirection(rtl ? PrTextDirection_Rtl : PrTextDirection_Ltr)};
+    *out = PrCanvasTextSource{
+        .fonts = presentation->fonts,
+        .shaper = presentation->shaper,
+        .language = prLocaleFromTag(domElementLanguage(element)),
+        .direction = PrTextDirection(rtl ? PrTextDirection_Rtl : PrTextDirection_Ltr),
+    };
     return true;
 }
 
@@ -96,23 +98,25 @@ HtmlCanvas* htmlCanvasFromElement(PrDomElement* element) {
 
 const HtmlCanvas* PR_NULLABLE htmlCanvasFind(const PrDomElement* element) {
     const DomElementState* state = element->state;
-    return state != nullptr && state->forgetEmbedded == forgetCanvas ? static_cast<HtmlCanvas*>(state->embedded)
-                                                                      : nullptr;
+    return state != nullptr && state->forgetEmbedded == forgetCanvas ? static_cast<HtmlCanvas*>(state->embedded) : nullptr;
 }
 
 PrCanvas* htmlCanvasCreateContext2D(HtmlCanvas* canvas, const PrCanvasSettings& settings) {
     PR_ASSERT(canvas->mode == PrHtmlCanvasContextMode_None);
     PrHtmlWindow* window = windowOf(canvas->element);
     PrCanvasDesc desc{
-        .extent = PrUVec2{domReflectedUnsigned(canvas->element, "width", 300),
-                          domReflectedUnsigned(canvas->element, "height", 150)},
+        .extent = PrUVec2{
+            domReflectedUnsigned(canvas->element, "width", 300),
+            domReflectedUnsigned(canvas->element, "height", 150),
+        },
         .settings = settings,
         .device = window != nullptr ? window->device : nullptr,
         .element = canvas->element,
         .changed = queueCanvas,
         .changedContext = canvas,
         .textSource = textSourceOf,
-        .textSourceContext = canvas};
+        .textSourceContext = canvas,
+    };
     canvas->context = prCanvasCreate(&desc);
     canvas->mode = PrHtmlCanvasContextMode_2d;
     return canvas->context;
@@ -124,14 +128,16 @@ PrStatus htmlCanvasToDataUrl(PrDomElement* element, PrStringView type, PrString*
     PrCanvas* context = canvas != nullptr ? canvas->context : nullptr;
     if (context != nullptr && !prCanvasIsOriginClean(context))
         return PrStatus_NotAllowed;
-    PrUVec2 extent = context != nullptr ? prCanvasExtent(context)
-                                        : PrUVec2{domReflectedUnsigned(element, "width", 300),
-                                                  domReflectedUnsigned(element, "height", 150)};
+    PrUVec2 extent;
+    if (context != nullptr)
+        extent = prCanvasExtent(context);
+    else
+        extent = PrUVec2{domReflectedUnsigned(element, "width", 300), domReflectedUnsigned(element, "height", 150)};
     PrHtmlWindow* window = windowOf(element);
     PrImageCodec* codec = window != nullptr ? window->images : nullptr;
     // A bitmap without pixels, or one that cannot be serialized, is the empty data: URL (html/#dom-canvas-todataurl).
-    if (extent.x == 0 || extent.y == 0 || extent.x > kPrCanvasBitmapMaxSize || extent.y > kPrCanvasBitmapMaxSize
-        || codec == nullptr) {
+    if (extent.x == 0 || extent.y == 0 || extent.x > kPrCanvasBitmapMaxSize || extent.y > kPrCanvasBitmapMaxSize ||
+            codec == nullptr) {
         *out = prStringCopy("data:,");
         return PrStatus_Ok;
     }
@@ -139,8 +145,11 @@ PrStatus htmlCanvasToDataUrl(PrDomElement* element, PrStringView type, PrString*
     pixels.resize(extent.x * extent.y * 4);
     memZero(pixels.data, pixels.count);
     if (context != nullptr) {
-        PrCanvasImageData data{.extent = extent, .format = PrCanvasPixelFormat_RgbaUnorm8,
-                               .colorSpace = PrColorSpace_Srgb};
+        PrCanvasImageData data{
+            .extent = extent,
+            .format = PrCanvasPixelFormat_RgbaUnorm8,
+            .colorSpace = PrColorSpace_Srgb,
+        };
         prCanvasGetImageData(context, PrIVec2{0, 0}, &data, pixels.data);
     }
     PrPixelView view{pixels.data, size_t(extent.x) * 4, extent};
@@ -186,8 +195,11 @@ bool htmlCanvasImageSource(PrDomElement* element, PrCanvasImageSource* out) {
         if (image == nullptr)
             return false;
         PrUVec2 extent = prCanvasExtent(canvas->context);
-        *out = PrCanvasImageSource{.image = image, .extent = PrVec2{float(extent.x), float(extent.y)},
-                                   .originClean = prCanvasIsOriginClean(canvas->context)};
+        *out = PrCanvasImageSource{
+            .image = image,
+            .extent = PrVec2{float(extent.x), float(extent.y)},
+            .originClean = prCanvasIsOriginClean(canvas->context),
+        };
         return true;
     }
     // A canvas without a context has a transparent bitmap of its size.
@@ -197,16 +209,18 @@ bool htmlCanvasImageSource(PrDomElement* element, PrCanvasImageSource* out) {
     Array<uint8_t> pixels;
     pixels.resize(extent.x * extent.y * 4);
     memZero(pixels.data, pixels.count);
-    PrDrawImageDesc desc{.pixels = PrPixelView{pixels.data, size_t(extent.x) * 4, extent},
-                         .format = PrPixelFormat_Rgba8, .alpha = PrDrawAlpha_Premultiplied,
-                         .space = PrColorSpace_Srgb};
+    PrDrawImageDesc desc{
+        .pixels = PrPixelView{pixels.data, size_t(extent.x) * 4, extent},
+        .format = PrPixelFormat_Rgba8,
+        .alpha = PrDrawAlpha_Premultiplied,
+        .space = PrColorSpace_Srgb,
+    };
     const PrDrawImage* image = nullptr;
     bool made = prDrawImageCreate(&desc, &image) == PrStatus_Ok;
     pixels.reset();
     if (!made)
         return false;
-    *out = PrCanvasImageSource{.image = image, .extent = PrVec2{float(extent.x), float(extent.y)},
-                               .originClean = true};
+    *out = PrCanvasImageSource{.image = image, .extent = PrVec2{float(extent.x), float(extent.y)}, .originClean = true};
     return true;
 }
 

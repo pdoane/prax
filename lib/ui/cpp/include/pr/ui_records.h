@@ -73,16 +73,17 @@ PrUiGroupRecipe uiGroupRecipe(const Owner& owner, const Recipe& recipe) {
     if constexpr (requires { recipe.base; })
         base = recipe.base;
     using Value = typename UiGroupValue<Recipe::kKind>::Type;
-    return PrUiGroupRecipe{.type = uiTypeId<Recipe>(),
-                           .bytes = &recipe,
-                           .size = uiRecipeSize<Recipe>(),
-                           .kind = Recipe::kKind,
-                           .base = base,
-                           .make = [](const void* PR_NULLABLE o, const void* PR_NULLABLE r, void* value) {
-                               static_cast<const Recipe*>(r)->make(*static_cast<const Owner*>(o),
-                                                                   *static_cast<Value*>(value));
-                           },
-                           .owner = &owner};
+    return PrUiGroupRecipe{
+        .type = uiTypeId<Recipe>(),
+        .bytes = &recipe,
+        .size = uiRecipeSize<Recipe>(),
+        .kind = Recipe::kKind,
+        .base = base,
+        .make = [](const void* PR_NULLABLE o, const void* PR_NULLABLE r, void* value) {
+            static_cast<const Recipe*>(r)->make(*static_cast<const Owner*>(o), *static_cast<Value*>(value));
+        },
+        .owner = &owner,
+    };
 }
 
 // Returns the group of `recipe`, owned by `owner` (prUiGroup).

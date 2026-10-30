@@ -96,18 +96,19 @@ void load(PrDomDocument* document, uint32_t index) {
     DomResource& resource = resources->documents.data[index];
     const DomDocumentHost* host = document->host;
     if (host == nullptr) {
-        resource.document = resources->load != nullptr
-                                ? resources->load(resources->loadContext, document, prStringView(&resource.url))
-                                : nullptr;
+        if (resources->load != nullptr)
+            resource.document = resources->load(resources->loadContext, document, prStringView(&resource.url));
+        else
+            resource.document = nullptr;
         resource.state = resource.document != nullptr ? DomResourceState_Loaded : DomResourceState_Failed;
         if (resource.document != nullptr)
             prDomDocumentRetain(resource.document);
         return;
     }
     PrUrl* url = nullptr;
-    bool allowed = document->url != nullptr
-                   && prUrlCreate(prStringView(&resource.url), nullptr, PrCharset_Utf8, &url) == PrStatus_Ok
-                   && prUrlHasSameOrigin(document->url, url);
+    bool allowed = document->url != nullptr &&
+        prUrlCreate(prStringView(&resource.url), nullptr, PrCharset_Utf8, &url) == PrStatus_Ok &&
+        prUrlHasSameOrigin(document->url, url);
     prUrlDestroy(url);
     if (!allowed) {
         resource.state = DomResourceState_Failed;

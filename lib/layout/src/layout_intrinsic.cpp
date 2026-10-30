@@ -22,8 +22,7 @@ namespace {
 // `mode` that the container gives its content. For each kind, the size is the larger of the widest contribution of an
 // in-flow child and the size of the inline content. Sets `*childrenRead` if a contribution read its percentage base.
 LayoutIntrinsicSizes flowIntrinsic(LayoutState& state, LayoutNodeIndex node, LayoutNodeIndex runFirst,
-                                   LayoutNodeIndex runLast, const LayoutIntrinsicInput& children, LayoutOuterMode mode,
-                                   bool* childrenRead) {
+        LayoutNodeIndex runLast, const LayoutIntrinsicInput& children, LayoutOuterMode mode, bool* childrenRead) {
     LayoutIntrinsicSizes sizes{};
     auto add = [&](const LayoutIntrinsicSizes& child) {
         sizes.minContent = layoutUnitMax(sizes.minContent, child.minContent);
@@ -99,9 +98,9 @@ PrLayoutUnit containedInline(LayoutState& state, LayoutNodeIndex node, const PrL
         return face.averageAdvance * int32_t(box.intrinsicCharacters - 1) + face.maxAdvance;
     }
     PrLayoutLength size = layoutIsHorizontal(mode) ? box.containIntrinsicWidth : box.containIntrinsicHeight;
-    return layoutLengthIsFixed(size) && !layoutLengthReadsBase(size)
-               ? layoutUnitMax(kLayoutUnitZero, layoutResolve(state.styles, size, kLayoutUnitZero))
-               : kLayoutUnitZero;
+    if (layoutLengthIsFixed(size) && !layoutLengthReadsBase(size))
+        return layoutUnitMax(kLayoutUnitZero, layoutResolve(state.styles, size, kLayoutUnitZero));
+    return kLayoutUnitZero;
 }
 
 // Returns the intrinsic sizes of the block container `node`. For each kind, the size is the larger of the widest
@@ -144,12 +143,13 @@ LayoutIntrinsicSizes containerIntrinsic(LayoutState& state, LayoutNodeIndex node
         .percentBlock =
             layoutIsDefinite(base.size) ? layoutUnitMax(kLayoutUnitZero, base.size - edgesBlock) : layoutUnit(-1),
         .blockLimit = layoutBlockLimit(state.styles, box, own, input.percentBlock, edgesBlock),
-        .fallback = layoutIsScrollContainer(box)
-                        ? layoutScrollFallback(state.styles, box, own, mode.mode,
-                                               LayoutLogicalSize{layoutUnit(-1), input.percentBlock},
-                                               LayoutLogicalSize{layoutEdgesInline(e), edgesBlock}, state.viewport)
-                        : input.fallback,
+        .fallback = input.fallback,
     };
+    if (layoutIsScrollContainer(box)) {
+        children.fallback = layoutScrollFallback(state.styles, box, own, mode.mode,
+            LayoutLogicalSize{layoutUnit(-1), input.percentBlock}, LayoutLogicalSize{layoutEdgesInline(e), edgesBlock},
+            state.viewport);
+    }
     LayoutIntrinsicSizes sizes{};
     // A box with inline-size containment measures no content in its inline axis.
     if (box.containInline && layoutIsHorizontal(mode.mode) == layoutIsHorizontal(input.mode)) {
@@ -161,12 +161,12 @@ LayoutIntrinsicSizes containerIntrinsic(LayoutState& state, LayoutNodeIndex node
     bool childrenRead = false;
     // A read by the content of the block size or limit that the container gives its children counts as a read of the
     // container's own input only if that size or limit reads the container's base.
-    bool givesInput = base.readsPercentBlock || layoutLengthReadsBase(own.minBlockSize)
-                      || layoutLengthReadsBase(own.maxBlockSize);
+    bool givesInput = base.readsPercentBlock || layoutLengthReadsBase(own.minBlockSize) ||
+        layoutLengthReadsBase(own.maxBlockSize);
     // The sizes of a flex or grid container come from the contributions of its items, as its layout finds them.
     if (layoutIsFlexContainer(box) || layoutIsGridContainer(box)) {
-        sizes = layoutIsFlexContainer(box) ? layoutFlexIntrinsic(state, node, children)
-                                           : layoutGridIntrinsic(state, node, children);
+        sizes =
+            layoutIsFlexContainer(box) ? layoutFlexIntrinsic(state, node, children) : layoutGridIntrinsic(state, node, children);
         PrLayoutUnit edges = layoutEdgesInline(e);
         sizes.maxContent = sizes.maxContent + edges;
         sizes.minContent = sizes.minContent + edges;
@@ -184,12 +184,14 @@ LayoutIntrinsicSizes containerIntrinsic(LayoutState& state, LayoutNodeIndex node
 // Returns the intrinsic sizes of the anonymous box that wraps the run of siblings from `first` through `last`, measured
 // in the writing mode of their parent, with no edges.
 LayoutIntrinsicSizes anonymousIntrinsic(LayoutState& state, LayoutNodeIndex first, LayoutNodeIndex last,
-                                        const LayoutIntrinsicInput& input) {
+        const LayoutIntrinsicInput& input) {
     LayoutOuterMode mode = layoutNodeOuterMode(state.tree, layoutTreeNode(state.tree, first).parent);
-    LayoutIntrinsicInput content{.mode = mode.mode,
-                                 .percentBlock = layoutUnit(-1),
-                                 .blockLimit = layoutUnit(-1),
-                                 .fallback = input.fallback};
+    LayoutIntrinsicInput content{
+        .mode = mode.mode,
+        .percentBlock = layoutUnit(-1),
+        .blockLimit = layoutUnit(-1),
+        .fallback = input.fallback,
+    };
     bool read = false;
     LayoutIntrinsicSizes sizes = flowIntrinsic(state, first, first, last, content, mode, &read);
     sizes.maxContent = layoutUnitMax(sizes.maxContent, sizes.minContent);
@@ -204,8 +206,7 @@ LayoutIntrinsicSizes anonymousIntrinsic(LayoutState& state, LayoutNodeIndex firs
 // The layout goes through the cache of the box, so the layout that follows the measurement reuses it if its space is
 // the same. The percentages of its edges and its block-axis percentages are cyclic, because the inline size of the
 // containing block is indefinite.
-LayoutIntrinsicSizes orthogonalContribution(LayoutState& state, LayoutNodeIndex node,
-                                            const LayoutIntrinsicInput& input) {
+LayoutIntrinsicSizes orthogonalContribution(LayoutState& state, LayoutNodeIndex node, const LayoutIntrinsicInput& input) {
     LayoutSpace content{
         .mode = input.mode,
         .available = layoutUnit(-1),
@@ -234,7 +235,11 @@ LayoutIntrinsicSizes orthogonalContribution(LayoutState& state, LayoutNodeIndex 
     size = size + e.margin[LayoutSide_InlineStart] + e.margin[LayoutSide_InlineEnd];
     layoutFragmentRelease(result.fragment);
     return LayoutIntrinsicSizes{
-        .minContent = size, .maxContent = size, .readsPercentBlock = true, .readsFallback = readsFallback};
+        .minContent = size,
+        .maxContent = size,
+        .readsPercentBlock = true,
+        .readsFallback = readsFallback,
+    };
 }
 
 // Measures the intrinsic sizes of `node` in `input`, as layoutIntrinsicSizes does if it finds none cached, and stores
@@ -254,8 +259,8 @@ LayoutIntrinsicSizes computeIntrinsic(LayoutState& state, LayoutNodeIndex node, 
     // The fallback that the content of a scroll container reads comes from the container's own sizes and the size of
     // the initial containing block.
     sizes.readsFallback = state.readsFallback;
-    if (sizes.readsFallback && layoutKindIsElement(kind)
-        && layoutIsScrollContainer(layoutBoxStyle(state.styles, layoutTreeNode(state.tree, node).style))) {
+    if (sizes.readsFallback && layoutKindIsElement(kind) &&
+            layoutIsScrollContainer(layoutBoxStyle(state.styles, layoutTreeNode(state.tree, node).style))) {
         if (state.reuse)
             layoutTreeReadViewport(state.tree, node);
         sizes.readsFallback = false;
@@ -268,8 +273,8 @@ LayoutIntrinsicSizes computeIntrinsic(LayoutState& state, LayoutNodeIndex node, 
 
 // Returns true if two intrinsic inputs are the same.
 bool sameInput(const LayoutIntrinsicInput& a, const LayoutIntrinsicInput& b) {
-    return a.mode == b.mode && a.percentBlock == b.percentBlock && a.blockLimit == b.blockLimit
-           && a.fallback == b.fallback;
+    return a.mode == b.mode && a.percentBlock == b.percentBlock && a.blockLimit == b.blockLimit &&
+        a.fallback == b.fallback;
 }
 
 } // namespace
@@ -299,7 +304,7 @@ LayoutIntrinsicSizes layoutIntrinsicSizes(LayoutState& state, LayoutNodeIndex no
 }
 
 LayoutIntrinsicSizes layoutAnonymousIntrinsic(LayoutState& state, LayoutNodeIndex first, LayoutNodeIndex last,
-                                              const LayoutIntrinsicInput& input) {
+        const LayoutIntrinsicInput& input) {
     bool readsBefore = state.readsFallback;
     state.readsFallback = false;
     LayoutIntrinsicSizes sizes = anonymousIntrinsic(state, first, last, input);
@@ -309,7 +314,7 @@ LayoutIntrinsicSizes layoutAnonymousIntrinsic(LayoutState& state, LayoutNodeInde
 }
 
 LayoutIntrinsicSizes layoutContribution(LayoutState& state, LayoutNodeIndex node, const LayoutIntrinsicInput& input,
-                                        LayoutIntrinsicSizes* PR_NULLABLE content) {
+        LayoutIntrinsicSizes* PR_NULLABLE content) {
     if (layoutIsOrthogonalRoot(state.tree, node, input.mode)) {
         LayoutIntrinsicSizes contribution = orthogonalContribution(state, node, input);
         if (content != nullptr)
@@ -339,9 +344,11 @@ LayoutIntrinsicSizes layoutContribution(LayoutState& state, LayoutNodeIndex node
         auto ofKind = [&](const LayoutIntrinsicSizes& of) { return min ? of.minContent : of.maxContent; };
         // A keyword names an intrinsic size. In a contribution, fit-content is the size of the kind being computed.
         auto keyword = [&](PrLayoutLength length) {
-            return length.bits == prLayoutLengthMinContent().bits   ? intrinsic().minContent
-                   : length.bits == prLayoutLengthMaxContent().bits ? intrinsic().maxContent
-                                                                    : ofKind(intrinsic());
+            if (length.bits == prLayoutLengthMinContent().bits)
+                return intrinsic().minContent;
+            if (length.bits == prLayoutLengthMaxContent().bits)
+                return intrinsic().maxContent;
+            return ofKind(intrinsic());
         };
         PrLayoutLength preferred = logical.inlineSize;
         PrLayoutUnit size = kLayoutUnitZero;
@@ -362,8 +369,7 @@ LayoutIntrinsicSizes layoutContribution(LayoutState& state, LayoutNodeIndex node
         // cyclic preferred size does. A minimum resolves its percentages against zero.
         PrLayoutLength maxLength = logical.maxInlineSize;
         if (layoutLengthIsFixed(maxLength) && !layoutLengthReadsBase(maxLength))
-            size = layoutUnitMin(size, layoutBorderSize(box, layoutResolve(state.styles, maxLength, kLayoutUnitZero),
-                                                        edges));
+            size = layoutUnitMin(size, layoutBorderSize(box, layoutResolve(state.styles, maxLength, kLayoutUnitZero), edges));
         else if (layoutLengthIsContentBased(maxLength))
             size = layoutUnitMin(size, keyword(maxLength));
         else if (layoutLengthIsFixed(maxLength) && replaced && min)

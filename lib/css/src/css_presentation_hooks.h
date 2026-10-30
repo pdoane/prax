@@ -32,8 +32,7 @@ void cssPresentationElementContentChanged(PrDomElement* element);
 // moves from `from` to `to`. `states` are pseudo-classes that selectors read but attributes do not decide. The elements
 // are those on one line of shadow-including ancestors and not the other.
 void cssPresentationStateMoved(PrDomElement* PR_NULLABLE from, PrDomElement* PR_NULLABLE to,
-                               const CssPseudoClass* states,
-                               uint32_t count);
+    const CssPseudoClass* states, uint32_t count);
 
 // Tells the presentation of the document that its media environment changed.
 void cssPresentationDocumentMediaChanged(const PrDomDocument* PR_NULLABLE document);

@@ -70,8 +70,8 @@ Substitution substitutionAt(PrStringView text, size_t i, size_t* length) {
     if (asciiIsLetter(before) || asciiIsDigit(before) || before == '-')
         return Substitution_None;
     auto named = [&](PrStringView name) {
-        return i + name.size < text.size && asciiEqualsFold(PrStringView{text.data + i, name.size}, name)
-               && text.data[i + name.size] == '(';
+        return i + name.size < text.size && asciiEqualsFold(PrStringView{text.data + i, name.size}, name) &&
+            text.data[i + name.size] == '(';
     };
     if (named("var")) {
         *length = 4;
@@ -150,9 +150,9 @@ bool crossesShadow(const PrCssSelectors* selectors, const CssCompoundSelector* c
         const CssSimpleSelector* simple = &selectors->simple[compound->simple + k];
         if (simple->kind == CssSimpleKind_PseudoElement)
             return true;
-        if (simple->kind == CssSimpleKind_PseudoClass
-            && (simple->pseudoClass == CssPseudoClass_Host || simple->pseudoClass == CssPseudoClass_HostFn
-                || simple->pseudoClass == CssPseudoClass_HostContextFn))
+        if (simple->kind == CssSimpleKind_PseudoClass &&
+                (simple->pseudoClass == CssPseudoClass_Host || simple->pseudoClass == CssPseudoClass_HostFn ||
+                    simple->pseudoClass == CssPseudoClass_HostContextFn))
             return true;
     }
     return false;
@@ -169,9 +169,9 @@ uint32_t attributeBucket(uint32_t hash) {
 uint32_t ancestorFeature(const PrCssSelectors* selectors, const CssSimpleSelector* simple) {
     switch (simple->kind) {
         case CssSimpleKind_Type:
-            return simple->name != kCssSelectorAll
-                       ? cssFeatureHash(CssFeature_Type, cssSelectorNameLowered(selectors, simple->name))
-                       : 0;
+            if (simple->name != kCssSelectorAll)
+                return cssFeatureHash(CssFeature_Type, cssSelectorNameLowered(selectors, simple->name));
+            return 0;
         case CssSimpleKind_Id:
             return cssFeatureHash(CssFeature_Id, cssSelectorNameLowered(selectors, simple->name));
         case CssSimpleKind_Class:
@@ -193,8 +193,8 @@ void eachAttrRead(const CssDeclarationBlock* block, Visit visit) {
         if (declarations[i].valueCount != 1)
             continue;
         CssValueRun run = cssDeclarationValue(block, &declarations[i]);
-        if (run.count != 1 || run.values[0].kind != PrCssValueKind_Tokens
-            || (run.values[0].aux & CssValueAuxFlag_ReadsAttributes) == 0)
+        if (run.count != 1 || run.values[0].kind != PrCssValueKind_Tokens ||
+                (run.values[0].aux & CssValueAuxFlag_ReadsAttributes) == 0)
             continue;
         PrStringView text = cssValueText(run, run.values);
         for (size_t at = 0; at < text.size; ++at) {
@@ -205,9 +205,8 @@ void eachAttrRead(const CssDeclarationBlock* block, Visit visit) {
             while (start < text.size && (asciiIsSpace(text.data[start]) || text.data[start] == '|'))
                 ++start;
             size_t end = start;
-            while (end < text.size
-                   && (asciiIsLetter(text.data[end]) || asciiIsDigit(text.data[end]) || text.data[end] == '-'
-                       || text.data[end] == '_' || uint8_t(text.data[end]) >= 0x80))
+            while (end < text.size && (asciiIsLetter(text.data[end]) || asciiIsDigit(text.data[end]) || text.data[end] == '-' ||
+                    text.data[end] == '_' || uint8_t(text.data[end]) >= 0x80))
                 ++end;
             visit(PrStringView{text.data + start, end - start});
         }
@@ -255,8 +254,8 @@ bool typeAlternatives(const PrCssSelectors* selectors, const CssCompoundSelector
     }
     for (uint32_t k = 0; k < compound->simpleCount; ++k) {
         const CssSimpleSelector* simple = &selectors->simple[compound->simple + k];
-        if (simple->kind != CssSimpleKind_PseudoClass || simple->argument == kCssSelectorNone
-            || (simple->pseudoClass != CssPseudoClass_IsFn && simple->pseudoClass != CssPseudoClass_WhereFn))
+        if (simple->kind != CssSimpleKind_PseudoClass || simple->argument == kCssSelectorNone ||
+                (simple->pseudoClass != CssPseudoClass_IsFn && simple->pseudoClass != CssPseudoClass_WhereFn))
             continue;
         const CssSelectorList& list = selectors->arguments[simple->argument].selectors;
         bool types = list.count != 0;
@@ -264,8 +263,8 @@ bool typeAlternatives(const PrCssSelectors* selectors, const CssCompoundSelector
             const CssComplexSelector* c = &selectors->complex[list.first + i];
             const CssCompoundSelector* only = &selectors->compounds[c->compound];
             const CssSimpleSelector* type = &selectors->simple[only->simple];
-            types = (c->flags & CssComplexFlag_Invalid) == 0 && c->compoundCount == 1 && only->simpleCount == 1
-                    && type->kind == CssSimpleKind_Type && type->name != kCssSelectorAll;
+            types = (c->flags & CssComplexFlag_Invalid) == 0 && c->compoundCount == 1 && only->simpleCount == 1 &&
+                type->kind == CssSimpleKind_Type && type->name != kCssSelectorAll;
         }
         if (!types)
             continue;
@@ -286,15 +285,15 @@ bool typeAlternatives(const PrCssSelectors* selectors, const CssCompoundSelector
 // Also writes to `anyOf` the types of the first of those compounds that requires one of several types
 // (typeAlternatives), if it requires no more of them than kCssAncestorAlternatives. `types` is scratch space.
 void collectAncestors(const PrCssSelectors* selectors, const CssComplexSelector* c, uint32_t* out, uint32_t* anyOf,
-                      Array<uint32_t>& types) {
+        Array<uint32_t>& types) {
     if ((c->flags & (CssComplexFlag_Relative | CssComplexFlag_Nesting | CssComplexFlag_ImpliedScope)) != 0)
         return;
     const CssCompoundSelector* compounds = selectors->compounds + c->compound;
     uint32_t reached = 0;
     while (reached + 1 < c->compoundCount) {
         CssCombinator combinator = compounds[reached].combinator;
-        if ((combinator != CssCombinator_Descendant && combinator != CssCombinator_Child)
-            || crossesShadow(selectors, &compounds[reached + 1]))
+        if ((combinator != CssCombinator_Descendant && combinator != CssCombinator_Child) ||
+                crossesShadow(selectors, &compounds[reached + 1]))
             break;
         ++reached;
     }
@@ -373,7 +372,7 @@ bool decidesAppearance(const CssDeclarationBlock* block) {
 // of several types (typeAlternatives). It is then filed under each type. An element has one type, so it finds the entry
 // once. A selector with none of these is filed as universal.
 void fileSelectors(Filing& f, const PrCssSelectors* selectors, uint32_t matcher, const CssDeclarationBlock* block,
-                   uint16_t layer) {
+        uint16_t layer) {
     CssRuleSet* set = f.set;
     PR_ASSERT(f.appearance == CssAppearance_None || !decidesAppearance(block));
     bool attributes = false;
@@ -383,32 +382,33 @@ void fileSelectors(Filing& f, const PrCssSelectors* selectors, uint32_t matcher,
     for (uint32_t i = 0; i < selectors->list.count; ++i) {
         uint32_t complex = selectors->list.first + i;
         const CssComplexSelector* c = &selectors->complex[complex];
-        CssPseudo pseudo = (c->flags & CssComplexFlag_Invalid) != 0 ? CssPseudo_Count
-                                                                    : cssSelectorPseudo(selectors, complex);
+        CssPseudo pseudo = (c->flags & CssComplexFlag_Invalid) != 0 ? CssPseudo_Count : cssSelectorPseudo(selectors, complex);
         // A selector of ::slotted() styles the elements that a slot of its tree is assigned.
-        bool slotted = pseudo == CssPseudo_Count && (c->flags & CssComplexFlag_Invalid) == 0 && f.scope != nullptr
-                       && endsInSlotted(selectors, c);
+        bool slotted = pseudo == CssPseudo_Count && (c->flags & CssComplexFlag_Invalid) == 0 && f.scope != nullptr &&
+            endsInSlotted(selectors, c);
         if (slotted)
             pseudo = CssPseudo_None;
         if (pseudo == CssPseudo_Count)
             continue;
-        CssRuleEntry entry{.selectors = selectors,
-                           .block = block,
-                           .complex = complex,
-                           .matcher = matcher,
-                           .specificity = c->specificity,
-                           .order = f.order++,
-                           .layer = layer,
-                           .origin = f.origin,
-                           .attributes = attributes,
-                           .pseudo = pseudo,
-                           .appearance = f.appearance,
-                           .sheet = f.sheet,
-                           .scope = f.scope,
-                           .depth = f.depth,
-                           .rank = rankOf(f.origin, f.depth, layer, c->specificity),
-                           .ancestors = {},
-                           .anyAncestor = {}};
+        CssRuleEntry entry{
+            .selectors = selectors,
+            .block = block,
+            .complex = complex,
+            .matcher = matcher,
+            .specificity = c->specificity,
+            .order = f.order++,
+            .layer = layer,
+            .origin = f.origin,
+            .attributes = attributes,
+            .pseudo = pseudo,
+            .appearance = f.appearance,
+            .sheet = f.sheet,
+            .scope = f.scope,
+            .depth = f.depth,
+            .rank = rankOf(f.origin, f.depth, layer, c->specificity),
+            .ancestors = {},
+            .anyAncestor = {},
+        };
         collectAncestors(selectors, c, entry.ancestors, entry.anyAncestor, f.types);
         uint32_t at = set->entries.count;
         set->entries.push(entry);
@@ -578,18 +578,15 @@ void collectHas(CssRuleSet* set, const PrCssSelectors* selectors, uint32_t compl
             switch (simple->kind) {
                 case CssSimpleKind_Id:
                     invalidateAnchor(set, cssFeatureHash(CssFeature_Id, cssSelectorNameLowered(selectors,
-                                                                                               simple->name)),
-                                     anchor);
+                        simple->name)), anchor);
                     continue;
                 case CssSimpleKind_Class:
                     invalidateAnchor(set,
-                                     cssFeatureHash(CssFeature_Class, cssSelectorNameLowered(selectors, simple->name)),
-                                     anchor);
+                        cssFeatureHash(CssFeature_Class, cssSelectorNameLowered(selectors, simple->name)), anchor);
                     continue;
                 case CssSimpleKind_Attribute:
-                    invalidateAnchor(
-                        set, cssFeatureHash(CssFeature_Attribute, cssSelectorNameLowered(selectors,
-                                                                                         simple->name)), anchor);
+                    invalidateAnchor(set, cssFeatureHash(CssFeature_Attribute, cssSelectorNameLowered(selectors,
+                        simple->name)), anchor);
                     continue;
                 case CssSimpleKind_PseudoClass:
                     break;
@@ -604,8 +601,7 @@ void collectHas(CssRuleSet* set, const PrCssSelectors* selectors, uint32_t compl
                 case CssPseudoClass_FocusWithin:
                 case CssPseudoClass_Target:
                     invalidateAnchor(set, cssFeatureHash(CssFeature_PseudoClass,
-                                                         kCssPseudoClassName[simple->pseudoClass]),
-                                     anchor);
+                        kCssPseudoClassName[simple->pseudoClass]), anchor);
                     break;
                 case CssPseudoClass_IsFn:
                 case CssPseudoClass_WhereFn:
@@ -663,8 +659,7 @@ uint32_t compoundFeature(const PrCssSelectors* selectors, const CssCompoundSelec
 }
 
 // Records what a change to each feature of a compound restyles, and what else its selectors read.
-void collectCompound(CssRuleSet* set, const PrCssSelectors* selectors, const CssCompoundSelector* compound,
-                     const Reach& reach) {
+void collectCompound(CssRuleSet* set, const PrCssSelectors* selectors, const CssCompoundSelector* compound, const Reach& reach) {
     CssRuleReads* reads = &set->reads;
     for (uint32_t k = 0; k < compound->simpleCount; ++k) {
         const CssSimpleSelector* simple = &selectors->simple[compound->simple + k];
@@ -673,12 +668,10 @@ void collectCompound(CssRuleSet* set, const PrCssSelectors* selectors, const Css
                 invalidate(set, cssFeatureHash(CssFeature_Id, cssSelectorNameLowered(selectors, simple->name)), reach);
                 continue;
             case CssSimpleKind_Class:
-                invalidate(set, cssFeatureHash(CssFeature_Class, cssSelectorNameLowered(selectors, simple->name)),
-                           reach);
+                invalidate(set, cssFeatureHash(CssFeature_Class, cssSelectorNameLowered(selectors, simple->name)), reach);
                 continue;
             case CssSimpleKind_Attribute:
-                invalidate(set, cssFeatureHash(CssFeature_Attribute, cssSelectorNameLowered(selectors, simple->name)),
-                           reach);
+                invalidate(set, cssFeatureHash(CssFeature_Attribute, cssSelectorNameLowered(selectors, simple->name)), reach);
                 continue;
             case CssSimpleKind_PseudoClass:
                 break;
@@ -695,9 +688,8 @@ void collectCompound(CssRuleSet* set, const PrCssSelectors* selectors, const Css
                 continue;
         }
         // The selectors of a pseudo-class's argument restyle what the pseudo-class's own place restyles.
-        const CssSelectorList* list = simple->argument != kCssSelectorNone
-                                          ? &selectors->arguments[simple->argument].selectors
-                                          : nullptr;
+        const CssSelectorList* list =
+            simple->argument != kCssSelectorNone ? &selectors->arguments[simple->argument].selectors : nullptr;
         Reach argument = reach;
         switch (simple->pseudoClass) {
             case CssPseudoClass_Hover:
@@ -709,7 +701,7 @@ void collectCompound(CssRuleSet* set, const PrCssSelectors* selectors, const Css
                 // A state matches only if the rest of the compound matches, so only an element that carries the
                 // compound's feature can change what the state reaches.
                 invalidate(set, cssFeatureHash(CssFeature_PseudoClass, kCssPseudoClassName[simple->pseudoClass]), reach,
-                           compoundFeature(selectors, compound));
+                    compoundFeature(selectors, compound));
                 break;
             case CssPseudoClass_IsFn:
             case CssPseudoClass_WhereFn:
@@ -730,9 +722,11 @@ void collectCompound(CssRuleSet* set, const PrCssSelectors* selectors, const Css
                 bool previous = false;
                 for (uint32_t i = 0; list != nullptr && i < list->count; ++i)
                     previous = previous || selectors->complex[list->first + i].reach != CssReach_Descendant;
-                CssHasAnchor anchor{compoundFeature(selectors, compound), reach.self, reach.laterSiblings,
-                                    reach.siblings,
-                                    reach.subtree, reach.descendant, previous};
+                CssHasAnchor anchor{
+                    compoundFeature(selectors, compound), reach.self, reach.laterSiblings,
+                    reach.siblings,
+                    reach.subtree, reach.descendant, previous,
+                };
                 for (uint32_t i = 0; list != nullptr && i < list->count; ++i)
                     collectHas(set, selectors, list->first + i, anchor);
                 list = nullptr;
@@ -787,8 +781,7 @@ void collectCompound(CssRuleSet* set, const PrCssSelectors* selectors, const Css
                 // A state that attributes decide, either of the element or of an ancestor, such as a fieldset's
                 // disabled state.
                 reads->states = true;
-                invalidate(set, cssFeatureHash(CssFeature_State, ""),
-                           unite(reach, Reach{true, false, false, true, 0}));
+                invalidate(set, cssFeatureHash(CssFeature_State, ""), unite(reach, Reach{true, false, false, true, 0}));
                 break;
         }
         for (uint32_t i = 0; list != nullptr && i < list->count; ++i)
@@ -799,8 +792,7 @@ void collectCompound(CssRuleSet* set, const PrCssSelectors* selectors, const Css
 // Records what a change to each feature of a complex selector restyles. A selector in a pseudo-class's argument has the
 // reach `outer` of the pseudo-class's place. A feature further left in such a selector restyles any element near that
 // place.
-void collectComplex(CssRuleSet* set, const PrCssSelectors* selectors, uint32_t complex,
-                    const Reach* PR_NULLABLE outer) {
+void collectComplex(CssRuleSet* set, const PrCssSelectors* selectors, uint32_t complex, const Reach* PR_NULLABLE outer) {
     const CssComplexSelector* c = &selectors->complex[complex];
     if ((c->flags & CssComplexFlag_Invalid) != 0)
         return;
@@ -1076,7 +1068,7 @@ struct CssPlace {
 // Returns the last normal declaration of `longhand` before the layer `layer` of `origin`. Returns no declaration if no
 // earlier declaration sets the longhand.
 CssCascaded rolledBack(const CssCascadeScratch& s, const CssPlace& place, CssOrigin origin, uint32_t layer,
-                       PrCssProperty longhand) {
+        PrCssProperty longhand) {
     CssCascaded winner{};
     auto consider = [&](const CssDeclarationBlock* block, const CssSheetData* sheet, CssOrigin declared) {
         const CssDeclaration* declarations = cssDeclarations(block);
@@ -1089,12 +1081,14 @@ CssCascaded rolledBack(const CssCascadeScratch& s, const CssPlace& place, CssOri
             for (uint32_t l = 0; l < longhands.count && !sets; ++l)
                 sets = kCssPropertyRuns[longhands.start + l] == longhand;
             if (sets)
-                winner = CssCascaded{.declaration = d,
-                                     .block = block,
-                                     .longhand = longhand,
-                                     .origin = declared,
-                                     .order = 0,
-                                     .sheet = sheet};
+                winner = CssCascaded{
+                    .declaration = d,
+                    .block = block,
+                    .longhand = longhand,
+                    .origin = declared,
+                    .order = 0,
+                    .sheet = sheet,
+                };
         }
     };
     auto considerHints = [&]() {
@@ -1137,15 +1131,17 @@ void apply(CssCascadeScratch& s, const CssDeclarationBlock* block, bool importan
         const CssDeclaration* d = &declarations[i];
         if (d->important != important || d->descriptor != PrCssDescriptor_None)
             continue;
-        CssCascaded cascaded{.declaration = d,
-                             .block = block,
-                             .longhand = d->property,
-                             .origin = place.origin,
-                             .order = ++s.applied,
-                             .sheet = place.sheet};
-        PrCssKeyword wide = d->valueCount == 1 && d->property != PrCssProperty_Count
-                                ? wideKeyword(cssDeclarationValue(block, d))
-                                : PrCssKeyword_Count;
+        CssCascaded cascaded{
+            .declaration = d,
+            .block = block,
+            .longhand = d->property,
+            .origin = place.origin,
+            .order = ++s.applied,
+            .sheet = place.sheet,
+        };
+        PrCssKeyword wide = PrCssKeyword_Count;
+        if (d->valueCount == 1 && d->property != PrCssProperty_Count)
+            wide = wideKeyword(cssDeclarationValue(block, d));
         bool reverted = wide == PrCssKeyword_Revert || wide == PrCssKeyword_RevertLayer;
         CssOrigin origin = place.origin;
         uint32_t layer = place.layer;
@@ -1189,7 +1185,7 @@ void apply(CssCascadeScratch& s, const CssDeclarationBlock* block, bool importan
 // Applies the matched entries of `origin` in order, or for important declarations, their encapsulation contexts and
 // their layers in reverse (css-cascade-5/#cascade-context, css-cascade-5/#layer-ordering).
 void applyOrigin(CssCascadeScratch& s, const CssRuleSet* set, const CssHintBlocks& hints, CssOrigin origin,
-                 bool important) {
+        bool important) {
     const uint32_t* matched = s.applying;
     uint32_t count = s.applyingCount;
     if (!important) {
@@ -1206,9 +1202,9 @@ void applyOrigin(CssCascadeScratch& s, const CssRuleSet* set, const CssHintBlock
         uint32_t start = end - 1;
         uint16_t layer = set->entries.data[matched[start]].layer;
         uint32_t depth = set->entries.data[matched[start]].depth;
-        while (start != 0 && set->entries.data[matched[start - 1]].layer == layer
-               && set->entries.data[matched[start - 1]].depth == depth
-               && set->entries.data[matched[start - 1]].origin == set->entries.data[matched[end - 1]].origin)
+        while (start != 0 && set->entries.data[matched[start - 1]].layer == layer &&
+                set->entries.data[matched[start - 1]].depth == depth &&
+                set->entries.data[matched[start - 1]].origin == set->entries.data[matched[end - 1]].origin)
             --start;
         for (uint32_t i = start; i < end; ++i) {
             const CssRuleEntry& entry = set->entries.data[matched[i]];
@@ -1358,16 +1354,16 @@ typedef uint8_t Fit;
 // the style read one, which `inherit` does. No value reads the locale, so a style cached under another locale fits
 // except for its locale.
 Fit fits(const CssMatchedStyle& cached, uint32_t hash, const CssCascadeScratch& s, const CssCascadeInput& input,
-         uint64_t sharedHints, DomWidget widget, CssAppearance parentAppearance) {
-    if (cached.style == nullptr || cached.hash != hash || cached.matched.count != s.candidates.count
-        || !memEquals(cached.matched.data, s.candidates.data, sizeof(uint32_t) * s.candidates.count)
-        || cached.pseudo != input.pseudo || cached.sharedHints != sharedHints || cached.widget != widget
-        || cached.parentAppearance != parentAppearance)
+        uint64_t sharedHints, DomWidget widget, CssAppearance parentAppearance) {
+    if (cached.style == nullptr || cached.hash != hash || cached.matched.count != s.candidates.count ||
+            !memEquals(cached.matched.data, s.candidates.data, sizeof(uint32_t) * s.candidates.count) ||
+            cached.pseudo != input.pseudo || cached.sharedHints != sharedHints || cached.widget != widget ||
+            cached.parentAppearance != parentAppearance)
         return Fit_None;
     if (cached.root != (input.parent == nullptr) || !sameBases(cached.rootFont, input.rootFont))
         return Fit_None;
-    if (cached.readsViewport
-        && (cached.viewport.width != input.viewport.width || cached.viewport.height != input.viewport.height))
+    if (cached.readsViewport &&
+            (cached.viewport.width != input.viewport.width || cached.viewport.height != input.viewport.height))
         return Fit_None;
     if (input.parent == nullptr)
         return Fit_Same;
@@ -1378,8 +1374,8 @@ Fit fits(const CssMatchedStyle& cached, uint32_t hash, const CssCascadeScratch& 
         bool inherited = cssStyleGroupInherited(CssStyleGroup(g));
         if ((!inherited && !cached.style->inheritsReset) || input.parent->groups[g] == cached.parentGroups[g])
             continue;
-        bool passes = inherited && !cached.style->inheritsReset && (cached.passThrough & (1u << g)) != 0
-                      && (g != CssStyleGroup_Font || !cached.readsFont);
+        bool passes = inherited && !cached.style->inheritsReset && (cached.passThrough & (1u << g)) != 0 &&
+            (g != CssStyleGroup_Font || !cached.readsFont);
         if (!passes)
             return Fit_None;
         fit = Fit_Rebase;
@@ -1451,8 +1447,8 @@ const CssComputedStyle* rebased(const CssMatchedStyle& cached, const CssComputed
 
 // Stores `style`, computed for the scratch's candidates under `input`, in `slot`.
 void store(CssMatchedStyle& slot, uint32_t hash, uint64_t sharedHints, DomWidget widget,
-           CssAppearance parentAppearance, const CssCascadeScratch& s, const CssCascadeInput& input,
-           const CssComputedStyle* style, bool readsViewport, bool readsFont) {
+        CssAppearance parentAppearance, const CssCascadeScratch& s, const CssCascadeInput& input,
+        const CssComputedStyle* style, bool readsViewport, bool readsFont) {
     forgetMatched(slot);
     slot.hash = hash;
     slot.matched.append(s.candidates.data, s.candidates.count);
@@ -1485,21 +1481,22 @@ void store(CssMatchedStyle& slot, uint32_t hash, uint64_t sharedHints, DomWidget
 // rule set, the same parent's style, root font, kind of widget, shared hints and language, and the same viewport if the
 // style read it.
 bool remembers(const CssCascadeMemo& memo, const CssRuleSet* set, const CssCascadeScratch& s,
-               const CssCascadeInput& input, uint64_t sharedHints, DomWidget widget, PrLocale locale) {
-    if (memo.style == nullptr || memo.generation != set->generation || memo.parent != input.parent
-        || input.pseudo != CssPseudo_None || memo.widget != widget
-        || memo.sharedHints != sharedHints || memo.style->locale != locale || !sameBases(memo.rootFont, input.rootFont))
+        const CssCascadeInput& input, uint64_t sharedHints, DomWidget widget, PrLocale locale) {
+    if (memo.style == nullptr || memo.generation != set->generation || memo.parent != input.parent ||
+            input.pseudo != CssPseudo_None || memo.widget != widget ||
+            memo.sharedHints != sharedHints || memo.style->locale != locale ||
+            !sameBases(memo.rootFont, input.rootFont))
         return false;
-    if (memo.readsViewport
-        && (memo.viewport.width != input.viewport.width || memo.viewport.height != input.viewport.height))
+    if (memo.readsViewport &&
+            (memo.viewport.width != input.viewport.width || memo.viewport.height != input.viewport.height))
         return false;
-    return memo.matched.count == s.candidates.count
-           && memEquals(memo.matched.data, s.candidates.data, sizeof(uint32_t) * s.candidates.count);
+    return memo.matched.count == s.candidates.count &&
+        memEquals(memo.matched.data, s.candidates.data, sizeof(uint32_t) * s.candidates.count);
 }
 
 // Keeps `style`, which the element now has from the entries it matched, in its memo.
 void remember(CssCascadeMemo* memo, const CssRuleSet* set, const CssCascadeScratch& s, const CssCascadeInput& input,
-              const CssComputedStyle* style, uint64_t sharedHints, DomWidget widget, bool readsViewport) {
+        const CssComputedStyle* style, uint64_t sharedHints, DomWidget widget, bool readsViewport) {
     cssComputedStyleRetain(style);
     if (input.parent != nullptr)
         cssComputedStyleRetain(input.parent);
@@ -1553,8 +1550,7 @@ void filterAncestors(CssCascadeScratch& s, const PrDomElement* element) {
     if (parent == s.ancestorsOf && s.ancestorsEpoch == s.epoch)
         return;
     const PrDomElement* parentElement = domElementFromNode(parent);
-    if (parentElement != nullptr && s.ancestorsOf != nullptr && parent->parent == s.ancestorsOf
-        && s.ancestorsEpoch == s.epoch) {
+    if (parentElement != nullptr && s.ancestorsOf != nullptr && parent->parent == s.ancestorsOf && s.ancestorsEpoch == s.epoch) {
         addFeatures(s, parentElement);
     } else {
         memZero(s.ancestorBits, sizeof(s.ancestorBits));
@@ -1649,12 +1645,12 @@ const PrDomNode* PR_NULLABLE treeOf(const CssRuleSet* set, const PrDomElement* e
 // and false for a set that tests none, whose matching costs nothing for them.
 template <bool Scoped>
 bool matchesEntry(const CssRuleSet* set, CssCascadeScratch& s, const PrDomElement* element,
-                  const PrDomNode* PR_NULLABLE tree, uint32_t entry, bool* filtered) {
+        const PrDomNode* PR_NULLABLE tree, uint32_t entry, bool* filtered) {
     const CssRuleEntry& e = set->entries.data[entry];
     // An element matches the rules of its own tree, and a host also those of its shadow tree that use :host.
-    if (Scoped && e.scope != nullptr && e.scope != tree
-        && (e.scope != static_cast<const PrDomNode*>(domShadowRootOfHost(element))
-            || !s.matchers.data[e.matcher].readsHost))
+    if (Scoped && e.scope != nullptr && e.scope != tree &&
+            (e.scope != static_cast<const PrDomNode*>(domShadowRootOfHost(element)) ||
+                !s.matchers.data[e.matcher].readsHost))
         return false;
     if ((e.ancestors[0] != 0 || e.anyAncestor[0] != 0) && !*filtered) {
         filterAncestors(s, element);
@@ -1681,8 +1677,7 @@ bool matchesEntry(const CssRuleSet* set, CssCascadeScratch& s, const PrDomElemen
 // Calls `visit` with each entry of `filed` that `element` may match: those filed under its features, and the universal
 // entries. Stops once `visit` returns false.
 template <typename Visit>
-void matchEach(const CssRuleSet*, CssCascadeScratch& s, const PrDomElement* element, const CssRuleIndex& filed,
-               Visit visit) {
+void matchEach(const CssRuleSet*, CssCascadeScratch& s, const PrDomElement* element, const CssRuleIndex& filed, Visit visit) {
     elementFeatures(s, element);
     for (uint32_t i = 0; i < s.featureHashes.count; ++i) {
         uint32_t hash = s.featureHashes.data[i];
@@ -1722,10 +1717,10 @@ void match(const CssRuleSet* set, CssCascadeScratch& s, const PrDomElement* elem
     }
     // The rules of ::slotted() in the trees of the slots that the element is assigned to, through slots assigned to
     // slots, apply to the element itself (css-shadow-1/#slotted-pseudo).
-    bool slotted = tree != nullptr && set->slotted.count != 0 && &filed == &set->filed[CssPseudo_None]
-                   && (element->flags & DomNodeFlag_Slotted) != 0;
+    bool slotted = tree != nullptr && set->slotted.count != 0 && &filed == &set->filed[CssPseudo_None] &&
+        (element->flags & DomNodeFlag_Slotted) != 0;
     for (const PrDomElement* slot = slotted ? domAssignedSlot(element) : nullptr; slot != nullptr;
-         slot = domAssignedSlot(slot)) {
+            slot = domAssignedSlot(slot)) {
         const PrDomNode* slotTree = domNodeRoot(slot);
         for (uint32_t i = 0; i < set->slotted.count; ++i) {
             const CssRuleEntry& e = set->entries.data[set->slotted.data[i]];
@@ -1745,8 +1740,8 @@ void match(const CssRuleSet* set, CssCascadeScratch& s, const PrDomElement* elem
 // block-level equivalent, and inline-block becomes block. A table-internal display becomes block, with flow as its
 // inner display (css-display-4/#transformations). Returns false if `run` is neither inline-level nor table-internal.
 bool blockified(CssValueRun run, PrCssKeyword* out) {
-    if (run.count == 2 && cssValueIsKeyword(run.values, PrCssKeyword_Inline)
-        && cssValueIsKeyword(run.values + 1, PrCssKeyword_ListItem)) {
+    if (run.count == 2 && cssValueIsKeyword(run.values, PrCssKeyword_Inline) &&
+            cssValueIsKeyword(run.values + 1, PrCssKeyword_ListItem)) {
         *out = PrCssKeyword_ListItem;
         return true;
     }
@@ -1816,9 +1811,9 @@ Reference attrValue(const PrDomElement* PR_NULLABLE element, PrStringView first,
     if (at < arguments.size && arguments.data[at] == '|')
         ++at;
     size_t nameStart = at;
-    while (at < arguments.size
-           && (asciiIsLetter(arguments.data[at]) || asciiIsDigit(arguments.data[at]) || arguments.data[at] == '-'
-               || arguments.data[at] == '_' || uint8_t(arguments.data[at]) >= 0x80))
+    while (at < arguments.size &&
+            (asciiIsLetter(arguments.data[at]) || asciiIsDigit(arguments.data[at]) || arguments.data[at] == '-' ||
+                arguments.data[at] == '_' || uint8_t(arguments.data[at]) >= 0x80))
         ++at;
     PrStringView name{arguments.data + nameStart, at - nameStart};
     PrStringView type = stringTrim(PrStringView{arguments.data + at, arguments.size - at});
@@ -1830,8 +1825,8 @@ Reference attrValue(const PrDomElement* PR_NULLABLE element, PrStringView first,
         }
         return Reference_Missing;
     };
-    bool parsed = name.size != 0 && !asciiIsDigit(name.data[0])
-                  && (at == arguments.size || asciiIsSpace(arguments.data[at]) || type.size == 0);
+    bool parsed = name.size != 0 && !asciiIsDigit(name.data[0]) &&
+        (at == arguments.size || asciiIsSpace(arguments.data[at]) || type.size == 0);
     if (!parsed || element == nullptr)
         return fail();
     // An HTML element's attribute names are lowercase in an HTML document, and attr() names them as attribute selectors
@@ -1848,8 +1843,8 @@ Reference attrValue(const PrDomElement* PR_NULLABLE element, PrStringView first,
         result = fail();
     } else if (raw) {
         cssSerializeString(out, value);
-    } else if (asciiEqualsFold(type, "number") || asciiEqualsFold(type, "%")
-               || cssUnitFromText(type) != PrCssUnit_Unknown) {
+    } else if (asciiEqualsFold(type, "number") || asciiEqualsFold(type, "%") ||
+            cssUnitFromText(type) != PrCssUnit_Unknown) {
         // A number, or a dimension or percentage of the number in the unit.
         PrStringView number = stringTrim(value);
         if (!isNumberToken(number)) {
@@ -1957,8 +1952,7 @@ struct ComputedLookup {
 // Returns the value that a winning declaration gives the longhand it declares, with its substitutions made. The result
 // is a run of the longhand's value, or the empty run if the declaration is invalid at computed-value time
 // (css-values-5/#invalid-at-computed-value-time).
-CssValueRun declaredValue(CssCascadeScratch& s, const CssCascaded& cascaded,
-                          const CssCustomProperties* PR_NULLABLE custom) {
+CssValueRun declaredValue(CssCascadeScratch& s, const CssCascaded& cascaded, const CssCustomProperties* PR_NULLABLE custom) {
     PrCssProperty property = cascaded.longhand;
     CssValueRun run = cssDeclarationValue(cascaded.block, cascaded.declaration);
     bool pending = run.count == 1 && run.values[0].kind == PrCssValueKind_Tokens;
@@ -2097,7 +2091,7 @@ PrCssKeyword customWideKeyword(CssValueRun run) {
 // the parent's properties with the element's declarations over them, and each declared value has its references
 // substituted. See CssCustomProperties for the layering.
 const CssCustomProperties* PR_NULLABLE customProperties(CssCascadeScratch& s, CssStyleTable* table,
-                                                        const CssCustomProperties* PR_NULLABLE parent) {
+        const CssCustomProperties* PR_NULLABLE parent) {
     if (s.custom.count == 0) {
         if (parent != nullptr)
             cssCustomPropertiesRetain(parent);
@@ -2155,9 +2149,11 @@ const CssCustomProperties* PR_NULLABLE customProperties(CssCascadeScratch& s, Cs
             const CssCustomEntry& e = parent->entries[i];
             PrStringView name{parent->text + e.name, e.nameSize};
             bool invalid = e.valueSize == kCssCustomInvalid;
-            inherited.push(CssCustomRow{e.hash, name,
-                                        invalid ? PrStringView{} : PrStringView{parent->text + e.value, e.valueSize},
-                                        invalid});
+            inherited.push(CssCustomRow{
+                e.hash, name,
+                invalid ? PrStringView{} : PrStringView{parent->text + e.value, e.valueSize},
+                invalid,
+            });
         }
     }
     if (base != nullptr && (inherited.count + declared.count) * 2 > base->count + kCustomFlattenSlack) {
@@ -2210,7 +2206,7 @@ const CssCustomProperties* PR_NULLABLE customProperties(CssCascadeScratch& s, Cs
 // initial value otherwise. This is the value that an element without a cascaded value takes
 // (css-cascade-5/#defaulting).
 void addDefault(CssStyleBuilder* builder, CssStyleGroup group, uint32_t slot, bool inherit,
-                const CssComputedStyle* PR_NULLABLE parent, const CssStyleValues* initial) {
+        const CssComputedStyle* PR_NULLABLE parent, const CssStyleValues* initial) {
     if (inherit && parent != nullptr)
         cssStyleAddValue(builder, cssStyleValue(parent->groups[group], slot));
     else
@@ -2231,8 +2227,8 @@ bool floats(CssCascadeScratch& s, const CssCascadeInput& input, const CssCustomP
     } else if (keyword != PrCssKeyword_Count) {
         return false;
     }
-    return run.count == 1 && run.values[0].kind == PrCssValueKind_Keyword
-           && cssValueKeyword(run.values) != PrCssKeyword_None;
+    return run.count == 1 && run.values[0].kind == PrCssValueKind_Keyword &&
+        cssValueKeyword(run.values) != PrCssKeyword_None;
 }
 
 // Returns true if the element is absolutely positioned: its position cascades to absolute or fixed. Absolute
@@ -2250,16 +2246,15 @@ bool outOfFlow(CssCascadeScratch& s, const CssCascadeInput& input, const CssCust
     } else if (keyword != PrCssKeyword_Count) {
         return false;
     }
-    return run.count == 1
-           && (cssValueIsKeyword(run.values, PrCssKeyword_Absolute)
-               || cssValueIsKeyword(run.values, PrCssKeyword_Fixed));
+    return run.count == 1 && (cssValueIsKeyword(run.values, PrCssKeyword_Absolute) ||
+        cssValueIsKeyword(run.values, PrCssKeyword_Fixed));
 }
 
 // Returns the overflow keyword that an axis cascades to before its pair is normalized: the declared keyword, the
 // parent's keyword if the axis inherits, or the initial visible. Sets `*inherits` if the axis takes the parent's
 // keyword.
 PrCssKeyword cascadedOverflow(CssCascadeScratch& s, PrCssProperty property, const CssCascadeInput& input,
-                              const CssCustomProperties* PR_NULLABLE custom, bool* inherits) {
+        const CssCustomProperties* PR_NULLABLE custom, bool* inherits) {
     const CssCascaded& cascaded = s.winners.data[property];
     if (cascaded.declaration == nullptr)
         return PrCssKeyword_Visible;
@@ -2311,7 +2306,7 @@ bool devolves(const CssCascadeScratch& s) {
 // Returns the keyword that appearance cascades to: the declared keyword, the parent's computed keyword if the property
 // inherits, or the initial none.
 PrCssKeyword cascadedAppearance(CssCascadeScratch& s, const CssCascadeInput& input,
-                                const CssCustomProperties* PR_NULLABLE custom) {
+        const CssCustomProperties* PR_NULLABLE custom) {
     const CssCascaded& cascaded = s.winners.data[PrCssProperty_Appearance];
     if (cascaded.declaration == nullptr)
         return PrCssKeyword_None;
@@ -2321,8 +2316,9 @@ PrCssKeyword cascadedAppearance(CssCascadeScratch& s, const CssCascadeInput& inp
         run = cssComputedValue(input.parent, PrCssProperty_Appearance);
     else if (keyword != PrCssKeyword_Count)
         return PrCssKeyword_None;
-    return run.count == 1 && run.values[0].kind == PrCssValueKind_Keyword ? cssValueKeyword(run.values)
-                                                                          : PrCssKeyword_None;
+    if (run.count == 1 && run.values[0].kind == PrCssValueKind_Keyword)
+        return cssValueKeyword(run.values);
+    return PrCssKeyword_None;
 }
 
 // Returns how an element whose appearance cascades to `keyword` is rendered (css-ui-4/#appearance-switching). The
@@ -2374,8 +2370,8 @@ PrStringView urlText(CssValueRun run, uint32_t index, uint32_t* at) {
         *at = index;
         return cssValueText(run, value);
     }
-    bool function = value->kind == PrCssValueKind_Function
-                    && (cssValueKeyword(value) == PrCssKeyword_Url || cssValueKeyword(value) == PrCssKeyword_Src);
+    bool function = value->kind == PrCssValueKind_Function &&
+        (cssValueKeyword(value) == PrCssKeyword_Url || cssValueKeyword(value) == PrCssKeyword_Src);
     if (!function || value->next < 2 || value[1].kind != PrCssValueKind_String)
         return PrStringView{};
     *at = index + 1;
@@ -2479,8 +2475,7 @@ bool appliesToFirst(CssPseudo pseudo, PrCssProperty property) {
 
 // Computes one group of the element's style.
 const CssStyleValues* buildGroup(CssStyleBuilder* builder, CssCascadeScratch& s, CssStyleGroup group,
-                                 const CssCascadeInput& input, CssStyleContext& context,
-                                 const CssCustomProperties* PR_NULLABLE custom) {
+        const CssCascadeInput& input, CssStyleContext& context, const CssCustomProperties* PR_NULLABLE custom) {
     CssStyleGroupProperties properties = cssStyleGroupProperties(group);
     bool inherited = cssStyleGroupInherited(group);
     bool any = false;
@@ -2491,8 +2486,11 @@ const CssStyleValues* buildGroup(CssStyleBuilder* builder, CssCascadeScratch& s,
     // On ::before and ::after, `content: normal` computes to none (css-content-3/#valdef-content-normal).
     bool generates = input.pseudo == CssPseudo_Before || input.pseudo == CssPseudo_After;
     if (!any && !((root || item) && group == CssStyleGroup_Box) && !(generates && group == CssStyleGroup_Generated)) {
-        const CssStyleValues* shared = inherited && input.parent != nullptr ? input.parent->groups[group]
-                                                                           : cssStyleInitial(builder, group);
+        const CssStyleValues* shared;
+        if (inherited && input.parent != nullptr)
+            shared = input.parent->groups[group];
+        else
+            shared = cssStyleInitial(builder, group);
         if (inherited && input.parent != nullptr) {
             cssStyleValuesRetain(shared);
             s.passThrough |= uint16_t(1u << group);
@@ -2505,8 +2503,7 @@ const CssStyleValues* buildGroup(CssStyleBuilder* builder, CssCascadeScratch& s,
     // (CSS2/#dis-pos-flo). An absolutely positioned box keeps whether its display was inline-level, which determines
     // its static position.
     bool positioned = !root && group == CssStyleGroup_Box && outOfFlow(s, input, custom);
-    bool blockify = root || positioned
-                    || (group == CssStyleGroup_Box && (item || floats(s, input, custom)));
+    bool blockify = root || positioned || (group == CssStyleGroup_Box && (item || floats(s, input, custom)));
     // The overflow pair is computed together, because each axis's value depends on the other's.
     PrCssKeyword overflowX = PrCssKeyword_Visible;
     PrCssKeyword overflowY = PrCssKeyword_Visible;
@@ -2565,8 +2562,8 @@ const CssStyleValues* buildGroup(CssStyleBuilder* builder, CssCascadeScratch& s,
         }
         // `color: currentcolor` is `color: inherit` (css-color-4/#resolving-color-values), so the element takes its
         // parent's computed color whole, with whatever range or gamut that color resolves to where it is used.
-        if (property == PrCssProperty_Color && run.count == 1
-            && cssValueIsKeyword(run.values, PrCssKeyword_Currentcolor))
+        if (property == PrCssProperty_Color && run.count == 1 &&
+                cssValueIsKeyword(run.values, PrCssKeyword_Currentcolor))
             keyword = PrCssKeyword_Inherit;
         if (keyword != PrCssKeyword_Count) {
             bool inherit = keyword == PrCssKeyword_Inherit || (keyword != PrCssKeyword_Initial && inherited);
@@ -2577,8 +2574,8 @@ const CssStyleValues* buildGroup(CssStyleBuilder* builder, CssCascadeScratch& s,
         }
         PrCssKeyword blockLevel = PrCssKeyword_Unknown;
         // Contents computes to block on the root, because it would give the root no box (css-display-4/#root).
-        if (root && property == PrCssProperty_Display && run.count == 1
-            && cssValueIsKeyword(run.values, PrCssKeyword_Contents)) {
+        if (root && property == PrCssProperty_Display && run.count == 1 &&
+                cssValueIsKeyword(run.values, PrCssKeyword_Contents)) {
             CssValueNode block = cssKeywordValue(PrCssKeyword_Block);
             cssStyleAddValue(builder, CssValueRun{&block, 1, nullptr});
             return;
@@ -2591,8 +2588,8 @@ const CssStyleValues* buildGroup(CssStyleBuilder* builder, CssCascadeScratch& s,
         }
         // On anything that is not a MathML element, math and inline math compute to inline, and block math to block
         // (mathml-core/#new-display-math-value).
-        if (property == PrCssProperty_Display && (input.pseudo != CssPseudo_None
-                                                  || input.element->space != PrDomNamespace_MathMl)) {
+        if (property == PrCssProperty_Display && (input.pseudo != CssPseudo_None ||
+                input.element->space != PrDomNamespace_MathMl)) {
             bool math = false;
             bool block = false;
             for (uint32_t k = 0; k < run.count; ++k) {
@@ -2608,8 +2605,8 @@ const CssStyleValues* buildGroup(CssStyleBuilder* builder, CssCascadeScratch& s,
                 return;
             }
         }
-        if ((property == PrCssProperty_TextAlignAll || property == PrCssProperty_TextAlignLast)
-            && run.count == 1 && cssValueIsKeyword(run.values, PrCssKeyword_MatchParent)) {
+        if ((property == PrCssProperty_TextAlignAll || property == PrCssProperty_TextAlignLast) &&
+                run.count == 1 && cssValueIsKeyword(run.values, PrCssKeyword_MatchParent)) {
             CssValueNode matched = matchParent(input.parent, property);
             cssStyleAddValue(builder, CssValueRun{&matched, 1, nullptr});
             return;
@@ -2642,7 +2639,7 @@ const CssStyleValues* buildGroup(CssStyleBuilder* builder, CssCascadeScratch& s,
                 context.root = cssFontBases(context.font.em, context.root.lh, context.root.style);
         } else if (property == PrCssProperty_LineHeight) {
             context.font = cssFontBases(context.font.em, cssLineHeightPx(cssStyleLastValue(builder), context.font.em),
-                                        context.font.style);
+                context.font.style);
             if (root)
                 context.root = context.font;
         }
@@ -2662,7 +2659,7 @@ void addBases(Array<uint64_t>& key, const CssFontBases& bases) {
 // keyword that `initial`, the initial group, holds. The `font` shorthand resets the longhands that it does not set with
 // such declarations.
 bool declaresInitial(CssCascadeScratch& s, CssStyleGroupProperties properties, const CssStyleValues* initial,
-                     const CssCustomProperties* PR_NULLABLE custom) {
+        const CssCustomProperties* PR_NULLABLE custom) {
     for (uint32_t i = 0; i < properties.count; ++i) {
         const CssCascaded& cascaded = s.winners.data[properties.properties[i]];
         if (cascaded.declaration == nullptr)
@@ -2676,8 +2673,8 @@ bool declaresInitial(CssCascadeScratch& s, CssStyleGroupProperties properties, c
         if (keyword != PrCssKeyword_Count || run.count != 1 || run.values[0].kind != PrCssValueKind_Keyword)
             return false;
         CssValueRun value = cssStyleValue(initial, i);
-        if (value.count != 1 || value.values[0].kind != PrCssValueKind_Keyword
-            || cssValueKeyword(value.values) != cssValueKeyword(run.values))
+        if (value.count != 1 || value.values[0].kind != PrCssValueKind_Keyword ||
+                cssValueKeyword(value.values) != cssValueKeyword(run.values))
             return false;
     }
     return true;
@@ -2687,8 +2684,7 @@ bool declaresInitial(CssCascadeScratch& s, CssStyleGroupProperties properties, c
 // group's values can read: the declarations that won its properties, the parent's group if the group inherits, the font
 // bases, the viewport's pixel ratio, the custom properties, and what makes a box blockified or a display of math.
 const CssStyleValues* computeGroup(CssStyleBuilder* builder, CssCascadeScratch& s, CssStyleGroup group,
-                                   const CssCascadeInput& input, CssStyleContext& context,
-                                   const CssCustomProperties* PR_NULLABLE custom) {
+        const CssCascadeInput& input, CssStyleContext& context, const CssCustomProperties* PR_NULLABLE custom) {
     // A group of a kind that does not inherit, with no declaration, is the initial one, unless the element's own
     // position decides one of its values. Most elements declare nothing of most such groups.
     bool special = group == CssStyleGroup_Box || group == CssStyleGroup_Generated;
@@ -2713,9 +2709,9 @@ const CssStyleValues* computeGroup(CssStyleBuilder* builder, CssCascadeScratch& 
     bool root = input.parent == nullptr;
     Array<uint64_t>& key = s.groupKey;
     key.clear();
-    key.push(uint64_t(group) | uint64_t(input.pseudo) << 8 | uint64_t(root) << 16
-             | uint64_t(!root && input.parent->childrenAreItems) << 17
-             | uint64_t(input.element->space == PrDomNamespace_MathMl) << 18);
+    key.push(uint64_t(group) | uint64_t(input.pseudo) << 8 | uint64_t(root) << 16 |
+        uint64_t(!root && input.parent->childrenAreItems) << 17 |
+        uint64_t(input.element->space == PrDomNamespace_MathMl) << 18);
     key.push(uint64_t(uintptr_t(inherited && !root ? input.parent->groups[group] : nullptr)));
     addBases(key, context.font);
     addBases(key, context.root);
@@ -2733,13 +2729,11 @@ const CssStyleValues* computeGroup(CssStyleBuilder* builder, CssCascadeScratch& 
     }
     CssCachedGroup& cached = s.cachedGroups.data[hash % kCssCachedGroups];
     const CssStyleValues* parentValues = root ? nullptr : input.parent->groups[group];
-    bool hit = cached.hash == hash && cached.key.count == key.count
-               && memEquals(cached.key.data, key.data, sizeof(uint64_t) * key.count)
-               && (!cached.inheritsReset || cached.parentValues == parentValues)
-               && (!cached.readsViewport
-                   || (cached.viewport.width == input.viewport.width
-                       && cached.viewport.height == input.viewport.height))
-               && !cached.readsMetrics;
+    bool hit = cached.hash == hash && cached.key.count == key.count &&
+        memEquals(cached.key.data, key.data, sizeof(uint64_t) * key.count) &&
+        (!cached.inheritsReset || cached.parentValues == parentValues) && (!cached.readsViewport ||
+            (cached.viewport.width == input.viewport.width && cached.viewport.height == input.viewport.height)) &&
+        !cached.readsMetrics;
     if (hit) {
         s.inheritsReset = s.inheritsReset || cached.inheritsReset;
         if (group == CssStyleGroup_Box)
@@ -2824,8 +2818,8 @@ void copyIndex(CssRuleIndex& to, const CssRuleIndex& from) {
 // Copies the rule set `from` into the empty `to`, which then holds the same entries for the same document. The user
 // agent's sheets that `from` files declare no layers and no keyframes.
 void copyRuleSet(CssRuleSet* to, const CssRuleSet* from) {
-    PR_ASSERT(from->layers.count == 0 && from->keyframes.count == 0 && from->anchors.anchors.count == 0
-              && from->counterStyleRules.count == 0);
+    PR_ASSERT(from->layers.count == 0 && from->keyframes.count == 0 && from->anchors.anchors.count == 0 &&
+        from->counterStyleRules.count == 0);
     to->document = from->document;
     to->entries.append(from->entries.data, from->entries.count);
     for (uint32_t p = 0; p < CssPseudo_Count; ++p)
@@ -2864,9 +2858,9 @@ uint32_t cssFeatureHash(CssFeature kind, PrStringView name) {
 
 void cssHasAnchorsAdd(CssHasAnchors* set, const CssHasAnchor& anchor) {
     auto same = [&](const CssHasAnchor& a) {
-        return a.feature == anchor.feature && a.self == anchor.self && a.laterSiblings == anchor.laterSiblings
-               && a.siblings == anchor.siblings && a.subtree == anchor.subtree && a.descendant == anchor.descendant
-               && a.previous == anchor.previous;
+        return a.feature == anchor.feature && a.self == anchor.self && a.laterSiblings == anchor.laterSiblings &&
+            a.siblings == anchor.siblings && a.subtree == anchor.subtree && a.descendant == anchor.descendant &&
+            a.previous == anchor.previous;
     };
     uint32_t first = kHashMissing;
     if (anchor.feature == 0) {
@@ -2876,7 +2870,7 @@ void cssHasAnchorsAdd(CssHasAnchors* set, const CssHasAnchor& anchor) {
         }
     } else {
         first = set->byFeature.find(anchor.feature,
-                                    [&](uint32_t at) { return set->anchors.data[at].feature == anchor.feature; });
+            [&](uint32_t at) { return set->anchors.data[at].feature == anchor.feature; });
         for (uint32_t at = first; at != kHashMissing; at = set->nextOfFeature.data[at]) {
             if (same(set->anchors.data[at]))
                 return;
@@ -2941,9 +2935,8 @@ bool cssRuleSubjectFeatures(const CssRuleData* rule, Array<uint32_t>* out) {
         }
         return true;
     }
-    bool holds = rule->kind == CssRuleDataKind_At && rule->block
-                 && (rule->atRule == CssAtRule_Media || rule->atRule == CssAtRule_Supports
-                     || rule->atRule == CssAtRule_Layer);
+    bool holds = rule->kind == CssRuleDataKind_At && rule->block &&
+        (rule->atRule == CssAtRule_Media || rule->atRule == CssAtRule_Supports || rule->atRule == CssAtRule_Layer);
     if (!holds)
         return false;
     for (uint32_t i = 0; i < rule->children.count; ++i) {
@@ -2954,8 +2947,8 @@ bool cssRuleSubjectFeatures(const CssRuleData* rule, Array<uint32_t>* out) {
 }
 
 void cssRuleSetBuildUserAgent(CssRuleSet* set, const PrDomDocument* document,
-                              const CssParsedUserAgentSheet* PR_NULLABLE userAgent, uint32_t userAgentCount,
-                              PrCssSheetConditions conditions, const CssMediaEnvironment* PR_NULLABLE media) {
+        const CssParsedUserAgentSheet* PR_NULLABLE userAgent, uint32_t userAgentCount,
+        PrCssSheetConditions conditions, const CssMediaEnvironment* PR_NULLABLE media) {
     uint32_t generation = set->generation;
     cssRuleSetReset(set);
     set->generation = generation + 1;
@@ -2974,13 +2967,18 @@ void cssRuleSetBuildUserAgent(CssRuleSet* set, const PrDomDocument* document,
 }
 
 void cssRuleSetBuild(CssRuleSet* set, const CssRuleSet* base, const CssTreeSheets* PR_NULLABLE trees,
-                     uint32_t treeCount, const CssMediaEnvironment* PR_NULLABLE media) {
+        uint32_t treeCount, const CssMediaEnvironment* PR_NULLABLE media) {
     uint32_t generation = set->generation;
     cssRuleSetReset(set);
     copyRuleSet(set, base);
     set->generation = generation + 1;
-    Filing f{.set = set, .document = base->document, .media = media, .origin = CssOrigin_Author,
-             .order = base->entries.count};
+    Filing f{
+        .set = set,
+        .document = base->document,
+        .media = media,
+        .origin = CssOrigin_Author,
+        .order = base->entries.count,
+    };
     set->scoped = base->document != nullptr && base->document->slots != nullptr && base->document->slots->scopes;
     for (uint32_t t = 0; t < treeCount; ++t) {
         f.scope = trees[t].tree;
@@ -2995,7 +2993,7 @@ void cssRuleSetBuild(CssRuleSet* set, const CssRuleSet* base, const CssTreeSheet
     }
     fileAttrReads(set, base->entries.count);
     cssCounterStylesBuild(&set->counterStyles, set->counterStyleRules.data, set->counterStyleRules.count,
-                          media != nullptr ? media->fontSize : 16);
+        media != nullptr ? media->fontSize : 16);
     f.name.text.reset();
     f.types.reset();
 }
@@ -3057,7 +3055,7 @@ void cssCascadeMemoReset(CssCascadeMemo* memo) {
 }
 
 const CssComputedStyle* cssCascadeStyle(const CssRuleSet* set, CssStyleBuilder* builder, CssCascadeScratch* scratch,
-                                        const CssCascadeInput& input) {
+        const CssCascadeInput& input) {
     CssCascadeScratch& s = *scratch;
     follow(s, set);
     if (s.winners.count == 0) {
@@ -3087,15 +3085,13 @@ const CssComputedStyle* cssCascadeStyle(const CssRuleSet* set, CssStyleBuilder* 
     // Presentational hints precede every author declaration (css-cascade-5/#preshint). The caller built them. The hints
     // that another element gives are shared, so a style that applies them alone may be cached.
     const CssElementStyle* elementStyle = input.element->style;
-    const CssDeclarationBlock* hints =
-        own && elementStyle != nullptr && elementStyle->hintsBuilt ? elementStyle->hints : nullptr;
+    const CssDeclarationBlock* hints = own && elementStyle != nullptr && elementStyle->hintsBuilt ? elementStyle->hints : nullptr;
     uint64_t sharedId = 0;
     const CssDeclarationBlock* shared = own ? cssSharedHints(input.element, &sharedId) : nullptr;
     // An element's used appearance follows from its entries and its kind of widget, and a pseudo-element's from what
     // originates it.
     DomWidget widget = input.pseudo == CssPseudo_None ? domElementWidget(input.element) : DomWidget(DomWidget_None);
-    CssAppearance parentAppearance =
-        input.pseudo == CssPseudo_None ? CssAppearance(CssAppearance_None) : input.parent->appearance;
+    CssAppearance parentAppearance = input.pseudo == CssPseudo_None ? CssAppearance_None : input.parent->appearance;
 
     // An element whose declarations all come from the rule set uses a style cached for the same entries.
     PrLocale locale = input.pseudo == CssPseudo_None ? localeOf(input) : input.parent->locale;
@@ -3122,8 +3118,8 @@ const CssComputedStyle* cssCascadeStyle(const CssRuleSet* set, CssStyleBuilder* 
         return memo->style;
     }
     if (cacheable) {
-        uint64_t salt = input.pseudo + (uint64_t(widget) << 8) + (uint64_t(parentAppearance) << 16)
-                        + sharedId * 0x9e3779b97f4a7c15ull;
+        uint64_t salt = input.pseudo + (uint64_t(widget) << 8) + (uint64_t(parentAppearance) << 16) +
+            sharedId * 0x9e3779b97f4a7c15ull;
         hash = uint32_t(hashBytes(s.candidates.data, sizeof(uint32_t) * s.candidates.count, kMatchedSeed + salt)) | 1;
         CssMatchedStyle* candidates = matchedSet(s, hash);
         ++s.matchedLookups;
@@ -3212,8 +3208,8 @@ const CssComputedStyle* cssCascadeStyle(const CssRuleSet* set, CssStyleBuilder* 
     style->appearance = parentAppearance;
     if (widget != DomWidget_None) {
         PrCssKeyword keyword = cascadedAppearance(s, input, style->custom);
-        style->appearance = usedAppearance(keyword, input.element, widget,
-                                           widget == DomWidget_Devolvable && devolves(s));
+        style->appearance =
+            usedAppearance(keyword, input.element, widget, widget == DomWidget_Devolvable && devolves(s));
         if ((conditions & (1u << style->appearance)) != 0) {
             s.appearance = style->appearance;
             cascade();
@@ -3231,8 +3227,10 @@ const CssComputedStyle* cssCascadeStyle(const CssRuleSet* set, CssStyleBuilder* 
     // Root-relative lengths in the root's own font size and line height are relative to the initial font.
     context.root = input.parent != nullptr ? input.rootFont : kCssInitialFontBases;
     context.parentWeight = input.parent != nullptr ? cssStyleFontWeight(input.parent) : 400;
-    context.parentColor =
-        input.parent != nullptr ? cssStyleColor(input.parent, kCssDefaultColorEnvironment) : PrColor{0, 0, 0, 1};
+    if (input.parent != nullptr)
+        context.parentColor = cssStyleColor(input.parent, kCssDefaultColorEnvironment);
+    else
+        context.parentColor = PrColor{0, 0, 0, 1};
     context.viewport = input.viewport;
     // Tracks whether this style reads the viewport. The scratch also records this for every style since it last forgot
     // the tree.
@@ -3241,8 +3239,7 @@ const CssComputedStyle* cssCascadeStyle(const CssRuleSet* set, CssStyleBuilder* 
     context.readsViewport = &s.readsViewport;
     // The font group comes first, because the lengths of the other groups are relative to its size and line height, and
     // so are the root's own root-relative lengths after them.
-    style->groups[CssStyleGroup_Font] =
-        computeGroup(builder, s, CssStyleGroup_Font, input, context, style->custom);
+    style->groups[CssStyleGroup_Font] = computeGroup(builder, s, CssStyleGroup_Font, input, context, style->custom);
     context.font.style = style;
     if (input.parent == nullptr)
         context.root.style = style;
@@ -3254,14 +3251,12 @@ const CssComputedStyle* cssCascadeStyle(const CssRuleSet* set, CssStyleBuilder* 
     mapFlowRelative(s, style, &readsFont);
     style->important = importantOf(s);
     context.readsFont = &readsFont;
-    style->groups[CssStyleGroup_Color] =
-        computeGroup(builder, s, CssStyleGroup_Color, input, context, style->custom);
+    style->groups[CssStyleGroup_Color] = computeGroup(builder, s, CssStyleGroup_Color, input, context, style->custom);
     style->groups[CssStyleGroup_Decoration] =
         computeGroup(builder, s, CssStyleGroup_Decoration, input, context, style->custom);
     style->groups[CssStyleGroup_Background] =
         computeGroup(builder, s, CssStyleGroup_Background, input, context, style->custom);
-    style->groups[CssStyleGroup_Effect] =
-        computeGroup(builder, s, CssStyleGroup_Effect, input, context, style->custom);
+    style->groups[CssStyleGroup_Effect] = computeGroup(builder, s, CssStyleGroup_Effect, input, context, style->custom);
     style->groups[CssStyleGroup_Compositing] =
         computeGroup(builder, s, CssStyleGroup_Compositing, input, context, style->custom);
     style->groups[CssStyleGroup_Animation] =
@@ -3281,10 +3276,9 @@ const CssComputedStyle* cssCascadeStyle(const CssRuleSet* set, CssStyleBuilder* 
     CssValueRun display = cssComputedValue(style, PrCssProperty_Display);
     bool single = display.count == 1 && display.values[0].kind == PrCssValueKind_Keyword;
     PrCssKeyword keyword = single ? cssValueKeyword(display.values) : PrCssKeyword_Count;
-    style->childrenAreItems = keyword == PrCssKeyword_Flex || keyword == PrCssKeyword_InlineFlex
-                              || keyword == PrCssKeyword_Grid || keyword == PrCssKeyword_InlineGrid
-                              || (keyword == PrCssKeyword_Contents && input.parent != nullptr
-                                  && input.parent->childrenAreItems);
+    style->childrenAreItems = keyword == PrCssKeyword_Flex || keyword == PrCssKeyword_InlineFlex ||
+        keyword == PrCssKeyword_Grid || keyword == PrCssKeyword_InlineGrid ||
+        (keyword == PrCssKeyword_Contents && input.parent != nullptr && input.parent->childrenAreItems);
     style->font = cssFontBases(context.font.em, context.font.lh);
     style->readsFontMetrics = metrics.readsFont;
     style->readsRootMetrics = metrics.readsRoot;
@@ -3318,8 +3312,11 @@ uint32_t cssCascadeOriginating(const CssRuleSet* set, CssCascadeScratch* scratch
             followed = true;
         }
         matchEach(set, s, element, *filed, [&](uint32_t entry) {
-            bool matches = tree != nullptr ? matchesEntry<true>(set, s, element, tree, entry, &filtered)
-                                           : matchesEntry<false>(set, s, element, nullptr, entry, &filtered);
+            bool matches;
+            if (tree != nullptr)
+                matches = matchesEntry<true>(set, s, element, tree, entry, &filtered);
+            else
+                matches = matchesEntry<false>(set, s, element, nullptr, entry, &filtered);
             if (matches)
                 originating |= 1u << set->entries.data[entry].pseudo;
             return !matches;
@@ -3342,8 +3339,11 @@ uint32_t cssCascadeGenerating(const CssRuleSet* set, CssCascadeScratch* scratch,
         uint32_t bit = 1u << set->entries.data[entry].pseudo;
         if ((generating & bit) != 0)
             return true;
-        bool matches = tree != nullptr ? matchesEntry<true>(set, s, element, tree, entry, &filtered)
-                                       : matchesEntry<false>(set, s, element, nullptr, entry, &filtered);
+        bool matches;
+        if (tree != nullptr)
+            matches = matchesEntry<true>(set, s, element, tree, entry, &filtered);
+        else
+            matches = matchesEntry<false>(set, s, element, nullptr, entry, &filtered);
         if (!matches)
             return true;
         generating |= bit;
@@ -3392,8 +3392,8 @@ void cssCascadeScratchReset(CssCascadeScratch* scratch) {
 }
 
 void cssStylePrepare(PrDomElement* element) {
-    if (domAttributeValue(element, "style").data != nullptr
-        && (element->style == nullptr || element->style->inlineStyle == nullptr))
+    if (domAttributeValue(element, "style").data != nullptr &&
+            (element->style == nullptr || element->style->inlineStyle == nullptr))
         cssElementInlineStyle(element);
     cssHints(element);
     cssSharedHintsPrepare(element);

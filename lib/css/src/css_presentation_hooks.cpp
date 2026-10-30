@@ -16,50 +16,41 @@ PrCssPresentation* presentationOf(void* PR_NULLABLE context) {
 // The changes to a document that its presentation follows. The presentation follows the nodes in the document, and none
 // other.
 constexpr DomDocumentHooks kDomHooks = {
-    .inserted =
-        [](void* PR_NULLABLE context, PrDomNode* node) {
-            if (domIsConnected(node))
-                cssPresentationInserted(presentationOf(context), node);
-        },
-    .removing =
-        [](void* PR_NULLABLE context, PrDomNode* node) {
-            if (domIsConnected(node))
-                cssPresentationRemoving(presentationOf(context), node);
-        },
-    .attributeChanged =
-        [](void* PR_NULLABLE context, PrDomElement* element, DomNamespaceId space, PrStringView name,
-           PrStringView oldValue, PrStringView value) {
+    .inserted = [](void* PR_NULLABLE context, PrDomNode* node) {
+        if (domIsConnected(node))
+            cssPresentationInserted(presentationOf(context), node);
+    },
+    .removing = [](void* PR_NULLABLE context, PrDomNode* node) {
+        if (domIsConnected(node))
+            cssPresentationRemoving(presentationOf(context), node);
+    },
+    .attributeChanged = [](void* PR_NULLABLE context, PrDomElement* element, DomNamespaceId space, PrStringView name,
+        PrStringView oldValue, PrStringView value) {
             if (domIsConnected(element))
                 cssPresentationAttributeChanged(presentationOf(context), element, space, name, oldValue, value);
         },
-    .dataChanged =
-        [](void* PR_NULLABLE context, PrDomNode* node) {
-            if (domIsConnected(node))
-                cssPresentationDataChanged(presentationOf(context), node);
-        },
-    .slotChanged =
-        [](void* PR_NULLABLE context, PrDomElement* slot, PrDomNode* const PR_NONNULL* PR_NULLABLE before,
-           uint32_t beforeCount) {
+    .dataChanged = [](void* PR_NULLABLE context, PrDomNode* node) {
+        if (domIsConnected(node))
+            cssPresentationDataChanged(presentationOf(context), node);
+    },
+    .slotChanged = [](void* PR_NULLABLE context, PrDomElement* slot, PrDomNode* const PR_NONNULL* PR_NULLABLE before,
+        uint32_t beforeCount) {
             if (domIsConnected(slot))
                 cssPresentationSlotChanged(presentationOf(context), slot, before, beforeCount);
         },
-    .shadowAttached =
-        [](void* PR_NULLABLE context, PrDomElement* host) {
-            if (domIsConnected(host))
-                cssPresentationShadowAttached(presentationOf(context), host);
-        },
-    .wheelListenersChanged =
-        [](void* PR_NULLABLE context, PrDomElement* element) {
-            if (domIsConnected(element))
-                cssPresentationWheelListenersChanged(presentationOf(context), element);
-        },
-    .statesChanged =
-        [](void* PR_NULLABLE context, PrDomElement* element) {
-            if (domIsConnected(element))
-                cssPresentationStatesChanged(presentationOf(context), element);
-        },
-    .metaChanged =
-        [](void* PR_NULLABLE context, PrDomDocument*) { cssPresentationMetaChanged(presentationOf(context)); },
+    .shadowAttached = [](void* PR_NULLABLE context, PrDomElement* host) {
+        if (domIsConnected(host))
+            cssPresentationShadowAttached(presentationOf(context), host);
+    },
+    .wheelListenersChanged = [](void* PR_NULLABLE context, PrDomElement* element) {
+        if (domIsConnected(element))
+            cssPresentationWheelListenersChanged(presentationOf(context), element);
+    },
+    .statesChanged = [](void* PR_NULLABLE context, PrDomElement* element) {
+        if (domIsConnected(element))
+            cssPresentationStatesChanged(presentationOf(context), element);
+    },
+    .metaChanged = [](void* PR_NULLABLE context, PrDomDocument*) { cssPresentationMetaChanged(presentationOf(context)); },
     .resourceLoaded =
         [](void* PR_NULLABLE context, PrDomDocument*) { cssPresentationResourceLoaded(presentationOf(context)); },
 };
@@ -67,20 +58,16 @@ constexpr DomDocumentHooks kDomHooks = {
 // The functions through which CSS reaches the presentation.
 constexpr CssPresentationHooks kCssHooks = {
     .styleChanged = [](void* context) { cssPresentationChanged(presentationOf(context)); },
-    .ruleChanged =
-        [](void* context, const CssRuleData* rule) { cssPresentationRuleChanged(presentationOf(context), rule); },
-    .colorContext =
-        [](void* context, const PrDomElement* element) {
-            return cssPresentationColorContext(presentationOf(context), element);
-        },
-    .styleCurrent =
-        [](void* context, const PrDomElement* element) {
-            return cssPresentationStyleCurrent(presentationOf(context), element);
-        },
-    .awaitsFontRequests =
-        [](const void* context) {
-            return cssPresentationAwaitsFontRequests(static_cast<const PrCssPresentation*>(context));
-        },
+    .ruleChanged = [](void* context, const CssRuleData* rule) { cssPresentationRuleChanged(presentationOf(context), rule); },
+    .colorContext = [](void* context, const PrDomElement* element) {
+        return cssPresentationColorContext(presentationOf(context), element);
+    },
+    .styleCurrent = [](void* context, const PrDomElement* element) {
+        return cssPresentationStyleCurrent(presentationOf(context), element);
+    },
+    .awaitsFontRequests = [](const void* context) {
+        return cssPresentationAwaitsFontRequests(static_cast<const PrCssPresentation*>(context));
+    },
 };
 
 // Returns the presentation of the node's document, if the node is in the document.
@@ -118,8 +105,7 @@ void cssPresentationElementContentChanged(PrDomElement* element) {
 }
 
 void cssPresentationStateMoved(PrDomElement* PR_NULLABLE from, PrDomElement* PR_NULLABLE to,
-                               const CssPseudoClass* states,
-                               uint32_t count) {
+        const CssPseudoClass* states, uint32_t count) {
     PrDomElement* any = from != nullptr ? from : to;
     PrCssPresentation* presentation = any != nullptr ? connectedPresentation(any) : nullptr;
     if (presentation == nullptr)

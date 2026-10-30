@@ -30,7 +30,7 @@ struct Stage {
 
     // Creates an element under `parent`, with a flex group if given.
     PrLayoutNode add(PrLayoutNode parent, const PrLayoutBoxStyle& box,
-                     const PrLayoutFlexStyle& flex = prLayoutFlexStyleDefault()) {
+            const PrLayoutFlexStyle& flex = prLayoutFlexStyleDefault()) {
         return f.element(parent, box, nullptr, nullptr, &font, &flex);
     }
     PrLayoutNode add(PrLayoutNode parent, const std::pair<PrLayoutBoxStyle, PrLayoutFlexStyle>& styled) {
@@ -110,8 +110,7 @@ struct TextStage : Stage {
     PrLayoutNode box(PrLayoutNode parent, float width, float height, PrLayoutNode before = kPrLayoutNodeNone) {
         PrLayoutBoxStyle style = block(height);
         style.width = prLayoutLengthPx(width);
-        PrLayoutNode node =
-            prLayoutNodeCreateElement(f.tree, kPrLayoutNodeNone, f.style(style, nullptr, nullptr, &ahem));
+        PrLayoutNode node = prLayoutNodeCreateElement(f.tree, kPrLayoutNodeNone, f.style(style, nullptr, nullptr, &ahem));
         prLayoutTreeInsert(f.tree, parent, node, before);
         return node;
     }
@@ -151,9 +150,9 @@ PrLayoutTreeStats stretchedLines(PrLayoutWritingMode mode, Fill fill) {
 
 // Returns the physical side of the block-start edge in `mode`.
 PrRectSide blockStartOf(PrLayoutWritingMode mode) {
-    return mode == PrLayoutWritingMode_HorizontalTb ? PrRectSide_Top
-           : mode == PrLayoutWritingMode_VerticalRl ? PrRectSide_Right
-                                                    : PrRectSide_Left;
+    if (mode == PrLayoutWritingMode_HorizontalTb)
+        return PrRectSide_Top;
+    return mode == PrLayoutWritingMode_VerticalRl ? PrRectSide_Right : PrRectSide_Left;
 }
 
 // Creates an inline box under `parent`, relatively positioned by `offset` from its block-start edge if given.
@@ -258,8 +257,8 @@ std::vector<PrLayoutNode> fixedItems(Stage& s, PrLayoutNode parent, std::vector<
 // Lays out a row `width` wide whose free space justify-content places, and returns the lefts of its items of `widths`,
 // relative to its own left.
 std::vector<float> justified(PrLayoutAlignment justify, std::vector<float> widths,
-                             PrLayoutFlexDirection direction = PrLayoutFlexDirection_Row, float width = 100,
-                             PrTextDirection inlineDirection = PrTextDirection_Ltr) {
+        PrLayoutFlexDirection direction = PrLayoutFlexDirection_Row, float width = 100,
+        PrTextDirection inlineDirection = PrTextDirection_Ltr) {
     Stage s;
     Styled row = flexBox(direction, width);
     row.second.justifyContent = justify;
@@ -280,7 +279,7 @@ PrLayoutAlignment safe(PrLayoutAlignment value) {
 
 // Returns the width of a row sized to `keyword` holding items of `styles`, each holding words of the widths given.
 float intrinsicWidth(PrLayoutLength keyword, std::vector<std::pair<Styled, std::vector<float>>> items,
-                     PrLayoutLength gap = prLayoutLengthNormal()) {
+        PrLayoutLength gap = prLayoutLengthNormal()) {
     Stage s;
     Styled row = flexBox(PrLayoutFlexDirection_Row);
     row.first.width = keyword;
@@ -354,7 +353,7 @@ float baselineTop(Styled styled, std::vector<float> heights) {
 // Returns the offset, from its container's border box, of an absolute 20px box styled by `child`, in a relative flex
 // container 100px square styled by `styled` and holding nothing else.
 PrVec2 staticOffset(Styled styled, Styled child = flexItem(0, 1, prLayoutLengthAuto()),
-                    PrTextDirection direction = PrTextDirection_Ltr) {
+        PrTextDirection direction = PrTextDirection_Ltr) {
     Stage s;
     styled.first.width = prLayoutLengthPx(100);
     styled.first.height = prLayoutLengthPx(100);
@@ -807,8 +806,10 @@ TEST_CASE("a text item keeps its layout while a sibling's change leaves its requ
 }
 
 TEST_CASE("a stretched item's lines are broken once, unless something on them reads its height") {
-    const PrLayoutWritingMode modes[] = {PrLayoutWritingMode_HorizontalTb, PrLayoutWritingMode_VerticalRl,
-                                         PrLayoutWritingMode_VerticalLr};
+    const PrLayoutWritingMode modes[] = {
+        PrLayoutWritingMode_HorizontalTb, PrLayoutWritingMode_VerticalRl,
+        PrLayoutWritingMode_VerticalLr,
+    };
     for (PrLayoutWritingMode mode : modes) {
         CAPTURE(int(mode));
         // Text, a fixed-size image and a span two inlines deep moved by a length: the stretched layout takes the lines
@@ -919,8 +920,10 @@ TEST_CASE("a stretched item's fixed-size image and scroll container are reused, 
 }
 
 TEST_CASE("the work of laying out a chain of flex containers grows linearly with its nodes") {
-    const Chain chains[] = {Chain_Columns,    Chain_Alternating, Chain_Wrapped,
-                            Chain_Percentages, Chain_Fitted,     Chain_Orthogonal, Chain_WrappedColumns};
+    const Chain chains[] = {
+        Chain_Columns,    Chain_Alternating, Chain_Wrapped,
+        Chain_Percentages, Chain_Fitted,     Chain_Orthogonal, Chain_WrappedColumns,
+    };
     for (Chain chain : chains) {
         CAPTURE(int(chain));
         CHECK(linear(chain, [](const Sweep& w) { return w.cold.blocksLaidOut; }));
@@ -965,10 +968,8 @@ TEST_CASE("justify-content places a line's free space, and its distributed value
     // start is the container's inline-start, the left, whichever way its items run. left is its line-left.
     CHECK(justified(PrLayoutAlignment_Start, {30, 30}, kReverse) == Lefts{30, 0});
     CHECK(justified(PrLayoutAlignment_End, {30, 30}, kReverse) == Lefts{70, 40});
-    CHECK(justified(PrLayoutAlignment_Left, {30, 30}, PrLayoutFlexDirection_Row, 100, PrTextDirection_Rtl)
-          == Lefts{30, 0});
-    CHECK(justified(PrLayoutAlignment_Right, {30, 30}, PrLayoutFlexDirection_Row, 100, PrTextDirection_Ltr)
-          == Lefts{40, 70});
+    CHECK(justified(PrLayoutAlignment_Left, {30, 30}, PrLayoutFlexDirection_Row, 100, PrTextDirection_Rtl) == Lefts{30, 0});
+    CHECK(justified(PrLayoutAlignment_Right, {30, 30}, PrLayoutFlexDirection_Row, 100, PrTextDirection_Ltr) == Lefts{40, 70});
 }
 
 TEST_CASE("left and right in a column are start, and end is its block-end, but in a vertical column are physical") {
@@ -1085,8 +1086,10 @@ TEST_CASE("a scroll container's scrollable overflow holds its flex items' margin
         s.layout();
         PrLayoutScrollInfo info{};
         REQUIRE(prLayoutNodeScrollInfo(s.f.tree, container, &info));
-        return PrRect{prLayoutUnitToPx(info.content.left), prLayoutUnitToPx(info.content.top),
-                      prLayoutUnitToPx(info.content.right), prLayoutUnitToPx(info.content.bottom)};
+        return PrRect{
+            prLayoutUnitToPx(info.content.left), prLayoutUnitToPx(info.content.top),
+            prLayoutUnitToPx(info.content.right), prLayoutUnitToPx(info.content.bottom),
+        };
     };
     CHECK(overflow(PrLayoutFlexDirection_Row, PrTextDirection_Ltr, PrRectSide_Right).right == 200.0f);
     CHECK(overflow(PrLayoutFlexDirection_Row, PrTextDirection_Ltr, PrRectSide_Bottom).bottom == 60.0f);
@@ -1118,8 +1121,10 @@ TEST_CASE("align-self places items in the line by their own start and end, and b
     PrLayoutNode containers[4];
     for (int i = 0; i < 4; ++i) {
         bool inRow = i % 2 == 0;
-        containers[i] = inRow ? s.f.element(s.root, row.first, nullptr, nullptr, &verticalRl, &row.second)
-                              : s.add(s.root, column);
+        if (inRow)
+            containers[i] = s.f.element(s.root, row.first, nullptr, nullptr, &verticalRl, &row.second);
+        else
+            containers[i] = s.add(s.root, column);
         Styled item = flexItem(0, 0, prLayoutLengthAuto());
         item.first.width = prLayoutLengthPx(30);
         item.first.height = prLayoutLengthPx(20);
@@ -1179,19 +1184,24 @@ TEST_CASE("a row's intrinsic sizes sum its items' contributions, which their fle
     PrLayoutLength minContent = prLayoutLengthMinContent();
     std::vector<float> five(5, 20);
     // I1: flexible items contribute their max-content sizes.
-    CHECK(intrinsicWidth(maxContent, {{flexItem(1, 1, prLayoutLengthPx(0)), five},
-                                      {flexItem(2, 1, prLayoutLengthPx(0)), five}}) == 200.0f);
+    CHECK(intrinsicWidth(maxContent, {
+        {flexItem(1, 1, prLayoutLengthPx(0)), five},
+        {flexItem(2, 1, prLayoutLengthPx(0)), five},
+    }) == 200.0f);
     // I2: an item that cannot grow is capped by its base, and the base of an item with an auto basis is its content.
     Styled capped = flexItem(0, 1, prLayoutLengthPx(200));
-    CHECK(intrinsicWidth(maxContent, {{capped, {20, 20, 10}}, {flexItem(0, 0, prLayoutLengthAuto()), {20, 20, 20, 20}}})
-          == 130.0f);
+    CHECK(intrinsicWidth(maxContent, {
+        {capped, {20, 20, 10}}, {flexItem(0, 0, prLayoutLengthAuto()), {20, 20, 20, 20,}},
+    }) == 130.0f);
     // I3: a maximum clamps the contribution.
     Styled clamped = flexItem(0, 0, prLayoutLengthAuto());
     clamped.first.maxWidth = prLayoutLengthPx(60);
     CHECK(intrinsicWidth(maxContent, {{clamped, five}, {flexItem(0, 0, prLayoutLengthAuto()), {20, 20}}}) == 100.0f);
     // I4: min-content contributions.
-    CHECK(intrinsicWidth(minContent, {{flexItem(1, 1, prLayoutLengthPx(100)), five},
-                                      {flexItem(1, 1, prLayoutLengthPx(100)), {40, 40, 40}}}) == 60.0f);
+    CHECK(intrinsicWidth(minContent, {
+        {flexItem(1, 1, prLayoutLengthPx(100)), five},
+        {flexItem(1, 1, prLayoutLengthPx(100)), {40, 40, 40}},
+    }) == 60.0f);
     // I6: a single line's gaps.
     Styled fixed = flexItem(0, 0, prLayoutLengthAuto());
     CHECK(intrinsicWidth(maxContent, {{fixed, {30}}, {fixed, {30}}, {fixed, {30}}}, prLayoutLengthPx(10)) == 110.0f);
@@ -1695,7 +1705,7 @@ TEST_CASE("an inline-flex box aligns by its first baseline on a line, and an inl
 
 TEST_CASE("a child out of flow is placed statically as the container's sole item would be") {
     auto with = [](PrLayoutFlexDirection direction, PrLayoutAlignment justify, PrLayoutAlignment align,
-                   PrLayoutFlexWrap wrap = PrLayoutFlexWrap_NoWrap) {
+            PrLayoutFlexWrap wrap = PrLayoutFlexWrap_NoWrap) {
         Styled styled = flexBox(direction);
         styled.second.justifyContent = justify;
         styled.second.alignItems = align;
@@ -1721,8 +1731,7 @@ TEST_CASE("a child out of flow is placed statically as the container's sole item
     centred.second.alignSelf = PrLayoutAlignment_Center;
     CHECK(staticOffset(with(PrLayoutFlexDirection_Row, kNormal, kNormal), centred).y == 40.0f);
     CHECK(staticOffset(with(PrLayoutFlexDirection_Row, kNormal, kNormal), flexItem(0, 1, prLayoutLengthAuto()),
-                       PrTextDirection_Rtl)
-              .x == 80.0f);
+        PrTextDirection_Rtl) .x == 80.0f);
     // A centered box wider than the container overflows it on both sides. A box with an inset is placed by the inset.
     Styled wide = flexItem(0, 1, prLayoutLengthAuto());
     wide.first.width = prLayoutLengthPx(200);

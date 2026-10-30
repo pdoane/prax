@@ -245,8 +245,7 @@ bool isTrustworthy(const PrUrl* url) {
     if (scheme == "data" || scheme == "https" || scheme == "wss" || scheme == "file")
         return true;
     PrStringView host = prUrlHost(url);
-    return host == "[::1]" || stringStartsWith(host, "127.") || host == "localhost"
-           || asciiEndsWithFold(host, ".localhost");
+    return host == "[::1]" || stringStartsWith(host, "127.") || host == "localhost" || asciiEndsWithFold(host, ".localhost");
 }
 
 // Returns true if the URL's scheme is local (fetch/#local-scheme), which a referrer never names.
@@ -487,8 +486,7 @@ bool appendBody(BuiltinFetch* fetch, PrByteView bytes, bool final) {
             uint32_t at = fetch->content.count;
             fetch->content.resize(at + kChunkBytes);
             PrCompressRead read{};
-            PrStatus status = prCompressDecoderRead(fetch->decoder, bytes, final, fetch->content.data + at,
-                                                    kChunkBytes, &read);
+            PrStatus status = prCompressDecoderRead(fetch->decoder, bytes, final, fetch->content.data + at, kChunkBytes, &read);
             fetch->content.resize(at + uint32_t(read.written));
             if (status != PrStatus_Ok) {
                 decoded = false;
@@ -526,8 +524,8 @@ void store(BuiltinFetch* fetch, PrByteView body) {
     for (uint32_t i = 0; i < fetch->response.names.count; ++i) {
         PrStringView name = prStringView(&fetch->response.names.data[i]);
         // The body is stored decoded, so the headers that describe its encoding on the wire do not apply to it.
-        if (asciiEqualsFold(name, "content-encoding") || asciiEqualsFold(name, "content-length")
-            || asciiEqualsFold(name, "transfer-encoding"))
+        if (asciiEqualsFold(name, "content-encoding") || asciiEqualsFold(name, "content-length") ||
+                asciiEqualsFold(name, "transfer-encoding"))
             continue;
         response.headers.push(PrFetchHeader{name, prStringView(&fetch->response.values.data[i])});
     }
@@ -547,7 +545,7 @@ void store(BuiltinFetch* fetch, PrByteView body) {
     fetchCacheWrite(&response, &record);
     PrStringView bytes = textView(&record);
     prStorageWrite(fetcher->cache, prStringView(&fetch->url),
-                   PrByteView{reinterpret_cast<const uint8_t*>(bytes.data), bytes.size});
+        PrByteView{reinterpret_cast<const uint8_t*>(bytes.data), bytes.size});
     textReset(&record);
     fetchCachedResponseReset(&response);
 }
@@ -623,12 +621,11 @@ bool followRedirect(BuiltinFetch* fetch) {
     PrString baseOrigin = prUrlOrigin(base);
     PrString nextOrigin = prUrlOrigin(next);
     bool credentialed = prUrlUsername(next).size != 0 || prUrlPassword(next).size != 0;
-    bool blocked = fetch->mode == PrFetchMode_Cors && credentialed
-                   && (fetch->tainting == PrFetchResponseType_Cors
-                       || !isSameOrigin(prStringView(&nextOrigin), prStringView(&fetch->origin)));
+    bool blocked = fetch->mode == PrFetchMode_Cors && credentialed && (fetch->tainting == PrFetchResponseType_Cors ||
+        !isSameOrigin(prStringView(&nextOrigin), prStringView(&fetch->origin)));
     // A redirect from another origin to a third taints the request's origin.
-    if (!isSameOrigin(prStringView(&nextOrigin), prStringView(&baseOrigin))
-        && !isSameOrigin(prStringView(&fetch->origin), prStringView(&baseOrigin)))
+    if (!isSameOrigin(prStringView(&nextOrigin), prStringView(&baseOrigin)) &&
+            !isSameOrigin(prStringView(&fetch->origin), prStringView(&baseOrigin)))
         fetch->taintedOrigin = true;
     prStringReset(&baseOrigin);
     prStringReset(&nextOrigin);
@@ -644,8 +641,8 @@ bool followRedirect(BuiltinFetch* fetch) {
     prUrlDestroy(next);
     // A 303, or a 301 or 302 of a POST, is followed with a GET and no body.
     PrStringView method = prStringView(&fetch->method);
-    if ((fetch->status == 303 && method != "GET" && method != "HEAD")
-        || ((fetch->status == 301 || fetch->status == 302) && method == "POST")) {
+    if ((fetch->status == 303 && method != "GET" && method != "HEAD") ||
+            ((fetch->status == 301 || fetch->status == 302) && method == "POST")) {
         prStringReplace(&fetch->method, "GET");
         prStringReset(&fetch->body);
     }
@@ -737,7 +734,7 @@ void request(BuiltinFetch* fetch, const PrUrl* current) {
     headersClear(&fetch->sent);
     for (uint32_t i = 0; i < fetch->requestHeaders.names.count; ++i)
         headersAdd(&fetch->sent, prStringView(&fetch->requestHeaders.names.data[i]),
-                   prStringView(&fetch->requestHeaders.values.data[i]));
+            prStringView(&fetch->requestHeaders.values.data[i]));
     if (!prStringIsNull(&fetch->referrer))
         headersAdd(&fetch->sent, "Referer", prStringView(&fetch->referrer));
     appendOriginHeader(fetch, current);
@@ -827,7 +824,7 @@ void answerRevalidated(BuiltinFetch* fetch, PrHttpExchange* exchange) {
     answerFromCache(fetch, &entry);
     PrStringView bytes = textView(&record);
     prStorageWrite(fetcher->cache, prStringView(&fetch->url),
-                   PrByteView{reinterpret_cast<const uint8_t*>(bytes.data), bytes.size});
+        PrByteView{reinterpret_cast<const uint8_t*>(bytes.data), bytes.size});
     textReset(&record);
     fetchCachedResponseReset(&entry);
     headersReset(&merged);
@@ -873,9 +870,9 @@ void receiveResponse(BuiltinFetch* fetch, PrHttpExchange* exchange) {
     }
     Array<PrFetchHeader> received{};
     headersView(&fetch->response, &received);
-    bool storable = fetcher->cache != nullptr && prStringView(&fetch->method) == "GET"
-                    && fetchCacheIsStorable(fetch->status, received.data, received.count)
-                    && !fetchCacheControlFromHeaders(received.data, received.count).noStore;
+    bool storable = fetcher->cache != nullptr && prStringView(&fetch->method) == "GET" &&
+        fetchCacheIsStorable(fetch->status, received.data, received.count) &&
+        !fetchCacheControlFromHeaders(received.data, received.count).noStore;
     received.reset();
     if (isRedirect(fetch->status) && fetch->redirect != PrFetchRedirect_Manual) {
         // A redirect's body is not read, so the cache stores it without one.
@@ -968,9 +965,9 @@ void receivePreflight(BuiltinFetch* fetch, PrHttpExchange* exchange) {
     uint16_t status = prHttpExchangeStatus(exchange);
     Array<PrStringView> methods{};
     Array<PrStringView> allowedHeaders{};
-    bool allowed = status >= 200 && status < 300 && passesCors(fetch, &received)
-                   && headerTokens(&received, "access-control-allow-methods", &methods)
-                   && headerTokens(&received, "access-control-allow-headers", &allowedHeaders);
+    bool allowed = status >= 200 && status < 300 && passesCors(fetch, &received) &&
+        headerTokens(&received, "access-control-allow-methods", &methods) &&
+        headerTokens(&received, "access-control-allow-headers", &allowedHeaders);
     if (allowed && !prFetchIsCorsSafelistedMethod(prStringView(&fetch->method)))
         allowed = allowsMethod(fetch, methods);
     Array<PrString> names{};
@@ -1003,8 +1000,8 @@ void fetchCurrent(BuiltinFetch* fetch) {
     PrUrl* current = nullptr;
     prUrlCreate(prStringView(&fetch->url), nullptr, PrCharset_Utf8, &current);
     determineReferrer(fetch, current);
-    bool basic = fetch->mode == PrFetchMode_Navigate
-                 || (fetch->tainting == PrFetchResponseType_Basic && isSameOriginAs(fetch, current));
+    bool basic = fetch->mode == PrFetchMode_Navigate ||
+        (fetch->tainting == PrFetchResponseType_Basic && isSameOriginAs(fetch, current));
     if (basic) {
         request(fetch, current);
     } else if (fetch->mode == PrFetchMode_SameOrigin) {
@@ -1171,9 +1168,8 @@ void start(void* PR_NULLABLE context) {
     if (!fetch->dead) {
         if (fetch->local)
             answerLocally(fetch);
-        else if (fetcherOf(fetch)->http != nullptr
-                 && (asciiStartsWithFold(prStringView(&fetch->url), "http:")
-                     || asciiStartsWithFold(prStringView(&fetch->url), "https:")))
+        else if (fetcherOf(fetch)->http != nullptr && (asciiStartsWithFold(prStringView(&fetch->url), "http:") ||
+                asciiStartsWithFold(prStringView(&fetch->url), "https:")))
             fetchCurrent(fetch);
         else
             fail(fetch, PrNetError_Protocol);
@@ -1203,8 +1199,8 @@ PrStatus createFetch(PrFetchNetwork* base, const PrFetchRequestDesc* desc, PrFet
     if (prUrlCreate(desc->url, nullptr, PrCharset_Utf8, &url) != PrStatus_Ok)
         return PrStatus_InvalidData;
     PrUrl* referrer = nullptr;
-    if (desc->referrer.data != nullptr
-        && prUrlCreate(desc->referrer, nullptr, PrCharset_Utf8, &referrer) != PrStatus_Ok) {
+    if (desc->referrer.data != nullptr &&
+            prUrlCreate(desc->referrer, nullptr, PrCharset_Utf8, &referrer) != PrStatus_Ok) {
         prUrlDestroy(url);
         return PrStatus_InvalidData;
     }
@@ -1267,8 +1263,10 @@ uint32_t fetchHeaderCount(const PrFetchNetwork*, const PrFetch* handle) {
 
 PrFetchHeader fetchHeader(const PrFetchNetwork*, const PrFetch* handle, uint32_t index) {
     const BuiltinFetch* fetch = static_cast<const BuiltinFetch*>(handle);
-    return PrFetchHeader{prStringView(&fetch->response.names.data[index]),
-                         prStringView(&fetch->response.values.data[index])};
+    return PrFetchHeader{
+        prStringView(&fetch->response.names.data[index]),
+        prStringView(&fetch->response.values.data[index]),
+    };
 }
 
 size_t fetchRead(PrFetchNetwork* base, PrFetch* handle, uint8_t* output, size_t capacity) {
@@ -1316,8 +1314,8 @@ PrFetchNetwork* prFetchBuiltinCreate(const PrFetchNetworkDesc* desc) {
     fetcher->http = desc->http;
     fetcher->compress = desc->compress;
     fetcher->cache = desc->cache;
-    fetcher->userAgentStorage = prStringCopy(desc->userAgent.data != nullptr ? desc->userAgent
-                                                                             : PrStringView{kPrFetchDefaultUserAgent});
+    PrStringView userAgent = desc->userAgent.data == nullptr ? kPrFetchDefaultUserAgent : desc->userAgent;
+    fetcher->userAgentStorage = prStringCopy(userAgent);
     fetcher->userAgent = prStringView(&fetcher->userAgentStorage);
     return fetcher;
 }

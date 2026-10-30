@@ -22,8 +22,7 @@ int prTestKitCApi(void) {
     PrKitTheme theme = prKitThemeStudio(PrKitThemeVariant_Light, NULL);
     PrKit* kit = prKitCreate(ui, &theme);
     PrKitPlace place = {.width = prKitPx(10), .height = prKitFill()};
-    int result = place.width.kind != PrKitSizeKind_Px
-                 || prKitTheme(kit)->types[PrKitTextRole_Caption].mono != true;
+    int result = place.width.kind != PrKitSizeKind_Px || prKitTheme(kit)->types[PrKitTextRole_Caption].mono != true;
     prKitDestroy(kit);
     prUiDestroy(ui);
     prLayoutTreeDestroy(tree);

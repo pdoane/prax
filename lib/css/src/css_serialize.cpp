@@ -110,8 +110,7 @@ bool isPlainName(PrStringView text, bool firstPosition) {
 bool isPlainString(PrStringView text) {
     for (uint32_t i = 0; i < text.size; ++i) {
         char c = text.data[i];
-        if ((kCssByte.of[uint8_t(c)] & (CssByteFlag_Decode | CssByteFlag_Control)) != 0 || c == '"'
-            || c == '\\') {
+        if ((kCssByte.of[uint8_t(c)] & (CssByteFlag_Decode | CssByteFlag_Control)) != 0 || c == '"' || c == '\\') {
             return false;
         }
     }
@@ -169,8 +168,7 @@ void serializeUnit(TextBuffer* out, CodePoints value, bool verbatim) {
         uint32_t second = 0;
         uint32_t third = 0;
         if (!(next(&after, &second) && asciiIsDigit(asciiOf(second)))) {
-            exponent = second == '-' && next(&after, &third)
-                    && asciiIsDigit(asciiOf(third));
+            exponent = second == '-' && next(&after, &third) && asciiIsDigit(asciiOf(third));
         }
     }
     if (!exponent) {
@@ -212,8 +210,7 @@ void serializeUrlValue(TextBuffer* out, CodePoints value) {
     while (next(&value, &codePoint)) {
         if (cssIsControl(codePoint) || codePoint == ' ') {
             appendHexEscape(out, codePoint);
-        } else if (codePoint == '"' || codePoint == '\'' || codePoint == '(' || codePoint == ')'
-                   || codePoint == '\\') {
+        } else if (codePoint == '"' || codePoint == '\'' || codePoint == '(' || codePoint == ')' || codePoint == '\\') {
             textAppendChar(out, '\\');
             textAppendChar(out, char(codePoint));
         } else {
@@ -241,19 +238,17 @@ bool tokenIsVerbatim(const CssTokenStream* ts, uint32_t index) {
 
 // Returns the code point that a delim token holds, or 0 for any other token. needsComment uses it to recognize pairs.
 uint32_t delimOf(const CssTokenStream* ts, uint32_t index) {
-    return cssTokenKind(ts->tokens, index) == CssTokenKind_Delim ? cssTokenDelim(ts->tokens, index)
-                                                            : 0;
+    return cssTokenKind(ts->tokens, index) == CssTokenKind_Delim ? cssTokenDelim(ts->tokens, index) : 0;
 }
 
 // Returns true if a token of `type` starts with an identifier.
 bool startsWithIdent(CssTokenKind type) {
-    return type == CssTokenKind_Ident || type == CssTokenKind_Function || type == CssTokenKind_Url
-        || type == CssTokenKind_BadUrl;
+    return type == CssTokenKind_Ident || type == CssTokenKind_Function || type == CssTokenKind_Url ||
+        type == CssTokenKind_BadUrl;
 }
 
 bool isNumeric(CssTokenKind type) {
-    return type == CssTokenKind_Number || type == CssTokenKind_Percentage
-           || type == CssTokenKind_Dimension;
+    return type == CssTokenKind_Number || type == CssTokenKind_Percentage || type == CssTokenKind_Dimension;
 }
 
 // Returns true if the two tokens form a pair that would read back as one token with nothing between them
@@ -264,16 +259,15 @@ bool needsComment(const CssTokenStream* ts, uint32_t first, uint32_t second) {
     uint32_t delimA = delimOf(ts, first);
     uint32_t delimB = delimOf(ts, second);
 
-    bool name = a == CssTokenKind_Ident || a == CssTokenKind_AtKeyword || a == CssTokenKind_Hash
-             || a == CssTokenKind_Dimension || delimA == '#' || delimA == '-';
+    bool name = a == CssTokenKind_Ident || a == CssTokenKind_AtKeyword || a == CssTokenKind_Hash ||
+        a == CssTokenKind_Dimension || delimA == '#' || delimA == '-';
     if (name && (startsWithIdent(b) || isNumeric(b) || b == CssTokenKind_Cdc || delimB == '-'))
         return true;
     if (a == CssTokenKind_Ident && b == CssTokenKind_OpenParen)
         return true;
     if (delimA == '@' && (startsWithIdent(b) || b == CssTokenKind_Cdc || delimB == '-'))
         return true;
-    if (a == CssTokenKind_Number
-        && (startsWithIdent(b) || isNumeric(b) || b == CssTokenKind_Cdc || delimB == '%'))
+    if (a == CssTokenKind_Number && (startsWithIdent(b) || isNumeric(b) || b == CssTokenKind_Cdc || delimB == '%'))
         return true;
     if ((delimA == '.' || delimA == '+') && isNumeric(b))
         return true;
@@ -297,13 +291,13 @@ struct Values {
 // Returns true if a space goes between `before` and `after`. No space goes before a ',', a ':' or a closing bracket,
 // between the name and the '(' of a <function-token>, or after an opening bracket, a '!' or a '@'.
 bool spaced(const CssValueNode* before, const CssValueNode* after) {
-    if (cssValueIsLiteral(after, ',') || cssValueIsLiteral(after, ':')
-        || cssValueIsLiteral(after, ')') || cssValueIsLiteral(after, ']'))
+    if (cssValueIsLiteral(after, ',') || cssValueIsLiteral(after, ':') ||
+            cssValueIsLiteral(after, ')') || cssValueIsLiteral(after, ']'))
         return false;
     if (before->kind == PrCssValueKind_Ident && cssValueIsLiteral(after, '('))
         return false;
-    return !cssValueIsLiteral(before, '(') && !cssValueIsLiteral(before, '[')
-           && !cssValueIsLiteral(before, '!') && !cssValueIsLiteral(before, '@');
+    return !cssValueIsLiteral(before, '(') && !cssValueIsLiteral(before, '[') &&
+        !cssValueIsLiteral(before, '!') && !cssValueIsLiteral(before, '@');
 }
 
 void serializeValue(const Values* v, uint32_t index, CssValueDef parent);
@@ -351,8 +345,8 @@ void serializeMediaQuery(const Values* v, uint32_t index) {
         return;
     }
     const CssValueNode* type = &values[first];
-    if (cssValueIsProduction(type, CssValueDef_MediaType) && first + type->next < end
-        && asciiEqualsFold(cssValueText(v->run, &values[first + 1]), "all")) {
+    if (cssValueIsProduction(type, CssValueDef_MediaType) && first + type->next < end &&
+            asciiEqualsFold(cssValueText(v->run, &values[first + 1]), "all")) {
         first += type->next;
         first += values[first].next;     // `and`
     }
@@ -414,8 +408,8 @@ void serializeLegacyColor(const Values* v, PrColorSpace space, const CssColorCha
         c[i] = channelValue(v, channels, i);
     double channel[3] = {c[0], c[1], c[2]};
     if (space != PrColorSpace_Srgb) {
-        PrColor rgb = space == PrColorSpace_Hsl ? prColorFromHsl(c[0], c[1], c[2], c[3])
-                                                : prColorFromHwb(c[0], c[1], c[2], c[3]);
+        PrColor rgb =
+            space == PrColorSpace_Hsl ? prColorFromHsl(c[0], c[1], c[2], c[3]) : prColorFromHwb(c[0], c[1], c[2], c[3]);
         channel[0] = double(rgb.r);
         channel[1] = double(rgb.g);
         channel[2] = double(rgb.b);
@@ -437,8 +431,7 @@ void serializeLegacyColor(const Values* v, PrColorSpace space, const CssColorCha
 // Writes a color in the modern form of its function (css-color-4/#serializing-color-values). The function is the one
 // named for the color's space if there is one, rgb() for rgb() and rgba(), and color() for the rest. The channels are
 // in the space's units, and the alpha is written if it is not 1.
-void serializeModernColor(const Values* v, PrColorSpace space, bool legacy,
-                          const CssColorChannels& channels) {
+void serializeModernColor(const Values* v, PrColorSpace space, bool legacy, const CssColorChannels& channels) {
     PrStringView name = prColorSpaceName(space);
     PrColorModel model = prColorSpaceModel(space);
     if (legacy) {
@@ -494,9 +487,7 @@ void serializeNumeric(TextBuffer* out, const CssValueNode* value) {
         textAppend(out, unit);
         return;
     }
-    textAppend(out, isNanF64(number) ? "NaN"
-                    : number > 0     ? "infinity"
-                                     : "-infinity");
+    textAppend(out, isNanF64(number) ? "NaN" : number > 0     ? "infinity" : "-infinity");
     if (unit.size != 0) {
         textAppend(out, " * 1");
         textAppend(out, unit);
@@ -587,8 +578,7 @@ uint32_t nextSorted(const Values* v, uint32_t index, uint32_t after) {
     uint32_t end = index + v->run.values[index].next;
     uint32_t best = end;
     for (uint32_t i = index + 1; i < end; i += v->run.values[i].next) {
-        if ((after == index || sortsBefore(v, after, i))
-            && (best == end || sortsBefore(v, i, best)))
+        if ((after == index || sortsBefore(v, after, i)) && (best == end || sortsBefore(v, i, best)))
             best = i;
     }
     return best;
@@ -628,8 +618,7 @@ void serializeTree(const Values* v, uint32_t index) {
         serializeNumeric(v->out, node);
         return;
     }
-    if (node->kind == PrCssValueKind_Function
-        && cssMathFunction(cssValueKeyword(node)) != CssValueDef_Count) {
+    if (node->kind == PrCssValueKind_Function && cssMathFunction(cssValueKeyword(node)) != CssValueDef_Count) {
         serializeMathNode(v, index);
         return;
     }
@@ -658,15 +647,13 @@ void serializeTree(const Values* v, uint32_t index) {
 void serializeMath(const Values* v, uint32_t index) {
     uint32_t root = index + 1;
     const CssValueNode* node = &v->run.values[root];
-    if (node->kind == PrCssValueKind_Function
-        && cssMathFunction(cssValueKeyword(node)) != CssValueDef_Count) {
+    if (node->kind == PrCssValueKind_Function && cssMathFunction(cssValueKeyword(node)) != CssValueDef_Count) {
         serializeMathNode(v, root);
         return;
     }
     // A leaf that is not a number, such as anchor(), is written without calc(). A relative color's component keyword is
     // a number that the origin color decides.
-    if (node->kind != PrCssValueKind_Calc && !cssValueIsNumeric(node->kind)
-        && node->kind != PrCssValueKind_Keyword) {
+    if (node->kind != PrCssValueKind_Calc && !cssValueIsNumeric(node->kind) && node->kind != PrCssValueKind_Keyword) {
         serializeValue(v, root, CssValueDef_Count);
         return;
     }
@@ -750,7 +737,7 @@ void serializeValue(const Values* v, uint32_t index, CssValueDef parent) {
                 serializeMediaQuery(v, index);
             else if (cssValueProduction(value) == CssValueDef_ANPlusB)
                 cssSerializeNth(v->out, int32_t(v->run.values[index + 1].number),
-                                int32_t(v->run.values[index + 2].number));
+                    int32_t(v->run.values[index + 2].number));
             else
                 serializeRun(v, index + 1, index + value->next, cssValueProduction(value));
             break;
@@ -856,7 +843,7 @@ void cssSerializeValues(TextBuffer* out, CssValueRun run) {
 }
 
 void cssSerializePreludeValues(TextBuffer* out, CssValueRun run, bool urls,
-                               const PrCssSelectors* PR_NULLABLE selectors, uint32_t first) {
+        const PrCssSelectors* PR_NULLABLE selectors, uint32_t first) {
     Values v = {out, run, urls, selectors, &first};
     serializeRun(&v, 0, run.count, CssValueDef_Count);
 }

@@ -42,8 +42,10 @@ constexpr TreeSeed kTreeSeeds[] = {
     {"player.script", "", "A", 1, PrKitIconKind_None, PrKitTone_Success, false, false},
     {"old_sky.mat", "", "D", 1, PrKitIconKind_None, PrKitTone_Danger, false, false},
     {"level_01.scene", "was level_1.scene", "R", 1, PrKitIconKind_None, PrKitTone_Accent, false, false},
-    {"a_very_long_component_name_that_overflows_the_row.scene", "+128 -64", "M", 1, PrKitIconKind_None,
-     PrKitTone_Warning, false, false},
+    {
+        "a_very_long_component_name_that_overflows_the_row.scene", "+128 -64", "M", 1, PrKitIconKind_None,
+        PrKitTone_Warning, false, false,
+    },
 };
 
 // Returns one past the last node of the subtree at `start`.
@@ -120,12 +122,16 @@ constexpr AssetKind kAssetKinds[] = {
 };
 
 // The words of the generated assets' names.
-constexpr const char* kAssetQualifiers[] = {"rusty",  "oak",      "granite", "coastal",   "ruined", "gilded",
-                                            "frozen", "scorched", "hollow",  "salvaged",  "painted", "weathered",
-                                            "brass",  "crimson",  "quiet",   "distant"};
-constexpr const char* kAssetNouns[] = {"crate",  "bulkhead", "banner", "lantern",  "girder", "console",
-                                       "statue", "barrel",   "hatch",  "railing",  "terminal", "pillar",
-                                       "canopy", "beacon",   "bridge", "workbench"};
+constexpr const char* kAssetQualifiers[] = {
+    "rusty",  "oak",      "granite", "coastal",   "ruined", "gilded",
+    "frozen", "scorched", "hollow",  "salvaged",  "painted", "weathered",
+    "brass",  "crimson",  "quiet",   "distant",
+};
+constexpr const char* kAssetNouns[] = {
+    "crate",  "bulkhead", "banner", "lantern",  "girder", "console",
+    "statue", "barrel",   "hatch",  "railing",  "terminal", "pillar",
+    "canopy", "beacon",   "bridge", "workbench",
+};
 
 // A generator whose sequence is the same on every run, so that the collection is too.
 struct AssetRandom {
@@ -175,8 +181,10 @@ void seedCollections(CollectionsState& collections) {
         asset.sizeBytes = 64ull + random.next() % (1ull << magnitude);
         asset.sizeText = sizeLabel(asset.sizeBytes);
         uint64_t tint = random.next();
-        asset.tint = PrColor{0.27f + float(tint & 0x6f) / 512.0f, 0.27f + float((tint >> 8) & 0x6f) / 512.0f,
-                             0.27f + float((tint >> 16) & 0x6f) / 512.0f, 1.0f};
+        asset.tint = PrColor{
+            0.27f + float(tint & 0x6f) / 512.0f, 0.27f + float((tint >> 8) & 0x6f) / 512.0f,
+            0.27f + float((tint >> 16) & 0x6f) / 512.0f, 1.0f,
+        };
         collections.assets.push_back(asset);
     }
 }
@@ -220,39 +228,60 @@ void seedTimeline(TimelineState& timeline) {
     for (const char* name : kTrackSeeds)
         timeline.tracks.push_back(PrKitTimelineTrack{.name = name});
     for (const BlockSeed& seed : kBlockSeeds) {
-        timeline.blocks.push_back(PrKitTimelineBlock{.id = timeline.nextId++,
-                                                     .track = seed.track,
-                                                     .start = seed.start,
-                                                     .duration = seed.duration,
-                                                     .color = seed.color,
-                                                     .label = seed.label});
+        timeline.blocks.push_back(PrKitTimelineBlock{
+            .id = timeline.nextId++,
+            .track = seed.track,
+            .start = seed.start,
+            .duration = seed.duration,
+            .color = seed.color,
+            .label = seed.label,
+        });
     }
     for (float time : kMarkerSeeds)
         timeline.markers.push_back(PrKitTimelineMarker{.track = 3, .time = time, .color = {.86f, .38f, .38f, 1}});
 }
 
 // The ports of the graph's nodes.
-constexpr PrKitGraphPort kSamplerOut[] = {{.id = 1, .type = PortType_Color, .label = "rgb"},
-                                          {.id = 2, .type = PortType_Scalar, .label = "alpha"}};
+constexpr PrKitGraphPort kSamplerOut[] = {
+    {.id = 1, .type = PortType_Color, .label = "rgb"},
+    {.id = 2, .type = PortType_Scalar, .label = "alpha"},
+};
 constexpr PrKitGraphPort kNoiseOut[] = {{.id = 1, .type = PortType_Scalar, .label = "value"}};
-constexpr PrKitGraphPort kBlendIn[] = {{.id = 1, .type = PortType_Color, .label = "a"},
-                                       {.id = 2, .type = PortType_Color, .label = "b"},
-                                       {.id = 3, .type = PortType_Scalar, .label = "mix"}};
+constexpr PrKitGraphPort kBlendIn[] = {
+    {.id = 1, .type = PortType_Color, .label = "a"},
+    {.id = 2, .type = PortType_Color, .label = "b"},
+    {.id = 3, .type = PortType_Scalar, .label = "mix"},
+};
 constexpr PrKitGraphPort kBlendOut[] = {{.id = 1, .type = PortType_Color, .label = "out"}};
-constexpr PrKitGraphPort kSurfaceIn[] = {{.id = 1, .type = PortType_Color, .label = "color"},
-                                         {.id = 2, .type = PortType_Scalar, .label = "opacity"},
-                                         {.id = 3, .type = PortType_Vector, .label = "normal"}};
+constexpr PrKitGraphPort kSurfaceIn[] = {
+    {.id = 1, .type = PortType_Color, .label = "color"},
+    {.id = 2, .type = PortType_Scalar, .label = "opacity"},
+    {.id = 3, .type = PortType_Vector, .label = "normal"},
+};
 
 void seedGraph(GraphState& graph) {
     graph.nodes = {
-        {.id = 1, .position = {24, 36}, .title = "Sampler", .meta = "texture2d",
-         .outputs = kSamplerOut, .outputCount = 2},
-        {.id = 2, .position = {40, 190}, .title = "Noise", .meta = "generator",
-         .outputs = kNoiseOut, .outputCount = 1},
-        {.id = 3, .position = {270, 96}, .title = "Blend", .meta = "mix", .inputs = kBlendIn,
-         .inputCount = 3, .outputs = kBlendOut, .outputCount = 1, .bodyHeight = 28},
-        {.id = 4, .position = {510, 130}, .title = "Surface", .meta = "output",
-         .inputs = kSurfaceIn, .inputCount = 3},
+        {
+            .id = 1,
+            .position = {24, 36},
+            .title = "Sampler",
+            .meta = "texture2d",
+            .outputs = kSamplerOut,
+            .outputCount = 2,
+        },
+        {.id = 2, .position = {40, 190}, .title = "Noise", .meta = "generator", .outputs = kNoiseOut, .outputCount = 1},
+        {
+            .id = 3,
+            .position = {270, 96},
+            .title = "Blend",
+            .meta = "mix",
+            .inputs = kBlendIn,
+            .inputCount = 3,
+            .outputs = kBlendOut,
+            .outputCount = 1,
+            .bodyHeight = 28,
+        },
+        {.id = 4, .position = {510, 130}, .title = "Surface", .meta = "output", .inputs = kSurfaceIn, .inputCount = 3},
     };
     graph.wires = {
         {.id = graph.nextWireId++, .link = {.fromNode = 1, .fromPort = 1, .toNode = 3, .toPort = 1}},
@@ -265,11 +294,11 @@ void seedGraph(GraphState& graph) {
 
 GalleryState::GalleryState() {
     inputs.prose = "Soft wrap breaks this paragraph at the field width, so the caret, the selection bands and Up and "
-                   "Down all follow the visual lines rather than the single line the text is. Double-click a word, "
-                   "triple-click the line, and hold the drag to grow the selection by that unit.";
+        "Down all follow the visual lines rather than the single line the text is. Double-click a word, "
+        "triple-click the line, and hold the drag to grow the selection by that unit.";
     inputs.snippet = "vec3 n = normalize(worldNormal);\n"
-                     "float d = dot(n, lightDir);\n"
-                     "return baseColor * max(d, 0.0);";
+        "float d = dot(n, lightDir);\n"
+        "return baseColor * max(d, 0.0);";
     inputs.commands = {"build --release", "suite render css/flex-basis", "bench vg"};
     uint32_t key = 0;
     for (const TreeSeed& seed : kTreeSeeds) {
@@ -336,8 +365,10 @@ const PrDrawImage* galleryPicture(GalleryState& state) {
             texel[3] = 255;
         }
     }
-    PrDrawImageDesc desc{PrPixelView{pixels.data(), kWidth * 4, {kWidth, kHeight}}, PrPixelFormat_Rgba8,
-                         PrDrawAlpha_Straight, PrColorSpace_Srgb};
+    PrDrawImageDesc desc{
+        PrPixelView{pixels.data(), kWidth * 4, {kWidth, kHeight}}, PrPixelFormat_Rgba8,
+        PrDrawAlpha_Straight, PrColorSpace_Srgb,
+    };
     const PrDrawImage* image = nullptr;
     if (prDrawImageCreate(&desc, &image) == PrStatus_Ok)
         state.picture = image;
@@ -357,8 +388,7 @@ const AssetRow* galleryAssets(uint32_t* count) {
     return kRows;
 }
 
-void sortAssetOrder(const AssetRow* assets, uint32_t count, AssetSort column, bool ascending,
-                    uint32_t* order) {
+void sortAssetOrder(const AssetRow* assets, uint32_t count, AssetSort column, bool ascending, uint32_t* order) {
     for (uint32_t i = 0; i < count; ++i)
         order[i] = i;
     // An insertion sort keeps equal rows in their order.
@@ -374,9 +404,11 @@ void sortAssetOrder(const AssetRow* assets, uint32_t count, AssetSort column, bo
 }
 
 const PrStringView* galleryComponentTypes(uint32_t* count) {
-    static const PrStringView kTypes[] = {"Transform", "Mesh Renderer", "Collider",
-                                          "Rigidbody", "Script",        "Audio Source",
-                                          "Camera"};
+    static const PrStringView kTypes[] = {
+        "Transform", "Mesh Renderer", "Collider",
+        "Rigidbody", "Script",        "Audio Source",
+        "Camera",
+    };
     *count = countOf(kTypes);
     return kTypes;
 }
@@ -396,7 +428,8 @@ const PrStringView* galleryAnimationClips(uint32_t* count) {
         "Block Start",    "Block Loop",       "Block Impact",    "Parry",           "Dodge Roll",
         "Dodge Step Back", "Hit React Front", "Hit React Back",  "Hit React Left",  "Hit React Right",
         "Death Front",    "Death Back",       "Emote Wave",      "Emote Point",     "Emote Salute",
-        "Emote Sit"};
+        "Emote Sit",
+    };
     static PrStringView clips[countOf(kNames)];
     if (clips[0].size == 0) {
         for (size_t i = 0; i < countOf(kNames); ++i)
@@ -424,18 +457,22 @@ const CommandItem* galleryCommands(uint32_t* count) {
 }
 
 const PrStringView* galleryAreas(uint32_t* count) {
-    static const PrStringView kAreas[] = {"lib/app",    "lib/core",   "lib/draw",
-                                          "lib/gpu",    "lib/image",  "lib/layout",
-                                          "lib/ui",     "lib/studio/kit", "lib/html",
-                                          "tools/suite"};
+    static const PrStringView kAreas[] = {
+        "lib/app",    "lib/core",   "lib/draw",
+        "lib/gpu",    "lib/image",  "lib/layout",
+        "lib/ui",     "lib/studio/kit", "lib/html",
+        "tools/suite",
+    };
     *count = countOf(kAreas);
     return kAreas;
 }
 
 const PrStringView* galleryRevisions(uint32_t* count) {
-    static const PrStringView kRevisions[] = {"main",    "origin/main", "shadow-atlas",
-                                              "v0.4.1",  "9f3c1ad",     "2b70e44",
-                                              "c81da09"};
+    static const PrStringView kRevisions[] = {
+        "main",    "origin/main", "shadow-atlas",
+        "v0.4.1",  "9f3c1ad",     "2b70e44",
+        "c81da09",
+    };
     *count = countOf(kRevisions);
     return kRevisions;
 }
@@ -529,9 +566,7 @@ void moveTreeNode(TreeState& tree, uint32_t key, uint32_t targetKey, TreePlaceme
     int32_t shift = int32_t(depth) - int32_t(moved[0].depth);
     for (TreeNode& node : moved)
         node.depth = uint32_t(int32_t(node.depth) + shift);
-    size_t insertAt = placement == TreePlacement_Into  ? at + 1
-                      : placement == TreePlacement_After ? subtreeEnd(nodes, at)
-                                                         : at;
+    size_t insertAt = placement == TreePlacement_Into  ? at + 1 : placement == TreePlacement_After ? subtreeEnd(nodes, at) : at;
     nodes.insert(nodes.begin() + long(insertAt), moved.begin(), moved.end());
     markChildren(nodes);
     if (placement == TreePlacement_Into)

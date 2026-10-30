@@ -86,8 +86,7 @@ enum {
 typedef uint8_t Zero;
 
 // Appends `property` mapped to the attribute `name` as a dimension: a pixel length, or a percentage.
-void addDimension(TextBuffer* out, const PrDomElement* element, PrStringView name, PrStringView property,
-                  Zero zero) {
+void addDimension(TextBuffer* out, const PrDomElement* element, PrStringView name, PrStringView property, Zero zero) {
     double value = 0;
     bool percentage = false;
     if (!domParseDimension(domAttributeValue(element, name), &value, &percentage))
@@ -117,8 +116,7 @@ void addAspectRatio(TextBuffer* out, const PrDomElement* element, Ratio parse) {
         PrStringView value = domAttributeValue(element, names[i]);
         bool percentage = false;
         int64_t integer = 0;
-        if (dimensions ? !domParseDimension(value, &ratio[i], &percentage) || percentage
-                       : !parseNonNegative(value, &integer))
+        if (dimensions ? !domParseDimension(value, &ratio[i], &percentage) || percentage : !parseNonNegative(value, &integer))
             return;
         if (!dimensions)
             ratio[i] = double(integer);
@@ -174,8 +172,8 @@ PrStringView textAlignOf(PrStringView align, Center center) {
         return "right";
     if (asciiEqualsFold(align, "justify"))
         return "justify";
-    if (asciiEqualsFold(align, "center") || (center != Center_Center && asciiEqualsFold(align, "middle"))
-        || (center == Center_Absmiddle && asciiEqualsFold(align, "absmiddle")))
+    if (asciiEqualsFold(align, "center") || (center != Center_Center && asciiEqualsFold(align, "middle")) ||
+            (center == Center_Absmiddle && asciiEqualsFold(align, "absmiddle")))
         return "center";
     return PrStringView{};
 }
@@ -203,10 +201,12 @@ void addEmbeddedAlign(TextBuffer* out, const PrDomElement* element) {
     PrStringView align = domAttributeValue(element, "align");
     if (asciiEqualsFold(align, "left") || asciiEqualsFold(align, "right"))
         cssHintAdd(out, "float", asciiEqualsFold(align, "left") ? "left" : "right");
-    else if (asciiEqualsFold(align, "top") || asciiEqualsFold(align, "baseline") || asciiEqualsFold(align, "bottom"))
-        cssHintAdd(out, "vertical-align", asciiEqualsFold(align, "top") ? "top"
-                                   : asciiEqualsFold(align, "bottom") ? "bottom"
-                                                                      : "baseline");
+    else if (asciiEqualsFold(align, "top"))
+        cssHintAdd(out, "vertical-align", "top");
+    else if (asciiEqualsFold(align, "bottom"))
+        cssHintAdd(out, "vertical-align", "bottom");
+    else if (asciiEqualsFold(align, "baseline"))
+        cssHintAdd(out, "vertical-align", "baseline");
     else if (asciiEqualsFold(align, "texttop"))
         cssHintAdd(out, "vertical-align", "text-top");
     else if (asciiEqualsFold(align, "absmiddle") || asciiEqualsFold(align, "abscenter"))
@@ -256,8 +256,18 @@ void addListType(TextBuffer* out, const PrDomElement* element) {
         return;
     PrStringView style{};
     if (element->tag != PrDomTag_Ul) {
-        style = type == "1" ? "decimal" : type == "a" ? "lower-alpha" : type == "A" ? "upper-alpha"
-                : type == "i" ? "lower-roman" : type == "I" ? "upper-roman" : PrStringView{};
+        if (type == "1")
+            style = "decimal";
+        else if (type == "a")
+            style = "lower-alpha";
+        else if (type == "A")
+            style = "upper-alpha";
+        else if (type == "i")
+            style = "lower-roman";
+        else if (type == "I")
+            style = "upper-roman";
+        else
+            style = PrStringView{};
     }
     if (style.data == nullptr && element->tag != PrDomTag_Ol) {
         const PrStringView values[] = {"none", "disc", "circle", "square"};
@@ -352,15 +362,17 @@ void addTable(TextBuffer* out, const PrDomElement* table) {
         PrStringView value;
         PrStringView style;
     };
-    const Frame frames[] = {{"void", "hidden"},
-                            {"above", "outset hidden hidden hidden"},
-                            {"below", "hidden hidden outset hidden"},
-                            {"hsides", "outset hidden outset hidden"},
-                            {"lhs", "hidden hidden hidden outset"},
-                            {"rhs", "hidden outset hidden hidden"},
-                            {"vsides", "hidden outset"},
-                            {"box", "outset"},
-                            {"border", "outset"}};
+    const Frame frames[] = {
+        {"void", "hidden"},
+        {"above", "outset hidden hidden hidden"},
+        {"below", "hidden hidden outset hidden"},
+        {"hsides", "outset hidden outset hidden"},
+        {"lhs", "hidden hidden hidden outset"},
+        {"rhs", "hidden outset hidden hidden"},
+        {"vsides", "hidden outset"},
+        {"box", "outset"},
+        {"border", "outset"},
+    };
     const Frame* framed = nullptr;
     for (const Frame& f : frames) {
         if (asciiEqualsFold(frame, f.value))
@@ -556,9 +568,9 @@ void addOwn(TextBuffer* out, const PrDomElement* element) {
                 // In quirks mode, a fixed width keeps the cell's text wrapping.
                 double width = 0;
                 bool percentage = false;
-                bool fixed = element->document->quirks == DomQuirks_Yes
-                             && domParseDimension(domAttributeValue(element, "width"), &width, &percentage)
-                             && width != 0 && !percentage;
+                bool fixed = element->document->quirks == DomQuirks_Yes &&
+                    domParseDimension(domAttributeValue(element, "width"), &width, &percentage) && width != 0 &&
+                    !percentage;
                 cssHintAdd(out, "white-space", fixed ? "normal" : "nowrap");
             }
             addColor(out, element, "bgcolor", "background-color");
@@ -638,12 +650,16 @@ bool oneOf(PrStringView name, const PrStringView (&names)[N]) {
 
 // Returns true if the attribute named `name` maps to a hint of the element itself.
 bool mapsOwn(const PrDomElement* element, PrStringView name) {
-    static constexpr PrStringView kBody[] = {"bgcolor", "background", "text", "marginheight", "topmargin",
-                                             "marginwidth", "leftmargin"};
+    static constexpr PrStringView kBody[] = {
+        "bgcolor", "background", "text", "marginheight", "topmargin",
+        "marginwidth", "leftmargin",
+    };
     static constexpr PrStringView kFont[] = {"color", "face", "size"};
     static constexpr PrStringView kList[] = {"type", "start", "reversed", "value"};
-    static constexpr PrStringView kTable[] = {"align", "cellspacing", "height", "width", "bgcolor", "background",
-                                              "rules", "frame", "bordercolor", "border"};
+    static constexpr PrStringView kTable[] = {
+        "align", "cellspacing", "height", "width", "bgcolor", "background",
+        "rules", "frame", "bordercolor", "border",
+    };
     static constexpr PrStringView kPart[] = {"height", "align", "valign", "bgcolor", "background"};
     static constexpr PrStringView kCell[] = {"height", "width", "align", "valign", "nowrap", "bgcolor", "background"};
     static constexpr PrStringView kRule[] = {"align", "color", "noshade", "size", "width"};
@@ -730,9 +746,8 @@ const PrDomElement* PR_NULLABLE giver(const PrDomElement* element, DomTaker* tak
             return nullptr;
     }
     if ((element->tag == PrDomTag_A || element->tag == PrDomTag_Area) && domElementLink(element)) {
-        *taker = domElementActive(element) ? DomTaker_Active
-                 : domElementVisited(element) ? DomTaker_Visited
-                                              : DomTaker_Link;
+        *taker =
+            domElementActive(element) ? DomTaker_Active : domElementVisited(element) ? DomTaker_Visited : DomTaker_Link;
         PrDomElement* body = domDocumentBody(element->document);
         return isHtml(body, PrDomTag_Body) ? body : nullptr;
     }
@@ -805,16 +820,15 @@ bool htmlParseLegacyColor(PrStringView text, PrColor8* out) {
     if (cssNamedColor(cssKeywordFromText(input), out))
         return true;
     auto hexValue = [](char c) {
-        return c >= '0' && c <= '9'   ? c - '0'
-               : c >= 'a' && c <= 'f' ? c - 'a' + 10
-               : c >= 'A' && c <= 'F' ? c - 'A' + 10
-                                      : -1;
+        return c >= '0' && c <= '9'   ? c - '0' : c >= 'a' && c <= 'f' ? c - 'a' + 10 : c >= 'A' && c <= 'F' ? c - 'A' + 10 : -1;
     };
     // Step 5: #rgb.
-    if (input.size == 4 && input.data[0] == '#' && hexValue(input.data[1]) >= 0 && hexValue(input.data[2]) >= 0
-        && hexValue(input.data[3]) >= 0) {
-        *out = PrColor8{uint8_t(hexValue(input.data[1]) * 17), uint8_t(hexValue(input.data[2]) * 17),
-                        uint8_t(hexValue(input.data[3]) * 17), 255};
+    if (input.size == 4 && input.data[0] == '#' && hexValue(input.data[1]) >= 0 && hexValue(input.data[2]) >= 0 &&
+            hexValue(input.data[3]) >= 0) {
+        *out = PrColor8{
+            uint8_t(hexValue(input.data[1]) * 17), uint8_t(hexValue(input.data[2]) * 17),
+            uint8_t(hexValue(input.data[3]) * 17), 255,
+        };
         return true;
     }
     // Steps 6 to 10: a code point past U+FFFF becomes "00", at most 128 code units are kept, a leading '#' goes, any

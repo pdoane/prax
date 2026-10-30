@@ -49,8 +49,8 @@ struct Fixture {
             return;
         }
         REQUIRE(status == PrStatus_Ok);
-        REQUIRE(prGpuShaderLibraryCreate(device, kTestGpuHostShaders, sizeof(kTestGpuHostShaders), &library)
-                == PrStatus_Ok);
+        REQUIRE(prGpuShaderLibraryCreate(device, kTestGpuHostShaders, sizeof(kTestGpuHostShaders), &library) ==
+            PrStatus_Ok);
     }
 
     ~Fixture() {
@@ -95,7 +95,7 @@ struct Fixture {
         PrGpuCommands* commands = nullptr;
         REQUIRE(prGpuCommandsBegin(device, nullptr, &commands));
         prGpuCommandsBufferBarrier(commands, buffer, PrGpuAccessFlag_ShaderWrite | PrGpuAccessFlag_CopyWrite,
-                                   PrGpuAccessFlag_CopyRead);
+            PrGpuAccessFlag_CopyRead);
         prGpuCommandsCopyBuffer(commands, buffer, 0, readback, 0, uint64_t(count) * 4);
         prGpuDeviceWait(device, prGpuCommandsSubmit(commands));
         std::vector<uint32_t> out(count);
@@ -229,7 +229,7 @@ TEST_CASE("vulkan draws into the host's pass, and says which of the pass's state
     PrGpuCommands* commands = nullptr;
     REQUIRE(prGpuCommandsBegin(f.device, &options, &commands));
     prGpuCommandsTextureBarrier(commands, target, PrGpuSubresources{}, PrGpuAccessFlag_Discard,
-                                PrGpuAccessFlag_ColorAttachment);
+        PrGpuAccessFlag_ColorAttachment);
     prGpuHostStateSync(commands);
 
     // The host begins its pass, which clears the target to blue, and the device draws the upper half red into it.
@@ -268,7 +268,7 @@ TEST_CASE("vulkan draws into the host's pass, and says which of the pass's state
     host.cmdEndRendering(native);
 
     prGpuCommandsTextureBarrier(commands, target, PrGpuSubresources{}, PrGpuAccessFlag_ColorAttachment,
-                                PrGpuAccessFlag_CopyRead);
+        PrGpuAccessFlag_CopyRead);
     PrGpuTextureRegion region = prGpuTextureRegion2d(PrUVec2{0, 0}, PrUVec2{8, 8});
     prGpuCommandsCopyTextureToBuffer(commands, target, &region, readback, 0, 32, 0);
     prGpuHostStateSync(commands);
@@ -295,7 +295,7 @@ TEST_CASE("vulkan presents frames to a window's swap chain, and resizes it") {
     RegisterClassW(&type);
     // A popup window's client area is the whole window, so the surface's extent is the window's size.
     HWND window = CreateWindowExW(0, type.lpszClassName, L"Vulkan test", WS_POPUP, 0, 0, 320, 240, nullptr, nullptr,
-                                  type.hInstance, nullptr);
+        type.hInstance, nullptr);
     REQUIRE(window != nullptr);
     PrAppSurface surface{PrAppSurfaceKind_Hwnd, window};
     PrGpuSwapChainDesc desc{.intent = PrGpuSwapChainIntent_Sdr};
@@ -312,11 +312,11 @@ TEST_CASE("vulkan presents frames to a window's swap chain, and resizes it") {
         PrGpuCommands* commands = nullptr;
         REQUIRE(prGpuCommandsBegin(f.device, nullptr, &commands));
         prGpuCommandsTextureBarrier(commands, texture, PrGpuSubresources{}, PrGpuAccessFlag_Discard,
-                                    PrGpuAccessFlag_ColorAttachment);
+            PrGpuAccessFlag_ColorAttachment);
         PrGpuPassDesc pass = prGpuPassDescColor(texture, PrGpuLoad_Clear, PrColor{0.2f, 0.4f, 0.6f, 1});
         prGpuPassEnd(prGpuPassBegin(commands, &pass));
         prGpuCommandsTextureBarrier(commands, texture, PrGpuSubresources{}, PrGpuAccessFlag_ColorAttachment,
-                                    PrGpuAccessFlag_Present);
+            PrGpuAccessFlag_Present);
         prGpuSwapChainPresent(swapChain, commands);
         prGpuCommandsSubmit(commands);
     }

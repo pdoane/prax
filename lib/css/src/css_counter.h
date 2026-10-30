@@ -47,7 +47,7 @@ struct CssCounterStyles {
 // symbols of its own, or it names a symbol that is an image, which the engine does not draw, is ignored. A calculation
 // in a descriptor resolves font-relative lengths against an initial font of size `em`, in px.
 void cssCounterStylesBuild(CssCounterStyles* out, const CssRuleData* const PR_NONNULL* PR_NULLABLE rules,
-                           uint32_t count, double em);
+    uint32_t count, double em);
 
 // Returns true if a @counter-style rule may define the style `name`, which is neither none nor a style that no rule may
 // define (css-counter-styles-3/#the-counter-style-rule).
@@ -96,19 +96,19 @@ constexpr uint32_t kCssCounterMaxCodePoints = 60;
 // prefix and suffix. A value that the style cannot represent uses the style's fallback, found among `styles`, and
 // decimal in the end. A symbol that points turns to `flow`, as disclosure-closed's does.
 void cssCounterRepresent(TextBuffer* out, const CssCounterStyles* PR_NULLABLE styles, const CssCounterStyle* style,
-                         int32_t value, CssCounterFlow flow);
+    int32_t value, CssCounterFlow flow);
 
 // Appends the representation of `value` in the counter style that a computed <counter-style> names, as counter() and
 // counters() write it: a style's name, among `styles` and the predefined styles, or symbols(). A name that no style has
 // is decimal.
 void cssCounterAppend(TextBuffer* out, const CssCounterStyles* PR_NULLABLE styles, CssValueRun counterStyle,
-                      int32_t value, CssCounterFlow flow);
+    int32_t value, CssCounterFlow flow);
 
 // Appends the marker string that a computed list-style-type gives a list item whose list-item counter is `value`
 // (css-lists-3/#text-markers): the counter style's prefix, the representation and the style's suffix, or the string
 // that the type gives. Appends nothing for none. Returns false if the type is none.
 bool cssCounterAppendMarker(TextBuffer* out, const CssCounterStyles* PR_NULLABLE styles, CssValueRun listStyleType,
-                            int32_t value, CssCounterFlow flow);
+    int32_t value, CssCounterFlow flow);
 
 } // namespace pr_impl
 

@@ -431,8 +431,7 @@ void addDecoration(TextStyle& style, SvgLineFlags lines, const SvgPaints& paints
 
 // Returns the text style of an element, whose parent span's style is `parent`, or which starts the text if `parent` is
 // null. The families are appended to the layout's.
-TextStyle textStyleOf(Layout& t, const PrDomElement* e, const CssComputedStyle* style,
-                      const TextStyle* PR_NULLABLE parent) {
+TextStyle textStyleOf(Layout& t, const PrDomElement* e, const CssComputedStyle* style, const TextStyle* PR_NULLABLE parent) {
     TextStyle s{};
     if (parent != nullptr) {
         s.textAlign = parent->textAlign;
@@ -452,9 +451,12 @@ TextStyle textStyleOf(Layout& t, const PrDomElement* e, const CssComputedStyle* 
     s.fontWeight = cssStyleFontWeight(style);
     s.fontWidth = cssStyleFontWidth(style);
     PrCssKeyword slope = svgStyleKeyword(style, PrCssProperty_FontStyle);
-    s.fontSlope = slope == PrCssKeyword_Italic    ? PrFontSlope_Italic
-                  : slope == PrCssKeyword_Oblique ? PrFontSlope_Oblique
-                                                  : PrFontSlope_Normal;
+    if (slope == PrCssKeyword_Italic)
+        s.fontSlope = PrFontSlope_Italic;
+    else if (slope == PrCssKeyword_Oblique)
+        s.fontSlope = PrFontSlope_Oblique;
+    else
+        s.fontSlope = PrFontSlope_Normal;
     s.textAnchor = anchorOf(svgStyleKeyword(style, PrCssProperty_TextAnchor));
     s.letterSpacing = svgStyleLength(style, PrCssProperty_LetterSpacing);
     s.wordSpacing = svgStyleLength(style, PrCssProperty_WordSpacing);
@@ -479,9 +481,12 @@ TextStyle textStyleOf(Layout& t, const PrDomElement* e, const CssComputedStyle* 
     s.wraps = !svgStyleIs(style, PrCssProperty_TextWrapMode, PrCssKeyword_Nowrap);
     s.breaks = cssTextBreakStyle(style);
     PrCssKeyword orientation = svgStyleKeyword(style, PrCssProperty_TextOrientation);
-    s.orientation = orientation == PrCssKeyword_Upright    ? PrTextOrientation_Upright
-                    : orientation == PrCssKeyword_Sideways ? PrTextOrientation_Sideways
-                                                           : PrTextOrientation_Mixed;
+    if (orientation == PrCssKeyword_Upright)
+        s.orientation = PrTextOrientation_Upright;
+    else if (orientation == PrCssKeyword_Sideways)
+        s.orientation = PrTextOrientation_Sideways;
+    else
+        s.orientation = PrTextOrientation_Mixed;
     s.lineHeight = float(cssStyleLineHeight(style));
     PrTextFeatureSet* features = cssFontFeatureSet(style);
     if (features != nullptr)
@@ -560,8 +565,7 @@ void pushBreak(Layout& t, uint32_t codePoint, uint32_t span) {
 // Returns true if layout discards the character, as it does a soft hyphen or a bidi control, which therefore is not
 // addressable (SVG2/text.html#TermAddressableCharacter). A bidi control still orders the text around it.
 bool isDiscarded(uint32_t c) {
-    return c == 0xad || c == 0x61c || c == 0x200e || c == 0x200f || (c >= 0x202a && c <= 0x202e)
-           || (c >= 0x2066 && c <= 0x2069);
+    return c == 0xad || c == 0x61c || c == 0x200e || c == 0x200f || (c >= 0x202a && c <= 0x202e) || (c >= 0x2066 && c <= 0x2069);
 }
 
 // Appends a text node's characters, with its white space processed as the span's white-space-collapse says
@@ -600,9 +604,9 @@ void appendText(Layout& t, PrStringView data, uint32_t span) {
 }
 
 bool hasPositions(const PrDomElement* e) {
-    return svgAttribute(e, "x").data != nullptr || svgAttribute(e, "y").data != nullptr
-           || svgAttribute(e, "dx").data != nullptr || svgAttribute(e, "dy").data != nullptr
-           || svgAttribute(e, "rotate").data != nullptr || svgAttribute(e, "textLength").data != nullptr;
+    return svgAttribute(e, "x").data != nullptr || svgAttribute(e, "y").data != nullptr ||
+        svgAttribute(e, "dx").data != nullptr || svgAttribute(e, "dy").data != nullptr ||
+        svgAttribute(e, "rotate").data != nullptr || svgAttribute(e, "textLength").data != nullptr;
 }
 
 void collect(Layout& t, const PrDomElement* element, uint32_t span) {
@@ -866,19 +870,23 @@ PrTextFont* PR_NULLABLE hostFonts(Layout& t, const Span& span) {
     Array<PrFontFamily> families;
     for (uint32_t i = 0; i < style.familyCount; ++i) {
         const Family& family = t.families.data[style.firstFamily + i];
-        families.push(family.generic != PrFontGeneric_None ? prFontFamilyGeneric(family.generic)
-                                                           : prFontFamilyFromName(familyName(t, family)));
+        if (family.generic != PrFontGeneric_None)
+            families.push(prFontFamilyGeneric(family.generic));
+        else
+            families.push(prFontFamilyFromName(familyName(t, family)));
     }
     PrFontStyle font = prFontStyleDefault();
     font.weight = style.fontWeight;
     font.width = style.fontWidth;
     font.slope = style.fontSlope;
     font.size = style.fontSize;
-    PrTextFontDesc desc{.set = options.fonts,
-                        .families = families.data,
-                        .familyCount = families.count,
-                        .style = font,
-                        .locale = span.locale};
+    PrTextFontDesc desc{
+        .set = options.fonts,
+        .families = families.data,
+        .familyCount = families.count,
+        .style = font,
+        .locale = span.locale,
+    };
     PrTextFont* text = prTextFontCreate(&desc);
     families.reset();
     fonts.hosts.push(SvgHostFont{key, text});
@@ -920,8 +928,8 @@ Font fontFor(Layout& t, const Char& c, const Span& span, PrStringView cluster) {
             if (first.svg == nullptr)
                 first = Font{font, nullptr};
             size_t length = 0;
-            if (rangesCover(face.ranges.data, face.ranges.count, codePoint)
-                && svgFontMatch(*font, text, c.offset, span.language, SvgArabicForm_Any, &length) != kSvgMissingGlyph)
+            if (rangesCover(face.ranges.data, face.ranges.count, codePoint) &&
+                    svgFontMatch(*font, text, c.offset, span.language, SvgArabicForm_Any, &length) != kSvgMissingGlyph)
                 return Font{font, nullptr};
         }
     }
@@ -985,9 +993,18 @@ void setSvgRun(Layout& t, Run& run, PrVec2* pen, uint32_t chunk) {
             pen->x -= svgFontKerning(font, previous, g.id) * scale;
         previous = run.upright ? kArrayMissing : g.id;
         float rotate = isNanF32(c.rotate) ? 0 : c.rotate;
-        Glyph glyph{.id = g.id, .position = *pen, .pen = *pen, .rotate = rotate,
-                    .advance = font.glyphs.data[g.id].advance * scale, .chunk = chunk, .character = g.character,
-                    .scale = 1, .stretch = 1, .warp = kArrayMissing};
+        Glyph glyph{
+            .id = g.id,
+            .position = *pen,
+            .pen = *pen,
+            .rotate = rotate,
+            .advance = font.glyphs.data[g.id].advance * scale,
+            .chunk = chunk,
+            .character = g.character,
+            .scale = 1,
+            .stretch = 1,
+            .warp = kArrayMissing,
+        };
         // An upright glyph advances by the em down the line, and hangs from its vertical origin, which is half its
         // advance across and its ascent down (SVG11/fonts.html#FontElementVertOriginXAttribute).
         if (run.upright) {
@@ -1051,10 +1068,18 @@ void setHostRun(Layout& t, Run& run, PrVec2* pen, uint32_t chunk) {
         if (placed == kArrayMissing)
             placed = reversed ? run.endChar - 1 : run.firstChar;
         const Char& c = t.chars.data[placed];
-        Glyph placedGlyph{.id = glyph.id, .position = {pen->x + glyph.offset.x * size, pen->y + glyph.offset.y * size},
-                          .pen = *pen, .rotate = isNanF32(c.rotate) ? 0 : c.rotate,
-                          .advance = glyph.advance.x * size, .chunk = chunk, .character = placed,
-                          .scale = glyph.scale, .stretch = 1, .warp = kArrayMissing};
+        Glyph placedGlyph{
+            .id = glyph.id,
+            .position = {pen->x + glyph.offset.x * size, pen->y + glyph.offset.y * size},
+            .pen = *pen,
+            .rotate = isNanF32(c.rotate) ? 0 : c.rotate,
+            .advance = glyph.advance.x * size,
+            .chunk = chunk,
+            .character = placed,
+            .scale = glyph.scale,
+            .stretch = 1,
+            .warp = kArrayMissing,
+        };
         // A run shaped down the line places its glyphs by their horizontal origins, about the line's center
         // (PrTextGlyph), which the frame of vertical text turns a quarter turn back.
         if (run.upright) {
@@ -1081,8 +1106,8 @@ void fitLengths(Layout& t) {
         const Positioned& at = t.positioned.data[p];
         SvgLengthPercentage length{};
         PrStringView text = svgAttribute(at.element, "textLength");
-        if (text.data == nullptr || !svgParseLength(text, t.spans.data[at.span].computed, &length)
-            || length.px < 0 || length.percent < 0)
+        if (text.data == nullptr || !svgParseLength(text, t.spans.data[at.span].computed, &length) ||
+                length.px < 0 || length.percent < 0)
             continue;
         // No adjustment is made to an element that holds a forced line break (SVG2/text.html#TextLayoutAlgorithm).
         bool forced = false;
@@ -1340,19 +1365,23 @@ void arabicForms(Layout& t) {
                 break;
         }
         auto joinsAfter = [](PrUnicodeJoiningType j) {
-            return j == PrUnicodeJoiningType_Left || j == PrUnicodeJoiningType_Dual
-                   || j == PrUnicodeJoiningType_JoinCausing;
+            return j == PrUnicodeJoiningType_Left || j == PrUnicodeJoiningType_Dual ||
+                j == PrUnicodeJoiningType_JoinCausing;
         };
         auto joinsBefore = [](PrUnicodeJoiningType j) {
-            return j == PrUnicodeJoiningType_Right || j == PrUnicodeJoiningType_Dual
-                   || j == PrUnicodeJoiningType_JoinCausing;
+            return j == PrUnicodeJoiningType_Right || j == PrUnicodeJoiningType_Dual ||
+                j == PrUnicodeJoiningType_JoinCausing;
         };
         bool previous = joinsBefore(own) && joinsAfter(before);
         bool next = joinsAfter(own) && joinsBefore(after);
-        t.chars.data[i].form = previous && next ? SvgArabicForm_Medial
-                               : previous       ? SvgArabicForm_Terminal
-                               : next           ? SvgArabicForm_Initial
-                                                : SvgArabicForm_Isolated;
+        if (previous && next)
+            t.chars.data[i].form = SvgArabicForm_Medial;
+        else if (previous)
+            t.chars.data[i].form = SvgArabicForm_Terminal;
+        else if (next)
+            t.chars.data[i].form = SvgArabicForm_Initial;
+        else
+            t.chars.data[i].form = SvgArabicForm_Isolated;
     }
 }
 
@@ -1387,8 +1416,8 @@ void itemize(Layout& t) {
                 t.order.push(s);
         }
         uint32_t depth = 0;
-        while (depth < t.spanStack.count && depth < t.order.count
-               && t.spanStack.data[depth] == t.order.data[t.order.count - 1 - depth])
+        while (depth < t.spanStack.count && depth < t.order.count &&
+                t.spanStack.data[depth] == t.order.data[t.order.count - 1 - depth])
             ++depth;
         while (t.spanStack.count > depth)
             element(t.spanStack.data[--t.spanStack.count], PrTextPieceKind_Close, c.offset);
@@ -1563,7 +1592,7 @@ float runShift(const Layout& t, const Run& run) {
 // Returns a glyph's own transform about its origin: scaled, stretched horizontally, then rotated.
 PrAffine2 glyphOwn(const Glyph& glyph) {
     return prAffine2Concat(prAffine2Scale(PrVec2{glyph.scale * glyph.stretch, glyph.scale}),
-                           prAffine2Rotate(glyph.rotate * (kPiF32 / 180)));
+        prAffine2Rotate(glyph.rotate * (kPiF32 / 180)));
 }
 
 PrAffine2 glyphTransform(const Glyph& glyph) {
@@ -1576,12 +1605,16 @@ void decorationLine(const Run& run, float size, SvgLineFlags line, float* center
     if (run.font.svg != nullptr) {
         const SvgFont& f = *run.font.svg;
         float scale = size / f.unitsPerEm;
-        float position = line == SvgLineFlag_Underline  ? f.underlinePosition
-                         : line == SvgLineFlag_Overline ? f.overlinePosition
-                                                     : f.strikethroughPosition;
-        float width = line == SvgLineFlag_Underline  ? f.underlineThickness
-                      : line == SvgLineFlag_Overline ? f.overlineThickness
-                                                  : f.strikethroughThickness;
+        float position = f.strikethroughPosition;
+        if (line == SvgLineFlag_Underline)
+            position = f.underlinePosition;
+        else if (line == SvgLineFlag_Overline)
+            position = f.overlinePosition;
+        float width = f.strikethroughThickness;
+        if (line == SvgLineFlag_Underline)
+            width = f.underlineThickness;
+        else if (line == SvgLineFlag_Overline)
+            width = f.overlineThickness;
         *center = -position * scale;
         *thickness = width * scale;
         return;
@@ -1676,7 +1709,7 @@ void recordRun(Layout& t, const Run& run) {
             const PrPath* outline = font.glyphs.data[glyph.id].path;
             if (!glyph.hidden && outline != nullptr)
                 addOutline(t, glyph, outline,
-                           prAffine2Concat(prAffine2Scale(PrVec2{scale, -scale}), glyphTransform(glyph)), path);
+                    prAffine2Concat(prAffine2Scale(PrVec2{scale, -scale}), glyphTransform(glyph)), path);
         }
         recordPath(t, path, style.paints, style.fillRule);
         // The child elements of a glyph draw in its font units with y up, the same space as its path data, and inherit
@@ -1687,9 +1720,14 @@ void recordRun(Layout& t, const Run& run) {
             if (glyph.hidden || content == nullptr)
                 continue;
             SvgBuilder& b = *t.b;
-            SvgNode group{.kind = SvgNodeKind_Group, .visible = true, .opacity = 1, .element = content,
-                          .transform = prAffine2Concat(prAffine2Scale(PrVec2{scale, -scale}), glyphTransform(glyph)),
-                          .transformStyle = kArrayMissing};
+            SvgNode group{
+                .kind = SvgNodeKind_Group,
+                .visible = true,
+                .opacity = 1,
+                .element = content,
+                .transform = prAffine2Concat(prAffine2Scale(PrVec2{scale, -scale}), glyphTransform(glyph)),
+                .transformStyle = kArrayMissing,
+            };
             // The text owns the stroke of the paints.
             group.paints = style.paints;
             group.paints.strokeStyle = kArrayMissing;
@@ -1702,8 +1740,13 @@ void recordRun(Layout& t, const Run& run) {
     }
     if (run.font.host == nullptr)
         return;
-    SvgTextPiece piece{.paints = style.paints, .rule = style.fillRule, .font = run.font.host, .size = style.fontSize,
-                       .firstGlyph = t.out->glyphs.count};
+    SvgTextPiece piece{
+        .paints = style.paints,
+        .rule = style.fillRule,
+        .font = run.font.host,
+        .size = style.fontSize,
+        .firstGlyph = t.out->glyphs.count,
+    };
     PrPath* bent = prPathCreate();
     PrPath* outline = prPathCreate();
     for (uint32_t g = run.firstGlyph; g < run.endGlyph; ++g) {
@@ -1814,7 +1857,7 @@ void beginLayout(Layout& t, const PrDomElement* text, const CssComputedStyle* st
     // inline, which no decoration crosses (css-text-decor-3/#line-decoration), so the ancestors end with it.
     Array<const PrDomElement*> ancestors;
     for (const PrDomElement* e = t.instance ? nullptr : domElementFromNode(text->parent);
-         e != nullptr && e->space == PrDomNamespace_Svg; e = domElementFromNode(e->parent))
+            e != nullptr && e->space == PrDomNamespace_Svg; e = domElementFromNode(e->parent))
         ancestors.push(e);
     for (uint32_t i = ancestors.count; i-- > 0;) {
         const PrDomElement* e = ancestors.data[i];
@@ -1831,14 +1874,22 @@ void beginLayout(Layout& t, const PrDomElement* text, const CssComputedStyle* st
     textStyle.lineIncrement = lineIncrementOf(text, textStyle.lineIncrement);
     addDecoration(textStyle, svgStyleLines(style), textStyle.paints);
     PrStringView language = domElementLanguage(text);
-    t.spans.push(Span{.style = textStyle, .element = text, .computed = style, .held = false, .of = kArrayMissing,
-                      .language = language, .locale = prLocaleFromTag(language), .parent = kArrayMissing});
+    t.spans.push(Span{
+        .style = textStyle,
+        .element = text,
+        .computed = style,
+        .held = false,
+        .of = kArrayMissing,
+        .language = language,
+        .locale = prLocaleFromTag(language),
+        .parent = kArrayMissing,
+    });
     t.positioned.push(Positioned{text, 0, 0, 0});
     // writing-mode applies to the text element alone (SVG2/text.html#WritingModeProperty). A sideways mode sets every
     // character on its side.
     PrCssKeyword mode = svgStyleKeyword(style, PrCssProperty_WritingMode);
-    t.vertical = mode == PrCssKeyword_VerticalRl || mode == PrCssKeyword_VerticalLr
-                 || mode == PrCssKeyword_SidewaysRl || mode == PrCssKeyword_SidewaysLr;
+    t.vertical = mode == PrCssKeyword_VerticalRl || mode == PrCssKeyword_VerticalLr ||
+        mode == PrCssKeyword_SidewaysRl || mode == PrCssKeyword_SidewaysLr;
     t.stacksRight = mode == PrCssKeyword_VerticalLr;
     t.turn = mode == PrCssKeyword_SidewaysLr ? -1 : 1;
     collect(t, text, 0);
@@ -1871,8 +1922,8 @@ void buildRuns(Layout& t) {
         }
         const Char* head = t.runs.count != 0 ? &t.chars.data[t.runs.last().firstChar] : nullptr;
         const Char* previous = i != 0 ? &t.chars.data[i - 1] : nullptr;
-        if (head == nullptr || isAbsolute(c) || !(next == font) || head->span != c.span || head->level != c.level
-            || head->script != c.script || head->upright != c.upright || c.forced || previous->forced)
+        if (head == nullptr || isAbsolute(c) || !(next == font) || head->span != c.span || head->level != c.level ||
+                head->script != c.script || head->upright != c.upright || c.forced || previous->forced)
             t.runs.push(Run{.firstChar = i, .endChar = i, .font = next, .upright = c.upright});
         t.runs.last().endChar = i + 1;
         font = next;
@@ -2048,13 +2099,14 @@ void recordCharacters(Layout& t) {
         if (span.of != kArrayMissing)
             continue;
         const SvgPaints& paints = span.style.paints;
-        out.elements.push(SvgTextElement{.element = span.element,
-                                         .start = span.start,
-                                         .end = span.end,
-                                         .pointerEvents = span.style.pointerEvents,
-                                         .visible = span.style.visible,
-                                         .painted = paints.fill.kind != SvgPaintKind_None
-                                                    || paints.stroke.kind != SvgPaintKind_None});
+        out.elements.push(SvgTextElement{
+            .element = span.element,
+            .start = span.start,
+            .end = span.end,
+            .pointerEvents = span.style.pointerEvents,
+            .visible = span.style.visible,
+            .painted = paints.fill.kind != SvgPaintKind_None || paints.stroke.kind != SvgPaintKind_None,
+        });
     }
 }
 
@@ -2091,7 +2143,7 @@ void measureChars(Layout& t, Array<float>* advances, Array<float>* ascents, Arra
 // Tiny's textArea breaks any word; otherwise it overflows the line. The spaces that end a line hang past it. A first
 // line that `firstEnd` gives ends there. Returns the start of each line, with the end last.
 void breakLines(Layout& t, const Array<float>& advances, float width, Array<uint32_t>* starts,
-                uint32_t firstEnd = kArrayMissing) {
+        uint32_t firstEnd = kArrayMissing) {
     PrStringView text{t.text.data, t.text.count};
     uint32_t count = t.chars.count;
     t.codePoints.clear();
@@ -2406,9 +2458,13 @@ void overflowLines(Layout& t, const CssComputedStyle* style, float inlineSize, c
     const TextStyle& own = t.spans.data[0].style;
     float x = isNanF32(t.chars.data[0].x) ? 0 : t.chars.data[0].x;
     bool rtl = own.rightToLeft;
-    float left = own.textAnchor == Anchor_Middle           ? x - inlineSize / 2
-                 : (own.textAnchor == Anchor_Start) != rtl ? x
-                                                           : x - inlineSize;
+    float left;
+    if (own.textAnchor == Anchor_Middle)
+        left = x - inlineSize / 2;
+    else if ((own.textAnchor == Anchor_Start) != rtl)
+        left = x;
+    else
+        left = x - inlineSize;
     float right = left + inlineSize;
     if (overflow == PrCssKeyword_Clip) {
         constexpr float kUnbounded = 1e7f;
@@ -2428,8 +2484,8 @@ void overflowLines(Layout& t, const CssComputedStyle* style, float inlineSize, c
         for (uint32_t g = 0; g < glyphCount; ++g) {
             const Glyph& glyph = t.glyphs.data[g];
             if (onLine(glyph))
-                overflows = overflows || (rtl ? glyph.pen.x < left - kTolerance
-                                              : glyph.pen.x + glyph.advance > right + kTolerance);
+                overflows = overflows ||
+                    (rtl ? glyph.pen.x < left - kTolerance : glyph.pen.x + glyph.advance > right + kTolerance);
         }
         if (!overflows)
             continue;
@@ -2492,7 +2548,7 @@ void layoutText(Layout& t, const PrDomElement* text, const CssComputedStyle* sty
     // An inline-size gives the text a wrapping area of that width, or that height for vertical text
     // (SVG2/text.html#InlineSize). Zero creates none.
     float inlineSize = svgLengthResolve(svgStyleLength(style, PrCssProperty_InlineSize),
-                                        percentBase(t, t.vertical ? SvgAxis_Y : SvgAxis_X));
+        percentBase(t, t.vertical ? SvgAxis_Y : SvgAxis_X));
     bool wraps = inlineSize > 0 && t.chars.count != 0;
     if (wraps)
         ignorePositions(t);
@@ -2636,20 +2692,26 @@ void layoutTextArea(Layout& t, const PrDomElement* area, const CssComputedStyle*
 } // namespace
 
 SvgNodeIndex svgBuildText(SvgBuilder& b, const PrDomElement* element, const CssComputedStyle* style,
-                          SvgNodeIndex parent, bool instance) {
+        SvgNodeIndex parent, bool instance) {
     PrCssKeyword visibility = svgStyleKeyword(style, PrCssProperty_Visibility);
-    SvgNode own{.kind = SvgNodeKind_Text,
-                .visible = visibility != PrCssKeyword_Hidden && visibility != PrCssKeyword_Collapse,
-                .fillRule = svgStyleFillRule(style, PrCssProperty_FillRule),
-                .clipRule = svgStyleFillRule(style, PrCssProperty_ClipRule),
-                .opacity = clampF32(svgStyleNumber(style, PrCssProperty_Opacity, 1), 0, 1),
-                .pointerEvents = svgStylePointerEvents(style), .element = element};
+    SvgNode own{
+        .kind = SvgNodeKind_Text,
+        .visible = visibility != PrCssKeyword_Hidden && visibility != PrCssKeyword_Collapse,
+        .fillRule = svgStyleFillRule(style, PrCssProperty_FillRule),
+        .clipRule = svgStyleFillRule(style, PrCssProperty_ClipRule),
+        .opacity = clampF32(svgStyleNumber(style, PrCssProperty_Opacity, 1), 0, 1),
+        .pointerEvents = svgStylePointerEvents(style),
+        .element = element,
+    };
     SvgTransformStyle transform = svgStyleTransform(style);
     own.transform = svgTransformMatrix(transform, PrRect{});
     own.transformStyle = kArrayMissing;
     // The text paints its pieces, each with the paints of its element.
-    own.paints = SvgPaints{.fill = {.server = kSvgResourceNone}, .stroke = {.server = kSvgResourceNone},
-                           .strokeStyle = kArrayMissing};
+    own.paints = SvgPaints{
+        .fill = {.server = kSvgResourceNone},
+        .stroke = {.server = kSvgResourceNone},
+        .strokeStyle = kArrayMissing,
+    };
     own.markers = kArrayMissing;
     own.effects = kArrayMissing;
     own.text = allocZeroed<SvgText>();
@@ -2676,7 +2738,7 @@ void svgDrawText(SvgDrawer& d, const SvgNode& node) {
         const SvgTextPiece& piece = text->pieces.data[i];
         if (piece.path != nullptr) {
             svgPaintShape(d, piece.paints, true, text->bounds, -1,
-                          [&](PrDrawPaint paint) { prDrawListPath(d.list, piece.path, piece.rule, paint); }, [] {});
+                [&](PrDrawPaint paint) { prDrawListPath(d.list, piece.path, piece.rule, paint); }, [] {});
             continue;
         }
         PrFontGlyphRun glyphs{};
@@ -2686,7 +2748,7 @@ void svgDrawText(SvgDrawer& d, const SvgNode& node) {
         glyphs.glyphCount = piece.glyphCount;
         glyphs.transforms = piece.transformed ? text->transforms.data + piece.firstGlyph : nullptr;
         svgPaintShape(d, piece.paints, true, text->bounds, -1,
-                      [&](PrDrawPaint paint) { prDrawListGlyphs(d.list, &glyphs, PrVec2{}, paint); }, [] {});
+            [&](PrDrawPaint paint) { prDrawListGlyphs(d.list, &glyphs, PrVec2{}, paint); }, [] {});
     }
     if (text->clipped)
         prDrawListPopClip(d.list);
@@ -2729,20 +2791,19 @@ const SvgPaints* PR_NULLABLE svgTextPaints(const SvgText* text) {
 }
 
 bool svgTextSame(const SvgTree* tree, const SvgText* text, const SvgTree* expectedTree, const SvgText* expected,
-                 TextBuffer* difference) {
+        TextBuffer* difference) {
     if (!memEquals(&text->bounds, &expected->bounds, sizeof(PrRect))) {
         textAppend(difference, "text bounds differ");
         return false;
     }
-    if (text->clipped != expected->clipped
-        || (text->clipped && !memEquals(&text->clip, &expected->clip, sizeof(PrRect)))) {
+    if (text->clipped != expected->clipped ||
+            (text->clipped && !memEquals(&text->clip, &expected->clip, sizeof(PrRect)))) {
         textAppend(difference, "text clips differ");
         return false;
     }
-    bool sameGlyphs = text->glyphs.count == expected->glyphs.count
-                      && text->transforms.count == expected->transforms.count
-                      && memEquals(text->transforms.data, expected->transforms.data,
-                                   text->transforms.count * sizeof(PrAffine2));
+    bool sameGlyphs = text->glyphs.count == expected->glyphs.count &&
+        text->transforms.count == expected->transforms.count &&
+        memEquals(text->transforms.data, expected->transforms.data, text->transforms.count * sizeof(PrAffine2));
     // A glyph is compared by its fields, since its id leaves padding before its position.
     for (uint32_t i = 0; sameGlyphs && i < text->glyphs.count; ++i) {
         const PrFontGlyph& a = text->glyphs.data[i];
@@ -2753,9 +2814,8 @@ bool svgTextSame(const SvgTree* tree, const SvgText* text, const SvgTree* expect
         textAppend(difference, "glyphs differ");
         return false;
     }
-    bool sameCharacters = text->characters.count == expected->characters.count
-                          && memEquals(text->characters.data, expected->characters.data,
-                                       text->characters.count * sizeof(SvgTextCharacter));
+    bool sameCharacters = text->characters.count == expected->characters.count &&
+        memEquals(text->characters.data, expected->characters.data, text->characters.count * sizeof(SvgTextCharacter));
     if (!sameCharacters) {
         textAppend(difference, "characters differ");
         return false;
@@ -2764,8 +2824,8 @@ bool svgTextSame(const SvgTree* tree, const SvgText* text, const SvgTree* expect
     for (uint32_t i = 0; sameElements && i < text->elements.count; ++i) {
         const SvgTextElement& a = text->elements.data[i];
         const SvgTextElement& e = expected->elements.data[i];
-        sameElements = a.start == e.start && a.end == e.end && a.pointerEvents == e.pointerEvents
-                       && a.visible == e.visible && a.painted == e.painted;
+        sameElements = a.start == e.start && a.end == e.end && a.pointerEvents == e.pointerEvents &&
+            a.visible == e.visible && a.painted == e.painted;
     }
     if (!sameElements) {
         textAppend(difference, "the elements of the text differ");
@@ -2778,10 +2838,9 @@ bool svgTextSame(const SvgTree* tree, const SvgText* text, const SvgTree* expect
     for (uint32_t i = 0; i < text->pieces.count; ++i) {
         const SvgTextPiece& a = text->pieces.data[i];
         const SvgTextPiece& e = expected->pieces.data[i];
-        bool same = a.rule == e.rule && a.font == e.font && a.size == e.size && a.firstGlyph == e.firstGlyph
-                    && a.glyphCount == e.glyphCount && a.transformed == e.transformed
-                    && (a.path == nullptr) == (e.path == nullptr)
-                    && (a.path == nullptr || svgPathSame(a.path, e.path));
+        bool same = a.rule == e.rule && a.font == e.font && a.size == e.size && a.firstGlyph == e.firstGlyph &&
+            a.glyphCount == e.glyphCount && a.transformed == e.transformed &&
+            (a.path == nullptr) == (e.path == nullptr) && (a.path == nullptr || svgPathSame(a.path, e.path));
         if (!same) {
             textAppend(difference, "a text piece differs");
             return false;

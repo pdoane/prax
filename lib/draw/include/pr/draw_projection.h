@@ -38,7 +38,7 @@ typedef struct PrDrawProjection {
 // Returns false if the group draws nothing: its matrix is not finite, its plane is edge-on or behind the eye, or no
 // part of it lands in `visible`.
 bool prDrawProjectionPlace(const PrMatrix4* projection, PrAffine2 toTarget, PrRect bounds, PrRect visible,
-                           float maxLayerSide, PrDrawProjection* out);
+    float maxLayerSide, PrDrawProjection* out);
 
 // Appends `rect`, a rectangle of the layer's pixels, to `out` in target pixels, cut where it passes behind the eye.
 void prDrawProjectionQuad(const PrDrawProjection* projection, PrRect rect, PrPathPolyline* out);

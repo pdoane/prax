@@ -18,8 +18,7 @@ PrLayoutEasing bezier(double x1, double y1, double x2, double y2) {
     return easing;
 }
 
-PrLayoutTransformFunction function(PrLayoutTransformKind kind, float x, float y = 0, float z = 0, float w = 0,
-                                   float v = 0) {
+PrLayoutTransformFunction function(PrLayoutTransformKind kind, float x, float y = 0, float z = 0, float w = 0, float v = 0) {
     PrLayoutTransformFunction f{};
     f.kind = kind;
     f.values[0] = x;
@@ -147,9 +146,11 @@ TEST_CASE("transforms that cannot be decomposed interpolate only discretely") {
 
 TEST_CASE("a list with percentages is affine in its reference box") {
     // translate(50%, 10px) rotate(90deg) translate(10%, 20%)
-    PrLayoutTransformList functions = list({function(PrLayoutTransformKind_Translate, 0, 10, 0, 0.5f),
-                                            function(PrLayoutTransformKind_Rotate, 0, 0, 1, kQuarter),
-                                            function(PrLayoutTransformKind_Translate, 0, 0, 0, 0.1f, 0.2f)});
+    PrLayoutTransformList functions = list({
+        function(PrLayoutTransformKind_Translate, 0, 10, 0, 0.5f),
+        function(PrLayoutTransformKind_Rotate, 0, 0, 1, kQuarter),
+        function(PrLayoutTransformKind_Translate, 0, 0, 0, 0.1f, 0.2f),
+    });
     PrLayoutTransform transform = prLayoutTransformListTransform(&functions);
     for (PrVec2 extent : {PrVec2{200, 100}, PrVec2{30, 70}}) {
         PrMatrix4 resolved = prLayoutTransformResolve(&transform, extent);
@@ -157,14 +158,18 @@ TEST_CASE("a list with percentages is affine in its reference box") {
     }
 
     // A percentage to the right of a perspective stays exact. One to its left, which applies after it, counts as zero.
-    PrLayoutTransformList right = list({function(PrLayoutTransformKind_Perspective, 100),
-                                        function(PrLayoutTransformKind_Rotate, 0, 1, 0, 0.5f),
-                                        function(PrLayoutTransformKind_Translate, 0, 0, 0, 0.5f)});
+    PrLayoutTransformList right = list({
+        function(PrLayoutTransformKind_Perspective, 100),
+        function(PrLayoutTransformKind_Rotate, 0, 1, 0, 0.5f),
+        function(PrLayoutTransformKind_Translate, 0, 0, 0, 0.5f),
+    });
     transform = prLayoutTransformListTransform(&right);
     PrMatrix4 resolved = prLayoutTransformResolve(&transform, PrVec2{80, 40});
     checkNear(resolved, prLayoutTransformListMatrix(&right, PrVec2{80, 40}));
-    PrLayoutTransformList left = list({function(PrLayoutTransformKind_Translate, 5, 0, 0, 0.5f),
-                                       function(PrLayoutTransformKind_Perspective, 100)});
+    PrLayoutTransformList left = list({
+        function(PrLayoutTransformKind_Translate, 5, 0, 0, 0.5f),
+        function(PrLayoutTransformKind_Perspective, 100),
+    });
     transform = prLayoutTransformListTransform(&left);
     resolved = prLayoutTransformResolve(&transform, PrVec2{80, 40});
     CHECK(double(resolved.m[0][3]) == doctest::Approx(5));

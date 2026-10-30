@@ -48,8 +48,7 @@ void meet(const Array<PathGridEdge>& edges, uint32_t i, uint32_t j, Array<Split>
     if (sign(d1) * sign(d2) < 0 && sign(d3) * sign(d4) < 0) {
         // A crossing, rounded to the grid.
         double t = double(d1) / double(d1 - d2);
-        PathGridPoint at{p.a.x + nearest(t * double(p.b.x - p.a.x)),
-                     p.a.y + nearest(t * double(p.b.y - p.a.y))};
+        PathGridPoint at{p.a.x + nearest(t * double(p.b.x - p.a.x)), p.a.y + nearest(t * double(p.b.y - p.a.y))};
         splits.push(Split{i, at});
         splits.push(Split{j, at});
         return;
@@ -160,17 +159,18 @@ PathGrid pathGridOver(const Array<PrVec2>* PR_NONNULL const* PR_NONNULL arrays, 
 }
 
 PathGridPoint pathGridSnap(const PathGrid& grid, PrVec2 p) {
-    return PathGridPoint{nearest((double(p.x) - grid.originX) * grid.scale),
-                     nearest((double(p.y) - grid.originY) * grid.scale)};
+    return PathGridPoint{
+        nearest((double(p.x) - grid.originX) * grid.scale),
+        nearest((double(p.y) - grid.originY) * grid.scale),
+    };
 }
 
 PrVec2 pathGridUnsnap(const PathGrid& grid, PathGridPoint p) {
-    return PrVec2{float(double(p.x) / grid.scale + grid.originX),
-                   float(double(p.y) / grid.scale + grid.originY)};
+    return PrVec2{float(double(p.x) / grid.scale + grid.originX), float(double(p.y) / grid.scale + grid.originY)};
 }
 
 void pathGridAddEdges(const PathGrid& grid, const Array<PrVec2>& points, const Array<uint32_t>& ends,
-                      uint8_t owner, Array<PathGridEdge>& edges) {
+        uint8_t owner, Array<PathGridEdge>& edges) {
     uint32_t start = 0;
     for (uint32_t r = 0; r < ends.count; ++r) {
         uint32_t end = ends.data[r];

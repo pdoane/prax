@@ -16,9 +16,9 @@ constexpr float kTagWidth = 32;
 
 // Returns the tone that a log line's tag is set in.
 PrKitTone levelTone(PrKitLogLevel level) {
-    return level == PrKitLogLevel_Error     ? PrKitTone_Danger
-           : level == PrKitLogLevel_Warning ? PrKitTone_Warning
-                                            : PrKitTone_Accent;
+    if (level == PrKitLogLevel_Error)
+        return PrKitTone_Danger;
+    return level == PrKitLogLevel_Warning ? PrKitTone_Warning : PrKitTone_Accent;
 }
 
 // Returns the font of a readout's text: `role`, on one line.
@@ -105,14 +105,13 @@ using namespace pr_impl;
 PrLayoutNode prKitStatTile(PrKit* kit, PrLayoutNode parent, PrKitStatTile tile) {
     Kit& k = *kit;
     const PrKitPalette& p = k.theme.palette;
-    PrLayoutStyleIndex tileRecord =
-        kitStyle(k, TileBox{}, TileFlex{}, KitColors{.background = p.bg1, .border = p.line1});
+    PrLayoutStyleIndex tileRecord = kitStyle(k, TileBox{}, TileFlex{}, KitColors{.background = p.bg1, .border = p.line1});
     PrLayoutNode card = part(k, parent, tile.key, tileRecord, PrStringView{});
     prUiSetFlags(k.ui, card, PrUiFlag_SubtreeTransparent);
     part(k, card, 0, kitStyle(k, KitBlock{}, lineFont(PrKitTextRole_Caption), KitToneInk{.tone = PrKitTone_Muted}),
-         tile.label);
+        tile.label);
     part(k, card, 0, kitStyle(k, KitBlock{}, lineFont(PrKitTextRole_MonoNum), KitToneInk{.tone = PrKitTone_Primary}),
-         tile.value);
+        tile.value);
     if (tile.note.size != 0) {
         PrKitTone tone = tile.noteTone == PrKitTone_Auto ? PrKitTone(PrKitTone_Muted) : tile.noteTone;
         part(k, card, 0, kitStyle(k, KitBlock{}, lineFont(PrKitTextRole_Meta), KitToneInk{.tone = tone}), tile.note);
@@ -131,26 +130,21 @@ PrLayoutNode prKitLogLine(PrKit* kit, PrLayoutNode parent, PrKitLogLine line) {
         wash = line.level == PrKitLogLevel_Error ? p.danger : p.warning;
         wash.a = line.level == PrKitLogLevel_Error ? 0.14f : 0.10f;
     }
-    PrLayoutStyleIndex lineRecord =
-        kitStyle(k, LineBox{}, LineFlex{}, KitColors{.background = wash, .border = p.line1});
+    PrLayoutStyleIndex lineRecord = kitStyle(k, LineBox{}, LineFlex{}, KitColors{.background = wash, .border = p.line1});
     PrLayoutNode row = part(k, parent, line.key, lineRecord, PrStringView{});
     if (line.time.size != 0) {
-        part(k, row, 0,
-             kitStyle(k, ColumnBox{.width = kTimeWidth}, KitFixed{}, lineFont(PrKitTextRole_Meta),
-                      KitToneInk{.tone = PrKitTone_Faint}),
-             line.time);
+        part(k, row, 0, kitStyle(k, ColumnBox{.width = kTimeWidth}, KitFixed{}, lineFont(PrKitTextRole_Meta),
+            KitToneInk{.tone = PrKitTone_Faint}), line.time);
     }
+    part(k, row, 0, kitStyle(k, ColumnBox{.width = kTagWidth}, KitFixed{}, lineFont(PrKitTextRole_Caption),
+        KitToneInk{.tone = levelTone(line.level)}), kTags[line.level]);
     part(k, row, 0,
-         kitStyle(k, ColumnBox{.width = kTagWidth}, KitFixed{}, lineFont(PrKitTextRole_Caption),
-                  KitToneInk{.tone = levelTone(line.level)}),
-         kTags[line.level]);
-    part(k, row, 0,
-         kitStyle(k, MessageBox{}, KitGrow{}, lineFont(PrKitTextRole_Mono), KitToneInk{.tone = PrKitTone_Primary}),
-         line.message);
+        kitStyle(k, MessageBox{}, KitGrow{}, lineFont(PrKitTextRole_Mono), KitToneInk{.tone = PrKitTone_Primary}),
+        line.message);
     if (line.source.size != 0) {
         part(k, row, 0,
-             kitStyle(k, KitBlock{}, KitFixed{}, lineFont(PrKitTextRole_Meta), KitToneInk{.tone = PrKitTone_Faint}),
-             line.source);
+            kitStyle(k, KitBlock{}, KitFixed{}, lineFont(PrKitTextRole_Meta), KitToneInk{.tone = PrKitTone_Faint}),
+            line.source);
     }
     return row;
 }

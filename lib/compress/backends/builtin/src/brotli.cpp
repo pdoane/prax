@@ -48,18 +48,25 @@ constexpr uint32_t kCopySlack = 16;
 // The block counts that the block count codes encode, and the extra bits that each reads (rfc 7932 6).
 constexpr uint32_t kBlockCountBase[kBlockCountAlphabet] = {
     1,   5,   9,   13,  17,  25,  33,   41,   49,   65,   81,   97,   113,
-    145, 177, 209, 241, 305, 369, 497, 753, 1265, 2289, 4337, 8433, 16625};
-constexpr uint8_t kBlockCountExtra[kBlockCountAlphabet] = {2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4,  4,  5,
-                                                           5, 5, 5, 6, 6, 7, 8, 9, 10, 11, 12, 13, 24};
+    145, 177, 209, 241, 305, 369, 497, 753, 1265, 2289, 4337, 8433, 16625,
+};
+constexpr uint8_t kBlockCountExtra[kBlockCountAlphabet] = {
+    2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4,  4,  5,
+    5, 5, 5, 6, 6, 7, 8, 9, 10, 11, 12, 13, 24,
+};
 
 // The insert lengths that the insert length codes encode, and the extra bits that each reads (rfc 7932 5).
-constexpr uint32_t kInsertBase[24] = {0,  1,  2,  3,  4,   5,   6,   8,   10,  14,   18,   26,
-                                      34, 50, 66, 98, 130, 194, 322, 578, 1090, 2114, 6210, 22594};
+constexpr uint32_t kInsertBase[24] = {
+    0,  1,  2,  3,  4,   5,   6,   8,   10,  14,   18,   26,
+    34, 50, 66, 98, 130, 194, 322, 578, 1090, 2114, 6210, 22594,
+};
 constexpr uint8_t kInsertExtra[24] = {0, 0, 0, 0, 0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 7, 8, 9, 10, 12, 14, 24};
 
 // The copy lengths that the copy length codes encode, and the extra bits that each reads (rfc 7932 5).
-constexpr uint32_t kCopyBase[24] = {2,  3,  4,  5,  6,  7,   8,   9,   10,  12,  14,   18,
-                                    22, 30, 38, 54, 70, 102, 134, 198, 326, 582, 1094, 2118};
+constexpr uint32_t kCopyBase[24] = {
+    2,  3,  4,  5,  6,  7,   8,   9,   10,  12,  14,   18,
+    22, 30, 38, 54, 70, 102, 134, 198, 326, 582, 1094, 2118,
+};
 constexpr uint8_t kCopyExtra[24] = {0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 7, 8, 9, 10, 24};
 
 // The first insert length code and the first copy length code of each range of 64 insert-and-copy length codes (rfc
@@ -68,8 +75,10 @@ constexpr uint8_t kCommandInsert[11] = {0, 0, 0, 0, 8, 8, 0, 16, 8, 16, 16};
 constexpr uint8_t kCommandCopy[11] = {0, 8, 0, 8, 0, 8, 16, 0, 16, 8, 16};
 
 // The order in which a complex prefix code stores the code lengths of the code length alphabet (rfc 7932 3.5).
-constexpr uint8_t kCodeLengthOrder[kCodeLengthAlphabet] = {1, 2, 3,  4,  0,  5,  17, 6,  16,
-                                                          7, 8, 9, 10, 11, 12, 13, 14, 15};
+constexpr uint8_t kCodeLengthOrder[kCodeLengthAlphabet] = {
+    1, 2, 3,  4,  0,  5,  17, 6,  16,
+    7, 8, 9, 10, 11, 12, 13, 14, 15,
+};
 
 // The code lengths of the code length alphabet are themselves coded with a fixed variable-length code (rfc 7932 3.5).
 // These tables give the length and symbol of that code, indexed by the next four bits of the stream.
@@ -496,7 +505,8 @@ BrotliStep readCodeHeader(BrotliState& d, BitReader& r) {
             addSingle(d, code.slot, symbols[0]);
         } else {
             static constexpr uint8_t kSimpleLengths[5][4] = {
-                {0, 0, 0, 0}, {0, 0, 0, 0}, {1, 1, 0, 0}, {1, 2, 2, 0}, {2, 2, 2, 2}};
+                {0, 0, 0, 0}, {0, 0, 0, 0}, {1, 1, 0, 0}, {1, 2, 2, 0}, {2, 2, 2, 2},
+            };
             static constexpr uint8_t kSelectLengths[4] = {1, 2, 3, 3};
             memZero(d.lengths, code.alphabet);
             for (uint32_t i = 0; i < count; ++i)
@@ -597,8 +607,8 @@ BrotliStep readCodeLengths(BrotliState& d, BitReader& r) {
 BrotliStep switchBlock(BrotliState& d, BitReader& r, uint32_t category) {
     uint32_t symbol = 0;
     uint32_t count = 0;
-    if (!readSymbol(r, tableOf(d, BrotliSlot_TypeCodes + category), symbol)
-        || !readBlockCount(r, tableOf(d, BrotliSlot_CountCodes + category), count))
+    if (!readSymbol(r, tableOf(d, BrotliSlot_TypeCodes + category), symbol) ||
+            !readBlockCount(r, tableOf(d, BrotliSlot_CountCodes + category), count))
         return BrotliStep_Input;
     const uint32_t types = d.types[category];
     uint32_t type = symbol - 2;
@@ -677,8 +687,7 @@ bool dictionaryWord(BrotliState& d, uint32_t length, uint32_t id) {
     if (transformId >= kBrotliTransformCount)
         return false;
     const BrotliTransform& transform = kBrotliTransforms[transformId];
-    const uint8_t* base =
-        kBrotliDictionary + kBrotliDictionaryOffsets[length] + (id & ((1u << bits) - 1)) * length;
+    const uint8_t* base = kBrotliDictionary + kBrotliDictionaryOffsets[length] + (id & ((1u << bits) - 1)) * length;
     uint32_t size = 0;
     memCopy(d.word, transform.prefix, transform.prefixSize);
     size += transform.prefixSize;
@@ -1111,8 +1120,9 @@ BrotliStep step(BrotliState& d, BitReader& r, BrotliOutput& out) {
                 return BrotliStep_Input;
             const bool literal = d.category == 0;
             d.map = literal ? &d.literalMap : &d.distanceMap;
-            const uint32_t size = literal ? kLiteralContexts * d.types[BrotliCategory_Literal]
-                                          : kDistanceContexts * d.types[BrotliCategory_Distance];
+            uint32_t size = kDistanceContexts * d.types[BrotliCategory_Distance];
+            if (literal)
+                size = kLiteralContexts * d.types[BrotliCategory_Literal];
             d.map->resize(size);
             (literal ? d.literalTrees : d.distanceTrees) = value;
             d.mapTrees = value;
@@ -1282,7 +1292,7 @@ void brotliDestroy(Brotli* PR_NULLABLE decoder) {
 }
 
 BrotliResult brotliRead(Brotli* decoder, PrByteView bytes, bool final, size_t* consumed,
-                        uint8_t* PR_NULLABLE output, size_t capacity, size_t* written) {
+        uint8_t* PR_NULLABLE output, size_t capacity, size_t* written) {
     PR_ASSERT(bytes.data != nullptr || bytes.size == 0);
     PR_ASSERT(output != nullptr || capacity == 0);
     BrotliState& d = *decoder;

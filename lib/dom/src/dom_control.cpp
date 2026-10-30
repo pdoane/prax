@@ -246,8 +246,8 @@ void sanitize(PrDomElement* input) {
 // Returns true if `a` and `b` are radios of one group: both have the same form owner, are in the same tree, and have
 // the same name, which is not empty.
 bool sameGroup(const PrDomElement* a, PrStringView name, const PrDomElement* b) {
-    return a != b && isRadio(b) && domFormOwner(a) == domFormOwner(b) && domAttributeValue(b, "name") == name
-           && domNodeRoot(a) == domNodeRoot(b);
+    return a != b && isRadio(b) && domFormOwner(a) == domFormOwner(b) && domAttributeValue(b, "name") == name &&
+        domNodeRoot(a) == domNodeRoot(b);
 }
 
 template <typename Visit>
@@ -517,8 +517,8 @@ bool domIsSubmitButton(const PrDomElement* element) {
         case DomButtonType_Submit:
             return true;
         case DomButtonType_Auto:
-            return !domHasAttribute(element, "command") && !domHasAttribute(element, "commandfor")
-                   && !domIsHtml(domElementFromNode(element->parent), PrDomTag_Select);
+            return !domHasAttribute(element, "command") && !domHasAttribute(element, "commandfor") &&
+                !domIsHtml(domElementFromNode(element->parent), PrDomTag_Select);
         default:
             return false;
     }
@@ -839,8 +839,8 @@ DomInputRange domInputRange(const PrDomElement* input) {
     else
         range.step = parsed * rules.scale;
     // A step of months, days or weeks is a whole number of them, and so is a step that rounds below one.
-    if (!isNanF64(range.step)
-        && (type == PrDomInputType_Date || type == PrDomInputType_Month || type == PrDomInputType_Week)) {
+    if (!isNanF64(range.step) &&
+            (type == PrDomInputType_Date || type == PrDomInputType_Month || type == PrDomInputType_Week)) {
         double units = floorF64(range.step / rules.scale + 0.5);
         range.step = (units < 1 ? 1 : units) * rules.scale;
     }
@@ -1076,9 +1076,9 @@ void domControlAttributeChanged(PrDomElement* element, PrStringView name, PrStri
     } else if (mode == DomValueMode_Value) {
         // The sanitization of a range reads its bounds and step, that of an email its multiple attribute, and that of a
         // color its alpha and color space.
-        bool reads = (type == PrDomInputType_Range && (name == "min" || name == "max" || name == "step"))
-                     || (type == PrDomInputType_Email && name == "multiple")
-                     || (type == PrDomInputType_Color && (name == "alpha" || name == "colorspace"));
+        bool reads = (type == PrDomInputType_Range && (name == "min" || name == "max" || name == "step")) ||
+            (type == PrDomInputType_Email && name == "multiple") ||
+            (type == PrDomInputType_Color && (name == "alpha" || name == "colorspace"));
         if (reads)
             sanitize(element);
     }

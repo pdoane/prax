@@ -59,14 +59,18 @@ bool layoutRectContains(PrLayoutRect rect, PrLayoutVec point);
 
 // Returns the smallest rectangle that holds both rectangles.
 inline PrLayoutRect layoutRectUnion(PrLayoutRect a, PrLayoutRect b) {
-    return PrLayoutRect{layoutUnitMin(a.left, b.left), layoutUnitMin(a.top, b.top), layoutUnitMax(a.right, b.right),
-                        layoutUnitMax(a.bottom, b.bottom)};
+    return PrLayoutRect{
+        layoutUnitMin(a.left, b.left), layoutUnitMin(a.top, b.top), layoutUnitMax(a.right, b.right),
+        layoutUnitMax(a.bottom, b.bottom),
+    };
 }
 
 // Returns the part of the rectangles that both cover, which is empty if they do not meet.
 inline PrLayoutRect layoutRectIntersect(PrLayoutRect a, PrLayoutRect b) {
-    return PrLayoutRect{layoutUnitMax(a.left, b.left), layoutUnitMax(a.top, b.top), layoutUnitMin(a.right, b.right),
-                        layoutUnitMin(a.bottom, b.bottom)};
+    return PrLayoutRect{
+        layoutUnitMax(a.left, b.left), layoutUnitMax(a.top, b.top), layoutUnitMin(a.right, b.right),
+        layoutUnitMin(a.bottom, b.bottom),
+    };
 }
 
 // Returns `rect` moved by `offset`.

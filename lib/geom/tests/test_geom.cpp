@@ -26,8 +26,7 @@ bool nearPoint(PrVec2 a, PrVec2 b) {
 }
 
 bool nearRect(PrRect a, PrRect b) {
-    return near(a.left, b.left) && near(a.top, b.top) && near(a.right, b.right)
-           && near(a.bottom, b.bottom);
+    return near(a.left, b.left) && near(a.top, b.top) && near(a.right, b.right) && near(a.bottom, b.bottom);
 }
 
 } // namespace
@@ -82,18 +81,26 @@ TEST_CASE("integer rectangles intersect to all zero where they do not overlap, a
 }
 
 TEST_CASE("fitting round corners scales every radius by the tightest side, and squares an axis of zero or less") {
-    PrCornerRect shape{PrRect{0, 0, 100, 50},
-                       {prCornerRound(PrVec2{60, 10}), prCornerRound(PrVec2{60, 10}), prCornerRound(PrVec2{10, 40}),
-                        prCornerRound(PrVec2{10, 40})}};
+    PrCornerRect shape{
+        PrRect{0, 0, 100, 50},
+        {
+            prCornerRound(PrVec2{60, 10}), prCornerRound(PrVec2{60, 10}), prCornerRound(PrVec2{10, 40}),
+            prCornerRound(PrVec2{10, 40}),
+        },
+    };
     PrCornerRect fitted = prCornerRectFit(shape);
     // The right side needs 10 + 40 of 50, and the top 60 + 60 of 100. The top sets the factor.
     float factor = 100.0f / 120.0f;
     CHECK(nearPoint(fitted.corners[PrRectCorner_TopLeft].radii, PrVec2{60 * factor, 10 * factor}));
     CHECK(nearPoint(fitted.corners[PrRectCorner_BottomRight].radii, PrVec2{10 * factor, 40 * factor}));
 
-    PrCornerRect square{PrRect{0, 0, 10, 10},
-                        {prCornerRound(PrVec2{0, 5}), prCornerRound(PrVec2{2, 2}), prCornerRound(PrVec2{-1, 3}),
-                         prCornerRound(PrVec2{2, 2})}};
+    PrCornerRect square{
+        PrRect{0, 0, 10, 10},
+        {
+            prCornerRound(PrVec2{0, 5}), prCornerRound(PrVec2{2, 2}), prCornerRound(PrVec2{-1, 3}),
+            prCornerRound(PrVec2{2, 2}),
+        },
+    };
     PrCornerRect squared = prCornerRectFit(square);
     CHECK(nearPoint(squared.corners[PrRectCorner_TopLeft].radii, PrVec2{0, 0}));
     CHECK(nearPoint(squared.corners[PrRectCorner_TopRight].radii, PrVec2{2, 2}));
@@ -148,8 +155,7 @@ TEST_CASE("a mapped rectangle is the bounds of its corners") {
 TEST_CASE("a corner's curve runs from the side before it to the side after") {
     PrVec2 round = prCornerCurvePoint(1, 0.5f);
     CHECK(nearPoint(round, PrVec2{0.70710678f, 1 - 0.70710678f}));
-    CHECK(nearPoint(prCornerCurvePoint(0, 0.3f), PrVec2{prCornerCurvePoint(0, 0.3f).x,
-                                                        prCornerCurvePoint(0, 0.3f).x}));
+    CHECK(nearPoint(prCornerCurvePoint(0, 0.3f), PrVec2{prCornerCurvePoint(0, 0.3f).x, prCornerCurvePoint(0, 0.3f).x}));
     CHECK(nearPoint(prCornerCurvePoint(-1, 0.5f), PrVec2{1 - 0.70710678f, 0.70710678f}));
     CHECK(nearPoint(prCornerCurvePoint(kInfinityF32, 0.25f), PrVec2{0.5f, 0}));
     CHECK(nearPoint(prCornerCurvePoint(-kInfinityF32, 0.25f), PrVec2{0, 0.5f}));
@@ -506,8 +512,10 @@ TEST_CASE("a projection's largest scale bounds its scale everywhere in the visib
     float largest = 0;
     for (uint32_t i = 0; i <= 40; ++i) {
         for (uint32_t j = 0; j <= 40; ++j) {
-            PrVec2 p{rect.left + (rect.right - rect.left) * float(i) / 40,
-                     rect.top + (rect.bottom - rect.top) * float(j) / 40};
+            PrVec2 p{
+                rect.left + (rect.right - rect.left) * float(i) / 40,
+                rect.top + (rect.bottom - rect.top) * float(j) / 40,
+            };
             float w = seen.m[2][0] * p.x + seen.m[2][1] * p.y + seen.m[2][2];
             if (w < minimumW)
                 continue;

@@ -43,28 +43,14 @@ NSView* viewOf(PrApp* app) {
 
 // A press of the A key, as AppKit would dispatch it to the window.
 NSEvent* keyA(NSWindow* window, NSEventType type) {
-    return [NSEvent keyEventWithType:type
-                            location:NSZeroPoint
-                       modifierFlags:0
-                           timestamp:0
-                        windowNumber:window.windowNumber
-                             context:nil
-                          characters:@"a"
-         charactersIgnoringModifiers:@"a"
-                           isARepeat:NO
-                             keyCode:0];
+    return [NSEvent keyEventWithType:type location:NSZeroPoint modifierFlags:0 timestamp:0
+        windowNumber:window.windowNumber context:nil characters:@"a" charactersIgnoringModifiers:@"a" isARepeat:NO
+        keyCode:0];
 }
 
 NSEvent* leftMouse(NSWindow* window, NSEventType type) {
-    return [NSEvent mouseEventWithType:type
-                              location:NSMakePoint(10, 10)
-                         modifierFlags:0
-                             timestamp:0
-                          windowNumber:window.windowNumber
-                               context:nil
-                           eventNumber:0
-                            clickCount:1
-                              pressure:1];
+    return [NSEvent mouseEventWithType:type location:NSMakePoint(10, 10) modifierFlags:0 timestamp:0
+        windowNumber:window.windowNumber context:nil eventNumber:0 clickCount:1 pressure:1];
 }
 
 // The events of a run, without Text, which the input method types as it will.
@@ -144,22 +130,17 @@ TEST_CASE("a browser loads a page, runs a script in it and captures it at two pi
             // Load the page from a file, which is how the viewer loads documents.
             NSString* path = [NSTemporaryDirectory() stringByAppendingPathComponent:@"pr-browser.svg"];
             [@"<svg xmlns='http://www.w3.org/2000/svg' width='40' height='20'><rect width='40' "
-             @"height='20' fill='#ff0000'/></svg>" writeToFile:path
-                                                    atomically:YES
-                                                      encoding:NSUTF8StringEncoding
-                                                         error:nil];
+                @"height='20' fill='#ff0000'/></svg>" writeToFile:path atomically:YES
+                encoding:NSUTF8StringEncoding error:nil];
             NSString* url = [NSURL fileURLWithPath:path].absoluteString;
-            prAppBrowserLoad(b.browser, url.UTF8String,
-                             [](void* context, PrStatus status) {
+            prAppBrowserLoad(b.browser, url.UTF8String, [](void* context, PrStatus status) {
                 Browse& b = *static_cast<Browse*>(context);
                 b.loaded = status;
-                prAppBrowserEvaluate(
-                    b.browser, "document.documentElement.getAttribute('width')",
+                prAppBrowserEvaluate(b.browser, "document.documentElement.getAttribute('width')",
                     [](void* context, PrStatus, PrStringView json) {
                         Browse& b = *static_cast<Browse*>(context);
                         b.result.assign(json.data != nullptr ? json.data : "", json.size);
-                        prAppBrowserCapture(
-                            b.browser, PrRect{0, 0, 40, 20}, PrUVec2{80, 40},
+                        prAppBrowserCapture(b.browser, PrRect{0, 0, 40, 20}, PrUVec2{80, 40},
                             [](void* context, PrStatus status, PrPixelView pixels) {
                                 Browse& b = *static_cast<Browse*>(context);
                                 if (status == PrStatus_Ok) {
@@ -169,10 +150,8 @@ TEST_CASE("a browser loads a page, runs a script in it and captures it at two pi
                                     b.center.assign(at, at + 4);
                                 }
                                 prAppStop(b.app);
-                            },
-                            &b);
-                    },
-                    &b);
+                            }, &b);
+                    }, &b);
             }, &b);
         },
         [](void*, PrApp*, const PrAppFrame*) {},
@@ -207,30 +186,22 @@ TEST_CASE("a page from a file reads the files beside it, and a promise answers o
             REQUIRE(prAppBrowserCreate(app, &desc, &b.browser) == PrStatus_Ok);
             NSString* directory = NSTemporaryDirectory();
             NSString* page = [directory stringByAppendingPathComponent:@"pr-browser-read.html"];
-            [@"<!doctype html><title>read</title>" writeToFile:page
-                                                   atomically:YES
-                                                     encoding:NSUTF8StringEncoding
-                                                        error:nil];
-            [@"beside" writeToFile:[directory stringByAppendingPathComponent:@"pr-browser-read.txt"]
-                        atomically:YES
-                          encoding:NSUTF8StringEncoding
-                             error:nil];
+            [@"<!doctype html><title>read</title>" writeToFile:page atomically:YES encoding:NSUTF8StringEncoding
+                error:nil];
+            [@"beside" writeToFile:[directory stringByAppendingPathComponent:@"pr-browser-read.txt"] atomically:YES
+                encoding:NSUTF8StringEncoding error:nil];
             NSString* url = [NSURL fileURLWithPath:page].absoluteString;
-            prAppBrowserLoad(b.browser, url.UTF8String,
-                             [](void* context, PrStatus status) {
+            prAppBrowserLoad(b.browser, url.UTF8String, [](void* context, PrStatus status) {
                 Browse& b = *static_cast<Browse*>(context);
                 b.loaded = status;
-                prAppBrowserEvaluate(
-                    b.browser,
+                prAppBrowserEvaluate(b.browser,
                     "var request = new XMLHttpRequest(); request.open('GET', 'pr-browser-read.txt', false);"
-                          " request.send(); new Promise(resolve => setTimeout(() => resolve(request.responseText),"
-                          " 10))",
-                    [](void* context, PrStatus, PrStringView json) {
-                        Browse& b = *static_cast<Browse*>(context);
-                        b.result.assign(json.data != nullptr ? json.data : "", json.size);
-                        prAppStop(b.app);
-                    },
-                    &b);
+                        " request.send(); new Promise(resolve => setTimeout(() => resolve(request.responseText),"
+                        " 10))", [](void* context, PrStatus, PrStringView json) {
+                            Browse& b = *static_cast<Browse*>(context);
+                            b.result.assign(json.data != nullptr ? json.data : "", json.size);
+                            prAppStop(b.app);
+                        }, &b);
             }, &b);
         },
         [](void*, PrApp*, const PrAppFrame*) {},
@@ -279,8 +250,10 @@ TEST_CASE("input that a callback's own run loop dispatches arrives after the cal
     prAppRun(app, &handler);
     prAppDestroy(app);
     CHECK(!input.nested);
-    CHECK(kindsOf(input.events) == std::vector<PrAppEventKind>{PrAppEventKind_KeyDown, PrAppEventKind_PointerDown,
-                                                                PrAppEventKind_PointerUp, PrAppEventKind_Wake});
+    CHECK(kindsOf(input.events) == std::vector<PrAppEventKind>{
+        PrAppEventKind_KeyDown, PrAppEventKind_PointerDown,
+        PrAppEventKind_PointerUp, PrAppEventKind_Wake,
+    });
 }
 
 TEST_CASE("a window that stops being the key window releases the buttons and keys that are down") {
@@ -295,7 +268,7 @@ TEST_CASE("a window that stops being the key window releases the buttons and key
             [view mouseDown:leftMouse(view.window, NSEventTypeLeftMouseDown)];
             // Another window becomes the key window, and the button's release goes to it, or arrives late.
             [NSNotificationCenter.defaultCenter postNotificationName:NSWindowDidResignKeyNotification
-                                                              object:view.window];
+                object:view.window];
             [view mouseUp:leftMouse(view.window, NSEventTypeLeftMouseUp)];
             prAppWake(app);
         },
@@ -309,9 +282,11 @@ TEST_CASE("a window that stops being the key window releases the buttons and key
     };
     prAppRun(app, &handler);
     prAppDestroy(app);
-    CHECK(kindsOf(input.events) == std::vector<PrAppEventKind>{PrAppEventKind_KeyDown, PrAppEventKind_PointerDown,
-                                                                PrAppEventKind_PointerUp, PrAppEventKind_KeyUp,
-                                                                PrAppEventKind_Wake});
+    CHECK(kindsOf(input.events) == std::vector<PrAppEventKind>{
+        PrAppEventKind_KeyDown, PrAppEventKind_PointerDown,
+        PrAppEventKind_PointerUp, PrAppEventKind_KeyUp,
+        PrAppEventKind_Wake,
+    });
     for (const PrAppEvent& event : input.events) {
         if (event.kind == PrAppEventKind_KeyUp)
             CHECK(event.code == PrAppKeyCode_KeyA);

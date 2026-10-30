@@ -10,7 +10,7 @@ using namespace pr_impl;
 
 TEST_CASE("d set by a style rule overrides the d attribute, and d: none draws nothing") {
     Drawing ruled(svgDocument("<style>#p { d: path('M 10 10 H 50') }</style>"
-                              "<path id='p' d='M 10 10 H 20' stroke='black'/>"));
+        "<path id='p' d='M 10 10 H 20' stroke='black'/>"));
     REQUIRE(ruled.strokes().size() == 1);
     CHECK(near(ruled.strokes()[0]->bounds, PrRect{10, 10, 50, 10}));
     Drawing none(svgDocument("<path d='M 10 10 H 20' style='d: none' stroke='black'/>"));
@@ -27,7 +27,7 @@ TEST_CASE("path data in error draws the commands before the error") {
 TEST_CASE("pathLength scales the dashes and their offset by the length of the geometry") {
     // The path is 100 long and its author's length is 10, so a dash of 2 is 20 and the offset of 1 is 10.
     Drawing drawing(svgDocument("<path d='M 0 10 H 100' pathLength='10' stroke='black' stroke-dasharray='2 3' "
-                                "stroke-dashoffset='1'/>"));
+        "stroke-dashoffset='1'/>"));
     REQUIRE(drawing.strokes().size() == 1);
     const Drawn& stroke = *drawing.strokes()[0];
     REQUIRE(stroke.dashes.size() == 2);
@@ -39,7 +39,7 @@ TEST_CASE("pathLength scales the dashes and their offset by the length of the ge
 TEST_CASE("pathLength applies to a basic shape, measured along its equivalent path") {
     // The rect's perimeter is 200, and its author's length 100, so each dash doubles.
     Drawing drawing(svgDocument("<rect width='50' height='50' pathLength='100' fill='none' stroke='black' "
-                                "stroke-dasharray='5'/>"));
+        "stroke-dasharray='5'/>"));
     REQUIRE(drawing.strokes().size() == 1);
     REQUIRE(drawing.strokes()[0]->dashes.size() == 1);
     CHECK(near(drawing.strokes()[0]->dashes[0], 10, 1e-2f));
@@ -65,7 +65,7 @@ TEST_CASE("a subpath that only closes strokes, as a segment of zero length") {
 
 TEST_CASE("an arc that ends where it starts strokes as a segment of zero length") {
     Drawing drawing(svgDocument("<path d='M 20 20 A 10 10 0 0 1 20 20' stroke='black' stroke-width='10' "
-                                "stroke-linecap='square'/>"));
+        "stroke-linecap='square'/>"));
     REQUIRE(drawing.strokes().size() == 1);
     CHECK(drawing.strokes()[0]->verbs.size() >= 2);
 }
@@ -80,8 +80,7 @@ TEST_CASE("a rect is placed by x, y, width and height, which percentages take fr
 }
 
 TEST_CASE("a rect's geometry properties apply from a style rule") {
-    Drawing drawing(svgDocument("<style>rect { x: 10px; width: 30px; height: 20px }</style>"
-                                "<rect x='50' width='5' height='5'/>"));
+    Drawing drawing(svgDocument("<style>rect { x: 10px; width: 30px; height: 20px }</style><rect x='50' width='5' height='5'/>"));
     REQUIRE(drawing.fills().size() == 1);
     CHECK(near(drawing.fills()[0]->bounds, PrRect{10, 0, 40, 20}));
 }

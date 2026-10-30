@@ -61,15 +61,13 @@ inline uint16_t readBeU16(const uint8_t* bytes) {
     return uint16_t((bytes[0] << 8) | bytes[1]);
 }
 inline uint32_t readBeU32(const uint8_t* bytes) {
-    return (uint32_t(bytes[0]) << 24) | (uint32_t(bytes[1]) << 16) | (uint32_t(bytes[2]) << 8)
-           | bytes[3];
+    return (uint32_t(bytes[0]) << 24) | (uint32_t(bytes[1]) << 16) | (uint32_t(bytes[2]) << 8) | bytes[3];
 }
 inline uint16_t readLeU16(const uint8_t* bytes) {
     return uint16_t(bytes[0] | (bytes[1] << 8));
 }
 inline uint32_t readLeU32(const uint8_t* bytes) {
-    return bytes[0] | (uint32_t(bytes[1]) << 8) | (uint32_t(bytes[2]) << 16)
-           | (uint32_t(bytes[3]) << 24);
+    return bytes[0] | (uint32_t(bytes[1]) << 8) | (uint32_t(bytes[2]) << 16) | (uint32_t(bytes[3]) << 24);
 }
 inline uint64_t readLeU64(const uint8_t* bytes) {
     return uint64_t(readLeU32(bytes)) | (uint64_t(readLeU32(bytes + 4)) << 32);

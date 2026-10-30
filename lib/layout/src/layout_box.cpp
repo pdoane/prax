@@ -17,8 +17,8 @@ void addInFlowBounds(const LayoutFragment* fragment, PrLayoutVec at, PrLayoutRec
         if ((f->flags & LayoutFragmentFlag_OutOfFlow) != 0 || layoutFragmentIsPoint(f))
             continue;
         PrLayoutVec offset = at + child.offset;
-        bool through = f->kind == LayoutFragmentKind_Line || f->kind == LayoutFragmentKind_Around
-                       || (f->kind == LayoutFragmentKind_Box && f->node == kPrLayoutNodeNone);
+        bool through = f->kind == LayoutFragmentKind_Line || f->kind == LayoutFragmentKind_Around ||
+            (f->kind == LayoutFragmentKind_Box && f->node == kPrLayoutNodeNone);
         if (through) {
             addInFlowBounds(f, offset, bounds, any);
             continue;
@@ -33,15 +33,14 @@ void addInFlowBounds(const LayoutFragment* fragment, PrLayoutVec at, PrLayoutRec
 // scrolls past those sides. They are the block-start and inline-start sides, or for a flex container its main-start and
 // cross-start sides (css-overflow-3/#scroll-origin), which a reverse flex-direction or flex-wrap moves to the end.
 PrLayoutRect cutAtOrigin(const LayoutTree* tree, const LayoutFragment* fragment, const PrLayoutBoxStyle& box,
-                         PrLayoutRect area, PrLayoutRect port, LayoutMode mode) {
+        PrLayoutRect area, PrLayoutRect port, LayoutMode mode) {
     LayoutSide block = LayoutSide_BlockStart;
     LayoutSide inlineSide = LayoutSide_InlineStart;
     if (layoutIsFlexContainer(box) && fragment->node != kPrLayoutNodeNone) {
-        const PrLayoutFlexStyle& flex =
-            layoutFlexStyle(tree->styles, layoutTreeNode(tree, fragment->node).style);
+        const PrLayoutFlexStyle& flex = layoutFlexStyle(tree->styles, layoutTreeNode(tree, fragment->node).style);
         bool row = flex.direction == PrLayoutFlexDirection_Row || flex.direction == PrLayoutFlexDirection_RowReverse;
-        bool mainReversed = flex.direction == PrLayoutFlexDirection_RowReverse
-                            || flex.direction == PrLayoutFlexDirection_ColumnReverse;
+        bool mainReversed = flex.direction == PrLayoutFlexDirection_RowReverse ||
+            flex.direction == PrLayoutFlexDirection_ColumnReverse;
         bool crossReversed = flex.wrap == PrLayoutFlexWrap_WrapReverse;
         bool blockReversed = row ? crossReversed : mainReversed;
         bool inlineReversed = row ? mainReversed : crossReversed;
@@ -62,9 +61,11 @@ PrLayoutRect cutAtOrigin(const LayoutTree* tree, const LayoutFragment* fragment,
 
 // Returns the padding box of `fragment`, styled by `box`, from its top left.
 PrLayoutRect paddingBox(const LayoutFragment* fragment, const PrLayoutBoxStyle& box) {
-    return PrLayoutRect{box.border[PrRectSide_Left], box.border[PrRectSide_Top],
-                        fragment->extent.x - box.border[PrRectSide_Right],
-                        fragment->extent.y - box.border[PrRectSide_Bottom]};
+    return PrLayoutRect{
+        box.border[PrRectSide_Left], box.border[PrRectSide_Top],
+        fragment->extent.x - box.border[PrRectSide_Right],
+        fragment->extent.y - box.border[PrRectSide_Bottom],
+    };
 }
 
 // Returns `area` extended by what each child of `fragment` adds to its overflow, from its top left. The border box of
@@ -81,9 +82,9 @@ PrLayoutRect childrenReach(const LayoutTree* tree, const LayoutFragment* fragmen
 // Returns the container of a node that the viewport holds: outside the content of the viewport for a fixed box, and
 // otherwise that content.
 LayoutNodeIndex topContainer(const LayoutTree* tree, LayoutNodeIndex node) {
-    return layoutTreeNode(tree, node).parent != kPrLayoutNodeNone && layoutIsFixed(tree, node)
-               ? kLayoutContainerOutside
-               : kLayoutContainerViewport;
+    if (layoutTreeNode(tree, node).parent != kPrLayoutNodeNone && layoutIsFixed(tree, node))
+        return kLayoutContainerOutside;
+    return kLayoutContainerViewport;
 }
 
 // Returns the memo of the position and container of the box `node`. Recomputes the memos of the box and of its
@@ -104,8 +105,8 @@ const LayoutPositioned& positioned(const LayoutTree* tree, LayoutNodeIndex node)
     }
     Array<LayoutNodeIndex>& path = cache.unpositioned;
     path.clear();
-    for (LayoutNodeIndex at = node; at != kPrLayoutNodeNone && !current(at);
-         at = layoutCachePlacement(cache, at).parent)
+    for (LayoutNodeIndex at = node; at != kPrLayoutNodeNone && !current(at); at =
+            layoutCachePlacement(cache, at).parent)
         path.push(at);
     for (uint32_t i = path.count; i-- > 0;) {
         LayoutNodeIndex at = path.data[i];
@@ -162,33 +163,39 @@ void layoutFragmentSetOverflow(const LayoutTree* tree, LayoutFragment* fragment)
 }
 
 void layoutScrollerSetOverflow(const LayoutTree* tree, LayoutFragment* fragment, const PrLayoutBoxStyle& box,
-                               const PrLayoutUnit* padding, LayoutMode mode, PrLayoutRect flow) {
+        const PrLayoutUnit* padding, LayoutMode mode, PrLayoutRect flow) {
     PrLayoutRect port = paddingBox(fragment, box);
     PrLayoutRect bounds = flow;
     bool any = true;
     addInFlowBounds(fragment, kLayoutVecZero, bounds, any);
-    bounds = PrLayoutRect{bounds.left - padding[PrRectSide_Left], bounds.top - padding[PrRectSide_Top],
-                          bounds.right + padding[PrRectSide_Right], bounds.bottom + padding[PrRectSide_Bottom]};
+    bounds = PrLayoutRect{
+        bounds.left - padding[PrRectSide_Left], bounds.top - padding[PrRectSide_Top],
+        bounds.right + padding[PrRectSide_Right], bounds.bottom + padding[PrRectSide_Bottom],
+    };
     fragment->overflow =
         cutAtOrigin(tree, fragment, box, layoutRectUnion(childrenReach(tree, fragment, port), bounds), port, mode);
 }
 
 PrLayoutRect layoutScrollingArea(const LayoutTree* tree, const LayoutFragment* fragment, const PrLayoutBoxStyle& box,
-                                 LayoutMode mode) {
+        LayoutMode mode) {
     PrLayoutRect port = paddingBox(fragment, box);
     return layoutRectMoved(cutAtOrigin(tree, fragment, box, childrenReach(tree, fragment, port), port, mode),
-                           PrLayoutVec{-port.left, -port.top});
+        PrLayoutVec{-port.left, -port.top});
 }
 
 PrLayoutRect layoutScrollRange(PrLayoutVec portExtent, PrLayoutRect content) {
-    return PrLayoutRect{layoutUnitMin(kLayoutUnitZero, content.left), layoutUnitMin(kLayoutUnitZero, content.top),
-                        layoutUnitMax(kLayoutUnitZero, content.right - portExtent.x),
-                        layoutUnitMax(kLayoutUnitZero, content.bottom - portExtent.y)};
+    return PrLayoutRect{
+        layoutUnitMin(kLayoutUnitZero, content.left), layoutUnitMin(kLayoutUnitZero, content.top),
+        layoutUnitMax(kLayoutUnitZero, content.right - portExtent.x),
+        layoutUnitMax(kLayoutUnitZero, content.bottom - portExtent.y),
+    };
 }
 
 PrLayoutVec layoutScrollClamp(PrLayoutVec offset, PrLayoutRect range) {
-    return PrLayoutVec{layoutUnitMax(range.left, layoutUnitMin(offset.x, range.right)),
-                       layoutUnitMax(range.top, layoutUnitMin(offset.y, range.bottom))};
+    return PrLayoutVec{
+        layoutUnitMax(range.left, layoutUnitMin(offset.x, range.right)),
+        layoutUnitMax(range.top, layoutUnitMin(offset.y, range.bottom)),
+    };
 }
 
 PrLayoutScrollFlags layoutUserAxes(const PrLayoutBoxStyle& box) {
@@ -218,9 +225,8 @@ bool layoutIsInColumn(const LayoutTree* tree, LayoutNodeIndex node) {
     PrLayoutDisplay parent = layoutBoxStyle(tree->styles, layoutTreeNode(tree, n.parent).style).display;
     if (parent == PrLayoutDisplay_TableColumn)
         return true;
-    return parent == PrLayoutDisplay_TableColumnGroup
-           && (!layoutKindIsElement(n.kind)
-               || layoutBoxStyle(tree->styles, n.style).display != PrLayoutDisplay_TableColumn);
+    return parent == PrLayoutDisplay_TableColumnGroup && (!layoutKindIsElement(n.kind) ||
+        layoutBoxStyle(tree->styles, n.style).display != PrLayoutDisplay_TableColumn);
 }
 
 double layoutNaturalRatio(const LayoutTree* tree, LayoutNodeIndex node) {
@@ -234,24 +240,23 @@ bool layoutIsInlineLevel(const LayoutTree* tree, LayoutNodeIndex node) {
     const LayoutTreeNode& n = layoutTreeNode(tree, node);
     if (n.kind == PrLayoutNodeKind_Text || n.kind == PrLayoutNodeKind_LineBreak)
         return true;
-    return prLayoutDisplayIsInlineLevel(layoutBoxStyle(tree->styles, n.style).display) && !layoutIsFloat(tree, node)
-           && !(n.positioned && n.parent != kPrLayoutNodeNone) && !layoutInItemContainer(tree, node);
+    return prLayoutDisplayIsInlineLevel(layoutBoxStyle(tree->styles, n.style).display) && !layoutIsFloat(tree, node) &&
+        !(n.positioned && n.parent != kPrLayoutNodeNone) && !layoutInItemContainer(tree, node);
 }
 
 bool layoutIsAtomicInline(const LayoutTree* tree, LayoutNodeIndex node) {
     const LayoutTreeNode& n = layoutTreeNode(tree, node);
-    if (n.kind == PrLayoutNodeKind_Text || n.kind == PrLayoutNodeKind_LineBreak || layoutIsFloat(tree, node)
-        || (n.positioned && n.parent != kPrLayoutNodeNone))
+    if (n.kind == PrLayoutNodeKind_Text || n.kind == PrLayoutNodeKind_LineBreak || layoutIsFloat(tree, node) ||
+            (n.positioned && n.parent != kPrLayoutNodeNone))
         return false;
     // The check for a flex or grid container parent comes last, and runs only for the few boxes that would otherwise be
     // atomic.
     PrLayoutDisplay display = layoutBoxStyle(tree->styles, n.style).display;
-    bool atomic = n.kind == PrLayoutNodeKind_Replaced || display == PrLayoutDisplay_InlineBlock
-                  || display == PrLayoutDisplay_InlineFlex || display == PrLayoutDisplay_InlineGrid
-                  || display == PrLayoutDisplay_InlineTable
-                  || (display == PrLayoutDisplay_Inline && n.parent != kPrLayoutNodeNone
-                      && layoutFontStyle(tree->styles, n.style).writingMode
-                             != layoutFontStyle(tree->styles, layoutTreeNode(tree, n.parent).style).writingMode);
+    bool atomic = n.kind == PrLayoutNodeKind_Replaced || display == PrLayoutDisplay_InlineBlock ||
+        display == PrLayoutDisplay_InlineFlex || display == PrLayoutDisplay_InlineGrid ||
+        display == PrLayoutDisplay_InlineTable || (display == PrLayoutDisplay_Inline && n.parent != kPrLayoutNodeNone &&
+            layoutFontStyle(tree->styles, n.style).writingMode !=
+            layoutFontStyle(tree->styles, layoutTreeNode(tree, n.parent).style).writingMode);
     return atomic && !layoutInItemContainer(tree, node);
 }
 
@@ -260,19 +265,18 @@ bool layoutIsInlineBoxAs(const LayoutTree* tree, LayoutNodeIndex node, PrLayoutS
     if (!layoutKindIsElement(n.kind) || n.parent == kPrLayoutNodeNone)
         return false;
     const PrLayoutBoxStyle& box = layoutBoxStyle(tree->styles, style);
-    if (box.display != PrLayoutDisplay_Inline || box.floating != PrLayoutFloat_None
-        || layoutStyleTraits(tree->styles, style).positioned)
+    if (box.display != PrLayoutDisplay_Inline || box.floating != PrLayoutFloat_None ||
+            layoutStyleTraits(tree->styles, style).positioned)
         return false;
     // An inline box whose writing mode differs from the writing mode of its parent is laid out as an inline-block.
-    return layoutFontStyle(tree->styles, style).writingMode
-               == layoutFontStyle(tree->styles, layoutTreeNode(tree, n.parent).style).writingMode
-           && !layoutInItemContainer(tree, node);
+    return layoutFontStyle(tree->styles, style).writingMode ==
+        layoutFontStyle(tree->styles, layoutTreeNode(tree, n.parent).style).writingMode && !layoutInItemContainer(tree, node);
 }
 
 LayoutLineSides layoutLineSides(bool left, bool right, bool start, bool end, PrTextDirection direction) {
     bool ltr = direction == PrTextDirection_Ltr;
-    return LayoutLineSides((left || (start && ltr) || (end && !ltr) ? LayoutLineSide_Left : 0)
-                           | (right || (end && ltr) || (start && !ltr) ? LayoutLineSide_Right : 0));
+    return LayoutLineSides((left || (start && ltr) || (end && !ltr) ? LayoutLineSide_Left : 0) |
+        (right || (end && ltr) || (start && !ltr) ? LayoutLineSide_Right : 0));
 }
 
 LayoutNodeIndex layoutOutOfFlowNoRun(const LayoutTree* tree, LayoutNodeIndex node) {
@@ -289,8 +293,7 @@ LayoutNodeIndex layoutOutOfFlowNoRun(const LayoutTree* tree, LayoutNodeIndex nod
 
 LayoutNodeIndex layoutRunFirst(const LayoutTree* tree, LayoutNodeIndex node) {
     LayoutNodeIndex first = layoutIsRunContent(layoutTreeNode(tree, node)) ? node : kPrLayoutNodeNone;
-    for (uint32_t p = layoutTreeNode(tree, node).previous; p != kPrLayoutNodeNone;
-         p = layoutTreeNode(tree, p).previous) {
+    for (uint32_t p = layoutTreeNode(tree, node).previous; p != kPrLayoutNodeNone; p = layoutTreeNode(tree, p).previous) {
         if (layoutIsRunContent(layoutTreeNode(tree, p)))
             first = p;
         else if (layoutChildKind(tree, p) != LayoutChildKind_None)
@@ -404,8 +407,8 @@ bool layoutIsStackingContextAs(const LayoutTree* tree, LayoutNodeIndex node, PrL
     if (!layoutStyleTraits(tree->styles, style).mayStack)
         return false;
     const PrLayoutBoxStyle& box = layoutBoxStyle(tree->styles, style);
-    if (box.position == PrLayoutPosition_Fixed || box.position == PrLayoutPosition_Sticky
-        || (box.zIndexed && layoutZIndexApplies(tree, node, box)))
+    if (box.position == PrLayoutPosition_Fixed || box.position == PrLayoutPosition_Sticky ||
+            (box.zIndexed && layoutZIndexApplies(tree, node, box)))
         return true;
     const LayoutStyleTraits& traits = layoutStyleTraits(tree->styles, style);
     if (traits.composites)
@@ -415,8 +418,8 @@ bool layoutIsStackingContextAs(const LayoutTree* tree, LayoutNodeIndex node, PrL
 
 bool layoutPaintsWholeAs(const LayoutTree* tree, LayoutNodeIndex node, PrLayoutStyleIndex style) {
     const PrLayoutBoxStyle& box = layoutBoxStyle(tree->styles, style);
-    return box.position != PrLayoutPosition_Static || box.transformed || layoutOwnsLayer(tree->styles, style)
-           || (box.zIndexed && layoutInItemContainer(tree, node));
+    return box.position != PrLayoutPosition_Static || box.transformed || layoutOwnsLayer(tree->styles, style) ||
+        (box.zIndexed && layoutInItemContainer(tree, node));
 }
 
 bool layoutInlinePaintsWhole(const LayoutStyles* styles, PrLayoutStyleIndex style) {
@@ -434,27 +437,26 @@ bool layoutInlineOwnsLayer(const LayoutStyles* styles, PrLayoutStyleIndex style)
 
 bool layoutHasLayerAs(const LayoutTree* tree, LayoutNodeIndex node, PrLayoutStyleIndex style) {
     const LayoutTreeNode& n = layoutTreeNode(tree, node);
-    if (!layoutKindIsBox(n.kind)
-        || !layoutStyleTraits(tree->styles, style).mayPaintWhole)
+    if (!layoutKindIsBox(n.kind) || !layoutStyleTraits(tree->styles, style).mayPaintWhole)
         return false;
-    return layoutIsInlineBoxAs(tree, node, style) ? layoutInlineOwnsLayer(tree->styles, style)
-                                                  : layoutOwnsLayer(tree->styles, style);
+    if (layoutIsInlineBoxAs(tree, node, style))
+        return layoutInlineOwnsLayer(tree->styles, style);
+    return layoutOwnsLayer(tree->styles, style);
 }
 
 LayoutStyleTraits layoutStyleTraitsFromIndex(const LayoutStyles* styles, PrLayoutStyleIndex style) {
     const PrLayoutStyle& record = layoutStyle(styles, style);
     const PrLayoutBoxStyle& box = layoutTableAt(styles->box, record.groups[PrLayoutGroup_Box]);
     const PrLayoutEffectStyle& effects = layoutTableAt(styles->effects, record.groups[PrLayoutGroup_Effect]);
-    bool positioned = (box.position == PrLayoutPosition_Absolute || box.position == PrLayoutPosition_Fixed)
-                      && box.display != PrLayoutDisplay_None;
+    bool positioned = (box.position == PrLayoutPosition_Absolute || box.position == PrLayoutPosition_Fixed) &&
+        box.display != PrLayoutDisplay_None;
     // The properties that give the box a stacking context or a layer of its own, whatever its position. This is the
     // union of what layoutPaintsWholeAs and layoutInlinePaintsWhole read besides position. A z-index may apply to a
     // static box, such as a flex item. A record that names the default effects group, at index 0, has no transform.
     bool transforms = record.groups[PrLayoutGroup_Effect] != 0 && layoutHasTransform(effects);
     // Most records name the default compositing group, which makes no group.
-    bool grouped = record.groups[PrLayoutGroup_Compositing] != 0
-                   && layoutCompositingGroups(
-                       layoutTableAt(styles->compositing, record.groups[PrLayoutGroup_Compositing]));
+    bool grouped = record.groups[PrLayoutGroup_Compositing] != 0 && layoutCompositingGroups(
+        layoutTableAt(styles->compositing, record.groups[PrLayoutGroup_Compositing]));
     bool layered = effects.opacity < 1 || effects.layer || grouped || box.transformed || transforms;
     bool moved = box.position != PrLayoutPosition_Static;
     const PrLayoutFlexStyle& flex = layoutTableAt(styles->flex, record.groups[PrLayoutGroup_Flex]);
@@ -469,12 +471,11 @@ LayoutStyleTraits layoutStyleTraitsFromIndex(const LayoutStyles* styles, PrLayou
     }
     return LayoutStyleTraits{
         .childKind = layoutChildKindFromStyle(PrLayoutNodeKind_Element, &box, positioned),
-        .vertical = layoutTableAt(styles->font, record.groups[PrLayoutGroup_Font]).writingMode
-                    != PrLayoutWritingMode_HorizontalTb,
+        .vertical = layoutTableAt(styles->font, record.groups[PrLayoutGroup_Font]).writingMode !=
+            PrLayoutWritingMode_HorizontalTb,
         .positioned = positioned,
         .mayPaintWhole = moved || layered || box.zIndexed,
-        .mayStack = box.position == PrLayoutPosition_Fixed || box.position == PrLayoutPosition_Sticky
-                    || box.zIndexed || layered,
+        .mayStack = box.position == PrLayoutPosition_Fixed || box.position == PrLayoutPosition_Sticky || box.zIndexed || layered,
         .children = layoutChildrenFromBox(box),
         .justifies = justifySelf != PrLayoutAlignment_Auto && justifySelf != PrLayoutAlignment_Normal,
         .justifiesItems = (flex.justifyItems & kPrLayoutAlignmentValueMask) != PrLayoutAlignment_Normal,
@@ -503,11 +504,10 @@ bool layoutHoldsAll(const LayoutTree* tree, LayoutNodeIndex node) {
     return box.transformed && !layoutIsInlineBox(tree, node);
 }
 
-LayoutNodeIndex layoutNodeHolder(const LayoutTree* tree, LayoutNodeIndex node,
-                                 LayoutNodeIndex* PR_NULLABLE containing) {
+LayoutNodeIndex layoutNodeHolder(const LayoutTree* tree, LayoutNodeIndex node, LayoutNodeIndex* PR_NULLABLE containing) {
     PrLayoutPosition position = layoutNodePositionScheme(tree, node);
-    for (LayoutNodeIndex at = layoutTreeNode(tree, node).parent; at != kPrLayoutNodeNone;
-         at = layoutTreeNode(tree, at).parent) {
+    for (LayoutNodeIndex at = layoutTreeNode(tree, node).parent; at != kPrLayoutNodeNone; at =
+            layoutTreeNode(tree, at).parent) {
         if (!layoutHoldsPosition(tree, at, position))
             continue;
         if (containing != nullptr)
@@ -579,7 +579,7 @@ LayoutNodeIndex layoutPositionsVerify(const LayoutTree* tree) {
         LayoutNodeIndex top = node;
         LayoutNodeIndex container = kPrLayoutNodeNone;
         for (LayoutNodeIndex at = layoutCachePlacement(cache, node).parent; at != kPrLayoutNodeNone;
-             at = layoutCachePlacement(cache, at).parent) {
+                at = layoutCachePlacement(cache, at).parent) {
             if (layoutNodeClips(tree, at)) {
                 container = at;
                 break;

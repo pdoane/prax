@@ -52,7 +52,7 @@ std::vector<PrTextGlyph> shape(PrTextShaper* shaper, const PrTextRun& run) {
     PrTextGlyphBuffer* glyphs = prTextGlyphBufferCreate();
     REQUIRE(prTextShaperShape(shaper, &run, glyphs) == PrStatus_Ok);
     std::vector<PrTextGlyph> out(prTextGlyphBufferGlyphs(glyphs),
-                                 prTextGlyphBufferGlyphs(glyphs) + prTextGlyphBufferGlyphCount(glyphs));
+        prTextGlyphBufferGlyphs(glyphs) + prTextGlyphBufferGlyphCount(glyphs));
     prTextGlyphBufferDestroy(glyphs);
     return out;
 }
@@ -63,8 +63,8 @@ std::string describe(const std::vector<PrTextGlyph>& glyphs) {
     char text[96];
     PrVec2 pen{0, 0};
     for (const PrTextGlyph& g : glyphs) {
-        std::snprintf(text, sizeof(text), "%u@%u(%.3f,%.3f) ", g.id, g.cluster,
-                      double(pen.x + g.offset.x), double(pen.y + g.offset.y));
+        std::snprintf(text, sizeof(text), "%u@%u(%.3f,%.3f) ", g.id, g.cluster, double(pen.x + g.offset.x),
+            double(pen.y + g.offset.y));
         out += text;
         pen.x += g.advance.x;
         pen.y += g.advance.y;
@@ -81,8 +81,8 @@ bool agree(const std::vector<PrTextGlyph>& a, const std::vector<PrTextGlyph>& b,
     for (size_t i = 0; i < a.size(); ++i) {
         if (a[i].id != b[i].id || a[i].cluster != b[i].cluster)
             return false;
-        if (std::fabs(penA.x + a[i].offset.x - penB.x - b[i].offset.x) > tolerance
-            || std::fabs(penA.y + a[i].offset.y - penB.y - b[i].offset.y) > tolerance)
+        if (std::fabs(penA.x + a[i].offset.x - penB.x - b[i].offset.x) > tolerance ||
+                std::fabs(penA.y + a[i].offset.y - penB.y - b[i].offset.y) > tolerance)
             return false;
         penA.x += a[i].advance.x;
         penA.y += a[i].advance.y;
@@ -94,33 +94,41 @@ bool agree(const std::vector<PrTextGlyph>& a, const std::vector<PrTextGlyph>& b,
 
 constexpr Case kCases[] = {
     {"NotoSans.ttf", "office affine flow", PrTextDirection_Ltr, 0, nullptr},
-    {"NotoSans.ttf", "AVATAR Toyota WAVE", PrTextDirection_Ltr,
-     PrScript_Latn, "en"},
-    {"NotoSans.ttf", "e\xcc\x81 n\xcc\x83 q\xcc\x87\xcc\xa3", PrTextDirection_Ltr, 0,
-     nullptr},
-    {"NotoSans.ttf", "\xce\xb3\xcf\x85\xce\xb1\xce\xbb\xce\xb9\xce\xac \xcf\x87\xcf\x89\xcf\x81"
-                     "\xce\xaf\xcf\x82",
-     PrTextDirection_Ltr, 0, nullptr},
-    {"NotoSansArabic.ttf", "\xd9\x85\xd8\xb1\xd8\xad\xd8\xa8\xd8\xa7 \xd8\xa8\xd8\xa7\xd9\x84"
-                           "\xd8\xb9\xd8\xa7\xd9\x84\xd9\x85",
-     PrTextDirection_Rtl, PrScript_Arab, "ar"},
-    {"NotoSansArabic.ttf", "\xd8\xa8\xd9\x90\xd8\xb3\xd9\x92\xd9\x85\xd9\x90 \xd8\xa7\xd9\x84"
-                           "\xd9\x84\xd9\x91\xd9\x8e\xd9\x87\xd9\x90",
-     PrTextDirection_Rtl, 0, nullptr},
-    {"NotoSansDevanagari.ttf", "\xe0\xa4\xa8\xe0\xa4\xae\xe0\xa4\xb8\xe0\xa5\x8d\xe0\xa4\xa4\xe0"
-                               "\xa5\x87 \xe0\xa4\x95\xe0\xa5\x8d\xe0\xa4\xb7\xe0\xa4\xa4\xe0\xa5"
-                               "\x8d\xe0\xa4\xb0\xe0\xa4\xbf\xe0\xa4\xaf",
-     PrTextDirection_Ltr, PrScript_Deva, "hi"},
-    {"Twemoji.ttf", "\xf0\x9f\x91\x8d\xf0\x9f\x8f\xbd \xf0\x9f\x91\xa9\xe2\x80\x8d\xf0\x9f\x9a\x80",
-     PrTextDirection_Ltr, 0, nullptr},
-    {"Twemoji.ttf", "\xf0\x9f\x87\xaf\xf0\x9f\x87\xb5\xf0\x9f\x87\xab\xf0\x9f\x87\xb7",
-     PrTextDirection_Ltr, 0, nullptr},
+    {"NotoSans.ttf", "AVATAR Toyota WAVE", PrTextDirection_Ltr, PrScript_Latn, "en"},
+    {"NotoSans.ttf", "e\xcc\x81 n\xcc\x83 q\xcc\x87\xcc\xa3", PrTextDirection_Ltr, 0, nullptr},
+    {
+        "NotoSans.ttf", "\xce\xb3\xcf\x85\xce\xb1\xce\xbb\xce\xb9\xce\xac \xcf\x87\xcf\x89\xcf\x81" "\xce\xaf\xcf\x82",
+        PrTextDirection_Ltr, 0, nullptr,
+    },
+    {
+        "NotoSansArabic.ttf", "\xd9\x85\xd8\xb1\xd8\xad\xd8\xa8\xd8\xa7 \xd8\xa8\xd8\xa7\xd9\x84"
+            "\xd8\xb9\xd8\xa7\xd9\x84\xd9\x85",
+        PrTextDirection_Rtl, PrScript_Arab, "ar",
+    },
+    {
+        "NotoSansArabic.ttf", "\xd8\xa8\xd9\x90\xd8\xb3\xd9\x92\xd9\x85\xd9\x90 \xd8\xa7\xd9\x84"
+            "\xd9\x84\xd9\x91\xd9\x8e\xd9\x87\xd9\x90",
+        PrTextDirection_Rtl, 0, nullptr,
+    },
+    {
+        "NotoSansDevanagari.ttf",
+        "\xe0\xa4\xa8\xe0\xa4\xae\xe0\xa4\xb8\xe0\xa5\x8d\xe0\xa4\xa4\xe0\xa5\x87 "
+            "\xe0\xa4\x95\xe0\xa5\x8d\xe0\xa4\xb7\xe0\xa4\xa4\xe0\xa5\x8d\xe0\xa4\xb0\xe0\xa4\xbf\xe0\xa4\xaf",
+        PrTextDirection_Ltr, PrScript_Deva, "hi",
+    },
+    {
+        "Twemoji.ttf", "\xf0\x9f\x91\x8d\xf0\x9f\x8f\xbd \xf0\x9f\x91\xa9\xe2\x80\x8d\xf0\x9f\x9a\x80",
+        PrTextDirection_Ltr, 0, nullptr,
+    },
+    {
+        "Twemoji.ttf", "\xf0\x9f\x87\xaf\xf0\x9f\x87\xb5\xf0\x9f\x87\xab\xf0\x9f\x87\xb7",
+        PrTextDirection_Ltr, 0, nullptr,
+    },
 };
 
 // Returns true if two shapers draw the same: the same glyphs in the same places, in any order, and the same total
 // advance.
-bool drawAlike(const std::vector<PrTextGlyph>& a, const std::vector<PrTextGlyph>& b,
-               float tolerance) {
+bool drawAlike(const std::vector<PrTextGlyph>& a, const std::vector<PrTextGlyph>& b, float tolerance) {
     struct Placed {
         uint32_t id;
         PrVec2 at;
@@ -144,8 +152,7 @@ bool drawAlike(const std::vector<PrTextGlyph>& a, const std::vector<PrTextGlyph>
     for (const Placed& p : pa) {
         bool found = false;
         for (Placed& q : pb) {
-            if (q.id == p.id && std::fabs(q.at.x - p.at.x) <= tolerance
-                && std::fabs(q.at.y - p.at.y) <= tolerance) {
+            if (q.id == p.id && std::fabs(q.at.x - p.at.x) <= tolerance && std::fabs(q.at.y - p.at.y) <= tolerance) {
                 q.id = 0xffffffffu;
                 found = true;
                 break;
@@ -210,10 +217,12 @@ PrTextFont* fontOf(PrFontSet* set, std::initializer_list<const char*> names) {
     std::vector<PrFontFamily> families;
     for (const char* name : names)
         families.push_back(prFontFamilyFromName(name));
-    PrTextFontDesc desc{.set = set,
-                        .families = families.data(),
-                        .familyCount = uint32_t(families.size()),
-                        .style = prFontStyleDefault()};
+    PrTextFontDesc desc{
+        .set = set,
+        .families = families.data(),
+        .familyCount = uint32_t(families.size()),
+        .style = prFontStyleDefault(),
+    };
     return prTextFontCreate(&desc);
 }
 
@@ -266,7 +275,7 @@ struct Layered {
     // Adds a pending face of `family` with `key`, loaded with `file` unless it is null, with the ranges `range` if
     // given.
     void add(const char* family, uint64_t key, const char* PR_NULLABLE file,
-             const PrFontCodePointRange* PR_NULLABLE range = nullptr) {
+            const PrFontCodePointRange* PR_NULLABLE range = nullptr) {
         PrFontFaceDescriptor d = prFontFaceDescriptorDefault();
         d.family = family;
         d.ranges = range;
@@ -531,8 +540,7 @@ TEST_CASE("the first glyph of each grapheme cluster is marked") {
     const PrFont* font = load("NotoSans.ttf");
     PrTextShaper* hb = prTextHarfBuzzCreate();
     // e and a combining acute, which NotoSans composes, then q with two marks it keeps separate.
-    std::vector<PrTextGlyph> glyphs =
-        shape(hb, runOf(font, "e\xcc\x81q\xcc\x87\xcc\xa3x"));
+    std::vector<PrTextGlyph> glyphs = shape(hb, runOf(font, "e\xcc\x81q\xcc\x87\xcc\xa3x"));
     uint32_t starts = 0;
     for (const PrTextGlyph& g : glyphs)
         starts += (g.flags & PrTextGlyphFlag_ClusterStart) != 0 ? 1 : 0;
@@ -550,8 +558,10 @@ TEST_CASE("features over the same text all apply") {
         run.font = font;
         run.text = "fi 1";
         std::vector<PrTextGlyph> plain = shape(shaper, run);
-        PrTextFeature features[] = {{PR_FONT_TAG('l', 'i', 'g', 'a'), 0, 0, 0xffffffffu},
-                                    {PR_FONT_TAG('o', 'n', 'u', 'm'), 1, 0, 0xffffffffu}};
+        PrTextFeature features[] = {
+            {PR_FONT_TAG('l', 'i', 'g', 'a'), 0, 0, 0xffffffffu},
+            {PR_FONT_TAG('o', 'n', 'u', 'm'), 1, 0, 0xffffffffu},
+        };
         run.features = features;
         run.featureCount = 2;
         std::vector<PrTextGlyph> both = shape(shaper, run);
@@ -770,8 +780,8 @@ TEST_CASE("text divides into runs of the faces that set its grapheme clusters") 
     // through to Twemoji. The script of the Han splits it from the Latin.
     std::string text = "Hi \xe6\xbc\xa2\xe5\xad\x97!\xf0\x9f\x98\x80";
     std::vector<PrTextItemRun> runs = itemize(group, text);
-    CHECK(familiesOf(group, runs)
-          == std::vector<std::string>{"Noto Sans", "Noto Sans JP", "Noto Sans", "twemoji-glyf_colr_1"});
+    CHECK(familiesOf(group, runs) ==
+        std::vector<std::string>{"Noto Sans", "Noto Sans JP", "Noto Sans", "twemoji-glyf_colr_1"});
     REQUIRE(runs.size() == 4);
     CHECK(runs[1].start == 3);
     CHECK(runs[1].script == PrScript_Hani);
@@ -815,8 +825,7 @@ TEST_CASE("a unicode-range excludes a face from code points it has glyphs for") 
     PrFontCodePointRange kanji{0x4e00, 0x9fff};
     PrFontSet* set = setOf({{"NotoSansJP.ttf", "Kanji", &kanji}, {"NotoSans.ttf"}});
     PrTextFont* group = fontOf(set, {"Kanji", "Noto Sans"});
-    CHECK(familiesOf(group, itemize(group, "A\xe6\xbc\xa2"))
-          == std::vector<std::string>{"Noto Sans", "Noto Sans JP"});
+    CHECK(familiesOf(group, itemize(group, "A\xe6\xbc\xa2")) == std::vector<std::string>{"Noto Sans", "Noto Sans JP"});
     CHECK(itemize(group, "").empty());
     prTextFontRelease(group);
     prFontSetDestroy(set);
@@ -831,8 +840,8 @@ TEST_CASE("a cluster of emoji presentation tries the emoji faces first") {
     CHECK(familiesOf(group, itemize(group, "\xe2\x99\xa5")) == std::vector<std::string>{"Noto Sans JP"});
     CHECK(familiesOf(group, itemize(group, "\xe2\x99\xa5\xef\xb8\x8f")) == std::vector<std::string>{"twemoji-glyf_colr_1"});
     // A grinning face is emoji by default. Requested as text, it moves past a text face that lacks it.
-    CHECK(familiesOf(group, itemize(group, "\xf0\x9f\x98\x80\xef\xb8\x8e"))
-          == std::vector<std::string>{"twemoji-glyf_colr_1"});
+    CHECK(familiesOf(group, itemize(group, "\xf0\x9f\x98\x80\xef\xb8\x8e")) ==
+        std::vector<std::string>{"twemoji-glyf_colr_1"});
     prTextFontRelease(group);
     prFontSetDestroy(set);
 }
@@ -877,8 +886,11 @@ TEST_CASE("a run of a font with full hinting takes the hinted advances") {
         run.kerning = PrTextKerning_None;
         run.pixelsPerEm = 11;
         for (const PrTextGlyph& g : shape(hb, run)) {
-            float expected = hinting == PrFontHinting_Full ? prFontGlyphAdvance(hinted, g.id, 11)
-                                                           : prFontGlyphAdvance(font, g.id, 0);
+            float expected;
+            if (hinting == PrFontHinting_Full)
+                expected = prFontGlyphAdvance(hinted, g.id, 11);
+            else
+                expected = prFontGlyphAdvance(font, g.id, 0);
             CHECK(g.advance.x == doctest::Approx(expected));
             if (hinting == PrFontHinting_Full)
                 CHECK(g.advance.x * 11 == doctest::Approx(std::round(g.advance.x * 11)));
@@ -977,10 +989,7 @@ TEST_CASE("a text layout orders a line's runs for display, and puts carets at th
     PrTextLayout* layout = prTextLayoutCreate();
     // Latin, a space, and Arabic, in a right-to-left paragraph: the Arabic goes left of the Latin.
     std::string text = "abc \xd8\xb3\xd9\x84\xd8\xa7\xd9\x85";
-    PrTextLayoutDesc desc{.text = text,
-                          .font = font,
-                          .shaper = hb,
-                          .direction = PrTextDirection_Rtl};
+    PrTextLayoutDesc desc{.text = text, .font = font, .shaper = hb, .direction = PrTextDirection_Rtl};
     prTextLayoutSet(layout, &desc);
     REQUIRE(prTextLayoutLineCount(layout) == 1);
     PrTextLine line = prTextLayoutLine(layout, 0);

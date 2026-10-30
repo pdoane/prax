@@ -121,8 +121,7 @@ bool cssNumericTypeAdd(const PrCssNumericType& a, const PrCssNumericType& b, PrC
 
 // Sets `out` to the type of a product of `a` and `b` (css-typed-om-1/#cssnumericvalue-multiply-two-types). Returns
 // false if the types cannot be multiplied.
-bool cssNumericTypeMultiply(const PrCssNumericType& a, const PrCssNumericType& b,
-                            PrCssNumericType* out);
+bool cssNumericTypeMultiply(const PrCssNumericType& a, const PrCssNumericType& b, PrCssNumericType* out);
 
 // Returns the type of the inverse of a value of `type` (css-typed-om-1/#cssnumericvalue-invert-a-type).
 PrCssNumericType cssNumericTypeInvert(const PrCssNumericType& type);
@@ -134,8 +133,7 @@ bool cssMathTo(CssValueRun run, uint32_t index, PrCssUnit unit, double* out);
 // Adds a PrCssValueKind_Math value over a Sum of numeric values in `units`, or in the value's own units if `count` is
 // zero (css-typed-om-1/#dom-cssnumericvalue-tosum). Returns false, adding nothing, if the value at `index` cannot be
 // expressed in those units.
-bool cssMathToSum(CssValueRun run, uint32_t index, const PrCssUnit* PR_NULLABLE units,
-                  uint32_t count, CssValuePool* out);
+bool cssMathToSum(CssValueRun run, uint32_t index, const PrCssUnit* PR_NULLABLE units, uint32_t count, CssValuePool* out);
 
 } // namespace pr_impl
 

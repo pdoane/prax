@@ -64,13 +64,17 @@ PR_CONSTEXPR PrFloat16 prColor16Channel(float value) {
     return prFloat16FromFloat(value != value ? 0.0f : value + 0.0f);
 }
 PR_CONSTEXPR PrColor16 prColor16FromColor(PrColor color) {
-    PrColor16 narrow = {prColor16Channel(color.r), prColor16Channel(color.g), prColor16Channel(color.b),
-                        prColor16Channel(color.a)};
+    PrColor16 narrow = {
+        prColor16Channel(color.r), prColor16Channel(color.g), prColor16Channel(color.b),
+        prColor16Channel(color.a),
+    };
     return narrow;
 }
 PR_CONSTEXPR PrColor prColorFromColor16(PrColor16 color) {
-    PrColor wide = {prFloat16ToFloat(color.r), prFloat16ToFloat(color.g), prFloat16ToFloat(color.b),
-                    prFloat16ToFloat(color.a)};
+    PrColor wide = {
+        prFloat16ToFloat(color.r), prFloat16ToFloat(color.g), prFloat16ToFloat(color.b),
+        prFloat16ToFloat(color.a),
+    };
     return wide;
 }
 

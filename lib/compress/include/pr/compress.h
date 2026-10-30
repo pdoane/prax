@@ -63,14 +63,13 @@ struct PrCompressDecoder {
 struct PrCompressCodec {
     void (*PR_NULLABLE destroy)(PrCompressCodec* codec);
     PrStatus (*decoderCreate)(PrCompressCodec* codec, PrCompressFormat format,
-                              PrCompressDecoder* PR_NULLABLE* PR_NONNULL out);
+        PrCompressDecoder* PR_NULLABLE* PR_NONNULL out);
     void (*decoderDestroy)(PrCompressCodec* codec, PrCompressDecoder* decoder);
     PrStatus (*decoderRead)(PrCompressCodec* codec, PrCompressDecoder* decoder, PrByteView input,
-                            bool final, uint8_t* PR_NULLABLE output, size_t capacity,
-                            PrCompressRead* out);
+        bool final, uint8_t* PR_NULLABLE output, size_t capacity, PrCompressRead* out);
     size_t (*PR_NULLABLE encodeBound)(PrCompressCodec* codec, PrCompressFormat format, size_t size);
     PrStatus (*PR_NULLABLE encode)(PrCompressCodec* codec, PrCompressFormat format, PrCompressLevel level,
-                                   PrByteView input, uint8_t* output, size_t* written);
+        PrByteView input, uint8_t* output, size_t* written);
 };
 
 // The library's backends of codecs, which the build turns on (README.md), and Default, the first that the build has.
@@ -101,7 +100,7 @@ void prCompressCodecDestroy(PrCompressCodec* PR_NULLABLE codec);
 // Creates a decoder at the start of a stream in `format`. Returns NotSupported for a format the codec does not read. On
 // failure, `*out` is null.
 PrStatus prCompressDecoderCreate(PrCompressCodec* codec, PrCompressFormat format,
-                                 PrCompressDecoder* PR_NULLABLE* PR_NONNULL out);
+    PrCompressDecoder* PR_NULLABLE* PR_NONNULL out);
 
 // Frees the decoder.
 void prCompressDecoderDestroy(PrCompressDecoder* PR_NULLABLE decoder);
@@ -113,12 +112,12 @@ void prCompressDecoderDestroy(PrCompressDecoder* PR_NULLABLE decoder);
 // if the stream needs a preset dictionary. After a failure, the output already written stays, and the decoder reads no
 // further.
 PrStatus prCompressDecoderRead(PrCompressDecoder* decoder, PrByteView input, bool final,
-                               uint8_t* PR_NULLABLE output, size_t capacity, PrCompressRead* out);
+    uint8_t* PR_NULLABLE output, size_t capacity, PrCompressRead* out);
 
 // Decodes the whole stream in `input` into up to `capacity` bytes at `output`. Returns the same failures as
 // prCompressDecoderRead. The progress is Output if the decoded stream does not fit.
 PrStatus prCompressCodecDecode(PrCompressCodec* codec, PrCompressFormat format, PrByteView input,
-                               uint8_t* PR_NULLABLE output, size_t capacity, PrCompressRead* out);
+    uint8_t* PR_NULLABLE output, size_t capacity, PrCompressRead* out);
 
 // Returns the largest number of bytes that prCompressCodecEncode writes for `size` bytes of input in `format`. Returns
 // zero if the codec does not encode `format`.
@@ -128,7 +127,7 @@ size_t prCompressCodecEncodeBound(PrCompressCodec* codec, PrCompressFormat forma
 // `output` must have room for the bound that prCompressCodecEncodeBound returns. Returns NotSupported if the codec does
 // not encode `format`, and then writes nothing.
 PrStatus prCompressCodecEncode(PrCompressCodec* codec, PrCompressFormat format, PrCompressLevel level,
-                               PrByteView input, uint8_t* output, size_t* written);
+    PrByteView input, uint8_t* output, size_t* written);
 
 #if defined(__cplusplus)
 }

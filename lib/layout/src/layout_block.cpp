@@ -36,10 +36,9 @@ PrLayoutAlignment justifySelfOf(const LayoutState& state, LayoutNodeIndex node) 
     if (n.justifies)
         return layoutFlexStyle(state.styles, n.style).justifySelf;
     // Its justify-self is auto or normal, and auto takes the justify-items of the parent.
-    if (n.parent == kPrLayoutNodeNone || !layoutTreeNode(state.tree, n.parent).justifiesItems
-        || (layoutFlexStyle(state.styles, n.style).justifySelf & kPrLayoutAlignmentValueMask)
-               == PrLayoutAlignment_Normal
-        || layoutIsInlineBox(state.tree, n.parent))
+    if (n.parent == kPrLayoutNodeNone || !layoutTreeNode(state.tree, n.parent).justifiesItems ||
+            (layoutFlexStyle(state.styles, n.style).justifySelf & kPrLayoutAlignmentValueMask) ==
+            PrLayoutAlignment_Normal || layoutIsInlineBox(state.tree, n.parent))
         return PrLayoutAlignment_Normal;
     return layoutFlexStyle(state.styles, layoutTreeNode(state.tree, n.parent).style).justifyItems;
 }
@@ -99,24 +98,25 @@ PR_NOINLINE bool fitsByJustifying(const LayoutState& state, LayoutNodeIndex node
 // Sets `*fills` if the size is what the available space leaves, so that a different available size changes it
 // (LayoutResultFlag_FillsAvailable).
 PrLayoutUnit inlineSizeOf(LayoutState& state, LayoutNodeIndex node, const LayoutSpace& space,
-                          const PrLayoutBoxStyle& box, const LayoutLogicalBox& logical, LayoutEdges& e,
-                          LayoutMode measure, bool* readsPercentBlock, bool* fills,
-                          LayoutNodeIndex runLast = kPrLayoutNodeNone) {
+        const PrLayoutBoxStyle& box, const LayoutLogicalBox& logical, LayoutEdges& e,
+        LayoutMode measure, bool* readsPercentBlock, bool* fills, LayoutNodeIndex runLast = kPrLayoutNodeNone) {
     // The root is laid out by block rules whatever its display (css-display-4/#root), which the cascade of a document
     // blockifies. It still floats as any box does.
     bool root = layoutTreeNode(state.tree, node).parent == kPrLayoutNodeNone;
     bool outOfFlow = layoutSpaceIsOutOfFlow(space);
-    bool shrinks = outOfFlow ? space.autoInline == LayoutAutoSize_FitContent
-                             : (!root && prLayoutDisplayIsInlineLevel(box.display))
-                                   || box.floating != PrLayoutFloat_None || box.display == PrLayoutDisplay_Marker
-                                   || layoutIsOrthogonal(measure, space.mode);
+    bool shrinks;
+    if (outOfFlow)
+        shrinks = space.autoInline == LayoutAutoSize_FitContent;
+    else
+        shrinks = (!root && prLayoutDisplayIsInlineLevel(box.display)) || box.floating != PrLayoutFloat_None ||
+            box.display == PrLayoutDisplay_Marker || layoutIsOrthogonal(measure, space.mode);
     // Only an in-flow block-level box is justified, and only if an alignment is set or the box is semi-replaced.
     PrLayoutAlignment justify = PrLayoutAlignment_Normal;
     bool fits = false;
     if (!outOfFlow && !shrinks && !root) {
         const LayoutTreeNode& n = layoutTreeNode(state.tree, node);
-        if (n.justifies || n.kind == PrLayoutNodeKind_SemiReplaced
-            || (n.parent != kPrLayoutNodeNone && layoutTreeNode(state.tree, n.parent).justifiesItems))
+        if (n.justifies || n.kind == PrLayoutNodeKind_SemiReplaced ||
+                (n.parent != kPrLayoutNodeNone && layoutTreeNode(state.tree, n.parent).justifiesItems))
             fits = fitsByJustifying(state, node, &justify);
     }
     bool aligned = fits && (justify & kPrLayoutAlignmentValueMask) != PrLayoutAlignment_Normal;
@@ -133,12 +133,11 @@ PrLayoutUnit inlineSizeOf(LayoutState& state, LayoutNodeIndex node, const Layout
         if (!measured) {
             LayoutIntrinsicInput input{measure, space.percentBlock, layoutUnit(-1), space.fallback};
             // An anonymous table has no edges, and nothing caches its sizes.
-            intrinsic = runLast != kPrLayoutNodeNone
-                            ? layoutTableIntrinsic(state, node, runLast, input)
-                            : layoutWithEdges(layoutIntrinsicSizes(state, node, input),
-                                              layoutEdgesInline(layoutEdgesFromBox(state.styles, logical,
-                                                                                   layoutUnit(-1))),
-                                              edges);
+            if (runLast != kPrLayoutNodeNone)
+                intrinsic = layoutTableIntrinsic(state, node, runLast, input);
+            else
+                intrinsic = layoutWithEdges(layoutIntrinsicSizes(state, node, input),
+                    layoutEdgesInline(layoutEdgesFromBox(state.styles, logical, layoutUnit(-1))), edges);
             if (intrinsic.fillsAvailable && layoutIsDefinite(stretch))
                 intrinsic.maxContent = layoutUnitMax(intrinsic.maxContent, stretch);
         }
@@ -186,12 +185,11 @@ PrLayoutUnit inlineSizeOf(LayoutState& state, LayoutNodeIndex node, const Layout
     *fills = !ratioSized && size == stretch && stretch > kLayoutUnitZero;
     PrLayoutUnit filled = size;
     size = layoutClampSize(state.styles, box, size, logical.minInlineSize, logical.maxInlineSize,
-                           space.percentInline, edges, stretch, keyword);
+        space.percentInline, edges, stretch, keyword);
     // A limit clamps it to a size of its own, which follows the available space only if the limit is a keyword.
     if (size != filled)
-        *fills = layoutLengthIsStretch(logical.minInlineSize) || layoutLengthIsStretch(logical.maxInlineSize)
-                 || layoutLengthIsContentBased(logical.minInlineSize)
-                 || layoutLengthIsContentBased(logical.maxInlineSize);
+        *fills = layoutLengthIsStretch(logical.minInlineSize) || layoutLengthIsStretch(logical.maxInlineSize) ||
+            layoutLengthIsContentBased(logical.minInlineSize) || layoutLengthIsContentBased(logical.maxInlineSize);
     if (table) {
         PrLayoutUnit least = keyword(prLayoutLengthMinContent());
         *fills = *fills && least <= size;
@@ -201,8 +199,7 @@ PrLayoutUnit inlineSizeOf(LayoutState& state, LayoutNodeIndex node, const Layout
     if (!outOfFlow && !shrinks && (!autoSize || ratioSized || fits || table || size != filled))
         layoutShareAutoMargins(e, space.available, size);
     if (aligned && !e.marginAuto[LayoutSide_InlineStart] && !e.marginAuto[LayoutSide_InlineEnd]) {
-        PrLayoutUnit free =
-            space.available - size - e.margin[LayoutSide_InlineStart] - e.margin[LayoutSide_InlineEnd];
+        PrLayoutUnit free = space.available - size - e.margin[LayoutSide_InlineStart] - e.margin[LayoutSide_InlineEnd];
         e.margin[LayoutSide_InlineStart] += justifyOffset(justify, measure, space, free);
     }
     *readsPercentBlock = readsBlock || (measured && intrinsic.readsPercentBlock);
@@ -237,7 +234,7 @@ bool clampChanges(LayoutState& state, const LayoutBaseline& baseline, PrLayoutUn
 // scroll container. They are measured in the block direction of the space, which is the reverse of the content's if one
 // stacks blocks right to left and the other left to right. Sets their flags in `result`.
 void exportBaselines(LayoutState& state, const LayoutSpace& space, const PrLayoutBoxStyle& box, LayoutMode mode,
-                     PrLayoutUnit blockSize, LayoutBaseline* edges, LayoutResult& result) {
+        PrLayoutUnit blockSize, LayoutBaseline* edges, LayoutResult& result) {
     bool orthogonal = layoutIsOrthogonal(mode, space.mode);
     for (uint32_t edge = 0; edge < LayoutBaselineEdge_Count; ++edge) {
         LayoutBaseline& baseline = edges[edge];
@@ -340,8 +337,8 @@ struct Content {
 // Finds the shell `s` of the box that layoutContainer lays out: its inline size, the block size that its style or its
 // container decides, and its content box.
 PR_FORCE_INLINE void shellOf(LayoutState& state, Shell& s, LayoutNodeIndex node, const LayoutSpace& space,
-                             const LayoutRequests* PR_NULLABLE requests, LayoutNodeIndex runLast,
-                             const PrLayoutBoxStyle* PR_NULLABLE anonymous) {
+        const LayoutRequests* PR_NULLABLE requests, LayoutNodeIndex runLast,
+        const PrLayoutBoxStyle* PR_NULLABLE anonymous) {
     // The cache keeps an anonymous flex item under the first node of its run, and keeps no anonymous table cell. The
     // content of either is made of children of its container.
     const LayoutTreeNode& n = layoutTreeNode(state.tree, node);
@@ -358,8 +355,8 @@ PR_FORCE_INLINE void shellOf(LayoutState& state, Shell& s, LayoutNodeIndex node,
     s.space = &space;
     s.children = anonymous != nullptr ? layoutChildrenFromBox(*anonymous) : LayoutChildren(n.children);
     const PrLayoutBoxStyle& box = *s.box;
-    PR_ASSERT(anonymous == nullptr || layoutIsTable(box)
-              || (requests != nullptr && requests->inlineAxis.kind == LayoutRequestKind_Fixed));
+    PR_ASSERT(anonymous == nullptr || layoutIsTable(box) ||
+        (requests != nullptr && requests->inlineAxis.kind == LayoutRequestKind_Fixed));
 
     // Its content and its sizes are in its own writing mode. Its margins are in the writing mode of its containing
     // block, whose axes differ if the box is an orthogonal flow root.
@@ -384,10 +381,10 @@ PR_FORCE_INLINE void shellOf(LayoutState& state, Shell& s, LayoutNodeIndex node,
     s.intrinsicReads = false;
     s.fills = false;
     LayoutRequest inlineRequest = layoutInlineRequest(requests);
-    s.inlineSize = s.requested && inlineRequest.kind == LayoutRequestKind_Fixed
-                       ? layoutUnitMax(inlineRequest.size, layoutEdgesInline(es))
-                       : inlineSizeOf(state, node, space, box, sizing, es, sizingMode, &s.intrinsicReads, &s.fills,
-                                      runLast);
+    if (s.requested && inlineRequest.kind == LayoutRequestKind_Fixed)
+        s.inlineSize = layoutUnitMax(inlineRequest.size, layoutEdgesInline(es));
+    else
+        s.inlineSize = inlineSizeOf(state, node, space, box, sizing, es, sizingMode, &s.intrinsicReads, &s.fills, runLast);
     PrLayoutUnit contentInline = layoutUnitMax(kLayoutUnitZero, s.inlineSize - layoutEdgesInline(es));
     // A box out of flow stretches into its inset-modified containing block rather than its containing block.
     PrLayoutUnit stretchBase = layoutSpaceIsOutOfFlow(space) ? space.stretchBlock : space.percentBlock;
@@ -415,17 +412,18 @@ PR_FORCE_INLINE void shellOf(LayoutState& state, Shell& s, LayoutNodeIndex node,
         if (aspect.ratio > 0) {
             PrLayoutUnit size = layoutAspectBlock(aspect, s.inlineSize, layoutEdgesInline(es), axis.edges);
             axis.size = layoutClampSize(state.styles, box, size, sizing.minBlockSize, sizing.maxBlockSize,
-                                        space.percentBlock, axis.edges, axis.stretch, layoutNoKeyword);
+                space.percentBlock, axis.edges, axis.stretch, layoutNoKeyword);
             axis.growsToContent = layoutLengthIsAuto(sizing.minBlockSize) && !s.scrolls;
         }
     }
 
     // The content box, in the box's own writing mode, on whose sides its padding and borders are taken. A scroll
     // container provides the fallback for the orthogonal flow roots in it.
-    PrLayoutUnit contentBlock = layoutIsDefinite(axis.size)
-                                        && (s.blockRequest.kind != LayoutRequestKind_Fixed || s.blockRequest.definite)
-                                    ? layoutUnitMax(kLayoutUnitZero, axis.size - axis.edges)
-                                    : layoutUnit(-1);
+    PrLayoutUnit contentBlock;
+    if (layoutIsDefinite(axis.size) && (s.blockRequest.kind != LayoutRequestKind_Fixed || s.blockRequest.definite))
+        contentBlock = layoutUnitMax(kLayoutUnitZero, axis.size - axis.edges);
+    else
+        contentBlock = layoutUnit(-1);
     s.contentSpace = LayoutSpace{
         .mode = mode,
         .available = contentInline,
@@ -433,41 +431,48 @@ PR_FORCE_INLINE void shellOf(LayoutState& state, Shell& s, LayoutNodeIndex node,
         .percentBlock = contentBlock,
         .containing = LayoutLogicalSize{contentInline, contentBlock},
         .blockLimit = layoutBlockLimit(state.styles, box, s.own, space.percentBlock, axis.edges),
-        .fallback = s.scrolls ? layoutScrollFallback(state.styles, box, s.own, mode,
-                                                     LayoutLogicalSize{space.percentInline, space.percentBlock},
-                                                     LayoutLogicalSize{layoutEdgesInline(s.inner), axis.edges},
-                                                     state.viewport)
-                              : space.fallback,
+        .fallback = space.fallback,
     };
-    s.origin = LayoutLogicalOffset{layoutEdgesContent(s.inner, LayoutSide_InlineStart),
-                                   layoutEdgesContent(s.inner, LayoutSide_BlockStart)};
+    if (s.scrolls) {
+        s.contentSpace.fallback = layoutScrollFallback(state.styles, box, s.own, mode,
+            LayoutLogicalSize{space.percentInline, space.percentBlock},
+            LayoutLogicalSize{layoutEdgesInline(s.inner), axis.edges}, state.viewport);
+    }
+    s.origin = LayoutLogicalOffset{
+        layoutEdgesContent(s.inner, LayoutSide_InlineStart),
+        layoutEdgesContent(s.inner, LayoutSide_BlockStart),
+    };
 }
 
 // Lays out the content of the block container `s` in flow (layoutFlowContent), which may stop where the margins before
 // it resolve. In flow in a context, the box records its reads of the context in `reads`. Sets `content` to what the
 // shell finishes the box from.
-PR_FORCE_INLINE LayoutFlowOutcome flowContent(LayoutState& state, Shell& s, LayoutReads* PR_NULLABLE reads,
-                                              Content& content) {
+PR_FORCE_INLINE LayoutFlowOutcome flowContent(LayoutState& state, Shell& s, LayoutReads* PR_NULLABLE reads, Content& content) {
     // Content in a block size that its style or its container fixes is aligned in it.
-    bool fixedBlock = s.requested ? s.blockRequest.kind == LayoutRequestKind_Fixed
-                                  : layoutIsDefinite(s.axis.size) && !s.axis.growsToContent;
-    LayoutFlowInput input{.node = s.parent,
-                          .runFirst = s.anonymous != nullptr ? s.node : kPrLayoutNodeNone,
-                          .runLast = s.runLast,
-                          .box = s.box,
-                          .space = s.space,
-                          .content = &s.contentSpace,
-                          .children = s.content,
-                          .origin = s.origin,
-                          .inlineSize = s.inlineSize,
-                          .sizing = &s.sizing(),
-                          .inner = &s.inner,
-                          .outer = &s.e,
-                          .axis = s.axis,
-                          .clamps = s.clamps,
-                          .fixedBlock = fixedBlock,
-                          .marked = s.anonymous == nullptr,
-                          .reads = reads};
+    bool fixedBlock;
+    if (s.requested)
+        fixedBlock = s.blockRequest.kind == LayoutRequestKind_Fixed;
+    else
+        fixedBlock = layoutIsDefinite(s.axis.size) && !s.axis.growsToContent;
+    LayoutFlowInput input{
+        .node = s.parent,
+        .runFirst = s.anonymous != nullptr ? s.node : kPrLayoutNodeNone,
+        .runLast = s.runLast,
+        .box = s.box,
+        .space = s.space,
+        .content = &s.contentSpace,
+        .children = s.content,
+        .origin = s.origin,
+        .inlineSize = s.inlineSize,
+        .sizing = &s.sizing(),
+        .inner = &s.inner,
+        .outer = &s.e,
+        .axis = s.axis,
+        .clamps = s.clamps,
+        .fixedBlock = fixedBlock,
+        .marked = s.anonymous == nullptr,
+        .reads = reads,
+    };
     LayoutFlowOutcome flow = layoutFlowContent(state, input);
     content.blockSize = flow.blockSize;
     content.contentBlock = flow.contentBlock;
@@ -483,7 +488,7 @@ PR_FORCE_INLINE LayoutFlowOutcome flowContent(LayoutState& state, Shell& s, Layo
 // and otherwise its content decides it within the box's limits. A size that its container decides or asks of its
 // content has no limits.
 PR_NOINLINE void independentContent(LayoutState& state, Shell& s, LayoutContentGoal goal, Content& content,
-                                    LayoutGridLines* lines) {
+        LayoutGridLines* lines) {
     const PrLayoutBoxStyle& box = *s.box;
     const LayoutLogicalBox& sizing = s.sizing();
     const LayoutBlockAxis& axis = s.axis;
@@ -497,8 +502,8 @@ PR_NOINLINE void independentContent(LayoutState& state, Shell& s, LayoutContentG
     LayoutContentInput input{
         .content = &s.contentSpace,
         .origin = s.origin,
-        .blockSize = layoutIsDefinite(axis.size) ? layoutUnitMax(kLayoutUnitZero, axis.size - axis.edges)
-                                                 : layoutUnit(-1),
+        .blockSize =
+            layoutIsDefinite(axis.size) ? layoutUnitMax(kLayoutUnitZero, axis.size - axis.edges) : layoutUnit(-1),
         .minBlock = limit(sizing.minBlockSize, kLayoutUnitZero),
         .maxBlock = limit(sizing.maxBlockSize, layoutUnit(-1)),
         .scrolls = s.scrolls,
@@ -511,9 +516,11 @@ PR_NOINLINE void independentContent(LayoutState& state, Shell& s, LayoutContentG
         input.minBlock = layoutUnitMax(input.minBlock, input.blockSize);
         input.blockSize = layoutUnit(-1);
     }
-    LayoutContentOutcome outcome = s.children == LayoutChildren_Flex
-                                       ? layoutFlexContent(state, s.parent, input)
-                                       : layoutGridContent(state, s.parent, input, lines);
+    LayoutContentOutcome outcome;
+    if (s.children == LayoutChildren_Flex)
+        outcome = layoutFlexContent(state, s.parent, input);
+    else
+        outcome = layoutGridContent(state, s.parent, input, lines);
     PrLayoutUnit size = outcome.contentBlock + axis.edges;
     content.blockSize = layoutContentBlockSize(state.styles, box, sizing, axis, percentBlock, s.clamps, size, size);
     content.contentBlock = outcome.contentBlock;
@@ -555,19 +562,17 @@ PR_NOINLINE LayoutTableOutcome tableContent(LayoutState& state, const Shell& s, 
 // of `kind`. The result then has no fragment, and the items are measured but not laid out. Kept out of line from
 // layoutBlock: most work in most layouts is reuse of a cached result, and this keeps that path cheap.
 PR_NOINLINE LayoutResult layoutContainer(LayoutState& state, LayoutNodeIndex node, const LayoutSpace& space,
-                                         const LayoutRequests* PR_NULLABLE requests, LayoutReads* PR_NULLABLE reads,
-                                         LayoutMeasurement* PR_NULLABLE measure,
-                                         LayoutMeasureKind kind = LayoutMeasureKind_Baselines,
-                                         LayoutNodeIndex runLast = kPrLayoutNodeNone,
-                                         const PrLayoutBoxStyle* PR_NULLABLE anonymous = nullptr) {
+        const LayoutRequests* PR_NULLABLE requests, LayoutReads* PR_NULLABLE reads, LayoutMeasurement* PR_NULLABLE measure,
+        LayoutMeasureKind kind = LayoutMeasureKind_Baselines, LayoutNodeIndex runLast = kPrLayoutNodeNone,
+        const PrLayoutBoxStyle* PR_NULLABLE anonymous = nullptr) {
     bool readsBefore = state.readsFallback;
     state.readsFallback = false;
     Shell s;
     shellOf(state, s, node, space, requests, runLast, anonymous);
     const PrLayoutBoxStyle& box = *s.box;
     LayoutMode mode = s.content.mode;
-    PR_ASSERT(space.bfc == nullptr
-              || !layoutEstablishesContext(state.tree, node, box, LayoutOuterMode{space.mode, kLayoutFontGroupNone}));
+    PR_ASSERT(space.bfc == nullptr ||
+        !layoutEstablishesContext(state.tree, node, box, LayoutOuterMode{space.mode, kLayoutFontGroupNone}));
 
     // The content, laid out by the algorithm that the box's children name, and the fragment, which each algorithm
     // finishes with what its content left. The fragment is built before the box's reads of the fallback are settled.
@@ -610,9 +615,11 @@ PR_NOINLINE LayoutResult layoutContainer(LayoutState& state, LayoutNodeIndex nod
         }
         case LayoutChildren_Flex:
         case LayoutChildren_Grid: {
-            LayoutContentGoal goal = measure == nullptr                 ? LayoutContentGoal_Build
-                                     : kind == LayoutMeasureKind_Baselines ? LayoutContentGoal_Baselines
-                                                                           : LayoutContentGoal_Size;
+            LayoutContentGoal goal = LayoutContentGoal_Size;
+            if (measure == nullptr)
+                goal = LayoutContentGoal_Build;
+            else if (kind == LayoutMeasureKind_Baselines)
+                goal = LayoutContentGoal_Baselines;
             LayoutGridLines lines{kPrLayoutNodeNone, 0};
             independentContent(state, s, goal, content, &lines);
             if (lines.node == kPrLayoutNodeNone) {
@@ -643,16 +650,18 @@ PR_NOINLINE LayoutResult layoutContainer(LayoutState& state, LayoutNodeIndex nod
         result.flags |= LayoutResultFlag_ReadsFallback;
     // The fallback of a scroll container, if its content read it, and the sizes of an orthogonal flow root also read
     // the sizes of the containing block.
-    if (s.intrinsicReads || scrollerReads || s.orthogonal
-        || (s.clamps && layoutBlockReadsBase(s.sizing(), space.autoBlock)))
+    if (s.intrinsicReads || scrollerReads || s.orthogonal ||
+            (s.clamps && layoutBlockReadsBase(s.sizing(), space.autoBlock)))
         result.flags |= LayoutResultFlag_ReadsBlockBase;
     if (s.fills)
         result.flags |= LayoutResultFlag_FillsAvailable;
     result.marginInlineStart = s.e.margin[LayoutSide_InlineStart];
     if (measure != nullptr) {
         exportBaselines(state, space, box, mode, content.blockSize, content.edges, result);
-        *measure = LayoutMeasurement{content.blockSize, content.edges[LayoutBaselineEdge_First],
-                                     content.edges[LayoutBaselineEdge_Last]};
+        *measure = LayoutMeasurement{
+            content.blockSize, content.edges[LayoutBaselineEdge_First],
+            content.edges[LayoutBaselineEdge_Last],
+        };
         return result;
     }
     ++state.stats->boxFragmentsMade;
@@ -666,13 +675,16 @@ PR_NOINLINE LayoutResult layoutContainer(LayoutState& state, LayoutNodeIndex nod
     // margins). The in-flow content of a flex container holds the margin boxes of its items, which css-overflow-3
     // requires.
     PrLayoutUnit contentInline = s.contentSpace.containing.inlineSize;
-    LayoutLogicalOffset inFlowStart{layoutUnitMin(kLayoutUnitZero, content.itemsStart.inlineOffset),
-                                    layoutUnitMin(kLayoutUnitZero, content.itemsStart.blockOffset) + content.shift};
+    LayoutLogicalOffset inFlowStart{
+        layoutUnitMin(kLayoutUnitZero, content.itemsStart.inlineOffset),
+        layoutUnitMin(kLayoutUnitZero, content.itemsStart.blockOffset) + content.shift,
+    };
     LayoutLogicalSize inFlow{
         layoutUnitMax(contentInline, content.itemsEnd.inlineOffset) - inFlowStart.inlineOffset,
-        layoutUnitMax(content.contentBlock, content.itemsEnd.blockOffset) - inFlowStart.blockOffset};
+        layoutUnitMax(content.contentBlock, content.itemsEnd.blockOffset) - inFlowStart.blockOffset,
+    };
     PrLayoutVec at = layoutPhysicalOffset(mode, s.origin + inFlowStart, inFlow,
-                                          LayoutLogicalSize{s.inlineSize, content.blockSize});
+        LayoutLogicalSize{s.inlineSize, content.blockSize});
     PrLayoutRect flowRect = layoutRectAt(at, layoutPhysicalSize(mode, inFlow));
     if (s.scrolls) {
         PrLayoutUnit padding[PrRectSide_Count];
@@ -687,19 +699,19 @@ PR_NOINLINE LayoutResult layoutContainer(LayoutState& state, LayoutNodeIndex nod
     result.fragment = fragment;
     exportBaselines(state, space, box, mode, content.blockSize, content.edges, result);
     layoutFragmentSetBaselines(fragment, content.edges[LayoutBaselineEdge_First],
-                               content.edges[LayoutBaselineEdge_Last]);
+        content.edges[LayoutBaselineEdge_Last]);
     return result;
 }
 
 // Returns true if two spaces of a flex item or a table cell are the same. Neither is in flow in a context.
 bool sameSpace(const LayoutSpace& a, const LayoutSpace& b) {
     PR_ASSERT(a.bfc == nullptr && b.bfc == nullptr);
-    return a.mode == b.mode && a.available == b.available && a.percentInline == b.percentInline
-           && a.percentBlock == b.percentBlock && a.containing.inlineSize == b.containing.inlineSize
-           && a.containing.blockSize == b.containing.blockSize && a.blockLimit == b.blockLimit
-           && a.fallback == b.fallback && a.autoInline == b.autoInline && a.autoBlock == b.autoBlock
-           && a.stretchBlock == b.stretchBlock && layoutCellSpacesEqual(layoutCellSpaceFromSpace(a),
-                                                                        layoutCellSpaceFromSpace(b));
+    return a.mode == b.mode && a.available == b.available && a.percentInline == b.percentInline &&
+        a.percentBlock == b.percentBlock && a.containing.inlineSize == b.containing.inlineSize &&
+        a.containing.blockSize == b.containing.blockSize && a.blockLimit == b.blockLimit &&
+        a.fallback == b.fallback && a.autoInline == b.autoInline && a.autoBlock == b.autoBlock &&
+        a.stretchBlock == b.stretchBlock && layoutCellSpacesEqual(layoutCellSpaceFromSpace(a),
+            layoutCellSpaceFromSpace(b));
 }
 
 // Takes the result that the cache holds for the box `node` from a layout when a different size was available, if the
@@ -707,7 +719,7 @@ bool sameSpace(const LayoutSpace& a, const LayoutSpace& b) {
 // resolves to there, in the flow and writing mode of its containing block, as its layout resolves them
 // (layoutContainer). Returns false if the inline size differs.
 bool findResized(LayoutState& state, LayoutNodeIndex node, const LayoutSpace& space,
-                 const LayoutRequests* PR_NULLABLE requests, LayoutResult* out) {
+        const LayoutRequests* PR_NULLABLE requests, LayoutResult* out) {
     const PrLayoutBoxStyle& box = layoutBoxStyle(state.styles, layoutTreeNode(state.tree, node).style);
     LayoutLogicalBox logical = layoutLogicalBox(box, space.mode);
     LayoutEdges e = layoutEdgesFromBox(state.styles, logical, space.containing.inlineSize);
@@ -723,7 +735,7 @@ bool findResized(LayoutState& state, LayoutNodeIndex node, const LayoutSpace& sp
 // result laid out when a different size was available is taken instead if it is still valid. Kept out of line from
 // layoutBlock, because most work in most layouts is reuse of a cached result.
 PR_NOINLINE LayoutResult layOut(LayoutState& state, LayoutNodeIndex node, const LayoutSpace& space,
-                                const LayoutRequests* PR_NULLABLE requests, bool keeps = true) {
+        const LayoutRequests* PR_NULLABLE requests, bool keeps = true) {
     LayoutResult result{};
     // A result laid out when a different size was available is valid if the box resolves to the same inline size.
     if (layoutCacheMayResize(state, node, space, requests) && findResized(state, node, space, requests, &result))
@@ -794,19 +806,19 @@ LayoutSpace ownSpace(LayoutState& state, LayoutNodeIndex node, const LayoutSpace
 // leaves of the available space, as the margins of a block-level box do. Its own layout holds neither that size nor
 // that space.
 PrLayoutUnit orthogonalMarginStart(const LayoutState& state, LayoutNodeIndex node, const LayoutSpace& content,
-                                   const LayoutResult& result) {
+        const LayoutResult& result) {
     const PrLayoutBoxStyle& box = layoutBoxStyle(state.styles, layoutTreeNode(state.tree, node).style);
     LayoutEdges e = layoutEdgesFromBox(state.styles, layoutLogicalBox(box, content.mode),
-                                       content.containing.inlineSize);
+        content.containing.inlineSize);
     if (!prLayoutDisplayIsInlineLevel(box.display) && box.floating == PrLayoutFloat_None)
         layoutShareAutoMargins(e, content.available,
-                               layoutLogicalSize(content.mode, result.fragment->extent).inlineSize);
+            layoutLogicalSize(content.mode, result.fragment->extent).inlineSize);
     return e.margin[LayoutSide_InlineStart];
 }
 
 // Returns the result of the block-level box `node` in `space` at `requests`, as layoutBlock gives it.
 PR_FORCE_INLINE LayoutResult resultOf(LayoutState& state, LayoutNodeIndex node, const LayoutSpace& space,
-                                      const LayoutRequests* PR_NULLABLE requests) {
+        const LayoutRequests* PR_NULLABLE requests) {
     LayoutResult result{};
     // The space of a box out of flow is already made in its own axes (layoutAbsolute).
     if (layoutSpaceIsOutOfFlow(space) || !layoutIsOrthogonalRoot(state.tree, node, space.mode)) {
@@ -824,7 +836,7 @@ PR_FORCE_INLINE LayoutResult resultOf(LayoutState& state, LayoutNodeIndex node, 
 
 // Measures `node` as layoutMeasure does, without the memo that a layout that keeps no records uses.
 LayoutMeasurement measure(LayoutState& state, LayoutNodeIndex node, const LayoutSpace& container,
-                          const LayoutRequests& requests, LayoutMeasureKind kind) {
+        const LayoutRequests& requests, LayoutMeasureKind kind) {
     LayoutSpace space = ownSpace(state, node, container);
     LayoutMeasurement out{};
     LayoutBaselines kept{};
@@ -851,7 +863,7 @@ LayoutMeasurement measure(LayoutState& state, LayoutNodeIndex node, const Layout
     out.first = layoutFragmentBaseline(result.fragment, LayoutBaselineEdge_First);
     out.last = layoutFragmentBaseline(result.fragment, LayoutBaselineEdge_Last);
     layoutCacheStoreMeasure(state, node, space, requests, LayoutMeasureKind_Baselines, result.flags, out.blockSize,
-                            out.first, out.last);
+        out.first, out.last);
     if (handed && state.reuse) {
         LayoutScratch& scratch = *state.scratch;
         scratch.handoffIndex.insert(KeyIndex::hashOf(node), scratch.handoffs.count);
@@ -875,7 +887,7 @@ LayoutResult layoutBlock(LayoutState& state, LayoutNodeIndex node, const LayoutS
 // Measurements and final layouts
 
 LayoutMeasurement layoutMeasure(LayoutState& state, LayoutNodeIndex node, const LayoutSpace& space,
-                                const LayoutRequests& requests, LayoutMeasureKind kind) {
+        const LayoutRequests& requests, LayoutMeasureKind kind) {
     PR_ASSERT(space.bfc == nullptr && requests.inlineAxis.kind == LayoutRequestKind_Fixed);
     if (state.reuse)
         return measure(state, node, space, requests, kind);
@@ -884,8 +896,8 @@ LayoutMeasurement layoutMeasure(LayoutState& state, LayoutNodeIndex node, const 
     uint32_t hash = KeyIndex::hashOf(node);
     uint32_t at = s.memoIndex.find(hash, [&](uint32_t i) {
         const LayoutMemo& memo = s.memos.data[i];
-        return memo.node == node && memo.kind >= kind && layoutRequestsEqual(memo.requests, requests)
-               && sameSpace(memo.space, space);
+        return memo.node == node && memo.kind >= kind && layoutRequestsEqual(memo.requests, requests) &&
+            sameSpace(memo.space, space);
     });
     if (at != kHashMissing)
         return s.memos.data[at].answer;
@@ -896,13 +908,12 @@ LayoutMeasurement layoutMeasure(LayoutState& state, LayoutNodeIndex node, const 
 }
 
 LayoutResult layoutFinal(LayoutState& state, LayoutNodeIndex node, const LayoutSpace& space,
-                         const LayoutRequests& requests) {
+        const LayoutRequests& requests) {
     LayoutScratch& scratch = *state.scratch;
     uint32_t hash = KeyIndex::hashOf(node);
     uint32_t at = scratch.handoffIndex.find(hash, [&](uint32_t i) {
         const LayoutHandoff& handoff = scratch.handoffs.data[i];
-        return handoff.node == node && sameSpace(handoff.space, space)
-               && layoutRequestsEqual(handoff.requests, requests);
+        return handoff.node == node && sameSpace(handoff.space, space) && layoutRequestsEqual(handoff.requests, requests);
     });
     if (at == kHashMissing)
         return resultOf(state, node, space, &requests);
@@ -917,17 +928,16 @@ LayoutResult layoutFinal(LayoutState& state, LayoutNodeIndex node, const LayoutS
 }
 
 LayoutResult layoutAnonymousBlock(LayoutState& state, LayoutNodeIndex first, LayoutNodeIndex last,
-                                  const LayoutSpace& space, const LayoutRequests& requests) {
+        const LayoutSpace& space, const LayoutRequests& requests) {
     ++state.stats->blocksLaidOut;
     return layoutContainer(state, first, space, &requests, nullptr, nullptr, LayoutMeasureKind_Baselines, last,
-                           &layoutAnonymousCellStyle());
+        &layoutAnonymousCellStyle());
 }
 
-LayoutResult layoutAnonymousTable(LayoutState& state, LayoutNodeIndex first, LayoutNodeIndex last,
-                                  const LayoutSpace& space) {
+LayoutResult layoutAnonymousTable(LayoutState& state, LayoutNodeIndex first, LayoutNodeIndex last, const LayoutSpace& space) {
     ++state.stats->blocksLaidOut;
     return layoutContainer(state, first, space, nullptr, nullptr, nullptr, LayoutMeasureKind_Baselines, last,
-                           &layoutAnonymousTableStyle());
+        &layoutAnonymousTableStyle());
 }
 
 void layoutEndLayout(LayoutScratch& scratch) {
@@ -955,13 +965,15 @@ const LayoutFragment* layoutViewport(LayoutState& state, uint32_t root, PrLayout
     // block, whose writing mode is the root's (css-writing-modes-4/#principal-flow).
     LayoutMode mode = layoutOwnMode(state.tree, root);
     LayoutLogicalSize initial = layoutLogicalSize(mode, extent);
-    LayoutSpace space{.mode = mode,
-                      .available = initial.inlineSize,
-                      .percentInline = initial.inlineSize,
-                      .percentBlock = initial.blockSize,
-                      .containing = initial,
-                      .blockLimit = layoutUnit(-1),
-                      .fallback = extent};
+    LayoutSpace space{
+        .mode = mode,
+        .available = initial.inlineSize,
+        .percentInline = initial.inlineSize,
+        .percentBlock = initial.blockSize,
+        .containing = initial,
+        .blockLimit = layoutUnit(-1),
+        .fallback = extent,
+    };
     LayoutResult result = layoutBlock(state, root, space);
     const PrLayoutBoxStyle& box = layoutBoxStyle(state.styles, layoutTreeNode(state.tree, root).style);
     LayoutLogicalSize size = layoutLogicalSize(mode, result.fragment->extent);
@@ -971,15 +983,14 @@ const LayoutFragment* layoutViewport(LayoutState& state, uint32_t root, PrLayout
     if (box.floating != PrLayoutFloat_None && box.display != PrLayoutDisplay_None) {
         PrLayoutFloat floating = box.floating;
         bool ltr = mode.direction == PrTextDirection_Ltr;
-        bool end = floating == PrLayoutFloat_InlineEnd || (floating == PrLayoutFloat_Right && ltr)
-                   || (floating == PrLayoutFloat_Left && !ltr);
+        bool end = floating == PrLayoutFloat_InlineEnd || (floating == PrLayoutFloat_Right && ltr) ||
+            (floating == PrLayoutFloat_Left && !ltr);
         if (end) {
             LayoutEdges e = layoutEdgesFromBox(state.styles, layoutLogicalBox(box, mode), initial.inlineSize);
             offset.inlineOffset = initial.inlineSize - size.inlineSize - e.margin[LayoutSide_InlineEnd];
         }
     }
-    PrLayoutVec at =
-        layoutPhysicalOffset(mode, offset + layoutRelativeOffset(state.styles, box, space), size, initial);
+    PrLayoutVec at = layoutPhysicalOffset(mode, offset + layoutRelativeOffset(state.styles, box, space), size, initial);
     // Holds the boxes out of flow that no box in the root holds, after the root: absolutely positioned boxes in the
     // initial containing block, and fixed boxes in the viewport (css-position-3/#def-cb).
     Array<LayoutChild> held;
@@ -995,10 +1006,12 @@ const LayoutFragment* layoutViewport(LayoutState& state, uint32_t root, PrLayout
         viewport->children[1 + i] = held.data[i];
     // The viewport scrolls through the margin box of the root and what the root reaches without clipping. Scrolling
     // starts from the corner of the initial containing block that is the origin of the principal writing mode.
-    LayoutLogicalSize margins{offset.inlineOffset + size.inlineSize,
-                              layoutStrutSize(result.start) + size.blockSize + layoutStrutSize(result.end)};
+    LayoutLogicalSize margins{
+        offset.inlineOffset + size.inlineSize,
+        layoutStrutSize(result.start) + size.blockSize + layoutStrutSize(result.end),
+    };
     PrLayoutRect reach = layoutRectAt(layoutPhysicalOffset(mode, kLayoutLogicalOffsetZero, margins, initial),
-                                      layoutPhysicalSize(mode, margins));
+        layoutPhysicalSize(mode, margins));
     reach = layoutRectUnion(reach, layoutRectMoved(result.fragment->overflow, at));
     // The parts of a fixed box that lie outside the viewport cannot be scrolled to.
     for (uint32_t i = 0; i < held.count; ++i) {
@@ -1008,8 +1021,10 @@ const LayoutFragment* layoutViewport(LayoutState& state, uint32_t root, PrLayout
     }
     held.reset();
     PrLayoutRect scrollable = layoutRectUnion(viewport->overflow, reach);
-    const PrRectSide origin[] = {layoutPhysicalSide(mode, LayoutSide_BlockStart),
-                                 layoutPhysicalSide(mode, LayoutSide_InlineStart)};
+    const PrRectSide origin[] = {
+        layoutPhysicalSide(mode, LayoutSide_BlockStart),
+        layoutPhysicalSide(mode, LayoutSide_InlineStart),
+    };
     for (PrRectSide side : origin) {
         switch (side) {
             case PrRectSide_Left: scrollable.left = kLayoutUnitZero; break;

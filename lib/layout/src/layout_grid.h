@@ -40,14 +40,14 @@ struct LayoutGridLines {
 // out of flow has its static position where the container's sole item would be, in a grid area that is the content box.
 // If the goal is to build, sets `lines` to where the container's lines are, until layoutGridFinish.
 LayoutContentOutcome layoutGridContent(LayoutState& state, LayoutNodeIndex node, const LayoutContentInput& input,
-                                       LayoutGridLines* PR_NULLABLE lines);
+    LayoutGridLines* PR_NULLABLE lines);
 
 // Returns the containing block of the box out of flow `box`, whose containing block is the grid container that laid out
 // `lines` (css-grid-1/#abspos-items). It is the grid area that the box's placement names, from the top left of the
 // container's border box, whose extent is `extent`. An auto line, or a line that the grid does not have, is the padding
 // edge of the container on that side, which `padding` gives, a rectangle from the same corner.
 PrLayoutRect layoutGridAbsoluteArea(LayoutState& state, const LayoutGridLines& lines, LayoutNodeIndex box,
-                                    PrLayoutRect padding, PrLayoutVec extent);
+    PrLayoutRect padding, PrLayoutVec extent);
 
 // Makes the grid container's fragment from `built`, which the function takes, with the used sizes of the tracks of the
 // layout that kept `lines` (layoutFragmentGrid), and returns it. Frees the scratch memory that holds the lines.

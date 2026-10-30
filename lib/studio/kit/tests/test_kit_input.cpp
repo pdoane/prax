@@ -113,7 +113,7 @@ std::vector<PrLayoutNode> gutterButtons(KitFixture& f, PrLayoutNode field) {
     std::vector<PrLayoutNode> buttons;
     PrLayoutNode gutter = prLayoutNodeLastChild(f.tree, field);
     for (PrLayoutNode n = prLayoutNodeFirstChild(f.tree, gutter); n != kPrLayoutNodeNone;
-         n = prLayoutNodeNextSibling(f.tree, n))
+            n = prLayoutNodeNextSibling(f.tree, n))
         buttons.push_back(n);
     return buttons;
 }
@@ -147,8 +147,10 @@ TEST_CASE("a scrub past a bound turns back as soon as the pointer does") {
     double value = 0;
     PrLayoutNode field = kPrLayoutNodeNone;
     f.build = [&](PrLayoutNode ground) {
-        PrKitNumber number{.value = prKitScalarF64(&value), .range = {.step = 1, .min = 0, .max = 5,
-                                                                         .hasMin = true, .hasMax = true}};
+        PrKitNumber number{
+            .value = prKitScalarF64(&value),
+            .range = {.step = 1, .min = 0, .max = 5, .hasMin = true, .hasMax = true},
+        };
         field = prKitNumberField(f.kit, ground, number, {});
     };
     f.frame();
@@ -233,7 +235,7 @@ TEST_CASE("a disabled number field takes no scrub and no focus") {
     PrLayoutNode field = kPrLayoutNodeNone;
     f.build = [&](PrLayoutNode ground) {
         field = prKitNumberField(f.kit, prKitBox(f.kit, ground, {.disabled = true}, {}),
-                                 {.value = prKitScalarF32(&value)}, {});
+            {.value = prKitScalarF32(&value)}, {});
     };
     f.frame();
     dragBy(f, f.center(field), {20});
@@ -299,13 +301,22 @@ TEST_CASE("controls on a plane turned in perspective take input where they are d
     PrMatrix4 turn = prMatrix4Rotate(PrVec3{0, 1, 0}, 1.0f);
     f.build = [&](PrLayoutNode ground) {
         // A stage that is the eye for the panel under it, and the panel turned in it.
-        PrKitPlaneStyle outer{.box = {.padding = PrKitEdges{40, 0, 0, 80},
-                                      .place = {.width = prKitPx(400), .height = prKitPx(300),
-                                                .flex = PrKitFlex_Fixed}},
-                              .perspective = distance};
+        PrKitPlaneStyle outer{
+            .box = {
+                .padding = PrKitEdges{40, 0, 0, 80},
+                .place = {.width = prKitPx(400), .height = prKitPx(300), .flex = PrKitFlex_Fixed},
+            },
+            .perspective = distance,
+        };
         stage = prKitPlane(f.kit, ground, {.key = 1}, outer);
-        PrKitPlaneStyle inner{.box = {.align = PrKitAlign_Start, .gap = 8, .padding = prKitEdgesAll(12),
-                                      .place = {.width = prKitPx(240), .align = PrKitAlign_Start}}};
+        PrKitPlaneStyle inner{
+            .box = {
+                .align = PrKitAlign_Start,
+                .gap = 8,
+                .padding = prKitEdgesAll(12),
+                .place = {.width = prKitPx(240), .align = PrKitAlign_Start},
+            },
+        };
         panel = prKitPlane(f.kit, stage, {.key = 2, .transform = &turn}, inner);
         slider = prKitSlider(f.kit, panel, {.key = 3, .value = prKitScalarF32(&value), .min = 0, .max = 10}, {});
         PrKitPlace fill{.align = PrKitAlign_Stretch};
@@ -352,18 +363,18 @@ TEST_CASE("a plane that hides its back takes no input while it shows it, and a p
     bool hidden = false;
     int32_t level = 0;
     f.build = [&](PrLayoutNode ground) {
-        PrKitPlaneStyle outer{.box = {.place = {.width = prKitPx(200), .height = prKitPx(200),
-                                                .flex = PrKitFlex_Fixed}},
-                              .perspective = 300};
+        PrKitPlaneStyle outer{
+            .box = {.place = {.width = prKitPx(200), .height = prKitPx(200), .flex = PrKitFlex_Fixed,}},
+            .perspective = 300,
+        };
         stage = prKitPlane(f.kit, ground, {.key = 1}, outer);
         PrKitBoxStyle cover{.place = {.width = prKitPercent(100), .height = prKitPercent(100)}};
-        back = prKitPlane(f.kit, prKitStack(f.kit, stage, {.key = 2}, cover), {.key = 3},
-                          {.box = cover, .zIndex = level});
+        back = prKitPlane(f.kit, prKitStack(f.kit, stage, {.key = 2}, cover), {.key = 3}, {.box = cover, .zIndex = level});
         // The layer that holds the front plane lets the pointer through to what is under it.
         PrLayoutNode layer = prKitLayer(f.kit, stage, {.key = 4}, cover);
         prUiSetFlags(f.ui, layer, PrUiFlag_Transparent);
         front = prKitPlane(f.kit, layer, {.key = 5, .transform = hidden ? &flip : nullptr},
-                           {.box = cover, .backfaceHidden = true});
+            {.box = cover, .backfaceHidden = true});
         for (PrLayoutNode node : {back, front}) {
             prUiSetFlags(f.ui, node, PrUiFlag_Pressable);
             if (prUiClicked(f.ui, node, 0))
@@ -478,8 +489,12 @@ TEST_CASE("an inspector group's header discloses and collapses its body") {
     PrLayoutNode row = kPrLayoutNodeNone;
     PrLayoutNode kept = kPrLayoutNodeNone;
     f.build = [&](PrLayoutNode ground) {
-        PrKitInspectorGroup group{.name = "Transform", .badge = "CORE",
-                                  .badgeVariant = PrKitBadgeVariant_Accent, .open = &open};
+        PrKitInspectorGroup group{
+            .name = "Transform",
+            .badge = "CORE",
+            .badgeVariant = PrKitBadgeVariant_Accent,
+            .open = &open,
+        };
         body = prKitInspectorGroup(f.kit, ground, group);
         row = kPrLayoutNodeNone;
         if (body != kPrLayoutNodeNone)

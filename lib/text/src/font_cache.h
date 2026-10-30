@@ -12,7 +12,7 @@ namespace pr_impl {
 // the first use of the font. They are kept at least until the next call. Returns false and writes nothing if the
 // backend cannot read the face of the font.
 bool textFontCacheFind(PrTextShaper* shaper, const PrFont* font, void* PR_NULLABLE* PR_NONNULL face,
-                       void* PR_NULLABLE* PR_NONNULL state);
+    void* PR_NULLABLE* PR_NONNULL state);
 
 // Frees every state that the shaper keeps.
 void textFontCacheDestroy(PrTextShaper* shaper);

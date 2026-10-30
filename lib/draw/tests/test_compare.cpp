@@ -39,7 +39,7 @@ constexpr uint8_t kReference[] = {
     119, 248, 64, 90, 162, 224, 0, 122, 160, 253, 64, 115, 211, 172, 200, 140, 112, 24, 255,
     188, 81, 104, 0, 152, 153, 190, 128, 237, 43, 63, 64, 193, 90, 79, 255, 218, 111, 26, 128,
     201, 178, 196, 200, 84, 20, 46, 255, 51, 136, 42, 128, 41, 227, 123, 64, 221, 203, 84, 200,
-    224, 64, 249, 128
+    224, 64, 249, 128,
 };
 
 constexpr uint8_t kRendered[] = {
@@ -66,7 +66,7 @@ constexpr uint8_t kRendered[] = {
     203, 205, 255, 45, 119, 248, 64, 90, 162, 224, 0, 122, 160, 253, 64, 115, 211, 172, 200,
     230, 112, 24, 255, 188, 81, 104, 0, 152, 153, 190, 128, 237, 43, 63, 64, 193, 90, 79, 255,
     52, 111, 26, 255, 201, 178, 196, 200, 84, 20, 46, 255, 51, 136, 42, 128, 41, 227, 123, 64,
-    55, 203, 84, 255, 224, 64, 249, 128
+    55, 203, 84, 255, 224, 64, 249, 128,
 };
 
 // The difference image that Pillow drew.
@@ -95,7 +95,7 @@ constexpr uint8_t kDifference[] = {
     237, 238, 255, 244, 250, 250, 255, 245, 248, 254, 255, 255, 255, 255, 255, 249, 250, 254,
     255, 235, 248, 243, 255, 229, 34, 34, 255, 255, 255, 255, 255, 245, 245, 249, 255, 254, 245,
     246, 255, 229, 34, 34, 255, 229, 34, 34, 255, 247, 244, 246, 255, 224, 212, 217, 255, 236,
-    244, 235, 255, 245, 253, 249, 255, 229, 34, 34, 255, 252, 237, 254, 255
+    244, 235, 255, 245, 253, 249, 255, 229, 34, 34, 255, 252, 237, 254, 255,
 };
 
 } // namespace
@@ -106,8 +106,7 @@ using namespace pr_impl;
 
 TEST_CASE("the corpora's comparison answers Pillow's figures and difference") {
     uint8_t diff[kWidth * kHeight * 4] = {};
-    ImageDifference d = compareImages(kReference, kRendered, kWidth, kHeight, kWidth * 4,
-                                      ImageComparison{}, diff);
+    ImageDifference d = compareImages(kReference, kRendered, kWidth, kHeight, kWidth * 4, ImageComparison{}, diff);
     CHECK(d.changedRatio == doctest::Approx(26.0 / 117).epsilon(1e-12));
     CHECK(d.contentChangedRatio == doctest::Approx(25.0 / 91).epsilon(1e-12));
     CHECK(d.mae == doctest::Approx(13.421652421652423).epsilon(1e-12));
@@ -117,8 +116,7 @@ TEST_CASE("the corpora's comparison answers Pillow's figures and difference") {
 
 TEST_CASE("an image compared with itself differs nowhere") {
     uint8_t diff[kWidth * kHeight * 4] = {};
-    ImageDifference d = compareImages(kReference, kReference, kWidth, kHeight, kWidth * 4,
-                                      ImageComparison{}, diff);
+    ImageDifference d = compareImages(kReference, kReference, kWidth, kHeight, kWidth * 4, ImageComparison{}, diff);
     CHECK(d.changedRatio == 0);
     CHECK(d.contentChangedRatio == 0);
     CHECK(d.mae == 0);

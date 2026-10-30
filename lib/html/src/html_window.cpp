@@ -39,8 +39,7 @@ uint32_t timerIndex(const PrHtmlWindow* window, int32_t id) {
 uint32_t nextTimerIndex(const PrHtmlWindow* window) {
     uint32_t index = window->timers.count;
     for (uint32_t i = 0; i < window->timers.count; ++i) {
-        if (index == window->timers.count
-            || window->timers.data[i].deadline < window->timers.data[index].deadline)
+        if (index == window->timers.count || window->timers.data[i].deadline < window->timers.data[index].deadline)
             index = i;
     }
     return index;
@@ -81,9 +80,9 @@ PrCssPresentation* PR_NULLABLE presentationOf(const PrHtmlWindow* window) {
 double frameDue(const PrHtmlWindow* window) {
     double due = nextFrame(window);
     PrCssPresentation* presentation = presentationOf(window);
-    if (window->animationFrames != PrHtmlAnimationFrames_Observed || window->frameRequests.count != 0
-        || window->revealing || window->taskHead != window->tasks.count || presentation == nullptr
-        || cssPresentationHasWork(presentation))
+    if (window->animationFrames != PrHtmlAnimationFrames_Observed || window->frameRequests.count != 0 ||
+            window->revealing || window->taskHead != window->tasks.count || presentation == nullptr ||
+            cssPresentationHasWork(presentation))
         return due;
     double event = cssAnimateNextEventTime(&presentation->animations);
     double target = event >= 0 ? window->timeOrigin + event : -1;
@@ -103,12 +102,12 @@ bool wantsFrame(const PrHtmlWindow* window) {
     if (htmlWindowRenderBlocked(window))
         return false;
     PrCssPresentation* presentation = presentationOf(window);
-    return window->frameRequests.count != 0 || window->revealing || window->canvases.count != 0
-           || (window->parent == nullptr && window->document != nullptr && htmlFocusHasAutofocus(window->document))
-           || (window->document != nullptr && prCssDocumentResizeObservationsPending(window->document))
-           || (window->document != nullptr && prCssDocumentIntersectionObservationsPending(window->document))
-           || (presentation != nullptr
-               && (prCssPresentationIsAnimating(presentation) || cssPresentationHasWork(presentation)));
+    return window->frameRequests.count != 0 || window->revealing || window->canvases.count != 0 ||
+        (window->parent == nullptr && window->document != nullptr && htmlFocusHasAutofocus(window->document)) ||
+        (window->document != nullptr && prCssDocumentResizeObservationsPending(window->document)) ||
+        (window->document != nullptr && prCssDocumentIntersectionObservationsPending(window->document)) ||
+        (presentation != nullptr &&
+            (prCssPresentationIsAnimating(presentation) || cssPresentationHasWork(presentation)));
 }
 
 // Implements html/#reveal: the first rendering update of a document notifies its window that the document is revealed.
@@ -288,8 +287,8 @@ void setTarget(PrDomDocument* document, PrDomElement* PR_NULLABLE element) {
 
 } // namespace
 
-int32_t htmlWindowSetTimeout(PrHtmlWindow* window, const PrHtmlTimerHandler* handler,
-                             int32_t timeout, bool repeats, bool endless) {
+int32_t htmlWindowSetTimeout(PrHtmlWindow* window, const PrHtmlTimerHandler* handler, int32_t timeout, bool repeats,
+        bool endless) {
     int32_t id;
     do {
         id = window->nextTimerId == INT32_MAX ? 1 : window->nextTimerId + 1;
@@ -321,10 +320,12 @@ void htmlWindowClearTimeout(PrHtmlWindow* window, int32_t id) {
 }
 
 void htmlWindowRunAfterTimeout(PrHtmlWindow* window, const PrHtmlTimerHandler* handler, double milliseconds) {
-    HtmlTimer timer{.handler = *handler,
-                    .deadline = htmlWindowClock(window) + (milliseconds > 0 ? milliseconds : 0),
-                    .id = 0,
-                    .interval = -1};
+    HtmlTimer timer{
+        .handler = *handler,
+        .deadline = htmlWindowClock(window) + (milliseconds > 0 ? milliseconds : 0),
+        .id = 0,
+        .interval = -1,
+    };
     if (timer.handler.retain != nullptr)
         timer.handler.retain(timer.handler.context);
     window->timers.push(timer);
@@ -358,7 +359,7 @@ double htmlWindowFrameTime(const PrHtmlWindow* window) {
 }
 
 void htmlWindowQueueTask(PrHtmlWindow* window, void (*run)(void* data), void* data,
-                         void (*PR_NULLABLE drop)(void* data), bool delaysLoad) {
+        void (*PR_NULLABLE drop)(void* data), bool delaysLoad) {
     // Tasks that have run are released once they make up at least half of the queue, so that a pop has constant cost.
     if (window->taskHead != 0 && window->taskHead * 2 >= window->tasks.count) {
         window->tasks.erase(0, window->taskHead);
@@ -380,8 +381,7 @@ PrString htmlWindowOrigin(const PrHtmlWindow* window) {
     return prUrlOrigin(window->document->url);
 }
 
-uint32_t htmlWindowRequestAnimationFrame(PrHtmlWindow* window,
-                                         const PrHtmlFrameRequestCallback* callback) {
+uint32_t htmlWindowRequestAnimationFrame(PrHtmlWindow* window, const PrHtmlFrameRequestCallback* callback) {
     uint32_t handle = ++window->nextFrameHandle;
     if (callback->retain != nullptr)
         callback->retain(callback->context);
@@ -434,11 +434,9 @@ bool htmlWindowIsIdle(const PrHtmlWindow* window) {
             return false;
     }
     PrCssPresentation* presentation = presentationOf(window);
-    return window->taskHead == window->tasks.count && window->frameRequests.count == 0
-           && !window->revealing
-           && (presentation == nullptr
-               || (!cssPresentationHasWork(presentation)
-                   && !cssAnimateHaveEventsAhead(&presentation->animations)));
+    return window->taskHead == window->tasks.count && window->frameRequests.count == 0 && !window->revealing &&
+        (presentation == nullptr || (!cssPresentationHasWork(presentation) &&
+            !cssAnimateHaveEventsAhead(&presentation->animations)));
 }
 
 double htmlWindowNextTaskDelay(const PrHtmlWindow* window) {
@@ -497,8 +495,7 @@ PrDomElement* PR_NULLABLE htmlWindowNamedObject(PrHtmlWindow* window, PrStringVi
     if (name.size == 0)
         return nullptr;
     PrDomDocument* document = window->document;
-    for (PrDomNode* node = domNodeNext(document, document); node != nullptr;
-         node = domNodeNext(document, node)) {
+    for (PrDomNode* node = domNodeNext(document, document); node != nullptr; node = domNodeNext(document, node)) {
         PrDomElement* element = domElementFromNode(node);
         if (element == nullptr)
             continue;

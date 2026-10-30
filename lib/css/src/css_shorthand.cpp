@@ -79,8 +79,7 @@ CssValueSpan initialValue(CssParser* parser, PrCssProperty longhand) {
     if (held.count == 0) {
         cssTokenize(&parser->asideTokens, &parser->asideScratch, cssPropertyInitial(longhand));
         CssTokenStream ts = cssStream(&parser->asideTokens);
-        bool parsed =
-            cssParsePropertyValue(longhand, &ts, &parser->initials, &parser->match, &held);
+        bool parsed = cssParsePropertyValue(longhand, &ts, &parser->initials, &parser->match, &held);
         PR_ASSERT(parsed);
         (void)parsed;
         parser->initialOf.data[longhand] = held;
@@ -120,11 +119,10 @@ bool set(const Expansion* e, PrCssProperty property, Items value) {
         slot(e, indexOf(e, property)) = spanOf(value);
         return true;
     }
-    return expandInner(e, property, value,
-                       [e](uint32_t, PrCssProperty longhand, CssValueSpan span) {
-                           PR_ASSERT(indexOf(e, longhand) < e->longhands.count);
-                           slot(e, indexOf(e, longhand)) = span;
-                       });
+    return expandInner(e, property, value, [e](uint32_t, PrCssProperty longhand, CssValueSpan span) {
+        PR_ASSERT(indexOf(e, longhand) < e->longhands.count);
+        slot(e, indexOf(e, longhand)) = span;
+    });
 }
 
 // Returns the number of values at the top level of `value`: components, and values that no component holds.
@@ -173,8 +171,7 @@ bool expandMirror(const Expansion* e, Items value) {
     uint32_t run = 1;
     if (!cssIsShorthand(named))
         slot(e, 0) = spanOf(inner);
-    else if (!expandInner(e, named, inner,
-                          [e](uint32_t i, PrCssProperty, CssValueSpan span) { slot(e, i) = span; }))
+    else if (!expandInner(e, named, inner, [e](uint32_t i, PrCssProperty, CssValueSpan span) { slot(e, i) = span; }))
         return false;
     else
         run = cssPropertyLonghands(named).count;
@@ -189,8 +186,7 @@ bool setComponents(const Expansion* e, Items value) {
     const CssValuePool* pool = poolOf(e);
     for (uint32_t i = value.first; i < value.end; i += pool->values.data[i].next) {
         const CssValueNode* item = &pool->values.data[i];
-        if (item->kind == PrCssValueKind_Longhand
-            && !set(e, cssValueLonghand(item), childrenOf(pool, i)))
+        if (item->kind == PrCssValueKind_Longhand && !set(e, cssValueLonghand(item), childrenOf(pool, i)))
             return false;
     }
     return true;
@@ -290,9 +286,9 @@ struct Boxes {
 };
 
 Boxes boxesOf(PrCssProperty shorthand) {
-    return shorthand == PrCssProperty_Background
-               ? Boxes{PrCssProperty_BackgroundOrigin, PrCssProperty_BackgroundClip}
-               : Boxes{PrCssProperty_MaskOrigin, PrCssProperty_MaskClip};
+    if (shorthand == PrCssProperty_Background)
+        return Boxes{PrCssProperty_BackgroundOrigin, PrCssProperty_BackgroundClip};
+    return Boxes{PrCssProperty_MaskOrigin, PrCssProperty_MaskClip};
 }
 
 // css-backgrounds-4/#background, css-masking-1/#the-mask: one box sets both the origin and the clip. A clip alone
@@ -323,8 +319,8 @@ bool expandListStyle(const Expansion* e, Items value) {
     uint32_t image = indexOf(e, PrCssProperty_ListStyleImage);
     uint32_t type = indexOf(e, PrCssProperty_ListStyleType);
     CssValueSpan set = slot(e, image);
-    if (set.count == 1 && cssValueIsKeyword(&poolOf(e)->values.data[set.start], PrCssKeyword_None)
-        && slot(e, type).count == 0)
+    if (set.count == 1 && cssValueIsKeyword(&poolOf(e)->values.data[set.start], PrCssKeyword_None) &&
+            slot(e, type).count == 0)
         slot(e, type) = set;
     fillInitial(e);
     return true;
@@ -333,9 +329,9 @@ bool expandListStyle(const Expansion* e, Items value) {
 // Returns the keyword if `value` is a single keyword, or PrCssKeyword_Count otherwise.
 PrCssKeyword soleKeyword(const CssValuePool* pool, Items value) {
     const CssValueNode* first = &pool->values.data[value.first];
-    return value.end - value.first == 1 && first->kind == PrCssValueKind_Keyword
-               ? cssValueKeyword(first)
-               : PrCssKeyword_Count;
+    if (value.end - value.first == 1 && first->kind == PrCssValueKind_Keyword)
+        return cssValueKeyword(first);
+    return PrCssKeyword_Count;
 }
 
 // Sets the longhand at `index` to the keyword `keyword`.
@@ -367,8 +363,10 @@ bool expandFlex(const Expansion* e, Items value) {
 // css-fonts-4/#propdef-font-synthesis: each keyword written makes its longhand auto, and each omitted keyword makes its
 // longhand none.
 bool expandFontSynthesis(const Expansion* e, Items value) {
-    static constexpr PrCssKeyword kKeyword[] = {PrCssKeyword_Weight, PrCssKeyword_Style,
-                                              PrCssKeyword_SmallCaps, PrCssKeyword_Position};
+    static constexpr PrCssKeyword kKeyword[] = {
+        PrCssKeyword_Weight, PrCssKeyword_Style,
+        PrCssKeyword_SmallCaps, PrCssKeyword_Position,
+    };
     const CssValuePool* pool = poolOf(e);
     for (uint32_t j = 0; j < 4; ++j) {
         bool written = false;
@@ -468,9 +466,8 @@ bool expandPlace(const Expansion* e, Items value) {
         return false;
     if (slot(e, 1).count == 0) {
         const CssValueNode* first = &poolOf(e)->values.data[slot(e, 0).start];
-        bool baseline = cssValueIsKeyword(first, PrCssKeyword_Baseline)
-                        || cssValueIsKeyword(first, PrCssKeyword_First)
-                        || cssValueIsKeyword(first, PrCssKeyword_Last);
+        bool baseline = cssValueIsKeyword(first, PrCssKeyword_Baseline) ||
+            cssValueIsKeyword(first, PrCssKeyword_First) || cssValueIsKeyword(first, PrCssKeyword_Last);
         if (e->shorthand == PrCssProperty_PlaceContent && baseline)
             setKeyword(e, 1, PrCssKeyword_Start);
         else
@@ -616,9 +613,8 @@ bool expandGapRule(const Expansion* e, Items value) {
 bool expandGridTemplate(const Expansion* e, Items value) {
     CssValuePool* pool = poolOf(e);
     const CssValueNode* first = &pool->values.data[value.first];
-    if (soleKeyword(pool, value) == PrCssKeyword_None
-        || (first->kind == PrCssValueKind_Longhand
-            && cssValueLonghand(first) == PrCssProperty_GridTemplateRows)) {
+    if (soleKeyword(pool, value) == PrCssKeyword_None || (first->kind == PrCssValueKind_Longhand &&
+            cssValueLonghand(first) == PrCssProperty_GridTemplateRows)) {
         if (!setComponents(e, value))
             return false;
         fillInitial(e);
@@ -656,8 +652,7 @@ bool expandGridTemplate(const Expansion* e, Items value) {
         if (close && cssValueIsLiteral(&pool->values.last(), '[')) {
             pool->values.pop();
             names = false;
-            closed = pool->values.count != rows
-                     && cssValueIsLiteral(&pool->values.last(), ']');
+            closed = pool->values.count != rows && cssValueIsLiteral(&pool->values.last(), ']');
             continue;
         }
         sized = sized || (!names && !open && !close);
@@ -706,8 +701,7 @@ bool expandGrid(const Expansion* e, Items value) {
             addValue(pool, cssKeywordValue(flow < slash ? PrCssKeyword_Row : PrCssKeyword_Column));
         if (dense)
             addValue(pool, cssKeywordValue(PrCssKeyword_Dense));
-        slot(e, indexOf(e, PrCssProperty_GridAutoFlow)) =
-            CssValueSpan{start, pool->values.count - start};
+        slot(e, indexOf(e, PrCssProperty_GridAutoFlow)) = CssValueSpan{start, pool->values.count - start};
     }
     fillInitial(e);
     return true;
@@ -799,8 +793,7 @@ struct Walk {
 // Returns the bits of the longhands that a component names: the longhand itself, or a shorthand's longhands.
 uint64_t bitsOf(const Longhands* l, PrCssProperty property) {
     uint64_t bits = 0;
-    CssPropertyList named =
-        cssIsShorthand(property) ? cssPropertyLonghands(property) : CssPropertyList{&property, 1};
+    CssPropertyList named = cssIsShorthand(property) ? cssPropertyLonghands(property) : CssPropertyList{&property, 1};
     for (uint32_t i = 0; i < named.count; ++i) {
         for (uint32_t j = 0; j < l->properties.count; ++j) {
             if (l->properties.data[j] == named.data[i])
@@ -879,9 +872,8 @@ bool canWrite(const Walk* w, CssGrammarIndex index) {
         bool found = false;
         for (CssGrammarIndex k = inner; k < cssGrammarAfter(inner); ++k) {
             CssGrammarNode keyword = kCssGrammarNodes[k];
-            found = found
-                    || (cssGrammarType(keyword) == CssGrammarType_Keyword
-                        && w->l->texts[j] == cssKeywordName(PrCssKeyword(cssGrammarValue(keyword))));
+            found = found || (cssGrammarType(keyword) == CssGrammarType_Keyword &&
+                w->l->texts[j] == cssKeywordName(PrCssKeyword(cssGrammarValue(keyword))));
         }
         if (!found)
             return false;
@@ -893,7 +885,7 @@ bool canWrite(const Walk* w, CssGrammarIndex index) {
 // first child that can write what its longhands hold, or else the first child.
 CssGrammarIndex anyOfFallback(const Walk* w, CssGrammarIndex index) {
     for (CssGrammarIndex child = CssGrammarIndex(index + 1); child < cssGrammarAfter(index);
-         child = cssGrammarAfter(child)) {
+            child = cssGrammarAfter(child)) {
         if (canWrite(w, child))
             return child;
     }
@@ -916,7 +908,7 @@ bool walkNode(Walk* w, CssGrammarIndex index, bool omittable) {
         case CssGrammarType_AnyOf: {
             bool wrote = false;
             for (CssGrammarIndex child = CssGrammarIndex(index + 1); child < cssGrammarAfter(index);
-                 child = cssGrammarAfter(child))
+                    child = cssGrammarAfter(child))
                 wrote = walkNode(w, child, true) || wrote;
             if (!wrote)
                 walkNode(w, anyOfFallback(w, index), false);
@@ -926,7 +918,7 @@ bool walkNode(Walk* w, CssGrammarIndex index, bool omittable) {
         case CssGrammarType_AllOf:
         case CssGrammarType_Sequence:
             for (CssGrammarIndex child = CssGrammarIndex(index + 1); child < cssGrammarAfter(index);
-                 child = cssGrammarAfter(child))
+                    child = cssGrammarAfter(child))
                 walkNode(w, child, false);
             return true;
 
@@ -934,10 +926,10 @@ bool walkNode(Walk* w, CssGrammarIndex index, bool omittable) {
         case CssGrammarType_OneOf: {
             uint64_t valued = 0;
             for (CssGrammarIndex child = CssGrammarIndex(index + 1); child < cssGrammarAfter(index);
-                 child = cssGrammarAfter(child))
+                    child = cssGrammarAfter(child))
                 valued |= reachOf(w, child).valued;
             for (CssGrammarIndex child = CssGrammarIndex(index + 1); child < cssGrammarAfter(index);
-                 child = cssGrammarAfter(child)) {
+                    child = cssGrammarAfter(child)) {
                 Reach reach = reachOf(w, child);
                 if (reach.named != 0 && (reach.named & valued) == valued)
                     return walkNode(w, child, false);
@@ -1368,11 +1360,7 @@ bool serializeGlyphOrientationVertical(const Longhands* l, TextBuffer* out) {
         PrStringView orientation;
         PrStringView keyword;
     };
-    static constexpr GlyphOrientation kKeywords[] = {
-        {"mixed", "auto"},
-        {"upright", "0deg"},
-        {"sideways", "90deg"},
-    };
+    static constexpr GlyphOrientation kKeywords[] = {{"mixed", "auto"}, {"upright", "0deg"}, {"sideways", "90deg"}};
     for (const GlyphOrientation& keyword : kKeywords) {
         if (textIs(l, 0, keyword.orientation)) {
             textAppend(out, keyword.keyword);
@@ -1456,8 +1444,10 @@ bool serializeGrid(const Longhands* l, TextBuffer* out) {
     bool autoRows = isInitial(l, 3);
     bool autoColumns = isInitial(l, 4);
     if (isInitial(l, 5) && autoRows && autoColumns) {
-        Longhands grid = {PrCssProperty_GridTemplate, cssPropertyLonghands(PrCssProperty_GridTemplate),
-                          l->values, l->texts};
+        Longhands grid = {
+            PrCssProperty_GridTemplate, cssPropertyLonghands(PrCssProperty_GridTemplate),
+            l->values, l->texts,
+        };
         return serializeGridTemplate(&grid, out);
     }
     if (!isInitial(l, 2))
@@ -1523,8 +1513,7 @@ bool nextEntries(const Longhands* l, uint32_t* at, CssValueRun* entries) {
         uint32_t i = at[j];
         while (i < run.count && !cssValueIsLiteral(&run.values[i], ','))
             i += run.values[i].next;
-        entries[j] = i >= at[j] ? CssValueRun{run.values + at[j], i - at[j], run.text}
-                                : CssValueRun{nullptr, 0, nullptr};
+        entries[j] = i >= at[j] ? CssValueRun{run.values + at[j], i - at[j], run.text} : CssValueRun{nullptr, 0, nullptr};
         at[j] = i + 1;
     }
     return true;
@@ -1566,8 +1555,7 @@ bool serializeGapRule(const Longhands* l, TextBuffer* out) {
             Longhands inner = {l->shorthand, l->properties, nullptr, l->texts};
             CssValueRun arguments[3];
             for (uint32_t j = 0; j < 3; ++j)
-                arguments[j] = CssValueRun{entries[j].values + 1, entries[j].values[0].next - 1,
-                                           entries[j].text};
+                arguments[j] = CssValueRun{entries[j].values + 1, entries[j].values[0].next - 1, entries[j].text};
             inner.values = arguments;
             uint32_t within[3] = {0, 0, 0};
             CssValueRun parts[3];
@@ -1577,8 +1565,7 @@ bool serializeGapRule(const Longhands* l, TextBuffer* out) {
                     const CssValueNode* count = parts[0].values;
                     for (uint32_t j = 1; j < 3; ++j) {
                         const CssValueNode* other = parts[j].values;
-                        if (other->kind != count->kind || other->aux != count->aux
-                            || other->number != count->number)
+                        if (other->kind != count->kind || other->aux != count->aux || other->number != count->number)
                             return false;
                     }
                     cssSerializeValues(out, parts[0]);
@@ -1604,8 +1591,7 @@ bool serializeLonghands(const Longhands* l, TextBuffer* out) {
         case CssShorthand_Components:    return serializeComponents(l, out);
         case CssShorthand_Layers:        return serializeLayers(l, out, 0, false);
         case CssShorthand_Background:
-            return serializeLayers(
-                l, out, uint64_t(1) << longhandIndex(l, PrCssProperty_BackgroundColor), true);
+            return serializeLayers(l, out, uint64_t(1) << longhandIndex(l, PrCssProperty_BackgroundColor), true);
         case CssShorthand_Mask:          return serializeLayers(l, out, 0, true);
         case CssShorthand_ListStyle:     return serializeComponents(l, out);
         case CssShorthand_BorderRadius:  return serializeBorderRadius(l, out);
@@ -1632,8 +1618,7 @@ bool serializeLonghands(const Longhands* l, TextBuffer* out) {
 // Returns the CSS-wide keyword if the run is one, or PrCssKeyword_Count otherwise.
 PrCssKeyword cssWideKeyword(CssValueRun run) {
     const CssValueNode* value = &run.values[0];
-    bool wide = run.count == 1 && value->kind == PrCssValueKind_Keyword
-                && cssIsCssWideKeyword(cssValueKeyword(value));
+    bool wide = run.count == 1 && value->kind == PrCssValueKind_Keyword && cssIsCssWideKeyword(cssValueKeyword(value));
     return wide ? cssValueKeyword(value) : PrCssKeyword_Count;
 }
 
@@ -1644,9 +1629,8 @@ PrCssKeyword cssWideKeyword(CssValueRun run) {
 
 bool cssShorthandPending(PrCssProperty shorthand, CssValueRun value) {
     const CssValueNode* first = &value.values[0];
-    return first->kind == PrCssValueKind_Tokens
-           || (kCssPropertyShorthand[shorthand] == CssShorthand_Font
-               && first->kind == PrCssValueKind_Keyword);
+    return first->kind == PrCssValueKind_Tokens || (kCssPropertyShorthand[shorthand] == CssShorthand_Font &&
+        first->kind == PrCssValueKind_Keyword);
 }
 
 bool cssExpandShorthand(CssParser* parser, PrCssProperty shorthand, CssValueSpan value) {

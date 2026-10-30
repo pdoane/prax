@@ -30,8 +30,7 @@ struct ImageDifference {
 // not null, it receives the difference in the same layout, opaque: the reference faded toward white, and red where the
 // images differ.
 ImageDifference compareImages(const uint8_t* reference, const uint8_t* rendered, uint32_t width,
-                              uint32_t height, size_t stride, const ImageComparison& comparison,
-                              uint8_t* PR_NULLABLE diff);
+    uint32_t height, size_t stride, const ImageComparison& comparison, uint8_t* PR_NULLABLE diff);
 
 // The difference between two images, as wptrunner measures it for WPT's reftests (web-platform-tests docs, "Fuzzy
 // Matching"). A pixel differs if the luma of its channels' differences is nonzero, with luma as Pillow converts RGB to
@@ -43,8 +42,8 @@ struct PixelDifference {
 
 // Measures how two images differ, each composited on white as a screenshot shows it. The images use the same layout as
 // for compareImages.
-PixelDifference countDifferences(const uint8_t* reference, const uint8_t* rendered,
-                                 uint32_t width, uint32_t height, size_t stride);
+PixelDifference countDifferences(const uint8_t* reference, const uint8_t* rendered, uint32_t width, uint32_t height,
+    size_t stride);
 
 // Returns true if any pixel of the image differs from white once composited on it, by more than the rounding of a
 // render on white. The image is laid out as for compareImages. A reftest whose reference draws nothing tests nothing.

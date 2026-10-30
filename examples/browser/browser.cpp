@@ -246,8 +246,8 @@ void runPage(Browser& b) {
 // platform's browsers do. Everything else goes to the page's view.
 void pageEvent(Browser& b, QueuedEvent& queued) {
     const PrAppEvent& e = queued.event;
-    if (e.kind == PrAppEventKind_KeyDown && (e.key == PrAppKey_Left || e.key == PrAppKey_Right)
-        && (e.modifiers & (PrAppModifierFlag_Alt | PrAppModifierFlag_Super)) != 0) {
+    if (e.kind == PrAppEventKind_KeyDown && (e.key == PrAppKey_Left || e.key == PrAppKey_Right) &&
+            (e.modifiers & (PrAppModifierFlag_Alt | PrAppModifierFlag_Super)) != 0) {
         if (b.shown.page != nullptr)
             prHtmlPageTraverse(b.shown.page, e.key == PrAppKey_Left ? -1 : 1);
         return;
@@ -314,8 +314,8 @@ void openShared(Browser& b) {
     // The cache and local storage are on disk where the platform keeps a user's, so that they outlive the run.
     PrString cacheRoot = prFileCacheDirectory();
     if (!prStringIsEmpty(&cacheRoot)) {
-        std::string directory = std::string(prStringView(&cacheRoot).data, prStringView(&cacheRoot).size)
-                                + "/Prax/Browser/Cache";
+        std::string directory = std::string(prStringView(&cacheRoot).data, prStringView(&cacheRoot).size) +
+            "/Prax/Browser/Cache";
         PrStorageDiskDesc disk{.directory = directory, .limitBytes = kCacheBytes, .pool = b.io};
         prStorageDiskCreate(&disk, &b.cache);
     }
@@ -326,8 +326,7 @@ void openShared(Browser& b) {
     PrHtmlStorageProviderDesc local{.quotaBytes = kPrHtmlStorageQuotaBytes, .pool = b.io};
     std::string localDirectory;
     if (!prStringIsEmpty(&dataRoot)) {
-        localDirectory = std::string(prStringView(&dataRoot).data, prStringView(&dataRoot).size)
-                         + "/Prax/Browser/Local Storage";
+        localDirectory = std::string(prStringView(&dataRoot).data, prStringView(&dataRoot).size) + "/Prax/Browser/Local Storage";
         local.directory = localDirectory;
     }
     prStringReset(&dataRoot);
@@ -339,8 +338,7 @@ void openShared(Browser& b) {
     b.tls = prTlsCreate(PrTlsBackend_Default, b.net);
     PrHttpDesc http{.net = b.net, .tls = b.tls};
     b.http = prHttpCreate(PrHttpBackend_Default, &http);
-    PrFetchNetworkDesc fetch{
-        .net = b.net, .http = b.http, .compress = b.compress, .cache = b.cache};
+    PrFetchNetworkDesc fetch{.net = b.net, .http = b.http, .compress = b.compress, .cache = b.cache};
     b.fetcher = prFetchNetworkCreate(PrFetchNetworkBackend_Default, &fetch);
 
     b.sessionHistory = prHtmlSessionHistoryCreate();
@@ -397,8 +395,8 @@ void present(void* PR_NULLABLE context, PrDrawList* list, PrColor16 canvasColor)
     Browser& b = *static_cast<Browser*>(context);
     PrGpuTexture drawable{};
     PrGpuCommands* commands = nullptr;
-    if (b.extent.x == 0 || b.extent.y == 0 || prGpuSwapChainAcquire(b.swapChain, b.extent, &drawable) != PrStatus_Ok
-        || !prGpuCommandsBegin(b.device, nullptr, &commands))
+    if (b.extent.x == 0 || b.extent.y == 0 || prGpuSwapChainAcquire(b.swapChain, b.extent, &drawable) != PrStatus_Ok ||
+            !prGpuCommandsBegin(b.device, nullptr, &commands))
         return;
     PrGpuSwapChainInfo info = prGpuSwapChainInfo(b.swapChain);
     bool mapped = info.format != PrGpuFormat_Bgra8 || info.space != PrColorSpace_Srgb;
@@ -413,24 +411,24 @@ void present(void* PR_NULLABLE context, PrDrawList* list, PrColor16 canvasColor)
         }
     }
     PrGpuTexture target = mapped ? b.rendered : drawable;
-    PrDrawTarget into{.extent = b.extent,
-                      .format = PrPixelFormat(mapped ? PrPixelFormat_RgbaF16 : PrPixelFormat_Bgra8),
-                      .commands = commands};
+    PrDrawTarget into{
+        .extent = b.extent,
+        .format = PrPixelFormat(mapped ? PrPixelFormat_RgbaF16 : PrPixelFormat_Bgra8),
+        .commands = commands,
+    };
     prDrawFramePrepare(b.frame, list, &into);
     PrColor canvas = prColorFromColor16(canvasColor);
     PrGpuSubresources all{};
     prGpuCommandsTextureBarrier(commands, target, all, mapped ? PrGpuAccessFlag_ShaderRead : PrGpuAccessFlag_Discard,
-                                PrGpuAccessFlag_ColorAttachment);
+        PrGpuAccessFlag_ColorAttachment);
     PrGpuPassDesc pass = prGpuPassDescColor(
         target, PrGpuLoad_Clear, PrColor{canvas.r * canvas.a, canvas.g * canvas.a, canvas.b * canvas.a, canvas.a});
     PrGpuPass* encoder = prGpuPassBegin(commands, &pass);
     prDrawFrameRender(b.frame, encoder, PrIVec2{0, 0});
     prGpuPassEnd(encoder);
     if (mapped) {
-        prGpuCommandsTextureBarrier(commands, target, all, PrGpuAccessFlag_ColorAttachment,
-                                    PrGpuAccessFlag_ShaderRead);
-        prGpuCommandsTextureBarrier(commands, drawable, all, PrGpuAccessFlag_Discard,
-                                    PrGpuAccessFlag_ColorAttachment);
+        prGpuCommandsTextureBarrier(commands, target, all, PrGpuAccessFlag_ColorAttachment, PrGpuAccessFlag_ShaderRead);
+        prGpuCommandsTextureBarrier(commands, drawable, all, PrGpuAccessFlag_Discard, PrGpuAccessFlag_ColorAttachment);
         PrGpuPassDesc shown = prGpuPassDescColor(drawable, PrGpuLoad_Discard, PrColor{});
         encoder = prGpuPassBegin(commands, &shown);
         PrDrawDisplayDesc mapping{.target = info.space, .headroom = b.shownOn.headroom, .gamut = b.shownOn.gamut};
@@ -447,11 +445,11 @@ void start(void* context, PrApp* app) {
     b.app = app;
     PrAppSurface surface{};
     PrGpuSwapChainDesc swapChain{.intent = PrGpuSwapChainIntent_Hdr};
-    if (prGpuDeviceCreate(PrGpuBackend_Default, nullptr, &b.device) != PrStatus_Ok
-        || prAppSurface(app, &surface) != PrStatus_Ok
-        || prGpuSwapChainCreate(b.device, &surface, &swapChain, &b.swapChain) != PrStatus_Ok
-        || prDrawRendererCreate(PrDrawRendererBackend_Default, b.device, nullptr, &b.renderer) != PrStatus_Ok
-        || prDrawDisplayCreate(b.device, &b.display) != PrStatus_Ok) {
+    if (prGpuDeviceCreate(PrGpuBackend_Default, nullptr, &b.device) != PrStatus_Ok ||
+            prAppSurface(app, &surface) != PrStatus_Ok ||
+            prGpuSwapChainCreate(b.device, &surface, &swapChain, &b.swapChain) != PrStatus_Ok ||
+            prDrawRendererCreate(PrDrawRendererBackend_Default, b.device, nullptr, &b.renderer) != PrStatus_Ok ||
+            prDrawDisplayCreate(b.device, &b.display) != PrStatus_Ok) {
         fprintf(stderr, "browser: no GPU device to render with\n");
         prAppStop(app);
         return;
@@ -481,8 +479,10 @@ void frame(void* context, PrApp* app, const PrAppFrame* f) {
     }
     b.wake.notify_one();
     prGpuSwapChainWait(b.swapChain);
-    b.extent = PrUVec2{uint32_t(std::lround(f->extent.x * f->display.pixelRatio)),
-                       uint32_t(std::lround(f->extent.y * f->display.pixelRatio))};
+    b.extent = PrUVec2{
+        uint32_t(std::lround(f->extent.x * f->display.pixelRatio)),
+        uint32_t(std::lround(f->extent.y * f->display.pixelRatio)),
+    };
     b.shownOn = f->display;
     prLayoutCompositorFrame(b.compositor);
     if (prLayoutCompositorWantsFrame(b.compositor))
@@ -511,7 +511,7 @@ void event(void* context, PrApp* app, const PrAppEvent* e) {
             PrLayoutVec at = prLayoutVecFromPx(e->position);
             if (b.compositor != nullptr && !prLayoutCompositorWheelBlocks(b.compositor, at)) {
                 prLayoutCompositorScrollAt(b.compositor, at,
-                                           prLayoutVecFromPx(prAppEventScrollPixels(e, kPrAppScrollLineHeight)));
+                    prLayoutVecFromPx(prAppEventScrollPixels(e, kPrAppScrollLineHeight)));
                 flags = PrHtmlViewEventFlag_Scrolled;
                 if (prLayoutCompositorWantsFrame(b.compositor))
                     prAppRequestFrame(app);

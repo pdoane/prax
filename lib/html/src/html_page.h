@@ -310,7 +310,7 @@ void htmlPageSetFrameViewport(PrHtmlPage* page, PrVec2 extent);
 // its host, from a task. Returns false, and does nothing, if the window is not its browsing context's current window or
 // the host does not navigate.
 bool htmlPageNavigate(PrHtmlWindow* window, PrStringView url,
-                      HtmlHistoryCommit commit = HtmlHistoryCommit_Push, uint32_t target = 0);
+    HtmlHistoryCommit commit = HtmlHistoryCommit_Push, uint32_t target = 0);
 
 // Sets the preferred color scheme of the browsing context of an iframe of `parent` to the scheme that the iframe uses
 // in the presentation of `parent`'s document, as of its last update (css-color-adjust-1/#color-scheme-page). Changes
@@ -324,8 +324,7 @@ void htmlPresentationPrepareJob(PrCssPresentation* presentation, PrLayoutVec ext
 
 // Starts a load whose input arrives in pieces, as prHtmlPageBeginLoad does, without dropping the page's document load
 // (prHtmlPageNavigate), which calls it as its response arrives.
-PrStatus htmlPageBeginStreamedLoad(PrHtmlPage* self, PrStringView url,
-                                   const PrHtmlResponseHeaders* PR_NULLABLE headers);
+PrStatus htmlPageBeginStreamedLoad(PrHtmlPage* self, PrStringView url, const PrHtmlResponseHeaders* PR_NULLABLE headers);
 
 } // namespace pr_impl
 

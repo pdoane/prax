@@ -68,8 +68,10 @@ uint32_t rgbAt(const std::vector<uint8_t>& pixels, uint32_t x, uint32_t y) {
 // Returns `png` with an eXIf chunk after its header chunk, which gives the EXIF orientation `orientation`.
 std::vector<uint8_t> withOrientation(const std::vector<uint8_t>& png, uint8_t orientation) {
     // The chunk's type and a big-endian TIFF directory of one entry, the orientation tag.
-    std::vector<uint8_t> typed = {'e', 'X', 'I', 'f', 'M', 'M', 0, 42, 0, 0, 0, 8, 0, 1, 0x01, 0x12, 0, 3,
-                                  0,   0,   0,   1,   0,   orientation, 0, 0, 0, 0, 0, 0};
+    std::vector<uint8_t> typed = {
+        'e', 'X', 'I', 'f', 'M', 'M', 0, 42, 0, 0, 0, 8, 0, 1, 0x01, 0x12, 0, 3,
+        0,   0,   0,   1,   0,   orientation, 0, 0, 0, 0, 0, 0,
+    };
     uint32_t crc = crc32Update(0, typed);
     uint32_t length = uint32_t(typed.size() - 4);
     std::vector<uint8_t> chunk = {uint8_t(length >> 24), uint8_t(length >> 16), uint8_t(length >> 8), uint8_t(length)};
@@ -102,9 +104,8 @@ struct Viewed {
     // including the fetches of frames. The host answers at once, or when answer() is called if `holds` is set. The page
     // loads at `url`.
     explicit Viewed(const char* html, PrImageCodec* PR_NULLABLE images = nullptr,
-                    const std::vector<uint8_t>* PR_NULLABLE resource = nullptr, bool holds = false,
-                    const char* url = "about:blank")
-        : resource(resource) {
+            const std::vector<uint8_t>* PR_NULLABLE resource = nullptr, bool holds = false,
+            const char* url = "about:blank") : resource(resource) {
         std::string path = std::string(PR_FONTS_DIR) + "/Tinos.ttf";
         const PrFont* font = nullptr;
         REQUIRE(prFontCreateFromFile(path, 0, nullptr, &font) == PrStatus_Ok);
@@ -129,12 +130,11 @@ struct Viewed {
         PrLayoutCompositorDesc compositorDesc{
             .context = this,
             .now = [](void* PR_NULLABLE) { return 0.0; },
-            .present =
-                [](void* PR_NULLABLE self, PrDrawList* list, PrColor16) {
-                    Viewed* viewed = static_cast<Viewed*>(self);
-                    ++viewed->presented;
-                    viewed->pixels = presentation(list);
-                },
+            .present = [](void* PR_NULLABLE self, PrDrawList* list, PrColor16) {
+                Viewed* viewed = static_cast<Viewed*>(self);
+                ++viewed->presented;
+                viewed->pixels = presentation(list);
+            },
             .wantFrame = [](void* PR_NULLABLE self) { ++static_cast<Viewed*>(self)->wanted; },
             .canvasFilled = true,
         };
@@ -207,8 +207,8 @@ struct Viewed {
 
 // A page of inline SVG whose changes are checked against a full rebuild after each update.
 struct ViewedSvg : Viewed {
-    explicit ViewedSvg(const char* body)
-        : Viewed((std::string("<style>body { margin: 0 } svg { display: block }</style>") + body).c_str()) {
+    explicit ViewedSvg(const char* body) :
+            Viewed((std::string("<style>body { margin: 0 } svg { display: block }</style>") + body).c_str()) {
         update();
     }
 
@@ -236,11 +236,16 @@ struct Heard {
 };
 
 PrDomEventListener recorder(Heard* heard) {
-    return PrDomEventListener{[](void* context, PrDomEvent* event) {
-        PrStringView type = prDomEventType(event);
-        static_cast<Heard*>(context)->types.emplace_back(type.data, type.size);
-    },
-                              heard, 0, nullptr, nullptr};
+    return PrDomEventListener{
+        [](void* context, PrDomEvent* event) {
+            PrStringView type = prDomEventType(event);
+            static_cast<Heard*>(context)->types.emplace_back(type.data, type.size);
+        },
+        heard,
+        0,
+        nullptr,
+        nullptr,
+    };
 }
 
 // The events heard, each as its type, then for a keyboard event its key and legacy key code, and for a composition
@@ -251,33 +256,38 @@ struct HeardKeys {
 };
 
 PrDomEventListener keyRecorder(HeardKeys* heard) {
-    return PrDomEventListener{[](void* context, PrDomEvent* event) {
-        HeardKeys* self = static_cast<HeardKeys*>(context);
-        PrStringView type = prDomEventType(event);
-        std::string line(type.data, type.size);
-        if (PrDomKeyboardEvent* key = prDomKeyboardEventQuery(event)) {
-            PrDomKeyboardEventInit members = prDomKeyboardEventMembers(key);
-            line += " " + std::string(members.key.data, members.key.size) + " " + std::to_string(members.keyCode);
-            if (members.isComposing)
-                line += " composing";
-        }
-        if (PrDomCompositionEvent* composition = prDomCompositionEventQuery(event)) {
-            PrStringView data = prDomCompositionEventData(composition);
-            line += " " + std::string(data.data, data.size);
-        }
-        if (!prDomEventIsTrusted(event))
-            line += " untrusted";
-        self->events.push_back(line);
-        if (self->cancelKeydown && line.rfind("keydown", 0) == 0)
-            prDomEventPreventDefault(event);
-    },
-                              heard, 0, nullptr, nullptr};
+    return PrDomEventListener{
+        [](void* context, PrDomEvent* event) {
+            HeardKeys* self = static_cast<HeardKeys*>(context);
+            PrStringView type = prDomEventType(event);
+            std::string line(type.data, type.size);
+            if (PrDomKeyboardEvent* key = prDomKeyboardEventQuery(event)) {
+                PrDomKeyboardEventInit members = prDomKeyboardEventMembers(key);
+                line += " " + std::string(members.key.data, members.key.size) + " " + std::to_string(members.keyCode);
+                if (members.isComposing)
+                    line += " composing";
+            }
+            if (PrDomCompositionEvent* composition = prDomCompositionEventQuery(event)) {
+                PrStringView data = prDomCompositionEventData(composition);
+                line += " " + std::string(data.data, data.size);
+            }
+            if (!prDomEventIsTrusted(event))
+                line += " untrusted";
+            self->events.push_back(line);
+            if (self->cancelKeydown && line.rfind("keydown", 0) == 0)
+                prDomEventPreventDefault(event);
+        },
+        heard,
+        0,
+        nullptr,
+        nullptr,
+    };
 }
 
 // Listens on `target` for the keyboard's, the composition's and click events.
 void listenForKeys(PrDomElement* target, PrDomEventListener* listener) {
     for (const char* type : {"keydown", "keypress", "keyup", "click", "compositionstart", "compositionupdate",
-                             "compositionend"})
+        "compositionend"})
         prDomEventTargetAddEventListener(prDomNodeAsEventTarget(prDomElementAsNode(target)), type, listener, nullptr);
 }
 
@@ -326,20 +336,25 @@ struct HeardWheels {
 };
 
 PrDomEventListener wheelRecorder(HeardWheels* heard) {
-    return PrDomEventListener{[](void* context, PrDomEvent* event) {
-        HeardWheels* self = static_cast<HeardWheels*>(context);
-        PrDomWheelEvent* wheel = prDomWheelEventQuery(event);
-        REQUIRE(wheel != nullptr);
-        PrDomElement* target = prDomElementQuery(prDomEventTarget(event));
-        PrStringView id = target != nullptr ? prDomElementId(target) : PrStringView{};
-        std::string line(id.data != nullptr ? id.data : "", id.size);
-        line += " " + std::to_string(int(prDomWheelEventMembers(wheel).deltaY));
-        line += prDomEventCancelable(event) ? " cancelable" : "";
-        self->events.push_back(line);
-        if (self->cancel)
-            prDomEventPreventDefault(event);
-    },
-                              heard, uint64_t(reinterpret_cast<uintptr_t>(heard)), nullptr, nullptr};
+    return PrDomEventListener{
+        [](void* context, PrDomEvent* event) {
+            HeardWheels* self = static_cast<HeardWheels*>(context);
+            PrDomWheelEvent* wheel = prDomWheelEventQuery(event);
+            REQUIRE(wheel != nullptr);
+            PrDomElement* target = prDomElementQuery(prDomEventTarget(event));
+            PrStringView id = target != nullptr ? prDomElementId(target) : PrStringView{};
+            std::string line(id.data != nullptr ? id.data : "", id.size);
+            line += " " + std::to_string(int(prDomWheelEventMembers(wheel).deltaY));
+            line += prDomEventCancelable(event) ? " cancelable" : "";
+            self->events.push_back(line);
+            if (self->cancel)
+                prDomEventPreventDefault(event);
+        },
+        heard,
+        uint64_t(reinterpret_cast<uintptr_t>(heard)),
+        nullptr,
+        nullptr,
+    };
 }
 
 // Returns a wheel's scroll by `pixels` down at `at`, at `time` in seconds.
@@ -379,7 +394,7 @@ TEST_CASE("a view commits each job's scene to its compositor, and starts a job o
 
 TEST_CASE("a view's viewport is the window's media environment and the extent the document is laid out in") {
     Viewed page("<style>body { margin: 0 } #a { height: 10px } @media (max-width: 500px) { #a { height: 30px } }"
-                "</style><div id=a></div>");
+        "</style><div id=a></div>");
     prHtmlViewUpdate(page.view);
     page.settle();
     CHECK(prCssElementGetBoundingClientRect(page.byId("a")).height == 10.0);
@@ -393,12 +408,10 @@ TEST_CASE("a view's viewport is the window's media environment and the extent th
 
 TEST_CASE("an inline box split by a block has its parts and its row as client rects, and bounds of those with area") {
     Viewed page("<style>body { margin: 0 } .w { width: 500px } b { display: inline-block; height: 1px }</style>"
-                "<div class=w><span id=empty><b style='width: 100px'></b><div></div><b style='width: 200px'></b>"
-                "</span></div>"
-                "<div class=w><span id=tall><b style='width: 100px'></b><div style='height: 100px'></div>"
-                "<b style='width: 200px'></b></span></div>"
-                "<div class=w><span id=split>ab<div>c</div>d</span></div>"
-                "<div class=w><span id=alone><div></div></span></div>");
+        "<div class=w><span id=empty><b style='width: 100px'></b><div></div><b style='width: 200px'></b></span></div>"
+        "<div class=w><span id=tall><b style='width: 100px'></b><div style='height: 100px'></div>"
+        "<b style='width: 200px'></b></span></div><div class=w><span id=split>ab<div>c</div>d</span></div>"
+        "<div class=w><span id=alone><div></div></span></div>");
     prHtmlViewUpdate(page.view);
     page.settle();
     // A row with no height widens no bounds; one with height does.
@@ -427,10 +440,9 @@ TEST_CASE("an inline box split by a block has its parts and its row as client re
 
 TEST_CASE("client rects and hit tests follow a projected box, cut where it passes behind the eye") {
     Viewed page("<style>body { margin: 0 } #p { perspective: 40px; width: 40px; height: 40px }"
-                "#c { width: 40px; height: 40px; transform: rotateY(30deg) }"
-                "#q { perspective: 10px; width: 40px; height: 40px }"
-                "#d { width: 40px; height: 40px; transform: rotateY(45deg) }</style>"
-                "<div id=p><div id=c></div></div><div id=q><div id=d></div></div>");
+        "#c { width: 40px; height: 40px; transform: rotateY(30deg) }#q { perspective: 10px; width: 40px; height: 40px }"
+        "#d { width: 40px; height: 40px; transform: rotateY(45deg) }</style>"
+        "<div id=p><div id=c></div></div><div id=q><div id=d></div></div>");
     prHtmlViewUpdate(page.view);
     page.settle();
     // At 30deg, the left edge comes toward the eye at w = 0.75 and the right edge goes away at w = 1.25.
@@ -451,8 +463,8 @@ TEST_CASE("the offsets a compositor scrolls to reach the document at the view's 
     Viewed page("<div style='height: 5000px'></div>");
     prHtmlViewUpdate(page.view);
     page.settle();
-    CHECK(prLayoutCompositorScroll(page.compositor, 0, kPrLayoutNodeNone, prLayoutVecFromPx(PrVec2{0, 100})).y.raw
-          == prLayoutUnitFromPx(100).raw);
+    CHECK(prLayoutCompositorScroll(page.compositor, 0, kPrLayoutNodeNone, prLayoutVecFromPx(PrVec2{0, 100})).y.raw ==
+        prLayoutUnitFromPx(100).raw);
     // The scroll applies to the document immediately and needs no job, since no scene holds an offset.
     CHECK_FALSE(prHtmlViewUpdate(page.view).started);
     CHECK(prHtmlWindowScrollY(prHtmlPageWindow(page.page)) == 100.0);
@@ -467,8 +479,8 @@ TEST_CASE("the offsets a document scrolls itself to reach the compositor at the 
     prHtmlWindowScroll(window, &to);
     CHECK_FALSE(prHtmlViewUpdate(page.view).started);
     // The compositor shows the document at 100: scrolling back to the top moves it all the way.
-    CHECK(prLayoutCompositorScroll(page.compositor, 0, kPrLayoutNodeNone, prLayoutVecFromPx(PrVec2{0, -150})).y.raw
-          == prLayoutUnitFromPx(-100).raw);
+    CHECK(prLayoutCompositorScroll(page.compositor, 0, kPrLayoutNodeNone, prLayoutVecFromPx(PrVec2{0, -150})).y.raw ==
+        prLayoutUnitFromPx(-100).raw);
 }
 
 TEST_CASE("a view routes the pointer to the elements under it") {
@@ -517,8 +529,10 @@ TEST_CASE("a key fires keydown, a keypress for its text and keyup at the focused
     prHtmlFocus(page.byId("a"), nullptr);
     send(page.view, press('A', PrAppKeyCode_KeyA, "a"));
     send(page.view, press('A', PrAppKeyCode_KeyA, "A", PrAppModifierFlag_Shift));
-    CHECK(heard.events == std::vector<std::string>{"keydown a 65", "keypress a 97", "keyup a 65", "keydown A 65",
-                                                   "keypress A 65", "keyup A 65"});
+    CHECK(heard.events == std::vector<std::string>{
+        "keydown a 65", "keypress a 97", "keyup a 65", "keydown A 65",
+        "keypress A 65", "keyup A 65",
+    });
 
     // A shortcut types no text, and a canceled keydown drops the text of its key.
     heard.events.clear();
@@ -530,7 +544,7 @@ TEST_CASE("a key fires keydown, a keypress for its text and keyup at the focused
 
 TEST_CASE("the first focusable element with autofocus is focused at the next rendering update, once") {
     Viewed page("<svg><rect id=plain autofocus width=10 height=10 /><rect id=rect autofocus tabindex=0 width=10 "
-                 "height=10 /></svg><input id=input autofocus>");
+        "height=10 /></svg><input id=input autofocus>");
     PrDomNode* root = prDomDocumentAsNode(page.document());
     // The rendering update flushes the candidates, as the next frame of the window would.
     auto frame = [&] {
@@ -607,7 +621,7 @@ TEST_CASE("Tab past the last area leaves the document with the focus at the view
 
 TEST_CASE("a press focuses the nearest focusable ancestor, or the viewport, and shows focus only for typing") {
     Viewed page("<style>body { margin: 0 } div, input { display: block; height: 20px }</style>"
-                "<div id=box tabindex=0><span id=inner>text</span></div><input id=field><div id=plain></div>");
+        "<div id=box tabindex=0><span id=inner>text</span></div><input id=field><div id=plain></div>");
     prHtmlViewUpdate(page.view);
     page.settle();
     PrDomNode* document = prDomDocumentAsNode(page.document());
@@ -658,8 +672,8 @@ TEST_CASE("an autofocus candidate that becomes focusable before the rendering up
 
 TEST_CASE("a text field is sized in characters by its size attribute, one line tall, and an author's width wins") {
     Viewed page("<style>input { border: 0; padding: 0; line-height: 20px }</style>"
-                "<input id=plain><input id=five size=5><input id=one size=1><input id=wide style='width: 300px'>"
-                "<input id=box type=checkbox><input id=sized size=5 style='field-sizing: content'>");
+        "<input id=plain><input id=five size=5><input id=one size=1><input id=wide style='width: 300px'>"
+        "<input id=box type=checkbox><input id=sized size=5 style='field-sizing: content'>");
     auto rect = [&](const char* id) { return prCssElementGetBoundingClientRect(page.byId(id)); };
     double average = (rect("plain").width - rect("one").width) / 19;
     CHECK(average > 0);
@@ -677,7 +691,7 @@ TEST_CASE("a text field is sized in characters by its size attribute, one line t
 
 TEST_CASE("keys scroll the nearest scroll container that can move their way, and the viewport past it") {
     Viewed page("<style>body { margin: 0 } #s { overflow: auto; height: 100px } #s div { height: 300px }</style>"
-                "<div id=s tabindex=0><div></div></div><div style='height: 5000px'></div>");
+        "<div id=s tabindex=0><div></div></div><div style='height: 5000px'></div>");
     prHtmlViewUpdate(page.view);
     page.settle();
     PrHtmlWindow* window = prHtmlPageWindow(page.page);
@@ -699,13 +713,13 @@ TEST_CASE("keys scroll the nearest scroll container that can move their way, and
     CHECK_FALSE(prHtmlViewUpdate(page.view).committed);
     CHECK(page.wanted == wanted + 1);
     CHECK(prCssElementScrollTop(page.byId("s")) == 160.0);
-    CHECK(prLayoutCompositorScroll(page.compositor, 0, kPrLayoutNodeNone, prLayoutVecFromPx(PrVec2{0, -1000})).y.raw
-          == prLayoutUnitFromPx(-560).raw);
+    CHECK(prLayoutCompositorScroll(page.compositor, 0, kPrLayoutNodeNone, prLayoutVecFromPx(PrVec2{0, -1000})).y.raw ==
+        prLayoutUnitFromPx(-560).raw);
 }
 
 TEST_CASE("the wheel fires at the element under the pointer and scrolls from its box unless a listener cancels it") {
     Viewed page("<style>body { margin: 0 } #s { overflow: auto; height: 100px } #s div { height: 300px }</style>"
-                "<div id=s><div id=in></div></div><div style='height: 5000px'></div>");
+        "<div id=s><div id=in></div></div><div style='height: 5000px'></div>");
     prHtmlViewUpdate(page.view);
     page.settle();
     HeardWheels heard;
@@ -744,7 +758,7 @@ TEST_CASE("the wheel fires at the element under the pointer and scrolls from its
 
 TEST_CASE("a wheel sequence keeps its first target, and a passive listener cannot cancel a wheel") {
     Viewed page("<style>body { margin: 0 } div { height: 50px }</style><div id=a></div><div id=b></div>"
-                "<div style='height: 5000px'></div>");
+        "<div style='height: 5000px'></div>");
     prHtmlViewUpdate(page.view);
     page.settle();
     HeardWheels heard;
@@ -815,11 +829,10 @@ TEST_CASE("a wheel listener that can cancel puts its element's box, or the whole
 // A page whose iframe, 30 by 20 at (10, 10) with no border, holds a document 100 pixels tall, `inner` sets its root's
 // style. The view lays out the frame's document in the frame's content box.
 struct ViewedFrame : Viewed {
-    explicit ViewedFrame(const char* inner)
-        : Viewed((std::string("<style>body { margin: 0; height: 2000px } iframe { display: block; margin: 10px; "
-                              "border: 0; width: 30px; height: 20px }</style><iframe id=f srcdoc=\"<style>html { ")
-                  + inner + " } body { margin: 0 } div { height: 100px }</style><div id=d></div>\"></iframe>")
-                     .c_str()) {
+    explicit ViewedFrame(const char* inner) :
+            Viewed((std::string("<style>body { margin: 0; height: 2000px } iframe { display: block; margin: 10px; "
+                "border: 0; width: 30px; height: 20px }</style><iframe id=f srcdoc=\"<style>html { ") +
+                inner + " } body { margin: 0 } div { height: 100px }</style><div id=d></div>\"></iframe>") .c_str()) {
         for (uint32_t i = 0; i < 6; ++i) {
             prHtmlViewUpdate(view);
             prHtmlViewWait(view);
@@ -833,8 +846,7 @@ struct ViewedFrame : Viewed {
     }
 
     PrDomElement* inner(const char* id) {
-        PrDomElement* element =
-            prDomNodeGetElementById(prDomDocumentAsNode(prHtmlWindowDocument(frameWindow())), id);
+        PrDomElement* element = prDomNodeGetElementById(prDomDocumentAsNode(prHtmlWindowDocument(frameWindow())), id);
         REQUIRE(element != nullptr);
         return element;
     }
@@ -843,14 +855,18 @@ struct ViewedFrame : Viewed {
 TEST_CASE("the pointer reaches the elements of a frame's document, in that document's coordinates") {
     ViewedFrame page("");
     std::vector<std::string> heard;
-    PrDomEventListener listener{[](void* context, PrDomEvent* event) {
-        PrDomMouseEventInit mouse = prDomMouseEventMembers(prDomMouseEventQuery(event));
-        PrStringView type = prDomEventType(event);
-        static_cast<std::vector<std::string>*>(context)->push_back(
-            std::string(type.data, type.size) + " "
-            + std::to_string(int(mouse.clientX)) + "," + std::to_string(int(mouse.clientY)));
-    },
-                                &heard, 1, nullptr, nullptr};
+    PrDomEventListener listener{
+        [](void* context, PrDomEvent* event) {
+            PrDomMouseEventInit mouse = prDomMouseEventMembers(prDomMouseEventQuery(event));
+            PrStringView type = prDomEventType(event);
+            static_cast<std::vector<std::string>*>(context)->push_back(std::string(type.data, type.size) + " " +
+                std::to_string(int(mouse.clientX)) + "," + std::to_string(int(mouse.clientY)));
+        },
+        &heard,
+        1,
+        nullptr,
+        nullptr,
+    };
     PrDomEventTarget* d = prDomNodeAsEventTarget(prDomElementAsNode(page.inner("d")));
     prDomEventTargetAddEventListener(d, "mousedown", &listener, nullptr);
     PrAppEvent event{.kind = PrAppEventKind_PointerMove, .position = PrVec2{15, 20}};
@@ -905,7 +921,8 @@ TEST_CASE("a composition fires its events, its keys report Process, and its comm
     CHECK(heard.events == std::vector<std::string>{
         "keydown k 75", "compositionstart ", "compositionupdate k", "keyup k 75 composing",
         "keydown Process 229 composing", "compositionupdate \xe3\x81\x8b", "compositionend \xe3\x81\x8b",
-        "keyup a 65"});
+        "keyup a 65",
+    });
 }
 
 TEST_CASE("the moves since the view's last update hover once, at the latest") {
@@ -924,7 +941,7 @@ TEST_CASE("the moves since the view's last update hover once, at the latest") {
 
 TEST_CASE("a scroll the compositor made hovers what comes under a pointer that has not moved") {
     Viewed page("<style>body { margin: 0 } div { height: 50px }</style><div id=a></div><div id=b></div>"
-                "<div style='height: 5000px'></div>");
+        "<div style='height: 5000px'></div>");
     prHtmlViewUpdate(page.view);
     page.settle();
     PrAppEvent move{.kind = PrAppEventKind_PointerMove};
@@ -968,8 +985,7 @@ TEST_CASE("an img is a replaced box, sized by its image and drawing it, as the h
     REQUIRE(prImageCodecEncode(images, "image/png", pixels, png.data(), size, &size) == PrStatus_Ok);
     {
         Viewed page("<style>body { margin: 0 } img { display: block }</style><img id=i src=http://test/red.png>"
-                    "<img id=w src=http://test/red.png style='width: 40px'>",
-                    images, &png);
+            "<img id=w src=http://test/red.png style='width: 40px'>", images, &png);
         PrDomAgent* agent = prHtmlPageAgent(page.page);
         page.fetcher.settle(agent);
         CHECK(prCssElementGetBoundingClientRect(page.byId("i")).width == 4.0);
@@ -1038,8 +1054,7 @@ TEST_CASE("an img's content takes the cap of its dynamic-range-limit and its ima
         prDomElementSetAttribute(page.byId("i"), "style", "");
         CHECK(limit() == 0.0f);
         // Half of no-limit is half the display's stops, so the cap follows the headroom.
-        prDomElementSetAttribute(page.byId("i"), "style",
-                                 "dynamic-range-limit: dynamic-range-limit-mix(standard 50%, no-limit 50%)");
+        prDomElementSetAttribute(page.byId("i"), "style", "dynamic-range-limit: dynamic-range-limit-mix(standard 50%, no-limit 50%)");
         CHECK(limit() == doctest::Approx(2.0f));
         setHeadroom(page.view, 16);
         CHECK(limit() == doctest::Approx(4.0f));
@@ -1123,11 +1138,10 @@ TEST_CASE("an img selects the source that matches, decodes and suits the display
     {
         // A picture's source of a type that the codec does not decode is passed over for the next.
         Viewed page("<picture><source type=image/avif srcset=http://test/a.avif>"
-                    "<source srcset='http://test/one.png, http://test/two.png 2x'>"
-                    "<img id=p src=http://test/fallback.png></picture>"
-                    "<img id=w srcset='http://test/w400.png 400w, http://test/w800.png 800w'"
-                    " sizes='(max-width: 500px) 100vw, 50vw' src=http://test/src.png>",
-                    images, &png);
+            "<source srcset='http://test/one.png, http://test/two.png 2x'>"
+            "<img id=p src=http://test/fallback.png></picture>"
+            "<img id=w srcset='http://test/w400.png 400w, http://test/w800.png 800w'"
+            " sizes='(max-width: 500px) 100vw, 50vw' src=http://test/src.png>", images, &png);
         auto image = [&](const char* id) {
             return prHtmlImageElementQuery(prDomElementAsEventTarget(page.byId(id)));
         };
@@ -1175,8 +1189,7 @@ TEST_CASE("a frame navigated to an image holds a media document whose img shows 
     std::vector<uint8_t> turned = withOrientation(png, 6);
     {
         // image-orientation does not inherit into the frame's document.
-        Viewed page("<iframe id=f src=http://test/turned.png style='image-orientation: none'></iframe>", images,
-                    &turned);
+        Viewed page("<iframe id=f src=http://test/turned.png style='image-orientation: none'></iframe>", images, &turned);
         PrDomAgent* agent = prHtmlPageAgent(page.page);
         page.fetcher.settle(agent);
         PrHtmlIFrameElement* frame = prHtmlIFrameElementQuery(prDomElementAsEventTarget(page.byId("f")));
@@ -1243,8 +1256,8 @@ TEST_CASE("an object of an image type is replaced by its image, and shows its fa
 
 TEST_CASE("an svg element in HTML is a replaced box that draws its content, again when its box is resized") {
     Viewed page("<style>body { margin: 0 } svg { display: block }</style>"
-                "<svg id=s width=20 height=10 viewBox='0 0 20 10'><rect id=r width=10 height=10 fill=red /></svg>"
-                "<div style='width: 30px'><svg id=p width=50% height=4></svg></div>");
+        "<svg id=s width=20 height=10 viewBox='0 0 20 10'><rect id=r width=10 height=10 fill=red /></svg>"
+        "<div style='width: 30px'><svg id=p width=50% height=4></svg></div>");
     PrCssPresentation* presentation = prHtmlPagePresentation(page.page);
     auto drawn = [&]() {
         prHtmlViewUpdate(page.view);
@@ -1283,7 +1296,7 @@ TEST_CASE("an svg element in HTML is a replaced box that draws its content, agai
 
 TEST_CASE("a change within an svg element builds again only the nodes of its SVG tree that it reaches") {
     ViewedSvg page("<svg width=40 height=40><g id=g><rect id=a width=10 height=10 fill=red />"
-                   "<rect id=b x=20 width=10 height=10 fill=red /></g><g id=more></g></svg>");
+        "<rect id=b x=20 width=10 height=10 fill=red /></g><g id=more></g></svg>");
     CHECK(rgbAt(page.paint(), 5, 5) == 0xff0000);
 
     // A shape's paint builds the shape alone.
@@ -1324,10 +1337,9 @@ TEST_CASE("a change within an svg element builds again only the nodes of its SVG
 
 TEST_CASE("a foreignObject's content is laid out in its positioning rectangle and drawn there, as it changes") {
     ViewedSvg page("<svg width=40 height=40><rect width=40 height=10 fill=blue />"
-                   "<foreignObject id=f x=10 y=10 width=20 height=20>"
-                   "<div id=d style='height: 10px; background: red'></div>"
-                   "<div style='position: absolute; right: 0; bottom: 0; width: 5px; height: 5px; background: lime'>"
-                   "</div></foreignObject></svg>");
+        "<foreignObject id=f x=10 y=10 width=20 height=20><div id=d style='height: 10px; background: red'></div>"
+        "<div style='position: absolute; right: 0; bottom: 0; width: 5px; height: 5px; background: lime'>"
+        "</div></foreignObject></svg>");
     std::vector<uint8_t> pixels = page.paint();
     // The block fills the rectangle's width, and the absolutely positioned box sits in its bottom right corner.
     CHECK(rgbAt(pixels, 15, 15) == 0xff0000);
@@ -1359,9 +1371,9 @@ TEST_CASE("a foreignObject's content is laid out in its positioning rectangle an
 
 TEST_CASE("a foreignObject of zero width or height draws nothing, and an svg in one is drawn as its own") {
     ViewedSvg page("<svg width=40 height=40><foreignObject id=f x=0 y=0 width=0 height=20 style='overflow: visible'>"
-                   "<div style='width: 20px; height: 10px; background: red'></div></foreignObject>"
-                   "<foreignObject x=0 y=20 width=40 height=20><svg width=20 height=10>"
-                   "<rect width=20 height=10 fill=lime /></svg></foreignObject></svg>");
+        "<div style='width: 20px; height: 10px; background: red'></div></foreignObject>"
+        "<foreignObject x=0 y=20 width=40 height=20><svg width=20 height=10>"
+        "<rect width=20 height=10 fill=lime /></svg></foreignObject></svg>");
     std::vector<uint8_t> pixels = page.paint();
     CHECK(rgbAt(pixels, 5, 5) == 0);
     CHECK(rgbAt(pixels, 5, 25) == 0x00ff00);
@@ -1373,8 +1385,8 @@ TEST_CASE("a foreignObject of zero width or height draws nothing, and an svg in 
 
 TEST_CASE("the client rects of a foreignObject's content are on the page, through the SVG content's transforms") {
     ViewedSvg page("<div style='height: 5px'></div><svg width=40 height=40 viewBox='0 0 20 20'>"
-                   "<g transform='translate(2 3)'><foreignObject x=1 y=2 width=10 height=10>"
-                   "<div id=d style='margin-left: 1px; width: 4px; height: 3px'></div></foreignObject></g></svg>");
+        "<g transform='translate(2 3)'><foreignObject x=1 y=2 width=10 height=10>"
+        "<div id=d style='margin-left: 1px; width: 4px; height: 3px'></div></foreignObject></g></svg>");
     // The div is at 1, 0 in the foreignObject, and at 4, 5 in the svg's user space. The viewBox doubles user space, and
     // the svg is 5px below the top of the page.
     PrDomRect rect = prCssElementGetBoundingClientRect(page.byId("d"));
@@ -1386,8 +1398,7 @@ TEST_CASE("the client rects of a foreignObject's content are on the page, throug
 
 TEST_CASE("a foreignObject clips its content to its rectangle unless its overflow is visible") {
     ViewedSvg page("<svg width=40 height=40><foreignObject id=f width=40 height=10>"
-                   "<div style='height: 10px'></div><div style='height: 10px; background: red'></div>"
-                   "</foreignObject></svg>");
+        "<div style='height: 10px'></div><div style='height: 10px; background: red'></div></foreignObject></svg>");
     CHECK(rgbAt(page.paint(), 5, 15) == 0);
     page.set("f", "style", "overflow: visible");
     page.update();
@@ -1416,8 +1427,7 @@ TEST_CASE("an SVG image element draws the image that it names once the image has
     REQUIRE(prImageCodecEncode(images, "image/png", pixels, png.data(), size, &size) == PrStatus_Ok);
     {
         Viewed page("<style>body { margin: 0 } svg { display: block }</style><svg width=40 height=40>"
-                    "<image id=i href=http://test/red.png width=40 height=40 /></svg>",
-                    images, &png, true);
+            "<image id=i href=http://test/red.png width=40 height=40 /></svg>", images, &png, true);
         PrCssPresentation* presentation = prHtmlPagePresentation(page.page);
         prHtmlViewUpdate(page.view);
         page.settle();
@@ -1448,8 +1458,8 @@ TEST_CASE("an SVG image element draws the image that it names once the image has
 TEST_CASE("an imported sheet applies in the layer that it names, unless its supports() condition fails") {
     std::vector<uint8_t> none;
     Viewed page("<style>@import url(a.css); @import url(b.css) supports(not (display: block));"
-                "@import url(c.css) layer(base);</style><p id=p>text</p><p id=q>text</p>",
-                nullptr, &none, true, "https://example.test/page.html");
+        "@import url(c.css) layer(base);</style><p id=p>text</p><p id=q>text</p>",
+        nullptr, &none, true, "https://example.test/page.html");
     page.answer("a.css", "#p { color: rgb(0, 0, 255) } #q { color: rgb(0, 128, 0) }", "text/css");
     page.answer("b.css", "#p { color: rgb(255, 0, 0) }", "text/css");
     page.answer("c.css", "#p { color: rgb(255, 255, 0) } #q { background-color: rgb(0, 0, 255) }", "text/css");
@@ -1472,9 +1482,9 @@ TEST_CASE("an imported sheet applies in the layer that it names, unless its supp
 TEST_CASE("a use and a paint server of another document of the page's origin draw once the document loads") {
     std::vector<uint8_t> none;
     Viewed page("<style>body { margin: 0 } svg { display: block }</style><svg width=40 height=40>"
-                "<use href=defs.svg#square /><use href=https://elsewhere.test/defs.svg#square y=20 />"
-                "<rect x=20 width=20 height=40 fill='url(defs.svg#red) black' /></svg>",
-                nullptr, &none, true, "https://example.test/page.html");
+        "<use href=defs.svg#square /><use href=https://elsewhere.test/defs.svg#square y=20 />"
+        "<rect x=20 width=20 height=40 fill='url(defs.svg#red) black' /></svg>",
+        nullptr, &none, true, "https://example.test/page.html");
     PrCssPresentation* presentation = prHtmlPagePresentation(page.page);
     prHtmlViewUpdate(page.view);
     page.settle();
@@ -1485,9 +1495,8 @@ TEST_CASE("a use and a paint server of another document of the page's origin dra
     CHECK(rgbAt(before, 10, 10) == 0);
     CHECK(rgbAt(before, 30, 10) == 0);
     page.answer("defs.svg",
-                "<svg xmlns='http://www.w3.org/2000/svg'><rect id='square' width='20' height='20' fill='#0000ff'/>"
-                "<linearGradient id='red'><stop stop-color='#ff0000'/></linearGradient></svg>",
-                "image/svg+xml");
+        "<svg xmlns='http://www.w3.org/2000/svg'><rect id='square' width='20' height='20' fill='#0000ff'/>"
+            "<linearGradient id='red'><stop stop-color='#ff0000'/></linearGradient></svg>", "image/svg+xml");
     prHtmlViewUpdate(page.view);
     page.settle();
     CHECK(verified(presentation));
@@ -1499,9 +1508,8 @@ TEST_CASE("a use and a paint server of another document of the page's origin dra
 
 TEST_CASE("a gradient is built again when its stops change, and the shapes that it paints follow, in any svg element") {
     ViewedSvg page("<svg width=40 height=20><defs><linearGradient id=gr><stop id=s offset=0 stop-color=red />"
-                   "<stop offset=1 stop-color=red /></linearGradient></defs>"
-                   "<rect width=40 height=20 fill=url(#gr) /></svg>"
-                   "<svg width=40 height=20><rect width=40 height=20 fill=url(#gr) /></svg>");
+        "<stop offset=1 stop-color=red /></linearGradient></defs><rect width=40 height=20 fill=url(#gr) /></svg>"
+        "<svg width=40 height=20><rect width=40 height=20 fill=url(#gr) /></svg>");
     CHECK(rgbAt(page.paint(), 20, 10) == 0xff0000);
     CHECK(rgbAt(page.paint(), 20, 30) == 0xff0000);
     page.set("s", "stop-color", "blue");
@@ -1513,8 +1521,8 @@ TEST_CASE("a gradient is built again when its stops change, and the shapes that 
 
 TEST_CASE("a pattern is built again when its template's content or its own style changes, and its shapes follow") {
     ViewedSvg page("<svg width=40 height=20><defs><pattern id=t width=20 height=20 patternUnits=userSpaceOnUse>"
-                   "<rect id=c width=10 height=20 /></pattern><pattern id=h href=#t fill=red /></defs>"
-                   "<rect width=40 height=20 fill=url(#h) /></svg>");
+        "<rect id=c width=10 height=20 /></pattern><pattern id=h href=#t fill=red /></defs>"
+        "<rect width=40 height=20 fill=url(#h) /></svg>");
     CHECK(rgbAt(page.paint(), 5, 10) == 0xff0000);
     CHECK(rgbAt(page.paint(), 15, 10) == 0);
     // The template's content is the pattern's shadow tree, whose clones inherit from the pattern.
@@ -1528,9 +1536,9 @@ TEST_CASE("a pattern is built again when its template's content or its own style
 
 TEST_CASE("a clipPath or a mask is built again when its content changes, and what it clips or masks follows") {
     ViewedSvg page("<svg width=40 height=20><defs><clipPath id=c><rect id=cr width=10 height=20 /></clipPath>"
-                   "<mask id=m maskUnits=userSpaceOnUse><rect id=mr x=20 width=10 height=20 fill=white /></mask>"
-                   "</defs><rect width=40 height=20 fill=blue clip-path=url(#c) />"
-                   "<rect id=masked width=40 height=20 fill=red mask=url(#m) /></svg>");
+        "<mask id=m maskUnits=userSpaceOnUse><rect id=mr x=20 width=10 height=20 fill=white /></mask>"
+        "</defs><rect width=40 height=20 fill=blue clip-path=url(#c) />"
+        "<rect id=masked width=40 height=20 fill=red mask=url(#m) /></svg>");
     CHECK(rgbAt(page.paint(), 5, 10) == 0x0000ff);
     CHECK(rgbAt(page.paint(), 15, 10) == 0);
     CHECK(rgbAt(page.paint(), 25, 10) == 0xff0000);
@@ -1549,8 +1557,7 @@ TEST_CASE("a clipPath or a mask is built again when its content changes, and wha
 
 TEST_CASE("a filter is built again when a primitive changes, and what it filters follows") {
     ViewedSvg page("<svg width=40 height=20><filter id=f filterUnits=userSpaceOnUse x=0 y=0 width=20 height=20>"
-                   "<feFlood id=flood flood-color=blue /></filter>"
-                   "<rect id=r width=40 height=20 fill=red filter=url(#f) /></svg>");
+        "<feFlood id=flood flood-color=blue /></filter><rect id=r width=40 height=20 fill=red filter=url(#f) /></svg>");
     CHECK(rgbAt(page.paint(), 5, 10) == 0x0000ff);
     CHECK(rgbAt(page.paint(), 30, 10) == 0);
     page.set("flood", "flood-color", "lime");
@@ -1564,19 +1571,19 @@ TEST_CASE("a filter is built again when a primitive changes, and what it filters
 
 TEST_CASE("a filter inside an element that displays none still applies, with its primitives' styles") {
     ViewedSvg page("<div style='display: none'><svg><filter id=f><feFlood flood-color=blue /></filter></svg></div>"
-                   "<svg width=40 height=20><rect x=10 y=5 width=20 height=10 fill=red filter=url(#f) /></svg>");
+        "<svg width=40 height=20><rect x=10 y=5 width=20 height=10 fill=red filter=url(#f) /></svg>");
     CHECK(rgbAt(page.paint(), 20, 10) == 0x0000ff);
 }
 
 TEST_CASE("a reference in a shadow tree names the element of its own tree first") {
     ViewedSvg page("<svg width=40 height=20><clipPath id=c><rect width=20 height=20 /></clipPath></svg>"
-                   "<div id=host></div>");
+        "<div id=host></div>");
     PrDomShadowRootInit init = prDomShadowRootInitDefault(PrDomShadowRootMode_Open);
     PrDomShadowRoot* shadow = nullptr;
     REQUIRE(prDomElementAttachShadow(page.byId("host"), &init, &shadow) == PrStatus_Ok);
     prHtmlSetInnerHtml(prDomShadowRootAsNode(shadow),
-                       "<svg width=40 height=20><clipPath id=c><rect x=20 width=20 height=20 /></clipPath>"
-                       "<rect width=40 height=20 fill=blue clip-path=url(#c) /></svg>");
+        "<svg width=40 height=20><clipPath id=c><rect x=20 width=20 height=20 /></clipPath>"
+            "<rect width=40 height=20 fill=blue clip-path=url(#c) /></svg>");
     page.update();
     CHECK(rgbAt(page.paint(), 30, 30) == 0x0000ff);
     CHECK(rgbAt(page.paint(), 10, 30) == 0);
@@ -1584,7 +1591,7 @@ TEST_CASE("a reference in a shadow tree names the element of its own tree first"
 
 TEST_CASE("an outermost svg element's clip path is its box's, which clips the content once") {
     ViewedSvg page("<svg width=40 height=20 clip-path=url(#c)><clipPath id=c><rect width=10 height=20 />"
-                   "</clipPath><rect width=40 height=20 fill=blue /></svg>");
+        "</clipPath><rect width=40 height=20 fill=blue /></svg>");
     std::vector<uint8_t> pixels = page.paint();
     CHECK(rgbAt(pixels, 5, 10) == 0x0000ff);
     CHECK(rgbAt(pixels, 30, 10) == 0);
@@ -1592,11 +1599,11 @@ TEST_CASE("an outermost svg element's clip path is its box's, which clips the co
 
 TEST_CASE("an HTML box's clip path, mask and filter may reference SVG resources, and follow changes to them") {
     ViewedSvg page("<svg width=0 height=0><clipPath id=c><rect id=r width=10 height=10 /></clipPath>"
-                   "<mask id=m><rect width=20 height=10 fill=white /></mask>"
-                   "<filter id=f><feFlood flood-color=red /></filter></svg>"
-                   "<div style='width: 30px; height: 10px; background: blue; clip-path: url(#c)'></div>"
-                   "<div style='width: 30px; height: 10px; background: blue; mask: url(#m)'></div>"
-                   "<div style='width: 30px; height: 10px; background: blue; filter: url(#f)'></div>");
+        "<mask id=m><rect width=20 height=10 fill=white /></mask>"
+        "<filter id=f><feFlood flood-color=red /></filter></svg>"
+        "<div style='width: 30px; height: 10px; background: blue; clip-path: url(#c)'></div>"
+        "<div style='width: 30px; height: 10px; background: blue; mask: url(#m)'></div>"
+        "<div style='width: 30px; height: 10px; background: blue; filter: url(#f)'></div>");
     std::vector<uint8_t> pixels = page.paint();
     CHECK(rgbAt(pixels, 5, 5) == 0x0000ff);
     CHECK(rgbAt(pixels, 25, 5) == 0);
@@ -1615,9 +1622,8 @@ TEST_CASE("an HTML box's fill-box is its border box for mask-origin and its cont
     // Each box is 18 by 18, with its content box 6 by 6 at 6, 6, and its mask a square 9 by 9 at the corner of the box
     // of mask-origin. The second box is at 18, 0.
     ViewedSvg page("<style>div { float: left; width: 6px; height: 6px; padding: 6px; background: blue;"
-                   " mask: linear-gradient(black, black) no-repeat; mask-size: 9px 9px }</style>"
-                   "<div style='mask-origin: fill-box; mask-clip: no-clip'></div>"
-                   "<div style='mask-clip: fill-box'></div>");
+        " mask: linear-gradient(black, black) no-repeat; mask-size: 9px 9px }</style>"
+        "<div style='mask-origin: fill-box; mask-clip: no-clip'></div><div style='mask-clip: fill-box'></div>");
     std::vector<uint8_t> pixels = page.paint();
     CHECK(rgbAt(pixels, 2, 2) == 0x0000ff);
     CHECK(rgbAt(pixels, 11, 11) == 0);
@@ -1628,8 +1634,8 @@ TEST_CASE("an HTML box's fill-box is its border box for mask-origin and its cont
 TEST_CASE("an HTML box's filter draws an feImage of an element, moved by the subregion's corner") {
     // The region runs from -4 to 36 across the box, so the image of the rect at 10 lands at 6.
     ViewedSvg page("<svg width=0 height=0><filter id=f x=-10% y=0 width=100% height=100%><feImage href=#g /></filter>"
-                   "<defs><g id=g><rect x=10 width=10 height=10 fill=lime /></g></defs></svg>"
-                   "<div style='width: 40px; height: 20px; filter: url(#f)'></div>");
+        "<defs><g id=g><rect x=10 width=10 height=10 fill=lime /></g></defs></svg>"
+        "<div style='width: 40px; height: 20px; filter: url(#f)'></div>");
     std::vector<uint8_t> pixels = page.paint();
     CHECK(rgbAt(pixels, 10, 5) == 0x00ff00);
     CHECK(rgbAt(pixels, 18, 5) == 0);
@@ -1637,8 +1643,8 @@ TEST_CASE("an HTML box's filter draws an feImage of an element, moved by the sub
 
 TEST_CASE("an ID that comes to name another element builds again what references it") {
     ViewedSvg page("<svg width=40 height=40><rect width=40 height=40 fill='url(#paint) blue' />"
-                   "<defs><linearGradient id=gr><stop offset=0 stop-color=red /><stop offset=1 stop-color=red />"
-                   "</linearGradient></defs></svg>");
+        "<defs><linearGradient id=gr><stop offset=0 stop-color=red /><stop offset=1 stop-color=red />"
+        "</linearGradient></defs></svg>");
     CHECK(rgbAt(page.paint(), 20, 20) == 0x0000ff);
     page.set("gr", "id", "paint");
     CHECK(page.update() == 1);
@@ -1649,8 +1655,7 @@ TEST_CASE("an ID that comes to name another element builds again what references
 }
 
 TEST_CASE("a change to what a use element references reaches its instance, and a change to the use builds it again") {
-    ViewedSvg page("<svg width=40 height=40><defs><rect id=t width=10 height=10 fill=red /></defs>"
-                   "<use id=u href=#t x=20 /></svg>");
+    ViewedSvg page("<svg width=40 height=40><defs><rect id=t width=10 height=10 fill=red /></defs><use id=u href=#t x=20 /></svg>");
     CHECK(rgbAt(page.paint(), 25, 5) == 0xff0000);
     // The instance of the rect takes the attribute in place, and only its node is built again.
     page.set("t", "fill", "blue");
@@ -1666,8 +1671,7 @@ TEST_CASE("a use's instances inherit from the use, and match the document's rule
     // The instance's fill is the use's, which it inherits. The rule with a combinator matches the original, which is in
     // the group, and not its instance, which is the shadow tree's root.
     ViewedSvg page("<style>#holder > rect { fill: red } use { fill: blue } .wide { width: 20px }</style>"
-                   "<svg width=40 height=40><defs><g id=holder><rect id=t class=wide height=10 /></g></defs>"
-                   "<use href=#t x=0 y=20 /></svg>");
+        "<svg width=40 height=40><defs><g id=holder><rect id=t class=wide height=10 /></g></defs><use href=#t x=0 y=20 /></svg>");
     std::vector<uint8_t> pixels = page.paint();
     CHECK(rgbAt(pixels, 5, 25) == 0x0000ff);
     CHECK(rgbAt(pixels, 15, 25) == 0x0000ff);
@@ -1676,8 +1680,8 @@ TEST_CASE("a use's instances inherit from the use, and match the document's rule
 
 TEST_CASE("a use's instance transitions when its original's class changes, and keeps transitioning through a removal") {
     ViewedSvg page("<style>#r { fill: rgb(0, 0, 0); transition: fill 1000ms linear } .on > #r { fill: rgb(0, 0, 255) }"
-                   "</style><svg width=40 height=40><defs><g id=g><rect id=r width=10 height=10 />"
-                   "<text id=gone>x</text></g></defs><use href=#g /></svg>");
+        "</style><svg width=40 height=40><defs><g id=g><rect id=r width=10 height=10 />"
+        "<text id=gone>x</text></g></defs><use href=#g /></svg>");
     PrCssPresentation* dom = prHtmlPagePresentation(page.page);
     prCssPresentationSetTime(dom, 0);
     page.set("g", "class", "on");
@@ -1696,7 +1700,7 @@ TEST_CASE("a use's instance transitions when its original's class changes, and k
 
 TEST_CASE("an instance of a symbol's child leaves and comes back with its original") {
     ViewedSvg page("<svg width=0 height=0><symbol id=s viewBox='0 0 20 20'><path id=d d='M0 0H20V20H0Z' fill=blue />"
-                   "</symbol></svg><svg width=20 height=20><use xlink:href=#s /></svg>");
+        "</symbol></svg><svg width=20 height=20><use xlink:href=#s /></svg>");
     CHECK(rgbAt(page.paint(), 10, 10) == 0x0000ff);
     PrDomNode* path = page.node("d");
     PrDomNode* symbol = prDomNodeParentNode(path);
@@ -1712,8 +1716,8 @@ TEST_CASE("an instance of a symbol's child leaves and comes back with its origin
 
 TEST_CASE("text is laid out again when its characters change, and a switch chooses again when its children change") {
     ViewedSvg page("<svg width=40 height=40><text id=t y=20>Hi</text>"
-                   "<switch><rect id=x systemLanguage=fr width=40 height=10 fill=red />"
-                   "<rect y=30 width=40 height=10 fill=blue /></switch></svg>");
+        "<switch><rect id=x systemLanguage=fr width=40 height=10 fill=red />"
+        "<rect y=30 width=40 height=10 fill=blue /></switch></svg>");
     prDomNodeSetTextContent(page.node("t"), "Hello");
     CHECK(page.update() == 1);
     CHECK(rgbAt(page.paint(), 20, 35) == 0x0000ff);
@@ -1725,10 +1729,9 @@ TEST_CASE("text is laid out again when its characters change, and a switch choos
 
 TEST_CASE("::first-line styles the first line of a block, and ::first-letter makes a box of its first letter") {
     Viewed page("<style>body { margin: 0; font: 10px/10px sans-serif } p { margin: 0; width: 200px }"
-                ".big::first-line { font-size: 30px; line-height: 30px }"
-                ".drop::first-letter { float: left; font-size: 30px; line-height: 30px }"
-                "div.big p { color: red }</style>"
-                "<p id=a>aa bb cc dd ee</p><p id=b>H<span id=e>ello</span></p><div id=c><p id=d>aa bb</p></div>");
+        ".big::first-line { font-size: 30px; line-height: 30px }"
+        ".drop::first-letter { float: left; font-size: 30px; line-height: 30px }div.big p { color: red }</style>"
+        "<p id=a>aa bb cc dd ee</p><p id=b>H<span id=e>ello</span></p><div id=c><p id=d>aa bb</p></div>");
     auto height = [&](const char* id) {
         prHtmlViewUpdate(page.view);
         page.settle();
@@ -1756,7 +1759,7 @@ TEST_CASE("::first-line styles the first line of a block, and ::first-letter mak
 
 TEST_CASE("text is laid out again when its ::first-line or ::first-letter style changes, its own style unchanged") {
     ViewedSvg page("<svg width=40 height=40><style>.line::first-line { fill: rgb(0, 0, 255) }</style>"
-                   "<text id=t y=35 font-size=30 fill=black>II</text></svg>");
+        "<text id=t y=35 font-size=30 fill=black>II</text></svg>");
     auto blue = [](const std::vector<uint8_t>& pixels) {
         uint32_t count = 0;
         for (uint32_t y = 0; y < 40; ++y) {
@@ -1777,8 +1780,8 @@ TEST_CASE("text is laid out again when its ::first-line or ::first-letter style 
 TEST_CASE("an img of an SVG image is sized by its root's width and height and draws its content, decoded or not") {
     // No host decoder: the engine draws an SVG image itself.
     Viewed page("<style>body { margin: 0 } img { display: block }</style><img id=s src=\"data:image/svg+xml,<svg "
-                "xmlns='http://www.w3.org/2000/svg' width='20' height='10'><rect width='20' height='10' "
-                "fill='red'/></svg>\" style='width: 40px'>");
+        "xmlns='http://www.w3.org/2000/svg' width='20' height='10'><rect width='20' height='10' "
+        "fill='red'/></svg>\" style='width: 40px'>");
     PrDomAgent* agent = prHtmlPageAgent(page.page);
     page.fetcher.settle(agent);
     // A width alone keeps the image's ratio, and its content scales with the box.
@@ -1797,12 +1800,12 @@ TEST_CASE("an SVG image without a width or a height draws at the size it is show
     // No natural size: the image fills the box. A viewBox alone gives a ratio, which the viewBox's own
     // preserveAspectRatio fits into the box.
     const char* full = "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg'><rect width='100%25' "
-                       "height='100%25' fill='red'/></svg>";
+        "height='100%25' fill='red'/></svg>";
     const char* square = "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'><rect "
-                         "width='10' height='10' fill='red'/></svg>";
+        "width='10' height='10' fill='red'/></svg>";
     std::string html = std::string("<style>body { margin: 0 } img, div { display: block; width: 40px; height: 10px }"
-                                   "</style><img src=\"") + full + "\"><img src=\"" + square
-                       + "\"><div style=\"background-image: url(&quot;" + full + "&quot;)\"></div>";
+        "</style><img src=\"") + full + "\"><img src=\"" + square +
+        "\"><div style=\"background-image: url(&quot;" + full + "&quot;)\"></div>";
     Viewed page(html.c_str());
     PrDomAgent* agent = prHtmlPageAgent(page.page);
     page.fetcher.settle(agent);
@@ -1824,8 +1827,8 @@ TEST_CASE("an SVG image without a width or a height draws at the size it is show
 
 TEST_CASE("an SVG image's root background fills the image, as the background of its canvas") {
     Viewed page("<style>body { margin: 0 } img { display: block; width: 40px }</style><img src=\"data:image/svg+xml,"
-                "<svg xmlns='http://www.w3.org/2000/svg' width='20' height='10' style='background: blue'><rect "
-                "width='5' height='5' fill='red'/></svg>\">");
+        "<svg xmlns='http://www.w3.org/2000/svg' width='20' height='10' style='background: blue'><rect "
+        "width='5' height='5' fill='red'/></svg>\">");
     PrDomAgent* agent = prHtmlPageAgent(page.page);
     page.fetcher.settle(agent);
     prHtmlViewUpdate(page.view);
@@ -1840,8 +1843,8 @@ TEST_CASE("an SVG image's root background fills the image, as the background of 
 
 TEST_CASE("an iframe shows its document in its slot, laid out in a viewport of its content box") {
     Viewed page("<style>body { margin: 0 } iframe { display: block; border: 0; width: 40px; height: 20px }</style>"
-                "<iframe id=f srcdoc=\"<style>html { background: rgb(255, 0, 0) } div { height: 5px }</style><div></div>\">"
-                "</iframe>");
+        "<iframe id=f srcdoc=\"<style>html { background: rgb(255, 0, 0) } div { height: 5px }</style><div></div>\">"
+        "</iframe>");
     // The first jobs size the iframe's viewport from the slot that the window's scene gives it, and the next jobs lay
     // it out there.
     for (uint32_t i = 0; i < 4; ++i) {
@@ -1870,8 +1873,8 @@ TEST_CASE("an iframe shows its document in its slot, laid out in a viewport of i
 
 TEST_CASE("an iframe's document is laid out in its iframe's content box before its parent is shown, and keeps a scroll") {
     Viewed page("<style>body { margin: 0 } iframe { display: block; border: 0; width: 40px; height: 20px }</style>"
-                "<iframe id=f srcdoc=\"<style>body { margin: 0 } div { height: 30px }</style><div></div>"
-                "<div style='height: 20px; background: rgb(255, 0, 0)'></div><div></div>\"></iframe>");
+        "<iframe id=f srcdoc=\"<style>body { margin: 0 } div { height: 30px }</style><div></div>"
+        "<div style='height: 20px; background: rgb(255, 0, 0)'></div><div></div>\"></iframe>");
     PrDomElement* frame = page.byId("f");
     PrHtmlWindow* inner =
         prHtmlIFrameElementContentWindow(prHtmlIFrameElementQuery(prDomNodeAsEventTarget(prDomElementAsNode(frame))));
@@ -1892,11 +1895,10 @@ TEST_CASE("an iframe's document is laid out in its iframe's content box before i
 
 TEST_CASE("an iframe's document prefers the iframe's color scheme, and paints an opaque canvas where its own differs") {
     Viewed page("<style>body { margin: 0 } iframe { display: block; border: 0; width: 40px; height: 12px; margin-bottom: "
-                "1px }</style>"
-                "<iframe style='color-scheme: light' srcdoc=\"<html style='color-scheme: dark'>\"></iframe>"
-                "<iframe style='color-scheme: dark' srcdoc=\"<html style='color-scheme: dark'>\"></iframe>"
-                "<iframe style='color-scheme: dark' srcdoc=\"<style>@media (prefers-color-scheme: dark) { html { "
-                "background: rgb(0, 0, 255) } }</style>\"></iframe>");
+        "1px }</style><iframe style='color-scheme: light' srcdoc=\"<html style='color-scheme: dark'>\"></iframe>"
+        "<iframe style='color-scheme: dark' srcdoc=\"<html style='color-scheme: dark'>\"></iframe>"
+        "<iframe style='color-scheme: dark' srcdoc=\"<style>@media (prefers-color-scheme: dark) { html { "
+        "background: rgb(0, 0, 255) } }</style>\"></iframe>");
     for (uint32_t i = 0; i < 6; ++i) {
         prHtmlViewUpdate(page.view);
         prHtmlViewWait(page.view);
@@ -1921,8 +1923,8 @@ TEST_CASE("an iframe's document prefers the iframe's color scheme, and paints an
 
 TEST_CASE("a view paints its composited animations at the presentation's time") {
     Viewed page("<style>body { margin: 0 } div { width: 20px; height: 20px; background: rgb(255, 0, 0) }"
-                "@keyframes move { from { transform: none } to { transform: translateX(20px) } }"
-                "#m { animation: move 1000ms linear }</style><div id=m></div>");
+        "@keyframes move { from { transform: none } to { transform: translateX(20px) } }"
+        "#m { animation: move 1000ms linear }</style><div id=m></div>");
     PrCssPresentation* dom = prHtmlPagePresentation(page.page);
     auto paintAt = [&](double time) {
         prCssPresentationSetTime(dom, time);
@@ -1944,10 +1946,8 @@ TEST_CASE("a view paints its composited animations at the presentation's time") 
 
 TEST_CASE("an important declaration overrides an animation of its property, composited or not") {
     Viewed page("<style>body { margin: 0 } div { width: 20px; height: 20px; background: rgb(255, 0, 0) }"
-                "@keyframes move { from { transform: none; margin-left: 0 } to { transform: translateX(20px);"
-                " margin-left: 20px } }"
-                "#m { animation: move 1000ms linear; transform: none !important; margin-left: 0 !important }"
-                "</style><div id=m></div>");
+        "@keyframes move { from { transform: none; margin-left: 0 } to { transform: translateX(20px); margin-left: 20px } }"
+        "#m { animation: move 1000ms linear; transform: none !important; margin-left: 0 !important }</style><div id=m></div>");
     PrCssPresentation* dom = prHtmlPagePresentation(page.page);
     prCssPresentationSetTime(dom, 500);
     PrDrawList* list = prDrawListCreate();
@@ -1960,9 +1960,9 @@ TEST_CASE("an important declaration overrides an animation of its property, comp
 
 TEST_CASE("a view paints a composited 3D transform under its parent's perspective through the projection") {
     Viewed page("<style>body { margin: 0 } #p { perspective: 40px; width: 40px; height: 40px }"
-                "#c { width: 40px; height: 40px; background: rgb(255, 0, 0) }"
-                "@keyframes turn { from { transform: rotateY(0deg) } to { transform: rotateY(120deg) } }"
-                "#c { animation: turn 1000ms linear }</style><div id=p><div id=c></div></div>");
+        "#c { width: 40px; height: 40px; background: rgb(255, 0, 0) }"
+        "@keyframes turn { from { transform: rotateY(0deg) } to { transform: rotateY(120deg) } }"
+        "#c { animation: turn 1000ms linear }</style><div id=p><div id=c></div></div>");
     PrCssPresentation* dom = prHtmlPagePresentation(page.page);
     auto paintAt = [&](double time) {
         prCssPresentationSetTime(dom, time);
@@ -1985,7 +1985,7 @@ TEST_CASE("a view paints a composited 3D transform under its parent's perspectiv
 TEST_CASE("a page that the wheel scrolled keeps the reader's place as its window narrows and content grows above") {
     // Like most pages, it adapts its padding to the width, which changes values on the path to every anchor.
     std::string html = "<style>body { margin: 0; padding: 0 40px } p { margin: 0 0 16px }"
-                       "@media (max-width: 700px) { body { padding: 0 8px } }</style>";
+        "@media (max-width: 700px) { body { padding: 0 8px } }</style>";
     for (int i = 0; i < 80; ++i) {
         html += "<p id=p" + std::to_string(i) + ">Paragraph " + std::to_string(i);
         for (int j = 0; j < 4 + i % 7; ++j)
@@ -2004,15 +2004,13 @@ TEST_CASE("a page that the wheel scrolled keeps the reader's place as its window
     };
     // The compositor's offset, which is what the window shows.
     auto shown = [&] {
-        PrLayoutVec back = prLayoutCompositorScroll(page.compositor, 0, kPrLayoutNodeNone,
-                                                    prLayoutVecFromPx(PrVec2{0, -1e7f}));
+        PrLayoutVec back = prLayoutCompositorScroll(page.compositor, 0, kPrLayoutNodeNone, prLayoutVecFromPx(PrVec2{0, -1e7f}));
         prLayoutCompositorScroll(page.compositor, 0, kPrLayoutNodeNone, PrLayoutVec{back.x, -back.y});
         return -double(prLayoutUnitToPx(back.y));
     };
     frame(PrVec2{800, 600});
     // The wheel scrolls to the middle of the page through the compositor.
-    prLayoutCompositorScrollAt(page.compositor, prLayoutVecFromPx(PrVec2{400, 300}),
-                               prLayoutVecFromPx(PrVec2{0, 2000}));
+    prLayoutCompositorScrollAt(page.compositor, prLayoutVecFromPx(PrVec2{400, 300}), prLayoutVecFromPx(PrVec2{0, 2000}));
     frame(PrVec2{800, 600});
     REQUIRE(prHtmlWindowScrollY(window) == 2000.0);
     PrDomElement* anchor = prCssDocumentElementFromPoint(page.document(), 60, 1);
@@ -2036,13 +2034,12 @@ TEST_CASE("a page that the wheel scrolled keeps the reader's place as its window
 }
 
 TEST_CASE("SVG content is hit over a shape's fill or stroke as pointer-events says, or else the svg is") {
-    ViewedSvg page("<svg id=s width=200 height=60>"
-                   "<circle id=ring cx=30 cy=30 r=20 fill=none stroke=black stroke-width=6 />"
-                   "<circle id=all cx=90 cy=30 r=20 fill=none pointer-events=all />"
-                   "<rect id=hidden x=120 width=20 height=20 visibility=hidden />"
-                   "<rect id=painted x=120 y=30 width=20 height=20 visibility=hidden pointer-events=painted />"
-                   "<g pointer-events=none><rect id=none x=160 width=20 height=20 />"
-                   "<rect id=back x=160 y=30 width=20 height=20 pointer-events=auto /></g></svg>");
+    ViewedSvg page("<svg id=s width=200 height=60><circle id=ring cx=30 cy=30 r=20 fill=none stroke=black stroke-width=6 />"
+        "<circle id=all cx=90 cy=30 r=20 fill=none pointer-events=all />"
+        "<rect id=hidden x=120 width=20 height=20 visibility=hidden />"
+        "<rect id=painted x=120 y=30 width=20 height=20 visibility=hidden pointer-events=painted />"
+        "<g pointer-events=none><rect id=none x=160 width=20 height=20 />"
+        "<rect id=back x=160 y=30 width=20 height=20 pointer-events=auto /></g></svg>");
     CHECK(hitAt(page, 30, 30) == "s");
     CHECK(hitAt(page, 30, 11) == "ring");
     CHECK(hitAt(page, 90, 30) == "all");
@@ -2054,9 +2051,9 @@ TEST_CASE("SVG content is hit over a shape's fill or stroke as pointer-events sa
 
 TEST_CASE("a hit follows transforms and viewports, and a viewport's overflow clips it") {
     ViewedSvg page("<svg id=s width=100 height=40>"
-                   "<g transform='translate(40 0)'><svg x=0 y=0 width=20 height=20 viewBox='0 0 10 10'>"
-                   "<rect id=inner width=5 height=5 /><rect id=outside x=12 width=5 height=5 /></svg></g>"
-                   "<rect id=turned x=0 y=0 width=10 height=10 transform='translate(10 20) rotate(45)' /></svg>");
+        "<g transform='translate(40 0)'><svg x=0 y=0 width=20 height=20 viewBox='0 0 10 10'>"
+        "<rect id=inner width=5 height=5 /><rect id=outside x=12 width=5 height=5 /></svg></g>"
+        "<rect id=turned x=0 y=0 width=10 height=10 transform='translate(10 20) rotate(45)' /></svg>");
     CHECK(hitAt(page, 42, 2) == "inner");
     CHECK(hitAt(page, 55, 15) == "s");
     CHECK(hitAt(page, 66, 2) == "s");
@@ -2066,14 +2063,13 @@ TEST_CASE("a hit follows transforms and viewports, and a viewport's overflow cli
 
 TEST_CASE("a clip path clips where SVG content is hit, and a mask and a filter do not") {
     ViewedSvg page("<svg id=s width=200 height=40>"
-                   "<clipPath id=left clipPathUnits=objectBoundingBox><rect width=0.5 height=1 /></clipPath>"
-                   "<mask id=clear x=0 y=0 width=1 height=1 maskContentUnits=objectBoundingBox>"
-                   "<rect width=0.5 height=1 fill=white /></mask>"
-                   "<filter id=shifted x=-1 y=-1 width=3 height=3><feOffset dx=40 /></filter>"
-                   "<rect id=clipped width=40 height=40 clip-path='url(#left)' />"
-                   "<rect id=masked x=50 width=40 height=40 mask='url(#clear)' />"
-                   "<rect id=filtered x=100 width=40 height=40 filter='url(#shifted)' />"
-                   "<rect id=shape x=150 width=40 height=40 style='clip-path: circle(10px at 20px 20px)' /></svg>");
+        "<clipPath id=left clipPathUnits=objectBoundingBox><rect width=0.5 height=1 /></clipPath>"
+        "<mask id=clear x=0 y=0 width=1 height=1 maskContentUnits=objectBoundingBox><rect width=0.5 height=1 fill=white /></mask>"
+        "<filter id=shifted x=-1 y=-1 width=3 height=3><feOffset dx=40 /></filter>"
+        "<rect id=clipped width=40 height=40 clip-path='url(#left)' />"
+        "<rect id=masked x=50 width=40 height=40 mask='url(#clear)' />"
+        "<rect id=filtered x=100 width=40 height=40 filter='url(#shifted)' />"
+        "<rect id=shape x=150 width=40 height=40 style='clip-path: circle(10px at 20px 20px)' /></svg>");
     CHECK(hitAt(page, 10, 20) == "clipped");
     CHECK(hitAt(page, 30, 20) == "s");
     CHECK(hitAt(page, 80, 20) == "masked");
@@ -2087,8 +2083,8 @@ TEST_CASE("a use element's clip path applies where it is hit after its x and y, 
     // The clip is 0 to 40 in the space that x moves by 60, and so 120 to 200 once scaled: the instance, at 130 to 170,
     // is whole.
     ViewedSvg page("<svg id=s width=300 height=60><defs><rect id=r x=5 y=5 width=20 height=10 />"
-                   "<clipPath id=c><rect width=40 height=100 /></clipPath></defs>"
-                   "<use id=u href='#r' x=60 y=10 transform='scale(2 1)' clip-path='url(#c)' /></svg>");
+        "<clipPath id=c><rect width=40 height=100 /></clipPath></defs>"
+        "<use id=u href='#r' x=60 y=10 transform='scale(2 1)' clip-path='url(#c)' /></svg>");
     CHECK(hitAt(page, 135, 20) == "u");
     CHECK(hitAt(page, 165, 20) == "u");
     CHECK(hitAt(page, 30, 20) == "s");
@@ -2099,9 +2095,9 @@ TEST_CASE("a use element's clip path applies where it is hit after its x and y, 
 
 TEST_CASE("text is hit by its characters' cells, the innermost element's, and markers are not hit") {
     ViewedSvg page("<svg id=s width=200 height=60><marker id=m markerWidth=20 markerHeight=20>"
-                   "<rect id=mark width=20 height=20 /></marker>"
-                   "<text id=t x=10 y=40 font-size=30>II<tspan id=span>II</tspan></text>"
-                   "<line id=line x1=150 y1=10 x2=190 y2=10 stroke=black marker-end='url(#m)' /></svg>");
+        "<rect id=mark width=20 height=20 /></marker>"
+        "<text id=t x=10 y=40 font-size=30>II<tspan id=span>II</tspan></text>"
+        "<line id=line x1=150 y1=10 x2=190 y2=10 stroke=black marker-end='url(#m)' /></svg>");
     PrDomRect text = prCssElementGetBoundingClientRect(page.byId("t"));
     PrDomRect span = prCssElementGetBoundingClientRect(page.byId("span"));
     REQUIRE(span.width > 0);
@@ -2114,7 +2110,7 @@ TEST_CASE("text is hit by its characters' cells, the innermost element's, and ma
 
 TEST_CASE("a foreignObject's content is hit in its rectangle, before the foreignObject") {
     ViewedSvg page("<svg id=s width=100 height=60><foreignObject id=f x=20 y=20 width=40 height=20>"
-                   "<div id=d style='height: 10px'></div></foreignObject></svg>");
+        "<div id=d style='height: 10px'></div></foreignObject></svg>");
     CHECK(hitAt(page, 30, 25) == "d");
     CHECK(hitAt(page, 30, 35) == "f");
     CHECK(hitAt(page, 10, 10) == "s");
@@ -2122,9 +2118,9 @@ TEST_CASE("a foreignObject's content is hit in its rectangle, before the foreign
 
 TEST_CASE("an SVG element's client rect is its object bounding box, mapped through every transform") {
     ViewedSvg page("<div style='height: 10px'></div><svg width=100 height=60 viewBox='0 0 50 30' "
-                   "style='padding: 5px'><rect id=r x=5 y=5 width=10 height=10 stroke=black stroke-width=4 />"
-                   "<g id=g><rect x=20 y=5 width=5 height=5 /><rect x=30 y=20 width=5 height=5 /></g>"
-                   "<rect id=gone width=5 height=5 display=none /></svg>");
+        "style='padding: 5px'><rect id=r x=5 y=5 width=10 height=10 stroke=black stroke-width=4 />"
+        "<g id=g><rect x=20 y=5 width=5 height=5 /><rect x=30 y=20 width=5 height=5 /></g>"
+        "<rect id=gone width=5 height=5 display=none /></svg>");
     PrDomRect r = prCssElementGetBoundingClientRect(page.byId("r"));
     CHECK(r.x == doctest::Approx(15));
     CHECK(r.y == doctest::Approx(25));
@@ -2139,7 +2135,7 @@ TEST_CASE("an SVG element's client rect is its object bounding box, mapped throu
 
 TEST_CASE("an SVG element's client rect and hit test follow its svg element's box when a viewBox sizes the content") {
     ViewedSvg page("<div id=w style='width: 100px'><svg viewBox='0 0 10 10' style='width: 100%'>"
-                   "<rect id=r x=5 y=5 width=5 height=5 /></svg></div>");
+        "<rect id=r x=5 y=5 width=5 height=5 /></svg></div>");
     PrDomRect before = prCssElementGetBoundingClientRect(page.byId("r"));
     CHECK(before.x == doctest::Approx(50));
     CHECK(before.width == doctest::Approx(50));
@@ -2154,7 +2150,7 @@ TEST_CASE("an SVG element's client rect and hit test follow its svg element's bo
 
 TEST_CASE("the pointer hovers and clicks SVG content, and a click on an SVG link follows its href") {
     ViewedSvg page("<svg width=100 height=40><a id=a href='#t'><rect id=r width=20 height=20 /></a>"
-                   "<rect id=other x=40 width=20 height=20 /></svg><p id=t>target</p>");
+        "<rect id=other x=40 width=20 height=20 /></svg><p id=t>target</p>");
     Heard heard;
     PrDomEventListener listener = recorder(&heard);
     prDomEventTargetAddEventListener(prDomNodeAsEventTarget(page.node("other")), "click", &listener, nullptr);
@@ -2173,7 +2169,7 @@ TEST_CASE("the pointer hovers and clicks SVG content, and a click on an SVG link
 
 TEST_CASE("an SVG a element inside another link is no link, and an XLink href makes one") {
     ViewedSvg page("<a href='#x'><svg width=10 height=10><a id=nested href='#y'><rect /></a></svg></a>"
-                   "<svg width=10 height=10><a id=xlink xlink:href='#y'><rect /></a><a id=none><rect /></a></svg>");
+        "<svg width=10 height=10><a id=xlink xlink:href='#y'><rect /></a><a id=none><rect /></a></svg>");
     CHECK_FALSE(page.matches("nested", ":link"));
     CHECK_FALSE(page.matches("nested", ":any-link"));
     CHECK(page.matches("xlink", ":link"));
@@ -2182,7 +2178,7 @@ TEST_CASE("an SVG a element inside another link is no link, and an XLink href ma
 
 TEST_CASE("an SVG a element inside a link is restyled as a link once the link loses its href") {
     ViewedSvg page("<style>svg a:link rect { fill: rgb(255, 0, 0) }</style><a id=outer href='#x'><svg width=10 "
-                   "height=10><a href='#y'><rect width=10 height=10 /></a></svg></a>");
+        "height=10><a href='#y'><rect width=10 height=10 /></a></svg></a>");
     CHECK(rgbAt(page.paint(), 5, 5) == 0);
     prDomElementRemoveAttribute(page.byId("outer"), "href");
     page.update();
@@ -2190,20 +2186,24 @@ TEST_CASE("an SVG a element inside a link is restyled as a link once the link lo
 }
 
 TEST_CASE("an instance in a use element's shadow tree is hit, its events retarget to the use, and its original's "
-          "listeners hear them") {
+        "listeners hear them") {
     ViewedSvg page("<svg width=100 height=40><defs><rect id=button width=20 height=20 /></defs>"
-                   "<use id=use href='#button' x=40 /></svg>");
+        "<use id=use href='#button' x=40 /></svg>");
     Heard original;
     PrDomEventListener originalListener = recorder(&original);
-    prDomEventTargetAddEventListener(prDomNodeAsEventTarget(page.node("button")), "click", &originalListener,
-                                     nullptr);
+    prDomEventTargetAddEventListener(prDomNodeAsEventTarget(page.node("button")), "click", &originalListener, nullptr);
     PrDomEventTarget* target = nullptr;
-    PrDomEventListener documentListener{[](void* context, PrDomEvent* event) {
-        *static_cast<PrDomEventTarget**>(context) = prDomEventTarget(event);
-    },
-                                        &target, 0, nullptr, nullptr};
+    PrDomEventListener documentListener{
+        [](void* context, PrDomEvent* event) {
+            *static_cast<PrDomEventTarget**>(context) = prDomEventTarget(event);
+        },
+        &target,
+        0,
+        nullptr,
+        nullptr,
+    };
     prDomEventTargetAddEventListener(prDomNodeAsEventTarget(prDomDocumentAsNode(page.document())), "click",
-                                     &documentListener, nullptr);
+        &documentListener, nullptr);
     CHECK(hitAt(page, 50, 10) == "use");
     clickAt(page, PrVec2{50, 10});
     CHECK(original.types == std::vector<std::string>{"click"});
@@ -2223,17 +2223,16 @@ TEST_CASE("an SVG image element fires load or error once what its href names has
     REQUIRE(prImageCodecEncode(images, "image/png", pixels, png.data(), size, &size) == PrStatus_Ok);
     {
         Viewed page("<svg width=40 height=40><image id=found href=http://test/red.png width=40 height=40 />"
-                    "<image id=missing href=http://test/missing.png display=none /></svg>",
-                    images, &png, true);
+            "<image id=missing href=http://test/missing.png display=none /></svg>", images, &png, true);
         Heard found;
         Heard missing;
         PrDomEventListener foundListener = recorder(&found);
         PrDomEventListener missingListener = recorder(&missing);
         for (const char* type : {"load", "error"}) {
             prDomEventTargetAddEventListener(prDomNodeAsEventTarget(prDomElementAsNode(page.byId("found"))), type,
-                                             &foundListener, nullptr);
+                &foundListener, nullptr);
             prDomEventTargetAddEventListener(prDomNodeAsEventTarget(prDomElementAsNode(page.byId("missing"))), type,
-                                             &missingListener, nullptr);
+                &missingListener, nullptr);
         }
         prHtmlViewUpdate(page.view);
         page.settle();
@@ -2261,8 +2260,8 @@ TEST_CASE("an SVG image element fires load or error once what its href names has
 
 TEST_CASE("pointer-events: none lets the pointer through a box to what lies beneath, and a descendant may take it") {
     Viewed page("<style>body { margin: 0 } div { position: absolute; width: 40px; height: 40px }</style>"
-                "<div id=under></div><div id=over style='pointer-events: none'>"
-                "<span id=taker style='pointer-events: auto'>x</span></div>");
+        "<div id=under></div><div id=over style='pointer-events: none'>"
+        "<span id=taker style='pointer-events: auto'>x</span></div>");
     prHtmlViewUpdate(page.view);
     page.settle();
     CHECK(hitAt(page, 30, 30) == "under");
@@ -2272,10 +2271,10 @@ TEST_CASE("pointer-events: none lets the pointer through a box to what lies bene
 
 TEST_CASE("an svg element that takes no pointer lets it through, and its content may take it back") {
     Viewed page("<style>body { margin: 0 } div { position: absolute; width: 40px; height: 40px }"
-                "svg { position: absolute; display: block }</style><div id=under></div>"
-                "<svg id=svg width=40 height=40 style='pointer-events: none'><rect id=none width=20 height=40 />"
-                "<rect id=taker x=20 width=20 height=40 pointer-events=auto /></svg>"
-                "<img id=img style='position: absolute; top: 50px; width: 10px; height: 10px; pointer-events: none'>");
+        "svg { position: absolute; display: block }</style><div id=under></div>"
+        "<svg id=svg width=40 height=40 style='pointer-events: none'><rect id=none width=20 height=40 />"
+        "<rect id=taker x=20 width=20 height=40 pointer-events=auto /></svg>"
+        "<img id=img style='position: absolute; top: 50px; width: 10px; height: 10px; pointer-events: none'>");
     prHtmlViewUpdate(page.view);
     page.settle();
     CHECK(hitAt(page, 10, 20) == "under");

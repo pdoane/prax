@@ -71,8 +71,10 @@ Edges grow(Edges edges, const CssIntersectionOffset margin[4]) {
     auto resolve = [&](const CssIntersectionOffset& offset, double base) {
         return offset.percent ? offset.value * base / 100 : offset.value;
     };
-    return Edges{edges.left - resolve(margin[3], width), edges.top - resolve(margin[0], height),
-                 edges.right + resolve(margin[1], width), edges.bottom + resolve(margin[2], height)};
+    return Edges{
+        edges.left - resolve(margin[3], width), edges.top - resolve(margin[0], height),
+        edges.right + resolve(margin[1], width), edges.bottom + resolve(margin[2], height),
+    };
 }
 
 // Reads a margin of one to four absolute lengths or percentages into its four offsets
@@ -89,16 +91,16 @@ bool parseMargin(PrStringView text, CssIntersectionOffset out[4]) {
         if (kind == CssTokenKind_Whitespace)
             continue;
         PrCssUnit unit = kind == CssTokenKind_Dimension ? cssTokenUnit(&tokens, i) : PrCssUnit_Unknown;
-        bool length = unit != PrCssUnit_Unknown && cssUnitCategory(unit) == CssUnitCategory_Length
-                      && cssUnitScale(unit) != 0;
+        bool length = unit != PrCssUnit_Unknown && cssUnitCategory(unit) == CssUnitCategory_Length && cssUnitScale(unit) != 0;
         ok = count < 4 && (length || kind == CssTokenKind_Percentage);
         // A length is a whole number of pixels, toward zero.
         if (ok) {
             double number = cssTokenNumber(&tokens, i);
             double pixels = kind == CssTokenKind_Percentage ? 0 : number * cssUnitScale(unit);
-            offsets[count++] = kind == CssTokenKind_Percentage
-                                   ? CssIntersectionOffset{number, true}
-                                   : CssIntersectionOffset{pixels < 0 ? -floorF64(-pixels) : floorF64(pixels), false};
+            if (kind == CssTokenKind_Percentage)
+                offsets[count++] = CssIntersectionOffset{number, true};
+            else
+                offsets[count++] = CssIntersectionOffset{pixels < 0 ? -floorF64(-pixels) : floorF64(pixels), false};
         }
     }
     cssTokenArrayReset(&tokens);
@@ -132,10 +134,12 @@ bool paddingBoxOf(PrLayoutTree* tree, PrLayoutNode node, Edges* out) {
     PrLayoutRect box{};
     if (prLayoutNodeBoxes(tree, node, PrLayoutCoordinates_Viewport, &box, 1) == 0)
         return false;
-    *out = Edges{px(box.left + prLayoutNodeBorderWidth(tree, node, PrRectSide_Left)),
-                 px(box.top + prLayoutNodeBorderWidth(tree, node, PrRectSide_Top)),
-                 px(box.right - prLayoutNodeBorderWidth(tree, node, PrRectSide_Right)),
-                 px(box.bottom - prLayoutNodeBorderWidth(tree, node, PrRectSide_Bottom))};
+    *out = Edges{
+        px(box.left + prLayoutNodeBorderWidth(tree, node, PrRectSide_Left)),
+        px(box.top + prLayoutNodeBorderWidth(tree, node, PrRectSide_Top)),
+        px(box.right - prLayoutNodeBorderWidth(tree, node, PrRectSide_Right)),
+        px(box.bottom - prLayoutNodeBorderWidth(tree, node, PrRectSide_Bottom)),
+    };
     return true;
 }
 
@@ -169,8 +173,8 @@ PrLayoutNode clippedBoxOf(PrCssPresentation* presentation, const PrDomElement* t
 // Returns true if the box of the element `root` is a scroll container, which clips its content to its padding box.
 bool clipsContent(PrCssPresentation* presentation, PrLayoutNode root) {
     PrLayoutScrollInfo info{};
-    return root != kPrLayoutNodeNone && prLayoutNodeScrollInfo(cssPresentationOwnTree(presentation), root, &info)
-           && info.scrollContainer;
+    return root != kPrLayoutNodeNone && prLayoutNodeScrollInfo(cssPresentationOwnTree(presentation), root, &info) &&
+        info.scrollContainer;
 }
 
 // Returns the observer's root intersection rectangle, grown by its root margin
@@ -206,23 +210,22 @@ struct Intersection {
 // container that it is in, up to the root, grown by the scroll margin, and cut by the root's rectangle. A target that
 // is not rendered, in another document, or not inside an element root is not measured, and intersects nothing.
 Intersection intersectionOf(const PrCssIntersectionObserver* observer, PrCssPresentation* presentation,
-                            PrDomElement* target, Edges rootBounds) {
+        PrDomElement* target, Edges rootBounds) {
     Intersection result{};
     PrLayoutNode node = clippedBoxOf(presentation, target);
     const PrDomNode* root = observer->root;
     PrDomDocument* document = root != nullptr ? root->document : observer->document;
     PrDomElement* rootElement = root != nullptr ? domElementFromNode(const_cast<PrDomNode*>(root)) : nullptr;
-    if (node == kPrLayoutNodeNone || target->document != document
-        || (rootElement != nullptr && !isDescendant(target, root)))
+    if (node == kPrLayoutNodeNone || target->document != document || (rootElement != nullptr && !isDescendant(target, root)))
         return result;
     result.measured = true;
     result.target = edgesOf(prCssElementGetBoundingClientRect(target));
     Edges shown = result.target;
     PrLayoutTree* tree = cssPresentationOwnTree(presentation);
     PrLayoutNode rootNode = rootElement != nullptr ? cssPresentationBox(presentation, rootElement) : kPrLayoutNodeNone;
-    for (PrLayoutNode container = prLayoutNodeScrollContainer(tree, node);
-         container != kPrLayoutNodeNone && container != rootNode;
-         container = prLayoutNodeScrollContainer(tree, container)) {
+    for (PrLayoutNode container =
+            prLayoutNodeScrollContainer(tree, node); container != kPrLayoutNodeNone && container != rootNode;
+            container = prLayoutNodeScrollContainer(tree, container)) {
         // The scroll containers outside an element root do not clip within it.
         const PrDomNode* owner = cssPresentationNodeFromLayout(presentation, container);
         if (rootElement != nullptr && (owner == nullptr || !isDescendant(owner, root)))
@@ -271,19 +274,20 @@ bool update(PrCssIntersectionObserver* observer, PrCssPresentation* presentation
         // The engine cannot rule out that other content covers the target, so no target is visible
         // (intersection-observer/#calculate-visibility-algo).
         bool visible = false;
-        if (thresholdIndex != observation.previousThresholdIndex
-            || intersecting != observation.previousIsIntersecting || visible != observation.previousIsVisible) {
+        if (thresholdIndex != observation.previousThresholdIndex ||
+                intersecting != observation.previousIsIntersecting || visible != observation.previousIsVisible) {
             domNodeRetain(observation.target);
             // A target that was not measured against the root reports empty root bounds.
-            observer->queued.push(PrCssIntersectionObserverEntry{.time = time,
-                                                                 .rootBounds = found.measured ? rectOf(rootBounds)
-                                                                                              : PrDomRect{},
-                                                                 .boundingClientRect = rectOf(found.target),
-                                                                 .intersectionRect = rectOf(found.shown),
-                                                                 .intersectionRatio = ratio,
-                                                                 .target = observation.target,
-                                                                 .isIntersecting = intersecting,
-                                                                 .isVisible = visible});
+            observer->queued.push(PrCssIntersectionObserverEntry{
+                .time = time,
+                .rootBounds = found.measured ? rectOf(rootBounds) : PrDomRect{},
+                .boundingClientRect = rectOf(found.target),
+                .intersectionRect = rectOf(found.shown),
+                .intersectionRatio = ratio,
+                .target = observation.target,
+                .isIntersecting = intersecting,
+                .isVisible = visible,
+            });
             queued = true;
         }
         observation.previousThresholdIndex = thresholdIndex;
@@ -300,8 +304,7 @@ bool update(PrCssIntersectionObserver* observer, PrCssPresentation* presentation
 using namespace pr_impl;
 
 PrStatus prCssIntersectionObserverCreate(PrDomDocument* document, const PrCssIntersectionObserverInit* init,
-                                         const PrCssIntersectionCallback* callback,
-                                         PrCssIntersectionObserver* PR_NULLABLE* PR_NONNULL out) {
+        const PrCssIntersectionCallback* callback, PrCssIntersectionObserver* PR_NULLABLE* PR_NONNULL out) {
     *out = nullptr;
     CssIntersectionOffset rootMargin[4];
     CssIntersectionOffset scrollMargin[4];
@@ -422,7 +425,7 @@ void prCssIntersectionObserverDisconnect(PrCssIntersectionObserver* self) {
 }
 
 uint32_t prCssIntersectionObserverTakeRecords(PrCssIntersectionObserver* self, PrCssIntersectionObserverEntry* out,
-                                              uint32_t capacity) {
+        uint32_t capacity) {
     uint32_t taken = capacity < self->queued.count ? capacity : self->queued.count;
     for (uint32_t i = 0; i < taken; ++i)
         out[i] = self->queued.data[i];

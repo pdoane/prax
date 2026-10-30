@@ -94,14 +94,12 @@ TEST_CASE("an observable array is an array whose indexes pass through its owner'
         array.length = 1;
         return array.length === 1 && array[0] === 4 && JSON.stringify(owner.removed) === '[[1,0],[3,2],[2,1]]';
     })())JS"));
-    CHECK(
-        evaluates(ctx, "try { array.length = 1.5; false } catch (e) { e instanceof RangeError }"));
+    CHECK(evaluates(ctx, "try { array.length = 1.5; false } catch (e) { e instanceof RangeError }"));
 
     JSValue values = JS_Eval(ctx, "[7, 8]", 6, "values", JS_EVAL_TYPE_GLOBAL);
     CHECK(jsObservableArraySet(ctx, array, values));
     JS_FreeValue(ctx, values);
-    CHECK(evaluates(ctx,
-                    "array.join() === '7,8' && JSON.stringify(owner.removed.at(-1)) === '[4,0]'"));
+    CHECK(evaluates(ctx, "array.join() === '7,8' && JSON.stringify(owner.removed.at(-1)) === '[4,0]'"));
 
     JS_FreeValue(ctx, array);
     JS_FreeValue(ctx, global);

@@ -25,7 +25,7 @@ VkImageLayout vulkanLayoutFromAccess(PrGpuAccessFlags access);
 // Allocates memory for `requirements` with every property of `required`, preferring those of `preferred`, and maps
 // memory that the host's processor sees. Returns false if no memory is left.
 bool vulkanMemoryAllocate(VulkanDevice* d, VkMemoryRequirements requirements, VkMemoryPropertyFlags required,
-                          VkMemoryPropertyFlags preferred, VulkanMemory* out);
+    VkMemoryPropertyFlags preferred, VulkanMemory* out);
 void vulkanMemoryFree(VulkanDevice* d, VulkanMemory& memory);
 
 // Returns a free slot of the bindless array, or zero if none is left. Called with the device's mutex held.

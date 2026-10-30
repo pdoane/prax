@@ -15,10 +15,12 @@ std::string processed(PrStringView url) {
     PrString body{};
     PrString type{};
     PrStatus status = prUrlProcessData(url, &body, &type);
-    std::string result = status != PrStatus_Ok
-                             ? "error"
-                             : std::string(prStringView(&type).data, prStringView(&type).size) + "|"
-                                   + std::string(prStringView(&body).data, prStringView(&body).size);
+    std::string result;
+    if (status != PrStatus_Ok)
+        result = "error";
+    else
+        result = std::string(prStringView(&type).data, prStringView(&type).size) + "|" +
+            std::string(prStringView(&body).data, prStringView(&body).size);
     prStringReset(&body);
     prStringReset(&type);
     return result;

@@ -203,8 +203,7 @@ inline bool htmlSpanEmpty(HtmlSpan span) {
 // Returns the number of bytes at the start of a character token's characters that have one of `flags`. Whitespace is
 // tab, line feed, form feed, carriage return and space. A carriage return can reach a token only through `&#13;`,
 // because preprocessing removed carriage returns from the input.
-uint32_t htmlTokenRun(const HtmlTokenizer* tokenizer, const HtmlToken* token,
-                      HtmlTokenFlags flags);
+uint32_t htmlTokenRun(const HtmlTokenizer* tokenizer, const HtmlToken* token, HtmlTokenFlags flags);
 
 // Drops the first `count` bytes of a character token's characters, along with their flags and the input they were
 // written with.
@@ -218,8 +217,7 @@ inline PrStringView htmlInputText(const HtmlTokenizer* tokenizer) {
 // Advances `line` and `column` from byte `at` to byte `to` of an input stream. A code point outside the Basic
 // Multilingual Plane counts two columns, and every other code point one. `line` and `column` start at one and `at` at
 // zero. Successive calls advance in input order.
-void htmlInputPosition(PrStringView text, uint32_t* at, uint32_t to, uint32_t* line,
-                       uint32_t* column);
+void htmlInputPosition(PrStringView text, uint32_t* at, uint32_t to, uint32_t* line, uint32_t* column);
 
 } // namespace pr_impl
 

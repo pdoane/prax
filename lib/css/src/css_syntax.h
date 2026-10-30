@@ -162,8 +162,7 @@ struct CssTokenArray {
 
 // Tokenizes `source`, replacing whatever `tokens` held. `source` may be any bytes. An ill-formed UTF-8 sequence in
 // `source` reads as U+FFFD.
-void cssTokenize(CssTokenArray* tokens, CssTokenScratch* scratch, PrStringView source,
-                 CssTokenizeFlags flags = 0);
+void cssTokenize(CssTokenArray* tokens, CssTokenScratch* scratch, PrStringView source, CssTokenizeFlags flags = 0);
 
 // Frees the scratch's memory.
 void cssTokenScratchReset(CssTokenScratch* scratch);
@@ -259,8 +258,7 @@ inline uint32_t cssTokenDelim(const CssTokenArray* tokens, uint32_t index) {
 
 // Writes the code points that the unicode-range token at `index` covers, parsed from its bytes
 // (css-syntax-3/#consume-unicode-range-token). `last` may be before `first`.
-void cssTokenRange(const CssTokenArray* tokens, uint32_t index, uint32_t* first,
-                   uint32_t* last);
+void cssTokenRange(const CssTokenArray* tokens, uint32_t index, uint32_t* first, uint32_t* last);
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Streams

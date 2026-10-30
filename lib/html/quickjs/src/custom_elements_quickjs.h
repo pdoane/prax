@@ -24,12 +24,10 @@ bool jsCustomElementsSetGlobal(JSContext* ctx, JSValueConst object, PrHtmlWindow
 JSValue jsCustomElements(JSContext* ctx, JSValueConst object);
 
 // Constructs an autonomous custom element from the current global's registry (html/#html-element-constructors).
-JSValue jsCustomElementsConstruct(JSContext* ctx, JSValueConst newTarget, int argc,
-                                  JSValueConst* argv);
+JSValue jsCustomElementsConstruct(JSContext* ctx, JSValueConst newTarget, int argc, JSValueConst* argv);
 
 // Attaches the ElementInternals of the custom element `self`, and returns it (html/#dom-attachinternals).
-JSValue jsCustomElementsAttachInternals(JSContext* ctx, JSValueConst self, int argc,
-                                        JSValueConst* argv);
+JSValue jsCustomElementsAttachInternals(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv);
 
 } // namespace pr_impl
 

@@ -196,7 +196,7 @@ PrVec2 centerOf(PrVec2 vertex, PrVec2 normal, float curve) {
 // continues the side that leaves `to` in `leaving`. Each continues as the circle of its curvature about the center of
 // curvature of the vertex, or as a line if the curvature is zero. Returns false if they do not meet on the outer side.
 bool arcsMeet(PrVec2 vertex, PrVec2 bisector, PrVec2 from, PrVec2 direction, float curveIn,
-              PrVec2 to, PrVec2 leaving, float curveOut, PrVec2* meet) {
+        PrVec2 to, PrVec2 leaving, float curveOut, PrVec2* meet) {
     bool lineIn = absF32(curveIn) < kCoincident;
     bool lineOut = absF32(curveOut) < kCoincident;
     PrVec2 centerIn = lineIn ? vertex : centerOf(vertex, leftNormal(direction), curveIn);
@@ -251,8 +251,7 @@ bool arcsMeet(PrVec2 vertex, PrVec2 bisector, PrVec2 from, PrVec2 direction, flo
 
 // Adds the points strictly inside the arc about `center` from `from`, starting in `direction`, to `to`. Adds nothing if
 // the curvature of the side is zero and the extension is a line.
-void pushExtension(Stroker& s, PrVec2 center, bool line, PrVec2 from, PrVec2 direction,
-                   PrVec2 to) {
+void pushExtension(Stroker& s, PrVec2 center, bool line, PrVec2 from, PrVec2 direction, PrVec2 to) {
     if (line)
         return;
     PrVec2 a = from - center;
@@ -269,7 +268,7 @@ void pushExtension(Stroker& s, PrVec2 center, bool line, PrVec2 from, PrVec2 dir
 // Adds the points that one side of an outline adds at a vertex, arriving in `in` and leaving in `out`, at half width
 // `w` on the left of the direction of travel.
 void pushJoin(Stroker& s, PrVec2 p, PrVec2 in, PrVec2 out, float w, bool corner, float curveIn,
-              float curveOut, float lengthIn, float lengthOut) {
+        float curveOut, float lengthIn, float lengthOut) {
     PrVec2 nIn = leftNormal(in);
     PrVec2 nOut = leftNormal(out);
     PrVec2 a = p + nIn * w;
@@ -318,16 +317,14 @@ void pushJoin(Stroker& s, PrVec2 p, PrVec2 in, PrVec2 out, float w, bool corner,
             break;
         case PrPathJoin_Arcs: {
             PrVec2 meet{};
-            if (arcsMeet(p, bisector, a, in, curveIn, b, out, curveOut, &meet)
-                && length(meet - p) <= limit) {
+            if (arcsMeet(p, bisector, a, in, curveIn, b, out, curveOut, &meet) && length(meet - p) <= limit) {
                 bool lineIn = absF32(curveIn) < kCoincident;
                 bool lineOut = absF32(curveOut) < kCoincident;
                 pushExtension(s, lineIn ? p : centerOf(p, nIn, curveIn), lineIn, a, in, meet);
                 push(s, meet);
                 // The extension of the outgoing side, walked back from its start and then reversed.
                 uint32_t mark = s.loop.count;
-                pushExtension(s, lineOut ? p : centerOf(p, nOut, curveOut), lineOut, b,
-                              out * -1, meet);
+                pushExtension(s, lineOut ? p : centerOf(p, nOut, curveOut), lineOut, b, out * -1, meet);
                 for (uint32_t i = mark, j = s.loop.count - 1; i < j; ++i, --j) {
                     PrVec2 swap = s.loop.data[i];
                     s.loop.data[i] = s.loop.data[j];
@@ -365,8 +362,7 @@ float segmentLength(const Vertex& a, const Vertex& b) {
 }
 
 // Strokes one loop around an open run of vertices, with its caps. `direction` is used for a lone vertex.
-void strokeOpen(Stroker& s, const Vertex* v, uint32_t n, PrVec2 direction, PrPathCap startCap,
-                PrPathCap endCap) {
+void strokeOpen(Stroker& s, const Vertex* v, uint32_t n, PrVec2 direction, PrPathCap startCap, PrPathCap endCap) {
     if (n == 1) {
         PrVec2 d = direction;
         PrVec2 normal = leftNormal(d);
@@ -382,16 +378,16 @@ void strokeOpen(Stroker& s, const Vertex* v, uint32_t n, PrVec2 direction, PrPat
     push(s, v[0].point + leftNormal(first) * v[0].left);
     for (uint32_t i = 1; i + 1 < n; ++i) {
         pushJoin(s, v[i].point, segmentDirection(v[i - 1], v[i]),
-                 segmentDirection(v[i], v[i + 1]), v[i].left, v[i].corner, v[i].curveIn,
-                 v[i].curveOut, segmentLength(v[i - 1], v[i]), segmentLength(v[i], v[i + 1]));
+            segmentDirection(v[i], v[i + 1]), v[i].left, v[i].corner, v[i].curveIn,
+            v[i].curveOut, segmentLength(v[i - 1], v[i]), segmentLength(v[i], v[i + 1]));
     }
     push(s, v[n - 1].point + leftNormal(last) * v[n - 1].left);
     pushCap(s, v[n - 1].point, last, v[n - 1].left, v[n - 1].right, endCap);
     push(s, v[n - 1].point - leftNormal(last) * v[n - 1].right);
     for (uint32_t i = n - 2; i >= 1; --i) {
         pushJoin(s, v[i].point, segmentDirection(v[i + 1], v[i]),
-                 segmentDirection(v[i], v[i - 1]), v[i].right, v[i].corner, -v[i].curveOut,
-                 -v[i].curveIn, segmentLength(v[i], v[i + 1]), segmentLength(v[i - 1], v[i]));
+            segmentDirection(v[i], v[i - 1]), v[i].right, v[i].corner, -v[i].curveOut,
+            -v[i].curveIn, segmentLength(v[i], v[i + 1]), segmentLength(v[i - 1], v[i]));
     }
     push(s, v[0].point - leftNormal(first) * v[0].right);
     pushCap(s, v[0].point, first * -1, v[0].right, v[0].left, startCap);
@@ -404,8 +400,7 @@ void strokeClosed(Stroker& s, const Vertex* v, uint32_t n) {
         const Vertex& before = v[(i + n - 1) % n];
         const Vertex& after = v[(i + 1) % n];
         pushJoin(s, v[i].point, segmentDirection(before, v[i]), segmentDirection(v[i], after),
-                 v[i].left, v[i].corner, v[i].curveIn, v[i].curveOut,
-                 segmentLength(before, v[i]), segmentLength(v[i], after));
+            v[i].left, v[i].corner, v[i].curveIn, v[i].curveOut, segmentLength(before, v[i]), segmentLength(v[i], after));
     }
     emit(s);
     for (uint32_t k = 0; k < n; ++k) {
@@ -413,8 +408,7 @@ void strokeClosed(Stroker& s, const Vertex* v, uint32_t n) {
         const Vertex& before = v[(i + n - 1) % n];
         const Vertex& after = v[(i + 1) % n];
         pushJoin(s, v[i].point, segmentDirection(after, v[i]), segmentDirection(v[i], before),
-                 v[i].right, v[i].corner, -v[i].curveOut, -v[i].curveIn,
-                 segmentLength(v[i], after), segmentLength(before, v[i]));
+            v[i].right, v[i].corner, -v[i].curveOut, -v[i].curveIn, segmentLength(v[i], after), segmentLength(before, v[i]));
     }
     emit(s);
 }
@@ -484,11 +478,9 @@ float measure(Stroker& s, bool closed) {
                 break;
             Vertex b = v.data[(i + 1) % v.count];
             b.along = i + 1 == v.count ? total : b.along;
-            while (next < style->profileCount
-                   && style->profile[next].position * total <= a.along + kCoincident)
+            while (next < style->profileCount && style->profile[next].position * total <= a.along + kCoincident)
                 ++next;
-            while (next < style->profileCount
-                   && style->profile[next].position * total < b.along - kCoincident) {
+            while (next < style->profileCount && style->profile[next].position * total < b.along - kCoincident) {
                 float at = style->profile[next].position * total;
                 split.push(between(s, a, b, (at - a.along) / (b.along - a.along), total));
                 ++next;
@@ -511,9 +503,8 @@ void finishPiece(Stroker& s, PrVec2 direction, bool atStart, bool atEnd, bool cl
         s.first.clear();
         s.first.append(s.piece.data, s.piece.count);
     } else {
-        strokeOpen(s, s.piece.data, s.piece.count, direction,
-                   atStart && !closed ? style->startCap : style->dashCap,
-                   atEnd && !closed ? style->endCap : style->dashCap);
+        strokeOpen(s, s.piece.data, s.piece.count, direction, atStart && !closed ? style->startCap : style->dashCap,
+            atEnd && !closed ? style->endCap : style->dashCap);
     }
     s.piece.clear();
 }
@@ -529,8 +520,7 @@ void dashContour(Stroker& s, bool closed, float total) {
         widthAt(s, 1, &end.left, &end.right);
         v.push(end);
     }
-    float phase =
-        style->dashOffset - s.patternLength * floorF32(style->dashOffset / s.patternLength);
+    float phase = style->dashOffset - s.patternLength * floorF32(style->dashOffset / s.patternLength);
     // A dash that ends at the offset is behind it, and one of no length at the offset is ahead of it.
     uint32_t k = 0;
     while (phase > pattern.data[k] || (phase == pattern.data[k] && pattern.data[k] > 0)) {
@@ -599,15 +589,13 @@ void dashContour(Stroker& s, bool closed, float total) {
             strokeOpen(s, s.piece.data, s.piece.count, direction, style->dashCap, style->dashCap);
             s.piece.clear();
         } else {
-            strokeOpen(s, s.piece.data, s.piece.count, direction,
-                       atStart && !closed ? style->startCap : style->dashCap,
-                       closed ? style->dashCap : style->endCap);
+            strokeOpen(s, s.piece.data, s.piece.count, direction, atStart && !closed ? style->startCap : style->dashCap,
+                closed ? style->dashCap : style->endCap);
             s.piece.clear();
         }
     }
     if (s.first.count != 0) {
-        PrVec2 d = s.first.count > 1 ? segmentDirection(s.first.data[0], s.first.data[1])
-                                      : direction;
+        PrVec2 d = s.first.count > 1 ? segmentDirection(s.first.data[0], s.first.data[1]) : direction;
         strokeOpen(s, s.first.data, s.first.count, d, style->dashCap, style->dashCap);
         s.first.clear();
     }
@@ -615,8 +603,7 @@ void dashContour(Stroker& s, bool closed, float total) {
 
 void strokeContour(Stroker& s, bool closed) {
     Array<Vertex>& v = s.contour;
-    if (closed && v.count > 1
-        && length(v.last().point - v.data[0].point) < kCoincident) {
+    if (closed && v.count > 1 && length(v.last().point - v.data[0].point) < kCoincident) {
         v.data[0].curveIn = v.last().curveIn;
         v.data[0].corner = true;
         v.pop();
@@ -629,8 +616,7 @@ void strokeContour(Stroker& s, bool closed) {
     } else if (closed) {
         strokeClosed(s, v.data, v.count);
     } else {
-        PrVec2 direction = v.count > 1 ? segmentDirection(v.data[0], v.data[1])
-                                       : unit(s.style->zeroLengthDirection);
+        PrVec2 direction = v.count > 1 ? segmentDirection(v.data[0], v.data[1]) : unit(s.style->zeroLengthDirection);
         strokeOpen(s, v.data, v.count, direction, s.style->startCap, s.style->endCap);
     }
 }
@@ -707,8 +693,7 @@ void prPathStrokeOutline(const PrPath* path, const PrPathStroke* stroke, float t
                 uint32_t count = pathQuadLineCount(current, p1, p2, tolerance);
                 uint32_t turned = turnCount(s, angleBetween(p1 - current, p2 - p1));
                 pathFlattenQuadLines(current, p1, p2, count > turned ? count : turned, s.curve);
-                addCurve(s, curvature(p1 - current, second),
-                         curvature(p2 - p1, second));
+                addCurve(s, curvature(p1 - current, second), curvature(p2 - p1, second));
                 current = p2;
                 next += 2;
                 segmented = true;
@@ -722,17 +707,15 @@ void prPathStrokeOutline(const PrPath* path, const PrPathStroke* stroke, float t
                 PrVec2 leg1 = p2 - p1;
                 PrVec2 leg2 = p3 - p2;
                 uint32_t count = pathCubicLineCount(current, p1, p2, p3, tolerance);
-                uint32_t turned =
-                    turnCount(s, angleBetween(leg0, leg1) + angleBetween(leg1, leg2)
-                                     + (length(leg1) < kCoincident ? angleBetween(leg0, leg2) : 0));
+                uint32_t turned = turnCount(s, angleBetween(leg0, leg1) + angleBetween(leg1, leg2) +
+                    (length(leg1) < kCoincident ? angleBetween(leg0, leg2) : 0));
                 pathFlattenCubicLines(current, p1, p2, p3, count > turned ? count : turned, s.curve);
                 // The first and second derivatives at each end, in thirds and sixths.
                 PrVec2 startSecond = current - p1 * 2 + p2;
                 PrVec2 endSecond = p1 - p2 * 2 + p3;
                 PrVec2 startTangent = length(leg0) > kCoincident ? leg0 : p2 - current;
                 PrVec2 endTangent = length(leg2) > kCoincident ? leg2 : p3 - p1;
-                addCurve(s, curvature(startTangent * 3, startSecond * 6),
-                         curvature(endTangent * 3, endSecond * 6));
+                addCurve(s, curvature(startTangent * 3, startSecond * 6), curvature(endTangent * 3, endSecond * 6));
                 current = p3;
                 next += 3;
                 segmented = true;
@@ -769,8 +752,10 @@ PrPathStrokeWidth prPathStrokeWidthAt(const PrPathStroke* stroke, float fraction
         if (fraction <= b.position) {
             float span = b.position - a.position;
             float t = span > 0 ? (fraction - a.position) / span : 1;
-            return PrPathStrokeWidth{(a.left + (b.left - a.left) * t) * width,
-                                     (a.right + (b.right - a.right) * t) * width};
+            return PrPathStrokeWidth{
+                (a.left + (b.left - a.left) * t) * width,
+                (a.right + (b.right - a.right) * t) * width,
+            };
         }
     }
     return PrPathStrokeWidth{profile[count - 1].left * width, profile[count - 1].right * width};
@@ -784,8 +769,8 @@ float prPathStrokeReach(const PrPathStroke* stroke) {
     float factor = 1;
     if (stroke->join == PrPathJoin_Miter || stroke->join == PrPathJoin_MiterClip || stroke->join == PrPathJoin_Arcs)
         factor = maxF32(stroke->miterLimit, 1);
-    if (stroke->startCap == PrPathCap_Square || stroke->endCap == PrPathCap_Square
-        || stroke->dashCap == PrPathCap_Square)
+    if (stroke->startCap == PrPathCap_Square || stroke->endCap == PrPathCap_Square ||
+            stroke->dashCap == PrPathCap_Square)
         factor = maxF32(factor, kSqrt2F32);
     return widestHalf(stroke) * factor;
 }

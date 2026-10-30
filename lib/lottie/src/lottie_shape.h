@@ -25,8 +25,7 @@ void lottieAddContour(const LottieGeometry& g, const LottieContour& c, PrAffine2
 
 // Appends the paths of `count` items from `first` to `path`, mapped through `transform`. Groups among the items add
 // their paths under their own transforms. Styles and modifiers are ignored.
-void lottieItemPaths(LottieRender& r, uint32_t first, uint32_t count, double frame, PrAffine2 transform,
-                     PrPath* path);
+void lottieItemPaths(LottieRender& r, uint32_t first, uint32_t count, double frame, PrAffine2 transform, PrPath* path);
 
 // Draws a shape layer's contents at `frame`, in its composition's time, in the layer's space.
 void lottieDrawShapes(LottieRender& r, const LottieLayer& layer, double frame);

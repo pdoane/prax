@@ -55,8 +55,7 @@ struct Stage {
         stage = f.element(root, box, nullptr, nullptr, &font);
     }
 
-    PrLayoutNode add(PrLayoutNode parent, const PrLayoutBoxStyle& box,
-                     const PrLayoutFontStyle* PR_NULLABLE withFont = nullptr) {
+    PrLayoutNode add(PrLayoutNode parent, const PrLayoutBoxStyle& box, const PrLayoutFontStyle* PR_NULLABLE withFont = nullptr) {
         return f.element(parent, box, nullptr, nullptr, withFont != nullptr ? withFont : &font);
     }
     PrLayoutNode add(const PrLayoutBoxStyle& box) {
@@ -67,7 +66,7 @@ struct Stage {
     }
     PrLayoutNode lineBreak(PrLayoutNode parent = kPrLayoutNodeNone) {
         return prLayoutNodeCreateLineBreak(f.tree, parent != kPrLayoutNodeNone ? parent : stage,
-                                           f.style(prLayoutBoxStyleDefault()));
+            f.style(prLayoutBoxStyleDefault()));
     }
 
     void layout() {
@@ -134,15 +133,15 @@ TEST_CASE("text-align places each line's content in its line box, by its start o
         CAPTURE(int(direction));
         bool rtl = direction == PrTextDirection_Rtl;
         for (PrLayoutTextAlign align : {PrLayoutTextAlign_Start, PrLayoutTextAlign_End, PrLayoutTextAlign_Left,
-                                        PrLayoutTextAlign_Right}) {
+            PrLayoutTextAlign_Right}) {
             CAPTURE(int(align));
             PrLayoutFontStyle font = aligned(align);
             font.direction = direction;
             Stage s(font);
             PrLayoutNode box = s.add(word());
             s.layout();
-            bool atRight = align == PrLayoutTextAlign_Right || (align == PrLayoutTextAlign_Start && rtl)
-                           || (align == PrLayoutTextAlign_End && !rtl);
+            bool atRight = align == PrLayoutTextAlign_Right || (align == PrLayoutTextAlign_Start && rtl) ||
+                (align == PrLayoutTextAlign_End && !rtl);
             CHECK(s.left(box) == doctest::Approx(atRight ? 170.0 : 0.0));
         }
     }
@@ -543,11 +542,10 @@ TEST_CASE("text-indent widens the first piece of each indented line in intrinsic
         double width;
     };
     for (Case c : {Case{prLayoutLengthPx(30), 0, false, false, 60}, Case{prLayoutLengthPx(-10), 0, false, false, 20},
-                   Case{prLayoutLengthPercent(50), 0, false, false, 30},
-                   Case{prLayoutLengthPx(30), 0, true, false, 60},
-                   Case{prLayoutLengthPx(30), PrLayoutTextIndentFlag_Hanging, false, false, 50},
-                   Case{prLayoutLengthPx(30), PrLayoutTextIndentFlag_EachLine, false, false, 60},
-                   Case{prLayoutLengthPx(30), 0, false, true, 30}}) {
+        Case{prLayoutLengthPercent(50), 0, false, false, 30}, Case{prLayoutLengthPx(30), 0, true, false, 60},
+                Case{prLayoutLengthPx(30), PrLayoutTextIndentFlag_Hanging, false, false, 50},
+                Case{prLayoutLengthPx(30), PrLayoutTextIndentFlag_EachLine, false, false, 60},
+                Case{prLayoutLengthPx(30), 0, false, true, 30}}) {
         CAPTURE(c.width);
         Stage s(aligned(PrLayoutTextAlign_Start));
         PrLayoutFontStyle font = indented(aligned(PrLayoutTextAlign_Start), c.indent, c.flags);

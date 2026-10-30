@@ -50,9 +50,12 @@ PrLayoutFlexStyle flexOf(const FlexStyle& style) {
         case FlexDirection_ColumnReverse: flex.direction = PrLayoutFlexDirection_ColumnReverse; break;
         default: flex.direction = PrLayoutFlexDirection_Row; break;
     }
-    flex.wrap = style.wrap == FlexWrap_Wrap          ? PrLayoutFlexWrap_Wrap
-                : style.wrap == FlexWrap_WrapReverse ? PrLayoutFlexWrap_WrapReverse
-                                                     : PrLayoutFlexWrap_NoWrap;
+    if (style.wrap == FlexWrap_Wrap)
+        flex.wrap = PrLayoutFlexWrap_Wrap;
+    else if (style.wrap == FlexWrap_WrapReverse)
+        flex.wrap = PrLayoutFlexWrap_WrapReverse;
+    else
+        flex.wrap = PrLayoutFlexWrap_NoWrap;
     flex.alignItems = alignmentOf(style.alignItems, PrLayoutAlignment_Normal);
     flex.alignSelf = alignmentOf(style.alignSelf, PrLayoutAlignment_Auto);
     flex.alignContent = alignmentOf(style.alignContent, PrLayoutAlignment_Normal);
@@ -69,9 +72,12 @@ PrLayoutFlexStyle flexOf(const FlexStyle& style) {
 PrLayoutBoxStyle boxOf(const FlexStyle& style) {
     PrLayoutBoxStyle box = prLayoutBoxStyleDefault();
     // A leaf with words is a block container that holds the lines of words.
-    box.display = style.display == FlexDisplay_None ? PrLayoutDisplay_None
-                  : style.words != 0                ? PrLayoutDisplay_FlowRoot
-                                                    : PrLayoutDisplay_Flex;
+    if (style.display == FlexDisplay_None)
+        box.display = PrLayoutDisplay_None;
+    else if (style.words != 0)
+        box.display = PrLayoutDisplay_FlowRoot;
+    else
+        box.display = PrLayoutDisplay_Flex;
     if (style.overflow == FlexOverflow_Scroll) {
         box.overflowX = PrLayoutOverflow_Scroll;
         box.overflowY = PrLayoutOverflow_Scroll;
@@ -83,12 +89,17 @@ PrLayoutBoxStyle boxOf(const FlexStyle& style) {
     box.maxWidth = maximumOf(style.maxWidth);
     box.maxHeight = maximumOf(style.maxHeight);
     box.aspectRatio = style.aspectRatio;
-    box.position = style.position == FlexPosition_Absolute   ? PrLayoutPosition_Absolute
-                   : style.position == FlexPosition_Relative ? PrLayoutPosition_Relative
-                                                             : PrLayoutPosition_Static;
+    if (style.position == FlexPosition_Absolute)
+        box.position = PrLayoutPosition_Absolute;
+    else if (style.position == FlexPosition_Relative)
+        box.position = PrLayoutPosition_Relative;
+    else
+        box.position = PrLayoutPosition_Static;
     for (int side = 0; side < PrRectSide_Count; ++side) {
-        box.margin[side] = (style.marginAuto & (1u << side)) != 0 ? prLayoutLengthAuto()
-                                                                   : prLayoutLengthPx(style.margin[side]);
+        if ((style.marginAuto & (1u << side)) != 0)
+            box.margin[side] = prLayoutLengthAuto();
+        else
+            box.margin[side] = prLayoutLengthPx(style.margin[side]);
         box.padding[side] = prLayoutLengthPx(style.padding[side]);
         box.border[side] = prLayoutUnitFromPx(style.border[side]);
         box.inset[side] = lengthOf(style.inset[side]);
@@ -149,27 +160,31 @@ public:
 
     Shape stopCounting() override {
         PrLayoutTreeStats stats = prLayoutTreeStats(tree_);
-        return Shape{.laidOut = stats.blocksLaidOut,
-                     .reused = stats.blocksReused,
-                     .measured = stats.intrinsicsComputed,
-                     .measures = stats.measuresComputed,
-                     .measureHits = stats.measuresReused,
-                     .measuresReplaced = stats.measuresReplaced,
-                     .handoffs = stats.handoffsTaken,
-                     .solved = stats.flexSolved,
-                     .flexLaidOut = stats.flexLaidOut,
-                     .flexed = stats.flexItemsFlexed,
-                     .lines = stats.linesLaidOut,
-                     .linesReused = stats.linesReused,
-                     .fragments = stats.boxFragmentsMade,
-                     .published = stats.childrenPublished};
+        return Shape{
+            .laidOut = stats.blocksLaidOut,
+            .reused = stats.blocksReused,
+            .measured = stats.intrinsicsComputed,
+            .measures = stats.measuresComputed,
+            .measureHits = stats.measuresReused,
+            .measuresReplaced = stats.measuresReplaced,
+            .handoffs = stats.handoffsTaken,
+            .solved = stats.flexSolved,
+            .flexLaidOut = stats.flexLaidOut,
+            .flexed = stats.flexItemsFlexed,
+            .lines = stats.linesLaidOut,
+            .linesReused = stats.linesReused,
+            .fragments = stats.boxFragmentsMade,
+            .published = stats.childrenPublished,
+        };
     }
 
     Box box(uint32_t index) override {
         PrLayoutRect rect = prLayoutNodeBounds(tree_, nodes_[index], PrLayoutCoordinates_Layout);
-        return Box{prLayoutUnitToPx(rect.left), prLayoutUnitToPx(rect.top),
-                   prLayoutUnitToPx(rect.right) - prLayoutUnitToPx(rect.left),
-                   prLayoutUnitToPx(rect.bottom) - prLayoutUnitToPx(rect.top)};
+        return Box{
+            prLayoutUnitToPx(rect.left), prLayoutUnitToPx(rect.top),
+            prLayoutUnitToPx(rect.right) - prLayoutUnitToPx(rect.left),
+            prLayoutUnitToPx(rect.bottom) - prLayoutUnitToPx(rect.top),
+        };
     }
 
 private:

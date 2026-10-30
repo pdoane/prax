@@ -35,10 +35,8 @@ inline uint64_t hashBytes(const void* PR_NULLABLE bytes, size_t size, uint64_t s
     if (size <= 16) {
         if (size >= 4) {
             size_t middle = (size >> 3) << 2;
-            a = (uint64_t(loadUnaligned<uint32_t>(data)) << 32)
-                | loadUnaligned<uint32_t>(data + middle);
-            b = (uint64_t(loadUnaligned<uint32_t>(data + size - 4)) << 32)
-                | loadUnaligned<uint32_t>(data + size - 4 - middle);
+            a = (uint64_t(loadUnaligned<uint32_t>(data)) << 32) | loadUnaligned<uint32_t>(data + middle);
+            b = (uint64_t(loadUnaligned<uint32_t>(data + size - 4)) << 32) | loadUnaligned<uint32_t>(data + size - 4 - middle);
         } else if (size > 0) {
             a = (uint64_t(data[0]) << 16) | (uint64_t(data[size >> 1]) << 8) | data[size - 1];
         }
@@ -50,20 +48,16 @@ inline uint64_t hashBytes(const void* PR_NULLABLE bytes, size_t size, uint64_t s
             uint64_t second = seed;
             uint64_t third = seed;
             do {
-                seed = hashFold(loadUnaligned<uint64_t>(at) ^ kP1,
-                                loadUnaligned<uint64_t>(at + 8) ^ seed);
-                second = hashFold(loadUnaligned<uint64_t>(at + 16) ^ kP2,
-                                  loadUnaligned<uint64_t>(at + 24) ^ second);
-                third = hashFold(loadUnaligned<uint64_t>(at + 32) ^ kP3,
-                                 loadUnaligned<uint64_t>(at + 40) ^ third);
+                seed = hashFold(loadUnaligned<uint64_t>(at) ^ kP1, loadUnaligned<uint64_t>(at + 8) ^ seed);
+                second = hashFold(loadUnaligned<uint64_t>(at + 16) ^ kP2, loadUnaligned<uint64_t>(at + 24) ^ second);
+                third = hashFold(loadUnaligned<uint64_t>(at + 32) ^ kP3, loadUnaligned<uint64_t>(at + 40) ^ third);
                 at += 48;
                 left -= 48;
             } while (left > 48);
             seed ^= second ^ third;
         }
         while (left > 16) {
-            seed =
-                hashFold(loadUnaligned<uint64_t>(at) ^ kP1, loadUnaligned<uint64_t>(at + 8) ^ seed);
+            seed = hashFold(loadUnaligned<uint64_t>(at) ^ kP1, loadUnaligned<uint64_t>(at + 8) ^ seed);
             at += 16;
             left -= 16;
         }

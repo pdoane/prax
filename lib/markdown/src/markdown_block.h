@@ -121,13 +121,12 @@ void markdownBlockParserReset(MarkdownBlockParser* parser);
 // at a line ending. If `ended` is false, the source may continue, and a last line without a line ending is parsed as it
 // is, but no block that it closes is final. Every block is closed once the parse ends, as if the source ended there.
 void markdownParseBlocks(MarkdownBlockParser* parser, const PrMarkdownOptions& options, PrStringView source,
-                         uint32_t start, bool ended);
+    uint32_t start, bool ended);
 
 // Builds the block `block` of the last parse, a child of the root, and its descendants into `tree` under its root, with
 // their inlines parsed by `inlines`, whose references `resolve` looks up.
 void markdownBuildBlock(MarkdownBlockParser* parser, const PrMarkdownOptions& options, MarkdownBlockIndex block,
-                        MarkdownTree* tree, MarkdownInlineParser* inlines, MarkdownResolveFn resolve,
-                        void* PR_NULLABLE context);
+    MarkdownTree* tree, MarkdownInlineParser* inlines, MarkdownResolveFn resolve, void* PR_NULLABLE context);
 
 } // namespace pr_impl
 

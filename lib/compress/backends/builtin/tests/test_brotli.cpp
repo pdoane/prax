@@ -242,9 +242,7 @@ constexpr uint8_t kNoiseQ11[] = {
 };
 
 // An empty input at quality 11.
-constexpr uint8_t kEmptyQ11[] = {
-    0x3b,
-};
+constexpr uint8_t kEmptyQ11[] = {0x3b};
 
 // The English text and HTML that the text streams encode. The encoder writes them with dictionary words.
 constexpr char kText[] =
@@ -297,7 +295,7 @@ Decoded decode(PrByteView input, size_t inputChunk, size_t outputChunk) {
         size_t consumed = 0;
         size_t written = 0;
         decoded.result = brotliRead(decoder, {input.data + at, size}, at + size == input.size, &consumed,
-                                    output.data(), output.size(), &written);
+            output.data(), output.size(), &written);
         REQUIRE(consumed <= size);
         REQUIRE(written <= output.size());
         decoded.text.append(reinterpret_cast<const char*>(output.data()), written);
@@ -405,8 +403,10 @@ struct BrotliWriter {
 };
 
 // The copy lengths of the copy length codes and their extra bits (rfc 7932 5).
-constexpr uint32_t kCopyBase[24] = {2,  3,  4,  5,  6,  7,  8,   9,   10,  12,  14,  18,
-                                    22, 30, 38, 54, 70, 102, 134, 198, 326, 582, 1094, 2118};
+constexpr uint32_t kCopyBase[24] = {
+    2,  3,  4,  5,  6,  7,  8,   9,   10,  12,  14,  18,
+    22, 30, 38, 54, 70, 102, 134, 198, 326, 582, 1094, 2118,
+};
 constexpr uint32_t kCopyExtra[24] = {0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 7, 8, 9, 10, 24};
 
 // Returns a stream of one dictionary reference to the word with length `length` and index `index`, under `transform`.
@@ -450,9 +450,8 @@ std::vector<uint8_t> wordStream(uint32_t length, uint32_t index, uint32_t transf
 }
 
 std::string word(uint32_t length, uint32_t index) {
-    return std::string(reinterpret_cast<const char*>(kBrotliDictionary + kBrotliDictionaryOffsets[length]
-                                                     + index * length),
-                       length);
+    return std::string(reinterpret_cast<const char*>(kBrotliDictionary + kBrotliDictionaryOffsets[length] +
+        index * length), length);
 }
 
 // Returns the index of the first dictionary word of length `length` that starts with `lead`.

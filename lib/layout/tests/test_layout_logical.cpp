@@ -21,7 +21,7 @@ PrLayoutUnit px(int32_t value) {
 
 // Checks the physical sides of the logical ones, in LayoutSide order.
 void checkSides(LayoutMode mode, PrRectSide inlineStart, PrRectSide inlineEnd, PrRectSide blockStart,
-                PrRectSide blockEnd) {
+        PrRectSide blockEnd) {
     CHECK(layoutPhysicalSide(mode, LayoutSide_InlineStart) == inlineStart);
     CHECK(layoutPhysicalSide(mode, LayoutSide_InlineEnd) == inlineEnd);
     CHECK(layoutPhysicalSide(mode, LayoutSide_BlockStart) == blockStart);

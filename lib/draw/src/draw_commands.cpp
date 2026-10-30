@@ -111,8 +111,7 @@ void appendPaintState(PrString* out, const PrDrawCommand& command) {
         if (shape.profileCount != 0) {
             appendText(out, " profile");
             for (uint32_t i = 0; i < shape.profileCount; ++i) {
-                float point[3] = {shape.profile[i].position, shape.profile[i].left,
-                                  shape.profile[i].right};
+                float point[3] = {shape.profile[i].position, shape.profile[i].left, shape.profile[i].right};
                 appendNumbers(out, point, 3);
             }
         }
@@ -175,8 +174,10 @@ void dumpCommand(PrString* out, const PrDrawCommand& command) {
             appendPaintState(out, command);
             break;
         case PrDrawCommandKind_Sector: {
-            float values[4] = {command.sector.innerRadius, command.sector.outerRadius,
-                               command.sector.startAngle, command.sector.sweep};
+            float values[4] = {
+                command.sector.innerRadius, command.sector.outerRadius,
+                command.sector.startAngle, command.sector.sweep,
+            };
             appendText(out, "sector");
             appendPoints(out, &command.sector.center, 1);
             appendNumbers(out, values, 4);
@@ -217,8 +218,10 @@ void dumpCommand(PrString* out, const PrDrawCommand& command) {
             appendPaintState(out, command);
             break;
         case PrDrawCommandKind_Border: {
-            constexpr const char* kStyle[] = {" none",  " solid", " double", " dotted", " dashed",
-                                              " groove", " ridge", " inset",  " outset"};
+            constexpr const char* kStyle[] = {
+                " none",  " solid", " double", " dotted", " dashed",
+                " groove", " ridge", " inset",  " outset",
+            };
             appendText(out, "border");
             appendRect(out, command.border->shape.rect);
             appendCorners(out, command.border->shape.corners);
@@ -238,8 +241,7 @@ void dumpCommand(PrString* out, const PrDrawCommand& command) {
         }
         case PrDrawCommandKind_DropShadow:
         case PrDrawCommandKind_InnerShadow:
-            appendText(out, command.kind == PrDrawCommandKind_DropShadow ? "drop-shadow"
-                                                                         : "inner-shadow");
+            appendText(out, command.kind == PrDrawCommandKind_DropShadow ? "drop-shadow" : "inner-shadow");
             appendShadow(out, command.shadow);
             appendPaintState(out, command);
             break;
@@ -328,8 +330,8 @@ void dumpCommand(PrString* out, const PrDrawCommand& command) {
             break;
         case PrDrawCommandKind_PushClipRect:
         case PrDrawCommandKind_PushClipTargetRect:
-            appendText(out, command.kind == PrDrawCommandKind_PushClipRect ? "push-clip-rect"
-                                                                           : "push-clip-target-rect");
+            appendText(out, command.kind == PrDrawCommandKind_PushClipRect ? "push-clip-rect" :
+                "push-clip-target-rect");
             appendRect(out, command.rect);
             break;
         case PrDrawCommandKind_PushClipCornerRect:
@@ -383,11 +385,10 @@ void dumpCommand(PrString* out, const PrDrawCommand& command) {
         default:
             break;
     }
-    if (command.kind >= PrDrawCommandKind_PushClipRect
-        && command.kind <= PrDrawCommandKind_PushClipPath && !command.antialias)
+    if (command.kind >= PrDrawCommandKind_PushClipRect &&
+            command.kind <= PrDrawCommandKind_PushClipPath && !command.antialias)
         appendText(out, " aliased");
-    if (command.kind >= PrDrawCommandKind_PushClipRect && command.kind <= PrDrawCommandKind_PushClipPath
-        && command.snap != 0)
+    if (command.kind >= PrDrawCommandKind_PushClipRect && command.kind <= PrDrawCommandKind_PushClipPath && command.snap != 0)
         appendText(out, " snapped");
     appendText(out, "\n");
 }

@@ -32,7 +32,7 @@ constexpr PrLocale kKorean = prLocaleMake(PrLanguage_None, PrScript_Kore, PrRegi
 // for its writing system and drawn in its generic family.
 void installCjk(Fixture& f) {
     for (const char* file : {"NotoSansSC-VF.otf", "NotoSansTC-VF.otf", "NotoSansHK-VF.otf", "NotoSansJP-VF.otf",
-                             "NotoSansKR-VF.otf", "NotoSerifSC-VF.otf", "LastResort-Regular.ttf"})
+        "NotoSansKR-VF.otf", "NotoSerifSC-VF.otf", "LastResort-Regular.ttf"})
         install(f, file);
     const PrFontFallbackFamily families[] = {
         {"Noto Sans SC", kHans, PrFontGeneric_SansSerif},
@@ -41,14 +41,14 @@ void installCjk(Fixture& f) {
         {"Noto Sans JP", kJapanese, PrFontGeneric_SansSerif},
         {"Noto Sans KR", kKorean, PrFontGeneric_SansSerif},
         {"Noto Serif SC", kHans, PrFontGeneric_Serif},
-        {"Last Resort", 0, PrFontGeneric_None}};
+        {"Last Resort", 0, PrFontGeneric_None},
+    };
     prFontSetSetFallbackFamilies(f.fonts, families, 7);
 }
 
 // Lays out a block of 20px text in `locale`, holding `text`, in the family `family` (a generic family if it is a
 // generic's keyword), or in the default family if `family` is null.
-void layOut(Fixture& f, const char* text, const char* PR_NULLABLE locale = nullptr,
-            const char* PR_NULLABLE family = nullptr) {
+void layOut(Fixture& f, const char* text, const char* PR_NULLABLE locale = nullptr, const char* PR_NULLABLE family = nullptr) {
     PrLayoutFontStyle font = prLayoutFontStyleDefault();
     std::vector<PrFontFamily> families;
     if (family != nullptr) {
@@ -114,8 +114,8 @@ TEST_CASE("Han falls back to the family made for its writing system, the closest
         const char* family;
     };
     for (Case c : {Case{nullptr, "Noto Sans SC"}, Case{"zh-Hans", "Noto Sans SC"}, Case{"zh", "Noto Sans SC"},
-                   Case{"zh-TW", "Noto Sans TC"}, Case{"zh-HK", "Noto Sans HK"}, Case{"yue", "Noto Sans HK"},
-                   Case{"yue-Hans", "Noto Sans SC"}, Case{"ja", "Noto Sans JP"}, Case{"ko", "Noto Sans KR"}}) {
+        Case{"zh-TW", "Noto Sans TC"}, Case{"zh-HK", "Noto Sans HK"}, Case{"yue", "Noto Sans HK"},
+                Case{"yue-Hans", "Noto Sans SC"}, Case{"ja", "Noto Sans JP"}, Case{"ko", "Noto Sans KR"}}) {
         CAPTURE(c.locale != nullptr ? c.locale : "none");
         Fixture f;
         installCjk(f);
@@ -135,7 +135,7 @@ TEST_CASE("Han falls back to a family drawn in its style's generic family, after
     // Noto Serif SC is the only serif family. Serif Simplified Chinese uses it, and serif Traditional Chinese uses a
     // sans family made for Traditional Chinese over a serif family that is not.
     for (Case c : {Case{"zh-Hans", "serif", "Noto Serif SC"}, Case{"zh-Hans", "sans-serif", "Noto Sans SC"},
-                   Case{"zh-Hans", "monospace", "Noto Sans SC"}, Case{"zh-TW", "serif", "Noto Sans TC"}}) {
+        Case{"zh-Hans", "monospace", "Noto Sans SC"}, Case{"zh-TW", "serif", "Noto Sans TC"}}) {
         CAPTURE(c.locale);
         CAPTURE(c.generic);
         Fixture f;
@@ -162,8 +162,8 @@ TEST_CASE("a family is preferred for the locale the host makes it for, and only 
         install(f, "NotoNastaliqUrdu[wght].ttf");
         const PrFontFallbackFamily families[] = {
             {"Noto Sans Arabic", 0, PrFontGeneric_SansSerif},
-            {"Noto Nastaliq Urdu", prLocaleMake(PrLanguage_Ur, PrScript_Zzzz, PrRegion_None),
-             PrFontGeneric_None}};
+            {"Noto Nastaliq Urdu", prLocaleMake(PrLanguage_Ur, PrScript_Zzzz, PrRegion_None), PrFontGeneric_None},
+        };
         prFontSetSetFallbackFamilies(f.fonts, families, 2);
         layOut(f, "\xd8\xb3\xd9\x84\xd8\xa7\xd9\x85", c.locale);
         std::vector<const PrFont*> fonts = paintedFonts(f);
@@ -228,8 +228,10 @@ TEST_CASE("a cluster of emoji presentation falls back to a color font first, and
     Fixture f;
     install(f, "NotoSansSymbols2-Regular.ttf");
     install(f, "NotoColorEmoji.ttf");
-    const PrFontFallbackFamily families[] = {{"Noto Sans Symbols 2", 0, PrFontGeneric_None},
-                                             {"Noto Color Emoji", 0, PrFontGeneric_None}};
+    const PrFontFallbackFamily families[] = {
+        {"Noto Sans Symbols 2", 0, PrFontGeneric_None},
+        {"Noto Color Emoji", 0, PrFontGeneric_None},
+    };
     prFontSetSetFallbackFamilies(f.fonts, families, 2);
     // U+2601 CLOUD, of text presentation by default, which both families serve and Arimo does not: with VS16 and with
     // VS15.

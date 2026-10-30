@@ -91,9 +91,9 @@ struct CharsetWriter {
 };
 
 bool removesBom(const PrCharsetDecoder* decoder) {
-    return (decoder->flags & PrCharsetDecoderFlag_KeepBom) == 0
-        && (decoder->charset == PrCharset_Utf8 || decoder->charset == PrCharset_Utf16Be
-            || decoder->charset == PrCharset_Utf16Le);
+    return (decoder->flags & PrCharsetDecoderFlag_KeepBom) == 0 &&
+        (decoder->charset == PrCharset_Utf8 || decoder->charset == PrCharset_Utf16Be ||
+            decoder->charset == PrCharset_Utf16Le);
 }
 
 // Writes `codePoint`. The first code point of the input is dropped if it is a byte order mark that the decoder removes
@@ -328,7 +328,7 @@ uint32_t gb18030RangesCodePoint(uint32_t pointer) {
         return 0xe7c7;
     // The last range from the second on that starts at or before `pointer`, or the first.
     uint32_t low = partitionPoint(1, uint32_t(countOf(kCharsetGb18030Ranges)),
-                                  [&](uint32_t i) { return kCharsetGb18030Ranges[i].pointer <= pointer; }) - 1;
+        [&](uint32_t i) { return kCharsetGb18030Ranges[i].pointer <= pointer; }) - 1;
     const CharsetGb18030Range& range = kCharsetGb18030Ranges[low];
     return range.codePoint + pointer - range.pointer;
 }
@@ -353,8 +353,8 @@ CharsetResult gb18030Handler(PrCharsetDecoder* d, CharsetQueue* queue, int32_t b
             first = second = third = 0;
             return CharsetResult_Error;
         }
-        uint32_t pointer = (uint32_t(first) - 0x81) * (10 * 126 * 10) + (uint32_t(second) - 0x30) * (10 * 126)
-                           + (uint32_t(third) - 0x81) * 10 + uint32_t(byte) - 0x30;
+        uint32_t pointer = (uint32_t(first) - 0x81) * (10 * 126 * 10) + (uint32_t(second) - 0x30) * (10 * 126) +
+            (uint32_t(third) - 0x81) * 10 + uint32_t(byte) - 0x30;
         first = second = third = 0;
         uint32_t codePoint = gb18030RangesCodePoint(pointer);
         if (codePoint == 0)
@@ -939,8 +939,7 @@ constexpr uint32_t kNoPointer = 0xffff;
 
 // Returns true if an encoder's table holds `codePoint`, and writes the pointer beside it.
 template <typename CodePoint, size_t N>
-bool findPointer(const CodePoint (&codePoints)[N], const uint16_t (&pointers)[N], uint32_t codePoint,
-                 uint32_t* pointer) {
+bool findPointer(const CodePoint (&codePoints)[N], const uint16_t (&pointers)[N], uint32_t codePoint, uint32_t* pointer) {
     uint32_t low = lowerBound(codePoints, uint32_t(N), codePoint);
     if (low == N || codePoints[low] != codePoint)
         return false;
@@ -961,7 +960,7 @@ uint32_t gb18030RangesPointer(uint32_t codePoint) {
         return 7457;
     // The last range from the second on that starts at or before `codePoint`, or the first.
     uint32_t low = partitionPoint(1, uint32_t(countOf(kCharsetGb18030Ranges)),
-                                  [&](uint32_t i) { return kCharsetGb18030Ranges[i].codePoint <= codePoint; }) - 1;
+        [&](uint32_t i) { return kCharsetGb18030Ranges[i].codePoint <= codePoint; }) - 1;
     const CharsetGb18030Range& range = kCharsetGb18030Ranges[low];
     return range.pointer + codePoint - range.codePoint;
 }
@@ -1101,8 +1100,7 @@ bool encodeOne(PrCharsetEncoder* e, uint32_t codePoint, CharsetBytes* b, uint32_
             for (;;) {
                 Iso2022JpEncoderState state = e->state;
                 bool ascii = codePoint < 0x80;
-                if (state != Iso2022JpEncoderState_Jis0208
-                    && (codePoint == 0x0e || codePoint == 0x0f || codePoint == 0x1b)) {
+                if (state != Iso2022JpEncoderState_Jis0208 && (codePoint == 0x0e || codePoint == 0x0f || codePoint == 0x1b)) {
                     *error = kPrUtf8Replacement;
                     return false;
                 }
@@ -1110,9 +1108,8 @@ bool encodeOne(PrCharsetEncoder* e, uint32_t codePoint, CharsetBytes* b, uint32_
                     b->put(codePoint);
                     return true;
                 }
-                if (state == Iso2022JpEncoderState_Roman
-                    && ((ascii && codePoint != 0x5c && codePoint != 0x7e) || codePoint == 0xa5
-                        || codePoint == 0x203e)) {
+                if (state == Iso2022JpEncoderState_Roman &&
+                        ((ascii && codePoint != 0x5c && codePoint != 0x7e) || codePoint == 0xa5 || codePoint == 0x203e)) {
                     b->put(codePoint == 0xa5 ? 0x5c : codePoint == 0x203e ? 0x7e : codePoint);
                     return true;
                 }
@@ -1133,8 +1130,7 @@ bool encodeOne(PrCharsetEncoder* e, uint32_t codePoint, CharsetBytes* b, uint32_
                 if (codePoint >= 0xff61 && codePoint <= 0xff9f)
                     codePoint = kCharsetIndexIso2022JpKatakana[codePoint - 0xff61];
                 *error = codePoint;
-                uint32_t pointer =
-                    pointerOf(kCharsetEncodeJis0208CodePoints, kCharsetEncodeJis0208Pointers, codePoint);
+                uint32_t pointer = pointerOf(kCharsetEncodeJis0208CodePoints, kCharsetEncodeJis0208Pointers, codePoint);
                 if (pointer == kNoPointer) {
                     if (state != Iso2022JpEncoderState_Jis0208)
                         return false;
@@ -1238,8 +1234,7 @@ size_t prCharsetDecodeMaxSize(const PrCharsetDecoder* decoder, size_t size) {
     return 3 * (size + 4);
 }
 
-bool prCharsetDecode(PrCharsetDecoder* decoder, PrStringView bytes, PrCharsetInput input, char* out,
-                     size_t* outSize) {
+bool prCharsetDecode(PrCharsetDecoder* decoder, PrStringView bytes, PrCharsetInput input, char* out, size_t* outSize) {
     CharsetWriter w = {decoder, out, 0};
     CharsetQueue queue = {};
     queue.bytes = reinterpret_cast<const uint8_t*>(bytes.data);
@@ -1294,7 +1289,7 @@ size_t prCharsetEncodeMaxSize(const PrCharsetEncoder* encoder, size_t size) {
 }
 
 size_t prCharsetEncode(PrCharsetEncoder* encoder, PrStringView text, PrCharsetInput input, char* out, size_t* outSize,
-                       uint32_t* outUnencoded) {
+        uint32_t* outUnencoded) {
     *outUnencoded = kPrCharsetUnencodedNone;
     if (encoder->charset == PrCharset_Utf8) {
         memCopy(out, text.data, text.size);

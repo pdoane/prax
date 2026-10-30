@@ -11,6 +11,5 @@ struct PrMathMlElement : PrDomElement {};
 
 PrMathMlElement* PR_NULLABLE prMathMlElementQuery(PrDomEventTarget* PR_NULLABLE object) {
     PrDomElement* element = domElementFromNode(domNodeFromTarget(object));
-    return element != nullptr && element->space == PrDomNamespace_MathMl ? static_cast<PrMathMlElement*>(element)
-                                                                       : nullptr;
+    return element != nullptr && element->space == PrDomNamespace_MathMl ? static_cast<PrMathMlElement*>(element) : nullptr;
 }

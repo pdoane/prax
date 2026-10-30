@@ -199,9 +199,9 @@ JSValue mediaToString(JSContext* ctx, JSValueConst self, int, JSValueConst*) {
 
 // cssom-1/#dom-stylesheet-type: every sheet here is a CSS style sheet.
 JSValue styleSheetType(JSContext* ctx, JSValueConst self) {
-    return jsThis<PrCssStyleSheet>(ctx, self, styleSheetClass) != nullptr
-               ? jsFixedString(ctx, "text/css")
-               : JS_EXCEPTION;
+    if (jsThis<PrCssStyleSheet>(ctx, self, styleSheetClass) == nullptr)
+        return JS_EXCEPTION;
+    return jsFixedString(ctx, "text/css");
 }
 
 JSValue setDisabled(JSContext* ctx, JSValueConst self, JSValueConst input) {
@@ -223,8 +223,8 @@ JSValue sheetConstruct(JSContext* ctx, JSValueConst newTarget, int argc, JSValue
         return JS_EXCEPTION;
     if (present) {
         JSValue value = JS_GetPropertyStr(ctx, options, "media");
-        bool read = !JS_IsException(value) && jsDictString(ctx, options, "baseURL", &baseUrl)
-                    && jsDictBool(ctx, options, "disabled", &init.disabled);
+        bool read = !JS_IsException(value) && jsDictString(ctx, options, "baseURL", &baseUrl) &&
+            jsDictBool(ctx, options, "disabled", &init.disabled);
         // (MediaList or DOMString) media: a list if the value is one (webidl/#js-union).
         if (read && !JS_IsUndefined(value)) {
             init.media.mediaList = jsHandleAs<PrCssMediaList>(ctx, value, cssMediaListClass);
@@ -249,8 +249,8 @@ JSValue sheetInsertRule(JSContext* ctx, JSValueConst self, int argc, JSValueCons
     PrCssStyleSheet* sheet = jsThis<PrCssStyleSheet>(ctx, self, prJsCssStyleSheetClass);
     StringArgument rule = {ctx};
     uint32_t index = 0;
-    if (sheet == nullptr || !jsArgCount(ctx, argc, 1) || !rule.read(argv[0])
-        || (jsArgGiven(argc, argv, 1) && JS_ToUint32(ctx, &index, argv[1]) < 0))
+    if (sheet == nullptr || !jsArgCount(ctx, argc, 1) || !rule.read(argv[0]) ||
+            (jsArgGiven(argc, argv, 1) && JS_ToUint32(ctx, &index, argv[1]) < 0))
         return JS_EXCEPTION;
     uint32_t inserted = 0;
     PrStatus status = prCssStyleSheetInsertRule(sheet, rule.value(), index, &inserted);
@@ -258,12 +258,11 @@ JSValue sheetInsertRule(JSContext* ctx, JSValueConst self, int argc, JSValueCons
 }
 
 // Implements deleteRule and removeRule, selected by the magic. removeRule's index is optional.
-JSValue sheetDeleteRule(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv,
-                        int magic) {
+JSValue sheetDeleteRule(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv, int magic) {
     PrCssStyleSheet* sheet = jsThis<PrCssStyleSheet>(ctx, self, prJsCssStyleSheetClass);
     uint32_t index = 0;
-    if (sheet == nullptr || (magic == 0 && !jsArgCount(ctx, argc, 1))
-        || (jsArgGiven(argc, argv, 0) && JS_ToUint32(ctx, &index, argv[0]) < 0))
+    if (sheet == nullptr || (magic == 0 && !jsArgCount(ctx, argc, 1)) ||
+            (jsArgGiven(argc, argv, 0) && JS_ToUint32(ctx, &index, argv[0]) < 0))
         return JS_EXCEPTION;
     return statusToJs(ctx, prCssStyleSheetDeleteRule(sheet, index));
 }
@@ -285,14 +284,13 @@ JSValue addRule(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv)
     StringArgument selector = {ctx, "undefined"};
     StringArgument style = {ctx, "undefined"};
     uint32_t indexValue = 0;
-    if (sheet == nullptr || (jsArgGiven(argc, argv, 0) && !selector.read(argv[0]))
-        || (jsArgGiven(argc, argv, 1) && !style.read(argv[1]))
-        || (jsArgGiven(argc, argv, 2) && JS_ToUint32(ctx, &indexValue, argv[2]) < 0))
+    if (sheet == nullptr || (jsArgGiven(argc, argv, 0) && !selector.read(argv[0])) ||
+            (jsArgGiven(argc, argv, 1) && !style.read(argv[1])) ||
+            (jsArgGiven(argc, argv, 2) && JS_ToUint32(ctx, &indexValue, argv[2]) < 0))
         return JS_EXCEPTION;
     int32_t result = 0;
     const uint32_t* index = jsArgGiven(argc, argv, 2) ? &indexValue : nullptr;
-    PrStatus status =
-        prCssStyleSheetAddRule(sheet, selector.value(), style.value(), index, &result);
+    PrStatus status = prCssStyleSheetAddRule(sheet, selector.value(), style.value(), index, &result);
     return status == PrStatus_Ok ? JS_NewInt32(ctx, result) : cssThrow(ctx, status);
 }
 
@@ -312,8 +310,7 @@ uint32_t sheetListLength(void* handle) {
 }
 
 JSValue sheetListItem(JSContext* ctx, JSValueConst self, void* handle, uint32_t index) {
-    PrCssStyleSheet* sheet =
-        prCssStyleSheetListStyleSheetAt(static_cast<PrCssStyleSheetList*>(handle), index);
+    PrCssStyleSheet* sheet = prCssStyleSheetListStyleSheetAt(static_cast<PrCssStyleSheetList*>(handle), index);
     return jsWrap(ctx, prJsCssStyleSheetClass, self, sheet, false);
 }
 
@@ -343,8 +340,8 @@ JSValue groupingInsertRule(JSContext* ctx, JSValueConst self, int argc, JSValueC
     PrCssGroupingRule* rule = jsThis<PrCssGroupingRule>(ctx, self, cssGroupingRuleClass);
     StringArgument text = {ctx};
     uint32_t index = 0;
-    if (rule == nullptr || !jsArgCount(ctx, argc, 1) || !text.read(argv[0])
-        || (jsArgGiven(argc, argv, 1) && JS_ToUint32(ctx, &index, argv[1]) < 0))
+    if (rule == nullptr || !jsArgCount(ctx, argc, 1) || !text.read(argv[0]) ||
+            (jsArgGiven(argc, argv, 1) && JS_ToUint32(ctx, &index, argv[1]) < 0))
         return JS_EXCEPTION;
     uint32_t inserted = 0;
     PrStatus status = prCssGroupingRuleInsertRule(rule, text.value(), index, &inserted);
@@ -367,8 +364,7 @@ JSValue styleMap(JSContext* ctx, JSValueConst self) {
     PrCssStyleRule* rule = jsThis<PrCssStyleRule>(ctx, self, cssStyleRuleClass);
     if (rule == nullptr)
         return JS_EXCEPTION;
-    PrCssStyleDeclaration* declarations =
-        prCssStylePropertiesAsCssStyleDeclaration(prCssStyleRuleStyle(rule));
+    PrCssStyleDeclaration* declarations = prCssStylePropertiesAsCssStyleDeclaration(prCssStyleRuleStyle(rule));
     return jsSameObject(ctx, self, "styleMap", [&] {
         return jsWrap(ctx, prJsCssStylePropertyMapClass, self, declarations, false);
     });
@@ -397,8 +393,7 @@ JSValue containerConditions(JSContext* ctx, JSValueConst self) {
 
 JSValue marginRuleName(JSContext* ctx, JSValueConst self) {
     PrCssMarginRule* rule = jsThis<PrCssMarginRule>(ctx, self, cssMarginRuleClass);
-    return rule != nullptr ? jsFixedString(ctx, prCssMarginName(prCssMarginRuleMargin(rule)))
-                           : JS_EXCEPTION;
+    return rule != nullptr ? jsFixedString(ctx, prCssMarginName(prCssMarginRuleMargin(rule))) : JS_EXCEPTION;
 }
 
 JSValue setKeyText(JSContext* ctx, JSValueConst self, JSValueConst input) {
@@ -414,8 +409,7 @@ uint32_t keyframesLength(void* handle) {
 }
 
 JSValue keyframesItem(JSContext* ctx, JSValueConst self, void* handle, uint32_t index) {
-    PrCssKeyframeRule* rule =
-        prCssKeyframesRuleKeyframeRuleAt(static_cast<PrCssKeyframesRule*>(handle), index);
+    PrCssKeyframeRule* rule = prCssKeyframesRuleKeyframeRuleAt(static_cast<PrCssKeyframesRule*>(handle), index);
     return jsWrap(ctx, cssKeyframeRuleClass, self, rule, false);
 }
 
@@ -423,9 +417,9 @@ constexpr JsIndexed kKeyframesIndexed = {keyframesLength, keyframesItem, nullptr
 
 JSValue keyframesRules(JSContext* ctx, JSValueConst self) {
     PrCssKeyframesRule* rule = jsThis<PrCssKeyframesRule>(ctx, self, cssKeyframesRuleClass);
-    return rule != nullptr
-               ? jsWrap(ctx, cssRuleListClass, self, prCssKeyframesRuleCssRules(rule), false)
-               : JS_EXCEPTION;
+    if (rule == nullptr)
+        return JS_EXCEPTION;
+    return jsWrap(ctx, cssRuleListClass, self, prCssKeyframesRuleCssRules(rule), false);
 }
 
 enum {
@@ -436,8 +430,7 @@ enum {
 typedef uint8_t KeyframesMethod;
 
 // Implements appendRule, deleteRule and findRule, selected by the magic.
-JSValue keyframesMethod(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv,
-                        int magic) {
+JSValue keyframesMethod(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv, int magic) {
     PrCssKeyframesRule* rule = jsThis<PrCssKeyframesRule>(ctx, self, cssKeyframesRuleClass);
     StringArgument text = {ctx};
     if (rule == nullptr || !jsArgCount(ctx, argc, 1) || !text.read(argv[0]))
@@ -450,8 +443,7 @@ JSValue keyframesMethod(JSContext* ctx, JSValueConst self, int argc, JSValueCons
             prCssKeyframesRuleDeleteRule(rule, text.value());
             return JS_UNDEFINED;
         case KeyframesMethod_FindRule:
-            return jsWrap(ctx, cssKeyframeRuleClass, self,
-                          prCssKeyframesRuleFindRule(rule, text.value()), false);
+            return jsWrap(ctx, cssKeyframeRuleClass, self, prCssKeyframesRuleFindRule(rule, text.value()), false);
     }
     return JS_UNDEFINED;
 }
@@ -465,8 +457,7 @@ JSValue parametersToJs(JSContext* ctx, Array<PrCssFunctionParameter>* items) {
         JS_SetPropertyStr(ctx, parameter, "name", jsNewString(ctx, &item->name));
         JS_SetPropertyStr(ctx, parameter, "type", jsNewString(ctx, &item->type));
         if (!prStringIsNull(&item->defaultValue))
-            JS_SetPropertyStr(ctx, parameter, "defaultValue",
-                              jsNewString(ctx, &item->defaultValue));
+            JS_SetPropertyStr(ctx, parameter, "defaultValue", jsNewString(ctx, &item->defaultValue));
         JS_SetPropertyUint32(ctx, array, i, parameter);
         prCssFunctionParameterReset(item);
     }
@@ -492,8 +483,9 @@ JSValue customMediaQuery(JSContext* ctx, JSValueConst self) {
     if (rule == nullptr)
         return JS_EXCEPTION;
     PrCssMediaListOrBoolean query = prCssCustomMediaRuleQueryValue(rule);
-    return query.mediaList != nullptr ? jsWrap(ctx, cssMediaListClass, self, query.mediaList, false)
-                                      : JS_NewBool(ctx, query.boolean);
+    if (query.mediaList == nullptr)
+        return JS_NewBool(ctx, query.boolean);
+    return jsWrap(ctx, cssMediaListClass, self, query.mediaList, false);
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -519,8 +511,7 @@ JSValue mapEntries(JSContext* ctx, PrCssFontFeatureValuesMap* map) {
         JSValue values = valuesToJs(ctx, [&](uint32_t* PR_NULLABLE items, uint32_t capacity) {
             return prCssFontFeatureValuesMapValueAt(map, index, items, capacity);
         });
-        JS_SetPropertyUint32(
-            ctx, entries, index,
+        JS_SetPropertyUint32(ctx, entries, index,
             jsEntry(ctx, jsNewStringView(ctx, prCssFontFeatureValuesMapKeyAt(map, index)), values));
     }
     return entries;
@@ -528,17 +519,13 @@ JSValue mapEntries(JSContext* ctx, PrCssFontFeatureValuesMap* map) {
 
 // Implements entries, keys and values, selected by the magic, which is the JsMapPart.
 JSValue mapIterate(JSContext* ctx, JSValueConst self, int, JSValueConst*, int magic) {
-    PrCssFontFeatureValuesMap* map =
-        jsThis<PrCssFontFeatureValuesMap>(ctx, self, cssFontFeatureValuesMapClass);
-    return map != nullptr ? jsMapIterate(ctx, mapEntries(ctx, map), JsMapPart(magic))
-                          : JS_EXCEPTION;
+    PrCssFontFeatureValuesMap* map = jsThis<PrCssFontFeatureValuesMap>(ctx, self, cssFontFeatureValuesMapClass);
+    return map != nullptr ? jsMapIterate(ctx, mapEntries(ctx, map), JsMapPart(magic)) : JS_EXCEPTION;
 }
 
 JSValue mapForEach(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv) {
-    PrCssFontFeatureValuesMap* map =
-        jsThis<PrCssFontFeatureValuesMap>(ctx, self, cssFontFeatureValuesMapClass);
-    return map != nullptr ? jsMapForEach(ctx, self, mapEntries(ctx, map), argc, argv)
-                          : JS_EXCEPTION;
+    PrCssFontFeatureValuesMap* map = jsThis<PrCssFontFeatureValuesMap>(ctx, self, cssFontFeatureValuesMapClass);
+    return map != nullptr ? jsMapForEach(ctx, self, mapEntries(ctx, map), argc, argv) : JS_EXCEPTION;
 }
 
 enum {
@@ -550,8 +537,7 @@ typedef uint8_t MapMethod;
 
 // Implements get, has and delete, selected by the magic.
 JSValue mapKeyMethod(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv, int magic) {
-    PrCssFontFeatureValuesMap* map =
-        jsThis<PrCssFontFeatureValuesMap>(ctx, self, cssFontFeatureValuesMapClass);
+    PrCssFontFeatureValuesMap* map = jsThis<PrCssFontFeatureValuesMap>(ctx, self, cssFontFeatureValuesMapClass);
     StringArgument key = {ctx};
     if (map == nullptr || !jsArgCount(ctx, argc, 1) || !key.read(argv[0]))
         return JS_EXCEPTION;
@@ -572,8 +558,7 @@ JSValue mapKeyMethod(JSContext* ctx, JSValueConst self, int argc, JSValueConst* 
 
 // css-fonts-4/#dom-cssfontfeaturevaluesmap-set. Its values are (unsigned long or sequence<unsigned long>).
 JSValue mapSet(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv) {
-    PrCssFontFeatureValuesMap* map =
-        jsThis<PrCssFontFeatureValuesMap>(ctx, self, cssFontFeatureValuesMapClass);
+    PrCssFontFeatureValuesMap* map = jsThis<PrCssFontFeatureValuesMap>(ctx, self, cssFontFeatureValuesMapClass);
     StringArgument name = {ctx};
     Uint32Sequence values = {ctx};
     if (map == nullptr || !jsArgCount(ctx, argc, 2) || !name.read(argv[0]) || !values.read(argv[1]))
@@ -583,8 +568,7 @@ JSValue mapSet(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv) 
 }
 
 JSValue mapClear(JSContext* ctx, JSValueConst self, int, JSValueConst*) {
-    PrCssFontFeatureValuesMap* map =
-        jsThis<PrCssFontFeatureValuesMap>(ctx, self, cssFontFeatureValuesMapClass);
+    PrCssFontFeatureValuesMap* map = jsThis<PrCssFontFeatureValuesMap>(ctx, self, cssFontFeatureValuesMapClass);
     if (map == nullptr)
         return JS_EXCEPTION;
     prCssFontFeatureValuesMapClear(map);
@@ -601,11 +585,13 @@ uint32_t declarationLength(void* handle) {
 // Returns a declaration's name as script sees it. The name of a property or a descriptor is the runtime's single string
 // for that name, and an author-defined name is created.
 JSValue declarationNameToJs(JSContext* ctx, PrCssDeclarationName* name) {
-    JSValue value = name->property != PrCssProperty_Count
-                        ? jsFixedString(ctx, prCssPropertyName(name->property))
-                    : name->descriptor != PrCssDescriptor_None
-                        ? jsFixedString(ctx, prCssDescriptorName(name->descriptor))
-                        : jsNewString(ctx, &name->author);
+    JSValue value;
+    if (name->property != PrCssProperty_Count)
+        value = jsFixedString(ctx, prCssPropertyName(name->property));
+    else if (name->descriptor != PrCssDescriptor_None)
+        value = jsFixedString(ctx, prCssDescriptorName(name->descriptor));
+    else
+        value = jsNewString(ctx, &name->author);
     prCssDeclarationNameReset(name);
     return value;
 }
@@ -630,8 +616,10 @@ struct DeclarationName {
         StringArgument text = {ctx};
         if (!text.read(input))
             return false;
-        found = block != nullptr ? prCssStyleDeclarationNameFromText(block, text.value(), &name)
-                                 : prCssPropertyNameFromText(text.value(), &name);
+        if (block != nullptr)
+            found = prCssStyleDeclarationNameFromText(block, text.value(), &name);
+        else
+            found = prCssPropertyNameFromText(text.value(), &name);
         if (found)
             jsHoldString(ctx, name.author);
         return true;
@@ -641,8 +629,7 @@ struct DeclarationName {
 constexpr JsIndexed kDeclarationIndexed = {declarationLength, declarationItem, nullptr};
 
 JSValue setCssText(JSContext* ctx, JSValueConst self, JSValueConst input) {
-    PrCssStyleDeclaration* declarations =
-        jsThis<PrCssStyleDeclaration>(ctx, self, cssStyleDeclarationClass);
+    PrCssStyleDeclaration* declarations = jsThis<PrCssStyleDeclaration>(ctx, self, cssStyleDeclarationClass);
     StringArgument text = {ctx};
     if (declarations == nullptr || !text.read(input))
         return JS_EXCEPTION;
@@ -650,11 +637,9 @@ JSValue setCssText(JSContext* ctx, JSValueConst self, JSValueConst input) {
 }
 
 JSValue declarationItemMethod(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv) {
-    PrCssStyleDeclaration* declarations =
-        jsThis<PrCssStyleDeclaration>(ctx, self, cssStyleDeclarationClass);
+    PrCssStyleDeclaration* declarations = jsThis<PrCssStyleDeclaration>(ctx, self, cssStyleDeclarationClass);
     uint32_t index = 0;
-    if (declarations == nullptr || !jsArgCount(ctx, argc, 1)
-        || JS_ToUint32(ctx, &index, argv[0]) < 0)
+    if (declarations == nullptr || !jsArgCount(ctx, argc, 1) || JS_ToUint32(ctx, &index, argv[0]) < 0)
         return JS_EXCEPTION;
     return declarationItem(ctx, self, declarations, index);
 }
@@ -669,26 +654,20 @@ typedef uint8_t PropertyMethod;
 // Implements getPropertyValue, getPropertyPriority and removeProperty, selected by the magic. Each returns the empty
 // string for a name that the block accepts no declaration of.
 JSValue propertyMethod(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv, int magic) {
-    PrCssStyleDeclaration* declarations =
-        jsThis<PrCssStyleDeclaration>(ctx, self, cssStyleDeclarationClass);
+    PrCssStyleDeclaration* declarations = jsThis<PrCssStyleDeclaration>(ctx, self, cssStyleDeclarationClass);
     DeclarationName property = {};
-    if (declarations == nullptr || !jsArgCount(ctx, argc, 1)
-        || !property.read(ctx, argv[0], declarations))
+    if (declarations == nullptr || !jsArgCount(ctx, argc, 1) || !property.read(ctx, argv[0], declarations))
         return JS_EXCEPTION;
     if (!property.found)
         return jsFixedString(ctx, "");
     switch (PropertyMethod(magic)) {
         case PropertyMethod_GetValue:
-            return jsTakeString(ctx,
-                                prCssStyleDeclarationGetPropertyValue(declarations, &property.name));
+            return jsTakeString(ctx, prCssStyleDeclarationGetPropertyValue(declarations, &property.name));
         case PropertyMethod_GetPriority:
-            return jsFixedString(ctx, prCssStyleDeclarationIsImportant(declarations, &property.name)
-                                          ? "important"
-                                          : "");
+            return jsFixedString(ctx, prCssStyleDeclarationIsImportant(declarations, &property.name) ? "important" : "");
         case PropertyMethod_Remove: {
             PrString removed = {};
-            PrStatus status =
-                prCssStyleDeclarationRemoveProperty(declarations, &property.name, &removed);
+            PrStatus status = prCssStyleDeclarationRemoveProperty(declarations, &property.name, &removed);
             return status == PrStatus_Ok ? jsTakeString(ctx, removed) : cssThrow(ctx, status);
         }
     }
@@ -704,22 +683,20 @@ JSValue setStatusToJs(JSContext* ctx, PrStatus status) {
 // cssom-1/#dom-cssstyledeclaration-setproperty. The value is [LegacyNullToEmptyString], and the priority defaults to
 // the empty string.
 JSValue setProperty(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv) {
-    PrCssStyleDeclaration* declarations =
-        jsThis<PrCssStyleDeclaration>(ctx, self, cssStyleDeclarationClass);
+    PrCssStyleDeclaration* declarations = jsThis<PrCssStyleDeclaration>(ctx, self, cssStyleDeclarationClass);
     DeclarationName property = {};
     StringArgument value = {ctx};
     StringArgument priority = {ctx};
-    if (declarations == nullptr || !jsArgCount(ctx, argc, 2)
-        || !property.read(ctx, argv[0], declarations) || !value.readNullable(argv[1])
-        || (jsArgGiven(argc, argv, 2) && !priority.readNullable(argv[2])))
+    if (declarations == nullptr || !jsArgCount(ctx, argc, 2) ||
+            !property.read(ctx, argv[0], declarations) || !value.readNullable(argv[1]) ||
+            (jsArgGiven(argc, argv, 2) && !priority.readNullable(argv[2])))
         return JS_EXCEPTION;
     // A priority that is neither empty nor "important", a name that the block accepts no declaration of, or a value
     // that the declaration does not accept leaves the block unchanged.
     bool important = asciiEqualsFold(priority.value(), "important");
     if (!property.found || (!important && priority.value().size != 0))
         return JS_UNDEFINED;
-    return setStatusToJs(ctx, prCssStyleDeclarationSetProperty(declarations, &property.name,
-                                                               value.value(), important));
+    return setStatusToJs(ctx, prCssStyleDeclarationSetProperty(declarations, &property.name, value.value(), important));
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -840,13 +817,11 @@ constexpr NameList kNameLists[] = {
 PrStringView attributeText(int magic) {
     Names names = Names(magic >> kNamesShift);
     uint32_t index = uint32_t(magic & ((1 << kNamesShift) - 1));
-    return names == Names_Properties ? prCssPropertyName(PrCssProperty(index))
-                                     : kNameLists[names].names[index];
+    return names == Names_Properties ? prCssPropertyName(PrCssProperty(index)) : kNameLists[names].names[index];
 }
 
 // Writes the name that the attribute refers to in the block. Returns false if the block accepts no declaration of it.
-bool attributeName(const PrCssStyleDeclaration* declarations, int magic,
-                   PrCssDeclarationName* out) {
+bool attributeName(const PrCssStyleDeclaration* declarations, int magic, PrCssDeclarationName* out) {
     if (Names(magic >> kNamesShift) == Names_Properties) {
         *out = prCssDeclarationNameFromProperty(PrCssProperty(magic & ((1 << kNamesShift) - 1)));
         return true;
@@ -855,8 +830,7 @@ bool attributeName(const PrCssStyleDeclaration* declarations, int magic,
 }
 
 JSValue attributeGet(JSContext* ctx, JSValueConst self, int magic) {
-    PrCssStyleDeclaration* declarations =
-        jsThis<PrCssStyleDeclaration>(ctx, self, cssStyleDeclarationClass);
+    PrCssStyleDeclaration* declarations = jsThis<PrCssStyleDeclaration>(ctx, self, cssStyleDeclarationClass);
     if (declarations == nullptr)
         return JS_EXCEPTION;
     PrCssDeclarationName name = {};
@@ -869,8 +843,7 @@ JSValue attributeGet(JSContext* ctx, JSValueConst self, int magic) {
 
 // Implements the setter, which is setProperty() with no priority, and is [LegacyNullToEmptyString].
 JSValue attributeSet(JSContext* ctx, JSValueConst self, JSValueConst input, int magic) {
-    PrCssStyleDeclaration* declarations =
-        jsThis<PrCssStyleDeclaration>(ctx, self, cssStyleDeclarationClass);
+    PrCssStyleDeclaration* declarations = jsThis<PrCssStyleDeclaration>(ctx, self, cssStyleDeclarationClass);
     StringArgument value = {ctx};
     if (declarations == nullptr || !value.readNullable(input))
         return JS_EXCEPTION;
@@ -888,17 +861,14 @@ void defineAttribute(JSContext* ctx, JSValueConst proto, const char* name, size_
     get.getter_magic = JsCallScoped<attributeGet>::call;
     JSCFunctionType set;
     set.setter_magic = JsCallScoped<attributeSet>::call;
-    JS_DefinePropertyGetSet(
-        ctx, proto, atom,
-        JS_NewCFunction2(ctx, get.generic, "get", 0, JS_CFUNC_getter_magic, magic),
+    JS_DefinePropertyGetSet(ctx, proto, atom, JS_NewCFunction2(ctx, get.generic, "get", 0, JS_CFUNC_getter_magic, magic),
         JS_NewCFunction2(ctx, set.generic, "set", 1, JS_CFUNC_setter_magic, magic),
         JS_PROP_ENUMERABLE | JS_PROP_CONFIGURABLE);
     JS_FreeAtom(ctx, atom);
 }
 
 // cssom-1/#css-property-to-idl-attribute. If `lowercaseFirst` is set, it drops the leading dash.
-uint32_t idlAttributeName(PrStringView property, bool lowercaseFirst, char* out,
-                          uint32_t capacity) {
+uint32_t idlAttributeName(PrStringView property, bool lowercaseFirst, char* out, uint32_t capacity) {
     uint32_t size = 0;
     bool upper = false;
     for (size_t i = lowercaseFirst ? 1 : 0; i < property.size && size < capacity; ++i) {
@@ -916,8 +886,7 @@ uint32_t idlAttributeName(PrStringView property, bool lowercaseFirst, char* out,
 // dash, and the webkit-cased attribute of a -webkit- name (cssom-1/#dom-cssstyleproperties-dashed-attribute,
 // cssom-1/#dom-cssstyleproperties-webkit-cased-attribute).
 void defineAttributes(JSContext* ctx, JSValueConst proto, Names names) {
-    uint32_t count =
-        names == Names_Properties ? uint32_t(PrCssProperty_Count) : kNameLists[names].count;
+    uint32_t count = names == Names_Properties ? uint32_t(PrCssProperty_Count) : kNameLists[names].count;
     static_assert(PrCssProperty_Count < 1 << kNamesShift);
     for (uint32_t index = 0; index < count; ++index) {
         int magic = int(names) << kNamesShift | int(index);
@@ -925,11 +894,9 @@ void defineAttributes(JSContext* ctx, JSValueConst proto, Names names) {
         defineAttribute(ctx, proto, property.data, property.size, magic);
         char name[64];
         if (memFind(property.data, '-', property.size) != nullptr)
-            defineAttribute(ctx, proto, name,
-                            idlAttributeName(property, false, name, uint32_t(sizeof(name))), magic);
+            defineAttribute(ctx, proto, name, idlAttributeName(property, false, name, uint32_t(sizeof(name))), magic);
         if (stringStartsWith(property, "-webkit-"))
-            defineAttribute(ctx, proto, name,
-                            idlAttributeName(property, true, name, uint32_t(sizeof(name))), magic);
+            defineAttribute(ctx, proto, name, idlAttributeName(property, true, name, uint32_t(sizeof(name))), magic);
     }
 }
 
@@ -971,37 +938,31 @@ PrDomRange* rangeOf(JSContext* ctx, JSValueConst value) {
 // setlike<AbstractRange> (css-highlight-api-1/#highlight)
 constexpr JsCollection kHighlightRanges = {
     .map = false,
-    .key =
-        [](JSContext* ctx, JSValueConst argument) {
-            return rangeOf(ctx, argument) != nullptr
-                       ? JS_DupValue(ctx, argument)
-                       : JS_ThrowTypeError(ctx, "Expected an AbstractRange");
-        },
+    .key = [](JSContext* ctx, JSValueConst argument) {
+        return rangeOf(ctx, argument) != nullptr ? JS_DupValue(ctx, argument) : JS_ThrowTypeError(ctx, "Expected an AbstractRange");
+    },
     .value = nullptr,
-    .add =
-        [](JSContext* ctx, void* handle, JSValueConst key, JSValueConst) {
-            prCssHighlightAdd(highlightOf(handle), rangeOf(ctx, key));
-            return true;
-        },
-    .remove =
-        [](JSContext* ctx, void* handle, JSValueConst key) {
-            prCssHighlightDelete(highlightOf(handle), rangeOf(ctx, key));
-        },
+    .add = [](JSContext* ctx, void* handle, JSValueConst key, JSValueConst) {
+        prCssHighlightAdd(highlightOf(handle), rangeOf(ctx, key));
+        return true;
+    },
+    .remove = [](JSContext* ctx, void* handle, JSValueConst key) {
+        prCssHighlightDelete(highlightOf(handle), rangeOf(ctx, key));
+    },
     .clear = [](JSContext*, void* handle) { prCssHighlightClear(highlightOf(handle)); },
     .version = [](void* handle) { return prCssHighlightVersion(highlightOf(handle)); },
-    .entries =
-        [](JSContext* ctx, JSValueConst, void* handle) {
-            PrCssHighlight* highlight = highlightOf(handle);
-            JSValue global = JS_GetGlobalObject(ctx);
-            JSValue ranges = JS_NewArray(ctx);
-            for (uint32_t i = 0; i < prCssHighlightSize(highlight); ++i) {
-                PrDomRange* range = prCssHighlightAt(highlight, i);
-                prDomRangeRetain(range);
-                JS_SetPropertyUint32(ctx, ranges, i, prJsDomWrapRange(ctx, global, range));
-            }
-            JS_FreeValue(ctx, global);
-            return ranges;
-        },
+    .entries = [](JSContext* ctx, JSValueConst, void* handle) {
+        PrCssHighlight* highlight = highlightOf(handle);
+        JSValue global = JS_GetGlobalObject(ctx);
+        JSValue ranges = JS_NewArray(ctx);
+        for (uint32_t i = 0; i < prCssHighlightSize(highlight); ++i) {
+            PrDomRange* range = prCssHighlightAt(highlight, i);
+            prDomRangeRetain(range);
+            JS_SetPropertyUint32(ctx, ranges, i, prJsDomWrapRange(ctx, global, range));
+        }
+        JS_FreeValue(ctx, global);
+        return ranges;
+    },
 };
 
 // css-highlight-api-1/#dom-highlight-highlight
@@ -1021,8 +982,7 @@ JSValue highlightConstruct(JSContext* ctx, JSValueConst newTarget, int argc, JSV
 
 JSValue highlightPriority(JSContext* ctx, JSValueConst self) {
     PrCssHighlight* highlight = jsThis<PrCssHighlight>(ctx, self, cssHighlightClass);
-    return highlight != nullptr ? JS_NewInt32(ctx, prCssHighlightPriority(highlight))
-                                : JS_EXCEPTION;
+    return highlight != nullptr ? JS_NewInt32(ctx, prCssHighlightPriority(highlight)) : JS_EXCEPTION;
 }
 
 JSValue highlightSetPriority(JSContext* ctx, JSValueConst self, JSValueConst value) {
@@ -1039,8 +999,7 @@ constexpr PrStringView kHighlightTypes[] = {"highlight", "spelling-error", "gram
 
 JSValue highlightType(JSContext* ctx, JSValueConst self) {
     PrCssHighlight* highlight = jsThis<PrCssHighlight>(ctx, self, cssHighlightClass);
-    return highlight != nullptr ? jsFixedString(ctx, kHighlightTypes[prCssHighlightType(highlight)])
-                                : JS_EXCEPTION;
+    return highlight != nullptr ? jsFixedString(ctx, kHighlightTypes[prCssHighlightType(highlight)]) : JS_EXCEPTION;
 }
 
 // Sets the type. A value that is not a HighlightType leaves the type unchanged (webidl/#js-enumeration, as converted by
@@ -1068,15 +1027,16 @@ constexpr JsCollection kRegistryEntries = {
     .map = true,
     .key = [](JSContext* ctx, JSValueConst argument) { return JS_ToString(ctx, argument); },
     .value = [](JSContext* ctx, JSValueConst argument) {
-        return jsHandleAs<PrCssHighlight>(ctx, argument, cssHighlightClass) != nullptr
-            ? JS_DupValue(ctx, argument) : JS_ThrowTypeError(ctx, "Expected a Highlight");
+        if (jsHandleAs<PrCssHighlight>(ctx, argument, cssHighlightClass) != nullptr)
+            return JS_DupValue(ctx, argument);
+        return JS_ThrowTypeError(ctx, "Expected a Highlight");
     },
     .add = [](JSContext* ctx, void* handle, JSValueConst key, JSValueConst value) {
         StringArgument name = {ctx};
         if (!name.read(key))
             return false;
         prCssHighlightRegistrySet(registryOf(handle), name.value(),
-                                  jsHandleAs<PrCssHighlight>(ctx, value, cssHighlightClass));
+            jsHandleAs<PrCssHighlight>(ctx, value, cssHighlightClass));
         return true;
     },
     .remove = [](JSContext* ctx, void* handle, JSValueConst key) {
@@ -1091,8 +1051,7 @@ constexpr JsCollection kRegistryEntries = {
         JSValue entries = JS_NewArray(ctx);
         for (uint32_t i = 0; i < prCssHighlightRegistrySize(registry); ++i) {
             JSValue name = jsNewStringView(ctx, prCssHighlightRegistryNameAt(registry, i));
-            JS_SetPropertyUint32(
-                ctx, entries, i,
+            JS_SetPropertyUint32(ctx, entries, i,
                 jsEntry(ctx, name, highlightToJs(ctx, prCssHighlightRegistryAt(registry, i))));
         }
         return entries;
@@ -1109,8 +1068,7 @@ JSValue cssHighlights(JSContext* ctx, JSValueConst) {
     if (JS_IsException(owner))
         return owner;
     JSValue registry = jsSameObject(ctx, owner, "highlights", [&] {
-        return jsWrap(ctx, cssHighlightRegistryClass, owner, prCssDocumentHighlights(document),
-                      false);
+        return jsWrap(ctx, cssHighlightRegistryClass, owner, prCssDocumentHighlights(document), false);
     });
     JS_FreeValue(ctx, owner);
     return registry;
@@ -1159,11 +1117,10 @@ JSValue registerProperty(JSContext* ctx, JSValueConst, int argc, JSValueConst* a
     bool typed = false;
     // The members of PropertyDefinition in lexicographic order. inherits and name are required
     // (css-properties-values-api-1/#dictdef-propertydefinition).
-    if (!jsArgCount(ctx, argc, 1) || !jsDictionary(ctx, dictionary, &present)
-        || !jsDictBool(ctx, dictionary, "inherits", &definition.inherits, &inherits)
-        || !jsDictString(ctx, dictionary, "initialValue", &initialValue, &initial)
-        || !jsDictString(ctx, dictionary, "name", &name, &named)
-        || !jsDictString(ctx, dictionary, "syntax", &syntax, &typed))
+    if (!jsArgCount(ctx, argc, 1) || !jsDictionary(ctx, dictionary, &present) ||
+            !jsDictBool(ctx, dictionary, "inherits", &definition.inherits, &inherits) ||
+            !jsDictString(ctx, dictionary, "initialValue", &initialValue, &initial) ||
+            !jsDictString(ctx, dictionary, "name", &name, &named) || !jsDictString(ctx, dictionary, "syntax", &syntax, &typed))
         return JS_EXCEPTION;
     if (!inherits || !named)
         return JS_ThrowTypeError(ctx, "A PropertyDefinition needs a name and inherits");
@@ -1222,10 +1179,11 @@ void settleFontFace(JSContext* ctx, JSValueConst object) {
     JSValue settle = jsReference(ctx, object, loaded ? FontSlot_Resolve : FontSlot_Reject);
     if (JS_IsUndefined(settle))
         return;
-    JSValue value =
-        loaded ? JS_DupValue(ctx, object)
-               : jsDomExceptionNew(ctx, prCssFontFaceFailedToParse(face) ? "SyntaxError"
-                                                                         : "NetworkError");
+    JSValue value;
+    if (loaded)
+        value = JS_DupValue(ctx, object);
+    else
+        value = jsDomExceptionNew(ctx, prCssFontFaceFailedToParse(face) ? "SyntaxError" : "NetworkError");
     JS_FreeValue(ctx, JS_Call(ctx, settle, JS_UNDEFINED, 1, &value));
     JS_FreeValue(ctx, value);
     JS_FreeValue(ctx, settle);
@@ -1253,8 +1211,7 @@ void fontFaceWrapped(JSContext* ctx, JSValueConst object, void*) {
     jsSetReference(ctx, object, FontSlot_Resolve, functions[0]);
     jsSetReference(ctx, object, FontSlot_Reject, functions[1]);
     // The promise is marked as handled, because a face that fails to load is not a script's error.
-    JSValue ignore = JS_NewCFunction(
-        ctx, [](JSContext*, JSValueConst, int, JSValueConst*) { return JS_UNDEFINED; }, "", 1);
+    JSValue ignore = JS_NewCFunction(ctx, [](JSContext*, JSValueConst, int, JSValueConst*) { return JS_UNDEFINED; }, "", 1);
     JSAtom name = JS_NewAtom(ctx, "catch");
     JS_FreeValue(ctx, JS_Invoke(ctx, promise, name, 1, &ignore));
     JS_FreeAtom(ctx, name);
@@ -1343,16 +1300,12 @@ JSValue fontFaceConstruct(JSContext* ctx, JSValueConst newTarget, int argc, JSVa
         PrCssFontFaceDescriptor descriptor;
     } kMembers[] = {
         {"ascentOverride", PrCssFontFaceDescriptor_AscentOverride},
-        {"descentOverride", PrCssFontFaceDescriptor_DescentOverride},
-        {"display", PrCssFontFaceDescriptor_Display},
-        {"featureSettings", PrCssFontFaceDescriptor_FeatureSettings},
-        {"lineGapOverride", PrCssFontFaceDescriptor_LineGapOverride},
-        {"stretch", PrCssFontFaceDescriptor_Stretch},
-        {"style", PrCssFontFaceDescriptor_Style},
-        {"unicodeRange", PrCssFontFaceDescriptor_UnicodeRange},
-        {"variationSettings", PrCssFontFaceDescriptor_VariationSettings},
-        {"weight", PrCssFontFaceDescriptor_Weight},
-        {"width", PrCssFontFaceDescriptor_Stretch},
+            {"descentOverride", PrCssFontFaceDescriptor_DescentOverride}, {"display", PrCssFontFaceDescriptor_Display},
+            {"featureSettings", PrCssFontFaceDescriptor_FeatureSettings},
+            {"lineGapOverride", PrCssFontFaceDescriptor_LineGapOverride}, {"stretch", PrCssFontFaceDescriptor_Stretch},
+            {"style", PrCssFontFaceDescriptor_Style}, {"unicodeRange", PrCssFontFaceDescriptor_UnicodeRange},
+            {"variationSettings", PrCssFontFaceDescriptor_VariationSettings},
+            {"weight", PrCssFontFaceDescriptor_Weight}, {"width", PrCssFontFaceDescriptor_Stretch},
     };
     StringArgument family = {ctx};
     StringArgument source = {ctx};
@@ -1370,17 +1323,18 @@ JSValue fontFaceConstruct(JSContext* ctx, JSValueConst newTarget, int argc, JSVa
         return JS_EXCEPTION;
     for (uint32_t i = 0; present && i < countOf(kMembers); ++i) {
         JSValue member = JS_GetPropertyStr(ctx, dictionary, kMembers[i].name);
-        bool read = !JS_IsException(member)
-                    && (JS_IsUndefined(member)
-                        || jsReadString(ctx, member, &descriptors[kMembers[i].descriptor - 1]));
+        bool read = !JS_IsException(member) && (JS_IsUndefined(member) ||
+            jsReadString(ctx, member, &descriptors[kMembers[i].descriptor - 1]));
         JS_FreeValue(ctx, member);
         if (!read)
             return JS_EXCEPTION;
     }
-    PrCssFontFace* face = binary
-                              ? prCssFontFaceCreateFromData(prJsDomGlobalDocument(ctx), family.value(),
-                                                            PrByteView{data, size}, descriptors)
-                              : prCssFontFaceCreate(family.value(), source.value(), descriptors);
+    PrCssFontFace* face;
+    if (binary)
+        face = prCssFontFaceCreateFromData(prJsDomGlobalDocument(ctx), family.value(), PrByteView{data, size},
+            descriptors);
+    else
+        face = prCssFontFaceCreate(family.value(), source.value(), descriptors);
     JSValue object = jsWrap(ctx, cssFontFaceClass, JS_UNDEFINED, face, true);
     if (JS_IsException(object))
         prCssFontFaceRelease(face);
@@ -1389,9 +1343,9 @@ JSValue fontFaceConstruct(JSContext* ctx, JSValueConst newTarget, int argc, JSVa
 
 JSValue fontDescriptor(JSContext* ctx, JSValueConst self, int magic) {
     PrCssFontFace* face = jsThis<PrCssFontFace>(ctx, self, cssFontFaceClass);
-    return face != nullptr
-               ? jsTakeString(ctx, prCssFontFaceDescriptor(face, PrCssFontFaceDescriptor(magic)))
-               : JS_EXCEPTION;
+    if (face == nullptr)
+        return JS_EXCEPTION;
+    return jsTakeString(ctx, prCssFontFaceDescriptor(face, PrCssFontFaceDescriptor(magic)));
 }
 
 JSValue setFontDescriptor(JSContext* ctx, JSValueConst self, JSValueConst input, int magic) {
@@ -1399,16 +1353,14 @@ JSValue setFontDescriptor(JSContext* ctx, JSValueConst self, JSValueConst input,
     StringArgument value = {ctx};
     if (face == nullptr || !value.read(input))
         return JS_EXCEPTION;
-    PrStatus status =
-        prCssFontFaceSetDescriptor(face, PrCssFontFaceDescriptor(magic), value.value());
+    PrStatus status = prCssFontFaceSetDescriptor(face, PrCssFontFaceDescriptor(magic), value.value());
     return status == PrStatus_Ok ? JS_UNDEFINED : jsDomExceptionThrow(ctx, "SyntaxError");
 }
 
 JSValue fontStatus(JSContext* ctx, JSValueConst self) {
     constexpr PrStringView kStatuses[] = {"unloaded", "loading", "loaded", "error"};
     PrCssFontFace* face = jsThis<PrCssFontFace>(ctx, self, cssFontFaceClass);
-    return face != nullptr ? jsFixedString(ctx, kStatuses[prCssFontFaceStatus(face)])
-                           : JS_EXCEPTION;
+    return face != nullptr ? jsFixedString(ctx, kStatuses[prCssFontFaceStatus(face)]) : JS_EXCEPTION;
 }
 
 JSValue fontLoaded(JSContext* ctx, JSValueConst self) {
@@ -1451,14 +1403,12 @@ JSValue setEntries(JSContext* ctx, JSValueConst self, PrCssFontFaceSet* set) {
 // Implements entries, keys and values, selected by the magic, which is the JsMapPart.
 JSValue setIterate(JSContext* ctx, JSValueConst self, int, JSValueConst*, int magic) {
     PrCssFontFaceSet* set = jsThis<PrCssFontFaceSet>(ctx, self, prJsCssFontFaceSetClass);
-    return set != nullptr ? jsMapIterate(ctx, setEntries(ctx, self, set), JsMapPart(magic))
-                          : JS_EXCEPTION;
+    return set != nullptr ? jsMapIterate(ctx, setEntries(ctx, self, set), JsMapPart(magic)) : JS_EXCEPTION;
 }
 
 JSValue setForEach(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv) {
     PrCssFontFaceSet* set = jsThis<PrCssFontFaceSet>(ctx, self, prJsCssFontFaceSetClass);
-    return set != nullptr ? jsMapForEach(ctx, self, setEntries(ctx, self, set), argc, argv)
-                          : JS_EXCEPTION;
+    return set != nullptr ? jsMapForEach(ctx, self, setEntries(ctx, self, set), argc, argv) : JS_EXCEPTION;
 }
 
 // Implements add, delete and has, selected by the magic, each taking a FontFace.
@@ -1499,9 +1449,7 @@ JSValue setStatus(JSContext* ctx, JSValueConst self) {
     PrCssFontFaceSet* set = jsThis<PrCssFontFaceSet>(ctx, self, prJsCssFontFaceSetClass);
     if (set == nullptr)
         return JS_EXCEPTION;
-    return jsFixedString(ctx, prCssFontFaceSetStatus(set) == PrCssFontFaceSetLoadStatus_Loading
-                                  ? "loading"
-                                  : "loaded");
+    return jsFixedString(ctx, prCssFontFaceSetStatus(set) == PrCssFontFaceSetLoadStatus_Loading ? "loading" : "loaded");
 }
 
 // Implements ready (css-font-loading-3/#dom-fontfaceset-ready)
@@ -1548,9 +1496,10 @@ JSValue setLoad(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv)
     JSValue promises = JS_NewArray(ctx);
     for (uint32_t i = 0; i < count; ++i) {
         JSValue face = fontFaceToJs(ctx, faces.data[i]);
-        JS_SetPropertyUint32(ctx, promises, i,
-                             JS_IsException(face) ? JS_UNDEFINED
-                                                  : jsReference(ctx, face, FontSlot_Promise));
+        JSValue promise = JS_UNDEFINED;
+        if (!JS_IsException(face))
+            promise = jsReference(ctx, face, FontSlot_Promise);
+        JS_SetPropertyUint32(ctx, promises, i, promise);
         JS_FreeValue(ctx, face);
     }
     faces.reset();
@@ -1611,8 +1560,7 @@ JSValue fontEventConstruct(JSContext* ctx, JSValueConst newTarget, int argc, JSV
     if (read) {
         init.fontfaces = faces.data;
         init.count = faces.count;
-        PrDomEvent* event =
-            prCssFontFaceSetLoadEventAsEvent(prCssFontFaceSetLoadEventCreate(type.value(), &init));
+        PrDomEvent* event = prCssFontFaceSetLoadEventAsEvent(prCssFontFaceSetLoadEventCreate(type.value(), &init));
         object = jsWrap(ctx, cssFontFaceSetLoadEventClass, JS_UNDEFINED, event, true);
         if (JS_IsException(object))
             prDomEventRelease(event);
@@ -1660,10 +1608,12 @@ JSValue animationEventConstruct(JSContext* ctx, JSValueConst newTarget, int argc
     }
     if (!read)
         return JS_EXCEPTION;
-    PrDomEvent* event = magic == 0 ? prCssTransitionEventAsEvent(prCssTransitionEventCreate(type.value(), &init))
-                                   : prCssAnimationEventAsEvent(prCssAnimationEventCreate(type.value(), &init));
-    JSValue object =
-        jsWrap(ctx, magic == 0 ? cssTransitionEventClass : cssAnimationEventClass, JS_UNDEFINED, event, true);
+    PrDomEvent* event;
+    if (magic == 0)
+        event = prCssTransitionEventAsEvent(prCssTransitionEventCreate(type.value(), &init));
+    else
+        event = prCssAnimationEventAsEvent(prCssAnimationEventCreate(type.value(), &init));
+    JSValue object = jsWrap(ctx, magic == 0 ? cssTransitionEventClass : cssAnimationEventClass, JS_UNDEFINED, event, true);
     if (JS_IsException(object)) {
         prDomEventRelease(event);
         return object;
@@ -1685,22 +1635,23 @@ JSValue animationEventGet(JSContext* ctx, JSValueConst self, int magic) {
             return JS_EXCEPTION;
         if (magic == 1)
             return JS_NewFloat64(ctx, prCssTransitionEventElapsedTime(event));
-        return jsNewStringView(ctx, magic == 0 ? prCssTransitionEventPropertyName(event)
-                                               : prCssTransitionEventPseudoElement(event));
+        if (magic == 0)
+            return jsNewStringView(ctx, prCssTransitionEventPropertyName(event));
+        return jsNewStringView(ctx, prCssTransitionEventPseudoElement(event));
     }
     PrCssAnimationEvent* event = jsThis<PrCssAnimationEvent>(ctx, self, cssAnimationEventClass);
     if (event == nullptr)
         return JS_EXCEPTION;
     if (magic == 4)
         return JS_NewFloat64(ctx, prCssAnimationEventElapsedTime(event));
-    return jsNewStringView(ctx, magic == 3 ? prCssAnimationEventAnimationName(event)
-                                           : prCssAnimationEventPseudoElement(event));
+    if (magic == 3)
+        return jsNewStringView(ctx, prCssAnimationEventAnimationName(event));
+    return jsNewStringView(ctx, prCssAnimationEventPseudoElement(event));
 }
 
 // Implements fontfaces, a FrozenArray that the object holds, so that each read returns the same array.
 JSValue fontEventFaces(JSContext* ctx, JSValueConst self) {
-    PrCssFontFaceSetLoadEvent* event =
-        jsThis<PrCssFontFaceSetLoadEvent>(ctx, self, cssFontFaceSetLoadEventClass);
+    PrCssFontFaceSetLoadEvent* event = jsThis<PrCssFontFaceSetLoadEvent>(ctx, self, cssFontFaceSetLoadEventClass);
     if (event == nullptr)
         return JS_EXCEPTION;
     return jsSameObject(ctx, self, "fontfaces", [&] {
@@ -1736,7 +1687,7 @@ JSValue fontEventFaces(JSContext* ctx, JSValueConst self) {
 constexpr JSCFunctionListEntry kMediaListProto[] = {
     PR_JS_TAG("MediaList"),
     PR_JS_GET_SET("mediaText", (jsStringGetter<&cssMediaListClass, prCssMediaListMediaText>),
-                  (jsStringSetter<&cssMediaListClass, prCssMediaListSetMediaText, true>)),
+        (jsStringSetter<&cssMediaListClass, prCssMediaListSetMediaText, true>)),
     PR_JS_GET("length", (jsNumberGetter<&cssMediaListClass, prCssMediaListLength>)),
     PR_JS_METHOD("item", 1, (jsItemMethod<&cssMediaListClass, &kMediaIndexed>)),
     PR_JS_MAGIC("appendMedium", 1, mediumMethod, 0),
@@ -1749,8 +1700,7 @@ constexpr JSCFunctionListEntry kStyleSheetProto[] = {
     PR_JS_GET("type", styleSheetType),
     PR_STRING("href", styleSheetClass, prCssStyleSheetHref),
     PR_OBJECT("ownerNode", styleSheetClass, prCssStyleSheetOwnerNode, prJsDomNodeClass),
-    PR_OBJECT("parentStyleSheet", styleSheetClass, prCssStyleSheetParentStyleSheet,
-              prJsCssStyleSheetClass),
+    PR_OBJECT("parentStyleSheet", styleSheetClass, prCssStyleSheetParentStyleSheet, prJsCssStyleSheetClass),
     PR_STRING("title", styleSheetClass, prCssStyleSheetTitle),
     PR_MEDIA(styleSheetClass, prCssStyleSheetMedia),
     PR_JS_GET_SET("disabled", (jsBoolGetter<&styleSheetClass, prCssStyleSheetDisabled>), setDisabled),
@@ -1759,14 +1709,14 @@ constexpr JSCFunctionListEntry kStyleSheetProto[] = {
 constexpr JSCFunctionListEntry kCssStyleSheetProto[] = {
     PR_JS_TAG("CSSStyleSheet"),
     PR_OBJECT("ownerRule", prJsCssStyleSheetClass, prCssStyleSheetOwnerRule, cssRuleClass),
-    PR_JS_GET("cssRules", (jsSameObjectGetter<&prJsCssStyleSheetClass, prCssStyleSheetCssRules,
-                                              &cssRuleListClass, "cssRules">)),
+    PR_JS_GET("cssRules",
+        (jsSameObjectGetter<&prJsCssStyleSheetClass, prCssStyleSheetCssRules, &cssRuleListClass, "cssRules">)),
     PR_JS_METHOD("insertRule", 1, sheetInsertRule),
     PR_JS_MAGIC("deleteRule", 1, sheetDeleteRule, 0),
     PR_JS_METHOD("replaceSync", 1, replaceSync),
     // cssom-1/#legacy-css-style-sheet-members: rules is cssRules.
-    PR_JS_GET("rules", (jsSameObjectGetter<&prJsCssStyleSheetClass, prCssStyleSheetCssRules,
-                                           &cssRuleListClass, "cssRules">)),
+    PR_JS_GET("rules",
+        (jsSameObjectGetter<&prJsCssStyleSheetClass, prCssStyleSheetCssRules, &cssRuleListClass, "cssRules">)),
     PR_JS_METHOD("addRule", 0, addRule),
     PR_JS_MAGIC("removeRule", 0, sheetDeleteRule, 1),
 };
@@ -1794,16 +1744,15 @@ constexpr JSCFunctionListEntry kRuleProto[] = {
 
 constexpr JSCFunctionListEntry kGroupingRuleProto[] = {
     PR_JS_TAG("CSSGroupingRule"),
-    PR_JS_GET("cssRules", (jsSameObjectGetter<&cssGroupingRuleClass, prCssGroupingRuleCssRules,
-                                              &cssRuleListClass, "cssRules">)),
+    PR_JS_GET("cssRules",
+        (jsSameObjectGetter<&cssGroupingRuleClass, prCssGroupingRuleCssRules, &cssRuleListClass, "cssRules">)),
     PR_JS_METHOD("insertRule", 1, groupingInsertRule),
     PR_JS_METHOD("deleteRule", 1, groupingDeleteRule),
 };
 
 constexpr JSCFunctionListEntry kStyleRuleProto[] = {
     PR_JS_TAG("CSSStyleRule"),
-    PR_STRING_SET("selectorText", cssStyleRuleClass, prCssStyleRuleSelectorText,
-                  prCssStyleRuleSetSelectorText),
+    PR_STRING_SET("selectorText", cssStyleRuleClass, prCssStyleRuleSelectorText, prCssStyleRuleSetSelectorText),
     PR_STYLE(cssStyleRuleClass, prCssStyleRuleStyle),
     PR_JS_GET("styleMap", styleMap),
 };
@@ -1858,8 +1807,7 @@ constexpr JSCFunctionListEntry kFontFaceRuleProto[] = {
 
 constexpr JSCFunctionListEntry kPageRuleProto[] = {
     PR_JS_TAG("CSSPageRule"),
-    PR_STRING_SET("selectorText", cssPageRuleClass, prCssPageRuleSelectorText,
-                  prCssPageRuleSetSelectorText),
+    PR_STRING_SET("selectorText", cssPageRuleClass, prCssPageRuleSelectorText, prCssPageRuleSetSelectorText),
     PR_STYLE(cssPageRuleClass, prCssPageRuleStyle),
 };
 
@@ -1881,8 +1829,7 @@ constexpr JSCFunctionListEntry kKeyframesRuleProto[] = {
 
 constexpr JSCFunctionListEntry kKeyframeRuleProto[] = {
     PR_JS_TAG("CSSKeyframeRule"),
-    PR_JS_GET_SET("keyText", (jsStringGetter<&cssKeyframeRuleClass, prCssKeyframeRuleKeyText>),
-                  setKeyText),
+    PR_JS_GET_SET("keyText", (jsStringGetter<&cssKeyframeRuleClass, prCssKeyframeRuleKeyText>), setKeyText),
     PR_STYLE(cssKeyframeRuleClass, prCssKeyframeRuleStyle),
 };
 
@@ -1893,9 +1840,7 @@ constexpr JSCFunctionListEntry kLayerBlockRuleProto[] = {
 
 constexpr JSCFunctionListEntry kLayerStatementRuleProto[] = {
     PR_JS_TAG("CSSLayerStatementRule"),
-    PR_JS_GET(
-        "nameList",
-        (jsFrozenStringsGetter<&cssLayerStatementRuleClass, prCssLayerStatementRuleNameList>)),
+    PR_JS_GET("nameList", (jsFrozenStringsGetter<&cssLayerStatementRuleClass, prCssLayerStatementRuleNameList>)),
 };
 
 constexpr JSCFunctionListEntry kScopeRuleProto[] = {
@@ -1904,34 +1849,24 @@ constexpr JSCFunctionListEntry kScopeRuleProto[] = {
     PR_STRING("end", cssScopeRuleClass, prCssScopeRuleEnd),
 };
 
-constexpr JSCFunctionListEntry kStartingStyleRuleProto[] = {
-    PR_JS_TAG("CSSStartingStyleRule"),
-};
+constexpr JSCFunctionListEntry kStartingStyleRuleProto[] = {PR_JS_TAG("CSSStartingStyleRule")};
 
 constexpr JSCFunctionListEntry kCounterStyleRuleProto[] = {
     PR_JS_TAG("CSSCounterStyleRule"),
-    PR_STRING_SET("name", cssCounterStyleRuleClass, prCssCounterStyleRuleName,
-                  prCssCounterStyleRuleSetName),
-    PR_STRING_SET("system", cssCounterStyleRuleClass, prCssCounterStyleRuleSystem,
-                  prCssCounterStyleRuleSetSystem),
-    PR_STRING_SET("symbols", cssCounterStyleRuleClass, prCssCounterStyleRuleSymbols,
-                  prCssCounterStyleRuleSetSymbols),
+    PR_STRING_SET("name", cssCounterStyleRuleClass, prCssCounterStyleRuleName, prCssCounterStyleRuleSetName),
+    PR_STRING_SET("system", cssCounterStyleRuleClass, prCssCounterStyleRuleSystem, prCssCounterStyleRuleSetSystem),
+    PR_STRING_SET("symbols", cssCounterStyleRuleClass, prCssCounterStyleRuleSymbols, prCssCounterStyleRuleSetSymbols),
     PR_STRING_SET("additiveSymbols", cssCounterStyleRuleClass, prCssCounterStyleRuleAdditiveSymbols,
-                  prCssCounterStyleRuleSetAdditiveSymbols),
+        prCssCounterStyleRuleSetAdditiveSymbols),
     PR_STRING_SET("negative", cssCounterStyleRuleClass, prCssCounterStyleRuleNegative,
-                  prCssCounterStyleRuleSetNegative),
-    PR_STRING_SET("prefix", cssCounterStyleRuleClass, prCssCounterStyleRulePrefix,
-                  prCssCounterStyleRuleSetPrefix),
-    PR_STRING_SET("suffix", cssCounterStyleRuleClass, prCssCounterStyleRuleSuffix,
-                  prCssCounterStyleRuleSetSuffix),
-    PR_STRING_SET("range", cssCounterStyleRuleClass, prCssCounterStyleRuleRange,
-                  prCssCounterStyleRuleSetRange),
-    PR_STRING_SET("pad", cssCounterStyleRuleClass, prCssCounterStyleRulePad,
-                  prCssCounterStyleRuleSetPad),
-    PR_STRING_SET("speakAs", cssCounterStyleRuleClass, prCssCounterStyleRuleSpeakAs,
-                  prCssCounterStyleRuleSetSpeakAs),
+        prCssCounterStyleRuleSetNegative),
+    PR_STRING_SET("prefix", cssCounterStyleRuleClass, prCssCounterStyleRulePrefix, prCssCounterStyleRuleSetPrefix),
+    PR_STRING_SET("suffix", cssCounterStyleRuleClass, prCssCounterStyleRuleSuffix, prCssCounterStyleRuleSetSuffix),
+    PR_STRING_SET("range", cssCounterStyleRuleClass, prCssCounterStyleRuleRange, prCssCounterStyleRuleSetRange),
+    PR_STRING_SET("pad", cssCounterStyleRuleClass, prCssCounterStyleRulePad, prCssCounterStyleRuleSetPad),
+    PR_STRING_SET("speakAs", cssCounterStyleRuleClass, prCssCounterStyleRuleSpeakAs, prCssCounterStyleRuleSetSpeakAs),
     PR_STRING_SET("fallback", cssCounterStyleRuleClass, prCssCounterStyleRuleFallback,
-                  prCssCounterStyleRuleSetFallback),
+        prCssCounterStyleRuleSetFallback),
 };
 
 constexpr JSCFunctionListEntry kPropertyRuleProto[] = {
@@ -1948,7 +1883,7 @@ constexpr JSCFunctionListEntry kPropertyRuleProto[] = {
 constexpr JSCFunctionListEntry kFontFeatureValuesRuleProto[] = {
     PR_JS_TAG("CSSFontFeatureValuesRule"),
     PR_STRING_SET("fontFamily", cssFontFeatureValuesRuleClass, prCssFontFeatureValuesRuleFontFamily,
-                  prCssFontFeatureValuesRuleSetFontFamily),
+        prCssFontFeatureValuesRuleSetFontFamily),
     PR_FEATURE_MAP("annotation", prCssFontFeatureValuesRuleAnnotation),
     PR_FEATURE_MAP("ornaments", prCssFontFeatureValuesRuleOrnaments),
     PR_FEATURE_MAP("stylistic", prCssFontFeatureValuesRuleStylistic),
@@ -1962,8 +1897,7 @@ constexpr JSCFunctionListEntry kFontFeatureValuesRuleProto[] = {
 
 constexpr JSCFunctionListEntry kFontFeatureValuesMapProto[] = {
     PR_JS_TAG("CSSFontFeatureValuesMap"),
-    PR_JS_GET("size",
-              (jsNumberGetter<&cssFontFeatureValuesMapClass, prCssFontFeatureValuesMapSize>)),
+    PR_JS_GET("size", (jsNumberGetter<&cssFontFeatureValuesMapClass, prCssFontFeatureValuesMapSize>)),
     PR_JS_MAGIC("entries", 0, mapIterate, JsMapPart_Entries),
     PR_JS_MAGIC("keys", 0, mapIterate, JsMapPart_Keys),
     PR_JS_MAGIC("values", 0, mapIterate, JsMapPart_Values),
@@ -1980,8 +1914,7 @@ constexpr JSCFunctionListEntry kFontPaletteValuesRuleProto[] = {
     PR_STRING("name", cssFontPaletteValuesRuleClass, prCssFontPaletteValuesRuleName),
     PR_STRING("fontFamily", cssFontPaletteValuesRuleClass, prCssFontPaletteValuesRuleFontFamily),
     PR_STRING("basePalette", cssFontPaletteValuesRuleClass, prCssFontPaletteValuesRuleBasePalette),
-    PR_STRING("overrideColors", cssFontPaletteValuesRuleClass,
-              prCssFontPaletteValuesRuleOverrideColors),
+    PR_STRING("overrideColors", cssFontPaletteValuesRuleClass, prCssFontPaletteValuesRuleOverrideColors),
 };
 
 constexpr JSCFunctionListEntry kPositionTryRuleProto[] = {
@@ -1993,15 +1926,13 @@ constexpr JSCFunctionListEntry kPositionTryRuleProto[] = {
 constexpr JSCFunctionListEntry kViewTransitionRuleProto[] = {
     PR_JS_TAG("CSSViewTransitionRule"),
     PR_STRING("navigation", cssViewTransitionRuleClass, prCssViewTransitionRuleNavigation),
-    PR_JS_GET("types",
-              (jsFrozenStringsGetter<&cssViewTransitionRuleClass, prCssViewTransitionRuleTypes>)),
+    PR_JS_GET("types", (jsFrozenStringsGetter<&cssViewTransitionRuleClass, prCssViewTransitionRuleTypes>)),
 };
 
 constexpr JSCFunctionListEntry kFunctionRuleProto[] = {
     PR_JS_TAG("CSSFunctionRule"),
     PR_STRING("name", cssFunctionRuleClass, prCssFunctionRuleName),
-    PR_JS_METHOD("getParameters", 0,
-                 (getParameters<&cssFunctionRuleClass, prCssFunctionRuleGetParameters>)),
+    PR_JS_METHOD("getParameters", 0, (getParameters<&cssFunctionRuleClass, prCssFunctionRuleGetParameters>)),
     PR_STRING("returnType", cssFunctionRuleClass, prCssFunctionRuleReturnType),
 };
 
@@ -2024,47 +1955,37 @@ constexpr JSCFunctionListEntry kSupportsConditionRuleProto[] = {
 constexpr JSCFunctionListEntry kMixinRuleProto[] = {
     PR_JS_TAG("CSSMixinRule"),
     PR_STRING("name", cssMixinRuleClass, prCssMixinRuleName),
-    PR_JS_METHOD("getParameters", 0,
-                 (getParameters<&cssMixinRuleClass, prCssMixinRuleGetParameters>)),
+    PR_JS_METHOD("getParameters", 0, (getParameters<&cssMixinRuleClass, prCssMixinRuleGetParameters>)),
     PR_JS_GET("contents", (jsBoolGetter<&cssMixinRuleClass, prCssMixinRuleContents>)),
 };
 
 constexpr JSCFunctionListEntry kApplyBlockRuleProto[] = {
     PR_JS_TAG("CSSApplyBlockRule"),
     PR_STRING("name", cssApplyBlockRuleClass, prCssApplyBlockRuleName),
-    PR_JS_METHOD("getArguments", 0,
-                 (jsStringsMethod<&cssApplyBlockRuleClass, prCssApplyBlockRuleGetArguments>)),
+    PR_JS_METHOD("getArguments", 0, (jsStringsMethod<&cssApplyBlockRuleClass, prCssApplyBlockRuleGetArguments>)),
 };
 
 constexpr JSCFunctionListEntry kApplyStatementRuleProto[] = {
     PR_JS_TAG("CSSApplyStatementRule"),
     PR_STRING("name", cssApplyStatementRuleClass, prCssApplyStatementRuleName),
-    PR_JS_METHOD(
-        "getArguments", 0,
+    PR_JS_METHOD("getArguments", 0,
         (jsStringsMethod<&cssApplyStatementRuleClass, prCssApplyStatementRuleGetArguments>)),
 };
 
-constexpr JSCFunctionListEntry kContentsBlockRuleProto[] = {
-    PR_JS_TAG("CSSContentsBlockRule"),
-};
+constexpr JSCFunctionListEntry kContentsBlockRuleProto[] = {PR_JS_TAG("CSSContentsBlockRule")};
 
-constexpr JSCFunctionListEntry kContentsStatementRuleProto[] = {
-    PR_JS_TAG("CSSContentsStatementRule"),
-};
+constexpr JSCFunctionListEntry kContentsStatementRuleProto[] = {PR_JS_TAG("CSSContentsStatementRule")};
 
 constexpr JSCFunctionListEntry kStyleDeclarationProto[] = {
     PR_JS_TAG("CSSStyleDeclaration"),
-    PR_JS_GET_SET("cssText",
-                  (jsStringGetter<&cssStyleDeclarationClass, prCssStyleDeclarationCssText>),
-                  setCssText),
+    PR_JS_GET_SET("cssText", (jsStringGetter<&cssStyleDeclarationClass, prCssStyleDeclarationCssText>), setCssText),
     PR_JS_GET("length", (jsNumberGetter<&cssStyleDeclarationClass, prCssStyleDeclarationLength>)),
     PR_JS_METHOD("item", 1, declarationItemMethod),
     PR_JS_MAGIC("getPropertyValue", 1, propertyMethod, PropertyMethod_GetValue),
     PR_JS_MAGIC("getPropertyPriority", 1, propertyMethod, PropertyMethod_GetPriority),
     PR_JS_METHOD("setProperty", 2, setProperty),
     PR_JS_MAGIC("removeProperty", 1, propertyMethod, PropertyMethod_Remove),
-    PR_OBJECT("parentRule", cssStyleDeclarationClass, prCssStyleDeclarationParentRule,
-              cssRuleClass),
+    PR_OBJECT("parentRule", cssStyleDeclarationClass, prCssStyleDeclarationParentRule, cssRuleClass),
 };
 
 constexpr JSCFunctionListEntry kStylePropertiesProto[] = {
@@ -2072,21 +1993,13 @@ constexpr JSCFunctionListEntry kStylePropertiesProto[] = {
     PR_JS_MAGIC_GET_SET("cssFloat", attributeGet, attributeSet, Names_Float << kNamesShift),
 };
 
-constexpr JSCFunctionListEntry kFontFaceDescriptorsProto[] = {
-    PR_JS_TAG("CSSFontFaceDescriptors"),
-};
+constexpr JSCFunctionListEntry kFontFaceDescriptorsProto[] = {PR_JS_TAG("CSSFontFaceDescriptors")};
 
-constexpr JSCFunctionListEntry kPageDescriptorsProto[] = {
-    PR_JS_TAG("CSSPageDescriptors"),
-};
+constexpr JSCFunctionListEntry kPageDescriptorsProto[] = {PR_JS_TAG("CSSPageDescriptors")};
 
-constexpr JSCFunctionListEntry kPositionTryDescriptorsProto[] = {
-    PR_JS_TAG("CSSPositionTryDescriptors"),
-};
+constexpr JSCFunctionListEntry kPositionTryDescriptorsProto[] = {PR_JS_TAG("CSSPositionTryDescriptors")};
 
-constexpr JSCFunctionListEntry kFunctionDescriptorsProto[] = {
-    PR_JS_TAG("CSSFunctionDescriptors"),
-};
+constexpr JSCFunctionListEntry kFunctionDescriptorsProto[] = {PR_JS_TAG("CSSFunctionDescriptors")};
 
 #undef PR_STRING
 #undef PR_STRING_SET
@@ -2096,29 +2009,19 @@ constexpr JSCFunctionListEntry kFunctionDescriptorsProto[] = {
 
 constexpr JSCFunctionListEntry kFontFaceProto[] = {
     PR_JS_TAG("FontFace"),
-    PR_JS_MAGIC_GET_SET("family", fontDescriptor, setFontDescriptor,
-                        PrCssFontFaceDescriptor_Family),
+    PR_JS_MAGIC_GET_SET("family", fontDescriptor, setFontDescriptor, PrCssFontFaceDescriptor_Family),
     PR_JS_MAGIC_GET_SET("style", fontDescriptor, setFontDescriptor, PrCssFontFaceDescriptor_Style),
-    PR_JS_MAGIC_GET_SET("weight", fontDescriptor, setFontDescriptor,
-                        PrCssFontFaceDescriptor_Weight),
-    PR_JS_MAGIC_GET_SET("stretch", fontDescriptor, setFontDescriptor,
-                        PrCssFontFaceDescriptor_Stretch),
-    PR_JS_MAGIC_GET_SET("width", fontDescriptor, setFontDescriptor,
-                        PrCssFontFaceDescriptor_Stretch),
-    PR_JS_MAGIC_GET_SET("unicodeRange", fontDescriptor, setFontDescriptor,
-                        PrCssFontFaceDescriptor_UnicodeRange),
-    PR_JS_MAGIC_GET_SET("featureSettings", fontDescriptor, setFontDescriptor,
-                        PrCssFontFaceDescriptor_FeatureSettings),
+    PR_JS_MAGIC_GET_SET("weight", fontDescriptor, setFontDescriptor, PrCssFontFaceDescriptor_Weight),
+    PR_JS_MAGIC_GET_SET("stretch", fontDescriptor, setFontDescriptor, PrCssFontFaceDescriptor_Stretch),
+    PR_JS_MAGIC_GET_SET("width", fontDescriptor, setFontDescriptor, PrCssFontFaceDescriptor_Stretch),
+    PR_JS_MAGIC_GET_SET("unicodeRange", fontDescriptor, setFontDescriptor, PrCssFontFaceDescriptor_UnicodeRange),
+    PR_JS_MAGIC_GET_SET("featureSettings", fontDescriptor, setFontDescriptor, PrCssFontFaceDescriptor_FeatureSettings),
     PR_JS_MAGIC_GET_SET("variationSettings", fontDescriptor, setFontDescriptor,
-                        PrCssFontFaceDescriptor_VariationSettings),
-    PR_JS_MAGIC_GET_SET("display", fontDescriptor, setFontDescriptor,
-                        PrCssFontFaceDescriptor_Display),
-    PR_JS_MAGIC_GET_SET("ascentOverride", fontDescriptor, setFontDescriptor,
-                        PrCssFontFaceDescriptor_AscentOverride),
-    PR_JS_MAGIC_GET_SET("descentOverride", fontDescriptor, setFontDescriptor,
-                        PrCssFontFaceDescriptor_DescentOverride),
-    PR_JS_MAGIC_GET_SET("lineGapOverride", fontDescriptor, setFontDescriptor,
-                        PrCssFontFaceDescriptor_LineGapOverride),
+        PrCssFontFaceDescriptor_VariationSettings),
+    PR_JS_MAGIC_GET_SET("display", fontDescriptor, setFontDescriptor, PrCssFontFaceDescriptor_Display),
+    PR_JS_MAGIC_GET_SET("ascentOverride", fontDescriptor, setFontDescriptor, PrCssFontFaceDescriptor_AscentOverride),
+    PR_JS_MAGIC_GET_SET("descentOverride", fontDescriptor, setFontDescriptor, PrCssFontFaceDescriptor_DescentOverride),
+    PR_JS_MAGIC_GET_SET("lineGapOverride", fontDescriptor, setFontDescriptor, PrCssFontFaceDescriptor_LineGapOverride),
     PR_JS_GET("status", fontStatus),
     PR_JS_METHOD("load", 0, fontLoad),
     PR_JS_GET("loaded", fontLoaded),
@@ -2145,10 +2048,8 @@ constexpr JSCFunctionListEntry kAnimationEventProto[] = {
 
 constexpr JSCFunctionListEntry kFontFaceSetProto[] = {
     PR_JS_TAG("FontFaceSet"),
-    PR_JS_DOM_EVENT_HANDLER(onloading)
-    PR_JS_DOM_EVENT_HANDLER(onloadingdone)
-    PR_JS_DOM_EVENT_HANDLER(onloadingerror)
-    PR_JS_GET("size", (jsNumberGetter<&prJsCssFontFaceSetClass, prCssFontFaceSetSize>)),
+    PR_JS_DOM_EVENT_HANDLER(onloading) PR_JS_DOM_EVENT_HANDLER(onloadingdone) PR_JS_DOM_EVENT_HANDLER(onloadingerror)
+        PR_JS_GET("size", (jsNumberGetter<&prJsCssFontFaceSetClass, prCssFontFaceSetSize>)),
     PR_JS_MAGIC("add", 1, setMember, 0),
     PR_JS_MAGIC("delete", 1, setMember, 1),
     PR_JS_MAGIC("has", 1, setMember, 2),
@@ -2169,9 +2070,7 @@ constexpr JSCFunctionListEntry kHighlightProto[] = {
     PR_JS_GET_SET("type", highlightType, highlightSetType),
 };
 
-constexpr JSCFunctionListEntry kHighlightRegistryProto[] = {
-    PR_JS_TAG("HighlightRegistry"),
-};
+constexpr JSCFunctionListEntry kHighlightRegistryProto[] = {PR_JS_TAG("HighlightRegistry")};
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Selectors on nodes and elements (dom/#dom-parentnode-queryselector, dom/#dom-element-matches)
@@ -2185,8 +2084,7 @@ JSValue querySelector(JSContext* ctx, JSValueConst self, int argc, JSValueConst*
     if (magic == 0) {
         PrDomElement* found = nullptr;
         PrStatus status = prCssNodeQuerySelector(node, selectors.value(), &found);
-        return status == PrStatus_Ok ? jsWrapAs(ctx, prJsDomElementClass, self, found, false)
-                                     : prJsDomThrow(ctx, status);
+        return status == PrStatus_Ok ? jsWrapAs(ctx, prJsDomElementClass, self, found, false) : prJsDomThrow(ctx, status);
     }
     PrDomNodeList* list = prDomNodeListCreate();
     PrStatus status = prCssNodeQuerySelectorAll(node, selectors.value(), list);
@@ -2268,7 +2166,7 @@ void resizeEntryDestroy(PrCssResizeObserverEntry* PR_NULLABLE entry) {
 // Calls the observer's callback with its entries and the observer, which is also the receiver
 // (resize-observer-1/#broadcast-active-resize-observations). The callback's exception is reported.
 void invokeResizeObserver(void* PR_NULLABLE context, PrCssResizeObserver* observer,
-                          const PrCssResizeObserverEntry* entries, uint32_t count) {
+        const PrCssResizeObserverEntry* entries, uint32_t count) {
     JsCallback* callback = static_cast<JsCallback*>(context);
     JSContext* ctx = callback->ctx;
     JSValue object = jsWrap(ctx, cssResizeObserverClass, JS_UNDEFINED, observer, false, retainResizeObserver);
@@ -2399,8 +2297,10 @@ JSValue resizeEntrySizes(JSContext* ctx, JSValueConst self, int magic) {
     if (entry == nullptr)
         return JS_EXCEPTION;
     return jsSameObject(ctx, self, kNames[magic], [&] {
-        const PrCssResizeObserverSize sizes[] = {entry->borderBoxSize, entry->contentBoxSize,
-                                                 entry->devicePixelContentBoxSize};
+        const PrCssResizeObserverSize sizes[] = {
+            entry->borderBoxSize, entry->contentBoxSize,
+            entry->devicePixelContentBoxSize,
+        };
         JSValue size = jsNewValue(ctx, cssResizeObserverSizeClass, sizes[magic]);
         if (JS_IsException(size))
             return size;
@@ -2504,7 +2404,7 @@ bool readThreshold(JSContext* ctx, JSValueConst value, Array<double>* out) {
 // Reads the members of an IntersectionObserverInit (intersection-observer/#dictdef-intersectionobserverinit) in
 // lexicographic order. The init's strings and thresholds stay valid while `margins` and `thresholds` live.
 bool readIntersectionInit(JSContext* ctx, JSValueConst dictionary, PrCssIntersectionObserverInit* init,
-                          StringArgument margins[2], Array<double>* thresholds) {
+        StringArgument margins[2], Array<double>* thresholds) {
     bool present = false;
     if (!jsDictionary(ctx, dictionary, &present))
         return false;
@@ -2521,8 +2421,7 @@ bool readIntersectionInit(JSContext* ctx, JSValueConst dictionary, PrCssIntersec
         return false;
     if (!JS_IsUndefined(root) && !JS_IsNull(root)) {
         PrDomElement* element = jsHandleAs<PrDomElement>(ctx, root, prJsDomElementClass);
-        PrDomDocument* document =
-            element == nullptr ? jsHandleAs<PrDomDocument>(ctx, root, prJsDomDocumentClass) : nullptr;
+        PrDomDocument* document = element == nullptr ? jsHandleAs<PrDomDocument>(ctx, root, prJsDomDocumentClass) : nullptr;
         if (element != nullptr)
             init->root = prDomElementAsNode(element);
         else if (document != nullptr)
@@ -2583,8 +2482,7 @@ JSValue intersectionObserverConstruct(JSContext* ctx, JSValueConst newTarget, in
     }
     PrCssIntersectionCallback value = *callback.get();
     value.observing = [](void* PR_NULLABLE context, PrCssIntersectionObserver* observer, bool observing) {
-        jsPin(JS_GetRuntime(static_cast<JsCallback*>(context)->ctx), cssIntersectionObserverClass, observer,
-              observing);
+        jsPin(JS_GetRuntime(static_cast<JsCallback*>(context)->ctx), cssIntersectionObserverClass, observer, observing);
     };
     PrCssIntersectionObserver* observer = nullptr;
     PrStatus status = prCssIntersectionObserverCreate(document, &init, &value, &observer);
@@ -2605,8 +2503,7 @@ JSValue intersectionObserverConstruct(JSContext* ctx, JSValueConst newTarget, in
 
 // Implements observe for magic 0, and unobserve for 1.
 JSValue intersectionObserverTarget(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv, int magic) {
-    PrCssIntersectionObserver* observer =
-        jsThis<PrCssIntersectionObserver>(ctx, self, cssIntersectionObserverClass);
+    PrCssIntersectionObserver* observer = jsThis<PrCssIntersectionObserver>(ctx, self, cssIntersectionObserverClass);
     if (observer == nullptr || !jsArgCount(ctx, argc, 1))
         return JS_EXCEPTION;
     PrDomElement* target = elementArgument(ctx, argv[0]);
@@ -2620,8 +2517,7 @@ JSValue intersectionObserverTarget(JSContext* ctx, JSValueConst self, int argc, 
 }
 
 JSValue intersectionObserverDisconnect(JSContext* ctx, JSValueConst self, int, JSValueConst*) {
-    PrCssIntersectionObserver* observer =
-        jsThis<PrCssIntersectionObserver>(ctx, self, cssIntersectionObserverClass);
+    PrCssIntersectionObserver* observer = jsThis<PrCssIntersectionObserver>(ctx, self, cssIntersectionObserverClass);
     if (observer == nullptr)
         return JS_EXCEPTION;
     prCssIntersectionObserverDisconnect(observer);
@@ -2629,14 +2525,12 @@ JSValue intersectionObserverDisconnect(JSContext* ctx, JSValueConst self, int, J
 }
 
 JSValue intersectionObserverTakeRecords(JSContext* ctx, JSValueConst self, int, JSValueConst*) {
-    PrCssIntersectionObserver* observer =
-        jsThis<PrCssIntersectionObserver>(ctx, self, cssIntersectionObserverClass);
+    PrCssIntersectionObserver* observer = jsThis<PrCssIntersectionObserver>(ctx, self, cssIntersectionObserverClass);
     return observer != nullptr ? takeIntersectionRecords(ctx, observer) : JS_EXCEPTION;
 }
 
 JSValue intersectionObserverRoot(JSContext* ctx, JSValueConst self) {
-    PrCssIntersectionObserver* observer =
-        jsThis<PrCssIntersectionObserver>(ctx, self, cssIntersectionObserverClass);
+    PrCssIntersectionObserver* observer = jsThis<PrCssIntersectionObserver>(ctx, self, cssIntersectionObserverClass);
     if (observer == nullptr)
         return JS_EXCEPTION;
     PrDomNode* root = prCssIntersectionObserverRoot(observer);
@@ -2645,18 +2539,17 @@ JSValue intersectionObserverRoot(JSContext* ctx, JSValueConst self) {
 
 // Implements rootMargin for magic 0, and scrollMargin for 1.
 JSValue intersectionObserverMargin(JSContext* ctx, JSValueConst self, int magic) {
-    PrCssIntersectionObserver* observer =
-        jsThis<PrCssIntersectionObserver>(ctx, self, cssIntersectionObserverClass);
+    PrCssIntersectionObserver* observer = jsThis<PrCssIntersectionObserver>(ctx, self, cssIntersectionObserverClass);
     if (observer == nullptr)
         return JS_EXCEPTION;
-    return jsTakeString(ctx, magic == 0 ? prCssIntersectionObserverRootMargin(observer)
-                                        : prCssIntersectionObserverScrollMargin(observer));
+    if (magic == 0)
+        return jsTakeString(ctx, prCssIntersectionObserverRootMargin(observer));
+    return jsTakeString(ctx, prCssIntersectionObserverScrollMargin(observer));
 }
 
 // The [SameObject]-like FrozenArray of the thresholds, which never change.
 JSValue intersectionObserverThresholds(JSContext* ctx, JSValueConst self) {
-    PrCssIntersectionObserver* observer =
-        jsThis<PrCssIntersectionObserver>(ctx, self, cssIntersectionObserverClass);
+    PrCssIntersectionObserver* observer = jsThis<PrCssIntersectionObserver>(ctx, self, cssIntersectionObserverClass);
     if (observer == nullptr)
         return JS_EXCEPTION;
     return jsSameObject(ctx, self, "thresholds", [&] {
@@ -2671,14 +2564,12 @@ JSValue intersectionObserverThresholds(JSContext* ctx, JSValueConst self) {
 }
 
 JSValue intersectionObserverDelay(JSContext* ctx, JSValueConst self) {
-    PrCssIntersectionObserver* observer =
-        jsThis<PrCssIntersectionObserver>(ctx, self, cssIntersectionObserverClass);
+    PrCssIntersectionObserver* observer = jsThis<PrCssIntersectionObserver>(ctx, self, cssIntersectionObserverClass);
     return observer != nullptr ? JS_NewInt32(ctx, prCssIntersectionObserverDelay(observer)) : JS_EXCEPTION;
 }
 
 JSValue intersectionObserverTrackVisibility(JSContext* ctx, JSValueConst self) {
-    PrCssIntersectionObserver* observer =
-        jsThis<PrCssIntersectionObserver>(ctx, self, cssIntersectionObserverClass);
+    PrCssIntersectionObserver* observer = jsThis<PrCssIntersectionObserver>(ctx, self, cssIntersectionObserverClass);
     return observer != nullptr ? JS_NewBool(ctx, prCssIntersectionObserverTrackVisibility(observer)) : JS_EXCEPTION;
 }
 
@@ -2783,135 +2674,182 @@ constexpr PrJsDomMatrixParser kMatrixParser = {.parse = prCssMatrixFromString};
 
 // The module's classes, each after its base.
 constexpr JsClassDefinition kClasses[] = {
-    {PR_JS_CLASS("MediaQueryList", prJsCssMediaQueryListClass,
-                 (jsFinalizer<&prJsCssMediaQueryListClass, prCssMediaQueryListRelease>),
-                 kMediaQueryListProto),
-     .base = &prJsDomEventTargetClass},
-    {PR_JS_CLASS("IntersectionObserver", cssIntersectionObserverClass,
-                 (jsFinalizer<&cssIntersectionObserverClass, prCssIntersectionObserverRelease>),
-                 kIntersectionObserverProto),
-     .constructor = intersectionObserverConstruct, .length = 1},
-    {PR_JS_CLASS("IntersectionObserverEntry", cssIntersectionObserverEntryClass,
-                 (jsFinalizer<&cssIntersectionObserverEntryClass, intersectionEntryDestroy>),
-                 kIntersectionObserverEntryProto)},
-    {PR_JS_CLASS("ResizeObserver", cssResizeObserverClass,
-                 (jsFinalizer<&cssResizeObserverClass, prCssResizeObserverRelease>), kResizeObserverProto),
-     .constructor = resizeObserverConstruct, .length = 1},
-    {PR_JS_CLASS("ResizeObserverEntry", cssResizeObserverEntryClass,
-                 (jsFinalizer<&cssResizeObserverEntryClass, resizeEntryDestroy>), kResizeObserverEntryProto)},
-    {.name = "ResizeObserverSize",
-     .id = &cssResizeObserverSizeClass,
-     .finalizer = jsValueFinalizer,
-     .mark = jsValueMark,
-     .proto = kResizeObserverSizeProto,
-     .protoCount = int(countOf(kResizeObserverSizeProto))},
-    {PR_JS_CLASS("FontFace", cssFontFaceClass, jsViewFinalizer<&cssFontFaceClass>, kFontFaceProto),
-     .constructor = fontFaceConstruct, .length = 2, .references = &kFontFaceReferences,
-     .wrapped = fontFaceWrapped},
-    {PR_JS_CLASS("FontFaceSet", prJsCssFontFaceSetClass, jsViewFinalizer<&prJsCssFontFaceSetClass>,
-                 kFontFaceSetProto),
-     .base = &prJsDomEventTargetClass, .iterator = "values"},
-    {PR_JS_CLASS("FontFaceSetLoadEvent", cssFontFaceSetLoadEventClass,
-                 jsViewFinalizer<&cssFontFaceSetLoadEventClass>, kFontFaceSetLoadEventProto),
-     .constructor = fontEventConstruct, .length = 1, .base = &prJsDomEventClass},
-    {PR_JS_CLASS("TransitionEvent", cssTransitionEventClass, jsViewFinalizer<&cssTransitionEventClass>,
-                 kTransitionEventProto),
-     .constructor = animationEventConstructAs<0>, .length = 1, .base = &prJsDomEventClass},
-    {PR_JS_CLASS("AnimationEvent", cssAnimationEventClass, jsViewFinalizer<&cssAnimationEventClass>,
-                 kAnimationEventProto),
-     .constructor = animationEventConstructAs<1>, .length = 1, .base = &prJsDomEventClass},
-    {PR_JS_CLASS("Highlight", cssHighlightClass, jsViewFinalizer<&cssHighlightClass>,
-                 kHighlightProto),
-     .constructor = highlightConstruct, .references = &kHighlightReferences,
-     .collection = &kHighlightRanges},
-    {PR_VIEW("HighlightRegistry", cssHighlightRegistryClass, kHighlightRegistryProto),
-     .collection = &kRegistryEntries},
+    {
+        PR_JS_CLASS("MediaQueryList", prJsCssMediaQueryListClass,
+            (jsFinalizer<&prJsCssMediaQueryListClass, prCssMediaQueryListRelease>), kMediaQueryListProto),
+        .base = &prJsDomEventTargetClass,
+    },
+    {
+        PR_JS_CLASS("IntersectionObserver", cssIntersectionObserverClass,
+            (jsFinalizer<&cssIntersectionObserverClass, prCssIntersectionObserverRelease>), kIntersectionObserverProto),
+        .constructor = intersectionObserverConstruct,
+        .length = 1,
+    },
+    {
+        PR_JS_CLASS("IntersectionObserverEntry", cssIntersectionObserverEntryClass,
+            (jsFinalizer<&cssIntersectionObserverEntryClass, intersectionEntryDestroy>),
+            kIntersectionObserverEntryProto)
+    },
+    {
+        PR_JS_CLASS("ResizeObserver", cssResizeObserverClass,
+            (jsFinalizer<&cssResizeObserverClass, prCssResizeObserverRelease>), kResizeObserverProto),
+        .constructor = resizeObserverConstruct,
+        .length = 1,
+    },
+    {
+        PR_JS_CLASS("ResizeObserverEntry", cssResizeObserverEntryClass,
+            (jsFinalizer<&cssResizeObserverEntryClass, resizeEntryDestroy>), kResizeObserverEntryProto)
+    },
+    {
+        .name = "ResizeObserverSize",
+        .id = &cssResizeObserverSizeClass,
+        .finalizer = jsValueFinalizer,
+        .mark = jsValueMark,
+        .proto = kResizeObserverSizeProto,
+        .protoCount = int(countOf(kResizeObserverSizeProto)),
+    },
+    {
+        PR_JS_CLASS("FontFace", cssFontFaceClass, jsViewFinalizer<&cssFontFaceClass>, kFontFaceProto),
+        .constructor = fontFaceConstruct,
+        .length = 2,
+        .references = &kFontFaceReferences,
+        .wrapped = fontFaceWrapped,
+    },
+    {
+        PR_JS_CLASS("FontFaceSet", prJsCssFontFaceSetClass, jsViewFinalizer<&prJsCssFontFaceSetClass>,
+            kFontFaceSetProto),
+        .base = &prJsDomEventTargetClass,
+        .iterator = "values",
+    },
+    {
+        PR_JS_CLASS("FontFaceSetLoadEvent", cssFontFaceSetLoadEventClass,
+            jsViewFinalizer<&cssFontFaceSetLoadEventClass>, kFontFaceSetLoadEventProto),
+        .constructor = fontEventConstruct,
+        .length = 1,
+        .base = &prJsDomEventClass,
+    },
+    {
+        PR_JS_CLASS("TransitionEvent", cssTransitionEventClass, jsViewFinalizer<&cssTransitionEventClass>,
+            kTransitionEventProto),
+        .constructor = animationEventConstructAs<0>,
+        .length = 1,
+        .base = &prJsDomEventClass,
+    },
+    {
+        PR_JS_CLASS("AnimationEvent", cssAnimationEventClass, jsViewFinalizer<&cssAnimationEventClass>,
+            kAnimationEventProto),
+        .constructor = animationEventConstructAs<1>,
+        .length = 1,
+        .base = &prJsDomEventClass,
+    },
+    {
+        PR_JS_CLASS("Highlight", cssHighlightClass, jsViewFinalizer<&cssHighlightClass>, kHighlightProto),
+        .constructor = highlightConstruct,
+        .references = &kHighlightReferences,
+        .collection = &kHighlightRanges,
+    },
+    {PR_VIEW("HighlightRegistry", cssHighlightRegistryClass, kHighlightRegistryProto), .collection = &kRegistryEntries},
     {PR_VIEW("MediaList", cssMediaListClass, kMediaListProto), .indexed = &kMediaIndexed},
     {PR_VIEW("StyleSheet", styleSheetClass, kStyleSheetProto), .references = &kSheetReferences},
-    {PR_JS_CLASS("CSSStyleSheet", prJsCssStyleSheetClass, jsViewFinalizer<&prJsCssStyleSheetClass>,
-                 kCssStyleSheetProto),
-     .constructor = sheetConstruct, .base = &styleSheetClass},
+    {
+        PR_JS_CLASS("CSSStyleSheet", prJsCssStyleSheetClass, jsViewFinalizer<&prJsCssStyleSheetClass>,
+            kCssStyleSheetProto),
+        .constructor = sheetConstruct,
+        .base = &styleSheetClass,
+    },
     {PR_VIEW("CSSRuleList", cssRuleListClass, kRuleListProto), .indexed = &kRuleListIndexed},
-    {PR_VIEW("StyleSheetList", prJsCssStyleSheetListClass, kStyleSheetListProto),
-     .indexed = &kSheetListIndexed},
+    {PR_VIEW("StyleSheetList", prJsCssStyleSheetListClass, kStyleSheetListProto), .indexed = &kSheetListIndexed},
 
-    {PR_VIEW("CSSRule", cssRuleClass, kRuleProto), PR_JS_CONSTANTS(kRuleConstants),
-     .references = &kRuleReferences},
+    {PR_VIEW("CSSRule", cssRuleClass, kRuleProto), PR_JS_CONSTANTS(kRuleConstants), .references = &kRuleReferences},
     {PR_VIEW("CSSGroupingRule", cssGroupingRuleClass, kGroupingRuleProto), .base = &cssRuleClass},
-    {PR_VIEW("CSSConditionRule", cssConditionRuleClass, kConditionRuleProto),
-     .base = &cssGroupingRuleClass},
+    {PR_VIEW("CSSConditionRule", cssConditionRuleClass, kConditionRuleProto), .base = &cssGroupingRuleClass},
     {PR_VIEW("CSSStyleRule", cssStyleRuleClass, kStyleRuleProto), .base = &cssGroupingRuleClass},
     {PR_VIEW("CSSImportRule", cssImportRuleClass, kImportRuleProto), .base = &cssRuleClass},
-    {PR_VIEW("CSSNamespaceRule", cssNamespaceRuleClass, kNamespaceRuleProto),
-     .base = &cssRuleClass},
+    {PR_VIEW("CSSNamespaceRule", cssNamespaceRuleClass, kNamespaceRuleProto), .base = &cssRuleClass},
     {PR_VIEW("CSSMediaRule", cssMediaRuleClass, kMediaRuleProto), .base = &cssConditionRuleClass},
-    {PR_VIEW("CSSSupportsRule", cssSupportsRuleClass, kSupportsRuleProto),
-     .base = &cssConditionRuleClass},
-    {PR_VIEW("CSSContainerRule", cssContainerRuleClass, kContainerRuleProto),
-     .base = &cssConditionRuleClass},
-    {PR_VIEW("CSSNestedDeclarations", cssNestedDeclarationsClass, kNestedDeclarationsProto),
-     .base = &cssRuleClass},
+    {PR_VIEW("CSSSupportsRule", cssSupportsRuleClass, kSupportsRuleProto), .base = &cssConditionRuleClass},
+    {PR_VIEW("CSSContainerRule", cssContainerRuleClass, kContainerRuleProto), .base = &cssConditionRuleClass},
+    {PR_VIEW("CSSNestedDeclarations", cssNestedDeclarationsClass, kNestedDeclarationsProto), .base = &cssRuleClass},
     {PR_VIEW("CSSFontFaceRule", cssFontFaceRuleClass, kFontFaceRuleProto), .base = &cssRuleClass},
     {PR_VIEW("CSSPageRule", cssPageRuleClass, kPageRuleProto), .base = &cssGroupingRuleClass},
     {PR_VIEW("CSSMarginRule", cssMarginRuleClass, kMarginRuleProto), .base = &cssRuleClass},
-    {PR_VIEW("CSSKeyframesRule", cssKeyframesRuleClass, kKeyframesRuleProto), .base = &cssRuleClass,
-     .indexed = &kKeyframesIndexed},
+    {
+        PR_VIEW("CSSKeyframesRule", cssKeyframesRuleClass, kKeyframesRuleProto),
+        .base = &cssRuleClass,
+        .indexed = &kKeyframesIndexed,
+    },
     {PR_VIEW("CSSKeyframeRule", cssKeyframeRuleClass, kKeyframeRuleProto), .base = &cssRuleClass},
-    {PR_VIEW("CSSLayerBlockRule", cssLayerBlockRuleClass, kLayerBlockRuleProto),
-     .base = &cssGroupingRuleClass},
-    {PR_VIEW("CSSLayerStatementRule", cssLayerStatementRuleClass, kLayerStatementRuleProto),
-     .base = &cssRuleClass},
+    {PR_VIEW("CSSLayerBlockRule", cssLayerBlockRuleClass, kLayerBlockRuleProto), .base = &cssGroupingRuleClass},
+    {PR_VIEW("CSSLayerStatementRule", cssLayerStatementRuleClass, kLayerStatementRuleProto), .base = &cssRuleClass},
     {PR_VIEW("CSSScopeRule", cssScopeRuleClass, kScopeRuleProto), .base = &cssGroupingRuleClass},
-    {PR_VIEW("CSSStartingStyleRule", cssStartingStyleRuleClass, kStartingStyleRuleProto),
-     .base = &cssGroupingRuleClass},
-    {PR_VIEW("CSSCounterStyleRule", cssCounterStyleRuleClass, kCounterStyleRuleProto),
-     .base = &cssRuleClass},
+    {
+        PR_VIEW("CSSStartingStyleRule", cssStartingStyleRuleClass, kStartingStyleRuleProto),
+        .base = &cssGroupingRuleClass,
+    },
+    {PR_VIEW("CSSCounterStyleRule", cssCounterStyleRuleClass, kCounterStyleRuleProto), .base = &cssRuleClass},
     {PR_VIEW("CSSPropertyRule", cssPropertyRuleClass, kPropertyRuleProto), .base = &cssRuleClass},
-    {PR_VIEW("CSSFontFeatureValuesRule", cssFontFeatureValuesRuleClass,
-             kFontFeatureValuesRuleProto),
-     .base = &cssRuleClass},
-    {PR_VIEW("CSSFontFeatureValuesMap", cssFontFeatureValuesMapClass, kFontFeatureValuesMapProto),
-     .iterator = "entries"},
-    {PR_VIEW("CSSFontPaletteValuesRule", cssFontPaletteValuesRuleClass,
-             kFontPaletteValuesRuleProto),
-     .base = &cssRuleClass},
-    {PR_VIEW("CSSPositionTryRule", cssPositionTryRuleClass, kPositionTryRuleProto),
-     .base = &cssRuleClass},
-    {PR_VIEW("CSSViewTransitionRule", cssViewTransitionRuleClass, kViewTransitionRuleProto),
-     .base = &cssRuleClass},
-    {PR_VIEW("CSSFunctionRule", cssFunctionRuleClass, kFunctionRuleProto),
-     .base = &cssGroupingRuleClass},
-    {PR_VIEW("CSSFunctionDeclarations", cssFunctionDeclarationsClass, kFunctionDeclarationsProto),
-     .base = &cssRuleClass},
-    {PR_VIEW("CSSCustomMediaRule", cssCustomMediaRuleClass, kCustomMediaRuleProto),
-     .base = &cssRuleClass},
-    {PR_VIEW("CSSSupportsConditionRule", cssSupportsConditionRuleClass,
-             kSupportsConditionRuleProto),
-     .base = &cssGroupingRuleClass},
+    {
+        PR_VIEW("CSSFontFeatureValuesRule", cssFontFeatureValuesRuleClass, kFontFeatureValuesRuleProto),
+        .base = &cssRuleClass,
+    },
+    {
+        PR_VIEW("CSSFontFeatureValuesMap", cssFontFeatureValuesMapClass, kFontFeatureValuesMapProto),
+        .iterator = "entries",
+    },
+    {
+        PR_VIEW("CSSFontPaletteValuesRule", cssFontPaletteValuesRuleClass, kFontPaletteValuesRuleProto),
+        .base = &cssRuleClass,
+    },
+    {PR_VIEW("CSSPositionTryRule", cssPositionTryRuleClass, kPositionTryRuleProto), .base = &cssRuleClass},
+    {PR_VIEW("CSSViewTransitionRule", cssViewTransitionRuleClass, kViewTransitionRuleProto), .base = &cssRuleClass},
+    {PR_VIEW("CSSFunctionRule", cssFunctionRuleClass, kFunctionRuleProto), .base = &cssGroupingRuleClass},
+    {
+        PR_VIEW("CSSFunctionDeclarations", cssFunctionDeclarationsClass, kFunctionDeclarationsProto),
+        .base = &cssRuleClass,
+    },
+    {PR_VIEW("CSSCustomMediaRule", cssCustomMediaRuleClass, kCustomMediaRuleProto), .base = &cssRuleClass},
+    {
+        PR_VIEW("CSSSupportsConditionRule", cssSupportsConditionRuleClass, kSupportsConditionRuleProto),
+        .base = &cssGroupingRuleClass,
+    },
     {PR_VIEW("CSSMixinRule", cssMixinRuleClass, kMixinRuleProto), .base = &cssGroupingRuleClass},
-    {PR_VIEW("CSSApplyBlockRule", cssApplyBlockRuleClass, kApplyBlockRuleProto),
-     .base = &cssGroupingRuleClass},
-    {PR_VIEW("CSSApplyStatementRule", cssApplyStatementRuleClass, kApplyStatementRuleProto),
-     .base = &cssRuleClass},
-    {PR_VIEW("CSSContentsBlockRule", cssContentsBlockRuleClass, kContentsBlockRuleProto),
-     .base = &cssGroupingRuleClass},
-    {PR_VIEW("CSSContentsStatementRule", cssContentsStatementRuleClass,
-             kContentsStatementRuleProto),
-     .base = &cssRuleClass},
+    {PR_VIEW("CSSApplyBlockRule", cssApplyBlockRuleClass, kApplyBlockRuleProto), .base = &cssGroupingRuleClass},
+    {PR_VIEW("CSSApplyStatementRule", cssApplyStatementRuleClass, kApplyStatementRuleProto), .base = &cssRuleClass},
+    {
+        PR_VIEW("CSSContentsBlockRule", cssContentsBlockRuleClass, kContentsBlockRuleProto),
+        .base = &cssGroupingRuleClass,
+    },
+    {
+        PR_VIEW("CSSContentsStatementRule", cssContentsStatementRuleClass, kContentsStatementRuleProto),
+        .base = &cssRuleClass,
+    },
 
-    {PR_VIEW("CSSStyleDeclaration", cssStyleDeclarationClass, kStyleDeclarationProto),
-     .indexed = &kDeclarationIndexed},
-    {PR_VIEW("CSSStyleProperties", prJsCssStylePropertiesClass, kStylePropertiesProto),
-     .base = &cssStyleDeclarationClass, .indexed = &kDeclarationIndexed},
-    {PR_VIEW("CSSFontFaceDescriptors", cssFontFaceDescriptorsClass, kFontFaceDescriptorsProto),
-     .base = &cssStyleDeclarationClass, .indexed = &kDeclarationIndexed},
-    {PR_VIEW("CSSPageDescriptors", cssPageDescriptorsClass, kPageDescriptorsProto),
-     .base = &cssStyleDeclarationClass, .indexed = &kDeclarationIndexed},
-    {PR_VIEW("CSSPositionTryDescriptors", cssPositionTryDescriptorsClass,
-             kPositionTryDescriptorsProto),
-     .base = &cssStyleDeclarationClass, .indexed = &kDeclarationIndexed},
-    {PR_VIEW("CSSFunctionDescriptors", cssFunctionDescriptorsClass, kFunctionDescriptorsProto),
-     .base = &cssStyleDeclarationClass, .indexed = &kDeclarationIndexed},
+    {PR_VIEW("CSSStyleDeclaration", cssStyleDeclarationClass, kStyleDeclarationProto), .indexed = &kDeclarationIndexed},
+    {
+        PR_VIEW("CSSStyleProperties", prJsCssStylePropertiesClass, kStylePropertiesProto),
+        .base = &cssStyleDeclarationClass,
+        .indexed = &kDeclarationIndexed,
+    },
+    {
+        PR_VIEW("CSSFontFaceDescriptors", cssFontFaceDescriptorsClass, kFontFaceDescriptorsProto),
+        .base = &cssStyleDeclarationClass,
+        .indexed = &kDeclarationIndexed,
+    },
+    {
+        PR_VIEW("CSSPageDescriptors", cssPageDescriptorsClass, kPageDescriptorsProto),
+        .base = &cssStyleDeclarationClass,
+        .indexed = &kDeclarationIndexed,
+    },
+    {
+        PR_VIEW("CSSPositionTryDescriptors", cssPositionTryDescriptorsClass, kPositionTryDescriptorsProto),
+        .base = &cssStyleDeclarationClass,
+        .indexed = &kDeclarationIndexed,
+    },
+    {
+        PR_VIEW("CSSFunctionDescriptors", cssFunctionDescriptorsClass, kFunctionDescriptorsProto),
+        .base = &cssStyleDeclarationClass,
+        .indexed = &kDeclarationIndexed,
+    },
 };
 
 #undef PR_VIEW
@@ -2940,20 +2878,16 @@ constexpr JSCFunctionListEntry kElementMembers[] = {
     PR_JS_MAGIC("matches", 1, elementSelectors, 1),
     PR_JS_MAGIC("webkitMatchesSelector", 1, elementSelectors, 1),
 };
-constexpr JSCFunctionListEntry kMatrixReadOnlyMembers[] = {
-    PR_JS_METHOD("toString", 0, matrixToString),
-};
-constexpr JSCFunctionListEntry kMatrixMembers[] = {
-    PR_JS_METHOD("setMatrixValue", 1, setMatrixValue),
-};
+constexpr JSCFunctionListEntry kMatrixReadOnlyMembers[] = {PR_JS_METHOD("toString", 0, matrixToString)};
+constexpr JSCFunctionListEntry kMatrixMembers[] = {PR_JS_METHOD("setMatrixValue", 1, setMatrixValue)};
 constexpr JSCFunctionListEntry kDocumentMembers[] = {
     PR_JS_GET("styleSheets", (jsSameObjectGetter<&prJsDomDocumentClass, prCssDocumentStyleSheets,
-                                                 &prJsCssStyleSheetListClass, "styleSheets">)),
+        &prJsCssStyleSheetListClass, "styleSheets">)),
     PR_JS_GET("fonts", prJsCssFonts),
 };
 constexpr JSCFunctionListEntry kShadowRootMembers[] = {
     PR_JS_GET("styleSheets", (jsSameObjectGetter<&prJsDomShadowRootClass, prCssShadowRootStyleSheets,
-                                                 &prJsCssStyleSheetListClass, "styleSheets">)),
+        &prJsCssStyleSheetListClass, "styleSheets">)),
 };
 
 // Adds `members` to the prototype of the class `id`, which another module defines.
@@ -2987,8 +2921,7 @@ JSValue scrollOffsetGet(JSContext* ctx, JSValueConst self, int magic) {
     PrDomElement* element = jsThis<PrDomElement>(ctx, self, prJsDomElementClass);
     if (element == nullptr)
         return JS_EXCEPTION;
-    return JS_NewFloat64(ctx, magic == 0 ? prCssElementScrollTop(element)
-                                         : prCssElementScrollLeft(element));
+    return JS_NewFloat64(ctx, magic == 0 ? prCssElementScrollTop(element) : prCssElementScrollLeft(element));
 }
 
 JSValue scrollOffsetSet(JSContext* ctx, JSValueConst self, JSValueConst input, int magic) {
@@ -3018,9 +2951,11 @@ JSValue measureGet(JSContext* ctx, JSValueConst self, int magic) {
     PrDomElement* element = jsThis<PrDomElement>(ctx, self, prJsDomElementClass);
     if (element == nullptr)
         return JS_EXCEPTION;
-    int32_t (*const measures[])(PrDomElement*) = {prCssElementScrollWidth, prCssElementScrollHeight,
-                                                  prCssElementClientTop,   prCssElementClientLeft,
-                                                  prCssElementClientWidth, prCssElementClientHeight};
+    int32_t (*const measures[])(PrDomElement*) = {
+        prCssElementScrollWidth, prCssElementScrollHeight,
+        prCssElementClientTop,   prCssElementClientLeft,
+        prCssElementClientWidth, prCssElementClientHeight,
+    };
     return JS_NewInt32(ctx, measures[magic](element));
 }
 
@@ -3039,8 +2974,7 @@ JSValue scrollMethod(JSContext* ctx, JSValueConst self, int argc, JSValueConst* 
 
 // Reads the ScrollLogicalPosition that a member names. Returns false with a TypeError thrown for a name that the
 // enumeration does not have.
-bool logicalPositionRead(JSContext* ctx, JSValueConst dictionary, const char* name,
-                         PrCssScrollLogicalPosition* out) {
+bool logicalPositionRead(JSContext* ctx, JSValueConst dictionary, const char* name, PrCssScrollLogicalPosition* out) {
     StringArgument value = {ctx};
     bool given = false;
     if (!jsDictString(ctx, dictionary, name, &value, &given))
@@ -3073,10 +3007,9 @@ JSValue scrollIntoView(JSContext* ctx, JSValueConst self, int argc, JSValueConst
         bool present = false;
         StringArgument behavior = {ctx};
         // ScrollOptions's behavior is read first, then block and inline in order.
-        if (!jsDictionary(ctx, arg, &present)
-            || (present && (!jsDictString(ctx, arg, "behavior", &behavior)
-                            || !logicalPositionRead(ctx, arg, "block", &options.block)
-                            || !logicalPositionRead(ctx, arg, "inline", &options.inlinePosition))))
+        if (!jsDictionary(ctx, arg, &present) || (present && (!jsDictString(ctx, arg, "behavior", &behavior) ||
+                !logicalPositionRead(ctx, arg, "block", &options.block) ||
+                !logicalPositionRead(ctx, arg, "inline", &options.inlinePosition))))
             return prJsCssScrollPromise(ctx, false);
     }
     prCssElementScrollIntoView(element, &options);
@@ -3244,8 +3177,7 @@ JSValue prJsCssAttributeStyleMap(JSContext* ctx, JSValueConst self) {
     PrDomElement* element = jsThis<PrDomElement>(ctx, self, prJsDomElementClass);
     if (element == nullptr)
         return JS_EXCEPTION;
-    PrCssStyleDeclaration* declarations =
-        prCssStylePropertiesAsCssStyleDeclaration(prCssElementStyle(element));
+    PrCssStyleDeclaration* declarations = prCssStylePropertiesAsCssStyleDeclaration(prCssElementStyle(element));
     return jsSameObject(ctx, self, "attributeStyleMap", [&] {
         return jsWrap(ctx, prJsCssStylePropertyMapClass, self, declarations, false);
     });
@@ -3289,11 +3221,10 @@ bool prJsCssScrollToOptionsRead(JSContext* ctx, int argc, JSValueConst* argv, Pr
     if (!jsDictString(ctx, options, "behavior", &behavior, &given))
         return false;
     PrStringView value = behavior.value();
-    if (given && value != "auto" && value != "instant"
-        && value != "smooth") {
+    if (given && value != "auto" && value != "instant" && value != "smooth") {
         JS_ThrowTypeError(ctx, "The provided value is not a valid ScrollBehavior");
         return false;
     }
-    return jsDictNumber(ctx, options, "left", &out->left, &out->hasLeft)
-           && jsDictNumber(ctx, options, "top", &out->top, &out->hasTop);
+    return jsDictNumber(ctx, options, "left", &out->left, &out->hasLeft) &&
+        jsDictNumber(ctx, options, "top", &out->top, &out->hasTop);
 }

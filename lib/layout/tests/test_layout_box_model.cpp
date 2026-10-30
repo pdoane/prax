@@ -73,11 +73,14 @@ PrLayoutFlexStyle justified(PrLayoutAlignment self, PrLayoutAlignment items = Pr
 // Creates a block of `kind` under `parent`, aligned by `flex` and holding an inline-block 40 wide, so that its
 // fit-content size is 40.
 PrLayoutNode justifiedBlock(Fixture& f, PrLayoutNode parent, const PrLayoutFlexStyle& flex,
-                            PrLayoutBoxStyle box = block(), PrLayoutNodeKind kind = PrLayoutNodeKind_Element) {
+        PrLayoutBoxStyle box = block(), PrLayoutNodeKind kind = PrLayoutNodeKind_Element) {
     PrLayoutFontStyle font = lineHeight20();
     PrLayoutStyleIndex style = f.style(box, nullptr, nullptr, &font, &flex);
-    PrLayoutNode node = kind == PrLayoutNodeKind_SemiReplaced ? prLayoutNodeCreateSemiReplaced(f.tree, parent, style)
-                                                              : prLayoutNodeCreateElement(f.tree, parent, style);
+    PrLayoutNode node;
+    if (kind == PrLayoutNodeKind_SemiReplaced)
+        node = prLayoutNodeCreateSemiReplaced(f.tree, parent, style);
+    else
+        node = prLayoutNodeCreateElement(f.tree, parent, style);
     element20(f, node, sized(inlineBlock(), 40, 20));
     return node;
 }
@@ -516,7 +519,7 @@ TEST_CASE("a relatively positioned inline-block moves alone, and nothing of its 
         CHECK(double(now.left) == doctest::Approx(double(at.left + dx)));
         CHECK(double(now.top) == doctest::Approx(double(at.top + dy)));
         checkRect(f.bounds(sibling), double(siblingAt.left), double(siblingAt.top), double(siblingAt.right),
-                  double(siblingAt.bottom));
+            double(siblingAt.bottom));
         PrLayoutRect boxes[4];
         CHECK(prLayoutNodeBoxes(f.tree, words, PrLayoutCoordinates_Viewport, boxes, 4) == 2);
         CHECK(boxes[1].top == second.top);
@@ -647,8 +650,8 @@ TEST_CASE("a box's content extent is its border box less the borders and the pad
     // An inline box, text and the root's own box.
     CHECK(prLayoutNodeContentExtent(f.tree, wrapper) == PrLayoutVec{});
     PrLayoutRect rootBox = prLayoutNodeBounds(f.tree, root, PrLayoutCoordinates_Layout);
-    CHECK(prLayoutNodeContentExtent(f.tree, root)
-          == PrLayoutVec{rootBox.right - rootBox.left, rootBox.bottom - rootBox.top});
+    CHECK(prLayoutNodeContentExtent(f.tree, root) ==
+        PrLayoutVec{rootBox.right - rootBox.left, rootBox.bottom - rootBox.top});
 
     // A box no longer generated has none, though its node's cache outlives it.
     padded.display = PrLayoutDisplay_Inline;

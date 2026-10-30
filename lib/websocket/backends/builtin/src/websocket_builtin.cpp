@@ -168,7 +168,7 @@ void writeFrame(Socket* socket, Opcode opcode, PrByteView first, PrByteView seco
 void writeClose(Socket* socket, uint16_t code, PrStringView reason) {
     uint8_t status[2] = {uint8_t(code >> 8), uint8_t(code)};
     writeFrame(socket, Opcode_Close, PrByteView{status, 2},
-               PrByteView{reinterpret_cast<const uint8_t*>(reason.data), reason.size});
+        PrByteView{reinterpret_cast<const uint8_t*>(reason.data), reason.size});
     socket->closeSent = true;
 }
 
@@ -338,8 +338,8 @@ void receiveData(Socket* socket, Opcode opcode, bool fin, PrByteView payload) {
         return;
     socket->inMessage = false;
     PrByteView data{socket->message.data, socket->message.count};
-    if (socket->messageKind == PrWebSocketMessageKind_Text
-        && prUtf8Validate(PrStringView{reinterpret_cast<const char*>(data.data), data.size}) != data.size) {
+    if (socket->messageKind == PrWebSocketMessageKind_Text &&
+            prUtf8Validate(PrStringView{reinterpret_cast<const char*>(data.data), data.size}) != data.size) {
         failSocket(socket, kCloseInvalidData, PrNetError_Protocol);
         return;
     }
@@ -354,8 +354,7 @@ void receiveData(Socket* socket, Opcode opcode, bool fin, PrByteView payload) {
 // Parses the frames that arrived, while the socket is open or closing. Returns once the input holds no whole frame, or
 // the socket closed or was destroyed.
 void readFrames(Socket* socket) {
-    while (!socket->dead
-           && (socket->state == PrWebSocketState_Open || socket->state == PrWebSocketState_Closing)) {
+    while (!socket->dead && (socket->state == PrWebSocketState_Open || socket->state == PrWebSocketState_Closing)) {
         const uint8_t* bytes = socket->input.data + socket->inputStart;
         uint64_t available = socket->input.count - socket->inputStart;
         if (available < 2)
@@ -662,11 +661,12 @@ PrWebSocketMessage socketMessage(const PrWebSocketNetwork*, const PrWebSocket* h
 
 PrWebSocketCloseInfo socketCloseInfo(const PrWebSocketNetwork*, const PrWebSocket* handle) {
     const Socket* socket = static_cast<const Socket*>(handle);
-    return PrWebSocketCloseInfo{.wasClean = socket->wasClean,
-                                .code = socket->closeCode,
-                                .reason = prStringIsNull(&socket->closeReason) ? PrStringView{""}
-                                                                               : viewOf(socket->closeReason),
-                                .error = socket->error};
+    return PrWebSocketCloseInfo{
+        .wasClean = socket->wasClean,
+        .code = socket->closeCode,
+        .reason = prStringIsNull(&socket->closeReason) ? PrStringView{""} : viewOf(socket->closeReason),
+        .error = socket->error,
+    };
 }
 
 } // namespace

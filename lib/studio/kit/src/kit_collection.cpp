@@ -234,9 +234,12 @@ struct ColumnFlex {
 
     void make(const Kit&, PrLayoutFlexStyle& flex) const {
         flex.alignItems = PrLayoutAlignment_Center;
-        flex.justifyContent = align == PrKitTextAlign_End      ? PrLayoutAlignment_FlexEnd
-                              : align == PrKitTextAlign_Center ? PrLayoutAlignment_Center
-                                                               : PrLayoutAlignment_FlexStart;
+        if (align == PrKitTextAlign_End)
+            flex.justifyContent = PrLayoutAlignment_FlexEnd;
+        else if (align == PrKitTextAlign_Center)
+            flex.justifyContent = PrLayoutAlignment_Center;
+        else
+            flex.justifyContent = PrLayoutAlignment_FlexStart;
         flex.columnGap = prLayoutLengthPx(kRowGap);
         flex.shrink = 0;
         if (weight > 0) {
@@ -299,8 +302,7 @@ float tableMinWidth(const PrKitTableColumn* columns, uint32_t count) {
 PrLayoutNode columnElement(PrKit* kit, PrLayoutNode parent, uint64_t key, const PrKitTableColumn& c) {
     bool fills = c.flex == PrKitFlex_Fill;
     ColumnFlex flex{.weight = fills ? (c.weight > 0 ? c.weight : 1) : 0, .align = c.align};
-    return prLayoutTreeFrameElement(kit->tree, parent, key,
-                                    kitStyle(*kit, ColumnBox{.width = c.width, .fills = fills}, flex));
+    return prLayoutTreeFrameElement(kit->tree, parent, key, kitStyle(*kit, ColumnBox{.width = c.width, .fills = fills}, flex));
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -389,8 +391,8 @@ bool viewKey(PrUi* ui, PrLayoutNode view, bool sideways, PrAppKey* key, bool* sh
         }
     }
     // Select all is A with the accelerator modifier, which is Command or Control.
-    if (prUiKeyPressed(ui, view, 'A', PrAppModifierFlag_Super)
-        || prUiKeyPressed(ui, view, 'A', PrAppModifierFlag_Control)) {
+    if (prUiKeyPressed(ui, view, 'A', PrAppModifierFlag_Super) ||
+            prUiKeyPressed(ui, view, 'A', PrAppModifierFlag_Control)) {
         if (!found) {
             found = true;
             *key = 'A';
@@ -413,7 +415,7 @@ uint32_t parentRow(const PrKitTreeItem* items, uint32_t index) {
 // of a grid, or 1, and `page` the number of rows or tiles that the scrollport shows. Returns the edit, which moves the
 // lead if its op is not None.
 PrKitSelectionEdit applyKey(PrKitSelection& selection, uint32_t count, uint32_t columns, uint32_t page, PrAppKey key,
-                            bool shift, const PrKitTreeItem* PR_NULLABLE items, PrKitTreeFold* fold) {
+        bool shift, const PrKitTreeItem* PR_NULLABLE items, PrKitTreeFold* fold) {
     uint32_t lead = selection.lead < count ? selection.lead : count - 1;
     if (items != nullptr && (key == PrAppKey_Left || key == PrAppKey_Right)) {
         const PrKitTreeItem& item = items[lead];
@@ -521,7 +523,7 @@ struct ViewShape {
 // applying the round's keys to `v.selection`. If `v.items` is set, the view is a tree view and writes its fold. Returns
 // the scroll container.
 PrLayoutNode listView(Kit& kit, PrLayoutNode parent, uint64_t key, uint32_t count, const PrKitListViewStyle& style,
-                      const ViewShape& shape, View& v) {
+        const ViewShape& shape, View& v) {
     float rowHeight = style.rowHeight > 0 ? style.rowHeight : kPrKitHeightSm;
     PrUi* ui = kit.ui;
     PrLayoutTree* tree = kit.tree;
@@ -529,7 +531,7 @@ PrLayoutNode listView(Kit& kit, PrLayoutNode parent, uint64_t key, uint32_t coun
     box.overflow = shape.minWidth > 0 ? PrKitOverflow_Scroll : PrKitOverflow_ScrollY;
     box.place = shape.place;
     PrLayoutNode view = kitBoxNode(kit, parent, PrKitBox{.key = key}, box.overflow,
-                                   kitStyle(kit, KitContainerBox{.style = box}, kitContainerFlex(box)));
+        kitStyle(kit, KitContainerBox{.style = box}, kitContainerFlex(box)));
     PrUiFlags flags = PrUiFlag_Scrollable;
     if (v.selection != nullptr)
         flags = flags | PrUiFlag_Focusable;
@@ -540,9 +542,12 @@ PrLayoutNode listView(Kit& kit, PrLayoutNode parent, uint64_t key, uint32_t coun
     bool measured = prLayoutNodeScrollInfo(tree, view, &info) && info.scrollContainer;
     float port = measured ? prLayoutUnitToPx(info.portExtent.y) : 0;
     if (!measured) {
-        port = shape.port > 0                                ? shape.port
-               : shape.place.height.kind == PrKitSizeKind_Px ? shape.place.height.value
-                                                             : rowHeight * kUnmeasuredRows;
+        if (shape.port > 0)
+            port = shape.port;
+        else if (shape.place.height.kind == PrKitSizeKind_Px)
+            port = shape.place.height.value;
+        else
+            port = rowHeight * kUnmeasuredRows;
         prUiRequestFrame(ui);
     }
     // A grid's tiles fill rows of as many as fit at their width, and the view's rows are rows of tiles.
@@ -594,10 +599,12 @@ PrLayoutNode listView(Kit& kit, PrLayoutNode parent, uint64_t key, uint32_t coun
 
     // The content's padding moves with the scroll, and only its box group with it.
     bool grid = style.tileWidth > 0;
-    ContentBox content{.minWidth = shape.minWidth,
-                       .above = rowHeight * float(first),
-                       .below = rowHeight * float(rowCount - end),
-                       .tiles = grid};
+    ContentBox content{
+        .minWidth = shape.minWidth,
+        .above = rowHeight * float(first),
+        .below = rowHeight * float(rowCount - end),
+        .tiles = grid,
+    };
     v.content = prLayoutTreeFrameElement(tree, view, 0, kitStyle(kit, content, ContentFlex{.tiles = grid}));
     return view;
 }
@@ -610,8 +617,7 @@ void applyClick(Kit& kit, View& v, uint32_t index, PrLayoutNode node) {
 
 // Creates the element of a view's row, keyed by `item` under the view, and indented by `indent` px, and applies a click
 // on it to the view's selection. A row of a tree view that drags marks where a payload of its kind would land on it.
-PrLayoutNode rowElement(Kit& kit, PrLayoutNode view, View& v, uint32_t index, uint64_t item, bool selected,
-                        float indent) {
+PrLayoutNode rowElement(Kit& kit, PrLayoutNode view, View& v, uint32_t index, uint64_t item, bool selected, float indent) {
     RowKind kind = v.minWidth > 0 ? RowKind_Table : RowKind_List;
     PrUi* ui = kit.ui;
     PrLayoutTree* tree = kit.tree;
@@ -621,12 +627,12 @@ PrLayoutNode rowElement(Kit& kit, PrLayoutNode view, View& v, uint32_t index, ui
     // A row is a target while a payload of the view's kind is in flight, according to the last layout.
     PrKitDropZone drop = PrKitDropZone_None;
     const PrUiPayload* dragging = prUiDragging(ui);
-    if (v.dragKind != 0 && dragging != nullptr && dragging->kind == v.dragKind && dragging->source != node
-        && prUiIsDropTarget(ui, node))
+    if (v.dragKind != 0 && dragging != nullptr && dragging->kind == v.dragKind && dragging->source != node &&
+            prUiIsDropTarget(ui, node))
         drop = dropZoneOf(kit, node);
     PrLayoutStyleIndex record =
         kitStyle(kit, RowBox{.height = v.rowHeight, .indent = indent, .minWidth = v.minWidth}, RowFlex{.kind = kind},
-                 RowFill{.selected = selected, .hover = hover, .drop = drop, .kind = kind});
+            RowFill{.selected = selected, .hover = hover, .drop = drop, .kind = kind});
     prLayoutTreeFrameSetStyle(tree, node, record);
     applyClick(kit, v, index, node);
     return node;
@@ -652,7 +658,7 @@ PrLayoutNode rowOf(PrKit* kit, PrLayoutNode view, View& v, const PrKitRow& row, 
         prKitStatus(kit, node, {.text = row.status}, {.tone = row.statusTone});
     else if (row.icon != PrKitIconKind_None)
         prKitIcon(kit, node, {.icon = row.icon},
-                  {.size = kRowIconSize, .tone = PrKitTone(row.selected ? PrKitTone_Accent : PrKitTone_Muted)});
+            {.size = kRowIconSize, .tone = PrKitTone(row.selected ? PrKitTone_Accent : PrKitTone_Muted)});
     PrKitTextStyle labelStyle{.role = PrKitTextRole_BodySmall, .tone = row.tone, .wrap = PrKitWrap_Clip};
     PrLayoutNode label = prKitLabel(kit, node, {.text = row.label}, labelStyle);
     PrKitPlace fill{.flex = PrKitFlex_Fill};
@@ -721,24 +727,32 @@ PrLayoutNode prKitListTile(PrKit* kit, PrLayoutNode view, PrKitTile tile) {
     bool hover = prUiIsHovered(ui, node) && !disabled;
     const PrKitPalette& p = k.theme.palette;
     PrColor clear{0, 0, 0, 0};
-    KitColors frame{.background = tile.selected ? p.accentWeak : hover ? p.bg2 : clear,
-                    .border = tile.selected ? p.accent : clear};
+    KitColors frame{
+        .background = tile.selected ? p.accentWeak : hover ? p.bg2 : clear,
+        .border = tile.selected ? p.accent : clear,
+    };
     PrLayoutStyleIndex record =
         kitStyle(k, TileBox{.width = 100.0f / float(v.tiles), .height = v.rowHeight}, TileFlex{}, frame);
     prLayoutTreeFrameSetStyle(tree, node, record);
     KitColors ground{.background = tile.tint.a > 0 ? tile.tint : p.bg3};
     PrLayoutNode thumb = prLayoutTreeFrameElement(tree, node, 0, kitStyle(k, ThumbBox{}, ThumbFlex{}, ground));
     if (tile.image != nullptr) {
-        PrKitImageStyle fit{.fit = PrKitImageFit_Cover,
-                            .place = {.width = prKitPercent(100), .height = prKitPercent(100)}};
+        PrKitImageStyle fit{
+            .fit = PrKitImageFit_Cover,
+            .place = {.width = prKitPercent(100), .height = prKitPercent(100)},
+        };
         prKitImage(kit, thumb, {.image = tile.image}, fit);
     } else if (tile.icon != PrKitIconKind_None) {
         prKitIcon(kit, thumb, {.icon = tile.icon},
-                  {.size = kTileIconSize, .tone = PrKitTone(tile.tint.a > 0 ? PrKitTone_Primary : PrKitTone_Muted)});
+            {.size = kTileIconSize, .tone = PrKitTone(tile.tint.a > 0 ? PrKitTone_Primary : PrKitTone_Muted)});
     }
     PrKitTone tone = tile.selected ? PrKitTone_Primary : PrKitTone_Secondary;
-    PrKitTextStyle labelStyle{.role = PrKitTextRole_BodySmall, .tone = tone, .wrap = PrKitWrap_Clip,
-                              .align = PrKitTextAlign_Center};
+    PrKitTextStyle labelStyle{
+        .role = PrKitTextRole_BodySmall,
+        .tone = tone,
+        .wrap = PrKitWrap_Clip,
+        .align = PrKitTextAlign_Center,
+    };
     prKitLabel(kit, node, {.text = tile.label}, labelStyle);
     applyClick(k, v, tile.index, node);
     return node;
@@ -757,8 +771,11 @@ PrLayoutNode prKitEmptyState(PrKit* kit, PrLayoutNode parent, PrKitEmptyState em
     PrKitTextStyle titleStyle{.role = PrKitTextRole_Caption};
     prKitLabel(kit, column, {.text = empty.title}, titleStyle);
     if (empty.hint.size != 0) {
-        PrKitTextStyle hintStyle{.role = PrKitTextRole_BodySmall, .tone = PrKitTone_Faint,
-                                 .align = PrKitTextAlign_Center};
+        PrKitTextStyle hintStyle{
+            .role = PrKitTextRole_BodySmall,
+            .tone = PrKitTone_Faint,
+            .align = PrKitTextAlign_Center,
+        };
         prKitLabel(kit, column, {.text = empty.hint}, hintStyle);
     }
     return column;
@@ -791,9 +808,11 @@ PrLayoutNode prKitTreeRow(PrKit* kit, PrLayoutNode view, PrKitRow row) {
         const PrUiPayload* dropped = prUiDropped(ui, node);
         if (dropped != nullptr && dropped->kind == v.dragKind && dropped->source != node) {
             PrKitDropZone zone = dropZoneOf(k, node);
-            v.drop = PrKitTreeDrop{.item = dropped->value,
-                                   .row = row.index,
-                                   .zone = zone != PrKitDropZone_None ? zone : PrKitDropZone(PrKitDropZone_Inside)};
+            v.drop = PrKitTreeDrop{
+                .item = dropped->value,
+                .row = row.index,
+                .zone = zone != PrKitDropZone_None ? zone : PrKitDropZone(PrKitDropZone_Inside),
+            };
         }
     }
     return node;
@@ -824,7 +843,7 @@ PrLayoutNode prKitVisibilityToggle(PrKit* kit, PrLayoutNode parent, PrKitVisibil
     if (toggle.hidden || toggle.revealed) {
         PrKitIconKind eye = toggle.hidden ? PrKitIconKind_EyeOff : PrKitIconKind_Eye;
         prKitIcon(kit, node, {.icon = eye},
-                  {.size = kCellIconSize, .tone = PrKitTone(toggle.hidden ? PrKitTone_Secondary : PrKitTone_Faint)});
+            {.size = kCellIconSize, .tone = PrKitTone(toggle.hidden ? PrKitTone_Secondary : PrKitTone_Faint)});
     }
     return node;
 }
@@ -842,9 +861,8 @@ PrLayoutNode prKitTable(PrKit* kit, PrLayoutNode parent, PrKitTable table, PrKit
 
     // The header sits above the rows' scroll container, and takes its sideways scroll from it below.
     PrLayoutNode header = prLayoutTreeFrameElement(tree, frame, 0, kitStyle(k, HeaderPortBox{}, KitFixed{}));
-    PrLayoutStyleIndex headings =
-        kitStyle(k, RowBox{.height = kHeaderHeight, .indent = kRowInset, .minWidth = minWidth},
-                 RowFlex{.kind = RowKind_Header}, RowFill{.kind = RowKind_Header});
+    PrLayoutStyleIndex headings = kitStyle(k, RowBox{.height = kHeaderHeight, .indent = kRowInset, .minWidth = minWidth},
+        RowFlex{.kind = RowKind_Header}, RowFill{.kind = RowKind_Header});
     PrLayoutNode row = prLayoutTreeFrameElement(tree, header, 0, headings);
     View v{.selection = table.selection, .columns = table.columns, .columnCount = table.columnCount};
     PrKitTableSort* sort = table.sort;

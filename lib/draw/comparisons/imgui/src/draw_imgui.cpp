@@ -88,8 +88,8 @@ void eachContour(Walk& w, const PrPathPolyline& flat, Each each) {
             if (w.points.count == 0 || p.x != w.points.last().x || p.y != w.points.last().y)
                 w.points.push(p);
         }
-        if (closed && w.points.count > 1 && w.points.last().x == w.points.data[0].x
-            && w.points.last().y == w.points.data[0].y)
+        if (closed && w.points.count > 1 && w.points.last().x == w.points.data[0].x &&
+                w.points.last().y == w.points.data[0].y)
             w.points.pop();
         if (w.points.count >= 2)
             each(closed);
@@ -137,8 +137,7 @@ ImDrawFlags strokePosition(const Walk& w, const PrDrawStroke* stroke, bool close
 
 // Strokes each contour with Dear ImGui's own stroker, at the stroke's width in the target's pixels and at the position
 // that its alignment sets. It uses ImGui's joins and caps, and draws no dashes.
-void strokePath(Walk& w, const PrPath* path, PrAffine2 transform, const PrDrawStroke* stroke,
-                ImU32 color) {
+void strokePath(Walk& w, const PrPath* path, PrAffine2 transform, const PrDrawStroke* stroke, ImU32 color) {
     float width = stroke->shape.width;
     if (!(width > 0))
         return;
@@ -156,8 +155,7 @@ void strokePath(Walk& w, const PrPath* path, PrAffine2 transform, const PrDrawSt
 // ---------------------------------------------------------------------------------------------------------------------
 // Shapes
 
-void drawImageRects(Walk& w, const PrDrawSource& source, PrColor color, const PrDrawImageRect* rects,
-                    uint32_t count);
+void drawImageRects(Walk& w, const PrDrawSource& source, PrColor color, const PrDrawImageRect* rects, uint32_t count);
 
 // Draws a rectangle filled with an image brush in the command's space, without rotation, skew or reflection, as the
 // image's tile clipped to the rectangle. The tile's surroundings are left out. Returns false for any other brush.
@@ -171,17 +169,23 @@ bool drawImageBrushRect(Walk& w, const PrDrawCommand& c) {
     const PrDrawSource& source = brush->image.source;
     PrRect tile = brush->image.tiles.tile;
     PrRect placed = prAffine2MapRect(brush->transform, tile);
-    PrRect visible{maxF32(placed.left, c.rect.left), maxF32(placed.top, c.rect.top),
-                   minF32(placed.right, c.rect.right), minF32(placed.bottom, c.rect.bottom)};
-    if (!(visible.right > visible.left && visible.bottom > visible.top) || !(placed.right > placed.left)
-        || !(placed.bottom > placed.top))
+    PrRect visible{
+        maxF32(placed.left, c.rect.left), maxF32(placed.top, c.rect.top),
+        minF32(placed.right, c.rect.right), minF32(placed.bottom, c.rect.bottom),
+    };
+    if (!(visible.right > visible.left && visible.bottom > visible.top) || !(placed.right > placed.left) ||
+            !(placed.bottom > placed.top))
         return true;
     // The visible part of the tile, in the source's texels from its origin.
     float width = prRectWidth(source.rect) / prRectWidth(placed);
     float height = prRectHeight(source.rect) / prRectHeight(placed);
-    PrDrawImageRect rect{PrRect{(visible.left - placed.left) * width, (visible.top - placed.top) * height,
-                                (visible.right - placed.left) * width, (visible.bottom - placed.top) * height},
-                         visible};
+    PrDrawImageRect rect{
+        PrRect{
+            (visible.left - placed.left) * width, (visible.top - placed.top) * height,
+            (visible.right - placed.left) * width, (visible.bottom - placed.top) * height,
+        },
+        visible,
+    };
     drawImageRects(w, source, c.color, &rect, 1);
     return true;
 }
@@ -197,8 +201,8 @@ void drawShape(Walk& w, const PrDrawCommand& c) {
     if (c.stroke == nullptr && prAffine2IsAxisAligned(t)) {
         if (c.kind == PrDrawCommandKind_Rect) {
             PrRect r = prAffine2MapRect(t, c.rect);
-            if (c.brush != nullptr && c.brush->kind == PrDrawBrushKind_Linear
-                && c.brush->space == PrDrawBrushSpace_User) {
+            if (c.brush != nullptr && c.brush->kind == PrDrawBrushKind_Linear &&
+                    c.brush->space == PrDrawBrushSpace_User) {
                 // The ramp's colors at the corners, at the gradient's parameter for each corner.
                 Array<PrDrawRampPiece> pieces{};
                 Array<PrColor> ramp{};
@@ -213,15 +217,13 @@ void drawShape(Walk& w, const PrDrawCommand& c) {
                     if (prDrawGradientExtend(c.brush->extend, &param))
                         k = prDrawRampColor(&pieces.data[prDrawRampPieceAt(pieces.data, param, 0)], ramp.data, param);
                     float a = k.a;
-                    return colorOf(PrColor{a > 0 ? k.r / a : 0, a > 0 ? k.g / a : 0,
-                                           a > 0 ? k.b / a : 0, a});
+                    return colorOf(PrColor{a > 0 ? k.r / a : 0, a > 0 ? k.g / a : 0, a > 0 ? k.b / a : 0, a});
                 };
                 // The command's points at the target's corners. A reflection or a swap of the axes moves them.
                 PrAffine2 back{};
                 if (prAffine2Invert(t, &back)) {
                     auto corner = [&](float x, float y) { return at(prAffine2MapPoint(back, PrVec2{x, y})); };
-                    w.draw->AddRectFilledMultiColor(
-                        ImVec2(r.left, r.top), ImVec2(r.right, r.bottom), corner(r.left, r.top),
+                    w.draw->AddRectFilledMultiColor(ImVec2(r.left, r.top), ImVec2(r.right, r.bottom), corner(r.left, r.top),
                         corner(r.right, r.top), corner(r.right, r.bottom), corner(r.left, r.bottom));
                 }
                 pieces.reset();
@@ -237,12 +239,12 @@ void drawShape(Walk& w, const PrDrawCommand& c) {
             float radius = shape.corners[0].radii.x;
             bool uniform = true;
             for (const PrCorner& corner : shape.corners)
-                uniform = uniform && corner.radii.x == radius && corner.radii.y == radius
-                          && (corner.shape == 1 || !(radius > 0));
+                uniform =
+                    uniform && corner.radii.x == radius && corner.radii.y == radius && (corner.shape == 1 || !(radius > 0));
             if (uniform) {
                 PrRect r = prAffine2MapRect(t, shape.rect);
                 w.draw->AddRectFilled(ImVec2(r.left, r.top), ImVec2(r.right, r.bottom), color,
-                                      radius * prAffine2MaxScale(t));
+                    radius * prAffine2MaxScale(t));
                 return;
             }
         }
@@ -250,8 +252,7 @@ void drawShape(Walk& w, const PrDrawCommand& c) {
             float scale = prAffine2MaxScale(t);
             float turn = atan2F32(t.b, t.a);
             w.draw->AddEllipseFilled(vec(prAffine2MapPoint(t, c.ellipse.center)),
-                                     ImVec2(c.ellipse.radii.x * scale, c.ellipse.radii.y * scale),
-                                     color, c.ellipse.rotation + turn);
+                ImVec2(c.ellipse.radii.x * scale, c.ellipse.radii.y * scale), color, c.ellipse.rotation + turn);
             return;
         }
     }
@@ -270,7 +271,7 @@ struct BorderDraw {
 
 // Draws a border's pieces as polygons in each side's color. Its brushes and the cuts between sides are left out.
 void drawBorderPiece(void* PR_NULLABLE context, const PrDrawBorderPiece* piece,
-                     const PrPathPolyline* shape, const PrPathPolyline* PR_NULLABLE) {
+        const PrPathPolyline* shape, const PrPathPolyline* PR_NULLABLE) {
     BorderDraw& d = *static_cast<BorderDraw*>(context);
     Walk& w = *d.w;
     PrAffine2 device = w.transforms.last().affine;
@@ -284,8 +285,7 @@ void drawBorderPiece(void* PR_NULLABLE context, const PrDrawBorderPiece* piece,
 
 // Draws the source's texels over each rectangle, under the current transform. Dear ImGui tints them with the vertex
 // color times the texels, as they are stored. A list source is left out.
-void drawImageRects(Walk& w, const PrDrawSource& source, PrColor color, const PrDrawImageRect* rects,
-                    uint32_t count) {
+void drawImageRects(Walk& w, const PrDrawSource& source, PrColor color, const PrDrawImageRect* rects, uint32_t count) {
     if (source.kind == PrDrawSourceKind_List)
         return;
     ImTextureID texture = ImTextureID_Invalid;
@@ -305,16 +305,16 @@ void drawImageRects(Walk& w, const PrDrawSource& source, PrColor color, const Pr
     ImU32 packed = colorOf(color);
     for (uint32_t i = 0; i < count; ++i) {
         PrRect s = rects[i].source;
-        s = PrRect{source.rect.left + s.left, source.rect.top + s.top, source.rect.left + s.right,
-                   source.rect.top + s.bottom};
+        s = PrRect{
+            source.rect.left + s.left, source.rect.top + s.top, source.rect.left + s.right,
+            source.rect.top + s.bottom,
+        };
         const PrRect& d = rects[i].destination;
         ImVec2 uv0(s.left / width, s.top / height);
         ImVec2 uv1(s.right / width, s.bottom / height);
         w.draw->AddImageQuad(ref, vec(prAffine2MapPoint(t, {d.left, d.top})),
-                             vec(prAffine2MapPoint(t, {d.right, d.top})),
-                             vec(prAffine2MapPoint(t, {d.right, d.bottom})),
-                             vec(prAffine2MapPoint(t, {d.left, d.bottom})), uv0,
-                             ImVec2(uv1.x, uv0.y), uv1, ImVec2(uv0.x, uv1.y), packed);
+            vec(prAffine2MapPoint(t, {d.right, d.top})), vec(prAffine2MapPoint(t, {d.right, d.bottom})),
+            vec(prAffine2MapPoint(t, {d.left, d.bottom})), uv0, ImVec2(uv1.x, uv0.y), uv1, ImVec2(uv0.x, uv1.y), packed);
     }
 }
 
@@ -390,8 +390,7 @@ void drawGlyphs(Walk& w, const PrDrawCommand& c) {
         float perEm = prDrawGlyphPixelsPerEm(&run, i, device) * adjust;
         if (!(perEm > 0))
             continue;
-        ImFontBaked* baked =
-            font->GetFontBaked(clampF32(perEm * heightPerEm, 1, IMGUI_FONT_SIZE_MAX));
+        ImFontBaked* baked = font->GetFontBaked(clampF32(perEm * heightPerEm, 1, IMGUI_FONT_SIZE_MAX));
         if (baked == nullptr)
             continue;
         ImFontGlyph* glyph = baked->FindGlyphNoFallback(ImWchar(id));
@@ -402,22 +401,18 @@ void drawGlyphs(Walk& w, const PrDrawCommand& c) {
         ImTextureRef atlas = font->OwnerAtlas->TexRef;
         // Maps the pixels of the baked box, about the origin on the baseline, to the font's ems at the scale that
         // FreeType used for the size. Then applies the glyph's placement and the target's transform.
-        const FT_Size_Metrics& metrics =
-            static_cast<ImGui_ImplFreeType_FontSrcBakedData*>(baked->FontLoaderDatas)
-                ->FtSize->metrics;
+        const FT_Size_Metrics& metrics = static_cast<ImGui_ImplFreeType_FontSrcBakedData*>(baked->FontLoaderDatas)
+            ->FtSize->metrics;
         float unitsToPixels = float(face->units_per_EM) / (65536.0f * 64.0f);
         float toEmsX = adjust / (float(metrics.x_scale) * unitsToPixels);
         float toEmsY = adjust / (float(metrics.y_scale) * unitsToPixels);
-        PrAffine2 box = prAffine2Concat(prAffine2Translate(PrVec2{0, -baked->Ascent}),
-                                        prAffine2Scale(PrVec2{toEmsX, toEmsY}));
-        PrAffine2 t = prAffine2Concat(
-            box, prAffine2Concat(prDrawGlyphTransform(&run, i), device));
+        PrAffine2 box = prAffine2Concat(prAffine2Translate(PrVec2{0, -baked->Ascent}), prAffine2Scale(PrVec2{toEmsX, toEmsY}));
+        PrAffine2 t = prAffine2Concat(box, prAffine2Concat(prDrawGlyphTransform(&run, i), device));
         auto at = [&](float x, float y) { return vec(prAffine2MapPoint(t, PrVec2{x, y})); };
         ImU32 shade = glyph->Colored ? (color | ~IM_COL32_A_MASK) : color;
         w.draw->AddImageQuad(atlas, at(glyph->X0, glyph->Y0), at(glyph->X1, glyph->Y0),
-                             at(glyph->X1, glyph->Y1), at(glyph->X0, glyph->Y1),
-                             ImVec2(glyph->U0, glyph->V0), ImVec2(glyph->U1, glyph->V0),
-                             ImVec2(glyph->U1, glyph->V1), ImVec2(glyph->U0, glyph->V1), shade);
+            at(glyph->X1, glyph->Y1), at(glyph->X0, glyph->Y1), ImVec2(glyph->U0, glyph->V0),
+            ImVec2(glyph->U1, glyph->V0), ImVec2(glyph->U1, glyph->V1), ImVec2(glyph->U0, glyph->V1), shade);
     }
 }
 
@@ -440,8 +435,8 @@ void pushClip(Walk& w, const PrDrawCommand& c) {
     if (prDrawTransformDrawsNothing(&w.transforms.last(), &c)) {
         clip = ImVec4(0, 0, 0, 0);
     } else if (scissor) {
-        clip = ImVec4(maxF32(clip.x, rect.left), maxF32(clip.y, rect.top),
-                      minF32(clip.z, rect.right), minF32(clip.w, rect.bottom));
+        clip = ImVec4(maxF32(clip.x, rect.left), maxF32(clip.y, rect.top), minF32(clip.z, rect.right),
+            minF32(clip.w, rect.bottom));
         if (clip.z < clip.x || clip.w < clip.y)
             clip = ImVec4(0, 0, 0, 0);
     }
@@ -462,11 +457,11 @@ void pushGroup(Walk& w, const PrDrawCommand& c) {
     PrDrawProjection p{};
     PrAffine2 tangent = prAffine2Identity();
     if (prDrawProjectionPlace(g->projection, x.affine, g->bounds, PrRect{clip.x, clip.y, clip.z, clip.w},
-                              float(kPrDrawRenderMaxSize), &p)) {
+            float(kPrDrawRenderMaxSize), &p)) {
         tangent = prDrawProjectionTangent(&p);
         const PrRect& landed = p.targetBounds;
         clip = ImVec4(maxF32(clip.x, landed.left), maxF32(clip.y, landed.top), minF32(clip.z, landed.right),
-                      minF32(clip.w, landed.bottom));
+            minF32(clip.w, landed.bottom));
     } else {
         clip = ImVec4(0, 0, 0, 0);
     }
@@ -499,8 +494,7 @@ void runCommands(Walk& w, const PrDrawCommand* commands, uint32_t count) {
         switch (c.kind) {
             case PrDrawCommandKind_Clear: {
                 ImVec4 clip = w.clips.last();
-                w.draw->AddRectFilled(ImVec2(clip.x, clip.y), ImVec2(clip.z, clip.w),
-                                      colorOf(c.color));
+                w.draw->AddRectFilled(ImVec2(clip.x, clip.y), ImVec2(clip.z, clip.w), colorOf(c.color));
                 break;
             }
             case PrDrawCommandKind_Border: {
@@ -524,7 +518,7 @@ void runCommands(Walk& w, const PrDrawCommand* commands, uint32_t count) {
                 const PrRect& area = c.nineSlice.source.rect;
                 PrDrawImageRect rects[64];
                 uint32_t n = prDrawNineSliceRects(c.nineSlice.slices, PrVec2{prRectWidth(area), prRectHeight(area)},
-                                                  c.nineSlice.destination, rects, 64);
+                    c.nineSlice.destination, rects, 64);
                 drawImageRects(w, c.nineSlice.source, c.color, rects, n < 64 ? n : 64);
                 break;
             }

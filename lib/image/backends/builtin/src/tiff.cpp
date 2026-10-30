@@ -168,10 +168,14 @@ PrStatus tiffImage(PrByteView bytes, TiffImage* out) {
     uint32_t strips = (image.height - 1) / image.rowsPerStrip + 1;
     if (image.stripCount < strips)
         return PrStatus_InvalidData;
-    image.alpha = extra == 0       ? PrImageAlpha_None
-                  : extraKind == 1 ? PrImageAlpha_Premultiplied
-                  : extraKind == 2 ? PrImageAlpha_Straight
-                                   : PrImageAlpha_Independent;
+    if (extra == 0)
+        image.alpha = PrImageAlpha_None;
+    else if (extraKind == 1)
+        image.alpha = PrImageAlpha_Premultiplied;
+    else if (extraKind == 2)
+        image.alpha = PrImageAlpha_Straight;
+    else
+        image.alpha = PrImageAlpha_Independent;
     return PrStatus_Ok;
 }
 
@@ -180,10 +184,12 @@ bool tiffDecode(const TiffImage& image, uint8_t* pixels, size_t pixelsSize) {
     if (pixelsSize != rowBytes * image.height)
         return false;
     for (uint32_t row = 0, strip = 0; row < image.height; row += image.rowsPerStrip, ++strip) {
-        uint32_t offset = image.stripCount == 1 ? image.stripOffsets
-                                                : valueAt(image, image.stripOffsets, image.offsetType, strip);
-        uint32_t count = image.stripCount == 1 ? image.stripCounts
-                                               : valueAt(image, image.stripCounts, image.countType, strip);
+        uint32_t offset;
+        if (image.stripCount == 1)
+            offset = image.stripOffsets;
+        else
+            offset = valueAt(image, image.stripOffsets, image.offsetType, strip);
+        uint32_t count = image.stripCount == 1 ? image.stripCounts : valueAt(image, image.stripCounts, image.countType, strip);
         uint32_t rows = image.height - row < image.rowsPerStrip ? image.height - row : image.rowsPerStrip;
         size_t size = rowBytes * rows;
         if (count < size || offset > image.bytes.size || image.bytes.size - offset < size)

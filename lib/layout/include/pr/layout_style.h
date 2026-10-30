@@ -664,7 +664,7 @@ typedef struct PrLayoutSourceFunctions {
     // Returns false if the box draws nothing, such as for a filter without primitives. Null for a source that is not a
     // filter.
     bool (*PR_NULLABLE filter)(void* PR_NULLABLE context, PrRect box, PrRect bounds, PrDrawFilterInput input,
-                               PrDrawFilterBuilder* builder, PrLayoutSourceFilter* out);
+        PrDrawFilterBuilder* builder, PrLayoutSourceFilter* out);
 
     // Returns true if `point`, in the box's user space, is inside a clip path for a box whose object bounding box is
     // `box`. Hit testing calls it. Null for a source that is not a clip path, or that leaves every point inside.
@@ -728,7 +728,7 @@ typedef struct PrLayoutFilter {
 // returns the node of its result. The nodes compute in sRGB (filter-effects-1/#FilterProperty), and a blur reads past
 // its input's region by `edge`.
 PrDrawFilterInput prLayoutFilterAppend(const PrLayoutFilter* filter, PrDrawFilterInput input, PrImageEdgeMode edge,
-                                       PrDrawFilterBuilder* builder);
+    PrDrawFilterBuilder* builder);
 
 // An interned filter list (prLayoutFilterIntern).
 typedef uint32_t PrLayoutFilterIndex;
@@ -983,13 +983,11 @@ PrLayoutBackgroundLayer prLayoutBackgroundLayerDefault(void);
 // kPrLayoutBackgroundNone. A layer with no image is kept, since it takes a place in the layers' order. Equal lists are
 // one entry. The decoration groups that name an entry keep it, and otherwise it stays valid until the next layout of
 // the tree.
-PrLayoutBackgroundIndex prLayoutBackgroundIntern(PrLayoutTree* tree, const PrLayoutBackgroundLayer* layers,
-                                                 uint32_t count);
+PrLayoutBackgroundIndex prLayoutBackgroundIntern(PrLayoutTree* tree, const PrLayoutBackgroundLayer* layers, uint32_t count);
 
 // The number of layers of the background at `index`, and the layer at `layer`, valid while the entry is.
 uint32_t prLayoutBackgroundLayerCount(const PrLayoutTree* tree, PrLayoutBackgroundIndex index);
-PrLayoutBackgroundLayer prLayoutBackgroundLayer(const PrLayoutTree* tree, PrLayoutBackgroundIndex index,
-                                                uint32_t layer);
+PrLayoutBackgroundLayer prLayoutBackgroundLayer(const PrLayoutTree* tree, PrLayoutBackgroundIndex index, uint32_t layer);
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Effects group

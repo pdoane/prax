@@ -132,8 +132,8 @@ struct HtmlWindow : PrDomEventTarget {
 // A timer nested more than five deep in the handlers of timers waits at least 4 milliseconds. An `endless` timer is one
 // of a series that never ends, such as the time updates of media that plays in a loop. Like an animation that runs
 // forever, it does not keep the window from being idle (htmlWindowIsIdle).
-int32_t htmlWindowSetTimeout(PrHtmlWindow* window, const PrHtmlTimerHandler* handler,
-                             int32_t timeout, bool repeats, bool endless);
+int32_t htmlWindowSetTimeout(PrHtmlWindow* window, const PrHtmlTimerHandler* handler, int32_t timeout, bool repeats,
+    bool endless);
 
 // Cancels the timer `id` and releases its handler. Does nothing if no timer has that id.
 void htmlWindowClearTimeout(PrHtmlWindow* window, int32_t id);
@@ -163,7 +163,7 @@ double htmlWindowFrameTime(const PrHtmlWindow* window);
 // Queues `run` with `data` in a task. `drop` frees `data` if the task is cleared before it runs. If `delaysLoad` is
 // set, the document's load event waits for the task.
 void htmlWindowQueueTask(PrHtmlWindow* window, void (*run)(void* data), void* data,
-                         void (*PR_NULLABLE drop)(void* data) = nullptr, bool delaysLoad = false);
+    void (*PR_NULLABLE drop)(void* data) = nullptr, bool delaysLoad = false);
 
 // Returns the origin of the window's document (html/#concept-origin), serialized
 // (html/#ascii-serialisation-of-an-origin). This is the origin of the document's URL, or the origin of the parent
@@ -171,8 +171,7 @@ void htmlWindowQueueTask(PrHtmlWindow* window, void (*run)(void* data), void* da
 PrString htmlWindowOrigin(const PrHtmlWindow* window);
 
 // Requests that `callback` run at the next rendering opportunity, and returns the request's handle.
-uint32_t htmlWindowRequestAnimationFrame(PrHtmlWindow* window,
-                                         const PrHtmlFrameRequestCallback* callback);
+uint32_t htmlWindowRequestAnimationFrame(PrHtmlWindow* window, const PrHtmlFrameRequestCallback* callback);
 
 // Cancels the request `handle` and releases its callback, even while its frame runs.
 void htmlWindowCancelAnimationFrame(PrHtmlWindow* window, uint32_t handle);

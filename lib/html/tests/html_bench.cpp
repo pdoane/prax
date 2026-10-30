@@ -26,8 +26,7 @@ namespace {
 
 uint32_t countNodes(PrDomNode* node) {
     uint32_t count = 1;
-    for (PrDomNode* child = prDomNodeFirstChild(node); child != nullptr;
-         child = prDomNodeNextSibling(child))
+    for (PrDomNode* child = prDomNodeFirstChild(node); child != nullptr; child = prDomNodeNextSibling(child))
         count += countNodes(child);
     return count;
 }
@@ -78,7 +77,7 @@ void measure(PrStringView name, PrStringView text) {
     textAppend(&row, "{\"name\": ");
     harnessWriteString(&row, name);
     harnessAppendFormat(&row, ", \"bytes\": %zu, \"nodes\": %u, \"parse\": %.4f, \"tokenize\": %.4f, \"bound\": %.4f",
-                        text.size, nodes, parse.millis, tokenize.millis, bound.millis);
+        text.size, nodes, parse.millis, tokenize.millis, bound.millis);
     harnessCountsWrite(&counts, &row);
     textAppend(&row, "}");
     harnessWriteLine(textView(&row));

@@ -28,7 +28,7 @@ struct Microtasks {
             return true;
         },
         .compile = [](void*, PrDomEventTarget*, PrDomElement*, PrDomEventHandler, PrStringView,
-                      PrDomEventHandlerCallback*) { return false; },
+            PrDomEventHandlerCallback*) { return false; },
         .embedChanged = [](void*, PrDomElement*, PrStringView) {},
     };
 
@@ -57,7 +57,10 @@ PrDomMutationCallback callbackFor(Delivered* delivered) {
             }
             prDomMutationRecordDestroy(record);
         },
-        delivered, nullptr, nullptr, nullptr,
+        delivered,
+        nullptr,
+        nullptr,
+        nullptr,
     };
 }
 
@@ -77,8 +80,7 @@ TEST_CASE("a mutation observer is told of the changes it observes in one microta
     PrDomMutationCallback callback = callbackFor(&delivered);
     PrDomMutationObserver* observer = domMutationObserverCreate(&callback);
     PrDomMutationObserverInit nothing = prDomMutationObserverInitDefault();
-    CHECK(domMutationObserverObserve(observer, parent, &nothing, nullptr, 0)
-          == PrStatus_InvalidData);
+    CHECK(domMutationObserverObserve(observer, parent, &nothing, nullptr, 0) == PrStatus_InvalidData);
     PrDomMutationObserverInit init = prDomMutationObserverInitDefault();
     init.childList = true;
     init.attributeOldValue = true;

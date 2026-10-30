@@ -23,14 +23,18 @@ using namespace pr;
 namespace viewer {
 namespace {
 
-constexpr PrDrawColorStop kRainbow[] = {{.offset = 0, .color = PrColor{0.9f, 0.1f, 0.1f, 1}},
-                                        {.offset = 0.25f, .color = PrColor{0.95f, 0.8f, 0.1f, 1}},
-                                        {.offset = 0.5f, .color = PrColor{0.1f, 0.7f, 0.3f, 1}},
-                                        {.offset = 0.75f, .color = PrColor{0.1f, 0.4f, 0.9f, 1}},
-                                        {.offset = 1, .color = PrColor{0.6f, 0.2f, 0.8f, 1}}};
+constexpr PrDrawColorStop kRainbow[] = {
+    {.offset = 0, .color = PrColor{0.9f, 0.1f, 0.1f, 1}},
+    {.offset = 0.25f, .color = PrColor{0.95f, 0.8f, 0.1f, 1}},
+    {.offset = 0.5f, .color = PrColor{0.1f, 0.7f, 0.3f, 1}},
+    {.offset = 0.75f, .color = PrColor{0.1f, 0.4f, 0.9f, 1}},
+    {.offset = 1, .color = PrColor{0.6f, 0.2f, 0.8f, 1}},
+};
 
-constexpr PrDrawColorStop kTwo[] = {{.offset = 0, .color = PrColor{0.05f, 0.2f, 0.6f, 1}},
-                                    {.offset = 1, .color = PrColor{1, 0.85f, 0.3f, 1}}};
+constexpr PrDrawColorStop kTwo[] = {
+    {.offset = 0, .color = PrColor{0.05f, 0.2f, 0.6f, 1}},
+    {.offset = 1, .color = PrColor{1, 0.85f, 0.3f, 1}},
+};
 
 void linearGradients(PrDrawList* list, float width, float height, double) {
     Grid grid{width, height, 4, 3};
@@ -38,26 +42,29 @@ void linearGradients(PrDrawList* list, float width, float height, double) {
     for (uint32_t i = 0; i < 4; ++i) {
         PrRect c = grid.at(i);
         float third = prRectWidth(c) / 3;
-        PrDrawBrush brush =
-            prDrawBrushLinear(PrVec2{c.left + third, c.top}, PrVec2{c.left + 2 * third, c.top}, kTwo, 2);
+        PrDrawBrush brush = prDrawBrushLinear(PrVec2{c.left + third, c.top}, PrVec2{c.left + 2 * third, c.top}, kTwo, 2);
         brush.extend = extends[i];
         prDrawListRect(list, c, {.brush = &brush});
     }
     // Hard stops, hints, many stops.
     PrRect c = grid.at(4);
-    const PrDrawColorStop hard[] = {{.offset = 0, .color = kRed},
-                                    {.offset = 0.33f, .color = kRed},
-                                    {.offset = 0.33f, .color = kGold},
-                                    {.offset = 0.66f, .color = kGold},
-                                    {.offset = 0.66f, .color = kBlue},
-                                    {.offset = 1, .color = kBlue}};
+    const PrDrawColorStop hard[] = {
+        {.offset = 0, .color = kRed},
+        {.offset = 0.33f, .color = kRed},
+        {.offset = 0.33f, .color = kGold},
+        {.offset = 0.66f, .color = kGold},
+        {.offset = 0.66f, .color = kBlue},
+        {.offset = 1, .color = kBlue},
+    };
     PrDrawBrush brush = prDrawBrushLinear(PrVec2{c.left, c.top}, PrVec2{c.right, c.top}, hard, 6);
     prDrawListRect(list, c, {.brush = &brush});
     c = grid.at(5);
     for (uint32_t k = 0; k < 4; ++k) {
         float band = prRectHeight(c) / 4;
-        PrDrawColorStop hinted[] = {{.offset = 0, .color = kInk, .hint = 0.1f + 0.25f * float(k)},
-                                    {.offset = 1, .color = kWhite}};
+        PrDrawColorStop hinted[] = {
+            {.offset = 0, .color = kInk, .hint = 0.1f + 0.25f * float(k)},
+            {.offset = 1, .color = kWhite},
+        };
         PrRect r{c.left, c.top + band * float(k), c.right, c.top + band * float(k + 1)};
         brush = prDrawBrushLinear(PrVec2{c.left, 0}, PrVec2{c.right, 0}, hinted, 2);
         prDrawListRect(list, r, {.brush = &brush});
@@ -86,11 +93,13 @@ void linearGradients(PrDrawList* list, float width, float height, double) {
     brush = prDrawBrushLinear(PrVec2{c.left, c.top}, PrVec2{c.right, c.bottom}, kRainbow, 5);
     prDrawListPath(list, path, PrPathFillRule_NonZero, {.brush = &brush, .stroke = &stroke});
     prPathDestroy(path);
-    const char* captions[] = {"pad over the middle third",  "reflect",
-                              "repeat",                     "none past the middle third",
-                              "hard stops",                 "hints 0.1, 0.35, 0.6, 0.85",
-                              "five stops",                 "fading to transparent over stripes",
-                              "at opacity 0.5, and 0.25", "stroked"};
+    const char* captions[] = {
+        "pad over the middle third",  "reflect",
+        "repeat",                     "none past the middle third",
+        "hard stops",                 "hints 0.1, 0.35, 0.6, 0.85",
+        "five stops",                 "fading to transparent over stripes",
+        "at opacity 0.5, and 0.25", "stroked",
+    };
     for (uint32_t i = 0; i < 10; ++i)
         grid.captionAt(i, captions[i]);
 }
@@ -111,15 +120,17 @@ void radialGradients(PrDrawList* list, float width, float height, double) {
     prDrawListEllipse(list, prRectCenter(c), PrVec2{extentOf(c) / 2, extentOf(c) / 2}, 0, {.brush = &brush});
     c = grid.at(4);
     brush = prDrawBrushRadial(PrVec2{c.left + 40, prRectCenter(c).y}, 15, PrVec2{c.right - 60, prRectCenter(c).y}, 50,
-                              kRainbow, 5);
+        kRainbow, 5);
     prDrawListRect(list, c, {.brush = &brush});
     c = grid.at(5);
     brush = prDrawBrushRadial(PrVec2{0.5f, 0.5f}, 0, PrVec2{0.5f, 0.5f}, 0.5f, kRainbow, 5);
     brush.space = PrDrawBrushSpace_ObjectBounds;
     brush.extend = PrDrawExtend_Reflect;
     prDrawListRect(list, PrRect{c.left, c.top + 40, c.right, c.bottom - 40}, {.brush = &brush});
-    const char* captions[] = {"pad", "reflect", "repeat", "focal point up and left",
-                              "a cone between two circles", "in object bounds, reflecting"};
+    const char* captions[] = {
+        "pad", "reflect", "repeat", "focal point up and left",
+        "a cone between two circles", "in object bounds, reflecting",
+    };
     for (uint32_t i = 0; i < 6; ++i)
         grid.captionAt(i, captions[i]);
 }
@@ -139,18 +150,22 @@ void conicAndDiamond(PrDrawList* list, float width, float height, double) {
     PrDrawBrush brush = prDrawBrushConic(prRectCenter(c), 0, wheel, 7);
     prDrawListEllipse(list, prRectCenter(c), PrVec2{extentOf(c) / 2, extentOf(c) / 2}, 0, {.brush = &brush});
     c = grid.at(1);
-    const PrDrawColorStop pie[] = {{.offset = 0, .color = kRed},
-                                   {.offset = 0.25f, .color = kRed},
-                                   {.offset = 0.25f, .color = kGold},
-                                   {.offset = 0.6f, .color = kGold},
-                                   {.offset = 0.6f, .color = kBlue},
-                                   {.offset = 1, .color = kBlue}};
+    const PrDrawColorStop pie[] = {
+        {.offset = 0, .color = kRed},
+        {.offset = 0.25f, .color = kRed},
+        {.offset = 0.25f, .color = kGold},
+        {.offset = 0.6f, .color = kGold},
+        {.offset = 0.6f, .color = kBlue},
+        {.offset = 1, .color = kBlue},
+    };
     brush = prDrawBrushConic(prRectCenter(c), -kPi / 2, pie, 6);
     prDrawListEllipse(list, prRectCenter(c), PrVec2{extentOf(c) / 2, extentOf(c) / 2}, 0, {.brush = &brush});
     c = grid.at(2);
-    const PrDrawColorStop spokes[] = {{.offset = 0, .color = kInk},
-                                      {.offset = 0.5f, .color = kWhite},
-                                      {.offset = 1, .color = kInk}};
+    const PrDrawColorStop spokes[] = {
+        {.offset = 0, .color = kInk},
+        {.offset = 0.5f, .color = kWhite},
+        {.offset = 1, .color = kInk},
+    };
     brush = prDrawBrushConic(PrVec2{c.left + 60, c.top + 60}, kPi / 4, spokes, 3);
     prDrawListRect(list, c, {.brush = &brush});
     PrDrawExtend extends[] = {PrDrawExtend_Pad, PrDrawExtend_Reflect, PrDrawExtend_Repeat};
@@ -160,9 +175,11 @@ void conicAndDiamond(PrDrawList* list, float width, float height, double) {
         brush.extend = extends[i];
         prDrawListRect(list, c, {.brush = &brush});
     }
-    const char* captions[] = {"conic color wheel", "conic hard stops from the top",
-                              "conic centered off the shape", "diamond, pad",
-                              "diamond, reflect", "diamond, repeat"};
+    const char* captions[] = {
+        "conic color wheel", "conic hard stops from the top",
+        "conic centered off the shape", "diamond, pad",
+        "diamond, reflect", "diamond, repeat",
+    };
     for (uint32_t i = 0; i < 6; ++i)
         grid.captionAt(i, captions[i]);
 }
@@ -187,13 +204,17 @@ void interpolation(PrDrawList* list, float width, float height, double) {
     float step = (height - 40) / float(count);
     for (uint32_t i = 0; i < count; ++i) {
         bool hues = i >= 10;
-        PrDrawColorStop stops[] = {{.offset = 0, .color = hues ? PrColor{1, 0.1f, 0.1f, 1} : PrColor{0, 0, 1, 1}},
-                              {.offset = 1, .color = hues ? PrColor{0.1f, 0.9f, 0.9f, 1} : PrColor{1, 1, 0, 1}}};
+        PrDrawColorStop stops[] = {
+            {.offset = 0, .color = hues ? PrColor{1, 0.1f, 0.1f, 1} : PrColor{0, 0, 1, 1}},
+            {.offset = 1, .color = hues ? PrColor{0.1f, 0.9f, 0.9f, 1} : PrColor{1, 1, 0, 1}},
+        };
         PrRect r{170, 20 + step * float(i) + 3, width - 40, 20 + step * float(i + 1) - 3};
-        const char* names[] = {"sRGB",       "sRGB-linear", "Display P3",  "Lab",
-                               "Oklab",      "XYZ D65",     "LCH",         "Oklch",
-                               "HSL",        "HWB",         "Oklch longer", "Oklch increasing",
-                               "Oklch decreasing"};
+        const char* names[] = {
+            "sRGB",       "sRGB-linear", "Display P3",  "Lab",
+            "Oklab",      "XYZ D65",     "LCH",         "Oklch",
+            "HSL",        "HWB",         "Oklch longer", "Oklch increasing",
+            "Oklch decreasing",
+        };
         caption(PrRect{10, r.top, 160, (r.top + r.bottom) / 2 + 9}, names[i]);
         PrDrawBrush brush = prDrawBrushLinear(PrVec2{r.left, 0}, PrVec2{r.right, 0}, stops, 2);
         brush.interpolationSpace = rows[i].space;
@@ -218,16 +239,14 @@ void brushSpaces(PrDrawList* list, float width, float height, double) {
     prDrawListEllipse(list, PrVec2{c.left + 150, prRectCenter(c).y}, PrVec2{70, 90}, 0, {.brush = &bounds});
     // The bounds brush turned a quarter by its transform about the unit square's center.
     c = grid.at(4, 40);
-    bounds.transform = prAffine2Concat(
-        prAffine2Concat(prAffine2Translate(PrVec2{-0.5f, -0.5f}), prAffine2Rotate(kPi / 2)),
+    bounds.transform = prAffine2Concat(prAffine2Concat(prAffine2Translate(PrVec2{-0.5f, -0.5f}), prAffine2Rotate(kPi / 2)),
         prAffine2Translate(PrVec2{0.5f, 0.5f}));
     prDrawListRect(list, c, {.brush = &bounds});
     c = grid.at(5, 40);
     PrDrawBrush inTarget = prDrawBrushLinear(PrVec2{0, 0}, PrVec2{40, 0}, kTwo, 2);
     inTarget.space = PrDrawBrushSpace_Target;
     inTarget.extend = PrDrawExtend_Reflect;
-    prDrawListPushTransformAffine2(list, prAffine2Concat(prAffine2Rotate(0.4f),
-                                                         prAffine2Translate(prRectCenter(c))));
+    prDrawListPushTransformAffine2(list, prAffine2Concat(prAffine2Rotate(0.4f), prAffine2Translate(prRectCenter(c))));
     prDrawListRect(list, PrRect{-80, -80, 80, 80}, {.brush = &inTarget});
     prDrawListPopTransform(list);
     for (uint32_t i = 0; i < 3; ++i)
@@ -242,35 +261,28 @@ void images(PrDrawList* list, float width, float height, double) {
     Grid grid{width, height, 4, 3};
     PrRect whole{0, 0, 64, 64};
     // Upscaled by each sampling.
-    PrDrawSampling samplings[] = {PrDrawSampling_Nearest, PrDrawSampling_Linear,
-                                  PrDrawSampling_Cubic, PrDrawSampling_Mipmap};
+    PrDrawSampling samplings[] = {
+        PrDrawSampling_Nearest, PrDrawSampling_Linear,
+        PrDrawSampling_Cubic, PrDrawSampling_Mipmap,
+    };
     for (uint32_t i = 0; i < 4; ++i)
-        drawImage(list, card, PrRect{16, 16, 40, 40}, squareIn(grid.at(i, 10), 200),
-                  samplings[i], 1);
+        drawImage(list, card, PrRect{16, 16, 40, 40}, squareIn(grid.at(i, 10), 200), samplings[i], 1);
     // Downscaled: linear aliases where mipmap does not.
     PrRect c = grid.at(4, 10);
-    drawImage(list, card, whole, prRectAt(PrVec2{c.left, c.top}, PrVec2{32, 32}),
-              PrDrawSampling_Linear, 1);
-    drawImage(list, card, whole, PrRect{c.left, c.top + 40, c.left + 20, c.top + 60},
-              PrDrawSampling_Linear, 1);
-    drawImage(list, card, whole, PrRect{c.left + 60, c.top, c.left + 92, c.top + 32},
-              PrDrawSampling_Mipmap, 1);
-    drawImage(list, card, whole, PrRect{c.left + 60, c.top + 40, c.left + 80, c.top + 60},
-              PrDrawSampling_Mipmap, 1);
-    drawImage(list, card, whole, PrRect{c.left + 120, c.top, c.left + 240, c.top + 120},
-              PrDrawSampling_Linear, 1);
+    drawImage(list, card, whole, prRectAt(PrVec2{c.left, c.top}, PrVec2{32, 32}), PrDrawSampling_Linear, 1);
+    drawImage(list, card, whole, PrRect{c.left, c.top + 40, c.left + 20, c.top + 60}, PrDrawSampling_Linear, 1);
+    drawImage(list, card, whole, PrRect{c.left + 60, c.top, c.left + 92, c.top + 32}, PrDrawSampling_Mipmap, 1);
+    drawImage(list, card, whole, PrRect{c.left + 60, c.top + 40, c.left + 80, c.top + 60}, PrDrawSampling_Mipmap, 1);
+    drawImage(list, card, whole, PrRect{c.left + 120, c.top, c.left + 240, c.top + 120}, PrDrawSampling_Linear, 1);
     // Rotated, tinted, translucent, a source rectangle, stretched.
     c = grid.at(5, 10);
-    prDrawListPushTransformAffine2(list, prAffine2Concat(prAffine2Rotate(0.5f),
-                                                         prAffine2Translate(prRectCenter(c))));
+    prDrawListPushTransformAffine2(list, prAffine2Concat(prAffine2Rotate(0.5f), prAffine2Translate(prRectCenter(c))));
     drawImage(list, card, whole, PrRect{-70, -70, 70, 70}, PrDrawSampling_Linear, 1);
     prDrawListPopTransform(list);
     c = grid.at(6, 10);
-    drawImage(list, card, whole, squareIn(c, 180), PrDrawSampling_Linear,
-              0.5f);
+    drawImage(list, card, whole, squareIn(c, 180), PrDrawSampling_Linear, 0.5f);
     c = grid.at(7, 10);
-    drawImage(list, card, PrRect{0, 0, 32, 32}, squareIn(c, 180), PrDrawSampling_Linear,
-              1);
+    drawImage(list, card, PrRect{0, 0, 32, 32}, squareIn(c, 180), PrDrawSampling_Linear, 1);
     c = grid.at(8, 10);
     drawImage(list, card, whole, inset(c, 20), PrDrawSampling_Linear, 1);
     // Decoded through lib/image, and as the brush of a shape other than its rectangle.
@@ -286,18 +298,20 @@ void images(PrDrawList* list, float width, float height, double) {
     PrRect offset{c.left + 0.5f, c.top + 0.5f, c.left + 128.5f, c.top + 128.5f};
     PrDrawBrush nearest = prDrawBrushImage(prDrawSourceImage(card, whole), offset, PrDrawSampling_Nearest);
     prDrawListRect(list, offset, {.brush = &nearest, .edges = PrDrawEdges_Aliased});
-    const char* captions[] = {"nearest",
-                              "linear",
-                              "cubic",
-                              "mipmap",
-                              "down: linear, mipmap; up 2x",
-                              "rotated",
-                              "tinted, half alpha",
-                              "a source rectangle",
-                              "stretched",
-                              "decoded through lib/image",
-                              "a rounded rectangle's brush",
-                              "aliased, nearest, half-pixel offset"};
+    const char* captions[] = {
+        "nearest",
+        "linear",
+        "cubic",
+        "mipmap",
+        "down: linear, mipmap; up 2x",
+        "rotated",
+        "tinted, half alpha",
+        "a source rectangle",
+        "stretched",
+        "decoded through lib/image",
+        "a rounded rectangle's brush",
+        "aliased, nearest, half-pixel offset",
+    };
     for (uint32_t i = 0; i < 12; ++i)
         grid.captionAt(i, captions[i], 10);
 }
@@ -305,8 +319,7 @@ void images(PrDrawList* list, float width, float height, double) {
 void imageBrushes(PrDrawList* list, float width, float height, double) {
     const PrDrawImage* tile = smallTile();
     Grid grid{width, height, 4, 2};
-    PrDrawExtend modes[] = {PrDrawExtend_None, PrDrawExtend_Pad, PrDrawExtend_Repeat,
-                              PrDrawExtend_Reflect};
+    PrDrawExtend modes[] = {PrDrawExtend_None, PrDrawExtend_Pad, PrDrawExtend_Repeat, PrDrawExtend_Reflect};
     for (uint32_t i = 0; i < 8; ++i) {
         PrRect c = grid.at(i, 20);
         PrDrawBrush brush = prDrawBrushDefault(PrDrawBrushKind_Image);
@@ -319,9 +332,7 @@ void imageBrushes(PrDrawList* list, float width, float height, double) {
         if (i >= 4) {
             // Spaced tiles, and the brush turned.
             brush.image.tiles.spacing = PrVec2{12, 6};
-            brush.transform = prAffine2Concat(
-                prAffine2Concat(prAffine2Translate(-center),
-                                prAffine2Rotate(0.3f)),
+            brush.transform = prAffine2Concat(prAffine2Concat(prAffine2Translate(-center), prAffine2Rotate(0.3f)),
                 prAffine2Translate(center));
             brush.image.sampling = PrDrawSampling_Nearest;
         }
@@ -335,8 +346,10 @@ void imageBrushes(PrDrawList* list, float width, float height, double) {
 void nineSlices(PrDrawList* list, float width, float height, double) {
     const PrDrawImage* frame = frameImage();
     Grid grid{width, height, 4, 2};
-    PrDrawSliceMode modes[] = {PrDrawSliceMode_Stretch, PrDrawSliceMode_Repeat,
-                               PrDrawSliceMode_Round, PrDrawSliceMode_Space};
+    PrDrawSliceMode modes[] = {
+        PrDrawSliceMode_Stretch, PrDrawSliceMode_Repeat,
+        PrDrawSliceMode_Round, PrDrawSliceMode_Space,
+    };
     for (uint32_t i = 0; i < 8; ++i) {
         PrRect c = grid.at(i, 20);
         PrDrawNineSlice slices{};
@@ -347,8 +360,7 @@ void nineSlices(PrDrawList* list, float width, float height, double) {
         slices.horizontal = modes[i % 4];
         slices.vertical = modes[i % 4];
         slices.center = i < 4;
-        PrRect destination =
-            i < 4 ? inset(c, 10) : PrRect{c.left, c.top + 30, c.right, c.bottom - 30};
+        PrRect destination = i < 4 ? inset(c, 10) : PrRect{c.left, c.top + 30, c.right, c.bottom - 30};
         drawNineSlice(list, frame, &slices, destination, PrDrawSampling_Nearest, kWhite);
         const char* names[] = {"stretch", "repeat", "round", "space"};
         std::string text = std::string(names[i % 4]) + (i < 4 ? ", center" : ", no center, wider");
@@ -359,9 +371,11 @@ void nineSlices(PrDrawList* list, float width, float height, double) {
 // Returns a 60-unit square of a diagonal gradient, of the kind that CSS makes for border-image-source.
 PrDrawList* gradientSquare() {
     PrDrawList* list = prDrawListCreate();
-    const PrDrawColorStop stops[] = {{.offset = 0, .color = kRed},
-                                     {.offset = 0.5f, .color = kGold},
-                                     {.offset = 1, .color = kBlue}};
+    const PrDrawColorStop stops[] = {
+        {.offset = 0, .color = kRed},
+        {.offset = 0.5f, .color = kGold},
+        {.offset = 1, .color = kBlue},
+    };
     PrDrawBrush brush = prDrawBrushLinear(PrVec2{0, 0}, PrVec2{60, 60}, stops, 3);
     prDrawListRect(list, PrRect{0, 0, 60, 60}, {.brush = &brush});
     return list;
@@ -456,9 +470,8 @@ void writePixels(PrDrawList* list, float width, float height, double) {
     c = grid.at(1, 40);
     prDrawListRect(list, c, {.color = kBlue});
     prDrawListWritePixels(list, smallTile(), PrIVec2{int32_t(c.left) + 40, int32_t(c.top) + 40});
-    drawImage(list, testCard(), PrRect{0, 0, 64, 64},
-              PrRect{c.left + 100, c.top + 40, c.left + 164, c.top + 104},
-              PrDrawSampling_Nearest, 1);
+    drawImage(list, testCard(), PrRect{0, 0, 64, 64}, PrRect{c.left + 100, c.top + 40, c.left + 164, c.top + 104},
+        PrDrawSampling_Nearest, 1);
     grid.captionAt(0, "written under a 3x scale and a clip, which it ignores", 40);
     grid.captionAt(1, "a tile written, beside the card drawn", 40);
 }
@@ -468,7 +481,7 @@ PrColor brighter(PrColor color, float brightness) {
     float c[3] = {color.r, color.g, color.b};
     for (float& channel : c)
         channel = prColorTransferEncode(PrColorTransfer_Srgb,
-                                        prColorTransferDecode(PrColorTransfer_Srgb, channel) * brightness);
+            prColorTransferDecode(PrColorTransfer_Srgb, channel) * brightness);
     return PrColor{c[0], c[1], c[2], color.a};
 }
 
@@ -508,13 +521,13 @@ PrPath* heart(PrRect square) {
     PrPath* path = prPathCreate();
     prPathMoveTo(path, PrVec2{x + s * 0.5f, y + s * 0.92f});
     prPathCubicTo(path, PrVec2{x + s * 0.1f, y + s * 0.62f}, PrVec2{x - s * 0.02f, y + s * 0.3f},
-                  PrVec2{x + s * 0.22f, y + s * 0.14f});
+        PrVec2{x + s * 0.22f, y + s * 0.14f});
     prPathCubicTo(path, PrVec2{x + s * 0.36f, y + s * 0.05f}, PrVec2{x + s * 0.48f, y + s * 0.16f},
-                  PrVec2{x + s * 0.5f, y + s * 0.28f});
+        PrVec2{x + s * 0.5f, y + s * 0.28f});
     prPathCubicTo(path, PrVec2{x + s * 0.52f, y + s * 0.16f}, PrVec2{x + s * 0.64f, y + s * 0.05f},
-                  PrVec2{x + s * 0.78f, y + s * 0.14f});
+        PrVec2{x + s * 0.78f, y + s * 0.14f});
     prPathCubicTo(path, PrVec2{x + s * 1.02f, y + s * 0.3f}, PrVec2{x + s * 0.9f, y + s * 0.62f},
-                  PrVec2{x + s * 0.5f, y + s * 0.92f});
+        PrVec2{x + s * 0.5f, y + s * 0.92f});
     prPathClose(path);
     return path;
 }
@@ -539,19 +552,21 @@ void gamutMapping(PrDrawList* list, float width, float height, double) {
         PrColorSpace space;
         double channels[3];
     };
-    const Sample samples[] = {{"Rec. 2020 green", PrColorSpace_Rec2020, {0, 1, 0}},
-                              {"Rec. 2020 blue", PrColorSpace_Rec2020, {0, 0, 1}},
-                              {"Rec. 2020 cyan", PrColorSpace_Rec2020, {0, 1, 1}},
-                              {"deep red", PrColorSpace_Oklch, {0.6, 0.4, 25}},
-                              {"Rec. 2020 red", PrColorSpace_Rec2020, {1, 0, 0}},
-                              {"Rec. 2020 magenta", PrColorSpace_Rec2020, {1, 0, 1}}};
+    const Sample samples[] = {
+        {"Rec. 2020 green", PrColorSpace_Rec2020, {0, 1, 0}},
+        {"Rec. 2020 blue", PrColorSpace_Rec2020, {0, 0, 1}},
+        {"Rec. 2020 cyan", PrColorSpace_Rec2020, {0, 1, 1}},
+        {"deep red", PrColorSpace_Oklch, {0.6, 0.4, 25}},
+        {"Rec. 2020 red", PrColorSpace_Rec2020, {1, 0, 0}},
+        {"Rec. 2020 magenta", PrColorSpace_Rec2020, {1, 0, 1}},
+    };
     // The display that the drawing is drawn for, as the viewer's conversion of its frames sees it (FrameConverter).
     const PrAppDisplay& display = drawingDisplay();
     float headroom = display.headroom > 1 ? display.headroom : 1;
     char mappedName[64];
     std::snprintf(mappedName, sizeof(mappedName), "mapped for this display: %s, %gx",
-                  std::string(prColorSpaceName(display.gamut).data, prColorSpaceName(display.gamut).size).c_str(),
-                  double(headroom));
+        std::string(prColorSpaceName(display.gamut).data, prColorSpaceName(display.gamut).size).c_str(),
+        double(headroom));
     const char* const columns[] = {"drawn", mappedName, "mapped to sRGB", "clipped to sRGB"};
     constexpr uint32_t kRows = 6;
     constexpr uint32_t kColumns = 4;
@@ -567,8 +582,10 @@ void gamutMapping(PrDrawList* list, float width, float height, double) {
         PrColor color{float(srgb[0]), float(srgb[1]), float(srgb[2]), 1};
         auto clip = [](float v) { return v < 0 ? 0.0f : v > 1 ? 1.0f : v; };
         PrColor mapped = prColorGamutMap(prColorToneMap(color, headroom), display.gamut, headroom);
-        const PrColor cells[kColumns] = {color, mapped, prColorGamutMap(color, PrColorSpace_Srgb, 1),
-                                         PrColor{clip(color.r), clip(color.g), clip(color.b), 1}};
+        const PrColor cells[kColumns] = {
+            color, mapped, prColorGamutMap(color, PrColorSpace_Srgb, 1),
+            PrColor{clip(color.r), clip(color.g), clip(color.b), 1},
+        };
         float y = top + cellHeight * float(r);
         label(samples[r].name, PrVec2{20, y + cellHeight / 2 + 4});
         for (uint32_t c = 0; c < kColumns; ++c) {
@@ -584,10 +601,12 @@ void neon(PrDrawList* list, float width, float height, double time) {
     const PrColor pink{1, 0.18f, 0.55f, 1};
     const PrColor cyan{0.15f, 0.85f, 1, 1};
     float signHeight = height * 0.52f;
-    PrDrawColorStop light[] = {{.offset = 0, .color = PrColor{0.25f, 0.1f, 0.3f, 1}},
-                               {.offset = 1, .color = PrColor{0.25f, 0.1f, 0.3f, 0}}};
+    PrDrawColorStop light[] = {
+        {.offset = 0, .color = PrColor{0.25f, 0.1f, 0.3f, 1}},
+        {.offset = 1, .color = PrColor{0.25f, 0.1f, 0.3f, 0}},
+    };
     PrDrawBrush wash = prDrawBrushRadial(PrVec2{width / 2, signHeight / 2}, 0, PrVec2{width / 2, signHeight / 2},
-                                         width * 0.45f, light, 2);
+        width * 0.45f, light, 2);
     prDrawListRect(list, PrRect{0, 0, width, signHeight}, {.brush = &wash});
 
     // The word, in outlined letters, and a heart that flickers.
@@ -607,7 +626,7 @@ void neon(PrDrawList* list, float width, float height, double time) {
     PrRect square{left + advance + 40, baseline - heartSize * 0.95f, left + advance + 40 + heartSize, baseline};
     PrPath* shape = heart(square);
     tube(list, square, pink, 3 * flicker(time),
-         [&](PrDrawPaint paint) { prDrawListPath(list, shape, PrPathFillRule_NonZero, paint); });
+        [&](PrDrawPaint paint) { prDrawListPath(list, shape, PrPathFillRule_NonZero, paint); });
     prPathDestroy(shape);
 
     // A ramp from SDR white to sixteen times it, in doublings. A display shows it flat past its headroom.
@@ -635,8 +654,10 @@ void neon(PrDrawList* list, float width, float height, double time) {
         PrColorSpace space;
         const char* name;
     };
-    const Gamut gamuts[] = {{PrColorSpace_Srgb, "sRGB"}, {PrColorSpace_DisplayP3, "Display P3"},
-                            {PrColorSpace_Rec2020, "Rec. 2020"}};
+    const Gamut gamuts[] = {
+        {PrColorSpace_Srgb, "sRGB"}, {PrColorSpace_DisplayP3, "Display P3"},
+        {PrColorSpace_Rec2020, "Rec. 2020"},
+    };
     float rowTop = ramp.bottom + 44;
     float rowHeight = (height - rowTop - 20) / 3;
     for (uint32_t g = 0; g < 3; ++g) {
@@ -647,15 +668,17 @@ void neon(PrDrawList* list, float width, float height, double time) {
             double out[3];
             prColorConvert(gamuts[g].space, PrColorSpace_Srgb, in, out);
             PrColor wide{float(out[0]), float(out[1]), float(out[2]), 1};
-            PrColor clipped{std::clamp(wide.r, 0.0f, 1.0f), std::clamp(wide.g, 0.0f, 1.0f),
-                            std::clamp(wide.b, 0.0f, 1.0f), 1};
+            PrColor clipped{
+                std::clamp(wide.r, 0.0f, 1.0f), std::clamp(wide.g, 0.0f, 1.0f),
+                std::clamp(wide.b, 0.0f, 1.0f), 1,
+            };
             float x = 160 + float(c) * (width - 200) / 3;
             float w = (width - 200) / 3 - 16;
             PrRect swatch{x, y + 4, x + w, y + rowHeight - 4};
             prDrawListRect(list, PrRect{swatch.left, swatch.top, (swatch.left + swatch.right) / 2, swatch.bottom},
-                           {.color = wide});
+                {.color = wide});
             prDrawListRect(list, PrRect{(swatch.left + swatch.right) / 2, swatch.top, swatch.right, swatch.bottom},
-                           {.color = clipped});
+                {.color = clipped});
         }
     }
 }
@@ -664,28 +687,32 @@ void neon(PrDrawList* list, float width, float height, double time) {
 
 const std::vector<Drawing>& paintFeatures() {
     static const std::vector<Drawing> features = {
-        {"Linear gradients", "Pad, reflect, repeat and none, stops and hints, transparency, tints and strokes.",
-         linearGradients},
-        {"Radial gradients", "Spreads, focal points, two-circle cones and object bounds.",
-         radialGradients},
-        {"Conic and diamond gradients", "Conic sweeps and hard stops, and diamonds by spread.",
-         conicAndDiamond},
-        {"Interpolation spaces",
-         "Blue to yellow in each space, then red to cyan by each hue direction.", interpolation},
+        {
+            "Linear gradients", "Pad, reflect, repeat and none, stops and hints, transparency, tints and strokes.",
+            linearGradients,
+        },
+        {"Radial gradients", "Spreads, focal points, two-circle cones and object bounds.", radialGradients},
+        {"Conic and diamond gradients", "Conic sweeps and hard stops, and diamonds by spread.", conicAndDiamond},
+        {
+            "Interpolation spaces",
+            "Blue to yellow in each space, then red to cyan by each hue direction.", interpolation,
+        },
         {"Brush spaces", "Brushes in user space, object bounds and target space.", brushSpaces},
-        {"Images", "Sampling up and down, transforms, tints, source rectangles and brushes.",
-         images},
-        {"Image brushes", "Each tile mode about a 48-pixel tile, plain, then spaced and turned.",
-         imageBrushes},
+        {"Images", "Sampling up and down, transforms, tints, source rectangles and brushes.", images},
+        {"Image brushes", "Each tile mode about a 48-pixel tile, plain, then spaced and turned.", imageBrushes},
         {"Nine-slices", "Each slice mode, with the center and without it.", nineSlices},
-        {"List sources",
-         "Lists drawn where images are: nine-slices, image brushes and filter nodes.",
-         listSources},
+        {"List sources", "Lists drawn where images are: nine-slices, image brushes and filter nodes.", listSources},
         {"Write pixels", "Pixels replacing the target's at a device point.", writePixels},
-        {"Neon", "Tubes past SDR white that glow and flicker, a ramp to sixteen times white, and primaries of wider "
-         "gamuts beside their sRGB clips. Press H for HDR.", neon},
-        {"Gamut mapping", "Colors far past Display P3, beside CSS's mapping for this display and into sRGB, and a clip to "
-         "sRGB. With H, the first column matches the second; in SDR, it matches the clip.", gamutMapping},
+        {
+            "Neon", "Tubes past SDR white that glow and flicker, a ramp to sixteen times white, and primaries of wider "
+                "gamuts beside their sRGB clips. Press H for HDR.", neon,
+        },
+        {
+            "Gamut mapping",
+            "Colors far past Display P3, beside CSS's mapping for this display and into sRGB, and a clip to sRGB. "
+                "With H, the first column matches the second; in SDR, it matches the clip.",
+            gamutMapping,
+        },
     };
     return features;
 }

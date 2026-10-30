@@ -73,7 +73,7 @@ struct LottieSource {
 };
 
 std::shared_ptr<LottieSource> loadLottie(const fs::path& path, const fs::path& settings, PrTextShaper* shaper,
-                                         PrFontHinting hinting, PrFontHinter* PR_NULLABLE hinter) {
+        PrFontHinting hinting, PrFontHinter* PR_NULLABLE hinter) {
     std::string json = readFile(path);
     Beside beside{path.parent_path(), {}};
     PrCompressCodec* compressCodec = prCompressBuiltinCreate();

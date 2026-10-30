@@ -128,11 +128,9 @@ struct PrDrawRenderer {
     void (*PR_NULLABLE destroy)(PrDrawRenderer* renderer);
     PrDrawFrame* PR_NONNULL (*PR_NONNULL frameCreate)(PrDrawRenderer* renderer);
     void (*frameDestroy)(PrDrawRenderer* renderer, PrDrawFrame* frame);
-    PrStatus (*framePrepare)(PrDrawRenderer* renderer, PrDrawFrame* frame, const PrDrawList* list,
-                             const PrDrawTarget* target);
+    PrStatus (*framePrepare)(PrDrawRenderer* renderer, PrDrawFrame* frame, const PrDrawList* list, const PrDrawTarget* target);
     void (*PR_NULLABLE frameRender)(PrDrawRenderer* renderer, PrDrawFrame* frame, PrGpuPass* pass, PrIVec2 origin);
-    void (*PR_NULLABLE frameRenderPixels)(PrDrawRenderer* renderer, PrDrawFrame* frame, PrPixels pixels,
-                                          PrPixelFormat format);
+    void (*PR_NULLABLE frameRenderPixels)(PrDrawRenderer* renderer, PrDrawFrame* frame, PrPixels pixels, PrPixelFormat format);
     void (*PR_NULLABLE frameStats)(PrDrawRenderer* renderer, const PrDrawFrame* frame, PrDrawStats* out);
     void (*PR_NULLABLE dropResources)(PrDrawRenderer* renderer);
 
@@ -178,8 +176,7 @@ PrDrawRendererOptions prDrawRendererOptionsDefault(void);
 // NotSupported if the build does not have the backend, if the backend renders on a device and `device` is null, or if
 // the device cannot run the renderer's shaders, and Lost if the device is lost. On failure, `*out` is null.
 PrStatus prDrawRendererCreate(PrDrawRendererBackend backend, PrGpuDevice* PR_NULLABLE device,
-                              const PrDrawRendererOptions* PR_NULLABLE options,
-                              PrDrawRenderer* PR_NULLABLE* PR_NONNULL out);
+    const PrDrawRendererOptions* PR_NULLABLE options, PrDrawRenderer* PR_NULLABLE* PR_NONNULL out);
 
 // Frees the renderer. Its frames must be destroyed first.
 void prDrawRendererDestroy(PrDrawRenderer* PR_NULLABLE renderer);
@@ -222,8 +219,7 @@ void prDrawFrameRender(PrDrawFrame* frame, PrGpuPass* pass, PrIVec2 origin);
 void prDrawFrameRenderPixels(PrDrawFrame* frame, PrPixels pixels, PrPixelFormat format);
 
 // Prepares the list and renders it into `pixels`, for a renderer in memory. Returns what preparing returns.
-PrStatus prDrawRendererRenderPixels(PrDrawRenderer* renderer, const PrDrawList* list, PrPixels pixels,
-                                    PrPixelFormat format);
+PrStatus prDrawRendererRenderPixels(PrDrawRenderer* renderer, const PrDrawList* list, PrPixels pixels, PrPixelFormat format);
 
 #if defined(__cplusplus)
 }

@@ -240,14 +240,16 @@ inline PrStringView cssValueText(CssValueRun run, const CssValueNode* value) {
 
 // Returns the keyword of a run that is a single keyword, or PrCssKeyword_Count otherwise.
 inline PrCssKeyword cssValueRunKeyword(CssValueRun run) {
-    return run.count == 1 && run.values[0].kind == PrCssValueKind_Keyword ? cssValueKeyword(run.values)
-                                                                       : PrCssKeyword_Count;
+    if (run.count == 1 && run.values[0].kind == PrCssValueKind_Keyword)
+        return cssValueKeyword(run.values);
+    return PrCssKeyword_Count;
 }
 
 // Returns the keyword that a run begins with, or PrCssKeyword_Count if its first value is no keyword.
 inline PrCssKeyword cssValueRunFirstKeyword(CssValueRun run) {
-    return run.count != 0 && run.values[0].kind == PrCssValueKind_Keyword ? cssValueKeyword(run.values)
-                                                                       : PrCssKeyword_Count;
+    if (run.count != 0 && run.values[0].kind == PrCssValueKind_Keyword)
+        return cssValueKeyword(run.values);
+    return PrCssKeyword_Count;
 }
 
 // Returns the value at `index` of the run, with its children.
@@ -324,14 +326,14 @@ inline PrStringView cssValuePoolText(const CssValuePool* pool, const CssValueNod
 
 // Returns true if a value of `kind` holds text.
 inline bool cssValueHasText(PrCssValueKind kind) {
-    return kind == PrCssValueKind_Ident || kind == PrCssValueKind_String || kind == PrCssValueKind_Url
-           || kind == PrCssValueKind_Tokens;
+    return kind == PrCssValueKind_Ident || kind == PrCssValueKind_String || kind == PrCssValueKind_Url ||
+        kind == PrCssValueKind_Tokens;
 }
 
 // Returns true if a value of `kind` is a number: an integer, a number, a percentage or a dimension.
 inline bool cssValueIsNumeric(PrCssValueKind kind) {
-    return kind == PrCssValueKind_Integer || kind == PrCssValueKind_Number
-           || kind == PrCssValueKind_Percentage || kind == PrCssValueKind_Dimension;
+    return kind == PrCssValueKind_Integer || kind == PrCssValueKind_Number ||
+        kind == PrCssValueKind_Percentage || kind == PrCssValueKind_Dimension;
 }
 
 // Returns true if two runs hold the same values.
@@ -357,8 +359,7 @@ CssValueList cssValueListCopy(CssValueRun run);
 
 // Returns the list's values and text as a run.
 inline CssValueRun cssValueListRun(const CssValueList* list) {
-    return CssValueRun{list->values, list->count,
-                       reinterpret_cast<const char*>(list->values + list->count)};
+    return CssValueRun{list->values, list->count, reinterpret_cast<const char*>(list->values + list->count)};
 }
 
 // Frees what the list holds and leaves it empty.
@@ -381,8 +382,7 @@ uint32_t cssValuePoolAddText(CssValuePool* pool, PrStringView text);
 
 // Copies the value of the text token at `index`, with escapes resolved, onto the end of the pool's text. Writes its
 // length to `length`, and returns the index of its first byte.
-uint32_t cssValuePoolAddTokenText(CssValuePool* pool, const CssTokenStream* ts, uint32_t index,
-                                  uint32_t* length);
+uint32_t cssValuePoolAddTokenText(CssValuePool* pool, const CssTokenStream* ts, uint32_t index, uint32_t* length);
 
 // Copies the value of `text`, with escapes resolved as cssValueNext reads them, onto the end of the pool's text. Writes
 // its length to `length`, and returns the index of its first byte.

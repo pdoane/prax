@@ -9,7 +9,7 @@ int prTestCompressCApi(void) {
     PrCompressRead read;
     PrByteView input = {stored, sizeof(stored)};
     PrStatus status = prCompressCodecDecode(prCompressBuiltinCreate(), PrCompressFormat_Deflate, input,
-                                            out, sizeof(out), &read);
+        out, sizeof(out), &read);
     int result = status != PrStatus_Ok || read.progress != PrCompressProgress_Done || out[1] != 'i';
     prCompressCodecDestroy(NULL);
     prCompressDecoderDestroy(NULL);

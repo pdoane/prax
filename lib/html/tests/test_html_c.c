@@ -6,12 +6,10 @@
 
 PrStatus prTestHtmlCApi(PrStringView source);
 
-static PrStatus runScript(void* context, PrHtmlPage* page,
-                          const PrHtmlScript* script) {
+static PrStatus runScript(void* context, PrHtmlPage* page, const PrHtmlScript* script) {
     (void)context;
     (void)script;
-    return prHtmlDocumentWrite(prHtmlWindowDocument(prHtmlPageWindow(page)),
-                               PR_SV("<p>native script</p>"));
+    return prHtmlDocumentWrite(prHtmlWindowDocument(prHtmlPageWindow(page)), PR_SV("<p>native script</p>"));
 }
 
 PrStatus prTestHtmlCApi(PrStringView source) {
@@ -43,8 +41,7 @@ PrStatus prTestHtmlCApi(PrStringView source) {
     (void)prDomCommentCreate(document, PR_SV("comment"));
     (void)prDomDocumentFragmentCreate(document);
     PrDomProcessingInstruction* instruction = NULL;
-    (void)prDomProcessingInstructionCreate(document, PR_SV("target"), PR_SV("data"),
-                                                   &instruction);
+    (void)prDomProcessingInstructionCreate(document, PR_SV("target"), PR_SV("data"), &instruction);
 
     PrHtmlResponseHeaders headers = {PR_SV("text/html"), PR_SV("en")};
     PrStatus status = prHtmlPageLoad(page, source, PR_SV("about:blank"), &headers);

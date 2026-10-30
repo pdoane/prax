@@ -28,8 +28,8 @@ struct TextQuery {
 };
 
 bool isTextContent(const PrDomElement* element) {
-    return element->space == PrDomNamespace_Svg
-           && (element->tag == PrDomTag_Text || element->tag == PrDomTag_Tspan || element->tag == PrDomTag_TextPath);
+    return element->space == PrDomNamespace_Svg &&
+        (element->tag == PrDomTag_Text || element->tag == PrDomTag_Tspan || element->tag == PrDomTag_TextPath);
 }
 
 // Finds the characters of `element`. Returns false, with no characters, if the element is not in a text that renders.
@@ -90,8 +90,8 @@ bool placedOf(const PrDomElement* element, SvgQuery* query, SvgPlace* place) {
 
 // Returns true if the node is a shape whose equivalent path SVGGeometryElement measures.
 bool isShape(const SvgNode& node) {
-    return node.kind == SvgNodeKind_Rect || node.kind == SvgNodeKind_Ellipse || node.kind == SvgNodeKind_Line
-           || node.kind == SvgNodeKind_Path;
+    return node.kind == SvgNodeKind_Rect || node.kind == SvgNodeKind_Ellipse || node.kind == SvgNodeKind_Line ||
+        node.kind == SvgNodeKind_Path;
 }
 
 // Calls `fn` with the tree, place and node of the geometry element `self`. Returns InvalidState if no tree draws it as
@@ -100,8 +100,8 @@ template <typename Fn>
 PrStatus withShape(PrSvgElement* self, Fn fn) {
     SvgQuery query{};
     SvgPlace place{};
-    bool found = prSvgInterfaceIsGeometry(prSvgElementInterface(self)) && placedOf(self, &query, &place)
-                 && isShape(query.tree->nodes.data[query.node]);
+    bool found = prSvgInterfaceIsGeometry(prSvgElementInterface(self)) && placedOf(self, &query, &place) &&
+        isShape(query.tree->nodes.data[query.node]);
     if (found)
         fn(query.tree, place, query.node);
     svgQueryEnd(&query);
@@ -135,8 +135,10 @@ PrRect cellOf(const SvgTextCharacter& c) {
         for (float b : acrosses) {
             float x = c.position.x + along.x * a + across.x * b;
             float y = c.position.y + along.y * a + across.y * b;
-            bounds = PrRect{minF32(bounds.left, x), minF32(bounds.top, y), maxF32(bounds.right, x),
-                            maxF32(bounds.bottom, y)};
+            bounds = PrRect{
+                minF32(bounds.left, x), minF32(bounds.top, y), maxF32(bounds.right, x),
+                maxF32(bounds.bottom, y),
+            };
         }
     }
     return bounds;
@@ -158,11 +160,10 @@ PrStatus withCharacter(PrSvgElement* self, uint32_t index, Fn fn) {
 // (SVG2/render.html#TermReplacedElement).
 constexpr CssBoxProvider kBoxes = {
     .tags = kDomTagsSvgBoxes,
-    .traits =
-        [](const PrDomElement* element, CssBoxTraits* out) {
-            if (domIsOuterSvg(element))
-                out->kind = CssBoxKind_Replaced;
-        },
+    .traits = [](const PrDomElement* element, CssBoxTraits* out) {
+        if (domIsOuterSvg(element))
+            out->kind = CssBoxKind_Replaced;
+    },
     .reads = [](const PrDomElement*, PrStringView) { return false; },
 };
 
@@ -192,11 +193,9 @@ PrSvgElement* PR_NULLABLE prSvgElementQuery(PrDomEventTarget* PR_NULLABLE object
 }
 
 PrSvgElement* PR_NULLABLE prSvgElementOwnerSvgElement(PrSvgElement* self) {
-    for (PrDomNode* node = domNodeParent(self); node != nullptr;
-         node = domNodeParent(node)) {
+    for (PrDomNode* node = domNodeParent(self); node != nullptr; node = domNodeParent(node)) {
         PrDomElement* element = domElementFromNode(node);
-        if (element != nullptr && element->space == PrDomNamespace_Svg
-            && element->tag == PrDomTag_Svg)
+        if (element != nullptr && element->space == PrDomNamespace_Svg && element->tag == PrDomTag_Svg)
             return static_cast<PrSvgElement*>(element);
     }
     return nullptr;
@@ -426,8 +425,7 @@ PrStatus prSvgTextContentElementGetStartPositionOfChar(PrSvgElement* self, uint3
 PrStatus prSvgTextContentElementGetEndPositionOfChar(PrSvgElement* self, uint32_t index, PrDomPoint* out) {
     return withCharacter(self, index, [&](const SvgTextCharacter& c) {
         PrVec2 along = alongOf(c);
-        *out = PrDomPoint{double(c.position.x + along.x * c.advance), double(c.position.y + along.y * c.advance), 0,
-                          1};
+        *out = PrDomPoint{double(c.position.x + along.x * c.advance), double(c.position.y + along.y * c.advance), 0, 1};
     });
 }
 

@@ -14,8 +14,7 @@ JsCallback* PR_NULLABLE jsCallbackCreate(JSContext* ctx, JSValueConst value, JSV
         return nullptr;
     }
     JsCallback* callback = alloc<JsCallback>();
-    *callback =
-        JsCallback{ctx, JS_GetRuntime(ctx), JS_DupValue(ctx, value), 1, nullptr, nullptr, nullptr};
+    *callback = JsCallback{ctx, JS_GetRuntime(ctx), JS_DupValue(ctx, value), 1, nullptr, nullptr, nullptr};
     jsCallbackLink(JS_GetRuntime(ctx), callback, owner);
     return callback;
 }
@@ -46,7 +45,7 @@ void jsCallbackRelease(void* PR_NULLABLE context) {
 }
 
 JSValue jsCallbackCall(JsCallback* callback, const char* PR_NULLABLE operation,
-                       JSValueConst receiver, int argc, JSValueConst* PR_NULLABLE argv) {
+        JSValueConst receiver, int argc, JSValueConst* PR_NULLABLE argv) {
     if (callback->runtime == nullptr)
         return JS_UNDEFINED;
     JSContext* ctx = callback->ctx;
@@ -56,8 +55,7 @@ JSValue jsCallbackCall(JsCallback* callback, const char* PR_NULLABLE operation,
         result = JS_Call(ctx, callback->value, receiver, argc, argv);
     } else {
         JSValue method = JS_GetPropertyStr(ctx, callback->value, operation);
-        result =
-            JS_IsException(method) ? method : JS_Call(ctx, method, callback->value, argc, argv);
+        result = JS_IsException(method) ? method : JS_Call(ctx, method, callback->value, argc, argv);
         JS_FreeValue(ctx, method);
     }
     jsLeaveRealm(ctx);

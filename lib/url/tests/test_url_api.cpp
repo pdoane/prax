@@ -45,8 +45,7 @@ TEST_CASE("a URL's parameters stay live across href replacement") {
     PrUrlSearchParams* params = prUrlSearchParams(url);
     prUrlSearchParamsDelete(params, "a", "1");
     CHECK(text(prUrlQuery(url)) == "a=2");
-    CHECK(prUrlSetComponent(url, PrUrlComponent_Href, "http://other.test/?b=3")
-          == PrStatus_Ok);
+    CHECK(prUrlSetComponent(url, PrUrlComponent_Href, "http://other.test/?b=3") == PrStatus_Ok);
     CHECK(prUrlSearchParams(url) == params);
     CHECK(text(prUrlSearchParamsNameAt(params, 0)) == "b");
     CHECK(text(prUrlSearchParamsGet(params, "b")) == "3");
@@ -91,8 +90,8 @@ TEST_CASE("a query is percent-encoded in the charset of the document that a URL 
         prUrlDestroy(url);
         return result;
     };
-    CHECK(parsed("https://example.test/caf\xC3\xA9?caf\xC3\xA9#caf\xC3\xA9", PrCharset_Windows1252)
-          == "https://example.test/caf%C3%A9?caf%E9#caf%C3%A9");
+    CHECK(parsed("https://example.test/caf\xC3\xA9?caf\xC3\xA9#caf\xC3\xA9", PrCharset_Windows1252) ==
+        "https://example.test/caf%C3%A9?caf%E9#caf%C3%A9");
     // A code point that the charset cannot encode is a numeric character reference.
     CHECK(parsed("https://example.test/?\xE4\xB8\xAD", PrCharset_Windows1252) == "https://example.test/?%26%2320013%3B");
     CHECK(parsed("https://example.test/?\xE4\xB8\xAD", PrCharset_Gbk) == "https://example.test/?%D6%D0");

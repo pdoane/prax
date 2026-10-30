@@ -265,7 +265,8 @@ inline const PrLayoutGridStyle& layoutGridStyle(const LayoutStyles* styles, PrLa
 
 // The identity box transform.
 constexpr PrLayoutTransform kLayoutTransformIdentity{
-    .matrix = {{{1, 0, 0, 0}, {0, 1, 0, 0}, {0, 0, 1, 0}, {0, 0, 0, 1}}}};
+    .matrix = {{{1, 0, 0, 0}, {0, 1, 0, 0}, {0, 0, 1, 0}, {0, 0, 0, 1}}},
+};
 
 // Returns true if the effects group has a transform other than the identity.
 inline bool layoutHasTransform(const PrLayoutEffectStyle& effects) {
@@ -319,7 +320,7 @@ void layoutFontRelease(LayoutStyles* styles, PrLayoutGroupIndex font);
 // Creates styles whose tables hold only their defaults, or frees them. The styles hold a reference to `font` and shape
 // with `shaper` (PrLayoutTreeDesc).
 LayoutStyles* layoutStylesCreate(PrTextFont* PR_NULLABLE font, PrTextShaper* PR_NULLABLE shaper,
-                                 float targetPixelRatio);
+    float targetPixelRatio);
 void layoutStylesDestroy(LayoutStyles* PR_NULLABLE styles);
 
 // Sets the target pixels per px that font metrics and leading snap to. A new ratio raises the metrics generation.

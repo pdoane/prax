@@ -30,8 +30,7 @@ typedef uint8_t PrUrlPercentEncodeSet;
 
 // Writes up to `capacity` bytes of `input`, with each byte in `set` percent-encoded in uppercase hex, and returns the
 // full size. `out` does not overlap `input`.
-size_t prUrlPercentEncode(PrStringView input, PrUrlPercentEncodeSet set, char* PR_NULLABLE out,
-                          size_t capacity);
+size_t prUrlPercentEncode(PrStringView input, PrUrlPercentEncodeSet set, char* PR_NULLABLE out, size_t capacity);
 
 // Writes up to `capacity` bytes of `input` percent-decoded (url/#percent-decode), and returns the full size. `out` may
 // be `input.data`. A `%` not followed by two hex digits is kept.

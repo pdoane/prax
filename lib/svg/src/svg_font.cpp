@@ -82,8 +82,7 @@ bool parseRange(PrStringView item, PrFontCodePointRange* out) {
     if (i < item.size && item.data[i] == '-' && wild == 0) {
         ++i;
         // The end may repeat the U+. The SVG 1.1 test suite writes ranges this way.
-        if (i + 1 < item.size && (item.data[i] == 'U' || item.data[i] == 'u')
-            && item.data[i + 1] == '+')
+        if (i + 1 < item.size && (item.data[i] == 'U' || item.data[i] == 'u') && item.data[i + 1] == '+')
             i += 2;
         last = 0;
         digits = 0;
@@ -125,9 +124,8 @@ bool languageMatches(PrStringView languages, PrStringView language) {
     if (languages.data == nullptr)
         return true;
     return anyItem(languages, [&](PrStringView tag) {
-        return language.size >= tag.size
-               && asciiEqualsFold(PrStringView{language.data, tag.size}, tag)
-               && (language.size == tag.size || language.data[tag.size] == '-');
+        return language.size >= tag.size && asciiEqualsFold(PrStringView{language.data, tag.size}, tag) &&
+            (language.size == tag.size || language.data[tag.size] == '-');
     });
 }
 
@@ -139,11 +137,16 @@ void readGlyph(const PrDomElement* element, float fallbackAdvance, SvgGlyph* out
     glyph.names = svgAttribute(element, "glyph-name");
     glyph.languages = svgAttribute(element, "lang");
     PrStringView form = svgAttribute(element, "arabic-form");
-    glyph.arabicForm = form == "isolated"   ? SvgArabicForm_Isolated
-                       : form == "initial"  ? SvgArabicForm_Initial
-                       : form == "medial"   ? SvgArabicForm_Medial
-                       : form == "terminal" ? SvgArabicForm_Terminal
-                                                               : SvgArabicForm_Any;
+    if (form == "isolated")
+        glyph.arabicForm = SvgArabicForm_Isolated;
+    else if (form == "initial")
+        glyph.arabicForm = SvgArabicForm_Initial;
+    else if (form == "medial")
+        glyph.arabicForm = SvgArabicForm_Medial;
+    else if (form == "terminal")
+        glyph.arabicForm = SvgArabicForm_Terminal;
+    else
+        glyph.arabicForm = SvgArabicForm_Any;
     glyph.advance = numberAttribute(element, "horiz-adv-x", fallbackAdvance);
     for (const PrDomNode* child = element->first; child != nullptr; child = child->next)
         if (domElementFromNode(child) != nullptr)
@@ -240,15 +243,13 @@ void svgFontReset(SvgFont* font) {
 }
 
 uint32_t svgFontMatch(const SvgFont& font, PrStringView text, size_t pos, PrStringView language,
-                      SvgArabicForm form, size_t* length) {
+        SvgArabicForm form, size_t* length) {
     for (uint32_t i = 1; i < font.glyphs.count; ++i) {
         const SvgGlyph& glyph = font.glyphs.data[i];
         PrStringView unicode = glyph.unicode;
-        if (unicode.size == 0 || unicode.size > text.size - pos
-            || PrStringView{text.data + pos, unicode.size} != unicode
-            || !languageMatches(glyph.languages, language)
-            || (form != SvgArabicForm_Any && glyph.arabicForm != SvgArabicForm_Any
-                && glyph.arabicForm != form))
+        if (unicode.size == 0 || unicode.size > text.size - pos ||
+                PrStringView{text.data + pos, unicode.size} != unicode || !languageMatches(glyph.languages, language) ||
+                (form != SvgArabicForm_Any && glyph.arabicForm != SvgArabicForm_Any && glyph.arabicForm != form))
             continue;
         *length = unicode.size;
         return i;
@@ -263,8 +264,7 @@ float svgFontKerning(const SvgFont& font, uint32_t first, uint32_t second) {
     const SvgGlyph& b = font.glyphs.data[second];
     for (uint32_t i = 0; i < font.kerns.count; ++i) {
         const SvgKern& kern = font.kerns.data[i];
-        if ((unicodeNames(kern.u1, a) || glyphNames(kern.g1, a))
-            && (unicodeNames(kern.u2, b) || glyphNames(kern.g2, b)))
+        if ((unicodeNames(kern.u1, a) || glyphNames(kern.g1, a)) && (unicodeNames(kern.u2, b) || glyphNames(kern.g2, b)))
             return kern.k;
     }
     return 0;

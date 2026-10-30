@@ -121,8 +121,7 @@ float angleBetween(PrVec2 u, PrVec2 v) {
 // An arc that ends where it starts is a segment of zero length, whose caps are painted
 // (SVG2/paths.html#ZeroLengthSegments), rather than omitted as SVG2/paths.html#ArcOutOfRangeParameters says. The
 // omission would leave a lone moveto, which is not stroked.
-void arcTo(PrPath* path, PrVec2 from, float rx, float ry, float rotation, bool large, bool sweep,
-           PrVec2 to) {
+void arcTo(PrPath* path, PrVec2 from, float rx, float ry, float rotation, bool large, bool sweep, PrVec2 to) {
     rx = absF32(rx);
     ry = absF32(ry);
     if ((from.x == to.x && from.y == to.y) || rx == 0 || ry == 0) {
@@ -149,8 +148,7 @@ void arcTo(PrPath* path, PrVec2 from, float rx, float ry, float rotation, bool l
         factor = -factor;
     float cx1 = factor * rx * y1 / ry;
     float cy1 = -factor * ry * x1 / rx;
-    PrVec2 center{c * cx1 - s * cy1 + (from.x + to.x) / 2,
-                   s * cx1 + c * cy1 + (from.y + to.y) / 2};
+    PrVec2 center{c * cx1 - s * cy1 + (from.x + to.x) / 2, s * cx1 + c * cy1 + (from.y + to.y) / 2};
     PrVec2 u{(x1 - cx1) / rx, (y1 - cy1) / ry};
     PrVec2 v{(-x1 - cx1) / rx, (-y1 - cy1) / ry};
     float start = angleBetween(PrVec2{1, 0}, u);
@@ -203,8 +201,7 @@ void appendCommand(PrPath* path, DataPosition& p, const PrPathDataCommand& comma
         }
         case 'S': {
             bool smooth = p.previous == 'C' || p.previous == 'S';
-            PrVec2 c1 = smooth ? PrVec2{2 * p.current.x - p.lastControl.x, 2 * p.current.y - p.lastControl.y}
-                               : p.current;
+            PrVec2 c1 = smooth ? PrVec2{2 * p.current.x - p.lastControl.x, 2 * p.current.y - p.lastControl.y} : p.current;
             p.lastControl = PrVec2{base.x + n[0], base.y + n[1]};
             p.current = PrVec2{base.x + n[2], base.y + n[3]};
             prPathCubicTo(path, c1, p.lastControl, p.current);
@@ -217,8 +214,7 @@ void appendCommand(PrPath* path, DataPosition& p, const PrPathDataCommand& comma
             break;
         case 'T': {
             bool smooth = p.previous == 'Q' || p.previous == 'T';
-            p.lastControl = smooth ? PrVec2{2 * p.current.x - p.lastControl.x, 2 * p.current.y - p.lastControl.y}
-                                   : p.current;
+            p.lastControl = smooth ? PrVec2{2 * p.current.x - p.lastControl.x, 2 * p.current.y - p.lastControl.y} : p.current;
             p.current = PrVec2{base.x + n[0], base.y + n[1]};
             prPathQuadTo(path, p.lastControl, p.current);
             break;
@@ -354,8 +350,7 @@ void prPathAppendCommands(PrPath* path, const PrPathDataCommand* PR_NULLABLE com
         appendCommand(path, position, commands[i]);
 }
 
-void prPathDataVertices(const PrPathDataCommand* PR_NULLABLE commands, uint32_t count,
-                        PrPathDataVertex* PR_NULLABLE out) {
+void prPathDataVertices(const PrPathDataCommand* PR_NULLABLE commands, uint32_t count, PrPathDataVertex* PR_NULLABLE out) {
     // Each segment's own directions, from the curves that its command appends after the current point.
     PrPath* segment = prPathCreate();
     DataPosition position{};

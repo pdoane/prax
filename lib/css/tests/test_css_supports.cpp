@@ -112,8 +112,7 @@ TEST_CASE("CSS.escape serializes an identifier") {
 
 TEST_CASE("filter() is an image wherever an image is written, with a string or an image as its input") {
     CHECK(supported("background-image", "filter(url(a.png), blur(2px))"));
-    CHECK(supported("background-image",
-                    "filter('a.png', hue-rotate(180deg)), filter(linear-gradient(red, blue), url(#f) invert())"));
+    CHECK(supported("background-image", "filter('a.png', hue-rotate(180deg)), filter(linear-gradient(red, blue), url(#f) invert())"));
     CHECK(supported("mask-image", "filter(filter(url(a.png), sepia()), opacity(0.5))"));
     CHECK(supported("list-style-image", "filter(url(a.png), grayscale(1))"));
     CHECK(supported("border-image-source", "filter(url(a.png), grayscale(1))"));

@@ -63,8 +63,7 @@ bool domParseMonth(PrStringView text, DomDate* out);
 bool domParseDate(PrStringView text, DomDate* out);
 bool domParseWeek(PrStringView text, int64_t* year, uint32_t* week);
 bool domParseTime(PrStringView text, DomTime* out, uint32_t* PR_NULLABLE fractionDigits = nullptr);
-bool domParseLocalDateTime(PrStringView text, DomDate* date, DomTime* time,
-                           uint32_t* PR_NULLABLE fractionDigits = nullptr);
+bool domParseLocalDateTime(PrStringView text, DomDate* date, DomTime* time, uint32_t* PR_NULLABLE fractionDigits = nullptr);
 
 // Returns true if `text` is a valid time string, or a valid local date and time string: one that parses, with at most
 // three digits of a fraction of a second.

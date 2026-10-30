@@ -242,8 +242,11 @@ void markDirty(LayoutTree* tree, LayoutNodeIndex node, Reach reach = Reach_Holde
     for (uint32_t at = n.parent; at != kPrLayoutNodeNone; at = nodeAt(tree, at).parent) {
         LayoutTreeNode& ancestor = nodeAt(tree, at);
         if (box != kPrLayoutNodeNone) {
-            bool holds = inlineHolder ? !layoutIsInlineBox(tree, at)
-                                      : layoutHoldsPosition(tree, at, layoutNodePositionScheme(tree, box));
+            bool holds;
+            if (inlineHolder)
+                holds = !layoutIsInlineBox(tree, at);
+            else
+                holds = layoutHoldsPosition(tree, at, layoutNodePositionScheme(tree, box));
             if (holds && layoutIsInlineBox(tree, at)) {
                 inlineHolder = true;
                 holds = false;
@@ -367,8 +370,8 @@ void markFontReaders(LayoutTree* tree) {
     }
     for (uint32_t i = 0; i < tree->nodes.count; ++i) {
         const LayoutTreeNode& node = tree->nodes.data[i];
-        if (node.live && layoutKindIsBox(node.kind)
-            && isChanged(layoutStyle(tree->styles, node.style).groups[PrLayoutGroup_Font]))
+        if (node.live && layoutKindIsBox(node.kind) &&
+                isChanged(layoutStyle(tree->styles, node.style).groups[PrLayoutGroup_Font]))
             markDirty(tree, i);
     }
 }
@@ -515,8 +518,8 @@ void markPainted(LayoutTree* tree, LayoutNodeIndex node, bool beyondLayer) {
 // Returns true if two records differ, for layout, only in whether the box is transformed or filtered. Those decide
 // whether the box holds the boxes out of flow in it.
 bool sameButHolding(const LayoutStyles* styles, PrLayoutStyleIndex a, PrLayoutStyleIndex b) {
-    if (layoutStyle(styles, a).groups[PrLayoutGroup_Font] != layoutStyle(styles, b).groups[PrLayoutGroup_Font]
-        || layoutStyle(styles, a).groups[PrLayoutGroup_Flex] != layoutStyle(styles, b).groups[PrLayoutGroup_Flex])
+    if (layoutStyle(styles, a).groups[PrLayoutGroup_Font] != layoutStyle(styles, b).groups[PrLayoutGroup_Font] ||
+            layoutStyle(styles, a).groups[PrLayoutGroup_Flex] != layoutStyle(styles, b).groups[PrLayoutGroup_Flex])
         return false;
     PrLayoutBoxStyle x = layoutBoxStyle(styles, a);
     PrLayoutBoxStyle y = layoutBoxStyle(styles, b);
@@ -528,14 +531,13 @@ bool sameButHolding(const LayoutStyles* styles, PrLayoutStyleIndex a, PrLayoutSt
 // Returns true if the styles `a` and `b` of a table or a table part differ in the style or color of a border. `box` is
 // the box style of the table or part. A table that collapses its borders resolves them during layout
 // (css-tables-3/#border-collapsing), so the borders' styles and colors are inputs of the table's layout.
-bool collapsingBorders(const LayoutStyles* styles, const PrLayoutBoxStyle& box, PrLayoutStyleIndex a,
-                       PrLayoutStyleIndex b) {
+bool collapsingBorders(const LayoutStyles* styles, const PrLayoutBoxStyle& box, PrLayoutStyleIndex a, PrLayoutStyleIndex b) {
     if (!layoutIsTable(box) && !layoutDisplayIsTablePart(box.display))
         return false;
     const PrLayoutDecorationStyle& x = layoutDecorationStyle(styles, a);
     const PrLayoutDecorationStyle& y = layoutDecorationStyle(styles, b);
-    return !memEquals(x.borderStyle, y.borderStyle, sizeof x.borderStyle)
-           || !memEquals(x.borderColor, y.borderColor, sizeof x.borderColor);
+    return !memEquals(x.borderStyle, y.borderStyle, sizeof x.borderStyle) ||
+        !memEquals(x.borderColor, y.borderColor, sizeof x.borderColor);
 }
 
 // Returns true if a box out of flow may be in the subtree of `node`: the fragment that the last layout placed it with
@@ -616,10 +618,8 @@ bool sameBaselines(const LayoutBaselines& a, const LayoutBaselines& b) {
     if (x == nullptr || y == nullptr)
         return x == y;
     for (uint32_t edge = 0; edge < LayoutBaselineEdge_Count; ++edge) {
-        if (x->clamped[edge] != y->clamped[edge]
-            || (x->clamped[edge]
-                && (x->unclamped[edge] != y->unclamped[edge] || x->lo[edge] != y->lo[edge]
-                    || x->hi[edge] != y->hi[edge])))
+        if (x->clamped[edge] != y->clamped[edge] || (x->clamped[edge] &&
+                (x->unclamped[edge] != y->unclamped[edge] || x->lo[edge] != y->lo[edge] || x->hi[edge] != y->hi[edge])))
             return false;
     }
     return true;
@@ -629,8 +629,7 @@ bool sameBaselines(const LayoutBaselines& a, const LayoutBaselines& b) {
 bool sameText(const LayoutFragment* x, const LayoutFragment* y, LayoutNodeIndex node, Mismatch* out) {
     const LayoutFragmentText& a = x->text;
     const LayoutFragmentText& b = y->text;
-    if (a.size != b.size || a.glyphCount != b.glyphCount || a.fontCount != b.fontCount
-        || a.rangeCount != b.rangeCount) {
+    if (a.size != b.size || a.glyphCount != b.glyphCount || a.fontCount != b.fontCount || a.rangeCount != b.rangeCount) {
         mismatch(out, node, "the text run's size, glyph count, font count or font range count");
         return false;
     }
@@ -836,19 +835,18 @@ void layoutTreeChangeStyle(LayoutTree* tree, LayoutNodeIndex index, PrLayoutStyl
         // A box's container reads whether its ancestors clip and whether the box that the viewport holds is fixed.
         LayoutClips clipsBefore = layoutClips(boxBefore);
         LayoutClips clipsAfter = layoutClips(boxAfter);
-        if (boxBefore.position != boxAfter.position || clipsBefore.x != clipsAfter.x || clipsBefore.y != clipsAfter.y
-            || boxBefore.clipped != boxAfter.clipped)
+        if (boxBefore.position != boxAfter.position || clipsBefore.x != clipsAfter.x || clipsBefore.y != clipsAfter.y ||
+                boxBefore.clipped != boxAfter.clipped)
             ++tree->cache.placed;
         // What the placeholder of a box out of flow reads, and what decides which box holds the boxes out of flow, are
         // inputs of its parent as well as its own, and may move a box to another holder.
         bool holds = boxBefore.transformed != boxAfter.transformed || boxBefore.filtered != boxAfter.filtered;
-        bool holding = boxBefore.position != boxAfter.position || boxBefore.display != boxAfter.display
-                       || boxBefore.staticInline != boxAfter.staticInline || holds;
+        bool holding = boxBefore.position != boxAfter.position || boxBefore.display != boxAfter.display ||
+            boxBefore.staticInline != boxAfter.staticInline || holds;
         // A transform or a filter appearing or disappearing changes which box holds the boxes out of flow in its
         // subtree, and nothing else of layout. If nothing else that layout reads changed, and the last layout found no
         // box out of flow in the box's subtree, the change affects only how the box paints.
-        bool onlyHolding =
-            holding && holds && sameButHolding(tree->styles, was, style) && !mayHoldOutOfFlow(tree, index);
+        bool onlyHolding = holding && holds && sameButHolding(tree->styles, was, style) && !mayHoldOutOfFlow(tree, index);
         if (onlyHolding) {
             // Nothing for layout to do.
         } else if (holding) {
@@ -858,9 +856,9 @@ void layoutTreeChangeStyle(LayoutTree* tree, LayoutNodeIndex index, PrLayoutStyl
         } else {
             markDirty(tree, index);
         }
-    } else if ((changed & (kFont | kTable)) != 0 || ((changed & kFlex) != 0 && !onlyItemFlex(tree->styles, was, style))
-               || ((changed & kGrid) != 0 && !onlyItemGrid(tree->styles, was, style))
-               || ((changed & kDecoration) != 0 && collapsingBorders(tree->styles, boxAfter, was, style))) {
+    } else if ((changed & (kFont | kTable)) != 0 || ((changed & kFlex) != 0 && !onlyItemFlex(tree->styles, was,
+            style)) || ((changed & kGrid) != 0 && !onlyItemGrid(tree->styles, was, style)) ||
+            ((changed & kDecoration) != 0 && collapsingBorders(tree->styles, boxAfter, was, style))) {
         markDirty(tree, index);
     } else if ((changed & (kFlex | kGrid)) != 0) {
         // What a flex or grid container reads of its item is the container's input, not the item's. The item is laid
@@ -877,8 +875,8 @@ void layoutTreeChangeStyle(LayoutTree* tree, LayoutNodeIndex index, PrLayoutStyl
     // these, before or after. Whether a child is laid out as an inline box, which decides how it paints whole, reads
     // this box's writing mode, and whether the child is an item reads this box's display. A display of none, or a
     // collapsed item, takes the box's subtree out of every list.
-    bool modes = (changed & kFont) != 0
-                 && layoutFontStyle(tree->styles, was).writingMode != layoutFontStyle(tree->styles, style).writingMode;
+    bool modes = (changed & kFont) != 0 &&
+        layoutFontStyle(tree->styles, was).writingMode != layoutFontStyle(tree->styles, style).writingMode;
     bool items = layoutChildrenFromBox(boxBefore) != layoutChildrenFromBox(boxAfter);
     const LayoutStyleTraits& traitsBefore = layoutStyleTraits(tree->styles, was);
     const LayoutStyleTraits& traitsAfter = layoutStyleTraits(tree->styles, style);
@@ -898,19 +896,19 @@ void layoutTreeChangeStyle(LayoutTree* tree, LayoutNodeIndex index, PrLayoutStyl
         // being a stacking context changes no list if no box in its subtree paints whole. Whether a box blends decides
         // whether the stacking context around it takes a layer to isolate it (layoutIsolatesBlending), which the
         // recording around that context names.
-        stacking = levelBefore != levelAfter || contextBefore != contextAfter
-                   || layoutStyleBlends(tree->styles, was) != layoutStyleBlends(tree->styles, style);
-        listed = listed || levelBefore != levelAfter
-                 || layoutNodePaintsWholeAs(tree, index, was) != layoutNodePaintsWholeAs(tree, index, style)
-                 || (contextBefore != contextAfter && layoutNodeLeadsWhole(tree, index));
+        stacking = levelBefore != levelAfter || contextBefore != contextAfter ||
+            layoutStyleBlends(tree->styles, was) != layoutStyleBlends(tree->styles, style);
+        listed = listed || levelBefore != levelAfter ||
+            layoutNodePaintsWholeAs(tree, index, was) != layoutNodePaintsWholeAs(tree, index, style) ||
+            (contextBefore != contextAfter && layoutNodeLeadsWhole(tree, index));
     }
 
     // A recording reads a box's record except its effects. Effects apply around the recording of a box with a layer of
     // its own, and decide only whether a box has one. A clip rectangle is the clip of the box's container, which the
     // recording around the box holds.
-    bool clipMoved = (changed & (1u << PrLayoutGroup_Compositing)) != 0 && (boxBefore.clipped || boxAfter.clipped)
-                     && !memEquals(layoutCompositingStyle(tree->styles, was).clip,
-                                   layoutCompositingStyle(tree->styles, style).clip, sizeof(PrLayoutLength) * 4);
+    bool clipMoved = (changed & (1u << PrLayoutGroup_Compositing)) != 0 && (boxBefore.clipped || boxAfter.clipped) &&
+        !memEquals(layoutCompositingStyle(tree->styles, was).clip,
+            layoutCompositingStyle(tree->styles, style).clip, sizeof(PrLayoutLength) * 4);
     if ((changed & ~kEffect) != 0 || clipMoved) {
         n.paintChanged = tree->paint.paints;
         markPainted(tree, index, layerChanged || stacking);
@@ -930,16 +928,16 @@ void layoutTreeChangeStyle(LayoutTree* tree, LayoutNodeIndex index, PrLayoutStyl
     bool childrenAfter = (modes || items) && (!listed || contextAfter);
     if (listed)
         layoutStackingRemoving(tree, index);
-    for (LayoutNodeIndex child = n.first; childrenBefore && child != kPrLayoutNodeNone;
-         child = nodeAt(tree, child).next)
+    for (LayoutNodeIndex child = n.first; childrenBefore && child != kPrLayoutNodeNone; child =
+            nodeAt(tree, child).next)
         layoutStackingRemoving(tree, child);
     layoutStyleRetain(tree->styles, style);
     layoutStyleRelease(tree->styles, was);
     setStyle(tree, index, style);
     // Whether the box is out of flow, or generates a box at all, ends the runs of text around it in a flex or grid
     // container, and the container's font is the font of its anonymous items.
-    if (n.parent != kPrLayoutNodeNone
-        && (boxBefore.display != boxAfter.display || boxBefore.position != boxAfter.position))
+    if (n.parent != kPrLayoutNodeNone &&
+            (boxBefore.display != boxAfter.display || boxBefore.position != boxAfter.position))
         markRunsAround(tree, n.parent, n.previous, n.next);
     if ((changed & kFont) != 0 && !items && layoutChildrenAreItems(n.children)) {
         for (LayoutNodeIndex child = n.first; child != kPrLayoutNodeNone; child = nodeAt(tree, child).next) {
@@ -952,28 +950,26 @@ void layoutTreeChangeStyle(LayoutTree* tree, LayoutNodeIndex index, PrLayoutStyl
     for (LayoutNodeIndex child = n.first; items && child != kPrLayoutNodeNone; child = nodeAt(tree, child).next)
         markDirty(tree, child);
     // A child whose justify-self is auto takes the box's justify-items.
-    if ((changed & kFlex) != 0
-        && layoutFlexStyle(tree->styles, was).justifyItems != layoutFlexStyle(tree->styles, style).justifyItems) {
+    if ((changed & kFlex) != 0 &&
+            layoutFlexStyle(tree->styles, was).justifyItems != layoutFlexStyle(tree->styles, style).justifyItems) {
         for (LayoutNodeIndex child = n.first; child != kPrLayoutNodeNone; child = nodeAt(tree, child).next) {
             const LayoutTreeNode& c = nodeAt(tree, child);
-            if (layoutKindIsElement(c.kind)
-                && (layoutFlexStyle(tree->styles, c.style).justifySelf & kPrLayoutAlignmentValueMask)
-                       == PrLayoutAlignment_Auto)
+            if (layoutKindIsElement(c.kind) &&
+                    (layoutFlexStyle(tree->styles, c.style).justifySelf & kPrLayoutAlignmentValueMask) ==
+                    PrLayoutAlignment_Auto)
                 markDirty(tree, child);
         }
     }
-    for (LayoutNodeIndex child = n.first; childrenAfter && child != kPrLayoutNodeNone;
-         child = nodeAt(tree, child).next)
+    for (LayoutNodeIndex child = n.first; childrenAfter && child != kPrLayoutNodeNone; child = nodeAt(tree, child).next)
         layoutStackingInserted(tree, child);
 }
 
-void layoutTreeInsert(LayoutTree* tree, LayoutNodeIndex parentIndex, LayoutNodeIndex index,
-                      LayoutNodeIndex beforeIndex) {
+void layoutTreeInsert(LayoutTree* tree, LayoutNodeIndex parentIndex, LayoutNodeIndex index, LayoutNodeIndex beforeIndex) {
     tree->frame.preorderStale = true;
     LayoutTreeNode& p = nodeAt(tree, parentIndex);
     LayoutTreeNode& n = nodeAt(tree, index);
-    PR_ASSERT(layoutKindIsElement(p.kind) && n.parent == kPrLayoutNodeNone && tree->root != index
-              && !layoutTreeIsLaidOutRoot(tree, index));
+    PR_ASSERT(layoutKindIsElement(p.kind) && n.parent == kPrLayoutNodeNone && tree->root != index &&
+        !layoutTreeIsLaidOutRoot(tree, index));
     PR_ASSERT(beforeIndex == kPrLayoutNodeNone || nodeAt(tree, beforeIndex).parent == parentIndex);
     markDirty(tree, parentIndex, Reach_Ancestors);
     n.parent = parentIndex;
@@ -1007,8 +1003,7 @@ void layoutTreeRemove(LayoutTree* tree, LayoutNodeIndex index) {
     if (parent != kPrLayoutNodeNone)
         markDirty(tree, parent, Reach_Ancestors);
     // Content removed from a flex or grid container keeps nothing of its run's anonymous item.
-    if (parent != kPrLayoutNodeNone && layoutChildrenAreItems(nodeAt(tree, parent).children)
-        && layoutIsRunContent(n))
+    if (parent != kPrLayoutNodeNone && layoutChildrenAreItems(nodeAt(tree, parent).children) && layoutIsRunContent(n))
         layoutCacheInvalidate(tree->cache, index);
     layoutStackingRemoving(tree, index);
     unlink(tree, index);
@@ -1071,12 +1066,12 @@ const LayoutHighlights* PR_NULLABLE layoutTextHighlights(const LayoutTree* tree,
     if (!n.listed || n.kind != PrLayoutNodeKind_Text)
         return nullptr;
     uint32_t at = tree->highlightIndex.find(layoutHighlightHash(node),
-                                            [&](uint32_t i) { return tree->highlights.data[i].node == node; });
+        [&](uint32_t i) { return tree->highlights.data[i].node == node; });
     return at != kHashMissing ? &tree->highlights.data[at] : nullptr;
 }
 
 void layoutTreeSetHighlights(LayoutTree* tree, LayoutNodeIndex node, const PrLayoutHighlight* PR_NULLABLE highlights,
-                             uint32_t count, uint32_t frame) {
+        uint32_t count, uint32_t frame) {
     LayoutTreeNode& n = nodeAt(tree, node);
     PR_ASSERT(n.kind == PrLayoutNodeKind_Text);
     LayoutHighlights* kept = const_cast<LayoutHighlights*>(layoutTextHighlights(tree, node));
@@ -1108,8 +1103,8 @@ void layoutTreeSetCaret(LayoutTree* tree, const PrLayoutCaret* PR_NULLABLE caret
     bool shown = caret != nullptr;
     // The caret has padding, so it is compared by its fields.
     auto same = [&](const PrLayoutCaret& a) {
-        return a.position.node == caret->position.node && a.position.offset == caret->position.offset
-               && a.affinity == caret->affinity && memEquals(&a.color, &caret->color, sizeof(PrColor16));
+        return a.position.node == caret->position.node && a.position.offset == caret->position.offset &&
+            a.affinity == caret->affinity && memEquals(&a.color, &caret->color, sizeof(PrColor16));
     };
     if (shown == kept.shown && (!shown || same(kept.caret)))
         return;
@@ -1141,16 +1136,16 @@ PrLayoutStyleIndex layoutFirstLineStyle(const LayoutTree* tree, LayoutNodeIndex 
     if (!n.listed || n.kind == PrLayoutNodeKind_Text)
         return kPrLayoutStyleNone;
     uint32_t at = tree->firstLineIndex.find(layoutFirstLineHash(node),
-                                            [&](uint32_t i) { return tree->firstLines.data[i].node == node; });
+        [&](uint32_t i) { return tree->firstLines.data[i].node == node; });
     return at != kHashMissing ? tree->firstLines.data[at].style : kPrLayoutStyleNone;
 }
 
 uint32_t layoutNodeLineStyle(const LayoutTree* tree, LayoutNodeIndex node) {
     const LayoutTreeNode& n = layoutTreeNode(tree, node);
     LayoutNodeIndex styled = n.kind == PrLayoutNodeKind_Text && n.style == kPrLayoutStyleNone ? n.parent : node;
-    PrLayoutStyleIndex line = styled != kPrLayoutNodeNone && (n.kind != PrLayoutNodeKind_Text || styled != node)
-                                  ? layoutFirstLineStyle(tree, styled)
-                                  : kPrLayoutStyleNone;
+    PrLayoutStyleIndex line = kPrLayoutStyleNone;
+    if (styled != kPrLayoutNodeNone && (n.kind != PrLayoutNodeKind_Text || styled != node))
+        line = layoutFirstLineStyle(tree, styled);
     return line != kPrLayoutStyleNone ? line : layoutNodeStyle(tree, node);
 }
 
@@ -1291,8 +1286,8 @@ void prLayoutTreeErase(PrLayoutTree* tree, PrLayoutNode node) {
 bool prLayoutNodeIsValid(const PrLayoutTree* tree, PrLayoutNode node) {
     const LayoutTree* t = tree;
     LayoutNodeIndex index = LayoutNodeIndex(node);
-    return index != kPrLayoutNodeNone && index < t->nodes.count && t->nodes.data[index].live
-           && t->nodes.data[index].generation == uint32_t(node >> 32);
+    return index != kPrLayoutNodeNone && index < t->nodes.count && t->nodes.data[index].live &&
+        t->nodes.data[index].generation == uint32_t(node >> 32);
 }
 
 PrLayoutNodeKind prLayoutNodeKind(const PrLayoutTree* tree, PrLayoutNode node) {
@@ -1397,13 +1392,13 @@ PrStringView prLayoutNodeText(const PrLayoutTree* tree, PrLayoutNode text) {
 }
 
 void prLayoutNodeSetHighlights(PrLayoutTree* tree, PrLayoutNode text, const PrLayoutHighlight* PR_NULLABLE highlights,
-                               uint32_t count) {
+        uint32_t count) {
     PR_ASSERT(!tree->frame.open);
     layoutTreeSetHighlights(tree, layoutNodeIndex(tree, text), highlights, count, 0);
 }
 
 uint32_t prLayoutNodeHighlights(const PrLayoutTree* tree, PrLayoutNode text, PrLayoutHighlight* PR_NULLABLE out,
-                                uint32_t capacity) {
+        uint32_t capacity) {
     const LayoutHighlights* kept = layoutTextHighlights(tree, layoutNodeIndex(tree, text));
     if (kept == nullptr)
         return 0;
@@ -1539,7 +1534,7 @@ PrLayoutVec prLayoutNodeScroll(const PrLayoutTree* tree, PrLayoutNode element) {
 }
 
 uint32_t prLayoutTreeTakeScrollAdjustments(PrLayoutTree* tree, PrLayoutScrollAdjustment* PR_NULLABLE out,
-                                           uint32_t capacity) {
+        uint32_t capacity) {
     Array<PrLayoutScrollAdjustment>& untaken = tree->anchoring.untaken;
     uint32_t count = untaken.count < capacity ? untaken.count : capacity;
     for (uint32_t i = 0; i < count; ++i)
@@ -1588,8 +1583,8 @@ void prLayoutTreeLayout(PrLayoutTree* tree, const PrLayoutRoot* roots, uint32_t 
     t->pendingLayout = 0;
     // A change under the root marks the root, so a clean root in the same viewport, at the same metrics, keeps the last
     // layout's fragments. A change outside the root's tree waits for the insert that brings it in, which marks it.
-    bool clean = t->fragment != nullptr && extent == t->viewport && !metricsChanged && !rootsChanged
-                 && t->root != kPrLayoutNodeNone && nodeAt(t, t->root).dirty == 0;
+    bool clean = t->fragment != nullptr && extent == t->viewport && !metricsChanged && !rootsChanged &&
+        t->root != kPrLayoutNodeNone && nodeAt(t, t->root).dirty == 0;
     for (uint32_t i = 0; clean && i < t->roots.count; ++i)
         clean = t->roots.data[i].fragment != nullptr && nodeAt(t, t->roots.data[i].node).dirty == 0;
     if (clean) {
@@ -1602,8 +1597,14 @@ void prLayoutTreeLayout(PrLayoutTree* tree, const PrLayoutRoot* roots, uint32_t 
         markViewportReaders(t);
         markViewportPainters(t);
     }
-    LayoutState state{.tree = t, .styles = t->styles, .scratch = scratchOf(t), .stats = &t->stats, .viewport = extent,
-                      .reuse = true};
+    LayoutState state{
+        .tree = t,
+        .styles = t->styles,
+        .scratch = scratchOf(t),
+        .stats = &t->stats,
+        .viewport = extent,
+        .reuse = true,
+    };
     layoutShapeAhead(state, t->root);
     for (uint32_t i = 0; i < t->roots.count; ++i)
         layoutShapeAhead(state, t->roots.data[i].node);
@@ -1670,21 +1671,26 @@ bool prLayoutTreeVerify(PrLayoutTree* tree, PrLayoutTreeDifference* PR_NULLABLE 
     const PrLayoutTreeStats& done = t->stats;
     bool same = true;
     // Each stage did no work unless an input it reads changed.
-    if ((t->laidOutFor & LayoutInputFlag_Layout) == 0
-        && (done.blocksLaidOut != 0 || done.linesLaidOut != 0 || done.inlinesShaped != 0
-            || done.intrinsicsComputed != 0)) {
+    if ((t->laidOutFor & LayoutInputFlag_Layout) == 0 &&
+            (done.blocksLaidOut != 0 || done.linesLaidOut != 0 || done.inlinesShaped != 0 || done.intrinsicsComputed != 0)) {
         mismatch(&found, kPrLayoutNodeNone, "the last layout did work, but no input that layout reads had changed");
         same = false;
     }
-    if (same && (t->paintedFor & (LayoutInputFlag_Layout | LayoutInputFlag_Paint)) == 0
-        && (done.layersRecorded != 0 || done.subtreesRecorded != 0)) {
+    if (same && (t->paintedFor & (LayoutInputFlag_Layout | LayoutInputFlag_Paint)) == 0 &&
+            (done.layersRecorded != 0 || done.subtreesRecorded != 0)) {
         mismatch(&found, kPrLayoutNodeNone, "the last paint recorded, but no input that recordings read had changed");
         same = false;
     }
     if (same && t->fragment != nullptr) {
         PrLayoutTreeStats stats{};
-        LayoutState state{.tree = t, .styles = t->styles, .scratch = scratchOf(t), .stats = &stats,
-                          .viewport = t->viewport, .reuse = false};
+        LayoutState state{
+            .tree = t,
+            .styles = t->styles,
+            .scratch = scratchOf(t),
+            .stats = &stats,
+            .viewport = t->viewport,
+            .reuse = false,
+        };
         const LayoutFragment* scratch = layoutViewport(state, t->root, t->viewport);
         same = sameFragments(t->fragment, scratch, kPrLayoutNodeNone, &found);
         layoutFragmentRelease(scratch);

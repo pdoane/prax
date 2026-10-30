@@ -35,10 +35,10 @@ typedef struct PrStringView {
     // Views a contiguous run of chars that has data() and size(), such as std::string or std::string_view. data() must
     // convert implicitly to the text pointer, and size() to a size without narrowing.
     template <typename Text>
-        requires requires(const Text& text, const char* PR_NULLABLE& pointer) {
-            pointer = text.data();
-            size_t{text.size()};
-        }
+    requires requires(const Text& text, const char* PR_NULLABLE& pointer) {
+        pointer = text.data();
+        size_t{text.size()};
+    }
     constexpr PrStringView(const Text& text) : data(text.data()), size(text.size()) {}
 
     constexpr const char* PR_NULLABLE begin() const { return data; }

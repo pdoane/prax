@@ -15,8 +15,7 @@ namespace {
 
 // Returns the pixels of a length that is pixels, or NaN for any other length.
 float px(PrLayoutLength length) {
-    return prLayoutWordKind(length.bits) == PrLayoutWordKind_Px ? prLayoutUnitToPx(prLayoutWordPxValue(length.bits))
-                                                                : kNanF32;
+    return prLayoutWordKind(length.bits) == PrLayoutWordKind_Px ? prLayoutUnitToPx(prLayoutWordPxValue(length.bits)) : kNanF32;
 }
 
 // An empty tree over an empty font set.
@@ -141,8 +140,7 @@ TEST_CASE("pixels and percentages truncate toward zero and saturate, and a numbe
 TEST_CASE("a calculation interns as pixels, a percentage, or one compound for equal calculations") {
     Tree c;
     // calc(10px + 2 * 5px) has no percentage, so it is pixels.
-    PrLayoutCalcNode pixels[] = {op(PrLayoutCalcOp_Sum, 2), px(10), op(PrLayoutCalcOp_Product, 2),
-                                 number(2), px(5)};
+    PrLayoutCalcNode pixels[] = {op(PrLayoutCalcOp_Sum, 2), px(10), op(PrLayoutCalcOp_Product, 2), number(2), px(5)};
     CHECK(prLayoutLengthIntern(c.tree, pixels, 5).bits == prLayoutLengthPx(20).bits);
     PrLayoutCalcNode thirty[] = {percent(30)};
     CHECK(prLayoutLengthIntern(c.tree, thirty, 1).bits == prLayoutLengthPercent(30).bits);
@@ -158,8 +156,10 @@ TEST_CASE("a calculation interns as pixels, a percentage, or one compound for eq
     PrLayoutCalcNode three[] = {number(3)};
     CHECK(prLayoutLengthIntern(c.tree, three, 1).bits == prLayoutLengthAuto().bits);
     // calc(20% * 8px / 1px) is a length, because its units cancel as types multiply.
-    PrLayoutCalcNode cancelled[] = {op(PrLayoutCalcOp_Product, 3), percent(20),
-                                    px(8), op(PrLayoutCalcOp_Invert, 1), px(1)};
+    PrLayoutCalcNode cancelled[] = {
+        op(PrLayoutCalcOp_Product, 3), percent(20),
+        px(8), op(PrLayoutCalcOp_Invert, 1), px(1),
+    };
     CHECK(resolved(c, prLayoutLengthIntern(c.tree, cancelled, 5), 520) == 832.0f);
 }
 
@@ -189,14 +189,12 @@ TEST_CASE("min(), max() and clamp() over percentages compute against the base") 
     CHECK(resolved(c, min, 300) == 100.0f);
     CHECK(resolved(c, min, 100) == 50.0f);
     // clamp(none, 50%, 80px) is min(50%, 80px), with its lower bound left out.
-    PrLayoutCalcNode clamp[] = {op(PrLayoutCalcOp_Clamp, 3), none(),
-                                percent(50), px(80)};
+    PrLayoutCalcNode clamp[] = {op(PrLayoutCalcOp_Clamp, 3), none(), percent(50), px(80)};
     PrLayoutLength clamped = prLayoutLengthIntern(c.tree, clamp, 4);
     CHECK(resolved(c, clamped, 300) == 80.0f);
     CHECK(resolved(c, clamped, 100) == 50.0f);
     // round(up, 30%, 16px) against 100px is 32px.
-    PrLayoutCalcNode round[] = {op(PrLayoutCalcOp_RoundUp, 2), percent(30),
-                                px(16)};
+    PrLayoutCalcNode round[] = {op(PrLayoutCalcOp_RoundUp, 2), percent(30), px(16)};
     CHECK(resolved(c, prLayoutLengthIntern(c.tree, round, 3), 100) == 32.0f);
 }
 
@@ -230,8 +228,10 @@ TEST_CASE("a compound lives while a group names it, and collecting frees it afte
         style.groups[PrLayoutGroup_Effect] = prLayoutEffectStyleIntern(tree, &effects);
         return style;
     };
-    PrLayoutStyle (*namings[])(PrLayoutTree*, PrLayoutLength) = {boxNaming, fontNaming, decorationNaming,
-                                                                 effectsNaming};
+    PrLayoutStyle (*namings[])(PrLayoutTree*, PrLayoutLength) = {
+        boxNaming, fontNaming, decorationNaming,
+        effectsNaming,
+    };
     for (PrLayoutStyle (*naming)(PrLayoutTree*, PrLayoutLength) : namings) {
         Tree c;
         PrLayoutCalcNode sum[] = {op(PrLayoutCalcOp_Sum, 2), px(4), percent(10)};
@@ -282,8 +282,7 @@ TEST_CASE("equal groups and records intern to one index") {
     uint32_t first = prLayoutStyleIntern(c.tree, &a);
     CHECK(prLayoutStyleIntern(c.tree, &b) == first);
     CHECK(prLayoutStyleIntern(c.tree, &d) != first);
-    CHECK(px(prLayoutBoxStyleRecord(c.tree, prLayoutStyleRecord(c.tree, first).groups[PrLayoutGroup_Box]).width)
-          == 10.0f);
+    CHECK(px(prLayoutBoxStyleRecord(c.tree, prLayoutStyleRecord(c.tree, first).groups[PrLayoutGroup_Box]).width) == 10.0f);
 }
 
 TEST_CASE("collecting frees what nothing names and keeps what a node or a caller names") {
@@ -328,8 +327,7 @@ TEST_CASE("a group that a caller holds outlives the collect, and records made of
     PrLayoutStyle record = prLayoutStyleDefault();
     record.groups[PrLayoutGroup_Box] = held;
     uint32_t index = prLayoutStyleIntern(c.tree, &record);
-    CHECK(px(prLayoutBoxStyleRecord(c.tree, prLayoutStyleRecord(c.tree, index).groups[PrLayoutGroup_Box]).width)
-          == 7.0f);
+    CHECK(px(prLayoutBoxStyleRecord(c.tree, prLayoutStyleRecord(c.tree, index).groups[PrLayoutGroup_Box]).width) == 7.0f);
 
     // Released, and named by no record that survives, the group is freed and its index taken by the next box.
     prLayoutGroupRelease(c.tree, PrLayoutGroup_Box, held);

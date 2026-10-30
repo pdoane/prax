@@ -214,8 +214,10 @@ struct LayoutMeasurement {
 inline LayoutLogicalSize layoutAtomicMarginBox(const LayoutAtomic& atomic, LayoutMode mode) {
     LayoutLogicalSize size = layoutLogicalSize(mode, atomic.fragment->extent);
     const PrLayoutUnit* margin = atomic.margin;
-    return LayoutLogicalSize{margin[LayoutSide_InlineStart] + size.inlineSize + margin[LayoutSide_InlineEnd],
-                             margin[LayoutSide_BlockStart] + size.blockSize + margin[LayoutSide_BlockEnd]};
+    return LayoutLogicalSize{
+        margin[LayoutSide_InlineStart] + size.inlineSize + margin[LayoutSide_InlineEnd],
+        margin[LayoutSide_BlockStart] + size.blockSize + margin[LayoutSide_BlockEnd],
+    };
 }
 
 // ---------------------------------------------------------------------------------------------------------------------

@@ -14,8 +14,8 @@ namespace {
 // Returns true if `codePoint` is a word separator (css-text-3/#word-separator), which inter-word justification
 // stretches.
 bool isWordSeparator(uint32_t codePoint) {
-    return codePoint == 0x20 || codePoint == 0xA0 || codePoint == 0x1361 || codePoint == 0x10100
-           || codePoint == 0x10101 || codePoint == 0x1039F || codePoint == 0x1091F;
+    return codePoint == 0x20 || codePoint == 0xA0 || codePoint == 0x1361 || codePoint == 0x10100 ||
+        codePoint == 0x10101 || codePoint == 0x1039F || codePoint == 0x1091F;
 }
 
 // Returns true if `codePoint` is a letter of a cursive script that joins or is joined by its neighbors. Justification
@@ -33,14 +33,12 @@ void layoutJustifierReset(LayoutJustifier& justifier) {
 }
 
 PR_NOINLINE void layoutJustifyFind(LayoutState& state, LayoutJustifier& justifier, const LayoutInlineShaping& t,
-                                   const PrLayoutStyleIndex* styles, PrLayoutStyleIndex containerStyle,
-                                   const LayoutLineContent& line) {
+        const PrLayoutStyleIndex* styles, PrLayoutStyleIndex containerStyle, const LayoutLineContent& line) {
     Array<LayoutJustifyOpportunity>& opportunities = justifier.opportunities;
     opportunities.clear();
     uint32_t stop = line.end;
-    while (stop > line.from.byte
-           && ((t.spaces.data[stop - 1] & (LayoutSpaceFlag_Collapsible | LayoutSpaceFlag_Hangs)) != 0
-               || t.text.data[stop - 1] == '\n'))
+    while (stop > line.from.byte && ((t.spaces.data[stop - 1] & (LayoutSpaceFlag_Collapsible | LayoutSpaceFlag_Hangs)) != 0 ||
+            t.text.data[stop - 1] == '\n'))
         --stop;
     // The last tab may be in the white space that ends the line, which leaves nothing to stretch.
     uint32_t from = line.from.byte;

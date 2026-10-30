@@ -187,14 +187,12 @@ inline void compositeWith(const float* s, const float* d, PrDrawBlendMode blend,
 
 template <PrDrawComposite Op, bool Normal>
 void compositeLoop(uint8_t* p, PrPixelFormat format, const float* source,
-                   uint32_t sourceStride, const uint8_t* PR_NULLABLE shape,
-                   const uint8_t* PR_NULLABLE clip, uint32_t count, PrDrawBlendMode blend,
-                   bool knockout, bool layer) {
+        uint32_t sourceStride, const uint8_t* PR_NULLABLE shape,
+        const uint8_t* PR_NULLABLE clip, uint32_t count, PrDrawBlendMode blend, bool knockout, bool layer) {
     // Where a layer is transparent, these operators change the pixel, and the others leave it unchanged.
-    constexpr bool kReachesOutside = Op == PrDrawComposite_Clear || Op == PrDrawComposite_Copy
-                                     || Op == PrDrawComposite_SourceIn || Op == PrDrawComposite_SourceOut
-                                     || Op == PrDrawComposite_DestinationIn
-                                     || Op == PrDrawComposite_DestinationAtop;
+    constexpr bool kReachesOutside = Op == PrDrawComposite_Clear || Op == PrDrawComposite_Copy ||
+        Op == PrDrawComposite_SourceIn || Op == PrDrawComposite_SourceOut || Op == PrDrawComposite_DestinationIn ||
+        Op == PrDrawComposite_DestinationAtop;
     const float transparent[4] = {0, 0, 0, 0};
     const uint32_t bytes = cpuPixelBytes(format);
     for (uint32_t i = 0; i < count; ++i, p += bytes, source += sourceStride) {
@@ -228,8 +226,7 @@ void compositeLoop(uint8_t* p, PrPixelFormat format, const float* source,
 }
 
 // Returns the product of two coverages in 255ths. A null coverage is 255 throughout.
-uint32_t coverageProduct(const uint8_t* PR_NULLABLE shape, const uint8_t* PR_NULLABLE clip,
-                         uint32_t i) {
+uint32_t coverageProduct(const uint8_t* PR_NULLABLE shape, const uint8_t* PR_NULLABLE clip, uint32_t i) {
     uint32_t s = shape != nullptr ? shape[i] : 255;
     return clip != nullptr ? cpuDivide255(s * clip[i]) : s;
 }
@@ -382,8 +379,7 @@ struct Sampler {
 // Returns the texel index along one axis for a tap `k` texels from the source's origin, or -1 if it hits no texel. For
 // Repeat and Reflect, `k` is from the first copy (nearCopy). A tap past the copy reads the neighboring copy if the
 // copies abut, and nothing if a gap separates them. Spaced copies therefore fade into their gaps.
-int32_t tapIndex(float k, float origin, float size, float period, PrDrawExtend mode,
-                 uint32_t levelSize) {
+int32_t tapIndex(float k, float origin, float size, float period, PrDrawExtend mode, uint32_t levelSize) {
     float position = k + 0.5f;
     switch (mode) {
         case PrDrawExtend_None:
@@ -446,13 +442,11 @@ bool intoCopy(float& k, float size, float period, PrDrawExtend& mode) {
 }
 
 int32_t tapX(const Sampler& s, const CpuTextureLevel& level, float scale, float k) {
-    return tapIndex(k, s.originX * scale, s.width * scale, s.periodX * scale, s.modeX,
-                    level.width);
+    return tapIndex(k, s.originX * scale, s.width * scale, s.periodX * scale, s.modeX, level.width);
 }
 
 int32_t tapY(const Sampler& s, const CpuTextureLevel& level, float scale, float k) {
-    return tapIndex(k, s.originY * scale, s.height * scale, s.periodY * scale, s.modeY,
-                    level.height);
+    return tapIndex(k, s.originY * scale, s.height * scale, s.periodY * scale, s.modeY, level.height);
 }
 
 // Catmull-Rom weights for the four taps around a fraction.
@@ -466,8 +460,7 @@ void cubicWeights(float t, float w[4]) {
 }
 
 // Samples one level at (u, v), in level-0 texels from the source's origin.
-void sampleLevel(const Sampler& s, uint32_t levelIndex, PrDrawSampling sampling, float u, float v,
-                 float out[4]) {
+void sampleLevel(const Sampler& s, uint32_t levelIndex, PrDrawSampling sampling, float u, float v, float out[4]) {
     const CpuTextureLevel& level = s.texture->levels.data[levelIndex];
     float scale = 1.0f / float(1u << levelIndex);
     u *= scale;
@@ -553,8 +546,7 @@ void sample(const Sampler& s, float u, float v, PrVec2 across, PrVec2 down, floa
     float major = maxF32(a, b);
     float minor = minF32(a, b);
     if (s.sampling != PrDrawSampling_Mipmap || s.texture->levels.count < 2 || !(major > 1)) {
-        PrDrawSampling sampling =
-            s.sampling == PrDrawSampling_Mipmap ? PrDrawSampling_Linear : s.sampling;
+        PrDrawSampling sampling = s.sampling == PrDrawSampling_Mipmap ? PrDrawSampling_Linear : s.sampling;
         sampleLevel(s, 0, sampling, u, v, out);
         return;
     }
@@ -588,8 +580,7 @@ bool strokePoint(const CpuPlacement& placement, float x, float y, PrVec2* out) {
     float left = width.left * placement.strokeScale;
     float right = width.right * placement.strokeScale;
     float across = left + right > 0 ? (nearest.offset + left) / (left + right) : 0.5f;
-    *out = placement.mapping == PrDrawStrokeMapping_Along ? PrVec2{along, across}
-                                                          : PrVec2{across, along};
+    *out = placement.mapping == PrDrawStrokeMapping_Along ? PrVec2{along, across} : PrVec2{across, along};
     return true;
 }
 
@@ -597,7 +588,7 @@ bool strokePoint(const CpuPlacement& placement, float x, float y, PrVec2* out) {
 // one that the placement does not reach. If `footprints` is not null, it receives each pixel's footprint in the stage's
 // space: zero along a stroke, where it is not measured.
 void placeSpan(const CpuPlacement& placement, int32_t x, int32_t y, uint32_t count, PrVec2* points,
-               Footprint* PR_NULLABLE footprints) {
+        Footprint* PR_NULLABLE footprints) {
     const PrAffine2& m = placement.transform;
     float cy = float(y) + 0.5f;
     for (uint32_t i = 0; i < count; ++i) {
@@ -613,8 +604,8 @@ void placeSpan(const CpuPlacement& placement, int32_t x, int32_t y, uint32_t cou
                 if (reached && footprints != nullptr) {
                     PrVec2 right{};
                     PrVec2 below{};
-                    reached = prMatrix3MapPoint(&placement.unproject, PrVec2{cx + 1, cy}, &right)
-                              && prMatrix3MapPoint(&placement.unproject, PrVec2{cx, cy + 1}, &below);
+                    reached = prMatrix3MapPoint(&placement.unproject, PrVec2{cx + 1, cy}, &right) &&
+                        prMatrix3MapPoint(&placement.unproject, PrVec2{cx, cy + 1}, &below);
                     across = right - at;
                     down = below - at;
                 }
@@ -629,16 +620,17 @@ void placeSpan(const CpuPlacement& placement, int32_t x, int32_t y, uint32_t cou
         }
         points[i] = reached ? prAffine2MapPoint(m, at) : PrVec2{kNanF32, kNanF32};
         if (footprints != nullptr) {
-            footprints[i] = Footprint{{m.a * across.x + m.c * across.y, m.b * across.x + m.d * across.y},
-                                      {m.a * down.x + m.c * down.y, m.b * down.x + m.d * down.y}};
+            footprints[i] = Footprint{
+                {m.a * across.x + m.c * across.y, m.b * across.x + m.d * across.y},
+                {m.a * down.x + m.c * down.y, m.b * down.x + m.d * down.y},
+            };
         }
     }
 }
 
 // Writes the colors of a border's sides at the points, which `placement` places in the border's space. Across the line
 // between two sides, the colors blend by the area of the pixel on either side of it (prDrawHalfPlaneArea).
-void sidesSpan(const CpuSource& source, const CpuPlacement& placement, const PrVec2* points, uint32_t count,
-               float* out) {
+void sidesSpan(const CpuSource& source, const CpuPlacement& placement, const PrVec2* points, uint32_t count, float* out) {
     const PrDrawBorderSides& s = *source.sides;
     const PrAffine2& m = placement.transform;
     for (uint32_t i = 0; i < count; ++i) {
@@ -663,8 +655,8 @@ void gradientSpan(const CpuSource& source, const PrVec2* points, uint32_t count,
     for (uint32_t i = 0; i < count; ++i) {
         float* o = out + i * 4;
         float t = 0;
-        if (isNanF32(points[i].x) || !prDrawGradientParameter(source.brush, points[i], &t)
-            || !prDrawGradientExtend(source.brush->extend, &t)) {
+        if (isNanF32(points[i].x) || !prDrawGradientParameter(source.brush, points[i], &t) ||
+                !prDrawGradientExtend(source.brush->extend, &t)) {
             o[0] = o[1] = o[2] = o[3] = 0;
             continue;
         }
@@ -707,11 +699,10 @@ uint32_t pieceAt(const CpuSource& source, PrVec2 p, uint32_t hint) {
 // Writes a texture's colors at the points. `footprints` are the values that placeSpan computes, or null if the sampling
 // uses no mip level.
 void textureSpan(const CpuSource& source, const PrVec2* points, const Footprint* PR_NULLABLE footprints, uint32_t count,
-                 float* out) {
+        float* out) {
     if (source.pieces != nullptr) {
         // Each piece maps its own texels onto its destination.
-        Sampler s{source.texture, 0, 0, 0, 0, 0, 0, PrDrawExtend_Pad, PrDrawExtend_Pad,
-                  source.sampling};
+        Sampler s{source.texture, 0, 0, 0, 0, 0, 0, PrDrawExtend_Pad, PrDrawExtend_Pad, source.sampling};
         uint32_t piece = 0;
         for (uint32_t i = 0; i < count; ++i) {
             float* o = out + i * 4;
@@ -730,7 +721,7 @@ void textureSpan(const CpuSource& source, const PrVec2* points, const Footprint*
             float sy = s.height / prRectHeight(r.destination);
             Footprint f = footprints != nullptr ? footprints[i] : Footprint{};
             sample(s, (p.x - r.destination.left) * sx, (p.y - r.destination.top) * sy,
-                   PrVec2{f.across.x * sx, f.across.y * sy}, PrVec2{f.down.x * sx, f.down.y * sy}, o);
+                PrVec2{f.across.x * sx, f.across.y * sy}, PrVec2{f.down.x * sx, f.down.y * sy}, o);
         }
         return;
     }
@@ -741,16 +732,18 @@ void textureSpan(const CpuSource& source, const PrVec2* points, const Footprint*
     float height = prRectHeight(source.texels);
     float scaleX = width / tileWidth;
     float scaleY = height / tileHeight;
-    Sampler s{source.texture,
-              source.texels.left,
-              source.texels.top,
-              width,
-              height,
-              (tileWidth + tiles.spacing.x) * scaleX,
-              (tileHeight + tiles.spacing.y) * scaleY,
-              tiles.x,
-              tiles.y,
-              source.sampling};
+    Sampler s{
+        source.texture,
+        source.texels.left,
+        source.texels.top,
+        width,
+        height,
+        (tileWidth + tiles.spacing.x) * scaleX,
+        (tileHeight + tiles.spacing.y) * scaleY,
+        tiles.x,
+        tiles.y,
+        source.sampling,
+    };
     bool clamped = (tiles.flags & PrDrawTileFlag_Clamped) != 0;
     float periodX = tileWidth + tiles.spacing.x;
     float periodY = tileHeight + tiles.spacing.y;
@@ -767,15 +760,13 @@ void textureSpan(const CpuSource& source, const PrVec2* points, const Footprint*
         float u = p.x - tiles.tile.left;
         float v = p.y - tiles.tile.top;
         Sampler at = s;
-        if (clamped
-            && !(intoCopy(u, tileWidth, periodX, at.modeX) && intoCopy(v, tileHeight, periodY, at.modeY))) {
+        if (clamped && !(intoCopy(u, tileWidth, periodX, at.modeX) && intoCopy(v, tileHeight, periodY, at.modeY))) {
             o[0] = o[1] = o[2] = o[3] = 0;
             continue;
         }
         u = nearCopy(u, tileWidth, periodX, at.modeX) * scaleX;
         v = nearCopy(v, tileHeight, periodY, at.modeY) * scaleY;
-        sample(at, u, v, PrVec2{f.across.x * scaleX, f.across.y * scaleY}, PrVec2{f.down.x * scaleX, f.down.y * scaleY},
-               o);
+        sample(at, u, v, PrVec2{f.across.x * scaleX, f.across.y * scaleY}, PrVec2{f.down.x * scaleX, f.down.y * scaleY}, o);
     }
 }
 
@@ -800,8 +791,7 @@ bool cpuIsRectPolyline(const PrPathPolyline& polyline) {
 CpuCoverageRow cpuCoverageRow(const CpuCoverage& c, int32_t y) {
     if (y < c.box.top || y >= c.box.bottom || prIRectIsEmpty(c.box))
         return CpuCoverageRow{nullptr, 0, 0};
-    const uint8_t* data =
-        c.data != nullptr ? c.data + size_t(y - c.box.top) * c.stride : nullptr;
+    const uint8_t* data = c.data != nullptr ? c.data + size_t(y - c.box.top) * c.stride : nullptr;
     return CpuCoverageRow{data, c.box.left, c.box.right};
 }
 
@@ -831,8 +821,10 @@ void cpuReadPixel(const uint8_t* p, PrPixelFormat format, float* out) {
 void cpuWritePixel(uint8_t* p, PrPixelFormat format, const float* rgba) {
     float alpha = clampF32(rgba[3], 0, 1);
     if (format == PrPixelFormat_RgbaF16) {
-        PrFloat16 stored[4] = {prFloat16FromFloat(rgba[0]), prFloat16FromFloat(rgba[1]), prFloat16FromFloat(rgba[2]),
-                               prFloat16FromFloat(alpha)};
+        PrFloat16 stored[4] = {
+            prFloat16FromFloat(rgba[0]), prFloat16FromFloat(rgba[1]), prFloat16FromFloat(rgba[2]),
+            prFloat16FromFloat(alpha),
+        };
         memCopy(p, stored, sizeof(stored));
         return;
     }
@@ -849,7 +841,7 @@ void cpuCopyTarget(const CpuTarget& from, const CpuTarget& to) {
     PrIRect box = prIRectIntersect(from.box, to.box);
     for (int32_t y = box.top; y < box.bottom; ++y)
         memCopy(cpuTargetPixel(to, box.left, y), cpuTargetPixel(from, box.left, y),
-                size_t(prIRectWidth(box)) * cpuPixelBytes(from.format));
+            size_t(prIRectWidth(box)) * cpuPixelBytes(from.format));
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -891,8 +883,7 @@ void cpuSourceOver(uint8_t* p, CpuPixel color, uint32_t coverage) {
     }
 }
 
-void cpuCompositeColors(const float* s, const float* d, PrDrawComposite op, PrDrawBlendMode blend,
-                        float* out) {
+void cpuCompositeColors(const float* s, const float* d, PrDrawComposite op, PrDrawBlendMode blend, float* out) {
     withOperator(op, [&](auto o) {
         if (blend == PrDrawBlendMode_Normal)
             compositeWith<decltype(o)::kOp, true>(s, d, blend, out);
@@ -901,8 +892,7 @@ void cpuCompositeColors(const float* s, const float* d, PrDrawComposite op, PrDr
     });
 }
 
-const uint8_t* PR_NULLABLE cpuCoverageSpan(const CpuCoverage& coverage, int32_t x, int32_t y,
-                                           uint32_t count, uint8_t* scratch) {
+const uint8_t* PR_NULLABLE cpuCoverageSpan(const CpuCoverage& coverage, int32_t x, int32_t y, uint32_t count, uint8_t* scratch) {
     CpuCoverageRow row = cpuCoverageRow(coverage, y);
     int32_t end = x + int32_t(count);
     if (x >= row.left && end <= row.right)
@@ -923,11 +913,10 @@ const uint8_t* PR_NULLABLE cpuCoverageSpan(const CpuCoverage& coverage, int32_t 
 }
 
 void cpuCompositeSpan(uint8_t* p, PrPixelFormat format, const float* source,
-                      uint32_t sourceStride, const uint8_t* PR_NULLABLE shape,
-                      const uint8_t* PR_NULLABLE clip, uint32_t count, PrDrawComposite op,
-                      PrDrawBlendMode blend, bool knockout, bool layer) {
-    if (op == PrDrawComposite_SourceOver && blend == PrDrawBlendMode_Normal && !knockout
-        && format != PrPixelFormat_RgbaF16) {
+        uint32_t sourceStride, const uint8_t* PR_NULLABLE shape,
+        const uint8_t* PR_NULLABLE clip, uint32_t count, PrDrawComposite op, PrDrawBlendMode blend, bool knockout, bool layer) {
+    if (op == PrDrawComposite_SourceOver && blend == PrDrawBlendMode_Normal && !knockout &&
+            format != PrPixelFormat_RgbaF16) {
         // In 255ths throughout.
         CpuPixel color = cpuPixelFromRgba(source, format);
         for (uint32_t i = 0; i < count; ++i, p += 4) {
@@ -943,20 +932,18 @@ void cpuCompositeSpan(uint8_t* p, PrPixelFormat format, const float* source,
     }
     withOperator(op, [&](auto o) {
         if (blend == PrDrawBlendMode_Normal)
-            compositeLoop<decltype(o)::kOp, true>(p, format, source, sourceStride, shape, clip,
-                                                  count, blend, knockout, layer);
+            compositeLoop<decltype(o)::kOp, true>(p, format, source, sourceStride, shape, clip, count, blend, knockout, layer);
         else
-            compositeLoop<decltype(o)::kOp, false>(p, format, source, sourceStride, shape, clip,
-                                                   count, blend, knockout, layer);
+            compositeLoop<decltype(o)::kOp, false>(p, format, source, sourceStride, shape, clip, count, blend, knockout, layer);
     });
 }
 
 void cpuCompositePixels(uint8_t* p, PrPixelFormat format, const uint8_t* source,
-                        const uint8_t* PR_NULLABLE shape, const uint8_t* PR_NULLABLE clip,
-                        uint32_t count, PrDrawComposite op, PrDrawBlendMode blend, bool knockout) {
+        const uint8_t* PR_NULLABLE shape, const uint8_t* PR_NULLABLE clip,
+        uint32_t count, PrDrawComposite op, PrDrawBlendMode blend, bool knockout) {
     PR_ASSERT(count <= kShadeSpan);
-    if (op == PrDrawComposite_SourceOver && blend == PrDrawBlendMode_Normal && !knockout
-        && format != PrPixelFormat_RgbaF16) {
+    if (op == PrDrawComposite_SourceOver && blend == PrDrawBlendMode_Normal && !knockout &&
+            format != PrPixelFormat_RgbaF16) {
         for (uint32_t i = 0; i < count; ++i, p += 4, source += 4) {
             uint32_t c = coverageProduct(shape, clip, i);
             if (c != 0 && source[3] != 0)
@@ -989,12 +976,12 @@ CpuTexture* cpuTextureFromImage(CpuTextureCache& cache, const PrDrawImage* image
 }
 
 CpuTexture* cpuListTexture(CpuTextureCache& cache, uint64_t id, PrRect region, uint32_t width, uint32_t height,
-                           PrPixelFormat format) {
+        PrPixelFormat format) {
     for (uint32_t i = 0; i < cache.textures.count; ++i) {
         CpuTexture* texture = cache.textures.data[i];
         const CpuTextureLevel& level = texture->levels.data[0];
-        if (texture->fromList && texture->key == id && level.width == width && level.height == height
-            && level.format == format && memEquals(&texture->region, &region, sizeof(PrRect))) {
+        if (texture->fromList && texture->key == id && level.width == width && level.height == height &&
+                level.format == format && memEquals(&texture->region, &region, sizeof(PrRect))) {
             texture->lastUsed = cache.render;
             return texture;
         }
@@ -1021,7 +1008,7 @@ void cpuPrepareMips(CpuTexture& texture, PrDrawSampling sampling) {
         const uint32_t bytes = cpuPixelBytes(level.format);
         level.data = static_cast<uint8_t*>(prMemoryAlloc(size_t(level.width) * level.height * bytes));
         prImageMipLevel(PrPixelView{above.data, size_t(above.width) * bytes, {above.width, above.height}},
-                        PrPixels{level.data, size_t(level.width) * bytes, {level.width, level.height}}, level.format);
+            PrPixels{level.data, size_t(level.width) * bytes, {level.width, level.height}}, level.format);
         texture.levels.push(level);
     }
 }
@@ -1084,7 +1071,7 @@ void cpuShade(const CpuPaint& paint, int32_t x, int32_t y, uint32_t count, float
                     if (!(c[3] > 0))
                         continue;
                     PrColor straight = prColorLimit(PrColor{c[0] / c[3], c[1] / c[3], c[2] / c[3], c[3]},
-                                                    stage.source.limit);
+                        stage.source.limit);
                     c[0] = straight.r * c[3];
                     c[1] = straight.g * c[3];
                     c[2] = straight.b * c[3];
@@ -1101,15 +1088,13 @@ float cpuMaskValue(const PrDrawMask* mask, const float* rgba) {
     if (mask->mode == PrDrawMaskMode_Alpha)
         return rgba[3];
     if (mask->space != PrColorSpace_SrgbLinear)
-        return kPrColorLuminanceRed * rgba[0] + kPrColorLuminanceGreen * rgba[1]
-               + kPrColorLuminanceBlue * rgba[2];
+        return kPrColorLuminanceRed * rgba[0] + kPrColorLuminanceGreen * rgba[1] + kPrColorLuminanceBlue * rgba[2];
     if (!(rgba[3] > 0))
         return 0;
     float linear[3];
     for (uint32_t i = 0; i < 3; ++i)
         linear[i] = prColorTransferDecode(PrColorTransfer_Srgb, clampF32(rgba[i] / rgba[3], 0, 1));
-    return (kPrColorLuminanceRed * linear[0] + kPrColorLuminanceGreen * linear[1] + kPrColorLuminanceBlue * linear[2])
-           * rgba[3];
+    return (kPrColorLuminanceRed * linear[0] + kPrColorLuminanceGreen * linear[1] + kPrColorLuminanceBlue * linear[2]) * rgba[3];
 }
 
 } // namespace pr_impl

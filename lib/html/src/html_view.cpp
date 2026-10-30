@@ -203,14 +203,16 @@ bool commitScene(HtmlView* v, PrCssPresentation* presentation, uint64_t embed, P
         v->tracks.resize(count);
         prCssPresentationTracks(presentation, v->tracks.data, count);
         sceneScrolls(presentation, scene, v->scrolls);
-        PrLayoutCommit commit{.embed = embed,
-                              .scene = scene,
-                              .transform = transform,
-                              .tracks = v->tracks.data,
-                              .trackCount = count,
-                              .scrolls = v->scrolls.data,
-                              .scrollCount = v->scrolls.count,
-                              .scrollsApplied = v->scrollsTaken};
+        PrLayoutCommit commit{
+            .embed = embed,
+            .scene = scene,
+            .transform = transform,
+            .tracks = v->tracks.data,
+            .trackCount = count,
+            .scrolls = v->scrolls.data,
+            .scrollCount = v->scrolls.count,
+            .scrollsApplied = v->scrollsTaken,
+        };
         prLayoutCompositorCommit(v->compositor, &commit);
     }
     prLayoutSceneRelease(scene);
@@ -328,8 +330,7 @@ ViewHit hitAt(HtmlView* v, PrVec2 point) {
         if (hit.element == nullptr)
             hit.element = prDomDocumentElement(document);
         PrHtmlWindow* window = hit.element != nullptr ? htmlFrameWindow(hit.element) : nullptr;
-        PrCssPresentation* inner =
-            window != nullptr ? presentationOfDocument(v, prHtmlWindowDocument(window)) : nullptr;
+        PrCssPresentation* inner = window != nullptr ? presentationOfDocument(v, prHtmlWindowDocument(window)) : nullptr;
         if (inner == nullptr)
             break;
         // The frame's document fills its content box, through whatever transforms the frame is under.
@@ -504,8 +505,8 @@ PrDomElement* PR_NULLABLE keyTarget(HtmlView* v) {
 // Returns true if `key` is a modifier key, which alone does not make focus show
 // (selectors-4/#the-focus-visible-pseudo).
 bool isModifierKey(PrAppKey key) {
-    return key == PrAppKey_Shift || key == PrAppKey_Control || key == PrAppKey_Alt || key == PrAppKey_Meta
-           || key == PrAppKey_CapsLock || key == PrAppKey_NumLock;
+    return key == PrAppKey_Shift || key == PrAppKey_Control || key == PrAppKey_Alt || key == PrAppKey_Meta ||
+        key == PrAppKey_CapsLock || key == PrAppKey_NumLock;
 }
 
 // Returns the key value of a key event (uievents-key): the name of a named key, or else the character that the key
@@ -531,8 +532,9 @@ uint32_t keyLocation(PrAppKeyCode code) {
         case PrAppKeyCode_ShiftRight:
             return PrDomKeyLocation_Right;
         default:
-            return code >= PrAppKeyCode_Numpad0 && code <= PrAppKeyCode_NumpadSubtract ? PrDomKeyLocation_Numpad
-                                                                                      : PrDomKeyLocation_Standard;
+            if (code >= PrAppKeyCode_Numpad0 && code <= PrAppKeyCode_NumpadSubtract)
+                return PrDomKeyLocation_Numpad;
+            return PrDomKeyLocation_Standard;
     }
 }
 
@@ -633,8 +635,8 @@ bool fireKeypress(HtmlView* v, PrDomElement* element, PrStringView character, ui
 
 // Returns true if `element` is a link, which Enter follows.
 bool isLink(const PrDomElement* element) {
-    return (domIsHtml(element, PrDomTag_A) || domIsHtml(element, PrDomTag_Area))
-           && domAttributeValue(element, "href").data != nullptr;
+    return (domIsHtml(element, PrDomTag_A) || domIsHtml(element, PrDomTag_Area)) &&
+        domAttributeValue(element, "href").data != nullptr;
 }
 
 // Returns true if `element` is a button, which Enter and Space activate: a button element, or an input of a button
@@ -645,14 +647,14 @@ bool isButton(const PrDomElement* element) {
     if (!domIsHtml(element, PrDomTag_Input))
         return false;
     PrStringView type = domAttributeValue(element, "type");
-    return asciiEqualsFold(type, "button") || asciiEqualsFold(type, "submit") || asciiEqualsFold(type, "reset")
-           || asciiEqualsFold(type, "image");
+    return asciiEqualsFold(type, "button") || asciiEqualsFold(type, "submit") || asciiEqualsFold(type, "reset") ||
+        asciiEqualsFold(type, "image");
 }
 
 // Returns true if `element` takes the keys that would scroll for its own use, as a form control does.
 bool takesScrollKeys(const PrDomElement* element) {
-    return (domIsHtml(element, PrDomTag_Input) && !isButton(element)) || domIsHtml(element, PrDomTag_Textarea)
-           || domIsHtml(element, PrDomTag_Select);
+    return (domIsHtml(element, PrDomTag_Input) && !isButton(element)) || domIsHtml(element, PrDomTag_Textarea) ||
+        domIsHtml(element, PrDomTag_Select);
 }
 
 // The distance that a key scrolls by a line, in CSS pixels. cssom-view-1 leaves it to the user agent.
@@ -707,8 +709,10 @@ void scrollByKey(HtmlView* v, PrDomElement* element, const PrAppEvent* event) {
         for (;;) {
             if (prLayoutNodeScrollInfo(tree, node, &info) && info.scrollContainer && (info.userAxes & axis) != 0) {
                 PrLayoutUnit offset = direction.x != 0 ? info.offset.x : info.offset.y;
-                room = back ? offset - (direction.x != 0 ? info.range.left : info.range.top)
-                            : (direction.x != 0 ? info.range.right : info.range.bottom) - offset;
+                if (back)
+                    room = offset - (direction.x != 0 ? info.range.left : info.range.top);
+                else
+                    room = (direction.x != 0 ? info.range.right : info.range.bottom) - offset;
             }
             if (room > PrLayoutUnit{} || node == kPrLayoutNodeNone)
                 break;
@@ -722,8 +726,10 @@ void scrollByKey(HtmlView* v, PrDomElement* element, const PrAppEvent* event) {
             distance = (direction.x != 0 ? port.x : port.y) - kScrollKeyLine;
         if (way == KeyScroll_End || distance > prLayoutUnitToPx(room))
             distance = prLayoutUnitToPx(room);
-        prCssPresentationScrollFrom(presentation, node, prLayoutVecFromPx(PrVec2{direction.x * distance,
-                                                                    direction.y * distance}));
+        prCssPresentationScrollFrom(presentation, node, prLayoutVecFromPx(PrVec2{
+            direction.x * distance,
+            direction.y * distance,
+        }));
         return;
     }
 }
@@ -734,8 +740,8 @@ void scrollByKey(HtmlView* v, PrDomElement* element, const PrAppEvent* event) {
 PrHtmlViewEventResult keyDefault(HtmlView* v, PrDomElement* target, const PrAppEvent* event) {
     PrDomModifiers modifiers = modifiersOf(event->modifiers);
     bool focused = target == target->document->focused;
-    if (event->key == PrAppKey_Tab
-        && (event->modifiers & (PrAppModifierFlag_Control | PrAppModifierFlag_Alt | PrAppModifierFlag_Super)) == 0) {
+    if (event->key == PrAppKey_Tab &&
+            (event->modifiers & (PrAppModifierFlag_Control | PrAppModifierFlag_Alt | PrAppModifierFlag_Super)) == 0) {
         bool back = (event->modifiers & PrAppModifierFlag_Shift) != 0;
         bool moved = htmlFocusNavigate(documentOf(v), back ? HtmlFocusDirection_Backward : HtmlFocusDirection_Forward);
         return moved ? PrHtmlViewEventResult_Handled : PrHtmlViewEventResult_FocusLeft;
@@ -826,7 +832,7 @@ bool fireComposition(PrDomElement* element, PrStringView type, PrStringView data
     PrDomUiEventInit init = inputInit(element, type == "compositionstart");
     PrDomCompositionEvent* composition = prDomCompositionEventCreate(type, &init, data);
     bool proceed = dispatchTrusted(prDomNodeAsEventTarget(prDomElementAsNode(element)),
-                                   prDomCompositionEventAsEvent(composition));
+        prDomCompositionEventAsEvent(composition));
     prDomEventRelease(prDomCompositionEventAsEvent(composition));
     return proceed;
 }
@@ -866,16 +872,15 @@ PrLayoutNode boxOf(HtmlView* v, PrDomElement* element) {
 // point, and the target keeps the box that it had as the sequence began. A target that leaves the document or loses its
 // box ends the sequence, as does a pointer that moves.
 bool continuesWheel(HtmlView* v, const PrAppEvent* event) {
-    return v->wheelTarget != nullptr && event->time - v->wheelTime <= kPrLayoutWheelSequenceGap / 1000
-           && event->position.x == v->wheelAt.x && event->position.y == v->wheelAt.y
-           && domIsConnected(prDomElementAsNode(v->wheelTarget)) && v->wheelBox != kPrLayoutNodeNone
-           && boxOf(v, v->wheelTarget) == v->wheelBox;
+    return v->wheelTarget != nullptr && event->time - v->wheelTime <= kPrLayoutWheelSequenceGap / 1000 &&
+        event->position.x == v->wheelAt.x && event->position.y == v->wheelAt.y &&
+        domIsConnected(prDomElementAsNode(v->wheelTarget)) && v->wheelBox != kPrLayoutNodeNone &&
+        boxOf(v, v->wheelTarget) == v->wheelBox;
 }
 
 // Fires a WheelEvent at `element`, at `point` in the viewport of the element's document, for a scroll by `delta` in CSS
 // pixels, which can be canceled if `cancelable`. Returns true if no listener canceled it.
-bool fireWheel(HtmlView* v, PrDomElement* element, PrVec2 point, const PrAppEvent* event, PrVec2 delta,
-               bool cancelable) {
+bool fireWheel(HtmlView* v, PrDomElement* element, PrVec2 point, const PrAppEvent* event, PrVec2 delta, bool cancelable) {
     PrDomWheelEventInit init = prDomWheelEventInitDefault();
     init.mouse.ui = inputInit(element, cancelable);
     init.mouse.screenX = double(event->position.x);
@@ -1021,8 +1026,8 @@ PrHtmlViewUpdate prHtmlViewUpdate(PrHtmlView* view) {
     bool current = !view->changed && prCssPresentationIsCurrent(presentation);
     for (uint32_t i = 0; i < view->frames.count && current; ++i) {
         PrCssPresentation* inner = frameRender(view, view->frames.data[i]);
-        current = inner == nullptr || prHtmlPageIsRenderBlocked(view->frames.data[i].page)
-                  || prCssPresentationIsCurrent(inner);
+        current = inner == nullptr || prHtmlPageIsRenderBlocked(view->frames.data[i].page) ||
+            prCssPresentationIsCurrent(inner);
     }
     if (current)
         return update;
@@ -1040,8 +1045,7 @@ PrHtmlViewUpdate prHtmlViewUpdate(PrHtmlView* view) {
     for (uint32_t i = 0; i < view->frames.count; ++i) {
         const ViewFrame& frame = view->frames.data[i];
         if (frame.posted)
-            cssPresentationPostJob(prHtmlPagePresentation(frame.page),
-                                   prLayoutVecFromPx(frame.extent));
+            cssPresentationPostJob(prHtmlPagePresentation(frame.page), prLayoutVecFromPx(frame.extent));
     }
     update.started = true;
     view->posted = true;
@@ -1117,8 +1121,7 @@ PrHtmlViewEventResult prHtmlViewEvent(PrHtmlView* view, const PrAppEvent* event,
                     PrDomNode* common = prDomElementAsNode(element);
                     while (common != nullptr && !prDomNodeContains(common, prDomElementAsNode(view->pressed)))
                         common = prDomNodeParentNode(common);
-                    PrDomElement* clicked =
-                        common != nullptr ? prDomElementQuery(prDomNodeAsEventTarget(common)) : nullptr;
+                    PrDomElement* clicked = common != nullptr ? prDomElementQuery(prDomNodeAsEventTarget(common)) : nullptr;
                     if (clicked != nullptr)
                         fireMouse(view, "click", clicked, hit.point, event);
                 }

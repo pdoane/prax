@@ -58,7 +58,7 @@ void queueLinkEvent(const DomDocumentHost* host, PrDomElement* element, HtmlLink
     if (state->linkEvent == HtmlLinkEvent_None) {
         domNodeHold(element);
         host->queueDelayingTask(host->context, fireLinkEvent, element,
-                                [](void* data) { domNodeUnhold(static_cast<PrDomElement*>(data)); });
+            [](void* data) { domNodeUnhold(static_cast<PrDomElement*>(data)); });
     }
     state->linkEvent = event;
 }
@@ -131,8 +131,10 @@ void preload(PrDomElement* element, const DomDocumentHost* host) {
     fetch->generation = cssElementStyle(element)->generation;
     PrString request = prUrlSerialize(url, PrUrlSerialization_ExcludeFragment);
     prUrlDestroy(url);
-    DomFetchRequest asked{prStringView(&request), destination,
-                          domCorsSettings(domAttributeValue(element, "crossorigin"))};
+    DomFetchRequest asked{
+        prStringView(&request), destination,
+        domCorsSettings(domAttributeValue(element, "crossorigin")),
+    };
     host->fetch(host->context, &asked, preloadFetched, fetch, dropPreloadFetch);
     prStringReset(&request);
 }
@@ -157,9 +159,9 @@ void htmlLinkUpdate(PrDomElement* element, DomInsertedBy by) {
         return;
     }
     // A disabled link obtains no sheet (html/#attr-link-disabled).
-    if (host == nullptr || !domIsConnected(element) || !relHolds(element, "stylesheet")
-        || href == nullptr || domAttribute(element, PrDomNamespace_None, "disabled") != nullptr
-        || prStringIsEmpty(&href->value) || !cssOwnerTypeIsCss(element))
+    if (host == nullptr || !domIsConnected(element) || !relHolds(element, "stylesheet") ||
+            href == nullptr || domAttribute(element, PrDomNamespace_None, "disabled") != nullptr ||
+            prStringIsEmpty(&href->value) || !cssOwnerTypeIsCss(element))
         return;
     PrUrl* url = nullptr;
     PrStatus parsed = domDocumentParseUrl(document, prStringView(&href->value), &url);
@@ -177,13 +179,13 @@ void htmlLinkUpdate(PrDomElement* element, DomInsertedBy by) {
     if (environment == PrCharset_None)
         environment = document->charset;
     cssOwnerFetch(element, url, domCorsSettings(domAttributeValue(element, "crossorigin")), environment,
-                  relHolds(element, "alternate"), linkSettled);
+        relHolds(element, "alternate"), linkSettled);
     prUrlDestroy(url);
 }
 
 void htmlLinkAttributeChanged(PrDomElement* element, PrStringView name) {
-    if (domIsHtml(element, PrDomTag_Link)
-        && (name == "href" || name == "rel" || name == "type" || name == "disabled" || name == "as"))
+    if (domIsHtml(element, PrDomTag_Link) &&
+            (name == "href" || name == "rel" || name == "type" || name == "disabled" || name == "as"))
         htmlLinkUpdate(element);
 }
 

@@ -19,11 +19,13 @@ PrTextFont* textFontOf(CanvasFont* font, PrFontSet* set, float width, PrLocale l
     prTextFontRelease(font->text);
     PrFontStyle style = prCssFontStyle(font->css);
     style.width = width;
-    PrTextFontDesc desc{.set = set,
-                        .families = prCssFontFamilies(font->css),
-                        .familyCount = prCssFontFamilyCount(font->css),
-                        .style = style,
-                        .locale = locale};
+    PrTextFontDesc desc{
+        .set = set,
+        .families = prCssFontFamilies(font->css),
+        .familyCount = prCssFontFamilyCount(font->css),
+        .style = style,
+        .locale = locale,
+    };
     font->text = prTextFontCreate(&desc);
     font->textWidth = width;
     font->textLocale = locale;
@@ -69,8 +71,7 @@ void canvasTextReset(CanvasText* text) {
     *text = CanvasText{};
 }
 
-bool canvasTextSet(CanvasText* text, PrStringView source, const CanvasTextStyle& style, PrFontSet* set,
-                   PrTextShaper* shaper) {
+bool canvasTextSet(CanvasText* text, PrStringView source, const CanvasTextStyle& style, PrFontSet* set, PrTextShaper* shaper) {
     text->glyphs.clear();
     text->runs.clear();
     text->width = 0;
@@ -91,14 +92,16 @@ bool canvasTextSet(CanvasText* text, PrStringView source, const CanvasTextStyle&
         if (asciiIsSpace(text->prepared.text.data[i]))
             text->prepared.text.data[i] = ' ';
     }
-    PrTextLayoutDesc desc{.text = textView(&text->prepared),
-                          .font = font,
-                          .shaper = shaper,
-                          .direction = style.direction,
-                          .align = PrTextAlign_Start,
-                          .kerning = style.kerning,
-                          .caps = style.caps,
-                          .synthesis = PrTextSynthesisFlag_SmallCaps | PrTextSynthesisFlag_Position};
+    PrTextLayoutDesc desc{
+        .text = textView(&text->prepared),
+        .font = font,
+        .shaper = shaper,
+        .direction = style.direction,
+        .align = PrTextAlign_Start,
+        .kerning = style.kerning,
+        .caps = style.caps,
+        .synthesis = PrTextSynthesisFlag_SmallCaps | PrTextSynthesisFlag_Position,
+    };
     prTextLayoutSet(text->layout, &desc);
 
     // The glyphs, spaced: letter spacing follows each character, and word spacing each space. The width is the advance
@@ -137,8 +140,8 @@ bool canvasTextSet(CanvasText* text, PrStringView source, const CanvasTextStyle&
     double ideographic = emsOf(metrics.ideographicUnder, units) * double(size);
     bool rtl = style.direction == PrTextDirection_Rtl;
     double anchorX = left;
-    if (style.align == PrCanvasTextAlign_Right || (style.align == PrCanvasTextAlign_Start && rtl)
-        || (style.align == PrCanvasTextAlign_End && !rtl))
+    if (style.align == PrCanvasTextAlign_Right || (style.align == PrCanvasTextAlign_Start && rtl) ||
+            (style.align == PrCanvasTextAlign_End && !rtl))
         anchorX = left + text->width;
     else if (style.align == PrCanvasTextAlign_Center)
         anchorX = left + text->width / 2;
@@ -168,13 +171,17 @@ bool canvasTextSet(CanvasText* text, PrStringView source, const CanvasTextStyle&
         PrFontGlyphRun run = prTextLayoutRun(text->layout, r);
         for (uint32_t g = 0; g < run.glyphCount; ++g) {
             PrFontGlyph& glyph = text->glyphs.data[at + g];
-            glyph.position = PrVec2{float(double(glyph.position.x) - anchorX),
-                                    float(double(glyph.position.y) - anchorY)};
+            glyph.position = PrVec2{
+                float(double(glyph.position.x) - anchorX),
+                float(double(glyph.position.y) - anchorY),
+            };
             PrRect bounds = prFontGlyphBounds(run.font, glyph.id);
             if (prRectIsEmpty(bounds))
                 continue;
-            PrRect placed{glyph.position.x + bounds.left * run.size, glyph.position.y + bounds.top * run.size,
-                          glyph.position.x + bounds.right * run.size, glyph.position.y + bounds.bottom * run.size};
+            PrRect placed{
+                glyph.position.x + bounds.left * run.size, glyph.position.y + bounds.top * run.size,
+                glyph.position.x + bounds.right * run.size, glyph.position.y + bounds.bottom * run.size,
+            };
             text->ink = prRectIsEmpty(text->ink) ? placed : prRectUnion(text->ink, placed);
         }
         run.glyphs = text->glyphs.data + at;

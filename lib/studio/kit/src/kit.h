@@ -245,14 +245,16 @@ struct KitContainerFlex {
 
 // Returns the flex container of a box widget's style.
 inline KitContainerFlex kitContainerFlex(const PrKitBoxStyle& style) {
-    return KitContainerFlex{.direction = style.direction,
-                            .justify = style.justify,
-                            .align = style.align,
-                            .wrap = style.wrap,
-                            .flex = style.place.flex,
-                            .alignSelf = style.place.align,
-                            .gap = style.gap,
-                            .weight = style.place.weight};
+    return KitContainerFlex{
+        .direction = style.direction,
+        .justify = style.justify,
+        .align = style.align,
+        .wrap = style.wrap,
+        .flex = style.place.flex,
+        .alignSelf = style.place.align,
+        .gap = style.gap,
+        .weight = style.place.weight,
+    };
 }
 PR_NO_PADDING_END
 
@@ -374,8 +376,7 @@ T& kitProvide(Kit& kit, PrLayoutNode node, uint64_t key) {
 // Returns the context of type `T` that `node` or the nearest node it was made under provides, or null. Writes the
 // provider to `provider` if it is not null.
 template <typename T>
-T* PR_NULLABLE kitContext(const Kit& kit, PrLayoutNode node, uint64_t key,
-                          PrLayoutNode* PR_NULLABLE provider = nullptr) {
+T* PR_NULLABLE kitContext(const Kit& kit, PrLayoutNode node, uint64_t key, PrLayoutNode* PR_NULLABLE provider = nullptr) {
     return static_cast<T*>(prUiContext(kit.ui, node, &kKitOwner, key, provider));
 }
 

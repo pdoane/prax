@@ -52,8 +52,7 @@ typedef struct PrPathDataVertex {
 // Writes the vertex of each of `count` commands to `out`, which holds `count` vertices. A moveto is a segment of zero
 // length. A segment of zero length takes its directions from the closest segments of the path that have length, and
 // every direction of a path of no length is the positive x-axis.
-void prPathDataVertices(const PrPathDataCommand* PR_NULLABLE commands, uint32_t count,
-                        PrPathDataVertex* PR_NULLABLE out);
+void prPathDataVertices(const PrPathDataCommand* PR_NULLABLE commands, uint32_t count, PrPathDataVertex* PR_NULLABLE out);
 
 // Rewrites `commands` in absolute coordinates, so that each letter is uppercase and the commands describe the same
 // path.

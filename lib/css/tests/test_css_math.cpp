@@ -196,12 +196,12 @@ TEST_CASE("an anchor function is valid only in the properties its spec names") {
 }
 
 TEST_CASE("an anchor function is a <length> inside a calculation") {
-    CHECK(specified("top", "calc((anchor(--foo top) + anchor(--bar bottom)) / 2)")
-          == "calc(0.5 * (anchor(--foo top) + anchor(--bar bottom)))");
+    CHECK(specified("top", "calc((anchor(--foo top) + anchor(--bar bottom)) / 2)") ==
+        "calc(0.5 * (anchor(--foo top) + anchor(--bar bottom)))");
     CHECK(specified("top", "calc(anchor(--foo left, 1px) + 10%)") == "calc(10% + anchor(--foo left, 1px))");
     CHECK(specified("top", "calc(anchor(--foo left, 0))") == "anchor(--foo left, 0px)");
-    CHECK(specified("top", "anchor(--foo top, calc(0.5 * anchor(--bar bottom)))")
-          == "anchor(--foo top, calc(0.5 * anchor(--bar bottom)))");
+    CHECK(specified("top", "anchor(--foo top, calc(0.5 * anchor(--bar bottom)))") ==
+        "anchor(--foo top, calc(0.5 * anchor(--bar bottom)))");
     CHECK(specified("top", "min(100px, 10%, anchor(--foo top))") == "min(100px, 10%, anchor(--foo top))");
 }
 
@@ -214,12 +214,10 @@ TEST_CASE("a percentage that resolves against another type is not compared befor
 TEST_CASE("a random function's key is written as its canonical parts") {
     CHECK(width("random(0px, 100px)") == "random(element-scoped ua-width-1, 0px, 100px)");
     CHECK(width("random(auto, 0px, 100px)") == "random(element-scoped ua-width-1, 0px, 100px)");
-    CHECK(width("random(property-scoped element-scoped --foo, 0px, 100px)")
-          == "random(--foo element-scoped ua-width, 0px, 100px)");
+    CHECK(width("random(property-scoped element-scoped --foo, 0px, 100px)") == "random(--foo element-scoped ua-width, 0px, 100px)");
     CHECK(width("random(--foo, 1em, 2em)") == "random(--foo, 1em, 2em)");
-    CHECK(
-        width("calc(random(1px, 2em) + random(1px, 2em))")
-        == "calc(random(element-scoped ua-width-1, 1px, 2em) + random(element-scoped ua-width-2, 1px, 2em))");
+    CHECK(width("calc(random(1px, 2em) + random(1px, 2em))") ==
+        "calc(random(element-scoped ua-width-1, 1px, 2em) + random(element-scoped ua-width-2, 1px, 2em))");
     CHECK(width("random(foo, 1px, 2px)").empty());
     CHECK(width("random(--foo --bar, 1px, 2px)").empty());
 }

@@ -46,8 +46,8 @@ struct Fixture {
             return;
         }
         REQUIRE(status == PrStatus_Ok);
-        REQUIRE(prGpuShaderLibraryCreate(device, kTestGpuHostShaders, sizeof(kTestGpuHostShaders), &library)
-                == PrStatus_Ok);
+        REQUIRE(prGpuShaderLibraryCreate(device, kTestGpuHostShaders, sizeof(kTestGpuHostShaders), &library) ==
+            PrStatus_Ok);
     }
 
     ~Fixture() {
@@ -90,7 +90,7 @@ struct Fixture {
         PrGpuCommands* commands = nullptr;
         REQUIRE(prGpuCommandsBegin(device, nullptr, &commands));
         prGpuCommandsBufferBarrier(commands, buffer, PrGpuAccessFlag_ShaderWrite | PrGpuAccessFlag_CopyWrite,
-                                   PrGpuAccessFlag_CopyRead);
+            PrGpuAccessFlag_CopyRead);
         prGpuCommandsCopyBuffer(commands, buffer, 0, readback, 0, uint64_t(count) * 4);
         prGpuDeviceWait(device, prGpuCommandsSubmit(commands));
         std::vector<uint32_t> out(count);
@@ -113,7 +113,7 @@ struct HostD3d12 {
         REQUIRE(SUCCEEDED(base->QueryInterface(IID_PPV_ARGS(&device))));
         REQUIRE(SUCCEEDED(device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&allocator))));
         REQUIRE(SUCCEEDED(device->CreateCommandList1(0, D3D12_COMMAND_LIST_TYPE_DIRECT, D3D12_COMMAND_LIST_FLAG_NONE,
-                                                     IID_PPV_ARGS(&list))));
+            IID_PPV_ARGS(&list))));
         REQUIRE(SUCCEEDED(list->Reset(allocator, nullptr)));
         D3D12_DESCRIPTOR_HEAP_DESC heap{.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV, .NumDescriptors = 1};
         REQUIRE(SUCCEEDED(device->CreateDescriptorHeap(&heap, IID_PPV_ARGS(&targets))));
@@ -187,7 +187,7 @@ TEST_CASE("d3d12 draws into the host's pass, and says which of the pass's state 
     PrGpuCommands* commands = nullptr;
     REQUIRE(prGpuCommandsBegin(f.device, &options, &commands));
     prGpuCommandsTextureBarrier(commands, target, PrGpuSubresources{}, PrGpuAccessFlag_Discard,
-                                PrGpuAccessFlag_ColorAttachment);
+        PrGpuAccessFlag_ColorAttachment);
     prGpuHostStateSync(commands);
 
     // The host sets its render target and clears it to blue, and the device draws the upper half red into it.
@@ -217,13 +217,13 @@ TEST_CASE("d3d12 draws into the host's pass, and says which of the pass's state 
     prGpuPassEnd(pass);
 
     prGpuCommandsTextureBarrier(commands, target, PrGpuSubresources{}, PrGpuAccessFlag_ColorAttachment,
-                                PrGpuAccessFlag_CopyRead);
+        PrGpuAccessFlag_CopyRead);
     prGpuHostStateSync(commands);
     REQUIRE(SUCCEEDED(host.list->Close()));
     prGpuDeviceWait(f.device, prGpuCommandsSubmit(commands));
     uint32_t pixels[8 * 8]{};
     prGpuTextureRead(f.device, target, PrGpuAccessFlag_CopyRead, PrIVec2{0, 0},
-                     PrPixels{reinterpret_cast<uint8_t*>(pixels), 8 * 4, PrUVec2{8, 8}});
+        PrPixels{reinterpret_cast<uint8_t*>(pixels), 8 * 4, PrUVec2{8, 8}});
     CHECK(pixels[0] == 0xff0000ffu);
     CHECK(pixels[7 * 8 + 7] == 0xffff0000u);
     prGpuPipelineDestroy(f.device, pipeline);

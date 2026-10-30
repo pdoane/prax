@@ -24,8 +24,7 @@ namespace pr_impl {
 // ancestor's preserve, as the attribute's nearest value decides (SVG2/text.html#LegacyXMLSpace), which the sheet that
 // SVG 2 gives does not say. A foreignObject's overflow is hidden, as the table of
 // SVG2/render.html#OverflowAndClipProperties gives it, though the sheet that SVG 2 gives leaves it visible.
-constexpr char kSvgStyle[] =
-    "@namespace url(http://www.w3.org/2000/svg);\n"
+constexpr char kSvgStyle[] = "@namespace url(http://www.w3.org/2000/svg);\n"
     "@namespace xml url(http://www.w3.org/XML/1998/namespace);\n"
     "svg:not(:root), image, marker, pattern, symbol, foreignObject { overflow: hidden; }\n"
     "*:not(svg), *:not(foreignObject) > svg { transform-origin: 0 0; }\n"
@@ -107,7 +106,7 @@ struct SvgPaintStyle {
 
 // Returns the computed paint of `property`, fill or stroke, with its colors resolved in `environment`.
 SvgPaintStyle svgStylePaint(const CssComputedStyle* style, PrCssProperty property,
-                            const CssColorEnvironment& environment);
+    const CssColorEnvironment& environment);
 
 // The painting operations of a shape or text, which paint-order orders (SVG2/painting.html#PaintOrder).
 enum {
@@ -188,8 +187,8 @@ SvgPointerEvents svgStylePointerEvents(const CssComputedStyle* style);
 // Returns true if an element whose pointer-events is `events` is hit over its stroke, and needs its stroke's shape
 // whether or not it paints a stroke.
 inline bool svgPointerReadsStroke(SvgPointerEvents events) {
-    return events == SvgPointerEvents_VisibleStroke || events == SvgPointerEvents_Visible
-           || events == SvgPointerEvents_Stroke || events == SvgPointerEvents_All;
+    return events == SvgPointerEvents_VisibleStroke || events == SvgPointerEvents_Visible ||
+        events == SvgPointerEvents_Stroke || events == SvgPointerEvents_All;
 }
 
 // The transform that a style gives an element (css-transforms-1/#transform-rendering): its transform functions, and

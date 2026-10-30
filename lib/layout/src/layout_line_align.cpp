@@ -15,12 +15,11 @@ PrLayoutUnit lineHeightOf(LayoutState& state, PrLayoutStyleIndex style) {
     const LayoutFontFaces& faces = layoutFontFaces(state.styles, style);
     const PrLayoutFontStyle& font = layoutFontStyle(state.styles, style);
     return layoutLineHeight(font.lineHeight, faces.size,
-                            faces.first.ascent + faces.first.descent + faces.first.lineGap);
+        faces.first.ascent + faces.first.descent + faces.first.lineGap);
 }
 
 // Returns how far a face's text reaches about the face's `name` baseline on lines of normal height.
-LayoutLineExtent normalExtent(const LayoutState& state, const LayoutFaceMetrics& face,
-                              PrLayoutAlignmentBaseline name) {
+LayoutLineExtent normalExtent(const LayoutState& state, const LayoutFaceMetrics& face, PrLayoutAlignmentBaseline name) {
     PrLayoutUnit above = face.ascent + layoutFloorToTargetPixel(state.styles, face.lineGap / 2);
     PrLayoutUnit at = layoutFaceBaseline(face, name);
     return LayoutLineExtent{above + at, face.ascent + face.descent + face.lineGap - above - at};
@@ -29,16 +28,18 @@ LayoutLineExtent normalExtent(const LayoutState& state, const LayoutFaceMetrics&
 // Returns how far an atomic inline reaches about its baseline: its margin box (CSS2/#line-height).
 LayoutLineExtent atomicExtent(const LayoutAtomic& atomic, LayoutMode mode) {
     PrLayoutUnit blockSize = layoutLogicalSize(mode, atomic.fragment->extent).blockSize;
-    return LayoutLineExtent{atomic.margin[LayoutSide_BlockStart] + atomic.baseline.offset,
-                            blockSize + atomic.margin[LayoutSide_BlockEnd] - atomic.baseline.offset};
+    return LayoutLineExtent{
+        atomic.margin[LayoutSide_BlockStart] + atomic.baseline.offset,
+        blockSize + atomic.margin[LayoutSide_BlockEnd] - atomic.baseline.offset,
+    };
 }
 
 // Returns the `name` baseline of a parent styled by `parent`, below the parent's dominant baseline, from the parent's
 // first face (layoutFaceBaseline).
 PrLayoutUnit parentBaseline(LayoutState& state, uint32_t parent, PrLayoutAlignmentBaseline name) {
     const LayoutFaceMetrics& face = layoutFontFaces(state.styles, parent).first;
-    return layoutFaceBaseline(face, name)
-           - layoutFaceBaseline(face, layoutDominantBaseline(layoutFontStyle(state.styles, parent)));
+    return layoutFaceBaseline(face, name) -
+        layoutFaceBaseline(face, layoutDominantBaseline(layoutFontStyle(state.styles, parent)));
 }
 
 // Returns the baseline that a box styled by `box` aligns by in a parent whose dominant baseline is `dominant`
@@ -64,7 +65,7 @@ PrLayoutUnit edgeBaseline(PrLayoutAlignmentBaseline name, LayoutLineExtent exten
 // that a scroll container clamped the alphabetic baseline to. A set at a margin edge places every baseline at that
 // edge. Otherwise the set is synthesized from the margin box.
 PrLayoutUnit atomicBaseline(LayoutState& state, const LayoutAtomic& atomic, PrLayoutAlignmentBaseline name,
-                            LayoutLineExtent extent) {
+        LayoutLineExtent extent) {
     const LayoutBaseline& baseline = atomic.baseline;
     if (name == PrLayoutAlignmentBaseline_Alphabetic)
         return kLayoutUnitZero;
@@ -80,8 +81,8 @@ PrLayoutUnit atomicBaseline(LayoutState& state, const LayoutAtomic& atomic, PrLa
             default: return edgeBaseline(name, extent, kLayoutUnitZero);
         }
     }
-    if (name == PrLayoutAlignmentBaseline_TextTop || name == PrLayoutAlignmentBaseline_TextBottom
-        || name == PrLayoutAlignmentBaseline_Middle)
+    if (name == PrLayoutAlignmentBaseline_TextTop || name == PrLayoutAlignmentBaseline_TextBottom ||
+            name == PrLayoutAlignmentBaseline_Middle)
         return edgeBaseline(name, extent, kLayoutUnitZero);
     PrLayoutUnit at =
         baseline.unclamped + layoutFaceBaseline(layoutFontFacesOfGroup(state.styles, baseline.source).first, name);
@@ -95,12 +96,13 @@ PrLayoutUnit atomicBaseline(LayoutState& state, const LayoutAtomic& atomic, PrLa
 // dominant baseline, and that baseline is also the one that the box's position is measured about: its dominant baseline
 // for an inline box, or its alphabetic baseline for an atomic inline.
 bool onParentBaseline(const LayoutState& state, const PrLayoutBoxStyle& box, PrLayoutStyleIndex style, uint32_t parent,
-                      bool open) {
+        bool open) {
     if (box.baselineShift.bits != prLayoutBaselineShiftPx(0).bits)
         return false;
     PrLayoutAlignmentBaseline dominant = layoutDominantBaseline(layoutFontStyle(state.styles, parent));
-    PrLayoutAlignmentBaseline own =
-        open ? layoutDominantBaseline(layoutFontStyle(state.styles, style)) : PrLayoutAlignmentBaseline_Alphabetic;
+    PrLayoutAlignmentBaseline own = PrLayoutAlignmentBaseline_Alphabetic;
+    if (open)
+        own = layoutDominantBaseline(layoutFontStyle(state.styles, style));
     return alignmentName(box, dominant) == dominant && own == dominant;
 }
 
@@ -119,7 +121,7 @@ bool rootsSubtree(const PrLayoutBoxStyle& box) {
 // baseline shift then moves the box. The engine chooses the offsets for sub and super
 // (css-inline-3/#valdef-baseline-shift-sub). A percentage raise is a percentage of the box's own line height.
 PrLayoutUnit localShift(LayoutState& state, const PrLayoutBoxStyle& box, PrLayoutStyleIndex style, uint32_t parent,
-                        PrLayoutAlignmentBaseline name, PrLayoutUnit own) {
+        PrLayoutAlignmentBaseline name, PrLayoutUnit own) {
     PrLayoutUnit shift = parentBaseline(state, parent, name) - own;
     PrLayoutBaselineShift by = box.baselineShift;
     if (!layoutBaselineShiftIsKeyword(by))
@@ -136,21 +138,18 @@ PrLayoutUnit localShift(LayoutState& state, const PrLayoutBoxStyle& box, PrLayou
 // reaches `extent` about its dominant baseline.
 PrLayoutUnit boxShift(LayoutState& state, PrLayoutStyleIndex style, uint32_t parent, LayoutLineExtent extent) {
     const PrLayoutBoxStyle& box = layoutBoxStyle(state.styles, style);
-    PrLayoutAlignmentBaseline name =
-        alignmentName(box, layoutDominantBaseline(layoutFontStyle(state.styles, parent)));
+    PrLayoutAlignmentBaseline name = alignmentName(box, layoutDominantBaseline(layoutFontStyle(state.styles, parent)));
     const LayoutFaceMetrics& face = layoutFontFaces(state.styles, style).first;
-    PrLayoutUnit fromFont =
-        layoutFaceBaseline(face, name)
-        - layoutFaceBaseline(face, layoutDominantBaseline(layoutFontStyle(state.styles, style)));
+    PrLayoutUnit fromFont = layoutFaceBaseline(face, name) -
+        layoutFaceBaseline(face, layoutDominantBaseline(layoutFontStyle(state.styles, style)));
     return localShift(state, box, style, parent, name, edgeBaseline(name, extent, fromFont));
 }
 
 // Returns the local shift of an atomic inline with the box style `box` and the record `style`, laid out as `atomic`, in
 // a parent styled by `parent`. The atomic inline's margin box reaches `extent` about its alphabetic baseline.
 PrLayoutUnit atomicShift(LayoutState& state, const PrLayoutBoxStyle& box, PrLayoutStyleIndex style, uint32_t parent,
-                         const LayoutAtomic& atomic, LayoutLineExtent extent) {
-    PrLayoutAlignmentBaseline name =
-        alignmentName(box, layoutDominantBaseline(layoutFontStyle(state.styles, parent)));
+        const LayoutAtomic& atomic, LayoutLineExtent extent) {
+    PrLayoutAlignmentBaseline name = alignmentName(box, layoutDominantBaseline(layoutFontStyle(state.styles, parent)));
     return localShift(state, box, style, parent, name, atomicBaseline(state, atomic, name, extent));
 }
 
@@ -159,9 +158,9 @@ PrLayoutUnit atomicShift(LayoutState& state, const PrLayoutBoxStyle& box, PrLayo
 // dominant baseline that alignment-baseline defers to is an edge.
 bool alignsByLeadingBox(const LayoutState& state, PrLayoutStyleIndex style) {
     PrLayoutAlignmentBaseline name = layoutBoxStyle(state.styles, style).alignmentBaseline;
-    return layoutLineHeightIsNormal(layoutFontStyle(state.styles, style).lineHeight)
-           && (name == PrLayoutAlignmentBaseline_TextTop || name == PrLayoutAlignmentBaseline_TextBottom
-               || name == PrLayoutAlignmentBaseline_Middle);
+    return layoutLineHeightIsNormal(layoutFontStyle(state.styles, style).lineHeight) &&
+        (name == PrLayoutAlignmentBaseline_TextTop || name == PrLayoutAlignmentBaseline_TextBottom ||
+            name == PrLayoutAlignmentBaseline_Middle);
 }
 
 // Returns the record that styles the parent `parent` of an item, which may be the root inline box.
@@ -173,7 +172,7 @@ PrLayoutStyleIndex parentStyleOf(const LayoutLineAligner& a, const PrLayoutStyle
 // line-dependent. First finds the leading box of each line-dependent box from the faces that its own text uses on the
 // line, then that box's local shift, and then each item's shift from its parent's shift, parents first.
 void shiftLine(LayoutState& state, LayoutLineAligner& a, const LayoutInlineShaping& t, const PrLayoutStyleIndex* styles,
-               const LayoutLineContent& line) {
+        const LayoutLineContent& line) {
     auto dependent = [&](LayoutItemIndex item) {
         return t.items.data[item].kind == LayoutInlineItemKind_Open && a.align.data[item].lineDependent;
     };
@@ -217,15 +216,17 @@ void shiftLine(LayoutState& state, LayoutLineAligner& a, const LayoutInlineShapi
 
 // Returns the aligned subtree that `item` roots on the line, and adds it if the line has not met it yet.
 LayoutInlineSubtree& subtreeOf(const LayoutState& state, LayoutLineAligner& a, const PrLayoutStyleIndex* styles,
-                               LayoutItemIndex item) {
+        LayoutItemIndex item) {
     uint32_t at = a.subtreeAt.data[item];
     if (at < a.subtrees.count && a.subtrees.data[at].item == item)
         return a.subtrees.data[at];
     a.subtreeAt.data[item] = a.subtrees.count;
     PrLayoutKeyword keyword = prLayoutWordKeywordValue(layoutBoxStyle(state.styles, styles[item]).baselineShift.bits);
-    LayoutInlineSubtreeKind kind = keyword == PrLayoutKeyword_Top      ? LayoutInlineSubtreeKind_Top
-                                   : keyword == PrLayoutKeyword_Center ? LayoutInlineSubtreeKind_Center
-                                                                       : LayoutInlineSubtreeKind_Bottom;
+    LayoutInlineSubtreeKind kind = LayoutInlineSubtreeKind_Bottom;
+    if (keyword == PrLayoutKeyword_Top)
+        kind = LayoutInlineSubtreeKind_Top;
+    else if (keyword == PrLayoutKeyword_Center)
+        kind = LayoutInlineSubtreeKind_Center;
     PrLayoutUnit least = layoutUnit(kLayoutUnitMin);
     a.subtrees.push(LayoutInlineSubtree{item, kind, LayoutLineExtent{least, least}, kLayoutUnitZero});
     return a.subtrees.last();
@@ -256,7 +257,7 @@ PrLayoutUnit layoutFaceBaseline(const LayoutFaceMetrics& face, PrLayoutAlignment
 
 PrLayoutUnit layoutDominantOffset(LayoutState& state, PrLayoutStyleIndex style) {
     return layoutFaceBaseline(layoutFontFaces(state.styles, style).first,
-                              layoutDominantBaseline(layoutFontStyle(state.styles, style)));
+        layoutDominantBaseline(layoutFontStyle(state.styles, style)));
 }
 
 LayoutLineExtent layoutTextExtent(LayoutState& state, PrLayoutStyleIndex style) {
@@ -269,8 +270,7 @@ LayoutLineExtent layoutTextExtent(LayoutState& state, PrLayoutStyleIndex style) 
 }
 
 PR_NOINLINE LayoutLineExtent layoutTextOnLineSearch(LayoutState& state, const LayoutInlineShaping& t,
-                                                    const LayoutInlineItem& item, PrLayoutStyleIndex style,
-                                                    uint32_t from, uint32_t to, LayoutLineExtent extent) {
+        const LayoutInlineItem& item, PrLayoutStyleIndex style, uint32_t from, uint32_t to, LayoutLineExtent extent) {
     if (!layoutLineHeightIsNormal(layoutFontStyle(state.styles, style).lineHeight))
         return extent;
     PrLayoutAlignmentBaseline dominant = layoutDominantBaseline(layoutFontStyle(state.styles, style));
@@ -286,8 +286,8 @@ PR_NOINLINE LayoutLineExtent layoutTextOnLineSearch(LayoutState& state, const La
 }
 
 void layoutAlignItems(LayoutState& state, LayoutLineAligner& aligner, const LayoutInlineShaping& t,
-                      const PrLayoutStyleIndex* styles, const LayoutAtomic* atomics, PrLayoutStyleIndex containerStyle,
-                      LayoutLineExtent strut, LayoutMode mode) {
+        const PrLayoutStyleIndex* styles, const LayoutAtomic* atomics, PrLayoutStyleIndex containerStyle,
+        LayoutLineExtent strut, LayoutMode mode) {
     // A text run aligns with the box around it. A Close item aligns with its Open item. A box that roots an aligned
     // subtree is placed by the line box alone, so its own alignment baseline moves nothing.
     aligner.align.resize(t.items.count);
@@ -321,8 +321,8 @@ void layoutAlignItems(LayoutState& state, LayoutLineAligner& aligner, const Layo
                 break;
             case LayoutInlineItemKind_Close: {
                 LayoutInlineAlign& open = aligner.align.data[parent];
-                open.lineDependent = open.fallbackText && open.subtree != parent && alignsByLeadingBox(state,
-                                                                                                       styles[i]);
+                open.lineDependent =
+                    open.fallbackText && open.subtree != parent && alignsByLeadingBox(state, styles[i]);
                 aligner.lineDependent = aligner.lineDependent || open.lineDependent;
                 align = open;
                 align.parent = parent;
@@ -340,8 +340,10 @@ void layoutAlignItems(LayoutState& state, LayoutLineAligner& aligner, const Layo
                     align.shift = kLayoutUnitZero;
                     aligner.subtreeRoots = true;
                 } else if (!onParentBaseline(state, box, styles[i], parentStyle, open)) {
-                    align.local = open ? boxShift(state, styles[i], parentStyle, align.extent)
-                                       : atomicShift(state, box, styles[i], parentStyle, atomics[i], align.extent);
+                    if (open)
+                        align.local = boxShift(state, styles[i], parentStyle, align.extent);
+                    else
+                        align.local = atomicShift(state, box, styles[i], parentStyle, atomics[i], align.extent);
                     align.shift += align.local;
                 }
                 if (open)
@@ -355,8 +357,7 @@ void layoutAlignItems(LayoutState& state, LayoutLineAligner& aligner, const Layo
 }
 
 LayoutLineExtent layoutAlignLine(LayoutState& state, LayoutLineAligner& aligner, const LayoutInlineShaping& t,
-                                 const PrLayoutStyleIndex* styles, const LayoutLineContent& line,
-                                 LayoutLineExtent strut) {
+        const PrLayoutStyleIndex* styles, const LayoutLineContent& line, LayoutLineExtent strut) {
     if (aligner.lineDependent)
         shiftLine(state, aligner, t, styles, line);
     LayoutLineExtent root = strut;
@@ -381,7 +382,7 @@ LayoutLineExtent layoutAlignLine(LayoutState& state, LayoutLineAligner& aligner,
             merge(on.item, own(on.item));
         else if (it.kind == LayoutInlineItemKind_Text && on.to > on.from)
             merge(on.item,
-                  layoutTextOnLine(state, t, it, styles[on.item], on.from, on.to, aligner.align.data[on.item].extent));
+                layoutTextOnLine(state, t, it, styles[on.item], on.from, on.to, aligner.align.data[on.item].extent));
     }
     LayoutLineExtent extent = root;
     for (uint32_t i = 0; i < aligner.subtrees.count; ++i) {

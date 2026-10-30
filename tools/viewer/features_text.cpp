@@ -46,8 +46,7 @@ void textBasics(PrDrawList* list, float width, float, double) {
         drawText(list, styleOf("NotoSans.ttf", size), pangram, PrVec2{60, y});
         y += size * 1.5f + 8;
     }
-    drawText(list, styleOf("NotoSerif.ttf", 30), "Noto Serif: Handgloves & Quizzical Jabs",
-             PrVec2{60, y + 10});
+    drawText(list, styleOf("NotoSerif.ttf", 30), "Noto Serif: Handgloves & Quizzical Jabs", PrVec2{60, y + 10});
 
     // A line's metrics, from the font, around large text.
     const PrFont* font = fontNamed("NotoSans.ttf");
@@ -55,16 +54,17 @@ void textBasics(PrDrawList* list, float width, float, double) {
     float size = 110;
     PrVec2 origin{60, 520};
     float right = width - 40;
-    float advance = drawText(list, styleOf("NotoSans.ttf", size, kInk), "Hxgy \xc3\x80\xc3\xa9",
-                             origin);
+    float advance = drawText(list, styleOf("NotoSans.ttf", size, kInk), "Hxgy \xc3\x80\xc3\xa9", origin);
     struct Line {
         const char* name;
         float y;
         PrColor tint;
     };
-    const Line lines[] = {{"ascent", -m.ascent, kRed},     {"cap height", -m.capHeight, kGold},
-                          {"x-height", -m.xHeight, kGreen}, {"baseline", 0, kInk},
-                          {"descent", m.descent, kBlue}};
+    const Line lines[] = {
+        {"ascent", -m.ascent, kRed},     {"cap height", -m.capHeight, kGold},
+        {"x-height", -m.xHeight, kGreen}, {"baseline", 0, kInk},
+        {"descent", m.descent, kBlue},
+    };
     for (const Line& line : lines) {
         float at = origin.y + line.y * size;
         guide(list, origin.x - 10, right, at, withAlpha(line.tint, 0.8f));
@@ -84,8 +84,7 @@ void textBasics(PrDrawList* list, float width, float, double) {
     // Translucent tints overlapping, each glyph compositing on its own.
     PrVec2 at{60, 720};
     drawText(list, styleOf("NotoSans.ttf", 64, withAlpha(kRed, 0.6f)), "Overlap", at);
-    drawText(list, styleOf("NotoSans.ttf", 64, withAlpha(kBlue, 0.6f)), "Overlap",
-             PrVec2{at.x + 24, at.y + 14});
+    drawText(list, styleOf("NotoSans.ttf", 64, withAlpha(kBlue, 0.6f)), "Overlap", PrVec2{at.x + 24, at.y + 14});
     TextStyle tight = styleOf("NotoSans.ttf", 64, withAlpha(kGreen, 0.5f));
     PrTextFeature spacing{PR_FONT_TAG('k', 'e', 'r', 'n'), 1, 0, 0xffffffffu};
     tight.features = &spacing;
@@ -107,34 +106,47 @@ void shaping(PrDrawList* list, float, float, double) {
     };
     const PrTextFeature none{0, 0, 0, 0};
     const Row rows[] = {
-        {"ligatures", "NotoSerif.ttf", "office affine flow", PrTextDirection_Ltr, nullptr,
-         none},
-        {"ligatures off", "NotoSerif.ttf", "office affine flow", PrTextDirection_Ltr,
-         nullptr, {PR_FONT_TAG('l', 'i', 'g', 'a'), 0, 0, 0xffffffffu}},
-        {"kerning", "NotoSans.ttf", "AVATAR Toyota WAVE", PrTextDirection_Ltr, nullptr,
-         none},
-        {"small caps", "NotoSans.ttf", "Small Capitals", PrTextDirection_Ltr, nullptr,
-         {PR_FONT_TAG('s', 'm', 'c', 'p'), 1, 0, 0xffffffffu}},
-        {"fractions", "NotoSans.ttf", "1/2 3/4 5/8", PrTextDirection_Ltr, nullptr,
-         {PR_FONT_TAG('f', 'r', 'a', 'c'), 1, 0, 0xffffffffu}},
-        {"marks", "NotoSans.ttf", "e\xcc\x81 n\xcc\x83 q\xcc\x87\xcc\xa3 a\xcc\x8a\xcc\x81",
-         PrTextDirection_Ltr, nullptr, none},
-        {"Arabic", "NotoSansArabic.ttf",
-         "\xd9\x85\xd8\xb1\xd8\xad\xd8\xa8\xd8\xa7 \xd8\xa8\xd8\xa7\xd9\x84\xd8\xb9\xd8\xa7\xd9\x84"
-         "\xd9\x85",
-         PrTextDirection_Rtl, "ar", none},
-        {"Arabic marks", "NotoSansArabic.ttf",
-         "\xd8\xa8\xd9\x90\xd8\xb3\xd9\x92\xd9\x85\xd9\x90 \xd8\xa7\xd9\x84\xd9\x84\xd9\x91\xd9\x8e"
-         "\xd9\x87\xd9\x90",
-         PrTextDirection_Rtl, "ar", none},
-        {"Devanagari", "NotoSansDevanagari.ttf",
-         "\xe0\xa4\xa8\xe0\xa4\xae\xe0\xa4\xb8\xe0\xa5\x8d\xe0\xa4\xa4\xe0\xa5\x87 \xe0\xa4\x95\xe0"
-         "\xa5\x8d\xe0\xa4\xb7\xe0\xa4\xa4\xe0\xa5\x8d\xe0\xa4\xb0\xe0\xa4\xbf\xe0\xa4\xaf",
-         PrTextDirection_Ltr, "hi", none},
-        {"Devanagari reph", "NotoSansDevanagari.ttf",
-         "\xe0\xa4\xb0\xe0\xa5\x8d\xe0\xa4\x95 \xe0\xa4\xa7\xe0\xa4\xb0\xe0\xa5\x8d\xe0\xa4\xae "
-         "\xe0\xa4\xb6\xe0\xa5\x8d\xe0\xa4\xb0\xe0\xa5\x80",
-         PrTextDirection_Ltr, "hi", none},
+        {"ligatures", "NotoSerif.ttf", "office affine flow", PrTextDirection_Ltr, nullptr, none},
+        {
+            "ligatures off", "NotoSerif.ttf", "office affine flow", PrTextDirection_Ltr,
+            nullptr, {PR_FONT_TAG('l', 'i', 'g', 'a'), 0, 0, 0xffffffffu},
+        },
+        {"kerning", "NotoSans.ttf", "AVATAR Toyota WAVE", PrTextDirection_Ltr, nullptr, none},
+        {
+            "small caps", "NotoSans.ttf", "Small Capitals", PrTextDirection_Ltr, nullptr,
+            {PR_FONT_TAG('s', 'm', 'c', 'p'), 1, 0, 0xffffffffu},
+        },
+        {
+            "fractions", "NotoSans.ttf", "1/2 3/4 5/8", PrTextDirection_Ltr, nullptr,
+            {PR_FONT_TAG('f', 'r', 'a', 'c'), 1, 0, 0xffffffffu},
+        },
+        {
+            "marks", "NotoSans.ttf", "e\xcc\x81 n\xcc\x83 q\xcc\x87\xcc\xa3 a\xcc\x8a\xcc\x81",
+            PrTextDirection_Ltr, nullptr, none,
+        },
+        {
+            "Arabic", "NotoSansArabic.ttf",
+            "\xd9\x85\xd8\xb1\xd8\xad\xd8\xa8\xd8\xa7 \xd8\xa8\xd8\xa7\xd9\x84\xd8\xb9\xd8\xa7\xd9\x84" "\xd9\x85",
+            PrTextDirection_Rtl, "ar", none,
+        },
+        {
+            "Arabic marks", "NotoSansArabic.ttf",
+            "\xd8\xa8\xd9\x90\xd8\xb3\xd9\x92\xd9\x85\xd9\x90 \xd8\xa7\xd9\x84\xd9\x84\xd9\x91\xd9\x8e"
+                "\xd9\x87\xd9\x90",
+            PrTextDirection_Rtl, "ar", none,
+        },
+        {
+            "Devanagari", "NotoSansDevanagari.ttf",
+            "\xe0\xa4\xa8\xe0\xa4\xae\xe0\xa4\xb8\xe0\xa5\x8d\xe0\xa4\xa4\xe0\xa5\x87 \xe0\xa4\x95\xe0"
+                "\xa5\x8d\xe0\xa4\xb7\xe0\xa4\xa4\xe0\xa5\x8d\xe0\xa4\xb0\xe0\xa4\xbf\xe0\xa4\xaf",
+            PrTextDirection_Ltr, "hi", none,
+        },
+        {
+            "Devanagari reph", "NotoSansDevanagari.ttf",
+            "\xe0\xa4\xb0\xe0\xa5\x8d\xe0\xa4\x95 \xe0\xa4\xa7\xe0\xa4\xb0\xe0\xa5\x8d\xe0\xa4\xae "
+                "\xe0\xa4\xb6\xe0\xa5\x8d\xe0\xa4\xb0\xe0\xa5\x80",
+            PrTextDirection_Ltr, "hi", none,
+        },
     };
     float y = 80;
     for (const Row& row : rows) {
@@ -189,8 +201,7 @@ void variations(PrDrawList* list, float width, float, double) {
         TextStyle style = styleOf("Nabla.ttf", 88);
         style.font = fontVaried("Nabla.ttf", v, 2);
         char text[48];
-        std::snprintf(text, sizeof(text), "EDPT %g EHLT %g", double(depths[i]),
-                      double(highlights[i]));
+        std::snprintf(text, sizeof(text), "EDPT %g EHLT %g", double(depths[i]), double(highlights[i]));
         label(text, PrVec2{30 + 350 * float(i), y - 10});
         drawText(list, style, "Nabla", PrVec2{30 + 350 * float(i), y + 90});
     }
@@ -204,9 +215,11 @@ void syntheticAndTransforms(PrDrawList* list, float width, float height, double)
         float embolden;
         float oblique;
     };
-    const Style styles[] = {{"regular", 0, 0},     {"embolden 0.02", 0.02f, 0},
-                            {"embolden 0.04", 0.04f, 0}, {"embolden -0.01", -0.01f, 0},
-                            {"oblique 0.2", 0, 0.2f},    {"both", 0.03f, 0.2f}};
+    const Style styles[] = {
+        {"regular", 0, 0},     {"embolden 0.02", 0.02f, 0},
+        {"embolden 0.04", 0.04f, 0}, {"embolden -0.01", -0.01f, 0},
+        {"oblique 0.2", 0, 0.2f},    {"both", 0.03f, 0.2f},
+    };
     for (uint32_t i = 0; i < 6; ++i) {
         TextStyle style = styleOf("NotoSans.ttf", 32);
         PrFontDerivation d = prFontDerivationDefault();
@@ -236,8 +249,7 @@ void syntheticAndTransforms(PrDrawList* list, float width, float height, double)
     for (size_t i = 0; i < shaped.glyphs.size(); ++i) {
         PrFontGlyph& g = shaped.glyphs[i];
         float angle = start + g.position.x / radius;
-        g.position = PrVec2{center.x + radius * std::cos(angle),
-                             center.y + radius * std::sin(angle)};
+        g.position = PrVec2{center.x + radius * std::cos(angle), center.y + radius * std::sin(angle)};
         shaped.transforms[i] = prAffine2Concat(shaped.transforms[i], prAffine2Rotate(angle + kPi / 2));
     }
     drawGlyphs(list, circle, shaped);
@@ -251,17 +263,15 @@ void syntheticAndTransforms(PrDrawList* list, float width, float height, double)
         float phase = (g.position.x - 430) / 60;
         g.position.y += 24 * std::sin(phase);
         shaped.transforms[i] = prAffine2Concat(shaped.transforms[i],
-                                               prAffine2Rotate(std::atan(24.0f / 60 * std::cos(phase))));
+            prAffine2Rotate(std::atan(24.0f / 60 * std::cos(phase))));
     }
     drawGlyphs(list, wave, shaped);
 
     // The run's own transform: rotated, vertical, and scaled from tiny to huge.
-    prDrawListPushTransformAffine2(list, prAffine2Concat(prAffine2Rotate(-kPi / 12),
-                                                         prAffine2Translate(PrVec2{450, 560})));
+    prDrawListPushTransformAffine2(list, prAffine2Concat(prAffine2Rotate(-kPi / 12), prAffine2Translate(PrVec2{450, 560})));
     drawText(list, styleOf("NotoSans.ttf", 28, kRed), "A rotated run", PrVec2{0, 0});
     prDrawListPopTransform(list);
-    prDrawListPushTransformAffine2(list, prAffine2Concat(prAffine2Rotate(kPi / 2),
-                                                         prAffine2Translate(PrVec2{width - 60, 380})));
+    prDrawListPushTransformAffine2(list, prAffine2Concat(prAffine2Rotate(kPi / 2), prAffine2Translate(PrVec2{width - 60, 380})));
     drawText(list, styleOf("NotoSans.ttf", 24, kBlue), "Turned a quarter", PrVec2{0, 0});
     prDrawListPopTransform(list);
     float x = 450;
@@ -269,8 +279,7 @@ void syntheticAndTransforms(PrDrawList* list, float width, float height, double)
         drawText(list, styleOf("NotoSans.ttf", size), "tiny text", PrVec2{x, 640});
         x += size * 6;
     }
-    drawText(list, styleOf("NotoSerif.ttf", 260, withAlpha(kGold, 0.8f)), "g",
-             PrVec2{width - 300, height - 70});
+    drawText(list, styleOf("NotoSerif.ttf", 260, withAlpha(kGold, 0.8f)), "g", PrVec2{width - 300, height - 70});
     label("sizes 5, 7, 9 and 11", PrVec2{450, 615});
     label("one glyph at 260, translucent", PrVec2{width - 300, height - 250});
     label("per-glyph transforms", PrVec2{110, 480});
@@ -317,9 +326,11 @@ void strokedAndPainted(PrDrawList* list, float width, float, double) {
     drawText(list, thin, "Outside", cellOrigin(3));
 
     // Brushes over the run: a gradient in its bounds, an image, a stroke's brush along it.
-    const PrDrawColorStop sunset[] = {{.offset = 0, .color = kPurple},
-                                      {.offset = 0.5f, .color = kRed},
-                                      {.offset = 1, .color = kGold}};
+    const PrDrawColorStop sunset[] = {
+        {.offset = 0, .color = kPurple},
+        {.offset = 0.5f, .color = kRed},
+        {.offset = 1, .color = kGold},
+    };
     PrDrawBrush bounds = prDrawBrushLinear(PrVec2{0, 0}, PrVec2{1, 1}, sunset, 3);
     bounds.space = PrDrawBrushSpace_ObjectBounds;
     label("a gradient over the run's bounds", PrVec2{cellOrigin(4).x, cellOrigin(4).y - 90});
@@ -340,11 +351,13 @@ void strokedAndPainted(PrDrawList* list, float width, float, double) {
     brushed.paint.brush = &tiles;
     drawText(list, brushed, "Pattern", cellOrigin(5));
 
-    const PrDrawColorStop rainbow[] = {{.offset = 0, .color = kRed},
-                                       {.offset = 0.25f, .color = kGold},
-                                       {.offset = 0.5f, .color = kGreen},
-                                       {.offset = 0.75f, .color = kBlue},
-                                       {.offset = 1, .color = kPurple}};
+    const PrDrawColorStop rainbow[] = {
+        {.offset = 0, .color = kRed},
+        {.offset = 0.25f, .color = kGold},
+        {.offset = 0.5f, .color = kGreen},
+        {.offset = 0.75f, .color = kBlue},
+        {.offset = 1, .color = kPurple},
+    };
     PrDrawBrush along = prDrawBrushLinear(PrVec2{0, 0}, PrVec2{1, 0}, rainbow, 5);
     label("a gradient along each contour", PrVec2{cellOrigin(6).x, cellOrigin(6).y - 90});
     PrDrawStroke mapped = strokeOf(5, PrPathJoin_Round, PrPathCap_Round);
@@ -363,20 +376,15 @@ void strokedAndPainted(PrDrawList* list, float width, float, double) {
 
 void colorGlyphs(PrDrawList* list, float, float, double) {
     // Emoji in Twemoji's COLRv1 layers, including sequences that the shaper joins.
-    label("Twemoji (COLRv1): single emoji, a skin tone, ZWJ sequences, flags",
-          PrVec2{30, 30});
+    label("Twemoji (COLRv1): single emoji, a skin tone, ZWJ sequences, flags", PrVec2{30, 30});
     TextStyle emoji = styleOf("Twemoji.ttf", 48);
-    drawText(list, emoji,
-             "\xf0\x9f\x98\x80\xf0\x9f\x98\x82\xf0\x9f\xa5\xb0\xf0\x9f\xa4\x96\xf0\x9f\x91\xbd\xf0"
-             "\x9f\x8e\x83\xf0\x9f\x8c\x8d\xf0\x9f\x8d\x89\xf0\x9f\x9a\x80\xe2\x9a\xbd\xf0\x9f\x8e"
-             "\xb8\xf0\x9f\x92\x8e",
-             PrVec2{30, 95});
-    drawText(list, emoji,
-             "\xf0\x9f\x91\x8d\xf0\x9f\x8f\xbd \xf0\x9f\x91\xa9\xe2\x80\x8d\xf0\x9f\x9a\x80 "
-             "\xf0\x9f\x91\xa8\xe2\x80\x8d\xf0\x9f\x91\xa9\xe2\x80\x8d\xf0\x9f\x91\xa7 "
-             "\xf0\x9f\x87\xaf\xf0\x9f\x87\xb5\xf0\x9f\x87\xab\xf0\x9f\x87\xb7\xf0\x9f\x87\xa7\xf0"
-             "\x9f\x87\xb7",
-             PrVec2{30, 160});
+    drawText(list, emoji, "\xf0\x9f\x98\x80\xf0\x9f\x98\x82\xf0\x9f\xa5\xb0\xf0\x9f\xa4\x96\xf0\x9f\x91\xbd\xf0"
+        "\x9f\x8e\x83\xf0\x9f\x8c\x8d\xf0\x9f\x8d\x89\xf0\x9f\x9a\x80\xe2\x9a\xbd\xf0\x9f\x8e" "\xb8\xf0\x9f\x92\x8e",
+        PrVec2{30, 95});
+    drawText(list, emoji, "\xf0\x9f\x91\x8d\xf0\x9f\x8f\xbd \xf0\x9f\x91\xa9\xe2\x80\x8d\xf0\x9f\x9a\x80 "
+        "\xf0\x9f\x91\xa8\xe2\x80\x8d\xf0\x9f\x91\xa9\xe2\x80\x8d\xf0\x9f\x91\xa7 "
+        "\xf0\x9f\x87\xaf\xf0\x9f\x87\xb5\xf0\x9f\x87\xab\xf0\x9f\x87\xb7\xf0\x9f\x87\xa7\xf0"
+        "\x9f\x87\xb7", PrVec2{30, 160});
     // Small and large, translucent, and stroked, which outlines the glyph rather than its layers.
     TextStyle small = styleOf("Twemoji.ttf", 16);
     drawText(list, small, "\xf0\x9f\x98\x80\xf0\x9f\x9a\x80\xf0\x9f\x8c\x88", PrVec2{760, 80});
@@ -443,8 +451,7 @@ void textEffects(PrDrawList* list, float width, float height, double) {
     const PrDrawColorStop stops[] = {{.offset = 0, .color = kBlue}, {.offset = 1, .color = kGold}};
     PrDrawBrush gradient = prDrawBrushLinear(PrVec2{band.left, 0}, PrVec2{band.right, 0}, stops, 2);
     prDrawListRect(list, band, {.brush = &gradient});
-    const PrDrawBlendMode modes[] = {PrDrawBlendMode_Multiply, PrDrawBlendMode_Screen,
-                                     PrDrawBlendMode_Difference};
+    const PrDrawBlendMode modes[] = {PrDrawBlendMode_Multiply, PrDrawBlendMode_Screen, PrDrawBlendMode_Difference};
     const char* names[] = {"Mul", "Scr", "Dif"};
     for (uint32_t i = 0; i < 3; ++i) {
         TextStyle style = heavy;
@@ -489,13 +496,17 @@ void textEffects(PrDrawList* list, float width, float height, double) {
     // Decorations from the font's metrics, of every style.
     const PrFont* font = fontNamed("NotoSans.ttf");
     PrFontMetrics m = prFontMetrics(font);
-    const PrDrawDecorationStyle styles[] = {PrDrawDecorationStyle_Solid,
-                                            PrDrawDecorationStyle_Double,
-                                            PrDrawDecorationStyle_Dotted,
-                                            PrDrawDecorationStyle_Dashed,
-                                            PrDrawDecorationStyle_Wavy};
-    const char* styleNames[] = {"Solid underline", "Double underline", "Dotted underline",
-                                "Dashed underline", "Wavy underline"};
+    const PrDrawDecorationStyle styles[] = {
+        PrDrawDecorationStyle_Solid,
+        PrDrawDecorationStyle_Double,
+        PrDrawDecorationStyle_Dotted,
+        PrDrawDecorationStyle_Dashed,
+        PrDrawDecorationStyle_Wavy,
+    };
+    const char* styleNames[] = {
+        "Solid underline", "Double underline", "Dotted underline",
+        "Dashed underline", "Wavy underline",
+    };
     for (uint32_t i = 0; i < 5; ++i) {
         float size = 30;
         PrVec2 at{30 + float(i % 3) * 360, 440 + float(i / 3) * 70};
@@ -516,8 +527,7 @@ void textEffects(PrDrawList* list, float width, float height, double) {
     PrMatrix4 place = prMatrix4Translate(PrVec3{width / 2, height - 30, 0});
     PrMatrix4 m1 = prMatrix4Concat(&tilt, &eye);
     PrMatrix4 m2 = prMatrix4Concat(&m1, &place);
-    const char* crawl[] = {"A long time ago, in a viewer", "far, far away, glyphs were",
-                           "drawn in perspective."};
+    const char* crawl[] = {"A long time ago, in a viewer", "far, far away, glyphs were", "drawn in perspective."};
     TextStyle line = styleOf("NotoSans.ttf", 60, kGold);
     float widest = 0;
     for (const char* text : crawl)
@@ -546,15 +556,14 @@ const std::vector<Drawing>& textFeatures() {
         {"Text", "Sizes and fonts, a font's metrics, and translucent runs.", textBasics},
         {"Shaping", "Ligatures, kerning, features, marks and complex scripts, shaped.", shaping},
         {"Variable fonts", "Design points of variable fonts, color layers included.", variations},
-        {"Synthetic styles and glyph transforms",
-         "Synthetic bold and oblique, per-glyph transforms, and runs under transforms.",
-         syntheticAndTransforms},
-        {"Stroked and painted text", "Glyph outlines stroked, and runs painted by brushes.",
-         strokedAndPainted},
-        {"Color glyphs", "Glyphs drawn in color from their COLR layers.",
-         colorGlyphs},
-        {"Text effects", "Text in groups, blends, masks and perspective, with decorations.",
-         textEffects},
+        {
+            "Synthetic styles and glyph transforms",
+            "Synthetic bold and oblique, per-glyph transforms, and runs under transforms.",
+            syntheticAndTransforms,
+        },
+        {"Stroked and painted text", "Glyph outlines stroked, and runs painted by brushes.", strokedAndPainted},
+        {"Color glyphs", "Glyphs drawn in color from their COLR layers.", colorGlyphs},
+        {"Text effects", "Text in groups, blends, masks and perspective, with decorations.", textEffects},
     };
     return features;
 }

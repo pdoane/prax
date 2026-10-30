@@ -44,7 +44,7 @@ void jsCallbackRelease(void* PR_NULLABLE context);
 // value is not a function, calls the value's method `operation` instead, with the value as `this`. A detached callback
 // returns undefined.
 JSValue jsCallbackCall(JsCallback* callback, const char* PR_NULLABLE operation,
-                       JSValueConst receiver, int argc, JSValueConst* PR_NULLABLE argv);
+    JSValueConst receiver, int argc, JSValueConst* PR_NULLABLE argv);
 
 // How a runtime reports an exception that no script caught. The module that has a global object to report it at sets
 // the runtime's reporter.

@@ -31,8 +31,7 @@ typedef struct PrSvgImage PrSvgImage;
 // `from`, or as written if it does not resolve, as a relative reference does not against about:blank. Returns null if
 // the document cannot be loaded. The host keeps the returned document alive until the call returns, and the draw takes
 // a reference to it. The document is loaded once for each URL.
-typedef PrDomDocument* PR_NULLABLE (*PrSvgLoadFn)(void* PR_NULLABLE context,
-                                                  PrDomDocument* from, PrStringView url);
+typedef PrDomDocument* PR_NULLABLE (*PrSvgLoadFn)(void* PR_NULLABLE context, PrDomDocument* from, PrStringView url);
 
 // An image that a reference names, as the host decodes it: a raster image or an SVG image. Exactly one of the two is
 // set.
@@ -44,8 +43,7 @@ typedef struct PrSvgLoadedImage {
 // Loads the image that a reference in `from` names, such as an image element's href. `url` is the reference as written,
 // with its fragment, and the host resolves it against the origin of `from`. Writes the image, with a reference for the
 // caller, and returns true, or returns false if nothing loads or the bytes are not an image that the host decodes.
-typedef bool (*PrSvgLoadImageFn)(void* PR_NULLABLE context, PrDomDocument* from, PrStringView url,
-                                 PrSvgLoadedImage* out);
+typedef bool (*PrSvgLoadImageFn)(void* PR_NULLABLE context, PrDomDocument* from, PrStringView url, PrSvgLoadedImage* out);
 
 // A custom property that the host gives every element, such as a palette entry of an OpenType SVG glyph. `name` starts
 // with two dashes.
@@ -87,16 +85,14 @@ PrSvgDrawOptions prSvgDrawOptionsDefault(void);
 // pixels. The top left of the viewport is the origin of the list's current transform. The element's own width, height,
 // viewBox and preserveAspectRatio place the content in the viewport (SVG2/coords.html). Both axes of `viewport` are
 // zero or more. The list's state is the same after the call as before. Null options mean the defaults.
-void prSvgElementDraw(PrSvgElement* svg, PrVec2 viewport, const PrSvgDrawOptions* PR_NULLABLE options,
-                      PrDrawList* list);
+void prSvgElementDraw(PrSvgElement* svg, PrVec2 viewport, const PrSvgDrawOptions* PR_NULLABLE options, PrDrawList* list);
 
 // Draws the content of the outermost svg element `svg` into `list`, as CSS lays it out: its width and height are the
 // CSS width and height of its box, so the content box, whose width and height are `extent` in CSS pixels, is its
 // viewport (SVG2/geometry.html#Sizing). The box's top left is the origin of the list's current transform. The element's
 // viewBox and preserveAspectRatio place the content in the viewport. The box applies the element's own opacity and
 // display, so the drawing leaves them out. Null options mean the defaults.
-void prSvgElementDrawBox(PrSvgElement* svg, PrVec2 extent, const PrSvgDrawOptions* PR_NULLABLE options,
-                         PrDrawList* list);
+void prSvgElementDrawBox(PrSvgElement* svg, PrVec2 extent, const PrSvgDrawOptions* PR_NULLABLE options, PrDrawList* list);
 
 // The natural dimensions of an outermost svg element in CSS (css-images-3/#natural-dimensions), in CSS pixels. A width
 // or height is negative if the element has none, and a ratio of width over height is zero if it has none.
@@ -119,8 +115,7 @@ PrSvgNaturalSize prSvgElementNaturalSize(const PrSvgElement* svg);
 // (selectors-4/#the-target-pseudo). The image keeps nothing of the document, which the caller may release at once. A
 // host that loads the image's own images through `options` loads none but data: URLs, as secure static mode requires.
 // Null options mean the defaults.
-const PrSvgImage* prSvgImageCreate(PrSvgElement* svg, PrStringView fragment,
-                                   const PrSvgDrawOptions* PR_NULLABLE options);
+const PrSvgImage* prSvgImageCreate(PrSvgElement* svg, PrStringView fragment, const PrSvgDrawOptions* PR_NULLABLE options);
 
 // Adds or releases a reference. The last release frees the image.
 void prSvgImageRetain(const PrSvgImage* image);
@@ -140,7 +135,7 @@ void prSvgImageDraw(const PrSvgImage* image, PrVec2 extent, PrDrawList* list);
 // in its document, and its references resolve in its document. Percentages resolve against a viewport whose width and
 // height are `viewport`. An OpenType SVG glyph is drawn this way. Null options mean the defaults.
 void prSvgElementDrawInPlace(PrSvgElement* element, PrVec2 viewport,
-                             const PrSvgDrawOptions* PR_NULLABLE options, PrDrawList* list);
+    const PrSvgDrawOptions* PR_NULLABLE options, PrDrawList* list);
 
 #if defined(__cplusplus)
 }

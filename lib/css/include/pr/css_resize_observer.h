@@ -49,7 +49,7 @@ typedef struct PrCssResizeObserverEntry {
 // Called with the entries of the observations that changed, which are valid for the call
 // (resize-observer-1/#broadcast-active-resize-observations).
 typedef void (*PrCssResizeCallbackFn)(void* PR_NULLABLE context, PrCssResizeObserver* observer,
-                                      const PrCssResizeObserverEntry* entries, uint32_t count);
+    const PrCssResizeObserverEntry* entries, uint32_t count);
 
 // The callback of an observer. The observer keeps a copy, and calls retain and release on the copy's context if they
 // are given. `observing`, if given, is called with true when the observer starts to observe an element, and with false

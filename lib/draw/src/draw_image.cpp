@@ -62,13 +62,15 @@ PrStatus createWide(PrImageDecoder* decoder, const PrImageInfo& info, const PrDr
     uint8_t* stored = static_cast<uint8_t*>(prMemoryAlloc(storedStride * height));
     uint8_t* half = static_cast<uint8_t*>(prMemoryAlloc(halfStride * height));
     PrStatus status = prImageDecoderRead(decoder, 0, PrPixels{stored, storedStride, {width, height}});
-    PrImageFormat wide{.model = PrColorModel_Rgb,
-                       .sample = PrImageSample_F16,
-                       .alpha = PrImageAlpha_Straight,
-                       .color = info.format.color};
+    PrImageFormat wide{
+        .model = PrColorModel_Rgb,
+        .sample = PrImageSample_F16,
+        .alpha = PrImageAlpha_Straight,
+        .color = info.format.color,
+    };
     if (status == PrStatus_Ok)
         status = prImageConvert(PrPixelView{stored, storedStride, {width, height}}, &info.format,
-                                PrPixels{half, halfStride, {width, height}}, &wide, 0);
+            PrPixels{half, halfStride, {width, height}}, &wide, 0);
     PrPixelView displayed{half, halfStride, {width, height}};
     uint8_t* oriented = nullptr;
     if (status == PrStatus_Ok && info.orientation != PrImageOrientation_Identity) {
@@ -136,10 +138,8 @@ struct PrDrawImage : DrawImage {};
 
 PrStatus prDrawImageCreate(const PrDrawImageDesc* desc, const PrDrawImage* PR_NULLABLE* PR_NONNULL out) {
     const PrPixelView& pixels = desc->pixels;
-    PR_ASSERT(pixels.data != nullptr
-              && (desc->format == PrPixelFormat_Rgba8 || desc->format == PrPixelFormat_Bgra8
-                  || desc->format == PrPixelFormat_RgbaF16)
-              && desc->alpha <= PrDrawAlpha_Opaque);
+    PR_ASSERT(pixels.data != nullptr && (desc->format == PrPixelFormat_Rgba8 || desc->format == PrPixelFormat_Bgra8 ||
+        desc->format == PrPixelFormat_RgbaF16) && desc->alpha <= PrDrawAlpha_Opaque);
     PR_ASSERT(prColorSpaceModel(desc->space) == PrColorModel_Rgb);
     PR_ASSERT(size_t(pixels.extent.x) * prPixelFormatSize(desc->format) <= pixels.stride);
     PR_ASSERT(pixels.extent.x != 0 && pixels.extent.y != 0);
@@ -162,8 +162,7 @@ PrStatus prDrawImageCreate(const PrDrawImageDesc* desc, const PrDrawImage* PR_NU
 }
 
 PrStatus prDrawImageCreateFromBytes(PrImageCodec* codec, PrByteView bytes,
-                                    const PrDrawImage* PR_NULLABLE* PR_NONNULL out,
-                                    PrImageOrientation* PR_NULLABLE orientation) {
+        const PrDrawImage* PR_NULLABLE* PR_NONNULL out, PrImageOrientation* PR_NULLABLE orientation) {
     *out = nullptr;
     PrImageSource source{};
     source.memory = bytes;
@@ -179,8 +178,8 @@ PrStatus prDrawImageCreateFromBytes(PrImageCodec* codec, PrByteView bytes,
     // An image that names a space other than sRGB keeps its range: it is read as it is stored, converted to half floats
     // in its space, and created in that space, which converts it to extended sRGB.
     const PrImageColor& color = info->format.color;
-    if (color.encoding == PrImageColorEncoding_Named && color.space != PrColorSpace_Srgb
-        && prColorSpaceModel(color.space) == PrColorModel_Rgb) {
+    if (color.encoding == PrImageColorEncoding_Named && color.space != PrColorSpace_Srgb &&
+            prColorSpaceModel(color.space) == PrColorModel_Rgb) {
         status = createWide(decoder, *info, out);
         prImageDecoderDestroy(decoder);
         return status;
@@ -194,12 +193,16 @@ PrStatus prDrawImageCreateFromBytes(PrImageCodec* codec, PrByteView bytes,
     }
     size_t size = size_t(width) * height * 4;
     uint8_t* pixels = static_cast<uint8_t*>(prMemoryAlloc(size != 0 ? size : 4));
-    status = size == 0 ? PrStatus_InvalidData
-                       : prImageDecoderReadRgba8(decoder, 0, PrImageAlpha_Premultiplied, info->orientation,
-                                                 PrPixels{pixels, size_t(width) * 4, {width, height}});
+    if (size == 0)
+        status = PrStatus_InvalidData;
+    else
+        status = prImageDecoderReadRgba8(decoder, 0, PrImageAlpha_Premultiplied, info->orientation,
+            PrPixels{pixels, size_t(width) * 4, {width, height}});
     if (status == PrStatus_Ok) {
-        PrDrawImageDesc desc{PrPixelView{pixels, size_t(width) * 4, {width, height}}, PrPixelFormat_Rgba8,
-                             PrDrawAlpha_Premultiplied, PrColorSpace_Srgb};
+        PrDrawImageDesc desc{
+            PrPixelView{pixels, size_t(width) * 4, {width, height}}, PrPixelFormat_Rgba8,
+            PrDrawAlpha_Premultiplied, PrColorSpace_Srgb,
+        };
         status = prDrawImageCreate(&desc, out);
     }
     prMemoryFree(pixels);
@@ -214,7 +217,7 @@ const PrDrawImage* prDrawImageCreateOriented(const PrDrawImage* image, PrImageOr
     PrDrawImage* oriented = static_cast<PrDrawImage*>(prMemoryAlloc(sizeof(PrDrawImage) + stride * extent.y));
     initImage(oriented, extent, stride, image->format, image->alpha);
     prImageOrient(prDrawImagePixels(image), prPixelFormatSize(image->format), orientation,
-                  PrPixels{pixelsOf(oriented), oriented->stride, extent});
+        PrPixels{pixelsOf(oriented), oriented->stride, extent});
     return oriented;
 }
 

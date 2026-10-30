@@ -19,15 +19,13 @@ JSClassID classifyElement(void* handle) {
     return prMathMlElementQuery(target) != nullptr ? prJsMathMlElementClass : prJsDomElementClass;
 }
 
-constexpr JSCFunctionListEntry kElementProto[] = {
-    PR_JS_TAG("MathMLElement"),
-    PR_JS_CSS_INLINE_STYLE,
-};
+constexpr JSCFunctionListEntry kElementProto[] = {PR_JS_TAG("MathMLElement"), PR_JS_CSS_INLINE_STYLE};
 
 constexpr JsClassDefinition kClasses[] = {
-    {PR_JS_CLASS("MathMLElement", prJsMathMlElementClass, jsViewFinalizer<&prJsMathMlElementClass>,
-                 kElementProto),
-     .base = &prJsDomElementClass},
+    {
+        PR_JS_CLASS("MathMLElement", prJsMathMlElementClass, jsViewFinalizer<&prJsMathMlElementClass>, kElementProto),
+        .base = &prJsDomElementClass,
+    },
 };
 
 } // namespace

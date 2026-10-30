@@ -41,18 +41,28 @@ struct Phases {
 struct GraphScene {
     KitFixture& f;
     Phases phases;
-    PrKitGraphPort samplerOut[2] = {{.id = 1, .type = PortType_Color, .label = "Color"},
-                                    {.id = 2, .type = PortType_Scalar, .label = "Alpha"}};
-    PrKitGraphPort blendIn[2] = {{.id = 1, .type = PortType_Color, .label = "Base"},
-                                 {.id = 2, .type = PortType_Scalar, .label = "Mask"}};
+    PrKitGraphPort samplerOut[2] = {
+        {.id = 1, .type = PortType_Color, .label = "Color"},
+        {.id = 2, .type = PortType_Scalar, .label = "Alpha"},
+    };
+    PrKitGraphPort blendIn[2] = {
+        {.id = 1, .type = PortType_Color, .label = "Base"},
+        {.id = 2, .type = PortType_Scalar, .label = "Mask"},
+    };
     PrKitGraphPort blendOut[1] = {{.id = 3, .type = PortType_Color, .label = "Out"}};
     PrKitGraphPort outputIn[1] = {{.id = 1, .type = PortType_Color, .label = "Color"}};
     std::vector<PrKitGraphNode> nodes = {
         {.id = 1, .position = {20, 20}, .title = "Sampler", .outputs = samplerOut, .outputCount = 2},
-        {.id = 2, .position = {260, 20}, .title = "Blend", .inputs = blendIn, .inputCount = 2,
-         .outputs = blendOut, .outputCount = 1},
-        {.id = 3, .position = {260, 200}, .title = "Output", .inputs = outputIn, .inputCount = 1,
-         .bodyHeight = 40},
+        {
+            .id = 2,
+            .position = {260, 20},
+            .title = "Blend",
+            .inputs = blendIn,
+            .inputCount = 2,
+            .outputs = blendOut,
+            .outputCount = 1,
+        },
+        {.id = 3, .position = {260, 200}, .title = "Output", .inputs = outputIn, .inputCount = 1, .bodyHeight = 40},
     };
     std::vector<PrKitGraphWire> wires = {{.id = 1, .link = {.fromNode = 1, .fromPort = 1, .toNode = 2, .toPort = 1}}};
     PrColor colors[2] = {{0.4f, 0.6f, 0.9f, 1}, {0.9f, 0.6f, 0.3f, 1}};
@@ -66,15 +76,17 @@ struct GraphScene {
         f.edit = Phases::record;
         f.editContext = &phases;
         f.build = [this](PrLayoutNode ground) {
-            PrKitGraph graph{.nodes = nodes.data(),
-                             .nodeCount = uint32_t(nodes.size()),
-                             .wires = wires.data(),
-                             .wireCount = uint32_t(wires.size()),
-                             .typeColors = colors,
-                             .typeCount = 2,
-                             .view = &view};
+            PrKitGraph graph{
+                .nodes = nodes.data(),
+                .nodeCount = uint32_t(nodes.size()),
+                .wires = wires.data(),
+                .wireCount = uint32_t(wires.size()),
+                .typeColors = colors,
+                .typeCount = 2,
+                .view = &view,
+            };
             canvas = prKitGraph(f.kit, ground, graph,
-                                {.place = {.width = prKitPx(600), .height = prKitPx(400), .flex = PrKitFlex_Fixed}});
+                {.place = {.width = prKitPx(600), .height = prKitPx(400), .flex = PrKitFlex_Fixed}});
             for (uint32_t i = 0; i < 3; ++i)
                 bodies[i] = prKitGraphBody(f.kit, canvas, i);
             PrKitGraphLink link{};
@@ -183,8 +195,12 @@ TEST_CASE("the wheel pans a graph, and with Command zooms it about the pointer, 
     f.frame();
     CHECK(scene.view.offset.x == -20.0f);
     CHECK(scene.view.offset.y == -10.0f);
-    f.push(PrAppEvent{.kind = PrAppEventKind_Scroll, .modifiers = PrAppModifierFlag_Super, .position = over,
-                      .delta = PrVec2{0, -70}});
+    f.push(PrAppEvent{
+        .kind = PrAppEventKind_Scroll,
+        .modifiers = PrAppModifierFlag_Super,
+        .position = over,
+        .delta = PrVec2{0, -70},
+    });
     f.frame();
     CHECK(scene.view.zoom == doctest::Approx(2.01).epsilon(0.01));
     // The point of the graph under the pointer stays under it.
@@ -207,8 +223,13 @@ TEST_CASE("arranging puts each node in the column after the nodes that feed it, 
         {.id = 4, .inputs = in, .inputCount = 1},
     };
     // 1 feeds 2 and 3, 2 feeds 3, and 3 and 4 feed each other.
-    PrKitGraphWire wires[5] = {{.link = {1, 1, 2, 1}}, {.link = {1, 1, 3, 1}}, {.link = {2, 1, 3, 1}},
-                               {.link = {3, 1, 4, 1}}, {.link = {4, 1, 3, 1}}};
+    PrKitGraphWire wires[5] = {
+        {.link = {1, 1, 2, 1}},
+        {.link = {1, 1, 3, 1}},
+        {.link = {2, 1, 3, 1}},
+        {.link = {3, 1, 4, 1}},
+        {.link = {4, 1, 3, 1}},
+    };
     prKitGraphArrange(nodes, 4, wires, 5);
     CHECK(nodes[0].position.x == 0.0f);
     CHECK(nodes[0].position.y == 0.0f);

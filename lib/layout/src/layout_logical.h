@@ -65,16 +65,26 @@ typedef uint8_t LayoutSide;
 
 // The physical side of each logical side, by writing mode and direction (css-writing-modes-4/#logical-to-physical).
 constexpr PrRectSide kLayoutPhysicalSides[5][2][LayoutSide_Count] = {
-    {{PrRectSide_Left, PrRectSide_Right, PrRectSide_Top, PrRectSide_Bottom},
-     {PrRectSide_Right, PrRectSide_Left, PrRectSide_Top, PrRectSide_Bottom}},
-    {{PrRectSide_Top, PrRectSide_Bottom, PrRectSide_Right, PrRectSide_Left},
-     {PrRectSide_Bottom, PrRectSide_Top, PrRectSide_Right, PrRectSide_Left}},
-    {{PrRectSide_Top, PrRectSide_Bottom, PrRectSide_Left, PrRectSide_Right},
-     {PrRectSide_Bottom, PrRectSide_Top, PrRectSide_Left, PrRectSide_Right}},
-    {{PrRectSide_Top, PrRectSide_Bottom, PrRectSide_Right, PrRectSide_Left},
-     {PrRectSide_Bottom, PrRectSide_Top, PrRectSide_Right, PrRectSide_Left}},
-    {{PrRectSide_Bottom, PrRectSide_Top, PrRectSide_Left, PrRectSide_Right},
-     {PrRectSide_Top, PrRectSide_Bottom, PrRectSide_Left, PrRectSide_Right}},
+    {
+        {PrRectSide_Left, PrRectSide_Right, PrRectSide_Top, PrRectSide_Bottom},
+        {PrRectSide_Right, PrRectSide_Left, PrRectSide_Top, PrRectSide_Bottom},
+    },
+    {
+        {PrRectSide_Top, PrRectSide_Bottom, PrRectSide_Right, PrRectSide_Left},
+        {PrRectSide_Bottom, PrRectSide_Top, PrRectSide_Right, PrRectSide_Left},
+    },
+    {
+        {PrRectSide_Top, PrRectSide_Bottom, PrRectSide_Left, PrRectSide_Right},
+        {PrRectSide_Bottom, PrRectSide_Top, PrRectSide_Left, PrRectSide_Right},
+    },
+    {
+        {PrRectSide_Top, PrRectSide_Bottom, PrRectSide_Right, PrRectSide_Left},
+        {PrRectSide_Bottom, PrRectSide_Top, PrRectSide_Right, PrRectSide_Left},
+    },
+    {
+        {PrRectSide_Bottom, PrRectSide_Top, PrRectSide_Left, PrRectSide_Right},
+        {PrRectSide_Top, PrRectSide_Bottom, PrRectSide_Left, PrRectSide_Right},
+    },
 };
 
 // Returns the physical side that the logical `side` maps to in `mode`, or the logical side that the physical `side`
@@ -196,8 +206,9 @@ inline bool operator==(LayoutLineExtent a, LayoutLineExtent b) {
 
 // Returns the physical extent of the logical `size` in `mode`, or the logical size of the physical `extent`.
 inline PrLayoutVec layoutPhysicalSize(LayoutMode mode, LayoutLogicalSize size) {
-    return layoutIsHorizontal(mode) ? PrLayoutVec{size.inlineSize, size.blockSize}
-                                    : PrLayoutVec{size.blockSize, size.inlineSize};
+    if (layoutIsHorizontal(mode))
+        return PrLayoutVec{size.inlineSize, size.blockSize};
+    return PrLayoutVec{size.blockSize, size.inlineSize};
 }
 inline LayoutLogicalSize layoutLogicalSize(LayoutMode mode, PrLayoutVec extent) {
     return layoutIsHorizontal(mode) ? LayoutLogicalSize{extent.x, extent.y} : LayoutLogicalSize{extent.y, extent.x};
@@ -206,15 +217,15 @@ inline LayoutLogicalSize layoutLogicalSize(LayoutMode mode, PrLayoutVec extent) 
 // Returns the physical offset of the top-left corner of a child of size `size` at `offset` in a parent of size `outer`,
 // both in the parent's `mode`.
 inline PrLayoutVec layoutPhysicalOffset(LayoutMode mode, LayoutLogicalOffset offset, LayoutLogicalSize size,
-                                        LayoutLogicalSize outer) {
+        LayoutLogicalSize outer) {
     // On an axis that runs from the right or the bottom, the child's far edge is placed at its offset from the parent's
     // far edge.
-    PrLayoutUnit inlineOffset = layoutRunsBackward(layoutPhysicalSide(mode, LayoutSide_InlineStart))
-                                    ? outer.inlineSize - offset.inlineOffset - size.inlineSize
-                                    : offset.inlineOffset;
-    PrLayoutUnit blockOffset = layoutRunsBackward(layoutPhysicalSide(mode, LayoutSide_BlockStart))
-                                   ? outer.blockSize - offset.blockOffset - size.blockSize
-                                   : offset.blockOffset;
+    PrLayoutUnit inlineOffset = offset.inlineOffset;
+    if (layoutRunsBackward(layoutPhysicalSide(mode, LayoutSide_InlineStart)))
+        inlineOffset = outer.inlineSize - offset.inlineOffset - size.inlineSize;
+    PrLayoutUnit blockOffset = offset.blockOffset;
+    if (layoutRunsBackward(layoutPhysicalSide(mode, LayoutSide_BlockStart)))
+        blockOffset = outer.blockSize - offset.blockOffset - size.blockSize;
     return layoutIsHorizontal(mode) ? PrLayoutVec{inlineOffset, blockOffset} : PrLayoutVec{blockOffset, inlineOffset};
 }
 

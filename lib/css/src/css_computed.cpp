@@ -12,8 +12,8 @@ namespace pr_impl {
 namespace {
 
 CssComputedDeclarations* computedOf(const PrCssStyleDeclaration* declaration) {
-    return reinterpret_cast<CssComputedDeclarations*>(reinterpret_cast<uintptr_t>(declaration)
-                                               - offsetof(CssComputedDeclarations, declaration));
+    return reinterpret_cast<CssComputedDeclarations*>(reinterpret_cast<uintptr_t>(declaration) -
+        offsetof(CssComputedDeclarations, declaration));
 }
 
 // Fills a computed style's block from the presentation of its element's document. Empties the block if the document has
@@ -28,7 +28,7 @@ void refreshComputed(const PrCssStyleDeclaration* declaration) {
         return;
     }
     cssPresentationComputedBlock(presentation, element, computed->pseudo, declaration->block, &computed->filler,
-                           &computed->version);
+        &computed->version);
 }
 
 // Serializes one longhand of a computed style from the presentation of its element's document.
@@ -57,8 +57,8 @@ CssPseudo computedTarget(PrStringView pseudoElement) {
         bool only = true;
         for (uint32_t k = 0; k < compound->simpleCount && only; ++k) {
             const CssSimpleSelector* simple = &selectors->simple[compound->simple + k];
-            only = simple->kind == CssSimpleKind_PseudoElement && simple->pseudoElement != CssPseudoElement_SlottedFn
-                   && simple->pseudoElement != CssPseudoElement_PartFn;
+            only = simple->kind == CssSimpleKind_PseudoElement && simple->pseudoElement != CssPseudoElement_SlottedFn &&
+                simple->pseudoElement != CssPseudoElement_PartFn;
         }
         if (only) {
             pseudo = cssSelectorPseudo(selectors, selectors->list.first);
@@ -79,7 +79,8 @@ PrCssStyleDeclaration* cssElementComputedStyle(PrDomElement* element, PrStringVi
     if (computed == nullptr) {
         computed = allocZeroed<CssComputedDeclarations>();
         computed->declaration = PrCssStyleDeclaration{
-            {nullptr, element, &computed->block, nullptr, refreshComputed, computedLonghand, true}};
+            {nullptr, element, &computed->block, nullptr, refreshComputed, computedLonghand, true},
+        };
         computed->pseudo = pseudo;
     }
     return &computed->declaration;

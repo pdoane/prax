@@ -32,9 +32,11 @@ PrLayoutBoxStyle withWidth(PrLayoutBoxStyle box, PrLayoutLength width) {
 
 // Returns `pixels` plus `percent`, as calc() gives it.
 PrLayoutLength calc(Fixture& f, double pixels, double percent) {
-    PrLayoutCalcNode nodes[] = {prLayoutCalcOperation(PrLayoutCalcOp_Sum, 2),
-                                prLayoutCalcLeaf(PrLayoutCalcLeaf_Px, pixels),
-                                prLayoutCalcLeaf(PrLayoutCalcLeaf_Percent, percent)};
+    PrLayoutCalcNode nodes[] = {
+        prLayoutCalcOperation(PrLayoutCalcOp_Sum, 2),
+        prLayoutCalcLeaf(PrLayoutCalcLeaf_Px, pixels),
+        prLayoutCalcLeaf(PrLayoutCalcLeaf_Percent, percent),
+    };
     return prLayoutLengthIntern(f.tree, nodes, 3);
 }
 
@@ -190,36 +192,36 @@ TEST_CASE("intrinsic sizes: a block's contribution from its sizing properties") 
     };
     // A percentage width behaves as auto.
     CHECK(contribution(prLayoutLengthMaxContent(),
-                       [](Fixture&, PrLayoutBoxStyle& box) { box.width = prLayoutLengthPercent(50); }) == 120);
+        [](Fixture&, PrLayoutBoxStyle& box) { box.width = prLayoutLengthPercent(50); }) == 120);
     // A minimum resolves its percentage against zero (css-sizing-3/#cyclic-percentage-contribution).
     CHECK(contribution(prLayoutLengthMinContent(),
-                       [](Fixture& f, PrLayoutBoxStyle& box) { box.minWidth = calc(f, 200, 50); }) == 200);
+        [](Fixture& f, PrLayoutBoxStyle& box) { box.minWidth = calc(f, 200, 50); }) == 200);
     // A maximum with a percentage is none.
     CHECK(contribution(prLayoutLengthMaxContent(),
-                       [](Fixture& f, PrLayoutBoxStyle& box) { box.maxWidth = calc(f, 10, 1); }) == 120);
+        [](Fixture& f, PrLayoutBoxStyle& box) { box.maxWidth = calc(f, 10, 1); }) == 120);
     // Percentage margins and padding are zero.
     CHECK(contribution(prLayoutLengthMaxContent(), [](Fixture&, PrLayoutBoxStyle& box) {
-              box.padding[PrRectSide_Left] = prLayoutLengthPercent(10);
-              box.margin[PrRectSide_Left] = prLayoutLengthPercent(20);
-          }) == 120);
+        box.padding[PrRectSide_Left] = prLayoutLengthPercent(10);
+        box.margin[PrRectSide_Left] = prLayoutLengthPercent(20);
+    }) == 120);
     // Fixed margins add to it, and a fixed width replaces the content's.
     CHECK(contribution(prLayoutLengthMaxContent(), [](Fixture&, PrLayoutBoxStyle& box) {
-              box.margin[PrRectSide_Left] = prLayoutLengthPx(7);
-              box.margin[PrRectSide_Right] = prLayoutLengthPx(3);
-          }) == 130);
+        box.margin[PrRectSide_Left] = prLayoutLengthPx(7);
+        box.margin[PrRectSide_Right] = prLayoutLengthPx(3);
+    }) == 130);
     CHECK(contribution(prLayoutLengthMaxContent(),
-                       [](Fixture&, PrLayoutBoxStyle& box) { box.width = prLayoutLengthPx(60); }) == 60);
+        [](Fixture&, PrLayoutBoxStyle& box) { box.width = prLayoutLengthPx(60); }) == 60);
     // A minimum wins over a maximum, fixed or a keyword.
     CHECK(contribution(prLayoutLengthMaxContent(), [](Fixture&, PrLayoutBoxStyle& box) {
-              box.width = prLayoutLengthPx(150);
-              box.minWidth = prLayoutLengthPx(200);
-              box.maxWidth = prLayoutLengthPx(100);
-          }) == 200);
+        box.width = prLayoutLengthPx(150);
+        box.minWidth = prLayoutLengthPx(200);
+        box.maxWidth = prLayoutLengthPx(100);
+    }) == 200);
     CHECK(contribution(prLayoutLengthMaxContent(), [](Fixture&, PrLayoutBoxStyle& box) {
-              box.width = prLayoutLengthPx(50);
-              box.minWidth = prLayoutLengthMaxContent();
-              box.maxWidth = prLayoutLengthPx(100);
-          }) == 120);
+        box.width = prLayoutLengthPx(50);
+        box.minWidth = prLayoutLengthMaxContent();
+        box.maxWidth = prLayoutLengthPx(100);
+    }) == 120);
 }
 
 TEST_CASE("intrinsic sizes: text gives its longest word and its whole line") {
@@ -450,18 +452,18 @@ TEST_CASE("intrinsic sizes: an empty inline box at either end of the content cou
     };
     auto image = [](Fixture& f, PrLayoutNode parent) { replaced(f, parent, inlineBox(), natural(100, 10)); };
     CHECK(measured([&](Fixture& f, PrLayoutNode box) {
-              image(f, box);
-              f.element(box, edged(20, 0));
-          }) == 121);
+        image(f, box);
+        f.element(box, edged(20, 0));
+    }) == 121);
     CHECK(measured([&](Fixture& f, PrLayoutNode box) {
-              f.element(box, edged(0, 20));
-              image(f, box);
-          }) == 121);
+        f.element(box, edged(0, 20));
+        image(f, box);
+    }) == 121);
     CHECK(measured([&](Fixture& f, PrLayoutNode box) {
-              f.element(f.element(box, edged(5, 7)), edged(5, 7));
-              image(f, box);
-              f.element(f.element(box, edged(5, 7)), edged(5, 7));
-          }) == 152);
+        f.element(f.element(box, edged(5, 7)), edged(5, 7));
+        image(f, box);
+        f.element(f.element(box, edged(5, 7)), edged(5, 7));
+    }) == 152);
 }
 
 TEST_CASE("intrinsic sizes: a change of writing mode measures again in the other axis") {

@@ -43,9 +43,9 @@ bool fullyActive(const PrHtmlWindow* window) {
 
 // html/#can-have-its-url-rewritten
 bool canRewrite(const PrUrl* document, const PrUrl* target) {
-    if (prUrlScheme(document) != prUrlScheme(target) || prUrlUsername(document) != prUrlUsername(target)
-        || prUrlPassword(document) != prUrlPassword(target) || prUrlHost(document) != prUrlHost(target)
-        || prUrlPort(document) != prUrlPort(target))
+    if (prUrlScheme(document) != prUrlScheme(target) || prUrlUsername(document) != prUrlUsername(target) ||
+            prUrlPassword(document) != prUrlPassword(target) || prUrlHost(document) != prUrlHost(target) ||
+            prUrlPort(document) != prUrlPort(target))
         return false;
     PrStringView scheme = prUrlScheme(target);
     if (scheme == "http" || scheme == "https")
@@ -135,8 +135,10 @@ uint64_t htmlHistoryCommit(HtmlSessionHistory* history, PrStringView url, bool i
     if (commit == HtmlHistoryCommit_Push) {
         if (current)
             dropForward(history);
-        history->entries.push(HtmlHistoryEntry{prStringCopy(url), prStringNull(), document,
-                                               PrHtmlScrollRestoration_Auto, initial});
+        history->entries.push(HtmlHistoryEntry{
+            prStringCopy(url), prStringNull(), document,
+            PrHtmlScrollRestoration_Auto, initial,
+        });
         history->index = history->entries.count - 1;
         return document;
     }
@@ -190,8 +192,8 @@ void htmlHistoryNotify(PrHtmlWindow* window, PrStringView oldUrl) {
 void htmlHistoryUpdate(PrHtmlWindow* window, PrString state, PrHtmlHistoryHandling handling) {
     HtmlSessionHistory* history = window->history;
     PrString url = prUrlSerialize(window->document->url, PrUrlSerialization_Whole);
-    bool current = history->index < history->entries.count
-                   && history->entries.data[history->index].document == window->historyDocument;
+    bool current = history->index < history->entries.count &&
+        history->entries.data[history->index].document == window->historyDocument;
     if (!current) {
         prStringReset(&url);
         prStringReset(&state);
@@ -271,7 +273,7 @@ PrStatus prHtmlHistoryState(const PrHtmlWindow* self, PrStringView* out, uint32_
 }
 
 PrStatus prHtmlHistoryPushState(PrHtmlWindow* self, PrStringView serialized, PrStringView url,
-                                PrHtmlHistoryHandling handling) {
+        PrHtmlHistoryHandling handling) {
     if (!fullyActive(self))
         return PrStatus_NotAllowed;
     PrDomDocument* document = self->document;
@@ -323,12 +325,11 @@ PrStatus prHtmlHistorySetScrollRestoration(PrHtmlWindow* self, PrHtmlScrollResto
 // PopStateEvent and HashChangeEvent
 
 PrHtmlPopStateEvent* PR_NULLABLE prHtmlPopStateEventQuery(PrDomEvent* PR_NULLABLE object) {
-    return object != nullptr && object->kind == PrDomEventKind_PopState ? static_cast<PrHtmlPopStateEvent*>(object)
-                                                                        : nullptr;
+    return object != nullptr && object->kind == PrDomEventKind_PopState ? static_cast<PrHtmlPopStateEvent*>(object) : nullptr;
 }
 
 PrHtmlPopStateEvent* prHtmlPopStateEventCreate(PrStringView type, const PrDomEventInit* PR_NULLABLE init,
-                                               bool hasUAVisualTransition) {
+        bool hasUAVisualTransition) {
     PrHtmlPopStateEvent* event = domEventCreate<PrHtmlPopStateEvent>(
         type, init != nullptr ? *init : prDomEventInitDefault(), PrDomEventKind_PopState);
     event->history = allocZeroed<DomHistoryEventData>();
@@ -345,13 +346,11 @@ bool prHtmlPopStateEventHasUAVisualTransition(const PrHtmlPopStateEvent* self) {
 }
 
 PrHtmlHashChangeEvent* PR_NULLABLE prHtmlHashChangeEventQuery(PrDomEvent* PR_NULLABLE object) {
-    return object != nullptr && object->kind == PrDomEventKind_HashChange
-               ? static_cast<PrHtmlHashChangeEvent*>(object)
-               : nullptr;
+    return object != nullptr && object->kind == PrDomEventKind_HashChange ? static_cast<PrHtmlHashChangeEvent*>(object) : nullptr;
 }
 
 PrHtmlHashChangeEvent* prHtmlHashChangeEventCreate(PrStringView type, const PrDomEventInit* PR_NULLABLE init,
-                                                   PrStringView oldUrl, PrStringView newUrl) {
+        PrStringView oldUrl, PrStringView newUrl) {
     PrHtmlHashChangeEvent* event = domEventCreate<PrHtmlHashChangeEvent>(
         type, init != nullptr ? *init : prDomEventInitDefault(), PrDomEventKind_HashChange);
     event->history = allocZeroed<DomHistoryEventData>();

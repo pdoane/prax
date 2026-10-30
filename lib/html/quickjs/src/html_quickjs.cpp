@@ -98,7 +98,7 @@ JsHtmlRealm* realmOf(JSContext* ctx) {
 void releaseFetchValues(JSContext* ctx, JsHtmlFetch* fetch) {
     if (fetch->abortAlgorithm != 0)
         prDomAbortSignalRemove(jsHandleAs<PrDomAbortSignal>(ctx, fetch->signal, prJsDomAbortSignalClass),
-                               fetch->abortAlgorithm);
+            fetch->abortAlgorithm);
     fetch->abortAlgorithm = 0;
     JS_FreeValue(ctx, fetch->signal);
     JS_FreeValue(ctx, fetch->resolvingFuncs[0]);
@@ -123,13 +123,15 @@ void fetched(void* PR_NULLABLE context, const PrFetchClientResponse* response) {
         if (response->status != PrStatus_Ok) {
             result = JS_ThrowTypeError(ctx, "Failed to fetch");
         } else {
-            PrJsFetchResponseDesc desc{.type = response->type,
-                                     .status = response->responseStatus,
-                                     .url = response->url,
-                                     .headers = response->headers,
-                                     .headerCount = response->headerCount,
-                                     .body = response->body,
-                                     .signal = fetch->signal};
+            PrJsFetchResponseDesc desc{
+                .type = response->type,
+                .status = response->responseStatus,
+                .url = response->url,
+                .headers = response->headers,
+                .headerCount = response->headerCount,
+                .body = response->body,
+                .signal = fetch->signal,
+            };
             result = prJsFetchResponseNew(ctx, &desc);
         }
         bool rejected = JS_IsException(result);
@@ -192,17 +194,21 @@ JSValue fetchMethod(JSContext* ctx, JSValueConst, int argc, JSValueConst* argv) 
     }
     if (ok) {
         JsHtmlFetch* fetch = allocZeroed<JsHtmlFetch>();
-        *fetch = JsHtmlFetch{.realm = realm,
-                             .resolvingFuncs = {functions[0], functions[1]},
-                             .signal = JS_DupValue(ctx, request.signal)};
-        PrFetchClientRequest desc{.url = request.url,
-                                .method = request.method,
-                                .headers = request.headers,
-                                .headerCount = request.headerCount,
-                                .body = request.body,
-                                .mode = request.mode,
-                                .credentials = request.credentials,
-                                .redirect = request.redirect};
+        *fetch = JsHtmlFetch{
+            .realm = realm,
+            .resolvingFuncs = {functions[0], functions[1]},
+            .signal = JS_DupValue(ctx, request.signal),
+        };
+        PrFetchClientRequest desc{
+            .url = request.url,
+            .method = request.method,
+            .headers = request.headers,
+            .headerCount = request.headerCount,
+            .body = request.body,
+            .mode = request.mode,
+            .credentials = request.credentials,
+            .redirect = request.redirect,
+        };
         if (prHtmlPageFetch(realm->page, &desc, fetched, fetch) == PrStatus_Ok) {
             realm->fetches.push(fetch);
             if (PrDomAbortSignal* signal = jsHandleAs<PrDomAbortSignal>(ctx, fetch->signal, prJsDomAbortSignalClass)) {
@@ -233,7 +239,7 @@ void bindFetch(JSContext* ctx) {
     JSValue global = JS_GetGlobalObject(ctx);
     JSValue function = JS_NewCFunction2(ctx, JsCallScoped<fetchMethod>::call, "fetch", 1, JS_CFUNC_generic, 0);
     JS_DefinePropertyValueStr(ctx, global, "fetch", function,
-                              JS_PROP_WRITABLE | JS_PROP_CONFIGURABLE | JS_PROP_ENUMERABLE);
+        JS_PROP_WRITABLE | JS_PROP_CONFIGURABLE | JS_PROP_ENUMERABLE);
     JS_FreeValue(ctx, global);
 }
 
@@ -398,7 +404,7 @@ bool resolveRequests(JsHtmlRealm* realm, JSModuleDef* definition, PrStringView b
 // already parsed by the same name is not parsed again. An error is kept with the module, for the execution or the
 // import() that reaches it.
 uint32_t parseModule(void* context, PrHtmlPage*, const PrHtmlScript* script, PrHtmlModuleRequestFn request,
-                     void* PR_NULLABLE requestContext) {
+        void* PR_NULLABLE requestContext) {
     JsHtmlRealm* realm = static_cast<JsHtmlRealm*>(context);
     if (realm->engine == nullptr)
         return 0;
@@ -417,9 +423,11 @@ uint32_t parseModule(void* context, PrHtmlPage*, const PrHtmlScript* script, PrH
         TextBuffer text;
         evalText(script->source, script->column, &text);
         textAppendChar(&name, '\0');
-        JSEvalOptions options{JS_EVAL_OPTIONS_VERSION,
-                              JS_EVAL_TYPE_MODULE | JS_EVAL_FLAG_COMPILE_ONLY | JS_EVAL_FLAG_NO_RESOLVE,
-                              textView(&name).data, int(script->line)};
+        JSEvalOptions options{
+            JS_EVAL_OPTIONS_VERSION,
+            JS_EVAL_TYPE_MODULE | JS_EVAL_FLAG_COMPILE_ONLY | JS_EVAL_FLAG_NO_RESOLVE,
+            textView(&name).data, int(script->line),
+        };
         PrStringView eval = textView(&text);
         JSValue compiled = JS_Eval2(ctx, eval.data, eval.size - 1, &options);
         textReset(&text);
@@ -428,10 +436,9 @@ uint32_t parseModule(void* context, PrHtmlPage*, const PrHtmlScript* script, PrH
         if (parsed) {
             JSModuleDef* definition = static_cast<JSModuleDef*>(JS_VALUE_GET_PTR(compiled));
             JSValue meta = JS_GetImportMeta(ctx, definition);
-            parsed = !JS_IsException(meta)
-                     && JS_DefinePropertyValueStr(ctx, meta, "url", jsNewStringView(ctx, script->baseUrl),
-                                                  JS_PROP_C_W_E) >= 0
-                     && resolveRequests(realm, definition, script->baseUrl, &requests);
+            parsed = !JS_IsException(meta) &&
+                JS_DefinePropertyValueStr(ctx, meta, "url", jsNewStringView(ctx, script->baseUrl),
+                    JS_PROP_C_W_E) >= 0 && resolveRequests(realm, definition, script->baseUrl, &requests);
             JS_FreeValue(ctx, meta);
         }
         // Recording an import may move the modules.
@@ -552,7 +559,7 @@ void imported(void* PR_NULLABLE context, PrStatus status) {
             TextBuffer specifier;
             jsEnterRealm(ctx);
             result = JS_LoadModule(ctx, cStringOf(prStringView(&import->base), &base),
-                                   cStringOf(prStringView(&import->specifier), &specifier));
+                cStringOf(prStringView(&import->specifier), &specifier));
             jsLeaveRealm(ctx);
             textReset(&base);
             textReset(&specifier);
@@ -584,11 +591,13 @@ void importModule(JSContext* ctx, const char* baseName, const char* specifier, J
         return;
     }
     JsHtmlImport* import = allocZeroed<JsHtmlImport>();
-    *import = JsHtmlImport{.realm = realm,
-                           .resolvingFuncs = {JS_DupValue(ctx, resolvingFuncs[0]), JS_DupValue(ctx, resolvingFuncs[1])},
-                           .base = prStringCopy(baseName),
-                           .specifier = prStringCopy(specifier),
-                           .url = prStringCopy(url)};
+    *import = JsHtmlImport{
+        .realm = realm,
+        .resolvingFuncs = {JS_DupValue(ctx, resolvingFuncs[0]), JS_DupValue(ctx, resolvingFuncs[1])},
+        .base = prStringCopy(baseName),
+        .specifier = prStringCopy(specifier),
+        .url = prStringCopy(url),
+    };
     js_free(ctx, url);
     realm->imports.push(import);
     prHtmlPageImportModule(realm->page, prStringView(&import->url), imported, import);
@@ -673,7 +682,7 @@ PrStatus settle(void* context, PrHtmlPage* page) {
 }
 
 bool compile(void* context, PrHtmlPage*, PrDomEventTarget* target, PrDomElement* element,
-             PrDomEventHandler handler, PrStringView body, PrDomEventHandlerCallback* out) {
+        PrDomEventHandler handler, PrStringView body, PrDomEventHandlerCallback* out) {
     JsHtmlRealm* realm = static_cast<JsHtmlRealm*>(context);
     return realm->engine != nullptr && jsHtmlCompileEventHandler(realm->ctx, target, element, handler, body, out);
 }
@@ -724,8 +733,7 @@ void closed(void* context, PrHtmlPage* page) {
 
 // The host's members that the engine passes on, with the host's own context.
 
-PrDomHostState elementState(void* context, PrHtmlPage* page, const PrDomElement* element,
-                            PrDomHostState wanted) {
+PrDomHostState elementState(void* context, PrHtmlPage* page, const PrDomElement* element, PrDomHostState wanted) {
     const PrHtmlHost& host = static_cast<JsHtmlRealm*>(context)->host;
     return host.elementState(host.context, page, element, wanted);
 }

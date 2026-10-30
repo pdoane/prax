@@ -133,7 +133,7 @@ bool cssCustomBefore(uint32_t hashA, PrStringView a, uint32_t hashB, PrStringVie
 // one, and the caller holds one reference to it. `base` must have no base of its own. The rows are sorted by
 // cssCustomBefore and have distinct names. The set retains `base`.
 const CssCustomProperties* cssCustomPropertiesCreate(CssStyleTable* table, const CssCustomProperties* PR_NULLABLE base,
-                                                     const CssCustomRow* PR_NULLABLE rows, uint32_t count);
+    const CssCustomRow* PR_NULLABLE rows, uint32_t count);
 
 // Looks up the value of custom property `name`. Returns false if the set has no valid value for it.
 bool cssCustomValue(const CssCustomProperties* PR_NULLABLE custom, PrStringView name, PrStringView* out);
@@ -206,8 +206,7 @@ typedef uint8_t CssFontMetric;
 // `style` set, in ems, and returns false if it cannot measure it. An advance is measured down the line if `upright`,
 // and along a horizontal line otherwise. `measure` is called on any thread that computes styles.
 struct CssFontMeasure {
-    bool (*measure)(void* PR_NULLABLE data, const CssComputedStyle* style, CssFontMetric metric, bool upright,
-                    double* ems);
+    bool (*measure)(void* PR_NULLABLE data, const CssComputedStyle* style, CssFontMetric metric, bool upright, double* ems);
     void* PR_NULLABLE data;
 };
 
@@ -407,12 +406,10 @@ void cssStyleBegin(CssStyleBuilder* builder);
 
 // Computes `specified` and adds it as the computed value of the group's next property. `specified` is a value of
 // `property` as declared, with no CSS-wide keyword or substitution left in it.
-void cssStyleAddComputed(CssStyleBuilder* builder, PrCssProperty property, CssValueRun specified,
-                         const CssStyleContext& context);
+void cssStyleAddComputed(CssStyleBuilder* builder, PrCssProperty property, CssValueRun specified, const CssStyleContext& context);
 
 // Appends the computed value of `property` to `pool`, computed in the same way as cssStyleAddComputed.
-void cssStyleComputeValue(CssValuePool* pool, PrCssProperty property, CssValueRun specified,
-                          const CssStyleContext& context);
+void cssStyleComputeValue(CssValuePool* pool, PrCssProperty property, CssValueRun specified, const CssStyleContext& context);
 
 // Appends the computed value of `property`'s initial value to `pool` (css-cascade-5/#initial-values). The initial font
 // family is the user agent's (css-fonts-4/#font-family-prop).
@@ -530,7 +527,7 @@ CssColor cssColorConvert(const CssColor& color, PrColorSpace space);
 // Returns the color from `a` to `b` by `t` in `space`, with hues taking `hueMethod` (css-color-4/#interpolation). A
 // component missing in one color takes the other's, and one missing in both stays missing.
 CssColor cssColorInterpolate(const CssColor& a, const CssColor& b, double t, PrColorSpace space,
-                             PrColorHueMethod hueMethod);
+    PrColorHueMethod hueMethod);
 
 // Returns the extended sRGB of a color, with straight alpha in [0, 1]. A missing component is zero.
 PrColor cssColorToSrgb(const CssColor& color);

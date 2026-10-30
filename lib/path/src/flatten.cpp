@@ -81,14 +81,15 @@ void pathFlattenQuadLines(PrVec2 p0, PrVec2 p1, PrVec2 p2, uint32_t count, Array
     for (uint32_t i = 1; i < count; ++i) {
         float t = float(i) / float(count);
         float u = 1 - t;
-        out.push(PrVec2{u * u * p0.x + 2 * u * t * p1.x + t * t * p2.x,
-                         u * u * p0.y + 2 * u * t * p1.y + t * t * p2.y});
+        out.push(PrVec2{
+            u * u * p0.x + 2 * u * t * p1.x + t * t * p2.x,
+            u * u * p0.y + 2 * u * t * p1.y + t * t * p2.y,
+        });
     }
     out.push(p2);
 }
 
-void pathFlattenCubicLines(PrVec2 p0, PrVec2 p1, PrVec2 p2, PrVec2 p3, uint32_t count,
-                           Array<PrVec2>& out) {
+void pathFlattenCubicLines(PrVec2 p0, PrVec2 p1, PrVec2 p2, PrVec2 p3, uint32_t count, Array<PrVec2>& out) {
     for (uint32_t i = 1; i < count; ++i) {
         float t = float(i) / float(count);
         float u = 1 - t;
@@ -96,8 +97,7 @@ void pathFlattenCubicLines(PrVec2 p0, PrVec2 p1, PrVec2 p2, PrVec2 p3, uint32_t 
         float b = 3 * u * u * t;
         float c = 3 * u * t * t;
         float d = t * t * t;
-        out.push(PrVec2{a * p0.x + b * p1.x + c * p2.x + d * p3.x,
-                         a * p0.y + b * p1.y + c * p2.y + d * p3.y});
+        out.push(PrVec2{a * p0.x + b * p1.x + c * p2.x + d * p3.x, a * p0.y + b * p1.y + c * p2.y + d * p3.y});
     }
     out.push(p3);
 }
@@ -106,42 +106,37 @@ void pathFlattenQuad(PrVec2 p0, PrVec2 p1, PrVec2 p2, float tolerance, Array<PrV
     pathFlattenQuadLines(p0, p1, p2, pathQuadLineCount(p0, p1, p2, tolerance), out);
 }
 
-void pathFlattenCubic(PrVec2 p0, PrVec2 p1, PrVec2 p2, PrVec2 p3, float tolerance,
-                      Array<PrVec2>& out) {
+void pathFlattenCubic(PrVec2 p0, PrVec2 p1, PrVec2 p2, PrVec2 p3, float tolerance, Array<PrVec2>& out) {
     pathFlattenCubicLines(p0, p1, p2, p3, pathCubicLineCount(p0, p1, p2, p3, tolerance), out);
 }
 
 void pathFlattenQuadArea(PrVec2 p0, PrVec2 p1, PrVec2 p2, float tolerance, Array<PrVec2>& out) {
     PrVec2 second{2 * (p0.x - 2 * p1.x + p2.x), 2 * (p0.y - 2 * p1.y + p2.y)};
-    flattenArea(pathQuadLineCount(p0, p1, p2, tolerance), out, [&](float t, PrVec2* tangent,
-                                                                   PrVec2* curvature) {
+    flattenArea(pathQuadLineCount(p0, p1, p2, tolerance), out, [&](float t, PrVec2* tangent, PrVec2* curvature) {
         float u = 1 - t;
-        *tangent = PrVec2{2 * (u * (p1.x - p0.x) + t * (p2.x - p1.x)),
-                           2 * (u * (p1.y - p0.y) + t * (p2.y - p1.y))};
+        *tangent = PrVec2{2 * (u * (p1.x - p0.x) + t * (p2.x - p1.x)), 2 * (u * (p1.y - p0.y) + t * (p2.y - p1.y))};
         *curvature = second;
-        return PrVec2{u * u * p0.x + 2 * u * t * p1.x + t * t * p2.x,
-                       u * u * p0.y + 2 * u * t * p1.y + t * t * p2.y};
+        return PrVec2{u * u * p0.x + 2 * u * t * p1.x + t * t * p2.x, u * u * p0.y + 2 * u * t * p1.y + t * t * p2.y};
     });
     out.push(p2);
 }
 
-void pathFlattenCubicArea(PrVec2 p0, PrVec2 p1, PrVec2 p2, PrVec2 p3, float tolerance,
-                          Array<PrVec2>& out) {
-    flattenArea(pathCubicLineCount(p0, p1, p2, p3, tolerance), out, [&](float t, PrVec2* tangent,
-                                                                        PrVec2* curvature) {
+void pathFlattenCubicArea(PrVec2 p0, PrVec2 p1, PrVec2 p2, PrVec2 p3, float tolerance, Array<PrVec2>& out) {
+    flattenArea(pathCubicLineCount(p0, p1, p2, p3, tolerance), out, [&](float t, PrVec2* tangent, PrVec2* curvature) {
         float u = 1 - t;
-        *tangent = PrVec2{3 * (u * u * (p1.x - p0.x) + 2 * u * t * (p2.x - p1.x)
-                                + t * t * (p3.x - p2.x)),
-                           3 * (u * u * (p1.y - p0.y) + 2 * u * t * (p2.y - p1.y)
-                                + t * t * (p3.y - p2.y))};
-        *curvature = PrVec2{6 * (u * (p2.x - 2 * p1.x + p0.x) + t * (p3.x - 2 * p2.x + p1.x)),
-                             6 * (u * (p2.y - 2 * p1.y + p0.y) + t * (p3.y - 2 * p2.y + p1.y))};
+        *tangent = PrVec2{
+            3 * (u * u * (p1.x - p0.x) + 2 * u * t * (p2.x - p1.x) + t * t * (p3.x - p2.x)),
+            3 * (u * u * (p1.y - p0.y) + 2 * u * t * (p2.y - p1.y) + t * t * (p3.y - p2.y)),
+        };
+        *curvature = PrVec2{
+            6 * (u * (p2.x - 2 * p1.x + p0.x) + t * (p3.x - 2 * p2.x + p1.x)),
+            6 * (u * (p2.y - 2 * p1.y + p0.y) + t * (p3.y - 2 * p2.y + p1.y)),
+        };
         float a = u * u * u;
         float b = 3 * u * u * t;
         float c = 3 * u * t * t;
         float d = t * t * t;
-        return PrVec2{a * p0.x + b * p1.x + c * p2.x + d * p3.x,
-                       a * p0.y + b * p1.y + c * p2.y + d * p3.y};
+        return PrVec2{a * p0.x + b * p1.x + c * p2.x + d * p3.x, a * p0.y + b * p1.y + c * p2.y + d * p3.y};
     });
     out.push(p3);
 }

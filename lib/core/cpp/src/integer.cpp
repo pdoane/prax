@@ -34,10 +34,13 @@ size_t parseU64Prefix(const char* data, size_t size, uint64_t* out, uint32_t rad
     size_t i = 0;
     for (; i < size; ++i) {
         char c = data[i];
-        uint32_t digit = c >= '0' && c <= '9' ? uint32_t(c - '0')
-            : c >= 'a' && c <= 'z'             ? uint32_t(c - 'a' + 10)
-            : c >= 'A' && c <= 'Z'             ? uint32_t(c - 'A' + 10)
-                                               : radix;
+        uint32_t digit = radix;
+        if (c >= '0' && c <= '9')
+            digit = uint32_t(c - '0');
+        else if (c >= 'a' && c <= 'z')
+            digit = uint32_t(c - 'a' + 10);
+        else if (c >= 'A' && c <= 'Z')
+            digit = uint32_t(c - 'A' + 10);
         if (digit >= radix)
             break;
         value = value > (UINT64_MAX - digit) / radix ? UINT64_MAX : value * radix + digit;

@@ -13,10 +13,12 @@ namespace pr_impl {
 namespace {
 
 PrImageFormat rgbaFormat() {
-    return {PrColorModel_Rgb,
-            PrImageSample_U8,
-            PrImageAlpha_Straight,
-            {PrImageColorEncoding_Named, PrColorSpace_Srgb, {nullptr, 0}}};
+    return {
+        PrColorModel_Rgb,
+        PrImageSample_U8,
+        PrImageAlpha_Straight,
+        {PrImageColorEncoding_Named, PrColorSpace_Srgb, {nullptr, 0}},
+    };
 }
 
 struct Reader {
@@ -76,7 +78,7 @@ struct FakeCodec {
     }
 
     static PrStatus open(PrImageCodec* codec, const PrImageSource* source, const PrImageLimits*,
-                         PrImageReader** out, PrImageInfo* info) {
+            PrImageReader** out, PrImageInfo* info) {
         FakeCodec& fake = of(codec);
         ++fake.opens;
         *out = nullptr;
@@ -99,8 +101,7 @@ struct FakeCodec {
         ++of(codec).closes;
     }
 
-    static PrStatus frameInfo(PrImageCodec*, PrImageReader*, uint32_t frame,
-                              PrImageFrameInfo* info) {
+    static PrStatus frameInfo(PrImageCodec*, PrImageReader*, uint32_t frame, PrImageFrameInfo* info) {
         info->durationMs = frame;
         return PrStatus_Ok;
     }
@@ -218,8 +219,7 @@ TEST_CASE("image source bounds are checked before callbacks") {
     PrImageSource source = reader.source();
     uint8_t result[4] = {};
     CHECK(prImageSourceRead(&source, 6, result, 4) != PrStatus_Ok);
-    CHECK(prImageSourceRead(&source, std::numeric_limits<uint64_t>::max(), result, 2)
-          != PrStatus_Ok);
+    CHECK(prImageSourceRead(&source, std::numeric_limits<uint64_t>::max(), result, 2) != PrStatus_Ok);
     CHECK(reader.reads == 0);
     REQUIRE(prImageSourceRead(&source, 4, result, 4) == PrStatus_Ok);
     CHECK(result[0] == 1);
@@ -375,8 +375,7 @@ TEST_CASE("rendering image convenience rejects independent alpha") {
     REQUIRE(prImageDecoderOpen(decoder, reader.source(), nullptr) == PrStatus_Ok);
     uint8_t output[16] = {};
     CHECK(prImageDecoderReadRgba8(decoder, 0, PrImageAlpha_Straight, PrImageOrientation_Identity,
-                                  PrPixels{output, 8, {2, 2}})
-          == PrStatus_NotSupported);
+        PrPixels{output, 8, {2, 2}}) == PrStatus_NotSupported);
     prImageDecoderDestroy(decoder);
 }
 
@@ -399,8 +398,8 @@ TEST_CASE("rendering image convenience rejects overflowing RGBA size before allo
     REQUIRE(prImageDecoderOpen(decoder, reader.source(), &limits) == PrStatus_Ok);
     uint8_t dummy = 0xA5;
     const PrPixels huge{&dummy, size_t(4) << 31, {uint32_t(1) << 31, uint32_t(1) << 31}};
-    CHECK(prImageDecoderReadRgba8(decoder, 0, PrImageAlpha_Straight, PrImageOrientation_Identity, huge)
-          == PrStatus_Limit);
+    CHECK(prImageDecoderReadRgba8(decoder, 0, PrImageAlpha_Straight, PrImageOrientation_Identity, huge) ==
+        PrStatus_Limit);
     CHECK(fake.decodes == 0);
     CHECK(dummy == 0xA5);
     prImageDecoderDestroy(decoder);
@@ -410,13 +409,12 @@ TEST_CASE("orienting arranges pixels of any size as the orientation displays the
     // A 3x1 row of 2-byte pixels, turned a quarter turn, becomes a 1x3 column.
     const uint8_t row[] = {1, 1, 2, 2, 3, 3};
     uint8_t column[6] = {};
-    prImageOrient(PrPixelView{row, sizeof(row), {3, 1}}, 2, PrImageOrientation_Rotate90,
-                  PrPixels{column, 2, {1, 3}});
+    prImageOrient(PrPixelView{row, sizeof(row), {3, 1}}, 2, PrImageOrientation_Rotate90, PrPixels{column, 2, {1, 3}});
     const uint8_t turned[] = {1, 1, 2, 2, 3, 3};
     CHECK(memcmp(column, turned, sizeof(column)) == 0);
     uint8_t flipped[6] = {};
     prImageOrient(PrPixelView{row, sizeof(row), {3, 1}}, 2, PrImageOrientation_FlipHorizontal,
-                  PrPixels{flipped, sizeof(flipped), {3, 1}});
+        PrPixels{flipped, sizeof(flipped), {3, 1}});
     const uint8_t mirrored[] = {3, 3, 2, 2, 1, 1};
     CHECK(memcmp(flipped, mirrored, sizeof(flipped)) == 0);
 }
@@ -424,14 +422,14 @@ TEST_CASE("orienting arranges pixels of any size as the orientation displays the
 TEST_CASE("an orientation's inverse arranges oriented pixels as they were stored") {
     // A 3x2 image of 1-byte pixels, numbered in stored order.
     const uint8_t stored[] = {1, 2, 3, 4, 5, 6};
-    for (PrImageOrientation orientation = PrImageOrientation_Identity; orientation <= PrImageOrientation_Rotate270;
-         ++orientation) {
+    for (PrImageOrientation orientation =
+            PrImageOrientation_Identity; orientation <= PrImageOrientation_Rotate270; ++orientation) {
         PrUVec2 extent = prImageOrientationSwapsAxes(orientation) ? PrUVec2{2, 3} : PrUVec2{3, 2};
         uint8_t oriented[6] = {};
         prImageOrient(PrPixelView{stored, 3, {3, 2}}, 1, orientation, PrPixels{oriented, extent.x, extent});
         uint8_t restored[6] = {};
         prImageOrient(PrPixelView{oriented, extent.x, extent}, 1, prImageOrientationInverse(orientation),
-                      PrPixels{restored, 3, {3, 2}});
+            PrPixels{restored, 3, {3, 2}});
         CHECK(memcmp(restored, stored, sizeof(stored)) == 0);
     }
 }
@@ -447,16 +445,14 @@ TEST_CASE("rendering image convenience applies stored orientation to rectangular
     REQUIRE(prImageDecoderOpen(decoder, reader.source(), nullptr) == PrStatus_Ok);
     uint8_t output[24] = {};
     REQUIRE(prImageDecoderReadRgba8(decoder, 0, PrImageAlpha_Straight, PrImageOrientation_Rotate90,
-                                    PrPixels{output, 12, {3, 2}})
-            == PrStatus_Ok);
+        PrPixels{output, 12, {3, 2}}) == PrStatus_Ok);
     const uint8_t expected[] = {14, 12, 10, 15, 13, 11};
     for (size_t pixel = 0; pixel < 6; ++pixel) {
         CHECK(output[pixel * 4] == expected[pixel]);
         CHECK(output[pixel * 4 + 3] == 255);
     }
     REQUIRE(prImageDecoderReadRgba8(decoder, 0, PrImageAlpha_Straight, PrImageOrientation_Identity,
-                                    PrPixels{output, 8, {2, 3}})
-            == PrStatus_Ok);
+        PrPixels{output, 8, {2, 3}}) == PrStatus_Ok);
     for (size_t pixel = 0; pixel < 6; ++pixel) {
         CHECK(output[pixel * 4] == 10 + pixel);
     }
@@ -473,8 +469,7 @@ TEST_CASE("rendering image convenience rejects ICC transforms despite fallback p
     REQUIRE(prImageDecoderOpen(decoder, reader.source(), nullptr) == PrStatus_Ok);
     uint8_t output[16] = {};
     CHECK(prImageDecoderReadRgba8(decoder, 0, PrImageAlpha_Straight, PrImageOrientation_Identity,
-                                  PrPixels{output, 8, {2, 2}})
-          == PrStatus_NotSupported);
+        PrPixels{output, 8, {2, 2}}) == PrStatus_NotSupported);
     prImageDecoderDestroy(decoder);
 }
 
@@ -493,8 +488,7 @@ TEST_CASE("cover frame requests require the codec to advertise a separate cover"
         CHECK(prImageDecoderFrameInfo(decoder, kPrImageFrameCover, &info) == expected);
         CHECK(prImageDecoderRead(decoder, kPrImageFrameCover, output) == expected);
         CHECK(prImageDecoderReadRgba8(decoder, kPrImageFrameCover, PrImageAlpha_Straight,
-                                      PrImageOrientation_Identity, output)
-              == expected);
+            PrImageOrientation_Identity, output) == expected);
         CHECK(prImageDecoderRead(decoder, 1, output) == PrStatus_OutOfRange);
         prImageDecoderDestroy(decoder);
     }
@@ -504,7 +498,7 @@ TEST_CASE("a codec that encodes nothing reports it") {
     FakeCodec fake;
     const uint8_t pixel[4] = {1, 2, 3, 4};
     size_t size = 1;
-    CHECK(prImageCodecEncode(fake.codec(), "image/png", PrPixelView{pixel, 4, {1, 1}}, nullptr, 0, &size)
-          == PrStatus_NotSupported);
+    CHECK(prImageCodecEncode(fake.codec(), "image/png", PrPixelView{pixel, 4, {1, 1}}, nullptr, 0, &size) ==
+        PrStatus_NotSupported);
     CHECK(size == 0);
 }

@@ -94,8 +94,8 @@ bool hasChange(const Client& client, uint32_t first, uint32_t removed, uint32_t 
 // Every extension, with raw HTML passed through.
 PrMarkdownOptions everything() {
     PrMarkdownOptions options = prMarkdownOptionsDefault();
-    options.extensions = PrMarkdownExtensionFlag_GitHub | PrMarkdownExtensionFlag_SmartPunctuation
-        | PrMarkdownExtensionFlag_Highlight | PrMarkdownExtensionFlag_Scripts | PrMarkdownExtensionFlag_FrontMatter;
+    options.extensions = PrMarkdownExtensionFlag_GitHub | PrMarkdownExtensionFlag_SmartPunctuation |
+        PrMarkdownExtensionFlag_Highlight | PrMarkdownExtensionFlag_Scripts | PrMarkdownExtensionFlag_FrontMatter;
     return options;
 }
 
@@ -130,8 +130,8 @@ TEST_CASE("the public headers compile as C") {
 }
 
 TEST_CASE("blocks and inlines write the HTML of the specification") {
-    CHECK(html("# Title\n\nSome *emphasis* and **strong**.\n")
-          == "<h1>Title</h1>\n<p>Some <em>emphasis</em> and <strong>strong</strong>.</p>\n");
+    CHECK(html("# Title\n\nSome *emphasis* and **strong**.\n") ==
+        "<h1>Title</h1>\n<p>Some <em>emphasis</em> and <strong>strong</strong>.</p>\n");
     CHECK(html("- a\n- b\n") == "<ul>\n<li>a</li>\n<li>b</li>\n</ul>\n");
     CHECK(html("[x]\n\n[x]: /u \"t\"\n") == "<p><a href=\"/u\" title=\"t\">x</a></p>\n");
 }
@@ -280,48 +280,44 @@ TEST_CASE("raw HTML passes, is filtered or is escaped, as the options say") {
     options.rawHtml = PrMarkdownRawHtml_Filter;
     CHECK(html(source, &options) == "<div>\n&lt;script>x&lt;/script>\n</div>\n<p><em>a</em> <b>b</b></p>\n");
     options.rawHtml = PrMarkdownRawHtml_Escape;
-    CHECK(html(source, &options)
-          == "<p>&lt;div&gt;\n&lt;script&gt;x&lt;/script&gt;\n&lt;/div&gt;</p>\n<p><em>a</em> &lt;b&gt;b&lt;/b&gt;</p>\n");
+    CHECK(html(source, &options) ==
+        "<p>&lt;div&gt;\n&lt;script&gt;x&lt;/script&gt;\n&lt;/div&gt;</p>\n<p><em>a</em> &lt;b&gt;b&lt;/b&gt;</p>\n");
 }
 
 TEST_CASE("safe destinations drop the schemes that run code or read files") {
     PrMarkdownOptions options = prMarkdownOptionsDefault();
     options.destinations = PrMarkdownDestinations_Safe;
     CHECK(html("[a](javascript:alert(1)) [b](https://x.y) ![c](data:image/png;base64,AA) [d](data:text/html,x)",
-               &options)
-          == "<p><a href=\"\">a</a> <a href=\"https://x.y\">b</a> <img src=\"data:image/png;base64,AA\" alt=\"c\" /> "
-             "<a href=\"\">d</a></p>\n");
+        &options) ==
+        "<p><a href=\"\">a</a> <a href=\"https://x.y\">b</a> <img src=\"data:image/png;base64,AA\" alt=\"c\" /> "
+        "<a href=\"\">d</a></p>\n");
 }
 
 TEST_CASE("HTML events carry tags, attributes and unescaped text") {
     PrMarkdown* document = prMarkdownCreate(gfm());
     prMarkdownParse(document, "[a & b](</x y> \"t\") <i>raw</i>\n\n---\n");
     std::vector<std::string> events;
-    prMarkdownWriteHtml(
-        document, 0, prMarkdownBlockCount(document),
-        [](void* context, const PrMarkdownHtmlEvent* event) {
-            std::string line;
-            switch (event->kind) {
-                case PrMarkdownHtmlEventKind_StartTag:
-                    line = "<" + viewString(event->name);
-                    for (uint32_t i = 0; i < event->attributeCount; ++i)
-                        line += " " + viewString(event->attributes[i].name) + "="
-                            + viewString(event->attributes[i].value);
-                    line += event->selfClosing ? "/>" : ">";
-                    break;
-                case PrMarkdownHtmlEventKind_EndTag:
-                    line = "</" + viewString(event->name) + ">";
-                    break;
-                case PrMarkdownHtmlEventKind_Text:
-                    line = "text:" + viewString(event->text);
-                    break;
-                case PrMarkdownHtmlEventKind_Html:
-                    line = "html:" + viewString(event->text);
-                    break;
-            }
-            static_cast<std::vector<std::string>*>(context)->push_back(line);
-        },
-        &events);
+    prMarkdownWriteHtml(document, 0, prMarkdownBlockCount(document), [](void* context, const PrMarkdownHtmlEvent* event) {
+        std::string line;
+        switch (event->kind) {
+            case PrMarkdownHtmlEventKind_StartTag:
+                line = "<" + viewString(event->name);
+                for (uint32_t i = 0; i < event->attributeCount; ++i)
+                    line += " " + viewString(event->attributes[i].name) + "=" + viewString(event->attributes[i].value);
+                line += event->selfClosing ? "/>" : ">";
+                break;
+            case PrMarkdownHtmlEventKind_EndTag:
+                line = "</" + viewString(event->name) + ">";
+                break;
+            case PrMarkdownHtmlEventKind_Text:
+                line = "text:" + viewString(event->text);
+                break;
+            case PrMarkdownHtmlEventKind_Html:
+                line = "html:" + viewString(event->text);
+                break;
+        }
+        static_cast<std::vector<std::string>*>(context)->push_back(line);
+    }, &events);
     std::vector<std::string> expected = {
         "<p>", "<a href=/x%20y title=t>", "text:a & b", "</a>", "text: ", "html:<i>", "text:raw", "html:</i>", "</p>",
         "text:\n", "<hr/>", "text:\n",
@@ -332,37 +328,37 @@ TEST_CASE("HTML events carry tags, attributes and unescaped text") {
 
 TEST_CASE("an alert is a block quote whose first line is its kind's marker") {
     PrMarkdownOptions options = everything();
-    CHECK(html("> [!NOTE]\n> Useful.\n", &options)
-          == "<div class=\"markdown-alert markdown-alert-note\">\n<p class=\"markdown-alert-title\">Note</p>\n"
-             "<p>Useful.</p>\n</div>\n");
-    CHECK(html("> [!caution]\n\n> [!TIP] text\n", &options)
-          == "<div class=\"markdown-alert markdown-alert-caution\">\n<p class=\"markdown-alert-title\">Caution</p>\n"
-             "</div>\n<blockquote>\n<p>[!TIP] text</p>\n</blockquote>\n");
+    CHECK(html("> [!NOTE]\n> Useful.\n", &options) ==
+        "<div class=\"markdown-alert markdown-alert-note\">\n<p class=\"markdown-alert-title\">Note</p>\n"
+        "<p>Useful.</p>\n</div>\n");
+    CHECK(html("> [!caution]\n\n> [!TIP] text\n", &options) ==
+        "<div class=\"markdown-alert markdown-alert-caution\">\n<p class=\"markdown-alert-title\">Caution</p>\n"
+        "</div>\n<blockquote>\n<p>[!TIP] text</p>\n</blockquote>\n");
     CHECK(streams("> [!WARNING]\n> One\n>\n> Two\n\nAfter\n", options));
 }
 
 TEST_CASE("heading ids are slugs, numbered after the first heading that takes them") {
     PrMarkdownOptions options = everything();
-    CHECK(html("# Hello, World!\n\n## Hello World\n\n### `Code` _and_ émphasis\n\n# Hello World\n", &options)
-          == "<h1 id=\"hello-world\">Hello, World!</h1>\n<h2 id=\"hello-world-1\">Hello World</h2>\n"
-             "<h3 id=\"code-and-émphasis\"><code>Code</code> <em>and</em> émphasis</h3>\n"
-             "<h1 id=\"hello-world-2\">Hello World</h1>\n");
+    CHECK(html("# Hello, World!\n\n## Hello World\n\n### `Code` _and_ émphasis\n\n# Hello World\n", &options) ==
+        "<h1 id=\"hello-world\">Hello, World!</h1>\n<h2 id=\"hello-world-1\">Hello World</h2>\n"
+        "<h3 id=\"code-and-émphasis\"><code>Code</code> <em>and</em> émphasis</h3>\n"
+        "<h1 id=\"hello-world-2\">Hello World</h1>\n");
     CHECK(streams("# A\n\nA\n=\n\n# A\n", options));
 }
 
 TEST_CASE("highlights, subscripts and superscripts pair runs of their characters") {
     PrMarkdownOptions options = everything();
-    CHECK(html("==mark== H~2~O x^2^ ~~gone~~ ~one==\n", &options)
-          == "<p><mark>mark</mark> H<sub>2</sub>O x<sup>2</sup> <del>gone</del> ~one==</p>\n");
+    CHECK(html("==mark== H~2~O x^2^ ~~gone~~ ~one==\n", &options) ==
+        "<p><mark>mark</mark> H<sub>2</sub>O x<sup>2</sup> <del>gone</del> ~one==</p>\n");
     PrMarkdownOptions plain = *gfm();
     CHECK(html("==mark== ~one~ x^2^\n", &plain) == "<p>==mark== <del>one</del> x^2^</p>\n");
 }
 
 TEST_CASE("math is TeX between dollar signs") {
     PrMarkdownOptions options = everything();
-    CHECK(html("$x^2$ and $$\\sum_i i$$ and $`a$b`$\n\nbut $5 and $6.\n\n$ x $, \\$y\\$\n", &options)
-          == "<p><span class=\"math math-inline\">x^2</span> and <span class=\"math math-display\">\\sum_i i</span> "
-             "and <span class=\"math math-inline\">a$b</span></p>\n<p>but $5 and $6.</p>\n<p>$ x $, $y$</p>\n");
+    CHECK(html("$x^2$ and $$\\sum_i i$$ and $`a$b`$\n\nbut $5 and $6.\n\n$ x $, \\$y\\$\n", &options) ==
+        "<p><span class=\"math math-inline\">x^2</span> and <span class=\"math math-display\">\\sum_i i</span> "
+        "and <span class=\"math math-inline\">a$b</span></p>\n<p>but $5 and $6.</p>\n<p>$ x $, $y$</p>\n");
     CHECK(streams("Inline $a*b*c$ *emphasis*\n\n$$\nx\n$$\n", options));
 }
 
@@ -374,13 +370,10 @@ TEST_CASE("front matter is held as it is written, and keeps the blocks after its
     prMarkdownAppend(document, "---\n# Body\n\nText\n");
     CHECK(prMarkdownFinalCount(document) == 2);
     std::string fields;
-    prMarkdownWalk(
-        document, 0, 1,
-        [](void* context, const PrMarkdownStep* step) {
-            if (step->kind == PrMarkdownStepKind_Text)
-                *static_cast<std::string*>(context) += viewString(step->text);
-        },
-        &fields);
+    prMarkdownWalk(document, 0, 1, [](void* context, const PrMarkdownStep* step) {
+        if (step->kind == PrMarkdownStepKind_Text)
+            *static_cast<std::string*>(context) += viewString(step->text);
+    }, &fields);
     CHECK(fields == "title: x\n\n# Not yet\n\n");
     prMarkdownEnd(document);
     CHECK(documentHtml(document) == "<h1 id=\"body\">Body</h1>\n<p>Text</p>\n");
@@ -412,13 +405,12 @@ TEST_CASE("a last line waits for its line ending only if the ending can change w
 }
 
 TEST_CASE("an extended autolink is not found in code") {
-    CHECK(html("`a@b.co` and a@b.co and `www.x.com`\n")
-          == "<p><code>a@b.co</code> and <a href=\"mailto:a@b.co\">a@b.co</a> and <code>www.x.com</code></p>\n");
+    CHECK(html("`a@b.co` and a@b.co and `www.x.com`\n") ==
+        "<p><code>a@b.co</code> and <a href=\"mailto:a@b.co\">a@b.co</a> and <code>www.x.com</code></p>\n");
 }
 
 TEST_CASE("every extension streams as it parses whole") {
-    const char* source =
-        "---\ntitle: t\n---\n# Answer\n\n> [!NOTE]\n> See [the docs][d] and the footnote.[^1]\n\n"
+    const char* source = "---\ntitle: t\n---\n# Answer\n\n> [!NOTE]\n> See [the docs][d] and the footnote.[^1]\n\n"
         "| a | b |\n|:--|--:|\n| ==x== | $y$ |\n\n- [x] done \"quoted\" -- dash...\n- [ ] H~2~O\n\n"
         "```python\nprint(1)\n```\n\n# Answer\n\n[^1]: A footnote.\n[d]: https://example.com\n";
     CHECK(streams(source, everything()));

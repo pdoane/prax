@@ -44,7 +44,7 @@ void layoutBackgroundsInit(LayoutBackgrounds* backgrounds);
 // Interns `count` layers as prLayoutBackgroundIntern defines. An entry that it adds holds references to the compounds
 // that its lengths name, and to its images and lists.
 PrLayoutBackgroundIndex layoutBackgroundsIntern(LayoutBackgrounds* backgrounds, LayoutCompounds* compounds,
-                                                const PrLayoutBackgroundLayer* layers, uint32_t count);
+    const PrLayoutBackgroundLayer* layers, uint32_t count);
 
 // Returns the entry at `index`.
 inline const LayoutBackground& layoutBackgroundAt(const LayoutBackgrounds* backgrounds, PrLayoutBackgroundIndex index) {
@@ -73,7 +73,7 @@ void layoutBackgroundKey(Array<uint8_t>& key, const PrLayoutBackgroundLayer* lay
 // the contexts of their painters that share them, and the sources of their filter lists. A list that a layer names is
 // frozen when it gains a reference.
 void layoutBackgroundCountLayers(LayoutCompounds* compounds, const PrLayoutBackgroundLayer* layers, uint32_t count,
-                                 uint32_t delta);
+    uint32_t delta);
 
 // The boxes of a box whose background paints, in the space of the list it paints into. `area` is where a layer paints,
 // if it is not empty, in place of the box that the layer's clip names: the canvas, for the root's background.
@@ -90,7 +90,7 @@ struct LayoutBackgroundBoxes {
 // Records `g` over `rect`, in a gradient box of `box`. `compounds` resolves the compound lengths that `g` names, if
 // any.
 void layoutBackgroundDrawGradient(const LayoutCompounds* PR_NULLABLE compounds, const PrLayoutGradient& g, PrRect box,
-                                  PrRect rect, PrDrawEdges edges, PrDrawList* list);
+    PrRect rect, PrDrawEdges edges, PrDrawList* list);
 
 // Gives `boxes` the corners of `border`, the border box's shape: the padding box's and the content box's corners are
 // the border box's, reduced by the widths between them (css-backgrounds-3/#corner-shaping). Only the boxes in `used`, a
@@ -100,7 +100,7 @@ void layoutBackgroundRound(LayoutBackgroundBoxes& boxes, const PrCornerRect& bor
 // Records the background layer `layer`. It is sized and placed in the box that its origin names, and painted within the
 // box that its clip names, with its blend mode and operator. Returns true if anything was recorded.
 bool layoutBackgroundPaintLayer(const LayoutCompounds* compounds, const PrLayoutBackgroundLayer& layer,
-                                const LayoutBackgroundBoxes& boxes, PrDrawList* list);
+    const LayoutBackgroundBoxes& boxes, PrDrawList* list);
 
 // Copies the filter items of `image` into `filters` from `next`, points the image at the copy, and advances `next`.
 void layoutImageTakeFilters(PrLayoutBackgroundLayer& image, PrLayoutFilter* PR_NULLABLE filters, uint32_t* next);
@@ -109,7 +109,7 @@ void layoutImageTakeFilters(PrLayoutBackgroundLayer& image, PrLayoutFilter* PR_N
 // filter list. The source covers the rectangle from the origin to `size`, or the image's own extent if it is unfiltered
 // and is scaled to `size`. A list that the source reads may be written to `drawn`, which the caller releases.
 PrDrawSource layoutImageSource(const LayoutCompounds* PR_NULLABLE compounds, const PrLayoutBackgroundLayer& layer,
-                               PrVec2 size, PrDrawList* PR_NULLABLE* PR_NONNULL drawn);
+    PrVec2 size, PrDrawList* PR_NULLABLE* PR_NONNULL drawn);
 
 // Returns true if one of `count` layers composites onto the layers below it otherwise than normally and source-over, so
 // that the background is an isolated group (compositing-1/#background-blend-mode).

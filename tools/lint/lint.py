@@ -48,6 +48,7 @@ SIGNATURE = re.compile(
 
 # The commands that fix the problems that a check finds, if a tool can fix them. The report names each with the files.
 REWRAP = "./dev.sh rewrap"
+LAYOUT = "./dev.sh layout"
 SUITE_FIX = "./dev.sh prax fix"
 
 
@@ -660,6 +661,18 @@ RAW_STRING = re.compile(r'(?:u8|u|U|L)?R"')
 # The last column that a line may reach. Comments are wrapped to it.
 LINE_LIMIT = 120
 
+# The most that a line of code may run past LINE_LIMIT with: a short tail reads better at the end of the line than alone
+# on the next.
+SHORT_TAIL = 10
+
+
+def within_limit(line):
+    """Returns true if a line of code ends by LINE_LIMIT, or runs past it only with a short tail: what follows its last
+    space before the limit."""
+    if len(line) <= LINE_LIMIT:
+        return True
+    return len(line) <= LINE_LIMIT + SHORT_TAIL and len(line) - line.rfind(" ", 0, LINE_LIMIT + 1) - 1 <= SHORT_TAIL
+
 
 @functools.cache
 def c_literals(text):
@@ -717,7 +730,7 @@ def check_line_length(report, path, text, literals=None):
             unbreakable = last is not None and last[0] < start + LINE_LIMIT and (
                 len(words.split()) == 1 if prose
                 else re.fullmatch(r"[\s)\]};,{:]*", text[last[1]:end]) is not None)
-            if not unbreakable:
+            if not unbreakable and (prose or not within_limit(line)):
                 # A whole-line comment rewraps.
                 fix = REWRAP if prose and line.lstrip().startswith("//") else None
                 report.add(path, number, "line-length",
@@ -793,36 +806,6 @@ def check_comment_columns(report, path, text):
         check_run()
 
 
-# Matches what a continuation line may start with and still align with something other than the open parenthesis: an
-# operator of the expression that it continues, or a string literal that continues the one above it.
-CONTINUES_EXPRESSION = re.compile(r'[-+*/%&|^<>=!?:."]|(?:u8|u|U|L)?R?"')
-
-
-def check_continuations(report, path, text):
-    """An argument or parameter list that continues past its line continues one column past its open parenthesis. A
-    list whose parenthesis ends its line is indented instead, and so is anything inside braces or brackets."""
-    code = mask_non_code(text)
-    opened = []     # each open bracket: the column after it, its kind, and whether it ends a line
-    for number, (line, original) in enumerate(zip(code.split("\n"), text.split("\n")), 1):
-        stripped = line.strip()
-        if stripped.startswith("#"):
-            continue
-        own = len(original) - len(original.lstrip())
-        if (stripped and opened and opened[-1][1] == "(" and not opened[-1][2]
-                and not stripped.startswith(")")
-                and not CONTINUES_EXPRESSION.match(original.lstrip())
-                and own != opened[-1][0]):
-            report.add(path, number, "continuation",
-                       "continues at column %d, not %d past its parenthesis"
-                       % (own + 1, opened[-1][0] + 1))
-        for column, character in enumerate(line):
-            if character in "([{":
-                rest = line[column + 1:].strip()
-                opened.append((column + 1, character, rest in ("", "\\")))
-            elif character in ")]}" and opened:
-                opened.pop()
-
-
 # A switch's label, which is indented one level into the switch, with its statements a level further.
 CASE_LABEL = re.compile(r"(?:case\b|default\s*:)")
 
@@ -835,60 +818,505 @@ UNINDENTED_BLOCK = re.compile(r'(?:inline\s+)?(?:namespace\b|extern\s+"C"\s*\{)'
 # The opening line of a switch.
 SWITCH_BLOCK = re.compile(r"(?:\}\s*)?switch\b")
 
+# The first line of a statement whose brace opens code rather than data: a type's or a namespace's head, an Objective-C
+# method, or an Objective-C directive.
+CODE_HEAD = re.compile(r"(?:template\s*<.*>\s*)?(?:(?:typedef|static|constexpr|const|inline)\s+)*"
+                       r"(?:struct|class|union|enum|namespace|extern)\b"
+                       r"|[-+]\s*\(|@")
 
-def check_indentation(report, path, text):
-    """Code is indented by four spaces a level, and never by tabs. A line that begins a statement, outside every open
-    parenthesis and bracket, is indented four spaces past its block's opening: the line that begins the statement that
-    opens the block, or the line that holds the brace, as a lambda's body is. A closing brace and an access specifier
-    sit at the opening's own indentation. A switch's case labels are indented one level, and their statements two.
-    The contents of a namespace and of C linkage are not indented. A line that continues an expression is left to its
-    own alignment (check_continuations)."""
+# The first line of an enumeration, whose items are each a line of their own.
+ENUM_HEAD = re.compile(r"(?:typedef\s+)?enum\b")
+
+# What comes before a brace that opens code: a parameter list, a capture list, a label, an Objective-C block's caret, a
+# lambda's or a function's specifier or attribute macro, a lambda's trailing return type, or a keyword that a block
+# follows. A brace after anything else opens data, an initializer list.
+CODE_BRACE = re.compile(r"(?:[)\]^:]|\b(?:mutable|noexcept|const|override|final|else|do|try|[A-Z][A-Z0-9]*_[A-Z0-9_]+)"
+                        r"|->\s*[\w:<>,*& ]+)\s*$")
+
+# A line that ends a statement without a semicolon: a macro that expands to declarations, or a template's header.
+UNTERMINATED_STATEMENT = re.compile(r"[A-Z][A-Z0-9_]*(?:\(.*\))?|template\s*<.*>")
+
+# The first line of a statement whose body may follow it without braces.
+CONTROL_HEAD = re.compile(r"(?:\}\s*)?(?:if|for|while|else|do|switch)\b")
+
+# A binary operator that begins a line. It belongs at the end of the line before it, where the line reads as unfinished.
+LEADING_OPERATOR = re.compile(r"(?:&&|\|\||<<=|>>=|[-+*/%&|^=!<>]=|<<|>>|[-+*/%&|^<>?:=])(?=\s)")
+
+# What a line ends with when a binary operator may follow it: an operand.
+OPERAND_END = re.compile(r"[\w)\]}\"']$")
+
+# An initializer list's item that is designated, or that is itself a list whose items are.
+DESIGNATED_ITEM = re.compile(r"\{*\s*[.\[]")
+
+# The end of a string literal whose last escape, a hex or an octal one, would read on into a literal joined to it.
+ESCAPE_END = re.compile(r'\\(?:x[0-9A-Fa-f]*|[0-7]{1,2})"$')
+
+# The invocations of macros, whose expansions the layout cannot see.
+MACRO_CALL = re.compile(r"(?:[A-Z][A-Z0-9_]*(?:\s*\([\s\S]*\))?\s*)+")
+
+# Where a line may break: after a comma, or after a binary operator between spaces.
+BREAK_AFTER = re.compile(r"(?:,|(?<= )(?:&&|\|\||[-+*/%&|^=!<>]=|<<|>>|[-+*/%&|^<>?:=]))( +)(?=\S)")
+
+# How loosely each operator that a line may break after binds: a line that runs too long breaks after the loosest, so
+# that each of its lines holds whole operands.
+BREAK_RANK = {op: rank for rank, ops in enumerate([
+    [","], ["=", "+=", "-=", "*=", "/=", "%=", "&=", "|=", "^=", "<<=", ">>="], ["?", ":"], ["||"], ["&&"], ["|"],
+    ["^"], ["&"], ["==", "!="], ["<", ">", "<=", ">="], ["<<", ">>"], ["+", "-"], ["*", "/", "%"]]) for op in ops}
+
+# A line that ends with a label rather than an operator: a case label, an access specifier, or a goto's label.
+LABEL = re.compile(r"case\b.*:|(?:default|public|private|protected)\s*:|[A-Za-z_]\w*:")
+
+
+def raw_string_lines(text):
+    """Returns the numbers of the lines that begin inside a raw string literal, whose text is not code."""
+    lines = set()
+    for start, end, comment in c_literals(text):
+        if not comment and RAW_STRING.match(text, start):
+            lines.update(range(line_of(text, start) + 1, line_of(text, end) + 1))
+    return lines
+
+
+def layout(text):
+    """Returns how C, C++ or Objective-C `text` is laid out, as (lines, braces).
+
+    `lines` holds (number, own, expected, role) for each line that the rules decide. Code is indented four spaces a
+    level:
+
+    - A line inside an expression's parentheses, brackets or initializer braces is indented one level past the line
+      that opened the innermost of them, or at that line's own indentation if it begins by closing it.
+    - A line that begins a statement is indented one level past its block's opening: the first line of the statement
+      that opens the block, or, for a lambda's or an Objective-C block's body, the line that holds its brace. A closing
+      brace and an access specifier sit at the opening's own indentation. A switch's case labels are indented one level,
+      and their statements two. The contents of a namespace and of C linkage are not indented. An enumeration's items
+      each begin a line.
+    - A line that continues a statement outside any open parenthesis is indented one level past the statement's first
+      line.
+    - The head of a block or of a control statement, which a body follows, is indented one level further where it
+      continues, so that it does not line up with the body.
+
+    A line's role is `start` if it begins a statement, `item` if it begins an item of an initializer list, `close` if
+    it begins by closing an expression's bracket, `body` if it is the body of a control statement without braces, and
+    `continuation` if it continues the line before it. A comment on a line of its own is decided only within an
+    expression's brackets, and has no role. Preprocessor directives, and the lines of a raw string literal, are left
+    alone. Each line is measured against the indentation that the lines before it should have, so that one misplaced
+    line does not misplace the lines that follow it.
+
+    `braces` holds (open, close), the offsets in `text` of each initializer list's braces."""
     code = mask_non_code(text)
-    depth = 0           # open parentheses and brackets
-    blocks = []         # each open brace: the indentations that may open it, and its kind
-    previous = ""       # the last line of code, stripped
+    raw = raw_string_lines(text)
+    lines = []
+    braces = []
+    stack = []          # each open bracket: its kind, its base indentation, the statement it opened in, its offset,
+                        # and whether an item within it has begun a line
+    previous = ""       # the last line of code, stripped, with its literals
+    closes_data = False # true if that line ends by closing an initializer list, which does not end a statement
+    statement = 0       # the index in `lines` of the line that began the current statement
+    deepened = -1       # the index of the statement whose head has been indented further
     start = 0           # the indentation of the line that began the current statement
+    head = ""           # that line, stripped
     directive = False   # true while a preprocessor directive continues onto the next line
+    offset = 0          # the offset of the current line in `text`
+    commented = mask_comments(text).split("\n")
+    closed_kind = None  # the kind of the bracket that closed last
+
+    def deepen():
+        """Indents the continuation lines of the current statement's head one level further, once."""
+        nonlocal deepened
+        if deepened == statement:
+            return
+        deepened = statement
+        for index in range(statement + 1, len(lines)):
+            number, own, expected, role = lines[index]
+            if expected is not None and expected > start:
+                lines[index] = (number, own, expected + 4, role)
+
     for number, (line, original) in enumerate(zip(code.split("\n"), text.split("\n")), 1):
+        at, offset = offset, offset + len(line) + 1
         stripped = line.strip()
         own = len(original) - len(original.lstrip())
-        if "\t" in original[:own]:
-            report.add(path, number, "indentation", "indented with a tab, not spaces")
+        leading = original[own:own + 1]  # the line's first character, which may begin a literal that the mask hides
         if directive or stripped.startswith("#"):
             directive = original.rstrip().endswith("\\")
             previous = ""
             continue
-        if not stripped:
+        # A line that begins inside a raw string keeps its indentation, which is the string's text. What follows the
+        # string's end is still code: its brackets close what the string's line opened, and it may end the statement.
+        literal = number in raw
+        top = stack[-1] if stack else None
+        inner = top is not None and top[0] in ("expression", "data")
+        # A line of only a string literal is code, though the mask leaves it blank.
+        if not stripped and not literal and original.lstrip()[:1] != '"':
+            if original.lstrip().startswith("//") and inner:
+                lines.append((number, own, top[1] + 4, None))
             continue
-        ended = previous.endswith((";", "{", "}", ":")) and not previous.endswith("::")
-        begins = depth == 0 and (previous == "" or ended)
-        if begins:
-            start = own
-        if begins and blocks and not stripped.startswith((":", ".", "?")):
-            openings, kind = blocks[-1]
-            if stripped.startswith("}") or ACCESS_LABEL.match(stripped) or kind == "flat":
-                step = 0
-            elif kind == "switch":
-                step = 4 if CASE_LABEL.match(stripped) else 8
+        expected = None
+        role = None
+        if literal:
+            pass
+        elif inner:
+            if leading in ")]}":
+                expected = top[1]
+                role = "close"
+            elif previous.endswith((",", "(", "[", "{")):
+                # An item that begins a line: what continues it is indented past it.
+                expected = top[1] + 4
+                role = "item" if top[0] == "data" else "continuation"
+                top[5] = True
             else:
-                step = 4
-            allowed = sorted({opening + step for opening in openings})
-            if own not in allowed:
-                report.add(path, number, "indentation",
-                           "begins at column %d, not %s, by the indentation of its block"
-                           % (own + 1, " or ".join(str(column + 1) for column in allowed)))
-        for character in line:
+                expected = top[1] + (8 if top[5] else 4)
+                role = "continuation"
+        else:
+            ended = (previous == "" or previous.endswith((";", "{")) or (previous.endswith("}") and not closes_data)
+                     or LABEL.fullmatch(previous) is not None
+                     or previous.startswith("@") or UNTERMINATED_STATEMENT.fullmatch(previous) is not None)
+            if top is not None and top[0] == "list":
+                ended = ended or previous.endswith(",")
+            if ended or leading == "}":
+                if top is None:
+                    expected = 0
+                elif leading == "}" or ACCESS_LABEL.match(stripped) or top[0] == "flat":
+                    expected = top[1]
+                elif top[0] == "switch":
+                    expected = top[1] + (4 if CASE_LABEL.match(stripped) else 8)
+                else:
+                    expected = top[1] + 4
+                role = "start"
+                if leading != "}":
+                    start = expected
+                    head = original.strip()
+            elif leading == "{" and CODE_BRACE.search(previous):
+                # A brace on a line of its own that opens a function's body sits at the function's indentation.
+                expected = start
+                role = "start"
+            else:
+                expected = start + 4
+                role = "body" if CONTROL_HEAD.match(head) else "continuation"
+                if role == "body":
+                    # A body without braces begins a statement of its own, whose continuations are indented past it.
+                    deepen()
+                    start = expected
+                    head = original.strip()
+        if not literal:
+            if role in ("start", "body"):
+                statement = len(lines)
+            lines.append((number, own, expected, role))
+        indent = expected if expected is not None else own
+        for column, character in enumerate(line):
+            inside = bool(stack) and stack[-1][0] in ("expression", "data")
             if character in "([":
-                depth += 1
-            elif character in ")]" and depth > 0:
-                depth -= 1
+                stack.append(["expression", indent, start, head, at + column, False])
             elif character == "{":
-                opener = original.strip()
-                kind = "flat" if UNINDENTED_BLOCK.match(opener) else "switch" if SWITCH_BLOCK.match(stripped) else "block"
-                blocks.append(((start, own), kind))
-            elif character == "}" and blocks:
-                blocks.pop()
-        previous = stripped
+                if CODE_BRACE.search(line[:column]) or (not inside and CODE_HEAD.match(head)):
+                    if UNINDENTED_BLOCK.match(head) and not inside:
+                        kind = "flat"
+                    elif SWITCH_BLOCK.match(head) and not inside:
+                        kind = "switch"
+                    elif ENUM_HEAD.match(head) and not inside:
+                        kind = "list"
+                    else:
+                        kind = "code"
+                    base = indent if inside else start
+                    stack.append([kind, base, start, head, at + column, False])
+                    if not inside:
+                        deepen()
+                elif not inside and column == own and (role == "start" or CODE_BRACE.search(previous)):
+                    # A brace on a line of its own that begins a statement opens a compound statement.
+                    stack.append(["code", indent, start, head, at + column, False])
+                    deepen()
+                else:
+                    stack.append(["data", indent, start, head, at + column, False])
+            elif character in ")]}" and stack:
+                closed = stack.pop()
+                closed_kind = closed[0]
+                if closed[0] == "data" and character == "}":
+                    braces.append((closed[4], at + column))
+                if closed[0] not in ("expression", "data"):
+                    start, head = closed[2], closed[3]
+        if literal and stripped:
+            previous = stripped
+        elif not literal and commented[number - 1].strip():
+            previous = commented[number - 1].strip()
+        else:
+            continue
+        closes_data = stripped.endswith("}") and closed_kind == "data"
+    return lines, braces
+
+
+def mask_comments(text):
+    """Returns the text with its comments hidden, and its literals kept, without changing offsets or line numbers."""
+    return NON_CODE.sub(lambda match: blank(match.group(0)) if match.group(0).startswith(("//", "/*"))
+        else match.group(0), text)
+
+
+def layout_problems(text):
+    """Returns the problems with how C, C++ or Objective-C `text` breaks its lines, as (number, check, message, edits),
+    where each edit, (start, end, replacement), replaces a span of `text`. The edits of one check do not overlap, and
+    applying them fixes its problems. A line reaches toward the column limit before it breaks:
+
+    - `operator`: a binary operator that a line breaks at ends the line, rather than beginning the next.
+    - `wrap`: a line that continues the line before it, and fits on it, is part of it, and a string literal that
+      continues another joins it as one literal. The body of a control statement begins a line of its own, and so do
+      an item of an initializer list that begins one and the text after a string literal that ends in a line break.
+    - `initializer`: an initializer list that fits on one line is on one line. One that does not begins its items on
+      the line after its opening brace, ends its last item with a comma, and closes on a line of its own. If its items
+      are designated, or are lists whose items are, each is on a line of its own."""
+    lines, braces = layout(text)
+    code = mask_non_code(text)
+    commented = mask_comments(text)
+    comments = commented.split("\n")
+    originals = text.split("\n")
+    raw = raw_string_lines(text)
+    starts = [0]
+    for line in originals:
+        starts.append(starts[-1] + len(line) + 1)
+    roles = {number: role for number, _, _, role in lines}
+    problems = []
+
+    def code_end(number):
+        """Returns the length of a line's code, or None if the line cannot be extended: it has a comment after its
+        code, or no code at all."""
+        if roles.get(number) is None:
+            return None
+        end = len(comments[number - 1].rstrip())
+        if end == 0 or originals[number - 1].rstrip() != originals[number - 1][:end]:
+            return None
+        return end
+
+    report = Report()
+    check_line_length(report, "x.cpp", text, c_literals(text))
+    conditionals = conditional_spans(code) if report.problems else []
+    for _, number, _, _ in report.problems:
+        own = len(originals[number - 1]) - len(originals[number - 1].lstrip())
+        if roles.get(number) is None:
+            continue
+        masked = code.split("\n")[number - 1]
+        end = len(masked.rstrip())
+        breaks = []
+        at = starts[number - 1]
+        for found in BREAK_AFTER.finditer(masked):
+            # A conditional expression stays on one line.
+            inside = any(s < at + found.start(1) < e for s, e in conditionals)
+            if own < found.start(1) <= LINE_LIMIT and found.end(1) < end and not inside:
+                depth = sum(masked[:found.start(1)].count(c) for c in "([{") - \
+                    sum(masked[:found.start(1)].count(c) for c in ")]}")
+                operator = masked[found.start():found.start(1)].strip()
+                breaks.append((depth, BREAK_RANK.get(operator, len(BREAK_RANK)), -found.start(1), found))
+        if breaks:
+            found = min(breaks, key=lambda b: b[:3])[3]
+            # The mask blanks literals, so only the spaces that the line itself holds are the break.
+            line = originals[number - 1]
+            spaces = len(line[found.start(1):]) - len(line[found.start(1):].lstrip(" "))
+            problems.append((number, "long", "runs past the limit",
+                [(at + found.start(1), at + found.start(1) + spaces, "\n")]))
+
+    for number, own, _, role in lines:
+        if role != "continuation" or number == 1:
+            continue
+        line = originals[number - 1]
+        match = LEADING_OPERATOR.match(line, own)
+        end = code_end(number - 1)
+        if match and end is not None and OPERAND_END.search(comments[number - 2][:end]):
+            operator = match.group(0)
+            after = len(line) - len(line[match.end():].lstrip())
+            at = starts[number - 2]
+            edits = [(at + end, at + end, " " + operator), (starts[number - 1] + own, starts[number - 1] + after, "")]
+            # If the operator does not fit on the line before, that line breaks sooner, at its last break that leaves
+            # room for what follows the break and the operator together.
+            if not within_limit(originals[number - 2][:end] + " " + operator):
+                previous = code.split("\n")[number - 2][:end]
+                indent = len(previous) - len(previous.lstrip()) + 4
+                breaks = [found for found in BREAK_AFTER.finditer(previous)
+                          if indent + end - found.end() + 1 + len(operator) <= LINE_LIMIT]
+                if not breaks:
+                    continue
+                edits.append((at + breaks[-1].start(1), at + breaks[-1].end(1), "\n"))
+            problems.append((number, "operator", "begins with %s, which ends the line before it" % operator, edits))
+
+    merged = {}             # each line's text, with the lines joined to it
+    for number, own, _, role in lines:
+        line = originals[number - 1].rstrip()
+        merged[number] = line
+        if role not in ("continuation", "close") or number == 1 or line[own] == "}":
+            continue
+        end = code_end(number - 1)
+        if end is None:
+            continue
+        before = comments[number - 2][:end]
+        if line[own] == "{" and not before.endswith(("(", "[", ",", "=")):
+            continue
+        if LEADING_OPERATOR.match(line, own) and OPERAND_END.search(before):
+            continue
+        # A line that leaves a bracket open joins only a line indented as far as it, so that what the bracket holds
+        # is not indented further.
+        masked = code.split("\n")[number - 1]
+        opened = sum(masked.count(c) for c in "([{") - sum(masked.count(c) for c in ")]}")
+        if opened > 0 and len(originals[number - 2]) - len(originals[number - 2].lstrip()) > own:
+            continue
+        # A string literal that ends a line of text, as embedded documents do, keeps the next on a line of its own.
+        if before.endswith('\\n"') and line[own] == '"':
+            continue
+        # A string literal that continues another ends its line, so that what follows it does not read as its text.
+        if (before.lstrip().startswith('"') and line[own] != '"' and number > 2
+                and comments[number - 3].rstrip().endswith('"')):
+            continue
+        # A string literal that continues one joins it as one literal, unless an escape that ends the first would take
+        # in the characters that begin the second.
+        joined = merged.get(number - 1, originals[number - 2].rstrip())
+        if (before.endswith('"') and line[own] == '"' and not ESCAPE_END.search(before)
+                and not RAW_STRING.search(before)):
+            joined = joined[:-1] + line[own + 1:]
+            joining = (starts[number - 2] + end - 1, starts[number - 1] + own + 1, "")
+        else:
+            tight = before.endswith(("(", "[")) or line[own] in ")],;"
+            joined += ("" if tight else " ") + line[own:]
+            joining = (starts[number - 2] + end, starts[number - 1] + own, "" if tight else " ")
+        if within_limit(joined):
+            merged[number] = joined
+            problems.append((number, "wrap", "fits on the line before it", [joining]))
+
+    collapsed = []
+    joined_lines = set()    # the lines that a collapse joins, which another collapse in the same pass leaves alone
+    for open_at, close_at in sorted(braces):
+        if any(o < open_at < c for o, c in collapsed):
+            continue
+        first, last = line_of(text, open_at), line_of(text, close_at)
+        if first == last:
+            continue
+        inner = text[open_at + 1:close_at]
+        masked = code[open_at + 1:close_at]
+        plain = (inner == commented[open_at + 1:close_at] and ";" not in masked and "\n#" not in "\n" + masked
+                 and not any(number in raw for number in range(first + 1, last + 1)))
+        if plain:
+            joined = ""
+            for piece in (part.strip() for part in inner.split("\n")):
+                if not piece:
+                    continue
+                if joined and not joined.endswith(("(", "[", "{")) and not piece.startswith((")", "]", "}", ",")):
+                    joined += " "
+                joined += piece
+            joined = joined[:-1] if joined.endswith(",") else joined
+            whole = text[starts[first - 1]:open_at + 1] + joined + originals[last - 1][close_at - starts[last - 1]:]
+            if len(whole.rstrip()) <= LINE_LIMIT and not joined_lines & {first, last}:
+                collapsed.append((open_at, close_at))
+                joined_lines.update(range(first, last + 1))
+                problems.append((first, "initializer", "an initializer list that fits on one line",
+                    [(open_at + 1, close_at, joined)]))
+                continue
+        edits = []
+        rest = commented[open_at + 1:starts[first] - 1]
+        if rest.strip():
+            edits.append((open_at + 1, open_at + 1 + len(rest) - len(rest.lstrip()), "\n"))
+        depth, commas, designated, item = 0, [], False, True
+        for at in range(open_at + 1, close_at):
+            character = code[at]
+            if item and not character.isspace():
+                designated = designated or DESIGNATED_ITEM.match(code, at) is not None
+                item = False
+            if character in "([{":
+                depth += 1
+            elif character in ")]}":
+                depth -= 1
+            elif character == "," and depth == 0:
+                commas.append(at)
+                item = True
+        if designated:
+            for comma in commas:
+                after = commented[comma + 1:text.find("\n", comma)]
+                if after.strip() and comma + 1 + len(after) < close_at:
+                    edits.append((comma + 1, comma + 1 + len(after) - len(after.lstrip()), "\n"))
+        # A macro may expand to items that end with their own comma, so a comma does not follow one that is last.
+        end = len(commented[:close_at].rstrip())
+        final = code[(commas[-1] + 1 if commas else open_at + 1):close_at]
+        comma = "" if commented[end - 1] in ",{" or MACRO_CALL.fullmatch(final.strip()) else ","
+        if commented[starts[last - 1]:close_at].strip():
+            edits.append((end, close_at, comma + "\n"))
+        elif comma:
+            edits.append((end, end, comma))
+        if edits:
+            problems.append((first, "initializer", "an initializer list that wraps puts its items on lines of their own "
+                "between its braces, each ending with a comma", edits))
+    return problems
+
+
+def check_indentation(report, path, text):
+    """Code is indented four spaces a level, and never by tabs, as layout lays it out."""
+    for number, line in enumerate(text.split("\n"), 1):
+        own = len(line) - len(line.lstrip())
+        if "\t" in line[:own]:
+            report.add(path, number, "indentation", "indented with a tab, not spaces")
+    for number, own, expected, _ in layout(text)[0]:
+        if expected is not None and own != expected:
+            report.add(path, number, "indentation", "begins at column %d, not %d" % (own + 1, expected + 1), LAYOUT)
+
+
+def check_line_breaks(report, path, text):
+    """A line reaches toward the column limit before it breaks, as layout_problems describes."""
+    for number, check, message, _ in layout_problems(text):
+        # The line-length check reports a line that runs too long.
+        if check != "long":
+            report.add(path, number, check, message, LAYOUT)
+
+
+# What a conditional expression begins after: an opening bracket, the end of a block, a separator, or an assignment.
+CONDITION_START = re.compile(r"[(\[{},;]|(?<![=!<>])=(?!=)")
+
+# A keyword that an expression follows, which a conditional expression may begin after.
+EXPRESSION_KEYWORD = re.compile(r"(?:return|co_return|throw)\b")
+
+
+def conditional_spans(code):
+    """Returns the spans, (start, end), of the conditional expressions in masked C or C++ `code`, outermost first. A
+    conditional runs from the start of its condition to the end of its last operand."""
+    spans = []
+    for question in (m.start() for m in re.finditer(r"\?", code)):
+        depth = 0
+        start = 0
+        for at in range(question - 1, -1, -1):
+            character = code[at]
+            if character in ")]":
+                depth += 1
+            elif character in "([{" and depth > 0:
+                depth -= 1
+            elif depth == 0 and CONDITION_START.match(code, at):
+                start = at + 1
+                break
+            elif depth == 0 and not re.match(r"\w", code[at - 1:at]):
+                keyword = EXPRESSION_KEYWORD.match(code, at)
+                if keyword:
+                    start = keyword.end()
+                    break
+        depth = 0
+        pending = 1     # the colons that the conditionals from this one on still need
+        end = len(code)
+        for at in range(question + 1, len(code)):
+            character = code[at]
+            if character in "([{":
+                depth += 1
+            elif character in ")]}":
+                if depth == 0:
+                    end = at
+                    break
+                depth -= 1
+            elif depth == 0 and character == "?":
+                pending += 1
+            elif depth == 0 and character == ":" and code[at - 1] != ":" and code[at + 1:at + 2] != ":":
+                pending -= 1
+            elif depth == 0 and character in ",;" and pending <= 0:
+                end = at
+                break
+        spans.append((start, end))
+    spans = sorted(set(spans))
+    return [span for span in spans if not any(o[0] <= span[0] and span[1] <= o[1] and o != span for o in spans)]
+
+
+def check_ternaries(report, path, text):
+    """A conditional expression fits on one line. One that does not reads more easily as statements: an `if`, or a
+    variable given its value in each branch."""
+    code = mask_non_code(text)
+    for start, end in conditional_spans(code):
+        if "\n" in code[start:end].strip():
+            report.add(path, line_of(text, start + len(code[start:end]) - len(code[start:end].lstrip())), "ternary",
+                       "a conditional expression spans lines; fit it on one, or write it as statements")
 
 
 def check_blank_lines(report, path, text):
@@ -2574,8 +3002,9 @@ def check_any_source(path):
         check_dangling_names(report, path, text, shared.defined)
         check_line_length(report, path, text, c_literals(text))
         check_comment_columns(report, path, text)
-        check_continuations(report, path, text)
         check_indentation(report, path, text)
+        check_line_breaks(report, path, text)
+        check_ternaries(report, path, text)
         check_blank_lines(report, path, text)
     check_qualified(report, path, text)
     if is_application(path):

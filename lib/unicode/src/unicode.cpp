@@ -132,7 +132,7 @@ uint32_t turkic(PrStringView text, size_t at, size_t end, uint32_t codePoint, Pr
 using namespace pr_impl;
 
 uint32_t prUnicodeMapCase(PrStringView text, size_t at, PrUnicodeCase target, PrLanguage language,
-                          uint32_t out[kPrUnicodeCaseMaxCodePoints]) {
+        uint32_t out[kPrUnicodeCaseMaxCodePoints]) {
     uint32_t codePoint = 0;
     size_t end = at + prUtf8Decode(text, at, &codePoint);
     uint32_t count = kUntailored;

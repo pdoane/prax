@@ -54,13 +54,11 @@ void notify(void* data) {
     PrDomMutationObserver* observer = static_cast<PrDomMutationObserver*>(data);
     observer->pending = false;
     if (observer->records.count != 0)
-        observer->callback.invoke(observer->callback.context,
-                                  reinterpret_cast<PrDomMutationObserver*>(observer));
+        observer->callback.invoke(observer->callback.context, reinterpret_cast<PrDomMutationObserver*>(observer));
     for (uint32_t i = 0; i < observer->documents.count; ++i)
         domSlotsFire(observer->documents.data[i]);
     if (observer->callback.pending != nullptr)
-        observer->callback.pending(observer->callback.context,
-                                   reinterpret_cast<PrDomMutationObserver*>(observer), false);
+        observer->callback.pending(observer->callback.context, reinterpret_cast<PrDomMutationObserver*>(observer), false);
     domMutationObserverRelease(observer);
 }
 
@@ -72,8 +70,7 @@ struct Interested {
 };
 
 // Returns the observer's registration on `node`, or null if it has none.
-const DomObserverRegistration* PR_NULLABLE registrationOn(const PrDomMutationObserver* observer,
-                                                          const PrDomNode* node) {
+const DomObserverRegistration* PR_NULLABLE registrationOn(const PrDomMutationObserver* observer, const PrDomNode* node) {
     for (uint32_t i = 0; i < observer->registrations.count; ++i) {
         if (observer->registrations.data[i].node == node)
             return &observer->registrations.data[i];
@@ -88,9 +85,9 @@ PrDomNode* PR_NULLABLE retained(PrDomNode* PR_NULLABLE node) {
 }
 
 void queueRecord(PrDomNode* target, PrDomMutationType type, PrStringView name, PrStringView space,
-                 PrStringView oldValue, PrDomNode* const PR_NONNULL* PR_NULLABLE added,
-                 uint32_t addedCount, PrDomNode* const PR_NONNULL* PR_NULLABLE removed,
-                 uint32_t removedCount, PrDomNode* PR_NULLABLE previous, PrDomNode* PR_NULLABLE next) {
+        PrStringView oldValue, PrDomNode* const PR_NONNULL* PR_NULLABLE added,
+        uint32_t addedCount, PrDomNode* const PR_NONNULL* PR_NULLABLE removed,
+        uint32_t removedCount, PrDomNode* PR_NULLABLE previous, PrDomNode* PR_NULLABLE next) {
     PrDomDocument* document = target->document;
     DomMutationObservers* observers = document->observers;
     if (observers == nullptr || observers->suppressed != 0)
@@ -108,20 +105,18 @@ void queueRecord(PrDomNode* target, PrDomMutationType type, PrStringView name, P
             if (type == PrDomMutationType_Attributes) {
                 if (!options.attributes)
                     continue;
-                bool filtered =
-                    registration->attributeFilter.count != 0 || options.hasAttributeFilter;
+                bool filtered = registration->attributeFilter.count != 0 || options.hasAttributeFilter;
                 bool listed = false;
                 for (uint32_t j = 0; j < registration->attributeFilter.count; ++j)
-                    listed |=
-                        prStringView(&registration->attributeFilter.data[j]) == name;
+                    listed |= prStringView(&registration->attributeFilter.data[j]) == name;
                 if (filtered && (!listed || space.size != 0))
                     continue;
             }
-            if ((type == PrDomMutationType_CharacterData && !options.characterData)
-                || (type == PrDomMutationType_ChildList && !options.childList))
+            if ((type == PrDomMutationType_CharacterData && !options.characterData) ||
+                    (type == PrDomMutationType_ChildList && !options.childList))
                 continue;
-            bool old = (type == PrDomMutationType_Attributes && options.attributeOldValue)
-                || (type == PrDomMutationType_CharacterData && options.characterDataOldValue);
+            bool old = (type == PrDomMutationType_Attributes && options.attributeOldValue) ||
+                (type == PrDomMutationType_CharacterData && options.characterDataOldValue);
             uint32_t at = 0;
             while (at < interested.count && interested.data[at].observer != observer)
                 ++at;
@@ -148,14 +143,12 @@ void queueRecord(PrDomNode* target, PrDomMutationType type, PrStringView name, P
         observer->records.push(record);
         // dom/#queue-a-mutation-observer-compound-microtask
         const DomDocumentHost* host = document->host;
-        if (!observer->pending && host != nullptr
-            && host->queueMicrotask(host->context, notify, observer)) {
+        if (!observer->pending && host != nullptr && host->queueMicrotask(host->context, notify, observer)) {
             observer->pending = true;
             domMutationObserverRetain(observer);
             if (observer->callback.pending != nullptr)
                 observer->callback.pending(observer->callback.context,
-                                           reinterpret_cast<PrDomMutationObserver*>(observer),
-                                           true);
+                    reinterpret_cast<PrDomMutationObserver*>(observer), true);
         }
     }
     interested.reset();
@@ -188,18 +181,17 @@ void domMutationObserverRelease(PrDomMutationObserver* PR_NULLABLE observer) {
 }
 
 PrStatus domMutationObserverObserve(PrDomMutationObserver* observer, PrDomNode* target,
-                                    const PrDomMutationObserverInit* options,
-                                    const PrStringView* PR_NULLABLE filter, uint32_t filterCount) {
+        const PrDomMutationObserverInit* options, const PrStringView* PR_NULLABLE filter, uint32_t filterCount) {
     // dom/#dom-mutationobserver-observe: an old value or a filter implies the kind of change that it applies to.
     PrDomMutationObserverInit effective = *options;
     if (!effective.hasAttributes && (effective.attributeOldValue || effective.hasAttributeFilter))
         effective.attributes = true;
     if (!effective.hasCharacterData && effective.characterDataOldValue)
         effective.characterData = true;
-    if ((!effective.childList && !effective.attributes && !effective.characterData)
-        || (effective.attributeOldValue && !effective.attributes)
-        || (effective.hasAttributeFilter && !effective.attributes)
-        || (effective.characterDataOldValue && !effective.characterData))
+    if ((!effective.childList && !effective.attributes && !effective.characterData) ||
+            (effective.attributeOldValue && !effective.attributes) ||
+            (effective.hasAttributeFilter && !effective.attributes) ||
+            (effective.characterDataOldValue && !effective.characterData))
         return PrStatus_InvalidData;
     for (uint32_t i = 0; i < observer->registrations.count; ++i) {
         DomObserverRegistration* registration = &observer->registrations.data[i];
@@ -272,8 +264,7 @@ void domMutationObserversDeliver(PrDomDocument* document) {
     for (uint32_t i = 0; i < delivering.count; ++i) {
         PrDomMutationObserver* observer = delivering.data[i];
         if (observer->records.count != 0)
-            observer->callback.invoke(observer->callback.context,
-                                      reinterpret_cast<PrDomMutationObserver*>(observer));
+            observer->callback.invoke(observer->callback.context, reinterpret_cast<PrDomMutationObserver*>(observer));
         domMutationObserverRelease(observer);
     }
     delivering.reset();
@@ -303,25 +294,22 @@ void domMutationObserversAdopted(PrDomDocument* from, PrDomDocument* to) {
     }
 }
 
-void domQueueAttributeRecord(PrDomNode* target, PrStringView name, PrStringView space,
-                             PrStringView oldValue) {
-    queueRecord(target, PrDomMutationType_Attributes, name, space, oldValue, nullptr, 0, nullptr, 0,
-                nullptr, nullptr);
+void domQueueAttributeRecord(PrDomNode* target, PrStringView name, PrStringView space, PrStringView oldValue) {
+    queueRecord(target, PrDomMutationType_Attributes, name, space, oldValue, nullptr, 0, nullptr, 0, nullptr, nullptr);
 }
 
 void domQueueCharacterDataRecord(PrDomNode* target, PrStringView oldValue) {
     queueRecord(target, PrDomMutationType_CharacterData, PrStringView{}, PrStringView{}, oldValue,
-                nullptr, 0, nullptr, 0, nullptr, nullptr);
+        nullptr, 0, nullptr, 0, nullptr, nullptr);
 }
 
 void domQueueTreeRecord(PrDomNode* target, PrDomNode* const PR_NONNULL* PR_NULLABLE added,
-                        uint32_t addedCount, PrDomNode* const PR_NONNULL* PR_NULLABLE removed,
-                        uint32_t removedCount, PrDomNode* PR_NULLABLE previous,
-                        PrDomNode* PR_NULLABLE next) {
+        uint32_t addedCount, PrDomNode* const PR_NONNULL* PR_NULLABLE removed,
+        uint32_t removedCount, PrDomNode* PR_NULLABLE previous, PrDomNode* PR_NULLABLE next) {
     if (addedCount == 0 && removedCount == 0)
         return;
     queueRecord(target, PrDomMutationType_ChildList, PrStringView{}, PrStringView{}, PrStringView{},
-                added, addedCount, removed, removedCount, previous, next);
+        added, addedCount, removed, removedCount, previous, next);
 }
 
 bool domMutationsSuppressed(const PrDomDocument* document) {

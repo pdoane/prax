@@ -34,8 +34,7 @@ bool jsHtmlNotifyRejectedPromises(JSContext* ctx);
 // `element`. Writes the callback to `out` with one reference. If `body` does not compile, reports the error and returns
 // false. A host's compile callback (PrHtmlHost) returns this result.
 bool jsHtmlCompileEventHandler(JSContext* ctx, PrDomEventTarget* target, PrDomElement* element,
-                               PrDomEventHandler handler, PrStringView body,
-                               PrDomEventHandlerCallback* out);
+    PrDomEventHandler handler, PrStringView body, PrDomEventHandlerCallback* out);
 
 } // namespace pr_impl
 

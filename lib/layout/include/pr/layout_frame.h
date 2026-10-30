@@ -41,12 +41,9 @@ bool prLayoutTreeIsInFrame(const PrLayoutTree* tree);
 // (prLayoutNodeSetKey). Returns the handle of the committed node that it continues, or of a new node.
 PrLayoutNode prLayoutTreeFrameElement(PrLayoutTree* tree, PrLayoutNode parent, uint64_t key, PrLayoutStyleIndex style);
 PrLayoutNode prLayoutTreeFrameText(PrLayoutTree* tree, PrLayoutNode parent, uint64_t key, PrStringView text);
-PrLayoutNode prLayoutTreeFrameReplaced(PrLayoutTree* tree, PrLayoutNode parent, uint64_t key,
-                                       PrLayoutStyleIndex style);
-PrLayoutNode prLayoutTreeFrameSemiReplaced(PrLayoutTree* tree, PrLayoutNode parent, uint64_t key,
-                                           PrLayoutStyleIndex style);
-PrLayoutNode prLayoutTreeFrameLineBreak(PrLayoutTree* tree, PrLayoutNode parent, uint64_t key,
-                                        PrLayoutStyleIndex style);
+PrLayoutNode prLayoutTreeFrameReplaced(PrLayoutTree* tree, PrLayoutNode parent, uint64_t key, PrLayoutStyleIndex style);
+PrLayoutNode prLayoutTreeFrameSemiReplaced(PrLayoutTree* tree, PrLayoutNode parent, uint64_t key, PrLayoutStyleIndex style);
+PrLayoutNode prLayoutTreeFrameLineBreak(PrLayoutTree* tree, PrLayoutNode parent, uint64_t key, PrLayoutStyleIndex style);
 
 // Sets the record of a node that the frame created. A later call may set it again. The commit compares the last record
 // set with the committed node's record, so a caller that restyles a component's node costs only a store if the result
@@ -73,7 +70,7 @@ void prLayoutTreeFrameSetContent(PrLayoutTree* tree, PrLayoutNode replaced, cons
 // effect immediately, as prLayoutNodeSetHighlights and prLayoutTreeSetCaret do. The commit removes the highlights of a
 // node, and the caret, that its frame did not set.
 void prLayoutTreeFrameSetHighlights(PrLayoutTree* tree, PrLayoutNode text,
-                                    const PrLayoutHighlight* PR_NULLABLE highlights, uint32_t count);
+    const PrLayoutHighlight* PR_NULLABLE highlights, uint32_t count);
 void prLayoutTreeFrameSetCaret(PrLayoutTree* tree, const PrLayoutCaret* caret);
 
 // Returns a node's slot: its index among the tree's nodes, below prLayoutTreeSlotCount. No two live nodes share a slot,
@@ -105,8 +102,7 @@ typedef struct PrLayoutDuplicateKey {
 
 // Writes up to `capacity` of the keys that the last committed frame gave twice to `out`, and returns how many there
 // are. The nodes stay valid until the next commit, so a client can show them while it builds the next frame.
-uint32_t prLayoutTreeDuplicateKeys(const PrLayoutTree* tree, PrLayoutDuplicateKey* PR_NULLABLE out,
-                                   uint32_t capacity);
+uint32_t prLayoutTreeDuplicateKeys(const PrLayoutTree* tree, PrLayoutDuplicateKey* PR_NULLABLE out, uint32_t capacity);
 
 #if defined(__cplusplus)
 }

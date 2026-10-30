@@ -66,7 +66,7 @@ std::string encoded(PrCharset charset, const std::string& text) {
         size_t size = 0;
         uint32_t unencoded = 0;
         at += prCharsetEncode(&encoder, {text.data() + at, text.size() - at}, PrCharsetInput_Final, out.data(), &size,
-                              &unencoded);
+            &unencoded);
         CHECK(size <= out.size());
         result.append(out.data(), size);
         if (unencoded == kPrCharsetUnencodedNone)
@@ -267,8 +267,8 @@ TEST_CASE("each charset encodes the code points of its index") {
     CHECK(encoded(PrCharset_Windows1252, "a\xE4\xB8\xAD" "b") == "a&#20013;b");
     CHECK(encoded(PrCharset_XUserDefined, "\xEF\x9E\x80") == "\x80");
     CHECK(encoded(PrCharset_Gbk, "\xE4\xB8\xAD\xE2\x82\xAC") == "\xD6\xD0\x80");
-    CHECK(encoded(PrCharset_Gb18030, "\xE2\x82\xAC\xC2\x80\xF0\x90\x80\x80")
-          == "\xA2\xE3\x81\x30\x81\x30\x90\x30\x81\x30");
+    CHECK(encoded(PrCharset_Gb18030, "\xE2\x82\xAC\xC2\x80\xF0\x90\x80\x80") ==
+        "\xA2\xE3\x81\x30\x81\x30\x90\x30\x81\x30");
     CHECK(encoded(PrCharset_Gbk, "\xF0\x90\x80\x80") == "&#65536;");
     CHECK(encoded(PrCharset_Gb18030, "\xEE\x97\xA5") == "&#58853;");
     CHECK(encoded(PrCharset_Gb18030, "\xEE\x9E\x8D") == "\xA6\xD9");
@@ -304,16 +304,16 @@ TEST_CASE("what a charset decodes from one or two bytes encodes back to bytes th
                 std::string text = decoded(charset, bytes);
                 uint32_t codePoint = 0;
                 // Only bytes that decode whole, to one code point, round trip.
-                if (prUtf8Decode({text.data(), text.size()}, 0, &codePoint) != text.size()
-                    || codePoint == kPrUtf8Replacement)
+                if (prUtf8Decode({text.data(), text.size()}, 0, &codePoint) != text.size() ||
+                        codePoint == kPrUtf8Replacement)
                     continue;
                 std::string back = encoded(charset, text);
                 CAPTURE(text);
                 if (back.find("&#") != std::string::npos) {
                     // Big5 does not encode its Hong Kong extensions, gb18030 does not encode U+E5E5, and Shift_JIS does
                     // not encode its user-defined area.
-                    CHECK((charset == PrCharset_Big5 || charset == PrCharset_Gb18030 || charset == PrCharset_Gbk
-                           || (charset == PrCharset_ShiftJis && codePoint >= 0xe000 && codePoint < 0xe758)));
+                    CHECK((charset == PrCharset_Big5 || charset == PrCharset_Gb18030 || charset == PrCharset_Gbk ||
+                        (charset == PrCharset_ShiftJis && codePoint >= 0xe000 && codePoint < 0xe758)));
                     continue;
                 }
                 CHECK(decoded(charset, back) == text);

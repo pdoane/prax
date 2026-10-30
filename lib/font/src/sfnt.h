@@ -65,8 +65,7 @@ void sfntDeltaSetIndex(SfntTable map, uint32_t index, uint16_t* outer, uint16_t*
 
 // Writes to `out` the scalar at the coordinates of each region that the ItemVariationData `outer` of the store lists,
 // in its order, and returns how many regions it lists. Writes no more than `capacity`.
-uint32_t sfntVariationScalars(SfntTable store, uint16_t outer, SfntCoords coords, float* PR_NULLABLE out,
-                              uint32_t capacity);
+uint32_t sfntVariationScalars(SfntTable store, uint16_t outer, SfntCoords coords, float* PR_NULLABLE out, uint32_t capacity);
 
 // Returns the scalar of one axis of a region at a coordinate: 1 at its peak, falling to 0 at its start and end. An axis
 // whose peak is 0, or whose region is invalid, takes no part and gives 1.
@@ -90,8 +89,7 @@ PrString sfntName(const Sfnt& sfnt, uint16_t id);
 // Gets a baseline of the horizontal axis of the BASE table, in font units above the origin, at the coordinates. It is
 // the value of the script if the script has one, and otherwise the value of the first script that does. Returns false
 // if no script has the tag.
-bool sfntBaseline(const Sfnt& sfnt, uint32_t baselineTag, uint32_t scriptTag, SfntCoords coords,
-                  float* out);
+bool sfntBaseline(const Sfnt& sfnt, uint32_t baselineTag, uint32_t scriptTag, SfntCoords coords, float* out);
 
 // Writes up to `capacity` tags to `out` and returns the total, each tag once: the script tags that the GSUB and GPOS
 // tables declare, except DFLT. If `out` holds fewer than the total, only the count can be wrong, because a tag past

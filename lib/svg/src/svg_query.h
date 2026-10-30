@@ -20,7 +20,7 @@ namespace pr_impl {
 // image and a foreignObject by their positioning rectangles. A clip path clips where content is hit. Masks, filters,
 // opacity and markers do not change it. Writes up to `capacity` hits to `out`, topmost first, and returns their number.
 uint32_t svgTreeHitTest(const SvgTree* tree, PrVec2 viewport, const SvgRootView* PR_NULLABLE view, PrVec2 point,
-                        CssPresentationSvgHit* PR_NULLABLE out, uint32_t capacity);
+    CssPresentationSvgHit* PR_NULLABLE out, uint32_t capacity);
 
 // Returns true if `point` is inside the clip path of the clipPath `index`, which clips an element whose object bounding
 // box is `box`, with percentages of `viewport`. The point and the box are in the element's user space. The clip path is

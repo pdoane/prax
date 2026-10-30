@@ -41,7 +41,7 @@ void prPathTessellatorDestroy(PrPathTessellator* PR_NULLABLE tessellator);
 //
 // The mesh lives in the storage of the tessellator, and stays valid until the tessellator is next used.
 PrPathMesh prPathTessellatorFill(PrPathTessellator* tessellator, const PrPathPolyline* polyline, PrPathFillRule rule,
-                                 float fringe);
+    float fringe);
 
 #if defined(__cplusplus)
 }

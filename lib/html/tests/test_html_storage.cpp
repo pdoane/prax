@@ -22,8 +22,7 @@ std::string textOf(PrString value) {
 }
 
 // A browsing context whose window's document is at `url`, with the providers given.
-PrHtmlPage* openAt(PrHtmlStorageProvider* local, PrHtmlStorageProvider* PR_NULLABLE session,
-                   const char* url) {
+PrHtmlPage* openAt(PrHtmlStorageProvider* local, PrHtmlStorageProvider* PR_NULLABLE session, const char* url) {
     PrHtmlHost host = prHtmlHostDefault();
     host.localStorage = local;
     host.sessionStorage = session;

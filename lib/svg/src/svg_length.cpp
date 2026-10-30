@@ -211,11 +211,13 @@ Basis basisOf(const SvgLength* length) {
         return Basis{100, float(kCssMediumFontSize)};
     SvgLengthBasis basis{};
     svgElementLengthBasis(length->element, &basis);
-    float percent = length->attribute->axis == SvgAxis_X   ? basis.viewport.x
-                    : length->attribute->axis == SvgAxis_Y ? basis.viewport.y
-                                                           : sqrtF32((basis.viewport.x * basis.viewport.x
-                                                                      + basis.viewport.y * basis.viewport.y)
-                                                                     / 2);
+    float percent;
+    if (length->attribute->axis == SvgAxis_X)
+        percent = basis.viewport.x;
+    else if (length->attribute->axis == SvgAxis_Y)
+        percent = basis.viewport.y;
+    else
+        percent = sqrtF32((basis.viewport.x * basis.viewport.x + basis.viewport.y * basis.viewport.y) / 2);
     return Basis{percent, basis.fontSize};
 }
 

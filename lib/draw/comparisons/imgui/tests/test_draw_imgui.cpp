@@ -23,8 +23,7 @@ struct Device {
     Device(uint32_t width, uint32_t height) {
         REQUIRE(prGpuDeviceCreate(PrGpuBackend_Default, nullptr, &gpuDevice) == PrStatus_Ok);
         REQUIRE(prDrawImGuiCreate(gpuDevice, &renderer));
-        PrGpuTextureDesc desc = prGpuTextureDesc2d(
-            PrGpuFormat_Rgba8, PrUVec2{width, height},
+        PrGpuTextureDesc desc = prGpuTextureDesc2d(PrGpuFormat_Rgba8, PrUVec2{width, height},
             PrGpuTextureUsageFlag_Sampled | PrGpuTextureUsageFlag_RenderTarget);
         REQUIRE(prGpuTextureCreate(gpuDevice, &desc, &texture) == PrStatus_Ok);
     }
@@ -40,21 +39,23 @@ struct Device {
     std::vector<uint8_t> render(const PrDrawList* list) {
         PrGpuCommands* commands = nullptr;
         REQUIRE(prGpuCommandsBegin(gpuDevice, nullptr, &commands));
-        PrDrawTarget prepared{.extent = prGpuTextureExtent(gpuDevice, texture),
-                              .format = PrPixelFormat_Rgba8,
-                              .commands = commands};
+        PrDrawTarget prepared{
+            .extent = prGpuTextureExtent(gpuDevice, texture),
+            .format = PrPixelFormat_Rgba8,
+            .commands = commands,
+        };
         if (frame == nullptr)
             frame = prDrawFrameCreate(renderer);
         REQUIRE(prDrawFramePrepare(frame, list, &prepared) == PrStatus_Ok);
         PrGpuSubresources all{};
         prGpuCommandsTextureBarrier(commands, texture, all, PrGpuAccessFlag_ShaderRead,
-                                    PrGpuAccessFlag_ColorAttachment);
+            PrGpuAccessFlag_ColorAttachment);
         PrGpuPassDesc desc = prGpuPassDescColor(texture, PrGpuLoad_Clear, PrColor{0, 0, 0, 0});
         PrGpuPass* pass = prGpuPassBegin(commands, &desc);
         prDrawFrameRender(frame, pass, PrIVec2{0, 0});
         prGpuPassEnd(pass);
         prGpuCommandsTextureBarrier(commands, texture, all, PrGpuAccessFlag_ColorAttachment,
-                                    PrGpuAccessFlag_ShaderRead);
+            PrGpuAccessFlag_ShaderRead);
         prGpuCommandsSubmitAndWait(commands);
         uint32_t width = prGpuTextureExtent(gpuDevice, texture).x;
         uint32_t height = prGpuTextureExtent(gpuDevice, texture).y;
@@ -68,8 +69,7 @@ struct Device {
 const PrFont* load(const char* name) {
     std::string path = std::string(PR_FONTS_DIR) + "/" + name;
     const PrFont* font = nullptr;
-    REQUIRE(prFontCreateFromFile(path, 0, nullptr, &font)
-            == PrStatus_Ok);
+    REQUIRE(prFontCreateFromFile(path, 0, nullptr, &font) == PrStatus_Ok);
     return font;
 }
 
@@ -93,7 +93,7 @@ double inked(const std::vector<uint8_t>& pixels) {
 
 // Records a run of the text's glyphs, one for each character, advanced by the font's advances.
 void addText(PrDrawList* list, const PrFont* font, float size, const char* text, PrVec2 at,
-             const PrDrawStroke* stroke = nullptr) {
+        const PrDrawStroke* stroke = nullptr) {
     std::vector<PrFontGlyph> glyphs;
     for (const char* c = text; *c != 0; ++c) {
         uint16_t id = prFontCodePointGlyph(font, uint32_t(*c));

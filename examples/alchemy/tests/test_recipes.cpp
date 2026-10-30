@@ -45,20 +45,22 @@ struct Graph {
     // Returns true if the input `key` links to output `slot` of the node `node`.
     bool linksTo(PrJsonValueIndex inputs, const char* key, const char* node, double slot) const {
         PrJsonValueIndex ref = prJsonMember(d, inputs, key);
-        return prJsonCount(d, ref) == 2 && prJsonString(d, prJsonElement(d, ref, 0)) == node
-               && prJsonNumber(d, prJsonElement(d, ref, 1), -1) == slot;
+        return prJsonCount(d, ref) == 2 && prJsonString(d, prJsonElement(d, ref, 0)) == node &&
+            prJsonNumber(d, prJsonElement(d, ref, 1), -1) == slot;
     }
 };
 
 SamplingRecipe sampling(std::vector<LoraRef> loras = {}, std::string negative = "") {
-    return SamplingRecipe{.checkpoint = "sdxl.safetensors",
-                          .loras = std::move(loras),
-                          .sampler = "euler",
-                          .scheduler = "normal",
-                          .prompt = "a fox",
-                          .negativePrompt = std::move(negative),
-                          .seed = 42,
-                          .cfg = 6.5};
+    return SamplingRecipe{
+        .checkpoint = "sdxl.safetensors",
+        .loras = std::move(loras),
+        .sampler = "euler",
+        .scheduler = "normal",
+        .prompt = "a fox",
+        .negativePrompt = std::move(negative),
+        .seed = 42,
+        .cfg = 6.5,
+    };
 }
 
 std::vector<LoraRef> chain() {
@@ -111,13 +113,15 @@ TEST_CASE("an image-to-image graph encodes the source at the requested size and 
 }
 
 TEST_CASE("an outpaint grows the canvas on one side and samples a crop anchored at the edge that grew") {
-    OutpaintRecipe recipe{.sampling = sampling(chain()),
-                          .sourceImage = "fox.png",
-                          .direction = OutpaintDirection_Left,
-                          .sourceWidth = 1000,
-                          .sourceHeight = 1000,
-                          .amount = 256,
-                          .context = 512};
+    OutpaintRecipe recipe{
+        .sampling = sampling(chain()),
+        .sourceImage = "fox.png",
+        .direction = OutpaintDirection_Left,
+        .sourceWidth = 1000,
+        .sourceHeight = 1000,
+        .amount = 256,
+        .context = 512,
+    };
     CHECK(outpaintWidth(recipe) == 1256);
     CHECK(outpaintHeight(recipe) == 1000);
     Graph g(outpaintGraph(recipe));
@@ -134,9 +138,11 @@ TEST_CASE("an outpaint grows the canvas on one side and samples a crop anchored 
 }
 
 TEST_CASE("a detail pass reads the chain's model and text encoder") {
-    Graph g(detailGraph({.sampling = sampling({{"detail.safetensors", 0.8}}),
-                         .sourceImage = "fox.png",
-                         .detector = "bbox/face_yolov8m.pt"}));
+    Graph g(detailGraph({
+        .sampling = sampling({{"detail.safetensors", 0.8}}),
+        .sourceImage = "fox.png",
+        .detector = "bbox/face_yolov8m.pt",
+    }));
     PrJsonValueIndex detail = g.inputs("detail", "FaceDetailer");
     CHECK(g.linksTo(detail, "model", "lora0", 0));
     CHECK(g.linksTo(detail, "clip", "lora0", 1));
@@ -159,7 +165,7 @@ TEST_CASE("an upscale rescales by what the model's name states, and runs the mod
 
 TEST_CASE("a direction reads back from its name") {
     for (OutpaintDirection direction :
-         {OutpaintDirection_Left, OutpaintDirection_Top, OutpaintDirection_Right, OutpaintDirection_Bottom})
+            {OutpaintDirection_Left, OutpaintDirection_Top, OutpaintDirection_Right, OutpaintDirection_Bottom})
         CHECK(parseDirection(directionName(direction), OutpaintDirection_Right) == direction);
     CHECK(parseDirection("TOP", OutpaintDirection_Right) == OutpaintDirection_Top);
     CHECK(parseDirection("sideways", OutpaintDirection_Bottom) == OutpaintDirection_Bottom);

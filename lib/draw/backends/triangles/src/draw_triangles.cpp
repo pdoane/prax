@@ -250,8 +250,10 @@ uint32_t textureOfImage(Walk& w, const PrDrawImage* image) {
     }
     uint32_t texture = newTexture(t);
     uint32_t index = w.b->requests.count;
-    request(w, TrianglesTextureRequest{TrianglesTextureOp_Create, texture, {0, 0},
-                                             PrPixelView{nullptr, size_t(width) * 4, {width, height}}});
+    request(w, TrianglesTextureRequest{
+        TrianglesTextureOp_Create, texture, {0, 0},
+        PrPixelView{nullptr, size_t(width) * 4, {width, height}},
+    });
     w.b->pending.push(PendingTexels{index, offset});
     t->imageIndex.insert(id, t->images.count);
     t->images.push(CachedImage{id, texture, t->build});
@@ -294,9 +296,9 @@ void useDraw(Walk& w, DrawTexture texture, TrianglesSampler sampler, const PrIRe
     TrianglesDraw draw{texture.hostTexture, texture.texture, sampler, clip, w.b->indices.count, 0};
     if (draws.count != 0) {
         TrianglesDraw& last = draws.last();
-        bool same = last.hostTexture == draw.hostTexture && last.texture == draw.texture && last.sampler == sampler
-                    && last.scissor.left == clip.left && last.scissor.top == clip.top
-                    && last.scissor.right == clip.right && last.scissor.bottom == clip.bottom;
+        bool same = last.hostTexture == draw.hostTexture && last.texture == draw.texture && last.sampler == sampler &&
+            last.scissor.left == clip.left && last.scissor.top == clip.top &&
+            last.scissor.right == clip.right && last.scissor.bottom == clip.bottom;
         if (same)
             return;
         if (last.indexCount == 0) {
@@ -411,8 +413,8 @@ void findBreaks(CachedRamp& r) {
     uint32_t start = 0;
     for (uint32_t end = 2; end < kRampSize; ++end) {
         uint32_t span = end - start;
-        bool fits = near(start, end, start + span / 4) && near(start, end, start + span / 2)
-                    && near(start, end, start + span * 3 / 4) && near(start, end, end - 1);
+        bool fits = near(start, end, start + span / 4) && near(start, end, start + span / 2) &&
+            near(start, end, start + span * 3 / 4) && near(start, end, end - 1);
         if (!fits) {
             start = end - 1;
             r.breaks[r.breakCount++] = float(start) / float(kRampSize - 1);
@@ -490,8 +492,8 @@ void placeGradient(Paint& p) {
             p.cut = PaintCut_Wedges;
             break;
         case PrDrawBrushKind_Radial:
-            if (brush->radial.start.x == brush->radial.end.x && brush->radial.start.y == brush->radial.end.y
-                && brush->radial.endRadius > brush->radial.startRadius) {
+            if (brush->radial.start.x == brush->radial.end.x && brush->radial.start.y == brush->radial.end.y &&
+                    brush->radial.endRadius > brush->radial.startRadius) {
                 p.cut = PaintCut_Rings;
                 break;
             }
@@ -558,18 +560,19 @@ bool makePaint(Walk& w, const PrDrawBrush* PR_NULLABLE brush, PrColor color, PrR
         PrVec2 size = sourceSize(source);
         float width = size.x;
         float height = size.y;
-        PrAffine2 toSource = prAffine2Concat(
-            prAffine2Translate(PrVec2{-tile.left, -tile.top}),
-            prAffine2Scale(PrVec2{prRectWidth(source.rect) / prRectWidth(tile),
-                                  prRectHeight(source.rect) / prRectHeight(tile)}));
+        PrAffine2 toSource = prAffine2Concat(prAffine2Translate(PrVec2{-tile.left, -tile.top}), prAffine2Scale(PrVec2{
+            prRectWidth(source.rect) / prRectWidth(tile),
+            prRectHeight(source.rect) / prRectHeight(tile),
+        }));
         toSource = prAffine2Concat(toSource, prAffine2Translate(PrVec2{source.rect.left, source.rect.top}));
         out->uvFromBrush = prAffine2Concat(toSource, prAffine2Scale(PrVec2{1 / width, 1 / height}));
         PrAffine2 toDevice{};
-        if (tiles.x == PrDrawExtend_None && tiles.y == PrDrawExtend_None
-            && prAffine2Invert(out->fromDevice, &toDevice)) {
+        if (tiles.x == PrDrawExtend_None && tiles.y == PrDrawExtend_None && prAffine2Invert(out->fromDevice, &toDevice)) {
             out->clipTile = true;
-            PrVec2 corners[4] = {{tile.left, tile.top}, {tile.right, tile.top}, {tile.right, tile.bottom},
-                                  {tile.left, tile.bottom}};
+            PrVec2 corners[4] = {
+                {tile.left, tile.top}, {tile.right, tile.top}, {tile.right, tile.bottom},
+                {tile.left, tile.bottom},
+            };
             for (uint32_t i = 0; i < 4; ++i)
                 out->tile[i] = prAffine2MapPoint(toDevice, corners[i]);
         }
@@ -633,9 +636,11 @@ uint32_t keepSide(const Piece* in, uint32_t count, Side side, Piece* out) {
             out[kept++] = a;
         if ((sa >= 0) != (sb >= 0)) {
             float t = sa / (sa - sb);
-            out[kept++] = Piece{a.p + (b.p - a.p) * t,
-                                a.coverage + (b.coverage - a.coverage) * t, a.value + (b.value - a.value) * t,
-                                a.uv + (b.uv - a.uv) * t};
+            out[kept++] = Piece{
+                a.p + (b.p - a.p) * t,
+                a.coverage + (b.coverage - a.coverage) * t, a.value + (b.value - a.value) * t,
+                a.uv + (b.uv - a.uv) * t,
+            };
         }
     }
     return kept;
@@ -811,15 +816,16 @@ RaySide raySide(const Paint& paint, PrVec2 center, float angle) {
 // of neighboring angles to `each` with the index of the first angle. As with cutAt, neighbors share their points
 // exactly.
 template <typename Each>
-void cutWedges(const Piece* polygon, uint32_t count, const Paint& paint, PrVec2 c, const float* angles, uint32_t n,
-               Each each) {
+void cutWedges(const Piece* polygon, uint32_t count, const Paint& paint, PrVec2 c, const float* angles, uint32_t n, Each each) {
     uint32_t half = 0;
     while (half + 1 < n && angles[half] < angles[0] + kPiF32 - 1e-4f)
         ++half;
     RaySide first = raySide(paint, c, angles[0]);
     Piece halves[2][kMaxPiece];
-    uint32_t counts[2] = {keepSide(polygon, count, first, halves[0]),
-                          keepSide(polygon, count, [&](const Piece& q) { return -first(q); }, halves[1])};
+    uint32_t counts[2] = {
+        keepSide(polygon, count, first, halves[0]),
+        keepSide(polygon, count, [&](const Piece& q) { return -first(q); }, halves[1]),
+    };
     uint32_t starts[2] = {0, half};
     uint32_t ends[2] = {half, n - 1};
     Piece piece[kMaxPiece];
@@ -1009,8 +1015,7 @@ void drawMapped(Walk& w, const Piece* triangle, const Paint& paint) {
     }
     for (uint32_t i = 0; i < m.segments.count; ++i) {
         const MapSegment& s = m.segments.data[i];
-        if (s.bounds.left > box.right || s.bounds.right < box.left || s.bounds.top > box.bottom
-            || s.bounds.bottom < box.top)
+        if (s.bounds.left > box.right || s.bounds.right < box.left || s.bounds.top > box.bottom || s.bounds.bottom < box.top)
             continue;
         Piece polygon[kMaxPiece];
         Piece next[kMaxPiece];
@@ -1144,7 +1149,7 @@ void strokePath(Walk& w, const PrPath* shape, const PrDrawStroke* stroke, bool a
         PrPathPolylineOp op =
             s.align == PrDrawStrokeAlign_Inside ? PrPathPolylineOp_Intersect : PrPathPolylineOp_Difference;
         prPathPolylineCombine(&t->aligned, PrPathFillRule_NonZero, &t->strokeRegion, PrPathFillRule_NonZero, op,
-                          &t->combined);
+            &t->combined);
         fillDevice(w, t->combined, PrPathFillRule_NonZero, antialias, paint);
     }
     if (t->fill.pointCount != 0)
@@ -1171,10 +1176,10 @@ void drawListRect(Walk& w, const PrDrawList* drawn, PrRect area, PrRect destinat
     pushClip(w, clip);
     PrDrawCommand place{};
     place.kind = PrDrawCommandKind_PushTransformAffine2;
-    place.affine = prDAffine2FromAffine2(prAffine2Concat(
-        prAffine2Concat(prAffine2Translate(PrVec2{-area.left, -area.top}),
-                        prAffine2Scale(PrVec2{prRectWidth(destination) / width, prRectHeight(destination) / height})),
-        prAffine2Translate(PrVec2{destination.left, destination.top})));
+    place.affine =
+        prDAffine2FromAffine2(prAffine2Concat(prAffine2Concat(prAffine2Translate(PrVec2{-area.left, -area.top}),
+            prAffine2Scale(PrVec2{prRectWidth(destination) / width, prRectHeight(destination) / height})),
+            prAffine2Translate(PrVec2{destination.left, destination.top})));
     PrDrawTransform next = prDrawTransformPush(&w.transforms.last(), &place);
     w.transforms.push(next);
     w.opacities.push(opacityOf(w) * clampF32(alpha, 0, 1));
@@ -1198,9 +1203,8 @@ void drawListBrush(Walk& w, const PrDrawCommand& c) {
     PrAffine2 fromDevice{};
     PrAffine2 toDevice{};
     PrAffine2 userFromDevice{};
-    if (!prDrawBrushFromTarget(&brush, x.affine, prDrawFillBounds(&c), &fromDevice)
-        || !prAffine2Invert(fromDevice, &toDevice)
-        || !prAffine2Invert(x.affine, &userFromDevice))
+    if (!prDrawBrushFromTarget(&brush, x.affine, prDrawFillBounds(&c), &fromDevice) ||
+            !prAffine2Invert(fromDevice, &toDevice) || !prAffine2Invert(x.affine, &userFromDevice))
         return;
     // The shape clips in the command's space, and the tiles play in brush space.
     prPathClear(w.t->brushShape);
@@ -1217,13 +1221,17 @@ void drawListBrush(Walk& w, const PrDrawCommand& c) {
     PrDrawTransform brushSpace = prDrawTransformPush(&x, &toBrush);
     w.transforms.push(brushSpace);
     // The tiles that the clip's bounds reach, in brush space.
-    PrVec2 corners[4] = {{float(box.left), float(box.top)}, {float(box.right), float(box.top)},
-                          {float(box.right), float(box.bottom)}, {float(box.left), float(box.bottom)}};
+    PrVec2 corners[4] = {
+        {float(box.left), float(box.top)}, {float(box.right), float(box.top)},
+        {float(box.right), float(box.bottom)}, {float(box.left), float(box.bottom)},
+    };
     PrRect reach{kInfinityF32, kInfinityF32, -kInfinityF32, -kInfinityF32};
     for (const PrVec2& corner : corners) {
         PrVec2 b = prAffine2MapPoint(fromDevice, corner);
-        reach = PrRect{minF32(reach.left, b.x), minF32(reach.top, b.y), maxF32(reach.right, b.x),
-                       maxF32(reach.bottom, b.y)};
+        reach = PrRect{
+            minF32(reach.left, b.x), minF32(reach.top, b.y), maxF32(reach.right, b.x),
+            maxF32(reach.bottom, b.y),
+        };
     }
     float periodX = prRectWidth(tile) + maxF32(tiles.spacing.x, 0);
     float periodY = prRectHeight(tile) + maxF32(tiles.spacing.y, 0);
@@ -1235,12 +1243,16 @@ void drawListBrush(Walk& w, const PrDrawCommand& c) {
     if (!prIRectIsEmpty(box) && (lastX - firstX + 1) * (lastY - firstY + 1) <= float(kListMaxTiles)) {
         for (float iy = firstY; iy <= lastY; iy += 1) {
             for (float ix = firstX; ix <= lastX; ix += 1) {
-                PrRect at{tile.left + ix * periodX, tile.top + iy * periodY, tile.right + ix * periodX,
-                          tile.bottom + iy * periodY};
+                PrRect at{
+                    tile.left + ix * periodX, tile.top + iy * periodY, tile.right + ix * periodX,
+                    tile.bottom + iy * periodY,
+                };
                 bool flipX = tiles.x == PrDrawExtend_Reflect && fmodF32(absF32(ix), 2) == 1;
                 bool flipY = tiles.y == PrDrawExtend_Reflect && fmodF32(absF32(iy), 2) == 1;
-                PrRect source{flipX ? area.right : area.left, flipY ? area.bottom : area.top,
-                              flipX ? area.left : area.right, flipY ? area.top : area.bottom};
+                PrRect source{
+                    flipX ? area.right : area.left, flipY ? area.bottom : area.top,
+                    flipX ? area.left : area.right, flipY ? area.top : area.bottom,
+                };
                 PrDrawCommand tileClip{};
                 tileClip.kind = PrDrawCommandKind_PushClipRect;
                 tileClip.rect = at;
@@ -1248,15 +1260,15 @@ void drawListBrush(Walk& w, const PrDrawCommand& c) {
                 PrDrawCommand place{};
                 place.kind = PrDrawCommandKind_PushTransformAffine2;
                 place.affine = prDAffine2FromAffine2(prAffine2Concat(
-                    prAffine2Concat(prAffine2Translate(PrVec2{-source.left, -source.top}),
-                                    prAffine2Scale(PrVec2{prRectWidth(at) / prRectWidth(source),
-                                                          prRectHeight(at) / prRectHeight(source)})),
-                    prAffine2Translate(PrVec2{at.left, at.top})));
+                    prAffine2Concat(prAffine2Translate(PrVec2{-source.left, -source.top}), prAffine2Scale(PrVec2{
+                        prRectWidth(at) / prRectWidth(source),
+                        prRectHeight(at) / prRectHeight(source),
+                    })), prAffine2Translate(PrVec2{at.left, at.top})));
                 w.transforms.push(prDrawTransformPush(&w.transforms.last(), &place));
                 w.opacities.push(opacityOf(w) * clampF32(prFloat16ToFloat(c.color.a), 0, 1));
                 if (!prIRectIsEmpty(clipOf(w)))
                     runCommands(w, prDrawListCommands(brush.image.source.list),
-                                prDrawListCommandCount(brush.image.source.list));
+                        prDrawListCommandCount(brush.image.source.list));
                 w.opacities.pop();
                 w.transforms.pop();
                 popClip(w);
@@ -1338,8 +1350,10 @@ bool mapStroke(Walk& w, const PrDrawCommand& c) {
             PrPathStrokeWidth width = prPathStrokeWidthAt(&stroke.shape, (along + span / 2) / length);
             s.left = width.left * scale;
             s.right = width.right * scale;
-            s.bounds = PrRect{minF32(a.x, b.x) - m.reach, minF32(a.y, b.y) - m.reach, maxF32(a.x, b.x) + m.reach,
-                              maxF32(a.y, b.y) + m.reach};
+            s.bounds = PrRect{
+                minF32(a.x, b.x) - m.reach, minF32(a.y, b.y) - m.reach, maxF32(a.x, b.x) + m.reach,
+                maxF32(a.y, b.y) + m.reach,
+            };
             m.segments.push(s);
             along += span;
         }
@@ -1373,8 +1387,8 @@ bool mapsStroke(const PrDrawCommand& c) {
 void drawShape(Walk& w, const PrDrawCommand& c) {
     if (c.kind == PrDrawCommandKind_Line && c.stroke == nullptr)
         return;
-    if (c.brush != nullptr && c.brush->kind == PrDrawBrushKind_Image
-        && c.brush->image.source.kind == PrDrawSourceKind_List && c.brush->image.source.list != nullptr) {
+    if (c.brush != nullptr && c.brush->kind == PrDrawBrushKind_Image &&
+            c.brush->image.source.kind == PrDrawSourceKind_List && c.brush->image.source.list != nullptr) {
         if (c.stroke == nullptr)
             drawListBrush(w, c);
         return;
@@ -1401,7 +1415,7 @@ struct BorderDraw {
 };
 
 void drawBorderPiece(void* PR_NULLABLE context, const PrDrawBorderPiece* piece, const PrPathPolyline* shape,
-                     const PrPathPolyline* PR_NULLABLE cut) {
+        const PrPathPolyline* PR_NULLABLE cut) {
     BorderDraw& d = *static_cast<BorderDraw*>(context);
     Walk& w = *d.w;
     const PrDrawCommand& c = *d.command;
@@ -1421,7 +1435,7 @@ void drawBorderPiece(void* PR_NULLABLE context, const PrDrawBorderPiece* piece, 
     prPathPolylineAddPolyline(&w.t->cut, cut, x.affine);
     prPathPolylineClear(&w.t->combined);
     prPathPolylineCombine(&w.t->polyline, piece->rule, &w.t->cut, PrPathFillRule_NonZero, PrPathPolylineOp_Intersect,
-                      &w.t->combined);
+        &w.t->combined);
     fillDevice(w, w.t->combined, PrPathFillRule_NonZero, c.antialias, paint);
 }
 
@@ -1494,12 +1508,17 @@ void cornerOutline(PrRect r, const PrCorner corners[4], PrAffine2 transform, Arr
         bool square = prCornerIsSquare(corners[k]);
         for (uint32_t i = 0; i < kShadowCornerPoints; ++i) {
             // A square corner is its corner point, which lies along the side before it by its whole radius.
-            PrVec2 uv = square ? PrVec2{1, 0}
-                                : prCornerCurvePoint(corners[k].shape, float(i) / float(kShadowCornerPoints - 1));
+            PrVec2 uv;
+            if (square)
+                uv = PrVec2{1, 0};
+            else
+                uv = prCornerCurvePoint(corners[k].shape, float(i) / float(kShadowCornerPoints - 1));
             float along = f.radiusBefore * uv.x;
             float inward = f.radiusAfter * uv.y;
-            PrVec2 p{f.start.x + f.before.x * along + f.after.x * inward,
-                      f.start.y + f.before.y * along + f.after.y * inward};
+            PrVec2 p{
+                f.start.x + f.before.x * along + f.after.x * inward,
+                f.start.y + f.before.y * along + f.after.y * inward,
+            };
             out.push(prAffine2MapPoint(transform, p));
         }
     }
@@ -1623,9 +1642,11 @@ void drawShadow(Walk& w, const PrDrawCommand& c) {
     prPathFlatten(t->region, prAffine2Identity(), kTolerance, PrPathFlattening_Balanced, &t->polyline);
     PrPathMesh mesh = prPathTessellatorFill(t->tessellator, &t->polyline, PrPathFillRule_EvenOdd, 0);
     for (uint32_t i = 0; i + 2 < mesh.indexCount; i += 3) {
-        Piece triangle[3] = {{mesh.points[mesh.indices[i]], 1, 0, PrVec2{0, 0}},
-                             {mesh.points[mesh.indices[i + 1]], 1, 0, PrVec2{0, 0}},
-                             {mesh.points[mesh.indices[i + 2]], 1, 0, PrVec2{0, 0}}};
+        Piece triangle[3] = {
+            {mesh.points[mesh.indices[i]], 1, 0, PrVec2{0, 0}},
+            {mesh.points[mesh.indices[i + 1]], 1, 0, PrVec2{0, 0}},
+            {mesh.points[mesh.indices[i + 2]], 1, 0, PrVec2{0, 0}},
+        };
         drawCut(w, triangle, opening, sign, paint);
     }
     opening.reset();
@@ -1644,8 +1665,10 @@ void drawImageRects(Walk& w, const PrDrawCommand& c, const PrDrawImageRect* rect
     if (!sampled(source)) {
         for (uint32_t i = 0; source.kind == PrDrawSourceKind_List && source.list != nullptr && i < count; ++i) {
             const PrRect& s = rects[i].source;
-            PrRect area{source.rect.left + s.left, source.rect.top + s.top, source.rect.left + s.right,
-                        source.rect.top + s.bottom};
+            PrRect area{
+                source.rect.left + s.left, source.rect.top + s.top, source.rect.left + s.right,
+                source.rect.top + s.bottom,
+            };
             drawListRect(w, source.list, area, rects[i].destination, prFloat16ToFloat(c.color.a));
         }
         return;
@@ -1674,10 +1697,11 @@ void drawImageRects(Walk& w, const PrDrawCommand& c, const PrDrawImageRect* rect
         if (!(d.right > d.left && d.bottom > d.top))
             continue;
         PrRect s = rects[i].source;
-        s = PrRect{source.rect.left + s.left, source.rect.top + s.top, source.rect.left + s.right,
-                   source.rect.top + s.bottom};
-        PrAffine2 toSource = prAffine2Concat(
-            prAffine2Translate(PrVec2{-d.left, -d.top}),
+        s = PrRect{
+            source.rect.left + s.left, source.rect.top + s.top, source.rect.left + s.right,
+            source.rect.top + s.bottom,
+        };
+        PrAffine2 toSource = prAffine2Concat(prAffine2Translate(PrVec2{-d.left, -d.top}),
             prAffine2Scale(PrVec2{prRectWidth(s) / prRectWidth(d), prRectHeight(s) / prRectHeight(d)}));
         toSource = prAffine2Concat(toSource, prAffine2Translate(PrVec2{s.left, s.top}));
         paint.fromDevice = prAffine2Concat(fromDevice, toSource);
@@ -1692,11 +1716,11 @@ void drawImageRects(Walk& w, const PrDrawCommand& c, const PrDrawImageRect* rect
 void drawNineSlice(Walk& w, const PrDrawCommand& c) {
     const PrRect& area = c.nineSlice.source.rect;
     uint32_t count = prDrawNineSliceRects(c.nineSlice.slices, PrVec2{prRectWidth(area), prRectHeight(area)},
-                                          c.nineSlice.destination, nullptr, 0);
+        c.nineSlice.destination, nullptr, 0);
     Array<PrDrawImageRect> rects;
     rects.reserve(count);
     rects.count = prDrawNineSliceRects(c.nineSlice.slices, PrVec2{prRectWidth(area), prRectHeight(area)},
-                                       c.nineSlice.destination, rects.data, count);
+        c.nineSlice.destination, rects.data, count);
     drawImageRects(w, c, rects.data, rects.count, false);
     rects.reset();
 }
@@ -1744,10 +1768,12 @@ bool drawAtlasGlyph(Walk& w, const PrDrawCommand& c, uint32_t index, const Paint
     float right = left + float(g.extent.x);
     float bottom = top + float(g.extent.y);
     PrVec2 corners[4] = {{left, top}, {right, top}, {right, bottom}, {left, bottom}};
-    PrVec2 uvs[4] = {{float(g.texel.x) / size, float(g.texel.y) / size},
-                      {float(g.texel.x + g.extent.x) / size, float(g.texel.y) / size},
-                      {float(g.texel.x + g.extent.x) / size, float(g.texel.y + g.extent.y) / size},
-                      {float(g.texel.x) / size, float(g.texel.y + g.extent.y) / size}};
+    PrVec2 uvs[4] = {
+        {float(g.texel.x) / size, float(g.texel.y) / size},
+        {float(g.texel.x + g.extent.x) / size, float(g.texel.y) / size},
+        {float(g.texel.x + g.extent.x) / size, float(g.texel.y + g.extent.y) / size},
+        {float(g.texel.x) / size, float(g.texel.y + g.extent.y) / size},
+    };
     useDraw(w, DrawTexture{pageTexture(w.t, g.page), 0}, TrianglesSampler_LinearClamp, clipOf(w));
     if (outlined(w)) {
         Paint quad = paint;
@@ -1783,8 +1809,8 @@ void drawGlyphs(Walk& w, const PrDrawCommand& c) {
     for (uint32_t i = 0; i < run.glyphCount; ++i) {
         if (c.stroke == nullptr) {
             float pixelsPerEm = prDrawGlyphPixelsPerEm(&run, i, w.transforms.last().affine);
-            PrDrawList* drawn = prDrawGlyphCacheList(w.t->lists, run.font, run.glyphs[i].id, pixelsPerEm,
-                                                          &run.palette, foreground);
+            PrDrawList* drawn =
+                prDrawGlyphCacheList(w.t->lists, run.font, run.glyphs[i].id, pixelsPerEm, &run.palette, foreground);
             if (drawn != nullptr) {
                 PrDrawGroup group{};
                 PrDrawCommand commands[kPrDrawGlyphMaxCommands];
@@ -1871,8 +1897,10 @@ void pushClip(Walk& w, const PrDrawCommand& c) {
     if (prDrawTransformDrawsNothing(&x, &c) || prRectIsEmpty(rect)) {
         clip.box = PrIRect{0, 0, 0, 0};
     } else {
-        PrIRect box{saturateI32(double(roundF32(rect.left))), saturateI32(double(roundF32(rect.top))),
-                saturateI32(double(roundF32(rect.right))), saturateI32(double(roundF32(rect.bottom)))};
+        PrIRect box{
+            saturateI32(double(roundF32(rect.left))), saturateI32(double(roundF32(rect.top))),
+            saturateI32(double(roundF32(rect.right))), saturateI32(double(roundF32(rect.bottom))),
+        };
         clip.box = prIRectIntersect(clip.box, box);
         if (outline && !prIRectIsEmpty(clip.box)) {
             uint32_t start = w.clipPoints.count;
@@ -1912,8 +1940,8 @@ void runCommands(Walk& w, const PrDrawCommand* commands, uint32_t count) {
                 w.opacities.push(0);
             continue;
         }
-        bool painting = c.kind <= PrDrawCommandKind_Glyphs && c.kind != PrDrawCommandKind_WritePixels
-                        && c.kind != PrDrawCommandKind_Clear;
+        bool painting = c.kind <= PrDrawCommandKind_Glyphs && c.kind != PrDrawCommandKind_WritePixels &&
+            c.kind != PrDrawCommandKind_Clear;
         if (painting && !drawsOver(c.composite))
             continue;
         switch (c.kind) {
@@ -2010,8 +2038,10 @@ void finishRequests(Walk& w) {
         }
         w.b->pending.push(PendingTexels{w.b->requests.count, offset});
         TrianglesTextureOp op = create ? TrianglesTextureOp_Create : TrianglesTextureOp_Update;
-        request(w, TrianglesTextureRequest{op, texture, {left, top},
-                                                 PrPixelView{nullptr, size_t(width) * 4, {width, height}}});
+        request(w, TrianglesTextureRequest{
+            op, texture, {left, top},
+            PrPixelView{nullptr, size_t(width) * 4, {width, height}},
+        });
     }
     t->pagesCreated = prDrawAtlasPageCount(t->atlas);
     uint32_t kept = 0;
@@ -2033,16 +2063,17 @@ void finishRequests(Walk& w) {
 }
 
 void describe(const FrameStorage* b, uint32_t width, uint32_t height, TrianglesFrame* out) {
-    *out = TrianglesFrame{{width,
-                                height},
-                                b->requests.data,
-                                b->requests.count,
-                                b->vertices.data,
-                                b->vertices.count,
-                                b->indices.data,
-                                b->indices.count,
-                                b->draws.data,
-                                b->draws.count};
+    *out = TrianglesFrame{
+        {width, height},
+        b->requests.data,
+        b->requests.count,
+        b->vertices.data,
+        b->vertices.count,
+        b->indices.data,
+        b->indices.count,
+        b->draws.data,
+        b->draws.count,
+    };
 }
 
 void forgetPages(Triangles* t) {
@@ -2116,7 +2147,7 @@ void storageDestroy(FrameStorage* b) {
 // `out`. The frame stays valid until the storage's next build. The requests' texels stay valid until the next build
 // with any storage.
 void trianglesBuild(Triangles* t, const PrDrawList* list, uint32_t width, uint32_t height, FrameStorage* b,
-                    TrianglesFrame* out) {
+        TrianglesFrame* out) {
     b->vertices.clear();
     b->indices.clear();
     b->draws.clear();
@@ -2178,8 +2209,7 @@ void destroyFrame(PrDrawRenderer*, PrDrawFrame* handle) {
     prMemoryFree(frame);
 }
 
-PrStatus prepare(PrDrawRenderer* renderer, PrDrawFrame* handle, const PrDrawList* list,
-                 const PrDrawTarget* target) {
+PrStatus prepare(PrDrawRenderer* renderer, PrDrawFrame* handle, const PrDrawList* list, const PrDrawTarget* target) {
     TrianglesRenderer* r = static_cast<TrianglesRenderer*>(renderer);
     TrianglesDrawFrame* frame = static_cast<TrianglesDrawFrame*>(handle);
     trianglesBuild(r->triangles, list, target->extent.x, target->extent.y, frame->storage, &frame->built);
@@ -2220,8 +2250,7 @@ void destroyRenderer(PrDrawRenderer* renderer) {
     prMemoryFree(r);
 }
 
-TrianglesRenderer* createRenderer(TrianglesDevice* device,
-                                  const PrDrawTrianglesOptions* PR_NULLABLE options) {
+TrianglesRenderer* createRenderer(TrianglesDevice* device, const PrDrawTrianglesOptions* PR_NULLABLE options) {
     TrianglesRenderer* r = allocZeroed<TrianglesRenderer>();
     r->device = device;
     r->triangles = trianglesCreate(options != nullptr ? *options : prDrawTrianglesOptionsDefault());
@@ -2248,7 +2277,7 @@ PrDrawTrianglesOptions prDrawTrianglesOptionsDefault(void) {
 }
 
 PrStatus prDrawTrianglesCreate(PrGpuDevice* device, const PrDrawTrianglesOptions* PR_NULLABLE options,
-                               PrDrawRenderer* PR_NULLABLE* PR_NONNULL out) {
+        PrDrawRenderer* PR_NULLABLE* PR_NONNULL out) {
     *out = nullptr;
     TrianglesDevice* state = nullptr;
     PrStatus status = trianglesDeviceCreate(device, &state);

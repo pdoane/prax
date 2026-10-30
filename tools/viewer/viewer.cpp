@@ -90,8 +90,10 @@ constexpr PrColor kBackdrop{0.12f, 0.12f, 0.13f, 1};
 
 // Returns the swap chain that the viewer presents with, for SDR or for HDR.
 PrGpuSwapChainDesc swapChainDesc(bool hdr) {
-    return {.intent = PrGpuSwapChainIntent(hdr ? PrGpuSwapChainIntent_Hdr : PrGpuSwapChainIntent_Sdr),
-            .flags = PrGpuSwapChainFlag_Threaded};
+    return {
+        .intent = PrGpuSwapChainIntent(hdr ? PrGpuSwapChainIntent_Hdr : PrGpuSwapChainIntent_Sdr),
+        .flags = PrGpuSwapChainFlag_Threaded,
+    };
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -99,7 +101,7 @@ PrGpuSwapChainDesc swapChainDesc(bool hdr) {
 
 // Renders the list into the slot and waits for the device, for rendering without a window.
 Rendered renderSlotWaiting(PrGpuDevice* device, Slot& slot, const std::vector<RendererConfig>& configs,
-                           uint32_t config, const PrDrawList* list, PrColor background) {
+        uint32_t config, const PrDrawList* list, PrColor background) {
     PrGpuCommands* commands = nullptr;
     if (!prGpuCommandsBegin(device, nullptr, &commands))
         return Rendered{.status = PrStatus_Lost};
@@ -131,8 +133,7 @@ std::vector<uint8_t> readSlot(const Slot& slot) {
 }
 
 // Writes straight RGBA pixels as a PNG.
-bool writeRgbaPng(const std::string& path, const std::vector<uint8_t>& rgba, uint32_t width,
-                  uint32_t height) {
+bool writeRgbaPng(const std::string& path, const std::vector<uint8_t>& rgba, uint32_t width, uint32_t height) {
     const PrPixelView pixels{rgba.data(), size_t(width) * 4, {width, height}};
     PrCompressCodec* compressCodec = prCompressBuiltinCreate();
     PrImageCodec* imageCodec = prImageBuiltinCreate(compressCodec);
@@ -150,8 +151,7 @@ bool writeRgbaPng(const std::string& path, const std::vector<uint8_t>& rgba, uin
 }
 
 // Writes premultiplied BGRA pixels as a PNG of straight RGBA.
-bool writePng(const std::string& path, const std::vector<uint8_t>& pixels, uint32_t width,
-              uint32_t height) {
+bool writePng(const std::string& path, const std::vector<uint8_t>& pixels, uint32_t width, uint32_t height) {
     std::vector<uint8_t> rgba = pixels;
     straightenBgra(rgba.data(), width, height, size_t(width) * 4);
     return writeRgbaPng(path, rgba, width, height);
@@ -169,7 +169,7 @@ int indexOf(const std::vector<RendererConfig>& configs, const char* name) {
 }
 
 int renderAll(const char* directory, const Collection& documents, const char* which, const char* referenceName,
-              TextBackends text, double time, float pixelRatio) {
+        TextBackends text, double time, float pixelRatio) {
     std::error_code error;
     std::filesystem::create_directories(directory, error);
     if (error) {
@@ -206,15 +206,13 @@ int renderAll(const char* directory, const Collection& documents, const char* wh
             record(list, *loaded, documents.width, documents.height, pixelRatio, time);
             return loaded;
         };
-        std::string stem = std::string(directory) + "/" + std::to_string(d + 1) + "-"
-                           + fileNameOf(document.name) + "-";
+        std::string stem = std::string(directory) + "/" + std::to_string(d + 1) + "-" + fileNameOf(document.name) + "-";
         std::vector<uint8_t> expected;
         if (reference >= 0) {
             std::shared_ptr<Loaded> loaded = recordFor(uint32_t(reference));
-            if (sizeSlot(device, referenceSlot, width, height) == PrStatus_Ok
-                && renderSlotWaiting(device, referenceSlot, configs, uint32_t(reference), list, background(*loaded))
-                           .status
-                       == PrStatus_Ok) {
+            if (sizeSlot(device, referenceSlot, width, height) == PrStatus_Ok &&
+                    renderSlotWaiting(device, referenceSlot, configs, uint32_t(reference), list, background(*loaded))
+                    .status == PrStatus_Ok) {
                 expected = readSlot(referenceSlot);
                 straightenBgra(expected.data(), width, height, size_t(width) * 4);
             }
@@ -230,20 +228,16 @@ int renderAll(const char* directory, const Collection& documents, const char* wh
                 pixels = readSlot(slot);
             std::string path = stem + configs[b].name + ".png";
             bool ok = r.status == PrStatus_Ok && writePng(path, pixels, width, height);
-            std::printf("%s %s: %u commands, %.2f ms", ok ? "wrote" : "FAILED", path.c_str(),
-                        r.commands, r.ms);
+            std::printf("%s %s: %u commands, %.2f ms", ok ? "wrote" : "FAILED", path.c_str(), r.commands, r.ms);
             if (ok && !expected.empty() && int(b) != reference) {
                 std::vector<uint8_t> diff(pixels.size());
                 straightenBgra(pixels.data(), width, height, size_t(width) * 4);
                 ImageDifference c = compareImages(expected.data(), pixels.data(), width, height,
-                                                  size_t(width) * 4, ImageComparison{},
-                                                  diff.data());
-                std::string diffPath =
-                    stem + configs[b].name + "-diff-" + referenceName + ".png";
+                    size_t(width) * 4, ImageComparison{}, diff.data());
+                std::string diffPath = stem + configs[b].name + "-diff-" + referenceName + ".png";
                 ok = writeRgbaPng(diffPath, diff, width, height);
                 std::printf(", against %s changed %.3f%% (content %.3f%%), mean error %.3f",
-                            referenceName, c.changedRatio * 100,
-                            c.contentChangedRatio * 100, c.mae);
+                    referenceName, c.changedRatio * 100, c.contentChangedRatio * 100, c.mae);
             }
             std::printf("\n");
             failures += ok ? 0 : 1;
@@ -309,7 +303,7 @@ public:
             s.pixels.resize(size_t(texels.extent.x) * texels.extent.y * 4);
             for (uint32_t y = 0; y < texels.extent.y; ++y)
                 std::copy_n(static_cast<const uint8_t*>(texels.data) + y * texels.stride,
-                            size_t(texels.extent.x) * 4, s.pixels.data() + size_t(y) * texels.extent.x * 4);
+                    size_t(texels.extent.x) * 4, s.pixels.data() + size_t(y) * texels.extent.x * 4);
             compared_ = false;
         }
         wake_.notify_one();
@@ -335,9 +329,8 @@ private:
 
     // Returns true if both sides hold what was requested and have not been compared.
     bool due() const {
-        return !compared_ && !wanted_[0].empty() && sides_[0].shown == wanted_[0]
-               && sides_[1].shown == wanted_[1] && sides_[0].width == sides_[1].width
-               && sides_[0].height == sides_[1].height;
+        return !compared_ && !wanted_[0].empty() && sides_[0].shown == wanted_[0] &&
+            sides_[1].shown == wanted_[1] && sides_[0].width == sides_[1].width && sides_[0].height == sides_[1].height;
     }
 
     void run() {
@@ -365,8 +358,7 @@ private:
             result.height = height;
             result.diff.resize(rendered.pixels.size());
             result.difference = compareImages(reference.pixels.data(), rendered.pixels.data(),
-                                              width, height, stride, ImageComparison{},
-                                              result.diff.data());
+                width, height, stride, ImageComparison{}, result.diff.data());
             // The difference is opaque, so its straight RGBA, once swapped, is the BGRA that the texture takes.
             for (size_t i = 0; i < result.diff.size(); i += 4)
                 std::swap(result.diff[i], result.diff[i + 2]);
@@ -581,12 +573,12 @@ std::string paneStem(const Viewer& v, const PaneChoice& pane, const Opened& docu
     const PaneOutput& output = source.output;
     bool prax = showsPrax(pane, document);
     std::snprintf(stem, sizeof(stem), "%u %u %s %u %u %u %ux%u %d %gx%g %g %g,%g %u %g %u %u", v.choices.collection,
-                  v.choices.document, prax ? "prax" : "reference", prax ? pane.config : pane.reference,
-                  uint32_t(pane.text.shaper), uint32_t(pane.text.hinting), source.width, source.height,
-                  int(v.choices.view == View_Single), double(source.docWidth), double(source.docHeight),
-                  double(source.pixelRatio), double(source.origin.x), double(source.origin.y),
-                  uint32_t(output.format), double(output.display.headroom), uint32_t(output.display.gamut),
-                  uint32_t(output.preferences.colorScheme));
+        v.choices.document, prax ? "prax" : "reference", prax ? pane.config : pane.reference,
+        uint32_t(pane.text.shaper), uint32_t(pane.text.hinting), source.width, source.height,
+        int(v.choices.view == View_Single), double(source.docWidth), double(source.docHeight),
+        double(source.pixelRatio), double(source.origin.x), double(source.origin.y),
+        uint32_t(output.format), double(output.display.headroom), uint32_t(output.display.gamut),
+        uint32_t(output.preferences.colorScheme));
     return stem;
 }
 
@@ -718,8 +710,7 @@ void browserStood(void* context, PrStatus status, PrStringView json) {
     }
     const PaneSource& source = c->source;
     PrRect region = source.viewed ? source.region : PrRect{0, 0, source.docWidth, source.docHeight};
-    prAppBrowserCapture(c->v->browsers[c->index].browser, region, PrUVec2{source.width, source.height},
-                        browserCaptured, c);
+    prAppBrowserCapture(c->v->browsers[c->index].browser, region, PrUVec2{source.width, source.height}, browserCaptured, c);
 }
 
 // Tells the browser of pane `index`, which shows a page, the next thing that the pane needs, if nothing is pending.
@@ -765,7 +756,7 @@ void browserNext(Viewer& v, uint32_t index, bool running) {
             b.asked = std::chrono::steady_clock::now();
             b.busy = true;
             prAppBrowserEvaluate(b.browser, "window.prStats ? window.prStats() : null", browserStats,
-                                 new BrowserCommand{&v, index, b.generation});
+                new BrowserCommand{&v, index, b.generation});
         }
         return;
     }
@@ -774,18 +765,16 @@ void browserNext(Viewer& v, uint32_t index, bool running) {
         return;
     b.playing = false;
     b.time = time;
-    BrowserCapture* c = new BrowserCapture{&v,   index, b.generation, source, pane.version(),
-                                           time, -1,    std::chrono::steady_clock::now()};
+    BrowserCapture* c = new BrowserCapture{
+        &v,   index, b.generation, source, pane.version(),
+        time, -1,    std::chrono::steady_clock::now(),
+    };
     b.busy = true;
-    std::snprintf(script, sizeof(script),
-                  "(function(t) {"
-                  " if (window.prSetTime) return window.prSetTime(t);"
-                  " var root = document.documentElement;"
-                  " if (root && root.pauseAnimations) { root.pauseAnimations(); root.setCurrentTime(t); }"
-                  " if (document.getAnimations)"
-                  " for (var a of document.getAnimations()) { a.pause(); a.currentTime = t * 1000; }"
-                  "})(%.6f)",
-                  time);
+    std::snprintf(script, sizeof(script), "(function(t) { if (window.prSetTime) return window.prSetTime(t);"
+        " var root = document.documentElement;"
+        " if (root && root.pauseAnimations) { root.pauseAnimations(); root.setCurrentTime(t); }"
+        " if (document.getAnimations)"
+        " for (var a of document.getAnimations()) { a.pause(); a.currentTime = t * 1000; }})(%.6f)", time);
     prAppBrowserEvaluate(b.browser, script, browserStood, c);
 }
 
@@ -853,7 +842,7 @@ std::shared_ptr<Loaded> paneDocument(Viewer& v, Opened& document, uint32_t index
 // image's pixels over the document's size. For a player of the document's own pixels, the ratio is the display's pixel
 // ratio. Returns zero if every pane draws from vectors.
 float rasterPixelRatio(const Viewer& v, const Collection& collection, const Opened& document, PrVec2 size,
-                       float pixelRatio) {
+        float pixelRatio) {
     for (const PaneChoice& pane : v.choices.panes) {
         if (showsPrax(pane, document))
             continue;
@@ -890,8 +879,10 @@ void viewRegion(const Viewer& v, PaneSource& source, PrRect rect, float pixelRat
     source.height = bottom > top ? uint32_t(bottom - top) : 0;
     source.origin = PrVec2{at.left * pixelRatio - left, at.top * pixelRatio - top};
     source.at = PrRect{left / pixelRatio, top / pixelRatio, right / pixelRatio, bottom / pixelRatio};
-    source.region = PrRect{(left - at.left * pixelRatio) / ratio, (top - at.top * pixelRatio) / ratio,
-                           (right - at.left * pixelRatio) / ratio, (bottom - at.top * pixelRatio) / ratio};
+    source.region = PrRect{
+        (left - at.left * pixelRatio) / ratio, (top - at.top * pixelRatio) / ratio,
+        (right - at.left * pixelRatio) / ratio, (bottom - at.top * pixelRatio) / ratio,
+    };
 }
 
 // Gives pane `index` what its choice says that it shows: the document rendered by Prax, or one of its references. In
@@ -969,8 +960,7 @@ void updateDifference(Viewer& v, const std::string& first, const std::string& se
     v.figures.compared = true;
     v.figures.comparing = false;
     if (sizeTexture(v.device, v.difference, v.result.width, v.result.height) == PrStatus_Ok) {
-        PrPixels texels{v.result.diff.data(), size_t(v.result.width) * 4, {v.result.width,
-                           v.result.height}};
+        PrPixels texels{v.result.diff.data(), size_t(v.result.width) * 4, {v.result.width, v.result.height}};
         prGpuTextureWrite(v.device, v.difference, PrIVec2{0, 0}, prPixelsView(texels));
     }
 }
@@ -979,9 +969,9 @@ void start(void* context, PrApp* app) {
     Viewer& v = *static_cast<Viewer*>(context);
     PrAppSurface surface{};
     PrGpuSwapChainDesc desc = swapChainDesc(false);
-    if (prGpuDeviceCreate(PrGpuBackend_Default, nullptr, &v.device) != PrStatus_Ok
-        || prAppSurface(app, &surface) != PrStatus_Ok
-        || prGpuSwapChainCreate(v.device, &surface, &desc, &v.swapChain) != PrStatus_Ok) {
+    if (prGpuDeviceCreate(PrGpuBackend_Default, nullptr, &v.device) != PrStatus_Ok ||
+            prAppSurface(app, &surface) != PrStatus_Ok ||
+            prGpuSwapChainCreate(v.device, &surface, &desc, &v.swapChain) != PrStatus_Ok) {
         std::fprintf(stderr, "viewer: no GPU device to present with\n");
         prAppStop(app);
         return;
@@ -1011,8 +1001,10 @@ void start(void* context, PrApp* app) {
     for (size_t b = 0; b < v.configs.size(); ++b)
         v.configLocks.push_back(std::make_unique<std::mutex>());
     v.app = app;
-    PaneContext shared{app,      v.device,      &v.configs,    &v.configLocks,
-                       &v.clock, &v.framesDone, &v.framesMutex, &v.framesDoneChanged};
+    PaneContext shared{
+        app,      v.device,      &v.configs,    &v.configLocks,
+        &v.clock, &v.framesDone, &v.framesMutex, &v.framesDoneChanged,
+    };
     for (std::unique_ptr<Pane>& pane : v.panes)
         pane = std::make_unique<Pane>(shared, true);
     v.ui = uiCreate(v.device);
@@ -1043,8 +1035,8 @@ void frame(void* context, PrApp* app, const PrAppFrame* frame) {
         PrAppSurface surface{};
         PrGpuSwapChain* swapChain = nullptr;
         PrGpuSwapChainDesc desc = swapChainDesc(v.choices.hdr);
-        if (prAppSurface(app, &surface) == PrStatus_Ok
-            && prGpuSwapChainCreate(v.device, &surface, &desc, &swapChain) == PrStatus_Ok) {
+        if (prAppSurface(app, &surface) == PrStatus_Ok &&
+                prGpuSwapChainCreate(v.device, &surface, &desc, &swapChain) == PrStatus_Ok) {
             prGpuSwapChainDestroy(v.swapChain);
             v.swapChain = swapChain;
             v.swapChainHdr = v.choices.hdr;
@@ -1066,7 +1058,7 @@ void frame(void* context, PrApp* app, const PrAppFrame* frame) {
         return;
     std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
     v.content = uiLayout(v.ui, frame->extent.x, frame->extent.y, pixelRatio, frame->delta, v.configs,
-                         shownDocument(v).references, v.figures, v.choices);
+        shownDocument(v).references, v.figures, v.choices);
     double layoutMs = millisSince(begin);
 
     // The clock starts from zero on each document that the controls or keys turn to, and runs while it plays. When
@@ -1101,7 +1093,8 @@ void frame(void* context, PrApp* app, const PrAppFrame* frame) {
         live[i] = i < paneCount && !page.url.empty();
         if (live[i] && v.browsers[i].browser == nullptr) {
             PrAppBrowserDesc desc{
-                .viewport = PrUVec2{uint32_t(std::lround(page.docWidth)), uint32_t(std::lround(page.docHeight))}};
+                .viewport = PrUVec2{uint32_t(std::lround(page.docWidth)), uint32_t(std::lround(page.docHeight))},
+            };
             prAppBrowserCreate(app, &desc, &v.browsers[i].browser);
         }
         if (live[i])
@@ -1141,15 +1134,15 @@ void frame(void* context, PrApp* app, const PrAppFrame* frame) {
                 showTexture(v, *slots[i], slots[i]->texture, paneShownRect(v, i), pixelRatio);
     }
     const Slot& first = *slots[0];
-    v.figures.zoom = first.viewed || first.texture.id == 0
-                         ? zoomFor(v, paneRect(v, 0), PrVec2{v.panes[0]->source().docWidth,
-                                                             v.panes[0]->source().docHeight})
-                         : viewZoom(v, first, paneRect(v, 0));
+    if (first.viewed || first.texture.id == 0)
+        v.figures.zoom =
+            zoomFor(v, paneRect(v, 0), PrVec2{v.panes[0]->source().docWidth, v.panes[0]->source().docHeight});
+    else
+        v.figures.zoom = viewZoom(v, first, paneRect(v, 0));
     // One pass clears the frame to the backdrop, then draws the panes' renders and the controls.
     PrGpuSubresources all{};
     prGpuCommandsTextureBarrier(commands, v.frame, all, PrGpuAccessFlag_ShaderRead, PrGpuAccessFlag_ColorAttachment);
-    PrGpuPassDesc controls = prGpuPassDescColor(v.frame, PrGpuLoad_Clear,
-                                                PrColor{kBackdrop.r, kBackdrop.g, kBackdrop.b, 1});
+    PrGpuPassDesc controls = prGpuPassDescColor(v.frame, PrGpuLoad_Clear, PrColor{kBackdrop.r, kBackdrop.g, kBackdrop.b, 1});
     PrGpuPass* pass = prGpuPassBegin(commands, &controls);
     uiEncode(v.ui, pass);
     prGpuPassEnd(pass);
@@ -1173,13 +1166,13 @@ void frame(void* context, PrApp* app, const PrAppFrame* frame) {
             prDrawDisplayDraw(v.displayShader, mapPass, v.frame, &mapping);
             prGpuPassEnd(mapPass);
             prGpuCommandsTextureBarrier(commands, drawable, all, PrGpuAccessFlag_ColorAttachment,
-                                        PrGpuAccessFlag_Present);
+                PrGpuAccessFlag_Present);
         } else {
             // The window shows the swap chain's texture past the frame while it resizes, which the backdrop fills.
             PrGpuPassDesc backdrop = prGpuPassDescColor(drawable, PrGpuLoad_Clear, kBackdrop);
             prGpuPassEnd(prGpuPassBegin(commands, &backdrop));
             prGpuCommandsTextureBarrier(commands, drawable, all, PrGpuAccessFlag_ColorAttachment,
-                                        PrGpuAccessFlag_CopyWrite);
+                PrGpuAccessFlag_CopyWrite);
             prGpuCommandsTextureBarrier(commands, v.frame, all, PrGpuAccessFlag_ShaderRead, PrGpuAccessFlag_CopyRead);
             PrGpuTextureRegion region = prGpuTextureRegion2d(PrUVec2{0, 0}, PrUVec2{width, height});
             prGpuCommandsCopyTexture(commands, v.frame, &region, drawable, &region);
@@ -1188,8 +1181,8 @@ void frame(void* context, PrApp* app, const PrAppFrame* frame) {
         }
         prGpuSwapChainPresent(v.swapChain, commands);
     }
-    bool settled = !running && v.panes[0]->settled() && (!compare || v.panes[1]->settled()) && !v.browsers[0].busy
-                   && !v.browsers[1].busy;
+    bool settled = !running && v.panes[0]->settled() && (!compare || v.panes[1]->settled()) && !v.browsers[0].busy &&
+        !v.browsers[1].busy;
     if (settled && !v.figures.comparing && v.snapshot != nullptr) {
         prGpuCommandsSubmitAndWait(commands);
         std::vector<uint8_t> pixels(size_t(width) * height * prPixelFormatSize(format));
@@ -1204,19 +1197,18 @@ void frame(void* context, PrApp* app, const PrAppFrame* frame) {
     }
     prGpuCommandsSubmit(commands);
     if (v.profile)
-        std::fprintf(stderr,
-                     "frame %llu: layout %.2f ms, whole %.2f ms; first %.1f FPS %s, %.2f ms, GPU %.3f ms, at %.3f s, "
-                     "frame %.2f; second %.1f FPS, %.2f ms, GPU %.3f ms, at frame %.2f\n",
-                     static_cast<unsigned long long>(v.frames), layoutMs, millisSince(begin), v.figures.panes[0].fps,
-                     v.figures.panes[0].backToBack ? "back to back" : "paced", v.figures.panes[0].ms,
-                     v.figures.panes[0].gpuMs, v.figures.panes[0].time, v.figures.panes[0].frame,
-                     v.figures.panes[1].fps, v.figures.panes[1].ms, v.figures.panes[1].gpuMs,
-                     v.figures.panes[1].frame);
+        std::fprintf(stderr, "frame %llu: layout %.2f ms, whole %.2f ms; first %.1f FPS %s, %.2f ms, GPU %.3f ms, at %.3f s, "
+            "frame %.2f; second %.1f FPS, %.2f ms, GPU %.3f ms, at frame %.2f\n",
+            static_cast<unsigned long long>(v.frames), layoutMs, millisSince(begin), v.figures.panes[0].fps,
+            v.figures.panes[0].backToBack ? "back to back" : "paced", v.figures.panes[0].ms,
+            v.figures.panes[0].gpuMs, v.figures.panes[0].time, v.figures.panes[0].frame,
+            v.figures.panes[1].fps, v.figures.panes[1].ms, v.figures.panes[1].gpuMs, v.figures.panes[1].frame);
     // A tour moves on once the panes show the document. While the clock runs, they never stand at its time, so any
     // render of the document will do.
-    bool toured = running ? (live[0] || v.panes[0]->current()) && (!compare || live[1] || v.panes[1]->current())
-                                && !v.browsers[0].busy && !v.browsers[1].busy
-                          : settled;
+    bool toured = settled;
+    if (running)
+        toured = (live[0] || v.panes[0]->current()) && (!compare || live[1] || v.panes[1]->current()) &&
+            !v.browsers[0].busy && !v.browsers[1].busy;
     if (v.touring != 0 && toured) {
         if (--v.touring == 0) {
             prAppStop(app);
@@ -1312,15 +1304,15 @@ void keyDown(Viewer& v, PrApp* app, PrAppKey key) {
 // the document, unless the page holds the pointer.
 Loaded* PR_NULLABLE pageAt(Viewer& v, uint32_t index, PrVec2 window, PrVec2* out) {
     const PaneSource& source = v.panes[index]->source();
-    if (source.loaded == nullptr || !takesInput(*source.loaded) || source.docWidth <= 0 || source.docHeight <= 0
-        || !paneShown(v, index))
+    if (source.loaded == nullptr || !takesInput(*source.loaded) || source.docWidth <= 0 || source.docHeight <= 0 ||
+            !paneShown(v, index))
         return nullptr;
     PrRect rect = paneShownRect(v, index);
     float zoom = zoomFor(v, rect, PrVec2{source.docWidth, source.docHeight});
     PrRect at = placed(v, rect, source.docWidth, source.docHeight, zoom);
     *out = PrVec2{(window.x - at.left) / zoom, (window.y - at.top) / zoom};
-    bool onPage = inside(rect, window.x, window.y) && out->x >= 0 && out->y >= 0 && out->x < source.docWidth
-                  && out->y < source.docHeight;
+    bool onPage = inside(rect, window.x, window.y) && out->x >= 0 && out->y >= 0 && out->x < source.docWidth &&
+        out->y < source.docHeight;
     return onPage || (v.pagePressed && v.pagePane == index) ? source.loaded.get() : nullptr;
 }
 
@@ -1360,8 +1352,8 @@ bool toPage(Viewer& v, const PrAppEvent& event) {
         case PrAppEventKind_CompositionUpdate:
         case PrAppEventKind_CompositionEnd: {
             const PaneSource& source = v.panes[v.pagePane]->source();
-            if (!v.pageKeys || (event.modifiers & PrAppModifierFlag_Super) != 0 || source.loaded == nullptr
-                || !takesInput(*source.loaded))
+            if (!v.pageKeys || (event.modifiers & PrAppModifierFlag_Super) != 0 || source.loaded == nullptr ||
+                    !takesInput(*source.loaded))
                 return false;
             input(*source.loaded, event);
             v.panes[v.pagePane]->touch();
@@ -1390,8 +1382,7 @@ void event(void* context, PrApp* app, const PrAppEvent* event) {
                 keyDown(v, app, event->key);
             break;
         case PrAppEventKind_PointerDown:
-            v.dragging = !taken && event->button == 0
-                         && inside(v.content, event->position.x, event->position.y);
+            v.dragging = !taken && event->button == 0 && inside(v.content, event->position.x, event->position.y);
             v.pointerX = event->position.x;
             v.pointerY = event->position.y;
             break;
@@ -1454,11 +1445,9 @@ int main(int argc, char** argv) {
     Viewer viewer;
     auto usage = [](FILE* to) {
         std::fprintf(to, "usage: viewer [--document <which>] [--render <directory>] [--pixel-ratio <pixels>]"
-                         " [--renderer <name>] [--shaper <name>] [--hinting <name>] [--reference <name>]"
-                         " [--look side|flip|difference]"
-                         " [--snapshot <path>] [--tour <passes>] [--collection <word>] [--zoom <percent>]"
-                         " [--time <seconds>] [--rendering paced|back-to-back] [--present sdr|hdr]"
-                         " [--wpt-server <http port> <https port>]\n");
+            " [--renderer <name>] [--shaper <name>] [--hinting <name>] [--reference <name>]"
+            " [--look side|flip|difference] [--snapshot <path>] [--tour <passes>] [--collection <word>] [--zoom <percent>]"
+            " [--time <seconds>] [--rendering paced|back-to-back] [--present sdr|hdr] [--wpt-server <http port> <https port>]\n");
     };
     for (int i = 1; i < argc; i += 2) {
         if (std::strcmp(argv[i], "--help") == 0 || std::strcmp(argv[i], "-h") == 0) {
@@ -1484,8 +1473,8 @@ int main(int argc, char** argv) {
             which = value;
         } else if (std::strcmp(argv[i], "--renderer") == 0) {
             viewer.configName = value;
-        } else if (std::strcmp(argv[i], "--shaper") == 0
-                   && prTextShaperBackendIsBuilt(prTextShaperBackendFromName(value))) {
+        } else if (std::strcmp(argv[i], "--shaper") == 0 &&
+                prTextShaperBackendIsBuilt(prTextShaperBackendFromName(value))) {
             viewer.choices.panes[0].text.shaper = prTextShaperBackendFromName(value);
         } else if (std::strcmp(argv[i], "--hinting") == 0 && prFontHintingFromName(value) != PrFontHinting_Count) {
             viewer.choices.panes[0].text.hinting = prFontHintingFromName(value);
@@ -1525,15 +1514,14 @@ int main(int argc, char** argv) {
     }
     const std::vector<Collection>& collections = allCollections();
     for (uint32_t c = 0; viewer.collectionName != nullptr && c < collections.size(); ++c) {
-        if (fileNameOf(collections[c].name).find(fileNameOf(viewer.collectionName))
-            != std::string::npos) {
+        if (fileNameOf(collections[c].name).find(fileNameOf(viewer.collectionName)) != std::string::npos) {
             viewer.choices.collection = c;
             break;
         }
     }
     if (directory != nullptr)
         return renderAll(directory, collections[viewer.choices.collection], which, viewer.referenceName,
-                         viewer.choices.panes[0].text, viewer.choices.time, pixelRatio > 0 ? pixelRatio : 1);
+            viewer.choices.panes[0].text, viewer.choices.time, pixelRatio > 0 ? pixelRatio : 1);
     // The list opens scrolled to the chosen document.
     viewer.choices.documentChanged = true;
     const Collection& opened = collections[viewer.choices.collection];

@@ -71,9 +71,7 @@ void writeNumeric(TextBuffer* out, const CssTokenStream* ts, uint32_t index, PrS
     textAppend(out, ", ");
     writeNumber(out, cssTokenNumber(ts->tokens, index));
     textAppend(out, ", ");
-    harnessWriteString(out, (cssTokenFlags(ts->tokens, index) & CssTokenFlag_Integer) != 0
-                                ? "integer"
-                                : "number");
+    harnessWriteString(out, (cssTokenFlags(ts->tokens, index) & CssTokenFlag_Integer) != 0 ? "integer" : "number");
     if (cssTokenKind(ts->tokens, index) == CssTokenKind_Dimension) {
         textAppend(out, ", ");
         writeValue(out, cssTokenUnitText(ts->tokens, index));
@@ -108,9 +106,8 @@ void writeComponentValue(TextBuffer* out, const CssTokenStream* ts, CssTokenSpan
         case CssTokenKind_Hash:
             textAppend(out, "[\"hash\", ");
             writeValue(out, cssTokenValueText(ts->tokens, index));
-            textAppend(out, (cssTokenFlags(ts->tokens, index) & CssTokenFlag_Id) != 0
-                                ? ", \"id\"]"
-                                : ", \"unrestricted\"]");
+            textAppend(out, (cssTokenFlags(ts->tokens, index) & CssTokenFlag_Id) != 0 ? ", \"id\"]" :
+                ", \"unrestricted\"]");
             return;
         case CssTokenKind_String:
             textAppend(out, "[\"string\", ");
@@ -217,8 +214,7 @@ void writeComponentValueList(TextBuffer* out, const CssTokenStream* ts, CssToken
 // ---------------------------------------------------------------------------------------------------------------------
 // Rules and declarations
 
-void writeDeclaration(TextBuffer* out, const CssTokenStream* ts,
-                      const CssSyntaxDeclaration& declaration) {
+void writeDeclaration(TextBuffer* out, const CssTokenStream* ts, const CssSyntaxDeclaration& declaration) {
     textAppend(out, "[\"declaration\", ");
     writeValue(out, cssTokenValueText(ts->tokens, declaration.name));
     textAppend(out, ", ");
@@ -249,8 +245,7 @@ void writeRule(TextBuffer* out, const CssTokenStream* ts, const CssSyntaxRule& r
 }
 
 // Writes the items of a parsed block, in written order.
-void writeItems(TextBuffer* out, const CssTokenStream* ts, const CssParser& parser,
-                CssBlock parsed) {
+void writeItems(TextBuffer* out, const CssTokenStream* ts, const CssParser& parser, CssBlock parsed) {
     bool first = true;
     textAppendChar(out, '[');
     for (uint32_t i = 0; i < parsed.items.count; ++i) {

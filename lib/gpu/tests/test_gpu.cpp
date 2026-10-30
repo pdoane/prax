@@ -52,7 +52,7 @@ struct Fixture {
     }
 
     PrGpuPipeline pipeline(const char* vertex, const char* fragment, PrGpuFormat format = PrGpuFormat_Rgba8,
-                           PrGpuTopology topology = PrGpuTopology_TriangleStrip, bool readsTarget = false) {
+            PrGpuTopology topology = PrGpuTopology_TriangleStrip, bool readsTarget = false) {
         PrGpuGraphicsPipelineDesc desc = prGpuGraphicsPipelineDescDefault(library);
         desc.vertex = vertex;
         desc.fragment = fragment;
@@ -69,8 +69,7 @@ struct Fixture {
     std::vector<uint8_t> read(PrGpuTexture texture, uint32_t access = PrGpuAccessFlag_ShaderRead) {
         PrUVec2 extent = prGpuTextureExtent(device, texture);
         std::vector<uint8_t> texels(size_t(extent.x) * extent.y * 4);
-        prGpuTextureRead(device, texture, access, PrIVec2{0, 0},
-                         PrPixels{texels.data(), size_t(extent.x) * 4, extent});
+        prGpuTextureRead(device, texture, access, PrIVec2{0, 0}, PrPixels{texels.data(), size_t(extent.x) * 4, extent});
         return texels;
     }
 
@@ -82,7 +81,7 @@ struct Fixture {
         PrGpuCommands* commands = nullptr;
         REQUIRE(prGpuCommandsBegin(device, nullptr, &commands));
         prGpuCommandsBufferBarrier(commands, buffer, PrGpuAccessFlag_ShaderRead | PrGpuAccessFlag_ShaderWrite,
-                                   PrGpuAccessFlag_CopyRead);
+            PrGpuAccessFlag_CopyRead);
         prGpuCommandsCopyBuffer(commands, buffer, 0, readback, 0, size);
         prGpuCommandsSubmitAndWait(commands);
         std::vector<uint8_t> bytes(size);
@@ -94,12 +93,11 @@ struct Fixture {
     // Draws a quad over the whole target with the pipeline and push data, into a pass that loads as `load` says and
     // clears to `clear`, and leaves the target to be sampled.
     void draw(PrGpuTexture target, PrGpuPipeline pipeline, Push push, PrGpuLoad load = PrGpuLoad_Clear,
-              PrColor clear = PrColor{0, 0, 0, 0}, const float* uniforms = nullptr) {
+            PrColor clear = PrColor{0, 0, 0, 0}, const float* uniforms = nullptr) {
         PrGpuCommands* commands = nullptr;
         REQUIRE(prGpuCommandsBegin(device, nullptr, &commands));
         PrGpuSubresources all{};
-        prGpuCommandsTextureBarrier(commands, target, all, PrGpuAccessFlag_ShaderRead,
-                                    PrGpuAccessFlag_ColorAttachment);
+        prGpuCommandsTextureBarrier(commands, target, all, PrGpuAccessFlag_ShaderRead, PrGpuAccessFlag_ColorAttachment);
         PrGpuPassDesc desc = prGpuPassDescColor(target, load, clear);
         PrGpuPass* pass = prGpuPassBegin(commands, &desc);
         prGpuCommandsSetPipeline(commands, pipeline);
@@ -108,8 +106,7 @@ struct Fixture {
             prGpuCommandsSetUniforms(commands, uniforms, sizeof(float) * 4);
         prGpuPassDraw(pass, 4, 1, 0, 0);
         prGpuPassEnd(pass);
-        prGpuCommandsTextureBarrier(commands, target, all, PrGpuAccessFlag_ColorAttachment,
-                                    PrGpuAccessFlag_ShaderRead);
+        prGpuCommandsTextureBarrier(commands, target, all, PrGpuAccessFlag_ColorAttachment, PrGpuAccessFlag_ShaderRead);
         prGpuCommandsSubmitAndWait(commands);
     }
 };
@@ -157,8 +154,8 @@ TEST_CASE("a backend's name names it, in any case") {
         CHECK(prGpuBackendFromName(prGpuBackendName(backend)) == backend);
     CHECK(prGpuBackendFromName("Metal") == PrGpuBackend_Metal);
     CHECK(prGpuBackendFromName("opengl") == PrGpuBackend_Count);
-    CHECK(prGpuBackendIsBuilt(PrGpuBackend_Default) == (prGpuBackendIsBuilt(PrGpuBackend_Metal)
-        || prGpuBackendIsBuilt(PrGpuBackend_Vulkan) || prGpuBackendIsBuilt(PrGpuBackend_D3d12)));
+    CHECK(prGpuBackendIsBuilt(PrGpuBackend_Default) == (prGpuBackendIsBuilt(PrGpuBackend_Metal) ||
+        prGpuBackendIsBuilt(PrGpuBackend_Vulkan) || prGpuBackendIsBuilt(PrGpuBackend_D3d12)));
 }
 
 TEST_CASE("a device reports its backend and limits") {
@@ -191,8 +188,7 @@ TEST_CASE("a texture's texels are written and read back, clipped to the texture"
         CHECK(near(texel(after, 4, 1, 0), 4, 5, 6, 7, 0));
         // A read that hangs off the bottom right reads zeros outside.
         uint8_t corner[2 * 2 * 4];
-        prGpuTextureRead(f.device, texture, PrGpuAccessFlag_ShaderRead, PrIVec2{3, 2},
-                         PrPixels{corner, 8, {2, 2}});
+        prGpuTextureRead(f.device, texture, PrGpuAccessFlag_ShaderRead, PrIVec2{3, 2}, PrPixels{corner, 8, {2, 2}});
         CHECK(near(corner, 44, 45, 46, 47, 0));
         CHECK(near(corner + 4, 0, 0, 0, 0, 0));
         prGpuTextureDestroy(f.device, texture);
@@ -227,8 +223,10 @@ TEST_CASE("uploads to one resource before a submission land as they would copied
             uint64_t size;
             uint8_t value;
         };
-        const Write writes[] = {{0, 4096, 1}, {100, 200, 2}, {150, 50, 3}, {50, 100, 4}, {250, 100, 5},
-                                {0, 1000, 6}, {999, 3, 7},   {1001, 1, 8}, {4000, 96, 9}, {3, 1, 10}};
+        const Write writes[] = {
+            {0, 4096, 1}, {100, 200, 2}, {150, 50, 3}, {50, 100, 4}, {250, 100, 5},
+            {0, 1000, 6}, {999, 3, 7},   {1001, 1, 8}, {4000, 96, 9}, {3, 1, 10},
+        };
         for (const Write& w : writes) {
             std::vector<uint8_t> bytes(w.size, w.value);
             prGpuBufferUpload(f.device, buffer, w.offset, bytes.data(), w.size);
@@ -332,7 +330,7 @@ TEST_CASE("a shader samples a texture and pulls vertices from a buffer, both by 
         PrGpuCommands* commands = nullptr;
         REQUIRE(prGpuCommandsBegin(f.device, nullptr, &commands));
         prGpuCommandsTextureBarrier(commands, target, PrGpuSubresources{}, PrGpuAccessFlag_ShaderRead,
-                                    PrGpuAccessFlag_ColorAttachment);
+            PrGpuAccessFlag_ColorAttachment);
         PrGpuPassDesc passDesc = prGpuPassDescColor(target, PrGpuLoad_Clear, PrColor{});
         PrGpuPass* pass = prGpuPassBegin(commands, &passDesc);
         prGpuCommandsSetPipeline(commands, pulled);
@@ -340,7 +338,7 @@ TEST_CASE("a shader samples a texture and pulls vertices from a buffer, both by 
         prGpuPassDraw(pass, 6, 1, 0, 0);
         prGpuPassEnd(pass);
         prGpuCommandsTextureBarrier(commands, target, PrGpuSubresources{}, PrGpuAccessFlag_ColorAttachment,
-                                    PrGpuAccessFlag_ShaderRead);
+            PrGpuAccessFlag_ShaderRead);
         prGpuCommandsSubmitAndWait(commands);
         out = f.read(target);
         CHECK(near(texel(out, 4, 0, 0), 0, 255, 0, 255));
@@ -377,7 +375,7 @@ TEST_CASE("a shader follows a handle that it reads from a buffer, to a buffer in
         Push push = fill(0, 0, 0, 0);
         push.buffer = names.id;
         prGpuCommandsTextureBarrier(commands, target, PrGpuSubresources{}, PrGpuAccessFlag_ShaderRead,
-                                    PrGpuAccessFlag_ColorAttachment);
+            PrGpuAccessFlag_ColorAttachment);
         PrGpuPassDesc passDesc = prGpuPassDescColor(target, PrGpuLoad_Clear, PrColor{});
         PrGpuPass* pass = prGpuPassBegin(commands, &passDesc);
         prGpuCommandsSetPipeline(commands, followed);
@@ -385,7 +383,7 @@ TEST_CASE("a shader follows a handle that it reads from a buffer, to a buffer in
         prGpuPassDraw(pass, 4, 1, 0, 0);
         prGpuPassEnd(pass);
         prGpuCommandsTextureBarrier(commands, target, PrGpuSubresources{}, PrGpuAccessFlag_ColorAttachment,
-                                    PrGpuAccessFlag_ShaderRead);
+            PrGpuAccessFlag_ShaderRead);
         prGpuCommandsSubmitAndWait(commands);
         CHECK(near(texel(f.read(target), 2, 1, 1), 0, 0, 255, 255));
         prGpuBufferDestroy(f.device, names);
@@ -448,7 +446,7 @@ TEST_CASE("a shader reads the target as the draws before it left it") {
         PrGpuCommands* commands = nullptr;
         REQUIRE(prGpuCommandsBegin(f.device, nullptr, &commands));
         prGpuCommandsTextureBarrier(commands, target, PrGpuSubresources{}, PrGpuAccessFlag_ShaderRead,
-                                    PrGpuAccessFlag_ColorAttachment);
+            PrGpuAccessFlag_ColorAttachment);
         PrGpuPassDesc passDesc = prGpuPassDescColor(target, PrGpuLoad_Clear, PrColor{0, 0, 0, 1});
         PrGpuPass* pass = prGpuPassBegin(commands, &passDesc);
         // The left half red, then the whole target inverted.
@@ -464,7 +462,7 @@ TEST_CASE("a shader reads the target as the draws before it left it") {
         prGpuPassDraw(pass, 4, 1, 0, 0);
         prGpuPassEnd(pass);
         prGpuCommandsTextureBarrier(commands, target, PrGpuSubresources{}, PrGpuAccessFlag_ColorAttachment,
-                                    PrGpuAccessFlag_ShaderRead);
+            PrGpuAccessFlag_ShaderRead);
         prGpuCommandsSubmitAndWait(commands);
         std::vector<uint8_t> texels = f.read(target);
         CHECK(near(texel(texels, 4, 0, 0), 0, 255, 255, 255));
@@ -488,7 +486,7 @@ TEST_CASE("objects destroyed after their work is recorded live until it is done"
         PrGpuCommands* commands = nullptr;
         REQUIRE(prGpuCommandsBegin(f.device, nullptr, &commands));
         prGpuCommandsTextureBarrier(commands, target, PrGpuSubresources{}, PrGpuAccessFlag_ShaderRead,
-                                    PrGpuAccessFlag_ColorAttachment);
+            PrGpuAccessFlag_ColorAttachment);
         PrGpuPassDesc passDesc = prGpuPassDescColor(target, PrGpuLoad_Clear, PrColor{});
         PrGpuPass* pass = prGpuPassBegin(commands, &passDesc);
         Push push = fill(0, 0, 0, 0);
@@ -499,7 +497,7 @@ TEST_CASE("objects destroyed after their work is recorded live until it is done"
         prGpuPassDraw(pass, 4, 1, 0, 0);
         prGpuPassEnd(pass);
         prGpuCommandsTextureBarrier(commands, target, PrGpuSubresources{}, PrGpuAccessFlag_ColorAttachment,
-                                    PrGpuAccessFlag_ShaderRead);
+            PrGpuAccessFlag_ShaderRead);
         // Destroyed before the submission, and new objects take no slot that the work still reads.
         prGpuTextureDestroy(f.device, source);
         prGpuPipelineDestroy(f.device, sampled);
@@ -530,8 +528,7 @@ TEST_CASE("mip levels are filled with the average of the level before") {
         prGpuCommandsSubmitAndWait(commands);
         PrGpuTexture last{};
         REQUIRE(prGpuTextureCreateView(f.device, texture, PrGpuTextureKind_2d,
-                                       PrGpuSubresources{.firstLevel = 2, .levels = 1, .layers = 1}, &last)
-                == PrStatus_Ok);
+            PrGpuSubresources{.firstLevel = 2, .levels = 1, .layers = 1}, &last) == PrStatus_Ok);
         CHECK(prGpuTextureExtent(f.device, last).x == 1);
         std::vector<uint8_t> top = f.read(last);
         CHECK(near(top.data(), 128, 128, 128, 128, 2));
@@ -551,15 +548,12 @@ TEST_CASE("a command buffer reports its time and the texels that it read when it
         } read;
         PrGpuCommands* commands = nullptr;
         REQUIRE(prGpuCommandsBegin(f.device, nullptr, &commands));
-        prGpuCommandsReadTexture(
-            commands, target, PrGpuAccessFlag_ShaderRead,
-            [](void* context, PrPixelView texels) {
-                std::vector<uint8_t>& into = static_cast<Read*>(context)->texels;
-                for (uint32_t y = 0; y < texels.extent.y; ++y)
-                    into.insert(into.end(), texels.data + y * texels.stride,
-                                texels.data + y * texels.stride + texels.extent.x * 4);
-            },
-            &read);
+        prGpuCommandsReadTexture(commands, target, PrGpuAccessFlag_ShaderRead, [](void* context, PrPixelView texels) {
+            std::vector<uint8_t>& into = static_cast<Read*>(context)->texels;
+            for (uint32_t y = 0; y < texels.extent.y; ++y)
+                into.insert(into.end(), texels.data + y * texels.stride,
+                    texels.data + y * texels.stride + texels.extent.x * 4);
+        }, &read);
         prGpuCommandsOnDone(
             commands, [](void* context, double seconds) { static_cast<Read*>(context)->seconds = seconds; }, &read);
         PrGpuFence fence = prGpuCommandsSubmit(commands);

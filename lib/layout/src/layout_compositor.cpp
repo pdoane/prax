@@ -117,7 +117,7 @@ void addScrolls(const LayoutCompositor* c, uint64_t embed, Array<PrLayoutSceneSc
 // Sets the client's offsets of `embed`, except for containers that the compositor scrolled since `applied`. Drops the
 // offsets of containers that `scene` does not have. The mutex is held.
 void setScrolls(LayoutCompositor* c, uint64_t embed, const LayoutScene* PR_NULLABLE scene,
-                const PrLayoutSceneScroll* PR_NULLABLE scrolls, uint32_t count, uint32_t applied) {
+        const PrLayoutSceneScroll* PR_NULLABLE scrolls, uint32_t count, uint32_t applied) {
     for (uint32_t i = 0; i < count; ++i) {
         CompositorScroll* own = scrollOf(c, embed, scrolls[i].node);
         if (own != nullptr && own->sequence > applied)
@@ -140,12 +140,14 @@ void setScrolls(LayoutCompositor* c, uint64_t embed, const LayoutScene* PR_NULLA
 // Moves the scroll container `scroll` of the scene committed for `embed` by as much of `delta` as it can, along the
 // axes in `axes`. Returns how far it moved. The mutex is held.
 PrLayoutVec scrollBy(LayoutCompositor* c, uint64_t embed, const LayoutScene* scene, uint32_t scroll, PrLayoutVec delta,
-                     PrLayoutScrollFlags axes) {
+        PrLayoutScrollFlags axes) {
     const LayoutSceneContainer& s = scene->scrolls.data[scroll];
     CompositorScroll* own = scrollOf(c, embed, s.node);
     PrLayoutVec from = own != nullptr ? layoutScrollClamp(own->offset, s.range) : kLayoutVecZero;
-    PrLayoutVec wanted{(axes & PrLayoutScrollFlag_X) != 0 ? from.x + delta.x : from.x,
-                       (axes & PrLayoutScrollFlag_Y) != 0 ? from.y + delta.y : from.y};
+    PrLayoutVec wanted{
+        (axes & PrLayoutScrollFlag_X) != 0 ? from.x + delta.x : from.x,
+        (axes & PrLayoutScrollFlag_Y) != 0 ? from.y + delta.y : from.y,
+    };
     PrLayoutVec moved = layoutScrollClamp(wanted, s.range) - from;
     if (moved == kLayoutVecZero)
         return moved;
@@ -164,7 +166,7 @@ PrLayoutVec scrollBy(LayoutCompositor* c, uint64_t embed, const LayoutScene* sce
 // Scrolls by `delta` at `point` in the scene of `content`, as a user's scroll does. The content embedded at the point
 // scrolls first. Returns the part of `delta` that none of the containers took. The mutex is held.
 PrLayoutVec scrollAt(LayoutCompositor* c, const CompositorContent& content, PrLayoutVec point, PrLayoutVec delta,
-                     uint32_t depth) {
+        uint32_t depth) {
     const LayoutScene* scene = content.scene;
     Array<PrLayoutSceneScroll> scrolls;
     addScrolls(c, content.embed, scrolls);
@@ -178,12 +180,11 @@ PrLayoutVec scrollAt(LayoutCompositor* c, const CompositorContent& content, PrLa
         uint64_t embed = scene->slots.data[hit.slot].embed;
         const CompositorContent* inner = contentOf(c, embed);
         PrDAffine2 inverse{};
-        if (inner != nullptr && embed != content.embed
-            && prDAffine2Invert(prDAffine2FromAffine2(inner->transform), &inverse))
+        if (inner != nullptr && embed != content.embed && prDAffine2Invert(prDAffine2FromAffine2(inner->transform), &inverse))
             rest = scrollAt(c, *inner, layoutVecMapped(inverse, hit.point), rest, depth + 1);
     }
     for (uint32_t scroll = hit.scroll; scroll != kPaintScrollNone && rest != kLayoutVecZero;
-         scroll = layoutSceneScrollNext(scene, scroll)) {
+            scroll = layoutSceneScrollNext(scene, scroll)) {
         const LayoutSceneContainer& s = scene->scrolls.data[scroll];
         rest -= scrollBy(c, content.embed, scene, scroll, rest, s.userAxes);
         // A container whose overscroll behavior contains the scroll keeps the rest from the containers around it.
@@ -213,9 +214,9 @@ bool regionHolds(LayoutCompositor* c, const CompositorContent& content, PrLayout
     uint64_t embed = scene->slots.data[hit.slot].embed;
     const CompositorContent* inner = contentOf(c, embed);
     PrDAffine2 inverse{};
-    return inner != nullptr && embed != content.embed
-           && prDAffine2Invert(prDAffine2FromAffine2(inner->transform), &inverse)
-           && regionHolds(c, *inner, layoutVecMapped(inverse, hit.point), depth + 1);
+    return inner != nullptr && embed != content.embed &&
+        prDAffine2Invert(prDAffine2FromAffine2(inner->transform), &inverse) &&
+        regionHolds(c, *inner, layoutVecMapped(inverse, hit.point), depth + 1);
 }
 
 // Plays the content that fills a slot, in the same way that the scene of a frame plays.
@@ -283,8 +284,10 @@ void frame(LayoutCompositor* c) {
         uint32_t scrollStart = c->offsets.count;
         addScrolls(c, content.embed, c->offsets);
         prLayoutSceneRetain(content.scene);
-        c->parts.push(FramePart{content.embed, content.scene, content.transform, start, c->effects.count - start,
-                                scrollStart, c->offsets.count - scrollStart});
+        c->parts.push(FramePart{
+            content.embed, content.scene, content.transform, start, c->effects.count - start,
+            scrollStart, c->offsets.count - scrollStart,
+        });
     }
     uint32_t scrolled = 0;
     for (uint32_t i = 0; i < c->scrolls.count; ++i)
@@ -325,8 +328,8 @@ void frame(LayoutCompositor* c) {
     // A frame that shows the viewport moved ends a gap. The gap counts only if an earlier frame also moved the
     // viewport.
     if (shown.x != c->shown.x || shown.y != c->shown.y) {
-        if (c->lastMoved != 0 && started - c->lastMoved > c->stats.longestScrollGapMillis
-            && started - c->lastMoved < kScrollIdleMillis) {
+        if (c->lastMoved != 0 && started - c->lastMoved > c->stats.longestScrollGapMillis &&
+                started - c->lastMoved < kScrollIdleMillis) {
             c->stats.longestScrollGapMillis = started - c->lastMoved;
             c->stats.longestScrollGapFrame = c->stats.frames;
         }
@@ -467,8 +470,7 @@ void prLayoutCompositorCommit(PrLayoutCompositor* compositor, const PrLayoutComm
 }
 
 void prLayoutCompositorSetScrolls(PrLayoutCompositor* compositor, uint64_t embed,
-                                  const PrLayoutSceneScroll* PR_NULLABLE scrolls, uint32_t count,
-                                  uint32_t scrollsApplied) {
+        const PrLayoutSceneScroll* PR_NULLABLE scrolls, uint32_t count, uint32_t scrollsApplied) {
     prMutexLock(&compositor->mutex);
     const CompositorContent* content = contentOf(compositor, embed);
     setScrolls(compositor, embed, content != nullptr ? content->scene : nullptr, scrolls, count, scrollsApplied);
@@ -499,8 +501,7 @@ void prLayoutCompositorRemove(PrLayoutCompositor* compositor, uint64_t embed) {
     notifyWanted(compositor, wanted);
 }
 
-PrLayoutVec prLayoutCompositorScroll(PrLayoutCompositor* compositor, uint64_t embed, PrLayoutNode node,
-                                     PrLayoutVec delta) {
+PrLayoutVec prLayoutCompositorScroll(PrLayoutCompositor* compositor, uint64_t embed, PrLayoutNode node, PrLayoutVec delta) {
     prMutexLock(&compositor->mutex);
     PrLayoutVec moved = kLayoutVecZero;
     const CompositorContent* content = contentOf(compositor, embed);
@@ -527,8 +528,7 @@ bool prLayoutCompositorScrollAt(PrLayoutCompositor* compositor, PrLayoutVec poin
 bool prLayoutCompositorWheelBlocks(PrLayoutCompositor* compositor, PrLayoutVec point) {
     double now = compositor->desc.now(compositor->desc.context);
     prMutexLock(&compositor->mutex);
-    if (!compositor->wheeled || now - compositor->lastWheel > kPrLayoutWheelSequenceGap
-        || point != compositor->wheelAt) {
+    if (!compositor->wheeled || now - compositor->lastWheel > kPrLayoutWheelSequenceGap || point != compositor->wheelAt) {
         const CompositorContent* root = contentOf(compositor, 0);
         compositor->wheelWaits = root != nullptr && regionHolds(compositor, *root, point, 0);
     }

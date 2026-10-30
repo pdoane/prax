@@ -167,8 +167,7 @@ void expandToWord(PrStringView text, uint32_t* start, uint32_t* end) {
 
 } // namespace
 
-bool promptWeightAdjust(PrStringView text, uint32_t selectionStart, uint32_t selectionEnd, double delta,
-                        WeightEdit* out) {
+bool promptWeightAdjust(PrStringView text, uint32_t selectionStart, uint32_t selectionEnd, double delta, WeightEdit* out) {
     uint32_t start = std::min(selectionStart, uint32_t(text.size));
     uint32_t end = std::min(selectionEnd, uint32_t(text.size));
     if (start == end) {
@@ -248,7 +247,7 @@ PrStringView embeddingName(PrStringView filename) {
 }
 
 std::string embeddingInsertText(PrStringView text, uint32_t selectionStart, uint32_t selectionEnd,
-                                PrStringView filename) {
+        PrStringView filename) {
     uint32_t begin = std::min(selectionStart, uint32_t(text.size));
     uint32_t end = std::min(selectionEnd, uint32_t(text.size));
     std::string out;

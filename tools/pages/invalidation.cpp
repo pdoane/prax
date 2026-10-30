@@ -79,10 +79,9 @@ struct TextCounts {
 
     // Appends the counts as JSON members, each after a comma.
     void write(std::string* out) const {
-        *out += ", \"textLeaves\": " + std::to_string(leaves) + ", \"textFragments\": " + std::to_string(fragments)
-                + ", \"textBytes\": " + std::to_string(bytes) + ", \"lineChildren\": " + std::to_string(lineChildren)
-                + ", \"textRecorded\": " + std::to_string(recorded)
-                + ", \"glyphCommands\": " + std::to_string(glyphCommands);
+        *out += ", \"textLeaves\": " + std::to_string(leaves) + ", \"textFragments\": " + std::to_string(fragments) +
+            ", \"textBytes\": " + std::to_string(bytes) + ", \"lineChildren\": " + std::to_string(lineChildren) +
+            ", \"textRecorded\": " + std::to_string(recorded) + ", \"glyphCommands\": " + std::to_string(glyphCommands);
     }
 };
 
@@ -121,7 +120,7 @@ struct Totals {
 // Appends the elements under `node` to `out`, in tree order.
 void collect(PrDomNode* node, std::vector<PrDomElement*>* out) {
     for (PrDomElement* e = prDomNodeFirstElementChild(node); e != nullptr;
-         e = prDomNodeNextElementSibling(prDomElementAsNode(e))) {
+            e = prDomNodeNextElementSibling(prDomElementAsNode(e))) {
         out->push_back(e);
         collect(prDomElementAsNode(e), out);
     }
@@ -129,8 +128,7 @@ void collect(PrDomNode* node, std::vector<PrDomElement*>* out) {
 
 // Runs a frame after a change, in a viewport of `viewport`. The presentation is brought up to date and painted, then
 // checked, and its work is counted.
-void frame(PrCssPresentation* presentation, bool verify, const char* step, Totals* totals,
-           PrVec2 viewport = kViewport) {
+void frame(PrCssPresentation* presentation, bool verify, const char* step, Totals* totals, PrVec2 viewport = kViewport) {
     HarnessCounters started = harnessCounters();
     bool changed = prHtmlPresentationUpdate(presentation, prLayoutVecFromPx(viewport));
     HarnessCounters updated = harnessCounters();
@@ -185,8 +183,8 @@ bool names(const PrDomElement* element, const char* match) {
     auto view = [](PrStringView text) {
         return std::string_view(text.data != nullptr ? text.data : "", text.size);
     };
-    return view(prDomElementGetAttribute(element, "class")).find(match) != std::string_view::npos
-           || view(prDomElementLocalName(element)) == match || prDomElementHasAttribute(element, match);
+    return view(prDomElementGetAttribute(element, "class")).find(match) != std::string_view::npos ||
+        view(prDomElementLocalName(element)) == match || prDomElementHasAttribute(element, match);
 }
 
 // Appends `text` to `out` as a JSON string.
@@ -234,7 +232,7 @@ int main(int argc, char** argv) {
     }
     if (argc - at != 2) {
         fprintf(stderr, "usage: invalidation [--elements N] [--element I [--mark FILE] | --match TEXT] [--no-verify] [--counts] "
-                        "[--restyle-threads N] <capture.json> <page.html>\n");
+            "[--restyle-threads N] <capture.json> <page.html>\n");
         return 2;
     }
     std::unique_ptr<PrTextShaper, decltype(&prTextShaperDestroy)> shaper(prTextHarfBuzzCreate(), prTextShaperDestroy);
@@ -289,8 +287,8 @@ int main(int argc, char** argv) {
             PrString markup = prHtmlOuterHtml(prDomDocumentElement(document));
             PrStringView text = prStringView(&markup);
             FILE* out = fopen(marked, "wb");
-            bool written = out != nullptr && fputs("<!DOCTYPE html>\n", out) >= 0
-                           && fwrite(text.data, 1, text.size, out) == text.size;
+            bool written = out != nullptr && fputs("<!DOCTYPE html>\n", out) >= 0 &&
+                fwrite(text.data, 1, text.size, out) == text.size;
             if (out != nullptr)
                 fclose(out);
             prStringReset(&markup);
@@ -356,25 +354,25 @@ int main(int argc, char** argv) {
     }
     prDomNodeRelease(prDomElementAsNode(floated));
 
-    std::string out = "{\"elements\": " + std::to_string(all.size()) + ", \"changed\": " + std::to_string(chosen)
-                      + ", \"frames\": " + std::to_string(totals.frames)
-                      + ", \"failures\": " + std::to_string(totals.failures) + ", \"firstFailure\": ";
+    std::string out = "{\"elements\": " + std::to_string(all.size()) + ", \"changed\": " + std::to_string(chosen) +
+        ", \"frames\": " + std::to_string(totals.frames) +
+        ", \"failures\": " + std::to_string(totals.failures) + ", \"firstFailure\": ";
     appendJson(&out, totals.firstFailure);
-    out += ", \"instructions\": " + std::to_string(totals.instructions) + ", \"visited\": "
-           + std::to_string(totals.visited) + ", \"styled\": " + std::to_string(totals.styled)
-           + ", \"styledUnchanged\": " + std::to_string(totals.styledUnchanged) + ", \"blocks\": "
-           + std::to_string(totals.blocks) + ", \"commands\": " + std::to_string(totals.commands)
-           + ", \"repaintedUnchanged\": " + std::to_string(totals.repaintedUnchanged);
+    out += ", \"instructions\": " + std::to_string(totals.instructions) + ", \"visited\": " +
+        std::to_string(totals.visited) + ", \"styled\": " + std::to_string(totals.styled) +
+        ", \"styledUnchanged\": " + std::to_string(totals.styledUnchanged) + ", \"blocks\": " +
+        std::to_string(totals.blocks) + ", \"commands\": " + std::to_string(totals.commands) +
+        ", \"repaintedUnchanged\": " + std::to_string(totals.repaintedUnchanged);
     totals.text.write(&out);
     out += ", \"kinds\": [";
     for (size_t i = 0; i < totals.kinds.size(); ++i) {
         const Kind& k = totals.kinds[i];
         out += i != 0 ? ", {\"name\": " : "{\"name\": ";
         appendJson(&out, k.name);
-        out += ", \"frames\": " + std::to_string(k.frames) + ", \"instructions\": " + std::to_string(k.instructions)
-               + ", \"styled\": " + std::to_string(k.styled) + ", \"styledUnchanged\": "
-               + std::to_string(k.styledUnchanged) + ", \"blocks\": " + std::to_string(k.blocks)
-               + ", \"commands\": " + std::to_string(k.commands);
+        out += ", \"frames\": " + std::to_string(k.frames) + ", \"instructions\": " + std::to_string(k.instructions) +
+            ", \"styled\": " + std::to_string(k.styled) + ", \"styledUnchanged\": " +
+            std::to_string(k.styledUnchanged) + ", \"blocks\": " + std::to_string(k.blocks) +
+            ", \"commands\": " + std::to_string(k.commands);
         k.text.write(&out);
         if (counts) {
             HarnessCounts row{};

@@ -181,7 +181,7 @@ void layoutSceneDestroy(LayoutScene* scene);
 // that time, and returns the number of tracks that set a value. A transform is sampled with the extent of its layer's
 // reference box.
 uint32_t layoutSceneSampleTracks(const LayoutScene* scene, const PrLayoutTrack* PR_NULLABLE tracks, uint32_t count,
-                                 double time, Array<PrLayoutSceneEffect>& out);
+    double time, Array<PrLayoutSceneEffect>& out);
 
 // Returns the scroll container of the scene that presents `node`, or kPaintScrollNone.
 uint32_t layoutSceneNodeScroll(const LayoutScene* scene, PrLayoutNode node);
@@ -190,7 +190,7 @@ uint32_t layoutSceneNodeScroll(const LayoutScene* scene, PrLayoutNode node);
 // and clamped to its range, or zero if `scrolls` gives none. The cost is proportional to the number of containers if
 // `scrolls` follows the scene's order, as a tree's offsets do (prLayoutSceneScrolls), and to their product otherwise.
 void layoutSceneScrollOffsets(const LayoutScene* scene, const PrLayoutSceneScroll* PR_NULLABLE scrolls, uint32_t count,
-                              Array<PrLayoutVec>& out);
+    Array<PrLayoutVec>& out);
 
 // What a user's scroll at a point of a scene meets first: the innermost scroll container of the topmost layer,
 // container or slot at the point. If the scroll meets a slot, it also holds the slot and the point in the space of the
@@ -207,8 +207,7 @@ struct LayoutScrollHit {
 // Returns what a user's scroll at `point` meets first. `point` is in the scene's space as played with `effects` and at
 // `offsets` (layoutSceneScrollOffsets).
 LayoutScrollHit layoutSceneScrollAt(const LayoutScene* scene, PrLayoutVec point,
-                                    const PrLayoutSceneEffect* PR_NULLABLE effects, uint32_t count,
-                                    const PrLayoutVec* offsets);
+    const PrLayoutSceneEffect* PR_NULLABLE effects, uint32_t count, const PrLayoutVec* offsets);
 
 // Returns the scroll container around `scroll` in the scene, across its layers, or kPaintScrollNone past the viewport.
 uint32_t layoutSceneScrollNext(const LayoutScene* scene, uint32_t scroll);

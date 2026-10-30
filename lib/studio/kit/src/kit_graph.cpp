@@ -237,7 +237,7 @@ PrVec2 toGraph(const PrKitGraphView& view, PrVec2 point) {
 
 // Finds the node with `id`, and the index of its port `port` on `side`. Returns false if there is none.
 bool findPort(const PrKitGraph& g, uint64_t id, uint64_t port, PrKitGraphSide side, const PrKitGraphNode** node,
-              uint32_t* index) {
+        uint32_t* index) {
     for (uint32_t i = 0; i < g.nodeCount; ++i) {
         const PrKitGraphNode& n = g.nodes[i];
         if (n.id != id)
@@ -287,12 +287,14 @@ bool wireCurve(const Kit& kit, const PrKitGraph& g, const PrKitGraphWire& wire, 
     const PrKitGraphNode* to = nullptr;
     uint32_t output = 0;
     uint32_t input = 0;
-    if (!findPort(g, wire.link.fromNode, wire.link.fromPort, PrKitGraphSide_Output, &from, &output)
-        || !findPort(g, wire.link.toNode, wire.link.toPort, PrKitGraphSide_Input, &to, &input))
+    if (!findPort(g, wire.link.fromNode, wire.link.fromPort, PrKitGraphSide_Output, &from, &output) ||
+            !findPort(g, wire.link.toNode, wire.link.toPort, PrKitGraphSide_Input, &to, &input))
         return false;
-    *out = WireCurve{.from = toCanvas(*g.view, prKitGraphPortAnchor(from, PrKitGraphSide_Output, output)),
-                     .to = toCanvas(*g.view, prKitGraphPortAnchor(to, PrKitGraphSide_Input, input)),
-                     .color = typeColor(kit, g, from->outputs[output].type)};
+    *out = WireCurve{
+        .from = toCanvas(*g.view, prKitGraphPortAnchor(from, PrKitGraphSide_Output, output)),
+        .to = toCanvas(*g.view, prKitGraphPortAnchor(to, PrKitGraphSide_Input, input)),
+        .color = typeColor(kit, g, from->outputs[output].type),
+    };
     return true;
 }
 
@@ -329,7 +331,7 @@ void drawCurve(PrDrawList* list, PrPath* path, PrVec2 from, PrVec2 to, float zoo
 // Finds the port nearest `point` on the canvas within reach, other than on the node `except`. Returns false if there is
 // none.
 bool portAt(const PrKitGraph& g, PrVec2 point, uint64_t except, const PrKitGraphNode** node, PrKitGraphSide* side,
-            uint32_t* index) {
+        uint32_t* index) {
     float nearest = kPortReach * g.view->zoom;
     bool found = false;
     for (uint32_t i = 0; i < g.nodeCount; ++i) {
@@ -340,8 +342,8 @@ bool portAt(const PrKitGraph& g, PrVec2 point, uint64_t except, const PrKitGraph
             uint32_t count = s == PrKitGraphSide_Input ? n.inputCount : n.outputCount;
             for (uint32_t j = 0; j < count; ++j) {
                 PrVec2 anchor = toCanvas(*g.view, prKitGraphPortAnchor(&n, s, j));
-                float distance = sqrtF32((anchor.x - point.x) * (anchor.x - point.x)
-                                         + (anchor.y - point.y) * (anchor.y - point.y));
+                float distance =
+                    sqrtF32((anchor.x - point.x) * (anchor.x - point.x) + (anchor.y - point.y) * (anchor.y - point.y));
                 if (distance <= nearest) {
                     nearest = distance;
                     *node = &n;
@@ -397,7 +399,7 @@ void drawCanvas(Kit& kit, const PrKitGraph& g, const GraphState& state, PrVec2 e
             continue;
         bool selected = g.wires[i].selected;
         drawCurve(list, path, curve.from, curve.to, view.zoom, selected ? p.text1 : curve.color,
-                  selected ? kWireWidth + 1 : kWireWidth);
+            selected ? kWireWidth + 1 : kWireWidth);
     }
     if (state.mode == DragMode_Wire) {
         const PrKitGraphNode* node = nullptr;
@@ -409,7 +411,7 @@ void drawCanvas(Kit& kit, const PrKitGraph& g, const GraphState& state, PrVec2 e
             color.a = 0.7f;
             bool output = state.side == PrKitGraphSide_Output;
             drawCurve(list, path, output ? anchor : state.reach, output ? state.reach : anchor, view.zoom, color,
-                      kWireWidth);
+                kWireWidth);
         }
     }
     prPathDestroy(path);
@@ -418,7 +420,7 @@ void drawCanvas(Kit& kit, const PrKitGraph& g, const GraphState& state, PrVec2 e
 // Creates a node's port square at the edge of its row, in the color of its type.
 PrLayoutNode portSquare(Kit& kit, PrLayoutNode row, PrKitGraphSide side, PrColor color) {
     PrLayoutStyleIndex record = kitStyle(kit, PortBox{.input = side == PrKitGraphSide_Input},
-                                         KitColors{.background = color, .border = kit.theme.palette.bg1});
+        KitColors{.background = color, .border = kit.theme.palette.bg1});
     PrLayoutNode node = prLayoutTreeFrameElement(kit.tree, row, 0, record);
     prUiSetFlags(kit.ui, node, PrUiFlag_Pressable);
     prUiSetCursor(kit.ui, node, PrAppCursor_Crosshair);
@@ -435,7 +437,7 @@ void openGesture(Kit& kit, PrLayoutNode canvas, GraphState& state) {
 
 // Selects the nodes and wires that a press with `modifiers` on `node`, or on `wire`, selects.
 void pressSelect(const PrKitGraph& g, PrKitGraphNode* PR_NULLABLE node, PrKitGraphWire* PR_NULLABLE wire,
-                 PrAppModifierFlags modifiers) {
+        PrAppModifierFlags modifiers) {
     bool toggle = (modifiers & (PrAppModifierFlag_Super | PrAppModifierFlag_Control)) != 0;
     bool extend = (modifiers & PrAppModifierFlag_Shift) != 0;
     bool* selected = node != nullptr ? &node->selected : &wire->selected;
@@ -502,7 +504,7 @@ PrLayoutNode prKitGraph(PrKit* kit, PrLayoutNode parent, PrKitGraph graph, PrKit
     prUiSetFlags(ui, canvas, flags);
     prKitPlace(kit, canvas, &style.place);
     GraphState* state = static_cast<GraphState*>(prUiState(ui, canvas, &kKitOwner, KitStateKey_Graph,
-                                                           sizeof(GraphState)));
+        sizeof(GraphState)));
     PrKitGraphView& view = *g.view;
     PrVec2 extent = kitExtent(k, canvas);
 
@@ -550,7 +552,7 @@ PrLayoutNode prKitGraph(PrKit* kit, PrLayoutNode parent, PrKitGraph graph, PrKit
         PrKitGraphNode& n = g.nodes[i];
         PrRect rect = prKitGraphNodeRect(&n);
         PrLayoutStyleIndex record = kitStyle(k, RectBox{.rect = rect, .column = true}, NodeFlex{},
-                                             KitColors{.background = p.bg2, .border = n.selected ? p.accent : p.line2});
+            KitColors{.background = p.bg2, .border = n.selected ? p.accent : p.line2});
         PrLayoutNode box = prLayoutTreeFrameElement(tree, world, hashMixKeys(canvas, n.id), record);
         if (editable) {
             prUiSetFlags(ui, box, PrUiFlag_Pressable);
@@ -565,8 +567,11 @@ PrLayoutNode prKitGraph(PrKit* kit, PrLayoutNode parent, PrKitGraph graph, PrKit
             prKitLabel(kit, header, {.text = n.meta}, meta);
         }
         uint32_t rows = n.inputCount > n.outputCount ? n.inputCount : n.outputCount;
-        PrKitTextStyle portStyle{.role = PrKitTextRole_BodySmall, .tone = PrKitTone_Secondary,
-                                 .wrap = PrKitWrap_Nowrap};
+        PrKitTextStyle portStyle{
+            .role = PrKitTextRole_BodySmall,
+            .tone = PrKitTone_Secondary,
+            .wrap = PrKitWrap_Nowrap,
+        };
         for (uint32_t j = 0; j < rows; ++j) {
             PrLayoutNode row = prLayoutTreeFrameElement(tree, box, 0, kitStyle(k, PortRowBox{}, PortRowFlex{}));
             prKitLabel(kit, row, {.text = j < n.inputCount ? n.inputs[j].label : PrStringView{}}, portStyle);
@@ -597,19 +602,22 @@ PrLayoutNode prKitGraph(PrKit* kit, PrLayoutNode parent, PrKitGraph graph, PrKit
                 uint32_t index = 0;
                 if (!portAt(g, at, n.id, &other, &otherSide, &index) || otherSide == side)
                     continue;
-                const PrKitGraphPort& target = otherSide == PrKitGraphSide_Input ? other->inputs[index]
-                                                                                 : other->outputs[index];
+                bool toInput = otherSide == PrKitGraphSide_Input;
+                const PrKitGraphPort& target = toInput ? other->inputs[index] : other->outputs[index];
                 if (target.type != port.type)
                     continue;
                 round.connected = true;
-                round.link = input ? PrKitGraphLink{other->id, target.id, n.id, port.id}
-                                   : PrKitGraphLink{n.id, port.id, other->id, target.id};
+                if (input)
+                    round.link = PrKitGraphLink{other->id, target.id, n.id, port.id};
+                else
+                    round.link = PrKitGraphLink{n.id, port.id, other->id, target.id};
                 kitEditOnce(k, canvas, [] {});
             }
         }
-        round.bodies()[i] =
-            n.bodyHeight > 0 ? prLayoutTreeFrameElement(tree, box, 0, kitStyle(k, BodyBox{}, BodyFlex{}))
-                             : kPrLayoutNodeNone;
+        if (n.bodyHeight > 0)
+            round.bodies()[i] = prLayoutTreeFrameElement(tree, box, 0, kitStyle(k, BodyBox{}, BodyFlex{}));
+        else
+            round.bodies()[i] = kPrLayoutNodeNone;
 
         if (!editable || !prUiDrag(ui, box, 0, 0, &drag) || !(drag.active || drag.released))
             continue;
@@ -683,8 +691,8 @@ PrLayoutNode prKitGraph(PrKit* kit, PrLayoutNode parent, PrKitGraph graph, PrKit
                 bool changed = false;
                 for (uint32_t i = 0; i < g.nodeCount; ++i) {
                     PrRect rect = prKitGraphNodeRect(&g.nodes[i]);
-                    bool inside = rect.left < band.right && rect.right > band.left && rect.top < band.bottom
-                                  && rect.bottom > band.top;
+                    bool inside = rect.left < band.right && rect.right > band.left && rect.top < band.bottom &&
+                        rect.bottom > band.top;
                     bool selected = inside || (state->extend && g.nodes[i].selected);
                     changed = changed || selected != g.nodes[i].selected;
                     g.nodes[i].selected = selected;
@@ -702,8 +710,10 @@ PrLayoutNode prKitGraph(PrKit* kit, PrLayoutNode parent, PrKitGraph graph, PrKit
     }
 
     if (state->mode == DragMode_Marquee && state->live && !ended) {
-        PrRect marquee{minF32(state->press.x, state->reach.x), minF32(state->press.y, state->reach.y),
-                       maxF32(state->press.x, state->reach.x), maxF32(state->press.y, state->reach.y)};
+        PrRect marquee{
+            minF32(state->press.x, state->reach.x), minF32(state->press.y, state->reach.y),
+            maxF32(state->press.x, state->reach.x), maxF32(state->press.y, state->reach.y),
+        };
         PrColor wash = p.accent;
         wash.a = 0.12f;
         prLayoutTreeFrameElement(

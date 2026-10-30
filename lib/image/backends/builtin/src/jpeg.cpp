@@ -19,7 +19,8 @@ constexpr uint32_t kTableCount = 4;
 constexpr uint8_t kZigZag[kBlockSamples] = {
     0,  1,  8,  16, 9,  2,  3,  10, 17, 24, 32, 25, 18, 11, 4,  5,  12, 19, 26, 33, 40, 48,
     41, 34, 27, 20, 13, 6,  7,  14, 21, 28, 35, 42, 49, 56, 57, 50, 43, 36, 29, 22, 15, 23,
-    30, 37, 44, 51, 58, 59, 52, 45, 38, 31, 39, 46, 53, 60, 61, 54, 47, 55, 62, 63};
+    30, 37, 44, 51, 58, 59, 52, 45, 38, 31, 39, 46, 53, 60, 61, 54, 47, 55, 62, 63,
+};
 
 // One Huffman table in the form that the decoder reads: the canonical code ranges per code length, and an index on the
 // first eight bits for codes short enough to resolve in one step (T.81 annex C, F.2.2.3).
@@ -149,8 +150,7 @@ bool readRestart(BitReader& reader) {
     reader.count = 0;
     reader.zeroBits = 0;
     size_t scan = reader.at;
-    while (scan + 1 < reader.size
-           && !(reader.bytes[scan] == 0xFF && reader.bytes[scan + 1] != 0x00)) {
+    while (scan + 1 < reader.size && !(reader.bytes[scan] == 0xFF && reader.bytes[scan + 1] != 0x00)) {
         scan += 1;
     }
     if (scan + 1 >= reader.size) {
@@ -167,8 +167,7 @@ bool readRestart(BitReader& reader) {
 
 // Derives the code ranges and the fast index from the code lengths and symbols in a DHT segment. Returns false for
 // lengths that describe more codes than a Huffman tree of sixteen levels holds (T.81 F.2.2.3).
-bool buildHuffTable(HuffTable& table, const uint8_t* counts, const uint8_t* symbols,
-                    uint32_t symbolCount) {
+bool buildHuffTable(HuffTable& table, const uint8_t* counts, const uint8_t* symbols, uint32_t symbolCount) {
     for (uint32_t index = 0; index < symbolCount; ++index) {
         table.symbols[index] = symbols[index];
     }
@@ -260,8 +259,7 @@ bool decodeBaselineBlock(Jpeg& jpeg, Component& component, BitReader& reader, in
     if (category < 0 || category > 16) {
         return false;
     }
-    component.dcPrediction =
-        advancePrediction(component, receiveAndExtend(reader, uint32_t(category)));
+    component.dcPrediction = advancePrediction(component, receiveAndExtend(reader, uint32_t(category)));
     block[0] = int16_t(component.dcPrediction);
     uint32_t index = 1;
     while (index < kBlockSamples) {
@@ -288,14 +286,12 @@ bool decodeBaselineBlock(Jpeg& jpeg, Component& component, BitReader& reader, in
     return true;
 }
 
-bool decodeDcFirst(Jpeg& jpeg, Component& component, BitReader& reader, Scan& scan,
-                   int16_t* block) {
+bool decodeDcFirst(Jpeg& jpeg, Component& component, BitReader& reader, Scan& scan, int16_t* block) {
     const int32_t category = decodeHuff(reader, jpeg.dcTables[component.dcIndex]);
     if (category < 0 || category > 16) {
         return false;
     }
-    component.dcPrediction =
-        advancePrediction(component, receiveAndExtend(reader, uint32_t(category)));
+    component.dcPrediction = advancePrediction(component, receiveAndExtend(reader, uint32_t(category)));
     block[0] = int16_t(uint32_t(component.dcPrediction) << scan.approximationLow);
     return true;
 }
@@ -307,8 +303,7 @@ bool decodeDcRefine(BitReader& reader, Scan& scan, int16_t* block) {
     return true;
 }
 
-bool decodeAcFirst(Jpeg& jpeg, Component& component, BitReader& reader, Scan& scan,
-                   int16_t* block) {
+bool decodeAcFirst(Jpeg& jpeg, Component& component, BitReader& reader, Scan& scan, int16_t* block) {
     if (scan.eobRun > 0) {
         scan.eobRun -= 1;
         return true;
@@ -333,8 +328,7 @@ bool decodeAcFirst(Jpeg& jpeg, Component& component, BitReader& reader, Scan& sc
         if (index > scan.spectralEnd || index >= kBlockSamples) {
             return false;
         }
-        block[kZigZag[index]] =
-            int16_t(uint32_t(receiveAndExtend(reader, size)) << scan.approximationLow);
+        block[kZigZag[index]] = int16_t(uint32_t(receiveAndExtend(reader, size)) << scan.approximationLow);
         index += 1;
     }
     return true;
@@ -342,8 +336,7 @@ bool decodeAcFirst(Jpeg& jpeg, Component& component, BitReader& reader, Scan& sc
 
 // The correction pass over one band. Every coefficient that earlier scans made nonzero gets one more bit, and the runs
 // between them place the newly nonzero ones (T.81 G.1.2.3).
-bool decodeAcRefine(Jpeg& jpeg, Component& component, BitReader& reader, Scan& scan,
-                    int16_t* block) {
+bool decodeAcRefine(Jpeg& jpeg, Component& component, BitReader& reader, Scan& scan, int16_t* block) {
     const int32_t bit = 1 << scan.approximationLow;
     uint32_t index = scan.spectralStart;
     if (scan.eobRun > 0) {
@@ -408,8 +401,7 @@ bool decodeAcRefine(Jpeg& jpeg, Component& component, BitReader& reader, Scan& s
 }
 
 int16_t* blockAt(const Component& component, uint32_t row, uint32_t column) {
-    return component.coefficients
-           + size_t(row * component.blocksPerLineForMcu + column) * kBlockSamples;
+    return component.coefficients + size_t(row * component.blocksPerLineForMcu + column) * kBlockSamples;
 }
 
 bool decodeBlock(Jpeg& jpeg, Scan& scan, Component& component, BitReader& reader, int16_t* block) {
@@ -417,11 +409,13 @@ bool decodeBlock(Jpeg& jpeg, Scan& scan, Component& component, BitReader& reader
         return decodeBaselineBlock(jpeg, component, reader, block);
     }
     if (scan.spectralStart == 0) {
-        return scan.approximationHigh == 0 ? decodeDcFirst(jpeg, component, reader, scan, block)
-                                           : decodeDcRefine(reader, scan, block);
+        if (scan.approximationHigh == 0)
+            return decodeDcFirst(jpeg, component, reader, scan, block);
+        return decodeDcRefine(reader, scan, block);
     }
-    return scan.approximationHigh == 0 ? decodeAcFirst(jpeg, component, reader, scan, block)
-                                       : decodeAcRefine(jpeg, component, reader, scan, block);
+    if (scan.approximationHigh == 0)
+        return decodeAcFirst(jpeg, component, reader, scan, block);
+    return decodeAcRefine(jpeg, component, reader, scan, block);
 }
 
 // Decodes the entropy-coded data of one scan. A single component walks its own blocks row by row. Several components
@@ -444,8 +438,7 @@ bool decodeScanData(Jpeg& jpeg, Scan& scan, BitReader& reader) {
             const uint32_t unitColumn = unit % unitsWide;
             if (single) {
                 Component& component = *scan.components[0];
-                if (!decodeBlock(jpeg, scan, component, reader,
-                                 blockAt(component, unitRow, unitColumn))) {
+                if (!decodeBlock(jpeg, scan, component, reader, blockAt(component, unitRow, unitColumn))) {
                     return false;
                 }
                 continue;
@@ -454,8 +447,7 @@ bool decodeScanData(Jpeg& jpeg, Scan& scan, BitReader& reader) {
                 Component& component = *scan.components[index];
                 for (uint32_t row = 0; row < component.v; ++row) {
                     for (uint32_t column = 0; column < component.h; ++column) {
-                        int16_t* block = blockAt(component, unitRow * component.v + row,
-                                                 unitColumn * component.h + column);
+                        int16_t* block = blockAt(component, unitRow * component.v + row, unitColumn * component.h + column);
                         if (!decodeBlock(jpeg, scan, component, reader, block)) {
                             return false;
                         }
@@ -513,8 +505,7 @@ void inverseTransform(const int16_t* block, const uint16_t* quant, uint8_t* out,
     for (uint32_t column = 0; column < 8; ++column) {
         const int16_t* in = block + column;
         const uint16_t* q = quant + column;
-        if (in[8] == 0 && in[16] == 0 && in[24] == 0 && in[32] == 0 && in[40] == 0 && in[48] == 0
-            && in[56] == 0) {
+        if (in[8] == 0 && in[16] == 0 && in[24] == 0 && in[32] == 0 && in[40] == 0 && in[48] == 0 && in[56] == 0) {
             const int64_t value = int64_t(in[0]) * q[0] << kPassBits;
             for (uint32_t row = 0; row < 8; ++row) {
                 work[row * 8 + column] = value;
@@ -670,8 +661,7 @@ void upsampleRow(const Component& component, const Jpeg& jpeg, uint32_t y, uint8
         const uint32_t bias = halfHeight && (y & 1) == 0 ? 1 : 2;
         for (uint32_t x = 0; x < jpeg.width; ++x) {
             const uint32_t source = x < sourceWidth ? x : sourceWidth - 1;
-            out[x] =
-                uint8_t((nearLine[source] * nearWeight + farLine[source] * farWeight + bias) >> 2);
+            out[x] = uint8_t((nearLine[source] * nearWeight + farLine[source] * farWeight + bias) >> 2);
         }
         return;
     }
@@ -688,8 +678,7 @@ void upsampleRow(const Component& component, const Jpeg& jpeg, uint32_t y, uint8
         previous = current;
         current = next;
         const uint32_t ahead = x + 2;
-        next = ahead < sourceWidth ? nearLine[ahead] * nearWeight + farLine[ahead] * farWeight
-                                   : current;
+        next = ahead < sourceWidth ? nearLine[ahead] * nearWeight + farLine[ahead] * farWeight : current;
     }
 }
 
@@ -714,8 +703,7 @@ bool componentsAreRgb(const Jpeg& jpeg) {
     if (jpeg.adobeTransform >= 0) {
         return jpeg.adobeTransform == 0;
     }
-    return jpeg.components[0].id == 'R' && jpeg.components[1].id == 'G'
-           && jpeg.components[2].id == 'B';
+    return jpeg.components[0].id == 'R' && jpeg.components[1].id == 'G' && jpeg.components[2].id == 'B';
 }
 
 // Writes canonical native rows, upsampling each component to full resolution.
@@ -742,8 +730,7 @@ void writePixels(const Jpeg& jpeg, uint8_t* pixels) {
                     pixel[3] = uint8_t(255 - rows[3][x]);
                 } else {
                     for (uint32_t channel = 0; channel < 4; ++channel) {
-                        pixel[channel] =
-                            inverted ? uint8_t(255 - rows[channel][x]) : rows[channel][x];
+                        pixel[channel] = inverted ? uint8_t(255 - rows[channel][x]) : rows[channel][x];
                     }
                 }
             } else if (jpeg.componentCount == 3) {
@@ -772,10 +759,8 @@ bool readFrame(Jpeg& jpeg, const uint8_t* segment, uint32_t size, uint8_t marker
     jpeg.height = readBeU16(segment + 1);
     jpeg.width = readBeU16(segment + 3);
     jpeg.componentCount = segment[5];
-    if (jpeg.width == 0 || jpeg.height == 0 || jpeg.componentCount == 0
-        || jpeg.componentCount > kMaxComponents
-        || uint64_t(jpeg.width) * uint64_t(jpeg.height) > kMaxPixels
-        || size < 6 + jpeg.componentCount * 3) {
+    if (jpeg.width == 0 || jpeg.height == 0 || jpeg.componentCount == 0 || jpeg.componentCount > kMaxComponents ||
+            uint64_t(jpeg.width) * uint64_t(jpeg.height) > kMaxPixels || size < 6 + jpeg.componentCount * 3) {
         return false;
     }
     jpeg.maxH = 1;
@@ -787,8 +772,8 @@ bool readFrame(Jpeg& jpeg, const uint8_t* segment, uint32_t size, uint8_t marker
         component.h = entry[1] >> 4;
         component.v = entry[1] & 15;
         component.quantIndex = entry[2];
-        if (component.h == 0 || component.h > 4 || component.v == 0 || component.v > 4
-            || component.quantIndex >= kTableCount) {
+        if (component.h == 0 || component.h > 4 || component.v == 0 || component.v > 4 ||
+                component.quantIndex >= kTableCount) {
             return false;
         }
         jpeg.maxH = component.h > jpeg.maxH ? component.h : jpeg.maxH;
@@ -805,16 +790,13 @@ bool readFrame(Jpeg& jpeg, const uint8_t* segment, uint32_t size, uint8_t marker
 bool allocatePlanes(Jpeg& jpeg) {
     for (uint32_t index = 0; index < jpeg.componentCount; ++index) {
         Component& component = jpeg.components[index];
-        component.downsampledWidth =
-            uint32_t((uint64_t(jpeg.width) * component.h + jpeg.maxH - 1) / jpeg.maxH);
-        component.downsampledHeight =
-            uint32_t((uint64_t(jpeg.height) * component.v + jpeg.maxV - 1) / jpeg.maxV);
+        component.downsampledWidth = uint32_t((uint64_t(jpeg.width) * component.h + jpeg.maxH - 1) / jpeg.maxH);
+        component.downsampledHeight = uint32_t((uint64_t(jpeg.height) * component.v + jpeg.maxV - 1) / jpeg.maxV);
         component.blocksPerLine = (component.downsampledWidth + 7) / 8;
         component.blocksPerColumn = (component.downsampledHeight + 7) / 8;
         component.blocksPerLineForMcu = jpeg.mcusPerLine * component.h;
         component.blocksPerColumnForMcu = jpeg.mcusPerColumn * component.v;
-        const uint64_t blocks =
-            uint64_t(component.blocksPerLineForMcu) * uint64_t(component.blocksPerColumnForMcu);
+        const uint64_t blocks = uint64_t(component.blocksPerLineForMcu) * uint64_t(component.blocksPerColumnForMcu);
         if (blocks * kBlockSamples > kMaxPixels * 4) {
             return false;
         }
@@ -838,9 +820,8 @@ bool readQuantTables(Jpeg& jpeg, const uint8_t* segment, uint32_t size) {
             return false;
         }
         for (uint32_t entry = 0; entry < kBlockSamples; ++entry) {
-            jpeg.quant[index][kZigZag[entry]] = precision == 0
-                                                    ? segment[at + entry]
-                                                    : uint16_t(readBeU16(segment + at + entry * 2));
+            jpeg.quant[index][kZigZag[entry]] =
+                precision == 0 ? segment[at + entry] : uint16_t(readBeU16(segment + at + entry * 2));
         }
         jpeg.quantPresent[index] = true;
         at += bytes;
@@ -906,9 +887,9 @@ bool readScan(Jpeg& jpeg, Scan& scan, const uint8_t* segment, uint32_t size) {
         scan.approximationHigh = tail[2] >> 4;
         scan.approximationLow = tail[2] & 15;
         // A DC scan covers only that coefficient, and an AC scan covers only one component.
-        if (scan.spectralStart > scan.spectralEnd || scan.spectralEnd >= kBlockSamples
-            || scan.approximationLow > 13 || (scan.spectralStart == 0 && scan.spectralEnd != 0)
-            || (scan.spectralStart != 0 && scan.count != 1)) {
+        if (scan.spectralStart > scan.spectralEnd || scan.spectralEnd >= kBlockSamples ||
+                scan.approximationLow > 13 || (scan.spectralStart == 0 && scan.spectralEnd != 0) ||
+                (scan.spectralStart != 0 && scan.count != 1)) {
             return false;
         }
     } else {
@@ -1016,10 +997,9 @@ bool decode(Jpeg& jpeg, const uint8_t* bytes, size_t size, uint8_t* pixels, size
         const uint32_t segmentSize = length - 2;
         at += length;
         if (marker == 0xC0 || marker == 0xC1 || marker == 0xC2) {
-            if (!readFrame(jpeg, segment, segmentSize, marker)
-                || uint64_t(jpeg.width) * uint64_t(jpeg.height) * jpeg.componentCount
-                       != uint64_t(pixelsSize)
-                || !allocatePlanes(jpeg)) {
+            if (!readFrame(jpeg, segment, segmentSize, marker) ||
+                    uint64_t(jpeg.width) * uint64_t(jpeg.height) * jpeg.componentCount != uint64_t(pixelsSize) ||
+                    !allocatePlanes(jpeg)) {
                 return false;
             }
         } else if (marker == 0xDB) {

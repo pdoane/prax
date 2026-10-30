@@ -21,9 +21,9 @@ struct Block {
     PrLayoutNode text = kPrLayoutNodeNone;
 
     Block(const char* value, float width = 400,
-          PrLayoutWhiteSpaceCollapse collapse = PrLayoutWhiteSpaceCollapse_Preserve,
-          PrTextDirection direction = PrTextDirection_Ltr,
-          PrLayoutWritingMode mode = PrLayoutWritingMode_HorizontalTb) {
+            PrLayoutWhiteSpaceCollapse collapse = PrLayoutWhiteSpaceCollapse_Preserve,
+            PrTextDirection direction = PrTextDirection_Ltr,
+            PrLayoutWritingMode mode = PrLayoutWritingMode_HorizontalTb) {
         PrLayoutFontStyle font = prLayoutFontStyleDefault();
         font.font = textFontOf(20);
         font.lineHeight = prLayoutLineHeightPx(40);
@@ -218,8 +218,8 @@ TEST_CASE("a highlight fills its range's box behind the text, and paints the gly
     REQUIRE(range.size() == 1);
     bool filled = false;
     for (const Painted::Fill& r : painted.rects)
-        filled = filled || (sameColor(r.color, kYellow) && r.rect.left == doctest::Approx(range[0].left)
-                            && r.rect.right == doctest::Approx(range[0].right));
+        filled = filled || (sameColor(r.color, kYellow) && r.rect.left == doctest::Approx(range[0].left) &&
+            r.rect.right == doctest::Approx(range[0].right));
     CHECK(filled);
     PrLayoutHighlight out[2];
     CHECK(prLayoutNodeHighlights(b.f.tree, b.text, out, 2) == 1);

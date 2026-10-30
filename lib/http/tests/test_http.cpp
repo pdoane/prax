@@ -34,19 +34,21 @@ bool open(Fixture* fixture, const PrHttpHostRule* PR_NULLABLE rules = nullptr, u
     fixture->net = prNetSocketsCreate();
     fixture->tls = prTlsCreate(PrTlsBackend_Default, fixture->net);
     fixture->anchor = PrByteView{fixture->peer.ca.data, fixture->peer.ca.size};
-    PrHttpDesc desc{.net = fixture->net,
-                           .tls = fixture->tls,
-                           .anchors = &fixture->anchor,
-                           .anchorCount = 1,
-                           .hostRules = rules,
-                           .hostRuleCount = ruleCount};
+    PrHttpDesc desc{
+        .net = fixture->net,
+        .tls = fixture->tls,
+        .anchors = &fixture->anchor,
+        .anchorCount = 1,
+        .hostRules = rules,
+        .hostRuleCount = ruleCount,
+    };
     fixture->http = prHttpCreate(PrHttpBackend_Default, &desc);
     return true;
 }
 
 void reset(Fixture* fixture) {
     netRunOnLoop(fixture->net, [](void* PR_NULLABLE http) { prHttpDestroy(static_cast<PrHttp*>(http)); },
-                 fixture->http);
+        fixture->http);
     prTlsDestroy(fixture->tls);
     prNetDestroy(fixture->net);
     netPeerReset(&fixture->peer);
@@ -74,13 +76,15 @@ void probeEvent(void* PR_NULLABLE context, PrHttpExchange* exchange, PrHttpEvent
         probe->status = prHttpExchangeStatus(exchange);
         for (uint32_t i = 0; i < prHttpExchangeHeaderCount(exchange); ++i) {
             PrHttpHeader header = prHttpExchangeHeader(exchange, i);
-            probe->headers.push_back({std::string(header.name.data, header.name.size),
-                                      std::string(header.value.data, header.value.size)});
+            probe->headers.push_back({
+                std::string(header.name.data, header.name.size),
+                std::string(header.value.data, header.value.size),
+            });
         }
     }
     uint8_t chunk[4096];
     for (size_t got = prHttpExchangeRead(exchange, chunk, sizeof(chunk)); got != 0;
-         got = prHttpExchangeRead(exchange, chunk, sizeof(chunk)))
+            got = prHttpExchangeRead(exchange, chunk, sizeof(chunk)))
         probe->received.append(reinterpret_cast<const char*>(chunk), got);
     if (event == PrHttpEvent_End || event == PrHttpEvent_Fail) {
         probe->error = prHttpExchangeError(exchange);
@@ -104,8 +108,7 @@ void startProbe(void* PR_NULLABLE context) {
 }
 
 // Runs an exchange for `url` with `method` and `body`, and waits until it ends or fails.
-void run(Fixture* fixture, Probe* probe, const std::string& url, const std::string& method = "",
-         const std::string& body = "") {
+void run(Fixture* fixture, Probe* probe, const std::string& url, const std::string& method = "", const std::string& body = "") {
     probe->http = fixture->http;
     probe->url = url;
     probe->method = method;

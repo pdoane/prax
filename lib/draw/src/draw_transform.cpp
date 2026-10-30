@@ -148,8 +148,7 @@ PrDrawTransform prDrawTransformMoved(const PrDrawTransform* current, PrDVec2 off
     return next;
 }
 
-const PrDrawCommand* prDrawTransformSnap(const PrDrawTransform* transform, const PrDrawCommand* command,
-                                         PrDrawSnapped* storage) {
+const PrDrawCommand* prDrawTransformSnap(const PrDrawTransform* transform, const PrDrawCommand* command, PrDrawSnapped* storage) {
     if (command->snap == 0 || command->kind == PrDrawCommandKind_PushTransformAffine2)
         return command;
     const PrDAffine2& s = transform->snap;
@@ -177,9 +176,11 @@ const PrDrawCommand* prDrawTransformSnap(const PrDrawTransform* transform, const
             // Each side is as wide as its snapped outer and inner edges leave it.
             const PrDrawBorder& b = *command->border;
             PrRect exact = b.shape.rect;
-            PrRect within{exact.left + b.sides[PrRectSide_Left].width, exact.top + b.sides[PrRectSide_Top].width,
-                          exact.right - b.sides[PrRectSide_Right].width,
-                          exact.bottom - b.sides[PrRectSide_Bottom].width};
+            PrRect within{
+                exact.left + b.sides[PrRectSide_Left].width, exact.top + b.sides[PrRectSide_Top].width,
+                exact.right - b.sides[PrRectSide_Right].width,
+                exact.bottom - b.sides[PrRectSide_Bottom].width,
+            };
             outer = snapRect(s, a, exact, axes);
             inner = snapRect(s, a, within, axes);
             moved = !sameRect(outer, exact) || !sameRect(inner, within);
@@ -191,16 +192,18 @@ const PrDrawCommand* prDrawTransformSnap(const PrDrawTransform* transform, const
     // An image brush's tile in the command's space snaps its start, and its far edge where it does not repeat.
     const PrDrawBrush* brush = command->brush;
     PrRect tile{};
-    bool tiled = brush != nullptr && brush->kind == PrDrawBrushKind_Image && brush->space == PrDrawBrushSpace_User
-                 && brush->transform.a == 1 && brush->transform.b == 0 && brush->transform.c == 0
-                 && brush->transform.d == 1 && brush->transform.e == 0 && brush->transform.f == 0;
+    bool tiled = brush != nullptr && brush->kind == PrDrawBrushKind_Image && brush->space == PrDrawBrushSpace_User &&
+        brush->transform.a == 1 && brush->transform.b == 0 && brush->transform.c == 0 &&
+        brush->transform.d == 1 && brush->transform.e == 0 && brush->transform.f == 0;
     if (tiled) {
         const PrRect& exact = brush->image.tiles.tile;
         PrRect snapped = snapRect(s, a, exact, axes);
         bool padX = brush->image.tiles.x == PrDrawExtend_Pad;
         bool padY = brush->image.tiles.y == PrDrawExtend_Pad;
-        tile = PrRect{snapped.left, snapped.top, padX ? snapped.right : snapped.left + (exact.right - exact.left),
-                      padY ? snapped.bottom : snapped.top + (exact.bottom - exact.top)};
+        tile = PrRect{
+            snapped.left, snapped.top, padX ? snapped.right : snapped.left + (exact.right - exact.left),
+            padY ? snapped.bottom : snapped.top + (exact.bottom - exact.top),
+        };
         tiled = !sameRect(tile, exact);
         moved = moved || tiled;
     }

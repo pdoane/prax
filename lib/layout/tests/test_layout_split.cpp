@@ -93,7 +93,7 @@ struct Stage {
 
     // Creates a stage in a font that `edit` changes, `width` wide and `height` high if that is not negative.
     template <typename Edit>
-        requires requires(Edit e, PrLayoutFontStyle& value) { e(value); }
+    requires requires(Edit e, PrLayoutFontStyle& value) { e(value); }
     Stage(Edit edit, float width = 200, float height = -1) {
         edit(style);
         build(width, height);
@@ -105,9 +105,8 @@ struct Stage {
     }
 
     // Creates an element under `parent` styled by `box`, in the stage's font or `withFont`.
-    PrLayoutNode add(PrLayoutNode parent, const PrLayoutBoxStyle& box,
-                     const PrLayoutFontStyle* PR_NULLABLE withFont = nullptr,
-                     const PrLayoutDecorationStyle* PR_NULLABLE decoration = nullptr) {
+    PrLayoutNode add(PrLayoutNode parent, const PrLayoutBoxStyle& box, const PrLayoutFontStyle* PR_NULLABLE withFont = nullptr,
+            const PrLayoutDecorationStyle* PR_NULLABLE decoration = nullptr) {
         return f.element(parent, box, decoration, nullptr, withFont != nullptr ? withFont : &style);
     }
     PrLayoutNode text(PrLayoutNode parent, const char* value) { return f.text(parent, value); }
@@ -119,8 +118,7 @@ struct Stage {
 
     // Create an inline box, a block box holding `value` if it is given, or a zero-size marker on the baseline.
     PrLayoutNode span(PrLayoutNode parent, const PrLayoutBoxStyle& box = inlineBox()) { return add(parent, box); }
-    PrLayoutNode div(PrLayoutNode parent, const PrLayoutBoxStyle& box = block(),
-                     const char* PR_NULLABLE value = nullptr) {
+    PrLayoutNode div(PrLayoutNode parent, const PrLayoutBoxStyle& box = block(), const char* PR_NULLABLE value = nullptr) {
         PrLayoutNode node = add(parent, box);
         if (value != nullptr)
             text(node, value);
@@ -150,8 +148,10 @@ struct Stage {
         std::vector<Bounds> out;
         for (const PrLayoutRect& box : boxes) {
             PrRect r = prLayoutRectToPx(box);
-            out.push_back(Bounds{double(r.left - origin.left), double(r.top - origin.top), double(r.right - r.left),
-                               double(r.bottom - r.top)});
+            out.push_back(Bounds{
+                double(r.left - origin.left), double(r.top - origin.top), double(r.right - r.left),
+                double(r.bottom - r.top),
+            });
         }
         return out;
     }
@@ -756,8 +756,10 @@ TEST_CASE("an inline box's border is open where a block splits it, on the sides 
             double x = double(origin.left) + (right ? r.left + r.width - 5 : r.left + 5);
             return pixel(pixels, 400, uint32_t(x), uint32_t(double(origin.top) + r.top + r.height / 2));
         };
-        return std::vector<std::string>{at(rects[0], false), at(rects[0], true), at(rects[2], false),
-                                        at(rects[2], true)};
+        return std::vector<std::string>{
+            at(rects[0], false), at(rects[0], true), at(rects[2], false),
+            at(rects[2], true),
+        };
     };
     std::string red = "255 0 0 255";
     std::string blue = "0 0 255 255";
@@ -888,30 +890,28 @@ TEST_CASE("a run with a block in an inline box is measured a segment and a block
         return s.width(shrink);
     };
     CHECK(widthOf([](Stage& s, PrLayoutNode parent) {
-              PrLayoutNode span = s.span(parent);
-              s.text(span, "aa ");
-              s.div(span, sized(block(), 150, 10));
-              s.text(span, " bb");
-          }) == 150);
+        PrLayoutNode span = s.span(parent);
+        s.text(span, "aa ");
+        s.div(span, sized(block(), 150, 10));
+        s.text(span, " bb");
+    }) == 150);
     // The inline box's edges are on the lines, not around the block.
     CHECK(widthOf([](Stage& s, PrLayoutNode parent) {
-              PrLayoutNode span = s.span(parent, padded(inlineBox(), 20, 20));
-              s.div(span, sized(block(), 100, 10));
-          }) == 100);
+        PrLayoutNode span = s.span(parent, padded(inlineBox(), 20, 20));
+        s.div(span, sized(block(), 100, 10));
+    }) == 100);
     // A float in a segment adds to that segment's line, not to the block after it.
     CHECK(widthOf([](Stage& s, PrLayoutNode parent) {
-              PrLayoutNode span = s.span(parent);
-              s.add(span, floatLeft(60, 10));
-              s.div(span, flowRoot(sized(block(), 100, 10)));
-          }) == 100);
-    CHECK(widthOf(
-              [](Stage& s, PrLayoutNode parent) {
-                  PrLayoutNode span = s.span(parent);
-                  s.text(span, "aaaa ");
-                  s.div(span, sized(block(), 50, 10));
-                  s.text(span, " b");
-              },
-              true) == 50);
+        PrLayoutNode span = s.span(parent);
+        s.add(span, floatLeft(60, 10));
+        s.div(span, flowRoot(sized(block(), 100, 10)));
+    }) == 100);
+    CHECK(widthOf([](Stage& s, PrLayoutNode parent) {
+        PrLayoutNode span = s.span(parent);
+        s.text(span, "aaaa ");
+        s.div(span, sized(block(), 50, 10));
+        s.text(span, " b");
+    }, true) == 50);
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -1009,8 +1009,7 @@ TEST_CASE("a block in an inline box is laid out again where what it read of the 
         PrLayoutNode inner = s.div(span, flowRoot(block()), "x");
         s.layout();
         CHECK(s.width(inner) == 140);
-        prLayoutNodeSetStyle(s.f.tree, before,
-                             s.f.style(inlineBlock(30, 60), nullptr, nullptr, &s.style));
+        prLayoutNodeSetStyle(s.f.tree, before, s.f.style(inlineBlock(30, 60), nullptr, nullptr, &s.style));
         s.layout();
         CHECK(s.top(inner) >= 50);
         CHECK(s.width(inner) == 200);

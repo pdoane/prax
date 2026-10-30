@@ -1,5 +1,5 @@
-"""`./dev.sh lint`, `rewrap`, `includes` and `prose`: the conventions that a compiler cannot check, and the tools that
-fix what they can."""
+"""`./dev.sh lint`, `rewrap`, `includes`, `layout` and `prose`: the conventions that a compiler cannot check, and the
+tools that fix what they can."""
 
 import subprocess
 import sys
@@ -19,6 +19,11 @@ USAGE = {
     "includes": """\
 ./dev.sh includes [path...]
     order the includes as lint requires, in the files named or in every source that lint reads""",
+    "layout": """\
+./dev.sh layout [path...]
+    lay out the code as lint requires: indent it four spaces a level and each continuation one level past the line it
+    continues, and break its lines no sooner than the column limit makes them, in the files named or in every source
+    that lint reads""",
     "prose": """\
 ./dev.sh prose [--base REV] [path...]
     check a prose pass (docs/technical_writing.md): the files named, or every file changed from REV (HEAD), must have
@@ -75,6 +80,11 @@ def rewrap(argv):
 def includes(argv):
     dev.usage(argv, USAGE["includes"])
     dev.python("tools.lint.includes", *argv)
+
+
+def layout(argv):
+    dev.usage(argv, USAGE["layout"])
+    dev.python("tools.lint.layout", *argv)
 
 
 def prose(argv):

@@ -173,8 +173,8 @@ void documentTree(Ui* ui, const Collection& collection, float height, Choices& c
                     if (row.node == ui->cursor)
                         flags |= ImGuiTreeNodeFlags_Selected;
                     ImGui::SetNextItemOpen(node.expanded);
-                    if (ImGui::TreeNodeEx("##directory", flags, "%s  (%u)", node.name.c_str(), node.matches)
-                        != node.expanded)
+                    if (ImGui::TreeNodeEx("##directory", flags, "%s  (%u)", node.name.c_str(), node.matches) !=
+                            node.expanded)
                         toggled = int(row.node);
                 } else {
                     flags |= ImGuiTreeNodeFlags_Leaf;
@@ -233,8 +233,8 @@ void textCombos(PaneChoice& pane) {
     ImGui::SetNextItemWidth(-90);
     if (ImGui::BeginCombo("Shaper", prTextShaperBackendName(pane.text.shaper).data)) {
         for (PrTextShaperBackend s = 0; s < PrTextShaperBackend_Count; ++s) {
-            if (prTextShaperBackendIsBuilt(s)
-                && ImGui::Selectable(prTextShaperBackendName(s).data, s == pane.text.shaper))
+            if (prTextShaperBackendIsBuilt(s) &&
+                    ImGui::Selectable(prTextShaperBackendName(s).data, s == pane.text.shaper))
                 pane.text.shaper = s;
         }
         ImGui::EndCombo();
@@ -250,7 +250,7 @@ void textCombos(PaneChoice& pane) {
 
 // Draws the controls of a pane: what renders it, Prax or one of the document's references, and Prax's renderers.
 void paneControls(const char* label, const std::vector<RendererConfig>& configs,
-                  const std::vector<Reference>& references, PaneChoice& pane) {
+        const std::vector<Reference>& references, PaneChoice& pane) {
     ImGui::PushID(label);
     bool prax = pane.renderer == Renderer_Prax || pane.reference >= references.size();
     ImGui::SetNextItemWidth(-90);
@@ -306,11 +306,11 @@ void chooseFamily(PaneChoice& pane, const std::vector<RendererConfig>& configs, 
 }
 
 std::string paneName(const PaneChoice& pane, const std::vector<RendererConfig>& configs,
-                     const std::vector<Reference>& references) {
+        const std::vector<Reference>& references) {
     if (pane.renderer == Renderer_Reference && pane.reference < references.size())
         return references[pane.reference].name;
-    return std::string("Prax, ") + configs[pane.config].name + ", "
-           + prTextShaperBackendName(pane.text.shaper).data + ", " + prFontHintingName(pane.text.hinting).data;
+    return std::string("Prax, ") + configs[pane.config].name + ", " +
+        prTextShaperBackendName(pane.text.shaper).data + ", " + prFontHintingName(pane.text.hinting).data;
 }
 
 Ui* uiCreate(PrGpuDevice* device) {
@@ -356,9 +356,8 @@ bool uiEvent(Ui* ui, const PrAppEvent& event) {
         case PrAppEventKind_KeyUp: {
             io.AddKeyEvent(keyOf(event.key), event.kind == PrAppEventKind_KeyDown);
             // The tree's cursor moves by the arrow and page keys (moveCursor).
-            bool moves = event.key == PrAppKey_Up || event.key == PrAppKey_Down || event.key == PrAppKey_Left
-                         || event.key == PrAppKey_Right || event.key == PrAppKey_PageUp
-                         || event.key == PrAppKey_PageDown;
+            bool moves = event.key == PrAppKey_Up || event.key == PrAppKey_Down || event.key == PrAppKey_Left ||
+                event.key == PrAppKey_Right || event.key == PrAppKey_PageUp || event.key == PrAppKey_PageDown;
             return io.WantCaptureKeyboard || moves;
         }
         case PrAppEventKind_Text: {
@@ -372,8 +371,8 @@ bool uiEvent(Ui* ui, const PrAppEvent& event) {
 }
 
 PrRect uiLayout(Ui* ui, float width, float height, float pixelRatio, double delta,
-                const std::vector<RendererConfig>& configs, const std::vector<Reference>& references,
-                const Figures& figures, Choices& choices) {
+        const std::vector<RendererConfig>& configs, const std::vector<Reference>& references,
+        const Figures& figures, Choices& choices) {
     use(ui);
     ImGuiIO& io = ImGui::GetIO();
     io.DisplaySize = ImVec2(width, height);
@@ -383,10 +382,8 @@ PrRect uiLayout(Ui* ui, float width, float height, float pixelRatio, double delt
 
     ImGui::SetNextWindowPos(ImVec2(0, 0));
     ImGui::SetNextWindowSize(ImVec2(kPanel, height));
-    ImGui::Begin("Viewer", nullptr,
-                 ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize
-                     | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse
-                     | ImGuiWindowFlags_NoBringToFrontOnFocus);
+    ImGui::Begin("Viewer", nullptr, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize |
+        ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoBringToFrontOnFocus);
     const std::vector<Collection>& collections = allCollections();
     ImGui::SetNextItemWidth(-1);
     if (ImGui::BeginCombo("##collection", collections[choices.collection].name.c_str())) {
@@ -486,8 +483,7 @@ PrRect uiLayout(Ui* ui, float width, float height, float pixelRatio, double delt
             ImGui::TextDisabled("comparing...");
         else if (figures.compared) {
             const ImageDifference& d = figures.difference;
-            ImGui::Text("changed %.3f%%, of content %.3f%%", d.changedRatio * 100,
-                        d.contentChangedRatio * 100);
+            ImGui::Text("changed %.3f%%, of content %.3f%%", d.changedRatio * 100, d.contentChangedRatio * 100);
             ImGui::Text("mean error %.3f", d.mae);
         }
     }
@@ -513,9 +509,8 @@ void uiImage(Ui* ui, PrGpuTexture texture, PrRect clip, PrRect destination, bool
     draw->PushClipRect(ImVec2(clip.left, clip.top), ImVec2(clip.right, clip.bottom), true);
     if (nearest && platform.DrawCallback_SetSamplerNearest != nullptr)
         draw->AddCallback(platform.DrawCallback_SetSamplerNearest, nullptr);
-    draw->AddImage(ImTextureRef(id),
-                   ImVec2(destination.left, destination.top),
-                   ImVec2(destination.right, destination.bottom));
+    draw->AddImage(ImTextureRef(id), ImVec2(destination.left, destination.top),
+        ImVec2(destination.right, destination.bottom));
     if (nearest && platform.DrawCallback_SetSamplerLinear != nullptr)
         draw->AddCallback(platform.DrawCallback_SetSamplerLinear, nullptr);
     draw->PopClipRect();

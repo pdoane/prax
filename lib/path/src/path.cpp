@@ -102,10 +102,8 @@ void ensureContour(Path* path) {
 
 // Appends a quarter of an ellipse from `from` to `to` around the corner at `corner`.
 void quarter(PrPath* path, PrVec2 from, PrVec2 corner, PrVec2 to) {
-    PrVec2 control1{from.x + (corner.x - from.x) * kQuarterArc,
-                     from.y + (corner.y - from.y) * kQuarterArc};
-    PrVec2 control2{to.x + (corner.x - to.x) * kQuarterArc,
-                     to.y + (corner.y - to.y) * kQuarterArc};
+    PrVec2 control1{from.x + (corner.x - from.x) * kQuarterArc, from.y + (corner.y - from.y) * kQuarterArc};
+    PrVec2 control2{to.x + (corner.x - to.x) * kQuarterArc, to.y + (corner.y - to.y) * kQuarterArc};
     prPathCubicTo(path, control1, control2, to);
 }
 
@@ -115,8 +113,10 @@ float distance(PrVec2 a, PrVec2 b) {
 
 PrVec2 placedTangent(const PrCornerPlacement& c, float t) {
     PrVec2 d = prCornerCurveTangent(c.shape, t);
-    PrVec2 w{c.before.x * c.radiusBefore * d.x + c.after.x * c.radiusAfter * d.y,
-              c.before.y * c.radiusBefore * d.x + c.after.y * c.radiusAfter * d.y};
+    PrVec2 w{
+        c.before.x * c.radiusBefore * d.x + c.after.x * c.radiusAfter * d.y,
+        c.before.y * c.radiusBefore * d.x + c.after.y * c.radiusAfter * d.y,
+    };
     float length = sqrtF32(w.x * w.x + w.y * w.y);
     return length > 0 ? w / length : c.before;
 }
@@ -167,10 +167,7 @@ float fitError(const PrCornerPlacement& c, float t0, float t1, const PrVec2 cubi
             PrVec2 b = polyline[i + 1];
             PrVec2 ab{b.x - a.x, b.y - a.y};
             float lengthSquared = ab.x * ab.x + ab.y * ab.y;
-            float along = lengthSquared > 0
-                              ? clampF32(((p.x - a.x) * ab.x + (p.y - a.y) * ab.y) / lengthSquared,
-                                         0, 1)
-                              : 0;
+            float along = lengthSquared > 0 ? clampF32(((p.x - a.x) * ab.x + (p.y - a.y) * ab.y) / lengthSquared, 0, 1) : 0;
             nearest = minF32(nearest, distance(p, prVec2Lerp(a, b, along)));
         }
         worst = maxF32(worst, nearest);
@@ -178,8 +175,7 @@ float fitError(const PrCornerPlacement& c, float t0, float t1, const PrVec2 cubi
     return worst;
 }
 
-void appendCornerCubics(PrPath* path, const PrCornerPlacement& c, float t0, float t1, float tolerance,
-                        uint32_t depth) {
+void appendCornerCubics(PrPath* path, const PrCornerPlacement& c, float t0, float t1, float tolerance, uint32_t depth) {
     PrVec2 cubic[4];
     fitCubic(c, t0, t1, cubic);
     if (depth < kCornerDepth && fitError(c, t0, t1, cubic) > tolerance) {
@@ -225,8 +221,7 @@ void arcCubic(PrPath* path, PrAffine2 transform, float a0, float sweep) {
     PrVec2 p3{cosF32(a1), sinF32(a1)};
     PrVec2 p1{p0.x - k * p0.y, p0.y + k * p0.x};
     PrVec2 p2{p3.x + k * p3.y, p3.y - k * p3.x};
-    prPathCubicTo(path, prAffine2MapPoint(transform, p1), prAffine2MapPoint(transform, p2),
-                  prAffine2MapPoint(transform, p3));
+    prPathCubicTo(path, prAffine2MapPoint(transform, p1), prAffine2MapPoint(transform, p2), prAffine2MapPoint(transform, p3));
 }
 
 void include(PrRect& bounds, PrVec2 p) {
@@ -251,8 +246,10 @@ void includeQuadExtremes(PrRect& bounds, PrVec2 p0, PrVec2 p1, PrVec2 p2) {
         float t = ts[i];
         if (t > 0 && t < 1) {
             float u = 1 - t;
-            include(bounds, PrVec2{u * u * p0.x + 2 * u * t * p1.x + t * t * p2.x,
-                                    u * u * p0.y + 2 * u * t * p1.y + t * t * p2.y});
+            include(bounds, PrVec2{
+                u * u * p0.x + 2 * u * t * p1.x + t * t * p2.x,
+                u * u * p0.y + 2 * u * t * p1.y + t * t * p2.y,
+            });
         }
     }
 }
@@ -360,8 +357,7 @@ void prPathClose(PrPath* path) {
 }
 
 void prPathEllipticArcTo(PrPath* path, PrVec2 center, PrVec2 radii, float rotation, float startAngle, float sweep) {
-    PrAffine2 transform = prAffine2Concat(
-        prAffine2Concat(prAffine2Scale(radii), prAffine2Rotate(rotation)),
+    PrAffine2 transform = prAffine2Concat(prAffine2Concat(prAffine2Scale(radii), prAffine2Rotate(rotation)),
         prAffine2Translate(center));
     PrVec2 start = prAffine2MapPoint(transform, PrVec2{cosF32(startAngle), sinF32(startAngle)});
     if (path->open)
@@ -408,8 +404,7 @@ void prPathAddCornerRect(PrPath* path, PrCornerRect shape) {
 void prPathAddEllipse(PrPath* path, PrVec2 center, PrVec2 radii, float rotation) {
     if (!(radii.x >= 0) || !(radii.y >= 0) || !isFiniteF32(radii.x) || !isFiniteF32(radii.y))
         return;
-    PrAffine2 transform = prAffine2Concat(
-        prAffine2Concat(prAffine2Scale(radii), prAffine2Rotate(rotation)),
+    PrAffine2 transform = prAffine2Concat(prAffine2Concat(prAffine2Scale(radii), prAffine2Rotate(rotation)),
         prAffine2Translate(center));
     // The quarters of the unit circle, clockwise from +x, mapped onto the ellipse.
     const PrVec2 unit[4] = {{1, 0}, {0, 1}, {-1, 0}, {0, -1}};
@@ -426,8 +421,7 @@ void prPathAddEllipse(PrPath* path, PrVec2 center, PrVec2 radii, float rotation)
     prPathClose(path);
 }
 
-void prPathAddSector(PrPath* path, PrVec2 center, float innerRadius, float outerRadius,
-                     float startAngle, float sweep) {
+void prPathAddSector(PrPath* path, PrVec2 center, float innerRadius, float outerRadius, float startAngle, float sweep) {
     if (!(outerRadius > 0) || !(sweep != 0))
         return;
     float inner = innerRadius > 0 ? minF32(innerRadius, outerRadius) : 0;
@@ -487,13 +481,12 @@ void prPathAddPath(PrPath* path, const PrPath* other, PrAffine2 transform) {
                 break;
             case PrPathVerb_Quad:
                 prPathQuadTo(path, prAffine2MapPoint(transform, points.data[next]),
-                             prAffine2MapPoint(transform, points.data[next + 1]));
+                    prAffine2MapPoint(transform, points.data[next + 1]));
                 next += 2;
                 break;
             case PrPathVerb_Cubic:
                 prPathCubicTo(path, prAffine2MapPoint(transform, points.data[next]),
-                              prAffine2MapPoint(transform, points.data[next + 1]),
-                              prAffine2MapPoint(transform, points.data[next + 2]));
+                    prAffine2MapPoint(transform, points.data[next + 1]), prAffine2MapPoint(transform, points.data[next + 2]));
                 next += 3;
                 break;
             case PrPathVerb_Close:
@@ -630,7 +623,7 @@ bool prPathContains(const PrPath* path, PrVec2 point, PrPathFillRule rule) {
 }
 
 void prPathFlatten(const PrPath* path, PrAffine2 transform, float tolerance, PrPathFlattening flattening,
-                   PrPathPolyline* out) {
+        PrPathPolyline* out) {
     const PrPathVerb* verbs = prPathVerbs(path);
     const PrVec2* p = prPathPoints(path);
     uint32_t at = 0;

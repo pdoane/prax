@@ -42,16 +42,14 @@ TEST_CASE("a foreign element matches its tag name as written, and a named item i
     PrDomDocument* document = domDocumentCreate(DomDocumentKind_Html);
     PrDomDocument* handle = document;
     PrDomElement* html = domElementCreate(document, PrDomNamespace_Html, PrDomTag_Div, "");
-    PrDomElement* foreign =
-        domElementCreate(document, PrDomNamespace_Svg, PrDomTag_Unknown, "DIV");
+    PrDomElement* foreign = domElementCreate(document, PrDomNamespace_Svg, PrDomTag_Unknown, "DIV");
     domAttach(document, html, nullptr);
     domAttach(document, foreign, nullptr);
     domSetAttribute(html, PrDomNamespace_None, "name", "match");
     domSetAttribute(foreign, PrDomNamespace_None, "id", "match");
     domSetAttribute(foreign, PrDomNamespace_None, "name", "foreign-name");
     char requested[] = "DIV";
-    PrDomHtmlCollection* upper =
-        prDomHtmlCollectionCreateByTagName(prDomDocumentAsNode(handle), PrStringView{requested, 3});
+    PrDomHtmlCollection* upper = prDomHtmlCollectionCreateByTagName(prDomDocumentAsNode(handle), PrStringView{requested, 3});
     requested[0] = 'x';
     PrDomHtmlCollection* lower = prDomHtmlCollectionCreateByTagName(prDomDocumentAsNode(handle), "div");
     PrDomHtmlCollection* all = prDomHtmlCollectionCreateByTagName(prDomDocumentAsNode(handle), "*");

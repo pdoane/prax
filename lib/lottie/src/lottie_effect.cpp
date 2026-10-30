@@ -50,8 +50,10 @@ PrDrawFilterNode matrixNode(PrDrawFilterInput input, PrColorSpace space, const f
 // by `alpha`.
 PrDrawFilterNode grayNode(PrDrawFilterInput input, float alpha) {
     constexpr float kThird = 0.3333f;
-    const float rows[20] = {kThird, kThird, kThird, 0, 0, kThird, kThird, kThird, 0, 0,
-                            kThird, kThird, kThird, 0, 0, 0,      0,      0,      alpha, 0};
+    const float rows[20] = {
+        kThird, kThird, kThird, 0, 0, kThird, kThird, kThird, 0, 0,
+        kThird, kThird, kThird, 0, 0, 0,      0,      0,      alpha, 0,
+    };
     return matrixNode(input, PrColorSpace_SrgbLinear, rows);
 }
 
@@ -80,8 +82,10 @@ const PrDrawFilter* PR_NULLABLE lottieLayerFilter(const LottieRender& r, const L
                 float amount = scalarOf(a, effect, 2, frame) / 100;
                 PrDrawFilterNode gray = grayNode(source, amount);
                 PrDrawFilterInput grayed = prDrawFilterBuilderAdd(builder, &gray);
-                const float rows[20] = {white[0] - black[0], 0, 0, 0, black[0], white[1] - black[1], 0, 0, 0, black[1],
-                                        white[2] - black[2], 0, 0, 0, black[2], 0, 0, 0, 1, 0};
+                const float rows[20] = {
+                    white[0] - black[0], 0, 0, 0, black[0], white[1] - black[1], 0, 0, 0, black[1],
+                    white[2] - black[2], 0, 0, 0, black[2], 0, 0, 0, 1, 0,
+                };
                 PrDrawFilterNode mapped = matrixNode(grayed, PrColorSpace_Srgb, rows);
                 PrDrawFilterInput tinted = prDrawFilterBuilderAdd(builder, &mapped);
                 PrDrawFilterInput inputs[3] = {source, grayed, tinted};
@@ -100,8 +104,10 @@ const PrDrawFilter* PR_NULLABLE lottieLayerFilter(const LottieRender& r, const L
                 float color[4];
                 valueOf(a, effect, 2, frame, color);
                 float opacity = scalarOf(a, effect, 6, frame);
-                const float rows[20] = {0, 0, 0, 0, color[0], 0, 0, 0, 0, color[1],
-                                        0, 0, 0, 0, color[2], 0, 0, 0, opacity, 0};
+                const float rows[20] = {
+                    0, 0, 0, 0, color[0], 0, 0, 0, 0, color[1],
+                    0, 0, 0, 0, color[2], 0, 0, 0, opacity, 0,
+                };
                 PrDrawFilterNode fill = matrixNode(source, PrColorSpace_Srgb, rows);
                 result = prDrawFilterBuilderAdd(builder, &fill);
                 break;
@@ -117,7 +123,8 @@ const PrDrawFilter* PR_NULLABLE lottieLayerFilter(const LottieRender& r, const L
                 PrDrawFilterNode gray = grayNode(source, 1);
                 PrDrawFilterInput grayed = prDrawFilterBuilderAdd(builder, &gray);
                 float tables[3][3] = {
-                    {dark[0], mid[0], bright[0]}, {dark[1], mid[1], bright[1]}, {dark[2], mid[2], bright[2]}};
+                    {dark[0], mid[0], bright[0]}, {dark[1], mid[1], bright[1]}, {dark[2], mid[2], bright[2]},
+                };
                 PrDrawFilterNode transfer{};
                 transfer.kind = PrDrawFilterKind_ComponentTransfer;
                 transfer.space = PrColorSpace_Srgb;
@@ -148,8 +155,10 @@ const PrDrawFilter* PR_NULLABLE lottieLayerFilter(const LottieRender& r, const L
                 shadow.inputs[1] = source;
                 shadow.shadow.offset = PrVec2{distance * cosF32(angle), distance * sinF32(angle)};
                 shadow.shadow.sigma = PrVec2{sigma, sigma};
-                shadow.shadow.color = PrColor{roundF32(color[0] * 255) / 255, roundF32(color[1] * 255) / 255,
-                                              roundF32(color[2] * 255) / 255, clampF32(opacity, 0, 1)};
+                shadow.shadow.color = PrColor{
+                    roundF32(color[0] * 255) / 255, roundF32(color[1] * 255) / 255,
+                    roundF32(color[2] * 255) / 255, clampF32(opacity, 0, 1),
+                };
                 result = prDrawFilterBuilderAdd(builder, &shadow);
                 break;
             }

@@ -111,7 +111,7 @@ PrDomElement* PR_NULLABLE prCssDocumentScrollingElement(PrDomDocument* document)
 // to its host. There are none for a point outside the viewport. Writes up to `capacity` elements to `out` and returns
 // the total count.
 uint32_t prCssDocumentElementsFromPoint(PrDomDocument* document, double x, double y,
-                                        PrDomElement* PR_NULLABLE* PR_NULLABLE out, uint32_t capacity);
+    PrDomElement* PR_NULLABLE* PR_NULLABLE out, uint32_t capacity);
 
 // Returns the first of the elements at (`x`, `y`), or null (cssom-view-1/#dom-document-elementfrompoint).
 PrDomElement* PR_NULLABLE prCssDocumentElementFromPoint(PrDomDocument* document, double x, double y);

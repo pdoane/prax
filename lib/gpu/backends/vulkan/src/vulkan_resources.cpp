@@ -26,7 +26,7 @@ constexpr uint64_t kUploadAlignment = 16;
 // Returns the index of a memory type in `bits` with every property of `required`, preferring one that also has those of
 // `preferred`, or UINT32_MAX if none has them.
 uint32_t memoryType(const VulkanDevice* d, uint32_t bits, VkMemoryPropertyFlags required,
-                    VkMemoryPropertyFlags preferred) {
+        VkMemoryPropertyFlags preferred) {
     uint32_t fallback = UINT32_MAX;
     for (uint32_t i = 0; i < d->memoryProperties.memoryTypeCount; ++i) {
         if ((bits & (1u << i)) == 0)
@@ -163,7 +163,7 @@ VkImageViewType viewTypeOf(PrGpuTextureKind kind) {
 }
 
 VkResult createView(VulkanDevice* d, VkImage image, PrGpuFormat format, VkImageViewType type, uint32_t firstLevel,
-                    uint32_t levels, uint32_t firstLayer, uint32_t layers, VkImageView* out) {
+        uint32_t levels, uint32_t firstLayer, uint32_t layers, VkImageView* out) {
     VkImageViewCreateInfo info{};
     info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
     info.image = image;
@@ -171,8 +171,10 @@ VkResult createView(VulkanDevice* d, VkImage image, PrGpuFormat format, VkImageV
     info.format = vulkanFormat(format);
     // A view that shaders read takes the depth of a format with depth and stencil.
     VkImageAspectFlags aspect = vulkanAspect(format);
-    info.subresourceRange.aspectMask =
-        (aspect & VK_IMAGE_ASPECT_DEPTH_BIT) != 0 ? VkImageAspectFlags(VK_IMAGE_ASPECT_DEPTH_BIT) : aspect;
+    if ((aspect & VK_IMAGE_ASPECT_DEPTH_BIT) != 0)
+        info.subresourceRange.aspectMask = VkImageAspectFlags(VK_IMAGE_ASPECT_DEPTH_BIT);
+    else
+        info.subresourceRange.aspectMask = aspect;
     info.subresourceRange.baseMipLevel = firstLevel;
     info.subresourceRange.levelCount = levels;
     info.subresourceRange.baseArrayLayer = firstLayer;
@@ -188,7 +190,7 @@ PrStatus describeTexture(VulkanDevice* d, uint32_t slot) {
     uint32_t layers = desc.kind == PrGpuTextureKind_3d ? 1 : desc.extent.depth;
     if ((desc.usage & PrGpuTextureUsageFlag_Sampled) != 0) {
         if (!vulkanCheck(d, createView(d, r.image, desc.format, viewTypeOf(desc.kind), r.firstLevel, desc.levels,
-                                       r.firstLayer, layers, &r.view)))
+                r.firstLayer, layers, &r.view)))
             return PrStatus_Limit;
         writeImage(d, slot, r.view, false);
     }
@@ -199,9 +201,11 @@ PrStatus describeTexture(VulkanDevice* d, uint32_t slot) {
         VulkanResource& s = vulkanResourceAt(d, storage);
         s.kind = VulkanSlotKind_StorageView;
         s.owner = slot;
-        VkImageViewType type = desc.kind == PrGpuTextureKind_Cube || desc.kind == PrGpuTextureKind_CubeArray
-                                   ? VK_IMAGE_VIEW_TYPE_2D_ARRAY
-                                   : viewTypeOf(desc.kind);
+        VkImageViewType type;
+        if (desc.kind == PrGpuTextureKind_Cube || desc.kind == PrGpuTextureKind_CubeArray)
+            type = VK_IMAGE_VIEW_TYPE_2D_ARRAY;
+        else
+            type = viewTypeOf(desc.kind);
         VkResult result = createView(d, r.image, desc.format, type, r.firstLevel, 1, r.firstLayer, layers, &s.view);
         if (!vulkanCheck(d, result)) {
             releaseSlot(d, storage);
@@ -238,8 +242,8 @@ PrStatus bufferCreate(PrGpuDevice* device, const PrGpuBufferDesc* desc, PrGpuBuf
     VkBufferCreateInfo info{};
     info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
     info.size = alignUp(desc->size, uint64_t(16));
-    info.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT
-                 | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+    info.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT |
+        VK_BUFFER_USAGE_TRANSFER_DST_BIT;
     if ((desc->usage & PrGpuBufferUsageFlag_Index) != 0)
         info.usage |= VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
     if ((desc->usage & PrGpuBufferUsageFlag_Indirect) != 0)
@@ -348,8 +352,10 @@ PrStatus textureCreate(PrGpuDevice* device, const PrGpuTextureDesc* desc, PrGpuT
     info.format = vulkanFormat(desc->format);
     if (info.format == VK_FORMAT_UNDEFINED)
         return PrStatus_NotSupported;
-    info.extent = VkExtent3D{desc->extent.width, desc->extent.height,
-                             desc->kind == PrGpuTextureKind_3d ? desc->extent.depth : 1};
+    info.extent = VkExtent3D{
+        desc->extent.width, desc->extent.height,
+        desc->kind == PrGpuTextureKind_3d ? desc->extent.depth : 1,
+    };
     info.mipLevels = desc->levels;
     info.arrayLayers = desc->kind == PrGpuTextureKind_3d ? 1 : desc->extent.depth;
     info.samples = VkSampleCountFlagBits(desc->samples);
@@ -403,7 +409,7 @@ PrStatus textureCreate(PrGpuDevice* device, const PrGpuTextureDesc* desc, PrGpuT
 }
 
 PrStatus textureCreateView(PrGpuDevice* device, PrGpuTexture texture, PrGpuTextureKind kind,
-                           PrGpuSubresources subresources, PrGpuTexture* out) {
+        PrGpuSubresources subresources, PrGpuTexture* out) {
     VulkanDevice* d = vulkanDevice(device);
     prMutexLock(&d->mutex);
     const VulkanResource& parent = vulkanResourceAt(d, texture.id);
@@ -411,8 +417,7 @@ PrStatus textureCreateView(PrGpuDevice* device, PrGpuTexture texture, PrGpuTextu
     PrGpuTextureDesc desc = parent.textureDesc;
     uint8_t levels = subresources.levels != 0 ? subresources.levels : uint8_t(desc.levels - subresources.firstLevel);
     uint32_t layerCount = desc.kind == PrGpuTextureKind_3d ? 1 : desc.extent.depth;
-    uint16_t layers = subresources.layers != 0 ? subresources.layers
-                                               : uint16_t(layerCount - subresources.firstLayer);
+    uint16_t layers = subresources.layers != 0 ? subresources.layers : uint16_t(layerCount - subresources.firstLayer);
     VulkanImage* held = parent.held;
     VkImage image = parent.image;
     VkImageAspectFlags aspect = parent.aspect;
@@ -469,7 +474,7 @@ uint32_t textureStorageHandle(const PrGpuDevice* device, PrGpuTexture texture) {
 }
 
 void textureUpload(PrGpuDevice* device, PrGpuTexture texture, const PrGpuTextureRegion* region, const void* data,
-                   uint32_t rowBytes, uint32_t layerBytes) {
+        uint32_t rowBytes, uint32_t layerBytes) {
     VulkanDevice* d = vulkanDevice(device);
     const VulkanResource& r = vulkanResourceAt(d, texture.id);
     PrGpuFormatBlock block = prGpuFormatBlock(r.textureDesc.format);
@@ -525,8 +530,7 @@ PrStatus samplerCreate(PrGpuDevice* device, const PrGpuSamplerDesc* desc, PrGpuS
     info.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
     info.magFilter = filterOf(desc->magnify);
     info.minFilter = filterOf(desc->minify);
-    info.mipmapMode =
-        desc->mip == PrGpuFilter_Linear ? VK_SAMPLER_MIPMAP_MODE_LINEAR : VK_SAMPLER_MIPMAP_MODE_NEAREST;
+    info.mipmapMode = desc->mip == PrGpuFilter_Linear ? VK_SAMPLER_MIPMAP_MODE_LINEAR : VK_SAMPLER_MIPMAP_MODE_NEAREST;
     info.addressModeU = addressOf(desc->address[0]);
     info.addressModeV = addressOf(desc->address[1]);
     info.addressModeW = addressOf(desc->address[2]);
@@ -722,8 +726,8 @@ VkImageLayout vulkanLayoutFromAccess(PrGpuAccessFlags access) {
         return VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
     if (access == PrGpuAccessFlag_CopyWrite)
         return VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-    constexpr PrGpuAccessFlags attachment = PrGpuAccessFlag_ColorAttachment | PrGpuAccessFlag_DepthStencilRead
-                                            | PrGpuAccessFlag_DepthStencilWrite;
+    constexpr PrGpuAccessFlags attachment = PrGpuAccessFlag_ColorAttachment | PrGpuAccessFlag_DepthStencilRead |
+        PrGpuAccessFlag_DepthStencilWrite;
     if ((access & ~attachment) == 0 && (access & (PrGpuAccessFlag_ColorAttachment | PrGpuAccessFlag_DepthStencilWrite)))
         return VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL;
     constexpr PrGpuAccessFlags reads = PrGpuAccessFlag_ShaderRead | PrGpuAccessFlag_DepthStencilRead;
@@ -733,14 +737,14 @@ VkImageLayout vulkanLayoutFromAccess(PrGpuAccessFlags access) {
 }
 
 bool vulkanMemoryAllocate(VulkanDevice* d, VkMemoryRequirements requirements, VkMemoryPropertyFlags required,
-                          VkMemoryPropertyFlags preferred, VulkanMemory* out) {
+        VkMemoryPropertyFlags preferred, VulkanMemory* out) {
     *out = VulkanMemory{};
     bool hostVisible = (required & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) != 0;
     if (!hostVisible && d->allocate != nullptr) {
         uint64_t memory = 0;
         uint64_t offset = 0;
         if (!d->allocate(d->memoryContext, requirements.size, requirements.alignment, requirements.memoryTypeBits,
-                         &memory, &offset))
+                &memory, &offset))
             return false;
         out->memory = reinterpret_cast<VkDeviceMemory>(memory);
         out->offset = offset;
@@ -902,8 +906,10 @@ void vulkanUploadsRecord(VulkanDevice* d, VulkanCommands* c, VkCommandBuffer buf
             barrier.dstAccessMask = VK_ACCESS_2_MEMORY_READ_BIT;
             barrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
             barrier.newLayout = VK_IMAGE_LAYOUT_READ_ONLY_OPTIMAL;
-            barrier.subresourceRange = VkImageSubresourceRange{target.aspect, 0, VK_REMAINING_MIP_LEVELS, 0,
-                                                               VK_REMAINING_ARRAY_LAYERS};
+            barrier.subresourceRange = VkImageSubresourceRange{
+                target.aspect, 0, VK_REMAINING_MIP_LEVELS, 0,
+                VK_REMAINING_ARRAY_LAYERS
+            };
             d->vk.CmdPipelineBarrier2(buffer, &imageDependency);
             continue;
         }
@@ -929,16 +935,17 @@ void vulkanUploadsRecord(VulkanDevice* d, VulkanCommands* c, VkCommandBuffer buf
         copy.bufferOffset = upload.offset;
         copy.bufferRowLength = upload.rowTexels;
         copy.bufferImageHeight = upload.imageRows;
-        copy.imageSubresource.aspectMask =
-            (target.aspect & VK_IMAGE_ASPECT_DEPTH_BIT) != 0 ? VkImageAspectFlags(VK_IMAGE_ASPECT_DEPTH_BIT)
-                                                             : target.aspect;
+        if ((target.aspect & VK_IMAGE_ASPECT_DEPTH_BIT) != 0)
+            copy.imageSubresource.aspectMask = VkImageAspectFlags(VK_IMAGE_ASPECT_DEPTH_BIT);
+        else
+            copy.imageSubresource.aspectMask = target.aspect;
         copy.imageSubresource.mipLevel = range.baseMipLevel;
         copy.imageSubresource.baseArrayLayer = range.baseArrayLayer;
         copy.imageSubresource.layerCount = range.layerCount;
         copy.imageOffset = VkOffset3D{int32_t(region.x), int32_t(region.y), int32_t(is3d ? region.z : 0)};
         copy.imageExtent = VkExtent3D{region.extent.width, region.extent.height, is3d ? region.extent.depth : 1};
         d->vk.CmdCopyBufferToImage(buffer, d->pages.data[upload.page].buffer, target.image,
-                                   VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &copy);
+            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &copy);
 
         barrier.srcStageMask = VK_PIPELINE_STAGE_2_COPY_BIT;
         barrier.srcAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT;

@@ -48,8 +48,10 @@ using namespace pr_impl;
 TEST_CASE("a glyph run is recorded with copies of its glyphs and a reference to its stack") {
     const PrFont* font = load("NotoSans.ttf");
     PrDrawList* list = prDrawListCreate();
-    std::vector<PrFontGlyph> glyphs = {{prFontCodePointGlyph(font, 'H'), {10, 20}},
-                                       {prFontCodePointGlyph(font, 'i'), {18, 20}}};
+    std::vector<PrFontGlyph> glyphs = {
+        {prFontCodePointGlyph(font, 'H'), {10, 20}},
+        {prFontCodePointGlyph(font, 'i'), {18, 20}},
+    };
     PrFontGlyphRun run{};
     run.font = font;
     run.size = 10;

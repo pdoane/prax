@@ -15,8 +15,8 @@ namespace fs = std::filesystem;
 // A page in its own host, on a virtual clock that the viewer's clock drives. `origin` is the clock's time once the page
 // settled, in milliseconds, which is time zero of the viewer's clock.
 struct HtmlSource {
-    HtmlSource(fs::path path, std::string location, PrTextShaper* shaper)
-        : path(std::move(path)), location(std::move(location)), host(shaper) {}
+    HtmlSource(fs::path path, std::string location, PrTextShaper* shaper) :
+            path(std::move(path)), location(std::move(location)), host(shaper) {}
 
     fs::path path;
     std::string location;       // the URL or path that the page loads from
@@ -63,8 +63,11 @@ std::string wptUrlOf(const fs::path& path) {
     if (relative.empty() || *relative.begin() == "..")
         return {};
     bool secure = path.filename().string().find(".https.") != std::string::npos;
-    std::string origin = secure ? "https://web-platform.test:" + std::to_string(wptHttps)
-                                : "http://web-platform.test:" + std::to_string(wptHttp);
+    std::string origin;
+    if (secure)
+        origin = "https://web-platform.test:" + std::to_string(wptHttps);
+    else
+        origin = "http://web-platform.test:" + std::to_string(wptHttp);
     return origin + "/" + relative.generic_string();
 }
 
@@ -74,7 +77,7 @@ bool reachWpt(page_host::PageHost& host) {
     if (!host.useNetwork() || !host.addTrustAnchor(wptCheckout() / "tools" / "certs" / "cacert.pem"))
         return false;
     for (const char* name : {"web-platform.test", "*.web-platform.test", "not-web-platform.test",
-                             "*.not-web-platform.test"})
+        "*.not-web-platform.test"})
         host.addHostRule(name, "127.0.0.1");
     return host.addFont(wptCheckout() / "fonts" / "Ahem.ttf");
 }
@@ -91,7 +94,7 @@ bool wptServed() {
 }
 
 std::shared_ptr<HtmlSource> loadHtml(const fs::path& path, PrTextShaper* shaper, PrFontHinting hinting,
-                                     PrFontHinter* PR_NULLABLE hinter, PrGpuDevice* PR_NULLABLE device) {
+        PrFontHinter* PR_NULLABLE hinter, PrGpuDevice* PR_NULLABLE device) {
     std::string url = wptUrlOf(path);
     std::shared_ptr<HtmlSource> html = std::make_shared<HtmlSource>(path, url.empty() ? path.string() : url, shaper);
     html->host.setHinting(hinting, hinter);
@@ -118,7 +121,7 @@ void htmlAt(HtmlSource& html, double time) {
 }
 
 void drawHtml(HtmlSource& html, PrDrawList* list, float width, float height, const PrAppDisplay& display,
-              const PrAppUserPreferences& preferences) {
+        const PrAppUserPreferences& preferences) {
     if (html.page != nullptr)
         html.host.paint(html.page, PrVec2{width, height}, display, preferences, list);
 }

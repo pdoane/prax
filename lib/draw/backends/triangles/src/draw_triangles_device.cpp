@@ -87,19 +87,19 @@ int32_t within(int64_t at, uint32_t extent) {
 PrStatus trianglesDeviceCreate(PrGpuDevice* device, TrianglesDevice* PR_NULLABLE* PR_NONNULL out) {
     *out = nullptr;
     PrGpuShaderLibrary* library = nullptr;
-    PrStatus status = prGpuShaderLibraryCreate(device, kDrawTrianglesShaders, sizeof(kDrawTrianglesShaders),
-                                               &library);
+    PrStatus status = prGpuShaderLibraryCreate(device, kDrawTrianglesShaders, sizeof(kDrawTrianglesShaders), &library);
     if (status != PrStatus_Ok)
         return status;
     TrianglesDevice* d = allocZeroed<TrianglesDevice>();
     d->device = device;
     d->library = library;
     for (uint32_t i = 0; i < TrianglesSampler_Count; ++i) {
-        PrGpuAddress address = i >= TrianglesSampler_LinearMirror   ? PrGpuAddress_Mirror
-                               : i >= TrianglesSampler_LinearRepeat ? PrGpuAddress_Repeat
-                                                                    : PrGpuAddress_Clamp;
-        PrGpuSamplerDesc desc = prGpuSamplerDescDefault(i % 2 == 0 ? PrGpuFilter_Linear : PrGpuFilter_Nearest,
-                                                        address);
+        PrGpuAddress address = PrGpuAddress_Clamp;
+        if (i >= TrianglesSampler_LinearMirror)
+            address = PrGpuAddress_Mirror;
+        else if (i >= TrianglesSampler_LinearRepeat)
+            address = PrGpuAddress_Repeat;
+        PrGpuSamplerDesc desc = prGpuSamplerDescDefault(i % 2 == 0 ? PrGpuFilter_Linear : PrGpuFilter_Nearest, address);
         desc.mip = PrGpuFilter_Nearest;
         PrGpuSampler sampler{};
         status = prGpuSamplerIntern(device, &desc, &sampler);
@@ -138,7 +138,7 @@ void trianglesDevicePrepare(TrianglesDevice* d, const TrianglesFrame* frame, PrG
                 if (q.texels.extent.x == 0 || q.texels.extent.y == 0)
                     break;
                 PrGpuTextureDesc desc = prGpuTextureDesc2d(PrGpuFormat_Rgba8, q.texels.extent,
-                                                           PrGpuTextureUsageFlag_Sampled);
+                    PrGpuTextureUsageFlag_Sampled);
                 desc.name = "triangles texture";
                 PrGpuTexture texture{};
                 if (prGpuTextureCreate(d->device, &desc, &texture) != PrStatus_Ok)
@@ -151,7 +151,7 @@ void trianglesDevicePrepare(TrianglesDevice* d, const TrianglesFrame* frame, PrG
             case TrianglesTextureOp_Update:
                 if (at != kArrayMissing)
                     prGpuTextureWrite(d->device, d->textures.data[at].texture,
-                                      PrIVec2{int32_t(q.origin.x), int32_t(q.origin.y)}, q.texels);
+                        PrIVec2{int32_t(q.origin.x), int32_t(q.origin.y)}, q.texels);
                 break;
             case TrianglesTextureOp_Destroy:
                 if (at != kArrayMissing) {
@@ -194,10 +194,10 @@ void trianglesDeviceRender(TrianglesDevice* d, const TrianglesFrame* frame, PrGp
     memCopy(bytes + indexAt, frame->indices, indexBytes);
     prGpuCommandsSetPipeline(commands, pipeline);
     prGpuPassSetIndexBuffer(pass, buffer, offset + indexAt, true);
-    prGpuPassSetViewport(pass,
-                         PrRect{float(origin.x), float(origin.y), float(origin.x) + float(frame->extent.x),
-                                float(origin.y) + float(frame->extent.y)},
-                         0, 1);
+    prGpuPassSetViewport(pass, PrRect{
+        float(origin.x), float(origin.y), float(origin.x) + float(frame->extent.x),
+        float(origin.y) + float(frame->extent.y),
+    }, 0, 1);
     TrianglesPush push{{float(frame->extent.x), float(frame->extent.y)}, buffer.id, uint32_t(offset), 0, 0};
     for (uint32_t i = 0; i < frame->drawCount; ++i) {
         const TrianglesDraw& draw = frame->draws[i];
@@ -206,12 +206,13 @@ void trianglesDeviceRender(TrianglesDevice* d, const TrianglesFrame* frame, PrGp
         if (at != kArrayMissing)
             texture = d->textures.data[at].texture;
         // The draw's scissor at the frame's position, within the pass's attachments.
-        PrIRect scissor{within(int64_t(origin.x) + draw.scissor.left, extent.x),
-                        within(int64_t(origin.y) + draw.scissor.top, extent.y),
-                        within(int64_t(origin.x) + draw.scissor.right, extent.x),
-                        within(int64_t(origin.y) + draw.scissor.bottom, extent.y)};
-        if (texture.id == 0 || draw.indexCount == 0 || scissor.right <= scissor.left
-            || scissor.bottom <= scissor.top)
+        PrIRect scissor{
+            within(int64_t(origin.x) + draw.scissor.left, extent.x),
+            within(int64_t(origin.y) + draw.scissor.top, extent.y),
+            within(int64_t(origin.x) + draw.scissor.right, extent.x),
+            within(int64_t(origin.y) + draw.scissor.bottom, extent.y),
+        };
+        if (texture.id == 0 || draw.indexCount == 0 || scissor.right <= scissor.left || scissor.bottom <= scissor.top)
             continue;
         prGpuPassSetScissor(pass, scissor);
         push.texture = texture.id;

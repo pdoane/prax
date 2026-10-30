@@ -16,7 +16,7 @@ void prCoreWindowsRandomBytes(void* out, size_t size) {
         ULONG chunk = size > 0x40000000 ? 0x40000000 : ULONG(size);
         if (!BCRYPT_SUCCESS(BCryptGenRandom(nullptr, bytes, chunk, BCRYPT_USE_SYSTEM_PREFERRED_RNG)))
             prCoreWindowsFailed("the system's random generator is unavailable", PrStringView(__FILE__),
-                                uint32_t(__LINE__));
+                uint32_t(__LINE__));
         bytes += chunk;
         size -= chunk;
     }

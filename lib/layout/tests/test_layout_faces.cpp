@@ -23,7 +23,7 @@ namespace {
 
 // Adds the font file `path` to the fixture's set as family `family`, serving the code points of `ranges` if given.
 void addFace(Fixture& f, const std::string& path, const char* family,
-             const PrFontCodePointRange* PR_NULLABLE ranges = nullptr, uint32_t count = 0) {
+        const PrFontCodePointRange* PR_NULLABLE ranges = nullptr, uint32_t count = 0) {
     const PrFont* PR_NULLABLE loaded = nullptr;
     REQUIRE(prFontCreateFromFile(path, 0, nullptr, &loaded) == PrStatus_Ok);
     PrFontFaceDescriptor descriptor = prFontFaceDescriptorDefault();
@@ -49,8 +49,10 @@ PrLayoutFontStyle mixed(Fixture& f) {
     addFace(f, std::string(PR_FONT_BUNDLE_DIR) + "/NotoSansHebrew[wdth,wght].ttf", "Hebrew");
     addFace(f, testFont("NotoSansJP.ttf"), "Japanese");
     PrLayoutFontStyle font = prLayoutFontStyleDefault();
-    font.font = f.textFont(20, {prFontFamilyFromName("Upper"), prFontFamilyFromName("Fallback"),
-                                prFontFamilyFromName("Hebrew"), prFontFamilyFromName("Japanese")});
+    font.font = f.textFont(20, {
+        prFontFamilyFromName("Upper"), prFontFamilyFromName("Fallback"),
+        prFontFamilyFromName("Hebrew"), prFontFamilyFromName("Japanese"),
+    });
     font.lineHeight = prLayoutLineHeightPx(40);
     return font;
 }
@@ -102,9 +104,11 @@ void appendPainted(const PrDrawList* list, PrDAffine2 transform, Paint& out) {
                     PrVec2 p = command.glyphs->glyphs[g].position;
                     double x = double(p.x);
                     double y = double(p.y);
-                    out.glyphs.push_back(Painted{command.glyphs->glyphs[g].id, command.glyphs->font,
-                                                 familyOf(command.glyphs->font), t.a * x + t.c * y + t.e,
-                                                 t.b * x + t.d * y + t.f});
+                    out.glyphs.push_back(Painted{
+                        command.glyphs->glyphs[g].id, command.glyphs->font,
+                        familyOf(command.glyphs->font), t.a * x + t.c * y + t.e,
+                        t.b * x + t.d * y + t.f,
+                    });
                 }
                 break;
             default: break;
@@ -123,7 +127,7 @@ struct Laid {
     // The stage's box is `box` if given, `width` wide, and its effects are `effects` if given.
     template <typename Style>
     Laid(Style style, std::vector<const char*> pieces, float width, const PrLayoutBoxStyle* PR_NULLABLE box = nullptr,
-         const PrLayoutEffectStyle* PR_NULLABLE effects = nullptr) {
+            const PrLayoutEffectStyle* PR_NULLABLE effects = nullptr) {
         font = mixed(f);
         style(font);
         PrLayoutNode root = f.element(kPrLayoutNodeNone, block(), nullptr, nullptr, &font);
@@ -194,7 +198,7 @@ uint32_t fontChanges(const Paint& paint) {
 // fragments made, and its paint, if asked.
 template <typename Style>
 void checkAsDivided(Style style, std::vector<const char*> pieces, float width,
-                    uint32_t* PR_NULLABLE fragments = nullptr, Paint* PR_NULLABLE paint = nullptr) {
+        uint32_t* PR_NULLABLE fragments = nullptr, Paint* PR_NULLABLE paint = nullptr) {
     Laid one(style, {joined(pieces)}, width);
     Laid many(style, pieces, width);
     Paint merged = one.paint();
@@ -304,7 +308,7 @@ TEST_CASE("text of one face across a change of script is one range") {
 
 TEST_CASE("glyphs of faces with different metrics sit on the item's dominant baseline, whatever its name") {
     for (PrLayoutDominantBaseline name : {PrLayoutDominantBaseline_Alphabetic, PrLayoutDominantBaseline_Central,
-                                          PrLayoutDominantBaseline_Hanging, PrLayoutDominantBaseline_TextTop}) {
+        PrLayoutDominantBaseline_Hanging, PrLayoutDominantBaseline_TextTop}) {
         CAPTURE(int(name));
         auto style = [name](PrLayoutFontStyle& font) { font.dominantBaseline = name; };
         uint32_t fragments = 0;
@@ -348,7 +352,7 @@ TEST_CASE("a right-to-left leaf of several faces places its ranges in visual ord
     // Alef to gimel in Arimo, kaf with a dagesh, lamed and mem in Noto Sans Hebrew, then bet with a dagesh in Arimo:
     // ranges of unequal length, and clusters of more than one code point.
     checkAsDivided(rtl, {"\xd7\x90\xd7\x91\xd7\x92", "\xd7\x9b\xd6\xbc\xd7\x9c\xd7\x9e", "\xd7\x91\xd6\xbc"}, 400,
-                   &fragments, &paint);
+        &fragments, &paint);
     CHECK(fragments == 1);
     CHECK(fontChanges(paint) == 2);
 }
@@ -359,9 +363,9 @@ TEST_CASE("faces of different metrics in one upright leaf, and in one sideways l
         PrLayoutTextOrientation orientation;
     };
     for (Case c : {Case{PrLayoutWritingMode_VerticalRl, PrLayoutTextOrientation_Upright},
-                   Case{PrLayoutWritingMode_VerticalLr, PrLayoutTextOrientation_Upright},
-                   Case{PrLayoutWritingMode_VerticalRl, PrLayoutTextOrientation_Sideways},
-                   Case{PrLayoutWritingMode_SidewaysLr, PrLayoutTextOrientation_Mixed}}) {
+        Case{PrLayoutWritingMode_VerticalLr, PrLayoutTextOrientation_Upright},
+                Case{PrLayoutWritingMode_VerticalRl, PrLayoutTextOrientation_Sideways},
+                Case{PrLayoutWritingMode_SidewaysLr, PrLayoutTextOrientation_Mixed}}) {
         CAPTURE(int(c.mode));
         CAPTURE(int(c.orientation));
         auto style = [c](PrLayoutFontStyle& font) {
@@ -411,9 +415,10 @@ TEST_CASE("justification widens each opportunity once where a change of face use
             font.textAlign = PrLayoutTextAlign_Justify;
             font.direction = direction;
         };
-        checkAsDivided(justified, {"AAbb", " CC", "dd ", "AA", "bb ", "\xd7\x90\xd7\x91", "\xd7\x9b\xd7\x9c",
-                                   " AAbb CCdd AAbb"},
-                       200);
+        checkAsDivided(justified, {
+            "AAbb", " CC", "dd ", "AA", "bb ", "\xd7\x90\xd7\x91", "\xd7\x9b\xd7\x9c",
+            " AAbb CCdd AAbb",
+        }, 200);
     }
 }
 
@@ -434,7 +439,7 @@ TEST_CASE("white space that ends a line takes the paragraph's level, and is plac
         const char* text;
     };
     for (Case c : {Case{PrTextDirection_Rtl, "abc\xe2\x80\x82\xe2\x80\x83" "def"},
-                   Case{PrTextDirection_Ltr, "\xd7\x90\xd7\x91\xd7\x92\xe2\x80\x82\xe2\x80\x83\xd7\x93\xd7\x94\xd7\x95"}}) {
+        Case{PrTextDirection_Ltr, "\xd7\x90\xd7\x91\xd7\x92\xe2\x80\x82\xe2\x80\x83\xd7\x93\xd7\x94\xd7\x95"}}) {
         CAPTURE(int(c.direction));
         Fixture f;
         PrLayoutFontStyle font = prLayoutFontStyleDefault();
@@ -512,8 +517,7 @@ TEST_CASE("a text node of faces with different metrics is hit across its one rec
     CHECK(many.f.hit(point) != many.texts[0]);
 }
 
-TEST_CASE("the area a text node's one rectangle newly encloses is hit through a transformed parent, and not where "
-          "clipped") {
+TEST_CASE("the area a text node's one rectangle newly encloses is hit through a transformed parent, and not where clipped") {
     auto noWrap = [](PrLayoutFontStyle& font) { font.textWrapMode = PrLayoutTextWrapMode_Nowrap; };
     SUBCASE("a transformed parent") {
         PrLayoutEffectStyle scaled = prLayoutEffectStyleDefault();
@@ -521,7 +525,7 @@ TEST_CASE("the area a text node's one rectangle newly encloses is hit through a 
         Laid one(noWrap, {"AAbb"}, 400, nullptr, &scaled);
         Laid many(noWrap, {"AA", "bb"}, 400, nullptr, &scaled);
         PrVec2 point = enclosedPoint(rectOf(many, 0, PrLayoutCoordinates_Viewport),
-                                     rectOf(many, 1, PrLayoutCoordinates_Viewport));
+            rectOf(many, 1, PrLayoutCoordinates_Viewport));
         CHECK(one.f.hit(point) == one.texts[0]);
         CHECK(many.f.hit(point) != many.texts[0]);
         CHECK(many.f.hit(point) != many.texts[1]);
@@ -546,8 +550,7 @@ TEST_CASE("characters that shape to no glyph make no range, among faces") {
     // A soft hyphen, a word joiner, a zero-width joiner and non-joiner, and a variation selector, between faces.
     uint32_t fragments = 0;
     checkAsDivided(horizontal,
-                   {"AA\xc2\xad", "bb\xe2\x81\xa0", "CC\xe2\x80\x8d", "dd\xe2\x80\x8c", "EE\xef\xb8\x8f", "ff"},
-                   400, &fragments);
+        {"AA\xc2\xad", "bb\xe2\x81\xa0", "CC\xe2\x80\x8d", "dd\xe2\x80\x8c", "EE\xef\xb8\x8f", "ff"}, 400, &fragments);
     CHECK(fragments == 1);
 }
 

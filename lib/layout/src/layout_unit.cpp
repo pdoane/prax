@@ -17,8 +17,10 @@ bool layoutRectContains(PrLayoutRect rect, PrLayoutVec point) {
 }
 
 PrLayoutRect layoutRectEnclosing(PrRect px) {
-    return PrLayoutRect{prLayoutUnitFromPxFloor(px.left), prLayoutUnitFromPxFloor(px.top),
-                        prLayoutUnitFromPxCeil(px.right), prLayoutUnitFromPxCeil(px.bottom)};
+    return PrLayoutRect{
+        prLayoutUnitFromPxFloor(px.left), prLayoutUnitFromPxFloor(px.top),
+        prLayoutUnitFromPxCeil(px.right), prLayoutUnitFromPxCeil(px.bottom),
+    };
 }
 
 PrDAffine2 layoutTranslation(PrLayoutVec offset) {
@@ -32,8 +34,10 @@ PrDVec2 layoutOffset(PrLayoutVec offset) {
 PrLayoutVec layoutVecMapped(PrDAffine2 transform, PrLayoutVec point) {
     double x = prLayoutUnitToPxDouble(point.x);
     double y = prLayoutUnitToPxDouble(point.y);
-    return PrLayoutVec{prLayoutUnitFromPxRoundDouble(transform.a * x + transform.c * y + transform.e),
-                       prLayoutUnitFromPxRoundDouble(transform.b * x + transform.d * y + transform.f)};
+    return PrLayoutVec{
+        prLayoutUnitFromPxRoundDouble(transform.a * x + transform.c * y + transform.e),
+        prLayoutUnitFromPxRoundDouble(transform.b * x + transform.d * y + transform.f),
+    };
 }
 
 PrLayoutRect layoutRectMapped(PrDAffine2 transform, PrLayoutRect rect) {
@@ -53,14 +57,15 @@ PrLayoutRect layoutRectMapped(PrDAffine2 transform, PrLayoutRect rect) {
             bottom = maxF64(bottom, my);
         }
     }
-    return PrLayoutRect{prLayoutUnitFromPxFloorDouble(left), prLayoutUnitFromPxFloorDouble(top),
-                        prLayoutUnitFromPxCeilDouble(right), prLayoutUnitFromPxCeilDouble(bottom)};
+    return PrLayoutRect{
+        prLayoutUnitFromPxFloorDouble(left), prLayoutUnitFromPxFloorDouble(top),
+        prLayoutUnitFromPxCeilDouble(right), prLayoutUnitFromPxCeilDouble(bottom),
+    };
 }
 
 bool layoutVecProjected(const PrDMatrix3& transform, PrLayoutVec point, PrLayoutVec* out) {
     PrDVec2 mapped{};
-    if (!prDMatrix3MapPoint(&transform, PrDVec2{prLayoutUnitToPxDouble(point.x), prLayoutUnitToPxDouble(point.y)},
-                            &mapped))
+    if (!prDMatrix3MapPoint(&transform, PrDVec2{prLayoutUnitToPxDouble(point.x), prLayoutUnitToPxDouble(point.y)}, &mapped))
         return false;
     *out = PrLayoutVec{prLayoutUnitFromPxRoundDouble(mapped.x), prLayoutUnitFromPxRoundDouble(mapped.y)};
     return true;
@@ -70,10 +75,14 @@ PrLayoutRect layoutRectProjected(const PrDMatrix3& transform, PrLayoutRect rect)
     // The corners in order around the rectangle, in homogeneous coordinates. w is affine over the plane, so its largest
     // value over the rectangle is at a corner, and the cut is a line that crosses each edge at most once.
     const double (*m)[3] = transform.m;
-    double xs[4] = {prLayoutUnitToPxDouble(rect.left), prLayoutUnitToPxDouble(rect.right),
-                    prLayoutUnitToPxDouble(rect.right), prLayoutUnitToPxDouble(rect.left)};
-    double ys[4] = {prLayoutUnitToPxDouble(rect.top), prLayoutUnitToPxDouble(rect.top),
-                    prLayoutUnitToPxDouble(rect.bottom), prLayoutUnitToPxDouble(rect.bottom)};
+    double xs[4] = {
+        prLayoutUnitToPxDouble(rect.left), prLayoutUnitToPxDouble(rect.right),
+        prLayoutUnitToPxDouble(rect.right), prLayoutUnitToPxDouble(rect.left),
+    };
+    double ys[4] = {
+        prLayoutUnitToPxDouble(rect.top), prLayoutUnitToPxDouble(rect.top),
+        prLayoutUnitToPxDouble(rect.bottom), prLayoutUnitToPxDouble(rect.bottom),
+    };
     double corners[4][3];
     double largest = -kF64Max;
     for (uint32_t i = 0; i < 4; ++i) {
@@ -104,8 +113,10 @@ PrLayoutRect layoutRectProjected(const PrDMatrix3& transform, PrLayoutRect rect)
             add(a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, near);
         }
     }
-    return PrLayoutRect{prLayoutUnitFromPxFloorDouble(left), prLayoutUnitFromPxFloorDouble(top),
-                        prLayoutUnitFromPxCeilDouble(right), prLayoutUnitFromPxCeilDouble(bottom)};
+    return PrLayoutRect{
+        prLayoutUnitFromPxFloorDouble(left), prLayoutUnitFromPxFloorDouble(top),
+        prLayoutUnitFromPxCeilDouble(right), prLayoutUnitFromPxCeilDouble(bottom),
+    };
 }
 
 } // namespace pr_impl

@@ -125,9 +125,8 @@ struct CssAnimateContext {
 // animations. The old styles are null for a target styled for the first time, which starts no transition. Colors
 // resolve in `environment`, as they do where the target's box presents them.
 void cssAnimateRestyled(PrCssPresentation* presentation, const PrDomNode* target,
-                        const CssComputedStyle* PR_NULLABLE oldBase, const CssComputedStyle* PR_NULLABLE old,
-                        const CssComputedStyle* base,
-                        const CssAnimateContext& context, const CssColorEnvironment& environment);
+    const CssComputedStyle* PR_NULLABLE oldBase, const CssComputedStyle* PR_NULLABLE old, const CssComputedStyle* base,
+    const CssAnimateContext& context, const CssColorEnvironment& environment);
 
 // Returns the target's style with its animations at the presentation's time applied over `base`, with one reference
 // that the caller holds. Returns `base` itself if no animation applies. The composited animations apply only if
@@ -135,8 +134,7 @@ void cssAnimateRestyled(PrCssPresentation* presentation, const PrDomNode* target
 // transitions that have ended. Colors that interpolate resolve in `environment`, so that a color for a display's
 // headroom keeps its range.
 const CssComputedStyle* cssAnimateApply(PrCssPresentation* presentation, const PrDomNode* target,
-                                        const CssComputedStyle* base, bool composited,
-                                        const CssColorEnvironment& environment);
+    const CssComputedStyle* base, bool composited, const CssColorEnvironment& environment);
 
 // Returns true if the target has a composited animation that has an effect now or later. The target's box is a layer
 // for such an animation.
@@ -144,14 +142,13 @@ bool cssAnimateComposited(const PrCssPresentation* presentation, const PrDomNode
 
 // Return the layout node that presents a target, and the style of the target without its animations.
 typedef PrLayoutNode (*AnimationNodeFn)(const PrCssPresentation* presentation, const PrDomNode* target);
-typedef const CssComputedStyle* PR_NULLABLE (*AnimationBaseFn)(const PrCssPresentation* presentation,
-                                                               const PrDomNode* target);
+typedef const CssComputedStyle* PR_NULLABLE (*AnimationBaseFn)(const PrCssPresentation* presentation, const PrDomNode* target);
 
 // Makes a track of the effect of each composited animation on the box of its target's layout node, which `layoutNode`
 // gives. Each value is computed against the target's base style, which `baseOf` gives. Returns the tracks, which stay
 // valid until the next call.
 const Array<PrLayoutTrack>& cssAnimateTracks(PrCssPresentation* presentation, AnimationNodeFn layoutNode,
-                                             AnimationBaseFn baseOf);
+    AnimationBaseFn baseOf);
 
 // Returns true if the target has a transition or a CSS animation.
 bool cssAnimateHas(const PrCssPresentation* presentation, const PrDomNode* target);

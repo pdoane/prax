@@ -263,7 +263,7 @@ void build(Markdown* document, MarkdownBlockIndex child, uint32_t index) {
     document->building = index;
     markdownTreeClear(&document->tree);
     markdownBuildBlock(&document->blockParser, document->options, child, &document->tree, &document->inlineParser,
-                       resolve, document);
+        resolve, document);
     block.nodes.clear();
     markdownTreeFlatten(&document->tree, &block.nodes);
     swapText(&block.text, &document->tree.text);
@@ -280,7 +280,7 @@ void build(Markdown* document, MarkdownBlockIndex child, uint32_t index) {
             values.start = references++;
         uint32_t mark = block.footnoteLabels.count;
         markdownAppendNormalizedLabel(PrStringView{block.text.data + values.info.start, values.info.size},
-                                      &block.footnoteLabels);
+            &block.footnoteLabels);
         MarkdownRange label{mark, block.footnoteLabels.count - mark};
         uint32_t hash = hashOf(PrStringView{block.footnoteLabels.data + mark, label.size});
         block.footnoteMarks.push(MarkdownFootnoteMark{i, hash, label, definition});
@@ -391,8 +391,8 @@ void resolveLate(Markdown* document, uint32_t before) {
     Array<uint32_t> rebuilt;
     for (uint32_t i = 0; i < document->lookups.count; ++i) {
         const MarkdownLookup& lookup = document->lookups.data[i];
-        if (lookup.block < before && hasHash(document->changedHashes, lookup.hash) && rebuilt.find(lookup.block)
-                == kArrayMissing)
+        if (lookup.block < before && hasHash(document->changedHashes, lookup.hash) &&
+                rebuilt.find(lookup.block) == kArrayMissing)
             rebuilt.push(lookup.block);
     }
     for (uint32_t i = 0; i < rebuilt.count; ++i) {
@@ -474,8 +474,10 @@ void resolveFootnotes(Markdown* document, uint32_t rebuiltFrom) {
                         MarkdownFootnote{definition.block, owner.footnoteMarks.data[definition.mark].node, 0});
                     definition.number = document->footnotes.count;
                 }
-                use = MarkdownFootnoteUse{definition.number, ++definition.referenceCount, definition.block,
-                                          owner.footnoteMarks.data[definition.mark].node};
+                use = MarkdownFootnoteUse{
+                    definition.number, ++definition.referenceCount, definition.block,
+                    owner.footnoteMarks.data[definition.mark].node,
+                };
                 document->footnotes.data[definition.number - 1].referenceCount = definition.referenceCount;
             }
             document->uses.push(use);
@@ -486,7 +488,7 @@ void resolveFootnotes(Markdown* document, uint32_t rebuiltFrom) {
         bool same = previousFirst + count <= document->previousUses.count;
         for (uint32_t i = 0; same && i < count; ++i)
             same = memEquals(&document->previousUses.data[previousFirst + i], &document->uses.data[block.firstUse + i],
-                             sizeof(MarkdownFootnoteUse));
+                sizeof(MarkdownFootnoteUse));
         if (!same)
             markResolved(document, b);
     }
@@ -495,8 +497,8 @@ void resolveFootnotes(Markdown* document, uint32_t rebuiltFrom) {
     bool changed = document->footnotes.count != document->previousFootnotes.count;
     for (uint32_t i = 0; !changed && i < document->footnotes.count; ++i) {
         const MarkdownFootnote& footnote = document->footnotes.data[i];
-        changed = !memEquals(&footnote, &document->previousFootnotes.data[i], sizeof(MarkdownFootnote))
-            || footnote.block >= rebuiltFrom || document->blocks.data[footnote.block].resolved;
+        changed = !memEquals(&footnote, &document->previousFootnotes.data[i], sizeof(MarkdownFootnote)) ||
+            footnote.block >= rebuiltFrom || document->blocks.data[footnote.block].resolved;
     }
     document->footnotesChanged = document->footnotesChanged || changed;
 }
@@ -625,7 +627,7 @@ void reparse(Markdown* document) {
 
     uint32_t index = 0;
     for (MarkdownBlockIndex child = parser->blocks.data[0].first; child != kMarkdownBlockNone;
-         child = parser->blocks.data[child].next, ++index) {
+            child = parser->blocks.data[child].next, ++index) {
         MarkdownTopBlock& block = addBlock(document);
         block.sourceStart = parser->blocks.data[child].sourceStart;
         MarkdownBlockIndex next = parser->blocks.data[child].next;
@@ -677,7 +679,7 @@ void documentClear(Markdown* document) {
 
 // Fills `step` with the values of `node` of `block`.
 void fillStep(const Markdown* document, const MarkdownTopBlock& block, const MarkdownNode& node,
-              PrMarkdownStepKind kind, PrMarkdownStep* step) {
+        PrMarkdownStepKind kind, PrMarkdownStep* step) {
     auto view = [&](MarkdownRange range) { return viewOf(block, range); };
     const MarkdownValues& values = node.values;
     *step = PrMarkdownStep{};
@@ -745,7 +747,7 @@ void fillStep(const Markdown* document, const MarkdownTopBlock& block, const Mar
 
 // Walks the nodes of `block` from `first` up to `end`, and leaves out the footnote definitions among them.
 void walkNodes(const Markdown* document, const MarkdownTopBlock& block, uint32_t first, uint32_t end,
-               PrMarkdownStepFn fn, void* PR_NULLABLE context) {
+        PrMarkdownStepFn fn, void* PR_NULLABLE context) {
     Array<uint32_t> open;
     PrMarkdownStep step;
     uint32_t i = first;
@@ -880,13 +882,11 @@ uint32_t prMarkdownFinalCount(const PrMarkdown* document) {
     return document->finalCount;
 }
 
-uint32_t prMarkdownTakeChanges(PrMarkdown* document, PrMarkdownChange* PR_NULLABLE out,
-                               uint32_t capacity) {
+uint32_t prMarkdownTakeChanges(PrMarkdown* document, PrMarkdownChange* PR_NULLABLE out, uint32_t capacity) {
     if (document->queueHead == document->queue.count) {
         document->queue.clear();
         document->queueHead = 0;
-        sortItems(document->resolvedBlocks.data, document->resolvedBlocks.count,
-                  [](uint32_t a, uint32_t b) { return a < b; });
+        sortItems(document->resolvedBlocks.data, document->resolvedBlocks.count, [](uint32_t a, uint32_t b) { return a < b; });
         for (uint32_t i = 0; i < document->resolvedBlocks.count; ++i) {
             uint32_t index = document->resolvedBlocks.data[i];
             if (index < document->blockCount)
@@ -916,8 +916,7 @@ bool prMarkdownTakeFootnotesChanged(PrMarkdown* document) {
     return changed;
 }
 
-void prMarkdownWalk(const PrMarkdown* document, uint32_t first, uint32_t count, PrMarkdownStepFn fn,
-                    void* PR_NULLABLE context) {
+void prMarkdownWalk(const PrMarkdown* document, uint32_t first, uint32_t count, PrMarkdownStepFn fn, void* PR_NULLABLE context) {
     PR_ASSERT(first <= document->blockCount && count <= document->blockCount - first);
     for (uint32_t b = first; b < first + count; ++b) {
         const MarkdownTopBlock& block = document->blocks.data[b];
@@ -925,8 +924,7 @@ void prMarkdownWalk(const PrMarkdown* document, uint32_t first, uint32_t count, 
     }
 }
 
-void prMarkdownWalkFootnotes(const PrMarkdown* document, PrMarkdownStepFn fn,
-                             void* PR_NULLABLE context) {
+void prMarkdownWalkFootnotes(const PrMarkdown* document, PrMarkdownStepFn fn, void* PR_NULLABLE context) {
     for (uint32_t i = 0; i < document->footnotes.count; ++i) {
         const MarkdownFootnote& footnote = document->footnotes.data[i];
         const MarkdownTopBlock& block = document->blocks.data[footnote.block];

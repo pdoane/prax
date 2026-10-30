@@ -165,13 +165,16 @@ TEST_CASE("a media query list serializes the way cssom defines") {
         const char* serialized;
     };
     for (const Case& test :
-         {Case{"@media aLL {}", "all"}, Case{"@media not PRINT {}", "not print"},
-          Case{"@media all and (color) {}", "(color)"},
-          Case{"@media not all and (color) {}", "not all and (color)"},
-          Case{"@media screen and (MIN-width:5px) AND (max-width:40px) {}",
-               "screen and (min-width: 5px) and (max-width: 40px)"},
-          Case{"@media (400px <= width < 700px), print {}",
-               "(400px <= width < 700px), print"}}) {
+            {
+                Case{"@media aLL {}", "all"}, Case{"@media not PRINT {}", "not print"},
+                Case{"@media all and (color) {}", "(color)"},
+                Case{"@media not all and (color) {}", "not all and (color)"},
+                Case{
+                    "@media screen and (MIN-width:5px) AND (max-width:40px) {}",
+                    "screen and (min-width: 5px) and (max-width: 40px)",
+                },
+                Case{"@media (400px <= width < 700px), print {}", "(400px <= width < 700px), print"},
+            }) {
         INFO(textOf(test.written));
         CssTestSheet sheet(test.written);
         REQUIRE(sheet.count() == 1);
@@ -188,14 +191,18 @@ TEST_CASE("a media query that is not one is not all") {
         const char* serialized;
     };
     for (const Case& test :
-         {Case{"@media (example, all,), speech {}", "(example, all,), speech"},
-          Case{"@media &test, speech {}", "not all, speech"},
-          Case{"@media screen and (max-weight: 3kg) and (color), (color) {}",
-               "screen and (max-weight: 3kg) and (color), (color)"},
-          Case{"@media (min-orientation: portrait) {}", "(min-orientation: portrait)"},
-          Case{"@media (color: 20example) {}", "(color: 20example)"},
-          Case{"@media or and (color) {}", "not all"},
-          Case{"@media (orientation < portrait) {}", "(orientation < portrait)"}}) {
+            {
+                Case{"@media (example, all,), speech {}", "(example, all,), speech"},
+                Case{"@media &test, speech {}", "not all, speech"},
+                Case{
+                    "@media screen and (max-weight: 3kg) and (color), (color) {}",
+                    "screen and (max-weight: 3kg) and (color), (color)",
+                },
+                Case{"@media (min-orientation: portrait) {}", "(min-orientation: portrait)"},
+                Case{"@media (color: 20example) {}", "(color: 20example)"},
+                Case{"@media or and (color) {}", "not all"},
+                Case{"@media (orientation < portrait) {}", "(orientation < portrait)"},
+            }) {
         INFO(textOf(test.written));
         CssTestSheet sheet(test.written);
         REQUIRE(sheet.count() == 1);
@@ -224,16 +231,18 @@ TEST_CASE("a container query's features are the ones of the function they are in
         bool known;
     };
     for (const Case& test :
-         {Case{"@container (width > 1px) {}", true},
-          Case{"@container (stuck: top) {}", false},
-          Case{"@container scroll-state(stuck: top) {}", true},
-          Case{"@container scroll-state((snapped: x) or (scrollable)) {}", true},
-          Case{"@container scroll-state(width > 1px) {}", false},
-          Case{"@container anchored(fallback: none) {}", true},
-          Case{"@container anchored(fallback: --a flip-block) {}", true},
-          Case{"@container anchored(fallback: 0) {}", false},
-          Case{"@container anchored(fallback:) {}", false},
-          Case{"@container anchored(stuck: top) {}", false}}) {
+            {
+                Case{"@container (width > 1px) {}", true},
+                Case{"@container (stuck: top) {}", false},
+                Case{"@container scroll-state(stuck: top) {}", true},
+                Case{"@container scroll-state((snapped: x) or (scrollable)) {}", true},
+                Case{"@container scroll-state(width > 1px) {}", false},
+                Case{"@container anchored(fallback: none) {}", true},
+                Case{"@container anchored(fallback: --a flip-block) {}", true},
+                Case{"@container anchored(fallback: 0) {}", false},
+                Case{"@container anchored(fallback:) {}", false},
+                Case{"@container anchored(stuck: top) {}", false},
+            }) {
         INFO(textOf(test.written));
         CssTestSheet sheet(test.written);
         REQUIRE(sheet.count() == 1);
@@ -242,20 +251,16 @@ TEST_CASE("a container query's features are the ones of the function they are in
 }
 
 TEST_CASE("a style query holds a declaration or a range, and a value holds no comparison") {
-    CssTestSheet sheet("@container style(--a: 1) and style(color) and style(--b > 2) {}"
-                             "@container style(--a = 1 = 2) {}");
+    CssTestSheet sheet("@container style(--a: 1) and style(color) and style(--b > 2) {}@container style(--a = 1 = 2) {}");
     REQUIRE(sheet.count() == 2);
     CHECK(!preludeHolds(sheet.rule(0), CssValueDef_GeneralEnclosed));
     CHECK(preludeHolds(sheet.rule(1), CssValueDef_GeneralEnclosed));
 }
 
 TEST_CASE("@when takes media() and supports() as the leaves of its condition") {
-    CssTestSheet sheet(
-        "@when media(width > 1px) and (supports(display: grid) or unknown(x)) {}"
-              "@when (width > 1px) {}");
+    CssTestSheet sheet("@when media(width > 1px) and (supports(display: grid) or unknown(x)) {}@when (width > 1px) {}");
     CHECK(sheet.count() == 2);
-    CHECK(prelude(sheet.rule(0))
-          == "media(width > 1px) and (supports(display: grid) or unknown(x))");
+    CHECK(prelude(sheet.rule(0)) == "media(width > 1px) and (supports(display: grid) or unknown(x))");
     CHECK(preludeHolds(sheet.rule(1), CssValueDef_GeneralEnclosed));
 }
 
@@ -263,8 +268,7 @@ TEST_CASE("an @supports condition is kept as written, whitespace aside") {
     CssTestSheet sheet("@supports (display:flex) and ( not (color : red !important)) { a {} }");
     REQUIRE(sheet.count() == 1);
     CHECK(prelude(sheet.rule(0)) == "(display: flex) and (not (color: red !important))");
-    CHECK(text(sheet.rule(0))
-          == "@supports (display: flex) and (not (color: red !important)) {\n  a { }\n}");
+    CHECK(text(sheet.rule(0)) == "@supports (display: flex) and (not (color: red !important)) {\n  a { }\n}");
 
     // A declaration of an unknown property, or of a value that the property does not accept, is still a declaration.
     CssTestSheet unknown("@supports (nonesuch: 1) or (color: 1px) or selector(a > b) {}");
@@ -281,9 +285,7 @@ TEST_CASE("an @supports condition is kept as written, whitespace aside") {
 
 TEST_CASE("@import and @namespace come before every other rule") {
     // css-cascade-5/#at-import, css-namespaces-3/#declaration: an @layer statement may come first.
-    CssTestSheet sheet(
-        "@layer a; @import url(x); @namespace svg url(y); @import url(z); a {} "
-              "@namespace url(w);");
+    CssTestSheet sheet("@layer a; @import url(x); @namespace svg url(y); @import url(z); a {} @namespace url(w);");
     REQUIRE(sheet.count() == 4);
     CHECK(text(sheet.rule(0)) == "@layer a;");
     CHECK(text(sheet.rule(1)) == "@import url(\"x\");");
@@ -297,8 +299,7 @@ TEST_CASE("@import and @namespace come before every other rule") {
 }
 
 TEST_CASE("an @namespace rule declares what a selector's prefix names") {
-    CssTestSheet sheet("@namespace svg url(http://w3.org/svg); @namespace \"http://x\"; "
-                             "svg|a {} b|c {}");
+    CssTestSheet sheet("@namespace svg url(http://w3.org/svg); @namespace \"http://x\"; svg|a {} b|c {}");
     REQUIRE(sheet.count() == 3);
     PrStringView url;
     REQUIRE(cssSheetNamespace(sheet.sheet->data, "svg", &url));
@@ -437,8 +438,7 @@ TEST_CASE("a selector in a prelude is written as a style rule's is") {
         {"@supports selector(:not(.a,.b)) {}", "selector(:not(.a, .b))"},
         {"@supports selector(:lang(en,\"fr\")) {}", "selector(:lang(en, \"fr\"))"},
         {"@supports selector(::part(a b)) {}", "selector(::part(a b))"},
-        {"@supports selector(::view-transition-group(*.a)) {}",
-         "selector(::view-transition-group(*.a))"},
+        {"@supports selector(::view-transition-group(*.a)) {}", "selector(::view-transition-group(*.a))"},
         {"@custom-selector :--x :where(a,b);", ":--x :where(a, b)"},
         // cssom-1/#serialize-a-simple-selector, in the way that a style rule's selectors are written.
         {"@supports selector([a=b i]) {}", "selector([a=\"b\" i])"},
@@ -483,7 +483,7 @@ TEST_CASE("a repeated custom property keeps the last, where the last was written
 
 TEST_CASE("a declaration holds its value, which serializes from what it holds") {
     CssTestSheet sheet("a { width: 0; color: RED; line-height: 1.50; margin-left: +1E1px; "
-                             "background-color: #1ac; outline-color: #11aacc80 }");
+        "background-color: #1ac; outline-color: #11aacc80 }");
     const CssDeclarationBlock* style = &sheet.rule(0)->style;
     REQUIRE(style->count == 6);
     CHECK(valueAt(style, 0) == "0px");
@@ -540,13 +540,10 @@ TEST_CASE("an at-rule that cssom gives a style declares descriptors") {
 TEST_CASE("an at-rule's block holds what its spec requires of it") {
     // css-properties-values-api-1/#at-property-rule: syntax and inherits, and an initial value except for the universal
     // syntax, in any written order.
-    CssTestSheet property(
-        "@property --a { syntax: '*'; inherits: false }"
-              "@property --b { syntax: '<length>'; inherits: false }"
-              "@property --c { initial-value: 1px; inherits: true; syntax: '<length>' }");
+    CssTestSheet property("@property --a { syntax: '*'; inherits: false }@property --b { syntax: '<length>'; inherits: false }"
+        "@property --c { initial-value: 1px; inherits: true; syntax: '<length>' }");
     REQUIRE(property.count() == 2);
-    CHECK(text(property.rule(1))
-          == "@property --c { syntax: \"<length>\"; inherits: true; initial-value: 1px; }");
+    CHECK(text(property.rule(1)) == "@property --c { syntax: \"<length>\"; inherits: true; initial-value: 1px; }");
 
     // css-counter-styles-3/#the-counter-style-rule: no rule defines decimal, disc, square, circle, disclosure-open or
     // disclosure-closed.
@@ -558,9 +555,8 @@ TEST_CASE("an at-rule's block holds what its spec requires of it") {
 TEST_CASE("a prose production parses what its spec lists") {
     // css-page-3/#typedef-page-size-page-size, css-fonts-4/#font-face-src-parsing, which drops a source that is not
     // valid, and scroll-animations-1/#typedef-timeline-range-name.
-    CssTestSheet sheet("@page { size: A3 landscape }"
-                             "@font-face { src: url(a) format(woff), bogus, local(x) }"
-                             "@keyframes k { entry 10% { top: 0 } }");
+    CssTestSheet sheet("@page { size: A3 landscape }@font-face { src: url(a) format(woff), bogus, local(x) }"
+        "@keyframes k { entry 10% { top: 0 } }");
     REQUIRE(sheet.count() == 3);
     CHECK(declarations(&sheet.rule(0)->style) == "size: a3 landscape;");
     CHECK(declarations(&sheet.rule(1)->style) == "src: url(\"a\") format(woff), local(\"x\");");
@@ -569,9 +565,7 @@ TEST_CASE("a prose production parses what its spec lists") {
 
 TEST_CASE("a rule that is valid but not where it is inserted is not a syntax error") {
     CssTestSheet sheet("a {}");
-    CHECK(
-        cssRuleListInsert(sheet.sheet->data, nullptr, nullptr, "@import url(x);", 1, nullptr)
-        == PrStatus_NotAllowed);
+    CHECK(cssRuleListInsert(sheet.sheet->data, nullptr, nullptr, "@import url(x);", 1, nullptr) == PrStatus_NotAllowed);
     CHECK(cssRuleListInsert(sheet.sheet->data, nullptr, nullptr, "@layer;", 0, nullptr) == PrStatus_Syntax);
     CHECK(cssRuleListInsert(sheet.sheet->data, nullptr, nullptr, "@nonesuch {}", 0, nullptr) == PrStatus_Syntax);
 }
@@ -589,8 +583,7 @@ TEST_CASE("an @function body holds each run of declarations as a rule, condition
 
 TEST_CASE("the unicode-range descriptor reads its value with unicode ranges allowed") {
     CssTestSheet sheet("@font-face { unicode-range: u+a?, U+0-10ffff, u+416 }");
-    CHECK(declarations(&sheet.rule(0)->style)
-          == "unicode-range: U+A0-AF, U+0-10FFFF, U+416;");
+    CHECK(declarations(&sheet.rule(0)->style) == "unicode-range: U+A0-AF, U+0-10FFFF, U+416;");
 
     // css-fonts-4/#unicode-range-desc: a bound above the maximum code point, or an end before the start.
     CssTestSheet high("@font-face { unicode-range: u+0-110000 }");
@@ -612,9 +605,7 @@ TEST_CASE("a descriptor is found by name and wins over the property of that name
     CHECK(nameAt(style, 0) == "size");
 
     CHECK(cssDeclarationBlockSet(style, named(style, "size"), "auto", false, nullptr) == CssEditResult_Changed);
-    CHECK(cssDeclarationBlockSet(style, named(style, "size"), "nonesuch", false,
-                                 nullptr)
-          == CssEditResult_Rejected);
+    CHECK(cssDeclarationBlockSet(style, named(style, "size"), "nonesuch", false, nullptr) == CssEditResult_Rejected);
     CHECK(declarations(style) == "size: auto; margin-top: 2px;");
 }
 
@@ -627,9 +618,7 @@ TEST_CASE("a declaration block is found, set and removed by name") {
     CHECK(cssDeclarationBlockFind(style, named(style, "--y")) == 1);
     CHECK(cssDeclarationBlockFind(style, named(style, "width")) == 2);
 
-    CHECK(cssDeclarationBlockSet(style, named(style, "width"), "  1px  ", false,
-                                 nullptr)
-          == CssEditResult_Changed);
+    CHECK(cssDeclarationBlockSet(style, named(style, "width"), "  1px  ", false, nullptr) == CssEditResult_Changed);
     CHECK(declarations(style) == "color: red; --y: z; width: 1px;");
 
     CssDeclaredName unknown = {};
@@ -667,28 +656,18 @@ TEST_CASE("a changed block keeps its declarations' order and values, and a parse
     CHECK(style->stored != nullptr);
     for (int i = 0; i < 20; ++i) {
         char width[8] = {char('0' + i / 10), char('0' + i % 10), 'p', 'x'};
-        CHECK(cssDeclarationBlockSet(style, named(style, "width"), PrStringView{width, 4},
-                                     false, nullptr)
-              == CssEditResult_Changed);
+        CHECK(cssDeclarationBlockSet(style, named(style, "width"), PrStringView{width, 4}, false, nullptr) ==
+            CssEditResult_Changed);
     }
-    CHECK(
-        cssDeclarationBlockSet(style, named(style, "--new"), "  q  ", false, nullptr)
-        == CssEditResult_Changed);
-    CHECK(
-        declarations(style)
-        == "--long: [a b c d e]; color: blue; background-image: url(\"x.png\"); width: 19px; --new: q;");
+    CHECK(cssDeclarationBlockSet(style, named(style, "--new"), "  q  ", false, nullptr) == CssEditResult_Changed);
+    CHECK(declarations(style) == "--long: [a b c d e]; color: blue; background-image: url(\"x.png\"); width: 19px; --new: q;");
 
     // A shorthand's value sets every longhand or none.
-    CHECK(cssDeclarationBlockSet(style, named(style, "margin"), "1px nonesuch", false,
-                                 nullptr)
-          == CssEditResult_Rejected);
-    CHECK(cssDeclarationBlockSet(style, named(style, "margin"), "1px 2px", false,
-                                 nullptr)
-          == CssEditResult_Changed);
+    CHECK(cssDeclarationBlockSet(style, named(style, "margin"), "1px nonesuch", false, nullptr) ==
+        CssEditResult_Rejected);
+    CHECK(cssDeclarationBlockSet(style, named(style, "margin"), "1px 2px", false, nullptr) == CssEditResult_Changed);
     CHECK(cssDeclarationBlockRemove(style, named(style, "color"), nullptr) == CssEditResult_Changed);
-    CHECK(
-        declarations(style)
-        == "--long: [a b c d e]; background-image: url(\"x.png\"); width: 19px; --new: q; margin: 1px 2px;");
+    CHECK(declarations(style) == "--long: [a b c d e]; background-image: url(\"x.png\"); width: 19px; --new: q; margin: 1px 2px;");
     CHECK(nameAt(style, 0) == "--long");
     CHECK(nameAt(style, 3) == "--new");
 
@@ -696,9 +675,7 @@ TEST_CASE("a changed block keeps its declarations' order and values, and a parse
     CssRuleData* copy = cssRuleDataCopy(sheet.rule(0));
     CssDeclarationBlock* copied = &copy->style;
     CHECK(cssDeclarationBlockRemove(style, named(style, "margin"), nullptr) == CssEditResult_Changed);
-    CHECK(
-        declarations(copied)
-        == "--long: [a b c d e]; background-image: url(\"x.png\"); width: 19px; --new: q; margin: 1px 2px;");
+    CHECK(declarations(copied) == "--long: [a b c d e]; background-image: url(\"x.png\"); width: 19px; --new: q; margin: 1px 2px;");
     cssRuleDataRelease(copy);
 
     cssDeclarationBlockParse(style, "--k: 1; top: 0", nullptr);
@@ -725,9 +702,7 @@ TEST_CASE("a rule list inserts and deletes by index") {
     CHECK(cssRuleListInsert(data, nullptr, nullptr, "@bogus;", 0, nullptr) == PrStatus_Syntax);
     // cssom-1/#parse-a-css-rule: a rule that is invalid anywhere is a syntax error.
     CHECK(cssRuleListInsert(data, nullptr, nullptr, "@nonesuch {}", 0, nullptr) == PrStatus_Syntax);
-    CHECK(
-        cssRuleListInsert(data, nullptr, nullptr, "@font-feature-values bongo;", 0, nullptr)
-        == PrStatus_Syntax);
+    CHECK(cssRuleListInsert(data, nullptr, nullptr, "@font-feature-values bongo;", 0, nullptr) == PrStatus_Syntax);
     CHECK(cssRuleListInsert(data, nullptr, nullptr, "@media (;) {} x", 0, nullptr) == PrStatus_Syntax);
 
     CHECK(cssRuleListRemovable(data, nullptr, 0) == PrStatus_Ok);
@@ -753,18 +728,15 @@ TEST_CASE("a rule is inserted only where it may stand") {
 
     // Inserting a rule that a grouping rule's block does not accept.
     CssTestSheet media("@media print {}");
-    CHECK(cssRuleListInsert(media.sheet->data, media.rule(0), nullptr, "@import url(x);", 0,
-                            nullptr)
-          == PrStatus_NotAllowed);
+    CHECK(cssRuleListInsert(media.sheet->data, media.rule(0), nullptr, "@import url(x);", 0, nullptr) ==
+        PrStatus_NotAllowed);
 }
 
 TEST_CASE("text inserted into a style rule that is no rule is declarations") {
     // cssom-1/#insert-a-css-rule, into a nested list.
     CssTestSheet sheet("a { color: red }");
     CssRuleData* rule = sheet.rule(0);
-    CHECK(cssRuleListInsert(sheet.sheet->data, rule, nullptr, "width: 1px; height: 2px", 0,
-                            nullptr)
-          == PrStatus_Ok);
+    CHECK(cssRuleListInsert(sheet.sheet->data, rule, nullptr, "width: 1px; height: 2px", 0, nullptr) == PrStatus_Ok);
     REQUIRE(rule->children.count == 1);
     CHECK(child(rule, 0)->kind == CssRuleDataKind_NestedDeclarations);
     CHECK(text(child(rule, 0)) == "width: 1px; height: 2px;");
@@ -797,9 +769,8 @@ TEST_CASE("a legacy descriptor name declares the descriptor it is an alias of") 
 TEST_CASE("a range descriptor whose bounds are the same serializes as the one value") {
     // css-fonts-4/#serializing-at-rules
     CssTestSheet sheet("@font-face { font-weight: 500 500; font-width: 75% 125%; font-style: oblique 10deg 10deg; font-size: calc(1) calc(1) }");
-    CHECK(
-        declarations(&sheet.rule(0)->style)
-        == "font-weight: 500; font-width: 75% 125%; font-style: oblique 10deg; font-size: calc(1) calc(1);");
+    CHECK(declarations(&sheet.rule(0)->style) ==
+        "font-weight: 500; font-width: 75% 125%; font-style: oblique 10deg; font-size: calc(1) calc(1);");
 }
 
 TEST_CASE("a palette's override colors are absolute colors") {
@@ -809,8 +780,7 @@ TEST_CASE("a palette's override colors are absolute colors") {
         CssTestSheet sheet(rule);
         return declarations(&sheet.rule(0)->style);
     };
-    CHECK(colors("0 #123, 1 color-mix(in lch, red, blue)")
-          == "override-colors: 0 rgb(17, 34, 51), 1 color-mix(in lch, red, blue);");
+    CHECK(colors("0 #123, 1 color-mix(in lch, red, blue)") == "override-colors: 0 rgb(17, 34, 51), 1 color-mix(in lch, red, blue);");
     CHECK(colors("0 red, 1 canvas") == "");
     CHECK(colors("0 currentcolor") == "");
     CHECK(colors("0 light-dark(white, black)") == "");
@@ -823,10 +793,10 @@ TEST_CASE("a src descriptor keeps the sources that parse and that the UA support
         CssTestSheet sheet(rule);
         return declarations(&sheet.rule(0)->style);
     };
-    CHECK(src("url(a.woff2) format(woff2) tech(variations, color-COLRv1), local(\"B\")")
-          == "src: url(\"a.woff2\") format(woff2) tech(variations, color-colrv1), local(\"B\");");
-    CHECK(src("local(inherit), url(a) format(bad), junk, url(b) format(\"woff-variations\")")
-          == "src: url(\"b\") format(\"woff-variations\");");
+    CHECK(src("url(a.woff2) format(woff2) tech(variations, color-COLRv1), local(\"B\")") ==
+        "src: url(\"a.woff2\") format(woff2) tech(variations, color-colrv1), local(\"B\");");
+    CHECK(src("local(inherit), url(a) format(bad), junk, url(b) format(\"woff-variations\")") ==
+        "src: url(\"b\") format(\"woff-variations\");");
     CHECK(src("url(a) tech(incremental), url(b) format(svg), local(C D)") == "src: local(\"C D\");");
     CHECK(src("local(), url(a) format(\"svg\"), url(b) format(woff) dummy()") == "");
 }
@@ -834,8 +804,7 @@ TEST_CASE("a src descriptor keeps the sources that parse and that the UA support
 TEST_CASE("a feature value block maps the names its author gives to lists of indexes") {
     // css-fonts-4/#font-feature-values-syntax
     CssTestSheet sheet("@font-feature-values Bongo { font-display: swap; @swash { pretty: 1; Pretty: 2; twice: 1 2; } "
-        "@character-variant { a: 1 2; b: 1 2 3; } "
-        "@styleset { \\:x: 1 2 3; neg: 1 -1; frac: 1.5; } }");
+        "@character-variant { a: 1 2; b: 1 2 3; } @styleset { \\:x: 1 2 3; neg: 1 -1; frac: 1.5; } }");
     REQUIRE(sheet.count() == 1);
     const CssRuleData* rule = sheet.rule(0);
     CHECK(cssRuleType(rule) == PrCssRuleType_FontFeatureValues);
@@ -845,15 +814,13 @@ TEST_CASE("a feature value block maps the names its author gives to lists of ind
     CHECK(declarations(&child(rule, 0)->style) == "pretty: 1; Pretty: 2;");
     CHECK(declarations(&child(rule, 1)->style) == "a: 1 2;");
     CHECK(declarations(&child(rule, 2)->style) == "\\:x: 1 2 3;");
-    CHECK(text(rule)
-          == "@font-feature-values Bongo { font-display: swap; @swash { pretty: 1; Pretty: 2; } "
-             "@character-variant { a: 1 2; } @styleset { \\:x: 1 2 3; } }");
+    CHECK(text(rule) == "@font-feature-values Bongo { font-display: swap; @swash { pretty: 1; Pretty: 2; } "
+        "@character-variant { a: 1 2; } @styleset { \\:x: 1 2 3; } }");
 }
 
 TEST_CASE("feature value blocks of one type are one block, the last value of a name standing") {
     // css-fonts-4/#serializing-at-rules
-    CssTestSheet sheet("@font-feature-values foo { @swash { pretty: 0; cool: 2; } "
-                             "@ornaments { x: 1 } @swash { pretty: 1; } }");
+    CssTestSheet sheet("@font-feature-values foo { @swash { pretty: 0; cool: 2; } @ornaments { x: 1 } @swash { pretty: 1; } }");
     const CssRuleData* rule = sheet.rule(0);
     REQUIRE(rule->children.count == 7);
     CHECK(text(child(rule, 0)) == "@swash { cool: 2; pretty: 1; }");

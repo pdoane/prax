@@ -110,8 +110,7 @@ TEST_CASE("the atlas empties a page no glyph was drawn from this use when it is 
     const PrFont* font = load("NotoSans.ttf");
     PrDrawAtlasOptions options{64, 1, 0, 0.05f};
     PrDrawAtlas* atlas = prDrawAtlasCreate(&options);
-    PrFontGlyph glyphs[2] = {{prFontCodePointGlyph(font, 'W'), {0, 40}},
-                             {prFontCodePointGlyph(font, 'M'), {0, 40}}};
+    PrFontGlyph glyphs[2] = {{prFontCodePointGlyph(font, 'W'), {0, 40}}, {prFontCodePointGlyph(font, 'M'), {0, 40}}};
     PrFontGlyphRun run = runOf(font, glyphs, 2, 44);
     PrDrawAtlasEntry g{};
     prDrawAtlasNext(atlas);

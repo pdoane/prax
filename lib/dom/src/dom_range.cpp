@@ -9,8 +9,8 @@ namespace pr_impl {
 namespace {
 
 bool isCharacterData(const PrDomNode* node) {
-    return node->type == PrDomNodeType_Text || node->type == PrDomNodeType_CdataSection
-        || node->type == PrDomNodeType_Comment || node->type == PrDomNodeType_ProcessingInstruction;
+    return node->type == PrDomNodeType_Text || node->type == PrDomNodeType_CdataSection ||
+        node->type == PrDomNodeType_Comment || node->type == PrDomNodeType_ProcessingInstruction;
 }
 
 // Removes the range from its document's list.
@@ -105,8 +105,7 @@ DomBoundary collapsedPoint(PrDomRange* range) {
     if (domIsInclusiveAncestor(range->start.node, range->end.node))
         return range->start;
     PrDomNode* reference = range->start.node;
-    while (domNodeParent(reference) != nullptr
-           && !domIsInclusiveAncestor(domNodeParent(reference), range->end.node))
+    while (domNodeParent(reference) != nullptr && !domIsInclusiveAncestor(domNodeParent(reference), range->end.node))
         reference = domNodeParent(reference);
     return DomBoundary{domNodeParent(reference), domNodeIndex(reference) + 1};
 }
@@ -114,15 +113,13 @@ DomBoundary collapsedPoint(PrDomRange* range) {
 // Adds to `fragment` the part of `node` that the range from `from` to `to` spans, and removes it from the node if
 // `extract` is set. For character data, the part is its data. Otherwise the part is a clone of the node that holds the
 // contents that this range extracts.
-PrStatus extractPart(PrDomNode* fragment, PrDomNode* node, DomBoundary from, DomBoundary to,
-                     bool extract) {
+PrStatus extractPart(PrDomNode* fragment, PrDomNode* node, DomBoundary from, DomBoundary to, bool extract) {
     if (isCharacterData(node)) {
         PrString data = substring(node, from.offset, to.offset - from.offset);
         domAttach(fragment, cloneWithData(node, prStringView(&data)), nullptr);
         prStringReset(&data);
         if (extract)
-            domReplaceData(static_cast<PrDomCharacterData*>(node), from.offset,
-                           to.offset - from.offset, "");
+            domReplaceData(static_cast<PrDomCharacterData*>(node), from.offset, to.offset - from.offset, "");
         return PrStatus_Ok;
     }
     PrDomNode* clone = domClone(node, node->document, false);
@@ -187,7 +184,7 @@ uint32_t domNodeLength(const PrDomNode* node) {
         default: {
             uint32_t count = 0;
             for (const PrDomNode* child = node->type != PrDomNodeType_Attribute ? node->first : nullptr;
-                 child != nullptr; child = child->next)
+                    child != nullptr; child = child->next)
                 ++count;
             return count;
         }
@@ -202,8 +199,8 @@ PrStatus domCheckBoundaryPoint(const PrDomNode* node, uint32_t offset) {
 
 uint32_t domNodeIndex(const PrDomNode* node) {
     uint32_t index = 0;
-    for (const PrDomNode* at = domNodeParent(node) != nullptr ? node->previous : nullptr; at != nullptr;
-         at = at->previous)
+    for (const PrDomNode* at = domNodeParent(node) != nullptr ? node->previous : nullptr; at != nullptr; at =
+            at->previous)
         ++index;
     return index;
 }
@@ -276,9 +273,8 @@ void domRangeCollapse(PrDomRange* range, bool toStart) {
 
 bool domRangeContains(const PrDomRange* range, const PrDomNode* node) {
     PrDomNode* held = const_cast<PrDomNode*>(node);
-    return domNodeRoot(node) == domRangeRoot(range)
-           && domBoundaryCompare(DomBoundary{held, 0}, range->start) > 0
-           && domBoundaryCompare(DomBoundary{held, domNodeLength(node)}, range->end) < 0;
+    return domNodeRoot(node) == domRangeRoot(range) && domBoundaryCompare(DomBoundary{held, 0}, range->start) > 0 &&
+        domBoundaryCompare(DomBoundary{held, domNodeLength(node)}, range->end) < 0;
 }
 
 bool domRangePartiallyContains(const PrDomRange* range, const PrDomNode* node) {
@@ -324,9 +320,8 @@ PrStatus domRangeExtract(PrDomRange* range, bool extract, PrDomDocumentFragment*
     DomBoundary collapsed = collapsedPoint(range);
 
     if (firstPartial != nullptr) {
-        PrStatus status =
-            extractPart(fragment, firstPartial, start,
-                        DomBoundary{firstPartial, domNodeLength(firstPartial)}, extract);
+        PrStatus status = extractPart(fragment, firstPartial, start,
+            DomBoundary{firstPartial, domNodeLength(firstPartial)}, extract);
         if (status != PrStatus_Ok) {
             contained.reset();
             return status;
@@ -337,8 +332,7 @@ PrStatus domRangeExtract(PrDomRange* range, bool extract, PrDomDocumentFragment*
         if (extract)
             domInsert(fragment, contained.data[i], nullptr);
         else
-            domAttach(fragment, domClone(contained.data[i], contained.data[i]->document, true),
-                      nullptr);
+            domAttach(fragment, domClone(contained.data[i], contained.data[i]->document, true), nullptr);
     }
     contained.reset();
 
@@ -394,8 +388,8 @@ void domRangeDelete(PrDomRange* range) {
 PrStatus domRangeInsert(PrDomRange* range, PrDomNode* node) {
     PrDomNode* start = range->start.node;
     bool text = domIsText(start);
-    if (start->type == PrDomNodeType_ProcessingInstruction || start->type == PrDomNodeType_Comment
-        || (text && domNodeParent(start) == nullptr) || start == node)
+    if (start->type == PrDomNodeType_ProcessingInstruction || start->type == PrDomNodeType_Comment ||
+            (text && domNodeParent(start) == nullptr) || start == node)
         return PrStatus_NotAllowed;
     PrDomNode* reference = nullptr;
     if (text) {
@@ -429,8 +423,8 @@ PrStatus domRangeSurround(PrDomRange* range, PrDomNode* parent) {
         if (!domIsText(node) && domRangePartiallyContains(range, node))
             return PrStatus_InvalidState;
     }
-    if (parent->type == PrDomNodeType_Document || parent->type == PrDomNodeType_DocumentType
-        || parent->type == PrDomNodeType_DocumentFragment)
+    if (parent->type == PrDomNodeType_Document || parent->type == PrDomNodeType_DocumentType ||
+            parent->type == PrDomNodeType_DocumentFragment)
         return PrStatus_WrongType;
     PrDomDocumentFragment* fragment = nullptr;
     PrStatus status = domRangeExtract(range, true, &fragment);

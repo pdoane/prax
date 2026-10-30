@@ -20,8 +20,8 @@ namespace {
 // visits the nodes that do not lead to a box that paints whole.
 void collect(const LayoutTree* tree, LayoutNodeIndex node, bool fresh, Array<LayoutStackedBox>& out) {
     const LayoutTreeNode& n = layoutTreeNode(tree, node);
-    if ((!fresh && !n.leadsWhole) || n.kind == PrLayoutNodeKind_Text || n.kind == PrLayoutNodeKind_LineBreak
-        || layoutIsAbsent(tree, node))
+    if ((!fresh && !n.leadsWhole) || n.kind == PrLayoutNodeKind_Text || n.kind == PrLayoutNodeKind_LineBreak ||
+            layoutIsAbsent(tree, node))
         return;
     if (layoutNodePaintsWhole(tree, node))
         out.push(LayoutStackedBox{node, layoutStackLevel(tree, node)});
@@ -38,11 +38,10 @@ struct FoundBox {
 };
 
 // Sets `out` to the list of the stacking context `context`, found from the box tree.
-void findList(const LayoutTree* tree, LayoutNodeIndex context, bool fresh, Array<LayoutStackedBox>& out,
-              uint32_t* zero) {
+void findList(const LayoutTree* tree, LayoutNodeIndex context, bool fresh, Array<LayoutStackedBox>& out, uint32_t* zero) {
     out.clear();
     for (LayoutNodeIndex child = layoutTreeNode(tree, context).first; child != kPrLayoutNodeNone;
-         child = layoutTreeNode(tree, child).next)
+            child = layoutTreeNode(tree, child).next)
         collect(tree, child, fresh, out);
     Array<FoundBox> found;
     for (uint32_t i = 0; i < out.count; ++i)
@@ -73,8 +72,8 @@ void dropList(LayoutStacking& s, uint32_t at) {
 // Returns the depth of `node` in the box tree: 0 for a node with no parent.
 uint32_t depthOf(const LayoutTree* tree, LayoutNodeIndex node) {
     uint32_t depth = 0;
-    for (LayoutNodeIndex at = layoutTreeNode(tree, node).parent; at != kPrLayoutNodeNone;
-         at = layoutTreeNode(tree, at).parent)
+    for (LayoutNodeIndex at = layoutTreeNode(tree, node).parent; at != kPrLayoutNodeNone; at =
+            layoutTreeNode(tree, at).parent)
         ++depth;
     return depth;
 }
@@ -141,11 +140,12 @@ void listChanged(LayoutStacking& s, LayoutStackingList& list) {
 
 bool layoutNodePaintsWholeAs(const LayoutTree* tree, LayoutNodeIndex node, PrLayoutStyleIndex style) {
     const LayoutTreeNode& n = layoutTreeNode(tree, node);
-    if (!layoutKindIsBox(n.kind) || n.parent == kPrLayoutNodeNone
-        || !layoutStyleTraits(tree->styles, style).mayPaintWhole)
+    if (!layoutKindIsBox(n.kind) || n.parent == kPrLayoutNodeNone ||
+            !layoutStyleTraits(tree->styles, style).mayPaintWhole)
         return false;
-    return layoutIsInlineBoxAs(tree, node, style) ? layoutInlinePaintsWhole(tree->styles, style)
-                                                  : layoutPaintsWholeAs(tree, node, style);
+    if (layoutIsInlineBoxAs(tree, node, style))
+        return layoutInlinePaintsWhole(tree->styles, style);
+    return layoutPaintsWholeAs(tree, node, style);
 }
 
 bool layoutNodePaintsWhole(const LayoutTree* tree, LayoutNodeIndex node) {
@@ -154,7 +154,7 @@ bool layoutNodePaintsWhole(const LayoutTree* tree, LayoutNodeIndex node) {
 
 bool layoutNodeLeadsWhole(const LayoutTree* tree, LayoutNodeIndex node) {
     for (LayoutNodeIndex child = layoutTreeNode(tree, node).first; child != kPrLayoutNodeNone;
-         child = layoutTreeNode(tree, child).next) {
+            child = layoutTreeNode(tree, child).next) {
         if (layoutTreeNode(tree, child).leadsWhole)
             return true;
     }
@@ -162,8 +162,8 @@ bool layoutNodeLeadsWhole(const LayoutTree* tree, LayoutNodeIndex node) {
 }
 
 LayoutNodeIndex layoutNodeStackingContext(const LayoutTree* tree, LayoutNodeIndex node) {
-    for (LayoutNodeIndex at = layoutTreeNode(tree, node).parent; at != kPrLayoutNodeNone;
-         at = layoutTreeNode(tree, at).parent) {
+    for (LayoutNodeIndex at = layoutTreeNode(tree, node).parent; at != kPrLayoutNodeNone; at =
+            layoutTreeNode(tree, at).parent) {
         if (layoutIsStackingContext(tree, at))
             return at;
     }
@@ -197,8 +197,7 @@ LayoutStackedBoxes layoutStackingList(const LayoutTree* tree, LayoutNodeIndex co
 
 bool layoutStackingListIs(const LayoutTree* tree, LayoutNodeIndex context, uint32_t version) {
     uint32_t at = listAt(tree->stacking, context);
-    return at != kHashMissing && !tree->stacking.lists.data[at].stale
-           && tree->stacking.lists.data[at].version == version;
+    return at != kHashMissing && !tree->stacking.lists.data[at].stale && tree->stacking.lists.data[at].version == version;
 }
 
 void layoutStackingRemoving(LayoutTree* tree, LayoutNodeIndex node) {
@@ -234,8 +233,7 @@ void layoutStackingInserted(LayoutTree* tree, LayoutNodeIndex node) {
             dropList(s, own);
     }
     // The marks are a superset of the boxes that paint whole, and the record's traits alone decide them.
-    if (layoutKindIsBox(n.kind)
-        && layoutStyleTraits(tree->styles, n.style).mayPaintWhole)
+    if (layoutKindIsBox(n.kind) && layoutStyleTraits(tree->styles, n.style).mayPaintWhole)
         n.leadsWhole = true;
     // A node that leads to no box that paints whole is in no list, and changes none.
     if (!n.leadsWhole)
@@ -243,7 +241,7 @@ void layoutStackingInserted(LayoutTree* tree, LayoutNodeIndex node) {
     // Its ancestors also lead to it. They are marked up to the first ancestor that is already marked, whose own
     // ancestors are marked too.
     for (LayoutNodeIndex at = n.parent; at != kPrLayoutNodeNone && !tree->nodes.data[at].leadsWhole;
-         at = tree->nodes.data[at].parent)
+            at = tree->nodes.data[at].parent)
         tree->nodes.data[at].leadsWhole = true;
     LayoutStackingList* list = heldListAround(tree, node);
     if (list == nullptr)
@@ -290,8 +288,8 @@ uint32_t layoutStackingVerify(const LayoutTree* tree) {
             continue;
         uint32_t zero = 0;
         findList(tree, list.context, true, boxes, &zero);
-        if (boxes.count != list.boxes.count || zero != list.zero
-            || !memEquals(boxes.data, list.boxes.data, sizeof(LayoutStackedBox) * boxes.count))
+        if (boxes.count != list.boxes.count || zero != list.zero ||
+                !memEquals(boxes.data, list.boxes.data, sizeof(LayoutStackedBox) * boxes.count))
             differs = list.context;
     }
     boxes.reset();

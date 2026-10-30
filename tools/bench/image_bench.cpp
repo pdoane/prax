@@ -82,7 +82,7 @@ int main(int argc, char** argv) {
         pixels.reserve(uint32_t(size));
         auto decode = [&] {
             return prImageDecoderReadRgba8(decoder, 0, PrImageAlpha_Straight, PrImageOrientation_Identity,
-                                           PrPixels{pixels.data, size_t(info->extent.x) * 4, info->extent});
+                PrPixels{pixels.data, size_t(info->extent.x) * 4, info->extent});
         };
         if (decode() != PrStatus_Ok) {
             fprintf(stderr, "cannot decode %s\n", argv[i]);
@@ -103,8 +103,7 @@ int main(int argc, char** argv) {
             auto inflate = [&] {
                 PrCompressRead read{};
                 return prCompressCodecDecode(compressCodec, PrCompressFormat_Zlib,
-                                             PrByteView{stream.data, stream.count}, inflated.data, inflated.capacity,
-                                             &read);
+                    PrByteView{stream.data, stream.count}, inflated.data, inflated.capacity, &read);
             };
             if (inflate() == PrStatus_Ok) {
                 HarnessCounters inflating = harnessMeasure([&] { inflate(); });

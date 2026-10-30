@@ -59,7 +59,7 @@ PrLayoutNode captionRow(PrKit* kit, PrLayoutNode parent, PrStringView text, floa
 // Creates a numbered section: a header of its number, its title and, at the header's end, its lede, then its
 // description, if any, in a column of a fixed measure. Returns the section, which takes the section's panels.
 PrLayoutNode sectionFrame(PrKit* kit, PrLayoutNode parent, PrStringView number, PrStringView title, PrStringView lede,
-                          PrStringView description);
+    PrStringView description);
 
 // Creates a panel of specimens: a card with a captioned header and `tags` at its end, and returns its body. The body of
 // a bare panel has no padding and no gap, so that its content reaches the card's edges and meets edge to edge.
@@ -68,7 +68,7 @@ PrLayoutNode demoPanel(PrKit* kit, PrLayoutNode parent, PrStringView title, PrSt
 // Creates a segmented control of `count` items. The item at index `*selected` is selected, and activating an item
 // writes its index to `selected`.
 PrLayoutNode segmented(PrKit* kit, PrLayoutNode parent, const PrKitChoice* items, uint32_t count, uint32_t* selected,
-                       PrKitChoiceStyle style);
+    PrKitChoiceStyle style);
 
 // A grid of equal columns, declared a cell at a time.
 struct Grid {

@@ -34,21 +34,27 @@ constexpr uint32_t kSymbolMaxBits = 48;
 
 // The lengths encoded by the codes of the literal alphabet from symbol 257 up, and the extra bits that each reads (rfc
 // 1951 3.2.5).
-constexpr uint16_t kLengthBase[] = {3,  4,  5,  6,  7,  8,  9,  10, 11,  13,  15,  17,  19,  23, 27,
-                                    31, 35, 43, 51, 59, 67, 83, 99, 115, 131, 163, 195, 227, 258};
-constexpr uint8_t kLengthExtra[] = {0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2,
-                                    2, 3, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 5, 0};
+constexpr uint16_t kLengthBase[] = {
+    3,  4,  5,  6,  7,  8,  9,  10, 11,  13,  15,  17,  19,  23, 27,
+    31, 35, 43, 51, 59, 67, 83, 99, 115, 131, 163, 195, 227, 258,
+};
+constexpr uint8_t kLengthExtra[] = {
+    0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2,
+    2, 3, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 5, 0,
+};
 
 // The distances encoded by the codes of the distance alphabet, and their extra bits (rfc 1951 3.2.5).
 constexpr uint16_t kDistanceBase[] = {
     1,   2,   3,   4,   5,   7,    9,    13,   17,   25,   33,   49,   65,    97,    129,
-    193, 257, 385, 513, 769, 1025, 1537, 2049, 3073, 4097, 6145, 8193, 12289, 16385, 24577};
-constexpr uint8_t kDistanceExtra[] = {0, 0, 0, 0, 1, 1, 2, 2,  3,  3,  4,  4,  5,  5,  6,
-                                      6, 7, 7, 8, 8, 9, 9, 10, 10, 11, 11, 12, 12, 13, 13};
+    193, 257, 385, 513, 769, 1025, 1537, 2049, 3073, 4097, 6145, 8193, 12289, 16385, 24577,
+};
+constexpr uint8_t kDistanceExtra[] = {
+    0, 0, 0, 0, 1, 1, 2, 2,  3,  3,  4,  4,  5,  5,  6,
+    6, 7, 7, 8, 8, 9, 9, 10, 10, 11, 11, 12, 12, 13, 13,
+};
 
 // The order in which the lengths of the code length alphabet are stored (rfc 1951 3.2.7).
-constexpr uint8_t kCodeLengthOrder[] = {16, 17, 18, 0, 8,  7, 9,  6, 10, 5,
-                                        11, 4,  12, 3, 13, 2, 14, 1, 15};
+constexpr uint8_t kCodeLengthOrder[] = {16, 17, 18, 0, 8,  7, 9,  6, 10, 5, 11, 4,  12, 3, 13, 2, 14, 1, 15};
 
 // A canonical Huffman code: code lengths, symbols in code-assignment order, and a lookup table for the short codes. The
 // lookup is indexed by the next bits of the stream, first bit lowest. It indexes as many bits as the longest code has,
@@ -296,8 +302,7 @@ typedef uint8_t SymbolResult;
 
 // Decodes the symbol whose code starts `bits`, of which the low `available` bits come from the stream. Sets `length` to
 // the length of the code.
-SymbolResult decodeSymbol(const Huffman& table, uint64_t bits, uint32_t available, uint32_t& symbol,
-                          uint32_t& length) {
+SymbolResult decodeSymbol(const Huffman& table, uint64_t bits, uint32_t available, uint32_t& symbol, uint32_t& length) {
     const uint32_t entry = table.fast[bits & table.fastMask];
     if (entry != 0) {
         length = entry & 15;
@@ -428,8 +433,8 @@ void decodeFast(Deflate& parser, InflateSpan& span) {
             break;
         }
         const uint32_t matchLength = kLengthBase[symbol - 257] + take(kLengthExtra[symbol - 257]);
-        if (decodeSymbol(*parser.distanceCodes, bits, count, symbol, length) != SymbolResult_Decoded
-            || symbol >= countOf(kDistanceBase)) {
+        if (decodeSymbol(*parser.distanceCodes, bits, count, symbol, length) != SymbolResult_Decoded ||
+                symbol >= countOf(kDistanceBase)) {
             parser.phase = InflatePhase_Invalid;
             break;
         }
@@ -543,20 +548,16 @@ InflateResult decodeDeflate(Deflate& parser, InflateSpan& span) {
                     parser.codeLengths[kCodeLengthOrder[parser.tableAt++]] = uint8_t(value);
                     break;
                 }
-                if (!buildHuffman(parser.codes, parser.codeLengths,
-                                  uint32_t(countOf(parser.codeLengths)))
-                    || !parser.codes.maximum
-                    || (parser.codes.maximum == 1 && parser.codes.counts[1] != 2))
+                if (!buildHuffman(parser.codes, parser.codeLengths, uint32_t(countOf(parser.codeLengths))) ||
+                        !parser.codes.maximum || (parser.codes.maximum == 1 && parser.codes.counts[1] != 2))
                     return InflateResult_Invalid;
                 parser.tableAt = 0;
                 parser.phase = InflatePhase_TableLengths;
                 break;
             case InflatePhase_TableLengths: {
                 if (parser.tableAt == parser.literalCount + parser.distanceCount) {
-                    if (!parser.lengths[256]
-                        || !buildHuffman(parser.literals, parser.lengths, parser.literalCount)
-                        || !buildHuffman(parser.distances, parser.lengths + parser.literalCount,
-                                         parser.distanceCount))
+                    if (!parser.lengths[256] || !buildHuffman(parser.literals, parser.lengths, parser.literalCount) ||
+                            !buildHuffman(parser.distances, parser.lengths + parser.literalCount, parser.distanceCount))
                         return InflateResult_Invalid;
                     parser.literalCodes = &parser.literals;
                     parser.distanceCodes = &parser.distances;
@@ -591,8 +592,8 @@ InflateResult decodeDeflate(Deflate& parser, InflateSpan& span) {
                 parser.phase = InflatePhase_TableLengths;
                 break;
             case InflatePhase_Symbol: {
-                if (parser.bitCount + (span.input.size - span.consumed) * 8 >= kSymbolMaxBits
-                    && span.capacity - span.written >= kMaxMatch + kMatchSlack) {
+                if (parser.bitCount + (span.input.size - span.consumed) * 8 >= kSymbolMaxBits &&
+                        span.capacity - span.written >= kMaxMatch + kMatchSlack) {
                     const size_t consumed = span.consumed;
                     const size_t written = span.written;
                     const InflatePhase phase = parser.phase;
@@ -657,8 +658,8 @@ InflateResult decodeDeflate(Deflate& parser, InflateSpan& span) {
                     return InflateResult_Output;
                 // Copies as much of the match as the output has room for. The copy reads from the history while the
                 // match reaches back past this call's output, and then from the output.
-                while (parser.remaining != 0 && span.written != span.capacity
-                       && parser.distance > span.written - span.base) {
+                while (parser.remaining != 0 && span.written != span.capacity &&
+                        parser.distance > span.written - span.base) {
                     span.output[span.written] = byteBack(parser, span, parser.distance);
                     ++span.written;
                     --parser.remaining;
@@ -693,8 +694,7 @@ bool readHeader(InflateState& parser, InflateSpan& span, uint32_t size) {
 }
 
 void checksumHeader(InflateState& parser, InflateSpan& span, size_t first) {
-    const PrByteView bytes{span.input.data ? span.input.data + first : nullptr,
-                           span.consumed - first};
+    const PrByteView bytes{span.input.data ? span.input.data + first : nullptr, span.consumed - first};
     parser.headerCrc = crc32Update(parser.headerCrc, bytes);
 }
 
@@ -705,8 +705,7 @@ InflateResult readFrame(InflateState& parser, InflateSpan& span, bool final) {
             case InflateFrame_ZlibHeader:
                 if (!readHeader(parser, span, 2))
                     return InflateResult_Input;
-                if ((parser.header[0] & 15) != 8 || (parser.header[0] >> 4) > 7
-                    || readBeU16(parser.header) % 31)
+                if ((parser.header[0] & 15) != 8 || (parser.header[0] >> 4) > 7 || readBeU16(parser.header) % 31)
                     return InflateResult_Invalid;
                 parser.deflate.windowLimit = 1u << ((parser.header[0] >> 4) + 8);
                 parser.frame = (parser.header[1] & 32) ? InflateFrame_DictionaryId : InflateFrame_Data;
@@ -724,8 +723,7 @@ InflateResult readFrame(InflateState& parser, InflateSpan& span, bool final) {
                 checksumHeader(parser, span, first);
                 if (!ready)
                     return InflateResult_Input;
-                if (parser.header[0] != 0x1f || parser.header[1] != 0x8b || parser.header[2] != 8
-                    || (parser.header[3] & 0xe0))
+                if (parser.header[0] != 0x1f || parser.header[1] != 0x8b || parser.header[2] != 8 || (parser.header[3] & 0xe0))
                     return InflateResult_Invalid;
                 // Preserve FLG while the scratch header receives the extra length and CRC.
                 parser.frame = InflateFrame_ExtraLength;
@@ -745,8 +743,7 @@ InflateResult readFrame(InflateState& parser, InflateSpan& span, bool final) {
                 break;
             case InflateFrame_Extra: {
                 const size_t available = span.input.size - span.consumed;
-                const uint32_t count =
-                    available < parser.remaining ? uint32_t(available) : parser.remaining;
+                const uint32_t count = available < parser.remaining ? uint32_t(available) : parser.remaining;
                 span.consumed += count;
                 parser.remaining -= count;
                 checksumHeader(parser, span, first);
@@ -769,8 +766,7 @@ InflateResult readFrame(InflateState& parser, InflateSpan& span, bool final) {
                     if (parser.header[3] & flag)
                         return InflateResult_Input;
                 }
-                parser.frame =
-                    parser.frame == InflateFrame_Name ? InflateFrame_Comment : InflateFrame_HeaderCrc;
+                parser.frame = parser.frame == InflateFrame_Name ? InflateFrame_Comment : InflateFrame_HeaderCrc;
                 break;
             }
             case InflateFrame_HeaderCrc:
@@ -785,8 +781,7 @@ InflateResult readFrame(InflateState& parser, InflateSpan& span, bool final) {
             case InflateFrame_Data: {
                 const size_t start = span.written;
                 const InflateResult result = readDeflate(parser.deflate, span);
-                const PrByteView bytes{span.output ? span.output + start : nullptr,
-                                       span.written - start};
+                const PrByteView bytes{span.output ? span.output + start : nullptr, span.written - start};
                 if (parser.format == InflateFormat_Zlib)
                     parser.checksum = adler32Update(parser.checksum, bytes);
                 else if (parser.format == InflateFormat_Gzip)
@@ -794,8 +789,7 @@ InflateResult readFrame(InflateState& parser, InflateSpan& span, bool final) {
                 parser.size += uint32_t(bytes.size);
                 if (result != InflateResult_Done)
                     return result;
-                parser.frame =
-                    parser.format == InflateFormat_Raw ? InflateFrame_Done : InflateFrame_Trailer;
+                parser.frame = parser.format == InflateFormat_Raw ? InflateFrame_Done : InflateFrame_Trailer;
                 break;
             }
             case InflateFrame_Trailer:
@@ -806,8 +800,7 @@ InflateResult readFrame(InflateState& parser, InflateSpan& span, bool final) {
                         return InflateResult_Invalid;
                     parser.frame = InflateFrame_Done;
                 } else {
-                    if (readLeU32(parser.header) != parser.checksum
-                        || readLeU32(parser.header + 4) != parser.size)
+                    if (readLeU32(parser.header) != parser.checksum || readLeU32(parser.header + 4) != parser.size)
                         return InflateResult_Invalid;
                     parser.frame = InflateFrame_Member;
                 }
@@ -845,11 +838,9 @@ void inflateReset(Inflate* parser, InflateFormat format) {
     PR_ASSERT(parser && format <= InflateFormat_Gzip);
     resetDeflate(parser->deflate);
     parser->format = format;
-    static constexpr InflateFrame frames[] = {InflateFrame_Data, InflateFrame_ZlibHeader,
-                                              InflateFrame_GzipHeader};
+    static constexpr InflateFrame frames[] = {InflateFrame_Data, InflateFrame_ZlibHeader, InflateFrame_GzipHeader};
     parser->frame = frames[format];
-    parser->headerSize = parser->headerCrc = parser->size = parser->remaining = parser->dictionary =
-        0;
+    parser->headerSize = parser->headerCrc = parser->size = parser->remaining = parser->dictionary = 0;
     parser->checksum = format == InflateFormat_Zlib ? 1 : 0;
 }
 
@@ -868,8 +859,7 @@ bool inflateSetDictionary(Inflate* parser, PrByteView dictionary) {
     if (adler32Update(1, dictionary) != parser->dictionary)
         return false;
     Deflate& deflate = parser->deflate;
-    uint32_t count =
-        dictionary.size < deflate.windowLimit ? uint32_t(dictionary.size) : deflate.windowLimit;
+    uint32_t count = dictionary.size < deflate.windowLimit ? uint32_t(dictionary.size) : deflate.windowLimit;
     if (count != 0)
         memCopy(deflate.history, dictionary.data + dictionary.size - count, count);
     deflate.historySize = count;
@@ -879,7 +869,7 @@ bool inflateSetDictionary(Inflate* parser, PrByteView dictionary) {
 }
 
 InflateResult inflateRead(Inflate* parser, PrByteView bytes, bool final, size_t* consumed,
-                          uint8_t* output, size_t capacity, size_t* written) {
+        uint8_t* output, size_t capacity, size_t* written) {
     PR_ASSERT(parser && (bytes.data || !bytes.size));
     PR_ASSERT(consumed && written && (output || !capacity));
     InflateSpan span{bytes, 0, output, capacity, 0, 0};

@@ -71,8 +71,7 @@ SamplingRefs emitModelAndPrompts(ComfyGraph& g, const SamplingRecipe& recipe) {
 }
 
 // Writes a KSampler over `latent` with the recipe's settings.
-void emitSampler(ComfyGraph& g, const SamplingRecipe& recipe, const SamplingRefs& refs, ComfyRef latent,
-                 double denoise) {
+void emitSampler(ComfyGraph& g, const SamplingRecipe& recipe, const SamplingRefs& refs, ComfyRef latent, double denoise) {
     g.node("sampler", "KSampler");
     g.setRef("model", refs.model());
     g.setRef("positive", {"positive", 0});
@@ -324,7 +323,7 @@ PrStringView directionName(OutpaintDirection direction) {
 
 OutpaintDirection parseDirection(PrStringView name, OutpaintDirection fallback) {
     for (OutpaintDirection direction : {OutpaintDirection_Left, OutpaintDirection_Top, OutpaintDirection_Right,
-                                        OutpaintDirection_Bottom}) {
+        OutpaintDirection_Bottom}) {
         if (asciiContainsFold(name, directionName(direction)))
             return direction;
     }
@@ -344,8 +343,10 @@ double upscaleModelFactor(PrStringView model) {
         PrStringView tag;
         double factor;
     };
-    static constexpr Tag kTags[] = {{"x2", 2}, {"2x", 2}, {"x3", 3}, {"3x", 3},
-                                    {"x4", 4}, {"4x", 4}, {"x8", 8}, {"8x", 8}};
+    static constexpr Tag kTags[] = {
+        {"x2", 2}, {"2x", 2}, {"x3", 3}, {"3x", 3},
+        {"x4", 4}, {"4x", 4}, {"x8", 8}, {"8x", 8},
+    };
     for (const Tag& tag : kTags) {
         if (asciiContainsFold(model, tag.tag))
             return tag.factor;

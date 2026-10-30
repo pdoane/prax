@@ -41,8 +41,8 @@ inline bool layoutLengthIsStretch(PrLayoutLength length) {
 }
 // Returns true if a length is min-content, max-content or fit-content, which size a box from its content.
 inline bool layoutLengthIsContentBased(PrLayoutLength length) {
-    return length.bits == prLayoutLengthMinContent().bits || length.bits == prLayoutLengthMaxContent().bits
-           || length.bits == prLayoutLengthFitContent().bits;
+    return length.bits == prLayoutLengthMinContent().bits || length.bits == prLayoutLengthMaxContent().bits ||
+        length.bits == prLayoutLengthFitContent().bits;
 }
 inline bool layoutLengthIsFixed(PrLayoutLength length) {
     return prLayoutWordKind(length.bits) != PrLayoutWordKind_Keyword;
@@ -110,7 +110,7 @@ inline bool layoutBaselineShiftIsKeyword(PrLayoutBaselineShift shift) {
 // Returns the units by which a baseline shift that is not a keyword raises its box. Its percentages are of
 // `lineHeight`.
 inline PrLayoutUnit layoutBaselineShiftRaise(const LayoutCompounds* compounds, PrLayoutBaselineShift shift,
-                                             PrLayoutUnit lineHeight) {
+        PrLayoutUnit lineHeight) {
     return layoutLengthResolve(compounds, PrLayoutLength{shift.bits}, lineHeight);
 }
 
@@ -118,8 +118,8 @@ inline PrLayoutUnit layoutBaselineShiftRaise(const LayoutCompounds* compounds, P
 inline PrLayoutUnit layoutLineHeight(PrLayoutLineHeight height, PrLayoutUnit size, PrLayoutUnit normal) {
     switch (prLayoutWordKind(height.bits)) {
         case PrLayoutWordKind_Number:
-            return prLayoutUnitFromPxDouble(double(prLayoutWordNumberValue(height.bits))
-                                            * prLayoutUnitToPxDouble(size));
+            return prLayoutUnitFromPxDouble(double(prLayoutWordNumberValue(height.bits)) *
+                prLayoutUnitToPxDouble(size));
         case PrLayoutWordKind_Px:
             return prLayoutWordPxValue(height.bits);
         default:

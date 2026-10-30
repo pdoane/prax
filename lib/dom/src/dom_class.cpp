@@ -61,8 +61,7 @@ PrStringView domClassesText(const PrDomDocument* document, uint32_t list) {
 }
 
 Atom domClassesFind(const PrDomDocument* document, PrStringView name) {
-    return document->classes != nullptr ? atomTableFind(&document->classes->names, name)
-                                        : kAtomNone;
+    return document->classes != nullptr ? atomTableFind(&document->classes->names, name) : kAtomNone;
 }
 
 PrStringView domClassesName(const PrDomDocument* document, Atom atom) {

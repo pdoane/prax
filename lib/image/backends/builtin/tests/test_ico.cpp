@@ -18,8 +18,7 @@ void put32(std::vector<uint8_t>& bytes, size_t at, uint32_t value) {
     put16(bytes, at + 2, uint16_t(value >> 16));
 }
 
-std::vector<uint8_t> container(const std::vector<uint8_t>& image, uint8_t width, uint8_t height,
-                               uint16_t bits) {
+std::vector<uint8_t> container(const std::vector<uint8_t>& image, uint8_t width, uint8_t height, uint16_t bits) {
     std::vector<uint8_t> bytes(22 + image.size());
     put16(bytes, 2, 1);
     put16(bytes, 4, 1);
@@ -65,8 +64,7 @@ std::vector<uint8_t> bitmap(uint16_t bits) {
     return container(bytes, 2, 2, bits);
 }
 
-PrStatus open(const std::vector<uint8_t>& bytes, PrImageDecoder** decoder,
-              const PrImageLimits* limits = nullptr) {
+PrStatus open(const std::vector<uint8_t>& bytes, PrImageDecoder** decoder, const PrImageLimits* limits = nullptr) {
     PrImageCodec* codec = testCodec();
     return testDecoderOpen(codec, {.memory = {bytes.data(), bytes.size()}}, limits, decoder);
 }
@@ -95,8 +93,7 @@ TEST_CASE("ICO bitmap palettes, row orientation, and transparency masks") {
         CHECK(prImageDecoderInfo(decoder)->extent.x == 2);
         CHECK(prImageDecoderInfo(decoder)->extent.y == 2);
         CHECK(prImageDecoderInfo(decoder)->format.alpha == PrImageAlpha_Straight);
-        const std::vector<uint8_t> expected = {255, 0, 0,   255, 0,   0, 255, 0,
-                                               0,   0, 255, 255, 255, 0, 0,   255};
+        const std::vector<uint8_t> expected = {255, 0, 0,   255, 0,   0, 255, 0, 0,   0, 255, 255, 255, 0, 0,   255};
         CHECK(decode(decoder) == expected);
         prImageDecoderDestroy(decoder);
     }

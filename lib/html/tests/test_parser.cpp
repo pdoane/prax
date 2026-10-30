@@ -36,13 +36,10 @@ struct Fragment {
     HtmlParser parser = {};
     PrDomNode* node = nullptr;
 
-    Fragment(std::string text, PrStringView context, DomNamespaceId space = PrDomNamespace_Html)
-        : source(std::move(text)) {
+    Fragment(std::string text, PrStringView context, DomNamespaceId space = PrDomNamespace_Html) :
+            source(std::move(text)) {
         htmlParserInit(&parser, document, 0);
-        node = htmlParseFragment(&parser,
-                                 domElementCreate(document, space, domTagFromText(context),
-                                                  context),
-                                 source);
+        node = htmlParseFragment(&parser, domElementCreate(document, space, domTagFromText(context), context), source);
     }
 
     ~Fragment() {
@@ -74,7 +71,7 @@ void writeNode(std::string* out, PrDomNode* node) {
             PrStringView name = domElementName(element);
             out->append(name.data, name.size);
             for (const PrDomAttr* attribute = element->firstAttribute; attribute != nullptr;
-                 attribute = static_cast<const PrDomAttr*>(attribute->next)) {
+                    attribute = static_cast<const PrDomAttr*>(attribute->next)) {
                 PrStringView text = prStringView(&attribute->name);
                 *out += '[';
                 out->append(text.data, text.size);
@@ -133,8 +130,7 @@ void writeNode(std::string* out, PrDomNode* node) {
         }
 
         case PrDomNodeType_ProcessingInstruction: {
-            const PrDomProcessingInstruction* instruction =
-                static_cast<const PrDomProcessingInstruction*>(node);
+            const PrDomProcessingInstruction* instruction = static_cast<const PrDomProcessingInstruction*>(node);
             PrStringView target = prStringView(&instruction->target);
             PrStringView data = prStringView(&instruction->data);
             *out += "<?";
@@ -154,8 +150,7 @@ std::string tree(std::string text, HtmlParseFlags flags = 0) {
     return out;
 }
 
-std::string fragment(std::string text, PrStringView context,
-                     DomNamespaceId space = PrDomNamespace_Html) {
+std::string fragment(std::string text, PrStringView context, DomNamespaceId space = PrDomNamespace_Html) {
     Fragment parse(std::move(text), context, space);
     std::string out;
     writeChildren(&out, parse.node);
@@ -226,13 +221,11 @@ TEST_CASE("an unclosed formatting element is reconstructed") {
 
 TEST_CASE("misnested formatting is repaired by the adoption agency") {
     CHECK(tree("<b><i>a</b>c") == "html(head body(b(i(\"a\")) i(\"c\")))");
-    CHECK(tree("<p>1<b>2<i>3</b>4</i>5</p>")
-          == "html(head body(p(\"1\" b(\"2\" i(\"3\")) i(\"4\") \"5\")))");
+    CHECK(tree("<p>1<b>2<i>3</b>4</i>5</p>") == "html(head body(p(\"1\" b(\"2\" i(\"3\")) i(\"4\") \"5\")))");
 }
 
 TEST_CASE("a formatting element reopened across a block keeps its nesting") {
-    CHECK(tree("<p><b><div><marquee></p></b></div>X")
-          == "html(head body(p(b) div(b(marquee(p \"X\")))))");
+    CHECK(tree("<p><b><div><marquee></p></b></div>X") == "html(head body(p(b) div(b(marquee(p \"X\")))))");
 }
 
 TEST_CASE("a void element takes no children") {
@@ -247,12 +240,10 @@ TEST_CASE("an attribute is lowercased and kept once") {
 TEST_CASE("a selectedcontent takes a copy of the selected option as the parser pops it") {
     // html/#maybe-clone-an-option-into-selectedcontent. The first option is selected once it is in the select, and so
     // is a later option with the selected attribute, even at the end.
-    CHECK(tree("<select><button><selectedcontent></button><option><b>x</b><option>y</select>")
-          == "html(head body(select(button(selectedcontent(b(\"x\"))) option(b(\"x\")) "
-             "option(\"y\"))))");
-    CHECK(tree("<select><button><selectedcontent></button><option>x<option selected>y")
-          == "html(head body(select(button(selectedcontent(\"y\")) option(\"x\") "
-             "option[selected=](\"y\"))))");
+    CHECK(tree("<select><button><selectedcontent></button><option><b>x</b><option>y</select>") ==
+        "html(head body(select(button(selectedcontent(b(\"x\"))) option(b(\"x\")) option(\"y\"))))");
+    CHECK(tree("<select><button><selectedcontent></button><option>x<option selected>y") ==
+        "html(head body(select(button(selectedcontent(\"y\")) option(\"x\") option[selected=](\"y\"))))");
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -264,10 +255,8 @@ TEST_CASE("a table grows the rows it was written without") {
 }
 
 TEST_CASE("text a table cannot hold is fostered out of it") {
-    CHECK(tree("<table>a<tr><td>b")
-          == "html(head body(\"a\" table(tbody(tr(td(\"b\"))))))");
-    CHECK(tree("<table><b>a</b><tr>")
-          == "html(head body(b(\"a\") table(tbody(tr))))");
+    CHECK(tree("<table>a<tr><td>b") == "html(head body(\"a\" table(tbody(tr(td(\"b\"))))))");
+    CHECK(tree("<table><b>a</b><tr>") == "html(head body(b(\"a\") table(tbody(tr))))");
 }
 
 TEST_CASE("whitespace a table can hold stays in it") {
@@ -284,8 +273,7 @@ TEST_CASE("a foreign element keeps its namespace and its spelling") {
 }
 
 TEST_CASE("a foreign attribute is respelled and namespaced") {
-    CHECK(tree("<svg><g xlink:href=a viewbox=b>")
-          == "html(head body(svg:svg(svg:g[href=a][viewBox=b])))");
+    CHECK(tree("<svg><g xlink:href=a viewbox=b>") == "html(head body(svg:svg(svg:g[href=a][viewBox=b])))");
 }
 
 TEST_CASE("an HTML element breaks out of foreign content") {
@@ -301,8 +289,7 @@ TEST_CASE("a CDATA section is text in foreign content and a comment outside it")
 // Templates (html/#parsing-main-inhead)
 
 TEST_CASE("a template holds its children in its content") {
-    CHECK(tree("<template><div></div></template>")
-          == "html(head(template(content div)) body)");
+    CHECK(tree("<template><div></div></template>") == "html(head(template(content div)) body)");
     CHECK(tree("<template></template>") == "html(head(template) body)");
 }
 
@@ -410,7 +397,10 @@ TEST_CASE("a load fires load at the Window after its scripts, and a failed one d
             CHECK(type == "load");
             ++state->loads;
         },
-        &state, 1, nullptr, nullptr,
+        &state,
+        1,
+        nullptr,
+        nullptr,
     };
     PrHtmlPage* page = prHtmlPageCreate(&scripting);
     state.target = prHtmlWindowAsEventTarget(prHtmlPageWindow(page));
@@ -438,16 +428,11 @@ TEST_CASE("a Window keeps its listeners when a new document replaces the old") {
     PrHtmlPage* page = prHtmlPageCreate(nullptr);
     PrHtmlWindow* window = prHtmlPageWindow(page);
     PrDomEventTarget* target = prHtmlWindowAsEventTarget(window);
-    CHECK(prHtmlPageLoad(page, "<p>first", "about:blank",
-                         nullptr)
-          == PrStatus_Ok);
+    CHECK(prHtmlPageLoad(page, "<p>first", "about:blank", nullptr) == PrStatus_Ok);
     prDomEventTargetAddEventListener(target, "test", &callback, nullptr);
-    prDomEventTargetAddEventListener(prDomDocumentAsEventTarget(prHtmlWindowDocument(window)),
-                                     "test", &callback, nullptr);
+    prDomEventTargetAddEventListener(prDomDocumentAsEventTarget(prHtmlWindowDocument(window)), "test", &callback, nullptr);
     CHECK(state.references == 2);
-    CHECK(prHtmlPageLoad(page, "<p>second", "about:blank",
-                         nullptr)
-          == PrStatus_Ok);
+    CHECK(prHtmlPageLoad(page, "<p>second", "about:blank", nullptr) == PrStatus_Ok);
     CHECK(state.references == 1);
     CHECK(prHtmlPageWindow(page) == window);
     PrDomEvent* event = prDomEventCreate("test", nullptr);

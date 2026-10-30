@@ -25,8 +25,7 @@ struct DomXmlScripting {
 // parser does not read (PrXmlHandler::entity).
 struct DomXmlEntities {
     void* PR_NULLABLE context;
-    PrStringView (*PR_NONNULL resolve)(void* PR_NULLABLE context, PrStringView publicId,
-                                       PrStringView name);
+    PrStringView (*PR_NONNULL resolve)(void* PR_NULLABLE context, PrStringView publicId, PrStringView name);
 };
 
 // A parse of an XML document's source into a document, as the source arrives. The builder holds a reference to each
@@ -43,7 +42,7 @@ struct DomXmlBuilder {
 
 // Starts a parse into `document`, which must have no children. `entities` must outlive the builder.
 void domXmlBuilderInit(DomXmlBuilder* builder, PrDomDocument* document, DomXmlScripting scripting,
-                       const DomXmlEntities* PR_NULLABLE entities);
+    const DomXmlEntities* PR_NULLABLE entities);
 
 // Frees the parse, and releases the elements that it holds. The document keeps what was built.
 void domXmlBuilderReset(DomXmlBuilder* builder);
@@ -52,7 +51,7 @@ void domXmlBuilderReset(DomXmlBuilder* builder);
 // Returns Syntax if the document is not well-formed, and `error` describes where. The document holds the content parsed
 // before the error.
 PrStatus domXmlParse(PrDomDocument* document, PrStringView source, DomXmlScripting scripting,
-                     const DomXmlEntities* PR_NULLABLE entities, PrXmlError* PR_NULLABLE error);
+    const DomXmlEntities* PR_NULLABLE entities, PrXmlError* PR_NULLABLE error);
 
 // Finds the charset of an XML document's bytes, and writes it to `*out`. The charset is that of the byte order mark, or
 // else `transport`, the charset of the document's Content-Type, or else the one the document declares

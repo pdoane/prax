@@ -128,8 +128,8 @@ enum {
     // The space held outside markers, or a table cell's baseline or borders. The context record holds them
     // (LayoutCacheContext::marker, LayoutCacheContext::cell).
     LayoutCacheFlag_SpaceExtras = 1 << 15,
-    LayoutCacheFlag_Requests = LayoutCacheFlag_InlineFixed | LayoutCacheFlag_BlockFixed | LayoutCacheFlag_BlockContent
-                               | LayoutCacheFlag_BlockDefinite,
+    LayoutCacheFlag_Requests = LayoutCacheFlag_InlineFixed | LayoutCacheFlag_BlockFixed | LayoutCacheFlag_BlockContent |
+        LayoutCacheFlag_BlockDefinite,
 };
 typedef uint16_t LayoutCacheFlags;
 static_assert((LayoutResultFlag_All & (LayoutCacheFlag_InContext | LayoutCacheFlag_Plain)) == 0);
@@ -370,12 +370,12 @@ void layoutCacheInvalidate(LayoutCache& cache, LayoutNodeIndex node);
 // with `edges`, and its own result is still valid in the fallback that `containing` gives, sets `*out` to the box as
 // its holder placed it and returns true. Otherwise returns false.
 bool layoutCacheFindAbsolute(LayoutState& state, LayoutNodeIndex node, const LayoutAbsoluteBlock& containing,
-                             PrLayoutVec at, LayoutStaticEdges edges, LayoutChild* out);
+    PrLayoutVec at, LayoutStaticEdges edges, LayoutChild* out);
 
 // Caches where the holder placed the box out of flow `node`, against the containing block `containing` at the static
 // position `at` with `edges`.
 void layoutCacheStoreAbsolute(LayoutState& state, LayoutNodeIndex node, const LayoutAbsoluteBlock& containing,
-                              PrLayoutVec at, LayoutStaticEdges edges, PrLayoutVec offset);
+    PrLayoutVec at, LayoutStaticEdges edges, PrLayoutVec offset);
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Placements
@@ -394,8 +394,9 @@ void layoutCachePlace(LayoutCache& cache, LayoutNodeIndex node, const LayoutFrag
 // Returns the placement of `node` that the last layout recorded. A node that no layout placed has the viewport as its
 // parent, at the origin. A box has a placement from the last layout only if it and its ancestors generate boxes.
 inline LayoutPlacement layoutCachePlacement(const LayoutCache& cache, LayoutNodeIndex node) {
-    return node < cache.placements.count ? cache.placements.data[node]
-                                         : LayoutPlacement{.parent = kPrLayoutNodeNone, .offset = PrLayoutVec{}};
+    if (node < cache.placements.count)
+        return cache.placements.data[node];
+    return LayoutPlacement{.parent = kPrLayoutNodeNone, .offset = PrLayoutVec{}};
 }
 
 // Returns the fragment that the last layout placed the box `node` with, or null if it placed none. If the box is in the
@@ -425,25 +426,23 @@ struct LayoutResolvedInline {
 // A result laid out when a different size was available differs only if the box resolves to a different inline size,
 // and is not taken here (layoutCacheFindResized).
 bool layoutCacheFind(LayoutState& state, LayoutNodeIndex node, const LayoutSpace& space,
-                     const LayoutRequests* PR_NULLABLE requests, LayoutResult* out);
+    const LayoutRequests* PR_NULLABLE requests, LayoutResult* out);
 
 // Returns true if the box of `node` holds a result, laid out when a different size was available, that may still be
 // valid in `space` at `requests`. The box must be an in-flow block container that is not an orthogonal flow root and
 // whose inline size did not fill the available size. If it is in a context, it must have seen no floats.
 bool layoutCacheMayResize(const LayoutState& state, LayoutNodeIndex node, const LayoutSpace& space,
-                          const LayoutRequests* PR_NULLABLE requests);
+    const LayoutRequests* PR_NULLABLE requests);
 
 // Takes the result that layoutCacheFind takes, or a result laid out when a different size was available if `resolved`,
 // the sizing of the box in `space`, gives the same inline size. The taken result uses the new inline-start margin.
 bool layoutCacheFindResized(LayoutState& state, LayoutNodeIndex node, const LayoutSpace& space,
-                            const LayoutRequests* PR_NULLABLE requests, const LayoutResolvedInline& resolved,
-                            LayoutResult* out);
+    const LayoutRequests* PR_NULLABLE requests, const LayoutResolvedInline& resolved, LayoutResult* out);
 
 // Keeps the result of laying out the box of `node` in `space` at `requests` for the next layout in the same space. In a
 // context, also keeps `reads`, what its subtree read of the context, and the floats it placed.
 void layoutCacheStore(LayoutState& state, LayoutNodeIndex node, const LayoutSpace& space,
-                      const LayoutRequests* PR_NULLABLE requests, const LayoutResult& result,
-                      const LayoutReads* PR_NULLABLE reads);
+    const LayoutRequests* PR_NULLABLE requests, const LayoutResult& result, const LayoutReads* PR_NULLABLE reads);
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Measurements
@@ -453,14 +452,13 @@ void layoutCacheStore(LayoutState& state, LayoutNodeIndex node, const LayoutSpac
 // read, and nothing may have changed since. Otherwise returns false. The record keeps ownership of the clamps of the
 // baselines.
 bool layoutCacheFindMeasure(LayoutState& state, LayoutNodeIndex node, const LayoutSpace& space,
-                            const LayoutRequests& requests, LayoutMeasureKind kind, PrLayoutUnit* blockSize,
-                            LayoutBaselines* baselines);
+    const LayoutRequests& requests, LayoutMeasureKind kind, PrLayoutUnit* blockSize, LayoutBaselines* baselines);
 
 // Keeps the answer that the box of `node` gave a measurement of `kind` in `space` at `requests`, whose result had
 // `flags`. The answer replaces a record of the same request that holds less, and otherwise the oldest record.
 void layoutCacheStoreMeasure(LayoutState& state, LayoutNodeIndex node, const LayoutSpace& space,
-                             const LayoutRequests& requests, LayoutMeasureKind kind, LayoutResultFlags flags,
-                             PrLayoutUnit blockSize, const LayoutBaseline& first, const LayoutBaseline& last);
+    const LayoutRequests& requests, LayoutMeasureKind kind, LayoutResultFlags flags,
+    PrLayoutUnit blockSize, const LayoutBaseline& first, const LayoutBaseline& last);
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Lines
@@ -483,11 +481,11 @@ void layoutLineRecordClear(LayoutLineRecord& record);
 // Takes the intrinsic sizes that the cache holds for the box of `node` measured in `input` into `out`. Returns false if
 // there are none.
 bool layoutCacheFindIntrinsic(LayoutState& state, LayoutNodeIndex node, const LayoutIntrinsicInput& input,
-                              LayoutIntrinsicSizes* out);
+    LayoutIntrinsicSizes* out);
 
 // Keeps the intrinsic sizes of the box of `node` measured in `input`.
 void layoutCacheStoreIntrinsic(LayoutState& state, LayoutNodeIndex node, const LayoutIntrinsicInput& input,
-                               const LayoutIntrinsicSizes& sizes);
+    const LayoutIntrinsicSizes& sizes);
 
 } // namespace pr_impl
 

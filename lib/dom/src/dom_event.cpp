@@ -48,8 +48,7 @@ void wheelListenersChanged(PrDomEventTarget* target) {
         domNotifyWheelListenersChanged(element);
 }
 
-DomEventHandlerEntry* PR_NULLABLE findHandler(const DomListeners* PR_NULLABLE listeners,
-                                              PrDomEventHandler handler) {
+DomEventHandlerEntry* PR_NULLABLE findHandler(const DomListeners* PR_NULLABLE listeners, PrDomEventHandler handler) {
     if (listeners == nullptr)
         return nullptr;
     for (uint32_t i = 0; i < listeners->handlers.count; ++i) {
@@ -68,18 +67,15 @@ void processHandler(void* PR_NULLABLE context, PrDomEvent* handle) {
     PrDomEventHandlerCallback callback = {};
     for (uint32_t i = 0; listeners != nullptr && i < listeners->handlers.count; ++i) {
         const DomEventHandlerEntry& handler = listeners->handlers.data[i];
-        if (handler.listening
-            && domEventHandlerType(handler.handler) == prStringView(&event->type)) {
+        if (handler.listening && domEventHandlerType(handler.handler) == prStringView(&event->type)) {
             callback = domEventHandler(target, handler.handler);
             break;
         }
     }
     if (callback.invoke == nullptr)
         return;
-    bool error = event->kind == PrDomEventKind_Error
-                 && prStringView(&event->type) == "error"
-                 && event->currentTarget != nullptr
-                 && event->currentTarget->type == DomTargetType_Window;
+    bool error = event->kind == PrDomEventKind_Error && prStringView(&event->type) == "error" &&
+        event->currentTarget != nullptr && event->currentTarget->type == DomTargetType_Window;
     if (callback.retain != nullptr)
         callback.retain(callback.context);
     PrDomEventHandlerResult result = callback.invoke(callback.context, handle, error);
@@ -124,19 +120,16 @@ void activate(PrDomEventTarget* target, DomEventHandlerEntry* entry) {
     entry->listening = true;
 }
 
-bool matches(const DomListener& entry, PrStringView type, const PrDomEventListener* callback,
-             bool capture) {
-    return entry.capture == capture && entry.callback.invoke == callback->invoke
-           && entry.callback.identity == callback->identity
-           && prStringView(&entry.type) == type;
+bool matches(const DomListener& entry, PrStringView type, const PrDomEventListener* callback, bool capture) {
+    return entry.capture == capture && entry.callback.invoke == callback->invoke &&
+        entry.callback.identity == callback->identity && prStringView(&entry.type) == type;
 }
 
 // dom/#get-the-parent: returns a node's parent, a shadow root's host, or a document's Window, for an event of `type`
 // that is composed if `composed` is set. A shadow root has no parent if the event is not composed and the shadow root
 // is the root of the event's target. A document has no parent for a load event. `origin` is the target that the path
 // starts from.
-PrDomEventTarget* PR_NULLABLE parentOf(PrDomEventTarget* target, PrStringView type, bool composed,
-                                       PrDomEventTarget* origin) {
+PrDomEventTarget* PR_NULLABLE parentOf(PrDomEventTarget* target, PrStringView type, bool composed, PrDomEventTarget* origin) {
     PrDomNode* node = domNodeFromTarget(target);
     if (node == nullptr)
         return nullptr;
@@ -210,9 +203,9 @@ void invokeListeners(PrDomEventTarget* owner, PrDomEvent* event, bool capture, b
         uint32_t index = 0;
         for (; index < listeners->entries.count; ++index) {
             const DomListener& entry = listeners->entries.data[index];
-            if (entry.id > previous && entry.id <= last && entry.capture == capture
-                && prStringView(&entry.type) == prStringView(&event->type)
-                && (handlers || entry.callback.invoke != processHandler))
+            if (entry.id > previous && entry.id <= last && entry.capture == capture &&
+                    prStringView(&entry.type) == prStringView(&event->type) &&
+                    (handlers || entry.callback.invoke != processHandler))
                 break;
         }
         if (index == listeners->entries.count)
@@ -433,8 +426,7 @@ void domEventCancel(PrDomEvent* event) {
         event->canceled = true;
 }
 
-bool domEventDispatch(PrDomEventTarget* target, PrDomEvent* event,
-                      PrDomEventTarget* PR_NULLABLE targetOverride) {
+bool domEventDispatch(PrDomEventTarget* target, PrDomEvent* event, PrDomEventTarget* PR_NULLABLE targetOverride) {
     event->dispatching = true;
     PrDomEventTarget* origin = targetOverride != nullptr ? targetOverride : target;
     // A click that is a MouseEvent activates its target or, if the event bubbles, the nearest parent with activation
@@ -447,19 +439,17 @@ bool domEventDispatch(PrDomEventTarget* target, PrDomEvent* event,
     if (related == nullptr || retarget(related, target) != target || target == related) {
         PrDomEventTarget* scope = target;
         for (PrDomEventTarget* item = target; item != nullptr;
-             item = parentOf(item, prStringView(&event->type), event->composed, target)) {
+                item = parentOf(item, prStringView(&event->type), event->composed, target)) {
             PrDomNode* node = domNodeFromTarget(item);
             PrDomNode* scopeNode = domNodeFromTarget(scope);
-            bool under =
-                node == nullptr
-                || (scopeNode != nullptr && shadowIncludingAncestor(domNodeRoot(scopeNode), node));
+            bool under = node == nullptr || (scopeNode != nullptr && shadowIncludingAncestor(domNodeRoot(scopeNode), node));
             if (item != target && !under) {
                 if (related != nullptr && item == retarget(related, item))
                     break;
                 scope = item;
             }
-            if (item != target && activation && event->bubbles && activationTarget == nullptr
-                && hasActivationBehavior(item))
+            if (item != target && activation && event->bubbles && activationTarget == nullptr &&
+                    hasActivationBehavior(item))
                 activationTarget = item;
             event->path.push(item);
         }
@@ -487,8 +477,7 @@ bool domEventDispatch(PrDomEventTarget* target, PrDomEvent* event,
     }
     // dom/#concept-event-dispatch leaves the targets retargeted to the outermost tree, and clears them if that tree is
     // still a shadow tree.
-    PrDomEventTarget* outermost =
-        event->path.count != 0 ? event->path.last() : origin;
+    PrDomEventTarget* outermost = event->path.count != 0 ? event->path.last() : origin;
     domEventTargetAssign(&event->target, retarget(origin, outermost));
     domEventTargetAssign(&event->relatedTarget, retarget(related, outermost));
     auto inShadow = [](PrDomEventTarget* PR_NULLABLE item) {
@@ -522,7 +511,7 @@ PrDomEventTarget* PR_NULLABLE domRetarget(PrDomEventTarget* PR_NULLABLE target, 
 }
 
 bool domEventFire(PrDomEventTarget* target, PrStringView type, const PrDomEventInit& init,
-                  PrDomEventTarget* PR_NULLABLE targetOverride) {
+        PrDomEventTarget* PR_NULLABLE targetOverride) {
     PrDomEvent* event = domEventCreate(type, init);
     event->trusted = true;
     bool proceed = domEventDispatch(target, event, targetOverride);
@@ -558,8 +547,7 @@ bool domDefaultPassive(const PrDomEventTarget* target, PrStringView type) {
     if (node == nullptr)
         return false;
     PrDomDocument* document = node->document;
-    return node == document || node == domDocumentElement(document)
-           || node == domDocumentBody(document);
+    return node == document || node == domDocumentElement(document) || node == domDocumentBody(document);
 }
 
 bool domHasBlockingWheelListener(const PrDomEventTarget* target) {
@@ -581,7 +569,7 @@ bool domWheelPathBlocks(PrDomEventTarget* target) {
 }
 
 void domListenerAdd(PrDomEventTarget* target, PrStringView type, const PrDomEventListener* callback,
-                    const PrDomAddEventListenerOptions* PR_NULLABLE options) {
+        const PrDomAddEventListenerOptions* PR_NULLABLE options) {
     PrDomAddEventListenerOptions settings = {.passive = domDefaultPassive(target, type)};
     if (options != nullptr)
         settings = *options;
@@ -594,14 +582,24 @@ void domListenerAdd(PrDomEventTarget* target, PrStringView type, const PrDomEven
         if (matches(listeners->entries.data[i], type, callback, settings.capture))
             return;
     }
-    DomListener entry{.type = prStringCopy(type), .callback = *callback, .id = ++listeners->nextId,
-                      .capture = settings.capture, .passive = settings.passive, .once = settings.once};
+    DomListener entry{
+        .type = prStringCopy(type),
+        .callback = *callback,
+        .id = ++listeners->nextId,
+        .capture = settings.capture,
+        .passive = settings.passive,
+        .once = settings.once,
+    };
     retain(entry.callback);
     if (settings.signal != nullptr) {
         ListenerAbort* abort = alloc<ListenerAbort>();
         *abort = ListenerAbort{target, entry.id};
-        PrDomAbortAlgorithm algorithm = {removeOnAbort, abort, nullptr,
-                                         [](void* context) { prMemoryFree(context); }};
+        PrDomAbortAlgorithm algorithm = {
+            removeOnAbort,
+            abort,
+            nullptr,
+            [](void* context) { prMemoryFree(context); },
+        };
         entry.signal = settings.signal;
         entry.abortId = prDomAbortSignalAdd(settings.signal, &algorithm);
         domAbortSignalRetain(settings.signal);
@@ -611,8 +609,7 @@ void domListenerAdd(PrDomEventTarget* target, PrStringView type, const PrDomEven
         wheelListenersChanged(target);
 }
 
-void domListenerRemove(PrDomEventTarget* target, PrStringView type,
-                       const PrDomEventListener* callback, bool capture) {
+void domListenerRemove(PrDomEventTarget* target, PrStringView type, const PrDomEventListener* callback, bool capture) {
     DomListeners* listeners = target->listeners;
     if (listeners == nullptr)
         return;
@@ -639,9 +636,7 @@ PrDomEventHandlerCallback domEventHandler(PrDomEventTarget* target, PrDomEventHa
         entry->element = nullptr;
         const DomDocumentHost* host = element->document->host;
         PrDomEventHandlerCallback compiled = {};
-        if (host != nullptr
-            && host->compile(host->context, target, element, handler, prStringView(&raw),
-                             &compiled))
+        if (host != nullptr && host->compile(host->context, target, element, handler, prStringView(&raw), &compiled))
             entry->value = compiled;
         prStringReset(&raw);
     }
@@ -649,7 +644,7 @@ PrDomEventHandlerCallback domEventHandler(PrDomEventTarget* target, PrDomEventHa
 }
 
 void domSetEventHandler(PrDomEventTarget* target, PrDomEventHandler handler,
-                        const PrDomEventHandlerCallback* PR_NULLABLE callback) {
+        const PrDomEventHandlerCallback* PR_NULLABLE callback) {
     DomEventHandlerEntry* entry = findHandler(target->listeners, handler);
     if (callback == nullptr || callback->invoke == nullptr) {
         // html/#deactivate-an-event-handler
@@ -671,8 +666,7 @@ void domSetEventHandler(PrDomEventTarget* target, PrDomEventHandler handler,
     activate(target, entry);
 }
 
-void domSetEventHandlerRaw(PrDomEventTarget* target, PrDomEventHandler handler, PrStringView text,
-                           PrDomElement* element) {
+void domSetEventHandlerRaw(PrDomEventTarget* target, PrDomEventHandler handler, PrStringView text, PrDomElement* element) {
     DomEventHandlerEntry* entry = entryOf(target, handler);
     releaseHandler(entry);
     entry->raw = prStringCopy(text);

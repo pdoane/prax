@@ -35,7 +35,7 @@ inline PrImageCodec* testCodec() {
 // Creates a decoder of `codec` and opens `source` with it. Returns the status of the open. `*out` is the decoder if the
 // status is Ok or Truncated, and null otherwise.
 inline PrStatus testDecoderOpen(PrImageCodec* codec, PrImageSource source, const PrImageLimits* PR_NULLABLE limits,
-                                PrImageDecoder* PR_NULLABLE* PR_NONNULL out) {
+        PrImageDecoder* PR_NULLABLE* PR_NONNULL out) {
     PrImageDecoder* decoder = prImageDecoderCreate(codec);
     PrStatus status = prImageDecoderOpen(decoder, source, limits);
     if (status != PrStatus_Ok && status != PrStatus_Truncated) {
@@ -68,7 +68,7 @@ inline size_t testEncodePng(PrPixelView pixels, uint8_t* PR_NULLABLE out, size_t
 // Decodes `frame` as Rgba8 with `alpha` into `size` bytes of packed `pixels`, in displayed orientation if `oriented`.
 // Returns InvalidData if `size` is not the size of the frame.
 inline PrStatus testReadRgba8(PrImageDecoder* decoder, uint32_t frame, bool oriented, PrImageAlpha alpha,
-                              uint8_t* pixels, size_t size) {
+        uint8_t* pixels, size_t size) {
     const PrImageInfo& info = *prImageDecoderInfo(decoder);
     const PrImageOrientation applied = oriented ? info.orientation : PrImageOrientation_Identity;
     const bool swap = prImageOrientationSwapsAxes(applied);
@@ -76,21 +76,19 @@ inline PrStatus testReadRgba8(PrImageDecoder* decoder, uint32_t frame, bool orie
     const uint32_t height = swap ? info.extent.x : info.extent.y;
     if (size != size_t(width) * height * 4)
         return PrStatus_InvalidData;
-    return prImageDecoderReadRgba8(decoder, frame, alpha, applied,
-                                   PrPixels{pixels, size_t(width) * 4, {width, height}});
+    return prImageDecoderReadRgba8(decoder, frame, alpha, applied, PrPixels{pixels, size_t(width) * 4, {width, height}});
 }
 
 // Writes the width and height of the image in `bytes`, swapped if `orientation` applies one that transposes. Returns
 // false if the image does not open.
 inline bool imageSize(const uint8_t* PR_NULLABLE bytes, size_t size, Orientation orientation,
-                      uint32_t* outWidth, uint32_t* outHeight) {
+        uint32_t* outWidth, uint32_t* outHeight) {
     PrImageDecoder* decoder = testImageOpen(bytes, size);
     if (decoder == nullptr) {
         return false;
     }
     const PrImageInfo& info = *prImageDecoderInfo(decoder);
-    const bool swap =
-        orientation == Orientation_FromImage && prImageOrientationSwapsAxes(info.orientation);
+    const bool swap = orientation == Orientation_FromImage && prImageOrientationSwapsAxes(info.orientation);
     *outWidth = swap ? info.extent.y : info.extent.x;
     *outHeight = swap ? info.extent.x : info.extent.y;
     prImageDecoderDestroy(decoder);
@@ -116,14 +114,14 @@ inline bool imageDensity(const uint8_t* PR_NULLABLE bytes, size_t size, float* o
 // Decodes `frame` of the image in `bytes` into `pixels` as straight-alpha Rgba8. A 16-bit image that needs no
 // reorientation is read in its own format, then narrowed to 8 bits. Returns false unless the read is Ok or Truncated.
 inline bool decodeFrame(const uint8_t* PR_NULLABLE bytes, size_t size, Orientation orientation,
-                        uint32_t frame, uint8_t* pixels, size_t pixelsSize) {
+        uint32_t frame, uint8_t* pixels, size_t pixelsSize) {
     PrImageDecoder* decoder = testImageOpen(bytes, size);
     if (decoder == nullptr) {
         return false;
     }
     const PrImageInfo& info = *prImageDecoderInfo(decoder);
-    if (info.format.sample == PrImageSample_U16
-        && (orientation == Orientation_None || info.orientation == PrImageOrientation_Identity)) {
+    if (info.format.sample == PrImageSample_U16 &&
+            (orientation == Orientation_None || info.orientation == PrImageOrientation_Identity)) {
         const size_t row = size_t(info.extent.x) * prImageFormatSize(&info.format);
         std::vector<uint16_t> native(row * info.extent.y / 2);
         const PrPixels output{reinterpret_cast<uint8_t*>(native.data()), row, info.extent};
@@ -131,15 +129,13 @@ inline bool decodeFrame(const uint8_t* PR_NULLABLE bytes, size_t size, Orientati
         const size_t pixelCount = size_t(info.extent.x) * info.extent.y;
         const uint32_t colors = info.format.model == PrColorModel_Gray ? 1 : 3;
         const uint32_t channels = colors + (info.format.alpha == PrImageAlpha_None ? 0 : 1);
-        const bool usable =
-            (status == PrStatus_Ok || status == PrStatus_Truncated) && pixelsSize == pixelCount * 4;
+        const bool usable = (status == PrStatus_Ok || status == PrStatus_Truncated) && pixelsSize == pixelCount * 4;
         for (size_t pixel = 0; usable && pixel < pixelCount; ++pixel) {
             const uint16_t* source = native.data() + pixel * channels;
             pixels[pixel * 4] = uint8_t(source[0] >> 8);
             pixels[pixel * 4 + 1] = uint8_t(source[colors == 1 ? 0 : 1] >> 8);
             pixels[pixel * 4 + 2] = uint8_t(source[colors == 1 ? 0 : 2] >> 8);
-            pixels[pixel * 4 + 3] =
-                info.format.alpha == PrImageAlpha_None ? 255 : uint8_t(source[colors] >> 8);
+            pixels[pixel * 4 + 3] = info.format.alpha == PrImageAlpha_None ? 255 : uint8_t(source[colors] >> 8);
         }
         prImageDecoderDestroy(decoder);
         return usable;
@@ -154,21 +150,20 @@ inline bool decodeFrame(const uint8_t* PR_NULLABLE bytes, size_t size, Orientati
         return false;
     }
     const PrStatus status = prImageDecoderReadRgba8(decoder, frame, PrImageAlpha_Straight, applied,
-                                                    PrPixels{pixels, size_t(width) * 4, {width, height}});
+        PrPixels{pixels, size_t(width) * 4, {width, height}});
     prImageDecoderDestroy(decoder);
     return status == PrStatus_Ok || status == PrStatus_Truncated;
 }
 
 // Decodes the first frame in the same way as decodeFrame.
-inline bool decodeImage(const uint8_t* PR_NULLABLE bytes, size_t size, Orientation orientation,
-                        uint8_t* pixels, size_t pixelsSize) {
+inline bool decodeImage(const uint8_t* PR_NULLABLE bytes, size_t size, Orientation orientation, uint8_t* pixels,
+        size_t pixelsSize) {
     return decodeFrame(bytes, size, orientation, 0, pixels, pixelsSize);
 }
 
 // Returns the number of frames of the image in `bytes`, and writes up to `count` frame durations, as encoded, to
 // `outDelays`. Returns zero if the image does not open.
-inline uint32_t imageFrames(const uint8_t* PR_NULLABLE bytes, size_t size,
-                            uint32_t* PR_NULLABLE outDelays, uint32_t count) {
+inline uint32_t imageFrames(const uint8_t* PR_NULLABLE bytes, size_t size, uint32_t* PR_NULLABLE outDelays, uint32_t count) {
     PrImageDecoder* decoder = testImageOpen(bytes, size);
     if (decoder == nullptr) {
         return 0;
@@ -189,8 +184,7 @@ inline uint32_t imageFrames(const uint8_t* PR_NULLABLE bytes, size_t size,
 }
 
 // Opens the image in `bytes` as an animation, read in `orientation`. Returns null if the image does not open.
-inline Animation* PR_NULLABLE animationOpen(const uint8_t* PR_NULLABLE bytes, size_t size,
-                                            Orientation orientation) {
+inline Animation* PR_NULLABLE animationOpen(const uint8_t* PR_NULLABLE bytes, size_t size, Orientation orientation) {
     PrImageDecoder* decoder = testImageOpen(bytes, size);
     if (decoder == nullptr) {
         return nullptr;
@@ -217,9 +211,7 @@ inline uint32_t animationFrames(const Animation* animation) {
 // Returns the duration of `frame` in milliseconds, as encoded, or zero for a frame that the animation does not have.
 inline uint32_t animationDelay(const Animation* animation, uint32_t frame) {
     PrImageFrameInfo info = {};
-    return prImageDecoderFrameInfo(animation->decoder, frame, &info) == PrStatus_Ok
-               ? info.durationMs
-               : 0;
+    return prImageDecoderFrameInfo(animation->decoder, frame, &info) == PrStatus_Ok ? info.durationMs : 0;
 }
 
 // Returns the number of times the frames play, or zero for forever.
@@ -266,14 +258,12 @@ inline bool animationEnded(const Animation* animation, double milliseconds) {
         return true;
     }
     const uint32_t plays = animationLoops(animation);
-    return plays != 0 && milliseconds > 0
-           && (milliseconds >= 1e15 || uint64_t(milliseconds) / duration >= plays);
+    return plays != 0 && milliseconds > 0 && (milliseconds >= 1e15 || uint64_t(milliseconds) / duration >= plays);
 }
 
 // Decodes `frame` of `animation` into `pixels` as straight-alpha Rgba8. Returns false unless the read is Ok or
 // Truncated.
-inline bool animationFrame(Animation* animation, uint32_t frame, uint8_t* pixels,
-                           size_t pixelsSize) {
+inline bool animationFrame(Animation* animation, uint32_t frame, uint8_t* pixels, size_t pixelsSize) {
     const PrImageInfo& info = *prImageDecoderInfo(animation->decoder);
     const PrImageOrientation applied =
         animation->orientation == Orientation_FromImage ? info.orientation : PrImageOrientation_Identity;
@@ -283,7 +273,7 @@ inline bool animationFrame(Animation* animation, uint32_t frame, uint8_t* pixels
     if (pixelsSize != size_t(width) * height * 4)
         return false;
     const PrStatus status = prImageDecoderReadRgba8(animation->decoder, frame, PrImageAlpha_Straight, applied,
-                                                    PrPixels{pixels, size_t(width) * 4, {width, height}});
+        PrPixels{pixels, size_t(width) * 4, {width, height}});
     return status == PrStatus_Ok || status == PrStatus_Truncated;
 }
 

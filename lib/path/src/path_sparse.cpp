@@ -183,9 +183,11 @@ void addEdge(PathSparseRasterizer* f, PrVec2 from, PrVec2 to) {
     for (uint32_t i = 0; i < cutCount; ++i) {
         float t0 = cuts[i];
         float t1 = cuts[i + 1];
-        PathCellEdge piece{t0 == 0 ? e.x0 : e.x0 + (e.x1 - e.x0) * t0, t0 == 0 ? e.y0 : e.y0 + (e.y1 - e.y0) * t0,
-                   t1 == 1 ? e.x1 : e.x0 + (e.x1 - e.x0) * t1, t1 == 1 ? e.y1 : e.y0 + (e.y1 - e.y0) * t1,
-                   e.direction};
+        PathCellEdge piece{
+            t0 == 0 ? e.x0 : e.x0 + (e.x1 - e.x0) * t0, t0 == 0 ? e.y0 : e.y0 + (e.y1 - e.y0) * t0,
+            t1 == 1 ? e.x1 : e.x0 + (e.x1 - e.x0) * t1, t1 == 1 ? e.y1 : e.y0 + (e.y1 - e.y0) * t1,
+            e.direction,
+        };
         if (!(piece.y1 > piece.y0))
             continue;
         float middle = (piece.x0 + piece.x1) / 2;
@@ -230,7 +232,7 @@ void addSolid(PathSparseRasterizer* f, uint32_t x, uint32_t y, uint32_t width, u
 
 // Adds the pixels of a row of tiles from `x0` to `x1`, which no edge touches, by the winding they carry.
 void addGap(PathSparseRasterizer* f, PrPathFillRule rule, uint32_t x0, uint32_t x1, uint32_t y, uint32_t height,
-            uint32_t& openAt) {
+        uint32_t& openAt) {
     if (x1 <= x0)
         return;
     bool full = true;
@@ -270,7 +272,7 @@ void addGap(PathSparseRasterizer* f, PrPathFillRule rule, uint32_t x0, uint32_t 
 
 // Adds a span of edge tiles, with the coverage of each pixel by the pieces of the span.
 void addCoverageSpan(PathSparseRasterizer* f, PrPathFillRule rule, uint32_t x0, uint32_t x1, uint32_t y,
-                     uint32_t height, const Ref* refs, uint32_t refCount) {
+        uint32_t height, const Ref* refs, uint32_t refCount) {
     uint32_t width = x1 - x0;
     size_t stride = size_t(width) + 2;
     size_t cellCount = stride * height;
@@ -304,7 +306,7 @@ void addCoverageSpan(PathSparseRasterizer* f, PrPathFillRule rule, uint32_t x0, 
 
 // Adds a span of edge tiles as records of the pieces of the span, clipped to each tile.
 void addSegmentSpan(PathSparseRasterizer* f, uint32_t firstTile, uint32_t x1, uint32_t y, uint32_t height,
-                    const Ref* refs, uint32_t refCount) {
+        const Ref* refs, uint32_t refCount) {
     uint32_t tw = f->options.tileExtent.x;
     uint32_t x0 = firstTile * tw;
     uint32_t data = f->tiles.count;
@@ -439,14 +441,14 @@ void prPathSparseRasterizerDestroy(PrPathSparseRasterizer* PR_NULLABLE rasterize
 }
 
 PrPathSparse prPathSparseRasterizerFill(PrPathSparseRasterizer* rasterizer, const PrPathPolyline* polyline,
-                                        PrPathFillRule rule, PrIRect box) {
+        PrPathFillRule rule, PrIRect box) {
     rasterizer->pieces.clear();
     rasterizer->refs.clear();
     rasterizer->spans.clear();
     rasterizer->coverage.clear();
     rasterizer->tiles.clear();
-    if (!(box.right > box.left && box.bottom > box.top) || !inRange(box.left) || !inRange(box.top)
-        || !inRange(box.right) || !inRange(box.bottom))
+    if (!(box.right > box.left && box.bottom > box.top) || !inRange(box.left) || !inRange(box.top) ||
+            !inRange(box.right) || !inRange(box.bottom))
         return PrPathSparse{};
     rasterizer->left = box.left;
     rasterizer->top = box.top;
@@ -463,6 +465,8 @@ PrPathSparse prPathSparseRasterizerFill(PrPathSparseRasterizer* rasterizer, cons
     rasterizer->carry.count = rasterizer->options.tileExtent.y;
     addEdges(rasterizer, *polyline);
     fill(rasterizer, rule);
-    return PrPathSparse{rasterizer->spans.data, rasterizer->spans.count, rasterizer->coverage.data,
-                        rasterizer->coverage.count, rasterizer->tiles.data, rasterizer->tiles.count};
+    return PrPathSparse{
+        rasterizer->spans.data, rasterizer->spans.count, rasterizer->coverage.data,
+        rasterizer->coverage.count, rasterizer->tiles.data, rasterizer->tiles.count,
+    };
 }

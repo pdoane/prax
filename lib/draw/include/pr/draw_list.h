@@ -59,12 +59,12 @@ void prDrawListRect(PrDrawList* list, PrRect rect, PrDrawPaint paint);
 void prDrawListCornerRect(PrDrawList* list, PrCornerRect shape, PrDrawPaint paint);
 void prDrawListEllipse(PrDrawList* list, PrVec2 center, PrVec2 radii, float rotation, PrDrawPaint paint);
 void prDrawListSector(PrDrawList* list, PrVec2 center, float innerRadius, float outerRadius, float startAngle,
-                      float sweep, PrDrawPaint paint);
+    float sweep, PrDrawPaint paint);
 void prDrawListCapsule(PrDrawList* list, PrVec2 start, PrVec2 end, float radius, PrDrawPaint paint);
 void prDrawListLine(PrDrawList* list, PrVec2 start, PrVec2 end, PrDrawPaint paint);
 void prDrawListPolyline(PrDrawList* list, const PrPathPolyline* polyline, PrPathFillRule rule, PrDrawPaint paint);
 void prDrawListPolylineContour(PrDrawList* list, const PrVec2* points, uint32_t pointCount, PrDrawContour contour,
-                               PrPathFillRule rule, PrDrawPaint paint);
+    PrPathFillRule rule, PrDrawPaint paint);
 void prDrawListPath(PrDrawList* list, const PrPath* path, PrPathFillRule rule, PrDrawPaint paint);
 
 // Records a box's border. Each side paints its own color or brush, and the border reads only the paint's operator,
@@ -79,7 +79,7 @@ void prDrawListDecoration(PrDrawList* list, const PrDrawDecoration* decoration, 
 // Records a nine-slice, whose regions of `source` paint as one shape, times the paint's color. The paint has no brush
 // and no stroke. Nothing is recorded if `source` is `list` itself.
 void prDrawListNineSlice(PrDrawList* list, PrDrawSource source, const PrDrawNineSlice* slices, PrRect destination,
-                         PrDrawSampling sampling, PrDrawPaint paint);
+    PrDrawSampling sampling, PrDrawPaint paint);
 
 // Records a command that replaces the target's pixels with the image's pixels, with the image's top left at the target
 // point `origin`. Transforms, clips and compositing do not apply.

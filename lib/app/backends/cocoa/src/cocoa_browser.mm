@@ -87,9 +87,9 @@
         PrRect frame = self.shownFrame;
         auto length = [](float from, float to) { return CGFloat(to) - CGFloat(from); };
         self.clip.frame = NSMakeRect(CGFloat(clip.left), CGFloat(clip.top), length(clip.left, clip.right),
-                                     length(clip.top, clip.bottom));
+            length(clip.top, clip.bottom));
         self.view.frame = NSMakeRect(length(clip.left, frame.left), length(clip.top, frame.top),
-                                     length(frame.left, frame.right), length(frame.top, frame.bottom));
+            length(frame.left, frame.right), length(frame.top, frame.bottom));
         CGFloat width = self.viewport.width;
         self.view.pageZoom = width > 0 ? length(frame.left, frame.right) / width : 1;
         return;
@@ -115,17 +115,13 @@
     (void)navigation;
     [self finish:YES];
 }
-- (void)webView:(WKWebView*)webView
-    didFailNavigation:(WKNavigation*)navigation
-            withError:(NSError*)error {
+- (void)webView:(WKWebView*)webView didFailNavigation:(WKNavigation*)navigation withError:(NSError*)error {
     (void)webView;
     (void)navigation;
     (void)error;
     [self finish:NO];
 }
-- (void)webView:(WKWebView*)webView
-    didFailProvisionalNavigation:(WKNavigation*)navigation
-                       withError:(NSError*)error {
+- (void)webView:(WKWebView*)webView didFailProvisionalNavigation:(WKNavigation*)navigation withError:(NSError*)error {
     (void)webView;
     (void)navigation;
     (void)error;
@@ -203,8 +199,7 @@ void cocoaBrowserHide(PrApp*, PrAppBrowser* browser) {
     [object layOut];
 }
 
-void cocoaBrowserLoad(PrApp*, PrAppBrowser* browser, PrStringView url, PrAppBrowserDoneFn done,
-                      void* PR_NULLABLE context) {
+void cocoaBrowserLoad(PrApp*, PrAppBrowser* browser, PrStringView url, PrAppBrowserDoneFn done, void* PR_NULLABLE context) {
     PrCocoaBrowser* object = objectOf(browser);
     __weak PrCocoaBrowser* weak = object;
     // A load that replaces a pending one completes the pending one as failed.
@@ -228,37 +223,31 @@ void cocoaBrowserLoad(PrApp*, PrAppBrowser* browser, PrStringView url, PrAppBrow
 }
 
 void cocoaBrowserEvaluate(PrApp*, PrAppBrowser* browser, PrStringView script, PrAppBrowserResultFn done,
-                          void* PR_NULLABLE context) {
+        void* PR_NULLABLE context) {
     PrCocoaBrowser* object = objectOf(browser);
     __weak PrCocoaBrowser* weak = object;
     // The script runs as global code and is awaited, so that a promise's result is returned once it settles.
-    [object.view callAsyncJavaScript:@"return await (0, eval)(script);"
-                           arguments:@{@"script" : stringOf(script)}
-                             inFrame:nil
-                      inContentWorld:WKContentWorld.pageWorld
-                   completionHandler:^(id result, NSError* error) {
-                      if (weak == nil)
-                          return;
-                      if (error != nil) {
-                          NSString* message = error.userInfo[@"WKJavaScriptExceptionMessage"];
-                          done(context, PrStatus_InvalidData,
-                               (message != nil ? message : error.localizedDescription).UTF8String);
-                          return;
-                      }
-                      NSData* json = result == nil ? nil
-                                         : [NSJSONSerialization
-                                               dataWithJSONObject:result
-                                                          options:NSJSONWritingFragmentsAllowed
-                                                            error:nil];
-                      done(context, PrStatus_Ok,
-                           json == nil ? PrStringView{}
-                                       : PrStringView{static_cast<const char*>(json.bytes),
-                                                      json.length});
-                  }];
+    [object.view callAsyncJavaScript:@"return await (0, eval)(script);" arguments:@{@"script" : stringOf(script)}
+        inFrame:nil inContentWorld:WKContentWorld.pageWorld completionHandler:^(id result, NSError* error) {
+            if (weak == nil)
+                return;
+            if (error != nil) {
+                NSString* message = error.userInfo[@"WKJavaScriptExceptionMessage"];
+                done(context, PrStatus_InvalidData, (message != nil ? message : error.localizedDescription).UTF8String);
+                return;
+            }
+            NSData* json;
+            if (result == nil)
+                json = nil;
+            else
+                json = [NSJSONSerialization dataWithJSONObject:result options:NSJSONWritingFragmentsAllowed error:nil];
+            done(context, PrStatus_Ok,
+                json == nil ? PrStringView{} : PrStringView{static_cast<const char*>(json.bytes), json.length});
+        }];
 }
 
 void cocoaBrowserCapture(PrApp*, PrAppBrowser* browser, PrRect rect, PrUVec2 size, PrAppBrowserCaptureFn done,
-                         void* PR_NULLABLE context) {
+        void* PR_NULLABLE context) {
     PrCocoaBrowser* object = objectOf(browser);
     __weak PrCocoaBrowser* weak = object;
     // The capture is of the window as the window server composites it, which is what the display shows. A view draws
@@ -278,14 +267,14 @@ void cocoaBrowserCapture(PrApp*, PrAppBrowser* browser, PrRect rect, PrUVec2 siz
         CGFloat sx = viewport.width > 0 ? bounds.width / viewport.width : 1;
         CGFloat sy = viewport.height > 0 ? bounds.height / viewport.height : 1;
         NSRect points = NSMakeRect(CGFloat(rect.left) * sx, CGFloat(rect.top) * sy,
-                                   CGFloat(rect.right - rect.left) * sx, CGFloat(rect.bottom - rect.top) * sy);
+            CGFloat(rect.right - rect.left) * sx, CGFloat(rect.bottom - rect.top) * sy);
         NSRect screen = [view.window convertRectToScreen:[view convertRect:points toView:nil]];
         CGFloat top = NSScreen.screens.count > 0 ? NSScreen.screens[0].frame.size.height : 0;
         CGRect global = CGRectMake(screen.origin.x, top - screen.origin.y - screen.size.height, screen.size.width,
-                                   screen.size.height);
-        NSImage* image = [view respondsToSelector:@selector(_windowSnapshotInRect:withOptions:)]
-                             ? [view _windowSnapshotInRect:global withOptions:kCGWindowImageBestResolution]
-                             : nil;
+            screen.size.height);
+        NSImage* image = nil;
+        if ([view respondsToSelector:@selector(_windowSnapshotInRect:withOptions:)])
+            image = [view _windowSnapshotInRect:global withOptions:kCGWindowImageBestResolution];
         CGImageRef cg = image != nil ? [image CGImageForProposedRect:nullptr context:nil hints:nil] : nullptr;
         if (cg == nullptr) {
             done(context, PrStatus_NotFound, PrPixelView{});
@@ -299,8 +288,7 @@ void cocoaBrowserCapture(PrApp*, PrAppBrowser* browser, PrRect rect, PrUVec2 siz
         bgra.count = width * height * 4;
         CGColorSpaceRef space = CGColorSpaceCreateWithName(kCGColorSpaceSRGB);
         CGContextRef bitmap = CGBitmapContextCreate(bgra.data, width, height, 8, size_t(width) * 4, space,
-                                                    uint32_t(kCGImageAlphaPremultipliedFirst)
-                                                        | uint32_t(kCGBitmapByteOrder32Little));
+            uint32_t(kCGImageAlphaPremultipliedFirst) | uint32_t(kCGBitmapByteOrder32Little));
         CGContextSetInterpolationQuality(bitmap, kCGInterpolationHigh);
         CGContextDrawImage(bitmap, CGRectMake(0, 0, width, height), cg);
         CGContextRelease(bitmap);
@@ -321,7 +309,7 @@ void cocoaBrowserCapture(PrApp*, PrAppBrowser* browser, PrRect rect, PrUVec2 siz
         frames.left = 2;
         frames.then = capture;
         [[strong displayLinkWithTarget:frames selector:@selector(frame:)] addToRunLoop:NSRunLoop.mainRunLoop
-                                                                               forMode:NSRunLoopCommonModes];
+            forMode:NSRunLoopCommonModes];
     };
     if ([object.view respondsToSelector:@selector(_doAfterNextPresentationUpdate:)])
         [object.view _doAfterNextPresentationUpdate:composited];
@@ -330,7 +318,7 @@ void cocoaBrowserCapture(PrApp*, PrAppBrowser* browser, PrRect rect, PrUVec2 siz
 }
 
 void cocoaBrowserPrint(PrApp*, PrAppBrowser* browser, PrStringView path, PrVec2 paper, PrAppBrowserDoneFn done,
-                       void* PR_NULLABLE context) {
+        void* PR_NULLABLE context) {
     PrCocoaBrowser* object = objectOf(browser);
     NSPrintInfo* info = [[NSPrintInfo alloc] init];
     info.jobDisposition = NSPrintSaveJob;
@@ -354,25 +342,23 @@ void cocoaBrowserPrint(PrApp*, PrAppBrowser* browser, PrStringView path, PrVec2 
     operation.showsProgressPanel = NO;
     operation.view.frame = object.view.bounds;
     // WebKit lays out the pages in its content process, so the print runs with the event loop instead of blocking it.
-    [operation runOperationModalForWindow:object.window
-                                 delegate:object
-                           didRunSelector:@selector(printOperationDidRun:success:contextInfo:)
-                              contextInfo:nullptr];
+    [operation runOperationModalForWindow:object.window delegate:object
+        didRunSelector:@selector(printOperationDidRun:success:contextInfo:) contextInfo:nullptr];
 }
 
-uint32_t cocoaBrowserProcesses(PrApp*, PrAppBrowser* browser, PrAppBrowserProcess* PR_NULLABLE out,
-                               uint32_t capacity) {
+uint32_t cocoaBrowserProcesses(PrApp*, PrAppBrowser* browser, PrAppBrowserProcess* PR_NULLABLE out, uint32_t capacity) {
     PrCocoaBrowser* object = objectOf(browser);
     WKWebView* view = object.view;
     WKWebsiteDataStore* store = view.configuration.websiteDataStore;
     // A process that WebKit does not name, as an older WebKit does not, or that it has not started, is left out.
     pid_t content = [view respondsToSelector:@selector(_webProcessIdentifier)] ? view._webProcessIdentifier : 0;
     pid_t gpu = [view respondsToSelector:@selector(_gpuProcessIdentifier)] ? view._gpuProcessIdentifier : 0;
-    pid_t network = [store respondsToSelector:@selector(_networkProcessIdentifier)] ? store._networkProcessIdentifier
-                                                                                   : 0;
-    const PrAppBrowserProcess found[] = {{PrAppBrowserProcessRole_Content, content},
-                                         {PrAppBrowserProcessRole_Gpu, gpu},
-                                         {PrAppBrowserProcessRole_Network, network}};
+    pid_t network = [store respondsToSelector:@selector(_networkProcessIdentifier)] ? store._networkProcessIdentifier : 0;
+    const PrAppBrowserProcess found[] = {
+        {PrAppBrowserProcessRole_Content, content},
+        {PrAppBrowserProcessRole_Gpu, gpu},
+        {PrAppBrowserProcessRole_Network, network},
+    };
     uint32_t count = 0;
     for (const PrAppBrowserProcess& process : found) {
         if (process.id <= 0)
@@ -385,22 +371,20 @@ uint32_t cocoaBrowserProcesses(PrApp*, PrAppBrowser* browser, PrAppBrowserProces
 }
 
 PrStatus cocoaBrowserCreate(PrApp* app, void* PR_NULLABLE host, const PrAppBrowserDesc* desc,
-                            PrAppBrowser* PR_NULLABLE* PR_NONNULL out) {
+        PrAppBrowser* PR_NULLABLE* PR_NONNULL out) {
     PrCocoaBrowser* object = [[PrCocoaBrowser alloc] init];
     object.host = (__bridge NSView*)host;
     object.viewport = NSMakeSize(desc->viewport.x, desc->viewport.y);
     NSRect frame = NSMakeRect(0, 0, desc->viewport.x, desc->viewport.y);
-    object.window = [[NSWindow alloc] initWithContentRect:frame
-                                                styleMask:NSWindowStyleMaskBorderless
-                                                  backing:NSBackingStoreBuffered
-                                                    defer:NO];
+    object.window = [[NSWindow alloc] initWithContentRect:frame styleMask:NSWindowStyleMaskBorderless
+        backing:NSBackingStoreBuffered defer:NO];
     object.window.releasedWhenClosed = NO;
     object.window.excludedFromWindowsMenu = YES;
     // On the main screen, so that the window server composites the page, and below the desktop, so that no one sees it,
     // in every space.
     object.window.level = CGWindowLevelForKey(kCGDesktopWindowLevelKey) - 1;
-    object.window.collectionBehavior = NSWindowCollectionBehaviorCanJoinAllSpaces
-                                       | NSWindowCollectionBehaviorStationary | NSWindowCollectionBehaviorIgnoresCycle;
+    object.window.collectionBehavior = NSWindowCollectionBehaviorCanJoinAllSpaces |
+        NSWindowCollectionBehaviorStationary | NSWindowCollectionBehaviorIgnoresCycle;
     object.window.ignoresMouseEvents = YES;
     [object.window setFrameOrigin:NSZeroPoint];
     WKWebViewConfiguration* configuration = [[WKWebViewConfiguration alloc] init];

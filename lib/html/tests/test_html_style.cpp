@@ -10,8 +10,7 @@ TEST_CASE("a style element's sheet is in the document's list before the next scr
     } state;
     PrHtmlHost scripting = prHtmlHostDefault();
     scripting.context = &state;
-    scripting.execute = [](void* data, PrHtmlPage* page,
-                           const PrHtmlScript*) -> PrStatus {
+    scripting.execute = [](void* data, PrHtmlPage* page, const PrHtmlScript*) -> PrStatus {
         State* state = static_cast<State*>(data);
         PrDomDocument* document = prHtmlWindowDocument(prHtmlPageWindow(page));
         CHECK(prCssDocumentStyleSheets(document) == state->list);
@@ -33,26 +32,18 @@ TEST_CASE("a style element's sheet is in the document's list before the next scr
     PrHtmlPage* page = prHtmlPageCreate(&scripting);
     PrHtmlWindow* window = prHtmlPageWindow(page);
     state.list = prCssDocumentStyleSheets(prHtmlWindowDocument(window));
-    CHECK(prHtmlPageLoad(page,
-                                    "<script>0</script><style>a { color: blue; }</style>"
-                                          "<script>0</script><style></style><script>0</script>",
-                                    "about:blank", nullptr)
-          == PrStatus_Ok);
+    CHECK(prHtmlPageLoad(page, "<script>0</script><style>a { color: blue; }</style>"
+        "<script>0</script><style></style><script>0</script>", "about:blank", nullptr) == PrStatus_Ok);
     CHECK(state.calls == 3);
-    CHECK(prHtmlPageLoad(page, "<p>replacement", "about:blank",
-                         nullptr)
-          == PrStatus_Ok);
+    CHECK(prHtmlPageLoad(page, "<p>replacement", "about:blank", nullptr) == PrStatus_Ok);
     CHECK(prCssStyleSheetListLength(prCssDocumentStyleSheets(prHtmlWindowDocument(window))) == 0);
     prHtmlPageDestroy(page);
 }
 
 TEST_CASE("an SVG style element in an HTML document makes a sheet, with its end tag or without one") {
     PrHtmlPage* page = prHtmlPageCreate(nullptr);
-    CHECK(prHtmlPageLoad(page,
-                                    "<svg><style>rect { fill: blue; }</style><rect/></svg>"
-                                    "<svg><style>circle { fill: red; } circle { r: 1px; }<p>",
-                                    "about:blank", nullptr)
-          == PrStatus_Ok);
+    CHECK(prHtmlPageLoad(page, "<svg><style>rect { fill: blue; }</style><rect/></svg>"
+        "<svg><style>circle { fill: red; } circle { r: 1px; }<p>", "about:blank", nullptr) == PrStatus_Ok);
     PrCssStyleSheetList* list = prCssDocumentStyleSheets(prHtmlWindowDocument(prHtmlPageWindow(page)));
     REQUIRE(prCssStyleSheetListLength(list) == 2);
     CHECK(prCssRuleListLength(prCssStyleSheetCssRules(prCssStyleSheetListStyleSheetAt(list, 0))) == 1);
@@ -61,13 +52,9 @@ TEST_CASE("an SVG style element in an HTML document makes a sheet, with its end 
 }
 
 TEST_CASE("a style element outside a template makes a sheet when its type is empty or text/css") {
-    PrStringView source = "<style type='text/plain'>a {}</style>"
-        "<style type='text/css; charset=utf-8'>b {}</style>"
-        "<style type=' TEXT/CSS '>c {}</style>"
-        "<template><style>d {}</style></template>"
-        "<link rel='stylesheet' href='external.css'>"
-        "<style type='TEXT/CSS'>e {}</style>"
-        "<style type=''>f {}</style>"
+    PrStringView source = "<style type='text/plain'>a {}</style><style type='text/css; charset=utf-8'>b {}</style>"
+        "<style type=' TEXT/CSS '>c {}</style><template><style>d {}</style></template>"
+        "<link rel='stylesheet' href='external.css'><style type='TEXT/CSS'>e {}</style><style type=''>f {}</style>"
         "<style>g {}";
     auto checkSheets = [](PrDomDocument* document) {
         PrCssStyleSheetList* list = prCssDocumentStyleSheets(document);
@@ -84,8 +71,7 @@ TEST_CASE("a style element outside a template makes a sheet when its type is emp
     checkSheets(prHtmlWindowDocument(prHtmlPageWindow(page)));
     prHtmlPageDestroy(page);
 
-    PrDomDocument* inert =
-        prHtmlDomParserParseFromString(source, PrHtmlDomParserSupportedType_TextHtml);
+    PrDomDocument* inert = prHtmlDomParserParseFromString(source, PrHtmlDomParserSupportedType_TextHtml);
     checkSheets(inert);
     prDomDocumentRelease(inert);
 }

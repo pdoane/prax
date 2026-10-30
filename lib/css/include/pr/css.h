@@ -385,10 +385,8 @@ bool prCssMediaQueryListMatches(const PrCssMediaQueryList* self);
 
 // Add or remove `callback` as a listener for `change` events, in the same way as the event target's functions. A null
 // `callback` does nothing.
-void prCssMediaQueryListAddListener(PrCssMediaQueryList* self,
-                                    const PrDomEventListener* PR_NULLABLE callback);
-void prCssMediaQueryListRemoveListener(PrCssMediaQueryList* self,
-                                       const PrDomEventListener* PR_NULLABLE callback);
+void prCssMediaQueryListAddListener(PrCssMediaQueryList* self, const PrDomEventListener* PR_NULLABLE callback);
+void prCssMediaQueryListRemoveListener(PrCssMediaQueryList* self, const PrDomEventListener* PR_NULLABLE callback);
 
 // Adds or releases a reference. The last release frees the list.
 void prCssMediaQueryListRetain(PrCssMediaQueryList* self);
@@ -463,8 +461,7 @@ PrCssRuleList* prCssStyleSheetCssRules(PrCssStyleSheet* self);
 // Inserts the rule in `rule` at `index`, and writes `index` to `out`. Returns OutOfRange if `index` is past the end,
 // Syntax if `rule` is not one valid rule, NotAllowed if the rule may not go at `index`, and InvalidState for an
 // @namespace rule while the sheet holds a rule that is neither @import nor @namespace.
-PrStatus prCssStyleSheetInsertRule(PrCssStyleSheet* self, PrStringView rule, uint32_t index,
-                                   uint32_t* PR_NULLABLE out);
+PrStatus prCssStyleSheetInsertRule(PrCssStyleSheet* self, PrStringView rule, uint32_t index, uint32_t* PR_NULLABLE out);
 
 // Removes the rule at `index`. Returns OutOfRange if there is none, and InvalidState for an @namespace rule while the
 // sheet holds a rule that is neither @import nor @namespace.
@@ -477,7 +474,7 @@ PrStatus prCssStyleSheetReplaceSync(PrCssStyleSheet* self, PrStringView text);
 // (cssom-1/#dom-cssstylesheet-addrule). Writes -1, which the legacy method always returns, to `out`. Fails in the same
 // cases as prCssStyleSheetInsertRule.
 PrStatus prCssStyleSheetAddRule(PrCssStyleSheet* self, PrStringView selector, PrStringView style,
-                                const uint32_t* PR_NULLABLE index, int32_t* PR_NULLABLE out);
+    const uint32_t* PR_NULLABLE index, int32_t* PR_NULLABLE out);
 
 // ---------------------------------------------------------------------------------------------------------------------
 // CSSRule (cssom)
@@ -575,8 +572,7 @@ PrCssRuleList* prCssGroupingRuleCssRules(PrCssGroupingRule* self);
 // text that is not a rule may be declarations instead, which are inserted as a nested declarations rule. Returns
 // OutOfRange if `index` is past the end, Syntax if `rule` is not one valid rule, and NotAllowed if the rule may not go
 // in the block.
-PrStatus prCssGroupingRuleInsertRule(PrCssGroupingRule* self, PrStringView rule, uint32_t index,
-                                     uint32_t* PR_NULLABLE out);
+PrStatus prCssGroupingRuleInsertRule(PrCssGroupingRule* self, PrStringView rule, uint32_t index, uint32_t* PR_NULLABLE out);
 
 // Removes the rule at `index` of the block. Returns OutOfRange if there is none.
 PrStatus prCssGroupingRuleDeleteRule(PrCssGroupingRule* self, uint32_t index);
@@ -713,9 +709,8 @@ PrString prCssContainerRuleContainerName(const PrCssContainerRule* self);
 PrString prCssContainerRuleContainerQuery(const PrCssContainerRule* self);
 
 // Writes up to `capacity` of the rule's conditions to `items`, which the caller releases, and returns the total count.
-uint32_t prCssContainerRuleConditions(const PrCssContainerRule* self,
-                                      PrCssContainerCondition* PR_NULLABLE items,
-                                      uint32_t capacity);
+uint32_t prCssContainerRuleConditions(const PrCssContainerRule* self, PrCssContainerCondition* PR_NULLABLE items,
+    uint32_t capacity);
 
 // ---------------------------------------------------------------------------------------------------------------------
 // CSSNestedDeclarations : CSSRule (css-nesting)
@@ -820,8 +815,7 @@ PrCssRuleList* prCssKeyframesRuleCssRules(PrCssKeyframesRule* self);
 
 // Return the number of keyframes, and the keyframe at `index` or null past the last keyframe.
 uint32_t prCssKeyframesRuleLength(const PrCssKeyframesRule* self);
-PrCssKeyframeRule* PR_NULLABLE prCssKeyframesRuleKeyframeRuleAt(PrCssKeyframesRule* self,
-                                                                uint32_t index);
+PrCssKeyframeRule* PR_NULLABLE prCssKeyframesRuleKeyframeRuleAt(PrCssKeyframesRule* self, uint32_t index);
 
 // Appends the keyframe in `rule`. Does nothing if `rule` is not a keyframe.
 void prCssKeyframesRuleAppendRule(PrCssKeyframesRule* self, PrStringView rule);
@@ -830,8 +824,7 @@ void prCssKeyframesRuleAppendRule(PrCssKeyframesRule* self, PrStringView rule);
 void prCssKeyframesRuleDeleteRule(PrCssKeyframesRule* self, PrStringView select);
 
 // Returns the last keyframe whose selectors are the ones in `select`, or null if there is none.
-PrCssKeyframeRule* PR_NULLABLE prCssKeyframesRuleFindRule(PrCssKeyframesRule* self,
-                                                          PrStringView select);
+PrCssKeyframeRule* PR_NULLABLE prCssKeyframesRuleFindRule(PrCssKeyframesRule* self, PrStringView select);
 
 // ---------------------------------------------------------------------------------------------------------------------
 // CSSKeyframeRule : CSSRule (css-animations)
@@ -874,8 +867,7 @@ PrCssLayerStatementRule* PR_NULLABLE prCssLayerStatementRuleQuery(PrCssRule* PR_
 
 // Writes up to `capacity` of the layer names that the rule declares to `items`, which the caller releases, and returns
 // the total count.
-uint32_t prCssLayerStatementRuleNameList(const PrCssLayerStatementRule* self,
-                                         PrString* PR_NULLABLE items, uint32_t capacity);
+uint32_t prCssLayerStatementRuleNameList(const PrCssLayerStatementRule* self, PrString* PR_NULLABLE items, uint32_t capacity);
 
 // ---------------------------------------------------------------------------------------------------------------------
 // CSSScopeRule : CSSGroupingRule (css-cascade-6)
@@ -968,8 +960,7 @@ PrString prCssPropertyRuleInitialValue(const PrCssPropertyRule* self);
 PR_HANDLE_UPCAST(CssFontFeatureValuesRule, CssRule, CssRule)
 
 // Returns a CSSRule as a CSSFontFeatureValuesRule, or null if it is not one.
-PrCssFontFeatureValuesRule* PR_NULLABLE prCssFontFeatureValuesRuleQuery(
-    PrCssRule* PR_NULLABLE object);
+PrCssFontFeatureValuesRule* PR_NULLABLE prCssFontFeatureValuesRuleQuery(PrCssRule* PR_NULLABLE object);
 
 // Get and set the font families that the rule applies to, serialized. Setting text that the rule does not accept as its
 // prelude does nothing.
@@ -982,11 +973,9 @@ PrCssFontFeatureValuesMap* prCssFontFeatureValuesRuleAnnotation(PrCssFontFeature
 PrCssFontFeatureValuesMap* prCssFontFeatureValuesRuleOrnaments(PrCssFontFeatureValuesRule* self);
 PrCssFontFeatureValuesMap* prCssFontFeatureValuesRuleStylistic(PrCssFontFeatureValuesRule* self);
 PrCssFontFeatureValuesMap* prCssFontFeatureValuesRuleSwash(PrCssFontFeatureValuesRule* self);
-PrCssFontFeatureValuesMap* prCssFontFeatureValuesRuleCharacterVariant(
-    PrCssFontFeatureValuesRule* self);
+PrCssFontFeatureValuesMap* prCssFontFeatureValuesRuleCharacterVariant(PrCssFontFeatureValuesRule* self);
 PrCssFontFeatureValuesMap* prCssFontFeatureValuesRuleStyleset(PrCssFontFeatureValuesRule* self);
-PrCssFontFeatureValuesMap* prCssFontFeatureValuesRuleHistoricalForms(
-    PrCssFontFeatureValuesRule* self);
+PrCssFontFeatureValuesMap* prCssFontFeatureValuesRuleHistoricalForms(PrCssFontFeatureValuesRule* self);
 
 // ---------------------------------------------------------------------------------------------------------------------
 // CSSFontFeatureValuesMap (css-fonts)
@@ -1002,7 +991,7 @@ PrStringView prCssFontFeatureValuesMapKeyAt(const PrCssFontFeatureValuesMap* sel
 // Writes the value of the entry at `index`, which is below the size. Writes up to `capacity` items to `items` and
 // returns the total count.
 uint32_t prCssFontFeatureValuesMapValueAt(const PrCssFontFeatureValuesMap* self, uint32_t index,
-                                          uint32_t* PR_NULLABLE items, uint32_t capacity);
+    uint32_t* PR_NULLABLE items, uint32_t capacity);
 
 // Returns true if the map has an entry for `key`.
 bool prCssFontFeatureValuesMapHas(const PrCssFontFeatureValuesMap* self, PrStringView key);
@@ -1010,7 +999,7 @@ bool prCssFontFeatureValuesMapHas(const PrCssFontFeatureValuesMap* self, PrStrin
 // Writes the value of the entry for `key`, which must be in the map. Writes up to `capacity` items to `items` and
 // returns the total count.
 uint32_t prCssFontFeatureValuesMapGet(const PrCssFontFeatureValuesMap* self, PrStringView key,
-                                      uint32_t* PR_NULLABLE items, uint32_t capacity);
+    uint32_t* PR_NULLABLE items, uint32_t capacity);
 
 // Removes the entry for `key`. Returns false if there is none.
 bool prCssFontFeatureValuesMapDelete(PrCssFontFeatureValuesMap* self, PrStringView key);
@@ -1021,7 +1010,7 @@ void prCssFontFeatureValuesMapClear(PrCssFontFeatureValuesMap* self);
 // Sets the entry for `key` to the `count` indexes in `values`. Does nothing if `key` is not an identifier, or if the
 // feature type of the map does not accept `count` indexes.
 void prCssFontFeatureValuesMapSet(PrCssFontFeatureValuesMap* self, PrStringView key,
-                                  const uint32_t* PR_NULLABLE values, uint32_t count);
+    const uint32_t* PR_NULLABLE values, uint32_t count);
 
 // ---------------------------------------------------------------------------------------------------------------------
 // CSSFontPaletteValuesRule : CSSRule (css-fonts)
@@ -1030,8 +1019,7 @@ void prCssFontFeatureValuesMapSet(PrCssFontFeatureValuesMap* self, PrStringView 
 PR_HANDLE_UPCAST(CssFontPaletteValuesRule, CssRule, CssRule)
 
 // Returns a CSSRule as a CSSFontPaletteValuesRule, or null if it is not one.
-PrCssFontPaletteValuesRule* PR_NULLABLE prCssFontPaletteValuesRuleQuery(
-    PrCssRule* PR_NULLABLE object);
+PrCssFontPaletteValuesRule* PR_NULLABLE prCssFontPaletteValuesRuleQuery(PrCssRule* PR_NULLABLE object);
 
 // Returns the palette's name.
 PrStringView prCssFontPaletteValuesRuleName(const PrCssFontPaletteValuesRule* self);
@@ -1071,8 +1059,7 @@ PrString prCssViewTransitionRuleNavigation(const PrCssViewTransitionRule* self);
 
 // Writes up to `capacity` of the names that the types descriptor declares to `items`, and returns the total count.
 // `none` declares no names.
-uint32_t prCssViewTransitionRuleTypes(const PrCssViewTransitionRule* self,
-                                      PrStringView* PR_NULLABLE items, uint32_t capacity);
+uint32_t prCssViewTransitionRuleTypes(const PrCssViewTransitionRule* self, PrStringView* PR_NULLABLE items, uint32_t capacity);
 
 // ---------------------------------------------------------------------------------------------------------------------
 // CSSFunctionRule : CSSGroupingRule (css-mixins)
@@ -1104,9 +1091,8 @@ PrStringView prCssFunctionRuleName(const PrCssFunctionRule* self);
 
 // Writes up to `capacity` of the function's parameters to `items`, which the caller releases, and returns the total
 // count.
-uint32_t prCssFunctionRuleGetParameters(const PrCssFunctionRule* self,
-                                        PrCssFunctionParameter* PR_NULLABLE items,
-                                        uint32_t capacity);
+uint32_t prCssFunctionRuleGetParameters(const PrCssFunctionRule* self, PrCssFunctionParameter* PR_NULLABLE items,
+    uint32_t capacity);
 
 // Returns the function's return type, or `*` if the rule writes none.
 PrString prCssFunctionRuleReturnType(const PrCssFunctionRule* self);
@@ -1118,8 +1104,7 @@ PrString prCssFunctionRuleReturnType(const PrCssFunctionRule* self);
 PR_HANDLE_UPCAST(CssFunctionDeclarations, CssRule, CssRule)
 
 // Returns a CSSRule as a CSSFunctionDeclarations, or null if it is not one.
-PrCssFunctionDeclarations* PR_NULLABLE prCssFunctionDeclarationsQuery(
-    PrCssRule* PR_NULLABLE object);
+PrCssFunctionDeclarations* PR_NULLABLE prCssFunctionDeclarationsQuery(PrCssRule* PR_NULLABLE object);
 
 // Returns the declarations in the function's body, which the rule owns.
 PrCssFunctionDescriptors* prCssFunctionDeclarationsStyle(PrCssFunctionDeclarations* self);
@@ -1154,8 +1139,7 @@ PR_HANDLE_UPCAST(CssSupportsConditionRule, CssGroupingRule, CssGroupingRule)
 PR_HANDLE_UPCAST(CssSupportsConditionRule, CssRule, CssRule)
 
 // Returns a CSSRule as a CSSSupportsConditionRule, or null if it is not one.
-PrCssSupportsConditionRule* PR_NULLABLE prCssSupportsConditionRuleQuery(
-    PrCssRule* PR_NULLABLE object);
+PrCssSupportsConditionRule* PR_NULLABLE prCssSupportsConditionRuleQuery(PrCssRule* PR_NULLABLE object);
 
 // Returns the name that the rule gives its condition.
 PrStringView prCssSupportsConditionRuleName(const PrCssSupportsConditionRule* self);
@@ -1174,8 +1158,7 @@ PrCssMixinRule* PR_NULLABLE prCssMixinRuleQuery(PrCssRule* PR_NULLABLE object);
 PrString prCssMixinRuleName(const PrCssMixinRule* self);
 
 // Writes up to `capacity` of the mixin's parameters to `items`, which the caller releases, and returns the total count.
-uint32_t prCssMixinRuleGetParameters(const PrCssMixinRule* self,
-                                     PrCssFunctionParameter* PR_NULLABLE items, uint32_t capacity);
+uint32_t prCssMixinRuleGetParameters(const PrCssMixinRule* self, PrCssFunctionParameter* PR_NULLABLE items, uint32_t capacity);
 
 // Returns true if the mixin's body holds an @contents rule, at any depth.
 bool prCssMixinRuleContents(const PrCssMixinRule* self);
@@ -1194,8 +1177,7 @@ PrCssApplyBlockRule* PR_NULLABLE prCssApplyBlockRuleQuery(PrCssRule* PR_NULLABLE
 PrString prCssApplyBlockRuleName(const PrCssApplyBlockRule* self);
 
 // Writes up to `capacity` of the rule's arguments, each as written, to `items`, and returns the total count.
-uint32_t prCssApplyBlockRuleGetArguments(const PrCssApplyBlockRule* self,
-                                         PrStringView* PR_NULLABLE items, uint32_t capacity);
+uint32_t prCssApplyBlockRuleGetArguments(const PrCssApplyBlockRule* self, PrStringView* PR_NULLABLE items, uint32_t capacity);
 
 // ---------------------------------------------------------------------------------------------------------------------
 // CSSApplyStatementRule : CSSRule (css-mixins)
@@ -1211,7 +1193,7 @@ PrString prCssApplyStatementRuleName(const PrCssApplyStatementRule* self);
 
 // Writes up to `capacity` of the rule's arguments, each as written, to `items`, and returns the total count.
 uint32_t prCssApplyStatementRuleGetArguments(const PrCssApplyStatementRule* self,
-                                             PrStringView* PR_NULLABLE items, uint32_t capacity);
+    PrStringView* PR_NULLABLE items, uint32_t capacity);
 
 // ---------------------------------------------------------------------------------------------------------------------
 // CSSContentsBlockRule : CSSGroupingRule (css-mixins)
@@ -1230,8 +1212,7 @@ PrCssContentsBlockRule* PR_NULLABLE prCssContentsBlockRuleQuery(PrCssRule* PR_NU
 PR_HANDLE_UPCAST(CssContentsStatementRule, CssRule, CssRule)
 
 // Returns a CSSRule as a CSSContentsStatementRule, or null if it is not one.
-PrCssContentsStatementRule* PR_NULLABLE prCssContentsStatementRuleQuery(
-    PrCssRule* PR_NULLABLE object);
+PrCssContentsStatementRule* PR_NULLABLE prCssContentsStatementRuleQuery(PrCssRule* PR_NULLABLE object);
 
 // ---------------------------------------------------------------------------------------------------------------------
 // CSSRuleList (cssom)
@@ -1244,8 +1225,7 @@ uint32_t prCssRuleListLength(const PrCssRuleList* self);
 // StyleSheetList (cssom)
 
 // Return the sheet at `index` or null past the last sheet, and the number of sheets.
-PrCssStyleSheet* PR_NULLABLE prCssStyleSheetListStyleSheetAt(PrCssStyleSheetList* self,
-                                                             uint32_t index);
+PrCssStyleSheet* PR_NULLABLE prCssStyleSheetListStyleSheetAt(PrCssStyleSheetList* self, uint32_t index);
 uint32_t prCssStyleSheetListLength(const PrCssStyleSheetList* self);
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -1282,34 +1262,28 @@ uint32_t prCssStyleDeclarationLength(const PrCssStyleDeclaration* self);
 // Writes the name that `text` refers to in the block. A descriptor of the block's rule takes precedence over a property
 // of the same name, and a legacy name resolves to the name that it is an alias of. Returns false if the block accepts
 // no declaration of that name, and leaves `out` unchanged.
-bool prCssStyleDeclarationNameFromText(const PrCssStyleDeclaration* self, PrStringView text,
-                                       PrCssDeclarationName* out);
+bool prCssStyleDeclarationNameFromText(const PrCssStyleDeclaration* self, PrStringView text, PrCssDeclarationName* out);
 
 // Writes the name of the declaration at `index`, which is below the length.
-void prCssStyleDeclarationNameAt(const PrCssStyleDeclaration* self, uint32_t index,
-                                 PrCssDeclarationName* out);
+void prCssStyleDeclarationNameAt(const PrCssStyleDeclaration* self, uint32_t index, PrCssDeclarationName* out);
 
 // Returns the value of `name`, serialized (cssom-1/#dom-cssstyledeclaration-getpropertyvalue), or the empty string if
 // the block has none or accepts no such declaration.
-PrString prCssStyleDeclarationGetPropertyValue(const PrCssStyleDeclaration* self,
-                                               const PrCssDeclarationName* name);
+PrString prCssStyleDeclarationGetPropertyValue(const PrCssStyleDeclaration* self, const PrCssDeclarationName* name);
 
 // Returns true if `name` is declared !important (cssom-1/#dom-cssstyledeclaration-getpropertypriority).
-bool prCssStyleDeclarationIsImportant(const PrCssStyleDeclaration* self,
-                                      const PrCssDeclarationName* name);
+bool prCssStyleDeclarationIsImportant(const PrCssStyleDeclaration* self, const PrCssDeclarationName* name);
 
 // Declares `name` as the value in `value` (cssom-1/#dom-cssstyledeclaration-setproperty). An empty `value` removes the
 // declaration. Returns InvalidData, and leaves the block unchanged, for a name that the block does not accept, a value
 // that its grammar does not accept, or an importance that the block's rule does not accept.
 PrStatus prCssStyleDeclarationSetProperty(PrCssStyleDeclaration* self,
-                                          const PrCssDeclarationName* name, PrStringView value,
-                                          bool important);
+    const PrCssDeclarationName* name, PrStringView value, bool important);
 
 // Removes the declaration of `name` (cssom-1/#dom-cssstyledeclaration-removeproperty). Writes the value that it had to
 // `out`, or the empty string if the block declared none. Returns InvalidData for a name that the block does not accept.
-PrStatus prCssStyleDeclarationRemoveProperty(PrCssStyleDeclaration* self,
-                                             const PrCssDeclarationName* name,
-                                             PrString* PR_NULLABLE out);
+PrStatus prCssStyleDeclarationRemoveProperty(PrCssStyleDeclaration* self, const PrCssDeclarationName* name,
+    PrString* PR_NULLABLE out);
 
 // Returns the rule whose declarations these are, or null for an element's style attribute.
 PrCssRule* PR_NULLABLE prCssStyleDeclarationParentRule(PrCssStyleDeclaration* self);
@@ -1317,8 +1291,7 @@ PrCssRule* PR_NULLABLE prCssStyleDeclarationParentRule(PrCssStyleDeclaration* se
 // Writes the value of `name`. Writes nothing if the block declares none, or holds a value that is pending on the
 // substitution of a shorthand (css-values-5/#pending-substitution-value). A shorthand's value is what its longhands
 // serialize to, as matched by its grammar. Returns InvalidData for a name that the block does not accept.
-PrStatus prCssStyleDeclarationValue(const PrCssStyleDeclaration* self,
-                                    const PrCssDeclarationName* name, PrCssValue* out);
+PrStatus prCssStyleDeclarationValue(const PrCssStyleDeclaration* self, const PrCssDeclarationName* name, PrCssValue* out);
 
 // Declares `name` as `value`. The value is matched against the grammar in the same way as its written tokens would be,
 // with a numeric value in place of a number, a percentage or a dimension of its type. A number is never a length,
@@ -1328,14 +1301,12 @@ PrStatus prCssStyleDeclarationValue(const PrCssStyleDeclaration* self,
 // block unchanged, for a name that the block does not accept, a value that its grammar does not accept, or an
 // importance that the block's rule does not accept.
 PrStatus prCssStyleDeclarationSetValue(PrCssStyleDeclaration* self,
-                                       const PrCssDeclarationName* name, const PrCssValue* value,
-                                       bool important);
+    const PrCssDeclarationName* name, const PrCssValue* value, bool important);
 
 // Appends the items of `value` to the items of a list-valued property (prCssPropertyListValued). Returns InvalidData if
 // the declaration holds no list of the items, and otherwise fails in the same cases as prCssStyleDeclarationSetValue.
-PrStatus prCssStyleDeclarationAppendValue(PrCssStyleDeclaration* self,
-                                          const PrCssDeclarationName* name,
-                                          const PrCssValue* value);
+PrStatus prCssStyleDeclarationAppendValue(PrCssStyleDeclaration* self, const PrCssDeclarationName* name,
+    const PrCssValue* value);
 
 // ---------------------------------------------------------------------------------------------------------------------
 // CSSStyleProperties : CSSStyleDeclaration (cssom)
@@ -1344,8 +1315,7 @@ PrStatus prCssStyleDeclarationAppendValue(PrCssStyleDeclaration* self,
 PR_HANDLE_UPCAST(CssStyleProperties, CssStyleDeclaration, CssStyleDeclaration)
 
 // Returns a CSSStyleDeclaration as a CSSStyleProperties, or null if it is not one.
-PrCssStyleProperties* PR_NULLABLE prCssStylePropertiesQuery(
-    PrCssStyleDeclaration* PR_NULLABLE object);
+PrCssStyleProperties* PR_NULLABLE prCssStylePropertiesQuery(PrCssStyleDeclaration* PR_NULLABLE object);
 
 // ---------------------------------------------------------------------------------------------------------------------
 // CSSFontFaceDescriptors : CSSStyleDeclaration (css-fonts-5)
@@ -1354,8 +1324,7 @@ PrCssStyleProperties* PR_NULLABLE prCssStylePropertiesQuery(
 PR_HANDLE_UPCAST(CssFontFaceDescriptors, CssStyleDeclaration, CssStyleDeclaration)
 
 // Returns a CSSStyleDeclaration as a CSSFontFaceDescriptors, or null if it is not one.
-PrCssFontFaceDescriptors* PR_NULLABLE prCssFontFaceDescriptorsQuery(
-    PrCssStyleDeclaration* PR_NULLABLE object);
+PrCssFontFaceDescriptors* PR_NULLABLE prCssFontFaceDescriptorsQuery(PrCssStyleDeclaration* PR_NULLABLE object);
 
 // ---------------------------------------------------------------------------------------------------------------------
 // CSSPageDescriptors : CSSStyleDeclaration (cssom)
@@ -1364,8 +1333,7 @@ PrCssFontFaceDescriptors* PR_NULLABLE prCssFontFaceDescriptorsQuery(
 PR_HANDLE_UPCAST(CssPageDescriptors, CssStyleDeclaration, CssStyleDeclaration)
 
 // Returns a CSSStyleDeclaration as a CSSPageDescriptors, or null if it is not one.
-PrCssPageDescriptors* PR_NULLABLE prCssPageDescriptorsQuery(
-    PrCssStyleDeclaration* PR_NULLABLE object);
+PrCssPageDescriptors* PR_NULLABLE prCssPageDescriptorsQuery(PrCssStyleDeclaration* PR_NULLABLE object);
 
 // ---------------------------------------------------------------------------------------------------------------------
 // CSSPositionTryDescriptors : CSSStyleDeclaration (css-anchor-position)
@@ -1374,8 +1342,7 @@ PrCssPageDescriptors* PR_NULLABLE prCssPageDescriptorsQuery(
 PR_HANDLE_UPCAST(CssPositionTryDescriptors, CssStyleDeclaration, CssStyleDeclaration)
 
 // Returns a CSSStyleDeclaration as a CSSPositionTryDescriptors, or null if it is not one.
-PrCssPositionTryDescriptors* PR_NULLABLE prCssPositionTryDescriptorsQuery(
-    PrCssStyleDeclaration* PR_NULLABLE object);
+PrCssPositionTryDescriptors* PR_NULLABLE prCssPositionTryDescriptorsQuery(PrCssStyleDeclaration* PR_NULLABLE object);
 
 // ---------------------------------------------------------------------------------------------------------------------
 // CSSFunctionDescriptors : CSSStyleDeclaration (css-mixins)
@@ -1384,8 +1351,7 @@ PrCssPositionTryDescriptors* PR_NULLABLE prCssPositionTryDescriptorsQuery(
 PR_HANDLE_UPCAST(CssFunctionDescriptors, CssStyleDeclaration, CssStyleDeclaration)
 
 // Returns a CSSStyleDeclaration as a CSSFunctionDescriptors, or null if it is not one.
-PrCssFunctionDescriptors* PR_NULLABLE prCssFunctionDescriptorsQuery(
-    PrCssStyleDeclaration* PR_NULLABLE object);
+PrCssFunctionDescriptors* PR_NULLABLE prCssFunctionDescriptorsQuery(PrCssStyleDeclaration* PR_NULLABLE object);
 
 // ---------------------------------------------------------------------------------------------------------------------
 // CSS (cssom)
@@ -1461,13 +1427,13 @@ typedef uint8_t PrCssFontFaceDescriptor;
 // Error, and that descriptor is the empty string. `descriptors` holds a value for each descriptor after the family, and
 // a null view keeps the default. A face with a `source` is Unloaded until it loads.
 PrCssFontFace* prCssFontFaceCreate(PrStringView family, PrStringView source,
-                                   const PrStringView* PR_NULLABLE descriptors);
+    const PrStringView* PR_NULLABLE descriptors);
 
 // Creates a face in the same way as prCssFontFaceCreate, for a face whose source is the font data itself, in the realm
 // of `document`. The face is Loaded if the data makes a font, and Error otherwise. The codec of the document's host
 // decompresses compressed data. Without a document or a codec, compressed data is an error.
 PrCssFontFace* prCssFontFaceCreateFromData(PrDomDocument* PR_NULLABLE document, PrStringView family, PrByteView data,
-                                           const PrStringView* PR_NULLABLE descriptors);
+    const PrStringView* PR_NULLABLE descriptors);
 
 // Adds or releases a reference. The last release frees the face.
 void prCssFontFaceRetain(PrCssFontFace* self);
@@ -1478,8 +1444,7 @@ PrString prCssFontFaceDescriptor(const PrCssFontFace* self, PrCssFontFaceDescrip
 
 // Sets `descriptor` to the value in `value`. Returns Syntax, and leaves the descriptor unchanged, if the descriptor
 // does not accept `value`.
-PrStatus prCssFontFaceSetDescriptor(PrCssFontFace* self, PrCssFontFaceDescriptor descriptor,
-                                    PrStringView value);
+PrStatus prCssFontFaceSetDescriptor(PrCssFontFace* self, PrCssFontFaceDescriptor descriptor, PrStringView value);
 
 // Returns the face's load status.
 PrCssFontFaceStatus prCssFontFaceStatus(const PrCssFontFace* self);
@@ -1514,12 +1479,10 @@ typedef uint8_t PrCssFontFaceSetLoadStatus;
 // Receives notifications about a document's fonts.
 typedef struct PrCssFontCallback {
     // Called with a face whose status changes during a load through the document.
-    void (*PR_NULLABLE faceStatus)(void* PR_NULLABLE context, PrDomDocument* document,
-                                   PrCssFontFace* face);
+    void (*PR_NULLABLE faceStatus)(void* PR_NULLABLE context, PrDomDocument* document, PrCssFontFace* face);
 
     // Called when the document's set switches between loading and loaded.
-    void (*PR_NULLABLE setStatus)(void* PR_NULLABLE context, PrDomDocument* document,
-                                  PrCssFontFaceSet* set);
+    void (*PR_NULLABLE setStatus)(void* PR_NULLABLE context, PrDomDocument* document, PrCssFontFaceSet* set);
 
     void* PR_NULLABLE context;
 } PrCssFontCallback;
@@ -1559,8 +1522,7 @@ PrStatus prCssFontFaceSetCheck(const PrCssFontFaceSet* self, PrStringView font, 
 // (css-font-loading-3/#dom-fontfaceset-load). Writes up to `capacity` of the faces to `items`, and the total to
 // `count`. Returns Syntax if `font` is not a value of the font property.
 PrStatus prCssFontFaceSetLoad(PrCssFontFaceSet* self, PrDomDocument* document, PrStringView font,
-                              PrCssFontFace* PR_NONNULL* PR_NULLABLE items, uint32_t capacity,
-                              uint32_t* count);
+    PrCssFontFace* PR_NONNULL* PR_NULLABLE items, uint32_t capacity, uint32_t* count);
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Highlight (css-highlight-api)
@@ -1623,12 +1585,10 @@ PrStringView prCssHighlightRegistryNameAt(PrCssHighlightRegistry* self, uint32_t
 PrCssHighlight* PR_NULLABLE prCssHighlightRegistryAt(PrCssHighlightRegistry* self, uint32_t index);
 
 // Returns the highlight that `name` names, or null if the registry does not have `name`.
-PrCssHighlight* PR_NULLABLE prCssHighlightRegistryGet(PrCssHighlightRegistry* self,
-                                                      PrStringView name);
+PrCssHighlight* PR_NULLABLE prCssHighlightRegistryGet(PrCssHighlightRegistry* self, PrStringView name);
 
 // Names `highlight` `name`, replacing the highlight that the name had.
-void prCssHighlightRegistrySet(PrCssHighlightRegistry* self, PrStringView name,
-                               PrCssHighlight* highlight);
+void prCssHighlightRegistrySet(PrCssHighlightRegistry* self, PrStringView name, PrCssHighlight* highlight);
 
 // Removes `name`. Returns false for a name that the registry does not have.
 bool prCssHighlightRegistryDelete(PrCssHighlightRegistry* self, PrStringView name);
@@ -1661,8 +1621,7 @@ bool prCssColorFromKeyword(PrCssKeyword keyword, PrColor8* out);
 
 // Writes the longhands of a shorthand (css-cascade-5/#shorthand-property), or none for a longhand. Writes up to
 // `capacity` items to `items` and returns the total count.
-uint32_t prCssPropertyLonghands(PrCssProperty property, PrCssProperty* PR_NULLABLE items,
-                                uint32_t capacity);
+uint32_t prCssPropertyLonghands(PrCssProperty property, PrCssProperty* PR_NULLABLE items, uint32_t capacity);
 
 // Returns true if a value of the property is a list of items separated by ','. That is the case if its grammar, or one
 // of its alternatives, is such a list (css-typed-om-1/#list-valued-properties).
@@ -1703,8 +1662,7 @@ uint32_t prCssValueNext(const PrCssValue* self, uint32_t node);
 PrCssValueFields prCssValueFields(const PrCssValue* self, uint32_t node);
 
 // Writes the channels of the Color at `node`, then its alpha.
-void prCssValueColorChannels(const PrCssValue* self, uint32_t node,
-                             PrCssColorChannel channels[PR_NONNULL 4]);
+void prCssValueColorChannels(const PrCssValue* self, uint32_t node, PrCssColorChannel channels[PR_NONNULL 4]);
 
 // Parses `text` as a value of `name` (css-typed-om-1/#dom-cssstylevalue-parseall). The result is what
 // prCssStyleDeclarationValue returns for a declaration of `text`. Returns InvalidData for a name that is neither a
@@ -1757,8 +1715,7 @@ typedef struct PrCssFont PrCssFont;
 // computes it as the font of a child of `element` computes, with line-height normal. Relative sizes and weights are
 // relative to the computed font of `element` where its document's render styles it, and otherwise to a normal weight at
 // 10px. Writes the font, which the caller destroys, or null and returns Syntax for text that is not such a value.
-PrStatus prCssFontCreate(PrStringView text, const PrDomElement* PR_NULLABLE element,
-                         PrCssFont* PR_NULLABLE* PR_NONNULL out);
+PrStatus prCssFontCreate(PrStringView text, const PrDomElement* PR_NULLABLE element, PrCssFont* PR_NULLABLE* PR_NONNULL out);
 
 // Frees the font.
 void prCssFontDestroy(PrCssFont* PR_NULLABLE font);
@@ -1784,15 +1741,14 @@ PrStringView prCssFontSerialization(const PrCssFont* font);
 // with no source. Writes up to `capacity` items to `out`, and the number of items to `count`. Returns Syntax for text
 // that is not such a list, which neither none nor a CSS-wide keyword is.
 PrStatus prCssParseFilterList(PrStringView text, const PrDomElement* PR_NULLABLE element,
-                              PrLayoutFilter* PR_NULLABLE out, uint32_t capacity, uint32_t* count);
+    PrLayoutFilter* PR_NULLABLE out, uint32_t capacity, uint32_t* count);
 
 // Returns the trees from `first` up to `end`, serialized in the way that a declaration's value is written
 // (cssom-1/#serialize-a-css-value).
 PrString prCssValueSerialize(const PrCssValue* self, uint32_t first, uint32_t end);
 
 // Returns true if the trees at `node` of `self` and at `otherNode` of `other` are the same value.
-bool prCssValueEquals(const PrCssValue* self, uint32_t node, const PrCssValue* other,
-                      uint32_t otherNode);
+bool prCssValueEquals(const PrCssValue* self, uint32_t node, const PrCssValue* other, uint32_t otherNode);
 
 // Writes the type of the numeric value at `node` (css-typed-om-1/#cssnumericvalue-type), which is a number, a
 // percentage, a dimension, a Math, or a node of a Math's tree. Returns InvalidData for a value with no type.
@@ -1804,13 +1760,11 @@ bool prCssNumericTypeFromUnit(PrCssUnit unit, PrCssNumericType* out);
 
 // Writes the type of the sum of values of types `a` and `b` (css-typed-om-1/#cssnumericvalue-add-two-types). Returns
 // false if the types cannot be added.
-bool prCssNumericTypeAdd(const PrCssNumericType* a, const PrCssNumericType* b,
-                         PrCssNumericType* out);
+bool prCssNumericTypeAdd(const PrCssNumericType* a, const PrCssNumericType* b, PrCssNumericType* out);
 
 // Writes the type of the product of values of types `a` and `b` (css-typed-om-1/#cssnumericvalue-multiply-two-types).
 // Returns false if the types cannot be multiplied.
-bool prCssNumericTypeMultiply(const PrCssNumericType* a, const PrCssNumericType* b,
-                              PrCssNumericType* out);
+bool prCssNumericTypeMultiply(const PrCssNumericType* a, const PrCssNumericType* b, PrCssNumericType* out);
 
 // Returns the type of the reciprocal of a value of `type` (css-typed-om-1/#cssnumericvalue-invert-a-type).
 PrCssNumericType prCssNumericTypeInvert(const PrCssNumericType* type);
@@ -1823,7 +1777,7 @@ PrStatus prCssValueTo(const PrCssValue* self, uint32_t node, PrCssUnit unit, dou
 // `count` is zero (css-typed-om-1/#dom-cssnumericvalue-tosum). Returns InvalidData if the value cannot be expressed in
 // those units.
 PrStatus prCssValueToSum(const PrCssValue* self, uint32_t node, const PrCssUnit* PR_NULLABLE units,
-                         uint32_t count, PrCssValue* out);
+    uint32_t count, PrCssValue* out);
 
 // Writes the matrix of the transform function at `node`, which is a Function
 // (css-transforms-2/#mathematical-description). Returns InvalidData if it is not a transform function, or if its
@@ -1832,8 +1786,7 @@ PrStatus prCssValueTransformMatrix(const PrCssValue* self, uint32_t node, PrDomM
 
 // Writes the var() references among the tokens of `text` that are not nested in another reference. Writes up to
 // `capacity` items to `items` and returns the total count.
-uint32_t prCssVariableReferences(PrStringView text, PrCssVariableReference* PR_NULLABLE items,
-                                 uint32_t capacity);
+uint32_t prCssVariableReferences(PrStringView text, PrCssVariableReference* PR_NULLABLE items, uint32_t capacity);
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Documents
@@ -1852,8 +1805,7 @@ typedef struct PrCssSelectors PrCssSelectors;
 
 // Writes the first descendant element that matches `selectors`, or null if none does
 // (dom/#dom-parentnode-queryselector). Returns Syntax if `selectors` is not a selector list.
-PrStatus prCssNodeQuerySelector(PrDomNode* self, PrStringView selectors,
-                                PrDomElement* PR_NULLABLE* PR_NONNULL out);
+PrStatus prCssNodeQuerySelector(PrDomNode* self, PrStringView selectors, PrDomElement* PR_NULLABLE* PR_NONNULL out);
 
 // Makes `list` a snapshot of the descendant elements that match `selectors`, in tree order
 // (dom/#dom-parentnode-queryselectorall). The snapshot holds no reference to `self`. Returns Syntax if `selectors` is
@@ -1869,20 +1821,17 @@ PrStatus prCssSelectorsCreate(PrStringView text, PrCssSelectors* PR_NULLABLE* PR
 void prCssSelectorsDestroy(PrCssSelectors* PR_NULLABLE self);
 
 // Implement prCssNodeQuerySelector and prCssNodeQuerySelectorAll with a selector list that is already parsed.
-PrDomElement* PR_NULLABLE prCssNodeQuerySelectorCompiled(PrDomNode* self,
-                                                         const PrCssSelectors* selectors);
+PrDomElement* PR_NULLABLE prCssNodeQuerySelectorCompiled(PrDomNode* self, const PrCssSelectors* selectors);
 void prCssNodeQuerySelectorAllCompiled(PrDomNode* self, const PrCssSelectors* selectors, PrDomNodeList* list);
 
 // prCssElementClosest writes the element or its nearest ancestor element that matches `selectors`, or null if none does
 // (dom/#dom-element-closest). prCssElementMatches writes true if the element matches `selectors`
 // (dom/#dom-element-matches). Both return Syntax if `selectors` is not a selector list.
-PrStatus prCssElementClosest(PrDomElement* self, PrStringView selectors,
-                             PrDomElement* PR_NULLABLE* PR_NONNULL out);
+PrStatus prCssElementClosest(PrDomElement* self, PrStringView selectors, PrDomElement* PR_NULLABLE* PR_NONNULL out);
 PrStatus prCssElementMatches(const PrDomElement* self, PrStringView selectors, bool* out);
 
 // Implement prCssElementClosest and prCssElementMatches with a selector list that is already parsed.
-PrDomElement* PR_NULLABLE prCssElementClosestCompiled(PrDomElement* self,
-                                                      const PrCssSelectors* selectors);
+PrDomElement* PR_NULLABLE prCssElementClosestCompiled(PrDomElement* self, const PrCssSelectors* selectors);
 bool prCssElementMatchesCompiled(const PrDomElement* self, const PrCssSelectors* selectors);
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -1956,19 +1905,16 @@ static inline PrCssFontFaceSetLoadEventInit prCssFontFaceSetLoadEventInitDefault
 }
 
 // Returns an Event as a FontFaceSetLoadEvent, or null if it is not one.
-PrCssFontFaceSetLoadEvent* PR_NULLABLE
-prCssFontFaceSetLoadEventQuery(PrDomEvent* PR_NULLABLE object);
+PrCssFontFaceSetLoadEvent* PR_NULLABLE prCssFontFaceSetLoadEventQuery(PrDomEvent* PR_NULLABLE object);
 
 // Creates a FontFaceSetLoadEvent of `type`, with one reference that the caller holds (prDomEventRelease). The event
 // holds its faces.
-PrCssFontFaceSetLoadEvent*
-prCssFontFaceSetLoadEventCreate(PrStringView type,
-                                const PrCssFontFaceSetLoadEventInit* PR_NULLABLE init);
+PrCssFontFaceSetLoadEvent* prCssFontFaceSetLoadEventCreate(PrStringView type,
+    const PrCssFontFaceSetLoadEventInit* PR_NULLABLE init);
 
 // Writes the faces that the event names. Writes up to `capacity` of them to `items`, and returns the total count.
 uint32_t prCssFontFaceSetLoadEventFontFaces(PrCssFontFaceSetLoadEvent* self,
-                                            PrCssFontFace* PR_NONNULL* PR_NULLABLE items,
-                                            uint32_t capacity);
+    PrCssFontFace* PR_NONNULL* PR_NULLABLE items, uint32_t capacity);
 
 // ---------------------------------------------------------------------------------------------------------------------
 // TransitionEvent : Event (css-transitions-1) and AnimationEvent : Event (css-animations-1)

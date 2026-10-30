@@ -56,9 +56,7 @@ TEST_CASE("a failing member throws the DOMException its status stands for") {
         }
         return false;
     })())JS"));
-    CHECK(evaluates(
-        ctx,
-        R"JS(CSS.supports("color", "red") && CSS.supports("color: red") && !CSS.supports("color", "blah"))JS"));
+    CHECK(evaluates(ctx, R"JS(CSS.supports("color", "red") && CSS.supports("color: red") && !CSS.supports("color", "blah"))JS"));
 
     JS_FreeContext(ctx);
     jsRuntimeDestroy(runtime);

@@ -168,9 +168,11 @@ JSValue nativeValue(JSContext* ctx, JSValueConst, int, JSValueConst* argv) {
 
 JSValue nativeKeys(JSContext* ctx, JSValueConst, int, JSValueConst* argv) {
     const LottieNode* node = nodeOf(ctx, argv[0]);
-    uint32_t count = node == nullptr || node->property == kLottieNone
-                         ? 0
-                         : animationOf(ctx).properties.data[node->property].keyframeCount;
+    uint32_t count;
+    if (node == nullptr || node->property == kLottieNone)
+        count = 0;
+    else
+        count = animationOf(ctx).properties.data[node->property].keyframeCount;
     return JS_NewUint32(ctx, count);
 }
 
@@ -223,7 +225,7 @@ JSValue nativeChildren(JSContext* ctx, JSValueConst, int, JSValueConst* argv) {
     JSValue array = JS_NewArray(ctx);
     uint32_t i = 0;
     for (uint32_t child = node != nullptr ? node->firstChild : kLottieNone; child != kLottieNone;
-         child = a.nodes.data[child].nextSibling)
+            child = a.nodes.data[child].nextSibling)
         JS_SetPropertyUint32(ctx, array, i++, nodeValue(ctx, child));
     return array;
 }
@@ -332,11 +334,8 @@ constexpr Native kNatives[] = {
 
 // The wrapper for an expression's function. It runs the source with the scope's names available, and returns the value
 // assigned to $bm_rt, the variable through which bodymovin exports the result.
-constexpr const char* kCompile =
-    "(function (source) {"
-    " return new Function('$scope', 'with ($scope) {\\n' + source + '\\n}\\n'"
-    " + 'return typeof $bm_rt === \"undefined\" ? undefined : $bm_rt;');"
-    "})";
+constexpr const char* kCompile = "(function (source) { return new Function('$scope', 'with ($scope) {\\n' + source + '\\n}\\n'"
+    " + 'return typeof $bm_rt === \"undefined\" ? undefined : $bm_rt;');})";
 
 JSValue run(JSContext* ctx, const char* source) {
     PrStringView sourceView = source;
@@ -406,8 +405,11 @@ bool readResult(JSContext* ctx, JSValueConst result, float* value, uint32_t dims
         value[0] = float(v);
         return true;
     }
-    JSValue array = JS_IsObject(result) && !JS_IsArray(result) ? JS_GetPropertyStr(ctx, result, "$path")
-                                                               : JS_DupValue(ctx, result);
+    JSValue array;
+    if (JS_IsObject(result) && !JS_IsArray(result))
+        array = JS_GetPropertyStr(ctx, result, "$path");
+    else
+        array = JS_DupValue(ctx, result);
     if (!JS_IsArray(array)) {
         JS_FreeValue(ctx, array);
         return false;
@@ -435,9 +437,11 @@ bool evaluate(LottieExpressions& e, uint32_t property, double frame, float* valu
     JSValue function = functionFor(e, property);
     if (JS_IsUndefined(function) || JS_IsUndefined(e.evaluate))
         return false;
-    JSValue args[4] = {JS_DupValue(e.ctx, function), JS_NewInt32(e.ctx, int32_t(p.node)),
-                       JS_NewFloat64(e.ctx, secondsOf(a, frame)),
-                       floatsValue(e.ctx, value, p.dims, a.nodes.data[p.node].role)};
+    JSValue args[4] = {
+        JS_DupValue(e.ctx, function), JS_NewInt32(e.ctx, int32_t(p.node)),
+        JS_NewFloat64(e.ctx, secondsOf(a, frame)),
+        floatsValue(e.ctx, value, p.dims, a.nodes.data[p.node].role),
+    };
     JSValue result = JS_Call(e.ctx, e.evaluate, JS_UNDEFINED, 4, args);
     for (JSValue& arg : args)
         JS_FreeValue(e.ctx, arg);

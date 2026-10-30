@@ -21,9 +21,8 @@ volatile LONG writes = 0;
 wchar_t* PR_NULLABLE widen(PrStringView path) {
     if (path.size > size_t(INT32_MAX))
         return nullptr;
-    int count = path.size == 0
-                    ? 0
-                    : MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, path.data, int(path.size), nullptr, 0);
+    int count =
+        path.size == 0 ? 0 : MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, path.data, int(path.size), nullptr, 0);
     if (path.size != 0 && count == 0)
         return nullptr;
     wchar_t* wide = static_cast<wchar_t*>(malloc((size_t(count) + 1) * sizeof(wchar_t)));
@@ -40,8 +39,7 @@ PrString narrow(const wchar_t* wide) {
     int size = WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, wide, -1, nullptr, 0, nullptr, nullptr);
     char* utf8 = size > 1 ? static_cast<char*>(malloc(size_t(size))) : nullptr;
     PrString text = prStringNull();
-    if (utf8 != nullptr
-        && WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, wide, -1, utf8, size, nullptr, nullptr) == size)
+    if (utf8 != nullptr && WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, wide, -1, utf8, size, nullptr, nullptr) == size)
         text = prStringCopy(PrStringView{utf8, size_t(size - 1)});
     free(utf8);
     return text;
@@ -88,7 +86,7 @@ bool prCoreWindowsFileMap(PrStringView path, PrFileMapping* out) {
         return false;
     // A directory does not open without FILE_FLAG_BACKUP_SEMANTICS, so only files reach the checks below.
     HANDLE file = CreateFileW(wide, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_DELETE, nullptr, OPEN_EXISTING,
-                              FILE_ATTRIBUTE_NORMAL, nullptr);
+        FILE_ATTRIBUTE_NORMAL, nullptr);
     free(wide);
     if (file == INVALID_HANDLE_VALUE)
         return false;
@@ -145,7 +143,7 @@ bool prCoreWindowsFileEachEntry(PrStringView path, PrFileEntryFn fn, void* PR_NU
     free(wide);
     WIN32_FIND_DATAW data;
     HANDLE find = FindFirstFileExW(pattern, FindExInfoBasic, &data, FindExSearchNameMatch, nullptr,
-                                   FIND_FIRST_EX_LARGE_FETCH);
+        FIND_FIRST_EX_LARGE_FETCH);
     free(pattern);
     if (find == INVALID_HANDLE_VALUE)
         return GetLastError() == ERROR_FILE_NOT_FOUND;
@@ -156,9 +154,10 @@ bool prCoreWindowsFileEachEntry(PrStringView path, PrFileEntryFn fn, void* PR_NU
         PrString utf8 = narrow(name);
         if (prStringIsNull(&utf8))
             continue;
-        PrFileEntry entry{.name = prStringView(&utf8),
-                          .info = infoOf(data.dwFileAttributes, data.nFileSizeHigh, data.nFileSizeLow,
-                                         data.ftLastWriteTime)};
+        PrFileEntry entry{
+            .name = prStringView(&utf8),
+            .info = infoOf(data.dwFileAttributes, data.nFileSizeHigh, data.nFileSizeLow, data.ftLastWriteTime),
+        };
         fn(context, &entry);
         prStringReset(&utf8);
     } while (FindNextFileW(find, &data));
@@ -179,7 +178,7 @@ bool prCoreWindowsFileWrite(PrStringView path, PrByteView bytes) {
         return false;
     }
     _snwprintf_s(temporary, capacity, _TRUNCATE, L"%s.%lu.%u.tmp", target, GetCurrentProcessId(),
-                 unsigned(InterlockedIncrement(&writes)));
+        unsigned(InterlockedIncrement(&writes)));
     bool written = false;
     HANDLE file = CreateFileW(temporary, GENERIC_WRITE, 0, nullptr, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
     if (file != INVALID_HANDLE_VALUE) {
@@ -225,8 +224,8 @@ bool prCoreWindowsFileCreateDirectory(PrStringView path) {
             continue;
         wchar_t saved = wide[i];
         wide[i] = 0;
-        if (!CreateDirectoryW(wide, nullptr) && GetLastError() != ERROR_ALREADY_EXISTS
-            && GetLastError() != ERROR_ACCESS_DENIED) {
+        if (!CreateDirectoryW(wide, nullptr) && GetLastError() != ERROR_ALREADY_EXISTS &&
+                GetLastError() != ERROR_ACCESS_DENIED) {
             free(wide);
             return false;
         }

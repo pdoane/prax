@@ -88,8 +88,8 @@ std::vector<Document> pages() {
         if (error)
             break;
         std::string name = it->path().filename().string();
-        if (it->is_directory() && name != "shared"
-            && std::find(directories.begin(), directories.end(), name) == directories.end())
+        if (it->is_directory() && name != "shared" &&
+                std::find(directories.begin(), directories.end(), name) == directories.end())
             unlisted.push_back(name);
     }
     std::sort(unlisted.begin(), unlisted.end());

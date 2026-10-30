@@ -54,13 +54,17 @@ DimensionSize outputSize(const Submission& s) {
     switch (s.mode) {
         case OperationMode_Generate: return s.size;
         case OperationMode_Upscale:
-            return {uint32_t(std::lround(source.width * s.upscale.factor)),
-                    uint32_t(std::lround(source.height * s.upscale.factor))};
+            return {
+                uint32_t(std::lround(source.width * s.upscale.factor)),
+                uint32_t(std::lround(source.height * s.upscale.factor)),
+            };
         case OperationMode_Outpaint: {
             bool horizontal =
                 s.outpaint.direction == OutpaintDirection_Left || s.outpaint.direction == OutpaintDirection_Right;
-            return {source.width + (horizontal ? s.outpaint.amount : 0),
-                    source.height + (horizontal ? 0 : s.outpaint.amount)};
+            return {
+                source.width + (horizontal ? s.outpaint.amount : 0),
+                source.height + (horizontal ? 0 : s.outpaint.amount),
+            };
         }
         default: return source;
     }
@@ -108,14 +112,16 @@ ProvenanceOp operationOf(const Submission& s) {
 }
 
 SamplingRecipe samplingOf(const GenerateParams& params) {
-    SamplingRecipe recipe{.checkpoint = params.checkpoint,
-                          .sampler = params.sampler,
-                          .scheduler = params.scheduler,
-                          .prompt = params.prompt,
-                          .negativePrompt = params.negativePrompt,
-                          .seed = params.seed,
-                          .steps = params.steps,
-                          .cfg = params.cfg};
+    SamplingRecipe recipe{
+        .checkpoint = params.checkpoint,
+        .sampler = params.sampler,
+        .scheduler = params.scheduler,
+        .prompt = params.prompt,
+        .negativePrompt = params.negativePrompt,
+        .seed = params.seed,
+        .steps = params.steps,
+        .cfg = params.cfg,
+    };
     for (const LoraEntry& lora : params.loras)
         recipe.loras.push_back({lora.name, lora.weight});
     return recipe;
@@ -126,25 +132,29 @@ std::string graphOf(const Submission& s) {
         case OperationMode_Upscale:
             return upscaleGraph({.model = s.upscale.model, .sourceImage = s.sourceName, .factor = s.upscale.factor});
         case OperationMode_Outpaint:
-            return outpaintGraph({.sampling = samplingOf(s.sampling),
-                                  .sourceImage = s.sourceName,
-                                  .direction = s.outpaint.direction,
-                                  .sourceWidth = s.sourceSize.width,
-                                  .sourceHeight = s.sourceSize.height,
-                                  .amount = s.outpaint.amount,
-                                  .crossfade = s.outpaint.crossfade,
-                                  .growMask = s.outpaint.growMask,
-                                  .context = s.outpaint.context});
+            return outpaintGraph({
+                .sampling = samplingOf(s.sampling),
+                .sourceImage = s.sourceName,
+                .direction = s.outpaint.direction,
+                .sourceWidth = s.sourceSize.width,
+                .sourceHeight = s.sourceSize.height,
+                .amount = s.outpaint.amount,
+                .crossfade = s.outpaint.crossfade,
+                .growMask = s.outpaint.growMask,
+                .context = s.outpaint.context,
+            });
         case OperationMode_Detail:
             return detailGraph(
                 {.sampling = samplingOf(s.sampling), .sourceImage = s.sourceName, .detector = s.detail.detector});
         default:
-            return txt2ImgGraph({.sampling = samplingOf(s.sampling),
-                                 .sourceImage = s.sourceName,
-                                 .denoise = s.sampling.strength,
-                                 .width = s.size.width,
-                                 .height = s.size.height,
-                                 .batch = s.sampling.batch});
+            return txt2ImgGraph({
+                .sampling = samplingOf(s.sampling),
+                .sourceImage = s.sourceName,
+                .denoise = s.sampling.strength,
+                .width = s.size.width,
+                .height = s.size.height,
+                .batch = s.sampling.batch,
+            });
     }
 }
 
@@ -226,12 +236,9 @@ void adoptCatalog(AppState& state, const ComfyCatalog& catalog) {
     state.detail.detector = chooseName(catalog.detectors, state.detail.detector, "face");
     // An adapter that the server no longer has is dropped from the chain.
     std::vector<LoraEntry>& loras = p.loras;
-    loras.erase(std::remove_if(loras.begin(), loras.end(),
-                               [&](const LoraEntry& lora) {
-                                   return std::find(catalog.loras.begin(), catalog.loras.end(), lora.name)
-                                          == catalog.loras.end();
-                               }),
-                loras.end());
+    loras.erase(std::remove_if(loras.begin(), loras.end(), [&](const LoraEntry& lora) {
+        return std::find(catalog.loras.begin(), catalog.loras.end(), lora.name) == catalog.loras.end();
+    }), loras.end());
     {
         std::lock_guard<std::mutex> lock(state.survey.mutex);
         ++state.survey.generation;
@@ -339,7 +346,7 @@ bool applyEvent(AppState& state, const ComfyEvent& event) {
             if (job == nullptr)
                 return false;
             finishJob(*job, state, event.kind == ComfyEventKind_Completed ? JobState_Done : JobState_Failed,
-                      event.message);
+                event.message);
             return true;
         }
         default: break;
@@ -569,11 +576,9 @@ void pumpEvents(AppState& state, double dt) {
     }
     // The status bar shows what is in flight. A finished run left its image in the gallery and its outcome in the
     // status.
-    state.jobs.erase(std::remove_if(state.jobs.begin(), state.jobs.end(),
-                                    [](const Job& job) {
-                                        return job.state == JobState_Done || job.state == JobState_Failed;
-                                    }),
-                     state.jobs.end());
+    state.jobs.erase(std::remove_if(state.jobs.begin(), state.jobs.end(), [](const Job& job) {
+        return job.state == JobState_Done || job.state == JobState_Failed;
+    }), state.jobs.end());
 }
 
 const Job* PR_NULLABLE activeJob(const AppState& state) {
@@ -600,20 +605,20 @@ ModelArchitecture modelArchitecture(const AppState& state, ModelFolder folder, P
 
 bool loraConflicts(const AppState& state, PrStringView name) {
     return architecturesConflict(modelArchitecture(state, ModelFolder_Loras, name),
-                                 modelArchitecture(state, ModelFolder_Checkpoints, state.params.checkpoint));
+        modelArchitecture(state, ModelFolder_Checkpoints, state.params.checkpoint));
 }
 
 void applyDimensions(AppState& state) {
     seedDimensions(state.dims, state.params.checkpoint,
-                   modelArchitecture(state, ModelFolder_Checkpoints, state.params.checkpoint));
+        modelArchitecture(state, ModelFolder_Checkpoints, state.params.checkpoint));
 }
 
 const ProvenanceRecord* PR_NULLABLE selectedRecord(AppState& state) {
     const GalleryEntry* entry = gallerySelected(state.gallery);
     if (entry == nullptr)
         return nullptr;
-    if (!state.selectedRecordRead || state.selectedRecordPath != entry->path
-        || state.selectedRecordRevision != state.gallery.revision) {
+    if (!state.selectedRecordRead || state.selectedRecordPath != entry->path ||
+            state.selectedRecordRevision != state.gallery.revision) {
         state.selectedRecordRead = true;
         state.selectedRecordPath = entry->path;
         state.selectedRecordRevision = state.gallery.revision;
@@ -693,8 +698,7 @@ bool useSeed(AppState& state) {
 }
 
 bool useAspect(AppState& state) {
-    const ProvenanceOp* op =
-        newestWhere(state, [](const ProvenanceOp& o) { return o.width != 0 && o.height != 0; });
+    const ProvenanceOp* op = newestWhere(state, [](const ProvenanceOp& o) { return o.width != 0 && o.height != 0; });
     if (op == nullptr)
         return false;
     applyAspectRatio(state.dims, {op->width, op->height});

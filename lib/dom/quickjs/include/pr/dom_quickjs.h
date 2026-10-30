@@ -70,8 +70,7 @@ JSValue prJsDomAbortSignalReason(JSContext* ctx, JSValueConst signal);
 
 // Returns `target` as a JS value. This is the global object if `target` belongs to the global, and otherwise the
 // target's object, which keeps `owner` alive.
-JSValue prJsDomWrapEventTarget(JSContext* ctx, JSValueConst owner,
-                               PrDomEventTarget* PR_NULLABLE target);
+JSValue prJsDomWrapEventTarget(JSContext* ctx, JSValueConst owner, PrDomEventTarget* PR_NULLABLE target);
 
 // Returns the object of `document`, which has no owner.
 JSValue prJsDomWrapDocument(JSContext* ctx, PrDomDocument* document);
@@ -121,8 +120,7 @@ void prJsDomInvokeListener(void* PR_NULLABLE context, PrDomEvent* event);
 // Creates the callback of an event handler that calls `function`. The callback belongs to `owner`, which is the object
 // of the handler's target (jsCallbackCreate). `out` holds one reference to the callback's context. Returns false with
 // an exception pending.
-bool prJsDomEventHandlerCallback(JSContext* ctx, JSValueConst function, JSValueConst owner,
-                                 PrDomEventHandlerCallback* out);
+bool prJsDomEventHandlerCallback(JSContext* ctx, JSValueConst function, JSValueConst owner, PrDomEventHandlerCallback* out);
 
 // The getter and setter of an event handler IDL attribute (html/#event-handler-idl-attributes). The magic is the
 // attribute's PrDomEventHandler.

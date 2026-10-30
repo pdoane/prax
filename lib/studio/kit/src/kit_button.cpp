@@ -10,8 +10,10 @@ namespace pr_impl {
 namespace {
 
 // The look of each PrKitButtonVariant.
-constexpr KitLookId kVariantLooks[] = {KitLookId_Button, KitLookId_ButtonPrimary, KitLookId_ButtonGhost,
-                                       KitLookId_ButtonDanger};
+constexpr KitLookId kVariantLooks[] = {
+    KitLookId_Button, KitLookId_ButtonPrimary, KitLookId_ButtonGhost,
+    KitLookId_ButtonDanger,
+};
 
 // The size of a button's icon by PrKitControlSize, which grows with the button.
 constexpr float kIconSizes[] = {14, 12, 10, 16};
@@ -75,8 +77,10 @@ struct ButtonFlex {
 // Returns the font of a button's label, which its text node takes: smaller for the small sizes, and never wrapping.
 KitFont buttonFont(PrKitControlSize size) {
     bool small = size == PrKitControlSize_Xs || size == PrKitControlSize_Sm;
-    return KitFont{.role = PrKitTextRole(small ? PrKitTextRole_BodySmall : PrKitTextRole_Body),
-                   .wrap = PrKitWrap_Nowrap};
+    return KitFont{
+        .role = PrKitTextRole(small ? PrKitTextRole_BodySmall : PrKitTextRole_Body),
+        .wrap = PrKitWrap_Nowrap,
+    };
 }
 
 // What a button group gives the buttons made directly under it.
@@ -179,8 +183,7 @@ PrColor washOf(PrColor color, float alpha) {
 }
 
 // Makes a tag of `text` in the record of its groups.
-PrLayoutNode tag(Kit& kit, PrLayoutNode parent, uint64_t key, PrStringView text, Tag tag, PrColor ink,
-                 KitColors colors) {
+PrLayoutNode tag(Kit& kit, PrLayoutNode parent, uint64_t key, PrStringView text, Tag tag, PrColor ink, KitColors colors) {
     PrLayoutStyleIndex record =
         kitStyle(kit, TagBox{.tag = tag}, TagFlex{.tag = tag}, tagFont(tag), KitInk{.color = ink}, colors);
     PrLayoutNode node = prLayoutTreeFrameElement(kit.tree, parent, key, record);
@@ -190,8 +193,10 @@ PrLayoutNode tag(Kit& kit, PrLayoutNode parent, uint64_t key, PrStringView text,
 }
 
 // The tone of each PrKitBadgeVariant.
-constexpr PrKitTone kBadgeTones[] = {PrKitTone_Secondary, PrKitTone_Accent, PrKitTone_Success, PrKitTone_Warning,
-                                     PrKitTone_Danger};
+constexpr PrKitTone kBadgeTones[] = {
+    PrKitTone_Secondary, PrKitTone_Accent, PrKitTone_Success, PrKitTone_Warning,
+    PrKitTone_Danger,
+};
 
 // A chip's remove control: a square as tall as the smallest control, which centers its icon.
 struct RemoveBox {
@@ -218,13 +223,15 @@ using namespace pr_impl;
 PrLayoutNode prKitButton(PrKit* kit, PrLayoutNode parent, PrKitButton button, PrKitButtonStyle style) {
     Kit& k = *kit;
     KitControl c = kitControl(k, parent, button.key, PrUiFlag_Pressable | PrUiFlag_Focusable, button.disabled);
-    ButtonBox box{.size = style.size,
-                  .square = button.text.size == 0 && button.icon != PrKitIconKind_None,
-                  .grouped = inGroup(k, parent)};
+    ButtonBox box{
+        .size = style.size,
+        .square = button.text.size == 0 && button.icon != PrKitIconKind_None,
+        .grouped = inGroup(k, parent),
+    };
     KitLookId look = buttonLook(style.variant, button.selected, c.disabled);
     KitDress dress = kitDress(k, c, look);
     prLayoutTreeFrameSetStyle(k.tree, c.node,
-                              kitStyle(k, box, ButtonFlex{}, buttonFont(style.size), dress.fill, dress.ink));
+        kitStyle(k, box, ButtonFlex{}, buttonFont(style.size), dress.fill, dress.ink));
     if (button.icon != PrKitIconKind_None)
         kitIcon(k, c.node, 0, button.icon, kIconSizes[style.size], k.looks[look].icon);
     if (button.text.size != 0)
@@ -258,7 +265,7 @@ PrLayoutNode prKitChip(PrKit* kit, PrLayoutNode parent, PrKitChip chip) {
     KitControl remove = kitControl(k, node, 0, PrUiFlag_Pressable, chip.disabled);
     KitLookId look = remove.disabled ? KitLookId_ButtonGhostDisabled : KitLookId_Plain;
     prLayoutTreeFrameSetStyle(k.tree, remove.node,
-                              kitStyle(k, RemoveBox{}, RemoveFlex{}, kitDress(k, remove, look).fill));
+        kitStyle(k, RemoveBox{}, RemoveFlex{}, kitDress(k, remove, look).fill));
     kitIcon(k, remove.node, 0, PrKitIconKind_Close, 10, k.looks[look].icon);
     if (prUiActivated(k.ui, remove.node))
         kitSignal(k, node, KitSignal_Removed);
@@ -268,8 +275,7 @@ PrLayoutNode prKitChip(PrKit* kit, PrLayoutNode parent, PrKitChip chip) {
 PrLayoutNode prKitButtonGroup(PrKit* kit, PrLayoutNode parent, PrKitButtonGroup group) {
     Kit& k = *kit;
     const PrKitPalette& p = k.theme.palette;
-    PrLayoutStyleIndex record =
-        kitStyle(k, GroupBox{}, GroupFlex{}, KitColors{.background = p.line2, .border = p.line2});
+    PrLayoutStyleIndex record = kitStyle(k, GroupBox{}, GroupFlex{}, KitColors{.background = p.line2, .border = p.line2});
     PrLayoutNode node =
         kitBoxNode(k, parent, PrKitBox{.key = group.key, .disabled = group.disabled}, PrKitOverflow_Visible, record);
     kitProvide<GroupContext>(k, node, KitContext_ButtonGroup);

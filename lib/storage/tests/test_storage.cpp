@@ -54,8 +54,7 @@ PrTaskPool* writer() {
 }
 
 // Opens a disk store in a directory of its own, emptied first.
-PrStorage* openDisk(const char* name, uint64_t limit,
-                    PrStorageEviction eviction = PrStorageEviction_LeastRecentlyUsed) {
+PrStorage* openDisk(const char* name, uint64_t limit, PrStorageEviction eviction = PrStorageEviction_LeastRecentlyUsed) {
     std::string directory = directoryOf(name);
     PrStorageDiskDesc desc{.directory = directory, .limitBytes = limit, .eviction = eviction, .pool = writer()};
     PrStorage* storage = nullptr;
@@ -64,7 +63,7 @@ PrStorage* openDisk(const char* name, uint64_t limit,
 }
 
 PrStorage* openEmptyDisk(const char* name, uint64_t limit,
-                         PrStorageEviction eviction = PrStorageEviction_LeastRecentlyUsed) {
+        PrStorageEviction eviction = PrStorageEviction_LeastRecentlyUsed) {
     PrStorage* storage = openDisk(name, limit, eviction);
     prStorageClear(storage);
     return storage;

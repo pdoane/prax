@@ -282,11 +282,11 @@ CpuCoverage maskOver(Array<uint8_t>& storage, PrIRect box) {
 
 // Rasterizes the polyline over exactly `box`.
 void rasterizeOver(Renderer& r, const PrPathPolyline& polyline, PrPathFillRule rule, PrPathCoverage coverage,
-                   const CpuCoverage& mask) {
+        const CpuCoverage& mask) {
     if (prIRectIsEmpty(mask.box))
         return;
     prPathRasterizerFill(r.rasterizer, &polyline, rule, coverage, PrIVec2{mask.box.left, mask.box.top},
-                         PrPixels{mask.data, mask.stride, {prIRectWidth(mask.box), prIRectHeight(mask.box)}});
+        PrPixels{mask.data, mask.stride, {prIRectWidth(mask.box), prIRectHeight(mask.box)}});
 }
 
 // Returns the box that the polyline covers, within `limit`.
@@ -355,8 +355,7 @@ bool shapeCoverage(Renderer& r, const PrDrawCommand& c, PrIRect limit, CpuCovera
 
 // Returns the texture that an area of a list renders to, for the list brush to sample as an image. Its size is that of
 // `tile` at `scale` target pixels per unit of brush space along each axis.
-CpuTexture* listTexture(Renderer& r, const PrDrawList* drawn, PrRect area, PrRect tile,
-                        PrVec2 scale);
+CpuTexture* listTexture(Renderer& r, const PrDrawList* drawn, PrRect area, PrRect tile, PrVec2 scale);
 
 // Returns the gradient's ramp, which is created on first use in a render by any gradient with the same ramp.
 const Ramp& rampOf(Renderer& r, const PrDrawBrush* brush) {
@@ -375,7 +374,7 @@ const Ramp& rampOf(Renderer& r, const PrDrawBrush* brush) {
     ramp.pieces.resize(prDrawGradientRampMaxPieces(brush->stopCount));
     ramp.colors.resize(prDrawGradientRampMaxColors(brush->stopCount, kRampResolution));
     ramp.pieces.resize(prDrawGradientRamp(brush, kWhite, PrColorSpace_Srgb, kRampResolution, ramp.pieces.data,
-                                          ramp.colors.data));
+        ramp.colors.data));
     ramp.colors.resize(prDrawRampColorCount(ramp.pieces.data, ramp.pieces.count));
     return ramp;
 }
@@ -393,7 +392,7 @@ bool placeFromUser(const PrDrawTransform& x, PrAffine2 fromUser, CpuPlacement* o
 
 // Adds an image command's texels as the paint's next stage, clamped at the edges of `texels`.
 void addImageStage(CpuPaint* paint, const CpuTexture* texture, PrRect texels, PrDrawSampling sampling,
-                   const CpuPlacement& placement) {
+        const CpuPlacement& placement) {
     CpuStage& stage = paint->stages[paint->stageCount++];
     stage.placement = placement;
     stage.source.kind = SourceKind_Texture;
@@ -407,8 +406,7 @@ void addImageStage(CpuPaint* paint, const CpuTexture* texture, PrRect texels, Pr
 // `bounds` is the command's fill geometry bounds, for an ObjectBounds brush. For a stroke whose brush is mapped along
 // it, `unitPixels` is the number of target pixels that one unit of its unit square covers along each axis.
 bool makePaint(Renderer& r, const PrDrawBrush* PR_NULLABLE brush, PrColor color, PrRect bounds,
-               const PrDrawTransform& x, CpuPaint* paint,
-               const PrVec2* PR_NULLABLE unitPixels = nullptr) {
+        const PrDrawTransform& x, CpuPaint* paint, const PrVec2* PR_NULLABLE unitPixels = nullptr) {
     *paint = CpuPaint{};
     float alpha = clampF32(color.a, 0, 1);
     paint->color[0] = color.r * alpha;
@@ -462,8 +460,7 @@ bool makePaint(Renderer& r, const PrDrawBrush* PR_NULLABLE brush, PrColor color,
         texture = listTexture(r, image.list, image.rect, source.tiles.tile, scale);
         if (texture == nullptr)
             return false;
-        source.texels = PrRect{0, 0, float(texture->levels.data[0].width),
-                               float(texture->levels.data[0].height)};
+        source.texels = PrRect{0, 0, float(texture->levels.data[0].width), float(texture->levels.data[0].height)};
     }
     if (prRectIsEmpty(source.texels))
         return false;
@@ -476,8 +473,8 @@ bool makePaint(Renderer& r, const PrDrawBrush* PR_NULLABLE brush, PrColor color,
 // Compositing
 
 // Finds the part [*first, *end) of `count` pixels where both coverages are nonzero. The part is empty if there is none.
-void trimSpan(const uint8_t* PR_NULLABLE shape, const uint8_t* PR_NULLABLE clip, uint32_t count,
-              uint32_t* first, uint32_t* end) {
+void trimSpan(const uint8_t* PR_NULLABLE shape, const uint8_t* PR_NULLABLE clip, uint32_t count, uint32_t* first,
+        uint32_t* end) {
     auto passes = [&](uint32_t i) {
         return (shape == nullptr || shape[i] != 0) && (clip == nullptr || clip[i] != 0);
     };
@@ -500,7 +497,7 @@ PrIRect visitBox(const Renderer& r, PrIRect shape, PrDrawComposite op, bool laye
 // Composites the paint into the target where the shape covers it and the clip lets it through (cpuCompositeSpan). A
 // layer's paint is its pixels, which a group composites.
 void composite(Renderer& r, const CpuCoverage& shape, const CpuPaint& paint, PrDrawComposite op,
-               PrDrawBlendMode blend, bool layer = false) {
+        PrDrawBlendMode blend, bool layer = false) {
     PrIRect box = visitBox(r, shape.box, op, layer);
     if (prIRectIsEmpty(box))
         return;
@@ -536,9 +533,8 @@ void composite(Renderer& r, const CpuCoverage& shape, const CpuPaint& paint, PrD
                 stride = 4;
             }
             cpuCompositeSpan(row + size_t(x - t.box.left) * cpuPixelBytes(t.format), t.format, source, stride,
-                             shapeRow != nullptr ? shapeRow + first : nullptr,
-                             clipRow != nullptr ? clipRow + first : nullptr, end - first, op,
-                             blend, t.knockout, layer);
+                shapeRow != nullptr ? shapeRow + first : nullptr,
+                clipRow != nullptr ? clipRow + first : nullptr, end - first, op, blend, t.knockout, layer);
         }
     }
 }
@@ -576,10 +572,10 @@ void compositeLayer(Renderer& r, const CpuTarget& layer, PrDrawComposite op, PrD
                 memZero(pixels, size_t(count) * bytes);
                 if (!prIRectIsEmpty(inside))
                     memCopy(pixels + size_t(inside.left - x) * bytes, cpuTargetPixel(layer, inside.left, y),
-                            size_t(prIRectWidth(inside)) * bytes);
+                        size_t(prIRectWidth(inside)) * bytes);
             }
             cpuCompositePixels(row + size_t(x - t.box.left) * bytes, t.format, source, shapeRow,
-                               clipRow, count, op, blend, t.knockout);
+                clipRow, count, op, blend, t.knockout);
         }
     }
 }
@@ -639,8 +635,7 @@ bool measureStroke(Renderer& r, const PrDrawCommand& c, StrokeMap* out) {
     for (uint32_t i = 0; i < prPathMeasureContourCount(out->measure); ++i)
         length = maxF32(length, prPathMeasureContour(out->measure, i).length);
     float across = maxF32(stroke.shape.width * scale, 1);
-    out->unitPixels = stroke.mapping == PrDrawStrokeMapping_Along ? PrVec2{length, across}
-                                                                  : PrVec2{across, length};
+    out->unitPixels = stroke.mapping == PrDrawStrokeMapping_Along ? PrVec2{length, across} : PrVec2{across, length};
     return true;
 }
 
@@ -658,8 +653,7 @@ void mapStroke(const PrDrawCommand& c, const StrokeMap& map, CpuPaint* paint) {
 }
 
 bool mapsStroke(const PrDrawCommand& c) {
-    return c.stroke != nullptr && c.brush != nullptr
-           && c.stroke->mapping != PrDrawStrokeMapping_Plain;
+    return c.stroke != nullptr && c.brush != nullptr && c.stroke->mapping != PrDrawStrokeMapping_Plain;
 }
 
 void drawShape(Renderer& r, const PrDrawCommand& c) {
@@ -668,7 +662,7 @@ void drawShape(Renderer& r, const PrDrawCommand& c) {
         return;
     CpuPaint paint{};
     if (makePaint(r, c.brush, c.color, prDrawFillBounds(&c), r.transforms.last(), &paint,
-                  map.measure != nullptr ? &map.unitPixels : nullptr)) {
+            map.measure != nullptr ? &map.unitPixels : nullptr)) {
         if (map.measure != nullptr)
             mapStroke(c, map, &paint);
         drawShapeWith(r, c, paint);
@@ -685,8 +679,7 @@ void drawShapeWith(Renderer& r, const PrDrawCommand& c, const CpuPaint& paint) {
 
 // Returns a texture of an image source if a unit of its rect covers `scale` target pixels along each axis, and writes
 // the rect of the texels that the source spans. Returns null if the source has no texture.
-CpuTexture* PR_NULLABLE sourceTexture(Renderer& r, const PrDrawSource& source, PrVec2 scale,
-                                      PrRect* texels) {
+CpuTexture* PR_NULLABLE sourceTexture(Renderer& r, const PrDrawSource& source, PrVec2 scale, PrRect* texels) {
     if (!prDrawSourceIsValid(source))
         return nullptr;
     if (source.kind == PrDrawSourceKind_Image) {
@@ -697,8 +690,7 @@ CpuTexture* PR_NULLABLE sourceTexture(Renderer& r, const PrDrawSource& source, P
         return nullptr;
     CpuTexture* texture = listTexture(r, source.list, source.rect, source.rect, scale);
     if (texture != nullptr)
-        *texels = PrRect{0, 0, float(texture->levels.data[0].width),
-                         float(texture->levels.data[0].height)};
+        *texels = PrRect{0, 0, float(texture->levels.data[0].width), float(texture->levels.data[0].height)};
     return texture;
 }
 
@@ -709,23 +701,19 @@ void drawNineSlice(Renderer& r, const PrDrawCommand& c) {
     const PrDrawSource& image = c.nineSlice.source;
     float width = prRectWidth(image.rect);
     float height = prRectHeight(image.rect);
-    uint32_t count =
-        prDrawNineSliceRects(c.nineSlice.slices, PrVec2{width, height}, c.nineSlice.destination, nullptr, 0);
+    uint32_t count = prDrawNineSliceRects(c.nineSlice.slices, PrVec2{width, height}, c.nineSlice.destination, nullptr, 0);
     if (count == 0)
         return;
     Array<PrDrawImageRect>& pieces = r.pieces;
     pieces.clear();
     pieces.reserve(count);
-    pieces.count = prDrawNineSliceRects(c.nineSlice.slices, PrVec2{width, height}, c.nineSlice.destination,
-                                        pieces.data, count);
+    pieces.count = prDrawNineSliceRects(c.nineSlice.slices, PrVec2{width, height}, c.nineSlice.destination, pieces.data, count);
     // A list renders at the largest scale of any piece, and the pieces then sample its texels.
     float most = 0;
     for (uint32_t i = 0; i < pieces.count; ++i) {
         const PrDrawImageRect& p = pieces.data[i];
-        most = maxF32(most, prRectWidth(p.destination)
-                                / maxF32(prRectWidth(p.source), 1e-6f));
-        most = maxF32(most, prRectHeight(p.destination)
-                                / maxF32(prRectHeight(p.source), 1e-6f));
+        most = maxF32(most, prRectWidth(p.destination) / maxF32(prRectWidth(p.source), 1e-6f));
+        most = maxF32(most, prRectHeight(p.destination) / maxF32(prRectHeight(p.source), 1e-6f));
     }
     float device = prAffine2MaxScale(x.affine) * most;
     PrRect texels{};
@@ -736,13 +724,15 @@ void drawNineSlice(Renderer& r, const PrDrawCommand& c) {
     float ky = prRectHeight(texels) / height;
     for (uint32_t i = 0; i < pieces.count; ++i) {
         PrRect& s = pieces.data[i].source;
-        s = PrRect{texels.left + s.left * kx, texels.top + s.top * ky, texels.left + s.right * kx,
-                   texels.top + s.bottom * ky};
+        s = PrRect{
+            texels.left + s.left * kx, texels.top + s.top * ky, texels.left + s.right * kx,
+            texels.top + s.bottom * ky,
+        };
     }
     CpuPaint paint{};
     CpuPlacement placement{};
-    if (!makePaint(r, nullptr, c.color, c.nineSlice.destination, x, &paint)
-        || !placeFromUser(x, prAffine2Identity(), &placement))
+    if (!makePaint(r, nullptr, c.color, c.nineSlice.destination, x, &paint) ||
+            !placeFromUser(x, prAffine2Identity(), &placement))
         return;
     cpuPrepareMips(*texture, PrDrawSampling(c.sampling & PrDrawSamplingFlag_Kind));
     addImageStage(&paint, texture, texels, c.sampling, placement);
@@ -765,20 +755,22 @@ void drawNineSlice(Renderer& r, const PrDrawCommand& c) {
 void writePixels(Renderer& r, const PrDrawCommand& c) {
     const CpuTarget& t = r.target;
     const PrDrawImage* image = c.writePixels.image;
-    PrIRect written{c.writePixels.origin.x, c.writePixels.origin.y,
-                c.writePixels.origin.x + int32_t(prDrawImageExtent(image).x),
-                c.writePixels.origin.y + int32_t(prDrawImageExtent(image).y)};
+    PrIRect written{
+        c.writePixels.origin.x, c.writePixels.origin.y,
+        c.writePixels.origin.x + int32_t(prDrawImageExtent(image).x),
+        c.writePixels.origin.y + int32_t(prDrawImageExtent(image).y),
+    };
     r.target.drawn = prIRectUnion(r.target.drawn, prIRectIntersect(written, t.box));
     PrPixels pixels{t.data, t.stride, {prIRectWidth(t.box), prIRectHeight(t.box)}};
     prDrawImageWritePixels(image, pixels, t.format,
-                           PrIVec2{c.writePixels.origin.x - t.box.left, c.writePixels.origin.y - t.box.top});
+        PrIVec2{c.writePixels.origin.x - t.box.left, c.writePixels.origin.y - t.box.top});
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Clips
 
-void pushClipCoverage(Renderer& r, const PrPath* shape, const PrDrawTransform& placement,
-                      PrPathFillRule rule, bool antialias) {
+void pushClipCoverage(Renderer& r, const PrPath* shape, const PrDrawTransform& placement, PrPathFillRule rule,
+        bool antialias) {
     const PrPathPolyline& landed = land(placement, shape, r.landed);
     const Clip& outer = currentClip(r);
     PrIRect box = polylineBox(landed, outer.coverage.box);
@@ -799,8 +791,8 @@ void pushClipCoverage(Renderer& r, const PrPath* shape, const PrDrawTransform& p
         }
         CpuCoverage kept{outer.coverage.data, outer.coverage.stride, narrowed};
         if (kept.data != nullptr)
-            kept.data += size_t(narrowed.top - outer.coverage.box.top) * kept.stride
-                         + size_t(narrowed.left - outer.coverage.box.left);
+            kept.data += size_t(narrowed.top - outer.coverage.box.top) * kept.stride +
+                size_t(narrowed.left - outer.coverage.box.left);
         r.clips.push(Clip{kept, rect, !prRectIsOnPixels(rect)});
         return;
     }
@@ -829,14 +821,12 @@ void pushClipCoverage(Renderer& r, const PrPath* shape, const PrDrawTransform& p
 // Groups
 
 // Evaluates a brush's alpha over a box, for a filter node that reads a brush.
-void brushAlpha(void* PR_NULLABLE context, const PrDrawBrush* brush, PrAffine2 transform,
-                PrIRect box, float* out) {
+void brushAlpha(void* PR_NULLABLE context, const PrDrawBrush* brush, PrAffine2 transform, PrIRect box, float* out) {
     Renderer& r = *static_cast<Renderer*>(context);
     CpuPaint paint{};
     uint32_t width = prIRectWidth(box);
     size_t count = size_t(width) * prIRectHeight(box);
-    if (!makePaint(r, brush, PrColor{1, 1, 1, 1}, prRectFromIRect(box), prDrawTransformFromAffine2(transform),
-                   &paint)) {
+    if (!makePaint(r, brush, PrColor{1, 1, 1, 1}, prRectFromIRect(box), prDrawTransformFromAffine2(transform), &paint)) {
         memZero(out, count * sizeof(float));
         return;
     }
@@ -853,12 +843,10 @@ void brushAlpha(void* PR_NULLABLE context, const PrDrawBrush* brush, PrAffine2 t
 }
 
 // Returns an image node's source texture, for a filter.
-const CpuTexture* PR_NULLABLE filterSourceTexture(void* PR_NULLABLE context,
-                                                  const PrDrawSource* source, uint32_t width,
-                                                  uint32_t height, PrRect* texels) {
+const CpuTexture* PR_NULLABLE filterSourceTexture(void* PR_NULLABLE context, const PrDrawSource* source, uint32_t width,
+        uint32_t height, PrRect* texels) {
     Renderer& r = *static_cast<Renderer*>(context);
-    PrVec2 scale{float(width) / prRectWidth(source->rect),
-                  float(height) / prRectHeight(source->rect)};
+    PrVec2 scale{float(width) / prRectWidth(source->rect), float(height) / prRectHeight(source->rect)};
     return sourceTexture(r, *source, scale, texels);
 }
 
@@ -897,7 +885,7 @@ PrIRect deviceBoxOf(Renderer& r, const PrDrawTransform& x, PrRect rect) {
 // The caller resets the texture's levels. The texels are the target's own if it is RGBA with packed rows, and otherwise
 // are copied into `storage`.
 void targetPaint(const CpuTarget& target, Array<uint8_t>& storage, const CpuPlacement& placement,
-                 CpuTexture* texture, CpuPaint* paint) {
+        CpuTexture* texture, CpuPaint* paint) {
     uint32_t width = prIRectWidth(target.box);
     uint32_t height = prIRectHeight(target.box);
     const uint32_t bytes = cpuPixelBytes(target.format);
@@ -943,8 +931,7 @@ void targetPaint(const CpuTarget& target, Array<uint8_t>& storage, const CpuPlac
 // Returns `beneath` resampled into an offscreen's pixels over `box`, in the storage for the group at `index`. The
 // placement maps each offscreen pixel to its position in `beneath`. The result is transparent where the placement
 // cannot map it.
-CpuTarget resampleUnder(Renderer& r, const CpuTarget& beneath, const CpuPlacement& placement, uint32_t index,
-                        PrIRect box) {
+CpuTarget resampleUnder(Renderer& r, const CpuTarget& beneath, const CpuPlacement& placement, uint32_t index, PrIRect box) {
     const uint32_t bytes = cpuPixelBytes(beneath.format);
     size_t size = size_t(prIRectWidth(box)) * prIRectHeight(box) * bytes;
     CpuTarget under{pooled(r.unders, index, size), size_t(prIRectWidth(box)) * bytes, box, beneath.format, false, box};
@@ -984,8 +971,9 @@ CpuTarget seenThrough(Renderer& r, uint32_t count, const CpuTarget& top) {
         const CpuTarget& under = projectedUnder(r, i);
         const uint32_t bytes = cpuPixelBytes(top.format);
         size_t size = size_t(prIRectWidth(top.box)) * prIRectHeight(top.box) * bytes;
-        CpuTarget out{pooled(r.seen, i,
-                             size), size_t(prIRectWidth(top.box)) * bytes, top.box, top.format, false, top.box};
+        CpuTarget out{
+            pooled(r.seen, i, size), size_t(prIRectWidth(top.box)) * bytes, top.box, top.format, false, top.box,
+        };
         for (int32_t y = top.box.top; y < top.box.bottom; ++y) {
             const uint8_t* above = cpuTargetRow(top, y);
             const uint8_t* below = cpuTargetRow(under, y);
@@ -1036,9 +1024,8 @@ void pushProjectedGroup(Renderer& r, Frame& frame) {
     PrIRect visible = prIRectIntersect(currentClip(r).coverage.box, r.target.box);
     PrIRect box{0, 0, 0, 0};
     float scale = 1;
-    if (!prIRectIsEmpty(visible)
-        && prDrawProjectionPlace(g->projection, x.affine, g->bounds, prRectFromIRect(visible),
-                                 float(kListTextureMaxSize), &frame.projection)) {
+    if (!prIRectIsEmpty(visible) && prDrawProjectionPlace(g->projection, x.affine, g->bounds, prRectFromIRect(visible),
+            float(kListTextureMaxSize), &frame.projection)) {
         scale = frame.projection.scale;
         box = prIRectRoundOut(prAffine2MapRect(prAffine2Scale(PrVec2{scale, scale}), frame.projection.area));
     }
@@ -1048,8 +1035,10 @@ void pushProjectedGroup(Renderer& r, Frame& frame) {
     const uint32_t bytes = cpuPixelBytes(r.target.format);
     size_t size = size_t(prIRectWidth(box)) * prIRectHeight(box) * bytes;
     frame.under = CpuTarget{nullptr, size_t(prIRectWidth(box)) * bytes, box, r.target.format, false, box};
-    CpuTarget layer{pooled(r.layers, r.frames.count, size), size_t(prIRectWidth(box)) * bytes, box,
-                 r.target.format, g->knockout, PrIRect{0, 0, 0, 0}};
+    CpuTarget layer{
+        pooled(r.layers, r.frames.count, size), size_t(prIRectWidth(box)) * bytes, box,
+        r.target.format, g->knockout, PrIRect{0, 0, 0, 0},
+    };
     memZero(layer.data, size);
     r.frames.push(frame);
     if (g->backdrop != nullptr) {
@@ -1084,8 +1073,8 @@ void pushHostGroup(Renderer& r, Frame& frame) {
     frame.host = true;
     frame.drawn = drawSharedClaimLayer(*g->layer);
     PrIRect box{0, 0, int32_t(extent.x), int32_t(extent.y)};
-    bool covers = texture != nullptr && extent.x != 0 && extent.y != 0 && width > 0 && height > 0
-                  && texture->pixels.extent.x >= extent.x && texture->pixels.extent.y >= extent.y;
+    bool covers = texture != nullptr && extent.x != 0 && extent.y != 0 && width > 0 && height > 0 &&
+        texture->pixels.extent.x >= extent.x && texture->pixels.extent.y >= extent.y;
     if (!covers)
         box = PrIRect{0, 0, 0, 0};
     double sx = covers ? double(extent.x) / double(width) : 1;
@@ -1097,8 +1086,10 @@ void pushHostGroup(Renderer& r, Frame& frame) {
     frame.localToDevice = prDrawTransformFromDAffine2(prDAffine2Concat(fromLocal, frame.xform.daffine));
     frame.xform = prDrawTransformFromDAffine2(toLocal);
     uint8_t* pixels = covers ? static_cast<uint8_t*>(texture->pixels.data) : nullptr;
-    CpuTarget layer{pixels, covers ? texture->pixels.stride : 0, box,
-                 covers ? texture->format : r.target.format, g->knockout, box};
+    CpuTarget layer{
+        pixels, covers ? texture->pixels.stride : 0, box,
+        covers ? texture->format : r.target.format, g->knockout, box,
+    };
     r.frames.push(frame);
     r.transforms.push(frame.xform);
     r.target = layer;
@@ -1187,11 +1178,11 @@ void pushGroup(Renderer& r, const PrDrawCommand& c) {
         box = PrIRect{0, 0, 0, 0};
     const uint32_t bytes = cpuPixelBytes(r.target.format);
     size_t size = size_t(prIRectWidth(box)) * prIRectHeight(box) * bytes;
-    CpuTarget layer{pooled(r.layers, r.frames.count, size), size_t(prIRectWidth(box)) * bytes, box,
-                 r.target.format, g->knockout, PrIRect{0, 0, 0, 0}};
-    CpuTarget under = frame.local ? frame.under
-                   : g->backdrop != nullptr ? seenThrough(r, r.frames.count, r.target)
-                                            : r.target;
+    CpuTarget layer{
+        pooled(r.layers, r.frames.count, size), size_t(prIRectWidth(box)) * bytes, box,
+        r.target.format, g->knockout, PrIRect{0, 0, 0, 0},
+    };
+    CpuTarget under = frame.local ? frame.under : g->backdrop != nullptr ? seenThrough(r, r.frames.count, r.target) : r.target;
     // A backdrop starts from what lies beneath, which covers the whole offscreen.
     if (g->backdrop == nullptr || !prIRectContains(under.box, box))
         memZero(layer.data, size);
@@ -1242,7 +1233,7 @@ void applyMask(Renderer& r, const Frame& frame, const CpuTarget& layer) {
 // Composites an offscreen in the group's space onto the target through the rest of the group's transform, sampled
 // between its pixels as `sampling` says.
 void compositeResampled(Renderer& r, const Frame& frame, const CpuTarget& layer,
-                        PrDrawSampling sampling = PrDrawSampling_Linear) {
+        PrDrawSampling sampling = PrDrawSampling_Linear) {
     const PrDrawTransform& toDevice = frame.localToDevice;
     if (prIRectIsEmpty(layer.drawn))
         return;
@@ -1256,9 +1247,11 @@ void compositeResampled(Renderer& r, const Frame& frame, const CpuTarget& layer,
     prPathClear(r.shape);
     prPathAddRect(r.shape, prRectFromIRect(layer.drawn));
     const PrPathPolyline& landed = land(toDevice, r.shape, r.landed);
-    PrIRect limit = prDrawCompositeIsUnbounded(frame.composite) ? currentClip(r).coverage.box
-                                                   : prIRectIntersect(currentClip(r).coverage.box,
-                                                                      r.target.box);
+    PrIRect limit;
+    if (prDrawCompositeIsUnbounded(frame.composite))
+        limit = currentClip(r).coverage.box;
+    else
+        limit = prIRectIntersect(currentClip(r).coverage.box, r.target.box);
     PrIRect box = polylineBox(landed, limit);
     if (!prIRectIsEmpty(box) || prDrawCompositeIsUnbounded(frame.composite)) {
         CpuCoverage shape = maskOver(r.coverage, box);
@@ -1290,8 +1283,8 @@ void compositeProjected(Renderer& r, const Frame& frame, const CpuTarget& layer)
     if (!prRectIsEmpty(drawn))
         prDrawProjectionQuad(&frame.projection, drawn, &r.landed);
     bool unbounded = prDrawCompositeIsUnbounded(frame.composite);
-    PrIRect limit = unbounded ? currentClip(r).coverage.box
-                              : prIRectIntersect(currentClip(r).coverage.box, r.target.box);
+    PrIRect limit =
+        unbounded ? currentClip(r).coverage.box : prIRectIntersect(currentClip(r).coverage.box, r.target.box);
     PrIRect box = polylineBox(r.landed, limit);
     if (!prIRectIsEmpty(box) || unbounded) {
         CpuCoverage shape = maskOver(r.coverage, box);
@@ -1322,9 +1315,13 @@ void popGroup(Renderer& r) {
     }
     if (g->filter != nullptr) {
         // The frame's own entry is still in place above the frames' count, so a projected group's beneath can be read.
-        CpuTarget beneath = frame.projected ? projectedUnder(r, r.frames.count)
-                         : frame.local   ? frame.under
-                                         : seenThrough(r, r.frames.count, frame.parent);
+        CpuTarget beneath;
+        if (frame.projected)
+            beneath = projectedUnder(r, r.frames.count);
+        else if (frame.local)
+            beneath = frame.under;
+        else
+            beneath = seenThrough(r, r.frames.count, frame.parent);
         CpuFilterInputs inputs = filterInputs(r, frame, &beneath);
         cpuApplyFilter(g->filter, inputs, layer);
         layer.drawn = layer.box;
@@ -1357,10 +1354,8 @@ void popGroup(Renderer& r) {
 // ---------------------------------------------------------------------------------------------------------------------
 // Lists
 
-CpuTexture* listTexture(Renderer& r, const PrDrawList* drawn, PrRect area, PrRect tile,
-                        PrVec2 scale) {
-    PrUVec2 layer =
-        prDrawLayerExtent(PrVec2{prRectWidth(tile), prRectHeight(tile)}, scale, kListTextureMaxSize);
+CpuTexture* listTexture(Renderer& r, const PrDrawList* drawn, PrRect area, PrRect tile, PrVec2 scale) {
+    PrUVec2 layer = prDrawLayerExtent(PrVec2{prRectWidth(tile), prRectHeight(tile)}, scale, kListTextureMaxSize);
     uint32_t width = layer.x;
     uint32_t height = layer.y;
     if (width == 0)
@@ -1372,16 +1367,18 @@ CpuTexture* listTexture(Renderer& r, const PrDrawList* drawn, PrRect area, PrRec
         return texture;
     CpuTextureLevel& level = texture->levels.data[0];
     memZero(level.data, size_t(width) * height * cpuPixelBytes(format));
-    CpuTarget target{level.data,
-                  size_t(width) * cpuPixelBytes(format),
-                  PrIRect{0, 0, int32_t(width), int32_t(height)},
-                  format,
-                  false,
-                  PrIRect{0, 0, 0, 0}};
+    CpuTarget target{
+        level.data,
+        size_t(width) * cpuPixelBytes(format),
+        PrIRect{0, 0, int32_t(width), int32_t(height)},
+        format,
+        false,
+        PrIRect{0, 0, 0, 0},
+    };
     Renderer& nested = beginRender(r.cpu, r.depth + 1, target);
-    nested.transforms.data[0] = prDrawTransformFromAffine2(prAffine2Concat(
-        prAffine2Translate(PrVec2{-area.left, -area.top}),
-        prAffine2Scale(PrVec2{float(width) / prRectWidth(area), float(height) / prRectHeight(area)})));
+    nested.transforms.data[0] =
+        prDrawTransformFromAffine2(prAffine2Concat(prAffine2Translate(PrVec2{-area.left, -area.top}),
+            prAffine2Scale(PrVec2{float(width) / prRectWidth(area), float(height) / prRectHeight(area)})));
     runCommands(nested, prDrawListCommands(drawn), prDrawListCommandCount(drawn));
     endRender(nested);
     texture->ready = true;
@@ -1398,7 +1395,7 @@ struct BorderDraw {
 };
 
 void drawBorderPiece(void* PR_NULLABLE context, const PrDrawBorderPiece* piece,
-                     const PrPathPolyline* shape, const PrPathPolyline* PR_NULLABLE cut) {
+        const PrPathPolyline* shape, const PrPathPolyline* PR_NULLABLE cut) {
     BorderDraw& d = *static_cast<BorderDraw*>(context);
     Renderer& r = *d.r;
     const PrDrawCommand& c = *d.command;
@@ -1507,8 +1504,7 @@ void drawShadow(Renderer& r, const PrDrawCommand& c) {
         return;
     CpuCoverage shape = maskOver(r.coverage, box);
     prDrawShadowCoverage(r.rasterizer, &shadow, &caster, kind, sigma, coverageOf(c.antialias),
-                         PrIVec2{box.left, box.top},
-                         PrPixels{shape.data, shape.stride, {prIRectWidth(box), prIRectHeight(box)}});
+        PrIVec2{box.left, box.top}, PrPixels{shape.data, shape.stride, {prIRectWidth(box), prIRectHeight(box)}});
     composite(r, shape, paint, c.composite, c.blendMode);
 }
 
@@ -1553,7 +1549,7 @@ void drawGlyphs(Renderer& r, const PrDrawCommand& c) {
     PrPathMeasure* measure = map.measure;
     CpuPaint paint{};
     if (!makePaint(r, c.brush, c.color, prDrawFillBounds(&c), r.transforms.last(), &paint,
-                   measure != nullptr ? &map.unitPixels : nullptr)) {
+            measure != nullptr ? &map.unitPixels : nullptr)) {
         prPathMeasureDestroy(measure);
         return;
     }
@@ -1616,8 +1612,7 @@ void runCommands(Renderer& r, const PrDrawCommand* commands, uint32_t count) {
         if (prDrawTransformDrawsNothing(&r.transforms.last(), &c)) {
             // A push still opens a scope that its pop closes: a clip that lets nothing through, or a group with no
             // offscreen.
-            if (c.kind >= PrDrawCommandKind_PushClipRect
-                && c.kind <= PrDrawCommandKind_PushClipPath)
+            if (c.kind >= PrDrawCommandKind_PushClipRect && c.kind <= PrDrawCommandKind_PushClipPath)
                 r.clips.push(clipOfBox(PrIRect{0, 0, 0, 0}));
             else if (c.kind == PrDrawCommandKind_PushGroup)
                 r.frames.push(Frame{});
@@ -1662,8 +1657,8 @@ void runCommands(Renderer& r, const PrDrawCommand* commands, uint32_t count) {
             case PrDrawCommandKind_PushClipTargetRect:
                 prPathClear(r.shape);
                 prPathAddRect(r.shape, c.rect);
-                pushClipCoverage(r, r.shape, prDrawTransformFromAffine2(prAffine2Identity()),
-                                 PrPathFillRule_NonZero, c.antialias);
+                pushClipCoverage(r, r.shape, prDrawTransformFromAffine2(prAffine2Identity()), PrPathFillRule_NonZero,
+                    c.antialias);
                 break;
             case PrDrawCommandKind_PushClipRect:
             case PrDrawCommandKind_PushClipCornerRect:

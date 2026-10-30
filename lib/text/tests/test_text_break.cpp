@@ -94,8 +94,7 @@ TEST_CASE("word-break allows a break between any two letters, or none between Ea
     // keep-all keeps the ideographs together, and the space still breaks.
     CHECK(breaksOf("\xe6\x97\xa5\xe6\x9c\xac \xe8\xaa\x9e", kNormal) == "|.|!");
     CHECK(breaksOf("\xe6\x97\xa5\xe6\x9c\xac \xe8\xaa\x9e",
-                   PrTextBreakStyle{PrTextWordBreak_KeepAll, PrTextOverflowWrap_Normal})
-          == "..|!");
+        PrTextBreakStyle{PrTextWordBreak_KeepAll, PrTextOverflowWrap_Normal}) == "..|!");
     // A combining mark stays with its letter.
     CHECK(breaksOf("e\xcc\x81" "e", PrTextBreakStyle{PrTextWordBreak_BreakAll, PrTextOverflowWrap_Normal}) == ".|!");
 }

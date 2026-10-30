@@ -63,11 +63,10 @@ void readAnimations(LottieArchive& a) {
         Array<char> bytes;
         bytes.reserve(uint32_t(entry.size) + 1);
         PrJson* doc = prJsonCreate();
-        if (prCompressZipRead(zip, manifest, reinterpret_cast<uint8_t*>(bytes.data), size_t(entry.size)) == PrStatus_Ok
-            && prJsonParse(doc, PrStringView{bytes.data, size_t(entry.size)}, nullptr)) {
+        if (prCompressZipRead(zip, manifest, reinterpret_cast<uint8_t*>(bytes.data), size_t(entry.size)) ==
+                PrStatus_Ok && prJsonParse(doc, PrStringView{bytes.data, size_t(entry.size)}, nullptr)) {
             uint32_t list = prJsonMember(doc, 0, "animations");
-            for (uint32_t i = prJsonFirst(doc, list); i != kPrJsonMissing;
-                 i = prJsonAfter(doc, list, i)) {
+            for (uint32_t i = prJsonFirst(doc, list); i != kPrJsonMissing; i = prJsonAfter(doc, list, i)) {
                 PrStringView id = prJsonString(doc, prJsonMember(doc, i, "id"));
                 uint32_t found = id.data != nullptr ? animationEntry(zip, id) : count;
                 if (found < count)
@@ -83,8 +82,8 @@ void readAnimations(LottieArchive& a) {
         PrStringView name = prCompressZipEntry(zip, i).name;
         const PrStringView folders[] = {"animations/", "a/"};
         for (PrStringView folder : folders) {
-            if (stringStartsWith(name, folder) && stringEndsWith(name, ".json")
-                && stringFind(stringSlice(name, folder.size, name.size - folder.size), '/') == name.size - folder.size)
+            if (stringStartsWith(name, folder) && stringEndsWith(name, ".json") &&
+                    stringFind(stringSlice(name, folder.size, name.size - folder.size), '/') == name.size - folder.size)
                 addAnimation(a, stringSlice(name, folder.size, name.size - folder.size - 5), i);
         }
     }
@@ -164,8 +163,7 @@ PrStringView prLottieArchiveAnimationId(const PrLottieArchive* archive, uint32_t
 }
 
 PrStatus prLottieAnimationCreateFromArchive(const PrLottieArchive* archive, uint32_t index,
-                                            const PrLottieOptions* PR_NULLABLE options,
-                                            PrLottieAnimation* PR_NULLABLE* PR_NONNULL out) {
+        const PrLottieOptions* PR_NULLABLE options, PrLottieAnimation* PR_NULLABLE* PR_NONNULL out) {
     *out = nullptr;
     uint32_t entry = archive->animations.data[index].entry;
     ArchiveFiles files{archive->zip, {}};

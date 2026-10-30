@@ -8,7 +8,7 @@ namespace {
 
 // A marker that draws a 2 by 2 square at its origin, whatever the marker's size, with nothing clipped.
 constexpr const char* kDot = "<marker id='m' markerWidth='2' markerHeight='2' overflow='visible'>"
-                             "<rect width='2' height='2'/></marker>";
+    "<rect width='2' height='2'/></marker>";
 
 // Returns the squares that kDot's marker draws, which are the rects of a drawing that strokes nothing.
 std::vector<const Drawn*> dots(const Drawing& drawing) {
@@ -36,7 +36,7 @@ TEST_CASE("fill none and stroke none paint nothing, and the initial stroke is no
 
 TEST_CASE("fill-opacity and stroke-opacity multiply their paints' alpha, and opacity groups the element") {
     Drawing drawing(svgDocument("<rect width='10' height='10' fill='rgb(0 0 255 / 0.5)' fill-opacity='0.5' "
-                                "stroke='black' stroke-opacity='0.25' opacity='0.5'/>"));
+        "stroke='black' stroke-opacity='0.25' opacity='0.5'/>"));
     REQUIRE(drawing.order() == "fs");
     CHECK(near(drawing.commands[0].color.a, 0.25f));
     CHECK(near(drawing.commands[1].color.a, 0.25f));
@@ -62,7 +62,7 @@ TEST_CASE("a paint is currentColor, or the fallback of a reference that names no
 
 TEST_CASE("a reference to a gradient paints with its brush") {
     Drawing drawing(svgDocument("<linearGradient id='g'><stop stop-color='red'/><stop offset='1' stop-color='blue'/>"
-                                "</linearGradient><rect width='10' height='10' fill='url(#g) green'/>"));
+        "</linearGradient><rect width='10' height='10' fill='url(#g) green'/>"));
     REQUIRE(drawing.fills().size() == 1);
     CHECK(drawing.fills()[0]->brushed);
 }
@@ -76,7 +76,7 @@ TEST_CASE("stroke-width is a percentage of the normalized diagonal, and zero str
 
 TEST_CASE("stroke-linecap, stroke-linejoin and stroke-miterlimit reach the stroke") {
     Drawing drawing(svgDocument("<polyline points='0 0 10 10 20 0' fill='none' stroke='black' "
-                                "stroke-linecap='square' stroke-linejoin='round' stroke-miterlimit='7'/>"));
+        "stroke-linecap='square' stroke-linejoin='round' stroke-miterlimit='7'/>"));
     REQUIRE(drawing.strokes().size() == 1);
     const PrPathStroke& stroke = drawing.strokes()[0]->stroke;
     CHECK(stroke.startCap == PrPathCap_Square);
@@ -125,7 +125,7 @@ TEST_CASE("shape-rendering crispEdges paints aliased edges") {
 TEST_CASE("a hidden shape paints nothing, but a visible child of a hidden group paints") {
     CHECK(Drawing(svgDocument("<rect width='10' height='10' visibility='hidden'/>")).commands.empty());
     Drawing drawing(svgDocument("<g visibility='hidden'><rect width='10' height='10'/>"
-                                "<rect width='5' height='5' visibility='visible'/></g>"));
+        "<rect width='5' height='5' visibility='visible'/></g>"));
     REQUIRE(drawing.fills().size() == 1);
     CHECK(near(drawing.fills()[0]->bounds, PrRect{0, 0, 5, 5}));
 }
@@ -140,16 +140,14 @@ TEST_CASE("paint-order paints a shape's stroke before its fill") {
 
 TEST_CASE("paint-order places markers among the fill and the stroke in the order written") {
     // markers, then the rest in their usual order: fill, then stroke.
-    Drawing drawing(svgDocument(std::string(kDot)
-                                + "<path d='M 10 10 H 50' stroke='black' fill='none' marker-start='url(#m)' "
-                                  "paint-order='markers'/>"));
+    Drawing drawing(svgDocument(std::string(kDot) +
+        "<path d='M 10 10 H 50' stroke='black' fill='none' marker-start='url(#m)' paint-order='markers'/>"));
     REQUIRE(drawing.commands.size() == 2);
     CHECK(drawing.commands[0].kind == PrDrawCommandKind_Rect);
     CHECK(drawing.commands[1].stroked);
     // stroke markers: the fill comes last.
-    Drawing late(svgDocument(std::string(kDot)
-                             + "<path d='M 10 10 H 50 V 50' stroke='black' marker-start='url(#m)' "
-                               "paint-order='stroke markers'/>"));
+    Drawing late(svgDocument(std::string(kDot) + "<path d='M 10 10 H 50 V 50' stroke='black' marker-start='url(#m)' "
+        "paint-order='stroke markers'/>"));
     REQUIRE(late.commands.size() == 3);
     CHECK(late.commands[0].stroked);
     CHECK(late.commands[1].kind == PrDrawCommandKind_Rect);
@@ -166,7 +164,7 @@ TEST_CASE("context paint without a context element paints nothing") {
 
 TEST_CASE("a use element's paints are the context paint of its shadow tree") {
     Drawing drawing(svgDocument("<defs><rect id='r' width='10' height='10' fill='context-stroke' "
-                                "stroke='context-fill'/></defs><use href='#r' fill='#ff0000' stroke='#0000ff'/>"));
+        "stroke='context-fill'/></defs><use href='#r' fill='#ff0000' stroke='#0000ff'/>"));
     REQUIRE(drawing.order() == "fs");
     CHECK(drawing.commands[0].color.b == 1.0f);
     CHECK(drawing.commands[1].color.r == 1.0f);
@@ -174,8 +172,8 @@ TEST_CASE("a use element's paints are the context paint of its shadow tree") {
 
 TEST_CASE("a context paint server paints in the context element's user space") {
     Drawing drawing(svgDocument("<linearGradient id='g'><stop stop-color='red'/><stop offset='1' stop-color='blue'/>"
-                                "</linearGradient><defs><rect id='r' width='10' height='10' fill='context-fill'/>"
-                                "</defs><use href='#r' fill='url(#g)'/>"));
+        "</linearGradient><defs><rect id='r' width='10' height='10' fill='context-fill'/>"
+        "</defs><use href='#r' fill='url(#g)'/>"));
     REQUIRE(drawing.fills().size() == 1);
     CHECK(drawing.fills()[0]->brushed);
 }
@@ -187,8 +185,8 @@ TEST_CASE("markers draw at the vertices of a shape's equivalent path, a rect's i
     // The rect's vertices are its corners, and its last vertex is its first: a start, three mids, and an end on the
     // start, however many commands its path has.
     Drawing drawing(svgDocument("<marker id='m'><circle cx='1' cy='1' r='1'/></marker>"
-                                "<rect x='10' y='10' width='50' height='20' fill='none' marker-start='url(#m)' "
-                                "marker-mid='url(#m)' marker-end='url(#m)'/>"));
+        "<rect x='10' y='10' width='50' height='20' fill='none' marker-start='url(#m)' "
+        "marker-mid='url(#m)' marker-end='url(#m)'/>"));
     CHECK(drawing.of(PrDrawCommandKind_Ellipse).size() == 5);
 }
 
@@ -196,43 +194,35 @@ TEST_CASE("markers draw on a circle, an ellipse and a line") {
     std::string m = kDot;
     // A circle's path is four arcs that close: a start, three mids, and an end on the start.
     CHECK(dots(Drawing(svgDocument(m + "<circle cx='50' cy='50' r='20' marker-start='url(#m)' marker-mid='url(#m)' "
-                                       "marker-end='url(#m)'/>")))
-              .size()
-          == 5);
+        "marker-end='url(#m)'/>"))) .size() == 5);
     CHECK(dots(Drawing(svgDocument(m + "<line x2='50' stroke='black' marker-start='url(#m)' marker-mid='url(#m)' "
-                                       "marker-end='url(#m)'/>")))
-              .size()
-          == 2);
+        "marker-end='url(#m)'/>"))) .size() == 2);
 }
 
 TEST_CASE("the marker shorthand sets the start, mid and end markers") {
-    Drawing drawing(svgDocument(std::string(kDot) + "<polyline points='0 0 10 0 20 0 30 0' fill='none' "
-                                                    "style='marker: url(#m)'/>"));
+    Drawing drawing(svgDocument(std::string(kDot) + "<polyline points='0 0 10 0 20 0 30 0' fill='none' style='marker: url(#m)'/>"));
     CHECK(dots(drawing).size() == 4);
 }
 
 TEST_CASE("a marker is placed at its vertex by its reference point") {
     Drawing drawing(svgDocument("<marker id='m' markerWidth='10' markerHeight='10' refX='5' refY='5'>"
-                                "<rect width='10' height='10'/></marker>"
-                                "<path d='M 30 40 H 60' fill='none' marker-start='url(#m)'/>"));
+        "<rect width='10' height='10'/></marker><path d='M 30 40 H 60' fill='none' marker-start='url(#m)'/>"));
     REQUIRE(drawing.of(PrDrawCommandKind_Rect).size() == 1);
     CHECK(near(drawing.of(PrDrawCommandKind_Rect)[0]->bounds, PrRect{25, 35, 35, 45}));
 }
 
 TEST_CASE("refX and refY take the keywords left, center, right, top and bottom") {
     Drawing drawing(svgDocument("<marker id='m' markerWidth='10' markerHeight='20' refX='right' refY='center'>"
-                                "<rect width='10' height='20'/></marker>"
-                                "<path d='M 30 40 H 60' fill='none' marker-start='url(#m)'/>"));
+        "<rect width='10' height='20'/></marker><path d='M 30 40 H 60' fill='none' marker-start='url(#m)'/>"));
     REQUIRE(drawing.of(PrDrawCommandKind_Rect).size() == 1);
     CHECK(near(drawing.of(PrDrawCommandKind_Rect)[0]->bounds, PrRect{20, 30, 30, 50}));
 }
 
 TEST_CASE("orient auto turns a marker to the path's direction, and auto-start-reverse turns the start around") {
     std::string m = "<marker id='m' orient='auto' overflow='visible'><rect width='2' height='2'/></marker>"
-                    "<marker id='r' orient='auto-start-reverse' overflow='visible'><rect width='2' height='2'/>"
-                    "</marker>";
+        "<marker id='r' orient='auto-start-reverse' overflow='visible'><rect width='2' height='2'/></marker>";
     Drawing drawing(svgDocument(m + "<path d='M 10 10 L 50 50' fill='none' marker-start='url(#m)'/>"
-                                    "<path d='M 10 10 L 50 50' fill='none' marker-start='url(#r)' marker-end='url(#r)'/>"));
+        "<path d='M 10 10 L 50 50' fill='none' marker-start='url(#r)' marker-end='url(#r)'/>"));
     REQUIRE(drawing.commands.size() == 3);
     CHECK(near(angleOf(drawing.commands[0].transform), 45, 1e-2f));
     CHECK(near(angleOf(drawing.commands[1].transform), -135, 1e-2f));
@@ -241,7 +231,7 @@ TEST_CASE("orient auto turns a marker to the path's direction, and auto-start-re
 
 TEST_CASE("orient takes an angle, which does not follow the path") {
     Drawing drawing(svgDocument("<marker id='m' orient='30deg' overflow='visible'><rect width='2' height='2'/>"
-                                "</marker><path d='M 10 10 L 50 50' fill='none' marker-start='url(#m)'/>"));
+        "</marker><path d='M 10 10 L 50 50' fill='none' marker-start='url(#m)'/>"));
     REQUIRE(drawing.commands.size() == 1);
     CHECK(near(angleOf(drawing.commands[0].transform), 30, 1e-2f));
 }
@@ -249,8 +239,7 @@ TEST_CASE("orient takes an angle, which does not follow the path") {
 TEST_CASE("a closed subpath's first and last markers face half way between its closing and first segments") {
     // The square runs right, down, left and up to close, so its start faces half way between up and right.
     Drawing drawing(svgDocument("<marker id='m' orient='auto' overflow='visible'><rect width='2' height='2'/>"
-                                "</marker><path d='M 10 10 H 50 V 50 H 10 Z' fill='none' marker-start='url(#m)' "
-                                "marker-end='url(#m)'/>"));
+        "</marker><path d='M 10 10 H 50 V 50 H 10 Z' fill='none' marker-start='url(#m)' marker-end='url(#m)'/>"));
     REQUIRE(drawing.commands.size() == 2);
     CHECK(near(angleOf(drawing.commands[0].transform), -45, 1e-2f));
     CHECK(near(angleOf(drawing.commands[1].transform), -45, 1e-2f));
@@ -258,10 +247,9 @@ TEST_CASE("a closed subpath's first and last markers face half way between its c
 
 TEST_CASE("markerUnits strokeWidth scales a marker by the stroke's width, and userSpaceOnUse does not") {
     std::string m = "<marker id='s' overflow='visible'><rect width='2' height='2'/></marker>"
-                    "<marker id='u' markerUnits='userSpaceOnUse' overflow='visible'><rect width='2' height='2'/>"
-                    "</marker>";
+        "<marker id='u' markerUnits='userSpaceOnUse' overflow='visible'><rect width='2' height='2'/></marker>";
     Drawing drawing(svgDocument(m + "<path d='M 10 10 H 50' fill='none' stroke-width='4' marker-start='url(#s)' "
-                                    "marker-end='url(#u)'/>"));
+        "marker-end='url(#u)'/>"));
     REQUIRE(drawing.commands.size() == 2);
     CHECK(near(scaleOf(drawing.commands[0].transform), 4));
     CHECK(near(scaleOf(drawing.commands[1].transform), 1));
@@ -270,23 +258,23 @@ TEST_CASE("markerUnits strokeWidth scales a marker by the stroke's width, and us
 TEST_CASE("a marker on a non-scaling stroke is sized by the stroke's width in the host's space") {
     // The user space is scaled by 2, and the stroke of 3 is 3 wide in the host's space, so the marker's unit is 3.
     Drawing drawing(svgDocument("<marker id='m' overflow='visible'><rect width='2' height='2'/></marker>"
-                                "<g transform='scale(2)'><path d='M 10 10 H 20' fill='none' stroke-width='3' "
-                                "vector-effect='non-scaling-stroke' marker-start='url(#m)'/></g>"));
+        "<g transform='scale(2)'><path d='M 10 10 H 20' fill='none' stroke-width='3' "
+        "vector-effect='non-scaling-stroke' marker-start='url(#m)'/></g>"));
     REQUIRE(drawing.commands.size() == 1);
     CHECK(near(scaleOf(drawing.commands[0].transform), 3));
 }
 
 TEST_CASE("a marker's viewBox maps its content into markerWidth by markerHeight") {
     Drawing drawing(svgDocument("<marker id='m' viewBox='0 0 20 20' markerWidth='10' markerHeight='10' "
-                                "markerUnits='userSpaceOnUse'><rect width='20' height='20'/></marker>"
-                                "<path d='M 30 30 H 60' fill='none' marker-start='url(#m)'/>"));
+        "markerUnits='userSpaceOnUse'><rect width='20' height='20'/></marker>"
+        "<path d='M 30 30 H 60' fill='none' marker-start='url(#m)'/>"));
     REQUIRE(drawing.of(PrDrawCommandKind_Rect).size() == 1);
     CHECK(near(drawing.of(PrDrawCommandKind_Rect)[0]->bounds, PrRect{30, 30, 40, 40}));
 }
 
 TEST_CASE("a marker clips its content to its viewport unless its overflow is visible") {
     Drawing hidden(svgDocument("<marker id='m'><rect width='2' height='2'/></marker>"
-                               "<path d='M 10 10 H 50' fill='none' marker-start='url(#m)'/>"));
+        "<path d='M 10 10 H 50' fill='none' marker-start='url(#m)'/>"));
     Drawing visible(svgDocument(std::string(kDot) + "<path d='M 10 10 H 50' fill='none' marker-start='url(#m)'/>"));
     REQUIRE(hidden.commands.size() == 1);
     REQUIRE(visible.commands.size() == 1);
@@ -296,28 +284,27 @@ TEST_CASE("a marker clips its content to its viewport unless its overflow is vis
 
 TEST_CASE("a marker draws even inside a subtree that is not displayed") {
     Drawing drawing(svgDocument("<g style='display: none'>" + std::string(kDot) + "</g>"
-                                "<path d='M 10 10 H 50' fill='none' marker-start='url(#m)'/>"));
+        "<path d='M 10 10 H 50' fill='none' marker-start='url(#m)'/>"));
     CHECK(dots(drawing).size() == 1);
 }
 
 TEST_CASE("a shape that is not visible draws no markers") {
     Drawing drawing(svgDocument(std::string(kDot) + "<path d='M 10 10 H 50' fill='none' visibility='hidden' "
-                                                    "marker-start='url(#m)'/>"));
+        "marker-start='url(#m)'/>"));
     CHECK(drawing.commands.empty());
 }
 
 TEST_CASE("a marker with no width or height draws nothing") {
     Drawing drawing(svgDocument("<marker id='m' markerWidth='0' overflow='visible'><rect width='2' height='2'/>"
-                                "</marker><path d='M 10 10 H 50' fill='none' marker-start='url(#m)'/>"));
+        "</marker><path d='M 10 10 H 50' fill='none' marker-start='url(#m)'/>"));
     CHECK(drawing.commands.empty());
 }
 
 TEST_CASE("a marker paints with its shape's paint as context paint, and does not draw inside itself") {
     // The marker's own content references the marker, which draws once at each vertex rather than without end.
     Drawing drawing(svgDocument("<marker id='m' overflow='visible'>"
-                                "<circle r='2' fill='context-stroke'/><path d='M 0 0 L 5 0' fill='none' marker-end='url(#m)'/>"
-                                "</marker><path d='M 10 10 L 50 10' stroke='#ff0000' marker-start='url(#m)' "
-                                "marker-end='url(#m)'/>"));
+        "<circle r='2' fill='context-stroke'/><path d='M 0 0 L 5 0' fill='none' marker-end='url(#m)'/>"
+        "</marker><path d='M 10 10 L 50 10' stroke='#ff0000' marker-start='url(#m)' marker-end='url(#m)'/>"));
     std::vector<const Drawn*> circles = drawing.of(PrDrawCommandKind_Ellipse);
     REQUIRE(circles.size() == 2);
     for (const Drawn* circle : circles) {
@@ -329,8 +316,8 @@ TEST_CASE("a marker paints with its shape's paint as context paint, and does not
 TEST_CASE("markers that draw each other nest to a bounded depth") {
     // Each marker draws the other on its content's line, so the nesting stops at a depth rather than without end.
     Drawing drawing(svgDocument("<marker id='a' overflow='visible'><path d='M 0 0 H 1' fill='none' marker-start='url(#b)'/>"
-                                "</marker><marker id='b' overflow='visible'><path d='M 0 0 H 1' "
-                                "marker-start='url(#a)'/></marker><path d='M 10 10 H 50' fill='none' marker-start='url(#a)'/>"));
+        "</marker><marker id='b' overflow='visible'><path d='M 0 0 H 1' "
+        "marker-start='url(#a)'/></marker><path d='M 10 10 H 50' fill='none' marker-start='url(#a)'/>"));
     CHECK(drawing.commands.size() >= 1);
     CHECK(drawing.commands.size() <= 9);
 }

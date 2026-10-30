@@ -26,8 +26,8 @@ PrPath* polygon(const std::vector<PrVec2>& points) {
 }
 
 double twiceArea(PrVec2 a, PrVec2 b, PrVec2 c) {
-    return (double(b.x) - double(a.x)) * (double(c.y) - double(a.y))
-           - (double(b.y) - double(a.y)) * (double(c.x) - double(a.x));
+    return (double(b.x) - double(a.x)) * (double(c.y) - double(a.y)) -
+        (double(b.y) - double(a.y)) * (double(c.x) - double(a.x));
 }
 
 // Returns the integral of the coverage of the mesh: the area of each triangle times the mean coverage of its vertices.
@@ -45,15 +45,14 @@ double covered(const PrPathMesh& mesh) {
 
 // Tessellates the path under the transform, flattened within `tolerance`.
 void tessellate(PrPathTessellator* t, const PrPath* path, PrAffine2 transform, PrPathFillRule rule, float tolerance,
-                float fringe, PrPathMesh* out) {
+        float fringe, PrPathMesh* out) {
     PrPathPolyline polyline{};
     prPathFlatten(path, transform, tolerance, PrPathFlattening_Balanced, &polyline);
     *out = prPathTessellatorFill(t, &polyline, rule, fringe);
     prPathPolylineReset(&polyline);
 }
 
-double fill(PrPathTessellator* t, const PrPath* path, PrPathFillRule rule, float fringe,
-            PrPathMesh* out = nullptr) {
+double fill(PrPathTessellator* t, const PrPath* path, PrPathFillRule rule, float fringe, PrPathMesh* out = nullptr) {
     PrPathMesh mesh{};
     tessellate(t, path, prAffine2Identity(), rule, 0.05f, fringe, &mesh);
     if (out != nullptr)

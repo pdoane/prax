@@ -18,8 +18,7 @@ namespace pr_impl {
 namespace {
 
 PrStringView withoutPrefix(PrStringView value, char prefix) {
-    return value.size != 0 && value.data[0] == prefix ? stringSlice(value, 1, value.size - 1)
-                                                      : value;
+    return value.size != 0 && value.data[0] == prefix ? stringSlice(value, 1, value.size - 1) : value;
 }
 
 bool matches(const UrlPair* pair, PrStringView name, PrStringView value) {
@@ -147,7 +146,7 @@ void setHash(PrUrl* self, PrStringView value) {
 using namespace pr_impl;
 
 PrStatus prUrlCreate(PrStringView input, const PrUrl* PR_NULLABLE base, PrCharset charset,
-                     PrUrl* PR_NULLABLE* PR_NONNULL out) {
+        PrUrl* PR_NULLABLE* PR_NONNULL out) {
     return urlParse(input, base, prCharsetOutput(charset), out);
 }
 
@@ -372,9 +371,7 @@ void prUrlSearchParamsSort(PrUrlSearchParams* self) {
     for (uint32_t i = 1; i < pairs->count; ++i) {
         UrlPair pair = pairs->data[i];
         uint32_t j = i;
-        for (;
-             j != 0 && lessUtf16(prStringView(&pair.name), prStringView(&pairs->data[j - 1].name));
-             --j)
+        for (; j != 0 && lessUtf16(prStringView(&pair.name), prStringView(&pairs->data[j - 1].name)); --j)
             pairs->data[j] = pairs->data[j - 1];
         pairs->data[j] = pair;
     }

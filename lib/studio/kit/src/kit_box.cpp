@@ -38,7 +38,7 @@ struct BoxBox {
 PR_NO_PADDING_END
 
 PrLayoutNode positioned(Kit& kit, PrLayoutNode parent, PrKitBox box, const PrKitBoxStyle& style,
-                        Positioning positioning) {
+        Positioning positioning) {
     PrLayoutStyleIndex record =
         kitStyle(kit, BoxBox{.style = style, .positioning = positioning}, kitContainerFlex(style));
     return kitBoxNode(kit, parent, box, style.overflow, record);
@@ -125,13 +125,15 @@ PrLayoutNode prKitLayer(PrKit* kit, PrLayoutNode parent, PrKitBox box, PrKitBoxS
 }
 
 PrLayoutNode prKitPlane(PrKit* kit, PrLayoutNode parent, PrKitPlane plane, PrKitPlaneStyle style) {
-    PlaneEffects effects{.transform = plane.transform != nullptr ? *plane.transform : PrMatrix4{},
-                         .perspective = style.perspective,
-                         .zIndex = style.zIndex,
-                         .transformed = plane.transform != nullptr,
-                         .backfaceHidden = style.backfaceHidden};
+    PlaneEffects effects{
+        .transform = plane.transform != nullptr ? *plane.transform : PrMatrix4{},
+        .perspective = style.perspective,
+        .zIndex = style.zIndex,
+        .transformed = plane.transform != nullptr,
+        .backfaceHidden = style.backfaceHidden,
+    };
     PrLayoutStyleIndex record = kitStyle(*kit, PlaneBox{.style = style.box, .zIndexed = style.zIndex != 0},
-                                         kitContainerFlex(style.box), effects);
+        kitContainerFlex(style.box), effects);
     return kitBoxNode(*kit, parent, PrKitBox{.key = plane.key, .disabled = plane.disabled}, style.box.overflow, record);
 }
 
@@ -141,5 +143,5 @@ PrLayoutNode prKitSpacer(PrKit* kit, PrLayoutNode parent, PrKitSpacer spacer) {
 
 PrLayoutNode prKitDivider(PrKit* kit, PrLayoutNode parent, PrKitDivider divider) {
     return prLayoutTreeFrameElement(kit->tree, parent, divider.key,
-                                    kitStyle(*kit, DividerBox{}, DividerFlex{}, DividerFill{}));
+        kitStyle(*kit, DividerBox{}, DividerFlex{}, DividerFill{}));
 }

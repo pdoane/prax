@@ -99,8 +99,7 @@ JSValue elementToJs(JSContext* ctx, PrDomElement* element) {
 Registry* PR_NULLABLE currentRegistry(JSContext* ctx) {
     JSValue global = JS_GetGlobalObject(ctx);
     JSValue window = JS_GetPrototype(ctx, global);
-    JSValue object =
-        JS_IsObject(window) ? jsSameObject(ctx, window, "customElements") : JS_UNDEFINED;
+    JSValue object = JS_IsObject(window) ? jsSameObject(ctx, window, "customElements") : JS_UNDEFINED;
     Registry* registry = static_cast<Registry*>(jsHandleIn(ctx, object, registryClass));
     JS_FreeValue(ctx, object);
     JS_FreeValue(ctx, window);
@@ -135,8 +134,7 @@ void* PR_NULLABLE lookup(void* PR_NULLABLE context, PrStringView localName, PrSt
     return definitionNamed(static_cast<Registry*>(context), localName);
 }
 
-bool observes(void* PR_NULLABLE, void* definition, PrDomCustomCallback callback,
-              PrStringView name) {
+bool observes(void* PR_NULLABLE, void* definition, PrDomCustomCallback callback, PrStringView name) {
     Definition* held = static_cast<Definition*>(definition);
     if (!held->callbacks[callback])
         return false;
@@ -189,8 +187,7 @@ bool upgrade(void* PR_NULLABLE context, PrDomElement* element, void* definition)
 PrDomElement* PR_NULLABLE construct(void* PR_NULLABLE context, void* definition) {
     Registry* registry = static_cast<Registry*>(context);
     JSContext* ctx = registry->ctx;
-    JSValue constructor =
-        definitionValue(registry, static_cast<Definition*>(definition), "constructor");
+    JSValue constructor = definitionValue(registry, static_cast<Definition*>(definition), "constructor");
     JSValue result = JS_CallConstructor(ctx, constructor, 0, nullptr);
     JS_FreeValue(ctx, constructor);
     PrDomElement* element = nullptr;
@@ -223,12 +220,11 @@ JSValue stringOrNull(JSContext* ctx, PrStringView text) {
 
 // Invokes a callback reaction with its arguments (html/#concept-custom-element-definition-lifecycle-callbacks), with
 // the element as this.
-void invoke(void* PR_NULLABLE context, PrDomElement* element, void* definition,
-            const PrDomCustomReaction* reaction) {
+void invoke(void* PR_NULLABLE context, PrDomElement* element, void* definition, const PrDomCustomReaction* reaction) {
     Registry* registry = static_cast<Registry*>(context);
     JSContext* ctx = registry->ctx;
     JSValue callback = definitionValue(registry, static_cast<Definition*>(definition),
-                                       kCallbackNames[reaction->callback]);
+        kCallbackNames[reaction->callback]);
     JSValue object = elementToJs(ctx, element);
     JSValue args[4] = {JS_UNDEFINED, JS_UNDEFINED, JS_UNDEFINED, JS_UNDEFINED};
     int argc = 0;
@@ -273,8 +269,7 @@ bool stringSequence(JSContext* ctx, JSValueConst value, Array<PrString>* out) {
 }
 
 // Reads a callback from the prototype, which is undefined or a function (webidl/#dfn-callback-function).
-bool callbackOf(JSContext* ctx, JSValueConst prototype, JSValueConst holder, const char* name,
-                bool* present) {
+bool callbackOf(JSContext* ctx, JSValueConst prototype, JSValueConst holder, const char* name, bool* present) {
     JSValue value = JS_GetPropertyStr(ctx, prototype, name);
     if (JS_IsException(value))
         return false;
@@ -299,8 +294,7 @@ JSValue define(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv) 
         return JS_ThrowTypeError(ctx, "The constructor is not a constructor");
     if (!prDomIsValidCustomElementName(name.value()))
         return jsDomExceptionThrow(ctx, "SyntaxError");
-    if (definitionNamed(registry, name.value()) != nullptr
-        || definitionOf(registry, constructor) != nullptr)
+    if (definitionNamed(registry, name.value()) != nullptr || definitionOf(registry, constructor) != nullptr)
         return jsDomExceptionThrow(ctx, "NotSupportedError");
     bool present = false;
     JSValueConst options = argc > 2 ? argv[2] : JS_UNDEFINED;
@@ -332,21 +326,18 @@ JSValue define(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv) 
         ok = callbackOf(ctx, prototype, holder, kCallbackNames[i], &definition->callbacks[i]);
     if (ok && definition->callbacks[PrDomCustomCallback_AttributeChanged]) {
         JSValue observed = JS_GetPropertyStr(ctx, constructor, "observedAttributes");
-        ok = !JS_IsException(observed)
-             && (JS_IsUndefined(observed) || stringSequence(ctx, observed, &definition->observed));
+        ok = !JS_IsException(observed) &&
+            (JS_IsUndefined(observed) || stringSequence(ctx, observed, &definition->observed));
         JS_FreeValue(ctx, observed);
     }
     if (ok) {
         Array<PrString> disabled;
         JSValue features = JS_GetPropertyStr(ctx, constructor, "disabledFeatures");
-        ok = !JS_IsException(features)
-             && (JS_IsUndefined(features) || stringSequence(ctx, features, &disabled));
+        ok = !JS_IsException(features) && (JS_IsUndefined(features) || stringSequence(ctx, features, &disabled));
         JS_FreeValue(ctx, features);
         for (uint32_t i = 0; i < disabled.count; ++i) {
-            definition->disableInternals |=
-                prStringView(&disabled.data[i]) == "internals";
-            definition->disableShadow |=
-                prStringView(&disabled.data[i]) == "shadow";
+            definition->disableInternals |= prStringView(&disabled.data[i]) == "internals";
+            definition->disableShadow |= prStringView(&disabled.data[i]) == "shadow";
         }
         stringsReset(&disabled);
     }
@@ -355,8 +346,7 @@ JSValue define(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv) 
         ok = !JS_IsException(formAssociated);
         definition->formAssociated = ok && JS_ToBool(ctx, formAssociated) == 1;
         JS_FreeValue(ctx, formAssociated);
-        for (uint32_t i = 0; ok && definition->formAssociated && i < countOf(kFormCallbackNames);
-             ++i) {
+        for (uint32_t i = 0; ok && definition->formAssociated && i < countOf(kFormCallbackNames); ++i) {
             bool has = false;
             ok = callbackOf(ctx, prototype, holder, kFormCallbackNames[i], &has);
         }
@@ -406,8 +396,7 @@ JSValue get(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv) {
     if (registry == nullptr || !jsArgCount(ctx, argc, 1) || !name.read(argv[0]))
         return JS_EXCEPTION;
     Definition* definition = definitionNamed(registry, name.value());
-    return definition != nullptr ? definitionValue(registry, definition, "constructor")
-                                 : JS_UNDEFINED;
+    return definition != nullptr ? definitionValue(registry, definition, "constructor") : JS_UNDEFINED;
 }
 
 // html/#dom-customelementregistry-getname
@@ -478,9 +467,7 @@ JSValue internalsShadowRoot(JSContext* ctx, JSValueConst self) {
     if (element == nullptr)
         return JS_EXCEPTION;
     PrDomShadowRoot* shadow = prDomElementHostedShadowRoot(element);
-    return shadow != nullptr ? prJsDomWrapEventTarget(
-                                   ctx, self, prDomNodeAsEventTarget(prDomShadowRootAsNode(shadow)))
-                             : JS_NULL;
+    return shadow != nullptr ? prJsDomWrapEventTarget(ctx, self, prDomNodeAsEventTarget(prDomShadowRootAsNode(shadow))) : JS_NULL;
 }
 
 // html/#dom-elementinternals-states. The set belongs to the internals object, and mirrors each change to the element so
@@ -621,13 +608,16 @@ constexpr JSCFunctionListEntry kStateSetProto[] = {
 };
 
 constexpr JsClassDefinition kClasses[] = {
-    {PR_JS_CLASS("CustomElementRegistry", registryClass,
-                 (jsFinalizer<&registryClass, registryDestroy>), kRegistryProto)},
-    {PR_JS_CLASS("ElementInternals", internalsClass, jsViewFinalizer<&internalsClass>,
-                 kInternalsProto)},
+    {
+        PR_JS_CLASS("CustomElementRegistry", registryClass, (jsFinalizer<&registryClass, registryDestroy>),
+            kRegistryProto)
+    },
+    {PR_JS_CLASS("ElementInternals", internalsClass, jsViewFinalizer<&internalsClass>, kInternalsProto)},
     // webidl/#dfn-setlike: a set's @@iterator is values.
-    {PR_JS_CLASS("CustomStateSet", stateSetClass, jsViewFinalizer<&stateSetClass>, kStateSetProto),
-     .iterator = "values"},
+    {
+        PR_JS_CLASS("CustomStateSet", stateSetClass, jsViewFinalizer<&stateSetClass>, kStateSetProto),
+        .iterator = "values",
+    },
 };
 
 } // namespace
@@ -639,11 +629,13 @@ void jsCustomElementsBind(JSContext* ctx) {
 
 bool jsCustomElementsSetGlobal(JSContext* ctx, JSValueConst object, PrHtmlWindow* window) {
     Registry* registry = allocZeroed<Registry>();
-    registry->hooks = PrDomCustomElementRegistry{registry,      prHtmlWindowAgent(window),
-                                                 lookup,        observes,
-                                                 upgrade,       construct,
-                                                 report,        invoke,
-                                                 queueMicrotask};
+    registry->hooks = PrDomCustomElementRegistry{
+        registry,      prHtmlWindowAgent(window),
+        lookup,        observes,
+        upgrade,       construct,
+        report,        invoke,
+        queueMicrotask,
+    };
     registry->ctx = ctx;
     registry->window = window;
     JSValue value = jsWrap(ctx, registryClass, object, registry, true);
@@ -699,8 +691,7 @@ JSValue jsCustomElementsConstruct(JSContext* ctx, JSValueConst newTarget, int, J
     JSValue element;
     if (depth == 0) {
         PrDomDocument* document = prHtmlWindowDocument(registry->window);
-        PrDomElement* made =
-            prDomElementCreateCustom(document, prStringView(&definition->name), definition);
+        PrDomElement* made = prDomElementCreateCustom(document, prStringView(&definition->name), definition);
         element = elementToJs(ctx, made);
         prDomNodeRelease(prDomElementAsNode(made));
     } else {
@@ -724,15 +715,13 @@ JSValue jsCustomElementsAttachInternals(JSContext* ctx, JSValueConst self, int, 
     if (element == nullptr)
         return JS_EXCEPTION;
     Registry* registry = currentRegistry(ctx);
-    Definition* definition =
-        registry != nullptr ? definitionNamed(registry, prDomElementLocalName(element)) : nullptr;
+    Definition* definition = registry != nullptr ? definitionNamed(registry, prDomElementLocalName(element)) : nullptr;
     JSValue attached = jsSameObject(ctx, self, "[[Internals]]");
     bool already = !JS_IsUndefined(attached);
     JS_FreeValue(ctx, attached);
     PrDomCustomElementState state = prDomElementCustomElementState(element);
-    if (definition == nullptr || definition->disableInternals || already
-        || (state != PrDomCustomElementState_Precustomized
-            && state != PrDomCustomElementState_Custom))
+    if (definition == nullptr || definition->disableInternals || already ||
+            (state != PrDomCustomElementState_Precustomized && state != PrDomCustomElementState_Custom))
         return jsDomExceptionThrow(ctx, "NotSupportedError");
     JSValue internals = jsWrap(ctx, internalsClass, self, element, false);
     if (!JS_IsException(internals))

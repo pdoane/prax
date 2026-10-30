@@ -40,15 +40,24 @@ struct Commands {
     }
 
     void add(const char* id, const char* title, const char* category, PrCommandFlags flags = 0,
-             const PrCommandParam* params = nullptr, uint32_t paramCount = 0) {
+            const PrCommandParam* params = nullptr, uint32_t paramCount = 0) {
         entries.push_back(std::make_unique<Entry>(Entry{this, id}));
-        PrCommandDesc desc{.id = id, .title = title, .category = category, .flags = flags, .params = params,
-                           .paramCount = paramCount, .run = run, .state = state, .context = entries.back().get()};
+        PrCommandDesc desc{
+            .id = id,
+            .title = title,
+            .category = category,
+            .flags = flags,
+            .params = params,
+            .paramCount = paramCount,
+            .run = run,
+            .state = state,
+            .context = entries.back().get(),
+        };
         prCommandRegistryAdd(registry, &desc);
     }
 
     void bind(const char* chord, const char* id, const char* context = "",
-              PrCommandBindingKind kind = PrCommandBindingKind_Normal) {
+            PrCommandBindingKind kind = PrCommandBindingKind_Normal) {
         PrCommandChord parsed{};
         REQUIRE(prCommandChordParse(chord, &parsed));
         prCommandKeymapBind(keymap, parsed, id, context, kind);
@@ -61,8 +70,8 @@ struct Commands {
 
     static PrCommandStateFlags state(void* PR_NULLABLE context) {
         const Commands* commands = static_cast<const Entry*>(context)->commands;
-        return PrCommandStateFlags((commands->disabled ? PrCommandStateFlag_Disabled : 0)
-                                   | (commands->checked ? PrCommandStateFlag_Checked : 0));
+        return PrCommandStateFlags((commands->disabled ? PrCommandStateFlag_Disabled : 0) |
+            (commands->checked ? PrCommandStateFlag_Checked : 0));
     }
 };
 
@@ -80,7 +89,7 @@ PrUiTextBuffer bufferOf(std::string& owned) {
 uint32_t childCount(const PrLayoutTree* tree, PrLayoutNode node) {
     uint32_t count = 0;
     for (PrLayoutNode child = prLayoutNodeFirstChild(tree, node); child != kPrLayoutNodeNone;
-         child = prLayoutNodeNextSibling(tree, child))
+            child = prLayoutNodeNextSibling(tree, child))
         ++count;
     return count;
 }

@@ -113,7 +113,7 @@ typedef struct PrCanvasImageData {
 // it). Every argument must be finite. A radial gradient returns OutOfRange for a negative radius, and then writes null.
 PrCanvasGradient* prCanvasGradientCreateLinear(double x0, double y0, double x1, double y1);
 PrStatus prCanvasGradientCreateRadial(double x0, double y0, double r0, double x1, double y1, double r1,
-                                      PrCanvasGradient* PR_NULLABLE* PR_NONNULL out);
+    PrCanvasGradient* PR_NULLABLE* PR_NONNULL out);
 PrCanvasGradient* prCanvasGradientCreateConic(double startAngle, double x, double y);
 
 // Adds or releases a reference. The last release frees the gradient.
@@ -176,16 +176,15 @@ void prCanvasPath2DClosePath(PrCanvasPath2D* path);
 void prCanvasPath2DMoveTo(PrCanvasPath2D* path, double x, double y);
 void prCanvasPath2DLineTo(PrCanvasPath2D* path, double x, double y);
 void prCanvasPath2DQuadraticCurveTo(PrCanvasPath2D* path, double cpx, double cpy, double x, double y);
-void prCanvasPath2DBezierCurveTo(PrCanvasPath2D* path, double cp1x, double cp1y, double cp2x, double cp2y, double x,
-                                 double y);
+void prCanvasPath2DBezierCurveTo(PrCanvasPath2D* path, double cp1x, double cp1y, double cp2x, double cp2y, double x, double y);
 PrStatus prCanvasPath2DArcTo(PrCanvasPath2D* path, double x1, double y1, double x2, double y2, double radius);
 void prCanvasPath2DRect(PrCanvasPath2D* path, double x, double y, double w, double h);
 PrStatus prCanvasPath2DRoundRect(PrCanvasPath2D* path, double x, double y, double w, double h,
-                                 const PrDVec2* PR_NULLABLE radii, uint32_t radiusCount);
+    const PrDVec2* PR_NULLABLE radii, uint32_t radiusCount);
 PrStatus prCanvasPath2DArc(PrCanvasPath2D* path, double x, double y, double radius, double startAngle,
-                           double endAngle, bool counterclockwise);
+    double endAngle, bool counterclockwise);
 PrStatus prCanvasPath2DEllipse(PrCanvasPath2D* path, double x, double y, double radiusX, double radiusY,
-                               double rotation, double startAngle, double endAngle, bool counterclockwise);
+    double rotation, double startAngle, double endAngle, bool counterclockwise);
 
 // ---------------------------------------------------------------------------------------------------------------------
 // CanvasRenderingContext2D (html/#canvasrenderingcontext2d)
@@ -320,10 +319,8 @@ typedef uint8_t PrCanvasImageSmoothingQuality;
 // html/#dom-context-2d-imagesmoothingquality).
 bool prCanvasImageSmoothingEnabled(const PrCanvas* canvas);
 void prCanvasSetImageSmoothingEnabled(PrCanvas* canvas, bool value);
-PrCanvasImageSmoothingQuality prCanvasImageSmoothingQuality(
-    const PrCanvas* canvas);
-void prCanvasSetImageSmoothingQuality(PrCanvas* canvas,
-                                      PrCanvasImageSmoothingQuality value);
+PrCanvasImageSmoothingQuality prCanvasImageSmoothingQuality(const PrCanvas* canvas);
+void prCanvasSetImageSmoothingQuality(PrCanvas* canvas, PrCanvasImageSmoothingQuality value);
 
 // --- CanvasFillStrokeStyles ---
 
@@ -357,12 +354,9 @@ PrCanvasStyle prCanvasStyle(const PrCanvas* canvas, PrCanvasStyleRole role);
 // Set the fill or stroke style (html/#dom-context-2d-fillstyle). A color is parsed as a CSS <color>, and ignored if it
 // is not one. The style holds a reference to a gradient or a pattern. A pattern that is not origin-clean taints the
 // bitmap.
-void prCanvasSetStyleColor(PrCanvas* canvas, PrCanvasStyleRole role,
-                           PrStringView color);
-void prCanvasSetStyleGradient(PrCanvas* canvas, PrCanvasStyleRole role,
-                              PrCanvasGradient* gradient);
-void prCanvasSetStylePattern(PrCanvas* canvas, PrCanvasStyleRole role,
-                             PrCanvasPattern* pattern);
+void prCanvasSetStyleColor(PrCanvas* canvas, PrCanvasStyleRole role, PrStringView color);
+void prCanvasSetStyleGradient(PrCanvas* canvas, PrCanvasStyleRole role, PrCanvasGradient* gradient);
+void prCanvasSetStylePattern(PrCanvas* canvas, PrCanvasStyleRole role, PrCanvasPattern* pattern);
 
 // --- CanvasShadowStyles ---
 
@@ -400,27 +394,22 @@ void prCanvasBeginPath(PrCanvas* canvas);
 
 // Fill, stroke and clip to `path`, or to the current default path if `path` is null (html/#dom-context-2d-fill and the
 // methods after it).
-void prCanvasFill(PrCanvas* canvas, const PrCanvasPath2D* PR_NULLABLE path,
-                  PrPathFillRule rule);
+void prCanvasFill(PrCanvas* canvas, const PrCanvasPath2D* PR_NULLABLE path, PrPathFillRule rule);
 void prCanvasStroke(PrCanvas* canvas, const PrCanvasPath2D* PR_NULLABLE path);
-void prCanvasClip(PrCanvas* canvas, const PrCanvasPath2D* PR_NULLABLE path,
-                  PrPathFillRule rule);
+void prCanvasClip(PrCanvas* canvas, const PrCanvasPath2D* PR_NULLABLE path, PrPathFillRule rule);
 
 // Return true if the point, in the bitmap's coordinates unaffected by the current transform, is inside `path` or its
 // stroke, or the current default path's if `path` is null (html/#dom-context-2d-ispointinpath,
 // html/#dom-context-2d-ispointinstroke). A point that is not finite is inside neither.
-bool prCanvasIsPointInPath(const PrCanvas* canvas,
-                           const PrCanvasPath2D* PR_NULLABLE path, double x, double y,
-                           PrPathFillRule rule);
-bool prCanvasIsPointInStroke(const PrCanvas* canvas,
-                             const PrCanvasPath2D* PR_NULLABLE path, double x, double y);
+bool prCanvasIsPointInPath(const PrCanvas* canvas, const PrCanvasPath2D* PR_NULLABLE path, double x, double y,
+    PrPathFillRule rule);
+bool prCanvasIsPointInStroke(const PrCanvas* canvas, const PrCanvasPath2D* PR_NULLABLE path, double x, double y);
 
 // --- CanvasUserInterface ---
 
 // Draws a focus ring around `path`, or the current default path if `path` is null, as drawFocusIfNeeded does for a
 // focused element (html/#dom-context-2d-drawfocusifneeded). The caller decides whether the element is focused.
-void prCanvasDrawFocusRing(PrCanvas* canvas,
-                           const PrCanvasPath2D* PR_NULLABLE path);
+void prCanvasDrawFocusRing(PrCanvas* canvas, const PrCanvasPath2D* PR_NULLABLE path);
 
 // --- CanvasText ---
 
@@ -444,10 +433,8 @@ typedef struct PrCanvasTextMetrics {
 
 // Fill or stroke `text` at (x, y), condensed to `maxWidth` if it is not null and the text is wider
 // (html/#dom-context-2d-filltext). An argument that is not finite, or a maximum width of zero or less, draws nothing.
-void prCanvasFillText(PrCanvas* canvas, PrStringView text, double x, double y,
-                      const double* PR_NULLABLE maxWidth);
-void prCanvasStrokeText(PrCanvas* canvas, PrStringView text, double x, double y,
-                        const double* PR_NULLABLE maxWidth);
+void prCanvasFillText(PrCanvas* canvas, PrStringView text, double x, double y, const double* PR_NULLABLE maxWidth);
+void prCanvasStrokeText(PrCanvas* canvas, PrStringView text, double x, double y, const double* PR_NULLABLE maxWidth);
 
 // Returns the measurements of `text` in the current text styles (html/#dom-context-2d-measuretext).
 PrCanvasTextMetrics prCanvasMeasureText(PrCanvas* canvas, PrStringView text);
@@ -458,24 +445,21 @@ PrCanvasTextMetrics prCanvasMeasureText(PrCanvas* canvas, PrStringView text);
 // (html/#dom-context-2d-drawimage). A rectangle's width and height may be negative. An argument that is not finite, or
 // a rectangle with no area, draws nothing.
 void prCanvasDrawImage(PrCanvas* canvas, const PrCanvasImageSource* source,
-                       double sx, double sy, double sw, double sh, double dx, double dy, double dw,
-                       double dh);
+    double sx, double sy, double sw, double sh, double dx, double dy, double dw, double dh);
 
 // --- CanvasImageData ---
 
 // Writes the pixels of `rect` of the bitmap to `out`, as `data` describes them, with `data->extent` the rect's extent
 // (html/#dom-context-2d-getimagedata). Pixels outside the bitmap are transparent black. `out` holds the pixels with no
 // gap between rows.
-void prCanvasGetImageData(PrCanvas* canvas, PrIVec2 origin,
-                          const PrCanvasImageData* data, void* out);
+void prCanvasGetImageData(PrCanvas* canvas, PrIVec2 origin, const PrCanvasImageData* data, void* out);
 
 // Writes the pixels of the dirty rectangle (dirtyX, dirtyY, dirtyWidth, dirtyHeight) of `pixels`, which `data`
 // describes, into the bitmap with the top left of `pixels` at `origin`, replacing what the bitmap holds
 // (html/#dom-context-2d-putimagedata). The dirty rectangle's width and height may be negative, and it is clipped to the
 // pixels and to the bitmap.
 void prCanvasPutImageData(PrCanvas* canvas, const PrCanvasImageData* data,
-                          const void* pixels, PrIVec2 origin, int32_t dirtyX, int32_t dirtyY,
-                          int32_t dirtyWidth, int32_t dirtyHeight);
+    const void* pixels, PrIVec2 origin, int32_t dirtyX, int32_t dirtyY, int32_t dirtyWidth, int32_t dirtyHeight);
 
 // --- CanvasPathDrawingStyles ---
 
@@ -509,8 +493,7 @@ void prCanvasSetLineJoin(PrCanvas* canvas, PrCanvasLineJoin value);
 // Set and get the dash list (html/#dom-context-2d-setlinedash, html/#dom-context-2d-getlinedash). A list with a value
 // that is negative or not finite is ignored, and a list of an odd count is used twice over. The dashes that the getter
 // returns are valid until the dash list changes.
-void prCanvasSetLineDash(PrCanvas* canvas, const double* PR_NULLABLE segments,
-                         uint32_t count);
+void prCanvasSetLineDash(PrCanvas* canvas, const double* PR_NULLABLE segments, uint32_t count);
 uint32_t prCanvasLineDashCount(const PrCanvas* canvas);
 const double* PR_NULLABLE prCanvasGetLineDash(const PrCanvas* canvas);
 
@@ -623,20 +606,16 @@ void prCanvasSetTextRendering(PrCanvas* canvas, PrCanvasTextRendering value);
 void prCanvasClosePath(PrCanvas* canvas);
 void prCanvasMoveTo(PrCanvas* canvas, double x, double y);
 void prCanvasLineTo(PrCanvas* canvas, double x, double y);
-void prCanvasQuadraticCurveTo(PrCanvas* canvas, double cpx, double cpy, double x,
-                              double y);
-void prCanvasBezierCurveTo(PrCanvas* canvas, double cp1x, double cp1y,
-                           double cp2x, double cp2y, double x, double y);
-PrStatus prCanvasArcTo(PrCanvas* canvas, double x1, double y1, double x2,
-                       double y2, double radius);
+void prCanvasQuadraticCurveTo(PrCanvas* canvas, double cpx, double cpy, double x, double y);
+void prCanvasBezierCurveTo(PrCanvas* canvas, double cp1x, double cp1y, double cp2x, double cp2y, double x, double y);
+PrStatus prCanvasArcTo(PrCanvas* canvas, double x1, double y1, double x2, double y2, double radius);
 void prCanvasRect(PrCanvas* canvas, double x, double y, double w, double h);
 PrStatus prCanvasRoundRect(PrCanvas* canvas, double x, double y, double w,
-                           double h, const PrDVec2* PR_NULLABLE radii, uint32_t radiusCount);
+    double h, const PrDVec2* PR_NULLABLE radii, uint32_t radiusCount);
 PrStatus prCanvasArc(PrCanvas* canvas, double x, double y, double radius,
-                     double startAngle, double endAngle, bool counterclockwise);
+    double startAngle, double endAngle, bool counterclockwise);
 PrStatus prCanvasEllipse(PrCanvas* canvas, double x, double y, double radiusX,
-                         double radiusY, double rotation, double startAngle, double endAngle,
-                         bool counterclockwise);
+    double radiusY, double rotation, double startAngle, double endAngle, bool counterclockwise);
 
 #if defined(__cplusplus)
 }

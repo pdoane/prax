@@ -328,8 +328,8 @@ uint32_t readValues(Parser& p, uint32_t object, ValueKind kind, uint32_t dims, f
     if (k == kPrJsonMissing)
         return kLottieNone;
     uint32_t first = elementOf(p, k, 0);
-    bool keyframed = kindOf(p, first) == PrJsonKind_Object
-                     && (kind == ValueKind_Numbers || member(p, first, "t") != kPrJsonMissing);
+    bool keyframed =
+        kindOf(p, first) == PrJsonKind_Object && (kind == ValueKind_Numbers || member(p, first, "t") != kPrJsonMissing);
     if (!keyframed) {
         readValue(p, k, kind, dims, p.scratch, scale);
         if (p.scratch.count == 0)
@@ -384,10 +384,7 @@ uint32_t readValues(Parser& p, uint32_t object, ValueKind kind, uint32_t dims, f
         uint32_t o = member(p, frame, "o");
         uint32_t in = member(p, frame, "i");
         if (o != kPrJsonMissing && in != kPrJsonMissing) {
-            uint32_t easingDims = kindOf(p, member(p, o, "x")) == PrJsonKind_Array
-                                          && kind == ValueKind_Numbers
-                                      ? dims
-                                      : 1;
+            uint32_t easingDims = kindOf(p, member(p, o, "x")) == PrJsonKind_Array && kind == ValueKind_Numbers ? dims : 1;
             kf.easing = p.a->numbers.count;
             kf.easingDims = easingDims;
             for (uint32_t d = 0; d < easingDims; ++d) {
@@ -399,8 +396,7 @@ uint32_t readValues(Parser& p, uint32_t object, ValueKind kind, uint32_t dims, f
         }
         uint32_t to = member(p, frame, "to");
         uint32_t ti = member(p, frame, "ti");
-        if (kind == ValueKind_Numbers && kindOf(p, to) == PrJsonKind_Array
-            && kindOf(p, ti) == PrJsonKind_Array) {
+        if (kind == ValueKind_Numbers && kindOf(p, to) == PrJsonKind_Array && kindOf(p, ti) == PrJsonKind_Array) {
             kf.spatial = p.a->numbers.count;
             readValue(p, to, kind, dims, p.scratch);
             pool(p, p.scratch);
@@ -419,8 +415,7 @@ uint32_t readValues(Parser& p, uint32_t object, ValueKind kind, uint32_t dims, f
             kf.end = p.a->keyframes.data[property.keyframe + i + 1].start;
         if (kf.spatial != kLottieNone) {
             const float* values = p.a->numbers.data;
-            if (straight(values + kf.start, values + kf.end, values + kf.spatial,
-                         values + kf.spatial + dims, dims))
+            if (straight(values + kf.start, values + kf.end, values + kf.spatial, values + kf.spatial + dims, dims))
                 kf.spatial = kLottieNone;
         }
     }
@@ -428,8 +423,8 @@ uint32_t readValues(Parser& p, uint32_t object, ValueKind kind, uint32_t dims, f
     return p.a->properties.count - 1;
 }
 
-uint32_t readProperty(Parser& p, uint32_t object, ValueKind kind = ValueKind_Numbers,
-                      uint32_t dims = kLottieNone, float scale = 1) {
+uint32_t readProperty(Parser& p, uint32_t object, ValueKind kind = ValueKind_Numbers, uint32_t dims = kLottieNone,
+        float scale = 1) {
     uint32_t property = readValues(p, object, kind, dims, scale);
     PrStringView expression = text(p, object, "x");
     if (property != kLottieNone && expression.data != nullptr && expression.size > 0) {
@@ -551,7 +546,7 @@ constexpr ItemName kItemNames[] = {
     {itemCode("zz", 2), LottieItemKind_ZigZag},
 };
 static_assert(sortedTable(kItemNames, [](const ItemName& a, const ItemName& b) { return a.code < b.code; }),
-              "kItemNames is in the order of its codes");
+    "kItemNames is in the order of its codes");
 
 LottieItemKind itemKindOf(PrStringView ty) {
     uint16_t code = itemCode(ty.data, ty.size);
@@ -573,9 +568,7 @@ void readStroke(Parser& p, uint32_t object, LottieItem& item) {
     for (uint32_t i = firstIn(p, dashes); i != kPrJsonMissing; i = nextIn(p, dashes, i)) {
         PrStringView n = text(p, i, "n");
         LottieDash dash{};
-        dash.kind = n == "o"   ? LottieDashKind_Offset
-                    : n == "g" ? LottieDashKind_Gap
-                                                  : LottieDashKind_Dash;
+        dash.kind = n == "o"   ? LottieDashKind_Offset : n == "g" ? LottieDashKind_Gap : LottieDashKind_Dash;
         dash.value = readScalar(p, i, "v", 0);
         p.a->dashes.push(dash);
         ++item.count;
@@ -641,7 +634,7 @@ constexpr ItemRole kItemRoles[] = {
     {LottieItemKind_OffsetPath, LottieProp_Amount, "a", LottieRole_Amount},
 };
 static_assert(sortedTable(kItemRoles, [](const ItemRole& a, const ItemRole& b) { return a.kind <= b.kind; }),
-              "kItemRoles is in the order of its kinds");
+    "kItemRoles is in the order of its kinds");
 
 LottieRole itemRoleOf(LottieItemKind kind) {
     switch (kind) {
@@ -672,8 +665,8 @@ void readItem(Parser& p, uint32_t object, uint32_t index) {
     // other item is a node of its own kind.
     uint32_t outer = p.parent;
     if (item.kind == LottieItemKind_Transform) {
-        if (p.parent != kLottieNone && p.a->nodes.data[p.parent].role == LottieRole_Contents
-            && p.a->nodes.data[p.parent].kind == LottieNodeKind_Group)
+        if (p.parent != kLottieNone && p.a->nodes.data[p.parent].role == LottieRole_Contents &&
+                p.a->nodes.data[p.parent].kind == LottieNodeKind_Group)
             p.parent = p.a->nodes.data[p.parent].parent;
     } else {
         uint32_t node = addNode(p, LottieNodeKind_Group, itemRoleOf(item.kind), object);
@@ -784,7 +777,7 @@ void readItem(Parser& p, uint32_t object, uint32_t index) {
             break;
     }
     for (uint32_t r = lowerBound(kItemRoles, uint32_t(countOf(kItemRoles)), item.kind);
-         r < countOf(kItemRoles) && kItemRoles[r].kind == item.kind; ++r)
+            r < countOf(kItemRoles) && kItemRoles[r].kind == item.kind; ++r)
         attach(p, item.props[kItemRoles[r].slot], kItemRoles[r].role, member(p, object, kItemRoles[r].key));
     p.parent = outer;
     p.a->items.data[index] = item;
@@ -808,9 +801,11 @@ void readItems(Parser& p, uint32_t array, uint32_t* first, uint32_t* count) {
 bool readColor(const Parser& p, uint32_t array, PrColor* out) {
     if (sizeOf(p, array) < 3)
         return false;
-    *out = PrColor{float(numberAt(p, elementOf(p, array, 0), 0)),
-                   float(numberAt(p, elementOf(p, array, 1), 0)),
-                   float(numberAt(p, elementOf(p, array, 2), 0)), 1};
+    *out = PrColor{
+        float(numberAt(p, elementOf(p, array, 0), 0)),
+        float(numberAt(p, elementOf(p, array, 1), 0)),
+        float(numberAt(p, elementOf(p, array, 2), 0)), 1,
+    };
     return true;
 }
 
@@ -838,11 +833,12 @@ void readDocument(Parser& p, uint32_t object, double time) {
     uint32_t box = member(p, object, "sz");
     d.box = sizeOf(p, box) >= 2;
     if (d.box) {
-        d.boxSize = PrVec2{float(numberAt(p, elementOf(p, box, 0), 0)),
-                            float(numberAt(p, elementOf(p, box, 1), 0))};
+        d.boxSize = PrVec2{float(numberAt(p, elementOf(p, box, 0), 0)), float(numberAt(p, elementOf(p, box, 1), 0))};
         uint32_t position = member(p, object, "ps");
-        d.boxPosition = PrVec2{float(numberAt(p, elementOf(p, position, 0), 0)),
-                                float(numberAt(p, elementOf(p, position, 1), 0))};
+        d.boxPosition = PrVec2{
+            float(numberAt(p, elementOf(p, position, 0), 0)),
+            float(numberAt(p, elementOf(p, position, 1), 0)),
+        };
     }
     p.a->documents.push(d);
 }
@@ -1004,17 +1000,23 @@ void readMasks(Parser& p, uint32_t array, LottieLayer& layer) {
         LottieMask mask{};
         PrStringView mode = text(p, i, "mode");
         char m = mode.size > 0 ? mode.data[0] : 'a';
-        mask.mode = m == 'n'   ? LottieMaskMode_None
-                    : m == 's' ? LottieMaskMode_Subtract
-                    : m == 'i' ? LottieMaskMode_Intersect
-                    : m == 'l' ? LottieMaskMode_Lighten
-                    : m == 'd' ? LottieMaskMode_Darken
-                    : m == 'f' ? LottieMaskMode_Difference
-                               : LottieMaskMode_Add;
+        if (m == 'n')
+            mask.mode = LottieMaskMode_None;
+        else if (m == 's')
+            mask.mode = LottieMaskMode_Subtract;
+        else if (m == 'i')
+            mask.mode = LottieMaskMode_Intersect;
+        else if (m == 'l')
+            mask.mode = LottieMaskMode_Lighten;
+        else if (m == 'd')
+            mask.mode = LottieMaskMode_Darken;
+        else if (m == 'f')
+            mask.mode = LottieMaskMode_Difference;
+        else
+            mask.mode = LottieMaskMode_Add;
         mask.inverted = flag(p, i, "inv");
         p.closed = p.closedOnItem ? int8_t(flag(p, i, "cl")) : int8_t(-1);
-        mask.shape = attach(p, readProperty(p, member(p, i, "pt"), ValueKind_Shape), LottieRole_MaskPath,
-                            member(p, i, "pt"));
+        mask.shape = attach(p, readProperty(p, member(p, i, "pt"), ValueKind_Shape), LottieRole_MaskPath, member(p, i, "pt"));
         p.closed = -1;
         mask.opacity = attach(p, readScalar(p, i, "o", 100), LottieRole_MaskOpacity, member(p, i, "o"));
         mask.expansion = attach(p, readScalar(p, i, "x", 0), LottieRole_MaskExpansion, member(p, i, "x"));
@@ -1048,14 +1050,22 @@ void readLayers(Parser& p, uint32_t array, LottieComp& comp, Array<uint32_t>& re
     for (uint32_t e = firstIn(p, array); e != kPrJsonMissing; e = nextIn(p, array, e), ++n) {
         LottieLayer layer{};
         double ty = number(p, e, "ty", -1);
-        layer.kind = ty == 0   ? LottieLayerKind_Precomp
-                     : ty == 1 ? LottieLayerKind_Solid
-                     : ty == 2 ? LottieLayerKind_Image
-                     : ty == 3 ? LottieLayerKind_Null
-                     : ty == 4 ? LottieLayerKind_Shape
-                     : ty == 5 ? LottieLayerKind_Text
-                     : ty == 13 ? LottieLayerKind_Camera
-                               : LottieLayerKind_Other;
+        if (ty == 0)
+            layer.kind = LottieLayerKind_Precomp;
+        else if (ty == 1)
+            layer.kind = LottieLayerKind_Solid;
+        else if (ty == 2)
+            layer.kind = LottieLayerKind_Image;
+        else if (ty == 3)
+            layer.kind = LottieLayerKind_Null;
+        else if (ty == 4)
+            layer.kind = LottieLayerKind_Shape;
+        else if (ty == 5)
+            layer.kind = LottieLayerKind_Text;
+        else if (ty == 13)
+            layer.kind = LottieLayerKind_Camera;
+        else
+            layer.kind = LottieLayerKind_Other;
         layer.blend = blendOf(number(p, e, "bm", 0), &layer.additive);
         double tt = number(p, e, "tt", 0);
         layer.matte = tt >= 1 && tt <= 4 ? LottieMatte(tt) : LottieMatte_None;
@@ -1120,7 +1130,7 @@ void readLayers(Parser& p, uint32_t array, LottieComp& comp, Array<uint32_t>& re
     for (uint32_t j = 0; j < comp.count; ++j)
         byId.push(LayerId{ids.data[j], j});
     sortItems(byId.data, byId.count,
-              [](const LayerId& a, const LayerId& b) { return a.id < b.id || (a.id == b.id && a.layer < b.layer); });
+        [](const LayerId& a, const LayerId& b) { return a.id < b.id || (a.id == b.id && a.layer < b.layer); });
     auto find = [&](double id) {
         uint32_t at = lowerBound(byId.data, byId.count, id);
         return id != -1e300 && at < byId.count && byId.data[at].id == id ? byId.data[at].layer : kLottieNone;
@@ -1198,8 +1208,7 @@ const PrDrawImage* PR_NULLABLE readImage(const Parser& p, uint32_t asset, const 
         size_t size = base64DecodedCapacity(encoded.size);
         char* bytes = static_cast<char*>(prMemoryAlloc(size != 0 ? size : 1));
         if (base64Decode(encoded, bytes, size, &size))
-            prDrawImageCreateFromBytes(options.codec, PrByteView{reinterpret_cast<const uint8_t*>(bytes), size},
-                                       &image, nullptr);
+            prDrawImageCreateFromBytes(options.codec, PrByteView{reinterpret_cast<const uint8_t*>(bytes), size}, &image, nullptr);
         prMemoryFree(bytes);
         return image;
     }

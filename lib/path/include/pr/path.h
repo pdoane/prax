@@ -74,8 +74,7 @@ void prPathAddEllipse(PrPath* path, PrVec2 center, PrVec2 radii, float rotation)
 // Appends the annular sector around `center` between `innerRadius` and `outerRadius`, from `startAngle` through
 // `sweep`, in radians clockwise from +x. With an `innerRadius` of zero the sector is a pie slice. With a `sweep` of a
 // full turn or more, it is a ring of two contours wound in opposite directions.
-void prPathAddSector(PrPath* path, PrVec2 center, float innerRadius, float outerRadius,
-                     float startAngle, float sweep);
+void prPathAddSector(PrPath* path, PrVec2 center, float innerRadius, float outerRadius, float startAngle, float sweep);
 
 // Appends a closed contour around every point within `radius` of the segment from `start` to `end`. A `radius` of zero
 // or less adds nothing.
@@ -122,7 +121,7 @@ typedef uint8_t PrPathFlattening;
 // Appends the path's contours to `out`, with each point mapped through `transform`. Curves become lines within
 // `tolerance` of the mapped curves, placed as `flattening` says. A contour that ends with a close is closed.
 void prPathFlatten(const PrPath* path, PrAffine2 transform, float tolerance, PrPathFlattening flattening,
-                   PrPathPolyline* out);
+    PrPathPolyline* out);
 
 #if defined(__cplusplus)
 }

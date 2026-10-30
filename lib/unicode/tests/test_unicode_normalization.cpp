@@ -92,8 +92,8 @@ TEST_CASE("normalization is as every case of NormalizationTest.txt says") {
             continue;
         std::string text = utf8({codePoint});
         ++cases;
-        if ((normalize(text, PrUnicodeNormalForm_Nfc) != text || normalize(text, PrUnicodeNormalForm_Nfd) != text)
-            && ++failures <= 10)
+        if ((normalize(text, PrUnicodeNormalForm_Nfc) != text || normalize(text, PrUnicodeNormalForm_Nfd) != text) &&
+                ++failures <= 10)
             MESSAGE("changes: U+", codePoint);
     }
     CHECK(cases > 1000000);

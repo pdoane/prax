@@ -301,8 +301,7 @@ void destroyFrame(LayoutInlineFrame* f) {
 
 // Returns the padding of a side, resolved against `containing`, the inline size of the containing block, and never
 // negative.
-PrLayoutUnit paddingOf(const LayoutState& state, const LayoutLogicalBox& box, LayoutSide side,
-                       PrLayoutUnit containing) {
+PrLayoutUnit paddingOf(const LayoutState& state, const LayoutLogicalBox& box, LayoutSide side, PrLayoutUnit containing) {
     return layoutUnitMax(kLayoutUnitZero, layoutResolve(state.styles, box.padding[side], containing));
 }
 
@@ -318,16 +317,15 @@ bool specifiedNonZero(PrLayoutLength length) {
 // percentages of `containing`. Sets the advance and margin of the item, and whether any of the three is non-zero, each
 // judged on its own (css-inline-3/#invisible-line-boxes).
 void resolveEdge(const LayoutState& state, LayoutInlineFrame& f, const LayoutInlineShaping& t, uint32_t i,
-                 LayoutMode mode, PrLayoutUnit containing) {
+        LayoutMode mode, PrLayoutUnit containing) {
     PrLayoutStyleIndex style = f.styles.data[i];
     mode.direction = layoutUsedMode(layoutFontStyle(state.styles, style)).direction;
     LayoutLogicalBox box = layoutLogicalBox(layoutBoxStyle(state.styles, style), mode);
-    LayoutSide side =
-        t.items.data[i].kind == LayoutInlineItemKind_Open ? LayoutSide_InlineStart : LayoutSide_InlineEnd;
+    LayoutSide side = t.items.data[i].kind == LayoutInlineItemKind_Open ? LayoutSide_InlineStart : LayoutSide_InlineEnd;
     f.margins.data[i] = layoutResolve(state.styles, box.margin[side], containing);
     f.advances.data[i] = f.margins.data[i] + box.border[side] + paddingOf(state, box, side, containing);
-    f.edges.data[i] = specifiedNonZero(box.margin[side]) || box.border[side] != kLayoutUnitZero
-                      || specifiedNonZero(box.padding[side]);
+    f.edges.data[i] = specifiedNonZero(box.margin[side]) || box.border[side] != kLayoutUnitZero ||
+        specifiedNonZero(box.padding[side]);
 }
 
 // Converts `baseline`, measured from the block-start edge of a box `blockSize` long, to a measure from its block-end
@@ -352,15 +350,14 @@ LayoutBaseline flipped(LayoutBaseline baseline, PrLayoutUnit blockSize) {
 // set synthesized from its margin box (CSS2/#leading). Replaced boxes and boxes in orthogonal flows are among such
 // boxes.
 LayoutBaseline baselineBySource(const PrLayoutBoxStyle& box, const LayoutResult& result, const PrLayoutUnit* margin,
-                                LayoutMode mode) {
+        LayoutMode mode) {
     PrLayoutUnit blockSize = layoutLogicalSize(mode, result.fragment->extent).blockSize;
     PrLayoutUnit edge = blockSize + margin[LayoutSide_BlockEnd];
     bool lastByDefault = !layoutIsFlexContainer(box) && !layoutIsGridContainer(box) && !layoutIsTable(box);
-    if (box.baselineSource == PrLayoutBaselineSource_Auto && lastByDefault
-        && (result.flags & LayoutResultFlag_Scrolls) != 0)
+    if (box.baselineSource == PrLayoutBaselineSource_Auto && lastByDefault && (result.flags & LayoutResultFlag_Scrolls) != 0)
         return layoutBaselineAt(edge, kLayoutBaselineMarginEdge);
-    bool first = box.baselineSource == PrLayoutBaselineSource_First
-                 || (box.baselineSource == PrLayoutBaselineSource_Auto && !lastByDefault);
+    bool first = box.baselineSource == PrLayoutBaselineSource_First ||
+        (box.baselineSource == PrLayoutBaselineSource_Auto && !lastByDefault);
     LayoutBaseline baseline =
         layoutFragmentBaseline(result.fragment, first ? LayoutBaselineEdge_First : LayoutBaselineEdge_Last);
     if (!baseline.present)
@@ -462,8 +459,7 @@ void resolveItems(LayoutState& state, LayoutInlineFrame& f, const LayoutInlineSh
                 break;
             case LayoutInlineItemKind_Float: atomic = layoutFloat(state, item.node, space); break;
             case LayoutInlineItemKind_Open:
-            case LayoutInlineItemKind_Close: resolveEdge(state, f, t, i, space.mode,
-                                                         space.containing.inlineSize); break;
+            case LayoutInlineItemKind_Close: resolveEdge(state, f, t, i, space.mode, space.containing.inlineSize); break;
             default: break;
         }
     }
@@ -517,8 +513,8 @@ void measure(const LayoutInlineShaping& t, LayoutInlineFrame& f, const PrLayoutU
         const LayoutInlineItem& item = t.items.data[i];
         uint32_t at = item.start - start;
         // position[b + 1] holds what goes with byte b.
-        if (item.kind == LayoutInlineItemKind_Open || item.kind == LayoutInlineItemKind_Atomic
-            || item.kind == LayoutInlineItemKind_Float)
+        if (item.kind == LayoutInlineItemKind_Open || item.kind == LayoutInlineItemKind_Atomic ||
+                item.kind == LayoutInlineItemKind_Float)
             position[at < size ? at + 1 : size] += prLayoutUnitToPx(advances[i]);
         else if (item.kind == LayoutInlineItemKind_Close)
             position[at > 0 ? at : 1] += prLayoutUnitToPx(advances[i]);
@@ -589,7 +585,7 @@ float widthOf(const LayoutInlineShaping& t, const LayoutInlineFrame& f, uint32_t
 // `end` and that fits, or the first one it adds if none fits, or `end` if it adds none. The shaping holds those
 // opportunities (LayoutInlineShaping::emergency), or this call finds them (LayoutInlineShaping::wrapsWords).
 uint32_t breakWord(const LayoutStyles* styles, const LayoutInlineShaping& t, LayoutInlineFrame& f, uint32_t start,
-                   float origin, float inlineSize, uint32_t end) {
+        float origin, float inlineSize, uint32_t end) {
     const PrTextEmergency* emergency = nullptr;
     uint32_t base = 0;
     if (t.emergency.count != 0) {
@@ -618,7 +614,7 @@ uint32_t breakWord(const LayoutStyles* styles, const LayoutInlineShaping& t, Lay
 // broken greedily, no wider than `inlineSize` if possible, before the end of the segment of the frame. It breaks at the
 // last opportunity that fits, or, if none fits, where breakWord says.
 uint32_t breakLine(const LayoutStyles* styles, const LayoutInlineShaping& t, LayoutInlineFrame& f, uint32_t start,
-                   float origin, float inlineSize) {
+        float origin, float inlineSize) {
     uint32_t size = f.segment.byteEnd;
     uint32_t fits = 0;
     LinePen pen{.t = t, .f = f, .origin = origin, .at = start};
@@ -705,7 +701,7 @@ LayoutLineStart collectLine(const LayoutInlineShaping& t, LayoutInlineFrame& f, 
 // Collects the line from `at` to `end`, aligns it, and returns how far it reaches about its baseline (layoutAlignLine).
 // Reuses the alignment if the line of the frame is that line and is already aligned.
 LayoutLineExtent alignLine(LayoutState& state, LayoutInlineFrame& f, const LayoutInlineShaping& t, LayoutLineStart at,
-                           uint32_t end, LayoutLineExtent strut) {
+        uint32_t end, LayoutLineExtent strut) {
     collectLine(t, f, at, end);
     if (!f.lineAligned) {
         f.lineExtent = layoutAlignLine(state, f.aligner, t, f.styles.data, f.line, strut);
@@ -723,8 +719,9 @@ LayoutLineExtent alignLine(LayoutState& state, LayoutInlineFrame& f, const Layou
 LayoutTextTurn turnOf(LayoutMode mode, bool upright) {
     if (layoutIsHorizontal(mode) || upright)
         return LayoutTextTurn_None;
-    return mode.writingMode == PrLayoutWritingMode_SidewaysLr ? LayoutTextTurn_CounterClockwise
-                                                              : LayoutTextTurn_Clockwise;
+    if (mode.writingMode == PrLayoutWritingMode_SidewaysLr)
+        return LayoutTextTurn_CounterClockwise;
+    return LayoutTextTurn_Clockwise;
 }
 
 // The justification of the line being placed: how many units each opportunity takes (css-text-3/#justification).
@@ -776,14 +773,13 @@ uint32_t sourceEnd(const LayoutState& state, const LayoutInlineShaping& t, const
 // line that holds nothing else. It spans the content area of the item's first face about the dominant baseline, which
 // sits `baseline` below the line's baseline.
 void placeBreakLeaf(LayoutState& state, const LayoutInlineShaping& t, const LayoutLineLeaf& leaf,
-                    PrLayoutStyleIndex style, PrLayoutUnit x, PrLayoutUnit baseline, LayoutMode mode) {
+        PrLayoutStyleIndex style, PrLayoutUnit x, PrLayoutUnit baseline, LayoutMode mode) {
     const LayoutInlineItem& item = t.items.data[leaf.item];
     const LayoutFontFaces& faces = layoutFontFaces(state.styles, style);
     PrLayoutUnit offset = layoutFaceBaseline(faces.first, layoutDominantBaseline(layoutFontStyle(state.styles, style)));
     PrLayoutUnit lo = -faces.first.ascent - offset;
     PrLayoutUnit hi = faces.first.descent - offset;
-    LayoutFragment* text = layoutFragmentCreateText(item.node, prLayoutUnitToPx(faces.size), nullptr, 0, nullptr, 0, 0,
-                                                    1);
+    LayoutFragment* text = layoutFragmentCreateText(item.node, prLayoutUnitToPx(faces.size), nullptr, 0, nullptr, 0, 0, 1);
     ++state.stats->textFragmentsMade;
     state.stats->textFragmentBytes += layoutFragmentTextBytes(0, 0, 0, 1);
     text->turn = turnOf(mode, false);
@@ -816,8 +812,8 @@ void placeBreakLeaf(LayoutState& state, const LayoutInlineShaping& t, const Layo
 //
 // The fragment's caret stops are where each cluster starts along the line, in the order its glyphs are placed.
 PrLayoutUnit placeTextLeaf(LayoutState& state, LayoutInlineFrame& f, const LayoutInlineShaping& t,
-                           const LayoutLineLeaf& leaf, PrLayoutStyleIndex style, PrLayoutUnit x, PrLayoutUnit baseline,
-                           LayoutMode mode, const LineShares& shares, float* carry) {
+        const LayoutLineLeaf& leaf, PrLayoutStyleIndex style, PrLayoutUnit x, PrLayoutUnit baseline,
+        LayoutMode mode, const LineShares& shares, float* carry) {
     const LayoutInlineItem& item = t.items.data[leaf.item];
     float size = prLayoutUnitToPx(layoutFontFaces(state.styles, style).size);
     PrLayoutAlignmentBaseline dominant = layoutDominantBaseline(layoutFontStyle(state.styles, style));
@@ -842,8 +838,13 @@ PrLayoutUnit placeTextLeaf(LayoutState& state, LayoutInlineFrame& f, const Layou
         PrLayoutUnit offset = layoutFaceBaseline(face, dominant);
         lo = layoutUnitMin(lo, -face.ascent - offset);
         hi = layoutUnitMax(hi, face.descent - offset);
-        return LayoutLeafFace{.glyphEnd = end, .font = layoutFaceFont(group, run.face), .metrics = &face,
-                              .dominant = offset, .across = 0};
+        return LayoutLeafFace{
+            .glyphEnd = end,
+            .font = layoutFaceFont(group, run.face),
+            .metrics = &face,
+            .dominant = offset,
+            .across = 0,
+        };
     };
     // A leaf of one run, which is the common case, has one face, one font and one font range, and needs no scratch.
     LayoutLeafFace single;
@@ -962,8 +963,7 @@ PrLayoutUnit placeTextLeaf(LayoutState& state, LayoutInlineFrame& f, const Layou
         if (!reversed) {
             while (i >= faces[j].glyphEnd)
                 ++j;
-            while (next < last && shares.opportunities[next].byte <= glyph.cluster
-                   && shares.opportunities[next].byte < leaf.to)
+            while (next < last && shares.opportunities[next].byte <= glyph.cluster && shares.opportunities[next].byte < leaf.to)
                 widen(next++);
         } else {
             while (j != 0 && i < faces[j - 1].glyphEnd)
@@ -978,8 +978,11 @@ PrLayoutUnit placeTextLeaf(LayoutState& state, LayoutInlineFrame& f, const Layou
         if (k == 0 || t.glyphs.data[beside].cluster != glyph.cluster)
             stops[stop++] = LayoutCaretStop{sources[glyph.cluster], along};
         float across = faces[j].across;
-        PrVec2 at = upright ? PrVec2{across + glyph.offset.x, along + glyph.offset.y}
-                            : PrVec2{along + glyph.offset.x, across + glyph.offset.y};
+        PrVec2 at;
+        if (upright)
+            at = PrVec2{across + glyph.offset.x, along + glyph.offset.y};
+        else
+            at = PrVec2{along + glyph.offset.x, across + glyph.offset.y};
         out[k] = PrFontGlyph{glyph.id, at};
         pen += glyph.advance;
     }
@@ -998,7 +1001,7 @@ PrLayoutUnit placeTextLeaf(LayoutState& state, LayoutInlineFrame& f, const Layou
 // line-over and line-under sides. On a phantom line, which is zero high, the part is zero high at the line-over edge of
 // the line. A side that has no edge of the box is broken: the box continues past it, on another line or across a split.
 LayoutFragment* makePart(LayoutState& state, const LayoutInlineFrame& f, const LayoutInlineShaping& t,
-                         const LayoutLinePart& part, PrLayoutUnit right, const LayoutSpace& space, bool phantom) {
+        const LayoutLinePart& part, PrLayoutUnit right, const LayoutSpace& space, bool phantom) {
     const LayoutLineBox& box = f.lineBoxes.data[part.box];
     PrLayoutStyleIndex style = f.styles.data[box.open];
     LayoutLogicalBox logical = layoutLogicalBox(layoutBoxStyle(state.styles, style), space.mode);
@@ -1022,9 +1025,10 @@ LayoutFragment* makePart(LayoutState& state, const LayoutInlineFrame& f, const L
     LayoutSide under = over == LayoutSide_BlockStart ? LayoutSide_BlockEnd : LayoutSide_BlockStart;
     PrLayoutUnit before = logical.border[over] + paddingOf(state, logical, over, space.containing.inlineSize);
     PrLayoutUnit after = logical.border[under] + paddingOf(state, logical, under, space.containing.inlineSize);
-    fragment->extent = layoutPhysicalSize(
-        space.mode, LayoutLogicalSize{layoutUnitMax(kLayoutUnitZero, right - part.x - marginLeft - marginRight),
-                                      faces.first.ascent + faces.first.descent + before + after});
+    fragment->extent = layoutPhysicalSize(space.mode, LayoutLogicalSize{
+        layoutUnitMax(kLayoutUnitZero, right - part.x - marginLeft - marginRight),
+        faces.first.ascent + faces.first.descent + before + after,
+    });
     LayoutLogicalChild& child = state.scratch->children.data[part.child];
     child.fragment = fragment;
     // A phantom line is not aligned, so nothing on it has a baseline. The part is zero high at the top of the line.
@@ -1115,7 +1119,7 @@ void lineLevels(LayoutInlineFrame& f, const LayoutInlineShaping& t, uint32_t sta
 // Each tab reaches its stop from `*logical`, which is how far the line reaches along itself in the order of the text
 // from the start edge of the block, in px, as breaking measured it. Each leaf advances `*logical`.
 void textLeaves(const LayoutInlineShaping& t, LayoutInlineFrame& f, const LayoutLineItem& on, uint32_t lineStart,
-                uint32_t hang, float* logical) {
+        uint32_t hang, float* logical) {
     const LayoutInlineItem& item = t.items.data[on.item];
     bool levels = t.bidi;
     // The run that holds the first byte of the item on the line, or the first run past it.
@@ -1126,16 +1130,20 @@ void textLeaves(const LayoutInlineShaping& t, LayoutInlineFrame& f, const Layout
         if (t.tabs && tab(b)) {
             float advance = tabAdvance(t, *logical);
             uint32_t g = t.glyphAt.data[b];
-            f.leaves.push(LayoutLineLeaf{on.item, b, b + 1, prLayoutUnitFromPxCeil(advance), advance, g, g,
-                                         LayoutLineLeafKind_Tab, levelAt(b), b >= hang, false});
+            f.leaves.push(LayoutLineLeaf{
+                on.item, b, b + 1, prLayoutUnitFromPxCeil(advance), advance, g, g,
+                LayoutLineLeafKind_Tab, levelAt(b), b >= hang, false,
+            });
             *logical += advance;
             ++b;
             continue;
         }
         if (t.text.data[b] == '\n') {
             uint32_t g = t.glyphAt.data[b];
-            f.leaves.push(LayoutLineLeaf{on.item, b, b + 1, kLayoutUnitZero, 0, g, g, LayoutLineLeafKind_Break,
-                                         levelAt(b), false, false});
+            f.leaves.push(LayoutLineLeaf{
+                on.item, b, b + 1, kLayoutUnitZero, 0, g, g, LayoutLineLeafKind_Break,
+                levelAt(b), false, false,
+            });
             ++b;
             continue;
         }
@@ -1150,8 +1158,8 @@ void textLeaves(const LayoutInlineShaping& t, LayoutInlineFrame& f, const Layout
         if (r < t.runs.count && t.runs.data[r].start <= b) {
             uint32_t k = r;
             e = t.runs.data[k].end;
-            while (e < limit && k + 1 < t.runs.count && t.runs.data[k + 1].start == e
-                   && t.runs.data[k + 1].upright == t.runs.data[r].upright && levelAt(e) == levelAt(b))
+            while (e < limit && k + 1 < t.runs.count && t.runs.data[k + 1].start == e &&
+                    t.runs.data[k + 1].upright == t.runs.data[r].upright && levelAt(e) == levelAt(b))
                 e = t.runs.data[++k].end;
         }
         e = e < limit ? e : limit;
@@ -1163,8 +1171,10 @@ void textLeaves(const LayoutInlineShaping& t, LayoutInlineFrame& f, const Layout
         }
         // Its advance in units is found once the leaves of the line are in visual order.
         float pen = float(t.reach.data[e] - t.reach.data[b]);
-        f.leaves.push(LayoutLineLeaf{on.item, b, e, kLayoutUnitZero, pen, t.glyphAt.data[b], t.glyphAt.data[e],
-                                     LayoutLineLeafKind_Text, levelAt(b), b >= hang, false});
+        f.leaves.push(LayoutLineLeaf{
+            on.item, b, e, kLayoutUnitZero, pen, t.glyphAt.data[b], t.glyphAt.data[e],
+            LayoutLineLeafKind_Text, levelAt(b), b >= hang, false,
+        });
         *logical += pen;
         b = e;
     }
@@ -1260,8 +1270,7 @@ void treeOrder(const LayoutStyles* styles, LayoutInlineFrame& f, uint32_t mark, 
 // A line that `phantom` marks as phantom, in a segment with nothing that keeps a line from being phantom, is not
 // aligned. It is zero high, and nothing on it has a baseline.
 LineBuilt buildLine(LayoutState& state, LayoutInlineFrame& f, const LayoutInlineShaping& t, LayoutLineStart& at,
-                    uint32_t end, LayoutLineExtent strut, const LinePlace& place, const LayoutSpace& space,
-                    bool phantom) {
+        uint32_t end, LayoutLineExtent strut, const LinePlace& place, const LayoutSpace& space, bool phantom) {
     LayoutLineAligner& aligner = f.aligner;
     bool byShift = !phantom && layoutAlignsByShift(aligner);
     LayoutLineExtent extent = byShift || phantom ? strut : alignLine(state, f, t, at, end, strut);
@@ -1317,8 +1326,10 @@ LineBuilt buildLine(LayoutState& state, LayoutInlineFrame& f, const LayoutInline
         if (box.first == f.leaves.count) {
             uint32_t byte = close != kNoItem ? t.items.data[close].start : end;
             uint8_t level = t.bidi && byte < end ? f.lineLevels.data[byte - line.from.byte] : paragraph;
-            f.leaves.push(LayoutLineLeaf{box.open, byte, byte, kLayoutUnitZero, 0, 0, 0, LayoutLineLeafKind_Empty,
-                                         level, false, false});
+            f.leaves.push(LayoutLineLeaf{
+                box.open, byte, byte, kLayoutUnitZero, 0, 0, 0, LayoutLineLeafKind_Empty,
+                level, false, false,
+            });
         }
         box.close = close;
         box.end = f.leaves.count;
@@ -1329,8 +1340,10 @@ LineBuilt buildLine(LayoutState& state, LayoutInlineFrame& f, const LayoutInline
     auto isolateMark = [&](LayoutItemIndex item) {
         if (t.bidi && t.marks.data[item] != kLayoutMarkNone) {
             uint32_t byte = t.items.data[item].start;
-            f.leaves.push(LayoutLineLeaf{item, byte, byte, kLayoutUnitZero, 0, 0, 0, LayoutLineLeafKind_Empty,
-                                         t.marks.data[item], false, false});
+            f.leaves.push(LayoutLineLeaf{
+                item, byte, byte, kLayoutUnitZero, 0, 0, 0, LayoutLineLeafKind_Empty,
+                t.marks.data[item], false, false,
+            });
         }
     };
     // A placeholder or an anchor resolves as a neutral with no text (UAX9 N1, N2). It takes the direction of the text
@@ -1370,21 +1383,27 @@ LineBuilt buildLine(LayoutState& state, LayoutInlineFrame& f, const LayoutInline
                 break;
             case LayoutInlineItemKind_Atomic: {
                 uint8_t level = t.bidi ? f.lineLevels.data[it.start - line.from.byte] : uint8_t(0);
-                f.leaves.push(LayoutLineLeaf{item, it.start, it.end, f.advances.data[item], 0, 0, 0,
-                                             LayoutLineLeafKind_Atomic, level, false, false});
+                f.leaves.push(LayoutLineLeaf{
+                    item, it.start, it.end, f.advances.data[item], 0, 0, 0,
+                    LayoutLineLeafKind_Atomic, level, false, false,
+                });
                 logical += prLayoutUnitToPx(f.advances.data[item]);
                 content = true;
                 take(item, aligner.align.data[item].extent);
                 break;
             }
             case LayoutInlineItemKind_OutOfFlow:
-                f.leaves.push(LayoutLineLeaf{item, it.start, it.start, kLayoutUnitZero, 0, 0, 0,
-                                             LayoutLineLeafKind_Placeholder, neutralLevel(it), false, content});
+                f.leaves.push(LayoutLineLeaf{
+                    item, it.start, it.start, kLayoutUnitZero, 0, 0, 0,
+                    LayoutLineLeafKind_Placeholder, neutralLevel(it), false, content,
+                });
                 break;
             case LayoutInlineItemKind_Float:
-                f.leaves.push(LayoutLineLeaf{item, it.start, it.start, kLayoutUnitZero, 0, 0, 0,
-                                             LayoutLineLeafKind_Anchor,
-                                             neutralLevel(it), false, false});
+                f.leaves.push(LayoutLineLeaf{
+                    item, it.start, it.start, kLayoutUnitZero, 0, 0, 0,
+                    LayoutLineLeafKind_Anchor,
+                    neutralLevel(it), false, false,
+                });
                 break;
             case LayoutInlineItemKind_Break: {
                 content = true;
@@ -1397,7 +1416,7 @@ LineBuilt buildLine(LayoutState& state, LayoutInlineFrame& f, const LayoutInline
                     textLeaves(t, f, on, line.from.byte, hang, &logical);
                     content = true;
                     take(item, layoutTextOnLine(state, t, it, f.styles.data[item], on.from, on.to,
-                                                aligner.align.data[item].extent));
+                        aligner.align.data[item].extent));
                 }
                 break;
             default:
@@ -1421,8 +1440,8 @@ LineBuilt buildLine(LayoutState& state, LayoutInlineFrame& f, const LayoutInline
         f.boxMoves.data[b] = own + around;
         f.depthMoves.resize(box.depth + 1);
         f.depthMoves.data[box.depth] = f.boxMoves.data[b];
-        moves = moves || f.boxMoves.data[b].inlineOffset != kLayoutUnitZero
-                || f.boxMoves.data[b].blockOffset != kLayoutUnitZero;
+        moves = moves || f.boxMoves.data[b].inlineOffset != kLayoutUnitZero ||
+            f.boxMoves.data[b].blockOffset != kLayoutUnitZero;
     }
     if (moves) {
         f.leafMoves.resize(f.leaves.count);
@@ -1455,8 +1474,7 @@ LineBuilt buildLine(LayoutState& state, LayoutInlineFrame& f, const LayoutInline
         const LayoutLineBox& box = f.lineBoxes.data[b];
         uint32_t partsStart = f.parts.count;
         if (!t.bidi) {
-            f.parts.push(
-                LayoutLinePart{.box = b, .start = box.first, .end = box.end - 1, .left = kNoItem, .right = kNoItem});
+            f.parts.push(LayoutLinePart{.box = b, .start = box.first, .end = box.end - 1, .left = kNoItem, .right = kNoItem});
         } else {
             f.positions.clear();
             for (uint32_t i = box.first; i < box.end; ++i)
@@ -1523,13 +1541,17 @@ LineBuilt buildLine(LayoutState& state, LayoutInlineFrame& f, const LayoutInline
         layoutJustifyFind(state, f.justifier, t, f.styles.data, aligner.containerStyle, line);
         const Array<LayoutJustifyOpportunity>& found = f.justifier.opportunities;
         if (found.count != 0 && free > kLayoutUnitZero) {
-            shares = LineShares{found.data, found.count, free.raw / int32_t(found.count),
-                                uint32_t(free.raw % int32_t(found.count))};
+            shares = LineShares{
+                found.data, found.count, free.raw / int32_t(found.count),
+                uint32_t(free.raw % int32_t(found.count)),
+            };
             free = kLayoutUnitZero;
         }
         PrLayoutTextAlign last = lastAlignOf(layoutFontStyle(state.styles, aligner.containerStyle));
-        align = free > kLayoutUnitZero ? (last == PrLayoutTextAlign_Justify ? PrLayoutTextAlign_Center : last)
-                                       : PrLayoutTextAlign_Start;
+        if (free > kLayoutUnitZero)
+            align = (last == PrLayoutTextAlign_Justify ? PrLayoutTextAlign_Center : last);
+        else
+            align = PrLayoutTextAlign_Start;
     }
 
     // Parts open in visual order, outermost first if several start at one leaf, and close innermost first. Without
@@ -1569,8 +1591,8 @@ LineBuilt buildLine(LayoutState& state, LayoutInlineFrame& f, const LayoutInline
         const LayoutLineLeaf& leaf = f.leaves.data[f.order.data[p]];
         bool rightToLeft = (leaf.level & 1) != 0;
         // A gap at its start, on the side from which the order of its text starts.
-        bool empty = leaf.kind == LayoutLineLeafKind_Empty || leaf.kind == LayoutLineLeafKind_Placeholder
-                     || leaf.kind == LayoutLineLeafKind_Break;
+        bool empty = leaf.kind == LayoutLineLeafKind_Empty || leaf.kind == LayoutLineLeafKind_Placeholder ||
+            leaf.kind == LayoutLineLeafKind_Break;
         int32_t gap = empty ? 0 : shares.gapAt(leaf.from);
         if (!rightToLeft)
             x.raw += gap;
@@ -1588,13 +1610,15 @@ LineBuilt buildLine(LayoutState& state, LayoutInlineFrame& f, const LayoutInline
         switch (leaf.kind) {
             case LayoutLineLeafKind_Text:
                 x += placeTextLeaf(state, f, t, leaf, style, x, layoutAlignedBaseline(aligner, leaf.item), space.mode,
-                                   shares, &carry);
+                    shares, &carry);
                 break;
             case LayoutLineLeafKind_Atomic: {
                 // Relative positioning moves an atomic inline from its place, and moves nothing else on the line.
                 LayoutAtomic& atomic = f.atomics.data[leaf.item];
-                LayoutLogicalOffset offset{x + atomic.margin[lineLeft],
-                                           layoutAlignedBaseline(aligner, leaf.item) - atomic.baseline.offset};
+                LayoutLogicalOffset offset{
+                    x + atomic.margin[lineLeft],
+                    layoutAlignedBaseline(aligner, leaf.item) - atomic.baseline.offset,
+                };
                 children.push(LayoutLogicalChild{atomic.fragment, offset + atomic.relative});
                 atomic.fragment = nullptr;
                 x += leaf.advance;
@@ -1611,8 +1635,7 @@ LineBuilt buildLine(LayoutState& state, LayoutInlineFrame& f, const LayoutInline
                 LayoutLogicalOffset move = moves ? f.leafMoves.data[f.order.data[p]] : kLayoutLogicalOffsetZero;
                 f.placeholders.push(LayoutLinePlaceholder{children.count, move, leaf.contentBefore});
                 LayoutFragment* placeholder =
-                    layoutFragmentCreatePlaceholder(node, layoutStaticEdges(space.mode), layoutIsFixed(state.tree,
-                                                                                                       node));
+                    layoutFragmentCreatePlaceholder(node, layoutStaticEdges(space.mode), layoutIsFixed(state.tree, node));
                 children.push(LayoutLogicalChild{placeholder, LayoutLogicalOffset{x, kLayoutUnitZero}});
                 placed = children.count;
                 break;
@@ -1621,13 +1644,12 @@ LineBuilt buildLine(LayoutState& state, LayoutInlineFrame& f, const LayoutInline
                 // The anchor carries the flags of the float that a walk looks for, taken from the fragment of the float
                 // wherever that fragment currently is.
                 LayoutItemIndex item = leaf.item;
-                const LayoutFragment* floated = f.floats.child.data[item] != kNoItem
-                                                    ? children.data[f.floats.child.data[item]].fragment
-                                                    : f.atomics.data[item].fragment;
-                LayoutFragmentFlags flags = floated != nullptr && !(f.floats.placed.data[item]
-                                                                    && f.floats.child.data[item] == kNoItem)
-                                                ? floated->flags
-                                                : 0;
+                const LayoutFragment* floated = f.atomics.data[item].fragment;
+                if (f.floats.child.data[item] != kNoItem)
+                    floated = children.data[f.floats.child.data[item]].fragment;
+                LayoutFragmentFlags flags = 0;
+                if (floated != nullptr && !(f.floats.placed.data[item] && f.floats.child.data[item] == kNoItem))
+                    flags = floated->flags;
                 LayoutFragment* anchor = layoutFragmentCreateAnchor(t.items.data[item].node, flags);
                 f.floats.anchors.push(LayoutLineAnchor{anchor, item, kNoItem});
                 children.push(LayoutLogicalChild{anchor, LayoutLogicalOffset{x, kLayoutUnitZero}});
@@ -1664,8 +1686,7 @@ LineBuilt buildLine(LayoutState& state, LayoutInlineFrame& f, const LayoutInline
     // goes past its end, which is on the right in an ltr paragraph and on the left in an rtl paragraph, where L1 put
     // it.
     PrLayoutUnit start = alignOffset(align, direction, free);
-    PrLayoutUnit offset = direction == PrTextDirection_Ltr ? place.indent + start
-                                                             : place.size - place.indent - start - x;
+    PrLayoutUnit offset = direction == PrTextDirection_Ltr ? place.indent + start : place.size - place.indent - start - x;
     built.phantom = !content;
     if (built.phantom)
         extent = LayoutLineExtent{};
@@ -1681,8 +1702,11 @@ LineBuilt buildLine(LayoutState& state, LayoutInlineFrame& f, const LayoutInline
     bool overIsStart = layoutLineOverIsBlockStart(space.mode);
     PrLayoutUnit lineStart = overIsStart ? kLayoutUnitZero : blockSize;
     PrLayoutUnit lineEnd = overIsStart ? blockSize : kLayoutUnitZero;
-    PrLayoutUnit contentStart = space.mode.direction == PrTextDirection_Rtl ? place.at.inlineOffset + place.size
-                                                                            : kLayoutUnitZero - place.at.inlineOffset;
+    PrLayoutUnit contentStart;
+    if (space.mode.direction == PrTextDirection_Rtl)
+        contentStart = place.at.inlineOffset + place.size;
+    else
+        contentStart = kLayoutUnitZero - place.at.inlineOffset;
     for (uint32_t i = 0; i < f.placeholders.count; ++i) {
         const LayoutLinePlaceholder& placeholder = f.placeholders.data[i];
         LayoutLogicalChild& child = children.data[placeholder.child];
@@ -1700,8 +1724,7 @@ LineBuilt buildLine(LayoutState& state, LayoutInlineFrame& f, const LayoutInline
         treeOrder(state.styles, f, mark, children);
     LayoutLogicalSize size{place.size, blockSize};
     state.stats->lineChildrenMade += children.count - mark;
-    LayoutFragment* fragment =
-        layoutFragmentBuild(children, mark, LayoutFragmentKind_Line, kPrLayoutNodeNone, frame, size);
+    LayoutFragment* fragment = layoutFragmentBuild(children, mark, LayoutFragmentKind_Line, kPrLayoutNodeNone, frame, size);
     layoutFragmentSetOverflow(state.tree, fragment);
     for (uint32_t i = anchorsBefore; i < f.floats.anchors.count; ++i)
         f.floats.anchors.data[i].line = children.count;
@@ -1718,14 +1741,14 @@ LineBuilt buildLine(LayoutState& state, LayoutInlineFrame& f, const LayoutInline
 
 // Places the float of `item` at or below `top`, and returns its margin box.
 LayoutExclusion placeFloat(const LayoutState& state, const LayoutInlineFrame& f, LayoutItemIndex item, PrLayoutUnit top,
-                           const LayoutSpace& space, const LayoutInlineBfc& bfc) {
+        const LayoutSpace& space, const LayoutInlineBfc& bfc) {
     const PrLayoutBoxStyle& box = layoutBoxStyle(state.styles, f.styles.data[item]);
     return layoutFloatPlace(box, f.atomics.data[item], bfc.containing, space.mode, top);
 }
 
 // Appends the fragment of the float of `item`, placed at `placed`, at its position from the corner of the context.
 void pushFloat(LayoutState& state, LayoutInlineFrame& f, LayoutItemIndex item, const LayoutExclusion& placed,
-               const LayoutSpace& space, const LayoutInlineBfc& bfc) {
+        const LayoutSpace& space, const LayoutInlineBfc& bfc) {
     LayoutAtomic& atomic = f.atomics.data[item];
     LayoutLogicalOffset at = layoutFloatOffset(atomic, placed, bfc.containing, space.mode, bfc.top);
     f.floats.child.data[item] = state.scratch->children.count;
@@ -1737,8 +1760,8 @@ void pushFloat(LayoutState& state, LayoutInlineFrame& f, LayoutItemIndex item, c
 // Returns the offset of the start of a line in `span` from the starting content edge of the block, in px. Tab stops are
 // measured from that edge.
 float originOf(const LayoutSpan& span, const LayoutSpace& space, const LayoutInlineBfc& bfc) {
-    PrLayoutUnit start = layoutInlineStartFromLeft(bfc.containing, space.mode.direction, span.left,
-                                                   span.right - span.left);
+    PrLayoutUnit start =
+        layoutInlineStartFromLeft(bfc.containing, space.mode.direction, span.left, span.right - span.left);
     return prLayoutUnitToPx(start);
 }
 
@@ -1748,8 +1771,8 @@ float originOf(const LayoutSpan& span, const LayoutSpace& space, const LayoutInl
 // fit, the forced ones, and the floats after them go after the line. Returns the end of the line, and sets `span` to
 // the space it was broken in.
 uint32_t breakBesideFloats(LayoutState& state, LayoutInlineFrame& f, const LayoutInlineShaping& t, LayoutLineStart at,
-                           PrLayoutUnit indent, PrLayoutUnit y, PrLayoutUnit h, const LayoutSpace& space,
-                           const LayoutInlineBfc& bfc, LayoutSpan& span) {
+        PrLayoutUnit indent, PrLayoutUnit y, PrLayoutUnit h, const LayoutSpace& space,
+        const LayoutInlineBfc& bfc, LayoutSpan& span) {
     LayoutInlineFloats& floats = f.floats;
     float indentPx = prLayoutUnitToPx(indent);
     span = layoutExclusionsAvailable(bfc.containing, y, h);
@@ -1766,8 +1789,8 @@ uint32_t breakBesideFloats(LayoutState& state, LayoutInlineFrame& f, const Layou
         uint32_t position = t.items.data[item].start;
         float before = position > at.byte ? widthOf(t, f, at.byte, position, origin) : 0;
         float inlineSize = prLayoutUnitToPx(layoutAtomicMarginBox(f.atomics.data[item], space.mode).inlineSize);
-        if (floats.deferred.count == 0 && floats.forced.find(item) == kArrayMissing
-            && (before <= 0 || before + inlineSize <= width + kFitTolerance)) {
+        if (floats.deferred.count == 0 && floats.forced.find(item) == kArrayMissing &&
+                (before <= 0 || before + inlineSize <= width + kFitTolerance)) {
             floats.onLine.push(LayoutInlinePlaced{item, placeFloat(state, f, item, y, space, bfc)});
             span = layoutExclusionsAvailable(bfc.containing, y, h);
             width = prLayoutUnitToPx(span.right - span.left) - indentPx;
@@ -1789,8 +1812,7 @@ struct LineFit {
 // narrows that space. A line that turns out taller, or that fits nowhere, breaks again. The floats of the frame record
 // the floats that the line places beside it and after it.
 LineFit fitLine(LayoutState& state, LayoutInlineFrame& f, const LayoutInlineShaping& t, LayoutLineStart at,
-                PrLayoutUnit indent, PrLayoutUnit y, LayoutLineExtent strut, const LayoutSpace& space,
-                const LayoutInlineBfc& bfc) {
+        PrLayoutUnit indent, PrLayoutUnit y, LayoutLineExtent strut, const LayoutSpace& space, const LayoutInlineBfc& bfc) {
     LayoutExclusions& exclusions = *bfc.containing.exclusions;
     LayoutExclusionMark mark = exclusions.mark;
     LayoutInlineFloats& floats = f.floats;
@@ -1858,7 +1880,7 @@ LineFit fitLine(LayoutState& state, LayoutInlineFrame& f, const LayoutInlineShap
 // Places the floats of a segment with no line where the margins before it resolve, or records them as waiting for the
 // margins. With no line, they are anchored on no line, and are children of their parent in tree order.
 void placeLooseFloats(LayoutState& state, LayoutInlineFrame& f, const LayoutInlineShaping& t, const LayoutSpace& space,
-                      const LayoutInlineBfc& bfc, LayoutInlineResult& result) {
+        const LayoutInlineBfc& bfc, LayoutInlineResult& result) {
     for (uint32_t i = f.segment.itemStart; i < f.segment.itemEnd; ++i) {
         if (t.items.data[i].kind != LayoutInlineItemKind_Float)
             continue;
@@ -1909,7 +1931,7 @@ struct LineStrut {
 
 // Lays out the segment of the frame, as layoutInlineSegment describes.
 LayoutInlineResult layoutLines(LayoutState& state, LayoutInlineFrame& f, const LayoutInlineShaping& t,
-                               uint32_t container, const LayoutSpace& space, const LayoutInlineBfc& bfc) {
+        uint32_t container, const LayoutSpace& space, const LayoutInlineBfc& bfc) {
     LayoutInlineResult result{};
     const LayoutInlineSegment& segment = f.segment;
     PrLayoutStyleIndex containerStyle = layoutTreeNode(state.tree, container).style;
@@ -1922,8 +1944,8 @@ LayoutInlineResult layoutLines(LayoutState& state, LayoutInlineFrame& f, const L
     bool lined = content;
     for (uint32_t i = segment.itemStart; i < segment.itemEnd; ++i) {
         LayoutInlineItemKind kind = t.items.data[i].kind;
-        content = content || f.edges.data[i] || kind == LayoutInlineItemKind_Atomic
-                  || kind == LayoutInlineItemKind_Break;
+        content = content || f.edges.data[i] || kind == LayoutInlineItemKind_Atomic ||
+            kind == LayoutInlineItemKind_Break;
         placeholders = placeholders || kind == LayoutInlineItemKind_OutOfFlow;
         lined = lined || (kind != LayoutInlineItemKind_Text && kind != LayoutInlineItemKind_Float);
     }
@@ -1970,9 +1992,11 @@ LayoutInlineResult layoutLines(LayoutState& state, LayoutInlineFrame& f, const L
         f.aligned = true;
     }
     const PrLayoutFontStyle& font = layoutFontStyle(state.styles, containerStyle);
-    PrLayoutUnit indent = font.textIndent.bits == prLayoutLengthPx(0).bits
-                              ? kLayoutUnitZero
-                              : layoutResolve(state.styles, font.textIndent, space.containing.inlineSize);
+    PrLayoutUnit indent;
+    if (font.textIndent.bits == prLayoutLengthPx(0).bits)
+        indent = kLayoutUnitZero;
+    else
+        indent = layoutResolve(state.styles, font.textIndent, space.containing.inlineSize);
 
     PrLayoutUnit y = bfc.top;
     LayoutLineStart at{segment.byteStart, segment.itemStart, 0};
@@ -1990,7 +2014,8 @@ LayoutInlineResult layoutLines(LayoutState& state, LayoutInlineFrame& f, const L
         LineFit fit = fitLine(state, lf, lt, at, lineIndent, y, lineStrut, space, bfc);
         PrLayoutUnit lineSize = fit.span.right - fit.span.left;
         LayoutLogicalOffset lineAt{
-            layoutInlineStartFromLeft(bfc.containing, space.mode.direction, fit.span.left, lineSize), fit.y - bfc.top};
+            layoutInlineStartFromLeft(bfc.containing, space.mode.direction, fit.span.left, lineSize), fit.y - bfc.top,
+        };
         bool lastLike = isFinal(lt, segment, at.byte, fit.end) || endsForced(lt, fit.end);
         LinePlace place{lineAt, lineSize, lineIndent, lastLike ? lastAlignOf(font) : font.textAlign};
         LineBuilt built = buildLine(state, lf, lt, at, fit.end, lineStrut, place, space, !content);
@@ -2040,7 +2065,7 @@ LayoutInlineResult layoutLines(LayoutState& state, LayoutInlineFrame& f, const L
         lf.floats.anchors.clear();
         LineStrut lineStrut = strutOf(lineStyle);
         layoutAlignItems(state, lf.aligner, lt, lf.styles.data, lf.atomics.data, lineStyle, lineStrut.extent,
-                         space.mode);
+            space.mode);
         lf.aligned = true;
         measure(lt, lf, lf.advances.data);
         lf.open.clear();
@@ -2087,7 +2112,7 @@ LayoutInlineResult layoutLines(LayoutState& state, LayoutInlineFrame& f, const L
 
 // Measures the segment of the frame, as layoutInlineSegmentIntrinsic describes.
 LayoutIntrinsicSizes measureLines(LayoutState& state, LayoutInlineFrame& f, const LayoutInlineShaping& t,
-                                  uint32_t container, const LayoutIntrinsicInput& input, bool firstFormatted) {
+        uint32_t container, const LayoutIntrinsicInput& input, bool firstFormatted) {
     const LayoutInlineSegment& segment = f.segment;
     // The indent, with a percentage taken as zero (css-text-3/#valdef-text-indent-percentage), widens the first piece
     // of each line that it indents.
@@ -2117,9 +2142,11 @@ LayoutIntrinsicSizes measureLines(LayoutState& state, LayoutInlineFrame& f, cons
         f.maxAdvances.data[i] = kLayoutUnitZero;
         if (item.kind == LayoutInlineItemKind_Atomic || item.kind == LayoutInlineItemKind_Float) {
             // An anonymous inline table has no edges, so its contribution is its intrinsic sizes.
-            LayoutIntrinsicSizes contribution = item.wraps
-                                                    ? layoutTableIntrinsic(state, item.node, item.runLast, input)
-                                                    : layoutContribution(state, item.node, input);
+            LayoutIntrinsicSizes contribution;
+            if (item.wraps)
+                contribution = layoutTableIntrinsic(state, item.node, item.runLast, input);
+            else
+                contribution = layoutContribution(state, item.node, input);
             if (item.kind == LayoutInlineItemKind_Float)
                 floatMin = layoutUnitMax(floatMin, contribution.minContent);
             else
@@ -2134,8 +2161,8 @@ LayoutIntrinsicSizes measureLines(LayoutState& state, LayoutInlineFrame& f, cons
     }
     LayoutMode mode = input.mode;
     auto clearsAt = [&](uint32_t i) {
-        return t.items.data[i].kind == LayoutInlineItemKind_Float
-               && layoutClearSides(layoutBoxStyle(state.styles, f.styles.data[i]), mode.direction) != 0;
+        return t.items.data[i].kind == LayoutInlineItemKind_Float &&
+            layoutClearSides(layoutBoxStyle(state.styles, f.styles.data[i]), mode.direction) != 0;
     };
     // By byte of the segment: true if a float that clears comes before the byte.
     Array<bool>& clearing = f.clearing;
@@ -2169,14 +2196,14 @@ LayoutIntrinsicSizes measureLines(LayoutState& state, LayoutInlineFrame& f, cons
         for (uint32_t b = segment.byteStart + 1; b <= segment.byteEnd; ++b) {
             PrUnicodeLineBreak at = t.breakAt.data[b];
             // overflow-wrap: anywhere's opportunities count at min-content (css-text-4/#valdef-overflow-wrap-anywhere).
-            if (soft && at == PrUnicodeLineBreak_Prohibited && t.emergency.count != 0
-                && t.emergency.data[b] == PrTextEmergency_Anywhere)
+            if (soft && at == PrUnicodeLineBreak_Prohibited && t.emergency.count != 0 &&
+                    t.emergency.data[b] == PrTextEmergency_Anywhere)
                 at = PrUnicodeLineBreak_Allowed;
             // A float that clears ends the run of floats beside the line before it.
             bool last = b == segment.byteEnd;
             bool cleared = !soft && !last && clearing.data[b];
-            if (!last && !cleared
-                && (at == PrUnicodeLineBreak_Prohibited || (!soft && at != PrUnicodeLineBreak_Mandatory)))
+            if (!last && !cleared &&
+                    (at == PrUnicodeLineBreak_Prohibited || (!soft && at != PrUnicodeLineBreak_Mandatory)))
                 continue;
             // Each piece is measured as a line of its own, as the narrowest container would break it.
             float lineIndent = indentAt(start);
@@ -2208,7 +2235,7 @@ LayoutIntrinsicSizes measureLines(LayoutState& state, LayoutInlineFrame& f, cons
         float lineWidth = lineIndent + widthOf(*lt, f, segment.byteStart, line, lineIndent);
         sizes.minContent = layoutUnitMax(sizes.minContent, prLayoutUnitFromPxCeil(pieceWidth));
         sizes.maxContent = layoutUnitMax(sizes.maxContent, layoutUnitMax(sizes.minContent,
-                                                                         prLayoutUnitFromPxCeil(lineWidth)));
+            prLayoutUnitFromPxCeil(lineWidth)));
     }
     return sizes;
 }
@@ -2224,20 +2251,20 @@ void enterSegment(LayoutInlineRun& run, uint32_t index) {
 // out as it is now. A record holds the fragments of the atomic inlines on its lines, so that a fragment it names never
 // belongs to a different box.
 bool linesHold(const LayoutLineRecord& record, const LayoutInlineFrame& f, const LayoutInlineShaping& t,
-               const LayoutSpace& space, const LayoutInlineBfc& bfc) {
-    if (record.collected == 0 || record.collected != t.collected || record.mode != space.mode
-        || record.inlineSize != space.containing.inlineSize || record.available != space.available
-        || record.lineLeft != bfc.containing.lineLeft || record.lineRight != bfc.containing.lineRight
-        || record.top != bfc.top || record.firstFormatted != bfc.firstFormatted || !(record.marker == bfc.marker)
-        || record.atomics.count != t.items.count)
+        const LayoutSpace& space, const LayoutInlineBfc& bfc) {
+    if (record.collected == 0 || record.collected != t.collected || record.mode != space.mode ||
+            record.inlineSize != space.containing.inlineSize || record.available != space.available ||
+            record.lineLeft != bfc.containing.lineLeft || record.lineRight != bfc.containing.lineRight ||
+            record.top != bfc.top || record.firstFormatted != bfc.firstFormatted || !(record.marker == bfc.marker) ||
+            record.atomics.count != t.items.count)
         return false;
     for (uint32_t i = 0; i < t.items.count; ++i) {
         if (t.items.data[i].kind != LayoutInlineItemKind_Atomic)
             continue;
         const LayoutLineAtomic& kept = record.atomics.data[i];
         const LayoutAtomic& now = f.atomics.data[i];
-        if (kept.fragment != now.fragment || kept.relative.inlineOffset != now.relative.inlineOffset
-            || kept.relative.blockOffset != now.relative.blockOffset)
+        if (kept.fragment != now.fragment || kept.relative.inlineOffset != now.relative.inlineOffset ||
+                kept.relative.blockOffset != now.relative.blockOffset)
             return false;
     }
     return true;
@@ -2249,7 +2276,7 @@ bool linesHold(const LayoutLineRecord& record, const LayoutInlineFrame& f, const
 // separately from the atomic inline's own layout. An atomic inline whose layout reads the block size gives a different
 // result at a different size, which linesHold compares.
 bool linesKeep(const LayoutState& state, const LayoutInlineFrame& f, const LayoutInlineShaping& t,
-               const LayoutSpace& space, const LayoutInlineResult& result, uint32_t mark) {
+        const LayoutSpace& space, const LayoutInlineResult& result, uint32_t mark) {
     if (t.segments.count != 1 || result.stopped)
         return false;
     for (uint32_t i = 0; i < t.items.count; ++i) {
@@ -2262,8 +2289,8 @@ bool linesKeep(const LayoutState& state, const LayoutInlineFrame& f, const Layou
         if (box.position != PrLayoutPosition_Relative)
             continue;
         LayoutLogicalBox logical = layoutLogicalBox(box, space.mode);
-        if (layoutLengthReadsBase(logical.inset[LayoutSide_BlockStart])
-            || layoutLengthReadsBase(logical.inset[LayoutSide_BlockEnd]))
+        if (layoutLengthReadsBase(logical.inset[LayoutSide_BlockStart]) ||
+                layoutLengthReadsBase(logical.inset[LayoutSide_BlockEnd]))
             return false;
     }
     const Array<LayoutLogicalChild>& children = state.scratch->children;
@@ -2277,7 +2304,7 @@ bool linesKeep(const LayoutState& state, const LayoutInlineFrame& f, const Layou
 // Starts `record` over for the lines that the run of the frame lays out in `space` beside `bfc`. Records its atomic
 // inlines as they are laid out, before a line takes them.
 void startLines(LayoutLineRecord& record, const LayoutInlineFrame& f, const LayoutInlineShaping& t,
-                const LayoutSpace& space, const LayoutInlineBfc& bfc) {
+        const LayoutSpace& space, const LayoutInlineBfc& bfc) {
     layoutLineRecordClear(record);
     record.mode = space.mode;
     record.inlineSize = space.containing.inlineSize;
@@ -2296,7 +2323,7 @@ void startLines(LayoutLineRecord& record, const LayoutInlineFrame& f, const Layo
 // Keeps the lines laid out as `result`, the scratch children from `mark`, in `record`, which startLines started. Sets
 // the collection of the shaping in the record, which makes the record valid.
 void keepLines(LayoutLineRecord& record, const LayoutInlineShaping& t, const LayoutInlineResult& result,
-               const Array<LayoutLogicalChild>& children, uint32_t mark) {
+        const Array<LayoutLogicalChild>& children, uint32_t mark) {
     record.collected = t.collected;
     record.hasLines = result.hasLines;
     record.hasBaselines = result.hasBaselines;
@@ -2312,7 +2339,7 @@ void keepLines(LayoutLineRecord& record, const LayoutInlineShaping& t, const Lay
 } // namespace
 
 LayoutInlineRun layoutInlineBegin(LayoutState& state, uint32_t container, uint32_t first, uint32_t last,
-                                  const LayoutSpace& space) {
+        const LayoutSpace& space) {
     LayoutInlineFrame& f = enterFrame(state.scratch);
     const LayoutInlineShaping& t = layoutShaping(state, f.own, first, last);
     resolveItems(state, f, t, space);
@@ -2345,7 +2372,7 @@ uint32_t layoutInlineBlockAfter(const LayoutInlineRun& run, uint32_t segment) {
 }
 
 LayoutInlineResult layoutInlineSegment(LayoutState& state, LayoutInlineRun& run, uint32_t segment,
-                                       const LayoutInlineBfc& bfc) {
+        const LayoutInlineBfc& bfc) {
     enterSegment(run, segment);
     const LayoutInlineShaping& t = *run.shaping;
     LayoutInlineFrame& f = *run.frame;
@@ -2355,7 +2382,7 @@ LayoutInlineResult layoutInlineSegment(LayoutState& state, LayoutInlineRun& run,
     PR_ASSERT(!bfc.reuses || (bfc.topFinal && bfc.mayResolve));
     LayoutNodeIndex first = t.nodes.data[0];
     if (const LayoutLineRecord* kept = reuses ? layoutCacheFindLines(state.tree->cache, first) : nullptr;
-        kept != nullptr && linesHold(*kept, f, t, run.space, bfc)) {
+            kept != nullptr && linesHold(*kept, f, t, run.space, bfc)) {
         for (uint32_t i = 0; i < kept->lines.count; ++i) {
             layoutFragmentRetain(kept->lines.data[i].fragment);
             children.push(kept->lines.data[i]);
@@ -2386,7 +2413,7 @@ LayoutInlineResult layoutInlineSegment(LayoutState& state, LayoutInlineRun& run,
 }
 
 LayoutIntrinsicSizes layoutInlineSegmentIntrinsic(LayoutState& state, LayoutInlineRun& run, uint32_t segment,
-                                                  const LayoutIntrinsicInput& input, bool firstFormatted) {
+        const LayoutIntrinsicInput& input, bool firstFormatted) {
     enterSegment(run, segment);
     return measureLines(state, *run.frame, *run.shaping, run.container, input, firstFormatted);
 }

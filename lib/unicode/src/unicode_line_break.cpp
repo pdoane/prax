@@ -35,8 +35,8 @@ PrUnicodeLineBreakClass resolved(PrUnicodeLineBreakClass c, PrUnicodeLineBreakFl
 }
 
 bool isHardBreak(PrUnicodeLineBreakClass c) {
-    return c == PrUnicodeLineBreakClass_BK || c == PrUnicodeLineBreakClass_CR || c == PrUnicodeLineBreakClass_LF
-           || c == PrUnicodeLineBreakClass_NL;
+    return c == PrUnicodeLineBreakClass_BK || c == PrUnicodeLineBreakClass_CR || c == PrUnicodeLineBreakClass_LF ||
+        c == PrUnicodeLineBreakClass_NL;
 }
 
 bool isAlphabetic(PrUnicodeLineBreakClass c) {
@@ -44,8 +44,8 @@ bool isAlphabetic(PrUnicodeLineBreakClass c) {
 }
 
 bool isHangul(PrUnicodeLineBreakClass c) {
-    return c == PrUnicodeLineBreakClass_JL || c == PrUnicodeLineBreakClass_JV || c == PrUnicodeLineBreakClass_JT
-           || c == PrUnicodeLineBreakClass_H2 || c == PrUnicodeLineBreakClass_H3;
+    return c == PrUnicodeLineBreakClass_JL || c == PrUnicodeLineBreakClass_JV || c == PrUnicodeLineBreakClass_JT ||
+        c == PrUnicodeLineBreakClass_H2 || c == PrUnicodeLineBreakClass_H3;
 }
 
 struct Text {
@@ -93,8 +93,8 @@ PrUnicodeLineBreak between(const Text& t, uint32_t k, bool afterJoiner) {
         return PrUnicodeLineBreak_Prohibited;
     // LB8: after a zero width space, and the spaces after it.
     uint32_t j = t.beforeSpaces(k);
-    if ((a == PrUnicodeLineBreakClass_ZW || a == PrUnicodeLineBreakClass_SP) && j != kArrayMissing
-        && t.at(j) == PrUnicodeLineBreakClass_ZW)
+    if ((a == PrUnicodeLineBreakClass_ZW || a == PrUnicodeLineBreakClass_SP) && j != kArrayMissing &&
+            t.at(j) == PrUnicodeLineBreakClass_ZW)
         return PrUnicodeLineBreak_Allowed;
     if (a == PrUnicodeLineBreakClass_ZW)
         return PrUnicodeLineBreak_Allowed;
@@ -104,22 +104,22 @@ PrUnicodeLineBreak between(const Text& t, uint32_t k, bool afterJoiner) {
     // LB11, LB12, LB12a.
     if (a == PrUnicodeLineBreakClass_WJ || b == PrUnicodeLineBreakClass_WJ || a == PrUnicodeLineBreakClass_GL)
         return PrUnicodeLineBreak_Prohibited;
-    if (b == PrUnicodeLineBreakClass_GL && a != PrUnicodeLineBreakClass_SP && a != PrUnicodeLineBreakClass_BA
-        && a != PrUnicodeLineBreakClass_HY && a != PrUnicodeLineBreakClass_HH)
+    if (b == PrUnicodeLineBreakClass_GL && a != PrUnicodeLineBreakClass_SP && a != PrUnicodeLineBreakClass_BA &&
+            a != PrUnicodeLineBreakClass_HY && a != PrUnicodeLineBreakClass_HH)
         return PrUnicodeLineBreak_Prohibited;
     // LB13, LB14.
-    if (b == PrUnicodeLineBreakClass_CL || b == PrUnicodeLineBreakClass_CP || b == PrUnicodeLineBreakClass_EX
-        || b == PrUnicodeLineBreakClass_SY)
+    if (b == PrUnicodeLineBreakClass_CL || b == PrUnicodeLineBreakClass_CP || b == PrUnicodeLineBreakClass_EX ||
+            b == PrUnicodeLineBreakClass_SY)
         return PrUnicodeLineBreak_Prohibited;
     if (j != kArrayMissing && t.at(j) == PrUnicodeLineBreakClass_OP)
         return PrUnicodeLineBreak_Prohibited;
     // LB15a: after an initial quotation mark that starts something, and spaces after it.
-    if (j != kArrayMissing && t.at(j) == PrUnicodeLineBreakClass_QU
-        && (t.bases[j].flags & PrUnicodeLineBreakFlag_InitialQuote) != 0) {
+    if (j != kArrayMissing && t.at(j) == PrUnicodeLineBreakClass_QU &&
+            (t.bases[j].flags & PrUnicodeLineBreakFlag_InitialQuote) != 0) {
         PrUnicodeLineBreakClass before = j == 0 ? PrUnicodeLineBreakClass_BK : t.at(j - 1);
-        if (isHardBreak(before) || before == PrUnicodeLineBreakClass_OP || before == PrUnicodeLineBreakClass_QU
-            || before == PrUnicodeLineBreakClass_GL || before == PrUnicodeLineBreakClass_SP
-            || before == PrUnicodeLineBreakClass_ZW)
+        if (isHardBreak(before) || before == PrUnicodeLineBreakClass_OP || before == PrUnicodeLineBreakClass_QU ||
+                before == PrUnicodeLineBreakClass_GL || before == PrUnicodeLineBreakClass_SP ||
+                before == PrUnicodeLineBreakClass_ZW)
             return PrUnicodeLineBreak_Prohibited;
     }
     // LB15b: before a final quotation mark that ends something.
@@ -127,22 +127,22 @@ PrUnicodeLineBreak between(const Text& t, uint32_t k, bool afterJoiner) {
         if (k + 1 == n)
             return PrUnicodeLineBreak_Prohibited;
         PrUnicodeLineBreakClass after = t.at(k + 1);
-        if (after == PrUnicodeLineBreakClass_SP || after == PrUnicodeLineBreakClass_GL
-            || after == PrUnicodeLineBreakClass_WJ || after == PrUnicodeLineBreakClass_CL
-            || after == PrUnicodeLineBreakClass_QU || after == PrUnicodeLineBreakClass_CP
-            || after == PrUnicodeLineBreakClass_EX || after == PrUnicodeLineBreakClass_IS
-            || after == PrUnicodeLineBreakClass_SY || isHardBreak(after) || after == PrUnicodeLineBreakClass_ZW)
+        if (after == PrUnicodeLineBreakClass_SP || after == PrUnicodeLineBreakClass_GL ||
+                after == PrUnicodeLineBreakClass_WJ || after == PrUnicodeLineBreakClass_CL ||
+                after == PrUnicodeLineBreakClass_QU || after == PrUnicodeLineBreakClass_CP ||
+                after == PrUnicodeLineBreakClass_EX || after == PrUnicodeLineBreakClass_IS ||
+                after == PrUnicodeLineBreakClass_SY || isHardBreak(after) || after == PrUnicodeLineBreakClass_ZW)
             return PrUnicodeLineBreak_Prohibited;
     }
     // LB15c, LB15d.
-    if (a == PrUnicodeLineBreakClass_SP && b == PrUnicodeLineBreakClass_IS && k + 1 < n
-        && t.at(k + 1) == PrUnicodeLineBreakClass_NU)
+    if (a == PrUnicodeLineBreakClass_SP && b == PrUnicodeLineBreakClass_IS && k + 1 < n &&
+            t.at(k + 1) == PrUnicodeLineBreakClass_NU)
         return PrUnicodeLineBreak_Allowed;
     if (b == PrUnicodeLineBreakClass_IS)
         return PrUnicodeLineBreak_Prohibited;
     // LB16, LB17.
-    if (b == PrUnicodeLineBreakClass_NS && j != kArrayMissing
-        && (t.at(j) == PrUnicodeLineBreakClass_CL || t.at(j) == PrUnicodeLineBreakClass_CP))
+    if (b == PrUnicodeLineBreakClass_NS && j != kArrayMissing &&
+            (t.at(j) == PrUnicodeLineBreakClass_CL || t.at(j) == PrUnicodeLineBreakClass_CP))
         return PrUnicodeLineBreak_Prohibited;
     if (b == PrUnicodeLineBreakClass_B2 && j != kArrayMissing && t.at(j) == PrUnicodeLineBreakClass_B2)
         return PrUnicodeLineBreak_Prohibited;
@@ -165,16 +165,16 @@ PrUnicodeLineBreak between(const Text& t, uint32_t k, bool afterJoiner) {
     // LB20a: after a word-initial hyphen.
     if ((a == PrUnicodeLineBreakClass_HY || a == PrUnicodeLineBreakClass_HH) && isAlphabetic(b)) {
         PrUnicodeLineBreakClass before = k < 2 ? PrUnicodeLineBreakClass_BK : t.at(k - 2);
-        if (isHardBreak(before) || before == PrUnicodeLineBreakClass_SP || before == PrUnicodeLineBreakClass_ZW
-            || before == PrUnicodeLineBreakClass_CB || before == PrUnicodeLineBreakClass_GL)
+        if (isHardBreak(before) || before == PrUnicodeLineBreakClass_SP || before == PrUnicodeLineBreakClass_ZW ||
+                before == PrUnicodeLineBreakClass_CB || before == PrUnicodeLineBreakClass_GL)
             return PrUnicodeLineBreak_Prohibited;
     }
     // LB21, LB21a, LB21b, LB22.
-    if (b == PrUnicodeLineBreakClass_BA || b == PrUnicodeLineBreakClass_HH || b == PrUnicodeLineBreakClass_HY
-        || b == PrUnicodeLineBreakClass_NS || a == PrUnicodeLineBreakClass_BB)
+    if (b == PrUnicodeLineBreakClass_BA || b == PrUnicodeLineBreakClass_HH || b == PrUnicodeLineBreakClass_HY ||
+            b == PrUnicodeLineBreakClass_NS || a == PrUnicodeLineBreakClass_BB)
         return PrUnicodeLineBreak_Prohibited;
-    if ((a == PrUnicodeLineBreakClass_HY || a == PrUnicodeLineBreakClass_HH) && b != PrUnicodeLineBreakClass_HL
-        && k >= 2 && t.at(k - 2) == PrUnicodeLineBreakClass_HL)
+    if ((a == PrUnicodeLineBreakClass_HY || a == PrUnicodeLineBreakClass_HH) && b != PrUnicodeLineBreakClass_HL &&
+            k >= 2 && t.at(k - 2) == PrUnicodeLineBreakClass_HL)
         return PrUnicodeLineBreak_Prohibited;
     if (a == PrUnicodeLineBreakClass_SY && b == PrUnicodeLineBreakClass_HL)
         return PrUnicodeLineBreak_Prohibited;
@@ -183,31 +183,31 @@ PrUnicodeLineBreak between(const Text& t, uint32_t k, bool afterJoiner) {
     // LB23, LB23a, LB24: numbers with letters, prefixes and suffixes.
     if ((isAlphabetic(a) && b == PrUnicodeLineBreakClass_NU) || (a == PrUnicodeLineBreakClass_NU && isAlphabetic(b)))
         return PrUnicodeLineBreak_Prohibited;
-    bool ideograph = b == PrUnicodeLineBreakClass_ID || b == PrUnicodeLineBreakClass_EB
-                     || b == PrUnicodeLineBreakClass_EM;
+    bool ideograph = b == PrUnicodeLineBreakClass_ID || b == PrUnicodeLineBreakClass_EB ||
+        b == PrUnicodeLineBreakClass_EM;
     if (a == PrUnicodeLineBreakClass_PR && ideograph)
         return PrUnicodeLineBreak_Prohibited;
-    if ((a == PrUnicodeLineBreakClass_ID || a == PrUnicodeLineBreakClass_EB || a == PrUnicodeLineBreakClass_EM)
-        && b == PrUnicodeLineBreakClass_PO)
+    if ((a == PrUnicodeLineBreakClass_ID || a == PrUnicodeLineBreakClass_EB || a == PrUnicodeLineBreakClass_EM) &&
+            b == PrUnicodeLineBreakClass_PO)
         return PrUnicodeLineBreak_Prohibited;
-    if (((a == PrUnicodeLineBreakClass_PR || a == PrUnicodeLineBreakClass_PO) && isAlphabetic(b))
-        || (isAlphabetic(a) && (b == PrUnicodeLineBreakClass_PR || b == PrUnicodeLineBreakClass_PO)))
+    if (((a == PrUnicodeLineBreakClass_PR || a == PrUnicodeLineBreakClass_PO) && isAlphabetic(b)) ||
+            (isAlphabetic(a) && (b == PrUnicodeLineBreakClass_PR || b == PrUnicodeLineBreakClass_PO)))
         return PrUnicodeLineBreak_Prohibited;
     // LB25: numbers.
     if (b == PrUnicodeLineBreakClass_PO || b == PrUnicodeLineBreakClass_PR) {
-        uint32_t number = a == PrUnicodeLineBreakClass_CL || a == PrUnicodeLineBreakClass_CP
-                              ? (k >= 2 ? t.beforeNumericPunctuation(k - 1) : kArrayMissing)
-                              : t.beforeNumericPunctuation(k);
+        uint32_t number;
+        if (a == PrUnicodeLineBreakClass_CL || a == PrUnicodeLineBreakClass_CP)
+            number = (k >= 2 ? t.beforeNumericPunctuation(k - 1) : kArrayMissing);
+        else
+            number = t.beforeNumericPunctuation(k);
         if (number != kArrayMissing && t.at(number) == PrUnicodeLineBreakClass_NU)
             return PrUnicodeLineBreak_Prohibited;
     }
     if (a == PrUnicodeLineBreakClass_PO || a == PrUnicodeLineBreakClass_PR) {
         if (b == PrUnicodeLineBreakClass_NU)
             return PrUnicodeLineBreak_Prohibited;
-        if (b == PrUnicodeLineBreakClass_OP && k + 1 < n
-            && (t.at(k + 1) == PrUnicodeLineBreakClass_NU
-                || (t.at(k + 1) == PrUnicodeLineBreakClass_IS && k + 2 < n
-                    && t.at(k + 2) == PrUnicodeLineBreakClass_NU)))
+        if (b == PrUnicodeLineBreakClass_OP && k + 1 < n && (t.at(k + 1) == PrUnicodeLineBreakClass_NU ||
+                (t.at(k + 1) == PrUnicodeLineBreakClass_IS && k + 2 < n && t.at(k + 2) == PrUnicodeLineBreakClass_NU)))
             return PrUnicodeLineBreak_Prohibited;
     }
     if ((a == PrUnicodeLineBreakClass_HY || a == PrUnicodeLineBreakClass_IS) && b == PrUnicodeLineBreakClass_NU)
@@ -218,12 +218,12 @@ PrUnicodeLineBreak between(const Text& t, uint32_t k, bool afterJoiner) {
             return PrUnicodeLineBreak_Prohibited;
     }
     // LB26, LB27: Korean syllable blocks.
-    if (a == PrUnicodeLineBreakClass_JL
-        && (b == PrUnicodeLineBreakClass_JL || b == PrUnicodeLineBreakClass_JV || b == PrUnicodeLineBreakClass_H2
-            || b == PrUnicodeLineBreakClass_H3))
+    if (a == PrUnicodeLineBreakClass_JL &&
+            (b == PrUnicodeLineBreakClass_JL || b == PrUnicodeLineBreakClass_JV || b == PrUnicodeLineBreakClass_H2 ||
+                b == PrUnicodeLineBreakClass_H3))
         return PrUnicodeLineBreak_Prohibited;
-    if ((a == PrUnicodeLineBreakClass_JV || a == PrUnicodeLineBreakClass_H2)
-        && (b == PrUnicodeLineBreakClass_JV || b == PrUnicodeLineBreakClass_JT))
+    if ((a == PrUnicodeLineBreakClass_JV || a == PrUnicodeLineBreakClass_H2) &&
+            (b == PrUnicodeLineBreakClass_JV || b == PrUnicodeLineBreakClass_JT))
         return PrUnicodeLineBreak_Prohibited;
     if ((a == PrUnicodeLineBreakClass_JT || a == PrUnicodeLineBreakClass_H3) && b == PrUnicodeLineBreakClass_JT)
         return PrUnicodeLineBreak_Prohibited;
@@ -237,8 +237,8 @@ PrUnicodeLineBreak between(const Text& t, uint32_t k, bool afterJoiner) {
         return PrUnicodeLineBreak_Prohibited;
     if (t.aksara(k - 1) && (b == PrUnicodeLineBreakClass_VF || b == PrUnicodeLineBreakClass_VI))
         return PrUnicodeLineBreak_Prohibited;
-    if (a == PrUnicodeLineBreakClass_VI && k >= 2 && t.aksara(k - 2)
-        && (b == PrUnicodeLineBreakClass_AK || t.bases[k].dottedCircle))
+    if (a == PrUnicodeLineBreakClass_VI && k >= 2 && t.aksara(k - 2) &&
+            (b == PrUnicodeLineBreakClass_AK || t.bases[k].dottedCircle))
         return PrUnicodeLineBreak_Prohibited;
     if (t.aksara(k - 1) && t.aksara(k) && k + 1 < n && t.at(k + 1) == PrUnicodeLineBreakClass_VF)
         return PrUnicodeLineBreak_Prohibited;
@@ -247,8 +247,7 @@ PrUnicodeLineBreak between(const Text& t, uint32_t k, bool afterJoiner) {
         return PrUnicodeLineBreak_Prohibited;
     if ((isAlphabetic(a) || a == PrUnicodeLineBreakClass_NU) && b == PrUnicodeLineBreakClass_OP && !t.eastAsian(k))
         return PrUnicodeLineBreak_Prohibited;
-    if (a == PrUnicodeLineBreakClass_CP && !t.eastAsian(k - 1)
-        && (isAlphabetic(b) || b == PrUnicodeLineBreakClass_NU))
+    if (a == PrUnicodeLineBreakClass_CP && !t.eastAsian(k - 1) && (isAlphabetic(b) || b == PrUnicodeLineBreakClass_NU))
         return PrUnicodeLineBreak_Prohibited;
     // LB30a: regional indicators in pairs.
     if (a == PrUnicodeLineBreakClass_RI && b == PrUnicodeLineBreakClass_RI) {
@@ -259,9 +258,8 @@ PrUnicodeLineBreak between(const Text& t, uint32_t k, bool afterJoiner) {
             return PrUnicodeLineBreak_Prohibited;
     }
     // LB30b.
-    if (b == PrUnicodeLineBreakClass_EM
-        && (a == PrUnicodeLineBreakClass_EB
-            || (t.bases[k - 1].flags & PrUnicodeLineBreakFlag_UnassignedPictographic) != 0))
+    if (b == PrUnicodeLineBreakClass_EM && (a == PrUnicodeLineBreakClass_EB ||
+            (t.bases[k - 1].flags & PrUnicodeLineBreakFlag_UnassignedPictographic) != 0))
         return PrUnicodeLineBreak_Prohibited;
     // LB31.
     return PrUnicodeLineBreak_Allowed;
@@ -288,8 +286,8 @@ void prUnicodeLineBreaks(const uint32_t* codePoints, uint32_t count, PrUnicodeLi
         bool mark = c == PrUnicodeLineBreakClass_CM || c == PrUnicodeLineBreakClass_ZWJ;
         if (mark && bases.count != 0) {
             PrUnicodeLineBreakClass base = bases.last().c;
-            if (!isHardBreak(base) && base != PrUnicodeLineBreakClass_SP && base != PrUnicodeLineBreakClass_ZW
-                && bases.last().last + 1 == i) {
+            if (!isHardBreak(base) && base != PrUnicodeLineBreakClass_SP && base != PrUnicodeLineBreakClass_ZW &&
+                    bases.last().last + 1 == i) {
                 bases.last().last = i;
                 continue;
             }

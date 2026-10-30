@@ -50,8 +50,7 @@ void trace(void* context, PrDomEvent* event) {
 
 void addTrace(PrDomNode* node, Trace* state, bool capture, uint64_t identity) {
     PrDomEventListener callback{trace, state, identity, nullptr, nullptr};
-    PrDomAddEventListenerOptions options =
-        prDomAddEventListenerOptionsDefault(targetOf(node), "test");
+    PrDomAddEventListenerOptions options = prDomAddEventListenerOptionsDefault(targetOf(node), "test");
     options.capture = capture;
     prDomEventTargetAddEventListener(targetOf(node), "test", &callback, &options);
 }
@@ -91,8 +90,7 @@ TEST_CASE("a listener added again with the same callback and capture is added on
     PrDomEventTarget* target = targetOf(document);
     ListenerState first, second;
     PrDomEventListener a = listener(&first), b = listener(&second);
-    PrDomAddEventListenerOptions options =
-        prDomAddEventListenerOptionsDefault(target, "test");
+    PrDomAddEventListenerOptions options = prDomAddEventListenerOptionsDefault(target, "test");
     prDomEventTargetAddEventListener(target, "test", &a, nullptr);
     prDomEventTargetAddEventListener(target, "test", &a, nullptr);
     prDomEventTargetAddEventListener(target, "test", &b, nullptr);
@@ -182,8 +180,7 @@ TEST_CASE("a once listener is removed before it is called") {
     PrDomDocument* document = domDocumentCreate(DomDocumentKind_Html);
     ListenerState state;
     PrDomEventListener callback = listener(&state);
-    PrDomAddEventListenerOptions options =
-        prDomAddEventListenerOptionsDefault(targetOf(document), "test");
+    PrDomAddEventListenerOptions options = prDomAddEventListenerOptionsDefault(targetOf(document), "test");
     options.once = true;
     prDomEventTargetAddEventListener(targetOf(document), "test", &callback, &options);
     PrDomEvent* event = prDomEventCreate("test", nullptr);
@@ -298,8 +295,7 @@ TEST_CASE("a passive listener cannot cancel, and wheel listeners on a document a
     Trace state;
     state.cancel = true;
     PrDomEventListener callback{trace, &state, 1, nullptr, nullptr};
-    PrDomAddEventListenerOptions options =
-        prDomAddEventListenerOptionsDefault(targetOf(document), "test");
+    PrDomAddEventListenerOptions options = prDomAddEventListenerOptionsDefault(targetOf(document), "test");
     options.passive = true;
     prDomEventTargetAddEventListener(targetOf(document), "test", &callback, &options);
     PrDomEventInit init = prDomEventInitDefault();
@@ -326,8 +322,7 @@ TEST_CASE("an event createEvent makes cannot be dispatched until it is initializ
     CHECK(prDomEventCreateUninitialized(kind, &event) == PrStatus_Ok);
     REQUIRE(event != nullptr);
     CHECK(prDomCustomEventQuery(event) != nullptr);
-    CHECK(prDomEventTargetDispatchEvent(targetOf(document), event, nullptr)
-          == PrStatus_InvalidState);
+    CHECK(prDomEventTargetDispatchEvent(targetOf(document), event, nullptr) == PrStatus_InvalidState);
     CHECK(prDomCustomEventInitCustomEvent(prDomCustomEventQuery(event), "test", false, false));
     CHECK(prDomEventTargetDispatchEvent(targetOf(document), event, nullptr) == PrStatus_Ok);
     CHECK(!prDomEventIsTrusted(event));

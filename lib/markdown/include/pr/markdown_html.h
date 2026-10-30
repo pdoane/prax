@@ -52,13 +52,12 @@ typedef void (*PrMarkdownHtmlFn)(void* PR_NULLABLE context, const PrMarkdownHtml
 // document. The HTML is what the CommonMark specification's examples give, with the line feeds between blocks as Text.
 // Raw HTML is as the document's options leave it.
 void prMarkdownWriteHtml(const PrMarkdown* document, uint32_t first, uint32_t count,
-                         PrMarkdownHtmlFn fn, void* PR_NULLABLE context);
+    PrMarkdownHtmlFn fn, void* PR_NULLABLE context);
 
 // Calls `fn` with the events of the HTML of the document's footnotes: a section that lists them, as GitHub writes it,
 // or nothing if the document references no footnote. The HTML of a whole document is its blocks' followed by its
 // footnotes'.
-void prMarkdownWriteFootnotesHtml(const PrMarkdown* document, PrMarkdownHtmlFn fn,
-                                  void* PR_NULLABLE context);
+void prMarkdownWriteFootnotesHtml(const PrMarkdown* document, PrMarkdownHtmlFn fn, void* PR_NULLABLE context);
 
 // Appends the HTML text of `event` to `out`, with its text and values escaped, as prMarkdownAppendHtml writes each
 // event.

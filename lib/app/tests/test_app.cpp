@@ -70,8 +70,7 @@ TEST_CASE("a run delivers to the handler in order") {
                 "frame " + std::to_string(int(frame->extent.x * frame->display.pixelRatio)));
         },
         [](void* context, PrApp*, const PrAppEvent* event) {
-            static_cast<std::vector<std::string>*>(context)->push_back(
-                "key " + std::string(1, char(event->key)));
+            static_cast<std::vector<std::string>*>(context)->push_back("key " + std::string(1, char(event->key)));
         },
         [](void* context, PrApp*) {
             static_cast<std::vector<std::string>*>(context)->push_back("shutdown");

@@ -160,10 +160,7 @@ constexpr const JSClassID* kColorClasses[] = {
 };
 
 // The name of the function that a color value is written with, indexed by ColorFunction.
-constexpr PrStringView kColorFunctionNames[] = {
-    "rgb", "hsl",   "hwb",   "lab",
-    "lch", "oklab", "oklch", "color",
-};
+constexpr PrStringView kColorFunctionNames[] = {"rgb", "hsl",   "hwb",   "lab", "lch", "oklab", "oklch", "color"};
 
 // The types of the channels of a color value before its alpha, indexed by ColorFunction.
 constexpr ChannelType kColorChannels[][3] = {
@@ -208,8 +205,7 @@ struct TypedObject {
     void* PR_NULLABLE binding;       // the object (JsClassDefinition::slot)
 };
 
-TypedObject typedFields(TypedKind kind, PrCssUnit unit = PrCssUnit_Number, double number = 0,
-                        bool is2D = false) {
+TypedObject typedFields(TypedKind kind, PrCssUnit unit = PrCssUnit_Number, double number = 0, bool is2D = false) {
     TypedObject object = {};
     object.kind = kind;
     object.unit = unit;
@@ -429,8 +425,7 @@ struct Tree {
 
 Tree heldTree(JSContext* ctx) {
     TreePool* pool = treePoolOf(ctx);
-    PrCssValue* value =
-        pool->free.count != 0 ? pool->free.data[--pool->free.count] : prCssValueCreate();
+    PrCssValue* value = pool->free.count != 0 ? pool->free.data[--pool->free.count] : prCssValueCreate();
     auto release = [](JSContext* context, void* held) {
         PrCssValue* value = static_cast<PrCssValue*>(held);
         TreePool* pool = treePoolOf(context);
@@ -470,9 +465,12 @@ bool closeNode(JSContext* ctx, PrCssValue* out) {
 // Returns the node of a numeric value of `number` in `unit`.
 PrCssValueFields numericFields(double number, PrCssUnit unit) {
     PrCssValueFields fields = {};
-    fields.kind = unit == PrCssUnit_Number ? PrCssValueKind_Number
-                : unit == PrCssUnit_Percent ? PrCssValueKind_Percentage
-                                            : PrCssValueKind_Dimension;
+    if (unit == PrCssUnit_Number)
+        fields.kind = PrCssValueKind_Number;
+    else if (unit == PrCssUnit_Percent)
+        fields.kind = PrCssValueKind_Percentage;
+    else
+        fields.kind = PrCssValueKind_Dimension;
     fields.number.value = number;
     fields.number.unit = unit;
     return fields;
@@ -542,8 +540,7 @@ bool matchesLength(const Summary& value) {
 }
 
 bool matchesLengthPercentage(const Summary& value) {
-    return matchesType(value, PrCssNumericBaseType_Length, true)
-           || matchesType(value, PrCssNumericBaseType_Percent);
+    return matchesType(value, PrCssNumericBaseType_Length, true) || matchesType(value, PrCssNumericBaseType_Percent);
 }
 
 bool matchesNumber(const Summary& value) {
@@ -627,7 +624,7 @@ bool mathType(TypedKind kind, const Summary* children, uint32_t count, PrCssNume
 // a TypeError if not, or a SyntaxError for a color value's channel whose type does not accept it. Returns the object's
 // type if it has one.
 bool childrenValid(JSContext* ctx, const TypedObject& fields, const Summary* children,
-                   uint32_t count, bool* hasType, PrCssNumericType* type) {
+        uint32_t count, bool* hasType, PrCssNumericType* type) {
     *hasType = false;
     auto numeric = [&](uint32_t first) {
         for (uint32_t i = first; i < count; ++i) {
@@ -642,8 +639,8 @@ bool childrenValid(JSContext* ctx, const TypedObject& fields, const Summary* chi
             ok = prStringView(&fields.text).size != 0;
             break;
         case TypedKind_VariableReference:
-            ok = stringStartsWith(prStringView(&fields.text), "--")
-                 && (count == 0 || (!children[0].string && children[0].kind == TypedKind_Unparsed));
+            ok = stringStartsWith(prStringView(&fields.text), "--") &&
+                (count == 0 || (!children[0].string && children[0].kind == TypedKind_Unparsed));
             break;
         case TypedKind_Unparsed:
             for (uint32_t i = 0; ok && i < count; ++i)
@@ -662,8 +659,7 @@ bool childrenValid(JSContext* ctx, const TypedObject& fields, const Summary* chi
         case TypedKind_Clamp: {
             bool single = fields.kind == TypedKind_Negate || fields.kind == TypedKind_Invert;
             uint32_t wanted = fields.kind == TypedKind_Clamp ? 3 : single ? 1 : 0;
-            ok = count != 0 && (wanted == 0 || count == wanted) && numeric(0)
-                 && mathType(fields.kind, children, count, type);
+            ok = count != 0 && (wanted == 0 || count == wanted) && numeric(0) && mathType(fields.kind, children, count, type);
             *hasType = ok;
             break;
         }
@@ -672,8 +668,8 @@ bool childrenValid(JSContext* ctx, const TypedObject& fields, const Summary* chi
                 ok = !children[i].string && isComponent(children[i].kind);
             break;
         case TypedKind_Translate:
-            ok = count == 3 && numeric(0) && matchesLengthPercentage(children[0])
-                 && matchesLengthPercentage(children[1]) && matchesLength(children[2]);
+            ok = count == 3 && numeric(0) && matchesLengthPercentage(children[0]) &&
+                matchesLengthPercentage(children[1]) && matchesLength(children[2]);
             break;
         case TypedKind_Rotate:
             ok = count == 4 && numeric(0);
@@ -693,20 +689,18 @@ bool childrenValid(JSContext* ctx, const TypedObject& fields, const Summary* chi
                 ok = matchesAngle(children[i]);
             break;
         case TypedKind_Perspective:
-            ok = count == 1 && !children[0].string
-                 && (matchesLength(children[0])
-                     || (children[0].kind == TypedKind_Keyword
-                         && asciiEqualsFold(children[0].keyword, "none")));
+            ok = count == 1 && !children[0].string && (matchesLength(children[0]) ||
+                (children[0].kind == TypedKind_Keyword && asciiEqualsFold(children[0].keyword, "none")));
             break;
         case TypedKind_Color: {
             // A color() value's color space is not a channel.
             uint32_t first = fields.colorFunction == ColorFunction_Color ? 1 : 0;
-            ok = fields.colorFunction == ColorFunction_Color
-                     ? count >= 2 && children[0].kind == TypedKind_Keyword
-                     : count == 4;
+            if (fields.colorFunction == ColorFunction_Color)
+                ok = count >= 2 && children[0].kind == TypedKind_Keyword;
+            else
+                ok = count == 4;
             for (uint32_t i = first; ok && i < count; ++i) {
-                ok = !children[i].string
-                     && (isNumeric(children[i].kind) || children[i].kind == TypedKind_Keyword);
+                ok = !children[i].string && (isNumeric(children[i].kind) || children[i].kind == TypedKind_Keyword);
                 if (ok && !channelValid(children[i], channelType(fields.colorFunction, i - first))) {
                     jsDomExceptionThrow(ctx, "SyntaxError");
                     return false;
@@ -749,7 +743,7 @@ bool valid(JSContext* ctx, JSValueConst value) {
 
 // Returns a new object of `id` that holds `fields` and `children`, which it takes, if its constructor allows it.
 JSValue construct(JSContext* ctx, JSValueConst newTarget, JSClassID id, const TypedObject& fields,
-                  JSValue* PR_NULLABLE children = nullptr, uint32_t count = 0) {
+        JSValue* PR_NULLABLE children = nullptr, uint32_t count = 0) {
     JSValue object = newTyped(ctx, id, fields);
     bool ok = !JS_IsException(object);
     for (uint32_t i = 0; i < count; ++i) {
@@ -770,9 +764,8 @@ JSValue construct(JSContext* ctx, JSValueConst newTarget, JSClassID id, const Ty
 // Returns a new math value of `kind` over `operands`, which it takes. For a kind that takes a list, the operands are in
 // a CSSNumericArray.
 JSValue newMath(JSContext* ctx, TypedKind kind, JSValue* operands, uint32_t count,
-                JSValueConst newTarget = JS_UNDEFINED) {
-    if (kind != TypedKind_Sum && kind != TypedKind_Product && kind != TypedKind_Min
-        && kind != TypedKind_Max)
+        JSValueConst newTarget = JS_UNDEFINED) {
+    if (kind != TypedKind_Sum && kind != TypedKind_Product && kind != TypedKind_Min && kind != TypedKind_Max)
         return construct(ctx, newTarget, *kKindClasses[kind], typedFields(kind), operands, count);
     JSValue array = newTyped(ctx, cssNumericArrayClass, typedFields(TypedKind_NumericArray));
     for (uint32_t i = 0; i < count; ++i) {
@@ -833,19 +826,25 @@ bool flattenCalculation(JSContext* ctx, JSValueConst value, PrCssValue* out) {
     }
     if (object->kind == TypedKind_Unit)
         return addNode(ctx, out, numericFields(object->number, object->unit));
-    bool function = object->kind == TypedKind_Min || object->kind == TypedKind_Max
-                    || object->kind == TypedKind_Clamp;
+    bool function = object->kind == TypedKind_Min || object->kind == TypedKind_Max || object->kind == TypedKind_Clamp;
     PrCssValueFields fields = {};
     if (function) {
-        fields = functionFields(object->kind == TypedKind_Min ? PrCssKeyword_Min
-                                : object->kind == TypedKind_Max ? PrCssKeyword_Max
-                                                            : PrCssKeyword_Clamp);
+        PrCssKeyword name = PrCssKeyword_Clamp;
+        if (object->kind == TypedKind_Min)
+            name = PrCssKeyword_Min;
+        else if (object->kind == TypedKind_Max)
+            name = PrCssKeyword_Max;
+        fields = functionFields(name);
     } else {
         fields.kind = PrCssValueKind_Calc;
-        fields.calc = object->kind == TypedKind_Sum ? PrCssCalc_Sum
-                    : object->kind == TypedKind_Product ? PrCssCalc_Product
-                    : object->kind == TypedKind_Negate ? PrCssCalc_Negate
-                                                   : PrCssCalc_Invert;
+        if (object->kind == TypedKind_Sum)
+            fields.calc = PrCssCalc_Sum;
+        else if (object->kind == TypedKind_Product)
+            fields.calc = PrCssCalc_Product;
+        else if (object->kind == TypedKind_Negate)
+            fields.calc = PrCssCalc_Negate;
+        else
+            fields.calc = PrCssCalc_Invert;
     }
     if (!openNode(ctx, out, fields))
         return false;
@@ -879,7 +878,7 @@ bool flattenArgument(JSContext* ctx, JSValueConst value, PrCssValue* out) {
 
 // Appends the function `name` over `count` arguments of `children` starting at `first`, with a ',' between each pair.
 bool flattenFunction(JSContext* ctx, PrCssKeyword name, const Values& children, uint32_t first,
-                     uint32_t count, PrCssValue* out) {
+        uint32_t count, PrCssValue* out) {
     if (!openNode(ctx, out, functionFields(name)))
         return false;
     for (uint32_t i = first; i < first + count; ++i) {
@@ -915,9 +914,8 @@ bool flattenComponent(JSContext* ctx, JSValueConst value, PrCssValue* out) {
         if (!openNode(ctx, out, functionFields(flat ? PrCssKeyword_Matrix : PrCssKeyword_Matrix3d)))
             return false;
         for (uint32_t i = 0; i < (flat ? 6u : 16u); ++i) {
-            if ((i != 0 && !addNode(ctx, out, literalFields(',')))
-                || !addNode(ctx, out,
-                            numericFields(matrix->m[flat ? k2D[i] : i], PrCssUnit_Number)))
+            if ((i != 0 && !addNode(ctx, out, literalFields(','))) || !addNode(ctx, out,
+                    numericFields(matrix->m[flat ? k2D[i] : i], PrCssUnit_Number)))
                 return false;
         }
         return closeNode(ctx, out);
@@ -927,14 +925,12 @@ bool flattenComponent(JSContext* ctx, JSValueConst value, PrCssValue* out) {
         return false;
     switch (object->kind) {
         case TypedKind_Translate:
-            return flattenFunction(ctx, flat ? PrCssKeyword_Translate : PrCssKeyword_Translate3d,
-                                   children, 0, flat ? 2 : 3, out);
+            return flattenFunction(ctx, flat ? PrCssKeyword_Translate : PrCssKeyword_Translate3d, children, 0, flat ? 2 : 3, out);
         case TypedKind_Rotate:
-            return flattenFunction(ctx, flat ? PrCssKeyword_Rotate : PrCssKeyword_Rotate3d, children,
-                                   flat ? 3 : 0, flat ? 1 : 4, out);
+            return flattenFunction(ctx, flat ? PrCssKeyword_Rotate : PrCssKeyword_Rotate3d, children, flat ? 3 : 0,
+                flat ? 1 : 4, out);
         case TypedKind_Scale:
-            return flattenFunction(ctx, flat ? PrCssKeyword_Scale : PrCssKeyword_Scale3d, children, 0,
-                                   flat ? 2 : 3, out);
+            return flattenFunction(ctx, flat ? PrCssKeyword_Scale : PrCssKeyword_Scale3d, children, 0, flat ? 2 : 3, out);
         case TypedKind_Skew:
             return flattenFunction(ctx, PrCssKeyword_Skew, children, 0, 2, out);
         case TypedKind_SkewX:
@@ -1007,8 +1003,7 @@ bool flattenStyle(JSContext* ctx, JSValueConst value, PrCssValue* out) {
     switch (object->kind) {
         case TypedKind_Style:
         case TypedKind_Image:
-            for (uint32_t tree = 0; tree < prCssValueSize(object->value);
-                 tree = prCssValueNext(object->value, tree)) {
+            for (uint32_t tree = 0; tree < prCssValueSize(object->value); tree = prCssValueNext(object->value, tree)) {
                 if (!built(ctx, prCssValueAddTree(out, object->value, tree)))
                     return false;
             }
@@ -1026,8 +1021,7 @@ bool flattenStyle(JSContext* ctx, JSValueConst value, PrCssValue* out) {
             return ok;
         }
         case TypedKind_Transform:
-            return eachChild(ctx, value, object,
-                             [&](JSValueConst child) { return flattenComponent(ctx, child, out); });
+            return eachChild(ctx, value, object, [&](JSValueConst child) { return flattenComponent(ctx, child, out); });
         case TypedKind_Color:
             return flattenColor(ctx, value, object, out);
         default:
@@ -1077,16 +1071,13 @@ void serializeUnit(Serializer* s, const TypedObject* object) {
 }
 
 // css-typed-om-1/#calc-serialization
-bool serializeMath(Serializer* s, JSValueConst value, const TypedObject* object, bool nested,
-                   bool parenless) {
+bool serializeMath(Serializer* s, JSValueConst value, const TypedObject* object, bool nested, bool parenless) {
     TypedKind kind = object->kind;
     Values children = heldValues(s->ctx);
     if (!children.read(value, object))
         return false;
     if (kind == TypedKind_Min || kind == TypedKind_Max || kind == TypedKind_Clamp) {
-        textAppend(s->out, kind == TypedKind_Min   ? "min("
-                           : kind == TypedKind_Max ? "max("
-                                               : "clamp(");
+        textAppend(s->out, kind == TypedKind_Min   ? "min(" : kind == TypedKind_Max ? "max(" : "clamp(");
         for (uint32_t i = 0; i < children.values->count; ++i) {
             if (i != 0)
                 textAppend(s->out, ", ");
@@ -1149,7 +1140,7 @@ bool numericEquals(JSContext* ctx, JSValueConst a, JSValueConst b) {
 // Serializes `count` arguments of a transform component, starting at `first`, in the form that the function `name`
 // takes them.
 bool serializeArguments(Serializer* s, const TypedObject* object, const Values& children,
-                        PrStringView name, uint32_t first, uint32_t count) {
+        PrStringView name, uint32_t first, uint32_t count) {
     textAppend(s->out, name);
     for (uint32_t i = first; i < first + count; ++i) {
         if (i != first)
@@ -1157,8 +1148,7 @@ bool serializeArguments(Serializer* s, const TypedObject* object, const Values& 
         JSValueConst argument = children.values->data[i];
         const TypedObject* at = typedOf(argument);
         // A negative perspective is out of range, so a calculation clamps it.
-        bool clamp =
-            object->kind == TypedKind_Perspective && at->kind == TypedKind_Unit && at->number < 0;
+        bool clamp = object->kind == TypedKind_Perspective && at->kind == TypedKind_Unit && at->number < 0;
         if (clamp)
             textAppend(s->out, "calc(");
         if (!serializeTree(s, argument, false, false))
@@ -1194,14 +1184,11 @@ bool serializeComponent(Serializer* s, JSValueConst value, const TypedObject* ob
         return false;
     switch (object->kind) {
         case TypedKind_Translate:
-            return serializeArguments(s, object, children,
-                                      flat ? "translate(" : "translate3d(", 0,
-                                      flat ? 2 : 3);
+            return serializeArguments(s, object, children, flat ? "translate(" : "translate3d(", 0, flat ? 2 : 3);
         case TypedKind_Rotate:
             return serializeArguments(s, object, children, flat ? "rotate(" : "rotate3d(", flat ? 3 : 0, flat ? 1 : 4);
         case TypedKind_Scale: {
-            bool same =
-                flat && numericEquals(s->ctx, children.values->data[0], children.values->data[1]);
+            bool same = flat && numericEquals(s->ctx, children.values->data[0], children.values->data[1]);
             return serializeArguments(s, object, children, flat ? "scale(" : "scale3d(", 0, flat ? (same ? 1 : 2) : 3);
         }
         case TypedKind_Skew: {
@@ -1359,16 +1346,17 @@ JSValue reifyTokens(JSContext* ctx, PrStringView text, uint32_t depth = 0) {
         fields.text = prStringCopy(reference.name);
         JSValue variable = newTyped(ctx, cssVariableReferenceValueClass, fields);
         if (ok && !JS_IsException(variable) && reference.hasFallback) {
-            PrStringView fallback = {text.data + reference.fallbackStart,
-                                     reference.fallbackEnd - reference.fallbackStart};
+            PrStringView fallback = {
+                text.data + reference.fallbackStart,
+                reference.fallbackEnd - reference.fallbackStart,
+            };
             ok = hold(ctx, variable, reifyTokens(ctx, fallback, depth + 1));
         }
         ok = ok && hold(ctx, unparsed, variable);
         written = reference.end;
     }
     if (ok && written < text.size)
-        ok = hold(ctx, unparsed,
-                  jsNewStringView(ctx, PrStringView{text.data + written, text.size - written}));
+        ok = hold(ctx, unparsed, jsNewStringView(ctx, PrStringView{text.data + written, text.size - written}));
     references.reset();
     if (!ok) {
         JS_FreeValue(ctx, unparsed);
@@ -1386,8 +1374,8 @@ JSValue reifyNumber(JSContext* ctx, const PrCssValueFields& fields) {
 }
 
 bool isNumericKind(PrCssValueKind kind) {
-    return kind == PrCssValueKind_Integer || kind == PrCssValueKind_Number
-           || kind == PrCssValueKind_Percentage || kind == PrCssValueKind_Dimension;
+    return kind == PrCssValueKind_Integer || kind == PrCssValueKind_Number ||
+        kind == PrCssValueKind_Percentage || kind == PrCssValueKind_Dimension;
 }
 
 // Returns a node of a calculation tree (css-values-4/#calculation-tree) as a math value.
@@ -1397,8 +1385,7 @@ JSValue reifyCalculation(JSContext* ctx, const PrCssValue* value, uint32_t node)
         return reifyNumber(ctx, fields);
     TypedKind kind;
     if (fields.kind == PrCssValueKind_Calc) {
-        constexpr TypedKind kOperators[] = {TypedKind_Sum, TypedKind_Product, TypedKind_Negate,
-                                            TypedKind_Invert};
+        constexpr TypedKind kOperators[] = {TypedKind_Sum, TypedKind_Product, TypedKind_Negate, TypedKind_Invert};
         kind = kOperators[fields.calc];
     } else if (fields.kind == PrCssValueKind_Function && fields.keyword == PrCssKeyword_Min) {
         kind = TypedKind_Min;
@@ -1410,13 +1397,11 @@ JSValue reifyCalculation(JSContext* ctx, const PrCssValue* value, uint32_t node)
         return JS_UNDEFINED;
     }
     Values operands = heldValues(ctx);
-    for (uint32_t child = node + 1; child < prCssValueNext(value, node);
-         child = prCssValueNext(value, child)) {
+    for (uint32_t child = node + 1; child < prCssValueNext(value, node); child = prCssValueNext(value, child)) {
         PrCssValueFields at = prCssValueFields(value, child);
         if (at.kind == PrCssValueKind_Literal && at.literal == ',')
             continue;
-        JSValue operand =
-            reifyCalculation(ctx, value, at.kind == PrCssValueKind_Math ? child + 1 : child);
+        JSValue operand = reifyCalculation(ctx, value, at.kind == PrCssValueKind_Math ? child + 1 : child);
         if (!operands.add(operand))
             return operand;
     }
@@ -1428,8 +1413,7 @@ JSValue reifyCalculation(JSContext* ctx, const PrCssValue* value, uint32_t node)
 JSValue reifyMath(JSContext* ctx, const PrCssValue* value, uint32_t node) {
     uint32_t root = node + 1;
     JSValue reified = reifyCalculation(ctx, value, root);
-    if (JS_IsException(reified) || JS_IsUndefined(reified)
-        || !isNumericKind(prCssValueFields(value, root).kind))
+    if (JS_IsException(reified) || JS_IsUndefined(reified) || !isNumericKind(prCssValueFields(value, root).kind))
         return reified;
     return newMath(ctx, TypedKind_Sum, &reified, 1);
 }
@@ -1440,8 +1424,7 @@ JSValue reifyArgument(JSContext* ctx, const PrCssValue* value, uint32_t node, Pr
     PrCssValueFields fields = prCssValueFields(value, node);
     if (fields.kind == PrCssValueKind_Math)
         return reifyMath(ctx, value, node);
-    if ((fields.kind == PrCssValueKind_Integer || fields.kind == PrCssValueKind_Number)
-        && zero != PrCssUnit_Number)
+    if ((fields.kind == PrCssValueKind_Integer || fields.kind == PrCssValueKind_Number) && zero != PrCssUnit_Number)
         return fields.number.value == 0 ? newUnit(ctx, 0, zero) : JS_UNDEFINED;
     if (!isNumericKind(fields.kind))
         return JS_UNDEFINED;
@@ -1455,8 +1438,7 @@ JSValue reifyComponent(JSContext* ctx, const PrCssValue* value, uint32_t node) {
         return JS_UNDEFINED;
     uint32_t args[16];
     uint32_t count = 0;
-    for (uint32_t child = node + 1; child < prCssValueNext(value, node);
-         child = prCssValueNext(value, child)) {
+    for (uint32_t child = node + 1; child < prCssValueNext(value, node); child = prCssValueNext(value, child)) {
         PrCssValueFields at = prCssValueFields(value, child);
         if (at.kind == PrCssValueKind_Literal && at.literal == ',')
             continue;
@@ -1472,7 +1454,7 @@ JSValue reifyComponent(JSContext* ctx, const PrCssValue* value, uint32_t node) {
     auto component = [&](TypedKind kind, bool is2D) {
         uint32_t taken = made.values->count;
         return construct(ctx, JS_UNDEFINED, *kKindClasses[kind],
-                         typedFields(kind, PrCssUnit_Number, 0, is2D), made.take(), taken);
+            typedFields(kind, PrCssUnit_Number, 0, is2D), made.take(), taken);
     };
     PrCssKeyword name = function.keyword;
     switch (name) {
@@ -1491,8 +1473,7 @@ JSValue reifyComponent(JSContext* ctx, const PrCssValue* value, uint32_t node) {
             JSValue held = prJsDomMatrixNew(ctx, matrix);
             if (JS_IsException(held))
                 return held;
-            TypedObject fields =
-                typedFields(TypedKind_Matrix, PrCssUnit_Number, 0, name == PrCssKeyword_Matrix);
+            TypedObject fields = typedFields(TypedKind_Matrix, PrCssUnit_Number, 0, name == PrCssKeyword_Matrix);
             return construct(ctx, JS_UNDEFINED, cssMatrixComponentClass, fields, &held, 1);
         }
         case PrCssKeyword_Translate:
@@ -1506,9 +1487,8 @@ JSValue reifyComponent(JSContext* ctx, const PrCssValue* value, uint32_t node) {
         case PrCssKeyword_Scalez:
         case PrCssKeyword_Scale3d: {
             // Which argument gives x, y and z, and the identity value for a component that no argument gives.
-            bool translate = name == PrCssKeyword_Translate || name == PrCssKeyword_Translatex
-                             || name == PrCssKeyword_Translatey || name == PrCssKeyword_Translatez
-                             || name == PrCssKeyword_Translate3d;
+            bool translate = name == PrCssKeyword_Translate || name == PrCssKeyword_Translatex ||
+                name == PrCssKeyword_Translatey || name == PrCssKeyword_Translatez || name == PrCssKeyword_Translate3d;
             bool x = name == PrCssKeyword_Translatex || name == PrCssKeyword_Scalex;
             bool y = name == PrCssKeyword_Translatey || name == PrCssKeyword_Scaley;
             bool z = name == PrCssKeyword_Translatez || name == PrCssKeyword_Scalez;
@@ -1540,10 +1520,7 @@ JSValue reifyComponent(JSContext* ctx, const PrCssValue* value, uint32_t node) {
             } else {
                 // rotate() and rotateZ() rotate about z, rotateX() about x and rotateY() about y.
                 for (uint32_t i = 0; i < 3; ++i) {
-                    bool about = i
-                                 == (name == PrCssKeyword_Rotatex   ? 0
-                                     : name == PrCssKeyword_Rotatey ? 1
-                                                                    : 2);
+                    bool about = i == (name == PrCssKeyword_Rotatex   ? 0 : name == PrCssKeyword_Rotatey ? 1 : 2);
                     if (!unit(about ? 1 : 0, PrCssUnit_Number))
                         return JS_UNDEFINED;
                 }
@@ -1582,8 +1559,7 @@ JSValue reifyTransform(JSContext* ctx, const PrCssValue* value, uint32_t first, 
             return component;
     }
     uint32_t count = components.values->count;
-    return construct(ctx, JS_UNDEFINED, cssTransformValueClass, typedFields(TypedKind_Transform),
-                     components.take(), count);
+    return construct(ctx, JS_UNDEFINED, cssTransformValueClass, typedFields(TypedKind_Transform), components.take(), count);
 }
 
 // css-typed-om-1/#reify-color, for the Color at `node`.
@@ -1653,9 +1629,8 @@ JSValue reifyColor(JSContext* ctx, const PrCssValue* value, uint32_t node) {
     JSValue object = newTyped(ctx, cssColorClass, fields);
     JSValue space = newKeyword(ctx, prColorSpaceName(color.color.space));
     JSValue* taken = made.take();
-    bool ok = !JS_IsException(object) && hold(ctx, object, space)
-              && hold(ctx, object, newChannels(ctx, object, taken, 3))
-              && hold(ctx, object, taken[3]);
+    bool ok = !JS_IsException(object) && hold(ctx, object, space) &&
+        hold(ctx, object, newChannels(ctx, object, taken, 3)) && hold(ctx, object, taken[3]);
     if (!ok) {
         JS_FreeValue(ctx, object);
         return JS_EXCEPTION;
@@ -1665,7 +1640,7 @@ JSValue reifyColor(JSContext* ctx, const PrCssValue* value, uint32_t node) {
 
 // Returns a style value of `kind` for `property` that holds the trees of `value` from `first` up to `end`.
 JSValue newStyle(JSContext* ctx, TypedKind kind, const PrCssValue* value, uint32_t first,
-                 uint32_t end, const PrCssDeclarationName* property) {
+        uint32_t end, const PrCssDeclarationName* property) {
     TypedObject fields = typedFields(kind);
     fields.property = prCssDeclarationNameCopy(property);
     fields.value = prCssValueCreate();
@@ -1677,12 +1652,11 @@ JSValue newStyle(JSContext* ctx, TypedKind kind, const PrCssValue* value, uint32
 // Reifies a value of `property`, or an item of a list-valued property, which is the trees from `first` up to `end`. A
 // shorthand's value that has one component, a keyword or a number, is reified as that component.
 JSValue reifyItem(JSContext* ctx, const PrCssValue* value, uint32_t first, uint32_t end,
-                  const PrCssDeclarationName* property) {
-    bool shorthand = property->property != PrCssProperty_Count
-                     && prCssPropertyLonghands(property->property, nullptr, 0) != 0;
+        const PrCssDeclarationName* property) {
+    bool shorthand = property->property != PrCssProperty_Count && prCssPropertyLonghands(property->property, nullptr, 0) != 0;
     uint32_t single = first;
-    while (single + 1 < end && prCssValueNext(value, single) == end
-           && prCssValueFields(value, single).kind == PrCssValueKind_Longhand)
+    while (single + 1 < end && prCssValueNext(value, single) == end &&
+            prCssValueFields(value, single).kind == PrCssValueKind_Longhand)
         ++single;
     if (single < end && prCssValueNext(value, single) == end) {
         PrCssValueFields fields = prCssValueFields(value, single);
@@ -1727,26 +1701,21 @@ JSValue reifyItem(JSContext* ctx, const PrCssValue* value, uint32_t first, uint3
 // css-typed-om-1/#reify-property: passes to `each` the objects of `value`, a declared value of `property`, one per item
 // for a list-valued property.
 template <typename Each>
-bool reifyValue(JSContext* ctx, const PrCssValue* value, const PrCssDeclarationName* property,
-                Each each) {
+bool reifyValue(JSContext* ctx, const PrCssValue* value, const PrCssDeclarationName* property, Each each) {
     uint32_t size = prCssValueSize(value);
     if (size == 0)
         return true;
     bool custom = property->property == PrCssProperty_Count;
-    if (custom
-        || (prCssValueNext(value, 0) == size
-            && prCssValueFields(value, 0).kind == PrCssValueKind_Tokens)) {
+    if (custom || (prCssValueNext(value, 0) == size && prCssValueFields(value, 0).kind == PrCssValueKind_Tokens)) {
         PrCssValueFields tokens = prCssValueFields(value, 0);
         // css-variables-1/#serializing-custom-props: an empty custom property is a single space.
         PrStringView text = tokens.kind == PrCssValueKind_Tokens ? tokens.text : PrStringView{};
         JSValue unparsed = reifyTokens(ctx, custom && text.size == 0 ? " " : text);
         return !JS_IsException(unparsed) && each(unparsed);
     }
-    bool list = prCssPropertyListValued(property->property)
-                && prCssPropertyLonghands(property->property, nullptr, 0) == 0;
+    bool list = prCssPropertyListValued(property->property) && prCssPropertyLonghands(property->property, nullptr, 0) == 0;
     uint32_t start = 0;
-    for (uint32_t tree = 0; tree <= size;
-         tree = tree < size ? prCssValueNext(value, tree) : tree + 1) {
+    for (uint32_t tree = 0; tree <= size; tree = tree < size ? prCssValueNext(value, tree) : tree + 1) {
         if (tree < size) {
             PrCssValueFields fields = prCssValueFields(value, tree);
             if (!list || fields.kind != PrCssValueKind_Literal || fields.literal != ',')
@@ -1796,12 +1765,10 @@ JSValue reifyFirst(JSContext* ctx, const PrCssValue* value, const PrCssDeclarati
 // CSSStyleValue (css-typed-om-1/#cssstylevalue)
 
 JSValue toString(JSContext* ctx, JSValueConst self, int, JSValueConst*) {
-    if (styleValueOf(ctx, self) == nullptr
-        && typedIn(ctx, self, cssTransformComponentClass) == nullptr)
+    if (styleValueOf(ctx, self) == nullptr && typedIn(ctx, self, cssTransformComponentClass) == nullptr)
         return JS_EXCEPTION;
     TextBuffer text;
-    JSValue result =
-        serializeValue(ctx, self, &text) ? jsNewStringView(ctx, textView(&text)) : JS_EXCEPTION;
+    JSValue result = serializeValue(ctx, self, &text) ? jsNewStringView(ctx, textView(&text)) : JS_EXCEPTION;
     textReset(&text);
     return result;
 }
@@ -1837,8 +1804,7 @@ JSValue parse(JSContext* ctx, JSValueConst, int argc, JSValueConst* argv, int ma
         return JS_ThrowTypeError(ctx, "Not a property");
     if (status != PrStatus_Ok)
         return jsDomExceptionThrow(ctx, "SyntaxError");
-    return magic == 1 ? reifyArray(ctx, value.value, &property.name)
-                      : reifyFirst(ctx, value.value, &property.name);
+    return magic == 1 ? reifyArray(ctx, value.value, &property.name) : reifyFirst(ctx, value.value, &property.name);
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -1867,8 +1833,7 @@ JSValue textConstruct(JSContext* ctx, JSValueConst newTarget, int argc, JSValueC
 
 JSValue textGet(JSContext* ctx, JSValueConst self) {
     TypedObject* object = typedOf(self);
-    return object != nullptr ? jsNewString(ctx, &object->text)
-                             : JS_ThrowTypeError(ctx, "Illegal invocation");
+    return object != nullptr ? jsNewString(ctx, &object->text) : JS_ThrowTypeError(ctx, "Illegal invocation");
 }
 
 // Sets a keyword's value, or a variable reference's name.
@@ -1918,11 +1883,10 @@ JSValue segmentOf(JSContext* ctx, JSValueConst value) {
 
 JSValue unparsedConstruct(JSContext* ctx, JSValueConst newTarget, int argc, JSValueConst* argv) {
     Array<JSValue> segments;
-    if (!jsArgCount(ctx, argc, 1)
-        || !sequence(ctx, argv[0], &segments, [&](JSValue v) { return segmentOf(ctx, v); }))
+    if (!jsArgCount(ctx, argc, 1) || !sequence(ctx, argv[0], &segments, [&](JSValue v) { return segmentOf(ctx, v); }))
         return JS_EXCEPTION;
-    JSValue result = construct(ctx, newTarget, cssUnparsedValueClass,
-                               typedFields(TypedKind_Unparsed), segments.data, segments.count);
+    JSValue result = construct(ctx, newTarget, cssUnparsedValueClass, typedFields(TypedKind_Unparsed), segments.data,
+        segments.count);
     segments.reset();
     return result;
 }
@@ -1958,8 +1922,7 @@ constexpr int kNumberish = 1 << 8;
 JSValue heldSet(JSContext* ctx, JSValueConst self, JSValueConst input, int magic) {
     if (typedOf(self) == nullptr)
         return JS_ThrowTypeError(ctx, "Illegal invocation");
-    JSValue value =
-        rectified(ctx, input, (magic & kNumberish) != 0 ? Rectify_Numberish : Rectify_None);
+    JSValue value = rectified(ctx, input, (magic & kNumberish) != 0 ? Rectify_Numberish : Rectify_None);
     if (JS_IsException(value))
         return value;
     bool ok = replaceHeld(ctx, self, uint32_t(magic & 0xff), value);
@@ -1978,20 +1941,17 @@ JSValue heldItem(JSContext* ctx, JSValueConst self, void*, uint32_t index) {
 // Sets an item at `index` of a css-typed-om-1/#cssunparsedvalue, or appends one at the index after the last: a segment
 // of an unparsed value, or a component of a transform value. A segment can make a value contain itself. Only flattening
 // detects that, as a value that is too deep.
-bool heldSetItem(JSContext* ctx, JSValueConst self, void* handle, uint32_t index,
-                 JSValueConst value) {
+bool heldSetItem(JSContext* ctx, JSValueConst self, void* handle, uint32_t index, JSValueConst value) {
     TypedObject* object = static_cast<TypedObject*>(handle);
     if (index > object->references) {
         JS_ThrowRangeError(ctx, "Index out of range");
         return false;
     }
-    if (object->kind == TypedKind_Transform
-        && jsHandleIn(ctx, value, cssTransformComponentClass) == nullptr) {
+    if (object->kind == TypedKind_Transform && jsHandleIn(ctx, value, cssTransformComponentClass) == nullptr) {
         JS_ThrowTypeError(ctx, "Expected a CSSTransformComponent");
         return false;
     }
-    JSValue item =
-        object->kind == TypedKind_Unparsed ? segmentOf(ctx, value) : JS_DupValue(ctx, value);
+    JSValue item = object->kind == TypedKind_Unparsed ? segmentOf(ctx, value) : JS_DupValue(ctx, value);
     bool ok = !JS_IsException(item);
     if (ok) {
         jsSetReference(ctx, self, index, item);
@@ -2007,8 +1967,7 @@ constexpr JsIndexed kWriteIndexed = {heldLength, heldItem, heldSetItem};
 
 JSValue lengthGet(JSContext* ctx, JSValueConst self) {
     TypedObject* object = typedOf(self);
-    return object != nullptr ? JS_NewUint32(ctx, object->references)
-                             : JS_ThrowTypeError(ctx, "Illegal invocation");
+    return object != nullptr ? JS_NewUint32(ctx, object->references) : JS_ThrowTypeError(ctx, "Illegal invocation");
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -2049,8 +2008,7 @@ JSValue opposite(JSContext* ctx, JSValue value, bool invert) {
 // Gathers the operands of `self` combined with the arguments by `operation`. `self` is flattened into its operands if a
 // sum is added to or a product is multiplied. Each argument is rectified as a numeric value, negated if it is
 // subtracted, and inverted if it divides.
-bool gatherOperands(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv,
-                    Operation operation, Values* out) {
+bool gatherOperands(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv, Operation operation, Values* out) {
     const TypedObject* object = typedOf(self);
     bool sum = operation == Operation_Add || operation == Operation_Sub;
     bool product = operation == Operation_Mul || operation == Operation_Div;
@@ -2094,14 +2052,15 @@ JSValue combine(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv,
     // numbers.
     bool units = true;
     PrCssUnit unit = multiply ? PrCssUnit(PrCssUnit_Number) : first->unit;
-    double result = multiply                                                   ? 1
-                    : operation == Operation_Add || operation == Operation_Sub ? 0
-                                                                               : first->number;
+    double result = first->number;
+    if (multiply)
+        result = 1;
+    else if (operation == Operation_Add || operation == Operation_Sub)
+        result = 0;
     for (uint32_t i = 0; units && i < count; ++i) {
         const TypedObject* operand = typedOf(operands.values->data[i]);
         if (multiply) {
-            units = operand->kind == TypedKind_Unit
-                    && (operand->unit == PrCssUnit_Number || unit == PrCssUnit_Number);
+            units = operand->kind == TypedKind_Unit && (operand->unit == PrCssUnit_Number || unit == PrCssUnit_Number);
             if (units && operand->unit != PrCssUnit_Number)
                 unit = operand->unit;
             result *= operand->number;
@@ -2119,10 +2078,13 @@ JSValue combine(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv,
     if (units)
         return newUnit(ctx, result, unit);
 
-    TypedKind kind = multiply ? TypedKind_Product
-                   : operation == Operation_Min ? TypedKind_Min
-                   : operation == Operation_Max ? TypedKind_Max
-                                                : TypedKind_Sum;
+    TypedKind kind = TypedKind_Sum;
+    if (multiply)
+        kind = TypedKind_Product;
+    else if (operation == Operation_Min)
+        kind = TypedKind_Min;
+    else if (operation == Operation_Max)
+        kind = TypedKind_Max;
     JSValue math = newMath(ctx, kind, operands.take(), count);
     if (JS_IsException(math)) {
         JS_FreeValue(ctx, JS_GetException(ctx));
@@ -2167,8 +2129,7 @@ bool unitArgument(JSContext* ctx, JSValueConst value, PrCssUnit* out) {
 
 JSValue to(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv) {
     PrCssUnit unit;
-    if (typedIn(ctx, self, cssNumericValueClass) == nullptr || !jsArgCount(ctx, argc, 1)
-        || !unitArgument(ctx, argv[0], &unit))
+    if (typedIn(ctx, self, cssNumericValueClass) == nullptr || !jsArgCount(ctx, argc, 1) || !unitArgument(ctx, argv[0], &unit))
         return JS_EXCEPTION;
     Tree tree = heldTree(ctx);
     if (!flattenNumeric(ctx, self, tree.value))
@@ -2199,17 +2160,14 @@ JSValue toSum(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv) {
     Tree tree = heldTree(ctx);
     ok = ok && flattenNumeric(ctx, self, tree.value);
     Tree sum = heldTree(ctx);
-    PrStatus status =
-        ok ? prCssValueToSum(tree.value, 0, units.data, units.count, sum.value) : PrStatus_Ok;
+    PrStatus status = ok ? prCssValueToSum(tree.value, 0, units.data, units.count, sum.value) : PrStatus_Ok;
     units.reset();
     if (!ok)
         return JS_EXCEPTION;
     if (status != PrStatus_Ok)
         return JS_ThrowTypeError(ctx, "The value cannot be written in those units");
     JSValue result = reifyMath(ctx, sum.value, 0);
-    return JS_IsUndefined(result)
-               ? JS_ThrowTypeError(ctx, "The value cannot be written in those units")
-               : result;
+    return JS_IsUndefined(result) ? JS_ThrowTypeError(ctx, "The value cannot be written in those units") : result;
 }
 
 // css-typed-om-1/#dom-cssnumericvalue-type, as a CSSNumericType dictionary: the type that the value has kept since it
@@ -2221,18 +2179,18 @@ JSValue type(JSContext* ctx, JSValueConst self, int, JSValueConst*) {
     if (!object->hasType)
         return JS_ThrowTypeError(ctx, "The value has no type");
     const PrCssNumericType& numeric = object->type;
-    constexpr PrStringView kBaseTypes[] = {"length",    "angle",      "time",
-                                           "frequency", "resolution", "flex",
-                                           "percent"};
+    constexpr PrStringView kBaseTypes[] = {
+        "length",    "angle",      "time",
+        "frequency", "resolution", "flex",
+        "percent",
+    };
     JSValue result = JS_NewObject(ctx);
     for (uint32_t i = 0; i < PrCssNumericBaseType_Count; ++i) {
         if (numeric.exponents[i] != 0)
-            JS_SetPropertyStr(ctx, result, kBaseTypes[i].data,
-                              JS_NewInt32(ctx, numeric.exponents[i]));
+            JS_SetPropertyStr(ctx, result, kBaseTypes[i].data, JS_NewInt32(ctx, numeric.exponents[i]));
     }
     if (numeric.hasPercentHint)
-        JS_SetPropertyStr(ctx, result, "percentHint",
-                          jsFixedString(ctx, kBaseTypes[numeric.percentHint]));
+        JS_SetPropertyStr(ctx, result, "percentHint", jsFixedString(ctx, kBaseTypes[numeric.percentHint]));
     return result;
 }
 
@@ -2244,8 +2202,7 @@ JSValue parseNumeric(JSContext* ctx, JSValueConst, int argc, JSValueConst* argv)
     if (prCssValueParseNumeric(text.value(), value.value) != PrStatus_Ok)
         return jsDomExceptionThrow(ctx, "SyntaxError");
     PrCssValueFields fields = prCssValueFields(value.value, 0);
-    JSValue result = fields.kind == PrCssValueKind_Math ? reifyMath(ctx, value.value, 0)
-                                                        : reifyNumber(ctx, fields);
+    JSValue result = fields.kind == PrCssValueKind_Math ? reifyMath(ctx, value.value, 0) : reifyNumber(ctx, fields);
     return JS_IsUndefined(result) ? jsDomExceptionThrow(ctx, "SyntaxError") : result;
 }
 
@@ -2291,9 +2248,7 @@ JSValue operatorGet(JSContext* ctx, JSValueConst self) {
     TypedObject* object = typedIn(ctx, self, cssMathValueClass);
     if (object == nullptr)
         return JS_EXCEPTION;
-    constexpr PrStringView kOperators[] = {"sum",    "product", "negate",
-                                           "invert", "min",     "max",
-                                           "clamp"};
+    constexpr PrStringView kOperators[] = {"sum",    "product", "negate", "invert", "min",     "max", "clamp"};
     return jsFixedString(ctx, kOperators[object->kind - TypedKind_Sum]);
 }
 
@@ -2312,7 +2267,7 @@ JSValue listConstruct(JSContext* ctx, JSValueConst newTarget, int argc, JSValueC
 
 // Returns a new object of `kind` that holds the first `count` arguments, each rectified as `rectify` specifies.
 JSValue argumentsConstruct(JSContext* ctx, JSValueConst newTarget, int argc, JSValueConst* argv,
-                           TypedKind kind, int count, const Rectify* rectify, bool is2D = true) {
+        TypedKind kind, int count, const Rectify* rectify, bool is2D = true) {
     if (!jsArgCount(ctx, argc, count))
         return JS_EXCEPTION;
     JSValue children[4];
@@ -2325,11 +2280,10 @@ JSValue argumentsConstruct(JSContext* ctx, JSValueConst newTarget, int argc, JSV
         }
     }
     return construct(ctx, newTarget, *kKindClasses[kind],
-                     typedFields(kind, PrCssUnit_Number, 0, is2D), children, uint32_t(count));
+        typedFields(kind, PrCssUnit_Number, 0, is2D), children, uint32_t(count));
 }
 
-constexpr Rectify kNumberishArguments[] = {Rectify_Numberish, Rectify_Numberish, Rectify_Numberish,
-                                           Rectify_Numberish};
+constexpr Rectify kNumberishArguments[] = {Rectify_Numberish, Rectify_Numberish, Rectify_Numberish, Rectify_Numberish};
 constexpr Rectify kNumericArguments[] = {Rectify_None, Rectify_None, Rectify_None, Rectify_None};
 
 constexpr Rectify kKeywordishArguments[] = {Rectify_Keywordish};
@@ -2358,7 +2312,7 @@ JSValue transformConstruct(JSContext* ctx, JSValueConst newTarget, int argc, JSV
         return JS_ThrowTypeError(ctx, "A transform has a component");
     }
     JSValue result = construct(ctx, newTarget, cssTransformValueClass,
-                               typedFields(TypedKind_Transform), components.data, components.count);
+        typedFields(TypedKind_Transform), components.data, components.count);
     components.reset();
     return result;
 }
@@ -2389,8 +2343,8 @@ JSValue setComponentIs2D(JSContext* ctx, JSValueConst self, JSValueConst input) 
     TypedObject* object = typedIn(ctx, self, cssTransformComponentClass);
     if (object == nullptr)
         return JS_EXCEPTION;
-    bool fixed = object->kind == TypedKind_Skew || object->kind == TypedKind_SkewX
-                 || object->kind == TypedKind_SkewY || object->kind == TypedKind_Perspective;
+    bool fixed = object->kind == TypedKind_Skew || object->kind == TypedKind_SkewX ||
+        object->kind == TypedKind_SkewY || object->kind == TypedKind_Perspective;
     if (!fixed)
         object->is2D = JS_ToBool(ctx, input) != 0;
     return JS_UNDEFINED;
@@ -2433,35 +2387,30 @@ JSValue toMatrix(JSContext* ctx, JSValueConst self, int, JSValueConst*) {
 // css-typed-om-1/#dom-csstranslate-csstranslate. An omitted z is 0px and makes the translation 2D.
 JSValue translateConstruct(JSContext* ctx, JSValueConst newTarget, int argc, JSValueConst* argv) {
     if (jsArgGiven(argc, argv, 2))
-        return argumentsConstruct(ctx, newTarget, argc, argv, TypedKind_Translate, 3,
-                                  kNumericArguments, false);
+        return argumentsConstruct(ctx, newTarget, argc, argv, TypedKind_Translate, 3, kNumericArguments, false);
     if (!jsArgCount(ctx, argc, 2))
         return JS_EXCEPTION;
     JSValue args[3] = {argv[0], argv[1], newUnit(ctx, 0, PrCssUnit_Px)};
-    JSValue result =
-        argumentsConstruct(ctx, newTarget, 3, args, TypedKind_Translate, 3, kNumericArguments);
+    JSValue result = argumentsConstruct(ctx, newTarget, 3, args, TypedKind_Translate, 3, kNumericArguments);
     JS_FreeValue(ctx, args[2]);
     return result;
 }
 
 // css-typed-om-1/#dom-cssrotate-cssrotate. An angle alone rotates about z, in 2D.
 JSValue rotateConstruct(JSContext* ctx, JSValueConst newTarget, int argc, JSValueConst* argv) {
-    constexpr Rectify kRotate[] = {Rectify_Numberish, Rectify_Numberish, Rectify_Numberish,
-                                   Rectify_None};
+    constexpr Rectify kRotate[] = {Rectify_Numberish, Rectify_Numberish, Rectify_Numberish, Rectify_None};
     if (argc >= 4)
         return argumentsConstruct(ctx, newTarget, argc, argv, TypedKind_Rotate, 4, kRotate, false);
     if (argc != 1)
         return JS_ThrowTypeError(ctx, "CSSRotate takes an angle, or x, y, z and an angle");
-    JSValue args[4] = {JS_NewFloat64(ctx, 0), JS_NewFloat64(ctx, 0), JS_NewFloat64(ctx, 1),
-                       argv[0]};
+    JSValue args[4] = {JS_NewFloat64(ctx, 0), JS_NewFloat64(ctx, 0), JS_NewFloat64(ctx, 1), argv[0]};
     return argumentsConstruct(ctx, newTarget, 4, args, TypedKind_Rotate, 4, kRotate);
 }
 
 // css-typed-om-1/#dom-cssscale-cssscale. An omitted z is 1 and makes the scale 2D.
 JSValue scaleConstruct(JSContext* ctx, JSValueConst newTarget, int argc, JSValueConst* argv) {
     if (jsArgGiven(argc, argv, 2))
-        return argumentsConstruct(ctx, newTarget, argc, argv, TypedKind_Scale, 3,
-                                  kNumberishArguments, false);
+        return argumentsConstruct(ctx, newTarget, argc, argv, TypedKind_Scale, 3, kNumberishArguments, false);
     if (!jsArgCount(ctx, argc, 2))
         return JS_EXCEPTION;
     JSValue args[3] = {argv[0], argv[1], JS_NewFloat64(ctx, 1)};
@@ -2479,20 +2428,16 @@ JSValue matrixConstruct(JSContext* ctx, JSValueConst newTarget, int argc, JSValu
     bool is2D = matrix->is2D;
     bool present = false;
     JSValueConst options = argc > 1 ? argv[1] : JS_UNDEFINED;
-    if (!jsDictionary(ctx, options, &present)
-        || (present && !jsDictBool(ctx, options, "is2D", &is2D)))
+    if (!jsDictionary(ctx, options, &present) || (present && !jsDictBool(ctx, options, "is2D", &is2D)))
         return JS_EXCEPTION;
-    JSValue held = prJsDomMatrixIsMutable(ctx, argv[0]) ? JS_DupValue(ctx, argv[0])
-                                                      : prJsDomMatrixNew(ctx, *matrix);
+    JSValue held = prJsDomMatrixIsMutable(ctx, argv[0]) ? JS_DupValue(ctx, argv[0]) : prJsDomMatrixNew(ctx, *matrix);
     if (JS_IsException(held))
         return held;
-    return construct(ctx, newTarget, cssMatrixComponentClass,
-                     typedFields(TypedKind_Matrix, PrCssUnit_Number, 0, is2D), &held, 1);
+    return construct(ctx, newTarget, cssMatrixComponentClass, typedFields(TypedKind_Matrix, PrCssUnit_Number, 0, is2D), &held, 1);
 }
 
 JSValue matrixGet(JSContext* ctx, JSValueConst self) {
-    return typedIn(ctx, self, cssMatrixComponentClass) != nullptr ? jsReference(ctx, self, 0)
-                                                                  : JS_EXCEPTION;
+    return typedIn(ctx, self, cssMatrixComponentClass) != nullptr ? jsReference(ctx, self, 0) : JS_EXCEPTION;
 }
 
 JSValue matrixSet(JSContext* ctx, JSValueConst self, JSValueConst input) {
@@ -2526,8 +2471,8 @@ ColorIdl colorIdl(ColorFunction function, uint32_t index, bool alpha) {
 // Returns an argument converted to `idl` (webidl/#js-union). A number is rectified in the form that a channel of `type`
 // accepts: as a fraction of a percentage, a number, or degrees.
 JSValue colorConvert(JSContext* ctx, JSValueConst value, ChannelType type, ColorIdl idl) {
-    if (jsHandleIn(ctx, value, cssNumericValueClass) != nullptr
-        || (idl == ColorIdl_Channel && jsHandleIn(ctx, value, cssKeywordValueClass) != nullptr))
+    if (jsHandleIn(ctx, value, cssNumericValueClass) != nullptr ||
+            (idl == ColorIdl_Channel && jsHandleIn(ctx, value, cssKeywordValueClass) != nullptr))
         return JS_DupValue(ctx, value);
     if (idl == ColorIdl_Numeric)
         return JS_ThrowTypeError(ctx, "Expected a CSSNumericValue");
@@ -2609,12 +2554,9 @@ JSValue colorConstruct(JSContext* ctx, JSValueConst newTarget, int argc, JSValue
     // Each argument is converted first, and then each is rectified. Only the alpha is optional. For the other channels,
     // undefined is a value.
     for (; converted < 4; ++converted) {
-        JSValueConst given = converted < 3 || jsArgGiven(argc, argv, converted)
-                                 ? argv[converted]
-                                 : JS_NewFloat64(ctx, 1);
+        JSValueConst given = converted < 3 || jsArgGiven(argc, argv, converted) ? argv[converted] : JS_NewFloat64(ctx, 1);
         ChannelType type = channelType(Function, uint32_t(converted));
-        children[converted] =
-            colorConvert(ctx, given, type, colorIdl(Function, uint32_t(converted), converted == 3));
+        children[converted] = colorConvert(ctx, given, type, colorIdl(Function, uint32_t(converted), converted == 3));
         if (JS_IsException(children[converted]))
             break;
     }
@@ -2633,8 +2575,7 @@ JSValue colorConstruct(JSContext* ctx, JSValueConst newTarget, int argc, JSValue
 
 // css-typed-om-1/#dom-csscolor-csscolor, which takes a color space, a sequence of channels, and an alpha. The alpha is
 // 1 if it is not given.
-JSValue colorFunctionConstruct(JSContext* ctx, JSValueConst newTarget, int argc,
-                               JSValueConst* argv) {
+JSValue colorFunctionConstruct(JSContext* ctx, JSValueConst newTarget, int argc, JSValueConst* argv) {
     if (!jsArgCount(ctx, argc, 2))
         return JS_EXCEPTION;
     JSValue children[3] = {rectified(ctx, argv[0], Rectify_Keywordish), JS_UNDEFINED, JS_UNDEFINED};
@@ -2686,16 +2627,18 @@ JSValue colorSet(JSContext* ctx, JSValueConst self, JSValueConst input, int magi
     JSValue value;
     if (object->colorFunction != ColorFunction_Color) {
         value = colorChannel(ctx, input, channelType(object->colorFunction, index),
-                             colorIdl(object->colorFunction, index, index == 3));
+            colorIdl(object->colorFunction, index, index == 3));
     } else if (index == 1) {
         JSValue channels = jsReference(ctx, self, 1);
         bool ok = jsObservableArraySet(ctx, channels, input);
         JS_FreeValue(ctx, channels);
         return ok ? JS_UNDEFINED : JS_EXCEPTION;
     } else if (index == 0) {
-        JSValue text = jsHandleIn(ctx, input, cssKeywordValueClass) != nullptr
-                           ? JS_DupValue(ctx, input)
-                           : JS_ToString(ctx, input);
+        JSValue text;
+        if (jsHandleIn(ctx, input, cssKeywordValueClass) != nullptr)
+            text = JS_DupValue(ctx, input);
+        else
+            text = JS_ToString(ctx, input);
         value = JS_IsException(text) ? text : rectified(ctx, text, Rectify_Keywordish);
         JS_FreeValue(ctx, text);
     } else {
@@ -2720,8 +2663,7 @@ JSValue parseColor(JSContext* ctx, JSValueConst, int argc, JSValueConst* argv) {
     PrCssValueFields fields = prCssValueFields(value.value, 0);
     if (fields.kind == PrCssValueKind_Keyword)
         return newKeyword(ctx, prCssKeywordName(fields.keyword));
-    JSValue color =
-        fields.kind == PrCssValueKind_Color ? reifyColor(ctx, value.value, 0) : JS_UNDEFINED;
+    JSValue color = fields.kind == PrCssValueKind_Color ? reifyColor(ctx, value.value, 0) : JS_UNDEFINED;
     if (!JS_IsUndefined(color))
         return color;
     PrCssDeclarationName none = prCssDeclarationNameFromProperty(PrCssProperty_Count);
@@ -2734,8 +2676,7 @@ JSValue parseColor(JSContext* ctx, JSValueConst, int argc, JSValueConst* argv) {
 
 // Implements get, getAll and has, selected by the magic.
 JSValue mapGet(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv, int magic) {
-    PrCssStyleDeclaration* map =
-        jsThis<PrCssStyleDeclaration>(ctx, self, stylePropertyMapReadOnlyClass);
+    PrCssStyleDeclaration* map = jsThis<PrCssStyleDeclaration>(ctx, self, stylePropertyMapReadOnlyClass);
     PropertyArgument property = {};
     if (map == nullptr || !jsArgCount(ctx, argc, 1) || !property.read(ctx, argv[0]))
         return JS_EXCEPTION;
@@ -2750,8 +2691,7 @@ JSValue mapGet(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv, 
 }
 
 JSValue mapSize(JSContext* ctx, JSValueConst self) {
-    PrCssStyleDeclaration* map =
-        jsThis<PrCssStyleDeclaration>(ctx, self, stylePropertyMapReadOnlyClass);
+    PrCssStyleDeclaration* map = jsThis<PrCssStyleDeclaration>(ctx, self, stylePropertyMapReadOnlyClass);
     return map != nullptr ? JS_NewUint32(ctx, prCssStyleDeclarationLength(map)) : JS_EXCEPTION;
 }
 
@@ -2769,9 +2709,11 @@ JSValue mapEntries(JSContext* ctx, PrCssStyleDeclaration* map) {
             JS_FreeValue(ctx, entries);
             return items;
         }
-        JSValue key = name.property != PrCssProperty_Count
-                          ? jsFixedString(ctx, prCssPropertyName(name.property))
-                          : jsNewString(ctx, &name.author);
+        JSValue key;
+        if (name.property != PrCssProperty_Count)
+            key = jsFixedString(ctx, prCssPropertyName(name.property));
+        else
+            key = jsNewString(ctx, &name.author);
         JS_SetPropertyUint32(ctx, entries, i, jsEntry(ctx, key, items));
         prCssDeclarationNameReset(&name);
     }
@@ -2780,8 +2722,7 @@ JSValue mapEntries(JSContext* ctx, PrCssStyleDeclaration* map) {
 
 // Implements entries, keys and values, selected by the magic, which is the JsMapPart.
 JSValue mapIterate(JSContext* ctx, JSValueConst self, int, JSValueConst*, int magic) {
-    PrCssStyleDeclaration* map =
-        jsThis<PrCssStyleDeclaration>(ctx, self, stylePropertyMapReadOnlyClass);
+    PrCssStyleDeclaration* map = jsThis<PrCssStyleDeclaration>(ctx, self, stylePropertyMapReadOnlyClass);
     if (map == nullptr)
         return JS_EXCEPTION;
     JSValue entries = mapEntries(ctx, map);
@@ -2789,8 +2730,7 @@ JSValue mapIterate(JSContext* ctx, JSValueConst self, int, JSValueConst*, int ma
 }
 
 JSValue mapForEach(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv) {
-    PrCssStyleDeclaration* map =
-        jsThis<PrCssStyleDeclaration>(ctx, self, stylePropertyMapReadOnlyClass);
+    PrCssStyleDeclaration* map = jsThis<PrCssStyleDeclaration>(ctx, self, stylePropertyMapReadOnlyClass);
     if (map == nullptr)
         return JS_EXCEPTION;
     JSValue entries = mapEntries(ctx, map);
@@ -2823,8 +2763,7 @@ JSValue mapSet(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv, 
     if (map == nullptr || !jsArgCount(ctx, argc, 1) || !property.read(ctx, argv[0]))
         return JS_EXCEPTION;
     bool append = magic == 1;
-    bool list = property.name.property != PrCssProperty_Count
-                && prCssPropertyListValued(property.name.property);
+    bool list = property.name.property != PrCssProperty_Count && prCssPropertyListValued(property.name.property);
     if ((append && !list) || (!list && argc > 2))
         return JS_ThrowTypeError(ctx, "The property does not take the values");
     Tree values = heldTree(ctx);
@@ -2834,8 +2773,8 @@ JSValue mapSet(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv, 
         const TypedObject* object = typedOf(argv[i]);
         if (object != nullptr) {
             bool styled = object->kind == TypedKind_Style || object->kind == TypedKind_Image;
-            bool taken = !(styled && !propertyEquals(object->property, property.name))
-                         && !(append && object->kind == TypedKind_Unparsed);
+            bool taken = !(styled && !propertyEquals(object->property, property.name)) &&
+                !(append && object->kind == TypedKind_Unparsed);
             if (!taken)
                 return JS_ThrowTypeError(ctx, "The property does not take the value");
             if (!flattenStyle(ctx, argv[i], values.value))
@@ -2849,15 +2788,16 @@ JSValue mapSet(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv, 
         PrStatus status = prCssValueParse(&property.name, text.value(), parsed.value);
         if (status != PrStatus_Ok || (append && holdsTokens(parsed.value)))
             return JS_ThrowTypeError(ctx, "The property does not take the value");
-        for (uint32_t tree = 0; tree < prCssValueSize(parsed.value);
-             tree = prCssValueNext(parsed.value, tree)) {
+        for (uint32_t tree = 0; tree < prCssValueSize(parsed.value); tree = prCssValueNext(parsed.value, tree)) {
             if (!built(ctx, prCssValueAddTree(values.value, parsed.value, tree)))
                 return JS_EXCEPTION;
         }
     }
-    PrStatus status = append
-                          ? prCssStyleDeclarationAppendValue(map, &property.name, values.value)
-                          : prCssStyleDeclarationSetValue(map, &property.name, values.value, false);
+    PrStatus status;
+    if (append)
+        status = prCssStyleDeclarationAppendValue(map, &property.name, values.value);
+    else
+        status = prCssStyleDeclarationSetValue(map, &property.name, values.value, false);
     if (status != PrStatus_Ok)
         return JS_ThrowTypeError(ctx, "The property does not take the values");
     return JS_UNDEFINED;
@@ -2909,10 +2849,7 @@ PrStringView factoryName(PrCssUnit unit) {
 #define PR_HELD(name, index) PR_JS_MAGIC_GET(name, heldGet, index)
 #define PR_HELD_SET(name, index) PR_JS_MAGIC_GET_SET(name, heldGet, heldSet, index)
 
-constexpr JSCFunctionListEntry kStyleValueProto[] = {
-    PR_JS_TAG("CSSStyleValue"),
-    PR_JS_METHOD("toString", 0, toString),
-};
+constexpr JSCFunctionListEntry kStyleValueProto[] = {PR_JS_TAG("CSSStyleValue"), PR_JS_METHOD("toString", 0, toString)};
 
 constexpr JSCFunctionListEntry kStyleValueStatic[] = {
     PR_JS_MAGIC("parse", 2, parse, 0),
@@ -2924,10 +2861,7 @@ constexpr JSCFunctionListEntry kKeywordProto[] = {
     PR_JS_GET_SET("value", textGet, textSet),
 };
 
-constexpr JSCFunctionListEntry kUnparsedProto[] = {
-    PR_JS_TAG("CSSUnparsedValue"),
-    PR_JS_GET("length", lengthGet),
-};
+constexpr JSCFunctionListEntry kUnparsedProto[] = {PR_JS_TAG("CSSUnparsedValue"), PR_JS_GET("length", lengthGet)};
 
 constexpr JSCFunctionListEntry kVariableProto[] = {
     PR_JS_TAG("CSSVariableReferenceValue"),
@@ -2949,9 +2883,7 @@ constexpr JSCFunctionListEntry kNumericProto[] = {
     PR_JS_METHOD("type", 0, type),
 };
 
-constexpr JSCFunctionListEntry kNumericStatic[] = {
-    PR_JS_METHOD("parse", 1, parseNumeric),
-};
+constexpr JSCFunctionListEntry kNumericStatic[] = {PR_JS_METHOD("parse", 1, parseNumeric)};
 
 constexpr JSCFunctionListEntry kUnitProto[] = {
     PR_JS_TAG("CSSUnitValue"),
@@ -2959,14 +2891,10 @@ constexpr JSCFunctionListEntry kUnitProto[] = {
     PR_JS_GET("unit", unitGet),
 };
 
-constexpr JSCFunctionListEntry kMathProto[] = {
-    PR_JS_TAG("CSSMathValue"),
-    PR_JS_GET("operator", operatorGet),
-};
+constexpr JSCFunctionListEntry kMathProto[] = {PR_JS_TAG("CSSMathValue"), PR_JS_GET("operator", operatorGet)};
 
 constexpr JSCFunctionListEntry kSumProto[] = {PR_JS_TAG("CSSMathSum"), PR_HELD("values", 0)};
-constexpr JSCFunctionListEntry kProductProto[] = {PR_JS_TAG("CSSMathProduct"),
-                                                  PR_HELD("values", 0)};
+constexpr JSCFunctionListEntry kProductProto[] = {PR_JS_TAG("CSSMathProduct"), PR_HELD("values", 0)};
 constexpr JSCFunctionListEntry kNegateProto[] = {PR_JS_TAG("CSSMathNegate"), PR_HELD("value", 0)};
 constexpr JSCFunctionListEntry kInvertProto[] = {PR_JS_TAG("CSSMathInvert"), PR_HELD("value", 0)};
 constexpr JSCFunctionListEntry kMinProto[] = {PR_JS_TAG("CSSMathMin"), PR_HELD("values", 0)};
@@ -2979,10 +2907,7 @@ constexpr JSCFunctionListEntry kClampProto[] = {
     PR_HELD("upper", 2),
 };
 
-constexpr JSCFunctionListEntry kNumericArrayProto[] = {
-    PR_JS_TAG("CSSNumericArray"),
-    PR_JS_GET("length", lengthGet),
-};
+constexpr JSCFunctionListEntry kNumericArrayProto[] = {PR_JS_TAG("CSSNumericArray"), PR_JS_GET("length", lengthGet)};
 
 constexpr JSCFunctionListEntry kTransformProto[] = {
     PR_JS_TAG("CSSTransformValue"),
@@ -3020,12 +2945,10 @@ constexpr JSCFunctionListEntry kScaleProto[] = {
     PR_HELD_SET("z", 2 | kNumberish),
 };
 
-constexpr JSCFunctionListEntry kSkewProto[] = {PR_JS_TAG("CSSSkew"), PR_HELD_SET("ax", 0),
-                                               PR_HELD_SET("ay", 1)};
+constexpr JSCFunctionListEntry kSkewProto[] = {PR_JS_TAG("CSSSkew"), PR_HELD_SET("ax", 0), PR_HELD_SET("ay", 1)};
 constexpr JSCFunctionListEntry kSkewXProto[] = {PR_JS_TAG("CSSSkewX"), PR_HELD_SET("ax", 0)};
 constexpr JSCFunctionListEntry kSkewYProto[] = {PR_JS_TAG("CSSSkewY"), PR_HELD_SET("ay", 0)};
-constexpr JSCFunctionListEntry kPerspectiveProto[] = {PR_JS_TAG("CSSPerspective"),
-                                                      PR_HELD_SET("length", 0)};
+constexpr JSCFunctionListEntry kPerspectiveProto[] = {PR_JS_TAG("CSSPerspective"), PR_HELD_SET("length", 0)};
 
 constexpr JSCFunctionListEntry kMatrixProto[] = {
     PR_JS_TAG("CSSMatrixComponent"),
@@ -3104,90 +3027,227 @@ constexpr JSCFunctionListEntry kMapProto[] = {
     PR_JS_CLASS(interface, id, (jsFinalizer<&id, destroyTyped>), proto)
 
 constexpr JsClassDefinition kClasses[] = {
-    {PR_TYPED("CSSStyleValue", cssStyleValueClass, kStyleValueProto), .statics = kStyleValueStatic,
-     .staticCount = int(countOf(kStyleValueStatic)), .slot = typedBinding},
-    {PR_TYPED("CSSKeywordValue", cssKeywordValueClass, kKeywordProto),
-     .constructor = textConstruct<TypedKind_Keyword>, .length = 1, .base = &cssStyleValueClass},
-    {PR_TYPED("CSSUnparsedValue", cssUnparsedValueClass, kUnparsedProto),
-     .constructor = unparsedConstruct, .length = 1, .base = &cssStyleValueClass,
-     .indexed = &kWriteIndexed, .iterable = true},
-    {PR_TYPED("CSSVariableReferenceValue", cssVariableReferenceValueClass, kVariableProto),
-     .constructor = textConstruct<TypedKind_VariableReference>, .length = 1, .slot = typedBinding},
-    {PR_TYPED("CSSNumericValue", cssNumericValueClass, kNumericProto), .statics = kNumericStatic,
-     .staticCount = int(countOf(kNumericStatic)), .base = &cssStyleValueClass},
-    {PR_TYPED("CSSUnitValue", cssUnitValueClass, kUnitProto), .constructor = unitConstruct,
-     .length = 2, .base = &cssNumericValueClass},
+    {
+        PR_TYPED("CSSStyleValue", cssStyleValueClass, kStyleValueProto),
+        .statics = kStyleValueStatic,
+        .staticCount = int(countOf(kStyleValueStatic)),
+        .slot = typedBinding,
+    },
+    {
+        PR_TYPED("CSSKeywordValue", cssKeywordValueClass, kKeywordProto),
+        .constructor = textConstruct<TypedKind_Keyword>,
+        .length = 1,
+        .base = &cssStyleValueClass,
+    },
+    {
+        PR_TYPED("CSSUnparsedValue", cssUnparsedValueClass, kUnparsedProto),
+        .constructor = unparsedConstruct,
+        .length = 1,
+        .base = &cssStyleValueClass,
+        .indexed = &kWriteIndexed,
+        .iterable = true,
+    },
+    {
+        PR_TYPED("CSSVariableReferenceValue", cssVariableReferenceValueClass, kVariableProto),
+        .constructor = textConstruct<TypedKind_VariableReference>,
+        .length = 1,
+        .slot = typedBinding,
+    },
+    {
+        PR_TYPED("CSSNumericValue", cssNumericValueClass, kNumericProto),
+        .statics = kNumericStatic,
+        .staticCount = int(countOf(kNumericStatic)),
+        .base = &cssStyleValueClass,
+    },
+    {
+        PR_TYPED("CSSUnitValue", cssUnitValueClass, kUnitProto),
+        .constructor = unitConstruct,
+        .length = 2,
+        .base = &cssNumericValueClass,
+    },
     {PR_TYPED("CSSMathValue", cssMathValueClass, kMathProto), .base = &cssNumericValueClass},
-    {PR_TYPED("CSSMathSum", cssMathSumClass, kSumProto),
-     .constructor = listConstruct<TypedKind_Sum>, .base = &cssMathValueClass},
-    {PR_TYPED("CSSMathProduct", cssMathProductClass, kProductProto),
-     .constructor = listConstruct<TypedKind_Product>, .base = &cssMathValueClass},
-    {PR_TYPED("CSSMathNegate", cssMathNegateClass, kNegateProto),
-     .constructor = fixedConstruct<TypedKind_Negate, 1, kNumberishArguments>, .length = 1,
-     .base = &cssMathValueClass},
-    {PR_TYPED("CSSMathInvert", cssMathInvertClass, kInvertProto),
-     .constructor = fixedConstruct<TypedKind_Invert, 1, kNumberishArguments>, .length = 1,
-     .base = &cssMathValueClass},
-    {PR_TYPED("CSSMathMin", cssMathMinClass, kMinProto),
-     .constructor = listConstruct<TypedKind_Min>, .base = &cssMathValueClass},
-    {PR_TYPED("CSSMathMax", cssMathMaxClass, kMaxProto),
-     .constructor = listConstruct<TypedKind_Max>, .base = &cssMathValueClass},
-    {PR_TYPED("CSSMathClamp", cssMathClampClass, kClampProto),
-     .constructor = fixedConstruct<TypedKind_Clamp, 3, kNumberishArguments>, .length = 3,
-     .base = &cssMathValueClass},
-    {PR_TYPED("CSSNumericArray", cssNumericArrayClass, kNumericArrayProto),
-     .indexed = &kReadIndexed, .iterable = true, .slot = typedBinding},
-    {PR_TYPED("CSSTransformValue", cssTransformValueClass, kTransformProto),
-     .constructor = transformConstruct, .length = 1, .base = &cssStyleValueClass,
-     .indexed = &kWriteIndexed, .iterable = true},
-    {PR_TYPED("CSSTransformComponent", cssTransformComponentClass, kComponentProto),
-     .slot = typedBinding},
-    {PR_TYPED("CSSTranslate", cssTranslateClass, kTranslateProto),
-     .constructor = translateConstruct, .length = 2, .base = &cssTransformComponentClass},
-    {PR_TYPED("CSSRotate", cssRotateClass, kRotateProto), .constructor = rotateConstruct,
-     .length = 1, .base = &cssTransformComponentClass},
-    {PR_TYPED("CSSScale", cssScaleClass, kScaleProto), .constructor = scaleConstruct, .length = 2,
-     .base = &cssTransformComponentClass},
-    {PR_TYPED("CSSSkew", cssSkewClass, kSkewProto),
-     .constructor = fixedConstruct<TypedKind_Skew, 2, kNumericArguments>, .length = 2,
-     .base = &cssTransformComponentClass},
-    {PR_TYPED("CSSSkewX", cssSkewXClass, kSkewXProto),
-     .constructor = fixedConstruct<TypedKind_SkewX, 1, kNumericArguments>, .length = 1,
-     .base = &cssTransformComponentClass},
-    {PR_TYPED("CSSSkewY", cssSkewYClass, kSkewYProto),
-     .constructor = fixedConstruct<TypedKind_SkewY, 1, kNumericArguments>, .length = 1,
-     .base = &cssTransformComponentClass},
-    {PR_TYPED("CSSPerspective", cssPerspectiveClass, kPerspectiveProto),
-     .constructor = fixedConstruct<TypedKind_Perspective, 1, kKeywordishArguments, false>,
-     .length = 1, .base = &cssTransformComponentClass},
-    {PR_TYPED("CSSMatrixComponent", cssMatrixComponentClass, kMatrixProto),
-     .constructor = matrixConstruct, .length = 1, .base = &cssTransformComponentClass},
+    {
+        PR_TYPED("CSSMathSum", cssMathSumClass, kSumProto),
+        .constructor = listConstruct<TypedKind_Sum>,
+        .base = &cssMathValueClass,
+    },
+    {
+        PR_TYPED("CSSMathProduct", cssMathProductClass, kProductProto),
+        .constructor = listConstruct<TypedKind_Product>,
+        .base = &cssMathValueClass,
+    },
+    {
+        PR_TYPED("CSSMathNegate", cssMathNegateClass, kNegateProto),
+        .constructor = fixedConstruct<TypedKind_Negate,
+        1,
+        kNumberishArguments>,
+        .length = 1,
+        .base = &cssMathValueClass,
+    },
+    {
+        PR_TYPED("CSSMathInvert", cssMathInvertClass, kInvertProto),
+        .constructor = fixedConstruct<TypedKind_Invert,
+        1,
+        kNumberishArguments>,
+        .length = 1,
+        .base = &cssMathValueClass,
+    },
+    {
+        PR_TYPED("CSSMathMin", cssMathMinClass, kMinProto),
+        .constructor = listConstruct<TypedKind_Min>,
+        .base = &cssMathValueClass,
+    },
+    {
+        PR_TYPED("CSSMathMax", cssMathMaxClass, kMaxProto),
+        .constructor = listConstruct<TypedKind_Max>,
+        .base = &cssMathValueClass,
+    },
+    {
+        PR_TYPED("CSSMathClamp", cssMathClampClass, kClampProto),
+        .constructor = fixedConstruct<TypedKind_Clamp,
+        3,
+        kNumberishArguments>,
+        .length = 3,
+        .base = &cssMathValueClass,
+    },
+    {
+        PR_TYPED("CSSNumericArray", cssNumericArrayClass, kNumericArrayProto),
+        .indexed = &kReadIndexed,
+        .iterable = true,
+        .slot = typedBinding,
+    },
+    {
+        PR_TYPED("CSSTransformValue", cssTransformValueClass, kTransformProto),
+        .constructor = transformConstruct,
+        .length = 1,
+        .base = &cssStyleValueClass,
+        .indexed = &kWriteIndexed,
+        .iterable = true,
+    },
+    {PR_TYPED("CSSTransformComponent", cssTransformComponentClass, kComponentProto), .slot = typedBinding},
+    {
+        PR_TYPED("CSSTranslate", cssTranslateClass, kTranslateProto),
+        .constructor = translateConstruct,
+        .length = 2,
+        .base = &cssTransformComponentClass,
+    },
+    {
+        PR_TYPED("CSSRotate", cssRotateClass, kRotateProto),
+        .constructor = rotateConstruct,
+        .length = 1,
+        .base = &cssTransformComponentClass,
+    },
+    {
+        PR_TYPED("CSSScale", cssScaleClass, kScaleProto),
+        .constructor = scaleConstruct,
+        .length = 2,
+        .base = &cssTransformComponentClass,
+    },
+    {
+        PR_TYPED("CSSSkew", cssSkewClass, kSkewProto),
+        .constructor = fixedConstruct<TypedKind_Skew,
+        2,
+        kNumericArguments>,
+        .length = 2,
+        .base = &cssTransformComponentClass,
+    },
+    {
+        PR_TYPED("CSSSkewX", cssSkewXClass, kSkewXProto),
+        .constructor = fixedConstruct<TypedKind_SkewX,
+        1,
+        kNumericArguments>,
+        .length = 1,
+        .base = &cssTransformComponentClass,
+    },
+    {
+        PR_TYPED("CSSSkewY", cssSkewYClass, kSkewYProto),
+        .constructor = fixedConstruct<TypedKind_SkewY,
+        1,
+        kNumericArguments>,
+        .length = 1,
+        .base = &cssTransformComponentClass,
+    },
+    {
+        PR_TYPED("CSSPerspective", cssPerspectiveClass, kPerspectiveProto),
+        .constructor = fixedConstruct<TypedKind_Perspective,
+        1,
+        kKeywordishArguments,
+        false>,
+        .length = 1,
+        .base = &cssTransformComponentClass,
+    },
+    {
+        PR_TYPED("CSSMatrixComponent", cssMatrixComponentClass, kMatrixProto),
+        .constructor = matrixConstruct,
+        .length = 1,
+        .base = &cssTransformComponentClass,
+    },
     {PR_TYPED("CSSImageValue", cssImageValueClass, kImageProto), .base = &cssStyleValueClass},
-    {PR_TYPED("CSSColorValue", cssColorValueClass, kColorValueProto), .statics = kColorValueStatic,
-     .staticCount = int(countOf(kColorValueStatic)), .base = &cssStyleValueClass},
-    {PR_TYPED("CSSRGB", cssRgbClass, kRgbProto), .constructor = colorConstruct<ColorFunction_Rgb>,
-     .length = 3, .base = &cssColorValueClass},
-    {PR_TYPED("CSSHSL", cssHslClass, kHslProto), .constructor = colorConstruct<ColorFunction_Hsl>,
-     .length = 3, .base = &cssColorValueClass},
-    {PR_TYPED("CSSHWB", cssHwbClass, kHwbProto), .constructor = colorConstruct<ColorFunction_Hwb>,
-     .length = 3, .base = &cssColorValueClass},
-    {PR_TYPED("CSSLab", cssLabClass, kLabProto), .constructor = colorConstruct<ColorFunction_Lab>,
-     .length = 3, .base = &cssColorValueClass},
-    {PR_TYPED("CSSLCH", cssLchClass, kLchProto), .constructor = colorConstruct<ColorFunction_Lch>,
-     .length = 3, .base = &cssColorValueClass},
-    {PR_TYPED("CSSOKLab", cssOklabClass, kOklabProto),
-     .constructor = colorConstruct<ColorFunction_Oklab>, .length = 3, .base = &cssColorValueClass},
-    {PR_TYPED("CSSOKLCH", cssOklchClass, kOklchProto),
-     .constructor = colorConstruct<ColorFunction_Oklch>, .length = 3, .base = &cssColorValueClass},
-    {PR_TYPED("CSSColor", cssColorClass, kColorProto), .constructor = colorFunctionConstruct,
-     .length = 2, .base = &cssColorValueClass},
+    {
+        PR_TYPED("CSSColorValue", cssColorValueClass, kColorValueProto),
+        .statics = kColorValueStatic,
+        .staticCount = int(countOf(kColorValueStatic)),
+        .base = &cssStyleValueClass,
+    },
+    {
+        PR_TYPED("CSSRGB", cssRgbClass, kRgbProto),
+        .constructor = colorConstruct<ColorFunction_Rgb>,
+        .length = 3,
+        .base = &cssColorValueClass,
+    },
+    {
+        PR_TYPED("CSSHSL", cssHslClass, kHslProto),
+        .constructor = colorConstruct<ColorFunction_Hsl>,
+        .length = 3,
+        .base = &cssColorValueClass,
+    },
+    {
+        PR_TYPED("CSSHWB", cssHwbClass, kHwbProto),
+        .constructor = colorConstruct<ColorFunction_Hwb>,
+        .length = 3,
+        .base = &cssColorValueClass,
+    },
+    {
+        PR_TYPED("CSSLab", cssLabClass, kLabProto),
+        .constructor = colorConstruct<ColorFunction_Lab>,
+        .length = 3,
+        .base = &cssColorValueClass,
+    },
+    {
+        PR_TYPED("CSSLCH", cssLchClass, kLchProto),
+        .constructor = colorConstruct<ColorFunction_Lch>,
+        .length = 3,
+        .base = &cssColorValueClass,
+    },
+    {
+        PR_TYPED("CSSOKLab", cssOklabClass, kOklabProto),
+        .constructor = colorConstruct<ColorFunction_Oklab>,
+        .length = 3,
+        .base = &cssColorValueClass,
+    },
+    {
+        PR_TYPED("CSSOKLCH", cssOklchClass, kOklchProto),
+        .constructor = colorConstruct<ColorFunction_Oklch>,
+        .length = 3,
+        .base = &cssColorValueClass,
+    },
+    {
+        PR_TYPED("CSSColor", cssColorClass, kColorProto),
+        .constructor = colorFunctionConstruct,
+        .length = 2,
+        .base = &cssColorValueClass,
+    },
     // webidl/#define-the-iteration-methods: a pair iterable's @@iterator is entries.
-    {PR_JS_CLASS("StylePropertyMapReadOnly", stylePropertyMapReadOnlyClass,
-                 jsViewFinalizer<&stylePropertyMapReadOnlyClass>, kMapReadOnlyProto),
-     .iterator = "entries"},
-    {PR_JS_CLASS("StylePropertyMap", prJsCssStylePropertyMapClass,
-                 jsViewFinalizer<&prJsCssStylePropertyMapClass>, kMapProto),
-     .base = &stylePropertyMapReadOnlyClass},
+    {
+        PR_JS_CLASS("StylePropertyMapReadOnly", stylePropertyMapReadOnlyClass,
+            jsViewFinalizer<&stylePropertyMapReadOnlyClass>, kMapReadOnlyProto),
+        .iterator = "entries",
+    },
+    {
+        PR_JS_CLASS("StylePropertyMap", prJsCssStylePropertyMapClass, jsViewFinalizer<&prJsCssStylePropertyMapClass>,
+            kMapProto),
+        .base = &stylePropertyMapReadOnlyClass,
+    },
 };
 
 #undef PR_TYPED
@@ -3220,11 +3280,10 @@ void prJsCssTypedOmBind(JSContext* ctx, JSValueConst css) {
             continue;
         PrStringView name = factoryName(unit);
         char terminated[16] = {};
-        memCopy(terminated, name.data,
-                name.size < sizeof(terminated) - 1 ? name.size : sizeof(terminated) - 1);
-        JSValue function = JS_NewCFunctionMagic(ctx, JsCallScoped<factory>::call, terminated, 1,
-                                                JS_CFUNC_generic_magic, int(unit));
+        memCopy(terminated, name.data, name.size < sizeof(terminated) - 1 ? name.size : sizeof(terminated) - 1);
+        JSValue function =
+            JS_NewCFunctionMagic(ctx, JsCallScoped<factory>::call, terminated, 1, JS_CFUNC_generic_magic, int(unit));
         JS_DefinePropertyValueStr(ctx, css, terminated, function,
-                                  JS_PROP_ENUMERABLE | JS_PROP_WRITABLE | JS_PROP_CONFIGURABLE);
+            JS_PROP_ENUMERABLE | JS_PROP_WRITABLE | JS_PROP_CONFIGURABLE);
     }
 }

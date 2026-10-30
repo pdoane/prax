@@ -63,8 +63,7 @@ int main() {
         }
         unsigned width = 0;
         unsigned height = 0;
-        if (lines.size() != 4 || std::sscanf(lines[1].c_str(), "%ux%u", &width, &height) != 2 || width == 0
-            || height == 0)
+        if (lines.size() != 4 || std::sscanf(lines[1].c_str(), "%ux%u", &width, &height) != 2 || width == 0 || height == 0)
             return 1;
         double frame = std::strtod(lines[2].c_str(), nullptr);
         answer(capture(lines[0], width, height, frame > 0 ? size_t(frame) : 0, lines[3]));

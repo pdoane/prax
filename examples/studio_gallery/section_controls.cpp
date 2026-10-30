@@ -23,8 +23,10 @@ namespace {
 constexpr float kCaptionWidth = 92;
 
 // The tools of a tool row.
-constexpr PrKitIconKind kToolIcons[] = {PrKitIconKind_Cursor, PrKitIconKind_Move, PrKitIconKind_Rotate,
-                                        PrKitIconKind_Scale};
+constexpr PrKitIconKind kToolIcons[] = {
+    PrKitIconKind_Cursor, PrKitIconKind_Move, PrKitIconKind_Rotate,
+    PrKitIconKind_Scale,
+};
 
 // A command of the file menu.
 struct MenuRow {
@@ -95,8 +97,7 @@ void buildMenuBar(PrKit* kit, PrLayoutNode section) {
         for (const MenuRow& row : kFileMenu) {
             if (row.separatorBefore)
                 prKitMenuSeparator(kit, menu, {});
-            prKitMenuItem(kit, menu,
-                          {.text = row.label, .shortcut = row.shortcut, .disabled = row.disabled}, {});
+            prKitMenuItem(kit, menu, {.text = row.label, .shortcut = row.shortcut, .disabled = row.disabled}, {});
         }
     }
 }
@@ -104,7 +105,7 @@ void buildMenuBar(PrKit* kit, PrLayoutNode section) {
 // Creates a select of `count` labeled options, and returns its field. The option at index `*selected` is the chosen
 // one. Choosing an option, or stepping to it with Up and Down, writes its index to `selected`.
 PrLayoutNode select(PrKit* kit, PrLayoutNode parent, const PrStringView* labels, uint32_t count, uint32_t* selected,
-                    bool disabled) {
+        bool disabled) {
     PrStringView label = *selected < count ? labels[*selected] : PrStringView{};
     PrLayoutNode field = prKitSelect(kit, parent, {.label = label, .disabled = disabled}, {});
     int32_t step = 0;
@@ -139,8 +140,7 @@ void buildSelect(PrKit* kit, PrLayoutNode section, MenuState& state) {
     prKitLabel(kit, longRow, {.text = "66 clips, clamped and scrolled"}, kBodySecondary);
     PrLayoutNode disabledRow = specimenRow(kit, panel, kPrKitSpace4, false);
     fixedWidth(kit, select(kit, disabledRow, types, typeCount, &state.component, true), 220);
-    prKitLabel(kit, disabledRow, {.text = "a disabled select shows its value and takes no input"},
-               kBodySecondary);
+    prKitLabel(kit, disabledRow, {.text = "a disabled select shows its value and takes no input"}, kBodySecondary);
 }
 
 // Creates the context menu's items: verbs, a row of tag colors, a check item and a destructive verb.
@@ -155,8 +155,11 @@ void buildContextMenuItems(PrKit* kit, PrLayoutNode menu, MenuState& state) {
     }
     prKitMenuSeparator(kit, menu, {});
     prKitMenuLabel(kit, menu, {.text = "TAG"});
-    PrKitBoxStyle line{.direction = PrKitDirection_Row, .gap = kPrKitSpace2,
-                  .padding = prKitEdgesXY(kPrKitSpace1, kPrKitSpace3)};
+    PrKitBoxStyle line{
+        .direction = PrKitDirection_Row,
+        .gap = kPrKitSpace2,
+        .padding = prKitEdgesXY(kPrKitSpace1, kPrKitSpace3),
+    };
     PrLayoutNode swatches = prKitBox(kit, menu, {}, line);
     const PrColor tags[] = {palette.accent, palette.success, palette.warning, palette.danger, palette.axisW};
     for (const PrColor& tag : tags) {
@@ -209,8 +212,7 @@ void buildContextMenu(PrKit* kit, PrLayoutNode section, MenuState& state) {
         ++state.outsideClicks;
     char clicks[32];
     prKitLabel(kit, readout, {.text = format(clicks, sizeof clicks, "clicks: %u", state.outsideClicks)}, kMonoMuted);
-    prKitLabel(kit, readout, {.text = state.verb.empty() ? "no verb chosen yet" : state.verb},
-               kMonoSecondary);
+    prKitLabel(kit, readout, {.text = state.verb.empty() ? "no verb chosen yet" : state.verb}, kMonoSecondary);
     PrLayoutNode tag = prKitBox(kit, readout, {}, {.direction = PrKitDirection_Row, .gap = kPrKitSpace2});
     prKitSwatch(kit, tag, {.color = state.tag}, {.size = kPrKitSpace5});
     prKitLabel(kit, tag, {.text = state.wrap ? "wrap: on" : "wrap: off"}, kMonoMuted);
@@ -222,8 +224,7 @@ void buildPalette(PrKit* kit, PrLayoutNode section, PaletteState& palette) {
     PrLayoutNode trigger = prKitButton(kit, row, {.text = "Open Palette...", .icon = PrKitIconKind_Search}, {});
     if (prKitActivated(kit, trigger))
         prKitSetOpen(kit, trigger, true);
-    prKitLabel(kit, row, {.text = "a modal at the top of the frame, over a list that the keys walk"},
-               kBodySecondary);
+    prKitLabel(kit, row, {.text = "a modal at the top of the frame, over a list that the keys walk"}, kBodySecondary);
     uint32_t count = 0;
     const CommandItem* commands = galleryCommands(&count);
     uint32_t shown[16];
@@ -232,17 +233,18 @@ void buildPalette(PrKit* kit, PrLayoutNode section, PaletteState& palette) {
         if (commandMatches(commands[i], palette.query))
             shown[matches++] = i;
     }
-    PrKitCommandPalette content{.prompt = "Type a command", .count = matches,
-                                .query = textBufferOf(palette.query)};
+    PrKitCommandPalette content{.prompt = "Type a command", .count = matches, .query = textBufferOf(palette.query)};
     PrLayoutNode list = prKitCommandPalette(kit, trigger, content);
     if (list == kPrLayoutNodeNone)
         return;
     for (uint32_t i = 0; i < matches; ++i) {
         const CommandItem& command = commands[shown[i]];
-        PrKitCommandItem item{.text = command.label,
-                              .category = command.category,
-                              .shortcut = command.shortcut != nullptr ? command.shortcut : PrStringView{},
-                              .icon = command.icon};
+        PrKitCommandItem item{
+            .text = command.label,
+            .category = command.category,
+            .shortcut = command.shortcut != nullptr ? command.shortcut : PrStringView{},
+            .icon = command.icon,
+        };
         if (prUiActivated(prKitUi(kit), prKitCommandItem(kit, list, item)))
             palette.active = shown[i];
     }
@@ -252,10 +254,9 @@ void buildPalette(PrKit* kit, PrLayoutNode section, PaletteState& palette) {
 } // namespace
 
 void sectionButtons(PrKit* kit, PrLayoutNode parent) {
-    PrLayoutNode section = sectionFrame(
-        kit, parent, "05", "Buttons", "Four variants across four height steps.",
+    PrLayoutNode section = sectionFrame(kit, parent, "05", "Buttons", "Four variants across four height steps.",
         "Primary for the one dominant action of a surface, secondary for the neutral options, ghost for "
-              "low-weight and toolbar use, and danger for what destroys something.");
+            "low-weight and toolbar use, and danger for what destroys something.");
     {
         PrLayoutNode panel = demoPanel(kit, section, "VARIANTS", "4 TYPES", false);
         PrLayoutNode row = specimenRow(kit, panel, kPrKitSpace3, true);
@@ -268,8 +269,10 @@ void sectionButtons(PrKit* kit, PrLayoutNode parent) {
     {
         PrLayoutNode panel = demoPanel(kit, section, "SIZES", "XS . SM . MD . LG", false);
         PrLayoutNode row = specimenRow(kit, panel, kPrKitSpace3, false);
-        const PrKitControlSize sizes[] = {PrKitControlSize_Xs, PrKitControlSize_Sm, PrKitControlSize_Md,
-                                          PrKitControlSize_Lg};
+        const PrKitControlSize sizes[] = {
+            PrKitControlSize_Xs, PrKitControlSize_Sm, PrKitControlSize_Md,
+            PrKitControlSize_Lg,
+        };
         const char* const labels[] = {"OK", "Save", "Play", "Build Project"};
         for (uint32_t i = 0; i < 4; ++i) {
             PrKitButtonStyle style{.variant = PrKitButtonVariant_Primary, .size = sizes[i]};
@@ -294,7 +297,7 @@ void sectionButtons(PrKit* kit, PrLayoutNode parent) {
         PrKitTooltip redoTip{.text = "Redo the last undone edit", .shortcut = "Cmd Shift Z"};
         prKitTooltip(kit, redo, redoTip);
         PrLayoutNode trash = prKitButton(kit, row, {.icon = PrKitIconKind_Trash},
-                                         {.variant = PrKitButtonVariant_Ghost, .size = PrKitControlSize_Md});
+            {.variant = PrKitButtonVariant_Ghost, .size = PrKitControlSize_Md});
         PrKitTooltip trashTip{.text = "Delete selection", .shortcut = "Del"};
         prKitTooltip(kit, trash, trashTip);
     }
@@ -314,14 +317,11 @@ void sectionButtons(PrKit* kit, PrLayoutNode parent) {
 
 void sectionInputs(PrKit* kit, PrLayoutNode parent, GalleryState& state) {
     InputsState& inputs = state.inputs;
-    PrLayoutNode section = sectionFrame(
-        kit, parent, "06", "Inputs", "Text, numeric, vector, slider and color.",
+    PrLayoutNode section = sectionFrame(kit, parent, "06", "Inputs", "Text, numeric, vector, slider and color.",
         "Every field here is live. A numeric field scrubs under a horizontal drag, and steps under Up and Down "
-              "while it has focus; a slider follows the pointer, and its track maps a ratio if its range spans "
-              "decades.");
+            "while it has focus; a slider follows the pointer, and its track maps a ratio if its range spans decades.");
     {
-        PrLayoutNode panel =
-            demoPanel(kit, section, "TEXT", "EDITABLE . SELECT ON FOCUS . DISABLED", false);
+        PrLayoutNode panel = demoPanel(kit, section, "TEXT", "EDITABLE . SELECT ON FOCUS . DISABLED", false);
         PrKitBoxStyle line{.direction = PrKitDirection_Row, .align = PrKitAlign_Start, .gap = kPrKitSpace4};
         PrLayoutNode row = prKitBox(kit, panel, {}, line);
         PrKitBoxStyle cell{.gap = kPrKitSpace2};
@@ -332,11 +332,13 @@ void sectionInputs(PrKit* kit, PrLayoutNode parent, GalleryState& state) {
         prKitTextField(kit, name, nameField, {});
         PrLayoutNode search = prKitBox(kit, row, {}, cell);
         caption(kit, search, "SELECT ON FOCUS");
-        PrKitTextField searchField{.text = textBufferOf(inputs.search),
-                                   .placeholder = "Search query",
-                                   .icon = PrKitIconKind_Search,
-                                   .clearable = true,
-                                   .selectOnFocus = true};
+        PrKitTextField searchField{
+            .text = textBufferOf(inputs.search),
+            .placeholder = "Search query",
+            .icon = PrKitIconKind_Search,
+            .clearable = true,
+            .selectOnFocus = true,
+        };
         prKitTextField(kit, search, searchField, {});
         PrLayoutNode locked = prKitBox(kit, row, {.disabled = true}, cell);
         caption(kit, locked, "DISABLED");
@@ -344,8 +346,7 @@ void sectionInputs(PrKit* kit, PrLayoutNode parent, GalleryState& state) {
         prKitTextField(kit, locked, lockedField, {});
     }
     {
-        PrLayoutNode panel =
-            demoPanel(kit, section, "HISTORY", "ENTER SUBMITS . UP AND DOWN RECALL", false);
+        PrLayoutNode panel = demoPanel(kit, section, "HISTORY", "ENTER SUBMITS . UP AND DOWN RECALL", false);
         PrLayoutNode row = captionRow(kit, panel, "COMMAND", kCaptionWidth);
         PrStringView lines[16];
         uint32_t count = 0;
@@ -353,10 +354,12 @@ void sectionInputs(PrKit* kit, PrLayoutNode parent, GalleryState& state) {
             if (count < 16)
                 lines[count++] = command;
         }
-        PrKitTextField command{.text = textBufferOf(inputs.command),
-                               .placeholder = "type a line, submit it, then press Up",
-                               .history = lines,
-                               .historyCount = count};
+        PrKitTextField command{
+            .text = textBufferOf(inputs.command),
+            .placeholder = "type a line, submit it, then press Up",
+            .history = lines,
+            .historyCount = count,
+        };
         PrKitFieldStyle mono{.mono = true};
         PrLayoutNode field = prKitTextField(kit, row, command, mono);
         // The field leaves Enter to its caller, which submits the line.
@@ -366,32 +369,39 @@ void sectionInputs(PrKit* kit, PrLayoutNode parent, GalleryState& state) {
                 submitCommand(inputs);
         }
         char submitted[32];
-        prKitLabel(kit, row, {.text = format(submitted, sizeof submitted, "%zu submitted", inputs.commands.size())},
-                   kCaption);
+        prKitLabel(kit, row, {.text = format(submitted, sizeof submitted, "%zu submitted", inputs.commands.size())}, kCaption);
     }
     {
         PrLayoutNode panel = demoPanel(kit, section, "SUGGEST", "FREE TEXT . KNOWN VALUES", false);
         uint32_t areaCount = 0;
         const PrStringView* areas = galleryAreas(&areaCount);
         PrKitFieldStyle mono{.mono = true};
-        PrKitSuggestField area{.field = {.text = textBufferOf(inputs.area),
-                                         .placeholder = "Area path",
-                                         .icon = PrKitIconKind_Search,
-                                         .selectOnFocus = true},
-                               .suggestions = areas,
-                               .count = areaCount};
+        PrKitSuggestField area{
+            .field = {
+                .text = textBufferOf(inputs.area),
+                .placeholder = "Area path",
+                .icon = PrKitIconKind_Search,
+                .selectOnFocus = true,
+            },
+            .suggestions = areas,
+            .count = areaCount,
+        };
         prKitSuggestField(kit, captionRow(kit, panel, "AREA", kCaptionWidth), area, mono);
         uint32_t revisionCount = 0;
         const PrStringView* revisions = galleryRevisions(&revisionCount);
-        PrKitSuggestField revision{.field = {.text = textBufferOf(inputs.revision),
-                                             .placeholder = "Branch, tag or commit",
-                                             .icon = PrKitIconKind_Branch,
-                                             .selectOnFocus = true},
-                                   .suggestions = revisions,
-                                   .count = revisionCount};
+        PrKitSuggestField revision{
+            .field = {
+                .text = textBufferOf(inputs.revision),
+                .placeholder = "Branch, tag or commit",
+                .icon = PrKitIconKind_Branch,
+                .selectOnFocus = true,
+            },
+            .suggestions = revisions,
+            .count = revisionCount,
+        };
         prKitSuggestField(kit, captionRow(kit, panel, "REVISION", kCaptionWidth), revision, mono);
         prKitLabel(kit, panel, {.text = "the caller filters the items, so the list shows what it hands over"},
-                   kBodySecondary);
+            kBodySecondary);
     }
     {
         PrLayoutNode panel = demoPanel(kit, section, "TEXT AREA", "SOFT WRAP . SHADER SNIPPET", false);
@@ -441,24 +451,38 @@ void sectionInputs(PrKit* kit, PrLayoutNode parent, GalleryState& state) {
         prKitVectorField(kit, captionRow(kit, panel, "UV", kCaptionWidth), uv, {});
         PrKitVector position{.value = prKitScalarF32(inputs.position), .count = 3, .range = {.step = 0.05}};
         prKitVectorField(kit, captionRow(kit, panel, "POSITION", kCaptionWidth), position, {});
-        PrKitVector rotation{.value = prKitScalarF32(inputs.rotation), .count = 3, .range = {.step = 0.5},
-                             .precision = 1};
+        PrKitVector rotation{
+            .value = prKitScalarF32(inputs.rotation),
+            .count = 3,
+            .range = {.step = 0.5},
+            .precision = 1,
+        };
         prKitVectorField(kit, captionRow(kit, panel, "ROTATION", kCaptionWidth), rotation, {});
-        PrKitVector orientation{.value = prKitScalarF32(inputs.quaternion), .count = 4, .range = {.step = 0.01},
-                                .precision = 3};
+        PrKitVector orientation{
+            .value = prKitScalarF32(inputs.quaternion),
+            .count = 4,
+            .range = {.step = 0.01},
+            .precision = 3,
+        };
         prKitVectorField(kit, captionRow(kit, panel, "ORIENTATION", kCaptionWidth), orientation, {});
         PrLayoutNode scalar = captionRow(kit, panel, "SCALAR", kCaptionWidth);
         PrKitNumberRange unit{.step = 0.01, .min = 0, .max = 1, .hasMin = true, .hasMax = true};
         PrKitNumber scalarNumber{.value = prKitScalarF32(&inputs.scalar), .range = unit};
         fixedWidth(kit, prKitNumberField(kit, scalar, scalarNumber, {}), 120);
         PrLayoutNode units = captionRow(kit, panel, "UNITS", kCaptionWidth);
-        PrKitNumber mass{.value = prKitScalarF32(&inputs.mass), .range = {.step = 0.5, .min = 0, .hasMin = true},
-                         .unit = "kg", .precision = 1};
+        PrKitNumber mass{
+            .value = prKitScalarF32(&inputs.mass),
+            .range = {.step = 0.5, .min = 0, .hasMin = true},
+            .unit = "kg",
+            .precision = 1,
+        };
         fixedWidth(kit, prKitNumberField(kit, units, mass, {}), 120);
-        PrKitNumber shutter{.value = prKitScalarF32(&inputs.shutter),
-                            .range = {.step = 0.001, .min = 0, .hasMin = true},
-                            .unit = "s",
-                            .precision = 4};
+        PrKitNumber shutter{
+            .value = prKitScalarF32(&inputs.shutter),
+            .range = {.step = 0.001, .min = 0, .hasMin = true},
+            .unit = "s",
+            .precision = 4,
+        };
         fixedWidth(kit, prKitNumberField(kit, units, shutter, {}), 120);
         PrKitNumber seed{.value = prKitScalarU32(&inputs.seed), .range = {.step = 1}, .unit = "Hz"};
         fixedWidth(kit, prKitNumberField(kit, units, seed, {}), 120);
@@ -486,7 +510,7 @@ void sectionInputs(PrKit* kit, PrLayoutNode parent, GalleryState& state) {
         }
         gridEnd(grid);
         prKitLabel(kit, panel, {.text = "an integer kind rounds what it writes and never leaves its own range"},
-                   kBodySecondary);
+            kBodySecondary);
     }
     {
         PrLayoutNode panel = demoPanel(kit, section, "SLIDERS", "TRACK . FIELD . RATIO", false);
@@ -504,17 +528,18 @@ void sectionInputs(PrKit* kit, PrLayoutNode parent, GalleryState& state) {
             {"MASS", prKitScalarF32(&inputs.mass), 0, 200, PrKitSliderScale_Linear, "kg", 1},
             {"STEPS", prKitScalarI32(&inputs.subdivisions), 0, 8, PrKitSliderScale_Linear, {}, 0},
             {"20-20K HZ", prKitScalarF32(&inputs.frequency), 20, 20000, PrKitSliderScale_Ratio, "Hz", 1},
-            {"SHUTTER", prKitScalarF32(&inputs.shutterSeconds), 1.0 / 8000, 30, PrKitSliderScale_Ratio, "s",
-             4},
+            {"SHUTTER", prKitScalarF32(&inputs.shutterSeconds), 1.0 / 8000, 30, PrKitSliderScale_Ratio, "s", 4},
         };
         for (const SliderRow& row : rows) {
             PrLayoutNode line = captionRow(kit, panel, row.caption, 72);
             PrKitSlider slider{.value = row.value, .min = row.min, .max = row.max, .scale = row.scale};
             prKitSlider(kit, line, slider, {});
-            PrKitNumber field{.value = row.value,
-                              .range = {.min = row.min, .max = row.max, .hasMin = true, .hasMax = true},
-                              .unit = row.unit,
-                              .precision = row.precision};
+            PrKitNumber field{
+                .value = row.value,
+                .range = {.min = row.min, .max = row.max, .hasMin = true, .hasMax = true},
+                .unit = row.unit,
+                .precision = row.precision,
+            };
             fixedWidth(kit, prKitNumberField(kit, line, field, {}), 88);
         }
     }
@@ -539,8 +564,7 @@ void sectionInputs(PrKit* kit, PrLayoutNode parent, GalleryState& state) {
 
         PrLayoutNode readout = specimenRow(kit, panel, kPrKitSpace8, false);
         const char* const labels[] = {"BEGIN", "CHANGE", "COMMIT", "STATES", "AT"};
-        const uint32_t counts[] = {undo.begins, undo.changes, undo.commits, uint32_t(undo.history.size()),
-                                   undo.cursor};
+        const uint32_t counts[] = {undo.begins, undo.changes, undo.commits, uint32_t(undo.history.size()), undo.cursor};
         for (uint32_t i = 0; i < 5; ++i) {
             PrKitBoxStyle column{.gap = kPrKitSpace1};
             PrLayoutNode box = prKitBox(kit, readout, {}, column);
@@ -555,29 +579,29 @@ void sectionInputs(PrKit* kit, PrLayoutNode parent, GalleryState& state) {
         if (undoing || redoing)
             undoStep(undo, redoing);
         fillLabel(kit, readout, "a scrub across many frames is one state, and an edit after an undo forks",
-                  kBodySecondary);
+            kBodySecondary);
     }
     {
         PrLayoutNode panel = demoPanel(kit, section, "COLOR", "FIELD . HEX", false);
         PrLayoutNode row = specimenRow(kit, panel, kPrKitSpace3, false);
         fixedWidth(kit, prKitColorField(kit, row, {.color = &inputs.tint}, {}), 180);
-        prKitLabel(kit, row,
-                   {.text = "the field shows the color and its hex, and raises a picker when activated"},
-                   kBodySecondary);
+        prKitLabel(kit, row, {.text = "the field shows the color and its hex, and raises a picker when activated"},
+            kBodySecondary);
     }
 }
 
 void sectionToggles(PrKit* kit, PrLayoutNode parent, GalleryState& state) {
     ToggleState& toggles = state.toggles;
-    PrLayoutNode section = sectionFrame(kit, parent, "07", "Checkboxes, Radios, Toggles",
-                                        "Binary state, in every flavor.", {});
+    PrLayoutNode section = sectionFrame(kit, parent, "07", "Checkboxes, Radios, Toggles", "Binary state, in every flavor.", {});
     Grid columns = gridBegin(kit, section, 3, kPrKitSpace4, false);
     {
         PrLayoutNode panel = demoPanel(kit, gridCell(columns), "CHECKBOXES", "LIVE", false);
-        const PrKitCheck checks[] = {{.value = &toggles.castShadows, .label = "Cast Shadows"},
-                                     {.value = &toggles.occlusionCull, .label = "Occlusion Cull"},
-                                     {.value = &toggles.children, .label = "Children"},
-                                     {.value = &toggles.locked, .label = "Locked"}};
+        const PrKitCheck checks[] = {
+            {.value = &toggles.castShadows, .label = "Cast Shadows"},
+            {.value = &toggles.occlusionCull, .label = "Occlusion Cull"},
+            {.value = &toggles.children, .label = "Children"},
+            {.value = &toggles.locked, .label = "Locked"},
+        };
         for (const PrKitCheck& check : checks)
             prKitCheckbox(kit, panel, check, {});
     }
@@ -592,9 +616,11 @@ void sectionToggles(PrKit* kit, PrLayoutNode parent, GalleryState& state) {
     }
     {
         PrLayoutNode panel = demoPanel(kit, gridCell(columns), "TOGGLES", "LIVE", false);
-        const PrKitCheck checks[] = {{.value = &toggles.physics, .label = "Physics Simulation"},
-                                     {.value = &toggles.snap, .label = "Snap to Grid"},
-                                     {.value = &toggles.gizmos, .label = "Show Gizmos"}};
+        const PrKitCheck checks[] = {
+            {.value = &toggles.physics, .label = "Physics Simulation"},
+            {.value = &toggles.snap, .label = "Snap to Grid"},
+            {.value = &toggles.gizmos, .label = "Show Gizmos"},
+        };
         for (const PrKitCheck& check : checks)
             prKitToggle(kit, panel, check, {});
     }
@@ -603,16 +629,16 @@ void sectionToggles(PrKit* kit, PrLayoutNode parent, GalleryState& state) {
 
 void sectionTabs(PrKit* kit, PrLayoutNode parent, GalleryState& state) {
     TabsState& tabs = state.tabs;
-    PrLayoutNode section = sectionFrame(kit, parent, "08", "Tabs & Segmented",
-                                        "Navigation, and mutually exclusive view modes.", {});
+    PrLayoutNode section = sectionFrame(kit, parent, "08", "Tabs & Segmented", "Navigation, and mutually exclusive view modes.", {});
     {
         PrLayoutNode panel = demoPanel(kit, section, "TABS", "PANEL NAV . DRAG TO REORDER", true);
-        const PrKitTab all[] = {{.label = "Scene"},
-                                {.label = "Game"},
-                                {.label = "Profiler", .badge = "3",
-                                 .badgeVariant = PrKitBadgeVariant_Warning},
-                                {.label = "Animator"},
-                                {.label = "Shader Graph", .closable = true}};
+        const PrKitTab all[] = {
+            {.label = "Scene"},
+            {.label = "Game"},
+            {.label = "Profiler", .badge = "3", .badgeVariant = PrKitBadgeVariant_Warning},
+            {.label = "Animator"},
+            {.label = "Shader Graph", .closable = true},
+        };
         // The strip shows the tabs in the model's order, keyed by the model's tab, and the model applies a drag.
         PrLayoutNode strip = prKitTabStrip(kit, panel, {.reorderable = true}, {});
         for (uint32_t i = 0; i < 5; ++i) {
@@ -627,22 +653,29 @@ void sectionTabs(PrKit* kit, PrLayoutNode parent, GalleryState& state) {
         if (prKitMoved(kit, strip, &from, &to))
             moveTab(tabs, from, to);
         PrKitBoxStyle body{.padding = prKitEdgesAll(kPrKitSpace5)};
-        const char* const bodies[] = {"The scene the viewport renders.", "The game view, at the target resolution.",
-                                      "Three frames over budget.", "The state machine of the selected rig.",
-                                      "The material graph of the selected mesh."};
+        const char* const bodies[] = {
+            "The scene the viewport renders.", "The game view, at the target resolution.",
+            "Three frames over budget.", "The state machine of the selected rig.",
+            "The material graph of the selected mesh.",
+        };
         uint32_t at = tabs.panel < 5 ? tabs.panel : 0;
         prKitLabel(kit, prKitBox(kit, panel, {}, body), {.text = bodies[tabs.panelOrder[at]]}, kBodySecondary);
     }
     {
         PrLayoutNode panel = demoPanel(kit, section, "SEGMENTED", "VIEW MODE", false);
         PrLayoutNode row = specimenRow(kit, panel, kPrKitSpace3, false);
-        const PrKitChoice modes[] = {{.label = "Wireframe"},
-                                     {.label = "Solid"},
-                                     {.label = "Textured"},
-                                     {.label = "PBR"}};
+        const PrKitChoice modes[] = {
+            {.label = "Wireframe"},
+            {.label = "Solid"},
+            {.label = "Textured"},
+            {.label = "PBR"},
+        };
         segmented(kit, row, modes, 4, &tabs.viewMode, {});
         const PrKitChoice shapes[] = {
-            {.icon = PrKitIconKind_Cube}, {.icon = PrKitIconKind_Sphere}, {.icon = PrKitIconKind_Light}};
+            {.icon = PrKitIconKind_Cube},
+            {.icon = PrKitIconKind_Sphere},
+            {.icon = PrKitIconKind_Light},
+        };
         segmented(kit, row, shapes, 3, &tabs.shape, {});
     }
     {
@@ -657,10 +690,9 @@ void sectionTabs(PrKit* kit, PrLayoutNode parent, GalleryState& state) {
 }
 
 void sectionMenus(PrKit* kit, PrLayoutNode parent, GalleryState& state) {
-    PrLayoutNode section = sectionFrame(
-        kit, parent, "09", "Menus & Popovers", "Application menus, context menus, a palette.",
+    PrLayoutNode section = sectionFrame(kit, parent, "09", "Menus & Popovers", "Application menus, context menus, a palette.",
         "Every floating surface here places itself from the box its trigger last stood in, stays inside the "
-              "frame, and takes itself down on Escape or on a press that lands outside it.");
+            "frame, and takes itself down on Escape or on a press that lands outside it.");
     buildMenuBar(kit, section);
     buildSelect(kit, section, state.menu);
     {
@@ -676,9 +708,11 @@ void sectionMenus(PrKit* kit, PrLayoutNode parent, GalleryState& state) {
             frame.place.width = prKitPx(220);
             PrLayoutNode body = prKitBox(kit, popover, {}, frame);
             caption(kit, body, "VISIBLE LAYERS");
-            const PrKitCheck checks[] = {{.value = &state.toggles.castShadows, .label = "Shadows"},
-                                         {.value = &state.toggles.gizmos, .label = "Gizmos"},
-                                         {.value = &state.toggles.children, .label = "Children"}};
+            const PrKitCheck checks[] = {
+                {.value = &state.toggles.castShadows, .label = "Shadows"},
+                {.value = &state.toggles.gizmos, .label = "Gizmos"},
+                {.value = &state.toggles.children, .label = "Children"},
+            };
             for (const PrKitCheck& check : checks)
                 prKitCheckbox(kit, body, check, {});
         }

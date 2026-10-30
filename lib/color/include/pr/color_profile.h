@@ -50,8 +50,7 @@ uint32_t prColorProfileChannels(const PrColorProfile* profile);
 // Converts a device color, one value in [0, 1] for each of the profile's channels, to CIE XYZ under D50 by `intent`,
 // and writes it to `out`. A channel outside [0, 1] is clamped. A profile without a mapping for `intent` uses its
 // default mapping.
-void prColorProfileToXyzD50(const PrColorProfile* profile, PrColorIntent intent, const double* in,
-                            double out[PR_NONNULL 3]);
+void prColorProfileToXyzD50(const PrColorProfile* profile, PrColorIntent intent, const double* in, double out[PR_NONNULL 3]);
 
 // Returns the named space that an RGB or gray profile describes, or PrColorSpace_Count if it describes none of the
 // named RGB spaces within a fraction of an 8-bit step, as an RGB profile of another space does. A color that converts

@@ -34,12 +34,12 @@ LayoutEdges layoutEdgesFromBox(const LayoutStyles* styles, const LayoutLogicalBo
 
 // Returns the padding and borders across the inline axis, or across the block axis.
 inline PrLayoutUnit layoutEdgesInline(const LayoutEdges& e) {
-    return e.padding[LayoutSide_InlineStart] + e.padding[LayoutSide_InlineEnd] + e.border[LayoutSide_InlineStart]
-           + e.border[LayoutSide_InlineEnd];
+    return e.padding[LayoutSide_InlineStart] + e.padding[LayoutSide_InlineEnd] + e.border[LayoutSide_InlineStart] +
+        e.border[LayoutSide_InlineEnd];
 }
 inline PrLayoutUnit layoutEdgesBlock(const LayoutEdges& e) {
-    return e.padding[LayoutSide_BlockStart] + e.padding[LayoutSide_BlockEnd] + e.border[LayoutSide_BlockStart]
-           + e.border[LayoutSide_BlockEnd];
+    return e.padding[LayoutSide_BlockStart] + e.padding[LayoutSide_BlockEnd] + e.border[LayoutSide_BlockStart] +
+        e.border[LayoutSide_BlockEnd];
 }
 
 // Returns the border and padding on `side`, between the border box and the content box.
@@ -87,8 +87,7 @@ inline LayoutIntrinsicSizes layoutWithEdges(LayoutIntrinsicSizes sizes, PrLayout
 // is negative.
 template <typename Keyword>
 PrLayoutUnit layoutClampSize(const LayoutStyles* styles, const PrLayoutBoxStyle& box, PrLayoutUnit size,
-                             PrLayoutLength min, PrLayoutLength max, PrLayoutUnit base, PrLayoutUnit edges,
-                             PrLayoutUnit stretch, Keyword keyword) {
+        PrLayoutLength min, PrLayoutLength max, PrLayoutUnit base, PrLayoutUnit edges, PrLayoutUnit stretch, Keyword keyword) {
     PrLayoutUnit limit = layoutUnit(-1);
     if (layoutLengthIsStretch(max) && layoutIsDefinite(stretch))
         size = layoutUnitMin(size, layoutUnitMax(stretch, edges));
@@ -126,11 +125,10 @@ struct LayoutBlockBase {
 // and is never smaller than the box's padding and borders. A limit that is a keyword depends on the content, and clamps
 // after layout instead. The box's content box, if definite, is what the children's percentages resolve against.
 LayoutBlockBase layoutBlockBase(const LayoutStyles* styles, const PrLayoutBoxStyle& box,
-                                const LayoutLogicalBox& logical, const LayoutEdges& e, PrLayoutUnit percentBlock,
-                                PrLayoutUnit stretchBase, LayoutAutoSize autoSize);
+    const LayoutLogicalBox& logical, const LayoutEdges& e, PrLayoutUnit percentBlock,
+    PrLayoutUnit stretchBase, LayoutAutoSize autoSize);
 inline LayoutBlockBase layoutBlockBase(const LayoutStyles* styles, const PrLayoutBoxStyle& box,
-                                       const LayoutLogicalBox& logical, const LayoutEdges& e,
-                                       PrLayoutUnit percentBlock) {
+        const LayoutLogicalBox& logical, const LayoutEdges& e, PrLayoutUnit percentBlock) {
     return layoutBlockBase(styles, box, logical, e, percentBlock, percentBlock, LayoutAutoSize_Style);
 }
 
@@ -138,7 +136,7 @@ inline LayoutBlockBase layoutBlockBase(const LayoutStyles* styles, const PrLayou
 // `edges` of padding and borders in its axis. Returns a negative size if `length` is not fixed: it is auto, a keyword,
 // or a percentage of an indefinite base.
 inline PrLayoutUnit layoutFixedInner(const LayoutStyles* styles, const PrLayoutBoxStyle& box, PrLayoutLength length,
-                                     PrLayoutUnit base, PrLayoutUnit edges) {
+        PrLayoutUnit base, PrLayoutUnit edges) {
     if (!layoutResolves(length, base))
         return layoutUnit(-1);
     return layoutUnitMax(kLayoutUnitZero, layoutBorderSize(box, layoutResolve(styles, length, base), edges) - edges);
@@ -157,15 +155,15 @@ bool layoutBlockReadsBase(const LayoutLogicalBox& logical, LayoutAutoSize autoSi
 // before the clamp, and is not laid out again for it (css-sizing-3/#cyclic-percentage-contribution leaves this case
 // open).
 PrLayoutUnit layoutContentBlockSize(const LayoutStyles* styles, const PrLayoutBoxStyle& box,
-                                    const LayoutLogicalBox& logical, const LayoutBlockAxis& axis,
-                                    PrLayoutUnit percentBlock, bool clamps, PrLayoutUnit content, PrLayoutUnit grown);
+    const LayoutLogicalBox& logical, const LayoutBlockAxis& axis,
+    PrLayoutUnit percentBlock, bool clamps, PrLayoutUnit content, PrLayoutUnit grown);
 
 // Returns the limit that a block container styled by `box` gives an orthogonal flow root among its children if its
 // block size is indefinite (LayoutSpace::blockLimit). The limit is its inner max block size, floored by its inner min
 // block size, each resolved against `percentBlock` if fixed, or a negative size if its max block size is not fixed.
 // `logical` is its style in its own writing mode, and `edges` its block-axis padding and borders.
 PrLayoutUnit layoutBlockLimit(const LayoutStyles* styles, const PrLayoutBoxStyle& box, const LayoutLogicalBox& logical,
-                              PrLayoutUnit percentBlock, PrLayoutUnit edges);
+    PrLayoutUnit percentBlock, PrLayoutUnit edges);
 
 // Returns the fallback size that a scroll container gives its content (LayoutSpace::fallback,
 // css-writing-modes-4/#orthogonal-auto) in each physical axis. If its size is fixed, the fallback is its inner size,
@@ -175,8 +173,7 @@ PrLayoutUnit layoutBlockLimit(const LayoutStyles* styles, const PrLayoutBoxStyle
 // own writing mode `mode`, `bases` holds what its sizes resolve against, and `edges` holds its padding and borders
 // across each axis.
 PrLayoutVec layoutScrollFallback(const LayoutStyles* styles, const PrLayoutBoxStyle& box,
-                                 const LayoutLogicalBox& logical, LayoutMode mode, LayoutLogicalSize bases,
-                                 LayoutLogicalSize edges, PrLayoutVec viewport);
+    const LayoutLogicalBox& logical, LayoutMode mode, LayoutLogicalSize bases, LayoutLogicalSize edges, PrLayoutVec viewport);
 
 // Sets the inline-start margin of `e` if auto margins share the space that a block-level box of inline size `size`
 // leaves of `available` (CSS2/#blockwidth). Two auto margins center the box, never past the start, and an auto start
@@ -190,12 +187,12 @@ void layoutShareAutoMargins(LayoutEdges& e, PrLayoutUnit available, PrLayoutUnit
 // each axis of the containing block's writing mode, the start inset wins over the end inset. The inset resolves against
 // the containing block's size in that axis, or is auto if that size is indefinite. layoutRelativeOffset gives the
 // offset for any box: the insets for a box that is relatively positioned, and zero otherwise.
-LayoutLogicalOffset layoutRelativeInsets(const LayoutStyles* styles, const PrLayoutBoxStyle& box,
-                                         const LayoutSpace& space);
+LayoutLogicalOffset layoutRelativeInsets(const LayoutStyles* styles, const PrLayoutBoxStyle& box, const LayoutSpace& space);
 inline LayoutLogicalOffset layoutRelativeOffset(const LayoutStyles* styles, const PrLayoutBoxStyle& box,
-                                                const LayoutSpace& space) {
-    return box.position == PrLayoutPosition_Relative ? layoutRelativeInsets(styles, box, space)
-                                                     : kLayoutLogicalOffsetZero;
+        const LayoutSpace& space) {
+    if (box.position == PrLayoutPosition_Relative)
+        return layoutRelativeInsets(styles, box, space);
+    return kLayoutLogicalOffsetZero;
 }
 
 } // namespace pr_impl

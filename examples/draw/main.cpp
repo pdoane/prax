@@ -78,11 +78,11 @@ void closeDevice(Window& w) {
 bool openDevice(Window& w) {
     PrAppSurface surface{};
     PrGpuSwapChainDesc desc{.intent = PrGpuSwapChainIntent_Hdr};
-    if (prGpuDeviceCreate(PrGpuBackend_Default, nullptr, &w.device) != PrStatus_Ok
-        || prAppSurface(w.app, &surface) != PrStatus_Ok
-        || prGpuSwapChainCreate(w.device, &surface, &desc, &w.swapChain) != PrStatus_Ok
-        || prDrawRendererCreate(PrDrawRendererBackend_Default, w.device, nullptr, &w.renderer) != PrStatus_Ok
-        || prDrawDisplayCreate(w.device, &w.display) != PrStatus_Ok) {
+    if (prGpuDeviceCreate(PrGpuBackend_Default, nullptr, &w.device) != PrStatus_Ok ||
+            prAppSurface(w.app, &surface) != PrStatus_Ok ||
+            prGpuSwapChainCreate(w.device, &surface, &desc, &w.swapChain) != PrStatus_Ok ||
+            prDrawRendererCreate(PrDrawRendererBackend_Default, w.device, nullptr, &w.renderer) != PrStatus_Ok ||
+            prDrawDisplayCreate(w.device, &w.display) != PrStatus_Ok) {
         closeDevice(w);
         return false;
     }
@@ -96,7 +96,7 @@ PrGpuTexture renderedFor(Window& w, PrUVec2 extent) {
     if (w.rendered.id == 0 || extent.x > held.x || extent.y > held.y) {
         prGpuTextureDestroy(w.device, w.rendered);
         PrGpuTextureDesc desc = prGpuTextureDesc2d(PrGpuFormat_Rgba16F, extent,
-                                                   PrGpuTextureUsageFlag_Sampled | PrGpuTextureUsageFlag_RenderTarget);
+            PrGpuTextureUsageFlag_Sampled | PrGpuTextureUsageFlag_RenderTarget);
         w.rendered = PrGpuTexture{};
         prGpuTextureCreate(w.device, &desc, &w.rendered);
     }
@@ -107,29 +107,29 @@ PrGpuTexture renderedFor(Window& w, PrUVec2 extent) {
 void render(Window& w, PrUVec2 extent, const PrAppDisplay& display) {
     PrGpuTexture drawable{};
     PrGpuCommands* commands = nullptr;
-    if (prGpuSwapChainAcquire(w.swapChain, extent, &drawable) != PrStatus_Ok
-        || !prGpuCommandsBegin(w.device, nullptr, &commands))
+    if (prGpuSwapChainAcquire(w.swapChain, extent, &drawable) != PrStatus_Ok ||
+            !prGpuCommandsBegin(w.device, nullptr, &commands))
         return;
     PrGpuSwapChainInfo info = prGpuSwapChainInfo(w.swapChain);
     bool mapped = info.format != PrGpuFormat_Bgra8 || info.space != PrColorSpace_Srgb;
     PrGpuTexture target = mapped ? renderedFor(w, extent) : drawable;
-    PrDrawTarget into{.extent = extent,
-                      .format = PrPixelFormat(mapped ? PrPixelFormat_RgbaF16 : PrPixelFormat_Bgra8),
-                      .commands = commands};
+    PrDrawTarget into{
+        .extent = extent,
+        .format = PrPixelFormat(mapped ? PrPixelFormat_RgbaF16 : PrPixelFormat_Bgra8),
+        .commands = commands,
+    };
     prDrawFramePrepare(w.frame, w.list, &into);
     // The half floats rest in the accesses of shader reads between frames, and the drawable holds nothing yet.
     PrGpuSubresources all{};
     prGpuCommandsTextureBarrier(commands, target, all, mapped ? PrGpuAccessFlag_ShaderRead : PrGpuAccessFlag_Discard,
-                                PrGpuAccessFlag_ColorAttachment);
+        PrGpuAccessFlag_ColorAttachment);
     PrGpuPassDesc pass = prGpuPassDescColor(target, PrGpuLoad_Clear, PrColor{0, 0, 0, 1});
     PrGpuPass* encoder = prGpuPassBegin(commands, &pass);
     prDrawFrameRender(w.frame, encoder, PrIVec2{0, 0});
     prGpuPassEnd(encoder);
     if (mapped) {
-        prGpuCommandsTextureBarrier(commands, target, all, PrGpuAccessFlag_ColorAttachment,
-                                    PrGpuAccessFlag_ShaderRead);
-        prGpuCommandsTextureBarrier(commands, drawable, all, PrGpuAccessFlag_Discard,
-                                    PrGpuAccessFlag_ColorAttachment);
+        prGpuCommandsTextureBarrier(commands, target, all, PrGpuAccessFlag_ColorAttachment, PrGpuAccessFlag_ShaderRead);
+        prGpuCommandsTextureBarrier(commands, drawable, all, PrGpuAccessFlag_Discard, PrGpuAccessFlag_ColorAttachment);
         PrGpuPassDesc shown = prGpuPassDescColor(drawable, PrGpuLoad_Discard, PrColor{});
         encoder = prGpuPassBegin(commands, &shown);
         PrDrawDisplayDesc mapping{.target = info.space, .headroom = display.headroom, .gamut = display.gamut};
@@ -171,8 +171,8 @@ void frame(void* context, PrApp* app, const PrAppFrame* f) {
     float ratio = f->display.pixelRatio;
     prDrawListClear(w.list);
     prDrawListPushTransformAffine2(w.list, prAffine2Scale(PrVec2{ratio, ratio}));
-    bool over = w.pointed && w.pointer.x >= 0 && w.pointer.y >= 0 && w.pointer.x < f->extent.x
-                && w.pointer.y < f->extent.y;
+    bool over =
+        w.pointed && w.pointer.x >= 0 && w.pointer.y >= 0 && w.pointer.x < f->extent.x && w.pointer.y < f->extent.y;
     SceneInput input{.pointer = w.pointer, .over = over, .hold = w.hold};
     w.scenes[w.scene].draw(w.list, f->extent.x, f->extent.y, w.clock, input);
     drawCaption(w.list, f->extent.x, f->extent.y, w.scene, w.paused);
@@ -186,8 +186,8 @@ void frame(void* context, PrApp* app, const PrAppFrame* f) {
 
 void event(void* context, PrApp* app, const PrAppEvent* e) {
     Window& w = *static_cast<Window*>(context);
-    if (e->kind == PrAppEventKind_PointerMove || e->kind == PrAppEventKind_PointerDown
-        || e->kind == PrAppEventKind_PointerUp) {
+    if (e->kind == PrAppEventKind_PointerMove || e->kind == PrAppEventKind_PointerDown ||
+            e->kind == PrAppEventKind_PointerUp) {
         w.pointer = e->position;
         w.pointed = true;
         if (e->button == 0 && e->kind != PrAppEventKind_PointerMove)

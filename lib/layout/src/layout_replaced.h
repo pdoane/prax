@@ -19,18 +19,17 @@ namespace pr_impl {
 // CSS2/#float-replaced-width). Its result reads its containing block's block size if a size or limit does, or if it is
 // out of flow (LayoutResultFlag_ReadsBlockBase).
 LayoutResult layoutReplacedBlock(LayoutState& state, LayoutNodeIndex node, const LayoutSpace& space,
-                                 const LayoutRequests* PR_NULLABLE requests);
+    const LayoutRequests* PR_NULLABLE requests);
 
 // Returns the intrinsic sizes of the replaced box of `node`: its size at min-content and at max-content, with no inline
 // base (css-sizing-3/#intrinsic-sizes).
-LayoutIntrinsicSizes layoutReplacedIntrinsic(LayoutState& state, LayoutNodeIndex node,
-                                             const LayoutIntrinsicInput& input);
+LayoutIntrinsicSizes layoutReplacedIntrinsic(LayoutState& state, LayoutNodeIndex node, const LayoutIntrinsicInput& input);
 
 // Returns true if the replaced box of `node` has a ratio and no natural size, and no block size in `input` for the
 // ratio to size its inline axis from, so that its contributions are zero. Sets `reads` if it read the input's
 // percentage base.
 bool layoutReplacedHasUnsizedRatio(const LayoutState& state, LayoutNodeIndex node, const LayoutLogicalBox& logical,
-                                   const LayoutIntrinsicInput& input, bool& reads);
+    const LayoutIntrinsicInput& input, bool& reads);
 
 } // namespace pr_impl
 

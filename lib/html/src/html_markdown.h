@@ -61,12 +61,12 @@ struct HtmlMarkdownBuilder {
 // Starts building into `document`, which must be empty, as an HTML document whose body holds the blocks. The parse runs
 // with `flags`, and never runs script. The builder retains the document.
 void htmlMarkdownBuilderInitDocument(HtmlMarkdownBuilder* builder, PrDomDocument* document, HtmlParseFlags flags,
-                                     const PrMarkdownOptions* PR_NULLABLE options);
+    const PrMarkdownOptions* PR_NULLABLE options);
 
 // Starts building into `element`, whose children are removed. The blocks are parsed as the element's contents
 // (html/#parsing-html-fragments), and the parse never runs script. The builder retains the element.
 void htmlMarkdownBuilderInitElement(HtmlMarkdownBuilder* builder, PrDomElement* element,
-                                    const PrMarkdownOptions* PR_NULLABLE options);
+    const PrMarkdownOptions* PR_NULLABLE options);
 
 // Appends `text` to the Markdown source and builds the blocks that changed, or ends the source and builds the rest.
 void htmlMarkdownBuilderAppend(HtmlMarkdownBuilder* builder, PrStringView text);

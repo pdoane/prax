@@ -89,8 +89,7 @@ void domDocumentUnsubscribe(PrDomDocument* document, const DomDocumentHooks* hoo
     updateFollowers(document);
 }
 
-const DomDocumentSubscriber* PR_NULLABLE domDocumentSubscriber(const PrDomDocument* document,
-                                                               const DomDocumentHooks* hooks) {
+const DomDocumentSubscriber* PR_NULLABLE domDocumentSubscriber(const PrDomDocument* document, const DomDocumentHooks* hooks) {
     for (const DomDocumentSubscriber& subscriber : document->subscribers) {
         if (subscriber.hooks == hooks)
             return &subscriber;

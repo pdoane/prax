@@ -15,8 +15,7 @@ PR_ASSUME_NONNULL_BEGIN
 namespace pr {
 
 // The bytes that asciiIsSpace accepts, as a set of bits indexed by byte.
-constexpr uint64_t kAsciiSpaces =
-    1ull << '\t' | 1ull << '\n' | 1ull << '\f' | 1ull << '\r' | 1ull << ' ';
+constexpr uint64_t kAsciiSpaces = 1ull << '\t' | 1ull << '\n' | 1ull << '\f' | 1ull << '\r' | 1ull << ' ';
 
 // Returns the byte of an ASCII code point, or 0 for every code point above ASCII.
 constexpr char asciiOf(uint32_t codePoint) {

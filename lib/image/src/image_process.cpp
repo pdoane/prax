@@ -38,8 +38,7 @@ int32_t edgeIndex(int32_t i, int32_t count, PrImageEdgeMode edge) {
 }
 
 // Blurs `count` values `stride` apart by a Gaussian of `sigma`, reading beyond them according to the edge mode.
-void blurLine(float* values, uint32_t count, size_t stride, float sigma, PrImageEdgeMode edge,
-              Array<float>& scratch) {
+void blurLine(float* values, uint32_t count, size_t stride, float sigma, PrImageEdgeMode edge, Array<float>& scratch) {
     if (!(sigma > 0) || count == 0)
         return;
     uint32_t d = uint32_t(floorF32(sigma * 3 * sqrtF32(2 * kPiF32) / 4 + 0.5f));
@@ -115,12 +114,11 @@ void prImageBlur(PrPixels pixels, PrPixelFormat format, PrVec2 sigma, PrImageEdg
         if (sigma.x > 0) {
             for (uint32_t y = 0; y < pixels.extent.y; ++y)
                 blurLine(floatsOf(pixels.data + size_t(y) * pixels.stride) + c, pixels.extent.x, channels, sigma.x,
-                         edge, scratch);
+                    edge, scratch);
         }
         if (sigma.y > 0 && pixels.extent.y != 0) {
             for (uint32_t x = 0; x < pixels.extent.x; ++x)
-                blurLine(floatsOf(pixels.data) + size_t(x) * channels + c, pixels.extent.y, rowFloats, sigma.y, edge,
-                         scratch);
+                blurLine(floatsOf(pixels.data) + size_t(x) * channels + c, pixels.extent.y, rowFloats, sigma.y, edge, scratch);
         }
     }
     scratch.reset();
@@ -148,8 +146,8 @@ void prImageMipLevel(PrPixelView above, PrPixels out, PrPixelFormat format) {
                 memCopy(block[3], row1 + x1 * 8, 8);
                 PrFloat16 mean[4];
                 for (uint32_t k = 0; k < 4; ++k) {
-                    float sum = prFloat16ToFloat(block[0][k]) + prFloat16ToFloat(block[1][k])
-                                + prFloat16ToFloat(block[2][k]) + prFloat16ToFloat(block[3][k]);
+                    float sum = prFloat16ToFloat(block[0][k]) + prFloat16ToFloat(block[1][k]) +
+                        prFloat16ToFloat(block[2][k]) + prFloat16ToFloat(block[3][k]);
                     mean[k] = prFloat16FromFloat(sum / 4);
                 }
                 memCopy(row + x * 8, mean, 8);

@@ -43,8 +43,7 @@ void layoutJustifierReset(LayoutJustifier& justifier);
 // are grapheme clusters that shaping did not merge. The edge of an inline box neither creates nor removes an
 // opportunity. An atomic inline or a forced break separates the units on either side of it.
 void layoutJustifyFind(LayoutState& state, LayoutJustifier& justifier, const LayoutInlineShaping& t,
-                       const PrLayoutStyleIndex* styles, PrLayoutStyleIndex containerStyle,
-                       const LayoutLineContent& line);
+    const PrLayoutStyleIndex* styles, PrLayoutStyleIndex containerStyle, const LayoutLineContent& line);
 
 } // namespace pr_impl
 

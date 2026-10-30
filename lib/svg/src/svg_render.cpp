@@ -76,13 +76,12 @@ const CssComputedStyle* PR_NULLABLE presentationStyle(void* PR_NULLABLE context,
 }
 
 const CssComputedStyle* presentationStyleUnder(void* PR_NULLABLE context, const PrDomElement* element,
-                                               const CssComputedStyle* PR_NULLABLE parent) {
+        const CssComputedStyle* PR_NULLABLE parent) {
     return cssPresentationStyleUnder(static_cast<PrCssPresentation*>(context), element, parent);
 }
 
 const CssComputedStyle* PR_NULLABLE presentationPseudoStyleUnder(void* PR_NULLABLE context,
-                                                                 const PrDomElement* element, CssPseudo pseudo,
-                                                                 const CssComputedStyle* PR_NULLABLE parent) {
+        const PrDomElement* element, CssPseudo pseudo, const CssComputedStyle* PR_NULLABLE parent) {
     return cssPresentationPseudoStyleUnder(static_cast<PrCssPresentation*>(context), element, pseudo, parent);
 }
 
@@ -91,13 +90,12 @@ const CssComputedStyle* PR_NULLABLE cascadeStyle(void* PR_NULLABLE context, cons
 }
 
 const CssComputedStyle* cascadeStyleUnder(void* PR_NULLABLE context, const PrDomElement* element,
-                                          const CssComputedStyle* PR_NULLABLE parent) {
+        const CssComputedStyle* PR_NULLABLE parent) {
     return svgCascadeStyleUnder(static_cast<SvgCascade*>(context), element, parent);
 }
 
 const CssComputedStyle* PR_NULLABLE cascadePseudoStyleUnder(void* PR_NULLABLE context, const PrDomElement* element,
-                                                            CssPseudo pseudo,
-                                                            const CssComputedStyle* PR_NULLABLE parent) {
+        CssPseudo pseudo, const CssComputedStyle* PR_NULLABLE parent) {
     return svgCascadePseudoStyleUnder(static_cast<SvgCascade*>(context), element, pseudo, parent);
 }
 
@@ -135,8 +133,8 @@ void drawPresentationRoot(void* PR_NULLABLE context, PrLayoutNode root, PrDrawLi
 bool hostImage(void* PR_NULLABLE context, const PrDomElement* element, PrStringView url, SvgPicture* out) {
     const PrSvgDrawOptions* options = static_cast<const PrSvgDrawOptions*>(context);
     PrSvgLoadedImage loaded{};
-    if (options->loadImage == nullptr
-        || !options->loadImage(options->loadContext, const_cast<PrDomDocument*>(element->document), url, &loaded))
+    if (options->loadImage == nullptr ||
+            !options->loadImage(options->loadContext, const_cast<PrDomDocument*>(element->document), url, &loaded))
         return false;
     out->raster = loaded.raster;
     out->svg = loaded.svg;
@@ -164,8 +162,8 @@ PrSvgNaturalSize naturalSizeOf(const PrDomElement* svg, const CssComputedStyle* 
     PrRect viewBox{};
     if (size.width > 0 && size.height > 0)
         size.ratio = size.width / size.height;
-    else if (svgParseViewBox(svgAttribute(svg, "viewBox"), &viewBox) && viewBox.right > viewBox.left
-             && viewBox.bottom > viewBox.top)
+    else if (svgParseViewBox(svgAttribute(svg, "viewBox"), &viewBox) && viewBox.right > viewBox.left &&
+            viewBox.bottom > viewBox.top)
         size.ratio = prRectWidth(viewBox) / prRectHeight(viewBox);
     return size;
 }
@@ -196,25 +194,26 @@ SvgBuild buildOf(const SvgContent* content, PrSvgDrawOptions* options) {
     *options = prSvgDrawOptionsDefault();
     options->fonts = presentation->fonts;
     options->shaper = presentation->shaper;
-    return SvgBuild{.source = {presentationStyle, presentationStyleUnder, presentationPseudoStyleUnder, presentation},
-                    .images = {loadedImage, nullptr},
-                    .foreign = {presentationForeignRoot, presentation},
-                    .environment = cssPresentationColorEnvironment(presentation),
-                    .options = options,
-                    .viewport = content->extent};
+    return SvgBuild{
+        .source = {presentationStyle, presentationStyleUnder, presentationPseudoStyleUnder, presentation},
+        .images = {loadedImage, nullptr},
+        .foreign = {presentationForeignRoot, presentation},
+        .environment = cssPresentationColorEnvironment(presentation),
+        .options = options,
+        .viewport = content->extent,
+    };
 }
 
 // Returns true if a viewBox gives the root of the tree a user space of its own, in which what the tree builds reads
 // nothing of the extent that it is drawn at.
 bool sizedByViewBox(const SvgTree& tree) {
-    return tree.nodes.count != 0 && tree.nodes.data[0].kind == SvgNodeKind_Viewport
-           && tree.nodes.data[0].viewport.hasViewBox;
+    return tree.nodes.count != 0 && tree.nodes.data[0].kind == SvgNodeKind_Viewport &&
+        tree.nodes.data[0].viewport.hasViewBox;
 }
 
 // Brings the content up to date for a box of `extent`, and writes to `foreign` the foreignObject elements whose content
 // it draws. A foreignObject with no layout root, or whose rectangle has no area, is not among them.
-CssPresentationSvgUpdate contentUpdate(SvgContent* content, PrVec2 extent,
-                                       Array<CssPresentationSvgForeignObject>* foreign) {
+CssPresentationSvgUpdate contentUpdate(SvgContent* content, PrVec2 extent, Array<CssPresentationSvgForeignObject>* foreign) {
     // The tree's text resolves its percentages against the extent, unless a viewBox gives the root a size of its own.
     const SvgTree& tree = content->tree;
     if (extent.x != content->extent.x || extent.y != content->extent.y) {
@@ -227,14 +226,16 @@ CssPresentationSvgUpdate contentUpdate(SvgContent* content, PrVec2 extent,
     SvgUpdate update = svgTreeUpdate(&content->tree, content->svg, &content->changes, build);
     for (uint32_t i = 0; i < tree.nodes.count; ++i) {
         const SvgNode& node = tree.nodes.data[i];
-        if (node.kind == SvgNodeKind_ForeignObject && node.foreign.root != kPrLayoutNodeNone
-            && node.foreign.extent.x > 0 && node.foreign.extent.y > 0)
+        if (node.kind == SvgNodeKind_ForeignObject && node.foreign.root != kPrLayoutNodeNone &&
+                node.foreign.extent.x > 0 && node.foreign.extent.y > 0)
             foreign->push(CssPresentationSvgForeignObject{node.element, node.foreign.root, node.foreign.extent});
     }
-    return CssPresentationSvgUpdate{.changed = update.changed,
-                                    .built = update.built,
-                                    .foreignObjects = foreign->data,
-                                    .foreignObjectCount = foreign->count};
+    return CssPresentationSvgUpdate{
+        .changed = update.changed,
+        .built = update.built,
+        .foreignObjects = foreign->data,
+        .foreignObjectCount = foreign->count,
+    };
 }
 
 void contentPaint(void* PR_NULLABLE context, PrVec2 extent, PrDrawList* list) {
@@ -243,8 +244,7 @@ void contentPaint(void* PR_NULLABLE context, PrVec2 extent, PrDrawList* list) {
     svgTreeDraw(&content->tree, extent, &host, list);
 }
 
-uint32_t contentHitTest(const void* content, PrVec2 point, CssPresentationSvgHit* PR_NULLABLE out,
-                        uint32_t capacity) {
+uint32_t contentHitTest(const void* content, PrVec2 point, CssPresentationSvgHit* PR_NULLABLE out, uint32_t capacity) {
     const SvgContent* own = static_cast<const SvgContent*>(content);
     Array<CssPresentationSvgHit> hits;
     hits.resize(svgTreeHitTest(&own->tree, own->extent, nullptr, point, nullptr, 0));
@@ -321,18 +321,21 @@ bool sourceDraw(void* PR_NULLABLE context, PrRect box, PrDrawList* list, PrLayou
     const SvgResource& resource = tree->resources.data[source->resource];
     if (resource.kind == SvgResourceKind_ClipPath) {
         bool drawn = svgDrawClipCoverage(tree, source->resource, box, viewportOf(box), list);
-        *out = PrLayoutSourceMask{.area = prDrawListBounds(list), .mode = PrDrawMaskMode_Alpha,
-                                  .space = PrColorSpace_Srgb};
+        *out = PrLayoutSourceMask{
+            .area = prDrawListBounds(list),
+            .mode = PrDrawMaskMode_Alpha,
+            .space = PrColorSpace_Srgb,
+        };
         return drawn;
     }
     return svgDrawMaskContent(tree, source->resource, box, viewportOf(box), list, &out->area, &out->mode, &out->space);
 }
 
 bool sourceFilter(void* PR_NULLABLE context, PrRect box, PrRect bounds, PrDrawFilterInput input,
-                  PrDrawFilterBuilder* builder, PrLayoutSourceFilter* out) {
+        PrDrawFilterBuilder* builder, PrLayoutSourceFilter* out) {
     const SvgReferenceSource* source = static_cast<const SvgReferenceSource*>(context);
     return svgAppendFilter(&source->references->tree, source->resource, bounds, viewportOf(box), input, builder,
-                           &out->result, &out->region);
+        &out->result, &out->region);
 }
 
 bool sourceContains(void* PR_NULLABLE context, PrRect box, PrVec2 point) {
@@ -349,10 +352,17 @@ void sourceRelease(void* PR_NULLABLE context) {
 }
 
 constexpr PrLayoutSourceFunctions kClipSource = {
-    .draw = sourceDraw, .contains = sourceContains, .retain = sourceRetain, .release = sourceRelease};
+    .draw = sourceDraw,
+    .contains = sourceContains,
+    .retain = sourceRetain,
+    .release = sourceRelease,
+};
 constexpr PrLayoutSourceFunctions kMaskSource = {.draw = sourceDraw, .retain = sourceRetain, .release = sourceRelease};
 constexpr PrLayoutSourceFunctions kFilterSource = {
-    .filter = sourceFilter, .retain = sourceRetain, .release = sourceRelease};
+    .filter = sourceFilter,
+    .retain = sourceRetain,
+    .release = sourceRelease,
+};
 
 // Returns what a build of the references reads: the presentation's styles, its colors, and its fonts, which `options`
 // holds.
@@ -361,12 +371,14 @@ SvgBuild referencesBuildOf(const SvgReferences* references, PrSvgDrawOptions* op
     *options = prSvgDrawOptionsDefault();
     options->fonts = presentation->fonts;
     options->shaper = presentation->shaper;
-    return SvgBuild{.source = {presentationStyle, presentationStyleUnder, presentationPseudoStyleUnder, presentation},
-                    .images = {loadedImage, nullptr},
-                    .foreign = {presentationForeignRoot, presentation},
-                    .environment = cssPresentationColorEnvironment(presentation),
-                    .options = options,
-                    .viewport = PrVec2{0, 0}};
+    return SvgBuild{
+        .source = {presentationStyle, presentationStyleUnder, presentationPseudoStyleUnder, presentation},
+        .images = {loadedImage, nullptr},
+        .foreign = {presentationForeignRoot, presentation},
+        .environment = cssPresentationColorEnvironment(presentation),
+        .options = options,
+        .viewport = PrVec2{0, 0},
+    };
 }
 
 // Frees the sources that no group names any longer, with their resources.
@@ -393,7 +405,7 @@ void follow(SvgPresentation* state);
 
 // Resolves a URL that an effect of the box of `element` names (CssPresentationReferences).
 bool referencesReference(void* PR_NULLABLE context, const PrDomElement* element, PrStringView url,
-                         CssPresentationReferenceKind kind, PrLayoutSource* out) {
+        CssPresentationReferenceKind kind, PrLayoutSource* out) {
     SvgPresentation* state = static_cast<SvgPresentation*>(context);
     SvgReferences* references = &state->references;
     *out = PrLayoutSource{};
@@ -407,9 +419,11 @@ bool referencesReference(void* PR_NULLABLE context, const PrDomElement* element,
         if (svgTreeUpdateResources(&references->tree, references->presentation->document, &references->changes, build))
             ++references->version;
     }
-    SvgResourceKind resourceKind = kind == CssPresentationReferenceKind_ClipPath ? SvgResourceKind_ClipPath
-                                   : kind == CssPresentationReferenceKind_Mask   ? SvgResourceKind_Mask
-                                                                                 : SvgResourceKind_Filter;
+    SvgResourceKind resourceKind = SvgResourceKind_Filter;
+    if (kind == CssPresentationReferenceKind_ClipPath)
+        resourceKind = SvgResourceKind_ClipPath;
+    else if (kind == CssPresentationReferenceKind_Mask)
+        resourceKind = SvgResourceKind_Mask;
     SvgResourceIndex index = svgTreeResourceFor(&references->tree, element, url, resourceKind, build);
     if (index == kSvgResourceNone)
         return false;
@@ -422,9 +436,11 @@ bool referencesReference(void* PR_NULLABLE context, const PrDomElement* element,
         source->resource = index;
     }
     source->count.fetchAdd(1);
-    const PrLayoutSourceFunctions* functions = kind == CssPresentationReferenceKind_ClipPath ? &kClipSource
-                                               : kind == CssPresentationReferenceKind_Mask   ? &kMaskSource
-                                                                                             : &kFilterSource;
+    const PrLayoutSourceFunctions* functions = &kFilterSource;
+    if (kind == CssPresentationReferenceKind_ClipPath)
+        functions = &kClipSource;
+    else if (kind == CssPresentationReferenceKind_Mask)
+        functions = &kMaskSource;
     *out = PrLayoutSource{.functions = functions, .context = source, .version = references->version};
     return true;
 }
@@ -465,14 +481,14 @@ void note(SvgPresentation* state, const PrDomElement* element, SvgChange change,
         return;
     const PrDomElement* outer = nullptr;
     for (const PrDomElement* at = element; at != nullptr && at->space == PrDomNamespace_Svg && outer == nullptr;
-         at = domElementFromNode(domFlatParent(at))) {
+            at = domElementFromNode(domFlatParent(at))) {
         if (domIsOuterSvg(at))
             outer = at;
     }
     for (uint32_t i = 0; i < count; ++i) {
         SvgContent* content = static_cast<SvgContent*>(svgs[i]->content);
-        if (content != nullptr
-            && svgTreeNoteChange(&content->tree, element, change, name, outer == content->svg, &content->changes))
+        if (content != nullptr &&
+                svgTreeNoteChange(&content->tree, element, change, name, outer == content->svg, &content->changes))
             stale(state, svgs[i]);
     }
 }
@@ -497,9 +513,8 @@ bool followsIds(const SvgPresentation* state) {
 bool holdsId(const PrDomNode* node) {
     for (const PrDomNode* at = node; at != nullptr; at = domNodeNext(node, at)) {
         const PrDomElement* element = domElementFromNode(at);
-        if (element != nullptr
-            && (domAttributeValue(element, "id").data != nullptr
-                || domAttribute(element, PrDomNamespace_Xml, "id") != nullptr))
+        if (element != nullptr && (domAttributeValue(element, "id").data != nullptr ||
+                domAttribute(element, PrDomNamespace_Xml, "id") != nullptr))
             return true;
     }
     return false;
@@ -558,7 +573,7 @@ void followRemoving(void* PR_NULLABLE context, PrDomNode* node) {
 }
 
 void followAttribute(void* PR_NULLABLE context, PrDomElement* element, DomNamespaceId space, PrStringView name,
-                     PrStringView, PrStringView) {
+        PrStringView, PrStringView) {
     SvgPresentation* state = static_cast<SvgPresentation*>(context);
     // An ID that an element of another namespace takes may name what an SVG reference names.
     bool id = name == "id" && (space == PrDomNamespace_None || space == PrDomNamespace_Xml);
@@ -597,17 +612,19 @@ void follow(SvgPresentation* state) {
 
 // Draws `element` of a document that has no presentation, as `root` says, into a viewport of `viewport`.
 void drawStatic(const PrDomElement* element, SvgRoot root, PrVec2 viewport,
-                const PrSvgDrawOptions* PR_NULLABLE options, PrDrawList* list) {
+        const PrSvgDrawOptions* PR_NULLABLE options, PrDrawList* list) {
     PrSvgDrawOptions own = options != nullptr ? *options : prSvgDrawOptionsDefault();
     SvgCascade cascade{};
     svgCascadeInit(&cascade, const_cast<PrDomDocument*>(element->document), own, viewport);
     CssColorEnvironment environment = kCssDefaultColorEnvironment;
     environment.headroom = own.headroom;
-    SvgBuild build{.source = {cascadeStyle, cascadeStyleUnder, cascadePseudoStyleUnder, &cascade},
-                   .images = hostImages(&own),
-                   .environment = environment,
-                   .options = &own,
-                   .viewport = viewport};
+    SvgBuild build{
+        .source = {cascadeStyle, cascadeStyleUnder, cascadePseudoStyleUnder, &cascade},
+        .images = hostImages(&own),
+        .environment = environment,
+        .options = &own,
+        .viewport = viewport,
+    };
     SvgTree tree{};
     svgTreeBuild(&tree, element, root, build);
     svgTreeDraw(&tree, viewport, nullptr, list);
@@ -713,22 +730,26 @@ bool svgQueryBegin(SvgQuery* query, const PrDomElement* element) {
     // A document that has no presentation draws its outermost svg element at its natural size.
     const PrDomElement* outermost = nullptr;
     for (const PrDomElement* e = element; e != nullptr && e->space == PrDomNamespace_Svg;
-         e = domElementFromNode(e->parent)) {
+            e = domElementFromNode(e->parent)) {
         if (e->tag == PrDomTag_Svg)
             outermost = e;
     }
     if (outermost == nullptr)
         return false;
     PrSvgNaturalSize natural = prSvgElementNaturalSize(static_cast<const PrSvgElement*>(outermost));
-    PrVec2 viewport{natural.width > 0 ? natural.width : kDefaultObjectSize.x,
-                    natural.height > 0 ? natural.height : kDefaultObjectSize.y};
+    PrVec2 viewport{
+        natural.width > 0 ? natural.width : kDefaultObjectSize.x,
+        natural.height > 0 ? natural.height : kDefaultObjectSize.y,
+    };
     PrSvgDrawOptions options = prSvgDrawOptionsDefault();
     svgCascadeInit(&query->cascade, const_cast<PrDomDocument*>(element->document), options, viewport);
-    SvgBuild build{.source = {cascadeStyle, cascadeStyleUnder, cascadePseudoStyleUnder, &query->cascade},
-                   .images = hostImages(&options),
-                   .environment = kCssDefaultColorEnvironment,
-                   .options = &options,
-                   .viewport = viewport};
+    SvgBuild build{
+        .source = {cascadeStyle, cascadeStyleUnder, cascadePseudoStyleUnder, &query->cascade},
+        .images = hostImages(&options),
+        .environment = kCssDefaultColorEnvironment,
+        .options = &options,
+        .viewport = viewport,
+    };
     svgTreeBuild(&query->own, outermost, SvgRoot_Outermost, build);
     query->owned = true;
     query->outermost = outermost;
@@ -764,9 +785,11 @@ bool svgElementLengthBasis(const PrDomElement* element, SvgLengthBasis* out) {
     if (found)
         out->viewport = place.viewport;
     PrCssPresentation* presentation = cssPresentationOf(element->document);
-    const CssComputedStyle* computed = query.owned          ? svgCascadeStyle(&query.cascade, element)
-                                       : presentation != nullptr ? cssPresentationStyle(presentation, element)
-                                                           : nullptr;
+    const CssComputedStyle* computed = nullptr;
+    if (query.owned)
+        computed = svgCascadeStyle(&query.cascade, element);
+    else if (presentation != nullptr)
+        computed = cssPresentationStyle(presentation, element);
     if (computed != nullptr)
         out->fontSize = float(cssStyleFontSize(computed));
     svgQueryEnd(&query);
@@ -776,14 +799,16 @@ bool svgElementLengthBasis(const PrDomElement* element, SvgLengthBasis* out) {
 bool svgForeignToClient(const PrDomElement* foreignObject, PrDVec2* points, uint32_t count) {
     SvgQuery query{};
     SvgPlace place{};
-    bool found = svgQueryBegin(&query, foreignObject) && svgQueryPlace(query, &place)
-                 && query.tree->nodes.data[query.node].kind == SvgNodeKind_ForeignObject;
+    bool found = svgQueryBegin(&query, foreignObject) && svgQueryPlace(query, &place) &&
+        query.tree->nodes.data[query.node].kind == SvgNodeKind_ForeignObject;
     if (found) {
         // The content is drawn from the top left of the positioning rectangle, in the foreignObject's user space.
         PrRect box = svgNodeBox(query.tree, place, query.node, PrSvgBoundingBoxOptions{.fill = true});
         for (uint32_t i = 0; i < count; ++i) {
-            PrVec2 mapped = prAffine2MapPoint(place.toTree, PrVec2{box.left + float(points[i].x),
-                                                                    box.top + float(points[i].y)});
+            PrVec2 mapped = prAffine2MapPoint(place.toTree, PrVec2{
+                box.left + float(points[i].x),
+                box.top + float(points[i].y),
+            });
             points[i] = PrDVec2{double(mapped.x), double(mapped.y)};
         }
         found = svgQueryToClient(query, points, count);
@@ -795,8 +820,8 @@ bool svgForeignToClient(const PrDomElement* foreignObject, PrDVec2* points, uint
 bool svgClientBounds(const PrDomElement* element, PrRect* out) {
     // A tspan or a textPath is drawn by the text that holds it, in the text's user space.
     const PrDomElement* drawn = element;
-    bool inText = element->space == PrDomNamespace_Svg
-                  && (element->tag == PrDomTag_Tspan || element->tag == PrDomTag_TextPath);
+    bool inText = element->space == PrDomNamespace_Svg &&
+        (element->tag == PrDomTag_Tspan || element->tag == PrDomTag_TextPath);
     while (inText && drawn != nullptr && !svgIs(drawn, PrDomTag_Text))
         drawn = domElementFromNode(drawn->parent);
     SvgQuery query{};
@@ -806,8 +831,7 @@ bool svgClientBounds(const PrDomElement* element, PrRect* out) {
         // The bounding box in the element's user space, mapped through every transform to the viewport, as drawn.
         PrRect box = svgNodeBox(query.tree, place, query.node, PrSvgBoundingBoxOptions{.fill = true});
         if (drawn != element) {
-            PrDomRect own = prSvgGraphicsElementGetBBox(static_cast<PrSvgElement*>(const_cast<PrDomElement*>(element)),
-                                                        nullptr);
+            PrDomRect own = prSvgGraphicsElementGetBBox(static_cast<PrSvgElement*>(const_cast<PrDomElement*>(element)), nullptr);
             box = PrRect{float(own.x), float(own.y), float(own.x + own.width), float(own.y + own.height)};
         }
         PrVec2 points[4] = {{box.left, box.top}, {box.right, box.top}, {box.right, box.bottom}, {box.left, box.bottom}};
@@ -820,8 +844,10 @@ bool svgClientBounds(const PrDomElement* element, PrRect* out) {
         if (found) {
             PrRect bounds{float(corners[0].x), float(corners[0].y), float(corners[0].x), float(corners[0].y)};
             for (const PrDVec2& corner : corners) {
-                bounds = PrRect{minF32(bounds.left, float(corner.x)), minF32(bounds.top, float(corner.y)),
-                                maxF32(bounds.right, float(corner.x)), maxF32(bounds.bottom, float(corner.y))};
+                bounds = PrRect{
+                    minF32(bounds.left, float(corner.x)), minF32(bounds.top, float(corner.y)),
+                    maxF32(bounds.right, float(corner.x)), maxF32(bounds.bottom, float(corner.y)),
+                };
             }
             *out = bounds;
         }
@@ -838,14 +864,12 @@ PrSvgDrawOptions prSvgDrawOptionsDefault(void) {
     return PrSvgDrawOptions{};
 }
 
-void prSvgElementDraw(PrSvgElement* svg, PrVec2 viewport, const PrSvgDrawOptions* PR_NULLABLE options,
-                      PrDrawList* list) {
+void prSvgElementDraw(PrSvgElement* svg, PrVec2 viewport, const PrSvgDrawOptions* PR_NULLABLE options, PrDrawList* list) {
     PR_ASSERT(viewport.x >= 0 && viewport.y >= 0);
     drawStatic(svg, SvgRoot_Outermost, viewport, options, list);
 }
 
-void prSvgElementDrawBox(PrSvgElement* svg, PrVec2 extent, const PrSvgDrawOptions* PR_NULLABLE options,
-                         PrDrawList* list) {
+void prSvgElementDrawBox(PrSvgElement* svg, PrVec2 extent, const PrSvgDrawOptions* PR_NULLABLE options, PrDrawList* list) {
     PR_ASSERT(extent.x >= 0 && extent.y >= 0);
     drawStatic(svg, SvgRoot_Box, extent, options, list);
 }
@@ -859,8 +883,7 @@ PrSvgNaturalSize prSvgElementNaturalSize(const PrSvgElement* svg) {
     return size;
 }
 
-const PrSvgImage* prSvgImageCreate(PrSvgElement* svg, PrStringView fragment,
-                                   const PrSvgDrawOptions* PR_NULLABLE options) {
+const PrSvgImage* prSvgImageCreate(PrSvgElement* svg, PrStringView fragment, const PrSvgDrawOptions* PR_NULLABLE options) {
     PrSvgDrawOptions own = options != nullptr ? *options : prSvgDrawOptionsDefault();
     PrSvgImage* picture = allocZeroed<PrSvgImage>();
     picture->references.storeRelaxed(1);
@@ -881,17 +904,21 @@ const PrSvgImage* prSvgImageCreate(PrSvgElement* svg, PrStringView fragment,
     if (!sized && view.hasViewBox && view.viewBox.right > view.viewBox.left && view.viewBox.bottom > view.viewBox.top)
         natural.ratio = prRectWidth(view.viewBox) / prRectHeight(view.viewBox);
     picture->natural = natural;
-    PrVec2 viewport{natural.width > 0 ? natural.width : kDefaultObjectSize.x,
-                    natural.height > 0 ? natural.height : kDefaultObjectSize.y};
+    PrVec2 viewport{
+        natural.width > 0 ? natural.width : kDefaultObjectSize.x,
+        natural.height > 0 ? natural.height : kDefaultObjectSize.y,
+    };
     SvgCascade cascade{};
     svgCascadeInit(&cascade, document, own, viewport);
     CssColorEnvironment environment = kCssDefaultColorEnvironment;
     environment.headroom = own.headroom;
-    SvgBuild build{.source = {cascadeStyle, cascadeStyleUnder, cascadePseudoStyleUnder, &cascade},
-                   .images = hostImages(&own),
-                   .environment = environment,
-                   .options = &own,
-                   .viewport = viewport};
+    SvgBuild build{
+        .source = {cascadeStyle, cascadeStyleUnder, cascadePseudoStyleUnder, &cascade},
+        .images = hostImages(&own),
+        .environment = environment,
+        .options = &own,
+        .viewport = viewport,
+    };
     svgTreeBuild(&picture->tree, svg, SvgRoot_Image, build);
     const CssComputedStyle* style = svgCascadeStyle(&cascade, svg);
     if (style != nullptr) {
@@ -930,7 +957,7 @@ void prSvgImageDraw(const PrSvgImage* image, PrVec2 extent, PrDrawList* list) {
 }
 
 void prSvgElementDrawInPlace(PrSvgElement* element, PrVec2 viewport, const PrSvgDrawOptions* PR_NULLABLE options,
-                             PrDrawList* list) {
+        PrDrawList* list) {
     PR_ASSERT(viewport.x >= 0 && viewport.y >= 0);
     drawStatic(element, SvgRoot_InPlace, viewport, options, list);
 }

@@ -131,7 +131,7 @@ bool svgDrawClipCoverage(const SvgTree* tree, SvgResourceIndex index, PrRect box
 // masks: by luminance or alpha, as its mask-type says, in the space that its color-interpolation gives. Returns false
 // if the mask hides what it masks, as a region of no area does.
 bool svgDrawMaskContent(const SvgTree* tree, SvgResourceIndex index, PrRect box, PrVec2 viewport, PrDrawList* list,
-                        PrRect* area, PrDrawMaskMode* mode, PrColorSpace* space);
+    PrRect* area, PrDrawMaskMode* mode, PrColorSpace* space);
 
 // Draws an image element's image in its positioning rectangle (SVG2/embedded.html#ImageElement).
 void svgDrawImage(SvgDrawer& d, const SvgImageShape& image);
@@ -167,8 +167,7 @@ float svgPercentBase(const SvgDrawer& d, SvgAxis axis);
 // Sets `base` to paint with `paint` at `opacity`: its color, or `brush` filled with the paint server's brush. `box` is
 // the bounds of the geometry painted, which a bounding-box server maps onto. Context paint paints with the drawer's
 // context element, in its user space and onto its bounding box. Returns false if the paint paints nothing.
-bool svgPaintFor(const SvgDrawer& d, const SvgPaint& paint, float opacity, PrRect box, PrDrawPaint* base,
-                 PrDrawBrush* brush);
+bool svgPaintFor(const SvgDrawer& d, const SvgPaint& paint, float opacity, PrRect box, PrDrawPaint* base, PrDrawBrush* brush);
 
 // Writes the stroke that `paints` strokes with, its lengths resolved, to `out`. `dashes` holds kSvgMaxDashes floats,
 // which `out` refers to. `length` is the length of the geometry in user units, which the paints' path-length scales the
@@ -229,7 +228,7 @@ PrRect svgImageRect(PrVec2 viewport, const SvgImageShape& image);
 // svgStrokeFor takes it. `draw` records the shape with the paint it is given.
 template <typename Draw, typename Markers>
 void svgPaintShape(const SvgDrawer& d, const SvgPaints& paints, bool fills, PrRect box, float length, Draw draw,
-                   Markers markers) {
+        Markers markers) {
     PrDrawEdges edges = paints.crisp ? PrDrawEdges_Aliased : PrDrawEdges_Antialiased;
     if (d.silhouette) {
         if (fills)
@@ -246,8 +245,8 @@ void svgPaintShape(const SvgDrawer& d, const SvgPaints& paints, bool fills, PrRe
             float dashes[kSvgMaxDashes];
             PrDrawStroke stroke{};
             PrDrawPaint outline{.edges = edges};
-            if (svgStrokeFor(d, paints, length, dashes, &stroke)
-                && svgPaintFor(d, paints.stroke, paints.strokeOpacity, box, &outline, &brush)) {
+            if (svgStrokeFor(d, paints, length, dashes, &stroke) &&
+                    svgPaintFor(d, paints.stroke, paints.strokeOpacity, box, &outline, &brush)) {
                 outline.stroke = &stroke;
                 draw(outline);
             }

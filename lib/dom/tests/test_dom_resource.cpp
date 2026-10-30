@@ -37,11 +37,10 @@ struct HostedDocument {
         REQUIRE(document != nullptr);
         prUrlDestroy(document->url);
         document->url = nullptr;
-        REQUIRE(prUrlCreate("https://example.test/dir/page.svg", nullptr, PrCharset_Utf8, &document->url)
-                == PrStatus_Ok);
+        REQUIRE(prUrlCreate("https://example.test/dir/page.svg", nullptr, PrCharset_Utf8, &document->url) ==
+            PrStatus_Ok);
         host.context = this;
-        host.fetch = [](void* context, const DomFetchRequest* request, DomFetchFn done, void* data,
-                        void (*drop)(void*)) {
+        host.fetch = [](void* context, const DomFetchRequest* request, DomFetchFn done, void* data, void (*drop)(void*)) {
             static_cast<HostedDocument*>(context)->fetches.push_back(
                 HeldFetch{std::string(request->url.data, request->url.size), done, data, drop});
         };
@@ -92,7 +91,7 @@ std::string urlOf(const DomReference& reference) {
 using namespace pr_impl;
 
 TEST_CASE("a reference without its surrounding white space names the document itself by a fragment alone or by its "
-          "own URL, and another document otherwise") {
+        "own URL, and another document otherwise") {
     HostedDocument d("<svg xmlns='http://www.w3.org/2000/svg'/>");
     DomReference reference{};
     REQUIRE(domReferenceSplit(d.document, " #a\n", &reference));
@@ -115,7 +114,7 @@ TEST_CASE("a reference without its surrounding white space names the document it
 
 TEST_CASE("a use instances an element of another document once the document loads") {
     HostedDocument d("<svg xmlns='http://www.w3.org/2000/svg'><use id='use' href='defs.svg#square'/>"
-                     "<use id='again' href='defs.svg'/></svg>");
+        "<use id='again' href='defs.svg'/></svg>");
     PrDomElement* use = d.byId("use");
     CHECK(d.instanceOf(use) == nullptr);
     // Both uses name one document, which is fetched once.
@@ -134,7 +133,7 @@ TEST_CASE("a use instances an element of another document once the document load
 
 TEST_CASE("a reference to another origin, or a document that fails to load, names nothing") {
     HostedDocument d("<svg xmlns='http://www.w3.org/2000/svg'><use id='other' href='https://elsewhere.test/a.svg#a'/>"
-                     "<use id='broken' href='broken.svg#a'/></svg>");
+        "<use id='broken' href='broken.svg#a'/></svg>");
     CHECK(d.instanceOf(d.byId("other")) == nullptr);
     REQUIRE(d.fetches.size() == 1);
     CHECK(d.fetches[0].url == "https://example.test/dir/broken.svg");
@@ -145,22 +144,18 @@ TEST_CASE("a reference to another origin, or a document that fails to load, name
 
 TEST_CASE("a document without a browsing context takes resource documents from its loader") {
     PrDomDocument* document = prDomParseXml("<svg xmlns='http://www.w3.org/2000/svg'><use id='use' href='lib.svg#a'/>"
-                                            "</svg>",
-                                            "image/svg+xml", nullptr);
+        "</svg>", "image/svg+xml", nullptr);
     PrDomDocument* library =
         prDomParseXml("<svg xmlns='http://www.w3.org/2000/svg'><circle id='a' r='3'/></svg>", "image/svg+xml", nullptr);
     struct Loader {
         PrDomDocument* library;
         std::vector<std::string> urls;
     } loader{library, {}};
-    domResourcesSetLoader(
-        document,
-        [](void* context, PrDomDocument*, PrStringView url) -> PrDomDocument* {
-            Loader* l = static_cast<Loader*>(context);
-            l->urls.emplace_back(url.data, url.size);
-            return l->library;
-        },
-        &loader);
+    domResourcesSetLoader(document, [](void* context, PrDomDocument*, PrStringView url) -> PrDomDocument* {
+        Loader* l = static_cast<Loader*>(context);
+        l->urls.emplace_back(url.data, url.size);
+        return l->library;
+    }, &loader);
     domUsesSync(document);
     PrDomElement* use = prDomNodeGetElementById(prDomDocumentAsNode(document), "use");
     const PrDomShadowRoot* shadow = domShadowRootOfHost(use);

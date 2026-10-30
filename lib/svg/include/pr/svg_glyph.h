@@ -18,7 +18,7 @@ extern "C" {
 // codec, the data that the codec would read draws nothing. Both codecs outlive the decoder. The decoder keeps the
 // documents that it parsed most recently.
 PrDrawGlyphDecoder* prSvgGlyphDecoderCreate(PrImageCodec* PR_NULLABLE imageCodec,
-                                            PrCompressCodec* PR_NULLABLE compressCodec);
+    PrCompressCodec* PR_NULLABLE compressCodec);
 
 #if defined(__cplusplus)
 }

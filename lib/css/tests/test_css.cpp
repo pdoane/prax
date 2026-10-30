@@ -22,9 +22,7 @@ PrCssRule* ruleAt(const CssTestSheet& sheet, uint32_t index) {
 
 // Returns the strings that a sequence function writes, and releases them.
 template <typename Handle>
-std::vector<std::string> strings(uint32_t (*function)(const Handle*, PrString* PR_NULLABLE,
-                                                      uint32_t),
-                                 const Handle* handle) {
+std::vector<std::string> strings(uint32_t (*function)(const Handle*, PrString* PR_NULLABLE, uint32_t), const Handle* handle) {
     std::vector<PrString> items(function(handle, nullptr, 0));
     function(handle, items.data(), uint32_t(items.size()));
     std::vector<std::string> out;
@@ -35,9 +33,7 @@ std::vector<std::string> strings(uint32_t (*function)(const Handle*, PrString* P
 
 // Returns the views that a sequence function writes, as strings.
 template <typename Handle>
-std::vector<std::string> strings(uint32_t (*function)(const Handle*, PrStringView* PR_NULLABLE,
-                                                      uint32_t),
-                                 const Handle* handle) {
+std::vector<std::string> strings(uint32_t (*function)(const Handle*, PrStringView* PR_NULLABLE, uint32_t), const Handle* handle) {
     std::vector<PrStringView> items(function(handle, nullptr, 0));
     function(handle, items.data(), uint32_t(items.size()));
     std::vector<std::string> out;
@@ -102,8 +98,7 @@ TEST_CASE("a sheet hands out its rules through the C API") {
 
 TEST_CASE("a style rule reaches its selector and its declarations") {
     CssTestSheet sheet("a, b { color: red; width: 1px !important }");
-    PrCssStyleRule* rule =
-        prCssStyleRuleQuery(prCssRuleListRuleAt(prCssStyleSheetCssRules(sheet.handle()), 0));
+    PrCssStyleRule* rule = prCssStyleRuleQuery(prCssRuleListRuleAt(prCssStyleSheetCssRules(sheet.handle()), 0));
     REQUIRE((rule != nullptr));
 
     CHECK(take(prCssStyleRuleSelectorText(rule)) == "a, b");
@@ -114,8 +109,7 @@ TEST_CASE("a style rule reaches its selector and its declarations") {
     prCssStyleRuleSetSelectorText(rule, "");
     CHECK(take(prCssStyleRuleSelectorText(rule)) == "c > d");
 
-    PrCssStyleDeclaration* style =
-        prCssStylePropertiesAsCssStyleDeclaration(prCssStyleRuleStyle(rule));
+    PrCssStyleDeclaration* style = prCssStylePropertiesAsCssStyleDeclaration(prCssStyleRuleStyle(rule));
     CHECK(prCssStyleDeclarationLength(style) == 2);
     PrCssDeclarationName name = {};
     prCssStyleDeclarationNameAt(style, 0, &name);
@@ -143,11 +137,9 @@ TEST_CASE("a declaration block is set and removed through the C API") {
     // A value that the property does not accept, and a name that the block does not accept, leave the block unchanged.
     const PrCssDeclarationName height = prCssDeclarationNameFromProperty(PrCssProperty_Height);
     CHECK(prCssStyleDeclarationSetProperty(style, &height, "red", false) == PrStatus_InvalidData);
-    const PrCssDeclarationName display = {PrCssProperty_Count, PrCssDescriptor_FontFaceFontDisplay,
-                                          prStringNull()};
+    const PrCssDeclarationName display = {PrCssProperty_Count, PrCssDescriptor_FontFaceFontDisplay, prStringNull()};
     CHECK(prCssStyleDeclarationSetProperty(style, &display, "swap", false) == PrStatus_InvalidData);
-    CHECK(prCssStyleDeclarationRemoveProperty(style, &display, nullptr)
-          == PrStatus_InvalidData);
+    CHECK(prCssStyleDeclarationRemoveProperty(style, &display, nullptr) == PrStatus_InvalidData);
     CHECK(prCssStyleDeclarationLength(style) == 2);
 
     const PrCssDeclarationName color = prCssDeclarationNameFromProperty(PrCssProperty_Color);
@@ -178,8 +170,7 @@ TEST_CASE("rules are inserted and deleted through the C API") {
 
 TEST_CASE("a nested rule reaches the rule that encloses it") {
     CssTestSheet sheet("a { & b { color: red } }");
-    PrCssStyleRule* outer =
-        prCssStyleRuleQuery(prCssRuleListRuleAt(prCssStyleSheetCssRules(sheet.handle()), 0));
+    PrCssStyleRule* outer = prCssStyleRuleQuery(prCssRuleListRuleAt(prCssStyleSheetCssRules(sheet.handle()), 0));
 
     PrCssRuleList* children = prCssGroupingRuleCssRules(prCssStyleRuleAsCssGroupingRule(outer));
     REQUIRE(prCssRuleListLength(children) == 1);
@@ -188,9 +179,7 @@ TEST_CASE("a nested rule reaches the rule that encloses it") {
     CHECK((prCssRuleParentRule(inner) == prCssStyleRuleAsCssRule(outer)));
     CHECK(take(prCssRuleCssText(inner)) == "& b { color: red; }");
 
-    CHECK(prCssGroupingRuleInsertRule(prCssStyleRuleAsCssGroupingRule(outer), "& c {}", 1,
-                                      nullptr)
-          == PrStatus_Ok);
+    CHECK(prCssGroupingRuleInsertRule(prCssStyleRuleAsCssGroupingRule(outer), "& c {}", 1, nullptr) == PrStatus_Ok);
     CHECK(prCssRuleListLength(children) == 2);
     CHECK(prCssGroupingRuleDeleteRule(prCssStyleRuleAsCssGroupingRule(outer), 0) == PrStatus_Ok);
     CHECK(prCssRuleListLength(children) == 1);
@@ -227,8 +216,7 @@ TEST_CASE("a sheet a caller makes is a sheet a caller releases") {
 TEST_CASE("only a constructed sheet is replaced in place") {
     CssTestSheet sheet("a { color: red }");
     CHECK(prCssStyleSheetReplaceSync(sheet.handle(), "b { color: blue }") == PrStatus_Ok);
-    CHECK(take(prCssRuleCssText(prCssRuleListRuleAt(prCssStyleSheetCssRules(sheet.handle()), 0)))
-          == "b { color: blue; }");
+    CHECK(take(prCssRuleCssText(prCssRuleListRuleAt(prCssStyleSheetCssRules(sheet.handle()), 0))) == "b { color: blue; }");
 
     sheet.sheet->constructed = false;
     CHECK(prCssStyleSheetReplaceSync(sheet.handle(), "c {}") == PrStatus_NotAllowed);
@@ -260,8 +248,7 @@ TEST_CASE("a media list is the media queries of a sheet, an @media rule and an @
     CHECK(take(prCssMediaListMediaText(media)) == "screen, print");
     CHECK(prCssMediaListDeleteMedium(media, "Screen") == PrStatus_Ok);
     CHECK(prCssMediaListDeleteMedium(media, "screen") == PrStatus_NotFound);
-    CHECK(take(prCssRuleCssText(ruleAt(sheet, 0)))
-          == "@import url(\"a.css\") layer(x) supports(display: grid) print;");
+    CHECK(take(prCssRuleCssText(ruleAt(sheet, 0))) == "@import url(\"a.css\") layer(x) supports(display: grid) print;");
 
     PrCssMediaList* own = prCssStyleSheetMedia(sheet.handle());
     CHECK(prCssMediaListLength(own) == 0);
@@ -327,11 +314,9 @@ TEST_CASE("a rule's prelude answers its interface's attributes") {
 }
 
 TEST_CASE("a descriptor attribute reads and writes its rule's declaration") {
-    CssTestSheet sheet(
-        "@counter-style foo { system: cyclic; symbols: a b }"
-              "@property --x { syntax: '<length>'; inherits: true; initial-value: 0px }"
-              "@font-face { font-family: bar }"
-              "@view-transition { navigation: auto; types: a b }");
+    CssTestSheet sheet("@counter-style foo { system: cyclic; symbols: a b }"
+        "@property --x { syntax: '<length>'; inherits: true; initial-value: 0px }@font-face { font-family: bar }"
+        "@view-transition { navigation: auto; types: a b }");
     PrCssCounterStyleRule* counter = prCssCounterStyleRuleQuery(ruleAt(sheet, 0));
     CHECK(take(prCssCounterStyleRuleSystem(counter)) == "cyclic");
     prCssCounterStyleRuleSetPad(counter, "2 \"0\"");
@@ -345,17 +330,12 @@ TEST_CASE("a descriptor attribute reads and writes its rule's declaration") {
     CHECK(prCssPropertyRuleInherits(property));
     CHECK(take(prCssPropertyRuleInitialValue(property)) == "0px");
 
-    PrCssFontFaceDescriptors* face =
-        prCssFontFaceRuleStyle(prCssFontFaceRuleQuery(ruleAt(sheet, 2)));
+    PrCssFontFaceDescriptors* face = prCssFontFaceRuleStyle(prCssFontFaceRuleQuery(ruleAt(sheet, 2)));
     PrCssStyleDeclaration* descriptors = prCssFontFaceDescriptorsAsCssStyleDeclaration(face);
-    CHECK(take(prCssStyleDeclarationGetPropertyValue(descriptors,
-                                                     Named(descriptors, "font-family")))
-          == "bar");
-    const PrCssDeclarationName display = {PrCssProperty_Count, PrCssDescriptor_FontFaceFontDisplay,
-                                          prStringNull()};
+    CHECK(take(prCssStyleDeclarationGetPropertyValue(descriptors, Named(descriptors, "font-family"))) == "bar");
+    const PrCssDeclarationName display = {PrCssProperty_Count, PrCssDescriptor_FontFaceFontDisplay, prStringNull()};
     CHECK(prCssStyleDeclarationSetProperty(descriptors, &display, "swap", false) == PrStatus_Ok);
-    CHECK(take(prCssStyleDeclarationCssText(descriptors))
-          == "font-family: bar; font-display: swap;");
+    CHECK(take(prCssStyleDeclarationCssText(descriptors)) == "font-family: bar; font-display: swap;");
 
     PrCssViewTransitionRule* transition = prCssViewTransitionRuleQuery(ruleAt(sheet, 3));
     CHECK(strings(prCssViewTransitionRuleTypes, transition) == std::vector<std::string>{"a", "b"});
@@ -379,13 +359,12 @@ TEST_CASE("a font feature values rule holds a map of each feature type") {
     CHECK(prCssFontFeatureValuesMapHas(swash, "e"));
     CHECK(!prCssFontFeatureValuesMapHas(swash, "d"));
     CHECK(prCssFontFeatureValuesMapDelete(swash, "c"));
-    CHECK(take(prCssRuleCssText(ruleAt(sheet, 0)))
-          == "@font-feature-values F { @styleset { b: 3; a: 5; } @swash { e: 6; } }");
+    CHECK(take(prCssRuleCssText(ruleAt(sheet, 0))) == "@font-feature-values F { @styleset { b: 3; a: 5; } @swash { e: 6; } }");
 }
 
 TEST_CASE("custom media keeps its boolean or live media list in the rule") {
     CssTestSheet sheet("@custom-media --yes true; @custom-media --no false; "
-                             "@custom-media --query (color), print; @custom-media --empty;");
+        "@custom-media --query (color), print; @custom-media --empty;");
     REQUIRE(sheet.count() == 4);
     PrCssCustomMediaRule* yes = prCssCustomMediaRuleQuery(ruleAt(sheet, 0));
     REQUIRE(yes != nullptr);
@@ -400,9 +379,7 @@ TEST_CASE("custom media keeps its boolean or live media list in the rule") {
     CHECK(prCssCustomMediaRuleQueryValue(query).mediaList == list);
     prCssMediaListSetMediaText(list, "screen");
     CHECK(take(prCssRuleCssText(ruleAt(sheet, 2))) == "@custom-media --query screen;");
-    CHECK(prCssMediaListLength(
-              prCssCustomMediaRuleQueryValue(prCssCustomMediaRuleQuery(ruleAt(sheet, 3))).mediaList)
-          == 0);
+    CHECK(prCssMediaListLength(prCssCustomMediaRuleQueryValue(prCssCustomMediaRuleQuery(ruleAt(sheet, 3))).mediaList) == 0);
 }
 
 TEST_CASE("mixin and apply rules retain parameters arguments and nested declarations") {
@@ -425,43 +402,35 @@ TEST_CASE("mixin and apply rules retain parameters arguments and nested declarat
     PrCssContentsBlockRule* contents = prCssContentsBlockRuleQuery(prCssRuleListRuleAt(rules, 1));
     REQUIRE(contents != nullptr);
     CHECK(prCssContentsStatementRuleQuery(prCssRuleListRuleAt(rules, 1)) == nullptr);
-    CHECK(prCssRuleListLength(
-              prCssGroupingRuleCssRules(prCssContentsBlockRuleAsCssGroupingRule(contents)))
-          == 1);
+    CHECK(prCssRuleListLength(prCssGroupingRuleCssRules(prCssContentsBlockRuleAsCssGroupingRule(contents))) == 1);
     CHECK(prCssContentsStatementRuleQuery(prCssRuleListRuleAt(rules, 2)) != nullptr);
     rules = prCssGroupingRuleCssRules(prCssGroupingRuleQuery(ruleAt(sheet, 1)));
     REQUIRE(prCssRuleListLength(rules) == 2);
     PrCssApplyBlockRule* apply = prCssApplyBlockRuleQuery(prCssRuleListRuleAt(rules, 0));
     REQUIRE(apply != nullptr);
     CHECK(prCssApplyBlockRuleGetArguments(apply, nullptr, 3) == 3);
-    CHECK(strings(prCssApplyBlockRuleGetArguments, apply)
-          == std::vector<std::string>{"1px", "red, blue", "calc(1px + 2px)"});
-    CHECK(
-        prCssRuleListLength(prCssGroupingRuleCssRules(prCssApplyBlockRuleAsCssGroupingRule(apply)))
-        == 1);
+    CHECK(strings(prCssApplyBlockRuleGetArguments, apply) == std::vector<std::string>{"1px", "red, blue", "calc(1px + 2px)"});
+    CHECK(prCssRuleListLength(prCssGroupingRuleCssRules(prCssApplyBlockRuleAsCssGroupingRule(apply))) == 1);
     CHECK(prCssApplyStatementRuleQuery(prCssRuleListRuleAt(rules, 1)) != nullptr);
     CHECK(prCssGroupingRuleQuery(prCssRuleListRuleAt(rules, 1)) == nullptr);
 }
 
 TEST_CASE("apply serialization omits empty parentheses and unnecessary argument braces") {
-    CssTestSheet sheet("@apply --invalid(); @mixin --empty() {}"
-                             "a { @apply --empty(); @apply --m({ 1px }, { red, blue }); }");
+    CssTestSheet sheet("@apply --invalid(); @mixin --empty() {}a { @apply --empty(); @apply --m({ 1px }, { red, blue }); }");
     REQUIRE(sheet.count() == 2);
     CHECK(take(prCssRuleCssText(ruleAt(sheet, 0))) == "@mixin --empty {\n}");
     PrCssRuleList* rules = prCssGroupingRuleCssRules(prCssGroupingRuleQuery(ruleAt(sheet, 1)));
     REQUIRE(prCssRuleListLength(rules) == 2);
     CHECK(take(prCssRuleCssText(prCssRuleListRuleAt(rules, 0))) == "@apply --empty;");
-    CHECK(take(prCssRuleCssText(prCssRuleListRuleAt(rules, 1)))
-          == "@apply --m(1px, { red, blue });");
+    CHECK(take(prCssRuleCssText(prCssRuleListRuleAt(rules, 1))) == "@apply --m(1px, { red, blue });");
 
     // EOF implicitly closes component blocks, including an otherwise empty argument wrapper.
     CssTestSheet unfinished("a { @apply --m({");
     REQUIRE(unfinished.count() == 1);
     rules = prCssGroupingRuleCssRules(prCssGroupingRuleQuery(ruleAt(unfinished, 0)));
     REQUIRE(prCssRuleListLength(rules) == 1);
-    CHECK(strings(prCssApplyStatementRuleGetArguments,
-                  prCssApplyStatementRuleQuery(prCssRuleListRuleAt(rules, 0)))
-          == std::vector<std::string>{""});
+    CHECK(strings(prCssApplyStatementRuleGetArguments, prCssApplyStatementRuleQuery(prCssRuleListRuleAt(rules, 0))) ==
+        std::vector<std::string>{""});
 }
 
 TEST_CASE("a highlight holds its ranges, and a registry names its highlights without holding them") {

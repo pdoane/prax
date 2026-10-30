@@ -55,15 +55,17 @@ struct TimelineScene {
         f.edit = Phases::record;
         f.editContext = &phases;
         f.build = [this](PrLayoutNode ground) {
-            PrKitTimeline timeline{.tracks = tracks,
-                                   .trackCount = 2,
-                                   .blocks = blocks.data(),
-                                   .blockCount = uint32_t(blocks.size()),
-                                   .markers = markers.data(),
-                                   .markerCount = uint32_t(markers.size()),
-                                   .view = &view,
-                                   .playhead = &playhead,
-                                   .snap = snap};
+            PrKitTimeline timeline{
+                .tracks = tracks,
+                .trackCount = 2,
+                .blocks = blocks.data(),
+                .blockCount = uint32_t(blocks.size()),
+                .markers = markers.data(),
+                .markerCount = uint32_t(markers.size()),
+                .view = &view,
+                .playhead = &playhead,
+                .snap = snap,
+            };
             PrLayoutNode parent = ground;
             if (above > 0) {
                 PrKitBoxStyle box{.overflow = PrKitOverflow_ScrollY};
@@ -75,8 +77,7 @@ struct TimelineScene {
                 parent = scroller;
             }
             frame = prKitTimeline(f.kit, parent, timeline,
-                                  {.place = {.width = prKitPx(kGutter + 400),
-                                             .flex = PrKitFlex_Fixed}});
+                {.place = {.width = prKitPx(kGutter + 400), .flex = PrKitFlex_Fixed}});
             removals += prKitRemoved(f.kit, frame) ? 1 : 0;
             uint32_t track = 0;
             float time = 0;
@@ -104,7 +105,7 @@ struct TimelineScene {
     uint32_t nodes(PrLayoutNode node) const {
         uint32_t total = 1;
         for (PrLayoutNode c = prLayoutNodeFirstChild(f.tree, node); c != kPrLayoutNodeNone;
-             c = prLayoutNodeNextSibling(f.tree, c))
+                c = prLayoutNodeNextSibling(f.tree, c))
             total += nodes(c);
         return total;
     }
@@ -209,8 +210,12 @@ TEST_CASE("the wheel pans a timeline's view, and with Command zooms it about the
     f.frame();
     CHECK(scene.view.start == doctest::Approx(1.0));
     CHECK(scene.view.end == doctest::Approx(9.0));
-    f.push(PrAppEvent{.kind = PrAppEventKind_Scroll, .modifiers = PrAppModifierFlag_Super, .position = over,
-                      .delta = PrVec2{0, -70}});
+    f.push(PrAppEvent{
+        .kind = PrAppEventKind_Scroll,
+        .modifiers = PrAppModifierFlag_Super,
+        .position = over,
+        .delta = PrVec2{0, -70},
+    });
     f.frame();
     // The time under the pointer stays where it was, 5 s, and the view spans half as much.
     float span = scene.view.end - scene.view.start;

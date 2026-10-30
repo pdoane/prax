@@ -124,8 +124,8 @@ void sha1Digest(PrByteView bytes, uint8_t out[PR_NONNULL kSha1Bytes]) {
         }
         uint32_t words[80];
         for (uint32_t i = 0; i < 16; ++i)
-            words[i] = uint32_t(block[4 * i]) << 24 | uint32_t(block[4 * i + 1]) << 16
-                       | uint32_t(block[4 * i + 2]) << 8 | block[4 * i + 3];
+            words[i] = uint32_t(block[4 * i]) << 24 | uint32_t(block[4 * i + 1]) << 16 |
+                uint32_t(block[4 * i + 2]) << 8 | block[4 * i + 3];
         for (uint32_t i = 16; i < 80; ++i) {
             uint32_t mixed = words[i - 3] ^ words[i - 8] ^ words[i - 14] ^ words[i - 16];
             words[i] = mixed << 1 | mixed >> 31;

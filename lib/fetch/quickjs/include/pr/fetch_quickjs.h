@@ -46,8 +46,7 @@ typedef struct PrJsFetchRequest {
 // Converts `input` and `init`, fetch()'s arguments, into `out`, with input's URL parsed against `baseUrl`, the API base
 // URL of the caller's realm. Returns false, with a TypeError or the exception of a conversion pending, for arguments
 // that make no request: among them a URL that does not parse or that has a username or a password.
-bool prJsFetchRequestRead(JSContext* ctx, JSValueConst input, JSValueConst init, PrStringView baseUrl,
-                          PrJsFetchRequest* out);
+bool prJsFetchRequestRead(JSContext* ctx, JSValueConst input, JSValueConst init, PrStringView baseUrl, PrJsFetchRequest* out);
 
 // Frees what the request holds.
 void prJsFetchRequestReset(PrJsFetchRequest* request);

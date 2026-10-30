@@ -12,7 +12,7 @@ namespace pr_impl {
 namespace {
 
 std::vector<uint8_t> render(PrDrawRenderer* renderer, const PrDrawList* list, uint32_t width,
-                            uint32_t height, PrPixelFormat format = PrPixelFormat_Bgra8) {
+        uint32_t height, PrPixelFormat format = PrPixelFormat_Bgra8) {
     std::vector<uint8_t> bytes(size_t(width) * height * 4, 0);
     PrPixels into{bytes.data(), size_t(width) * 4, {width, height}};
     REQUIRE(prDrawRendererRenderPixels(renderer, list, into, format) == PrStatus_Ok);
@@ -81,9 +81,7 @@ TEST_CASE("blend2d fills as cpu does, onto either format") {
     CHECK(againstCpu(list, 64, 40) == 0);
     PrDrawRenderer* cpu = prDrawCpuCreate(nullptr);
     PrDrawRenderer* blend2d = prDrawBlend2dCreate(nullptr);
-    CHECK(differing(render(cpu, list, 64, 40, PrPixelFormat_Rgba8),
-                    render(blend2d, list, 64, 40, PrPixelFormat_Rgba8), 4)
-          == 0);
+    CHECK(differing(render(cpu, list, 64, 40, PrPixelFormat_Rgba8), render(blend2d, list, 64, 40, PrPixelFormat_Rgba8), 4) == 0);
     prDrawRendererDestroy(cpu);
     prDrawRendererDestroy(blend2d);
     prDrawListRelease(list);
@@ -139,15 +137,14 @@ TEST_CASE("blend2d draws an operator where its shape covers, and a group's acros
 
 TEST_CASE("blend2d nests a rotated clip inside a target-pixel clip") {
     PrDrawList* list = prDrawListCreate();
-    prDrawListPushTransformAffine2(list, prAffine2Concat(prAffine2Rotate(0.6f),
-                                                         prAffine2Translate(PrVec2{32, 32})));
+    prDrawListPushTransformAffine2(list, prAffine2Concat(prAffine2Rotate(0.6f), prAffine2Translate(PrVec2{32, 32})));
     prDrawListPushClipTargetRect(list, PrRect{8, 8, 56, 56}, PrDrawEdges_Antialiased);
     prDrawListRect(list, PrRect{-40, -40, 40, 40}, {.color = PrColor{0, 0.6f, 0.3f, 1}});
     prDrawListPushClipRect(list, PrRect{-20, -20, 20, 20}, PrDrawEdges_Antialiased);
     for (float x = -60; x < 60; x += 12) {
         PrVec2 band[] = {{x, -20}, {x + 6, -20}, {x + 46, 20}, {x + 40, 20}};
         prDrawListPolylineContour(list, band, 4, PrDrawContour_Closed, PrPathFillRule_NonZero,
-                                  {.color = PrColor{1, 0.7f, 0, 1}});
+            {.color = PrColor{1, 0.7f, 0, 1}});
     }
     prDrawListPopClip(list);
     prDrawListPopClip(list);
@@ -161,8 +158,7 @@ TEST_CASE("blend2d draws stripes under a rotated clip inside a target-pixel clip
     // The previous cell: a clip in a rotated space, with stripes drawn in the page's space again.
     {
         PrRect d{400, 30, 700, 330};
-        PrAffine2 rotated =
-            prAffine2Concat(prAffine2Rotate(0.3f), prAffine2Translate(PrVec2{550, 180}));
+        PrAffine2 rotated = prAffine2Concat(prAffine2Rotate(0.3f), prAffine2Translate(PrVec2{550, 180}));
         PrAffine2 back{};
         prAffine2Invert(rotated, &back);
         prDrawListPushTransformAffine2(list, rotated);
@@ -170,10 +166,9 @@ TEST_CASE("blend2d draws stripes under a rotated clip inside a target-pixel clip
         prDrawListPushTransformAffine2(list, back);
         prDrawListPushClipRect(list, d, PrDrawEdges_Antialiased);
         for (float x = d.left - 200; x < d.right + 200; x += 24) {
-            PrVec2 band[] = {
-                {x, d.top}, {x + 12, d.top}, {x + 212, d.bottom}, {x + 200, d.bottom}};
+            PrVec2 band[] = {{x, d.top}, {x + 12, d.top}, {x + 212, d.bottom}, {x + 200, d.bottom}};
             prDrawListPolylineContour(list, band, 4, PrDrawContour_Closed, PrPathFillRule_NonZero,
-                                      {.color = PrColor{0, 0, 1, 1}});
+                {.color = PrColor{0, 0, 1, 1}});
         }
         prDrawListPopClip(list);
         prDrawListPopTransform(list);
@@ -181,18 +176,18 @@ TEST_CASE("blend2d draws stripes under a rotated clip inside a target-pixel clip
         prDrawListPopTransform(list);
     }
     PrRect c{30, 430, 337, 754};
-    prDrawListPushTransformAffine2(list, prAffine2Concat(prAffine2Rotate(0.6f),
-                                                         prAffine2Translate(PrVec2{183.5f, 592})));
-    prDrawListPushClipTargetRect(list, PrRect{c.left + 30, c.top + 30, c.right - 30,
-                                               c.bottom - 30}, PrDrawEdges_Antialiased);
+    prDrawListPushTransformAffine2(list, prAffine2Concat(prAffine2Rotate(0.6f), prAffine2Translate(PrVec2{183.5f, 592})));
+    prDrawListPushClipTargetRect(list, PrRect{
+        c.left + 30, c.top + 30, c.right - 30,
+        c.bottom - 30,
+    }, PrDrawEdges_Antialiased);
     prDrawListRect(list, PrRect{-200, -200, 200, 200}, {.color = PrColor{0, 0.6f, 0.3f, 1}});
     PrRect s{-200, -200, 200, 200};
     prDrawListPushClipRect(list, s, PrDrawEdges_Antialiased);
     for (float x = s.left - 200; x < s.right + 200; x += 24) {
-        PrVec2 band[] = {
-            {x, s.top}, {x + 12, s.top}, {x + 212, s.bottom}, {x + 200, s.bottom}};
+        PrVec2 band[] = {{x, s.top}, {x + 12, s.top}, {x + 212, s.bottom}, {x + 200, s.bottom}};
         prDrawListPolylineContour(list, band, 4, PrDrawContour_Closed, PrPathFillRule_NonZero,
-                                  {.color = PrColor{1, 0.7f, 0, 1}});
+            {.color = PrColor{1, 0.7f, 0, 1}});
     }
     prDrawListPopClip(list);
     prDrawListPopClip(list);
@@ -228,8 +223,10 @@ TEST_CASE("blend2d draws no shadow, having no blur") {
 }
 
 TEST_CASE("blend2d masks a group by a gradient's alpha, or by its inverse") {
-    PrDrawColorStop stops[2] = {{.offset = 0, .color = PrColor{0, 0, 0, 1}},
-                                {.offset = 1, .color = PrColor{0, 0, 0, 0}}};
+    PrDrawColorStop stops[2] = {
+        {.offset = 0, .color = PrColor{0, 0, 0, 1}},
+        {.offset = 1, .color = PrColor{0, 0, 0, 0}},
+    };
     PrDrawBrush fade = prDrawBrushLinear(PrVec2{8, 0}, PrVec2{56, 0}, stops, 2);
     for (bool invert : {false, true}) {
         PrDrawMask mask = prDrawMaskDefault(&fade);

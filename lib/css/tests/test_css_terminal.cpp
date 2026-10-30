@@ -15,8 +15,7 @@ namespace {
 // Returns the root of a prose production, or CssTerminal_None if the production has a grammar or has neither.
 CssTerminal terminalOf(CssValueDef def) {
     CssGrammarIndex root = kCssValueDefGrammarRoot[def];
-    if (root == CssGrammarRoot_None
-        || cssGrammarType(kCssGrammarNodes[root]) != CssGrammarType_Terminal)
+    if (root == CssGrammarRoot_None || cssGrammarType(kCssGrammarNodes[root]) != CssGrammarType_Terminal)
         return CssTerminal_None;
     return CssTerminal(cssGrammarValue(kCssGrammarNodes[root]));
 }
@@ -112,9 +111,11 @@ TEST_CASE("every type reference resolves") {
 TEST_CASE("the heavy terminals are present") {
     // The dozen productions that carry most of the references.
     for (PrStringView name :
-         {"<number>", "<percentage>", "<length>", "<string>",
-          "<integer>", "<custom-ident>", "<angle>", "<dashed-ident>",
-          "<ident>", "<time>", "<zero>", "<flex>"}) {
+            {
+                "<number>", "<percentage>", "<length>", "<string>",
+                "<integer>", "<custom-ident>", "<angle>", "<dashed-ident>",
+                "<ident>", "<time>", "<zero>", "<flex>",
+            }) {
         INFO(textOf(name));
         bool found = false;
         for (CssValueDef def = 0; def < CssValueDef_Count; ++def) {
@@ -138,16 +139,17 @@ TEST_CASE("terminal names match the value def they came from") {
 
 TEST_CASE("a terminal begins with a token its first set holds") {
     // The generator's sample of what each prose production starts with, checked against the parsers.
-    const char* samples[] = {"0", "3", "1.5", "-2", "10px", "1deg", "2s", "3hz", "2dppx", "1fr",
-                             "3db", "2st", "5%", "auto", "red", "canvas", "--x", "\"s\"", "#abc",
-                             "#abcd12", "url(x)", "calc(1px)", "@media", "U+26", ",", "/", "(",
-                             "[", ":"};
+    const char* samples[] = {
+        "0", "3", "1.5", "-2", "10px", "1deg", "2s", "3hz", "2dppx", "1fr",
+        "3db", "2st", "5%", "auto", "red", "canvas", "--x", "\"s\"", "#abc",
+        "#abcd12", "url(x)", "calc(1px)", "@media", "U+26", ",", "/", "(",
+        "[", ":",
+    };
     for (CssValueDef def = 0; def < CssValueDef_Count; ++def) {
         CssTerminal terminal = terminalOf(def);
         if (terminal == CssTerminal_None)
             continue;
-        const CssGrammarFirst& first =
-            kCssGrammarFirsts[kCssGrammarFirstOf[kCssValueDefGrammarRoot[def]]];
+        const CssGrammarFirst& first = kCssGrammarFirsts[kCssGrammarFirstOf[kCssValueDefGrammarRoot[def]]];
         for (const char* sample : samples) {
             CssTestSource source(sample, CssTokenizeFlag_UnicodeRanges);
             CssValuePool pool = {};

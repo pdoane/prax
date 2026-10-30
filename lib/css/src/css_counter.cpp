@@ -137,8 +137,8 @@ bool appendCjk(TextBuffer* out, CssCounterSystem system, const PrStringView* sym
     }
     bool chinese = system == CssCounterSystem_ChineseInformal || system == CssCounterSystem_ChineseFormal;
     bool korean = system == CssCounterSystem_KoreanInformal || system == CssCounterSystem_KoreanFormal;
-    bool informal = system == CssCounterSystem_ChineseInformal || system == CssCounterSystem_JapaneseInformal
-                    || system == CssCounterSystem_KoreanInformal;
+    bool informal = system == CssCounterSystem_ChineseInformal || system == CssCounterSystem_JapaneseInformal ||
+        system == CssCounterSystem_KoreanInformal;
     uint32_t groups[4] = {};
     uint32_t n = 0;
     for (int64_t rest = value; rest != 0; rest /= 10000)
@@ -166,10 +166,8 @@ bool appendCjk(TextBuffer* out, CssCounterSystem system, const PrStringView* sym
             if (zero)
                 textAppend(out, symbols[0]);
             zero = false;
-            bool dropped = informal && digit == 1
-                           && ((chinese && place == 1 && group <= 19)
-                               || (!chinese && place != 0)
-                               || (korean && place == 0 && i == 1 && group == 1));
+            bool dropped = informal && digit == 1 && ((chinese && place == 1 && group <= 19) ||
+                (!chinese && place != 0) || (korean && place == 0 && i == 1 && group == 1));
             if (!dropped)
                 textAppend(out, symbols[digit]);
             if (place != 0)
@@ -321,8 +319,8 @@ bool appendInitial(TextBuffer* out, const CssCounterStyle* style, int64_t value,
                 if (tuple.weight <= 0 || tuple.weight > value)
                     continue;
                 int64_t repeats = value / tuple.weight;
-                written += uint32_t(repeats > kCssCounterMaxCodePoints ? kCssCounterMaxCodePoints + 1 : repeats)
-                           * codePointsOf(tuple.symbol);
+                written += uint32_t(repeats > kCssCounterMaxCodePoints ? kCssCounterMaxCodePoints + 1 : repeats) *
+                    codePointsOf(tuple.symbol);
                 if (written > kCssCounterMaxCodePoints) {
                     out->text.count = mark;
                     return false;
@@ -403,11 +401,13 @@ void appendDecimal(TextBuffer* out, int32_t value) {
 // its symbols in `symbols`. Returns false if the function defines no style that the engine can represent with, such as
 // one of images.
 bool symbolsStyle(CssValueRun run, uint32_t at, Array<PrStringView>* symbols, CssCounterStyle* out) {
-    *out = CssCounterStyle{.system = CssCounterSystem_Symbolic,
-                           .first = 1,
-                           .negative = {"-", {}},
-                           .suffix = " ",
-                           .fallback = "decimal"};
+    *out = CssCounterStyle{
+        .system = CssCounterSystem_Symbolic,
+        .first = 1,
+        .negative = {"-", {}},
+        .suffix = " ",
+        .fallback = "decimal",
+    };
     CssValueRun arguments = cssValueChildren(run, at);
     for (uint32_t i = 0; i < arguments.count; i += arguments.values[i].next) {
         const CssValueNode* argument = &arguments.values[i];
@@ -520,9 +520,9 @@ bool integerOf(CssValueRun run, const CssValueNode* node, double em, int32_t* ou
         }
         CssMathScratch scratch{};
         CssMathSlot slot{.category = CssUnitCategory_Number, .percentages = CssUnitCategory_Unknown};
-        resolved = resolved && cssMathAdopt(&pool, span.start, slot, &scratch)
-                   && cssMathTo(cssValuePoolRun(&pool, CssValueSpan{span.start, pool.values.count - span.start}), 0,
-                                PrCssUnit_Number, &number);
+        resolved = resolved && cssMathAdopt(&pool, span.start, slot, &scratch) &&
+            cssMathTo(cssValuePoolRun(&pool, CssValueSpan{span.start, pool.values.count - span.start}), 0,
+                PrCssUnit_Number, &number);
         cssMathScratchReset(&scratch);
         cssValuePoolReset(&pool);
         if (!resolved || isNanF64(number))
@@ -538,8 +538,10 @@ bool integerOf(CssValueRun run, const CssValueNode* node, double em, int32_t* ou
 // Returns true if no @counter-style rule may define `name`: decimal and the predefined symbolic styles
 // (css-counter-styles-3/#the-counter-style-rule), and none.
 bool nonOverridable(PrStringView name) {
-    const PrStringView fixed[] = {"decimal", "disc", "square", "circle", "disclosure-open", "disclosure-closed",
-                                  "none"};
+    const PrStringView fixed[] = {
+        "decimal", "disc", "square", "circle", "disclosure-open", "disclosure-closed",
+        "none",
+    };
     for (PrStringView other : fixed) {
         if (asciiEqualsFold(name, other))
             return true;
@@ -645,8 +647,11 @@ bool definesStyle(const Algorithm& a, double em) {
         return !hasSymbols && !hasAdditive;
     Array<PrStringView> listed;
     Array<CssAdditiveTuple> tuples;
-    bool valid = style.system == CssCounterSystem_Additive ? additiveOf(additive, em, &tuples) && tuples.count != 0
-                                                           : symbolsOf(symbols, &listed);
+    bool valid;
+    if (style.system == CssCounterSystem_Additive)
+        valid = additiveOf(additive, em, &tuples) && tuples.count != 0;
+    else
+        valid = symbolsOf(symbols, &listed);
     uint32_t least = style.system == CssCounterSystem_Alphabetic || style.system == CssCounterSystem_Numeric ? 2 : 1;
     valid = valid && (style.system == CssCounterSystem_Additive || listed.count >= least);
     listed.reset();
@@ -750,11 +755,13 @@ void resolveDefined(Array<Defined>& defined, uint32_t at, double em, CssCounterS
     PrStringView extended{};
     CssCounterStyle own{};
     if (systemOf(descriptorOf(d.rule, PrCssDescriptor_CounterStyleSystem), em, &own, &extended)) {
-        style = CssCounterStyle{.system = own.system,
-                                .first = own.first,
-                                .negative = {"-", {}},
-                                .suffix = ". ",
-                                .fallback = "decimal"};
+        style = CssCounterStyle{
+            .system = own.system,
+            .first = own.first,
+            .negative = {"-", {}},
+            .suffix = ". ",
+            .fallback = "decimal",
+        };
         if (own.system == CssCounterSystem_Additive) {
             additiveOf(descriptorOf(d.rule, PrCssDescriptor_CounterStyleAdditiveSymbols), em, &storage.additive);
             style.additive = storage.additive.data;
@@ -790,7 +797,7 @@ void resolveDefined(Array<Defined>& defined, uint32_t at, double em, CssCounterS
 } // namespace
 
 void cssCounterStylesBuild(CssCounterStyles* out, const CssRuleData* const PR_NONNULL* PR_NULLABLE rules,
-                           uint32_t count, double em) {
+        uint32_t count, double em) {
     cssCounterStylesReset(out);
     // Of the rules of a name, the last that defines a style wins, in the place of the name's first rule.
     Array<Defined> defined;
@@ -880,7 +887,7 @@ const CssCounterStyle* PR_NULLABLE cssCounterStyleFind(const CssCounterStyles* P
 }
 
 void cssCounterRepresent(TextBuffer* out, const CssCounterStyles* PR_NULLABLE styles, const CssCounterStyle* style,
-                         int32_t value, CssCounterFlow flow) {
+        int32_t value, CssCounterFlow flow) {
     for (uint32_t hop = 0; hop <= kMaxFallbacks; ++hop) {
         if (appendRepresentation(out, style, value, flow))
             return;
@@ -893,7 +900,7 @@ void cssCounterRepresent(TextBuffer* out, const CssCounterStyles* PR_NULLABLE st
 }
 
 void cssCounterAppend(TextBuffer* out, const CssCounterStyles* PR_NULLABLE styles, CssValueRun counterStyle,
-                      int32_t value, CssCounterFlow flow) {
+        int32_t value, CssCounterFlow flow) {
     withStyle(styles, counterStyle, [&](const CssCounterStyle* PR_NULLABLE style) {
         if (style != nullptr)
             cssCounterRepresent(out, styles, style, value, flow);
@@ -903,7 +910,7 @@ void cssCounterAppend(TextBuffer* out, const CssCounterStyles* PR_NULLABLE style
 }
 
 bool cssCounterAppendMarker(TextBuffer* out, const CssCounterStyles* PR_NULLABLE styles, CssValueRun listStyleType,
-                            int32_t value, CssCounterFlow flow) {
+        int32_t value, CssCounterFlow flow) {
     if (listStyleType.count == 0 || cssValueIsKeyword(listStyleType.values, PrCssKeyword_None))
         return false;
     if (listStyleType.values[0].kind == PrCssValueKind_String) {

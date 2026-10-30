@@ -13,17 +13,17 @@ namespace {
 
 // dom/#concept-getelementsbyclassname: returns true if the element has every class of `wanted`. `atoms` holds the atoms
 // of `wanted`. Classes compare ASCII case-insensitively in a quirks mode document.
-bool hasClasses(const PrDomElement* element, const Array<PrStringView>& wanted,
-                const Array<Atom>& atoms, bool quirks) {
+bool hasClasses(const PrDomElement* element, const Array<PrStringView>& wanted, const Array<Atom>& atoms, bool quirks) {
     if (element->classes == kDomClassesNone)
         return false;
     DomClassList classes = domClassesList(element->document, element->classes);
     for (uint32_t i = 0; i < wanted.count; ++i) {
         bool found = false;
         for (uint32_t j = 0; !found && j < classes.count; ++j) {
-            found = quirks ? asciiEqualsFold(domClassesName(element->document, classes.atoms[j]),
-                                             wanted.data[i])
-                           : classes.atoms[j] == atoms.data[i];
+            if (quirks)
+                found = asciiEqualsFold(domClassesName(element->document, classes.atoms[j]), wanted.data[i]);
+            else
+                found = classes.atoms[j] == atoms.data[i];
         }
         if (!found)
             return false;
@@ -46,9 +46,8 @@ PrDomElement* PR_NULLABLE nextWithClasses(const PrDomHtmlCollection* collection,
         possible = possible && (quirks || atoms.data[i] != kAtomNone);
     }
     PrDomElement* found = nullptr;
-    for (PrDomNode* node = domNodeNext(collection->root, after);
-         possible && found == nullptr && node != nullptr;
-         node = domNodeNext(collection->root, node)) {
+    for (PrDomNode* node = domNodeNext(collection->root, after); possible && found == nullptr && node != nullptr;
+            node = domNodeNext(collection->root, node)) {
         PrDomElement* element = domElementFromNode(node);
         if (element != nullptr && hasClasses(element, wanted, atoms, quirks))
             found = element;
@@ -65,8 +64,8 @@ bool collectionMatches(const PrDomHtmlCollection* collection, const PrDomElement
         case DomCollectionFilter_Embeds:
             return domIsHtml(element, PrDomTag_Embed);
         case DomCollectionFilter_Links:
-            return (domIsHtml(element, PrDomTag_A) || domIsHtml(element, PrDomTag_Area))
-                   && domAttribute(element, PrDomNamespace_None, "href") != nullptr;
+            return (domIsHtml(element, PrDomTag_A) || domIsHtml(element, PrDomTag_Area)) &&
+                domAttribute(element, PrDomNamespace_None, "href") != nullptr;
         case DomCollectionFilter_Forms:
             return domIsHtml(element, PrDomTag_Form);
         case DomCollectionFilter_Scripts:
@@ -74,8 +73,8 @@ bool collectionMatches(const PrDomHtmlCollection* collection, const PrDomElement
         case DomCollectionFilter_Anchors:
             return domIsHtml(element, PrDomTag_A) && domAttribute(element, PrDomNamespace_None, "name") != nullptr;
         case DomCollectionFilter_FormControls:
-            return domIsListed(element) && domFormOwner(element) == collection->root
-                   && !(domIsHtml(element, PrDomTag_Input) && domElementInputType(element) == PrDomInputType_Image);
+            return domIsListed(element) && domFormOwner(element) == collection->root &&
+                !(domIsHtml(element, PrDomTag_Input) && domElementInputType(element) == PrDomInputType_Image);
         case DomCollectionFilter_FieldSetElements:
             return domIsListed(element);
         default:
@@ -94,8 +93,8 @@ bool collectionMatches(const PrDomHtmlCollection* collection, const PrDomElement
 
 PrDomElement* PR_NULLABLE nextCollectionElement(const PrDomHtmlCollection* collection, PrDomNode* after) {
     if (collection->filter == DomCollectionFilter_Children) {
-        for (PrDomNode* node = after == collection->root ? after->first : after->next;
-             node != nullptr; node = node->next) {
+        for (PrDomNode* node = after == collection->root ? after->first : after->next; node != nullptr; node =
+                node->next) {
             if (PrDomElement* element = domElementFromNode(node))
                 return element;
         }
@@ -164,8 +163,7 @@ void update(PrDomTokenList* list, const TokenSet& set) {
             prStringAppend(&value, " ");
         prStringAppend(&value, set.tokens.data[i]);
     }
-    domSetAttribute(list->element, PrDomNamespace_None, prStringView(&list->name),
-                    prStringView(&value));
+    domSetAttribute(list->element, PrDomNamespace_None, prStringView(&list->name), prStringView(&value));
     prStringReset(&value);
 }
 
@@ -195,8 +193,7 @@ PrDomNode* PR_NULLABLE nextListNode(const PrDomNodeList* list, PrDomNode* PR_NUL
         return after == nullptr ? owner->first : after->next;
     PrDomNode* root = domNodeRoot(owner);
     PrStringView name = prStringView(&list->name);
-    for (PrDomNode* node = domNodeNext(root, after != nullptr ? after : root); node != nullptr;
-         node = domNodeNext(root, node)) {
+    for (PrDomNode* node = domNodeNext(root, after != nullptr ? after : root); node != nullptr; node = domNodeNext(root, node)) {
         PrDomElement* element = domElementFromNode(node);
         if (element == nullptr)
             continue;
@@ -207,8 +204,8 @@ PrDomNode* PR_NULLABLE nextListNode(const PrDomNodeList* list, PrDomNode* PR_NUL
                     return element;
                 break;
             case DomNodeListFilter_Radio:
-                if (named && domIsListed(element) && domFormOwner(element) == owner
-                    && !(domIsHtml(element, PrDomTag_Input) && domElementInputType(element) == PrDomInputType_Image))
+                if (named && domIsListed(element) && domFormOwner(element) == owner &&
+                        !(domIsHtml(element, PrDomTag_Input) && domElementInputType(element) == PrDomInputType_Image))
                     return element;
                 break;
             default:
@@ -234,8 +231,7 @@ DomCollectionCache& current(DomCollectionCache& cache, const PrDomNode* root) {
 
 } // namespace
 
-PrDomHtmlCollection* domHtmlCollectionCreate(PrDomNode* root, DomCollectionFilter filter,
-                                             PrStringView text) {
+PrDomHtmlCollection* domHtmlCollectionCreate(PrDomNode* root, DomCollectionFilter filter, PrStringView text) {
     PrDomHtmlCollection* collection = alloc<PrDomHtmlCollection>();
     *collection = PrDomHtmlCollection{{root, prStringCopy(text), filter, {}}};
     domNodeRetain(root);
@@ -248,7 +244,7 @@ uint32_t domHtmlCollectionLength(const PrDomHtmlCollection* collection) {
         return cache.length;
     uint32_t count = 0;
     for (PrDomElement* element = nextCollectionElement(collection, collection->root);
-         element != nullptr; element = nextCollectionElement(collection, element))
+            element != nullptr; element = nextCollectionElement(collection, element))
         ++count;
     cache.length = count;
     return count;
@@ -261,8 +257,11 @@ PrDomElement* PR_NULLABLE domHtmlCollectionItem(const PrDomHtmlCollection* colle
     // Start from the last element reached if it is at or before `index`, and from the start otherwise.
     bool resume = cache.node != nullptr && cache.index <= index;
     uint32_t at = resume ? cache.index : 0;
-    PrDomElement* element = resume ? static_cast<PrDomElement*>(cache.node)
-                                 : nextCollectionElement(collection, collection->root);
+    PrDomElement* element;
+    if (resume)
+        element = static_cast<PrDomElement*>(cache.node);
+    else
+        element = nextCollectionElement(collection, collection->root);
     for (; element != nullptr && at != index; ++at)
         element = nextCollectionElement(collection, element);
     if (element == nullptr) {
@@ -274,15 +273,13 @@ PrDomElement* PR_NULLABLE domHtmlCollectionItem(const PrDomHtmlCollection* colle
     return element;
 }
 
-PrDomElement* PR_NULLABLE domHtmlCollectionNamedItem(const PrDomHtmlCollection* collection,
-                                                     PrStringView name) {
+PrDomElement* PR_NULLABLE domHtmlCollectionNamedItem(const PrDomHtmlCollection* collection, PrStringView name) {
     if (name.size == 0)
         return nullptr;
     for (PrDomElement* element = nextCollectionElement(collection, collection->root);
-         element != nullptr; element = nextCollectionElement(collection, element)) {
-        if (domElementId(element) == name
-            || (element->space == PrDomNamespace_Html
-                && domAttributeValue(element, "name") == name))
+            element != nullptr; element = nextCollectionElement(collection, element)) {
+        if (domElementId(element) == name || (element->space == PrDomNamespace_Html &&
+                domAttributeValue(element, "name") == name))
             return element;
     }
     return nullptr;
@@ -300,7 +297,7 @@ void domHtmlCollectionNames(const PrDomHtmlCollection* collection, Array<PrStrin
         out->push(name);
     };
     for (PrDomElement* element = nextCollectionElement(collection, collection->root);
-         element != nullptr; element = nextCollectionElement(collection, element)) {
+            element != nullptr; element = nextCollectionElement(collection, element)) {
         add(domElementId(element));
         if (element->space == PrDomNamespace_Html)
             add(domAttributeValue(element, "name"));
@@ -423,8 +420,7 @@ bool domTokenListContains(const PrDomTokenList* list, PrStringView token) {
     return found;
 }
 
-PrStatus domTokenListAdd(PrDomTokenList* list, const PrStringView* PR_NULLABLE tokens,
-                         uint32_t count) {
+PrStatus domTokenListAdd(PrDomTokenList* list, const PrStringView* PR_NULLABLE tokens, uint32_t count) {
     PrStatus status = validate(tokens, count);
     if (status != PrStatus_Ok)
         return status;
@@ -438,8 +434,7 @@ PrStatus domTokenListAdd(PrDomTokenList* list, const PrStringView* PR_NULLABLE t
     return PrStatus_Ok;
 }
 
-PrStatus domTokenListRemove(PrDomTokenList* list, const PrStringView* PR_NULLABLE tokens,
-                            uint32_t count) {
+PrStatus domTokenListRemove(PrDomTokenList* list, const PrStringView* PR_NULLABLE tokens, uint32_t count) {
     PrStatus status = validate(tokens, count);
     if (status != PrStatus_Ok)
         return status;
@@ -454,8 +449,7 @@ PrStatus domTokenListRemove(PrDomTokenList* list, const PrStringView* PR_NULLABL
     return PrStatus_Ok;
 }
 
-PrStatus domTokenListToggle(PrDomTokenList* list, PrStringView token, const bool* PR_NULLABLE force,
-                            bool* out) {
+PrStatus domTokenListToggle(PrDomTokenList* list, PrStringView token, const bool* PR_NULLABLE force, bool* out) {
     PrStatus status = validate(token);
     if (status != PrStatus_Ok)
         return status;
@@ -476,8 +470,7 @@ PrStatus domTokenListToggle(PrDomTokenList* list, PrStringView token, const bool
     return PrStatus_Ok;
 }
 
-PrStatus domTokenListReplace(PrDomTokenList* list, PrStringView token, PrStringView newToken,
-                             bool* out) {
+PrStatus domTokenListReplace(PrDomTokenList* list, PrStringView token, PrStringView newToken, bool* out) {
     if (token.size == 0 || newToken.size == 0)
         return PrStatus_Syntax;
     PrStatus status = validate(token);

@@ -311,7 +311,7 @@ PrDrawBrush prDrawBrushImage(PrDrawSource source, PrRect destination, PrDrawSamp
 // interpolates in sRGB, with hues taking the shorter way. Its opacity is one.
 PrDrawBrush prDrawBrushLinear(PrVec2 start, PrVec2 end, const PrDrawColorStop* stops, uint32_t stopCount);
 PrDrawBrush prDrawBrushRadial(PrVec2 start, float startRadius, PrVec2 end, float endRadius,
-                              const PrDrawColorStop* stops, uint32_t stopCount);
+    const PrDrawColorStop* stops, uint32_t stopCount);
 PrDrawBrush prDrawBrushConic(PrVec2 center, float angle, const PrDrawColorStop* stops, uint32_t stopCount);
 PrDrawBrush prDrawBrushDiamond(PrVec2 center, PrVec2 radii, const PrDrawColorStop* stops, uint32_t stopCount);
 

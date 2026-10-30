@@ -66,11 +66,10 @@ CssMatcher cssMatchNested(const CssMatcher* m, CssTokenStream* ts);
 // Matches the whole of `span`, from `production` or `root` as in cssMatchWhole, for the argument of a pseudo-class or
 // pseudo-element whose check `m` is running.
 bool cssMatchArgument(const CssMatcher* m, CssTokenSpan span, CssGrammarIndex root,
-                      CssValueDef production, CssMatchArgument argument);
+    CssValueDef production, CssMatchArgument argument);
 
 // Matches the whole of `span` as `production`, a query whose features are descriptors of `features`.
-bool cssMatchQuery(const CssMatcher* m, CssTokenSpan span, CssValueDef production,
-                   CssAtRule features);
+bool cssMatchQuery(const CssMatcher* m, CssTokenSpan span, CssValueDef production, CssAtRule features);
 
 // Returns the component keywords of the relative color whose arguments contain the match, as kCssColorComponents lists
 // them. For alpha(), which accepts only `alpha`, each keyword is PrCssKeyword_Unknown. Returns null outside a relative

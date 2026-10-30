@@ -29,8 +29,7 @@ const PrFont* load(const char* name) {
 }
 
 // Renders the list onto `size` by `size` transparent RGBA pixels, reading images with the decoders if they are given.
-std::vector<uint8_t> render(const PrDrawList* list, uint32_t size,
-                            PrImageCodec* imageCodec = nullptr) {
+std::vector<uint8_t> render(const PrDrawList* list, uint32_t size, PrImageCodec* imageCodec = nullptr) {
     std::vector<uint8_t> bytes(size_t(size) * size * 4, 0);
     PrDrawCpuOptions options = prDrawCpuOptionsDefault();
     PrDrawGlyphDecoder* decoder = imageCodec != nullptr ? prDrawGlyphBitmapCreate(imageCodec) : nullptr;
@@ -45,8 +44,7 @@ std::vector<uint8_t> render(const PrDrawList* list, uint32_t size,
 
 std::string pixel(const std::vector<uint8_t>& bytes, uint32_t size, uint32_t x, uint32_t y) {
     const uint8_t* p = bytes.data() + (size_t(y) * size + x) * 4;
-    return std::to_string(p[0]) + " " + std::to_string(p[1]) + " " + std::to_string(p[2]) + " " +
-           std::to_string(p[3]);
+    return std::to_string(p[0]) + " " + std::to_string(p[1]) + " " + std::to_string(p[2]) + " " + std::to_string(p[3]);
 }
 
 } // namespace
@@ -113,8 +111,12 @@ TEST_CASE("a bitmap glyph draws its strike's image, and nothing without a codec"
         PrFontGlyphImage image{};
         REQUIRE(prFontGlyphImage(font, id, 64, &image));
         // The glyph at 64 pixels per em, with its image's center at the target's center.
-        PrFontGlyph glyph{id, {40 - (image.bounds.left + image.bounds.right) * 32,
-                               40 - (image.bounds.top + image.bounds.bottom) * 32}};
+        PrFontGlyph glyph{
+            id, {
+                40 - (image.bounds.left + image.bounds.right) * 32,
+                40 - (image.bounds.top + image.bounds.bottom) * 32,
+            },
+        };
         PrFontGlyphRun run{};        run.font = font;
         run.size = 64;
         run.glyphs = &glyph;

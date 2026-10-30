@@ -96,8 +96,8 @@ PrDMatrix4 transposed(const PrDMatrix4& a) {
 
 // Returns true if `a` is a 2D matrix: one that matrix() can write.
 bool is2D(const PrDMatrix4& a) {
-    return a.m[0][2] == 0 && a.m[1][2] == 0 && a.m[2][0] == 0 && a.m[2][1] == 0 && a.m[2][2] == 1 && a.m[2][3] == 0
-           && a.m[3][0] == 0 && a.m[3][1] == 0 && a.m[3][2] == 0 && a.m[3][3] == 1;
+    return a.m[0][2] == 0 && a.m[1][2] == 0 && a.m[2][0] == 0 && a.m[2][1] == 0 && a.m[2][2] == 1 && a.m[2][3] == 0 &&
+        a.m[3][0] == 0 && a.m[3][1] == 0 && a.m[3][2] == 0 && a.m[3][3] == 1;
 }
 
 // Returns the rotation by `angle` about the axis (x, y, z), or the identity for an axis of zero length
@@ -395,8 +395,10 @@ bool decompose3D(const PrDMatrix4& a, Decomposed3D* out) {
         d.skew[1] /= d.scale[2];
         d.skew[2] /= d.scale[2];
     }
-    double cross[3] = {row[1][1] * row[2][2] - row[1][2] * row[2][1], row[1][2] * row[2][0] - row[1][0] * row[2][2],
-                       row[1][0] * row[2][1] - row[1][1] * row[2][0]};
+    double cross[3] = {
+        row[1][1] * row[2][2] - row[1][2] * row[2][1], row[1][2] * row[2][0] - row[1][0] * row[2][2],
+        row[1][0] * row[2][1] - row[1][1] * row[2][0],
+    };
     if (dot3(row[0], cross) < 0) {
         for (uint32_t i = 0; i < 3; ++i) {
             d.scale[i] = -d.scale[i];
@@ -512,7 +514,7 @@ double inverseDistance(float distance) {
 
 // Interpolates two functions of the same kind (css-transforms-2/#interpolation-of-transform-functions).
 PrLayoutTransformFunction interpolateFunction(const PrLayoutTransformFunction& a, const PrLayoutTransformFunction& b,
-                                              double progress, PrVec2 extent) {
+        double progress, PrVec2 extent) {
     PrLayoutTransformFunction out{};
     out.kind = a.kind;
     switch (a.kind) {
@@ -634,9 +636,9 @@ double prLayoutTimingProgress(const PrLayoutTiming* timing, double time, bool* f
         iteration -= 1;
     }
     bool odd = fmodF64(iteration, 2) != 0;
-    bool reverse = t.direction == PrLayoutPlaybackDirection_Reverse
-                   || (t.direction == PrLayoutPlaybackDirection_Alternate && odd)
-                   || (t.direction == PrLayoutPlaybackDirection_AlternateReverse && !odd);
+    bool reverse = t.direction == PrLayoutPlaybackDirection_Reverse ||
+        (t.direction == PrLayoutPlaybackDirection_Alternate && odd) ||
+        (t.direction == PrLayoutPlaybackDirection_AlternateReverse && !odd);
     return reverse ? 1 - progress : progress;
 }
 
@@ -674,8 +676,7 @@ PrLayoutTransform prLayoutTransformListTransform(const PrLayoutTransformList* li
 }
 
 PrLayoutTransformList prLayoutTransformListInterpolate(const PrLayoutTransformList* from,
-                                                       const PrLayoutTransformList* to, double progress,
-                                                       PrVec2 extent) {
+        const PrLayoutTransformList* to, double progress, PrVec2 extent) {
     PrLayoutTransformList a = *from;
     PrLayoutTransformList b = *to;
     // The shorter list is extended with the identity functions of the longer list's kinds.
@@ -700,8 +701,7 @@ PrLayoutTransformList prLayoutTransformListInterpolate(const PrLayoutTransformLi
     return out;
 }
 
-bool prLayoutTransformListInterpolates(const PrLayoutTransformList* from, const PrLayoutTransformList* to,
-                                       PrVec2 extent) {
+bool prLayoutTransformListInterpolates(const PrLayoutTransformList* from, const PrLayoutTransformList* to, PrVec2 extent) {
     PrLayoutTransformList a = *from;
     PrLayoutTransformList b = *to;
     for (; a.count < b.count; ++a.count)
@@ -716,15 +716,14 @@ bool prLayoutTransformListInterpolates(const PrLayoutTransformList* from, const 
             return interpolateMatrices(listMatrix(a, i, extent), listMatrix(b, i, extent), 0.5, &m);
         // A matrix, and a rotation that turns about another axis, interpolate decomposed. Testing a rotation's pair is
         // harmless, because a rotation can always be decomposed.
-        if ((x.kind == PrLayoutTransformKind_Matrix || x.kind == PrLayoutTransformKind_Rotate)
-            && !interpolateMatrices(functionMatrix(x, extent), functionMatrix(y, extent), 0.5, &m))
+        if ((x.kind == PrLayoutTransformKind_Matrix || x.kind == PrLayoutTransformKind_Rotate) &&
+                !interpolateMatrices(functionMatrix(x, extent), functionMatrix(y, extent), 0.5, &m))
             return false;
     }
     return true;
 }
 
-bool prLayoutTrackSample(const PrLayoutTrack* track, double time, PrVec2 extent, float* opacity,
-                         PrMatrix4* transform) {
+bool prLayoutTrackSample(const PrLayoutTrack* track, double time, PrVec2 extent, float* opacity, PrMatrix4* transform) {
     bool finished = false;
     double progress = prLayoutTimingProgress(&track->timing, time, &finished);
     if (progress < 0 || track->keyframeCount == 0)

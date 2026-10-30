@@ -148,8 +148,8 @@ void subDrop(LayoutPaintCache& cache, const LayoutFragment* fragment) {
 bool changedSince(const LayoutTree* tree, const LayoutFragment* fragment, uint32_t recorded) {
     if (fragment->node != kPrLayoutNodeNone) {
         const LayoutTreeNode& n = layoutTreeNode(tree, fragment->node);
-        return n.paintSubtree >= recorded
-               || (n.kind == PrLayoutNodeKind_Text && layoutTreeNode(tree, n.parent).paintChanged >= recorded);
+        return n.paintSubtree >= recorded ||
+            (n.kind == PrLayoutNodeKind_Text && layoutTreeNode(tree, n.parent).paintChanged >= recorded);
     }
     for (uint32_t i = 0; i < fragment->childCount; ++i) {
         if (changedSince(tree, fragment->children[i].fragment, recorded))
@@ -177,15 +177,15 @@ bool subIsCurrent(const LayoutTree* tree, const LayoutPaintSub& sub) {
 // children are the fragments it recorded, at the same offsets from one another, and nothing they read has changed
 // since.
 bool runIsCurrent(const LayoutTree* tree, const LayoutPaintRun& run, const LayoutFragment* fragment, uint32_t start,
-                  uint32_t end) {
+        uint32_t end) {
     if (run.children.count != end - start)
         return false;
     PrLayoutVec first = fragment->children[start].offset;
     for (uint32_t i = 0; i < run.children.count; ++i) {
         const LayoutChild& child = fragment->children[start + i];
         const LayoutChild& kept = run.children.data[i];
-        if (child.fragment != kept.fragment || child.offset - first != kept.offset
-            || changedSince(tree, child.fragment, run.recorded))
+        if (child.fragment != kept.fragment || child.offset - first != kept.offset ||
+                changedSince(tree, child.fragment, run.recorded))
             return false;
     }
     return true;
@@ -201,7 +201,7 @@ const LayoutFragment* PR_NULLABLE entryFragment(const LayoutTree* tree, LayoutNo
 // Returns true if a run's recording is what recording the boxes `boxes` of a list again would give, with the first box
 // at `first` in the viewport's content as laid out. Each box must also be in the container that it was in.
 bool entriesCurrent(const LayoutTree* tree, const LayoutPaintRun& run, const LayoutStackedBox* boxes, uint32_t count,
-                    PrLayoutVec first) {
+        PrLayoutVec first) {
     if (run.entries.count != count || !listsCurrent(tree, run.recording.lists))
         return false;
     // If nothing was laid out or placed again since the recording, the boxes have the fragments, positions and
@@ -251,7 +251,7 @@ constexpr uint32_t kPaintSubVisits = 32;
 // content to the box as `decoration` specifies (css-images-3/#the-object-fit, css-images-3/#the-object-position). The
 // natural space has the content's natural size, and the box's size along an axis that has no natural size.
 PrAffine2 fitContent(const LayoutStyles* styles, const PrLayoutDecorationStyle& decoration, PrLayoutNaturalSize natural,
-                     PrLayoutRect box, PrLayoutVec* drawn) {
+        PrLayoutRect box, PrLayoutVec* drawn) {
     double boxWidth = double(layoutRectWidth(box).raw);
     double boxHeight = double(layoutRectHeight(box).raw);
     bool hasWidth = natural.width.raw >= 0;
@@ -297,13 +297,17 @@ PrAffine2 fitContent(const LayoutStyles* styles, const PrLayoutDecorationStyle& 
     // Position percentages refer to the room that the drawn size leaves.
     PrLayoutUnit roomX = prLayoutUnitClamped(int64_t(boxWidth - drawnWidth));
     PrLayoutUnit roomY = prLayoutUnitClamped(int64_t(boxHeight - drawnHeight));
-    PrLayoutVec at{box.left + layoutResolve(styles, decoration.objectPositionX, roomX),
-                   box.top + layoutResolve(styles, decoration.objectPositionY, roomY)};
+    PrLayoutVec at{
+        box.left + layoutResolve(styles, decoration.objectPositionX, roomX),
+        box.top + layoutResolve(styles, decoration.objectPositionY, roomY),
+    };
     float scaleX = width > 0 ? float(drawnWidth / width) : 1;
     float scaleY = height > 0 ? float(drawnHeight / height) : 1;
     PrVec2 offset = prLayoutVecToPx(at);
-    *drawn = PrLayoutVec{prLayoutUnitClamped(int64_t(roundF64(drawnWidth))),
-                         prLayoutUnitClamped(int64_t(roundF64(drawnHeight)))};
+    *drawn = PrLayoutVec{
+        prLayoutUnitClamped(int64_t(roundF64(drawnWidth))),
+        prLayoutUnitClamped(int64_t(roundF64(drawnHeight))),
+    };
     return PrAffine2{scaleX, 0, 0, scaleY, offset.x, offset.y};
 }
 
@@ -421,8 +425,9 @@ struct Painter : LayoutWalkVisitor {
     // chunk, and the root's own space in any other chunk.
     LayoutPaintContainerRef viewportRef() const {
         LayoutNodeIndex root = layoutNodeRoot(tree, chunk->node);
-        return root == chunk->node ? layoutPaintOwn(kPaintScrollNone)
-                                   : LayoutPaintContainerRef{root, PaintRefKind_Space};
+        if (root == chunk->node)
+            return layoutPaintOwn(kPaintScrollNone);
+        return LayoutPaintContainerRef{root, PaintRefKind_Space};
     }
 
     // Returns the innermost open recording.
@@ -435,15 +440,13 @@ struct Painter : LayoutWalkVisitor {
 
     // Returns where an open recording records the content of the container `node`, or null.
     const Opened* PR_NULLABLE openedOf(LayoutNodeIndex node) const {
-        uint32_t at =
-            openedIndex.find(KeyIndex::hashOf(node), [&](uint32_t i) { return opened.data[i].node == node; });
+        uint32_t at = openedIndex.find(KeyIndex::hashOf(node), [&](uint32_t i) { return opened.data[i].node == node; });
         return at != kHashMissing ? &opened.data[at] : nullptr;
     }
 
     // Notes that the recording inside `depth` parts records the content of the container `node` as its `index`.
     void open(LayoutNodeIndex node, uint32_t depth, uint32_t index) {
-        uint32_t at =
-            openedIndex.find(KeyIndex::hashOf(node), [&](uint32_t i) { return opened.data[i].node == node; });
+        uint32_t at = openedIndex.find(KeyIndex::hashOf(node), [&](uint32_t i) { return opened.data[i].node == node; });
         if (at == kHashMissing) {
             openedIndex.insert(KeyIndex::hashOf(node), opened.count);
             opened.push(Opened{node, depth, index});
@@ -471,11 +474,14 @@ struct Painter : LayoutWalkVisitor {
     // named as the chunk's own space, and the others as a recording around the chunk names them.
     void startIn(const Array<LayoutNodeIndex>& chain) {
         for (uint32_t i = 0; i + 1 < chain.count; ++i)
-            stack.push(chain.data[i] == kLayoutContainerViewport
-                           ? viewportRef()
-                           : LayoutPaintContainerRef{chain.data[i], PaintRefKind_Container});
-        stack.push(chain.count != 0 ? layoutPaintOwn(kPaintScrollNone)
-                                    : LayoutPaintContainerRef{0, PaintRefKind_Outside});
+            if (chain.data[i] == kLayoutContainerViewport)
+                stack.push(viewportRef());
+        else
+            stack.push(LayoutPaintContainerRef{chain.data[i], PaintRefKind_Container});
+        if (chain.count != 0)
+            stack.push(layoutPaintOwn(kPaintScrollNone));
+        else
+            stack.push(LayoutPaintContainerRef{0, PaintRefKind_Outside});
         segment(resolve(top()));
     }
 
@@ -573,8 +579,8 @@ struct Painter : LayoutWalkVisitor {
         flush();
         PrLayoutVec moved = at - origin;
         // Most parts are in one container, the one that the walk is in, and name nothing.
-        bool names = part.scrolls.count != 0 || part.layers.count != 0 || part.slots.count != 0
-                     || part.regions.count != 0 || part.fixed.count != 0;
+        bool names = part.scrolls.count != 0 || part.layers.count != 0 || part.slots.count != 0 ||
+            part.regions.count != 0 || part.fixed.count != 0;
         bool here = part.segments.count == 0 || (part.segments.count == 1 && part.segments.data[0].scroll == top());
         bool plain = !names && here;
         if (plain) {
@@ -669,8 +675,10 @@ struct Painter : LayoutWalkVisitor {
         }
         before(part.segments.count);
         for (uint32_t i = 0; i < part.regions.count; ++i)
-            to.regions.push(LayoutPaintRegion{layoutRectMoved(part.regions.data[i].rect, moved),
-                                        map(part.regions.data[i].scroll)});
+            to.regions.push(LayoutPaintRegion{
+                layoutRectMoved(part.regions.data[i].rect, moved),
+                map(part.regions.data[i].scroll),
+            });
         to.lists.append(part.lists.data, part.lists.count);
         // A part ends where the walk is, which may be a different container from its last segment's. For example, a run
         // of a list ends in the container of its last box.
@@ -709,8 +717,8 @@ struct Painter : LayoutWalkVisitor {
 
     // Returns true if a part recorded nothing: no commands, containers, names or wheel region.
     static bool isEmpty(const LayoutPaintRecording& recording) {
-        return recording.segments.count == 0 && recording.scrolls.count == 0 && recording.layers.count == 0
-               && recording.slots.count == 0 && recording.regions.count == 0;
+        return recording.segments.count == 0 && recording.scrolls.count == 0 && recording.layers.count == 0 &&
+            recording.slots.count == 0 && recording.regions.count == 0;
     }
 
     // Embeds the cached recording of `fragment`'s subtree at `offset` for `phase` if it is valid. Returns false if
@@ -746,8 +754,7 @@ struct Painter : LayoutWalkVisitor {
         uint32_t recordedCommands = commands - s.commands;
         // A run is cached even if it records nothing, which saves examining its children again. A run of children holds
         // no box that paints whole, so it reads no list.
-        bool worth =
-            !s.placesOutside && (s.run != 0 || !isEmpty(s.recording) || visits - s.visits >= kPaintSubVisits);
+        bool worth = !s.placesOutside && (s.run != 0 || !isEmpty(s.recording) || visits - s.visits >= kPaintSubVisits);
         PR_ASSERT(s.run == 0 || layoutPhaseIsList(s.phase) || s.recording.lists.count == 0);
         if (subs != RecordSubs_Cached || !worth) {
             clearRecording(s.recording);
@@ -759,13 +766,15 @@ struct Painter : LayoutWalkVisitor {
         } else if (s.run != 0) {
             storeRun(s, recordedCommands);
         } else {
-            LayoutPaintSub sub{.fragment = s.fragment,
-                         .phase = s.phase,
-                         .chunk = chunk->node,
-                         .entry = s.entry,
-                         .recording = s.recording,
-                         .commands = recordedCommands,
-                         .recorded = cache->paints};
+            LayoutPaintSub sub{
+                .fragment = s.fragment,
+                .phase = s.phase,
+                .chunk = chunk->node,
+                .entry = s.entry,
+                .recording = s.recording,
+                .commands = recordedCommands,
+                .recorded = cache->paints,
+            };
             layoutFragmentRetain(s.fragment);
             subStore(*cache, sub);
             ++stats->subtreesRecorded;
@@ -809,10 +818,12 @@ struct Painter : LayoutWalkVisitor {
     bool enterRun(const LayoutFragment* fragment, uint32_t start, uint32_t, PrLayoutVec base, LayoutPhase phase) {
         if (!hasRuns(fragment))
             return false;
-        enterPart(Subtree{.fragment = fragment,
-                          .phase = phase,
-                          .run = start / kPaintRun + 1,
-                          .offset = base + fragment->children[start].offset});
+        enterPart(Subtree{
+            .fragment = fragment,
+            .phase = phase,
+            .run = start / kPaintRun + 1,
+            .offset = base + fragment->children[start].offset,
+        });
         return true;
     }
 
@@ -820,7 +831,7 @@ struct Painter : LayoutWalkVisitor {
 
     // Embeds the cached recording of the run of a list whose boxes are `boxes`, keyed by the first box, if it is valid.
     bool replayEntries(LayoutNodeIndex, LayoutPhase phase, const LayoutStackedBox* boxes, uint32_t count,
-                       PrLayoutVec at, PrLayoutVec reference) {
+            PrLayoutVec at, PrLayoutVec reference) {
         if (subs != RecordSubs_Cached)
             return false;
         uint32_t found = runFind(*cache, boxes[0].node, phase, 0);
@@ -839,14 +850,16 @@ struct Painter : LayoutWalkVisitor {
     // Starts recording the run of a list whose boxes are `boxes` into a recording of its own. The recording's origin is
     // where the first box is placed, given that the context's reference box is at `at`.
     bool enterEntries(LayoutNodeIndex, LayoutPhase phase, const LayoutStackedBox* boxes, uint32_t count, PrLayoutVec at,
-                      PrLayoutVec reference) {
+            PrLayoutVec reference) {
         PrLayoutVec first = layoutNodePosition(tree, boxes[0].node);
-        enterPart(Subtree{.phase = phase,
-                          .run = 1,
-                          .offset = at + first - reference,
-                          .boxes = boxes,
-                          .count = count,
-                          .first = first});
+        enterPart(Subtree{
+            .phase = phase,
+            .run = 1,
+            .offset = at + first - reference,
+            .boxes = boxes,
+            .count = count,
+            .first = first,
+        });
         return true;
     }
 
@@ -920,7 +933,7 @@ struct Painter : LayoutWalkVisitor {
     // recorded as a scrolling layer instead (css-transforms-1/#transform-rendering), and so is a fixed layer of a
     // background that blends, which is one group.
     void backgroundLayers(LayoutNodeIndex node, const LayoutBackground& layers, const LayoutBackgroundBoxes& boxes,
-                          bool scrolls) {
+            bool scrolls) {
         // A transform is looked for only if a layer is fixed, since that search walks the box's ancestors.
         int8_t viewportFixed = -1;
         for (uint32_t i = layers.count; i-- > 0;) {
@@ -1000,23 +1013,24 @@ struct Painter : LayoutWalkVisitor {
     // the canvas instead.
     void localBackground(const LayoutFragment* fragment, PrLayoutRect padding) {
         const LayoutTreeNode& n = layoutTreeNode(tree, fragment->node);
-        if (fragment->node == tree->root
-            || layoutColorStyle(styles, n.style).visibility != PrLayoutVisibility_Visible)
+        if (fragment->node == tree->root || layoutColorStyle(styles, n.style).visibility != PrLayoutVisibility_Visible)
             return;
         const PrLayoutDecorationStyle& decoration = layoutDecorationStyle(styles, n.style);
         const LayoutBackground& layers = layoutBackgroundAt(&styles->backgrounds, decoration.backgroundLayers);
-        bool color = decoration.backgroundAttachment == PrLayoutBackgroundAttachment_Local
-                     && prFloat16ToFloat(decoration.background.a) > 0;
+        bool color = decoration.backgroundAttachment == PrLayoutBackgroundAttachment_Local &&
+            prFloat16ToFloat(decoration.background.a) > 0;
         if (layers.count == 0 && !color)
             return;
         const PrLayoutBoxStyle& box = layoutBoxStyle(styles, n.style);
         PrLayoutRect content = layoutScrollContent(fragment, box);
         PrLayoutVec start{padding.left, padding.top};
         PrRect area = prLayoutRectToPx(layoutRectMoved(content, start - origin));
-        PrRect framed{area.left - prLayoutUnitToPx(box.border[PrRectSide_Left]),
-                      area.top - prLayoutUnitToPx(box.border[PrRectSide_Top]),
-                      area.right + prLayoutUnitToPx(box.border[PrRectSide_Right]),
-                      area.bottom + prLayoutUnitToPx(box.border[PrRectSide_Bottom])};
+        PrRect framed{
+            area.left - prLayoutUnitToPx(box.border[PrRectSide_Left]),
+            area.top - prLayoutUnitToPx(box.border[PrRectSide_Top]),
+            area.right + prLayoutUnitToPx(box.border[PrRectSide_Right]),
+            area.bottom + prLayoutUnitToPx(box.border[PrRectSide_Bottom]),
+        };
         LayoutBackgroundBoxes boxes = layoutBackgroundBoxes(styles, fragment, box, framed);
         boxes.boxes[PrLayoutBackgroundBox_BorderBox] = boxes.boxes[PrLayoutBackgroundBox_PaddingBox];
         // The layers that scroll with the content blend among themselves, and with the color if it scrolls too.
@@ -1025,8 +1039,8 @@ struct Painter : LayoutWalkVisitor {
             backgroundColor(decoration.background, boxes, decoration.backgroundClip);
         for (uint32_t i = layers.count; i-- > 0;) {
             const PrLayoutBackgroundLayer& layer = layers.layers[i];
-            if (layer.attachment == PrLayoutBackgroundAttachment_Local
-                && layoutBackgroundPaintLayer(&styles->compounds, layer, boxes, out()))
+            if (layer.attachment == PrLayoutBackgroundAttachment_Local &&
+                    layoutBackgroundPaintLayer(&styles->compounds, layer, boxes, out()))
                 recorded();
         }
         if (layers.blends)
@@ -1047,7 +1061,7 @@ struct Painter : LayoutWalkVisitor {
             return;
         PrDrawList* to = target();
         prDrawListPushClipRect(to, prLayoutRectToPx(layoutRectMoved(heldClip, kLayoutVecZero - origin)),
-                               PrDrawEdges_Snapped);
+            PrDrawEdges_Snapped);
         prDrawListEmbed(to, batch, PrDVec2{0, 0});
         prDrawListPopClip(to);
         prDrawListRelease(batch);
@@ -1078,11 +1092,13 @@ struct Painter : LayoutWalkVisitor {
             LayoutPaintRecording& to = into();
             PrLayoutVec port{layoutRectWidth(clip), layoutRectHeight(clip)};
             const PrLayoutBoxStyle& box = layoutBoxStyle(styles, layoutTreeNode(tree, node).style);
-            LayoutPaintScroll made{.node = node,
-                             .parent = current,
-                             .segment = to.segments.count,
-                             .clip = layoutClipMoved(clip, kLayoutVecZero - origin),
-                             .scrolls = scrolls};
+            LayoutPaintScroll made{
+                .node = node,
+                .parent = current,
+                .segment = to.segments.count,
+                .clip = layoutClipMoved(clip, kLayoutVecZero - origin),
+                .scrolls = scrolls,
+            };
             // A scroll container's clip rectangle cuts the clip of its scrollport, but the whole scrollport still
             // decides the scroll range.
             PrLayoutRect clipped = clip;
@@ -1114,12 +1130,14 @@ struct Painter : LayoutWalkVisitor {
     // Names a box with a layer of its own at `offset`. The layer plays after what is recorded so far and before what
     // follows. Returns false for any other box, which the walk visits.
     bool takesLayer(const LayoutFragment* fragment, PrLayoutVec offset) {
-        if (!layoutOwnsLayer(styles, layoutTreeNode(tree, fragment->node).style)
-            && !layoutIsolatesBlending(tree, fragment->node))
+        if (!layoutOwnsLayer(styles, layoutTreeNode(tree, fragment->node).style) &&
+                !layoutIsolatesBlending(tree, fragment->node))
             return false;
         nameNext();
-        into().layers.push(LayoutPaintLayer{fragment, offset - origin, current, into().segments.count, named(),
-                                      fragment->node, LayoutPieceAt{kLayoutPieceNone, kLayoutPieceNone}});
+        into().layers.push(LayoutPaintLayer{
+            fragment, offset - origin, current, into().segments.count, named(),
+            fragment->node, LayoutPieceAt{kLayoutPieceNone, kLayoutPieceNone},
+        });
         return true;
     }
 
@@ -1130,8 +1148,10 @@ struct Painter : LayoutWalkVisitor {
         if (!layoutInlineOwnsLayer(styles, layoutTreeNode(tree, node).style))
             return false;
         nameNext();
-        into().layers.push(LayoutPaintLayer{place.container, place.base - origin, current, into().segments.count,
-                                            named(), node, place.at});
+        into().layers.push(LayoutPaintLayer{
+            place.container, place.base - origin, current, into().segments.count,
+            named(), node, place.at,
+        });
         return true;
     }
 
@@ -1149,7 +1169,7 @@ struct Painter : LayoutWalkVisitor {
         uint32_t through = 0;
         bool inner = false;
         for (LayoutNodeIndex p = layoutCachePlacement(tree->cache, node).parent; p != kPrLayoutNodeNone && !inner;
-             p = layoutCachePlacement(tree->cache, p).parent) {
+                p = layoutCachePlacement(tree->cache, p).parent) {
             inner = p == reference;
             for (uint32_t i = subtrees.count; i-- > through;) {
                 if (subtrees.data[i].run == 0 && subtrees.data[i].fragment->node == p) {
@@ -1177,8 +1197,10 @@ struct Painter : LayoutWalkVisitor {
     // after what is recorded so far and before what follows.
     void slot(uint64_t embed, LayoutNodeIndex node, PrLayoutRect box) {
         nameNext();
-        into().slots.push(LayoutPaintSlot{embed, node, layoutRectMoved(box, kLayoutVecZero - origin), current,
-                                    into().segments.count, named()});
+        into().slots.push(LayoutPaintSlot{
+            embed, node, layoutRectMoved(box, kLayoutVecZero - origin), current,
+            into().segments.count, named(),
+        });
     }
 
     // Adds the border box `at` of `fragment` to the wheel region, with the area that its descendants reach, unless the
@@ -1200,8 +1222,8 @@ struct Painter : LayoutWalkVisitor {
         if (previous == 0 || node == kPrLayoutNodeNone)
             return;
         const LayoutTreeNode& n = layoutTreeNode(tree, node);
-        bool changed = n.paintSubtree >= previous
-                       || (n.kind == PrLayoutNodeKind_Text && layoutTreeNode(tree, n.parent).paintChanged >= previous);
+        bool changed = n.paintSubtree >= previous ||
+            (n.kind == PrLayoutNodeKind_Text && layoutTreeNode(tree, n.parent).paintChanged >= previous);
         if (!changed)
             ++stats->boxesRepaintedUnchanged;
     }
@@ -1240,8 +1262,8 @@ struct Painter : LayoutWalkVisitor {
                 borders = layoutTableStyle(styles, style).borderCollapse != PrLayoutBorderCollapse_Collapse;
             } else if (box.display == PrLayoutDisplay_TableCell) {
                 borders = !layoutTableCellCollapses(tree, fragment->node);
-                if (borders && layoutColorStyle(styles, style).emptyCells == PrLayoutEmptyCells_Hide
-                    && layoutTableCellIsEmpty(fragment))
+                if (borders && layoutColorStyle(styles, style).emptyCells == PrLayoutEmptyCells_Hide &&
+                        layoutTableCellIsEmpty(fragment))
                     return;
             }
         }
@@ -1249,8 +1271,11 @@ struct Painter : LayoutWalkVisitor {
         // Corners do not apply to a track, nor to a table or cell whose borders collapse
         // (css-backgrounds-3/#corner-clipping).
         bool rounded = decorates && borders && layoutHasCorners(decoration);
-        PrCornerRect shape =
-            rounded ? layoutBorderShape(styles, decoration, rect, fragment->broken) : prCornerRectRound(rect, 0);
+        PrCornerRect shape;
+        if (rounded)
+            shape = layoutBorderShape(styles, decoration, rect, fragment->broken);
+        else
+            shape = prCornerRectRound(rect, 0);
         PrColor16 background = decoration.background;
         const LayoutBackground& layers = layoutBackgroundAt(&styles->backgrounds, decoration.backgroundLayers);
         if (decorates && !root && (prFloat16ToFloat(background.a) > 0 || layers.count != 0)) {
@@ -1286,8 +1311,8 @@ struct Painter : LayoutWalkVisitor {
             recorded();
         }
         PrLayoutUnit outlineWidth = layoutBorderWidth(styles, decoration.outlineWidth);
-        if (decoration.outlineStyle != PrDrawBorderStyle_None && outlineWidth > kLayoutUnitZero
-            && prFloat16ToFloat(decoration.outlineColor.a) > 0) {
+        if (decoration.outlineStyle != PrDrawBorderStyle_None && outlineWidth > kLayoutUnitZero &&
+                prFloat16ToFloat(decoration.outlineColor.a) > 0) {
             // A negative offset shrinks the outline into the border box, but the outline's outer edge is never smaller
             // than twice its width in either dimension (css-ui-4/#negative-offset). The offset snaps as the width does
             // (w3c/csswg-drafts#12906). The outline follows the border box's corners
@@ -1303,27 +1328,34 @@ struct Painter : LayoutWalkVisitor {
                 PrCornerRect corners = layoutBorderShape(styles, decoration, whole, fragment->broken);
                 float offsetX = outsetX - width;
                 float offsetY = outsetY - width;
-                float grown[PrRectSide_Count] = {maxF32(offsetY, 0), maxF32(offsetX, 0), maxF32(offsetY, 0),
-                                                 maxF32(offsetX, 0)};
-                float shrunk[PrRectSide_Count] = {maxF32(-offsetY, 0), maxF32(-offsetX, 0), maxF32(-offsetY, 0),
-                                                  maxF32(-offsetX, 0)};
+                float grown[PrRectSide_Count] = {
+                    maxF32(offsetY, 0), maxF32(offsetX, 0), maxF32(offsetY, 0),
+                    maxF32(offsetX, 0),
+                };
+                float shrunk[PrRectSide_Count] = {
+                    maxF32(-offsetY, 0), maxF32(-offsetX, 0), maxF32(-offsetY, 0),
+                    maxF32(-offsetX, 0),
+                };
                 PrCornerRect inner = prCornerRectInset(prCornerRectOutset(corners, grown), shrunk);
                 outline.shape = inner;
-                outline.shape.rect = PrRect{inner.rect.left - width, inner.rect.top - width, inner.rect.right + width,
-                                            inner.rect.bottom + width};
+                outline.shape.rect = PrRect{
+                    inner.rect.left - width, inner.rect.top - width, inner.rect.right + width,
+                    inner.rect.bottom + width,
+                };
                 for (PrCorner& c : outline.shape.corners) {
                     if (c.radii.x > 0 && c.radii.y > 0)
                         c.radii = PrVec2{c.radii.x + width, c.radii.y + width};
                 }
             } else {
                 outline.shape = prCornerRectRound(
-                    PrRect{whole.left - outsetX, whole.top - outsetY, whole.right + outsetX, whole.bottom + outsetY},
-                    0);
+                    PrRect{whole.left - outsetX, whole.top - outsetY, whole.right + outsetX, whole.bottom + outsetY}, 0);
             }
             for (PrDrawBorderSide& s : outline.sides)
-                s = PrDrawBorderSide{.width = prLayoutUnitToPx(outlineWidth),
-                                     .style = decoration.outlineStyle,
-                                     .color = decoration.outlineColor};
+                s = PrDrawBorderSide{
+                    .width = prLayoutUnitToPx(outlineWidth),
+                    .style = decoration.outlineStyle,
+                    .color = decoration.outlineColor,
+                };
             prDrawListBorder(out(), &outline, {.edges = PrDrawEdges_Snapped});
             recorded();
         }
@@ -1350,9 +1382,11 @@ struct Painter : LayoutWalkVisitor {
                     columns.push(GridColumn{kPrLayoutNodeNone, f->node, PrLayoutRect{}, rect});
                 for (uint32_t k = 0; k < f->childCount; ++k) {
                     const LayoutChild& column = f->children[k];
-                    columns.push(GridColumn{column.fragment->node, f->node,
-                                            layoutRectAt(at + child.offset + column.offset, column.fragment->extent),
-                                            rect});
+                    columns.push(GridColumn{
+                        column.fragment->node, f->node,
+                        layoutRectAt(at + child.offset + column.offset, column.fragment->extent),
+                        rect,
+                    });
                 }
             }
         }
@@ -1362,7 +1396,7 @@ struct Painter : LayoutWalkVisitor {
     // Records the track backgrounds behind each cell in `fragment` at `at`. The cells are in the row group `group` and
     // the row `row`, whose boxes are `groupRect` and `rowRect`, if those are not kPrLayoutNodeNone.
     void gridCells(const LayoutFragment* fragment, PrLayoutVec at, LayoutNodeIndex group, PrLayoutRect groupRect,
-                   LayoutNodeIndex row, PrLayoutRect rowRect) {
+            LayoutNodeIndex row, PrLayoutRect rowRect) {
         for (uint32_t i = 0; i < fragment->childCount; ++i) {
             const LayoutChild& child = fragment->children[i];
             const LayoutFragment* f = child.fragment;
@@ -1385,9 +1419,9 @@ struct Painter : LayoutWalkVisitor {
             if (f->node != kPrLayoutNodeNone) {
                 PrLayoutStyleIndex style = layoutTreeNode(tree, f->node).style;
                 const PrLayoutColorStyle& color = layoutColorStyle(styles, style);
-                if (color.visibility != PrLayoutVisibility_Visible
-                    || (color.emptyCells == PrLayoutEmptyCells_Hide && layoutTableCellIsEmpty(f)
-                        && !layoutTableCellCollapses(tree, f->node)))
+                if (color.visibility != PrLayoutVisibility_Visible ||
+                        (color.emptyCells == PrLayoutEmptyCells_Hide && layoutTableCellIsEmpty(f) &&
+                            !layoutTableCellCollapses(tree, f->node)))
                     continue;
             }
             for (uint32_t k = 0; k < columns.count; ++k) {
@@ -1460,10 +1494,11 @@ struct Painter : LayoutWalkVisitor {
                 PrDrawBorder border{};
                 border.shape = prCornerRectRound(rect, 0);
                 bool across = segment.side == PrRectSide_Top || segment.side == PrRectSide_Bottom;
-                border.sides[segment.side] = PrDrawBorderSide{.width = across ? rect.bottom - rect.top
-                                                                              : rect.right - rect.left,
-                                                              .style = segment.style,
-                                                              .color = segment.color};
+                border.sides[segment.side] = PrDrawBorderSide{
+                    .width = across ? rect.bottom - rect.top : rect.right - rect.left,
+                    .style = segment.style,
+                    .color = segment.color,
+                };
                 prDrawListBorder(out(), &border, {});
             }
             recorded();
@@ -1475,16 +1510,17 @@ struct Painter : LayoutWalkVisitor {
     // recording draws again and bypasses the cache.
     PrDrawList* imaged(const LayoutReplaced& n, PrLayoutRect box) {
         bool cached = subs != RecordSubs_Fresh;
-        PrLayoutVec extent{n.natural.width.raw > 0 ? n.natural.width : layoutRectWidth(box),
-                           n.natural.height.raw > 0 ? n.natural.height : layoutRectHeight(box)};
+        PrLayoutVec extent{
+            n.natural.width.raw > 0 ? n.natural.width : layoutRectWidth(box),
+            n.natural.height.raw > 0 ? n.natural.height : layoutRectHeight(box),
+        };
         if (cached && n.content != nullptr && n.painted == extent) {
             prDrawListRetain(n.content);
             return n.content;
         }
         PrUVec2 texels = prDrawImageExtent(n.image);
         PrRect covered{0, 0, prLayoutUnitToPx(extent.x), prLayoutUnitToPx(extent.y)};
-        PrDrawBrush brush = prDrawBrushImage(
-            prDrawSourceImage(n.image, PrRect{0, 0, float(texels.x), float(texels.y)}), covered,
+        PrDrawBrush brush = prDrawBrushImage(prDrawSourceImage(n.image, PrRect{0, 0, float(texels.x), float(texels.y)}), covered,
             n.rendering == PrLayoutImageRendering_Auto ? PrDrawSampling_Linear : PrDrawSampling_Nearest);
         brush.image.limit = n.limit;
         PrDrawList* drawing = prDrawListCreate();
@@ -1544,8 +1580,10 @@ struct Painter : LayoutWalkVisitor {
         PrLayoutVec fitted{};
         PrAffine2 placed = fitContent(styles, layoutDecorationStyle(styles, style), n.natural, box, &fitted);
         // The natural space, the box's size along an axis that has no natural size.
-        PrLayoutVec space{n.natural.width.raw >= 0 ? n.natural.width : layoutRectWidth(box),
-                          n.natural.height.raw >= 0 ? n.natural.height : layoutRectHeight(box)};
+        PrLayoutVec space{
+            n.natural.width.raw >= 0 ? n.natural.width : layoutRectWidth(box),
+            n.natural.height.raw >= 0 ? n.natural.height : layoutRectHeight(box),
+        };
         PrDrawList* into = out();
         // The content is clipped to the curves of the content box's corners (css-backgrounds-3/#corner-clipping).
         const PrLayoutDecorationStyle& decoration = layoutDecorationStyle(styles, style);
@@ -1553,7 +1591,7 @@ struct Painter : LayoutWalkVisitor {
             PrRect border = prLayoutRectToPx(layoutRectAt(at - origin, fragment->extent));
             LayoutBackgroundBoxes boxes{.boxes = {border, border, prLayoutRectToPx(box)}};
             layoutBackgroundRound(boxes, layoutBorderShape(styles, decoration, border),
-                                  1u << PrLayoutBackgroundBox_ContentBox);
+                1u << PrLayoutBackgroundBox_ContentBox);
             prDrawListPushClipCornerRect(into, boxes.shapes[PrLayoutBackgroundBox_ContentBox], PrDrawEdges_Snapped);
         } else {
             prDrawListPushClipRect(into, prLayoutRectToPx(box), PrDrawEdges_Snapped);
@@ -1578,8 +1616,11 @@ struct Painter : LayoutWalkVisitor {
                 placed = prAffine2Translate(PrVec2{placed.e, placed.f});
             }
             // The content's extent, which fills the rectangle it is fitted to and snaps with it.
-            PrVec2 extent = n.contentKind == PrLayoutContentKind_DrawList ? prLayoutVecToPx(space)
-                                                                          : prLayoutVecToPx(fitted);
+            PrVec2 extent;
+            if (n.contentKind == PrLayoutContentKind_DrawList)
+                extent = prLayoutVecToPx(space);
+            else
+                extent = prLayoutVecToPx(fitted);
             prDrawListPushTransformSnappedRect(into, prDAffine2FromAffine2(placed), extent);
             prDrawListEmbed(into, content, PrDVec2{0, 0});
             prDrawListPopTransform(into);
@@ -1602,9 +1643,9 @@ struct Painter : LayoutWalkVisitor {
             return;
         const LayoutHighlights* highlights = layoutTextHighlights(tree, fragment->node);
         const LayoutTreeCaret& caret = tree->caret;
-        bool caretHere = caret.shown
-                         && prLayoutNodeIsValid(static_cast<const PrLayoutTree*>(tree), caret.caret.position.node)
-                         && layoutNodeIndex(tree, caret.caret.position.node) == fragment->node;
+        bool caretHere = caret.shown &&
+            prLayoutNodeIsValid(static_cast<const PrLayoutTree*>(tree), caret.caret.position.node) &&
+            layoutNodeIndex(tree, caret.caret.position.node) == fragment->node;
         if (highlights != nullptr || caretHere) {
             marked(fragment, at, highlights, caretHere);
             return;
@@ -1625,9 +1666,10 @@ struct Painter : LayoutWalkVisitor {
         PrDrawSnapFlags blockAxis = vertical ? PrDrawSnapFlag_X : PrDrawSnapFlag_Y;
         if (turned) {
             PrVec2 extent = prLayoutVecToPx(fragment->extent);
-            placed = fragment->turn == LayoutTextTurn_Clockwise
-                         ? PrAffine2{0, 1, -1, 0, offset.x + extent.x, offset.y}
-                         : PrAffine2{0, -1, 1, 0, offset.x, offset.y + extent.y};
+            if (fragment->turn == LayoutTextTurn_Clockwise)
+                placed = PrAffine2{0, 1, -1, 0, offset.x + extent.x, offset.y};
+            else
+                placed = PrAffine2{0, -1, 1, 0, offset.x, offset.y + extent.y};
             pen = PrVec2{};
             blockAxis = PrDrawSnapFlag_X;
         }
@@ -1669,7 +1711,7 @@ struct Painter : LayoutWalkVisitor {
     // its glyphs, clipped to each stretch along its line that one color paints, then the caret if the caret stands in
     // the fragment (css-pseudo-4/#highlight-painting).
     void marked(const LayoutFragment* fragment, PrLayoutVec at, const LayoutHighlights* PR_NULLABLE highlights,
-                bool caretHere) {
+            bool caretHere) {
         const LayoutFragmentText& text = fragment->text;
         PrLayoutVec offset = at - origin;
         PrColor16 base = layoutColorStyle(styles, layoutFragmentStyle(tree, fragment)).color;
@@ -1731,8 +1773,7 @@ struct Painter : LayoutWalkVisitor {
             bool whole = cuts.count == 2;
             if (!whole) {
                 PrRect clip = prLayoutRectToPx(layoutTextSpanRect(tree, fragment, offset,
-                                                                  lo == -kInfinityF32 ? -text.size : lo,
-                                                                  hi == kInfinityF32 ? length + text.size : hi));
+                    lo == -kInfinityF32 ? -text.size : lo, hi == kInfinityF32 ? length + text.size : hi));
                 bool vertical = layoutStyleTraits(styles, layoutFragmentStyle(tree, fragment)).vertical;
                 if (vertical) {
                     clip.left -= text.size;
@@ -1776,8 +1817,10 @@ struct Painter : LayoutWalkVisitor {
         PrDrawSnapFlags blockAxis = vertical ? PrDrawSnapFlag_X : PrDrawSnapFlag_Y;
         if (turned) {
             PrVec2 extent = prLayoutVecToPx(fragment->extent);
-            placed = fragment->turn == LayoutTextTurn_Clockwise ? PrAffine2{0, 1, -1, 0, at.x + extent.x, at.y}
-                                                                : PrAffine2{0, -1, 1, 0, at.x, at.y + extent.y};
+            if (fragment->turn == LayoutTextTurn_Clockwise)
+                placed = PrAffine2{0, 1, -1, 0, at.x + extent.x, at.y};
+            else
+                placed = PrAffine2{0, -1, 1, 0, at.x, at.y + extent.y};
             pen = PrVec2{};
             blockAxis = PrDrawSnapFlag_X;
         }
@@ -1840,9 +1883,9 @@ bool outerCurrent(const LayoutTree* tree, const LayoutPaintChunk& chunk) {
             return false;
         bool inlineBox = layoutIsInlineBox(tree, node);
         LayoutNodeIndex holder = inlineBox ? layoutCachePlacement(tree->cache, node).parent : node;
-        if (holder == kPrLayoutNodeNone || layoutCachePlaced(tree->cache, holder) != placed.fragment
-            || layoutNodePosition(tree, node) - reference != placed.offset
-            || layoutNodeContainer(tree, node) != placed.container)
+        if (holder == kPrLayoutNodeNone || layoutCachePlaced(tree->cache, holder) != placed.fragment ||
+                layoutNodePosition(tree, node) - reference != placed.offset ||
+                layoutNodeContainer(tree, node) != placed.container)
             return false;
     }
     return true;
@@ -1852,23 +1895,29 @@ bool outerCurrent(const LayoutTree* tree, const LayoutPaintChunk& chunk) {
 // recorded, the boxes it placed from outside it are where they were, and nothing it read from its nodes has changed
 // since. A change to the box's own effects does not count, because effects apply around the recording.
 bool isCurrent(const LayoutTree* tree, const LayoutPaintChunk& chunk, const LayoutFragment* fragment,
-               LayoutPieceAt opening, bool root) {
-    if (chunk.fragment != fragment || chunk.opening.child != opening.child || chunk.opening.line != opening.line
-        || chunk.root != root || !outerCurrent(tree, chunk))
+        LayoutPieceAt opening, bool root) {
+    if (chunk.fragment != fragment || chunk.opening.child != opening.child || chunk.opening.line != opening.line ||
+            chunk.root != root || !outerCurrent(tree, chunk))
         return false;
     // An inline box's recording reads only its pieces, which are fragments of its descendants. The descendants mark the
     // box when they change.
-    if (chunk.node != fragment->node ? layoutTreeNode(tree, chunk.node).paintSubtree >= chunk.recorded
-                                     : changedSince(tree, fragment, chunk.recorded))
+    bool changed;
+    if (chunk.node != fragment->node)
+        changed = layoutTreeNode(tree, chunk.node).paintSubtree >= chunk.recorded;
+    else
+        changed = changedSince(tree, fragment, chunk.recorded);
+    if (changed)
         return false;
     // A box named as a layer must still have a layer of its own. An inline box is checked by its node, separately from
     // its container's fragment.
     for (uint32_t i = 0; i < chunk.layers.count; ++i) {
         const LayoutPaintLayer& layer = chunk.layers.data[i];
         PrLayoutStyleIndex style = layoutTreeNode(tree, layer.node).style;
-        bool owns = layer.node != layer.fragment->node
-                        ? layoutInlineOwnsLayer(tree->styles, style)
-                        : layoutOwnsLayer(tree->styles, style) || layoutIsolatesBlending(tree, layer.node);
+        bool owns;
+        if (layer.node != layer.fragment->node)
+            owns = layoutInlineOwnsLayer(tree->styles, style);
+        else
+            owns = layoutOwnsLayer(tree->styles, style) || layoutIsolatesBlending(tree, layer.node);
         if (!owns)
             return false;
     }
@@ -1877,9 +1926,8 @@ bool isCurrent(const LayoutTree* tree, const LayoutPaintChunk& chunk, const Layo
 
 // Records the body of the box `fragment` into the chunk, in the box's own space, in the containers it paints in.
 void record(LayoutTree* tree, LayoutPaintChunk& chunk, const LayoutFragment* fragment, LayoutPieceAt opening, bool root,
-            RecordSubs subs) {
-    bool reused = subs == RecordSubs_Cached && chunk.fragment == fragment
-                && (tree->paintedFor & LayoutInputFlag_Layout) == 0;
+        RecordSubs subs) {
+    bool reused = subs == RecordSubs_Cached && chunk.fragment == fragment && (tree->paintedFor & LayoutInputFlag_Layout) == 0;
     uint32_t previous = reused ? chunk.recorded : 0;
     resetChunk(chunk);
     layoutFragmentRetain(fragment);
@@ -1887,14 +1935,16 @@ void record(LayoutTree* tree, LayoutPaintChunk& chunk, const LayoutFragment* fra
     chunk.opening = opening;
     chunk.root = root;
     chunk.recorded = tree->paint.paints;
-    Painter painter{.tree = tree,
-                    .styles = tree->styles,
-                    .chunk = &chunk,
-                    .previous = previous,
-                    .cache = &tree->paint,
-                    .subs = subs,
-                    .stats = &tree->stats,
-                    .current = layoutPaintOwn(kPaintScrollNone)};
+    Painter painter{
+        .tree = tree,
+        .styles = tree->styles,
+        .chunk = &chunk,
+        .previous = previous,
+        .cache = &tree->paint,
+        .subs = subs,
+        .stats = &tree->stats,
+        .current = layoutPaintOwn(kPaintScrollNone),
+    };
     LayoutWalk<Painter> w{.tree = tree, .styles = tree->styles, .visitor = painter};
     Array<LayoutNodeIndex> around;
     layoutContainerChain(tree, layoutNodeContainer(tree, chunk.node), around);
@@ -1922,14 +1972,14 @@ void record(LayoutTree* tree, LayoutPaintChunk& chunk, const LayoutFragment* fra
 // Returns true if two recordings of a box are the same: the commands of their segments, the containers they are in, the
 // boxes they name, and their wheel regions.
 bool sameRecording(const LayoutPaintChunk& a, const LayoutPaintChunk& b) {
-    if (a.segments.count != b.segments.count || a.scrolls.count != b.scrolls.count
-        || a.layers.count != b.layers.count || a.slots.count != b.slots.count)
+    if (a.segments.count != b.segments.count || a.scrolls.count != b.scrolls.count ||
+            a.layers.count != b.layers.count || a.slots.count != b.slots.count)
         return false;
     for (uint32_t i = 0; i < a.layers.count; ++i) {
         const LayoutPaintLayer& x = a.layers.data[i];
         const LayoutPaintLayer& y = b.layers.data[i];
-        if (x.fragment != y.fragment || x.node != y.node || x.offset.x != y.offset.x || x.offset.y != y.offset.y
-            || x.scroll != y.scroll || x.segment != y.segment || x.order != y.order)
+        if (x.fragment != y.fragment || x.node != y.node || x.offset.x != y.offset.x || x.offset.y != y.offset.y ||
+                x.scroll != y.scroll || x.segment != y.segment || x.order != y.order)
             return false;
     }
     if (a.outer.count != b.outer.count || a.fixed.count != b.fixed.count || a.regions.count != b.regions.count)
@@ -1951,24 +2001,23 @@ bool sameRecording(const LayoutPaintChunk& a, const LayoutPaintChunk& b) {
     for (uint32_t i = 0; i < a.slots.count; ++i) {
         const LayoutPaintSlot& x = a.slots.data[i];
         const LayoutPaintSlot& y = b.slots.data[i];
-        if (x.embed != y.embed || x.node != y.node || memCompare(&x.box, &y.box, sizeof(PrLayoutRect)) != 0
-            || x.scroll != y.scroll || x.segment != y.segment || x.order != y.order)
+        if (x.embed != y.embed || x.node != y.node || memCompare(&x.box, &y.box, sizeof(PrLayoutRect)) != 0 ||
+                x.scroll != y.scroll || x.segment != y.segment || x.order != y.order)
             return false;
     }
     for (uint32_t i = 0; i < a.scrolls.count; ++i) {
         const LayoutPaintScroll& x = a.scrolls.data[i];
         const LayoutPaintScroll& y = b.scrolls.data[i];
-        if (x.node != y.node || x.parent != y.parent || memCompare(&x.clip, &y.clip, sizeof(PrLayoutRect)) != 0
-            || x.range != y.range || x.userAxes != y.userAxes || x.chainAxes != y.chainAxes || x.scrolls != y.scrolls)
+        if (x.node != y.node || x.parent != y.parent || memCompare(&x.clip, &y.clip, sizeof(PrLayoutRect)) != 0 ||
+                x.range != y.range || x.userAxes != y.userAxes || x.chainAxes != y.chainAxes || x.scrolls != y.scrolls)
             return false;
     }
     bool same = true;
     for (uint32_t i = 0; i < a.segments.count && same; ++i) {
         PrString x = prDrawListDump(a.segments.data[i].list);
         PrString y = prDrawListDump(b.segments.data[i].list);
-        same = a.segments.data[i].scroll == b.segments.data[i].scroll
-               && a.segments.data[i].offset == b.segments.data[i].offset
-               && prStringView(&x) == prStringView(&y);
+        same = a.segments.data[i].scroll == b.segments.data[i].scroll &&
+            a.segments.data[i].offset == b.segments.data[i].offset && prStringView(&x) == prStringView(&y);
         prStringReset(&x);
         prStringReset(&y);
     }
@@ -1993,7 +2042,7 @@ void layoutPaintCacheReset(LayoutPaintCache& cache) {
 }
 
 LayoutBackgroundBoxes layoutBackgroundBoxes(const LayoutStyles* styles, const LayoutFragment* fragment,
-                                            const PrLayoutBoxStyle& box, PrRect border) {
+        const PrLayoutBoxStyle& box, PrRect border) {
     LayoutBackgroundBoxes boxes{};
     PrLayoutUnit base = layoutUnitMax(fragment->box.containingInline, kLayoutUnitZero);
     PrRect padding = border;
@@ -2037,7 +2086,7 @@ void layoutPaintReused(LayoutTree* tree, uint32_t layers) {
 }
 
 uint32_t layoutPaintChunk(LayoutTree* tree, LayoutNodeIndex node, const LayoutFragment* fragment, LayoutPieceAt opening,
-                          bool root) {
+        bool root) {
     LayoutPaintCache& cache = tree->paint;
     while (cache.byNode.count <= node)
         cache.byNode.push(kPaintChunkNone);
@@ -2106,10 +2155,9 @@ uint32_t layoutPaintVerify(LayoutTree* tree) {
         // A chunk of a box laid out since, or of a node erased, is recorded again before it is used.
         LayoutNodeIndex node = chunk.node;
         LayoutNodeIndex laid = chunk.fragment->node;
-        bool laidOut = node < tree->nodes.count && tree->nodes.data[node].live && laid < tree->nodes.count
-                       && tree->nodes.data[laid].live && layoutCachePlaced(tree->cache, laid) == chunk.fragment;
-        if (!laidOut
-            || !isCurrent(tree, chunk, chunk.fragment, chunk.opening, chunk.root))
+        bool laidOut = node < tree->nodes.count && tree->nodes.data[node].live && laid < tree->nodes.count &&
+            tree->nodes.data[laid].live && layoutCachePlaced(tree->cache, laid) == chunk.fragment;
+        if (!laidOut || !isCurrent(tree, chunk, chunk.fragment, chunk.opening, chunk.root))
             continue;
         LayoutPaintChunk fresh{};
         fresh.node = node;

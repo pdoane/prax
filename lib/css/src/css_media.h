@@ -73,12 +73,10 @@ bool cssMediaEnvironmentSet(CssMediaEnvironment* environment, PrCssDescriptor fe
 
 // Overrides the user preference `feature` with `keyword`, or removes its override if `keyword` is PrCssKeyword_Unknown
 // (mediaqueries-5/#auto-pref).
-void cssMediaEnvironmentOverride(CssMediaEnvironment* environment, PrCssDescriptor feature,
-                                 PrCssKeyword keyword);
+void cssMediaEnvironmentOverride(CssMediaEnvironment* environment, PrCssDescriptor feature, PrCssKeyword keyword);
 
 // Returns the keyword of `feature` that a query sees: its override if there is one, and otherwise its value.
-PrCssKeyword cssMediaEnvironmentKeyword(const CssMediaEnvironment* environment,
-                                        PrCssDescriptor feature);
+PrCssKeyword cssMediaEnvironmentKeyword(const CssMediaEnvironment* environment, PrCssDescriptor feature);
 
 // Returns the environment's target pixels per px, which the document renders at. Returns 1 if `environment` is null, as
 // it is for a document with no window.
@@ -126,8 +124,7 @@ struct CssMediaQueryList : DomCountedTarget {
 
 // Creates a list of the media queries in `query` (cssom-view-1/#dom-window-matchmedia). Each entry that is not a media
 // query becomes `not all`. The caller holds the list's only reference.
-PrCssMediaQueryList* cssMediaQueryListCreate(const CssMediaEnvironment* environment,
-                                             PrStringView query);
+PrCssMediaQueryList* cssMediaQueryListCreate(const CssMediaEnvironment* environment, PrStringView query);
 
 // Adds or releases a reference. The last release frees the list.
 void cssMediaQueryListRetain(PrCssMediaQueryList* list);

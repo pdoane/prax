@@ -19,8 +19,7 @@ namespace pr_impl {
 // (prTextIsUpright). The unit's first code point is `codePoint`, its resolved script is `script`, and it is styled by
 // `font`. A unit can be upright only in a vertical typographic mode, and the text-orientation of `font` decides whether
 // it is.
-bool layoutIsUpright(const PrLayoutFontStyle& container, const PrLayoutFontStyle& font, uint32_t codePoint,
-                     PrScript script);
+bool layoutIsUpright(const PrLayoutFontStyle& container, const PrLayoutFontStyle& font, uint32_t codePoint, PrScript script);
 
 // Returns true if text styled by the font groups `a` and `b` shapes identically, which is the case if the groups have
 // the same faces, size and language. Other properties of the groups, such as color, do not affect glyphs.

@@ -294,7 +294,7 @@ void layoutTreeSetNewStyle(LayoutTree* tree, LayoutNodeIndex node, PrLayoutStyle
 // the marks.
 void layoutTreeChangeStyle(LayoutTree* tree, LayoutNodeIndex index, PrLayoutStyleIndex style);
 void layoutTreeInsert(LayoutTree* tree, LayoutNodeIndex parentIndex, LayoutNodeIndex index,
-                      LayoutNodeIndex beforeIndex);
+    LayoutNodeIndex beforeIndex);
 void layoutTreeRemove(LayoutTree* tree, LayoutNodeIndex index);
 void layoutTreeSetKey(LayoutTree* tree, LayoutNodeIndex index, uint64_t key);
 
@@ -329,9 +329,9 @@ inline LayoutNodeIndex layoutNodeRoot(const LayoutTree* tree, LayoutNodeIndex no
 // Returns the index of the node that `node` names, or kPrLayoutNodeNone for none. The node is live.
 inline LayoutNodeIndex layoutNodeIndex(const LayoutTree* tree, PrLayoutNode node) {
     LayoutNodeIndex index = LayoutNodeIndex(node);
-    PR_ASSERT(node == kPrLayoutNodeNone
-              || (index != kPrLayoutNodeNone && index < tree->nodes.count && tree->nodes.data[index].live
-                  && tree->nodes.data[index].generation == uint32_t(node >> 32)));
+    PR_ASSERT(node == kPrLayoutNodeNone ||
+        (index != kPrLayoutNodeNone && index < tree->nodes.count && tree->nodes.data[index].live &&
+            tree->nodes.data[index].generation == uint32_t(node >> 32)));
     return index;
 }
 
@@ -392,7 +392,7 @@ const LayoutHighlights* PR_NULLABLE layoutTextHighlights(const LayoutTree* tree,
 
 // Sets the highlights of the text `node` (prLayoutNodeSetHighlights) on behalf of `frame`, or of no frame for 0.
 void layoutTreeSetHighlights(LayoutTree* tree, LayoutNodeIndex node, const PrLayoutHighlight* PR_NULLABLE highlights,
-                             uint32_t count, uint32_t frame);
+    uint32_t count, uint32_t frame);
 
 // Sets or removes the caret (prLayoutTreeSetCaret) on behalf of `frame`, or of no frame for 0.
 void layoutTreeSetCaret(LayoutTree* tree, const PrLayoutCaret* PR_NULLABLE caret, uint32_t frame);
@@ -411,8 +411,9 @@ uint32_t layoutNodeLineStyle(const LayoutTree* tree, LayoutNodeIndex node);
 // Returns the record that a fragment's node paints in: its record for the first formatted line if the fragment is on
 // that line (LayoutFragmentFlag_FirstLine), and its own otherwise.
 inline PrLayoutStyleIndex layoutFragmentStyle(const LayoutTree* tree, const LayoutFragment* fragment) {
-    return (fragment->flags & LayoutFragmentFlag_FirstLine) != 0 ? layoutNodeLineStyle(tree, fragment->node)
-                                                                  : layoutNodeStyle(tree, fragment->node);
+    if ((fragment->flags & LayoutFragmentFlag_FirstLine) != 0)
+        return layoutNodeLineStyle(tree, fragment->node);
+    return layoutNodeStyle(tree, fragment->node);
 }
 
 } // namespace pr_impl

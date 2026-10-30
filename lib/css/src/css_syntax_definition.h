@@ -50,8 +50,7 @@ bool cssSyntaxDefinitionParse(CssParser* parser, PrStringView text, CssSyntaxDef
 // Returns true if a registration of `definition` accepts `value` as its initial value
 // (css-properties-values-api-1/#the-registerproperty-function). The value must parse by the definition and be
 // computationally independent (css-properties-values-api-1/#computationally-independent).
-bool cssSyntaxInitialValueValid(CssParser* parser, const CssSyntaxDefinition* definition,
-                                PrStringView value);
+bool cssSyntaxInitialValueValid(CssParser* parser, const CssSyntaxDefinition* definition, PrStringView value);
 
 // Returns true if `value` parses by `definition` (css-values-5/#parse-with-a-syntax). A CSS-wide keyword does not.
 bool cssSyntaxValueMatches(CssParser* parser, const CssSyntaxDefinition* definition, PrStringView value);

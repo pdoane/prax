@@ -34,8 +34,10 @@ Utf8 utf8Of(const wchar_t* wide, UINT32 length) {
 // language.
 Utf8 familyOf(IDWriteFontSet* fonts, UINT32 index) {
     Utf8 family;
-    const DWRITE_FONT_PROPERTY_ID properties[] = {DWRITE_FONT_PROPERTY_ID_TYPOGRAPHIC_FAMILY_NAME,
-                                                  DWRITE_FONT_PROPERTY_ID_WIN32_FAMILY_NAME};
+    const DWRITE_FONT_PROPERTY_ID properties[] = {
+        DWRITE_FONT_PROPERTY_ID_TYPOGRAPHIC_FAMILY_NAME,
+        DWRITE_FONT_PROPERTY_ID_WIN32_FAMILY_NAME
+    };
     for (DWRITE_FONT_PROPERTY_ID property : properties) {
         IDWriteLocalizedStrings* names = nullptr;
         BOOL exists = FALSE;
@@ -72,10 +74,10 @@ Utf8 pathOf(IDWriteFontSet* fonts, UINT32 index) {
     const void* key = nullptr;
     UINT32 keySize = 0;
     UINT32 length = 0;
-    if (SUCCEEDED(fonts->GetFontFaceReference(index, &reference)) && SUCCEEDED(reference->GetFontFile(&file))
-        && SUCCEEDED(file->GetLoader(&loader)) && SUCCEEDED(loader->QueryInterface(IID_PPV_ARGS(&local)))
-        && SUCCEEDED(file->GetReferenceKey(&key, &keySize))
-        && SUCCEEDED(local->GetFilePathLengthFromKey(key, keySize, &length))) {
+    if (SUCCEEDED(fonts->GetFontFaceReference(index, &reference)) && SUCCEEDED(reference->GetFontFile(&file)) &&
+            SUCCEEDED(file->GetLoader(&loader)) && SUCCEEDED(loader->QueryInterface(IID_PPV_ARGS(&local))) &&
+            SUCCEEDED(file->GetReferenceKey(&key, &keySize)) &&
+            SUCCEEDED(local->GetFilePathLengthFromKey(key, keySize, &length))) {
         wchar_t* wide = static_cast<wchar_t*>(prMemoryAlloc((size_t(length) + 1) * sizeof(wchar_t)));
         if (SUCCEEDED(local->GetFilePathFromKey(key, keySize, wide, length + 1)))
             path = utf8Of(wide, length);
@@ -103,7 +105,7 @@ uint32_t prFontDirectWriteInstall(PrFontSet* set) {
     // them from the font cache, so the files are not read.
     IDWriteFactory3* factory = nullptr;
     if (FAILED(DWriteCreateFactory(DWRITE_FACTORY_TYPE_SHARED, __uuidof(IDWriteFactory3),
-                                   reinterpret_cast<IUnknown**>(&factory))))
+            reinterpret_cast<IUnknown**>(&factory))))
         return 0;
     uint32_t before = prFontSetFaceCount(set);
     IDWriteFontSet* fonts = nullptr;

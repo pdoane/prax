@@ -99,13 +99,11 @@ TEST_CASE("a dimension parses as the type its unit measures") {
         PrCssUnit unit;
     };
     for (const Case& test : {Case{"3px", CssValueDef_Length, PrCssUnit_Px},
-                             Case{"45deg", CssValueDef_Angle, PrCssUnit_Deg},
-                             Case{"2s", CssValueDef_Time, PrCssUnit_S},
-                             Case{"50Hz", CssValueDef_Frequency, PrCssUnit_Hz},
-                             Case{"2dppx", CssValueDef_Resolution, PrCssUnit_Dppx},
-                             Case{"1fr", CssValueDef_Flex, PrCssUnit_Fr},
-                             Case{"-6dB", CssValueDef_Decibel, PrCssUnit_DB},
-                             Case{"2st", CssValueDef_Semitones, PrCssUnit_St}}) {
+        Case{"45deg", CssValueDef_Angle, PrCssUnit_Deg}, Case{"2s", CssValueDef_Time, PrCssUnit_S},
+                Case{"50Hz", CssValueDef_Frequency, PrCssUnit_Hz},
+                Case{"2dppx", CssValueDef_Resolution, PrCssUnit_Dppx},
+                Case{"1fr", CssValueDef_Flex, PrCssUnit_Fr}, Case{"-6dB", CssValueDef_Decibel, PrCssUnit_DB},
+                Case{"2st", CssValueDef_Semitones, PrCssUnit_St}}) {
         INFO(test.text);
         Source s(test.text);
         CssValueNode value;
@@ -182,7 +180,7 @@ TEST_CASE("a string value drops its quotes") {
 
 TEST_CASE("a custom ident is any ident but the CSS-wide keywords") {
     for (PrStringView text : {"inherit", "INITIAL", "unset",
-                              "revert", "revert-layer", "default"}) {
+        "revert", "revert-layer", "default"}) {
         INFO(textOf(text));
         Source s(text);
         CssValueNode value;
@@ -237,9 +235,7 @@ TEST_CASE("a declaration value's last token is written as it was read where the 
         const char* kept;
     };
     for (const Case& test : {Case{"a  foo\\", "a  foo\uFFFD"},
-                             Case{"url(foo\\", "url(foo\uFFFD)"},
-                             Case{"\"foo\\", "\"foo\""},
-                             Case{"a  b", "a  b"}}) {
+        Case{"url(foo\\", "url(foo\uFFFD)"}, Case{"\"foo\\", "\"foo\""}, Case{"a  b", "a  b"}}) {
         INFO(textOf(test.written));
         Source s(test.written);
         CssValueNode value;
@@ -359,8 +355,7 @@ TEST_CASE("a unit no table names keeps its text") {
 TEST_CASE("a value that does not match leaves the stream and the pool alone") {
     Source s("nonsense");
     CssValueSpan span;
-    CHECK_FALSE(cssParseValue(kCssPropertyGrammarRoot[PrCssProperty_ZIndex], &s.ts, &s.pool,
-                              &s.match, &span));
+    CHECK_FALSE(cssParseValue(kCssPropertyGrammarRoot[PrCssProperty_ZIndex], &s.ts, &s.pool, &s.match, &span));
     CHECK(s.ts.pos == 0);
     CHECK(s.pool.values.count == 0);
     CHECK(s.pool.text.count == 0);
@@ -369,8 +364,7 @@ TEST_CASE("a value that does not match leaves the stream and the pool alone") {
 TEST_CASE("a grammar has to match the whole stream") {
     Source s("1 and then some");
     CssValueSpan span;
-    CHECK_FALSE(cssParseValue(kCssPropertyGrammarRoot[PrCssProperty_ZIndex], &s.ts, &s.pool,
-                              &s.match, &span));
+    CHECK_FALSE(cssParseValue(kCssPropertyGrammarRoot[PrCssProperty_ZIndex], &s.ts, &s.pool, &s.match, &span));
 }
 
 TEST_CASE("a definition with no grammar matches nothing") {
@@ -381,7 +375,7 @@ TEST_CASE("a definition with no grammar matches nothing") {
 
 TEST_CASE("a CSS-wide keyword is the value of any property at all") {
     for (PrStringView text : {"inherit", "INITIAL", "unset",
-                              "revert", "revert-layer", "revert-rule"}) {
+        "revert", "revert-layer", "revert-rule"}) {
         INFO(textOf(text));
         Source s(text);
         CssValueSpan span;
@@ -396,7 +390,7 @@ TEST_CASE("a CSS-wide keyword is the value of any property at all") {
 
 TEST_CASE("a value reaching a substitution function is kept as tokens") {
     for (PrStringView text : {"var(--x)", "calc(var(--x) + 1px)",
-                              "env(safe-area-inset-top)"}) {
+        "env(safe-area-inset-top)"}) {
         INFO(textOf(text));
         Source s(text);
         CssValueSpan span;
@@ -533,12 +527,9 @@ TEST_CASE("a voice name is a family name, but alone none of the keywords it woul
 }
 
 TEST_CASE("a url takes each request modifier once, in the order the grammar writes them") {
-    CHECK(serialized("background-image",
-                     "url(\"a\" integrity(\"x\") cross-origin(anonymous))")
-          == "url(\"a\" cross-origin(anonymous) integrity(\"x\"))");
-    CHECK(serialized("background-image",
-                     "url(\"a\" cross-origin(anonymous) cross-origin(anonymous))")
-          == "");
+    CHECK(serialized("background-image", "url(\"a\" integrity(\"x\") cross-origin(anonymous))") ==
+        "url(\"a\" cross-origin(anonymous) integrity(\"x\"))");
+    CHECK(serialized("background-image", "url(\"a\" cross-origin(anonymous) cross-origin(anonymous))") == "");
     CHECK(serialized("background-image", "url(\"a\" crossorigin(anonymous))") == "");
 }
 
@@ -607,9 +598,8 @@ TEST_CASE("an OpenType tag is four characters from space to tilde") {
 
 TEST_CASE("a font value takes the one spelling its prose gives values of the same meaning") {
     // css-fonts-4/#feature-tag-value
-    CHECK(serialized("font-feature-settings",
-                     "\"dlig\" 1, \"smcp\" on, \"liga\" off, \"swsh\" 2")
-          == "\"dlig\", \"smcp\", \"liga\" 0, \"swsh\" 2");
+    CHECK(serialized("font-feature-settings", "\"dlig\" 1, \"smcp\" on, \"liga\" off, \"swsh\" 2") ==
+        "\"dlig\", \"smcp\", \"liga\" 0, \"swsh\" 2");
     // css-fonts-5/#propdef-font-size-adjust
     CHECK(serialized("font-size-adjust", "ex-height 0.5") == "0.5");
     CHECK(serialized("font-size-adjust", "cap-height 0.5") == "cap-height 0.5");
@@ -648,9 +638,8 @@ TEST_CASE("a component that has its implied value is left out") {
     CHECK(serialized("transition-timing-function", "steps(2, end)") == "steps(2)");
     CHECK(serialized("transition-timing-function", "steps(2, jump-end)") == "steps(2)");
     CHECK(serialized("clip-path", "polygon(nonzero, 1px 2px, 3px 4px)") == "polygon(1px 2px, 3px 4px)");
-    CHECK(serialized("background-image",
-                     "radial-gradient(farthest-corner at center, red, blue)")
-          == "radial-gradient(red, blue)");
+    CHECK(serialized("background-image", "radial-gradient(farthest-corner at center, red, blue)") ==
+        "radial-gradient(red, blue)");
 }
 
 TEST_CASE("keywords the prose says are the same value as fewer are held as those") {

@@ -153,14 +153,12 @@ PrLayoutTransform prLayoutTransformListTransform(const PrLayoutTransformList* li
 // reference box, which resolves percentages in functions that interpolate as matrices. A pair of matrices that cannot
 // be decomposed interpolates discretely.
 PrLayoutTransformList prLayoutTransformListInterpolate(const PrLayoutTransformList* from,
-                                                       const PrLayoutTransformList* to, double progress,
-                                                       PrVec2 extent);
+    const PrLayoutTransformList* to, double progress, PrVec2 extent);
 
 // Returns true if prLayoutTransformListInterpolate interpolates `from` and `to` other than discretely: every pair of
 // matrices that it interpolates can be decomposed. A transition between lists that do not starts no animation
 // (css-transitions-1/#starting).
-bool prLayoutTransformListInterpolates(const PrLayoutTransformList* from, const PrLayoutTransformList* to,
-                                       PrVec2 extent);
+bool prLayoutTransformListInterpolates(const PrLayoutTransformList* from, const PrLayoutTransformList* to, PrVec2 extent);
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Tracks
@@ -192,8 +190,7 @@ typedef struct PrLayoutTrack {
 // Sets the value that a track gives its effect at `time`: an opacity, or a transform's matrix relative to its origin,
 // depending on the track's effect. `extent` is the extent of the box's reference box in pixels, which resolves the
 // transform's percentages. Returns false if the track has no effect at that time.
-bool prLayoutTrackSample(const PrLayoutTrack* track, double time, PrVec2 extent, float* opacity,
-                         PrMatrix4* transform);
+bool prLayoutTrackSample(const PrLayoutTrack* track, double time, PrVec2 extent, float* opacity, PrMatrix4* transform);
 
 #if defined(__cplusplus)
 }

@@ -34,8 +34,7 @@ typedef struct PrJsHtmlEngineDesc {
     // Called once for each realm, with its bindings defined, to add what the application gives scripts. A browsing
     // context's realm is opened once its global is the browsing context's window, before its document loads. The
     // engine's own realm (prJsHtmlEngineContext) is opened with a null browsing context.
-    void (*PR_NULLABLE realmOpened)(void* PR_NULLABLE context, JSContext* ctx,
-                                    PrHtmlPage* PR_NULLABLE page);
+    void (*PR_NULLABLE realmOpened)(void* PR_NULLABLE context, JSContext* ctx, PrHtmlPage* PR_NULLABLE page);
 
     // Waits for what a module's evaluation waits on before its document can finish loading: `delay` milliseconds for a
     // timer, or, while the browsing context fetches, until a task is posted to the agent (prDomAgentPost). The delay is

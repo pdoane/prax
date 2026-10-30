@@ -29,8 +29,7 @@ struct Device {
     Device(uint32_t width, uint32_t height) {
         REQUIRE(prGpuDeviceCreate(PrGpuBackend_Default, nullptr, &gpuDevice) == PrStatus_Ok);
         REQUIRE(prDrawTrianglesCreate(gpuDevice, nullptr, &renderer) == PrStatus_Ok);
-        PrGpuTextureDesc desc = prGpuTextureDesc2d(
-            PrGpuFormat_Rgba8, PrUVec2{width, height},
+        PrGpuTextureDesc desc = prGpuTextureDesc2d(PrGpuFormat_Rgba8, PrUVec2{width, height},
             PrGpuTextureUsageFlag_Sampled | PrGpuTextureUsageFlag_RenderTarget);
         REQUIRE(prGpuTextureCreate(gpuDevice, &desc, &texture) == PrStatus_Ok);
     }
@@ -46,21 +45,23 @@ struct Device {
     std::vector<uint8_t> render(const PrDrawList* list) {
         PrGpuCommands* commands = nullptr;
         REQUIRE(prGpuCommandsBegin(gpuDevice, nullptr, &commands));
-        PrDrawTarget prepared{.extent = prGpuTextureExtent(gpuDevice, texture),
-                              .format = PrPixelFormat_Rgba8,
-                              .commands = commands};
+        PrDrawTarget prepared{
+            .extent = prGpuTextureExtent(gpuDevice, texture),
+            .format = PrPixelFormat_Rgba8,
+            .commands = commands,
+        };
         if (frame == nullptr)
             frame = prDrawFrameCreate(renderer);
         REQUIRE(prDrawFramePrepare(frame, list, &prepared) == PrStatus_Ok);
         PrGpuSubresources all{};
         prGpuCommandsTextureBarrier(commands, texture, all, PrGpuAccessFlag_ShaderRead,
-                                    PrGpuAccessFlag_ColorAttachment);
+            PrGpuAccessFlag_ColorAttachment);
         PrGpuPassDesc desc = prGpuPassDescColor(texture, PrGpuLoad_Clear, PrColor{0, 0, 0, 0});
         PrGpuPass* pass = prGpuPassBegin(commands, &desc);
         prDrawFrameRender(frame, pass, PrIVec2{0, 0});
         prGpuPassEnd(pass);
         prGpuCommandsTextureBarrier(commands, texture, all, PrGpuAccessFlag_ColorAttachment,
-                                    PrGpuAccessFlag_ShaderRead);
+            PrGpuAccessFlag_ShaderRead);
         prGpuCommandsSubmitAndWait(commands);
         uint32_t width = prGpuTextureExtent(gpuDevice, texture).x;
         uint32_t height = prGpuTextureExtent(gpuDevice, texture).y;
@@ -132,7 +133,7 @@ double fractionDiffering(const std::vector<uint8_t>& a, const std::vector<uint8_
 }
 
 void addText(PrDrawList* list, const PrFont* font, float size, const char* text, PrVec2 at,
-             const PrDrawStroke* stroke = nullptr) {
+        const PrDrawStroke* stroke = nullptr) {
     std::vector<PrFontGlyph> glyphs;
     for (const char* c = text; *c != 0; ++c) {
         uint16_t id = prFontCodePointGlyph(font, uint32_t(*c));
@@ -214,13 +215,15 @@ TEST_CASE("the triangles renderer draws the host's texture of straight texels as
         t[3] = left ? 128 : 255;
     }
     PrGpuTextureDesc desc = prGpuTextureDesc2d(prGpuFormatFromPixelFormat(PrPixelFormat_Rgba8), PrUVec2{4, 4},
-                                               PrGpuTextureUsageFlag_Sampled);
+        PrGpuTextureUsageFlag_Sampled);
     PrGpuTexture texture{};
     REQUIRE(prGpuTextureCreate(device.gpuDevice, &desc, &texture) == PrStatus_Ok);
     PrPixels upload{texels.data(), 16, {4, 4}};
     prGpuTextureWrite(device.gpuDevice, texture, PrIVec2{0, 0}, prPixelsView(upload));
-    PrDrawImageDesc imageDesc{PrPixelView{texels.data(), 16, {4, 4}}, PrPixelFormat_Rgba8, PrDrawAlpha_Straight,
-                              PrColorSpace_Srgb};
+    PrDrawImageDesc imageDesc{
+        PrPixelView{texels.data(), 16, {4, 4}}, PrPixelFormat_Rgba8, PrDrawAlpha_Straight,
+        PrColorSpace_Srgb,
+    };
     const PrDrawImage* image = nullptr;
     REQUIRE(prDrawImageCreate(&imageDesc, &image) == PrStatus_Ok);
     auto draw = [&](PrDrawSource source) {
@@ -229,9 +232,8 @@ TEST_CASE("the triangles renderer draws the host's texture of straight texels as
         prDrawListRect(list, PrRect{0, 0, 32, 16}, {.brush = &brush});
         return list;
     };
-    PrDrawList* fromTexture =
-        draw(prDrawSourceTexture(prDrawGpuTexture(texture), prGpuTextureExtent(device.gpuDevice, texture),
-                                 PrRect{0, 0, 4, 4}, PrDrawAlpha_Straight));
+    PrDrawList* fromTexture = draw(prDrawSourceTexture(prDrawGpuTexture(texture), prGpuTextureExtent(device.gpuDevice, texture),
+        PrRect{0, 0, 4, 4}, PrDrawAlpha_Straight));
     PrDrawList* fromImage = draw(prDrawSourceImage(image, PrRect{0, 0, 4, 4}));
     std::vector<uint8_t> drawn = device.render(fromTexture);
     std::vector<uint8_t> expected = reference(fromImage, 32, 16);
@@ -302,8 +304,10 @@ TEST_CASE("triangles fills a path by its rule and strokes it") {
 TEST_CASE("triangles evaluates a gradient at each vertex") {
     Device h(64, 16);
     PrDrawList* list = prDrawListCreate();
-    PrDrawColorStop stops[2] = {{.offset = 0, .color = PrColor{1, 0, 0, 1}},
-                                {.offset = 1, .color = PrColor{0, 0, 1, 1}}};
+    PrDrawColorStop stops[2] = {
+        {.offset = 0, .color = PrColor{1, 0, 0, 1}},
+        {.offset = 1, .color = PrColor{0, 0, 1, 1}},
+    };
     PrDrawBrush brush = prDrawBrushLinear(PrVec2{0, 0}, PrVec2{64, 0}, stops, 2);
     prDrawListRect(list, PrRect{0, 0, 64, 16}, {.brush = &brush});
     std::vector<uint8_t> drawn = h.render(list);
@@ -319,15 +323,21 @@ TEST_CASE("triangles cuts each kind of gradient where its colors turn") {
     for (uint32_t i = 0; i < 7; ++i) {
         float hue = float(i % 6) / 6;
         auto clamp = [](float v) { return v < 0 ? 0 : v > 1 ? 1 : v; };
-        wheel[i] = PrDrawColorStop{.offset = float(i) / 6,
-                                   .color = PrColor{clamp(std::fabs(hue * 6 - 3) - 1),
-                                                    clamp(2 - std::fabs(hue * 6 - 2)),
-                                                    clamp(2 - std::fabs(hue * 6 - 4)), 1}};
+        wheel[i] = PrDrawColorStop{
+            .offset = float(i) / 6,
+            .color = PrColor{
+                clamp(std::fabs(hue * 6 - 3) - 1),
+                clamp(2 - std::fabs(hue * 6 - 2)),
+                clamp(2 - std::fabs(hue * 6 - 4)), 1,
+            },
+        };
     }
-    PrDrawColorStop hard[4] = {{.offset = 0, .color = PrColor{1, 0, 0, 1}},
-                               {.offset = 0.5f, .color = PrColor{1, 0, 0, 1}},
-                               {.offset = 0.5f, .color = PrColor{0, 0, 1, 1}},
-                               {.offset = 1, .color = PrColor{0, 0, 1, 1}}};
+    PrDrawColorStop hard[4] = {
+        {.offset = 0, .color = PrColor{1, 0, 0, 1}},
+        {.offset = 0.5f, .color = PrColor{1, 0, 0, 1}},
+        {.offset = 0.5f, .color = PrColor{0, 0, 1, 1}},
+        {.offset = 1, .color = PrColor{0, 0, 1, 1}},
+    };
     struct Case {
         PrDrawBrushKind kind;
         PrDrawExtend extend;
@@ -372,10 +382,12 @@ TEST_CASE("triangles cuts each kind of gradient where its colors turn") {
 }
 
 TEST_CASE("triangles places a brush along and across a stroke") {
-    PrDrawColorStop bands[4] = {{.offset = 0, .color = PrColor{0, 0, 0, 1}},
-                                {.offset = 0.5f, .color = PrColor{0, 0, 0, 1}},
-                                {.offset = 0.5f, .color = PrColor{1, 0.7f, 0, 1}},
-                                {.offset = 1, .color = PrColor{1, 0.7f, 0, 1}}};
+    PrDrawColorStop bands[4] = {
+        {.offset = 0, .color = PrColor{0, 0, 0, 1}},
+        {.offset = 0.5f, .color = PrColor{0, 0, 0, 1}},
+        {.offset = 0.5f, .color = PrColor{1, 0.7f, 0, 1}},
+        {.offset = 1, .color = PrColor{1, 0.7f, 0, 1}},
+    };
     for (PrDrawStrokeMapping mapping : {PrDrawStrokeMapping_Along, PrDrawStrokeMapping_Across}) {
         CAPTURE(int(mapping));
         Device h(200, 100);
@@ -496,8 +508,10 @@ TEST_CASE("triangles uploads its atlas and images once") {
     CHECK(geometry < first);
 
     uint8_t texels[4 * 4] = {255, 0, 0, 255, 0, 255, 0, 255, 0, 0, 255, 255, 255, 255, 255, 255};
-    PrDrawImageDesc target{PrPixelView{texels, 8, {2, 2}}, PrPixelFormat_Rgba8, PrDrawAlpha_Premultiplied,
-                         PrColorSpace_Srgb};
+    PrDrawImageDesc target{
+        PrPixelView{texels, 8, {2, 2}}, PrPixelFormat_Rgba8, PrDrawAlpha_Premultiplied,
+        PrColorSpace_Srgb,
+    };
     const PrDrawImage* image = nullptr;
     REQUIRE(prDrawImageCreate(&target, &image) == PrStatus_Ok);
     PrDrawSource source = prDrawSourceImage(image, PrRect{0, 0, 2, 2});

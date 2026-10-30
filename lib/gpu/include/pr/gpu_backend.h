@@ -94,12 +94,12 @@ struct PrGpuDevice {
 
     PrStatus (*textureCreate)(PrGpuDevice* device, const PrGpuTextureDesc* desc, PrGpuTexture* out);
     PrStatus (*textureCreateView)(PrGpuDevice* device, PrGpuTexture texture, PrGpuTextureKind kind,
-                                  PrGpuSubresources subresources, PrGpuTexture* out);
+        PrGpuSubresources subresources, PrGpuTexture* out);
     void (*textureDestroy)(PrGpuDevice* device, PrGpuTexture texture);
     PrGpuTextureDesc (*textureDesc)(const PrGpuDevice* device, PrGpuTexture texture);
     uint32_t (*textureStorageHandle)(const PrGpuDevice* device, PrGpuTexture texture);
     void (*textureUpload)(PrGpuDevice* device, PrGpuTexture texture, const PrGpuTextureRegion* region,
-                          const void* data, uint32_t rowBytes, uint32_t layerBytes);
+        const void* data, uint32_t rowBytes, uint32_t layerBytes);
 
     // Creates the sampler for a description that the device has not seen. pr/gpu.h keeps one sampler for each.
     PrStatus (*samplerCreate)(PrGpuDevice* device, const PrGpuSamplerDesc* desc, PrGpuSampler* out);
@@ -107,60 +107,54 @@ struct PrGpuDevice {
     // Creates a library over entries whose code pr/gpu.h has found for the backend, and frees one. The library holds
     // the entries, which pr/gpu.h frees after the library.
     PrStatus (*shaderLibraryCreate)(PrGpuDevice* device, PrGpuShaderEntry* entries, uint32_t entryCount,
-                                    PrGpuShaderLibrary* PR_NULLABLE* PR_NONNULL out);
+        PrGpuShaderLibrary* PR_NULLABLE* PR_NONNULL out);
     void (*shaderLibraryDestroy)(PrGpuDevice* device, PrGpuShaderLibrary* library);
 
     // Create pipelines from entries that pr/gpu.h has found in the library and checked the stages of.
     PrStatus (*graphicsPipelineCreate)(PrGpuDevice* device, const PrGpuGraphicsPipelineDesc* desc,
-                                       const PrGpuShaderEntry* vertex, const PrGpuShaderEntry* PR_NULLABLE fragment,
-                                       PrGpuPipeline* out);
+        const PrGpuShaderEntry* vertex, const PrGpuShaderEntry* PR_NULLABLE fragment, PrGpuPipeline* out);
     PrStatus (*computePipelineCreate)(PrGpuDevice* device, const PrGpuShaderLibrary* library,
-                                      const PrGpuShaderEntry* compute, PrStringView name, PrGpuPipeline* out);
+        const PrGpuShaderEntry* compute, PrStringView name, PrGpuPipeline* out);
     void (*pipelineDestroy)(PrGpuDevice* device, PrGpuPipeline pipeline);
     PrGpuExtent (*pipelineGroupSize)(const PrGpuDevice* device, PrGpuPipeline pipeline);
 
     bool (*commandsBegin)(PrGpuDevice* device, const PrGpuCommandsOptions* options,
-                          PrGpuCommands* PR_NULLABLE* PR_NONNULL out);
+        PrGpuCommands* PR_NULLABLE* PR_NONNULL out);
     PrGpuFence (*commandsSubmit)(PrGpuDevice* device, PrGpuCommands* commands);
     void* PR_NONNULL (*PR_NONNULL commandsStream)(PrGpuDevice* device, PrGpuCommands* commands, uint64_t size,
-                                                  PrGpuBuffer* buffer, uint64_t* offset);
+        PrGpuBuffer* buffer, uint64_t* offset);
     void (*commandsSetPush)(PrGpuDevice* device, PrGpuCommands* commands, const void* data, uint32_t size);
     void (*commandsSetUniforms)(PrGpuDevice* device, PrGpuCommands* commands, const void* data, uint32_t size);
     void (*commandsSetPipeline)(PrGpuDevice* device, PrGpuCommands* commands, PrGpuPipeline pipeline);
     void (*commandsDispatch)(PrGpuDevice* device, PrGpuCommands* commands, PrGpuExtent groups);
-    void (*commandsDispatchIndirect)(PrGpuDevice* device, PrGpuCommands* commands, PrGpuBuffer buffer,
-                                     uint64_t offset);
+    void (*commandsDispatchIndirect)(PrGpuDevice* device, PrGpuCommands* commands, PrGpuBuffer buffer, uint64_t offset);
     void (*commandsCopyBuffer)(PrGpuDevice* device, PrGpuCommands* commands, PrGpuBuffer source,
-                               uint64_t sourceOffset, PrGpuBuffer target, uint64_t targetOffset, uint64_t size);
+        uint64_t sourceOffset, PrGpuBuffer target, uint64_t targetOffset, uint64_t size);
     void (*commandsCopyTexture)(PrGpuDevice* device, PrGpuCommands* commands, PrGpuTexture source,
-                                const PrGpuTextureRegion* sourceRegion, PrGpuTexture target,
-                                const PrGpuTextureRegion* targetRegion);
+        const PrGpuTextureRegion* sourceRegion, PrGpuTexture target, const PrGpuTextureRegion* targetRegion);
     void (*commandsCopyBufferToTexture)(PrGpuDevice* device, PrGpuCommands* commands, PrGpuBuffer source,
-                                        uint64_t sourceOffset, uint32_t rowBytes, uint32_t layerBytes,
-                                        PrGpuTexture target, const PrGpuTextureRegion* targetRegion);
+        uint64_t sourceOffset, uint32_t rowBytes, uint32_t layerBytes, PrGpuTexture target,
+        const PrGpuTextureRegion* targetRegion);
     void (*commandsCopyTextureToBuffer)(PrGpuDevice* device, PrGpuCommands* commands, PrGpuTexture source,
-                                        const PrGpuTextureRegion* sourceRegion, PrGpuBuffer target,
-                                        uint64_t targetOffset, uint32_t rowBytes, uint32_t layerBytes);
+        const PrGpuTextureRegion* sourceRegion, PrGpuBuffer target, uint64_t targetOffset, uint32_t rowBytes,
+        uint32_t layerBytes);
 
     // Optional: prGpuCommandsGenerateMipmaps of a texture with more than one level, by the device's own operation. It
     // takes the texture from `before` to PrGpuAccessFlag_ShaderRead as the API function does. Without it, the core
     // draws each level from the one before.
-    void (*commandsGenerateMipmaps)(PrGpuDevice* device, PrGpuCommands* commands, PrGpuTexture texture,
-                                    PrGpuAccessFlags before);
-    void (*commandsOnDone)(PrGpuDevice* device, PrGpuCommands* commands, PrGpuDoneFn done,
-                           void* PR_NULLABLE context);
+    void (*commandsGenerateMipmaps)(PrGpuDevice* device, PrGpuCommands* commands, PrGpuTexture texture, PrGpuAccessFlags before);
+    void (*commandsOnDone)(PrGpuDevice* device, PrGpuCommands* commands, PrGpuDoneFn done, void* PR_NULLABLE context);
     void (*commandsPushGroup)(PrGpuDevice* device, PrGpuCommands* commands, PrStringView name);
     void (*commandsPopGroup)(PrGpuDevice* device, PrGpuCommands* commands);
     void (*commandsBufferBarrier)(PrGpuDevice* device, PrGpuCommands* commands, PrGpuBuffer buffer,
-                                  PrGpuAccessFlags before, PrGpuAccessFlags after);
+        PrGpuAccessFlags before, PrGpuAccessFlags after);
     void (*commandsTextureBarrier)(PrGpuDevice* device, PrGpuCommands* commands, PrGpuTexture texture,
-                                   PrGpuSubresources subresources, PrGpuAccessFlags before, PrGpuAccessFlags after);
+        PrGpuSubresources subresources, PrGpuAccessFlags before, PrGpuAccessFlags after);
     void (*commandsGlobalBarrier)(PrGpuDevice* device, PrGpuCommands* commands, PrGpuAccessFlags before,
-                                  PrGpuAccessFlags after);
+        PrGpuAccessFlags after);
     PrGpuHostStateFlags (*hostStateSync)(PrGpuDevice* device, PrGpuCommands* commands);
 
-    PrGpuPass* PR_NONNULL (*PR_NONNULL passBegin)(PrGpuDevice* device, PrGpuCommands* commands,
-                                                  const PrGpuPassDesc* desc);
+    PrGpuPass* PR_NONNULL (*PR_NONNULL passBegin)(PrGpuDevice* device, PrGpuCommands* commands, const PrGpuPassDesc* desc);
     void (*passEnd)(PrGpuDevice* device, PrGpuPass* pass);
     void (*passSetViewport)(PrGpuDevice* device, PrGpuPass* pass, PrRect viewport, float minDepth, float maxDepth);
     void (*passSetScissor)(PrGpuDevice* device, PrGpuPass* pass, PrIRect scissor);
@@ -168,16 +162,16 @@ struct PrGpuDevice {
     void (*passSetStencilReference)(PrGpuDevice* device, PrGpuPass* pass, uint8_t reference);
     void (*passSetIndexBuffer)(PrGpuDevice* device, PrGpuPass* pass, PrGpuBuffer buffer, uint64_t offset, bool wide);
     void (*passDraw)(PrGpuDevice* device, PrGpuPass* pass, uint32_t vertexCount, uint32_t instanceCount,
-                     uint32_t firstVertex, uint32_t firstInstance);
+        uint32_t firstVertex, uint32_t firstInstance);
     void (*passDrawIndexed)(PrGpuDevice* device, PrGpuPass* pass, uint32_t indexCount, uint32_t instanceCount,
-                            uint32_t firstIndex, int32_t vertexOffset, uint32_t firstInstance);
+        uint32_t firstIndex, int32_t vertexOffset, uint32_t firstInstance);
     void (*passDrawIndirect)(PrGpuDevice* device, PrGpuPass* pass, PrGpuBuffer buffer, uint64_t offset,
-                             uint32_t count, uint32_t stride);
+        uint32_t count, uint32_t stride);
     void (*passDrawIndexedIndirect)(PrGpuDevice* device, PrGpuPass* pass, PrGpuBuffer buffer, uint64_t offset,
-                                    uint32_t count, uint32_t stride);
+        uint32_t count, uint32_t stride);
 
     PrStatus (*swapChainCreate)(PrGpuDevice* device, const PrAppSurface* surface, const PrGpuSwapChainDesc* desc,
-                                PrGpuSwapChain* PR_NULLABLE* PR_NONNULL out);
+        PrGpuSwapChain* PR_NULLABLE* PR_NONNULL out);
     void (*swapChainDestroy)(PrGpuDevice* device, PrGpuSwapChain* swapChain);
     void (*swapChainWait)(PrGpuDevice* device, PrGpuSwapChain* swapChain);
     PrStatus (*swapChainAcquire)(PrGpuDevice* device, PrGpuSwapChain* swapChain, PrUVec2 extent, PrGpuTexture* out);

@@ -134,8 +134,8 @@ bool inside(int32_t winding, Winding rule) {
 // Returns twice the signed area of the triangle. The result is positive if `c` is left of the line from `a` to `b`
 // under pathGridOrient.
 double sideOf(PrVec2 a, PrVec2 b, PrVec2 c) {
-    return (double(b.x) - double(a.x)) * (double(c.y) - double(a.y))
-           - (double(b.y) - double(a.y)) * (double(c.x) - double(a.x));
+    return (double(b.x) - double(a.x)) * (double(c.y) - double(a.y)) -
+        (double(b.y) - double(a.y)) * (double(c.x) - double(a.x));
 }
 
 // The shape of a ring of points.
@@ -367,8 +367,7 @@ void visit(PathTessellator& t, uint32_t v, Winding rule) {
     uint32_t last = kNone;
     for (uint32_t i = 0; i < t.active.count; ++i) {
         const SweepEdge& e = t.edges.data[t.active.data[i]];
-        bool here = e.lower == v
-                    || pathGridOrient(t.vertices.data[e.upper], t.vertices.data[e.lower], p) == 0;
+        bool here = e.lower == v || pathGridOrient(t.vertices.data[e.upper], t.vertices.data[e.lower], p) == 0;
         if (here) {
             first = first == kNone ? i : first;
             last = i;
@@ -395,9 +394,7 @@ void visit(PathTessellator& t, uint32_t v, Winding rule) {
 
     // The edges below, left to right.
     sortItems(t.starting.data, t.starting.count, [&](uint32_t a, uint32_t b) {
-        return pathGridOrient(p, t.vertices.data[t.edges.data[a].lower],
-                              t.vertices.data[t.edges.data[b].lower])
-               < 0;
+        return pathGridOrient(p, t.vertices.data[t.edges.data[a].lower], t.vertices.data[t.edges.data[b].lower]) < 0;
     });
 
     t.between.clear();
@@ -525,8 +522,7 @@ void buildSweep(PathTessellator& t) {
         else
             t.edges.push(SweepEdge{hi, lo, piece.winding[0], false, false});
     }
-    sortItems(t.edges.data, t.edges.count,
-              [](const SweepEdge& a, const SweepEdge& b) { return a.upper < b.upper; });
+    sortItems(t.edges.data, t.edges.count, [](const SweepEdge& a, const SweepEdge& b) { return a.upper < b.upper; });
     t.starts.clear();
     uint32_t e = 0;
     for (uint32_t v = 0; v <= t.vertices.count; ++v) {
@@ -587,7 +583,7 @@ PathGrid sweep(PathTessellator& t, Winding rule, bool triangulate) {
 // Chains the boundary into loops, places their fringe, and replaces `ring` with the loops moved inward.
 void addBoundaryFringe(PathTessellator& t, const PathGrid& grid, float fringe) {
     sortItems(t.boundary.data, t.boundary.count,
-              [](const BoundaryEdge& a, const BoundaryEdge& b) { return a.from < b.from; });
+        [](const BoundaryEdge& a, const BoundaryEdge& b) { return a.from < b.from; });
     auto firstFrom = [&](uint32_t v) {
         return partitionPoint(0, t.boundary.count, [&](uint32_t i) { return t.boundary.data[i].from < v; });
     };
@@ -737,7 +733,7 @@ void prPathTessellatorDestroy(PrPathTessellator* PR_NULLABLE tessellator) {
 }
 
 PrPathMesh prPathTessellatorFill(PrPathTessellator* tessellator, const PrPathPolyline* polyline, PrPathFillRule rule,
-                                 float fringe) {
+        float fringe) {
     tessellator->points.clear();
     tessellator->coverage.clear();
     tessellator->indices.clear();
@@ -755,6 +751,8 @@ PrPathMesh prPathTessellatorFill(PrPathTessellator* tessellator, const PrPathPol
     float band = fringe > 0 ? fringe : 0;
     if (finite && tessellator->ring.count >= 3 && !fanConvex(*tessellator, band))
         tessellate(*tessellator, rule, band);
-    return PrPathMesh{tessellator->points.data, tessellator->coverage.data, tessellator->points.count,
-                      tessellator->indices.data, tessellator->indices.count};
+    return PrPathMesh{
+        tessellator->points.data, tessellator->coverage.data, tessellator->points.count,
+        tessellator->indices.data, tessellator->indices.count,
+    };
 }

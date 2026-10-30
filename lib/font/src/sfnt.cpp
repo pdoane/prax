@@ -79,8 +79,7 @@ void appendUtf8(PrString* out, uint32_t codePoint) {
 
 // Reads the size of a PNG from its header. Returns false for bytes that are not a PNG.
 bool pngSize(SfntTable png, uint32_t* width, uint32_t* height) {
-    if (png.uint32At(0) != 0x89504e47u || png.uint32At(4) != 0x0d0a1a0au
-        || png.uint32At(12) != 0x49484452u)
+    if (png.uint32At(0) != 0x89504e47u || png.uint32At(4) != 0x0d0a1a0au || png.uint32At(12) != 0x49484452u)
         return false;
     *width = png.uint32At(16);
     *height = png.uint32At(20);
@@ -160,10 +159,13 @@ bool sbixImage(SfntTable strike, uint32_t glyph, uint32_t glyphCount, SfntImage*
         SfntTable image{data.data + 8, end - start - 8};
         uint32_t width = 0;
         uint32_t height = 0;
-        bool sized = type == kPng    ? pngSize(image, &width, &height)
-                     : type == kJpg  ? jpegSize(image, &width, &height)
-                     : type == kTiff ? tiffSize(image, &width, &height)
-                                     : false;
+        bool sized = false;
+        if (type == kPng)
+            sized = pngSize(image, &width, &height);
+        else if (type == kJpg)
+            sized = jpegSize(image, &width, &height);
+        else if (type == kTiff)
+            sized = tiffSize(image, &width, &height);
         if (!sized)
             return false;
         // The origin offset places the bottom left corner of the image, with y up.
@@ -427,7 +429,7 @@ void sfntDeltaSetIndex(SfntTable map, uint32_t index, uint16_t* outer, uint16_t*
 }
 
 uint32_t sfntVariationScalars(SfntTable store, uint16_t outer, SfntCoords coords, float* PR_NULLABLE out,
-                              uint32_t capacity) {
+        uint32_t capacity) {
     if (store.uint16At(0) != 1 || outer >= store.uint16At(6))
         return 0;
     SfntTable regions = store.from(store.uint32At(2));
@@ -525,8 +527,7 @@ float sfntMetricDelta(const Sfnt& sfnt, uint32_t tag, SfntCoords coords) {
     for (uint16_t i = 0; i < count; ++i) {
         uint32_t record = 12 + uint32_t(i) * recordSize;
         if (mvar.uint32At(record) == tag) {
-            return sfntVariationDelta(store, mvar.uint16At(record + 4),
-                                      mvar.uint16At(record + 6), coords);
+            return sfntVariationDelta(store, mvar.uint16At(record + 4), mvar.uint16At(record + 6), coords);
         }
     }
     return 0;
@@ -585,8 +586,7 @@ PrString sfntName(const Sfnt& sfnt, uint16_t id) {
     return out;
 }
 
-bool sfntBaseline(const Sfnt& sfnt, uint32_t baselineTag, uint32_t scriptTag, SfntCoords coords,
-                  float* out) {
+bool sfntBaseline(const Sfnt& sfnt, uint32_t baselineTag, uint32_t scriptTag, SfntCoords coords, float* out) {
     SfntTable base = sfntTable(sfnt, kBase);
     if (base.size == 0 || base.uint16At(4) == 0)
         return false;
@@ -709,8 +709,8 @@ bool sfntCmapUnicode(const Sfnt& sfnt, SfntCmap* out) {
     uint32_t count = entriesIn(cmap, 4, 8, cmap.uint16At(2));
     // The formats that FreeType makes charmaps of, and the encodings that it takes as Unicode.
     auto mapsCharacters = [](uint16_t format) {
-        return format == 0 || format == 2 || format == 4 || format == 6 || format == 8 || format == 10 || format == 12
-               || format == 13 || format == 14;
+        return format == 0 || format == 2 || format == 4 || format == 6 || format == 8 || format == 10 || format ==
+            12 || format == 13 || format == 14;
     };
     auto unicode = [](uint16_t platform, uint16_t encoding) {
         return platform == 0 || platform == 2 || (platform == 3 && (encoding == 1 || encoding == 10));
@@ -724,8 +724,8 @@ bool sfntCmapUnicode(const Sfnt& sfnt, SfntCmap* out) {
             uint16_t format = cmap.from(cmap.uint32At(record + 4)).uint16At(0);
             if (!mapsCharacters(format) || !unicode(platform, encoding))
                 continue;
-            bool wide = (platform == 3 && encoding == 10) || (platform == 0 && encoding == 4)
-                        || (platform == 0 && encoding == 6 && format == 13);
+            bool wide = (platform == 3 && encoding == 10) || (platform == 0 && encoding == 4) ||
+                (platform == 0 && encoding == 6 && format == 13);
             if (pass == 1 || wide)
                 chosen = int32_t(i);
         }
@@ -756,8 +756,7 @@ uint32_t sfntCmapGlyph(const SfntCmap& cmap, uint32_t codePoint) {
             uint32_t starts = ends + segments * 2 + 2;
             uint32_t deltas = starts + segments * 2;
             uint32_t offsets = deltas + segments * 2;
-            uint32_t low = partitionPoint(0, segments,
-                                          [&](uint32_t i) { return t.uint16At(ends + i * 2) < codePoint; });
+            uint32_t low = partitionPoint(0, segments, [&](uint32_t i) { return t.uint16At(ends + i * 2) < codePoint; });
             if (low == segments || t.uint16At(starts + low * 2) > codePoint)
                 return 0;
             uint16_t delta = t.uint16At(deltas + low * 2);
@@ -778,8 +777,7 @@ uint32_t sfntCmapGlyph(const SfntCmap& cmap, uint32_t codePoint) {
             // Groups of consecutive code points, in order. The glyphs of a group are consecutive in format 12, and a
             // single glyph in format 13.
             uint32_t groups = entriesIn(t, 16, 12, t.uint32At(12));
-            uint32_t low = partitionPoint(0, groups,
-                                          [&](uint32_t i) { return t.uint32At(16 + i * 12 + 4) < codePoint; });
+            uint32_t low = partitionPoint(0, groups, [&](uint32_t i) { return t.uint32At(16 + i * 12 + 4) < codePoint; });
             uint32_t group = 16 + low * 12;
             if (low == groups || t.uint32At(group) > codePoint)
                 return 0;
@@ -795,9 +793,7 @@ bool sfntGlyphImage(const Sfnt& sfnt, uint32_t glyph, float pixelsPerEm, SfntIma
     bool found = false;
     float best = 0;
     auto consider = [&](float ppem, const SfntImage& image) {
-        bool better = !found
-                      || (best < pixelsPerEm ? ppem > best
-                                             : ppem >= pixelsPerEm && ppem < best);
+        bool better = !found || (best < pixelsPerEm ? ppem > best : ppem >= pixelsPerEm && ppem < best);
         if (better) {
             *out = image;
             out->pixelsPerEm = ppem;
@@ -822,8 +818,7 @@ bool sfntGlyphImage(const Sfnt& sfnt, uint32_t glyph, float pixelsPerEm, SfntIma
         uint32_t start = cblc.uint16At(record + 40);
         uint32_t end = cblc.uint16At(record + 42);
         SfntImage image{};
-        if (glyph >= start && glyph <= end && cblc.uint8At(record + 45) != 0
-            && cbdtImage(cblc, cbdt, record, glyph, &image))
+        if (glyph >= start && glyph <= end && cblc.uint8At(record + 45) != 0 && cbdtImage(cblc, cbdt, record, glyph, &image))
             consider(float(cblc.uint8At(record + 45)), image);
     }
     return found;

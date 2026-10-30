@@ -30,8 +30,7 @@ PR_ASSUME_NONNULL_BEGIN
 namespace pr_impl {
 
 // The rules that apply to every document.
-constexpr char kHtmlStyle[] =
-    "@namespace \"http://www.w3.org/1999/xhtml\";\n"
+constexpr char kHtmlStyle[] = "@namespace \"http://www.w3.org/1999/xhtml\";\n"
     // html/#hidden-elements
     "area, base, basefont, datalist, head, link, meta, noembed, noframes, param, rp, script, style, template,"
     " title { display: none; }\n"
@@ -52,8 +51,7 @@ constexpr char kHtmlStyle[] =
     "listing, plaintext, pre, xmp { font-family: monospace; white-space: pre; }\n"
     "dialog:not([open]) { display: none; }\n"
     "dialog { position: absolute; inset-inline-start: 0; inset-inline-end: 0; width: fit-content;"
-    " height: fit-content; margin: auto; border: solid; padding: 1em; background-color: Canvas;"
-    " color: CanvasText; }\n"
+    " height: fit-content; margin: auto; border: solid; padding: 1em; background-color: Canvas; color: CanvasText; }\n"
     "dialog:modal { position: fixed; overflow: auto; inset-block: 0; max-width: calc(100% - 6px - 2em);"
     " max-height: calc(100% - 6px - 2em); }\n"
     "dialog::backdrop { background: rgba(0, 0, 0, 0.1); }\n"
@@ -131,8 +129,7 @@ constexpr char kHtmlStyle[] =
     "tfoot, tfoot[hidden] { display: table-footer-group; }\n"
     "tr, tr[hidden] { display: table-row; }\n"
     "td, th { display: table-cell; }\n"
-    "colgroup[hidden], col[hidden], thead[hidden], tbody[hidden], tfoot[hidden], tr[hidden] {"
-    " visibility: collapse; }\n"
+    "colgroup[hidden], col[hidden], thead[hidden], tbody[hidden], tfoot[hidden], tr[hidden] { visibility: collapse; }\n"
     "table { box-sizing: border-box; border-spacing: 2px; border-collapse: separate; text-indent: initial; }\n"
     "td, th { padding: 1px; }\n"
     "th { font-weight: bold; }\n"
@@ -142,12 +139,10 @@ constexpr char kHtmlStyle[] =
     "thead, tbody, tfoot, tr { border-color: inherit; }\n"
     // html/#form-controls
     "input, button, textarea { letter-spacing: initial; word-spacing: initial; line-height: initial; }\n"
-    "input, select, button, textarea { text-transform: initial; text-indent: initial; text-shadow: initial;"
-    " appearance: auto; }\n"
+    "input, select, button, textarea { text-transform: initial; text-indent: initial; text-shadow: initial; appearance: auto; }\n"
     // Controls take a font of 10pt (13.333px), the size that web content expects of them.
     "input, select, button, textarea { font: 10pt system-ui, sans-serif; }\n"
-    "input:not([type=range i], [type=checkbox i], [type=radio i]) { overflow: clip !important;"
-    " overflow-clip-margin: 0 !important; }\n"
+    "input:not([type=range i], [type=checkbox i], [type=radio i]) { overflow: clip !important; overflow-clip-margin: 0 !important; }\n"
     "input[type=image i] { overflow-clip-margin: content-box !important; }\n"
     "input, select, textarea { text-align: initial; }\n"
     ":autofill { field-sizing: fixed !important; }\n"
@@ -167,12 +162,10 @@ constexpr char kHtmlStyle[] =
     "input:where(:not([type=hidden i], [type=checkbox i], [type=radio i], [type=file i], [type=submit i],"
     " [type=image i], [type=reset i], [type=button i], [type=range i], [type=color i], [type=date i], [type=month i],"
     " [type=week i], [type=time i], [type=datetime-local i], [type=number i])) { border: 1px solid ButtonBorder;"
-    " padding: 2px 3px;"
-    " background-color: Field; color: FieldText; }\n"
+    " padding: 2px 3px; background-color: Field; color: FieldText; }\n"
     "input::field-content { display: block; min-block-size: 1lh; }\n"
     // html/#the-hr-element-2
-    "hr { color: gray; border-style: inset; border-width: 1px; margin-block: 0.5em; margin-inline: auto;"
-    " overflow: hidden; }\n"
+    "hr { color: gray; border-style: inset; border-width: 1px; margin-block: 0.5em; margin-inline: auto; overflow: hidden; }\n"
     // html/#the-fieldset-and-legend-elements
     "fieldset { display: block; margin-inline: 2px; border: groove 2px ThreeDFace; padding-block: 0.35em 0.625em;"
     " padding-inline: 0.75em; min-inline-size: min-content; }\n"
@@ -185,12 +178,10 @@ constexpr char kHtmlStyle[] =
     // html/#embedded-content-rendering-rules, html/#images-3
     "iframe { border: 2px inset; }\n"
     "video { object-fit: contain; }\n"
-    "img:is([sizes=\"auto\" i], [sizes^=\"auto,\" i]) { contain: size !important;"
-    " contain-intrinsic-size: 300px 150px; }\n"
+    "img:is([sizes=\"auto\" i], [sizes^=\"auto,\" i]) { contain: size !important; contain-intrinsic-size: 300px 150px; }\n"
     // html/#the-details-and-summary-elements
     "details, summary { display: block; }\n"
-    "details > summary:first-of-type { display: list-item; counter-increment: list-item 0;"
-    " list-style: disclosure-closed inside; }\n"
+    "details > summary:first-of-type { display: list-item; counter-increment: list-item 0; list-style: disclosure-closed inside; }\n"
     "details[open] > summary:first-of-type { list-style-type: disclosure-open; }\n"
     // html/#the-marquee-element-2
     "marquee { display: inline-block; text-align: initial; overflow: hidden !important; }\n"
@@ -206,8 +197,7 @@ constexpr char kHtmlStyle[] =
 
 // The base look of the widgets rendered with their base appearance (css-forms-1/#basic-appearance-stylesheet): a widget
 // takes its colors and font from the page, inside a border of its text color.
-constexpr char kHtmlStyleBase[] =
-    "@namespace \"http://www.w3.org/1999/xhtml\";\n"
+constexpr char kHtmlStyleBase[] = "@namespace \"http://www.w3.org/1999/xhtml\";\n"
     "input, textarea, button, meter, progress { color: inherit; font: inherit; box-sizing: border-box;"
     " background-color: transparent; }\n"
     "input:not([type=file i], [type=range i], [type=checkbox i][switch]), textarea, button {"
@@ -220,8 +210,7 @@ constexpr char kHtmlStyleMarkers[] =
     " white-space: pre; text-transform: none; }\n";
 
 // The rules that apply while the document is in quirks mode (html/#quirks-mode).
-constexpr char kHtmlStyleQuirks[] =
-    "@namespace \"http://www.w3.org/1999/xhtml\";\n"
+constexpr char kHtmlStyleQuirks[] = "@namespace \"http://www.w3.org/1999/xhtml\";\n"
     "form { margin-block-end: 1em; }\n"
     "li { list-style-position: inside; }\n"
     "li :is(dir, menu, ol, ul) { list-style-position: outside; }\n"
@@ -233,18 +222,15 @@ constexpr char kHtmlStyleQuirks[] =
     "img[align=right i] { margin-left: 3px; }\n";
 
 // The rules that apply in an HTML document (dom/#html-document).
-constexpr char kHtmlStyleHtmlDocument[] =
-    "@namespace \"http://www.w3.org/1999/xhtml\";\n"
+constexpr char kHtmlStyleHtmlDocument[] = "@namespace \"http://www.w3.org/1999/xhtml\";\n"
     "table > form, thead > form, tbody > form, tfoot > form, tr > form { display: none !important; }\n";
 
 // The rules that apply in a document built from Markdown (pr/html_markdown.h): a column of text that is comfortable to
 // read, in either color scheme. Colors are mixed from the scheme's system colors, so that they follow it.
-constexpr char kHtmlStyleMarkdown[] =
-    "@namespace \"http://www.w3.org/1999/xhtml\";\n"
+constexpr char kHtmlStyleMarkdown[] = "@namespace \"http://www.w3.org/1999/xhtml\";\n"
     "html { color-scheme: light dark; }\n"
     "body { max-width: 48em; margin: 0 auto; padding: 1em 2em; font-family: sans-serif; line-height: 1.5; }\n"
-    "h1, h2 { padding-block-end: 0.3em;"
-    " border-block-end: 1px solid color-mix(in srgb, CanvasText 20%, Canvas); }\n"
+    "h1, h2 { padding-block-end: 0.3em; border-block-end: 1px solid color-mix(in srgb, CanvasText 20%, Canvas); }\n"
     "h1, h2, h3, h4, h5, h6 { margin-block: 1.5em 0.75em; line-height: 1.25; }\n"
     "code { padding: 0.1em 0.3em; border-radius: 4px; font-size: 0.9em;"
     " background-color: color-mix(in srgb, CanvasText 8%, Canvas); }\n"

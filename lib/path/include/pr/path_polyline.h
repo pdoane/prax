@@ -88,13 +88,13 @@ typedef uint8_t PrPathPolylineOp;
 // Appends to `out` the result of `op` on the regions that `a` and `b` fill by `aRule` and `bRule`. An open contour
 // counts as closed. A union with an empty `b` gives the region of `a` with its overlaps resolved.
 void prPathPolylineCombine(const PrPathPolyline* a, PrPathFillRule aRule, const PrPathPolyline* b, PrPathFillRule bRule,
-                           PrPathPolylineOp op, PrPathPolyline* out);
+    PrPathPolylineOp op, PrPathPolyline* out);
 
 // Appends to `out` the region that `polyline` fills by `rule`, grown outward by `distance`, or shrunk if `distance` is
 // negative. `join` and `miterLimit` shape the corners, and curved corners lie within `tolerance` of their arcs. A
 // `tolerance` that is not both finite and above zero leaves the region as it is.
 void prPathPolylineOffset(const PrPathPolyline* polyline, PrPathFillRule rule, float distance, PrPathJoin join,
-                          float miterLimit, float tolerance, PrPathPolyline* out);
+    float miterLimit, float tolerance, PrPathPolyline* out);
 
 #if defined(__cplusplus)
 }

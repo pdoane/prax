@@ -55,7 +55,7 @@ PrStringView documentText(SvgDecoder& d, PrByteView bytes) {
         d.inflated.reserve(uint32_t(capacity));
         PrCompressRead read{};
         PrStatus status = prCompressCodecDecode(d.compressCodec, PrCompressFormat_Gzip, bytes, d.inflated.data,
-                                                capacity, &read);
+            capacity, &read);
         if (status != PrStatus_Ok)
             return PrStringView{};
         if (read.progress == PrCompressProgress_Done)
@@ -152,8 +152,10 @@ void paletteProperties(SvgDecoder& d, const PrFont* font, const PrFontPalette* P
         uint32_t name = starts.data[i * 2];
         uint32_t value = starts.data[i * 2 + 1];
         uint32_t end = starts.data[i * 2 + 2];
-        d.properties.push(PrSvgCustomProperty{PrStringView{base + name, value - name},
-                                              PrStringView{base + value, end - value}});
+        d.properties.push(PrSvgCustomProperty{
+            PrStringView{base + name, value - name},
+            PrStringView{base + value, end - value},
+        });
     }
     starts.reset();
 }
@@ -170,7 +172,7 @@ void destroyDecoder(PrDrawGlyphDecoder* decoder) {
 }
 
 bool decode(PrDrawGlyphDecoder* decoder, const PrFont* font, uint16_t glyph, float pixelsPerEm,
-            const PrFontPalette* PR_NULLABLE palette, PrColor foreground, PrDrawList* list) {
+        const PrFontPalette* PR_NULLABLE palette, PrColor foreground, PrDrawList* list) {
     SvgDecoder& d = *static_cast<SvgDecoder*>(decoder);
     PrFontGlyphSvg svg{};
     if (!prFontGlyphSvg(font, glyph, &svg))
@@ -182,8 +184,7 @@ bool decode(PrDrawGlyphDecoder* decoder, const PrFont* font, uint16_t glyph, flo
     Array<char> name;
     appendText(name, "glyph");
     appendNumber(name, glyph);
-    PrDomElement* element =
-        prDomNodeGetElementById(prDomDocumentAsNode(document), PrStringView{name.data, name.count});
+    PrDomElement* element = prDomNodeGetElementById(prDomDocumentAsNode(document), PrStringView{name.data, name.count});
     name.reset();
     PrSvgElement* drawn = element != nullptr ? prSvgElementQuery(prDomElementAsEventTarget(element)) : nullptr;
     if (drawn == nullptr)
@@ -209,7 +210,7 @@ bool decode(PrDrawGlyphDecoder* decoder, const PrFont* font, uint16_t glyph, flo
 using namespace pr_impl;
 
 PrDrawGlyphDecoder* prSvgGlyphDecoderCreate(PrImageCodec* PR_NULLABLE imageCodec,
-                                            PrCompressCodec* PR_NULLABLE compressCodec) {
+        PrCompressCodec* PR_NULLABLE compressCodec) {
     SvgDecoder* decoder = allocZeroed<SvgDecoder>();
     decoder->destroy = destroyDecoder;
     decoder->decode = decode;

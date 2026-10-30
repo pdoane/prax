@@ -45,7 +45,7 @@ bool taints(const FilterParts& parts, SvgFilterInput input) {
 // tainted input (filter-effects-1/#tainted-filter-primitives). A color that mixes currentColor, or is relative to it,
 // reads it too.
 bool isTainted(const FilterParts& parts, const PrDomElement* e, const CssComputedStyle* PR_NULLABLE style,
-               const SvgPrimitive& p) {
+        const SvgPrimitive& p) {
     auto current = [&](PrCssProperty property) {
         if (style == nullptr)
             return false;
@@ -323,8 +323,8 @@ void readTransfer(FilterParts& parts, const PrDomElement* e, SvgPrimitive* p) {
         t.exponent = numberOf(parts, f, "exponent", 1);
         t.offset = numberOf(parts, f, "offset", 0);
         // An empty or missing table is the identity, which lib/draw makes of a table without values.
-        if ((t.kind == PrDrawTransferKind_Table || t.kind == PrDrawTransferKind_Discrete)
-            && numbersOf(f, "tableValues", &parts.scratch)) {
+        if ((t.kind == PrDrawTransferKind_Table || t.kind == PrDrawTransferKind_Discrete) &&
+                numbersOf(f, "tableValues", &parts.scratch)) {
             t.first = parts.numbers.count;
             t.count = parts.scratch.count;
             parts.numbers.append(parts.scratch.data, parts.scratch.count);
@@ -345,12 +345,18 @@ void readComposite(FilterParts& parts, const PrDomElement* e, SvgPrimitive* p) {
         return;
     }
     p->kind = SvgPrimitiveKind_Composite;
-    p->composite = op == "in"        ? PrDrawComposite_SourceIn
-                   : op == "out"     ? PrDrawComposite_SourceOut
-                   : op == "atop"    ? PrDrawComposite_SourceAtop
-                   : op == "xor"     ? PrDrawComposite_Xor
-                   : op == "lighter" ? PrDrawComposite_PlusLighter
-                                     : PrDrawComposite_SourceOver;
+    if (op == "in")
+        p->composite = PrDrawComposite_SourceIn;
+    else if (op == "out")
+        p->composite = PrDrawComposite_SourceOut;
+    else if (op == "atop")
+        p->composite = PrDrawComposite_SourceAtop;
+    else if (op == "xor")
+        p->composite = PrDrawComposite_Xor;
+    else if (op == "lighter")
+        p->composite = PrDrawComposite_PlusLighter;
+    else
+        p->composite = PrDrawComposite_SourceOver;
 }
 
 // Reads a feConvolveMatrix (filter-effects-1/#feConvolveMatrixElement). An order that is not positive, a kernel of the
@@ -389,13 +395,13 @@ void readConvolve(FilterParts& parts, const PrDomElement* e, SvgPrimitive* p) {
 // Reads a feDiffuseLighting or feSpecularLighting and its light source, its first child that is one
 // (filter-effects-1/#LightSourceDefinitions). A primitive without a light is transparent black.
 void readLighting(SvgBuilder& b, FilterParts& parts, const PrDomElement* e, const CssComputedStyle* PR_NULLABLE style,
-                  SvgPrimitive* p) {
+        SvgPrimitive* p) {
     p->kind = SvgPrimitiveKind_Transparent;
     const PrDomElement* light = nullptr;
     for (const PrDomNode* child = e->first; child != nullptr && light == nullptr; child = child->next) {
         const PrDomElement* c = domElementFromNode(child);
-        if (c != nullptr
-            && (svgIs(c, PrDomTag_FeDistantLight) || svgIs(c, PrDomTag_FePointLight) || svgIs(c, PrDomTag_FeSpotLight)))
+        if (c != nullptr && (svgIs(c, PrDomTag_FeDistantLight) || svgIs(c, PrDomTag_FePointLight) ||
+                svgIs(c, PrDomTag_FeSpotLight)))
             light = c;
     }
     if (light == nullptr)
@@ -412,8 +418,10 @@ void readLighting(SvgBuilder& b, FilterParts& parts, const PrDomElement* e, cons
         p->kind = SvgPrimitiveKind_Transparent;
         return;
     }
-    p->lighting.color = style != nullptr ? svgStyleColor(style, PrCssProperty_LightingColor, b.build->environment)
-                                         : PrColor{1, 1, 1, 1};
+    if (style != nullptr)
+        p->lighting.color = svgStyleColor(style, PrCssProperty_LightingColor, b.build->environment);
+    else
+        p->lighting.color = PrColor{1, 1, 1, 1};
     PrDrawLight& l = p->lighting.light;
     float degrees = kPiF32 / 180;
     if (svgIs(light, PrDomTag_FeDistantLight)) {
@@ -423,12 +431,13 @@ void readLighting(SvgBuilder& b, FilterParts& parts, const PrDomElement* e, cons
         return;
     }
     l.kind = svgIs(light, PrDomTag_FePointLight) ? PrDrawLightKind_Point : PrDrawLightKind_Spot;
-    l.position = PrVec3{numberOf(parts, light, "x", 0), numberOf(parts, light, "y", 0),
-                        numberOf(parts, light, "z", 0)};
+    l.position = PrVec3{numberOf(parts, light, "x", 0), numberOf(parts, light, "y", 0), numberOf(parts, light, "z", 0)};
     if (l.kind == PrDrawLightKind_Point)
         return;
-    l.pointsAt = PrVec3{numberOf(parts, light, "pointsAtX", 0), numberOf(parts, light, "pointsAtY", 0),
-                        numberOf(parts, light, "pointsAtZ", 0)};
+    l.pointsAt = PrVec3{
+        numberOf(parts, light, "pointsAtX", 0), numberOf(parts, light, "pointsAtY", 0),
+        numberOf(parts, light, "pointsAtZ", 0),
+    };
     // A negative exponent of the spot is taken as its initial value.
     l.spotExponent = numberOf(parts, light, "specularExponent", 1);
     if (l.spotExponent < 0)
@@ -450,13 +459,13 @@ void readTurbulence(FilterParts& parts, const PrDomElement* e, SvgPrimitive* p) 
     }
     float octaves = numberOf(parts, e, "numOctaves", 1);
     p->kind = SvgPrimitiveKind_Turbulence;
+    bool fractal = svgAttribute(e, "type") == "fractalNoise";
     p->turbulence = PrDrawFilterTurbulence{
         .baseFrequency = frequency,
         .octaves = octaves > 0 ? uint32_t(minF32(octaves, float(kPrDrawTurbulenceMaxOctaves))) : 0,
         // The seed is truncated toward zero.
         .seed = truncated(numberOf(parts, e, "seed", 0)),
-        .kind = PrDrawTurbulenceKind(svgAttribute(e, "type") == "fractalNoise" ? PrDrawTurbulenceKind_FractalNoise
-                                                                               : PrDrawTurbulenceKind_Turbulence),
+        .kind = PrDrawTurbulenceKind(fractal ? PrDrawTurbulenceKind_FractalNoise : PrDrawTurbulenceKind_Turbulence),
         .stitch = svgAttribute(e, "stitchTiles") == "stitch",
     };
 }
@@ -464,7 +473,7 @@ void readTurbulence(FilterParts& parts, const PrDomElement* e, SvgPrimitive* p) 
 // Reads a feImage: an image that its href names, or an element of the document, which is built in the filter's content
 // group (filter-effects-1/#feImageElement). A reference that names nothing draws transparent black.
 void readImage(SvgBuilder& b, SvgResourceIndex index, const PrDomElement* e, const CssComputedStyle* PR_NULLABLE style,
-               SvgPrimitive* p) {
+        SvgPrimitive* p) {
     p->kind = SvgPrimitiveKind_Image;
     p->image.node = kSvgNodeNone;
     p->image.picture = SvgPicture{};
@@ -473,8 +482,8 @@ void readImage(SvgBuilder& b, SvgResourceIndex index, const PrDomElement* e, con
     p->image.sampling = PrDrawSampling_Linear;
     if (style != nullptr) {
         PrCssKeyword rendering = svgStyleKeyword(style, PrCssProperty_ImageRendering);
-        if (rendering == PrCssKeyword_Pixelated || rendering == PrCssKeyword_CrispEdges
-            || rendering == PrCssKeyword_Optimizespeed)
+        if (rendering == PrCssKeyword_Pixelated || rendering == PrCssKeyword_CrispEdges ||
+                rendering == PrCssKeyword_Optimizespeed)
             p->image.sampling = PrDrawSampling_Nearest;
     }
     PrStringView href = svgHref(e);
@@ -498,7 +507,7 @@ void readImage(SvgBuilder& b, SvgResourceIndex index, const PrDomElement* e, con
 
 // Reads one primitive into `p`, whose common attributes are read.
 void readPrimitive(SvgBuilder& b, SvgResourceIndex index, FilterParts& parts, const PrDomElement* e,
-                   const CssComputedStyle* PR_NULLABLE style, SvgFilterInput implicit, SvgPrimitive* p) {
+        const CssComputedStyle* PR_NULLABLE style, SvgFilterInput implicit, SvgPrimitive* p) {
     p->inputs[0] = inputOf(parts, svgAttribute(e, "in"), implicit);
     p->inputs[1] = inputOf(parts, svgAttribute(e, "in2"), implicit);
     switch (e->tag) {
@@ -580,7 +589,7 @@ void readPrimitive(SvgBuilder& b, SvgResourceIndex index, FilterParts& parts, co
 
 // Reads the attribute `name` of a primitive's subregion into `out`, and returns `flag` if it is given and parses.
 SvgSubregionFlags subregionOf(const PrDomElement* e, PrStringView name, const CssComputedStyle* PR_NULLABLE style,
-                              SvgSubregionFlags flag, SvgLengthPercentage* out) {
+        SvgSubregionFlags flag, SvgLengthPercentage* out) {
     PrStringView text = svgAttribute(e, name);
     return text.data != nullptr && svgParseLength(text, style, out) ? flag : 0;
 }
@@ -625,8 +634,7 @@ float primitivePosition(const Graph& g, float value, SvgAxis axis) {
 
 // Returns a length of a subregion or region along an axis: in user space with percentages of the viewport, or a
 // fraction of the bounding box, which a percentage is a hundredth of. `origin` is added to a fraction of a position.
-float regionLength(const SvgDrawer& d, bool userSpace, SvgLengthPercentage length, SvgAxis axis, float origin,
-                   float extent) {
+float regionLength(const SvgDrawer& d, bool userSpace, SvgLengthPercentage length, SvgAxis axis, float origin, float extent) {
     if (userSpace)
         return svgLengthResolve(length, svgPercentBase(d, axis));
     return origin + (length.px + length.percent / 100) * extent;
@@ -664,8 +672,11 @@ PrDrawFilterInput listNode(Graph& g, PrRect area, Record record) {
     SvgDrawer inner = svgEffectDrawer(*g.d, g.index, list);
     record(inner);
     PrDrawFilterNode node{.kind = PrDrawFilterKind_Image, .space = PrColorSpace_Srgb, .region = area};
-    node.image = PrDrawFilterImage{.source = prDrawSourceList(list, area), .rect = area,
-                                   .sampling = PrDrawSampling_Linear};
+    node.image = PrDrawFilterImage{
+        .source = prDrawSourceList(list, area),
+        .rect = area,
+        .sampling = PrDrawSampling_Linear,
+    };
     PrDrawFilterInput made = add(g, node);
     prDrawListRelease(list);
     return made;
@@ -753,16 +764,18 @@ PrRect subregionOf(const Graph& g, const SvgPrimitive& p) {
         base = g.region;
     const SvgDrawer& d = *g.d;
     bool user = !g.filter->primitiveBoundingBox;
-    float x = (p.given & SvgSubregionFlag_X) ? regionLength(d, user, p.x, SvgAxis_X, g.box.left, prRectWidth(g.box))
-                                             : base.left;
-    float y = (p.given & SvgSubregionFlag_Y) ? regionLength(d, user, p.y, SvgAxis_Y, g.box.top, prRectHeight(g.box))
-                                             : base.top;
-    float w = (p.given & SvgSubregionFlag_Width)
-                  ? regionLength(d, user, p.width, SvgAxis_X, 0, prRectWidth(g.box))
-                  : prRectWidth(base);
-    float h = (p.given & SvgSubregionFlag_Height)
-                  ? regionLength(d, user, p.height, SvgAxis_Y, 0, prRectHeight(g.box))
-                  : prRectHeight(base);
+    float x = (p.given & SvgSubregionFlag_X) ? regionLength(d, user, p.x, SvgAxis_X, g.box.left, prRectWidth(g.box)) : base.left;
+    float y = (p.given & SvgSubregionFlag_Y) ? regionLength(d, user, p.y, SvgAxis_Y, g.box.top, prRectHeight(g.box)) : base.top;
+    float w;
+    if ((p.given & SvgSubregionFlag_Width))
+        w = regionLength(d, user, p.width, SvgAxis_X, 0, prRectWidth(g.box));
+    else
+        w = prRectWidth(base);
+    float h;
+    if ((p.given & SvgSubregionFlag_Height))
+        h = regionLength(d, user, p.height, SvgAxis_Y, 0, prRectHeight(g.box));
+    else
+        h = prRectHeight(base);
     return PrRect{x, y, x + w, y + h};
 }
 
@@ -771,8 +784,10 @@ PrRect subregionOf(const Graph& g, const SvgPrimitive& p) {
 PrDrawFilterInput primitiveNode(Graph& g, const SvgPrimitive& p, PrRect subregion, PrRect clip) {
     const SvgFilter& f = *g.filter;
     PrDrawFilterNode node{.space = p.space, .region = clip};
-    node.inputs[0] = p.kind != SvgPrimitiveKind_Merge && inputsRead(p) >= 1 ? inputNode(g, p.inputs[0])
-                                                                           : PrDrawFilterInput_Source;
+    if (p.kind != SvgPrimitiveKind_Merge && inputsRead(p) >= 1)
+        node.inputs[0] = inputNode(g, p.inputs[0]);
+    else
+        node.inputs[0] = PrDrawFilterInput_Source;
     node.inputs[1] = inputsRead(p) >= 2 ? inputNode(g, p.inputs[1]) : PrDrawFilterInput_Source;
     auto length = [&](float value, SvgAxis axis) { return primitiveLength(g, value, axis); };
     switch (p.kind) {
@@ -789,10 +804,16 @@ PrDrawFilterInput primitiveNode(Graph& g, const SvgPrimitive& p, PrRect subregio
             for (uint32_t c = 0; c < PrDrawChannel_Count; ++c) {
                 const SvgTransfer& t = p.transfer[c];
                 const float* values = t.count != 0 ? f.numbers + t.first : nullptr;
-                node.transfer[c] = PrDrawTransfer{.kind = t.kind, .values = values,
-                                                  .valueCount = t.count, .slope = t.slope, .intercept = t.intercept,
-                                                  .amplitude = t.amplitude, .exponent = t.exponent,
-                                                  .offset = t.offset};
+                node.transfer[c] = PrDrawTransfer{
+                    .kind = t.kind,
+                    .values = values,
+                    .valueCount = t.count,
+                    .slope = t.slope,
+                    .intercept = t.intercept,
+                    .amplitude = t.amplitude,
+                    .exponent = t.exponent,
+                    .offset = t.offset,
+                };
             }
             break;
         case SvgPrimitiveKind_Composite:
@@ -805,38 +826,54 @@ PrDrawFilterInput primitiveNode(Graph& g, const SvgPrimitive& p, PrRect subregio
             break;
         case SvgPrimitiveKind_ConvolveMatrix:
             node.kind = PrDrawFilterKind_Convolution;
-            node.convolution = PrDrawFilterConvolution{.kernel = f.numbers + p.convolve.first,
-                                                       .extent = p.convolve.order, .divisor = p.convolve.divisor,
-                                                       .bias = p.convolve.bias, .target = p.convolve.target,
-                                                       .edge = p.convolve.edge,
-                                                       .preserveAlpha = p.convolve.preserveAlpha};
+            node.convolution = PrDrawFilterConvolution{
+                .kernel = f.numbers + p.convolve.first,
+                .extent = p.convolve.order,
+                .divisor = p.convolve.divisor,
+                .bias = p.convolve.bias,
+                .target = p.convolve.target,
+                .edge = p.convolve.edge,
+                .preserveAlpha = p.convolve.preserveAlpha,
+            };
             break;
         case SvgPrimitiveKind_Lighting: {
             node.kind = PrDrawFilterKind_Lighting;
             PrDrawLight light = p.lighting.light;
-            light.position = PrVec3{primitivePosition(g, light.position.x, SvgAxis_X),
-                                    primitivePosition(g, light.position.y, SvgAxis_Y),
-                                    length(light.position.z, SvgAxis_Other)};
-            light.pointsAt = PrVec3{primitivePosition(g, light.pointsAt.x, SvgAxis_X),
-                                    primitivePosition(g, light.pointsAt.y, SvgAxis_Y),
-                                    length(light.pointsAt.z, SvgAxis_Other)};
-            node.lighting = PrDrawFilterLighting{.kind = p.lighting.kind, .surfaceScale = p.lighting.surfaceScale,
-                                                 .constant = p.lighting.constant,
-                                                 .specularExponent = p.lighting.specularExponent,
-                                                 .color = prColor16FromColor(p.lighting.color), .light = light};
+            light.position = PrVec3{
+                primitivePosition(g, light.position.x, SvgAxis_X),
+                primitivePosition(g, light.position.y, SvgAxis_Y),
+                length(light.position.z, SvgAxis_Other),
+            };
+            light.pointsAt = PrVec3{
+                primitivePosition(g, light.pointsAt.x, SvgAxis_X),
+                primitivePosition(g, light.pointsAt.y, SvgAxis_Y),
+                length(light.pointsAt.z, SvgAxis_Other),
+            };
+            node.lighting = PrDrawFilterLighting{
+                .kind = p.lighting.kind,
+                .surfaceScale = p.lighting.surfaceScale,
+                .constant = p.lighting.constant,
+                .specularExponent = p.lighting.specularExponent,
+                .color = prColor16FromColor(p.lighting.color),
+                .light = light,
+            };
             break;
         }
         case SvgPrimitiveKind_DisplacementMap:
             node.kind = PrDrawFilterKind_DisplacementMap;
-            node.displacement = PrDrawFilterDisplacement{.scale = length(p.displacement.scale, SvgAxis_X),
-                                                         .x = p.displacement.x, .y = p.displacement.y};
+            node.displacement = PrDrawFilterDisplacement{
+                .scale = length(p.displacement.scale, SvgAxis_X),
+                .x = p.displacement.x,
+                .y = p.displacement.y,
+            };
             break;
         case SvgPrimitiveKind_DropShadow:
             node.kind = PrDrawFilterKind_DropShadow;
             node.shadow = PrDrawFilterShadow{
                 .offset = PrVec2{length(p.shadow.offset.x, SvgAxis_X), length(p.shadow.offset.y, SvgAxis_Y)},
                 .sigma = PrVec2{length(p.shadow.sigma.x, SvgAxis_X), length(p.shadow.sigma.y, SvgAxis_Y)},
-                .color = prColor16FromColor(p.shadow.color)};
+                .color = prColor16FromColor(p.shadow.color),
+            };
             break;
         case SvgPrimitiveKind_Flood:
             // A flood is the same in either space.
@@ -848,7 +885,8 @@ PrDrawFilterInput primitiveNode(Graph& g, const SvgPrimitive& p, PrRect subregio
             node.kind = PrDrawFilterKind_Blur;
             node.blur = PrDrawFilterBlur{
                 .sigma = PrVec2{length(p.blur.sigma.x, SvgAxis_X), length(p.blur.sigma.y, SvgAxis_Y)},
-                .edge = p.blur.edge};
+                .edge = p.blur.edge,
+            };
             break;
         case SvgPrimitiveKind_Image: {
             // An element draws as a use element would, moved by the subregion's origin. An image fits the subregion as
@@ -858,9 +896,9 @@ PrDrawFilterInput primitiveNode(Graph& g, const SvgPrimitive& p, PrRect subregio
             return listNode(g, clip, [&](SvgDrawer& inner) {
                 if (p.image.node != kSvgNodeNone) {
                     prDrawListPushTransformAffine2(inner.list,
-                                                   prAffine2Translate(PrVec2{subregion.left, subregion.top}));
-                    inner.space = prAffine2Concat(prAffine2Translate(PrVec2{subregion.left, subregion.top}),
-                                                  inner.space);
+                        prAffine2Translate(PrVec2{subregion.left, subregion.top}));
+                    inner.space =
+                        prAffine2Concat(prAffine2Translate(PrVec2{subregion.left, subregion.top}), inner.space);
                     svgDrawNode(inner, p.image.node);
                     prDrawListPopTransform(inner.list);
                     return;
@@ -892,7 +930,8 @@ PrDrawFilterInput primitiveNode(Graph& g, const SvgPrimitive& p, PrRect subregio
             node.kind = PrDrawFilterKind_Morphology;
             node.morphology = PrDrawFilterMorphology{
                 .radius = PrVec2{length(p.morphology.radius.x, SvgAxis_X), length(p.morphology.radius.y, SvgAxis_Y)},
-                .op = p.morphology.op};
+                .op = p.morphology.op,
+            };
             break;
         case SvgPrimitiveKind_Offset:
             node.kind = PrDrawFilterKind_Offset;
@@ -931,14 +970,22 @@ PrRect regionOf(const SvgDrawer& d, const SvgFilter& f, PrRect box) {
 // `source` as its SourceGraphic. Writes the node of its result and its region. Returns false if the filter hides the
 // element: it has no primitives, its region has no area, or its units are of a bounding box that has none.
 bool appendFilter(SvgDrawer& d, const SvgNode& owner, SvgResourceIndex index, PrRect box, PrDrawFilterInput source,
-                  PrDrawFilterBuilder* builder, PrDrawFilterInput* result, PrRect* region) {
+        PrDrawFilterBuilder* builder, PrDrawFilterInput* result, PrRect* region) {
     const SvgFilter& f = d.tree->resources.data[index].filter;
     if (f.primitiveCount == 0)
         return false;
     if ((!f.userSpace || f.primitiveBoundingBox) && prRectIsEmpty(box))
         return false;
-    Graph g{.d = &d, .node = &owner, .index = index, .filter = &f, .builder = builder, .box = box,
-            .region = regionOf(d, f, box), .source = source};
+    Graph g{
+        .d = &d,
+        .node = &owner,
+        .index = index,
+        .filter = &f,
+        .builder = builder,
+        .box = box,
+        .region = regionOf(d, f, box),
+        .source = source,
+    };
     if (prRectIsEmpty(g.region))
         return false;
     for (PrDrawFilterInput& s : g.sources)
@@ -948,9 +995,11 @@ bool appendFilter(SvgDrawer& d, const SvgNode& owner, SvgResourceIndex index, Pr
         PrRect subregion = subregionOf(g, p);
         PrRect clip = prRectIntersect(subregion, g.region);
         // A subregion with no area disables the primitive, whose result is transparent black.
-        PrDrawFilterInput made = !prRectIsEmpty(subregion) && !prRectIsEmpty(clip)
-                                     ? primitiveNode(g, p, subregion, clip)
-                                     : add(g, transparent(g.region));
+        PrDrawFilterInput made;
+        if (!prRectIsEmpty(subregion) && !prRectIsEmpty(clip))
+            made = primitiveNode(g, p, subregion, clip);
+        else
+            made = add(g, transparent(g.region));
         g.results.push(made);
         g.subregions.push(!prRectIsEmpty(clip) ? clip : PrRect{});
     }
@@ -969,7 +1018,7 @@ void svgBuildFilter(SvgBuilder& b, SvgResourceIndex index, const PrDomElement* e
     const PrDomElement* chain[kMaxTemplates];
     uint32_t count = 0;
     for (const PrDomElement* at = e; at != nullptr && svgIs(at, PrDomTag_Filter) && count < kMaxTemplates;
-         at = svgBuildHref(b, at, true)) {
+            at = svgBuildHref(b, at, true)) {
         bool seen = false;
         for (uint32_t i = 0; i < count && !seen; ++i)
             seen = chain[i] == at;
@@ -1014,10 +1063,10 @@ void svgBuildFilter(SvgBuilder& b, SvgResourceIndex index, const PrDomElement* e
         uint32_t at = parts.primitives.count;
         SvgPrimitive p{};
         p.space = spaceOf(primitiveStyle);
-        p.given = subregionOf(element, "x", primitiveStyle, SvgSubregionFlag_X, &p.x)
-                  | subregionOf(element, "y", primitiveStyle, SvgSubregionFlag_Y, &p.y)
-                  | subregionOf(element, "width", primitiveStyle, SvgSubregionFlag_Width, &p.width)
-                  | subregionOf(element, "height", primitiveStyle, SvgSubregionFlag_Height, &p.height);
+        p.given = subregionOf(element, "x", primitiveStyle, SvgSubregionFlag_X, &p.x) |
+            subregionOf(element, "y", primitiveStyle, SvgSubregionFlag_Y, &p.y) |
+            subregionOf(element, "width", primitiveStyle, SvgSubregionFlag_Width, &p.width) |
+            subregionOf(element, "height", primitiveStyle, SvgSubregionFlag_Height, &p.height);
         SvgFilterInput implicit = at == 0 ? SvgFilterInput_Graphic : SvgFilterInput(at - 1);
         readPrimitive(b, index, parts, element, primitiveStyle, implicit, &p);
         // A displacement map that reads a tainted map passes its input through
@@ -1074,18 +1123,18 @@ bool svgFilterSame(const SvgFilter& a, const SvgFilter& b) {
     auto sameLength = [](SvgLengthPercentage x, SvgLengthPercentage y) {
         return x.px == y.px && x.percent == y.percent;
     };
-    if (a.userSpace != b.userSpace || a.primitiveBoundingBox != b.primitiveBoundingBox || !sameLength(a.x, b.x)
-        || !sameLength(a.y, b.y) || !sameLength(a.width, b.width) || !sameLength(a.height, b.height)
-        || a.primitiveCount != b.primitiveCount || (a.content == kSvgNodeNone) != (b.content == kSvgNodeNone))
+    if (a.userSpace != b.userSpace || a.primitiveBoundingBox != b.primitiveBoundingBox || !sameLength(a.x, b.x) ||
+            !sameLength(a.y, b.y) || !sameLength(a.width, b.width) || !sameLength(a.height, b.height) ||
+            a.primitiveCount != b.primitiveCount || (a.content == kSvgNodeNone) != (b.content == kSvgNodeNone))
         return false;
     uint32_t numbers = 0;
     uint32_t merges = 0;
     for (uint32_t i = 0; i < a.primitiveCount; ++i) {
         const SvgPrimitive& p = a.primitives[i];
         const SvgPrimitive& q = b.primitives[i];
-        if (p.kind != q.kind || p.space != q.space || p.given != q.given
-            || !memEquals(p.inputs, q.inputs, sizeof(p.inputs)) || !sameLength(p.x, q.x) || !sameLength(p.y, q.y)
-            || !sameLength(p.width, q.width) || !sameLength(p.height, q.height))
+        if (p.kind != q.kind || p.space != q.space || p.given != q.given ||
+                !memEquals(p.inputs, q.inputs, sizeof(p.inputs)) || !sameLength(p.x, q.x) || !sameLength(p.y, q.y) ||
+                !sameLength(p.width, q.width) || !sameLength(p.height, q.height))
             return false;
         bool same = true;
         switch (p.kind) {
@@ -1095,68 +1144,67 @@ bool svgFilterSame(const SvgFilter& a, const SvgFilter& b) {
                 for (uint32_t c = 0; c < PrDrawChannel_Count && same; ++c) {
                     const SvgTransfer& s = p.transfer[c];
                     const SvgTransfer& t = q.transfer[c];
-                    same = s.kind == t.kind && s.slope == t.slope && s.intercept == t.intercept
-                           && s.amplitude == t.amplitude && s.exponent == t.exponent && s.offset == t.offset
-                           && s.count == t.count;
+                    same = s.kind == t.kind && s.slope == t.slope && s.intercept == t.intercept &&
+                        s.amplitude == t.amplitude && s.exponent == t.exponent && s.offset == t.offset && s.count == t.count;
                     numbers = larger(numbers, s.first + s.count);
                 }
                 break;
             case SvgPrimitiveKind_Composite: same = p.composite == q.composite; break;
             case SvgPrimitiveKind_Arithmetic: same = memEquals(p.k, q.k, sizeof(p.k)); break;
             case SvgPrimitiveKind_ConvolveMatrix:
-                same = p.convolve.order.x == q.convolve.order.x && p.convolve.order.y == q.convolve.order.y
-                       && p.convolve.target.x == q.convolve.target.x && p.convolve.target.y == q.convolve.target.y
-                       && p.convolve.divisor == q.convolve.divisor && p.convolve.bias == q.convolve.bias
-                       && p.convolve.edge == q.convolve.edge && p.convolve.preserveAlpha == q.convolve.preserveAlpha;
+                same = p.convolve.order.x == q.convolve.order.x && p.convolve.order.y == q.convolve.order.y &&
+                    p.convolve.target.x == q.convolve.target.x && p.convolve.target.y == q.convolve.target.y &&
+                    p.convolve.divisor == q.convolve.divisor && p.convolve.bias == q.convolve.bias &&
+                    p.convolve.edge == q.convolve.edge && p.convolve.preserveAlpha == q.convolve.preserveAlpha;
                 numbers = larger(numbers, p.convolve.first + p.convolve.order.x * p.convolve.order.y);
                 break;
             case SvgPrimitiveKind_Lighting:
-                same = p.lighting.kind == q.lighting.kind && p.lighting.surfaceScale == q.lighting.surfaceScale
-                       && p.lighting.constant == q.lighting.constant
-                       && p.lighting.specularExponent == q.lighting.specularExponent
-                       && memEquals(&p.lighting.color, &q.lighting.color, sizeof(PrColor))
-                       && memEquals(&p.lighting.light, &q.lighting.light, sizeof(PrDrawLight));
+                same = p.lighting.kind == q.lighting.kind && p.lighting.surfaceScale == q.lighting.surfaceScale &&
+                    p.lighting.constant == q.lighting.constant &&
+                    p.lighting.specularExponent == q.lighting.specularExponent &&
+                    memEquals(&p.lighting.color, &q.lighting.color, sizeof(PrColor)) &&
+                    memEquals(&p.lighting.light, &q.lighting.light, sizeof(PrDrawLight));
                 break;
             case SvgPrimitiveKind_DisplacementMap:
-                same = p.displacement.scale == q.displacement.scale && p.displacement.x == q.displacement.x
-                       && p.displacement.y == q.displacement.y;
+                same = p.displacement.scale == q.displacement.scale && p.displacement.x == q.displacement.x &&
+                    p.displacement.y == q.displacement.y;
                 break;
             case SvgPrimitiveKind_DropShadow:
-                same = memEquals(&p.shadow.offset, &q.shadow.offset, sizeof(PrVec2))
-                       && memEquals(&p.shadow.sigma, &q.shadow.sigma, sizeof(PrVec2))
-                       && memEquals(&p.shadow.color, &q.shadow.color, sizeof(PrColor));
+                same = memEquals(&p.shadow.offset, &q.shadow.offset, sizeof(PrVec2)) &&
+                    memEquals(&p.shadow.sigma, &q.shadow.sigma, sizeof(PrVec2)) &&
+                    memEquals(&p.shadow.color, &q.shadow.color, sizeof(PrColor));
                 break;
             case SvgPrimitiveKind_Flood: same = memEquals(&p.flood, &q.flood, sizeof(PrColor)); break;
             case SvgPrimitiveKind_GaussianBlur:
                 same = memEquals(&p.blur.sigma, &q.blur.sigma, sizeof(PrVec2)) && p.blur.edge == q.blur.edge;
                 break;
             case SvgPrimitiveKind_Image:
-                same = p.image.picture.raster == q.image.picture.raster && p.image.picture.svg == q.image.picture.svg
-                       && (p.image.node == kSvgNodeNone) == (q.image.node == kSvgNodeNone)
-                       && p.image.aspect.x == q.image.aspect.x && p.image.aspect.y == q.image.aspect.y
-                       && p.image.aspect.slice == q.image.aspect.slice && p.image.sampling == q.image.sampling;
+                same = p.image.picture.raster == q.image.picture.raster && p.image.picture.svg == q.image.picture.svg &&
+                    (p.image.node == kSvgNodeNone) == (q.image.node == kSvgNodeNone) &&
+                    p.image.aspect.x == q.image.aspect.x && p.image.aspect.y == q.image.aspect.y &&
+                    p.image.aspect.slice == q.image.aspect.slice && p.image.sampling == q.image.sampling;
                 break;
             case SvgPrimitiveKind_Merge:
                 same = p.merge.count == q.merge.count;
                 merges = larger(merges, p.merge.first + p.merge.count);
                 break;
             case SvgPrimitiveKind_Morphology:
-                same = memEquals(&p.morphology.radius, &q.morphology.radius, sizeof(PrVec2))
-                       && p.morphology.op == q.morphology.op;
+                same = memEquals(&p.morphology.radius, &q.morphology.radius, sizeof(PrVec2)) &&
+                    p.morphology.op == q.morphology.op;
                 break;
             case SvgPrimitiveKind_Offset: same = memEquals(&p.offset, &q.offset, sizeof(PrVec2)); break;
             case SvgPrimitiveKind_Turbulence:
-                same = memEquals(&p.turbulence.baseFrequency, &q.turbulence.baseFrequency, sizeof(PrVec2))
-                       && p.turbulence.octaves == q.turbulence.octaves && p.turbulence.seed == q.turbulence.seed
-                       && p.turbulence.kind == q.turbulence.kind && p.turbulence.stitch == q.turbulence.stitch;
+                same = memEquals(&p.turbulence.baseFrequency, &q.turbulence.baseFrequency, sizeof(PrVec2)) &&
+                    p.turbulence.octaves == q.turbulence.octaves && p.turbulence.seed == q.turbulence.seed &&
+                    p.turbulence.kind == q.turbulence.kind && p.turbulence.stitch == q.turbulence.stitch;
                 break;
             default: break;
         }
         if (!same)
             return false;
     }
-    return (numbers == 0 || memEquals(a.numbers, b.numbers, numbers * sizeof(float)))
-           && (merges == 0 || memEquals(a.merges, b.merges, merges * sizeof(SvgFilterInput)));
+    return (numbers == 0 || memEquals(a.numbers, b.numbers, numbers * sizeof(float))) &&
+        (merges == 0 || memEquals(a.merges, b.merges, merges * sizeof(SvgFilterInput)));
 }
 
 bool svgFilterReadsBackdrop(const SvgFilter& filter) {
@@ -1218,15 +1266,20 @@ SvgFiltered svgFilterFromNode(SvgDrawer& d, SvgNodeIndex index, SvgFilterGraph* 
 }
 
 bool svgAppendFilter(const SvgTree* tree, SvgResourceIndex index, PrRect box, PrVec2 viewport,
-                     PrDrawFilterInput input, PrDrawFilterBuilder* builder, PrDrawFilterInput* result,
-                     PrRect* region) {
+        PrDrawFilterInput input, PrDrawFilterBuilder* builder, PrDrawFilterInput* result, PrRect* region) {
     // What the filter applies to has no node, and so no fill or stroke for FillPaint and StrokePaint.
     SvgNode owner{};
     owner.paints.strokeStyle = kArrayMissing;
     PrDrawList* unused = prDrawListCreate();
     SvgTiles tiles{};
-    SvgDrawer d{.tree = tree, .list = unused, .viewport = viewport, .scratch = prPathCreate(),
-                .space = prAffine2Identity(), .tiles = &tiles};
+    SvgDrawer d{
+        .tree = tree,
+        .list = unused,
+        .viewport = viewport,
+        .scratch = prPathCreate(),
+        .space = prAffine2Identity(),
+        .tiles = &tiles,
+    };
     bool drawn = appendFilter(d, owner, index, box, input, builder, result, region);
     prPathDestroy(d.scratch);
     for (uint32_t i = 0; i < tiles.tiles.count; ++i)

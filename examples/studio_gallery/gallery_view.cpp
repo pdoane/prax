@@ -93,11 +93,13 @@ void findActiveSection(PrKit* kit, GalleryState& state) {
 // activated.
 void sidebarRow(PrKit* kit, PrLayoutNode list, const SidebarEntry& entry, GalleryState& state) {
     bool active = state.activeSection == entry.section;
-    PrKitBoxStyle row{.direction = PrKitDirection_Row,
-                      .align = PrKitAlign_Center,
-                      .gap = kPrKitSpace3,
-                      .padding = prKitEdgesXY(0, kPrKitSpace4),
-                      .place = {.height = prKitPx(kPrKitHeightSm), .flex = PrKitFlex_Fixed}};
+    PrKitBoxStyle row{
+        .direction = PrKitDirection_Row,
+        .align = PrKitAlign_Center,
+        .gap = kPrKitSpace3,
+        .padding = prKitEdgesXY(0, kPrKitSpace4),
+        .place = {.height = prKitPx(kPrKitHeightSm), .flex = PrKitFlex_Fixed},
+    };
     PrLayoutNode node = prKitSelectable(kit, list, {.selected = active}, row);
     PrKitTextStyle label{.tone = PrKitTone(active ? PrKitTone_Primary : PrKitTone_Secondary), .wrap = PrKitWrap_Clip};
     fillLabel(kit, node, entry.label, label);
@@ -158,8 +160,11 @@ void buildGallery(PrKit* kit, PrLayoutNode ground, GalleryState& state) {
     page.place.flex = PrKitFlex_Fill;
     PrLayoutNode row = prKitBox(kit, ground, {}, page);
     buildSidebar(kit, row, state);
-    PrKitBoxStyle scroll{.overflow = PrKitOverflow_ScrollY, .gap = kPrKitSpace16,
-                    .padding = {kPrKitSpace10 * 2, kPrKitSpace12, kPrKitSpace16 * 3, kPrKitSpace12}};
+    PrKitBoxStyle scroll{
+        .overflow = PrKitOverflow_ScrollY,
+        .gap = kPrKitSpace16,
+        .padding = {kPrKitSpace10 * 2, kPrKitSpace12, kPrKitSpace16 * 3, kPrKitSpace12},
+    };
     scroll.place.flex = PrKitFlex_Fill;
     PrLayoutNode content = prKitBox(kit, row, {}, scroll);
     state.contentView = content;

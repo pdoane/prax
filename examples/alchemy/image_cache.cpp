@@ -150,8 +150,7 @@ bool imageCachePump(ImageCache* cache) {
         landed.swap(cache->landed);
     }
     for (Decode* decode : landed) {
-        Entries::iterator found =
-            cache->entries.find({decode->path, decode->scale});
+        Entries::iterator found = cache->entries.find({decode->path, decode->scale});
         // A decode of a file that was forgotten while it ran is dropped.
         if (found == cache->entries.end() || found->second.state != ImageCache::LoadState_Loading) {
             prDrawImageRelease(decode->image);
@@ -161,8 +160,7 @@ bool imageCachePump(ImageCache* cache) {
         }
         delete decode;
     }
-    for (Entries::iterator it = cache->entries.begin();
-         it != cache->entries.end();) {
+    for (Entries::iterator it = cache->entries.begin(); it != cache->entries.end();) {
         uint64_t idle = it->first.second == ImageScale_Full ? kFullIdleFrames : kThumbnailIdleFrames;
         if (it->second.state != ImageCache::LoadState_Loading && cache->frame - it->second.lastFrame > idle) {
             prDrawImageRelease(it->second.image);
@@ -204,7 +202,11 @@ const PrDrawImage* imageShrink(const PrDrawImage* image, uint32_t maxEdge) {
         above = PrPixelView{level.data(), next.x * pixelSize, next};
     }
     PrDrawImageDesc desc{
-        .pixels = above, .format = format, .alpha = prDrawImageAlpha(image), .space = PrColorSpace_Srgb};
+        .pixels = above,
+        .format = format,
+        .alpha = prDrawImageAlpha(image),
+        .space = PrColorSpace_Srgb,
+    };
     const PrDrawImage* shrunk = nullptr;
     if (prDrawImageCreate(&desc, &shrunk) != PrStatus_Ok) {
         prDrawImageRetain(image);

@@ -65,13 +65,13 @@ void prFontHinterDestroy(PrFontHinter* PR_NULLABLE hinter) {
 }
 
 bool prFontHinterOutline(PrFontHinter* hinter, const PrFont* font, uint16_t glyph, float pixelsPerEm,
-                         PrFontHinting hinting, float embolden, PrPath* out) {
+        PrFontHinting hinting, float embolden, PrPath* out) {
     PR_ASSERT(hinting != PrFontHinting_None && pixelsPerEm > 0);
     return hinter->outline(hinter, font, glyph, pixelsPerEm, hinting, embolden, out);
 }
 
 bool prFontHinterAdvance(PrFontHinter* hinter, const PrFont* font, uint16_t glyph, float pixelsPerEm,
-                         PrFontHinting hinting, float* out) {
+        PrFontHinting hinting, float* out) {
     PR_ASSERT(hinting != PrFontHinting_None && pixelsPerEm > 0);
     return hinter->advance(hinter, font, glyph, pixelsPerEm, hinting, out);
 }

@@ -90,8 +90,7 @@ size_t prCharsetDecodeMaxSize(const PrCharsetDecoder* decoder, size_t size);
 // having written what came before it, and the bytes after the error are not read. The decoder keeps the state that the
 // error left, as the spec's decoders do (encoding/#concept-encoding-process). After a final part, the decoder is at the
 // start of a new input.
-bool prCharsetDecode(PrCharsetDecoder* decoder, PrStringView bytes, PrCharsetInput input, char* out,
-                     size_t* outSize);
+bool prCharsetDecode(PrCharsetDecoder* decoder, PrStringView bytes, PrCharsetInput input, char* out, size_t* outSize);
 
 // Decodes `bytes`, the next part of the input, and returns its text as UTF-8. If the text is the bytes themselves, or
 // the bytes without the byte order mark that the decoder removes, the result is a view of `bytes` and nothing is
@@ -127,7 +126,7 @@ size_t prCharsetEncodeMaxSize(const PrCharsetEncoder* encoder, size_t size);
 // encodes the rest of the text with the same encoder. Once a final part has encoded whole, the encoder is in its first
 // state again, with the bytes that this takes written.
 size_t prCharsetEncode(PrCharsetEncoder* encoder, PrStringView text, PrCharsetInput input, char* out, size_t* outSize,
-                       uint32_t* outUnencoded);
+    uint32_t* outUnencoded);
 
 #if defined(__cplusplus)
 }

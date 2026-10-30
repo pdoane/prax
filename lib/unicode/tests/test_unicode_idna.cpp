@@ -114,18 +114,17 @@ TEST_CASE("conversions are as every case of IdnaTestV2.txt says") {
         std::string unicode = taken(&out);
         bool asciiNValid = prUnicodeIdnaToAscii(source, PrUnicodeIdnaFlag_Strict, &out);
         std::string asciiN = taken(&out);
-        bool asciiTValid =
-            prUnicodeIdnaToAscii(source, PrUnicodeIdnaFlag_Strict | PrUnicodeIdnaFlag_Transitional, &out);
+        bool asciiTValid = prUnicodeIdnaToAscii(source, PrUnicodeIdnaFlag_Strict | PrUnicodeIdnaFlag_Transitional, &out);
         std::string asciiT = taken(&out);
 
         // An implementation need only record an error: the text of a conversion that fails is not compared.
-        bool agrees = unicodeValid == !unicodeError && (unicodeError || unicode == toUnicode)
-                      && asciiNValid == !asciiNError && (asciiNError || asciiN == toAsciiN)
-                      && asciiTValid == !asciiTError && (asciiTError || asciiT == toAsciiT);
+        bool agrees = unicodeValid == !unicodeError && (unicodeError || unicode == toUnicode) &&
+            asciiNValid == !asciiNError && (asciiNError || asciiN == toAsciiN) &&
+            asciiTValid == !asciiTError && (asciiTError || asciiT == toAsciiT);
         ++cases;
         if (!agrees && ++failures <= 20)
             MESSAGE("disagrees: ", line, "\n    toUnicode ", unicodeValid, " ", unicode, "\n    toAsciiN ",
-                    asciiNValid, " ", asciiN, "\n    toAsciiT ", asciiTValid, " ", asciiT);
+                asciiNValid, " ", asciiN, "\n    toAsciiT ", asciiTValid, " ", asciiT);
     }
     CHECK(cases > 6000);
     CHECK(failures == 0);
@@ -133,8 +132,7 @@ TEST_CASE("conversions are as every case of IdnaTestV2.txt says") {
 
 TEST_CASE("the URL Standard's flags accept what its host parser does") {
     PrString out{};
-    CHECK(prUnicodeIdnaToAscii("Bu\xcc\x88" "cher.de", PrUnicodeIdnaFlag_CheckBidi | PrUnicodeIdnaFlag_CheckJoiners,
-                               &out));
+    CHECK(prUnicodeIdnaToAscii("Bu\xcc\x88" "cher.de", PrUnicodeIdnaFlag_CheckBidi | PrUnicodeIdnaFlag_CheckJoiners, &out));
     CHECK(taken(&out) == "xn--bcher-kva.de");
     CHECK(prUnicodeIdnaToAscii("a_b.\xe2\x98\x95", PrUnicodeIdnaFlag_CheckBidi | PrUnicodeIdnaFlag_CheckJoiners, &out));
     CHECK(taken(&out) == "a_b.xn--53h");

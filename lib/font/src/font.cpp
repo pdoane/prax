@@ -36,8 +36,7 @@ namespace {
 constexpr PrStringView kHintingNames[PrFontHinting_Count] = {"none", "light", "full"};
 
 constexpr uint32_t tagOf(char a, char b, char c, char d) {
-    return uint32_t(uint8_t(a)) << 24 | uint32_t(uint8_t(b)) << 16 | uint32_t(uint8_t(c)) << 8
-           | uint32_t(uint8_t(d));
+    return uint32_t(uint8_t(a)) << 24 | uint32_t(uint8_t(b)) << 16 | uint32_t(uint8_t(c)) << 8 | uint32_t(uint8_t(d));
 }
 
 // The bytes of a font file, shared by the fonts derived from it: either a copy that follows this structure in the same
@@ -166,8 +165,8 @@ bool openReaders(Font* font) {
     font->outlined = font->truetype || cffOpen(sfnt, &font->cff);
     if (!font->truetype && font->outlined && cffGlyphCount(font->cff) < font->glyphCount)
         font->glyphCount = cffGlyphCount(font->cff);
-    font->strikes = sfntTable(sfnt, tagOf('s', 'b', 'i', 'x')).size != 0
-                    || sfntTable(sfnt, tagOf('C', 'B', 'L', 'C')).size != 0;
+    font->strikes =
+        sfntTable(sfnt, tagOf('s', 'b', 'i', 'x')).size != 0 || sfntTable(sfnt, tagOf('C', 'B', 'L', 'C')).size != 0;
     if ((!font->outlined && !font->strikes) || font->glyphCount == 0)
         return false;
     font->boundsFilled = static_cast<Atomic<uint8_t>*>(prMemoryAllocZeroed(sizeof(Atomic<uint8_t>) * font->glyphCount));
@@ -309,8 +308,7 @@ void readMetrics(Font* font) {
     if (!(underlineThickness > 0))
         underlineThickness = em / 14;
     // post gives the top of the underline. Its center is half its thickness below.
-    underlinePosition = underlinePosition != 0 ? underlinePosition - underlineThickness / 2
-                                               : -underlineThickness * 1.5f;
+    underlinePosition = underlinePosition != 0 ? underlinePosition - underlineThickness / 2 : -underlineThickness * 1.5f;
     float strikeThickness = hasOs2 ? float(os2.int16At(26)) + delta("strs") : 0;
     float strikePosition = hasOs2 ? float(os2.int16At(28)) + delta("stro") : 0;
     if (strikeThickness > 0) {
@@ -388,15 +386,12 @@ void readMetrics(Font* font) {
 
     // Converts to ems, with y down, scaled. Overrides are already in ems.
     float k = font->sizeAdjust / em;
-    m.ascent = (font->overrides & PrFontOverrideFlag_Ascent) != 0
-                   ? font->ascentOverride * font->sizeAdjust
-                   : ascent * k;
-    m.descent = (font->overrides & PrFontOverrideFlag_Descent) != 0
-                    ? font->descentOverride * font->sizeAdjust
-                    : descent * k;
-    m.lineGap = (font->overrides & PrFontOverrideFlag_LineGap) != 0
-                    ? font->lineGapOverride * font->sizeAdjust
-                    : maxF32(gap, 0) * k;
+    m.ascent = (font->overrides & PrFontOverrideFlag_Ascent) != 0 ? font->ascentOverride * font->sizeAdjust : ascent * k;
+    m.descent = (font->overrides & PrFontOverrideFlag_Descent) != 0 ? font->descentOverride * font->sizeAdjust : descent * k;
+    if ((font->overrides & PrFontOverrideFlag_LineGap) != 0)
+        m.lineGap = font->lineGapOverride * font->sizeAdjust;
+    else
+        m.lineGap = maxF32(gap, 0) * k;
     m.capHeight = capHeight * k;
     m.xHeight = xHeight * k;
     m.underlinePosition = -underlinePosition * k;
@@ -525,9 +520,8 @@ void replay(const ColrWalk& w, const PrFontPainter* painter) {
 }
 
 bool validDerivation(const PrFontDerivation* PR_NULLABLE d) {
-    return d == nullptr
-           || (d->sizeAdjust > 0 && isFiniteF32(d->sizeAdjust) && isFiniteF32(d->embolden)
-               && isFiniteF32(d->oblique));
+    return d == nullptr || (d->sizeAdjust > 0 && isFiniteF32(d->sizeAdjust) && isFiniteF32(d->embolden) &&
+        isFiniteF32(d->oblique));
 }
 
 // What a derivation makes of a font: the values that it sets each axis to, and what it scales, synthesizes and
@@ -602,14 +596,14 @@ void derivedReset(Derived* derived) {
 
 // Returns true if the font is of the state `derived`.
 bool isDerived(const Font* font, const Derived& derived) {
-    return font->axisKey.count == derived.axes.count
-           && memEquals(font->axisKey.data, derived.axes.data, derived.axes.count * sizeof(float))
-           && font->sizeAdjust == derived.sizeAdjust && font->embolden == derived.embolden
-           && font->oblique == derived.oblique && font->hinting == derived.hinting && font->hinter == derived.hinter
-           && font->aliased == derived.aliased && font->overrides == derived.overrides
-           && font->ascentOverride == derived.ascentOverride && font->descentOverride == derived.descentOverride
-           && font->lineGapOverride == derived.lineGapOverride && font->features.count == derived.features.count
-           && memEquals(font->features.data, derived.features.data, derived.features.count * sizeof(PrFontFeature));
+    return font->axisKey.count == derived.axes.count &&
+        memEquals(font->axisKey.data, derived.axes.data, derived.axes.count * sizeof(float)) &&
+        font->sizeAdjust == derived.sizeAdjust && font->embolden == derived.embolden &&
+        font->oblique == derived.oblique && font->hinting == derived.hinting && font->hinter == derived.hinter &&
+        font->aliased == derived.aliased && font->overrides == derived.overrides &&
+        font->ascentOverride == derived.ascentOverride && font->descentOverride == derived.descentOverride &&
+        font->lineGapOverride == derived.lineGapOverride && font->features.count == derived.features.count &&
+        memEquals(font->features.data, derived.features.data, derived.features.count * sizeof(PrFontFeature));
 }
 
 // Makes a font, just opened at its default instance, match the base if there is one, and then applies the derivation.
@@ -640,7 +634,7 @@ void derive(Font* font, const Font* PR_NULLABLE base, const PrFontDerivation* PR
 // derivation specifies. Returns false and frees `font` if the data has no such face. Releases the reference of the
 // caller to the data.
 bool openDerived(Font* font, FontData* data, uint32_t index, const Font* PR_NULLABLE base,
-                 const PrFontDerivation* PR_NULLABLE derivation) {
+        const PrFontDerivation* PR_NULLABLE derivation) {
     bool opened = openFont(font, data, index);
     releaseData(data);
     if (!opened) {
@@ -653,14 +647,14 @@ bool openDerived(Font* font, FontData* data, uint32_t index, const Font* PR_NULL
 
 // Returns true if the two fonts are of one face of one data, in one state.
 bool sameFont(const Font* a, const Font* b) {
-    return a->data == b->data && a->index == b->index && a->axisKey.count == b->axisKey.count
-           && memEquals(a->axisKey.data, b->axisKey.data, a->axisKey.count * sizeof(float))
-           && a->sizeAdjust == b->sizeAdjust && a->embolden == b->embolden && a->oblique == b->oblique
-           && a->hinting == b->hinting && a->hinter == b->hinter && a->aliased == b->aliased
-           && a->overrides == b->overrides && a->ascentOverride == b->ascentOverride
-           && a->descentOverride == b->descentOverride && a->lineGapOverride == b->lineGapOverride
-           && a->features.count == b->features.count
-           && memEquals(a->features.data, b->features.data, a->features.count * sizeof(PrFontFeature));
+    return a->data == b->data && a->index == b->index && a->axisKey.count == b->axisKey.count &&
+        memEquals(a->axisKey.data, b->axisKey.data, a->axisKey.count * sizeof(float)) &&
+        a->sizeAdjust == b->sizeAdjust && a->embolden == b->embolden && a->oblique == b->oblique &&
+        a->hinting == b->hinting && a->hinter == b->hinter && a->aliased == b->aliased &&
+        a->overrides == b->overrides && a->ascentOverride == b->ascentOverride &&
+        a->descentOverride == b->descentOverride && a->lineGapOverride == b->lineGapOverride &&
+        a->features.count == b->features.count &&
+        memEquals(a->features.data, b->features.data, a->features.count * sizeof(PrFontFeature));
 }
 
 // Releases a reference to the font, and frees it with the last (prFontRelease).
@@ -787,7 +781,7 @@ PrFontDerivation prFontDerivationDefault(void) {
 }
 
 PrStatus prFontCreate(PrByteView bytes, uint32_t index, const PrFontDerivation* PR_NULLABLE derivation,
-                      const PrFont* PR_NULLABLE* PR_NONNULL out) {
+        const PrFont* PR_NULLABLE* PR_NONNULL out) {
     PR_ASSERT(validDerivation(derivation));
     FontData* copy = static_cast<FontData*>(prMemoryAllocZeroed(sizeof(FontData) + bytes.size));
     initData(copy);
@@ -800,7 +794,7 @@ PrStatus prFontCreate(PrByteView bytes, uint32_t index, const PrFontDerivation* 
 }
 
 PrStatus prFontCreateWoff(PrByteView bytes, uint32_t index, const PrFontDerivation* PR_NULLABLE derivation,
-                          PrCompressCodec* codec, const PrFont* PR_NULLABLE* PR_NONNULL out) {
+        PrCompressCodec* codec, const PrFont* PR_NULLABLE* PR_NONNULL out) {
     PR_ASSERT(validDerivation(derivation));
     *out = nullptr;
     Array<uint8_t> decoded;
@@ -819,9 +813,8 @@ PrStatus prFontCreateWoff(PrByteView bytes, uint32_t index, const PrFontDerivati
     return *out != nullptr ? PrStatus_Ok : PrStatus_InvalidData;
 }
 
-PrStatus prFontCreateFromFile(PrStringView path, uint32_t index,
-                              const PrFontDerivation* PR_NULLABLE derivation,
-                              const PrFont* PR_NULLABLE* PR_NONNULL out) {
+PrStatus prFontCreateFromFile(PrStringView path, uint32_t index, const PrFontDerivation* PR_NULLABLE derivation,
+        const PrFont* PR_NULLABLE* PR_NONNULL out) {
     PR_ASSERT(validDerivation(derivation));
     *out = nullptr;
     PrFileMapping mapping{};
@@ -974,8 +967,8 @@ float prFontGlyphVerticalAdvance(const PrFont* font, uint16_t glyph) {
     const FontGlyphMetricTables& tables = data->metricTables;
     float units = 0;
     // A TrueType font whose variation moves its phantom points, without VVAR, finds the advance by loading the glyph.
-    if (data->truetype && data->normalized.count != 0 && !fontGlyphMetricsVariesVertical(tables)
-        && tables.verticalCount != 0 && data->glyf.gvar.size != 0) {
+    if (data->truetype && data->normalized.count != 0 && !fontGlyphMetricsVariesVertical(tables) &&
+            tables.verticalCount != 0 && data->glyf.gvar.size != 0) {
         FontGlyphOutline outline{};
         GlyfPhantom phantom{};
         if (loadDesign(data, glyph, &outline, &phantom))
@@ -1000,8 +993,7 @@ PrVec2 prFontGlyphVerticalOrigin(const PrFont* font, uint16_t glyph) {
     if (loadDesign(data, glyph, &outline, &phantom)) {
         // The vertical origin lies half the horizontal advance across, and the top side bearing above the glyph's top.
         PrRect box = fontOutlineControlBox(outline);
-        float advance = data->truetype ? phantom.horizontalAdvance.x - phantom.horizontalOrigin.x
-                                       : designAdvance(data, glyph);
+        float advance = data->truetype ? phantom.horizontalAdvance.x - phantom.horizontalOrigin.x : designAdvance(data, glyph);
         const FontGlyphMetricTables& tables = data->metricTables;
         float top = 0;
         // The bearing and the height round to whole units, as FreeType divides them out of its scaled coordinates.
@@ -1040,12 +1032,10 @@ PrRect prFontGlyphBounds(const PrFont* font, uint16_t glyph) {
         return PrRect{0, 0, 0, 0};
     float k = data->sizeAdjust;
     float e = data->embolden;
-    return PrRect{bounds.left * k - e, bounds.top * k - e, bounds.right * k + e,
-                  bounds.bottom * k + e};
+    return PrRect{bounds.left * k - e, bounds.top * k - e, bounds.right * k + e, bounds.bottom * k + e};
 }
 
-bool prFontGlyphOutline(const PrFont* font, uint16_t glyph, float pixelsPerEm,
-                        PrAffine2 transform, PrPath* out) {
+bool prFontGlyphOutline(const PrFont* font, uint16_t glyph, float pixelsPerEm, PrAffine2 transform, PrPath* out) {
     const Font* data = font;
     if (glyph >= data->glyphCount)
         return false;
@@ -1055,8 +1045,8 @@ bool prFontGlyphOutline(const PrFont* font, uint16_t glyph, float pixelsPerEm,
     float k = data->sizeAdjust;
     PrAffine2 scaled = prAffine2Concat(prAffine2Scale(PrVec2{k, k}), transform);
     PrPath* outline = prPathCreate();
-    bool hinted = hinting != PrFontHinting_None
-                  && prFontHinterOutline(data->hinter, font, glyph, pixelsPerEm * k, hinting, embolden / k, outline);
+    bool hinted = hinting != PrFontHinting_None &&
+        prFontHinterOutline(data->hinter, font, glyph, pixelsPerEm * k, hinting, embolden / k, outline);
     if (!hinted && embolden == 0) {
         prMutexLock(&data->mutex);
         const PrPath* cached = cachedOutline(data, glyph);
@@ -1105,8 +1095,8 @@ PrFontPaletteFlags prFontPaletteFlags(const PrFont* font, uint32_t palette) {
     if (types == 0)
         return 0;
     uint32_t type = cpal.uint32At(types + palette * 4);
-    return PrFontPaletteFlags(((type & 1u) != 0 ? PrFontPaletteFlag_Light : 0)
-                              | ((type & 2u) != 0 ? PrFontPaletteFlag_Dark : 0));
+    return PrFontPaletteFlags(((type & 1u) != 0 ? PrFontPaletteFlag_Light : 0) |
+        ((type & 2u) != 0 ? PrFontPaletteFlag_Dark : 0));
 }
 
 uint32_t prFontPaletteSelect(const PrFont* font, PrFontPaletteFlags flags) {
@@ -1136,7 +1126,7 @@ bool prFontGlyphHasColor(const PrFont* font, uint16_t glyph) {
 }
 
 bool prFontGlyphPaint(const PrFont* font, uint16_t glyph, const PrFontPalette* PR_NULLABLE palette,
-                      PrColor foreground, const PrFontPainter* painter) {
+        PrColor foreground, const PrFontPainter* painter) {
     const Font* data = font;
     if (glyph >= data->glyphCount)
         return false;
@@ -1156,27 +1146,25 @@ bool prFontGlyphPaint(const PrFont* font, uint16_t glyph, const PrFontPalette* P
     return painted;
 }
 
-bool prFontGlyphImage(const PrFont* font, uint16_t glyph, float pixelsPerEm,
-                      PrFontGlyphImage* out) {
+bool prFontGlyphImage(const PrFont* font, uint16_t glyph, float pixelsPerEm, PrFontGlyphImage* out) {
     const Font* data = font;
     // The pixels of the strike are placed on the device in the same way as the ems of the design, which the size-adjust
     // scales.
     float k = data->sizeAdjust;
     SfntImage image{};
-    if (!data->strikes || glyph >= data->glyphCount
-        || !sfntGlyphImage(data->sfnt, glyph, pixelsPerEm / k, &image))
+    if (!data->strikes || glyph >= data->glyphCount || !sfntGlyphImage(data->sfnt, glyph, pixelsPerEm / k, &image))
         return false;
     float unit = k / image.pixelsPerEm;
     out->bytes = PrByteView{image.data, image.size};
-    out->type = image.type == SfntImageType_Png    ? "image/png"
-                : image.type == SfntImageType_Jpeg ? "image/jpeg"
-                                                   : "image/tiff";
+    out->type = image.type == SfntImageType_Png    ? "image/png" : image.type == SfntImageType_Jpeg ? "image/jpeg" : "image/tiff";
     out->extent.x = image.width;
     out->extent.y = image.height;
     out->pixelsPerEm = image.pixelsPerEm;
-    out->bounds = PrRect{image.left * unit, image.top * unit,
-                         (image.left + float(image.width)) * unit,
-                         (image.top + float(image.height)) * unit};
+    out->bounds = PrRect{
+        image.left * unit, image.top * unit,
+        (image.left + float(image.width)) * unit,
+        (image.top + float(image.height)) * unit,
+    };
     return true;
 }
 

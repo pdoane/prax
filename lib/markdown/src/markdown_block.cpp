@@ -50,8 +50,8 @@ PrStringView lineView(const MarkdownBlockParser* p) {
 }
 
 bool acceptsLines(PrMarkdownNodeKind kind) {
-    return kind == PrMarkdownNodeKind_Paragraph || kind == PrMarkdownNodeKind_Heading
-        || kind == PrMarkdownNodeKind_CodeBlock;
+    return kind == PrMarkdownNodeKind_Paragraph || kind == PrMarkdownNodeKind_Heading ||
+        kind == PrMarkdownNodeKind_CodeBlock;
 }
 
 bool canContain(PrMarkdownNodeKind parent, PrMarkdownNodeKind child) {
@@ -219,8 +219,8 @@ bool endsWithBlankLine(MarkdownBlockParser* p, MarkdownBlockIndex index) {
         if (block.lastLineChecked)
             return block.lastLineBlank;
         block.lastLineChecked = true;
-        bool descends = (block.kind == PrMarkdownNodeKind_List || block.kind == PrMarkdownNodeKind_Item)
-            && block.last != kMarkdownBlockNone;
+        bool descends = (block.kind == PrMarkdownNodeKind_List || block.kind == PrMarkdownNodeKind_Item) &&
+            block.last != kMarkdownBlockNone;
         if (!descends)
             return block.lastLineBlank;
         index = block.last;
@@ -267,16 +267,16 @@ MarkdownBlockIndex finalize(MarkdownBlockParser* p, MarkdownBlockIndex index) {
             break;
         case PrMarkdownNodeKind_List: {
             block.tight = true;
-            for (MarkdownBlockIndex item = block.first; item != kMarkdownBlockNone && block.tight;
-                 item = blockOf(p, item).next) {
+            for (MarkdownBlockIndex item = block.first; item != kMarkdownBlockNone && block.tight; item =
+                    blockOf(p, item).next) {
                 if (blockOf(p, item).lastLineBlank && blockOf(p, item).next != kMarkdownBlockNone) {
                     block.tight = false;
                     break;
                 }
-                for (MarkdownBlockIndex child = blockOf(p, item).first; child != kMarkdownBlockNone;
-                     child = blockOf(p, child).next) {
-                    bool followed = blockOf(p, item).next != kMarkdownBlockNone
-                        || blockOf(p, child).next != kMarkdownBlockNone;
+                for (MarkdownBlockIndex child = blockOf(p, item).first; child != kMarkdownBlockNone; child =
+                        blockOf(p, child).next) {
+                    bool followed = blockOf(p, item).next != kMarkdownBlockNone ||
+                        blockOf(p, child).next != kMarkdownBlockNone;
                     if (followed && endsWithBlankLine(p, child)) {
                         block.tight = false;
                         break;
@@ -733,8 +733,8 @@ void tryTableHeader(MarkdownBlockParser* p, MarkdownBlockIndex paragraph) {
     if (made) {
         const MarkdownParseBlock& from = blockOf(p, paragraph);
         content.append(p->content.data + from.contentStart, from.contentEnd - from.contentStart);
-        made = splitRow(p, PrStringView{content.data, content.count}, &headers, &paragraphEnd)
-            && headers.count == delimiters.count;
+        made = splitRow(p, PrStringView{content.data, content.count}, &headers, &paragraphEnd) &&
+            headers.count == delimiters.count;
         if (!made)
             blockOf(p, paragraph).tableVisited = true;
     }
@@ -849,8 +849,7 @@ bool taskListMarker(const MarkdownBlockParser* p) {
         return false;
     while (isTableSpace(peek(p, index)))
         ++index;
-    bool box = peek(p, index) == '[' && peek(p, index + 2) == ']'
-        && (peek(p, index + 1) == ' ' || peek(p, index + 1) == 'x');
+    bool box = peek(p, index) == '[' && peek(p, index + 2) == ']' && (peek(p, index + 1) == ' ' || peek(p, index + 1) == 'x');
     return box && isTableSpace(peek(p, index + 3));
 }
 
@@ -934,7 +933,7 @@ MarkdownBlockIndex checkOpenBlocks(MarkdownBlockParser* p, bool* allMatched) {
 
 // Opens the blocks that the rest of the line starts, under `*container`, and leaves `*container` at the deepest one.
 void openNewBlocks(MarkdownBlockParser* p, const PrMarkdownOptions& options, MarkdownBlockIndex* container,
-                   bool allMatched) {
+        bool allMatched) {
     bool maybeLazy = blockOf(p, p->current).kind == PrMarkdownNodeKind_Paragraph;
     PrMarkdownNodeKind kind = blockOf(p, *container).kind;
     uint32_t opened = 0;
@@ -965,15 +964,12 @@ void openNewBlocks(MarkdownBlockParser* p, const PrMarkdownOptions& options, Mar
             block.fenceLength = uint8_t(matched > 255 ? 255 : matched);
             block.fenceOffset = uint8_t(p->firstNonspace - p->offset);
             advance(p, p->firstNonspace + matched - p->offset, false);
-        } else if (!indented
-                   && (htmlKind = markdownHtmlBlockStart(lineView(p), p->firstNonspace,
-                                                         kind == PrMarkdownNodeKind_Paragraph))
-                          != 0) {
+        } else if (!indented && (htmlKind = markdownHtmlBlockStart(lineView(p), p->firstNonspace,
+                kind == PrMarkdownNodeKind_Paragraph)) != 0) {
             *container = addChild(p, *container, PrMarkdownNodeKind_HtmlBlock);
             blockOf(p, *container).htmlKind = htmlKind;
             // The tag is part of the block's text, so the offset stays.
-        } else if (!indented && kind == PrMarkdownNodeKind_Paragraph
-                   && (level = setextUnderline(p, p->firstNonspace)) != 0) {
+        } else if (!indented && kind == PrMarkdownNodeKind_Paragraph && (level = setextUnderline(p, p->firstNonspace)) != 0) {
             if (resolveDefinitions(p, *container)) {
                 MarkdownParseBlock& block = blockOf(p, *container);
                 block.kind = PrMarkdownNodeKind_Heading;
@@ -981,20 +977,19 @@ void openNewBlocks(MarkdownBlockParser* p, const PrMarkdownOptions& options, Mar
                 block.setext = true;
                 advance(p, p->line.count - 1 - p->offset, false);
             }
-        } else if (!indented && !(kind == PrMarkdownNodeKind_Paragraph && !allMatched)
-                   && p->thematicBreakKillPosition <= p->firstNonspace && thematicBreak(p, p->firstNonspace)) {
+        } else if (!indented && !(kind == PrMarkdownNodeKind_Paragraph && !allMatched) &&
+                p->thematicBreakKillPosition <= p->firstNonspace && thematicBreak(p, p->firstNonspace)) {
             *container = addChild(p, *container, PrMarkdownNodeKind_ThematicBreak);
             advance(p, p->line.count - 1 - p->offset, false);
-        } else if (!indented && (options.extensions & PrMarkdownExtensionFlag_Footnotes) != 0
-                   && opened < kMaxOpenedPerLine && (matched = footnoteDefinitionStart(p, p->firstNonspace, &label))) {
+        } else if (!indented && (options.extensions & PrMarkdownExtensionFlag_Footnotes) != 0 &&
+                opened < kMaxOpenedPerLine && (matched = footnoteDefinitionStart(p, p->firstNonspace, &label))) {
             uint32_t mark = p->text.count;
             p->text.append(p->line.data + label.start, label.size);
             advance(p, p->firstNonspace + matched - p->offset, false);
             *container = addChild(p, *container, PrMarkdownNodeKind_FootnoteDefinition);
             blockOf(p, *container).info = MarkdownRange{mark, label.size};
-        } else if ((!indented || kind == PrMarkdownNodeKind_List) && p->indent < 4 && opened < kMaxOpenedPerLine
-                   && (matched = listMarker(p, p->firstNonspace, kind == PrMarkdownNodeKind_Paragraph, &marker))
-                          != 0) {
+        } else if ((!indented || kind == PrMarkdownNodeKind_List) && p->indent < 4 && opened < kMaxOpenedPerLine &&
+                (matched = listMarker(p, p->firstNonspace, kind == PrMarkdownNodeKind_Paragraph, &marker)) != 0) {
             advance(p, p->firstNonspace + matched - p->offset, false);
             bool savedTab = p->partiallyConsumedTab;
             uint32_t savedOffset = p->offset;
@@ -1016,8 +1011,8 @@ void openNewBlocks(MarkdownBlockParser* p, const PrMarkdownOptions& options, Mar
                 markerWidth = matched + spaces;
             }
             const MarkdownParseBlock& list = blockOf(p, *container);
-            bool continues = kind == PrMarkdownNodeKind_List && list.list == marker.list
-                && list.delimiter == marker.delimiter && list.bulletCharacter == marker.bulletCharacter;
+            bool continues = kind == PrMarkdownNodeKind_List && list.list == marker.list &&
+                list.delimiter == marker.delimiter && list.bulletCharacter == marker.bulletCharacter;
             if (!continues) {
                 *container = addChild(p, *container, PrMarkdownNodeKind_List);
                 MarkdownParseBlock& added = blockOf(p, *container);
@@ -1037,22 +1032,22 @@ void openNewBlocks(MarkdownBlockParser* p, const PrMarkdownOptions& options, Mar
         } else if (indented && !maybeLazy && !p->blank) {
             advance(p, kCodeIndent, true);
             *container = addChild(p, *container, PrMarkdownNodeKind_CodeBlock);
-        } else if (!indented && kind == PrMarkdownNodeKind_Paragraph
-                   && (options.extensions & PrMarkdownExtensionFlag_Tables) != 0) {
+        } else if (!indented && kind == PrMarkdownNodeKind_Paragraph &&
+                (options.extensions & PrMarkdownExtensionFlag_Tables) != 0) {
             tryTableHeader(p, *container);
             break;
-        } else if (!indented && kind == PrMarkdownNodeKind_Table
-                   && (options.extensions & PrMarkdownExtensionFlag_Tables) != 0) {
+        } else if (!indented && kind == PrMarkdownNodeKind_Table &&
+                (options.extensions & PrMarkdownExtensionFlag_Tables) != 0) {
             if (!tryTableRow(p, *container))
                 break;
-        } else if (kind == PrMarkdownNodeKind_Item && (options.extensions & PrMarkdownExtensionFlag_TaskLists) != 0
-                   && taskListMarker(p)) {
+        } else if (kind == PrMarkdownNodeKind_Item && (options.extensions & PrMarkdownExtensionFlag_TaskLists) != 0 &&
+                taskListMarker(p)) {
             // The task list item marker is the first three characters of the item's content. The item is checked if the
             // line holds "[x]" or "[X]" anywhere, which is what GFM's HTML gives.
             bool checked = false;
             for (uint32_t i = 0; i + 2 < p->line.count; ++i) {
-                if (p->line.data[i] == '[' && (p->line.data[i + 1] == 'x' || p->line.data[i + 1] == 'X')
-                    && p->line.data[i + 2] == ']')
+                if (p->line.data[i] == '[' && (p->line.data[i + 1] == 'x' || p->line.data[i + 1] == 'X') &&
+                        p->line.data[i + 2] == ']')
                     checked = true;
             }
             blockOf(p, *container).task = checked ? PrMarkdownTask_Checked : PrMarkdownTask_Unchecked;
@@ -1094,20 +1089,20 @@ void addTextToContainer(MarkdownBlockParser* p, MarkdownBlockIndex container, Ma
     // A block quote's lines are never blank, since they start with '>'. Blank lines in fenced code and the blank first
     // line of an empty item do not decide whether a list is tight.
     const MarkdownParseBlock& block = blockOf(p, container);
-    bool lastLineBlank = p->blank && block.kind != PrMarkdownNodeKind_BlockQuote
-        && block.kind != PrMarkdownNodeKind_Heading && block.kind != PrMarkdownNodeKind_ThematicBreak
-        && !(block.kind == PrMarkdownNodeKind_CodeBlock && block.fenced)
-        && !(block.kind == PrMarkdownNodeKind_Item && block.first == kMarkdownBlockNone
-             && block.startLine == p->lineNumber);
+    bool lastLineBlank = p->blank && block.kind != PrMarkdownNodeKind_BlockQuote &&
+        block.kind != PrMarkdownNodeKind_Heading && block.kind != PrMarkdownNodeKind_ThematicBreak &&
+        !(block.kind == PrMarkdownNodeKind_CodeBlock && block.fenced) &&
+        !(block.kind == PrMarkdownNodeKind_Item && block.first == kMarkdownBlockNone &&
+            block.startLine == p->lineNumber);
     blockOf(p, container).lastLineBlank = lastLineBlank;
     for (MarkdownBlockIndex ancestor = blockOf(p, container).parent; ancestor != kMarkdownBlockNone;
-         ancestor = blockOf(p, ancestor).parent)
+            ancestor = blockOf(p, ancestor).parent)
         blockOf(p, ancestor).lastLineBlank = false;
 
     // A line that matches fewer prefixes than the open blocks have and starts no block continues an open paragraph
     // lazily (commonmark/#lazy-continuation-line).
-    if (p->current != lastMatched && container == lastMatched && !p->blank
-        && blockOf(p, p->current).kind == PrMarkdownNodeKind_Paragraph) {
+    if (p->current != lastMatched && container == lastMatched && !p->blank &&
+            blockOf(p, p->current).kind == PrMarkdownNodeKind_Paragraph) {
         addLine(p, p->current);
         return;
     }
@@ -1217,7 +1212,7 @@ PrMarkdownAlert alertMarker(PrStringView content, size_t* outLength) {
 void appendTextContent(MarkdownTree* tree, MarkdownNodeIndex node, Array<char>* out) {
     Array<MarkdownNodeIndex> pending;
     for (MarkdownNodeIndex child = tree->nodes.data[node].last; child != kMarkdownNodeNone;
-         child = tree->nodes.data[child].previous)
+            child = tree->nodes.data[child].previous)
         pending.push(child);
     while (pending.count != 0) {
         MarkdownNodeIndex next = pending.last();
@@ -1228,7 +1223,7 @@ void appendTextContent(MarkdownTree* tree, MarkdownNodeIndex node, Array<char>* 
         if (values.kind == PrMarkdownNodeKind_Text && values.textKind == PrMarkdownTextKind_Plain)
             out->append(tree->text.data + values.text.start, values.text.size);
         for (MarkdownNodeIndex child = tree->nodes.data[next].last; child != kMarkdownNodeNone;
-             child = tree->nodes.data[child].previous)
+                child = tree->nodes.data[child].previous)
             pending.push(child);
     }
     pending.reset();
@@ -1296,14 +1291,13 @@ bool waitsForLineEnd(PrStringView line) {
     if (first == '[' || first == '<')
         return true;
     bool digits = asciiIsDigit(first);
-    bool marker = first == '-' || first == '=' || first == '*' || first == '_' || first == '+' || first == '#'
-        || first == '`' || first == '~';
+    bool marker = first == '-' || first == '=' || first == '*' || first == '_' || first == '+' || first == '#' ||
+        first == '`' || first == '~';
     if (!digits && !marker)
         return false;
     for (size_t i = index; i < line.size; ++i) {
         char c = line.data[i];
-        bool continues = markdownIsSpaceOrTab(c) || c == first
-            || (digits && (asciiIsDigit(c) || c == '.' || c == ')'));
+        bool continues = markdownIsSpaceOrTab(c) || c == first || (digits && (asciiIsDigit(c) || c == '.' || c == ')'));
         if (!continues)
             return false;
     }
@@ -1322,7 +1316,7 @@ void markdownBlockParserReset(MarkdownBlockParser* parser) {
 }
 
 void markdownParseBlocks(MarkdownBlockParser* parser, const PrMarkdownOptions& options, PrStringView source,
-                         uint32_t start, bool ended) {
+        uint32_t start, bool ended) {
     MarkdownBlockParser* p = parser;
     p->blocks.clear();
     p->content.clear();
@@ -1379,8 +1373,7 @@ void markdownParseBlocks(MarkdownBlockParser* parser, const PrMarkdownOptions& o
 }
 
 void markdownBuildBlock(MarkdownBlockParser* parser, const PrMarkdownOptions& options, MarkdownBlockIndex block,
-                        MarkdownTree* tree, MarkdownInlineParser* inlines, MarkdownResolveFn resolve,
-                        void* PR_NULLABLE context) {
+        MarkdownTree* tree, MarkdownInlineParser* inlines, MarkdownResolveFn resolve, void* PR_NULLABLE context) {
     // The parse blocks to build, each with the tree node to build it under, and the bytes of its content that come
     // before what it holds, which an alert's marker is.
     struct Pending {
@@ -1395,8 +1388,10 @@ void markdownBuildBlock(MarkdownBlockParser* parser, const PrMarkdownOptions& op
         Pending next = pending.last();
         pending.pop();
         const MarkdownParseBlock& from = parser->blocks.data[next.block];
-        PrStringView content{parser->content.data + from.contentStart + next.skip,
-                             size_t(from.contentEnd - from.contentStart - next.skip)};
+        PrStringView content{
+            parser->content.data + from.contentStart + next.skip,
+            size_t(from.contentEnd - from.contentStart - next.skip),
+        };
         PrMarkdownNodeKind kind = from.kind;
         if (kind == PrMarkdownNodeKind_HtmlBlock && options.rawHtml == PrMarkdownRawHtml_Escape)
             kind = PrMarkdownNodeKind_Paragraph;
@@ -1460,12 +1455,14 @@ void markdownBuildBlock(MarkdownBlockParser* parser, const PrMarkdownOptions& op
         // follows the marker. A paragraph of only the marker is left out.
         uint32_t firstSkip = 0;
         bool firstDropped = false;
-        if (from.kind == PrMarkdownNodeKind_BlockQuote && (options.extensions & PrMarkdownExtensionFlag_Alerts) != 0
-            && from.first != kMarkdownBlockNone
-            && parser->blocks.data[from.first].kind == PrMarkdownNodeKind_Paragraph) {
+        if (from.kind == PrMarkdownNodeKind_BlockQuote && (options.extensions & PrMarkdownExtensionFlag_Alerts) != 0 &&
+                from.first != kMarkdownBlockNone &&
+                parser->blocks.data[from.first].kind == PrMarkdownNodeKind_Paragraph) {
             const MarkdownParseBlock& paragraph = parser->blocks.data[from.first];
-            PrStringView text{parser->content.data + paragraph.contentStart,
-                              size_t(paragraph.contentEnd - paragraph.contentStart)};
+            PrStringView text{
+                parser->content.data + paragraph.contentStart,
+                size_t(paragraph.contentEnd - paragraph.contentStart),
+            };
             size_t length = 0;
             PrMarkdownAlert alert = alertMarker(text, &length);
             if (alert != PrMarkdownAlert_None) {
@@ -1486,7 +1483,7 @@ void markdownBuildBlock(MarkdownBlockParser* parser, const PrMarkdownOptions& op
                 body = markdownTreeAppend(tree, node, PrMarkdownNodeKind_TableBody);
         }
         for (MarkdownBlockIndex child = from.last; child != kMarkdownBlockNone;
-             child = parser->blocks.data[child].previous) {
+                child = parser->blocks.data[child].previous) {
             bool first = child == from.first;
             if (first && firstDropped)
                 continue;

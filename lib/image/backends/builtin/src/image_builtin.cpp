@@ -21,10 +21,8 @@ namespace {
 constexpr uint8_t kPngSignature[8] = {0x89, 'P', 'N', 'G', '\r', '\n', 0x1A, '\n'};
 
 bool supportsType(PrImageCodec*, PrStringView type) {
-    return type == "image/png" || type == "image/apng"
-           || type == "image/jpeg" || type == "image/gif"
-           || type == "image/tiff" || type == "image/x-icon"
-           || type == "image/vnd.microsoft.icon";
+    return type == "image/png" || type == "image/apng" || type == "image/jpeg" || type == "image/gif" ||
+        type == "image/tiff" || type == "image/x-icon" || type == "image/vnd.microsoft.icon";
 }
 
 enum {
@@ -62,8 +60,8 @@ bool startsWith(PrByteView bytes, PrByteView prefix) {
 }
 
 bool isType(const uint8_t* bytes, const char* type) {
-    return bytes[0] == uint8_t(type[0]) && bytes[1] == uint8_t(type[1])
-           && bytes[2] == uint8_t(type[2]) && bytes[3] == uint8_t(type[3]);
+    return bytes[0] == uint8_t(type[0]) && bytes[1] == uint8_t(type[1]) &&
+        bytes[2] == uint8_t(type[2]) && bytes[3] == uint8_t(type[3]);
 }
 
 bool addChecked(uint64_t a, uint64_t b, uint64_t* out) {
@@ -106,23 +104,22 @@ uint32_t formatChannels(PrImageFormat format) {
     return colorChannels(format.model) + (format.alpha == PrImageAlpha_None ? 0 : 1);
 }
 
-PrStatus finishInfo(PrImageInfo* info, const PrImageLimits& limits, uint64_t inputSize,
-                    uint64_t factor, uint64_t fixedBytes) {
+PrStatus finishInfo(PrImageInfo* info, const PrImageLimits& limits, uint64_t inputSize, uint64_t factor,
+        uint64_t fixedBytes) {
     uint64_t pixels = 0;
     uint64_t rowBytes = 0;
     uint64_t output = 0;
     const uint64_t sampleBytes = info->format.sample == PrImageSample_U16 ? 2 : 1;
-    if (info->frameCount > limits.frames || !multiplyChecked(info->extent.x, info->extent.y, &pixels)
-        || pixels > limits.pixels
-        || !multiplyChecked(info->extent.x, uint64_t(formatChannels(info->format)) * sampleBytes,
-                            &rowBytes)
-        || !multiplyChecked(rowBytes, info->extent.y, &output) || output > limits.outputBytes) {
+    if (info->frameCount > limits.frames || !multiplyChecked(info->extent.x, info->extent.y, &pixels) ||
+            pixels > limits.pixels ||
+            !multiplyChecked(info->extent.x, uint64_t(formatChannels(info->format)) * sampleBytes,
+                &rowBytes) || !multiplyChecked(rowBytes, info->extent.y, &output) || output > limits.outputBytes) {
         return PrStatus_Limit;
     }
     uint64_t working = 0;
     uint64_t scaled = 0;
-    if (!multiplyChecked(pixels, factor, &scaled) || !addChecked(inputSize, scaled, &working)
-        || !addChecked(working, fixedBytes, &working) || working > limits.workingBytes) {
+    if (!multiplyChecked(pixels, factor, &scaled) || !addChecked(inputSize, scaled, &working) ||
+            !addChecked(working, fixedBytes, &working) || working > limits.workingBytes) {
         return PrStatus_Limit;
     }
     info->workingBytes = working;
@@ -130,7 +127,7 @@ PrStatus finishInfo(PrImageInfo* info, const PrImageLimits& limits, uint64_t inp
 }
 
 PrStatus inspectPng(PrCompressCodec* compressCodec, const uint8_t* bytes, size_t size,
-                    const PrImageLimits& limits, PrImageInfo* info) {
+        const PrImageLimits& limits, PrImageInfo* info) {
     if (limits.work == 0) {
         return PrStatus_Limit;
     }
@@ -147,12 +144,10 @@ PrStatus inspectPng(PrCompressCodec* compressCodec, const uint8_t* bytes, size_t
     if (info->extent.x == 0 || info->extent.y == 0) {
         return PrStatus_InvalidData;
     }
-    const bool depthValid =
-        (colorType == 0 && (depth == 1 || depth == 2 || depth == 4 || depth == 8 || depth == 16))
-        || (colorType == 2 && (depth == 8 || depth == 16))
-        || (colorType == 3 && (depth == 1 || depth == 2 || depth == 4 || depth == 8))
-        || (colorType == 4 && (depth == 8 || depth == 16))
-        || (colorType == 6 && (depth == 8 || depth == 16));
+    const bool depthValid = (colorType == 0 && (depth == 1 || depth == 2 || depth == 4 || depth == 8 || depth == 16)) ||
+        (colorType == 2 && (depth == 8 || depth == 16)) ||
+        (colorType == 3 && (depth == 1 || depth == 2 || depth == 4 || depth == 8)) ||
+        (colorType == 4 && (depth == 8 || depth == 16)) || (colorType == 6 && (depth == 8 || depth == 16));
     if (!depthValid || bytes[26] != 0 || bytes[27] != 0 || bytes[28] > 1) {
         return PrStatus_NotSupported;
     }
@@ -239,10 +234,9 @@ PrStatus inspectPng(PrCompressCodec* compressCodec, const uint8_t* bytes, size_t
     }
     uint64_t pixelWork = 0;
     uint64_t retainedAndChunks = 0;
-    if (!multiplyChecked(uint64_t(info->extent.x) * info->extent.y, formatChannels(info->format),
-                         &pixelWork)
-        || !addChecked(pixelWork, size, &pixelWork) || pixelWork > limits.work
-        || !multiplyChecked(size, 8, &retainedAndChunks)) {
+    if (!multiplyChecked(uint64_t(info->extent.x) * info->extent.y, formatChannels(info->format), &pixelWork) ||
+            !addChecked(pixelWork, size, &pixelWork) || pixelWork > limits.work ||
+            !multiplyChecked(size, 8, &retainedAndChunks)) {
         return PrStatus_Limit;
     }
     const PrStatus bounded = finishInfo(info, limits, retainedAndChunks, 32, 2u << 20);
@@ -269,8 +263,7 @@ bool jpegFrame(uint8_t marker) {
     return marker >= 0xC0 && marker <= 0xCF && marker != 0xC4 && marker != 0xC8 && marker != 0xCC;
 }
 
-PrStatus inspectJpeg(const uint8_t* bytes, size_t size, const PrImageLimits& limits,
-                     PrImageInfo* info) {
+PrStatus inspectJpeg(const uint8_t* bytes, size_t size, const PrImageLimits& limits, PrImageInfo* info) {
     if (limits.work == 0) {
         return PrStatus_Limit;
     }
@@ -320,15 +313,13 @@ PrStatus inspectJpeg(const uint8_t* bytes, size_t size, const PrImageLimits& lim
                 return PrStatus_NotSupported;
             }
             if (frame || segmentSize < 6 || segment[0] != 8) {
-                return segmentSize >= 1 && segment[0] != 8 ? PrStatus_NotSupported
-                                                           : PrStatus_InvalidData;
+                return segmentSize >= 1 && segment[0] != 8 ? PrStatus_NotSupported : PrStatus_InvalidData;
             }
             info->extent.y = readBeU16(segment + 1);
             info->extent.x = readBeU16(segment + 3);
             components = segment[5];
-            if (info->extent.x == 0 || info->extent.y == 0
-                || (components != 1 && components != 3 && components != 4)
-                || segmentSize < 6 + components * 3) {
+            if (info->extent.x == 0 || info->extent.y == 0 || (components != 1 && components != 3 && components != 4) ||
+                    segmentSize < 6 + components * 3) {
                 return PrStatus_InvalidData;
             }
             frame = true;
@@ -346,9 +337,7 @@ PrStatus inspectJpeg(const uint8_t* bytes, size_t size, const PrImageLimits& lim
     if (!frame) {
         return PrStatus_InvalidData;
     }
-    info->format.model = components == 1   ? PrColorModel_Gray
-                         : components == 4 ? PrColorModel_Cmyk
-                                           : PrColorModel_Rgb;
+    info->format.model = components == 1   ? PrColorModel_Gray : components == 4 ? PrColorModel_Cmyk : PrColorModel_Rgb;
     info->format.sample = PrImageSample_U8;
     info->format.alpha = PrImageAlpha_None;
     info->format.color = unknownColor();
@@ -362,16 +351,14 @@ PrStatus inspectJpeg(const uint8_t* bytes, size_t size, const PrImageLimits& lim
     uint64_t paddedArea = 0;
     uint64_t pixelWork = 0;
     uint64_t scanWork = 0;
-    if (limits.work == 0
-        || !multiplyChecked(uint64_t(info->extent.x) + 31, uint64_t(info->extent.y) + 31, &paddedArea)
-        || !multiplyChecked(paddedArea, components, &pixelWork)
-        || !multiplyChecked(pixelWork, scans == 0 ? 1 : scans, &scanWork)
-        || !addChecked(scanWork, size, &scanWork) || scanWork > limits.work) {
+    if (limits.work == 0 || !multiplyChecked(uint64_t(info->extent.x) + 31, uint64_t(info->extent.y) + 31, &paddedArea) ||
+            !multiplyChecked(paddedArea, components, &pixelWork) ||
+            !multiplyChecked(pixelWork, scans == 0 ? 1 : scans, &scanWork) ||
+            !addChecked(scanWork, size, &scanWork) || scanWork > limits.work) {
         return PrStatus_Limit;
     }
     uint64_t decodeStorage = 0;
-    if (!multiplyChecked(paddedArea, 16, &decodeStorage)
-        || !addChecked(decodeStorage, size, &decodeStorage)) {
+    if (!multiplyChecked(paddedArea, 16, &decodeStorage) || !addChecked(decodeStorage, size, &decodeStorage)) {
         return PrStatus_Limit;
     }
     const PrStatus bounded = finishInfo(info, limits, decodeStorage, 0, 1u << 20);
@@ -392,8 +379,7 @@ bool skipGifBlocks(const uint8_t* bytes, size_t size, size_t* at) {
     return false;
 }
 
-PrStatus inspectGif(const uint8_t* bytes, size_t size, const PrImageLimits& limits,
-                    PrImageInfo* info) {
+PrStatus inspectGif(const uint8_t* bytes, size_t size, const PrImageLimits& limits, PrImageInfo* info) {
     if (limits.work == 0) {
         return PrStatus_Limit;
     }
@@ -443,9 +429,8 @@ PrStatus inspectGif(const uint8_t* bytes, size_t size, const PrImageLimits& limi
             }
             const uint8_t label = bytes[at++];
             const size_t start = at;
-            if (label == 0xFF && size - at >= 16 && bytes[at] == 11
-                && memEquals(bytes + at + 1, "NETSCAPE2.0", 11) && bytes[at + 12] == 3
-                && bytes[at + 13] == 1) {
+            if (label == 0xFF && size - at >= 16 && bytes[at] == 11 &&
+                    memEquals(bytes + at + 1, "NETSCAPE2.0", 11) && bytes[at + 12] == 3 && bytes[at + 13] == 1) {
                 const uint32_t repeats = readLeU16(bytes + at + 14);
                 // NETSCAPE2.0 counts the repeats after the first play. Zero means indefinitely.
                 playCount = repeats == 0 ? 0 : repeats + 1;
@@ -474,15 +459,15 @@ PrStatus inspectGif(const uint8_t* bytes, size_t size, const PrImageLimits& limi
             return PrStatus_InvalidData;
         }
         uint64_t frameWork = 0;
-        if (!multiplyChecked(width, height, &frameWork) || frameWork > limits.pixels
-            || !multiplyChecked(frameWork, 2, &frameWork)
-            || !addChecked(decodeWork, frameWork, &decodeWork) || decodeWork > limits.work) {
+        if (!multiplyChecked(width, height, &frameWork) || frameWork > limits.pixels ||
+                !multiplyChecked(frameWork, 2, &frameWork) ||
+                !addChecked(decodeWork, frameWork, &decodeWork) || decodeWork > limits.work) {
             return PrStatus_Limit;
         }
         if (disposal == 3) {
             uint64_t snapshotWork = 0;
-            if (!multiplyChecked(uint64_t(info->extent.x) * info->extent.y, 2, &snapshotWork)
-                || !addChecked(decodeWork, snapshotWork, &decodeWork) || decodeWork > limits.work) {
+            if (!multiplyChecked(uint64_t(info->extent.x) * info->extent.y, 2, &snapshotWork) ||
+                    !addChecked(decodeWork, snapshotWork, &decodeWork) || decodeWork > limits.work) {
                 return PrStatus_Limit;
             }
         }
@@ -516,17 +501,16 @@ PrStatus inspectGif(const uint8_t* bytes, size_t size, const PrImageLimits& limi
     info->playCount = playCount;
     uint64_t frameBytes = 0;
     uint64_t extra = 0;
-    if (!multiplyChecked(frames, 256, &frameBytes) || !multiplyChecked(maxFrameArea, 2, &extra)
-        || !addChecked(extra, frameBytes, &extra) || !addChecked(extra, 2u << 20, &extra)) {
+    if (!multiplyChecked(frames, 256, &frameBytes) || !multiplyChecked(maxFrameArea, 2, &extra) ||
+            !addChecked(extra, frameBytes, &extra) || !addChecked(extra, 2u << 20, &extra)) {
         return PrStatus_Limit;
     }
     const PrStatus bounded = finishInfo(info, limits, size, 32, extra);
-    return bounded == PrStatus_Ok ? (end && frames != 0 ? PrStatus_Ok : PrStatus_Truncated)
-                                  : bounded;
+    return bounded == PrStatus_Ok ? (end && frames != 0 ? PrStatus_Ok : PrStatus_Truncated) : bounded;
 }
 
 PrStatus inspect(PrCompressCodec* compressCodec, BuiltinKind kind, const uint8_t* bytes, size_t size,
-                 const PrImageLimits& limits, PrImageInfo* info) {
+        const PrImageLimits& limits, PrImageInfo* info) {
     *info = {};
     if (kind == BuiltinKind_Png) {
         return inspectPng(compressCodec, bytes, size, limits, info);
@@ -599,17 +583,17 @@ PrStatus inspectIcon(BuiltinDecoder& decoder, const PrImageLimits& limits) {
 
 bool recognize(PrImageCodec*, PrByteView prefix) {
     const uint8_t jpeg[2] = {0xFF, 0xD8};
-    return startsWith(prefix, {kPngSignature, sizeof(kPngSignature)})
-           || startsWith(prefix, {jpeg, sizeof(jpeg)}) || gifHasSignature(prefix) || tiffHasSignature(prefix)
-           || isIcon(prefix.data, prefix.size);
+    return startsWith(prefix, {kPngSignature, sizeof(kPngSignature)}) ||
+        startsWith(prefix, {jpeg, sizeof(jpeg)}) || gifHasSignature(prefix) || tiffHasSignature(prefix) ||
+        isIcon(prefix.data, prefix.size);
 }
 
 PrStatus open(PrImageCodec* imageCodec, const PrImageSource* source, const PrImageLimits* limits,
-              PrImageReader* PR_NULLABLE* PR_NONNULL outReader, PrImageInfo* outInfo) {
+        PrImageReader* PR_NULLABLE* PR_NONNULL outReader, PrImageInfo* outInfo) {
     *outReader = nullptr;
-    if (prImageSourceSize(source) > limits->inputBytes || prImageSourceSize(source) > size_t(-1)
-        || prImageSourceSize(source) > limits->workingBytes
-        || sizeof(BuiltinDecoder) > limits->workingBytes - prImageSourceSize(source)) {
+    if (prImageSourceSize(source) > limits->inputBytes || prImageSourceSize(source) > size_t(-1) ||
+            prImageSourceSize(source) > limits->workingBytes ||
+            sizeof(BuiltinDecoder) > limits->workingBytes - prImageSourceSize(source)) {
         return PrStatus_Limit;
     }
     BuiltinBackend* backend = static_cast<BuiltinBackend*>(imageCodec);
@@ -625,18 +609,23 @@ PrStatus open(PrImageCodec* imageCodec, const PrImageSource* source, const PrIma
         return read;
     }
     const uint8_t jpeg[2] = {0xFF, 0xD8};
-    decoder->kind =
-        startsWith({decoder->bytes, decoder->size}, {kPngSignature, sizeof(kPngSignature)})
-            ? BuiltinKind_Png
-        : startsWith({decoder->bytes, decoder->size}, {jpeg, sizeof(jpeg)}) ? BuiltinKind_Jpeg
-        : tiffHasSignature({decoder->bytes, decoder->size})                           ? BuiltinKind_Tiff
-        : isIcon(decoder->bytes, decoder->size)                             ? BuiltinKind_Ico
-                                                                            : BuiltinKind_Gif;
-    const PrStatus status = decoder->kind == BuiltinKind_Ico    ? inspectIcon(*decoder, *limits)
-                            : decoder->kind == BuiltinKind_Tiff ? inspectTiff(*decoder, *limits)
-                                                                : inspect(decoder->compressCodec, decoder->kind,
-                                                                          decoder->bytes, decoder->size, *limits,
-                                                                          &decoder->info);
+    if (startsWith({decoder->bytes, decoder->size}, {kPngSignature, sizeof(kPngSignature)}))
+        decoder->kind = BuiltinKind_Png;
+    else if (startsWith({decoder->bytes, decoder->size}, {jpeg, sizeof(jpeg)}))
+        decoder->kind = BuiltinKind_Jpeg;
+    else if (tiffHasSignature({decoder->bytes, decoder->size}))
+        decoder->kind = BuiltinKind_Tiff;
+    else if (isIcon(decoder->bytes, decoder->size))
+        decoder->kind = BuiltinKind_Ico;
+    else
+        decoder->kind = BuiltinKind_Gif;
+    PrStatus status;
+    if (decoder->kind == BuiltinKind_Ico)
+        status = inspectIcon(*decoder, *limits);
+    else if (decoder->kind == BuiltinKind_Tiff)
+        status = inspectTiff(*decoder, *limits);
+    else
+        status = inspect(decoder->compressCodec, decoder->kind, decoder->bytes, decoder->size, *limits, &decoder->info);
     if (status != PrStatus_Ok && status != PrStatus_Truncated) {
         prMemoryFree(decoder->bytes);
         prMemoryFree(decoder);
@@ -651,14 +640,15 @@ PrStatus open(PrImageCodec* imageCodec, const PrImageSource* source, const PrIma
     if (decoder->kind == BuiltinKind_Png && decoder->info.format.color.encoding == PrImageColorEncoding_Unknown) {
         size_t profileSize = 0;
         if (pngIccProfile(decoder->compressCodec, {decoder->bytes, decoder->size}, limits->metadataBytes,
-                          &decoder->profile, &profileSize))
-            decoder->info.format.color = PrImageColor{.encoding = PrImageColorEncoding_Icc,
-                                                      .profile = PrByteView{decoder->profile, profileSize}};
+                &decoder->profile, &profileSize))
+            decoder->info.format.color = PrImageColor{
+                .encoding = PrImageColorEncoding_Icc,
+                .profile = PrByteView{decoder->profile, profileSize},
+            };
     }
     if (decoder->kind == BuiltinKind_Png) {
-        const PrStatus animated =
-            pngAnimationOpen(decoder->compressCodec, {decoder->bytes, decoder->size}, *limits,
-                             decoder->info, &decoder->png);
+        const PrStatus animated = pngAnimationOpen(decoder->compressCodec, {decoder->bytes, decoder->size}, *limits,
+            decoder->info, &decoder->png);
         if (animated != PrStatus_Ok) {
             prMemoryFree(decoder->profile);
             prMemoryFree(decoder->bytes);
@@ -666,8 +656,8 @@ PrStatus open(PrImageCodec* imageCodec, const PrImageSource* source, const PrIma
             return animated;
         }
     }
-    decoder->rowBytes = size_t(decoder->info.extent.x) * formatChannels(decoder->info.format)
-                        * (decoder->info.format.sample == PrImageSample_U16 ? 2 : 1);
+    decoder->rowBytes = size_t(decoder->info.extent.x) * formatChannels(decoder->info.format) *
+        (decoder->info.format.sample == PrImageSample_U16 ? 2 : 1);
     decoder->pixelsSize = decoder->rowBytes * decoder->info.extent.y;
     decoder->scratch = static_cast<uint8_t*>(prMemoryAlloc(decoder->pixelsSize));
     decoder->openStatus = status;
@@ -698,16 +688,18 @@ void close(PrImageCodec*, PrImageReader* reader) {
 
 PrStatus frameInfo(PrImageCodec*, PrImageReader* reader, uint32_t frame, PrImageFrameInfo* info) {
     BuiltinDecoder* decoder = static_cast<BuiltinDecoder*>(reader);
-    if (frame >= decoder->info.frameCount
-        && !(frame == kPrImageFrameCover && decoder->info.hasCover)) {
+    if (frame >= decoder->info.frameCount && !(frame == kPrImageFrameCover && decoder->info.hasCover)) {
         return PrStatus_InvalidData;
     }
     if (decoder->kind == BuiltinKind_Gif && decoder->gif == nullptr) {
         return PrStatus_InvalidData;
     }
-    info->durationMs = decoder->png != nullptr   ? pngAnimationDelay(*decoder->png, frame)
-                       : decoder->gif == nullptr ? 0
-                                                 : gifAnimationDelay(*decoder->gif, frame);
+    if (decoder->png != nullptr)
+        info->durationMs = pngAnimationDelay(*decoder->png, frame);
+    else if (decoder->gif == nullptr)
+        info->durationMs = 0;
+    else
+        info->durationMs = gifAnimationDelay(*decoder->gif, frame);
     return PrStatus_Ok;
 }
 
@@ -718,19 +710,21 @@ PrStatus decode(PrImageCodec*, PrImageReader* reader, uint32_t frame, PrPixels o
     PR_ASSERT(output.stride >= decoder->rowBytes);
     bool ok = false;
     if (decoder->kind == BuiltinKind_Png) {
-        ok = decoder->png == nullptr
-                 ? pngDecode(decoder->compressCodec, {decoder->bytes, decoder->size}, decoder->scratch,
-                             decoder->pixelsSize)
-                 : pngAnimationFrame(*decoder->png, frame, decoder->scratch, decoder->pixelsSize);
+        if (decoder->png == nullptr)
+            ok = pngDecode(decoder->compressCodec, {decoder->bytes, decoder->size}, decoder->scratch,
+                decoder->pixelsSize);
+        else
+            ok = pngAnimationFrame(*decoder->png, frame, decoder->scratch, decoder->pixelsSize);
     } else if (decoder->kind == BuiltinKind_Jpeg) {
         ok = jpegDecode({decoder->bytes, decoder->size}, decoder->scratch, decoder->pixelsSize);
     } else if (decoder->kind == BuiltinKind_Tiff) {
         ok = tiffDecode(decoder->tiff, decoder->scratch, decoder->pixelsSize);
     } else if (decoder->kind == BuiltinKind_Ico) {
-        ok = decoder->icon.png
-                 ? pngDecode(decoder->compressCodec, {decoder->icon.bytes, decoder->icon.size},
-                             decoder->scratch, decoder->pixelsSize)
-                 : icoDecodeBitmap(decoder->icon, decoder->scratch, decoder->pixelsSize);
+        if (decoder->icon.png)
+            ok = pngDecode(decoder->compressCodec, {decoder->icon.bytes, decoder->icon.size}, decoder->scratch,
+                decoder->pixelsSize);
+        else
+            ok = icoDecodeBitmap(decoder->icon, decoder->scratch, decoder->pixelsSize);
     } else if (decoder->gif != nullptr) {
         ok = gifAnimationFrame(*decoder->gif, frame, decoder->scratch, decoder->pixelsSize);
     }
@@ -739,13 +733,13 @@ PrStatus decode(PrImageCodec*, PrImageReader* reader, uint32_t frame, PrPixels o
     }
     for (uint32_t row = 0; row < output.extent.y; ++row) {
         memCopy(output.data + size_t(row) * output.stride,
-                decoder->scratch + size_t(row) * decoder->rowBytes, decoder->rowBytes);
+            decoder->scratch + size_t(row) * decoder->rowBytes, decoder->rowBytes);
     }
     return decoder->openStatus;
 }
 
 PrStatus encode(PrImageCodec* imageCodec, PrStringView type, PrPixelView pixels, uint8_t* PR_NULLABLE out,
-                size_t capacity, size_t* size) {
+        size_t capacity, size_t* size) {
     if (type != "image/png")
         return PrStatus_NotSupported;
     *size = pngEncode(pixels, static_cast<BuiltinBackend*>(imageCodec)->compressCodec, out, capacity);

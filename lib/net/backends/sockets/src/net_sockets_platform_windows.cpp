@@ -88,9 +88,9 @@ SOCKET openWake() {
     address.sin_family = AF_INET;
     address.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
     int length = sizeof(address);
-    if (bind(wake, reinterpret_cast<const sockaddr*>(&address), sizeof(address)) != 0
-        || getsockname(wake, reinterpret_cast<sockaddr*>(&address), &length) != 0
-        || ::connect(wake, reinterpret_cast<const sockaddr*>(&address), sizeof(address)) != 0) {
+    if (bind(wake, reinterpret_cast<const sockaddr*>(&address), sizeof(address)) != 0 ||
+            getsockname(wake, reinterpret_cast<sockaddr*>(&address), &length) != 0 ||
+            ::connect(wake, reinterpret_cast<const sockaddr*>(&address), sizeof(address)) != 0) {
         closesocket(wake);
         return INVALID_SOCKET;
     }
@@ -183,8 +183,8 @@ SocketsHandle socketsConnect(const SocketsAddress& address, PrNetError* error) {
         DWORD returned = 0;
         WSAIoctl(socket, SIO_TCP_INITIAL_RTO, &rto, sizeof(rto), nullptr, 0, &returned, nullptr, nullptr);
     }
-    if (::connect(socket, reinterpret_cast<const sockaddr*>(storage), int(address.length)) == 0
-        || WSAGetLastError() == WSAEWOULDBLOCK)
+    if (::connect(socket, reinterpret_cast<const sockaddr*>(storage), int(address.length)) == 0 ||
+            WSAGetLastError() == WSAEWOULDBLOCK)
         return SocketsHandle(socket);
     *error = errorOfWsa(WSAGetLastError());
     closesocket(socket);
@@ -253,9 +253,10 @@ PrNetError socketsResolve(const char* host, uint16_t port, Array<SocketsAddress>
     hints.ai_protocol = IPPROTO_TCP;
     ADDRINFOW* found = nullptr;
     int status = GetAddrInfoW(wide, service, &hints, &found);
+    if (status == WSA_NOT_ENOUGH_MEMORY || status == WSANOTINITIALISED)
+        return PrNetError_Io;
     if (status != 0)
-        return status == WSA_NOT_ENOUGH_MEMORY || status == WSANOTINITIALISED ? PrNetError_Io
-                                                                              : PrNetError_NameNotResolved;
+        return PrNetError_NameNotResolved;
     uint32_t before = out->count;
     for (ADDRINFOW* entry = found; entry != nullptr; entry = entry->ai_next) {
         if (entry->ai_addrlen > sizeof(sockaddr_storage))

@@ -82,8 +82,7 @@ void count(LayoutGridTable<Entry>& table, uint32_t index, uint32_t delta) {
 }
 
 // Adds `delta` to the references of the compounds that the breadths and limits of `count` tracks name.
-void countTracks(LayoutCompounds* compounds, const PrLayoutGridTrack* PR_NULLABLE tracks, uint32_t count,
-                 uint32_t delta) {
+void countTracks(LayoutCompounds* compounds, const PrLayoutGridTrack* PR_NULLABLE tracks, uint32_t count, uint32_t delta) {
     for (uint32_t i = 0; i < count; ++i) {
         layoutCompoundsCount(compounds, tracks[i].min.bits, delta);
         layoutCompoundsCount(compounds, tracks[i].max.bits, delta);
@@ -116,8 +115,8 @@ bool isBreadth(PrLayoutTrackBreadth breadth) {
         case PrLayoutWordKind_Compound: return true;
         case PrLayoutWordKind_Keyword: {
             PrLayoutKeyword keyword = prLayoutWordKeywordValue(breadth.bits);
-            return keyword == PrLayoutKeyword_Auto || keyword == PrLayoutKeyword_MinContent
-                   || keyword == PrLayoutKeyword_MaxContent || keyword == PrLayoutKeyword_FitContent;
+            return keyword == PrLayoutKeyword_Auto || keyword == PrLayoutKeyword_MinContent ||
+                keyword == PrLayoutKeyword_MaxContent || keyword == PrLayoutKeyword_FitContent;
         }
         default: return false;
     }
@@ -128,8 +127,8 @@ bool isLine(const PrLayoutGridLine& line) {
     switch (line.kind) {
         case PrLayoutGridLineKind_Auto: return true;
         case PrLayoutGridLineKind_Line:
-            return line.integer >= -kPrLayoutGridMaxLine && line.integer <= kPrLayoutGridMaxLine
-                   && (line.integer != 0 || line.name != kPrLayoutGridNameNone);
+            return line.integer >= -kPrLayoutGridMaxLine && line.integer <= kPrLayoutGridMaxLine &&
+                (line.integer != 0 || line.name != kPrLayoutGridNameNone);
         case PrLayoutGridLineKind_Span: return line.integer >= 1 && line.integer <= kPrLayoutGridMaxLine;
         default: return false;
     }
@@ -143,11 +142,11 @@ void layoutGridTemplatesInit(LayoutGridTemplates* templates) {
 }
 
 PrLayoutGridTracksIndex layoutGridTemplatesInternTracks(LayoutGridTemplates* templates, LayoutCompounds* compounds,
-                                                        const PrLayoutGridTrackList& list) {
+        const PrLayoutGridTrackList& list) {
     if (list.trackCount == 0)
         return kPrLayoutGridTracksNone;
-    PR_ASSERT(list.repeat == PrLayoutGridRepeat_None
-              || (list.repeatCount != 0 && list.repeatStart + list.repeatCount <= list.trackCount));
+    PR_ASSERT(list.repeat == PrLayoutGridRepeat_None ||
+        (list.repeatCount != 0 && list.repeatStart + list.repeatCount <= list.trackCount));
     for (uint32_t i = 0; i < list.trackCount; ++i)
         PR_ASSERT(isBreadth(list.tracks[i].min) && isBreadth(list.tracks[i].max));
     PrLayoutGridRepeat repeat = list.repeat;
@@ -257,15 +256,13 @@ void layoutGridTemplatesCollect(LayoutGridTemplates* templates, LayoutCompounds*
 bool layoutGridTemplatesVerify(const LayoutGridTemplates* templates) {
     const LayoutGridTable<LayoutGridTracksEntry>& tracks = templates->tracks;
     const LayoutGridTable<LayoutGridAreasEntry>& areas = templates->areas;
-    return layoutCandidatesCover(tracks.candidates, tracks.entries.count,
-                                 [&](uint32_t i) {
-                                     const LayoutGridTracksEntry& entry = tracks.entries.data[i];
-                                     return entry.tracks != nullptr && entry.references == 0;
-                                 })
-           && layoutCandidatesCover(areas.candidates, areas.entries.count, [&](uint32_t i) {
-                  const LayoutGridAreasEntry& entry = areas.entries.data[i];
-                  return entry.live && entry.references == 0;
-              });
+    return layoutCandidatesCover(tracks.candidates, tracks.entries.count, [&](uint32_t i) {
+        const LayoutGridTracksEntry& entry = tracks.entries.data[i];
+        return entry.tracks != nullptr && entry.references == 0;
+    }) && layoutCandidatesCover(areas.candidates, areas.entries.count, [&](uint32_t i) {
+        const LayoutGridAreasEntry& entry = areas.entries.data[i];
+        return entry.live && entry.references == 0;
+    });
 }
 
 void layoutGridTemplatesReset(LayoutGridTemplates* templates) {

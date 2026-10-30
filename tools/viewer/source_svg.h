@@ -19,7 +19,7 @@ namespace viewer {
 // resources that it references from beside it.
 struct SvgSource;
 std::shared_ptr<SvgSource> loadSvg(const std::filesystem::path& path, const std::filesystem::path& settings,
-                                   PrTextShaper* shaper, PrFontHinting hinting, PrFontHinter* PR_NULLABLE hinter);
+    PrTextShaper* shaper, PrFontHinting hinting, PrFontHinter* PR_NULLABLE hinter);
 void drawSvg(SvgSource& svg, PrDrawList* list, float width, float height);
 
 } // namespace viewer

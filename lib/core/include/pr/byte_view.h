@@ -24,10 +24,10 @@ typedef struct PrByteView {
     // Views a contiguous run of bytes that has data() and size(), such as std::vector<uint8_t>. data() must convert
     // implicitly to the byte pointer, and size() to a size without narrowing.
     template <typename Bytes>
-        requires requires(const Bytes& bytes, const uint8_t* PR_NULLABLE& pointer) {
-            pointer = bytes.data();
-            size_t{bytes.size()};
-        }
+    requires requires(const Bytes& bytes, const uint8_t* PR_NULLABLE& pointer) {
+        pointer = bytes.data();
+        size_t{bytes.size()};
+    }
     constexpr PrByteView(const Bytes& bytes) : data(bytes.data()), size(bytes.size()) {}
 
     constexpr const uint8_t* PR_NULLABLE begin() const { return data; }

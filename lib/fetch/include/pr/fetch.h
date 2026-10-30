@@ -150,8 +150,7 @@ struct PrFetch {
 // response is Basic. Callers use the functions below, never these members.
 struct PrFetchNetwork {
     void (*destroy)(PrFetchNetwork* fetcher);
-    PrStatus (*fetchCreate)(PrFetchNetwork* fetcher, const PrFetchRequestDesc* desc,
-                            PrFetch* PR_NULLABLE* PR_NONNULL out);
+    PrStatus (*fetchCreate)(PrFetchNetwork* fetcher, const PrFetchRequestDesc* desc, PrFetch* PR_NULLABLE* PR_NONNULL out);
     void (*fetchDestroy)(PrFetchNetwork* fetcher, PrFetch* fetch);
     uint16_t (*fetchStatus)(const PrFetchNetwork* fetcher, const PrFetch* fetch);
     PrStringView (*fetchUrl)(const PrFetchNetwork* fetcher, const PrFetch* fetch);

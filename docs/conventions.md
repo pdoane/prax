@@ -157,12 +157,26 @@ describes how they should read, and is the guide for prose passes.
 
 ## Rules the example cannot show
 
-- **Formatting** is by hand, and no formatter runs. Code is indented four spaces a level, never with tabs, and a line
-  ends by column 120. A switch's case labels are indented one level into it, and their statements two. An argument
-  list that continues past its line continues one column past its open parenthesis. `lint.py` checks each
-  (`indentation`, `line-length`, `continuation`). Every text file is UTF-8 with LF line endings, no whitespace at the
-  end of a line, and a newline at its end: `.gitattributes` keeps the endings LF in every checkout, `.editorconfig`
-  tells editors, and `lint.py` checks each (`whitespace`).
+- **Formatting.** Code is indented four spaces a level, never with tabs, and a line ends by column 120. A switch's case
+  labels are indented one level into it, and their statements two. A line that continues a statement, an argument
+  list or an initializer is indented one level past the line it continues, never aligned to a column on that line, so
+  renaming a call does not reindent its arguments. A bracket that closes on its own line returns to the indentation of
+  the line that opened it, and a lambda's body is one level past the line that opens it. A line that continues an item
+  which began a line of its own is one level past that item. The head of a function, a block or a control statement
+  continues two levels in, so that it does not line up with the body that follows it. A line runs toward the column
+  limit before it breaks: what fits on the line before it belongs there, a short tail of at most 10 columns runs past
+  the limit rather than sit alone on a line, a string literal that continues another joins it as one literal, and a
+  binary operator that a line breaks at ends that line rather than beginning the next. The body of a control
+  statement, an item of an initializer list that begins a line, and the text after a string literal that ends in a
+  line break begin lines of their own. An initializer list that fits on one line is on one line; one that does not
+  breaks after its opening brace, ends its last item with a comma, and closes on a line of its own, and if its items
+  are designated, each is on a line of its own. `lint.py` checks each (`indentation`, `line-length`, `operator`,
+  `wrap`, `initializer`), and `./dev.sh layout` fixes them, breaking a line that runs too long where it nests least.
+  A conditional expression fits on one line; one that would not is written as statements, an `if` or a variable given
+  its value in each branch (`ternary`), which no tool rewrites.
+  Every text file is UTF-8 with LF line endings, no whitespace at the end of a line, and a newline at its end:
+  `.gitattributes` keeps the endings LF in every checkout, `.editorconfig` tells editors, and `lint.py` checks each
+  (`whitespace`).
 - **Strings.** Inputs are `PrStringView`. A result is a `PrStringView` if its bytes outlive the call, as with a
   generated table or storage that the object owns until it changes. A result is an owned `PrString`, released with
   `prStringReset`, if the bytes are copied. Nothing is NUL-terminated. In C++, a NUL-terminated string or a run of

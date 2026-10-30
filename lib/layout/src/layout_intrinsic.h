@@ -25,7 +25,7 @@ LayoutIntrinsicSizes layoutIntrinsicSizes(LayoutState& state, LayoutNodeIndex no
 // Returns the intrinsic sizes of the anonymous table cell that wraps the siblings from `first` through `last`, measured
 // in `input`. The cell has no edges, and its sizes are not cached.
 LayoutIntrinsicSizes layoutAnonymousIntrinsic(LayoutState& state, LayoutNodeIndex first, LayoutNodeIndex last,
-                                              const LayoutIntrinsicInput& input);
+    const LayoutIntrinsicInput& input);
 
 // Returns the contribution of the element or replaced element `node` to the intrinsic sizes of its parent
 // (css-sizing-3/#contributions). This is its margin-box inline size from its sizing properties, falling back to its
@@ -33,7 +33,7 @@ LayoutIntrinsicSizes layoutAnonymousIntrinsic(LayoutState& state, LayoutNodeInde
 // min-content the whole size of a replaced box compresses, not only the percentage. If `content` is given, it is set to
 // the intrinsic sizes of the box, which are measured once for both.
 LayoutIntrinsicSizes layoutContribution(LayoutState& state, LayoutNodeIndex node, const LayoutIntrinsicInput& input,
-                                        LayoutIntrinsicSizes* PR_NULLABLE content = nullptr);
+    LayoutIntrinsicSizes* PR_NULLABLE content = nullptr);
 
 // Returns the first node whose cached intrinsic sizes differ from a fresh measurement with `fresh`, which bypasses the
 // cache, or kPrLayoutNodeNone if none differs. A fresh measurement also bypasses the shapings of inline formatting

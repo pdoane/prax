@@ -270,8 +270,8 @@ struct CssParsedUserAgentSheet {
 // order, with their media conditions evaluated against `media`. The rule set is the base that the document's rule set
 // builds on (cssRuleSetBuild).
 void cssRuleSetBuildUserAgent(CssRuleSet* set, const PrDomDocument* document,
-                              const CssParsedUserAgentSheet* PR_NULLABLE userAgent, uint32_t userAgentCount,
-                              PrCssSheetConditions conditions, const CssMediaEnvironment* PR_NULLABLE media);
+    const CssParsedUserAgentSheet* PR_NULLABLE userAgent, uint32_t userAgentCount,
+    PrCssSheetConditions conditions, const CssMediaEnvironment* PR_NULLABLE media);
 
 // The sheets of one tree of a document: the document's own, or a shadow root's
 // (cssom-1/#documentorshadowroot-document-or-shadow-root-css-style-sheets).
@@ -286,7 +286,7 @@ struct CssTreeSheets {
 // `media`. Each entry's scope is its tree. The set starts as a copy of `base`, which costs less than filing the user
 // agent's sheets again.
 void cssRuleSetBuild(CssRuleSet* set, const CssRuleSet* base, const CssTreeSheets* PR_NULLABLE trees,
-                     uint32_t treeCount, const CssMediaEnvironment* PR_NULLABLE media);
+    uint32_t treeCount, const CssMediaEnvironment* PR_NULLABLE media);
 
 // Returns true if a media query list that decided what the rule set filed gives a different result in `media`. If so,
 // the set is out of date even for the same sheets.
@@ -513,7 +513,7 @@ struct CssCascadeInput {
 // (cssElementInlineStyle). Safe on several threads at once, each with its own builder and scratch, while the document
 // and the rule set do not change.
 const CssComputedStyle* cssCascadeStyle(const CssRuleSet* set, CssStyleBuilder* builder, CssCascadeScratch* scratch,
-                                        const CssCascadeInput& input);
+    const CssCascadeInput& input);
 
 // Returns the pseudo-elements among ::first-line and ::first-letter that `element` originates, as bits by CssPseudo. An
 // element originates one if an entry of `set` for that pseudo-element matches it. If `set` has no such entries, returns
