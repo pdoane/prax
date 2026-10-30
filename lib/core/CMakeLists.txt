@@ -56,7 +56,7 @@ if (PR_PLATFORM_MIMALLOC OR PR_DEVELOP)
     else()
         set(MI_DEBUG OFF CACHE STRING "" FORCE)
     endif()
-    FetchContent_MakeAvailable(mimalloc)
+    pr_dependency_available(mimalloc)
     pr_third_party_directory(${mimalloc_SOURCE_DIR})
     # MSVC refuses to optimize a Debug build's runtime checks, so mimalloc stays unoptimized there.
     if (CMAKE_BUILD_TYPE STREQUAL "Debug" AND NOT MSVC)
@@ -126,7 +126,7 @@ target_link_libraries(pr_core_cpp PUBLIC prax::core)
 # QuickJS, built from its sources as its own build builds them: what the QuickJS layers run JavaScript with. It is C11
 # with GNU extensions, and other compilers than MSVC read a plain char as unsigned.
 if (PR_JS)
-    FetchContent_MakeAvailable(quickjs)
+    pr_dependency_available(quickjs)
     add_library(pr_quickjs STATIC
         ${quickjs_SOURCE_DIR}/cutils.c
         ${quickjs_SOURCE_DIR}/libbf.c

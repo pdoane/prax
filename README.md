@@ -101,7 +101,7 @@ recursion limits assume that much, as macOS and Linux give a main thread. The op
 | `PR_PLATFORM_MIMALLOC` | `OFF` | allocates with mimalloc instead of the C library |
 | `PR_USER_CONFIG`, `PR_PLATFORM_NO_DEFAULT` | | bind platform facilities at compile time from a header |
 | `PR_SLANGC` | | the Slang compiler to use instead of the release the build fetches |
-| `PR_DOWNLOAD_DIR` | | a download cache that several builds can share |
+| `PR_DOWNLOAD_DIR` | the environment variable of that name, or else `prax/downloads` in the user's cache directory | the download cache that builds share; empty disables it |
 
 A backend is on by default when it uses the platform's own API or Prax's own code, and off when it depends on a
 third-party library. A development build (`PR_DEVELOP`) or an examples build (`PR_EXAMPLES`) enables every backend the
@@ -128,8 +128,19 @@ after `find_package(prax)` or when the source tree is added to the project.
 `./dev.sh` runs the development workflow: building, testing, running the conformance suites, benchmarking, regenerating
 generated sources, linting, and checking the package the way a consumer uses it. `./dev.sh help` lists its commands.
 It and its tools are written in Python 3, which development also needs. Its builds use Ninja and enable `PR_EXAMPLES`
-and `PR_DEVELOP`, which builds the tests, tools and comparisons with warnings as errors. The suites' test corpora are
-fetched into `third_party` at pinned revisions.
+and `PR_DEVELOP`, which builds the tests, tools and comparisons with warnings as errors. They cache
+downloads in `third_party/downloads`. The suites' test corpora are fetched into `third_party` at pinned revisions.
+
+### CMake versions
+
+| build | minimum | reason |
+| --- | --- | --- |
+| consumer | 3.28 | `FetchContent_Declare` needs 3.28 for `EXCLUDE_FROM_ALL`. Older versions build and install third-party libraries with Prax. Ubuntu 24.04 LTS ships 3.28. |
+| development | 4.0 | Comparisons that predate CMake's current policies need `CMAKE_POLICY_VERSION_MINIMUM`, because deprecation warnings are errors. |
+
+Raise the consumer minimum only for a feature that Prax needs. `CMakeLists.txt`, `cmake/shader_library.cmake` and
+`tools/package/CMakeLists.txt` each state it. Test a change on the minimum version, because a newer CMake accepts what
+an older one rejects. The `PR_DEVELOP` check in `CMakeLists.txt` states the development minimum.
 
 ## License
 

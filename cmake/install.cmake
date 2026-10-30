@@ -36,6 +36,7 @@ write_basic_package_version_file(${PROJECT_BINARY_DIR}/prax-config-version.cmake
 install(FILES
     ${PROJECT_BINARY_DIR}/prax-config.cmake
     ${PROJECT_BINARY_DIR}/prax-config-version.cmake
+    ${PROJECT_SOURCE_DIR}/cmake/pr_dependency.cmake
     ${PROJECT_SOURCE_DIR}/lib/font_bundle/font_bundle.cmake
     DESTINATION ${PR_PACKAGE_DIR})
 

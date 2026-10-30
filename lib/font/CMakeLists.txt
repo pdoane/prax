@@ -22,7 +22,7 @@ if (PR_FONT_FREETYPE)
     set(FT_DISABLE_HARFBUZZ ON CACHE BOOL "" FORCE)
     set(FT_DISABLE_BROTLI ON CACHE BOOL "" FORCE)
     set(SKIP_INSTALL_ALL ON CACHE BOOL "" FORCE)
-    FetchContent_MakeAvailable(freetype)
+    pr_dependency_available(freetype)
     pr_third_party_directory(${freetype_SOURCE_DIR})
     set_property(GLOBAL APPEND PROPERTY PR_LIBRARIES freetype)
 

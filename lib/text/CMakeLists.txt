@@ -11,7 +11,7 @@ pr_library(text INCLUDE include
 target_link_libraries(pr_text PUBLIC prax::font prax::geom prax::unicode prax::locale PRIVATE prax::core_cpp)
 
 if (PR_TEXT_KB)
-    FetchContent_MakeAvailable(kb)
+    pr_dependency_available(kb)
     target_sources(pr_text PRIVATE backends/kb/src/text_kb.cpp)
     pr_headers(pr_text PUBLIC backends/kb/include)
     target_include_directories(pr_text SYSTEM PRIVATE ${kb_SOURCE_DIR})
@@ -26,7 +26,7 @@ endif()
 
 # HarfBuzz, built as its single-source amalgamation, and the backend built on it.
 if (PR_TEXT_HARFBUZZ)
-    FetchContent_MakeAvailable(harfbuzz)
+    pr_dependency_available(harfbuzz)
     add_library(pr_harfbuzz STATIC ${harfbuzz_SOURCE_DIR}/src/harfbuzz.cc)
     add_library(prax::harfbuzz ALIAS pr_harfbuzz)
     set_target_properties(pr_harfbuzz PROPERTIES EXPORT_NAME harfbuzz)

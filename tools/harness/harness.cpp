@@ -12,10 +12,9 @@
 
 #if defined(__ARM_NEON)
 #include <arm_neon.h>
+#endif
 
 using namespace pr;
-
-#endif
 
 namespace harness {
 namespace {

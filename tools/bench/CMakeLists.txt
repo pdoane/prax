@@ -13,7 +13,7 @@ target_compile_definitions(ui_bench PRIVATE PR_FONTS_DIR="${PROJECT_SOURCE_DIR}/
 # where Cargo is installed. Taffy's side is a Rust static library, which Cargo builds, optimized whatever the build type.
 find_program(PR_CARGO cargo)
 if (PR_CARGO)
-    FetchContent_MakeAvailable(yoga taffy)
+    pr_dependency_available(yoga taffy)
     file(GLOB_RECURSE PR_YOGA_SOURCES CONFIGURE_DEPENDS ${yoga_SOURCE_DIR}/yoga/*.cpp)
     add_library(yoga STATIC ${PR_YOGA_SOURCES})
     target_include_directories(yoga SYSTEM PUBLIC ${yoga_SOURCE_DIR})

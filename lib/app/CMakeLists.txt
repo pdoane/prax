@@ -26,7 +26,7 @@ if (PR_APP_WIN32)
         DOWNLOAD_NAME webview2.zip
         SOURCE_SUBDIR none
     )
-    FetchContent_MakeAvailable(webview2)
+    pr_dependency_available(webview2)
     if (CMAKE_SYSTEM_PROCESSOR MATCHES "ARM64|arm64|aarch64")
         set(PR_WEBVIEW2_ARCH arm64)
     else()

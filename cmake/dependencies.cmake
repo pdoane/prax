@@ -5,19 +5,7 @@
 # A dependency is declared here and made available where a target needs it, so a build fetches only what its options
 # build. Moving a pin means changing its URL and its hash together.
 
-include(FetchContent)
-
-# The archives are kept in PR_DOWNLOAD_DIR when it is set. Build directories that name the same directory download each
-# archive once, and a download that is already there with the right hash is not fetched again.
-set(PR_DOWNLOAD_DIR "" CACHE PATH "A directory that keeps the downloaded archives, which builds can share")
-
-# Declares a dependency with FetchContent_Declare, kept in PR_DOWNLOAD_DIR.
-function(pr_dependency name)
-    if (PR_DOWNLOAD_DIR)
-        set(download DOWNLOAD_DIR ${PR_DOWNLOAD_DIR}/${name})
-    endif()
-    FetchContent_Declare(${name} ${ARGN} ${download} DOWNLOAD_EXTRACT_TIMESTAMP ON)
-endfunction()
+include(${CMAKE_CURRENT_LIST_DIR}/pr_dependency.cmake)
 
 # A patch command that applies the patches in `directory` to a fetched source tree. It runs Git outside the repository
 # that holds the build directory, which `git apply` would otherwise patch instead. The patches' hash is part of the

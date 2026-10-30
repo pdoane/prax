@@ -3,7 +3,7 @@
 
 # Dear ImGui, with its draw data drawn on lib/gpu, and the draw backend that records into it. The viewer draws its
 # controls with the same build of Dear ImGui.
-FetchContent_MakeAvailable(imgui)
+pr_dependency_available(imgui)
 add_library(imgui STATIC
     ${imgui_SOURCE_DIR}/imgui.cpp
     ${imgui_SOURCE_DIR}/imgui_draw.cpp
@@ -44,7 +44,7 @@ set(BLEND2D_STATIC ON CACHE BOOL "" FORCE)
 set(BLEND2D_NO_JIT ON CACHE BOOL "" FORCE)
 set(BLEND2D_NO_INSTALL ON CACHE BOOL "" FORCE)
 set(BLEND2D_TEST OFF CACHE BOOL "" FORCE)
-FetchContent_MakeAvailable(blend2d)
+pr_dependency_available(blend2d)
 pr_third_party_directory(${blend2d_SOURCE_DIR})
 if (CMAKE_BUILD_TYPE STREQUAL "Debug" AND NOT MSVC)
     target_compile_options(blend2d PRIVATE -O2)

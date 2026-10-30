@@ -7,6 +7,7 @@
 include(CMakeFindDependencyMacro)
 @PR_PACKAGE_DEPENDENCIES@
 include(${CMAKE_CURRENT_LIST_DIR}/prax-targets.cmake)
+include(${CMAKE_CURRENT_LIST_DIR}/pr_dependency.cmake)
 include(${CMAKE_CURRENT_LIST_DIR}/font_bundle.cmake)
 
 foreach (_prax_component IN LISTS prax_FIND_COMPONENTS)

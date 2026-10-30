@@ -9,18 +9,19 @@ endif()
 if (APPLE OR WIN32)
     # rlottie, another Lottie player, which the viewer compares lib/lottie with, and the references of the rlottie
     # suite, which it draws and tools/suite/reftest.py drives.
-    # A static library of the player alone. Its build predates CMake's current policies: it enables ASM, which MSVC
-    # does not assemble, and installs to /usr/lib unless told otherwise, an absolute path that CMake refuses on Windows.
+    # A static library of the player alone. Its build predates CMake's current policies: it installs to /usr/lib unless
+    # told otherwise, an absolute path that CMake refuses on Windows, and it enables ASM but assembles nothing here.
+    # CMP0194's old behavior accepts cl as the assembler, so the build does not pick up a gcc from the path.
     # Its NEON drawing needs 32-bit ARM assembly, so an arm64 build draws without it. Its warnings are its own.
     block(SCOPE_FOR VARIABLES)
         set(CMAKE_POLICY_VERSION_MINIMUM 3.10)
         set(LIB_INSTALL_DIR lib)
         set(CMAKE_POLICY_DEFAULT_CMP0077 NEW)
-        set(CMAKE_POLICY_DEFAULT_CMP0194 NEW)
+        set(CMAKE_POLICY_DEFAULT_CMP0194 OLD)
         set(BUILD_SHARED_LIBS OFF)
         set(LOTTIE_MODULE OFF)
         set(LOTTIE_THREAD OFF)
-        FetchContent_MakeAvailable(rlottie)
+        pr_dependency_available(rlottie)
     endblock()
     pr_third_party(rlottie)
     # It builds without exceptions, so MSVC's standard library is told not to use them, or its headers warn (C4530)

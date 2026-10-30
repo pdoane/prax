@@ -1,3 +1,4 @@
+# The consumer minimum (README.md, CMake versions). shader_library.cmake and tools/package state it too.
 cmake_minimum_required(VERSION 3.28)
 # Where Prax is built on its own, macOS builds target Apple Silicon and the oldest macOS that Prax runs on. A build that
 # includes Prax chooses its own, and Prax checks them below. These precede project(), which reads them.
@@ -39,6 +40,10 @@ endif()
 # development build (./dev.sh) adds their tests, the tools that check and measure them, and the comparisons, with
 # warnings as errors.
 option(PR_DEVELOP "Build the tests, the tools and the comparisons, with warnings as errors" OFF)
+# The development minimum (README.md, CMake versions).
+if (PR_DEVELOP AND CMAKE_VERSION VERSION_LESS 4.0)
+    message(FATAL_ERROR "A development build needs CMake 4.0 or newer, and this is CMake ${CMAKE_VERSION}")
+endif()
 option(PR_EXAMPLES "Build the examples" OFF)
 option(PR_INSTALL "Install the libraries, their headers and the CMake package" ${PROJECT_IS_TOP_LEVEL})
 
@@ -153,8 +158,11 @@ include(lib/font_bundle/font_bundle.cmake)
 
 # The compiler of the shaders, and the shader libraries that it compiles for each backend.
 if (NOT PR_SLANGC)
-    FetchContent_MakeAvailable(slang)
-    set(PR_SLANGC ${slang_SOURCE_DIR}/bin/slangc${CMAKE_HOST_EXECUTABLE_SUFFIX})
+    pr_dependency_available(slang)
+    set(PR_SLANGC ${slang_SOURCE_DIR}/bin/slangc)
+    if (CMAKE_HOST_WIN32)
+        string(APPEND PR_SLANGC .exe)
+    endif()
 endif()
 if (APPLE)
     set(PR_SHADER_TARGETS metal)
@@ -162,7 +170,7 @@ elseif (WIN32)
     set(PR_SHADER_TARGETS dxil)
 endif()
 if (PR_GPU_VULKAN)
-    FetchContent_MakeAvailable(vulkan_headers)
+    pr_dependency_available(vulkan_headers)
     set(PR_VULKAN_HEADERS ${vulkan_headers_SOURCE_DIR}/include)
     list(APPEND PR_SHADER_TARGETS spirv)
 endif()
@@ -180,7 +188,7 @@ if (PR_DEVELOP)
     # Its build predates CMake's current policies.
     block(SCOPE_FOR VARIABLES)
         set(CMAKE_POLICY_VERSION_MINIMUM 3.10)
-        FetchContent_MakeAvailable(doctest)
+        pr_dependency_available(doctest)
     endblock()
     pr_third_party_directory(${doctest_SOURCE_DIR})
     include(${doctest_SOURCE_DIR}/scripts/cmake/doctest.cmake)

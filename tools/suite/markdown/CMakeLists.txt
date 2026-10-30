@@ -1,6 +1,6 @@
 # cmark-gfm, built with the headers that its own build would configure, and the harness that writes its HTML, which
 # tools/suite/markdown/markdown_compare.py compares lib/markdown's with.
-FetchContent_MakeAvailable(cmark_gfm)
+pr_dependency_available(cmark_gfm)
 set(PR_CMARK_GFM_HEADERS ${CMAKE_CURRENT_BINARY_DIR}/cmark-gfm)
 block(SCOPE_FOR VARIABLES)
     # Every compiler has stdbool.h, and where C makes bool a keyword, the header's fallback typedef does not compile.
