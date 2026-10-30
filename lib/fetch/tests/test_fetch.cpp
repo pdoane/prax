@@ -1,5 +1,6 @@
 #include "pr/compress_builtin.h"
 #include "pr/fetch.h"
+#include "pr/fetch_load.h"
 #include "pr/file.h"
 #include "pr/http.h"
 #include "pr/net_null.h"
@@ -7,6 +8,7 @@
 #include "pr/storage_disk.h"
 #include "pr/storage_memory.h"
 #include "pr/task_builtin.h"
+#include "pr/thread.h"
 
 #include "tools/harness/net_peer.h"
 
@@ -130,10 +132,8 @@ void startProbe(void* PR_NULLABLE context) {
         .origin = probe->origin.empty() ? PrStringView{} : PrStringView(probe->origin),
         .referrer = probe->referrer.empty() ? PrStringView{} : PrStringView(probe->referrer),
         .referrerPolicy = probe->referrerPolicy,
-        .event = probeEvent,
-        .context = probe,
     };
-    probe->created = prFetchCreate(probe->fetcher, &desc, &probe->fetch);
+    probe->created = prFetchCreate(probe->fetcher, &desc, probeEvent, probe, &probe->fetch);
     if (probe->created != PrStatus_Ok)
         netLatchOpen(&probe->done);
 }
@@ -171,6 +171,77 @@ void runOn(PrNet* net, PrFetchNetwork* fetcher, Probe* probe, const std::string&
     startProbe(probe);
     prNetNullRun(net);
 }
+
+// The owner's queue of a test's loads: the tasks that the loop posts, which the test's thread runs.
+struct OwnerQueue {
+    PrMutex mutex;
+    PrCondition posted;
+    std::vector<std::pair<PrFetchTaskFn, void*>> tasks;
+};
+
+void postToOwner(void* PR_NULLABLE queue, PrFetchTaskFn fn, void* PR_NULLABLE context) {
+    OwnerQueue* owner = static_cast<OwnerQueue*>(queue);
+    prMutexLock(&owner->mutex);
+    owner->tasks.emplace_back(fn, context);
+    prConditionSignal(&owner->posted);
+    prMutexUnlock(&owner->mutex);
+}
+
+// Runs the tasks that the owner's queue holds, after waiting for one if `wait` is true.
+void runOwner(OwnerQueue* owner, bool wait) {
+    prMutexLock(&owner->mutex);
+    while (wait && owner->tasks.empty())
+        prConditionWait(&owner->posted, &owner->mutex);
+    std::vector<std::pair<PrFetchTaskFn, void*>> tasks;
+    tasks.swap(owner->tasks);
+    prMutexUnlock(&owner->mutex);
+    for (const std::pair<PrFetchTaskFn, void*>& task : tasks)
+        task.first(task.second);
+}
+
+// What a load delivered, and the load, which `done` destroys.
+struct Delivery {
+    PrFetchLoad* PR_NULLABLE load;
+    uint32_t calls;
+    PrStatus status;
+    uint16_t responseStatus;
+    std::string url;
+    std::string type;
+    std::string body;
+};
+
+void delivered(void* PR_NULLABLE context, const PrFetchResponse* response) {
+    Delivery* delivery = static_cast<Delivery*>(context);
+    ++delivery->calls;
+    delivery->status = response->status;
+    delivery->responseStatus = response->responseStatus;
+    delivery->url.assign(response->url.data != nullptr ? response->url.data : "", response->url.size);
+    for (uint32_t i = 0; i < response->headerCount; ++i) {
+        if (response->headers[i].name == "Content-Type" || response->headers[i].name == "content-type")
+            delivery->type.assign(response->headers[i].value.data, response->headers[i].value.size);
+    }
+    delivery->body.assign(reinterpret_cast<const char*>(response->body.data), response->body.size);
+    prFetchLoadDestroy(delivery->load);
+    delivery->load = nullptr;
+}
+
+// Loads `url` for the test's thread and waits for the response, with a body of at most `maxBodySize` bytes.
+Delivery load(Fixture* fixture, OwnerQueue* owner, const std::string& url, uint64_t maxBodySize = 0) {
+    Delivery delivery{};
+    PrFetchRequestDesc request{.url = url};
+    PrFetchLoadDesc desc{
+        .post = postToOwner,
+        .queue = owner,
+        .done = delivered,
+        .context = &delivery,
+        .maxBodySize = maxBodySize,
+    };
+    delivery.load = prFetchLoadCreate(fixture->fetcher, &request, &desc);
+    runOwner(owner, true);
+    return delivery;
+}
+
+void nothing(void* PR_NULLABLE) {}
 
 } // namespace
 
@@ -596,4 +667,60 @@ TEST_CASE("fetch: methods and headers are classified as the Fetch standard names
     CHECK(prFetchIsCorsExposedHeader("X-Secret", " * ", PrFetchCredentials_SameOrigin));
     CHECK_FALSE(prFetchIsCorsExposedHeader("X-Secret", "*", PrFetchCredentials_Include));
     CHECK_FALSE(prFetchIsCorsExposedHeader("Set-Cookie", "set-cookie, *", PrFetchCredentials_Omit));
+}
+
+TEST_CASE("fetch: a load delivers a whole response on its owner's thread") {
+    Fixture fixture{};
+    if (!open(&fixture))
+        return;
+    OwnerQueue owner{};
+    prMutexInit(&owner.mutex);
+    prConditionInit(&owner.posted);
+    Delivery hello = load(&fixture, &owner, urlOf(fixture, "/redirect"));
+    CHECK(hello.calls == 1);
+    CHECK(hello.status == PrStatus_Ok);
+    CHECK(hello.responseStatus == 200);
+    CHECK(hello.url == urlOf(fixture, "/hello"));
+    CHECK(hello.type == "text/plain");
+    CHECK(hello.body == "hello");
+    Delivery missing = load(&fixture, &owner, urlOf(fixture, "/missing"));
+    CHECK(missing.status == PrStatus_Ok);
+    CHECK_FALSE(prFetchIsOkStatus(missing.responseStatus));
+    CHECK(missing.body == "missing");
+    CHECK(load(&fixture, &owner, "not a url").status == PrStatus_InvalidData);
+    CHECK(load(&fixture, &owner, "ftp://localhost/file").status == PrStatus_Io);
+    CHECK(load(&fixture, &owner, urlOf(fixture, "/large"), 1024).status == PrStatus_Limit);
+    prConditionReset(&owner.posted);
+    prMutexReset(&owner.mutex);
+    reset(&fixture);
+}
+
+TEST_CASE("fetch: a load destroyed before its response arrives delivers nothing") {
+    Fixture fixture{};
+    if (!open(&fixture))
+        return;
+    OwnerQueue owner{};
+    prMutexInit(&owner.mutex);
+    prConditionInit(&owner.posted);
+    Delivery early{};
+    Delivery late{};
+    PrFetchRequestDesc request{.url = urlOf(fixture, "/large")};
+    PrFetchLoadDesc desc{.post = postToOwner, .queue = &owner, .done = delivered, .context = &early};
+    prFetchLoadDestroy(prFetchLoadCreate(fixture.fetcher, &request, &desc));
+    // A load whose response is posted to the owner before the owner destroys it.
+    PrFetchRequestDesc hello{.url = urlOf(fixture, "/hello")};
+    desc.context = &late;
+    late.load = prFetchLoadCreate(fixture.fetcher, &hello, &desc);
+    prMutexLock(&owner.mutex);
+    while (owner.tasks.empty())
+        prConditionWait(&owner.posted, &owner.mutex);
+    prMutexUnlock(&owner.mutex);
+    prFetchLoadDestroy(late.load);
+    prNetPostBlocking(fixture.net, nothing, nullptr);
+    runOwner(&owner, false);
+    CHECK(early.calls == 0);
+    CHECK(late.calls == 0);
+    prConditionReset(&owner.posted);
+    prMutexReset(&owner.mutex);
+    reset(&fixture);
 }

@@ -128,7 +128,7 @@ void ready(void* context, PrStatus status, PrStringView json) {
     }
     if (!h.pdf.empty()) {
         PrVec2 paper{float(paperWidth), float(paperHeight)};
-        if (prAppBrowserPrint(h.browser, PrStringView{h.pdf.data(), h.pdf.size()}, paper, printed, &h) != PrStatus_Ok) {
+        if (prAppBrowserPrint(h.browser, h.pdf, paper, printed, &h) != PrStatus_Ok) {
             std::fprintf(stderr, "webkit_host: this browser does not print\n");
             stop(h, 1);
         }
@@ -205,7 +205,7 @@ int main(int argc, char** argv) {
                     prAppWake(app);
                 }
             });
-            prAppBrowserLoad(h.browser, PrStringView{h.url.data(), h.url.size()}, loaded, &h);
+            prAppBrowserLoad(h.browser, h.url, loaded, &h);
         },
         [](void*, PrApp*, const PrAppFrame*) {},
         [](void* context, PrApp*, const PrAppEvent* event) {

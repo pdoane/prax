@@ -353,16 +353,12 @@ void buildScenePanel(PrKit* kit, PrLayoutNode panel, EditorState& editor) {
     PrKitWindow window = prKitListWindow(kit, view);
     for (uint32_t i = window.first; i < window.first + window.count; ++i) {
         Entity& entity = *editor.find(editor.sceneRows[i]);
-        PrKitRow row{
-            .index = i,
-            .item = entity.id,
-            .icon = entity.icon,
-            .tone = PrKitTone(entity.hidden ? PrKitTone_Faint : PrKitTone_Primary),
-            .selected = editor.selected == entity.id,
-            .label = entity.name,
-            .meta = entity.type,
-        };
-        PrLayoutNode node = prKitTreeRow(kit, view, row);
+        PrLayoutNode node =
+            prKitTreeRow(kit, view, {.index = i, .item = entity.id, .selected = editor.selected == entity.id});
+        prKitRowIcon(kit, node, {.icon = entity.icon});
+        prKitRowLabel(kit, node, {.text = entity.name}, PrKitTone(entity.hidden ? PrKitTone_Faint : PrKitTone_Primary));
+        if (!entity.type.empty())
+            prKitRowMeta(kit, node, {.text = entity.type});
         PrKitVisibilityToggle toggle{.hidden = entity.hidden, .revealed = prUiIsHovered(ui, node)};
         if (prKitActivated(kit, prKitVisibilityToggle(kit, node, toggle)))
             entity.hidden = !entity.hidden;

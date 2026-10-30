@@ -137,7 +137,7 @@ void requestError(Xhr* request, PrStringView type) {
 // Reads the response into the request, and fires the events of its arrival and of its end
 // (xhr/#dom-xmlhttprequest-send, processResponse and processResponseEndOfBody). The client passes the whole response at
 // once.
-void receive(Xhr* request, const PrFetchClientResponse* response) {
+void receive(Xhr* request, const PrFetchResponse* response) {
     uint32_t generation = request->generation;
     request->status = response->responseStatus;
     request->responseUrl = prStringCopy(response->url);
@@ -185,7 +185,7 @@ void receive(Xhr* request, const PrFetchClientResponse* response) {
 
 // Called with the response that the client fetched for the request. A response for a client that is gone ends the
 // request without its events.
-void fetched(void* PR_NULLABLE context, const PrFetchClientResponse* response) {
+void fetched(void* PR_NULLABLE context, const PrFetchResponse* response) {
     Xhr* request = static_cast<Xhr*>(context);
     request->fetching = false;
     clearTimer(request);

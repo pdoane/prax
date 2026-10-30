@@ -91,7 +91,8 @@ struct Win32App : PrApp {
     bool composing;             // an input method composes text
     double lastFrame;
     HWND window;
-    HCURSOR cursor;
+    PrAppCursor shape;          // the pointer's shape over the client area
+    HCURSOR PR_NULLABLE cursor; // the system's cursor for `shape`, or null to hide the pointer
     UINT dpi;
     wchar_t highSurrogate;      // the first half of a character that WM_CHAR splits, or zero
     KeyText keyText;
@@ -1120,6 +1121,44 @@ HCURSOR systemCursor(Name name) {
     return LoadCursorW(nullptr, MAKEINTRESOURCEW(reinterpret_cast<ULONG_PTR>(name)));
 }
 
+// Returns the system's nearest cursor to `cursor`, or null for none, which hides the pointer over the window. Windows
+// has no system cursors for a context menu, a cell, an alias, a copy, a grab or a zoom. A cell shows the crosshair, a
+// grab shows the hand, and the others show the arrow.
+HCURSOR PR_NULLABLE cursorFor(PrAppCursor cursor) {
+    switch (cursor) {
+        case PrAppCursor_None: return nullptr;
+        case PrAppCursor_Help: return systemCursor(IDC_HELP);
+        case PrAppCursor_Hand: return systemCursor(IDC_HAND);
+        case PrAppCursor_Progress: return systemCursor(IDC_APPSTARTING);
+        case PrAppCursor_Wait: return systemCursor(IDC_WAIT);
+        case PrAppCursor_Cell: return systemCursor(IDC_CROSS);
+        case PrAppCursor_Crosshair: return systemCursor(IDC_CROSS);
+        case PrAppCursor_Text: return systemCursor(IDC_IBEAM);
+        case PrAppCursor_VerticalText: return systemCursor(IDC_IBEAM);
+        case PrAppCursor_Move: return systemCursor(IDC_SIZEALL);
+        case PrAppCursor_NoDrop: return systemCursor(IDC_NO);
+        case PrAppCursor_NotAllowed: return systemCursor(IDC_NO);
+        case PrAppCursor_Grab: return systemCursor(IDC_HAND);
+        case PrAppCursor_Grabbing: return systemCursor(IDC_HAND);
+        case PrAppCursor_ResizeN: return systemCursor(IDC_SIZENS);
+        case PrAppCursor_ResizeS: return systemCursor(IDC_SIZENS);
+        case PrAppCursor_ResizeY: return systemCursor(IDC_SIZENS);
+        case PrAppCursor_ResizeRow: return systemCursor(IDC_SIZENS);
+        case PrAppCursor_ResizeE: return systemCursor(IDC_SIZEWE);
+        case PrAppCursor_ResizeW: return systemCursor(IDC_SIZEWE);
+        case PrAppCursor_ResizeX: return systemCursor(IDC_SIZEWE);
+        case PrAppCursor_ResizeColumn: return systemCursor(IDC_SIZEWE);
+        case PrAppCursor_ResizeNE: return systemCursor(IDC_SIZENESW);
+        case PrAppCursor_ResizeSW: return systemCursor(IDC_SIZENESW);
+        case PrAppCursor_ResizeNESW: return systemCursor(IDC_SIZENESW);
+        case PrAppCursor_ResizeNW: return systemCursor(IDC_SIZENWSE);
+        case PrAppCursor_ResizeSE: return systemCursor(IDC_SIZENWSE);
+        case PrAppCursor_ResizeNWSE: return systemCursor(IDC_SIZENWSE);
+        case PrAppCursor_AllScroll: return systemCursor(IDC_SIZEALL);
+        default: return systemCursor(IDC_ARROW);
+    }
+}
+
 void registerClass(HINSTANCE instance) {
     WNDCLASSEXW existing{};
     existing.cbSize = sizeof(existing);
@@ -1185,8 +1224,7 @@ void run(PrApp* base, const PrAppHandler* handler) {
     if (app->dpi == 0)
         app->dpi = 96;
     placeWindow(app);
-    if (app->cursor == nullptr)
-        app->cursor = systemCursor(IDC_ARROW);
+    app->cursor = cursorFor(app->shape);
     refreshPreferences(app);
     app->display = prAppDisplayDefault();
     app->displayRead = 0;
@@ -1289,17 +1327,10 @@ void requestFrame(PrApp* base) {
 
 void setCursor(PrApp* base, PrAppCursor cursor) {
     Win32App* app = static_cast<Win32App*>(base);
-    HCURSOR selected = systemCursor(IDC_ARROW);
-    switch (cursor) {
-        case PrAppCursor_Hand: selected = systemCursor(IDC_HAND); break;
-        case PrAppCursor_Text: selected = systemCursor(IDC_IBEAM); break;
-        case PrAppCursor_Crosshair: selected = systemCursor(IDC_CROSS); break;
-        case PrAppCursor_ResizeX: selected = systemCursor(IDC_SIZEWE); break;
-        case PrAppCursor_ResizeY: selected = systemCursor(IDC_SIZENS); break;
-        default: break;
-    }
-    if (selected == app->cursor)
+    if (cursor == app->shape)
         return;
+    app->shape = cursor;
+    HCURSOR selected = cursorFor(cursor);
     app->cursor = selected;
     if (app->window == nullptr)
         return;
@@ -1309,6 +1340,16 @@ void setCursor(PrApp* base, PrAppCursor cursor) {
     if (GetCursorPos(&point) && WindowFromPoint(point) == app->window && ScreenToClient(app->window, &point) &&
             GetClientRect(app->window, &client) && PtInRect(&client, point))
         SetCursor(selected);
+}
+
+void setTitle(PrApp* base, PrStringView title) {
+    Win32App* app = static_cast<Win32App*>(base);
+    Array<wchar_t> wide;
+    win32Widen(title, wide);
+    prMemoryFree(app->title);
+    app->title = wide.data;
+    if (app->window != nullptr)
+        SetWindowTextW(app->window, app->title);
 }
 
 PrStatus surface(PrApp* base, PrAppSurface* out) {
@@ -1405,6 +1446,7 @@ PrApp* prAppWin32Create(const PrAppDesc* desc) {
     app->wake = wake;
     app->requestFrame = requestFrame;
     app->setCursor = setCursor;
+    app->setTitle = setTitle;
     app->surface = surface;
     app->openUrl = openUrl;
     app->requestClipboardText = requestClipboardText;

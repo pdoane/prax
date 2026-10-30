@@ -752,7 +752,7 @@ JSValue statusGet(JSContext* ctx, JSValueConst self) {
 // fetch/#dom-response-ok
 JSValue okGet(JSContext* ctx, JSValueConst self) {
     JsResponse* response = responseOf(ctx, self);
-    return response != nullptr ? JS_NewBool(ctx, response->status >= 200 && response->status <= 299) : JS_EXCEPTION;
+    return response != nullptr ? JS_NewBool(ctx, prFetchIsOkStatus(response->status)) : JS_EXCEPTION;
 }
 
 JSValue statusTextGet(JSContext* ctx, JSValueConst self) {

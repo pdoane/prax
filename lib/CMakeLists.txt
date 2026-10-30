@@ -3,6 +3,7 @@
 
 add_subdirectory(core)
 add_subdirectory(task)
+add_subdirectory(cache)
 add_subdirectory(json)
 add_subdirectory(geom)
 add_subdirectory(color)

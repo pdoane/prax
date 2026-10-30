@@ -33,7 +33,7 @@ std::vector<uint8_t> readFile(const char* name) {
 
 const PrFont* load(const std::vector<uint8_t>& bytes) {
     const PrFont* font = nullptr;
-    REQUIRE(prFontCreate(PrByteView{bytes.data(), bytes.size()}, 0, nullptr, &font) == PrStatus_Ok);
+    REQUIRE(prFontCreate(bytes, 0, nullptr, &font) == PrStatus_Ok);
     return font;
 }
 

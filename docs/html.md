@@ -43,7 +43,9 @@ generator takes them from WHATWG's `entities.json`.
 - A page loads the document at a URL by navigating (`prHtmlPageNavigate`): it fetches the document through the host's
   fetcher and loads it as it arrives, and its current document stays until the response arrives. A network error
   loads a document that says why. A navigation to another document by a hyperlink or by setting the location runs
-  from a task, and aborts the load of the current document. The page is the navigable: each document that it commits
+  from a task, and aborts the load of the current document. Its fetch is from the document's origin, while the host's
+  navigations and traversals of the session history are from none, so a fetcher can keep a host's own pages from
+  documents. The page is the navigable: each document that it commits
   has a Window of its own, and the host learns of each Window as it opens and closes (`PrHtmlHost::windowOpened`,
   `windowClosed`). A navigation within the document, to a fragment, keeps its Window.
 - The session history (`PrHtmlSessionHistory`, `pr/html_history.h`) is the host's for a tab, and outlives the browsing
@@ -170,6 +172,14 @@ generator takes them from WHATWG's `entities.json`.
   pointer and the wheel go to that document's elements, and keys go to the focused frame's focused element. A scroll
   that a frame's document cannot take passes on to the containers around the frame, unless its root's
   `overscroll-behavior` contains it, in the view and in the compositor alike.
+- The pointer's shape comes from the document. The view hit tests the pointer's position at each hover and at each
+  commit of a scene, and reads the `cursor` property of the element that it hits (`prHtmlViewCursor`), which the host
+  shows with `prAppSetCursor`. Hit testing honors `pointer-events`, `visibility` and inertness, so the element hit is
+  the one that takes the pointer's events.
+- Some states of an element are the host's to know: whether a link's URL is in the user's history (`:visited`), and
+  whether the user agent autofilled a control (`:autofill`). A restyle asks the host (`PrHtmlHost::elementState`), and a
+  script always sees a link as unvisited. The host calls `prHtmlPageInvalidateHostStates` once what it knows changes,
+  which restyles the elements that the change can reach.
 - A rendering update does not wait for the layout thread. Its styles are computed at once, and the layout tree takes
   them when the view starts the next job, so the page's tasks continue while the layout thread lays out
   (`prCssPresentationIsBusy`).

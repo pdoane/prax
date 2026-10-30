@@ -755,7 +755,7 @@ void buildApp(void* context, PrKit* kit, PrLayoutNode ground) {
     };
     PrLayoutNode status = prKitSurface(kit, ground, {}, footer);
     std::string line = statusOf(s);
-    prKitLabel(kit, status, {.text = PrStringView{line.data(), line.size()}}, meta);
+    prKitLabel(kit, status, {.text = line}, meta);
 }
 
 // ---------------------------------------------------------------------------------------------------------------------

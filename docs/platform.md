@@ -22,7 +22,7 @@ implementation does not wait with a mutex from another, and one allocator does n
 | threads | `PR_PLATFORM_THREAD_START`, `_JOIN`, `_HARDWARE_COUNT` and `_SLEEP`, `PR_PLATFORM_MUTEX_INIT`, `_RESET`, `_LOCK` and `_UNLOCK`, and `PR_PLATFORM_CONDITION_INIT`, `_RESET`, `_WAIT`, `_WAIT_FOR`, `_SIGNAL` and `_BROADCAST` | POSIX, or the Windows family on Windows |
 | files | `PR_PLATFORM_FILE_MAP`, `_UNMAP`, `_INFO`, `_EACH_ENTRY`, `_WRITE`, `_REMOVE`, `_CREATE_DIRECTORY`, `_CACHE_DIRECTORY` and `_DATA_DIRECTORY` | POSIX, or the Windows family on Windows |
 | address space | `PR_PLATFORM_VMEM_RESERVE`, `_COMMIT` and `_FREE` | POSIX, or the Windows family on Windows |
-| clocks | `PR_PLATFORM_TIME_MONOTONIC_MILLISECONDS` and `_WALL_MILLISECONDS` | POSIX, or the Windows family on Windows |
+| clocks | `PR_PLATFORM_TIME_MONOTONIC_MILLISECONDS`, `_WALL_MILLISECONDS` and `_LOCAL_OFFSET_MILLISECONDS` | POSIX, or the Windows family on Windows |
 | random bytes | `PR_PLATFORM_RANDOM_BYTES` | POSIX, or the Windows family on Windows |
 
 Each macro behaves as the backend function of the same name. For example, `PR_PLATFORM_MUTEX_LOCK(mutex)` behaves as

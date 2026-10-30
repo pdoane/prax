@@ -19,10 +19,6 @@ std::vector<uint8_t> framed(const std::string& header, uint64_t declared) {
     return bytes;
 }
 
-ModelArchitecture prefixed(const std::vector<uint8_t>& bytes) {
-    return architectureFromPrefix(PrByteView{bytes.data(), bytes.size()});
-}
-
 // Returns a header of one tensor named `key`, of the shape [rows, `width`].
 std::string tensorHeader(const std::string& key, uint32_t width, uint32_t rows = 640) {
     return "{\"" + key + "\":{\"dtype\":\"F16\",\"shape\":[" + std::to_string(rows) + "," + std::to_string(width) +
@@ -76,10 +72,10 @@ TEST_CASE("a cross-attention width, a signature block or an adapter's down proje
 
 TEST_CASE("a file's leading bytes frame its header, and a framing that does not fit names nothing") {
     std::string header = spec("stable-diffusion-xl-v1-base");
-    CHECK(prefixed(framed(header, header.size())) == ModelArchitecture_Sdxl);
-    CHECK(prefixed(framed(header, 4096)) == ModelArchitecture_Unknown);
-    CHECK(prefixed(framed("{}", 1ull << 40)) == ModelArchitecture_Unknown);
-    CHECK(prefixed({1, 2, 3}) == ModelArchitecture_Unknown);
+    CHECK(architectureFromPrefix(framed(header, header.size())) == ModelArchitecture_Sdxl);
+    CHECK(architectureFromPrefix(framed(header, 4096)) == ModelArchitecture_Unknown);
+    CHECK(architectureFromPrefix(framed("{}", 1ull << 40)) == ModelArchitecture_Unknown);
+    CHECK(architectureFromPrefix(std::vector<uint8_t>{1, 2, 3}) == ModelArchitecture_Unknown);
     CHECK(readArchitecture("/nonexistent/model.safetensors") == ModelArchitecture_Unknown);
 }
 

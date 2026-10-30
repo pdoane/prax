@@ -126,16 +126,16 @@ TEST_CASE("a record is written into a PNG file and read back from it") {
     ProvenanceRecord written;
     written.operations.push_back(generateOp());
     std::vector<uint8_t> plain = png();
-    std::string withRecord = provenanceWrite(PrByteView{plain.data(), plain.size()}, written);
+    std::string withRecord = provenanceWrite(plain, written);
     REQUIRE(!withRecord.empty());
     ProvenanceRecord read;
     REQUIRE(provenanceRead(PrByteView{reinterpret_cast<const uint8_t*>(withRecord.data()), withRecord.size()}, nullptr, &read));
     CHECK(read.operations[0].prompt == "a red fox in snow");
 
     std::vector<uint8_t> other = png("other", "{\"version\":1,\"operations\":[{\"mode\":\"generate\"}]}");
-    CHECK_FALSE(provenanceRead(PrByteView{other.data(), other.size()}, nullptr, &read));
+    CHECK_FALSE(provenanceRead(other, nullptr, &read));
 
-    CHECK_FALSE(provenanceRead(PrByteView{plain.data(), plain.size()}, nullptr, &read));
+    CHECK_FALSE(provenanceRead(plain, nullptr, &read));
     std::string notPng = "not an image";
     CHECK_FALSE(provenanceRead(PrByteView{reinterpret_cast<const uint8_t*>(notPng.data()), notPng.size()}, nullptr, &read));
     CHECK(provenanceWrite(PrByteView{reinterpret_cast<const uint8_t*>(notPng.data()), notPng.size()}, written) .empty());

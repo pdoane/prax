@@ -455,15 +455,19 @@ void buildBrowser(PrKit* kit, PrLayoutNode content, AppState& state, Commands& c
     PrKitWindow window = prKitListWindow(kit, view);
     for (uint32_t i = window.first; i < window.first + window.count && i < gallery.entries.size(); ++i) {
         const GalleryEntry& entry = gallery.entries[i];
-        PrKitTile tile{
+        PrKitTile item{
             .index = i,
             .item = std::hash<std::string>{}(entry.filename),
-            .image = imageCacheGet(state.images, entry.path, ImageScale_Thumbnail),
-            .icon = PrKitIconKind_Image,
             .selected = gallery.selected[i] != 0,
-            .label = entry.filename,
         };
-        prKitListTile(kit, view, tile);
+        PrLayoutNode tile = prKitListTile(kit, view, item);
+        // The thumbnail is an icon until the cache has decoded the image.
+        const PrDrawImage* image = imageCacheGet(state.images, entry.path, ImageScale_Thumbnail);
+        if (image != nullptr)
+            prKitTileImage(kit, tile, {.image = image});
+        else
+            prKitTileIcon(kit, tile, {.icon = PrKitIconKind_Image}, PrColor{0, 0, 0, 0});
+        prKitTileLabel(kit, tile, {.text = entry.filename});
     }
     PrKitSelectionEdit edit{};
     if (prKitSelectionEdited(kit, view, &edit)) {

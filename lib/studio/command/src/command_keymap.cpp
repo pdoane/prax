@@ -231,3 +231,12 @@ bool prCommandKeymapChord(const PrCommandKeymap* keymap, PrStringView commandId,
     }
     return false;
 }
+
+PrStringView prCommandKeymapCommand(const PrCommandKeymap* keymap, PrCommandChord chord, PrStringView context) {
+    for (uint32_t i = 0; i < keymap->bindings.count; ++i) {
+        const Binding& binding = *keymap->bindings.data[i];
+        if (binding.chord.key == chord.key && binding.chord.modifiers == chord.modifiers && viewOf(binding.context) == context)
+            return viewOf(binding.commandId);
+    }
+    return PrStringView{};
+}

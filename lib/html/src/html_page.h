@@ -53,7 +53,7 @@ struct HtmlFetch {
     HtmlFetch* PR_NULLABLE next;    // the next fetch in the context's list
     DomFetchDestination destination;
     DomFetchFn PR_NULLABLE done;
-    PrFetchClientFn PR_NULLABLE scriptDone;
+    PrFetchResponseFn PR_NULLABLE scriptDone;
     void* PR_NULLABLE data;
     void (*PR_NULLABLE drop)(void* PR_NULLABLE data);
     bool delaysLoad;            // true if its document's load event waits for it (html/#delay-the-load-event)
@@ -104,6 +104,10 @@ struct HtmlDocumentLoad {
     PrDomAgent* agent;
     PrFetchNetwork* fetcher;
     PrString url;                           // as the navigation asked for it, with its fragment
+
+    // The serialized origin of the document that started the navigation, which the fetch is from, or the null string
+    // for a navigation that the user started, whose fetch has no client.
+    PrString origin;
 
     PrFetch* PR_NULLABLE fetch;             // the loop's side, while the fetch runs
     bool loopDone;                          // true once the fetch ended on the loop, or was cancelled there

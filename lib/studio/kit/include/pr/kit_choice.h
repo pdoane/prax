@@ -6,6 +6,7 @@
 #include "pr/kit_box.h"
 #include "pr/kit_button.h"
 #include "pr/kit_icon.h"
+#include "pr/kit_text.h"
 #include "pr/string.h"
 #include "pr/string_view.h"
 
@@ -81,28 +82,27 @@ typedef struct PrKitTabStrip {
     bool reorderable;
 } PrKitTabStrip;
 
-// The content of one tab in a strip.
+// One tab in a strip: its identity and its state.
 typedef struct PrKitTab {
     uint64_t key;                   // identity within the strip, or 0 to match by position
-    PrStringView label;
-
-    // A badge beside the label, such as a count or a state. An empty badge shows nothing.
-    PrStringView badge;
-    PrKitBadgeVariant badgeVariant;
-
     bool selected;
-    bool closable;                  // true to show a close control, which only the pointer can use
     bool disabled;
 } PrKitTab;
 
 // Creates a tab strip, or a tab under one. The strip has a rule along its bottom, and the selected tab is underlined in
 // the accent. Left and Right move between tabs.
+//
+// A tab is a cell that the caller fills: what it shows goes under it, in order, from the tab's parts below or any of
+// the kit's widgets, such as an image (prKitImage) or a badge (prKitBadge).
 PrLayoutNode prKitTabStrip(PrKit* kit, PrLayoutNode parent, PrKitTabStrip strip, PrKitChoiceStyle style);
 PrLayoutNode prKitTab(PrKit* kit, PrLayoutNode strip, PrKitTab tab);
 
-// Returns true if the tab's close control was activated in the current round. The tab remains until the caller stops
-// creating it.
-bool prKitClosed(const PrKit* kit, PrLayoutNode tab);
+// Creates a tab's label, in the text color of the tab's state.
+PrLayoutNode prKitTabLabel(PrKit* kit, PrLayoutNode tab, PrKitLabel label);
+
+// Creates a tab's close control, which only the pointer can use, so that the arrow keys move between tabs. A click
+// activates it (prKitActivated). The tab remains until the caller stops creating it.
+PrLayoutNode prKitTabClose(PrKit* kit, PrLayoutNode tab);
 
 // Returns true if the user dropped one of the strip's tabs at another place in the strip in the current round. Writes
 // the tab's old index to `from` and its new index to `to`. Both indices count the tabs in the order that the previous

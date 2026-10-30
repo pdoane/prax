@@ -3,6 +3,7 @@
 #include "pr/ascii.h"
 #include "pr/charset.h"
 #include "pr/memory.h"
+#include "pr/mime.h"
 #include "pr/url.h"
 
 #include "css/src/css_owner.h"
@@ -20,6 +21,9 @@ enum {
     HtmlLinkEvent_Error,
 };
 typedef uint8_t HtmlLinkEvent;
+
+// The longest type of an icon link that the codec is asked about.
+constexpr size_t kIconTypeMaxSize = 128;
 
 // Returns true if the element's `rel` contains the keyword `keyword`, ASCII case-insensitively (html/#attr-link-rel).
 bool relHolds(const PrDomElement* element, PrStringView keyword) {
@@ -187,6 +191,36 @@ void htmlLinkAttributeChanged(PrDomElement* element, PrStringView name) {
     if (domIsHtml(element, PrDomTag_Link) &&
             (name == "href" || name == "rel" || name == "type" || name == "disabled" || name == "as"))
         htmlLinkUpdate(element);
+}
+
+PrString htmlLinkIconUrl(const PrDomDocument* document, PrImageCodec* PR_NULLABLE codec) {
+    PrString found = prStringNull();
+    for (const PrDomNode* node = document->first; node != nullptr; node = domNodeNext(document, node)) {
+        const PrDomElement* element = domElementFromNode(node);
+        if (element == nullptr || !domIsHtml(element, PrDomTag_Link) || !relHolds(element, "icon"))
+            continue;
+        PrStringView href = domAttributeValue(element, "href");
+        if (href.size == 0)
+            continue;
+        // The codec takes a type's essence in lowercase. A type longer than any image type's is not one.
+        PrStringView essence = prMimeTypeEssence(domAttributeValue(element, "type"));
+        if (codec != nullptr && essence.size != 0) {
+            char lowered[kIconTypeMaxSize];
+            if (essence.size > sizeof lowered)
+                continue;
+            for (size_t i = 0; i < essence.size; ++i)
+                lowered[i] = asciiLower(essence.data[i]);
+            if (!prImageCodecSupportsType(codec, PrStringView{lowered, essence.size}))
+                continue;
+        }
+        PrUrl* url = nullptr;
+        if (domDocumentParseUrl(document, href, &url) == PrStatus_Ok) {
+            prStringReset(&found);
+            found = prUrlSerialize(url, PrUrlSerialization_Whole);
+        }
+        prUrlDestroy(url);
+    }
+    return found;
 }
 
 } // namespace pr_impl

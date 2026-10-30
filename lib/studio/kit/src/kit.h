@@ -355,6 +355,7 @@ enum : uint64_t {
     KitContext_SelectMenu,
     KitContext_AssetDrop,
     KitContext_View,
+    KitContext_Item,
     KitContext_Graph,
     KitContext_Timeline,
     KitContext_Split,
@@ -383,12 +384,11 @@ T* PR_NULLABLE kitContext(const Kit& kit, PrLayoutNode node, uint64_t key, PrLay
 // What can happen to a widget in a round, which its caller asks of its node.
 enum {
     KitSignal_Removed = 1u << 0,
-    KitSignal_Closed = 1u << 1,
-    KitSignal_StepBack = 1u << 2,
-    KitSignal_StepForward = 1u << 3,
-    KitSignal_Browsed = 1u << 4,
-    KitSignal_Located = 1u << 5,
-    KitSignal_Cleared = 1u << 6,
+    KitSignal_StepBack = 1u << 1,
+    KitSignal_StepForward = 1u << 2,
+    KitSignal_Browsed = 1u << 3,
+    KitSignal_Located = 1u << 4,
+    KitSignal_Cleared = 1u << 5,
 };
 typedef uint32_t KitSignals;
 

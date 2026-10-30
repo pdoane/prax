@@ -1,4 +1,4 @@
-// Clocks, through the platform: a monotonic clock and the wall clock.
+// Clocks, through the platform: a monotonic clock, the wall clock, and the local time zone.
 
 #pragma once
 
@@ -16,6 +16,10 @@ double prTimeMonotonicMilliseconds(void);
 
 // The wall clock, in milliseconds since the Unix epoch. Adjusting the clock changes it.
 double prTimeWallMilliseconds(void);
+
+// Returns the offset of the local time zone from UTC at the wall clock's time `wall`, in milliseconds, which the local
+// time is ahead of UTC. The offset includes daylight saving time if it is in effect at that time.
+double prTimeLocalOffsetMilliseconds(double wall);
 
 #if defined(__cplusplus)
 }

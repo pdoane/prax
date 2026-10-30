@@ -111,6 +111,28 @@ class CompilerAttributes(unittest.TestCase):
         self.assertEqual(self.rules("#define PR_COLD __attribute__((cold))\n", lint.ATTRIBUTE_HEADER), [])
 
 
+class ContainerViews(unittest.TestCase):
+    def rules(self, source):
+        report = lint.Report()
+        lint.check_container_views(report, os.path.join(lint.ROOT, "examples/a/a.cpp"), source)
+        return [rule for _, _, rule, _ in report.problems]
+
+    def test_a_view_of_a_whole_container_is_the_container(self):
+        self.assertEqual(self.rules("f(PrStringView{url.data(), url.size()});\n"), ["container-view"])
+        self.assertEqual(self.rules("return PrStringView(text.data(), text.size());\n"), ["container-view"])
+        self.assertEqual(self.rules("g(PrStringView{tab->info.url.data(), tab->info.url.size()});\n"),
+                         ["container-view"])
+        self.assertEqual(self.rules("g(PrStringView{items[i].url.data(), items[i].url.size()});\n"),
+                         ["container-view"])
+        self.assertEqual(self.rules("decode(PrByteView{body.data(), body.size()});\n"), ["container-view"])
+
+    def test_a_part_of_a_container_or_of_two_keeps_its_length(self):
+        self.assertEqual(self.rules("f(PrStringView{file.data(), slash});\n"), [])
+        self.assertEqual(self.rules("f(PrStringView{a.data(), b.size()});\n"), [])
+        self.assertEqual(self.rules("f(PrStringView{text.data() + at, text.size() - at});\n"), [])
+        self.assertEqual(self.rules("// PrStringView{url.data(), url.size()} in a comment\n"), [])
+
+
 class LiteralViews(unittest.TestCase):
     def rules(self, source):
         report = lint.Report()

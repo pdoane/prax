@@ -31,3 +31,12 @@ double prCorePosixTimeMonotonicMilliseconds(void) {
 double prCorePosixTimeWallMilliseconds(void) {
     return milliseconds(CLOCK_REALTIME, "wall clock is unavailable");
 }
+
+double prCorePosixTimeLocalOffsetMilliseconds(double wall) {
+    // A time that the C library cannot convert, such as one past its range, is taken to be in UTC.
+    time_t seconds = time_t(wall / 1e3);
+    tm local{};
+    if (localtime_r(&seconds, &local) == nullptr)
+        return 0;
+    return double(local.tm_gmtoff) * 1e3;
+}

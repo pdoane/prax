@@ -138,14 +138,15 @@ PrStringView prFetchNetworkUserAgent(const PrFetchNetwork* fetcher) {
     return fetcher->userAgent;
 }
 
-PrStatus prFetchCreate(PrFetchNetwork* fetcher, const PrFetchRequestDesc* desc, PrFetch* PR_NULLABLE* PR_NONNULL out) {
+PrStatus prFetchCreate(PrFetchNetwork* fetcher, const PrFetchRequestDesc* desc, PrFetchFn PR_NULLABLE event,
+        void* PR_NULLABLE context, PrFetch* PR_NULLABLE* PR_NONNULL out) {
     PR_ASSERT(desc->headers != nullptr || desc->headerCount == 0);
     PR_ASSERT(desc->body.data != nullptr || desc->body.size == 0);
     PR_ASSERT(desc->destination <= PrFetchDestination_Object && desc->redirect <= PrFetchRedirect_Manual);
     PR_ASSERT(desc->mode <= PrFetchMode_Navigate && desc->credentials <= PrFetchCredentials_Include);
     PR_ASSERT(desc->referrerPolicy <= PrFetchReferrerPolicy_UnsafeUrl);
     *out = nullptr;
-    PrStatus status = fetcher->fetchCreate(fetcher, desc, out);
+    PrStatus status = fetcher->fetchCreate(fetcher, desc, event, context, out);
     PR_ASSERT(status != PrStatus_Ok || ((*out) != nullptr && (*out)->fetcher == fetcher));
     return status;
 }
@@ -197,6 +198,13 @@ size_t prFetchRead(PrFetch* fetch, uint8_t* PR_NULLABLE output, size_t capacity)
 
 PrNetError prFetchError(const PrFetch* fetch) {
     return fetch->fetcher->fetchError(fetch->fetcher, fetch);
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Whole responses
+
+bool prFetchIsOkStatus(uint16_t status) {
+    return status >= 200 && status <= 299;
 }
 
 // ---------------------------------------------------------------------------------------------------------------------

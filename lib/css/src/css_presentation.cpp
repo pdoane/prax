@@ -6841,6 +6841,23 @@ void cssPresentationStatesChanged(PrCssPresentation* presentation, PrDomElement*
         invalidate(presentation, element, cssFeatureHash(CssFeature_State, ""));
 }
 
+void cssPresentationHostStatesChanged(PrCssPresentation* presentation, PrDomHostState states) {
+    // An element that the presentation has not styled takes the host's answers when it is first styled.
+    for (uint32_t i = 0; i < presentation->entries.count; ++i) {
+        PrDomElement* element = domElementFromNode(const_cast<PrDomNode*>(presentation->entries.data[i].node));
+        if (element == nullptr)
+            continue;
+        if ((states & PrDomHostState_Visited) != 0 && domElementLink(element)) {
+            PrStringView href = domElementLinkHref(element);
+            cssPresentationAttributeChanged(presentation, element, PrDomNamespace_None, "href", href, href);
+        }
+        if ((states & PrDomHostState_Autofill) != 0 && domIsHtml(element, PrDomTag_Input)) {
+            CssPseudoClass autofill = CssPseudoClass_Autofill;
+            cssPresentationStateChanged(presentation, element, &autofill, 1);
+        }
+    }
+}
+
 void cssPresentationFlush(PrCssPresentation* presentation) {
     const DomDocumentHost* host = presentation->document->host;
     if (host != nullptr && host->updatePresentation != nullptr) {

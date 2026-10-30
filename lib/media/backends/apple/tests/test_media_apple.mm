@@ -116,7 +116,7 @@ TEST_CASE("the AVFoundation codec reads a movie from memory and decodes the fram
     CHECK(prMediaCodecSupportsType(codec, "text/plain") == PrMediaSupport_No);
     PrMediaDecoder* decoder = nullptr;
     PrMediaInfo info{};
-    REQUIRE(prMediaDecoderCreate(codec, PrByteView{bytes.data(), bytes.size()}, &decoder, &info) == PrStatus_Ok);
+    REQUIRE(prMediaDecoderCreate(codec, bytes, &decoder, &info) == PrStatus_Ok);
     CHECK(info.hasVideo);
     CHECK(!info.hasAudio);
     CHECK(info.videoExtent.x == kWidth);
@@ -148,8 +148,7 @@ TEST_CASE("the AVFoundation codec reads a movie from memory and decodes the fram
 
     // Bytes that are no container that AVFoundation reads are not supported.
     std::vector<uint8_t> noise(256, 0x5a);
-    CHECK(prMediaDecoderCreate(codec, PrByteView{noise.data(), noise.size()}, &decoder, &info) ==
-        PrStatus_NotSupported);
+    CHECK(prMediaDecoderCreate(codec, noise, &decoder, &info) == PrStatus_NotSupported);
     CHECK(decoder == nullptr);
     prMediaCodecDestroy(codec);
 }

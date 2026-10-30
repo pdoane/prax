@@ -632,20 +632,30 @@ void sectionTabs(PrKit* kit, PrLayoutNode parent, GalleryState& state) {
     PrLayoutNode section = sectionFrame(kit, parent, "08", "Tabs & Segmented", "Navigation, and mutually exclusive view modes.", {});
     {
         PrLayoutNode panel = demoPanel(kit, section, "TABS", "PANEL NAV . DRAG TO REORDER", true);
-        const PrKitTab all[] = {
-            {.label = "Scene"},
-            {.label = "Game"},
-            {.label = "Profiler", .badge = "3", .badgeVariant = PrKitBadgeVariant_Warning},
-            {.label = "Animator"},
-            {.label = "Shader Graph", .closable = true},
+        // What each tab shows: a label, a badge if it has one, and a close control if it is closable.
+        struct PanelTab {
+            const char* label;
+            const char* badge;
+            bool closable;
+        };
+        const PanelTab all[] = {
+            {"Scene", nullptr, false},
+            {"Game", nullptr, false},
+            {"Profiler", "3", false},
+            {"Animator", nullptr, false},
+            {"Shader Graph", nullptr, true},
         };
         // The strip shows the tabs in the model's order, keyed by the model's tab, and the model applies a drag.
         PrLayoutNode strip = prKitTabStrip(kit, panel, {.reorderable = true}, {});
         for (uint32_t i = 0; i < 5; ++i) {
-            PrKitTab tab = all[tabs.panelOrder[i]];
-            tab.key = tabs.panelOrder[i] + 1;
-            tab.selected = tabs.panel == i;
-            if (prKitActivated(kit, prKitTab(kit, strip, tab)))
+            const PanelTab& shown = all[tabs.panelOrder[i]];
+            PrLayoutNode tab = prKitTab(kit, strip, {.key = tabs.panelOrder[i] + 1u, .selected = tabs.panel == i});
+            prKitTabLabel(kit, tab, {.text = shown.label});
+            if (shown.badge != nullptr)
+                prKitBadge(kit, tab, {.text = shown.badge}, {.variant = PrKitBadgeVariant_Warning});
+            if (shown.closable)
+                prKitTabClose(kit, tab);
+            if (prKitActivated(kit, tab))
                 tabs.panel = i;
         }
         uint32_t from = 0;

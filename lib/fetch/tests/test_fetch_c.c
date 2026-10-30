@@ -1,4 +1,5 @@
 #include "pr/fetch_builtin.h"
+#include "pr/fetch_load.h"
 
 int prTestFetchCApi(void);
 
@@ -6,5 +7,6 @@ int prTestFetchCApi(void);
 int prTestFetchCApi(void) {
     prFetchNetworkDestroy(NULL);
     prFetchDestroy(NULL);
+    prFetchLoadDestroy(NULL);
     return 0;
 }

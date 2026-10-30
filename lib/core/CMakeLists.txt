@@ -10,6 +10,7 @@ pr_library(core INCLUDE include
     src/string.cpp
     src/thread.cpp
     src/time.cpp
+    src/time_date.cpp
     src/utf8.cpp
     src/vec.cpp
     src/vmem.cpp
@@ -178,6 +179,7 @@ if (PR_DEVELOP)
         tests/test_string.cpp
         tests/test_string_view.cpp
         tests/test_thread.cpp
+        tests/test_time_date.cpp
         tests/test_utf8.cpp
     )
     target_link_libraries(core_tests PRIVATE prax::core_libc prax::core_mimalloc)

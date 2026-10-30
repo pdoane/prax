@@ -116,7 +116,7 @@ void releaseFetchValues(JSContext* ctx, JsHtmlFetch* fetch) {
 // Called once the browsing context has the response to a fetch(), or failed to fetch it. Resolves the fetch's promise
 // with a Response, or rejects it with a TypeError for a network error. A fetch whose document is gone is dropped
 // unsettled.
-void fetched(void* PR_NULLABLE context, const PrFetchClientResponse* response) {
+void fetched(void* PR_NULLABLE context, const PrFetchResponse* response) {
     JsHtmlFetch* fetch = static_cast<JsHtmlFetch*>(context);
     JsHtmlRealm* realm = fetch->realm;
     if (realm->engine == nullptr) {

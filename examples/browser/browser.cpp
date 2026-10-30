@@ -1,285 +1,59 @@
-// The browser example: a web browser in a window, whose pages' scripts run, rendered through lib/layout and lib/draw.
+// The browser's window: the chrome and the active tab's page presented together, and the window's input routed to them.
 //
-// Usage: browser [--cache <directory>] [--stats] <url | path>
-//
-// The browser opens a URL, or a file at its file: URL, and navigates from there: a link that the user follows, or a
-// script that sets the location, opens the document that it names, and Alt or Cmd with Left goes back in the window's
-// session history, and with Right forward. The network is lib/net's sockets, with the platform's TLS, under lib/http
-// and lib/fetch, and an HTTP cache on disk, where the platform keeps a user's caches or in the directory that --cache
-// names, as pr_shell's --cache does. Local storage is on disk too, where the platform keeps a user's data. --stats
-// prints, once a second, how many frames the window presented, the time that the window's thread and the GPU spent on
-// each, and the work that the renderer prepared for the last.
-//
-// main() is the composition root: the window is one page (pr/html_page.h), the navigable that loads each document, with
-// its script engine (pr/html_quickjs.h) and its view (pr/html_view.h). The browser runs on three threads:
-//
-//   - The window's thread takes the window's events and frames, and posts them to the view. A wheel scrolls the
-//     compositor at once. Each frame presents the compositor's last scene.
-//   - The page's thread runs the page's agent's event loop (prDomAgentRun), which the view's update ends.
-//   - The agent's layout thread lays out and records the page in jobs of about a frame's work. As each job finishes,
-//     the view commits its scene to the compositor, which asks the window for a frame.
+// A frame builds the chrome, posts the frame to the active tab's view at the extent of the page's box, and presents the
+// tab's compositor. The compositor's present renders the page's list into the page's box and the chrome's list over the
+// whole window, in one pass.
 
-#include "pr/app.h"
-#include "pr/assert.h"
-#include "pr/charset_quickjs.h"
-#include "pr/compress.h"
-#include "pr/count_of.h"
-#include "pr/draw_display.h"
-#include "pr/draw_renderer.h"
-#include "pr/fetch.h"
-#include "pr/file.h"
-#include "pr/font_bundle.h"
-#include "pr/font_set.h"
-#include "pr/gpu.h"
-#include "pr/html_page.h"
-#include "pr/html_quickjs.h"
-#include "pr/html_storage.h"
-#include "pr/html_view.h"
-#include "pr/http.h"
-#include "pr/image.h"
-#include "pr/layout_compositor.h"
-#include "pr/mathml_quickjs.h"
-#include "pr/media.h"
-#include "pr/net.h"
-#include "pr/storage_disk.h"
-#include "pr/storage_memory.h"
-#include "pr/svg_quickjs.h"
-#include "pr/task.h"
-#include "pr/text.h"
-#include "pr/thread.h"
+#include "examples/browser/browser.h"
+
+#include "pr/draw_list.h"
+#include "pr/kit_theme.h"
+#include "pr/layout_query.h"
+#include "pr/layout_tree.h"
+#include "pr/layout_unit.h"
 #include "pr/time.h"
-#include "pr/tls.h"
-#include "pr/url_quickjs.h"
-#include "pr/xhr_quickjs.h"
 
-#include <atomic>
+#include "examples/browser/chrome.h"
+#include "examples/browser/commands.h"
+#include "examples/browser/tab.h"
+
+#include <algorithm>
 #include <cmath>
 #include <cstdio>
-#include <filesystem>
-#include <string>
+
+namespace browser {
 
 using namespace pr;
 
 namespace {
 
-// How long the page's thread runs the page's due tasks at a time, in milliseconds, so that a long load renders as it
-// goes.
-constexpr double kTaskBudget = 8;
+// The color that the page's box shows before its page has a frame to present.
+constexpr PrColor kBlankCanvas{1, 1, 1, 1};
 
-// The approximate duration of each job of the layout thread, in milliseconds.
-constexpr double kJobBudget = 10;
-
-// The most that the HTTP cache holds.
-constexpr uint64_t kCacheBytes = uint64_t(256) << 20;
-
-struct Browser {
-    std::string address;            // the URL that the browser opens first
-    std::string cacheDirectory;     // where the HTTP cache is kept, or empty for the platform's cache directory
-    bool stats = false;             // prints the frames' statistics once a second
-
-    // What every page shares: text, images, media, storage, the network, the window's session history, and the agent
-    // whose event loop runs the pages on the page's thread.
-    PrFontSet* fonts = nullptr;
-    PrTextShaper* shaper = nullptr;
-    PrTextFont* font = nullptr;
-    PrCompressCodec* compress = nullptr;
-    PrImageCodec* images = nullptr;
-    PrMediaCodec* media = nullptr;
-    PrTaskPool* io = nullptr;       // writes the files of the cache and of local storage
-    PrTaskPool* workers = nullptr;  // the threads that share the agent's work with the page's thread, such as restyles
-    PrStorage* cache = nullptr;
-    PrHtmlStorageProvider* localStorage = nullptr;
-    PrHtmlStorageProvider* sessionStorage = nullptr;
-    PrNet* net = nullptr;
-    PrTls* tls = nullptr;
-    PrHttp* http = nullptr;
-    PrFetchNetwork* fetcher = nullptr;
-    PrHtmlSessionHistory* sessionHistory = nullptr;
-    PrDomAgent* agent = nullptr;
-
-    // The window's page, the engine of its scripts, and the view that presents it.
-    PrJsHtmlEngine* engine = nullptr;
-    PrHtmlPage* page = nullptr;
-    PrHtmlView* view = nullptr;
-
-    // What the window's thread presents with: the compositor, which the page's thread commits to, and the device.
-    PrApp* app = nullptr;
-    PrLayoutCompositor* compositor = nullptr;
-    PrGpuDevice* device = nullptr;
-    PrGpuSwapChain* swapChain = nullptr;
-    PrDrawRenderer* renderer = nullptr;
-    PrDrawFrame* frame = nullptr;
-    PrGpuTexture rendered{};        // the half floats that a frame renders into where the swap chain holds more
-    PrDrawDisplay* display = nullptr;
-    PrUVec2 extent{};               // the window's frame's extent in target pixels
-    PrAppDisplay shownOn = prAppDisplayDefault();
-    std::atomic<bool> frameWanted{false};
-
-    // The frames' statistics since they were last printed. The GPU's time is added on the device's thread.
-    double statsSince = 0;
-    uint32_t statsFrames = 0;
-    double statsCpu = 0;               // milliseconds on the window's thread, in present
-    double statsWait = 0;              // milliseconds of that spent waiting for a drawable
-    std::atomic<uint64_t> statsGpu{0}; // microseconds on the GPU
-    PrDrawStats statsLast{};
-
-    // The page's thread.
-    PrThread thread{};
-    bool started = false;
-};
-
-// The clock of the compositor, which is the pages' clock: the system's monotonic clock.
-double clock(void* PR_NULLABLE) {
-    return prTimeMonotonicMilliseconds();
+void build(void* context, PrUi*, const PrUiRound*) {
+    chromeBuild(*static_cast<Browser*>(context));
 }
 
-// Asks the window's thread for a frame, from any thread. Only the window's thread may request one, so this wakes it.
-void wantFrame(Browser& b) {
-    if (b.app != nullptr && !b.frameWanted.exchange(true))
-        prAppWake(b.app);
-}
-
-void printConsole(JSContext*, PrJsHtmlConsoleLevel, uint32_t depth, PrStringView text) {
-    for (uint32_t i = 0; i < depth; ++i)
-        fputs("  ", stderr);
-    fwrite(text.data, 1, text.size, stderr);
-    fputc('\n', stderr);
-}
-
-constexpr PrJsHtmlConsolePrinter kConsolePrinter = {printConsole};
-
-PrHtmlHost pageHost(Browser& b);
-
-// Gives the page of an iframe the host that the window's page has.
-void frameHost(void* context, PrHtmlPage*, PrHtmlHost* child) {
-    *child = pageHost(*static_cast<Browser*>(context));
-}
-
-// Returns the host of the window's page, before its script engine takes it: what every page shares.
-PrHtmlHost pageHost(Browser& b) {
-    PrHtmlHost host = prHtmlHostDefault();
-    host.context = &b;
-    host.fetcher = b.fetcher;
-    host.frame = frameHost;
-    host.agent = b.agent;
-    host.font = b.font;
-    host.shaper = b.shaper;
-    host.images = b.images;
-    host.media = b.media;
-    host.device = b.device;
-    host.compress = b.compress;
-    host.localStorage = b.localStorage;
-    host.sessionStorage = b.sessionStorage;
-    host.sessionHistory = b.sessionHistory;
-    return host;
-}
-
-// Opens the window's page in `window`, as the window first is, and navigates it to the browser's address.
-void openPage(Browser& b, const PrAppFrame& window) {
-    PrJsHtmlBind* const binds[] = {prJsSvgBind, prJsMathMlBind, prJsUrlBind, prJsCharsetBind, prJsXhrBind};
-    PrJsHtmlEngineDesc engine{.binds = binds, .bindCount = uint32_t(countOf(binds)), .console = &kConsolePrinter};
-    b.engine = prJsHtmlEngineCreate(&engine);
-    PrHtmlHost host = pageHost(b);
-    PrHtmlHost scripted = prJsHtmlEngineHost(b.engine, &host, PrJsHtmlScripting_Enabled);
-    b.page = prHtmlPageCreate(&scripted);
-    prHtmlPageSetViewport(b.page, window.extent);
-    prHtmlPageSetDisplay(b.page, &window.display);
-    prHtmlPageSetUserPreferences(b.page, &window.preferences);
-    PrHtmlViewDesc view{.page = b.page, .compositor = b.compositor, .jobBudget = kJobBudget};
-    b.view = prHtmlViewCreate(&view);
-    if (prHtmlPageNavigate(b.page, b.address) != PrStatus_Ok)
-        fprintf(stderr, "browser: %s is not a URL\n", b.address.c_str());
-}
-
-// The page's thread: the agent's event loop, until the window closes.
-void pageThread(Browser& b) {
-    while (prDomAgentWait(b.agent, -1))
-        prDomAgentRun(b.agent, kTaskBudget);
+// Plays the chrome's scene into its list in target pixels at `ratio`, each scroll container at the tree's offset for
+// it. The chrome leaves the page's box empty.
+void playChrome(Browser& b, float ratio) {
+    const PrLayoutScene* scene = prLayoutTreeScene(b.tree);
+    prLayoutSceneRelease(b.scene);
+    b.scene = scene;
+    b.scrolls.resize(prLayoutSceneScrolls(b.tree, scene, nullptr, 0));
+    prLayoutSceneScrolls(b.tree, scene, b.scrolls.data(), uint32_t(b.scrolls.size()));
+    PrLayoutScenePlayOptions options = prLayoutScenePlayOptionsDefault();
+    options.scrolls = b.scrolls.data();
+    options.scrollCount = uint32_t(b.scrolls.size());
+    options.canvasFilled = true;
+    prDrawListClear(b.chromeList);
+    prDrawListPushTransformAffine2(b.chromeList, prAffine2Scale(PrVec2{ratio, ratio}));
+    prLayoutScenePlay(scene, b.chromeList, &options);
+    prDrawListPopTransform(b.chromeList);
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
-// What every page shares
-
-// Opens text, images, media, storage, the network and the agent.
-void openShared(Browser& b) {
-    b.fonts = prFontSetCreate(nullptr);
-    prFontBundleInstall(b.fonts, PrFontBundle_Noto, PR_FONT_BUNDLE_DIR);
-    prFontSystemInstall(PrFontSystemBackend_Default, b.fonts);
-    b.shaper = prTextShaperCreate(PrTextShaperBackend_Default);
-    PrTextFontDesc font{.set = b.fonts, .style = prFontStyleDefault()};
-    b.font = prTextFontCreate(&font);
-    b.compress = prCompressCodecCreate(PrCompressCodecBackend_Default);
-    b.images = prImageCodecCreate(PrImageCodecBackend_Default, b.compress);
-    b.media = prMediaCodecCreate(PrMediaCodecBackend_Default);
-    b.io = prTaskPoolCreate(PrTaskPoolBackend_Default, 1);
-
-    // The cache and local storage are on disk where the platform keeps a user's, so that they outlive the run.
-    std::string directory = b.cacheDirectory;
-    PrString cacheRoot = prFileCacheDirectory();
-    if (directory.empty() && !prStringIsEmpty(&cacheRoot))
-        directory = std::string(prStringView(&cacheRoot).data, prStringView(&cacheRoot).size) + "/Prax/Browser/Cache";
-    prStringReset(&cacheRoot);
-    if (!directory.empty()) {
-        PrStorageDiskDesc disk{.directory = directory, .limitBytes = kCacheBytes, .pool = b.io};
-        if (prStorageDiskCreate(&disk, &b.cache) != PrStatus_Ok)
-            fprintf(stderr, "browser: cannot open the cache in %s\n", directory.c_str());
-    }
-    if (b.cache == nullptr)
-        b.cache = prStorageMemoryCreate(kCacheBytes, PrStorageEviction_LeastRecentlyUsed);
-    PrString dataRoot = prFileDataDirectory();
-    PrHtmlStorageProviderDesc local{.quotaBytes = kPrHtmlStorageQuotaBytes, .pool = b.io};
-    std::string localDirectory;
-    if (!prStringIsEmpty(&dataRoot)) {
-        localDirectory = std::string(prStringView(&dataRoot).data, prStringView(&dataRoot).size) + "/Prax/Browser/Local Storage";
-        local.directory = localDirectory;
-    }
-    prStringReset(&dataRoot);
-    b.localStorage = prHtmlStorageProviderCreate(&local);
-    PrHtmlStorageProviderDesc session{.quotaBytes = kPrHtmlStorageQuotaBytes};
-    b.sessionStorage = prHtmlStorageProviderCreate(&session);
-
-    b.net = prNetCreate(PrNetBackend_Default);
-    b.tls = prTlsCreate(PrTlsBackend_Default, b.net);
-    PrHttpDesc http{.net = b.net, .tls = b.tls};
-    b.http = prHttpCreate(PrHttpBackend_Default, &http);
-    PrFetchNetworkDesc fetch{.net = b.net, .http = b.http, .compress = b.compress, .cache = b.cache};
-    b.fetcher = prFetchNetworkCreate(PrFetchNetworkBackend_Default, &fetch);
-
-    b.sessionHistory = prHtmlSessionHistoryCreate();
-    uint32_t cores = prThreadHardwareCount();
-    b.workers = cores > 1 ? prTaskPoolCreate(PrTaskPoolBackend_Default, cores - 1) : nullptr;
-    PrDomAgentOptions agentOptions = prDomAgentOptionsDefault();
-    agentOptions.restylePool = b.workers;
-    b.agent = prDomAgentCreate(&agentOptions);
-}
-
-// Frees what every page shares, once the pages are gone. The fetcher and HTTP run on the network's loop, and are freed
-// there, after the cancels of the pages' fetches.
-void closeShared(Browser& b) {
-    prDomAgentDestroy(b.agent);
-    prNetPostBlocking(b.net, [](void* PR_NULLABLE context) {
-        Browser& browser = *static_cast<Browser*>(context);
-        prFetchNetworkDestroy(browser.fetcher);
-        prHttpDestroy(browser.http);
-    }, &b);
-    prTlsDestroy(b.tls);
-    prNetDestroy(b.net);
-    prStorageDestroy(b.cache);
-    prHtmlSessionHistoryDestroy(b.sessionHistory);
-    prHtmlStorageProviderDestroy(b.localStorage);
-    prHtmlStorageProviderDestroy(b.sessionStorage);
-    prTaskPoolDestroy(b.workers);
-    prTaskPoolDestroy(b.io);
-    prImageCodecDestroy(b.images);
-    prMediaCodecDestroy(b.media);
-    prCompressCodecDestroy(b.compress);
-    prTextFontRelease(b.font);
-    prTextShaperDestroy(b.shaper);
-    prFontSetDestroy(b.fonts);
-}
-
-// ---------------------------------------------------------------------------------------------------------------------
-// The window's thread
+// Presenting
 
 // Prints the frames' statistics if a second has passed since they were last printed, and starts counting again.
 void printStats(Browser& b, double now) {
@@ -302,11 +76,11 @@ void printStats(Browser& b, double now) {
     b.statsWait = 0;
 }
 
-// Presents a frame that the compositor made, on the window's thread. The pass clears to the frame's canvas color, which
-// fills the canvas in place of the list. A swap chain that holds more than 8-bit sRGB takes the frame through the
-// display shader.
-void present(void* PR_NULLABLE context, PrDrawList* list, PrColor16 canvasColor) {
-    Browser& b = *static_cast<Browser*>(context);
+// Renders a frame and presents it: the page's list, if there is one, in the page's rectangle, and the chrome's list
+// over the whole window. The pass clears to the page's canvas color, which fills the canvas in place of the page's
+// list. The chrome's surfaces cover the rest of the window. A swap chain that holds more than 8-bit sRGB takes the
+// frame through the display shader.
+void render(Browser& b, PrDrawList* PR_NULLABLE page, PrColor canvas) {
     PrGpuTexture drawable{};
     PrGpuCommands* commands = nullptr;
     double began = prTimeMonotonicMilliseconds();
@@ -327,20 +101,22 @@ void present(void* PR_NULLABLE context, PrDrawList* list, PrColor16 canvasColor)
         }
     }
     PrGpuTexture target = mapped ? b.rendered : drawable;
-    PrDrawTarget into{
-        .extent = b.extent,
-        .format = PrPixelFormat(mapped ? PrPixelFormat_RgbaF16 : PrPixelFormat_Bgra8),
-        .commands = commands,
-    };
-    prDrawFramePrepare(b.frame, list, &into);
-    PrColor canvas = prColorFromColor16(canvasColor);
+    PrPixelFormat format = PrPixelFormat(mapped ? PrPixelFormat_RgbaF16 : PrPixelFormat_Bgra8);
+    if (page != nullptr) {
+        PrDrawTarget into{.extent = b.pageExtent, .format = format, .commands = commands};
+        prDrawFramePrepare(b.pageFrame, page, &into);
+    }
+    PrDrawTarget window{.extent = b.extent, .format = format, .commands = commands};
+    prDrawFramePrepare(b.chromeFrame, b.chromeList, &window);
     PrGpuSubresources all{};
     prGpuCommandsTextureBarrier(commands, target, all, mapped ? PrGpuAccessFlag_ShaderRead : PrGpuAccessFlag_Discard,
         PrGpuAccessFlag_ColorAttachment);
     PrGpuPassDesc pass = prGpuPassDescColor(
         target, PrGpuLoad_Clear, PrColor{canvas.r * canvas.a, canvas.g * canvas.a, canvas.b * canvas.a, canvas.a});
     PrGpuPass* encoder = prGpuPassBegin(commands, &pass);
-    prDrawFrameRender(b.frame, encoder, PrIVec2{0, 0});
+    if (page != nullptr)
+        prDrawFrameRender(b.pageFrame, encoder, b.pageOrigin);
+    prDrawFrameRender(b.chromeFrame, encoder, PrIVec2{0, 0});
     prGpuPassEnd(encoder);
     if (mapped) {
         prGpuCommandsTextureBarrier(commands, target, all, PrGpuAccessFlag_ColorAttachment, PrGpuAccessFlag_ShaderRead);
@@ -364,14 +140,47 @@ void present(void* PR_NULLABLE context, PrDrawList* list, PrColor16 canvasColor)
         ++b.statsFrames;
         b.statsCpu += now - began;
         b.statsWait += acquired - began;
-        b.statsLast = prDrawFrameStats(b.frame);
+        b.statsLast = prDrawFrameStats(page != nullptr ? b.pageFrame : b.chromeFrame);
         printStats(b, now);
     }
 }
 
+// ---------------------------------------------------------------------------------------------------------------------
+// Input
+
+// Returns true if the pointer at `position` is over the page: in the page's box, with nothing of the chrome over it,
+// such as a menu.
+bool overPage(Browser& b, PrVec2 position) {
+    const PrRect& page = b.chrome.page;
+    if (b.chrome.slot == kPrLayoutNodeNone || position.x < page.left || position.x >= page.right ||
+            position.y < page.top || position.y >= page.bottom)
+        return false;
+    PrLayoutNode top = kPrLayoutNodeNone;
+    prLayoutTreeHitTest(b.tree, prLayoutVecFromPx(position), &top, 1);
+    return top == b.chrome.slot;
+}
+
+// Returns the event as the tab's page sees it: its position in the page's viewport, and a scroll's delta in the page's
+// CSS pixels, at the tab's zoom.
+PrAppEvent toPage(const Browser& b, const Tab& tab, const PrAppEvent& e) {
+    PrAppEvent moved = e;
+    moved.position = PrVec2{(e.position.x - b.chrome.page.left) / tab.zoom, (e.position.y - b.chrome.page.top) / tab.zoom};
+    moved.delta = PrVec2{e.delta.x / tab.zoom, e.delta.y / tab.zoom};
+    return moved;
+}
+
+// Returns true while the keyboard goes to the page: the active tab shows a page, and nothing of the chrome has focus.
+bool pageHasKeys(Browser& b) {
+    return b.chrome.slot != kPrLayoutNodeNone && prUiFocus(b.ui) == kPrLayoutNodeNone;
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+// The window
+
 void start(void* context, PrApp* app, const PrAppFrame* window) {
     Browser& b = *static_cast<Browser*>(context);
     b.app = app;
+    prUiSetApp(b.ui, app);
     PrAppSurface surface{};
     PrGpuSwapChainDesc swapChain{.intent = PrGpuSwapChainIntent_Hdr};
     if (prGpuDeviceCreate(PrGpuBackend_Default, nullptr, &b.device) != PrStatus_Ok ||
@@ -383,84 +192,161 @@ void start(void* context, PrApp* app, const PrAppFrame* window) {
         prAppStop(app);
         return;
     }
-    b.frame = prDrawFrameCreate(b.renderer);
-    // The compositor has no thread of its own: the window's frames make its frames, when it wants them.
-    PrLayoutCompositorDesc compositor{
-        .context = &b,
-        .now = clock,
-        .present = present,
-        .wantFrame = [](void* PR_NULLABLE context) { wantFrame(*static_cast<Browser*>(context)); },
-        .canvasFilled = true,
-    };
-    b.compositor = prLayoutCompositorCreate(&compositor);
-    openPage(b, *window);
-    prThreadStart(&b.thread, [](void* PR_NULLABLE context) { pageThread(*static_cast<Browser*>(context)); }, &b);
+    b.pageFrame = prDrawFrameCreate(b.renderer);
+    b.chromeFrame = prDrawFrameCreate(b.renderer);
+    b.pageWindow = *window;
+    for (const std::string& address : b.addresses)
+        tabOpen(b, address, uint32_t(b.tabs.size()));
+    if (b.tabs.empty()) {
+        tabOpen(b, PrStringView{}, 0);
+        b.chrome.focusAddress = true;
+    }
+    tabActivate(b, 0);
+    prThreadStart(&b.thread, [](void* PR_NULLABLE context) { tabsRun(*static_cast<Browser*>(context)); }, &b);
     b.started = true;
     prAppRequestFrame(app);
 }
 
-// Each of the window's frames goes to the view, and the compositor presents its last scene at the window's size.
+// Each frame builds the chrome, posts the frame to the active tab's view at the extent of the page's box, and presents
+// the tab's compositor, which renders the page with the chrome over it. A tab with no frame to present yet renders the
+// chrome over a blank page.
 void frame(void* context, PrApp* app, const PrAppFrame* f) {
     Browser& b = *static_cast<Browser*>(context);
-    prHtmlViewPostFrame(b.view, f);
     prGpuSwapChainWait(b.swapChain);
-    b.extent = PrUVec2{
-        uint32_t(std::lround(f->extent.x * f->display.pixelRatio)),
-        uint32_t(std::lround(f->extent.y * f->display.pixelRatio)),
+    tabsRefresh(b);
+    prCachePump(b.icons);
+    if (f->preferences.colorScheme != b.scheme) {
+        b.scheme = f->preferences.colorScheme;
+        PrKitThemeVariant variant =
+            b.scheme == PrAppColorScheme_Dark ? PrKitThemeVariant_Dark : PrKitThemeVariant_Light;
+        PrKitTheme theme = prKitThemeStudio(variant, b.fonts);
+        prKitSetTheme(b.kit, &theme);
+    }
+    PrUiFrameDesc desc{
+        .time = f->time,
+        .delta = f->delta,
+        .extent = f->extent,
+        .maxRounds = 4,
+        .display = f->display,
+        .preferences = f->preferences,
     };
+    prUiFrame(b.ui, &desc, build, &b);
+    float ratio = f->display.pixelRatio;
+    playChrome(b, ratio);
+    b.extent = PrUVec2{uint32_t(std::lround(f->extent.x * ratio)), uint32_t(std::lround(f->extent.y * ratio))};
     b.shownOn = f->display;
-    prLayoutCompositorFrame(b.compositor);
-    if (prLayoutCompositorWantsFrame(b.compositor))
+
+    // The page's box, as this frame's layout placed it, in px and in target pixels within the window.
+    PrRect page{};
+    if (b.chrome.slot != kPrLayoutNodeNone)
+        page = prLayoutRectToPx(prLayoutNodeBounds(b.tree, b.chrome.slot, PrLayoutCoordinates_Viewport));
+    b.chrome.page = page;
+    int32_t left = int32_t(std::lround(page.left * ratio));
+    int32_t top = int32_t(std::lround(page.top * ratio));
+    int32_t right = std::min(int32_t(std::lround(page.right * ratio)), int32_t(b.extent.x));
+    int32_t bottom = std::min(int32_t(std::lround(page.bottom * ratio)), int32_t(b.extent.y));
+    b.pageOrigin = PrIVec2{left, top};
+    b.pageExtent = PrUVec2{uint32_t(std::max(right - left, 0)), uint32_t(std::max(bottom - top, 0))};
+
+    Tab* tab = browserActiveTab(b);
+    PrHtmlView* view = tab != nullptr ? tab->view.load() : nullptr;
+    b.presented = false;
+    if (view != nullptr && b.pageExtent.x != 0 && b.pageExtent.y != 0) {
+        // The page sees the window at its zoom: a smaller viewport of larger CSS pixels.
+        PrAppFrame shown = *f;
+        shown.extent = PrVec2{(page.right - page.left) / tab->zoom, (page.bottom - page.top) / tab->zoom};
+        shown.display.pixelRatio = ratio * tab->zoom;
+        b.pageWindow = shown;
+        prHtmlViewPostFrame(view, &shown);
+        prLayoutCompositorFrame(tab->compositor);
+    }
+    if (!b.presented)
+        render(b, nullptr, kBlankCanvas);
+    // The pointer shows the document's cursor wherever the page takes the pointer, and the chrome's elsewhere.
+    bool pagePointer = view != nullptr && (b.pageButtons != 0 || overPage(b, b.pointer));
+    prAppSetCursor(app, pagePointer ? tab->info.cursor : prUiCursor(b.ui));
+    if (prUiWantsFrame(b.ui) || (tab != nullptr && prLayoutCompositorWantsFrame(tab->compositor)))
         prAppRequestFrame(app);
 }
 
-// The window's input goes to the view. Alt or Cmd with Left goes back in the session history, and with Right forward,
-// as a platform's browsers do, and Escape closes the window.
+// The window's input goes to the chrome, and to the active tab's page where the page has it. The pointer goes to the
+// page over the page's box, and stays with the page while a button pressed there is held. The keyboard goes to the page
+// while nothing of the chrome has focus. The chrome sees every move of the pointer, so that its hover follows the
+// pointer out of it, and every press, so that a press in the page closes its menus. A key bound to one of the browser's
+// commands runs it wherever focus is: through the chrome's scope while the chrome has the keyboard, and ahead of the
+// page while the page has it.
 void event(void* context, PrApp* app, const PrAppEvent* e) {
     Browser& b = *static_cast<Browser*>(context);
+    Tab* tab = browserActiveTab(b);
+    PrHtmlView* view = tab != nullptr ? tab->view.load() : nullptr;
+    bool toPageToo = false;
     switch (e->kind) {
         case PrAppEventKind_Wake:
             if (b.frameWanted.exchange(false))
                 prAppRequestFrame(app);
             return;
-        case PrAppEventKind_Clipboard:
-            return;
         case PrAppEventKind_KeyDown:
-            if (e->key == PrAppKey_Escape) {
-                prAppStop(app);
+            if (view != nullptr && pageHasKeys(b) && commandsRunChord(b, *e)) {
+                prAppRequestFrame(app);
                 return;
             }
-            if ((e->key == PrAppKey_Left || e->key == PrAppKey_Right) &&
-                    (e->modifiers & (PrAppModifierFlag_Alt | PrAppModifierFlag_Super)) != 0) {
-                prHtmlViewPostTraverse(b.view, e->key == PrAppKey_Left ? -1 : 1);
+            [[fallthrough]];
+        case PrAppEventKind_KeyUp:
+        case PrAppEventKind_Text:
+        case PrAppEventKind_CompositionUpdate:
+        case PrAppEventKind_CompositionEnd:
+            if (view != nullptr && pageHasKeys(b)) {
+                prHtmlViewPostEvent(view, e);
+                return;
+            }
+            break;
+        case PrAppEventKind_PointerMove:
+            b.pointer = e->position;
+            toPageToo = b.pageButtons != 0 || overPage(b, e->position);
+            break;
+        case PrAppEventKind_PointerDown:
+            b.pointer = e->position;
+            if (overPage(b, e->position)) {
+                b.pageButtons |= 1u << e->button;
+                b.chrome.releaseFocus = true;
+                toPageToo = true;
+            }
+            break;
+        case PrAppEventKind_PointerUp:
+            b.pointer = e->position;
+            toPageToo = (b.pageButtons & (1u << e->button)) != 0;
+            b.pageButtons &= ~(1u << e->button);
+            break;
+        case PrAppEventKind_Scroll:
+            if (view != nullptr && overPage(b, e->position)) {
+                PrAppEvent moved = toPage(b, *tab, *e);
+                prHtmlViewPostEvent(view, &moved);
+                if (prLayoutCompositorWantsFrame(tab->compositor))
+                    prAppRequestFrame(app);
                 return;
             }
             break;
         default:
             break;
     }
-    prHtmlViewPostEvent(b.view, e);
-    if (prLayoutCompositorWantsFrame(b.compositor))
-        prAppRequestFrame(app);
+    if (toPageToo && view != nullptr) {
+        PrAppEvent moved = toPage(b, *tab, *e);
+        prHtmlViewPostEvent(view, &moved);
+    }
+    prUiPushEvent(b.ui, e);
+    prAppRequestFrame(app);
 }
 
 void shutdown(void* context, PrApp*) {
     Browser& b = *static_cast<Browser*>(context);
-    if (b.started) {
-        prDomAgentStop(b.agent);
-        prThreadJoin(&b.thread);
-    }
-    // The engine goes before the page, since its objects' finalizers reach the page's window.
-    prHtmlViewDestroy(b.view);
-    prJsHtmlEngineDestroy(b.engine);
-    prHtmlPageDestroy(b.page);
-    prLayoutCompositorDestroy(b.compositor);
+    tabsShutdown(b);
     if (b.device != nullptr) {
         prGpuDeviceWaitIdle(b.device);
         prGpuTextureDestroy(b.device, b.rendered);
     }
     prDrawDisplayDestroy(b.display);
-    prDrawFrameDestroy(b.frame);
+    prDrawFrameDestroy(b.pageFrame);
+    prDrawFrameDestroy(b.chromeFrame);
     prDrawRendererDestroy(b.renderer);
     prGpuSwapChainDestroy(b.swapChain);
     prGpuDeviceDestroy(b.device);
@@ -468,35 +354,22 @@ void shutdown(void* context, PrApp*) {
 
 } // namespace
 
-int main(int argc, char** argv) {
-    prCrashHandler();
-    static Browser b;
-    int at = 1;
-    for (; at + 1 < argc; ++at) {
-        std::string option = argv[at];
-        if (option == "--cache" && at + 2 < argc)
-            b.cacheDirectory = argv[++at];
-        else if (option == "--stats")
-            b.stats = true;
-        else
-            break;
-    }
-    if (at + 1 != argc) {
-        fprintf(stderr, "usage: browser [--cache <directory>] [--stats] <url | path>\n");
-        return 2;
-    }
-    // A path to a file opens the file at its file: URL. Anything else is a URL.
-    b.address = argv[at];
-    std::error_code error;
-    if (std::filesystem::is_regular_file(b.address, error))
-        b.address = "file://" + std::filesystem::absolute(b.address).lexically_normal().generic_string();
-    openShared(b);
-    std::string title = "Prax: " + b.address;
-    PrAppDesc desc{.title = title, .extent = {1024, 768}};
-    PrApp* app = prAppCreate(PrAppBackend_Default, &desc);
-    PrAppHandler handler{&b, start, frame, event, shutdown};
-    prAppRun(app, &handler);
-    prAppDestroy(app);
-    closeShared(b);
-    return 0;
+void browserWantFrame(Browser& b) {
+    if (b.app != nullptr && !b.frameWanted.exchange(true))
+        prAppWake(b.app);
 }
+
+Tab* PR_NULLABLE browserActiveTab(const Browser& b) {
+    return b.active < b.tabs.size() ? b.tabs[b.active] : nullptr;
+}
+
+void browserPresent(Browser& b, PrDrawList* list, PrColor16 canvas) {
+    b.presented = true;
+    render(b, list, prColorFromColor16(canvas));
+}
+
+PrAppHandler browserHandler(Browser& b) {
+    return PrAppHandler{&b, start, frame, event, shutdown};
+}
+
+} // namespace browser

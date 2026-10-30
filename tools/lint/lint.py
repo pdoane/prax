@@ -1694,6 +1694,25 @@ def check_literal_views(report, path, text):
                    "a literal converts to a view where one is expected; write the literal alone")
 
 
+# A view built from the data() and size() of one object, such as `PrStringView{name.data(), name.size()}`: the view's
+# type, and the object, a name with members and subscripts.
+CONTAINER_VIEW = re.compile(
+    r"\b(Pr(?:String|Byte)View)\s*[({]\s*([A-Za-z_]\w*(?:(?:\.|->)\w+|\[[^\]\n]*\])*)\.data\(\)\s*,\s*\2\.size\(\)"
+    r"\s*[)}]")
+
+
+def check_container_views(report, path, text):
+    """A contiguous run with data() and size() converts to a view implicitly: a run of chars, such as std::string, to a
+    PrStringView, and a run of bytes, such as std::vector<uint8_t>, to a PrByteView. Building the view from its data()
+    and its size() spells out that conversion, and so does a helper that only returns such a view. Pass the object where
+    a view is expected, or name the view's type around it where the type must be named."""
+    for match in CONTAINER_VIEW.finditer(mask_non_code(text)):
+        view, name = match.group(1), match.group(2)
+        report.add(path, line_of(text, match.start()), "container-view",
+                   "%s converts to a %s; pass it where a view is expected, or write %s(%s) where the type must be "
+                   "named" % (name, view, view, name))
+
+
 def enclosed_by_braces(code, at):
     """Returns true if the innermost bracket open around offset `at` is a braced initializer's brace, rather than a
     parenthesis, a subscript or a block's brace. A block's brace follows a parenthesis, a statement or a keyword."""
@@ -1961,7 +1980,7 @@ def check_include_paths(report, path, text):
 THIRD_PARTY = {
     "mimalloc.h": ("lib/core/backends/mimalloc/src/core_mimalloc.cpp",),
     "quickjs.h": ("lib/*/quickjs/*", "lib/*/quickjs_cpp/*", "lib/lottie/src/lottie_expression.cpp", "tools/shell/page_host.cpp",
-                  "examples/browser/browser.cpp"),
+                  "examples/browser/main.cpp"),
     "doctest/doctest.h": ("lib/*/tests/*", "examples/*/tests/*", "tools/harness/test_main.cpp", "tools/harness/kit_fixture.h"),
     "blend2d/blend2d.h": ("lib/draw/comparisons/blend2d/src/draw_blend2d.cpp",),
     "rlottie.h": ("tools/viewer/source_rlottie.cpp", "tools/suite/lottie/rlottie_reference.cpp"),
@@ -3012,6 +3031,7 @@ def check_any_source(path):
         check_count_of(report, path, text)
     if not path.endswith(".c"):
         check_literal_views(report, path, text)
+        check_container_views(report, path, text)
     if os.path.relpath(path, ROOT).replace(os.sep, "/").startswith("lib/"):
         check_example_includes(report, path, text)
         if not is_test(path):

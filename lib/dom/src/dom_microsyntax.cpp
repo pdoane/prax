@@ -30,25 +30,9 @@ size_t digitsAt(PrStringView text, size_t at) {
 // The most digits of a year that the parsers accept, which keeps every date's days and milliseconds exact.
 constexpr size_t kMaxYearDigits = 12;
 
-bool isLeapYear(int64_t year) {
-    return (year % 4 == 0 && year % 100 != 0) || year % 400 == 0;
-}
-
-uint32_t daysInMonth(int64_t year, uint32_t month) {
-    constexpr uint32_t kDays[] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
-    return month == 2 && isLeapYear(year) ? 29 : kDays[month - 1];
-}
-
-// Returns `value` modulo `divisor`, in [0, divisor).
-int64_t floorMod(int64_t value, int64_t divisor) {
-    int64_t remainder = value % divisor;
-    return remainder < 0 ? remainder + divisor : remainder;
-}
-
 // Returns the day of the week of the day `days` after 1970-01-01, with Monday as 0.
 uint32_t isoWeekday(int64_t days) {
-    // 1970-01-01 was a Thursday.
-    return uint32_t(floorMod(days + 3, 7));
+    return (uint32_t(prTimeWeekdayFromDays(days)) + 6) % 7;
 }
 
 // Reads exactly `count` digits at `*at` and advances past them.
@@ -85,10 +69,10 @@ bool readMonth(PrStringView text, size_t* at, int64_t* year, uint32_t* month) {
 }
 
 // html/#parse-a-date-component
-bool readDate(PrStringView text, size_t* at, DomDate* out) {
-    DomDate date{};
+bool readDate(PrStringView text, size_t* at, PrTimeDate* out) {
+    PrTimeDate date{};
     if (!readMonth(text, at, &date.year, &date.month) || !readChar(text, at, '-') ||
-            !readDigits(text, at, 2, &date.day) || date.day < 1 || date.day > daysInMonth(date.year, date.month))
+            !readDigits(text, at, 2, &date.day) || date.day < 1 || date.day > prTimeDaysInMonth(date.year, date.month))
         return false;
     *out = date;
     return true;
@@ -253,16 +237,17 @@ void domAppendFloat(TextBuffer* out, double value) {
 // ---------------------------------------------------------------------------------------------------------------------
 // Dates and times
 
-bool domParseMonth(PrStringView text, DomDate* out) {
+bool domParseMonth(PrStringView text, int64_t* year, uint32_t* month) {
     size_t at = 0;
-    DomDate date{};
-    if (!readMonth(text, &at, &date.year, &date.month) || at != text.size)
+    PrTimeDate read{};
+    if (!readMonth(text, &at, &read.year, &read.month) || at != text.size)
         return false;
-    *out = date;
+    *year = read.year;
+    *month = read.month;
     return true;
 }
 
-bool domParseDate(PrStringView text, DomDate* out) {
+bool domParseDate(PrStringView text, PrTimeDate* out) {
     size_t at = 0;
     return readDate(text, &at, out) && at == text.size;
 }
@@ -294,7 +279,7 @@ bool domParseTime(PrStringView text, DomTime* out, uint32_t* PR_NULLABLE fractio
     return true;
 }
 
-bool domParseLocalDateTime(PrStringView text, DomDate* date, DomTime* time, uint32_t* PR_NULLABLE fractionDigits) {
+bool domParseLocalDateTime(PrStringView text, PrTimeDate* date, DomTime* time, uint32_t* PR_NULLABLE fractionDigits) {
     size_t at = 0;
     uint32_t digits = 0;
     if (!readDate(text, &at, date) || at >= text.size || (text.data[at] != 'T' && text.data[at] != ' '))
@@ -314,52 +299,26 @@ bool domIsValidTime(PrStringView text) {
 }
 
 bool domIsValidLocalDateTime(PrStringView text) {
-    DomDate date{};
+    PrTimeDate date{};
     DomTime time = 0;
     uint32_t digits = 0;
     return domParseLocalDateTime(text, &date, &time, &digits) && digits <= 3;
 }
 
-// The days of a date count from 0000-03-01 in eras of 400 years, each 146097 days long, so that a leap day ends its
-// year (H. Hinnant, "chrono-Compatible Low-Level Date Algorithms").
-int64_t domDateDays(DomDate date) {
-    PR_ASSERT(date.month >= 1 && date.month <= 12 && date.day != 0);
-    int64_t year = date.year - (date.month <= 2 ? 1 : 0);
-    int64_t era = (year >= 0 ? year : year - 399) / 400;
-    int64_t yearOfEra = year - era * 400;
-    int64_t dayOfYear = (153 * (date.month > 2 ? date.month - 3 : date.month + 9) + 2) / 5 + date.day - 1;
-    int64_t dayOfEra = yearOfEra * 365 + yearOfEra / 4 - yearOfEra / 100 + dayOfYear;
-    return era * 146097 + dayOfEra - 719468;
-}
-
-DomDate domDateFromDays(int64_t days) {
-    int64_t z = days + 719468;
-    int64_t era = (z >= 0 ? z : z - 146096) / 146097;
-    int64_t dayOfEra = z - era * 146097;
-    int64_t yearOfEra = (dayOfEra - dayOfEra / 1460 + dayOfEra / 36524 - dayOfEra / 146096) / 365;
-    int64_t dayOfYear = dayOfEra - (365 * yearOfEra + yearOfEra / 4 - yearOfEra / 100);
-    int64_t shifted = (5 * dayOfYear + 2) / 153;
-    DomDate date{};
-    date.day = uint32_t(dayOfYear - (153 * shifted + 2) / 5 + 1);
-    date.month = uint32_t(shifted < 10 ? shifted + 3 : shifted - 9);
-    date.year = yearOfEra + era * 400 + (date.month <= 2 ? 1 : 0);
-    return date;
-}
-
 // A year has 53 weeks if it starts on a Thursday, or if it is a leap year that starts on a Wednesday.
 uint32_t domWeeksInYear(int64_t year) {
-    uint32_t first = isoWeekday(domDateDays(DomDate{year, 1, 1}));
-    return first == 3 || (first == 2 && isLeapYear(year)) ? 53 : 52;
+    uint32_t first = isoWeekday(prTimeDateToDays(PrTimeDate{year, 1, 1}));
+    return first == 3 || (first == 2 && prTimeIsLeapYear(year)) ? 53 : 52;
 }
 
 // Week 1 is the week that holds the year's first Thursday, and so its January 4.
 int64_t domWeekDays(int64_t year, uint32_t week) {
-    int64_t fourth = domDateDays(DomDate{year, 1, 4});
+    int64_t fourth = prTimeDateToDays(PrTimeDate{year, 1, 4});
     return fourth - isoWeekday(fourth) + int64_t(week - 1) * 7;
 }
 
 void domWeekOfDays(int64_t days, int64_t* year, uint32_t* week) {
-    int64_t at = domDateFromDays(days).year;
+    int64_t at = prTimeDateFromDays(days).year;
     if (days >= domWeekDays(at + 1, 1))
         ++at;
     else if (days < domWeekDays(at, 1))
@@ -374,7 +333,7 @@ void domAppendMonth(TextBuffer* out, int64_t year, uint32_t month) {
     appendPadded(out, month, 2);
 }
 
-void domAppendDate(TextBuffer* out, DomDate date) {
+void domAppendDate(TextBuffer* out, PrTimeDate date) {
     domAppendMonth(out, date.year, date.month);
     textAppendChar(out, '-');
     appendPadded(out, date.day, 2);
@@ -403,7 +362,7 @@ void domAppendTime(TextBuffer* out, DomTime time) {
     appendPadded(out, fraction, 3);
 }
 
-void domAppendLocalDateTime(TextBuffer* out, DomDate date, DomTime time) {
+void domAppendLocalDateTime(TextBuffer* out, PrTimeDate date, DomTime time) {
     domAppendDate(out, date);
     textAppendChar(out, 'T');
     domAppendTime(out, time);

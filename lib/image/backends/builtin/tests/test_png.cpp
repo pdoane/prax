@@ -1124,7 +1124,7 @@ TEST_CASE("a png's coding-independent code points name its space, in a cICP chun
     iccp.push_back(uint8_t(~size));
     iccp.push_back(uint8_t(uint16_t(~size) >> 8));
     iccp.insert(iccp.end(), profile.begin(), profile.end());
-    uint32_t adler = adler32Update(1, PrByteView{profile.data(), profile.size()});
+    uint32_t adler = adler32Update(1, profile);
     for (uint32_t i = 0; i < 4; ++i)
         iccp.push_back(uint8_t(adler >> (24 - 8 * i)));
     CHECK(namedSpace(withChunk(png, "iCCP", iccp)) == PrColorSpace_Rec2100Pq);

@@ -215,3 +215,14 @@ TEST_CASE("a keymap binds a chord once per context, and a later binding replaces
     CHECK_FALSE(prCommandKeymapChord(keymap, "app.run", &chord));
     prCommandKeymapDestroy(keymap);
 }
+
+TEST_CASE("a chord looks up the command that it is bound to in a context") {
+    PrCommandKeymap* keymap = prCommandKeymapCreate();
+    prCommandKeymapBind(keymap, chordOf("Cmd Enter"), "app.run", "", PrCommandBindingKind_Normal);
+    prCommandKeymapBind(keymap, chordOf("Cmd Enter"), "panel.run", "panel", PrCommandBindingKind_Normal);
+    CHECK(prCommandKeymapCommand(keymap, chordOf("Cmd Enter"), "") == "app.run");
+    CHECK(prCommandKeymapCommand(keymap, chordOf("Cmd Enter"), "panel") == "panel.run");
+    CHECK(prCommandKeymapCommand(keymap, chordOf("Cmd Enter"), "other").data == nullptr);
+    CHECK(prCommandKeymapCommand(keymap, chordOf("Cmd Shift Enter"), "").data == nullptr);
+    prCommandKeymapDestroy(keymap);
+}

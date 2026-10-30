@@ -15,6 +15,7 @@
 
 #include "css/src/css_presentation.h"
 #include "css/src/css_serialize.h"
+#include "dom/src/dom_element_state.h"
 #include "dom/src/dom_event.h"
 #include "dom/src/dom_node.h"
 #include "html/src/html_focus.h"
@@ -76,6 +77,7 @@ struct HtmlView {
     PrDomElement* PR_NULLABLE hovered;
     PrDomElement* PR_NULLABLE pressed;
     uint16_t buttons;               // the buttons held, as bits of MouseEvent's buttons
+    PrAppCursor cursor;             // the cursor at the pointer, as of the last hover or commit
 
     // The keyboard's state: the code and modifiers of the last key pressed, and the element that Space pressed, which
     // the view holds.
@@ -318,17 +320,23 @@ PrCssPresentation* PR_NULLABLE presentationOfDocument(HtmlView* v, const PrDomDo
 struct ViewHit {
     PrDomElement* PR_NULLABLE element;
     PrVec2 point;
+    bool text;                      // true if the point hits text, whose parent is `element`
+
+    // The presentation of the element's document, or null if it has none.
+    PrCssPresentation* PR_NULLABLE presentation;
 };
 
 // Hit tests a point of the viewport. A point in the content box of a frame whose document the view presents goes on
 // into that document.
 ViewHit hitAt(HtmlView* v, PrVec2 point) {
-    ViewHit hit{nullptr, point};
+    ViewHit hit{nullptr, point, false, nullptr};
     PrDomDocument* document = documentOf(v);
     for (PrCssPresentation* presentation = presentationOf(v); presentation != nullptr;) {
+        hit.presentation = presentation;
         PrDomNode* node = prCssPresentationHitTest(presentation, prLayoutVecFromPx(hit.point));
         PrDomElement* element = node != nullptr ? prDomElementQuery(prDomNodeAsEventTarget(node)) : nullptr;
-        hit.element = node != nullptr && element == nullptr ? prDomNodeParentElement(node) : element;
+        hit.text = node != nullptr && element == nullptr;
+        hit.element = hit.text ? prDomNodeParentElement(node) : element;
         if (hit.element == nullptr)
             hit.element = prDomDocumentElement(document);
         PrHtmlWindow* window = hit.element != nullptr ? htmlFrameWindow(hit.element) : nullptr;
@@ -375,10 +383,126 @@ void designate(HtmlView* v, PrDomElement* PR_NULLABLE element, void (*set)(PrDom
         set(at->document, at);
 }
 
-// Hovers the element under the pointer.
+// Returns the cursor of a predefined keyword of the cursor property other than auto (css-ui-4/#cursor).
+PrAppCursor cursorFromKeyword(PrCssKeyword keyword) {
+    switch (keyword) {
+        case PrCssKeyword_None: return PrAppCursor_None;
+        case PrCssKeyword_ContextMenu: return PrAppCursor_ContextMenu;
+        case PrCssKeyword_Help: return PrAppCursor_Help;
+        case PrCssKeyword_Pointer: return PrAppCursor_Hand;
+        case PrCssKeyword_Progress: return PrAppCursor_Progress;
+        case PrCssKeyword_Wait: return PrAppCursor_Wait;
+        case PrCssKeyword_Cell: return PrAppCursor_Cell;
+        case PrCssKeyword_Crosshair: return PrAppCursor_Crosshair;
+        case PrCssKeyword_Text: return PrAppCursor_Text;
+        case PrCssKeyword_VerticalText: return PrAppCursor_VerticalText;
+        case PrCssKeyword_Alias: return PrAppCursor_Alias;
+        case PrCssKeyword_Copy: return PrAppCursor_Copy;
+        case PrCssKeyword_Move: return PrAppCursor_Move;
+        case PrCssKeyword_NoDrop: return PrAppCursor_NoDrop;
+        case PrCssKeyword_NotAllowed: return PrAppCursor_NotAllowed;
+        case PrCssKeyword_Grab: return PrAppCursor_Grab;
+        case PrCssKeyword_Grabbing: return PrAppCursor_Grabbing;
+        case PrCssKeyword_NResize: return PrAppCursor_ResizeN;
+        case PrCssKeyword_EResize: return PrAppCursor_ResizeE;
+        case PrCssKeyword_SResize: return PrAppCursor_ResizeS;
+        case PrCssKeyword_WResize: return PrAppCursor_ResizeW;
+        case PrCssKeyword_NeResize: return PrAppCursor_ResizeNE;
+        case PrCssKeyword_NwResize: return PrAppCursor_ResizeNW;
+        case PrCssKeyword_SeResize: return PrAppCursor_ResizeSE;
+        case PrCssKeyword_SwResize: return PrAppCursor_ResizeSW;
+        case PrCssKeyword_EwResize: return PrAppCursor_ResizeX;
+        case PrCssKeyword_NsResize: return PrAppCursor_ResizeY;
+        case PrCssKeyword_NeswResize: return PrAppCursor_ResizeNESW;
+        case PrCssKeyword_NwseResize: return PrAppCursor_ResizeNWSE;
+        case PrCssKeyword_ColResize: return PrAppCursor_ResizeColumn;
+        case PrCssKeyword_RowResize: return PrAppCursor_ResizeRow;
+        case PrCssKeyword_AllScroll: return PrAppCursor_AllScroll;
+        case PrCssKeyword_ZoomIn: return PrAppCursor_ZoomIn;
+        case PrCssKeyword_ZoomOut: return PrAppCursor_ZoomOut;
+        default: return PrAppCursor_Arrow;
+    }
+}
+
+// Returns the predefined keyword that ends a computed value of the cursor property. The view shows no cursor images, so
+// the keyword is the cursor, as it is when none of the images loads.
+PrCssKeyword cursorKeyword(CssValueRun value) {
+    PrCssKeyword keyword = PrCssKeyword_Auto;
+    for (uint32_t i = 0; i < value.count; i += value.values[i].next) {
+        if (value.values[i].kind == PrCssValueKind_Keyword)
+            keyword = cssValueKeyword(&value.values[i]);
+    }
+    return keyword;
+}
+
+// Returns true if the used value of the element's user-select is not none (css-ui-4/#content-selection). The value auto
+// takes the parent's used value, so the nearest value along the ancestors that is not auto decides.
+bool selectable(const PrCssPresentation* presentation, const PrDomElement* element) {
+    for (const PrDomNode* at = element; at != nullptr; at = domShadowIncludingParent(at)) {
+        const PrDomElement* ancestor = domElementFromNode(at);
+        const CssComputedStyle* style = ancestor != nullptr ? cssPresentationStyle(presentation, ancestor) : nullptr;
+        if (style == nullptr)
+            continue;
+        PrCssKeyword value = cssComputedFirstKeyword(style, PrCssProperty_UserSelect);
+        if (value != PrCssKeyword_Auto)
+            return value != PrCssKeyword_None;
+    }
+    return true;
+}
+
+// Returns true if an element whose box is hit is part of a widget other than a text control, such as a button's label.
+// The text of such a widget is not selectable as a document's text is.
+bool inWidget(const PrCssPresentation* presentation, const PrDomElement* element) {
+    for (const PrDomNode* at = element; at != nullptr; at = domShadowIncludingParent(at)) {
+        const PrDomElement* ancestor = domElementFromNode(at);
+        const CssComputedStyle* style = ancestor != nullptr ? cssPresentationStyle(presentation, ancestor) : nullptr;
+        if (style != nullptr && style->appearance != CssAppearance_None)
+            return true;
+    }
+    return false;
+}
+
+// Returns true if the element is editable, or is in the shadow tree of a text control.
+bool inEditable(const PrDomElement* element) {
+    for (const PrDomNode* at = element; at != nullptr; at = domShadowIncludingParent(at)) {
+        const PrDomElement* ancestor = domElementFromNode(at);
+        if (ancestor != nullptr && ancestor->space == PrDomNamespace_Html && domElementReadWrite(ancestor))
+            return true;
+    }
+    return false;
+}
+
+// Returns the cursor that `hit` shows, as prHtmlViewCursor describes. The text cursor is vertical in a vertical writing
+// mode.
+PrAppCursor cursorOf(const ViewHit& hit) {
+    if (hit.element == nullptr || hit.presentation == nullptr)
+        return PrAppCursor_Arrow;
+    const CssComputedStyle* style = cssPresentationStyle(hit.presentation, hit.element);
+    if (style == nullptr)
+        return PrAppCursor_Arrow;
+    PrCssKeyword keyword = cursorKeyword(cssComputedValue(style, PrCssProperty_Cursor));
+    if (keyword != PrCssKeyword_Auto)
+        return cursorFromKeyword(keyword);
+    bool text = hit.text && selectable(hit.presentation, hit.element) && !inWidget(hit.presentation, hit.element);
+    if (!text && !inEditable(hit.element))
+        return PrAppCursor_Arrow;
+    switch (cssComputedFirstKeyword(style, PrCssProperty_WritingMode)) {
+        case PrCssKeyword_VerticalRl:
+        case PrCssKeyword_VerticalLr:
+        case PrCssKeyword_SidewaysRl:
+        case PrCssKeyword_SidewaysLr:
+            return PrAppCursor_VerticalText;
+        default:
+            return PrAppCursor_Text;
+    }
+}
+
+// Hovers the element under the pointer, and takes the cursor there.
 void hover(HtmlView* v) {
     v->hoverDue = false;
-    PrDomElement* element = hitAt(v, v->pointer).element;
+    ViewHit hit = hitAt(v, v->pointer);
+    v->cursor = cursorOf(hit);
+    PrDomElement* element = hit.element;
     if (element == v->hovered)
         return;
     v->hovered = element;
@@ -1096,6 +1220,10 @@ PrHtmlViewUpdate prHtmlViewUpdate(PrHtmlView* view) {
             if (inner != nullptr)
                 commitScene(view, inner, frame.embed, prAffine2Identity());
         }
+        // A new scene can put a box with another cursor under a pointer that has not moved, or change the cursor of the
+        // box there.
+        if (view->pointed)
+            view->cursor = cursorOf(hitAt(view, view->pointer));
     }
     findFrames(view);
     bool current = !view->changed && prCssPresentationIsCurrent(presentation);
@@ -1140,6 +1268,10 @@ PrColor16 prHtmlViewPaint(PrHtmlView* view, PrDrawList* list) {
     findFrames(view);
     prHtmlPresentationUpdate(presentation, prLayoutVecFromPx(view->extent));
     return playTree(view, presentation, list, view->canvasFilled);
+}
+
+PrAppCursor prHtmlViewCursor(const PrHtmlView* view) {
+    return view->cursor;
 }
 
 PrHtmlViewEventResult prHtmlViewEvent(PrHtmlView* view, const PrAppEvent* event, PrHtmlViewEventFlags flags) {

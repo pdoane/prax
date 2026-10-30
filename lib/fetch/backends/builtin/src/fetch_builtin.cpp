@@ -965,7 +965,7 @@ void receivePreflight(BuiltinFetch* fetch, PrHttpExchange* exchange) {
     uint16_t status = prHttpExchangeStatus(exchange);
     Array<PrStringView> methods{};
     Array<PrStringView> allowedHeaders{};
-    bool allowed = status >= 200 && status < 300 && passesCors(fetch, &received) &&
+    bool allowed = prFetchIsOkStatus(status) && passesCors(fetch, &received) &&
         headerTokens(&received, "access-control-allow-methods", &methods) &&
         headerTokens(&received, "access-control-allow-headers", &allowedHeaders);
     if (allowed && !prFetchIsCorsSafelistedMethod(prStringView(&fetch->method)))
@@ -1194,7 +1194,8 @@ void destroyFetcher(PrFetchNetwork* base) {
     prMemoryFree(fetcher);
 }
 
-PrStatus createFetch(PrFetchNetwork* base, const PrFetchRequestDesc* desc, PrFetch* PR_NULLABLE* PR_NONNULL out) {
+PrStatus createFetch(PrFetchNetwork* base, const PrFetchRequestDesc* desc, PrFetchFn PR_NULLABLE event,
+        void* PR_NULLABLE context, PrFetch* PR_NULLABLE* PR_NONNULL out) {
     PrUrl* url = nullptr;
     if (prUrlCreate(desc->url, nullptr, PrCharset_Utf8, &url) != PrStatus_Ok)
         return PrStatus_InvalidData;
@@ -1213,8 +1214,8 @@ PrStatus createFetch(PrFetchNetwork* base, const PrFetchRequestDesc* desc, PrFet
     fetch->mode = desc->mode;
     fetch->credentials = desc->credentials;
     fetch->fetcher = base;
-    fetch->event = desc->event;
-    fetch->context = desc->context;
+    fetch->event = event;
+    fetch->context = context;
     PrStringView scheme = prUrlScheme(url);
     fetch->local = scheme == "data" || scheme == "file" || (scheme == "about" && prUrlPath(url) == "blank");
     fetch->url = prUrlSerialize(url, PrUrlSerialization_ExcludeFragment);

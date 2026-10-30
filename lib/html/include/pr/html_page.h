@@ -84,11 +84,14 @@ typedef struct PrHtmlHost {
     // The fetcher of the resources that the documents load (html/#fetching-resources), the documents of their iframes
     // included, and of the document that a navigation loads (prHtmlPageNavigate). The page starts each fetch on the
     // fetcher's loop, from the document's origin and with its URL as the referrer, and the agent's event loop receives
-    // the whole response in a task. A script, a style sheet or a font whose status is not ok fails as a network error
-    // does. The element whose resource fails fires `error`, and the load continues. A data: URL is answered by the page
-    // itself, during the call that asks for it. The fetcher must outlive the page and the tasks that it posts to the
-    // loop: a host destroys the fetcher on the loop after the page, so that the cancels of the fetches that it dropped
-    // run first. If null, an iframe's page uses its parent's fetcher, and any other fetch fails as a network error.
+    // the whole response in a task. A navigation that a document starts, by a hyperlink or by setting its location, is
+    // fetched from that document's origin. A traversal of the session history, like the user's own navigations, is
+    // fetched from no origin (PrFetchRequestDesc::origin). A script, a style sheet or a font whose status is not ok
+    // fails as a network error does. The element whose resource fails fires `error`, and the load continues. A data:
+    // URL is answered by the page itself, during the call that asks for it. The fetcher must outlive the page and the
+    // tasks that it posts to the loop: a host destroys the fetcher on the loop after the page, so that the cancels of
+    // the fetches that it dropped run first. If null, an iframe's page uses its parent's fetcher, and any other fetch
+    // fails as a network error.
     PrFetchNetwork* PR_NULLABLE fetcher;
 
     // Runs a script. A module script runs the module that `parseModule` made of it, once every module that its graph
@@ -292,13 +295,13 @@ void prHtmlPageAppendLoad(PrHtmlPage* self, PrStringView bytes);
 void prHtmlPageEndLoad(PrHtmlPage* self);
 
 // Navigates the page to the document at `url` (html/#navigate), an absolute URL that may have a fragment, as a user
-// does by entering an address: fetches it through the host's fetcher, from no document and so with no referrer, and
-// loads the response as it arrives (prHtmlPageBeginLoad), at the response's URL with `url`'s fragment, with the
-// response's headers. The current document stays until the response arrives. A network error, or a URL that the fetcher
-// does not take, loads a document that says why in its place, and the end of that load reports Io (PrHtmlHost::loaded).
-// Another navigation or load replaces a navigation in flight, and prHtmlPageIsFetching is true until its response has
-// arrived whole. Returns the URL parser's status if it rejects `url`, and InvalidState if the host has no fetcher or
-// another load is in progress.
+// does by entering an address: fetches it through the host's fetcher, from no document and so with no origin and no
+// referrer, and loads the response as it arrives (prHtmlPageBeginLoad), at the response's URL with `url`'s fragment,
+// with the response's headers. The current document stays until the response arrives. A network error, or a URL that
+// the fetcher does not take, loads a document that says why in its place, and the end of that load reports Io
+// (PrHtmlHost::loaded). Another navigation or load replaces a navigation in flight, and prHtmlPageIsFetching is true
+// until its response has arrived whole. Returns the URL parser's status if it rejects `url`, and InvalidState if the
+// host has no fetcher or another load is in progress.
 PrStatus prHtmlPageNavigate(PrHtmlPage* self, PrStringView url);
 
 // Fetches the module graph at `url`, an absolute URL, as a script's import() does (html/#hostloadimportedmodule): each
@@ -314,7 +317,8 @@ void prHtmlPageImportModule(PrHtmlPage* self, PrStringView url, PrHtmlImportFn d
 // destroyed first. The body is read whole before the response is passed. The fetch does not delay the document's load
 // event. Returns InvalidData, and never calls `done`, for a URL that does not parse or that has a username or a
 // password (fetch/#dom-request).
-PrStatus prHtmlPageFetch(PrHtmlPage* self, const PrFetchClientRequest* request, PrFetchClientFn done, void* PR_NULLABLE context);
+PrStatus prHtmlPageFetch(PrHtmlPage* self, const PrFetchClientRequest* request, PrFetchResponseFn done,
+    void* PR_NULLABLE context);
 
 // Cancels the fetch that prHtmlPageFetch started with `context` and has not answered (fetch/#fetch-controller-abort).
 // The fetch stops if it still runs, and its `done` is never called. Does nothing if no such fetch waits.
@@ -368,6 +372,11 @@ void prHtmlPageSetUserPreferences(PrHtmlPage* self, const PrAppUserPreferences* 
 // visibilitychange at it in a task (html/#update-the-visibility-state).
 void prHtmlPageSetVisibility(PrHtmlPage* self, PrHtmlVisibility visibility);
 
+// Restyles the elements that can be in `states`, which are states that the host reports (PrHtmlHost::elementState), in
+// the window's document and in the documents of the page's frames. A host calls it once what it knows changes, as when
+// the user visits a URL that links point to, so that the elements match their selectors again.
+void prHtmlPageInvalidateHostStates(PrHtmlPage* self, PrDomHostState states);
+
 // Returns the presentation of the window's document. For each document that the page loads, it creates a presentation
 // with the user agent style sheet of html/#rendering, if its host gives a text font and a shaper. Returns null if the
 // host gives none. A new document replaces the presentation.
@@ -384,6 +393,12 @@ void prHtmlPresentationStart(PrCssPresentation* presentation, PrLayoutVec extent
 // Returns the time on the host's clock at which the Window's timeline starts (hr-time-3/#sec-time-origin). The
 // timeline's time, which the presentation's animations run on, is the clock's time minus this value.
 double prHtmlPageTimeOrigin(PrHtmlPage* self);
+
+// Returns the URL of the icon that represents the window's document (html/#rel-icon), which a host fetches and shows
+// beside the page's title. It is the last link in tree order whose rel holds icon, skipping a link whose type the
+// host's image codec cannot decode. A document at an http: or https: URL with no such link has the icon at
+// /favicon.ico. Returns the null string for any other document. The caller releases the string with prStringReset.
+PrString prHtmlPageIconUrl(PrHtmlPage* self);
 
 #if defined(__cplusplus)
 }

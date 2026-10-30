@@ -101,6 +101,9 @@
 #if defined(PR_PLATFORM_TIME_MONOTONIC_MILLISECONDS) != defined(PR_PLATFORM_TIME_WALL_MILLISECONDS)
 #error "PR_PLATFORM_TIME_MONOTONIC_MILLISECONDS and PR_PLATFORM_TIME_WALL_MILLISECONDS are defined together or not at all"
 #endif
+#if defined(PR_PLATFORM_TIME_MONOTONIC_MILLISECONDS) != defined(PR_PLATFORM_TIME_LOCAL_OFFSET_MILLISECONDS)
+#error "PR_PLATFORM_TIME_MONOTONIC_MILLISECONDS and PR_PLATFORM_TIME_LOCAL_OFFSET_MILLISECONDS are defined together or not at all"
+#endif
 
 // The default backends of each target. The C library serves memory on every target, or mimalloc if the build chooses it
 // (PR_PLATFORM_MIMALLOC). POSIX serves the other groups on the Unix-like targets, and the Windows family on Windows.
@@ -215,10 +218,12 @@
 #include "pr/core_windows_time.h"
 #define PR_PLATFORM_TIME_MONOTONIC_MILLISECONDS() prCoreWindowsTimeMonotonicMilliseconds()
 #define PR_PLATFORM_TIME_WALL_MILLISECONDS() prCoreWindowsTimeWallMilliseconds()
+#define PR_PLATFORM_TIME_LOCAL_OFFSET_MILLISECONDS(wall) prCoreWindowsTimeLocalOffsetMilliseconds(wall)
 #elif !defined(PR_PLATFORM_NO_DEFAULT) && !defined(PR_PLATFORM_TIME_MONOTONIC_MILLISECONDS)
 #include "pr/core_posix_time.h"
 #define PR_PLATFORM_TIME_MONOTONIC_MILLISECONDS() prCorePosixTimeMonotonicMilliseconds()
 #define PR_PLATFORM_TIME_WALL_MILLISECONDS() prCorePosixTimeWallMilliseconds()
+#define PR_PLATFORM_TIME_LOCAL_OFFSET_MILLISECONDS(wall) prCorePosixTimeLocalOffsetMilliseconds(wall)
 #endif
 
 // The default random bytes, from Windows or POSIX, if the build binds none.

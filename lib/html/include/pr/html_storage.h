@@ -57,6 +57,10 @@ PrHtmlStorageProvider* prHtmlStorageProviderCreate(const PrHtmlStorageProviderDe
 // must be destroyed first.
 void prHtmlStorageProviderDestroy(PrHtmlStorageProvider* PR_NULLABLE provider);
 
+// Removes every item of every origin's area, including the areas that earlier runs left in the provider's directory, as
+// when the user deletes the sites' data. A window whose area is open finds it empty. No storage event fires.
+void prHtmlStorageProviderClear(PrHtmlStorageProvider* provider);
+
 // A window's Storage object of one kind (html/#storage-2): the area of its document's origin. The window owns it.
 typedef struct PrHtmlStorage PrHtmlStorage;
 

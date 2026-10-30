@@ -134,10 +134,6 @@ typedef struct PrFetchRequestDesc {
     // no referrer. The policy decides how much of it the request sends.
     PrStringView referrer;
     PrFetchReferrerPolicy referrerPolicy;
-
-    // Called with the fetch's events, with its context.
-    PrFetchFn PR_NULLABLE event;
-    void* PR_NULLABLE context;
 } PrFetchRequestDesc;
 
 // The start of every fetch's state. `fetcher` is the source that made the fetch.
@@ -150,7 +146,8 @@ struct PrFetch {
 // response is Basic. Callers use the functions below, never these members.
 struct PrFetchNetwork {
     void (*destroy)(PrFetchNetwork* fetcher);
-    PrStatus (*fetchCreate)(PrFetchNetwork* fetcher, const PrFetchRequestDesc* desc, PrFetch* PR_NULLABLE* PR_NONNULL out);
+    PrStatus (*fetchCreate)(PrFetchNetwork* fetcher, const PrFetchRequestDesc* desc, PrFetchFn PR_NULLABLE event,
+        void* PR_NULLABLE context, PrFetch* PR_NULLABLE* PR_NONNULL out);
     void (*fetchDestroy)(PrFetchNetwork* fetcher, PrFetch* fetch);
     uint16_t (*fetchStatus)(const PrFetchNetwork* fetcher, const PrFetch* fetch);
     PrStringView (*fetchUrl)(const PrFetchNetwork* fetcher, const PrFetch* fetch);
@@ -220,10 +217,11 @@ void prFetchNetworkDestroy(PrFetchNetwork* PR_NULLABLE fetcher);
 // it unchanged for its life, so any thread may read it. The view is valid while the source lives.
 PrStringView prFetchNetworkUserAgent(const PrFetchNetwork* fetcher);
 
-// Starts fetching what `desc` requests, and writes the fetch to `*out`. The fetch delivers Response once the response
-// arrives, then its body, or Fail. Its first event comes after this call. Returns InvalidData for a URL or a referrer
-// that does not parse. On failure, `*out` is null.
-PrStatus prFetchCreate(PrFetchNetwork* fetcher, const PrFetchRequestDesc* desc, PrFetch* PR_NULLABLE* PR_NONNULL out);
+// Starts fetching what `desc` requests, and writes the fetch to `*out`. The fetch delivers its events to `event`:
+// Response once the response arrives, then its body, or Fail. Its first event comes after this call. Returns
+// InvalidData for a URL or a referrer that does not parse. On failure, `*out` is null.
+PrStatus prFetchCreate(PrFetchNetwork* fetcher, const PrFetchRequestDesc* desc, PrFetchFn PR_NULLABLE event,
+    void* PR_NULLABLE context, PrFetch* PR_NULLABLE* PR_NONNULL out);
 
 // Abandons the fetch if it has not ended, and frees it. Its callback is not called again. A fetch may be destroyed
 // during its own callback.
@@ -255,12 +253,36 @@ size_t prFetchRead(PrFetch* fetch, uint8_t* PR_NULLABLE output, size_t capacity)
 PrNetError prFetchError(const PrFetch* fetch);
 
 // ---------------------------------------------------------------------------------------------------------------------
+// Whole responses
+
+// A response whose body has been read to its end. The views are valid during the call that receives the response.
+typedef struct PrFetchResponse {
+    // Ok for a response, whatever its status. Any other value means that no response arrived: a network error, or a
+    // reason that the receiver gives, such as Lost when the receiver went away first.
+    PrStatus status;
+    PrFetchResponseType type;
+    uint16_t responseStatus;                    // the response's status (fetch/#concept-response-status)
+    PrStringView url;                           // after the redirects that the fetch followed, without its fragment
+    const PrFetchHeader* PR_NULLABLE headers;
+    uint32_t headerCount;
+    PrByteView body;                            // decoded from its content codings
+} PrFetchResponse;
+
+// Called once with a whole response.
+typedef void (*PrFetchResponseFn)(void* PR_NULLABLE context, const PrFetchResponse* response);
+
+// Returns true if `status` is an ok status (fetch/#ok-status), from 200 to 299.
+bool prFetchIsOkStatus(uint16_t status);
+
+// ---------------------------------------------------------------------------------------------------------------------
 // Fetches of a client
 //
 // A request that a script makes through its client (fetch/#concept-request-client), the environment of a document or a
 // worker, as fetch() and XMLHttpRequest make one. The client completes the request: it parses the URL against its base
 // URL, gives the request its origin and its referrer, and fetches it with its fetcher. The client reads the whole
-// response before it passes the response on.
+// response before it passes the response on, filtered as its type says (fetch/#concept-filtered-response): a basic
+// response without Set-Cookie, a CORS response with the headers that it exposes, and an opaque response with no status,
+// URL, headers or body. Lost says that the client went away before the response arrived.
 
 // A request that a script makes through its client.
 typedef struct PrFetchClientRequest {
@@ -273,24 +295,6 @@ typedef struct PrFetchClientRequest {
     PrFetchCredentials credentials;
     PrFetchRedirect redirect;
 } PrFetchClientRequest;
-
-// The response to a request of a client, filtered as its type says (fetch/#concept-filtered-response): a basic response
-// without Set-Cookie, a CORS response with the headers that it exposes, and an opaque response with no status, URL,
-// headers or body. The views are valid during the call that receives the response.
-typedef struct PrFetchClientResponse {
-    // Ok for a response. Any other status is a network error, and Lost says that the client went away before the
-    // response arrived.
-    PrStatus status;
-    PrFetchResponseType type;
-    uint16_t responseStatus;                    // the response's status (fetch/#concept-response-status)
-    PrStringView url;                           // after the redirects that the fetch followed, without its fragment
-    const PrFetchHeader* PR_NULLABLE headers;
-    uint32_t headerCount;
-    PrByteView body;                            // decoded from its content codings
-} PrFetchClientResponse;
-
-// Called once with the response to a request of a client.
-typedef void (*PrFetchClientFn)(void* PR_NULLABLE context, const PrFetchClientResponse* response);
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Methods and headers (fetch/#methods, fetch/#terminology-headers)

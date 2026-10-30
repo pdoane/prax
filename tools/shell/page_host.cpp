@@ -447,7 +447,7 @@ void loadedHtml(void* context, PrHtmlPage* htmlPage, PrStatus status) {
     const std::string& wait = run->host->captureWait;
     if (run->capture == PageHost::Capture::Wait && !wait.empty() && run->ok && run->ctx != nullptr) {
         std::string waiter = "(function () {\n" + wait + "\n}).call(window, location.href, stopRun);";
-        run->ok = prJsHtmlEngineRun(run->ctx, PrStringView{waiter.data(), waiter.size()}, "capture-wait", 1, 1) && run->ok;
+        run->ok = prJsHtmlEngineRun(run->ctx, waiter, "capture-wait", 1, 1) && run->ok;
     }
 }
 
@@ -611,7 +611,7 @@ JSValue jsStopRun(JSContext* ctx, JSValueConst, int, JSValueConst*) {
 // or PrAppKey_Unknown.
 PrAppKey keyNamed(const std::string& name) {
     for (uint32_t key = PrAppKey_Left; key <= PrAppKey_F20; ++key) {
-        if (prAppKeyName(PrAppKey(key)) == PrStringView{name.data(), name.size()})
+        if (prAppKeyName(PrAppKey(key)) == name)
             return PrAppKey(key);
     }
     if (name.size() == 1 && uint8_t(name[0]) < 128)
@@ -622,7 +622,7 @@ PrAppKey keyNamed(const std::string& name) {
 // Returns the code that has the name of UI Events `name`, or PrAppKeyCode_Unidentified.
 PrAppKeyCode codeNamed(const std::string& name) {
     for (uint32_t code = 0; code < PrAppKeyCode_Count; ++code) {
-        if (prAppKeyCodeName(PrAppKeyCode(code)) == PrStringView{name.data(), name.size()})
+        if (prAppKeyCodeName(PrAppKeyCode(code)) == name)
             return PrAppKeyCode(code);
     }
     return PrAppKeyCode_Unidentified;
@@ -824,7 +824,7 @@ bool dispatchInput(HostState& s) {
             PendingInput pending = std::move(page->input.front());
             page->input.erase(page->input.begin());
             for (InputEvent& input : pending.events) {
-                input.event.text = PrStringView{input.text.data(), input.text.size()};
+                input.event.text = input.text;
                 dispatchEvent(s, page, input.event);
             }
             JS_FreeValue(page->ctx, JS_Call(page->ctx, pending.resolve, JS_UNDEFINED, 0, nullptr));

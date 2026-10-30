@@ -38,6 +38,7 @@
 #include "html/src/html_document.h"
 #include "html/src/html_image.h"
 #include "html/src/html_image_source.h"
+#include "html/src/html_link.h"
 #include "html/src/html_markdown.h"
 #include "html/src/html_media.h"
 #include "html/src/html_parser.h"
@@ -177,7 +178,7 @@ void releaseFetch(HtmlFetch* fetch) {
 
 // Passes a script's fetch's response to its callback, filtered as its type says (fetch/#concept-filtered-response).
 void completeScriptFetch(HtmlFetch* fetch) {
-    PrFetchClientResponse response{.status = fetch->status, .type = fetch->responseType};
+    PrFetchResponse response{.status = fetch->status, .type = fetch->responseType};
     Array<PrFetchHeader> headers;
     TextBuffer exposed;
     bool opaque = fetch->responseType == PrFetchResponseType_Opaque ||
@@ -272,7 +273,7 @@ void dropFetch(void* data) {
     if (fetch->drop != nullptr)
         fetch->drop(fetch->data);
     if (fetch->scriptDone != nullptr && !fetch->cancelled) {
-        PrFetchClientResponse lost{.status = PrStatus_Lost};
+        PrFetchResponse lost{.status = PrStatus_Lost};
         fetch->scriptDone(fetch->data, &lost);
     }
     if (fetch->answered) {
@@ -368,7 +369,7 @@ void fetchEvent(void* PR_NULLABLE context, PrFetch* handle, PrFetchEvent event) 
         case PrFetchEvent_End: {
             readBody(fetch, handle);
             fetch->responseStatus = prFetchStatus(handle);
-            bool ok = fetch->responseStatus >= 200 && fetch->responseStatus < 300;
+            bool ok = prFetchIsOkStatus(fetch->responseStatus);
             finishOnLoop(fetch, ok || !needsOkStatus(fetch->destination) ? PrStatus_Ok : PrStatus_NotFound);
             break;
         }
@@ -425,10 +426,8 @@ void beginOnLoop(void* PR_NULLABLE data) {
         .redirect = fetch->redirect,
         .origin = prStringView(&fetch->origin),
         .referrer = prStringView(&fetch->referrer),
-        .event = fetchEvent,
-        .context = fetch,
     };
-    PrStatus status = prFetchCreate(fetch->fetcher, &desc, &fetch->fetch);
+    PrStatus status = prFetchCreate(fetch->fetcher, &desc, fetchEvent, fetch, &fetch->fetch);
     headers.reset();
     if (status != PrStatus_Ok)
         finishOnLoop(fetch, PrStatus_InvalidData);
@@ -2571,6 +2570,7 @@ struct Navigation {
     PrHtmlPage* page;
     uint32_t id;
     PrString url;
+    PrString origin;            // the origin of the document that started the navigation (HtmlDocumentLoad::origin)
     HtmlHistoryCommit commit;   // how the document that the navigation loads takes its entry
     uint32_t target;
 };
@@ -2578,10 +2578,12 @@ struct Navigation {
 void dropNavigation(void* data) {
     Navigation* navigation = static_cast<Navigation*>(data);
     prStringReset(&navigation->url);
+    prStringReset(&navigation->origin);
     prMemoryFree(navigation);
 }
 
 void abortDocument(PrHtmlPage* self);
+PrStatus startNavigation(PrHtmlPage* self, PrStringView url, PrStringView origin);
 
 // Navigates the page to another document (html/#navigate), from the task that htmlPageNavigate queued. A document that
 // is still loading stops (html/#abort-a-document).
@@ -2592,7 +2594,7 @@ void runNavigation(void* data) {
         page->pendingNavigation = 0;
         abortDocument(page);
         htmlHistoryExpect(page->window->history, navigation->commit, navigation->target);
-        prHtmlPageNavigate(page, prStringView(&navigation->url));
+        startNavigation(page, prStringView(&navigation->url), prStringView(&navigation->origin));
     }
     dropNavigation(navigation);
 }
@@ -2621,6 +2623,7 @@ void releaseDocumentLoad(HtmlDocumentLoad* load) {
     if (load->references.fetchSub(1) != 1)
         return;
     prStringReset(&load->url);
+    prStringReset(&load->origin);
     prMutexReset(&load->lock);
     prMemoryFree(load);
 }
@@ -2833,10 +2836,9 @@ void beginLoadOnLoop(void* PR_NULLABLE data) {
         .destination = PrFetchDestination_Document,
         .mode = PrFetchMode_Navigate,
         .credentials = PrFetchCredentials_Include,
-        .event = documentLoadEvent,
-        .context = load,
+        .origin = prStringView(&load->origin),
     };
-    if (prFetchCreate(load->fetcher, &desc, &load->fetch) != PrStatus_Ok) {
+    if (prFetchCreate(load->fetcher, &desc, documentLoadEvent, load, &load->fetch) != PrStatus_Ok) {
         postPiece(load, newPiece(LoadPiece_Fail));
         endLoadOnLoop(load);
     }
@@ -2908,6 +2910,30 @@ void queueVisibilityChange(PrHtmlWindow* window) {
     };
     domNodeHold(document);
     htmlWindowQueueTask(window, fire, document, [](void* data) { domNodeUnhold(static_cast<PrDomDocument*>(data)); });
+}
+
+// Navigates the page to the document at `url`, as prHtmlPageNavigate describes, with a fetch from `origin`: a
+// document's serialized origin, or the null view for a navigation that the user started.
+PrStatus startNavigation(PrHtmlPage* self, PrStringView url, PrStringView origin) {
+    if (self->host.fetcher == nullptr || self->loading || self->runningScript || self->window->streaming)
+        return PrStatus_InvalidState;
+    PrUrl* parsed = nullptr;
+    PrStatus status = prUrlCreate(url, nullptr, PrCharset_Utf8, &parsed);
+    prUrlDestroy(parsed);
+    if (status != PrStatus_Ok)
+        return status;
+    dropDocumentLoad(self);
+    HtmlDocumentLoad* load = allocZeroed<HtmlDocumentLoad>();
+    load->page = self;
+    load->agent = self->window->agent;
+    load->fetcher = self->host.fetcher;
+    load->url = prStringCopy(url);
+    load->origin = prStringCopy(origin);
+    prMutexInit(&load->lock);
+    load->references.store(2);
+    self->documentLoad = load;
+    prNetPost(load->fetcher->net, beginLoadOnLoop, load);
+    return PrStatus_Ok;
 }
 
 } // namespace
@@ -3004,6 +3030,9 @@ bool htmlPageNavigate(PrHtmlWindow* window, PrStringView url, HtmlHistoryCommit 
     navigation->page = self;
     navigation->id = self->pendingNavigation = ++self->navigations;
     navigation->url = prStringCopy(url);
+    // A traversal loads an entry that the session history holds already, as the user's back and forward buttons do, so
+    // it reaches no URL that the user's navigations did not. Any other navigation is the document's own.
+    navigation->origin = commit == HtmlHistoryCommit_Traverse ? prStringNull() : htmlWindowOrigin(window);
     navigation->commit = commit;
     navigation->target = target;
     htmlWindowQueueTask(window, runNavigation, navigation, dropNavigation);
@@ -3257,24 +3286,7 @@ void prHtmlPageEndLoad(PrHtmlPage* self) {
 }
 
 PrStatus prHtmlPageNavigate(PrHtmlPage* self, PrStringView url) {
-    if (self->host.fetcher == nullptr || self->loading || self->runningScript || self->window->streaming)
-        return PrStatus_InvalidState;
-    PrUrl* parsed = nullptr;
-    PrStatus status = prUrlCreate(url, nullptr, PrCharset_Utf8, &parsed);
-    prUrlDestroy(parsed);
-    if (status != PrStatus_Ok)
-        return status;
-    dropDocumentLoad(self);
-    HtmlDocumentLoad* load = allocZeroed<HtmlDocumentLoad>();
-    load->page = self;
-    load->agent = self->window->agent;
-    load->fetcher = self->host.fetcher;
-    load->url = prStringCopy(url);
-    prMutexInit(&load->lock);
-    load->references.store(2);
-    self->documentLoad = load;
-    prNetPost(load->fetcher->net, beginLoadOnLoop, load);
-    return PrStatus_Ok;
+    return startNavigation(self, url, PrStringView{});
 }
 
 void prHtmlPageImportModule(PrHtmlPage* self, PrStringView url, PrHtmlImportFn done, void* PR_NULLABLE context) {
@@ -3290,7 +3302,8 @@ void prHtmlPageImportModule(PrHtmlPage* self, PrStringView url, PrHtmlImportFn d
     queueModules(self);
 }
 
-PrStatus prHtmlPageFetch(PrHtmlPage* self, const PrFetchClientRequest* request, PrFetchClientFn done, void* PR_NULLABLE context) {
+PrStatus prHtmlPageFetch(PrHtmlPage* self, const PrFetchClientRequest* request, PrFetchResponseFn done,
+        void* PR_NULLABLE context) {
     PR_ASSERT(request->mode != PrFetchMode_Navigate);
     PR_ASSERT(request->headers != nullptr || request->headerCount == 0);
     PrUrl* base = domDocumentBaseUrl(self->window->document);
@@ -3438,6 +3451,13 @@ void prHtmlPageSetVisibility(PrHtmlPage* self, PrHtmlVisibility visibility) {
         prHtmlPageSetVisibility(self->children.data[i], visibility);
 }
 
+void prHtmlPageInvalidateHostStates(PrHtmlPage* self, PrDomHostState states) {
+    if (self->presentation != nullptr)
+        cssPresentationHostStatesChanged(self->presentation, states);
+    for (uint32_t i = 0; i < self->children.count; ++i)
+        prHtmlPageInvalidateHostStates(self->children.data[i], states);
+}
+
 PrCssPresentation* PR_NULLABLE prHtmlPagePresentation(PrHtmlPage* self) {
     return self->presentation;
 }
@@ -3459,5 +3479,20 @@ void prHtmlPresentationStart(PrCssPresentation* presentation, PrLayoutVec extent
 
 double prHtmlPageTimeOrigin(PrHtmlPage* self) {
     return self->window->timeOrigin;
+}
+
+PrString prHtmlPageIconUrl(PrHtmlPage* self) {
+    const PrDomDocument* document = self->window->document;
+    PrString found = htmlLinkIconUrl(document, self->host.images);
+    if (!prStringIsNull(&found) || document->url == nullptr)
+        return found;
+    PrStringView scheme = prUrlScheme(document->url);
+    if (scheme != "http" && scheme != "https")
+        return found;
+    PrUrl* url = nullptr;
+    if (domDocumentParseUrl(document, "/favicon.ico", &url) == PrStatus_Ok)
+        found = prUrlSerialize(url, PrUrlSerialization_Whole);
+    prUrlDestroy(url);
+    return found;
 }
 

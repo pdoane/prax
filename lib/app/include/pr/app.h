@@ -242,14 +242,51 @@ enum {
 };
 typedef uint8_t PrAppModifierFlags;
 
-// The shapes of the pointer over the window.
+// The shapes of the pointer over the window. They are the predefined cursors of CSS (css-ui-4/#cursor), so that a
+// document's cursor maps to one. A backend shows the platform's nearest cursor, or the arrow if the platform has none
+// close to a shape.
 enum {
-    PrAppCursor_Arrow,
-    PrAppCursor_Hand,
-    PrAppCursor_Text,
+    PrAppCursor_Arrow,          // default
+    PrAppCursor_None,           // no cursor shows
+    PrAppCursor_ContextMenu,    // a context menu is available
+    PrAppCursor_Help,
+    PrAppCursor_Hand,           // a link or another control that activates
+    PrAppCursor_Progress,       // the program is busy, and the user can still interact with it
+    PrAppCursor_Wait,           // the program is busy, and the user cannot interact with it
+    PrAppCursor_Cell,           // a cell or a set of cells can be selected
     PrAppCursor_Crosshair,
-    PrAppCursor_ResizeX,        // a horizontal resize
-    PrAppCursor_ResizeY,        // a vertical resize
+    PrAppCursor_Text,
+    PrAppCursor_VerticalText,
+    PrAppCursor_Alias,          // a drag makes an alias or a shortcut
+    PrAppCursor_Copy,           // a drag copies
+    PrAppCursor_Move,           // a drag moves
+    PrAppCursor_NoDrop,         // a drop is not allowed here
+    PrAppCursor_NotAllowed,
+    PrAppCursor_Grab,           // a drag grabs and moves what is under the pointer
+    PrAppCursor_Grabbing,       // a drag grabbed what is under the pointer
+
+    // Resizes that move one edge or corner, which the platform may show pointing outward only.
+    PrAppCursor_ResizeN,
+    PrAppCursor_ResizeE,
+    PrAppCursor_ResizeS,
+    PrAppCursor_ResizeW,
+    PrAppCursor_ResizeNE,
+    PrAppCursor_ResizeNW,
+    PrAppCursor_ResizeSE,
+    PrAppCursor_ResizeSW,
+
+    // Resizes in both directions along an axis.
+    PrAppCursor_ResizeX,        // east and west
+    PrAppCursor_ResizeY,        // north and south
+    PrAppCursor_ResizeNESW,
+    PrAppCursor_ResizeNWSE,
+    PrAppCursor_ResizeColumn,   // a divider between columns moves left or right
+    PrAppCursor_ResizeRow,      // a divider between rows moves up or down
+
+    PrAppCursor_AllScroll,      // the content scrolls in any direction
+    PrAppCursor_ZoomIn,
+    PrAppCursor_ZoomOut,
+    PrAppCursor_Count,
 };
 typedef uint8_t PrAppCursor;
 
@@ -408,6 +445,7 @@ struct PrApp {
     void (*wake)(PrApp* app);
     void (*requestFrame)(PrApp* app);
     void (*setCursor)(PrApp* app, PrAppCursor cursor);
+    void (*setTitle)(PrApp* app, PrStringView title);
     PrStatus (*surface)(PrApp* app, PrAppSurface* out);
     PrStatus (*openUrl)(PrApp* app, PrStringView url);
     void (*requestClipboardText)(PrApp* app);
@@ -452,6 +490,9 @@ void prAppRequestFrame(PrApp* app);
 
 // Sets the shape of the pointer over the window.
 void prAppSetCursor(PrApp* app, PrAppCursor cursor);
+
+// Sets the title of the window, which PrAppDesc::title sets first. The window copies `title`.
+void prAppSetTitle(PrApp* app, PrStringView title);
 
 // Writes the window's native surface to `out`. The surface is valid until shutdown. Returns InvalidState if the
 // application is not running.

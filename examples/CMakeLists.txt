@@ -74,7 +74,7 @@ add_library(alchemy_studio STATIC
 )
 target_include_directories(alchemy_studio PUBLIC ${PROJECT_SOURCE_DIR})
 target_link_libraries(alchemy_studio PUBLIC prax::json prax::image prax::compress prax::net prax::http prax::websocket
-                                            prax::draw prax::task prax::studio_kit prax::core_cpp
+                                            prax::draw prax::task prax::cache prax::studio_kit prax::core_cpp
                                      PRIVATE pr_warnings)
 
 # The application: alchemy's interface over the library, composed in main().
@@ -102,12 +102,25 @@ if (PR_DEVELOP)
     target_link_libraries(alchemy_comfy_tests PRIVATE alchemy_studio prax::http prax::websocket)
 endif()
 
-# The browser example: a page in a window, its scripts run, rendered through lib/layout.
-pr_example(browser browser/browser.cpp)
-target_link_libraries(browser PRIVATE prax::app prax::html_quickjs prax::url_quickjs prax::xhr_quickjs
+# The browser example: a tabbed web browser, whose pages' scripts run, rendered through lib/layout, inside chrome built
+# with Studio Kit. Its addresses, favorites and history are a library of their own, which the application and the tests
+# link.
+add_library(browser_model STATIC browser/address.cpp browser/favorites.cpp browser/history.cpp browser/profile.cpp)
+target_include_directories(browser_model PUBLIC ${PROJECT_SOURCE_DIR})
+target_link_libraries(browser_model PUBLIC prax::json prax::core_cpp PRIVATE pr_warnings)
+
+pr_example(browser browser/main.cpp browser/browser.cpp browser/chrome.cpp browser/commands.cpp browser/icons.cpp
+    browser/tab.cpp)
+target_link_libraries(browser PRIVATE browser_model prax::app prax::html_quickjs prax::url_quickjs prax::xhr_quickjs
                                       prax::charset_quickjs prax::svg_quickjs prax::mathml_quickjs
+                                      prax::studio_kit prax::studio_command prax::ui
                                       prax::text prax::font_bundle prax::font
                                       prax::draw prax::gpu prax::image prax::media
-                                      prax::compress prax::fetch prax::html prax::layout
-                                      prax::net prax::http prax::tls prax::storage
+                                      prax::compress prax::fetch prax::html prax::dom prax::layout
+                                      prax::net prax::http prax::tls prax::storage prax::cache
                                       prax::task prax::core_cpp)
+
+if (PR_DEVELOP)
+    pr_module_tests(browser_model browser/tests/test_address.cpp browser/tests/test_favorites.cpp
+        browser/tests/test_history.cpp)
+endif()

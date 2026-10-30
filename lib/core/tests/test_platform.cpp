@@ -2,8 +2,11 @@
 #include "pr/core_mimalloc.h"
 #include "pr/mem.h"
 #include "pr/random.h"
+#include "pr/time.h"
 
 #include "doctest/doctest.h"
+
+#include <initializer_list>
 
 extern "C" int prTestCoreCApi(void);
 
@@ -24,6 +27,16 @@ TEST_CASE("random bytes fill the whole of a request longer than one read of the 
     for (size_t at = 0; at + sizeof(zero) <= sizeof(first); at += sizeof(zero))
         CHECK(!memEquals(first + at, zero, sizeof(zero)));
     prRandomBytes(nullptr, 0);
+}
+
+TEST_CASE("the local time zone's offset from UTC is a whole number of minutes, less than a day, in any season") {
+    // 2026-01-15 and 2026-07-15 at noon UTC, one of which is in daylight saving time where the zone has it.
+    for (double wall : {1768478400000.0, 1784116800000.0, prTimeWallMilliseconds()}) {
+        double offset = prTimeLocalOffsetMilliseconds(wall);
+        CHECK(offset > -86400000.0);
+        CHECK(offset < 86400000.0);
+        CHECK(offset / 60000.0 == double(int64_t(offset / 60000.0)));
+    }
 }
 
 TEST_CASE("the mimalloc backend allocates, resizes and frees") {

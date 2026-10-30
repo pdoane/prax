@@ -48,10 +48,6 @@ std::vector<uint8_t> pngWith(const std::vector<std::pair<const char*, std::strin
     return png;
 }
 
-PrByteView viewOf(const std::vector<uint8_t>& bytes) {
-    return PrByteView{bytes.data(), bytes.size()};
-}
-
 std::string stringOf(PrStringView view) {
     return std::string(view.data, view.size);
 }
@@ -64,7 +60,7 @@ PrStatus textsOf(const std::vector<uint8_t>& png, PrCompressCodec* compress, std
             stringOf(text->translatedKeyword),
         });
     };
-    return prImagePngEachText(viewOf(png), compress, collect, out);
+    return prImagePngEachText(png, compress, collect, out);
 }
 
 std::string zlibOf(PrCompressCodec* codec, const std::string& text) {
@@ -78,10 +74,10 @@ std::string zlibOf(PrCompressCodec* codec, const std::string& text) {
 
 std::vector<uint8_t> withText(const std::vector<uint8_t>& png, PrStringView keyword, PrStringView text) {
     size_t size = 0;
-    REQUIRE(prImagePngSetText(viewOf(png), keyword, text, nullptr, 0, &size) == PrStatus_Ok);
+    REQUIRE(prImagePngSetText(png, keyword, text, nullptr, 0, &size) == PrStatus_Ok);
     std::vector<uint8_t> out(size);
     size_t written = 0;
-    REQUIRE(prImagePngSetText(viewOf(png), keyword, text, out.data(), out.size(), &written) == PrStatus_Ok);
+    REQUIRE(prImagePngSetText(png, keyword, text, out.data(), out.size(), &written) == PrStatus_Ok);
     CHECK(written == size);
     return out;
 }
@@ -172,11 +168,11 @@ TEST_CASE("a set text replaces every chunk of its keyword, where the first was, 
     // A short buffer is filled as far as it goes, and the size is the whole file's.
     std::vector<uint8_t> partial(10);
     size_t size = 0;
-    CHECK(prImagePngSetText(viewOf(plain), "Record", "first", partial.data(), partial.size(), &size) == PrStatus_Ok);
+    CHECK(prImagePngSetText(plain, "Record", "first", partial.data(), partial.size(), &size) == PrStatus_Ok);
     CHECK(size == added.size());
     CHECK(std::vector<uint8_t>(added.begin(), added.begin() + 10) == partial);
 
     std::vector<uint8_t> headerOnly(plain.begin(), plain.begin() + 33);
-    CHECK(prImagePngSetText(viewOf(headerOnly), "Record", "x", nullptr, 0, &size) == PrStatus_InvalidData);
+    CHECK(prImagePngSetText(headerOnly, "Record", "x", nullptr, 0, &size) == PrStatus_InvalidData);
     CHECK(size == 0);
 }

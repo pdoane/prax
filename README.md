@@ -27,7 +27,7 @@ Key libraries:
 
 | layer | libraries |
 | --- | --- |
-| Platform | `core` (memory, strings, threads, files), `task`, `app` (windows, input), `gpu`, `net`, `tls`, `http`, `fetch`, `websocket` and `storage` |
+| Platform | `core` (memory, strings, threads, files), `task`, `app` (windows, input), `gpu`, `net`, `tls`, `http`, `fetch`, `websocket`, `storage` and `cache` |
 | Formats | `json`, `xml`, `charset`, `locale`, `unicode`, `image`, `compress` and `color` |
 | Engines | `font`, `text`, `layout`, `path` and `draw` |
 | Documents | `html`, `svg`, `mathml`, `markdown` and `lottie` |

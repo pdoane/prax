@@ -15,3 +15,7 @@ double prTimeMonotonicMilliseconds(void) {
 double prTimeWallMilliseconds(void) {
     return PR_PLATFORM_TIME_WALL_MILLISECONDS();
 }
+
+double prTimeLocalOffsetMilliseconds(double wall) {
+    return PR_PLATFORM_TIME_LOCAL_OFFSET_MILLISECONDS(wall);
+}

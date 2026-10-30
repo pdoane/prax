@@ -16,10 +16,12 @@ constexpr PrCssProperty kFontProperties[] = {
     PrCssProperty_DominantBaseline, PrCssProperty_LetterSpacing, PrCssProperty_WordSpacing, PrCssProperty_TextTransform,
 };
 
+// The inherited properties that painting reads, and those that decide how a box takes the pointer: whether it is a
+// target, and the cursor that it shows.
 constexpr PrCssProperty kColorProperties[] = {
     PrCssProperty_Color, PrCssProperty_Visibility, PrCssProperty_DynamicRangeLimit, PrCssProperty_ImageRendering,
     PrCssProperty_ImageOrientation, PrCssProperty_ColorScheme, PrCssProperty_AccentColor, PrCssProperty_Interactivity,
-    PrCssProperty_PointerEvents,
+    PrCssProperty_PointerEvents, PrCssProperty_Cursor,
 };
 
 constexpr PrCssProperty kBoxProperties[] = {
@@ -93,10 +95,11 @@ constexpr PrCssProperty kAnimationProperties[] = {
 
 // Few elements declare generated content, counters or list styles, so these are groups of their own, which most styles
 // share with their parent or the initial style. Appearance joins the generated content, since only controls declare it
-// and the presentation reads it to generate their parts.
+// and the presentation reads it to generate their parts. So does user-select, which few elements declare either, and
+// which decides whether the user can select an element's text.
 constexpr PrCssProperty kGeneratedProperties[] = {
     PrCssProperty_Content, PrCssProperty_CounterReset, PrCssProperty_CounterIncrement, PrCssProperty_CounterSet,
-    PrCssProperty_Appearance,
+    PrCssProperty_Appearance, PrCssProperty_UserSelect,
 };
 
 constexpr PrCssProperty kListProperties[] = {
@@ -151,7 +154,7 @@ constexpr PrCssProperty kGridProperties[] = {
 
 extern const CssStyleGroupProperties kCssStyleGroupProperties[CssStyleGroup_Count] = {
     {kFontProperties, 19},         // Font
-    {kColorProperties, 9},         // Color
+    {kColorProperties, 10},        // Color
     {kBoxProperties, 45},          // Box
     {kFlexProperties, 14},         // Flex
     {kDecorationProperties, 18},   // Decoration
@@ -159,7 +162,7 @@ extern const CssStyleGroupProperties kCssStyleGroupProperties[CssStyleGroup_Coun
     {kEffectProperties, 12},       // Effect
     {kCompositingProperties, 20},  // Compositing
     {kAnimationProperties, 14},    // Animation
-    {kGeneratedProperties, 5},     // Generated
+    {kGeneratedProperties, 6},     // Generated
     {kListProperties, 4},          // List
     {kSvgProperties, 21},          // Svg
     {kSvgGeometryProperties, 16},  // SvgGeometry
@@ -426,7 +429,7 @@ extern const CssStyleSlot kCssStyleSlots[PrCssProperty_Count] = {
     {CssStyleGroup_Count, 0},         // cue
     {CssStyleGroup_Count, 0},         // cue-after
     {CssStyleGroup_Count, 0},         // cue-before
-    {CssStyleGroup_Count, 0},         // cursor
+    {CssStyleGroup_Color, 9},         // cursor
     {CssStyleGroup_SvgGeometry, 0},   // cx
     {CssStyleGroup_SvgGeometry, 1},   // cy
     {CssStyleGroup_SvgGeometry, 7},   // d
@@ -885,7 +888,7 @@ extern const CssStyleSlot kCssStyleSlots[PrCssProperty_Count] = {
     {CssStyleGroup_Effect, 4},        // translate
     {CssStyleGroup_Count, 0},         // trigger-scope
     {CssStyleGroup_Box, 33},          // unicode-bidi
-    {CssStyleGroup_Count, 0},         // user-select
+    {CssStyleGroup_Generated, 5},     // user-select
     {CssStyleGroup_SvgGeometry, 8},   // vector-effect
     {CssStyleGroup_Count, 0},         // vertical-align
     {CssStyleGroup_Count, 0},         // view-timeline

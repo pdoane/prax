@@ -148,14 +148,15 @@ void appendSanitized(const PrDomElement* input, PrStringView text, TextBuffer* o
             return;
         }
         case PrDomInputType_Date: {
-            DomDate date{};
+            PrTimeDate date{};
             if (domParseDate(value, &date))
                 textAppend(out, value);
             return;
         }
         case PrDomInputType_Month: {
-            DomDate date{};
-            if (domParseMonth(value, &date))
+            int64_t year = 0;
+            uint32_t month = 0;
+            if (domParseMonth(value, &year, &month))
                 textAppend(out, value);
             return;
         }
@@ -171,7 +172,7 @@ void appendSanitized(const PrDomElement* input, PrStringView text, TextBuffer* o
                 textAppend(out, value);
             return;
         case PrDomInputType_DatetimeLocal: {
-            DomDate date{};
+            PrTimeDate date{};
             DomTime time = 0;
             uint32_t digits = 0;
             if (domParseLocalDateTime(value, &date, &time, &digits) && digits <= 3)
@@ -701,17 +702,18 @@ DomInputApplyFlags domInputApplies(PrDomInputType type) {
 bool domInputStringToNumber(const PrDomElement* input, PrStringView text, double* out) {
     switch (domElementInputType(input)) {
         case PrDomInputType_Date: {
-            DomDate date{};
+            PrTimeDate date{};
             if (!domParseDate(text, &date))
                 return false;
-            *out = double(domDateDays(date)) * kDayMilliseconds;
+            *out = double(prTimeDateToDays(date)) * kDayMilliseconds;
             return true;
         }
         case PrDomInputType_Month: {
-            DomDate date{};
-            if (!domParseMonth(text, &date))
+            int64_t year = 0;
+            uint32_t month = 0;
+            if (!domParseMonth(text, &year, &month))
                 return false;
-            *out = double((date.year - 1970) * 12 + int64_t(date.month) - 1);
+            *out = double((year - 1970) * 12 + int64_t(month) - 1);
             return true;
         }
         case PrDomInputType_Week: {
@@ -725,11 +727,11 @@ bool domInputStringToNumber(const PrDomElement* input, PrStringView text, double
         case PrDomInputType_Time:
             return domParseTime(text, out);
         case PrDomInputType_DatetimeLocal: {
-            DomDate date{};
+            PrTimeDate date{};
             DomTime time = 0;
             if (!domParseLocalDateTime(text, &date, &time))
                 return false;
-            *out = double(domDateDays(date)) * kDayMilliseconds + time;
+            *out = double(prTimeDateToDays(date)) * kDayMilliseconds + time;
             return true;
         }
         case PrDomInputType_Number:
@@ -744,7 +746,7 @@ void domInputNumberToString(const PrDomElement* input, double value, TextBuffer*
     PR_ASSERT(isFiniteF64(value));
     switch (domElementInputType(input)) {
         case PrDomInputType_Date:
-            domAppendDate(out, domDateFromDays(int64_t(floorF64(value / kDayMilliseconds))));
+            domAppendDate(out, prTimeDateFromDays(int64_t(floorF64(value / kDayMilliseconds))));
             return;
         case PrDomInputType_Month: {
             int64_t months = int64_t(floorF64(value)) + 1970 * 12;
@@ -766,7 +768,7 @@ void domInputNumberToString(const PrDomElement* input, double value, TextBuffer*
         }
         case PrDomInputType_DatetimeLocal: {
             double days = floorF64(value / kDayMilliseconds);
-            domAppendLocalDateTime(out, domDateFromDays(int64_t(days)), floorF64(value - days * kDayMilliseconds));
+            domAppendLocalDateTime(out, prTimeDateFromDays(int64_t(days)), floorF64(value - days * kDayMilliseconds));
             return;
         }
         default:
@@ -779,11 +781,11 @@ bool domInputStringToDate(const PrDomElement* input, PrStringView text, double* 
     switch (domElementInputType(input)) {
         case PrDomInputType_Month: {
             // A month's Date is the start of its first day.
-            DomDate date{};
-            if (!domParseMonth(text, &date))
+            int64_t year = 0;
+            uint32_t month = 0;
+            if (!domParseMonth(text, &year, &month))
                 return false;
-            date.day = 1;
-            *out = double(domDateDays(date)) * kDayMilliseconds;
+            *out = double(prTimeDateToDays(PrTimeDate{year, month, 1})) * kDayMilliseconds;
             return true;
         }
         case PrDomInputType_Date:
@@ -797,7 +799,7 @@ bool domInputStringToDate(const PrDomElement* input, PrStringView text, double* 
 
 void domInputDateToString(const PrDomElement* input, double time, TextBuffer* out) {
     if (domElementInputType(input) == PrDomInputType_Month) {
-        DomDate date = domDateFromDays(int64_t(floorF64(time / kDayMilliseconds)));
+        PrTimeDate date = prTimeDateFromDays(int64_t(floorF64(time / kDayMilliseconds)));
         domAppendMonth(out, date.year, date.month);
         return;
     }

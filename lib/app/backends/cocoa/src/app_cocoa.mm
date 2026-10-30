@@ -301,21 +301,79 @@ void requestFrame(PrApp* app) {
     [hostOf(app) requestFrame];
 }
 
-void setCursor(PrApp* app, PrAppCursor cursor) {
-    PrCocoaHost* host = hostOf(app);
-    NSCursor* selected = NSCursor.arrowCursor;
+// Returns a cursor that shows nothing, for PrAppCursor_None. A hidden cursor would need [NSCursor hide], whose calls
+// must balance, so a transparent image stands in for it.
+NSCursor* emptyCursor() {
+    static NSCursor* empty = [[NSCursor alloc] initWithImage:[[NSImage alloc] initWithSize:NSMakeSize(1, 1)]
+        hotSpot:NSZeroPoint];
+    return empty;
+}
+
+// Returns the system's cursor that resizes a frame from `position`, outward only or in both directions.
+NSCursor* frameResize(NSCursorFrameResizePosition position, NSCursorFrameResizeDirections directions) {
+    return [NSCursor frameResizeCursorFromPosition:position inDirections:directions];
+}
+
+// Returns the system's nearest cursor to `cursor`. AppKit has no public cursors for help, busy, cell, move or
+// all-scroll, which show the arrow, or the crosshair for a cell.
+NSCursor* cursorFor(PrAppCursor cursor) {
+    constexpr NSCursorFrameResizeDirections kOutward = NSCursorFrameResizeDirectionsOutward;
+    constexpr NSCursorFrameResizeDirections kBoth = NSCursorFrameResizeDirectionsAll;
     switch (cursor) {
-        case PrAppCursor_Hand: selected = NSCursor.pointingHandCursor; break;
-        case PrAppCursor_Text: selected = NSCursor.IBeamCursor; break;
-        case PrAppCursor_Crosshair: selected = NSCursor.crosshairCursor; break;
-        case PrAppCursor_ResizeX: selected = NSCursor.resizeLeftRightCursor; break;
-        case PrAppCursor_ResizeY: selected = NSCursor.resizeUpDownCursor; break;
-        default: break;
+        case PrAppCursor_None: return emptyCursor();
+        case PrAppCursor_ContextMenu: return NSCursor.contextualMenuCursor;
+        case PrAppCursor_Hand: return NSCursor.pointingHandCursor;
+        case PrAppCursor_Cell: return NSCursor.crosshairCursor;
+        case PrAppCursor_Crosshair: return NSCursor.crosshairCursor;
+        case PrAppCursor_Text: return NSCursor.IBeamCursor;
+        case PrAppCursor_VerticalText: return NSCursor.IBeamCursorForVerticalLayout;
+        case PrAppCursor_Alias: return NSCursor.dragLinkCursor;
+        case PrAppCursor_Copy: return NSCursor.dragCopyCursor;
+        case PrAppCursor_NoDrop: return NSCursor.operationNotAllowedCursor;
+        case PrAppCursor_NotAllowed: return NSCursor.operationNotAllowedCursor;
+        case PrAppCursor_Grab: return NSCursor.openHandCursor;
+        case PrAppCursor_Grabbing: return NSCursor.closedHandCursor;
+        case PrAppCursor_ResizeN: return frameResize(NSCursorFrameResizePositionTop, kOutward);
+        case PrAppCursor_ResizeE: return frameResize(NSCursorFrameResizePositionRight, kOutward);
+        case PrAppCursor_ResizeS: return frameResize(NSCursorFrameResizePositionBottom, kOutward);
+        case PrAppCursor_ResizeW: return frameResize(NSCursorFrameResizePositionLeft, kOutward);
+        case PrAppCursor_ResizeNE: return frameResize(NSCursorFrameResizePositionTopRight, kOutward);
+        case PrAppCursor_ResizeNW: return frameResize(NSCursorFrameResizePositionTopLeft, kOutward);
+        case PrAppCursor_ResizeSE: return frameResize(NSCursorFrameResizePositionBottomRight, kOutward);
+        case PrAppCursor_ResizeSW: return frameResize(NSCursorFrameResizePositionBottomLeft, kOutward);
+        case PrAppCursor_ResizeX: return frameResize(NSCursorFrameResizePositionRight, kBoth);
+        case PrAppCursor_ResizeY: return frameResize(NSCursorFrameResizePositionBottom, kBoth);
+        case PrAppCursor_ResizeNESW: return frameResize(NSCursorFrameResizePositionTopRight, kBoth);
+        case PrAppCursor_ResizeNWSE: return frameResize(NSCursorFrameResizePositionTopLeft, kBoth);
+        case PrAppCursor_ResizeColumn: return NSCursor.columnResizeCursor;
+        case PrAppCursor_ResizeRow: return NSCursor.rowResizeCursor;
+        case PrAppCursor_ZoomIn: return NSCursor.zoomInCursor;
+        case PrAppCursor_ZoomOut: return NSCursor.zoomOutCursor;
+        default: return NSCursor.arrowCursor;
     }
+}
+
+void setCursor(PrApp* app, PrAppCursor cursor) {
+    // A cursor is made once per shape, so that setting the same shape again finds the view's cursor unchanged. Only the
+    // main thread reads the table.
+    static NSCursor* made[PrAppCursor_Count];
+    PrAppCursor shape = cursor < PrAppCursor_Count ? cursor : PrAppCursor_Arrow;
+    if (made[shape] == nil)
+        made[shape] = cursorFor(shape);
+    PrCocoaHost* host = hostOf(app);
+    NSCursor* selected = made[shape];
     if (host.view == nil || host.view.cursor == selected)
         return;
     host.view.cursor = selected;
     [host.window invalidateCursorRectsForView:host.view];
+}
+
+void setTitle(PrApp* app, PrStringView title) {
+    PrCocoaHost* host = hostOf(app);
+    NSString* string = [[NSString alloc] initWithBytes:title.data length:title.size encoding:NSUTF8StringEncoding];
+    host.title = string != nil ? string : @"";
+    if (host.window != nil)
+        host.window.title = host.title;
 }
 
 PrStatus surface(PrApp* app, PrAppSurface* out) {
@@ -797,6 +855,7 @@ PrApp* prAppCocoaCreate(const PrAppDesc* desc) {
     app->wake = wake;
     app->requestFrame = requestFrame;
     app->setCursor = setCursor;
+    app->setTitle = setTitle;
     app->surface = surface;
     app->openUrl = openUrl;
     app->requestClipboardText = requestClipboardText;

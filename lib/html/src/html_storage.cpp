@@ -5,6 +5,7 @@
 #include "pr/alloc.h"
 #include "pr/array.h"
 #include "pr/assert.h"
+#include "pr/file.h"
 #include "pr/mutex.h"
 #include "pr/storage_disk.h"
 #include "pr/storage_memory.h"
@@ -48,14 +49,12 @@ void appendDirectoryName(PrStringView origin, TextBuffer* out) {
     }
 }
 
-// Returns a new area for `origin`, or null if its directory cannot be made.
-PrStorage* PR_NULLABLE createArea(const HtmlStorageProvider* provider, PrStringView origin) {
-    if (prStringIsNull(&provider->directory))
-        return prStorageMemoryCreate(provider->quota, PrStorageEviction_None);
+// Opens the area on disk whose directory in the provider's directory is `name`, or returns null if it cannot be made.
+PrStorage* PR_NULLABLE openDiskArea(const HtmlStorageProvider* provider, PrStringView name) {
     TextBuffer path{};
     textAppend(&path, prStringView(&provider->directory));
     textAppendChar(&path, '/');
-    appendDirectoryName(origin, &path);
+    textAppend(&path, name);
     PrStorageDiskDesc desc{
         .directory = textView(&path),
         .limitBytes = provider->quota,
@@ -65,6 +64,17 @@ PrStorage* PR_NULLABLE createArea(const HtmlStorageProvider* provider, PrStringV
     PrStorage* store = nullptr;
     prStorageDiskCreate(&desc, &store);
     textReset(&path);
+    return store;
+}
+
+// Returns a new area for `origin`, or null if its directory cannot be made.
+PrStorage* PR_NULLABLE createArea(const HtmlStorageProvider* provider, PrStringView origin) {
+    if (prStringIsNull(&provider->directory))
+        return prStorageMemoryCreate(provider->quota, PrStorageEviction_None);
+    TextBuffer name{};
+    appendDirectoryName(origin, &name);
+    PrStorage* store = openDiskArea(provider, textView(&name));
+    textReset(&name);
     return store;
 }
 
@@ -119,6 +129,45 @@ void prHtmlStorageProviderDestroy(PrHtmlStorageProvider* PR_NULLABLE provider) {
     prStringReset(&provider->directory);
     prMutexReset(&provider->mutex);
     prMemoryFree(provider);
+}
+
+void prHtmlStorageProviderClear(PrHtmlStorageProvider* provider) {
+    prMutexLock(&provider->mutex);
+    for (uint32_t i = 0; i < provider->areas.count; ++i)
+        prStorageClear(provider->areas.data[i].store);
+    // The areas of origins that have not asked for theirs in this run are opened only to be cleared. The names of their
+    // directories are gathered first, since the callback must not change the provider's directory.
+    struct Gather {
+        const HtmlStorageProvider* provider;
+        Array<PrString> closed;
+    } gather{provider, {}};
+    if (!prStringIsNull(&provider->directory)) {
+        prFileEachEntry(prStringView(&provider->directory), [](void* PR_NULLABLE context, const PrFileEntry* entry) {
+            Gather& g = *static_cast<Gather*>(context);
+            if (entry->info.kind != PrFileKind_Directory)
+                return;
+            TextBuffer name{};
+            for (uint32_t i = 0; i < g.provider->areas.count; ++i) {
+                textClear(&name);
+                appendDirectoryName(prStringView(&g.provider->areas.data[i].origin), &name);
+                if (textView(&name) == entry->name) {
+                    textReset(&name);
+                    return;
+                }
+            }
+            textReset(&name);
+            g.closed.push(prStringCopy(entry->name));
+        }, &gather);
+    }
+    for (uint32_t i = 0; i < gather.closed.count; ++i) {
+        if (PrStorage* store = openDiskArea(provider, prStringView(&gather.closed.data[i]))) {
+            prStorageClear(store);
+            prStorageDestroy(store);
+        }
+        prStringReset(&gather.closed.data[i]);
+    }
+    gather.closed.reset();
+    prMutexUnlock(&provider->mutex);
 }
 
 PrHtmlStorage* PR_NULLABLE prHtmlWindowStorage(PrHtmlWindow* window, PrHtmlStorageKind kind) {

@@ -611,6 +611,10 @@ void cssPresentationWheelListenersChanged(PrCssPresentation* presentation, PrDom
 // whether the element is defined as a custom element (:defined), and its custom states (:state()).
 void cssPresentationStatesChanged(PrCssPresentation* presentation, PrDomElement* element);
 
+// Restyles the elements that a change to the host's answers for `states` can reach (DomDocumentHost::elementState).
+// Links are invalidated as a change of their href is, because their :link and :visited depend on it.
+void cssPresentationHostStatesChanged(PrCssPresentation* presentation, PrDomHostState states);
+
 // Brings the presentation's styles, its tree and the tree's layout up to date with the document, on the caller's
 // thread, as a synchronous query needs. The document's host does it if it brings up to date what it draws in the boxes
 // (DomDocumentHost::updatePresentation). Otherwise the presentation is updated alone, at the extent of the host's

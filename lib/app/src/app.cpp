@@ -140,6 +140,10 @@ void prAppSetCursor(PrApp* app, PrAppCursor cursor) {
     app->setCursor(app, cursor);
 }
 
+void prAppSetTitle(PrApp* app, PrStringView title) {
+    app->setTitle(app, title);
+}
+
 PrStatus prAppSurface(PrApp* app, PrAppSurface* out) {
     return app->surface(app, out);
 }

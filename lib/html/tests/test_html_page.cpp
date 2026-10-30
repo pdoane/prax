@@ -2,7 +2,9 @@
 //
 // html - https://html.spec.whatwg.org/multipage/document-sequences.html
 
+#include "pr/compress.h"
 #include "pr/html_page.h"
+#include "pr/image.h"
 #include "pr/string_ops.h"
 
 #include "html/tests/support/html_test_fetch.h"
@@ -92,6 +94,22 @@ std::string sheetMedia(PrHtmlPage* page, uint32_t index) {
     PrString text = prCssMediaListMediaText(prCssStyleSheetMedia(sheet));
     std::string out(prStringView(&text).data, prStringView(&text).size);
     prStringReset(&text);
+    return out;
+}
+
+// Loads `source` at `url` in a page whose host decodes images with `images`, and returns the URL of its icon, or
+// "(none)" for the null string.
+std::string iconUrl(PrImageCodec* PR_NULLABLE images, PrStringView source, PrStringView url) {
+    PrHtmlHost host = prHtmlHostDefault();
+    host.images = images;
+    PrHtmlPage* page = prHtmlPageCreate(&host);
+    REQUIRE(prHtmlPageLoad(page, source, url, nullptr) == PrStatus_Ok);
+    PrString icon = prHtmlPageIconUrl(page);
+    std::string out = "(none)";
+    if (!prStringIsNull(&icon))
+        out = std::string(prStringView(&icon).data, prStringView(&icon).size);
+    prStringReset(&icon);
+    prHtmlPageDestroy(page);
     return out;
 }
 
@@ -970,6 +988,37 @@ TEST_CASE("a location of another document navigates the page from a task, and a 
     prHtmlPageDestroy(page);
 }
 
+TEST_CASE("a navigation that a document starts is fetched from its origin, and the user's and a traversal from none") {
+    LaterHost later;
+    PrHtmlSessionHistory* history = prHtmlSessionHistoryCreate();
+    PrHtmlHost host = later.host();
+    host.sessionHistory = history;
+    PrHtmlPage* page = prHtmlPageCreate(&host);
+    // Answers the navigation that waits for the URL that ends in `name`, and returns the origin that it was fetched
+    // from.
+    auto originOf = [&](const char* name) {
+        later.settle(page);
+        REQUIRE(later.waitingFor(name) == 1);
+        std::string origin = "<none>";
+        for (PrFetchInterceptRequest* request : later.fetcher.held) {
+            if (TestFetcher::urlOf(request).ends_with(name) && request->desc.origin.data != nullptr)
+                origin = std::string(request->desc.origin.data, request->desc.origin.size);
+        }
+        later.answer(name, "<p>");
+        later.settle(page);
+        return origin;
+    };
+    REQUIRE(prHtmlPageNavigate(page, "https://example.test/a") == PrStatus_Ok);
+    CHECK(originOf("/a") == "<none>");
+    REQUIRE(prHtmlWindowSetLocation(prHtmlPageWindow(page), PrUrlComponent_Href, "https://other.test/b",
+        PrHtmlHistoryHandling_Push) == PrStatus_Ok);
+    CHECK(originOf("/b") == "https://example.test");
+    prHtmlPageTraverse(page, -1);
+    CHECK(originOf("/a") == "<none>");
+    prHtmlPageDestroy(page);
+    prHtmlSessionHistoryDestroy(history);
+}
+
 TEST_CASE("a page's session history keeps each document's entries, and going to another document's navigates") {
     LaterHost later;
     PrHtmlSessionHistory* history = prHtmlSessionHistoryCreate();
@@ -1053,7 +1102,7 @@ TEST_CASE("a script's fetch sends what it asks, and receives the response filter
     struct Responses {
         std::vector<PrStatus> statuses;
         std::vector<std::string> received;
-        static void done(void* PR_NULLABLE data, const PrFetchClientResponse* response) {
+        static void done(void* PR_NULLABLE data, const PrFetchResponse* response) {
             Responses* self = static_cast<Responses*>(data);
             self->statuses.push_back(response->status);
             PrStringView url = response->url.data != nullptr ? response->url : PrStringView{""};
@@ -1182,7 +1231,7 @@ TEST_CASE("a script's fetch that is cancelled stops, and is never answered") {
     CHECK(prHtmlPageLoad(page, "<p>", "https://example.test/page", nullptr) == PrStatus_Ok);
     later.settle(page);
     uint32_t waited = 0;
-    PrFetchClientFn count = [](void* PR_NULLABLE data, const PrFetchClientResponse*) {
+    PrFetchResponseFn count = [](void* PR_NULLABLE data, const PrFetchResponse*) {
         ++*static_cast<uint32_t*>(data);
     };
     // One waits for the network, and the answer of the other, a data: URL, waits for its task.
@@ -1285,4 +1334,34 @@ TEST_CASE("a navigation replaces one in flight, and a page destroyed during one 
     prHtmlPageDestroy(page);
     later.answer("/third.html", "<!doctype html><p id=third>", 200, "text/html");
     CHECK(later.fetcher.waiting() == 0);
+}
+
+TEST_CASE("a document's icon is its last icon link, resolved against its base URL") {
+    CHECK(iconUrl(nullptr, "<link rel=icon href=a.png><link rel='shortcut ICON' href=/b.ico>",
+        "https://example.test/dir/page") == "https://example.test/b.ico");
+    CHECK(iconUrl(nullptr, "<base href=https://cdn.test/x/><link rel=icon href=icon.png>",
+        "https://example.test/page") == "https://cdn.test/x/icon.png");
+    CHECK(iconUrl(nullptr, "<link rel=icon href=a.png><link rel=apple-touch-icon href=b.png><link rel=icon href=''>",
+        "https://example.test/") == "https://example.test/a.png");
+    CHECK(iconUrl(nullptr, "<body><link rel=icon href=late.png>", "file:///dir/page.html") == "file:///dir/late.png");
+}
+
+TEST_CASE("an icon link whose type the host cannot decode names no icon") {
+    PrCompressCodec* compress = prCompressCodecCreate(PrCompressCodecBackend_Default);
+    PrImageCodec* images = prImageCodecCreate(PrImageCodecBackend_Default, compress);
+    REQUIRE(images != nullptr);
+    PrStringView source = "<link rel=icon type=image/png href=a.png><link rel=icon type='Image/SVG+XML' href=b.svg>";
+    CHECK(iconUrl(images, source, "https://example.test/") == "https://example.test/a.png");
+    CHECK(iconUrl(nullptr, source, "https://example.test/") == "https://example.test/b.svg");
+    CHECK(iconUrl(images, "<link rel=icon type='image/x-icon; charset=x' href=c.ico>", "https://example.test/") ==
+        "https://example.test/c.ico");
+    prImageCodecDestroy(images);
+    prCompressCodecDestroy(compress);
+}
+
+TEST_CASE("a document without an icon link has the favicon of its HTTP origin, and none elsewhere") {
+    CHECK(iconUrl(nullptr, "<p>no icon", "https://example.test:8443/a/b?c") == "https://example.test:8443/favicon.ico");
+    CHECK(iconUrl(nullptr, "<p>no icon", "http://example.test/") == "http://example.test/favicon.ico");
+    CHECK(iconUrl(nullptr, "<p>no icon", "file:///dir/page.html") == "(none)");
+    CHECK(iconUrl(nullptr, "<p>no icon", "about:blank") == "(none)");
 }

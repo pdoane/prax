@@ -83,6 +83,11 @@ PrCommandBinding prCommandKeymapBinding(const PrCommandKeymap* keymap, uint32_t 
 // context. Returns false if nothing binds the command.
 bool prCommandKeymapChord(const PrCommandKeymap* keymap, PrStringView commandId, PrCommandChord* out);
 
+// Returns the id of the command that `chord` is bound to in `context`, or the null view if the chord is bound to none
+// there. The view is valid until the keymap changes. A host that routes keys past the scopes of its interface, such as
+// to content that keeps the keyboard, looks its chords up here.
+PrStringView prCommandKeymapCommand(const PrCommandKeymap* keymap, PrCommandChord chord, PrStringView context);
+
 #if defined(__cplusplus)
 }
 #endif

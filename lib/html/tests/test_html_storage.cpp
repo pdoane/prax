@@ -92,3 +92,45 @@ TEST_CASE("a window's storage is its document's origin's area, which a provider 
     prHtmlStorageProviderDestroy(local);
     prTaskPoolDestroy(pool);
 }
+
+TEST_CASE("clearing a provider empties every origin's area, including those that an earlier provider left on disk") {
+    const std::string directory = std::string(PR_HTML_TEST_DIR) + "/storage_clear";
+    PrTaskPool* pool = prTaskBuiltinCreate(1);
+    PrHtmlStorageProviderDesc disk{.directory = directory, .quotaBytes = 16, .pool = pool};
+    auto setAt = [](PrHtmlStorageProvider* provider, const char* url, const char* value) {
+        PrHtmlPage* page = openAt(provider, nullptr, url);
+        PrHtmlStorage* storage = prHtmlWindowStorage(prHtmlPageWindow(page), PrHtmlStorageKind_Local);
+        REQUIRE(storage != nullptr);
+        CHECK(prHtmlStorageSetItem(storage, "key", value) == PrStatus_Ok);
+        prHtmlPageDestroy(page);
+    };
+    auto valueAt = [](PrHtmlStorageProvider* provider, const char* url) {
+        PrHtmlPage* page = openAt(provider, nullptr, url);
+        PrHtmlStorage* storage = prHtmlWindowStorage(prHtmlPageWindow(page), PrHtmlStorageKind_Local);
+        REQUIRE(storage != nullptr);
+        std::string value = textOf(prHtmlStorageGetItem(storage, "key"));
+        prHtmlPageDestroy(page);
+        return value;
+    };
+    PrHtmlStorageProvider* earlier = prHtmlStorageProviderCreate(&disk);
+    setAt(earlier, "https://a.test/", "a");
+    setAt(earlier, "https://b.test/", "b");
+    prHtmlStorageProviderDestroy(earlier);
+
+    // In a later run, b.test opens its area before the clear, and a.test's area is only on disk.
+    PrHtmlStorageProvider* local = prHtmlStorageProviderCreate(&disk);
+    CHECK(valueAt(local, "https://b.test/") == "b");
+    prHtmlStorageProviderClear(local);
+    CHECK(valueAt(local, "https://a.test/") == "<null>");
+    CHECK(valueAt(local, "https://b.test/") == "<null>");
+    prHtmlStorageProviderDestroy(local);
+
+    // A provider in memory clears its areas in the same way.
+    PrHtmlStorageProviderDesc memory{.quotaBytes = 16};
+    PrHtmlStorageProvider* session = prHtmlStorageProviderCreate(&memory);
+    setAt(session, "https://a.test/", "a");
+    prHtmlStorageProviderClear(session);
+    CHECK(valueAt(session, "https://a.test/") == "<null>");
+    prHtmlStorageProviderDestroy(session);
+    prTaskPoolDestroy(pool);
+}

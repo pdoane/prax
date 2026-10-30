@@ -46,16 +46,10 @@ PrLayoutNode buildList(PrKit* kit, PrLayoutNode parent, CollectionsState& collec
     for (uint32_t i = window.first; i < window.first + window.count; ++i) {
         const CollectionAsset& asset = collections.assets[i];
         bool selected = selectionHolds(collections.selection, i);
-        PrKitRow row{
-            .index = i,
-            .item = i,
-            .icon = asset.icon,
-            .tone = PrKitTone_Primary,
-            .selected = selected,
-            .label = asset.name,
-            .meta = asset.sizeText,
-        };
-        PrLayoutNode node = prKitListRow(kit, view, row);
+        PrLayoutNode node = prKitListRow(kit, view, {.index = i, .item = i, .selected = selected});
+        prKitRowIcon(kit, node, {.icon = asset.icon});
+        prKitRowLabel(kit, node, {.text = asset.name}, PrKitTone_Primary);
+        prKitRowMeta(kit, node, {.text = asset.sizeText});
         PrKitBoxStyle type{.direction = PrKitDirection_Row, .justify = PrKitJustify_End};
         type.place.width = prKitPx(60);
         type.place.flex = PrKitFlex_Fixed;
@@ -79,15 +73,10 @@ PrLayoutNode buildGrid(PrKit* kit, PrLayoutNode parent, CollectionsState& collec
     PrKitWindow window = prKitListWindow(kit, view);
     for (uint32_t i = window.first; i < window.first + window.count; ++i) {
         const CollectionAsset& asset = collections.assets[i];
-        PrKitTile tile{
-            .index = i,
-            .item = i,
-            .icon = asset.icon,
-            .tint = asset.tint,
-            .selected = selectionHolds(collections.selection, i),
-            .label = asset.name,
-        };
-        prKitListTile(kit, view, tile);
+        PrKitTile item{.index = i, .item = i, .selected = selectionHolds(collections.selection, i)};
+        PrLayoutNode tile = prKitListTile(kit, view, item);
+        prKitTileIcon(kit, tile, {.icon = asset.icon}, asset.tint);
+        prKitTileLabel(kit, tile, {.text = asset.name});
     }
     PrKitSelectionEdit edit{};
     if (prKitSelectionEdited(kit, view, &edit))
@@ -112,18 +101,19 @@ PrLayoutNode buildTree(PrKit* kit, PrLayoutNode parent, CollectionsState& collec
         uint32_t index = 0;
         char label[32];
         char meta[16];
-        PrKitRow row{.index = i, .item = key, .tone = PrKitTone_Primary, .selected = selected};
+        PrLayoutNode row = prKitTreeRow(kit, view, {.index = i, .item = key, .selected = selected});
         if (collectionAssetOf(key, &index)) {
             const CollectionAsset& asset = collections.assets[index];
-            row.icon = asset.icon;
-            row.label = asset.name;
-            row.meta = asset.type;
+            prKitRowIcon(kit, row, {.icon = asset.icon});
+            prKitRowLabel(kit, row, {.text = asset.name}, PrKitTone_Primary);
+            prKitRowMeta(kit, row, {.text = asset.type});
         } else {
-            row.icon = collections.treeRows[i].open ? PrKitIconKind_FolderOpen : PrKitIconKind_Folder;
-            row.label = format(label, sizeof label, "Group %u", collectionGroupOf(key));
-            row.meta = format(meta, sizeof meta, "%u", kCollectionGroupSize);
+            PrKitIconKind folder = collections.treeRows[i].open ? PrKitIconKind_FolderOpen : PrKitIconKind_Folder;
+            prKitRowIcon(kit, row, {.icon = folder});
+            prKitRowLabel(kit, row, {.text = format(label, sizeof label, "Group %u", collectionGroupOf(key))},
+                PrKitTone_Primary);
+            prKitRowMeta(kit, row, {.text = format(meta, sizeof meta, "%u", kCollectionGroupSize)});
         }
-        prKitTreeRow(kit, view, row);
     }
     PrKitTreeFold fold{};
     if (prKitFolded(kit, view, &fold))

@@ -20,7 +20,7 @@ struct TestClient {
         std::vector<std::string> headers;   // each as "name: value"
         std::string body;
         PrFetchCredentials credentials;
-        PrFetchClientFn done;
+        PrFetchResponseFn done;
         void* PR_NULLABLE context;
         bool cancelled;
     };
@@ -38,26 +38,28 @@ struct TestClient {
         return PrXhrClient{
             .context = this,
             .baseUrl = [](void*) { return prStringCopy("https://example.com/dir/page.html"); },
-            .fetch = [](void* context, const PrFetchClientRequest* request, PrFetchClientFn done, void* doneContext) -> PrStatus {
-                TestClient* self = static_cast<TestClient*>(context);
-                if (self->refuses)
-                    return PrStatus_NotSupported;
-                Request fetch{
-                    .url = std::string(request->url.data, request->url.size),
-                    .method = "GET",
-                    .body = std::string(reinterpret_cast<const char*>(request->body.data), request->body.size),
-                    .credentials = request->credentials,
-                    .done = done,
-                    .context = doneContext,
-                };
-                if (request->method.data != nullptr)
-                    fetch.method = std::string(request->method.data, request->method.size);
-                for (uint32_t i = 0; i < request->headerCount; ++i)
-                    fetch.headers.push_back(std::string(request->headers[i].name.data, request->headers[i].name.size) + ": " +
-                        std::string(request->headers[i].value.data, request->headers[i].value.size));
-                self->fetches.push_back(fetch);
-                return PrStatus_Ok;
-            },
+            .fetch =
+                [](void* context, const PrFetchClientRequest* request, PrFetchResponseFn done, void* doneContext) -> PrStatus {
+                    TestClient* self = static_cast<TestClient*>(context);
+                    if (self->refuses)
+                        return PrStatus_NotSupported;
+                    Request fetch{
+                        .url = std::string(request->url.data, request->url.size),
+                        .method = "GET",
+                        .body = std::string(reinterpret_cast<const char*>(request->body.data), request->body.size),
+                        .credentials = request->credentials,
+                        .done = done,
+                        .context = doneContext,
+                    };
+                    if (request->method.data != nullptr)
+                        fetch.method = std::string(request->method.data, request->method.size);
+                    for (uint32_t i = 0; i < request->headerCount; ++i)
+                        fetch.headers.push_back(std::string(request->headers[i].name.data,
+                            request->headers[i].name.size) + ": " +
+                            std::string(request->headers[i].value.data, request->headers[i].value.size));
+                    self->fetches.push_back(fetch);
+                    return PrStatus_Ok;
+                },
             .cancelFetch = [](void* context, void* doneContext) {
                 for (Request& fetch : static_cast<TestClient*>(context)->fetches) {
                     if (fetch.context == doneContext)
@@ -98,7 +100,7 @@ struct TestClient {
     // Answers the last fetch with `body`, `status` and `headers`.
     void respond(const std::string& body, uint16_t status, std::vector<PrFetchHeader> headers) {
         Request fetch = fetches.back();
-        PrFetchClientResponse response{
+        PrFetchResponse response{
             .status = PrStatus_Ok,
             .responseStatus = status,
             .url = "https://example.com/final",
@@ -112,7 +114,7 @@ struct TestClient {
     // Fails the last fetch with `status`, a network error or Lost.
     void fail(PrStatus status) {
         Request fetch = fetches.back();
-        PrFetchClientResponse response{.status = status};
+        PrFetchResponse response{.status = status};
         fetch.done(fetch.context, &response);
     }
 };

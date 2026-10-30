@@ -31,7 +31,7 @@ void answer(void* PR_NULLABLE context, PrFetchInterceptRequest* request) {
         prFetchInterceptRequestPass(request);
     } else if (location.ends_with("/moved")) {
         std::string moved = location + "/here";
-        PrFetchInterceptResponse response{.status = 200, .url = PrStringView{moved.data(), moved.size()}};
+        PrFetchInterceptResponse response{.status = 200, .url = moved};
         prFetchInterceptRequestRespond(request, &response);
     } else {
         PrFetchHeader header{"Content-Type", "text/plain"};
@@ -86,8 +86,8 @@ void probeEvent(void* PR_NULLABLE context, PrFetch* fetch, PrFetchEvent event) {
 }
 
 void start(PrFetchNetwork* fetcher, Probe* probe, const char* url) {
-    PrFetchRequestDesc desc{.url = url, .event = probeEvent, .context = probe};
-    REQUIRE(prFetchCreate(fetcher, &desc, &probe->fetch) == PrStatus_Ok);
+    PrFetchRequestDesc desc{.url = url};
+    REQUIRE(prFetchCreate(fetcher, &desc, probeEvent, probe, &probe->fetch) == PrStatus_Ok);
 }
 
 } // namespace

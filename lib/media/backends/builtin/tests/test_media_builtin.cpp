@@ -51,10 +51,6 @@ std::vector<uint8_t> movie(uint32_t milliseconds, const std::vector<uint8_t>& tr
     return join({box("ftyp", brand), box("moov", join({box("mvhd", header), tracks}))});
 }
 
-PrByteView viewOf(const std::vector<uint8_t>& bytes) {
-    return PrByteView{bytes.data(), bytes.size()};
-}
-
 } // namespace
 
 } // namespace pr_impl
@@ -66,7 +62,7 @@ TEST_CASE("the built-in codec reads a movie's duration and its first video track
     std::vector<uint8_t> bytes = movie(2500, join({track("soun", 0, 0), track("vide", 320, 240), track("vide", 8, 8)}));
     PrMediaDecoder* decoder = nullptr;
     PrMediaInfo info{};
-    REQUIRE(prMediaDecoderCreate(codec, viewOf(bytes), &decoder, &info) == PrStatus_Ok);
+    REQUIRE(prMediaDecoderCreate(codec, bytes, &decoder, &info) == PrStatus_Ok);
     CHECK(info.duration == 2.5);
     CHECK(info.hasVideo);
     CHECK(info.hasAudio);
@@ -78,17 +74,17 @@ TEST_CASE("the built-in codec reads a movie's duration and its first video track
     prMediaDecoderDestroy(decoder);
 
     std::vector<uint8_t> audio = movie(1000, track("soun", 0, 0));
-    REQUIRE(prMediaDecoderCreate(codec, viewOf(audio), &decoder, &info) == PrStatus_Ok);
+    REQUIRE(prMediaDecoderCreate(codec, audio, &decoder, &info) == PrStatus_Ok);
     CHECK(!info.hasVideo);
     CHECK(info.videoExtent.x == 0);
     prMediaDecoderDestroy(decoder);
 
     // A resource without a movie header, or without a file type box, is not a movie.
     std::vector<uint8_t> untimed = box("ftyp", std::vector<uint8_t>(8));
-    CHECK(prMediaDecoderCreate(codec, viewOf(untimed), &decoder, &info) == PrStatus_NotSupported);
+    CHECK(prMediaDecoderCreate(codec, untimed, &decoder, &info) == PrStatus_NotSupported);
     CHECK(decoder == nullptr);
     std::vector<uint8_t> noise(64, 0x5a);
-    CHECK(prMediaDecoderCreate(codec, viewOf(noise), &decoder, &info) == PrStatus_NotSupported);
+    CHECK(prMediaDecoderCreate(codec, noise, &decoder, &info) == PrStatus_NotSupported);
     prMediaCodecDestroy(codec);
 }
 

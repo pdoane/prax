@@ -48,7 +48,7 @@ bool loadImage(void* PR_NULLABLE context, PrDomDocument* from, PrStringView url,
     PrSvgDrawOptions options = prSvgDrawOptionsDefault();
     options.loadImage = loadImage;
     options.loadContext = context;
-    out->svg = root != nullptr ? prSvgImageCreate(root, PrStringView{fragment.data(), fragment.size()}, &options) : nullptr;
+    out->svg = root != nullptr ? prSvgImageCreate(root, fragment, &options) : nullptr;
     prDomDocumentRelease(document);
     return out->svg != nullptr;
 }

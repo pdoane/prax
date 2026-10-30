@@ -1,4 +1,6 @@
+#include "pr/draw_image.h"
 #include "pr/kit_choice.h"
+#include "pr/kit_image.h"
 
 #include "tools/harness/kit_fixture.h"
 
@@ -10,19 +12,33 @@ namespace pr_impl {
 
 namespace {
 
-constexpr PrKitTab kTabs[] = {{.label = "Console"}, {.label = "Output"}, {.label = "Profiler"}};
+// What a test's tab shows: its label, a badge if `badge` is not null, and a close control if `closable` is true.
+struct TabContent {
+    const char* label;
+    const char* PR_NULLABLE badge;
+    bool closable;
+};
+
+constexpr TabContent kTabs[] = {{"Console", nullptr, false}, {"Output", nullptr, false}, {"Profiler", nullptr, false}};
 constexpr PrKitChoice kItems[] = {{.label = "Local"}, {.label = "World"}, {.label = "Parent"}};
 
-// Creates the tabs of `items` under `strip`, the tab at `*selected` selected, writes each tab's node to `nodes`, and
-// chooses a tab that is activated.
-void tabs(KitFixture& f, PrLayoutNode strip, const PrKitTab* items, uint32_t count, uint32_t* selected, PrLayoutNode* nodes) {
+// Creates the tabs of `items` under `strip`, the tab at `*selected` selected, and fills each with its content. Writes
+// each tab's node to `nodes`, and chooses a tab that is activated. Returns the index of the tab whose close control was
+// activated, or `count` if none was.
+uint32_t tabs(KitFixture& f, PrLayoutNode strip, const TabContent* items, uint32_t count, uint32_t* selected,
+        PrLayoutNode* nodes) {
+    uint32_t closed = count;
     for (uint32_t i = 0; i < count; ++i) {
-        PrKitTab tab = items[i];
-        tab.selected = *selected == i;
-        nodes[i] = prKitTab(f.kit, strip, tab);
+        nodes[i] = prKitTab(f.kit, strip, {.selected = *selected == i});
+        prKitTabLabel(f.kit, nodes[i], {.text = items[i].label});
+        if (items[i].badge != nullptr)
+            prKitBadge(f.kit, nodes[i], {.text = items[i].badge}, {});
+        if (items[i].closable && prKitActivated(f.kit, prKitTabClose(f.kit, nodes[i])))
+            closed = i;
         if (prKitActivated(f.kit, nodes[i]))
             *selected = i;
     }
+    return closed;
 }
 
 // Creates the segments or radios of kItems under `strip`, the item at `*selected` selected, and chooses an item that is
@@ -70,6 +86,34 @@ TEST_CASE("clicking a tab selects it") {
     CHECK(kitVerified(f.tree));
 }
 
+TEST_CASE("a tab holds what its caller creates under it, in order") {
+    KitFixture f;
+    uint8_t pixels[16 * 16 * 4] = {};
+    PrDrawImageDesc desc{
+        .pixels = PrPixelView{pixels, 16 * 4, {16, 16}},
+        .format = PrPixelFormat_Rgba8,
+        .alpha = PrDrawAlpha_Straight,
+        .space = PrColorSpace_Srgb,
+    };
+    const PrDrawImage* image = nullptr;
+    REQUIRE(prDrawImageCreate(&desc, &image) == PrStatus_Ok);
+    PrLayoutNode tab = kPrLayoutNodeNone;
+    PrLayoutNode close = kPrLayoutNodeNone;
+    f.build = [&](PrLayoutNode ground) {
+        tab = prKitTab(f.kit, prKitTabStrip(f.kit, ground, {}, {}), {.selected = true});
+        prKitImage(f.kit, tab, {.image = image}, {});
+        prKitTabLabel(f.kit, tab, {.text = "Page"});
+        close = prKitTabClose(f.kit, tab);
+    };
+    f.frame();
+    PrLayoutNode first = childOf(f, tab, 0);
+    CHECK(prLayoutNodeContent(f.tree, first).image == image);
+    CHECK(f.bounds(childOf(f, tab, 1)).left > f.bounds(first).right);
+    CHECK(prLayoutNodeLastChild(f.tree, tab) == close);
+    CHECK(kitVerified(f.tree));
+    prDrawImageRelease(image);
+}
+
 TEST_CASE("the arrow keys move a focused tab strip's focus and activate the tab they reach, stopping at the ends") {
     KitFixture f;
     uint32_t selected = 0;
@@ -98,16 +142,16 @@ TEST_CASE("the arrow keys move a focused tab strip's focus and activate the tab 
     CHECK(kitVerified(f.tree));
 }
 
-TEST_CASE("a closable tab reports its close control's click on its node, and leaves the selection to its caller") {
+TEST_CASE("a tab's close control reports its click, and leaves the selection to its caller") {
     KitFixture f;
     uint32_t selected = 0;
     PrLayoutNode nodes[2] = {};
     uint32_t closes = 0;
     f.build = [&](PrLayoutNode ground) {
-        const PrKitTab items[] = {{.label = "a.cpp", .closable = true}, {.label = "b.cpp", .closable = true}};
-        tabs(f, prKitTabStrip(f.kit, ground, {}, {}), items, 2, &selected, nodes);
-        CHECK_FALSE(prKitClosed(f.kit, nodes[0]));
-        closes += prKitClosed(f.kit, nodes[1]) ? 1 : 0;
+        const TabContent items[] = {{"a.cpp", nullptr, true}, {"b.cpp", nullptr, true}};
+        uint32_t closed = tabs(f, prKitTabStrip(f.kit, ground, {}, {}), items, 2, &selected, nodes);
+        CHECK(closed != 0);
+        closes += closed == 1 ? 1 : 0;
     };
     f.frame();
     PrLayoutNode close = prLayoutNodeLastChild(f.tree, nodes[1]);
@@ -448,7 +492,7 @@ TEST_CASE("a frame of the same choices makes no node and lays nothing out") {
     bool on = true;
     f.build = [&](PrLayoutNode ground) {
         PrLayoutNode column = prKitBox(f.kit, ground, {}, {.gap = kPrKitSpace4});
-        const PrKitTab items[] = {{.label = "Console", .badge = "3"}, {.label = "Output", .closable = true}};
+        const TabContent items[] = {{"Console", "3", false}, {"Output", nullptr, true}};
         PrLayoutNode nodes[2] = {};
         tabs(f, prKitTabStrip(f.kit, column, {.reorderable = true}, {}), items, 2, &tab, nodes);
         choices(f, prKitSegmented(f.kit, column, {}, {}), &segment, prKitSegment);

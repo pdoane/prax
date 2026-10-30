@@ -11,9 +11,11 @@ PR_ASSUME_NONNULL_BEGIN
 extern "C" {
 #endif
 
-// Implement prTimeMonotonicMilliseconds and prTimeWallMilliseconds.
+// Implement prTimeMonotonicMilliseconds, prTimeWallMilliseconds and prTimeLocalOffsetMilliseconds. The local time zone
+// is the system's active time zone.
 double prCoreWindowsTimeMonotonicMilliseconds(void);
 double prCoreWindowsTimeWallMilliseconds(void);
+double prCoreWindowsTimeLocalOffsetMilliseconds(double wall);
 
 #if defined(__cplusplus)
 }

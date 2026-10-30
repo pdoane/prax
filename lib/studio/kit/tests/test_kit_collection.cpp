@@ -72,15 +72,10 @@ struct ListScene {
         }
         for (uint32_t i = 0; i < rows.count; ++i) {
             uint32_t index = rows.first + i;
-            PrKitRow row{
-                .index = index,
-                .item = index,
-                .icon = PrKitIconKind_Cube,
-                .selected = selected[index],
-                .label = "Entity",
-                .meta = "mesh",
-            };
-            cells[index] = prKitListRow(f.kit, rows.view, row);
+            cells[index] = prKitListRow(f.kit, rows.view, {.index = index, .item = index, .selected = selected[index]});
+            prKitRowIcon(f.kit, cells[index], {.icon = PrKitIconKind_Cube});
+            prKitRowLabel(f.kit, cells[index], {.text = "Entity"}, PrKitTone_Primary);
+            prKitRowMeta(f.kit, cells[index], {.text = "mesh"});
         }
         if (prKitSelectionEdited(f.kit, rows.view, &rows.edit))
             prKitSelectionApply(&rows.edit, selected, count);
@@ -157,14 +152,9 @@ struct TreeScene {
         for (uint32_t i = 0; i < rows.count; ++i) {
             uint32_t index = rows.first + i;
             uint64_t id = ids[index];
-            PrKitRow row{
-                .index = index,
-                .item = id,
-                .icon = PrKitIconKind_Cube,
-                .selected = id == selectedId,
-                .label = "Entity",
-            };
-            nodes[index] = prKitTreeRow(f.kit, view, row);
+            nodes[index] = prKitTreeRow(f.kit, view, {.index = index, .item = id, .selected = id == selectedId});
+            prKitRowIcon(f.kit, nodes[index], {.icon = PrKitIconKind_Cube});
+            prKitRowLabel(f.kit, nodes[index], {.text = "Entity"}, PrKitTone_Primary);
             if (items[index].depth == 0) {
                 uint32_t group = uint32_t(id / 10 - 1);
                 toggles[index] = prKitVisibilityToggle(
@@ -290,14 +280,9 @@ struct GridScene {
         PrLayoutNode view = prKitListView(f.kit, ground, {.key = 1, .count = kTiles, .selection = &selection}, style);
         rows = rowsOf(f, view);
         for (uint32_t i = rows.first; i < rows.first + rows.count; ++i) {
-            PrKitTile tile{
-                .index = i,
-                .item = i,
-                .icon = PrKitIconKind_Cube,
-                .selected = selected[i],
-                .label = "Entity",
-            };
-            tiles[i] = prKitListTile(f.kit, view, tile);
+            tiles[i] = prKitListTile(f.kit, view, {.index = i, .item = i, .selected = selected[i]});
+            prKitTileIcon(f.kit, tiles[i], {.icon = PrKitIconKind_Cube}, PrColor{0, 0, 0, 0});
+            prKitTileLabel(f.kit, tiles[i], {.text = "Entity"});
         }
         if (prKitSelectionEdited(f.kit, view, &rows.edit))
             prKitSelectionApply(&rows.edit, selected, kTiles);
@@ -798,13 +783,9 @@ TEST_CASE("a tile's image fills its thumbnail in place of its icon") {
             .place = {.width = prKitPx(200), .height = prKitPx(200), .flex = PrKitFlex_Fixed},
         };
         PrLayoutNode view = prKitListView(f.kit, ground, {.key = 1, .count = 1}, style);
-        tile = prKitListTile(f.kit, view, {
-            .index = 0,
-            .item = 7,
-            .image = image,
-            .icon = PrKitIconKind_Cube,
-            .label = "fox.png",
-        });
+        tile = prKitListTile(f.kit, view, {.index = 0, .item = 7});
+        prKitTileImage(f.kit, tile, {.image = image});
+        prKitTileLabel(f.kit, tile, {.text = "fox.png"});
     };
     f.frame();
     f.frame();

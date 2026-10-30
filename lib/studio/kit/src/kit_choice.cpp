@@ -477,18 +477,6 @@ PrLayoutNode checkRow(PrKit* kit, PrLayoutNode parent, const PrKitCheck& check, 
     return row.node;
 }
 
-// Creates a tab's close control, which only the pointer can use, so that the arrow keys move between tabs.
-PrLayoutNode tabClose(PrKit* kit, PrLayoutNode cell) {
-    Kit& k = *kit;
-    KitControl close = kitControl(k, cell, 0, PrUiFlag_Pressable, false);
-    PrLayoutStyleIndex record = kitStyle(k, GlyphBox{.width = kPrKitHeightXxs, .height = kPrKitHeightXxs}, GlyphFlex{},
-        kitDress(k, close, KitLookId_Quiet).fill);
-    prLayoutTreeFrameSetStyle(k.tree, close.node, record);
-    PrKitTone tone = close.over ? PrKitTone_Primary : PrKitTone_Muted;
-    prKitIcon(kit, close.node, {.icon = PrKitIconKind_Close}, {.size = 10, .tone = tone});
-    return close.node;
-}
-
 // Returns the strip's payload kind. The kind is the strip itself, so that a tab drops only into its own strip.
 uint64_t tabPayloadOf(PrLayoutNode strip) {
     return hashMixKeys(strip, 0x7461627375ull);
@@ -667,19 +655,26 @@ PrLayoutNode prKitTab(PrKit* kit, PrLayoutNode strip, PrKitTab tab) {
     KitDress dress = kitDress(k, cell, look);
     prLayoutTreeFrameSetStyle(k.tree, cell.node,
         kitStyle(k, TabBox{.size = s.style.size}, TabFlex{}, choiceFont(PrKitTextRole_Body), dress.fill, dress.ink));
-    prLayoutTreeFrameText(k.tree, cell.node, 0, tab.label);
-    if (tab.badge.size != 0)
-        prKitBadge(kit, cell.node, {.text = tab.badge}, {.variant = tab.badgeVariant});
-    if (tab.closable && prKitActivated(kit, tabClose(kit, cell.node)))
-        kitSignal(k, cell.node, KitSignal_Closed);
     if (s.reorders && !cell.disabled && prUiIsPressed(k.ui, cell.node, 0))
         prUiDragStart(k.ui, cell.node, kTabDragThreshold, s.payload, s.count);
     stripItem(k, s, cell);
     return cell.node;
 }
 
-bool prKitClosed(const PrKit* kit, PrLayoutNode tab) {
-    return kitSignaled(*kit, tab, KitSignal_Closed);
+PrLayoutNode prKitTabLabel(PrKit* kit, PrLayoutNode tab, PrKitLabel label) {
+    // The tab's style sets the font and the text color of its state, which the text takes.
+    return prLayoutTreeFrameText(kit->tree, tab, label.key, label.text);
+}
+
+PrLayoutNode prKitTabClose(PrKit* kit, PrLayoutNode tab) {
+    Kit& k = *kit;
+    KitControl close = kitControl(k, tab, 0, PrUiFlag_Pressable, false);
+    PrLayoutStyleIndex record = kitStyle(k, GlyphBox{.width = kPrKitHeightXxs, .height = kPrKitHeightXxs}, GlyphFlex{},
+        kitDress(k, close, KitLookId_Quiet).fill);
+    prLayoutTreeFrameSetStyle(k.tree, close.node, record);
+    PrKitTone tone = close.over ? PrKitTone_Primary : PrKitTone_Muted;
+    prKitIcon(kit, close.node, {.icon = PrKitIconKind_Close}, {.size = 10, .tone = tone});
+    return close.node;
 }
 
 bool prKitMoved(const PrKit* kit, PrLayoutNode strip, uint32_t* from, uint32_t* to) {

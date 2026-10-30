@@ -387,16 +387,12 @@ void buildScenePanel(PrKit* kit, PrLayoutNode parent, EditorState& editor) {
     for (uint32_t i = window.first; i < window.first + window.count; ++i) {
         EntityId id = editor.sceneRows[i];
         SceneEntity* node = editor.find(id);
-        PrKitRow row{
-            .index = i,
-            .item = id,
-            .icon = node->icon,
-            .tone = PrKitTone(node->hidden ? PrKitTone_Faint : PrKitTone_Primary),
-            .selected = editor.selected == id,
-            .label = node->name,
-            .meta = node->typeLabel,
-        };
-        PrLayoutNode rowNode = prKitTreeRow(kit, view, row);
+        PrLayoutNode rowNode = prKitTreeRow(kit, view, {.index = i, .item = id, .selected = editor.selected == id});
+        prKitRowIcon(kit, rowNode, {.icon = node->icon});
+        prKitRowLabel(kit, rowNode, {.text = node->name},
+            PrKitTone(node->hidden ? PrKitTone_Faint : PrKitTone_Primary));
+        if (!node->typeLabel.empty())
+            prKitRowMeta(kit, rowNode, {.text = node->typeLabel});
         PrKitVisibilityToggle toggle{.hidden = node->hidden, .revealed = prUiIsHovered(ui, rowNode)};
         if (prKitActivated(kit, prKitVisibilityToggle(kit, rowNode, toggle)))
             editor.toggleHidden(id);
@@ -558,7 +554,9 @@ void buildConsole(PrKit* kit, PrLayoutNode parent, EditorState& editor) {
     };
     PrLayoutNode strip = prKitTabStrip(kit, tabs, {}, {});
     for (const ConsoleTabDef& def : kTabs) {
-        if (prKitActivated(kit, prKitTab(kit, strip, {.label = def.label, .selected = editor.consoleTab == def.tab})))
+        PrLayoutNode tab = prKitTab(kit, strip, {.selected = editor.consoleTab == def.tab});
+        prKitTabLabel(kit, tab, {.text = def.label});
+        if (prKitActivated(kit, tab))
             editor.consoleTab = def.tab;
     }
     prKitSpacer(kit, tabs, {});

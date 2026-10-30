@@ -825,11 +825,12 @@ STYLE_GROUPS = [
             "text-transform",
         ]),
     StyleGroup(
-        "Color", True, "read by painting",
-        "",
+        "Color", True, "read by painting, and by hit testing",
+        ("The inherited properties that painting reads, and those that decide how a box takes the pointer: whether it "
+         "is a target, and the cursor that it shows."),
         [
             "color", "visibility", "dynamic-range-limit", "image-rendering", "image-orientation", "color-scheme",
-            "accent-color", "interactivity", "pointer-events",
+            "accent-color", "interactivity", "pointer-events", "cursor",
         ]),
     StyleGroup(
         "Box", False, "read by layout",
@@ -900,12 +901,13 @@ STYLE_GROUPS = [
             "animation-play-state", "animation-composition",
         ]),
     StyleGroup(
-        "Generated", False, "read by the presentation: generated content, counters, appearance",
+        "Generated", False, "read by the presentation: generated content, counters, appearance, selection",
         ("Few elements declare generated content, counters or list styles, so these are groups of their own, which most "
          "styles share with their parent or the initial style. Appearance joins the generated content, since only "
-         "controls declare it and the presentation reads it to generate their parts."),
+         "controls declare it and the presentation reads it to generate their parts. So does user-select, which few "
+         "elements declare either, and which decides whether the user can select an element's text."),
         [
-            "content", "counter-reset", "counter-increment", "counter-set", "appearance",
+            "content", "counter-reset", "counter-increment", "counter-set", "appearance", "user-select",
         ]),
     StyleGroup(
         "List", True, "read by the presentation: list markers and quotes",
@@ -982,7 +984,7 @@ NOT_COMPUTED = {
     "corner-block-end", "corner-block-start", "corner-bottom", "corner-bottom-left", "corner-bottom-right",
     "corner-end-end", "corner-end-start", "corner-inline-end", "corner-inline-start", "corner-left", "corner-right",
     "corner-start-end", "corner-start-start", "corner-top", "corner-top-left", "corner-top-right", "cue-after",
-    "cue-before", "cursor", "event-trigger", "event-trigger-name", "event-trigger-source", "fill-break", "fill-color",
+    "cue-before", "event-trigger", "event-trigger-name", "event-trigger-source", "fill-break", "fill-color",
     "fill-image", "fill-origin", "fill-position", "fill-repeat", "fill-size", "flex-line-count", "float-defer",
     "float-offset", "float-reference", "flow-from", "flow-into", "flow-tolerance", "font-language-override",
     "font-optical-sizing", "font-palette", "font-size-adjust", "font-synthesis-style", "font-synthesis-weight",
@@ -1020,7 +1022,7 @@ NOT_COMPUTED = {
     "timeline-trigger", "timeline-trigger-activation-range", "timeline-trigger-activation-range-end",
     "timeline-trigger-activation-range-start", "timeline-trigger-active-range", "timeline-trigger-active-range-end",
     "timeline-trigger-active-range-start", "timeline-trigger-name", "timeline-trigger-source", "touch-action",
-    "transform-style", "trigger-scope", "user-select", "view-timeline-axis", "view-timeline-inset",
+    "transform-style", "trigger-scope", "view-timeline-axis", "view-timeline-inset",
     "view-timeline-name", "view-transition-class", "view-transition-group", "view-transition-name",
     "view-transition-scope", "voice-balance", "voice-duration", "voice-family", "voice-pitch", "voice-range",
     "voice-rate", "voice-stress", "voice-volume", "white-space-trim", "widows", "window-drag", "word-space-transform",

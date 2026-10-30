@@ -1,0 +1,706 @@
+// The chrome: the browser's own interface around the page, in Studio Kit.
+//
+// From the top, the chrome is the tab strip, the toolbar with the address bar, and the favorites bar. Below them, the
+// active tab's page fills a box that the chrome leaves empty, and the window draws the page there. A tab that shows no
+// document shows the start page instead, which the chrome draws: the favorites and the pages visited recently. The
+// chrome draws the history page over the empty document at the history's address (kAddressHistory).
+//
+// The chrome's buttons, its menus and the keyboard run the browser's commands (commands.h) alike.
+
+#include "examples/browser/chrome.h"
+
+#include "pr/command_keymap.h"
+#include "pr/command_kit.h"
+#include "pr/kit_box.h"
+#include "pr/kit_button.h"
+#include "pr/kit_choice.h"
+#include "pr/kit_image.h"
+#include "pr/kit_input.h"
+#include "pr/kit_menu.h"
+#include "pr/kit_surface.h"
+#include "pr/kit_text.h"
+#include "pr/storage.h"
+#include "pr/string_ops.h"
+#include "pr/time.h"
+#include "pr/time_date.h"
+#include "pr/utf8.h"
+
+#include "examples/browser/address.h"
+#include "examples/browser/commands.h"
+#include "examples/browser/icons.h"
+#include "examples/browser/tab.h"
+
+#include <algorithm>
+#include <cmath>
+#include <cstdio>
+#include <functional>
+
+namespace browser {
+
+using namespace pr;
+
+namespace {
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Constants
+
+// The platform's primary modifier, which opens a link of the chrome in a new tab.
+constexpr PrAppModifierFlags kCommand = kPrCommandPrimaryModifier;
+
+// The most suggestions that the address bar lists, the most recent pages that the start page lists, and the most visits
+// that the history page lists, past which a search finds the rest.
+constexpr size_t kMaxSuggestions = 8;
+constexpr size_t kMaxRecent = 8;
+constexpr size_t kMaxHistoryRows = 300;
+
+// The start page's column, in px, and its favorites' tiles: as many to a row as fill the column, and the gap between
+// them in px.
+constexpr float kStartWidth = 720;
+constexpr uint32_t kTilesPerRow = 4;
+constexpr float kTileGap = 8;
+
+// The most characters of a title that a tab or a favorite shows.
+constexpr uint32_t kMaxLabel = 28;
+
+// The side of the square that a tab fits its page's icon into, in px.
+constexpr float kTabIconSize = 16;
+
+// Returns true if the tab shows the start page: it shows no document and loads none.
+bool showsStart(const Tab& tab) {
+    return addressIsBlank(tab.info.url) && !tab.info.loading;
+}
+
+// Deletes what the history page's dialog chose of the browsing data. The history goes with the tabs that can reopen.
+void deleteBrowsingData(Browser& b) {
+    const Chrome& chrome = b.chrome;
+    if (chrome.deleteHistory) {
+        tabsForget(b, PrStringView{});
+        b.closed.clear();
+    }
+    if (chrome.deleteCache)
+        prStorageClear(b.cache);
+    if (chrome.deleteSiteData)
+        prHtmlStorageProviderClear(b.localStorage);
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Labels
+
+// Returns `text` cut to `max` code points, with an ellipsis in place of what was cut.
+std::string shortened(const std::string& text, uint32_t max) {
+    size_t at = 0;
+    uint32_t points = 0;
+    while (at < text.size() && points < max) {
+        uint32_t codePoint = 0;
+        uint32_t length = prUtf8Decode(text, at, &codePoint);
+        at += length != 0 ? length : 1;
+        ++points;
+    }
+    return at < text.size() ? text.substr(0, at) + "\xe2\x80\xa6" : text;
+}
+
+// Returns what a tab's label shows: its page's title, or else its host or URL, or "New Tab" for a blank tab.
+std::string tabLabel(const Tab& tab) {
+    if (!tab.info.title.empty())
+        return shortened(tab.info.title, kMaxLabel);
+    PrStringView url = tab.info.url;
+    if (addressIsBlank(url))
+        return "New Tab";
+    std::string host = addressHost(url);
+    return shortened(host.empty() ? tab.info.url : host, kMaxLabel);
+}
+
+// Returns the icon at the start of the address bar for `url`: a lock for a secure page, and a search for anything else.
+PrKitIconKind addressIcon(const std::string& url) {
+    if (stringStartsWith(url, "https:"))
+        return PrKitIconKind_Lock;
+    if (stringStartsWith(url, "http:"))
+        return PrKitIconKind_Unlock;
+    if (stringStartsWith(url, "file:"))
+        return PrKitIconKind_Folder;
+    return PrKitIconKind_Search;
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Parts of the chrome
+
+// The style of a toolbar's buttons.
+PrKitButtonStyle toolStyle() {
+    return PrKitButtonStyle{.variant = PrKitButtonVariant_Ghost, .size = PrKitControlSize_Md};
+}
+
+// Creates a button that runs the command `id`, with a tooltip that names the command and its shortcut. The button is
+// selected while the command is checked, and disabled while the command is.
+PrLayoutNode commandButton(Browser& b, PrLayoutNode parent, PrKitButton button, PrKitButtonStyle style, PrStringView id) {
+    button.selected = commandIsChecked(b, id);
+    button.disabled = !commandIsEnabled(b, id);
+    PrLayoutNode node = prKitButton(b.kit, parent, button, style);
+    std::string shortcut = commandShortcut(b, id);
+    prKitTooltip(b.kit, node, {.text = commandTitle(b, id), .shortcut = shortcut});
+    if (prKitActivated(b.kit, node))
+        commandRun(b, id);
+    return node;
+}
+
+// Creates a toolbar's icon button that runs the command `id`.
+PrLayoutNode toolButton(Browser& b, PrLayoutNode toolbar, PrKitIconKind icon, PrStringView id) {
+    return commandButton(b, toolbar, {.icon = icon}, toolStyle(), id);
+}
+
+// Creates a menu item that runs the command `id`.
+void commandItem(Browser& b, PrLayoutNode menu, PrStringView id) {
+    prCommandMenuItem(b.kit, menu, b.commands, b.keymap, id);
+}
+
+// Returns true if a press asks a link in the chrome, such as a favorite, to open in a new tab rather than the active
+// tab: a middle click, or a click with the command modifier.
+bool opensInNewTab(Browser& b, PrLayoutNode node) {
+    return prUiClicked(b.ui, node, 2) || (prKitActivated(b.kit, node) && (prUiPressModifiers(b.ui, 0) & kCommand) != 0);
+}
+
+// The tab strip, and the button that opens a tab after the strip's tabs. Each tab has a context menu, a middle click
+// closes it, and a drag moves it in the strip.
+void buildTabs(Browser& b, PrLayoutNode root) {
+    PrKitSurfaceStyle style{
+        .box = {.direction = PrKitDirection_Row, .align = PrKitAlign_End, .gap = 4, .padding = {6, 8, 0, 8}},
+        .ground = PrKitGround_Header,
+    };
+    PrLayoutNode row = prKitSurface(b.kit, root, {}, style);
+    PrLayoutNode strip = prKitTabStrip(b.kit, row, {.reorderable = true}, {});
+    PrKitPlace shrink{.flex = PrKitFlex_Auto};
+    prKitPlace(b.kit, strip, &shrink);
+    // The tabs change after the strip is built, so that each tab's node stays with its tab during the round. `chosen`
+    // is the tab that the user chose in the round, if any.
+    uint32_t chosen = UINT32_MAX;
+    uint32_t closing = UINT32_MAX;
+    uint32_t closingOthers = UINT32_MAX;
+    uint32_t duplicating = UINT32_MAX;
+    for (uint32_t i = 0; i < b.tabs.size(); ++i) {
+        Tab& tab = *b.tabs[i];
+        // A tab shows its page's icon, if it has one, its label, and its close control.
+        PrLayoutNode node = prKitTab(b.kit, strip, {.selected = i == b.active});
+        if (const PrDrawImage* image = iconsGet(b, tab.info.iconUrl)) {
+            PrKitImageStyle icon{
+                .fit = PrKitImageFit_Contain,
+                .place = {.width = prKitPx(kTabIconSize), .height = prKitPx(kTabIconSize), .flex = PrKitFlex_Fixed},
+            };
+            prKitImage(b.kit, node, {.image = image}, icon);
+        }
+        prKitTabLabel(b.kit, node, {.text = tabLabel(tab)});
+        if (prKitActivated(b.kit, node))
+            chosen = i;
+        if (prKitActivated(b.kit, prKitTabClose(b.kit, node)) || prUiClicked(b.ui, node, 2))
+            closing = i;
+        std::string tip = tab.info.title.empty() ? addressShown(tab.info.url) : tab.info.title;
+        if (!tip.empty())
+            prKitTooltip(b.kit, node, {.text = tip});
+        PrLayoutNode menu = prKitContextMenu(b.kit, node, {}, {});
+        if (menu == kPrLayoutNodeNone)
+            continue;
+        if (prKitActivated(b.kit, prKitMenuItem(b.kit, menu, {.text = "Reload"}, {})))
+            tabTraverse(tab, 0);
+        if (prKitActivated(b.kit, prKitMenuItem(b.kit, menu, {.text = "Duplicate"}, {})))
+            duplicating = i;
+        prKitMenuSeparator(b.kit, menu, {});
+        if (prKitActivated(b.kit, prKitMenuItem(b.kit, menu, {.text = "Close Tab"}, {})))
+            closing = i;
+        PrKitMenuItem others{.text = "Close Other Tabs", .disabled = b.tabs.size() < 2};
+        if (prKitActivated(b.kit, prKitMenuItem(b.kit, menu, others, {})))
+            closingOthers = i;
+    }
+    uint32_t from = 0;
+    uint32_t to = 0;
+    if (prKitMoved(b.kit, strip, &from, &to) && from < b.tabs.size() && to < b.tabs.size()) {
+        Tab* active = b.tabs[b.active];
+        Tab* moved = b.tabs[from];
+        b.tabs.erase(b.tabs.begin() + from);
+        b.tabs.insert(b.tabs.begin() + to, moved);
+        b.active = uint32_t(std::find(b.tabs.begin(), b.tabs.end(), active) - b.tabs.begin());
+    }
+    PrKitButtonStyle small{.variant = PrKitButtonVariant_Ghost, .size = PrKitControlSize_Sm};
+    PrLayoutNode plus = commandButton(b, row, {.icon = PrKitIconKind_Plus}, small, kCommandNewTab);
+    PrKitPlace below{.margin = {0, 0, 4, 0}};
+    prKitPlace(b.kit, plus, &below);
+
+    if (duplicating != UINT32_MAX) {
+        std::string url = b.tabs[duplicating]->info.url;
+        tabOpen(b, url, duplicating + 1);
+        chosen = duplicating + 1;
+    }
+    if (closingOthers != UINT32_MAX) {
+        Tab* kept = b.tabs[closingOthers];
+        for (uint32_t i = uint32_t(b.tabs.size()); i-- > 0;) {
+            if (b.tabs[i] != kept)
+                tabClose(b, i);
+        }
+        chosen = 0;
+    }
+    if (closing != UINT32_MAX && closingOthers == UINT32_MAX)
+        tabClose(b, closing);
+    if (chosen != UINT32_MAX)
+        tabActivate(b, std::min(chosen, uint32_t(b.tabs.size() - 1)));
+}
+
+// Returns the address bar's suggestions for the text that the user typed: favorites first, then the history's pages,
+// the most recent first, each URL once.
+std::vector<Favorite> suggestionsFor(const Browser& b, const std::string& typed) {
+    std::vector<Favorite> found;
+    PrStringView query = typed;
+    auto add = [&](const std::string& title, const std::string& url) {
+        if (found.size() >= kMaxSuggestions || url == typed)
+            return;
+        if (!addressMatches(url, query) && !addressMatches(title, query))
+            return;
+        for (const Favorite& seen : found) {
+            if (seen.url == url)
+                return;
+        }
+        found.push_back(Favorite{title, url});
+    };
+    for (const Favorite& favorite : b.favorites)
+        add(favorite.title, favorite.url);
+    for (size_t i = b.history.size(); i-- > 0 && found.size() < kMaxSuggestions;)
+        add(b.history[i].title, b.history[i].url);
+    return found;
+}
+
+// Read and replace the text of a field that edits a std::string, which is the context of its buffer (PrUiTextBuffer).
+PrStringView readString(void* PR_NULLABLE context) {
+    const std::string& text = *static_cast<std::string*>(context);
+    return text;
+}
+
+void replaceString(void* PR_NULLABLE context, uint32_t start, uint32_t end, PrStringView value) {
+    static_cast<std::string*>(context)->replace(start, end - start, value.data, value.size);
+}
+
+// Returns a text buffer that edits `text`.
+PrUiTextBuffer stringBuffer(std::string* text) {
+    return PrUiTextBuffer{.context = text, .read = readString, .replace = replaceString};
+}
+
+// Leaves the address bar: focus leaves the chrome, and the bar shows the active tab's URL again.
+void leaveAddress(Browser& b, PrLayoutNode field) {
+    prUiSetFocus(b.ui, kPrLayoutNodeNone);
+    prKitSetOpen(b.kit, field, false);
+    b.chrome.addressTab = 0;
+}
+
+// The address bar, and the suggestions under it while the user types. Enter loads what the text means (addressResolve)
+// in the active tab, and Escape restores the tab's URL.
+void buildAddress(Browser& b, PrLayoutNode toolbar, Tab& tab) {
+    Chrome& chrome = b.chrome;
+    // The bar follows the active tab while the user is not editing it.
+    if (!chrome.addressFocused || chrome.addressTab != tab.key) {
+        chrome.address = addressShown(tab.info.url);
+        chrome.typed = chrome.address;
+        chrome.addressTab = tab.key;
+    }
+    PrKitTextField field{
+        .text = stringBuffer(&chrome.address),
+        .placeholder = "Search or enter an address",
+        .icon = addressIcon(tab.info.url),
+        .selectOnFocus = true,
+    };
+    PrLayoutNode node = prKitTextField(b.kit, toolbar, field, {.size = PrKitControlSize_Md});
+    if (chrome.focusAddress) {
+        prUiSetFocus(b.ui, node);
+        chrome.focusAddress = false;
+    }
+    chrome.addressFocused = prUiFocus(b.ui) == node;
+    PrUiEvents events = prUiEvents(b.ui, node);
+    for (uint32_t i = 0; i < events.count; ++i) {
+        const PrAppEvent& e = events.events[i];
+        if (e.kind != PrAppEventKind_KeyDown)
+            continue;
+        if (e.key == PrAppKey_Enter) {
+            std::string url = addressResolve(chrome.address);
+            if (!url.empty())
+                tabsLoad(b, url, (e.modifiers & kCommand) != 0 ? TabTarget_New : TabTarget_Active);
+            leaveAddress(b, node);
+            return;
+        }
+        if (e.key == PrAppKey_Escape) {
+            leaveAddress(b, node);
+            return;
+        }
+    }
+    // The suggestions open as the user types, and Kit closes them on Escape, a press outside them or a choice.
+    std::vector<Favorite> suggestions;
+    if (chrome.addressFocused && !chrome.address.empty())
+        suggestions = suggestionsFor(b, chrome.address);
+    if (chrome.address != chrome.typed) {
+        chrome.typed = chrome.address;
+        prKitSetOpen(b.kit, node, chrome.addressFocused && !suggestions.empty());
+    }
+    if (suggestions.empty())
+        return;
+    PrRect box = prLayoutRectToPx(prLayoutNodeBounds(b.tree, node, PrLayoutCoordinates_Viewport));
+    PrKitPopoverStyle placed{.offset = PrVec2{0, 4}, .minWidth = box.right - box.left};
+    PrLayoutNode popover = prKitPopover(b.kit, node, {}, placed);
+    if (popover == kPrLayoutNodeNone)
+        return;
+    PrLayoutNode menu = prKitMenu(b.kit, popover, {}, {.leavesFocus = true});
+    for (size_t i = 0; i < suggestions.size(); ++i) {
+        const Favorite& suggestion = suggestions[i];
+        std::string text = suggestion.url;
+        if (!suggestion.title.empty())
+            text = shortened(suggestion.title, kMaxLabel * 2) + "  \xe2\x80\x94  " + suggestion.url;
+        bool favorite = favoriteFind(b.favorites, suggestion.url) != kFavoriteMissing;
+        PrKitMenuItem item{.text = text, .icon = PrKitIconKind(favorite ? PrKitIconKind_Star : PrKitIconKind_Link)};
+        if (prKitActivated(b.kit, prKitMenuItem(b.kit, menu, item, {}))) {
+            tabsLoad(b, suggestion.url, TabTarget_Active);
+            leaveAddress(b, node);
+            return;
+        }
+    }
+}
+
+// The menu of the browser's commands, which the button at the end of the toolbar opens.
+void buildMenu(Browser& b, PrLayoutNode toolbar) {
+    PrKitButton button{.icon = PrKitIconKind_More};
+    PrLayoutNode trigger = prKitButton(b.kit, toolbar, button, toolStyle());
+    if (prKitActivated(b.kit, trigger))
+        prKitToggleOpen(b.kit, trigger);
+    PrLayoutNode popover = prKitPopover(b.kit, trigger, {}, {.offset = PrVec2{-200, 4}, .minWidth = 230});
+    if (popover == kPrLayoutNodeNone)
+        return;
+    PrLayoutNode menu = prKitMenu(b.kit, popover, {}, {});
+    commandItem(b, menu, kCommandNewTab);
+    commandItem(b, menu, "tab.reopen");
+    commandItem(b, menu, "tab.close");
+    prKitMenuSeparator(b.kit, menu, {});
+    commandItem(b, menu, kCommandReload);
+    commandItem(b, menu, kCommandToggleFavorite);
+    commandItem(b, menu, "favorites.toggleBar");
+    prKitMenuSeparator(b.kit, menu, {});
+    commandItem(b, menu, kCommandShowHistory);
+    commandItem(b, menu, kCommandDeleteBrowsingData);
+    prKitMenuSeparator(b.kit, menu, {});
+    commandItem(b, menu, "view.zoomIn");
+    commandItem(b, menu, "view.zoomOut");
+    commandItem(b, menu, kCommandZoomReset);
+}
+
+// The toolbar: back, forward and reload, the address bar, the favorite's star, the zoom while it is not 100%, and the
+// menu. A bar along its bottom shows while the page loads. The menu comes last, since it can close the tab.
+void buildToolbar(Browser& b, PrLayoutNode root, Tab& tab) {
+    bool loading = tab.info.loading;
+    PrLayoutNode stack = prKitStack(b.kit, root, {}, {});
+    PrKitSurfaceStyle style{
+        .box = {.direction = PrKitDirection_Row, .align = PrKitAlign_Center, .gap = 2, .padding = prKitEdgesXY(5, 8)},
+        .ground = PrKitGround_Panel,
+        .rules = PrKitRuleFlag_Bottom,
+    };
+    PrLayoutNode toolbar = prKitSurface(b.kit, stack, {}, style);
+    toolButton(b, toolbar, PrKitIconKind_ArrowLeft, kCommandBack);
+    toolButton(b, toolbar, PrKitIconKind_ArrowRight, kCommandForward);
+    toolButton(b, toolbar, PrKitIconKind_Restart, kCommandReload);
+    buildAddress(b, toolbar, tab);
+    toolButton(b, toolbar, PrKitIconKind_Star, kCommandToggleFavorite);
+    if (tab.zoom != 1) {
+        std::string percent = std::to_string(int(std::lround(tab.zoom * 100))) + "%";
+        PrKitButtonStyle small{.variant = PrKitButtonVariant_Ghost, .size = PrKitControlSize_Sm};
+        commandButton(b, toolbar, {.text = percent}, small, kCommandZoomReset);
+    }
+    buildMenu(b, toolbar);
+    if (!loading)
+        return;
+    PrKitBoxStyle bottom{.justify = PrKitJustify_End};
+    PrLayoutNode layer = prKitLayer(b.kit, stack, {}, bottom);
+    PrLayoutNode progress = prKitProgress(b.kit, layer, {.indeterminate = true});
+    PrKitPlace thin{.height = prKitPx(2)};
+    prKitPlace(b.kit, progress, &thin);
+}
+
+// The favorites bar: a button for each favorite, which loads it. Each has a context menu, and a middle click or a click
+// with the command modifier opens it in a new tab.
+void buildFavorites(Browser& b, PrLayoutNode root) {
+    PrKitSurfaceStyle style{
+        .box = {
+            .direction = PrKitDirection_Row,
+            .align = PrKitAlign_Center,
+            .overflow = PrKitOverflow_Clip,
+            .gap = 2,
+            .padding = prKitEdgesXY(3, 8),
+        },
+        .ground = PrKitGround_Panel,
+        .rules = PrKitRuleFlag_Bottom,
+    };
+    PrLayoutNode bar = prKitSurface(b.kit, root, {}, style);
+    if (b.favorites.empty()) {
+        PrKitTextStyle faint{.role = PrKitTextRole_BodySmall, .tone = PrKitTone_Faint};
+        prKitLabel(b.kit, bar, {.text = "Pages that you add to your favorites show here."}, faint);
+        return;
+    }
+    uint32_t removing = kFavoriteMissing;
+    for (uint32_t i = 0; i < b.favorites.size(); ++i) {
+        const Favorite& favorite = b.favorites[i];
+        std::string label = shortened(favoriteLabel(favorite), kMaxLabel);
+        PrKitButton button{.text = label};
+        PrLayoutNode node = prKitButton(b.kit, bar, button, {
+            .variant = PrKitButtonVariant_Ghost,
+            .size = PrKitControlSize_Sm,
+        });
+        prKitTooltip(b.kit, node, {.text = favorite.url});
+        if (opensInNewTab(b, node))
+            tabsLoad(b, favorite.url, TabTarget_New);
+        else if (prKitActivated(b.kit, node))
+            tabsLoad(b, favorite.url, TabTarget_Active);
+        PrLayoutNode menu = prKitContextMenu(b.kit, node, {}, {});
+        if (menu == kPrLayoutNodeNone)
+            continue;
+        if (prKitActivated(b.kit, prKitMenuItem(b.kit, menu, {.text = "Open"}, {})))
+            tabsLoad(b, favorite.url, TabTarget_Active);
+        if (prKitActivated(b.kit, prKitMenuItem(b.kit, menu, {.text = "Open in New Tab"}, {})))
+            tabsLoad(b, favorite.url, TabTarget_New);
+        prKitMenuSeparator(b.kit, menu, {});
+        PrKitMenuItem remove{.text = "Remove from Favorites", .icon = PrKitIconKind_Trash};
+        if (prKitActivated(b.kit, prKitMenuItem(b.kit, menu, remove, {.variant = PrKitMenuItemVariant_Danger})))
+            removing = i;
+    }
+    if (removing != kFavoriteMissing) {
+        b.favorites.erase(b.favorites.begin() + removing);
+        if (!b.favoritesPath.empty())
+            favoritesSave(b.favoritesPath, b.favorites);
+    }
+}
+
+// Creates a tile or a row of the start page that loads `url`, labeled by `title` above the URL's host or the URL.
+void startLink(Browser& b, PrLayoutNode parent, const std::string& title, const std::string& url, PrKitBoxStyle style) {
+    PrLayoutNode link = prKitSelectable(b.kit, parent, {}, style);
+    prUiSetCursor(b.ui, link, PrAppCursor_Hand);
+    std::string host = addressHost(url);
+    PrKitTextStyle strong{.role = PrKitTextRole_Strong, .wrap = PrKitWrap_Clip};
+    PrKitTextStyle meta{.role = PrKitTextRole_Meta, .tone = PrKitTone_Muted, .wrap = PrKitWrap_Clip};
+    const std::string& site = host.empty() ? url : host;
+    prKitLabel(b.kit, link, {.text = title.empty() ? site : title}, strong);
+    prKitLabel(b.kit, link, {.text = title.empty() ? url : site}, meta);
+    if (opensInNewTab(b, link))
+        tabsLoad(b, url, TabTarget_New);
+    else if (prKitActivated(b.kit, link))
+        tabsLoad(b, url, TabTarget_Active);
+}
+
+// The start page of a tab that shows no document: the favorites as tiles, and the pages visited most recently.
+void buildStart(Browser& b, PrLayoutNode root) {
+    PrKitSurfaceStyle style{
+        .box = {
+            .align = PrKitAlign_Center,
+            .overflow = PrKitOverflow_ScrollY,
+            .gap = 18,
+            .padding = prKitEdgesXY(56, 24),
+            .place = {.flex = PrKitFlex_Fill},
+        },
+        .ground = PrKitGround_App,
+    };
+    PrLayoutNode page = prKitSurface(b.kit, root, {}, style);
+    prKitLabel(b.kit, page, {.text = "Prax"}, {.role = PrKitTextRole_Display});
+    PrKitTextStyle caption{.role = PrKitTextRole_Caption, .tone = PrKitTone_Muted};
+    PrKitPlace column{.width = prKitPx(kStartWidth), .maxWidth = prKitPercent(100)};
+    if (!b.favorites.empty()) {
+        PrLayoutNode section = prKitBox(b.kit, page, {}, {.gap = 8, .place = column});
+        prKitLabel(b.kit, section, {.text = "FAVORITES"}, caption);
+        PrKitBoxStyle rows{.direction = PrKitDirection_Row, .wrap = true, .gap = kTileGap};
+        PrLayoutNode grid = prKitBox(b.kit, section, {}, rows);
+        float width = (kStartWidth - kTileGap * float(kTilesPerRow - 1)) / float(kTilesPerRow);
+        PrKitBoxStyle tile{.gap = 2, .padding = prKitEdgesAll(10), .place = {.width = prKitPx(width)}};
+        for (uint32_t i = 0; i < b.favorites.size(); ++i)
+            startLink(b, grid, b.favorites[i].title, b.favorites[i].url, tile);
+    }
+    if (!b.history.empty()) {
+        PrLayoutNode section = prKitBox(b.kit, page, {}, {.gap = 4, .place = column});
+        prKitLabel(b.kit, section, {.text = "RECENTLY VISITED"}, caption);
+        PrKitBoxStyle row{.gap = 1, .padding = prKitEdgesXY(6, 10)};
+        size_t shown = std::min(b.history.size(), kMaxRecent);
+        for (size_t i = 0; i < shown; ++i) {
+            const Visit& visit = b.history[b.history.size() - 1 - i];
+            startLink(b, section, visit.title, visit.url, row);
+        }
+        PrKitButton all{.text = "Show Full History"};
+        PrLayoutNode more = prKitButton(b.kit, section, all, {.variant = PrKitButtonVariant_Ghost});
+        PrKitPlace start{.align = PrKitAlign_Start};
+        prKitPlace(b.kit, more, &start);
+        if (prKitActivated(b.kit, more))
+            commandRun(b, kCommandShowHistory);
+    }
+}
+
+// Creates a row of the history page: the visit's time, and its title and site, which load the page, and a control that
+// removes the visit. A middle click or a click with the command modifier opens the page in a new tab. `offset` is the
+// local time zone's offset at the visit. Returns true if the user asked to remove the visit.
+bool historyRow(Browser& b, PrLayoutNode list, const Visit& visit, double offset) {
+    uint64_t key = std::hash<std::string>{}(visit.url);
+    PrLayoutNode row =
+        prKitBox(b.kit, list, {.key = key}, {.direction = PrKitDirection_Row, .align = PrKitAlign_Center, .gap = 4});
+    PrKitBoxStyle style{
+        .direction = PrKitDirection_Row,
+        .align = PrKitAlign_Center,
+        .gap = 12,
+        .padding = prKitEdgesXY(6, 10),
+        .place = {.flex = PrKitFlex_Fill},
+    };
+    PrLayoutNode link = prKitSelectable(b.kit, row, {}, style);
+    prUiSetCursor(b.ui, link, PrAppCursor_Hand);
+    prKitTooltip(b.kit, link, {.text = visit.url});
+    PrKitTextStyle meta{.role = PrKitTextRole_Meta, .tone = PrKitTone_Muted, .wrap = PrKitWrap_Clip};
+    PrKitTextStyle strong{.role = PrKitTextRole_Strong, .wrap = PrKitWrap_Clip};
+    std::string host = addressHost(visit.url);
+    const std::string& site = host.empty() ? visit.url : host;
+    prKitLabel(b.kit, link, {.text = historyTimeLabel(visit.time, offset)}, meta);
+    PrLayoutNode title = prKitLabel(b.kit, link, {.text = visit.title.empty() ? site : visit.title}, strong);
+    PrKitPlace shrink{.flex = PrKitFlex_Auto};
+    prKitPlace(b.kit, title, &shrink);
+    prKitLabel(b.kit, link, {.text = visit.title.empty() ? visit.url : site}, meta);
+    if (opensInNewTab(b, link))
+        tabsLoad(b, visit.url, TabTarget_New);
+    else if (prKitActivated(b.kit, link))
+        tabsLoad(b, visit.url, TabTarget_Active);
+    bool removing = false;
+    if (PrLayoutNode menu = prKitContextMenu(b.kit, link, {}, {}); menu != kPrLayoutNodeNone) {
+        if (prKitActivated(b.kit, prKitMenuItem(b.kit, menu, {.text = "Open"}, {})))
+            tabsLoad(b, visit.url, TabTarget_Active);
+        if (prKitActivated(b.kit, prKitMenuItem(b.kit, menu, {.text = "Open in New Tab"}, {})))
+            tabsLoad(b, visit.url, TabTarget_New);
+        prKitMenuSeparator(b.kit, menu, {});
+        PrKitMenuItem remove{.text = "Remove from History", .icon = PrKitIconKind_Trash};
+        removing = prKitActivated(b.kit, prKitMenuItem(b.kit, menu, remove, {.variant = PrKitMenuItemVariant_Danger}));
+    }
+    PrKitButton close{.icon = PrKitIconKind_Close};
+    PrLayoutNode remove =
+        prKitButton(b.kit, row, close, {.variant = PrKitButtonVariant_Ghost, .size = PrKitControlSize_Sm});
+    prKitTooltip(b.kit, remove, {.text = "Remove from History"});
+    return removing || prKitActivated(b.kit, remove);
+}
+
+// The dialog that deletes the browsing data that the user chooses, which `trigger` opens.
+void buildDeleteDialog(Browser& b, PrLayoutNode trigger) {
+    Chrome& chrome = b.chrome;
+    if (chrome.openDelete) {
+        prKitSetOpen(b.kit, trigger, true);
+        chrome.openDelete = false;
+    }
+    PrLayoutNode body = prKitDialog(b.kit, trigger, {.title = "Delete Browsing Data"}, {});
+    if (body == kPrLayoutNodeNone)
+        return;
+    PrKitTextStyle muted{.role = PrKitTextRole_Body, .tone = PrKitTone_Muted};
+    prKitLabel(b.kit, body, {.text = "The browser deletes what you choose, from every tab."}, muted);
+    prKitCheckbox(b.kit, body, {.value = &chrome.deleteHistory, .label = "History and recently closed tabs"}, {});
+    prKitCheckbox(b.kit, body, {.value = &chrome.deleteCache, .label = "Cached images and files"}, {});
+    prKitCheckbox(b.kit, body, {.value = &chrome.deleteSiteData, .label = "Data that sites keep in local storage"}, {});
+    PrLayoutNode footer = prKitDialogFooter(b.kit, body);
+    if (prKitActivated(b.kit, prKitButton(b.kit, footer, {.text = "Cancel"}, {})))
+        prKitSetOpen(b.kit, trigger, false);
+    bool chosen = chrome.deleteHistory || chrome.deleteCache || chrome.deleteSiteData;
+    PrKitButton remove{.text = "Delete", .disabled = !chosen};
+    if (prKitActivated(b.kit, prKitButton(b.kit, footer, remove, {.variant = PrKitButtonVariant_Danger}))) {
+        deleteBrowsingData(b);
+        prKitSetOpen(b.kit, trigger, false);
+    }
+}
+
+// The history page: the pages visited, the most recent first, under the day of each visit, which a search narrows. A
+// button opens the dialog that deletes the browsing data.
+void buildHistory(Browser& b, PrLayoutNode root) {
+    Chrome& chrome = b.chrome;
+    PrKitSurfaceStyle style{
+        .box = {
+            .align = PrKitAlign_Center,
+            .overflow = PrKitOverflow_ScrollY,
+            .gap = 12,
+            .padding = prKitEdgesXY(32, 24),
+            .place = {.flex = PrKitFlex_Fill},
+        },
+        .ground = PrKitGround_App,
+    };
+    PrLayoutNode page = prKitSurface(b.kit, root, {}, style);
+    PrKitPlace column{.width = prKitPx(kStartWidth), .maxWidth = prKitPercent(100)};
+    PrKitBoxStyle heading{.direction = PrKitDirection_Row, .align = PrKitAlign_Center, .gap = 8, .place = column};
+    PrLayoutNode header = prKitBox(b.kit, page, {}, heading);
+    prKitLabel(b.kit, header, {.text = "History"}, {.role = PrKitTextRole_Title});
+    prKitSpacer(b.kit, header, {});
+    PrKitButton deleting{.text = commandTitle(b, kCommandDeleteBrowsingData), .icon = PrKitIconKind_Trash};
+    PrLayoutNode trigger = prKitButton(b.kit, header, deleting, {.size = PrKitControlSize_Md});
+    std::string shortcut = commandShortcut(b, kCommandDeleteBrowsingData);
+    prKitTooltip(b.kit, trigger, {.text = commandTitle(b, kCommandDeleteBrowsingData), .shortcut = shortcut});
+    if (prKitActivated(b.kit, trigger))
+        prKitToggleOpen(b.kit, trigger);
+    buildDeleteDialog(b, trigger);
+
+    PrKitTextField search{
+        .text = stringBuffer(&chrome.historyQuery),
+        .placeholder = "Search history",
+        .icon = PrKitIconKind_Search,
+        .clearable = true,
+    };
+    PrLayoutNode field = prKitTextField(b.kit, page, search, {.size = PrKitControlSize_Md});
+    prKitPlace(b.kit, field, &column);
+    PrLayoutNode list = prKitBox(b.kit, page, {}, {.gap = 1, .place = column});
+    PrKitTextStyle faint{.role = PrKitTextRole_Body, .tone = PrKitTone_Faint};
+    if (b.history.empty()) {
+        prKitLabel(b.kit, list, {.text = "Pages that you visit show here."}, faint);
+        return;
+    }
+    std::vector<uint32_t> found = historySearch(b.history, chrome.historyQuery);
+    if (found.empty()) {
+        prKitLabel(b.kit, list, {.text = "No page in the history matches the search."}, faint);
+        return;
+    }
+    double now = prTimeWallMilliseconds();
+    int64_t today = prTimeDaysFromMilliseconds(now, prTimeLocalOffsetMilliseconds(now));
+    int64_t shownDay = INT64_MIN;
+    std::string removing;
+    PrKitTextStyle day{.role = PrKitTextRole_Heading};
+    PrKitPlace dayPlace{.margin = {12, 0, 4, 0}};
+    for (size_t i = 0; i < found.size() && i < kMaxHistoryRows; ++i) {
+        const Visit& visit = b.history[found[i]];
+        double offset = prTimeLocalOffsetMilliseconds(visit.time);
+        int64_t visitDay = prTimeDaysFromMilliseconds(visit.time, offset);
+        if (visitDay != shownDay) {
+            shownDay = visitDay;
+            PrLayoutNode label = prKitLabel(b.kit, list, {.text = historyDayLabel(visitDay, today)}, day);
+            prKitPlace(b.kit, label, &dayPlace);
+        }
+        if (historyRow(b, list, visit, offset))
+            removing = visit.url;
+    }
+    if (found.size() > kMaxHistoryRows)
+        prKitLabel(b.kit, list, {.text = "A search finds the pages visited before these."}, faint);
+    if (!removing.empty())
+        tabsForget(b, removing);
+}
+
+} // namespace
+
+void chromeBuild(Browser& b) {
+    Chrome& chrome = b.chrome;
+    if (chrome.releaseFocus) {
+        prUiSetFocus(b.ui, kPrLayoutNodeNone);
+        chrome.releaseFocus = false;
+    }
+    PrKitSurfaceStyle style{
+        .box = {.overflow = PrKitOverflow_Clip, .place = {.width = prKitPercent(100), .height = prKitPercent(100)}},
+    };
+    PrLayoutNode root = prKitSurface(b.kit, kPrLayoutNodeNone, {}, style);
+    prCommandScope(b.ui, root, b.commands, b.keymap, "");
+    buildTabs(b, root);
+    Tab& tab = *browserActiveTab(b);
+    buildToolbar(b, root, tab);
+    if (chrome.favoritesBar)
+        buildFavorites(b, root);
+    // A tab at the history's address shows the history page over its empty document, and a tab whose page shows no
+    // document and loads none shows the start page. Otherwise the page fills an empty box, which the window draws the
+    // page in.
+    Tab& shown = *browserActiveTab(b);
+    if (shown.info.url == kAddressHistory) {
+        buildHistory(b, root);
+        chrome.slot = kPrLayoutNodeNone;
+    } else if (showsStart(shown)) {
+        buildStart(b, root);
+        chrome.slot = kPrLayoutNodeNone;
+    } else {
+        chrome.slot = prKitBox(b.kit, root, {}, {.place = {.flex = PrKitFlex_Fill}});
+    }
+}
+
+} // namespace browser

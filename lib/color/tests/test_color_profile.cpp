@@ -103,7 +103,7 @@ std::vector<uint8_t> parametricElement(double gamma) {
 
 PrColorProfile* create(const std::vector<uint8_t>& bytes) {
     PrColorProfile* profile = nullptr;
-    REQUIRE(prColorProfileCreate(PrByteView{bytes.data(), bytes.size()}, &profile) == PrStatus_Ok);
+    REQUIRE(prColorProfileCreate(bytes, &profile) == PrStatus_Ok);
     return profile;
 }
 
@@ -206,10 +206,10 @@ TEST_CASE("bytes that are no profile the engine reads are invalid data") {
         },
     };
     std::vector<uint8_t> bytes = partial.build();
-    CHECK(prColorProfileCreate(PrByteView{bytes.data(), bytes.size()}, &profile) == PrStatus_InvalidData);
+    CHECK(prColorProfileCreate(bytes, &profile) == PrStatus_InvalidData);
     ProfileBytes truncated{"GRAY", "XYZ ", {{"kTRC", gammaElement(1)}}};
     bytes = truncated.build();
     bytes.resize(bytes.size() - 4);
-    CHECK(prColorProfileCreate(PrByteView{bytes.data(), bytes.size()}, &profile) == PrStatus_InvalidData);
+    CHECK(prColorProfileCreate(bytes, &profile) == PrStatus_InvalidData);
     prColorProfileDestroy(nullptr);
 }

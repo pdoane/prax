@@ -96,6 +96,9 @@ struct Viewed {
     uint32_t wanted = 0;            // the times the compositor came to want a frame
     std::vector<uint8_t> pixels;    // the last frame presented, 40 by 40
 
+    // The link that the host reports visited, or null for none.
+    const PrDomElement* PR_NULLABLE visited = nullptr;
+
     // The resource that answers fetches, and the fetcher that holds them for answer() to answer, if it holds them.
     const std::vector<uint8_t>* PR_NULLABLE resource = nullptr;
     TestFetcher fetcher;
@@ -116,6 +119,12 @@ struct Viewed {
         PrTextFontDesc defaultFontDesc{.set = fonts, .style = prFontStyleDefault()};
         defaultFont = prTextFontCreate(&defaultFontDesc);
         PrHtmlHost host = prHtmlHostDefault();
+        host.context = this;
+        host.elementState =
+                [](void* self, PrHtmlPage*, const PrDomElement* element, PrDomHostState wanted) -> PrDomHostState {
+            bool visited = element == static_cast<Viewed*>(self)->visited;
+            return visited ? PrDomHostState(wanted & PrDomHostState_Visited) : PrDomHostState(0);
+        };
         host.font = defaultFont;
         host.shaper = shaper;
         host.images = images;
@@ -967,6 +976,73 @@ TEST_CASE("a pointer that moves while the layout thread lays out hovers as the v
     prHtmlViewEvent(page.view, &move, 0);
     page.settle();
     CHECK(page.matches("a", ":hover"));
+}
+
+TEST_CASE("the cursor at the pointer is its element's, and auto shows the text cursor over selectable or editable text") {
+    Viewed page("<style>body { margin: 0; font: 20px Tinos } div, input, button { display: block; height: 50px;"
+        " width: 200px; margin: 0; padding: 0; border: 0 }</style>"
+        "<div id=text>Words</div><div style='cursor: url(hand.png) 2 2, help'></div>"
+        "<div><a href=x>Link</a></div><div style='user-select: none'><span>Fixed</span></div><input>"
+        "<div style='writing-mode: vertical-rl'>Up</div>");
+    prHtmlViewSetViewport(page.view, PrVec2{400, 400});
+    prHtmlViewUpdate(page.view);
+    page.settle();
+    CHECK(prHtmlViewCursor(page.view) == PrAppCursor_Arrow);
+    auto cursorAt = [&](float x, float y) {
+        PrAppEvent move{.kind = PrAppEventKind_PointerMove, .position = PrVec2{x, y}};
+        prHtmlViewEvent(page.view, &move, 0);
+        prHtmlViewUpdate(page.view);
+        page.settle();
+        return prHtmlViewCursor(page.view);
+    };
+    CHECK(cursorAt(5, 10) == PrAppCursor_Text);
+    CHECK(cursorAt(150, 10) == PrAppCursor_Arrow);
+    // The view shows no images, so it shows the keyword that ends the list.
+    CHECK(cursorAt(5, 60) == PrAppCursor_Help);
+    // The user agent's style sheet gives links the hand, and their text inherits it.
+    CHECK(cursorAt(5, 110) == PrAppCursor_Hand);
+    // The span's user-select is auto, which takes the none of its parent.
+    CHECK(cursorAt(5, 160) == PrAppCursor_Arrow);
+    CHECK(cursorAt(150, 210) == PrAppCursor_Text);
+    // A vertical-rl block's first line is at its right edge.
+    CHECK(cursorAt(190, 258) == PrAppCursor_VerticalText);
+
+    // A new scene changes the cursor under a pointer that has not moved.
+    cursorAt(150, 10);
+    prDomElementSetAttribute(page.byId("text"), "style", "cursor: move");
+    prHtmlViewUpdate(page.view);
+    page.settle();
+    CHECK(prHtmlViewCursor(page.view) == PrAppCursor_Move);
+}
+
+TEST_CASE("the text of a widget other than a text control shows the arrow") {
+    Viewed page("<style>body { margin: 0; font: 20px Tinos } button { display: block; width: 200px; height: 50px }"
+        "</style><button>Press</button>");
+    prHtmlViewSetViewport(page.view, PrVec2{400, 400});
+    prHtmlViewUpdate(page.view);
+    page.settle();
+    PrAppEvent move{.kind = PrAppEventKind_PointerMove, .position = PrVec2{100, 25}};
+    prHtmlViewEvent(page.view, &move, 0);
+    prHtmlViewUpdate(page.view);
+    page.settle();
+    CHECK(prHtmlViewCursor(page.view) == PrAppCursor_Arrow);
+}
+
+TEST_CASE("links restyle once the host says that what it knows of visited links changed") {
+    Viewed page("<style>body { margin: 0 } a { display: block; width: 40px; height: 40px }"
+        " :link { background-color: rgb(255, 0, 0) } :visited { background-color: rgb(0, 0, 255) }</style>"
+        "<a id=a href=x></a>");
+    prHtmlViewUpdate(page.view);
+    page.settle();
+    CHECK(rgbAt(page.paint(), 20, 20) == 0xff0000);
+    page.visited = page.byId("a");
+    prHtmlPageInvalidateHostStates(page.page, PrDomHostState_Visited);
+    CHECK(rgbAt(page.paint(), 20, 20) == 0x0000ff);
+    CHECK(verified(prHtmlPagePresentation(page.page)));
+    page.visited = nullptr;
+    prHtmlPageInvalidateHostStates(page.page, PrDomHostState_Visited);
+    CHECK(rgbAt(page.paint(), 20, 20) == 0xff0000);
+    CHECK(verified(prHtmlPagePresentation(page.page)));
 }
 
 TEST_CASE("an img is a replaced box, sized by its image and drawing it, as the host decodes it") {

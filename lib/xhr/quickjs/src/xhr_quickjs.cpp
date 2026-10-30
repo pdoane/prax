@@ -58,7 +58,7 @@ PrString windowBaseUrl(void* PR_NULLABLE context) {
 }
 
 // A window whose document its browsing context no longer shows fetches nothing.
-PrStatus windowFetch(void* PR_NULLABLE context, const PrFetchClientRequest* request, PrFetchClientFn done,
+PrStatus windowFetch(void* PR_NULLABLE context, const PrFetchClientRequest* request, PrFetchResponseFn done,
         void* PR_NULLABLE doneContext) {
     PrHtmlPage* page = prHtmlWindowPage(static_cast<PrHtmlWindow*>(context));
     return page != nullptr ? prHtmlPageFetch(page, request, done, doneContext) : PrStatus_Lost;

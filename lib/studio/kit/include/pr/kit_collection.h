@@ -10,9 +10,10 @@
 
 #pragma once
 
-#include "pr/draw_image.h"
+#include "pr/color.h"
 #include "pr/kit.h"
 #include "pr/kit_icon.h"
+#include "pr/kit_image.h"
 #include "pr/kit_text.h"
 #include "pr/string.h"
 #include "pr/string_view.h"
@@ -96,43 +97,49 @@ PrKitWindow prKitListWindow(const PrKit* kit, PrLayoutNode view);
 // and writes the edit to `edit`. The caller applies the edit once it has created the rows.
 bool prKitSelectionEdited(const PrKit* kit, PrLayoutNode view, PrKitSelectionEdit* edit);
 
-// The content of a list's or a tree's row: row `index` of the view, which shows `item`, and keys the row by it, so that
-// scrolling keeps its node. The row shows an icon, or a status (prKitStatus) in `statusTone` in the icon's place; a
-// label in `tone`, which takes the room that the row leaves and clips; and faint meta text at its end. An empty label,
-// meta or status, or no icon, shows nothing in its place.
+// A row of a list or a tree view: row `index` of the view, which shows `item`, and keys the row by it, so that
+// scrolling keeps its node.
 typedef struct PrKitRow {
     uint32_t index;
     uint64_t item;
-    PrKitIconKind icon;
-    PrKitTone tone;
     bool selected;
-    PrKitTone statusTone;
-    PrStringView status;
-    PrStringView label;
-    PrStringView meta;
 } PrKitRow;
 
 // Creates a row of a list view. A click edits the view's selection: a plain click replaces the selection with the row,
 // Shift extends the range from the anchor, and Command or Control toggles the row, or adds the range with Shift.
-// Returns the row, which can take more children after its meta.
+//
+// A row is a line of cells that the caller fills: what it shows goes under it, in order, from the row's cells below or
+// any of the kit's widgets, such as a status (prKitStatus) or a visibility toggle (prKitVisibilityToggle).
 PrLayoutNode prKitListRow(PrKit* kit, PrLayoutNode view, PrKitRow row);
 
-// The content of a grid's tile: tile `index` of the view, which shows `item`, and is keyed by it. The tile shows a
-// thumbnail over a label. The thumbnail is `image`, fitted to cover it, or else `icon` on a ground of `tint`, or of the
-// theme's raised ground if `tint` is fully transparent.
+// Creates a row's icon, in the accent while the row is selected and muted otherwise.
+PrLayoutNode prKitRowIcon(PrKit* kit, PrLayoutNode row, PrKitIcon icon);
+
+// Creates a row's label, in `tone`: one line that takes the room that the row's other cells leave, and clips. A label
+// before other cells puts them at the row's end.
+PrLayoutNode prKitRowLabel(PrKit* kit, PrLayoutNode row, PrKitLabel label, PrKitTone tone);
+
+// Creates a row's meta text, such as a type, a count or a size, faint and on one line.
+PrLayoutNode prKitRowMeta(PrKit* kit, PrLayoutNode row, PrKitLabel label);
+
+// A tile of a grid: tile `index` of the view, which shows `item`, and is keyed by it.
 typedef struct PrKitTile {
     uint32_t index;
     uint64_t item;
-    const PrDrawImage* PR_NULLABLE image;
-    PrKitIconKind icon;
-    PrColor tint;
     bool selected;
-    PrStringView label;
 } PrKitTile;
 
-// Creates a tile of a grid, which selects in the same way as prKitListRow. Returns the tile, which can take more
-// children after its label.
+// Creates a tile of a grid, which selects in the same way as prKitListRow. A tile is a column that the caller fills
+// from the tile's parts below or any of the kit's widgets: a thumbnail, then a label.
 PrLayoutNode prKitListTile(PrKit* kit, PrLayoutNode view, PrKitTile tile);
+
+// Create a tile's thumbnail: `image` fitted to cover it, or `icon` on a ground of `tint`, or of the theme's raised
+// ground if `tint` is fully transparent.
+PrLayoutNode prKitTileImage(PrKit* kit, PrLayoutNode tile, PrKitImage image);
+PrLayoutNode prKitTileIcon(PrKit* kit, PrLayoutNode tile, PrKitIcon icon, PrColor tint);
+
+// Creates a tile's label: one centered line that clips, brighter while the tile is selected.
+PrLayoutNode prKitTileLabel(PrKit* kit, PrLayoutNode tile, PrKitLabel label);
 
 // The content of an empty list's notice: an icon, if any, above a title, above a hint, if any.
 typedef struct PrKitEmptyState {
@@ -196,7 +203,7 @@ PrLayoutNode prKitTreeView(PrKit* kit, PrLayoutNode parent, PrKitTreeView tree, 
 
 // Creates a row of a tree view, in the same way as prKitListRow. The row is indented by its depth and led by its
 // disclosure, a cell whose click asks for a fold and selects nothing. The row marks where a drop of the view's kind
-// would land. Returns the row, which can take more children after its meta.
+// would land. The caller fills the row after its disclosure, in the same way as a list's row.
 PrLayoutNode prKitTreeRow(PrKit* kit, PrLayoutNode view, PrKitRow row);
 
 // Returns true if a key or a disclosure asked to open or close a row of the tree view in the current round, and writes

@@ -609,6 +609,23 @@ PrLayoutNode listView(Kit& kit, PrLayoutNode parent, uint64_t key, uint32_t coun
     return view;
 }
 
+// What a row or a tile tells the cells that its caller creates under it (KitContext_Item).
+struct ItemCell {
+    bool selected;
+};
+
+// Returns true if the row or tile that `node` was created under is selected.
+bool itemSelected(const Kit& kit, PrLayoutNode node) {
+    const ItemCell* item = kitContext<ItemCell>(kit, node, KitContext_Item);
+    return item != nullptr && item->selected;
+}
+
+// Creates a tile's thumbnail box on a ground of `tint`, or of the theme's raised ground if `tint` is fully transparent.
+PrLayoutNode tileThumbnail(Kit& kit, PrLayoutNode tile, PrColor tint) {
+    KitColors ground{.background = tint.a > 0 ? tint : kit.theme.palette.bg3};
+    return prLayoutTreeFrameElement(kit.tree, tile, 0, kitStyle(kit, ThumbBox{}, ThumbFlex{}, ground));
+}
+
 // Applies a click on the node of row or tile `index` to the view's selection.
 void applyClick(Kit& kit, View& v, uint32_t index, PrLayoutNode node) {
     if (v.selection != nullptr && prUiClicked(kit.ui, node, 0))
@@ -634,12 +651,13 @@ PrLayoutNode rowElement(Kit& kit, PrLayoutNode view, View& v, uint32_t index, ui
         kitStyle(kit, RowBox{.height = v.rowHeight, .indent = indent, .minWidth = v.minWidth}, RowFlex{.kind = kind},
             RowFill{.selected = selected, .hover = hover, .drop = drop, .kind = kind});
     prLayoutTreeFrameSetStyle(tree, node, record);
+    kitProvide<ItemCell>(kit, node, KitContext_Item).selected = selected;
     applyClick(kit, v, index, node);
     return node;
 }
 
-// Creates a row of a list or tree view. A tree's row is indented by its depth and led by its disclosure, which this
-// writes to `disclosure`.
+// Creates a row of a list or tree view, which its caller fills. A tree's row is indented by its depth and led by its
+// disclosure, which this writes to `disclosure`.
 PrLayoutNode rowOf(PrKit* kit, PrLayoutNode view, View& v, const PrKitRow& row, PrLayoutNode* PR_NULLABLE disclosure) {
     const PrKitTreeItem* place = v.items != nullptr ? &v.items[row.index] : nullptr;
     float depth = place != nullptr ? float(place->depth) : 0;
@@ -653,19 +671,6 @@ PrLayoutNode rowOf(PrKit* kit, PrLayoutNode view, View& v, const PrKitRow& row, 
             prKitIcon(kit, caret, {.icon = chevron}, {.size = kChevronSize, .tone = PrKitTone_Muted});
         }
         *disclosure = caret;
-    }
-    if (row.status.size != 0)
-        prKitStatus(kit, node, {.text = row.status}, {.tone = row.statusTone});
-    else if (row.icon != PrKitIconKind_None)
-        prKitIcon(kit, node, {.icon = row.icon},
-            {.size = kRowIconSize, .tone = PrKitTone(row.selected ? PrKitTone_Accent : PrKitTone_Muted)});
-    PrKitTextStyle labelStyle{.role = PrKitTextRole_BodySmall, .tone = row.tone, .wrap = PrKitWrap_Clip};
-    PrLayoutNode label = prKitLabel(kit, node, {.text = row.label}, labelStyle);
-    PrKitPlace fill{.flex = PrKitFlex_Fill};
-    prKitPlace(kit, label, &fill);
-    if (row.meta.size != 0) {
-        PrKitTextStyle metaStyle{.role = PrKitTextRole_Meta};
-        prKitLabel(kit, node, {.text = row.meta}, metaStyle);
     }
     return node;
 }
@@ -716,6 +721,23 @@ PrLayoutNode prKitListRow(PrKit* kit, PrLayoutNode view, PrKitRow row) {
     return rowOf(kit, view, v, row, nullptr);
 }
 
+PrLayoutNode prKitRowIcon(PrKit* kit, PrLayoutNode row, PrKitIcon icon) {
+    PrKitTone tone = itemSelected(*kit, row) ? PrKitTone_Accent : PrKitTone_Muted;
+    return prKitIcon(kit, row, icon, {.size = kRowIconSize, .tone = tone});
+}
+
+PrLayoutNode prKitRowLabel(PrKit* kit, PrLayoutNode row, PrKitLabel label, PrKitTone tone) {
+    PrKitTextStyle style{.role = PrKitTextRole_BodySmall, .tone = tone, .wrap = PrKitWrap_Clip};
+    PrLayoutNode node = prKitLabel(kit, row, label, style);
+    PrKitPlace fill{.flex = PrKitFlex_Fill};
+    prKitPlace(kit, node, &fill);
+    return node;
+}
+
+PrLayoutNode prKitRowMeta(PrKit* kit, PrLayoutNode row, PrKitLabel label) {
+    return prKitLabel(kit, row, label, {.role = PrKitTextRole_Meta});
+}
+
 PrLayoutNode prKitListTile(PrKit* kit, PrLayoutNode view, PrKitTile tile) {
     Kit& k = *kit;
     View& v = viewOf(k, view);
@@ -734,28 +756,36 @@ PrLayoutNode prKitListTile(PrKit* kit, PrLayoutNode view, PrKitTile tile) {
     PrLayoutStyleIndex record =
         kitStyle(k, TileBox{.width = 100.0f / float(v.tiles), .height = v.rowHeight}, TileFlex{}, frame);
     prLayoutTreeFrameSetStyle(tree, node, record);
-    KitColors ground{.background = tile.tint.a > 0 ? tile.tint : p.bg3};
-    PrLayoutNode thumb = prLayoutTreeFrameElement(tree, node, 0, kitStyle(k, ThumbBox{}, ThumbFlex{}, ground));
-    if (tile.image != nullptr) {
-        PrKitImageStyle fit{
-            .fit = PrKitImageFit_Cover,
-            .place = {.width = prKitPercent(100), .height = prKitPercent(100)},
-        };
-        prKitImage(kit, thumb, {.image = tile.image}, fit);
-    } else if (tile.icon != PrKitIconKind_None) {
-        prKitIcon(kit, thumb, {.icon = tile.icon},
-            {.size = kTileIconSize, .tone = PrKitTone(tile.tint.a > 0 ? PrKitTone_Primary : PrKitTone_Muted)});
-    }
-    PrKitTone tone = tile.selected ? PrKitTone_Primary : PrKitTone_Secondary;
-    PrKitTextStyle labelStyle{
+    kitProvide<ItemCell>(k, node, KitContext_Item).selected = tile.selected;
+    applyClick(k, v, tile.index, node);
+    return node;
+}
+
+PrLayoutNode prKitTileImage(PrKit* kit, PrLayoutNode tile, PrKitImage image) {
+    PrLayoutNode thumbnail = tileThumbnail(*kit, tile, PrColor{0, 0, 0, 0});
+    PrKitImageStyle cover{
+        .fit = PrKitImageFit_Cover,
+        .place = {.width = prKitPercent(100), .height = prKitPercent(100)},
+    };
+    prKitImage(kit, thumbnail, image, cover);
+    return thumbnail;
+}
+
+PrLayoutNode prKitTileIcon(PrKit* kit, PrLayoutNode tile, PrKitIcon icon, PrColor tint) {
+    PrLayoutNode thumbnail = tileThumbnail(*kit, tile, tint);
+    PrKitTone tone = tint.a > 0 ? PrKitTone_Primary : PrKitTone_Muted;
+    prKitIcon(kit, thumbnail, icon, {.size = kTileIconSize, .tone = tone});
+    return thumbnail;
+}
+
+PrLayoutNode prKitTileLabel(PrKit* kit, PrLayoutNode tile, PrKitLabel label) {
+    PrKitTextStyle style{
         .role = PrKitTextRole_BodySmall,
-        .tone = tone,
+        .tone = PrKitTone(itemSelected(*kit, tile) ? PrKitTone_Primary : PrKitTone_Secondary),
         .wrap = PrKitWrap_Clip,
         .align = PrKitTextAlign_Center,
     };
-    prKitLabel(kit, node, {.text = tile.label}, labelStyle);
-    applyClick(k, v, tile.index, node);
-    return node;
+    return prKitLabel(kit, tile, label, style);
 }
 
 PrLayoutNode prKitEmptyState(PrKit* kit, PrLayoutNode parent, PrKitEmptyState empty) {

@@ -2,175 +2,129 @@
 
 #include "examples/alchemy/image_cache.h"
 
+#include "pr/cache.h"
 #include "pr/file.h"
 #include "pr/image_process.h"
 
 #include "examples/alchemy/text.h"
 
-#include <condition_variable>
-#include <map>
-#include <mutex>
 #include <utility>
 #include <vector>
 
 namespace alchemy {
 
-// The decoded images of files, and the decodes on the pool.
+// The context of the cache of one scale.
+struct ScaleCache {
+    ImageCache* images;
+    ImageScale scale;
+    PrCache* cache;
+};
+
+// A cache of decoded images for each scale, whose loads decode on the pool.
 struct ImageCache {
-    enum {
-        LoadState_Loading,
-        LoadState_Ready,
-        LoadState_Failed,
-    };
-    typedef uint8_t LoadState;
-
-    struct Entry {
-        LoadState state = ImageCache::LoadState_Loading;
-        const PrDrawImage* PR_NULLABLE image = nullptr;
-        uint64_t lastFrame = 0;
-    };
-
-    // A decode in flight, which a pool thread fills and the pump adopts.
-    struct Decode {
-        ImageCache* cache;
-        std::string path;
-        ImageScale scale;
-        const PrDrawImage* PR_NULLABLE image;
-    };
-
     PrTaskPool* pool;
     PrImageCodec* codec;
     std::function<void()> wake;
-    uint64_t frame = 1;
-    std::map<std::pair<std::string, ImageScale>, Entry> entries;
-
-    // The decodes that landed, and the count in flight, which freeing waits for.
-    std::mutex mutex;
-    std::condition_variable idle;
-    std::vector<Decode*> landed;
-    uint32_t inFlight = 0;
+    ScaleCache scales[2];               // by ImageScale
 };
 
 namespace {
 
-typedef ImageCache::Decode Decode;
-typedef ImageCache::Entry Entry;
-typedef std::map<std::pair<std::string, ImageScale>, Entry> Entries;
-
 // The frames that an image may go unrequested before it is freed: a thumbnail scrolled out of the browser, or an image
 // that the viewport no longer shows.
-constexpr uint64_t kThumbnailIdleFrames = 600;
-constexpr uint64_t kFullIdleFrames = 120;
+constexpr uint32_t kThumbnailIdleFrames = 600;
+constexpr uint32_t kFullIdleFrames = 120;
+
+// A decode on the pool, which finishes its load.
+struct Decode {
+    const ScaleCache* scale;
+    std::string path;
+    PrCacheLoad* load;
+};
 
 void runDecode(void* PR_NULLABLE context) {
     Decode* decode = static_cast<Decode*>(context);
-    ImageCache* cache = decode->cache;
+    ImageCache* images = decode->scale->images;
+    const PrDrawImage* image = nullptr;
     PrFileMapping mapping{};
     if (prFileMap(decode->path, &mapping)) {
-        const PrDrawImage* image = imageDecode(cache->codec, mapping.data, mapping.size);
+        image = imageDecode(images->codec, mapping.data, mapping.size);
         prFileUnmap(&mapping);
-        if (image != nullptr && decode->scale == ImageScale_Thumbnail) {
-            decode->image = imageShrink(image, kThumbnailMaxEdge);
-            prDrawImageRelease(image);
-        } else {
-            decode->image = image;
+        if (image != nullptr && decode->scale->scale == ImageScale_Thumbnail) {
+            const PrDrawImage* full = image;
+            image = imageShrink(full, kThumbnailMaxEdge);
+            prDrawImageRelease(full);
         }
     }
-    {
-        std::lock_guard<std::mutex> lock(cache->mutex);
-        cache->landed.push_back(decode);
-        --cache->inFlight;
-        cache->idle.notify_all();
-    }
-    if (cache->wake)
-        cache->wake();
+    prCacheLoadFinish(decode->load, image);
+    delete decode;
+}
+
+void* startDecode(void* PR_NULLABLE context, PrStringView path, PrCacheLoad* load) {
+    const ScaleCache* scale = static_cast<const ScaleCache*>(context);
+    prTaskPoolPost(scale->images->pool, runDecode, new Decode{scale, std::string(path.data, path.size), load});
+    return nullptr;
+}
+
+void releaseImage(void* PR_NULLABLE, const void* image) {
+    prDrawImageRelease(static_cast<const PrDrawImage*>(image));
+}
+
+void wakeOwner(void* PR_NULLABLE context) {
+    ImageCache* images = static_cast<const ScaleCache*>(context)->images;
+    if (images->wake)
+        images->wake();
 }
 
 } // namespace
 
 ImageCache* imageCacheCreate(PrTaskPool* pool, PrImageCodec* codec, std::function<void()> wake) {
-    ImageCache* cache = new ImageCache();
-    cache->pool = pool;
-    cache->codec = codec;
-    cache->wake = std::move(wake);
-    return cache;
+    ImageCache* images = new ImageCache();
+    images->pool = pool;
+    images->codec = codec;
+    images->wake = std::move(wake);
+    for (ImageScale scale : {ImageScale_Full, ImageScale_Thumbnail}) {
+        ScaleCache& entry = images->scales[scale];
+        entry.images = images;
+        entry.scale = scale;
+        PrCacheDesc desc{
+            .load = startDecode,
+            .release = releaseImage,
+            .wake = wakeOwner,
+            .context = &entry,
+            .idlePumps = scale == ImageScale_Full ? kFullIdleFrames : kThumbnailIdleFrames,
+        };
+        entry.cache = prCacheCreate(&desc);
+    }
+    return images;
 }
 
 void imageCacheDestroy(ImageCache* PR_NULLABLE cache) {
     if (cache == nullptr)
         return;
-    {
-        std::unique_lock<std::mutex> lock(cache->mutex);
-        cache->idle.wait(lock, [cache] { return cache->inFlight == 0; });
-    }
-    for (Decode* decode : cache->landed) {
-        prDrawImageRelease(decode->image);
-        delete decode;
-    }
-    for (std::pair<const std::pair<std::string, ImageScale>, Entry>& entry : cache->entries)
-        prDrawImageRelease(entry.second.image);
+    for (ScaleCache& scale : cache->scales)
+        prCacheDestroy(scale.cache);
     delete cache;
 }
 
 const PrDrawImage* PR_NULLABLE imageCacheGet(ImageCache* cache, const std::string& path, ImageScale scale) {
-    std::pair<std::string, ImageScale> key{path, scale};
-    Entries::iterator found = cache->entries.find(key);
-    if (found != cache->entries.end()) {
-        found->second.lastFrame = cache->frame;
-        return found->second.image;
-    }
-    cache->entries[key].lastFrame = cache->frame;
-    {
-        std::lock_guard<std::mutex> lock(cache->mutex);
-        ++cache->inFlight;
-    }
-    prTaskPoolPost(cache->pool, runDecode, new Decode{cache, path, scale, nullptr});
-    return nullptr;
+    return static_cast<const PrDrawImage*>(prCacheValue(cache->scales[scale].cache, path));
 }
 
 bool imageCacheFailed(ImageCache* cache, const std::string& path, ImageScale scale) {
-    Entries::iterator found = cache->entries.find({path, scale});
-    return found != cache->entries.end() && found->second.state == ImageCache::LoadState_Failed;
+    return prCacheKeyState(cache->scales[scale].cache, path) == PrCacheState_Failed;
 }
 
 void imageCacheForget(ImageCache* cache, const std::string& path) {
-    for (ImageScale scale : {ImageScale_Full, ImageScale_Thumbnail}) {
-        Entries::iterator found = cache->entries.find({path, scale});
-        if (found == cache->entries.end())
-            continue;
-        prDrawImageRelease(found->second.image);
-        cache->entries.erase(found);
-    }
+    for (ScaleCache& scale : cache->scales)
+        prCacheRemove(scale.cache, path);
 }
 
 bool imageCachePump(ImageCache* cache) {
-    std::vector<Decode*> landed;
-    {
-        std::lock_guard<std::mutex> lock(cache->mutex);
-        landed.swap(cache->landed);
-    }
-    for (Decode* decode : landed) {
-        Entries::iterator found = cache->entries.find({decode->path, decode->scale});
-        // A decode of a file that was forgotten while it ran is dropped.
-        if (found == cache->entries.end() || found->second.state != ImageCache::LoadState_Loading) {
-            prDrawImageRelease(decode->image);
-        } else {
-            found->second.image = decode->image;
-            found->second.state = decode->image != nullptr ? ImageCache::LoadState_Ready : ImageCache::LoadState_Failed;
-        }
-        delete decode;
-    }
-    for (Entries::iterator it = cache->entries.begin(); it != cache->entries.end();) {
-        uint64_t idle = it->first.second == ImageScale_Full ? kFullIdleFrames : kThumbnailIdleFrames;
-        if (it->second.state != ImageCache::LoadState_Loading && cache->frame - it->second.lastFrame > idle) {
-            prDrawImageRelease(it->second.image);
-            it = cache->entries.erase(it);
-        } else {
-            ++it;
-        }
-    }
-    ++cache->frame;
-    return !landed.empty();
+    bool landed = false;
+    for (ScaleCache& scale : cache->scales)
+        landed = prCachePump(scale.cache) || landed;
+    return landed;
 }
 
 const PrDrawImage* PR_NULLABLE imageDecode(PrImageCodec* codec, const void* bytes, size_t size) {

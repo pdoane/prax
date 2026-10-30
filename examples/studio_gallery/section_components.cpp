@@ -95,18 +95,16 @@ void sectionTree(PrKit* kit, PrLayoutNode parent, GalleryState& state) {
     for (uint32_t i = window.first; i < window.first + window.count; ++i) {
         uint32_t key = tree.keys[i];
         TreeNode* node = findTreeNode(tree, key);
-        PrKitRow row{
-            .index = i,
-            .item = key,
-            .icon = node->icon,
-            .tone = PrKitTone(node->hidden ? PrKitTone_Faint : PrKitTone_Primary),
-            .selected = tree.selected == key,
-            .statusTone = node->badgeTone,
-            .status = node->badge,
-            .label = node->name,
-            .meta = node->meta,
-        };
-        PrLayoutNode rowNode = prKitTreeRow(kit, view, row);
+        PrLayoutNode rowNode = prKitTreeRow(kit, view, {.index = i, .item = key, .selected = tree.selected == key});
+        // A node with a status shows it in place of its icon.
+        if (!node->badge.empty())
+            prKitStatus(kit, rowNode, {.text = node->badge}, {.tone = node->badgeTone});
+        else
+            prKitRowIcon(kit, rowNode, {.icon = node->icon});
+        prKitRowLabel(kit, rowNode, {.text = node->name},
+            PrKitTone(node->hidden ? PrKitTone_Faint : PrKitTone_Primary));
+        if (!node->meta.empty())
+            prKitRowMeta(kit, rowNode, {.text = node->meta});
         PrKitVisibilityToggle toggle{.hidden = node->hidden, .revealed = prUiIsHovered(ui, rowNode)};
         if (prKitActivated(kit, prKitVisibilityToggle(kit, rowNode, toggle)))
             node->hidden = !node->hidden;

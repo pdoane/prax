@@ -34,12 +34,17 @@ view and its rows, a menu and its items. No content carries an array of items, a
   the library asserts.
 - What a container computes for the caller after its items exist, such as a list's selection edit or a tree's fold,
   stays in its context, and a query on the container's node reads it once the items are created.
+- An item is a frame, and what it shows is the caller's. An item's content holds its identity and its state, such as
+  whether it is selected, and none of what it shows: no icon, label or badge. The caller creates what the item shows
+  under it, in the order that the caller chooses, from any of the library's widgets. The parts that most items show
+  in the design system's own style are widgets of their own, such as a row's label or a tab's close control
+  (`prKitRowLabel`, `prKitTabClose`), which read the item's state from its context.
 
 ## Events are queried on nodes
 
 What happened to a widget in a round is asked of the node that it returned. lib/ui answers activation
 (`prUiActivated`), and a library marks its own events as signals on the node (`prUiSignal`, `prUiSignaled`).
-Studio Kit's queries read both: `prKitActivated`, `prKitClosed`, `prKitRemoved`. An event that carries values
+Studio Kit's queries read both: `prKitActivated`, `prKitRemoved`. An event that carries values
 writes them through an out parameter (`prKitMoved(kit, strip, &from, &to)`).
 
 ## State: bound, kept or chosen

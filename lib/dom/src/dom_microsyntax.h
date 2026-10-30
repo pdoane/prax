@@ -11,6 +11,7 @@
 #include "pr/string.h"
 #include "pr/string_view.h"
 #include "pr/text_buffer.h"
+#include "pr/time_date.h"
 
 PR_ASSUME_NONNULL_BEGIN
 
@@ -43,14 +44,8 @@ void domAppendFloat(TextBuffer* out, double value);
 // ---------------------------------------------------------------------------------------------------------------------
 // Dates and times (html/#dates-and-times)
 //
-// Dates are in the proleptic Gregorian calendar, and a year is greater than zero. A time is local, with no time zone.
-
-// A date, a month or a week: `day` is zero for a month, and a week is `year` and `week` alone.
-struct DomDate {
-    int64_t year;
-    uint32_t month;                 // 1 through 12
-    uint32_t day;                   // 1 through the days of the month
-};
+// Dates are in the proleptic Gregorian calendar (pr/time_date.h), and a year is greater than zero. A month is a year
+// and a month, and a week is a year and a week. A time is local, with no time zone.
 
 // A time of day, in milliseconds since midnight, below 86400000.
 typedef double DomTime;
@@ -59,22 +54,16 @@ typedef double DomTime;
 // html/#valid-time-string and html/#valid-local-date-and-time-string define. Each writes what the string represents and
 // returns false for a string that is not one. A time's fraction of a second may have more digits than the valid
 // syntax's three, as the parsing rules allow (html/#parse-a-time-component), and `fractionDigits` says how many it has.
-bool domParseMonth(PrStringView text, DomDate* out);
-bool domParseDate(PrStringView text, DomDate* out);
+bool domParseMonth(PrStringView text, int64_t* year, uint32_t* month);
+bool domParseDate(PrStringView text, PrTimeDate* out);
 bool domParseWeek(PrStringView text, int64_t* year, uint32_t* week);
 bool domParseTime(PrStringView text, DomTime* out, uint32_t* PR_NULLABLE fractionDigits = nullptr);
-bool domParseLocalDateTime(PrStringView text, DomDate* date, DomTime* time, uint32_t* PR_NULLABLE fractionDigits = nullptr);
+bool domParseLocalDateTime(PrStringView text, PrTimeDate* date, DomTime* time, uint32_t* PR_NULLABLE fractionDigits = nullptr);
 
 // Returns true if `text` is a valid time string, or a valid local date and time string: one that parses, with at most
 // three digits of a fraction of a second.
 bool domIsValidTime(PrStringView text);
 bool domIsValidLocalDateTime(PrStringView text);
-
-// Returns the number of days from 1970-01-01 to `date`, negative before it. The date's day must not be zero.
-int64_t domDateDays(DomDate date);
-
-// Returns the date `days` after 1970-01-01, or before it for a negative count.
-DomDate domDateFromDays(int64_t days);
 
 // Returns the number of weeks in `year`, 52 or 53 (html/#week-number-of-the-last-day).
 uint32_t domWeeksInYear(int64_t year);
@@ -89,10 +78,10 @@ void domWeekOfDays(int64_t days, int64_t* year, uint32_t* week);
 // (html/#valid-normalised-local-date-and-time-string). A time string leaves out its seconds if they and the
 // milliseconds are zero, and the milliseconds if they are zero.
 void domAppendMonth(TextBuffer* out, int64_t year, uint32_t month);
-void domAppendDate(TextBuffer* out, DomDate date);
+void domAppendDate(TextBuffer* out, PrTimeDate date);
 void domAppendWeek(TextBuffer* out, int64_t year, uint32_t week);
 void domAppendTime(TextBuffer* out, DomTime time);
-void domAppendLocalDateTime(TextBuffer* out, DomDate date, DomTime time);
+void domAppendLocalDateTime(TextBuffer* out, PrTimeDate date, DomTime time);
 
 // Returns the attribute `name` of `element` as an unsigned long IDL attribute that reflects it with the default
 // `fallback` reads it (html/#reflecting-content-attributes-in-idl-attributes): a non-negative integer, or `fallback` if

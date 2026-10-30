@@ -102,7 +102,7 @@ std::string parse(const std::string& source) {
     Recorder recorder;
     PrXmlHandler handler = recordingHandler(&recorder);
     PrXmlError error = {};
-    PrStatus status = prXmlParse(PrStringView{source.data(), source.size()}, &handler, &error);
+    PrStatus status = prXmlParse(source, &handler, &error);
     return outcome(recorder, status, error);
 }
 

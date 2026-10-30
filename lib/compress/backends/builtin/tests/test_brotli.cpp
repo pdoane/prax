@@ -315,15 +315,6 @@ std::string decodeAll(PrByteView input) {
     return decoded.text;
 }
 
-template <size_t N>
-PrByteView view(const uint8_t (&bytes)[N]) {
-    return {bytes, N};
-}
-
-PrByteView view(const std::vector<uint8_t>& bytes) {
-    return {bytes.data(), bytes.size()};
-}
-
 // Checks that `stream` decodes to `expected` whole, a byte of input at a time, a byte of output at a time, and in
 // pieces of each that do not divide the stream.
 void checkStream(PrByteView stream, const std::string& expected) {
@@ -490,47 +481,47 @@ TEST_CASE("Brotli decodes an encoder's streams whole and in pieces") {
     const std::string text = kText;
     const std::string runs = repeated();
     SUBCASE("text with dictionary words") {
-        checkStream(view(kTextQ11), text);
-        checkStream(view(kTextQ5), text);
-        checkStream(view(kTextQ0), text);
+        checkStream(kTextQ11, text);
+        checkStream(kTextQ5, text);
+        checkStream(kTextQ0, text);
     }
     SUBCASE("meta-blocks in a window smaller than the output") {
-        checkStream(view(kRepeatedQ2Window10), runs);
-        checkStream(view(kRepeatedQ11Window10), runs);
+        checkStream(kRepeatedQ2Window10, runs);
+        checkStream(kRepeatedQ11Window10, runs);
     }
     SUBCASE("uncompressed meta-blocks") {
-        checkStream(view(kNoiseQ11), noise(600));
+        checkStream(kNoiseQ11, noise(600));
     }
     SUBCASE("an empty stream") {
-        checkStream(view(kEmptyQ11), "");
+        checkStream(kEmptyQ11, "");
     }
 }
 
 TEST_CASE("Brotli transforms dictionary words") {
     // The first word of four letters is "time" (rfc 7932 appendix A).
-    CHECK(decodeAll(view(wordStream(4, 0, 0, 4))) == "time");
-    CHECK(decodeAll(view(wordStream(4, 0, 9, 4))) == "Time");
-    CHECK(decodeAll(view(wordStream(4, 0, 44, 4))) == "TIME");
-    CHECK(decodeAll(view(wordStream(4, 0, 11, 2))) == "me");
-    CHECK(decodeAll(view(wordStream(4, 0, 12, 3))) == "tim");
-    CHECK(decodeAll(view(wordStream(4, 0, 49, 7))) == "timing ");
-    CHECK(decodeAll(view(wordStream(4, 1, 73, 17))) == " the down of the ");
-    CHECK(decodeAll(view(wordStream(4, 1, 15, 6))) == " Down ");
-    CHECK(decodeAll(view(wordStream(5, 3, 102, 7))) == "\xc2\xa0" + word(5, 3));
-    CHECK(decodeAll(view(wordStream(24, 2, 0, 24))) == word(24, 2));
+    CHECK(decodeAll(wordStream(4, 0, 0, 4)) == "time");
+    CHECK(decodeAll(wordStream(4, 0, 9, 4)) == "Time");
+    CHECK(decodeAll(wordStream(4, 0, 44, 4)) == "TIME");
+    CHECK(decodeAll(wordStream(4, 0, 11, 2)) == "me");
+    CHECK(decodeAll(wordStream(4, 0, 12, 3)) == "tim");
+    CHECK(decodeAll(wordStream(4, 0, 49, 7)) == "timing ");
+    CHECK(decodeAll(wordStream(4, 1, 73, 17)) == " the down of the ");
+    CHECK(decodeAll(wordStream(4, 1, 15, 6)) == " Down ");
+    CHECK(decodeAll(wordStream(5, 3, 102, 7)) == "\xc2\xa0" + word(5, 3));
+    CHECK(decodeAll(wordStream(24, 2, 0, 24)) == word(24, 2));
 
     // FermentFirst and FermentAll change the second byte of a two-byte character, and the third of a three-byte one.
     const uint32_t cyrillic = wordStarting(4, 0xd0);
     std::string upper = word(4, cyrillic);
     upper[1] = char(upper[1] ^ 32);
-    CHECK(decodeAll(view(wordStream(4, cyrillic, 9, 4))) == upper);
+    CHECK(decodeAll(wordStream(4, cyrillic, 9, 4)) == upper);
     upper[3] = char(upper[3] ^ 32);
-    CHECK(decodeAll(view(wordStream(4, cyrillic, 44, 4))) == upper);
+    CHECK(decodeAll(wordStream(4, cyrillic, 44, 4)) == upper);
     const uint32_t devanagari = wordStarting(6, 0xe0);
     std::string shifted = word(6, devanagari);
     shifted[2] = char(shifted[2] ^ 5);
     shifted[5] = char(shifted[5] ^ 5);
-    CHECK(decodeAll(view(wordStream(6, devanagari, 44, 6))) == shifted);
+    CHECK(decodeAll(wordStream(6, devanagari, 44, 6)) == shifted);
 }
 
 TEST_CASE("Brotli switches block types and reads context maps with runs and move-to-front") {
@@ -577,7 +568,7 @@ TEST_CASE("Brotli switches block types and reads context maps with runs and move
     w.put(3, 2);
     w.code(2, 2);
     w.put(2, 2);
-    checkStream(view(w.finish()), "aaabbaaaabbb");
+    checkStream(w.finish(), "aaabbaaaabbb");
 }
 
 TEST_CASE("Brotli skips metadata") {
@@ -596,19 +587,19 @@ TEST_CASE("Brotli skips metadata") {
     w.put('z', 8);
     w.put(1, 1);
     w.put(1, 1);
-    checkStream(view(w.finish()), "");
+    checkStream(w.finish(), "");
 }
 
 TEST_CASE("Brotli reports a truncated stream and leaves what follows a stream unread") {
     // Every proper prefix of a stream ends inside it.
-    const PrByteView stream = view(kTextQ11);
+    const PrByteView stream = kTextQ11;
     for (size_t size = 0; size < stream.size; ++size) {
         CAPTURE(size);
         CHECK(decode({stream.data, size}, size, 4096).result == BrotliResult_Truncated);
     }
     std::vector<uint8_t> followed(stream.data, stream.data + stream.size);
     followed.push_back('!');
-    const Decoded decoded = decode(view(followed), followed.size(), 4096);
+    const Decoded decoded = decode(followed, followed.size(), 4096);
     CHECK(decoded.result == BrotliResult_Done);
     CHECK(decoded.consumed == stream.size);
     CHECK(decoded.text == kText);
@@ -617,11 +608,11 @@ TEST_CASE("Brotli reports a truncated stream and leaves what follows a stream un
 TEST_CASE("Brotli rejects corrupt streams") {
     SUBCASE("the reserved window size") {
         const uint8_t stream[] = {0x11, 0x00};
-        CHECK(decode(view(stream), 2, 64).result == BrotliResult_Invalid);
+        CHECK(decode(stream, 2, 64).result == BrotliResult_Invalid);
     }
     SUBCASE("nonzero bits after the last meta-block") {
         const uint8_t stream[] = {0x06 | 0x80};
-        CHECK(decode(view(stream), 1, 64).result == BrotliResult_Invalid);
+        CHECK(decode(stream, 1, 64).result == BrotliResult_Invalid);
     }
     SUBCASE("a length whose last nibble is zero") {
         BrotliWriter w;
@@ -630,22 +621,22 @@ TEST_CASE("Brotli rejects corrupt streams") {
         w.put(0, 1);
         w.put(1, 2); // five nibbles
         w.put(0x0ffff, 20);
-        CHECK(decode(view(w.finish()), 64, 64).result == BrotliResult_Invalid);
+        CHECK(decode(w.finish(), 64, 64).result == BrotliResult_Invalid);
     }
     SUBCASE("a reference to a word that does not exist") {
         // Transform 121 is past the last transform.
-        CHECK(decode(view(wordStream(4, 0, 121, 4)), 64, 64).result == BrotliResult_Invalid);
+        CHECK(decode(wordStream(4, 0, 121, 4), 64, 64).result == BrotliResult_Invalid);
     }
     SUBCASE("any byte changed") {
         // A corrupt stream fails or decodes to something. It never reads or writes out of bounds, which the sanitizer
         // builds check.
-        const PrByteView streams[] = {view(kTextQ11), view(kTextQ0), view(kRepeatedQ2Window10)};
+        const PrByteView streams[] = {kTextQ11, kTextQ0, kRepeatedQ2Window10};
         for (PrByteView original : streams) {
             std::vector<uint8_t> bytes(original.data, original.data + original.size);
             for (size_t at = 0; at < bytes.size(); at += 3) {
                 for (uint8_t flip : {uint8_t(0x01), uint8_t(0x80), uint8_t(0xff)}) {
                     bytes[at] ^= flip;
-                    decode(view(bytes), 37, 1000);
+                    decode(bytes, 37, 1000);
                     bytes[at] ^= flip;
                 }
             }

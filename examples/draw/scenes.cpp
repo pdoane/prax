@@ -71,7 +71,7 @@ const PrFont* PR_NULLABLE fontVaried(const char* file, const PrFontVariation* PR
                 bytes.insert(bytes.end(), buffer, buffer + read);
             std::fclose(f);
         }
-        if (prFontCreate(PrByteView{bytes.data(), bytes.size()}, 0, nullptr, &font) != PrStatus_Ok)
+        if (prFontCreate(bytes, 0, nullptr, &font) != PrStatus_Ok)
             font = nullptr;
     }
     loadedFonts().push_back(LoadedFont{key, font});

@@ -14,7 +14,7 @@ namespace pr_impl {
 // The kinds of group, which partition the properties that the engine computes (STYLE_GROUPS in gen_css.py).
 enum {
     CssStyleGroup_Font,         // inherited, read by layout
-    CssStyleGroup_Color,        // inherited, read by painting
+    CssStyleGroup_Color,        // inherited, read by painting, and by hit testing
     CssStyleGroup_Box,          // not inherited, read by layout
     CssStyleGroup_Flex,         // not inherited, read by layout: flex layout and box alignment
     CssStyleGroup_Decoration,   // not inherited, read by painting
@@ -22,7 +22,10 @@ enum {
     CssStyleGroup_Effect,       // not inherited, read by compositing: opacity, transforms and stacking
     CssStyleGroup_Compositing,  // not inherited, read by compositing: clip paths, masks, filters and blending
     CssStyleGroup_Animation,    // not inherited, which the presentation runs
-    CssStyleGroup_Generated,    // not inherited, read by the presentation: generated content, counters, appearance
+
+    // not inherited, read by the presentation: generated content, counters, appearance, selection
+    CssStyleGroup_Generated,
+
     CssStyleGroup_List,         // inherited, read by the presentation: list markers and quotes
     CssStyleGroup_Svg,          // inherited, read by SVG: fills, strokes, markers and how shapes render
     CssStyleGroup_SvgGeometry,  // not inherited, read by SVG: geometry, and the properties of resource elements

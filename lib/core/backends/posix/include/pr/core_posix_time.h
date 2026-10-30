@@ -11,9 +11,11 @@ PR_ASSUME_NONNULL_BEGIN
 extern "C" {
 #endif
 
-// Implement prTimeMonotonicMilliseconds and prTimeWallMilliseconds.
+// Implement prTimeMonotonicMilliseconds, prTimeWallMilliseconds and prTimeLocalOffsetMilliseconds. The local time zone
+// is the C library's (localtime_r), which follows TZ.
 double prCorePosixTimeMonotonicMilliseconds(void);
 double prCorePosixTimeWallMilliseconds(void);
+double prCorePosixTimeLocalOffsetMilliseconds(double wall);
 
 #if defined(__cplusplus)
 }

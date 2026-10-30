@@ -143,7 +143,8 @@ void destroyFetcher(PrFetchNetwork* base) {
     prMemoryFree(fetcher);
 }
 
-PrStatus createFetch(PrFetchNetwork* base, const PrFetchRequestDesc* desc, PrFetch* PR_NULLABLE* PR_NONNULL out) {
+PrStatus createFetch(PrFetchNetwork* base, const PrFetchRequestDesc* desc, PrFetchFn PR_NULLABLE event,
+        void* PR_NULLABLE context, PrFetch* PR_NULLABLE* PR_NONNULL out) {
     PrUrl* url = nullptr;
     if (prUrlCreate(desc->url, nullptr, PrCharset_Utf8, &url) != PrStatus_Ok)
         return PrStatus_InvalidData;
@@ -156,8 +157,8 @@ PrStatus createFetch(PrFetchNetwork* base, const PrFetchRequestDesc* desc, PrFet
     prUrlDestroy(referrer);
     InterceptFetch* fetch = allocZeroed<InterceptFetch>();
     fetch->fetcher = base;
-    fetch->event = desc->event;
-    fetch->context = desc->context;
+    fetch->event = event;
+    fetch->context = context;
     fetch->url = prUrlSerialize(url, PrUrlSerialization_ExcludeFragment);
     prUrlDestroy(url);
     fetch->method = copyOrNull(desc->method);
@@ -173,8 +174,6 @@ PrStatus createFetch(PrFetchNetwork* base, const PrFetchRequestDesc* desc, PrFet
     fetch->desc.referrer = prStringView(&fetch->referrer);
     fetch->desc.headers = fetch->requestHeaders.views.data;
     fetch->desc.body = PrByteView{fetch->requestBody.data, fetch->requestBody.count};
-    fetch->desc.event = nullptr;
-    fetch->desc.context = nullptr;
     // The hold of the task that asks the host.
     fetch->holds = 1;
     prNetPost(base->net, ask, fetch);
@@ -319,10 +318,7 @@ void prFetchInterceptRequestPass(PrFetchInterceptRequest* request) {
     PR_ASSERT(fetcher->next != nullptr);
     fetch->state = InterceptState_Passed;
     if (!fetch->dead) {
-        PrFetchRequestDesc desc = fetch->desc;
-        desc.event = passedEvent;
-        desc.context = fetch;
-        if (prFetchCreate(fetcher->next, &desc, &fetch->passed) != PrStatus_Ok) {
+        if (prFetchCreate(fetcher->next, &fetch->desc, passedEvent, fetch, &fetch->passed) != PrStatus_Ok) {
             fetch->state = InterceptState_Failed;
             fetch->error = PrNetError_Protocol;
             deliver(fetch, PrFetchEvent_Fail);

@@ -644,10 +644,10 @@ TEST_CASE("a file added by its family is read when a match first asks for the fa
     std::string regular = fontPath("Arimo.ttf");
     std::string italic = fontPath("Arimo-Italic.ttf");
     std::string missing = fontPath("Missing.ttf");
-    prFontSetAddFileFamily(set, "Arimo", PrStringView{regular.data(), regular.size()});
-    prFontSetAddFileFamily(set, "Arimo", PrStringView{italic.data(), italic.size()});
-    prFontSetAddFileFamily(set, "Arimo", PrStringView{italic.data(), italic.size()});
-    prFontSetAddFileFamily(set, "Missing", PrStringView{missing.data(), missing.size()});
+    prFontSetAddFileFamily(set, "Arimo", regular);
+    prFontSetAddFileFamily(set, "Arimo", italic);
+    prFontSetAddFileFamily(set, "Arimo", italic);
+    prFontSetAddFileFamily(set, "Missing", missing);
     CHECK(prFontSetFaceCount(set) == 3);
     CHECK(prFontSetFamilyCount(set) == 2);
     Asked asked = request("Arimo");
@@ -668,8 +668,8 @@ TEST_CASE("a file whose faces read as another family gives them the family it wa
     PrFontSet* set = prFontSetCreate(nullptr);
     std::string sans = fontPath("NotoSans.ttf");
     std::string emoji = fontPath("Twemoji.ttf");
-    prFontSetAddFileFamily(set, "Platform Sans", PrStringView{sans.data(), sans.size()});
-    prFontSetAddFileFamily(set, "Platform Emoji", PrStringView{emoji.data(), emoji.size()});
+    prFontSetAddFileFamily(set, "Platform Sans", sans);
+    prFontSetAddFileFamily(set, "Platform Emoji", emoji);
     CHECK(familyMatched(set, request("Platform Sans")) == "Noto Sans");
     PrFontFace face = matchOne(set, request("Platform Emoji"));
     CHECK(face.flags == PrFontFaceFlag_Emoji);
