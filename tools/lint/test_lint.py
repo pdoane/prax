@@ -848,20 +848,6 @@ class DanglingNames(unittest.TestCase):
         self.assertEqual(self.problems('A `PrSketch` is illustrative.\n', 'docs/conventions.md'), [])
 
 
-class Plans(unittest.TestCase):
-    def problems(self, text):
-        report = lint.Report()
-        lint.check_plans(report, os.path.join(lint.ROOT, 'docs/example.md'), text)
-        return report.problems
-
-    def test_a_pointer_into_plans(self):
-        self.assertEqual(len(self.problems('See [the plan](../plans/draw.md).\n')), 1)
-        self.assertEqual(len(self.problems('// Has failed before (plans/backends.md).\n')), 1)
-
-    def test_other_words(self):
-        self.assertEqual(self.problems('The explans/ and the plans for it.\n'), [])
-
-
 class CountOf(unittest.TestCase):
     def problems(self, source):
         report = lint.Report()

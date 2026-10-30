@@ -1832,12 +1832,6 @@ def check_compiler_attributes(report, path, text):
                    "a compiler's attribute is spelled through a macro of pr/base.h, such as PR_NOINLINE")
 
 
-def check_plans(report, path, text):
-    """The documents under plans are working notes that come and go, so nothing outside them points there."""
-    for match in re.finditer(r"\bplans/", text):
-        report.add(path, line_of(text, match.start()), "plans", "plans/ is working notes; state the fact here")
-
-
 # Other implementations, by name: browsers, layout engines, Lottie players, and vector graphics libraries. A CSS vendor
 # prefix, such as -webkit-, is syntax and not a reference.
 IMPLEMENTATION = re.compile(r"(?<![-\w.])(Chrome|Chromium|Blink|Safari|WebKit|Firefox|Gecko|Servo|Ladybird|LayoutNG"
@@ -3028,7 +3022,6 @@ def check_any_source(path):
     if backend_of(path) is not None:
         check_backend_includes(report, path, text)
     check_include_order(report, path, text)
-    check_plans(report, path, text)
     check_doc_links(report, path, text)
     check_comment_placement(report, path, text)
     check_comment_wrap(report, path, text)
@@ -3140,7 +3133,6 @@ def main():
         with open(path, encoding="utf-8") as f:
             text = f.read()
         check_line_length(report, path, text)
-        check_plans(report, path, text)
         if os.path.dirname(path) == os.path.join(ROOT, "docs"):
             check_doc_implementation_names(report, path, text)
             check_dangling_names(report, path, text, defined)

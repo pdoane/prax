@@ -131,7 +131,7 @@ BENCHES = [
     Bench("ui", "immediate-mode frames: trees declared whole every frame, unchanged, changed, scrolled and cold",
           ["ui_bench", "editor_bench"], fetch=["fonts"], run=engine.ui),
     Bench("flex", "trees of flex boxes in lib/layout, Yoga and Taffy: built, laid out, resized, changed and unchanged",
-          ["flex_bench"], fetch=["yoga", "taffy"], run=engine.flex, options=engine.flex_options,
+          ["flex_bench"], run=engine.flex, options=engine.flex_options,
           sources=sorted(glob.glob(os.path.join(FLEX, "*.*")) + glob.glob(os.path.join(FLEX, "taffy", "*.*"))
                          + glob.glob(os.path.join(FLEX, "taffy", "src", "*.rs")))),
     Bench("page-changes", "the real pages after each kind of change: their style, layout and recording",

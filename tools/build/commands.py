@@ -17,9 +17,9 @@ USAGE = {
     past a failure and reports every error. --target builds only the targets named, and what they need""",
     "test": """\
 ./dev.sh test [debug|asan|tsan] [module] [args...]
-    the unit tests, with lint beside them, or one module's doctest binary with args, as in ./dev.sh test dom
-    -ts="*keyword*" --success, from that build, which builds only that binary. `asan` also runs the tools' tests
-    against its harnesses""",
+    the unit tests and the tools' tests against that build's harnesses, with lint beside them, or one module's doctest
+    binary with args, as in ./dev.sh test dom -ts="*keyword*" --success, from that build, which builds only that
+    binary""",
     "example": """\
 ./dev.sh example <name> [args...]
     build an example under examples, and only what it needs, and run it with the arguments""",
@@ -55,13 +55,11 @@ def build(argv):
 
 
 def unit_tests(mode=None):
-    """Builds and runs every unit test of the build that `mode` names, and with asan, the tools' tests against its
-    harnesses."""
+    """Builds and runs every unit test of the build that `mode` names, then the tools' tests against its harnesses."""
     chosen = builds.build(mode)
     dev.run(["ctest", "--test-dir", chosen.directory, "--output-on-failure", "--parallel", os.cpu_count() or 4,
              "--timeout", TEST_TIMEOUT])
-    if chosen.name == "asan":
-        lint.tools_tests(chosen.environment())
+    lint.tools_tests(chosen.environment())
 
 
 def test(argv):

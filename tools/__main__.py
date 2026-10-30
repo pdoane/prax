@@ -9,7 +9,6 @@ results are kept under perf, which is not committed either.
 import importlib
 import sys
 
-from tools import dev
 
 # The commands, in the order that help lists them, each by the module that defines it.
 COMMANDS = {
@@ -38,16 +37,10 @@ COMMANDS = {
 
 
 def everything():
-    """Lints beside the unit tests, then runs the tools' tests."""
+    """The whole of `./dev.sh test`: lint beside the unit tests and the tools' tests."""
     from tools.build import commands as build
-    from tools.fetch import checkouts
-    from tools.lint import commands as lint
 
-    def work():
-        checkouts.fetch("fonts", "unicode", "html5lib")
-        build.unit_tests()
-        lint.tools_tests()
-    lint.beside(work)
+    build.test([])
 
 
 def help(code=0):

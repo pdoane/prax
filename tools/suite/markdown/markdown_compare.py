@@ -36,7 +36,7 @@ def main():
     ap.add_argument("--shown", type=int, default=10, help="how many differing files to show")
     ap.add_argument("--lines", type=int, default=12, help="how many lines of each difference to show")
     args = ap.parse_args()
-    paths = args.paths or [os.path.join(corpus.ROOT, name) for name in ("README.md", "docs", "plans", "third_party")]
+    paths = args.paths or [os.path.join(corpus.ROOT, name) for name in ("README.md", "docs", "third_party")]
     files = markdown_files(paths)
     if not files:
         sys.exit("no Markdown files")

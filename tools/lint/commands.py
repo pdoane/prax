@@ -6,13 +6,12 @@ import sys
 import tempfile
 
 from tools import dev
-from tools.build import build as builds
 from tools.fetch import checkouts
 
 USAGE = {
     "lint": """\
 ./dev.sh lint
-    the conventions the compiler cannot check, and the tools' tests""",
+    the conventions the compiler cannot check""",
     "rewrap": """\
 ./dev.sh rewrap [path...]
     refill comment paragraphs to the line limit, in the files named or in every source that lint reads""",
@@ -33,10 +32,8 @@ USAGE = {
 
 
 def sources():
-    """Fetches what lint and the tools' tests read: the references to Markdown's specifications are checked against
-    the specifications themselves, the tools' tests run pages with WPT's harness, and they check the font bundles
-    against CLDR's exemplar characters."""
-    checkouts.fetch("webref", "webfeatures", "commonmark", "cmark_gfm", "wpt", "cldr")
+    """Fetches what lint reads: the references to specifications are checked against the specifications themselves."""
+    checkouts.fetch("webref", "webfeatures", "commonmark", "cmark_gfm")
 
 
 def beside(work):
@@ -60,7 +57,9 @@ def beside(work):
 
 
 def tools_tests(env=None):
-    """Runs the tools' tests, which drive the harnesses and catch what only a page can reach."""
+    """Runs the tools' tests, which drive the harnesses and catch what only a page can reach. They run pages with WPT's
+    harness, and check the font bundles against CLDR's exemplar characters."""
+    checkouts.fetch("wpt", "cldr")
     dev.run([sys.executable, "-m", "unittest", "discover", "-q", "-s", "tools", "-t", ".", "-p", "test_*.py"], env=env)
 
 
@@ -68,8 +67,6 @@ def lint(argv):
     dev.usage(argv, USAGE["lint"])
     sources()
     dev.python("tools.lint.lint")
-    builds.build()
-    tools_tests()
 
 
 def rewrap(argv):
