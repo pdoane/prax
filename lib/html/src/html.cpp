@@ -1304,6 +1304,33 @@ double prHtmlPerformanceTimeOrigin(const PrHtmlPerformance* self) {
     return self->window->timeOriginWall;
 }
 
+PrStringView prHtmlOrientationTypeName(PrHtmlOrientationType type) {
+    switch (type) {
+        case PrHtmlOrientationType_PortraitPrimary: return "portrait-primary";
+        case PrHtmlOrientationType_PortraitSecondary: return "portrait-secondary";
+        case PrHtmlOrientationType_LandscapePrimary: return "landscape-primary";
+        case PrHtmlOrientationType_LandscapeSecondary: return "landscape-secondary";
+    }
+    return "";
+}
+
+PrHtmlScreenOrientation* PR_NULLABLE prHtmlScreenOrientationQuery(PrDomEventTarget* PR_NULLABLE object) {
+    if (object != nullptr && object->type == DomTargetType_ScreenOrientation)
+        return static_cast<PrHtmlScreenOrientation*>(object);
+    return nullptr;
+}
+
+PrHtmlOrientationType prHtmlScreenOrientationType(const PrHtmlScreenOrientation* self) {
+    if (mediaInteger(self->window, PrCssDescriptor_MediaDeviceHeight) >
+            mediaInteger(self->window, PrCssDescriptor_MediaDeviceWidth))
+        return PrHtmlOrientationType_PortraitPrimary;
+    return PrHtmlOrientationType_LandscapePrimary;
+}
+
+uint16_t prHtmlScreenOrientationAngle(const PrHtmlScreenOrientation*) {
+    return 0;
+}
+
 PrHtmlDocumentTimeline* prHtmlDocumentTimelineCreate(PrDomDocument* document, double originTime) {
     PrHtmlDocumentTimeline* timeline = allocZeroed<PrHtmlDocumentTimeline>();
     *timeline = PrHtmlDocumentTimeline{{document, originTime}};
@@ -1345,6 +1372,10 @@ PrHtmlPreferenceObject* prHtmlWindowPreference(PrHtmlWindow* self, PrHtmlPrefere
 
 PrHtmlPerformance* prHtmlWindowPerformance(PrHtmlWindow* self) {
     return static_cast<PrHtmlPerformance*>(&self->performance);
+}
+
+PrHtmlScreenOrientation* prHtmlWindowScreenOrientation(PrHtmlWindow* self) {
+    return static_cast<PrHtmlScreenOrientation*>(&self->orientation);
 }
 
 PrHtmlWindow* PR_NULLABLE prHtmlWindowParent(PrHtmlWindow* self) {

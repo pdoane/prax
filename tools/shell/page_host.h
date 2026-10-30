@@ -87,6 +87,10 @@ public:
     void setUserPreferences(const PrAppUserPreferences& preferences);
     PrAppUserPreferences userPreferences() const;
 
+    // Loads the pages afterward in a viewport of `viewport` CSS pixels, so that their scripts measure the layout that a
+    // paint at that viewport renders. They load in WPT's 800x600 until this is called.
+    void setViewport(PrVec2 viewport);
+
     // Restyles on `threads` threads, including the event loop's own thread, as PrDomAgentOptions::restyleThreads
     // describes: 0 means one thread per core. Call it before any page loads.
     void setRestyleThreads(uint32_t threads);
@@ -122,6 +126,10 @@ public:
     // Fetches over sockets, as a browser does, rather than on the host's thread. Call it before any page loads. Returns
     // false, saying why on stderr, if the build has no network or a page has loaded.
     bool useNetwork();
+
+    // Fetches over sockets with an HTTP cache on disk in `directory`, which outlives the process, as a browser's does.
+    // Call it before any page loads. Returns false, saying why on stderr, if the network cannot be used.
+    bool useDiskCache(const std::filesystem::path& directory);
 
     // Resolves `host` to `target` over sockets, as a hosts file does. A host of the form `*.name` covers every
     // subdomain of the name (PrHttpHostRule). Call it before any page loads.

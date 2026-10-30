@@ -124,6 +124,15 @@ void prCoreWindowsConditionWait(PrCondition* condition, PrMutex* mutex) {
     SleepConditionVariableSRW(nativeOf(condition), nativeOf(mutex), INFINITE, 0);
 }
 
+bool prCoreWindowsConditionWaitFor(PrCondition* condition, PrMutex* mutex, double milliseconds) {
+    // A wait past a day is a day, which keeps it below INFINITE. A caller that waits for a state tests it again after a
+    // wake in any case.
+    double bounded = milliseconds == milliseconds && milliseconds < 86400000 ? milliseconds : 86400000;
+    DWORD wait = DWORD(bounded + 0.5);
+    return SleepConditionVariableSRW(nativeOf(condition), nativeOf(mutex), wait, 0) != 0 ||
+        GetLastError() != ERROR_TIMEOUT;
+}
+
 void prCoreWindowsConditionSignal(PrCondition* condition) {
     WakeConditionVariable(nativeOf(condition));
 }

@@ -2446,8 +2446,38 @@ void prDomAgentSetWake(PrDomAgent* self, PrDomAgentWakeFn PR_NULLABLE wake, void
 void prDomAgentSetLayoutDone(PrDomAgent* self, PrDomAgentLayoutDoneFn PR_NULLABLE done, void* PR_NULLABLE context) {
     self->layoutDone = done;
     self->layoutDoneContext = context;
-    if (self->worker != nullptr)
-        prLayoutWorkerSetDone(self->worker, done, context);
+}
+
+void prDomAgentAddCheckpoint(PrDomAgent* self, PrDomAgentHookFn fn, void* PR_NULLABLE context) {
+    domAgentAddHook(&self->checkpoints, fn, context);
+}
+
+void prDomAgentRemoveCheckpoint(PrDomAgent* self, PrDomAgentHookFn fn, void* PR_NULLABLE context) {
+    domAgentRemoveHook(&self->checkpoints, fn, context);
+}
+
+void prDomAgentAddUpdate(PrDomAgent* self, PrDomAgentHookFn fn, void* PR_NULLABLE context) {
+    domAgentAddHook(&self->updates, fn, context);
+}
+
+void prDomAgentRemoveUpdate(PrDomAgent* self, PrDomAgentHookFn fn, void* PR_NULLABLE context) {
+    domAgentRemoveHook(&self->updates, fn, context);
+}
+
+bool prDomAgentRun(PrDomAgent* self, double milliseconds) {
+    return domAgentRun(self, milliseconds);
+}
+
+bool prDomAgentWait(PrDomAgent* self, double milliseconds) {
+    return domAgentWait(self, milliseconds);
+}
+
+void prDomAgentWake(PrDomAgent* self) {
+    domAgentWake(self);
+}
+
+void prDomAgentStop(PrDomAgent* self) {
+    domAgentStop(self);
 }
 
 void prDomAgentReactionsPush(PrDomAgent* self) {

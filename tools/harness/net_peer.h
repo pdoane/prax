@@ -56,9 +56,6 @@ void netLatchOpen(NetLatch* latch);
 // Waits until the latch is open, then closes it again.
 void netLatchWait(NetLatch* latch);
 
-// Runs `fn` with `context` on `net`'s loop, and waits until it returns.
-void netRunOnLoop(PrNet* net, void (*fn)(void* PR_NULLABLE context), void* PR_NULLABLE context);
-
 // Makes the stream that a probe drives, on the loop, with the probe's callback and context.
 typedef PrStatus (*NetProbeOpenFn)(void* PR_NULLABLE context, PrNet* net, PrNetStreamFn event, void* eventContext,
     PrNetStream* PR_NULLABLE* PR_NONNULL out);

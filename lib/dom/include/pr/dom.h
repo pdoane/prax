@@ -557,8 +557,8 @@ static inline PrDomEventListenerOptions prDomEventListenerOptionsDefault(void) {
 PrDomEventTarget* prDomEventTargetCreate(void);
 
 // Adds or releases a reference to any event target. A reference to a node keeps its tree alive, in the same way as
-// prDomNodeRetain. The last release frees a standalone EventTarget. An object that a window owns lives as long as the
-// window's browsing context, and these calls do nothing for it.
+// prDomNodeRetain. The last release frees a standalone EventTarget. A reference to an object that a window presents as
+// a member, such as its Performance, is a reference to the window, which lives while references to it remain.
 void prDomEventTargetRetain(PrDomEventTarget* self);
 void prDomEventTargetRelease(PrDomEventTarget* PR_NULLABLE self);
 
@@ -1950,6 +1950,38 @@ typedef void (*PrDomAgentLayoutDoneFn)(void* PR_NULLABLE context);
 // Sets the function that is called from now on as the agent's layout thread finishes its jobs. Null means no function,
 // which is the initial state of an agent.
 void prDomAgentSetLayoutDone(PrDomAgent* self, PrDomAgentLayoutDoneFn PR_NULLABLE done, void* PR_NULLABLE context);
+
+// Called on the agent's thread with the context that it was added with (prDomAgentAddCheckpoint, prDomAgentAddUpdate).
+typedef void (*PrDomAgentHookFn)(void* PR_NULLABLE context);
+
+// Adds or removes a microtask checkpoint (html/#perform-a-microtask-checkpoint), which prDomAgentRun performs after
+// each task, in the order the checkpoints were added. A script engine adds one for each agent that its realms run on.
+// Call on the agent's thread.
+void prDomAgentAddCheckpoint(PrDomAgent* self, PrDomAgentHookFn fn, void* PR_NULLABLE context);
+void prDomAgentRemoveCheckpoint(PrDomAgent* self, PrDomAgentHookFn fn, void* PR_NULLABLE context);
+
+// Adds or removes an update, which prDomAgentRun calls once the tasks that it ran are done, in the order the updates
+// were added. A view adds one to bring its document's rendering to its host's screen. Call on the agent's thread.
+void prDomAgentAddUpdate(PrDomAgent* self, PrDomAgentHookFn fn, void* PR_NULLABLE context);
+void prDomAgentRemoveUpdate(PrDomAgent* self, PrDomAgentHookFn fn, void* PR_NULLABLE context);
+
+// Runs the tasks of the agent's event loop that can run, each followed by the checkpoints, until none can run or
+// `milliseconds` have passed, then calls the updates. A long load runs in turns of a few milliseconds each, so that
+// what it does reaches the screen as it goes, and a budget of zero runs one task. Returns true if a task ran. Call on
+// the agent's thread, outside any task.
+bool prDomAgentRun(PrDomAgent* self, double milliseconds);
+
+// Waits on the agent's thread until a task can run, a task is posted, the agent's layout thread finishes its jobs,
+// prDomAgentWake is called, or `milliseconds` pass. A negative `milliseconds` waits without a limit. Returns false once
+// prDomAgentStop has been called, at once.
+bool prDomAgentWait(PrDomAgent* self, double milliseconds);
+
+// Ends the agent's wait, or the next one if none is in progress. Any thread may call it, such as a host's window when
+// its frame starts.
+void prDomAgentWake(PrDomAgent* self);
+
+// Ends the agent's waits from now on (prDomAgentWait). Any thread may call it.
+void prDomAgentStop(PrDomAgent* self);
 
 // Push or pop the element queue of the host's own [CEReactions] member (html/#cereactions). The host pushes the queue
 // when the member starts, and pops it, running its reactions, when the member returns.

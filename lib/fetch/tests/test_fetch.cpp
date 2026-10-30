@@ -62,7 +62,7 @@ void closeOnLoop(void* PR_NULLABLE context) {
 }
 
 void reset(Fixture* fixture) {
-    netRunOnLoop(fixture->net, closeOnLoop, fixture);
+    prNetPostBlocking(fixture->net, closeOnLoop, fixture);
     prNetDestroy(fixture->net);
     prCompressCodecDestroy(fixture->compress);
     prStorageDestroy(fixture->cache);

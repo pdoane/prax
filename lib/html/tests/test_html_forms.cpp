@@ -35,7 +35,7 @@ TEST_CASE("a color input's value is a serialized color") {
     CHECK(well(input, "rgb(255 0 0 / 0.5)") == "#ff0000");
     domSetAttribute(input, PrDomNamespace_None, "alpha", "");
     CHECK(well(input, "rgb(255 0 0 / 0.5)") == "color(srgb 1 0 0 / 0.5)");
-    domNodeRelease(input);
+    // The element has no references: the document holds it while it is detached, and frees it with itself.
     domNodeRelease(document);
 }
 

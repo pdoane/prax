@@ -54,7 +54,7 @@ struct Fixture {
     ~Fixture() {
         comfyClientDestroy(client);
         if (net != nullptr) {
-            netRunOnLoop(net, [](void* PR_NULLABLE context) {
+            prNetPostBlocking(net, [](void* PR_NULLABLE context) {
                 Fixture* f = static_cast<Fixture*>(context);
                 prWebSocketNetworkDestroy(f->websockets);
                 prHttpDestroy(f->http);

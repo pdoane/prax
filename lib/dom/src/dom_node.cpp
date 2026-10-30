@@ -1637,6 +1637,15 @@ void domEmbedChanged(PrDomElement* element, PrStringView attribute) {
         host->embedChanged(host->context, element, attribute);
 }
 
+void domEmbedRemoved(PrDomNode* node, PrDomNode* oldParent, PrDomNode* PR_NULLABLE oldNext) {
+    PrDomElement* element = domElementFromNode(node);
+    if (element == nullptr || !domEmbeds(element))
+        return;
+    const DomDocumentHost* host = element->document->host;
+    if (host != nullptr && host->embedRemoved != nullptr)
+        host->embedRemoved(host->context, element, oldParent, oldNext);
+}
+
 bool domIsScript(const PrDomElement* element) {
     return element->tag == PrDomTag_Script &&
         (element->space == PrDomNamespace_Html || element->space == PrDomNamespace_Svg);
@@ -2217,13 +2226,16 @@ void domRemove(PrDomNode* node) {
         domQueueTreeRecord(parent, nullptr, 0, removed, 1, node->previous, node->next);
     }
     Array<PrDomElement* PR_NONNULL> stepped;
+    PrDomNode* next = node->next;
     domDetach(node, connected ? &stepped : nullptr);
     PrDomElement* select = domSelectedContentRemoved(node, parent);
     // If steps run, the node is held through them, and releasing it frees it if nothing else holds it.
-    bool held = stepped.count != 0 || select != nullptr;
+    bool embeds = domElementFromNode(node) != nullptr && domEmbeds(domElementFromNode(node));
+    bool held = stepped.count != 0 || select != nullptr || embeds;
     if (held) {
         domNodeRetain(node);
         runConnectionSteps(&stepped);
+        domEmbedRemoved(node, parent, next);
     }
     stepped.reset();
     if (select != nullptr)

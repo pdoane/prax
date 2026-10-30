@@ -34,6 +34,18 @@ void postFromThread(void* PR_NULLABLE context) {
     prDomAgentPost(posts->agent, appendB, posts);
 }
 
+void checkpoint(void* PR_NULLABLE context) {
+    static_cast<Posts*>(context)->ran += "c";
+}
+
+void update(void* PR_NULLABLE context) {
+    static_cast<Posts*>(context)->ran += "u";
+}
+
+void stopFromThread(void* PR_NULLABLE context) {
+    prDomAgentStop(static_cast<Posts*>(context)->agent);
+}
+
 } // namespace
 
 } // namespace pr_impl
@@ -68,4 +80,30 @@ TEST_CASE("an agent runs the tasks posted to it that have not run when it is des
     prDomAgentPost(agent, appendA, &posts);
     prDomAgentDestroy(agent);
     CHECK(posts.ran == "a");
+}
+
+TEST_CASE("an agent's loop waits for a posted task, runs it with its checkpoints, then updates, until it stops") {
+    Posts posts{};
+    posts.agent = prDomAgentCreate(nullptr);
+    prDomAgentAddCheckpoint(posts.agent, checkpoint, &posts);
+    prDomAgentAddUpdate(posts.agent, update, &posts);
+    // A wait with nothing to run lasts its time.
+    CHECK(prDomAgentWait(posts.agent, 5));
+    PrThread thread{};
+    prThreadStart(&thread, postFromThread, &posts);
+    prThreadJoin(&thread);
+    CHECK(prDomAgentWait(posts.agent, -1));
+    prDomAgentRun(posts.agent, 1000);
+    CHECK(posts.ran == "acbcu");
+    // A removed hook is no longer called, and a run with no task still updates.
+    prDomAgentRemoveCheckpoint(posts.agent, checkpoint, &posts);
+    posts.ran.clear();
+    prDomAgentRun(posts.agent, 1000);
+    CHECK(posts.ran == "u");
+    prThreadStart(&thread, stopFromThread, &posts);
+    prThreadJoin(&thread);
+    CHECK_FALSE(prDomAgentWait(posts.agent, -1));
+    CHECK_FALSE(prDomAgentWait(posts.agent, 0));
+    prDomAgentRemoveUpdate(posts.agent, update, &posts);
+    prDomAgentDestroy(posts.agent);
 }

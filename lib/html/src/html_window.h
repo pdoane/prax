@@ -60,8 +60,10 @@ struct HtmlFrame {
     PrHtmlWindow* window;
 };
 
-// The Window of a browsing context (html/#the-window-object).
-struct HtmlWindow : PrDomEventTarget {
+// The Window of a browsing context (html/#the-window-object). It is reference counted (DomCountedTarget): its page
+// holds a reference while the window is its page's, and the script objects of the window and of its members hold
+// references too, so that a window that its page has closed outlives the objects that name it.
+struct HtmlWindow : DomCountedTarget {
     PrDomDocument* document;
     PrDomAgent* agent;                        // the agent whose event loop runs the window (html/#relevant-agent)
     CssMediaEnvironment media;                // the environment that its document's media queries are evaluated against
@@ -102,6 +104,7 @@ struct HtmlWindow : PrDomEventTarget {
     double timeOrigin;         // hr-time-3/#sec-time-origin, on the clock
     double timeOriginWall;     // the same moment on the wall clock, in timeWallMilliseconds
     PrHtmlPerformance performance;
+    PrHtmlScreenOrientation orientation;
     HtmlSessionHistory* history;                    // the session history that its documents take entries in
     uint64_t historyDocument;                       // its document's number in the history, or 0 before it has one
     uint32_t historyGeneration;                     // changed each time its history state is set (prHtmlHistoryState)
@@ -148,6 +151,11 @@ bool htmlWindowRenderBlocked(const PrHtmlWindow* window);
 
 // Returns the time on the window's clock, which is its host's clock or the system's monotonic clock.
 double htmlWindowClock(const PrHtmlWindow* window);
+
+// Creates a window, with none of its document's state, and the objects that it presents as members. The caller holds
+// the one reference (domEventTargetRelease). The last release frees the window, whose tasks, listeners and document
+// must be gone by then.
+PrHtmlWindow* htmlWindowCreate(void);
 
 // Restarts the window's clock, as for the global object of a new document. The new time origin is the current time, and
 // so is the time of the last rendering opportunity.

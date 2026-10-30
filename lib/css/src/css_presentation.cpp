@@ -7133,6 +7133,12 @@ void cssPresentationComputedBlock(PrCssPresentation* presentation, const PrDomEl
             serializeResolved(&text, presentation, style, order.properties[i], node);
             textAppend(&text, "; ");
         }
+        cssCustomEach(style->custom, [&](const CssCustomRow& row) {
+            textAppend(&text, row.name);
+            textAppend(&text, ": ");
+            textAppend(&text, row.value);
+            textAppend(&text, "; ");
+        });
         cssComputedStyleRelease(style);
     }
     cssDeclarationBlockParse(out, textView(&text), nullptr);
@@ -7167,6 +7173,20 @@ bool cssPresentationComputedValue(PrCssPresentation* presentation, const PrDomEl
     const CssComputedStyle* style = targetStyle(presentation, at, pseudo);
     serializeResolved(out, presentation, style, property,
         pseudo == CssPseudo_None ? presentation->entries.data[at].layoutNode : kPrLayoutNodeNone);
+    cssComputedStyleRelease(style);
+    return true;
+}
+
+bool cssPresentationComputedCustomValue(PrCssPresentation* presentation, const PrDomElement* element, CssPseudo pseudo,
+        PrStringView name, TextBuffer* out) {
+    restyle(presentation, presentation->extent, RestyleReach_All);
+    uint32_t at = cssPresentationNodeEntry(presentation, element);
+    if (at == kHashMissing || presentation->entries.data[at].style == nullptr)
+        return true;
+    const CssComputedStyle* style = targetStyle(presentation, at, pseudo);
+    PrStringView value{};
+    if (cssCustomValue(style->custom, name, &value))
+        textAppend(out, value);
     cssComputedStyleRelease(style);
     return true;
 }

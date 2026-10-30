@@ -40,6 +40,10 @@ void prConditionWait(PrCondition* condition, PrMutex* mutex) {
     PR_PLATFORM_CONDITION_WAIT(condition, mutex);
 }
 
+bool prConditionWaitFor(PrCondition* condition, PrMutex* mutex, double milliseconds) {
+    return PR_PLATFORM_CONDITION_WAIT_FOR(condition, mutex, milliseconds > 0 ? milliseconds : 0);
+}
+
 void prConditionSignal(PrCondition* condition) {
     PR_PLATFORM_CONDITION_SIGNAL(condition);
 }

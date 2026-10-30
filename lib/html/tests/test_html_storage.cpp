@@ -65,13 +65,13 @@ TEST_CASE("a window's storage is its document's origin's area, which a provider 
     REQUIRE(sessionStorage != nullptr);
     CHECK(textOf(prHtmlStorageGetItem(sessionStorage, "key")) == "<null>");
 
-    // A document of another origin reaches that origin's area, and an opaque origin has none.
+    // A document of another origin has a window whose storage is that origin's area, and an opaque origin has none.
     REQUIRE(prHtmlPageLoad(page, "<p>", "https://b.test/", nullptr) == PrStatus_Ok);
-    storage = prHtmlWindowStorage(window, PrHtmlStorageKind_Local);
+    storage = prHtmlWindowStorage(prHtmlPageWindow(page), PrHtmlStorageKind_Local);
     REQUIRE(storage != nullptr);
     CHECK(prHtmlStorageLength(storage) == 0);
     REQUIRE(prHtmlPageLoad(page, "<p>", "data:text/html,", nullptr) == PrStatus_Ok);
-    CHECK(prHtmlWindowStorage(window, PrHtmlStorageKind_Local) == nullptr);
+    CHECK(prHtmlWindowStorage(prHtmlPageWindow(page), PrHtmlStorageKind_Local) == nullptr);
     prHtmlPageDestroy(page);
 
     // Without a provider of a kind, there is no storage of that kind.

@@ -574,6 +574,19 @@ void scheduleFrame(Win32App* app) {
         SetEvent(app->pacerRequest);
 }
 
+// The window as a frame at `now` finds it, with the display refreshed.
+PrAppFrame frameAt(Win32App* app, double now) {
+    PrAppFrame frame{};
+    frame.time = now;
+    frame.delta = app->framed ? now - app->lastFrame : 0;
+    frame.extent = extentOf(app);
+    refreshDisplay(app, now);
+    frame.display = app->display;
+    frame.display.pixelRatio = float(app->dpi) / 96.0f;
+    frame.preferences = app->preferences;
+    return frame;
+}
+
 void runFrame(Win32App* app) {
     if (!app->running)
         return;
@@ -586,14 +599,7 @@ void runFrame(Win32App* app) {
     app->frameRequested = false;
     app->frameDue = false;
     double now = secondsNow();
-    PrAppFrame frame{};
-    frame.time = now;
-    frame.delta = app->framed ? now - app->lastFrame : 0;
-    frame.extent = extentOf(app);
-    refreshDisplay(app, now);
-    frame.display = app->display;
-    frame.display.pixelRatio = float(app->dpi) / 96.0f;
-    frame.preferences = app->preferences;
+    PrAppFrame frame = frameAt(app, now);
     app->framed = true;
     app->lastFrame = now;
     app->inCallback = true;
@@ -1196,7 +1202,8 @@ void run(PrApp* base, const PrAppHandler* handler) {
     app->running = true;
     app->framed = false;
     app->inCallback = true;
-    app->handler.start(app->handler.context, app);
+    PrAppFrame window = frameAt(app, secondsNow());
+    app->handler.start(app->handler.context, app, &window);
     endCallback(app);
     app->requestFrame(app);
     // A frame runs when nothing else waits in the queue, as WM_PAINT does, since a posted message comes ahead of input:

@@ -13,6 +13,7 @@
 #include "pr/dom.h"
 #include "pr/layout_worker.h"
 #include "pr/mutex.h"
+#include "pr/thread.h"
 
 PR_ASSUME_NONNULL_BEGIN
 
@@ -71,6 +72,16 @@ struct DomAgent {
     Array<DomAgentTask> taken;
     uint32_t takenAt;
     Atomic<uint32_t> postedCount;
+
+    // The agent's wait (prDomAgentWait). `postMutex` guards these too: `signaled` is set by a post, a finished layout
+    // job and a wake, and cleared by the wait that it ends.
+    PrCondition woken;
+    bool signaled;
+    bool stopped;
+
+    // The hooks of prDomAgentRun, in the order they were added. Only the agent's thread reaches them.
+    Array<DomAgentTask> checkpoints;
+    Array<DomAgentTask> updates;
 };
 
 // Initializes an agent whose storage is zeroed, with `options`.
@@ -91,6 +102,17 @@ bool domAgentSpinTask(PrDomAgent* agent);
 // prDomAgentSetWake describe their contracts.
 void domAgentPost(PrDomAgent* agent, PrDomAgentTaskFn fn, void* PR_NULLABLE context);
 void domAgentSetWake(PrDomAgent* agent, PrDomAgentWakeFn PR_NULLABLE wake, void* PR_NULLABLE context);
+
+// Adds a hook to `hooks`, or removes the hook with `fn` and `context`.
+void domAgentAddHook(Array<DomAgentTask>* hooks, PrDomAgentHookFn fn, void* PR_NULLABLE context);
+void domAgentRemoveHook(Array<DomAgentTask>* hooks, PrDomAgentHookFn fn, void* PR_NULLABLE context);
+
+// Run, wait for, wake and stop the agent's event loop. prDomAgentRun, prDomAgentWait, prDomAgentWake and prDomAgentStop
+// describe their contracts.
+bool domAgentRun(PrDomAgent* agent, double milliseconds);
+bool domAgentWait(PrDomAgent* agent, double milliseconds);
+void domAgentWake(PrDomAgent* agent);
+void domAgentStop(PrDomAgent* agent);
 
 // Returns the number of threads that a restyle of the agent's documents divides its work among, including the agent's
 // own thread: what the options ask for, no wider than the pool.

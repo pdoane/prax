@@ -26,8 +26,8 @@ void createFake(FakeApp& fake) {
     fake.record.destroy = [](PrApp* app) { fakeOf(app).calls.push_back("destroy"); };
     fake.record.run = [](PrApp* app, const PrAppHandler* handler) {
         fakeOf(app).calls.push_back("run");
-        handler->start(handler->context, app);
         PrAppFrame frame{.extent = {100, 50}, .display = {.pixelRatio = 2, .headroom = 1, .potentialHeadroom = 1}};
+        handler->start(handler->context, app, &frame);
         handler->frame(handler->context, app, &frame);
         PrAppEvent event{};
         event.kind = PrAppEventKind_KeyDown;
@@ -62,7 +62,7 @@ TEST_CASE("a run delivers to the handler in order") {
     std::vector<std::string> seen;
     PrAppHandler handler{
         &seen,
-        [](void* context, PrApp*) {
+        [](void* context, PrApp*, const PrAppFrame*) {
             static_cast<std::vector<std::string>*>(context)->push_back("start");
         },
         [](void* context, PrApp*, const PrAppFrame* frame) {

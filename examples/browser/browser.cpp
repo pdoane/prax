@@ -1,24 +1,21 @@
 // The browser example: a web browser in a window, whose pages' scripts run, rendered through lib/layout and lib/draw.
 //
-// Usage: browser <url | path>
+// Usage: browser [--cache <directory>] <url | path>
 //
 // The browser opens a URL, or a file at its file: URL, and navigates from there: a link that the user follows, or a
 // script that sets the location, opens the document that it names, and Alt or Cmd with Left goes back in the window's
 // session history, and with Right forward. The network is lib/net's sockets, with the platform's TLS, under lib/http
-// and lib/fetch, and an HTTP cache on disk. Local storage is on disk too, where the platform keeps a user's data.
+// and lib/fetch, and an HTTP cache on disk, where the platform keeps a user's caches or in the directory that --cache
+// names, as pr_shell's --cache does. Local storage is on disk too, where the platform keeps a user's data.
 //
-// main() is the composition root, and the browser runs on three threads:
+// main() is the composition root: the window is one page (pr/html_page.h), the navigable that loads each document, with
+// its script engine (pr/html_quickjs.h) and its view (pr/html_view.h). The browser runs on three threads:
 //
-//   - The window's thread takes the window's events and frames. A wheel scrolls the compositor at once, and the rest of
-//     the input is queued for the page. Each frame ticks the page's thread and presents the compositor's last scene.
-//   - The page's thread owns the page shown (pr/html_page.h), its scripts and its view (pr/html_view.h). It sleeps
-//     until a task of the page is due, input arrives, the window ticks it, or the layout thread finishes a job.
-//   - The page's agent's layout thread lays out and records the page in jobs of about a frame's work. As each job
-//     finishes, the view commits its scene to the compositor, which asks the window for a frame.
-//
-// Every page that the window shows has a script engine and a page of its own, as each document has a Window of its own.
-// A navigation makes the next page and navigates it (prHtmlPageNavigate). The page shown stays until the next one's
-// response arrives, and the next one then takes its place.
+//   - The window's thread takes the window's events and frames, and posts them to the view. A wheel scrolls the
+//     compositor at once. Each frame presents the compositor's last scene.
+//   - The page's thread runs the page's agent's event loop (prDomAgentRun), which the view's update ends.
+//   - The agent's layout thread lays out and records the page in jobs of about a frame's work. As each job finishes,
+//     the view commits its scene to the compositor, which asks the window for a frame.
 
 #include "pr/app.h"
 #include "pr/assert.h"
@@ -39,25 +36,24 @@
 #include "pr/http.h"
 #include "pr/image.h"
 #include "pr/layout_compositor.h"
+#include "pr/mathml_quickjs.h"
 #include "pr/net.h"
 #include "pr/storage_disk.h"
 #include "pr/storage_memory.h"
+#include "pr/svg_quickjs.h"
 #include "pr/task.h"
 #include "pr/text.h"
 #include "pr/thread.h"
+#include "pr/time.h"
 #include "pr/tls.h"
 #include "pr/url_quickjs.h"
 #include "pr/xhr_quickjs.h"
 
 #include <atomic>
-#include <chrono>
 #include <cmath>
-#include <condition_variable>
 #include <cstdio>
 #include <filesystem>
-#include <mutex>
 #include <string>
-#include <vector>
 
 using namespace pr;
 
@@ -73,22 +69,9 @@ constexpr double kJobBudget = 10;
 // The most that the HTTP cache holds.
 constexpr uint64_t kCacheBytes = uint64_t(256) << 20;
 
-// A document of the window: its script engine and its page, and the view that presents it once it is shown.
-struct Document {
-    PrJsHtmlEngine* engine = nullptr;
-    PrHtmlPage* page = nullptr;
-    PrHtmlView* view = nullptr;
-};
-
-// Input that the window's thread queues for the page's thread, with a copy of its text.
-struct QueuedEvent {
-    PrAppEvent event;
-    std::string text;
-    PrHtmlViewEventFlags flags;     // what the window's thread did with the event
-};
-
 struct Browser {
     std::string address;            // the URL that the browser opens first
+    std::string cacheDirectory;     // where the HTTP cache is kept, or empty for the platform's cache directory
 
     // What every page shares: text, images, storage, the network, the window's session history, and the agent whose
     // event loop runs the pages on the page's thread.
@@ -109,11 +92,10 @@ struct Browser {
     PrHtmlSessionHistory* sessionHistory = nullptr;
     PrDomAgent* agent = nullptr;
 
-    // The page's thread's: the document shown, the one that a navigation is loading, and a navigation that a task of
-    // the page asked for, which starts once the task returns.
-    Document shown;
-    Document next;
-    std::string pendingNavigation;
+    // The window's page, the engine of its scripts, and the view that presents it.
+    PrJsHtmlEngine* engine = nullptr;
+    PrHtmlPage* page = nullptr;
+    PrHtmlView* view = nullptr;
 
     // What the window's thread presents with: the compositor, which the page's thread commits to, and the device.
     PrApp* app = nullptr;
@@ -128,35 +110,20 @@ struct Browser {
     PrAppDisplay shownOn = prAppDisplayDefault();
     std::atomic<bool> frameWanted{false};
 
-    // The page's thread, and what wakes it. `mutex` guards the members from `ending` to `queued`.
+    // The page's thread.
     PrThread thread{};
     bool started = false;
-    std::mutex mutex;
-    std::condition_variable wake;
-    bool ending = false;
-    bool ticked = false;            // true if the window ticked a frame
-    bool woken = false;             // true if a task was posted or a layout job finished
-    PrAppFrame tick{};
-    std::vector<QueuedEvent> queued;
 };
 
-// The clock of the pages and of the compositor: a monotonic clock in milliseconds.
+// The clock of the compositor, which is the pages' clock: the system's monotonic clock.
 double clock(void* PR_NULLABLE) {
-    return std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now().time_since_epoch()).count();
+    return prTimeMonotonicMilliseconds();
 }
 
 // Asks the window's thread for a frame, from any thread. Only the window's thread may request one, so this wakes it.
 void wantFrame(Browser& b) {
     if (b.app != nullptr && !b.frameWanted.exchange(true))
         prAppWake(b.app);
-}
-
-// Wakes the page's thread when a task is posted to the agent or the layout thread finishes its jobs.
-void wakePage(void* PR_NULLABLE context) {
-    Browser& b = *static_cast<Browser*>(context);
-    std::lock_guard<std::mutex> lock(b.mutex);
-    b.woken = true;
-    b.wake.notify_one();
 }
 
 void printConsole(JSContext*, PrJsHtmlConsoleLevel, uint32_t depth, PrStringView text) {
@@ -168,32 +135,19 @@ void printConsole(JSContext*, PrJsHtmlConsoleLevel, uint32_t depth, PrStringView
 
 constexpr PrJsHtmlConsolePrinter kConsolePrinter = {printConsole};
 
-// ---------------------------------------------------------------------------------------------------------------------
-// The page's thread
+PrHtmlHost pageHost(Browser& b);
 
-// Asks for a navigation, from a task of the page.
-void navigateHost(void* context, PrHtmlPage*, PrStringView url) {
-    static_cast<Browser*>(context)->pendingNavigation.assign(url.data, url.size);
+// Gives the page of an iframe the host that the window's page has.
+void frameHost(void* context, PrHtmlPage*, PrHtmlHost* child) {
+    *child = pageHost(*static_cast<Browser*>(context));
 }
 
-// Frees a document: the engine first, since its objects' finalizers reach the page's window.
-void closeDocument(Document& d) {
-    prHtmlViewDestroy(d.view);
-    prJsHtmlEngineDestroy(d.engine);
-    prHtmlPageDestroy(d.page);
-    d = Document{};
-}
-
-// Starts a navigation to `url` in a new page, which replaces the one that a navigation before it was loading.
-void navigate(Browser& b, const std::string& url) {
-    closeDocument(b.next);
-    PrJsHtmlBind* const binds[] = {prJsUrlBind, prJsCharsetBind, prJsXhrBind};
-    PrJsHtmlEngineDesc engine{.binds = binds, .bindCount = uint32_t(countOf(binds)), .console = &kConsolePrinter};
-    b.next.engine = prJsHtmlEngineCreate(&engine);
+// Returns the host of the window's page, before its script engine takes it: what every page shares.
+PrHtmlHost pageHost(Browser& b) {
     PrHtmlHost host = prHtmlHostDefault();
     host.context = &b;
     host.fetcher = b.fetcher;
-    host.navigate = navigateHost;
+    host.frame = frameHost;
     host.agent = b.agent;
     host.font = b.font;
     host.shaper = b.shaper;
@@ -203,97 +157,30 @@ void navigate(Browser& b, const std::string& url) {
     host.localStorage = b.localStorage;
     host.sessionStorage = b.sessionStorage;
     host.sessionHistory = b.sessionHistory;
-    host.now = clock;
-    PrHtmlHost scripted = prJsHtmlEngineHost(b.next.engine, &host, PrJsHtmlScripting_Enabled);
-    b.next.page = prHtmlPageCreate(&scripted);
-    if (prHtmlPageNavigate(b.next.page, url) != PrStatus_Ok)
-        fprintf(stderr, "browser: %s is not a URL\n", url.c_str());
+    return host;
 }
 
-// Shows the next document in place of the one shown, once its response has arrived.
-void showNext(Browser& b) {
-    if (b.next.page == nullptr || prHtmlPageIsNavigating(b.next.page))
-        return;
-    closeDocument(b.shown);
-    b.shown = b.next;
-    b.next = Document{};
-    PrHtmlViewDesc view{.page = b.shown.page, .compositor = b.compositor, .jobBudget = kJobBudget};
-    b.shown.view = prHtmlViewCreate(&view);
-    wantFrame(b);
+// Opens the window's page in `window`, as the window first is, and navigates it to the browser's address.
+void openPage(Browser& b, const PrAppFrame& window) {
+    PrJsHtmlBind* const binds[] = {prJsSvgBind, prJsMathMlBind, prJsUrlBind, prJsCharsetBind, prJsXhrBind};
+    PrJsHtmlEngineDesc engine{.binds = binds, .bindCount = uint32_t(countOf(binds)), .console = &kConsolePrinter};
+    b.engine = prJsHtmlEngineCreate(&engine);
+    PrHtmlHost host = pageHost(b);
+    PrHtmlHost scripted = prJsHtmlEngineHost(b.engine, &host, PrJsHtmlScripting_Enabled);
+    b.page = prHtmlPageCreate(&scripted);
+    prHtmlPageSetViewport(b.page, window.extent);
+    prHtmlPageSetDisplay(b.page, &window.display);
+    prHtmlPageSetUserPreferences(b.page, &window.preferences);
+    PrHtmlViewDesc view{.page = b.page, .compositor = b.compositor, .jobBudget = kJobBudget};
+    b.view = prHtmlViewCreate(&view);
+    if (prHtmlPageNavigate(b.page, b.address) != PrStatus_Ok)
+        fprintf(stderr, "browser: %s is not a URL\n", b.address.c_str());
 }
 
-// Runs the agent's due tasks, each followed by the microtasks of the pages' engines, for as long as the budget allows.
-// Then commits the scene that the layout thread recorded, and starts the next job.
-void runPage(Browser& b) {
-    double deadline = clock(nullptr) + kTaskBudget;
-    while (clock(nullptr) < deadline && prDomAgentNextTaskDelay(b.agent) == 0 && prDomAgentRunTask(b.agent)) {
-        for (Document* d : {&b.shown, &b.next}) {
-            if (d->engine != nullptr)
-                prJsHtmlEngineCheckpoint(d->engine);
-        }
-    }
-    showNext(b);
-    if (b.shown.view != nullptr)
-        prHtmlViewUpdate(b.shown.view);
-    if (!b.pendingNavigation.empty()) {
-        std::string url = std::move(b.pendingNavigation);
-        b.pendingNavigation.clear();
-        navigate(b, url);
-    }
-}
-
-// Handles input that the window's thread queued. Alt or Cmd with Left goes back, and with Right forward, as a
-// platform's browsers do. Everything else goes to the page's view.
-void pageEvent(Browser& b, QueuedEvent& queued) {
-    const PrAppEvent& e = queued.event;
-    if (e.kind == PrAppEventKind_KeyDown && (e.key == PrAppKey_Left || e.key == PrAppKey_Right) &&
-            (e.modifiers & (PrAppModifierFlag_Alt | PrAppModifierFlag_Super)) != 0) {
-        if (b.shown.page != nullptr)
-            prHtmlPageTraverse(b.shown.page, e.key == PrAppKey_Left ? -1 : 1);
-        return;
-    }
-    if (b.shown.view == nullptr)
-        return;
-    queued.event.text = PrStringView{queued.text.data(), queued.text.size()};
-    prHtmlViewEvent(b.shown.view, &queued.event, queued.flags);
-    prJsHtmlEngineCheckpoint(b.shown.engine);
-}
-
-// The page's thread's event loop: it sleeps until something wakes it, then handles the input, takes the window's frame,
-// and runs the page.
+// The page's thread: the agent's event loop, until the window closes.
 void pageThread(Browser& b) {
-    navigate(b, b.address);
-    for (;;) {
-        std::vector<QueuedEvent> input;
-        PrAppFrame tick{};
-        bool ticked = false;
-        {
-            std::unique_lock<std::mutex> lock(b.mutex);
-            auto woken = [&] { return b.ending || b.ticked || b.woken || !b.queued.empty(); };
-            double delay = prDomAgentNextTaskDelay(b.agent);
-            if (delay < 0)
-                b.wake.wait(lock, woken);
-            else
-                b.wake.wait_for(lock, std::chrono::duration<double, std::milli>(delay), woken);
-            if (b.ending)
-                break;
-            input.swap(b.queued);
-            ticked = b.ticked;
-            tick = b.tick;
-            b.ticked = false;
-            b.woken = false;
-        }
-        for (QueuedEvent& queued : input)
-            pageEvent(b, queued);
-        if (ticked && b.shown.view != nullptr) {
-            prHtmlViewSetViewport(b.shown.view, tick.extent);
-            prHtmlViewSetDisplay(b.shown.view, &tick.display);
-            prHtmlViewSetUserPreferences(b.shown.view, &tick.preferences);
-        }
-        runPage(b);
-    }
-    closeDocument(b.next);
-    closeDocument(b.shown);
+    while (prDomAgentWait(b.agent, -1))
+        prDomAgentRun(b.agent, kTaskBudget);
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -312,14 +199,16 @@ void openShared(Browser& b) {
     b.io = prTaskPoolCreate(PrTaskPoolBackend_Default, 1);
 
     // The cache and local storage are on disk where the platform keeps a user's, so that they outlive the run.
+    std::string directory = b.cacheDirectory;
     PrString cacheRoot = prFileCacheDirectory();
-    if (!prStringIsEmpty(&cacheRoot)) {
-        std::string directory = std::string(prStringView(&cacheRoot).data, prStringView(&cacheRoot).size) +
-            "/Prax/Browser/Cache";
-        PrStorageDiskDesc disk{.directory = directory, .limitBytes = kCacheBytes, .pool = b.io};
-        prStorageDiskCreate(&disk, &b.cache);
-    }
+    if (directory.empty() && !prStringIsEmpty(&cacheRoot))
+        directory = std::string(prStringView(&cacheRoot).data, prStringView(&cacheRoot).size) + "/Prax/Browser/Cache";
     prStringReset(&cacheRoot);
+    if (!directory.empty()) {
+        PrStorageDiskDesc disk{.directory = directory, .limitBytes = kCacheBytes, .pool = b.io};
+        if (prStorageDiskCreate(&disk, &b.cache) != PrStatus_Ok)
+            fprintf(stderr, "browser: cannot open the cache in %s\n", directory.c_str());
+    }
     if (b.cache == nullptr)
         b.cache = prStorageMemoryCreate(kCacheBytes, PrStorageEviction_LeastRecentlyUsed);
     PrString dataRoot = prFileDataDirectory();
@@ -347,29 +236,17 @@ void openShared(Browser& b) {
     PrDomAgentOptions agentOptions = prDomAgentOptionsDefault();
     agentOptions.restylePool = b.workers;
     b.agent = prDomAgentCreate(&agentOptions);
-    prDomAgentSetWake(b.agent, wakePage, &b);
-    prDomAgentSetLayoutDone(b.agent, wakePage, &b);
 }
 
-// The loop's part in closing the network: the fetcher and HTTP run on it.
-void closeOnLoop(void* PR_NULLABLE context) {
-    Browser& b = *static_cast<Browser*>(context);
-    prFetchNetworkDestroy(b.fetcher);
-    prHttpDestroy(b.http);
-    std::lock_guard<std::mutex> lock(b.mutex);
-    b.fetcher = nullptr;
-    b.wake.notify_one();
-}
-
-// Frees what every page shares, once the pages are gone. The cancels of their fetches run on the loop before the
-// fetcher is destroyed there.
+// Frees what every page shares, once the pages are gone. The fetcher and HTTP run on the network's loop, and are freed
+// there, after the cancels of the pages' fetches.
 void closeShared(Browser& b) {
     prDomAgentDestroy(b.agent);
-    prNetPost(b.net, closeOnLoop, &b);
-    {
-        std::unique_lock<std::mutex> lock(b.mutex);
-        b.wake.wait(lock, [&] { return b.fetcher == nullptr; });
-    }
+    prNetPostBlocking(b.net, [](void* PR_NULLABLE context) {
+        Browser& browser = *static_cast<Browser*>(context);
+        prFetchNetworkDestroy(browser.fetcher);
+        prHttpDestroy(browser.http);
+    }, &b);
     prTlsDestroy(b.tls);
     prNetDestroy(b.net);
     prStorageDestroy(b.cache);
@@ -440,7 +317,7 @@ void present(void* PR_NULLABLE context, PrDrawList* list, PrColor16 canvasColor)
     prGpuCommandsSubmit(commands);
 }
 
-void start(void* context, PrApp* app) {
+void start(void* context, PrApp* app, const PrAppFrame* window) {
     Browser& b = *static_cast<Browser*>(context);
     b.app = app;
     PrAppSurface surface{};
@@ -464,20 +341,16 @@ void start(void* context, PrApp* app) {
         .canvasFilled = true,
     };
     b.compositor = prLayoutCompositorCreate(&compositor);
+    openPage(b, *window);
     prThreadStart(&b.thread, [](void* PR_NULLABLE context) { pageThread(*static_cast<Browser*>(context)); }, &b);
     b.started = true;
     prAppRequestFrame(app);
 }
 
-// Each of the window's frames ticks the page's thread, then presents the compositor's last scene at the window's size.
+// Each of the window's frames goes to the view, and the compositor presents its last scene at the window's size.
 void frame(void* context, PrApp* app, const PrAppFrame* f) {
     Browser& b = *static_cast<Browser*>(context);
-    {
-        std::lock_guard<std::mutex> lock(b.mutex);
-        b.tick = *f;
-        b.ticked = true;
-    }
-    b.wake.notify_one();
+    prHtmlViewPostFrame(b.view, f);
     prGpuSwapChainWait(b.swapChain);
     b.extent = PrUVec2{
         uint32_t(std::lround(f->extent.x * f->display.pixelRatio)),
@@ -489,11 +362,10 @@ void frame(void* context, PrApp* app, const PrAppFrame* f) {
         prAppRequestFrame(app);
 }
 
-// The window's thread scrolls the compositor at once under the pointer, unless the wheel waits for the page's
-// listeners, and queues the input for the page.
+// The window's input goes to the view. Alt or Cmd with Left goes back in the session history, and with Right forward,
+// as a platform's browsers do, and Escape closes the window.
 void event(void* context, PrApp* app, const PrAppEvent* e) {
     Browser& b = *static_cast<Browser*>(context);
-    PrHtmlViewEventFlags flags = 0;
     switch (e->kind) {
         case PrAppEventKind_Wake:
             if (b.frameWanted.exchange(false))
@@ -506,39 +378,30 @@ void event(void* context, PrApp* app, const PrAppEvent* e) {
                 prAppStop(app);
                 return;
             }
-            break;
-        case PrAppEventKind_Scroll: {
-            PrLayoutVec at = prLayoutVecFromPx(e->position);
-            if (b.compositor != nullptr && !prLayoutCompositorWheelBlocks(b.compositor, at)) {
-                prLayoutCompositorScrollAt(b.compositor, at,
-                    prLayoutVecFromPx(prAppEventScrollPixels(e, kPrAppScrollLineHeight)));
-                flags = PrHtmlViewEventFlag_Scrolled;
-                if (prLayoutCompositorWantsFrame(b.compositor))
-                    prAppRequestFrame(app);
+            if ((e->key == PrAppKey_Left || e->key == PrAppKey_Right) &&
+                    (e->modifiers & (PrAppModifierFlag_Alt | PrAppModifierFlag_Super)) != 0) {
+                prHtmlViewPostTraverse(b.view, e->key == PrAppKey_Left ? -1 : 1);
+                return;
             }
             break;
-        }
         default:
             break;
     }
-    QueuedEvent queued{*e, std::string(e->text.data != nullptr ? e->text.data : "", e->text.size), flags};
-    {
-        std::lock_guard<std::mutex> lock(b.mutex);
-        b.queued.push_back(std::move(queued));
-    }
-    b.wake.notify_one();
+    prHtmlViewPostEvent(b.view, e);
+    if (prLayoutCompositorWantsFrame(b.compositor))
+        prAppRequestFrame(app);
 }
 
 void shutdown(void* context, PrApp*) {
     Browser& b = *static_cast<Browser*>(context);
     if (b.started) {
-        {
-            std::lock_guard<std::mutex> lock(b.mutex);
-            b.ending = true;
-        }
-        b.wake.notify_one();
+        prDomAgentStop(b.agent);
         prThreadJoin(&b.thread);
     }
+    // The engine goes before the page, since its objects' finalizers reach the page's window.
+    prHtmlViewDestroy(b.view);
+    prJsHtmlEngineDestroy(b.engine);
+    prHtmlPageDestroy(b.page);
     prLayoutCompositorDestroy(b.compositor);
     if (b.device != nullptr) {
         prGpuDeviceWaitIdle(b.device);
@@ -555,13 +418,18 @@ void shutdown(void* context, PrApp*) {
 
 int main(int argc, char** argv) {
     prCrashHandler();
-    if (argc != 2) {
-        fprintf(stderr, "usage: browser <url | path>\n");
+    static Browser b;
+    int at = 1;
+    if (at + 1 < argc && std::string(argv[at]) == "--cache") {
+        b.cacheDirectory = argv[at + 1];
+        at += 2;
+    }
+    if (at + 1 != argc) {
+        fprintf(stderr, "usage: browser [--cache <directory>] <url | path>\n");
         return 2;
     }
-    static Browser b;
     // A path to a file opens the file at its file: URL. Anything else is a URL.
-    b.address = argv[1];
+    b.address = argv[at];
     std::error_code error;
     if (std::filesystem::is_regular_file(b.address, error))
         b.address = "file://" + std::filesystem::absolute(b.address).lexically_normal().generic_string();

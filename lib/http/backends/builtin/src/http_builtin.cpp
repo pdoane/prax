@@ -226,18 +226,6 @@ void releaseConnection(Connection* connection) {
         freeConnection(connection);
 }
 
-// Closes the connection's stream and drops it from its source. Its memory goes once nothing holds it.
-void closeConnection(Connection* connection) {
-    if (connection->held.dead)
-        return;
-    connection->held.dead = true;
-    connection->http->connections.removeFirst(connection);
-    prNetStreamDestroy(connection->stream);
-    connection->stream = nullptr;
-    if (connection->held.holds == 0)
-        freeConnection(connection);
-}
-
 void pump(void* PR_NULLABLE context);
 
 void schedulePump(BuiltinHttp* http) {
@@ -247,8 +235,23 @@ void schedulePump(BuiltinHttp* http) {
     prNetPost(http->net, pump, http);
 }
 
+// Closes the connection's stream and drops it from its source. Its memory goes once nothing holds it. Its origin then
+// has room for another connection, which a waiting exchange takes.
+void closeConnection(Connection* connection) {
+    if (connection->held.dead)
+        return;
+    connection->held.dead = true;
+    BuiltinHttp* http = connection->http;
+    http->connections.removeFirst(connection);
+    prNetStreamDestroy(connection->stream);
+    connection->stream = nullptr;
+    if (connection->held.holds == 0)
+        freeConnection(connection);
+    schedulePump(http);
+}
+
 // Detaches the exchange from its connection, which closes unless the exchange completed the response and the connection
-// stays open for another.
+// stays open for another. Either way, a waiting exchange takes the connection or its place.
 void detach(Exchange* exchange, bool keep) {
     Connection* connection = exchange->connection;
     if (connection == nullptr)
@@ -259,6 +262,7 @@ void detach(Exchange* exchange, bool keep) {
         connection->input.clear();
         connection->inputStart = 0;
         connection->arrived = false;
+        schedulePump(connection->http);
     } else {
         closeConnection(connection);
     }
@@ -274,13 +278,11 @@ void failExchange(Exchange* exchange, PrNetError error) {
 }
 
 void completeExchange(Exchange* exchange) {
-    BuiltinHttp* http = static_cast<BuiltinHttp*>(exchange->http);
     exchange->state = ExchangeState_Done;
     if (exchange->connection != nullptr)
         ++exchange->connection->served;
     detach(exchange, true);
     deliver(exchange, PrHttpEvent_End);
-    schedulePump(http);
 }
 
 // Returns the line that starts at `start` of `text`, without its line ending, and sets `*next` past the ending. Returns
@@ -881,8 +883,13 @@ void destroyExchange(PrHttp* base, PrHttpExchange* handle) {
     exchange->held.dead = true;
     if (exchange->state == ExchangeState_Queued)
         http->queue.removeFirst(exchange);
-    // An exchange abandoned before its response ended leaves its connection with no way to find the next response.
-    detach(exchange, exchange->state == ExchangeState_Done);
+    // An exchange abandoned before its response ended leaves its connection with no way to find the next response. A
+    // response with no content, such as a 304, ends with its head.
+    bool ended = exchange->state == ExchangeState_Done ||
+        (exchange->state == ExchangeState_Content && exchange->framing == Framing_None);
+    if (ended && exchange->state != ExchangeState_Done && exchange->connection != nullptr)
+        ++exchange->connection->served;
+    detach(exchange, ended);
     if (exchange->held.holds == 0)
         freeExchange(exchange);
 }

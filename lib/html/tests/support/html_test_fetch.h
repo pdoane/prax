@@ -52,6 +52,9 @@ struct TestFetcher {
     void respondTo(PrFetchInterceptRequest* request, const std::string& body, uint16_t status = 200,
         PrStringView contentType = PrStringView{nullptr, 0}, PrStringView url = PrStringView{nullptr, 0});
 
+    // Answers `request` with `response`, and takes it out of `held`.
+    void respondWith(PrFetchInterceptRequest* request, const PrFetchInterceptResponse& response);
+
     // Answers `request` with a network error, and takes it out of `held`.
     void failTo(PrFetchInterceptRequest* request);
 

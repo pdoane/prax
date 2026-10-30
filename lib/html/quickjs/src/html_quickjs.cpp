@@ -78,7 +78,15 @@ struct JsHtmlRealm {
     bool closed;
 };
 
+// An agent that the engine's realms run on, with the number of them. The engine's checkpoint follows each of the
+// agent's tasks while the number is above zero (prDomAgentAddCheckpoint).
+struct JsHtmlAgent {
+    PrDomAgent* agent;
+    uint32_t realms;
+};
+
 struct JsHtmlEngine {
+    Array<JsHtmlAgent> agents;
     Array<PrJsHtmlBind*> binds;
     PrJsHtmlEngineDesc desc;
     JSRuntime* runtime;
@@ -243,9 +251,9 @@ void bindFetch(JSContext* ctx) {
     JS_FreeValue(ctx, global);
 }
 
-JsHtmlRealm* createRealm(JsHtmlEngine* engine) {
-    JsHtmlRealm* realm = allocZeroed<JsHtmlRealm>();
-    realm->engine = engine;
+// Gives the realm a new context, with the engine's bindings.
+void bindContext(JsHtmlRealm* realm) {
+    JsHtmlEngine* engine = realm->engine;
     realm->ctx = JS_NewContext(engine->runtime);
     JS_SetContextOpaque(realm->ctx, realm);
     prJsDomBind(realm->ctx);
@@ -255,12 +263,18 @@ JsHtmlRealm* createRealm(JsHtmlEngine* engine) {
     prJsFetchBind(realm->ctx);
     jsHtmlBind(realm->ctx);
     bindFetch(realm->ctx);
+}
+
+JsHtmlRealm* createRealm(JsHtmlEngine* engine) {
+    JsHtmlRealm* realm = allocZeroed<JsHtmlRealm>();
+    realm->engine = engine;
+    bindContext(realm);
     engine->realms.push(realm);
     return realm;
 }
 
-// Frees the realm's scripts and its context, which the runtime's destruction requires.
-void freeScripts(JsHtmlRealm* realm) {
+// Frees what the realm's scripts hold, and its context.
+void freeContext(JsHtmlRealm* realm) {
     for (uint32_t i = 0; i < realm->modules.count; ++i) {
         JsHtmlModule& module = realm->modules.data[i];
         prStringReset(&module.name);
@@ -289,6 +303,11 @@ void freeScripts(JsHtmlRealm* realm) {
     realm->evaluations.reset();
     JS_FreeContext(realm->ctx);
     realm->ctx = nullptr;
+}
+
+// Frees the realm's scripts and its context, which the runtime's destruction requires.
+void freeScripts(JsHtmlRealm* realm) {
+    freeContext(realm);
     realm->engine = nullptr;
 }
 
@@ -702,13 +721,52 @@ void frame(void* context, PrHtmlPage* parent, PrHtmlHost* child) {
         *child = engineHost(realm->engine, child, realm->scripting);
 }
 
-void opened(void* context, PrHtmlPage* page) {
+// The engine's checkpoint, after each task of an agent that its realms run on.
+void checkpointHook(void* PR_NULLABLE context) {
+    engineCheckpoint(static_cast<JsHtmlEngine*>(context));
+}
+
+// Counts a realm that runs on `agent`, and adds the engine's checkpoint to the agent for its first realm.
+void addAgent(JsHtmlEngine* engine, PrDomAgent* agent) {
+    for (uint32_t i = 0; i < engine->agents.count; ++i) {
+        if (engine->agents.data[i].agent == agent) {
+            ++engine->agents.data[i].realms;
+            return;
+        }
+    }
+    engine->agents.push(JsHtmlAgent{agent, 1});
+    prDomAgentAddCheckpoint(agent, checkpointHook, engine);
+}
+
+// Stops counting a realm that ran on `agent`, and removes the engine's checkpoint from the agent with its last realm.
+void removeAgent(JsHtmlEngine* engine, PrDomAgent* agent) {
+    for (uint32_t i = 0; i < engine->agents.count; ++i) {
+        JsHtmlAgent& counted = engine->agents.data[i];
+        if (counted.agent != agent)
+            continue;
+        if (--counted.realms == 0) {
+            prDomAgentRemoveCheckpoint(agent, checkpointHook, engine);
+            engine->agents.erase(i);
+        }
+        return;
+    }
+}
+
+// A window of the realm's page opens. The page's first window takes the realm's context, and each window after it a new
+// context, since each window is the global of a realm of its own.
+void windowOpened(void* context, PrHtmlPage* page) {
     JsHtmlRealm* realm = static_cast<JsHtmlRealm*>(context);
     realm->opened = true;
     if (realm->engine == nullptr) {
-        if (realm->host.opened != nullptr)
-            realm->host.opened(realm->host.context, page);
+        if (realm->host.windowOpened != nullptr)
+            realm->host.windowOpened(realm->host.context, page);
         return;
+    }
+    if (realm->page != nullptr) {
+        freeContext(realm);
+        bindContext(realm);
+    } else {
+        addAgent(realm->engine, prHtmlPageAgent(page));
     }
     realm->page = page;
     if (!jsHtmlSetGlobal(realm->ctx, prHtmlPageWindow(page)))
@@ -716,12 +774,20 @@ void opened(void* context, PrHtmlPage* page) {
     const PrJsHtmlEngineDesc& desc = realm->engine->desc;
     if (desc.realmOpened != nullptr)
         desc.realmOpened(desc.context, realm->ctx, page);
-    if (realm->host.opened != nullptr)
-        realm->host.opened(realm->host.context, page);
+    if (realm->host.windowOpened != nullptr)
+        realm->host.windowOpened(realm->host.context, page);
+}
+
+void windowClosed(void* context, PrHtmlPage* page) {
+    const PrHtmlHost& host = static_cast<JsHtmlRealm*>(context)->host;
+    if (host.windowClosed != nullptr)
+        host.windowClosed(host.context, page);
 }
 
 void closed(void* context, PrHtmlPage* page) {
     JsHtmlRealm* realm = static_cast<JsHtmlRealm*>(context);
+    if (realm->engine != nullptr && realm->page != nullptr)
+        removeAgent(realm->engine, prHtmlPageAgent(page));
     realm->page = nullptr;
     realm->closed = true;
     PrHtmlHost host = realm->host;
@@ -736,11 +802,6 @@ void closed(void* context, PrHtmlPage* page) {
 PrDomHostState elementState(void* context, PrHtmlPage* page, const PrDomElement* element, PrDomHostState wanted) {
     const PrHtmlHost& host = static_cast<JsHtmlRealm*>(context)->host;
     return host.elementState(host.context, page, element, wanted);
-}
-
-void navigate(void* context, PrHtmlPage* page, PrStringView url) {
-    const PrHtmlHost& host = static_cast<JsHtmlRealm*>(context)->host;
-    host.navigate(host.context, page, url);
 }
 
 void loaded(void* context, PrHtmlPage* page, PrStatus status) {
@@ -771,9 +832,9 @@ PrHtmlHost engineHost(JsHtmlEngine* engine, const PrHtmlHost* host, bool scripti
     result.compile = compile;
     result.microtask = microtask;
     result.frame = host->frame != nullptr ? frame : nullptr;
-    result.opened = opened;
+    result.windowOpened = windowOpened;
+    result.windowClosed = windowClosed;
     result.closed = closed;
-    result.navigate = host->navigate != nullptr ? navigate : nullptr;
     result.loaded = host->loaded != nullptr ? loaded : nullptr;
     result.elementState = host->elementState != nullptr ? elementState : nullptr;
     result.now = host->now != nullptr ? now : nullptr;
@@ -835,6 +896,9 @@ PrJsHtmlEngine* prJsHtmlEngineCreate(const PrJsHtmlEngineDesc* desc) {
 void prJsHtmlEngineDestroy(PrJsHtmlEngine* PR_NULLABLE engine) {
     if (engine == nullptr)
         return;
+    for (uint32_t i = 0; i < engine->agents.count; ++i)
+        prDomAgentRemoveCheckpoint(engine->agents.data[i].agent, checkpointHook, engine);
+    engine->agents.reset();
     for (uint32_t i = 0; i < engine->realms.count; ++i)
         freeScripts(engine->realms.data[i]);
     jsRuntimeDestroy(engine->runtime);

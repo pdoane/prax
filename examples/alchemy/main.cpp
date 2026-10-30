@@ -33,8 +33,6 @@
 #include "examples/alchemy/view.h"
 
 #include <atomic>
-#include <condition_variable>
-#include <mutex>
 #include <stdio.h>
 #include <stdlib.h>
 #include <vector>
@@ -172,7 +170,7 @@ void render(Window& w, PrUVec2 extent, PrColor canvas) {
     prGpuCommandsSubmit(commands);
 }
 
-void start(void* context, PrApp* app) {
+void start(void* context, PrApp* app, const PrAppFrame*) {
     Window& w = *static_cast<Window*>(context);
     w.app.store(app);
     w.shell.app = app;
@@ -265,28 +263,6 @@ void shutdown(void* context, PrApp*) {
     closeDevice(*static_cast<Window*>(context));
 }
 
-// Runs `fn` on the network's loop, and waits until it returns.
-void runOnLoop(PrNet* net, void (*fn)(Window&), Window& w) {
-    struct Task {
-        void (*fn)(Window&);
-        Window* w;
-        std::mutex mutex;
-        std::condition_variable done;
-        bool finished = false;
-    } task;
-    task.fn = fn;
-    task.w = &w;
-    prNetPost(net, [](void* PR_NULLABLE context) {
-        Task* t = static_cast<Task*>(context);
-        t->fn(*t->w);
-        std::lock_guard<std::mutex> lock(t->mutex);
-        t->finished = true;
-        t->done.notify_one();
-    }, &task);
-    std::unique_lock<std::mutex> lock(task.mutex);
-    task.done.wait(lock, [&task] { return task.finished; });
-}
-
 } // namespace
 
 int main() {
@@ -343,10 +319,11 @@ int main() {
     // The services go in the reverse of their making: the client lets go of the loop, the sources on the loop go on it,
     // and the pool finishes its decodes and surveys before the state that they write to.
     comfyClientDestroy(w.state.client);
-    runOnLoop(w.net, [](Window& window) {
+    prNetPostBlocking(w.net, [](void* PR_NULLABLE context) {
+        Window& window = *static_cast<Window*>(context);
         prWebSocketNetworkDestroy(window.websockets);
         prHttpDestroy(window.http);
-    }, w);
+    }, &w);
     prTlsDestroy(w.tls);
     prNetDestroy(w.net);
     imageCacheDestroy(w.state.images);

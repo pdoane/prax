@@ -59,6 +59,9 @@
 #if defined(PR_PLATFORM_THREAD_START) != defined(PR_PLATFORM_CONDITION_WAIT)
 #error "PR_PLATFORM_THREAD_START and PR_PLATFORM_CONDITION_WAIT are defined together or not at all"
 #endif
+#if defined(PR_PLATFORM_THREAD_START) != defined(PR_PLATFORM_CONDITION_WAIT_FOR)
+#error "PR_PLATFORM_THREAD_START and PR_PLATFORM_CONDITION_WAIT_FOR are defined together or not at all"
+#endif
 #if defined(PR_PLATFORM_THREAD_START) != defined(PR_PLATFORM_CONDITION_SIGNAL)
 #error "PR_PLATFORM_THREAD_START and PR_PLATFORM_CONDITION_SIGNAL are defined together or not at all"
 #endif
@@ -148,6 +151,7 @@
 #define PR_PLATFORM_CONDITION_INIT(condition) prCoreWindowsConditionInit(condition)
 #define PR_PLATFORM_CONDITION_RESET(condition) prCoreWindowsConditionReset(condition)
 #define PR_PLATFORM_CONDITION_WAIT(condition, mutex) prCoreWindowsConditionWait(condition, mutex)
+#define PR_PLATFORM_CONDITION_WAIT_FOR(condition, mutex, ms) prCoreWindowsConditionWaitFor(condition, mutex, ms)
 #define PR_PLATFORM_CONDITION_SIGNAL(condition) prCoreWindowsConditionSignal(condition)
 #define PR_PLATFORM_CONDITION_BROADCAST(condition) prCoreWindowsConditionBroadcast(condition)
 #elif !defined(PR_PLATFORM_NO_DEFAULT) && !defined(PR_PLATFORM_THREAD_START)
@@ -163,6 +167,7 @@
 #define PR_PLATFORM_CONDITION_INIT(condition) prCorePosixConditionInit(condition)
 #define PR_PLATFORM_CONDITION_RESET(condition) prCorePosixConditionReset(condition)
 #define PR_PLATFORM_CONDITION_WAIT(condition, mutex) prCorePosixConditionWait(condition, mutex)
+#define PR_PLATFORM_CONDITION_WAIT_FOR(condition, mutex, ms) prCorePosixConditionWaitFor(condition, mutex, ms)
 #define PR_PLATFORM_CONDITION_SIGNAL(condition) prCorePosixConditionSignal(condition)
 #define PR_PLATFORM_CONDITION_BROADCAST(condition) prCorePosixConditionBroadcast(condition)
 #endif

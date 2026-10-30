@@ -33,6 +33,7 @@ Usage:
                                              the name, from its URL
     python3 -m tools.pages.pages check [word...]         the URLs that each capture's markup and sheets name and that it
     lacks
+    python3 -m tools.pages.pages take <url>...           capture each page at its URL into third_party/pages-corpus
 """
 
 import argparse
@@ -934,6 +935,20 @@ def refresh(words, jobs):
     return 0
 
 
+def take_urls(urls):
+    """Captures each page at its URL into the corpus, named for its host and path, and prints the path of each page's
+    record, which `pr_shell --html` and the browser example open. The rolled pages are left alone, because their
+    sources decide what a benchmark reads. Returns false if any page cannot be captured."""
+    taken = True
+    for url in urls:
+        name = name_for("url", url)
+        if take(name, url, (CORPUS,)):
+            print("  %s" % os.path.relpath(os.path.join(CORPUS, name[:-len(".html")] + ".json"), ROOT))
+        else:
+            taken = False
+    return taken
+
+
 def check(words):
     """Prints the URLs that each capture's markup and sheets name, that it holds no file for and that it did not record
     as omitted. Returns false if any capture lacks one."""
@@ -986,6 +1001,8 @@ def main():
     refreshed.add_argument("words", nargs="*")
     checked = commands.add_parser("check", help="the URLs that captures name and lack")
     checked.add_argument("words", nargs="*")
+    taken = commands.add_parser("take", help="capture the pages at the URLs given into the corpus")
+    taken.add_argument("urls", nargs="+")
     args = ap.parse_args()
 
     if args.command == "check":
@@ -993,6 +1010,8 @@ def main():
     AGENT = user_agent()
     if args.command == "roll":
         return roll(args.if_empty)
+    if args.command == "take":
+        return 0 if take_urls(args.urls) else 1
     return refresh(args.words, args.jobs)
 
 

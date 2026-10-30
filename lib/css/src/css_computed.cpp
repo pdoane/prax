@@ -31,14 +31,16 @@ void refreshComputed(const PrCssStyleDeclaration* declaration) {
         &computed->version);
 }
 
-// Serializes one longhand of a computed style from the presentation of its element's document.
-bool computedLonghand(const PrCssStyleDeclaration* declaration, PrCssProperty property, TextBuffer* out) {
+// Serializes one longhand or custom property of a computed style from the presentation of its element's document.
+bool computedValue(const PrCssStyleDeclaration* declaration, const CssDeclaredName& name, TextBuffer* out) {
     PrDomElement* element = domElementFromNode(declaration->ownerNode);
     PrCssPresentation* presentation = domIsConnected(element) ? cssPresentationOf(element->document) : nullptr;
     CssPseudo pseudo = computedOf(declaration)->pseudo;
     if (presentation == nullptr || pseudo == CssPseudo_Count)
         return true;
-    return cssPresentationComputedValue(presentation, element, pseudo, property, out);
+    if (name.property == PrCssProperty_Count)
+        return cssPresentationComputedCustomValue(presentation, element, pseudo, name.text, out);
+    return cssPresentationComputedValue(presentation, element, pseudo, name.property, out);
 }
 
 // Returns what getComputedStyle's pseudo-element argument names (cssom-1/#dom-window-getcomputedstyle): the element if
@@ -79,7 +81,7 @@ PrCssStyleDeclaration* cssElementComputedStyle(PrDomElement* element, PrStringVi
     if (computed == nullptr) {
         computed = allocZeroed<CssComputedDeclarations>();
         computed->declaration = PrCssStyleDeclaration{
-            {nullptr, element, &computed->block, nullptr, refreshComputed, computedLonghand, true},
+            {nullptr, element, &computed->block, nullptr, refreshComputed, computedValue, true},
         };
         computed->pseudo = pseudo;
     }

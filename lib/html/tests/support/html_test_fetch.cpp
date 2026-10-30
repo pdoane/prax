@@ -80,6 +80,11 @@ void TestFetcher::respondTo(PrFetchInterceptRequest* request, const std::string&
     prFetchInterceptRequestRespond(request, &response);
 }
 
+void TestFetcher::respondWith(PrFetchInterceptRequest* request, const PrFetchInterceptResponse& response) {
+    forget(this, request);
+    prFetchInterceptRequestRespond(request, &response);
+}
+
 void TestFetcher::failTo(PrFetchInterceptRequest* request) {
     forget(this, request);
     prFetchInterceptRequestFail(request, PrNetError_Refused);

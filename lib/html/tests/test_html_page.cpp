@@ -883,28 +883,26 @@ TEST_CASE("a fetch the host answers after its browsing context is gone is droppe
     CHECK(later.log.empty());
 }
 
-TEST_CASE("a location of another document navigates through the host, from a task, and a fragment does not") {
-    struct Navigations {
-        std::vector<std::string> urls;
-    } navigations;
-    PrHtmlHost host = prHtmlHostDefault();
-    host.context = &navigations;
-    host.navigate = [](void* data, PrHtmlPage*, PrStringView url) {
-        static_cast<Navigations*>(data)->urls.push_back(std::string(url.data, url.size));
-    };
+TEST_CASE("a location of another document navigates the page from a task, and a fragment does not") {
+    LaterHost later;
+    PrHtmlHost host = later.host();
     PrHtmlPage* page = prHtmlPageCreate(&host);
     REQUIRE(prHtmlPageLoad(page, "<p id=top>", "https://example.test/start", nullptr) == PrStatus_Ok);
     PrHtmlWindow* window = prHtmlPageWindow(page);
     CHECK(prHtmlWindowSetLocation(window, PrUrlComponent_Hash, "top", PrHtmlHistoryHandling_Push) == PrStatus_Ok);
     CHECK(prHtmlWindowSetLocation(window, PrUrlComponent_Href, "next?q=1#part", PrHtmlHistoryHandling_Push) ==
         PrStatus_Ok);
-    CHECK(navigations.urls.empty());
-    runTasks(page);
-    REQUIRE(navigations.urls.size() == 1);
-    CHECK(navigations.urls[0] == "https://example.test/next?q=1#part");
+    CHECK(later.waitingFor("next?q=1") == 0);
+    later.settle(page);
+    REQUIRE(later.waitingFor("next?q=1") == 1);
+    later.answer("next?q=1", "<p id=next>");
+    later.settle(page);
+    CHECK(prHtmlPageWindow(page) != window);
+    PrDomDocument* document = prHtmlWindowDocument(prHtmlPageWindow(page));
+    CHECK(prDomNodeGetElementById(prDomDocumentAsNode(document), "next") != nullptr);
     prHtmlPageDestroy(page);
 
-    // Without a host that navigates, only a fragment navigation is supported.
+    // Without a fetcher, only a fragment navigation is supported.
     PrHtmlHost bare = prHtmlHostDefault();
     page = prHtmlPageCreate(&bare);
     REQUIRE(prHtmlPageLoad(page, "<p>", "https://example.test/start", nullptr) == PrStatus_Ok);
@@ -913,47 +911,42 @@ TEST_CASE("a location of another document navigates through the host, from a tas
     prHtmlPageDestroy(page);
 }
 
-TEST_CASE("a host's session history keeps each document's entries across the browsing contexts that load them") {
-    struct Tab {
-        PrHtmlSessionHistory* history = prHtmlSessionHistoryCreate();
-        std::vector<std::string> navigations;
-        PrHtmlPage* page = nullptr;
-
-        // Loads `url` into a new browsing context, as a navigation makes a new Window.
-        void load(const std::string& url) {
-            prHtmlPageDestroy(page);
-            PrHtmlHost host = prHtmlHostDefault();
-            host.context = this;
-            host.sessionHistory = history;
-            host.navigate = [](void* data, PrHtmlPage*, PrStringView target) {
-                static_cast<Tab*>(data)->navigations.push_back(std::string(target.data, target.size));
-            };
-            page = prHtmlPageCreate(&host);
-            REQUIRE(prHtmlPageLoad(page, "<p id=x>", url, nullptr) == PrStatus_Ok);
-        }
-        std::string url(uint32_t index) const {
-            PrStringView text = prHtmlSessionHistoryUrl(history, index);
-            std::string result = text.data == nullptr ? "<none>" : std::string(text.data, text.size);
-            return result;
-        }
-    } tab;
-    tab.load("https://example.test/a");
-    tab.load("https://example.test/b");
-    PrHtmlWindow* window = prHtmlPageWindow(tab.page);
+TEST_CASE("a page's session history keeps each document's entries, and going to another document's navigates") {
+    LaterHost later;
+    PrHtmlSessionHistory* history = prHtmlSessionHistoryCreate();
+    PrHtmlHost host = later.host();
+    host.sessionHistory = history;
+    PrHtmlPage* page = prHtmlPageCreate(&host);
+    auto url = [&](uint32_t index) {
+        PrStringView text = prHtmlSessionHistoryUrl(history, index);
+        return text.data == nullptr ? std::string("<none>") : std::string(text.data, text.size);
+    };
+    // Answers the navigation that waits for the document at the URL that ends in `name`.
+    auto arrive = [&](const char* name) {
+        later.settle(page);
+        REQUIRE(later.waitingFor(name) == 1);
+        later.answer(name, "<p id=x>");
+        later.settle(page);
+    };
+    REQUIRE(prHtmlPageNavigate(page, "https://example.test/a") == PrStatus_Ok);
+    arrive("/a");
+    REQUIRE(prHtmlPageNavigate(page, "https://example.test/b") == PrStatus_Ok);
+    arrive("/b");
+    PrHtmlWindow* window = prHtmlPageWindow(page);
     // A fragment navigation and pushState add entries for the same document.
     REQUIRE(prHtmlWindowSetLocation(window, PrUrlComponent_Hash, "x", PrHtmlHistoryHandling_Push) == PrStatus_Ok);
     REQUIRE(prHtmlHistoryPushState(window, "state", "c", PrHtmlHistoryHandling_Push) == PrStatus_Ok);
-    CHECK(prHtmlSessionHistoryLength(tab.history) == 4);
-    CHECK(prHtmlSessionHistoryIndex(tab.history) == 3);
-    CHECK(tab.url(3) == "https://example.test/c");
+    CHECK(prHtmlSessionHistoryLength(history) == 4);
+    CHECK(prHtmlSessionHistoryIndex(history) == 3);
+    CHECK(url(3) == "https://example.test/c");
     // A URL of another origin is refused.
     CHECK(prHtmlHistoryPushState(window, PrStringView{}, "https://other.test/", PrHtmlHistoryHandling_Push) ==
         PrStatus_NotAllowed);
 
-    // Going back within the document changes its URL and state in a task, and asks the host for nothing.
-    prHtmlPageTraverse(tab.page, -1);
-    runTasks(tab.page);
-    CHECK(prHtmlSessionHistoryIndex(tab.history) == 2);
+    // Going back within the document changes its URL and state in a task, and fetches nothing.
+    prHtmlPageTraverse(page, -1);
+    later.settle(page);
+    CHECK(prHtmlSessionHistoryIndex(history) == 2);
     PrString hash = prHtmlWindowLocation(window, PrUrlComponent_Hash);
     CHECK(prStringView(&hash) == "#x");
     prStringReset(&hash);
@@ -961,47 +954,40 @@ TEST_CASE("a host's session history keeps each document's entries across the bro
     uint32_t generation = 0;
     REQUIRE(prHtmlHistoryState(window, &state, &generation) == PrStatus_Ok);
     CHECK(state.data == nullptr);
-    CHECK(tab.navigations.empty());
+    CHECK(later.fetcher.held.empty());
 
-    // Going back past the document asks the host to load the entry's URL, and the load takes that entry.
-    prHtmlPageTraverse(tab.page, -2);
-    runTasks(tab.page);
-    REQUIRE(tab.navigations.size() == 1);
-    CHECK(tab.navigations[0] == "https://example.test/a");
-    tab.load(tab.navigations[0]);
-    CHECK(prHtmlSessionHistoryLength(tab.history) == 4);
-    CHECK(prHtmlSessionHistoryIndex(tab.history) == 0);
+    // Going back past the document navigates to the entry's URL, and the document that loads takes that entry.
+    prHtmlPageTraverse(page, -2);
+    arrive("/a");
+    CHECK(prHtmlSessionHistoryLength(history) == 4);
+    CHECK(prHtmlSessionHistoryIndex(history) == 0);
 
     // Going forward to the pushed entry loads its document with the entry's state.
-    prHtmlPageTraverse(tab.page, 3);
-    runTasks(tab.page);
-    REQUIRE(tab.navigations.size() == 2);
-    tab.load(tab.navigations[1]);
-    CHECK(prHtmlSessionHistoryIndex(tab.history) == 3);
-    REQUIRE(prHtmlHistoryState(prHtmlPageWindow(tab.page), &state, &generation) == PrStatus_Ok);
+    prHtmlPageTraverse(page, 3);
+    arrive("/c");
+    CHECK(prHtmlSessionHistoryIndex(history) == 3);
+    REQUIRE(prHtmlHistoryState(prHtmlPageWindow(page), &state, &generation) == PrStatus_Ok);
     CHECK(std::string(state.data, state.size) == "state");
 
-    // A navigation that replaces drops nothing, and the load takes the current entry with no state.
-    REQUIRE(prHtmlWindowSetLocation(prHtmlPageWindow(tab.page), PrUrlComponent_Href, "d",
-        PrHtmlHistoryHandling_Replace) == PrStatus_Ok);
-    runTasks(tab.page);
-    REQUIRE(tab.navigations.size() == 3);
-    tab.load(tab.navigations[2]);
-    CHECK(prHtmlSessionHistoryLength(tab.history) == 4);
-    CHECK(tab.url(3) == "https://example.test/d");
-    REQUIRE(prHtmlHistoryState(prHtmlPageWindow(tab.page), &state, &generation) == PrStatus_Ok);
+    // A navigation that replaces drops nothing, and the document that loads takes the current entry with no state.
+    REQUIRE(prHtmlWindowSetLocation(prHtmlPageWindow(page), PrUrlComponent_Href, "d", PrHtmlHistoryHandling_Replace) ==
+        PrStatus_Ok);
+    arrive("/d");
+    CHECK(prHtmlSessionHistoryLength(history) == 4);
+    CHECK(url(3) == "https://example.test/d");
+    REQUIRE(prHtmlHistoryState(prHtmlPageWindow(page), &state, &generation) == PrStatus_Ok);
     CHECK(state.data == nullptr);
 
     // A navigation that pushes from an earlier entry drops the entries after it.
-    prHtmlPageTraverse(tab.page, -3);
-    runTasks(tab.page);
-    tab.load(tab.navigations.back());
-    tab.load("https://example.test/e");
-    CHECK(prHtmlSessionHistoryLength(tab.history) == 2);
-    CHECK(tab.url(1) == "https://example.test/e");
+    prHtmlPageTraverse(page, -3);
+    arrive("/a");
+    REQUIRE(prHtmlPageNavigate(page, "https://example.test/e") == PrStatus_Ok);
+    arrive("/e");
+    CHECK(prHtmlSessionHistoryLength(history) == 2);
+    CHECK(url(1) == "https://example.test/e");
 
-    prHtmlPageDestroy(tab.page);
-    prHtmlSessionHistoryDestroy(tab.history);
+    prHtmlPageDestroy(page);
+    prHtmlSessionHistoryDestroy(history);
 }
 
 TEST_CASE("a script's fetch sends what it asks, and receives the response filtered as its type says") {
@@ -1053,7 +1039,7 @@ TEST_CASE("a script's fetch sends what it asks, and receives the response filter
             .headerCount = 5,
             .body = PrByteView{reinterpret_cast<const uint8_t*>("body"), 4},
         };
-        prFetchInterceptRequestRespond(request, &response);
+        later.fetcher.respondWith(request, response);
     };
     PrHtmlHost host = later.host();
     PrHtmlPage* page = prHtmlPageCreate(&host);

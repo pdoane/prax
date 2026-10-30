@@ -47,3 +47,23 @@ TEST_CASE("a thread runs beside its starter, which waits on a condition for what
     prConditionReset(&shared.changed);
     prMutexReset(&shared.mutex);
 }
+
+TEST_CASE("a timed wait returns false once its time passes, and true when it is signaled first") {
+    Shared shared{};
+    prMutexInit(&shared.mutex);
+    prConditionInit(&shared.changed);
+    prMutexLock(&shared.mutex);
+    CHECK_FALSE(prConditionWaitFor(&shared.changed, &shared.mutex, 5));
+    CHECK_FALSE(prConditionWaitFor(&shared.changed, &shared.mutex, 0));
+    CHECK_FALSE(prConditionWaitFor(&shared.changed, &shared.mutex, -1));
+    PrThread thread{};
+    prThreadStart(&thread, raise, &shared);
+    bool signaled = false;
+    while (shared.count < 1000)
+        signaled = prConditionWaitFor(&shared.changed, &shared.mutex, 60000) || signaled;
+    prMutexUnlock(&shared.mutex);
+    prThreadJoin(&thread);
+    CHECK(signaled);
+    prConditionReset(&shared.changed);
+    prMutexReset(&shared.mutex);
+}

@@ -48,6 +48,7 @@ typedef struct PrHtmlFrameRequestCallback PrHtmlFrameRequestCallback;
 typedef struct PrHtmlWindow PrHtmlWindow;
 typedef struct PrHtmlPreferenceObject PrHtmlPreferenceObject;
 typedef struct PrHtmlPerformance PrHtmlPerformance;
+typedef struct PrHtmlScreenOrientation PrHtmlScreenOrientation;
 typedef struct PrHtmlDocumentTimeline PrHtmlDocumentTimeline;
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -1011,6 +1012,40 @@ double prHtmlPerformanceNow(const PrHtmlPerformance* self);
 double prHtmlPerformanceTimeOrigin(const PrHtmlPerformance* self);
 
 // ---------------------------------------------------------------------------------------------------------------------
+// ScreenOrientation : EventTarget (screen-orientation)
+//
+// The orientation of a window's screen (screen-orientation/#screenorientation-interface), which the window owns. The
+// screen's current orientation is its natural one, so the type follows the screen's extent and the angle is zero. The
+// window fires change at the orientation in the rendering update after the type changes
+// (screen-orientation/#dfn-screen-orientation-change-steps). A document cannot lock the orientation.
+
+// The orientations of a screen (screen-orientation/#dom-orientationtype).
+enum {
+    PrHtmlOrientationType_PortraitPrimary,
+    PrHtmlOrientationType_PortraitSecondary,
+    PrHtmlOrientationType_LandscapePrimary,
+    PrHtmlOrientationType_LandscapeSecondary,
+};
+typedef uint8_t PrHtmlOrientationType;
+
+// Returns the keyword of `type`, as "landscape-primary". The text lives as long as the process.
+PrStringView prHtmlOrientationTypeName(PrHtmlOrientationType type);
+
+// A ScreenOrientation as the interface it inherits from.
+PR_HANDLE_UPCAST(HtmlScreenOrientation, DomEventTarget, EventTarget)
+
+// Returns `object` as a ScreenOrientation, or null if it is not one.
+PrHtmlScreenOrientation* PR_NULLABLE prHtmlScreenOrientationQuery(PrDomEventTarget* PR_NULLABLE object);
+
+// Returns the screen's orientation (screen-orientation/#dom-screenorientation-type): landscape unless the screen is
+// taller than it is wide.
+PrHtmlOrientationType prHtmlScreenOrientationType(const PrHtmlScreenOrientation* self);
+
+// Returns the screen's rotation from its natural orientation in degrees
+// (screen-orientation/#dom-screenorientation-angle).
+uint16_t prHtmlScreenOrientationAngle(const PrHtmlScreenOrientation* self);
+
+// ---------------------------------------------------------------------------------------------------------------------
 // DocumentTimeline : AnimationTimeline (web-animations)
 //
 // A document's timeline (web-animations-1/#document-timelines). Its time is the time of its window's latest rendering
@@ -1054,6 +1089,9 @@ PrHtmlPreferenceObject* prHtmlWindowPreference(PrHtmlWindow* self, PrHtmlPrefere
 // Returns the window's clock (hr-time-3/#the-performance-attribute).
 PrHtmlPerformance* prHtmlWindowPerformance(PrHtmlWindow* self);
 
+// Returns the orientation of the window's screen (screen-orientation/#dom-screen-orientation).
+PrHtmlScreenOrientation* prHtmlWindowScreenOrientation(PrHtmlWindow* self);
+
 // Returns the window whose document holds the iframe of this window's browsing context, or null for a top-level
 // browsing context (html/#dom-parent).
 PrHtmlWindow* PR_NULLABLE prHtmlWindowParent(PrHtmlWindow* self);
@@ -1078,10 +1116,9 @@ typedef uint8_t PrHtmlHistoryHandling;
 // Sets a component of that URL by the rules of the setters of Location, as `handling` says. A URL that differs from the
 // document's URL only in its fragment is a fragment navigation (html/#navigate-fragid): its entry becomes current, and
 // popstate fires, then hashchange if the fragment changed. A navigation to the URL that the document has already
-// replaces its entry. Any other URL navigates the window's browsing context to another document through its host
-// (PrHtmlHost::navigate), whose entry the document's commit pushes or replaces. An href is parsed against the
-// document's URL. Returns Syntax if it does not parse, and NotSupported for a URL of another document if the window's
-// host does not navigate.
+// replaces its entry. Any other URL navigates the window's page to another document from a task (prHtmlPageNavigate),
+// whose entry the document's commit pushes or replaces. An href is parsed against the document's URL. Returns Syntax if
+// it does not parse, and NotSupported for a URL of another document if the page's host has no fetcher.
 PrStatus prHtmlWindowSetLocation(PrHtmlWindow* self, PrUrlComponent component, PrStringView value,
     PrHtmlHistoryHandling handling);
 

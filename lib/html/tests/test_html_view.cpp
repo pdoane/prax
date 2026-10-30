@@ -1172,6 +1172,12 @@ TEST_CASE("an img selects the source that matches, decodes and suits the display
         page.fetcher.settle(prHtmlPageAgent(page.page));
         CHECK(current("w") == "http://test/w800.png");
         CHECK(prHtmlImageElementNaturalWidth(image("w")) == 2);
+
+        // Removing the source that the img selected passes over it, here to the img's own src.
+        prDomNodeRemove(prDomElementAsNode(source));
+        page.fetcher.settle(prHtmlPageAgent(page.page));
+        CHECK(current("p") == "http://test/fallback.png");
+        CHECK(prHtmlImageElementNaturalWidth(image("p")) == 4);
     }
     prImageCodecDestroy(images);
     prCompressCodecDestroy(compress);

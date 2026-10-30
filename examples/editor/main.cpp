@@ -118,7 +118,7 @@ void render(Window& w, PrUVec2 extent, PrColor canvas) {
     prGpuCommandsSubmit(commands);
 }
 
-void start(void* context, PrApp* app) {
+void start(void* context, PrApp* app, const PrAppFrame*) {
     Window& w = *static_cast<Window*>(context);
     w.app = app;
     prUiSetApp(w.ui, app);

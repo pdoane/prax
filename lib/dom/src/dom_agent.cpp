@@ -5,6 +5,7 @@
 #include "pr/assert.h"
 #include "pr/memory.h"
 #include "pr/task.h"
+#include "pr/time.h"
 
 #include "dom/src/dom_node.h"
 
@@ -65,11 +66,26 @@ bool runNextTask(PrDomAgent* agent) {
     return false;
 }
 
+// Ends the agent's wait. Called with `postMutex` held.
+void signal(PrDomAgent* agent) {
+    agent->signaled = true;
+    prConditionSignal(&agent->woken);
+}
+
+// The layout worker's done function: wakes the agent's wait, then calls the host's (prDomAgentSetLayoutDone).
+void layoutDone(void* PR_NULLABLE context) {
+    PrDomAgent* agent = static_cast<PrDomAgent*>(context);
+    domAgentWake(agent);
+    if (agent->layoutDone != nullptr)
+        agent->layoutDone(agent->layoutDoneContext);
+}
+
 } // namespace
 
 void domAgentInit(PrDomAgent* agent, const PrDomAgentOptions& options) {
     agent->options = options;
     prMutexInit(&agent->postMutex);
+    prConditionInit(&agent->woken);
     agent->postedCount.store(0);
 }
 
@@ -126,6 +142,7 @@ void domAgentPost(PrDomAgent* agent, PrDomAgentTaskFn fn, void* PR_NULLABLE cont
     agent->posted.push(DomAgentTask{fn, context});
     PrDomAgentWakeFn wake = agent->wake;
     void* wakeContext = agent->wakeContext;
+    signal(agent);
     prMutexUnlock(&agent->postMutex);
     if (wake != nullptr)
         wake(wakeContext);
@@ -135,6 +152,66 @@ void domAgentSetWake(PrDomAgent* agent, PrDomAgentWakeFn PR_NULLABLE wake, void*
     prMutexLock(&agent->postMutex);
     agent->wake = wake;
     agent->wakeContext = context;
+    prMutexUnlock(&agent->postMutex);
+}
+
+void domAgentAddHook(Array<DomAgentTask>* hooks, PrDomAgentHookFn fn, void* PR_NULLABLE context) {
+    hooks->push(DomAgentTask{fn, context});
+}
+
+void domAgentRemoveHook(Array<DomAgentTask>* hooks, PrDomAgentHookFn fn, void* PR_NULLABLE context) {
+    for (uint32_t i = 0; i < hooks->count; ++i) {
+        if (hooks->data[i].fn == fn && hooks->data[i].context == context) {
+            hooks->erase(i);
+            return;
+        }
+    }
+}
+
+bool domAgentRun(PrDomAgent* agent, double milliseconds) {
+    PR_ASSERT(!agent->runningTask);
+    double deadline = prTimeMonotonicMilliseconds() + milliseconds;
+    bool ran = false;
+    while (domAgentNextTaskDelay(agent) == 0 && runNextTask(agent)) {
+        ran = true;
+        // A checkpoint may remove itself or another, so each is called by its position as the array stands.
+        for (uint32_t i = 0; i < agent->checkpoints.count; ++i)
+            agent->checkpoints.data[i].fn(agent->checkpoints.data[i].context);
+        if (prTimeMonotonicMilliseconds() >= deadline)
+            break;
+    }
+    for (uint32_t i = 0; i < agent->updates.count; ++i)
+        agent->updates.data[i].fn(agent->updates.data[i].context);
+    return ran;
+}
+
+bool domAgentWait(PrDomAgent* agent, double milliseconds) {
+    // A task that can run ends the wait at once, and a timer's delay bounds it.
+    double delay = domAgentNextTaskDelay(agent);
+    double limit = delay >= 0 && (milliseconds < 0 || delay < milliseconds) ? delay : milliseconds;
+    prMutexLock(&agent->postMutex);
+    if (limit != 0 && !agent->signaled && !agent->stopped) {
+        if (limit < 0)
+            prConditionWait(&agent->woken, &agent->postMutex);
+        else
+            prConditionWaitFor(&agent->woken, &agent->postMutex, limit);
+    }
+    agent->signaled = false;
+    bool running = !agent->stopped;
+    prMutexUnlock(&agent->postMutex);
+    return running;
+}
+
+void domAgentWake(PrDomAgent* agent) {
+    prMutexLock(&agent->postMutex);
+    signal(agent);
+    prMutexUnlock(&agent->postMutex);
+}
+
+void domAgentStop(PrDomAgent* agent) {
+    prMutexLock(&agent->postMutex);
+    agent->stopped = true;
+    signal(agent);
     prMutexUnlock(&agent->postMutex);
 }
 
@@ -155,7 +232,7 @@ PrTaskPool* PR_NULLABLE domAgentRestylePool(PrDomAgent* agent) {
 PrLayoutWorker* domAgentLayoutWorker(PrDomAgent* agent) {
     if (agent->worker == nullptr) {
         agent->worker = prLayoutWorkerCreate();
-        prLayoutWorkerSetDone(agent->worker, agent->layoutDone, agent->layoutDoneContext);
+        prLayoutWorkerSetDone(agent->worker, layoutDone, agent);
     }
     return agent->worker;
 }
@@ -177,6 +254,9 @@ void domAgentDestroy(PrDomAgent* PR_NULLABLE agent) {
     agent->constructed.reset();
     agent->posted.reset();
     agent->taken.reset();
+    agent->checkpoints.reset();
+    agent->updates.reset();
+    prConditionReset(&agent->woken);
     prMutexReset(&agent->postMutex);
     prLayoutWorkerDestroy(agent->worker);
     prMemoryFree(agent);

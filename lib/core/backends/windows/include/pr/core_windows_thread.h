@@ -31,10 +31,12 @@ void prCoreWindowsMutexReset(PrMutex* mutex);
 void prCoreWindowsMutexLock(PrMutex* mutex);
 void prCoreWindowsMutexUnlock(PrMutex* mutex);
 
-// Implement prConditionInit, prConditionReset, prConditionWait, prConditionSignal and prConditionBroadcast.
+// Implement prConditionInit, prConditionReset, prConditionWait, prConditionWaitFor, prConditionSignal and
+// prConditionBroadcast. The wait of prCoreWindowsConditionWaitFor is zero or more milliseconds.
 void prCoreWindowsConditionInit(PrCondition* condition);
 void prCoreWindowsConditionReset(PrCondition* condition);
 void prCoreWindowsConditionWait(PrCondition* condition, PrMutex* mutex);
+bool prCoreWindowsConditionWaitFor(PrCondition* condition, PrMutex* mutex, double milliseconds);
 void prCoreWindowsConditionSignal(PrCondition* condition);
 void prCoreWindowsConditionBroadcast(PrCondition* condition);
 

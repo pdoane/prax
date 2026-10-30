@@ -31,10 +31,12 @@ void prCorePosixMutexReset(PrMutex* mutex);
 void prCorePosixMutexLock(PrMutex* mutex);
 void prCorePosixMutexUnlock(PrMutex* mutex);
 
-// Implement prConditionInit, prConditionReset, prConditionWait, prConditionSignal and prConditionBroadcast.
+// Implement prConditionInit, prConditionReset, prConditionWait, prConditionWaitFor, prConditionSignal and
+// prConditionBroadcast. The wait of prCorePosixConditionWaitFor is zero or more milliseconds.
 void prCorePosixConditionInit(PrCondition* condition);
 void prCorePosixConditionReset(PrCondition* condition);
 void prCorePosixConditionWait(PrCondition* condition, PrMutex* mutex);
+bool prCorePosixConditionWaitFor(PrCondition* condition, PrMutex* mutex, double milliseconds);
 void prCorePosixConditionSignal(PrCondition* condition);
 void prCorePosixConditionBroadcast(PrCondition* condition);
 

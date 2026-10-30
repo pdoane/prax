@@ -5,6 +5,7 @@
 #include "pr/alloc.h"
 #include "pr/array.h"
 #include "pr/ascii.h"
+#include "pr/atomic.h"
 #include "pr/draw_list.h"
 #include "pr/html.h"
 #include "pr/layout_query.h"
@@ -36,8 +37,19 @@ struct ViewFrame {
 // (html/#the-iframe-element).
 constexpr PrVec2 kFrameExtent{300, 150};
 
+// The part of a view that other threads post to (prHtmlViewPostEvent). The view holds a reference, and so does each
+// post that has not run. The view clears `view` as it is destroyed, on the agent's thread, where the posts run.
+struct ViewInbox {
+    Atomic<uint32_t> references;
+    PrHtmlView* PR_NULLABLE view;
+    PrHtmlPage* page;
+    PrDomAgent* agent;
+    PrLayoutCompositor* PR_NULLABLE compositor;
+};
+
 struct HtmlView {
     PrHtmlPage* page;
+    ViewInbox* inbox;
     PrLayoutCompositor* PR_NULLABLE compositor;
     double jobBudget;
     bool canvasFilled;                           // as the description gives it
@@ -102,20 +114,10 @@ PrCssPresentation* PR_NULLABLE presentationOf(HtmlView* v) {
     return presentation;
 }
 
-// Sets a media feature of the window's environment to `value` followed by `unit`.
-void setFeature(HtmlView* v, PrCssDescriptor feature, double value, PrStringView unit) {
-    TextBuffer text{};
-    cssSerializeNumber(&text, value);
-    textAppend(&text, unit);
-    prHtmlPageSetMediaFeature(v->page, feature, textView(&text));
-    textReset(&text);
-}
-
-// Sets the viewport, and sets the window's media environment to match it.
+// Sets the viewport of the view and of its page.
 void setViewport(HtmlView* v, PrVec2 extent) {
     v->extent = extent;
-    setFeature(v, PrCssDescriptor_MediaWidth, double(extent.x), "px");
-    setFeature(v, PrCssDescriptor_MediaHeight, double(extent.y), "px");
+    prHtmlPageSetViewport(v->page, extent);
     v->changed = true;
 }
 
@@ -176,7 +178,7 @@ void sizeFrames(HtmlView* v, const PrLayoutScene* scene) {
         if (frame == nullptr || (frame->extent.x == extent.x && frame->extent.y == extent.y))
             continue;
         frame->extent = extent;
-        htmlPageSetFrameViewport(frame->page, extent);
+        prHtmlPageSetViewport(frame->page, extent);
         v->changed = true;
     }
 }
@@ -288,7 +290,7 @@ void paintEmbedded(void* PR_NULLABLE context, uint64_t embed, PrLayoutVec extent
     PrVec2 size = prLayoutVecToPx(extent);
     if (size.x != frame->extent.x || size.y != frame->extent.y) {
         frame->extent = size;
-        htmlPageSetFrameViewport(frame->page, size);
+        prHtmlPageSetViewport(frame->page, size);
     }
     prHtmlPresentationUpdate(presentation, extent);
     playTree(v, presentation, list, false);
@@ -935,6 +937,66 @@ PrHtmlViewEventResult wheel(HtmlView* v, const PrAppEvent* event, PrHtmlViewEven
     return proceed ? PrHtmlViewEventResult_Handled : PrHtmlViewEventResult_Canceled;
 }
 
+// What a post to the view carries.
+enum {
+    ViewPostKind_Event,
+    ViewPostKind_Frame,
+    ViewPostKind_Traverse,
+};
+typedef uint8_t ViewPostKind;
+
+// What a thread posted to the view, which a task of the agent applies. An event's text follows the post.
+struct ViewPost {
+    ViewInbox* inbox;
+    ViewPostKind kind;
+    PrHtmlViewEventFlags flags;
+    int32_t delta;
+    PrAppEvent event;
+    PrAppFrame frame;
+};
+
+void releaseInbox(ViewInbox* inbox) {
+    if (inbox->references.fetchSub(1) == 1)
+        prMemoryFree(inbox);
+}
+
+// Applies a post on the agent's thread, unless its view is gone.
+void applyPost(void* PR_NULLABLE context) {
+    ViewPost* post = static_cast<ViewPost*>(context);
+    if (PrHtmlView* view = post->inbox->view) {
+        switch (post->kind) {
+            case ViewPostKind_Event:
+                post->event.text = PrStringView{reinterpret_cast<const char*>(post + 1), post->event.text.size};
+                prHtmlViewEvent(view, &post->event, post->flags);
+                break;
+            case ViewPostKind_Frame:
+                prHtmlViewSetViewport(view, post->frame.extent);
+                prHtmlViewSetDisplay(view, &post->frame.display);
+                prHtmlViewSetUserPreferences(view, &post->frame.preferences);
+                break;
+            case ViewPostKind_Traverse:
+                prHtmlPageTraverse(post->inbox->page, post->delta);
+                break;
+        }
+    }
+    releaseInbox(post->inbox);
+    prMemoryFree(post);
+}
+
+// Returns a post to `inbox` with room for `size` bytes of text after it.
+ViewPost* newPost(ViewInbox* inbox, ViewPostKind kind, size_t size) {
+    ViewPost* post = static_cast<ViewPost*>(prMemoryAllocZeroed(sizeof(ViewPost) + size));
+    inbox->references.fetchAdd(1);
+    post->inbox = inbox;
+    post->kind = kind;
+    return post;
+}
+
+// The view's update after each run of the agent's tasks.
+void updateView(void* PR_NULLABLE context) {
+    prHtmlViewUpdate(static_cast<PrHtmlView*>(context));
+}
+
 } // namespace
 
 } // namespace pr_impl
@@ -950,13 +1012,26 @@ PrHtmlView* prHtmlViewCreate(const PrHtmlViewDesc* desc) {
     v->compositor = desc->compositor;
     v->jobBudget = desc->jobBudget;
     v->canvasFilled = desc->canvasFilled;
-    setViewport(v, PrVec2{800, 600});
+    v->extent = desc->page->viewport;
+    v->changed = true;
+    v->inbox = allocZeroed<ViewInbox>();
+    v->inbox->references.store(1);
+    v->inbox->view = v;
+    v->inbox->page = v->page;
+    v->inbox->agent = prHtmlPageAgent(v->page);
+    v->inbox->compositor = v->compositor;
+    if (v->compositor != nullptr)
+        prDomAgentAddUpdate(v->inbox->agent, updateView, v);
     return v;
 }
 
 void prHtmlViewDestroy(PrHtmlView* PR_NULLABLE view) {
     if (view == nullptr)
         return;
+    if (view->compositor != nullptr)
+        prDomAgentRemoveUpdate(view->inbox->agent, updateView, view);
+    view->inbox->view = nullptr;
+    releaseInbox(view->inbox);
     prHtmlViewWait(view);
     release(view);
     releaseSpaced(view);
@@ -1133,4 +1208,37 @@ PrHtmlViewEventResult prHtmlViewEvent(PrHtmlView* view, const PrAppEvent* event,
         default:
             return PrHtmlViewEventResult_Ignored;
     }
+}
+
+void prHtmlViewPostEvent(PrHtmlView* view, const PrAppEvent* event) {
+    PrHtmlViewEventFlags flags = 0;
+    PrLayoutCompositor* compositor = view->inbox->compositor;
+    if (event->kind == PrAppEventKind_Scroll && compositor != nullptr) {
+        PrLayoutVec at = prLayoutVecFromPx(event->position);
+        if (!prLayoutCompositorWheelBlocks(compositor, at)) {
+            prLayoutCompositorScrollAt(compositor, at,
+                prLayoutVecFromPx(prAppEventScrollPixels(event, kPrAppScrollLineHeight)));
+            flags = PrHtmlViewEventFlag_Scrolled;
+        }
+    }
+    size_t size = event->text.data != nullptr ? event->text.size : 0;
+    ViewPost* post = newPost(view->inbox, ViewPostKind_Event, size);
+    post->event = *event;
+    post->event.text = PrStringView{nullptr, size};
+    post->flags = flags;
+    if (size != 0)
+        memCopy(post + 1, event->text.data, size);
+    prDomAgentPost(view->inbox->agent, applyPost, post);
+}
+
+void prHtmlViewPostFrame(PrHtmlView* view, const PrAppFrame* frame) {
+    ViewPost* post = newPost(view->inbox, ViewPostKind_Frame, 0);
+    post->frame = *frame;
+    prDomAgentPost(view->inbox->agent, applyPost, post);
+}
+
+void prHtmlViewPostTraverse(PrHtmlView* view, int32_t delta) {
+    ViewPost* post = newPost(view->inbox, ViewPostKind_Traverse, 0);
+    post->delta = delta;
+    prDomAgentPost(view->inbox->agent, applyPost, post);
 }

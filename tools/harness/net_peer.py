@@ -148,6 +148,7 @@ class Http(http.server.BaseHTTPRequestHandler):
         "/gzip": (200, {"Content-Encoding": "gzip"}, gzip.compress(b"compressed " * 1000)),
         "/large": (200, {}, LARGE),
         "/missing": (404, {"Content-Type": "text/plain"}, b"missing"),
+        "/not-modified": (304, {"ETag": '"same"'}, b""),
         "/redirect": (302, {"Location": "/hello"}, b""),
         "/see-other": (303, {"Location": "/hello"}, b""),
         "/loop": (302, {"Location": "/loop"}, b""),

@@ -44,6 +44,7 @@
 - (BOOL)pointerUp:(uint8_t)button;
 - (void)key:(PrAppKeyCode)code down:(BOOL)down key:(PrAppKey)key;
 - (void)frame;
+- (PrAppFrame)frameAt:(double)now;
 - (void)requestFrame;
 - (void)stop;
 @end
@@ -259,7 +260,8 @@ void run(PrApp* app, const PrAppHandler* handler) {
         host.running = YES;
         host.lastFrame = 0;
         host.inCallback = YES;
-        host.handler.start(host.handler.context, app);
+        PrAppFrame window = [host frameAt:NSProcessInfo.processInfo.systemUptime];
+        host.handler.start(host.handler.context, app, &window);
         [host endCallback];
         [host requestFrame];
         if (host.running)
@@ -684,6 +686,14 @@ using namespace pr_impl;
         return;
     }
     double now = NSProcessInfo.processInfo.systemUptime;
+    PrAppFrame frame = [self frameAt:now];
+    self.lastFrame = now;
+    self.inCallback = YES;
+    self.handler.frame(self.handler.context, self.app, &frame);
+    [self endCallback];
+}
+// The window as a frame at `now` finds it.
+- (PrAppFrame)frameAt:(double)now {
     PrAppFrame frame{};
     frame.time = now;
     frame.delta = self.lastFrame == 0 ? 0 : now - self.lastFrame;
@@ -709,10 +719,7 @@ using namespace pr_impl;
         preferences.contrast = PrAppContrast_More;
     preferences.reducedMotion = workspace.accessibilityDisplayShouldReduceMotion;
     preferences.reducedTransparency = workspace.accessibilityDisplayShouldReduceTransparency;
-    self.lastFrame = now;
-    self.inCallback = YES;
-    self.handler.frame(self.handler.context, self.app, &frame);
-    [self endCallback];
+    return frame;
 }
 - (void)displayFrame:(CADisplayLink*)sender {
     if (!self.frameRequested)

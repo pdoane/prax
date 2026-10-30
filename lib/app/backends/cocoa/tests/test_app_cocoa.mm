@@ -85,7 +85,7 @@ TEST_CASE("a headless run starts, frames, wakes from another thread and shuts do
     PrApp* app = prAppCocoaCreate(&appDesc);
     PrAppHandler handler{
         &run,
-        [](void* context, PrApp* app) {
+        [](void* context, PrApp* app, const PrAppFrame*) {
             runOf(context).seen.push_back("start");
             PrAppSurface surface{};
             CHECK(prAppSurface(app, &surface) == PrStatus_Ok);
@@ -123,7 +123,7 @@ TEST_CASE("a browser loads a page, runs a script in it and captures it at two pi
     browse.app = prAppCocoaCreate(&appDesc);
     PrAppHandler handler{
         &browse,
-        [](void* context, PrApp* app) {
+        [](void* context, PrApp* app, const PrAppFrame*) {
             Browse& b = *static_cast<Browse*>(context);
             PrAppBrowserDesc desc{.viewport = PrUVec2{40, 20}};
             REQUIRE(prAppBrowserCreate(app, &desc, &b.browser) == PrStatus_Ok);
@@ -180,7 +180,7 @@ TEST_CASE("a page from a file reads the files beside it, and a promise answers o
     browse.app = prAppCocoaCreate(&appDesc);
     PrAppHandler handler{
         &browse,
-        [](void* context, PrApp* app) {
+        [](void* context, PrApp* app, const PrAppFrame*) {
             Browse& b = *static_cast<Browse*>(context);
             PrAppBrowserDesc desc{.viewport = PrUVec2{40, 20}};
             REQUIRE(prAppBrowserCreate(app, &desc, &b.browser) == PrStatus_Ok);
@@ -224,7 +224,7 @@ TEST_CASE("input that a callback's own run loop dispatches arrives after the cal
     PrApp* app = prAppCocoaCreate(&appDesc);
     PrAppHandler handler{
         &input,
-        [](void* context, PrApp* app) {
+        [](void* context, PrApp* app, const PrAppFrame*) {
             Input& in = inputOf(context);
             NSView* view = viewOf(app);
             // A modal panel that the callback opens runs a run loop of its own, which dispatches input and the main
@@ -262,7 +262,7 @@ TEST_CASE("a window that stops being the key window releases the buttons and key
     PrApp* app = prAppCocoaCreate(&appDesc);
     PrAppHandler handler{
         &input,
-        [](void*, PrApp* app) {
+        [](void*, PrApp* app, const PrAppFrame*) {
             NSView* view = viewOf(app);
             [view keyDown:keyA(view.window, NSEventTypeKeyDown)];
             [view mouseDown:leftMouse(view.window, NSEventTypeLeftMouseDown)];

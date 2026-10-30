@@ -190,7 +190,7 @@ int main(int argc, char** argv) {
     h.app = prAppCocoaCreate(&appDesc);
     PrAppHandler handler{
         &h,
-        [](void* context, PrApp* app) {
+        [](void* context, PrApp* app, const PrAppFrame*) {
             Host& h = *static_cast<Host*>(context);
             PrAppBrowserDesc desc{.viewport = h.size, .pixelRatio = h.pixelRatio, .preferences = &h.preferences};
             if (prAppBrowserCreate(app, &desc, &h.browser) != PrStatus_Ok) {

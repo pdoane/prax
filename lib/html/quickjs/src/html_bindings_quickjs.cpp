@@ -65,6 +65,7 @@ JSClassID htmlPageRevealEventClass;
 JSClassID htmlWindowClass;
 JSClassID htmlNavigatorClass;
 JSClassID htmlScreenClass;
+JSClassID htmlScreenOrientationClass;
 JSClassID htmlCryptoClass;
 JSClassID htmlLocationClass;
 JSClassID htmlHistoryClass;
@@ -145,6 +146,8 @@ JSClassID classifyEventTarget(void* handle) {
         return htmlPreferenceObjectClass;
     if (prHtmlPerformanceQuery(target) != nullptr)
         return htmlPerformanceClass;
+    if (prHtmlScreenOrientationQuery(target) != nullptr)
+        return htmlScreenOrientationClass;
     return prJsDomEventTargetClass;
 }
 
@@ -172,6 +175,7 @@ enum {
     WindowSlot_Global,
     WindowSlot_Document,
     WindowSlot_Performance,
+    WindowSlot_ScreenOrientation,
 };
 typedef uint8_t WindowSlot;
 
@@ -1891,6 +1895,57 @@ JSValue screenMeasure(JSContext* ctx, JSValueConst self, int magic) {
     }
 }
 
+// [SameObject] orientation (screen-orientation/#dom-screen-orientation). The window owns it, and the window's object
+// holds its object.
+JSValue screenOrientation(JSContext* ctx, JSValueConst self) {
+    PrHtmlWindow* window = jsThis<PrHtmlWindow>(ctx, self, htmlScreenClass);
+    if (window == nullptr)
+        return JS_EXCEPTION;
+    JSValue holder = jsWrap(ctx, htmlWindowClass, JS_NULL, window, false);
+    if (JS_IsException(holder))
+        return holder;
+    JSValue object = jsReference(ctx, holder, WindowSlot_ScreenOrientation);
+    if (JS_IsUndefined(object)) {
+        PrHtmlScreenOrientation* orientation = prHtmlWindowScreenOrientation(window);
+        object = jsWrapAs(ctx, htmlScreenOrientationClass, JS_UNDEFINED,
+            prHtmlScreenOrientationAsEventTarget(orientation), false);
+        if (!JS_IsException(object))
+            jsSetReference(ctx, holder, WindowSlot_ScreenOrientation, object);
+    }
+    JS_FreeValue(ctx, holder);
+    return object;
+}
+
+JSValue orientationType(JSContext* ctx, JSValueConst self) {
+    PrHtmlScreenOrientation* orientation = jsThis<PrHtmlScreenOrientation>(ctx, self, htmlScreenOrientationClass);
+    if (orientation != nullptr)
+        return jsFixedString(ctx, prHtmlOrientationTypeName(prHtmlScreenOrientationType(orientation)));
+    return JS_EXCEPTION;
+}
+
+JSValue orientationAngle(JSContext* ctx, JSValueConst self) {
+    PrHtmlScreenOrientation* orientation = jsThis<PrHtmlScreenOrientation>(ctx, self, htmlScreenOrientationClass);
+    return orientation != nullptr ? JS_NewUint32(ctx, prHtmlScreenOrientationAngle(orientation)) : JS_EXCEPTION;
+}
+
+// lock (screen-orientation/#dom-screenorientation-lock): rejects with NotSupportedError, since a document cannot lock
+// the orientation.
+JSValue orientationLock(JSContext* ctx, JSValueConst self, int, JSValueConst*) {
+    if (jsThis<PrHtmlScreenOrientation>(ctx, self, htmlScreenOrientationClass) == nullptr)
+        return JS_EXCEPTION;
+    JSValue error = jsDomExceptionNew(ctx, "NotSupportedError");
+    JSValue promise = jsSettledPromise(ctx, error, true);
+    JS_FreeValue(ctx, error);
+    return promise;
+}
+
+// unlock (screen-orientation/#dom-screenorientation-unlock): does nothing, since the orientation is never locked.
+JSValue orientationUnlock(JSContext* ctx, JSValueConst self, int, JSValueConst*) {
+    if (jsThis<PrHtmlScreenOrientation>(ctx, self, htmlScreenOrientationClass) == nullptr)
+        return JS_EXCEPTION;
+    return JS_UNDEFINED;
+}
+
 // selection-api/#dom-document-getselection: returns the document's selection, as the same object each time, if the
 // document has a browsing context. Returns null for a document without one. The window's object holds the selection
 // object of its current document, which lives as long as the document. The selection's range object lives as long as
@@ -2440,6 +2495,11 @@ JSValue navigatorFlag(JSContext* ctx, JSValueConst self, int magic) {
     return JS_NewBool(ctx, flag == NavigatorFlag_OnLine || flag == NavigatorFlag_CookieEnabled);
 }
 
+// javaEnabled (html/#dom-navigator-javaenabled): false, as HTML requires.
+JSValue navigatorJavaEnabled(JSContext* ctx, JSValueConst self, int, JSValueConst*) {
+    return jsThis<PrHtmlWindow>(ctx, self, htmlNavigatorClass) != nullptr ? JS_FALSE : JS_EXCEPTION;
+}
+
 // hardwareConcurrency (html/#dom-navigator-hardwareconcurrency): the logical processors that the system has.
 JSValue navigatorHardwareConcurrency(JSContext* ctx, JSValueConst self) {
     if (jsThis<PrHtmlWindow>(ctx, self, htmlNavigatorClass) == nullptr)
@@ -2907,7 +2967,12 @@ constexpr JSCFunctionListEntry kLinkElementProto[] = {
     PR_REFLECT_URL("href", "href"),
     PR_REFLECT_STRING("rel", "rel"),
     PR_REFLECT_STRING("media", "media"),
+    PR_REFLECT_STRING("hreflang", "hreflang"),
     PR_REFLECT_STRING("type", "type"),
+    PR_REFLECT_STRING("integrity", "integrity"),
+    PR_REFLECT_STRING("imageSrcset", "imagesrcset"),
+    PR_REFLECT_STRING("imageSizes", "imagesizes"),
+    PR_REFLECT_STRING("referrerPolicy", "referrerpolicy"),
     PR_REFLECT_BOOL("disabled", "disabled"),
     PR_JS_GET("sheet", linkSheet),
 };
@@ -3113,6 +3178,7 @@ constexpr JSCFunctionListEntry kNavigatorProto[] = {
     PR_JS_MAGIC_GET("cookieEnabled", navigatorFlag, NavigatorFlag_CookieEnabled),
     PR_JS_MAGIC_GET("pdfViewerEnabled", navigatorFlag, NavigatorFlag_PdfViewerEnabled),
     PR_JS_MAGIC_GET("webdriver", navigatorFlag, NavigatorFlag_Webdriver),
+    PR_JS_METHOD("javaEnabled", 0, navigatorJavaEnabled),
     PR_JS_GET("hardwareConcurrency", navigatorHardwareConcurrency),
     PR_JS_GET("maxTouchPoints", navigatorMaxTouchPoints),
     PR_JS_GET("preferences", preferences),
@@ -3126,6 +3192,16 @@ constexpr JSCFunctionListEntry kScreenProto[] = {
     PR_JS_MAGIC_GET("height", screenMeasure, ScreenMeasure_Height),
     PR_JS_MAGIC_GET("colorDepth", screenMeasure, ScreenMeasure_ColorDepth),
     PR_JS_MAGIC_GET("pixelDepth", screenMeasure, ScreenMeasure_ColorDepth),
+    PR_JS_GET("orientation", screenOrientation),
+};
+
+constexpr JSCFunctionListEntry kScreenOrientationProto[] = {
+    PR_JS_TAG("ScreenOrientation"),
+    PR_JS_METHOD("lock", 1, orientationLock),
+    PR_JS_METHOD("unlock", 0, orientationUnlock),
+    PR_JS_GET("type", orientationType),
+    PR_JS_GET("angle", orientationAngle),
+    PR_JS_DOM_EVENT_HANDLER(onchange)
 };
 
 constexpr JSCFunctionListEntry kCryptoProto[] = {
@@ -3400,6 +3476,11 @@ constexpr JsClassDefinition kClasses[] = {
     },
     {PR_JS_CLASS("Navigator", htmlNavigatorClass, jsViewFinalizer<&htmlNavigatorClass>, kNavigatorProto)},
     {PR_JS_CLASS("Screen", htmlScreenClass, jsViewFinalizer<&htmlScreenClass>, kScreenProto)},
+    {
+        PR_JS_CLASS("ScreenOrientation", htmlScreenOrientationClass,
+            jsViewFinalizer<&htmlScreenOrientationClass>, kScreenOrientationProto),
+        .base = &prJsDomEventTargetClass,
+    },
     {PR_JS_CLASS("Crypto", htmlCryptoClass, jsViewFinalizer<&htmlCryptoClass>, kCryptoProto)},
     {
         PR_JS_CLASS("PreferenceManager", htmlPreferenceManagerClass,

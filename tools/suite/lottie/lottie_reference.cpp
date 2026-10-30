@@ -140,7 +140,7 @@ int main() {
     c.app = prAppCocoaCreate(&appDesc);
     PrAppHandler handler{
         &c,
-        [](void* context, PrApp* app) {
+        [](void* context, PrApp* app, const PrAppFrame*) {
             Capturing& c = *static_cast<Capturing*>(context);
             PrAppBrowserDesc desc{.viewport = PrUVec2{c.cases[0].width, c.cases[0].height}};
             if (prAppBrowserCreate(app, &desc, &c.browser) != PrStatus_Ok) {

@@ -416,7 +416,7 @@ TEST_CASE("a load fires load at the Window after its scripts, and a failed one d
     prHtmlPageDestroy(page);
 }
 
-TEST_CASE("a Window keeps its listeners when a new document replaces the old") {
+TEST_CASE("a document that replaces another has a window of its own, and the closed window lets its listeners go") {
     struct State { int references = 0; int calls = 0; } state;
     PrDomEventListener callback{
         [](void* context, PrDomEvent*) { ++static_cast<State*>(context)->calls; },
@@ -426,21 +426,26 @@ TEST_CASE("a Window keeps its listeners when a new document replaces the old") {
         [](void* context) { --static_cast<State*>(context)->references; },
     };
     PrHtmlPage* page = prHtmlPageCreate(nullptr);
-    PrHtmlWindow* window = prHtmlPageWindow(page);
-    PrDomEventTarget* target = prHtmlWindowAsEventTarget(window);
+    PrHtmlWindow* initial = prHtmlPageWindow(page);
+    // The first document replaces the initial about:blank, whose window it keeps.
     CHECK(prHtmlPageLoad(page, "<p>first", "about:blank", nullptr) == PrStatus_Ok);
+    PrHtmlWindow* window = prHtmlPageWindow(page);
+    CHECK(window == initial);
+    PrDomEventTarget* target = prHtmlWindowAsEventTarget(window);
+    prDomEventTargetRetain(target);
     prDomEventTargetAddEventListener(target, "test", &callback, nullptr);
     prDomEventTargetAddEventListener(prDomDocumentAsEventTarget(prHtmlWindowDocument(window)), "test", &callback, nullptr);
     CHECK(state.references == 2);
     CHECK(prHtmlPageLoad(page, "<p>second", "about:blank", nullptr) == PrStatus_Ok);
-    CHECK(state.references == 1);
-    CHECK(prHtmlPageWindow(page) == window);
+    CHECK(prHtmlPageWindow(page) != window);
+    CHECK(state.references == 0);
+    // The closed window lives while a reference to it remains, and runs nothing.
     PrDomEvent* event = prDomEventCreate("test", nullptr);
     prDomEventTargetDispatchEvent(target, event, nullptr);
-    CHECK(state.calls == 1);
+    CHECK(state.calls == 0);
     prDomEventRelease(event);
+    prDomEventTargetRelease(target);
     prHtmlPageDestroy(page);
-    CHECK(state.references == 0);
 }
 
 TEST_CASE("a Window names the first element whose id is the name, or a form whose name is") {

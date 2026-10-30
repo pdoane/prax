@@ -317,15 +317,17 @@ typedef struct PrAppFrame {
 } PrAppFrame;
 
 // The callbacks into the program, each passed `context`. All are called on the thread that runs the application, and
-// none is nested in another. `start` is called once the window exists, and `shutdown` last of all. After `shutdown`,
-// the application makes no more calls. Every callback must be set.
+// none is nested in another. `start` is called once the window exists, with `window`, the window as the first frame
+// finds it (its delta is zero), so that what the program makes for the window can start at its extent, on its display,
+// for the user's preferences. `shutdown` is called last of all. After `shutdown`, the application makes no more calls.
+// Every callback must be set.
 //
 // `frame` runs within the window's display transaction: at the display's refresh after a frame is requested, and at
 // each step of a resize, whether or not one is requested. What `frame` presents through a swap chain that presents
 // within the transaction (prGpuSwapChainCreate) is shown with the window at the frame's extent.
 typedef struct PrAppHandler {
     void* PR_NULLABLE context;
-    void (*start)(void* PR_NULLABLE context, PrApp* app);
+    void (*start)(void* PR_NULLABLE context, PrApp* app, const PrAppFrame* window);
     void (*frame)(void* PR_NULLABLE context, PrApp* app, const PrAppFrame* frame);
     void (*event)(void* PR_NULLABLE context, PrApp* app, const PrAppEvent* event);
     void (*shutdown)(void* PR_NULLABLE context, PrApp* app);

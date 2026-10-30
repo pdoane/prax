@@ -277,8 +277,12 @@ void domEventTargetRetain(PrDomEventTarget* target) {
     }
     switch (target->type) {
         case DomTargetType_EventTarget: ++static_cast<DomStandaloneTarget*>(target)->references; break;
+        case DomTargetType_Window:
         case DomTargetType_MediaQueryList:
         case DomTargetType_XmlHttpRequest: ++static_cast<DomCountedTarget*>(target)->references; break;
+        case DomTargetType_Preference:
+        case DomTargetType_Performance:
+        case DomTargetType_ScreenOrientation:
         case DomTargetType_XmlHttpRequestUpload:
             domEventTargetRetain(static_cast<DomPartTarget*>(target)->owner);
             break;
@@ -304,6 +308,7 @@ void domEventTargetRelease(PrDomEventTarget* PR_NULLABLE target) {
             }
             break;
         }
+        case DomTargetType_Window:
         case DomTargetType_MediaQueryList:
         case DomTargetType_XmlHttpRequest: {
             DomCountedTarget* counted = static_cast<DomCountedTarget*>(target);
@@ -311,6 +316,9 @@ void domEventTargetRelease(PrDomEventTarget* PR_NULLABLE target) {
                 counted->destroy(counted);
             break;
         }
+        case DomTargetType_Preference:
+        case DomTargetType_Performance:
+        case DomTargetType_ScreenOrientation:
         case DomTargetType_XmlHttpRequestUpload:
             domEventTargetRelease(static_cast<DomPartTarget*>(target)->owner);
             break;

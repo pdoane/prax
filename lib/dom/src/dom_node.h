@@ -164,6 +164,10 @@ bool domEmbeds(const PrDomElement* element);
 // connection change, and otherwise a change to that attribute. Does nothing for other elements.
 void domEmbedChanged(PrDomElement* element, PrStringView attribute);
 
+// Notifies the document's host that `node`, if it is an element for which domEmbeds is true, was removed from
+// `oldParent`, where `oldNext` followed it. Does nothing for other nodes.
+void domEmbedRemoved(PrDomNode* node, PrDomNode* oldParent, PrDomNode* PR_NULLABLE oldNext);
+
 // The state that html/#script-processing-model keeps for a script element. An element that script creates has none of
 // them: it has not started, it is not parser-inserted, and its force async is true.
 enum {

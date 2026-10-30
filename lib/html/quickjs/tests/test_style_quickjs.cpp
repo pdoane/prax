@@ -172,6 +172,42 @@ TEST_CASE("devicePixelRatio is the display's pixel ratio, not a resolution a que
     prHtmlPageDestroy(page);
 }
 
+TEST_CASE("the viewport that the host sets is the one that scripts measure, and the screen's orientation follows it") {
+    JSRuntime* runtime = jsRuntimeCreate();
+    JSContext* ctx = JS_NewContext(runtime);
+    prJsDomBind(ctx);
+    prJsCssBind(ctx);
+    prJsSvgBind(ctx);
+    prJsMathMlBind(ctx);
+    jsHtmlBind(ctx);
+    PrHtmlPage* page = prHtmlPageCreate(nullptr);
+    CHECK(prHtmlPageLoad(page, "<link id=l hreflang=fr-CA imagesrcset='a.png 2x'>", "about:blank", nullptr) ==
+        PrStatus_Ok);
+    CHECK(jsHtmlSetGlobal(ctx, prHtmlPageWindow(page)));
+    auto run = [&](const char* source) {
+        JSValue result = JS_Eval(ctx, source, strlen(source), "viewport", JS_EVAL_TYPE_GLOBAL);
+        CHECK(!JS_IsException(result));
+        JS_FreeValue(ctx, result);
+    };
+    run("if (innerWidth !== 800 || innerHeight !== 600) throw new Error('the default viewport');"
+        "const o = screen.orientation;"
+        "if (!(o instanceof ScreenOrientation) || !(o instanceof EventTarget) || o !== screen.orientation)"
+        "    throw new Error('[SameObject] orientation');"
+        "if (o.type !== 'landscape-primary' || o.angle !== 0) throw new Error('type and angle');o.unlock();"
+        "globalThis.lockError = null;o.lock('portrait').catch(e => { globalThis.lockError = e.name; });"
+        "if (navigator.javaEnabled() !== false) throw new Error('javaEnabled');"
+        "if (l.hreflang !== 'fr-CA' || l.imageSrcset !== 'a.png 2x') throw new Error('link reflections');");
+    prHtmlPageSetViewport(page, PrVec2{1280, 900});
+    JSContext* pending = nullptr;
+    while (JS_ExecutePendingJob(runtime, &pending) > 0) {
+    }
+    run("if (innerWidth !== 1280 || innerHeight !== 900 || !matchMedia('(width: 1280px)').matches)"
+        "    throw new Error('the host viewport');if (lockError !== 'NotSupportedError') throw new Error('lock rejects');");
+    JS_FreeContext(ctx);
+    jsRuntimeDestroy(runtime);
+    prHtmlPageDestroy(page);
+}
+
 TEST_CASE("a face's object made while it loads is held until the load settles its promise") {
     JSRuntime* runtime = jsRuntimeCreate();
     JSContext* ctx = JS_NewContext(runtime);

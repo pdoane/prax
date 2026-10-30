@@ -21,6 +21,7 @@ enum {
     DomTargetType_FontFaceSet,              // a FontFaceSet (css-font-loading-3/#fontfaceset)
     DomTargetType_Preference,               // a PreferenceObject (mediaqueries-5/#preferenceobject)
     DomTargetType_Performance,              // a Performance (hr-time-3/#sec-performance)
+    DomTargetType_ScreenOrientation,        // a ScreenOrientation (screen-orientation/#screenorientation-interface)
     DomTargetType_PseudoElement,            // a pseudo-element that a presentation generates (CssPresentationPseudo)
     DomTargetType_AbortSignal,              // an AbortSignal (dom/#interface-AbortSignal)
     DomTargetType_XmlHttpRequest,           // an XMLHttpRequest (xhr/#interface-xmlhttprequest)

@@ -502,6 +502,34 @@ TEST_CASE("a pseudo-element's rules style it, under its originating element's fe
     CHECK(resolved(page, "a", PrCssProperty_Width, "::part(x)").empty());
 }
 
+TEST_CASE("a computed style gives the element's custom properties, read one at a time and listed after the longhands") {
+    Page page("<style>#a { --fill: rgba(0,0,0,0.48); --blur: 20px; --ref: var(--blur) 1px }#b { --own: x }</style>"
+        "<div id=a><div id=b></div></div>");
+    auto custom = [&](const char* id, const char* text) {
+        PrCssStyleDeclaration* computed =
+            prCssStylePropertiesAsCssStyleDeclaration(prCssElementComputedStyle(byId(page, id), ""));
+        PrCssDeclarationName name{};
+        REQUIRE(prCssStyleDeclarationNameFromText(computed, text, &name));
+        PrString read = prCssStyleDeclarationGetPropertyValue(computed, &name);
+        std::string value(prStringView(&read).data, prStringView(&read).size);
+        prStringReset(&read);
+        prCssDeclarationNameReset(&name);
+        return value;
+    };
+    CHECK(custom("a", "--fill") == "rgba(0,0,0,0.48)");
+    CHECK(custom("a", "--ref") == "20px 1px");
+    // Custom properties inherit.
+    CHECK(custom("b", "--blur") == "20px");
+    CHECK(custom("b", "--own") == "x");
+    CHECK(custom("a", "--own").empty());
+    PrString text = prCssStyleDeclarationCssText(
+        prCssStylePropertiesAsCssStyleDeclaration(prCssElementComputedStyle(byId(page, "b"), "")));
+    std::string listed(prStringView(&text).data, prStringView(&text).size);
+    prStringReset(&text);
+    CHECK(listed.find("--own: x;") != std::string::npos);
+    CHECK(listed.find("--blur: 20px;") > listed.find("width:"));
+}
+
 TEST_CASE("::first-line and ::first-letter take their rules, and the first letter inherits from the first line") {
     Page page("<style>#a { color: rgb(255, 0, 0); font-size: 10px; width: 10px }"
         "#a::first-line { color: rgb(0, 0, 255); font-size: 20px; direction: rtl; writing-mode: vertical-rl }"
@@ -3636,6 +3664,7 @@ TEST_CASE("geometry reads lay out what changed, and a scroll's events fire at th
     // no scene holds an offset. The host takes the document's own offsets for its compositor, each container once, and
     // not the offsets that it set itself.
     PrCssPresentation* presentation = prHtmlPagePresentation(page);
+    prHtmlPageSetViewport(page, PrVec2{200, 100});
     prHtmlPresentationUpdate(presentation, prLayoutVecFromPx(PrVec2{200, 100}));
     CHECK_FALSE(prCssPresentationIsCurrent(presentation));
     auto job = [&] {

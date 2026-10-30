@@ -47,8 +47,9 @@ bool open(Fixture* fixture, const PrHttpHostRule* PR_NULLABLE rules = nullptr, u
 }
 
 void reset(Fixture* fixture) {
-    netRunOnLoop(fixture->net, [](void* PR_NULLABLE http) { prHttpDestroy(static_cast<PrHttp*>(http)); },
-        fixture->http);
+    prNetPostBlocking(fixture->net, [](void* PR_NULLABLE http) {
+        prHttpDestroy(static_cast<PrHttp*>(http));
+    }, fixture->http);
     prTlsDestroy(fixture->tls);
     prNetDestroy(fixture->net);
     netPeerReset(&fixture->peer);
@@ -131,6 +132,40 @@ std::string urlOf(uint16_t port, const char* path, const char* scheme = "http") 
     return std::string(scheme) + "://localhost:" + std::to_string(port) + path;
 }
 
+// Exchanges made at once on the loop, each destroyed as its response arrives, as a cache that revalidates does with a
+// 304. The loop writes the results before it opens `done`.
+struct Abandoned {
+    PrHttp* http;
+    std::string url;
+    uint32_t count;
+    uint32_t answered;
+    uint32_t reused;                // the responses that a connection carried after another
+    NetLatch done;
+};
+
+void abandonedEvent(void* PR_NULLABLE context, PrHttpExchange* exchange, PrHttpEvent event) {
+    Abandoned* batch = static_cast<Abandoned*>(context);
+    if (event == PrHttpEvent_Response) {
+        for (uint32_t i = 0; i < prHttpExchangeHeaderCount(exchange); ++i) {
+            PrHttpHeader header = prHttpExchangeHeader(exchange, i);
+            if (header.name == "X-Requests" && header.value != "1")
+                ++batch->reused;
+        }
+    }
+    prHttpExchangeDestroy(exchange);
+    if (++batch->answered == batch->count)
+        netLatchOpen(&batch->done);
+}
+
+void startAbandoned(void* PR_NULLABLE context) {
+    Abandoned* batch = static_cast<Abandoned*>(context);
+    for (uint32_t i = 0; i < batch->count; ++i) {
+        PrHttpRequestDesc desc{.url = batch->url, .event = abandonedEvent, .context = batch};
+        PrHttpExchange* exchange = nullptr;
+        REQUIRE(prHttpExchangeCreate(batch->http, &desc, &exchange) == PrStatus_Ok);
+    }
+}
+
 } // namespace
 
 } // namespace pr_impl
@@ -203,6 +238,22 @@ TEST_CASE("http: a 204 that declares content leaves its connection to no other r
     CHECK(after.status == 200);
     CHECK(after.received == "hello");
     CHECK(headerOf(after, "X-Requests") == "1");
+    reset(&fixture);
+}
+
+TEST_CASE("http: exchanges destroyed as their 304s arrive leave their connections to the exchanges waiting for them") {
+    Fixture fixture{};
+    if (!open(&fixture))
+        return;
+    // More exchanges than an origin's connections, so most wait for a connection that an earlier one leaves.
+    Abandoned batch{.http = fixture.http, .url = urlOf(fixture.peer.http, "/not-modified"), .count = 24};
+    netLatchInit(&batch.done);
+    prNetPost(fixture.net, startAbandoned, &batch);
+    netLatchWait(&batch.done);
+    netLatchReset(&batch.done);
+    CHECK(batch.answered == batch.count);
+    // A 304 has no content, so its connection carries the next request.
+    CHECK(batch.reused != 0);
     reset(&fixture);
 }
 

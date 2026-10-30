@@ -42,9 +42,10 @@ generator takes them from WHATWG's `entities.json`.
   host decides the order in which responses arrive.
 - A page loads the document at a URL by navigating (`prHtmlPageNavigate`): it fetches the document through the host's
   fetcher and loads it as it arrives, and its current document stays until the response arrives. A network error
-  loads a document that says why. A navigation to another document by a hyperlink or by setting the location goes to
-  the host (`PrHtmlHost::navigate`) from a task, and the host navigates a new page, as a navigation makes a new Window,
-  or the same one. A navigation within the document, to a fragment, stays in the page.
+  loads a document that says why. A navigation to another document by a hyperlink or by setting the location runs
+  from a task, and aborts the load of the current document. The page is the navigable: each document that it commits
+  has a Window of its own, and the host learns of each Window as it opens and closes (`PrHtmlHost::windowOpened`,
+  `windowClosed`). A navigation within the document, to a fragment, keeps its Window.
 - The session history (`PrHtmlSessionHistory`, `pr/html_history.h`) is the host's for a tab, and outlives the browsing
   contexts that its navigations make. Each document that a browsing context loads takes an entry: a new one after the
   current entry, which drops those after it, or the entry that a traversal or a `location.replace()` asked for. A

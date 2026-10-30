@@ -124,16 +124,17 @@ typedef struct PrHtmlHost {
     // default host. Null gives each such page the default host, which runs no scripts.
     void (*PR_NULLABLE frame)(void* PR_NULLABLE context, PrHtmlPage* parent, struct PrHtmlHost* child);
 
-    // Navigates the page to the document at `url` (html/#navigate), as a hyperlink or a script that sets the location
-    // asks. `url` is absolute, and may have a fragment. The call comes from a task of the page. After the call returns,
-    // the host navigates this page to it, or a page that replaces this one (prHtmlPageNavigate). If null, a navigation
-    // to another document does nothing.
-    void (*PR_NULLABLE navigate)(void* PR_NULLABLE context, PrHtmlPage* page, PrStringView url);
+    // Called when the page's window opens, which prHtmlPageWindow then returns: once the page is created, before
+    // anything loads in it, and each time a navigation commits a document, which has a window of its own
+    // (html/#initialise-the-document-object).
+    void (*PR_NULLABLE windowOpened)(void* PR_NULLABLE context, PrHtmlPage* page);
 
-    // Called once the host's page is created, before anything loads in it.
-    void (*PR_NULLABLE opened)(void* PR_NULLABLE context, PrHtmlPage* page);
+    // Called before the page's window closes: before the window of a document that a navigation commits takes its
+    // place, and before the page is destroyed. A closed window runs nothing, and lives while references to it remain
+    // (prDomEventTargetRetain).
+    void (*PR_NULLABLE windowClosed)(void* PR_NULLABLE context, PrHtmlPage* page);
 
-    // Called when the host's page is about to be destroyed.
+    // Called when the host's page is about to be destroyed, after its window closes.
     void (*PR_NULLABLE closed)(void* PR_NULLABLE context, PrHtmlPage* page);
 
     // Called once the load of a document ends (html/#the-end), after its load event or after the failure that aborted
@@ -211,8 +212,8 @@ static inline PrHtmlHost prHtmlHostDefault(void) {
     value.compile = NULL;
     value.microtask = NULL;
     value.frame = NULL;
-    value.navigate = NULL;
-    value.opened = NULL;
+    value.windowOpened = NULL;
+    value.windowClosed = NULL;
     value.closed = NULL;
     value.loaded = NULL;
     value.elementState = NULL;
@@ -244,9 +245,9 @@ void prHtmlPageDestroy(PrHtmlPage* PR_NULLABLE self);
 // Traverses the page's session history by `delta` entries (html/#traverse-the-history-by-a-delta), as a user's back and
 // forward buttons do. An entry of the window's document becomes current in a task, which sets the document's URL and
 // history state and fires popstate, and hashchange if the fragment changed. For an entry of another document, the task
-// asks the host to navigate to its URL (PrHtmlHost::navigate), and the next document that a page of the history loads
-// takes that entry and its state rather than pushing one. A delta of 0 reloads the current entry's document in the same
-// way. Does nothing for a delta past either end.
+// navigates the page to its URL (prHtmlPageNavigate), and the document that loads takes that entry and its state rather
+// than pushing one. A delta of 0 reloads the current entry's document in the same way. Does nothing for a delta past
+// either end.
 void prHtmlPageTraverse(PrHtmlPage* self, int32_t delta);
 
 // Returns the page's Window, which the page owns.
@@ -340,6 +341,11 @@ void prHtmlPageSetMediaType(PrHtmlPage* self, PrCssMediaType type);
 // (html/#encoding-sniffing-algorithm). It is windows-1252 until a host sets it, and the page's frames take it. The spec
 // suggests a default that depends on the user's locale.
 void prHtmlPageSetDefaultCharset(PrHtmlPage* self, PrCharset charset);
+
+// Sets the extent of the viewport in CSS pixels, which is 800 by 600 until a host sets it. The window's media queries
+// see it, and the document is laid out in it, including the layout that a script's query brings up to date. A frame's
+// viewport is its iframe's content box, which its parent sets.
+void prHtmlPageSetViewport(PrHtmlPage* self, PrVec2 extent);
 
 // Sets the display that the document is shown on, which is prAppDisplayDefault until a host sets it. The media features
 // that describe a display follow it: resolution, color-gamut and dynamic-range. The layout snaps to its pixel ratio,

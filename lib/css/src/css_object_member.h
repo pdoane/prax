@@ -41,10 +41,11 @@ struct CssStyleDeclaration {
     // owns.
     void (*PR_NULLABLE refresh)(const PrCssStyleDeclaration* declaration);
 
-    // Serializes the value of the longhand `property` to `out` without bringing the whole block up to date. Used for a
-    // block that `refresh` maintains. The value is the same one that a read of the refreshed block gives. Returns false
-    // if it does not serialize the value, and the block is then read instead.
-    bool (*PR_NULLABLE serializeLonghand)(const PrCssStyleDeclaration* declaration, PrCssProperty property, TextBuffer* out);
+    // Serializes the value of a longhand or a custom property to `out` without bringing the whole block up to date.
+    // Used for a block that `refresh` maintains. The value is the same one that a read of the refreshed block gives.
+    // Returns false if it does not serialize the value, and the block is then read instead.
+    bool (*PR_NULLABLE serializeValue)(const PrCssStyleDeclaration* declaration, const CssDeclaredName& name,
+        TextBuffer* out);
 
     bool readOnly;                                    // cssom-1/#cssstyledeclaration-readonly-flag
 };

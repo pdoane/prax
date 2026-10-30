@@ -539,7 +539,7 @@ WRAPPERS = {
                                                         "unistd.h"},
     "lib/core/backends/posix/src/core_posix_file.cpp": {"dirent.h", "errno.h", "fcntl.h", "stdio.h", "stdlib.h",
                                                         "string.h", "sys/mman.h", "sys/stat.h", "unistd.h"},
-    "lib/core/backends/posix/src/core_posix_thread.cpp": {"pthread.h", "stdlib.h", "unistd.h"},
+    "lib/core/backends/posix/src/core_posix_thread.cpp": {"errno.h", "pthread.h", "stdlib.h", "time.h", "unistd.h"},
     "lib/core/backends/posix/src/core_posix_time.cpp": {"time.h"},
     "lib/net/backends/sockets/src/net_sockets_platform_posix.cpp": {"errno.h", "fcntl.h", "netdb.h", "netinet/in.h",
                                                                     "netinet/tcp.h", "poll.h", "sys/socket.h",

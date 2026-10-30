@@ -64,6 +64,12 @@ void post(PrNet* base, PrNetTaskFn fn, void* PR_NULLABLE context) {
     prMutexUnlock(&network->mutex);
 }
 
+// The loop runs on the caller's thread, so a blocking post runs it.
+void postBlocking(PrNet* base, PrNetTaskFn fn, void* PR_NULLABLE context) {
+    post(base, fn, context);
+    run(static_cast<NullNet*>(base));
+}
+
 PrStatus connectNetwork(PrNet*, const PrNetConnectDesc*, PrNetStream* PR_NULLABLE* PR_NONNULL) {
     return PrStatus_NotSupported;
 }
@@ -78,6 +84,7 @@ PrNet* prNetNullCreate(void) {
     NullNet* network = allocZeroed<NullNet>();
     network->destroy = destroyNetwork;
     network->post = post;
+    network->postBlocking = postBlocking;
     network->connect = connectNetwork;
     prMutexInit(&network->mutex);
     return network;

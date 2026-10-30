@@ -50,6 +50,10 @@ void prConditionReset(PrCondition* condition);
 // return without a signal, so a waiter tests the state it waits for again.
 void prConditionWait(PrCondition* condition, PrMutex* mutex);
 
+// Waits as prConditionWait does, for at most `milliseconds`. Returns false if the time passed first. A wait of zero or
+// less, or one that is not a number, returns false at once, having released and locked `mutex`.
+bool prConditionWaitFor(PrCondition* condition, PrMutex* mutex, double milliseconds);
+
 // Wakes at least one of the threads waiting on the condition, if any are waiting.
 void prConditionSignal(PrCondition* condition);
 

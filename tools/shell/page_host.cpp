@@ -27,6 +27,7 @@
 #include "pr/net.h"
 #include "pr/net_null.h"
 #include "pr/quickjs_binding.h"
+#include "pr/storage_disk.h"
 #include "pr/storage_memory.h"
 #include "pr/string_ops.h"
 #include "pr/svg_quickjs.h"
@@ -47,7 +48,6 @@
 #include <chrono>
 #include <condition_variable>
 #include <functional>
-#include <future>
 #include <map>
 #include <mutex>
 #include <set>
@@ -93,10 +93,12 @@ struct HostState {
     PrFetchNetwork* PR_NULLABLE builtin = nullptr;
     PrFetchNetwork* PR_NULLABLE fetcher = nullptr;
 
-    // The built-in fetcher's HTTP cache, in memory, which the runs share as a browser under wptrunner keeps its cache
-    // from one test to the next, or null without sockets. A server that marks its resources cacheable is asked for each
-    // once in a run.
+    // The built-in fetcher's HTTP cache, which the runs share as a browser under wptrunner keeps its cache from one
+    // test to the next, or null without sockets. A server that marks its resources cacheable is asked for each once in
+    // a run. The cache is in memory, or on disk in `cacheDirectory` (useDiskCache), where `cacheIo` writes it.
     PrStorage* PR_NULLABLE cache = nullptr;
+    std::string cacheDirectory;
+    PrTaskPool* PR_NULLABLE cacheIo = nullptr;
 
     // How the network is opened: with sockets or not, the rules that resolve hosts (addHostRule), and the DER
     // certificates that HTTPS trusts besides the system's (addTrustAnchor), with the views of them that HTTP holds.
@@ -123,6 +125,7 @@ struct HostState {
     bool verify = false;                        // check each page's presentation after its rendering updates
     bool scripts = true;                        // run the pages' own scripts
     PrAppUserPreferences preferences{};         // the user's preferences that the pages load with
+    PrVec2 viewport = {800, 600};               // the viewport that the pages load in, in CSS pixels
     uint32_t restyleThreads = 0;                // as in PrDomAgentOptions::restyleThreads
     PrTaskPool* workers = nullptr;              // the threads that share the agent's work with the loop's thread
 
@@ -167,7 +170,7 @@ struct Page {
     // and the host has yet to dispatch.
     PrHtmlView* PR_NULLABLE view = nullptr;
     std::vector<PendingInput> input = {};
-    PrVec2 viewport = {800, 600};   // the view's viewport, WPT's until a paint gives another
+    PrVec2 viewport = {800, 600};   // the view's viewport, the host's until a paint gives another
 };
 
 namespace {
@@ -309,24 +312,6 @@ void answerResource(void* PR_NULLABLE context, PrFetchInterceptRequest* request)
 void runNetwork(HostState& s) {
     if (s.net != nullptr && s.nullNet)
         prNetNullRun(s.net);
-}
-
-// Runs `fn` on the loop, and returns once it has run.
-void runOnLoop(HostState& s, void (*fn)(HostState& s)) {
-    struct Call {
-        HostState* host;
-        void (*fn)(HostState& s);
-        std::promise<void> done;
-    };
-    Call call{&s, fn, {}};
-    std::future<void> done = call.done.get_future();
-    prNetPost(s.net, [](void* PR_NULLABLE context) {
-        Call* call = static_cast<Call*>(context);
-        call->fn(*call->host);
-        call->done.set_value();
-    }, &call);
-    runNetwork(s);
-    done.wait();
 }
 
 // Wakes the host's thread when a task is posted to the agent, as the loop does with each response.
@@ -507,7 +492,14 @@ void openNetwork(HostState& s) {
             .hostRuleCount = uint32_t(rules.size()),
         };
         s.http = prHttpCreate(PrHttpBackend_Default, &http);
-        s.cache = prStorageMemoryCreate(kCacheBytes, PrStorageEviction_LeastRecentlyUsed);
+        if (!s.cacheDirectory.empty()) {
+            s.cacheIo = prTaskPoolCreate(PrTaskPoolBackend_Default, 1);
+            PrStorageDiskDesc disk{.directory = s.cacheDirectory, .limitBytes = kCacheBytes, .pool = s.cacheIo};
+            if (prStorageDiskCreate(&disk, &s.cache) != PrStatus_Ok)
+                fprintf(stderr, "cannot open the cache in %s\n", s.cacheDirectory.c_str());
+        }
+        if (s.cache == nullptr)
+            s.cache = prStorageMemoryCreate(kCacheBytes, PrStorageEviction_LeastRecentlyUsed);
     }
     if (s.net == nullptr) {
         s.net = prNetNullCreate();
@@ -524,15 +516,18 @@ void openNetwork(HostState& s) {
 void closeNetwork(HostState& s) {
     if (s.net == nullptr)
         return;
-    runOnLoop(s, [](HostState& state) {
+    prNetPostBlocking(s.net, [](void* PR_NULLABLE context) {
+        HostState& state = *static_cast<HostState*>(context);
         prFetchNetworkDestroy(state.fetcher);
         prFetchNetworkDestroy(state.builtin);
         prHttpDestroy(state.http);
-    });
+    }, &s);
     prTlsDestroy(s.tls);
     prNetDestroy(s.net);
     prStorageDestroy(s.cache);
     s.cache = nullptr;
+    prTaskPoolDestroy(s.cacheIo);
+    s.cacheIo = nullptr;
     s.fetcher = nullptr;
     s.builtin = nullptr;
     s.http = nullptr;
@@ -545,6 +540,7 @@ PrHtmlHost startPage(HostState& state, const std::string& name, const std::strin
     openNetwork(state);
     state.pages.push_back(std::make_unique<Page>(Page{nullptr, name, url, &state}));
     Page* run = state.pages.back().get();
+    run->viewport = state.viewport;
     PrHtmlHost host = prHtmlHostDefault();
     host.context = run;
     host.agent = state.agent;
@@ -1009,7 +1005,7 @@ void PageHost::advance(double until) {
             continue;
         }
         *s.now += delay;
-        if (!prDomAgentRunTask(s.agent))
+        if (!prDomAgentRun(s.agent, 0))
             return;
     }
 }
@@ -1024,6 +1020,13 @@ bool PageHost::useNetwork() {
         return false;
     }
     state_->sockets = true;
+    return true;
+}
+
+bool PageHost::useDiskCache(const std::filesystem::path& directory) {
+    if (!useNetwork())
+        return false;
+    state_->cacheDirectory = directory.string();
     return true;
 }
 
@@ -1077,6 +1080,7 @@ Page* PR_NULLABLE PageHost::load(const std::string& location, Capture capture) {
     PrHtmlHost scripted = prJsHtmlEngineHost(s.engine, &host, scripting);
     PrHtmlPage* htmlPage = prHtmlPageCreate(&scripted);
     prHtmlPageSetUserPreferences(htmlPage, &s.preferences);
+    prHtmlPageSetViewport(htmlPage, run.viewport);
     run.requested = true;
     run.capture = capture;
     if (!run.ok)
@@ -1101,6 +1105,10 @@ void PageHost::setUserPreferences(const PrAppUserPreferences& preferences) {
 
 PrAppUserPreferences PageHost::userPreferences() const {
     return state_->preferences;
+}
+
+void PageHost::setViewport(PrVec2 viewport) {
+    state_->viewport = viewport;
 }
 
 void PageHost::setRestyleThreads(uint32_t threads) {
@@ -1183,7 +1191,7 @@ PageHost::Settled PageHost::settle(double timeout) {
         }
         if (delay > 0 && !waitMilliseconds(s, delay))
             return Settled::Failed;
-        prDomAgentRunTask(s.agent);
+        prDomAgentRun(s.agent, 0);
     }
 }
 
@@ -1242,10 +1250,8 @@ bool PageHost::paint(Page* page, PrVec2 viewport, const PrAppDisplay& display, c
         bool ran = false;
         for (;;) {
             runNetwork(s);
-            while (prDomAgentNextTaskDelay(s.agent) == 0 && prDomAgentRunTask(s.agent)) {
-                prJsHtmlEngineCheckpoint(s.engine);
+            while (prDomAgentNextTaskDelay(s.agent) == 0 && prDomAgentRun(s.agent, 0))
                 ran = true;
-            }
             if (!waitsForNetwork(s) || !waitForWake(s, deadline))
                 break;
         }

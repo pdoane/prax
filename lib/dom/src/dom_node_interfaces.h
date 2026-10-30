@@ -190,6 +190,12 @@ struct DomDocumentHost {
     // `attribute`, or when the element's attribute `attribute` changes.
     void (*PR_NONNULL embedChanged)(void* PR_NULLABLE context, PrDomElement* element, PrStringView attribute);
 
+    // Called when an element for which domEmbeds is true is removed from `oldParent`, where `oldNext` followed it, or
+    // null if it was the last child (dom/#concept-node-remove-ext). Null for a host whose content does not depend on
+    // its siblings.
+    void (*PR_NULLABLE embedRemoved)(void* PR_NULLABLE context, PrDomElement* element, PrDomNode* oldParent,
+        PrDomNode* PR_NULLABLE oldNext);
+
     // Prepares a script element that is not parser-inserted (html/#prepare-the-script-element), as its post-connection
     // steps do: once an insertion that connects it ends, when its children change while it is connected, and when its
     // source attribute is set while it is connected (html/#script-processing-model). Null for a host that runs no

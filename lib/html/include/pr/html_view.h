@@ -53,8 +53,10 @@ typedef struct PrHtmlViewDesc {
     bool canvasFilled;
 } PrHtmlViewDesc;
 
-// Creates a view of the browsing context's document. The viewport starts at 800 by 600 CSS pixels, and the window's
-// media environment takes that size.
+// Creates a view of the browsing context's documents, in the page's viewport (prHtmlPageSetViewport). The view follows
+// the page from one document to the next. A view with a compositor adds an update to the page's agent
+// (prDomAgentAddUpdate), so that each run of the agent's tasks (prDomAgentRun) brings the rendering to the compositor
+// (prHtmlViewUpdate).
 PrHtmlView* prHtmlViewCreate(const PrHtmlViewDesc* desc);
 
 // Waits for the agent's layout thread, and frees the view.
@@ -143,6 +145,16 @@ typedef uint8_t PrHtmlViewEventResult;
 //
 // The events that the view fires are trusted.
 PrHtmlViewEventResult prHtmlViewEvent(PrHtmlView* view, const PrAppEvent* event, PrHtmlViewEventFlags flags);
+
+// Pass what a host's window gives the view from the window's thread, which is the compositor's, to the agent's thread.
+// Each is applied in a task of the agent: an event as prHtmlViewEvent dispatches it, with a copy of its text; a frame's
+// extent, display and preferences as prHtmlViewSetViewport, prHtmlViewSetDisplay and prHtmlViewSetUserPreferences set
+// them; and a traversal of the session history by `delta` as prHtmlPageTraverse runs it. A wheel scrolls the compositor
+// at once, unless the compositor says that it waits for the document (prLayoutCompositorWheelBlocks), and its event
+// then goes to the document with PrHtmlViewEventFlag_Scrolled. What is posted after the view is destroyed is dropped.
+void prHtmlViewPostEvent(PrHtmlView* view, const PrAppEvent* event);
+void prHtmlViewPostFrame(PrHtmlView* view, const PrAppFrame* frame);
+void prHtmlViewPostTraverse(PrHtmlView* view, int32_t delta);
 
 #if defined(__cplusplus)
 }

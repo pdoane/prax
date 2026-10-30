@@ -6,7 +6,8 @@
 //
 // --network fetches over sockets, as a browser does, rather than answering each fetch on the shell's thread in a fixed
 // order. --resolve <host> <address> resolves a host, or each subdomain of `*.<name>`, to an address, as a hosts file
-// does, and --ca <pem> trusts a certificate authority besides the system's. Each implies --network. --virtual-time runs
+// does, and --ca <pem> trusts a certificate authority besides the system's. --cache <directory> keeps the HTTP cache on
+// disk in the directory, where it outlives the run, as a browser's does. Each implies --network. --virtual-time runs
 // the pages on a virtual clock that advances only when they wait (PageHost::useVirtualTime).
 //
 // --screenshot writes the next page's rendering as a PNG once every page has settled, as WPT's reftests capture it: in
@@ -243,7 +244,7 @@ void parse(PageHost& host, const std::vector<std::string>& args, Run& run) {
             option == "--write" || option == "--reference" || option == "--html" ||
             option == "--viewport" || option == "--pixel-ratio" || option == "--renderer" ||
             option == "--timeout" || option == "--restyle-threads" || option == "--shaper" ||
-            option == "--hinting" || option == "--ca" || option == "--capture-wait";
+            option == "--hinting" || option == "--ca" || option == "--capture-wait" || option == "--cache";
         if ((takesOne && i + 1 >= args.size()) || (takesTwo && i + 2 >= args.size())) {
             fprintf(stderr, "%s needs %s\n", option.c_str(), takesTwo ? "two arguments" : "an argument");
             run.ok = false;
@@ -272,6 +273,9 @@ void parse(PageHost& host, const std::vector<std::string>& args, Run& run) {
                 host.addPrelude(value);
             } else if (option == "--font") {
                 run.ok = host.addFont(value);
+            } else if (option == "--cache") {
+                run.ok = host.useDiskCache(value);
+                run.network = run.ok;
             } else if (option == "--ca") {
                 run.ok = network(host, run) && host.addTrustAnchor(value);
             } else if (option == "--capture-wait") {
@@ -305,6 +309,7 @@ void parse(PageHost& host, const std::vector<std::string>& args, Run& run) {
                 if (!run.ok)
                     fprintf(stderr, "--viewport takes WxH, as 600x800\n");
                 run.viewport = PrVec2{float(width), float(height)};
+                host.setViewport(run.viewport);
             } else if (option == "--renderer") {
                 run.renderer = prDrawRendererBackendFromName(value);
                 run.ok = run.renderer != PrDrawRendererBackend_Default && prDrawRendererBackendIsBuilt(run.renderer);
@@ -406,6 +411,7 @@ int serve(PageHost& host, const Run& settings, Renderers& renderers) {
         }
         harnessCaptureBegin(capture);
         host.reset();
+        host.setViewport(run.viewport);
         parse(host, args, run);
         int status = run.ok ? finish(host, run, renderers) : 1;
         std::string written;
@@ -424,7 +430,7 @@ int main(int argc, char** argv) {
     prCrashHandler();
     harnessStreamsBinary();
     if (argc < 2) {
-        fprintf(stderr, "usage: pr_shell [--network] [--resolve <host> <address>]... [--ca <pem>]... "
+        fprintf(stderr, "usage: pr_shell [--network] [--resolve <host> <address>]... [--ca <pem>]... [--cache <directory>] "
             "[--prelude <script>] [--font <file>] [--capture-wait <script>] [--virtual-time] [--verify] [--no-scripts] [--dark] "
             "[--viewport WxH] [--pixel-ratio <target pixels per px>] [--renderer <name>] "
             "[--timeout <ms>] [--restyle-threads <n>] [--shaper <name>] [--hinting none|light|full] [--serve] "

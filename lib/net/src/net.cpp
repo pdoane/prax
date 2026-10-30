@@ -4,6 +4,8 @@
 
 #include "pr/ascii.h"
 #include "pr/assert.h"
+#include "pr/mutex.h"
+#include "pr/thread.h"
 
 #if defined(PR_NET_HAS_SOCKETS)
 #include "pr/net_sockets.h"
@@ -75,6 +77,38 @@ void prNetDestroy(PrNet* PR_NULLABLE net) {
 
 void prNetPost(PrNet* net, PrNetTaskFn fn, void* PR_NULLABLE context) {
     net->post(net, fn, context);
+}
+
+void prNetPostBlocking(PrNet* net, PrNetTaskFn fn, void* PR_NULLABLE context) {
+    if (net->postBlocking != nullptr) {
+        net->postBlocking(net, fn, context);
+        return;
+    }
+    // The task runs on the loop's thread, and the caller waits until it has.
+    struct Blocking {
+        PrNetTaskFn fn;
+        void* PR_NULLABLE context;
+        PrMutex mutex;
+        PrCondition done;
+        bool finished;
+    };
+    Blocking blocking{.fn = fn, .context = context};
+    prMutexInit(&blocking.mutex);
+    prConditionInit(&blocking.done);
+    prNetPost(net, [](void* PR_NULLABLE data) {
+        Blocking* task = static_cast<Blocking*>(data);
+        task->fn(task->context);
+        prMutexLock(&task->mutex);
+        task->finished = true;
+        prConditionSignal(&task->done);
+        prMutexUnlock(&task->mutex);
+    }, &blocking);
+    prMutexLock(&blocking.mutex);
+    while (!blocking.finished)
+        prConditionWait(&blocking.done, &blocking.mutex);
+    prMutexUnlock(&blocking.mutex);
+    prConditionReset(&blocking.done);
+    prMutexReset(&blocking.mutex);
 }
 
 PrStatus prNetConnect(PrNet* net, const PrNetConnectDesc* desc, PrNetStream* PR_NULLABLE* PR_NONNULL out) {

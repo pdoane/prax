@@ -2,7 +2,7 @@
 //
 // A network owns a loop, which is one thread or one serial queue. The loop runs every callback of the network's
 // streams, and of every layer built over the network, one at a time. A callback never runs during the call that caused
-// it. A network and its streams are used on the loop, except for prNetPost and prNetDestroy.
+// it. A network and its streams are used on the loop, except for prNetPost, prNetPostBlocking and prNetDestroy.
 
 #pragma once
 
@@ -68,6 +68,9 @@ typedef struct PrNetConnectDesc {
 struct PrNet {
     void (*destroy)(PrNet* net);
     void (*post)(PrNet* net, PrNetTaskFn fn, void* PR_NULLABLE context);
+
+    // Null for a backend whose loop is a thread of its own, which prNetPostBlocking waits for.
+    void (*PR_NULLABLE postBlocking)(PrNet* net, PrNetTaskFn fn, void* PR_NULLABLE context);
     PrStatus (*connect)(PrNet* net, const PrNetConnectDesc* desc, PrNetStream* PR_NULLABLE* PR_NONNULL out);
 };
 
@@ -116,6 +119,11 @@ void prNetDestroy(PrNet* PR_NULLABLE net);
 
 // Runs `fn` with `context` on the loop, after the tasks posted before it. Any thread may call it.
 void prNetPost(PrNet* net, PrNetTaskFn fn, void* PR_NULLABLE context);
+
+// Runs `fn` with `context` on the loop, after the tasks posted before it, and returns once `fn` has returned, as an
+// owner does to destroy what lives on the loop. Any thread but the loop's may call it. A network whose loop runs on its
+// owner's thread (prNetNullCreate) runs the loop during the call.
+void prNetPostBlocking(PrNet* net, PrNetTaskFn fn, void* PR_NULLABLE context);
 
 // Starts a connection to `desc`'s host, and writes its stream to `*out`. The stream delivers Open once it connects, or
 // Fail if it cannot. A name that resolves to several addresses is tried at each in turn. Returns InvalidData for a host

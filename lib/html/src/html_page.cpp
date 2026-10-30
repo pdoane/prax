@@ -335,7 +335,7 @@ void fetchArrived(void* PR_NULLABLE data) {
         return;
     }
     fetch->answered = true;
-    htmlWindowQueueTask(&fetch->page->window, completeFetchTask, fetch, dropFetch);
+    htmlWindowQueueTask(fetch->page->window, completeFetchTask, fetch, dropFetch);
 }
 
 // Ends the fetch on the loop with `status`, and posts it to the agent unless the browsing context dropped it. Then
@@ -518,11 +518,11 @@ HtmlFetch* createFetch(PrHtmlPage* self, PrStringView url, DomFetchDestination d
         ++self->delayingFetches;
     fetch->destination = destination;
     fetch->delaysLoad = settings.delaysLoad;
-    fetch->agent = self->window.agent;
+    fetch->agent = self->window->agent;
     fetch->fetcher = self->host.fetcher;
     fetch->url = prStringCopy(url);
-    fetch->origin = htmlWindowOrigin(&self->window);
-    fetch->referrer = prUrlSerialize(self->window.document->url, PrUrlSerialization_Whole);
+    fetch->origin = htmlWindowOrigin(self->window);
+    fetch->referrer = prUrlSerialize(self->window->document->url, PrUrlSerialization_Whole);
     fetch->mode = settings.mode;
     fetch->credentials = settings.credentials;
     prMutexInit(&fetch->lock);
@@ -541,7 +541,7 @@ void answerFetch(HtmlFetch* fetch, PrStatus status) {
     fetch->status = status;
     fetch->references.store(1);
     fetch->answered = true;
-    htmlWindowQueueTask(&fetch->page->window, completeFetchTask, fetch, dropFetch);
+    htmlWindowQueueTask(fetch->page->window, completeFetchTask, fetch, dropFetch);
 }
 
 // Fetches `url`, an absolute URL without a fragment, for `destination` with `settings`, and calls `done` with `data`
@@ -642,7 +642,7 @@ void queueModules(PrHtmlPage* self) {
     if (self->modulesQueued)
         return;
     self->modulesQueued = true;
-    htmlWindowQueueTask(&self->window, settleModulesTask, self,
+    htmlWindowQueueTask(self->window, settleModulesTask, self,
         [](void* data) { static_cast<PrHtmlPage*>(data)->modulesQueued = false; });
 }
 
@@ -810,15 +810,15 @@ PrStatus executeScript(PrHtmlPage* self, const PreparedScript* prepared) {
     };
     bool running = self->runningScript;
     self->runningScript = running || (self->parsing && prepared->kind == PrHtmlScriptKind_Classic);
-    PrDomElement* previous = self->window.currentScript;
+    PrDomElement* previous = self->window->currentScript;
     bool shadow = domNodeShadowRoot(domNodeRoot(prepared->element)) != nullptr;
-    self->window.currentScript = prepared->kind == PrHtmlScriptKind_Classic && !shadow ? prepared->element : nullptr;
+    self->window->currentScript = prepared->kind == PrHtmlScriptKind_Classic && !shadow ? prepared->element : nullptr;
     // An external or module script cannot open the document by writing to it.
     bool destructive = prepared->external || prepared->kind == PrHtmlScriptKind_Module;
     self->ignoreDestructiveWrites += destructive;
     PrStatus status = self->host.execute(self->host.context, self, &script);
     self->ignoreDestructiveWrites -= destructive;
-    self->window.currentScript = previous;
+    self->window->currentScript = previous;
     self->runningScript = running;
     if (status == PrStatus_Ok && prepared->external)
         domEventFire(prepared->element, "load");
@@ -868,7 +868,7 @@ void dropScriptFetch(void* PR_NULLABLE data) {
 // Otherwise it is ready once the fetch is answered.
 void fetchScript(PrHtmlPage* self, PreparedScript* script, PrStringView src, const PrUrl* base) {
     PrUrl* resource = nullptr;
-    if (src.size == 0 || prUrlCreate(src, base, self->window.document->charset, &resource) != PrStatus_Ok) {
+    if (src.size == 0 || prUrlCreate(src, base, self->window->document->charset, &resource) != PrStatus_Ok) {
         prUrlDestroy(resource);
         script->ready = true;
         return;
@@ -895,7 +895,7 @@ void fetchScript(PrHtmlPage* self, PreparedScript* script, PrStringView src, con
     else if (named != PrCharset_None)
         script->charset = named;
     else
-        script->charset = prCharsetOutput(self->window.document->charset);
+        script->charset = prCharsetOutput(self->window->document->charset);
     PrString request = prUrlSerialize(resource, PrUrlSerialization_ExcludeFragment);
     prUrlDestroy(resource);
     script->fetching = true;
@@ -918,7 +918,7 @@ PrStringView scriptSource(const PrDomElement* element) {
 
 // Pauses the parse of the window's document, which its HTML or XML parser runs.
 void pauseParse(PrHtmlPage* self) {
-    if (self->window.document->kind == DomDocumentKind_Xml)
+    if (self->window->document->kind == DomDocumentKind_Xml)
         prXmlParserPause(self->xml.parser);
     else
         self->parser.paused = true;
@@ -926,7 +926,7 @@ void pauseParse(PrHtmlPage* self) {
 
 // Returns true if a script paused the parse of the window's document.
 bool parsePaused(const PrHtmlPage* self) {
-    if (self->window.document->kind == DomDocumentKind_Xml)
+    if (self->window->document->kind == DomDocumentKind_Xml)
         return self->xml.parser != nullptr && prXmlParserIsPaused(self->xml.parser);
     return self->parser.paused;
 }
@@ -977,11 +977,11 @@ PrStatus prepareScriptAt(PrHtmlPage* self, PrDomElement* element, uint32_t line,
         .line = 1,
         .column = 1,
     };
-    PrUrl* base = domDocumentBaseUrl(self->window.document);
+    PrUrl* base = domDocumentBaseUrl(self->window->document);
     if (script->external) {
         fetchScript(self, script, src, base);
     } else {
-        script->url = prUrlSerialize(self->window.document->url, PrUrlSerialization_Whole);
+        script->url = prUrlSerialize(self->window->document->url, PrUrlSerialization_Whole);
         script->baseUrl = prUrlSerialize(base, PrUrlSerialization_Whole);
         script->line = line;
         script->column = column;
@@ -1022,7 +1022,7 @@ PrStatus prepareScriptAt(PrHtmlPage* self, PrDomElement* element, uint32_t line,
     }
     // A parser-blocking script runs at once if it is ready and no sheet blocks it, as does an inline script that no
     // parser inserted (html/#script-processing-inline), even while another script runs.
-    if (blocking && (!script->ready || cssDocumentHasBlockingSheet(self->window.document))) {
+    if (blocking && (!script->ready || cssDocumentHasBlockingSheet(self->window->document))) {
         self->blocking = script;
         pauseParse(self);
         return PrStatus_Ok;
@@ -1044,7 +1044,7 @@ PrStatus prepareScript(void* context, PrDomElement* element) {
 // A document that is not the window's, or a window that runs no scripts, runs none.
 void prepareConnectedScript(void* PR_NULLABLE context, PrDomElement* element) {
     PrHtmlPage* self = static_cast<PrHtmlPage*>(context);
-    if (self->host.execute != nullptr && element->document == self->window.document)
+    if (self->host.execute != nullptr && element->document == self->window->document)
         prepareScriptAt(self, element, 1, 1);
 }
 
@@ -1054,11 +1054,11 @@ PrStatus prepareXmlScript(void* context, PrDomElement* element, uint32_t line, u
 }
 
 void queueTask(void* PR_NULLABLE context, void (*run)(void* data), void* data, void (*PR_NULLABLE drop)(void* data)) {
-    htmlWindowQueueTask(&static_cast<PrHtmlPage*>(context)->window, run, data, drop);
+    htmlWindowQueueTask(static_cast<PrHtmlPage*>(context)->window, run, data, drop);
 }
 
 void queueDelayingTask(void* PR_NULLABLE context, void (*run)(void* data), void* data, void (*PR_NULLABLE drop)(void* data)) {
-    htmlWindowQueueTask(&static_cast<PrHtmlPage*>(context)->window, run, data, drop, true);
+    htmlWindowQueueTask(static_cast<PrHtmlPage*>(context)->window, run, data, drop, true);
 }
 
 bool queueMicrotask(void* PR_NULLABLE context, void (*run)(void* data), void* data) {
@@ -1072,7 +1072,7 @@ bool queueMicrotask(void* PR_NULLABLE context, void (*run)(void* data), void* da
 bool compileHandler(void* PR_NULLABLE context, PrDomEventTarget* target, PrDomElement* element,
         PrDomEventHandler handler, PrStringView body, PrDomEventHandlerCallback* out) {
     PrHtmlPage* self = static_cast<PrHtmlPage*>(context);
-    if (self->host.compile == nullptr || isMarkdownDocument(self->window.document))
+    if (self->host.compile == nullptr || isMarkdownDocument(self->window->document))
         return false;
     return self->host.compile(self->host.context, self, target, element, handler, body, out);
 }
@@ -1088,7 +1088,7 @@ PrDomHostState elementState(void* PR_NULLABLE context, const PrDomElement* eleme
 void startDecoder(PrHtmlPage* self, PrCharset charset, HtmlConfidence confidence) {
     self->decoder = prCharsetDecoderMake(charset, 0);
     self->confidence = confidence;
-    self->window.document->charset = charset;
+    self->window->document->charset = charset;
 }
 
 // Decides the charset of an HTML load from the bytes that have arrived (html/#encoding-sniffing-algorithm), and starts
@@ -1108,11 +1108,11 @@ bool sniffCharset(PrHtmlPage* self, PrStringView bytes, bool complete) {
     if (!htmlPrescan(bytes, complete, &charset))
         return false;
     // A frame takes the charset of its parent's document of the same origin.
-    const PrHtmlWindow* parent = self->window.parent;
+    const PrHtmlWindow* parent = self->window->parent;
     if (charset == PrCharset_None && parent != nullptr && parent->document != nullptr) {
         PrCharset inherited = parent->document->charset;
         if (inherited != PrCharset_Utf16Be && inherited != PrCharset_Utf16Le &&
-                prUrlHasSameOrigin(parent->document->url, self->window.document->url))
+                prUrlHasSameOrigin(parent->document->url, self->window->document->url))
             charset = inherited;
     }
     startDecoder(self, charset != PrCharset_None ? charset : self->defaultCharset, HtmlConfidence_Tentative);
@@ -1149,14 +1149,14 @@ bool changeEncoding(void* data, PrCharset charset) {
     }
     self->decoder = after;
     self->confidence = HtmlConfidence_Certain;
-    self->window.document->charset = charset;
+    self->window->document->charset = charset;
     return false;
 }
 
 // Releases the window's document, which a script may still hold. The document loses the objects that the window gave
 // it, which the document refers to without holding them.
 void discardDocument(PrHtmlPage* self) {
-    PrDomDocument* document = self->window.document;
+    PrDomDocument* document = self->window->document;
     if (document == nullptr)
         return;
     prCssPresentationDestroy(self->presentation);
@@ -1167,14 +1167,14 @@ void discardDocument(PrHtmlPage* self) {
     document->global = nullptr;
     document->host = nullptr;
     document->customElements = nullptr;
-    self->window.document = nullptr;
+    self->window->document = nullptr;
     domNodeRelease(document);
 }
 
 // Gives the window a new document. The document's media queries are evaluated against the window's environment, and the
 // document fetches and queues tasks through the browsing context.
 void newDocument(PrHtmlPage* self) {
-    PrHtmlWindow* window = &self->window;
+    PrHtmlWindow* window = self->window;
     window->document = domDocumentCreate(DomDocumentKind_Html);
     prCssEnable(window->document);
     prSvgEnable(window->document);
@@ -1234,7 +1234,7 @@ void queueElementEvent(PrHtmlPage* self, PrDomElement* element, bool error) {
         return;
     domNodeHold(element);
     self->elementEvents.push(HtmlElementEvent{element, domElementState(element)->generation, error});
-    htmlWindowQueueTask(&self->window, fireElementEventsTask, self);
+    htmlWindowQueueTask(self->window, fireElementEventsTask, self);
 }
 
 // A fetch for an element's embedded content (html/#the-iframe-element, html/#the-img-element,
@@ -1272,38 +1272,29 @@ bool isCurrent(const EmbedFetch* fetch) {
 void frameViewport(PrHtmlPage* child, const PrDomElement* element) {
     struct ViewportSide {
         PrStringView attribute;
-        PrCssDescriptor feature;
         double fallback;
     };
-    constexpr ViewportSide kSides[] = {
-        {"width", PrCssDescriptor_MediaWidth, 300},
-        {"height", PrCssDescriptor_MediaHeight, 150},
-    };
-    for (const ViewportSide& side : kSides) {
-        double value = 0;
+    constexpr ViewportSide kSides[] = {{"width", 300}, {"height", 150}};
+    double sizes[2];
+    for (uint32_t i = 0; i < 2; ++i) {
         bool percentage = false;
-        if (!domParseDimension(domAttributeValue(element, side.attribute), &value, &percentage) || percentage)
-            value = side.fallback;
-        TextBuffer length;
-        cssSerializeNumber(&length, value);
-        textAppend(&length, "px");
-        cssMediaEnvironmentSet(&child->window.media, side.feature, textView(&length));
-        textReset(&length);
+        if (!domParseDimension(domAttributeValue(element, kSides[i].attribute), &sizes[i], &percentage) || percentage)
+            sizes[i] = kSides[i].fallback;
     }
-    cssPresentationDocumentMediaChanged(child->window.document);
+    prHtmlPageSetViewport(child, PrVec2{float(sizes[0]), float(sizes[1])});
 }
 
 // Releases the frame that the element holds, if any. The browsing context that it held is discarded: its tasks no
 // longer run, and it lives on until this context is destroyed.
 void dropFrame(PrHtmlPage* self, PrDomElement* element) {
-    PrHtmlWindow* window = &self->window;
+    PrHtmlWindow* window = self->window;
     for (uint32_t i = 0; i < window->frames.count; ++i) {
         if (window->frames.data[i].container != element)
             continue;
         for (uint32_t k = 0; k < self->children.count; ++k) {
             PrHtmlPage* child = self->children.data[k];
-            if (&child->window == window->frames.data[i].window)
-                domAgentRemoveGlobal(child->window.agent, child);
+            if (child->window == window->frames.data[i].window)
+                domAgentRemoveGlobal(child->window->agent, child);
         }
         window->frames.erase(i);
         // A load that waited for the frame's document no longer does.
@@ -1327,7 +1318,7 @@ typedef uint8_t FrameDocument;
 // `headers`.
 void attachFrame(PrHtmlPage* self, PrDomElement* element, PrStringView source, PrStringView url,
         const PrHtmlResponseHeaders& headers, FrameDocument kind = FrameDocument_Navigated) {
-    PrHtmlWindow* window = &self->window;
+    PrHtmlWindow* window = self->window;
     PrHtmlHost childHost = prHtmlHostDefault();
     childHost.navigatorCompatibilityMode = self->host.navigatorCompatibilityMode;
     if (self->host.frame != nullptr)
@@ -1351,7 +1342,7 @@ void attachFrame(PrHtmlPage* self, PrDomElement* element, PrStringView source, P
     if (childHost.sessionStorage == nullptr)
         childHost.sessionStorage = self->host.sessionStorage;
     PrHtmlPage* child = prHtmlPageCreate(&childHost);
-    child->window.parent = window;
+    child->window->parent = window;
     child->initialBlank = kind == FrameDocument_InitialBlank;
     child->defaultCharset = self->defaultCharset;
     prHtmlPageSetDisplay(child, &self->display);
@@ -1360,7 +1351,7 @@ void attachFrame(PrHtmlPage* self, PrDomElement* element, PrStringView source, P
     if (child->presentation != nullptr)
         child->presentation->embedding = PrCssPresentationEmbedding_Frame;
     self->children.push(child);
-    window->frames.push(HtmlFrame{element, &child->window});
+    window->frames.push(HtmlFrame{element, child->window});
     frameViewport(child, element);
     domElementState(element)->embed = htmlPageEmbed(child);
     if (domIsConnected(element))
@@ -1370,7 +1361,7 @@ void attachFrame(PrHtmlPage* self, PrDomElement* element, PrStringView source, P
 
 // Returns true if the element is connected in the window's document, which is where its content loads.
 bool inWindow(const PrHtmlPage* self, PrDomElement* element) {
-    return domIsConnected(element) && element->document == self->window.document;
+    return domIsConnected(element) && element->document == self->window->document;
 }
 
 // Receives the result of fetching an iframe's src. The iframe's browsing context navigates to the resource, or to an
@@ -1403,7 +1394,7 @@ void frameChanged(PrHtmlPage* self, PrDomElement* element) {
     PrUrl* resolved = nullptr;
     if (srcdoc.data != nullptr) {
         attachFrame(self, element, srcdoc, "about:srcdoc", PrHtmlResponseHeaders{});
-    } else if (src.size != 0 && domDocumentParseUrl(self->window.document, src, &resolved) == PrStatus_Ok) {
+    } else if (src.size != 0 && domDocumentParseUrl(self->window->document, src, &resolved) == PrStatus_Ok) {
         attachFrame(self, element, "", "about:blank", PrHtmlResponseHeaders{}, FrameDocument_InitialBlank);
         self->children.data[self->children.count - 1]->awaitingSource = true;
         EmbedFetch* fetch = newEmbedFetch(self, element, prUrlSerialize(resolved, PrUrlSerialization_Whole));
@@ -1626,7 +1617,7 @@ void updateImage(PrHtmlPage* self, PrDomElement* element, PrStringView source, d
 
 // Updates an img element's image to the source that it selects for the window's display (html_image_source.h).
 void updateImageSource(PrHtmlPage* self, PrDomElement* element) {
-    const CssMediaEnvironment* media = &self->window.media;
+    const CssMediaEnvironment* media = &self->window->media;
     HtmlImageEnvironment environment{
         .media = media,
         .pixelRatio = double(cssMediaEnvironmentPixelRatio(media)),
@@ -1638,13 +1629,14 @@ void updateImageSource(PrHtmlPage* self, PrDomElement* element) {
     updateImage(self, element, source.url, source.density);
 }
 
-// Updates the image of each img element after a source element in its picture parent, whose source set the source can
-// change. An img that its browsing context has not updated yet selects its source when it is first connected.
-void sourceChanged(PrHtmlPage* self, PrDomElement* source) {
-    PrDomElement* picture = domElementFromNode(source->parent);
+// Updates the image of each img element from `next` on among the children of `parent`, if `parent` is a picture: the
+// img elements whose source sets a change to a source element before them can change. An img that its browsing context
+// has not updated yet selects its source when it is first connected.
+void sourceChanged(PrHtmlPage* self, PrDomNode* parent, PrDomNode* PR_NULLABLE next) {
+    PrDomElement* picture = domElementFromNode(parent);
     if (picture == nullptr || !domIsHtml(picture, PrDomTag_Picture))
         return;
-    for (PrDomNode* at = source->next; at != nullptr; at = at->next) {
+    for (PrDomNode* at = next; at != nullptr; at = at->next) {
         PrDomElement* img = domElementFromNode(at);
         if (img != nullptr && domIsHtml(img, PrDomTag_Img) && img->state != nullptr && img->state->generation != 0)
             updateImageSource(self, img);
@@ -1731,7 +1723,7 @@ bool activates(void* PR_NULLABLE, const PrDomElement* element) {
 }
 
 void activate(void* PR_NULLABLE context, PrDomElement* element, PrDomEvent*) {
-    htmlWindowFollowHyperlink(&static_cast<PrHtmlPage*>(context)->window, element);
+    htmlWindowFollowHyperlink(static_cast<PrHtmlPage*>(context)->window, element);
 }
 
 // Handles a change to embedded content that the browsing context of its document loads. An image updates when its
@@ -1774,8 +1766,9 @@ void embedChanged(void* PR_NULLABLE context, PrDomElement* element, PrStringView
         }
         case PrDomTag_Source:
             // A source of a picture offers the images of the img elements after it (html/#reacting-to-dom-mutations).
-            if (connection || attribute == "srcset" || attribute == "sizes" || attribute == "media" || attribute == "type")
-                sourceChanged(self, element);
+            if (element->parent != nullptr &&
+                    (connection || attribute == "srcset" || attribute == "sizes" || attribute == "media" || attribute == "type"))
+                sourceChanged(self, element->parent, element->next);
             return;
         case PrDomTag_Input:
             if (connection ? fresh && domElementIsImageButton(element) : attribute == "src" || attribute == "type") {
@@ -1790,32 +1783,42 @@ void embedChanged(void* PR_NULLABLE context, PrDomElement* element, PrStringView
     }
 }
 
-// The document host's viewport (DomDocumentHost::viewport). A frame's viewport is its iframe's content box, so the
-// parent's layout is brought up to date first. A frame whose iframe has no box keeps its last viewport, and so does a
-// window that is not a frame, whose viewport its view sets.
-bool frameViewportNow(void* PR_NULLABLE context, PrVec2* out) {
-    PrHtmlPage* self = static_cast<PrHtmlPage*>(context);
-    PrHtmlWindow* parentWindow = self->window.parent;
+// Handles the removal of embedded content from `oldParent`. A source removed from a picture no longer offers the images
+// of the img elements that followed it (html/#reacting-to-dom-mutations).
+void embedRemoved(void* PR_NULLABLE context, PrDomElement* element, PrDomNode* oldParent, PrDomNode* PR_NULLABLE oldNext) {
+    if (domIsHtml(element, PrDomTag_Source))
+        sourceChanged(static_cast<PrHtmlPage*>(context), oldParent, oldNext);
+}
+
+// Brings a frame's viewport up to date as its iframe's content box, after the parent's layout. A frame whose iframe has
+// no box keeps its last viewport.
+void updateFrameViewport(PrHtmlPage* self) {
+    PrHtmlWindow* parentWindow = self->window->parent;
     PrHtmlPage* parent = parentWindow != nullptr ? htmlDocumentPage(parentWindow->document) : nullptr;
     if (parent == nullptr || parent->presentation == nullptr)
-        return false;
+        return;
     PrDomElement* container = nullptr;
-    for (uint32_t i = 0; i < parent->window.frames.count && container == nullptr; ++i) {
-        if (parent->window.frames.data[i].window == &self->window)
-            container = parent->window.frames.data[i].container;
+    for (uint32_t i = 0; i < parent->window->frames.count && container == nullptr; ++i) {
+        if (parent->window->frames.data[i].window == self->window)
+            container = parent->window->frames.data[i].container;
     }
     if (container == nullptr)
-        return false;
+        return;
     cssPresentationFlush(parent->presentation);
     PrLayoutNode box = cssPresentationBox(parent->presentation, prDomElementAsNode(container));
     if (box == kPrLayoutNodeNone)
-        return false;
+        return;
     PrLayoutRect content = prLayoutNodeReplacedContent(cssPresentationOwnTree(parent->presentation), box);
     PrVec2 extent = prLayoutVecToPx(prLayoutRectExtent(content));
-    if (!(extent.x > 0) || !(extent.y > 0))
-        return false;
-    *out = extent;
-    htmlPageSetFrameViewport(self, *out);
+    if (extent.x > 0 && extent.y > 0)
+        prHtmlPageSetViewport(self, extent);
+}
+
+// The document host's viewport (DomDocumentHost::viewport): the page's, after a frame's is brought up to date.
+bool viewportNow(void* PR_NULLABLE context, PrVec2* out) {
+    PrHtmlPage* self = static_cast<PrHtmlPage*>(context);
+    updateFrameViewport(self);
+    *out = self->viewport;
     return true;
 }
 
@@ -1828,7 +1831,8 @@ void updatePresentationNow(void* PR_NULLABLE context) {
     if (presentation == nullptr)
         return;
     PrVec2 viewport{};
-    PrLayoutVec extent = frameViewportNow(self, &viewport) ? prLayoutVecFromPx(viewport) : presentation->extent;
+    viewportNow(self, &viewport);
+    PrLayoutVec extent = prLayoutVecFromPx(viewport);
     prHtmlPresentationUpdate(presentation, extent);
     if (cssPresentationSvgsResized(presentation))
         prHtmlPresentationUpdate(presentation, extent);
@@ -1868,7 +1872,7 @@ void startParser(PrHtmlPage* self, PrDomDocument* document) {
 // runs scripts.
 void startXmlParser(PrHtmlPage* self) {
     DomXmlScripting scripting = {self, self->host.execute != nullptr ? prepareXmlScript : nullptr};
-    domXmlBuilderInit(&self->xml, self->window.document, scripting, htmlXhtmlEntities());
+    domXmlBuilderInit(&self->xml, self->window->document, scripting, htmlXhtmlEntities());
 }
 
 // Returns true if script may open, write to or close the document. This holds for an HTML document whose markup
@@ -1908,8 +1912,8 @@ void releaseWaiting(PrHtmlPage* self) {
 // context's window has a document whose load has not ended, which delays the window's load event
 // (html/#delay-the-load-event).
 bool framesLoading(const PrHtmlPage* self) {
-    for (uint32_t i = 0; i < self->window.frames.count; ++i) {
-        const PrHtmlPage* frame = htmlDocumentPage(self->window.frames.data[i].window->document);
+    for (uint32_t i = 0; i < self->window->frames.count; ++i) {
+        const PrHtmlPage* frame = htmlDocumentPage(self->window->frames.data[i].window->document);
         if (frame != nullptr && !frame->loadEnded)
             return true;
     }
@@ -1925,12 +1929,12 @@ void frameLoadEnded(PrHtmlPage* self) {
     if (self->host.loaded != nullptr)
         self->host.loaded(self->host.context, self,
             self->endStatus != PrStatus_Ok ? self->endStatus : self->navigationFailure);
-    PrHtmlWindow* parent = self->window.parent;
+    PrHtmlWindow* parent = self->window->parent;
     PrHtmlPage* holder = parent != nullptr ? htmlDocumentPage(parent->document) : nullptr;
     if (holder == nullptr || self->initialBlank)
         return;
     for (uint32_t i = 0; i < parent->frames.count; ++i) {
-        if (parent->frames.data[i].window == &self->window)
+        if (parent->frames.data[i].window == self->window)
             queueElementEvent(holder, parent->frames.data[i].container, false);
     }
     continueEnd(holder);
@@ -1940,7 +1944,7 @@ void continueEnd(PrHtmlPage* self) {
     if (!self->ending || self->continuing)
         return;
     self->continuing = true;
-    PrDomDocument* document = self->window.document;
+    PrDomDocument* document = self->window->document;
     while (self->deferred.count != 0 && self->endStatus == PrStatus_Ok) {
         PreparedScript* script = self->deferred.data[0];
         if (!script->ready || cssDocumentHasBlockingSheet(document)) {
@@ -1962,7 +1966,7 @@ void continueEnd(PrHtmlPage* self) {
         }
     }
     if (self->endStatus == PrStatus_Ok)
-        htmlWindowRunLoadDelaying(&self->window);
+        htmlWindowRunLoadDelaying(self->window);
     // The load event waits for the fetches that delay it, for the scripts that run as soon as possible, and for the
     // loads of its frames' documents.
     bool delayed =
@@ -1972,7 +1976,7 @@ void continueEnd(PrHtmlPage* self) {
         return;
     }
     // It waits for the tasks that delay it too, which cannot run during a task. A task queued after them goes on.
-    if (self->endStatus == PrStatus_Ok && self->window.delayingTasks != 0) {
+    if (self->endStatus == PrStatus_Ok && self->window->delayingTasks != 0) {
         self->continuing = false;
         queueAdvance(self);
         return;
@@ -1985,7 +1989,7 @@ void continueEnd(PrHtmlPage* self) {
         fireElementEvents(self);
         // The load event is fired at the window with the legacy target override flag, so its target is the document.
         setReadiness(document, DomReadiness_Complete);
-        domEventFire(&self->window, "load", {}, document);
+        domEventFire(self->window, "load", {}, document);
     }
     frameLoadEnded(self);
 }
@@ -1994,7 +1998,7 @@ void continueEnd(PrHtmlPage* self) {
 // as far as it can (continueEnd). Returns the failure of a script that it ran, or `status`, the status of the parse. A
 // parse that a script started does not settle, since that script is still running.
 PrStatus finishParse(PrHtmlPage* page, PrStatus status, bool settle) {
-    setReadiness(page->window.document, DomReadiness_Interactive);
+    setReadiness(page->window->document, DomReadiness_Interactive);
     page->ending = true;
     page->contentLoaded = false;
     page->settleAtEnd = settle;
@@ -2033,6 +2037,78 @@ PrStringView firstLanguage(PrStringView header) {
     return first.size != 0 ? first : PrStringView{nullptr, 0};
 }
 
+void rendered(void* context);
+
+// Gives `window` what every window of the page shares: the host's clock and services, and the page's rendering
+// callback. Starts the window's clock.
+void shareWithWindow(PrHtmlPage* self, PrHtmlWindow* window) {
+    window->clock = self->host.now;
+    window->clockContext = self->host.context;
+    window->storage[PrHtmlStorageKind_Local].provider = self->host.localStorage;
+    window->storage[PrHtmlStorageKind_Session].provider = self->host.sessionStorage;
+    window->device = self->host.device;
+    window->images = self->host.images;
+    if (self->host.fetcher != nullptr)
+        window->userAgent = prFetchNetworkUserAgent(self->host.fetcher);
+    window->navigatorCompatibilityMode = self->host.navigatorCompatibilityMode;
+    window->animationFrames = self->host.animationFrames;
+    if (self->host.rendered != nullptr) {
+        window->rendered = rendered;
+        window->renderedContext = self;
+    }
+    htmlWindowStartClock(window);
+}
+
+// Closes the page's window. Its host learns of it first, and then the window's tasks, timers, media, listeners and
+// storage objects go. The window lives on while references to it remain.
+void closeWindow(PrHtmlPage* self) {
+    if (self->host.windowClosed != nullptr)
+        self->host.windowClosed(self->host.context, self);
+    PrHtmlWindow* window = self->window;
+    htmlWindowClearTasks(window);
+    htmlMediaReset(window);
+    htmlCanvasReset(window);
+    domListenersDestroy(window->listeners);
+    window->listeners = nullptr;
+    for (PrHtmlPreferenceObject& preference : window->preferences) {
+        domListenersDestroy(preference.listeners);
+        preference.listeners = nullptr;
+    }
+    domListenersDestroy(window->performance.listeners);
+    window->performance.listeners = nullptr;
+    domListenersDestroy(window->orientation.listeners);
+    window->orientation.listeners = nullptr;
+    for (PrHtmlStorage& storage : window->storage)
+        htmlStorageReset(&storage);
+}
+
+// Replaces the page's window, which closeWindow closed, with the window of the document that a navigation commits
+// (html/#initialise-the-document-object). The new window has the page's agent, session history and parent, and the
+// media environment of the window before it, without the preferences that its scripts overrode. The parent's record of
+// the iframe names the new window.
+void replaceWindow(PrHtmlPage* self) {
+    PrHtmlWindow* closed = self->window;
+    PrHtmlWindow* window = htmlWindowCreate();
+    shareWithWindow(self, window);
+    window->agent = closed->agent;
+    window->history = closed->history;
+    window->parent = closed->parent;
+    window->media = closed->media;
+    for (CssMediaValue& value : window->media.overrides)
+        value.keyword = PrCssKeyword_Unknown;
+    // A load whose input still arrives, such as one that a meta element restarts in another charset, goes on in the new
+    // window's document.
+    window->streaming = closed->streaming;
+    if (window->parent != nullptr) {
+        for (uint32_t i = 0; i < window->parent->frames.count; ++i) {
+            if (window->parent->frames.data[i].window == closed)
+                window->parent->frames.data[i].window = window;
+        }
+    }
+    self->window = window;
+    domEventTargetRelease(closed);
+}
+
 // Starts a new document at `url` for a load of a response with `headers`. The window's last document is discarded, and
 // the new document is loading. A response without a Content-Type is HTML.
 PrStatus beginDocument(PrHtmlPage* page, PrStringView url, const PrHtmlResponseHeaders* PR_NULLABLE headers) {
@@ -2047,30 +2123,30 @@ PrStatus beginDocument(PrHtmlPage* page, PrStringView url, const PrHtmlResponseH
         page->scriptCreated = false;
     }
     if (page->loaded) {
-        htmlWindowClearTasks(&page->window);
         dropMarkdown(page);
         dropFetches(page);
         domXmlBuilderReset(&page->xml);
         dropAvailableImages(page);
         releaseWaiting(page);
         dropModules(page);
-        htmlMediaReset(&page->window);
-        htmlCanvasReset(&page->window);
-        page->window.frames.clear();
         dropElementEvents(page);
+        closeWindow(page);
         discardDocument(page);
+        replaceWindow(page);
         newDocument(page);
+        if (page->host.windowOpened != nullptr)
+            page->host.windowOpened(page->host.context, page);
     }
-    PrDomDocument* document = page->window.document;
+    PrDomDocument* document = page->window->document;
     prUrlDestroy(document->url);
     document->url = documentUrl;
     // The document takes its entry in the session history, and the history state is the entry's.
     PrString committed = prUrlSerialize(documentUrl, PrUrlSerialization_Whole);
-    page->window.historyDocument = htmlHistoryCommit(page->window.history, prStringView(&committed), false);
-    ++page->window.historyGeneration;
+    page->window->historyDocument = htmlHistoryCommit(page->window->history, prStringView(&committed), false);
+    ++page->window->historyGeneration;
     prStringReset(&committed);
-    htmlWindowStartClock(&page->window);
-    page->window.revealing = true;
+    htmlWindowStartClock(page->window);
+    page->window->revealing = true;
     document->kind = isXmlMimeType(contentType) ? DomDocumentKind_Xml : DomDocumentKind_Html;
     TextBuffer essence;
     textAppend(&essence, domMimeTypeEssence(contentType));
@@ -2111,7 +2187,7 @@ PrDomTag mediaHostOf(PrStringView essence) {
 // the document's URL as its source, and stops its parse. The element fetches the resource itself, so the response's
 // bytes are not read. Returns the status of the end of the load (finishParse).
 PrStatus loadMediaDocument(PrHtmlPage* page, PrDomTag tag) {
-    PrDomDocument* document = page->window.document;
+    PrDomDocument* document = page->window->document;
     page->loading = true;
     document->quirks = DomQuirks_No;
     PrDomElement* html = domElementCreate(document, PrDomNamespace_Html, PrDomTag_Html, PrStringView{});
@@ -2137,14 +2213,14 @@ PrStatus runXmlParser(PrHtmlPage* self) {
     self->parsing = false;
     if (status != PrStatus_Syntax)
         return status;
-    htmlShowXmlError(self->window.document, prXmlParserError(self->xml.parser));
+    htmlShowXmlError(self->window->document, prXmlParserError(self->xml.parser));
     return PrStatus_Ok;
 }
 
 // Continues a load of a whole source in tasks, in the same way as a streamed load whose bytes have all arrived and been
 // decoded: a parse that waits for a script.
 void continueInTasks(PrHtmlPage* page, PrStringView source) {
-    page->window.streaming = true;
+    page->window->streaming = true;
     page->streamInput.text.clear();
     textAppend(&page->streamInput, source);
     page->streamRead = page->streamInput.text.count;
@@ -2168,7 +2244,7 @@ PrCharset transportCharsetOf(const PrHtmlResponseHeaders* PR_NULLABLE headers) {
 PrStatus restartDocument(PrHtmlPage* self) {
     PrCharset charset = self->reparse;
     self->reparse = PrCharset_None;
-    PrDomDocument* old = self->window.document;
+    PrDomDocument* old = self->window->document;
     PrString url = prUrlSerialize(old->url, PrUrlSerialization_Whole);
     PrString contentType = prStringClone(&old->contentType);
     PrString language = prStringClone(&old->languageHeader);
@@ -2185,7 +2261,7 @@ PrStatus restartDocument(PrHtmlPage* self) {
 
 // Parses the whole source of a load as HTML, decoded in the load's charset.
 void parseHtmlSource(PrHtmlPage* page, PrStringView source) {
-    startParser(page, page->window.document);
+    startParser(page, page->window->document);
     PrString decoded = {};
     page->loadSource = source;
     page->parsing = true;
@@ -2206,15 +2282,15 @@ void queueStream(PrHtmlPage* page) {
     if (page->streamQueued)
         return;
     page->streamQueued = true;
-    htmlWindowQueueTask(&page->window, parseStream, page, nullptr, true);
+    htmlWindowQueueTask(page->window, parseStream, page, nullptr, true);
 }
 
 // Ends a load whose parse ran in tasks, by stopping the parse (html/#the-end).
 void endStream(PrHtmlPage* page, PrStatus status) {
-    page->window.streaming = false;
+    page->window->streaming = false;
     page->streamInput.text.reset();
     page->streamRead = 0;
-    if (page->window.document->kind == DomDocumentKind_Html)
+    if (page->window->document->kind == DomDocumentKind_Html)
         htmlParserReset(&page->parser);
     domXmlBuilderReset(&page->xml);
     finishParse(page, status, true);
@@ -2227,7 +2303,7 @@ void restartStream(PrHtmlPage* page) {
         endStream(page, status);
         return;
     }
-    startParser(page, page->window.document);
+    startParser(page, page->window->document);
     htmlParserOpen(&page->parser);
     page->streamRead = 0;
     page->streamFlushed = false;
@@ -2330,10 +2406,10 @@ void parseStream(void* data) {
     PrHtmlPage* page = static_cast<PrHtmlPage*>(data);
     page->streamQueued = false;
     // A parse that a script paused continues once the script runs (resumeParse).
-    if (!page->window.streaming || parsePaused(page))
+    if (!page->window->streaming || parsePaused(page))
         return;
     PrStringView input = textView(&page->streamInput);
-    if (page->window.document->kind == DomDocumentKind_Xml) {
+    if (page->window->document->kind == DomDocumentKind_Xml) {
         parseXmlStream(page, input);
         return;
     }
@@ -2393,7 +2469,7 @@ void parseStream(void* data) {
 // Continues a parse once the script that paused it has run. The parse goes as far as its input reaches, then continues
 // in tasks as more input arrives, and runs to its end if its input has ended.
 void resumeParse(PrHtmlPage* self) {
-    if (self->window.document->kind == DomDocumentKind_Xml) {
+    if (self->window->document->kind == DomDocumentKind_Xml) {
         continueXml(self);
         return;
     }
@@ -2422,14 +2498,14 @@ void advance(PrHtmlPage* self) {
     if (self->parsing || self->runningScript)
         return;
     PreparedScript* script = self->blocking;
-    if (script != nullptr && script->ready && !cssDocumentHasBlockingSheet(self->window.document)) {
+    if (script != nullptr && script->ready && !cssDocumentHasBlockingSheet(self->window->document)) {
         self->blocking = nullptr;
         self->parsing = true;
         PrStatus status = executeScript(self, script);
         self->parsing = false;
         releaseScript(script);
         // A script's failure stops the parse. The XML parser has no status of its own to carry it.
-        if (status != PrStatus_Ok && self->window.document->kind == DomDocumentKind_Xml) {
+        if (status != PrStatus_Ok && self->window->document->kind == DomDocumentKind_Xml) {
             endStream(self, status);
         } else {
             if (status != PrStatus_Ok)
@@ -2469,7 +2545,7 @@ void queueAdvance(PrHtmlPage* self) {
     if (self->advanceQueued || !waiting)
         return;
     self->advanceQueued = true;
-    htmlWindowQueueTask(&self->window, advanceTask, self,
+    htmlWindowQueueTask(self->window, advanceTask, self,
         [](void* data) { static_cast<PrHtmlPage*>(data)->advanceQueued = false; });
 }
 
@@ -2487,21 +2563,21 @@ bool runsTasks(const PrHtmlPage* page) {
 
 double windowTaskDelay(void* global) {
     PrHtmlPage* page = static_cast<PrHtmlPage*>(global);
-    return runsTasks(page) ? htmlWindowNextTaskDelay(&page->window) : -1;
+    return runsTasks(page) ? htmlWindowNextTaskDelay(page->window) : -1;
 }
 
 // The settle hook spins the event loop, from the task that ends a streamed load too.
 bool windowRunTask(void* global) {
     PrHtmlPage* page = static_cast<PrHtmlPage*>(global);
     if (page->settling)
-        return htmlWindowSpinTask(&page->window);
-    return runsTasks(page) && htmlWindowRunTask(&page->window);
+        return htmlWindowSpinTask(page->window);
+    return runsTasks(page) && htmlWindowRunTask(page->window);
 }
 
 // A window is not idle while it waits for a fetch, whose response arrives as a task.
 bool windowIsIdle(void* global) {
     PrHtmlPage* page = static_cast<PrHtmlPage*>(global);
-    return page->fetches == nullptr && htmlWindowIsIdle(&page->window);
+    return page->fetches == nullptr && htmlWindowIsIdle(page->window);
 }
 
 constexpr DomGlobalTasks kWindowTasks = {windowTaskDelay, windowRunTask, windowIsIdle};
@@ -2527,13 +2603,18 @@ void dropNavigation(void* data) {
     prMemoryFree(navigation);
 }
 
+void abortDocument(PrHtmlPage* self);
+
+// Navigates the page to another document (html/#navigate), from the task that htmlPageNavigate queued. A document that
+// is still loading stops (html/#abort-a-document).
 void runNavigation(void* data) {
     Navigation* navigation = static_cast<Navigation*>(data);
     PrHtmlPage* page = navigation->page;
     if (page->pendingNavigation == navigation->id) {
         page->pendingNavigation = 0;
-        htmlHistoryExpect(page->window.history, navigation->commit, navigation->target);
-        page->host.navigate(page->host.context, page, prStringView(&navigation->url));
+        abortDocument(page);
+        htmlHistoryExpect(page->window->history, navigation->commit, navigation->target);
+        prHtmlPageNavigate(page, prStringView(&navigation->url));
     }
     dropNavigation(navigation);
 }
@@ -2810,14 +2891,25 @@ void stopLoading(PrHtmlPage* self) {
     self->pendingNavigation = 0;
     if (self->awaitingSource) {
         self->awaitingSource = false;
-        PrHtmlWindow* parent = self->window.parent;
+        PrHtmlWindow* parent = self->window->parent;
         for (uint32_t i = 0; parent != nullptr && i < parent->frames.count; ++i) {
-            if (parent->frames.data[i].window == &self->window)
+            if (parent->frames.data[i].window == self->window)
                 ++domElementState(parent->frames.data[i].container)->generation;
         }
     }
     dropDocumentLoad(self);
     dropFetches(self);
+}
+
+// html/#abort-a-document: a load whose input is still arriving, or whose parse waits for a script, stops.
+void abortDocument(PrHtmlPage* self) {
+    if (!self->window->streaming)
+        return;
+    htmlParserReset(&self->parser);
+    self->window->streaming = false;
+    self->streamInput.text.reset();
+    self->streamRead = 0;
+    releaseWaiting(self);
 }
 
 } // namespace
@@ -2834,18 +2926,11 @@ PrStatus htmlDocumentOpen(PrDomDocument* document) {
     // A page that is navigating stops loading.
     if (self->awaitingSource || self->pendingNavigation != 0)
         stopLoading(self);
-    // A load whose input is still arriving, or whose parse waits for a script, is aborted (html/#abort-a-document).
-    if (self->window.streaming) {
-        htmlParserReset(&self->parser);
-        self->window.streaming = false;
-        self->streamInput.text.reset();
-        self->streamRead = 0;
-        releaseWaiting(self);
-    }
+    abortDocument(self);
     // The listeners of the document and the window are erased, and the document's children are removed. A
     // script-created parser takes over the document, with its insertion point at the end of an empty input.
     eraseListeners(document);
-    domListenersErase(&self->window);
+    domListenersErase(self->window);
     domReplaceAll(document, nullptr);
     startParser(self, document);
     htmlParserOpen(&self->parser);
@@ -2893,9 +2978,9 @@ PrStatus htmlDocumentClose(PrDomDocument* document) {
 
 void htmlPageFrames(PrHtmlPage* page, Array<PrHtmlPage*>* out) {
     PrHtmlPage* self = page;
-    for (uint32_t i = 0; i < self->window.frames.count; ++i) {
+    for (uint32_t i = 0; i < self->window->frames.count; ++i) {
         for (uint32_t k = 0; k < self->children.count; ++k) {
-            if (&self->children.data[k]->window == self->window.frames.data[i].window)
+            if (self->children.data[k]->window == self->window->frames.data[i].window)
                 out->push(self->children.data[k]);
         }
     }
@@ -2906,33 +2991,16 @@ PrHtmlPage* PR_NULLABLE htmlDocumentPage(const PrDomDocument* document) {
     if (host == nullptr || host->fetch != fetchHost)
         return nullptr;
     PrHtmlPage* self = static_cast<PrHtmlPage*>(host->context);
-    return self->window.document == document ? self : nullptr;
+    return self->window->document == document ? self : nullptr;
 }
 
 uint64_t htmlPageEmbed(const PrHtmlPage* page) {
     return uint64_t(uintptr_t(page));
 }
 
-void htmlPageSetFrameViewport(PrHtmlPage* page, PrVec2 extent) {
-    PrHtmlPage* self = page;
-    if (self->frameExtent.x == extent.x && self->frameExtent.y == extent.y)
-        return;
-    self->frameExtent = extent;
-    const PrCssDescriptor features[] = {PrCssDescriptor_MediaWidth, PrCssDescriptor_MediaHeight};
-    const float sizes[] = {extent.x, extent.y};
-    for (uint32_t i = 0; i < 2; ++i) {
-        TextBuffer length;
-        cssSerializeNumber(&length, double(sizes[i]));
-        textAppend(&length, "px");
-        cssMediaEnvironmentSet(&self->window.media, features[i], textView(&length));
-        textReset(&length);
-    }
-    cssPresentationDocumentMediaChanged(self->window.document);
-}
-
 bool htmlPageNavigate(PrHtmlWindow* window, PrStringView url, HtmlHistoryCommit commit, uint32_t target) {
     PrHtmlPage* self = htmlDocumentPage(window->document);
-    if (self == nullptr || &self->window != window || self->host.navigate == nullptr)
+    if (self == nullptr || self->window != window || self->host.fetcher == nullptr)
         return false;
     Navigation* navigation = allocZeroed<Navigation>();
     navigation->page = self;
@@ -2947,9 +3015,9 @@ bool htmlPageNavigate(PrHtmlWindow* window, PrStringView url, HtmlHistoryCommit 
 void htmlPageFollowFrameScheme(PrHtmlPage* parent, PrHtmlPage* page) {
     if (parent->presentation == nullptr)
         return;
-    for (uint32_t i = 0; i < parent->window.frames.count; ++i) {
-        const HtmlFrame& frame = parent->window.frames.data[i];
-        if (frame.window != &page->window)
+    for (uint32_t i = 0; i < parent->window->frames.count; ++i) {
+        const HtmlFrame& frame = parent->window->frames.data[i];
+        if (frame.window != page->window)
             continue;
         PrAppUserPreferences preferences = page->preferences;
         bool dark = cssPresentationUsesDarkScheme(parent->presentation, frame.container);
@@ -2970,15 +3038,15 @@ void htmlPresentationPrepareJob(PrCssPresentation* presentation, PrLayoutVec ext
 
 PrStatus htmlPageBeginStreamedLoad(PrHtmlPage* self, PrStringView url, const PrHtmlResponseHeaders* PR_NULLABLE headers) {
     PrHtmlPage* page = self;
-    if (page->loading || page->runningScript || page->window.streaming)
+    if (page->loading || page->runningScript || page->window->streaming)
         return PrStatus_InvalidState;
     PrStatus status = beginDocument(page, url, headers);
     if (status != PrStatus_Ok)
         return status;
-    PrDomTag media = mediaHostOf(prStringView(&page->window.document->contentType));
+    PrDomTag media = mediaHostOf(prStringView(&page->window->document->contentType));
     if (media != PrDomTag_Unknown)
         return loadMediaDocument(page, media);
-    page->window.streaming = true;
+    page->window->streaming = true;
     page->streamInput.text.clear();
     page->streamRead = 0;
     page->streamEnded = false;
@@ -2987,12 +3055,12 @@ PrStatus htmlPageBeginStreamedLoad(PrHtmlPage* self, PrStringView url, const PrH
     page->streamFlushed = false;
     page->transportCharset = transportCharsetOf(headers);
     page->reparse = PrCharset_None;
-    if (isMarkdownDocument(page->window.document)) {
+    if (isMarkdownDocument(page->window->document)) {
         page->markdown = allocZeroed<HtmlMarkdownBuilder>();
-        htmlMarkdownBuilderInitDocument(page->markdown, page->window.document,
+        htmlMarkdownBuilderInitDocument(page->markdown, page->window->document,
             HtmlParseFlag_DeclarativeShadowRoots, &page->markdownOptions);
-    } else if (page->window.document->kind == DomDocumentKind_Html) {
-        startParser(page, page->window.document);
+    } else if (page->window->document->kind == DomDocumentKind_Html) {
+        startParser(page, page->window->document);
         htmlParserOpen(&page->parser);
     } else {
         startXmlParser(page);
@@ -3006,64 +3074,44 @@ using namespace pr_impl;
 
 PrHtmlPage* prHtmlPageCreate(const PrHtmlHost* PR_NULLABLE host) {
     PrHtmlPage* self = allocZeroed<PrHtmlPage>();
-    self->window.type = DomTargetType_Window;
-    for (PrHtmlPreference preference = 0; preference < PrHtmlPreference_Count; ++preference) {
-        PrHtmlPreferenceObject& object = self->window.preferences[preference];
-        object.type = DomTargetType_Preference;
-        object.window = &self->window;
-        object.preference = preference;
-    }
-    self->window.performance.type = DomTargetType_Performance;
-    self->window.performance.window = &self->window;
+    self->window = htmlWindowCreate();
     self->host = host != nullptr ? *host : prHtmlHostDefault();
-    self->window.clock = self->host.now;
-    self->window.clockContext = self->host.context;
+    shareWithWindow(self, self->window);
     // A browsing context with no history of its host's keeps its own, whose first entry is its initial about:blank's.
     self->ownsHistory = self->host.sessionHistory == nullptr;
-    self->window.history = self->ownsHistory ? prHtmlSessionHistoryCreate() : self->host.sessionHistory;
+    self->window->history = self->ownsHistory ? prHtmlSessionHistoryCreate() : self->host.sessionHistory;
     if (self->ownsHistory)
-        self->window.historyDocument = htmlHistoryCommit(self->window.history, "about:blank", true);
-    self->window.storage[PrHtmlStorageKind_Local].provider = self->host.localStorage;
-    self->window.storage[PrHtmlStorageKind_Session].provider = self->host.sessionStorage;
-    self->window.device = self->host.device;
-    self->window.images = self->host.images;
-    if (self->host.fetcher != nullptr)
-        self->window.userAgent = prFetchNetworkUserAgent(self->host.fetcher);
-    self->window.navigatorCompatibilityMode = self->host.navigatorCompatibilityMode;
-    self->window.animationFrames = self->host.animationFrames;
-    if (self->host.rendered != nullptr) {
-        self->window.rendered = rendered;
-        self->window.renderedContext = self;
-    }
-    htmlWindowStartClock(&self->window);
+        self->window->historyDocument = htmlHistoryCommit(self->window->history, "about:blank", true);
     self->ownsAgent = self->host.agent == nullptr;
-    self->window.agent = self->ownsAgent ? prDomAgentCreate(nullptr) : self->host.agent;
-    domAgentAddGlobal(self->window.agent, self, &kWindowTasks);
-    cssMediaEnvironmentInit(&self->window.media, self->host.execute != nullptr);
+    self->window->agent = self->ownsAgent ? prDomAgentCreate(nullptr) : self->host.agent;
+    domAgentAddGlobal(self->window->agent, self, &kWindowTasks);
+    cssMediaEnvironmentInit(&self->window->media, self->host.execute != nullptr);
     self->defaultCharset = PrCharset_Windows1252;
     self->display = prAppDisplayDefault();
-    cssMediaEnvironmentSetDisplay(&self->window.media, self->display);
+    cssMediaEnvironmentSetDisplay(&self->window->media, self->display);
+    prHtmlPageSetViewport(self, PrVec2{800, 600});
     self->documentHost = DomDocumentHost{
         .context = self,
         .fetch = fetchHost,
         .compress = self->host.compress,
         .decodeImage = decodeImage,
         .updatePresentation = updatePresentationNow,
-        .viewport = frameViewportNow,
+        .viewport = viewportNow,
         .sheetsChanged = sheetsChanged,
         .queueTask = queueTask,
         .queueDelayingTask = queueDelayingTask,
         .queueMicrotask = queueMicrotask,
         .compile = compileHandler,
         .embedChanged = embedChanged,
+        .embedRemoved = embedRemoved,
         .prepareScript = prepareConnectedScript,
         .elementState = elementState,
         .activates = activates,
         .activate = activate,
     };
     newDocument(self);
-    if (self->host.opened != nullptr)
-        self->host.opened(self->host.context, self);
+    if (self->host.windowOpened != nullptr)
+        self->host.windowOpened(self->host.context, self);
     return self;
 }
 
@@ -3071,13 +3119,13 @@ void prHtmlPageDestroy(PrHtmlPage* PR_NULLABLE self) {
     if (self == nullptr)
         return;
     PrHtmlPage* page = self;
-    domAgentRemoveGlobal(page->window.agent, page);
+    domAgentRemoveGlobal(page->window->agent, page);
     if (page->scriptCreated)
         htmlParserReset(&page->parser);
     for (uint32_t i = 0; i < page->children.count; ++i)
         prHtmlPageDestroy(page->children.data[i]);
     page->children.reset();
-    page->window.frames.reset();
+    page->window->frames.reset();
     page->streamInput.text.reset();
     dropDocumentLoad(page);
     dropFetches(page);
@@ -3090,53 +3138,46 @@ void prHtmlPageDestroy(PrHtmlPage* PR_NULLABLE self) {
     page->inOrder.reset();
     dropElementEvents(page);
     page->elementEvents.reset();
+    closeWindow(page);
     if (page->host.closed != nullptr)
         page->host.closed(page->host.context, self);
-    htmlWindowClearTasks(&page->window);
     dropMarkdown(page);
-    htmlMediaReset(&page->window);
-    htmlCanvasReset(&page->window);
-    domListenersDestroy(page->window.listeners);
-    for (PrHtmlPreferenceObject& preference : page->window.preferences)
-        domListenersDestroy(preference.listeners);
-    domListenersDestroy(page->window.performance.listeners);
-    for (PrHtmlStorage& storage : page->window.storage)
-        htmlStorageReset(&storage);
     if (page->ownsHistory)
-        prHtmlSessionHistoryDestroy(static_cast<PrHtmlSessionHistory*>(page->window.history));
+        prHtmlSessionHistoryDestroy(static_cast<PrHtmlSessionHistory*>(page->window->history));
     discardDocument(page);
     if (page->ownsAgent)
-        domAgentDestroy(page->window.agent);
+        domAgentDestroy(page->window->agent);
+    domEventTargetRelease(page->window);
     prMemoryFree(page);
 }
 
 void prHtmlPageTraverse(PrHtmlPage* self, int32_t delta) {
-    htmlHistoryTraverse(&self->window, delta);
+    htmlHistoryTraverse(self->window, delta);
 }
 
 PrHtmlWindow* prHtmlPageWindow(PrHtmlPage* self) {
-    return &self->window;
+    return self->window;
 }
 
 PrHtmlPage* PR_NULLABLE prHtmlWindowPage(PrHtmlWindow* window) {
     PrHtmlPage* page = htmlDocumentPage(window->document);
-    return page != nullptr && &page->window == window ? page : nullptr;
+    return page != nullptr && page->window == window ? page : nullptr;
 }
 
 PrDomAgent* prHtmlPageAgent(PrHtmlPage* self) {
-    return self->window.agent;
+    return self->window->agent;
 }
 
 PrStatus prHtmlPageLoad(PrHtmlPage* self, PrStringView source, PrStringView url,
         const PrHtmlResponseHeaders* PR_NULLABLE headers) {
     PrHtmlPage* page = self;
-    if (page->loading || page->runningScript || page->window.streaming)
+    if (page->loading || page->runningScript || page->window->streaming)
         return PrStatus_InvalidState;
     dropDocumentLoad(page);
     PrStatus status = beginDocument(page, url, headers);
     if (status != PrStatus_Ok)
         return status;
-    PrDomDocument* document = page->window.document;
+    PrDomDocument* document = page->window->document;
     PrDomTag media = mediaHostOf(prStringView(&document->contentType));
     if (media != PrDomTag_Unknown)
         return loadMediaDocument(page, media);
@@ -3195,7 +3236,7 @@ PrStatus prHtmlPageLoad(PrHtmlPage* self, PrStringView source, PrStringView url,
 }
 
 PrStatus prHtmlPageBeginLoad(PrHtmlPage* self, PrStringView url, const PrHtmlResponseHeaders* PR_NULLABLE headers) {
-    if (self->loading || self->runningScript || self->window.streaming)
+    if (self->loading || self->runningScript || self->window->streaming)
         return PrStatus_InvalidState;
     dropDocumentLoad(self);
     return htmlPageBeginStreamedLoad(self, url, headers);
@@ -3203,21 +3244,21 @@ PrStatus prHtmlPageBeginLoad(PrHtmlPage* self, PrStringView url, const PrHtmlRes
 
 void prHtmlPageAppendLoad(PrHtmlPage* self, PrStringView bytes) {
     PrHtmlPage* page = self;
-    if (!page->window.streaming || page->streamEnded)
+    if (!page->window->streaming || page->streamEnded)
         return;
     textAppend(&page->streamInput, bytes);
     queueStream(page);
 }
 
 void prHtmlPageEndLoad(PrHtmlPage* self) {
-    if (!self->window.streaming || self->streamEnded)
+    if (!self->window->streaming || self->streamEnded)
         return;
     self->streamEnded = true;
     queueStream(self);
 }
 
 PrStatus prHtmlPageNavigate(PrHtmlPage* self, PrStringView url) {
-    if (self->host.fetcher == nullptr || self->loading || self->runningScript || self->window.streaming)
+    if (self->host.fetcher == nullptr || self->loading || self->runningScript || self->window->streaming)
         return PrStatus_InvalidState;
     PrUrl* parsed = nullptr;
     PrStatus status = prUrlCreate(url, nullptr, PrCharset_Utf8, &parsed);
@@ -3227,7 +3268,7 @@ PrStatus prHtmlPageNavigate(PrHtmlPage* self, PrStringView url) {
     dropDocumentLoad(self);
     HtmlDocumentLoad* load = allocZeroed<HtmlDocumentLoad>();
     load->page = self;
-    load->agent = self->window.agent;
+    load->agent = self->window->agent;
     load->fetcher = self->host.fetcher;
     load->url = prStringCopy(url);
     prMutexInit(&load->lock);
@@ -3253,7 +3294,7 @@ void prHtmlPageImportModule(PrHtmlPage* self, PrStringView url, PrHtmlImportFn d
 PrStatus prHtmlPageFetch(PrHtmlPage* self, const PrFetchClientRequest* request, PrFetchClientFn done, void* PR_NULLABLE context) {
     PR_ASSERT(request->mode != PrFetchMode_Navigate);
     PR_ASSERT(request->headers != nullptr || request->headerCount == 0);
-    PrUrl* base = domDocumentBaseUrl(self->window.document);
+    PrUrl* base = domDocumentBaseUrl(self->window->document);
     PrUrl* parsed = nullptr;
     PrStatus status = prUrlCreate(request->url, base, PrCharset_Utf8, &parsed);
     prUrlDestroy(base);
@@ -3332,19 +3373,19 @@ bool prHtmlPageIsFetching(const PrHtmlPage* self) {
 }
 
 bool prHtmlPageIsRenderBlocked(PrHtmlPage* self) {
-    return htmlWindowRenderBlocked(&self->window);
+    return htmlWindowRenderBlocked(self->window);
 }
 
 bool prHtmlPageSetMediaFeature(PrHtmlPage* self, PrCssDescriptor feature, PrStringView value) {
     PrHtmlPage* page = self;
-    cssPresentationDocumentMediaChanged(page->window.document);
-    return cssMediaEnvironmentSet(&page->window.media, feature, value);
+    cssPresentationDocumentMediaChanged(page->window->document);
+    return cssMediaEnvironmentSet(&page->window->media, feature, value);
 }
 
 void prHtmlPageSetMediaType(PrHtmlPage* self, PrCssMediaType type) {
     PrHtmlPage* page = self;
-    cssPresentationDocumentMediaChanged(page->window.document);
-    cssMediaEnvironmentSetType(&page->window.media, type);
+    cssPresentationDocumentMediaChanged(page->window->document);
+    cssMediaEnvironmentSetType(&page->window->media, type);
 }
 
 void prHtmlPageSetDefaultCharset(PrHtmlPage* self, PrCharset charset) {
@@ -3352,18 +3393,34 @@ void prHtmlPageSetDefaultCharset(PrHtmlPage* self, PrCharset charset) {
     self->defaultCharset = charset;
 }
 
+void prHtmlPageSetViewport(PrHtmlPage* self, PrVec2 extent) {
+    if (self->viewport.x == extent.x && self->viewport.y == extent.y)
+        return;
+    self->viewport = extent;
+    const PrCssDescriptor features[] = {PrCssDescriptor_MediaWidth, PrCssDescriptor_MediaHeight};
+    const float sizes[] = {extent.x, extent.y};
+    for (uint32_t i = 0; i < 2; ++i) {
+        TextBuffer length;
+        cssSerializeNumber(&length, double(sizes[i]));
+        textAppend(&length, "px");
+        cssMediaEnvironmentSet(&self->window->media, features[i], textView(&length));
+        textReset(&length);
+    }
+    cssPresentationDocumentMediaChanged(self->window->document);
+}
+
 void prHtmlPageSetDisplay(PrHtmlPage* self, const PrAppDisplay* display) {
     self->display = *display;
-    if (cssMediaEnvironmentSetDisplay(&self->window.media, *display))
-        cssPresentationDocumentMediaChanged(self->window.document);
+    if (cssMediaEnvironmentSetDisplay(&self->window->media, *display))
+        cssPresentationDocumentMediaChanged(self->window->document);
     for (uint32_t i = 0; i < self->children.count; ++i)
         prHtmlPageSetDisplay(self->children.data[i], display);
 }
 
 void prHtmlPageSetUserPreferences(PrHtmlPage* self, const PrAppUserPreferences* preferences) {
     self->preferences = *preferences;
-    if (cssMediaEnvironmentSetUserPreferences(&self->window.media, *preferences))
-        cssPresentationDocumentMediaChanged(self->window.document);
+    if (cssMediaEnvironmentSetUserPreferences(&self->window->media, *preferences))
+        cssPresentationDocumentMediaChanged(self->window->document);
     // Each frame keeps the color scheme that its iframe element gives it.
     for (uint32_t i = 0; i < self->children.count; ++i) {
         PrHtmlPage* child = self->children.data[i];
@@ -3393,6 +3450,6 @@ void prHtmlPresentationStart(PrCssPresentation* presentation, PrLayoutVec extent
 }
 
 double prHtmlPageTimeOrigin(PrHtmlPage* self) {
-    return self->window.timeOrigin;
+    return self->window->timeOrigin;
 }
 

@@ -1810,17 +1810,21 @@ void prCssStyleDeclarationNameAt(const PrCssStyleDeclaration* self, uint32_t ind
 
 PrString prCssStyleDeclarationGetPropertyValue(const PrCssStyleDeclaration* self, const PrCssDeclarationName* name) {
     // A legacy name alias reads the property that it is an alias of (css-cascade-5/#legacy-name-alias).
-    PrCssProperty property = name->property < PrCssProperty_Count ? kCssPropertyAlias[name->property] : name->property;
-    if (self->serializeLonghand != nullptr && property < PrCssProperty_Count && kCssPropertyLonghands[property].count == 0) {
+    CssDeclaredName declared = {};
+    if (!cssDeclaredNameFromName(cssStyleDeclarationAtRule(self), name, &declared))
+        return prStringEmpty();
+    bool single;
+    if (declared.property < PrCssProperty_Count)
+        single = kCssPropertyLonghands[declared.property].count == 0;
+    else
+        single = declared.text.data != nullptr;
+    if (self->serializeValue != nullptr && single) {
         TextBuffer text{};
-        if (self->serializeLonghand(self, property, &text))
+        if (self->serializeValue(self, declared, &text))
             return textTake(&text);
         textReset(&text);
     }
     const CssDeclarationBlock* block = cssStyleDeclarationBlock(self);
-    CssDeclaredName declared = {};
-    if (!cssDeclaredNameFromName(block->rule, name, &declared))
-        return prStringEmpty();
     return serialized([&](TextBuffer* out) { cssSerializePropertyValue(out, block, declared); });
 }
 

@@ -47,7 +47,7 @@ bool open(Fixture* fixture) {
 }
 
 void reset(Fixture* fixture) {
-    netRunOnLoop(fixture->net, [](void* PR_NULLABLE network) {
+    prNetPostBlocking(fixture->net, [](void* PR_NULLABLE network) {
         prWebSocketNetworkDestroy(static_cast<PrWebSocketNetwork*>(network));
     }, fixture->network);
     prTlsDestroy(fixture->tls);

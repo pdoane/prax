@@ -155,23 +155,6 @@ void netLatchWait(NetLatch* latch) {
     prMutexUnlock(&latch->mutex);
 }
 
-void netRunOnLoop(PrNet* net, void (*fn)(void* PR_NULLABLE context), void* PR_NULLABLE context) {
-    struct Call {
-        void (*fn)(void* PR_NULLABLE context);
-        void* PR_NULLABLE context;
-        NetLatch done;
-    };
-    Call call{fn, context, {}};
-    netLatchInit(&call.done);
-    prNetPost(net, [](void* PR_NULLABLE data) {
-        Call* posted = static_cast<Call*>(data);
-        posted->fn(posted->context);
-        netLatchOpen(&posted->done);
-    }, &call);
-    netLatchWait(&call.done);
-    netLatchReset(&call.done);
-}
-
 void netProbeRun(NetProbe* probe, PrNet* net, const NetProbeScript* script) {
     probe->net = net;
     probe->script = *script;

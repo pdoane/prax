@@ -2,8 +2,10 @@
 
 #include "pr/core_posix_thread.h"
 
+#include <errno.h>
 #include <pthread.h>
 #include <stdlib.h>
+#include <time.h>
 #include <unistd.h>
 
 namespace pr_impl {
@@ -108,6 +110,28 @@ void prCorePosixConditionReset(PrCondition* condition) {
 
 void prCorePosixConditionWait(PrCondition* condition, PrMutex* mutex) {
     pthread_cond_wait(nativeOf(condition), nativeOf(mutex));
+}
+
+bool prCorePosixConditionWaitFor(PrCondition* condition, PrMutex* mutex, double milliseconds) {
+    // A wait past a day is a day, which keeps the deadline's seconds in range. A caller that waits for a state tests it
+    // again after a wake in any case.
+    double bounded = milliseconds == milliseconds && milliseconds < 86400000 ? milliseconds : 86400000;
+#if defined(__APPLE__)
+    double seconds = double(time_t(bounded / 1000));
+    timespec relative{time_t(seconds), long((bounded - seconds * 1000) * 1000000)};
+    return pthread_cond_timedwait_relative_np(nativeOf(condition), nativeOf(mutex), &relative) != ETIMEDOUT;
+#else
+    timespec deadline{};
+    clock_gettime(CLOCK_REALTIME, &deadline);
+    double seconds = double(time_t(bounded / 1000));
+    deadline.tv_sec += time_t(seconds);
+    deadline.tv_nsec += long((bounded - seconds * 1000) * 1000000);
+    if (deadline.tv_nsec >= 1000000000) {
+        deadline.tv_sec += 1;
+        deadline.tv_nsec -= 1000000000;
+    }
+    return pthread_cond_timedwait(nativeOf(condition), nativeOf(mutex), &deadline) != ETIMEDOUT;
+#endif
 }
 
 void prCorePosixConditionSignal(PrCondition* condition) {

@@ -163,7 +163,7 @@ struct HtmlElementEvent {
 
 // A browsing context (html/#browsing-context), which hosts a window.
 struct HtmlPage {
-    PrHtmlWindow window;
+    PrHtmlWindow* window;       // the window of its active document (html/#nav-window)
     HtmlParser parser;          // the parse that an HTML load runs
     DomXmlBuilder xml;          // the parse that an XML load runs, whose parser is null outside one
     PrHtmlHost host;
@@ -273,9 +273,9 @@ struct HtmlPage {
     PrAppDisplay display;
     PrAppUserPreferences preferences;
 
-    // A frame's viewport in CSS pixels, which is its iframe's content box (htmlPageSetFrameViewport), or zero before
-    // the parent first lays the iframe out.
-    PrVec2 frameExtent;
+    // The viewport in CSS pixels (prHtmlPageSetViewport), which the window's media features describe and its document
+    // is laid out in. A frame's is its iframe's content box once the parent lays the iframe out.
+    PrVec2 viewport;
 
     Array<HtmlElementEvent> elementEvents;     // events for its document's embedded content, in the order queued
     Array<HtmlAvailableImage> availableImages; // the images of its document that an img shows at once
@@ -301,10 +301,6 @@ PrHtmlPage* PR_NULLABLE htmlDocumentPage(const PrDomDocument* document);
 // Returns the id by which the context's scenes fill its iframe's slot in the scenes of the enclosing context
 // (PrLayoutContentKind_Embed). The id is never zero.
 uint64_t htmlPageEmbed(const PrHtmlPage* page);
-
-// Sets the viewport of an iframe's browsing context to `extent` in CSS pixels, which is the iframe's content box. The
-// context's media queries see this viewport.
-void htmlPageSetFrameViewport(PrHtmlPage* page, PrVec2 extent);
 
 // Navigates the browsing context whose current window is `window` to the document at `url` (html/#navigate), through
 // its host, from a task. Returns false, and does nothing, if the window is not its browsing context's current window or

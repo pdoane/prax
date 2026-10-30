@@ -36,7 +36,7 @@ TEST_CASE("a style element's sheet is in the document's list before the next scr
         "<script>0</script><style></style><script>0</script>", "about:blank", nullptr) == PrStatus_Ok);
     CHECK(state.calls == 3);
     CHECK(prHtmlPageLoad(page, "<p>replacement", "about:blank", nullptr) == PrStatus_Ok);
-    CHECK(prCssStyleSheetListLength(prCssDocumentStyleSheets(prHtmlWindowDocument(window))) == 0);
+    CHECK(prCssStyleSheetListLength(prCssDocumentStyleSheets(prHtmlWindowDocument(prHtmlPageWindow(page)))) == 0);
     prHtmlPageDestroy(page);
 }
 

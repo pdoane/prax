@@ -123,7 +123,7 @@ void runBrowser(Browse& b) {
     b.app = prAppWin32Create(&appDesc);
     PrAppHandler handler{
         &b,
-        [](void* context, PrApp* app) {
+        [](void* context, PrApp* app, const PrAppFrame*) {
             Browse& b = browseOf(context);
             PrStatus created = prAppBrowserCreate(app, &b.desc, &b.browser);
             if (created == PrStatus_NotSupported) {
@@ -202,7 +202,7 @@ TEST_CASE("a headless run starts, frames, wakes from another thread and shuts do
     PrApp* app = prAppWin32Create(&appDesc);
     PrAppHandler handler{
         &run,
-        [](void* context, PrApp* app) {
+        [](void* context, PrApp* app, const PrAppFrame*) {
             runOf(context).seen.push_back("start");
             HWND window = windowOf(app);
             CHECK(IsWindow(window));
@@ -252,7 +252,7 @@ TEST_CASE("a resize runs a frame at the new extent without a request") {
     PrApp* app = prAppWin32Create(&appDesc);
     PrAppHandler handler{
         &run,
-        [](void*, PrApp*) {},
+        [](void*, PrApp*, const PrAppFrame*) {},
         [](void* context, PrApp* app, const PrAppFrame* frame) {
             Run& r = runOf(context);
             if (r.frames++ == 0) {
@@ -293,7 +293,7 @@ TEST_CASE("keys, text, pointers and wheels translate to events") {
     input.app = prAppWin32Create(&appDesc);
     PrAppHandler handler{
         &input,
-        [](void* context, PrApp* app) {
+        [](void* context, PrApp* app, const PrAppFrame*) {
             Input& in = *static_cast<Input*>(context);
             // No key is down and no lock is on, whatever the keyboard's state.
             BYTE state[256] = {};
@@ -407,7 +407,7 @@ TEST_CASE("input that a callback's own message loop dispatches arrives after the
     PrApp* app = prAppWin32Create(&appDesc);
     PrAppHandler handler{
         &run,
-        [](void* context, PrApp* app) {
+        [](void* context, PrApp* app, const PrAppFrame*) {
             Nesting& n = nestingOf(context);
             BYTE state[256] = {};
             SetKeyboardState(state);
@@ -453,7 +453,7 @@ TEST_CASE("a window that loses the pointer's capture releases the buttons that a
     PrApp* app = prAppWin32Create(&appDesc);
     PrAppHandler handler{
         &run,
-        [](void* context, PrApp* app) {
+        [](void* context, PrApp* app, const PrAppFrame*) {
             Nesting& n = nestingOf(context);
             HWND window = windowOf(app);
             n.sender = std::thread([app, window] {
@@ -492,7 +492,7 @@ TEST_CASE("a window that loses the keyboard releases the keys that are down, onc
     PrApp* app = prAppWin32Create(&appDesc);
     PrAppHandler handler{
         &run,
-        [](void* context, PrApp* app) {
+        [](void* context, PrApp* app, const PrAppFrame*) {
             Nesting& n = nestingOf(context);
             BYTE state[256] = {};
             SetKeyboardState(state);
@@ -535,7 +535,7 @@ TEST_CASE("closing the window stops the run") {
     PrApp* app = prAppWin32Create(&appDesc);
     PrAppHandler handler{
         &run,
-        [](void* context, PrApp* app) {
+        [](void* context, PrApp* app, const PrAppFrame*) {
             runOf(context).seen.push_back("start");
             PostMessageW(windowOf(app), WM_CLOSE, 0, 0);
         },
@@ -561,7 +561,7 @@ TEST_CASE("the clipboard's text arrives after the request, never during it") {
     PrApp* app = prAppWin32Create(&appDesc);
     PrAppHandler handler{
         &clip,
-        [](void* context, PrApp* app) {
+        [](void* context, PrApp* app, const PrAppFrame*) {
             Clip& c = *static_cast<Clip*>(context);
             c.set = prAppSetClipboardText(app, "h\xC3\xA9llo \xF0\x9F\x98\x80");
             c.requesting = true;

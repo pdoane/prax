@@ -730,8 +730,8 @@ void cssPresentationUpdateStyle(PrCssPresentation* presentation);
 
 // Fills `out` with the computed style of the element, or of its pseudo-element `pseudo`, as declarations of the
 // resolved value of each property that the engine renders (cssom-1/#resolved-values), in the order of their names,
-// after updating the presentation. Leaves `out` unchanged if `*filler` and `*version` say that this presentation filled
-// it at its current version. Otherwise records them.
+// followed by its custom properties, after updating the presentation. Leaves `out` unchanged if `*filler` and
+// `*version` say that this presentation filled it at its current version. Otherwise records them.
 void cssPresentationComputedBlock(PrCssPresentation* presentation, const PrDomElement* element, CssPseudo pseudo,
     CssDeclarationBlock* out, const void* PR_NULLABLE* PR_NONNULL filler, uint64_t* version);
 
@@ -741,6 +741,13 @@ void cssPresentationComputedBlock(PrCssPresentation* presentation, const PrDomEl
 // property that the engine does not render, or an element that it did not style.
 bool cssPresentationComputedValue(PrCssPresentation* presentation, const PrDomElement* element, CssPseudo pseudo,
     PrCssProperty property, TextBuffer* out);
+
+// Serializes the computed value of the custom property `name` of the element, or of its pseudo-element `pseudo`, to
+// `out`, after updating the presentation's styles. The result matches the declaration of the property in
+// cssPresentationComputedBlock. Writes nothing for a property without a valid value, or an element that it did not
+// style.
+bool cssPresentationComputedCustomValue(PrCssPresentation* presentation, const PrDomElement* element, CssPseudo pseudo,
+    PrStringView name, TextBuffer* out);
 
 // The two halves of prCssPresentationStart. The first brings the styles and the tree up to date and waits for the
 // agent's layout thread. The second posts the job, and then restyles the next job's content ahead. A host that presents

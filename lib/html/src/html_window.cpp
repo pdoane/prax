@@ -21,6 +21,7 @@
 #include "css/src/css_root.h"
 #include "css/src/css_view.h"
 #include "dom/src/dom_element_state.h"
+#include "dom/src/dom_event.h"
 #include "html/src/html_canvas.h"
 #include "html/src/html_focus.h"
 #include "html/src/html_interface.h"
@@ -142,19 +143,31 @@ void notifyIntersectionObservers(void* data) {
         prCssDocumentNotifyIntersectionObservers(window->document);
 }
 
+// Fires change at the window's screen orientation if its type changed since the last rendering update
+// (screen-orientation/#dfn-screen-orientation-change-steps).
+void updateScreenOrientation(PrHtmlWindow* window) {
+    PrHtmlScreenOrientation* orientation = prHtmlWindowScreenOrientation(window);
+    PrHtmlOrientationType type = prHtmlScreenOrientationType(orientation);
+    if (type == orientation->reported)
+        return;
+    orientation->reported = type;
+    domEventFire(orientation, "change");
+}
+
 // Runs a rendering update (html/#update-the-rendering). The document is revealed, a top-level document flushes its
-// autofocus candidates, its scroll events are fired, and its animations are updated and fire their events. Then
-// html/#run-the-animation-frame-callbacks runs the callbacks that were requested before the update started, each with
-// the frame's time. A callback canceled before its turn does not run. Last, the document's styles are computed, its
-// resize observers are called with the boxes whose sizes changed, a focused element that is no longer focusable loses
-// the focus, its intersection observations are computed, and its host lays it out afterward. The entries of the
-// intersection observations wait for a task. A document with observations is laid out to compute them, and a document
-// whose text may request fonts is laid out so that the fonts start loading.
+// autofocus candidates, its screen orientation fires change if it changed, its scroll events are fired, and its
+// animations are updated and fire their events. Then html/#run-the-animation-frame-callbacks runs the callbacks that
+// were requested before the update started, each with the frame's time. A callback canceled before its turn does not
+// run. Last, the document's styles are computed, its resize observers are called with the boxes whose sizes changed, a
+// focused element that is no longer focusable loses the focus, its intersection observations are computed, and its host
+// lays it out afterward. The entries of the intersection observations wait for a task. A document with observations is
+// laid out to compute them, and a document whose text may request fonts is laid out so that the fonts start loading.
 void runFrame(PrHtmlWindow* window, double now) {
     window->lastFrame = now;
     reveal(window);
     if (window->parent == nullptr && window->document != nullptr)
         htmlFocusFlushAutofocus(window->document);
+    updateScreenOrientation(window);
     if (PrCssPresentation* presentation = presentationOf(window))
         cssPresentationRunScrollSteps(presentation);
     double time = htmlWindowFrameTime(window);
@@ -285,6 +298,19 @@ void setTarget(PrDomDocument* document, PrDomElement* PR_NULLABLE element) {
         cssPresentationStateMoved(from, element, &state, 1);
 }
 
+// Frees a window once its last reference is released (DomCountedTarget::destroy).
+void freeWindow(DomCountedTarget* target) {
+    PrHtmlWindow* window = static_cast<PrHtmlWindow*>(target);
+    window->timers.reset();
+    window->tasks.reset();
+    window->frameRequests.reset();
+    window->frameRunning.reset();
+    window->canvases.reset();
+    window->mediaElements.reset();
+    window->frames.reset();
+    prMemoryFree(window);
+}
+
 } // namespace
 
 int32_t htmlWindowSetTimeout(PrHtmlWindow* window, const PrHtmlTimerHandler* handler, int32_t timeout, bool repeats,
@@ -342,6 +368,28 @@ bool htmlWindowRenderBlocked(const PrHtmlWindow* window) {
 
 double htmlWindowClock(const PrHtmlWindow* window) {
     return window->clock != nullptr ? window->clock(window->clockContext) : prTimeMonotonicMilliseconds();
+}
+
+PrHtmlWindow* htmlWindowCreate(void) {
+    PrHtmlWindow* window = allocZeroed<PrHtmlWindow>();
+    window->type = DomTargetType_Window;
+    window->references = 1;
+    window->destroy = freeWindow;
+    for (PrHtmlPreference preference = 0; preference < PrHtmlPreference_Count; ++preference) {
+        PrHtmlPreferenceObject& object = window->preferences[preference];
+        object.type = DomTargetType_Preference;
+        object.owner = window;
+        object.window = window;
+        object.preference = preference;
+    }
+    window->performance.type = DomTargetType_Performance;
+    window->performance.owner = window;
+    window->performance.window = window;
+    window->orientation.type = DomTargetType_ScreenOrientation;
+    window->orientation.owner = window;
+    window->orientation.window = window;
+    window->orientation.reported = PrHtmlOrientationType_LandscapePrimary;
+    return window;
 }
 
 void htmlWindowStartClock(PrHtmlWindow* window) {

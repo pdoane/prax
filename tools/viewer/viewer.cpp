@@ -965,7 +965,7 @@ void updateDifference(Viewer& v, const std::string& first, const std::string& se
     }
 }
 
-void start(void* context, PrApp* app) {
+void start(void* context, PrApp* app, const PrAppFrame*) {
     Viewer& v = *static_cast<Viewer*>(context);
     PrAppSurface surface{};
     PrGpuSwapChainDesc desc = swapChainDesc(false);
