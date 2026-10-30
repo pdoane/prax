@@ -207,7 +207,10 @@ void layoutContainerChain(const LayoutTree* tree, LayoutNodeIndex container, Arr
         out.push(kLayoutContainerViewport);
         return;
     }
-    layoutContainerChain(tree, layoutBoxPositioned(tree, container).container, out);
+    if (layoutContainerIsSticky(container))
+        layoutContainerChain(tree, layoutStickyOuterContainer(tree, layoutContainerBox(container)), out);
+    else
+        layoutContainerChain(tree, layoutBoxPositioned(tree, container).container, out);
     out.push(container);
 }
 

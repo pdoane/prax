@@ -117,11 +117,19 @@ struct LayoutPaintRegion {
     LayoutPaintContainerRef scroll;
 };
 
-// A container in a recording: a scroll container, or a box that only clips. Its clip is in the recording's space, and
-// the content of every container is also in that space, unscrolled. A box that only clips has no range, extents or user
-// axes.
+// What a container of a recording or a scene does to its content.
+enum {
+    LayoutContainerKind_Scroll,     // a scroll container, which clips its content and moves it by its scroll offset
+    LayoutContainerKind_Clip,       // a box that only clips its content
+    LayoutContainerKind_Sticky,     // a sticky box, which moves itself and its content by its sticky offset
+};
+typedef uint8_t LayoutContainerKind;
+
+// A container in a recording: a scroll container, a box that only clips, or a sticky box. Its clip is in the
+// recording's space, and the content of every container is also in that space, unscrolled. A box that only clips has no
+// range, extents or user axes. A sticky box clips nothing, and a scene finds what moves it from the tree.
 struct LayoutPaintScroll {
-    LayoutNodeIndex node;
+    LayoutNodeIndex node;           // as layoutNodeContainer names it
     LayoutPaintContainerRef parent; // the container it is in
     uint32_t segment;               // the recording's segments before the first that may hold its content
     PrLayoutRect clip;
@@ -130,7 +138,7 @@ struct LayoutPaintScroll {
     PrLayoutRect content;
     PrLayoutScrollFlags userAxes;
     PrLayoutScrollFlags chainAxes;
-    bool scrolls;                   // true for a scroll container, false for a box that only clips
+    LayoutContainerKind kind;
 
     // If `curved`, the corners of the clip, by PrRectCorner, whose curves it clips to (layoutClipCorners). Otherwise
     // its corners are square.

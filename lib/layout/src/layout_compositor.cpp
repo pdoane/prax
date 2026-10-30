@@ -171,7 +171,7 @@ PrLayoutVec scrollAt(LayoutCompositor* c, const CompositorContent& content, PrLa
     Array<PrLayoutSceneScroll> scrolls;
     addScrolls(c, content.embed, scrolls);
     Array<PrLayoutVec> offsets;
-    layoutSceneScrollOffsets(scene, scrolls.data, scrolls.count, offsets);
+    layoutSceneScrollOffsets(scene, scrolls.data, scrolls.count, 0, offsets);
     LayoutScrollHit hit = layoutSceneScrollAt(scene, point, nullptr, 0, offsets.data);
     offsets.reset();
     scrolls.reset();
@@ -203,7 +203,7 @@ bool regionHolds(LayoutCompositor* c, const CompositorContent& content, PrLayout
     Array<PrLayoutSceneScroll> scrolls;
     addScrolls(c, content.embed, scrolls);
     Array<PrLayoutVec> offsets;
-    layoutSceneScrollOffsets(scene, scrolls.data, scrolls.count, offsets);
+    layoutSceneScrollOffsets(scene, scrolls.data, scrolls.count, 0, offsets);
     LayoutScrollHit hit = layoutSceneScrollAt(scene, point, nullptr, 0, offsets.data);
     offsets.reset();
     scrolls.reset();

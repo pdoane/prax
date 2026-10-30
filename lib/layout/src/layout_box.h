@@ -64,7 +64,8 @@ inline bool layoutDisplayIsRowGroup(PrLayoutDisplay display) {
 }
 
 // Returns true if a box of `display` is a table-track or table-track-group box: a row, a column or a group of them.
-// Such a box paints no decoration of its own. The table paints its background behind the cells in it.
+// Such a box paints no decoration of its own. Its background is painted behind the cells in it, by the table, or by the
+// box itself if it paints whole.
 inline bool layoutDisplayIsTrack(PrLayoutDisplay display) {
     return layoutDisplayIsRowGroup(display) || display == PrLayoutDisplay_TableRow ||
         display == PrLayoutDisplay_TableColumnGroup || display == PrLayoutDisplay_TableColumn;
@@ -766,19 +767,47 @@ LayoutNodeIndex layoutNodeHolder(const LayoutTree* tree, LayoutNodeIndex node, L
 constexpr LayoutNodeIndex kLayoutContainerViewport = kPrLayoutNodeNone;
 constexpr LayoutNodeIndex kLayoutContainerOutside = 0xfffffffeu;
 
+// The bit that names the container of a sticky box (layoutNodeSticks) by the box's node. That container moves the box
+// and what paints in it by the box's sticky offset, and clips nothing. A sticky box that clips its content is also the
+// container of its content, named by its node alone, inside its sticky container. Node indices stay below the bit.
+constexpr LayoutNodeIndex kLayoutContainerSticky = 0x80000000u;
+
+// Returns true if `container` is the container of a sticky box.
+inline bool layoutContainerIsSticky(LayoutNodeIndex container) {
+    return container != kLayoutContainerOutside && (container & kLayoutContainerSticky) != 0;
+}
+
+// Returns the box of `container`, a container other than the viewport's content or none.
+inline LayoutNodeIndex layoutContainerBox(LayoutNodeIndex container) {
+    return container & ~kLayoutContainerSticky;
+}
+
 // Returns true if the box of `node` clips its content in an axis (layoutClips). Only the block box of an element can
 // clip, and the root does not, because its overflow belongs to the viewport.
 bool layoutNodeClips(const LayoutTree* tree, LayoutNodeIndex node);
+
+// Returns true if the box of `node` is sticky positioned, so that it paints in a container of its own that moves it by
+// its sticky offset (layout_sticky.h). The root does not stick.
+bool layoutNodeSticks(const LayoutTree* tree, LayoutNodeIndex node);
+
+// Returns the container that the sticky box `box` would paint in if it did not stick: the container around its own.
+LayoutNodeIndex layoutStickyOuterContainer(const LayoutTree* tree, LayoutNodeIndex box);
+
+// Returns the innermost sticky inline box that moves `node` with it, or kPrLayoutNodeNone. Placements pass over inline
+// boxes, so such a box is found in the tree: among the inline boxes between a node in flow and its block container, or
+// as the containing block of a box out of flow.
+LayoutNodeIndex layoutStickyInlineAround(const LayoutTree* tree, LayoutNodeIndex node);
 
 // Returns the position, in the laid-out content of the viewport, of the box whose fragment holds the fragments of
 // `node`. That box is `node` itself, or its block container for an inline box or a text. The position is the sum of the
 // placements from the box to the viewport (LayoutPlacement), before any transform or scroll.
 PrLayoutVec layoutNodePosition(const LayoutTree* tree, LayoutNodeIndex node);
 
-// Returns the container that `node` paints in, which clips it. This is the nearest box that clips its content along the
-// placements from the box whose fragment holds `node`. If there is none, it is the content of the viewport, or
-// kLayoutContainerOutside for a fixed box that the viewport holds. A box out of flow therefore escapes the boxes
-// between its holder and its placeholder.
+// Returns the container that `node` paints in, which clips or moves it. This is the sticky container of a sticky box
+// itself, then that of a sticky inline box around it (layoutStickyInlineAround), and otherwise the nearest box along
+// the placements from the box whose fragment holds `node` that clips its content or sticks. If there is none, it is the
+// content of the viewport, or kLayoutContainerOutside for a fixed box that the viewport holds. A box out of flow
+// therefore escapes the boxes between its holder and its placeholder.
 LayoutNodeIndex layoutNodeContainer(const LayoutTree* tree, LayoutNodeIndex node);
 
 // layoutNodePositioned returns layoutNodePosition and layoutNodeContainer of `node` together, at the cost of one read

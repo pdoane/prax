@@ -142,14 +142,36 @@ void subDrop(LayoutPaintCache& cache, const LayoutFragment* fragment) {
     }
 }
 
+// Returns true if a change since the paint `recorded` reached the table parts from `node` up to its table: the tracks
+// whose backgrounds a table part that paints whole records behind its cells (trackBackgrounds), and its table's
+// columns, which mark the table when they change.
+bool tableChangedSince(const LayoutTree* tree, LayoutNodeIndex node, uint32_t recorded) {
+    for (LayoutNodeIndex at = layoutTreeNode(tree, node).parent; at != kPrLayoutNodeNone;
+            at = layoutTreeNode(tree, at).parent) {
+        const LayoutTreeNode& n = layoutTreeNode(tree, at);
+        if (n.paintSubtree >= recorded)
+            return true;
+        if (layoutIsTable(layoutBoxStyle(tree->styles, n.style)))
+            return false;
+    }
+    return false;
+}
+
 // Returns true if what a recording of `fragment` read from its nodes has changed since the paint `recorded` made it.
-// The recording reads a box's subtree, as tracked by LayoutTreeNode::paintSubtree, and the record of a text's parent,
-// which the text of an anonymous block reads from outside the block.
+// The recording reads a box's subtree, as tracked by LayoutTreeNode::paintSubtree, the record of a text's parent, which
+// the text of an anonymous block reads from outside the block, and for a table part that paints whole, the tracks
+// around it.
 bool changedSince(const LayoutTree* tree, const LayoutFragment* fragment, uint32_t recorded) {
     if (fragment->node != kPrLayoutNodeNone) {
         const LayoutTreeNode& n = layoutTreeNode(tree, fragment->node);
-        return n.paintSubtree >= recorded ||
-            (n.kind == PrLayoutNodeKind_Text && layoutTreeNode(tree, n.parent).paintChanged >= recorded);
+        if (n.paintSubtree >= recorded ||
+                (n.kind == PrLayoutNodeKind_Text && layoutTreeNode(tree, n.parent).paintChanged >= recorded))
+            return true;
+        if (tree->styles->wholeTableParts == 0 || n.kind == PrLayoutNodeKind_Text ||
+                fragment->kind != LayoutFragmentKind_Box)
+            return false;
+        bool part = layoutStyleTraits(tree->styles, n.style).wholeTablePart;
+        return part && layoutFragmentPaintsWhole(tree, fragment) && tableChangedSince(tree, fragment->node, recorded);
     }
     for (uint32_t i = 0; i < fragment->childCount; ++i) {
         if (changedSince(tree, fragment->children[i].fragment, recorded))
@@ -922,7 +944,7 @@ struct Painter : LayoutWalkVisitor {
     }
 
     PrLayoutVec pushScroll(const LayoutFragment* fragment, PrLayoutRect padding, PrLayoutVec) {
-        container(fragment, padding, true);
+        container(fragment->node, fragment, padding, LayoutContainerKind_Scroll);
         localBackground(fragment, padding);
         return kLayoutVecZero;
     }
@@ -1047,7 +1069,20 @@ struct Painter : LayoutWalkVisitor {
             closeBlending(wasHeld);
     }
 
-    void pushClip(const LayoutFragment* fragment, PrLayoutRect rect) { container(fragment, rect, false); }
+    void pushClip(const LayoutFragment* fragment, PrLayoutRect rect) {
+        container(fragment->node, fragment, rect, LayoutContainerKind_Clip);
+    }
+
+    // A sticky box's content is recorded where it was laid out, and clipped by nothing of its own.
+    PrLayoutVec pushSticky(LayoutNodeIndex node) {
+        PrLayoutRect unbounded{
+            layoutUnit(-kLayoutClipUnbounded.raw), layoutUnit(-kLayoutClipUnbounded.raw), kLayoutClipUnbounded,
+            kLayoutClipUnbounded,
+        };
+        container(node | kLayoutContainerSticky, nullptr, unbounded, LayoutContainerKind_Sticky);
+        return kLayoutVecZero;
+    }
+    void popSticky() { leave(); }
 
     // Records the decoration that follows as a batch of its own, which popBoxClip embeds clipped to `rect`.
     void pushBoxClip(PrLayoutRect rect) {
@@ -1079,25 +1114,28 @@ struct Painter : LayoutWalkVisitor {
         return false;
     }
 
-    // Records what follows into the content of the container `fragment`, which clips to `clip` and scrolls if `scrolls`
-    // is true. A box that only clips has no scroll range and no axes that a user scrolls. A container around the
-    // chunk's box, which a box of a list escapes to, is recorded by a recording around the chunk's. A container's
-    // content is entered once in each phase, and out of order for the boxes of lists in it. It is one container of the
-    // chunk, recorded by the innermost recording that first enters it.
-    void container(const LayoutFragment* fragment, PrLayoutRect clip, bool scrolls) {
-        LayoutNodeIndex node = fragment->node;
+    // Records what follows into the content of the container `node` (layoutNodeContainer), which clips to `clip` and is
+    // of `kind`. Its box's fragment is `fragment`, which a sticky box needs not give. A box that only clips, and a
+    // sticky box, have no scroll range and no axes that a user scrolls. A container around the chunk's box, which a box
+    // of a list escapes to, is recorded by a recording around the chunk's. A container's content is entered once in
+    // each phase, and out of order for the boxes of lists in it. It is one container of the chunk, recorded by the
+    // innermost recording that first enters it.
+    void container(LayoutNodeIndex node, const LayoutFragment* PR_NULLABLE fragment, PrLayoutRect clip,
+            LayoutContainerKind kind) {
         LayoutPaintContainerRef id{node, PaintRefKind_Container};
         LayoutPaintContainerRef ref = resolve(id);
-        if (ref.kind == PaintRefKind_Container && inChunk(node) && !opensAround(node)) {
+        LayoutNodeIndex owner = layoutContainerBox(node);
+        if (ref.kind == PaintRefKind_Container && inChunk(owner) && !opensAround(node)) {
             LayoutPaintRecording& to = into();
             PrLayoutVec port{layoutRectWidth(clip), layoutRectHeight(clip)};
-            const PrLayoutBoxStyle& box = layoutBoxStyle(styles, layoutTreeNode(tree, node).style);
+            const PrLayoutBoxStyle& box = layoutBoxStyle(styles, layoutTreeNode(tree, owner).style);
+            bool scrolls = kind == LayoutContainerKind_Scroll;
             LayoutPaintScroll made{
                 .node = node,
                 .parent = current,
                 .segment = to.segments.count,
                 .clip = layoutClipMoved(clip, kLayoutVecZero - origin),
-                .scrolls = scrolls,
+                .kind = kind,
             };
             // A scroll container's clip rectangle cuts the clip of its scrollport, but the whole scrollport still
             // decides the scroll range.
@@ -1108,7 +1146,8 @@ struct Painter : LayoutWalkVisitor {
                 clipped = layoutRectIntersect(clip, rect);
                 made.clip = layoutClipMoved(clipped, kLayoutVecZero - origin);
             }
-            made.curved = layoutClipCorners(tree, fragment, clipped, made.corners);
+            if (kind != LayoutContainerKind_Sticky)
+                made.curved = layoutClipCorners(tree, fragment, clipped, made.corners);
             if (scrolls) {
                 made.content = layoutScrollContent(fragment, box);
                 made.range = layoutScrollRange(port, made.content);
@@ -1365,8 +1404,53 @@ struct Painter : LayoutWalkVisitor {
     // (css-tables-3/#drawing-cell-backgrounds). The table's fragment is `grid` at `at`, and holds its parts. A track's
     // background is positioned in the track's own box, and painted only within the border boxes of the cells that start
     // in the track. A cell starts in the first column, in column order, that its box overlaps. A cell that is hidden,
-    // or that empty-cells hides, has none of these backgrounds.
+    // or that empty-cells hides, has none of these backgrounds. The backgrounds behind the cells of a track or cell
+    // that paints whole paint with it instead, so that they move and stack with it.
     void gridBackgrounds(const LayoutFragment* grid, PrLayoutVec at) {
+        tableColumns(grid, at);
+        gridCells(grid, at, kPrLayoutNodeNone, PrLayoutRect{}, kPrLayoutNodeNone, PrLayoutRect{});
+    }
+
+    // Records the backgrounds of the tracks and track groups behind the cells of the row group, row or cell `part` at
+    // `at`, which paints whole, so that they paint with it rather than with its table.
+    void trackBackgrounds(const LayoutFragment* part, PrLayoutVec at) {
+        LayoutNodeIndex node = part->node;
+        LayoutNodeIndex table = kPrLayoutNodeNone;
+        LayoutNodeIndex group = kPrLayoutNodeNone;
+        LayoutNodeIndex row = kPrLayoutNodeNone;
+        for (LayoutNodeIndex up = layoutTreeNode(tree, node).parent;
+                up != kPrLayoutNodeNone && table == kPrLayoutNodeNone; up = layoutTreeNode(tree, up).parent) {
+            const PrLayoutBoxStyle& box = layoutBoxStyle(styles, layoutTreeNode(tree, up).style);
+            if (layoutIsTable(box))
+                table = up;
+            else if (box.display == PrLayoutDisplay_TableRow && row == kPrLayoutNodeNone)
+                row = up;
+            else if (layoutDisplayIsRowGroup(box.display) && group == kPrLayoutNodeNone)
+                group = up;
+        }
+        const LayoutFragment* grid = table != kPrLayoutNodeNone ? layoutCachePlaced(tree->cache, table) : nullptr;
+        if (grid == nullptr)
+            return;
+        PrLayoutVec position = layoutNodePosition(tree, node);
+        auto rectOf = [&](LayoutNodeIndex box) {
+            const LayoutFragment* f = box != kPrLayoutNodeNone ? layoutCachePlaced(tree->cache, box) : nullptr;
+            if (f == nullptr)
+                return PrLayoutRect{};
+            return layoutRectAt(at + layoutNodePosition(tree, box) - position, f->extent);
+        };
+        tableColumns(grid, at + layoutNodePosition(tree, table) - position);
+        PrLayoutRect rect = layoutRectAt(at, part->extent);
+        PrLayoutDisplay display = layoutBoxStyle(styles, layoutTreeNode(tree, node).style).display;
+        if (layoutDisplayIsRowGroup(display))
+            gridCells(part, at, node, rect, kPrLayoutNodeNone, PrLayoutRect{});
+        else if (display == PrLayoutDisplay_TableRow)
+            gridCells(part, at, group, rectOf(group), node, rect);
+        else
+            cellBackgrounds(part, rect, group, rectOf(group), row, rectOf(row));
+    }
+
+    // Sets `columns` to the columns of the table `grid` at `at`, in order.
+    void tableColumns(const LayoutFragment* grid, PrLayoutVec at) {
         columns.clear();
         for (uint32_t i = 0; i < grid->childCount; ++i) {
             const LayoutChild& child = grid->children[i];
@@ -1390,11 +1474,11 @@ struct Painter : LayoutWalkVisitor {
                 }
             }
         }
-        gridCells(grid, at, kPrLayoutNodeNone, PrLayoutRect{}, kPrLayoutNodeNone, PrLayoutRect{});
     }
 
     // Records the track backgrounds behind each cell in `fragment` at `at`. The cells are in the row group `group` and
-    // the row `row`, whose boxes are `groupRect` and `rowRect`, if those are not kPrLayoutNodeNone.
+    // the row `row`, whose boxes are `groupRect` and `rowRect`, if those are not kPrLayoutNodeNone. A track or cell
+    // that paints whole records its own (trackBackgrounds).
     void gridCells(const LayoutFragment* fragment, PrLayoutVec at, LayoutNodeIndex group, PrLayoutRect groupRect,
             LayoutNodeIndex row, PrLayoutRect rowRect) {
         for (uint32_t i = 0; i < fragment->childCount; ++i) {
@@ -1402,40 +1486,44 @@ struct Painter : LayoutWalkVisitor {
             const LayoutFragment* f = child.fragment;
             if (f->kind != LayoutFragmentKind_Box)
                 continue;
+            if (styles->wholeTableParts != 0 && f->node != kPrLayoutNodeNone && layoutFragmentPaintsWhole(tree, f))
+                continue;
             PrLayoutRect rect = layoutRectAt(at + child.offset, f->extent);
             PrLayoutDisplay display = PrLayoutDisplay_TableCell;
             if (f->node != kPrLayoutNodeNone)
                 display = layoutBoxStyle(styles, layoutTreeNode(tree, f->node).style).display;
-            if (layoutDisplayIsRowGroup(display)) {
+            if (layoutDisplayIsRowGroup(display))
                 gridCells(f, at + child.offset, f->node, rect, kPrLayoutNodeNone, PrLayoutRect{});
-                continue;
-            }
-            if (display == PrLayoutDisplay_TableRow) {
+            else if (display == PrLayoutDisplay_TableRow)
                 gridCells(f, at + child.offset, group, groupRect, f->node, rect);
-                continue;
-            }
-            if (display != PrLayoutDisplay_TableCell)
-                continue;
-            if (f->node != kPrLayoutNodeNone) {
-                PrLayoutStyleIndex style = layoutTreeNode(tree, f->node).style;
-                const PrLayoutColorStyle& color = layoutColorStyle(styles, style);
-                if (color.visibility != PrLayoutVisibility_Visible ||
-                        (color.emptyCells == PrLayoutEmptyCells_Hide && layoutTableCellIsEmpty(f) &&
-                            !layoutTableCellCollapses(tree, f->node)))
-                    continue;
-            }
-            for (uint32_t k = 0; k < columns.count; ++k) {
-                const GridColumn& column = columns.data[k];
-                PrLayoutRect area = column.node != kPrLayoutNodeNone ? column.rect : column.groupRect;
-                if (!startsIn(area, rect))
-                    continue;
-                trackBackground(column.group, column.groupRect, rect);
-                trackBackground(column.node, column.rect, rect);
-                break;
-            }
-            trackBackground(group, groupRect, rect);
-            trackBackground(row, rowRect, rect);
+            else if (display == PrLayoutDisplay_TableCell)
+                cellBackgrounds(f, rect, group, groupRect, row, rowRect);
         }
+    }
+
+    // Records the track backgrounds behind the cell `cell`, whose border box is `rect`, in the row group `group` and
+    // the row `row`, whose boxes are `groupRect` and `rowRect`, if those are not kPrLayoutNodeNone.
+    void cellBackgrounds(const LayoutFragment* cell, PrLayoutRect rect, LayoutNodeIndex group, PrLayoutRect groupRect,
+            LayoutNodeIndex row, PrLayoutRect rowRect) {
+        if (cell->node != kPrLayoutNodeNone) {
+            PrLayoutStyleIndex style = layoutTreeNode(tree, cell->node).style;
+            const PrLayoutColorStyle& color = layoutColorStyle(styles, style);
+            if (color.visibility != PrLayoutVisibility_Visible ||
+                    (color.emptyCells == PrLayoutEmptyCells_Hide && layoutTableCellIsEmpty(cell) &&
+                        !layoutTableCellCollapses(tree, cell->node)))
+                return;
+        }
+        for (uint32_t k = 0; k < columns.count; ++k) {
+            const GridColumn& column = columns.data[k];
+            PrLayoutRect area = column.node != kPrLayoutNodeNone ? column.rect : column.groupRect;
+            if (!startsIn(area, rect))
+                continue;
+            trackBackground(column.group, column.groupRect, rect);
+            trackBackground(column.node, column.rect, rect);
+            break;
+        }
+        trackBackground(group, groupRect, rect);
+        trackBackground(row, rowRect, rect);
     }
 
     // Returns true if the cell whose border box is `cell` starts in the column whose box is `area`: the boxes overlap,
@@ -2009,7 +2097,7 @@ bool sameRecording(const LayoutPaintChunk& a, const LayoutPaintChunk& b) {
         const LayoutPaintScroll& x = a.scrolls.data[i];
         const LayoutPaintScroll& y = b.scrolls.data[i];
         if (x.node != y.node || x.parent != y.parent || memCompare(&x.clip, &y.clip, sizeof(PrLayoutRect)) != 0 ||
-                x.range != y.range || x.userAxes != y.userAxes || x.chainAxes != y.chainAxes || x.scrolls != y.scrolls)
+                x.range != y.range || x.userAxes != y.userAxes || x.chainAxes != y.chainAxes || x.kind != y.kind)
             return false;
     }
     bool same = true;

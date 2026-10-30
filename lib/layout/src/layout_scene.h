@@ -19,6 +19,7 @@
 
 #include "layout/src/layout_effects.h"
 #include "layout/src/layout_paint.h"
+#include "layout/src/layout_sticky.h"
 #include "layout/src/layout_walk.h"
 
 PR_ASSUME_NONNULL_BEGIN
@@ -89,9 +90,10 @@ struct LayoutSceneRegion {
     uint32_t scroll;                // kPaintScrollNone for none, past the viewport
 };
 
-// A container of a scene: a scroll container, or a box that only clips. Its clip is in the space of the layer whose
-// recording holds it, or in the scene's space for the viewport. A container's content is that space moved by the scroll
-// offset that a player gives the container.
+// A container of a scene: a scroll container, a box that only clips, or a sticky box. Its clip is in the space of the
+// layer whose recording holds it, or in the scene's space for the viewport. A container's content is that space moved
+// back by the container's offset: the scroll offset that a player gives a scroll container, or a sticky box's sticky
+// offset, negated, which follows from the offset of its scroll container.
 struct LayoutSceneContainer {
     PrLayoutNode node;              // kPrLayoutNodeNone for the viewport
     uint32_t parent;                // the container it is in, in its layer or around it, or kPaintScrollNone
@@ -103,7 +105,8 @@ struct LayoutSceneContainer {
     PrLayoutRect content;
     PrLayoutScrollFlags userAxes;
     PrLayoutScrollFlags chainAxes;
-    bool scrolls;                   // false for a box that only clips, which no query names
+    LayoutContainerKind kind;       // no query names a box that only clips, or a sticky box
+    uint32_t sticky;                // its entry in the scene's stickies, or kPaintScrollNone if it never moves
 
     // If `curved`, the corners of the clip, by PrRectCorner, whose curves it clips to. Otherwise its corners are
     // square.
@@ -133,6 +136,7 @@ struct LayoutScene {
     Array<LayoutSceneTransform> transforms;
     Array<LayoutResolvedEffects> effects; // the resolved clip paths, masks, filters and blending of layers
     Array<LayoutSceneContainer> scrolls;
+    Array<LayoutSticky> stickies;          // what decides the offsets of the sticky boxes
     Array<LayoutSceneSegment> segments;
     Array<PrLayoutRect> fixedClips;       // the clips of the segments fixed to the viewport (LayoutPaintFixed)
     Array<LayoutSceneSlot> slots;         // each layer's run in painting order
@@ -186,11 +190,13 @@ uint32_t layoutSceneSampleTracks(const LayoutScene* scene, const PrLayoutTrack* 
 // Returns the scroll container of the scene that presents `node`, or kPaintScrollNone.
 uint32_t layoutSceneNodeScroll(const LayoutScene* scene, PrLayoutNode node);
 
-// Sets `out`, indexed by the scene's containers, to the offset at which each container is played, taken from `scrolls`
-// and clamped to its range, or zero if `scrolls` gives none. The cost is proportional to the number of containers if
+// Sets `out`, indexed by the scene's containers, to the offset at which each container is played. A scroll container's
+// offset is taken from `scrolls` and clamped to its range, or is zero if `scrolls` gives none. If `pixelRatio` is not
+// zero, the offset is then rounded to whole target pixels at that ratio, half up. A sticky box's offset follows from
+// its scroll container's, and a box that only clips has none. The cost is proportional to the number of containers if
 // `scrolls` follows the scene's order, as a tree's offsets do (prLayoutSceneScrolls), and to their product otherwise.
 void layoutSceneScrollOffsets(const LayoutScene* scene, const PrLayoutSceneScroll* PR_NULLABLE scrolls, uint32_t count,
-    Array<PrLayoutVec>& out);
+    float pixelRatio, Array<PrLayoutVec>& out);
 
 // What a user's scroll at a point of a scene meets first: the innermost scroll container of the topmost layer,
 // container or slot at the point. If the scroll meets a slot, it also holds the slot and the point in the space of the

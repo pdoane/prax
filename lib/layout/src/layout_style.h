@@ -115,6 +115,10 @@ struct LayoutStyleTraits {
     bool composites;                // its opacity is below one, or `layer`, or its compositing group makes a group
     bool transforms;                // its effects group has a transform other than the identity (layoutHasTransform)
     bool fixedBackground;           // a background layer of its decoration is fixed to the viewport
+
+    // A table's row group, row or cell styled by it may paint whole, and then paints the track backgrounds behind its
+    // cells itself.
+    bool wholeTablePart;
 };
 
 // The interned style records and groups of a tree, and the faces and metrics that layout caches for their fonts.
@@ -146,6 +150,11 @@ struct LayoutStyles {
     // The number of live compositing groups that blend. If there are none, layoutIsolatesBlending returns false at
     // once.
     uint32_t blendingGroups;
+
+    // The number of live box groups whose position is sticky, and of live records whose traits have wholeTablePart. A
+    // tree with none of either pays nothing to look for sticky boxes or for the table parts that paint their tracks.
+    uint32_t stickyGroups;
+    uint32_t wholeTableParts;
 
     Array<LayoutFontFaces> faces;   // by PrLayoutGroupIndex, made on first use
     float targetPixelRatio;         // target pixels per px, which font metrics and leading snap to

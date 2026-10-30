@@ -30,6 +30,11 @@ enum {
 
     // Initial containing block coordinates as laid out, before any transform or scroll.
     PrLayoutCoordinates_Layout,
+
+    // Layout coordinates with each sticky box moved by its sticky offset at the tree's scroll offsets
+    // (css-position-3/#stickypos-scroll), as offsetTop and offsetLeft measure
+    // (cssom-view-1/#extensions-to-the-htmlelement-interface).
+    PrLayoutCoordinates_Positioned,
 };
 typedef uint8_t PrLayoutCoordinates;
 

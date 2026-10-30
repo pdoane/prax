@@ -220,6 +220,8 @@ void countCompounds(LayoutStyles* c, const PrLayoutLength& length, uint32_t delt
     layoutCompoundsCount(&c->compounds, length.bits, delta);
 }
 void countCompounds(LayoutStyles* c, const PrLayoutBoxStyle& box, uint32_t delta) {
+    if (box.position == PrLayoutPosition_Sticky)
+        c->stickyGroups += delta;
     const PrLayoutLength* sizes[] = {
         &box.width, &box.height, &box.minWidth, &box.minHeight, &box.maxWidth,
         &box.maxHeight,
@@ -439,6 +441,8 @@ void addedRecord(LayoutStyles* c, const PrLayoutStyle& style, PrLayoutStyleIndex
     while (c->traits.count <= index)
         c->traits.push(LayoutStyleTraits{});
     c->traits.data[index] = layoutStyleTraitsFromIndex(c, index);
+    if (c->traits.data[index].wholeTablePart)
+        ++c->wholeTableParts;
 }
 
 PR_NOINLINE PrLayoutStyleIndex internRecord(LayoutStyles* c, const PrLayoutStyle& style) {
@@ -659,7 +663,11 @@ void layoutStylesSetTargetPixelRatio(LayoutStyles* styles, float ratio) {
 
 void layoutStylesCollect(LayoutStyles* styles) {
     LayoutStyles* c = styles;
-    collect(c->style, [&](uint32_t i) { countGroups(c, layoutTableAt(c->style, i), 0xffffffffu); });
+    collect(c->style, [&](uint32_t i) {
+        countGroups(c, layoutTableAt(c->style, i), 0xffffffffu);
+        if (c->traits.data[i].wholeTablePart)
+            --c->wholeTableParts;
+    });
     collect(c->font, [&](uint32_t i) {
         countCompounds(c, layoutTableAt(c->font, i), 0xffffffffu);
         if (i < c->faces.count)

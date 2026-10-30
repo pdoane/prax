@@ -33,6 +33,7 @@ pr_library(layout INCLUDE include
     src/layout_sizing.cpp
     src/layout_space.cpp
     src/layout_stacking.cpp
+    src/layout_sticky.cpp
     src/layout_table.cpp
     src/layout_text_position.cpp
     src/layout_tree.cpp
@@ -67,6 +68,7 @@ if (PR_DEVELOP)
         tests/test_layout_marker.cpp
         tests/test_layout_position.cpp
         tests/test_layout_stacking.cpp
+        tests/test_layout_sticky.cpp
         tests/test_layout_split.cpp
         tests/test_layout_table.cpp
         tests/test_layout_text.cpp

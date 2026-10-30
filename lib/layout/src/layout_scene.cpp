@@ -25,7 +25,8 @@ uint32_t resolve(const LayoutTree* tree, const LayoutScene* scene, uint32_t laye
             return ref.value == kPaintScrollNone ? scene->layers.data[layer].placement : base + ref.value;
         case PaintRefKind_Container:
         case PaintRefKind_Space: {
-            PrLayoutNode node = layoutNodeName(tree, ref.value);
+            PrLayoutNode node = layoutNodeName(tree, layoutContainerBox(ref.value));
+            bool sticky = ref.kind == PaintRefKind_Container && layoutContainerIsSticky(ref.value);
             for (uint32_t at = scene->layers.data[layer].parent; at != kPaintScrollNone;
                     at = scene->layers.data[at].parent) {
                 const LayoutSceneLayer& l = scene->layers.data[at];
@@ -35,7 +36,8 @@ uint32_t resolve(const LayoutTree* tree, const LayoutScene* scene, uint32_t laye
                     continue;
                 }
                 for (uint32_t i = l.scrollStart; i < l.scrollStart + l.scrollCount; ++i) {
-                    if (scene->scrolls.data[i].node == node)
+                    const LayoutSceneContainer& c = scene->scrolls.data[i];
+                    if (c.node == node && (c.kind == LayoutContainerKind_Sticky) == sticky)
                         return i;
                 }
             }
@@ -131,8 +133,16 @@ void addLayer(LayoutTree* tree, LayoutScene* scene, LayoutNodeIndex node, const 
     uint32_t base = scene->scrolls.count;
     for (uint32_t i = 0; i < chunk->scrolls.count; ++i) {
         const LayoutPaintScroll& s = chunk->scrolls.data[i];
+        // What moves a sticky box is found anew for each scene, since it reads the layout of boxes around the recording
+        // that holds the box.
+        uint32_t sticky = kPaintScrollNone;
+        LayoutSticky found{};
+        if (s.kind == LayoutContainerKind_Sticky && layoutStickyFind(tree, layoutContainerBox(s.node), &found)) {
+            sticky = scene->stickies.count;
+            scene->stickies.push(found);
+        }
         LayoutSceneContainer scroll{
-            .node = layoutNodeName(tree, s.node),
+            .node = layoutNodeName(tree, layoutContainerBox(s.node)),
             .parent = resolve(tree, scene, index, base, s.parent),
             .layer = index,
             .segment = s.segment,
@@ -142,7 +152,8 @@ void addLayer(LayoutTree* tree, LayoutScene* scene, LayoutNodeIndex node, const 
             .content = s.content,
             .userAxes = s.userAxes,
             .chainAxes = s.chainAxes,
-            .scrolls = s.scrolls,
+            .kind = s.kind,
+            .sticky = sticky,
             .curved = s.curved,
         };
         memCopy(scroll.corners, s.corners, sizeof(s.corners));
@@ -332,16 +343,22 @@ struct Player {
         chain.reset();
     }
 
-    // Pushes the clip and scroll offset of the scene's container `scroll`.
+    // Pushes the clip and scroll offset of the scene's container `scroll`. A sticky box clips nothing, and pushes only
+    // its offset.
     void push(uint32_t scroll) {
+        const LayoutSceneContainer& s = scene->scrolls.data[scroll];
+        PrLayoutVec offset = offsets[scroll];
+        open.push(scroll);
+        if (s.kind == LayoutContainerKind_Sticky) {
+            prDrawListPushTransformDAffine2(list, layoutTranslation(kLayoutVecZero - offset));
+            return;
+        }
         // The clip is placed at its corner, and the content is placed from there, so that neither carries the corner's
         // offset in its coordinates.
         PrLayoutRect clip = frames.clipOf(scroll);
         PrLayoutVec corner{clip.left, clip.top};
-        PrLayoutVec offset = offsets[scroll];
         prDrawListPushTransformDAffine2(list, layoutTranslation(corner));
         PrRect rect = prLayoutRectToPx(layoutRectMoved(clip, kLayoutVecZero - corner));
-        const LayoutSceneContainer& s = scene->scrolls.data[scroll];
         if (s.curved) {
             PrCornerRect shape{.rect = rect};
             memCopy(shape.corners, s.corners, sizeof(s.corners));
@@ -350,13 +367,14 @@ struct Player {
             prDrawListPushClipRect(list, rect, PrDrawEdges_Snapped);
         }
         prDrawListPushTransformDAffine2(list, layoutTranslation(kLayoutVecZero - corner - offset));
-        open.push(scroll);
     }
 
     // Pops the open containers past the first `depth`.
     void closeTo(uint32_t depth) {
         for (; open.count > depth; --open.count) {
             prDrawListPopTransform(list);
+            if (scene->scrolls.data[open.data[open.count - 1]].kind == LayoutContainerKind_Sticky)
+                continue;
             prDrawListPopClip(list);
             prDrawListPopTransform(list);
         }
@@ -558,7 +576,7 @@ uint32_t containerAround(const LayoutScene* scene, uint32_t scroll) {
 
 // Returns the scroll container that is `scroll` or encloses it, skipping boxes that only clip.
 uint32_t scrollerOf(const LayoutScene* scene, uint32_t scroll) {
-    while (scroll != kPaintScrollNone && !scene->scrolls.data[scroll].scrolls)
+    while (scroll != kPaintScrollNone && scene->scrolls.data[scroll].kind != LayoutContainerKind_Scroll)
         scroll = containerAround(scene, scroll);
     return scroll;
 }
@@ -632,10 +650,13 @@ struct ScrollFinder {
             blocks = enterChain(region.scroll, frame, &in) &&
                 layoutRectContains(layoutRectMoved(region.rect, frames.origin.data[index]), in);
         }
-        // The layer's scroll containers, its slots and its children, in the order they play.
+        // The layer's scroll containers, its slots and its children, in the order they play. A sticky box clips
+        // nothing, so the point is in it wherever it is, and the boxes in it are found by what holds them.
         uint32_t next = 0;
         auto scrollsTo = [&](uint32_t segment) {
             for (; next < l.scrollCount && scene->scrolls.data[l.scrollStart + next].segment < segment; ++next) {
+                if (scene->scrolls.data[l.scrollStart + next].kind == LayoutContainerKind_Sticky)
+                    continue;
                 PrLayoutVec in = point;
                 if (enterChain(l.scrollStart + next, frame, &in))
                     foundIn(l.scrollStart + next);
@@ -735,6 +756,8 @@ PrDrawList* drawRoot(LayoutTree* tree, const LayoutLaidRoot& root) {
         .clip = unbounded,
         .portExtent = viewport->extent,
         .content = viewport->overflow,
+        .kind = LayoutContainerKind_Clip,
+        .sticky = kPaintScrollNone,
     });
     addLayer(tree, scene, top.fragment->node, top.fragment, LayoutPieceAt{kLayoutPieceNone, kLayoutPieceNone},
         top.offset, false, kPaintScrollNone, 0, 0, 0);
@@ -861,7 +884,8 @@ const PrLayoutScene* layoutScene(LayoutTree* tree) {
             .content = viewport->overflow,
             .userAxes = layoutUserAxes(overflow),
             .chainAxes = layoutChainAxes(overflow),
-            .scrolls = true,
+            .kind = LayoutContainerKind_Scroll,
+            .sticky = kPaintScrollNone,
         });
         addLayer(tree, scene, root.fragment->node, root.fragment, LayoutPieceAt{kLayoutPieceNone, kLayoutPieceNone},
             root.offset, true, kPaintScrollNone, 0, 0, 0);
@@ -877,16 +901,9 @@ const PrLayoutScene* layoutScene(LayoutTree* tree) {
 void layoutScenePlay(const LayoutScene* scene, PrDrawList* list, const PrLayoutScenePlayOptions& options) {
     if (scene->layers.count == 0)
         return;
+    // A container scrolls by whole target pixels, so that a scroll moves what it shows by whole pixels.
     Array<PrLayoutVec> offsets;
-    layoutSceneScrollOffsets(scene, options.scrolls, options.scrollCount, offsets);
-    // A container scrolls by whole target pixels, rounded half up, so that a scroll moves what it shows by whole
-    // pixels.
-    double ratio = double(scene->pixelRatio);
-    for (uint32_t i = 0; i < offsets.count; ++i) {
-        PrLayoutVec& offset = offsets.data[i];
-        offset.x = prLayoutUnitFromPxRoundDouble(floorF64(prLayoutUnitToPxDouble(offset.x) * ratio + 0.5) / ratio);
-        offset.y = prLayoutUnitFromPxRoundDouble(floorF64(prLayoutUnitToPxDouble(offset.y) * ratio + 0.5) / ratio);
-    }
+    layoutSceneScrollOffsets(scene, options.scrolls, options.scrollCount, scene->pixelRatio, offsets);
     Player player{
         .scene = scene,
         .list = list,
@@ -919,6 +936,7 @@ void layoutSceneDestroy(LayoutScene* scene) {
     scene->layers.reset();
     scene->transforms.reset();
     scene->scrolls.reset();
+    scene->stickies.reset();
     scene->segments.reset();
     scene->slots.reset();
     scene->regions.reset();
@@ -971,30 +989,58 @@ uint32_t layoutSceneSampleTracks(const LayoutScene* scene, const PrLayoutTrack* 
 
 uint32_t layoutSceneNodeScroll(const LayoutScene* scene, PrLayoutNode node) {
     for (uint32_t i = 0; i < scene->scrolls.count; ++i) {
-        if (scene->scrolls.data[i].node == node && scene->scrolls.data[i].scrolls)
+        if (scene->scrolls.data[i].node == node && scene->scrolls.data[i].kind == LayoutContainerKind_Scroll)
             return i;
     }
     return kPaintScrollNone;
 }
 
 void layoutSceneScrollOffsets(const LayoutScene* scene, const PrLayoutSceneScroll* PR_NULLABLE scrolls, uint32_t count,
-        Array<PrLayoutVec>& out) {
+        float pixelRatio, Array<PrLayoutVec>& out) {
     out.resize(scene->scrolls.count);
+    double ratio = double(pixelRatio);
     // Offsets given in the scene's order are each found at the next position. Offsets in any other order are searched
     // for.
     uint32_t next = 0;
     for (uint32_t i = 0; i < scene->scrolls.count; ++i) {
         const LayoutSceneContainer& s = scene->scrolls.data[i];
         out.data[i] = kLayoutVecZero;
-        if (!s.scrolls)
+        if (s.kind != LayoutContainerKind_Scroll)
             continue;
         uint32_t at = next < count && scrolls[next].node == s.node ? next : kArrayMissing;
         for (uint32_t k = 0; k < count && at == kArrayMissing; ++k)
             at = scrolls[k].node == s.node ? k : kArrayMissing;
         if (at == kArrayMissing)
             continue;
-        out.data[i] = layoutScrollClamp(scrolls[at].offset, s.range);
+        PrLayoutVec offset = layoutScrollClamp(scrolls[at].offset, s.range);
+        if (ratio != 0) {
+            offset.x = prLayoutUnitFromPxRoundDouble(floorF64(prLayoutUnitToPxDouble(offset.x) * ratio + 0.5) / ratio);
+            offset.y = prLayoutUnitFromPxRoundDouble(floorF64(prLayoutUnitToPxDouble(offset.y) * ratio + 0.5) / ratio);
+        }
+        out.data[i] = offset;
         next = at + 1;
+    }
+    // A container comes after the containers around it, so the offsets of a sticky box's scroll container and of the
+    // sticky boxes between them are known by the time it is reached.
+    for (uint32_t i = 0; i < scene->scrolls.count; ++i) {
+        const LayoutSceneContainer& s = scene->scrolls.data[i];
+        if (s.sticky == kPaintScrollNone)
+            continue;
+        const LayoutSticky& sticky = scene->stickies.data[s.sticky];
+        PrLayoutVec around = kLayoutVecZero;
+        PrLayoutVec limitAround = kLayoutVecZero;
+        uint32_t skipped = 0;
+        uint32_t at = s.parent;
+        for (; at != kPaintScrollNone && scene->scrolls.data[at].kind != LayoutContainerKind_Scroll;
+                at = scene->scrolls.data[at].parent) {
+            if (scene->scrolls.data[at].kind != LayoutContainerKind_Sticky)
+                continue;
+            around = around - out.data[at];
+            if (skipped++ >= sticky.limitSkips)
+                limitAround = limitAround - out.data[at];
+        }
+        PrLayoutVec scroll = at != kPaintScrollNone ? out.data[at] : kLayoutVecZero;
+        out.data[i] = kLayoutVecZero - layoutStickyShift(sticky, scroll, around, limitAround);
     }
 }
 
@@ -1113,7 +1159,7 @@ uint32_t prLayoutSceneScrolls(const PrLayoutTree* tree, const PrLayoutScene* sce
     uint32_t total = 0;
     for (uint32_t i = 0; i < scene->scrolls.count; ++i) {
         const LayoutSceneContainer& s = scene->scrolls.data[i];
-        if (!s.scrolls)
+        if (s.kind != LayoutContainerKind_Scroll)
             continue;
         if (total < capacity) {
             PrLayoutVec offset = kLayoutVecZero;

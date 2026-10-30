@@ -144,11 +144,12 @@ void scrollElement(PrDomElement* element, const PrCssScrollToOptions* options, b
     cssPresentationScrollTo(presentation, node, to);
 }
 
-// Writes the border box of the first box of the element, as laid out. Returns false if the element has no box.
+// Writes the border box of the first box of the element, as laid out and with sticky boxes at their offsets. Returns
+// false if the element has no box.
 bool firstBox(PrCssPresentation* presentation, const PrDomElement* element, PrLayoutRect* out) {
     PrLayoutNode box = cssPresentationBox(presentation, element);
     return box != kPrLayoutNodeNone &&
-        prLayoutNodeBoxes(cssPresentationOwnTree(presentation), box, PrLayoutCoordinates_Layout, out, 1) != 0;
+        prLayoutNodeBoxes(cssPresentationOwnTree(presentation), box, PrLayoutCoordinates_Positioned, out, 1) != 0;
 }
 
 } // namespace
@@ -392,7 +393,8 @@ void prCssElementScrollIntoView(PrDomElement* element, const PrCssScrollIntoView
         return;
     // Each scrolling box that the element is in, innermost first, and then the viewport, scrolls the element's border
     // box to the position in the box's scrollport where the options align it. The border box is measured where the
-    // earlier scrolls left the element.
+    // earlier scrolls left the element, and where it was laid out in any sticky box around it, or itself: a sticky box
+    // stuck at an edge of the scrollport is shown already, and the scroll brings its place in flow into view.
     auto align = [](PrCssScrollLogicalPosition position, double start, double end, double portStart, double portEnd) {
         double size = end - start;
         double portSize = portEnd - portStart;
@@ -421,6 +423,11 @@ void prCssElementScrollIntoView(PrDomElement* element, const PrCssScrollIntoView
         if (viewport && !prLayoutNodeScrollInfo(tree, kPrLayoutNodeNone, &info))
             break;
         PrDomRect target = prCssElementGetBoundingClientRect(element);
+        PrLayoutNode box = cssPresentationBox(presentation, element);
+        PrLayoutRect laid = prLayoutNodeBounds(tree, box, PrLayoutCoordinates_Layout);
+        PrLayoutRect moved = prLayoutNodeBounds(tree, box, PrLayoutCoordinates_Positioned);
+        target.x -= px(moved.left - laid.left);
+        target.y -= px(moved.top - laid.top);
         PrLayoutRect port{PrLayoutUnit{0}, PrLayoutUnit{0}, info.portExtent.x, info.portExtent.y};
         if (!viewport) {
             PrLayoutRect border = prLayoutNodeBounds(tree, node, PrLayoutCoordinates_Viewport);

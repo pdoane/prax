@@ -745,6 +745,9 @@ LayoutNodeIndex layoutTreeCreateNode(LayoutTree* tree, PrLayoutNodeKind kind) {
         tree->freeNodes = tree->nodes.data[node].next;
     } else {
         node = tree->nodes.count;
+        // A sticky box's container is named by its node with a bit that no node index reaches.
+        if (node >= kLayoutContainerSticky)
+            PR_FATAL("layout tree has too many nodes");
         tree->nodes.emplace();
     }
     LayoutTreeNode& n = tree->nodes.data[node];

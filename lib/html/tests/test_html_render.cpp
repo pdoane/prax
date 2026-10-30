@@ -2384,6 +2384,23 @@ TEST_CASE("float and clear reach layout, and a floated element's display is bloc
     CHECK(verified(page.presentation));
 }
 
+TEST_CASE("a sticky element sticks as its scroll container scrolls, where it is measured, hit and scrolled to") {
+    Page page("<style>body { margin: 0 } #s { overflow: auto; height: 100px } "
+        "#h { position: sticky; top: 10px; height: 20px }</style>"
+        "<div id=s><div style='height: 50px'></div><div id=h></div><div style='height: 500px'></div></div>");
+    PrHtmlElement* header = prHtmlElementQuery(prDomNodeAsEventTarget(prDomElementAsNode(byId(page, "h"))));
+    CHECK(prCssElementGetBoundingClientRect(byId(page, "h")).y == 50.0);
+    prCssElementSetScrollTop(byId(page, "s"), 100);
+    // It stays 10px below the scrollport's top, and offsetTop measures it there, in its scroll container's content.
+    CHECK(prCssElementGetBoundingClientRect(byId(page, "h")).y == 10.0);
+    CHECK(prHtmlElementOffsetTop(header) == 110);
+    CHECK(prCssDocumentElementFromPoint(page.document, 5, 15) == byId(page, "h"));
+    // Scrolled into view, its place in flow comes to the top.
+    PrCssScrollIntoViewOptions options = prCssScrollIntoViewOptionsDefault();
+    prCssElementScrollIntoView(byId(page, "h"), &options);
+    CHECK(prCssElementScrollTop(byId(page, "s")) == 50.0);
+}
+
 TEST_CASE("absolute and fixed positions reach layout, blockified, their float none, keeping whether they were inline") {
     Page page("<style>body { margin: 0 } .a { position: absolute }</style>"
         "<span id=a class=a>a</span><span id=ib class=a style='display: inline-block'>b</span>"

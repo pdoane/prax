@@ -87,6 +87,48 @@ LayoutNodeIndex topContainer(const LayoutTree* tree, LayoutNodeIndex node) {
     return kLayoutContainerViewport;
 }
 
+// Returns the innermost sticky inline box that moves `node` with it, or kPrLayoutNodeNone. Placements pass over inline
+// boxes, so these are found in the tree: the inline boxes between a node in flow and its block container, or the
+// containing block of a box out of flow if that is an inline box.
+LayoutNodeIndex stickyInlineAround(const LayoutTree* tree, LayoutNodeIndex node) {
+    if (tree->styles->stickyGroups == 0)
+        return kPrLayoutNodeNone;
+    const LayoutTreeNode& n = layoutTreeNode(tree, node);
+    if (n.kind != PrLayoutNodeKind_Text && layoutIsOutOfFlow(tree, node)) {
+        LayoutNodeIndex containing = kPrLayoutNodeNone;
+        layoutNodeHolder(tree, node, &containing);
+        bool moves = containing != kPrLayoutNodeNone && layoutIsInlineBox(tree, containing) &&
+            layoutNodeSticks(tree, containing);
+        return moves ? containing : kPrLayoutNodeNone;
+    }
+    for (LayoutNodeIndex at = n.parent; at != kPrLayoutNodeNone && layoutIsInlineBox(tree, at);
+            at = layoutTreeNode(tree, at).parent) {
+        if (layoutNodeSticks(tree, at))
+            return at;
+    }
+    return kPrLayoutNodeNone;
+}
+
+// Returns the container that `node`, placed in the box `parent`, paints in if it does not stick itself, given the
+// container `up` that `parent` paints in.
+LayoutNodeIndex containerAround(const LayoutTree* tree, LayoutNodeIndex node, LayoutNodeIndex parent, LayoutNodeIndex up) {
+    LayoutNodeIndex inlineBox = stickyInlineAround(tree, node);
+    if (inlineBox != kPrLayoutNodeNone)
+        return inlineBox | kLayoutContainerSticky;
+    if (parent == kPrLayoutNodeNone)
+        return topContainer(tree, node);
+    return layoutNodeClips(tree, parent) ? parent : up;
+}
+
+// Returns the container of the box `node`, as its memo holds it, found again from its placements without the memos.
+LayoutNodeIndex freshContainer(const LayoutTree* tree, LayoutNodeIndex node) {
+    if (layoutNodeSticks(tree, node))
+        return node | kLayoutContainerSticky;
+    LayoutNodeIndex parent = layoutCachePlacement(tree->cache, node).parent;
+    LayoutNodeIndex up = parent != kPrLayoutNodeNone ? freshContainer(tree, parent) : kLayoutContainerViewport;
+    return containerAround(tree, node, parent, up);
+}
+
 // Returns the memo of the position and container of the box `node`. Recomputes the memos of the box and of its
 // ancestors along its placements if they are stale. A read costs the number of boxes up to the nearest one with a
 // current memo.
@@ -108,17 +150,26 @@ const LayoutPositioned& positioned(const LayoutTree* tree, LayoutNodeIndex node)
     for (LayoutNodeIndex at = node; at != kPrLayoutNodeNone && !current(at); at =
             layoutCachePlacement(cache, at).parent)
         path.push(at);
+    // A tree with no sticky box finds each container from its placement alone.
+    bool sticks = tree->styles->stickyGroups != 0;
     for (uint32_t i = path.count; i-- > 0;) {
         LayoutNodeIndex at = path.data[i];
         LayoutPlacement placement = layoutCachePlacement(cache, at);
         LayoutPositioned memo{.position = placement.offset, .version = cache.placed};
-        if (placement.parent == kPrLayoutNodeNone) {
-            memo.container = topContainer(tree, at);
-        } else {
-            const LayoutPositioned& up = cache.positioned.data[placement.parent];
-            memo.position = up.position + placement.offset;
-            memo.container = layoutNodeClips(tree, placement.parent) ? placement.parent : up.container;
+        LayoutNodeIndex up = kLayoutContainerViewport;
+        if (placement.parent != kPrLayoutNodeNone) {
+            const LayoutPositioned& above = cache.positioned.data[placement.parent];
+            memo.position = above.position + placement.offset;
+            up = above.container;
         }
+        if (!sticks && placement.parent == kPrLayoutNodeNone)
+            memo.container = topContainer(tree, at);
+        else if (!sticks)
+            memo.container = layoutNodeClips(tree, placement.parent) ? placement.parent : up;
+        else if (layoutNodeSticks(tree, at))
+            memo.container = at | kLayoutContainerSticky;
+        else
+            memo.container = containerAround(tree, at, placement.parent, up);
         cache.positioned.data[at] = memo;
     }
     return cache.positioned.data[node];
@@ -482,6 +533,8 @@ LayoutStyleTraits layoutStyleTraitsFromIndex(const LayoutStyles* styles, PrLayou
         .composites = effects.opacity < 1 || effects.layer || grouped,
         .transforms = transforms,
         .fixedBackground = fixedBackground,
+        .wholeTablePart = (moved || layered || box.zIndexed) && (layoutDisplayIsRowGroup(box.display) ||
+            box.display == PrLayoutDisplay_TableRow || box.display == PrLayoutDisplay_TableCell),
     };
 }
 
@@ -532,6 +585,25 @@ bool layoutNodeClips(const LayoutTree* tree, LayoutNodeIndex node) {
     return clips.x || clips.y || box.clipped;
 }
 
+bool layoutNodeSticks(const LayoutTree* tree, LayoutNodeIndex node) {
+    if (tree->styles->stickyGroups == 0)
+        return false;
+    const LayoutTreeNode& n = layoutTreeNode(tree, node);
+    if (!layoutKindIsBox(n.kind) || n.parent == kPrLayoutNodeNone)
+        return false;
+    return layoutBoxStyle(tree->styles, n.style).position == PrLayoutPosition_Sticky;
+}
+
+LayoutNodeIndex layoutStickyOuterContainer(const LayoutTree* tree, LayoutNodeIndex box) {
+    LayoutNodeIndex parent = layoutCachePlacement(tree->cache, box).parent;
+    LayoutNodeIndex up = parent != kPrLayoutNodeNone ? positioned(tree, parent).container : kLayoutContainerViewport;
+    return containerAround(tree, box, parent, up);
+}
+
+LayoutNodeIndex layoutStickyInlineAround(const LayoutTree* tree, LayoutNodeIndex node) {
+    return stickyInlineAround(tree, node);
+}
+
 PrLayoutVec layoutNodePosition(const LayoutTree* tree, LayoutNodeIndex node) {
     const LayoutTreeNode& n = layoutTreeNode(tree, node);
     if (n.kind != PrLayoutNodeKind_Text && !layoutIsInlineBox(tree, node))
@@ -544,10 +616,9 @@ LayoutNodeIndex layoutNodeContainer(const LayoutTree* tree, LayoutNodeIndex node
     const LayoutTreeNode& n = layoutTreeNode(tree, node);
     if (n.kind != PrLayoutNodeKind_Text && !layoutIsInlineBox(tree, node))
         return positioned(tree, node).container;
-    LayoutNodeIndex parent = layoutCachePlacement(tree->cache, node).parent;
-    if (parent == kPrLayoutNodeNone)
-        return topContainer(tree, node);
-    return layoutNodeClips(tree, parent) ? parent : positioned(tree, parent).container;
+    if (layoutNodeSticks(tree, node))
+        return node | kLayoutContainerSticky;
+    return layoutStickyOuterContainer(tree, node);
 }
 
 LayoutPositioned layoutNodePositioned(const LayoutTree* tree, LayoutNodeIndex node) {
@@ -555,12 +626,14 @@ LayoutPositioned layoutNodePositioned(const LayoutTree* tree, LayoutNodeIndex no
     if (n.kind != PrLayoutNodeKind_Text && !layoutIsInlineBox(tree, node))
         return positioned(tree, node);
     LayoutNodeIndex parent = layoutCachePlacement(tree->cache, node).parent;
-    if (parent == kPrLayoutNodeNone)
-        return LayoutPositioned{.position = kLayoutVecZero, .container = topContainer(tree, node)};
-    LayoutPositioned up = positioned(tree, parent);
-    if (layoutNodeClips(tree, parent))
-        up.container = parent;
-    return up;
+    LayoutPositioned at{.position = kLayoutVecZero, .container = kLayoutContainerViewport};
+    if (parent != kPrLayoutNodeNone)
+        at = positioned(tree, parent);
+    if (layoutNodeSticks(tree, node))
+        at.container = node | kLayoutContainerSticky;
+    else
+        at.container = containerAround(tree, node, parent, at.container);
+    return at;
 }
 
 LayoutPositioned layoutBoxPositioned(const LayoutTree* tree, LayoutNodeIndex box) {
@@ -576,19 +649,7 @@ LayoutNodeIndex layoutPositionsVerify(const LayoutTree* tree) {
         PrLayoutVec position = kLayoutVecZero;
         for (LayoutNodeIndex at = node; at != kPrLayoutNodeNone; at = layoutCachePlacement(cache, at).parent)
             position = position + layoutCachePlacement(cache, at).offset;
-        LayoutNodeIndex top = node;
-        LayoutNodeIndex container = kPrLayoutNodeNone;
-        for (LayoutNodeIndex at = layoutCachePlacement(cache, node).parent; at != kPrLayoutNodeNone;
-                at = layoutCachePlacement(cache, at).parent) {
-            if (layoutNodeClips(tree, at)) {
-                container = at;
-                break;
-            }
-            top = at;
-        }
-        if (container == kPrLayoutNodeNone)
-            container = topContainer(tree, top);
-        if (position != memo.position || container != memo.container)
+        if (position != memo.position || freshContainer(tree, node) != memo.container)
             return node;
     }
     return kPrLayoutNodeNone;

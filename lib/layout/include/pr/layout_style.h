@@ -441,7 +441,9 @@ enum {
 typedef uint8_t PrLayoutBaselineSource;
 
 // How a box is positioned (css-position-3/#position-property). Absolute and Fixed take the box out of flow and place it
-// in its containing block. Sticky is laid out as Relative with no offset.
+// in its containing block. Sticky is laid out as Relative with no offset, and is then moved by its insets from the
+// scrollport of its nearest scroll container as that container scrolls (css-position-3/#stickypos-insets). Its insets'
+// percentages are of the scrollport's size. An inline box does not stick.
 enum {
     PrLayoutPosition_Static,
     PrLayoutPosition_Relative,

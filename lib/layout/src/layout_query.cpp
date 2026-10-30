@@ -9,6 +9,7 @@
 
 #include "layout/src/layout_cache.h"
 #include "layout/src/layout_effects.h"
+#include "layout/src/layout_sticky.h"
 #include "layout/src/layout_text_position.h"
 #include "layout/src/layout_walk.h"
 
@@ -177,6 +178,8 @@ struct HitTester : LayoutWalkVisitor {
     void popScroll() { popClip(); }
     PrLayoutVec scrollViewport(PrLayoutVec scroll) { return scroll; }
 
+    PrLayoutVec pushSticky(LayoutNodeIndex node) { return kLayoutVecZero - layoutNodeStickyShift(tree, node); }
+
     // A point that the inverse of a transform does not reach, behind the eye or through a collapse, hits nothing in the
     // transform's space.
     void pushTransform(const PrDMatrix3& transform) {
@@ -243,6 +246,7 @@ struct Mapping {
     PrDMatrix3 projective;          // used if `projected` is set
     bool projected;
     bool painted;                   // true for viewport coordinates, through transforms and scroll offsets
+    bool sticky;                    // true if sticky boxes are at their sticky offsets
 
     // If set, the mapping is kept as stages instead of one composition: each projective transform is a stage of its
     // own, and the affine transforms between them compose into the stages around them. A point that maps back through
@@ -288,9 +292,30 @@ void moveBy(Mapping& m, PrLayoutVec offset) {
 // to the query's coordinates: its scroll offset if it is a scroll container, then the mapping from its border box.
 void fromContent(const LayoutTree* tree, LayoutNodeIndex node, Mapping& m);
 
+// Returns how far the sticky boxes that placements pass over move `node` from where its placement puts it: the node
+// itself if it sticks, and the sticky inline boxes around it (layoutStickyInlineAround).
+PrLayoutVec stickyMoves(const LayoutTree* tree, LayoutNodeIndex node) {
+    PrLayoutVec moved = kLayoutVecZero;
+    if (layoutTreeNode(tree, node).kind != PrLayoutNodeKind_Text && layoutNodeSticks(tree, node))
+        moved = layoutNodeStickyShift(tree, node);
+    for (LayoutNodeIndex at = layoutStickyInlineAround(tree, node); at != kPrLayoutNodeNone;
+            at = layoutStickyInlineAround(tree, at))
+        moved = moved + layoutNodeStickyShift(tree, at);
+    return moved;
+}
+
+// Appends to `m` the mapping from the content of the block container of the inline box or text `node`, whose placement
+// names it as `parent`, with the moves of the sticky boxes that its placement passes over.
+void fromPieces(const LayoutTree* tree, LayoutNodeIndex node, LayoutNodeIndex parent, Mapping& m) {
+    if (m.sticky)
+        moveBy(m, stickyMoves(tree, node));
+    fromContent(tree, parent, m);
+}
+
 // Appends to `m` the mapping from the border box of the box `node` to the query's coordinates: its transform, its
-// position in its parent's content, and onward from there. The root and the absolutely positioned boxes that the
-// viewport holds are in the viewport's scrolled content, and the fixed boxes that it holds are in the viewport itself.
+// position in its parent's content with the moves of the sticky boxes that its placement passes over, and onward from
+// there. The root and the absolutely positioned boxes that the viewport holds are in the viewport's scrolled content,
+// and the fixed boxes that it holds are in the viewport itself.
 void fromBox(const LayoutTree* tree, LayoutNodeIndex node, Mapping& m) {
     const LayoutFragment* fragment = layoutCachePlaced(tree->cache, node);
     if (m.painted && fragment != nullptr && layoutFragmentPaintsWhole(tree, fragment)) {
@@ -300,6 +325,8 @@ void fromBox(const LayoutTree* tree, LayoutNodeIndex node, Mapping& m) {
     }
     LayoutPlacement placement = layoutCachePlacement(tree->cache, node);
     moveBy(m, placement.offset);
+    if (m.sticky)
+        moveBy(m, stickyMoves(tree, node));
     if (placement.parent != kPrLayoutNodeNone) {
         fromContent(tree, placement.parent, m);
         return;
@@ -413,7 +440,7 @@ void boxesIn(const LayoutTree* tree, LayoutNodeIndex node, Mapping& m, Array<PrL
     if (placement.parent == kPrLayoutNodeNone)
         return;
     const LayoutFragment* container = layoutCachePlaced(tree->cache, placement.parent);
-    fromContent(tree, placement.parent, m);
+    fromPieces(tree, node, placement.parent, m);
     if (n.kind == PrLayoutNodeKind_Text)
         textBoxes(node, container, placement.at, out);
     else
@@ -423,7 +450,11 @@ void boxesIn(const LayoutTree* tree, LayoutNodeIndex node, Mapping& m, Array<PrL
 // Appends the boxes of `node` in the last layout to `out`, in `coordinates` and in content order: where the last layout
 // placed the node, mapped through the boxes that place it.
 void boxesOf(const LayoutTree* tree, PrLayoutCoordinates coordinates, LayoutNodeIndex node, Array<PrLayoutRect>& out) {
-    Mapping m{.transform = prDAffine2Identity(), .painted = coordinates == PrLayoutCoordinates_Viewport};
+    Mapping m{
+        .transform = prDAffine2Identity(),
+        .painted = coordinates == PrLayoutCoordinates_Viewport,
+        .sticky = coordinates != PrLayoutCoordinates_Layout,
+    };
     uint32_t first = out.count;
     boxesIn(tree, node, m, out);
     for (uint32_t i = first; i < out.count; ++i)
@@ -440,7 +471,7 @@ bool textPieces(const LayoutTree* tree, LayoutNodeIndex node, Mapping& m, Fn fn)
     LayoutPlacement placement = layoutCachePlacement(tree->cache, node);
     if (placement.parent == kPrLayoutNodeNone)
         return false;
-    fromContent(tree, placement.parent, m);
+    fromPieces(tree, node, placement.parent, m);
     eachText(node, layoutCachePlaced(tree->cache, placement.parent), placement.at, fn);
     return true;
 }
@@ -619,7 +650,7 @@ PrLayoutRect prLayoutNodeShownBounds(PrLayoutTree* tree, PrLayoutNode node) {
         bool clipped = layoutFragmentClipped(tree, fragment);
         if (!clips.x && !clips.y && !clipped)
             continue;
-        Mapping m{.transform = prDAffine2Identity(), .painted = true};
+        Mapping m{.transform = prDAffine2Identity(), .painted = true, .sticky = true};
         fromBox(tree, at, m);
         if (clipped) {
             PrLayoutRect rect = mapped(m, layoutClipRect(tree, at, layoutRectAt(kLayoutVecZero, fragment->extent)));
@@ -651,7 +682,7 @@ bool prLayoutNodeLocalPoint(PrLayoutTree* tree, PrLayoutNode node, PrLayoutVec p
     Array<PrLayoutRect>& boxes = tree->queries.boxes;
     Array<PrDMatrix3> stages;
     boxes.clear();
-    Mapping m{.transform = prDAffine2Identity(), .painted = true, .stages = &stages};
+    Mapping m{.transform = prDAffine2Identity(), .painted = true, .sticky = true, .stages = &stages};
     boxesIn(tree, uint32_t(node), m, boxes);
     bool reached = boxes.count != 0;
     PrDVec2 at{prLayoutUnitToPxDouble(point.x), prLayoutUnitToPxDouble(point.y)};
@@ -681,7 +712,7 @@ bool prLayoutNodeMapFromBox(PrLayoutTree* tree, PrLayoutNode node, PrDVec2* PR_N
     Array<PrLayoutRect>& boxes = tree->queries.boxes;
     Array<PrDMatrix3> stages;
     boxes.clear();
-    Mapping m{.transform = prDAffine2Identity(), .painted = true, .stages = &stages};
+    Mapping m{.transform = prDAffine2Identity(), .painted = true, .sticky = true, .stages = &stages};
     boxesIn(tree, uint32_t(node), m, boxes);
     bool reached = boxes.count != 0;
     if (reached) {
@@ -795,7 +826,11 @@ bool prLayoutNodeTextCaret(PrLayoutTree* tree, PrLayoutNode text, uint32_t offse
         PrLayoutCoordinates coordinates, PrLayoutRect* out) {
     if (!prLayoutNodeIsValid(tree, text))
         return false;
-    Mapping m{.transform = prDAffine2Identity(), .painted = coordinates == PrLayoutCoordinates_Viewport};
+    Mapping m{
+        .transform = prDAffine2Identity(),
+        .painted = coordinates == PrLayoutCoordinates_Viewport,
+        .sticky = coordinates != PrLayoutCoordinates_Layout,
+    };
     PlacedText best{};
     uint32_t nearest = UINT32_MAX;
     textPieces(tree, uint32_t(text), m, [&](const PlacedText& piece) {
@@ -818,7 +853,11 @@ uint32_t prLayoutNodeTextRangeBoxes(PrLayoutTree* tree, PrLayoutNode text, uint3
     boxes.clear();
     if (!prLayoutNodeIsValid(tree, text))
         return 0;
-    Mapping m{.transform = prDAffine2Identity(), .painted = coordinates == PrLayoutCoordinates_Viewport};
+    Mapping m{
+        .transform = prDAffine2Identity(),
+        .painted = coordinates == PrLayoutCoordinates_Viewport,
+        .sticky = coordinates != PrLayoutCoordinates_Layout,
+    };
     textPieces(tree, uint32_t(text), m, [&](const PlacedText& piece) {
         const LayoutFragment* fragment = piece.fragment;
         uint32_t from = layoutTextStart(fragment);
@@ -850,7 +889,7 @@ bool prLayoutTextPositionFromPoint(PrLayoutTree* tree, PrLayoutNode root, PrLayo
     for (LayoutNodeIndex at = top; at != kPrLayoutNodeNone;) {
         pieces.clear();
         stages.clear();
-        Mapping m{.transform = prDAffine2Identity(), .painted = true, .stages = &stages};
+        Mapping m{.transform = prDAffine2Identity(), .painted = true, .sticky = true, .stages = &stages};
         bool placed = textPieces(tree, at, m, [&](const PlacedText& piece) { pieces.push(piece); });
         PrDVec2 p{prLayoutUnitToPxDouble(point.x), prLayoutUnitToPxDouble(point.y)};
         bool reached = placed && pieces.count != 0;

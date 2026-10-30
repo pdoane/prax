@@ -48,7 +48,7 @@ of a change to it is what the change did.
 | css/WOFF2                        |     298/298 |       298/298 |  100.0% |
 | css/compositing                  |       81/81 |       205/233 |   87.9% |
 | css/css-align                    |     296/296 |     3870/5364 |   72.1% |
-| css/css-anchor-position          |     515/525 |   10268/13916 |   73.7% |
+| css/css-anchor-position          |     515/525 |   10267/13916 |   73.7% |
 | css/css-animations               |     196/207 |      903/1505 |   60.0% |
 | css/css-backgrounds              |     824/859 |     5350/6946 |   77.0% |
 | css/css-borders                  |     181/181 |     1233/1670 |   73.8% |
@@ -73,7 +73,7 @@ of a change to it is what the change did.
 | css/css-forced-color-adjust      |         4/4 |          9/14 |   64.2% |
 | css/css-forms                    |       22/22 |         63/80 |   78.7% |
 | css/css-gaps                     |     549/549 |     3198/4622 |   69.1% |
-| css/css-grid                     |   1354/1354 |   11330/12793 |   88.5% |
+| css/css-grid                     |   1354/1354 |   11334/12793 |   88.5% |
 | css/css-highlight-api            |     134/134 |       195/290 |   67.2% |
 | css/css-image-animation          |       23/23 |         13/27 |   48.1% |
 | css/css-images                   |     505/508 |     2577/4061 |   63.4% |
@@ -92,7 +92,7 @@ of a change to it is what the change did.
 | css/css-overscroll-behavior      |       11/12 |         78/96 |   81.2% |
 | css/css-page                     |       41/41 |       125/168 |   74.4% |
 | css/css-parser-api               |         1/1 |          5/71 |    7.0% |
-| css/css-position                 |     373/385 |     1278/1767 |   72.3% |
+| css/css-position                 |     373/385 |     1389/1767 |   78.6% |
 | css/css-properties-values-api    |     123/123 |      686/1393 |   49.2% |
 | css/css-pseudo                   |     339/342 |      695/1126 |   61.7% |
 | css/css-ruby                     |     177/178 |       117/247 |   47.3% |
@@ -105,7 +105,7 @@ of a change to it is what the change did.
 | css/css-sizing                   |     761/762 |     5057/6549 |   77.2% |
 | css/css-style-attr               |       16/16 |         14/16 |   87.5% |
 | css/css-syntax                   |       50/50 |       376/446 |   84.3% |
-| css/css-tables                   |     337/337 |      904/1110 |   81.4% |
+| css/css-tables                   |     337/337 |      907/1110 |   81.7% |
 | css/css-text                     |   1866/1877 |     4197/6185 |   67.8% |
 | css/css-text-decor               |     365/365 |     1200/1693 |   70.8% |
 | css/css-transforms               |     897/923 |     4229/6327 |   66.8% |
@@ -120,7 +120,7 @@ of a change to it is what the change did.
 | css/css-writing-modes            |   1234/1234 |     1287/1555 |   82.7% |
 | css/css-zoom                     |         1/1 |           1/1 |  100.0% |
 | css/cssom                        |     282/283 |     3395/4403 |   77.1% |
-| css/cssom-view                   |     229/237 |     1348/2578 |   52.2% |
+| css/cssom-view                   |     229/237 |     1349/2578 |   52.3% |
 | css/fetching                     |         1/1 |           0/4 |    0.0% |
 | css/fill-stroke                  |       11/11 |       283/410 |   69.0% |
 | css/filter-effects               |     387/392 |     2067/3308 |   62.4% |
@@ -137,7 +137,7 @@ of a change to it is what the change did.
 | web-animations/interfaces        |       45/47 |        80/834 |    9.5% |
 | web-animations/responsive        |       40/46 |         0/105 |    0.0% |
 | web-animations/timing-model      |       25/34 |         2/402 |    0.4% |
-| **total**                        | 31952/32289 | 153458/209271 |   73.3% |
+| **total**                        | 31952/32289 | 153576/209271 |   73.3% |
 
 ## dom
 

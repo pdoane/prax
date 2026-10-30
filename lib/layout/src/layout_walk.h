@@ -140,8 +140,8 @@ inline bool layoutNodeInlinePaintsWhole(const LayoutTree* tree, LayoutNodeIndex 
 bool layoutInOwningInline(const LayoutTree* tree, LayoutNodeIndex node);
 
 // Appends to `out` the containers that a node whose container is `container` (layoutNodeContainer) paints in, outermost
-// first: the viewport's content, as kLayoutContainerViewport, and the boxes that clip around the node. Appends none of
-// them for kLayoutContainerOutside.
+// first: the viewport's content, as kLayoutContainerViewport, and the boxes that clip or stick around the node. Appends
+// none of them for kLayoutContainerOutside.
 void layoutContainerChain(const LayoutTree* tree, LayoutNodeIndex container, Array<LayoutNodeIndex>& out);
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -190,12 +190,21 @@ struct LayoutWalkVisitor {
     void gridBackgrounds(const LayoutFragment*, PrLayoutVec) {}
     void gridBorders(const LayoutFragment*, PrLayoutVec) {}
 
+    // Called before the decoration of a table's row group, row or cell at `at` that paints whole, for the backgrounds
+    // of the tracks and track groups behind its cells, which its table's gridBackgrounds leaves to it.
+    void trackBackgrounds(const LayoutFragment*, PrLayoutVec) {}
+
     // Called for a scroll container's content, with its padding box and its scroll offset, and for a box that only
     // clips. Returns how far a scroll container's content moves.
     PrLayoutVec pushScroll(const LayoutFragment*, PrLayoutRect, PrLayoutVec) { return kLayoutVecZero; }
     void popScroll() {}
     void pushClip(const LayoutFragment*, PrLayoutRect) {}
     void popClip() {}
+
+    // Called for the container of the sticky box `node`, which holds the box and what paints in it. Returns how far the
+    // container moves its content back, as a scroll offset does: its sticky offset, negated (layoutNodeStickyShift).
+    PrLayoutVec pushSticky(LayoutNodeIndex) { return kLayoutVecZero; }
+    void popSticky() {}
 
     // Called for the viewport's content, scrolled by `scroll`. Returns how far it moves. The walk leaves it for a fixed
     // box that the viewport holds, and enters it again afterward.
@@ -258,10 +267,10 @@ struct LayoutWalkVisitor {
 // ---------------------------------------------------------------------------------------------------------------------
 // The walk
 
-// A container the walk is in: a box that clips or scrolls its content, or the viewport's content, and how far the
-// visitor said that its content moves.
+// A container the walk is in: a box that clips or scrolls its content, a sticky box, or the viewport's content, and how
+// far the visitor said that its content moves.
 struct LayoutWalkContainer {
-    LayoutNodeIndex node;           // kLayoutContainerViewport for the viewport's content
+    LayoutNodeIndex node;           // as layoutNodeContainer names it
     PrLayoutVec scroll;
 };
 
@@ -314,6 +323,13 @@ struct LayoutWalk {
 
     // --- Containers ---
 
+    // Enters the container of a sticky box (layoutContainerIsSticky). Returns how far its content moves.
+    PrLayoutVec pushSticky(LayoutNodeIndex container) {
+        PrLayoutVec scroll = visitor.pushSticky(layoutContainerBox(container));
+        containers.push(LayoutWalkContainer{container, scroll});
+        return scroll;
+    }
+
     // Enters the container `fragment` at `offset`, a box that clips its content: a scroll container, or a box that only
     // clips, whose clip is its padding box extended without limit in an axis that it does not clip, cut by its clip
     // rectangle if it has one. Returns how far its content moves.
@@ -347,6 +363,8 @@ struct LayoutWalk {
         containers.pop();
         if (last.node == kLayoutContainerViewport)
             visitor.leaveViewport();
+        else if (layoutContainerIsSticky(last.node))
+            visitor.popSticky();
         else if (layoutFragmentScrolls(tree, layoutCachePlaced(tree->cache, last.node)))
             visitor.popScroll();
         else
@@ -398,6 +416,10 @@ struct LayoutWalk {
                 PrLayoutVec scroll = visitor.scrollViewport(layoutViewportScroll(tree, tree->fragment));
                 containers.push(LayoutWalkContainer{node, scroll});
                 moved = moved - scroll;
+                continue;
+            }
+            if (layoutContainerIsSticky(node)) {
+                moved = moved - pushSticky(node);
                 continue;
             }
             const LayoutFragment* fragment = layoutCachePlaced(tree->cache, node);
@@ -832,8 +854,11 @@ struct LayoutWalk {
         bool clipped = fragment->node != kPrLayoutNodeNone && layoutFragmentClipped(tree, fragment);
         if (clipped)
             visitor.pushBoxClip(layoutClipRect(tree, fragment->node, layoutRectAt(offset, fragment->extent)));
-        if (fragment->node != kPrLayoutNodeNone)
+        if (fragment->node != kPrLayoutNodeNone) {
+            if (styles->wholeTableParts != 0 && layoutStyleTraits(styles, nodeOf(fragment).style).wholeTablePart)
+                visitor.trackBackgrounds(fragment, offset);
             visitor.box(fragment, layoutRectAt(offset, fragment->extent), isVisible(fragment->node), root);
+        }
         if (fragment->kind == LayoutFragmentKind_Replaced)
             visitor.replaced(fragment, offset, isVisible(fragment->node));
         if (clipped)

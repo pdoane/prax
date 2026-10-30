@@ -1321,7 +1321,7 @@ TEST_CASE("a scene's input finds an escaped scroll container and slot outside th
         const PrLayoutScene* scene = prLayoutTreeScene(f.tree);
         const LayoutScene* s = scene;
         Array<PrLayoutVec> offsets;
-        layoutSceneScrollOffsets(s, nullptr, 0, offsets);
+        layoutSceneScrollOffsets(s, nullptr, 0, 0, offsets);
         LayoutScrollHit hit = layoutSceneScrollAt(s, px(75, 75), nullptr, 0, offsets.data);
         if (slot) {
             REQUIRE(hit.slot != kPaintScrollNone);

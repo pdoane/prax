@@ -191,15 +191,15 @@ values.
   change that may move a box out of flow to another holder (a position, a display, a transform appearing, or children
   inserted or removed) marks every ancestor.
 - Painting, hit testing and geometry read the tree as of the last layout, which follows every change. Geometry is
-  measured either as painted, through transforms and scrolling, or as laid out, before either applies
-  (`PrLayoutCoordinates`). The placements publish the final tree (`LayoutPlacement`). Each placement gives a box's
-  fragment and its offset in its parent's fragment (its holder's fragment if it is out of flow, and the nearest box
-  around it if it is in flow), through the anonymous boxes, rows and lines between, and, for an inline box or a text,
-  the line that it starts on in its block container. Placements are written once a layout's tree is complete, by a
-  walk that descends only into the fragments that are new to it, so a fragment that a layout builds and then drops
-  never reaches them. Readers of the final geometry read placements, never layout entries, which are a cache and may
-  hold a different result. A query maps its node's boxes through their placements, transforms and scroll offsets, at a
-  cost proportional to the node's depth.
+  measured either as painted, through transforms and scrolling, or as laid out, before either applies, or as laid out
+  with sticky boxes at their offsets, as `offsetTop` measures (`PrLayoutCoordinates`). The placements publish the final
+  tree (`LayoutPlacement`). Each placement gives a box's fragment and its offset in its parent's fragment (its holder's
+  fragment if it is out of flow, and the nearest box around it if it is in flow), through the anonymous boxes, rows and
+  lines between, and, for an inline box or a text, the line that it starts on in its block container. Placements are
+  written once a layout's tree is complete, by a walk that descends only into the fragments that are new to it, so a
+  fragment that a layout builds and then drops never reaches them. Readers of the final geometry read placements, never
+  layout entries, which are a cache and may hold a different result. A query maps its node's boxes through their
+  placements, transforms and scroll offsets, at a cost proportional to the node's depth.
 - A query in viewport coordinates maps a box through every transform between it and the viewport. A box under a
   projection gives the bounding rectangle of the part of it that is drawn: the part nearer the eye than drawing's cut
   (`kPrPathPolylineNearPlane`) is cut away, so a box partly behind the eye has finite bounds, and a box wholly behind it
@@ -424,6 +424,30 @@ since everything it reads is geometry and a few facts of a box's record, so a do
 - A box out of flow adds to its holder's overflow, and through it to its ancestors' overflow, but to no scroll
   container's in-flow bounds, and a fixed box that the viewport holds adds nothing to what the viewport scrolls. It
   adds nothing to its parent's intrinsic sizes.
+
+### Sticky positioning
+
+A sticky box (`layout_sticky.h`) is laid out as a relatively positioned box with no offset, and moves as its nearest
+scroll container scrolls, to stay inside the scrollport at its insets, within its containing block
+(css-position-3/#stickypos-insets). Its offset depends on a scroll offset, which layout does not read, so it applies
+where scroll offsets apply, and a scroll still records and lays out nothing.
+
+- **A container.** A sticky box paints in a container of its own, which clips nothing and moves the box, its
+  decoration and what paints in it, as a scroll container moves its content. The container is named by the box's node
+  with a bit set (`kLayoutContainerSticky`), apart from the container of its content if it also clips. A box out of
+  flow that a box outside it holds escapes it, as it escapes a clip. Placements pass over inline boxes, so a sticky
+  inline box is found in the tree as the container of the nodes and boxes in it.
+- **What moves it** is found from the last layout: the scrollport less the scroll container's padding, the box's
+  border box, and its containing block's content box less its margins, which a scroll container as containing block
+  replaces with its scrollable overflow. A table's cells, rows and row groups stay in the table. A box in a fixed box
+  that the viewport holds is in the viewport, unscrolled. A scene finds these as it is assembled, since they read boxes
+  around the recording that holds the box, and computes the offset as it plays, from the offset that it gives the
+  scroll container. Hit testing and geometry compute it from the tree's offsets.
+- **Nesting.** A sticky box inside another in the same scroll container moves with it, and so does its containing
+  block if the outer box holds it, before its own offset is found.
+- **Tables.** A track or cell that paints whole, as a positioned one does, paints the backgrounds of the tracks behind
+  its cells itself, so that they move and stack with it, and its table paints none of them.
+- **Scrolling into view** brings a sticky box's place in flow into view, rather than where it is stuck.
 
 ### Flex layout
 
@@ -927,10 +951,11 @@ change of whether a box paints whole, of its level, or of whether it makes a sta
 Layout changes no list.
 
 A box of a list paints where the last layout placed it (`LayoutPlacement`, under Trees), from its stacking context, in
-its own containers: the boxes that clip their content along its placements, which for a box out of flow are its holder
-and the holder's ancestors. A box out of flow therefore escapes the clips and scroll containers between its holder and
-its placeholder, and a fixed box that the viewport holds escapes the viewport's scrolling. A recording whose box places
-one of its list's boxes through a box outside it is current only while that box stays where it was.
+its own containers: the boxes that clip their content or stick along its placements, which for a box out of flow are its
+holder and the holder's ancestors, and the sticky inline boxes that its placements pass over. A box out of flow
+therefore escapes the clips and scroll containers between its holder and its placeholder, and a fixed box that the
+viewport holds escapes the viewport's scrolling. A recording whose box places one of its list's boxes through a box
+outside it is current only while that box stays where it was.
 
 An inline box that paints whole (a positioned inline box, or one that is a stacking context because of its opacity)
 paints from its list with its own phases: its list if it makes a context, the blocks in its rows, its floats and those
