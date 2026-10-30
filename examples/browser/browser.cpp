@@ -1,12 +1,14 @@
 // The browser example: a web browser in a window, whose pages' scripts run, rendered through lib/layout and lib/draw.
 //
-// Usage: browser [--cache <directory>] <url | path>
+// Usage: browser [--cache <directory>] [--stats] <url | path>
 //
 // The browser opens a URL, or a file at its file: URL, and navigates from there: a link that the user follows, or a
 // script that sets the location, opens the document that it names, and Alt or Cmd with Left goes back in the window's
 // session history, and with Right forward. The network is lib/net's sockets, with the platform's TLS, under lib/http
 // and lib/fetch, and an HTTP cache on disk, where the platform keeps a user's caches or in the directory that --cache
-// names, as pr_shell's --cache does. Local storage is on disk too, where the platform keeps a user's data.
+// names, as pr_shell's --cache does. Local storage is on disk too, where the platform keeps a user's data. --stats
+// prints, once a second, how many frames the window presented, the time that the window's thread and the GPU spent on
+// each, and the work that the renderer prepared for the last.
 //
 // main() is the composition root: the window is one page (pr/html_page.h), the navigable that loads each document, with
 // its script engine (pr/html_quickjs.h) and its view (pr/html_view.h). The browser runs on three threads:
@@ -37,6 +39,7 @@
 #include "pr/image.h"
 #include "pr/layout_compositor.h"
 #include "pr/mathml_quickjs.h"
+#include "pr/media.h"
 #include "pr/net.h"
 #include "pr/storage_disk.h"
 #include "pr/storage_memory.h"
@@ -72,14 +75,16 @@ constexpr uint64_t kCacheBytes = uint64_t(256) << 20;
 struct Browser {
     std::string address;            // the URL that the browser opens first
     std::string cacheDirectory;     // where the HTTP cache is kept, or empty for the platform's cache directory
+    bool stats = false;             // prints the frames' statistics once a second
 
-    // What every page shares: text, images, storage, the network, the window's session history, and the agent whose
-    // event loop runs the pages on the page's thread.
+    // What every page shares: text, images, media, storage, the network, the window's session history, and the agent
+    // whose event loop runs the pages on the page's thread.
     PrFontSet* fonts = nullptr;
     PrTextShaper* shaper = nullptr;
     PrTextFont* font = nullptr;
     PrCompressCodec* compress = nullptr;
     PrImageCodec* images = nullptr;
+    PrMediaCodec* media = nullptr;
     PrTaskPool* io = nullptr;       // writes the files of the cache and of local storage
     PrTaskPool* workers = nullptr;  // the threads that share the agent's work with the page's thread, such as restyles
     PrStorage* cache = nullptr;
@@ -109,6 +114,14 @@ struct Browser {
     PrUVec2 extent{};               // the window's frame's extent in target pixels
     PrAppDisplay shownOn = prAppDisplayDefault();
     std::atomic<bool> frameWanted{false};
+
+    // The frames' statistics since they were last printed. The GPU's time is added on the device's thread.
+    double statsSince = 0;
+    uint32_t statsFrames = 0;
+    double statsCpu = 0;               // milliseconds on the window's thread, in present
+    double statsWait = 0;              // milliseconds of that spent waiting for a drawable
+    std::atomic<uint64_t> statsGpu{0}; // microseconds on the GPU
+    PrDrawStats statsLast{};
 
     // The page's thread.
     PrThread thread{};
@@ -152,6 +165,7 @@ PrHtmlHost pageHost(Browser& b) {
     host.font = b.font;
     host.shaper = b.shaper;
     host.images = b.images;
+    host.media = b.media;
     host.device = b.device;
     host.compress = b.compress;
     host.localStorage = b.localStorage;
@@ -186,7 +200,7 @@ void pageThread(Browser& b) {
 // ---------------------------------------------------------------------------------------------------------------------
 // What every page shares
 
-// Opens text, images, storage, the network and the agent.
+// Opens text, images, media, storage, the network and the agent.
 void openShared(Browser& b) {
     b.fonts = prFontSetCreate(nullptr);
     prFontBundleInstall(b.fonts, PrFontBundle_Noto, PR_FONT_BUNDLE_DIR);
@@ -196,6 +210,7 @@ void openShared(Browser& b) {
     b.font = prTextFontCreate(&font);
     b.compress = prCompressCodecCreate(PrCompressCodecBackend_Default);
     b.images = prImageCodecCreate(PrImageCodecBackend_Default, b.compress);
+    b.media = prMediaCodecCreate(PrMediaCodecBackend_Default);
     b.io = prTaskPoolCreate(PrTaskPoolBackend_Default, 1);
 
     // The cache and local storage are on disk where the platform keeps a user's, so that they outlive the run.
@@ -256,6 +271,7 @@ void closeShared(Browser& b) {
     prTaskPoolDestroy(b.workers);
     prTaskPoolDestroy(b.io);
     prImageCodecDestroy(b.images);
+    prMediaCodecDestroy(b.media);
     prCompressCodecDestroy(b.compress);
     prTextFontRelease(b.font);
     prTextShaperDestroy(b.shaper);
@@ -265,6 +281,27 @@ void closeShared(Browser& b) {
 // ---------------------------------------------------------------------------------------------------------------------
 // The window's thread
 
+// Prints the frames' statistics if a second has passed since they were last printed, and starts counting again.
+void printStats(Browser& b, double now) {
+    if (b.statsSince == 0)
+        b.statsSince = now;
+    double elapsed = now - b.statsSince;
+    if (elapsed < 1000)
+        return;
+    uint32_t frames = b.statsFrames;
+    double gpu = double(b.statsGpu.exchange(0)) / 1000;
+    const PrDrawStats& last = b.statsLast;
+    fprintf(stderr,
+        "browser: %.1f fps, per frame %.2f ms on the window's thread (%.2f ms waiting for a drawable), %.2f ms on the "
+            "GPU; last frame %u passes, %u layers, %u draws, %u primitives, %u path fills, %llu KB uploaded\n",
+        frames * 1000 / elapsed, b.statsCpu / frames, b.statsWait / frames, gpu / frames, last.passes, last.layers,
+        last.draws, last.primitives, last.pathFills, (unsigned long long)(last.uploadBytes >> 10));
+    b.statsSince = now;
+    b.statsFrames = 0;
+    b.statsCpu = 0;
+    b.statsWait = 0;
+}
+
 // Presents a frame that the compositor made, on the window's thread. The pass clears to the frame's canvas color, which
 // fills the canvas in place of the list. A swap chain that holds more than 8-bit sRGB takes the frame through the
 // display shader.
@@ -272,9 +309,11 @@ void present(void* PR_NULLABLE context, PrDrawList* list, PrColor16 canvasColor)
     Browser& b = *static_cast<Browser*>(context);
     PrGpuTexture drawable{};
     PrGpuCommands* commands = nullptr;
+    double began = prTimeMonotonicMilliseconds();
     if (b.extent.x == 0 || b.extent.y == 0 || prGpuSwapChainAcquire(b.swapChain, b.extent, &drawable) != PrStatus_Ok ||
             !prGpuCommandsBegin(b.device, nullptr, &commands))
         return;
+    double acquired = prTimeMonotonicMilliseconds();
     PrGpuSwapChainInfo info = prGpuSwapChainInfo(b.swapChain);
     bool mapped = info.format != PrGpuFormat_Bgra8 || info.space != PrColorSpace_Srgb;
     if (mapped) {
@@ -314,7 +353,20 @@ void present(void* PR_NULLABLE context, PrDrawList* list, PrColor16 canvasColor)
     }
     prGpuCommandsTextureBarrier(commands, drawable, all, PrGpuAccessFlag_ColorAttachment, PrGpuAccessFlag_Present);
     prGpuSwapChainPresent(b.swapChain, commands);
+    if (b.stats) {
+        prGpuCommandsOnDone(commands, [](void* PR_NULLABLE context, double seconds) {
+            static_cast<Browser*>(context)->statsGpu.fetch_add(uint64_t(seconds * 1e6));
+        }, &b);
+    }
     prGpuCommandsSubmit(commands);
+    if (b.stats) {
+        double now = prTimeMonotonicMilliseconds();
+        ++b.statsFrames;
+        b.statsCpu += now - began;
+        b.statsWait += acquired - began;
+        b.statsLast = prDrawFrameStats(b.frame);
+        printStats(b, now);
+    }
 }
 
 void start(void* context, PrApp* app, const PrAppFrame* window) {
@@ -420,12 +472,17 @@ int main(int argc, char** argv) {
     prCrashHandler();
     static Browser b;
     int at = 1;
-    if (at + 1 < argc && std::string(argv[at]) == "--cache") {
-        b.cacheDirectory = argv[at + 1];
-        at += 2;
+    for (; at + 1 < argc; ++at) {
+        std::string option = argv[at];
+        if (option == "--cache" && at + 2 < argc)
+            b.cacheDirectory = argv[++at];
+        else if (option == "--stats")
+            b.stats = true;
+        else
+            break;
     }
     if (at + 1 != argc) {
-        fprintf(stderr, "usage: browser [--cache <directory>] <url | path>\n");
+        fprintf(stderr, "usage: browser [--cache <directory>] [--stats] <url | path>\n");
         return 2;
     }
     // A path to a file opens the file at its file: URL. Anything else is a URL.

@@ -8,10 +8,12 @@
 #include "pr/alloc.h"
 #include "pr/ascii.h"
 #include "pr/assert.h"
+#include "pr/charset.h"
 #include "pr/css.h"
 #include "pr/css_presentation.h"
 #include "pr/dom_xml.h"
 #include "pr/float.h"
+#include "pr/mime.h"
 #include "pr/net.h"
 #include "pr/string_ops.h"
 #include "pr/svg.h"
@@ -31,7 +33,6 @@
 #include "dom/src/dom_custom.h"
 #include "dom/src/dom_element_state.h"
 #include "dom/src/dom_microsyntax.h"
-#include "dom/src/dom_mime.h"
 #include "dom/src/dom_resource.h"
 #include "html/src/html_canvas.h"
 #include "html/src/html_document.h"
@@ -66,33 +67,6 @@ struct PreparedScript {
 
 namespace {
 
-// mimesniff/#javascript-mime-type
-constexpr PrStringView kJavaScriptMimeTypes[] = {
-    "application/ecmascript", "application/javascript",
-    "application/x-ecmascript", "application/x-javascript",
-    "text/ecmascript", "text/javascript", "text/javascript1.0",
-    "text/javascript1.1", "text/javascript1.2", "text/javascript1.3",
-    "text/javascript1.4", "text/javascript1.5", "text/jscript",
-    "text/livescript", "text/x-ecmascript", "text/x-javascript",
-};
-
-// mimesniff/#javascript-mime-type-essence-match, for `prefix` followed by `rest`.
-bool isJavaScriptMimeType(PrStringView prefix, PrStringView rest) {
-    for (PrStringView type : kJavaScriptMimeTypes) {
-        if (type.size == prefix.size + rest.size && asciiStartsWithFold(type, prefix) &&
-                asciiEqualsFold(stringSlice(type, prefix.size, rest.size), rest))
-            return true;
-    }
-    return false;
-}
-
-// mimesniff/#xml-mime-type
-bool isXmlMimeType(PrStringView type) {
-    PrStringView essence = domMimeTypeEssence(type);
-    return asciiEqualsFold(essence, "text/xml") || asciiEqualsFold(essence, "application/xml") ||
-        asciiEndsWithFold(essence, "+xml");
-}
-
 // Returns true if the document's content type is Markdown's (RFC 7763). A Markdown document is an HTML document that
 // the context builds from the Markdown, and it runs no script.
 bool isMarkdownDocument(const PrDomDocument* document) {
@@ -104,22 +78,14 @@ bool isMarkdownDocument(const PrDomDocument* document) {
 // or none, is parsed with the extensions that GitHub renders.
 PrMarkdownOptions markdownOptionsOf(PrStringView type) {
     PrMarkdownOptions options = prMarkdownOptionsDefault();
-    size_t start = stringFind(type, ';');
-    while (start < type.size) {
-        size_t end = start + 1 + stringFind(stringSlice(type, start + 1, type.size - start - 1), ';');
-        PrStringView parameter = stringTrim(stringSlice(type, start + 1, end - start - 1));
-        size_t equals = stringFind(parameter, '=');
-        if (equals < parameter.size && asciiEqualsFold(stringTrim(stringSlice(parameter, 0, equals)), "variant")) {
-            PrStringView value = stringTrim(stringSlice(parameter, equals + 1, parameter.size - equals - 1));
-            if (value.size >= 2 && value.data[0] == '"' && value.data[value.size - 1] == '"')
-                value = stringSlice(value, 1, value.size - 2);
-            if (asciiEqualsFold(value, "CommonMark"))
-                options.extensions = 0;
-            else if (asciiEqualsFold(value, "GFM"))
-                options.extensions = PrMarkdownExtensionFlag_Gfm;
-        }
-        start = end;
+    PrString variant = prStringNull();
+    if (prMimeTypeParameter(type, "variant", &variant)) {
+        if (asciiEqualsFold(prStringView(&variant), "CommonMark"))
+            options.extensions = 0;
+        else if (asciiEqualsFold(prStringView(&variant), "GFM"))
+            options.extensions = PrMarkdownExtensionFlag_Gfm;
     }
+    prStringReset(&variant);
     return options;
 }
 
@@ -140,10 +106,17 @@ bool scriptKind(const PrDomElement* element, PrHtmlScriptKind* out) {
     *out = PrHtmlScriptKind_Classic;
     if (type.data != nullptr ? type.size == 0 : language.size == 0)
         return true;
-    if (type.data == nullptr)
-        return isJavaScriptMimeType("text/", language);
+    if (type.data == nullptr) {
+        // The language attribute names the subtype of a text/ type.
+        TextBuffer named;
+        textAppend(&named, "text/");
+        textAppend(&named, language);
+        bool javaScript = prMimeTypeIsJavaScript(textView(&named));
+        textReset(&named);
+        return javaScript;
+    }
     type = stringTrim(type);
-    if (isJavaScriptMimeType("", type))
+    if (prMimeTypeIsJavaScript(type))
         return true;
     *out = PrHtmlScriptKind_Module;
     return asciiEqualsFold(type, "module");
@@ -662,7 +635,7 @@ void moduleFetched(void* PR_NULLABLE data, const DomFetchResult* result) {
     PrHtmlPage* self = fetch->page;
     HtmlModuleIndex index = fetch->module;
     prMemoryFree(fetch);
-    if (!domFetchIsOk(result) || !isJavaScriptMimeType("", domMimeTypeEssence(result->contentType))) {
+    if (!domFetchIsOk(result) || !prMimeTypeIsJavaScript(prMimeTypeEssence(result->contentType))) {
         self->modules.data[index].state = HtmlModuleState_Failed;
     } else {
         PrString decoded = {};
@@ -837,7 +810,7 @@ void scriptFetched(void* PR_NULLABLE data, const DomFetchResult* result) {
         PrStringView body = result->body.data != nullptr ? result->body : "";
         PrCharset charset = script->charset;
         if (script->kind == PrHtmlScriptKind_Classic) {
-            PrCharset response = domMimeTypeCharset(result->contentType);
+            PrCharset response = prCharsetFromMimeType(result->contentType);
             charset = prCharsetSniffBom(body);
             if (charset == PrCharset_None)
                 charset = response != PrCharset_None ? response : script->charset;
@@ -1153,12 +1126,15 @@ bool changeEncoding(void* data, PrCharset charset) {
     return false;
 }
 
-// Releases the window's document, which a script may still hold. The document loses the objects that the window gave
-// it, which the document refers to without holding them.
+// Discards the window's document, which a script may still hold. The document loses the objects that the window gave
+// it, which the document refers to without holding them, and its listeners, as its closed window loses its own: the
+// window keeps the document until the window is freed, and a listener's callback could otherwise keep the window.
 void discardDocument(PrHtmlPage* self) {
     PrDomDocument* document = self->window->document;
     if (document == nullptr)
         return;
+    domListenersDestroy(document->listeners);
+    document->listeners = nullptr;
     prCssPresentationDestroy(self->presentation);
     self->presentation = nullptr;
     svgPresentationDestroy(self->svg);
@@ -1167,8 +1143,6 @@ void discardDocument(PrHtmlPage* self) {
     document->global = nullptr;
     document->host = nullptr;
     document->customElements = nullptr;
-    self->window->document = nullptr;
-    domNodeRelease(document);
 }
 
 // Gives the window a new document. The document's media queries are evaluated against the window's environment, and the
@@ -1331,6 +1305,8 @@ void attachFrame(PrHtmlPage* self, PrDomElement* element, PrStringView source, P
         childHost.shaper = self->host.shaper;
     if (childHost.images == nullptr)
         childHost.images = self->host.images;
+    if (childHost.media == nullptr)
+        childHost.media = self->host.media;
     if (childHost.compress == nullptr)
         childHost.compress = self->host.compress;
     if (childHost.fetcher == nullptr)
@@ -1347,6 +1323,7 @@ void attachFrame(PrHtmlPage* self, PrDomElement* element, PrStringView source, P
     child->defaultCharset = self->defaultCharset;
     prHtmlPageSetDisplay(child, &self->display);
     prHtmlPageSetUserPreferences(child, &self->preferences);
+    child->visibility = self->visibility;
     // The context made its first document's presentation before it had a parent.
     if (child->presentation != nullptr)
         child->presentation->embedding = PrCssPresentationEmbedding_Frame;
@@ -1671,16 +1648,16 @@ void objectFetched(void* PR_NULLABLE data, const DomFetchResult* result) {
     if (isCurrent(fetch) && inWindow(fetch->page, element)) {
         DomElementState* state = element->state;
         PrStringView type = domAttributeValue(element, "type");
-        PrStringView essence = domMimeTypeEssence(type.size != 0 ? type : result->contentType);
+        PrStringView essence = prMimeTypeEssence(type.size != 0 ? type : result->contentType);
         if (!domFetchIsOk(result)) {
             queueElementEvent(fetch->page, element, true);
-        } else if (asciiStartsWithFold(essence, "image/") && !isXmlMimeType(essence)) {
+        } else if (asciiStartsWithFold(essence, "image/") && !prMimeTypeIsXml(essence)) {
             bool decoded = htmlImageSize(result->body, &state->naturalWidth, &state->naturalHeight);
             if (decoded)
                 state->image = PrDomImageState_CompletelyAvailable;
             showImage(fetch->page, element, decoded ? result->body : PrStringView{});
             queueElementEvent(fetch->page, element, !decoded);
-        } else if (asciiEqualsFold(essence, "text/html") || isXmlMimeType(essence)) {
+        } else if (asciiEqualsFold(essence, "text/html") || prMimeTypeIsXml(essence)) {
             attachFrame(fetch->page, element, result->body, prStringView(&fetch->url),
                 PrHtmlResponseHeaders{essence, result->contentLanguage});
         }
@@ -2048,6 +2025,7 @@ void shareWithWindow(PrHtmlPage* self, PrHtmlWindow* window) {
     window->storage[PrHtmlStorageKind_Session].provider = self->host.sessionStorage;
     window->device = self->host.device;
     window->images = self->host.images;
+    window->mediaCodec = self->host.media;
     if (self->host.fetcher != nullptr)
         window->userAgent = prFetchNetworkUserAgent(self->host.fetcher);
     window->navigatorCompatibilityMode = self->host.navigatorCompatibilityMode;
@@ -2147,9 +2125,9 @@ PrStatus beginDocument(PrHtmlPage* page, PrStringView url, const PrHtmlResponseH
     prStringReset(&committed);
     htmlWindowStartClock(page->window);
     page->window->revealing = true;
-    document->kind = isXmlMimeType(contentType) ? DomDocumentKind_Xml : DomDocumentKind_Html;
+    document->kind = prMimeTypeIsXml(contentType) ? DomDocumentKind_Xml : DomDocumentKind_Html;
     TextBuffer essence;
-    textAppend(&essence, domMimeTypeEssence(contentType));
+    textAppend(&essence, prMimeTypeEssence(contentType));
     textAsciiLower(&essence);
     prStringReset(&document->contentType);
     document->contentType = textTake(&essence);
@@ -2172,7 +2150,7 @@ PrStatus beginDocument(PrHtmlPage* page, PrStringView url, const PrHtmlResponseH
 // PrDomTag_Unknown if the resource is not an image, a video or an audio resource. An XML MIME type, such as an SVG
 // image's, is never media, since the XML parser loads it as a document.
 PrDomTag mediaHostOf(PrStringView essence) {
-    if (isXmlMimeType(essence))
+    if (prMimeTypeIsXml(essence))
         return PrDomTag_Unknown;
     if (asciiStartsWithFold(essence, "image/"))
         return PrDomTag_Img;
@@ -2235,7 +2213,7 @@ void continueInTasks(PrHtmlPage* page, PrStringView source) {
 PrCharset transportCharsetOf(const PrHtmlResponseHeaders* PR_NULLABLE headers) {
     if (headers == nullptr || headers->contentType.data == nullptr)
         return PrCharset_None;
-    return domMimeTypeCharset(headers->contentType);
+    return prCharsetFromMimeType(headers->contentType);
 }
 
 // Starts the load's document again, to parse its bytes in the charset that a meta element named
@@ -2912,6 +2890,26 @@ void abortDocument(PrHtmlPage* self) {
     releaseWaiting(self);
 }
 
+// Fires visibilitychange at the window's document in a task of the window (html/#update-the-visibility-state). The
+// event bubbles, and the task holds the document.
+void queueVisibilityChange(PrHtmlWindow* window) {
+    PrDomDocument* document = window->document;
+    if (document == nullptr)
+        return;
+    auto fire = [](void* data) {
+        PrDomDocument* held = static_cast<PrDomDocument*>(data);
+        PrDomEventInit init = prDomEventInitDefault();
+        init.bubbles = true;
+        PrDomEvent* event = prDomEventCreate("visibilitychange", &init);
+        event->trusted = true;
+        domEventDispatch(held, event);
+        domEventRelease(event);
+        domNodeUnhold(held);
+    };
+    domNodeHold(document);
+    htmlWindowQueueTask(window, fire, document, [](void* data) { domNodeUnhold(static_cast<PrDomDocument*>(data)); });
+}
+
 } // namespace
 
 PrStatus htmlDocumentOpen(PrDomDocument* document) {
@@ -3088,6 +3086,7 @@ PrHtmlPage* prHtmlPageCreate(const PrHtmlHost* PR_NULLABLE host) {
     cssMediaEnvironmentInit(&self->window->media, self->host.execute != nullptr);
     self->defaultCharset = PrCharset_Windows1252;
     self->display = prAppDisplayDefault();
+    self->visibility = PrHtmlVisibility_Visible;
     cssMediaEnvironmentSetDisplay(&self->window->media, self->display);
     prHtmlPageSetViewport(self, PrVec2{800, 600});
     self->documentHost = DomDocumentHost{
@@ -3428,6 +3427,15 @@ void prHtmlPageSetUserPreferences(PrHtmlPage* self, const PrAppUserPreferences* 
         taken.colorScheme = child->preferences.colorScheme;
         prHtmlPageSetUserPreferences(child, &taken);
     }
+}
+
+void prHtmlPageSetVisibility(PrHtmlPage* self, PrHtmlVisibility visibility) {
+    if (self->visibility == visibility)
+        return;
+    self->visibility = visibility;
+    queueVisibilityChange(self->window);
+    for (uint32_t i = 0; i < self->children.count; ++i)
+        prHtmlPageSetVisibility(self->children.data[i], visibility);
 }
 
 PrCssPresentation* PR_NULLABLE prHtmlPagePresentation(PrHtmlPage* self) {

@@ -32,6 +32,7 @@ typedef struct PrHtmlIFrameElement PrHtmlIFrameElement;
 typedef struct PrHtmlImageElement PrHtmlImageElement;
 typedef struct PrHtmlLinkElement PrHtmlLinkElement;
 typedef struct PrHtmlMediaElement PrHtmlMediaElement;
+typedef struct PrHtmlTrackList PrHtmlTrackList;
 typedef struct PrHtmlMetaElement PrHtmlMetaElement;
 typedef struct PrHtmlPictureElement PrHtmlPictureElement;
 typedef struct PrHtmlScriptElement PrHtmlScriptElement;
@@ -188,6 +189,17 @@ PrDomHtmlCollection* prHtmlDocumentCollection(PrDomDocument* document, PrHtmlDoc
 // top-level browsing context is taken to have the system focus. A nested browsing context has it if its parent has it
 // and the iframe that contains it is focused in the parent's document.
 bool prHtmlDocumentHasFocus(PrDomDocument* document);
+
+// The visibility states of a document (html/#visibility-state).
+enum {
+    PrHtmlVisibility_Hidden,
+    PrHtmlVisibility_Visible,
+};
+typedef uint8_t PrHtmlVisibility;
+
+// Returns the document's visibility state (html/#dom-document-visibilitystate): its page's, as the host sets it
+// (prHtmlPageSetVisibility), or hidden for a document that is not its window's document.
+PrHtmlVisibility prHtmlDocumentVisibilityState(const PrDomDocument* document);
 
 // Returns the focused element as `root` sees it (html/#dom-documentorshadowroot-activeelement). `root` is a document or
 // a shadow root.
@@ -556,9 +568,10 @@ PrHtmlSourceElement* PR_NULLABLE prHtmlSourceElementQuery(PrDomEventTarget* PR_N
 // HTMLMediaElement : HTMLElement (html)
 //
 // The interface of the video and audio elements (html/#htmlvideoelement, html/#htmlaudioelement). The engine plays a
-// media resource as a timeline, without decoding it. A resource is supported if its container gives its duration. Its
-// media data is available as soon as it is fetched. A media element plays only if its document is its window's
-// document.
+// media resource as a timeline, which the host's media codec reads (PrHtmlHost::media). A resource is supported if the
+// codec reads it. Its media data is available as soon as it is fetched. A video element shows the frame at its playback
+// position, where the codec decodes frames, or else its poster frame. A media element plays only if its document is its
+// window's document.
 
 // An HTMLMediaElement as each interface it inherits from.
 PR_HANDLE_UPCAST(HtmlMediaElement, HtmlElement, HtmlElement)
@@ -642,7 +655,8 @@ PrHtmlMediaReadyState prHtmlMediaElementReadyState(const PrHtmlMediaElement* sel
 // Resets the element and selects a media resource again (html/#dom-media-load).
 void prHtmlMediaElementLoad(PrHtmlMediaElement* self);
 
-// Returns how likely the element is to play a resource of the MIME type `type` (html/#dom-navigator-canplaytype).
+// Returns how likely the element is to play a resource of the MIME type `type`, as its window's media codec answers
+// (html/#dom-navigator-canplaytype).
 PrHtmlCanPlay prHtmlMediaElementCanPlayType(const PrHtmlMediaElement* self, PrStringView type);
 
 // Returns true if the element is seeking.
@@ -702,6 +716,42 @@ void prHtmlMediaElementSetMuted(PrHtmlMediaElement* self, bool muted);
 // html/#dom-video-videoheight).
 uint32_t prHtmlMediaElementVideoWidth(const PrHtmlMediaElement* self);
 uint32_t prHtmlMediaElementVideoHeight(const PrHtmlMediaElement* self);
+
+// The kinds of a media element's tracks.
+enum {
+    PrHtmlTrackKind_Text,       // html/#text-track
+    PrHtmlTrackKind_Audio,      // html/#audiotrack
+    PrHtmlTrackKind_Video,      // html/#videotrack
+};
+typedef uint8_t PrHtmlTrackKind;
+
+// Returns the list of the element's tracks of `kind` (html/#dom-media-texttracks, html/#dom-media-audiotracks,
+// html/#dom-media-videotracks). The list is a part of the element: it lives as long as the element, and a reference to
+// it is a reference to the element.
+PrHtmlTrackList* prHtmlMediaElementTracks(PrHtmlMediaElement* self, PrHtmlTrackKind kind);
+
+// ---------------------------------------------------------------------------------------------------------------------
+// TextTrackList, AudioTrackList and VideoTrackList : EventTarget (html)
+//
+// A media element's tracks of one kind (html/#texttracklist, html/#audiotracklist, html/#videotracklist). The list
+// fires addtrack and removetrack as the element's tracks change, and change as a track is enabled, selected or its mode
+// changes.
+
+// A track list as the interface it inherits from.
+PR_HANDLE_UPCAST(HtmlTrackList, DomEventTarget, EventTarget)
+
+// Returns `object` as a track list, or null if it is not one.
+PrHtmlTrackList* PR_NULLABLE prHtmlTrackListQuery(PrDomEventTarget* PR_NULLABLE object);
+
+// Returns the kind of the tracks that the list holds.
+PrHtmlTrackKind prHtmlTrackListKind(const PrHtmlTrackList* self);
+
+// Returns the number of tracks in the list.
+uint32_t prHtmlTrackListLength(const PrHtmlTrackList* self);
+
+// Returns the index of the selected track of a list of video tracks, or -1 if none is selected
+// (html/#dom-videotracklist-selectedindex).
+int32_t prHtmlTrackListSelectedIndex(const PrHtmlTrackList* self);
 
 // ---------------------------------------------------------------------------------------------------------------------
 // HTMLSlotElement : HTMLElement (html)

@@ -55,13 +55,14 @@ bool unboxes(const PrDomElement* element) {
     }
 }
 
-// The replaced elements are img, iframe, an object that represents an image or its content navigable
-// (html/#the-object-element), and a canvas where scripting is enabled (html/#replaced-elements). An iframe has no
-// natural dimensions, and takes the default object size. A canvas's are its bitmap's, which its width and height
-// attributes give (html/#attr-canvas-width), and its children are fallback content. A text field's inline size is its
-// size attribute in characters, or 20 (html/#the-input-element-as-a-text-entry-widget). A td or th spans 1 to 1000
-// columns, and 0 to 65534 rows, where 0 is the rest of its row group (html/#attr-tdth-colspan,
-// html/#attr-tdth-rowspan). A column or column group spans 1 to 1000 columns (html/#attr-col-span).
+// The replaced elements are img, iframe, video, an object that represents an image or its content navigable
+// (html/#the-object-element), and a canvas where scripting is enabled (html/#replaced-elements). A video's children are
+// fallback content. An iframe has no natural dimensions, and takes the default object size. A canvas's are its
+// bitmap's, which its width and height attributes give (html/#attr-canvas-width), and its children are fallback
+// content. A text field's inline size is its size attribute in characters, or 20
+// (html/#the-input-element-as-a-text-entry-widget). A td or th spans 1 to 1000 columns, and 0 to 65534 rows, where 0 is
+// the rest of its row group (html/#attr-tdth-colspan, html/#attr-tdth-rowspan). A column or column group spans 1 to
+// 1000 columns (html/#attr-col-span).
 void traits(const PrDomElement* element, CssBoxTraits* out) {
     out->unboxes = unboxes(element);
     switch (element->tag) {
@@ -77,6 +78,20 @@ void traits(const PrDomElement* element, CssBoxTraits* out) {
             const DomElementState* state = element->state;
             if (state != nullptr && (state->image == PrDomImageState_CompletelyAvailable || state->embed != 0))
                 out->kind = CssBoxKind_Replaced;
+            break;
+        }
+        case PrDomTag_Video: {
+            // The video's natural size is its resource's or its poster frame's, which its state records, and it has
+            // none without either (html/#the-video-element).
+            out->kind = CssBoxKind_Replaced;
+            out->holdsFallback = true;
+            out->sized = true;
+            out->natural = prLayoutNaturalSizeNone();
+            const DomElementState* state = element->state;
+            if (state != nullptr && state->image == PrDomImageState_CompletelyAvailable) {
+                out->natural.width = prLayoutUnitFromPxDouble(state->naturalWidth);
+                out->natural.height = prLayoutUnitFromPxDouble(state->naturalHeight);
+            }
             break;
         }
         case PrDomTag_Canvas:

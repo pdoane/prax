@@ -61,8 +61,8 @@ struct CssBoxTraits {
     // The inline size of a text field in characters, or 0.
     uint16_t characters;
 
-    // The natural dimensions of a replaced element whose attributes give them, as a canvas's do, if `sized` is set.
-    // Otherwise a replaced element's are its resource's.
+    // The natural dimensions of a replaced element that the element decides, as a canvas's attributes and a video's
+    // resource do, if `sized` is set. Otherwise a replaced element's are its image's.
     bool sized;
     PrLayoutNaturalSize natural;
 };

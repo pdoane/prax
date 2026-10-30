@@ -107,7 +107,7 @@ pr_example(browser browser/browser.cpp)
 target_link_libraries(browser PRIVATE prax::app prax::html_quickjs prax::url_quickjs prax::xhr_quickjs
                                       prax::charset_quickjs prax::svg_quickjs prax::mathml_quickjs
                                       prax::text prax::font_bundle prax::font
-                                      prax::draw prax::gpu prax::image
+                                      prax::draw prax::gpu prax::image prax::media
                                       prax::compress prax::fetch prax::html prax::layout
                                       prax::net prax::http prax::tls prax::storage
                                       prax::task prax::core_cpp)

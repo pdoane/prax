@@ -877,9 +877,7 @@ bool parseAngle(PrStringView text, float* radians) {
     float number = 0;
     if (!numberListRead(text, &pos, &number))
         return false;
-    PrStringView unit{text.data + pos, text.size - pos};
-    while (unit.size != 0 && asciiIsSpace(unit.data[unit.size - 1]))
-        --unit.size;
+    PrStringView unit = stringTrimEnd(stringSlice(text, pos, text.size - pos));
     double scale = kPiF64 / 180;
     if (unit.size != 0) {
         PrCssUnit css = cssUnitFromText(unit);
@@ -2693,9 +2691,7 @@ bool svgParseLength(PrStringView text, const CssComputedStyle* PR_NULLABLE style
     float number = 0;
     if (!numberListRead(text, &pos, &number))
         return false;
-    PrStringView unit{text.data + pos, text.size - pos};
-    while (unit.size != 0 && asciiIsSpace(unit.data[unit.size - 1]))
-        --unit.size;
+    PrStringView unit = stringTrimEnd(stringSlice(text, pos, text.size - pos));
     double em = style != nullptr ? cssStyleFontSize(style) : kCssMediumFontSize;
     if (unit.size == 0) {
         *out = SvgLengthPercentage{number, 0};
@@ -2730,13 +2726,7 @@ PrStringView svgAttribute(const PrDomElement* element, PrStringView name) {
     PrStringView value = domAttributeValue(element, name);
     if (value.data == nullptr)
         return value;
-    while (value.size != 0 && asciiIsSpace(value.data[0])) {
-        ++value.data;
-        --value.size;
-    }
-    while (value.size != 0 && asciiIsSpace(value.data[value.size - 1]))
-        --value.size;
-    return value;
+    return stringTrim(value);
 }
 
 SvgSizeLimits svgStyleSizeLimits(const CssComputedStyle* style) {

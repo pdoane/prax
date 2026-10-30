@@ -273,6 +273,8 @@ struct HtmlPage {
     PrAppDisplay display;
     PrAppUserPreferences preferences;
 
+    PrHtmlVisibility visibility;    // whether the page is shown to the user (html/#system-visibility-state)
+
     // The viewport in CSS pixels (prHtmlPageSetViewport), which the window's media features describe and its document
     // is laid out in. A frame's is its iframe's content box once the parent lays the iframe out.
     PrVec2 viewport;

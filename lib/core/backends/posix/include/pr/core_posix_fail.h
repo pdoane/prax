@@ -18,7 +18,9 @@ PR_NORETURN void prCorePosixFailed(PrStringView message, PrStringView file, uint
 
 // Makes the signals of a crash (SIGSEGV, SIGBUS, SIGILL, SIGFPE, SIGTRAP and SIGABRT, as an uncaught exception raises)
 // report the signal, its address and the stack of the thread that crashed before they end the process. A crash of the
-// calling thread is reported on a stack of its own, so that a stack overflow reports too.
+// calling thread is reported on a stack of its own, so that a stack overflow reports too. Under AddressSanitizer, which
+// reports crashes itself, it installs nothing: a report that ASan ends with abort holds its locks, which the stack's
+// report would wait for.
 void prCorePosixCrashHandler(void);
 
 #if defined(__cplusplus)

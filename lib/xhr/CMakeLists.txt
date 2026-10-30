@@ -2,7 +2,7 @@
 pr_library(xhr INCLUDE include
     src/xhr.cpp
 )
-target_link_libraries(pr_xhr PUBLIC prax::dom prax::fetch PRIVATE prax::core_cpp prax::charset prax::url)
+target_link_libraries(pr_xhr PUBLIC prax::dom prax::fetch PRIVATE prax::core_cpp prax::charset prax::mime prax::url)
 
 if (PR_JS)
     pr_library(xhr_quickjs INCLUDE quickjs/include

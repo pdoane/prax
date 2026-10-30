@@ -8,6 +8,7 @@
 #include "pr/bitset.h"
 #include "pr/count_of.h"
 #include "pr/mem.h"
+#include "pr/mime.h"
 #include "pr/search.h"
 #include "pr/string_ops.h"
 #include "pr/text_buffer.h"
@@ -1176,6 +1177,15 @@ using namespace pr_impl;
 
 PrCharset prCharsetFromLabel(PrStringView label) {
     return charsetOfLabel(stringTrim(label));
+}
+
+PrCharset prCharsetFromMimeType(PrStringView type) {
+    PrString label = prStringNull();
+    if (!prMimeTypeParameter(type, "charset", &label))
+        return PrCharset_None;
+    PrCharset charset = prCharsetFromLabel(prStringView(&label));
+    prStringReset(&label);
+    return charset;
 }
 
 PrStringView prCharsetName(PrCharset charset) {

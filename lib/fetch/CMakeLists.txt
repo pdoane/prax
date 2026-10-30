@@ -2,7 +2,7 @@
 pr_library(fetch INCLUDE include
     src/fetch.cpp
 )
-target_link_libraries(pr_fetch PUBLIC prax::net prax::http prax::compress prax::storage PRIVATE prax::core_cpp)
+target_link_libraries(pr_fetch PUBLIC prax::net prax::http prax::compress prax::storage PRIVATE prax::core_cpp prax::mime)
 
 if (PR_FETCH_BUILTIN)
     target_sources(pr_fetch PRIVATE

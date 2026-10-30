@@ -746,10 +746,7 @@ bool firstFamily(PrStringView list, PrStringView* family) {
     size_t start = i;
     while (i < list.size && list.data[i] != ',')
         ++i;
-    size_t end = i;
-    while (end > start && asciiIsSpace(list.data[end - 1]))
-        --end;
-    *family = PrStringView{list.data + start, end - start};
+    *family = stringTrimEnd(stringSlice(list, start, i - start));
     return true;
 }
 

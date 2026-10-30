@@ -344,15 +344,16 @@ PrRect glyphRunBounds(const PrFontGlyphRun* run) {
     return bounds;
 }
 
-// Returns the bounds of a list's commands as they play, using the transforms and clips in effect.
-PrRect recordingBounds(const DrawRecording& r) {
+// Returns the bounds of commands as they play, using the transforms and clips that they push. The commands close every
+// scope that they open.
+PrRect commandsBounds(const PrDrawCommand* commands, uint32_t count) {
     Array<PrDAffine2> transforms;
     Array<PrRect> clips;
     transforms.push(prDAffine2Identity());
     clips.push(kUnbounded);
     PrRect bounds{0, 0, 0, 0};
-    for (uint32_t i = 0; i < r.commands.count; ++i) {
-        const PrDrawCommand& c = r.commands.data[i];
+    for (uint32_t i = 0; i < count; ++i) {
+        const PrDrawCommand& c = commands[i];
         // Transforms compose in doubles, and map bounds in floats.
         PrAffine2 t = prAffine2FromDAffine2(transforms.last());
         PrRect clip = clips.last();
@@ -451,7 +452,7 @@ PrRect recordingBounds(const DrawRecording& r) {
                     PrRect landed = prDrawProjectionBounds(g->projection, g->bounds);
                     if (!prRectIsEmpty(landed))
                         bounds = prRectUnion(bounds, prRectIntersect(clip, mapBounds(t, landed)));
-                    i = prDrawCommandGroupEnd(r.commands.data, r.commands.count, i);
+                    i = prDrawCommandGroupEnd(commands, count, i);
                     painting = false;
                     break;
                 }
@@ -555,6 +556,10 @@ PrRect recordingBounds(const DrawRecording& r) {
     return bounds;
 }
 
+PrRect recordingBounds(const DrawRecording& r) {
+    return commandsBounds(r.commands.data, r.commands.count);
+}
+
 // Returns true if a filter reads what lies beneath the group.
 bool readsBackdrop(const PrDrawFilter* PR_NULLABLE filter) {
     if (filter == nullptr)
@@ -627,6 +632,44 @@ void recordGroup(DrawList* list, const PrDrawGroup* group) {
     }
     copy->space = PrColorSpace_Srgb;
     c->group = copy;
+    list->groups.push(r.commands.count - 1);
+}
+
+// Closes the innermost open group. A group without bounds whose contents alone decide what it covers takes their
+// bounds, so that a renderer sizes its layer to them and skips the group where it does not show. A filter or a backdrop
+// may draw outside the contents, and so may an operator that changes what lies outside them. A group that draws
+// nothing, because it is transparent or its contents cover nothing, is removed with its contents. A group in a knockout
+// group, a group that draws into the host's texture, and contents that write pixels are kept.
+void popGroup(DrawList* list) {
+    if (list->open.count == 0 || list->open.last() != PrDrawCommandKind_PushGroup) {
+        pop(list, PrDrawCommandKind_PushGroup, PrDrawCommandKind_PopGroup);
+        return;
+    }
+    uint32_t push = list->groups.last();
+    list->groups.pop();
+    pop(list, PrDrawCommandKind_PushGroup, PrDrawCommandKind_PopGroup);
+    Array<PrDrawCommand>& commands = list->recording.commands;
+    const PrDrawCommand* contents = commands.data + push + 1;
+    uint32_t count = commands.count - push - 2;
+    // The list owns the side copy of the group, which nothing has read yet.
+    PrDrawGroup* group = const_cast<PrDrawGroup*>(commands.data[push].group);
+    bool bounded = !prDrawCompositeIsUnbounded(group->composite);
+    bool removable = bounded && group->layer == nullptr &&
+        !(list->groups.count != 0 && commands.data[list->groups.last()].group->knockout) &&
+        !commandsWritePixels(contents, count);
+    if (removable && !(group->opacity > 0)) {
+        commands.resize(push);
+        return;
+    }
+    if (!prRectIsEmpty(group->bounds) || group->filter != nullptr || group->backdrop != nullptr || !bounded)
+        return;
+    PrRect covered = commandsBounds(contents, count);
+    if (prRectIsEmpty(covered)) {
+        if (removable)
+            commands.resize(push);
+    } else if (!unbounded(covered)) {
+        group->bounds = covered;
+    }
 }
 
 // Records a group that composites in sRGB-linear as two groups that composite in sRGB. The outer group reads what lies
@@ -701,6 +744,7 @@ void drawListRelease(const DrawList* PR_NULLABLE list) {
     resetRecording(owned->recording);
     owned->open.reset();
     owned->lowered.reset();
+    owned->groups.reset();
     prMemoryFree(owned);
 }
 
@@ -732,6 +776,7 @@ void prDrawListClear(PrDrawList* list) {
     clearRecording(list->recording);
     list->open.clear();
     list->lowered.clear();
+    list->groups.clear();
     list->lastBrush = nullptr;
     list->lastStroke = nullptr;
 }
@@ -995,9 +1040,9 @@ void prDrawListPopGroup(PrDrawList* list) {
     bool nested = lowered && list->lowered.last().nested;
     if (lowered)
         list->lowered.pop();
-    pop(list, PrDrawCommandKind_PushGroup, PrDrawCommandKind_PopGroup);
+    popGroup(list);
     if (nested)
-        pop(list, PrDrawCommandKind_PushGroup, PrDrawCommandKind_PopGroup);
+        popGroup(list);
 }
 
 uint32_t prDrawListDepth(const PrDrawList* list) {

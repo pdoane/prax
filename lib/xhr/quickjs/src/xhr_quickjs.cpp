@@ -423,16 +423,16 @@ constexpr JSCFunctionListEntry kProgressEventProto[] = {
 
 constexpr JSCFunctionListEntry kEventTargetProto[] = {
     PR_JS_TAG("XMLHttpRequestEventTarget"),
-    PR_JS_DOM_EVENT_HANDLER(onloadstart) PR_JS_DOM_EVENT_HANDLER(onprogress) PR_JS_DOM_EVENT_HANDLER(onabort)
-        PR_JS_DOM_EVENT_HANDLER(onerror) PR_JS_DOM_EVENT_HANDLER(onload) PR_JS_DOM_EVENT_HANDLER(ontimeout)
-        PR_JS_DOM_EVENT_HANDLER(onloadend)
+    PR_JS_DOM_EVENT_HANDLER(onloadstart), PR_JS_DOM_EVENT_HANDLER(onprogress), PR_JS_DOM_EVENT_HANDLER(onabort),
+    PR_JS_DOM_EVENT_HANDLER(onerror), PR_JS_DOM_EVENT_HANDLER(onload), PR_JS_DOM_EVENT_HANDLER(ontimeout),
+    PR_JS_DOM_EVENT_HANDLER(onloadend),
 };
 
 constexpr JSCFunctionListEntry kUploadProto[] = {PR_JS_TAG("XMLHttpRequestUpload")};
 
 constexpr JSCFunctionListEntry kRequestProto[] = {
     PR_JS_TAG("XMLHttpRequest"),
-    PR_JS_DOM_EVENT_HANDLER(onreadystatechange) PR_JS_GET("readyState", xhrReadyState),
+    PR_JS_DOM_EVENT_HANDLER(onreadystatechange), PR_JS_GET("readyState", xhrReadyState),
     PR_JS_METHOD("open", 2, xhrOpen),
     PR_JS_METHOD("setRequestHeader", 2, xhrSetRequestHeader),
     PR_JS_GET_SET("timeout", xhrTimeout, xhrSetTimeout),

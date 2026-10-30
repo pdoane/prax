@@ -275,17 +275,16 @@ void domEventTargetRetain(PrDomEventTarget* target) {
         domNodeRetain(node);
         return;
     }
+    if ((target->type & DomTargetTypeFlag_Counted) != 0) {
+        ++static_cast<DomCountedTarget*>(target)->references;
+        return;
+    }
+    if ((target->type & DomTargetTypeFlag_Part) != 0) {
+        domEventTargetRetain(static_cast<DomPartTarget*>(target)->owner);
+        return;
+    }
     switch (target->type) {
         case DomTargetType_EventTarget: ++static_cast<DomStandaloneTarget*>(target)->references; break;
-        case DomTargetType_Window:
-        case DomTargetType_MediaQueryList:
-        case DomTargetType_XmlHttpRequest: ++static_cast<DomCountedTarget*>(target)->references; break;
-        case DomTargetType_Preference:
-        case DomTargetType_Performance:
-        case DomTargetType_ScreenOrientation:
-        case DomTargetType_XmlHttpRequestUpload:
-            domEventTargetRetain(static_cast<DomPartTarget*>(target)->owner);
-            break;
         case DomTargetType_FontFaceSet: domNodeRetain(static_cast<DomDocumentTarget*>(target)->document); break;
         case DomTargetType_AbortSignal: domAbortSignalRetain(static_cast<PrDomAbortSignal*>(target)); break;
         default: break;
@@ -299,6 +298,16 @@ void domEventTargetRelease(PrDomEventTarget* PR_NULLABLE target) {
         domNodeRelease(node);
         return;
     }
+    if ((target->type & DomTargetTypeFlag_Counted) != 0) {
+        DomCountedTarget* counted = static_cast<DomCountedTarget*>(target);
+        if (--counted->references == 0)
+            counted->destroy(counted);
+        return;
+    }
+    if ((target->type & DomTargetTypeFlag_Part) != 0) {
+        domEventTargetRelease(static_cast<DomPartTarget*>(target)->owner);
+        return;
+    }
     switch (target->type) {
         case DomTargetType_EventTarget: {
             DomStandaloneTarget* standalone = static_cast<DomStandaloneTarget*>(target);
@@ -308,20 +317,6 @@ void domEventTargetRelease(PrDomEventTarget* PR_NULLABLE target) {
             }
             break;
         }
-        case DomTargetType_Window:
-        case DomTargetType_MediaQueryList:
-        case DomTargetType_XmlHttpRequest: {
-            DomCountedTarget* counted = static_cast<DomCountedTarget*>(target);
-            if (--counted->references == 0)
-                counted->destroy(counted);
-            break;
-        }
-        case DomTargetType_Preference:
-        case DomTargetType_Performance:
-        case DomTargetType_ScreenOrientation:
-        case DomTargetType_XmlHttpRequestUpload:
-            domEventTargetRelease(static_cast<DomPartTarget*>(target)->owner);
-            break;
         case DomTargetType_FontFaceSet: domNodeRelease(static_cast<DomDocumentTarget*>(target)->document); break;
         case DomTargetType_AbortSignal: domAbortSignalRelease(static_cast<PrDomAbortSignal*>(target)); break;
         default: break;

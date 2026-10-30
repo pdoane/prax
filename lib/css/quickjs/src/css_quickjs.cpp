@@ -2048,8 +2048,8 @@ constexpr JSCFunctionListEntry kAnimationEventProto[] = {
 
 constexpr JSCFunctionListEntry kFontFaceSetProto[] = {
     PR_JS_TAG("FontFaceSet"),
-    PR_JS_DOM_EVENT_HANDLER(onloading) PR_JS_DOM_EVENT_HANDLER(onloadingdone) PR_JS_DOM_EVENT_HANDLER(onloadingerror)
-        PR_JS_GET("size", (jsNumberGetter<&prJsCssFontFaceSetClass, prCssFontFaceSetSize>)),
+    PR_JS_DOM_EVENT_HANDLER(onloading), PR_JS_DOM_EVENT_HANDLER(onloadingdone), PR_JS_DOM_EVENT_HANDLER(onloadingerror),
+    PR_JS_GET("size", (jsNumberGetter<&prJsCssFontFaceSetClass, prCssFontFaceSetSize>)),
     PR_JS_MAGIC("add", 1, setMember, 0),
     PR_JS_MAGIC("delete", 1, setMember, 1),
     PR_JS_MAGIC("has", 1, setMember, 2),
@@ -2138,7 +2138,7 @@ constexpr JSCFunctionListEntry kMediaQueryListProto[] = {
     PR_JS_GET("matches", (jsBoolGetter<&prJsCssMediaQueryListClass, prCssMediaQueryListMatches>)),
     PR_JS_MAGIC("addListener", 1, mediaListener, 0),
     PR_JS_MAGIC("removeListener", 1, mediaListener, 1),
-    PR_JS_DOM_EVENT_HANDLER(onchange)
+    PR_JS_DOM_EVENT_HANDLER(onchange),
 };
 
 // ---------------------------------------------------------------------------------------------------------------------

@@ -7,7 +7,8 @@
 #include "pr/time.h"
 #include "pr/url.h"
 
-#include "dom/src/dom_mime.h"
+#include "css/src/css_presentation_hooks.h"
+#include "dom/src/dom_element_state.h"
 
 namespace pr_impl {
 
@@ -15,92 +16,6 @@ namespace {
 
 // The maximum time between two timeupdate events while a media element plays (html/#event-media-timeupdate).
 constexpr double kTimeUpdateMilliseconds = 250;
-
-// ---------------------------------------------------------------------------------------------------------------------
-// Containers (the ISO base media file format, ISO/IEC 14496-12)
-
-// The information that a media resource's container gives about it.
-struct Metadata {
-    double duration;   // in seconds
-    uint32_t width;    // the size of its video track, or zero if it has none
-    uint32_t height;
-};
-
-uint64_t readU64(const uint8_t* bytes) {
-    return uint64_t(readBeU32(bytes)) << 32 | readBeU32(bytes + 4);
-}
-
-// Passes each box of [data, end) to `visit`, with its type, its payload, and the payload's size.
-template <typename Visit>
-void eachBox(const uint8_t* data, const uint8_t* end, Visit visit) {
-    while (end - data >= 8) {
-        uint64_t size = readBeU32(data);
-        uint32_t header = 8;
-        if (size == 1 && end - data >= 16) {
-            size = readU64(data + 8);
-            header = 16;
-        } else if (size == 0) {
-            size = uint64_t(end - data);
-        }
-        if (size < header || size > uint64_t(end - data))
-            return;
-        visit(readBeU32(data + 4), data + header, size_t(size - header));
-        data += size;
-    }
-}
-
-constexpr uint32_t fourCc(const char (&code)[5]) {
-    return uint32_t(uint8_t(code[0])) << 24 | uint32_t(uint8_t(code[1])) << 16 |
-        uint32_t(uint8_t(code[2])) << 8 | uint32_t(uint8_t(code[3]));
-}
-
-// Reads the duration of a movie (its mvhd box) and the size of its first video track (a trak whose handler is vide,
-// with the size its tkhd box gives). Returns false for a resource that is not a movie.
-bool readMp4(PrStringView resource, Metadata* out) {
-    const uint8_t* data = reinterpret_cast<const uint8_t*>(resource.data);
-    const uint8_t* end = data + resource.size;
-    bool typed = false;
-    bool timed = false;
-    eachBox(data, end, [&](uint32_t type, const uint8_t* payload, size_t size) {
-        if (type == fourCc("ftyp"))
-            typed = true;
-        if (type != fourCc("moov"))
-            return;
-        eachBox(payload, payload + size, [&](uint32_t child, const uint8_t* body, size_t length) {
-            if (child == fourCc("mvhd") && length >= 32) {
-                bool wide = body[0] == 1;
-                uint32_t scale = readBeU32(body + (wide ? 20 : 12));
-                uint64_t units = wide ? readU64(body + 24) : readBeU32(body + 16);
-                if (scale != 0) {
-                    out->duration = double(units) / scale;
-                    timed = true;
-                }
-            } else if (child == fourCc("trak") && out->width == 0) {
-                uint32_t width = 0;
-                uint32_t height = 0;
-                bool video = false;
-                eachBox(body, body + length, [&](uint32_t part, const uint8_t* bytes, size_t count) {
-                    if (part == fourCc("tkhd")) {
-                        size_t at = bytes[0] == 1 ? 88 : 76;
-                        if (count >= at + 8) {
-                            width = readBeU32(bytes + at) >> 16;
-                            height = readBeU32(bytes + at + 4) >> 16;
-                        }
-                    } else if (part == fourCc("mdia")) {
-                        eachBox(bytes, bytes + count, [&](uint32_t inner, const uint8_t* handler, size_t n) {
-                            video |= inner == fourCc("hdlr") && n >= 12 && readBeU32(handler + 8) == fourCc("vide");
-                        });
-                    }
-                });
-                if (video) {
-                    out->width = width;
-                    out->height = height;
-                }
-            }
-        });
-    });
-    return typed && timed;
-}
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Tasks (html/#queue-a-media-element-task)
@@ -174,8 +89,12 @@ MediaTask* newTask(HtmlMedia* media) {
     return task;
 }
 
+// Queues the task on the window that runs the element, or drops it if no window does.
 void queueTask(MediaTask* task) {
-    htmlWindowQueueTask(task->media->window, runTask, task, dropTask);
+    if (PrHtmlWindow* window = task->media->window)
+        htmlWindowQueueTask(window, runTask, task, dropTask);
+    else
+        dropTask(task);
 }
 
 void queueEvent(HtmlMedia* media, PrStringView event) {
@@ -267,6 +186,140 @@ void updateFlags(HtmlMedia* media) {
 
 void schedule(HtmlMedia* media);
 
+// ---------------------------------------------------------------------------------------------------------------------
+// Pictures (html/#the-video-element)
+
+// Marks the picture of a video element out of date, which the window's next rendering update brings up to date.
+void pictureChanged(HtmlMedia* media) {
+    media->stale = media->element->tag == PrDomTag_Video;
+}
+
+// Releases the resource's decoder and its decoded frame.
+void closeResource(HtmlMedia* media) {
+    prMediaDecoderDestroy(media->decoder);
+    media->decoder = nullptr;
+    prDrawImageRelease(media->frame);
+    media->frame = nullptr;
+    media->frameSerial = 0;
+}
+
+// Returns the image that the video shows: its poster frame while no video data is available, or while it is paused with
+// the show poster flag set, if it has a poster frame. Otherwise the frame at its playback position.
+const PrDrawImage* PR_NULLABLE pictureOf(const HtmlMedia* media) {
+    bool data = media->frame != nullptr && media->readyState >= PrHtmlMediaReadyState_HaveCurrentData;
+    if (!data || (media->showPoster && media->paused && media->poster != nullptr))
+        return media->poster;
+    return media->frame;
+}
+
+// Decodes the frame at the playback position into the video's frame. Returns false if the frame that shows there is not
+// decoded yet, and true once it is, or if none will be.
+bool decodeFrame(HtmlMedia* media) {
+    if (media->decoder == nullptr || !prMediaDecoderHasFrames(media->decoder))
+        return true;
+    PrMediaFrame frame{};
+    if (!prMediaDecoderFrame(media->decoder, currentPosition(media), &frame))
+        return frame.current;
+    if (frame.serial != media->frameSerial) {
+        PrDrawImageDesc desc{
+            .pixels = frame.pixels,
+            .format = PrPixelFormat_Bgra8,
+            .alpha = PrDrawAlpha_Premultiplied,
+            .space = PrColorSpace_Srgb,
+        };
+        const PrDrawImage* image = nullptr;
+        if (prDrawImageCreate(&desc, &image) == PrStatus_Ok) {
+            prDrawImageRelease(media->frame);
+            media->frame = image;
+            media->frameSerial = frame.serial;
+        }
+    }
+    return frame.current;
+}
+
+// Shows the video's picture as its element's: its natural size is the video's once it is known, and else the poster
+// frame's (html/#concept-video-intrinsic-width).
+void showPicture(HtmlMedia* media) {
+    DomElementState* state = domElementState(media->element);
+    const PrDrawImage* picture = pictureOf(media);
+    PrUVec2 natural{media->videoWidth, media->videoHeight};
+    if ((natural.x == 0 || natural.y == 0) && media->poster != nullptr)
+        natural = prDrawImageExtent(media->poster);
+    PrDomImageState image = PrDomImageState_Unavailable;
+    if (natural.x != 0 && natural.y != 0)
+        image = PrDomImageState_CompletelyAvailable;
+    if (state->picture == picture && state->image == image && state->naturalWidth == natural.x &&
+            state->naturalHeight == natural.y)
+        return;
+    if (picture != nullptr)
+        prDrawImageRetain(picture);
+    prDrawImageRelease(state->picture);
+    prDrawImageRelease(state->storedPicture);
+    state->picture = picture;
+    state->storedPicture = nullptr;
+    state->orientation = PrImageOrientation_Identity;
+    state->image = image;
+    state->naturalWidth = natural.x;
+    state->naturalHeight = natural.y;
+    if (domIsConnected(media->element))
+        cssPresentationElementContentChanged(media->element);
+}
+
+// A fetch of a video's poster frame, which holds the element. `generation` tells it from a later fetch, whose result
+// replaces it.
+struct PosterFetch {
+    HtmlMedia* media;
+    uint32_t generation;
+};
+
+void dropPosterFetch(void* data) {
+    PosterFetch* fetch = static_cast<PosterFetch*>(data);
+    PrDomElement* element = fetch->media->element;
+    prMemoryFree(fetch);
+    domNodeUnhold(element);
+}
+
+void posterFetched(void* PR_NULLABLE data, const DomFetchResult* result) {
+    PosterFetch* fetch = static_cast<PosterFetch*>(data);
+    HtmlMedia* media = fetch->media;
+    PrImageCodec* images = media->window != nullptr ? media->window->images : nullptr;
+    if (fetch->generation == media->posters && images != nullptr && domFetchIsOk(result)) {
+        PrByteView bytes{reinterpret_cast<const uint8_t*>(result->body.data), result->body.size};
+        const PrDrawImage* poster = nullptr;
+        if (prDrawImageCreateFromBytes(images, bytes, &poster, nullptr) == PrStatus_Ok) {
+            prDrawImageRelease(media->poster);
+            media->poster = poster;
+            pictureChanged(media);
+            showPicture(media);
+        }
+    }
+    dropPosterFetch(fetch);
+}
+
+// Fetches the poster frame that the poster attribute names (html/#attr-video-poster), and drops the last one.
+void updatePoster(HtmlMedia* media) {
+    ++media->posters;
+    prDrawImageRelease(media->poster);
+    media->poster = nullptr;
+    pictureChanged(media);
+    PrStringView source = domAttributeValue(media->element, "poster");
+    const DomDocumentHost* host = media->element->document->host;
+    PrUrl* url = nullptr;
+    if (media->window == nullptr || host == nullptr || source.size == 0 ||
+            domDocumentParseUrl(media->element->document, source, &url) != PrStatus_Ok) {
+        prUrlDestroy(url);
+        return;
+    }
+    PrString request = prUrlSerialize(url, PrUrlSerialization_ExcludeFragment);
+    domNodeHold(media->element);
+    PosterFetch* fetch = alloc<PosterFetch>();
+    *fetch = PosterFetch{media, media->posters};
+    DomFetchRequest asked{prStringView(&request), DomFetchDestination_Image, DomCorsSettings_NoCors};
+    host->fetch(host->context, &asked, posterFetched, fetch, dropPosterFetch);
+    prStringReset(&request);
+    prUrlDestroy(url);
+}
+
 // Runs the steps for playing forwards to the end (html/#playing-the-media-resource).
 void reachedEnd(HtmlMedia* media) {
     if (domAttribute(media->element, PrDomNamespace_None, "loop") != nullptr) {
@@ -305,7 +358,7 @@ void schedule(HtmlMedia* media) {
         htmlWindowClearTimeout(media->window, media->timer);
         media->timer = 0;
     }
-    if (!potentiallyPlaying(media) || media->rate == 0)
+    if (media->window == nullptr || !potentiallyPlaying(media) || media->rate == 0)
         return;
     double wait = kTimeUpdateMilliseconds;
     if (!isNanF64(media->duration) && media->rate > 0) {
@@ -375,20 +428,26 @@ void sourceFailed(HtmlMedia* media, PrStringView message) {
     queueTask(task);
 }
 
-// html/#concept-media-load-resource, once the resource has arrived. Reads its metadata, and then all of its data, which
-// the engine has as soon as the resource is fetched. Returns false for a resource whose format the engine does not
-// read.
+// html/#concept-media-load-resource, once the resource has arrived. The window's codec reads its metadata, and then all
+// of its data, which the engine has as soon as the resource is fetched. Returns false for a resource that the codec
+// does not read.
 bool resourceArrived(HtmlMedia* media, PrStringView body) {
-    Metadata metadata = {};
-    if (!readMp4(body, &metadata))
+    PrMediaCodec* codec = media->window != nullptr ? media->window->mediaCodec : nullptr;
+    PrMediaInfo info{};
+    PrByteView bytes{reinterpret_cast<const uint8_t*>(body.data), body.size};
+    if (codec == nullptr || prMediaDecoderCreate(codec, bytes, &media->decoder, &info) != PrStatus_Ok)
         return false;
-    media->duration = metadata.duration;
+    media->duration = info.duration;
     queueEvent(media, "durationchange");
-    if (metadata.width != 0 && metadata.height != 0 && media->element->tag == PrDomTag_Video) {
-        media->videoWidth = metadata.width;
-        media->videoHeight = metadata.height;
+    if (info.videoExtent.x != 0 && info.videoExtent.y != 0 && media->element->tag == PrDomTag_Video) {
+        media->videoWidth = info.videoExtent.x;
+        media->videoHeight = info.videoExtent.y;
         queueEvent(media, "resize");
     }
+    pictureChanged(media);
+    // The natural size is the video's from the moment that its metadata is known.
+    if (media->element->tag == PrDomTag_Video)
+        showPicture(media);
     media->readyState = PrHtmlMediaReadyState_HaveMetadata;
     queueEvent(media, "loadedmetadata");
     queueEvent(media, "progress");
@@ -472,7 +531,7 @@ void trySources(HtmlMedia* media, const PrDomNode* PR_NULLABLE from) {
             continue;
         const PrDomAttr* type = domAttribute(source, PrDomNamespace_None, "type");
         PrUrl* url;
-        if (type != nullptr && htmlCanPlayType(prStringView(&type->value)) == PrHtmlCanPlay_No)
+        if (type != nullptr && htmlCanPlayType(media->window, prStringView(&type->value)) == PrHtmlCanPlay_No)
             url = nullptr;
         else
             url = candidateUrl(media, domAttributeValue(source, "src"));
@@ -532,8 +591,10 @@ void selectResourceTask(void* data) {
 }
 
 // html/#concept-media-load-algorithm. Its steps after the first run once the script that invoked it is done
-// (html/#await-a-stable-state).
+// (html/#await-a-stable-state). An element that no window runs selects no resource.
 void resourceSelection(HtmlMedia* media) {
+    if (media->window == nullptr)
+        return;
     media->networkState = PrHtmlMediaNetworkState_NoSource;
     MediaTask* task = newTask(media);
     const DomDocumentHost* host = media->element->document->host;
@@ -549,6 +610,9 @@ void internalPlay(HtmlMedia* media) {
         htmlMediaSeek(media, 0);
     if (media->paused) {
         media->paused = false;
+        // html/#internal-play-steps: playing unsets the show poster flag.
+        media->showPoster = false;
+        pictureChanged(media);
         media->since = prTimeMonotonicMilliseconds();
         queueEvent(media, "play");
         if (media->readyState <= PrHtmlMediaReadyState_HaveCurrentData)
@@ -583,25 +647,89 @@ void internalPause(HtmlMedia* media) {
     schedule(media);
 }
 
-// Frees the state, which no task or timer holds, and removes it from the window's list.
-void destroyMedia(HtmlMedia* media) {
+// Sets the playback state to its initial values, which an element has before any window runs it.
+void initializePlayback(HtmlMedia* media) {
+    media->currentSrc = prStringEmpty();
+    media->errorMessage = prStringEmpty();
+    media->position = 0;
+    media->since = 0;
+    media->duration = kNanF64;
+    media->defaultRate = 1;
+    media->rate = 1;
+    media->volume = 1;
+    media->videoWidth = 0;
+    media->videoHeight = 0;
+    media->timer = 0;
+    media->networkState = PrHtmlMediaNetworkState_Empty;
+    media->readyState = PrHtmlMediaReadyState_HaveNothing;
+    media->error = PrHtmlMediaError_None;
+    media->paused = true;
+    media->seeking = false;
+    media->muted = false;
+    media->mutedSet = false;
+    media->autoplaying = true;
+    media->preservesPitch = true;
+    media->loadedData = false;
+    media->showPoster = true;
+}
+
+// Frees what the playback state holds: its resource and its poster frame too. A poster fetch that is still running is
+// dropped when it ends.
+void resetPlayback(HtmlMedia* media) {
+    closeResource(media);
+    prDrawImageRelease(media->poster);
+    media->poster = nullptr;
+    ++media->posters;
+    releasePromises(&media->promises);
+    media->played.reset();
+    prStringReset(&media->currentSrc);
+    prStringReset(&media->errorMessage);
+}
+
+// Takes the state out of the window that runs it, and clears its timer there. Reads nothing of the element.
+void leaveWindow(HtmlMedia* media) {
     PrHtmlWindow* window = media->window;
+    if (window == nullptr)
+        return;
+    if (media->timer != 0)
+        htmlWindowClearTimeout(window, media->timer);
     for (uint32_t i = 0; i < window->mediaElements.count; ++i) {
         if (window->mediaElements.data[i] == media) {
             window->mediaElements.erase(i);
             break;
         }
     }
-    releasePromises(&media->promises);
-    media->played.reset();
-    prStringReset(&media->currentSrc);
-    prStringReset(&media->errorMessage);
+    media->window = nullptr;
+}
+
+// Removes the state from the window that runs it. The window's tasks and timers of the state are gone or are dropped,
+// and the state returns to its initial playback state. A later load starts over.
+void detach(HtmlMedia* media) {
+    if (media->window == nullptr)
+        return;
+    leaveWindow(media);
+    ++media->load;
+    resetPlayback(media);
+    initializePlayback(media);
+    updateFlags(media);
+    pictureChanged(media);
+}
+
+// Frees the element's state along with the element, which is being destroyed, so nothing here reads it.
+void forgetMedia(void* data) {
+    HtmlMedia* media = static_cast<HtmlMedia*>(data);
+    leaveWindow(media);
+    resetPlayback(media);
+    domListenersDestroy(media->textTracks.listeners);
+    domListenersDestroy(media->audioTracks.listeners);
+    domListenersDestroy(media->videoTracks.listeners);
     prMemoryFree(media);
 }
 
-// Frees the element's state along with the element.
-void forgetMedia(void* data) {
-    destroyMedia(static_cast<HtmlMedia*>(data));
+// Initializes a list of the element's tracks of the kind that `type` names.
+void initializeTracks(HtmlTrackList* list, PrDomElement* element, DomTargetType type) {
+    list->type = type;
+    list->owner = prDomElementAsEventTarget(element);
 }
 
 // html/#media-elements: a removed element pauses once the script that removed it is done, unless the element is back in
@@ -615,53 +743,91 @@ void removedTask(void* data) {
 
 } // namespace
 
-HtmlMedia* PR_NULLABLE htmlMediaFromElement(PrDomElement* element) {
-    PrHtmlWindow* window = static_cast<PrHtmlWindow*>(element->document->global);
-    if (window == nullptr || window->document != element->document || element->document->host == nullptr)
-        return nullptr;
+HtmlMedia* htmlMediaFromElement(PrDomElement* element) {
     DomElementState* state = domElementState(element);
     if (state->forgetEmbedded == forgetMedia)
         return static_cast<HtmlMedia*>(state->embedded);
     HtmlMedia* media = allocZeroed<HtmlMedia>();
     media->element = element;
+    initializeTracks(&media->textTracks, element, DomTargetType_TextTrackList);
+    initializeTracks(&media->audioTracks, element, DomTargetType_AudioTrackList);
+    initializeTracks(&media->videoTracks, element, DomTargetType_VideoTrackList);
+    initializePlayback(media);
     state->embedded = media;
     state->forgetEmbedded = forgetMedia;
-    media->window = window;
-    media->currentSrc = prStringEmpty();
-    media->errorMessage = prStringEmpty();
-    media->duration = kNanF64;
-    media->defaultRate = 1;
-    media->rate = 1;
-    media->volume = 1;
-    media->paused = true;
-    media->autoplaying = true;
-    media->preservesPitch = true;
-    window->mediaElements.push(media);
     updateFlags(media);
     return media;
+}
+
+HtmlMedia* PR_NULLABLE htmlMediaRunning(PrDomElement* element) {
+    HtmlMedia* media = htmlMediaFromElement(element);
+    PrHtmlWindow* window = static_cast<PrHtmlWindow*>(element->document->global);
+    if (window == nullptr || window->document != element->document || element->document->host == nullptr)
+        window = nullptr;
+    if (media->window != window) {
+        detach(media);
+        if (window != nullptr) {
+            media->window = window;
+            window->mediaElements.push(media);
+            // The poster frame is the new window's to fetch.
+            if (element->tag == PrDomTag_Video)
+                updatePoster(media);
+        }
+    }
+    return window != nullptr ? media : nullptr;
 }
 
 void htmlMediaReset(PrHtmlWindow* window) {
     // The window's tasks and timers are gone, and with them the references that held the elements.
     while (window->mediaElements.count != 0) {
         HtmlMedia* media = window->mediaElements.last();
-        DomElementState* state = media->element->state;
-        state->media = 0;
-        state->embedded = nullptr;
-        state->forgetEmbedded = nullptr;
-        destroyMedia(media);
+        media->timer = 0;
+        detach(media);
+        if (media->element->tag == PrDomTag_Video)
+            showPicture(media);
     }
     window->mediaElements.reset();
 }
 
+bool htmlMediaAwaitsPicture(const PrHtmlWindow* window) {
+    for (uint32_t i = 0; i < window->mediaElements.count; ++i) {
+        if (window->mediaElements.data[i]->stale)
+            return true;
+    }
+    return false;
+}
+
+bool htmlMediaWantsFrame(const PrHtmlWindow* window) {
+    for (uint32_t i = 0; i < window->mediaElements.count; ++i) {
+        const HtmlMedia* media = window->mediaElements.data[i];
+        if (media->stale || (potentiallyPlaying(media) && media->frame != nullptr))
+            return true;
+    }
+    return false;
+}
+
+void htmlMediaShow(PrHtmlWindow* window) {
+    for (uint32_t i = 0; i < window->mediaElements.count; ++i) {
+        HtmlMedia* media = window->mediaElements.data[i];
+        if (media->element->tag != PrDomTag_Video || (!media->stale && !potentiallyPlaying(media)))
+            continue;
+        // A frame that is not decoded yet leaves the picture out of date, and the last frame shows until it is.
+        media->stale = !decodeFrame(media);
+        showPicture(media);
+    }
+}
+
 void htmlMediaChanged(PrDomElement* element, PrStringView attribute) {
     bool connection = attribute.data == nullptr;
-    if (!connection && attribute != "src" && attribute != "muted")
+    if (!connection && attribute != "src" && attribute != "muted" && attribute != "poster")
         return;
-    HtmlMedia* media = htmlMediaFromElement(element);
+    HtmlMedia* media = htmlMediaRunning(element);
     if (media == nullptr)
         return;
-    if (attribute == "muted") {
+    if (attribute == "poster") {
+        if (element->tag == PrDomTag_Video)
+            updatePoster(media);
+    } else if (attribute == "muted") {
         updateFlags(media);
     } else if (!connection) {
         // html/#location-of-the-media-resource: setting or changing src loads the element. Removing it does not.
@@ -680,6 +846,10 @@ void htmlMediaChanged(PrDomElement* element, PrStringView attribute) {
 
 void htmlMediaLoad(HtmlMedia* media) {
     ++media->load;
+    // html/#media-element-load-algorithm: the load drops the last resource, and sets the show poster flag.
+    closeResource(media);
+    media->showPoster = true;
+    pictureChanged(media);
     media->played.clear();
     if (media->networkState == PrHtmlMediaNetworkState_Loading || media->networkState == PrHtmlMediaNetworkState_Idle)
         queueEvent(media, "abort");
@@ -728,6 +898,9 @@ void htmlMediaSeek(HtmlMedia* media, double seconds) {
     if (seconds < 0)
         seconds = 0;
     media->seeking = true;
+    // html/#dom-media-seek: seeking unsets the show poster flag.
+    media->showPoster = false;
+    pictureChanged(media);
     MediaTask* start = newTask(media);
     start->event = "seeking";
     queueTask(start);
@@ -794,12 +967,15 @@ void htmlMediaSetVolume(HtmlMedia* media, double volume, bool muted) {
     updateFlags(media);
 }
 
-PrHtmlCanPlay htmlCanPlayType(PrStringView type) {
-    PrStringView essence = domMimeTypeEssence(type);
-    // The engine reads the duration from an MP4 container, and plays the timeline of any codec in one.
-    if (asciiEqualsFold(essence, "video/mp4") || asciiEqualsFold(essence, "audio/mp4"))
-        return PrHtmlCanPlay_Maybe;
-    return PrHtmlCanPlay_No;
+PrHtmlCanPlay htmlCanPlayType(const PrHtmlWindow* PR_NULLABLE window, PrStringView type) {
+    PrMediaCodec* codec = window != nullptr ? window->mediaCodec : nullptr;
+    if (codec == nullptr)
+        return PrHtmlCanPlay_No;
+    switch (prMediaCodecSupportsType(codec, type)) {
+        case PrMediaSupport_Probably: return PrHtmlCanPlay_Probably;
+        case PrMediaSupport_Maybe: return PrHtmlCanPlay_Maybe;
+        default: return PrHtmlCanPlay_No;
+    }
 }
 
 } // namespace pr_impl

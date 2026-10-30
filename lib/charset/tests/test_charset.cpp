@@ -327,3 +327,11 @@ TEST_CASE("what a charset decodes from one or two bytes encodes back to bytes th
 TEST_CASE("charsets work through the C API") {
     CHECK(prTestCharsetC());
 }
+
+TEST_CASE("a MIME type's charset parameter names its charset, where the type parses and the label is one") {
+    CHECK(prCharsetFromMimeType("text/html; charset=Shift_JIS") == PrCharset_ShiftJis);
+    CHECK(prCharsetFromMimeType("text/css;charset=\"utf-8\"; charset=latin1") == PrCharset_Utf8);
+    CHECK(prCharsetFromMimeType("text/plain; charset=nonsense") == PrCharset_None);
+    CHECK(prCharsetFromMimeType("text/plain") == PrCharset_None);
+    CHECK(prCharsetFromMimeType("text; charset=utf-8") == PrCharset_None);
+}

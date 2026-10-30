@@ -558,6 +558,8 @@ WRAPPERS = {
     "lib/text/backends/coretext/src/text_coretext.cpp": {"CoreText/CoreText.h"},
     "lib/font/backends/coretext/src/font_coretext.cpp": {"CoreText/CoreText.h"},
     "lib/font/backends/directwrite/src/font_directwrite.cpp": {"windows.h", "dwrite_3.h"},
+    "lib/media/backends/windows/src/media_windows.cpp": {"windows.h", "mfapi.h", "mferror.h", "mfidl.h", "mfreadwrite.h",
+                                                         "objbase.h", "shlwapi.h"},
     "lib/draw/comparisons/coregraphics/src/draw_coregraphics.cpp": {"CoreGraphics/CoreGraphics.h",
                                                                  "CoreText/CoreText.h"},
     "tools/harness/harness.cpp": {"arm_neon.h", "stdarg.h", "stdio.h", "stdlib.h"},

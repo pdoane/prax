@@ -28,19 +28,6 @@ void dropForward(HtmlSessionHistory* history) {
     }
 }
 
-// Returns true if the window's document is fully active (html/#fully-active): it is its browsing context's document,
-// and each ancestor's browsing context still holds an iframe of the window.
-bool fullyActive(const PrHtmlWindow* window) {
-    for (const PrHtmlWindow* child = window; child->parent != nullptr; child = child->parent) {
-        bool held = false;
-        for (uint32_t i = 0; i < child->parent->frames.count; ++i)
-            held = held || child->parent->frames.data[i].window == child;
-        if (!held)
-            return false;
-    }
-    return htmlDocumentPage(window->document) != nullptr;
-}
-
 // html/#can-have-its-url-rewritten
 bool canRewrite(const PrUrl* document, const PrUrl* target) {
     if (prUrlScheme(document) != prUrlScheme(target) || prUrlUsername(document) != prUrlUsername(target) ||
@@ -251,7 +238,7 @@ PrStringView prHtmlSessionHistoryUrl(const PrHtmlSessionHistory* self, uint32_t 
 
 PrStatus prHtmlHistoryLength(const PrHtmlWindow* self, uint32_t* out) {
     *out = 0;
-    if (!fullyActive(self))
+    if (!htmlWindowIsFullyActive(self))
         return PrStatus_NotAllowed;
     // A browsing context that has yet to load a document into a host's history still shows its initial about:blank.
     *out = self->history->entries.count != 0 ? self->history->entries.count : 1;
@@ -261,7 +248,7 @@ PrStatus prHtmlHistoryLength(const PrHtmlWindow* self, uint32_t* out) {
 PrStatus prHtmlHistoryState(const PrHtmlWindow* self, PrStringView* out, uint32_t* generation) {
     *out = PrStringView{};
     *generation = self->historyGeneration;
-    if (!fullyActive(self))
+    if (!htmlWindowIsFullyActive(self))
         return PrStatus_NotAllowed;
     const HtmlSessionHistory* history = self->history;
     if (history->index < history->entries.count) {
@@ -274,7 +261,7 @@ PrStatus prHtmlHistoryState(const PrHtmlWindow* self, PrStringView* out, uint32_
 
 PrStatus prHtmlHistoryPushState(PrHtmlWindow* self, PrStringView serialized, PrStringView url,
         PrHtmlHistoryHandling handling) {
-    if (!fullyActive(self))
+    if (!htmlWindowIsFullyActive(self))
         return PrStatus_NotAllowed;
     PrDomDocument* document = self->document;
     PrUrl* newUrl = nullptr;
@@ -296,7 +283,7 @@ PrStatus prHtmlHistoryPushState(PrHtmlWindow* self, PrStringView serialized, PrS
 }
 
 PrStatus prHtmlHistoryGo(PrHtmlWindow* self, int32_t delta) {
-    if (!fullyActive(self))
+    if (!htmlWindowIsFullyActive(self))
         return PrStatus_NotAllowed;
     queueTraversal(self, delta);
     return PrStatus_Ok;
@@ -304,7 +291,7 @@ PrStatus prHtmlHistoryGo(PrHtmlWindow* self, int32_t delta) {
 
 PrStatus prHtmlHistoryScrollRestoration(const PrHtmlWindow* self, PrHtmlScrollRestoration* out) {
     *out = PrHtmlScrollRestoration_Auto;
-    if (!fullyActive(self))
+    if (!htmlWindowIsFullyActive(self))
         return PrStatus_NotAllowed;
     const HtmlSessionHistory* history = self->history;
     if (history->index < history->entries.count)
@@ -313,7 +300,7 @@ PrStatus prHtmlHistoryScrollRestoration(const PrHtmlWindow* self, PrHtmlScrollRe
 }
 
 PrStatus prHtmlHistorySetScrollRestoration(PrHtmlWindow* self, PrHtmlScrollRestoration mode) {
-    if (!fullyActive(self))
+    if (!htmlWindowIsFullyActive(self))
         return PrStatus_NotAllowed;
     HtmlSessionHistory* history = self->history;
     if (history->index < history->entries.count)

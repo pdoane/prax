@@ -53,6 +53,7 @@ struct DrawList {
     DrawRecording recording;
     Array<PrDrawCommandKind> open;   // innermost last; a clip of any kind is stored as PushClipRect
     Array<DrawLoweredGroup> lowered; // the open groups that composite in sRGB-linear, innermost last
+    Array<uint32_t> groups;          // the PushGroup commands of the open groups, innermost last
 
     // The brush and stroke copied last, in side storage. A command whose brush or stroke equals one of them shares the
     // copy, so that commands recorded in one paint store it once.

@@ -72,7 +72,7 @@ bool isOneOf(PrStringView name, const char* const* names, size_t count) {
 // Raw HTML is scanned within a paragraph, which holds no blank line, so its whitespace holds at most one line ending.
 size_t skipWhitespace(PrStringView text, size_t start) {
     size_t end = start;
-    while (end < text.size && (markdownIsSpaceOrTab(text.data[end]) || text.data[end] == '\n' || text.data[end] == '\r'))
+    while (end < text.size && (asciiIsTabOrSpace(text.data[end]) || text.data[end] == '\n' || text.data[end] == '\r'))
         ++end;
     return end;
 }
@@ -137,7 +137,7 @@ size_t openTagRest(PrStringView text, size_t start, MarkdownTagScan* PR_NULLABLE
             end = close;
         } else {
             size_t close = value;
-            while (close < text.size && !markdownIsSpaceOrTab(text.data[close]) && text.data[close] != '\n' &&
+            while (close < text.size && !asciiIsTabOrSpace(text.data[close]) && text.data[close] != '\n' &&
                     text.data[close] != '\r' && text.data[close] != '"' && text.data[close] != '\'' &&
                     text.data[close] != '=' && text.data[close] != '<' && text.data[close] != '>' && text.data[close] != '`')
                 ++close;
@@ -267,7 +267,7 @@ uint8_t markdownHtmlBlockStart(PrStringView line, size_t start, bool interruptsP
         PrStringView tag = stringSlice(line, start + 1, name);
         char next = at(line, start + 1 + name);
         bool ends = isLineEnd(line, start + 1 + name);
-        if (isOneOf(tag, kRawTagNames, countOf(kRawTagNames)) && (ends || markdownIsSpaceOrTab(next) || next == '>'))
+        if (isOneOf(tag, kRawTagNames, countOf(kRawTagNames)) && (ends || asciiIsTabOrSpace(next) || next == '>'))
             return 1;
     }
     if (startsWithFold(line, start, "<!--"))
@@ -283,7 +283,7 @@ uint8_t markdownHtmlBlockStart(PrStringView line, size_t start, bool interruptsP
     if (blockName != 0 && isOneOf(stringSlice(line, nameStart, blockName), kBlockTagNames, countOf(kBlockTagNames))) {
         size_t end = nameStart + blockName;
         char next = at(line, end);
-        if (isLineEnd(line, end) || markdownIsSpaceOrTab(next) || next == '>' || (next == '/' && at(line, end + 1) == '>'))
+        if (isLineEnd(line, end) || asciiIsTabOrSpace(next) || next == '>' || (next == '/' && at(line, end + 1) == '>'))
             return 6;
     }
     if (interruptsParagraph)
@@ -297,7 +297,7 @@ uint8_t markdownHtmlBlockStart(PrStringView line, size_t start, bool interruptsP
     if (stringFind(taken, '\n') != taken.size || stringFind(taken, '\r') != taken.size)
         return 0;
     size_t end = start + length;
-    while (markdownIsSpaceOrTab(at(line, end)))
+    while (asciiIsTabOrSpace(at(line, end)))
         ++end;
     return isLineEnd(line, end) ? 7 : 0;
 }
@@ -481,13 +481,13 @@ bool markdownIsUnsafeDestination(PrStringView destination) {
 
 size_t markdownSkipSpaceAndLineEnding(PrStringView text, size_t start) {
     size_t end = start;
-    while (markdownIsSpaceOrTab(at(text, end)))
+    while (asciiIsTabOrSpace(at(text, end)))
         ++end;
     if (at(text, end) == '\r')
         ++end;
     if (at(text, end) == '\n')
         ++end;
-    while (markdownIsSpaceOrTab(at(text, end)))
+    while (asciiIsTabOrSpace(at(text, end)))
         ++end;
     return end;
 }

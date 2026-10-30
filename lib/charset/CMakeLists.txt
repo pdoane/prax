@@ -3,7 +3,7 @@ pr_library(charset INCLUDE include
     src/charset.cpp
     src/charset_tables.cpp
 )
-target_link_libraries(pr_charset PUBLIC prax::core PRIVATE prax::core_cpp)
+target_link_libraries(pr_charset PUBLIC prax::core PRIVATE prax::core_cpp prax::mime)
 
 if (PR_JS)
     pr_library(charset_quickjs INCLUDE quickjs/include

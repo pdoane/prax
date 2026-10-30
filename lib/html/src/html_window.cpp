@@ -25,6 +25,8 @@
 #include "html/src/html_canvas.h"
 #include "html/src/html_focus.h"
 #include "html/src/html_interface.h"
+#include "html/src/html_media.h"
+#include "html/src/html_page.h"
 
 namespace pr_impl {
 namespace {
@@ -98,12 +100,14 @@ double frameDue(const PrHtmlWindow* window) {
 
 // Returns true if the next rendering opportunity updates the rendering. It does if there are frame requests, if the
 // document is to be revealed, if a top-level document has autofocus candidates, if its animations are running, if
-// scroll or animation events are due, or if its styles changed.
+// scroll or animation events are due, if a canvas or a video shows a picture that is out of date, or if its styles
+// changed.
 bool wantsFrame(const PrHtmlWindow* window) {
     if (htmlWindowRenderBlocked(window))
         return false;
     PrCssPresentation* presentation = presentationOf(window);
     return window->frameRequests.count != 0 || window->revealing || window->canvases.count != 0 ||
+        htmlMediaWantsFrame(window) ||
         (window->parent == nullptr && window->document != nullptr && htmlFocusHasAutofocus(window->document)) ||
         (window->document != nullptr && prCssDocumentResizeObservationsPending(window->document)) ||
         (window->document != nullptr && prCssDocumentIntersectionObservationsPending(window->document)) ||
@@ -190,6 +194,7 @@ void runFrame(PrHtmlWindow* window, double now) {
     window->frameRunning.reset();
     // The canvases that the callbacks and the tasks before them drew show what they drew.
     htmlCanvasShow(window);
+    htmlMediaShow(window);
     // Styles are computed for the frame, in the same way as when the host lays out, which starts the transitions that
     // style changes make. Computing styles does not wait for a presentation thread that is still laying out the last
     // frame.
@@ -301,6 +306,7 @@ void setTarget(PrDomDocument* document, PrDomElement* PR_NULLABLE element) {
 // Frees a window once its last reference is released (DomCountedTarget::destroy).
 void freeWindow(DomCountedTarget* target) {
     PrHtmlWindow* window = static_cast<PrHtmlWindow*>(target);
+    domNodeRelease(window->document);
     window->timers.reset();
     window->tasks.reset();
     window->frameRequests.reset();
@@ -483,8 +489,19 @@ bool htmlWindowIsIdle(const PrHtmlWindow* window) {
     }
     PrCssPresentation* presentation = presentationOf(window);
     return window->taskHead == window->tasks.count && window->frameRequests.count == 0 && !window->revealing &&
-        (presentation == nullptr || (!cssPresentationHasWork(presentation) &&
+        !htmlMediaAwaitsPicture(window) && (presentation == nullptr || (!cssPresentationHasWork(presentation) &&
             !cssAnimateHaveEventsAhead(&presentation->animations)));
+}
+
+bool htmlWindowIsFullyActive(const PrHtmlWindow* window) {
+    for (const PrHtmlWindow* child = window; child->parent != nullptr; child = child->parent) {
+        bool held = false;
+        for (uint32_t i = 0; i < child->parent->frames.count; ++i)
+            held = held || child->parent->frames.data[i].window == child;
+        if (!held)
+            return false;
+    }
+    return window->document != nullptr && htmlDocumentPage(window->document) != nullptr;
 }
 
 double htmlWindowNextTaskDelay(const PrHtmlWindow* window) {
@@ -503,11 +520,16 @@ double htmlWindowNextTaskDelay(const PrHtmlWindow* window) {
 }
 
 bool htmlWindowRunTask(PrHtmlWindow* window) {
-    return !window->runningTask && runNextTask(window);
+    return !window->runningTask && htmlWindowSpinTask(window);
 }
 
 bool htmlWindowSpinTask(PrHtmlWindow* window) {
-    return runNextTask(window);
+    // A task may replace the window's document, and with it the window, which the page then releases. The window lives
+    // until the task returns.
+    domEventTargetRetain(window);
+    bool ran = runNextTask(window);
+    domEventTargetRelease(window);
+    return ran;
 }
 
 void htmlWindowRunLoadDelaying(PrHtmlWindow* window) {

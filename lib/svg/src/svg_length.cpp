@@ -9,6 +9,7 @@
 #include "pr/count_of.h"
 #include "pr/float.h"
 #include "pr/number_list.h"
+#include "pr/string_ops.h"
 #include "pr/text_buffer.h"
 
 #include "css/src/css_serialize.h"
@@ -107,9 +108,7 @@ bool parse(PrStringView text, LengthValue* out) {
     float number = 0;
     if (!numberListRead(text, &at, &number))
         return false;
-    PrStringView unit{text.data + at, text.size - at};
-    while (unit.size != 0 && asciiIsSpace(unit.data[unit.size - 1]))
-        --unit.size;
+    PrStringView unit = stringTrimEnd(stringSlice(text, at, text.size - at));
     for (uint32_t type = PrSvgLengthType_Percentage; type < countOf(kUnits); ++type) {
         if (asciiEqualsFold(unit, kUnits[type])) {
             *out = LengthValue{.type = PrSvgLengthType(type), .factor = number};

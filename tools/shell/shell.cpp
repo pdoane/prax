@@ -36,9 +36,10 @@
 // --no-scripts loads the pages that follow without running their own scripts. --dark loads them for a user who prefers
 // a dark color scheme.
 //
-// --shaper shapes the pages' text with the shaper of lib/text that it names, the default shaper otherwise, and
-// --hinting hints their fonts as the hinting that it names with the default hinter, none by default. Each sets the
-// process's backend, so a served run (--serve) uses the backends that the process started with.
+// --shaper shapes the pages' text with the shaper of lib/text that it names, the default shaper otherwise, --hinting
+// hints their fonts as the hinting that it names with the default hinter, none by default, and --media reads their
+// media resources with the codec of lib/media that it names, the built-in codec otherwise, which decodes no frames.
+// Each sets the process's backend, so a served run (--serve) uses the backends that the process started with.
 //
 // --restyle-threads N restyles on N threads, including the event loop's own thread, as
 // PrDomAgentOptions::restyleThreads describes: 0, the default, means one thread per core, and 1 means the event loop's
@@ -59,6 +60,7 @@
 #include "pr/draw_renderer.h"
 #include "pr/float.h"
 #include "pr/font_hinter.h"
+#include "pr/media.h"
 #include "pr/text.h"
 
 #include "tools/harness/compare.h"
@@ -243,7 +245,7 @@ void parse(PageHost& host, const std::vector<std::string>& args, Run& run) {
         bool takesOne = option == "--prelude" || option == "--font" || option == "--screenshot" ||
             option == "--write" || option == "--reference" || option == "--html" ||
             option == "--viewport" || option == "--pixel-ratio" || option == "--renderer" ||
-            option == "--timeout" || option == "--restyle-threads" || option == "--shaper" ||
+            option == "--timeout" || option == "--restyle-threads" || option == "--shaper" || option == "--media" ||
             option == "--hinting" || option == "--ca" || option == "--capture-wait" || option == "--cache";
         if ((takesOne && i + 1 >= args.size()) || (takesTwo && i + 2 >= args.size())) {
             fprintf(stderr, "%s needs %s\n", option.c_str(), takesTwo ? "two arguments" : "an argument");
@@ -286,7 +288,7 @@ void parse(PageHost& host, const std::vector<std::string>& args, Run& run) {
                 run.write = value;
             } else if (option == "--reference") {
                 run.references.push_back(value);
-            } else if (option == "--shaper" || option == "--hinting") {
+            } else if (option == "--shaper" || option == "--hinting" || option == "--media") {
                 // main reads these options, before the host is created.
             } else if (option == "--restyle-threads") {
                 char* end = nullptr;
@@ -433,7 +435,7 @@ int main(int argc, char** argv) {
         fprintf(stderr, "usage: pr_shell [--network] [--resolve <host> <address>]... [--ca <pem>]... [--cache <directory>] "
             "[--prelude <script>] [--font <file>] [--capture-wait <script>] [--virtual-time] [--verify] [--no-scripts] [--dark] "
             "[--viewport WxH] [--pixel-ratio <target pixels per px>] [--renderer <name>] "
-            "[--timeout <ms>] [--restyle-threads <n>] [--shaper <name>] [--hinting none|light|full] [--serve] "
+            "[--timeout <ms>] [--restyle-threads <n>] [--shaper <name>] [--hinting none|light|full] [--media <name>] [--serve] "
             "<script | [--screenshot <png>] [--reference <page>]... [--write <stem>] "
             "--html <url | page.html | capture.json>>...\n");
         return 2;
@@ -441,11 +443,18 @@ int main(int argc, char** argv) {
     std::vector<std::string> args(argv + 1, argv + argc);
     PrTextShaperBackend chosen = PrTextShaperBackend_Default;
     PrFontHinting hinting = PrFontHinting_None;
+    PrMediaCodecBackend media = PrMediaCodecBackend_Builtin;
     for (size_t i = 0; i + 1 < args.size(); ++i) {
         if (args[i] == "--shaper") {
             chosen = prTextShaperBackendFromName(args[i + 1]);
             if (!prTextShaperBackendIsBuilt(chosen)) {
                 fprintf(stderr, "--shaper names no shaper that the build has: %s\n", args[i + 1].c_str());
+                return 2;
+            }
+        } else if (args[i] == "--media") {
+            media = prMediaCodecBackendFromName(args[i + 1]);
+            if (!prMediaCodecBackendIsBuilt(media)) {
+                fprintf(stderr, "--media names no media codec that the build has: %s\n", args[i + 1].c_str());
                 return 2;
             }
         } else if (args[i] == "--hinting") {
@@ -458,7 +467,9 @@ int main(int argc, char** argv) {
     }
     std::unique_ptr<PrTextShaper, decltype(&prTextShaperDestroy)> shaper(prTextShaperCreate(chosen),
         prTextShaperDestroy);
-    PageHost host(shaper.get());
+    std::unique_ptr<PrMediaCodec, decltype(&prMediaCodecDestroy)> mediaCodec(prMediaCodecCreate(media),
+        prMediaCodecDestroy);
+    PageHost host(shaper.get(), mediaCodec.get());
     // The hinter lives as long as the process, because the fonts that name it are kept.
     host.setHinting(hinting, hinting != PrFontHinting_None ? prFontHinterCreate(PrFontHinterBackend_Default) : nullptr);
     Run run;

@@ -808,13 +808,7 @@ const CssHintProvider* htmlHints() {
 
 bool htmlParseLegacyColor(PrStringView text, PrColor8* out) {
     // Steps 2 to 4: an empty value, transparent, and a named color.
-    size_t start = 0;
-    size_t end = text.size;
-    while (start < end && asciiIsSpace(text.data[start]))
-        ++start;
-    while (end > start && asciiIsSpace(text.data[end - 1]))
-        --end;
-    PrStringView input{text.data + start, end - start};
+    PrStringView input = stringTrim(text);
     if (input.size == 0 || asciiEqualsFold(input, "transparent"))
         return false;
     if (cssNamedColor(cssKeywordFromText(input), out))

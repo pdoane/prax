@@ -260,7 +260,9 @@ TEST_CASE("new shapes, clips and groups record what they are given") {
     PrDrawGroup group = prDrawGroupDefault();
     group.opacity = 0.5f;
     group.isolated = true;
+    group.bounds = PrRect{0, 0, 2, 2};
     prDrawListPushGroup(list, &group);
+    prDrawListRect(list, PrRect{0, 0, 1, 1}, {.color = kRed});
     prDrawListPopGroup(list);
     prDrawListPopClip(list);
     prDrawListPopClip(list);
@@ -270,10 +272,69 @@ TEST_CASE("new shapes, clips and groups record what they are given") {
         "capsule 0 0 4 0 2 color 1 0 0 1\n"
         "push-clip-corner-rect 0 0 10 10 corners 4 4 2 0 0 1 2 3 -1 1 1 1\n"
         "push-clip-target-rect 0 0 3 3\n"
-        "push-group 0 0 0 0 opacity 0.5 isolated\n"
+        "push-group 0 0 2 2 opacity 0.5 isolated\n"
+        "rect 0 0 1 1 color 1 0 0 1\n"
         "pop-group\n"
         "pop-clip\n"
         "pop-clip\n");
+    prDrawListRelease(list);
+}
+
+TEST_CASE("a group without bounds takes the bounds of its contents, unless it may draw outside them") {
+    PrDrawList* list = prDrawListCreate();
+    PrDrawGroup group = prDrawGroupDefault();
+    group.isolated = true;
+    prDrawListPushGroup(list, &group);
+    prDrawListPushTransformAffine2(list, prAffine2Translate(PrVec2{10, 20}));
+    prDrawListRect(list, PrRect{0, 0, 4, 4}, {.color = kRed});
+    prDrawListPopTransform(list);
+    prDrawListPopGroup(list);
+    // The bounds reach as far as antialiasing does.
+    CHECK(dump(list) == "push-group 9 19 15 25 opacity 1 isolated\n"
+        "push-transform-affine 1 0 0 1 10 20\n"
+        "rect 0 0 4 4 color 1 0 0 1\n"
+        "pop-transform\n"
+        "pop-group\n");
+    prDrawListRelease(list);
+
+    // An operator that changes what lies outside the contents covers the whole clip.
+    list = prDrawListCreate();
+    group = prDrawGroupDefault();
+    group.composite = PrDrawComposite_Copy;
+    prDrawListPushGroup(list, &group);
+    prDrawListRect(list, PrRect{0, 0, 4, 4}, {.color = kRed});
+    prDrawListPopGroup(list);
+    CHECK(prDrawListCommands(list)[0].group->bounds.right == 0);
+    prDrawListRelease(list);
+}
+
+TEST_CASE("a group that draws nothing is removed with its contents") {
+    PrDrawList* list = prDrawListCreate();
+    prDrawListRect(list, PrRect{0, 0, 1, 1}, {.color = kRed});
+    PrDrawGroup transparent = prDrawGroupDefault();
+    transparent.opacity = 0;
+    prDrawListPushGroup(list, &transparent);
+    prDrawListRect(list, PrRect{0, 0, 4, 4}, {.color = kRed});
+    prDrawListPopGroup(list);
+    // Contents clipped to nothing cover nothing.
+    PrDrawGroup isolated = prDrawGroupDefault();
+    isolated.isolated = true;
+    prDrawListPushGroup(list, &isolated);
+    prDrawListPushClipRect(list, PrRect{0, 0, 0, 0}, PrDrawEdges_Snapped);
+    prDrawListRect(list, PrRect{0, 0, 4, 4}, {.color = kRed});
+    prDrawListPopClip(list);
+    prDrawListPopGroup(list);
+    CHECK(dump(list) == "rect 0 0 1 1 color 1 0 0 1\n");
+
+    // A transparent child of a knockout group still knocks out what its siblings drew.
+    PrDrawGroup knockout = prDrawGroupDefault();
+    knockout.knockout = true;
+    prDrawListPushGroup(list, &knockout);
+    prDrawListPushGroup(list, &transparent);
+    prDrawListRect(list, PrRect{0, 0, 4, 4}, {.color = kRed});
+    prDrawListPopGroup(list);
+    prDrawListPopGroup(list);
+    CHECK(prDrawListCommandCount(list) == 6);
     prDrawListRelease(list);
 }
 

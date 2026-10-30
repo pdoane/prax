@@ -64,7 +64,11 @@ struct HtmlFrame {
 // holds a reference while the window is its page's, and the script objects of the window and of its members hold
 // references too, so that a window that its page has closed outlives the objects that name it.
 struct HtmlWindow : DomCountedTarget {
-    PrDomDocument* document;
+    // The window's document (html/#concept-document-window), which the window holds. A window that its page closed
+    // keeps the document that it had, which its page discarded, so that the objects that name the window read what it
+    // showed.
+    PrDomDocument* PR_NULLABLE document;
+
     PrDomAgent* agent;                        // the agent whose event loop runs the window (html/#relevant-agent)
     CssMediaEnvironment media;                // the environment that its document's media queries are evaluated against
     PrHtmlPreferenceObject preferences[PrHtmlPreference_Count];
@@ -77,6 +81,8 @@ struct HtmlWindow : DomCountedTarget {
     // holds their bitmaps, or null for bitmaps in memory, and the codec that encodes them.
     PrGpuDevice* PR_NULLABLE device;
     PrImageCodec* PR_NULLABLE images;
+
+    PrMediaCodec* PR_NULLABLE mediaCodec;     // reads the resources of its document's media elements, or null
 
     // The default User-Agent value of the host's fetcher (prFetchNetworkUserAgent), or empty without one, and the
     // navigator compatibility mode of the host.
@@ -187,8 +193,12 @@ void htmlWindowCancelAnimationFrame(PrHtmlWindow* window, uint32_t handle);
 // Drops every task, timer and frame request without running it.
 void htmlWindowClearTasks(PrHtmlWindow* window);
 
-// Returns true if nothing is pending except the rendering updates that animations want.
+// Returns true if nothing is pending except the rendering updates that animations and playing media want.
 bool htmlWindowIsIdle(const PrHtmlWindow* window);
+
+// Returns true if the window's document is fully active (html/#fully-active): it is its browsing context's document,
+// and each ancestor's browsing context still holds an iframe of the window. A window that its page closed is not.
+bool htmlWindowIsFullyActive(const PrHtmlWindow* window);
 
 // Returns the number of milliseconds until the next task can run: zero if one can run already, and -1 if there is none.
 // A queued task can run immediately, and a timer once it is due. A rendering update can run at the next rendering

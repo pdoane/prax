@@ -139,6 +139,10 @@ TEST_CASE("nodes a script makes and lets go of are freed, however it mutated the
             " Object.preventExtensions(d.appendChild(document.createElement('p'))); d.remove(); }",
         "for (let i = 0; i < 200; ++i) { const d = document.createElement('div');"
             " d.appendChild(document.createElement('p')).addEventListener('x', () => {}); }",
+        "for (let i = 0; i < 200; ++i) { const t = document.createElement('video').textTracks;"
+            " t.onaddtrack = () => {}; t.addEventListener('change', () => {}); }",
+        "for (let i = 0; i < 200; ++i) { const v = document.body.appendChild(document.createElement('video'));"
+            " v.audioTracks; v.load(); v.remove(); }",
     };
     for (const char* source : kChurns) {
         // A block of its own, so that its declarations do not clash when it runs again.
@@ -230,6 +234,30 @@ TEST_CASE("a [SameObject] attribute answers one object while script can tell, an
     CHECK(page.run("globalThis.declarations = element.style; globalThis.element = null; globalThis.list = null;"));
     JS_RunGC(page.runtime);
     CHECK(page.run("if (declarations.probe !== 1) throw new Error('held');"));
+}
+
+TEST_CASE("a window's members that script holds stay usable after a new document replaces the window") {
+    Page page("<body></body>");
+    CHECK(page.run("globalThis.clock = performance; globalThis.orientation = screen.orientation;"
+        "globalThis.reduced = navigator.preferences.reducedMotion;"));
+    REQUIRE(prHtmlPageLoad(page.page, "<p>next</p>", "about:blank", nullptr) == PrStatus_Ok);
+    page.settle();
+    JS_RunGC(page.runtime);
+    CHECK(page.run("clock.now(); clock.timeOrigin; orientation.type; orientation.angle; reduced.value;"));
+}
+
+TEST_CASE("a media element's track lists are its parts: one object each, which keeps the element alive") {
+    Page page("<body></body>");
+    CHECK(page.run("globalThis.video = document.createElement('video'); video.marker = 1;"
+        "globalThis.texts = video.textTracks; texts.onchange = () => { globalThis.changed = true; };"
+        "if (video.textTracks !== texts || !(texts instanceof TextTrackList) || !(texts instanceof EventTarget))"
+        " throw new Error('textTracks');"
+        "if (!(video.audioTracks instanceof AudioTrackList) || !(video.videoTracks instanceof VideoTrackList))"
+        " throw new Error('kinds');if (texts.length !== 0 || Array.from(texts).length !== 0 || texts.getTrackById('a') !== null)"
+        " throw new Error('empty');if (video.videoTracks.selectedIndex !== -1) throw new Error('selectedIndex');"
+        "globalThis.video = null;"));
+    JS_RunGC(page.runtime);
+    CHECK(page.run("texts.dispatchEvent(new Event('change')); if (!globalThis.changed) throw new Error('handler');"));
 }
 
 TEST_CASE("a node's object stays itself while it is a weak reference's target and script reaches its tree") {

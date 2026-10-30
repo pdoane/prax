@@ -47,9 +47,9 @@ struct DomEventExtra {
 };
 
 // Adds or releases a reference to an event target. A reference to a node, or to a document's FontFaceSet, keeps its
-// document alive. The last release frees a standalone EventTarget, a MediaQueryList, an XMLHttpRequest or an
-// AbortSignal. A reference to a part of a target (DomPartTarget) is a reference to its owner. An object that a window
-// owns lives as long as the window's browsing context, and these calls do nothing for it.
+// document alive. The last release frees a standalone EventTarget, a reference-counted target (DomCountedTarget) or an
+// AbortSignal. A reference to a part of a target (DomPartTarget) is a reference to its owner. These calls do nothing
+// for any other target, which its owner keeps alive.
 void domEventTargetRetain(PrDomEventTarget* target);
 void domEventTargetRelease(PrDomEventTarget* PR_NULLABLE target);
 

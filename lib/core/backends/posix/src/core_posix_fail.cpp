@@ -84,6 +84,8 @@ void prCorePosixFailed(PrStringView message, PrStringView file, uint32_t line) {
 }
 
 void prCorePosixCrashHandler(void) {
+    if (PR_ADDRESS_SANITIZER)
+        return;
     stack_t stack{};
     stack.ss_sp = crashStack;
     stack.ss_size = sizeof(crashStack);

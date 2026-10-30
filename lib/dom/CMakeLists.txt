@@ -15,7 +15,6 @@ pr_library(dom INCLUDE include
     src/dom_flat.cpp
     src/dom_hooks.cpp
     src/dom_microsyntax.cpp
-    src/dom_mime.cpp
     src/dom_mutation.cpp
     src/dom_node.cpp
     src/dom_range.cpp

@@ -1217,6 +1217,16 @@ bool layoutEffectsResolve(const LayoutTree* tree, LayoutNodeIndex node, const La
         PrRect unused{};
         out->backdropShape = layoutBorderShape(styles, layoutDecorationStyle(styles, style), border);
         out->backdrop = filterOf(&styles->effectLists, c.backdrop, border, border, true, border, &unused, &hidden);
+        // The layer that the backdrop is filtered in reaches as far past the box as the filter reads, so that the
+        // filter's edges are those of its own region rather than the layer's.
+        if (out->backdrop != nullptr) {
+            PrRect region = prRectUnion(border, ink);
+            PrRect reach = prDrawFilterOutset(out->backdrop);
+            out->backdropRegion = PrRect{
+                region.left + reach.left, region.top + reach.top, region.right + reach.right,
+                region.bottom + reach.bottom,
+            };
+        }
     }
     if (hidden) {
         layoutEffectsReset(out);
@@ -1266,6 +1276,9 @@ LayoutEffectsPushed layoutEffectsPush(const LayoutResolvedEffects& effects, floa
     group.isolated = true;
     group.filter = e.filter;
     group.bounds = e.filterRegion;
+    // A backdrop draws over the whole of a group without bounds. A filter without a region may draw anywhere.
+    if (e.backdrop != nullptr && e.filter == nullptr)
+        group.bounds = e.backdropRegion;
     group.backdrop = e.backdrop;
     PrDrawMask mask{};
     if (e.mask != nullptr) {

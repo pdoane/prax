@@ -16,6 +16,7 @@
 #include "pr/html_history.h"
 #include "pr/html_storage.h"
 #include "pr/image.h"
+#include "pr/media.h"
 #include "pr/string_view.h"
 
 PR_ASSUME_NONNULL_BEGIN
@@ -161,6 +162,10 @@ typedef struct PrHtmlHost {
     // decoded: an image still has the natural size that its header records, and draws nothing. If null, an iframe's
     // page uses its parent's codec. The codec also encodes the bitmaps of canvases (prHtmlCanvasElementToDataUrl).
     PrImageCodec* PR_NULLABLE images;
+
+    // The codec that reads the media resources of video and audio elements, and decodes the frames of their video,
+    // which must outlive the page. If null, no media resource plays. If null, an iframe's page uses its parent's codec.
+    PrMediaCodec* PR_NULLABLE media;
 
     // The device that the renderer presenting the documents renders on, or null if that renderer renders in memory. It
     // must outlive the page. The page keeps content that the renderer draws into on that device, such as the bitmaps of
@@ -357,6 +362,11 @@ void prHtmlPageSetDisplay(PrHtmlPage* self, const PrAppDisplay* display);
 // them, below any override that script makes. The page's frames take the same preferences, except the preferred color
 // scheme, which is the scheme that a frame's iframe element uses (css-color-adjust-1/#color-scheme-page).
 void prHtmlPageSetUserPreferences(PrHtmlPage* self, const PrAppUserPreferences* preferences);
+
+// Sets whether the page is shown to the user (html/#system-visibility-state), which it is until a host sets it. The
+// page's frames take the same visibility. A change updates the visibility state of each window's document, which fires
+// visibilitychange at it in a task (html/#update-the-visibility-state).
+void prHtmlPageSetVisibility(PrHtmlPage* self, PrHtmlVisibility visibility);
 
 // Returns the presentation of the window's document. For each document that the page loads, it creates a presentation
 // with the user agent style sheet of html/#rendering, if its host gives a text font and a shaper. Returns null if the

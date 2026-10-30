@@ -539,6 +539,65 @@ TEST_CASE("a media element its window runs may leave for a document that goes fi
     prHtmlPageDestroy(page);
 }
 
+TEST_CASE("a page is visible until its host hides it, and its document then fires visibilitychange in a task") {
+    PrHtmlPage* page = prHtmlPageCreate(nullptr);
+    CHECK(prHtmlPageLoad(page, "<p>text</p>", "about:blank", nullptr) == PrStatus_Ok);
+    PrDomDocument* document = prHtmlWindowDocument(prHtmlPageWindow(page));
+    CHECK(prHtmlDocumentVisibilityState(document) == PrHtmlVisibility_Visible);
+    struct Heard {
+        int count = 0;
+        bool bubbles = false;
+    } heard;
+    PrDomEventListener listener{
+        .invoke = [](void* context, PrDomEvent* event) {
+            Heard* h = static_cast<Heard*>(context);
+            ++h->count;
+            h->bubbles = prDomEventBubbles(event);
+        },
+        .context = &heard,
+    };
+    prDomEventTargetAddEventListener(prDomDocumentAsEventTarget(document), "visibilitychange", &listener, nullptr);
+    prHtmlPageSetVisibility(page, PrHtmlVisibility_Hidden);
+    CHECK(prHtmlDocumentVisibilityState(document) == PrHtmlVisibility_Hidden);
+    CHECK(heard.count == 0);
+    runTasks(page);
+    CHECK(heard.count == 1);
+    CHECK(heard.bubbles);
+    // Setting the same visibility again changes nothing.
+    prHtmlPageSetVisibility(page, PrHtmlVisibility_Hidden);
+    runTasks(page);
+    CHECK(heard.count == 1);
+    // A document that is not its window's has no visibility of its own.
+    PrDomDocument* other = prDomDocumentCreate();
+    CHECK(prHtmlDocumentVisibilityState(other) == PrHtmlVisibility_Hidden);
+    prDomDocumentRelease(other);
+    prHtmlPageDestroy(page);
+}
+
+TEST_CASE("a media element keeps its state and track lists without a window, in their initial state") {
+    PrHtmlPage* page = prHtmlPageCreate(nullptr);
+    CHECK(prHtmlPageLoad(page, "<video id=v src=a.mp4></video>", "about:blank", nullptr) == PrStatus_Ok);
+    PrDomDocument* document = prHtmlWindowDocument(prHtmlPageWindow(page));
+    PrDomElement* video = prDomNodeGetElementById(prDomDocumentAsNode(document), "v");
+    PrHtmlMediaElement* media = prHtmlMediaElementQuery(prDomElementAsEventTarget(video));
+    REQUIRE(media != nullptr);
+    prDomNodeRetain(prDomElementAsNode(video));
+    PrHtmlTrackList* texts = prHtmlMediaElementTracks(media, PrHtmlTrackKind_Text);
+    CHECK(prHtmlTrackListKind(texts) == PrHtmlTrackKind_Text);
+    CHECK(prHtmlTrackListQuery(prHtmlTrackListAsEventTarget(texts)) == texts);
+    CHECK(prHtmlMediaElementSetVolume(media, 0.5) == PrStatus_Ok);
+    CHECK(prHtmlMediaElementVolume(media) == 0.5);
+    // Once the window goes, the element is in its initial state, and its lists are the same.
+    prHtmlPageDestroy(page);
+    CHECK(prHtmlMediaElementVolume(media) == 1);
+    CHECK(prHtmlMediaElementPaused(media));
+    CHECK(prHtmlMediaElementNetworkState(media) == PrHtmlMediaNetworkState_Empty);
+    CHECK(prHtmlMediaElementTracks(media, PrHtmlTrackKind_Text) == texts);
+    prHtmlMediaElementLoad(media);
+    CHECK(prHtmlMediaElementNetworkState(media) == PrHtmlMediaNetworkState_Empty);
+    prDomNodeRelease(prDomElementAsNode(video));
+}
+
 TEST_CASE("the host designates and activates elements, and answers the states it alone knows") {
     struct State { const PrDomElement* known = nullptr; } state;
     PrHtmlHost host = prHtmlHostDefault();

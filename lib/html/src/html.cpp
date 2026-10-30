@@ -169,9 +169,11 @@ const CssMediaEnvironment* environmentOf(const PrHtmlPreferenceObject* preferenc
     return &preference->window->media;
 }
 
-// Returns the state of a media element that its window runs, or null for an element outside its window's document.
-HtmlMedia* PR_NULLABLE mediaOf(const PrHtmlMediaElement* self) {
-    return htmlMediaFromElement(const_cast<PrHtmlMediaElement*>(self));
+// Returns the state of a media element, which the window whose document is the element's document runs if there is one.
+HtmlMedia* mediaOf(const PrHtmlMediaElement* self) {
+    PrDomElement* element = const_cast<PrHtmlMediaElement*>(self);
+    HtmlMedia* running = htmlMediaRunning(element);
+    return running != nullptr ? running : htmlMediaFromElement(element);
 }
 
 constexpr PrStringView kDataPrefix = "data-";
@@ -437,6 +439,11 @@ PrDomHtmlCollection* prHtmlDocumentCollection(PrDomDocument* document, PrHtmlDoc
 
 bool prHtmlDocumentHasFocus(PrDomDocument* document) {
     return htmlHasFocus(document);
+}
+
+PrHtmlVisibility prHtmlDocumentVisibilityState(const PrDomDocument* document) {
+    const PrHtmlPage* page = htmlDocumentPage(document);
+    return page != nullptr ? page->visibility : PrHtmlVisibility_Hidden;
 }
 
 PrDomElement* PR_NULLABLE prHtmlActiveElement(PrDomNode* root) {
@@ -895,52 +902,43 @@ bool prHtmlMediaElementIsVideo(const PrHtmlMediaElement* self) {
 }
 
 PrHtmlMediaError prHtmlMediaElementError(const PrHtmlMediaElement* self) {
-    const HtmlMedia* media = mediaOf(self);
-    return media != nullptr ? media->error : PrHtmlMediaError_None;
+    return mediaOf(self)->error;
 }
 
 PrStringView prHtmlMediaElementErrorMessage(const PrHtmlMediaElement* self) {
-    const HtmlMedia* media = mediaOf(self);
-    return media != nullptr ? prStringView(&media->errorMessage) : "";
+    return prStringView(&mediaOf(self)->errorMessage);
 }
 
 PrStringView prHtmlMediaElementCurrentSrc(const PrHtmlMediaElement* self) {
-    const HtmlMedia* media = mediaOf(self);
-    return media != nullptr ? prStringView(&media->currentSrc) : "";
+    return prStringView(&mediaOf(self)->currentSrc);
 }
 
 PrHtmlMediaNetworkState prHtmlMediaElementNetworkState(const PrHtmlMediaElement* self) {
-    const HtmlMedia* media = mediaOf(self);
-    return media != nullptr ? media->networkState : PrHtmlMediaNetworkState_Empty;
+    return mediaOf(self)->networkState;
 }
 
 PrHtmlMediaReadyState prHtmlMediaElementReadyState(const PrHtmlMediaElement* self) {
-    const HtmlMedia* media = mediaOf(self);
-    return media != nullptr ? media->readyState : PrHtmlMediaReadyState_HaveNothing;
+    return mediaOf(self)->readyState;
 }
 
 void prHtmlMediaElementLoad(PrHtmlMediaElement* self) {
-    if (HtmlMedia* media = mediaOf(self))
-        htmlMediaLoad(media);
+    htmlMediaLoad(mediaOf(self));
 }
 
-PrHtmlCanPlay prHtmlMediaElementCanPlayType(const PrHtmlMediaElement*, PrStringView type) {
-    return htmlCanPlayType(type);
+PrHtmlCanPlay prHtmlMediaElementCanPlayType(const PrHtmlMediaElement* self, PrStringView type) {
+    return htmlCanPlayType(mediaOf(self)->window, type);
 }
 
 bool prHtmlMediaElementSeeking(const PrHtmlMediaElement* self) {
-    const HtmlMedia* media = mediaOf(self);
-    return media != nullptr && media->seeking;
+    return mediaOf(self)->seeking;
 }
 
 double prHtmlMediaElementCurrentTime(PrHtmlMediaElement* self) {
-    HtmlMedia* media = mediaOf(self);
-    return media != nullptr ? htmlMediaCurrentTime(media) : 0;
+    return htmlMediaCurrentTime(mediaOf(self));
 }
 
 void prHtmlMediaElementSetCurrentTime(PrHtmlMediaElement* self, double seconds) {
-    if (HtmlMedia* media = mediaOf(self))
-        htmlMediaSeek(media, seconds);
+    htmlMediaSeek(mediaOf(self), seconds);
 }
 
 void prHtmlMediaElementFastSeek(PrHtmlMediaElement* self, double seconds) {
@@ -948,57 +946,46 @@ void prHtmlMediaElementFastSeek(PrHtmlMediaElement* self, double seconds) {
 }
 
 double prHtmlMediaElementDuration(const PrHtmlMediaElement* self) {
-    const HtmlMedia* media = mediaOf(self);
-    return media != nullptr ? media->duration : kNanF64;
+    return mediaOf(self)->duration;
 }
 
 bool prHtmlMediaElementPaused(const PrHtmlMediaElement* self) {
-    const HtmlMedia* media = mediaOf(self);
-    return media == nullptr || media->paused;
+    return mediaOf(self)->paused;
 }
 
 bool prHtmlMediaElementEnded(PrHtmlMediaElement* self) {
-    HtmlMedia* media = mediaOf(self);
-    return media != nullptr && htmlMediaEnded(media);
+    return htmlMediaEnded(mediaOf(self));
 }
 
 double prHtmlMediaElementDefaultPlaybackRate(const PrHtmlMediaElement* self) {
-    const HtmlMedia* media = mediaOf(self);
-    return media != nullptr ? media->defaultRate : 1;
+    return mediaOf(self)->defaultRate;
 }
 
 void prHtmlMediaElementSetDefaultPlaybackRate(PrHtmlMediaElement* self, double rate) {
-    if (HtmlMedia* media = mediaOf(self))
-        htmlMediaSetRate(media, rate, true);
+    htmlMediaSetRate(mediaOf(self), rate, true);
 }
 
 double prHtmlMediaElementPlaybackRate(const PrHtmlMediaElement* self) {
-    const HtmlMedia* media = mediaOf(self);
-    return media != nullptr ? media->rate : 1;
+    return mediaOf(self)->rate;
 }
 
 PrStatus prHtmlMediaElementSetPlaybackRate(PrHtmlMediaElement* self, double rate) {
     // html/#dom-media-playbackrate: the engine can play its timeline at any rate, forwards and backwards.
-    if (HtmlMedia* media = mediaOf(self))
-        htmlMediaSetRate(media, rate, false);
+    htmlMediaSetRate(mediaOf(self), rate, false);
     return PrStatus_Ok;
 }
 
 bool prHtmlMediaElementPreservesPitch(const PrHtmlMediaElement* self) {
-    const HtmlMedia* media = mediaOf(self);
-    return media == nullptr || media->preservesPitch;
+    return mediaOf(self)->preservesPitch;
 }
 
 void prHtmlMediaElementSetPreservesPitch(PrHtmlMediaElement* self, bool preserves) {
-    if (HtmlMedia* media = mediaOf(self))
-        media->preservesPitch = preserves;
+    mediaOf(self)->preservesPitch = preserves;
 }
 
 uint32_t prHtmlMediaElementRanges(PrHtmlMediaElement* self, PrHtmlMediaRanges which,
         double* PR_NULLABLE starts, double* PR_NULLABLE ends, uint32_t capacity) {
     HtmlMedia* media = mediaOf(self);
-    if (media == nullptr)
-        return 0;
     if (which == PrHtmlMediaRanges_Played) {
         uint32_t count = media->played.count / 2;
         for (uint32_t i = 0; i < count && i < capacity; ++i) {
@@ -1019,8 +1006,8 @@ uint32_t prHtmlMediaElementRanges(PrHtmlMediaElement* self, PrHtmlMediaRanges wh
 
 void prHtmlMediaElementPlay(PrHtmlMediaElement* self, const PrHtmlPlayPromise* promise) {
     HtmlMedia* media = mediaOf(self);
-    if (media == nullptr) {
-        // An element outside its window's document has no resource to play.
+    if (media->window == nullptr) {
+        // An element that no window runs has no resource to play.
         promise->settle(promise->context, "NotSupportedError");
         promise->release(promise->context);
         return;
@@ -1029,44 +1016,70 @@ void prHtmlMediaElementPlay(PrHtmlMediaElement* self, const PrHtmlPlayPromise* p
 }
 
 void prHtmlMediaElementPause(PrHtmlMediaElement* self) {
-    if (HtmlMedia* media = mediaOf(self))
-        htmlMediaPause(media);
+    htmlMediaPause(mediaOf(self));
 }
 
 double prHtmlMediaElementVolume(const PrHtmlMediaElement* self) {
-    const HtmlMedia* media = mediaOf(self);
-    return media != nullptr ? media->volume : 1;
+    return mediaOf(self)->volume;
 }
 
 PrStatus prHtmlMediaElementSetVolume(PrHtmlMediaElement* self, double volume) {
     if (volume < 0 || volume > 1)
         return PrStatus_OutOfRange;
-    if (HtmlMedia* media = mediaOf(self))
-        htmlMediaSetVolume(media, volume, prHtmlMediaElementMuted(self));
+    htmlMediaSetVolume(mediaOf(self), volume, prHtmlMediaElementMuted(self));
     return PrStatus_Ok;
 }
 
 bool prHtmlMediaElementMuted(const PrHtmlMediaElement* self) {
     const HtmlMedia* media = mediaOf(self);
-    if (media != nullptr && media->mutedSet)
+    if (media->mutedSet)
         return media->muted;
     // html/#dom-media-muted: an element follows its muted content attribute until a script sets muted.
     return domAttribute(self, PrDomNamespace_None, "muted") != nullptr;
 }
 
 void prHtmlMediaElementSetMuted(PrHtmlMediaElement* self, bool muted) {
-    if (HtmlMedia* media = mediaOf(self))
-        htmlMediaSetVolume(media, media->volume, muted);
+    HtmlMedia* media = mediaOf(self);
+    htmlMediaSetVolume(media, media->volume, muted);
 }
 
 uint32_t prHtmlMediaElementVideoWidth(const PrHtmlMediaElement* self) {
-    const HtmlMedia* media = mediaOf(self);
-    return media != nullptr ? media->videoWidth : 0;
+    return mediaOf(self)->videoWidth;
 }
 
 uint32_t prHtmlMediaElementVideoHeight(const PrHtmlMediaElement* self) {
-    const HtmlMedia* media = mediaOf(self);
-    return media != nullptr ? media->videoHeight : 0;
+    return mediaOf(self)->videoHeight;
+}
+
+PrHtmlTrackList* prHtmlMediaElementTracks(PrHtmlMediaElement* self, PrHtmlTrackKind kind) {
+    HtmlMedia* media = mediaOf(self);
+    switch (kind) {
+        case PrHtmlTrackKind_Audio: return static_cast<PrHtmlTrackList*>(&media->audioTracks);
+        case PrHtmlTrackKind_Video: return static_cast<PrHtmlTrackList*>(&media->videoTracks);
+        default: return static_cast<PrHtmlTrackList*>(&media->textTracks);
+    }
+}
+
+PrHtmlTrackList* PR_NULLABLE prHtmlTrackListQuery(PrDomEventTarget* PR_NULLABLE object) {
+    bool list = object != nullptr && (object->type == DomTargetType_TextTrackList ||
+        object->type == DomTargetType_AudioTrackList || object->type == DomTargetType_VideoTrackList);
+    return list ? static_cast<PrHtmlTrackList*>(object) : nullptr;
+}
+
+PrHtmlTrackKind prHtmlTrackListKind(const PrHtmlTrackList* self) {
+    switch (self->type) {
+        case DomTargetType_AudioTrackList: return PrHtmlTrackKind_Audio;
+        case DomTargetType_VideoTrackList: return PrHtmlTrackKind_Video;
+        default: return PrHtmlTrackKind_Text;
+    }
+}
+
+uint32_t prHtmlTrackListLength(const PrHtmlTrackList*) {
+    return 0;
+}
+
+int32_t prHtmlTrackListSelectedIndex(const PrHtmlTrackList*) {
+    return -1;
 }
 
 PrHtmlSlotElement* PR_NULLABLE prHtmlSlotElementQuery(PrDomEventTarget* PR_NULLABLE object) {
@@ -1406,6 +1419,9 @@ PrString prHtmlWindowLocation(const PrHtmlWindow* self, PrUrlComponent component
 
 PrStatus prHtmlWindowSetLocation(PrHtmlWindow* self, PrUrlComponent component, PrStringView value,
         PrHtmlHistoryHandling handling) {
+    // A document that is not fully active navigates nowhere (html/#navigate).
+    if (!htmlWindowIsFullyActive(self))
+        return PrStatus_Ok;
     PrDomDocument* document = self->document;
     PrUrl* copy = nullptr;
     if (component == PrUrlComponent_Href) {

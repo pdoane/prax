@@ -188,9 +188,11 @@ struct LayoutResolvedEffects {
     const PrDrawFilter* PR_NULLABLE filter;
     PrRect filterRegion;            // the region of a filter element that ends the list, or empty for no limit
 
-    // The backdrop filter, and the corner rectangle of the border box that it shows within.
+    // The backdrop filter, the corner rectangle of the border box that it shows within, and the area that its group
+    // covers: what the box and its backdrop may draw over, and as far past it as the filter reads.
     const PrDrawFilter* PR_NULLABLE backdrop;
     PrCornerRect backdropShape;
+    PrRect backdropRegion;
 
     PrDrawBlendMode blendMode;
     PrDrawComposite composite;

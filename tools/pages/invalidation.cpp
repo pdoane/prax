@@ -236,7 +236,7 @@ int main(int argc, char** argv) {
         return 2;
     }
     std::unique_ptr<PrTextShaper, decltype(&prTextShaperDestroy)> shaper(prTextHarfBuzzCreate(), prTextShaperDestroy);
-    PageHost host(shaper.get());
+    PageHost host(shaper.get(), nullptr);
     if (restyleThreads >= 0)
         host.setRestyleThreads(uint32_t(restyleThreads));
     host.disableScripts();

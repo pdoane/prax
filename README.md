@@ -115,6 +115,7 @@ platform supports.
 | tls | `APPLE` (Network.framework) on Apple platforms, `SCHANNEL` on Windows, `OPENSSL` on other Unix-like systems | `OPENSSL` elsewhere |
 | fetch | `BUILTIN`, `INTERCEPT` | |
 | http, websocket, task, compress, image | `BUILTIN` | |
+| media | `BUILTIN`, `APPLE` (AVFoundation) on Apple platforms, `WINDOWS` (Media Foundation) on Windows | |
 | font | `CORETEXT` on Apple platforms, `DIRECTWRITE` on Windows | `FREETYPE` |
 | text | `SIMPLE`, `CORETEXT` on Apple platforms | `HARFBUZZ`, `KB` |
 | draw | `CPU`, `TRIANGLES`, `FRAGMENT`, `GLYPH_BITMAP` | |

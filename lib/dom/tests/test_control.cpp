@@ -122,11 +122,9 @@ TEST_CASE("an input's value follows its value attribute until script sets it") {
     set(text, "value", "back");
     set(text, "type", "text");
     CHECK(valueOf(text) == "back");
-    domNodeRelease(text);
 
     PrDomElement* checkbox = input(p.document, "checkbox");
     CHECK(valueOf(checkbox) == "on");
-    domNodeRelease(checkbox);
 }
 
 TEST_CASE("a range's value rounds to its step and stays in its range") {
@@ -143,7 +141,6 @@ TEST_CASE("a range's value rounds to its step and stays in its range") {
     CHECK(valueOf(range) == "20");
     set(range, "value", "nonsense");
     CHECK(valueOf(range) == "20");
-    domNodeRelease(range);
 }
 
 TEST_CASE("stepping a number moves by its step within its bounds") {
@@ -160,7 +157,6 @@ TEST_CASE("stepping a number moves by its step within its bounds") {
     CHECK(valueOf(number) == "10");
     set(number, "step", "any");
     CHECK(domInputStep(number, 1, true) == PrStatus_InvalidState);
-    domNodeRelease(number);
 }
 
 TEST_CASE("a checked radio unchecks the rest of its group, and a group without one is indeterminate") {

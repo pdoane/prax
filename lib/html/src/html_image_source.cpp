@@ -6,12 +6,12 @@
 
 #include "pr/ascii.h"
 #include "pr/css.h"
+#include "pr/mime.h"
 
 #include "css/src/css_media.h"
 #include "css/src/css_syntax.h"
 #include "css/src/css_unit.h"
 #include "dom/src/dom_microsyntax.h"
-#include "dom/src/dom_mime.h"
 #include "dom/src/dom_node.h"
 
 namespace pr_impl {
@@ -112,7 +112,7 @@ bool matches(PrStringView query, const HtmlImageEnvironment& environment) {
 // Returns true if the environment decodes images of the MIME type `type`, as a source element's type must say
 // (html/#update-the-source-set). SVG images are drawn whatever the codec.
 bool decodes(PrStringView type, const HtmlImageEnvironment& environment) {
-    PrStringView essence = domMimeTypeEssence(type);
+    PrStringView essence = prMimeTypeEssence(type);
     char lower[64];
     if (essence.size == 0 || essence.size > sizeof(lower))
         return false;

@@ -16,7 +16,7 @@ namespace fs = std::filesystem;
 // settled, in milliseconds, which is time zero of the viewer's clock.
 struct HtmlSource {
     HtmlSource(fs::path path, std::string location, PrTextShaper* shaper) :
-            path(std::move(path)), location(std::move(location)), host(shaper) {}
+            path(std::move(path)), location(std::move(location)), host(shaper, nullptr) {}
 
     fs::path path;
     std::string location;       // the URL or path that the page loads from

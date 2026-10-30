@@ -128,9 +128,14 @@ JSValue prJsDomEventHandler(JSContext* ctx, JSValueConst self, int magic);
 JSValue prJsDomSetEventHandler(JSContext* ctx, JSValueConst self, JSValueConst input, int magic);
 
 // The entry of a prototype's member list that is the event handler IDL attribute `name`.
-#define PR_JS_DOM_EVENT_HANDLER(name)                                                                  \
-    PR_JS_MAGIC_GET_SET(#name, prJsDomEventHandler, prJsDomSetEventHandler,                         \
-                        PrDomEventHandler_##name),
+#define PR_JS_DOM_EVENT_HANDLER(name) \
+    PR_JS_MAGIC_GET_SET(#name, prJsDomEventHandler, prJsDomSetEventHandler, PrDomEventHandler_##name)
+
+// The entries of the event handler IDL attributes of the GlobalEventHandlers and WindowEventHandlers mixins, each
+// followed by a comma.
+#define PR_JS_DOM_EVENT_HANDLER_MEMBER(name) PR_JS_DOM_EVENT_HANDLER(name),
+#define PR_JS_DOM_GLOBAL_EVENT_HANDLER_MEMBERS PR_JS_DOM_GLOBAL_EVENT_HANDLERS(PR_JS_DOM_EVENT_HANDLER_MEMBER)
+#define PR_JS_DOM_WINDOW_EVENT_HANDLER_MEMBERS PR_JS_DOM_WINDOW_EVENT_HANDLERS(PR_JS_DOM_EVENT_HANDLER_MEMBER)
 
 // Reads a position argument of the insertAdjacent methods, matched ASCII case-insensitively (dom/#insert-adjacent).
 // Returns false with an exception pending, which is a SyntaxError for a string that names no position.

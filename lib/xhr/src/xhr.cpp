@@ -7,12 +7,12 @@
 #include "pr/ascii.h"
 #include "pr/charset.h"
 #include "pr/fetch.h"
+#include "pr/mime.h"
 #include "pr/string_ops.h"
 #include "pr/text_buffer.h"
 #include "pr/url.h"
 
 #include "dom/src/dom_event.h"
-#include "dom/src/dom_mime.h"
 
 namespace pr_impl {
 
@@ -480,7 +480,7 @@ PrStatus prXhrOverrideMimeType(PrXhr* self, PrStringView mime) {
     if (self->state == PrXhrState_Loading || self->state == PrXhrState_Done)
         return PrStatus_InvalidState;
     prStringReset(&self->overrideMime);
-    PrStringView essence = domMimeTypeEssence(mime);
+    PrStringView essence = prMimeTypeEssence(mime);
     self->overrideMime = prStringCopy(essence.size != 0 ? mime : PrStringView("application/octet-stream"));
     return PrStatus_Ok;
 }
@@ -565,7 +565,7 @@ PrString prXhrResponseText(const PrXhr* self) {
         uint32_t index = findHeader(self->responseHeaders, "Content-Type");
         mime = index != kArrayMissing ? prStringView(&self->responseHeaders.data[index].value) : PrStringView("");
     }
-    PrCharset charset = domMimeTypeCharset(mime);
+    PrCharset charset = prCharsetFromMimeType(mime);
     PrCharsetDecoder decoder = prCharsetDecoderMake(charset != PrCharset_None ? charset : PrCharset_Utf8, 0);
     PrStringView bytes{reinterpret_cast<const char*>(self->body.data), self->body.count};
     PrString out = prStringNull();

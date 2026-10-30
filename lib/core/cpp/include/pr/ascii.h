@@ -43,6 +43,11 @@ constexpr bool asciiIsTabOrSpace(char c) {
     return c == ' ' || c == '\t';
 }
 
+// Returns true if `c` is whitespace in HTTP: tab, line feed, carriage return or space.
+constexpr bool asciiIsHttpSpace(char c) {
+    return c == '\t' || c == '\n' || c == '\r' || c == ' ';
+}
+
 // Returns true if `c` may appear in an HTTP token: a letter, a digit, or one of !#$%&'*+-.^_`|~.
 constexpr bool asciiIsHttpToken(char c) {
     switch (c) {

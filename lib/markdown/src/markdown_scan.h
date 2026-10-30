@@ -25,11 +25,6 @@ bool markdownIsPunctuation(uint32_t codePoint);
 // (commonmark/#unicode-whitespace-character).
 bool markdownIsWhitespace(uint32_t codePoint);
 
-// Returns true if `c` is a space or a tab.
-inline bool markdownIsSpaceOrTab(char c) {
-    return c == ' ' || c == '\t';
-}
-
 // The searches that failed while scanning one text for HTML tags. A search that found no end after one offset finds
 // none after a later offset either, so a scan skips it. This keeps a text of many unclosed tags linear.
 struct MarkdownTagScan {

@@ -66,6 +66,9 @@ JSClassID htmlWindowClass;
 JSClassID htmlNavigatorClass;
 JSClassID htmlScreenClass;
 JSClassID htmlScreenOrientationClass;
+JSClassID htmlTextTrackListClass;
+JSClassID htmlAudioTrackListClass;
+JSClassID htmlVideoTrackListClass;
 JSClassID htmlCryptoClass;
 JSClassID htmlLocationClass;
 JSClassID htmlHistoryClass;
@@ -138,6 +141,15 @@ JSClassID classifyEvent(void* handle) {
     }
 }
 
+// Returns the class of a list of tracks of `kind`.
+JSClassID trackListClass(PrHtmlTrackKind kind) {
+    switch (kind) {
+        case PrHtmlTrackKind_Audio: return htmlAudioTrackListClass;
+        case PrHtmlTrackKind_Video: return htmlVideoTrackListClass;
+        default: return htmlTextTrackListClass;
+    }
+}
+
 JSClassID classifyEventTarget(void* handle) {
     PrDomEventTarget* target = static_cast<PrDomEventTarget*>(handle);
     if (prHtmlWindowQuery(target) != nullptr)
@@ -148,6 +160,8 @@ JSClassID classifyEventTarget(void* handle) {
         return htmlPerformanceClass;
     if (prHtmlScreenOrientationQuery(target) != nullptr)
         return htmlScreenOrientationClass;
+    if (PrHtmlTrackList* list = prHtmlTrackListQuery(target))
+        return trackListClass(prHtmlTrackListKind(list));
     return prJsDomEventTargetClass;
 }
 
@@ -462,6 +476,17 @@ JSValue documentCollection(JSContext* ctx, JSValueConst self, int magic) {
 JSValue hasFocus(JSContext* ctx, JSValueConst self, int, JSValueConst*) {
     PrDomDocument* document = jsThis<PrDomDocument>(ctx, self, prJsDomDocumentClass);
     return document != nullptr ? JS_NewBool(ctx, prHtmlDocumentHasFocus(document)) : JS_EXCEPTION;
+}
+
+// visibilityState (html/#dom-document-visibilitystate) and hidden (html/#dom-document-hidden), selected by the magic.
+JSValue documentVisibility(JSContext* ctx, JSValueConst self, int magic) {
+    PrDomDocument* document = jsThis<PrDomDocument>(ctx, self, prJsDomDocumentClass);
+    if (document == nullptr)
+        return JS_EXCEPTION;
+    bool visible = prHtmlDocumentVisibilityState(document) == PrHtmlVisibility_Visible;
+    if (magic == 1)
+        return JS_NewBool(ctx, !visible);
+    return jsFixedString(ctx, visible ? "visible" : "hidden");
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -945,6 +970,48 @@ JSValue videoSize(JSContext* ctx, JSValueConst self, int magic) {
     if (media == nullptr)
         return JS_EXCEPTION;
     return JS_NewUint32(ctx, magic == 0 ? prHtmlMediaElementVideoWidth(media) : prHtmlMediaElementVideoHeight(media));
+}
+
+// [SameObject] textTracks, audioTracks and videoTracks, selected by the magic, a PrHtmlTrackKind. The element's object
+// holds the list's object, which keeps the element's object alive.
+JSValue mediaTracks(JSContext* ctx, JSValueConst self, int magic) {
+    PrHtmlMediaElement* media = mediaThis(ctx, self);
+    if (media == nullptr)
+        return JS_EXCEPTION;
+    constexpr const char* kNames[] = {"textTracks", "audioTracks", "videoTracks"};
+    PrHtmlTrackKind kind = PrHtmlTrackKind(magic);
+    return jsSameObject(ctx, self, kNames[kind], [&] {
+        PrHtmlTrackList* list = prHtmlMediaElementTracks(media, kind);
+        return jsWrap(ctx, trackListClass(kind), self, prHtmlTrackListAsEventTarget(list), false);
+    });
+}
+
+// Returns `self` as a track list of any kind, or null with an exception pending.
+PrHtmlTrackList* PR_NULLABLE trackListThis(JSContext* ctx, JSValueConst self) {
+    PrDomEventTarget* target = jsThis<PrDomEventTarget>(ctx, self, prJsDomEventTargetClass);
+    PrHtmlTrackList* list = prHtmlTrackListQuery(target);
+    if (target != nullptr && list == nullptr)
+        JS_ThrowTypeError(ctx, "Illegal invocation");
+    return list;
+}
+
+JSValue trackListLength(JSContext* ctx, JSValueConst self) {
+    PrHtmlTrackList* list = trackListThis(ctx, self);
+    return list != nullptr ? JS_NewUint32(ctx, prHtmlTrackListLength(list)) : JS_EXCEPTION;
+}
+
+// getTrackById (html/#dom-texttracklist-gettrackbyid and the others): the list's track whose id is the argument, or
+// null.
+JSValue trackListGetTrackById(JSContext* ctx, JSValueConst self, int argc, JSValueConst* argv) {
+    StringArgument id = {ctx};
+    if (trackListThis(ctx, self) == nullptr || !jsArgCount(ctx, argc, 1) || !id.read(argv[0]))
+        return JS_EXCEPTION;
+    return JS_NULL;
+}
+
+JSValue trackListSelectedIndex(JSContext* ctx, JSValueConst self) {
+    PrHtmlTrackList* list = trackListThis(ctx, self);
+    return list != nullptr ? JS_NewInt32(ctx, prHtmlTrackListSelectedIndex(list)) : JS_EXCEPTION;
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -2807,6 +2874,10 @@ constexpr JSCFunctionListEntry kDocumentProto[] = {
     PR_JS_GET("currentScript", currentScript),
     PR_JS_GET("activeElement", activeElement),
     PR_JS_METHOD("hasFocus", 0, hasFocus),
+    PR_JS_MAGIC_GET("visibilityState", documentVisibility, 0),
+    PR_JS_MAGIC_GET("hidden", documentVisibility, 1),
+    PR_JS_DOM_EVENT_HANDLER(onreadystatechange),
+    PR_JS_DOM_EVENT_HANDLER(onvisibilitychange),
     PR_JS_MAGIC_GET("images", documentCollection, PrHtmlDocumentCollection_Images),
     PR_JS_MAGIC_GET("embeds", documentCollection, PrHtmlDocumentCollection_Embeds),
     PR_JS_MAGIC_GET("plugins", documentCollection, PrHtmlDocumentCollection_Embeds),
@@ -2846,7 +2917,7 @@ constexpr JSCFunctionListEntry kShadowRootProto[] = {
                       setTabIndex),                                                                \
         PR_REFLECT_BOOL("autofocus", "autofocus"),                                         \
         PR_JS_METHOD("focus", 0, elementFocus), PR_JS_METHOD("blur", 0, elementBlur),              \
-        PR_JS_DOM_GLOBAL_EVENT_HANDLERS(PR_JS_DOM_EVENT_HANDLER)
+        PR_JS_DOM_GLOBAL_EVENT_HANDLER_MEMBERS
 
 constexpr JSCFunctionListEntry kElementProto[] = {
     PR_JS_TAG("HTMLElement"),
@@ -3031,6 +3102,46 @@ constexpr JSCFunctionListEntry kMediaElementProto[] = {
     PR_JS_MAGIC_GET_SET("muted", mediaFlag, setMediaFlag, 3),
     PR_REFLECT_BOOL("defaultMuted", "muted"),
     PR_JS_MAGIC_GET_SET("loading", mediaEnumerated, setMediaEnumerated, 2),
+    PR_JS_MAGIC_GET("textTracks", mediaTracks, PrHtmlTrackKind_Text),
+    PR_JS_MAGIC_GET("audioTracks", mediaTracks, PrHtmlTrackKind_Audio),
+    PR_JS_MAGIC_GET("videoTracks", mediaTracks, PrHtmlTrackKind_Video),
+};
+
+// The object of a window, or of a part of another target (DomPartTarget) such as a track list or a window's
+// Performance, holds a reference to the target, which for a part is a reference to its owner. So the target outlives
+// the object however the collector orders their finalizers, and whatever replaces the target.
+constexpr JsReferences kTargetReferences = {
+    [](void* handle) { prDomEventTargetRetain(static_cast<PrDomEventTarget*>(handle)); },
+    [](void* handle) { prDomEventTargetRelease(static_cast<PrDomEventTarget*>(handle)); },
+    false,
+};
+
+constexpr JSCFunctionListEntry kTextTrackListProto[] = {
+    PR_JS_TAG("TextTrackList"),
+    PR_JS_GET("length", trackListLength),
+    PR_JS_METHOD("getTrackById", 1, trackListGetTrackById),
+    PR_JS_DOM_EVENT_HANDLER(onchange),
+    PR_JS_DOM_EVENT_HANDLER(onaddtrack),
+    PR_JS_DOM_EVENT_HANDLER(onremovetrack),
+};
+
+constexpr JSCFunctionListEntry kAudioTrackListProto[] = {
+    PR_JS_TAG("AudioTrackList"),
+    PR_JS_GET("length", trackListLength),
+    PR_JS_METHOD("getTrackById", 1, trackListGetTrackById),
+    PR_JS_DOM_EVENT_HANDLER(onchange),
+    PR_JS_DOM_EVENT_HANDLER(onaddtrack),
+    PR_JS_DOM_EVENT_HANDLER(onremovetrack),
+};
+
+constexpr JSCFunctionListEntry kVideoTrackListProto[] = {
+    PR_JS_TAG("VideoTrackList"),
+    PR_JS_GET("length", trackListLength),
+    PR_JS_METHOD("getTrackById", 1, trackListGetTrackById),
+    PR_JS_GET("selectedIndex", trackListSelectedIndex),
+    PR_JS_DOM_EVENT_HANDLER(onchange),
+    PR_JS_DOM_EVENT_HANDLER(onaddtrack),
+    PR_JS_DOM_EVENT_HANDLER(onremovetrack),
 };
 
 constexpr JsConstant kMediaElementConstants[] = {
@@ -3201,7 +3312,7 @@ constexpr JSCFunctionListEntry kScreenOrientationProto[] = {
     PR_JS_METHOD("unlock", 0, orientationUnlock),
     PR_JS_GET("type", orientationType),
     PR_JS_GET("angle", orientationAngle),
-    PR_JS_DOM_EVENT_HANDLER(onchange)
+    PR_JS_DOM_EVENT_HANDLER(onchange),
 };
 
 constexpr JSCFunctionListEntry kCryptoProto[] = {
@@ -3226,7 +3337,7 @@ constexpr JSCFunctionListEntry kPreferenceObjectProto[] = {
     PR_JS_GET("validValues", validValues),
     PR_JS_METHOD("clearOverride", 0, clearOverride),
     PR_JS_METHOD("requestOverride", 1, requestOverride),
-    PR_JS_DOM_EVENT_HANDLER(onchange)
+    PR_JS_DOM_EVENT_HANDLER(onchange),
 };
 
 constexpr JSCFunctionListEntry kPromiseRejectionEventProto[] = {
@@ -3309,7 +3420,7 @@ constexpr JSCFunctionListEntry kWindowProto[] = {
     PR_JS_METHOD("clearInterval", 0, clearTimeout),
     PR_JS_METHOD("requestAnimationFrame", 1, requestAnimationFrame),
     PR_JS_METHOD("cancelAnimationFrame", 1, cancelAnimationFrame),
-    PR_JS_DOM_GLOBAL_EVENT_HANDLERS(PR_JS_DOM_EVENT_HANDLER) PR_JS_DOM_WINDOW_EVENT_HANDLERS(PR_JS_DOM_EVENT_HANDLER)
+    PR_JS_DOM_GLOBAL_EVENT_HANDLER_MEMBERS PR_JS_DOM_WINDOW_EVENT_HANDLER_MEMBERS
 };
 
 constexpr JsClassDefinition kClasses[] = {
@@ -3480,6 +3591,25 @@ constexpr JsClassDefinition kClasses[] = {
         PR_JS_CLASS("ScreenOrientation", htmlScreenOrientationClass,
             jsViewFinalizer<&htmlScreenOrientationClass>, kScreenOrientationProto),
         .base = &prJsDomEventTargetClass,
+        .references = &kTargetReferences,
+    },
+    {
+        PR_JS_CLASS("TextTrackList", htmlTextTrackListClass, jsViewFinalizer<&htmlTextTrackListClass>,
+            kTextTrackListProto),
+        .base = &prJsDomEventTargetClass,
+        .references = &kTargetReferences,
+    },
+    {
+        PR_JS_CLASS("AudioTrackList", htmlAudioTrackListClass, jsViewFinalizer<&htmlAudioTrackListClass>,
+            kAudioTrackListProto),
+        .base = &prJsDomEventTargetClass,
+        .references = &kTargetReferences,
+    },
+    {
+        PR_JS_CLASS("VideoTrackList", htmlVideoTrackListClass, jsViewFinalizer<&htmlVideoTrackListClass>,
+            kVideoTrackListProto),
+        .base = &prJsDomEventTargetClass,
+        .references = &kTargetReferences,
     },
     {PR_JS_CLASS("Crypto", htmlCryptoClass, jsViewFinalizer<&htmlCryptoClass>, kCryptoProto)},
     {
@@ -3490,10 +3620,12 @@ constexpr JsClassDefinition kClasses[] = {
         PR_JS_CLASS("PreferenceObject", htmlPreferenceObjectClass,
             jsViewFinalizer<&htmlPreferenceObjectClass>, kPreferenceObjectProto),
         .base = &prJsDomEventTargetClass,
+        .references = &kTargetReferences,
     },
     {
         PR_JS_CLASS("Performance", htmlPerformanceClass, jsViewFinalizer<&htmlPerformanceClass>, kPerformanceProto),
         .base = &prJsDomEventTargetClass,
+        .references = &kTargetReferences,
     },
     {
         PR_JS_CLASS("AnimationTimeline", htmlAnimationTimelineClass,
@@ -3508,6 +3640,7 @@ constexpr JsClassDefinition kClasses[] = {
     {
         PR_JS_CLASS("Window", htmlWindowClass, jsViewFinalizer<&htmlWindowClass>, kWindowProto),
         .base = &prJsDomEventTargetClass,
+        .references = &kTargetReferences,
     },
 };
 

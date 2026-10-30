@@ -7,6 +7,7 @@ import struct
 import subprocess
 import tempfile
 import unittest
+import zlib
 
 from tools.suite.wpt import wpt
 
@@ -25,6 +26,16 @@ def mp4(seconds, width, height):
     handler = bytes(8) + b"vide" + bytes(12)
     trak = box(b"trak", box(b"tkhd", track) + box(b"mdia", box(b"hdlr", handler)))
     return box(b"ftyp", b"isom" + bytes(4)) + box(b"moov", box(b"mvhd", header) + trak)
+
+
+def png(width, height):
+    """Returns a PNG of `width` by `height` opaque gray pixels."""
+    def chunk(kind, payload):
+        return struct.pack(">I", len(payload)) + kind + payload + struct.pack(">I", zlib.crc32(kind + payload))
+    rows = b"".join(b"\x00" + b"\x80\x80\x80" * width for _ in range(height))
+    header = struct.pack(">IIBBBBB", width, height, 8, 2, 0, 0, 0)
+    return (b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", header) + chunk(b"IDAT", zlib.compress(rows)) +
+        chunk(b"IEND", b""))
 
 
 def url(path):
@@ -446,6 +457,50 @@ class HtmlHostTests(unittest.TestCase):
             self.assertEqual(result.stdout.splitlines(), [
                 "true true true true maybe", "2 320 240 4 2", "NotSupportedError 4", "true false",
                 "true", "1.50 loadedmetadata,canplay,play,playing,seeking,seeked"])
+
+    def test_a_window_that_its_frame_navigated_away_from_keeps_its_document_and_navigates_nowhere(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "pages").mkdir()
+            (root / "pages" / "a.html").write_text("<p>a</p><script>setTimeout(() => location.href = 'b.html');</script>")
+            (root / "pages" / "b.html").write_text("<p>b</p>")
+            result = self.run_page(root,
+                "<iframe id=f src=a.html></iframe><script>f.addEventListener('load', () => { const w = f.contentWindow;"
+                "const held = w.location; f.addEventListener('load', () => { held.hash = 'x';"
+                "print(held.href.split('/').pop(), w.document.querySelector('p').textContent,"
+                "f.contentDocument.body.textContent, f.contentWindow.location.href.split('/').pop());"
+                "held.reload(); setTimeout(() => print(f.contentDocument.body.textContent), 20); },"
+                "{once: true}); }, {once: true});</script>")
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(result.stdout.splitlines(), ["a.html a b b.html", "b"])
+
+    def test_a_video_is_replaced_at_its_resource_size_once_its_metadata_loads(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "pages").mkdir()
+            (root / "pages" / "clip.mp4").write_bytes(mp4(2, 320, 240))
+            result = self.run_page(root,
+                "<video id=v muted></video><script>const size = () => { const r = v.getBoundingClientRect(); "
+                "return r.width + 'x' + r.height; };print(size(), document.visibilityState, document.hidden);"
+                "v.addEventListener('loadedmetadata', () => print(size(), v.videoWidth, v.videoHeight));"
+                "v.src = 'clip.mp4';</script>")
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(result.stdout.splitlines(), ["300x150 visible false", "320x240 320 240"])
+
+    def test_a_video_without_data_takes_its_poster_frame_size_and_its_metadata_size_over_it(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "pages").mkdir()
+            (root / "pages" / "poster.png").write_bytes(png(40, 30))
+            (root / "pages" / "clip.mp4").write_bytes(mp4(2, 320, 240))
+            result = self.run_page(root,
+                "<video id=v poster=poster.png></video><script>const size = () => { const r = "
+                "v.getBoundingClientRect(); return r.width + 'x' + r.height; };"
+                "const wait = () => size() === '300x150' ? requestAnimationFrame(wait) : shown();"
+                "const shown = () => { print(size()); v.addEventListener('loadedmetadata', () => print(size()));"
+                "v.src = 'clip.mp4'; };requestAnimationFrame(wait);</script>")
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(result.stdout.splitlines(), ["40x30", "320x240"])
 
     def test_a_page_settles_while_media_plays_in_a_loop_and_waits_for_media_that_ends(self):
         with tempfile.TemporaryDirectory() as directory:

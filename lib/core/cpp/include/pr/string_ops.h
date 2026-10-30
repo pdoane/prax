@@ -92,6 +92,20 @@ inline PrStringView stringTrim(PrStringView text) {
     return stringTrim(text, asciiIsSpace);
 }
 
+// Returns `text` without the bytes at its end for which `isTrimmed` returns true.
+template <typename Predicate>
+PrStringView stringTrimEnd(PrStringView text, Predicate isTrimmed) {
+    size_t end = text.size;
+    while (end > 0 && isTrimmed(text.data[end - 1]))
+        --end;
+    return stringSlice(text, 0, end);
+}
+
+// Returns `text` without ASCII whitespace at its end.
+inline PrStringView stringTrimEnd(PrStringView text) {
+    return stringTrimEnd(text, asciiIsSpace);
+}
+
 // Returns an owned string over `data`, which holds `size` bytes in an allocation of `capacity` from prMemoryAlloc. The
 // string frees the allocation.
 inline PrString stringAdopt(char* data, uint32_t size, uint32_t capacity) {

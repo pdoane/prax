@@ -4,6 +4,7 @@
 
 #include "pr/ascii.h"
 #include "pr/assert.h"
+#include "pr/mime.h"
 #include "pr/string_ops.h"
 #include "pr/text_buffer.h"
 
@@ -33,16 +34,6 @@ bool isToken(PrStringView text) {
             return false;
     }
     return true;
-}
-
-// fetch/#http-whitespace-byte
-bool isHttpWhitespace(char c) {
-    return c == '\t' || c == '\n' || c == '\r' || c == ' ';
-}
-
-// fetch/#http-tab-or-space-byte
-bool isHttpTabOrSpace(char c) {
-    return c == '\t' || c == ' ';
 }
 
 // Returns true if `value` has a CORS-unsafe request-header byte (fetch/#cors-unsafe-request-header-byte).
@@ -97,7 +88,7 @@ bool anyListItem(PrStringView value, Visit visit) {
             textAppendChar(&item, value.data[i]);
             continue;
         }
-        found = visit(stringTrim(textView(&item), isHttpTabOrSpace));
+        found = visit(stringTrim(textView(&item), asciiIsTabOrSpace));
         textClear(&item);
     }
     textReset(&item);
@@ -237,7 +228,7 @@ bool prFetchIsHeaderName(PrStringView name) {
 }
 
 bool prFetchIsHeaderValue(PrStringView value) {
-    if (value.size != 0 && (isHttpTabOrSpace(value.data[0]) || isHttpTabOrSpace(value.data[value.size - 1])))
+    if (value.size != 0 && (asciiIsTabOrSpace(value.data[0]) || asciiIsTabOrSpace(value.data[value.size - 1])))
         return false;
     for (size_t i = 0; i < value.size; ++i) {
         char c = value.data[i];
@@ -248,7 +239,7 @@ bool prFetchIsHeaderValue(PrStringView value) {
 }
 
 PrStringView prFetchNormalizeHeaderValue(PrStringView value) {
-    return stringTrim(value, isHttpWhitespace);
+    return stringTrim(value, asciiIsHttpSpace);
 }
 
 bool prFetchIsForbiddenRequestHeader(PrStringView name, PrStringView value) {
@@ -291,7 +282,7 @@ bool prFetchIsCorsSafelistedRequestHeader(PrStringView name, PrStringView value)
     if (asciiEqualsFold(name, "content-type")) {
         if (hasUnsafeHeaderByte(value))
             return false;
-        PrStringView essence = stringTrim(stringSlice(value, 0, stringFind(value, ';')));
+        PrStringView essence = prMimeTypeEssence(value);
         return asciiEqualsFold(essence, "application/x-www-form-urlencoded") ||
             asciiEqualsFold(essence, "multipart/form-data") || asciiEqualsFold(essence, "text/plain");
     }

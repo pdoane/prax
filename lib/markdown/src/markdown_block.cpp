@@ -110,7 +110,7 @@ void unlinkBlock(MarkdownBlockParser* p, MarkdownBlockIndex index) {
 // Link reference definitions
 
 void skipSpaces(PrStringView text, size_t* index) {
-    while (*index < text.size && markdownIsSpaceOrTab(text.data[*index]))
+    while (*index < text.size && asciiIsTabOrSpace(text.data[*index]))
         ++*index;
 }
 
@@ -204,7 +204,7 @@ bool resolveDefinitions(MarkdownBlockParser* p, MarkdownBlockIndex index) {
     }
     for (uint32_t i = block.contentStart; i < block.contentEnd; ++i) {
         char c = p->content.data[i];
-        if (!markdownIsSpaceOrTab(c) && c != '\n')
+        if (!asciiIsTabOrSpace(c) && c != '\n')
             return true;
     }
     return false;
@@ -244,7 +244,7 @@ MarkdownBlockIndex finalize(MarkdownBlockParser* p, MarkdownBlockIndex index) {
                 uint32_t end = block.contentEnd;
                 while (end > block.contentStart) {
                     char c = p->content.data[end - 1];
-                    if (!markdownIsSpaceOrTab(c) && c != '\n')
+                    if (!asciiIsTabOrSpace(c) && c != '\n')
                         break;
                     --end;
                 }
@@ -258,7 +258,7 @@ MarkdownBlockIndex finalize(MarkdownBlockParser* p, MarkdownBlockIndex index) {
                     ++end;
                 PrStringView info = stringTrim(
                     PrStringView{p->content.data + block.contentStart, size_t(end - block.contentStart)},
-                    markdownIsSpaceOrTab);
+                    asciiIsTabOrSpace);
                 uint32_t mark = p->text.count;
                 markdownAppendDecoded(info, &p->text);
                 block.info = MarkdownRange{mark, p->text.count - mark};
@@ -398,9 +398,9 @@ uint32_t atxHeadingStart(const MarkdownBlockParser* p, uint32_t start, uint8_t* 
         *outLevel = uint8_t(level);
         return end - start;
     }
-    if (!markdownIsSpaceOrTab(peek(p, end)))
+    if (!asciiIsTabOrSpace(peek(p, end)))
         return 0;
-    while (markdownIsSpaceOrTab(peek(p, end)))
+    while (asciiIsTabOrSpace(peek(p, end)))
         ++end;
     *outLevel = uint8_t(level);
     return end - start;
@@ -434,7 +434,7 @@ uint32_t closeCodeFence(const MarkdownBlockParser* p, uint32_t start, char fence
     uint32_t length = end - start;
     if (length < 3)
         return 0;
-    while (markdownIsSpaceOrTab(peek(p, end)))
+    while (asciiIsTabOrSpace(peek(p, end)))
         ++end;
     return isLineEnd(peek(p, end)) ? length : 0;
 }
@@ -448,7 +448,7 @@ uint8_t setextUnderline(const MarkdownBlockParser* p, uint32_t start) {
     uint32_t end = start;
     while (peek(p, end) == c)
         ++end;
-    while (markdownIsSpaceOrTab(peek(p, end)))
+    while (asciiIsTabOrSpace(peek(p, end)))
         ++end;
     if (!isLineEnd(peek(p, end)))
         return 0;
@@ -469,7 +469,7 @@ bool thematicBreak(MarkdownBlockParser* p, uint32_t start) {
         char next = peek(p, index);
         if (next == c)
             ++count;
-        else if (!markdownIsSpaceOrTab(next))
+        else if (!asciiIsTabOrSpace(next))
             break;
         ++index;
     }
@@ -503,7 +503,7 @@ uint32_t footnoteDefinitionStart(const MarkdownBlockParser* p, uint32_t start, M
         return 0;
     *outLabel = MarkdownRange{start + 2, end - (start + 2)};
     end += 2;
-    while (markdownIsSpaceOrTab(peek(p, end)))
+    while (asciiIsTabOrSpace(peek(p, end)))
         ++end;
     return end - start;
 }
@@ -535,11 +535,11 @@ uint32_t listMarker(const MarkdownBlockParser* p, uint32_t start, bool interrupt
         return 0;
     }
     char next = peek(p, end);
-    if (!markdownIsSpaceOrTab(next) && !isLineEnd(next))
+    if (!asciiIsTabOrSpace(next) && !isLineEnd(next))
         return 0;
     if (interruptsParagraph) {
         uint32_t index = end;
-        while (markdownIsSpaceOrTab(peek(p, index)))
+        while (asciiIsTabOrSpace(peek(p, index)))
             ++index;
         if (isLineEnd(peek(p, index)))
             return 0;
@@ -869,7 +869,7 @@ MarkdownBlockIndex checkOpenBlocks(MarkdownBlockParser* p, bool* allMatched) {
                 matched = p->indent <= 3 && peek(p, p->firstNonspace) == '>';
                 if (matched) {
                     advance(p, p->indent + 1, true);
-                    if (markdownIsSpaceOrTab(peek(p, p->offset)))
+                    if (asciiIsTabOrSpace(peek(p, p->offset)))
                         advance(p, 1, true);
                 }
                 break;
@@ -897,7 +897,7 @@ MarkdownBlockIndex checkOpenBlocks(MarkdownBlockParser* p, bool* allMatched) {
                         p->current = finalize(p, container);
                         return kMarkdownBlockNone;
                     }
-                    for (uint32_t i = block.fenceOffset; i > 0 && markdownIsSpaceOrTab(peek(p, p->offset)); --i)
+                    for (uint32_t i = block.fenceOffset; i > 0 && asciiIsTabOrSpace(peek(p, p->offset)); --i)
                         advance(p, 1, true);
                 }
                 break;
@@ -949,7 +949,7 @@ void openNewBlocks(MarkdownBlockParser* p, const PrMarkdownOptions& options, Mar
         MarkdownRange label{};
         if (!indented && c == '>') {
             advance(p, p->firstNonspace + 1 - p->offset, false);
-            if (markdownIsSpaceOrTab(peek(p, p->offset)))
+            if (asciiIsTabOrSpace(peek(p, p->offset)))
                 advance(p, 1, true);
             *container = addChild(p, *container, PrMarkdownNodeKind_BlockQuote);
         } else if (!indented && (matched = atxHeadingStart(p, p->firstNonspace, &level)) != 0) {
@@ -994,7 +994,7 @@ void openNewBlocks(MarkdownBlockParser* p, const PrMarkdownOptions& options, Mar
             bool savedTab = p->partiallyConsumedTab;
             uint32_t savedOffset = p->offset;
             uint32_t savedColumn = p->column;
-            while (p->column - savedColumn <= 5 && markdownIsSpaceOrTab(peek(p, p->offset)))
+            while (p->column - savedColumn <= 5 && asciiIsTabOrSpace(peek(p, p->offset)))
                 advance(p, 1, true);
             uint32_t spaces = p->column - savedColumn;
             uint32_t markerWidth = 0;
@@ -1067,14 +1067,14 @@ void openNewBlocks(MarkdownBlockParser* p, const PrMarkdownOptions& options, Mar
 void chopClosingSequence(MarkdownBlockParser* p) {
     // The line ends with '\n', which stays.
     uint32_t end = p->line.count - 1;
-    while (end > p->offset && markdownIsSpaceOrTab(p->line.data[end - 1]))
+    while (end > p->offset && asciiIsTabOrSpace(p->line.data[end - 1]))
         --end;
     uint32_t hashes = end;
     while (hashes > p->offset && p->line.data[hashes - 1] == '#')
         --hashes;
-    if (hashes != end && (hashes == p->offset || markdownIsSpaceOrTab(p->line.data[hashes - 1]))) {
+    if (hashes != end && (hashes == p->offset || asciiIsTabOrSpace(p->line.data[hashes - 1]))) {
         end = hashes;
-        while (end > p->offset && markdownIsSpaceOrTab(p->line.data[end - 1]))
+        while (end > p->offset && asciiIsTabOrSpace(p->line.data[end - 1]))
             --end;
     }
     p->line.data[end] = '\n';
@@ -1197,7 +1197,7 @@ void appendHtml(const PrMarkdownOptions& options, MarkdownTree* tree, MarkdownNo
 PrMarkdownAlert alertMarker(PrStringView content, size_t* outLength) {
     static const char* const kMarkers[] = {"[!NOTE]", "[!TIP]", "[!IMPORTANT]", "[!WARNING]", "[!CAUTION]"};
     size_t end = stringFind(content, '\n');
-    PrStringView line = stringTrim(stringSlice(content, 0, end), markdownIsSpaceOrTab);
+    PrStringView line = stringTrim(stringSlice(content, 0, end), asciiIsTabOrSpace);
     for (size_t i = 0; i < countOf(kMarkers); ++i) {
         if (asciiEqualsFold(line, kMarkers[i])) {
             *outLength = end < content.size ? end + 1 : end;
@@ -1278,7 +1278,7 @@ void appendSlug(PrStringView text, Array<char>* out) {
 bool waitsForLineEnd(PrStringView line) {
     size_t index = 0;
     while (true) {
-        while (index < line.size && markdownIsSpaceOrTab(line.data[index]))
+        while (index < line.size && asciiIsTabOrSpace(line.data[index]))
             ++index;
         if (index < line.size && line.data[index] == '>')
             ++index;
@@ -1297,7 +1297,7 @@ bool waitsForLineEnd(PrStringView line) {
         return false;
     for (size_t i = index; i < line.size; ++i) {
         char c = line.data[i];
-        bool continues = markdownIsSpaceOrTab(c) || c == first || (digits && (asciiIsDigit(c) || c == '.' || c == ')'));
+        bool continues = asciiIsTabOrSpace(c) || c == first || (digits && (asciiIsDigit(c) || c == '.' || c == ')'));
         if (!continues)
             return false;
     }

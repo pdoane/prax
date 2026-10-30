@@ -56,18 +56,6 @@ void appendStrippingNewlines(TextBuffer* out, PrStringView text) {
     }
 }
 
-// Returns `text` without its leading and trailing ASCII whitespace
-// (infra/#strip-leading-and-trailing-ascii-whitespace).
-PrStringView trimmed(PrStringView text) {
-    size_t start = 0;
-    size_t end = text.size;
-    while (start < end && asciiIsSpace(text.data[start]))
-        ++start;
-    while (end > start && asciiIsSpace(text.data[end - 1]))
-        --end;
-    return PrStringView{text.data + start, end - start};
-}
-
 // Returns the value of the input's number for the input's type, or NaN if `text` does not convert.
 double numberOf(const PrDomElement* input, PrStringView text) {
     double value = 0;
@@ -132,7 +120,7 @@ void appendSanitized(const PrDomElement* input, PrStringView text, TextBuffer* o
         case PrDomInputType_Url: {
             TextBuffer stripped;
             appendStrippingNewlines(&stripped, value);
-            textAppend(out, trimmed(textView(&stripped)));
+            textAppend(out, stringTrim(textView(&stripped)));
             textReset(&stripped);
             return;
         }
@@ -141,7 +129,7 @@ void appendSanitized(const PrDomElement* input, PrStringView text, TextBuffer* o
             appendStrippingNewlines(&stripped, value);
             PrStringView rest = textView(&stripped);
             if (!domHasAttribute(input, "multiple")) {
-                textAppend(out, trimmed(rest));
+                textAppend(out, stringTrim(rest));
                 textReset(&stripped);
                 return;
             }
@@ -150,7 +138,7 @@ void appendSanitized(const PrDomElement* input, PrStringView text, TextBuffer* o
                 size_t comma = start;
                 while (comma < rest.size && rest.data[comma] != ',')
                     ++comma;
-                textAppend(out, trimmed(PrStringView{rest.data + start, comma - start}));
+                textAppend(out, stringTrim(PrStringView{rest.data + start, comma - start}));
                 if (comma == rest.size)
                     break;
                 textAppendChar(out, ',');

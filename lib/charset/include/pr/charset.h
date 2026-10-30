@@ -22,6 +22,10 @@ extern "C" {
 // and trailing ASCII whitespace is ignored, and ASCII letters match in either case.
 PrCharset prCharsetFromLabel(PrStringView label);
 
+// Returns the charset that the charset parameter of the MIME type `type` names (fetch/#legacy-extract-an-encoding), or
+// PrCharset_None if the type does not parse, has no charset parameter, or names no charset.
+PrCharset prCharsetFromMimeType(PrStringView type);
+
 // Returns the canonical name of `charset` (encoding/#name), or the null view for PrCharset_None.
 PrStringView prCharsetName(PrCharset charset);
 

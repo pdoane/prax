@@ -2878,7 +2878,7 @@ constexpr JSCFunctionListEntry kAbortSignalProto[] = {
     PR_JS_GET("aborted", (jsBoolGetter<&prJsDomAbortSignalClass, prDomAbortSignalAborted>)),
     PR_JS_GET("reason", signalReason),
     PR_JS_METHOD("throwIfAborted", 0, throwIfAborted),
-    PR_JS_DOM_EVENT_HANDLER(onabort)
+    PR_JS_DOM_EVENT_HANDLER(onabort),
 };
 
 constexpr JSCFunctionListEntry kNodeProto[] = {
@@ -2945,7 +2945,7 @@ constexpr JSCFunctionListEntry kDocumentProto[] = {
     PR_JS_GET("characterSet", characterSet),
     PR_JS_GET("charset", characterSet),
     PR_JS_GET("inputEncoding", characterSet),
-    PR_JS_DOM_GLOBAL_EVENT_HANDLERS(PR_JS_DOM_EVENT_HANDLER) PR_PARENT_NODE,
+    PR_JS_DOM_GLOBAL_EVENT_HANDLER_MEMBERS PR_PARENT_NODE,
 };
 
 constexpr JSCFunctionListEntry kDocumentFragmentProto[] = {
@@ -2978,7 +2978,7 @@ constexpr JSCFunctionListEntry kShadowRootProto[] = {
     PR_JS_GET("clonable", (jsBoolGetter<&prJsDomShadowRootClass, prDomShadowRootClonable>)),
     PR_JS_GET("serializable", (jsBoolGetter<&prJsDomShadowRootClass, prDomShadowRootSerializable>)),
     PR_JS_GET("host", (jsObjectGetter<&prJsDomShadowRootClass, prDomShadowRootHost, &prJsDomElementClass>)),
-    PR_JS_DOM_EVENT_HANDLER(onslotchange)
+    PR_JS_DOM_EVENT_HANDLER(onslotchange),
 };
 
 constexpr JSCFunctionListEntry kElementProto[] = {

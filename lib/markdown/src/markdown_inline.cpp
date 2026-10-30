@@ -125,12 +125,12 @@ void appendTextFrom(Subject& s, uint32_t mark) {
 }
 
 void skipSpaces(Subject& s) {
-    while (markdownIsSpaceOrTab(peek(s, s.pos)))
+    while (asciiIsTabOrSpace(peek(s, s.pos)))
         ++s.pos;
 }
 
 size_t skipWhitespace(const Subject& s, size_t index) {
-    while (markdownIsSpaceOrTab(peek(s, index)) || peek(s, index) == '\n')
+    while (asciiIsTabOrSpace(peek(s, index)) || peek(s, index) == '\n')
         ++index;
     return index;
 }
@@ -681,10 +681,10 @@ void handleDollar(Subject& s) {
         appendText(s, "$$");
         s.pos = start + 2;
         return;
-    } else if (!markdownIsSpaceOrTab(peek(s, start + 1)) && peek(s, start + 1) != '\n' && start + 1 < s.text.size) {
+    } else if (!asciiIsTabOrSpace(peek(s, start + 1)) && peek(s, start + 1) != '\n' && start + 1 < s.text.size) {
         size_t end = findCloser(s, start + 1, "$", &s.missingMath[2], [&](size_t at) {
             char before = s.text.data[at - 1];
-            return at > start + 1 && before != '\\' && !markdownIsSpaceOrTab(before) && before != '\n' &&
+            return at > start + 1 && before != '\\' && !asciiIsTabOrSpace(before) && before != '\n' &&
                 !asciiIsDigit(peek(s, at + 1));
         });
         if (end < s.text.size) {
@@ -1260,7 +1260,7 @@ void markdownParseInlines(MarkdownInlineParser* parser, const PrMarkdownOptions&
     s.parent = parent;
     // The end of the content is trimmed. Its lines begin at their first non-whitespace character already.
     size_t size = content.size;
-    while (size != 0 && (markdownIsSpaceOrTab(content.data[size - 1]) || content.data[size - 1] == '\n'))
+    while (size != 0 && (asciiIsTabOrSpace(content.data[size - 1]) || content.data[size - 1] == '\n'))
         --size;
     s.text = PrStringView{content.data, size};
     s.pos = 0;
@@ -1318,7 +1318,7 @@ void markdownParseInlines(MarkdownInlineParser* parser, const PrMarkdownOptions&
             PrStringView run = stringSlice(s.text, s.pos, end - s.pos);
             // Spaces at the end of a line are not part of its text (commonmark/#soft-line-breaks).
             if (end < s.text.size && s.text.data[end] == '\n') {
-                while (run.size != 0 && markdownIsSpaceOrTab(run.data[run.size - 1]))
+                while (run.size != 0 && asciiIsTabOrSpace(run.data[run.size - 1]))
                     --run.size;
             }
             if (run.size != 0)
