@@ -9,6 +9,9 @@ pr_harness(ui_bench prax::layout ui_bench.cpp)
 target_link_libraries(ui_bench PRIVATE prax::text)
 target_compile_definitions(ui_bench PRIVATE PR_FONTS_DIR="${PROJECT_SOURCE_DIR}/third_party/fonts")
 
+# What editing text costs at each size of document, which ./dev.sh bench text-edit runs.
+pr_harness(text_edit_bench prax::text_edit text_edit_bench.cpp)
+
 # The flex benchmark, which lays the same trees out in lib/layout, Yoga and Taffy (./dev.sh bench flex). It is built
 # where Cargo is installed. Taffy's side is a Rust static library, which Cargo builds, optimized whatever the build type.
 find_program(PR_CARGO cargo)

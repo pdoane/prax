@@ -89,12 +89,14 @@ another must meet belongs to the context, so that no library owns it:
 - **Records.** The context keeps the groups that libraries' recipes made and a memo of the last frame's records by
   their place in the round (component_library.md, Records). It ages both by its rounds, so a library needs no call to
   begin a round.
-- **Text editing.** A library's text controls share one edit (`pr/ui_text_edit.h`): the caret and the selection in the
-  caller's text, moved by the pointer and the keys over what the last layout placed, and the edits of typing, deletion
-  and the clipboard of the application that the host binds (`prUiSetApp`). The edit creates the text node that shows
-  the text, and the layout tree paints the selection and the caret for the frame (layout.md, Text positions,
-  highlights and the caret). A library chooses only the look: the element that holds the text, and the colors of the
-  selection and the caret.
+- **Text editing.** A library's text controls share one edit (`pr/ui_text_edit.h`). In the simple form, the caller gives
+  the text as a value in each round and takes the new text if it changed, and a text buffer holds the text only while
+  the control is being edited. A caller whose text needs an edit stream, anchors or history across focus gives its own
+  buffer instead (text.md, Text editing). The edit moves the caret and the selection by the pointer and the keys over
+  what the last layout placed, and it applies typing, deletion and the clipboard of the application that the host binds
+  (`prUiSetApp`). The edit creates the text node that shows the text, and the layout tree paints the selection and the
+  caret for the frame (layout.md, Text positions, highlights and the caret). A library chooses only the look: the
+  element that holds the text, and the colors of the selection and the caret.
 
 ## Component libraries
 

@@ -37,9 +37,6 @@ constexpr PrKitButtonStyle kPrimary = {.variant = PrKitButtonVariant_Primary};
 constexpr PrKitButtonStyle kGhost = {.variant = PrKitButtonVariant_Ghost};
 constexpr PrKitButtonStyle kDanger = {.variant = PrKitButtonVariant_Danger};
 
-// Returns a buffer through which a text control edits `owned`, valid while the string is.
-PrUiTextBuffer textBufferOf(std::string& owned);
-
 // Returns a view of the formatted text in `buffer`, which holds `size` bytes.
 PrStringView format(char* buffer, size_t size, const char* text, ...) PR_PRINTF_FORMAT(3, 4);
 

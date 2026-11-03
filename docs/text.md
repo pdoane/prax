@@ -200,6 +200,26 @@ and SVG text break words alike.
   punctuation around it. Every producer that sets the letter apart, as a box or as a styled part of its text, finds
   the same extent.
 
+## Text editing (`pr/text_edit.h`)
+
+`lib/text_edit` holds what editing means, apart from how the text is shown, so form controls, component libraries and
+editors share it. It has no dependency on UI or layout, and it is tested without a window.
+
+- **The buffer** is UTF-8 in a gap buffer, with an index of its lines. Offsets are 32 bits, and a buffer holds at most
+  2 GB, well past the largest document that editing targets. A reader takes chunks, and does not assume that a document
+  is contiguous. Only text that is shown whole asks for it as one view.
+- **Transactions.** Every change is a transaction that replaces byte ranges, in one mutation primitive. A transaction
+  has an origin, which decides whether it can be rejected and whether it enters the history.
+- **Proposals.** A local or composition transaction is proposed before it applies. The host may reject it or change its
+  text, which serves a cancelable input event, a filter, or a limit on length.
+- **The edit stream** gives each consumer the replacements of each transaction, with their lines and columns, at its own
+  pace. Highlighting, language servers and replicas of the text on other threads read it.
+- **Anchors** are positions that follow their text, with a bias that decides where they go at an insertion. A view's
+  selections follow the same rules, except that a selection of the view that made an edit lands after the new text.
+- **The history** holds invertible steps and the selections around them. It belongs to the owner of the model. A
+  composition stays out of it until it commits. Runs of typing or deletion join one step if they continue from where the
+  last step left the selections.
+
 ## Languages and scripts (`pr/locale.h`)
 
 This section describes how the engine names languages, scripts and regions, which tags are legal, where the data comes

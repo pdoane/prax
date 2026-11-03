@@ -48,17 +48,6 @@ constexpr const char* kRenderModes[RenderMode_Count] = {"Shaded", "Flat", "Wiref
 constexpr uint64_t kDragEntity = 1;
 constexpr uint64_t kDragAsset = 2;
 
-// Returns a text buffer that edits `owned`.
-PrUiTextBuffer textBufferOf(std::string& owned) {
-    PrUiTextBuffer buffer{};
-    buffer.context = &owned;
-    buffer.read = [](void* context) -> PrStringView { return *static_cast<const std::string*>(context); };
-    buffer.replace = [](void* context, uint32_t start, uint32_t end, PrStringView value) {
-        static_cast<std::string*>(context)->replace(start, end - start, value.data, value.size);
-    };
-    return buffer;
-}
-
 // Creates a row of fixed height on a ground, with the rules that `rules` names, whose items `gap` px apart sit centered
 // across it.
 PrLayoutNode bar(PrKit* kit, PrLayoutNode parent, PrKitGround ground, PrKitRuleFlags rules, float height, float gap) {
@@ -328,12 +317,15 @@ void sceneRows(EditorState& editor) {
 void buildScenePanel(PrKit* kit, PrLayoutNode panel, EditorState& editor) {
     PrLayoutNode actions = actionBar(kit, panel);
     PrKitTextField filter{
-        .text = textBufferOf(editor.sceneFilter),
+        .text = editor.sceneFilter,
         .placeholder = "Filter",
         .icon = PrKitIconKind_Search,
         .clearable = true,
     };
     PrLayoutNode field = prKitTextField(kit, actions, filter, {.size = PrKitControlSize_Sm});
+    PrStringView changed{};
+    if (prKitTextChanged(kit, field, &changed))
+        editor.sceneFilter.assign(changed.data, changed.size);
     PrKitPlace fill{.flex = PrKitFlex_Fill};
     prKitPlace(kit, field, &fill);
     PrLayoutNode add = prKitButton(kit, actions, {.icon = PrKitIconKind_Plus}, kGhostXs);

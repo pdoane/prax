@@ -75,15 +75,12 @@ struct Commands {
     }
 };
 
-// A text buffer over a std::string.
-PrUiTextBuffer bufferOf(std::string& owned) {
-    PrUiTextBuffer buffer{};
-    buffer.context = &owned;
-    buffer.read = [](void* context) -> PrStringView { return *static_cast<const std::string*>(context); };
-    buffer.replace = [](void* context, uint32_t start, uint32_t end, PrStringView value) {
-        static_cast<std::string*>(context)->replace(start, end - start, value.data, value.size);
-    };
-    return buffer;
+// Writes the text of the control `field` to `owned`, if it changed in the round, and returns the control.
+PrLayoutNode taken(PrKit* kit, PrLayoutNode field, std::string& owned) {
+    PrStringView text{};
+    if (prKitTextChanged(kit, field, &text))
+        owned.assign(text.data, text.size);
+    return field;
 }
 
 uint32_t childCount(const PrLayoutTree* tree, PrLayoutNode node) {
@@ -115,7 +112,7 @@ TEST_CASE("a scope runs the command of a chord while focus is within it, and the
         prCommandScope(f.ui, ground, c.registry, c.keymap, "");
         panel = prKitBox(f.kit, ground, {}, {});
         prCommandScope(f.ui, panel, c.registry, c.keymap, "panel");
-        field = prKitTextField(f.kit, panel, {.text = bufferOf(text)}, {});
+        field = taken(f.kit, prKitTextField(f.kit, panel, {.text = text}, {}), text);
     };
     f.frame();
     // With nothing focused, the root's scope takes the chord.
@@ -145,7 +142,7 @@ TEST_CASE("an override takes a chord that a focused text field claims, and a nor
     std::string text = "abc";
     f.build = [&](PrLayoutNode ground) {
         prCommandScope(f.ui, ground, c.registry, c.keymap, "");
-        field = prKitTextField(f.kit, ground, {.text = bufferOf(text)}, {});
+        field = taken(f.kit, prKitTextField(f.kit, ground, {.text = text}, {}), text);
     };
     f.frame();
     f.click(f.center(field));
@@ -227,7 +224,9 @@ TEST_CASE("the command palette lists the commands that match its query, and runs
     PrLayoutNode list = kPrLayoutNodeNone;
     f.build = [&](PrLayoutNode ground) {
         trigger = ground;
-        list = prCommandPalette(f.kit, trigger, c.registry, c.keymap, bufferOf(query));
+        list = prCommandPalette(f.kit, trigger, c.registry, c.keymap, query);
+        if (list != kPrLayoutNodeNone)
+            taken(f.kit, list, query);
     };
     f.frame();
     prKitSetOpen(f.kit, trigger, true);

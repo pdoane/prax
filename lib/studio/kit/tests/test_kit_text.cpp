@@ -3,6 +3,7 @@
 
 #include "pr/kit_box.h"
 #include "pr/kit_input.h"
+#include "pr/text_edit.h"
 #include "pr/ui_text_edit.h"
 
 #include "tools/harness/kit_fixture.h"
@@ -17,15 +18,12 @@ namespace pr_impl {
 
 namespace {
 
-// A text buffer over a std::string.
-PrUiTextBuffer bufferOf(std::string& owned) {
-    PrUiTextBuffer buffer{};
-    buffer.context = &owned;
-    buffer.read = [](void* context) -> PrStringView { return *static_cast<const std::string*>(context); };
-    buffer.replace = [](void* context, uint32_t start, uint32_t end, PrStringView value) {
-        static_cast<std::string*>(context)->replace(start, end - start, value.data, value.size);
-    };
-    return buffer;
+// Writes the text of the control `field` to `owned`, if it changed in the round, and returns the control.
+PrLayoutNode taken(PrKit* kit, PrLayoutNode field, std::string& owned) {
+    PrStringView text{};
+    if (prKitTextChanged(kit, field, &text))
+        owned.assign(text.data, text.size);
+    return field;
 }
 
 // An application whose clipboard is a string, which a request delivers to the context as a Clipboard event.
@@ -61,9 +59,9 @@ struct Edited {
         f.build = [this, area, rows](PrLayoutNode ground) {
             PrLayoutNode column = prKitBox(f.kit, ground, {}, {.place = {.width = prKitPx(200)}});
             if (area)
-                node = prKitTextArea(f.kit, column, {.text = bufferOf(text), .rows = rows}, {});
+                node = taken(f.kit, prKitTextArea(f.kit, column, {.text = text, .rows = rows}, {}), text);
             else
-                node = prKitTextField(f.kit, column, {.text = bufferOf(text), .placeholder = "Name"}, {});
+                node = taken(f.kit, prKitTextField(f.kit, column, {.text = text, .placeholder = "Name"}, {}), text);
         };
         f.frame();
     }
@@ -331,12 +329,158 @@ TEST_CASE("a text field scrolls along its line to keep the caret in view, and ba
     CHECK(info.offset.x.raw == 0);
 }
 
+TEST_CASE("a caller that keeps its old text rejects an edit") {
+    Edited e("fixed");
+    e.focus();
+    e.f.type("x");
+    e.f.frame();
+    CHECK(e.text == "fixedx");
+    e.text = "fixed";
+    e.f.frame();
+    CHECK(prLayoutNodeText(e.f.tree, e.textNode()) == "fixed");
+}
+
+TEST_CASE("text that the caller changes during an edit replaces the text being edited") {
+    Edited e("abcdef");
+    e.focus();
+    e.f.type("g");
+    e.f.frame();
+    CHECK(e.text == "abcdefg");
+    e.text = "xy";
+    e.f.frame();
+    e.f.type("z");
+    e.f.frame();
+    CHECK(e.text == "xyz");
+}
+
+TEST_CASE("a field over the caller's buffer edits it, and the caller's other edits carry the caret") {
+    KitFixture f;
+    PrTextEditBuffer* buffer = prTextEditBufferCreate("abc");
+    PrTextEditHistory* history = prTextEditHistoryCreate(buffer);
+    PrLayoutNode field = kPrLayoutNodeNone;
+    bool reported = false;
+    f.build = [&](PrLayoutNode ground) {
+        PrKitTextField content{.buffer = buffer};
+        field = prKitTextField(f.kit, ground, content, {});
+        PrStringView text{};
+        reported = prKitTextChanged(f.kit, field, &text) || reported;
+    };
+    f.frame();
+    f.click(f.center(field));
+    f.frame();
+    prUiTextEditSetSelection(f.ui, field, PrUiTextSelection{3, 3});
+    f.frame();
+    f.type("d");
+    f.frame();
+    CHECK(prTextEditBufferText(buffer) == "abcd");
+    CHECK(reported);
+
+    PrTextEditChange before{.start = 0, .end = 0, .text = "zz"};
+    prTextEditBufferApply(buffer, &before, 1, PrTextEditOrigin_Remote);
+    f.frame();
+    CHECK(prUiTextEditSelection(f.ui, field).caret == 6);
+
+    // The history of the buffer belongs to its owner, and it records what the field did.
+    PrTextEditChange more{.start = 6, .end = 6, .text = "e"};
+    prTextEditBufferApply(buffer, &more, 1, PrTextEditOrigin_Local);
+    CHECK(prTextEditHistoryCanUndo(history));
+    prTextEditHistoryDestroy(history);
+    f.frame();
+    prTextEditBufferDestroy(buffer);
+}
+
+TEST_CASE("marked text stays inside a value's edit until it commits") {
+    Edited e("ab");
+    uint32_t commits = 0;
+    e.f.editContext = &commits;
+    e.f.edit = [](void* context, PrLayoutNode, PrUiEditPhase phase) {
+        *static_cast<uint32_t*>(context) += phase == PrUiEditPhase_Commit ? 1 : 0;
+    };
+    e.focus();
+
+    e.f.push(PrAppEvent{.kind = PrAppEventKind_CompositionUpdate, .text = "k"});
+    e.f.frame();
+    e.f.frame();
+    CHECK(e.text == "ab");
+    CHECK(commits == 0);
+    CHECK(prLayoutNodeText(e.f.tree, e.textNode()) == "abk");
+
+    e.f.push(PrAppEvent{.kind = PrAppEventKind_CompositionUpdate, .text = "\xe3\x81\x8b"});
+    e.f.frame();
+    e.f.frame();
+    CHECK(e.text == "ab");
+    CHECK(prLayoutNodeText(e.f.tree, e.textNode()) == "ab\xe3\x81\x8b");
+
+    e.f.push(PrAppEvent{.kind = PrAppEventKind_CompositionEnd});
+    e.f.push(PrAppEvent{.kind = PrAppEventKind_Text, .text = "\xe3\x81\x8b"});
+    e.f.frame();
+    CHECK(e.text == "ab\xe3\x81\x8b");
+    CHECK(commits == 1);
+}
+
+TEST_CASE("text that the caller changes during a composition ends the composition") {
+    Edited e("ab");
+    e.focus();
+    e.f.push(PrAppEvent{.kind = PrAppEventKind_CompositionUpdate, .text = "k"});
+    e.f.frame();
+    e.text = "xy";
+    e.f.frame();
+    CHECK(prLayoutNodeText(e.f.tree, e.textNode()) == "xy");
+}
+
+TEST_CASE("a value's edit keeps its selection when focus leaves, and takes the caller's text when it returns") {
+    Edited e("abcd");
+    e.focus();
+    e.f.type("e");
+    e.f.frame();
+    uint32_t caret = e.selection().caret;
+    prUiSetFocus(e.f.ui, kPrLayoutNodeNone);
+    e.f.frame();
+    e.f.frame();
+    CHECK(e.selection().caret == caret);
+
+    e.text = "xyz";
+    e.f.frame();
+    // A second press at the same place selects a unit, so End collapses the selection first.
+    e.focus();
+    e.f.key(PrAppKey_End);
+    e.f.frame();
+    e.f.type("!");
+    e.f.frame();
+    CHECK(e.text == "xyz!");
+}
+
+TEST_CASE("marked text in the caller's buffer leaves with focus") {
+    KitFixture f;
+    PrTextEditBuffer* buffer = prTextEditBufferCreate("ab");
+    PrLayoutNode field = kPrLayoutNodeNone;
+    bool reported = false;
+    f.build = [&](PrLayoutNode ground) {
+        PrKitTextField content{.buffer = buffer};
+        field = prKitTextField(f.kit, ground, content, {});
+        PrStringView text{};
+        reported = prKitTextChanged(f.kit, field, &text) || reported;
+    };
+    f.frame();
+    f.click(f.center(field));
+    f.frame();
+    f.push(PrAppEvent{.kind = PrAppEventKind_CompositionUpdate, .text = "k"});
+    f.frame();
+    CHECK(prTextEditBufferSize(buffer) == 3);
+    CHECK_FALSE(reported);
+    prUiSetFocus(f.ui, kPrLayoutNodeNone);
+    f.frame();
+    f.frame();
+    CHECK(prTextEditBufferText(buffer) == "ab");
+    prTextEditBufferDestroy(buffer);
+}
+
 TEST_CASE("a disabled field takes no text and shows no caret") {
     KitFixture f;
     std::string text = "fixed";
     PrLayoutNode field = kPrLayoutNodeNone;
     f.build = [&](PrLayoutNode ground) {
-        field = prKitTextField(f.kit, ground, {.text = bufferOf(text), .disabled = true}, {});
+        field = taken(f.kit, prKitTextField(f.kit, ground, {.text = text, .disabled = true}, {}), text);
     };
     f.frame();
     f.click(f.center(field));

@@ -233,10 +233,13 @@ void buildPalette(PrKit* kit, PrLayoutNode section, PaletteState& palette) {
         if (commandMatches(commands[i], palette.query))
             shown[matches++] = i;
     }
-    PrKitCommandPalette content{.prompt = "Type a command", .count = matches, .query = textBufferOf(palette.query)};
+    PrKitCommandPalette content{.prompt = "Type a command", .count = matches, .query = palette.query};
     PrLayoutNode list = prKitCommandPalette(kit, trigger, content);
     if (list == kPrLayoutNodeNone)
         return;
+    PrStringView text{};
+    if (prKitTextChanged(kit, list, &text))
+        palette.query.assign(text.data, text.size);
     for (uint32_t i = 0; i < matches; ++i) {
         const CommandItem& command = commands[shown[i]];
         PrKitCommandItem item{
@@ -328,22 +331,26 @@ void sectionInputs(PrKit* kit, PrLayoutNode parent, GalleryState& state) {
         cell.place.flex = PrKitFlex_Fill;
         PrLayoutNode name = prKitBox(kit, row, {}, cell);
         caption(kit, name, "ENTITY NAME");
-        PrKitTextField nameField{.text = textBufferOf(inputs.name), .placeholder = "Unnamed entity"};
-        prKitTextField(kit, name, nameField, {});
+        PrKitTextField nameField{.text = inputs.name, .placeholder = "Unnamed entity"};
+        PrStringView text{};
+        if (prKitTextChanged(kit, prKitTextField(kit, name, nameField, {}), &text))
+            inputs.name.assign(text.data, text.size);
         PrLayoutNode search = prKitBox(kit, row, {}, cell);
         caption(kit, search, "SELECT ON FOCUS");
         PrKitTextField searchField{
-            .text = textBufferOf(inputs.search),
+            .text = inputs.search,
             .placeholder = "Search query",
             .icon = PrKitIconKind_Search,
             .clearable = true,
             .selectOnFocus = true,
         };
-        prKitTextField(kit, search, searchField, {});
+        if (prKitTextChanged(kit, prKitTextField(kit, search, searchField, {}), &text))
+            inputs.search.assign(text.data, text.size);
         PrLayoutNode locked = prKitBox(kit, row, {.disabled = true}, cell);
         caption(kit, locked, "DISABLED");
-        PrKitTextField lockedField{.text = textBufferOf(inputs.locked)};
-        prKitTextField(kit, locked, lockedField, {});
+        PrKitTextField lockedField{.text = inputs.locked};
+        if (prKitTextChanged(kit, prKitTextField(kit, locked, lockedField, {}), &text))
+            inputs.locked.assign(text.data, text.size);
     }
     {
         PrLayoutNode panel = demoPanel(kit, section, "HISTORY", "ENTER SUBMITS . UP AND DOWN RECALL", false);
@@ -355,13 +362,16 @@ void sectionInputs(PrKit* kit, PrLayoutNode parent, GalleryState& state) {
                 lines[count++] = command;
         }
         PrKitTextField command{
-            .text = textBufferOf(inputs.command),
+            .text = inputs.command,
             .placeholder = "type a line, submit it, then press Up",
             .history = lines,
             .historyCount = count,
         };
         PrKitFieldStyle mono{.mono = true};
         PrLayoutNode field = prKitTextField(kit, row, command, mono);
+        PrStringView text{};
+        if (prKitTextChanged(kit, field, &text))
+            inputs.command.assign(text.data, text.size);
         // The field leaves Enter to its caller, which submits the line.
         PrUiEvents events = prUiEvents(prKitUi(kit), field);
         for (uint32_t i = 0; i < events.count; ++i) {
@@ -378,7 +388,7 @@ void sectionInputs(PrKit* kit, PrLayoutNode parent, GalleryState& state) {
         PrKitFieldStyle mono{.mono = true};
         PrKitSuggestField area{
             .field = {
-                .text = textBufferOf(inputs.area),
+                .text = inputs.area,
                 .placeholder = "Area path",
                 .icon = PrKitIconKind_Search,
                 .selectOnFocus = true,
@@ -386,12 +396,14 @@ void sectionInputs(PrKit* kit, PrLayoutNode parent, GalleryState& state) {
             .suggestions = areas,
             .count = areaCount,
         };
-        prKitSuggestField(kit, captionRow(kit, panel, "AREA", kCaptionWidth), area, mono);
+        PrStringView text{};
+        if (prKitTextChanged(kit, prKitSuggestField(kit, captionRow(kit, panel, "AREA", kCaptionWidth), area, mono), &text))
+            inputs.area.assign(text.data, text.size);
         uint32_t revisionCount = 0;
         const PrStringView* revisions = galleryRevisions(&revisionCount);
         PrKitSuggestField revision{
             .field = {
-                .text = textBufferOf(inputs.revision),
+                .text = inputs.revision,
                 .placeholder = "Branch, tag or commit",
                 .icon = PrKitIconKind_Branch,
                 .selectOnFocus = true,
@@ -399,12 +411,15 @@ void sectionInputs(PrKit* kit, PrLayoutNode parent, GalleryState& state) {
             .suggestions = revisions,
             .count = revisionCount,
         };
-        prKitSuggestField(kit, captionRow(kit, panel, "REVISION", kCaptionWidth), revision, mono);
+        PrLayoutNode revisionRow = captionRow(kit, panel, "REVISION", kCaptionWidth);
+        if (prKitTextChanged(kit, prKitSuggestField(kit, revisionRow, revision, mono), &text))
+            inputs.revision.assign(text.data, text.size);
         prKitLabel(kit, panel, {.text = "the caller filters the items, so the list shows what it hands over"},
             kBodySecondary);
     }
     {
         PrLayoutNode panel = demoPanel(kit, section, "TEXT AREA", "SOFT WRAP . SHADER SNIPPET", false);
+        PrStringView text{};
         // Runs set chords in their own role within the sentence around them.
         constexpr PrKitTextRun kChord = {.role = PrKitTextRole_MonoStrong, .tone = PrKitTone_Accent};
         constexpr PrKitTextRun kStrongRun = {.role = PrKitTextRole_Strong};
@@ -437,13 +452,15 @@ void sectionInputs(PrKit* kit, PrLayoutNode parent, GalleryState& state) {
         cell.place.flex = PrKitFlex_Fill;
         PrLayoutNode notes = prKitBox(kit, row, {}, cell);
         caption(kit, notes, "NOTES");
-        PrKitTextArea prose{.text = textBufferOf(inputs.prose), .placeholder = "Notes", .rows = 5};
-        prKitTextArea(kit, notes, prose, {});
+        PrKitTextArea prose{.text = inputs.prose, .placeholder = "Notes", .rows = 5};
+        if (prKitTextChanged(kit, prKitTextArea(kit, notes, prose, {}), &text))
+            inputs.prose.assign(text.data, text.size);
         PrLayoutNode code = prKitBox(kit, row, {}, cell);
         caption(kit, code, "SHADER SNIPPET");
-        PrKitTextArea snippet{.text = textBufferOf(inputs.snippet), .rows = 5};
+        PrKitTextArea snippet{.text = inputs.snippet, .rows = 5};
         PrKitFieldStyle mono{.mono = true};
-        prKitTextArea(kit, code, snippet, mono);
+        if (prKitTextChanged(kit, prKitTextArea(kit, code, snippet, mono), &text))
+            inputs.snippet.assign(text.data, text.size);
     }
     {
         PrLayoutNode panel = demoPanel(kit, section, "NUMERIC . VECTORS", "DRAG TO SCRUB", false);

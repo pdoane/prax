@@ -1,7 +1,8 @@
 // Studio Kit's text fields, sliders, numeric fields, vectors, and the inspector.
 //
 // A bound control reads its value through a pointer each round and writes the round's edits through it. The value is
-// read and written during the call that creates the control, so the pointer needs to be valid only for that call.
+// read and written during the call that creates the control, so the pointer needs to be valid only for that call. A
+// text control takes its text as a value, and the caller takes the new text from prKitTextChanged.
 
 #pragma once
 
@@ -12,6 +13,7 @@
 #include "pr/kit_text.h"
 #include "pr/string.h"
 #include "pr/string_view.h"
+#include "pr/text_edit.h"
 #include "pr/ui_text_edit.h"
 
 PR_ASSUME_NONNULL_BEGIN
@@ -154,9 +156,10 @@ typedef struct PrKitFieldStyle {
 // What a text field edits and shows.
 typedef struct PrKitTextField {
     uint64_t key;
-    PrUiTextBuffer text;
-    PrStringView placeholder;       // shown faint while the text is empty
-    PrKitIconKind icon;             // before the text, or none
+    PrStringView text;
+    PrTextEditBuffer* PR_NULLABLE buffer; // holds the text instead of `text`, for a caller that owns a buffer
+    PrStringView placeholder;             // shown faint while the text is empty
+    PrKitIconKind icon;                   // before the text, or none
 
     // Earlier lines, oldest first, that Up and Down recall into the field, as a console's history.
     const PrStringView* PR_NULLABLE history;
@@ -177,7 +180,8 @@ PrLayoutNode prKitTextField(PrKit* kit, PrLayoutNode parent, PrKitTextField fiel
 // What a text area edits and shows: text that wraps at the area's width, and `rows` lines of room, or 3 for zero.
 typedef struct PrKitTextArea {
     uint64_t key;
-    PrUiTextBuffer text;
+    PrStringView text;
+    PrTextEditBuffer* PR_NULLABLE buffer;   // holds the text instead of `text`, for a caller that owns a buffer
     PrStringView placeholder;
     uint32_t rows;
     bool disabled;
@@ -200,6 +204,11 @@ typedef struct PrKitSuggestField {
 // any. Activating a suggestion replaces the text with it, as one gesture, closes the list, and leaves focus in the
 // field.
 PrLayoutNode prKitSuggestField(PrKit* kit, PrLayoutNode parent, PrKitSuggestField suggest, PrKitFieldStyle style);
+
+// Returns true if the text control `field`, or the search row of the command palette whose list is `field`, changed its
+// text in the current round, and writes the new text to `text`. The text is valid until the end of the round. A control
+// shows the text that the caller gives it in the next round, so a caller that keeps its old text rejects the change.
+bool prKitTextChanged(const PrKit* kit, PrLayoutNode field, PrStringView* text);
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Sliders

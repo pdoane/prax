@@ -98,11 +98,10 @@ bool prCommandMatches(PrStringView query, PrStringView title, PrStringView categ
 }
 
 PrLayoutNode prCommandPalette(PrKit* kit, PrLayoutNode trigger, const PrCommandRegistry* registry,
-        const PrCommandKeymap* keymap, PrUiTextBuffer query) {
-    PrStringView text = query.read != nullptr ? query.read(query.context) : PrStringView{};
+        const PrCommandKeymap* keymap, PrStringView query) {
     uint32_t count = 0;
     for (PrCommandIndex i = 0; i < prCommandRegistryCount(registry); ++i)
-        count += isListed(registry, i, text) ? 1 : 0;
+        count += isListed(registry, i, query) ? 1 : 0;
     PrKitCommandPalette palette{.prompt = "Type a command", .count = count, .query = query};
     PrLayoutNode list = prKitCommandPalette(kit, trigger, palette);
     if (list == kPrLayoutNodeNone)
@@ -111,7 +110,7 @@ PrLayoutNode prCommandPalette(PrKit* kit, PrLayoutNode trigger, const PrCommandR
     // reads.
     PrCommandIndex chosen = kPrCommandMissing;
     for (PrCommandIndex i = 0; i < prCommandRegistryCount(registry); ++i) {
-        if (!isListed(registry, i, text))
+        if (!isListed(registry, i, query))
             continue;
         PrCommandDesc command = prCommandRegistryCommand(registry, i);
         PrString shortcut = shortcutOf(keymap, command.id);

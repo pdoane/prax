@@ -264,21 +264,6 @@ std::vector<Favorite> suggestionsFor(const Browser& b, const std::string& typed)
     return found;
 }
 
-// Read and replace the text of a field that edits a std::string, which is the context of its buffer (PrUiTextBuffer).
-PrStringView readString(void* PR_NULLABLE context) {
-    const std::string& text = *static_cast<std::string*>(context);
-    return text;
-}
-
-void replaceString(void* PR_NULLABLE context, uint32_t start, uint32_t end, PrStringView value) {
-    static_cast<std::string*>(context)->replace(start, end - start, value.data, value.size);
-}
-
-// Returns a text buffer that edits `text`.
-PrUiTextBuffer stringBuffer(std::string* text) {
-    return PrUiTextBuffer{.context = text, .read = readString, .replace = replaceString};
-}
-
 // Leaves the address bar: focus leaves the chrome, and the bar shows the active tab's URL again.
 void leaveAddress(Browser& b, PrLayoutNode field) {
     prUiSetFocus(b.ui, kPrLayoutNodeNone);
@@ -297,12 +282,15 @@ void buildAddress(Browser& b, PrLayoutNode toolbar, Tab& tab) {
         chrome.addressTab = tab.key;
     }
     PrKitTextField field{
-        .text = stringBuffer(&chrome.address),
+        .text = chrome.address,
         .placeholder = "Search or enter an address",
         .icon = addressIcon(tab.info.url),
         .selectOnFocus = true,
     };
     PrLayoutNode node = prKitTextField(b.kit, toolbar, field, {.size = PrKitControlSize_Md});
+    PrStringView changed{};
+    if (prKitTextChanged(b.kit, node, &changed))
+        chrome.address.assign(changed.data, changed.size);
     if (chrome.focusAddress) {
         prUiSetFocus(b.ui, node);
         chrome.focusAddress = false;
@@ -628,12 +616,15 @@ void buildHistory(Browser& b, PrLayoutNode root) {
     buildDeleteDialog(b, trigger);
 
     PrKitTextField search{
-        .text = stringBuffer(&chrome.historyQuery),
+        .text = chrome.historyQuery,
         .placeholder = "Search history",
         .icon = PrKitIconKind_Search,
         .clearable = true,
     };
     PrLayoutNode field = prKitTextField(b.kit, page, search, {.size = PrKitControlSize_Md});
+    PrStringView text{};
+    if (prKitTextChanged(b.kit, field, &text))
+        chrome.historyQuery.assign(text.data, text.size);
     prKitPlace(b.kit, field, &column);
     PrLayoutNode list = prKitBox(b.kit, page, {}, {.gap = 1, .place = column});
     PrKitTextStyle faint{.role = PrKitTextRole_Body, .tone = PrKitTone_Faint};

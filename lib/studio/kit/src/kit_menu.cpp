@@ -916,17 +916,18 @@ PrLayoutNode prKitCommandPalette(PrKit* kit, PrLayoutNode trigger, PrKitCommandP
     PrUi* ui = kit->ui;
     // The search field, or the frame if the palette has no query, takes focus as the modal's first focusable node. The
     // frame claims the keys that move and activate the selection, which reach it from the field inside it.
-    bool queried = palette.query.read != nullptr;
+    bool queried = palette.query.data != nullptr;
     PrLayoutNode frame =
         prUiElement(ui, content, 0, cardStyle(*kit, kPaletteWidth), queried ? PrUiFlags(0) : PrUiFlag_Focusable);
     RowBox searchBox{.height = kPrKitHeightXl, .padding = prKitEdgesXY(0, kPrKitSpace5), .rules = PrKitRuleFlag_Bottom};
     PrLayoutNode search =
         prLayoutTreeFrameElement(kit->tree, frame, 0, ruledRow(*kit, searchBox, kPrKitSpace4, PrColor{0, 0, 0, 0}));
     prKitIcon(kit, search, {.icon = PrKitIconKind_Search}, {.size = 14, .tone = PrKitTone_Muted});
-    if (palette.query.read != nullptr) {
+    PrLayoutNode queryField = kPrLayoutNodeNone;
+    if (queried) {
         PrKitTextField field{.text = palette.query, .placeholder = palette.prompt};
         PrKitFieldStyle bare{.bare = true};
-        prKitTextField(kit, search, field, bare);
+        queryField = prKitTextField(kit, search, field, bare);
     } else {
         PrKitTextStyle prompt{.tone = PrKitTone_Faint, .wrap = PrKitWrap_Clip};
         prKitLabel(kit, search, {.text = palette.prompt}, prompt);
@@ -940,6 +941,9 @@ PrLayoutNode prKitCommandPalette(PrKit* kit, PrLayoutNode trigger, PrKitCommandP
         .place = {.maxHeight = prKitPx(kPaletteListHeight), .flex = PrKitFlex_Fixed},
     };
     PrLayoutNode list = prKitBox(kit, frame, {}, listBox);
+    PrStringView changed{};
+    if (queryField != kPrLayoutNodeNone && prKitTextChanged(kit, queryField, &changed))
+        kitReportText(*kit, list, changed);
 
     PaletteState& state = kitState<PaletteState>(*kit, frame, MenuStateKey_Palette);
     uint32_t selected = state.selected;

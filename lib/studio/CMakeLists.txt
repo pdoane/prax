@@ -18,8 +18,8 @@ pr_library(studio_kit INCLUDE kit/include
     kit/src/kit_text.cpp
     kit/src/kit_theme.cpp
 )
-target_link_libraries(pr_studio_kit PUBLIC prax::ui prax::layout prax::path prax::draw prax::text prax::geom prax::font
-                                           prax::color
+target_link_libraries(pr_studio_kit PUBLIC prax::ui prax::layout prax::path prax::draw prax::text prax::text_edit
+                                           prax::geom prax::font prax::color
                                     PRIVATE prax::core_cpp prax::ui_cpp)
 
 if (PR_DEVELOP)
@@ -38,7 +38,7 @@ if (PR_DEVELOP)
         kit/tests/test_kit_text.cpp
         kit/tests/test_kit_menu.cpp
     )
-    target_link_libraries(studio_kit_tests PRIVATE kit_fixture prax::text prax::draw prax::layout prax::ui
+    target_link_libraries(studio_kit_tests PRIVATE kit_fixture prax::text_edit prax::text prax::draw prax::layout prax::ui
                                                    prax::ui_cpp prax::color)
 endif()
 

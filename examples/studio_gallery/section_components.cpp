@@ -150,9 +150,11 @@ void sectionInspector(PrKit* kit, PrLayoutNode parent, GalleryState& state) {
         bar.box.place.flex = PrKitFlex_Fixed;
         PrLayoutNode identity = prKitSurface(kit, panel, {}, bar);
         prKitIcon(kit, identity, {.icon = PrKitIconKind_Cube}, {.size = 14, .tone = PrKitTone_Secondary});
-        PrKitTextField name{.text = textBufferOf(inspector.name)};
+        PrKitTextField name{.text = inspector.name};
         PrKitFieldStyle small{.size = PrKitControlSize_Sm};
-        prKitTextField(kit, identity, name, small);
+        PrStringView text{};
+        if (prKitTextChanged(kit, prKitTextField(kit, identity, name, small), &text))
+            inspector.name.assign(text.data, text.size);
         prKitBadge(kit, identity, {.text = "ENTITY"}, {.variant = PrKitBadgeVariant_Accent});
         prKitBadge(kit, identity, {.text = "0x7FF8_A2B0"}, {.variant = PrKitBadgeVariant_Neutral});
     }

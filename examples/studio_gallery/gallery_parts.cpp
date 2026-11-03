@@ -18,16 +18,6 @@ constexpr float kMeasure = 600;
 
 } // namespace
 
-PrUiTextBuffer textBufferOf(std::string& owned) {
-    PrUiTextBuffer buffer{};
-    buffer.context = &owned;
-    buffer.read = [](void* context) -> PrStringView { return *static_cast<const std::string*>(context); };
-    buffer.replace = [](void* context, uint32_t start, uint32_t end, PrStringView value) {
-        static_cast<std::string*>(context)->replace(start, end - start, value.data, value.size);
-    };
-    return buffer;
-}
-
 PrStringView format(char* buffer, size_t size, const char* text, ...) {
     va_list args;
     va_start(args, text);

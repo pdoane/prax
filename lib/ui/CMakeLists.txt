@@ -3,7 +3,7 @@ pr_library(ui INCLUDE include
     src/ui.cpp
     src/ui_text_edit.cpp
 )
-target_link_libraries(pr_ui PUBLIC prax::app prax::color prax::layout PRIVATE prax::core_cpp prax::unicode)
+target_link_libraries(pr_ui PUBLIC prax::app prax::color prax::layout prax::text_edit PRIVATE prax::core_cpp prax::unicode)
 
 # lib/ui's C++ layer: group recipes as types, for the component libraries written in C++.
 pr_library(ui_cpp INCLUDE cpp/include)

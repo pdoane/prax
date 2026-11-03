@@ -41,18 +41,6 @@ PrKitDockTab describePanel(void* PR_NULLABLE, PrKitDockPanelId panel) {
     }
 }
 
-PrUiTextBuffer bufferOf(std::string& owned) {
-    PrUiTextBuffer buffer{};
-    buffer.context = &owned;
-    buffer.read = [](void* PR_NULLABLE context) -> PrStringView {
-        return *static_cast<const std::string*>(context);
-    };
-    buffer.replace = [](void* PR_NULLABLE context, uint32_t start, uint32_t end, PrStringView value) {
-        static_cast<std::string*>(context)->replace(start, end - start, value.data, value.size);
-    };
-    return buffer;
-}
-
 PrKitTextStyle textStyle(PrKitTextRole role, PrKitTone tone = PrKitTone_Auto) {
     return PrKitTextStyle{.role = role, .tone = tone, .wrap = PrKitWrap_Clip};
 }
@@ -115,7 +103,10 @@ void numberField(PrKit* kit, PrLayoutNode parent, PrKitScalar value, double min,
 void buildServer(PrKit* kit, PrLayoutNode parent, AppState& state, Commands& commands) {
     PrLayoutNode line = field(kit, parent, "Server");
     bool connected = state.connection == ConnectionState_Connected;
-    prKitTextField(kit, line, {.text = bufferOf(state.server), .placeholder = "http://127.0.0.1:8188"}, {});
+    PrStringView text{};
+    PrKitTextField server{.text = state.server, .placeholder = "http://127.0.0.1:8188"};
+    if (prKitTextChanged(kit, prKitTextField(kit, line, server, {}), &text))
+        state.server.assign(text.data, text.size);
     commandButton(kit, line, commands, connected ? "alchemy.disconnect" : "alchemy.connect",
         connected ? "Disconnect" : "Connect", PrKitIconKind_Link, PrKitButtonVariant_Default);
 }
@@ -144,10 +135,15 @@ void buildSource(PrKit* kit, PrLayoutNode parent, AppState& state, Commands& com
 void buildPrompts(PrKit* kit, PrLayoutNode parent, AppState& state, Shell& shell) {
     prKitLabel(kit, parent, {.text = "Prompt"}, textStyle(PrKitTextRole_Caption, PrKitTone_Muted));
     shell.promptFields[0] = prKitTextArea(
-        kit, parent, {.text = bufferOf(state.params.prompt), .placeholder = "What to make", .rows = 4}, {});
+        kit, parent, {.text = state.params.prompt, .placeholder = "What to make", .rows = 4}, {});
     prKitLabel(kit, parent, {.text = "Negative prompt"}, textStyle(PrKitTextRole_Caption, PrKitTone_Muted));
     shell.promptFields[1] = prKitTextArea(
-        kit, parent, {.text = bufferOf(state.params.negativePrompt), .placeholder = "What to avoid", .rows = 2}, {});
+        kit, parent, {.text = state.params.negativePrompt, .placeholder = "What to avoid", .rows = 2}, {});
+    PrStringView text{};
+    if (prKitTextChanged(kit, shell.promptFields[0], &text))
+        state.params.prompt.assign(text.data, text.size);
+    if (prKitTextChanged(kit, shell.promptFields[1], &text))
+        state.params.negativePrompt.assign(text.data, text.size);
 }
 
 void buildLoras(PrKit* kit, PrLayoutNode parent, AppState& state) {
@@ -611,9 +607,12 @@ void buildView(PrKit* kit, PrLayoutNode root, View& view, Commands& commands) {
         prKitSetOpen(kit, bar, true);
         commands.shell->paletteRequested = false;
     }
-    PrLayoutNode list = prCommandPalette(kit, bar, commands.registry, commands.keymap, bufferOf(view.paletteQuery));
+    PrLayoutNode list = prCommandPalette(kit, bar, commands.registry, commands.keymap, view.paletteQuery);
+    PrStringView query{};
     if (list == kPrLayoutNodeNone)
         view.paletteQuery.clear();
+    else if (prKitTextChanged(kit, list, &query))
+        view.paletteQuery.assign(query.data, query.size);
 
     PrLayoutNode dock = prKitDockBuild(kit, root, {.dock = view.dock, .describe = describePanel});
     PrKitPlace fill{.flex = PrKitFlex_Fill};

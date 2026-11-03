@@ -97,15 +97,12 @@ PrVec2 landed(PrVec2 p, PrVec2 panel, PrVec2 stage, const PrMatrix4& turn, float
     return out;
 }
 
-// A text buffer over a std::string.
-PrUiTextBuffer bufferOf(std::string& owned) {
-    PrUiTextBuffer buffer{};
-    buffer.context = &owned;
-    buffer.read = [](void* context) -> PrStringView { return *static_cast<const std::string*>(context); };
-    buffer.replace = [](void* context, uint32_t start, uint32_t end, PrStringView value) {
-        static_cast<std::string*>(context)->replace(start, end - start, value.data, value.size);
-    };
-    return buffer;
+// Writes the text of the control `field` to `owned`, if it changed in the round, and returns the control.
+PrLayoutNode taken(PrKit* kit, PrLayoutNode field, std::string& owned) {
+    PrStringView text{};
+    if (prKitTextChanged(kit, field, &text))
+        owned.assign(text.data, text.size);
+    return field;
 }
 
 // Returns the asset field's gutter buttons, in order: browse, then locate and clear unless the field is empty.
@@ -675,8 +672,8 @@ TEST_CASE("a text field's clear control empties its text as one gesture, and sho
     PrLayoutNode field = kPrLayoutNodeNone;
     f.build = [&](PrLayoutNode ground) {
         PrLayoutNode row = prKitBox(f.kit, ground, {}, {.direction = PrKitDirection_Row, .gap = 0});
-        PrKitTextField content{.text = bufferOf(text), .placeholder = "Search", .clearable = true};
-        field = prKitTextField(f.kit, row, content, {});
+        PrKitTextField content{.text = text, .placeholder = "Search", .clearable = true};
+        field = taken(f.kit, prKitTextField(f.kit, row, content, {}), text);
     };
     f.frame();
     PrRect box = f.bounds(field);
@@ -694,8 +691,8 @@ TEST_CASE("Up and Down recall a text field's history while it has focus, and pas
     const PrStringView history[] = {"build", "bench"};
     PrLayoutNode field = kPrLayoutNodeNone;
     f.build = [&](PrLayoutNode ground) {
-        PrKitTextField content{.text = bufferOf(text), .history = history, .historyCount = 2};
-        field = prKitTextField(f.kit, ground, content, {});
+        PrKitTextField content{.text = text, .history = history, .historyCount = 2};
+        field = taken(f.kit, prKitTextField(f.kit, ground, content, {}), text);
     };
     f.frame();
     f.click(f.center(field));
@@ -720,8 +717,8 @@ TEST_CASE("a suggest field opens its list as it takes focus, and a suggestion re
     const PrStringView suggestions[] = {"lib/gpu", "lib/geom"};
     PrLayoutNode field = kPrLayoutNodeNone;
     f.build = [&](PrLayoutNode ground) {
-        PrKitSuggestField content{.field = {.text = bufferOf(text)}, .suggestions = suggestions, .count = 2};
-        field = prKitSuggestField(f.kit, ground, content, {});
+        PrKitSuggestField content{.field = {.text = text}, .suggestions = suggestions, .count = 2};
+        field = taken(f.kit, prKitSuggestField(f.kit, ground, content, {}), text);
     };
     f.frame();
     f.click(f.center(field));

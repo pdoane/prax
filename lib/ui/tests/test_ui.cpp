@@ -776,6 +776,32 @@ TEST_CASE("state is kept while every round asks for it, by owner and key, and mo
     CHECK(*counters[0] == 1);
 }
 
+TEST_CASE("retained state with a destroy function is destroyed when no round asks for it, and with the context") {
+    static int destroyed;
+    destroyed = 0;
+    PrUiStateDestroyFn destroy = [](void* state) { destroyed += *static_cast<int*>(state); };
+    static const char owner = 0;
+    {
+        UiFixture f;
+        bool ask = true;
+        PrLayoutNode box = kPrLayoutNodeNone;
+        f.build = [&] {
+            box = f.box(f.root, 0, 0, 10, 10);
+            if (ask)
+                *static_cast<int*>(prUiStateWithDestroy(f.ui, box, &owner, 0, sizeof(int), destroy)) = 1;
+        };
+        f.frame();
+        CHECK(destroyed == 0);
+        ask = false;
+        f.frame();
+        CHECK(destroyed == 1);
+        ask = true;
+        f.frame();
+        CHECK(destroyed == 1);
+    }
+    CHECK(destroyed == 2);
+}
+
 TEST_CASE("a tween moves to its target over its duration and asks for frames while it moves") {
     UiFixture f;
     static const char owner = 0;

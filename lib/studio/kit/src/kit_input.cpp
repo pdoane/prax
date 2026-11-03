@@ -1004,17 +1004,23 @@ struct TextState {
     bool chose;                     // a suggestion was chosen, and focus comes back from the list without reopening it
 };
 
-// Replaces the whole text of `buffer` with `value`, as one gesture on `node`, and puts the caret at its end.
-void replaceText(const Kit& kit, PrLayoutNode node, const PrUiTextBuffer& buffer, PrStringView value) {
-    PrStringView was = buffer.read(buffer.context);
-    kitEditOnce(kit, node, [&] { buffer.replace(buffer.context, 0, uint32_t(was.size), value); });
+// Replaces the whole text with `value`, which stays valid for the round, as one gesture on `node`, and puts the caret
+// at its end.
+void replaceText(Kit& kit, PrLayoutNode node, PrTextEditBuffer* PR_NULLABLE buffer, PrStringView value) {
+    kitEditOnce(kit, node, [&] {
+        kitReportText(kit, node, value);
+        if (buffer != nullptr) {
+            PrTextEditChange change{.start = 0, .end = prTextEditBufferSize(buffer), .text = value};
+            prTextEditBufferApply(buffer, &change, 1, PrTextEditOrigin_Local);
+        }
+    });
     uint32_t end = uint32_t(value.size);
     prUiTextEditSetSelection(kit.ui, node, PrUiTextSelection{end, end});
 }
 
 // Recalls the history's earlier line with Up and its later line with Down, while the field has focus. Past the latest
-// line is the line being typed, which starts empty.
-void recall(Kit& kit, PrLayoutNode node, const PrKitTextField& field, TextState& state) {
+// line is the line being typed, which starts empty. Returns the text that the field shows in this round.
+PrStringView recall(Kit& kit, PrLayoutNode node, const PrKitTextField& field, TextState& state) {
     bool up = prUiKeyPressed(kit.ui, node, PrAppKey_Up, 0);
     bool down = prUiKeyPressed(kit.ui, node, PrAppKey_Down, 0);
     uint32_t count = field.historyCount;
@@ -1022,17 +1028,22 @@ void recall(Kit& kit, PrLayoutNode node, const PrKitTextField& field, TextState&
         state.recalled = count;
     if (up && state.recalled > 0) {
         --state.recalled;
-        replaceText(kit, node, field.text, field.history[state.recalled]);
-    } else if (down && state.recalled < count) {
-        ++state.recalled;
-        replaceText(kit, node, field.text, state.recalled < count ? field.history[state.recalled] : PrStringView{});
+        replaceText(kit, node, field.buffer, field.history[state.recalled]);
+        return field.history[state.recalled];
     }
+    if (down && state.recalled < count) {
+        ++state.recalled;
+        PrStringView line = state.recalled < count ? field.history[state.recalled] : PrStringView{""};
+        replaceText(kit, node, field.buffer, line);
+        return line;
+    }
+    return field.buffer != nullptr ? prTextEditBufferText(field.buffer) : field.text;
 }
 
 // Creates the element that holds the text of an edit on `control`, runs the edit, and creates the placeholder after the
 // text while the text is empty.
-void editedText(Kit& kit, PrLayoutNode control, const PrUiTextBuffer& buffer, PrStringView placeholder,
-        const PrKitFieldStyle& style, bool disabled, bool area, PrUiTextEditFlags flags) {
+void editedText(Kit& kit, PrLayoutNode control, PrStringView text, PrTextEditBuffer* PR_NULLABLE buffer,
+        PrStringView placeholder, const PrKitFieldStyle& style, bool disabled, bool area, PrUiTextEditFlags flags) {
     const PrKitPalette& p = kit.theme.palette;
     uint8_t textFlags = uint8_t((disabled ? PartFlag_Disabled : 0) | (style.mono ? PartFlag_Mono : 0) |
         (area ? PartFlag_Wraps : 0));
@@ -1041,13 +1052,19 @@ void editedText(Kit& kit, PrLayoutNode control, const PrUiTextBuffer& buffer, Pr
     PrUiTextEditDesc edit{
         .control = control,
         .parent = value,
+        .value = text,
         .buffer = buffer,
         .flags = PrUiTextEditFlags(flags | (area ? PrUiTextEditFlag_Multiline : 0)),
         .selection = kitColor16(p.accentWeak),
         .caret = kitColor16(p.text1),
     };
     prUiTextEdit(kit.ui, &edit);
-    if (buffer.read(buffer.context).size == 0 && placeholder.size != 0)
+    PrStringView changed{};
+    if (prUiTextEditChanged(kit.ui, control, &changed)) {
+        kitReportText(kit, control, changed);
+        text = changed;
+    }
+    if (text.size == 0 && placeholder.size != 0 && !prUiTextEditIsComposing(kit.ui, control))
         textPart(kit, value, 0, PartRecipe{.part = Part_TextPlaceholder, .size = style.size, .flags = textFlags},
             placeholder);
 }
@@ -1056,7 +1073,7 @@ void editedText(Kit& kit, PrLayoutNode control, const PrUiTextBuffer& buffer, Pr
 // frame.
 PrLayoutNode textField(PrKit* kit, PrLayoutNode parent, const PrKitTextField& field, const PrKitFieldStyle& style,
         bool* arrived) {
-    PR_ASSERT(field.text.read != nullptr && field.text.replace != nullptr);
+    PrStringView text = field.buffer != nullptr ? prTextEditBufferText(field.buffer) : field.text;
     bool inRow = isRow(*kit, parent);
     bool disabled = false;
     PrLayoutNode node =
@@ -1068,7 +1085,7 @@ PrLayoutNode textField(PrKit* kit, PrLayoutNode parent, const PrKitTextField& fi
     if (!disabled) {
         prUiSetCursor(kit->ui, node, PrAppCursor_Text);
         if (field.historyCount != 0 && field.history != nullptr)
-            recall(*kit, node, field, *state);
+            text = recall(*kit, node, field, *state);
     }
     if (!focused)
         state->recalled = field.historyCount;
@@ -1082,9 +1099,9 @@ PrLayoutNode textField(PrKit* kit, PrLayoutNode parent, const PrKitTextField& fi
     if (field.icon != PrKitIconKind_None)
         prKitIcon(kit, node, {.icon = field.icon},
             {.size = 12, .tone = PrKitTone(disabled ? PrKitTone_Faint : PrKitTone_Muted)});
-    editedText(*kit, node, field.text, field.placeholder, style, disabled, false,
+    editedText(*kit, node, text, field.buffer, field.placeholder, style, disabled, false,
         field.selectOnFocus ? PrUiTextEditFlag_SelectOnFocus : 0);
-    if (field.clearable && field.text.read(field.text.context).size != 0 && !disabled) {
+    if (field.clearable && text.size != 0 && !disabled) {
         PrLayoutNode clear = prLayoutTreeFrameElement(kit->tree, node, 0, 0);
         prUiSetFlags(kit->ui, clear, PrUiFlag_Pressable);
         prUiSetCursor(kit->ui, clear, PrAppCursor_Hand);
@@ -1092,7 +1109,7 @@ PrLayoutNode textField(PrKit* kit, PrLayoutNode parent, const PrKitTextField& fi
             partStyle(*kit, PartRecipe{.part = Part_TextClear, .state = pointerState(*kit, clear, false)}));
         prKitIcon(kit, clear, {.icon = PrKitIconKind_Close}, {.size = 10, .tone = PrKitTone_Muted});
         if (prUiActivated(kit->ui, clear)) {
-            replaceText(*kit, node, field.text, PrStringView{});
+            replaceText(*kit, node, field.buffer, "");
             prUiSetFocus(kit->ui, node);
         }
     }
@@ -1247,7 +1264,6 @@ PrLayoutNode prKitTextField(PrKit* kit, PrLayoutNode parent, PrKitTextField fiel
 }
 
 PrLayoutNode prKitTextArea(PrKit* kit, PrLayoutNode parent, PrKitTextArea area, PrKitFieldStyle style) {
-    PR_ASSERT(area.text.read != nullptr && area.text.replace != nullptr);
     Kit& k = *kit;
     bool inRow = isRow(k, parent);
     bool disabled = false;
@@ -1270,7 +1286,8 @@ PrLayoutNode prKitTextArea(PrKit* kit, PrLayoutNode parent, PrKitTextArea area, 
         .tone = rows,
         .flags = flags,
     }));
-    editedText(k, node, area.text, area.placeholder, style, disabled, true, 0);
+    PrStringView text = area.buffer != nullptr ? prTextEditBufferText(area.buffer) : area.text;
+    editedText(k, node, text, area.buffer, area.placeholder, style, disabled, true, 0);
     prUiAddFlags(k.ui, node, PrUiFlag_Scrollable);
     return node;
 }
@@ -1293,12 +1310,21 @@ PrLayoutNode prKitSuggestField(PrKit* kit, PrLayoutNode parent, PrKitSuggestFiel
     PrLayoutNode menu = prKitMenu(kit, popover, {}, {.leavesFocus = true});
     for (uint32_t i = 0; i < suggest.count; ++i) {
         if (prUiActivated(ui, prKitMenuItem(kit, menu, {.text = suggest.suggestions[i]}, {}))) {
-            replaceText(*kit, node, suggest.field.text, suggest.suggestions[i]);
+            replaceText(*kit, node, suggest.field.buffer, suggest.suggestions[i]);
             prUiSetFocus(ui, node);
             state->chose = true;
         }
     }
     return node;
+}
+
+bool prKitTextChanged(const PrKit* kit, PrLayoutNode field, PrStringView* text) {
+    PrLayoutNode provider = kPrLayoutNodeNone;
+    const KitTextChange* change = kitContext<KitTextChange>(*kit, field, KitContext_TextChange, &provider);
+    if (change == nullptr || provider != field)
+        return false;
+    *text = change->text;
+    return true;
 }
 
 PrLayoutNode prKitSlider(PrKit* kit, PrLayoutNode parent, PrKitSlider slider, PrKitSliderStyle style) {

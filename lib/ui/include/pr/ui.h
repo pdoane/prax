@@ -369,6 +369,14 @@ PrLayoutNode prUiFocusMove(PrUi* ui, PrLayoutNode scope, bool reverse);
 // the same on every call. The returned pointer is stable until the end of the round.
 void* prUiState(PrUi* ui, PrLayoutNode node, const void* owner, uint64_t key, uint32_t size);
 
+// Called with retained storage just before the storage is freed.
+typedef void (*PrUiStateDestroyFn)(void* state);
+
+// Returns storage as prUiState does, for state that holds resources. `destroy` releases them when the storage is freed,
+// which also happens when the context is destroyed.
+void* prUiStateWithDestroy(PrUi* ui, PrLayoutNode node, const void* owner, uint64_t key, uint32_t size,
+    PrUiStateDestroyFn destroy);
+
 // Returns an animated value attached to the node under `owner` and `key`. When `target` changes, the value moves from
 // its current position to the new target over `duration` seconds, using `easing`, or linearly if `easing` is null. On
 // the first call, or if `duration` is zero or less, the value is the target. The value persists under the same rules as

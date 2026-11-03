@@ -85,6 +85,7 @@ struct UiState {
     uint32_t round;                 // the round that last asked for the storage
     uint32_t next;                  // the node's next state, or kUiNone
     void* data;
+    PrUiStateDestroyFn PR_NULLABLE destroy;
 };
 
 // The value of a tween (prUiTween).
@@ -767,6 +768,8 @@ void sweepStates(Ui* ui) {
             if (*link == i)
                 *link = state.next;
         }
+        if (state.destroy != nullptr)
+            state.destroy(state.data);
         prMemoryFree(state.data);
         state = UiState{};
         ui->freeStates.push(i);
@@ -1173,8 +1176,12 @@ PrUi* prUiCreate(PrLayoutTree* tree) {
 void prUiDestroy(PrUi* PR_NULLABLE ui) {
     if (ui == nullptr)
         return;
-    for (uint32_t i = 0; i < ui->states.count; ++i)
-        prMemoryFree(ui->states.data[i].data);
+    for (uint32_t i = 0; i < ui->states.count; ++i) {
+        const UiState& state = ui->states.data[i];
+        if (state.destroy != nullptr)
+            state.destroy(state.data);
+        prMemoryFree(state.data);
+    }
     ui->slots.reset();
     ui->states.reset();
     ui->freeStates.reset();
@@ -1586,6 +1593,13 @@ PrLayoutNode prUiFocusMove(PrUi* ui, PrLayoutNode scope, bool reverse) {
 
 void* prUiState(PrUi* ui, PrLayoutNode node, const void* owner, uint64_t key, uint32_t size) {
     return stateOf(ui, node, owner, key, size).data;
+}
+
+void* prUiStateWithDestroy(PrUi* ui, PrLayoutNode node, const void* owner, uint64_t key, uint32_t size,
+        PrUiStateDestroyFn destroy) {
+    UiState& state = stateOf(ui, node, owner, key, size);
+    state.destroy = destroy;
+    return state.data;
 }
 
 float prUiTween(PrUi* ui, PrLayoutNode node, const void* owner, uint64_t key, float target, double duration,

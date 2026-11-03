@@ -354,6 +354,7 @@ enum : uint64_t {
     KitContext_Palette,
     KitContext_SelectMenu,
     KitContext_AssetDrop,
+    KitContext_TextChange,
     KitContext_View,
     KitContext_Item,
     KitContext_Graph,
@@ -372,6 +373,16 @@ T& kitState(Kit& kit, PrLayoutNode node, uint64_t key) {
 template <typename T>
 T& kitProvide(Kit& kit, PrLayoutNode node, uint64_t key) {
     return *static_cast<T*>(prUiProvide(kit.ui, node, &kKitOwner, key, uint32_t(sizeof(T))));
+}
+
+// The new text of a text control in the round, which prKitTextChanged reads.
+struct KitTextChange {
+    PrStringView text;
+};
+
+// Reports `text` as the new text of the control `node`.
+inline void kitReportText(Kit& kit, PrLayoutNode node, PrStringView text) {
+    kitProvide<KitTextChange>(kit, node, KitContext_TextChange).text = text;
 }
 
 // Returns the context of type `T` that `node` or the nearest node it was made under provides, or null. Writes the

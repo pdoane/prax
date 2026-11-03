@@ -15,6 +15,7 @@
 #include "pr/kit_menu.h"
 #include "pr/kit_surface.h"
 #include "pr/kit_text.h"
+#include "pr/mem.h"
 
 #include "studio/kit/src/kit.h"
 
@@ -212,10 +213,8 @@ struct PickerState {
     uint32_t seededTab;             // the mode that the coordinates were last read for
     char hex[10];                   // the hex field's text
     uint8_t hexLength;
-    bool hexParsed;              // the hex field's text changed to a color this round
     bool seeded;                 // the coordinates hold `written`
     bool live;                   // a gesture of a drag is open
-    PrColor hexColor;            // the color that the hex field's text parsed to
 };
 
 // Reads `color` into the coordinates of every mode, keeping a hue where the color leaves it undefined and a saturation
@@ -831,34 +830,6 @@ void coordinateRow(PrKit* kit, PrLayoutNode node, PickerState& s, PrColor* color
     writeFields(s, made);
 }
 
-// Reads the hex field's text, and replaces a range of it.
-PrStringView hexRead(void* context) {
-    const PickerState& s = *static_cast<const PickerState*>(context);
-    return PrStringView{s.hex, s.hexLength};
-}
-
-void hexReplace(void* context, uint32_t start, uint32_t end, PrStringView value) {
-    PickerState& s = *static_cast<PickerState*>(context);
-    char text[sizeof s.hex];
-    uint32_t length = 0;
-    auto add = [&](const char* from, uint32_t count) {
-        for (uint32_t i = 0; i < count && length < sizeof text - 1; ++i)
-            text[length++] = from[i];
-    };
-    add(s.hex, start < s.hexLength ? start : s.hexLength);
-    add(value.data, uint32_t(value.size));
-    if (end < s.hexLength)
-        add(s.hex + end, s.hexLength - end);
-    for (uint32_t i = 0; i < length; ++i)
-        s.hex[i] = text[i];
-    s.hexLength = uint8_t(length);
-    PrColor parsed{};
-    if (prKitColorParseHex(PrStringView{s.hex, s.hexLength}, &parsed)) {
-        s.hexColor = parsed;
-        s.hexParsed = true;
-    }
-}
-
 // Creates the swatch of the color beside its hex field, and folds an edit of the field back into the color.
 void hexRow(PrKit* kit, PrLayoutNode node, PickerState& s, PrColor* color) {
     PrLayoutNode row = part(*kit, node, 0, Part_Row);
@@ -871,13 +842,18 @@ void hexRow(PrKit* kit, PrLayoutNode node, PickerState& s, PrColor* color) {
             s.hex[i] = text.data[i];
         s.hexLength = uint8_t(text.size);
     }
-    s.hexParsed = false;
-    PrKitTextField field{.text = {.context = &s, .read = hexRead, .replace = hexReplace}, .selectOnFocus = true};
+    PrKitTextField field{.text = PrStringView{s.hex, s.hexLength}, .selectOnFocus = true};
     PrKitFieldStyle mono{.size = PrKitControlSize_Sm, .mono = true};
     quiet(*kit, row);
     s.hexField = prKitTextField(kit, row, field, mono);
-    if (s.hexParsed)
-        writeEdit(*kit, node, s, color, s.hexColor);
+    PrStringView changed{};
+    if (!prKitTextChanged(kit, s.hexField, &changed))
+        return;
+    s.hexLength = uint8_t(changed.size < sizeof s.hex - 1 ? changed.size : sizeof s.hex - 1);
+    memCopy(s.hex, changed.data, s.hexLength);
+    PrColor parsed{};
+    if (prKitColorParseHex(PrStringView{s.hex, s.hexLength}, &parsed))
+        writeEdit(*kit, node, s, color, parsed);
 }
 
 // Creates the channel fields, and folds an edit of them back into the color.

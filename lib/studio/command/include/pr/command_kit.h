@@ -40,10 +40,11 @@ PrLayoutNode prCommandMenuItem(PrKit* kit, PrLayoutNode menu, const PrCommandReg
 bool prCommandMatches(PrStringView query, PrStringView title, PrStringView category);
 
 // Creates the command palette that `trigger` opens (prKitCommandPalette), with an item for each command that matches
-// the query that `query` holds, in the registry's order. The palette leaves out hidden commands and those that a
-// surface cannot run. Activating an item runs its command. Returns the palette's list, or none while it is closed.
+// `query`, in the registry's order. The caller takes a new query from prKitTextChanged on the list. The palette leaves
+// out hidden commands and those that a surface cannot run. Activating an item runs its command. Returns the palette's
+// list, or none while it is closed.
 PrLayoutNode prCommandPalette(PrKit* kit, PrLayoutNode trigger, const PrCommandRegistry* registry,
-    const PrCommandKeymap* keymap, PrUiTextBuffer query);
+    const PrCommandKeymap* keymap, PrStringView query);
 
 #if defined(__cplusplus)
 }
