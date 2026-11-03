@@ -85,7 +85,7 @@ JSValue jsSetReflectInteger(JSContext* ctx, JSValueConst elementObject, JSValueC
     if (element == nullptr)
         return JS_EXCEPTION;
     int64_t value = 0;
-    if (Kind == PrHtmlReflectedInteger_NonNegative) {
+    if (Kind == PrHtmlReflectedInteger_NonNegative || Kind == PrHtmlReflectedInteger_Long) {
         int32_t number = 0;
         if (JS_ToInt32(ctx, &number, input) < 0)
             return JS_EXCEPTION;

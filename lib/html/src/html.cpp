@@ -20,6 +20,7 @@
 #include "css/src/css_view.h"
 #include "dom/src/dom_attribute.h"
 #include "dom/src/dom_collection.h"
+#include "dom/src/dom_element_state.h"
 #include "dom/src/dom_microsyntax.h"
 #include "dom/src/dom_node.h"
 #include "dom/src/dom_slot.h"
@@ -409,6 +410,18 @@ PrHtmlWindow* PR_NULLABLE prHtmlDocumentDefaultView(PrDomDocument* document) {
     return window->document == document ? window : nullptr;
 }
 
+PrStringView prHtmlDocumentBodyAttribute(PrDomDocument* document, PrStringView name) {
+    PrDomElement* body = domDocumentBody(document);
+    PrStringView value = domIsHtml(body, PrDomTag_Body) ? domAttributeValue(body, name) : PrStringView{};
+    return value.data != nullptr ? value : "";
+}
+
+void prHtmlDocumentSetBodyAttribute(PrDomDocument* document, PrStringView name, PrStringView value) {
+    PrDomElement* body = domDocumentBody(document);
+    if (domIsHtml(body, PrDomTag_Body))
+        domSetAttribute(body, PrDomNamespace_None, name, value);
+}
+
 PrDomElement* PR_NULLABLE prHtmlDocumentCurrentScript(PrDomDocument* document) {
     PrHtmlWindow* window = prHtmlDocumentDefaultView(document);
     return window != nullptr ? window->currentScript : nullptr;
@@ -535,6 +548,97 @@ PrStatus prHtmlElementSetOuterText(PrHtmlElement* element, PrStringView value) {
     return PrStatus_Ok;
 }
 
+void prHtmlElementClick(PrHtmlElement* element) {
+    DomElementState* state = domElementState(element);
+    if (state->clicking || domElementDisabled(element))
+        return;
+    PrDomMouseEventInit init = prDomMouseEventInitDefault();
+    init.ui.event.bubbles = true;
+    init.ui.event.cancelable = true;
+    init.ui.event.composed = true;
+    PrDomMouseEvent* event = prDomMouseEventCreate("click", &init);
+    domNodeRetain(element);
+    state->clicking = true;
+    prDomEventTargetDispatchEvent(prDomElementAsEventTarget(element), prDomMouseEventAsEvent(event), nullptr);
+    state->clicking = false;
+    domNodeRelease(element);
+    prDomEventRelease(prDomMouseEventAsEvent(event));
+}
+
+PrStringView prHtmlContentEditableKeyword(PrHtmlContentEditable state) {
+    constexpr PrStringView kKeywords[] = {"inherit", "true", "false", "plaintext-only"};
+    return kKeywords[state];
+}
+
+bool prHtmlContentEditableFromKeyword(PrStringView keyword, PrHtmlContentEditable* out) {
+    for (PrHtmlContentEditable state = PrHtmlContentEditable_Inherit; state <= PrHtmlContentEditable_PlaintextOnly; ++state) {
+        if (asciiEqualsFold(keyword, prHtmlContentEditableKeyword(state))) {
+            *out = state;
+            return true;
+        }
+    }
+    return false;
+}
+
+PrHtmlContentEditable prHtmlElementContentEditable(const PrHtmlElement* element) {
+    PrStringView value = domAttributeValue(element, "contenteditable");
+    if (value.data == nullptr)
+        return PrHtmlContentEditable_Inherit;
+    if (value.size == 0)
+        return PrHtmlContentEditable_True;
+    PrHtmlContentEditable state = PrHtmlContentEditable_Inherit;
+    prHtmlContentEditableFromKeyword(value, &state);
+    return state;
+}
+
+void prHtmlElementSetContentEditable(PrHtmlElement* element, PrHtmlContentEditable value) {
+    if (value == PrHtmlContentEditable_Inherit)
+        domRemoveAttribute(element, PrDomNamespace_None, "contenteditable");
+    else
+        domSetAttribute(element, PrDomNamespace_None, "contenteditable", prHtmlContentEditableKeyword(value));
+}
+
+bool prHtmlElementIsContentEditable(const PrHtmlElement* element) {
+    for (const PrDomElement* at = element; at != nullptr; at = domNodeParentElement(at)) {
+        if (at->space != PrDomNamespace_Html)
+            continue;
+        switch (prHtmlElementContentEditable(static_cast<const PrHtmlElement*>(at))) {
+            case PrHtmlContentEditable_True:
+            case PrHtmlContentEditable_PlaintextOnly:
+                return true;
+            case PrHtmlContentEditable_False:
+                return false;
+            default:
+                break;
+        }
+    }
+    return false;
+}
+
+bool prHtmlElementDraggable(const PrHtmlElement* element) {
+    PrStringView value = domAttributeValue(element, "draggable");
+    if (asciiEqualsFold(value, "true"))
+        return true;
+    if (asciiEqualsFold(value, "false"))
+        return false;
+    return domIsHtml(element, PrDomTag_Img) || (domIsHtml(element, PrDomTag_A) && domHasAttribute(element, "href"));
+}
+
+void prHtmlElementSetDraggable(PrHtmlElement* element, bool value) {
+    domSetAttribute(element, PrDomNamespace_None, "draggable", value ? "true" : "false");
+}
+
+PrDomTokenList* prHtmlElementRelList(PrHtmlElement* element) {
+    // The keywords that the engine acts on, which is what feature detection asks about (html/#linkTypes).
+    static constexpr PrStringView kLinkTokens[] = {"alternate", "icon", "preload", "stylesheet"};
+    static constexpr PrStringView kHyperlinkTokens[] = {"noopener", "noreferrer", "opener"};
+    PrDomTokenList* list = domTokenListCreate(element, "rel");
+    bool link = domIsHtml(element, PrDomTag_Link);
+    list->supported = link ? kLinkTokens : kHyperlinkTokens;
+    list->supportedCount = uint32_t(link ? countOf(kLinkTokens) : countOf(kHyperlinkTokens));
+    return list;
+}
+
 PrDomElement* PR_NULLABLE prHtmlElementOffsetParent(PrHtmlElement* element) {
     return cssViewOffsetParent(element);
 }
@@ -572,7 +676,8 @@ PrString prHtmlElementReflectedUrl(const PrHtmlElement* element, PrStringView na
 int64_t prHtmlElementReflectedInteger(const PrHtmlElement* element, PrStringView name, PrHtmlReflectedInteger kind,
         int64_t fallback) {
     int64_t value = 0;
-    if (!domParseInteger(domAttributeValue(element, name), &value) || value < 0 || value > 2147483647 ||
+    int64_t least = kind == PrHtmlReflectedInteger_Long ? -2147483648ll : 0;
+    if (!domParseInteger(domAttributeValue(element, name), &value) || value < least || value > 2147483647 ||
             (kind == PrHtmlReflectedInteger_Positive && value == 0))
         return fallback;
     return value;
@@ -583,7 +688,8 @@ PrStatus prHtmlElementSetReflectedInteger(PrHtmlElement* element, PrStringView n
     if ((kind == PrHtmlReflectedInteger_NonNegative && value < 0) || (kind == PrHtmlReflectedInteger_Positive && value == 0))
         return PrStatus_OutOfRange;
     TextBuffer text;
-    int64_t set = value >= 0 && value <= 2147483647 ? value : fallback;
+    int64_t least = kind == PrHtmlReflectedInteger_Long ? -2147483648ll : 0;
+    int64_t set = value >= least && value <= 2147483647 ? value : fallback;
     if (set < 0)
         textAppendChar(&text, '-');
     textAppendU64(&text, uint64_t(set < 0 ? -set : set));
@@ -931,6 +1037,15 @@ PrHtmlMediaElement* PR_NULLABLE prHtmlMediaElementQuery(PrDomEventTarget* PR_NUL
 
 bool prHtmlMediaElementIsVideo(const PrHtmlMediaElement* element) {
     return element->tag == PrDomTag_Video;
+}
+
+PrHtmlMediaElement* prHtmlMediaElementCreateAudio(PrDomDocument* document, PrStringView src) {
+    PrDomElement* element = domElementCreate(document, PrDomNamespace_Html, PrDomTag_Audio, "audio");
+    domNodeRetain(element);
+    domSetAttribute(element, PrDomNamespace_None, "preload", "auto");
+    if (src.data != nullptr)
+        domSetAttribute(element, PrDomNamespace_None, "src", src);
+    return static_cast<PrHtmlMediaElement*>(element);
 }
 
 PrHtmlMediaError prHtmlMediaElementError(const PrHtmlMediaElement* element) {
@@ -1659,4 +1774,12 @@ PrStringView prHtmlNavigatorVendor(const PrHtmlWindow* window) {
 const PrCssUserAgentSheet* prHtmlUserAgentSheets(uint32_t* count) {
     *count = countOf(kUserAgentSheets);
     return kUserAgentSheets;
+}
+
+PrHtmlMapElement* PR_NULLABLE prHtmlMapElementQuery(PrDomEventTarget* PR_NULLABLE object) {
+    return htmlElementQuery<PrHtmlMapElement>(object, PrDomTag_Map);
+}
+
+PrDomHtmlCollection* prHtmlMapElementAreas(PrHtmlMapElement* map) {
+    return domHtmlCollectionCreate(map, DomCollectionFilter_MapAreas, PrStringView{});
 }

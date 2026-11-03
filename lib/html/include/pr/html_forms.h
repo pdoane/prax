@@ -35,6 +35,9 @@ typedef struct PrHtmlOutputElement PrHtmlOutputElement;
 typedef struct PrHtmlProgressElement PrHtmlProgressElement;
 typedef struct PrHtmlMeterElement PrHtmlMeterElement;
 typedef struct PrHtmlDetailsElement PrHtmlDetailsElement;
+typedef struct PrHtmlSelectElement PrHtmlSelectElement;
+typedef struct PrHtmlOptionElement PrHtmlOptionElement;
+typedef struct PrHtmlDataListElement PrHtmlDataListElement;
 typedef struct PrHtmlFormData PrHtmlFormData;
 typedef struct PrHtmlSubmitEvent PrHtmlSubmitEvent;
 typedef struct PrHtmlFormDataEvent PrHtmlFormDataEvent;
@@ -374,6 +377,111 @@ PrStringView prHtmlCommandEventCommand(const PrHtmlCommandEvent* event);
 // html/#dom-commandevent-source read it, or null if it has none.
 PrDomElement* PR_NULLABLE prHtmlToggleEventSource(PrHtmlToggleEvent* event);
 PrDomElement* PR_NULLABLE prHtmlCommandEventSource(PrHtmlCommandEvent* event);
+
+// ---------------------------------------------------------------------------------------------------------------------
+// HTMLSelectElement : HTMLElement (html)
+
+// An HTMLSelectElement as each interface it inherits from.
+PR_HANDLE_UPCAST(HtmlSelectElement, HtmlElement, HtmlElement)
+PR_HANDLE_UPCAST(HtmlSelectElement, DomElement, Element)
+PR_HANDLE_UPCAST(HtmlSelectElement, DomNode, Node)
+PR_HANDLE_UPCAST(HtmlSelectElement, DomEventTarget, EventTarget)
+
+// Returns `object` as an HTMLSelectElement, or null if it is not one.
+PrHtmlSelectElement* PR_NULLABLE prHtmlSelectElementQuery(PrDomEventTarget* PR_NULLABLE object);
+
+// Returns "select-multiple" or "select-one" (html/#dom-select-type). The text lives as long as the process.
+PrStringView prHtmlSelectElementType(const PrHtmlSelectElement* select);
+
+// Create the live collections of the select's list of options and of those that are selected (html/#dom-select-options,
+// html/#dom-select-selectedoptions). The caller destroys each.
+PrDomHtmlCollection* prHtmlSelectElementOptions(PrHtmlSelectElement* select);
+PrDomHtmlCollection* prHtmlSelectElementSelectedOptions(PrHtmlSelectElement* select);
+
+// Returns the number of options in the list.
+uint32_t prHtmlSelectElementLength(PrHtmlSelectElement* select);
+
+// Appends new options, or removes the last ones, until the list has `length` options. A length above 100000 changes
+// nothing (html/#dom-htmloptionscollection-length).
+void prHtmlSelectElementSetLength(PrHtmlSelectElement* select, uint32_t length);
+
+// Returns the option at `index` of the list, or null past the end.
+PrHtmlOptionElement* PR_NULLABLE prHtmlSelectElementItem(PrHtmlSelectElement* select, uint32_t index);
+
+// Puts `option` at `index` of the list, which replaces the option there, or removes that option for a null `option`. An
+// index past the end adds new options up to it (html/#dom-htmloptionscollection-setter). Returns what inserting
+// returns.
+PrStatus prHtmlSelectElementSetItem(PrHtmlSelectElement* select, uint32_t index, PrHtmlOptionElement* PR_NULLABLE option);
+
+// Inserts `element`, an option or optgroup, before `before`, or at the end of the select for null, or before the option
+// at `index` (html/#dom-htmloptionscollection-add). An index past the end appends. Returns NotAllowed if `element`
+// contains the select, and NotFound if `before` is not under the select.
+PrStatus prHtmlSelectElementAdd(PrHtmlSelectElement* select, PrHtmlElement* element, PrHtmlElement* PR_NULLABLE before);
+PrStatus prHtmlSelectElementAddAt(PrHtmlSelectElement* select, PrHtmlElement* element, uint32_t index);
+
+// Removes the option at `index` of the list, if there is one (html/#dom-htmloptionscollection-remove).
+void prHtmlSelectElementRemove(PrHtmlSelectElement* select, int32_t index);
+
+// Returns the index of the first selected option, or -1, and makes the option at `index` the only one selected
+// (html/#dom-select-selectedindex).
+int32_t prHtmlSelectElementSelectedIndex(PrHtmlSelectElement* select);
+void prHtmlSelectElementSetSelectedIndex(PrHtmlSelectElement* select, int32_t index);
+
+// Returns the value of the first selected option, or the empty string, and makes the first option with `value` the only
+// one selected (html/#dom-select-value).
+PrString prHtmlSelectElementValue(PrHtmlSelectElement* select);
+void prHtmlSelectElementSetValue(PrHtmlSelectElement* select, PrStringView value);
+
+// ---------------------------------------------------------------------------------------------------------------------
+// HTMLOptionElement : HTMLElement (html)
+
+// An HTMLOptionElement as each interface it inherits from.
+PR_HANDLE_UPCAST(HtmlOptionElement, HtmlElement, HtmlElement)
+PR_HANDLE_UPCAST(HtmlOptionElement, DomElement, Element)
+PR_HANDLE_UPCAST(HtmlOptionElement, DomNode, Node)
+PR_HANDLE_UPCAST(HtmlOptionElement, DomEventTarget, EventTarget)
+
+// Returns `object` as an HTMLOptionElement, or null if it is not one.
+PrHtmlOptionElement* PR_NULLABLE prHtmlOptionElementQuery(PrDomEventTarget* PR_NULLABLE object);
+
+// What a new option starts with. A null view of `text` or `value` leaves it out.
+typedef struct PrHtmlOptionDesc {
+    PrStringView text;
+    PrStringView value;
+    bool defaultSelected;       // sets the selected attribute
+    bool selected;
+} PrHtmlOptionDesc;
+
+// Creates an option in `document`, with one reference for the caller (html/#dom-option).
+PrHtmlOptionElement* prHtmlOptionElementCreate(PrDomDocument* document, const PrHtmlOptionDesc* desc);
+
+// Returns the form owner of the option's select, or null (html/#dom-option-form).
+PrHtmlFormElement* PR_NULLABLE prHtmlOptionElementForm(PrHtmlOptionElement* option);
+
+// Returns the option's text (html/#dom-option-text), and replaces its children with a text node of `value`.
+PrString prHtmlOptionElementText(const PrHtmlOptionElement* option);
+void prHtmlOptionElementSetText(PrHtmlOptionElement* option, PrStringView value);
+
+// Return the value attribute or the text, and the label attribute if it is not empty or the text
+// (html/#dom-option-value, html/#dom-option-label).
+PrString prHtmlOptionElementValue(const PrHtmlOptionElement* option);
+PrString prHtmlOptionElementLabel(const PrHtmlOptionElement* option);
+
+// Returns the selectedness, and sets it as a script does (html/#dom-option-selected).
+bool prHtmlOptionElementSelected(const PrHtmlOptionElement* option);
+void prHtmlOptionElementSetSelected(PrHtmlOptionElement* option, bool value);
+
+// Returns the option's index in its select's list of options, or 0 if it has no select (html/#dom-option-index).
+uint32_t prHtmlOptionElementIndex(PrHtmlOptionElement* option);
+
+// ---------------------------------------------------------------------------------------------------------------------
+// HTMLDataListElement : HTMLElement (html)
+
+// Returns `object` as an HTMLDataListElement, or null if it is not one.
+PrHtmlDataListElement* PR_NULLABLE prHtmlDataListElementQuery(PrDomEventTarget* PR_NULLABLE object);
+
+// Creates the live collection of the option descendants (html/#dom-datalist-options), which the caller destroys.
+PrDomHtmlCollection* prHtmlDataListElementOptions(PrHtmlDataListElement* list);
 
 #if defined(__cplusplus)
 }

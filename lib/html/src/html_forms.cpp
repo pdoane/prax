@@ -23,6 +23,7 @@
 #include "dom/src/dom_event.h"
 #include "dom/src/dom_microsyntax.h"
 #include "dom/src/dom_node.h"
+#include "dom/src/dom_range.h"
 #include "dom/src/dom_select.h"
 #include "html/src/html_interface.h"
 
@@ -859,4 +860,173 @@ PrDomElement* PR_NULLABLE prHtmlToggleEventSource(PrHtmlToggleEvent* event) {
 
 PrDomElement* PR_NULLABLE prHtmlCommandEventSource(PrHtmlCommandEvent* event) {
     return retargetedSource(event);
+}
+
+PrHtmlSelectElement* PR_NULLABLE prHtmlSelectElementQuery(PrDomEventTarget* PR_NULLABLE object) {
+    return htmlElementQuery<PrHtmlSelectElement>(object, PrDomTag_Select);
+}
+
+PrStringView prHtmlSelectElementType(const PrHtmlSelectElement* select) {
+    return domHasAttribute(select, "multiple") ? "select-multiple" : "select-one";
+}
+
+PrDomHtmlCollection* prHtmlSelectElementOptions(PrHtmlSelectElement* select) {
+    return domHtmlCollectionCreate(select, DomCollectionFilter_SelectOptions, PrStringView{});
+}
+
+PrDomHtmlCollection* prHtmlSelectElementSelectedOptions(PrHtmlSelectElement* select) {
+    return domHtmlCollectionCreate(select, DomCollectionFilter_SelectedOptions, PrStringView{});
+}
+
+uint32_t prHtmlSelectElementLength(PrHtmlSelectElement* select) {
+    Array<PrDomElement* PR_NONNULL> options;
+    domSelectOptions(select, &options);
+    uint32_t length = options.count;
+    options.reset();
+    return length;
+}
+
+void prHtmlSelectElementSetLength(PrHtmlSelectElement* select, uint32_t length) {
+    if (length > 100000)
+        return;
+    Array<PrDomElement* PR_NONNULL> options;
+    domSelectOptions(select, &options);
+    for (uint32_t i = options.count; i < length; ++i)
+        domInsert(select, domElementCreate(select->document, PrDomNamespace_Html, PrDomTag_Option, "option"), nullptr);
+    for (uint32_t i = options.count; i > length; --i)
+        domRemoveFromParent(options.data[i - 1]);
+    options.reset();
+}
+
+PrHtmlOptionElement* PR_NULLABLE prHtmlSelectElementItem(PrHtmlSelectElement* select, uint32_t index) {
+    Array<PrDomElement* PR_NONNULL> options;
+    domSelectOptions(select, &options);
+    PrDomElement* option = index < options.count ? options.data[index] : nullptr;
+    options.reset();
+    return static_cast<PrHtmlOptionElement*>(option);
+}
+
+PrStatus prHtmlSelectElementSetItem(PrHtmlSelectElement* select, uint32_t index, PrHtmlOptionElement* PR_NULLABLE option) {
+    if (option == nullptr) {
+        prHtmlSelectElementRemove(select, int32_t(index));
+        return PrStatus_Ok;
+    }
+    uint32_t length = prHtmlSelectElementLength(select);
+    if (index < length) {
+        PrHtmlOptionElement* replaced = prHtmlSelectElementItem(select, index);
+        return replaced == option ? PrStatus_Ok : domReplace(replaced->parent, option, replaced);
+    }
+    prHtmlSelectElementSetLength(select, index);
+    return domPreInsert(select, option, nullptr);
+}
+
+PrStatus prHtmlSelectElementAdd(PrHtmlSelectElement* select, PrHtmlElement* element, PrHtmlElement* PR_NULLABLE before) {
+    if (domIsInclusiveAncestor(element, select))
+        return PrStatus_NotAllowed;
+    if (before != nullptr && (before == select || !domIsInclusiveAncestor(select, before)))
+        return PrStatus_NotFound;
+    if (element == before)
+        return PrStatus_Ok;
+    return domPreInsert(before != nullptr ? before->parent : select, element, before);
+}
+
+PrStatus prHtmlSelectElementAddAt(PrHtmlSelectElement* select, PrHtmlElement* element, uint32_t index) {
+    return prHtmlSelectElementAdd(select, element, prHtmlSelectElementItem(select, index));
+}
+
+void prHtmlSelectElementRemove(PrHtmlSelectElement* select, int32_t index) {
+    if (index < 0)
+        return;
+    if (PrHtmlOptionElement* option = prHtmlSelectElementItem(select, uint32_t(index)))
+        domRemoveFromParent(option);
+}
+
+int32_t prHtmlSelectElementSelectedIndex(PrHtmlSelectElement* select) {
+    return domSelectSelectedIndex(select);
+}
+
+void prHtmlSelectElementSetSelectedIndex(PrHtmlSelectElement* select, int32_t index) {
+    domSelectSetSelectedIndex(select, index);
+}
+
+PrString prHtmlSelectElementValue(PrHtmlSelectElement* select) {
+    int32_t index = domSelectSelectedIndex(select);
+    if (index < 0)
+        return prStringEmpty();
+    return prHtmlOptionElementValue(prHtmlSelectElementItem(select, uint32_t(index)));
+}
+
+void prHtmlSelectElementSetValue(PrHtmlSelectElement* select, PrStringView value) {
+    domSelectSetValue(select, value);
+}
+
+PrHtmlOptionElement* PR_NULLABLE prHtmlOptionElementQuery(PrDomEventTarget* PR_NULLABLE object) {
+    return htmlElementQuery<PrHtmlOptionElement>(object, PrDomTag_Option);
+}
+
+PrHtmlOptionElement* prHtmlOptionElementCreate(PrDomDocument* document, const PrHtmlOptionDesc* desc) {
+    PrDomElement* option = domElementCreate(document, PrDomNamespace_Html, PrDomTag_Option, "option");
+    domNodeRetain(option);
+    if (desc->text.size != 0)
+        prDomNodeSetTextContent(option, desc->text);
+    if (desc->value.data != nullptr)
+        domSetAttribute(option, PrDomNamespace_None, "value", desc->value);
+    if (desc->defaultSelected)
+        domSetAttribute(option, PrDomNamespace_None, "selected", "");
+    if (desc->selected)
+        domOptionSetSelected(option, true);
+    return static_cast<PrHtmlOptionElement*>(option);
+}
+
+PrHtmlFormElement* PR_NULLABLE prHtmlOptionElementForm(PrHtmlOptionElement* option) {
+    PrDomElement* select = domNearestAncestorSelect(option);
+    return select != nullptr ? prHtmlElementForm(static_cast<PrHtmlElement*>(select)) : nullptr;
+}
+
+PrString prHtmlOptionElementText(const PrHtmlOptionElement* option) {
+    TextBuffer text;
+    domOptionText(option, &text);
+    return textTake(&text);
+}
+
+void prHtmlOptionElementSetText(PrHtmlOptionElement* option, PrStringView value) {
+    prDomNodeSetTextContent(option, value);
+}
+
+PrString prHtmlOptionElementValue(const PrHtmlOptionElement* option) {
+    TextBuffer text;
+    domOptionValue(option, &text);
+    return textTake(&text);
+}
+
+PrString prHtmlOptionElementLabel(const PrHtmlOptionElement* option) {
+    PrStringView label = domAttributeValue(option, "label");
+    return label.size != 0 ? prStringCopy(label) : prHtmlOptionElementText(option);
+}
+
+bool prHtmlOptionElementSelected(const PrHtmlOptionElement* option) {
+    return domOptionSelected(option);
+}
+
+void prHtmlOptionElementSetSelected(PrHtmlOptionElement* option, bool value) {
+    domOptionSetSelected(option, value);
+}
+
+uint32_t prHtmlOptionElementIndex(PrHtmlOptionElement* option) {
+    PrDomElement* select = domNearestAncestorSelect(option);
+    if (select == nullptr)
+        return 0;
+    Array<PrDomElement* PR_NONNULL> options;
+    domSelectOptions(select, &options);
+    uint32_t index = options.find(option);
+    options.reset();
+    return index == kArrayMissing ? 0 : index;
+}
+
+PrHtmlDataListElement* PR_NULLABLE prHtmlDataListElementQuery(PrDomEventTarget* PR_NULLABLE object) {
+    return htmlElementQuery<PrHtmlDataListElement>(object, PrDomTag_Datalist);
+}
+
+PrDomHtmlCollection* prHtmlDataListElementOptions(PrHtmlDataListElement* list) {
+    return domHtmlCollectionCreate(list, DomCollectionFilter_DataListOptions, PrStringView{});
 }

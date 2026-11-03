@@ -709,6 +709,9 @@ PrString prDomNodeTextContent(const PrDomNode* node);
 // for the empty string. An attribute or character data gets `value` as its value. Any other node is unchanged.
 void prDomNodeSetTextContent(PrDomNode* node, PrStringView value);
 
+// Returns the concatenation of the data of the node's Text children (dom/#concept-child-text-content).
+PrString prDomNodeChildTextContent(const PrDomNode* node);
+
 // Inserts `node` before `child`, or last for a null `child` (dom/#dom-node-insertbefore).
 PrStatus prDomNodeInsertBefore(PrDomNode* parent, PrDomNode* node, PrDomNode* PR_NULLABLE child);
 
@@ -1372,6 +1375,9 @@ PrDomHtmlCollection* prDomHtmlCollectionCreateChildren(PrDomNode* parent);
 PrDomHtmlCollection* prDomHtmlCollectionCreateByClassName(PrDomNode* root, PrStringView classNames);
 PrDomHtmlCollection* prDomHtmlCollectionCreateByTagName(PrDomNode* root, PrStringView qualifiedName);
 
+// Returns the node that the collection is rooted at (dom/#concept-collection).
+PrDomNode* prDomHtmlCollectionRoot(PrDomHtmlCollection* collection);
+
 // Return the number of elements, and the element at `index` or null past the end.
 uint32_t prDomHtmlCollectionLength(const PrDomHtmlCollection* collection);
 PrDomElement* PR_NULLABLE prDomHtmlCollectionElementAt(PrDomHtmlCollection* collection, uint32_t index);
@@ -1417,6 +1423,10 @@ void prDomNodeListDestroy(PrDomNodeList* PR_NULLABLE list);
 // Creates the token list of the element's attribute in no namespace whose local name is `name`, as the element's
 // classList (dom/#dom-element-classlist) is the list of its class attribute. The caller destroys the list.
 PrDomTokenList* prDomTokenListCreate(PrDomElement* element, PrStringView name);
+
+// Writes whether `token` is a supported token of the attribute, ASCII case-insensitively, to `out`
+// (dom/#dom-domtokenlist-supports). Returns WrongType if the attribute defines no supported tokens.
+PrStatus prDomTokenListSupports(const PrDomTokenList* list, PrStringView token, bool* out);
 
 // Returns the number of tokens.
 uint32_t prDomTokenListLength(const PrDomTokenList* list);

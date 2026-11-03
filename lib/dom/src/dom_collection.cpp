@@ -7,6 +7,7 @@
 #include "dom/src/dom_control.h"
 #include "dom/src/dom_element_state.h"
 #include "dom/src/dom_node.h"
+#include "dom/src/dom_select.h"
 
 namespace pr_impl {
 namespace {
@@ -77,6 +78,15 @@ bool collectionMatches(const PrDomHtmlCollection* collection, const PrDomElement
                 !(domIsHtml(element, PrDomTag_Input) && domElementInputType(element) == PrDomInputType_Image);
         case DomCollectionFilter_FieldSetElements:
             return domIsListed(element);
+        case DomCollectionFilter_MapAreas:
+            return domIsHtml(element, PrDomTag_Area);
+        case DomCollectionFilter_SelectOptions:
+            return domIsHtml(element, PrDomTag_Option) && domNearestAncestorSelect(element) == collection->root;
+        case DomCollectionFilter_SelectedOptions:
+            return domIsHtml(element, PrDomTag_Option) && domOptionSelected(element) &&
+                domNearestAncestorSelect(element) == collection->root;
+        case DomCollectionFilter_DataListOptions:
+            return domIsHtml(element, PrDomTag_Option);
         default:
             break;
     }
@@ -91,7 +101,64 @@ bool collectionMatches(const PrDomHtmlCollection* collection, const PrDomElement
     return asciiEqualsLowered(name, requested);
 }
 
+// Returns the first child at or after `child` that is the HTML element `tag`, or also `other`, or null.
+PrDomElement* PR_NULLABLE childFrom(PrDomNode* PR_NULLABLE child, PrDomTag tag, PrDomTag other) {
+    for (; child != nullptr; child = child->next) {
+        PrDomElement* element = domElementFromNode(child);
+        if (domIsHtml(element, tag) || domIsHtml(element, other))
+            return element;
+    }
+    return nullptr;
+}
+
+// The order of the rows of a table's children: 0 for a thead, 1 for a tbody or a row, 2 for a tfoot, and 3 for any
+// other child, which holds no rows of the table.
+uint32_t rowOrder(PrDomNode* child) {
+    PrDomElement* element = domElementFromNode(child);
+    if (domIsHtml(element, PrDomTag_Thead))
+        return 0;
+    if (domIsHtml(element, PrDomTag_Tbody) || domIsHtml(element, PrDomTag_Tr))
+        return 1;
+    return domIsHtml(element, PrDomTag_Tfoot) ? 2 : 3;
+}
+
+// Returns the row of `table` after `after`, which is the table for its first row (html/#dom-table-rows).
+PrDomElement* PR_NULLABLE nextTableRow(PrDomNode* table, PrDomNode* after) {
+    PrDomNode* from = table->first;
+    uint32_t order = 0;
+    if (after != table) {
+        if (after->parent == table) {
+            from = after->next;
+            order = 1;
+        } else {
+            if (PrDomElement* row = childFrom(after->next, PrDomTag_Tr, PrDomTag_Tr))
+                return row;
+            from = after->parent->next;
+            order = rowOrder(after->parent);
+        }
+    }
+    for (; order < 3; ++order, from = table->first) {
+        for (PrDomNode* child = from; child != nullptr; child = child->next) {
+            if (rowOrder(child) != order)
+                continue;
+            if (domIsHtml(domElementFromNode(child), PrDomTag_Tr))
+                return domElementFromNode(child);
+            if (PrDomElement* row = childFrom(child->first, PrDomTag_Tr, PrDomTag_Tr))
+                return row;
+        }
+    }
+    return nullptr;
+}
+
 PrDomElement* PR_NULLABLE nextCollectionElement(const PrDomHtmlCollection* collection, PrDomNode* after) {
+    PrDomNode* afterChild = after == collection->root ? collection->root->first : after->next;
+    switch (collection->filter) {
+        case DomCollectionFilter_TableRows: return nextTableRow(collection->root, after);
+        case DomCollectionFilter_TableBodies: return childFrom(afterChild, PrDomTag_Tbody, PrDomTag_Tbody);
+        case DomCollectionFilter_ChildRows: return childFrom(afterChild, PrDomTag_Tr, PrDomTag_Tr);
+        case DomCollectionFilter_RowCells: return childFrom(afterChild, PrDomTag_Td, PrDomTag_Th);
+        default: break;
+    }
     if (collection->filter == DomCollectionFilter_Children) {
         for (PrDomNode* node = after == collection->root ? after->first : after->next; node != nullptr; node =
                 node->next) {
@@ -380,8 +447,9 @@ void domNodeListDestroy(PrDomNodeList* PR_NULLABLE list) {
 }
 
 PrDomTokenList* domTokenListCreate(PrDomElement* element, PrStringView name) {
-    PrDomTokenList* list = alloc<PrDomTokenList>();
-    *list = PrDomTokenList{{element, prStringCopy(name)}};
+    PrDomTokenList* list = allocZeroed<PrDomTokenList>();
+    list->element = element;
+    list->name = prStringCopy(name);
     domNodeRetain(element);
     return list;
 }

@@ -27,10 +27,12 @@ uint64_t displaySize(const PrDomElement* select) {
     return value;
 }
 
-// Sets the option's selectedness, which restyles it through :checked.
+// Sets the option's selectedness, which restyles it through :checked. A collection of selected options reads the
+// selectedness, so the change ends what those collections have cached.
 void setSelected(PrDomElement* option, bool selected) {
     if (domOptionSelected(option) == selected)
         return;
+    ++option->document->treeVersion;
     if (selected)
         option->flags |= DomNodeFlag_OptionSelected;
     else
@@ -195,14 +197,18 @@ bool domOptionDisabled(const PrDomElement* option) {
     return false;
 }
 
-// The text is the option's descendant text outside script elements, with its ASCII whitespace stripped and collapsed.
 void domOptionValue(const PrDomElement* option, TextBuffer* out) {
-    textClear(out);
     PrStringView value = domAttributeValue(option, "value");
-    if (value.data != nullptr) {
-        textAppend(out, value);
+    if (value.data == nullptr) {
+        domOptionText(option, out);
         return;
     }
+    textClear(out);
+    textAppend(out, value);
+}
+
+void domOptionText(const PrDomElement* option, TextBuffer* out) {
+    textClear(out);
     bool space = false;
     for (const PrDomNode* node = domNodeNext(option, option); node != nullptr;) {
         const PrDomElement* element = domElementFromNode(node);
@@ -225,6 +231,54 @@ void domOptionValue(const PrDomElement* option, TextBuffer* out) {
         }
         node = domNodeNext(option, node);
     }
+}
+
+void domOptionSetSelected(PrDomElement* option, bool selected) {
+    setSelected(option, selected);
+    option->flags |= DomNodeFlag_OptionDirty;
+    PrDomElement* select = domNearestAncestorSelect(option);
+    if (select == nullptr)
+        return;
+    selectOnly(select, option);
+    resetSelectedness(select);
+    domSelectUpdateSelectedContent(select);
+}
+
+int32_t domSelectSelectedIndex(PrDomElement* select) {
+    int32_t at = 0;
+    int32_t found = -1;
+    eachOption(select, [&](PrDomElement* option) {
+        if (found < 0 && domOptionSelected(option))
+            found = at;
+        ++at;
+    });
+    return found;
+}
+
+void domSelectSetSelectedIndex(PrDomElement* select, int32_t index) {
+    int32_t at = 0;
+    eachOption(select, [&](PrDomElement* option) {
+        setSelected(option, at == index);
+        if (at == index)
+            option->flags |= DomNodeFlag_OptionDirty;
+        ++at;
+    });
+    domSelectUpdateSelectedContent(select);
+}
+
+void domSelectSetValue(PrDomElement* select, PrStringView value) {
+    bool found = false;
+    TextBuffer text;
+    eachOption(select, [&](PrDomElement* option) {
+        domOptionValue(option, &text);
+        bool chosen = !found && textView(&text) == value;
+        setSelected(option, chosen);
+        if (chosen)
+            option->flags |= DomNodeFlag_OptionDirty;
+        found = found || chosen;
+    });
+    textReset(&text);
+    domSelectUpdateSelectedContent(select);
 }
 
 void domSelectOptions(PrDomElement* select, Array<PrDomElement* PR_NONNULL>* out) {

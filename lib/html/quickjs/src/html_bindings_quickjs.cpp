@@ -27,6 +27,7 @@
 #include "pr/webidl_quickjs.h"
 
 #include "html/quickjs/src/custom_elements_quickjs.h"
+#include "html/quickjs/src/html_elements_quickjs.h"
 #include "html/quickjs/src/html_forms_quickjs.h"
 #include "html/quickjs/src/html_reflect_quickjs.h"
 
@@ -121,8 +122,10 @@ JSClassID classifyElement(void* handle) {
         return htmlTemplateElementClass;
     if (JSClassID forms = jsHtmlFormsElementClass(static_cast<PrDomElement*>(handle)))
         return forms;
-    if (prHtmlElementQuery(target) != nullptr)
-        return htmlElementClass;
+    if (prHtmlElementQuery(target) != nullptr) {
+        JSClassID specific = jsHtmlElementsClass(static_cast<PrDomElement*>(handle));
+        return specific != 0 ? specific : htmlElementClass;
+    }
     return prJsDomElementClass;
 }
 
@@ -584,14 +587,21 @@ JSValue imageFactory(JSContext* ctx, JSValueConst, int argc, JSValueConst* argv)
     return object;
 }
 
-// Defines Image on the global. Its prototype is that of `constructor`, which is HTMLImageElement
-// (webidl/#create-a-legacy-factory-function).
-void defineImageFactory(JSContext* ctx, JSValueConst constructor) {
-    JSValue factory = JS_NewCFunction2(ctx, JsCallScoped<imageFactory>::call, "Image", 0, JS_CFUNC_constructor, 0);
-    JS_DefinePropertyValueStr(ctx, factory, "prototype", JS_GetPropertyStr(ctx, constructor, "prototype"), 0);
-    JSValue global = JS_GetGlobalObject(ctx);
-    JS_DefinePropertyValueStr(ctx, global, "Image", factory, JS_PROP_CONFIGURABLE | JS_PROP_WRITABLE);
-    JS_FreeValue(ctx, global);
+// html/#dom-audio, the legacy factory function Audio(src).
+JSValue audioFactory(JSContext* ctx, JSValueConst, int argc, JSValueConst* argv) {
+    PrDomDocument* document = prJsDomGlobalDocument(ctx);
+    if (document == nullptr)
+        return JS_ThrowTypeError(ctx, "Illegal constructor");
+    StringArgument source = {ctx};
+    bool given = jsArgGiven(argc, argv, 0);
+    if (given && !source.read(argv[0]))
+        return JS_EXCEPTION;
+    PrHtmlMediaElement* audio = prHtmlMediaElementCreateAudio(document, given ? source.value() : PrStringView{});
+    // The object replaces the reference that the element was created with.
+    PrDomElement* element = prHtmlMediaElementAsElement(audio);
+    JSValue object = jsWrapAs(ctx, prJsDomElementClass, JS_UNDEFINED, element, false);
+    prDomNodeRelease(prDomElementAsNode(element));
+    return object;
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -1137,6 +1147,91 @@ JSValue setOuterText(JSContext* ctx, JSValueConst elementObject, JSValueConst in
         return JS_EXCEPTION;
     PrStatus status = prHtmlElementSetOuterText(element, value.value());
     return status == PrStatus_Ok ? JS_UNDEFINED : jsDomExceptionThrow(ctx, "NoModificationAllowedError");
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Document's fgColor, bgColor, linkColor, vlinkColor and alinkColor
+
+// The body attribute that each reflects, as the magic of its accessors.
+constexpr PrStringView kBodyColorAttributes[] = {"text", "bgcolor", "link", "vlink", "alink"};
+
+JSValue bodyColor(JSContext* ctx, JSValueConst documentObject, int magic) {
+    PrDomDocument* document = jsThis<PrDomDocument>(ctx, documentObject, prJsDomDocumentClass);
+    if (document == nullptr)
+        return JS_EXCEPTION;
+    return jsNewStringView(ctx, prHtmlDocumentBodyAttribute(document, kBodyColorAttributes[magic]));
+}
+
+// [LegacyNullToEmptyString]
+JSValue setBodyColor(JSContext* ctx, JSValueConst documentObject, JSValueConst input, int magic) {
+    PrDomDocument* document = jsThis<PrDomDocument>(ctx, documentObject, prJsDomDocumentClass);
+    StringArgument value = {ctx, ""};
+    if (document == nullptr || !value.readNullable(input))
+        return JS_EXCEPTION;
+    prHtmlDocumentSetBodyAttribute(document, kBodyColorAttributes[magic], value.value());
+    return JS_UNDEFINED;
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+// HTMLElement's click, contenteditable and draggable, and relList
+
+JSValue elementClick(JSContext* ctx, JSValueConst elementObject, int, JSValueConst*) {
+    PrHtmlElement* element = jsThis<PrHtmlElement>(ctx, elementObject, htmlElementClass);
+    if (element == nullptr)
+        return JS_EXCEPTION;
+    prHtmlElementClick(element);
+    return JS_UNDEFINED;
+}
+
+JSValue contentEditable(JSContext* ctx, JSValueConst elementObject) {
+    PrHtmlElement* element = jsThis<PrHtmlElement>(ctx, elementObject, htmlElementClass);
+    if (element == nullptr)
+        return JS_EXCEPTION;
+    return jsFixedString(ctx, prHtmlContentEditableKeyword(prHtmlElementContentEditable(element)));
+}
+
+JSValue setContentEditable(JSContext* ctx, JSValueConst elementObject, JSValueConst input) {
+    PrHtmlElement* element = jsThis<PrHtmlElement>(ctx, elementObject, htmlElementClass);
+    StringArgument value = {ctx};
+    if (element == nullptr || !value.read(input))
+        return JS_EXCEPTION;
+    PrHtmlContentEditable state = PrHtmlContentEditable_Inherit;
+    if (!prHtmlContentEditableFromKeyword(value.value(), &state))
+        return jsDomExceptionThrow(ctx, "SyntaxError");
+    prHtmlElementSetContentEditable(element, state);
+    return JS_UNDEFINED;
+}
+
+JSValue isContentEditable(JSContext* ctx, JSValueConst elementObject) {
+    PrHtmlElement* element = jsThis<PrHtmlElement>(ctx, elementObject, htmlElementClass);
+    return element != nullptr ? JS_NewBool(ctx, prHtmlElementIsContentEditable(element)) : JS_EXCEPTION;
+}
+
+JSValue draggable(JSContext* ctx, JSValueConst elementObject) {
+    PrHtmlElement* element = jsThis<PrHtmlElement>(ctx, elementObject, htmlElementClass);
+    return element != nullptr ? JS_NewBool(ctx, prHtmlElementDraggable(element)) : JS_EXCEPTION;
+}
+
+JSValue setDraggable(JSContext* ctx, JSValueConst elementObject, JSValueConst input) {
+    PrHtmlElement* element = jsThis<PrHtmlElement>(ctx, elementObject, htmlElementClass);
+    if (element == nullptr)
+        return JS_EXCEPTION;
+    prHtmlElementSetDraggable(element, JS_ToBool(ctx, input) > 0);
+    return JS_UNDEFINED;
+}
+
+// relList, the same DOMTokenList of the rel attribute at each read.
+JSValue relList(JSContext* ctx, JSValueConst elementObject) {
+    PrHtmlElement* element = jsThis<PrHtmlElement>(ctx, elementObject, htmlElementClass);
+    if (element == nullptr)
+        return JS_EXCEPTION;
+    return jsSameObject(ctx, elementObject, "relList", [&] {
+        PrDomTokenList* list = prHtmlElementRelList(element);
+        JSValue object = jsWrapAs(ctx, prJsDomTokenListClass, elementObject, list, true);
+        if (JS_IsException(object))
+            prDomTokenListDestroy(list);
+        return object;
+    });
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -2883,6 +2978,11 @@ constexpr JSCFunctionListEntry kDomElementProto[] = {
 
 // The members that HTML adds to Document, in the DOM's class.
 constexpr JSCFunctionListEntry kDocumentProto[] = {
+    PR_JS_MAGIC_GET_SET("fgColor", bodyColor, setBodyColor, 0),
+    PR_JS_MAGIC_GET_SET("bgColor", bodyColor, setBodyColor, 1),
+    PR_JS_MAGIC_GET_SET("linkColor", bodyColor, setBodyColor, 2),
+    PR_JS_MAGIC_GET_SET("vlinkColor", bodyColor, setBodyColor, 3),
+    PR_JS_MAGIC_GET_SET("alinkColor", bodyColor, setBodyColor, 4),
     PR_JS_GET("location", documentLocation),
     PR_JS_GET("defaultView", defaultView),
     PR_JS_GET("readyState", readyState),
@@ -2939,6 +3039,14 @@ constexpr JSCFunctionListEntry kShadowRootProto[] = {
 constexpr JSCFunctionListEntry kElementProto[] = {
     PR_JS_TAG("HTMLElement"),
     PR_JS_METHOD("attachInternals", 0, jsCustomElementsAttachInternals),
+    PR_JS_METHOD("click", 0, elementClick),
+    PR_JS_GET_SET("contentEditable", contentEditable, setContentEditable),
+    PR_JS_GET("isContentEditable", isContentEditable),
+    PR_JS_GET_SET("draggable", draggable, setDraggable),
+    PR_REFLECT_BOOL("inert", "inert"),
+    PR_REFLECT_STRING("accessKey", "accesskey"),
+    PR_REFLECT_STRING("enterKeyHint", "enterkeyhint"),
+    PR_REFLECT_STRING("inputMode", "inputmode"),
     // html/#dom-innertext, whose setter treats null as the empty string.
     PR_JS_GET_SET("innerText", (jsStringGetter<&htmlElementClass, prHtmlElementInnerText>),
         (jsStringSetter<&htmlElementClass, prHtmlElementSetInnerText, true>)),
@@ -3020,6 +3128,12 @@ constexpr JSCFunctionListEntry kCanvasElementProto[] = {
 
 constexpr JSCFunctionListEntry kAnchorElementProto[] = {
     PR_JS_TAG("HTMLAnchorElement"),
+    PR_JS_GET_SET("relList", relList, (jsPutForwards<"relList", "value">)),
+    PR_REFLECT_STRING("charset", "charset"),
+    PR_REFLECT_STRING("coords", "coords"),
+    PR_REFLECT_STRING("name", "name"),
+    PR_REFLECT_STRING("rev", "rev"),
+    PR_REFLECT_STRING("shape", "shape"),
     PR_REFLECT_STRING("target", "target"),
     PR_REFLECT_STRING("download", "download"),
     PR_REFLECT_STRING("ping", "ping"),
@@ -3034,6 +3148,8 @@ constexpr JSCFunctionListEntry kAnchorElementProto[] = {
 
 constexpr JSCFunctionListEntry kAreaElementProto[] = {
     PR_JS_TAG("HTMLAreaElement"),
+    PR_JS_GET_SET("relList", relList, (jsPutForwards<"relList", "value">)),
+    PR_REFLECT_BOOL("noHref", "nohref"),
     PR_REFLECT_STRING("alt", "alt"),
     PR_REFLECT_STRING("coords", "coords"),
     PR_REFLECT_STRING("shape", "shape"),
@@ -3053,6 +3169,10 @@ constexpr JSCFunctionListEntry kBaseElementProto[] = {
 
 constexpr JSCFunctionListEntry kLinkElementProto[] = {
     PR_JS_TAG("HTMLLinkElement"),
+    PR_JS_GET_SET("relList", relList, (jsPutForwards<"relList", "value">)),
+    PR_REFLECT_STRING("charset", "charset"),
+    PR_REFLECT_STRING("rev", "rev"),
+    PR_REFLECT_STRING("target", "target"),
     PR_REFLECT_URL("href", "href"),
     PR_REFLECT_STRING("rel", "rel"),
     PR_REFLECT_STRING("media", "media"),
@@ -3671,10 +3791,13 @@ void jsHtmlBind(JSContext* ctx) {
     for (const JsClassDefinition& definition : kClasses) {
         JSValue constructor = jsDefineClass(ctx, definition);
         if (definition.id == &htmlImageElementClass)
-            defineImageFactory(ctx, constructor);
+            jsHtmlDefineFactory(ctx, "Image", JsCallScoped<imageFactory>::call, 0, constructor);
+        if (definition.id == &htmlAudioElementClass)
+            jsHtmlDefineFactory(ctx, "Audio", JsCallScoped<audioFactory>::call, 0, constructor);
         JS_FreeValue(ctx, constructor);
     }
     jsHtmlFormsBind(ctx);
+    jsHtmlElementsBind(ctx);
     // The members that HTML adds to the classes of other modules.
     struct Extension {
         JSClassID id;
@@ -3691,8 +3814,11 @@ void jsHtmlBind(JSContext* ctx) {
         JS_SetPropertyFunctionList(ctx, proto, extended.members, extended.count);
         JS_FreeValue(ctx, proto);
     }
-    // HTMLOrSVGElement's members, on the elements of the foreign modules that the realm binds.
     JSValue global = JS_GetGlobalObject(ctx);
+    // The interface object of Document also goes by the name that browsers give HTML documents.
+    JS_DefinePropertyValueStr(ctx, global, "HTMLDocument", JS_GetPropertyStr(ctx, global, "Document"),
+        JS_PROP_CONFIGURABLE | JS_PROP_WRITABLE);
+    // HTMLOrSVGElement's members, on the elements of the foreign modules that the realm binds.
     constexpr const char* kForeign[] = {"SVGElement", "MathMLElement"};
     for (const char* foreign : kForeign) {
         JSValue constructor = JS_GetPropertyStr(ctx, global, foreign);

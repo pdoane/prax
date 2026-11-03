@@ -34,6 +34,25 @@ enum {
 
     // The listed elements under the fieldset at the root of the collection (html/#dom-fieldset-elements).
     DomCollectionFilter_FieldSetElements,
+
+    // The area elements under the map at the root of the collection (html/#dom-map-areas).
+    DomCollectionFilter_MapAreas,
+
+    // The options under the root of the collection: the list of options of a select (html/#concept-select-option-list),
+    // those of its options that are selected, and the option elements under a datalist (html/#dom-datalist-options).
+    DomCollectionFilter_SelectOptions,
+    DomCollectionFilter_SelectedOptions,
+    DomCollectionFilter_DataListOptions,
+
+    // The parts of the table at the root of the collection (html/#dom-table-tbodies, html/#dom-table-rows). Its rows
+    // are not in tree order: those of its thead children come first, and those of its tfoot children last.
+    DomCollectionFilter_TableBodies,
+    DomCollectionFilter_TableRows,
+
+    // The tr children of a table section, and the td and th children of a row (html/#dom-tbody-rows,
+    // html/#dom-tr-cells).
+    DomCollectionFilter_ChildRows,
+    DomCollectionFilter_RowCells,
 };
 typedef uint8_t DomCollectionFilter;
 
@@ -127,6 +146,11 @@ void domNodeListDestroy(PrDomNodeList* PR_NULLABLE list);
 struct DomTokenList {
     PrDomElement* element;
     PrString name;
+
+    // The attribute's supported tokens (dom/#concept-supported-tokens) in ASCII lowercase, which outlive the list. Null
+    // if the attribute defines none.
+    const PrStringView* PR_NULLABLE supported;
+    uint32_t supportedCount;
 };
 
 // Create the token list of the attribute `name` of `element`, and free a list.

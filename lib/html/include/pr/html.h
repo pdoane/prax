@@ -31,6 +31,7 @@ typedef struct PrHtmlDialogElement PrHtmlDialogElement;
 typedef struct PrHtmlIFrameElement PrHtmlIFrameElement;
 typedef struct PrHtmlImageElement PrHtmlImageElement;
 typedef struct PrHtmlLinkElement PrHtmlLinkElement;
+typedef struct PrHtmlMapElement PrHtmlMapElement;
 typedef struct PrHtmlMediaElement PrHtmlMediaElement;
 typedef struct PrHtmlTrackList PrHtmlTrackList;
 typedef struct PrHtmlMetaElement PrHtmlMetaElement;
@@ -137,6 +138,11 @@ void prHtmlSetTabIndex(PrDomElement* element, int32_t value);
 
 // Returns the window whose document this is, or null if there is none (html/#dom-document-defaultview).
 PrHtmlWindow* PR_NULLABLE prHtmlDocumentDefaultView(PrDomDocument* document);
+
+// Returns the content attribute `name` of the document's body, or the empty string if it has none or its body element
+// is not a body, and sets it (html/#dom-document-fgcolor).
+PrStringView prHtmlDocumentBodyAttribute(PrDomDocument* document, PrStringView name);
+void prHtmlDocumentSetBodyAttribute(PrDomDocument* document, PrStringView name, PrStringView value);
 
 // Returns the script element whose classic script is running (html/#dom-document-currentscript). Returns null if no
 // script is running, or if a module script is running.
@@ -266,6 +272,42 @@ void prHtmlElementSetInnerText(PrHtmlElement* element, PrStringView value);
 // (html/#dom-outertext). Returns NotAllowed if the element has no parent.
 PrStatus prHtmlElementSetOuterText(PrHtmlElement* element, PrStringView value);
 
+// Fires a click at the element, as a script's call does (html/#dom-click). Does nothing for a disabled form control, or
+// while a click that this call fired at the same element is being dispatched.
+void prHtmlElementClick(PrHtmlElement* element);
+
+// The states of the contenteditable attribute (html/#attr-contenteditable).
+enum {
+    PrHtmlContentEditable_Inherit,
+    PrHtmlContentEditable_True,
+    PrHtmlContentEditable_False,
+    PrHtmlContentEditable_PlaintextOnly,
+};
+typedef uint8_t PrHtmlContentEditable;
+
+// Returns the keyword of a state, which lives as long as the process (html/#dom-contenteditable).
+PrStringView prHtmlContentEditableKeyword(PrHtmlContentEditable state);
+
+// Writes the state that `keyword` names, ASCII case-insensitively, to `out`. Returns false if it names none.
+bool prHtmlContentEditableFromKeyword(PrStringView keyword, PrHtmlContentEditable* out);
+
+// Returns the state of the contenteditable attribute, and sets the attribute to the state's keyword, or removes it for
+// Inherit.
+PrHtmlContentEditable prHtmlElementContentEditable(const PrHtmlElement* element);
+void prHtmlElementSetContentEditable(PrHtmlElement* element, PrHtmlContentEditable value);
+
+// Returns true if the element is an editing host or is inside one (html/#dom-iscontenteditable).
+bool prHtmlElementIsContentEditable(const PrHtmlElement* element);
+
+// Returns whether the element is draggable, and sets the draggable attribute (html/#dom-draggable). Without a true or
+// false attribute, an img element and a hyperlink are draggable.
+bool prHtmlElementDraggable(const PrHtmlElement* element);
+void prHtmlElementSetDraggable(PrHtmlElement* element, bool value);
+
+// Creates the token list of the rel attribute, with the keywords that the element's interface supports
+// (html/#dom-a-rellist). The caller destroys the list.
+PrDomTokenList* prHtmlElementRelList(PrHtmlElement* element);
+
 // Returns the element that the element's offsets are measured from (cssom-view-1/#dom-htmlelement-offsetparent). This
 // is its nearest positioned ancestor, or the body. Returns null if the element generates no box, is the root or the
 // body, or is fixed.
@@ -290,17 +332,18 @@ enum {
     PrHtmlReflectedInteger_Unsigned,        // unsigned long
     PrHtmlReflectedInteger_Positive,        // unsigned long limited to only positive numbers
     PrHtmlReflectedInteger_NonNegative,     // long limited to only non-negative numbers
+    PrHtmlReflectedInteger_Long,            // long
 };
 typedef uint8_t PrHtmlReflectedInteger;
 
 // Returns the value of an integer IDL attribute of `kind` that reflects the content attribute `name`: the attribute
 // parsed as an integer, or `fallback` if there is no attribute, it does not parse, or its integer is outside the kind's
-// range. Every kind's range ends at 2147483647.
+// range. Every kind's range ends at 2147483647, and only a Long's starts below zero.
 int64_t prHtmlElementReflectedInteger(const PrHtmlElement* element, PrStringView name, PrHtmlReflectedInteger kind,
     int64_t fallback);
 
-// Sets the content attribute that prHtmlElementReflectedInteger reads to `value`, or to `fallback` for a value past
-// 2147483647. Returns OutOfRange, and sets nothing, for a negative value of a NonNegative attribute or zero for a
+// Sets the content attribute that prHtmlElementReflectedInteger reads to `value`, or to `fallback` for a value outside
+// the kind's range. Returns OutOfRange, and sets nothing, for a negative value of a NonNegative attribute or zero for a
 // Positive one.
 PrStatus prHtmlElementSetReflectedInteger(PrHtmlElement* element, PrStringView name, PrHtmlReflectedInteger kind,
     int64_t value, int64_t fallback);
@@ -588,6 +631,10 @@ PrHtmlMediaElement* PR_NULLABLE prHtmlMediaElementQuery(PrDomEventTarget* PR_NUL
 
 // Returns true if the media element is a video element, and false if it is an audio element.
 bool prHtmlMediaElementIsVideo(const PrHtmlMediaElement* element);
+
+// Creates an audio element in `document` that preloads automatically, whose source is `src` unless it is the null view,
+// with one reference for the caller (html/#dom-audio).
+PrHtmlMediaElement* prHtmlMediaElementCreateAudio(PrDomDocument* document, PrStringView src);
 
 // The network states of a media element (html/#dom-media-networkstate).
 enum {
@@ -1284,6 +1331,15 @@ PrStringView prHtmlNavigatorVendor(const PrHtmlWindow* window);
 // Returns the user agent style sheets for HTML documents, and writes their number to `count`. Most of the rules come
 // from HTML's rendering section (html/#rendering). The sheets live as long as the process.
 const PrCssUserAgentSheet* prHtmlUserAgentSheets(uint32_t* count);
+
+// ---------------------------------------------------------------------------------------------------------------------
+// HTMLMapElement : HTMLElement (html)
+
+// Returns `object` as an HTMLMapElement, or null if it is not one.
+PrHtmlMapElement* PR_NULLABLE prHtmlMapElementQuery(PrDomEventTarget* PR_NULLABLE object);
+
+// Creates the live collection of the map's area descendants (html/#dom-map-areas), which the caller destroys.
+PrDomHtmlCollection* prHtmlMapElementAreas(PrHtmlMapElement* map);
 
 #if defined(__cplusplus)
 }

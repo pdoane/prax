@@ -848,6 +848,10 @@ void prDomNodeSetTextContent(PrDomNode* node, PrStringView value) {
     domSetTextContent(node, value);
 }
 
+PrString prDomNodeChildTextContent(const PrDomNode* node) {
+    return domChildTextContent(node);
+}
+
 PrStatus prDomNodeInsertBefore(PrDomNode* parent, PrDomNode* node, PrDomNode* PR_NULLABLE child) {
     return domPreInsert(parent, node, child);
 }
@@ -1876,6 +1880,10 @@ PrDomHtmlCollection* prDomHtmlCollectionCreateByTagName(PrDomNode* root, PrStrin
     return domHtmlCollectionCreate(root, DomCollectionFilter_QualifiedName, qualifiedName);
 }
 
+PrDomNode* prDomHtmlCollectionRoot(PrDomHtmlCollection* collection) {
+    return collection->root;
+}
+
 uint32_t prDomHtmlCollectionLength(const PrDomHtmlCollection* collection) {
     return domHtmlCollectionLength(collection);
 }
@@ -1928,6 +1936,15 @@ void prDomNodeListDestroy(PrDomNodeList* PR_NULLABLE list) {
 
 PrDomTokenList* prDomTokenListCreate(PrDomElement* element, PrStringView name) {
     return domTokenListCreate(element, name);
+}
+
+PrStatus prDomTokenListSupports(const PrDomTokenList* list, PrStringView token, bool* out) {
+    *out = false;
+    if (list->supported == nullptr)
+        return PrStatus_WrongType;
+    for (uint32_t i = 0; i < list->supportedCount; ++i)
+        *out = *out || asciiEqualsFold(token, list->supported[i]);
+    return PrStatus_Ok;
 }
 
 uint32_t prDomTokenListLength(const PrDomTokenList* list) {

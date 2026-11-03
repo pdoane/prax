@@ -2299,13 +2299,16 @@ JSValue tokenToString(JSContext* ctx, JSValueConst object, int, JSValueConst*) {
     return jsStringGetter<&prJsDomTokenListClass, prDomTokenListValue>(ctx, object);
 }
 
-// dom/#dom-domtokenlist-supports, for a list whose attribute defines no supported tokens, as class does.
-JSValue tokenSupports(JSContext* ctx, JSValueConst object, int argc, JSValueConst* argv) {
+// dom/#dom-domtokenlist-supports. A list whose attribute defines no supported tokens throws a TypeError, as class does.
+JSValue tokenSupports(JSContext* ctx, JSValueConst listObject, int argc, JSValueConst* argv) {
     StringArgument token = {ctx};
-    if (jsThis<PrDomTokenList>(ctx, object, prJsDomTokenListClass) == nullptr || !jsArgCount(ctx, argc, 1) ||
-            !token.read(argv[0]))
+    PrDomTokenList* list = jsThis<PrDomTokenList>(ctx, listObject, prJsDomTokenListClass);
+    if (list == nullptr || !jsArgCount(ctx, argc, 1) || !token.read(argv[0]))
         return JS_EXCEPTION;
-    return JS_ThrowTypeError(ctx, "The attribute defines no supported tokens");
+    bool supported = false;
+    if (prDomTokenListSupports(list, token.value(), &supported) != PrStatus_Ok)
+        return JS_ThrowTypeError(ctx, "The attribute defines no supported tokens");
+    return JS_NewBool(ctx, supported);
 }
 
 // ---------------------------------------------------------------------------------------------------------------------

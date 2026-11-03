@@ -1359,7 +1359,24 @@ void frameFetched(void* PR_NULLABLE data, const DomFetchResult* result) {
 // Handles a change to an iframe's frame (html/#the-iframe-element). An iframe connected in the window's document
 // contains a new browsing context, navigated to what its attributes name. This is its srcdoc, or the resource that its
 // src names, fetched through its document's browsing context, or else about:blank. Any other iframe contains no
-// browsing context. Its load event follows html/#iframe-load-event-steps.
+// browsing context. Its load event follows html/#iframe-load-event-steps. Returns true if `url` is, ignoring fragments,
+// the URL of the page's document or of a document around it. A nested document with such a URL would hold another copy
+// of its container, without end (html/#process-the-iframe-attributes).
+bool loadsItself(const PrHtmlPage* page, const PrUrl* url) {
+    PrString wanted = prUrlSerialize(url, PrUrlSerialization_ExcludeFragment);
+    bool found = false;
+    for (const PrHtmlWindow* window = page->window; window != nullptr && !found; window = window->parent) {
+        PrString at = prDomDocumentUrl(window->document);
+        PrStringView view = prStringView(&at);
+        PrStringView fragment = domUrlFragment(view);
+        size_t length = fragment.data != nullptr ? view.size - fragment.size - 1 : view.size;
+        found = PrStringView{view.data, length} == prStringView(&wanted);
+        prStringReset(&at);
+    }
+    prStringReset(&wanted);
+    return found;
+}
+
 void frameChanged(PrHtmlPage* page, PrDomElement* element) {
     ++domElementState(element)->generation;
     dropFrame(page, element);
@@ -1370,7 +1387,8 @@ void frameChanged(PrHtmlPage* page, PrDomElement* element) {
     PrUrl* resolved = nullptr;
     if (srcdoc.data != nullptr) {
         attachFrame(page, element, srcdoc, "about:srcdoc", PrHtmlResponseHeaders{});
-    } else if (src.size != 0 && domDocumentParseUrl(page->window->document, src, &resolved) == PrStatus_Ok) {
+    } else if (src.size != 0 && domDocumentParseUrl(page->window->document, src, &resolved) == PrStatus_Ok &&
+            !loadsItself(page, resolved)) {
         attachFrame(page, element, "", "about:blank", PrHtmlResponseHeaders{}, FrameDocument_InitialBlank);
         page->children.data[page->children.count - 1]->awaitingSource = true;
         EmbedFetch* fetch = newEmbedFetch(page, element, prUrlSerialize(resolved, PrUrlSerialization_Whole));
@@ -1678,7 +1696,7 @@ void objectChanged(PrHtmlPage* page, PrDomElement* element) {
     if (!inWindow(page, element) || data.size == 0)
         return;
     PrUrl* url = nullptr;
-    if (domDocumentParseUrl(element->document, data, &url) == PrStatus_Ok) {
+    if (domDocumentParseUrl(element->document, data, &url) == PrStatus_Ok && !loadsItself(page, url)) {
         EmbedFetch* fetch = newEmbedFetch(page, element, prUrlSerialize(url, PrUrlSerialization_Whole));
         PrString request = prUrlSerialize(url, PrUrlSerialization_ExcludeFragment);
         startFetch(page, prStringView(&request), DomFetchDestination_Object,
@@ -1695,7 +1713,11 @@ void objectChanged(PrHtmlPage* page, PrDomElement* element) {
 bool activates(void* PR_NULLABLE, const PrDomElement* element) {
     if (element->space == PrDomNamespace_Svg)
         return element->tag == PrDomTag_A && domElementLink(element);
-    return domIsHtml(element, PrDomTag_A) || domIsHtml(element, PrDomTag_Area);
+    // A click in an editing host places the caret, so a link there does not navigate.
+    if (!domIsHtml(element, PrDomTag_A) && !domIsHtml(element, PrDomTag_Area))
+        return false;
+    PrDomNode* node = const_cast<PrDomElement*>(element);
+    return !prHtmlElementIsContentEditable(prHtmlElementQuery(prDomNodeAsEventTarget(node)));
 }
 
 void activate(void* PR_NULLABLE context, PrDomElement* element, PrDomEvent*) {

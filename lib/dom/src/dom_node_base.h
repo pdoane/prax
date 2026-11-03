@@ -65,6 +65,7 @@ struct DomElementState {
     PrString prefix;                         // dom/#concept-element-namespace-prefix, or the null string for none
     PrString returnValue;                    // html/#dom-dialog-returnvalue
     bool modal;                              // html/#is-modal
+    bool clicking;                           // html/#click-in-progress-flag
 
     // For an element of embedded content, the number of updates to the content that its browsing context loads. The
     // events of an update that a later update superseded are dropped.

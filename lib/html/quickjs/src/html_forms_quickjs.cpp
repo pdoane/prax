@@ -317,7 +317,7 @@ JSValue formRelList(JSContext* ctx, JSValueConst formObject) {
     if (form == nullptr)
         return JS_EXCEPTION;
     return jsSameObject(ctx, formObject, "relList", [&] {
-        PrDomTokenList* list = prDomTokenListCreate(prHtmlFormElementAsElement(form), "rel");
+        PrDomTokenList* list = prHtmlElementRelList(prHtmlFormElementAsHtmlElement(form));
         JSValue object = jsWrapAs(ctx, prJsDomTokenListClass, formObject, list, true);
         if (JS_IsException(object))
             prDomTokenListDestroy(list);

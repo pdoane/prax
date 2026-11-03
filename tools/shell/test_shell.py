@@ -141,6 +141,53 @@ class HtmlHostTests(unittest.TestCase):
             self.assertEqual(result.returncode, 0, result.stderr)
             self.assertEqual(result.stdout, '"x y\\n\\nz\\n\\nU" "x   y"\n')
 
+    def test_html_elements_have_their_interfaces_and_factories(self):
+        with tempfile.TemporaryDirectory() as directory:
+            result = self.run_page(Path(directory),
+                                   "<!doctype html><link id=l><div id=d></div><x-y id=c></x-y><blink id=u></blink>"
+                                   "<script>print(d.constructor.name, c.constructor.name, u.constructor.name);\n"
+                                   "print(new Audio('a.mp3').preload, new Option('t', 'v').value);\n"
+                                   "print(l.relList.supports('STYLESHEET'), l.relList.supports('nope'));\n"
+                                   "print(document instanceof HTMLDocument);\n"
+                                   "let clicks = 0; d.onclick = () => { ++clicks; d.click(); }; d.click();\n"
+                                   "print(clicks);</script>")
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(result.stdout.splitlines(), [
+                "HTMLDivElement HTMLElement HTMLUnknownElement",
+                "auto v",
+                "true false",
+                "true",
+                "1",
+            ])
+
+    def test_a_select_and_its_options_collection_act_on_one_list(self):
+        with tempfile.TemporaryDirectory() as directory:
+            result = self.run_page(Path(directory),
+                                   "<!doctype html><select id=s><option value=a>A</option>"
+                                   "<optgroup><option>B  C</option></optgroup></select>"
+                                   "<script>print(s.length, s.value, s.selectedIndex, s.options[1].text);\n"
+                                   "s.value = 'B C'; print(s.selectedIndex);\n"
+                                   "s.options.add(new Option('D', 'd'), 0); print(s[0].value, s.options[2].index);\n"
+                                   "s.options.length = 1; print(s.length, s.selectedOptions.length);\n"
+                                   "s[2] = new Option('E'); print(s.length, s[1].text === '');</script>")
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(result.stdout.splitlines(), ["2 a 0 B C", "1", "d 2", "1 1", "3 true"])
+
+    def test_a_table_builds_from_script_and_orders_its_rows_by_section(self):
+        with tempfile.TemporaryDirectory() as directory:
+            result = self.run_page(Path(directory),
+                                   "<!doctype html><table id=t></table>"
+                                   "<script>t.createTFoot().insertRow().id = 'f';\n"
+                                   "t.createTHead().insertRow().id = 'h';\n"
+                                   "t.createTBody().insertRow().id = 'b';\n"
+                                   "print([...t.rows].map((row) => row.id).join());\n"
+                                   "const cell = t.rows[1].insertCell(); print(cell.cellIndex, cell.parentNode.rowIndex);\n"
+                                   "t.createCaption(); print(t.firstChild.tagName); t.deleteRow(0);\n"
+                                   "print(t.rows.length, t.tHead.rows.length);\n"
+                                   "try { t.insertRow(9); } catch (e) { print(e.name); }</script>")
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(result.stdout.splitlines(), ["h,b,f", "0 1", "CAPTION", "2 0", "IndexSizeError"])
+
     def test_a_style_property_setter_runs_the_reactions_it_queues_before_it_returns(self):
         with tempfile.TemporaryDirectory() as directory:
             result = self.run_page(Path(directory),

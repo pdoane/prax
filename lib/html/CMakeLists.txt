@@ -19,6 +19,7 @@ pr_library(html INCLUDE include
     src/html_parser.cpp
     src/html_serialize.cpp
     src/html_storage.cpp
+    src/html_table.cpp
     src/html_tokenizer.cpp
     src/html_media.cpp
     src/html_view.cpp
@@ -34,11 +35,13 @@ if (PR_JS)
     pr_library(html_quickjs INCLUDE quickjs/include
         quickjs/src/custom_elements_quickjs.cpp
         quickjs/src/html_bindings_quickjs.cpp
+        quickjs/src/html_elements_quickjs.cpp
         quickjs/src/html_forms_quickjs.cpp
         quickjs/src/html_console_quickjs.cpp
         quickjs/src/html_quickjs.cpp
     )
-    target_link_libraries(pr_html_quickjs PUBLIC prax::html prax::quickjs prax::css_quickjs prax::dom_quickjs PRIVATE
+    target_link_libraries(pr_html_quickjs PUBLIC prax::html prax::quickjs prax::css_quickjs
+                                                 prax::dom_quickjs PRIVATE
                                           prax::canvas_quickjs prax::core_quickjs_cpp prax::dom prax::fetch_quickjs
                                           prax::webidl_quickjs_cpp prax::url)
 endif()
