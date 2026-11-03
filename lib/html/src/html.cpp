@@ -188,34 +188,34 @@ constexpr PrStringView kDataPrefix = "data-";
 
 // Writes the name of the element's custom data attribute into `out`, as its dataset exposes it. Returns false if the
 // attribute is not a custom data attribute (html/#concept-domstringmap-pairs).
-bool datasetName(const PrDomAttr* attribute, TextBuffer* out) {
+bool datasetName(const PrDomAttr* attribute, PrTextBuffer* out) {
     PrStringView name = prStringView(&attribute->name);
-    if (attribute->space != PrDomNamespace_None || !stringStartsWith(name, kDataPrefix))
+    if (attribute->space != PrDomNamespace_None || !prStringStartsWith(name, kDataPrefix))
         return false;
     for (size_t i = 0; i < name.size; ++i) {
-        if (asciiIsUpper(name.data[i]))
+        if (prAsciiIsUpper(name.data[i]))
             return false;
     }
-    textClear(out);
+    prTextBufferClear(out);
     for (size_t i = kDataPrefix.size; i < name.size; ++i) {
         char c = name.data[i];
-        if (c == '-' && i + 1 < name.size && asciiIsLower(name.data[i + 1]))
-            c = asciiUpper(name.data[++i]);
-        textAppendChar(out, c);
+        if (c == '-' && i + 1 < name.size && prAsciiIsLower(name.data[i + 1]))
+            c = prAsciiUpper(name.data[++i]);
+        prTextBufferAppendChar(out, c);
     }
     return true;
 }
 
 // Writes the attribute name for a dataset name: data- is prepended, and each ASCII uppercase letter is replaced by a
 // hyphen and the lowercased letter.
-void attributeName(PrStringView name, TextBuffer* out) {
-    textAppend(out, kDataPrefix);
+void attributeName(PrStringView name, PrTextBuffer* out) {
+    prTextBufferAppend(out, kDataPrefix);
     for (size_t i = 0; i < name.size; ++i) {
-        if (asciiIsUpper(name.data[i])) {
-            textAppendChar(out, '-');
-            textAppendChar(out, asciiLower(name.data[i]));
+        if (prAsciiIsUpper(name.data[i])) {
+            prTextBufferAppendChar(out, '-');
+            prTextBufferAppendChar(out, prAsciiLower(name.data[i]));
         } else {
-            textAppendChar(out, name.data[i]);
+            prTextBufferAppendChar(out, name.data[i]);
         }
     }
 }
@@ -277,7 +277,7 @@ constexpr PrCssUserAgentSheet kUserAgentSheets[] = {
 // Returns the value of the media feature `feature` of the window, rounded to an integer, or 0 if it has none.
 int32_t mediaInteger(const PrHtmlWindow* window, PrCssDescriptor feature) {
     double number = window->media.features[feature - kCssDescriptorMediaFirst].number;
-    return isFiniteF64(number) ? int32_t(floorF64(number + 0.5)) : 0;
+    return prF64IsFinite(number) ? int32_t(prF64Floor(number + 0.5)) : 0;
 }
 
 } // namespace
@@ -315,9 +315,9 @@ PrDomDocument* prHtmlDomParserParseFromString(PrStringView source, PrHtmlDomPars
 }
 
 PrString prHtmlInnerHtml(const PrDomNode* node) {
-    TextBuffer text;
+    PrTextBuffer text = {};
     htmlSerializeChildren(&text, node);
-    return textTake(&text);
+    return prTextBufferTake(&text);
 }
 
 void prHtmlSetInnerHtml(PrDomNode* node, PrStringView markup) {
@@ -332,9 +332,9 @@ void prHtmlSetInnerHtml(PrDomNode* node, PrStringView markup) {
 }
 
 PrString prHtmlOuterHtml(const PrDomElement* element) {
-    TextBuffer text;
+    PrTextBuffer text = {};
     htmlSerializeNode(&text, element);
-    return textTake(&text);
+    return prTextBufferTake(&text);
 }
 
 PrStatus prHtmlSetOuterHtml(PrDomElement* element, PrStringView markup) {
@@ -390,12 +390,12 @@ int32_t prHtmlTabIndex(const PrDomElement* element) {
 }
 
 void prHtmlSetTabIndex(PrDomElement* element, int32_t value) {
-    TextBuffer text;
+    PrTextBuffer text = {};
     if (value < 0)
-        textAppendChar(&text, '-');
-    textAppendU64(&text, value < 0 ? uint64_t(-int64_t(value)) : uint64_t(value));
-    domSetAttribute(element, PrDomNamespace_None, "tabindex", textView(&text));
-    textReset(&text);
+        prTextBufferAppendChar(&text, '-');
+    prTextBufferAppendU64(&text, value < 0 ? uint64_t(-int64_t(value)) : uint64_t(value), 10);
+    domSetAttribute(element, PrDomNamespace_None, "tabindex", prTextBufferView(&text));
+    prTextBufferReset(&text);
 }
 
 PrHtmlWindow* PR_NULLABLE prHtmlDocumentDefaultView(PrDomDocument* document) {
@@ -565,7 +565,9 @@ PrHtmlHidden prHtmlElementHidden(const PrHtmlElement* element) {
     const PrDomAttr* hidden = domAttribute(element, PrDomNamespace_None, "hidden");
     if (hidden == nullptr)
         return PrHtmlHidden_NotHidden;
-    return asciiEqualsFold(prStringView(&hidden->value), "until-found") ? PrHtmlHidden_UntilFound : PrHtmlHidden_Hidden;
+    if (prAsciiEqualsFold(prStringView(&hidden->value), "until-found"))
+        return PrHtmlHidden_UntilFound;
+    return PrHtmlHidden_Hidden;
 }
 
 void prHtmlElementSetHidden(PrHtmlElement* element, PrHtmlHidden value) {
@@ -630,7 +632,7 @@ PrStringView prHtmlContentEditableKeyword(PrHtmlContentEditable state) {
 
 bool prHtmlContentEditableFromKeyword(PrStringView keyword, PrHtmlContentEditable* out) {
     for (PrHtmlContentEditable state = PrHtmlContentEditable_Inherit; state <= PrHtmlContentEditable_PlaintextOnly; ++state) {
-        if (asciiEqualsFold(keyword, prHtmlContentEditableKeyword(state))) {
+        if (prAsciiEqualsFold(keyword, prHtmlContentEditableKeyword(state))) {
             *out = state;
             return true;
         }
@@ -675,9 +677,9 @@ bool prHtmlElementIsContentEditable(const PrHtmlElement* element) {
 
 bool prHtmlElementDraggable(const PrHtmlElement* element) {
     PrStringView value = domAttributeValue(element, "draggable");
-    if (asciiEqualsFold(value, "true"))
+    if (prAsciiEqualsFold(value, "true"))
         return true;
-    if (asciiEqualsFold(value, "false"))
+    if (prAsciiEqualsFold(value, "false"))
         return false;
     return domIsHtml(element, PrDomTag_Img) || (domIsHtml(element, PrDomTag_A) && domHasAttribute(element, "href"));
 }
@@ -702,19 +704,19 @@ PrDomElement* PR_NULLABLE prHtmlElementOffsetParent(PrHtmlElement* element) {
 }
 
 int32_t prHtmlElementOffsetTop(PrHtmlElement* element) {
-    return int32_t(floorF64(cssViewOffsetRect(element).y + 0.5));
+    return int32_t(prF64Floor(cssViewOffsetRect(element).y + 0.5));
 }
 
 int32_t prHtmlElementOffsetLeft(PrHtmlElement* element) {
-    return int32_t(floorF64(cssViewOffsetRect(element).x + 0.5));
+    return int32_t(prF64Floor(cssViewOffsetRect(element).x + 0.5));
 }
 
 int32_t prHtmlElementOffsetWidth(PrHtmlElement* element) {
-    return int32_t(floorF64(cssViewOffsetRect(element).width + 0.5));
+    return int32_t(prF64Floor(cssViewOffsetRect(element).width + 0.5));
 }
 
 int32_t prHtmlElementOffsetHeight(PrHtmlElement* element) {
-    return int32_t(floorF64(cssViewOffsetRect(element).height + 0.5));
+    return int32_t(prF64Floor(cssViewOffsetRect(element).height + 0.5));
 }
 
 PrString prHtmlElementReflectedUrl(const PrHtmlElement* element, PrStringView name) {
@@ -745,68 +747,68 @@ PrStatus prHtmlElementSetReflectedInteger(PrHtmlElement* element, PrStringView n
         int64_t value, int64_t fallback) {
     if ((kind == PrHtmlReflectedInteger_NonNegative && value < 0) || (kind == PrHtmlReflectedInteger_Positive && value == 0))
         return PrStatus_OutOfRange;
-    TextBuffer text;
+    PrTextBuffer text = {};
     int64_t least = kind == PrHtmlReflectedInteger_Long ? -2147483648ll : 0;
     int64_t set = value >= least && value <= 2147483647 ? value : fallback;
     if (set < 0)
-        textAppendChar(&text, '-');
-    textAppendU64(&text, uint64_t(set < 0 ? -set : set));
-    domSetAttribute(element, PrDomNamespace_None, name, textView(&text));
-    textReset(&text);
+        prTextBufferAppendChar(&text, '-');
+    prTextBufferAppendU64(&text, uint64_t(set < 0 ? -set : set), 10);
+    domSetAttribute(element, PrDomNamespace_None, name, prTextBufferView(&text));
+    prTextBufferReset(&text);
     return PrStatus_Ok;
 }
 
 uint32_t prHtmlDatasetNames(const PrDomElement* element, PrString* PR_NULLABLE items, uint32_t capacity) {
     uint32_t count = 0;
-    TextBuffer name;
+    PrTextBuffer name = {};
     for (const PrDomAttr* attribute = firstAttribute(element);
             attribute != nullptr; attribute = nextAttribute(attribute)) {
         if (!datasetName(attribute, &name))
             continue;
         if (count < capacity)
-            items[count] = prStringCopy(textView(&name));
+            items[count] = prStringCopy(prTextBufferView(&name));
         ++count;
     }
-    textReset(&name);
+    prTextBufferReset(&name);
     return count;
 }
 
 PrStringView prHtmlDatasetGet(const PrDomElement* element, PrStringView name) {
     PrStringView value = {};
-    TextBuffer candidate;
+    PrTextBuffer candidate = {};
     for (const PrDomAttr* attribute = firstAttribute(element);
             attribute != nullptr; attribute = nextAttribute(attribute)) {
-        if (datasetName(attribute, &candidate) && textView(&candidate) == name) {
+        if (datasetName(attribute, &candidate) && prTextBufferView(&candidate) == name) {
             value = prStringView(&attribute->value);
             break;
         }
     }
-    textReset(&candidate);
+    prTextBufferReset(&candidate);
     return value;
 }
 
 PrStatus prHtmlDatasetSet(PrDomElement* element, PrStringView name, PrStringView value) {
     for (size_t i = 0; i + 1 < name.size; ++i) {
-        if (name.data[i] == '-' && asciiIsLower(name.data[i + 1]))
+        if (name.data[i] == '-' && prAsciiIsLower(name.data[i + 1]))
             return PrStatus_Syntax;
     }
-    TextBuffer attribute;
+    PrTextBuffer attribute = {};
     attributeName(name, &attribute);
     PrStatus status = PrStatus_InvalidData;
-    if (domIsValidAttributeLocalName(textView(&attribute))) {
-        domSetAttribute(element, PrDomNamespace_None, textView(&attribute), value);
+    if (domIsValidAttributeLocalName(prTextBufferView(&attribute))) {
+        domSetAttribute(element, PrDomNamespace_None, prTextBufferView(&attribute), value);
         status = PrStatus_Ok;
     }
-    textReset(&attribute);
+    prTextBufferReset(&attribute);
     return status;
 }
 
 void prHtmlDatasetDelete(PrDomElement* element, PrStringView name) {
-    TextBuffer attribute;
+    PrTextBuffer attribute = {};
     attributeName(name, &attribute);
-    if (PrDomAttr* found = domAttributeByName(element, textView(&attribute)))
+    if (PrDomAttr* found = domAttributeByName(element, prTextBufferView(&attribute)))
         domRemoveAttributeNode(element, found);
-    textReset(&attribute);
+    prTextBufferReset(&attribute);
 }
 
 PrHtmlDialogElement* PR_NULLABLE prHtmlDialogElementQuery(PrDomEventTarget* PR_NULLABLE object) {
@@ -1215,7 +1217,7 @@ uint32_t prHtmlMediaElementRanges(PrHtmlMediaElement* element, PrHtmlMediaRanges
         return count;
     }
     // The whole resource is fetched, so all of its data is available to seek to.
-    if (media->readyState < PrHtmlMediaReadyState_HaveMetadata || isNanF64(media->duration))
+    if (media->readyState < PrHtmlMediaReadyState_HaveMetadata || prF64IsNan(media->duration))
         return 0;
     if (capacity != 0) {
         starts[0] = 0;
@@ -1369,9 +1371,9 @@ PrDomDocumentFragment* prHtmlTemplateElementContent(PrHtmlTemplateElement* eleme
 
 bool prHtmlTemplateElementShadowRootMode(const PrHtmlTemplateElement* element, PrDomShadowRootMode* out) {
     PrStringView mode = domAttributeValue(element, "shadowrootmode");
-    if (asciiEqualsFold(mode, "open"))
+    if (prAsciiEqualsFold(mode, "open"))
         *out = PrDomShadowRootMode_Open;
-    else if (asciiEqualsFold(mode, "closed"))
+    else if (prAsciiEqualsFold(mode, "closed"))
         *out = PrDomShadowRootMode_Closed;
     else
         return false;
@@ -1380,7 +1382,7 @@ bool prHtmlTemplateElementShadowRootMode(const PrHtmlTemplateElement* element, P
 
 PrDomSlotAssignmentMode prHtmlTemplateElementShadowRootSlotAssignment(const PrHtmlTemplateElement* element) {
     PrStringView value = domAttributeValue(element, "shadowrootslotassignment");
-    return asciiEqualsFold(value, "manual") ? PrDomSlotAssignmentMode_Manual : PrDomSlotAssignmentMode_Named;
+    return prAsciiEqualsFold(value, "manual") ? PrDomSlotAssignmentMode_Manual : PrDomSlotAssignmentMode_Named;
 }
 
 PrHtmlErrorEvent* PR_NULLABLE prHtmlErrorEventQuery(PrDomEvent* PR_NULLABLE object) {
@@ -1772,7 +1774,7 @@ int32_t prHtmlWindowInnerWidth(PrHtmlWindow* window) {
         width = prLayoutUnitToPxDouble(extent.x);
     else
         width = window->media.features[PrCssDescriptor_MediaWidth - kCssDescriptorMediaFirst].number;
-    return isFiniteF64(width) ? int32_t(floorF64(width + 0.5)) : 0;
+    return prF64IsFinite(width) ? int32_t(prF64Floor(width + 0.5)) : 0;
 }
 
 int32_t prHtmlWindowInnerHeight(PrHtmlWindow* window) {
@@ -1782,7 +1784,7 @@ int32_t prHtmlWindowInnerHeight(PrHtmlWindow* window) {
         height = prLayoutUnitToPxDouble(extent.y);
     else
         height = window->media.features[PrCssDescriptor_MediaHeight - kCssDescriptorMediaFirst].number;
-    return isFiniteF64(height) ? int32_t(floorF64(height + 0.5)) : 0;
+    return prF64IsFinite(height) ? int32_t(prF64Floor(height + 0.5)) : 0;
 }
 
 double prHtmlWindowDevicePixelRatio(PrHtmlWindow* window) {
@@ -1812,7 +1814,7 @@ double prHtmlWindowScrollY(PrHtmlWindow* window) {
 void prHtmlWindowScroll(PrHtmlWindow* window, const PrCssScrollToOptions* options) {
     PrDomDocument* document = window->document;
     PrLayoutVec at = cssViewViewportScroll(document);
-    auto units = [](double px) { return prLayoutUnitFromPxDouble(isFiniteF64(px) ? px : 0); };
+    auto units = [](double px) { return prLayoutUnitFromPxDouble(prF64IsFinite(px) ? px : 0); };
     cssViewScrollViewport(document, PrLayoutVec{
         options->hasLeft ? units(options->left) : at.x,
         options->hasTop ? units(options->top) : at.y,
@@ -1820,7 +1822,7 @@ void prHtmlWindowScroll(PrHtmlWindow* window, const PrCssScrollToOptions* option
 }
 
 void prHtmlWindowScrollBy(PrHtmlWindow* window, const PrCssScrollToOptions* options) {
-    auto units = [](double px) { return prLayoutUnitFromPxDouble(isFiniteF64(px) ? px : 0); };
+    auto units = [](double px) { return prLayoutUnitFromPxDouble(prF64IsFinite(px) ? px : 0); };
     PrLayoutVec delta{
         options->hasLeft ? units(options->left) : PrLayoutUnit{0},
         options->hasTop ? units(options->top) : PrLayoutUnit{0},
@@ -1885,21 +1887,21 @@ PrStringView prHtmlNavigatorUserAgent(const PrHtmlWindow* window) {
 
 PrString prHtmlNavigatorAppVersion(const PrHtmlWindow* window) {
     PrStringView userAgent = prHtmlNavigatorUserAgent(window);
-    if (!stringStartsWith(userAgent, "Mozilla/5.0 ("))
+    if (!prStringStartsWith(userAgent, "Mozilla/5.0 ("))
         return prStringCopy("");
-    PrStringView trail = stringSlice(userAgent, 8, userAgent.size - 8);
+    PrStringView trail = prStringSlice(userAgent, 8, userAgent.size - 8);
     if (window->navigatorCompatibilityMode != PrHtmlNavigatorCompatibilityMode_Gecko)
         return prStringCopy(trail);
-    if (stringStartsWith(trail, "5.0 (Windows"))
+    if (prStringStartsWith(trail, "5.0 (Windows"))
         return prStringCopy("5.0 (Windows)");
     // The trail up to its first semicolon, closed with a parenthesis.
     size_t end = 0;
     while (end < trail.size && trail.data[end] != ';')
         ++end;
-    TextBuffer text;
-    textAppend(&text, stringSlice(trail, 0, end));
-    textAppendChar(&text, ')');
-    return textTake(&text);
+    PrTextBuffer text = {};
+    prTextBufferAppend(&text, prStringSlice(trail, 0, end));
+    prTextBufferAppendChar(&text, ')');
+    return prTextBufferTake(&text);
 }
 
 PrStringView prHtmlNavigatorPlatform(const PrHtmlWindow*) {

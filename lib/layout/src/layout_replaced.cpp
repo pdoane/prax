@@ -132,12 +132,12 @@ ReplacedBox replacedBox(LayoutState& state, LayoutNodeIndex node, const LayoutSp
     auto toBlock = [&](double inlineSize) {
         if (!aspect.borderBox)
             return inlineSize / ratio;
-        return maxF64(0, (inlineSize + double(edgesInline.raw)) / ratio - double(edgesBlock.raw));
+        return prF64Max(0, (inlineSize + double(edgesInline.raw)) / ratio - double(edgesBlock.raw));
     };
     auto toInline = [&](double blockSize) {
         if (!aspect.borderBox)
             return blockSize * ratio;
-        return maxF64(0, (blockSize + double(edgesBlock.raw)) * ratio - double(edgesInline.raw));
+        return prF64Max(0, (blockSize + double(edgesBlock.raw)) * ratio - double(edgesInline.raw));
     };
 
     // The limits, with a maximum never below its minimum. If both sizes are left to a ratio, they keep the ratio as
@@ -158,11 +158,11 @@ ReplacedBox replacedBox(LayoutState& state, LayoutNodeIndex node, const LayoutSp
     };
     constexpr double kNoLimit = 1e18;
     double minInline = limit(logical.minInlineSize, space.percentInline, stretchInline, edgesInline, 0, true);
-    double maxInline = maxF64(minInline,
+    double maxInline = prF64Max(minInline,
         limit(logical.maxInlineSize, space.percentInline, stretchInline, edgesInline, kNoLimit, true));
     double minBlock = limit(logical.minBlockSize, space.percentBlock, stretchBlock, edgesBlock, 0, false);
     double maxBlock =
-        maxF64(minBlock, limit(logical.maxBlockSize, space.percentBlock, stretchBlock, edgesBlock, kNoLimit, false));
+        prF64Max(minBlock, limit(logical.maxBlockSize, space.percentBlock, stretchBlock, edgesBlock, kNoLimit, false));
 
     // An auto size is the natural size, or the size that the other size and the ratio give, or else the default object
     // size of 300 by 150 (css-images-3/#default-object-size). With only a ratio, the inline size fills the containing
@@ -186,7 +186,7 @@ ReplacedBox replacedBox(LayoutState& state, LayoutNodeIndex node, const LayoutSp
                 inlineSize = 0;
             } else if (policy.fit == ReplacedFit_MaxContent) {
                 double fromBlock = lengthMinimum(logical.minBlockSize, edgesBlock);
-                inlineSize = maxF64(lengthMinimum(logical.minInlineSize, edgesInline),
+                inlineSize = prF64Max(lengthMinimum(logical.minInlineSize, edgesInline),
                     fromBlock >= 0 ? toInline(fromBlock) : -1);
                 if (inlineSize < 0) {
                     inlineSize = double(layoutLogicalSize(space.mode, state.viewport).inlineSize.raw);
@@ -210,10 +210,10 @@ ReplacedBox replacedBox(LayoutState& state, LayoutNodeIndex node, const LayoutSp
         double fallback = defaultInline;
         if (intrinsic && lengthMinimum(logical.minInlineSize, edgesInline) >= 0)
             fallback = lengthMinimum(logical.minInlineSize, edgesInline);
-        blockSize = minF64(maxF64(blockSize, minBlock), maxBlock);
+        blockSize = prF64Min(prF64Max(blockSize, minBlock), maxBlock);
         inlineSize = ratio > 0 ? toInline(blockSize) : naturalInline >= 0 ? naturalInline : fallback;
     } else if (autoBlock) {
-        inlineSize = minF64(maxF64(inlineSize, minInline), maxInline);
+        inlineSize = prF64Min(prF64Max(inlineSize, minInline), maxInline);
         blockSize = ratio > 0 ? toBlock(inlineSize) : naturalBlock >= 0 ? naturalBlock : defaultBlock;
     }
 
@@ -224,18 +224,18 @@ ReplacedBox replacedBox(LayoutState& state, LayoutNodeIndex node, const LayoutSp
         if (w > maxInline && h > maxBlock) {
             if (maxInline / w <= maxBlock / h) {
                 inlineSize = maxInline;
-                blockSize = maxF64(minBlock, toBlock(maxInline));
+                blockSize = prF64Max(minBlock, toBlock(maxInline));
             } else {
-                inlineSize = maxF64(minInline, toInline(maxBlock));
+                inlineSize = prF64Max(minInline, toInline(maxBlock));
                 blockSize = maxBlock;
             }
         } else if (w < minInline && h < minBlock) {
             if (minInline / w <= minBlock / h) {
-                inlineSize = minF64(maxInline, toInline(minBlock));
+                inlineSize = prF64Min(maxInline, toInline(minBlock));
                 blockSize = minBlock;
             } else {
                 inlineSize = minInline;
-                blockSize = minF64(maxBlock, toBlock(minInline));
+                blockSize = prF64Min(maxBlock, toBlock(minInline));
             }
         } else if (w < minInline && h > maxBlock) {
             inlineSize = minInline;
@@ -245,20 +245,20 @@ ReplacedBox replacedBox(LayoutState& state, LayoutNodeIndex node, const LayoutSp
             blockSize = minBlock;
         } else if (w > maxInline) {
             inlineSize = maxInline;
-            blockSize = maxF64(toBlock(maxInline), minBlock);
+            blockSize = prF64Max(toBlock(maxInline), minBlock);
         } else if (w < minInline) {
             inlineSize = minInline;
-            blockSize = minF64(toBlock(minInline), maxBlock);
+            blockSize = prF64Min(toBlock(minInline), maxBlock);
         } else if (h > maxBlock) {
-            inlineSize = maxF64(toInline(maxBlock), minInline);
+            inlineSize = prF64Max(toInline(maxBlock), minInline);
             blockSize = maxBlock;
         } else if (h < minBlock) {
-            inlineSize = minF64(toInline(minBlock), maxInline);
+            inlineSize = prF64Min(toInline(minBlock), maxInline);
             blockSize = minBlock;
         }
     } else {
-        inlineSize = minF64(maxF64(inlineSize, minInline), maxInline);
-        blockSize = minF64(maxF64(blockSize, minBlock), maxBlock);
+        inlineSize = prF64Min(prF64Max(inlineSize, minInline), maxInline);
+        blockSize = prF64Min(prF64Max(blockSize, minBlock), maxBlock);
     }
 
     // Sizing computed counts of units in doubles, each rounded to the nearest unit.

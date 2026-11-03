@@ -60,7 +60,7 @@ struct Cache {
 };
 
 uint32_t hashOf(PrStringView key) {
-    return uint32_t(hashBytes(key.data, key.size, 0));
+    return uint32_t(prHashBytes(key.data, key.size, 0));
 }
 
 uint32_t findEntry(const Cache* cache, PrStringView key) {

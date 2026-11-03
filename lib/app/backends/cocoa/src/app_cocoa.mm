@@ -487,7 +487,7 @@ PrStatus setClipboardImage(PrApp*, PrPixelView pixels) {
     if (rep == nil)
         return PrStatus_Io;
     for (uint32_t y = 0; y < pixels.extent.y; ++y)
-        memCopy(rep.bitmapData + size_t(y) * size_t(rep.bytesPerRow), pixels.data + y * pixels.stride,
+        prMemCopy(rep.bitmapData + size_t(y) * size_t(rep.bytesPerRow), pixels.data + y * pixels.stride,
             size_t(pixels.extent.x) * 4);
     rep = [rep bitmapImageRepByRetaggingWithColorSpace:NSColorSpace.sRGBColorSpace];
     NSData* png = [rep representationUsingType:NSBitmapImageFileTypePNG properties:@{}];
@@ -839,7 +839,7 @@ using namespace pr_impl;
 // Forgets the buttons and the keys that are down, at the end of a run.
 - (void)forgetHeld {
     _buttons = 0;
-    memZero(_keys, sizeof(_keys));
+    prMemZero(_keys, sizeof(_keys));
 }
 - (void)frame {
     if (!self.running)

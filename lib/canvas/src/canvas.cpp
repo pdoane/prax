@@ -372,7 +372,7 @@ void stateReset(CanvasState* state) {
 }
 
 void stateCopy(CanvasState* out, const CanvasState& from) {
-    memCopy(out, &from, sizeof(CanvasState));
+    prMemCopy(out, &from, sizeof(CanvasState));
     out->clips = {};
     out->clips.reserve(from.clips.count);
     for (uint32_t i = 0; i < from.clips.count; ++i) {
@@ -669,7 +669,7 @@ void clearBitmap(CanvasContext* c) {
     prDrawListClear(c->pending);
     segmentsReset(&c->segments);
     if (c->pixels != nullptr) {
-        memZero(c->pixels, strideOf(c) * c->extent.y);
+        prMemZero(c->pixels, strideOf(c) * c->extent.y);
         if (!c->settings.alpha)
             makeOpaque(c);
         prDrawListClearRect(c->pending, PrRect{0, 0, float(c->extent.x), float(c->extent.y)}, clearColorOf(c));
@@ -759,13 +759,13 @@ PrColor readPixel(const CanvasContext* c, size_t index) {
 
 // Writes `color`, straight-alpha extended sRGB, to the pixel at `index` of the bitmap.
 void writePixel(CanvasContext* c, size_t index, PrColor color) {
-    float a = c->settings.alpha ? clampF32(color.a, 0, 1) : 1;
+    float a = c->settings.alpha ? prF32Clamp(color.a, 0, 1) : 1;
     PrColor p{color.r * a, color.g * a, color.b * a, a};
     if (holdsBytes(c)) {
         uint8_t* q = c->pixels + index * 4;
         const float channels[] = {p.r, p.g, p.b, p.a};
         for (uint32_t i = 0; i < 4; ++i)
-            q[i] = uint8_t(roundF32(clampF32(channels[i], 0, 1) * 255));
+            q[i] = uint8_t(prF32Round(prF32Clamp(channels[i], 0, 1) * 255));
         return;
     }
     PrFloat16* q = reinterpret_cast<PrFloat16*>(c->pixels) + index * 4;
@@ -790,7 +790,7 @@ void writeData(void* pixels, PrCanvasPixelFormat format, size_t index, PrColor c
         uint8_t* q = static_cast<uint8_t*>(pixels) + index * 4;
         const float channels[] = {color.r, color.g, color.b, color.a};
         for (uint32_t i = 0; i < 4; ++i)
-            q[i] = uint8_t(roundF32(clampF32(channels[i], 0, 1) * 255));
+            q[i] = uint8_t(prF32Round(prF32Clamp(channels[i], 0, 1) * 255));
         return;
     }
     PrFloat16* q = static_cast<PrFloat16*>(pixels) + index * 4;
@@ -1214,7 +1214,7 @@ void prCanvasGradientRelease(PrCanvasGradient* PR_NULLABLE gradient) {
 }
 
 PrStatus prCanvasGradientAddColorStop(PrCanvasGradient* gradient, double offset, PrStringView color) {
-    PR_ASSERT(!isNanF64(offset));
+    PR_ASSERT(!prF64IsNan(offset));
     if (!(offset >= 0 && offset <= 1))
         return PrStatus_OutOfRange;
     PrColor parsed{};
@@ -1484,8 +1484,8 @@ void prCanvasScale(PrCanvas* canvas, double x, double y) {
 void prCanvasRotate(PrCanvas* canvas, double angle) {
     if (!canvasIsFinite(angle))
         return;
-    double cosine = cosF64(angle);
-    double sine = sinF64(angle);
+    double cosine = prF64Cos(angle);
+    double sine = prF64Sin(angle);
     prCanvasTransform(canvas, PrDAffine2{.a = cosine, .b = sine, .c = -sine, .d = cosine});
 }
 
@@ -1642,7 +1642,7 @@ void prCanvasClearRect(PrCanvas* canvas, double x, double y, double w, double h)
     if (!canvasIsFinite(x, y, w, h) || w == 0 || h == 0 || canvas->pixels == nullptr)
         return;
     syncClips(canvas);
-    PrRect rect{float(minF64(x, x + w)), float(minF64(y, y + h)), float(maxF64(x, x + w)), float(maxF64(y, y + h))};
+    PrRect rect{float(prF64Min(x, x + w)), float(prF64Min(y, y + h)), float(prF64Max(x, x + w)), float(prF64Max(y, y + h))};
     prDrawListPushTransformDAffine2(canvas->pending, canvas->state.transform);
     prDrawListClearRect(canvas->pending, rect, PrColor{0, 0, 0, 0});
     prDrawListPopTransform(canvas->pending);
@@ -1653,7 +1653,7 @@ void prCanvasClearRect(PrCanvas* canvas, double x, double y, double w, double h)
 void prCanvasFillRect(PrCanvas* canvas, double x, double y, double w, double h) {
     if (!canvasIsFinite(x, y, w, h) || w == 0 || h == 0)
         return;
-    PrRect rect{float(minF64(x, x + w)), float(minF64(y, y + h)), float(maxF64(x, x + w)), float(maxF64(y, y + h))};
+    PrRect rect{float(prF64Min(x, x + w)), float(prF64Min(y, y + h)), float(prF64Max(x, x + w)), float(prF64Max(y, y + h))};
     drawStyled(canvas, PrCanvasStyleRole_Fill, nullptr, canvas->state.transform, prDAffine2Identity(),
         [&](PrDrawPaint paint) { prDrawListRect(canvas->pending, rect, paint); });
 }
@@ -1804,10 +1804,10 @@ void prCanvasDrawImage(PrCanvas* canvas, const PrCanvasImageSource* source,
     // The source rectangle is clipped to the image, and the destination with it in proportion.
     double scaleX = dw / sw;
     double scaleY = dh / sh;
-    double left = maxF64(sx, 0);
-    double top = maxF64(sy, 0);
-    double right = minF64(sx + sw, double(source->extent.x));
-    double bottom = minF64(sy + sh, double(source->extent.y));
+    double left = prF64Max(sx, 0);
+    double top = prF64Max(sy, 0);
+    double right = prF64Min(sx + sw, double(source->extent.x));
+    double bottom = prF64Min(sy + sh, double(source->extent.y));
     if (right <= left || bottom <= top)
         return;
     double destLeft = dx + (left - sx) * scaleX;
@@ -1831,7 +1831,7 @@ void prCanvasDrawImage(PrCanvas* canvas, const PrCanvasImageSource* source,
 void prCanvasGetImageData(PrCanvas* canvas, PrIVec2 origin, const PrCanvasImageData* data, void* out) {
     readPixels(canvas);
     uint32_t pixelSize = prCanvasPixelFormatSize(data->format);
-    memZero(out, size_t(data->extent.x) * data->extent.y * pixelSize);
+    prMemZero(out, size_t(data->extent.x) * data->extent.y * pixelSize);
     if (canvas->pixels == nullptr)
         return;
     bool exact = holdsBytes(canvas) && data->format == PrCanvasPixelFormat_RgbaUnorm8 &&

@@ -7,31 +7,31 @@
 namespace pr_impl {
 
 float pathCoverageFromWinding(float winding, PrPathFillRule rule) {
-    float magnitude = absF32(winding);
+    float magnitude = prF32Abs(winding);
     if (rule == PrPathFillRule_EvenOdd) {
-        magnitude -= 2 * floorF32(magnitude / 2);
+        magnitude -= 2 * prF32Floor(magnitude / 2);
         return magnitude > 1 ? 2 - magnitude : magnitude;
     }
-    return minF32(magnitude, 1);
+    return prF32Min(magnitude, 1);
 }
 
 void pathAccumulate(float* cells, size_t stride, uint32_t width, uint32_t height, PathCellEdge e) {
-    float y0 = maxF32(e.y0, 0);
-    float y1 = minF32(e.y1, float(height));
+    float y0 = prF32Max(e.y0, 0);
+    float y1 = prF32Min(e.y1, float(height));
     if (y0 >= y1)
         return;
     float slope = (e.x1 - e.x0) / (e.y1 - e.y0);
-    float x = minF32(maxF32(e.x0 + (y0 - e.y0) * slope, 0), float(width));
+    float x = prF32Min(prF32Max(e.x0 + (y0 - e.y0) * slope, 0), float(width));
     for (uint32_t y = uint32_t(y0); float(y) < y1; ++y) {
         float* row = cells + size_t(y) * stride;
-        float dy = minF32(float(y + 1), y1) - maxF32(float(y), y0);
-        float xNext = minF32(maxF32(x + slope * dy, 0), float(width));
+        float dy = prF32Min(float(y + 1), y1) - prF32Max(float(y), y0);
+        float xNext = prF32Min(prF32Max(x + slope * dy, 0), float(width));
         float d = dy * e.direction;
-        float xLow = minF32(x, xNext);
-        float xHigh = maxF32(x, xNext);
-        float lowFloor = floorF32(xLow);
+        float xLow = prF32Min(x, xNext);
+        float xHigh = prF32Max(x, xNext);
+        float lowFloor = prF32Floor(xLow);
         uint32_t lowCell = uint32_t(lowFloor);
-        uint32_t highCell = uint32_t(ceilF32(xHigh));
+        uint32_t highCell = uint32_t(prF32Ceil(xHigh));
         if (highCell <= lowCell + 1) {
             float middle = (x + xNext) / 2 - lowFloor;
             row[lowCell] += d - d * middle;

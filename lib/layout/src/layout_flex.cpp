@@ -111,7 +111,7 @@ double contentOf(const PrLayoutBoxStyle& box, PrLayoutUnit size, PrLayoutUnit ed
 
 // Returns the unit nearest to `raw` units.
 PrLayoutUnit unitOf(double raw) {
-    return prLayoutUnitClamped(int64_t(roundF64(raw)));
+    return prLayoutUnitClamped(int64_t(prF64Round(raw)));
 }
 
 // Returns true if a flex direction's main axis is the inline axis.
@@ -387,16 +387,16 @@ MainSizes mainSizesOf(const LayoutStyles* styles, const PrLayoutBoxStyle& box, c
         if (!layoutIsScrollContainer(box)) {
             double minimum = content(prLayoutLengthMinContent());
             if (ratio.most >= 0)
-                minimum = minF64(minimum, ratio.most);
+                minimum = prF64Min(minimum, ratio.most);
             if (ratio.least >= 0)
-                minimum = maxF64(minimum, ratio.least);
+                minimum = prF64Max(minimum, ratio.least);
             if (ratio.transferred >= 0)
-                minimum = ratio.replaced ? minF64(minimum, ratio.transferred) : maxF64(minimum, ratio.transferred);
+                minimum = ratio.replaced ? prF64Min(minimum, ratio.transferred) : prF64Max(minimum, ratio.transferred);
             if (layoutResolves(mainLength, base) && !layoutLengthIsContentBased(mainLength)) {
                 PrLayoutUnit specified = compressible ? kLayoutUnitZero : base;
-                minimum = minF64(minimum, contentOf(box, layoutResolve(styles, mainLength, specified), edges));
+                minimum = prF64Min(minimum, contentOf(box, layoutResolve(styles, mainLength, specified), edges));
             }
-            out.min = maxF64(0, minF64(minimum, out.max));
+            out.min = prF64Max(0, prF64Min(minimum, out.max));
         }
     } else if (layoutLengthIsContentBased(minLength)) {
         out.min = content(minLength);
@@ -487,7 +487,7 @@ void sizeMain(Flex& f, LayoutFlexItem& it) {
     it.maxMain = main.max;
     // A definite flex basis, or a container of definite main size, makes the flexed size definite.
     it.definiteMain = f.row || !main.contentBased || layoutIsDefinite(f.content.percentBlock);
-    it.hypothetical = maxF64(0, maxF64(minF64(it.base, it.maxMain), it.minMain));
+    it.hypothetical = prF64Max(0, prF64Max(prF64Min(it.base, it.maxMain), it.minMain));
 }
 
 // Returns the total of the gaps between `count` items on a line.
@@ -512,8 +512,8 @@ double containerMain(Flex& f, bool visible) {
         sum += it.hypothetical + double(it.edgesMain.raw + it.marginsMain.raw);
     }
     if (layoutIsDefinite(f.maxBlock))
-        sum = minF64(sum, double(f.maxBlock.raw));
-    return maxF64(sum, double(f.minBlock.raw));
+        sum = prF64Min(sum, double(f.maxBlock.raw));
+    return prF64Max(sum, double(f.minBlock.raw));
 }
 
 // Returns the outer hypothetical main size of an item, which line breaking sums (css-flexbox-2/#algo-line-break). It is
@@ -579,7 +579,7 @@ double unclampedTarget(const LayoutFlexItem& it, double remaining, bool grows, d
     if (remaining != 0 && grows && factors > 0)
         return it.base + remaining * it.factor / factors;
     if (remaining != 0 && !grows && scaled > 0)
-        return it.base - absF64(remaining) * it.factor * it.base / scaled;
+        return it.base - prF64Abs(remaining) * it.factor * it.base / scaled;
     return it.base;
 }
 
@@ -626,7 +626,7 @@ void resolveFlexibleLengths(Flex& f, const LayoutFlexLine& line, double main) {
             break;
         f.state.stats->flexItemsFlexed += line.count;
         double remaining = freeSpace();
-        if (factors < 1 && absF64(initial * factors) < absF64(remaining))
+        if (factors < 1 && prF64Abs(initial * factors) < prF64Abs(remaining))
             remaining = initial * factors;
         // Each unfrozen item takes its share of the free space and is clamped by its limits.
         double violation = 0;
@@ -635,7 +635,7 @@ void resolveFlexibleLengths(Flex& f, const LayoutFlexLine& line, double main) {
             if (it.frozen)
                 continue;
             double target = unclampedTarget(it, remaining, grows, factors, scaled);
-            it.target = maxF64(0, maxF64(minF64(target, it.maxMain), it.minMain));
+            it.target = prF64Max(0, prF64Max(prF64Min(target, it.maxMain), it.minMain));
             violation += it.target - target;
         }
         // If there is no violation, every item freezes. A positive violation freezes the items that the clamp raised,
@@ -1382,7 +1382,7 @@ LayoutIntrinsicSizes layoutFlexIntrinsic(LayoutState& state, LayoutNodeIndex nod
             };
             MainSizes main = mainSizesOf(state.styles, box, itemFlex, logical.inlineSize, logical.minInlineSize,
                 logical.maxInlineSize, layoutUnit(-1), edges, kNoRatio, false, ofContent);
-            double hypothetical = maxF64(0, maxF64(minF64(main.base, main.max), main.min));
+            double hypothetical = prF64Max(0, prF64Max(prF64Min(main.base, main.max), main.min));
             PrLayoutUnit outer = layoutUnitMax(unitOf(hypothetical) + edges, edges) + margins;
             if (itemFlex.grow == 0)
                 result[kind] = layoutUnitMin(result[kind], outer);

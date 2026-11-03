@@ -49,17 +49,17 @@ bool namesForm(const PrDomElement* element) {
 // Sanitization (html/#value-sanitization-algorithm)
 
 // Appends `text` without its line feeds and carriage returns (infra/#strip-newlines).
-void appendStrippingNewlines(TextBuffer* out, PrStringView text) {
+void appendStrippingNewlines(PrTextBuffer* out, PrStringView text) {
     for (size_t i = 0; i < text.size; ++i) {
         if (text.data[i] != '\n' && text.data[i] != '\r')
-            textAppendChar(out, text.data[i]);
+            prTextBufferAppendChar(out, text.data[i]);
     }
 }
 
 // Returns the value of the input's number for the input's type, or NaN if `text` does not convert.
 double numberOf(const PrDomElement* input, PrStringView text) {
     double value = 0;
-    return text.data != nullptr && domInputStringToNumber(input, text, &value) ? value : kNanF64;
+    return text.data != nullptr && domInputStringToNumber(input, text, &value) ? value : kPrF64Nan;
 }
 
 // The default step, its scale factor and the default step base of an input type to which the step applies
@@ -88,15 +88,15 @@ StepRules stepRulesOf(PrDomInputType type) {
 double rangeValueOf(const PrDomElement* input, double value) {
     DomInputRange range = domInputRange(input);
     double maximum = range.maximum < range.minimum ? range.minimum : range.maximum;
-    if (isNanF64(value))
+    if (prF64IsNan(value))
         value = range.minimum + (maximum - range.minimum) / 2;
     if (value < range.minimum)
         value = range.minimum;
     if (value > maximum)
         value = maximum;
-    if (isNanF64(range.step))
+    if (prF64IsNan(range.step))
         return value;
-    double steps = floorF64((value - range.stepBase) / range.step + 0.5);
+    double steps = prF64Floor((value - range.stepBase) / range.step + 0.5);
     double aligned = range.stepBase + steps * range.step;
     // A value past either bound moves one step back inside it, where there is a step inside.
     if (aligned > maximum)
@@ -108,7 +108,7 @@ double rangeValueOf(const PrDomElement* input, double value) {
 
 // Appends the value that the value sanitization algorithm of the input's type makes of `text`, which is the null view
 // for a missing value.
-void appendSanitized(const PrDomElement* input, PrStringView text, TextBuffer* out) {
+void appendSanitized(const PrDomElement* input, PrStringView text, PrTextBuffer* out) {
     PrStringView value = text.data != nullptr ? text : "";
     switch (domElementInputType(input)) {
         case PrDomInputType_Text:
@@ -118,19 +118,19 @@ void appendSanitized(const PrDomElement* input, PrStringView text, TextBuffer* o
             appendStrippingNewlines(out, value);
             return;
         case PrDomInputType_Url: {
-            TextBuffer stripped;
+            PrTextBuffer stripped = {};
             appendStrippingNewlines(&stripped, value);
-            textAppend(out, stringTrim(textView(&stripped)));
-            textReset(&stripped);
+            prTextBufferAppend(out, prStringTrim(prTextBufferView(&stripped)));
+            prTextBufferReset(&stripped);
             return;
         }
         case PrDomInputType_Email: {
-            TextBuffer stripped;
+            PrTextBuffer stripped = {};
             appendStrippingNewlines(&stripped, value);
-            PrStringView rest = textView(&stripped);
+            PrStringView rest = prTextBufferView(&stripped);
             if (!domHasAttribute(input, "multiple")) {
-                textAppend(out, stringTrim(rest));
-                textReset(&stripped);
+                prTextBufferAppend(out, prStringTrim(rest));
+                prTextBufferReset(&stripped);
                 return;
             }
             // Each comma-separated token is trimmed, and the tokens are joined by single commas.
@@ -138,38 +138,38 @@ void appendSanitized(const PrDomElement* input, PrStringView text, TextBuffer* o
                 size_t comma = start;
                 while (comma < rest.size && rest.data[comma] != ',')
                     ++comma;
-                textAppend(out, stringTrim(PrStringView{rest.data + start, comma - start}));
+                prTextBufferAppend(out, prStringTrim(PrStringView{rest.data + start, comma - start}));
                 if (comma == rest.size)
                     break;
-                textAppendChar(out, ',');
+                prTextBufferAppendChar(out, ',');
                 start = comma + 1;
             }
-            textReset(&stripped);
+            prTextBufferReset(&stripped);
             return;
         }
         case PrDomInputType_Date: {
             PrTimeDate date{};
             if (domParseDate(value, &date))
-                textAppend(out, value);
+                prTextBufferAppend(out, value);
             return;
         }
         case PrDomInputType_Month: {
             int64_t year = 0;
             uint32_t month = 0;
             if (domParseMonth(value, &year, &month))
-                textAppend(out, value);
+                prTextBufferAppend(out, value);
             return;
         }
         case PrDomInputType_Week: {
             int64_t year = 0;
             uint32_t week = 0;
             if (domParseWeek(value, &year, &week))
-                textAppend(out, value);
+                prTextBufferAppend(out, value);
             return;
         }
         case PrDomInputType_Time:
             if (domIsValidTime(value))
-                textAppend(out, value);
+                prTextBufferAppend(out, value);
             return;
         case PrDomInputType_DatetimeLocal: {
             PrTimeDate date{};
@@ -181,10 +181,10 @@ void appendSanitized(const PrDomElement* input, PrStringView text, TextBuffer* o
         }
         case PrDomInputType_Number:
             if (domIsValidFloat(value))
-                textAppend(out, value);
+                prTextBufferAppend(out, value);
             return;
         case PrDomInputType_Range: {
-            double number = domIsValidFloat(value) ? numberOf(input, value) : kNanF64;
+            double number = domIsValidFloat(value) ? numberOf(input, value) : kPrF64Nan;
             domAppendFloat(out, rangeValueOf(input, number));
             return;
         }
@@ -192,7 +192,7 @@ void appendSanitized(const PrDomElement* input, PrStringView text, TextBuffer* o
             domNotifyColorValue(input, text, out);
             return;
         default:
-            textAppend(out, value);
+            prTextBufferAppend(out, value);
             return;
     }
 }
@@ -215,16 +215,16 @@ void valueChanged(PrDomElement* element) {
 // Sets the value of an input in the value mode to the sanitization of `text`, which is the null view for none. Restyles
 // the input if the value changed.
 void setSanitized(PrDomElement* input, PrStringView text) {
-    TextBuffer sanitized;
+    PrTextBuffer sanitized = {};
     appendSanitized(input, text, &sanitized);
-    PrStringView value = textView(&sanitized);
+    PrStringView value = prTextBufferView(&sanitized);
     const DomControl* existing = domControl(input);
     PrStringView old = existing != nullptr ? domControlText(existing) : "";
     if (old != value) {
         domControlSetText(domControlFromElement(input), value);
         valueChanged(input);
     }
-    textReset(&sanitized);
+    prTextBufferReset(&sanitized);
 }
 
 // Runs the value sanitization algorithm on the current value of an input in the value mode.
@@ -367,23 +367,23 @@ void resetFormAttributed(PrDomDocument* document) {
 }
 
 // Writes the child text content of `element` to `out`.
-void appendChildText(const PrDomElement* element, TextBuffer* out) {
+void appendChildText(const PrDomElement* element, PrTextBuffer* out) {
     for (const PrDomNode* child = element->first; child != nullptr; child = child->next) {
         if (child->type == PrDomNodeType_Text || child->type == PrDomNodeType_CdataSection)
-            textAppend(out, prStringView(&static_cast<const PrDomCharacterData*>(child)->data));
+            prTextBufferAppend(out, prStringView(&static_cast<const PrDomCharacterData*>(child)->data));
     }
 }
 
 // Appends `text` with each CRLF pair and each CR alone replaced by LF (infra/#normalize-newlines).
-void appendNormalizingNewlines(TextBuffer* out, PrStringView text) {
+void appendNormalizingNewlines(PrTextBuffer* out, PrStringView text) {
     for (size_t i = 0; i < text.size; ++i) {
         char c = text.data[i];
         if (c == '\r') {
-            textAppendChar(out, '\n');
+            prTextBufferAppendChar(out, '\n');
             if (i + 1 < text.size && text.data[i + 1] == '\n')
                 ++i;
         } else {
-            textAppendChar(out, c);
+            prTextBufferAppendChar(out, c);
         }
     }
 }
@@ -607,32 +607,32 @@ void domControlSetText(DomControl* control, PrStringView text) {
 DomControl* domTextControlSync(PrDomElement* element) {
     DomControl* control = domControlFromElement(element);
     if (domIsHtml(element, PrDomTag_Textarea) && !control->dirtyValue) {
-        TextBuffer value;
+        PrTextBuffer value = {};
         domControlValue(element, &value);
         // A change of the default value moves the caret to the start.
-        if (control->text != nullptr && domControlText(control) != textView(&value)) {
+        if (control->text != nullptr && domControlText(control) != prTextBufferView(&value)) {
             PrTextEditSelection start{};
             prTextEditViewSetSelections(control->view, &start, 1);
         }
-        domControlSetText(control, textView(&value));
-        textReset(&value);
+        domControlSetText(control, prTextBufferView(&value));
+        prTextBufferReset(&value);
     }
     if (control->text == nullptr)
         domControlSetText(control, "");
     return control;
 }
 
-void domControlValue(const PrDomElement* element, TextBuffer* out) {
-    textClear(out);
+void domControlValue(const PrDomElement* element, PrTextBuffer* out) {
+    prTextBufferClear(out);
     if (domIsHtml(element, PrDomTag_Textarea)) {
         const DomControl* control = domControl(element);
         if (control != nullptr && control->dirtyValue) {
-            textAppend(out, domControlText(control));
+            prTextBufferAppend(out, domControlText(control));
         } else {
-            TextBuffer raw;
+            PrTextBuffer raw = {};
             appendChildText(element, &raw);
-            appendNormalizingNewlines(out, textView(&raw));
-            textReset(&raw);
+            appendNormalizingNewlines(out, prTextBufferView(&raw));
+            prTextBufferReset(&raw);
         }
         return;
     }
@@ -642,15 +642,15 @@ void domControlValue(const PrDomElement* element, TextBuffer* out) {
         case DomValueMode_Value: {
             const DomControl* control = domControl(element);
             if (control != nullptr)
-                textAppend(out, domControlText(control));
+                prTextBufferAppend(out, domControlText(control));
             return;
         }
         case DomValueMode_Default:
-            textAppend(out, domAttributeValue(element, "value"));
+            prTextBufferAppend(out, domAttributeValue(element, "value"));
             return;
         case DomValueMode_DefaultOn: {
             PrStringView value = domAttributeValue(element, "value");
-            textAppend(out, value.data != nullptr ? value : "on");
+            prTextBufferAppend(out, value.data != nullptr ? value : "on");
             return;
         }
         case DomValueMode_Filename:
@@ -691,15 +691,15 @@ bool domControlValueEmpty(const PrDomElement* element) {
 PrStatus domControlSetValue(PrDomElement* element, PrStringView value) {
     if (domIsHtml(element, PrDomTag_Textarea)) {
         // The caret moves to the end of a value that the setter changes (html/#dom-textarea-value).
-        TextBuffer normalized;
+        PrTextBuffer normalized = {};
         appendNormalizingNewlines(&normalized, value);
         DomControl* control = domTextControlSync(element);
-        bool changed = domControlText(control) != textView(&normalized);
-        domControlSetText(control, textView(&normalized));
+        bool changed = domControlText(control) != prTextBufferView(&normalized);
+        domControlSetText(control, prTextBufferView(&normalized));
         control->dirtyValue = true;
         if (changed)
             collapseAtEnd(control);
-        textReset(&normalized);
+        prTextBufferReset(&normalized);
         valueChanged(element);
         return PrStatus_Ok;
     }
@@ -708,13 +708,13 @@ PrStatus domControlSetValue(PrDomElement* element, PrStringView value) {
         case DomValueMode_Value: {
             // The caret moves to the end of a value that the setter changes (html/#dom-input-value-value).
             DomControl* control = domControlFromElement(element);
-            TextBuffer before;
-            textAppend(&before, domControlText(control));
+            PrTextBuffer before = {};
+            prTextBufferAppend(&before, domControlText(control));
             control->dirtyValue = true;
             setSanitized(element, value);
-            if (domControlText(control) != textView(&before))
+            if (domControlText(control) != prTextBufferView(&before))
                 collapseAtEnd(control);
-            textReset(&before);
+            prTextBufferReset(&before);
             return PrStatus_Ok;
         }
         case DomValueMode_Default:
@@ -728,8 +728,8 @@ PrStatus domControlSetValue(PrDomElement* element, PrStringView value) {
     return PrStatus_Ok;
 }
 
-void domTextareaDefaultValue(const PrDomElement* textarea, TextBuffer* out) {
-    textClear(out);
+void domTextareaDefaultValue(const PrDomElement* textarea, PrTextBuffer* out) {
+    prTextBufferClear(out);
     appendChildText(textarea, out);
 }
 
@@ -803,14 +803,14 @@ bool domInputStringToNumber(const PrDomElement* input, PrStringView text, double
     }
 }
 
-void domInputNumberToString(const PrDomElement* input, double value, TextBuffer* out) {
-    PR_ASSERT(isFiniteF64(value));
+void domInputNumberToString(const PrDomElement* input, double value, PrTextBuffer* out) {
+    PR_ASSERT(prF64IsFinite(value));
     switch (domElementInputType(input)) {
         case PrDomInputType_Date:
-            domAppendDate(out, prTimeDateFromDays(int64_t(floorF64(value / kDayMilliseconds))));
+            domAppendDate(out, prTimeDateFromDays(int64_t(prF64Floor(value / kDayMilliseconds))));
             return;
         case PrDomInputType_Month: {
-            int64_t months = int64_t(floorF64(value)) + 1970 * 12;
+            int64_t months = int64_t(prF64Floor(value)) + 1970 * 12;
             int64_t year = months >= 0 ? months / 12 : (months - 11) / 12;
             domAppendMonth(out, year, uint32_t(months - year * 12 + 1));
             return;
@@ -818,18 +818,18 @@ void domInputNumberToString(const PrDomElement* input, double value, TextBuffer*
         case PrDomInputType_Week: {
             int64_t year = 0;
             uint32_t week = 0;
-            domWeekOfDays(int64_t(floorF64(value / kDayMilliseconds)), &year, &week);
+            domWeekOfDays(int64_t(prF64Floor(value / kDayMilliseconds)), &year, &week);
             domAppendWeek(out, year, week);
             return;
         }
         case PrDomInputType_Time: {
-            double time = value - floorF64(value / kDayMilliseconds) * kDayMilliseconds;
-            domAppendTime(out, floorF64(time));
+            double time = value - prF64Floor(value / kDayMilliseconds) * kDayMilliseconds;
+            domAppendTime(out, prF64Floor(time));
             return;
         }
         case PrDomInputType_DatetimeLocal: {
-            double days = floorF64(value / kDayMilliseconds);
-            domAppendLocalDateTime(out, prTimeDateFromDays(int64_t(days)), floorF64(value - days * kDayMilliseconds));
+            double days = prF64Floor(value / kDayMilliseconds);
+            domAppendLocalDateTime(out, prTimeDateFromDays(int64_t(days)), prF64Floor(value - days * kDayMilliseconds));
             return;
         }
         default:
@@ -858,9 +858,9 @@ bool domInputStringToDate(const PrDomElement* input, PrStringView text, double* 
     }
 }
 
-void domInputDateToString(const PrDomElement* input, double time, TextBuffer* out) {
+void domInputDateToString(const PrDomElement* input, double time, PrTextBuffer* out) {
     if (domElementInputType(input) == PrDomInputType_Month) {
-        PrTimeDate date = prTimeDateFromDays(int64_t(floorF64(time / kDayMilliseconds)));
+        PrTimeDate date = prTimeDateFromDays(int64_t(prF64Floor(time / kDayMilliseconds)));
         domAppendMonth(out, date.year, date.month);
         return;
     }
@@ -869,12 +869,12 @@ void domInputDateToString(const PrDomElement* input, double time, TextBuffer* ou
 
 DomInputRange domInputRange(const PrDomElement* input) {
     PrDomInputType type = domElementInputType(input);
-    DomInputRange range{kNanF64, kNanF64, kNanF64, 0};
+    DomInputRange range{kPrF64Nan, kPrF64Nan, kPrF64Nan, 0};
     double minimum = numberOf(input, domAttributeValue(input, "min"));
     double maximum = numberOf(input, domAttributeValue(input, "max"));
     if (type == PrDomInputType_Range) {
-        minimum = isNanF64(minimum) ? 0 : minimum;
-        maximum = isNanF64(maximum) ? 100 : maximum;
+        minimum = prF64IsNan(minimum) ? 0 : minimum;
+        maximum = prF64IsNan(maximum) ? 100 : maximum;
     }
     range.minimum = minimum;
     range.maximum = maximum;
@@ -883,22 +883,22 @@ DomInputRange domInputRange(const PrDomElement* input) {
     double parsed = 0;
     if (step.data == nullptr)
         range.step = rules.step * rules.scale;
-    else if (asciiEqualsFold(step, "any"))
-        range.step = kNanF64;
+    else if (prAsciiEqualsFold(step, "any"))
+        range.step = kPrF64Nan;
     else if (!domParseFloat(step, &parsed) || parsed <= 0)
         range.step = rules.step * rules.scale;
     else
         range.step = parsed * rules.scale;
     // A step of months, days or weeks is a whole number of them, and so is a step that rounds below one.
-    if (!isNanF64(range.step) &&
+    if (!prF64IsNan(range.step) &&
             (type == PrDomInputType_Date || type == PrDomInputType_Month || type == PrDomInputType_Week)) {
-        double units = floorF64(range.step / rules.scale + 0.5);
+        double units = prF64Floor(range.step / rules.scale + 0.5);
         range.step = (units < 1 ? 1 : units) * rules.scale;
     }
     double base = numberOf(input, domAttributeValue(input, "min"));
-    if (isNanF64(base))
+    if (prF64IsNan(base))
         base = numberOf(input, domAttributeValue(input, "value"));
-    range.stepBase = isNanF64(base) ? rules.base : base;
+    range.stepBase = prF64IsNan(base) ? rules.base : base;
     return range;
 }
 
@@ -906,41 +906,41 @@ PrStatus domInputStep(PrDomElement* input, int32_t n, bool up) {
     if ((domInputApplies(domElementInputType(input)) & DomInputApplyFlag_ValueAsNumber) == 0)
         return PrStatus_InvalidState;
     DomInputRange range = domInputRange(input);
-    if (isNanF64(range.step))
+    if (prF64IsNan(range.step))
         return PrStatus_InvalidState;
-    bool bounded = !isNanF64(range.minimum) && !isNanF64(range.maximum);
+    bool bounded = !prF64IsNan(range.minimum) && !prF64IsNan(range.maximum);
     if (bounded && range.minimum > range.maximum)
         return PrStatus_Ok;
     // The smallest and the largest value at a step from the step base within the bounds.
-    double lowest = range.stepBase + ceilF64((range.minimum - range.stepBase) / range.step) * range.step;
-    double highest = range.stepBase + floorF64((range.maximum - range.stepBase) / range.step) * range.step;
+    double lowest = range.stepBase + prF64Ceil((range.minimum - range.stepBase) / range.step) * range.step;
+    double highest = range.stepBase + prF64Floor((range.maximum - range.stepBase) / range.step) * range.step;
     if (bounded && lowest > highest)
         return PrStatus_Ok;
-    TextBuffer text;
+    PrTextBuffer text = {};
     domControlValue(input, &text);
     double value = 0;
-    if (!domInputStringToNumber(input, textView(&text), &value))
+    if (!domInputStringToNumber(input, prTextBufferView(&text), &value))
         value = 0;
     double before = value;
     double offset = (value - range.stepBase) / range.step;
-    if (offset != floorF64(offset)) {
-        value = range.stepBase + (up ? ceilF64(offset) : floorF64(offset)) * range.step;
+    if (offset != prF64Floor(offset)) {
+        value = range.stepBase + (up ? prF64Ceil(offset) : prF64Floor(offset)) * range.step;
     } else {
         double delta = range.step * n;
         value += up ? delta : -delta;
     }
-    if (!isNanF64(range.minimum) && value < range.minimum)
+    if (!prF64IsNan(range.minimum) && value < range.minimum)
         value = lowest;
-    if (!isNanF64(range.maximum) && value > range.maximum)
+    if (!prF64IsNan(range.maximum) && value > range.maximum)
         value = highest;
-    if ((!up && value > before) || (up && value < before) || !isFiniteF64(value)) {
-        textReset(&text);
+    if ((!up && value > before) || (up && value < before) || !prF64IsFinite(value)) {
+        prTextBufferReset(&text);
         return PrStatus_Ok;
     }
-    textClear(&text);
+    prTextBufferClear(&text);
     domInputNumberToString(input, value, &text);
-    PrStatus status = domControlSetValue(input, textView(&text));
-    textReset(&text);
+    PrStatus status = domControlSetValue(input, prTextBufferView(&text));
+    prTextBufferReset(&text);
     return status;
 }
 

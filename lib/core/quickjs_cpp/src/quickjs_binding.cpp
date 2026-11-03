@@ -42,7 +42,7 @@ char* PR_NULLABLE scalarize(const char* text, size_t size) {
         return nullptr;
 
     char* copy = static_cast<char*>(prMemoryAlloc(size));
-    memCopy(copy, text, size);
+    prMemCopy(copy, text, size);
     for (size_t i = at; i + 2 < size; ++i) {
         if (isSurrogate(copy, i)) {
             copy[i] = char(0xef);
@@ -163,7 +163,7 @@ struct FixedStrings {
     uint32_t count;
 
     Entry* slotOf(const char* data, uint32_t size) const {
-        for (uint32_t slot = hashPointer(data, size) & mask;; slot = (slot + 1) & mask) {
+        for (uint32_t slot = prHashPointer(data, size) & mask;; slot = (slot + 1) & mask) {
             Entry* at = &slots[slot];
             if (at->data == nullptr || (at->data == data && at->size == size))
                 return at;
@@ -274,7 +274,7 @@ JsWrapper* PR_NULLABLE findWrapperOf(const JsWrappers* wrappers, const void* han
     JSClassID family = familyOf(wrappers, id);
     if (void* PR_NULLABLE* slot = slotOf(wrappers, family, handle))
         return static_cast<JsWrapper*>(*slot);
-    return wrappers->table.find(handle, family, hashPointer(handle, family));
+    return wrappers->table.find(handle, family, prHashPointer(handle, family));
 }
 
 JSValue objectOf(const JsWrapper* wrapper) {
@@ -672,7 +672,7 @@ JSValue jsWrap(JSContext* ctx, JSClassID id, JSValueConst owner, void* PR_NULLAB
 
     JsWrappers* wrappers = wrappersOf(JS_GetRuntime(ctx));
     JSClassID family = familyOf(wrappers, id);
-    uint32_t hash = hashPointer(handle, family);
+    uint32_t hash = prHashPointer(handle, family);
     void* PR_NULLABLE* slot = slotOf(wrappers, family, handle);
     const JsWrapper* found = slot != nullptr ? static_cast<JsWrapper*>(*slot) : wrappers->table.find(handle, family, hash);
     if (found != nullptr)
@@ -1005,10 +1005,10 @@ bool jsReadFloatArray(JSContext* ctx, JSValueConst value, JSTypedArrayEnum type,
     for (uint32_t i = 0; i < *count && i < capacity; ++i) {
         if (type == JS_TYPED_ARRAY_FLOAT32) {
             float element;
-            memCopy(&element, data + offset + i * sizeof(float), sizeof(float));
+            prMemCopy(&element, data + offset + i * sizeof(float), sizeof(float));
             out[i] = double(element);
         } else {
-            memCopy(&out[i], data + offset + i * sizeof(double), sizeof(double));
+            prMemCopy(&out[i], data + offset + i * sizeof(double), sizeof(double));
         }
     }
     return true;

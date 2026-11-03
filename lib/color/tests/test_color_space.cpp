@@ -62,7 +62,7 @@ TEST_CASE("every 8-bit channel survives a 16-bit float and back") {
 
 TEST_CASE("a color of 16-bit floats holds no -0 and no NaN, so equal colors have equal bits") {
     PrColor16 zero = prColor16FromColor(PrColor{0, 0, 0, 0});
-    PrColor16 negative = prColor16FromColor(PrColor{-0.0f, -0.0f, kNanF32, 0});
+    PrColor16 negative = prColor16FromColor(PrColor{-0.0f, -0.0f, kPrF32Nan, 0});
     CHECK(bitCast<uint64_t>(negative) == bitCast<uint64_t>(zero));
     // Extended sRGB keeps channels past [0, 1].
     PrColor wide = prColorFromColor16(prColor16FromColor(PrColor{-0.5f, 1.5f, 2, 1}));
@@ -146,7 +146,7 @@ TEST_CASE("an HDR color resolves to the geometric mean of its colors in absolute
     CHECK(xyz[2] == doctest::Approx(244.000).epsilon(1e-2));
     // At or past each headroom, its own color.
     PrColor low = prColorHdrResolve(&hdr, -1);
-    PrColor high = prColorHdrResolve(&hdr, kInfinityF32);
+    PrColor high = prColorHdrResolve(&hdr, kPrF32Infinity);
     CHECK(low.g == prFloat16ToFloat(hdr.colors[0].g));
     CHECK(high.g == prFloat16ToFloat(hdr.colors[1].g));
 }

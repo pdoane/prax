@@ -23,9 +23,9 @@ TEST_CASE("random bytes fill the whole of a request longer than one read of the 
     prRandomBytes(second, sizeof(second));
     // Two draws are equal, and a 64-byte run of a draw is all zero, with negligible probability.
     uint8_t zero[64] = {};
-    CHECK(!memEquals(first, second, sizeof(first)));
+    CHECK(!prMemEquals(first, second, sizeof(first)));
     for (size_t at = 0; at + sizeof(zero) <= sizeof(first); at += sizeof(zero))
-        CHECK(!memEquals(first + at, zero, sizeof(zero)));
+        CHECK(!prMemEquals(first + at, zero, sizeof(zero)));
     prRandomBytes(nullptr, 0);
 }
 
@@ -42,7 +42,7 @@ TEST_CASE("the local time zone's offset from UTC is a whole number of minutes, l
 TEST_CASE("the mimalloc backend allocates, resizes and frees") {
     uint8_t* bytes = static_cast<uint8_t*>(prCoreMimallocAllocBytes(32));
     REQUIRE(bytes != nullptr);
-    memFill(bytes, 7, 32);
+    prMemFill(bytes, 7, 32);
     CHECK(prCoreMimallocUsableBytes(bytes) >= 32);
 
     bytes = static_cast<uint8_t*>(prCoreMimallocReallocBytes(bytes, 4096));
@@ -61,7 +61,7 @@ TEST_CASE("the mimalloc backend allocates, resizes and frees") {
 TEST_CASE("the C library backend allocates, resizes and frees") {
     uint8_t* bytes = static_cast<uint8_t*>(prCoreLibcAllocBytes(32));
     REQUIRE(bytes != nullptr);
-    memFill(bytes, 7, 32);
+    prMemFill(bytes, 7, 32);
     CHECK(prCoreLibcUsableBytes(bytes) >= 32);
 
     bytes = static_cast<uint8_t*>(prCoreLibcReallocBytes(bytes, 4096));

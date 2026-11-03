@@ -10,17 +10,17 @@ namespace pr_impl {
 namespace {
 
 double parse(const char* text) {
-    return parseF64(text, PrStringView(text).size);
+    return prF64Parse(text, PrStringView(text).size);
 }
 
 std::string format(double value) {
-    char text[kF64TextMaxBytes];
-    return std::string(text, formatF64(value, text));
+    char text[kPrF64TextMaxBytes];
+    return std::string(text, prF64Format(value, text));
 }
 
 std::string significant(double value, uint32_t digits) {
-    char text[kF64TextMaxBytes];
-    return std::string(text, formatF64Significant(value, digits, text));
+    char text[kPrF64TextMaxBytes];
+    return std::string(text, prF64FormatSignificant(value, digits, text));
 }
 
 } // namespace

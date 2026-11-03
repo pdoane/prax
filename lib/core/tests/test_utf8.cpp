@@ -135,10 +135,10 @@ TEST_CASE("validating finds a sequence wherever it falls in a long text") {
 
 TEST_CASE("repaired text has U+FFFD in place of each maximal subpart") {
     auto repair = [](const std::string& text) {
-        TextBuffer out;
-        textAppendUtf8(&out, text);
-        std::string result(out.text.data != nullptr ? out.text.data : "", out.text.count);
-        textReset(&out);
+        PrTextBuffer out = {};
+        prTextBufferAppendUtf8(&out, text);
+        std::string result(out.data != nullptr ? out.data : "", out.size);
+        prTextBufferReset(&out);
         return result;
     };
     CHECK(repair("caf\xc3\xa9") == "caf\xc3\xa9");

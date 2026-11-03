@@ -2,6 +2,7 @@
 
 #include "pr/gpu.h"
 
+#include "pr/align.h"
 #include "pr/alloc.h"
 #include "pr/array.h"
 #include "pr/ascii.h"
@@ -107,7 +108,7 @@ bool sameSampler(const PrGpuSamplerDesc& a, const PrGpuSamplerDesc& b) {
 }
 
 uint32_t readWord(const uint8_t* bytes, uint64_t at) {
-    return readLeU32(bytes + at);
+    return prMemReadLeU32(bytes + at);
 }
 
 const PrGpuShaderEntry* PR_NULLABLE entryNamed(const PrGpuShaderLibrary* library, PrStringView name) {
@@ -222,7 +223,7 @@ using namespace pr_impl;
 
 PrGpuBackend prGpuBackendFromName(PrStringView name) {
     for (PrGpuBackend backend = 0; backend < PrGpuBackend_Count; ++backend) {
-        if (asciiEqualsFold(kBackendNames[backend], name))
+        if (prAsciiEqualsFold(kBackendNames[backend], name))
             return backend;
     }
     return PrGpuBackend_Count;
@@ -569,7 +570,7 @@ void prGpuTextureRead(PrGpuDevice* device, PrGpuTexture texture, uint32_t access
     PrGpuTextureDesc desc = prGpuTextureDesc(device, texture);
     uint32_t bytes = kFormatBlocks[desc.format].bytes;
     for (uint32_t y = 0; y < out.extent.y; ++y)
-        memZero(out.data + y * out.stride, size_t(out.extent.x) * bytes);
+        prMemZero(out.data + y * out.stride, size_t(out.extent.x) * bytes);
     PrUVec2 at{};
     PrUVec2 size{};
     PrUVec2 to{};
@@ -586,7 +587,7 @@ void prGpuTextureRead(PrGpuDevice* device, PrGpuTexture texture, uint32_t access
     if (!device->isLost(device)) {
         const uint8_t* from = static_cast<const uint8_t*>(prGpuBufferMap(device, buffer));
         for (uint32_t y = 0; y < size.y; ++y)
-            memCopy(out.data + (to.y + y) * out.stride + size_t(to.x) * bytes, from + size_t(y) * rowBytes,
+            prMemCopy(out.data + (to.y + y) * out.stride + size_t(to.x) * bytes, from + size_t(y) * rowBytes,
                 size_t(size.x) * bytes);
     }
     prGpuBufferDestroy(device, buffer);

@@ -124,7 +124,7 @@ struct DrawAtlas {
 };
 
 uint32_t hashOf(const Key& key) {
-    return uint32_t(hashBytes(&key, sizeof(key), 0));
+    return uint32_t(prHashBytes(&key, sizeof(key), 0));
 }
 
 void markDirty(Page& page, uint32_t left, uint32_t top, uint32_t right, uint32_t bottom) {
@@ -154,7 +154,7 @@ uint32_t addPage(DrawAtlas* a) {
     uint32_t index = a->pages.count;
     uint32_t solid = keptRows(a, index);
     for (uint32_t y = 0; y < solid; ++y)
-        memFill(page.texels + size_t(y) * size, 0xff, solid);
+        prMemFill(page.texels + size_t(y) * size, 0xff, solid);
     page.top = solid;
     markDirty(page, 0, 0, size, size);
     a->pages.push(page);
@@ -167,7 +167,7 @@ void clearPage(DrawAtlas* a, uint32_t index) {
     Page& page = a->pages.data[index];
     uint32_t size = a->options.size;
     uint32_t keep = keptRows(a, index);
-    memFill(page.texels + size_t(keep) * size, 0, size_t(size - keep) * size);
+    prMemFill(page.texels + size_t(keep) * size, 0, size_t(size - keep) * size);
     page.shelves.clear();
     page.top = keep;
     markDirty(page, 0, keep, size, size);
@@ -233,7 +233,7 @@ bool placeBox(DrawAtlas* a, uint32_t width, uint32_t height, uint32_t* page, uin
 // Returns the entry for the key, and marks its page as found. Returns null if the atlas has no entry for the key.
 const Entry* PR_NULLABLE lookUp(DrawAtlas* a, const Key& key, uint32_t hash) {
     uint32_t found = a->entryIndex.find(hash, [&](uint32_t i) {
-        return memEquals(&a->entries.data[i].key, &key, sizeof(key));
+        return prMemEquals(&a->entries.data[i].key, &key, sizeof(key));
     });
     if (found == kHashMissing)
         return nullptr;
@@ -249,10 +249,10 @@ const Entry* PR_NULLABLE add(DrawAtlas* a, const Key& key, uint32_t hash, PrPath
     e.key = key;
     if (a->outline.pointCount != 0) {
         PrRect bounds = prPathPolylineBounds(&a->outline);
-        int32_t left = int32_t(floorF32(bounds.left));
-        int32_t top = int32_t(floorF32(bounds.top));
-        int32_t right = int32_t(ceilF32(bounds.right));
-        int32_t bottom = int32_t(ceilF32(bounds.bottom));
+        int32_t left = int32_t(prF32Floor(bounds.left));
+        int32_t top = int32_t(prF32Floor(bounds.top));
+        int32_t right = int32_t(prF32Ceil(bounds.right));
+        int32_t bottom = int32_t(prF32Ceil(bounds.bottom));
         if (right > left && bottom > top) {
             uint32_t width = uint32_t(right - left);
             uint32_t height = uint32_t(bottom - top);
@@ -285,16 +285,16 @@ const Entry* PR_NULLABLE add(DrawAtlas* a, const Key& key, uint32_t hash, PrPath
 // Computes the pixel that contains a point, and the point's phase within that pixel to a quarter pixel. Returns false
 // if the point is not finite.
 bool phaseOf(PrVec2 point, PrVec2* pixel, uint8_t* phaseX, uint8_t* phaseY) {
-    if (!isFiniteF32(point.x) || !isFiniteF32(point.y))
+    if (!prF32IsFinite(point.x) || !prF32IsFinite(point.y))
         return false;
-    float column = floorF32(point.x);
-    float x = roundF32((point.x - column) * kPhases);
+    float column = prF32Floor(point.x);
+    float x = prF32Round((point.x - column) * kPhases);
     if (x >= kPhases) {
         x = 0;
         column += 1;
     }
-    float row = floorF32(point.y);
-    float y = roundF32((point.y - row) * kPhases);
+    float row = prF32Floor(point.y);
+    float y = prF32Round((point.y - row) * kPhases);
     if (y >= kPhases) {
         y = 0;
         row += 1;
@@ -340,9 +340,9 @@ bool mixesContours(const PrPath* path) {
 uint64_t patternOf(const PrPathStroke& stroke) {
     uint64_t hash = 0;
     if (stroke.dashCount != 0)
-        hash = hashBytes(stroke.dashes, sizeof(float) * stroke.dashCount, hash + 1);
+        hash = prHashBytes(stroke.dashes, sizeof(float) * stroke.dashCount, hash + 1);
     if (stroke.profileCount != 0)
-        hash = hashBytes(stroke.profile, sizeof(PrPathWidthPoint) * stroke.profileCount, hash + 2);
+        hash = prHashBytes(stroke.profile, sizeof(PrPathWidthPoint) * stroke.profileCount, hash + 2);
     return hash;
 }
 
@@ -419,7 +419,7 @@ bool prDrawAtlasGlyph(PrDrawAtlas* atlas, const PrFontGlyphRun* run, uint32_t in
         return false;
     const PrAffine2& glyph = placement.glyph;
     PrVec2 drawn = placement.origin;
-    PrVec2 pixel{floorF32(drawn.x), floorF32(drawn.y)};
+    PrVec2 pixel{prF32Floor(drawn.x), prF32Floor(drawn.y)};
     Key key{};
     key.phaseX = uint8_t((drawn.x - pixel.x) * kPhases);
     key.phaseY = uint8_t((drawn.y - pixel.y) * kPhases);
@@ -468,7 +468,7 @@ bool prDrawAtlasPath(PrDrawAtlas* atlas, const PrPath* path, PrPathFillRule rule
     if (stroke != nullptr) {
         reach = prPathStrokeReach(&stroke->shape) * (stroke->align == PrDrawStrokeAlign_Center ? 1 : 2);
         if (!stroke->nonScaling)
-            reach *= maxF32(transform.a, transform.d);
+            reach *= prF32Max(transform.a, transform.d);
     }
     float width = (bounds.right - bounds.left) * transform.a + 2 * reach;
     float height = (bounds.bottom - bounds.top) * transform.d + 2 * reach;

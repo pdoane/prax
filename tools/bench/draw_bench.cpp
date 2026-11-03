@@ -340,7 +340,7 @@ int main(int argc, char** argv) {
                             t.cpu, t.gpu, frameMillis);
                     else
                         std::snprintf(timing, sizeof(timing), "\"cpu\": %.4f, \"render\": %.4f", t.cpu, frameMillis);
-                    TextBuffer row{};
+                    PrTextBuffer row{};
                     harnessAppendFormat(&row,
                         "{\"name\": \"%s / %s%s\", \"commands\": %u%s, %s, \"passes\": %u, \"layers\": %u, "
                             "\"draws\": %u, \"primitives\": %u, \"records\": %u, \"paths\": %u, \"upload\": %llu",
@@ -348,9 +348,9 @@ int main(int argc, char** argv) {
                         timing, stats.passes, stats.layers, stats.draws, stats.primitives, stats.records,
                         stats.pathFills, static_cast<unsigned long long>(stats.uploadBytes));
                     harnessCountsWrite(&counts, &row);
-                    textAppend(&row, "}");
-                    harnessWriteLine(textView(&row));
-                    textReset(&row);
+                    prTextBufferAppend(&row, "}");
+                    harnessWriteLine(prTextBufferView(&row));
+                    prTextBufferReset(&row);
                     std::fflush(stdout);
                 }
             }

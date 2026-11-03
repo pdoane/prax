@@ -22,7 +22,7 @@ bool hasClasses(const PrDomElement* element, const Array<PrStringView>& wanted, 
         bool found = false;
         for (uint32_t j = 0; !found && j < classes.count; ++j) {
             if (quirks)
-                found = asciiEqualsFold(domClassesName(element->document, classes.atoms[j]), wanted.data[i]);
+                found = prAsciiEqualsFold(domClassesName(element->document, classes.atoms[j]), wanted.data[i]);
             else
                 found = classes.atoms[j] == atoms.data[i];
         }
@@ -98,7 +98,7 @@ bool collectionMatches(const PrDomHtmlCollection* collection, const PrDomElement
         return name == requested;
     // dom/#concept-getelementsbytagname: an HTML element in an HTML document matches the requested name in ASCII
     // lowercase.
-    return asciiEqualsLowered(name, requested);
+    return prAsciiEqualsLowered(name, requested);
 }
 
 // Returns the first child at or after `child` that is the HTML element `tag`, or also `other`, or null.
@@ -238,7 +238,7 @@ PrStatus validate(PrStringView token) {
     if (token.size == 0)
         return PrStatus_Syntax;
     for (size_t i = 0; i < token.size; ++i) {
-        if (asciiIsSpace(token.data[i]))
+        if (prAsciiIsSpace(token.data[i]))
             return PrStatus_InvalidData;
     }
     return PrStatus_Ok;
@@ -578,10 +578,10 @@ void domTokenListSetValue(PrDomTokenList* list, PrStringView value) {
 void domOrderedSetParse(PrStringView text, Array<PrStringView>* out) {
     size_t at = 0;
     while (at < text.size) {
-        while (at < text.size && asciiIsSpace(text.data[at]))
+        while (at < text.size && prAsciiIsSpace(text.data[at]))
             ++at;
         size_t start = at;
-        while (at < text.size && !asciiIsSpace(text.data[at]))
+        while (at < text.size && !prAsciiIsSpace(text.data[at]))
             ++at;
         if (at == start)
             break;

@@ -83,7 +83,7 @@ struct ReservedArray {
         if (count == committed)
             commitMore();
         uint32_t index = count++;
-        memCopy(data + index, &value, sizeof(T));
+        prMemCopy(data + index, &value, sizeof(T));
         return index;
     }
 

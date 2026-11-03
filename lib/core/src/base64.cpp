@@ -4,7 +4,7 @@
 
 #include "pr/ascii.h"
 
-namespace pr {
+namespace pr_impl {
 namespace {
 
 constexpr char kAlphabet[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
@@ -22,7 +22,7 @@ struct Sextets {
 constexpr Sextets sextets() {
     Sextets t{};
     for (uint32_t c = 0; c < 256; ++c)
-        t.of[c] = asciiIsSpace(char(c)) ? kSpace : c == '=' ? kPad : kInvalid;
+        t.of[c] = prAsciiIsSpace(char(c)) ? kSpace : c == '=' ? kPad : kInvalid;
     for (uint8_t v = 0; v < 64; ++v)
         t.of[uint8_t(kAlphabet[v])] = v;
     return t;
@@ -32,11 +32,15 @@ constexpr Sextets kSextets = sextets();
 
 } // namespace
 
-size_t base64EncodedSize(size_t size) {
+} // namespace pr_impl
+
+using namespace pr_impl;
+
+size_t prBase64EncodedSize(size_t size) {
     return (size + 2) / 3 * 4;
 }
 
-size_t base64Encode(PrStringView input, char* PR_NULLABLE out, size_t capacity) {
+size_t prBase64Encode(PrStringView input, char* PR_NULLABLE out, size_t capacity) {
     if (out == nullptr)
         capacity = 0;
     size_t written = 0;
@@ -60,7 +64,7 @@ size_t base64Encode(PrStringView input, char* PR_NULLABLE out, size_t capacity) 
     return written;
 }
 
-bool base64Decode(PrStringView input, char* PR_NULLABLE out, size_t capacity, size_t* size) {
+bool prBase64Decode(PrStringView input, char* PR_NULLABLE out, size_t capacity, size_t* size) {
     // After removing ASCII whitespace, and one or two trailing '=' if the length is a multiple of four, only alphabet
     // characters may remain. Their number must not leave a remainder of one when divided by four. Each output byte
     // comes from characters already read, so the output can overwrite the input.
@@ -122,5 +126,3 @@ bool base64Decode(PrStringView input, char* PR_NULLABLE out, size_t capacity, si
     *size = written;
     return true;
 }
-
-} // namespace pr

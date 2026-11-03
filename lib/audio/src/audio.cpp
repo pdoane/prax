@@ -44,7 +44,7 @@ using namespace pr_impl;
 
 PrAudioOutputBackend prAudioOutputBackendFromName(PrStringView name) {
     for (PrAudioOutputBackend backend = 0; backend < PrAudioOutputBackend_Count; ++backend) {
-        if (asciiEqualsFold(kBackendNames[backend], name))
+        if (prAsciiEqualsFold(kBackendNames[backend], name))
             return backend;
     }
     return PrAudioOutputBackend_Count;

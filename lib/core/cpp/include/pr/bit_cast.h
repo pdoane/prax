@@ -3,6 +3,7 @@
 #pragma once
 
 #include "pr/base.h"
+#include "pr/type_traits.h"
 
 PR_ASSUME_NONNULL_BEGIN
 
@@ -13,7 +14,7 @@ namespace pr {
 template <typename To, typename From>
 constexpr To bitCast(const From& value) {
     static_assert(sizeof(To) == sizeof(From));
-    static_assert(__is_trivially_copyable(To) && __is_trivially_copyable(From));
+    static_assert(isTriviallyCopyable<To> && isTriviallyCopyable<From>);
     return __builtin_bit_cast(To, value);
 }
 

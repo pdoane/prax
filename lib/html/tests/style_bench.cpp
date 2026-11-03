@@ -50,20 +50,20 @@ constexpr uint32_t kAnchors = 400;
 constexpr uint32_t kSiblingAnchors = 8;
 
 // The sheet of anchors, as in bench.js. No rule matches the page.
-void anchorRules(TextBuffer* out) {
+void anchorRules(PrTextBuffer* out) {
     for (uint32_t i = 0; i < kAnchors - kSiblingAnchors; ++i) {
-        textAppend(out, ".anchor");
-        textAppendU64(out, i);
-        textAppend(out, ":has(.flag");
-        textAppendU64(out, i);
-        textAppend(out, ") { outline: 1px solid rgb(200, 0, 0) }\n");
+        prTextBufferAppend(out, ".anchor");
+        prTextBufferAppendU64(out, i, 10);
+        prTextBufferAppend(out, ":has(.flag");
+        prTextBufferAppendU64(out, i, 10);
+        prTextBufferAppend(out, ") { outline: 1px solid rgb(200, 0, 0) }\n");
     }
     for (uint32_t i = 0; i < kSiblingAnchors; ++i) {
-        textAppend(out, ".sibling");
-        textAppendU64(out, i);
-        textAppend(out, ":has(~ .flag");
-        textAppendU64(out, i);
-        textAppend(out, ") { outline: 1px solid rgb(0, 0, 200) }\n");
+        prTextBufferAppend(out, ".sibling");
+        prTextBufferAppendU64(out, i, 10);
+        prTextBufferAppend(out, ":has(~ .flag");
+        prTextBufferAppendU64(out, i, 10);
+        prTextBufferAppend(out, ") { outline: 1px solid rgb(0, 0, 200) }\n");
     }
 }
 
@@ -95,21 +95,21 @@ struct Case {
 };
 
 // The markup of the page's content.
-void markup(TextBuffer* out) {
+void markup(PrTextBuffer* out) {
     for (uint32_t i = 0; i < kCards; ++i) {
-        textAppend(out, "<div class=\"card\" id=\"card");
-        textAppendU64(out, i);
-        textAppend(out, "\"><h2>Card ");
-        textAppendU64(out, i);
-        textAppend(out, "</h2><p>Some text with <span>an inline span</span> in a paragraph of a card.</p></div>");
+        prTextBufferAppend(out, "<div class=\"card\" id=\"card");
+        prTextBufferAppendU64(out, i, 10);
+        prTextBufferAppend(out, "\"><h2>Card ");
+        prTextBufferAppendU64(out, i, 10);
+        prTextBufferAppend(out, "</h2><p>Some text with <span>an inline span</span> in a paragraph of a card.</p></div>");
     }
-    textAppend(out, "<ul class=\"list\">");
+    prTextBufferAppend(out, "<ul class=\"list\">");
     for (uint32_t i = 0; i < kItems; ++i) {
-        textAppend(out, "<li>item ");
-        textAppendU64(out, i);
-        textAppend(out, "</li>");
+        prTextBufferAppend(out, "<li>item ");
+        prTextBufferAppendU64(out, i, 10);
+        prTextBufferAppend(out, "</li>");
     }
-    textAppend(out, "</ul>");
+    prTextBufferAppend(out, "</ul>");
 }
 
 // The value that a read of the resolved value gives, stored where the optimizer cannot remove the read.
@@ -263,10 +263,10 @@ constexpr Case kCases[] = {
             read(prDomElementQuery(prDomNodeAsEventTarget(prDomNodeLastChild(w->list))), PrCssProperty_Color);
         },
         [](Work* w) {
-            TextBuffer rules = {};
+            PrTextBuffer rules = {};
             anchorRules(&rules);
-            addStyle(w, textView(&rules));
-            textReset(&rules);
+            addStyle(w, prTextBufferView(&rules));
+            prTextBufferReset(&rules);
             read(prDomElementQuery(prDomNodeAsEventTarget(prDomNodeLastChild(w->list))), PrCssProperty_Color);
         },
     },
@@ -308,7 +308,7 @@ int main(int argc, char** argv) {
         fprintf(stderr, "usage: style_bench <large.css> [case]\n");
         return 2;
     }
-    TextBuffer large = {};
+    PrTextBuffer large = {};
     if (!harnessReadFile(&large, argv[1])) {
         fprintf(stderr, "style_bench: cannot read the stylesheet\n");
         return 1;
@@ -318,19 +318,19 @@ int main(int argc, char** argv) {
     const char* const kFonts[][2] = {{"Tinos.ttf", "serif"}, {"Tinos-Bold.ttf", nullptr}, {"Arimo.ttf", "sans-serif"}};
     const char* const kFamilies[] = {"Tinos", "Tinos", "Arimo"};
     for (uint32_t i = 0; i < countOf(kFonts); ++i) {
-        TextBuffer path = {};
-        textAppend(&path, PR_FONTS_DIR);
-        textAppend(&path, "/");
-        textAppend(&path, kFonts[i][0]);
+        PrTextBuffer path = {};
+        prTextBufferAppend(&path, PR_FONTS_DIR);
+        prTextBufferAppend(&path, "/");
+        prTextBufferAppend(&path, kFonts[i][0]);
         const PrFont* font = nullptr;
-        if (prFontCreateFromFile(textView(&path), 0, nullptr, &font) == PrStatus_Ok) {
+        if (prFontCreateFromFile(prTextBufferView(&path), 0, nullptr, &font) == PrStatus_Ok) {
             PrFontFaceDescriptor descriptor = prFontFaceDescriptorDefault();
             prFontSetAdd(fonts, &descriptor, font);
             prFontRelease(font);
             if (kFonts[i][1] != nullptr)
                 prFontSetSetGeneric(fonts, prFontGenericFromName(kFonts[i][1]), kFamilies[i]);
         }
-        textReset(&path);
+        prTextBufferReset(&path);
     }
     prFontSetSetDefaultFamily(fonts, prFontFamilyGeneric(PrFontGeneric_Serif));
     PrTextShaper* shaper = prTextHarfBuzzCreate();
@@ -342,16 +342,16 @@ int main(int argc, char** argv) {
     PrHtmlPage* page = prHtmlPageCreate(&host);
     prHtmlPageLoad(page, "<!doctype html><body>", "about:blank", nullptr);
 
-    TextBuffer html = {};
+    PrTextBuffer html = {};
     markup(&html);
     Work work = {};
     work.document = prHtmlWindowDocument(prHtmlPageWindow(page));
     work.root = prDomDocumentElement(work.document);
-    addStyle(&work, textView(&large));
+    addStyle(&work, prTextBufferView(&large));
     work.own = addStyle(&work, kRules);
     work.host = prDomElementAsNode(element(&work, "div"));
     prDomNodeAppendChild(prDomElementAsNode(prDomDocumentBody(work.document)), work.host);
-    work.html = textView(&html);
+    work.html = prTextBufferView(&html);
     work.extra = prDomElementAsNode(element(&work, "li"));
     work.inserted = prDomElementAsNode(element(&work, "em"));
     build(&work);
@@ -382,7 +382,7 @@ int main(int argc, char** argv) {
     prTextFontRelease(defaultFont);
     prTextShaperDestroy(shaper);
     prFontSetDestroy(fonts);
-    textReset(&html);
-    textReset(&large);
+    prTextBufferReset(&html);
+    prTextBufferReset(&large);
     return 0;
 }

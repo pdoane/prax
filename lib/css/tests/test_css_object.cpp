@@ -9,19 +9,19 @@ namespace pr_impl {
 namespace {
 
 std::string text(const CssRuleData* rule) {
-    TextBuffer buffer;
+    PrTextBuffer buffer = {};
     cssSerializeRule(&buffer, rule);
     return take(&buffer);
 }
 
 std::string selectors(const CssRuleData* rule) {
-    TextBuffer buffer;
+    PrTextBuffer buffer = {};
     cssSerializeSelectorText(&buffer, rule);
     return take(&buffer);
 }
 
 std::string prelude(const CssRuleData* rule) {
-    TextBuffer buffer;
+    PrTextBuffer buffer = {};
     cssSerializePrelude(&buffer, rule);
     return take(&buffer);
 }
@@ -36,7 +36,7 @@ bool preludeHolds(const CssRuleData* rule, CssValueDef production) {
 }
 
 std::string declarations(const CssDeclarationBlock* block) {
-    TextBuffer buffer;
+    PrTextBuffer buffer = {};
     cssSerializeDeclarationBlock(&buffer, block);
     return take(&buffer);
 }
@@ -50,7 +50,7 @@ std::string nameAt(const CssDeclarationBlock* block, uint32_t index) {
 }
 
 std::string valueAt(const CssDeclarationBlock* block, uint32_t index) {
-    TextBuffer buffer;
+    PrTextBuffer buffer = {};
     cssSerializeDeclarationValue(&buffer, block, &declarationAt(block, index));
     return take(&buffer);
 }

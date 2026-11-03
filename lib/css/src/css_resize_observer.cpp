@@ -70,10 +70,10 @@ BoxSizes measure(PrCssPresentation* PR_NULLABLE presentation, const PrDomElement
     sizes.border = logical(px(border.right - border.left), px(border.bottom - border.top), vertical);
     sizes.content = logical(px(content.x), px(content.y), vertical);
     // The content box in device pixels covers the whole pixels between its edges, each rounded to the nearest pixel.
-    double x0 = roundF64(px(border.left + left) * pixelRatio);
-    double y0 = roundF64(px(border.top + top) * pixelRatio);
-    double x1 = roundF64(px(border.left + left + content.x) * pixelRatio);
-    double y1 = roundF64(px(border.top + top + content.y) * pixelRatio);
+    double x0 = prF64Round(px(border.left + left) * pixelRatio);
+    double y0 = prF64Round(px(border.top + top) * pixelRatio);
+    double x1 = prF64Round(px(border.left + left + content.x) * pixelRatio);
+    double y1 = prF64Round(px(border.top + top + content.y) * pixelRatio);
     sizes.devicePixelContent = logical(x1 - x0, y1 - y0, vertical);
     sizes.contentRect = PrDomRect{
         px(padding(PrRectSide_Left)), px(padding(PrRectSide_Top)), px(content.x),

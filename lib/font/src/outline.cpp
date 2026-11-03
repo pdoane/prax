@@ -39,7 +39,7 @@ Winding windingOf(const FontGlyphOutline& outline) {
 
 // Returns `v` scaled to length 1, and its length in `length`. A zero vector stays zero.
 PrVec2 unit(PrVec2 v, float* length) {
-    *length = sqrtF32(v.x * v.x + v.y * v.y);
+    *length = prF32Sqrt(v.x * v.x + v.y * v.y);
     return *length != 0 ? PrVec2{v.x / *length, v.y / *length} : PrVec2{0, 0};
 }
 
@@ -78,10 +78,10 @@ PrRect fontOutlineControlBox(const FontGlyphOutline& outline) {
     PrRect box{outline.points.data[0].x, outline.points.data[0].y, outline.points.data[0].x, outline.points.data[0].y};
     for (uint32_t i = 1; i < outline.points.count; ++i) {
         PrVec2 p = outline.points.data[i];
-        box.left = minF32(box.left, p.x);
-        box.top = minF32(box.top, p.y);
-        box.right = maxF32(box.right, p.x);
-        box.bottom = maxF32(box.bottom, p.y);
+        box.left = prF32Min(box.left, p.x);
+        box.top = prF32Min(box.top, p.y);
+        box.right = prF32Max(box.right, p.x);
+        box.bottom = prF32Max(box.bottom, p.y);
     }
     return box;
 }
@@ -143,7 +143,7 @@ void fontOutlineEmbolden(FontGlyphOutline& outline, float x, float y) {
                     float q = out.x * in.y - out.y * in.x;
                     if (winding == Winding_TrueType)
                         q = -q;
-                    float l = minF32(lengthIn, lengthOut);
+                    float l = prF32Min(lengthIn, lengthOut);
                     shift.x = xStrength * q <= l * d ? shift.x * xStrength / d : shift.x * l / q;
                     shift.y = yStrength * q <= l * d ? shift.y * yStrength / d : shift.y * l / q;
                 }

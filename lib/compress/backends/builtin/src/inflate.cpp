@@ -211,15 +211,15 @@ bool reaches(const Deflate& parser, const InflateSpan& span, uint32_t distance) 
 // Appends this call's output to the history.
 void keepHistory(Deflate& parser, const uint8_t* data, size_t size) {
     if (size >= kHistorySize) {
-        memCopy(parser.history, data + size - kHistorySize, kHistorySize);
+        prMemCopy(parser.history, data + size - kHistorySize, kHistorySize);
         parser.historyAt = 0;
         parser.historySize = kHistorySize;
         return;
     }
     uint32_t count = uint32_t(size);
     uint32_t first = kHistorySize - parser.historyAt < count ? kHistorySize - parser.historyAt : count;
-    memCopy(parser.history + parser.historyAt, data, first);
-    memCopy(parser.history, data + first, count - first);
+    prMemCopy(parser.history + parser.historyAt, data, first);
+    prMemCopy(parser.history, data + first, count - first);
     parser.historyAt = (parser.historyAt + count) % kHistorySize;
     parser.historySize = parser.historySize + count < kHistorySize ? parser.historySize + count : kHistorySize;
 }
@@ -233,7 +233,7 @@ void copyMatch(uint8_t* out, uint32_t distance, uint32_t length) {
     const uint8_t* from = out - distance;
     if (distance >= 8) {
         for (; at < length; at += 8)
-            memCopy(out + at, from + at, 8);
+            prMemCopy(out + at, from + at, 8);
         return;
     }
     for (; at < 8; ++at)
@@ -242,8 +242,8 @@ void copyMatch(uint8_t* out, uint32_t distance, uint32_t length) {
     const uint32_t step = distance * (8 / distance);
     for (; at < length; at += step) {
         uint64_t word = 0;
-        memCopy(&word, out + (at - step), 8);
-        memCopy(out + at, &word, 8);
+        prMemCopy(&word, out + (at - step), 8);
+        prMemCopy(out + at, &word, 8);
     }
 }
 
@@ -402,7 +402,7 @@ void decodeFast(Deflate& parser, InflateSpan& span) {
         // Fills the register to at least 56 bits with one read of eight bytes, or one byte at a time near the end of
         // the input. It stops if the rest of the input may not hold a whole literal or match.
         if (inputEnd - at >= 8) {
-            bits |= readLeU64(in + at) << count;
+            bits |= prMemReadLeU64(in + at) << count;
             const uint32_t added = (63 - count) / 8;
             at += added;
             fetched += added;
@@ -518,7 +518,7 @@ InflateResult decodeDeflate(Deflate& parser, InflateSpan& span) {
                     count = count < span.capacity - span.written ? count : span.capacity - span.written;
                     if (count == 0)
                         return InflateResult_Input;
-                    memCopy(span.output + span.written, span.input.data + span.consumed, count);
+                    prMemCopy(span.output + span.written, span.input.data + span.consumed, count);
                     span.consumed += count;
                     span.written += count;
                     parser.remaining -= uint32_t(count);
@@ -537,7 +537,7 @@ InflateResult decodeDeflate(Deflate& parser, InflateSpan& span) {
                 parser.codeCount = (value >> 10) + 4;
                 if (parser.literalCount > 286)
                     return InflateResult_Invalid;
-                memZero(parser.codeLengths, sizeof(parser.codeLengths));
+                prMemZero(parser.codeLengths, sizeof(parser.codeLengths));
                 parser.tableAt = 0;
                 parser.phase = InflatePhase_CodeLengths;
                 break;
@@ -695,7 +695,7 @@ bool readHeader(InflateState& parser, InflateSpan& span, uint32_t size) {
 
 void checksumHeader(InflateState& parser, InflateSpan& span, size_t first) {
     const PrByteView bytes{span.input.data ? span.input.data + first : nullptr, span.consumed - first};
-    parser.headerCrc = crc32Update(parser.headerCrc, bytes);
+    parser.headerCrc = prCrc32Update(parser.headerCrc, bytes);
 }
 
 InflateResult readFrame(InflateState& parser, InflateSpan& span, bool final) {
@@ -705,7 +705,7 @@ InflateResult readFrame(InflateState& parser, InflateSpan& span, bool final) {
             case InflateFrame_ZlibHeader:
                 if (!readHeader(parser, span, 2))
                     return InflateResult_Input;
-                if ((parser.header[0] & 15) != 8 || (parser.header[0] >> 4) > 7 || readBeU16(parser.header) % 31)
+                if ((parser.header[0] & 15) != 8 || (parser.header[0] >> 4) > 7 || prMemReadBeU16(parser.header) % 31)
                     return InflateResult_Invalid;
                 parser.deflate.windowLimit = 1u << ((parser.header[0] >> 4) + 8);
                 parser.frame = (parser.header[1] & 32) ? InflateFrame_DictionaryId : InflateFrame_Data;
@@ -713,7 +713,7 @@ InflateResult readFrame(InflateState& parser, InflateSpan& span, bool final) {
             case InflateFrame_DictionaryId:
                 if (!readHeader(parser, span, 4))
                     return InflateResult_Input;
-                parser.dictionary = readBeU32(parser.header);
+                parser.dictionary = prMemReadBeU32(parser.header);
                 parser.frame = InflateFrame_Dictionary;
                 break;
             case InflateFrame_Dictionary:
@@ -735,7 +735,7 @@ InflateResult readFrame(InflateState& parser, InflateSpan& span, bool final) {
                     checksumHeader(parser, span, first);
                     if (!ready)
                         return InflateResult_Input;
-                    parser.remaining = readLeU16(parser.header);
+                    parser.remaining = prMemReadLeU16(parser.header);
                 } else {
                     parser.remaining = 0;
                 }
@@ -773,7 +773,7 @@ InflateResult readFrame(InflateState& parser, InflateSpan& span, bool final) {
                 if (parser.header[3] & 2) {
                     if (!readHeader(parser, span, 2))
                         return InflateResult_Input;
-                    if (readLeU16(parser.header) != (parser.headerCrc & 0xffff))
+                    if (prMemReadLeU16(parser.header) != (parser.headerCrc & 0xffff))
                         return InflateResult_Invalid;
                 }
                 parser.frame = InflateFrame_Data;
@@ -783,9 +783,9 @@ InflateResult readFrame(InflateState& parser, InflateSpan& span, bool final) {
                 const InflateResult result = readDeflate(parser.deflate, span);
                 const PrByteView bytes{span.output ? span.output + start : nullptr, span.written - start};
                 if (parser.format == InflateFormat_Zlib)
-                    parser.checksum = adler32Update(parser.checksum, bytes);
+                    parser.checksum = prAdler32Update(parser.checksum, bytes);
                 else if (parser.format == InflateFormat_Gzip)
-                    parser.checksum = crc32Update(parser.checksum, bytes);
+                    parser.checksum = prCrc32Update(parser.checksum, bytes);
                 parser.size += uint32_t(bytes.size);
                 if (result != InflateResult_Done)
                     return result;
@@ -796,11 +796,13 @@ InflateResult readFrame(InflateState& parser, InflateSpan& span, bool final) {
                 if (!readHeader(parser, span, parser.format == InflateFormat_Zlib ? 4 : 8))
                     return InflateResult_Input;
                 if (parser.format == InflateFormat_Zlib) {
-                    if (readBeU32(parser.header) != parser.checksum)
+                    if (prMemReadBeU32(parser.header) != parser.checksum)
                         return InflateResult_Invalid;
                     parser.frame = InflateFrame_Done;
                 } else {
-                    if (readLeU32(parser.header) != parser.checksum || readLeU32(parser.header + 4) != parser.size)
+                    uint32_t storedChecksum = prMemReadLeU32(parser.header);
+                    uint32_t storedSize = prMemReadLeU32(parser.header + 4);
+                    if (storedChecksum != parser.checksum || storedSize != parser.size)
                         return InflateResult_Invalid;
                     parser.frame = InflateFrame_Member;
                 }
@@ -856,12 +858,12 @@ uint32_t inflateDictionaryChecksum(const Inflate* parser) {
 bool inflateSetDictionary(Inflate* parser, PrByteView dictionary) {
     PR_ASSERT(parser->frame == InflateFrame_Dictionary);
     PR_ASSERT(dictionary.data != nullptr || dictionary.size == 0);
-    if (adler32Update(1, dictionary) != parser->dictionary)
+    if (prAdler32Update(1, dictionary) != parser->dictionary)
         return false;
     Deflate& deflate = parser->deflate;
     uint32_t count = dictionary.size < deflate.windowLimit ? uint32_t(dictionary.size) : deflate.windowLimit;
     if (count != 0)
-        memCopy(deflate.history, dictionary.data + dictionary.size - count, count);
+        prMemCopy(deflate.history, dictionary.data + dictionary.size - count, count);
     deflate.historySize = count;
     deflate.historyAt = count % kHistorySize;
     parser->frame = InflateFrame_Data;

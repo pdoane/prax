@@ -34,7 +34,7 @@ void cssValuePoolAddAbsolutePath(CssValuePool* pool, CssValueRun run, uint32_t i
 
 // Appends the path() at `index` of `run` as CSS text: its fill rule if it has one, and its path data as a string, as
 // prPathDataWrite writes it.
-void cssSerializePath(TextBuffer* out, CssValueRun run, uint32_t index);
+void cssSerializePath(PrTextBuffer* out, CssValueRun run, uint32_t index);
 
 } // namespace pr_impl
 

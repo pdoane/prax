@@ -39,7 +39,7 @@ void cssParserReset(CssParser* parser) {
     cssTokenArrayReset(&parser->asideTokens);
     cssTokenScratchReset(&parser->asideScratch);
     cssTokenArrayReset(&parser->givenTokens);
-    textReset(&parser->givenSource);
+    prTextBufferReset(&parser->givenSource);
 
     parser->items.reset();
     parser->declarations.reset();
@@ -55,7 +55,7 @@ void cssParserReset(CssParser* parser) {
     parser->initialOf.reset();
     parser->filter.reset();
 
-    textReset(&parser->names);
+    prTextBufferReset(&parser->names);
 }
 
 void cssParserDrop(CssParser* parser, CssBlock block) {

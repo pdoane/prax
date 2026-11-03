@@ -240,7 +240,7 @@ TEST_CASE("keyword names are unique and sorted") {
         REQUIRE(cssKeywordName(i).data != nullptr);
         CHECK(cssKeywordName(i).size != 0);
         if (i)
-            CHECK(stringCompare(cssKeywordName(i - 1), cssKeywordName(i)) < 0);
+            CHECK(prStringCompare(cssKeywordName(i - 1), cssKeywordName(i)) < 0);
     }
 }
 

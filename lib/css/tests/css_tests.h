@@ -37,9 +37,9 @@ inline std::string take(PrString string) {
 }
 
 // Returns the text written to a buffer, which is then released.
-inline std::string take(TextBuffer* buffer) {
-    std::string text = textOf(textView(buffer));
-    textReset(buffer);
+inline std::string take(PrTextBuffer* buffer) {
+    std::string text = textOf(prTextBufferView(buffer));
+    prTextBufferReset(buffer);
     return text;
 }
 

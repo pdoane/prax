@@ -69,7 +69,7 @@ float cross(PrVec2 a, PrVec2 b) {
 }
 
 float length(PrVec2 a) {
-    return sqrtF32(dot(a, a));
+    return prF32Sqrt(dot(a, a));
 }
 
 PrVec2 unit(PrVec2 a) {
@@ -92,7 +92,7 @@ float curvature(PrVec2 d, PrVec2 dd) {
 float angleBetween(PrVec2 a, PrVec2 b) {
     if (length(a) < kCoincident || length(b) < kCoincident)
         return 0;
-    return absF32(atan2F32(cross(a, b), dot(a, b)));
+    return prF32Abs(prF32Atan2(cross(a, b), dot(a, b)));
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -111,7 +111,7 @@ float widestHalf(const PrPathStroke* style) {
         return half;
     float widest = 0;
     for (uint32_t i = 0; i < style->profileCount; ++i)
-        widest = maxF32(widest, maxF32(style->profile[i].left, style->profile[i].right));
+        widest = prF32Max(widest, prF32Max(style->profile[i].left, style->profile[i].right));
     return widest * style->width;
 }
 
@@ -121,8 +121,8 @@ float widestHalf(const PrPathStroke* style) {
 // Returns the number of steps that an arc of `radius` through `angle` needs to stay within the tolerance.
 uint32_t arcSteps(float radius, float angle, float tolerance) {
     float ratio = 1 - tolerance / radius;
-    float step = ratio > -1 && ratio < 1 ? 2 * acosF32(ratio) : kPiF32;
-    float steps = ceilF32(absF32(angle) / step);
+    float step = ratio > -1 && ratio < 1 ? 2 * prF32Acos(ratio) : kPrF32Pi;
+    float steps = prF32Ceil(prF32Abs(angle) / step);
     if (!(steps >= 1))
         return 1;
     return steps > float(kArcMaxSteps) ? kArcMaxSteps : uint32_t(steps);
@@ -140,8 +140,8 @@ void pushArc(Stroker& s, PrVec2 center, PrVec2 from, float angle) {
     uint32_t steps = arcSteps(length(radius), angle, s.tolerance);
     for (uint32_t i = 1; i < steps; ++i) {
         float a = angle * float(i) / float(steps);
-        float c = cosF32(a);
-        float n = sinF32(a);
+        float c = prF32Cos(a);
+        float n = prF32Sin(a);
         push(s, center + PrVec2{radius.x * c - radius.y * n, radius.x * n + radius.y * c});
     }
 }
@@ -179,7 +179,7 @@ void pushCap(Stroker& s, PrVec2 p, PrVec2 d, float l, float r, PrPathCap kind) {
             push(s, middle + ahead);
             break;
         case PrPathCap_Round:
-            pushArc(s, middle, p + n * l, kPiF32);
+            pushArc(s, middle, p + n * l, kPrF32Pi);
             break;
         default:
             break;
@@ -197,8 +197,8 @@ PrVec2 centerOf(PrVec2 vertex, PrVec2 normal, float curve) {
 // curvature of the vertex, or as a line if the curvature is zero. Returns false if they do not meet on the outer side.
 bool arcsMeet(PrVec2 vertex, PrVec2 bisector, PrVec2 from, PrVec2 direction, float curveIn,
         PrVec2 to, PrVec2 leaving, float curveOut, PrVec2* meet) {
-    bool lineIn = absF32(curveIn) < kCoincident;
-    bool lineOut = absF32(curveOut) < kCoincident;
+    bool lineIn = prF32Abs(curveIn) < kCoincident;
+    bool lineOut = prF32Abs(curveOut) < kCoincident;
     PrVec2 centerIn = lineIn ? vertex : centerOf(vertex, leftNormal(direction), curveIn);
     PrVec2 centerOut = lineOut ? vertex : centerOf(vertex, leftNormal(leaving), curveOut);
     float radiusIn = length(from - centerIn);
@@ -207,7 +207,7 @@ bool arcsMeet(PrVec2 vertex, PrVec2 bisector, PrVec2 from, PrVec2 direction, flo
     uint32_t count = 0;
     if (lineIn && lineOut) {
         float denominator = cross(direction, leaving);
-        if (absF32(denominator) < kParallel)
+        if (prF32Abs(denominator) < kParallel)
             return false;
         float t = cross(to - from, leaving) / denominator;
         candidates[count++] = from + direction * t;
@@ -222,22 +222,22 @@ bool arcsMeet(PrVec2 vertex, PrVec2 bisector, PrVec2 from, PrVec2 direction, flo
         float discriminant = b * b - c;
         if (discriminant < 0)
             return false;
-        float root = sqrtF32(discriminant);
+        float root = prF32Sqrt(discriminant);
         candidates[count++] = point + along * (-b + root);
         candidates[count++] = point + along * (-b - root);
     } else {
         PrVec2 separation = centerOut - centerIn;
         float d = length(separation);
-        if (d < kCoincident || d > radiusIn + radiusOut || d < absF32(radiusIn - radiusOut))
+        if (d < kCoincident || d > radiusIn + radiusOut || d < prF32Abs(radiusIn - radiusOut))
             return false;
         float a = (radiusIn * radiusIn - radiusOut * radiusOut + d * d) / (2 * d);
-        float h = sqrtF32(maxF32(radiusIn * radiusIn - a * a, 0));
+        float h = prF32Sqrt(prF32Max(radiusIn * radiusIn - a * a, 0));
         PrVec2 base = centerIn + separation * (a / d);
         PrVec2 across = leftNormal(separation) * (h / d);
         candidates[count++] = base + across;
         candidates[count++] = base - across;
     }
-    float best = kF32Max;
+    float best = kPrF32Max;
     for (uint32_t i = 0; i < count; ++i) {
         PrVec2 offset = candidates[i] - vertex;
         float reach = length(offset);
@@ -246,7 +246,7 @@ bool arcsMeet(PrVec2 vertex, PrVec2 bisector, PrVec2 from, PrVec2 direction, flo
             *meet = candidates[i];
         }
     }
-    return best < kF32Max;
+    return best < kPrF32Max;
 }
 
 // Adds the points strictly inside the arc about `center` from `from`, starting in `direction`, to `to`. Adds nothing if
@@ -256,12 +256,12 @@ void pushExtension(Stroker& s, PrVec2 center, bool line, PrVec2 from, PrVec2 dir
         return;
     PrVec2 a = from - center;
     PrVec2 b = to - center;
-    float angle = atan2F32(cross(a, b), dot(a, b));
+    float angle = prF32Atan2(cross(a, b), dot(a, b));
     float turning = cross(a, direction);
     if (turning > 0 && angle < 0)
-        angle += 2 * kPiF32;
+        angle += 2 * kPrF32Pi;
     else if (turning < 0 && angle > 0)
-        angle -= 2 * kPiF32;
+        angle -= 2 * kPrF32Pi;
     pushArc(s, center, from, angle);
 }
 
@@ -275,7 +275,7 @@ void pushJoin(Stroker& s, PrVec2 p, PrVec2 in, PrVec2 out, float w, bool corner,
     PrVec2 b = p + nOut * w;
     float turn = cross(in, out);
     float along = dot(in, out);
-    if (absF32(turn) <= kParallel && along > 0) {
+    if (prF32Abs(turn) <= kParallel && along > 0) {
         push(s, a);
         push(s, b);
         return;
@@ -309,7 +309,7 @@ void pushJoin(Stroker& s, PrVec2 p, PrVec2 in, PrVec2 out, float w, bool corner,
     push(s, a);
     switch (kind) {
         case PrPathJoin_Round:
-            pushArc(s, p, a, atan2F32(absF32(turn), along));
+            pushArc(s, p, a, prF32Atan2(prF32Abs(turn), along));
             break;
         case PrPathJoin_Miter:
             if (withinLimit)
@@ -318,8 +318,8 @@ void pushJoin(Stroker& s, PrVec2 p, PrVec2 in, PrVec2 out, float w, bool corner,
         case PrPathJoin_Arcs: {
             PrVec2 meet{};
             if (arcsMeet(p, bisector, a, in, curveIn, b, out, curveOut, &meet) && length(meet - p) <= limit) {
-                bool lineIn = absF32(curveIn) < kCoincident;
-                bool lineOut = absF32(curveOut) < kCoincident;
+                bool lineIn = prF32Abs(curveIn) < kCoincident;
+                bool lineOut = prF32Abs(curveOut) < kCoincident;
                 pushExtension(s, lineIn ? p : centerOf(p, nIn, curveIn), lineIn, a, in, meet);
                 push(s, meet);
                 // The extension of the outgoing side, walked back from its start and then reversed.
@@ -442,7 +442,7 @@ Vertex between(const Stroker& s, const Vertex& a, const Vertex& b, float t, floa
 // Returns the number of steps for a curve whose control polygon turns through `turn`, so that the offset of its widest
 // side stays within the tolerance.
 uint32_t turnCount(const Stroker& s, float turn) {
-    float steps = ceilF32(turn / s.maxTurn);
+    float steps = prF32Ceil(turn / s.maxTurn);
     return steps >= 1 ? (steps > 1024 ? 1024 : uint32_t(steps)) : 1;
 }
 
@@ -520,7 +520,7 @@ void dashContour(Stroker& s, bool closed, float total) {
         widthAt(s, 1, &end.left, &end.right);
         v.push(end);
     }
-    float phase = style->dashOffset - s.patternLength * floorF32(style->dashOffset / s.patternLength);
+    float phase = style->dashOffset - s.patternLength * prF32Floor(style->dashOffset / s.patternLength);
     // A dash that ends at the offset is behind it, and one of no length at the offset is ahead of it.
     uint32_t k = 0;
     while (phase > pattern.data[k] || (phase == pattern.data[k] && pattern.data[k] > 0)) {
@@ -636,27 +636,27 @@ PrPathStroke prPathStrokeDefault(void) {
 }
 
 void prPathStrokeOutline(const PrPath* path, const PrPathStroke* stroke, float tolerance, PrPathPolyline* out) {
-    if (!(stroke->width > 0) || !isFiniteF32(stroke->width) || !(tolerance > 0))
+    if (!(stroke->width > 0) || !prF32IsFinite(stroke->width) || !(tolerance > 0))
         return;
     Stroker s{};
     s.style = stroke;
     s.tolerance = tolerance;
     s.out = out;
     float widest = widestHalf(stroke);
-    float ratio = 1 - tolerance / maxF32(widest, tolerance);
-    s.maxTurn = ratio > 0 ? maxF32(2 * acosF32(ratio), 0.01f) : kPiF32 / 2;
+    float ratio = 1 - tolerance / prF32Max(widest, tolerance);
+    s.maxTurn = ratio > 0 ? prF32Max(2 * prF32Acos(ratio), 0.01f) : kPrF32Pi / 2;
 
     if (stroke->dashes != nullptr && stroke->dashCount != 0 && stroke->dashCount <= kMaxDashes) {
         bool valid = true;
         for (uint32_t repeat = 0; repeat < (stroke->dashCount % 2 == 0 ? 1u : 2u); ++repeat) {
             for (uint32_t i = 0; i < stroke->dashCount; ++i) {
                 float value = stroke->dashes[i];
-                valid = valid && value >= 0 && isFiniteF32(value);
+                valid = valid && value >= 0 && prF32IsFinite(value);
                 s.pattern.push(value);
                 s.patternLength += value;
             }
         }
-        if (!valid || !(s.patternLength > 0) || !isFiniteF32(s.patternLength)) {
+        if (!valid || !(s.patternLength > 0) || !prF32IsFinite(s.patternLength)) {
             s.pattern.clear();
             s.patternLength = 0;
         }
@@ -768,9 +768,9 @@ float prPathStrokeReach(const PrPathStroke* stroke) {
     // the diagonal of the half width.
     float factor = 1;
     if (stroke->join == PrPathJoin_Miter || stroke->join == PrPathJoin_MiterClip || stroke->join == PrPathJoin_Arcs)
-        factor = maxF32(stroke->miterLimit, 1);
+        factor = prF32Max(stroke->miterLimit, 1);
     if (stroke->startCap == PrPathCap_Square || stroke->endCap == PrPathCap_Square ||
             stroke->dashCap == PrPathCap_Square)
-        factor = maxF32(factor, kSqrt2F32);
+        factor = prF32Max(factor, kPrF32Sqrt2);
     return widestHalf(stroke) * factor;
 }

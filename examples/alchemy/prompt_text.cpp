@@ -27,7 +27,7 @@ constexpr double kImplicitWeight = 1.1;
 // its terms with, and at the backslash that takes a parenthesis out of the grammar.
 bool isWordChar(char c) {
     PrStringView separators = ",.:;!?'\"()[]{}\\";
-    return !asciiIsSpace(c) && stringFind(separators, c) == separators.size;
+    return !prAsciiIsSpace(c) && prStringFindByte(separators, c) == separators.size;
 }
 
 // Returns true if the parenthesis at `pos` is text rather than a delimiter: a backslash before it removes it from the
@@ -68,17 +68,17 @@ void appendGroup(std::string& out, PrStringView inner, double weight) {
 // Splits a group's content into its text and its weight. Only the last colon can name the weight, and content whose
 // tail past it is not a number names none.
 bool splitWeight(PrStringView content, PrStringView* inner, double* weight) {
-    size_t colon = stringFindLast(content, ':');
+    size_t colon = prStringFindLastByte(content, ':');
     if (colon == content.size || colon == 0)
         return false;
-    std::string tail = stringOf(stringTrim(stringSlice(content, colon + 1, content.size - colon - 1)));
+    std::string tail = stringOf(prStringTrim(prStringSlice(content, colon + 1, content.size - colon - 1)));
     if (tail.empty())
         return false;
     char* end = nullptr;
     double parsed = strtod(tail.c_str(), &end);
     if (end != tail.c_str() + tail.size() || !std::isfinite(parsed))
         return false;
-    *inner = stringSlice(content, 0, colon);
+    *inner = prStringSlice(content, 0, colon);
     *weight = parsed;
     return true;
 }
@@ -97,7 +97,7 @@ Group readGroup(PrStringView text, uint32_t start, uint32_t end) {
     Group group{.start = start, .end = end, .innerStart = start + 1, .innerEnd = end - 1, .weight = kImplicitWeight};
     PrStringView inner;
     double weight = 0.0;
-    if (splitWeight(stringSlice(text, group.innerStart, group.innerEnd - group.innerStart), &inner, &weight)) {
+    if (splitWeight(prStringSlice(text, group.innerStart, group.innerEnd - group.innerStart), &inner, &weight)) {
         group.innerEnd = group.innerStart + uint32_t(inner.size);
         group.weight = weight;
     }
@@ -105,7 +105,7 @@ Group readGroup(PrStringView text, uint32_t start, uint32_t end) {
 }
 
 PrStringView groupInner(PrStringView text, const Group& group) {
-    return stringSlice(text, group.innerStart, group.innerEnd - group.innerStart);
+    return prStringSlice(text, group.innerStart, group.innerEnd - group.innerStart);
 }
 
 // Returns the parenthesis that closes the group opened at `open`, or kNoOffset if the text leaves it open.
@@ -213,19 +213,19 @@ bool promptWeightAdjust(PrStringView text, uint32_t selectionStart, uint32_t sel
         return false;
     out->begin = start;
     out->end = end;
-    appendGroup(out->text, stringSlice(text, start, end - start), adjusted);
+    appendGroup(out->text, prStringSlice(text, start, end - start), adjusted);
     return true;
 }
 
 std::vector<PrStringView> promptLines(PrStringView prompt) {
     std::vector<PrStringView> lines;
-    PrStringView text = stringTrim(prompt);
+    PrStringView text = prStringTrim(prompt);
     while (text.size != 0) {
-        size_t newline = stringFind(text, '\n');
-        lines.push_back(stringSlice(text, 0, newline));
+        size_t newline = prStringFindByte(text, '\n');
+        lines.push_back(prStringSlice(text, 0, newline));
         if (newline == text.size)
             break;
-        text = stringSlice(text, newline + 1, text.size - newline - 1);
+        text = prStringSlice(text, newline + 1, text.size - newline - 1);
     }
     return lines;
 }
@@ -240,8 +240,8 @@ std::string promptAppendLine(PrStringView prompt, PrStringView line) {
 
 PrStringView embeddingName(PrStringView filename) {
     for (PrStringView extension : {".safetensors", ".ckpt", ".pt", ".pth", ".bin"}) {
-        if (asciiEndsWithFold(filename, extension))
-            return stringSlice(filename, 0, filename.size - extension.size);
+        if (prAsciiEndsWithFold(filename, extension))
+            return prStringSlice(filename, 0, filename.size - extension.size);
     }
     return filename;
 }
@@ -251,12 +251,12 @@ std::string embeddingInsertText(PrStringView text, uint32_t selectionStart, uint
     uint32_t begin = std::min(selectionStart, uint32_t(text.size));
     uint32_t end = std::min(selectionEnd, uint32_t(text.size));
     std::string out;
-    if (begin > 0 && !asciiIsSpace(text.data[begin - 1]))
+    if (begin > 0 && !prAsciiIsSpace(text.data[begin - 1]))
         out += ' ';
     out += "embedding:";
     PrStringView name = embeddingName(filename);
     out.append(name.begin(), name.end());
-    if (end < text.size && !asciiIsSpace(text.data[end]))
+    if (end < text.size && !prAsciiIsSpace(text.data[end]))
         out += ' ';
     return out;
 }

@@ -36,13 +36,13 @@ constexpr uint32_t kEntrySize = 12;
 uint16_t read16(const TiffImage& image, uint32_t at) {
     if (image.bytes.data == nullptr || at > image.bytes.size || image.bytes.size - at < 2)
         return 0;
-    return image.bigEndian ? readBeU16(image.bytes.data + at) : readLeU16(image.bytes.data + at);
+    return image.bigEndian ? prMemReadBeU16(image.bytes.data + at) : prMemReadLeU16(image.bytes.data + at);
 }
 
 uint32_t read32(const TiffImage& image, uint32_t at) {
     if (image.bytes.data == nullptr || at > image.bytes.size || image.bytes.size - at < 4)
         return 0;
-    return image.bigEndian ? readBeU32(image.bytes.data + at) : readLeU32(image.bytes.data + at);
+    return image.bigEndian ? prMemReadBeU32(image.bytes.data + at) : prMemReadLeU32(image.bytes.data + at);
 }
 
 uint32_t typeSize(TiffType type) {
@@ -194,7 +194,7 @@ bool tiffDecode(const TiffImage& image, uint8_t* pixels, size_t pixelsSize) {
         size_t size = rowBytes * rows;
         if (count < size || offset > image.bytes.size || image.bytes.size - offset < size)
             return false;
-        memCopy(pixels + rowBytes * row, image.bytes.data + offset, size);
+        prMemCopy(pixels + rowBytes * row, image.bytes.data + offset, size);
     }
     if (image.whiteIsZero) {
         for (size_t i = 0; i < pixelsSize; i += image.samples)

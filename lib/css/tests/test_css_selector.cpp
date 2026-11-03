@@ -15,7 +15,7 @@ std::string roundTrip(PrStringView text, CssSelectorNesting nesting = CssSelecto
     CssSelectorContext context = {};
     context.nesting = nesting;
 
-    TextBuffer buffer;
+    PrTextBuffer buffer = {};
     PrCssSelectors* selectors = cssParseSelectorText(&parser, text, &context);
     if (selectors != nullptr)
         cssSerializeSelectors(&buffer, selectors);
@@ -38,7 +38,7 @@ CssSpecificity specificity(PrStringView text) {
 }
 
 std::string nth(int32_t a, int32_t b) {
-    TextBuffer buffer;
+    PrTextBuffer buffer = {};
     cssSerializeNth(&buffer, a, b);
     return take(&buffer);
 }

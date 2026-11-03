@@ -228,7 +228,7 @@ JSValue constructParams(JSContext* ctx, JSValueConst newTarget, int argc, JSValu
     PrUrlSearchParams* params = prUrlSearchParamsCreate();
     PrStringView text = init.string;
     if (text.size != 0 && text.data[0] == '?')
-        text = stringSlice(text, 1, text.size - 1);
+        text = prStringSlice(text, 1, text.size - 1);
     prUrlSearchParamsParse(params, text);
     for (uint32_t i = 0; i < init.pairs.count; ++i)
         prUrlSearchParamsAppend(params, init.pairs.data[i].name, init.pairs.data[i].value);

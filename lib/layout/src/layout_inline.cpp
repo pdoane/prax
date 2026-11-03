@@ -1129,7 +1129,7 @@ void treeOrder(const LayoutStyles* styles, LayoutInlineFrame& f, uint32_t mark, 
         f.reordered.clear();
         for (uint32_t i = 0; i < f.logical.count; ++i)
             f.reordered.push(children.data[f.logical.data[i]]);
-        memCopy(children.data + mark, f.reordered.data, sizeof(LayoutLogicalChild) * f.reordered.count);
+        prMemCopy(children.data + mark, f.reordered.data, sizeof(LayoutLogicalChild) * f.reordered.count);
     }
     for (b = 0; b < boxes; ++b) {
         const LayoutLineBox& box = f.lineBoxes.data[b];
@@ -1746,7 +1746,7 @@ LineFit fitLine(LayoutState& state, LayoutInlineFrame& f, const LayoutInlineShap
                 pushFloat(state, f, floats.onLine.data[i].item, floats.onLine.data[i].box, space, bfc);
             floats.onLine.clear();
             mark = exclusions.mark;
-            float needed = maxF32(0, piece + indentPx - kPrTextLineFitTolerance);
+            float needed = prF32Max(0, piece + indentPx - kPrTextLineFitTolerance);
             fit.y = layoutExclusionsFirstFit(bfc.containing, fit.y, h, prLayoutUnitFromPxCeil(needed)).y;
             continue;
         }
@@ -2099,7 +2099,7 @@ LayoutIntrinsicSizes measureLines(LayoutState& state, LayoutInlineFrame& f, cons
                 continue;
             // Each piece is measured as a line of its own, as the narrowest container would break it.
             float lineIndent = indentAt(start);
-            width = maxF32(width, lineIndent + widthOf(t, f, start, b, lineIndent));
+            width = prF32Max(width, lineIndent + widthOf(t, f, start, b, lineIndent));
             start = b;
         }
         // Rounded up, so that a layout at this size breaks no more often than the measurement did.

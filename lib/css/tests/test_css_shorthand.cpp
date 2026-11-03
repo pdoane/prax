@@ -19,13 +19,13 @@ struct Block {
     Block& operator=(const Block&) = delete;
 
     std::string value(PrStringView name) const {
-        TextBuffer buffer;
+        PrTextBuffer buffer = {};
         cssSerializePropertyValue(&buffer, &style, named(&style, name));
         return take(&buffer);
     }
 
     std::string text() const {
-        TextBuffer buffer;
+        PrTextBuffer buffer = {};
         cssSerializeDeclarationBlock(&buffer, &style);
         return take(&buffer);
     }
@@ -79,7 +79,7 @@ TEST_CASE("every longhand's initial value is one its grammar takes, written as i
         CHECK(parsed);
         if (!parsed)
             continue;
-        TextBuffer buffer;
+        PrTextBuffer buffer = {};
         cssSerializeValues(&buffer, cssValuePoolRun(&pool, span));
         CHECK(take(&buffer) == textOf(initial));
     }

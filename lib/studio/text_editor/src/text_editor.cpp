@@ -447,7 +447,7 @@ void loadPieces(TextEditorDocument* document, double milliseconds) {
             // A piece ends after a line feed where it can, so that lines arrive whole, and otherwise between code
             // points and never between a CR and its LF.
             PrStringView window{source.data + at, stop - at};
-            size_t lineFeed = stringFindLast(window, '\n');
+            size_t lineFeed = prStringFindLastByte(window, '\n');
             if (lineFeed != window.size) {
                 stop = at + uint32_t(lineFeed) + 1;
             } else {
@@ -470,7 +470,7 @@ void loadPieces(TextEditorDocument* document, double milliseconds) {
         };
         prTextEditBufferApply(document->buffer, &change, 1, PrTextEditOrigin_Load);
         document->loaded = stop;
-        if (document->syntax != nullptr && prSyntaxTreeUpdate(document->syntax, kInfinityF64))
+        if (document->syntax != nullptr && prSyntaxTreeUpdate(document->syntax, kPrF64Infinity))
             ++document->syntaxChanges;
     } while (document->loaded < source.size && prTimeMonotonicMilliseconds() < end);
     if (document->loaded == source.size)
@@ -646,7 +646,7 @@ void syncBreakpoints(TextEditor* editor) {
             continue;
         breakpointLinesOf(document, lines);
         bool same = document->sent && lines.count == document->sentLines.count &&
-            memEquals(lines.data, document->sentLines.data, lines.count * sizeof(uint32_t));
+            prMemEquals(lines.data, document->sentLines.data, lines.count * sizeof(uint32_t));
         if (same)
             continue;
         prDapClientSetBreakpoints(editor->debug->client, prStringView(&document->path), lines.data, lines.count);
@@ -781,9 +781,9 @@ void buildDebugPanel(TextEditor* editor, PrLayoutNode parent, float top, PrVec2 
         prStringAppend(&line, reason);
     }
     if (state == PrTextEditorDebugState_Ended && prDapClientExitCode(session->client) >= 0) {
-        char digits[kU64TextMaxBytes];
+        char digits[kPrU64TextMaxBytes];
         prStringAppend(&line, ", exit code ");
-        prStringAppend(&line, PrStringView{digits, formatU64(uint64_t(prDapClientExitCode(session->client)), digits)});
+        prStringAppend(&line, PrStringView{digits, prU64Format(uint64_t(prDapClientExitCode(session->client)), digits, 10)});
     }
     debugLine(editor, stack, prStringView(&line));
     bool stopped = state == PrTextEditorDebugState_Stopped;
@@ -792,12 +792,12 @@ void buildDebugPanel(TextEditor* editor, PrLayoutNode parent, float top, PrVec2 
         prStringReplace(&line, prStringView(&frame.name));
         if (!prStringIsEmpty(&frame.path)) {
             PrStringView path = prStringView(&frame.path);
-            size_t slash = stringFindLast(path, '/');
+            size_t slash = prStringFindLastByte(path, '/');
             prStringAppend(&line, "  ");
-            prStringAppend(&line, slash != path.size ? stringSlice(path, slash + 1, path.size - slash - 1) : path);
-            char digits[kU64TextMaxBytes];
+            prStringAppend(&line, slash != path.size ? prStringSlice(path, slash + 1, path.size - slash - 1) : path);
+            char digits[kPrU64TextMaxBytes];
             prStringAppend(&line, ":");
-            prStringAppend(&line, PrStringView{digits, formatU64(uint64_t(frame.line) + 1, digits)});
+            prStringAppend(&line, PrStringView{digits, prU64Format(uint64_t(frame.line) + 1, digits, 10)});
         }
         debugLine(editor, stack, prStringView(&line));
     }
@@ -1339,7 +1339,7 @@ void gutterOf(void* PR_NULLABLE context, PrLayoutTree* tree, PrLayoutNode cell, 
     bool marked = false;
     for (uint32_t i = 0; side->severities && i < editor->breakpointLines.count && !marked; ++i)
         marked = editor->breakpointLines.data[i] == line;
-    char digits[kU64TextMaxBytes + 4];
+    char digits[kPrU64TextMaxBytes + 4];
     size_t length = 0;
     if (marked) {
         const char dot[] = "\xE2\x97\x8F ";
@@ -1347,7 +1347,7 @@ void gutterOf(void* PR_NULLABLE context, PrLayoutTree* tree, PrLayoutNode cell, 
             digits[length++] = dot[i];
         style = editor->breakpointStyle;
     }
-    length += formatU64(uint64_t(line) + 1, digits + length);
+    length += prU64Format(uint64_t(line) + 1, digits + length, 10);
     PrLayoutNode number = prLayoutTreeFrameElement(tree, cell, 0, style);
     prLayoutTreeFrameText(tree, number, 0, PrStringView{digits, length});
 }

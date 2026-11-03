@@ -9,8 +9,8 @@
 
 #pragma once
 
-#include "pr/bits.h"
 #include "pr/dom.h"
+#include "pr/integer.h"
 #include "pr/string.h"
 #include "pr/string_view.h"
 #include "pr/text_buffer.h"
@@ -68,7 +68,8 @@ struct DomDocumentHooks {
 
     // Appends a color input's value after the steps of html/#update-a-color-well-control-color, given `text`, the value
     // or value attribute that the steps start from. The first subscriber that has it gives the value.
-    void (*PR_NULLABLE colorValue)(void* PR_NULLABLE context, const PrDomElement* input, PrStringView text, TextBuffer* out);
+    void (*PR_NULLABLE colorValue)(void* PR_NULLABLE context, const PrDomElement* input, PrStringView text,
+        PrTextBuffer* out);
 
     // The update steps of the owners of style sheets: an HTML or SVG style element's block
     // (html/#update-a-style-block), an HTML link element (html/#link-type-stylesheet), and an xml-stylesheet processing
@@ -142,7 +143,7 @@ const DomDocumentSubscriber* PR_NULLABLE domDocumentSubscriber(const PrDomDocume
 template <typename Fn>
 inline void domEachFollower(const PrDomDocument* document, DomHook hook, Fn fn) {
     for (uint64_t followers = document->followers[hook]; followers != 0; followers &= followers - 1) {
-        const DomDocumentSubscriber& subscriber = document->subscribers[lowestBitU64(followers)];
+        const DomDocumentSubscriber& subscriber = document->subscribers[prU64LowestBit(followers)];
         fn(*subscriber.hooks, subscriber.context);
     }
 }
@@ -269,13 +270,13 @@ inline void domNotifyResourceLoaded(PrDomDocument* document) {
 
 // Appends a color input's value: the one that the first subscriber that gives one gives. A document whose subscribers
 // give none has no colors to parse, and a color input keeps its value as given.
-inline void domNotifyColorValue(const PrDomElement* input, PrStringView text, TextBuffer* out) {
+inline void domNotifyColorValue(const PrDomElement* input, PrStringView text, PrTextBuffer* out) {
     uint32_t followers = input->document->followers[DomHook_ColorValue];
     if (followers == 0) {
-        textAppend(out, text);
+        prTextBufferAppend(out, text);
         return;
     }
-    const DomDocumentSubscriber& subscriber = input->document->subscribers[lowestBitU64(followers)];
+    const DomDocumentSubscriber& subscriber = input->document->subscribers[prU64LowestBit(followers)];
     subscriber.hooks->colorValue(subscriber.context, input, text, out);
 }
 

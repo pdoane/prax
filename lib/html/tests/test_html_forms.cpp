@@ -14,10 +14,10 @@ namespace {
 
 // Returns the value of a color input after the color well's steps, given `text`.
 std::string well(const PrDomElement* input, PrStringView text) {
-    TextBuffer out = {};
+    PrTextBuffer out = {};
     htmlColorWellValue(input, text, &out);
-    std::string value(textView(&out).data, textView(&out).size);
-    textReset(&out);
+    std::string value(prTextBufferView(&out).data, prTextBufferView(&out).size);
+    prTextBufferReset(&out);
     return value;
 }
 

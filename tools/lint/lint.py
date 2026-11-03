@@ -395,13 +395,14 @@ MACRO_CONSTANT = re.compile(r"^#define\s+(PR_[A-Z0-9_]+)\s+\(?\s*-?\s*(?:0x[0-9a
 
 def check_macro_constants(report, path, text):
     """A public header spells an integer constant as `enum { kPrX = n }` and a floating-point constant as
-    `static const float kPrX`. A macro holds a value only if the preprocessor reads it, in an #if."""
+    `PR_CONSTANT float kPrX`, which is constexpr in C++. A macro holds a value only if the preprocessor reads it, in an
+    #if."""
     for match in MACRO_CONSTANT.finditer(text):
         name = match.group(1)
         if re.search(r"^#\s*(?:el)?if\b.*\b%s\b" % name, text, re.M):
             continue
         report.add(path, line_of(text, match.start()), "macro-constant",
-                   "%s is a macro; a constant is an enum or a static const" % name)
+                   "%s is a macro; a constant is an enum or a PR_CONSTANT" % name)
 
 
 # The words that an array's `by` comment may use for its index if no type names the domain: positions in the data that
@@ -616,28 +617,37 @@ WRAPPERS = {
 BUILTINS = {
     "lib/core/include/pr/base.h",
     "lib/core/include/pr/byte_view.h",
+    "lib/core/include/pr/float.h",
     "lib/core/include/pr/float16.h",
+    "lib/core/include/pr/integer.h",
+    "lib/core/include/pr/mem.h",
     "lib/core/include/pr/string_view.h",
     "lib/core/cpp/include/pr/atomic.h",
     "lib/core/cpp/include/pr/atomic_msvc.h",
     "lib/core/cpp/include/pr/bit_cast.h",
-    "lib/core/cpp/include/pr/bits.h",
-    "lib/core/cpp/include/pr/float.h",
-    "lib/core/cpp/include/pr/mem.h",
     "lib/layout/include/pr/layout_unit.h",
     "lib/layout/include/pr/layout_value.h",
     "lib/draw/comparisons/coregraphics/src/draw_coregraphics.cpp",
 }
 
+# The one header that names the compiler's type intrinsics, which are its <type_traits>.
+TYPE_TRAITS = "lib/core/cpp/include/pr/type_traits.h"
+
 
 def check_builtins(report, path, text):
     """A compiler's builtin is reached through the core header that wraps it, such as pr/float.h for the C library's
-    arithmetic, so that the library works with a compiler that spells it otherwise or lacks it."""
-    if os.path.relpath(path, ROOT).replace(os.sep, "/") in BUILTINS:
-        return
-    for match in re.finditer(r"\b__builtin_\w+", mask_non_code(text)):
-        report.add(path, line_of(text, match.start()), "builtin",
-                   "%s belongs behind a core header, such as pr/float.h" % match.group(0))
+    arithmetic, so that the library works with a compiler that spells it otherwise or lacks it. A type intrinsic, such
+    as __is_trivially_copyable, is reached through pr/type_traits.h."""
+    relative = os.path.relpath(path, ROOT).replace(os.sep, "/")
+    code = mask_non_code(text)
+    if relative not in BUILTINS:
+        for match in re.finditer(r"\b__builtin_\w+", code):
+            report.add(path, line_of(text, match.start()), "builtin",
+                       "%s belongs behind a core header, such as pr/float.h" % match.group(0))
+    if relative != TYPE_TRAITS:
+        for match in re.finditer(r"\b__is_\w+(?=\s*\()", code):
+            report.add(path, line_of(text, match.start()), "builtin",
+                       "%s belongs behind pr/type_traits.h" % match.group(0))
 
 
 def check_stdlib(report, path, text):
@@ -2158,14 +2168,14 @@ def definitions(text):
 def check_defined(report, headers, sources, texts):
     """Every function that a header declares is defined, so the header promises nothing that a caller cannot link
     against. An inline function may be defined later in a header. A name with no capital, such as strlen, belongs to
-    the platform."""
+    the platform, as does a compiler's intrinsic, whose name starts with an underscore."""
     defined = set()
     for path in sources + headers:
         defined.update(definitions(texts[path]))
     for path in headers:
         for match in SIGNATURE.finditer(texts[path]):
             if (match.group(2) == ";" and match.group(1) not in defined
-                    and match.group(1) != match.group(1).lower()
+                    and match.group(1) != match.group(1).lower() and not match.group(1).startswith("_")
                     and not match.group(0).startswith("typedef")
                     and re.search(r"\b%s\s*\(" % match.group(1), match.group(0))
                     and not re.search(r"\(\s*\*", match.group(0))):
@@ -2487,8 +2497,9 @@ def check_homes(report, headers, sources, texts):
 # types appear in other modules' signatures more than in their own, own a tag for each vocabulary. A numeric variant,
 # as PrIRect is of PrRect, is a tag of its own.
 TAGS = {
-    "lib/core": ("ByteView", "Condition", "Core", "Crash", "DVec2", "Fail", "File", "Float16", "IVec2", "Memory",
-                 "Mutex", "Pixel", "Pixels", "Random", "Status", "String", "Thread", "Time", "UVec2", "Utf8", "Vec2",
+    "lib/core": ("Adler32", "Ascii", "Base64", "ByteView", "Condition", "Core", "Crash", "Crc32", "DVec2", "F32",
+                 "F64", "Fail", "File", "Float16", "Hash", "IVec2", "Mem", "Memory", "Mutex", "Pixel", "Pixels",
+                 "Random", "Sha1", "Status", "String", "TextBuffer", "Thread", "Time", "U64", "UVec2", "Utf8", "Vec2",
                  "Vec3", "Vmem"),
     "lib/geom": ("Affine2", "Affine4", "Corner", "DAffine2", "DMatrix3", "DMatrix4", "IRect", "Matrix3", "Matrix4",
                  "Rect"),
@@ -2528,7 +2539,7 @@ DECLARED_NAME = (re.compile(r"\btypedef\b[^;(]*?\b(\w+)\s*;"),
                  re.compile(r"\btypedef\b[^;]*?\(\s*\*\s*(\w+)\s*\)"),
                  re.compile(r"\b(?:struct|union|enum)\s+(\w+)\s*[{:]"),
                  re.compile(r"^(?!typedef\b|return\b|#)[A-Za-z_][\w \t*]*?[\s*](\w+)\s*\(", re.M),
-                 re.compile(r"^static\s+const\b[^=;(]*?\b(\w+)\s*=", re.M),
+                 re.compile(r"^(?:static\s+const|PR_CONSTANT)\b[^=;(]*?\b(\w+)\s*=", re.M),
                  re.compile(r"^\s*#\s*define\s+(\w+)", re.M))
 ENUM_BODY = re.compile(r"\benum\b[^{;]*\{([^}]*)\}")
 

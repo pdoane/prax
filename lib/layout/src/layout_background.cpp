@@ -163,8 +163,8 @@ PrVec2 imageSize(const LayoutCompounds* compounds, const PrLayoutBackgroundLayer
     }
     bool autoX = layoutLengthIsAuto(layer.sizeX);
     bool autoY = layoutLengthIsAuto(layer.sizeY);
-    float x = autoX ? 0 : maxF32(resolvePx(compounds, layer.sizeX, area.x), 0);
-    float y = autoY ? 0 : maxF32(resolvePx(compounds, layer.sizeY, area.y), 0);
+    float x = autoX ? 0 : prF32Max(resolvePx(compounds, layer.sizeX, area.x), 0);
+    float y = autoY ? 0 : prF32Max(resolvePx(compounds, layer.sizeY, area.y), 0);
     float naturalX = prLayoutUnitToPx(natural.width);
     float naturalY = prLayoutUnitToPx(natural.height);
     if (autoX && autoY) {
@@ -208,7 +208,7 @@ TileAxis placeAxis(const LayoutCompounds* compounds, PrLayoutBackgroundRepeat re
         case PrLayoutBackgroundRepeat_Space: {
             // As many whole copies as fit, the first and last against the area's edges. Fewer than two copies are
             // placed as one, by the position.
-            float copies = size > 0 ? floorF32(extent / size) : 0;
+            float copies = size > 0 ? prF32Floor(extent / size) : 0;
             if (copies >= 2) {
                 axis.start = low;
                 axis.spacing = (extent - copies * size) / (copies - 1);
@@ -224,7 +224,7 @@ TileAxis placeAxis(const LayoutCompounds* compounds, PrLayoutBackgroundRepeat re
 
 // Returns the number of whole copies of `size` that `round` fits in `extent`, at least one.
 float roundCopies(float extent, float size) {
-    float copies = roundF32(extent / size);
+    float copies = prF32Round(extent / size);
     return copies < 1 ? 1 : copies;
 }
 
@@ -282,11 +282,11 @@ void resolveStops(const LayoutCompounds* compounds, const PrLayoutGradient& g, f
         stops.last().position = 1;
         stops.last().positioned = true;
     }
-    float largest = -kInfinityF32;
+    float largest = -kPrF32Infinity;
     for (uint32_t i = 0; i < stops.count; ++i) {
         if (!stops.data[i].positioned)
             continue;
-        stops.data[i].position = maxF32(stops.data[i].position, largest);
+        stops.data[i].position = prF32Max(stops.data[i].position, largest);
         largest = stops.data[i].position;
     }
     // A run of color stops with no position is spread evenly between the positioned stops around it.
@@ -315,7 +315,7 @@ void resolveStops(const LayoutCompounds* compounds, const PrLayoutGradient& g, f
             float previous = stops.data[i - 1].position;
             float gap = stops.data[i + 1].position - previous;
             float fraction = gap > 0 ? (s.position - previous) / gap : 0.5f;
-            out->stops.last().hint = clampF32(fraction, 1e-4f, 1 - 1e-4f);
+            out->stops.last().hint = prF32Clamp(fraction, 1e-4f, 1 - 1e-4f);
             continue;
         }
         PrDrawColorStop paint = s.paint;
@@ -347,12 +347,12 @@ bool repeatOverTurn(ResolvedStops* resolved) {
     if (!(period > 0))
         return false;
     uint32_t perPeriod = resolved->stops.count;
-    float copies = ceilF32(1 / period) + 2;
+    float copies = prF32Ceil(1 / period) + 2;
     if (copies * float(perPeriod) > float(kMaxRepeatedStops))
         return false;
     Array<PrDrawColorStop> turn;
     // The first copy starts at or before the turn's start, and the last ends at or after its end.
-    float shift = -period * ceilF32(resolved->first / period) - period;
+    float shift = -period * prF32Ceil(resolved->first / period) - period;
     for (uint32_t c = 0; float(c) < copies; ++c) {
         for (uint32_t i = 0; i < perPeriod; ++i) {
             PrDrawColorStop stop = resolved->stops.data[i];
@@ -393,34 +393,34 @@ PrColor16 averageColor(const ResolvedStops& resolved) {
 PrVec2 radialRadii(const LayoutCompounds* compounds, const PrLayoutGradient& g, PrVec2 center, PrVec2 size) {
     bool circle = g.shape == PrLayoutRadialShape_Circle;
     if (g.extent == PrLayoutRadialExtent_Radii) {
-        float rx = maxF32(resolvePx(compounds, g.radiusX, size.x), 0);
-        float ry = circle ? rx : maxF32(resolvePx(compounds, g.radiusY, size.y), 0);
+        float rx = prF32Max(resolvePx(compounds, g.radiusX, size.x), 0);
+        float ry = circle ? rx : prF32Max(resolvePx(compounds, g.radiusY, size.y), 0);
         return PrVec2{rx, ry};
     }
-    float left = absF32(center.x);
-    float right = absF32(size.x - center.x);
-    float top = absF32(center.y);
-    float bottom = absF32(size.y - center.y);
+    float left = prF32Abs(center.x);
+    float right = prF32Abs(size.x - center.x);
+    float top = prF32Abs(center.y);
+    float bottom = prF32Abs(size.y - center.y);
     bool closest = g.extent == PrLayoutRadialExtent_ClosestSide || g.extent == PrLayoutRadialExtent_ClosestCorner;
-    float sideX = closest ? minF32(left, right) : maxF32(left, right);
-    float sideY = closest ? minF32(top, bottom) : maxF32(top, bottom);
+    float sideX = closest ? prF32Min(left, right) : prF32Max(left, right);
+    float sideY = closest ? prF32Min(top, bottom) : prF32Max(top, bottom);
     bool side = g.extent == PrLayoutRadialExtent_ClosestSide || g.extent == PrLayoutRadialExtent_FarthestSide;
     if (side) {
         if (circle) {
-            float r = closest ? minF32(sideX, sideY) : maxF32(sideX, sideY);
+            float r = closest ? prF32Min(sideX, sideY) : prF32Max(sideX, sideY);
             return PrVec2{r, r};
         }
         return PrVec2{sideX, sideY};
     }
     // A corner: the circle through it, or the ellipse through it with the aspect ratio of the same side ellipse.
     if (circle) {
-        float r = sqrtF32(sideX * sideX + sideY * sideY);
+        float r = prF32Sqrt(sideX * sideX + sideY * sideY);
         return PrVec2{r, r};
     }
     if (sideX <= 0 || sideY <= 0)
         return PrVec2{sideX, sideY};
     float ratio = sideX / sideY;
-    float ry = sqrtF32(sideX * sideX / (ratio * ratio) + sideY * sideY);
+    float ry = prF32Sqrt(sideX * sideX / (ratio * ratio) + sideY * sideY);
     return PrVec2{ry * ratio, ry};
 }
 
@@ -442,7 +442,7 @@ bool gradientBrush(const LayoutCompounds* compounds, const PrLayoutGradient& g, 
     switch (g.kind) {
         case PrLayoutGradientKind_Linear: {
             if (g.corner != PrLayoutGradientCorner_None) {
-                float toward = atan2F32(size.y, size.x) * 180 / kPiF32;
+                float toward = prF32Atan2(size.y, size.x) * 180 / kPrF32Pi;
                 switch (g.corner) {
                     case PrLayoutGradientCorner_TopRight: degrees = toward; break;
                     case PrLayoutGradientCorner_BottomRight: degrees = 180 - toward; break;
@@ -450,9 +450,9 @@ bool gradientBrush(const LayoutCompounds* compounds, const PrLayoutGradient& g, 
                     default: degrees = 360 - toward; break;
                 }
             }
-            float radians = degrees * kPiF32 / 180;
-            direction = PrVec2{sinF32(radians), -cosF32(radians)};
-            length = absF32(size.x * direction.x) + absF32(size.y * direction.y);
+            float radians = degrees * kPrF32Pi / 180;
+            direction = PrVec2{prF32Sin(radians), -prF32Cos(radians)};
+            length = prF32Abs(size.x * direction.x) + prF32Abs(size.y * direction.y);
             break;
         }
         case PrLayoutGradientKind_Radial: {
@@ -460,7 +460,7 @@ bool gradientBrush(const LayoutCompounds* compounds, const PrLayoutGradient& g, 
             radii = radialRadii(compounds, g, center, size);
             // A degenerate ellipse is drawn as a very thin one (css-images-3/#degenerate-radials).
             constexpr float kThin = 1.0f / 1024;
-            radii = PrVec2{maxF32(radii.x, kThin), maxF32(radii.y, kThin)};
+            radii = PrVec2{prF32Max(radii.x, kThin), prF32Max(radii.y, kThin)};
             length = radii.x;
             break;
         }
@@ -481,8 +481,8 @@ bool gradientBrush(const LayoutCompounds* compounds, const PrLayoutGradient& g, 
     PrDrawBrush brush{};
     switch (g.kind) {
         case PrLayoutGradientKind_Linear: {
-            float low = g.repeating ? resolved->first : minF32(resolved->first, 0);
-            float high = g.repeating ? resolved->last : maxF32(resolved->last, 1);
+            float low = g.repeating ? resolved->first : prF32Min(resolved->first, 0);
+            float high = g.repeating ? resolved->last : prF32Max(resolved->last, 1);
             normalize(resolved, low, high);
             PrVec2 middle = origin + size * 0.5f;
             PrVec2 start = middle + direction * (length * (low - 0.5f));
@@ -493,9 +493,9 @@ bool gradientBrush(const LayoutCompounds* compounds, const PrLayoutGradient& g, 
         case PrLayoutGradientKind_Radial: {
             // A ray has no negative radius, so a repeating gradient moves its period out by whole periods.
             float low = 0;
-            float high = maxF32(resolved->last, 1);
+            float high = prF32Max(resolved->last, 1);
             if (g.repeating) {
-                float shift = resolved->first < 0 ? period * ceilF32(-resolved->first / period) : 0;
+                float shift = resolved->first < 0 ? period * prF32Ceil(-resolved->first / period) : 0;
                 low = resolved->first + shift;
                 high = resolved->last + shift;
                 for (uint32_t i = 0; i < resolved->stops.count; ++i)
@@ -517,7 +517,7 @@ bool gradientBrush(const LayoutCompounds* compounds, const PrLayoutGradient& g, 
                 return false;
             }
             // The turn starts up, at the gradient's angle.
-            brush = prDrawBrushConic(origin + center, (degrees - 90) * kPiF32 / 180, resolved->stops.data,
+            brush = prDrawBrushConic(origin + center, (degrees - 90) * kPrF32Pi / 180, resolved->stops.data,
                 resolved->stops.count);
             break;
     }
@@ -654,12 +654,12 @@ bool paintLayer(const LayoutCompounds* compounds, const PrLayoutBackgroundLayer&
     PrRect tile{x.start, y.start, x.start + size.x, y.start + size.y};
     PrRect rect = painted;
     if (!x.repeats) {
-        rect.left = maxF32(rect.left, tile.left);
-        rect.right = minF32(rect.right, tile.right);
+        rect.left = prF32Max(rect.left, tile.left);
+        rect.right = prF32Min(rect.right, tile.right);
     }
     if (!y.repeats) {
-        rect.top = maxF32(rect.top, tile.top);
-        rect.bottom = minF32(rect.bottom, tile.bottom);
+        rect.top = prF32Max(rect.top, tile.top);
+        rect.bottom = prF32Min(rect.bottom, tile.bottom);
     }
     if (isEmpty(rect))
         return false;
@@ -702,10 +702,10 @@ PrLayoutBackgroundIndex layoutBackgroundsIntern(LayoutBackgrounds* backgrounds, 
         return kPrLayoutBackgroundNone;
     Array<uint8_t> key;
     backgroundKey(key, layers, count);
-    uint32_t hash = uint32_t(hashBytes(key.data, key.count, kBackgroundSeed));
+    uint32_t hash = uint32_t(prHashBytes(key.data, key.count, kBackgroundSeed));
     uint32_t found = backgrounds->index.find(hash, [&](uint32_t i) {
         const LayoutBackground& b = backgrounds->entries.data[i];
-        return b.key.count == key.count && memEquals(b.key.data, key.data, key.count);
+        return b.key.count == key.count && prMemEquals(b.key.data, key.data, key.count);
     });
     if (found != kHashMissing) {
         key.reset();
@@ -728,7 +728,7 @@ PrLayoutBackgroundIndex layoutBackgroundsIntern(LayoutBackgrounds* backgrounds, 
     }
     LayoutBackground& entry = backgrounds->entries.data[at];
     entry.layers = static_cast<PrLayoutBackgroundLayer*>(prMemoryAlloc(sizeof(PrLayoutBackgroundLayer) * count));
-    memCopy(entry.layers, layers, sizeof(PrLayoutBackgroundLayer) * count);
+    prMemCopy(entry.layers, layers, sizeof(PrLayoutBackgroundLayer) * count);
     entry.count = count;
     entry.stops =
         stopCount != 0 ? static_cast<PrLayoutColorStop*>(prMemoryAlloc(sizeof(PrLayoutColorStop) * stopCount)) : nullptr;
@@ -743,7 +743,7 @@ PrLayoutBackgroundIndex layoutBackgroundsIntern(LayoutBackgrounds* backgrounds, 
         layoutImageTakeFilters(l, entry.filters, &nextFilter);
         if (l.kind != PrLayoutImageKind_Gradient)
             continue;
-        memCopy(entry.stops + nextStop, l.gradient.stops, sizeof(PrLayoutColorStop) * l.gradient.stopCount);
+        prMemCopy(entry.stops + nextStop, l.gradient.stops, sizeof(PrLayoutColorStop) * l.gradient.stopCount);
         l.gradient.stops = entry.stops + nextStop;
         nextStop += l.gradient.stopCount;
     }
@@ -861,7 +861,7 @@ void layoutImageTakeFilters(PrLayoutBackgroundLayer& image, PrLayoutFilter* PR_N
         image.filters = nullptr;
         return;
     }
-    memCopy(filters + *next, image.filters, sizeof(PrLayoutFilter) * image.filterCount);
+    prMemCopy(filters + *next, image.filters, sizeof(PrLayoutFilter) * image.filterCount);
     image.filters = filters + *next;
     *next += image.filterCount;
 }

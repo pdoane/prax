@@ -111,53 +111,53 @@ void run(Work* work) {
 }
 
 // bench.js's listMarkup.
-void listMarkup(TextBuffer* out) {
-    textAppend(out, "<ul id=\"list\">");
+void listMarkup(PrTextBuffer* out) {
+    prTextBufferAppend(out, "<ul id=\"list\">");
     for (uint32_t i = 0; i < kSiblings; ++i) {
         PrStringView tag = i % 4 == 3 ? "p" : "li";
-        textAppend(out, "<");
-        textAppend(out, tag);
-        textAppend(out, i % 3 == 0 ? " class=\"a\"></" : " class=\"b\"></");
-        textAppend(out, tag);
-        textAppend(out, ">");
+        prTextBufferAppend(out, "<");
+        prTextBufferAppend(out, tag);
+        prTextBufferAppend(out, i % 3 == 0 ? " class=\"a\"></" : " class=\"b\"></");
+        prTextBufferAppend(out, tag);
+        prTextBufferAppend(out, ">");
     }
-    textAppend(out, "</ul>");
+    prTextBufferAppend(out, "</ul>");
 }
 
 // bench.js's treeMarkup.
-void level(TextBuffer* out, uint32_t depth, uint32_t* leaves) {
+void level(PrTextBuffer* out, uint32_t depth, uint32_t* leaves) {
     for (uint32_t i = 0; i < kFanout; ++i) {
         if (depth > 1) {
-            textAppend(out, "<div class=\"group\">");
+            prTextBufferAppend(out, "<div class=\"group\">");
             level(out, depth - 1, leaves);
-            textAppend(out, "</div>");
+            prTextBufferAppend(out, "</div>");
             continue;
         }
         uint32_t leaf = (*leaves)++;
-        textAppend(out, leaf == 500 ? "<span id=\"leaf\"" : "<span");
-        textAppend(out, leaf % 7 == 0 ? " class=\"item x\">text</span>" : " class=\"item\">text</span>");
+        prTextBufferAppend(out, leaf == 500 ? "<span id=\"leaf\"" : "<span");
+        prTextBufferAppend(out, leaf % 7 == 0 ? " class=\"item x\">text</span>" : " class=\"item\">text</span>");
     }
 }
 
 // bench.js's chainMarkup.
-void chainMarkup(TextBuffer* out) {
-    textAppend(out, "<div id=\"deep\">");
+void chainMarkup(PrTextBuffer* out) {
+    prTextBufferAppend(out, "<div id=\"deep\">");
     for (uint32_t i = 0; i < kChain; ++i) {
-        textAppend(out, "<div class=\"level\">");
+        prTextBufferAppend(out, "<div class=\"level\">");
         for (uint32_t j = 0; j < kChainSpans; ++j)
-            textAppend(out, "<span class=\"leaf\"></span>");
+            prTextBufferAppend(out, "<span class=\"leaf\"></span>");
     }
-    textAppend(out, "<span id=\"bottom\"></span>");
+    prTextBufferAppend(out, "<span id=\"bottom\"></span>");
     for (uint32_t i = 0; i < kChain; ++i)
-        textAppend(out, "</div>");
-    textAppend(out, "</div>");
+        prTextBufferAppend(out, "</div>");
+    prTextBufferAppend(out, "</div>");
 }
 
-void treeMarkup(TextBuffer* out) {
+void treeMarkup(PrTextBuffer* out) {
     uint32_t leaves = 0;
-    textAppend(out, "<div id=\"tree\">");
+    prTextBufferAppend(out, "<div id=\"tree\">");
     level(out, kDepth, &leaves);
-    textAppend(out, "</div><p id=\"target\"></p>");
+    prTextBufferAppend(out, "</div><p id=\"target\"></p>");
 }
 
 } // namespace
@@ -168,7 +168,7 @@ int main(int argc, char** argv) {
         fprintf(stderr, "usage: selector_bench [case]\n");
         return 2;
     }
-    TextBuffer markup = {};
+    PrTextBuffer markup = {};
     listMarkup(&markup);
     treeMarkup(&markup);
     chainMarkup(&markup);
@@ -180,7 +180,7 @@ int main(int argc, char** argv) {
     prDomElementCreate(document, "div", nullptr, &host);
     prDomNodeAppendChild(prDomElementAsNode(prDomDocumentBody(document)), prDomElementAsNode(host));
     prDomNodeRelease(prDomElementAsNode(host));
-    prHtmlSetInnerHtml(prDomElementAsNode(host), textView(&markup));
+    prHtmlSetInnerHtml(prDomElementAsNode(host), prTextBufferView(&markup));
 
     PrStringView only = argc == 2 ? argv[1] : PrStringView{};
     Work work = {.list = prDomNodeListCreate()};
@@ -205,6 +205,6 @@ int main(int argc, char** argv) {
 
     prDomNodeListDestroy(work.list);
     prHtmlPageDestroy(page);
-    textReset(&markup);
+    prTextBufferReset(&markup);
     return 0;
 }

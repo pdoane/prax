@@ -125,9 +125,9 @@ TEST_CASE("a rectangle's edges hold whichever sign its size has, and NaN spreads
     CHECK(prDomRectRight(&rect) == 10);
     CHECK(prDomRectTop(&rect) == 20);
     CHECK(prDomRectBottom(&rect) == 50);
-    rect.x = kNanF64;
-    CHECK(isNanF64(prDomRectLeft(&rect)));
-    CHECK(isNanF64(prDomRectRight(&rect)));
+    rect.x = kPrF64Nan;
+    CHECK(prF64IsNan(prDomRectLeft(&rect)));
+    CHECK(prF64IsNan(prDomRectRight(&rect)));
     CHECK(prDomRectTop(&rect) == 20);
 }
 
@@ -141,8 +141,8 @@ TEST_CASE("a quad's bounds hold its corners") {
     CHECK(bounds.x == -10);
     CHECK(bounds.width == 14);
     CHECK(bounds.height == 4);
-    quad.p[3].y = kNanF64;
+    quad.p[3].y = kPrF64Nan;
     bounds = prDomQuadGetBounds(&quad);
-    CHECK(isNanF64(bounds.y));
+    CHECK(prF64IsNan(bounds.y));
     CHECK(bounds.x == -10);
 }

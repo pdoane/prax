@@ -22,41 +22,41 @@ using namespace pr_impl;
 namespace {
 
 // Appends the tree under `node` to `out`, with each node's boundaries, so that adjacent Text nodes differ from one.
-void writeTree(TextBuffer* out, const PrDomNode* node) {
+void writeTree(PrTextBuffer* out, const PrDomNode* node) {
     for (const PrDomNode* child = node->first; child != nullptr; child = child->next) {
         if (child->type == PrDomNodeType_Element) {
             const PrDomElement* element = domElementFromNode(child);
-            textAppendChar(out, '<');
-            textAppend(out, domElementName(element));
+            prTextBufferAppendChar(out, '<');
+            prTextBufferAppend(out, domElementName(element));
             for (const PrDomAttr* attribute = element->firstAttribute; attribute != nullptr;
                     attribute = static_cast<const PrDomAttr*>(attribute->next)) {
-                textAppendChar(out, ' ');
-                textAppend(out, prStringView(&attribute->name));
-                textAppend(out, "=\"");
-                textAppend(out, prStringView(&attribute->value));
-                textAppendChar(out, '"');
+                prTextBufferAppendChar(out, ' ');
+                prTextBufferAppend(out, prStringView(&attribute->name));
+                prTextBufferAppend(out, "=\"");
+                prTextBufferAppend(out, prStringView(&attribute->value));
+                prTextBufferAppendChar(out, '"');
             }
-            textAppendChar(out, '>');
+            prTextBufferAppendChar(out, '>');
             writeTree(out, child);
-            textAppend(out, "</>");
+            prTextBufferAppend(out, "</>");
         } else if (child->type == PrDomNodeType_Text || child->type == PrDomNodeType_Comment) {
-            textAppend(out, child->type == PrDomNodeType_Text ? "[" : "<!--");
-            textAppend(out, prStringView(&static_cast<const PrDomCharacterData*>(child)->data));
-            textAppend(out, child->type == PrDomNodeType_Text ? "]" : "-->");
+            prTextBufferAppend(out, child->type == PrDomNodeType_Text ? "[" : "<!--");
+            prTextBufferAppend(out, prStringView(&static_cast<const PrDomCharacterData*>(child)->data));
+            prTextBufferAppend(out, child->type == PrDomNodeType_Text ? "]" : "-->");
         } else {
-            textAppend(out, "<?>");
+            prTextBufferAppend(out, "<?>");
         }
     }
 }
 
 bool sameTree(const PrDomNode* a, const PrDomNode* b) {
-    TextBuffer left;
-    TextBuffer right;
+    PrTextBuffer left = {};
+    PrTextBuffer right = {};
     writeTree(&left, a);
     writeTree(&right, b);
-    bool same = textView(&left) == textView(&right);
-    textReset(&left);
-    textReset(&right);
+    bool same = prTextBufferView(&left) == prTextBufferView(&right);
+    prTextBufferReset(&left);
+    prTextBufferReset(&right);
     return same;
 }
 
@@ -70,7 +70,7 @@ bool readOptions(PrStringView field, PrMarkdownOptions* out) {
         size_t end = start;
         while (end < field.size && field.data[end] != ',')
             ++end;
-        PrStringView name = stringSlice(field, start, end - start);
+        PrStringView name = prStringSlice(field, start, end - start);
         if (name == "table")
             out->extensions |= PrMarkdownExtensionFlag_Tables;
         else if (name == "tasklist")
@@ -97,19 +97,19 @@ bool buildsDocument(const PrMarkdownOptions& options, PrStringView markdown, PrS
     PrDomDocument* expected = domDocumentCreate(DomDocumentKind_Html);
     HtmlParser parser = {};
     htmlParserInit(&parser, expected, HtmlParseFlag_DeclarativeShadowRoots);
-    TextBuffer source;
-    textAppend(&source, "<!DOCTYPE html><html><head></head><body>");
-    textAppend(&source, html);
-    htmlParse(&parser, textView(&source));
+    PrTextBuffer source = {};
+    prTextBufferAppend(&source, "<!DOCTYPE html><html><head></head><body>");
+    prTextBufferAppend(&source, html);
+    htmlParse(&parser, prTextBufferView(&source));
     htmlParserReset(&parser);
-    textReset(&source);
+    prTextBufferReset(&source);
 
     PrDomDocument* built = domDocumentCreate(DomDocumentKind_Html);
     HtmlMarkdownBuilder builder;
     htmlMarkdownBuilderInitDocument(&builder, built, HtmlParseFlag_DeclarativeShadowRoots, &options);
     if (streamed) {
         for (size_t i = 0; i < markdown.size; ++i)
-            htmlMarkdownBuilderAppend(&builder, stringSlice(markdown, i, 1));
+            htmlMarkdownBuilderAppend(&builder, prStringSlice(markdown, i, 1));
     } else {
         htmlMarkdownBuilderAppend(&builder, markdown);
     }
@@ -158,19 +158,19 @@ int main() {
         PrMarkdownOptions options{};
         if (test.fieldCount != 1 || !readOptions(test.fields[0], &options))
             return 1;
-        PrStringView markdown = textView(&test.input);
+        PrStringView markdown = prTextBufferView(&test.input);
         PrString written = htmlOf(options, markdown);
         PrStringView html = prStringView(&written);
-        TextBuffer out;
-        textAppend(&out, "{\"whole\":");
-        textAppend(&out, buildsDocument(options, markdown, html, false) ? "true" : "false");
-        textAppend(&out, ",\"streamed\":");
-        textAppend(&out, buildsDocument(options, markdown, html, true) ? "true" : "false");
-        textAppend(&out, ",\"element\":");
-        textAppend(&out, buildsElement(options, markdown, html) ? "true" : "false");
-        textAppendChar(&out, '}');
-        harnessWriteLine(textView(&out));
-        textReset(&out);
+        PrTextBuffer out = {};
+        prTextBufferAppend(&out, "{\"whole\":");
+        prTextBufferAppend(&out, buildsDocument(options, markdown, html, false) ? "true" : "false");
+        prTextBufferAppend(&out, ",\"streamed\":");
+        prTextBufferAppend(&out, buildsDocument(options, markdown, html, true) ? "true" : "false");
+        prTextBufferAppend(&out, ",\"element\":");
+        prTextBufferAppend(&out, buildsElement(options, markdown, html) ? "true" : "false");
+        prTextBufferAppendChar(&out, '}');
+        harnessWriteLine(prTextBufferView(&out));
+        prTextBufferReset(&out);
         prStringReset(&written);
     }
     harnessCaseReset(&test);

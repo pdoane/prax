@@ -26,7 +26,7 @@ namespace {
 // The size in bytes of a block of side storage. The data that commands point to lives there without moving.
 constexpr size_t kBlockBytes = 4096;
 
-constexpr PrRect kUnbounded{-kInfinityF32, -kInfinityF32, kInfinityF32, kInfinityF32};
+constexpr PrRect kUnbounded{-kPrF32Infinity, -kPrF32Infinity, kPrF32Infinity, kPrF32Infinity};
 
 // Allocates `size` bytes of side storage, aligned for anything that a command points to.
 void* sideAlloc(DrawRecording& r, size_t size) {
@@ -45,7 +45,7 @@ void* sideAlloc(DrawRecording& r, size_t size) {
 template <typename T>
 T* sideCopy(DrawRecording& r, const T* items, uint32_t count) {
     T* copy = static_cast<T*>(sideAlloc(r, sizeof(T) * count));
-    memCopy(copy, items, sizeof(T) * count);
+    prMemCopy(copy, items, sizeof(T) * count);
     return copy;
 }
 
@@ -153,8 +153,8 @@ bool brushesEqual(const PrDrawBrush& a, const PrDrawBrush& b) {
     PrDrawBrush bWithStops = b;
     bWithStops.stops = a.stops;
     bWithStops.stopCount = a.stopCount;
-    return memEquals(&a, &bWithStops, sizeof(PrDrawBrush)) &&
-        (count == 0 || memEquals(a.stops, b.stops, sizeof(PrDrawColorStop) * count));
+    return prMemEquals(&a, &bWithStops, sizeof(PrDrawBrush)) &&
+        (count == 0 || prMemEquals(a.stops, b.stops, sizeof(PrDrawColorStop) * count));
 }
 
 // Drops the brush's source if it is the list that the brush is recorded into. Such a list would draw itself forever.
@@ -182,8 +182,8 @@ bool strokesEqual(const PrDrawStroke& a, const PrDrawStroke& b) {
         x.startCap == y.startCap && x.endCap == y.endCap && x.dashCap == y.dashCap &&
         x.zeroLengthDirection.x == y.zeroLengthDirection.x && x.zeroLengthDirection.y == y.zeroLengthDirection.y &&
         dashes == (y.dashes != nullptr ? y.dashCount : 0) && profile == (y.profile != nullptr ? y.profileCount : 0) &&
-        (dashes == 0 || memEquals(x.dashes, y.dashes, sizeof(float) * dashes)) &&
-        (profile == 0 || memEquals(x.profile, y.profile, sizeof(PrPathWidthPoint) * profile));
+        (dashes == 0 || prMemEquals(x.dashes, y.dashes, sizeof(float) * dashes)) &&
+        (profile == 0 || prMemEquals(x.profile, y.profile, sizeof(PrPathWidthPoint) * profile));
 }
 
 const PrDrawStroke* copyStroke(DrawRecording& r, const PrDrawStroke* stroke) {
@@ -214,7 +214,7 @@ PrDrawCommand* add(DrawList* list, PrDrawCommandKind kind, PrDrawEdges edges) {
     changed(list);
     DrawRecording& r = list->recording;
     PrDrawCommand* command = &r.commands.emplace();
-    memZero(command, sizeof(PrDrawCommand));
+    prMemZero(command, sizeof(PrDrawCommand));
     command->kind = kind;
     command->antialias = edges != PrDrawEdges_Aliased;
     command->snap = edges == PrDrawEdges_Snapped ? PrDrawSnapFlag_X | PrDrawSnapFlag_Y : 0;
@@ -290,13 +290,14 @@ PrRect outset(PrRect r, float by) {
 }
 
 bool unbounded(PrRect r) {
-    return r.left == -kInfinityF32 || r.top == -kInfinityF32 || r.right == kInfinityF32 || r.bottom == kInfinityF32;
+    const float infinity = kPrF32Infinity;
+    return r.left == -infinity || r.top == -infinity || r.right == infinity || r.bottom == infinity;
 }
 
 PrRect mapBounds(PrAffine2 t, PrRect r) {
     if (prRectIsEmpty(r) || unbounded(r))
         return r;
-    if (!isFiniteF32(t.a))
+    if (!prF32IsFinite(t.a))
         return kUnbounded;
     return prAffine2MapRect(t, r);
 }
@@ -318,7 +319,7 @@ PrRect mappedBox(PrAffine2 t, PrRect r) {
     float x1 = r.right * t.a + t.e;
     float y0 = r.top * t.d + t.f;
     float y1 = r.bottom * t.d + t.f;
-    return PrRect{minF32(x0, x1), minF32(y0, y1), maxF32(x0, x1), maxF32(y0, y1)};
+    return PrRect{prF32Min(x0, x1), prF32Min(y0, y1), prF32Max(x0, x1), prF32Max(y0, y1)};
 }
 
 PrRect glyphRunBounds(const PrFontGlyphRun* run) {
@@ -381,10 +382,10 @@ PrRect commandsBounds(const PrDrawCommand* commands, uint32_t count) {
                     rect.left + s->offset.x, rect.top + s->offset.y, rect.right + s->offset.x,
                     rect.bottom + s->offset.y,
                 };
-                float reach = maxF32(s->spread, 0) + 4 * maxF32(s->sigma, 0);
+                float reach = prF32Max(s->spread, 0) + 4 * prF32Max(s->sigma, 0);
                 if (s->nonScaling) {
                     local = rect;
-                    device = reach + absF32(s->offset.x) + absF32(s->offset.y);
+                    device = reach + prF32Abs(s->offset.x) + prF32Abs(s->offset.y);
                 } else {
                     local = outset(prRectUnion(caster, rect), reach);
                 }
@@ -395,7 +396,7 @@ PrRect commandsBounds(const PrDrawCommand* commands, uint32_t count) {
                 break;
             case PrDrawCommandKind_Decoration: {
                 const PrDrawDecoration* d = c.decoration;
-                float half = d->thickness * 2 + maxF32(d->amplitude, 0);
+                float half = d->thickness * 2 + prF32Max(d->amplitude, 0);
                 local = PrRect{d->origin.x, d->origin.y - half, d->origin.x + d->length, d->origin.y + half};
                 break;
             }
@@ -480,7 +481,7 @@ PrRect commandsBounds(const PrDrawCommand* commands, uint32_t count) {
                         local = c.cornerRect->rect;
                         break;
                     case PrDrawCommandKind_Ellipse: {
-                        float radius = maxF32(c.ellipse.radii.x, c.ellipse.radii.y);
+                        float radius = prF32Max(c.ellipse.radii.x, c.ellipse.radii.y);
                         local = PrRect{
                             c.ellipse.center.x - radius, c.ellipse.center.y - radius,
                             c.ellipse.center.x + radius, c.ellipse.center.y + radius,
@@ -500,27 +501,27 @@ PrRect commandsBounds(const PrDrawCommand* commands, uint32_t count) {
                         PrVec2 a = c.capsule.start;
                         PrVec2 b = c.capsule.end;
                         local = PrRect{
-                            minF32(a.x, b.x) - radius, minF32(a.y, b.y) - radius,
-                            maxF32(a.x, b.x) + radius, maxF32(a.y, b.y) + radius,
+                            prF32Min(a.x, b.x) - radius, prF32Min(a.y, b.y) - radius,
+                            prF32Max(a.x, b.x) + radius, prF32Max(a.y, b.y) + radius,
                         };
                         break;
                     }
                     case PrDrawCommandKind_Line:
                         local = PrRect{
-                            minF32(c.line.start.x, c.line.end.x),
-                            minF32(c.line.start.y, c.line.end.y),
-                            maxF32(c.line.start.x, c.line.end.x),
-                            maxF32(c.line.start.y, c.line.end.y),
+                            prF32Min(c.line.start.x, c.line.end.x),
+                            prF32Min(c.line.start.y, c.line.end.y),
+                            prF32Max(c.line.start.x, c.line.end.x),
+                            prF32Max(c.line.start.y, c.line.end.y),
                         };
                         break;
                     case PrDrawCommandKind_Polyline: {
                         const PrVec2* p = c.polyline->points;
                         local = PrRect{p[0].x, p[0].y, p[0].x, p[0].y};
                         for (uint32_t k = 1; k < c.polyline->pointCount; ++k) {
-                            local.left = minF32(local.left, p[k].x);
-                            local.top = minF32(local.top, p[k].y);
-                            local.right = maxF32(local.right, p[k].x);
-                            local.bottom = maxF32(local.bottom, p[k].y);
+                            local.left = prF32Min(local.left, p[k].x);
+                            local.top = prF32Min(local.top, p[k].y);
+                            local.right = prF32Max(local.right, p[k].x);
+                            local.bottom = prF32Max(local.bottom, p[k].y);
                         }
                         break;
                     }
@@ -945,7 +946,7 @@ void prDrawListWritePixels(PrDrawList* list, const PrDrawImage* image, PrIVec2 o
 }
 
 void prDrawListGlyphs(PrDrawList* list, const PrFontGlyphRun* run, PrVec2 origin, PrDrawPaint paint) {
-    if (run->glyphCount == 0 || !(run->size > 0) || !isFiniteF32(run->size))
+    if (run->glyphCount == 0 || !(run->size > 0) || !prF32IsFinite(run->size))
         return;
     if (PrDrawCommand* c = addShape(list, PrDrawCommandKind_Glyphs, true, paint)) {
         DrawRecording& r = list->recording;

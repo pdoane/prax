@@ -21,7 +21,7 @@ struct TestList {
     TestList& operator=(const TestList&) = delete;
 
     std::string text() const {
-        TextBuffer out = {};
+        PrTextBuffer out = {};
         cssSerializeMediaList(&out, &list);
         return take(&out);
     }
@@ -194,7 +194,7 @@ TEST_CASE("a media query list is its query and its environment") {
     CssMediaEnvironment media;
     cssMediaEnvironmentInit(&media, true);
     PrCssMediaQueryList* list = cssMediaQueryListCreate(&media, " (SCRIPTING: enabled) , print");
-    TextBuffer out = {};
+    PrTextBuffer out = {};
     cssSerializeMediaList(&out, &list->media);
     CHECK(take(&out) == "(scripting: enabled), print");
     CHECK(cssMediaListMatches(&list->media, list->environment));

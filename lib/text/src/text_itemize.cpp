@@ -95,7 +95,7 @@ void resolveScripts(TextItems& t, PrStringView whole, uint32_t start, uint32_t e
         PrStringView cluster{whole.data + at, next - at};
         PrScript script;
         if (cluster.size == 1)
-            script = (asciiIsLetter(cluster.data[0]) ? PrScript_Latn : PrScript_Zyyy);
+            script = (prAsciiIsLetter(cluster.data[0]) ? PrScript_Latn : PrScript_Zyyy);
         else
             script = clusterScript(cluster);
         if (cluster.data[0] == '\n') {
@@ -339,9 +339,9 @@ bool resolveLevels(TextItems& t, const PrTextItemizeDesc& d) {
     if (!mayHaveOddLevels(t, d))
         return false;
     t.levels.resize(uint32_t(d.text.size));
-    memZero(t.levels.data, d.text.size);
+    prMemZero(t.levels.data, d.text.size);
     t.marks.resize(d.pieceCount);
-    memFill(t.marks.data, kPrTextLevelNone, d.pieceCount);
+    prMemFill(t.marks.data, kPrTextLevelNone, d.pieceCount);
     bool overrides = d.bidi == PrTextBidi_BidiOverride || d.bidi == PrTextBidi_IsolateOverride;
     bool rightToLeft = d.direction == PrTextDirection_Rtl;
     PrUnicodeBidiDirection direction = PrUnicodeBidiDirection_LeftToRight;
@@ -592,7 +592,7 @@ void prTextItemsItemize(PrTextItems* items, const PrTextItemizeDesc* desc) {
     items->scripts.resize(size);
     items->upright.resize(size);
     items->faces.resize(size);
-    memZero(items->upright.data, size * sizeof(bool));
+    prMemZero(items->upright.data, size * sizeof(bool));
     // Resolves scripts, by the paragraphs that Break pieces end, and then the orientation of each Text piece.
     uint32_t from = 0;
     for (uint32_t i = 0; i <= d.pieceCount; ++i) {

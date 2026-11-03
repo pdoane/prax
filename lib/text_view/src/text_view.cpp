@@ -271,12 +271,12 @@ typedef uint8_t RowPart;
 // A key is a node's identity in the tree, and the view's own address is unique, so it is the identity of the view's
 // rows, as a DOM node's address is its own.
 uint64_t rowKey(const TextViewState* v, RowPart part, uint32_t line) {
-    return hashMixKeys(uint64_t(reinterpret_cast<uintptr_t>(v)), uint64_t(line) << 1 | part);
+    return prHashMixKeys(uint64_t(reinterpret_cast<uintptr_t>(v)), uint64_t(line) << 1 | part);
 }
 
 // Returns the key of the sheet that holds the rows of lines that do not wrap, past every key of a line's part.
 uint64_t sheetKey(const TextViewState* v) {
-    return hashMixKeys(uint64_t(reinterpret_cast<uintptr_t>(v)), uint64_t(1) << 40);
+    return prHashMixKeys(uint64_t(reinterpret_cast<uintptr_t>(v)), uint64_t(1) << 40);
 }
 
 // Returns the size of the gap before `line`, or zero.
@@ -1137,13 +1137,13 @@ bool prTextViewLaidOut(PrTextView* view) {
             }
         }
         float was = v->heights.heightOf(row.line);
-        if (absF32(was - (height + gap)) > kHeightTolerance)
+        if (prF32Abs(was - (height + gap)) > kHeightTolerance)
             corrected = true;
         v->heights.set(row.line, height + gap, true);
     }
     // A window in which every row wraps still says how tall a line is, so that the estimates do not stay at the first
     // guess.
-    if (!v->measured && wrappedLineHeight > 0 && absF32(wrappedLineHeight - v->lineHeight) > kHeightTolerance) {
+    if (!v->measured && wrappedLineHeight > 0 && prF32Abs(wrappedLineHeight - v->lineHeight) > kHeightTolerance) {
         v->lineHeight = wrappedLineHeight;
         estimateAll(v);
         corrected = true;
@@ -1212,7 +1212,7 @@ bool prTextViewRefine(PrTextView* view, double milliseconds) {
             if (v->heights.isExact(line))
                 continue;
             float height = refinedHeight(v, line);
-            if (absF32(v->heights.heightOf(line) - height) > kHeightTolerance) {
+            if (prF32Abs(v->heights.heightOf(line) - height) > kHeightTolerance) {
                 v->heights.set(line, height, false);
                 changed = true;
             }
@@ -1324,9 +1324,9 @@ void prTextViewRunPage(PrTextView* view, PrTextViewPage page, PrTextEditSelectio
         PrTextEditLine answered{};
         uint32_t to = prTextEditBufferLineStart(v->buffer, line);
         if (estimatedLine(v, line, &answered)) {
-            float nearest = kInfinityF32;
+            float nearest = kPrF32Infinity;
             for (uint32_t k = 0; k < answered.stopCount; ++k) {
-                float away = absF32(answered.stops[k].along - goal);
+                float away = prF32Abs(answered.stops[k].along - goal);
                 if (away < nearest) {
                     nearest = away;
                     to = prTextEditBufferLineStart(v->buffer, line) + answered.stops[k].position.offset;

@@ -412,7 +412,7 @@ std::vector<uint8_t> stored(const std::vector<uint8_t>& data) {
         uint8_t((~data.size() >> 8) & 0xFF),
     };
     out.insert(out.end(), data.begin(), data.end());
-    appendBe32(out, adler32Update(1, {data.data(), data.size()}));
+    appendBe32(out, prAdler32Update(1, {data.data(), data.size()}));
     return out;
 }
 
@@ -564,10 +564,10 @@ std::vector<uint8_t> grayPixels(const std::vector<uint8_t>& samples) {
 // Checks the CRC of each chunk.
 void checkChunks(const std::vector<uint8_t>& encoded) {
     for (size_t chunkAt = 8; chunkAt < encoded.size();) {
-        const size_t length = readBeU32(encoded.data() + chunkAt);
+        const size_t length = prMemReadBeU32(encoded.data() + chunkAt);
         REQUIRE(length + 12 <= encoded.size() - chunkAt);
         const std::vector<uint8_t> typed(encoded.data() + chunkAt + 4, encoded.data() + chunkAt + 8 + length);
-        CHECK(readBeU32(encoded.data() + chunkAt + 8 + length) == crc32(typed));
+        CHECK(prMemReadBeU32(encoded.data() + chunkAt + 8 + length) == crc32(typed));
         chunkAt += length + 12;
     }
 }
@@ -580,7 +580,7 @@ std::vector<uint8_t> withChunk(const std::vector<uint8_t>& png, const char* type
         chunk[i] = uint8_t(length >> (24 - 8 * i));
     chunk.insert(chunk.end(), type, type + 4);
     chunk.insert(chunk.end(), body.begin(), body.end());
-    uint32_t crc = crc32Update(0, PrByteView{chunk.data() + 4, chunk.size() - 4});
+    uint32_t crc = prCrc32Update(0, PrByteView{chunk.data() + 4, chunk.size() - 4});
     for (uint32_t i = 0; i < 4; ++i)
         chunk.push_back(uint8_t(crc >> (24 - 8 * i)));
     std::vector<uint8_t> out(png.begin(), png.begin() + 33);
@@ -1124,7 +1124,7 @@ TEST_CASE("a png's coding-independent code points name its space, in a cICP chun
     iccp.push_back(uint8_t(~size));
     iccp.push_back(uint8_t(uint16_t(~size) >> 8));
     iccp.insert(iccp.end(), profile.begin(), profile.end());
-    uint32_t adler = adler32Update(1, profile);
+    uint32_t adler = prAdler32Update(1, profile);
     for (uint32_t i = 0; i < 4; ++i)
         iccp.push_back(uint8_t(adler >> (24 - 8 * i)));
     CHECK(namedSpace(withChunk(png, "iCCP", iccp)) == PrColorSpace_Rec2100Pq);

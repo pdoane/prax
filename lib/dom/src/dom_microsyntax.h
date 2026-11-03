@@ -39,7 +39,7 @@ bool domIsValidFloat(PrStringView text);
 // Appends the best representation of `value` as a floating-point number
 // (html/#best-representation-of-the-number-as-a-floating-point-number), which is the shortest decimal that parses back
 // to it, as JavaScript's Number::toString writes it. `value` must be finite.
-void domAppendFloat(TextBuffer* out, double value);
+void domAppendFloat(PrTextBuffer* out, double value);
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Dates and times (html/#dates-and-times)
@@ -77,11 +77,11 @@ void domWeekOfDays(int64_t days, int64_t* year, uint32_t* week);
 // Append a valid month string, date string, week string, time string, and normalized local date and time string
 // (html/#valid-normalised-local-date-and-time-string). A time string leaves out its seconds if they and the
 // milliseconds are zero, and the milliseconds if they are zero.
-void domAppendMonth(TextBuffer* out, int64_t year, uint32_t month);
-void domAppendDate(TextBuffer* out, PrTimeDate date);
-void domAppendWeek(TextBuffer* out, int64_t year, uint32_t week);
-void domAppendTime(TextBuffer* out, DomTime time);
-void domAppendLocalDateTime(TextBuffer* out, PrTimeDate date, DomTime time);
+void domAppendMonth(PrTextBuffer* out, int64_t year, uint32_t month);
+void domAppendDate(PrTextBuffer* out, PrTimeDate date);
+void domAppendWeek(PrTextBuffer* out, int64_t year, uint32_t week);
+void domAppendTime(PrTextBuffer* out, DomTime time);
+void domAppendLocalDateTime(PrTextBuffer* out, PrTimeDate date, DomTime time);
 
 // Returns the attribute `name` of `element` as an unsigned long IDL attribute that reflects it with the default
 // `fallback` reads it (html/#reflecting-content-attributes-in-idl-attributes): a non-negative integer, or `fallback` if

@@ -18,11 +18,11 @@ TEST_CASE("a hash reads every byte, at any length and any alignment") {
                 size_t(0), size_t(1), size_t(3), size_t(4), size_t(8), size_t(15), size_t(16), size_t(17),
                 size_t(32), size_t(48), size_t(49), size_t(97), size_t(150),
             }) {
-        uint64_t hash = hashBytes(text, size, kSeed);
-        CHECK(hash != hashBytes(text, size + 1, kSeed));
+        uint64_t hash = prHashBytes(text, size, kSeed);
+        CHECK(hash != prHashBytes(text, size + 1, kSeed));
         for (size_t i = 0; i < size; ++i) {
             text[i] ^= 1;
-            CHECK(hashBytes(text, size, kSeed) != hash);
+            CHECK(prHashBytes(text, size, kSeed) != hash);
             text[i] ^= 1;
         }
     }
@@ -31,6 +31,6 @@ TEST_CASE("a hash reads every byte, at any length and any alignment") {
     char copy[64] = {};
     for (size_t i = 0; i < 60; ++i)
         copy[3 + i] = text[i];
-    CHECK(hashBytes(copy + 3, 60, kSeed) == hashBytes(text, 60, kSeed));
-    CHECK(hashBytes(text, 60, kSeed) != hashBytes(text, 60, kSeed + 1));
+    CHECK(prHashBytes(copy + 3, 60, kSeed) == prHashBytes(text, 60, kSeed));
+    CHECK(prHashBytes(text, 60, kSeed) != prHashBytes(text, 60, kSeed + 1));
 }

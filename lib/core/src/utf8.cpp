@@ -178,8 +178,8 @@ DfaState dfaStep(DfaState state, uint8_t byte) {
 uint64_t highBits(const uint8_t* bytes) {
     uint64_t low;
     uint64_t high;
-    memCopy(&low, bytes, 8);
-    memCopy(&high, bytes + 8, 8);
+    prMemCopy(&low, bytes, 8);
+    prMemCopy(&high, bytes + 8, 8);
     return (low | high) & 0x8080808080808080ull;
 }
 

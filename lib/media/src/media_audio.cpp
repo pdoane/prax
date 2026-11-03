@@ -119,7 +119,7 @@ bool prMediaAudioQueueWrite(PrMediaAudioQueue* queue, uint32_t id, const float* 
         uint32_t count = queue->capacity - at;
         count = count < queue->capacity - uint32_t(held) ? count : queue->capacity - uint32_t(held);
         count = count < frames ? count : frames;
-        memCopy(queue->samples + size_t(at) * channels, samples, size_t(count) * channels * sizeof(float));
+        prMemCopy(queue->samples + size_t(at) * channels, samples, size_t(count) * channels * sizeof(float));
         queue->written.store(written + count);
         samples += size_t(count) * channels;
         frames -= count;
@@ -151,7 +151,7 @@ PrMediaAudioChunk prMediaAudioQueueRead(PrMediaAudioQueue* queue, float* samples
     while (count != 0) {
         uint32_t at = uint32_t(read % queue->capacity);
         uint32_t run = queue->capacity - at < count ? queue->capacity - at : count;
-        memCopy(samples, queue->samples + size_t(at) * channels, size_t(run) * channels * sizeof(float));
+        prMemCopy(samples, queue->samples + size_t(at) * channels, size_t(run) * channels * sizeof(float));
         samples += size_t(run) * channels;
         read += run;
         count -= run;

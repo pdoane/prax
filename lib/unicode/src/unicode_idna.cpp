@@ -145,16 +145,16 @@ bool punycodeDecode(const uint32_t* PR_NULLABLE input, uint32_t count, Array<uin
 }
 
 // Appends the Punycode of the code points at `input` to `out` (RFC 3492 section 6.3). Returns false on overflow.
-bool punycodeEncode(const uint32_t* PR_NULLABLE input, uint32_t count, TextBuffer* out) {
+bool punycodeEncode(const uint32_t* PR_NULLABLE input, uint32_t count, PrTextBuffer* out) {
     uint32_t basic = 0;
     for (uint32_t j = 0; j < count; ++j) {
         if (input[j] < 0x80) {
-            textAppendChar(out, char(input[j]));
+            prTextBufferAppendChar(out, char(input[j]));
             ++basic;
         }
     }
     if (basic != 0)
-        textAppendChar(out, '-');
+        prTextBufferAppendChar(out, '-');
     uint32_t n = kPunycodeInitialN;
     uint32_t delta = 0;
     uint32_t bias = kPunycodeInitialBias;
@@ -178,10 +178,10 @@ bool punycodeEncode(const uint32_t* PR_NULLABLE input, uint32_t count, TextBuffe
                 uint32_t t = threshold(k, bias);
                 if (q < t)
                     break;
-                textAppendChar(out, digitOf(t + (q - t) % (kPunycodeBase - t)));
+                prTextBufferAppendChar(out, digitOf(t + (q - t) % (kPunycodeBase - t)));
                 q = (q - t) / (kPunycodeBase - t);
             }
-            textAppendChar(out, digitOf(q));
+            prTextBufferAppendChar(out, digitOf(q));
             bias = adapt(delta, handled + 1, handled == basic);
             delta = 0;
             ++handled;
@@ -385,42 +385,42 @@ bool prUnicodeIdnaToAscii(PrStringView domain, PrUnicodeIdnaFlags flags, PrStrin
     Array<uint32_t> processed{};
     bool valid = process(domain, flags, &processed);
     Array<IdnaLabel> labels = labelsOf(processed);
-    TextBuffer text;
+    PrTextBuffer text = {};
     for (uint32_t l = 0; l < labels.count && valid; ++l) {
         const uint32_t* label = processed.data + labels.data[l].start;
         uint32_t count = labels.data[l].count;
         if (l != 0)
-            textAppendChar(&text, '.');
-        uint32_t start = text.text.count;
+            prTextBufferAppendChar(&text, '.');
+        uint32_t start = text.size;
         if (isAscii(label, count)) {
             for (uint32_t i = 0; i < count; ++i)
-                textAppendChar(&text, char(label[i]));
+                prTextBufferAppendChar(&text, char(label[i]));
         } else {
-            textAppend(&text, "xn--");
+            prTextBufferAppend(&text, "xn--");
             valid = punycodeEncode(label, count, &text);
         }
-        uint32_t bytes = text.text.count - start;
+        uint32_t bytes = text.size - start;
         if ((flags & PrUnicodeIdnaFlag_VerifyDnsLength) && (bytes == 0 || bytes > kDnsMaxLabelBytes))
             valid = false;
     }
-    if ((flags & PrUnicodeIdnaFlag_VerifyDnsLength) && text.text.count > kDnsMaxNameBytes)
+    if ((flags & PrUnicodeIdnaFlag_VerifyDnsLength) && text.size > kDnsMaxNameBytes)
         valid = false;
     labels.reset();
     processed.reset();
     if (valid)
-        *out = textTake(&text);
+        *out = prTextBufferTake(&text);
     else
-        textReset(&text);
+        prTextBufferReset(&text);
     return valid;
 }
 
 bool prUnicodeIdnaToUnicode(PrStringView domain, PrUnicodeIdnaFlags flags, PrString* out) {
     Array<uint32_t> processed{};
     bool valid = process(domain, PrUnicodeIdnaFlags(flags & ~PrUnicodeIdnaFlag_VerifyDnsLength), &processed);
-    TextBuffer text;
+    PrTextBuffer text = {};
     for (uint32_t i = 0; i < processed.count; ++i)
-        textAppendCodePoint(&text, processed.data[i]);
+        prTextBufferAppendCodePoint(&text, processed.data[i]);
     processed.reset();
-    *out = textTake(&text);
+    *out = prTextBufferTake(&text);
     return valid;
 }

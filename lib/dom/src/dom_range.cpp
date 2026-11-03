@@ -439,17 +439,17 @@ PrStatus domRangeSurround(PrDomRange* range, PrDomNode* parent) {
 }
 
 PrString domRangeString(const PrDomRange* range) {
-    TextBuffer out;
+    PrTextBuffer out = {};
     auto append = [&](const PrDomNode* node, uint32_t offset, uint32_t count) {
         PrString data = substring(node, offset, count);
-        textAppend(&out, prStringView(&data));
+        prTextBufferAppend(&out, prStringView(&data));
         prStringReset(&data);
     };
     const PrDomNode* start = range->start.node;
     const PrDomNode* end = range->end.node;
     if (start == end && domIsText(start)) {
         append(start, range->start.offset, range->end.offset - range->start.offset);
-        return textTake(&out);
+        return prTextBufferTake(&out);
     }
     if (domIsText(start))
         append(start, range->start.offset, domNodeLength(start) - range->start.offset);
@@ -460,7 +460,7 @@ PrString domRangeString(const PrDomRange* range) {
     }
     if (domIsText(end))
         append(end, 0, range->end.offset);
-    return textTake(&out);
+    return prTextBufferTake(&out);
 }
 
 void domRangesInserted(PrDomNode* node) {

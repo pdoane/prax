@@ -1,13 +1,19 @@
 # Core: the platform, the foundation types, and the toolkit that every implementation is written with.
 pr_library(core INCLUDE include
     src/assert.cpp
+    src/base64.cpp
+    src/checksum.cpp
     src/file.cpp
+    src/float.cpp
+    src/float_convert.cpp
+    src/integer.cpp
     src/memory.cpp
     src/mutex.cpp
     src/pixels.cpp
     src/random.cpp
     src/status.cpp
     src/string.cpp
+    src/text_buffer.cpp
     src/thread.cpp
     src/time.cpp
     src/time_date.cpp
@@ -113,14 +119,8 @@ endif()
 # Core's C++ layer: the toolkit that every library's implementation is written with, and the C++ side of the platform.
 pr_library(core_cpp INCLUDE cpp/include
     cpp/src/atom_table.cpp
-    cpp/src/base64.cpp
-    cpp/src/checksum.cpp
-    cpp/src/float.cpp
-    cpp/src/float_convert.cpp
     cpp/src/hash_index.cpp
-    cpp/src/integer.cpp
     cpp/src/number_list.cpp
-    cpp/src/text_buffer.cpp
 )
 target_link_libraries(pr_core_cpp PUBLIC prax::core)
 
@@ -170,13 +170,19 @@ endif()
 
 if (PR_DEVELOP)
     pr_module_tests(core
+        tests/test_base64.cpp
         tests/test_byte_view.cpp
+        tests/test_checksum.cpp
         tests/test_core_c.c
         tests/test_file.cpp
+        tests/test_float.cpp
         tests/test_float16.cpp
+        tests/test_hash.cpp
+        tests/test_integer.cpp
         tests/test_pixels.cpp
         tests/test_platform.cpp
         tests/test_string.cpp
+        tests/test_string_ops.cpp
         tests/test_string_view.cpp
         tests/test_thread.cpp
         tests/test_time_date.cpp
@@ -188,18 +194,12 @@ if (PR_DEVELOP)
     pr_module_tests(core_cpp
         cpp/tests/test_array.cpp
         cpp/tests/test_atom_table.cpp
-        cpp/tests/test_base64.cpp
         cpp/tests/test_bitset.cpp
-        cpp/tests/test_checksum.cpp
-        cpp/tests/test_float.cpp
-        cpp/tests/test_hash.cpp
         cpp/tests/test_hash_index.cpp
-        cpp/tests/test_integer.cpp
         cpp/tests/test_name_table.cpp
         cpp/tests/test_number_list.cpp
         cpp/tests/test_search.cpp
         cpp/tests/test_sort.cpp
-        cpp/tests/test_string_ops.cpp
         cpp/tests/test_vmem.cpp
     )
 

@@ -46,7 +46,7 @@ const char kPartType = 0;
 PrLayoutStyleIndex widthStyle(PrUi* ui, Maker& owner, float width) {
     PrLayoutStyleIndex style = 0;
     const void* kept = prUiMemoFind(ui, &kPartType, &owner, &style);
-    if (kept != nullptr && memEquals(kept, &width, sizeof width))
+    if (kept != nullptr && prMemEquals(kept, &width, sizeof width))
         return style;
     PrUiPart part{.type = &kPartType, .owner = &owner, .bytes = &width, .size = uint32_t(sizeof width)};
     ++owner.missed;

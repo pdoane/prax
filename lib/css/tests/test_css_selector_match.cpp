@@ -202,7 +202,7 @@ TEST_CASE("a compound without a type selector matches only the default namespace
     // The implied universal selector is not written back.
     PrCssSelectors* written = cssParseSelectorText(&parser, ".c::before, [id] b", &context);
     REQUIRE(written != nullptr);
-    TextBuffer buffer;
+    PrTextBuffer buffer = {};
     cssSerializeSelectors(&buffer, written);
     CHECK(take(&buffer) == ".c::before, [id] b");
     cssSelectorsDestroy(written);

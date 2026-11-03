@@ -120,12 +120,12 @@ void decodeVideo(SourceDecoder* d) {
     prMutexLock(&d->mutex);
     while (!d->stopping) {
         double start = d->wanted;
-        if (!isNanF64(d->jumpTo)) {
+        if (!prF64IsNan(d->jumpTo)) {
             start = d->jumpTo;
-            d->jumpTo = kNanF64;
+            d->jumpTo = kPrF64Nan;
             releaseImages(d);
-            d->lastDecode = kNanF64;
-            d->through = -kInfinityF64;
+            d->lastDecode = kPrF64Nan;
+            d->through = -kPrF64Infinity;
             prMutexUnlock(&d->mutex);
             d->backend->sampleDecoderFlush(d->backend, d->video);
             prMutexLock(&d->mutex);
@@ -144,14 +144,14 @@ void decodeVideo(SourceDecoder* d) {
         bool decoded = false;
         if (found) {
             // A frame after a gap in decode order starts again at a random access point.
-            if (!isNanF64(lastDecode) && !frame.key && frame.decode > lastDecode + kJumpAhead)
+            if (!prF64IsNan(lastDecode) && !frame.key && frame.decode > lastDecode + kJumpAhead)
                 d->backend->sampleDecoderFlush(d->backend, d->video);
             decoded = d->backend->sampleDecode(d->backend, d->video, &frame, &handlers);
         } else {
             prThreadSleep(kPollMilliseconds);
         }
         prMutexLock(&d->mutex);
-        bool jumped = !isNanF64(d->jumpTo);
+        bool jumped = !prF64IsNan(d->jumpTo);
         for (uint32_t i = 0; i < sink.images.count; ++i) {
             if (jumped) {
                 releaseImage(d, sink.images.data[i].image);
@@ -207,7 +207,7 @@ void decodeAudio(SourceDecoder* d) {
         uint32_t seek = request.id;
         double seconds = request.seconds;
         d->backend->sampleDecoderFlush(d->backend, d->audio);
-        double lastDecode = kNanF64;
+        double lastDecode = kPrF64Nan;
         bool begun = false;
         bool finished = false;
         while (!prMediaAudioQueueIsInterrupted(queue, seek)) {
@@ -287,12 +287,12 @@ bool decoderFrame(PrMediaCodec*, PrMediaDecoder* decoder, double seconds, PrMedi
     d->wanted = seconds;
     // A time well before the earliest image kept, or far past the last decoded, restarts decoding there.
     bool before = d->images.count != 0 && seconds < d->images.data[0].presentation - kJumpAhead;
-    bool past = seconds > d->through + kJumpAhead && !isNanF64(d->lastDecode);
-    if (isNanF64(d->jumpTo) && (before || past))
+    bool past = seconds > d->through + kJumpAhead && !prF64IsNan(d->lastDecode);
+    if (prF64IsNan(d->jumpTo) && (before || past))
         d->jumpTo = seconds;
     // The image that shows is the last that starts at or before the time. Before the first image, the first shows.
     uint32_t at = UINT32_MAX;
-    if (isNanF64(d->jumpTo)) {
+    if (prF64IsNan(d->jumpTo)) {
         for (uint32_t i = 0; i < d->images.count && d->images.data[i].presentation <= seconds + 1e-6; ++i)
             at = i;
         if (at == UINT32_MAX && d->images.count != 0)
@@ -393,10 +393,10 @@ PrStatus mediaSourceDecoderCreate(PrMediaCodec* codec, PrMediaSourceBuffer* PR_N
     *out = nullptr;
     SourceDecoder* d = allocZeroed<SourceDecoder>();
     d->backend = codec;
-    d->jumpTo = kNanF64;
-    d->lastDecode = kNanF64;
-    d->through = -kInfinityF64;
-    info->duration = kNanF64;
+    d->jumpTo = kPrF64Nan;
+    d->lastDecode = kPrF64Nan;
+    d->through = -kPrF64Infinity;
+    info->duration = kPrF64Nan;
     prMutexInit(&d->mutex);
     prConditionInit(&d->wake);
     for (uint32_t b = 0; b < count; ++b) {

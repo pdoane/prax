@@ -26,10 +26,10 @@ namespace {
 //
 // Each node is one line starting with "| ", indented two spaces per level, which is the corpus's own format.
 
-void writeIndent(TextBuffer* out, uint32_t depth) {
-    textAppend(out, "| ");
+void writeIndent(PrTextBuffer* out, uint32_t depth) {
+    prTextBufferAppend(out, "| ");
     for (uint32_t i = 0; i < depth; ++i)
-        textAppend(out, "  ");
+        prTextBufferAppend(out, "  ");
 }
 
 PrStringView namespacePrefix(DomNamespaceId space) {
@@ -44,14 +44,14 @@ PrStringView namespacePrefix(DomNamespaceId space) {
 }
 
 // Writes the attributes, in the order that the corpus prints them, which is sorted by the name that it writes.
-void writeAttributes(TextBuffer* out, const PrDomElement* element, uint32_t depth) {
+void writeAttributes(PrTextBuffer* out, const PrDomElement* element, uint32_t depth) {
     Array<const PrDomAttr* PR_NONNULL> order;
     for (const PrDomAttr* attribute = element->firstAttribute; attribute != nullptr;
             attribute = static_cast<const PrDomAttr*>(attribute->next)) {
         uint32_t at = order.count;
         while (at != 0) {
             const PrDomAttr* before = order.data[at - 1];
-            int side = stringCompare(prStringView(&before->name), prStringView(&attribute->name));
+            int side = prStringCompare(prStringView(&before->name), prStringView(&attribute->name));
             if (side < 0 || (side == 0 && before->space <= attribute->space))
                 break;
             --at;
@@ -62,37 +62,37 @@ void writeAttributes(TextBuffer* out, const PrDomElement* element, uint32_t dept
     for (uint32_t i = 0; i < order.count; ++i) {
         const PrDomAttr* attribute = order.data[i];
         writeIndent(out, depth);
-        textAppend(out, namespacePrefix(attribute->space));
-        textAppend(out, prStringView(&attribute->name));
-        textAppend(out, "=\"");
-        textAppend(out, prStringView(&attribute->value));
-        textAppend(out, "\"\n");
+        prTextBufferAppend(out, namespacePrefix(attribute->space));
+        prTextBufferAppend(out, prStringView(&attribute->name));
+        prTextBufferAppend(out, "=\"");
+        prTextBufferAppend(out, prStringView(&attribute->value));
+        prTextBufferAppend(out, "\"\n");
     }
     order.reset();
 }
 
-void writeNode(TextBuffer* out, const PrDomNode* node, uint32_t depth);
+void writeNode(PrTextBuffer* out, const PrDomNode* node, uint32_t depth);
 
-void writeChildren(TextBuffer* out, const PrDomNode* node, uint32_t depth) {
+void writeChildren(PrTextBuffer* out, const PrDomNode* node, uint32_t depth) {
     for (const PrDomNode* child = node->first; child != nullptr; child = child->next)
         writeNode(out, child, depth);
 }
 
-void writeNode(TextBuffer* out, const PrDomNode* node, uint32_t depth) {
+void writeNode(PrTextBuffer* out, const PrDomNode* node, uint32_t depth) {
     switch (node->type) {
         case PrDomNodeType_Element: {
             const PrDomElement* element = static_cast<const PrDomElement*>(node);
             writeIndent(out, depth);
-            textAppendChar(out, '<');
-            textAppend(out, namespacePrefix(element->space));
-            textAppend(out, domElementName(element));
-            textAppend(out, ">\n");
+            prTextBufferAppendChar(out, '<');
+            prTextBufferAppend(out, namespacePrefix(element->space));
+            prTextBufferAppend(out, domElementName(element));
+            prTextBufferAppend(out, ">\n");
 
             writeAttributes(out, element, depth + 1);
             const PrDomNode* contents = domElementContents(element);
             if (contents != nullptr) {
                 writeIndent(out, depth + 1);
-                textAppend(out, "content\n");
+                prTextBufferAppend(out, "content\n");
                 writeChildren(out, contents, depth + 2);
             }
             writeChildren(out, node, depth + 1);
@@ -101,42 +101,42 @@ void writeNode(TextBuffer* out, const PrDomNode* node, uint32_t depth) {
 
         case PrDomNodeType_Text:
             writeIndent(out, depth);
-            textAppendChar(out, '"');
-            textAppend(out, prStringView(&static_cast<const PrDomText*>(node)->data));
-            textAppend(out, "\"\n");
+            prTextBufferAppendChar(out, '"');
+            prTextBufferAppend(out, prStringView(&static_cast<const PrDomText*>(node)->data));
+            prTextBufferAppend(out, "\"\n");
             return;
 
         case PrDomNodeType_Comment:
             writeIndent(out, depth);
-            textAppend(out, "<!-- ");
-            textAppend(out, prStringView(&static_cast<const PrDomComment*>(node)->data));
-            textAppend(out, " -->\n");
+            prTextBufferAppend(out, "<!-- ");
+            prTextBufferAppend(out, prStringView(&static_cast<const PrDomComment*>(node)->data));
+            prTextBufferAppend(out, " -->\n");
             return;
 
         case PrDomNodeType_ProcessingInstruction: {
             const PrDomProcessingInstruction* instruction = static_cast<const PrDomProcessingInstruction*>(node);
             writeIndent(out, depth);
-            textAppend(out, "<?");
-            textAppend(out, prStringView(&instruction->target));
-            textAppendChar(out, ' ');
-            textAppend(out, prStringView(&instruction->data));
-            textAppend(out, "?>\n");
+            prTextBufferAppend(out, "<?");
+            prTextBufferAppend(out, prStringView(&instruction->target));
+            prTextBufferAppendChar(out, ' ');
+            prTextBufferAppend(out, prStringView(&instruction->data));
+            prTextBufferAppend(out, "?>\n");
             return;
         }
 
         case PrDomNodeType_DocumentType: {
             const PrDomDocumentType* doctype = static_cast<const PrDomDocumentType*>(node);
             writeIndent(out, depth);
-            textAppend(out, "<!DOCTYPE ");
-            textAppend(out, prStringView(&doctype->name));
+            prTextBufferAppend(out, "<!DOCTYPE ");
+            prTextBufferAppend(out, prStringView(&doctype->name));
             if (prStringView(&doctype->publicId).size != 0 || prStringView(&doctype->systemId).size != 0) {
-                textAppend(out, " \"");
-                textAppend(out, prStringView(&doctype->publicId));
-                textAppend(out, "\" \"");
-                textAppend(out, prStringView(&doctype->systemId));
-                textAppendChar(out, '"');
+                prTextBufferAppend(out, " \"");
+                prTextBufferAppend(out, prStringView(&doctype->publicId));
+                prTextBufferAppend(out, "\" \"");
+                prTextBufferAppend(out, prStringView(&doctype->systemId));
+                prTextBufferAppendChar(out, '"');
             }
-            textAppend(out, ">\n");
+            prTextBufferAppend(out, ">\n");
             return;
         }
 
@@ -159,7 +159,7 @@ DomNamespaceId namespaceFromName(PrStringView text) {
 
 // A case's fields are its scripting flag, "on" or "off", and its context element's namespace and name, which are "-"
 // for a document parse.
-void run(TextBuffer* out, const HarnessCase& test) {
+void run(PrTextBuffer* out, const HarnessCase& test) {
     PrStringView space = test.fields[1];
     PrStringView name = test.fields[2];
 
@@ -167,7 +167,7 @@ void run(TextBuffer* out, const HarnessCase& test) {
     HtmlParser parser = {};
     htmlParserInit(&parser, document, test.fields[0] == "on" ? HtmlParseFlag_Scripting : 0);
 
-    PrStringView input = textView(&test.input);
+    PrStringView input = prTextBufferView(&test.input);
     const PrDomNode* printed = document;
     if (space == "-") {
         htmlParse(&parser, input);
@@ -176,16 +176,16 @@ void run(TextBuffer* out, const HarnessCase& test) {
         printed = htmlParseFragment(&parser, context, input);
     }
 
-    TextBuffer tree;
+    PrTextBuffer tree = {};
     writeChildren(&tree, printed, 0);
 
-    textAppend(out, "{\"document\": ");
-    harnessWriteString(out, textView(&tree));
-    textAppend(out, ", \"errors\": ");
+    prTextBufferAppend(out, "{\"document\": ");
+    harnessWriteString(out, prTextBufferView(&tree));
+    prTextBufferAppend(out, ", \"errors\": ");
     harnessWriteNumber(out, parser.errors.count);
-    textAppendChar(out, '}');
+    prTextBufferAppendChar(out, '}');
 
-    textReset(&tree);
+    prTextBufferReset(&tree);
     htmlParserReset(&parser);
     domNodeRelease(document);
 }
@@ -195,19 +195,19 @@ void run(TextBuffer* out, const HarnessCase& test) {
 int main() {
     prCrashHandler();
     HarnessCase test = {};
-    TextBuffer out;
+    PrTextBuffer out = {};
 
     while (harnessReadCase(&test)) {
         if (test.fieldCount != 3) {
             fprintf(stderr, "a case names a scripting flag and a context element\n");
             return 2;
         }
-        textClear(&out);
+        prTextBufferClear(&out);
         run(&out, test);
-        harnessWriteLine(textView(&out));
+        harnessWriteLine(prTextBufferView(&out));
     }
 
     harnessCaseReset(&test);
-    textReset(&out);
+    prTextBufferReset(&out);
     return 0;
 }

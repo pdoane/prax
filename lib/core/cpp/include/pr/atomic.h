@@ -3,6 +3,7 @@
 #pragma once
 
 #include "pr/base.h"
+#include "pr/type_traits.h"
 
 #if defined(_MSC_VER)
 #include "pr/atomic_msvc.h"
@@ -32,42 +33,6 @@ struct AtomicWord<8> {
     using Type = uint64_t;
 };
 
-// True for the integral types, which fetch-add and fetch-sub take. MSVC has no __is_integral.
-template <typename T>
-inline constexpr bool kAtomicIntegral = false;
-template <>
-inline constexpr bool kAtomicIntegral<bool> = true;
-template <>
-inline constexpr bool kAtomicIntegral<char> = true;
-template <>
-inline constexpr bool kAtomicIntegral<signed char> = true;
-template <>
-inline constexpr bool kAtomicIntegral<unsigned char> = true;
-template <>
-inline constexpr bool kAtomicIntegral<char8_t> = true;
-template <>
-inline constexpr bool kAtomicIntegral<char16_t> = true;
-template <>
-inline constexpr bool kAtomicIntegral<char32_t> = true;
-template <>
-inline constexpr bool kAtomicIntegral<wchar_t> = true;
-template <>
-inline constexpr bool kAtomicIntegral<short> = true;
-template <>
-inline constexpr bool kAtomicIntegral<unsigned short> = true;
-template <>
-inline constexpr bool kAtomicIntegral<int> = true;
-template <>
-inline constexpr bool kAtomicIntegral<unsigned int> = true;
-template <>
-inline constexpr bool kAtomicIntegral<long> = true;
-template <>
-inline constexpr bool kAtomicIntegral<unsigned long> = true;
-template <>
-inline constexpr bool kAtomicIntegral<long long> = true;
-template <>
-inline constexpr bool kAtomicIntegral<unsigned long long> = true;
-
 // Atomic storage for a trivially copyable value of 1, 2, 4 or 8 bytes, aligned to its size. A static instance starts at
 // zero, and any other instance is stored to before it is shared. It cannot be copied or moved.
 //
@@ -76,7 +41,7 @@ inline constexpr bool kAtomicIntegral<unsigned long long> = true;
 // so every byte of `T` must have a defined value.
 template <typename T>
 struct Atomic {
-    static_assert(__is_trivially_copyable(T));
+    static_assert(isTriviallyCopyable<T>);
     static_assert(sizeof(T) == 1 || sizeof(T) == 2 || sizeof(T) == 4 || sizeof(T) == 8);
 private:
     using Word = typename AtomicWord<sizeof(T)>::Type;
@@ -116,7 +81,7 @@ private:
     }
 
     template <bool Relaxed>
-    PR_FORCE_INLINE T addImpl(Word operand) requires(kAtomicIntegral<T>)
+    PR_FORCE_INLINE T addImpl(Word operand) requires(isIntegral<T>)
     {
 #if defined(_MSC_VER)
         const Word previous = atomicMsvcExchangeAdd<Relaxed>(&bits, operand);
@@ -184,24 +149,24 @@ public:
 
     // Adds `value` to the stored value, wrapping on overflow, and returns the previous value. The operand is a variable
     // because MSVC does not parse a bit cast in the arguments of a call with template arguments.
-    PR_FORCE_INLINE T fetchAdd(T value) requires(kAtomicIntegral<T>)
+    PR_FORCE_INLINE T fetchAdd(T value) requires(isIntegral<T>)
     {
         const Word operand = __builtin_bit_cast(Word, value);
         return addImpl<false>(operand);
     }
-    PR_FORCE_INLINE T fetchAddRelaxed(T value) requires(kAtomicIntegral<T>)
+    PR_FORCE_INLINE T fetchAddRelaxed(T value) requires(isIntegral<T>)
     {
         const Word operand = __builtin_bit_cast(Word, value);
         return addImpl<true>(operand);
     }
 
     // Subtracts `value` from the stored value, wrapping on underflow, and returns the previous value.
-    PR_FORCE_INLINE T fetchSub(T value) requires(kAtomicIntegral<T>)
+    PR_FORCE_INLINE T fetchSub(T value) requires(isIntegral<T>)
     {
         const Word operand = Word(0) - __builtin_bit_cast(Word, value);
         return addImpl<false>(operand);
     }
-    PR_FORCE_INLINE T fetchSubRelaxed(T value) requires(kAtomicIntegral<T>)
+    PR_FORCE_INLINE T fetchSubRelaxed(T value) requires(isIntegral<T>)
     {
         const Word operand = Word(0) - __builtin_bit_cast(Word, value);
         return addImpl<true>(operand);

@@ -166,7 +166,7 @@ void polygonOf(CssValueRun run, uint32_t index, const CssShapeLengths& lengths, 
             out->rule = PrPathFillRule_EvenOdd;
         if (keyword == PrCssKeyword_Round && k + 1 < prelude.count) {
             double px = 0;
-            out->round = cssResolveLength(run, prelude.items[k + 1], 0, &px) ? maxF32(float(px), 0) : 0;
+            out->round = cssResolveLength(run, prelude.items[k + 1], 0, &px) ? prF32Max(float(px), 0) : 0;
         }
     }
     if (hasPrelude)
@@ -203,7 +203,7 @@ float baseOf(const BoxLengths& b, CssShapeAxis axis) {
     switch (axis) {
         case CssShapeAxis_X: return b.extent.x;
         case CssShapeAxis_Y: return b.extent.y;
-        default: return sqrtF32((b.extent.x * b.extent.x + b.extent.y * b.extent.y) / 2);
+        default: return prF32Sqrt((b.extent.x * b.extent.x + b.extent.y * b.extent.y) / 2);
     }
 }
 
@@ -299,7 +299,7 @@ bool cssShapePath(CssValueRun run, uint32_t index, PrRect box, PrPath* out, PrPa
     // a viewBox. The shape is therefore resolved in the box scaled up by a power of two, and its outline is scaled back
     // down.
     PrVec2 extent{prRectWidth(box), prRectHeight(box)};
-    float size = maxF32(absF32(extent.x), absF32(extent.y));
+    float size = prF32Max(prF32Abs(extent.x), prF32Abs(extent.y));
     float scale = 1;
     while (size * scale < kScaledSize && scale < kMaxScale)
         scale *= 2;
@@ -341,16 +341,16 @@ double cssCornerShapeParameter(CssValueRun run) {
         if (cssValueIsNumeric(argument->kind))
             return argument->number;
         if (cssValueIsKeyword(argument, PrCssKeyword_Infinity))
-            return kInfinityF64;
+            return kPrF64Infinity;
         if (cssValueIsKeyword(argument, PrCssKeyword_MinusInfinity))
-            return -kInfinityF64;
+            return -kPrF64Infinity;
         return 1;
     }
     switch (run.values[0].kind == PrCssValueKind_Keyword ? cssValueKeyword(run.values) : PrCssKeyword_Count) {
         case PrCssKeyword_Scoop: return -1;
         case PrCssKeyword_Bevel: return 0;
-        case PrCssKeyword_Notch: return -kInfinityF64;
-        case PrCssKeyword_Square: return kInfinityF64;
+        case PrCssKeyword_Notch: return -kPrF64Infinity;
+        case PrCssKeyword_Square: return kPrF64Infinity;
         case PrCssKeyword_Squircle: return 2;
         default: return 1;
     }
@@ -358,7 +358,7 @@ double cssCornerShapeParameter(CssValueRun run) {
 
 void cssValuePoolAddSuperellipse(CssValuePool* pool, double k) {
     uint32_t function = cssValuePoolAdd(pool, cssFunctionValue(PrCssKeyword_Superellipse));
-    if (isFiniteF64(k))
+    if (prF64IsFinite(k))
         cssValuePoolAdd(pool, cssNumberValue(PrCssValueKind_Number, PrCssUnit_Number, k));
     else
         cssValuePoolAdd(pool, cssKeywordValue(k > 0 ? PrCssKeyword_Infinity : PrCssKeyword_MinusInfinity));
@@ -369,18 +369,18 @@ void cssCornerShapeInterpolate(CssValuePool* out, CssValueRun from, CssValueRun 
     // The normalized half corner of K: where a convex corner's curve crosses its diagonal, as a fraction of its radius
     // from the far corner, and the mirror of that for a concave one.
     auto halfCorner = [](double k) {
-        if (!isFiniteF64(k))
+        if (!prF64IsFinite(k))
             return k > 0 ? 1.0 : 0.0;
-        double convex = powF64(0.5, 1 / powF64(2, absF64(k)));
+        double convex = prF64Pow(0.5, 1 / prF64Pow(2, prF64Abs(k)));
         return k < 0 ? 1 - convex : convex;
     };
     double half = halfCorner(cssCornerShapeParameter(from)) * (1 - progress) + halfCorner(cssCornerShapeParameter(to)) * progress;
     if (half <= 0 || half >= 1) {
-        cssValuePoolAddSuperellipse(out, half <= 0 ? -kInfinityF64 : kInfinityF64);
+        cssValuePoolAddSuperellipse(out, half <= 0 ? -kPrF64Infinity : kPrF64Infinity);
         return;
     }
     double convex = half < 0.5 ? 1 - half : half;
-    double k = logF64(logF64(0.5) / logF64(convex)) / logF64(2);
+    double k = prF64Log(prF64Log(0.5) / prF64Log(convex)) / prF64Log(2);
     cssValuePoolAddSuperellipse(out, half < 0.5 ? -k : k);
 }
 

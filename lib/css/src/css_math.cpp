@@ -240,11 +240,11 @@ Built buildSum(Builder* b, Cursor* c);
 // Sets `out` to the value of a <calc-keyword> (css-values-4/#calc-keywords), which is a <number>.
 bool keywordNumber(PrCssKeyword keyword, double* out) {
     switch (keyword) {
-        case PrCssKeyword_E:              *out = kEF64; return true;
-        case PrCssKeyword_Pi:             *out = kPiF64; return true;
-        case PrCssKeyword_Infinity:       *out = kInfinityF64; return true;
-        case PrCssKeyword_MinusInfinity:  *out = -kInfinityF64; return true;
-        case PrCssKeyword_Nan:            *out = kNanF64; return true;
+        case PrCssKeyword_E:              *out = kPrF64E; return true;
+        case PrCssKeyword_Pi:             *out = kPrF64Pi; return true;
+        case PrCssKeyword_Infinity:       *out = kPrF64Infinity; return true;
+        case PrCssKeyword_MinusInfinity:  *out = -kPrF64Infinity; return true;
+        case PrCssKeyword_Nan:            *out = kPrF64Nan; return true;
         default:                        return false;
     }
 }
@@ -704,7 +704,7 @@ void canonicalize(CssValueNode* value) {
 }
 
 CssValueNode degrees(double radians) {
-    return cssNumberValue(PrCssValueKind_Dimension, PrCssUnit_Deg, radians * (180 / kPiF64));
+    return cssNumberValue(PrCssValueKind_Dimension, PrCssUnit_Deg, radians * (180 / kPrF64Pi));
 }
 
 // Unlinks the sibling after `node`.
@@ -916,10 +916,10 @@ uint32_t simplifyProduct(Builder* b, uint32_t node) {
 // a tie up, and infinities are handled as css-values-4/#round-infinities specifies.
 double roundBy(PrCssKeyword strategy, double a, double step) {
     switch (strategy) {
-        case PrCssKeyword_Up:     return roundToMultipleF64<RoundMode_Up>(a, step);
-        case PrCssKeyword_Down:   return roundToMultipleF64<RoundMode_Down>(a, step);
-        case PrCssKeyword_ToZero: return roundToMultipleF64<RoundMode_TowardZero>(a, step);
-        default:                return roundToMultipleF64<RoundMode_Nearest>(a, step);
+        case PrCssKeyword_Up:     return prF64RoundToMultiple(a, step, PrF64RoundMode_Up);
+        case PrCssKeyword_Down:   return prF64RoundToMultiple(a, step, PrF64RoundMode_Down);
+        case PrCssKeyword_ToZero: return prF64RoundToMultiple(a, step, PrF64RoundMode_TowardZero);
+        default:                return prF64RoundToMultiple(a, step, PrF64RoundMode_Nearest);
     }
 }
 
@@ -927,7 +927,7 @@ double roundBy(PrCssKeyword strategy, double a, double step) {
 // number, or a math function whose tree is a number. Returns NaN if it is neither.
 double baseValue(const CssValueNode* values) {
     const CssValueNode* number = values->kind == PrCssValueKind_Math ? values + 1 : values;
-    return number->kind == PrCssValueKind_Number ? number->number : kNanF64;
+    return number->kind == PrCssValueKind_Number ? number->number : kPrF64Nan;
 }
 
 // Returns the value between `min` and `max` at `base` (css-values-5/#random). With a step, it is the multiple of the
@@ -935,8 +935,8 @@ double baseValue(const CssValueNode* values) {
 double randomValue(double base, double min, double max, double step) {
     if (step <= 0)
         return min + base * (max - min);
-    double steps = floorF64((max - min) / step);
-    double picked = floorF64(base * (steps + 1));
+    double steps = prF64Floor((max - min) / step);
+    double picked = prF64Floor(base * (steps + 1));
     return min + step * (picked < steps ? picked : steps);
 }
 
@@ -952,7 +952,7 @@ bool computeFunction(Builder* b, uint32_t node, CssValueNode* out) {
     uint32_t count = 0;         // number of arguments so far, `none` included
     double acc = 0;
     bool fixed = false;         // random(): true if the key is `fixed`; `base` is then its value
-    double base = kNanF64;
+    double base = kPrF64Nan;
     for (uint32_t child = nodeAt(b, node).child; child != kCssMathNone; child = nodeAt(b, child).sibling) {
         const CssMathNode& argument = nodeAt(b, child);
         const CssValueNode& value = argument.value;
@@ -963,7 +963,7 @@ bool computeFunction(Builder* b, uint32_t node, CssValueNode* out) {
                 fixed = true;
             else if (value.kind == PrCssValueKind_Keyword)
                 strategy = cssValueKeyword(&value);
-            else if (fixed && isNanF64(base))
+            else if (fixed && prF64IsNan(base))
                 base = baseValue(b->scratch->leaves.data + argument.leaf);
             continue;
         }
@@ -976,11 +976,11 @@ bool computeFunction(Builder* b, uint32_t node, CssValueNode* out) {
         numeric = true;
         double x = value.number;
         switch (def) {
-            case CssValueDef_MinFn:     acc = count == 0 ? x : minimumF64(acc, x); break;
-            case CssValueDef_MaxFn:     acc = count == 0 ? x : maximumF64(acc, x); break;
+            case CssValueDef_MinFn:     acc = count == 0 ? x : prF64Minimum(acc, x); break;
+            case CssValueDef_MaxFn:     acc = count == 0 ? x : prF64Maximum(acc, x); break;
             case CssValueDef_HypotFn:
                 // Any NaN gives NaN (css-values-4/#calc-ieee), although hypot would let an infinity win.
-                acc = count == 0 ? absF64(x) : isNanF64(acc) || isNanF64(x) ? kNanF64 : hypotF64(acc, x);
+                acc = count == 0 ? prF64Abs(x) : prF64IsNan(acc) || prF64IsNan(x) ? kPrF64Nan : prF64Hypot(acc, x);
                 break;
             default:
                 if (count < 3) {
@@ -1001,7 +1001,7 @@ bool computeFunction(Builder* b, uint32_t node, CssValueNode* out) {
         return false;
     }
 
-    const double toRadians = first.kind == PrCssValueKind_Dimension ? kPiF64 / 180 : 1;
+    const double toRadians = first.kind == PrCssValueKind_Dimension ? kPrF64Pi / 180 : 1;
     CssValueNode same = first;
     switch (def) {
         case CssValueDef_MinFn:
@@ -1012,43 +1012,43 @@ bool computeFunction(Builder* b, uint32_t node, CssValueNode* out) {
         case CssValueDef_ClampFn: {
             double x = v[1];
             if (present[2])
-                x = minimumF64(x, v[2]);
+                x = prF64Minimum(x, v[2]);
             if (present[0])
-                x = maximumF64(v[0], x);
+                x = prF64Maximum(v[0], x);
             same.number = x;
             break;
         }
         case CssValueDef_RoundFn:
             same.number = roundBy(strategy, v[0], present[1] ? v[1] : 1);
             break;
-        case CssValueDef_ModFn:     same.number = floorModF64(v[0], v[1]); break;
-        case CssValueDef_RemFn:     same.number = fmodF64(v[0], v[1]); break;
-        case CssValueDef_AbsFn:     same.number = absF64(v[0]); break;
+        case CssValueDef_ModFn:     same.number = prF64FloorMod(v[0], v[1]); break;
+        case CssValueDef_RemFn:     same.number = prF64Fmod(v[0], v[1]); break;
+        case CssValueDef_AbsFn:     same.number = prF64Abs(v[0]); break;
         case CssValueDef_SinFn:
-            same = cssNumberValue(PrCssValueKind_Number, PrCssUnit_Number, sinF64(v[0] * toRadians));
+            same = cssNumberValue(PrCssValueKind_Number, PrCssUnit_Number, prF64Sin(v[0] * toRadians));
             break;
         case CssValueDef_CosFn:
-            same = cssNumberValue(PrCssValueKind_Number, PrCssUnit_Number, cosF64(v[0] * toRadians));
+            same = cssNumberValue(PrCssValueKind_Number, PrCssUnit_Number, prF64Cos(v[0] * toRadians));
             break;
         case CssValueDef_TanFn:
-            same = cssNumberValue(PrCssValueKind_Number, PrCssUnit_Number, tanF64(v[0] * toRadians));
+            same = cssNumberValue(PrCssValueKind_Number, PrCssUnit_Number, prF64Tan(v[0] * toRadians));
             break;
-        case CssValueDef_AsinFn:    same = degrees(asinF64(v[0])); break;
-        case CssValueDef_AcosFn:    same = degrees(acosF64(v[0])); break;
-        case CssValueDef_AtanFn:    same = degrees(atanF64(v[0])); break;
-        case CssValueDef_Atan2Fn:   same = degrees(atan2F64(v[0], v[1])); break;
+        case CssValueDef_AsinFn:    same = degrees(prF64Asin(v[0])); break;
+        case CssValueDef_AcosFn:    same = degrees(prF64Acos(v[0])); break;
+        case CssValueDef_AtanFn:    same = degrees(prF64Atan(v[0])); break;
+        case CssValueDef_Atan2Fn:   same = degrees(prF64Atan2(v[0], v[1])); break;
         case CssValueDef_PowFn:
-            same = cssNumberValue(PrCssValueKind_Number, PrCssUnit_Number, powF64(v[0], v[1]));
+            same = cssNumberValue(PrCssValueKind_Number, PrCssUnit_Number, prF64Pow(v[0], v[1]));
             break;
         case CssValueDef_SqrtFn:
-            same = cssNumberValue(PrCssValueKind_Number, PrCssUnit_Number, sqrtF64(v[0]));
+            same = cssNumberValue(PrCssValueKind_Number, PrCssUnit_Number, prF64Sqrt(v[0]));
             break;
         case CssValueDef_ExpFn:
-            same = cssNumberValue(PrCssValueKind_Number, PrCssUnit_Number, expF64(v[0]));
+            same = cssNumberValue(PrCssValueKind_Number, PrCssUnit_Number, prF64Exp(v[0]));
             break;
         case CssValueDef_LogFn:
             same = cssNumberValue(PrCssValueKind_Number, PrCssUnit_Number,
-                present[1] ? logF64(v[0]) / logF64(v[1]) : logF64(v[0]));
+                present[1] ? prF64Log(v[0]) / prF64Log(v[1]) : prF64Log(v[0]));
             break;
         case CssValueDef_SignFn:
             same = cssNumberValue(PrCssValueKind_Number, PrCssUnit_Number, v[0] > 0 ? 1 : v[0] < 0 ? -1 : v[0]);
@@ -1057,7 +1057,7 @@ bool computeFunction(Builder* b, uint32_t node, CssValueNode* out) {
             same = cssNumberValue(PrCssValueKind_Number, PrCssUnit_Number, (v[0] - v[1]) / (v[2] - v[1]));
             break;
         case CssValueDef_RandomFn:
-            if (isNanF64(base))
+            if (prF64IsNan(base))
                 return false;
             same.number = randomValue(base, v[0], v[1], present[2] ? v[2] : 0);
             break;
@@ -1112,7 +1112,7 @@ uint32_t simplifyFunction(Builder* b, uint32_t node) {
         return node;
     bool larger = name == PrCssKeyword_Max;
     combineUnits(b, node, !comparesPercentages(b),
-        [larger](double x, double y) { return larger ? maximumF64(x, y) : minimumF64(x, y); });
+        [larger](double x, double y) { return larger ? prF64Maximum(x, y) : prF64Minimum(x, y); });
 
     // The commas of the arguments that were combined away are removed with them.
     for (uint32_t child = nodeAt(b, node).child; child != kCssMathNone; child = nodeAt(b, child).sibling) {
@@ -1548,11 +1548,11 @@ PrStringView cssNumericUnitName(PrCssUnit unit) {
 }
 
 bool cssNumericUnitFromName(PrStringView name, PrCssUnit* out) {
-    if (asciiEqualsFold(name, "number")) {
+    if (prAsciiEqualsFold(name, "number")) {
         *out = PrCssUnit_Number;
         return true;
     }
-    if (asciiEqualsFold(name, "percent")) {
+    if (prAsciiEqualsFold(name, "percent")) {
         *out = PrCssUnit_Percent;
         return true;
     }
@@ -1633,7 +1633,7 @@ bool cssMathToSum(CssValueRun run, uint32_t index, const PrCssUnit* PR_NULLABLE 
     if (ok && count == 0) {
         // Sort in code point order of the units' names.
         for (uint32_t i = 1; i < values.count; ++i) {
-            for (uint32_t j = i; j > 0 && stringCompare(cssNumericUnitName(values.data[j].units[0].unit),
+            for (uint32_t j = i; j > 0 && prStringCompare(cssNumericUnitName(values.data[j].units[0].unit),
                     cssNumericUnitName(values.data[j - 1].units[0].unit)) < 0; --j) {
                 SumItem swap = values.data[j];
                 values.data[j] = values.data[j - 1];

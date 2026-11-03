@@ -55,14 +55,14 @@ bool readLine(SuiteRender* out, PrStringView line, PrStringView root) {
     if (!split(line, ' ', &setting, &value))
         return false;
     if (setting == "font") {
-        TextBuffer file;
-        textAppend(&file, root);
-        textAppend(&file, "/");
-        textAppend(&file, value);
+        PrTextBuffer file = {};
+        prTextBufferAppend(&file, root);
+        prTextBufferAppend(&file, "/");
+        prTextBufferAppend(&file, value);
         PrFontFaceDescriptor descriptor = prFontFaceDescriptorDefault();
         const PrFont* font = nullptr;
-        PrStatus status = prFontCreateFromFile(textView(&file), 0, nullptr, &font);
-        textReset(&file);
+        PrStatus status = prFontCreateFromFile(prTextBufferView(&file), 0, nullptr, &font);
+        prTextBufferReset(&file);
         if (status != PrStatus_Ok)
             return false;
         prFontSetAdd(out->fonts, &descriptor, font);

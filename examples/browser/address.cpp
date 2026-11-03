@@ -21,10 +21,10 @@ constexpr const char* kOpaqueSchemes[] = {"about", "data", "javascript", "mailto
 // Returns the length of the scheme that `text` begins with (url/#scheme-state), or 0 if it begins with none. The colon
 // after the scheme is not counted.
 size_t schemeLength(const std::string& text) {
-    if (text.empty() || !asciiIsLetter(text[0]))
+    if (text.empty() || !prAsciiIsLetter(text[0]))
         return 0;
     size_t at = 1;
-    while (at < text.size() && (asciiIsLetter(text[at]) || asciiIsDigit(text[at]) || text[at] == '+' || text[at] == '-' ||
+    while (at < text.size() && (prAsciiIsLetter(text[at]) || prAsciiIsDigit(text[at]) || text[at] == '+' || text[at] == '-' ||
             text[at] == '.'))
         ++at;
     return at < text.size() && text[at] == ':' ? at : 0;
@@ -39,7 +39,7 @@ bool hasScheme(const std::string& text) {
         return true;
     PrStringView scheme{text.data(), length};
     for (const char* opaque : kOpaqueSchemes) {
-        if (asciiEqualsFold(scheme, opaque))
+        if (prAsciiEqualsFold(scheme, opaque))
             return true;
     }
     return false;
@@ -56,7 +56,7 @@ bool isLocal(const std::string& authority) {
     std::string host = authority.substr(0, authority.rfind(':'));
     if (authority.compare(0, 1, "[") == 0)
         host = authority.substr(0, authority.find(']') + 1);
-    return asciiEqualsFold(host, "localhost") || host == "127.0.0.1" || host == "[::1]";
+    return prAsciiEqualsFold(host, "localhost") || host == "127.0.0.1" || host == "[::1]";
 }
 
 // Returns true if `authority` reads as a host: a name with a dot that is neither its first nor its last character, the
@@ -70,7 +70,7 @@ bool isHost(const std::string& authority) {
     if (colon != std::string::npos && colon != 0 && colon + 1 < authority.size()) {
         bool port = true;
         for (size_t i = colon + 1; i < authority.size(); ++i)
-            port = port && asciiIsDigit(authority[i]);
+            port = port && prAsciiIsDigit(authority[i]);
         if (port)
             return true;
     }
@@ -95,7 +95,7 @@ std::string formEncoded(const std::string& text) {
     static const char kHex[] = "0123456789ABCDEF";
     std::string encoded;
     for (char c : text) {
-        if (asciiIsLetter(c) || asciiIsDigit(c) || c == '*' || c == '-' || c == '.' || c == '_') {
+        if (prAsciiIsLetter(c) || prAsciiIsDigit(c) || c == '*' || c == '-' || c == '.' || c == '_') {
             encoded += c;
         } else if (c == ' ') {
             encoded += '+';
@@ -111,7 +111,7 @@ std::string formEncoded(const std::string& text) {
 } // namespace
 
 std::string addressResolve(PrStringView text) {
-    PrStringView trimmed = stringTrim(text);
+    PrStringView trimmed = prStringTrim(text);
     std::string typed(trimmed.data, trimmed.size);
     if (typed.empty())
         return typed;
@@ -122,7 +122,7 @@ std::string addressResolve(PrStringView text) {
         return file;
     bool spaced = false;
     for (char c : typed)
-        spaced = spaced || asciiIsSpace(c);
+        spaced = spaced || prAsciiIsSpace(c);
     std::string authority = authorityOf(typed);
     if (!spaced && isHost(authority))
         return (isLocal(authority) ? "http://" : "https://") + typed;
@@ -134,7 +134,7 @@ bool addressIsBlank(PrStringView url) {
 }
 
 bool addressIsBrowserPage(PrStringView url) {
-    return asciiStartsWithFold(url, "prax:");
+    return prAsciiStartsWithFold(url, "prax:");
 }
 
 std::string addressShown(PrStringView url) {
@@ -160,7 +160,7 @@ std::string addressHost(PrStringView url) {
 }
 
 bool addressMatches(PrStringView text, PrStringView query) {
-    return asciiContainsFold(text, query);
+    return prAsciiContainsFold(text, query);
 }
 
 } // namespace browser

@@ -56,7 +56,7 @@ void breakLines(TextLayout& t, float width) {
     PrStringView text{t.text.data, t.text.count};
     for (uint32_t first = 0;;) {
         PrTextShapingLine line{.start = first, .end = t.text.count};
-        uint32_t end = prTextShapingBreakLine(t.shaping, text, &line, width > 0 ? width : kInfinityF32, nullptr);
+        uint32_t end = prTextShapingBreakLine(t.shaping, text, &line, width > 0 ? width : kPrF32Infinity, nullptr);
         t.lines.push(PrTextLine{.start = first, .end = end});
         if (end >= t.text.count) {
             if (end != 0 && isLineFeed(t, end - 1))
@@ -110,8 +110,8 @@ void placeLine(TextLayout& t, PrTextLine& line, const PrTextLayoutDesc& d, float
             float next = pen + glyph.advance;
             float& l = t.clusterLeft.data[glyph.cluster];
             float& r = t.clusterRight.data[glyph.cluster];
-            l = isNanF32(l) || pen < l ? pen : l;
-            r = isNanF32(r) || next > r ? next : r;
+            l = prF32IsNan(l) || pen < l ? pen : l;
+            r = prF32IsNan(r) || next > r ? next : r;
             t.clusterLevel.data[glyph.cluster] = part.level;
             pen = next;
         }
@@ -201,8 +201,8 @@ void prTextLayoutSet(PrTextLayout* layout, const PrTextLayoutDesc* desc) {
     layout->clusterRight.resize(bytes);
     layout->clusterLevel.resize(bytes);
     for (uint32_t b = 0; b < bytes; ++b) {
-        layout->clusterLeft.data[b] = kNanF32;
-        layout->clusterRight.data[b] = kNanF32;
+        layout->clusterLeft.data[b] = kPrF32Nan;
+        layout->clusterRight.data[b] = kPrF32Nan;
         layout->clusterLevel.data[b] = 0;
     }
 
@@ -291,7 +291,7 @@ PrVec2 prTextLayoutCaret(const PrTextLayout* layout, uint32_t offset) {
     if (t.lines.count == 0)
         return PrVec2{0, 0};
     const PrTextLine& line = t.lines.data[lineOf(t, offset)];
-    if (offset < t.text.count && !isNanF32(t.clusterLeft.data[offset])) {
+    if (offset < t.text.count && !prF32IsNan(t.clusterLeft.data[offset])) {
         bool rightToLeft = (t.clusterLevel.data[offset] & 1) != 0;
         return PrVec2{rightToLeft ? t.clusterRight.data[offset] : t.clusterLeft.data[offset], line.baseline};
     }
@@ -316,9 +316,9 @@ uint32_t prTextLayoutHitTest(const PrTextLayout* layout, PrVec2 point) {
     PrStringView text{t.text.data, t.text.count};
     uint32_t end = contentEnd(t, line);
     uint32_t best = end;
-    float nearest = kInfinityF32;
+    float nearest = kPrF32Infinity;
     for (uint32_t at = line.start; at < end; at = uint32_t(prUnicodeGraphemeNext(text, at))) {
-        if (isNanF32(t.clusterLeft.data[at]))
+        if (prF32IsNan(t.clusterLeft.data[at]))
             continue;
         float left = t.clusterLeft.data[at];
         float right = t.clusterRight.data[at];

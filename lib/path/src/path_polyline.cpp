@@ -27,7 +27,7 @@ namespace {
 
 bool finite(const PrPathPolyline& polyline) {
     for (uint32_t i = 0; i < polyline.pointCount; ++i) {
-        if (!isFiniteF32(polyline.points[i].x) || !isFiniteF32(polyline.points[i].y))
+        if (!prF32IsFinite(polyline.points[i].x) || !prF32IsFinite(polyline.points[i].y))
             return false;
     }
     return true;
@@ -241,7 +241,7 @@ void boundaryBand(const Array<PrVec2>& points, const Array<uint32_t>& ends, floa
     auto normal = [](PrVec2 a, PrVec2 b) {
         float dx = b.x - a.x;
         float dy = b.y - a.y;
-        float length = sqrtF32(dx * dx + dy * dy);
+        float length = prF32Sqrt(dx * dx + dy * dy);
         return length > 0 ? PrVec2{-dy / length, dx / length} : PrVec2{0, 0};
     };
     auto along = [](PrVec2 p, PrVec2 n, float d) {
@@ -249,7 +249,7 @@ void boundaryBand(const Array<PrVec2>& points, const Array<uint32_t>& ends, floa
     };
     // A circle approximated as a polygon within the tolerance.
     uint32_t steps = 8;
-    while (steps < 256 && distance * (1 - cosF32(kPiF32 / float(steps))) > tolerance)
+    while (steps < 256 && distance * (1 - prF32Cos(kPrF32Pi / float(steps))) > tolerance)
         steps *= 2;
     uint32_t start = 0;
     for (uint32_t r = 0; r < ends.count; ++r) {
@@ -277,8 +277,8 @@ void boundaryBand(const Array<PrVec2>& points, const Array<uint32_t>& ends, floa
             if (join == PrPathJoin_Round || join == PrPathJoin_Arcs) {
                 PrVec2 circle[256];
                 for (uint32_t k = 0; k < steps; ++k) {
-                    float angle = 2 * kPiF32 * float(k) / float(steps);
-                    circle[k] = PrVec2{b.x + distance * cosF32(angle), b.y + distance * sinF32(angle)};
+                    float angle = 2 * kPrF32Pi * float(k) / float(steps);
+                    circle[k] = PrVec2{b.x + distance * prF32Cos(angle), b.y + distance * prF32Sin(angle)};
                 }
                 addPolygon(circle, steps, out);
                 continue;
@@ -292,7 +292,7 @@ void boundaryBand(const Array<PrVec2>& points, const Array<uint32_t>& ends, floa
             if (join == PrPathJoin_Miter || join == PrPathJoin_MiterClip) {
                 // The tip of the miter, at which the outer sides of the two bands meet.
                 PrVec2 mid{n1.x + n2.x, n1.y + n2.y};
-                float length = sqrtF32(mid.x * mid.x + mid.y * mid.y);
+                float length = prF32Sqrt(mid.x * mid.x + mid.y * mid.y);
                 float cosine = length / 2;            // cosine of half the angle between the normals
                 if (cosine > 0) {
                     float reach = distance / cosine;   // distance from b to the tip
@@ -348,7 +348,7 @@ void polylineAddProjected(PrPathPolyline& out, const PrMatrix4* matrix, const Ar
     clipped.clear();
     float largest = 0;
     for (uint32_t i = 0; i < polygon.count; ++i)
-        largest = maxF32(largest, homogeneousLift(matrix, polygon.data[i]).w);
+        largest = prF32Max(largest, homogeneousLift(matrix, polygon.data[i]).w);
     if (!(largest > 0))
         return;
     float near = largest * kPrPathPolylineNearPlane;
@@ -400,7 +400,7 @@ void prPathPolylineMoveTo(PrPathPolyline* polyline, PrVec2 point) {
     size_t grown = bitsetWords(contours.capacity);
     if (grown != words) {
         polyline->closed = static_cast<uint64_t*>(prMemoryRealloc(polyline->closed, grown * sizeof(uint64_t)));
-        memZero(polyline->closed + words, (grown - words) * sizeof(uint64_t));
+        prMemZero(polyline->closed + words, (grown - words) * sizeof(uint64_t));
     }
     polyline->contours = contours.data;
     polyline->contourCount = contours.count;
@@ -442,10 +442,10 @@ PrRect prPathPolylineBounds(const PrPathPolyline* polyline) {
     const PrVec2* p = polyline->points;
     PrRect bounds{p[0].x, p[0].y, p[0].x, p[0].y};
     for (uint32_t i = 1; i < polyline->pointCount; ++i) {
-        bounds.left = minF32(bounds.left, p[i].x);
-        bounds.top = minF32(bounds.top, p[i].y);
-        bounds.right = maxF32(bounds.right, p[i].x);
-        bounds.bottom = maxF32(bounds.bottom, p[i].y);
+        bounds.left = prF32Min(bounds.left, p[i].x);
+        bounds.top = prF32Min(bounds.top, p[i].y);
+        bounds.right = prF32Max(bounds.right, p[i].x);
+        bounds.bottom = prF32Max(bounds.bottom, p[i].y);
     }
     return bounds;
 }
@@ -528,11 +528,11 @@ void prPathPolylineCombine(const PrPathPolyline* a, PrPathFillRule aRule, const 
 void prPathPolylineOffset(const PrPathPolyline* polyline, PrPathFillRule rule, float distance, PrPathJoin join,
         float miterLimit, float tolerance, PrPathPolyline* out) {
     PrPathPolyline band{};
-    if (distance != 0 && isFiniteF32(distance) && tolerance > 0 && isFiniteF32(tolerance)) {
+    if (distance != 0 && prF32IsFinite(distance) && tolerance > 0 && prF32IsFinite(tolerance)) {
         Array<PrVec2> points;
         Array<uint32_t> ends;
         ringsOf(*polyline, points, ends);
-        boundaryBand(points, ends, absF32(distance), join, miterLimit, tolerance, band);
+        boundaryBand(points, ends, prF32Abs(distance), join, miterLimit, tolerance, band);
         points.reset();
         ends.reset();
     }

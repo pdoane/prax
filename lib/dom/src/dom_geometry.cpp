@@ -30,31 +30,31 @@ void multiply(PrDomMatrix* matrix, const PrDomMatrix* left, const PrDomMatrix* r
                 product[column * 4 + row] += left->m[i * 4 + row] * right->m[column * 4 + i];
         }
     }
-    memCopy(matrix->m, product, sizeof(product));
+    prMemCopy(matrix->m, product, sizeof(product));
     matrix->is2D = left->is2D && right->is2D;
 }
 
 // geometry-1/#nan-safe-minimum and geometry-1/#nan-safe-maximum: return NaN if either argument is NaN.
 double nanSafeMin(double a, double b) {
-    return isNanF64(a) || isNanF64(b) ? kNanF64 : a < b ? a : b;
+    return prF64IsNan(a) || prF64IsNan(b) ? kPrF64Nan : a < b ? a : b;
 }
 
 double nanSafeMax(double a, double b) {
-    return isNanF64(a) || isNanF64(b) ? kNanF64 : a > b ? a : b;
+    return prF64IsNan(a) || prF64IsNan(b) ? kPrF64Nan : a > b ? a : b;
 }
 
 } // namespace
 
 PrDomMatrix domMatrixRotation(double x, double y, double z, double angle) {
     PrDomMatrix result = prDomMatrixIdentity();
-    double length = hypotF64(hypotF64(x, y), z);
+    double length = prF64Hypot(prF64Hypot(x, y), z);
     if (length == 0)
         return result;
     x /= length;
     y /= length;
     z /= length;
-    double c = cosF64(angle);
-    double s = sinF64(angle);
+    double c = prF64Cos(angle);
+    double s = prF64Sin(angle);
     // For a rotation about an axis of the coordinate system, the elements along that axis stay exactly the same as in
     // the identity.
     if (x == 0 && y == 0) {
@@ -107,7 +107,7 @@ PrStatus prDomMatrixFromValues(const double* PR_NULLABLE values, uint32_t count,
         return PrStatus_InvalidData;
     *out = prDomMatrixIdentity();
     if (count == 16) {
-        memCopy(out->m, values, sizeof(out->m));
+        prMemCopy(out->m, values, sizeof(out->m));
         out->is2D = false;
     } else {
         for (uint32_t i = 0; i < 6; ++i)
@@ -149,35 +149,35 @@ void prDomMatrixScale(PrDomMatrix* matrix, double sx, double sy, double sz, doub
 
 void prDomMatrixRotate(PrDomMatrix* matrix, double x, double y, double z) {
     bool is2D = matrix->is2D && x == 0 && y == 0;
-    PrDomMatrix about = domMatrixRotation(0, 0, 1, degreesToRadiansF64(z));
+    PrDomMatrix about = domMatrixRotation(0, 0, 1, prF64DegreesToRadians(z));
     prDomMatrixMultiply(matrix, &about);
-    about = domMatrixRotation(0, 1, 0, degreesToRadiansF64(y));
+    about = domMatrixRotation(0, 1, 0, prF64DegreesToRadians(y));
     prDomMatrixMultiply(matrix, &about);
-    about = domMatrixRotation(1, 0, 0, degreesToRadiansF64(x));
+    about = domMatrixRotation(1, 0, 0, prF64DegreesToRadians(x));
     prDomMatrixMultiply(matrix, &about);
     matrix->is2D = is2D;
 }
 
 void prDomMatrixRotateFromVector(PrDomMatrix* matrix, double x, double y) {
-    PrDomMatrix about = domMatrixRotation(0, 0, 1, x == 0 && y == 0 ? 0 : atan2F64(y, x));
+    PrDomMatrix about = domMatrixRotation(0, 0, 1, x == 0 && y == 0 ? 0 : prF64Atan2(y, x));
     prDomMatrixMultiply(matrix, &about);
 }
 
 void prDomMatrixRotateAxisAngle(PrDomMatrix* matrix, double x, double y, double z, double angle) {
-    PrDomMatrix about = domMatrixRotation(x, y, z, degreesToRadiansF64(angle));
+    PrDomMatrix about = domMatrixRotation(x, y, z, prF64DegreesToRadians(angle));
     about.is2D = x == 0 && y == 0;
     prDomMatrixMultiply(matrix, &about);
 }
 
 void prDomMatrixSkewX(PrDomMatrix* matrix, double degrees) {
     PrDomMatrix operation = prDomMatrixIdentity();
-    operation.m[4] = tanF64(degreesToRadiansF64(degrees));
+    operation.m[4] = prF64Tan(prF64DegreesToRadians(degrees));
     prDomMatrixMultiply(matrix, &operation);
 }
 
 void prDomMatrixSkewY(PrDomMatrix* matrix, double degrees) {
     PrDomMatrix operation = prDomMatrixIdentity();
-    operation.m[1] = tanF64(degreesToRadiansF64(degrees));
+    operation.m[1] = prF64Tan(prF64DegreesToRadians(degrees));
     prDomMatrixMultiply(matrix, &operation);
 }
 
@@ -217,9 +217,9 @@ bool prDomMatrixInvert(PrDomMatrix* matrix) {
     inverse[15] = m[0] * m[5] * m[10] - m[0] * m[6] * m[9] - m[4] * m[1] * m[10] +
         m[4] * m[2] * m[9] + m[8] * m[1] * m[6] - m[8] * m[2] * m[5];
     double determinant = m[0] * inverse[0] + m[1] * inverse[4] + m[2] * inverse[8] + m[3] * inverse[12];
-    if (determinant == 0 || !isFiniteF64(determinant)) {
+    if (determinant == 0 || !prF64IsFinite(determinant)) {
         for (double& element : matrix->m)
-            element = kNanF64;
+            element = kPrF64Nan;
         matrix->is2D = false;
         return false;
     }

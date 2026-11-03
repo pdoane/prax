@@ -756,8 +756,8 @@ bool readFrame(Jpeg& jpeg, const uint8_t* segment, uint32_t size, uint8_t marker
         return false;
     }
     jpeg.progressive = marker == 0xC2;
-    jpeg.height = readBeU16(segment + 1);
-    jpeg.width = readBeU16(segment + 3);
+    jpeg.height = prMemReadBeU16(segment + 1);
+    jpeg.width = prMemReadBeU16(segment + 3);
     jpeg.componentCount = segment[5];
     if (jpeg.width == 0 || jpeg.height == 0 || jpeg.componentCount == 0 || jpeg.componentCount > kMaxComponents ||
             uint64_t(jpeg.width) * uint64_t(jpeg.height) > kMaxPixels || size < 6 + jpeg.componentCount * 3) {
@@ -821,7 +821,7 @@ bool readQuantTables(Jpeg& jpeg, const uint8_t* segment, uint32_t size) {
         }
         for (uint32_t entry = 0; entry < kBlockSamples; ++entry) {
             jpeg.quant[index][kZigZag[entry]] =
-                precision == 0 ? segment[at + entry] : uint16_t(readBeU16(segment + at + entry * 2));
+                precision == 0 ? segment[at + entry] : uint16_t(prMemReadBeU16(segment + at + entry * 2));
         }
         jpeg.quantPresent[index] = true;
         at += bytes;
@@ -933,12 +933,12 @@ void readAdobe(Jpeg& jpeg, const uint8_t* segment, uint32_t size) {
 // centimetre, or an aspect ratio that specifies no resolution (JFIF 1.02).
 void readJfif(const uint8_t* segment, uint32_t size, ImageMetadata* out) {
     const uint8_t tag[5] = {'J', 'F', 'I', 'F', 0};
-    if (size < 12 || !memEquals(segment, tag, sizeof(tag))) {
+    if (size < 12 || !prMemEquals(segment, tag, sizeof(tag))) {
         return;
     }
     const uint32_t units = segment[7];
-    const float densityX = float(readBeU16(segment + 8));
-    const float densityY = float(readBeU16(segment + 10));
+    const float densityX = float(prMemReadBeU16(segment + 8));
+    const float densityY = float(prMemReadBeU16(segment + 10));
     if (units == 1) {
         out->pixelsPerMeterX = imagePixelsPerMeterFromInch(densityX);
         out->pixelsPerMeterY = imagePixelsPerMeterFromInch(densityY);
@@ -952,7 +952,7 @@ void readJfif(const uint8_t* segment, uint32_t size, ImageMetadata* out) {
 // resolution.
 void readExifSegment(const uint8_t* segment, uint32_t size, ImageMetadata* out) {
     const uint8_t tag[6] = {'E', 'x', 'i', 'f', 0, 0};
-    if (size <= sizeof(tag) || !memEquals(segment, tag, sizeof(tag))) {
+    if (size <= sizeof(tag) || !prMemEquals(segment, tag, sizeof(tag))) {
         return;
     }
     imageReadExif(segment + sizeof(tag), size - sizeof(tag), out);
@@ -989,7 +989,7 @@ bool decode(Jpeg& jpeg, const uint8_t* bytes, size_t size, uint8_t* pixels, size
         if (at + 2 > size) {
             return false;
         }
-        const uint32_t length = readBeU16(bytes + at);
+        const uint32_t length = prMemReadBeU16(bytes + at);
         if (length < 2 || size_t(length) > size - at) {
             return false;
         }
@@ -1014,7 +1014,7 @@ bool decode(Jpeg& jpeg, const uint8_t* bytes, size_t size, uint8_t* pixels, size
             if (segmentSize < 2) {
                 return false;
             }
-            jpeg.restartInterval = readBeU16(segment);
+            jpeg.restartInterval = prMemReadBeU16(segment);
         } else if (marker == 0xEE) {
             readAdobe(jpeg, segment, segmentSize);
         } else if (marker == 0xDA) {
@@ -1070,7 +1070,7 @@ void jpegMetadata(PrByteView bytes, ImageMetadata* out) {
         if (at + 2 > bytes.size) {
             return;
         }
-        const uint32_t length = readBeU16(bytes.data + at);
+        const uint32_t length = prMemReadBeU16(bytes.data + at);
         if (length < 2 || size_t(length) > bytes.size - at) {
             return;
         }

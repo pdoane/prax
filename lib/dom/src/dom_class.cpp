@@ -26,13 +26,13 @@ uint32_t domClassesAdd(PrDomDocument* document, PrStringView text) {
 
     uint32_t first = classes->atoms.count;
     for (size_t at = 0; at < text.size;) {
-        if (asciiIsSpace(text.data[at])) {
+        if (prAsciiIsSpace(text.data[at])) {
             ++at;
             continue;
         }
         size_t start = at;
-        at = asciiFindSpace(text, at);
-        Atom atom = atomTableAdd(&classes->names, stringSlice(text, start, at - start));
+        at = prAsciiFindSpace(text, at);
+        Atom atom = atomTableAdd(&classes->names, prStringSlice(text, start, at - start));
         bool seen = false;
         for (uint32_t i = first; !seen && i < classes->atoms.count; ++i)
             seen = classes->atoms.data[i] == atom;

@@ -75,7 +75,7 @@ bool readFinite(JSContext* ctx, int argc, JSValueConst* argv, int count, double*
     if (!readNumbers(ctx, argc, argv, 0, count, out))
         return false;
     for (int i = 0; i < count; ++i) {
-        if (!isFiniteF64(out[i])) {
+        if (!prF64IsFinite(out[i])) {
             JS_ThrowTypeError(ctx, "The value is not a finite number");
             return false;
         }
@@ -88,11 +88,11 @@ bool enforceLong(JSContext* ctx, JSValueConst value, int32_t* out) {
     double number = 0;
     if (JS_ToFloat64(ctx, &number, value) < 0)
         return false;
-    if (!isFiniteF64(number)) {
+    if (!prF64IsFinite(number)) {
         JS_ThrowTypeError(ctx, "The value is not a finite number");
         return false;
     }
-    number = number < 0 ? ceilF64(number) : floorF64(number);
+    number = number < 0 ? prF64Ceil(number) : prF64Floor(number);
     if (number < -2147483648.0 || number > 2147483647.0) {
         JS_ThrowTypeError(ctx, "The value is out of range");
         return false;

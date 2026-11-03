@@ -48,13 +48,13 @@ constexpr uint32_t kChunk = 4096;
 constexpr char kRules[] = "ol { list-style-position: inside } li.marked { color: rgb(0, 0, 200) }";
 
 // A whole document of the page: an ordered list of `items` items.
-void page(TextBuffer* out, uint32_t items) {
-    textAppend(out, "<!doctype html><html><head><style>");
-    textAppend(out, kRules);
-    textAppend(out, "</style></head><body><ol>");
+void page(PrTextBuffer* out, uint32_t items) {
+    prTextBufferAppend(out, "<!doctype html><html><head><style>");
+    prTextBufferAppend(out, kRules);
+    prTextBufferAppend(out, "</style></head><body><ol>");
     for (uint32_t i = 0; i < items; ++i)
-        textAppend(out, "<li>An item of the list</li>");
-    textAppend(out, "</ol></body></html>");
+        prTextBufferAppend(out, "<li>An item of the list</li>");
+    prTextBufferAppend(out, "</ol></body></html>");
 }
 
 // The state that the cases work on.
@@ -115,16 +115,16 @@ const Case kCases[] = {
 // Creates the set of the checkout's Tinos font, a shaper, and the default text font over the set, and returns the font.
 PrTextFont* makeFont(PrFontSet** fonts, PrTextShaper** shaper) {
     *fonts = prFontSetCreate(nullptr);
-    TextBuffer path = {};
-    textAppend(&path, PR_FONTS_DIR "/Tinos.ttf");
+    PrTextBuffer path = {};
+    prTextBufferAppend(&path, PR_FONTS_DIR "/Tinos.ttf");
     const PrFont* font = nullptr;
-    if (prFontCreateFromFile(textView(&path), 0, nullptr, &font) == PrStatus_Ok) {
+    if (prFontCreateFromFile(prTextBufferView(&path), 0, nullptr, &font) == PrStatus_Ok) {
         PrFontFaceDescriptor descriptor = prFontFaceDescriptorDefault();
         prFontSetAdd(*fonts, &descriptor, font);
         prFontRelease(font);
         prFontSetSetGeneric(*fonts, prFontGenericFromName("serif"), "Tinos");
     }
-    textReset(&path);
+    prTextBufferReset(&path);
     prFontSetSetDefaultFamily(*fonts, prFontFamilyGeneric(PrFontGeneric_Serif));
     *shaper = prTextHarfBuzzCreate();
     PrTextFontDesc defaultFontDesc{.set = *fonts, .style = prFontStyleDefault()};
@@ -187,14 +187,14 @@ int main(int argc, char** argv) {
     PrFontSet* fonts = nullptr;
     PrTextShaper* shaper = nullptr;
     PrTextFont* font = makeFont(&fonts, &shaper);
-    TextBuffer document = {};
+    PrTextBuffer document = {};
     page(&document, itemCount);
 
     PrHtmlHost host = prHtmlHostDefault();
     host.font = font;
     host.shaper = shaper;
     PrHtmlPage* page = prHtmlPageCreate(&host);
-    prHtmlPageLoad(page, textView(&document), "about:blank", nullptr);
+    prHtmlPageLoad(page, prTextBufferView(&document), "about:blank", nullptr);
     Work work = {};
     work.presentation = prHtmlPagePresentation(page);
     work.document = prHtmlWindowDocument(prHtmlPageWindow(page));
@@ -237,8 +237,8 @@ int main(int argc, char** argv) {
     }
     if (only.data == nullptr) {
         // A load is measured whole, after a first load that fills the caches.
-        load(font, shaper, textView(&document));
-        harnessWriteCase(false, "list load in pieces", load(font, shaper, textView(&document)));
+        load(font, shaper, prTextBufferView(&document));
+        harnessWriteCase(false, "list load in pieces", load(font, shaper, prTextBufferView(&document)));
     }
     printf("\n]\n");
 
@@ -247,6 +247,6 @@ int main(int argc, char** argv) {
     prTextFontRelease(font);
     prTextShaperDestroy(shaper);
     prFontSetDestroy(fonts);
-    textReset(&document);
+    prTextBufferReset(&document);
     return failed ? 1 : 0;
 }

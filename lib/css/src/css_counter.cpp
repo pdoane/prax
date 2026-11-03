@@ -128,11 +128,11 @@ bool usesNegativeSign(const CssCounterStyle* style) {
 // - Chinese drops the zeros that end a group or the number, and writes one zero for each run of the others, across
 //   groups. Japanese and Korean drop every zero.
 // - Korean puts a space between groups.
-bool appendCjk(TextBuffer* out, CssCounterSystem system, const PrStringView* symbols, uint32_t count, int64_t value) {
+bool appendCjk(PrTextBuffer* out, CssCounterSystem system, const PrStringView* symbols, uint32_t count, int64_t value) {
     if (count != 16 || value >= 10000000000000000)
         return false;
     if (value == 0) {
-        textAppend(out, symbols[0]);
+        prTextBufferAppend(out, symbols[0]);
         return true;
     }
     bool chinese = system == CssCounterSystem_ChineseInformal || system == CssCounterSystem_ChineseFormal;
@@ -152,7 +152,7 @@ bool appendCjk(TextBuffer* out, CssCounterSystem system, const PrStringView* sym
             continue;
         }
         if (korean && written)
-            textAppend(out, " ");
+            prTextBufferAppend(out, " ");
         uint32_t digits[4] = {group % 10, group / 10 % 10, group / 100 % 10, group / 1000};
         uint32_t low = 0;
         while (digits[low] == 0)
@@ -164,18 +164,18 @@ bool appendCjk(TextBuffer* out, CssCounterSystem system, const PrStringView* sym
                 continue;
             }
             if (zero)
-                textAppend(out, symbols[0]);
+                prTextBufferAppend(out, symbols[0]);
             zero = false;
             bool dropped = informal && digit == 1 && ((chinese && place == 1 && group <= 19) ||
                 (!chinese && place != 0) || (korean && place == 0 && i == 1 && group == 1));
             if (!dropped)
-                textAppend(out, symbols[digit]);
+                prTextBufferAppend(out, symbols[digit]);
             if (place != 0)
-                textAppend(out, symbols[9 + place]);
+                prTextBufferAppend(out, symbols[9 + place]);
             written = true;
         }
         if (i != 0)
-            textAppend(out, symbols[12 + i]);
+            prTextBufferAppend(out, symbols[12 + i]);
     }
     return true;
 }
@@ -184,11 +184,11 @@ bool appendCjk(TextBuffer* out, CssCounterSystem system, const PrStringView* sym
 // (css-counter-styles-3/#ethiopic-numeric-counter-style). The groups of two digits from the least significant, by index
 // from 0, keep their digits unless they are 0, or 1 in the most significant group or in an odd group. An odd group that
 // is not 0 is followed by the odd groups' separator, and an even group other than the first by the even groups'.
-bool appendEthiopic(TextBuffer* out, const PrStringView* symbols, uint32_t count, int64_t value) {
+bool appendEthiopic(PrTextBuffer* out, const PrStringView* symbols, uint32_t count, int64_t value) {
     if (count != 20 || value < 1)
         return false;
     if (value == 1) {
-        textAppend(out, symbols[0]);
+        prTextBufferAppend(out, symbols[0]);
         return true;
     }
     uint32_t groups[8];
@@ -200,13 +200,13 @@ bool appendEthiopic(TextBuffer* out, const PrStringView* symbols, uint32_t count
         bool odd = (i & 1) != 0;
         bool dropped = group == 0 || (group == 1 && (i == n - 1 || odd));
         if (!dropped && group / 10 != 0)
-            textAppend(out, symbols[9 + group / 10 - 1]);
+            prTextBufferAppend(out, symbols[9 + group / 10 - 1]);
         if (!dropped && group % 10 != 0)
-            textAppend(out, symbols[group % 10 - 1]);
+            prTextBufferAppend(out, symbols[group % 10 - 1]);
         if (odd && group != 0)
-            textAppend(out, symbols[18]);
+            prTextBufferAppend(out, symbols[18]);
         else if (!odd && i != 0)
-            textAppend(out, symbols[19]);
+            prTextBufferAppend(out, symbols[19]);
     }
     return true;
 }
@@ -223,25 +223,25 @@ uint32_t symbolsOf(const CssCounterStyle* style, CssCounterFlow flow, const PrSt
 
 // Appends the additive representation of `value`, from 1, by the style's tuples of weights below `below`. Returns false
 // if they cannot represent it.
-bool appendAdditiveBelow(TextBuffer* out, const CssCounterStyle* style, int64_t value, int32_t below) {
-    uint32_t mark = out->text.count;
+bool appendAdditiveBelow(PrTextBuffer* out, const CssCounterStyle* style, int64_t value, int32_t below) {
+    uint32_t mark = out->size;
     for (uint32_t i = 0; i < style->additiveCount && value != 0; ++i) {
         const CssAdditiveTuple& tuple = style->additive[i];
         if (tuple.weight <= 0 || tuple.weight >= below || tuple.weight > value)
             continue;
         for (int64_t repeats = value / tuple.weight; repeats > 0; --repeats)
-            textAppend(out, tuple.symbol);
+            prTextBufferAppend(out, tuple.symbol);
         value %= tuple.weight;
     }
     if (value != 0)
-        out->text.count = mark;
+        out->size = mark;
     return value == 0;
 }
 
 // Appends the initial representation of `value`, which is not negative if the style uses a negative sign
 // (css-counter-styles-3/#initial-representation-for-the-counter-value). Returns false if the algorithm cannot represent
 // it, or if the representation would be longer than kCssCounterMaxCodePoints.
-bool appendInitial(TextBuffer* out, const CssCounterStyle* style, int64_t value, CssCounterFlow flow) {
+bool appendInitial(PrTextBuffer* out, const CssCounterStyle* style, int64_t value, CssCounterFlow flow) {
     const PrStringView* symbols = nullptr;
     uint32_t count = symbolsOf(style, flow, &symbols);
     // A digit of each place, from the last place to the first.
@@ -252,14 +252,14 @@ bool appendInitial(TextBuffer* out, const CssCounterStyle* style, int64_t value,
             if (count == 0)
                 return false;
             int64_t at = (value - 1) % int64_t(count);
-            textAppend(out, symbols[at < 0 ? at + count : at]);
+            prTextBufferAppend(out, symbols[at < 0 ? at + count : at]);
             return true;
         }
         case CssCounterSystem_Fixed: {
             int64_t at = value - style->first;
             if (at < 0 || at >= int64_t(count))
                 return false;
-            textAppend(out, symbols[at]);
+            prTextBufferAppend(out, symbols[at]);
             return true;
         }
         case CssCounterSystem_Symbolic: {
@@ -270,7 +270,7 @@ bool appendInitial(TextBuffer* out, const CssCounterStyle* style, int64_t value,
             if (repeats * int64_t(codePointsOf(symbol)) > kCssCounterMaxCodePoints)
                 return false;
             for (int64_t i = 0; i < repeats; ++i)
-                textAppend(out, symbol);
+                prTextBufferAppend(out, symbol);
             return true;
         }
         case CssCounterSystem_Alphabetic:
@@ -299,20 +299,20 @@ bool appendInitial(TextBuffer* out, const CssCounterStyle* style, int64_t value,
             if (value < 1 || (thousands != 0 && !appendAdditiveBelow(out, style, thousands, 1000)))
                 return false;
             if (thousands != 0)
-                textAppend(out, "\xD7\xB3");
+                prTextBufferAppend(out, "\xD7\xB3");
             return rest == 0 || appendAdditiveBelow(out, style, rest, 1000);
         }
         case CssCounterSystem_Additive: {
             if (value == 0) {
                 for (uint32_t i = 0; i < style->additiveCount; ++i) {
                     if (style->additive[i].weight == 0) {
-                        textAppend(out, style->additive[i].symbol);
+                        prTextBufferAppend(out, style->additive[i].symbol);
                         return true;
                     }
                 }
                 return false;
             }
-            uint32_t mark = out->text.count;
+            uint32_t mark = out->size;
             uint32_t written = 0;
             for (uint32_t i = 0; i < style->additiveCount && value != 0; ++i) {
                 const CssAdditiveTuple& tuple = style->additive[i];
@@ -322,15 +322,15 @@ bool appendInitial(TextBuffer* out, const CssCounterStyle* style, int64_t value,
                 written += uint32_t(repeats > kCssCounterMaxCodePoints ? kCssCounterMaxCodePoints + 1 : repeats) *
                     codePointsOf(tuple.symbol);
                 if (written > kCssCounterMaxCodePoints) {
-                    out->text.count = mark;
+                    out->size = mark;
                     return false;
                 }
                 for (int64_t k = 0; k < repeats; ++k)
-                    textAppend(out, tuple.symbol);
+                    prTextBufferAppend(out, tuple.symbol);
                 value -= repeats * tuple.weight;
             }
             if (value != 0)
-                out->text.count = mark;
+                out->size = mark;
             return value == 0;
         }
         case CssCounterSystem_ChineseInformal:
@@ -351,50 +351,48 @@ bool appendInitial(TextBuffer* out, const CssCounterStyle* style, int64_t value,
     if (written > kCssCounterMaxCodePoints)
         return false;
     for (uint32_t i = places; i > 0; --i)
-        textAppend(out, symbols[digits[i - 1]]);
+        prTextBufferAppend(out, symbols[digits[i - 1]]);
     return true;
 }
 
 // Appends the representation of `value` in `style` with its pad and negative sign, and returns true, or returns false
 // and appends nothing if the style cannot represent the value.
-bool appendRepresentation(TextBuffer* out, const CssCounterStyle* style, int32_t value, CssCounterFlow flow) {
+bool appendRepresentation(PrTextBuffer* out, const CssCounterStyle* style, int32_t value, CssCounterFlow flow) {
     if (!inRange(style, value))
         return false;
     bool negative = value < 0 && usesNegativeSign(style);
-    uint32_t mark = out->text.count;
+    uint32_t mark = out->size;
     if (negative)
-        textAppend(out, style->negative[0]);
-    uint32_t start = out->text.count;
+        prTextBufferAppend(out, style->negative[0]);
+    uint32_t start = out->size;
     if (!appendInitial(out, style, negative ? -int64_t(value) : int64_t(value), flow)) {
-        out->text.count = mark;
+        out->size = mark;
         return false;
     }
     if (style->minimumLength != 0) {
-        PrStringView text{out->text.data + start, out->text.count - start};
+        PrStringView text{out->data + start, out->size - start};
         uint32_t length = graphemesOf(text);
         if (negative)
             length += graphemesOf(style->negative[0]) + graphemesOf(style->negative[1]);
         uint32_t padding = style->minimumLength > length ? style->minimumLength - length : 0;
         if (padding * codePointsOf(style->padSymbol) + codePointsOf(text) > kCssCounterMaxCodePoints) {
-            out->text.count = mark;
+            out->size = mark;
             return false;
         }
         // The pad goes between the negative sign and the representation.
-        for (uint32_t i = 0; i < padding; ++i) {
-            for (size_t b = style->padSymbol.size; b > 0; --b)
-                out->text.insert(start, style->padSymbol.data[b - 1]);
-        }
+        for (uint32_t i = 0; i < padding; ++i)
+            prTextBufferInsert(out, start, style->padSymbol);
     }
     if (negative)
-        textAppend(out, style->negative[1]);
+        prTextBufferAppend(out, style->negative[1]);
     return true;
 }
 
 // Appends `value` in decimal, which represents every value.
-void appendDecimal(TextBuffer* out, int32_t value) {
+void appendDecimal(PrTextBuffer* out, int32_t value) {
     if (value < 0)
-        textAppendChar(out, '-');
-    textAppendU64(out, value < 0 ? uint64_t(-int64_t(value)) : uint64_t(value));
+        prTextBufferAppendChar(out, '-');
+    prTextBufferAppendU64(out, value < 0 ? uint64_t(-int64_t(value)) : uint64_t(value), 10);
 }
 
 // Builds the anonymous counter style that a computed symbols() defines (css-counter-styles-3/#symbols-function), with
@@ -525,9 +523,9 @@ bool integerOf(CssValueRun run, const CssValueNode* node, double em, int32_t* ou
                 PrCssUnit_Number, &number);
         cssMathScratchReset(&scratch);
         cssValuePoolReset(&pool);
-        if (!resolved || isNanF64(number))
+        if (!resolved || prF64IsNan(number))
             return false;
-        number = roundF64(number);
+        number = prF64Round(number);
     } else if (node->kind != PrCssValueKind_Integer) {
         return false;
     }
@@ -543,7 +541,7 @@ bool nonOverridable(PrStringView name) {
         "none",
     };
     for (PrStringView other : fixed) {
-        if (asciiEqualsFold(name, other))
+        if (prAsciiEqualsFold(name, other))
             return true;
     }
     return false;
@@ -886,7 +884,7 @@ const CssCounterStyle* PR_NULLABLE cssCounterStyleFind(const CssCounterStyles* P
     return predefined;
 }
 
-void cssCounterRepresent(TextBuffer* out, const CssCounterStyles* PR_NULLABLE styles, const CssCounterStyle* style,
+void cssCounterRepresent(PrTextBuffer* out, const CssCounterStyles* PR_NULLABLE styles, const CssCounterStyle* style,
         int32_t value, CssCounterFlow flow) {
     for (uint32_t hop = 0; hop <= kMaxFallbacks; ++hop) {
         if (appendRepresentation(out, style, value, flow))
@@ -899,7 +897,7 @@ void cssCounterRepresent(TextBuffer* out, const CssCounterStyles* PR_NULLABLE st
     appendDecimal(out, value);
 }
 
-void cssCounterAppend(TextBuffer* out, const CssCounterStyles* PR_NULLABLE styles, CssValueRun counterStyle,
+void cssCounterAppend(PrTextBuffer* out, const CssCounterStyles* PR_NULLABLE styles, CssValueRun counterStyle,
         int32_t value, CssCounterFlow flow) {
     withStyle(styles, counterStyle, [&](const CssCounterStyle* PR_NULLABLE style) {
         if (style != nullptr)
@@ -909,21 +907,21 @@ void cssCounterAppend(TextBuffer* out, const CssCounterStyles* PR_NULLABLE style
     });
 }
 
-bool cssCounterAppendMarker(TextBuffer* out, const CssCounterStyles* PR_NULLABLE styles, CssValueRun listStyleType,
+bool cssCounterAppendMarker(PrTextBuffer* out, const CssCounterStyles* PR_NULLABLE styles, CssValueRun listStyleType,
         int32_t value, CssCounterFlow flow) {
     if (listStyleType.count == 0 || cssValueIsKeyword(listStyleType.values, PrCssKeyword_None))
         return false;
     if (listStyleType.values[0].kind == PrCssValueKind_String) {
-        textAppend(out, cssValueText(listStyleType, listStyleType.values));
+        prTextBufferAppend(out, cssValueText(listStyleType, listStyleType.values));
         return true;
     }
     // An unknown style is decimal, with decimal's prefix and suffix.
     withStyle(styles, listStyleType, [&](const CssCounterStyle* PR_NULLABLE style) {
         if (style == nullptr)
             style = cssCounterStylePredefined("decimal");
-        textAppend(out, style->prefix);
+        prTextBufferAppend(out, style->prefix);
         cssCounterRepresent(out, styles, style, value, flow);
-        textAppend(out, style->suffix);
+        prTextBufferAppend(out, style->suffix);
     });
     return true;
 }

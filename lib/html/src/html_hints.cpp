@@ -58,21 +58,21 @@ bool parseNonNegative(PrStringView text, int64_t* out) {
 
 // Appends a declaration of each of the four properties of a box's sides that `prefix` and `suffix` name, as "border-"
 // and "-width" name the border widths.
-void addSides(TextBuffer* out, PrStringView prefix, PrStringView suffix, PrStringView value) {
+void addSides(PrTextBuffer* out, PrStringView prefix, PrStringView suffix, PrStringView value) {
     const PrStringView sides[] = {"top", "right", "bottom", "left"};
     for (PrStringView side : sides) {
-        textAppend(out, prefix);
-        textAppend(out, side);
-        textAppend(out, suffix);
-        textAppendChar(out, ':');
-        textAppend(out, value);
-        textAppendChar(out, ';');
+        prTextBufferAppend(out, prefix);
+        prTextBufferAppend(out, side);
+        prTextBufferAppend(out, suffix);
+        prTextBufferAppendChar(out, ':');
+        prTextBufferAppend(out, value);
+        prTextBufferAppendChar(out, ';');
     }
 }
 
 // Appends `property` mapped to the attribute `name` as a pixel length (html/#maps-to-the-pixel-length-property). A
 // value beyond the range of a CSS integer is clamped to that range.
-void addPixelLength(TextBuffer* out, const PrDomElement* element, PrStringView name, PrStringView property) {
+void addPixelLength(PrTextBuffer* out, const PrDomElement* element, PrStringView name, PrStringView property) {
     int64_t value = 0;
     if (parseNonNegative(domAttributeValue(element, name), &value))
         cssHintAddPixels(out, property, double(value < INT32_MAX ? value : INT32_MAX));
@@ -86,17 +86,17 @@ enum {
 typedef uint8_t Zero;
 
 // Appends `property` mapped to the attribute `name` as a dimension: a pixel length, or a percentage.
-void addDimension(TextBuffer* out, const PrDomElement* element, PrStringView name, PrStringView property, Zero zero) {
+void addDimension(PrTextBuffer* out, const PrDomElement* element, PrStringView name, PrStringView property, Zero zero) {
     double value = 0;
     bool percentage = false;
     if (!domParseDimension(domAttributeValue(element, name), &value, &percentage))
         return;
     if (zero == Zero_Ignore && value == 0)
         return;
-    textAppend(out, property);
-    textAppendChar(out, ':');
+    prTextBufferAppend(out, property);
+    prTextBufferAppendChar(out, ':');
     cssSerializeNumber(out, value);
-    textAppend(out, percentage ? "%;" : "px;");
+    prTextBufferAppend(out, percentage ? "%;" : "px;");
 }
 
 // How the width and height attributes that map to an aspect ratio are parsed.
@@ -108,7 +108,7 @@ enum {
 typedef uint8_t Ratio;
 
 // Appends the aspect ratio that the width and height attributes map to.
-void addAspectRatio(TextBuffer* out, const PrDomElement* element, Ratio parse) {
+void addAspectRatio(PrTextBuffer* out, const PrDomElement* element, Ratio parse) {
     bool dimensions = parse == Ratio_Dimensions;
     double ratio[2] = {};
     const PrStringView names[] = {"width", "height"};
@@ -121,16 +121,16 @@ void addAspectRatio(TextBuffer* out, const PrDomElement* element, Ratio parse) {
         if (!dimensions)
             ratio[i] = double(integer);
     }
-    textAppend(out, "aspect-ratio:auto ");
+    prTextBufferAppend(out, "aspect-ratio:auto ");
     cssSerializeNumber(out, ratio[0]);
-    textAppendChar(out, '/');
+    prTextBufferAppendChar(out, '/');
     cssSerializeNumber(out, ratio[1]);
-    textAppendChar(out, ';');
+    prTextBufferAppendChar(out, ';');
 }
 
 // Appends `property` mapped to the color of the attribute `name`, if it parses as a legacy color value
 // (html/#rules-for-parsing-a-legacy-colour-value).
-void addColor(TextBuffer* out, const PrDomElement* element, PrStringView name, PrStringView property) {
+void addColor(PrTextBuffer* out, const PrDomElement* element, PrStringView name, PrStringView property) {
     PrColor8 color{};
     if (!htmlParseLegacyColor(domAttributeValue(element, name), &color))
         return;
@@ -146,13 +146,13 @@ void addColor(TextBuffer* out, const PrDomElement* element, PrStringView name, P
 
 // Appends the background image that a background attribute maps to, if it is not empty. The URL resolves against the
 // document's base URL, as an image of a hint does.
-void addBackground(TextBuffer* out, const PrDomElement* element) {
+void addBackground(PrTextBuffer* out, const PrDomElement* element) {
     PrStringView value = domAttributeValue(element, "background");
     if (value.size == 0)
         return;
-    textAppend(out, "background-image:url(");
+    prTextBufferAppend(out, "background-image:url(");
     cssSerializeString(out, value);
-    textAppend(out, ");");
+    prTextBufferAppend(out, ");");
 }
 
 // The values of an align attribute that center text. Every element whose align attribute maps to text-align also takes
@@ -166,55 +166,55 @@ typedef uint8_t Center;
 
 // Returns the text-align value that an align attribute maps to, or the null view for a value that maps to none.
 PrStringView textAlignOf(PrStringView align, Center center) {
-    if (asciiEqualsFold(align, "left"))
+    if (prAsciiEqualsFold(align, "left"))
         return "left";
-    if (asciiEqualsFold(align, "right"))
+    if (prAsciiEqualsFold(align, "right"))
         return "right";
-    if (asciiEqualsFold(align, "justify"))
+    if (prAsciiEqualsFold(align, "justify"))
         return "justify";
-    if (asciiEqualsFold(align, "center") || (center != Center_Center && asciiEqualsFold(align, "middle")) ||
-            (center == Center_Absmiddle && asciiEqualsFold(align, "absmiddle")))
+    if (prAsciiEqualsFold(align, "center") || (center != Center_Center && prAsciiEqualsFold(align, "middle")) ||
+            (center == Center_Absmiddle && prAsciiEqualsFold(align, "absmiddle")))
         return "center";
     return PrStringView{};
 }
 
 // Appends the text-align that the element's align attribute maps to.
-void addTextAlign(TextBuffer* out, const PrDomElement* element, Center center) {
+void addTextAlign(PrTextBuffer* out, const PrDomElement* element, Center center) {
     PrStringView align = textAlignOf(domAttributeValue(element, "align"), center);
     if (align.data != nullptr)
         cssHintAdd(out, "text-align", align);
 }
 
 // Appends the vertical-align that a table part's valign attribute maps to.
-void addVerticalAlign(TextBuffer* out, const PrDomElement* element) {
+void addVerticalAlign(PrTextBuffer* out, const PrDomElement* element) {
     PrStringView valign = domAttributeValue(element, "valign");
     const PrStringView values[] = {"top", "middle", "bottom", "baseline"};
     for (PrStringView value : values) {
-        if (asciiEqualsFold(valign, value))
+        if (prAsciiEqualsFold(valign, value))
             cssHintAdd(out, "vertical-align", value);
     }
 }
 
 // Appends what the align attribute of an embedded element maps to: a float, or a vertical alignment
 // (html/#attributes-for-embedded-content-and-images).
-void addEmbeddedAlign(TextBuffer* out, const PrDomElement* element) {
+void addEmbeddedAlign(PrTextBuffer* out, const PrDomElement* element) {
     PrStringView align = domAttributeValue(element, "align");
-    if (asciiEqualsFold(align, "left") || asciiEqualsFold(align, "right"))
-        cssHintAdd(out, "float", asciiEqualsFold(align, "left") ? "left" : "right");
-    else if (asciiEqualsFold(align, "top"))
+    if (prAsciiEqualsFold(align, "left") || prAsciiEqualsFold(align, "right"))
+        cssHintAdd(out, "float", prAsciiEqualsFold(align, "left") ? "left" : "right");
+    else if (prAsciiEqualsFold(align, "top"))
         cssHintAdd(out, "vertical-align", "top");
-    else if (asciiEqualsFold(align, "bottom"))
+    else if (prAsciiEqualsFold(align, "bottom"))
         cssHintAdd(out, "vertical-align", "bottom");
-    else if (asciiEqualsFold(align, "baseline"))
+    else if (prAsciiEqualsFold(align, "baseline"))
         cssHintAdd(out, "vertical-align", "baseline");
-    else if (asciiEqualsFold(align, "texttop"))
+    else if (prAsciiEqualsFold(align, "texttop"))
         cssHintAdd(out, "vertical-align", "text-top");
-    else if (asciiEqualsFold(align, "absmiddle") || asciiEqualsFold(align, "abscenter"))
+    else if (prAsciiEqualsFold(align, "absmiddle") || prAsciiEqualsFold(align, "abscenter"))
         cssHintAdd(out, "vertical-align", "middle");
 }
 
 // Appends the margins that hspace and vspace map to.
-void addSpaces(TextBuffer* out, const PrDomElement* element) {
+void addSpaces(PrTextBuffer* out, const PrDomElement* element) {
     addDimension(out, element, "hspace", "margin-left", Zero_Keep);
     addDimension(out, element, "hspace", "margin-right", Zero_Keep);
     addDimension(out, element, "vspace", "margin-top", Zero_Keep);
@@ -222,35 +222,35 @@ void addSpaces(TextBuffer* out, const PrDomElement* element) {
 }
 
 // Appends the border that the border attribute of an image or object maps to, if it is greater than zero.
-void addImageBorder(TextBuffer* out, const PrDomElement* element) {
+void addImageBorder(PrTextBuffer* out, const PrDomElement* element) {
     int64_t value = 0;
     if (!parseNonNegative(domAttributeValue(element, "border"), &value) || value == 0)
         return;
-    TextBuffer width{};
+    PrTextBuffer width{};
     cssSerializeNumber(&width, double(value < INT32_MAX ? value : INT32_MAX));
-    textAppend(&width, "px");
-    addSides(out, "border-", "-width", textView(&width));
+    prTextBufferAppend(&width, "px");
+    addSides(out, "border-", "-width", prTextBufferView(&width));
     addSides(out, "border-", "-style", "solid");
-    textReset(&width);
+    prTextBufferReset(&width);
 }
 
 // Appends the declaration of a counter with the `value` that an attribute gives it, clamped to the range of a CSS
 // integer.
-void addCounter(TextBuffer* out, PrStringView property, PrStringView counter, int64_t value) {
+void addCounter(PrTextBuffer* out, PrStringView property, PrStringView counter, int64_t value) {
     int64_t clamped = value < INT32_MIN ? INT32_MIN : value > INT32_MAX ? INT32_MAX : value;
-    textAppend(out, property);
-    textAppendChar(out, ':');
-    textAppend(out, counter);
-    textAppendChar(out, ' ');
+    prTextBufferAppend(out, property);
+    prTextBufferAppendChar(out, ':');
+    prTextBufferAppend(out, counter);
+    prTextBufferAppendChar(out, ' ');
     if (clamped < 0)
-        textAppendChar(out, '-');
-    textAppendU64(out, clamped < 0 ? uint64_t(-clamped) : uint64_t(clamped));
-    textAppendChar(out, ';');
+        prTextBufferAppendChar(out, '-');
+    prTextBufferAppendU64(out, clamped < 0 ? uint64_t(-clamped) : uint64_t(clamped), 10);
+    prTextBufferAppendChar(out, ';');
 }
 
 // Appends the list-style-type that an ol, ul or li's type attribute maps to (html/#lists). An ol's types are compared
 // exactly, so that "a" and "A" differ, and a ul's ASCII case-insensitively. An li takes either kind.
-void addListType(TextBuffer* out, const PrDomElement* element) {
+void addListType(PrTextBuffer* out, const PrDomElement* element) {
     PrStringView type = domAttributeValue(element, "type");
     if (type.data == nullptr)
         return;
@@ -272,7 +272,7 @@ void addListType(TextBuffer* out, const PrDomElement* element) {
     if (style.data == nullptr && element->tag != PrDomTag_Ol) {
         const PrStringView values[] = {"none", "disc", "circle", "square"};
         for (PrStringView value : values) {
-            if (asciiEqualsFold(type, value))
+            if (prAsciiEqualsFold(type, value))
                 style = value;
         }
     }
@@ -282,7 +282,7 @@ void addListType(TextBuffer* out, const PrDomElement* element) {
 
 // Appends the counters that an ol's start and reversed attributes and an li's value attribute map to
 // (html/#css-list-rendering).
-void addListCounters(TextBuffer* out, const PrDomElement* element) {
+void addListCounters(PrTextBuffer* out, const PrDomElement* element) {
     int64_t value = 0;
     if (element->tag == PrDomTag_Li) {
         if (domParseInteger(domAttributeValue(element, "value"), &value))
@@ -303,15 +303,15 @@ void addListCounters(TextBuffer* out, const PrDomElement* element) {
 }
 
 // Appends the font size that a font's size attribute maps to (html/#rules-for-parsing-a-legacy-font-size).
-void addLegacyFontSize(TextBuffer* out, PrStringView input) {
+void addLegacyFontSize(PrTextBuffer* out, PrStringView input) {
     size_t at = 0;
-    while (at < input.size && asciiIsSpace(input.data[at]))
+    while (at < input.size && prAsciiIsSpace(input.data[at]))
         ++at;
     if (at == input.size)
         return;
     char mode = input.data[at] == '+' || input.data[at] == '-' ? input.data[at++] : 0;
     uint64_t digits = 0;
-    if (parseU64Prefix(input.data + at, input.size - at, &digits) == 0)
+    if (prU64ParsePrefix(input.data + at, input.size - at, &digits, 10) == 0)
         return;
     int64_t value = digits > 100 ? 100 : int64_t(digits);
     if (mode == '+')
@@ -327,7 +327,7 @@ void addLegacyFontSize(TextBuffer* out, PrStringView input) {
 bool hasRules(PrStringView rules) {
     const PrStringView values[] = {"none", "groups", "rows", "cols", "all"};
     for (PrStringView value : values) {
-        if (asciiEqualsFold(rules, value))
+        if (prAsciiEqualsFold(rules, value))
             return true;
     }
     return false;
@@ -342,11 +342,11 @@ bool borderNonzero(const PrDomElement* table) {
 }
 
 // Appends a table's hints for itself (html/#tables-2).
-void addTable(TextBuffer* out, const PrDomElement* table) {
+void addTable(PrTextBuffer* out, const PrDomElement* table) {
     PrStringView align = domAttributeValue(table, "align");
-    if (asciiEqualsFold(align, "left") || asciiEqualsFold(align, "right")) {
-        cssHintAdd(out, "float", asciiEqualsFold(align, "left") ? "left" : "right");
-    } else if (asciiEqualsFold(align, "center")) {
+    if (prAsciiEqualsFold(align, "left") || prAsciiEqualsFold(align, "right")) {
+        cssHintAdd(out, "float", prAsciiEqualsFold(align, "left") ? "left" : "right");
+    } else if (prAsciiEqualsFold(align, "center")) {
         cssHintAdd(out, "margin-left", "auto");
         cssHintAdd(out, "margin-right", "auto");
     }
@@ -375,7 +375,7 @@ void addTable(TextBuffer* out, const PrDomElement* table) {
     };
     const Frame* framed = nullptr;
     for (const Frame& f : frames) {
-        if (asciiEqualsFold(frame, f.value))
+        if (prAsciiEqualsFold(frame, f.value))
             framed = &f;
     }
     if (hasRules(rules) || framed != nullptr)
@@ -384,12 +384,12 @@ void addTable(TextBuffer* out, const PrDomElement* table) {
     PrStringView border = domAttributeValue(table, "border");
     if (border.data != nullptr) {
         int64_t value = 0;
-        TextBuffer width{};
+        PrTextBuffer width{};
         bool parsed = parseNonNegative(border, &value);
         cssSerializeNumber(&width, parsed ? double(value < INT32_MAX ? value : INT32_MAX) : 1);
-        textAppend(&width, "px");
-        addSides(out, "border-", "-width", textView(&width));
-        textReset(&width);
+        prTextBufferAppend(&width, "px");
+        addSides(out, "border-", "-width", prTextBufferView(&width));
+        prTextBufferReset(&width);
     }
     // Later declarations win: a frame over the border attribute's style, and both over the rules attribute's.
     if (hasRules(rules)) {
@@ -403,23 +403,23 @@ void addTable(TextBuffer* out, const PrDomElement* table) {
 }
 
 // Appends the hints that a table gives the elements of `taker`'s kind.
-void addTableGiven(TextBuffer* out, const PrDomElement* table, DomTaker taker) {
+void addTableGiven(PrTextBuffer* out, const PrDomElement* table, DomTaker taker) {
     PrStringView rules = domAttributeValue(table, "rules");
     switch (taker) {
         case DomTaker_Section:
-            if (asciiEqualsFold(rules, "groups")) {
+            if (prAsciiEqualsFold(rules, "groups")) {
                 cssHintAdd(out, "border-block-width", "1px");
                 cssHintAdd(out, "border-block-style", "solid");
             }
             break;
         case DomTaker_Row:
-            if (asciiEqualsFold(rules, "rows")) {
+            if (prAsciiEqualsFold(rules, "rows")) {
                 cssHintAdd(out, "border-block-width", "1px");
                 cssHintAdd(out, "border-block-style", "solid");
             }
             break;
         case DomTaker_ColumnGroup:
-            if (asciiEqualsFold(rules, "groups")) {
+            if (prAsciiEqualsFold(rules, "groups")) {
                 cssHintAdd(out, "border-inline-width", "1px");
                 cssHintAdd(out, "border-inline-style", "solid");
             }
@@ -431,14 +431,14 @@ void addTableGiven(TextBuffer* out, const PrDomElement* table, DomTaker taker) {
                 cssHintAdd(out, "border-width", "1px");
                 cssHintAdd(out, "border-style", "inset");
             }
-            if (asciiEqualsFold(rules, "none") || asciiEqualsFold(rules, "groups") || asciiEqualsFold(rules, "rows")) {
+            if (prAsciiEqualsFold(rules, "none") || prAsciiEqualsFold(rules, "groups") || prAsciiEqualsFold(rules, "rows")) {
                 cssHintAdd(out, "border-width", "1px");
                 cssHintAdd(out, "border-style", "none");
-            } else if (asciiEqualsFold(rules, "cols")) {
+            } else if (prAsciiEqualsFold(rules, "cols")) {
                 cssHintAdd(out, "border-width", "1px");
                 cssHintAdd(out, "border-block-style", "none");
                 cssHintAdd(out, "border-inline-style", "solid");
-            } else if (asciiEqualsFold(rules, "all")) {
+            } else if (prAsciiEqualsFold(rules, "all")) {
                 cssHintAdd(out, "border-width", "1px");
                 cssHintAdd(out, "border-style", "solid");
             }
@@ -453,7 +453,7 @@ void addTableGiven(TextBuffer* out, const PrDomElement* table, DomTaker taker) {
 // Appends a body's hints for itself (html/#the-page). For each axis, the first of its attributes that is present gives
 // both margins. A margin attribute that fails to parse gives a margin of 8px. The user agent's sheet gives the same
 // margin to a body without the attributes.
-void addBody(TextBuffer* out, const PrDomElement* body) {
+void addBody(PrTextBuffer* out, const PrDomElement* body) {
     addColor(out, body, "bgcolor", "background-color");
     addBackground(out, body);
     addColor(out, body, "text", "color");
@@ -473,15 +473,15 @@ void addBody(TextBuffer* out, const PrDomElement* body) {
 }
 
 // Appends an hr's hints (html/#the-hr-element-2).
-void addRule(TextBuffer* out, const PrDomElement* hr) {
+void addRule(PrTextBuffer* out, const PrDomElement* hr) {
     PrStringView align = domAttributeValue(hr, "align");
-    if (asciiEqualsFold(align, "left")) {
+    if (prAsciiEqualsFold(align, "left")) {
         cssHintAdd(out, "margin-left", "0");
         cssHintAdd(out, "margin-right", "auto");
-    } else if (asciiEqualsFold(align, "right")) {
+    } else if (prAsciiEqualsFold(align, "right")) {
         cssHintAdd(out, "margin-left", "auto");
         cssHintAdd(out, "margin-right", "0");
-    } else if (asciiEqualsFold(align, "center")) {
+    } else if (prAsciiEqualsFold(align, "center")) {
         cssHintAdd(out, "margin-left", "auto");
         cssHintAdd(out, "margin-right", "auto");
     }
@@ -492,11 +492,11 @@ void addRule(TextBuffer* out, const PrDomElement* hr) {
     if (parseNonNegative(domAttributeValue(hr, "size"), &size)) {
         double pixels = double(size < INT32_MAX ? size : INT32_MAX);
         if (solid) {
-            TextBuffer width{};
+            PrTextBuffer width{};
             cssSerializeNumber(&width, pixels / 2);
-            textAppend(&width, "px");
-            addSides(out, "border-", "-width", textView(&width));
-            textReset(&width);
+            prTextBufferAppend(&width, "px");
+            addSides(out, "border-", "-width", prTextBufferView(&width));
+            prTextBufferReset(&width);
         } else if (size == 1) {
             cssHintAdd(out, "border-bottom-width", "0");
         } else if (size > 1) {
@@ -508,7 +508,7 @@ void addRule(TextBuffer* out, const PrDomElement* hr) {
 }
 
 // Appends the hints that the element's own attributes map to.
-void addOwn(TextBuffer* out, const PrDomElement* element) {
+void addOwn(PrTextBuffer* out, const PrDomElement* element) {
     switch (element->tag) {
         case PrDomTag_Body: addBody(out, element); break;
         case PrDomTag_Pre:
@@ -520,9 +520,9 @@ void addOwn(TextBuffer* out, const PrDomElement* element) {
         case PrDomTag_P: addTextAlign(out, element, Center_Center); break;
         case PrDomTag_Br: {
             PrStringView clear = domAttributeValue(element, "clear");
-            if (asciiEqualsFold(clear, "left") || asciiEqualsFold(clear, "right"))
-                cssHintAdd(out, "clear", asciiEqualsFold(clear, "left") ? "left" : "right");
-            else if (asciiEqualsFold(clear, "all") || asciiEqualsFold(clear, "both"))
+            if (prAsciiEqualsFold(clear, "left") || prAsciiEqualsFold(clear, "right"))
+                cssHintAdd(out, "clear", prAsciiEqualsFold(clear, "left") ? "left" : "right");
+            else if (prAsciiEqualsFold(clear, "all") || prAsciiEqualsFold(clear, "both"))
                 cssHintAdd(out, "clear", "both");
             break;
         }
@@ -544,7 +544,7 @@ void addOwn(TextBuffer* out, const PrDomElement* element) {
             break;
         case PrDomTag_Table: addTable(out, element); break;
         case PrDomTag_Caption:
-            if (asciiEqualsFold(domAttributeValue(element, "align"), "bottom"))
+            if (prAsciiEqualsFold(domAttributeValue(element, "align"), "bottom"))
                 cssHintAdd(out, "caption-side", "bottom");
             break;
         case PrDomTag_Col: addDimension(out, element, "width", "width", Zero_Keep); break;
@@ -628,18 +628,18 @@ void addOwn(TextBuffer* out, const PrDomElement* element) {
             addSpaces(out, element);
             break;
         case PrDomTag_Textarea: {
-            if (asciiEqualsFold(domAttributeValue(element, "wrap"), "off"))
+            if (prAsciiEqualsFold(domAttributeValue(element, "wrap"), "off"))
                 cssHintAdd(out, "white-space", "pre");
             // The box is `rows` lines tall (html/#the-textarea-element-2).
             int64_t rows = 0;
             if (!domParseInteger(domAttributeValue(element, "rows"), &rows) || rows < 1)
                 rows = 2;
-            TextBuffer height;
-            textAppend(&height, "calc(");
-            textAppendU64(&height, uint64_t(rows));
-            textAppend(&height, "lh)");
-            cssHintAdd(out, "block-size", textView(&height));
-            textReset(&height);
+            PrTextBuffer height = {};
+            prTextBufferAppend(&height, "calc(");
+            prTextBufferAppendU64(&height, uint64_t(rows), 10);
+            prTextBufferAppend(&height, "lh)");
+            cssHintAdd(out, "block-size", prTextBufferView(&height));
+            prTextBufferReset(&height);
             break;
         }
         default:
@@ -766,7 +766,7 @@ const PrDomElement* PR_NULLABLE giver(const PrDomElement* element, DomTaker* tak
 }
 
 // Appends the hints that a table or a body gives the elements of the kind `taker`.
-void addGiven(TextBuffer* out, const PrDomElement* element, uint32_t taker) {
+void addGiven(PrTextBuffer* out, const PrDomElement* element, uint32_t taker) {
     if (element->tag == PrDomTag_Table) {
         addTableGiven(out, element, DomTaker(taker));
     } else if (taker < DomTaker_Count - 1) {
@@ -819,8 +819,8 @@ const CssHintProvider* htmlHints() {
 
 bool htmlParseLegacyColor(PrStringView text, PrColor8* out) {
     // Steps 2 to 4: an empty value, transparent, and a named color.
-    PrStringView input = stringTrim(text);
-    if (input.size == 0 || asciiEqualsFold(input, "transparent"))
+    PrStringView input = prStringTrim(text);
+    if (input.size == 0 || prAsciiEqualsFold(input, "transparent"))
         return false;
     if (cssNamedColor(cssKeywordFromText(input), out))
         return true;

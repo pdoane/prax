@@ -56,7 +56,7 @@ void prSyntaxRegistryAdd(PrSyntaxRegistry* registry, const PrSyntaxLanguage* lan
 
 const PrSyntaxLanguage* PR_NULLABLE prSyntaxRegistryFind(const PrSyntaxRegistry* registry, PrStringView name) {
     for (uint32_t i = registry->languages.count; i-- > 0;) {
-        if (asciiEqualsFold(registry->languages.data[i]->name, name))
+        if (prAsciiEqualsFold(registry->languages.data[i]->name, name))
             return registry->languages.data[i];
     }
     // The names that an injection gives are short, so a name too long for the buffer matches no pattern.
@@ -64,7 +64,7 @@ const PrSyntaxLanguage* PR_NULLABLE prSyntaxRegistryFind(const PrSyntaxRegistry*
     if (name.size > sizeof(lowered))
         return nullptr;
     for (size_t i = 0; i < name.size; ++i)
-        lowered[i] = asciiLower(name.data[i]);
+        lowered[i] = prAsciiLower(name.data[i]);
     PrStringView folded{lowered, name.size};
     for (uint32_t i = registry->languages.count; i-- > 0;) {
         const PrRegex* pattern = registry->namePatterns.data[i];
@@ -82,7 +82,7 @@ const PrSyntaxLanguage* PR_NULLABLE prSyntaxRegistryFromPath(const PrSyntaxRegis
     for (uint32_t i = registry->languages.count; i-- > 0;) {
         const PrSyntaxLanguage* language = registry->languages.data[i];
         for (uint32_t k = 0; k < language->fileNameCount; ++k) {
-            if (asciiEqualsFold(language->fileNames[k], file))
+            if (prAsciiEqualsFold(language->fileNames[k], file))
                 return language;
         }
     }
@@ -96,7 +96,7 @@ const PrSyntaxLanguage* PR_NULLABLE prSyntaxRegistryFromPath(const PrSyntaxRegis
     for (uint32_t i = registry->languages.count; i-- > 0;) {
         const PrSyntaxLanguage* language = registry->languages.data[i];
         for (uint32_t k = 0; k < language->extensionCount; ++k) {
-            if (asciiEqualsFold(language->extensions[k], extension))
+            if (prAsciiEqualsFold(language->extensions[k], extension))
                 return language;
         }
     }

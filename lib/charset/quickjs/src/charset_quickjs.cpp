@@ -76,17 +76,17 @@ JSValue decodeMethod(JSContext* ctx, JSValueConst decoderObject, int argc, JSVal
         decoder->decoder = prCharsetDecoderMake(decoder->decoder.charset, decoder->decoder.flags);
     decoder->doNotFlush = stream;
     PrStringView bytes = {reinterpret_cast<const char*>(data), size};
-    TextBuffer text;
-    text.text.resize(uint32_t(prCharsetDecodeMaxSize(&decoder->decoder, size)));
+    PrTextBuffer text = {};
+    prTextBufferResize(&text, uint32_t(prCharsetDecodeMaxSize(&decoder->decoder, size)));
     size_t written = 0;
     bool decoded = prCharsetDecode(&decoder->decoder, bytes, stream ? PrCharsetInput_Partial : PrCharsetInput_Final,
-        text.text.data, &written);
+        text.data, &written);
     JSValue result;
     if (decoded)
-        result = JS_NewStringLen(ctx, text.text.data, written);
+        result = JS_NewStringLen(ctx, text.data, written);
     else
         result = JS_ThrowTypeError(ctx, "The encoded data was not valid.");
-    textReset(&text);
+    prTextBufferReset(&text);
     return result;
 }
 
@@ -95,11 +95,11 @@ JSValue encodingGet(JSContext* ctx, JSValueConst decoderObject) {
     JsTextDecoder* decoder = decoderOf(ctx, decoderObject);
     if (decoder == nullptr)
         return JS_EXCEPTION;
-    TextBuffer name;
-    textAppend(&name, prCharsetName(decoder->decoder.charset));
-    textAsciiLower(&name);
-    JSValue result = jsNewStringView(ctx, textView(&name));
-    textReset(&name);
+    PrTextBuffer name = {};
+    prTextBufferAppend(&name, prCharsetName(decoder->decoder.charset));
+    prTextBufferAsciiLower(&name);
+    JSValue result = jsNewStringView(ctx, prTextBufferView(&name));
+    prTextBufferReset(&name);
     return result;
 }
 
@@ -162,7 +162,7 @@ JSValue encodeIntoMethod(JSContext* ctx, JSValueConst object, int argc, JSValueC
         uint32_t width = prUtf8Decode(text, at, &codePoint);
         if (written + width > length)
             break;
-        memCopy(destination + offset + written, text.data + at, width);
+        prMemCopy(destination + offset + written, text.data + at, width);
         written += width;
         at += width;
         read += codePoint > 0xffff ? 2 : 1;

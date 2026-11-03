@@ -20,13 +20,13 @@ constexpr uint32_t kConcaveSearchSteps = 24;
 // Returns the factor by which one side needs every radius scaled, or `factor` if that is smaller.
 float sideFactor(float factor, float length, float first, float second) {
     float sum = first + second;
-    return sum > length ? minF32(factor, length / sum) : factor;
+    return sum > length ? prF32Min(factor, length / sum) : factor;
 }
 
 // Returns sin(πt/2) for t in [0, 1], which is exactly 0 and 1 at the ends. In floats, cos(πt/2) is not exact at the
 // ends.
 float quarterSine(float t) {
-    return clampF32(sinF32(kPiF32 / 2 * clampF32(t, 0, 1)), 0, 1);
+    return prF32Clamp(prF32Sin(kPrF32Pi / 2 * prF32Clamp(t, 0, 1)), 0, 1);
 }
 
 // A corner's position on the rectangle: its point, the direction of the side before it, and the direction of the side
@@ -75,19 +75,19 @@ bool trianglesOverlap(const PrVec2 a[3], const PrVec2 b[3]) {
             PrVec2 p = t[i];
             PrVec2 q = t[(i + 1) % 3];
             PrVec2 axis{q.y - p.y, p.x - q.x};
-            float minA = kF32Max;
-            float maxA = -kF32Max;
-            float minB = kF32Max;
-            float maxB = -kF32Max;
+            float minA = kPrF32Max;
+            float maxA = -kPrF32Max;
+            float minB = kPrF32Max;
+            float maxB = -kPrF32Max;
             for (uint32_t j = 0; j < 3; ++j) {
                 float da = axis.x * a[j].x + axis.y * a[j].y;
                 float db = axis.x * b[j].x + axis.y * b[j].y;
-                minA = minF32(minA, da);
-                maxA = maxF32(maxA, da);
-                minB = minF32(minB, db);
-                maxB = maxF32(maxB, db);
+                minA = prF32Min(minA, da);
+                maxA = prF32Max(maxA, da);
+                minB = prF32Min(minB, db);
+                maxB = prF32Max(maxB, db);
             }
-            float scale = absF32(axis.x) + absF32(axis.y);
+            float scale = prF32Abs(axis.x) + prF32Abs(axis.y);
             float slack = scale * 1e-4f;
             if (maxA <= minB + slack || maxB <= minA + slack)
                 return false;
@@ -121,7 +121,7 @@ bool concaveOverlap(PrRect r, const PrCorner corners[4], float factor) {
 }
 
 int32_t pixelEdge(float whole) {
-    return int32_t(clampF32(whole, -float(kPrIRectMaxCoordinate), float(kPrIRectMaxCoordinate)));
+    return int32_t(prF32Clamp(whole, -float(kPrIRectMaxCoordinate), float(kPrIRectMaxCoordinate)));
 }
 
 } // namespace
@@ -172,17 +172,27 @@ PrRect prRectUnion(PrRect a, PrRect b) {
         return b;
     if (prRectIsEmpty(b))
         return a;
-    return PrRect{minF32(a.left, b.left), minF32(a.top, b.top), maxF32(a.right, b.right), maxF32(a.bottom, b.bottom)};
+    return PrRect{
+        .left = prF32Min(a.left, b.left),
+        .top = prF32Min(a.top, b.top),
+        .right = prF32Max(a.right, b.right),
+        .bottom = prF32Max(a.bottom, b.bottom),
+    };
 }
 
 PrRect prRectIntersect(PrRect a, PrRect b) {
-    return PrRect{maxF32(a.left, b.left), maxF32(a.top, b.top), minF32(a.right, b.right), minF32(a.bottom, b.bottom)};
+    return PrRect{
+        .left = prF32Max(a.left, b.left),
+        .top = prF32Max(a.top, b.top),
+        .right = prF32Min(a.right, b.right),
+        .bottom = prF32Min(a.bottom, b.bottom),
+    };
 }
 
 bool prRectIsOnPixels(PrRect rect) {
     float edges[4] = {rect.left, rect.top, rect.right, rect.bottom};
     for (float e : edges) {
-        if (!(absF32(e - roundF32(e)) <= kPrRectOnPixelTolerance))
+        if (!(prF32Abs(e - prF32Round(e)) <= kPrRectOnPixelTolerance))
             return false;
     }
     return true;
@@ -205,8 +215,8 @@ PrIRect prIRectRoundOut(PrRect rect) {
         return PrIRect{0, 0, 0, 0};
     float t = kPrRectOnPixelTolerance;
     return PrIRect{
-        pixelEdge(floorF32(rect.left + t)), pixelEdge(floorF32(rect.top + t)),
-        pixelEdge(ceilF32(rect.right - t)), pixelEdge(ceilF32(rect.bottom - t)),
+        pixelEdge(prF32Floor(rect.left + t)), pixelEdge(prF32Floor(rect.top + t)),
+        pixelEdge(prF32Ceil(rect.right - t)), pixelEdge(prF32Ceil(rect.bottom - t)),
     };
 }
 
@@ -214,8 +224,8 @@ PrIRect prIRectRound(PrRect rect) {
     if (prRectIsEmpty(rect))
         return PrIRect{0, 0, 0, 0};
     return PrIRect{
-        pixelEdge(ceilF32(rect.left - 0.5f)), pixelEdge(ceilF32(rect.top - 0.5f)),
-        pixelEdge(ceilF32(rect.right - 0.5f)), pixelEdge(ceilF32(rect.bottom - 0.5f)),
+        pixelEdge(prF32Ceil(rect.left - 0.5f)), pixelEdge(prF32Ceil(rect.top - 0.5f)),
+        pixelEdge(prF32Ceil(rect.right - 0.5f)), pixelEdge(prF32Ceil(rect.bottom - 0.5f)),
     };
 }
 
@@ -258,38 +268,38 @@ bool prIRectContains(PrIRect outer, PrIRect inner) {
 // Corners
 
 bool prCornerIsSquare(PrCorner corner) {
-    return !(corner.radii.x > 0 && corner.radii.y > 0) || corner.shape == kInfinityF32;
+    return !(corner.radii.x > 0 && corner.radii.y > 0) || corner.shape == kPrF32Infinity;
 }
 
 PrVec2 prCornerCurvePoint(float shape, float t) {
     bool concave = shape < 0;
-    float k = absF32(shape);
-    if (k == kInfinityF32) {
+    float k = prF32Abs(shape);
+    if (k == kPrF32Infinity) {
         // The curve is two straight lines through the box's outer corner, or through its inner one.
         if (t <= 0.5f)
             return concave ? PrVec2{0, 2 * t} : PrVec2{2 * t, 0};
         return concave ? PrVec2{2 * t - 1, 1} : PrVec2{1, 2 * t - 1};
     }
-    float p = powF32(2, 1 - k);
-    float s = powF32(quarterSine(t), p);
-    float c = powF32(quarterSine(1 - t), p);
+    float p = prF32Pow(2, 1 - k);
+    float s = prF32Pow(quarterSine(t), p);
+    float c = prF32Pow(quarterSine(1 - t), p);
     return concave ? PrVec2{1 - c, s} : PrVec2{s, 1 - c};
 }
 
 PrVec2 prCornerCurveTangent(float shape, float t) {
     bool concave = shape < 0;
-    float k = absF32(shape);
-    if (k == kInfinityF32) {
+    float k = prF32Abs(shape);
+    if (k == kPrF32Infinity) {
         if (t < 0.5f)
             return concave ? PrVec2{0, 1} : PrVec2{1, 0};
         return concave ? PrVec2{1, 0} : PrVec2{0, 1};
     }
     // The derivative scaled by (sin cos)^(1 - p), which keeps it finite if p < 1.
-    float q = 2 - powF32(2, 1 - k);
-    float s = powF32(quarterSine(t), q);
-    float c = powF32(quarterSine(1 - t), q);
+    float q = 2 - prF32Pow(2, 1 - k);
+    float s = prF32Pow(quarterSine(t), q);
+    float c = prF32Pow(quarterSine(1 - t), q);
     PrVec2 d = concave ? PrVec2{s, c} : PrVec2{c, s};
-    float length = sqrtF32(d.x * d.x + d.y * d.y);
+    float length = prF32Sqrt(d.x * d.x + d.y * d.y);
     return length > 0 ? d / length : PrVec2{1, 0};
 }
 
@@ -363,10 +373,10 @@ PrCornerRect prCornerRectInset(PrCornerRect shape, const float insets[PR_NONNULL
             // A round corner's midpoint is 1 - sqrt(1/2) of its radii from the corner, so its factor is 1.
             float midpoint = 1;
             if (c.shape == 1)
-                midpoint = 1 - sqrtF32(0.5f);
-            else if (isFiniteF32(c.shape))
-                midpoint = 1 - powF32(2, -1 / powF32(2, c.shape));
-            float factor = (1 - sqrtF32(0.5f)) / midpoint;
+                midpoint = 1 - prF32Sqrt(0.5f);
+            else if (prF32IsFinite(c.shape))
+                midpoint = 1 - prF32Pow(2, -1 / prF32Pow(2, c.shape));
+            float factor = (1 - prF32Sqrt(0.5f)) / midpoint;
             c.radii = PrVec2{c.radii.x - horizontal[i] * factor, c.radii.y - vertical[i] * factor};
         }
         if (!(c.radii.x > 0 && c.radii.y > 0))
@@ -431,10 +441,10 @@ bool prCornerRectContains(PrCornerRect shape, PrVec2 point) {
             continue;
         // A convex corner holds the points within the superellipse of exponent 2^K around its center. A concave corner
         // is that curve of -K reflected into the box, centered on the corner, and holds the points beyond it.
-        float exponent = powF32(2, c.shape >= 0 ? c.shape : -c.shape);
+        float exponent = prF32Pow(2, c.shape >= 0 ? c.shape : -c.shape);
         if (c.shape >= 0)
-            return powF32(1 - a, exponent) + powF32(1 - b, exponent) <= 1;
-        return powF32(a, exponent) + powF32(b, exponent) >= 1;
+            return prF32Pow(1 - a, exponent) + prF32Pow(1 - b, exponent) <= 1;
+        return prF32Pow(a, exponent) + prF32Pow(b, exponent) >= 1;
     }
     return true;
 }
@@ -476,15 +486,15 @@ PrAffine2 prAffine2Scale(PrVec2 factors) {
 }
 
 PrAffine2 prAffine2Rotate(float radians) {
-    float s = sinF32(radians);
-    float c = cosF32(radians);
+    float s = prF32Sin(radians);
+    float c = prF32Cos(radians);
     // At a multiple of a quarter turn, the sine or cosine that float error leaves near zero becomes zero, and the other
     // becomes one, so that a whole turn is the identity.
     constexpr float kNearZero = 1e-6f;
-    if (absF32(s) < kNearZero) {
+    if (prF32Abs(s) < kNearZero) {
         s = 0;
         c = c < 0 ? -1.0f : 1.0f;
-    } else if (absF32(c) < kNearZero) {
+    } else if (prF32Abs(c) < kNearZero) {
         c = 0;
         s = s < 0 ? -1.0f : 1.0f;
     }
@@ -504,7 +514,7 @@ PrAffine2 prAffine2Concat(PrAffine2 first, PrAffine2 second) {
 bool prAffine2Invert(PrAffine2 transform, PrAffine2* out) {
     const PrAffine2& m = transform;
     float determinant = m.a * m.d - m.b * m.c;
-    if (determinant == 0 || !isFiniteF32(1 / determinant))
+    if (determinant == 0 || !prF32IsFinite(1 / determinant))
         return false;
     float inverse = 1 / determinant;
     *out = PrAffine2{
@@ -534,19 +544,19 @@ PrRect prAffine2MapRect(PrAffine2 transform, PrRect rect) {
     };
     PrRect bounds{corners[0].x, corners[0].y, corners[0].x, corners[0].y};
     for (const PrVec2& corner : corners) {
-        bounds.left = minF32(bounds.left, corner.x);
-        bounds.top = minF32(bounds.top, corner.y);
-        bounds.right = maxF32(bounds.right, corner.x);
-        bounds.bottom = maxF32(bounds.bottom, corner.y);
+        bounds.left = prF32Min(bounds.left, corner.x);
+        bounds.top = prF32Min(bounds.top, corner.y);
+        bounds.right = prF32Max(bounds.right, corner.x);
+        bounds.bottom = prF32Max(bounds.bottom, corner.y);
     }
     return bounds;
 }
 
 float prAffine2MaxScale(PrAffine2 transform) {
     const PrAffine2& t = transform;
-    float x = sqrtF32(t.a * t.a + t.b * t.b);
-    float y = sqrtF32(t.c * t.c + t.d * t.d);
-    return maxF32(x, y);
+    float x = prF32Sqrt(t.a * t.a + t.b * t.b);
+    float y = prF32Sqrt(t.c * t.c + t.d * t.d);
+    return prF32Max(x, y);
 }
 
 bool prAffine2IsIdentity(PrAffine2 transform) {
@@ -558,8 +568,8 @@ bool prAffine2IsSimilarity(PrAffine2 transform) {
     const PrAffine2& t = transform;
     float x = t.a * t.a + t.b * t.b;
     float y = t.c * t.c + t.d * t.d;
-    float tolerance = kSimilarityTolerance * maxF32(x, y);
-    return absF32(x - y) <= tolerance && absF32(t.a * t.c + t.b * t.d) <= tolerance;
+    float tolerance = kSimilarityTolerance * prF32Max(x, y);
+    return prF32Abs(x - y) <= tolerance && prF32Abs(t.a * t.c + t.b * t.d) <= tolerance;
 }
 
 bool prAffine2IsAxisAligned(PrAffine2 transform) {
@@ -604,7 +614,7 @@ PrDAffine2 prDAffine2Concat(PrDAffine2 first, PrDAffine2 second) {
 bool prDAffine2Invert(PrDAffine2 transform, PrDAffine2* out) {
     const PrDAffine2& m = transform;
     double determinant = m.a * m.d - m.b * m.c;
-    if (determinant == 0 || !isFiniteF64(1 / determinant))
+    if (determinant == 0 || !prF64IsFinite(1 / determinant))
         return false;
     double inverse = 1 / determinant;
     *out = PrDAffine2{
@@ -659,14 +669,14 @@ PrMatrix4 prMatrix4Rotate(PrVec3 axis, float radians) {
     float x = axis.x;
     float y = axis.y;
     float z = axis.z;
-    float length = sqrtF32(x * x + y * y + z * z);
+    float length = prF32Sqrt(x * x + y * y + z * z);
     if (!(length > 0))
         return prMatrix4Identity();
     x /= length;
     y /= length;
     z /= length;
-    float s = sinF32(radians);
-    float c = cosF32(radians);
+    float s = prF32Sin(radians);
+    float c = prF32Cos(radians);
     float k = 1 - c;
     PrMatrix4 m = prMatrix4Identity();
     m.m[0][0] = c + x * x * k;
@@ -779,10 +789,10 @@ bool prDMatrix4Invert(const PrDMatrix4* matrix, PrDMatrix4* out) {
     for (uint32_t column = 0; column < 4; ++column) {
         uint32_t pivot = column;
         for (uint32_t row = column + 1; row < 4; ++row) {
-            if (absF64(a[row][column]) > absF64(a[pivot][column]))
+            if (prF64Abs(a[row][column]) > prF64Abs(a[pivot][column]))
                 pivot = row;
         }
-        if (!(absF64(a[pivot][column]) > 1e-12))
+        if (!(prF64Abs(a[pivot][column]) > 1e-12))
             return false;
         for (uint32_t k = 0; k < 8; ++k) {
             double swap = a[column][k];
@@ -928,23 +938,26 @@ float prMatrix3MaxScale(const PrMatrix3* matrix, PrRect rect, float minimumW) {
         const double x = visible[i][0];
         const double y = visible[i][1];
         const double w = h.m[2][0] * x + h.m[2][1] * y + h.m[2][2];
-        inverseW = maxF64(inverseW, 1 / w);
+        inverseW = prF64Max(inverseW, 1 / w);
         qx[i] = (h.m[0][0] * x + h.m[0][1] * y + h.m[0][2]) / w;
         qy[i] = (h.m[1][0] * x + h.m[1][1] * y + h.m[1][2]) / w;
         centerX += qx[i] / count;
         centerY += qy[i] / count;
     }
     double reach = 0;
-    for (uint32_t i = 0; i < count; ++i)
-        reach = maxF64(reach, sqrtF64((qx[i] - centerX) * (qx[i] - centerX) + (qy[i] - centerY) * (qy[i] - centerY)));
+    for (uint32_t i = 0; i < count; ++i) {
+        double dx = qx[i] - centerX;
+        double dy = qy[i] - centerY;
+        reach = prF64Max(reach, prF64Sqrt(dx * dx + dy * dy));
+    }
     const double a = h.m[0][0] - centerX * h.m[2][0];
     const double c = h.m[0][1] - centerX * h.m[2][1];
     const double b = h.m[1][0] - centerY * h.m[2][0];
     const double d = h.m[1][1] - centerY * h.m[2][1];
     const double sum = a * a + b * b + c * c + d * d;
     const double determinant = a * d - b * c;
-    const double norm = sqrtF64((sum + sqrtF64(maxF64(sum * sum - 4 * determinant * determinant, 0))) / 2);
-    const double row = sqrtF64(h.m[2][0] * h.m[2][0] + h.m[2][1] * h.m[2][1]);
+    const double norm = prF64Sqrt((sum + prF64Sqrt(prF64Max(sum * sum - 4 * determinant * determinant, 0))) / 2);
+    const double row = prF64Sqrt(h.m[2][0] * h.m[2][0] + h.m[2][1] * h.m[2][1]);
     return float(inverseW * (norm + reach * row));
 }
 
@@ -1064,7 +1077,7 @@ bool prDMatrix3Invert(const PrDMatrix3* matrix, PrDMatrix3* out) {
         m[3] * m[7] - m[4] * m[6], m[1] * m[6] - m[0] * m[7], m[0] * m[4] - m[1] * m[3],
     };
     const double determinant = m[0] * c[0] + m[1] * c[3] + m[2] * c[6];
-    if (!(determinant != 0) || !isFiniteF64(determinant))
+    if (!(determinant != 0) || !prF64IsFinite(determinant))
         return false;
     for (uint32_t i = 0; i < 9; ++i)
         out->m[i / 3][i % 3] = c[i] / determinant;

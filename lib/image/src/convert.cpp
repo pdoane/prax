@@ -72,7 +72,7 @@ uint32_t pixelBytes(const PrImageFormat& format) {
 
 float floatFromBits(uint32_t bits) {
     float value = 0;
-    memCopy(&value, &bits, sizeof(value));
+    prMemCopy(&value, &bits, sizeof(value));
     return value;
 }
 
@@ -82,21 +82,21 @@ double readSample(const uint8_t* source, PrImageSample sample) {
     }
     if (sample == PrImageSample_F32) {
         float value = 0;
-        memCopy(&value, source, sizeof(value));
+        prMemCopy(&value, source, sizeof(value));
         return double(value);
     }
     uint16_t value = 0;
-    memCopy(&value, source, sizeof(value));
+    prMemCopy(&value, source, sizeof(value));
     if (sample == PrImageSample_U16) {
         return value / 65535.0;
     }
     if (sample == PrImageSample_I16) {
         int16_t signedValue = 0;
-        memCopy(&signedValue, &value, sizeof(value));
+        prMemCopy(&signedValue, &value, sizeof(value));
         return signedValue == -32768 ? -1.0 : signedValue / 32767.0;
     }
     PrFloat16 stored{};
-    memCopy(&stored, source, sizeof(stored));
+    prMemCopy(&stored, source, sizeof(stored));
     return double(prFloat16ToFloat(stored));
 }
 
@@ -114,7 +114,7 @@ void writeSample(uint8_t* out, PrImageSample sample, double value) {
     }
     if (sample == PrImageSample_U16) {
         const uint16_t converted = uint16_t(clampUnit(value) * 65535.0 + 0.5);
-        memCopy(out, &converted, sizeof(converted));
+        prMemCopy(out, &converted, sizeof(converted));
         return;
     }
     if (sample == PrImageSample_I16) {
@@ -123,22 +123,22 @@ void writeSample(uint8_t* out, PrImageSample sample, double value) {
         }
         value = value < -1 ? -1 : (value > 1 ? 1 : value);
         const int16_t converted = int16_t(value * 32767.0 + (value < 0 ? -0.5 : 0.5));
-        memCopy(out, &converted, sizeof(converted));
+        prMemCopy(out, &converted, sizeof(converted));
         return;
     }
     float converted = 0;
-    if (value > double(kF32Max)) {
+    if (value > double(kPrF32Max)) {
         converted = floatFromBits(0x7F800000u);
-    } else if (value < -double(kF32Max)) {
+    } else if (value < -double(kPrF32Max)) {
         converted = floatFromBits(0xFF800000u);
     } else {
         converted = float(value);
     }
     if (sample == PrImageSample_F32) {
-        memCopy(out, &converted, sizeof(converted));
+        prMemCopy(out, &converted, sizeof(converted));
     } else {
         const PrFloat16 narrow = prFloat16FromFloat(converted);
-        memCopy(out, &narrow, sizeof(narrow));
+        prMemCopy(out, &narrow, sizeof(narrow));
     }
 }
 
@@ -331,7 +331,7 @@ bool colorEquals(const PrImageColor& a, const PrImageColor& b) {
         return a.space == b.space;
     }
     if (a.encoding == PrImageColorEncoding_Icc) {
-        return a.profile.size == b.profile.size && memEquals(a.profile.data, b.profile.data, a.profile.size);
+        return a.profile.size == b.profile.size && prMemEquals(a.profile.data, b.profile.data, a.profile.size);
     }
     return true;
 }
@@ -435,7 +435,7 @@ PrStatus imageConvert(PrPixelView source, const PrImageFormat& from, PrPixels de
         const uint8_t* input = source.data + size_t(y) * source.stride;
         uint8_t* output = destination.data + size_t(y) * destination.stride;
         if (identical) {
-            memCopy(output, input, size_t(source.extent.x) * sourcePixel);
+            prMemCopy(output, input, size_t(source.extent.x) * sourcePixel);
             continue;
         }
         if (eightBit) {
@@ -479,7 +479,7 @@ PrStatus imageConvert(PrPixelView source, const PrImageFormat& from, PrPixels de
             }
             if (to.alpha != PrImageAlpha_None) {
                 if (from.alpha == PrImageAlpha_Independent && from.sample == to.sample) {
-                    memCopy(output + destinationChannels * destinationSample, input + sourceChannels * sourceSample,
+                    prMemCopy(output + destinationChannels * destinationSample, input + sourceChannels * sourceSample,
                         sourceSample);
                 } else {
                     writeSample(output + destinationChannels * destinationSample, to.sample, alpha);

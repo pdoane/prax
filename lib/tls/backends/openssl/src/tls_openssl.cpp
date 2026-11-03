@@ -228,7 +228,7 @@ bool copyName(PrStringView name, char* out) {
         if (name.data[i] == 0)
             return false;
     }
-    memCopy(out, name.data, name.size);
+    prMemCopy(out, name.data, name.size);
     out[name.size] = 0;
     return true;
 }

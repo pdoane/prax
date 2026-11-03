@@ -228,7 +228,7 @@ bool cssValueNext(PrStringView text, uint32_t* pos, uint32_t* codePoint);
 uint32_t cssValue(PrStringView text, char* PR_NULLABLE buffer, uint32_t capacity);
 
 // Appends the value of `text` to `out`, as cssValueNext reads it.
-void cssValueAppend(TextBuffer* out, PrStringView text);
+void cssValueAppend(PrTextBuffer* out, PrStringView text);
 
 // Returns the keyword that the token at `index` names, or PrCssKeyword_Unknown. The comparison uses the token's value,
 // so an escape matches the code point that it spells.

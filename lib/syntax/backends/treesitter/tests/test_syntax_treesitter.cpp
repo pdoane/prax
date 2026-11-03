@@ -42,7 +42,7 @@ struct Parsed {
         buffer = prTextEditBufferCreate(text);
         view = prTextEditViewCreate(buffer);
         tree = prSyntaxTreeCreate(language, registry, buffer);
-        prSyntaxTreeUpdate(tree, kInfinityF64);
+        prSyntaxTreeUpdate(tree, kPrF64Infinity);
     }
 
     ~Parsed() {
@@ -157,7 +157,7 @@ TEST_CASE("edits update the tree incrementally, and give the spans of a parse fr
         const char* text = insertions[(seed >> 16) % countOf(insertions)];
         h.replace(at, at + removed, (seed & 1) != 0 ? text : "");
         if (step % 7 == 0 || step == 299) {
-            prSyntaxTreeUpdate(h.tree, kInfinityF64);
+            prSyntaxTreeUpdate(h.tree, kPrF64Infinity);
             PrStringView now = prTextEditBufferText(h.buffer);
             Parsed fresh(prSyntaxTreeSitterC(), std::string(now.data, now.size));
             // Both registries were made the same way, but a category's number depends on the order of first use, so
@@ -248,7 +248,7 @@ TEST_CASE("an edit while a parse is halted starts the parse again from the edite
     prTextEditBufferApply(buffer, &change, 1, PrTextEditOrigin_Local);
     change = PrTextEditChange{.start = 21, .end = 21, .text = " */"};
     prTextEditBufferApply(buffer, &change, 1, PrTextEditOrigin_Local);
-    CHECK(prSyntaxTreeUpdate(tree, kInfinityF64));
+    CHECK(prSyntaxTreeUpdate(tree, kPrF64Infinity));
     CHECK_FALSE(prSyntaxTreeIsPending(tree));
     PrSyntaxSpan first{};
     REQUIRE(prSyntaxTreeSpans(tree, 0, 30, &first, 1) >= 1);
@@ -270,7 +270,7 @@ TEST_CASE("text appended in pieces parses to the tree of the whole") {
         std::string piece = program.substr(at, 97);
         uint32_t size = prTextEditBufferSize(pieces.buffer);
         pieces.replace(size, size, piece);
-        prSyntaxTreeUpdate(pieces.tree, kInfinityF64);
+        prSyntaxTreeUpdate(pieces.tree, kPrF64Infinity);
     }
     std::vector<PrSyntaxSpan> a = whole.all();
     std::vector<PrSyntaxSpan> b = pieces.all();

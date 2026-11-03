@@ -20,7 +20,7 @@ namespace pr_impl {
 // Returns true if every value is finite.
 template <typename... Values>
 bool canvasIsFinite(Values... values) {
-    return (isFiniteF64(values) && ...);
+    return (prF64IsFinite(values) && ...);
 }
 
 // The path of an object that implements CanvasPath (html/#canvaspath): subpaths, whose points each method maps through

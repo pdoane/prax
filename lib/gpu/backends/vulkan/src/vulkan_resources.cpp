@@ -11,6 +11,7 @@
 
 #include "gpu/backends/vulkan/src/vulkan_resources.h"
 
+#include "pr/align.h"
 #include "pr/alloc.h"
 #include "pr/assert.h"
 #include "pr/integer.h"
@@ -60,7 +61,7 @@ void writeImage(VulkanDevice* d, uint32_t slot, VkImageView view, bool storage) 
 void releaseSlot(VulkanDevice* d, uint32_t slot) {
     VulkanResource& r = vulkanResourceAt(d, slot);
     r.attachments.reset();
-    memZero(&r, sizeof(r));
+    prMemZero(&r, sizeof(r));
     d->freeSlots.push(slot);
 }
 
@@ -268,7 +269,7 @@ PrStatus bufferCreate(PrGpuDevice* device, const PrGpuBufferDesc* desc, PrGpuBuf
     }
     d->vk.BindBufferMemory(d->device, buffer, memory.memory, memory.offset);
     if (memory.mapped != nullptr)
-        memZero(memory.mapped, size_t(info.size));
+        prMemZero(memory.mapped, size_t(info.size));
     vulkanName(d, VK_OBJECT_TYPE_BUFFER, uint64_t(buffer), desc->name);
 
     prMutexLock(&d->mutex);
@@ -329,7 +330,7 @@ void bufferUpload(PrGpuDevice* device, PrGpuBuffer buffer, uint64_t offset, cons
     uint64_t at = 0;
     uint8_t* staging = stagingTake(d, size, &page, &at);
     if (staging != nullptr) {
-        memCopy(staging, data, size_t(size));
+        prMemCopy(staging, data, size_t(size));
         VulkanUpload upload{};
         upload.page = page;
         upload.offset = at;
@@ -490,7 +491,7 @@ void textureUpload(PrGpuDevice* device, PrGpuTexture texture, const PrGpuTexture
     uint64_t at = 0;
     uint8_t* staging = stagingTake(d, size, &page, &at);
     if (staging != nullptr) {
-        memCopy(staging, data, size_t(size));
+        prMemCopy(staging, data, size_t(size));
         VulkanUpload upload{};
         upload.page = page;
         upload.offset = at;
@@ -613,7 +614,7 @@ void vulkanName(VulkanDevice* d, VkObjectType type, uint64_t handle, PrStringVie
         return;
     char text[128];
     size_t size = name.size < sizeof(text) - 1 ? name.size : sizeof(text) - 1;
-    memCopy(text, name.data, size);
+    prMemCopy(text, name.data, size);
     text[size] = '\0';
     VkDebugUtilsObjectNameInfoEXT info{};
     info.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT;
@@ -795,7 +796,7 @@ uint32_t vulkanSlotTake(VulkanDevice* d) {
         }
     }
     if (slot != 0)
-        memZero(&d->resources.data[slot], sizeof(VulkanResource));
+        prMemZero(&d->resources.data[slot], sizeof(VulkanResource));
     return slot;
 }
 
@@ -841,7 +842,7 @@ void vulkanRetireDone(VulkanDevice* d) {
         } else {
             VulkanPipeline& pipeline = d->pipelines.data[retired.index - 1];
             d->vk.DestroyPipeline(d->device, pipeline.pipeline, nullptr);
-            memZero(&pipeline, sizeof(pipeline));
+            prMemZero(&pipeline, sizeof(pipeline));
             d->freePipelines.push(retired.index);
         }
     }

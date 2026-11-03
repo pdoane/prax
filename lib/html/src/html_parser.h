@@ -103,7 +103,7 @@ struct HtmlParser {
     Array<HtmlInsertionMode> templateModes;     // html/#stack-of-template-insertion-modes
 
     // The characters that html/#parsing-main-intabletext holds until it knows where they go.
-    TextBuffer pending;
+    PrTextBuffer pending = {};
 
     HtmlParserHost host;
     uint32_t scriptStart;                         // the byte offset after the opening script tag

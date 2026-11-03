@@ -21,7 +21,7 @@ PrStringView withoutFragment(PrStringView url) {
 }
 
 // Appends a version 4 UUID (rfc 9562, section 5.4).
-void appendUuid(TextBuffer* out) {
+void appendUuid(PrTextBuffer* out) {
     uint8_t bytes[16];
     prRandomBytes(bytes, sizeof(bytes));
     bytes[6] = uint8_t((bytes[6] & 0x0f) | 0x40);
@@ -29,9 +29,9 @@ void appendUuid(TextBuffer* out) {
     constexpr char kDigits[] = "0123456789abcdef";
     for (uint32_t i = 0; i < sizeof(bytes); ++i) {
         if (i == 4 || i == 6 || i == 8 || i == 10)
-            textAppendChar(out, '-');
-        textAppendChar(out, kDigits[bytes[i] >> 4]);
-        textAppendChar(out, kDigits[bytes[i] & 15]);
+            prTextBufferAppendChar(out, '-');
+        prTextBufferAppendChar(out, kDigits[bytes[i] >> 4]);
+        prTextBufferAppendChar(out, kDigits[bytes[i] & 15]);
     }
 }
 
@@ -43,12 +43,12 @@ PrFetchBlob* newBlob(PrByteView bytes, PrStringView type) {
     bool valid = true;
     for (size_t i = 0; i < type.size; ++i)
         valid = valid && uint8_t(type.data[i]) >= 0x20 && uint8_t(type.data[i]) <= 0x7e;
-    TextBuffer lowered{};
+    PrTextBuffer lowered{};
     if (valid)
-        textAppend(&lowered, type);
-    textAsciiLower(&lowered);
-    blob->type = prStringCopy(textView(&lowered));
-    textReset(&lowered);
+        prTextBufferAppend(&lowered, type);
+    prTextBufferAsciiLower(&lowered);
+    blob->type = prStringCopy(prTextBufferView(&lowered));
+    prTextBufferReset(&lowered);
     return blob;
 }
 
@@ -153,7 +153,7 @@ const PrFetchBlob* prFetchBlobSlice(const PrFetchBlob* blob, int64_t start, int6
 }
 
 PrString prFetchBlobConvertLineEndings(PrStringView text) {
-    TextBuffer out{};
+    PrTextBuffer out{};
 #if defined(_WIN32)
     constexpr PrStringView kNative = "\r\n";
 #else
@@ -161,17 +161,17 @@ PrString prFetchBlobConvertLineEndings(PrStringView text) {
 #endif
     for (size_t i = 0; i < text.size; ++i) {
         if (text.data[i] == '\r') {
-            textAppend(&out, kNative);
+            prTextBufferAppend(&out, kNative);
             if (i + 1 < text.size && text.data[i + 1] == '\n')
                 ++i;
         } else if (text.data[i] == '\n') {
-            textAppend(&out, kNative);
+            prTextBufferAppend(&out, kNative);
         } else {
-            textAppendChar(&out, text.data[i]);
+            prTextBufferAppendChar(&out, text.data[i]);
         }
     }
-    PrString result = prStringCopy(textView(&out));
-    textReset(&out);
+    PrString result = prStringCopy(prTextBufferView(&out));
+    prTextBufferReset(&out);
     return result;
 }
 
@@ -206,17 +206,17 @@ const PrFetchBlob* PR_NULLABLE prFetchBlobStoreResolve(PrFetchBlobStore* store, 
 }
 
 bool prFetchBlobIsUrl(PrStringView url) {
-    return asciiStartsWithFold(url, "blob:");
+    return prAsciiStartsWithFold(url, "blob:");
 }
 
 PrString prFetchBlobUrlGenerate(PrStringView origin) {
-    TextBuffer url{};
-    textAppend(&url, "blob:");
-    textAppend(&url, origin);
-    textAppendChar(&url, '/');
+    PrTextBuffer url{};
+    prTextBufferAppend(&url, "blob:");
+    prTextBufferAppend(&url, origin);
+    prTextBufferAppendChar(&url, '/');
     appendUuid(&url);
-    PrString result = prStringCopy(textView(&url));
-    textReset(&url);
+    PrString result = prStringCopy(prTextBufferView(&url));
+    prTextBufferReset(&url);
     return result;
 }
 

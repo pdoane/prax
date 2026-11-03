@@ -97,7 +97,7 @@ TEST_CASE("an @supports rule matches where its condition is supported") {
 TEST_CASE("an at-rule() keeps the '@' of its at-keyword") {
     CssTestSheet sheet("@supports at-rule( @supports ) or at-rule(@\\31 23) {}");
     REQUIRE(sheet.count() == 1);
-    TextBuffer buffer;
+    PrTextBuffer buffer = {};
     cssSerializePrelude(&buffer, sheet.rule(0));
     CHECK(take(&buffer) == "at-rule(@supports) or at-rule(@\\31 23)");
 }

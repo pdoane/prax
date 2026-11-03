@@ -49,7 +49,7 @@ using namespace pr_impl;
 
 PrDrawRendererBackend prDrawRendererBackendFromName(PrStringView name) {
     for (PrDrawRendererBackend backend = 0; backend < PrDrawRendererBackend_Count; ++backend) {
-        if (asciiEqualsFold(kBackendNames[backend], name))
+        if (prAsciiEqualsFold(kBackendNames[backend], name))
             return backend;
     }
     return PrDrawRendererBackend_Count;
@@ -192,10 +192,10 @@ void prDrawFrameRenderPixels(PrDrawFrame* frame, PrPixels pixels, PrPixelFormat 
     for (uint32_t y = 0; y < pixels.extent.y; ++y) {
         for (uint32_t x = 0; x < pixels.extent.x; ++x) {
             PrFloat16 wide[4];
-            memCopy(wide, pixels.data + y * pixels.stride + x * 8, sizeof(wide));
-            float a = clampF32(prFloat16ToFloat(wide[3]), 0, 1);
+            prMemCopy(wide, pixels.data + y * pixels.stride + x * 8, sizeof(wide));
+            float a = prF32Clamp(prFloat16ToFloat(wide[3]), 0, 1);
             for (uint32_t k = 0; k < 4; ++k) {
-                float v = clampF32(prFloat16ToFloat(wide[k]), 0, k < 3 ? a : 1);
+                float v = prF32Clamp(prFloat16ToFloat(wide[k]), 0, k < 3 ? a : 1);
                 narrow[y * stride + x * 4 + k] = uint8_t(v * 255 + 0.5f);
             }
         }
@@ -207,7 +207,7 @@ void prDrawFrameRenderPixels(PrDrawFrame* frame, PrPixels pixels, PrPixelFormat 
             PrFloat16 wide[4];
             for (uint32_t k = 0; k < 4; ++k)
                 wide[k] = prFloat16FromFloat(float(narrow[y * stride + x * 4 + k]) / 255);
-            memCopy(pixels.data + y * pixels.stride + x * 8, wide, sizeof(wide));
+            prMemCopy(pixels.data + y * pixels.stride + x * 8, wide, sizeof(wide));
         }
     }
     prMemoryFree(narrow);

@@ -349,11 +349,11 @@ JSValue responseObject(JSContext* ctx, PrXhr* request) {
             // A JSON response is UTF-8 whatever its charset (xhr/#json-response), and is null if it does not parse.
             if (body.size == 0)
                 return JS_NULL;
-            TextBuffer source;
-            textAppend(&source, reinterpret_cast<const char*>(body.data), uint32_t(body.size));
-            textAppendChar(&source, '\0');
-            JSValue parsed = JS_ParseJSON(ctx, textView(&source).data, body.size, "<json>");
-            textReset(&source);
+            PrTextBuffer source = {};
+            prTextBufferAppend(&source, PrStringView{reinterpret_cast<const char*>(body.data), uint32_t(body.size)});
+            prTextBufferAppendChar(&source, '\0');
+            JSValue parsed = JS_ParseJSON(ctx, prTextBufferView(&source).data, body.size, "<json>");
+            prTextBufferReset(&source);
             if (JS_IsException(parsed)) {
                 JS_FreeValue(ctx, JS_GetException(ctx));
                 return JS_NULL;

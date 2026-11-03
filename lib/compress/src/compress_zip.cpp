@@ -197,7 +197,7 @@ PrStatus prCompressZipRead(const PrCompressZip* archive, uint32_t index, uint8_t
         if (record.entry.compressedSize != record.entry.size)
             return PrStatus_InvalidData;
         if (record.entry.size > 0)
-            memCopy(out, input.data, size_t(record.entry.size));
+            prMemCopy(out, input.data, size_t(record.entry.size));
     } else {
         PrCompressRead read{};
         PrStatus status = prCompressCodecDecode(archive->codec, PrCompressFormat_Deflate, input, out, capacity, &read);
@@ -206,6 +206,6 @@ PrStatus prCompressZipRead(const PrCompressZip* archive, uint32_t index, uint8_t
         if (read.written != record.entry.size || read.progress != PrCompressProgress_Done)
             return PrStatus_InvalidData;
     }
-    uint32_t crc = crc32Update(0, PrByteView{out, size_t(record.entry.size)});
+    uint32_t crc = prCrc32Update(0, PrByteView{out, size_t(record.entry.size)});
     return crc == record.entry.crc32 ? PrStatus_Ok : PrStatus_InvalidData;
 }

@@ -123,7 +123,7 @@ void signalSlotChange(PrDomElement* slot) {
 
 // Returns the position of `node` in the document's list of slotted nodes, or kHashMissing.
 uint32_t slottedAt(const DomSlots* slots, const PrDomNode* node) {
-    return slots->slottedIndex.find(hashPointer(node, 0), [&](uint32_t i) { return slots->slotted.data[i].node == node; });
+    return slots->slottedIndex.find(prHashPointer(node, 0), [&](uint32_t i) { return slots->slotted.data[i].node == node; });
 }
 
 // Records that `slot` is the assigned slot of `node`.
@@ -133,7 +133,7 @@ void setSlotted(DomSlots* slots, PrDomNode* node, PrDomElement* slot) {
         slots->slotted.data[at].slot = slot;
         return;
     }
-    slots->slottedIndex.insert(hashPointer(node, 0), slots->slotted.count);
+    slots->slottedIndex.insert(prHashPointer(node, 0), slots->slotted.count);
     slots->slotted.push(DomSlotted{node, slot});
     node->flags |= DomNodeFlag_Slotted;
 }
@@ -145,10 +145,10 @@ void unsetSlotted(DomSlots* slots, PrDomNode* node, const PrDomElement* PR_NULLA
     if (at == kHashMissing || (slot != nullptr && slots->slotted.data[at].slot != slot))
         return;
     node->flags = DomNodeFlags(node->flags & ~DomNodeFlag_Slotted);
-    slots->slottedIndex.erase(hashPointer(node, 0), at);
+    slots->slottedIndex.erase(prHashPointer(node, 0), at);
     uint32_t last = slots->slotted.count - 1;
     if (at != last) {
-        slots->slottedIndex.relocate(hashPointer(slots->slotted.data[last].node, 0), last, at);
+        slots->slottedIndex.relocate(prHashPointer(slots->slotted.data[last].node, 0), last, at);
         slots->slotted.data[at] = slots->slotted.data[last];
     }
     slots->slotted.pop();

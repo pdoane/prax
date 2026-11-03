@@ -26,7 +26,7 @@ constexpr float kModifierTolerance = 0.05f;
 constexpr float kZigZagMaxRidges = 1000;
 
 float distance(PrVec2 a, PrVec2 b) {
-    return sqrtF32((a.x - b.x) * (a.x - b.x) + (a.y - b.y) * (a.y - b.y));
+    return prF32Sqrt((a.x - b.x) * (a.x - b.x) + (a.y - b.y) * (a.y - b.y));
 }
 
 struct Cubic {
@@ -237,7 +237,7 @@ void trim(LottieRender& r, const LottieItem& item, double frame, Array<uint32_t>
     const LottieAnimation& a = *r.a;
     float s = lottieScalar(a, item.props[LottieProp_Start], frame, 0) / 100;
     float e = lottieScalar(a, item.props[LottieProp_End], frame, 100) / 100;
-    float o = fmodF32(lottieScalar(a, item.props[LottieProp_Offset], frame, 0), 360) / 360;
+    float o = prF32Fmod(lottieScalar(a, item.props[LottieProp_Offset], frame, 0), 360) / 360;
     if (o < 0)
         o += 1;
     s = (s > 1 ? 1 : s < 0 ? 0 : s) + o;
@@ -247,8 +247,8 @@ void trim(LottieRender& r, const LottieItem& item, double frame, Array<uint32_t>
         s = e;
         e = swap;
     }
-    s = roundF32(s * 10000) * 0.0001f;
-    e = roundF32(e * 10000) * 0.0001f;
+    s = prF32Round(s * 10000) * 0.0001f;
+    e = prF32Round(e * 10000) * 0.0001f;
     if ((s == 0 && e == 1) || (s == 1 && e == 0))
         return;
     Array<uint32_t> contours;
@@ -342,12 +342,12 @@ void roundCorners(LottieGeometry& g, const LottieContour& c, float round) {
         }
         PrVec2 before = g.vertices.data[c.first + (i == 0 ? c.count - 1 : i - 1)].point;
         float d = distance(v.point, before);
-        float perc = d > 0 ? minF32(d / 2, round) / d : 0;
+        float perc = d > 0 ? prF32Min(d / 2, round) / d : 0;
         PrVec2 p = prVec2Lerp(v.point, before, perc);
         g.vertices.push(LottieVertex{p, p, prVec2Lerp(p, v.point, kLottieQuarterArc)});
         PrVec2 after = g.vertices.data[c.first + (i == c.count - 1 ? 0 : i + 1)].point;
         d = distance(v.point, after);
-        perc = d > 0 ? minF32(d / 2, round) / d : 0;
+        perc = d > 0 ? prF32Min(d / 2, round) / d : 0;
         p = prVec2Lerp(v.point, after, perc);
         g.vertices.push(LottieVertex{p, prVec2Lerp(p, v.point, kLottieQuarterArc), p});
     }
@@ -378,14 +378,14 @@ void puckerBloat(LottieGeometry& g, const LottieContour& c, float amount) {
 // Appends a zig-zag vertex `amplitude` away from `point` across `angle`.
 void zigZagPoint(LottieGeometry& g, PrVec2 point, float angle, float direction, float amplitude, float outAmplitude,
         float inAmplitude) {
-    float angleOut = angle - kPiF32 / 2;
-    float angleIn = angle + kPiF32 / 2;
-    float px = point.x + cosF32(angle) * direction * amplitude;
-    float py = point.y - sinF32(angle) * direction * amplitude;
+    float angleOut = angle - kPrF32Pi / 2;
+    float angleIn = angle + kPrF32Pi / 2;
+    float px = point.x + prF32Cos(angle) * direction * amplitude;
+    float py = point.y - prF32Sin(angle) * direction * amplitude;
     g.vertices.push(LottieVertex{
         PrVec2{px, py},
-        PrVec2{px + cosF32(angleIn) * inAmplitude, py - sinF32(angleIn) * inAmplitude},
-        PrVec2{px + cosF32(angleOut) * outAmplitude, py - sinF32(angleOut) * outAmplitude},
+        PrVec2{px + prF32Cos(angleIn) * inAmplitude, py - prF32Sin(angleIn) * inAmplitude},
+        PrVec2{px + prF32Cos(angleOut) * outAmplitude, py - prF32Sin(angleOut) * outAmplitude},
     });
 }
 
@@ -406,7 +406,7 @@ void zigZag(LottieGeometry& g, const LottieContour& c, float amplitude, float fr
         // The perpendicular of the line from the previous vertex to the next.
         PrVec2 v{next.x - prev.x, next.y - prev.y};
         PrVec2 rotated{v.y, -v.x};
-        float angle = -atan2F32(rotated.y, rotated.x);
+        float angle = -prF32Atan2(rotated.y, rotated.x);
         float prevDist = smooth ? distance(point, prev) : 0;
         float nextDist = smooth ? distance(point, next) : 0;
         zigZagPoint(g, point, angle, direction, amplitude, nextDist / ((frequency + 1) * 2), prevDist / ((frequency + 1) * 2));
@@ -426,7 +426,7 @@ void zigZag(LottieGeometry& g, const LottieContour& c, float amplitude, float fr
             float t = float(k + 1) / (frequency + 1);
             float dist = smooth ? distance(seg.p[3], seg.p[0]) : 0;
             PrVec2 d = cubicDerivative(seg, t);
-            float angle = atan2F32(d.x, d.y);
+            float angle = prF32Atan2(d.x, d.y);
             zigZagPoint(g, cubicAt(seg, t), angle, direction, amplitude, dist / ((frequency + 1) * 2),
                 dist / ((frequency + 1) * 2));
             direction = -direction;
@@ -442,12 +442,12 @@ void twist(LottieGeometry& g, const LottieContour& c, float angle, PrVec2 center
     // vertex. Points farther out rotate more, matching After Effects' Twist.
     float farthest = 0;
     for (uint32_t i = 0; i < c.count; ++i)
-        farthest = maxF32(farthest, distance(g.vertices.data[c.first + i].point, center));
+        farthest = prF32Max(farthest, distance(g.vertices.data[c.first + i].point, center));
     auto turn = [&](PrVec2 p) {
         float d = farthest > 0 ? distance(p, center) / farthest : 0;
-        float radians = angle * kPiF32 / 180 * d;
-        float cs = cosF32(radians);
-        float sn = sinF32(radians);
+        float radians = angle * kPrF32Pi / 180 * d;
+        float cs = prF32Cos(radians);
+        float sn = prF32Sin(radians);
         PrVec2 q{p.x - center.x, p.y - center.y};
         return PrVec2{center.x + q.x * cs - q.y * sn, center.y + q.x * sn + q.y * cs};
     };
@@ -648,8 +648,8 @@ void lottieApplyModifiers(LottieRender& r, double frame) {
                     amount = lottieScalar(a, item.props[LottieProp_Amount], frame, 0);
                 } else if (item.kind == LottieItemKind_ZigZag) {
                     amount = lottieScalar(a, item.props[LottieProp_Size], frame, 0);
-                    float ridges = roundF32(lottieScalar(a, item.props[LottieProp_Points], frame, 0));
-                    frequency = ridges > 0 ? minF32(ridges, kZigZagMaxRidges) : 0;
+                    float ridges = prF32Round(lottieScalar(a, item.props[LottieProp_Points], frame, 0));
+                    frequency = ridges > 0 ? prF32Min(ridges, kZigZagMaxRidges) : 0;
                     pointType = lottieScalar(a, item.props[LottieProp_Roundness], frame, 1);
                 } else {
                     amount = lottieScalar(a, item.props[LottieProp_Amount], frame, 0);

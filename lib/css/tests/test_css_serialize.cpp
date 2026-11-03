@@ -8,19 +8,19 @@ namespace pr_impl {
 namespace {
 
 std::string number(double value) {
-    TextBuffer text;
+    PrTextBuffer text = {};
     cssSerializeNumber(&text, value);
     return take(&text);
 }
 
 std::string ident(PrStringView value) {
-    TextBuffer text;
+    PrTextBuffer text = {};
     cssSerializeIdent(&text, value);
     return take(&text);
 }
 
 std::string string(PrStringView value) {
-    TextBuffer text;
+    PrTextBuffer text = {};
     cssSerializeString(&text, value);
     return take(&text);
 }
@@ -28,7 +28,7 @@ std::string string(PrStringView value) {
 // Tokenizes `source` and serializes every token of it.
 std::string tokens(PrStringView source) {
     CssTestSource s(source);
-    TextBuffer text;
+    PrTextBuffer text = {};
     cssSerializeTokens(&text, &s.ts, cssStreamAll(&s.ts));
     return take(&text);
 }

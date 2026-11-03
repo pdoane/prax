@@ -41,7 +41,7 @@ std::string specified(PrStringView property, PrStringView value) {
     Parsed parsed(property, value);
     if (!parsed.valid)
         return std::string();
-    TextBuffer out = {};
+    PrTextBuffer out = {};
     cssSerializeValues(&out, parsed.run());
     return take(&out);
 }

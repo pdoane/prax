@@ -481,17 +481,17 @@ TEST_CASE("a filter node clamps negative sizes and produces nothing for paramete
     shadow.kind = PrDrawFilterKind_DropShadow;
     shadow.inputs[0] = PrDrawFilterInput_Source;
     shadow.region = PrRect{0, 0, 10, 10};
-    shadow.shadow.sigma = PrVec2{kInfinityF32, 1};
+    shadow.shadow.sigma = PrVec2{kPrF32Infinity, 1};
     prDrawFilterBuilderAdd(builder, &shadow);
     PrDrawFilterNode morphology{};
     morphology.kind = PrDrawFilterKind_Morphology;
     morphology.inputs[0] = PrDrawFilterInput_Source;
-    morphology.morphology.radius = PrVec2{1, kNanF32};
+    morphology.morphology.radius = PrVec2{1, kPrF32Nan};
     prDrawFilterBuilderAdd(builder, &morphology);
     PrDrawFilterNode offset{};
     offset.kind = PrDrawFilterKind_Offset;
     offset.inputs[0] = PrDrawFilterInput_Source;
-    offset.offset = PrVec2{kInfinityF32, 0};
+    offset.offset = PrVec2{kPrF32Infinity, 0};
     prDrawFilterBuilderAdd(builder, &offset);
     const PrDrawFilter* filter = prDrawFilterCreate(builder);
     const PrDrawFilterNode* nodes = prDrawFilterNodes(filter);
@@ -504,8 +504,8 @@ TEST_CASE("a filter node clamps negative sizes and produces nothing for paramete
     }
     CHECK(nodes[1].region.right == 10.0f);
     PrRect outset = prDrawFilterOutset(filter);
-    CHECK(isFiniteF32(outset.left));
-    CHECK(isFiniteF32(outset.right));
+    CHECK(prF32IsFinite(outset.left));
+    CHECK(prF32IsFinite(outset.right));
     prDrawFilterRelease(filter);
     prDrawFilterBuilderDestroy(builder);
 }

@@ -9,8 +9,8 @@ namespace pr_impl {
 namespace {
 
 std::string format(uint64_t value, uint32_t radix = 10) {
-    char text[kU64TextMaxBytes];
-    return std::string(text, formatU64(value, text, radix));
+    char text[kPrU64TextMaxBytes];
+    return std::string(text, prU64Format(value, text, radix));
 }
 
 } // namespace
@@ -35,12 +35,12 @@ TEST_CASE("a digit above nine is a lowercase letter") {
 
 TEST_CASE("a prefix parse reads the digits a text starts with, and says how many") {
     uint64_t value = 99;
-    CHECK(parseU64Prefix("12px", 4, &value) == 2);
+    CHECK(prU64ParsePrefix("12px", 4, &value, 10) == 2);
     CHECK(value == 12);
-    CHECK(parseU64Prefix("ffz", 3, &value, 16) == 2);
+    CHECK(prU64ParsePrefix("ffz", 3, &value, 16) == 2);
     CHECK(value == 255);
-    CHECK(parseU64Prefix("x1", 2, &value) == 0);
+    CHECK(prU64ParsePrefix("x1", 2, &value, 10) == 0);
     CHECK(value == 255);
-    CHECK(parseU64Prefix("99999999999999999999999", 23, &value) == 23);
+    CHECK(prU64ParsePrefix("99999999999999999999999", 23, &value, 10) == 23);
     CHECK(value == UINT64_MAX);
 }

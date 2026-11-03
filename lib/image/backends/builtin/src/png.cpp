@@ -152,8 +152,8 @@ bool readHeader(Png& png, const Chunk& chunk) {
     if (chunk.size < 13) {
         return false;
     }
-    png.width = readBeU32(chunk.data);
-    png.height = readBeU32(chunk.data + 4);
+    png.width = prMemReadBeU32(chunk.data);
+    png.height = prMemReadBeU32(chunk.data + 4);
     png.depth = chunk.data[8];
     png.colorType = PngColorType(chunk.data[9]);
     png.interlaced = chunk.data[12] == 1;
@@ -170,8 +170,8 @@ void readPhys(const Chunk& chunk, ImageMetadata* out) {
     if (chunk.size < 9 || chunk.data[8] != 1) {
         return;
     }
-    out->pixelsPerMeterX = float(readBeU32(chunk.data));
-    out->pixelsPerMeterY = float(readBeU32(chunk.data + 4));
+    out->pixelsPerMeterX = float(prMemReadBeU32(chunk.data));
+    out->pixelsPerMeterY = float(prMemReadBeU32(chunk.data + 4));
 }
 
 // Walks the chunk sequence, collecting the header, the palette, the transparency and every run of pixel data. Returns
@@ -180,7 +180,7 @@ bool readChunks(Png& png, Array<Chunk>& data, const uint8_t* bytes, size_t size)
     size_t at = sizeof(kSignature);
     bool header = false;
     while (at + 8 <= size) {
-        const uint32_t length = readBeU32(bytes + at);
+        const uint32_t length = prMemReadBeU32(bytes + at);
         const uint8_t* type = bytes + at + 4;
         if (length > 0x7FFFFFFFu || size_t(length) + 12 > size - at) {
             return false;
@@ -306,7 +306,7 @@ bool unfilterRow(uint8_t type, uint8_t* row, const uint8_t* above, size_t size, 
 // Returns the sample at `index` in a row of `depth`-bit samples, in the range of that depth.
 uint32_t sampleOf(const uint8_t* row, uint32_t depth, uint32_t index) {
     if (depth == 16) {
-        return readBeU16(row + size_t(index) * 2);
+        return prMemReadBeU16(row + size_t(index) * 2);
     }
     if (depth == 8) {
         return row[index];
@@ -339,7 +339,7 @@ bool isTransparentColor(const Png& png, const uint32_t* samples) {
         return false;
     }
     for (uint32_t channel = 0; channel < channels; ++channel) {
-        if (samples[channel] != readBeU16(png.transparency + size_t(channel) * 2)) {
+        if (samples[channel] != prMemReadBeU16(png.transparency + size_t(channel) * 2)) {
             return false;
         }
     }
@@ -356,11 +356,11 @@ bool emitRow(const Png& png, const uint8_t* row, uint32_t count, uint32_t origin
     if (png.depth == 8 && png.colorType != PngColorType_Indexed && outChannels == channels) {
         uint8_t* out = destination + size_t(originX) * channels;
         if (stepX == 1) {
-            memCopy(out, row, size_t(count) * channels);
+            prMemCopy(out, row, size_t(count) * channels);
             return true;
         }
         for (uint32_t index = 0; index < count; ++index)
-            memCopy(out + size_t(index) * stepX * channels, row + size_t(index) * channels, channels);
+            prMemCopy(out + size_t(index) * stepX * channels, row + size_t(index) * channels, channels);
         return true;
     }
     for (uint32_t index = 0; index < count; ++index) {
@@ -456,30 +456,30 @@ void readRawExif(uint8_t* text, size_t size, ImageMetadata* out) {
     size_t at = 1;
     while (at < size && text[at] != '\n')
         ++at;
-    while (at < size && asciiIsSpace(char(text[at])))
+    while (at < size && prAsciiIsSpace(char(text[at])))
         ++at;
     size_t count = 0;
     const size_t start = at;
-    while (at < size && asciiIsDigit(char(text[at]))) {
+    while (at < size && prAsciiIsDigit(char(text[at]))) {
         const uint32_t digit = text[at++] - '0';
         if (count > size / 10 || count * 10 + digit > size)
             return;
         count = count * 10 + digit;
     }
-    if (at == start || at == size || !asciiIsSpace(char(text[at])) || count < 6)
+    if (at == start || at == size || !prAsciiIsSpace(char(text[at])) || count < 6)
         return;
     for (size_t index = 0; index < count; ++index) {
-        while (at < size && asciiIsSpace(char(text[at])))
+        while (at < size && prAsciiIsSpace(char(text[at])))
             ++at;
-        if (size - at < 2 || !asciiIsHexDigit(char(text[at])) || !asciiIsHexDigit(char(text[at + 1])))
+        if (size - at < 2 || !prAsciiIsHexDigit(char(text[at])) || !prAsciiIsHexDigit(char(text[at + 1])))
             return;
-        text[index] = uint8_t(asciiHexValue(char(text[at])) * 16 + asciiHexValue(char(text[at + 1])));
+        text[index] = uint8_t(prAsciiHexValue(char(text[at])) * 16 + prAsciiHexValue(char(text[at + 1])));
         at += 2;
     }
-    while (at < size && asciiIsSpace(char(text[at])))
+    while (at < size && prAsciiIsSpace(char(text[at])))
         ++at;
     constexpr uint8_t kExifPrefix[] = {'E', 'x', 'i', 'f', 0, 0};
-    if (at == size && memEquals(text, kExifPrefix, sizeof(kExifPrefix)))
+    if (at == size && prMemEquals(text, kExifPrefix, sizeof(kExifPrefix)))
         imageReadExif(text + sizeof(kExifPrefix), count - sizeof(kExifPrefix), out);
 }
 
@@ -502,7 +502,7 @@ PrStatus readProfile(PrCompressCodec* codec, const Chunk& profile, bool compress
         written = read.written;
         valid = status == PrStatus_Ok && read.progress != PrCompressProgress_Input;
     } else {
-        memCopy(text, source, size);
+        prMemCopy(text, source, size);
     }
     if (valid && written <= limit)
         readRawExif(text, written, out);
@@ -548,11 +548,11 @@ struct Writer {
 };
 
 void writeBytes(Writer& writer, PrByteView bytes) {
-    writer.crc = crc32Update(writer.crc, bytes);
+    writer.crc = prCrc32Update(writer.crc, bytes);
     if (writer.size < writer.capacity) {
         const size_t available = writer.capacity - writer.size;
         const size_t count = bytes.size < available ? bytes.size : available;
-        memCopy(writer.out + writer.size, bytes.data, count);
+        prMemCopy(writer.out + writer.size, bytes.data, count);
     }
     writer.size += bytes.size;
 }
@@ -561,19 +561,19 @@ void writeByte(Writer& writer, uint8_t value) {
     writeBytes(writer, {&value, 1});
 }
 
-void writeBeU32(Writer& writer, uint32_t value) {
+void prMemWriteBeU32(Writer& writer, uint32_t value) {
     const uint8_t bytes[] = {uint8_t(value >> 24), uint8_t(value >> 16), uint8_t(value >> 8), uint8_t(value)};
     writeBytes(writer, {bytes, sizeof(bytes)});
 }
 
 void beginChunk(Writer& writer, uint32_t length, const char* type) {
-    writeBeU32(writer, length);
+    prMemWriteBeU32(writer, length);
     writer.crc = 0;
     writeBytes(writer, {reinterpret_cast<const uint8_t*>(type), 4});
 }
 
 void endChunk(Writer& writer) {
-    writeBeU32(writer, writer.crc);
+    prMemWriteBeU32(writer, writer.crc);
 }
 
 // Returns the size of a zlib stream of `size` bytes in stored blocks: its two header bytes, one block header per 65535
@@ -601,7 +601,7 @@ void writeStoredZlib(Writer& writer, PrByteView bytes) {
         writeBytes(writer, PrByteView{bytes.data + written, block});
         written += block;
     } while (written < bytes.size);
-    writeBeU32(writer, adler32Update(1, bytes));
+    prMemWriteBeU32(writer, prAdler32Update(1, bytes));
 }
 
 // Writes each row of `rgba8` to `out` as its filter type and its filtered bytes (png 7.3, 9.2). Each row takes the
@@ -612,7 +612,7 @@ void filterRows(PrPixelView rgba8, uint8_t* out) {
     const size_t rowBytes = size_t(rgba8.extent.x) * kPixelBytes;
     uint8_t* candidates = static_cast<uint8_t*>(prMemoryAlloc(kFilters * rowBytes + rowBytes));
     uint8_t* zeros = candidates + kFilters * rowBytes;
-    memZero(zeros, rowBytes);
+    prMemZero(zeros, rowBytes);
     for (uint32_t y = 0; y < rgba8.extent.y; ++y) {
         const uint8_t* row = rgba8.data + size_t(y) * rgba8.stride;
         const uint8_t* up = y == 0 ? zeros : rgba8.data + size_t(y - 1) * rgba8.stride;
@@ -644,7 +644,7 @@ void filterRows(PrPixelView rgba8, uint8_t* out) {
         uint8_t* target = out + size_t(y) * (rowBytes + 1);
         target[0] = uint8_t(chosen);
         if (rowBytes != 0)
-            memCopy(target + 1, candidates + chosen * rowBytes, rowBytes);
+            prMemCopy(target + 1, candidates + chosen * rowBytes, rowBytes);
     }
     prMemoryFree(candidates);
 }
@@ -665,7 +665,7 @@ PrStatus scanAnimation(const uint8_t* bytes, size_t size, const PrImageLimits& l
     bool defaultFrame = false;
     uint64_t work = size;
     for (size_t at = 33; at + 12 <= size;) {
-        const uint32_t length = readBeU32(bytes + at);
+        const uint32_t length = prMemReadBeU32(bytes + at);
         if (length > 0x7FFFFFFFu || size_t(length) + 12 > size - at)
             return info.frames == 0 ? PrStatus_Ok : PrStatus_InvalidData;
         const uint8_t* type = bytes + at + 4;
@@ -674,22 +674,24 @@ PrStatus scanAnimation(const uint8_t* bytes, size_t size, const PrImageLimits& l
         if (isType(type, "acTL")) {
             if (length != 8 || info.frames != 0 || imageData)
                 return PrStatus_InvalidData;
-            info.frames = readBeU32(data);
-            info.plays = readBeU32(data + 4);
+            info.frames = prMemReadBeU32(data);
+            info.plays = prMemReadBeU32(data + 4);
             if (info.frames == 0)
                 return PrStatus_InvalidData;
             if (info.frames > limits.frames)
                 return PrStatus_Limit;
         } else if (isType(type, "fcTL") && info.frames != 0) {
-            if (length != 26 || readBeU32(data) != sequence++ || (frames != 0 && !frameData) || frames >= info.frames)
+            if (length != 26 || prMemReadBeU32(data) != sequence++)
+                return PrStatus_InvalidData;
+            if ((frames != 0 && !frameData) || frames >= info.frames)
                 return PrStatus_InvalidData;
             PngFrame frame = {};
-            frame.width = readBeU32(data + 4);
-            frame.height = readBeU32(data + 8);
-            frame.x = readBeU32(data + 12);
-            frame.y = readBeU32(data + 16);
-            const uint32_t denominator = readBeU16(data + 22) == 0 ? 100 : readBeU16(data + 22);
-            frame.duration = (uint32_t(readBeU16(data + 20)) * 1000 + denominator / 2) / denominator;
+            frame.width = prMemReadBeU32(data + 4);
+            frame.height = prMemReadBeU32(data + 8);
+            frame.x = prMemReadBeU32(data + 12);
+            frame.y = prMemReadBeU32(data + 16);
+            const uint32_t denominator = prMemReadBeU16(data + 22) == 0 ? 100 : prMemReadBeU16(data + 22);
+            frame.duration = (uint32_t(prMemReadBeU16(data + 20)) * 1000 + denominator / 2) / denominator;
             frame.disposal = data[24];
             frame.blend = data[25];
             if (frame.width == 0 || frame.height == 0 || frame.width > width ||
@@ -727,7 +729,7 @@ PrStatus scanAnimation(const uint8_t* bytes, size_t size, const PrImageLimits& l
             }
         } else if (isType(type, "fdAT") && info.frames != 0) {
             if (length < 4 || !imageData || frames == 0 || (defaultFrame && frames == 1) ||
-                    readBeU32(data) != sequence++)
+                    prMemReadBeU32(data) != sequence++)
                 return PrStatus_InvalidData;
             frameData = true;
             if (animation != nullptr) {
@@ -758,7 +760,7 @@ void composePngFrame(PngAnimation& animation, const PngFrame& frame) {
             Sample* destination = reinterpret_cast<Sample*>(animation.pixels) +
                 (size_t(y + frame.y) * animation.png.width + x + frame.x) * channels;
             if (frame.blend == PngBlend_Source) {
-                memCopy(destination, source, channels * sizeof(Sample));
+                prMemCopy(destination, source, channels * sizeof(Sample));
                 continue;
             }
             const uint64_t alpha = source[colors];
@@ -808,11 +810,11 @@ PrColorSpace cicpSpace(uint8_t primaries, uint8_t transfer, uint8_t matrix, uint
 PrColorSpace profileCicpSpace(const uint8_t* profile, size_t size) {
     if (size < 132)
         return PrColorSpace_Count;
-    uint32_t tags = readBeU32(profile + 128);
+    uint32_t tags = prMemReadBeU32(profile + 128);
     for (uint32_t i = 0; i < tags && 132 + size_t(i + 1) * 12 <= size; ++i) {
         const uint8_t* entry = profile + 132 + size_t(i) * 12;
-        uint32_t offset = readBeU32(entry + 4);
-        uint32_t length = readBeU32(entry + 8);
+        uint32_t offset = prMemReadBeU32(entry + 4);
+        uint32_t length = prMemReadBeU32(entry + 8);
         if (!isType(entry, "cicp") || length < 12 || offset > size || size - offset < 12)
             continue;
         const uint8_t* tag = profile + offset;
@@ -834,7 +836,7 @@ PrStatus pngMetadata(PrCompressCodec* codec, PrByteView bytes, size_t textLimit,
     bool compressed = false;
     bool hasExif = false;
     while (at + 12 <= bytes.size) {
-        const uint32_t length = readBeU32(bytes.data + at);
+        const uint32_t length = prMemReadBeU32(bytes.data + at);
         const uint8_t* type = bytes.data + at + 4;
         if (length > 0x7FFFFFFFu || size_t(length) + 12 > bytes.size - at) {
             break;
@@ -851,7 +853,7 @@ PrStatus pngMetadata(PrCompressCodec* codec, PrByteView bytes, size_t textLimit,
             imageReadExif(chunk.data, chunk.size, out);
         } else if (profile.data == nullptr && (isType(type, "tEXt") || isType(type, "zTXt"))) {
             constexpr char kKeyword[] = "Raw profile type exif";
-            if (chunk.size > sizeof(kKeyword) && memEquals(chunk.data, kKeyword, sizeof(kKeyword))) {
+            if (chunk.size > sizeof(kKeyword) && prMemEquals(chunk.data, kKeyword, sizeof(kKeyword))) {
                 profile = {chunk.data + sizeof(kKeyword), uint32_t(chunk.size - sizeof(kKeyword))};
                 compressed = isType(type, "zTXt");
             }
@@ -872,7 +874,7 @@ PrStatus pngMetadata(PrCompressCodec* codec, PrByteView bytes, size_t textLimit,
 PrColorSpace pngCicpSpace(PrCompressCodec* codec, PrByteView bytes) {
     size_t at = sizeof(kSignature);
     while (at + 12 <= bytes.size) {
-        const uint32_t length = readBeU32(bytes.data + at);
+        const uint32_t length = prMemReadBeU32(bytes.data + at);
         const uint8_t* type = bytes.data + at + 4;
         if (length > 0x7FFFFFFFu || size_t(length) + 12 > bytes.size - at)
             break;
@@ -898,7 +900,7 @@ bool pngIccProfile(PrCompressCodec* codec, PrByteView bytes, size_t limit, uint8
     size_t at = sizeof(kSignature);
     Chunk profile = {};
     while (at + 12 <= bytes.size) {
-        const uint32_t length = readBeU32(bytes.data + at);
+        const uint32_t length = prMemReadBeU32(bytes.data + at);
         const uint8_t* type = bytes.data + at + 4;
         if (length > 0x7FFFFFFFu || size_t(length) + 12 > bytes.size - at)
             break;
@@ -1015,7 +1017,7 @@ bool pngAnimationFrame(PngAnimation& animation, uint32_t frame, uint8_t* pixels,
     if (frame >= animation.frames.count)
         return false;
     if (animation.at == kNoFrame || frame < animation.at) {
-        memZero(animation.pixels, pixelsSize);
+        prMemZero(animation.pixels, pixelsSize);
         animation.at = kNoFrame;
     }
     const uint32_t pixelBytes = outputChannelsOf(animation.png) * outputSampleBytesOf(animation.png);
@@ -1024,18 +1026,19 @@ bool pngAnimationFrame(PngAnimation& animation, uint32_t frame, uint8_t* pixels,
         if (animation.at != kNoFrame) {
             const PngFrame& previous = animation.frames.data[animation.at];
             if (previous.disposal == PngDisposal_Background) {
-                for (uint32_t y = 0; y < previous.height; ++y)
-                    memZero(animation.pixels + (size_t(y + previous.y) * animation.png.width + previous.x) * pixelBytes,
-                        size_t(previous.width) * pixelBytes);
+                for (uint32_t y = 0; y < previous.height; ++y) {
+                    size_t pixel = size_t(y + previous.y) * animation.png.width + previous.x;
+                    prMemZero(animation.pixels + pixel * pixelBytes, size_t(previous.width) * pixelBytes);
+                }
             } else if (previous.disposal == PngDisposal_Previous) {
-                memCopy(animation.pixels, animation.previous, pixelsSize);
+                prMemCopy(animation.pixels, animation.previous, pixelsSize);
             }
         }
         const PngFrame& current = animation.frames.data[next];
         if (current.disposal == PngDisposal_Previous) {
             if (animation.previous == nullptr)
                 animation.previous = static_cast<uint8_t*>(prMemoryAlloc(pixelsSize));
-            memCopy(animation.previous, animation.pixels, pixelsSize);
+            prMemCopy(animation.previous, animation.pixels, pixelsSize);
         }
         Png png = animation.png;
         png.width = current.width;
@@ -1051,7 +1054,7 @@ bool pngAnimationFrame(PngAnimation& animation, uint32_t frame, uint8_t* pixels,
             composePngFrame<uint8_t>(animation, current);
         animation.at = next;
     }
-    memCopy(pixels, animation.pixels, pixelsSize);
+    prMemCopy(pixels, animation.pixels, pixelsSize);
     return true;
 }
 
@@ -1068,8 +1071,8 @@ size_t pngEncode(PrPixelView rgba8, PrCompressCodec* codec, uint8_t* PR_NULLABLE
     // png 11.2.2: the dimensions, then 8 bits per sample, color type 6 for truecolor with alpha, and the single
     // compression, filter and interlace method the format defines.
     beginChunk(writer, 13, "IHDR");
-    writeBeU32(writer, width);
-    writeBeU32(writer, height);
+    prMemWriteBeU32(writer, width);
+    prMemWriteBeU32(writer, height);
     writeByte(writer, 8);
     writeByte(writer, 6);
     writeByte(writer, 0);

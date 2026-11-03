@@ -117,7 +117,7 @@ bool decodes(PrStringView type, const HtmlImageEnvironment& environment) {
     if (essence.size == 0 || essence.size > sizeof(lower))
         return false;
     for (size_t i = 0; i < essence.size; ++i)
-        lower[i] = asciiLower(essence.data[i]);
+        lower[i] = prAsciiLower(essence.data[i]);
     PrStringView folded{lower, essence.size};
     if (folded == "image/svg+xml")
         return true;

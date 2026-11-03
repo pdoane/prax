@@ -69,7 +69,7 @@ PrLayoutBoxStyle inset(PrLayoutBoxStyle box, float top, float right, float botto
     return box;
 }
 
-constexpr float kAuto = kNanF32;
+constexpr float kAuto = kPrF32Nan;
 
 // A box with a border, padding and margins of `width` on every side, each where it is not below zero.
 PrLayoutBoxStyle bordered(PrLayoutBoxStyle box, float width) {

@@ -77,7 +77,7 @@ void releaseGraph(Graph& g) {
 template <typename T>
 T* copyOf(const T* items, uint32_t count) {
     T* copy = static_cast<T*>(prMemoryAlloc(sizeof(T) * (count != 0 ? count : 1)));
-    memCopy(copy, items, sizeof(T) * count);
+    prMemCopy(copy, items, sizeof(T) * count);
     return copy;
 }
 
@@ -116,17 +116,17 @@ bool validInput(PrDrawFilterInput input, uint32_t index) {
 }
 
 bool finite(float value) {
-    return isFiniteF32(value);
+    return prF32IsFinite(value);
 }
 
 bool finite(PrVec2 value) {
-    return isFiniteF32(value.x) && isFiniteF32(value.y);
+    return prF32IsFinite(value.x) && prF32IsFinite(value.y);
 }
 
 // Clamps a negative size to zero, and returns true if the size is finite.
 bool clampSize(float& value) {
-    value = maxF32(value, 0);
-    return isFiniteF32(value);
+    value = prF32Max(value, 0);
+    return prF32IsFinite(value);
 }
 
 bool clampSize(PrVec2& value) {
@@ -138,7 +138,7 @@ bool clampSize(PrVec2& value) {
 // Returns how far a node may move the content that it reads, in the group's space.
 PrRect nodeOutset(const PrDrawFilterNode& n) {
     auto blurReach = [](PrVec2 sigma) {
-        return PrVec2{4 * absF32(sigma.x), 4 * absF32(sigma.y)};
+        return PrVec2{4 * prF32Abs(sigma.x), 4 * prF32Abs(sigma.y)};
     };
     PrVec2 reach{0, 0};
     PrVec2 shift{0, 0};
@@ -166,18 +166,18 @@ PrRect nodeOutset(const PrDrawFilterNode& n) {
         case PrDrawFilterKind_OuterGlow:
         case PrDrawFilterKind_InnerGlow:
             reach = blurReach(PrVec2{n.glow.sigma, n.glow.sigma});
-            reach.x += maxF32(n.glow.spread, 0);
-            reach.y += maxF32(n.glow.spread, 0);
+            reach.x += prF32Max(n.glow.spread, 0);
+            reach.y += prF32Max(n.glow.spread, 0);
             break;
         case PrDrawFilterKind_DisplacementMap:
-            reach = PrVec2{absF32(n.displacement.scale) / 2, absF32(n.displacement.scale) / 2};
+            reach = PrVec2{prF32Abs(n.displacement.scale) / 2, prF32Abs(n.displacement.scale) / 2};
             break;
         default:
             break;
     }
     return PrRect{
-        -reach.x - maxF32(shift.x, 0), -reach.y - maxF32(shift.y, 0),
-        reach.x - minF32(shift.x, 0), reach.y - minF32(shift.y, 0),
+        -reach.x - prF32Max(shift.x, 0), -reach.y - prF32Max(shift.y, 0),
+        reach.x - prF32Min(shift.x, 0), reach.y - prF32Min(shift.y, 0),
     };
 }
 
@@ -294,9 +294,9 @@ PrDrawFilterInput prDrawFilterBuilderAdd(PrDrawFilterBuilder* builder, const PrD
                 double magnitude = 0;
                 for (uint32_t i = 0; i < extent.x * extent.y; ++i) {
                     sum += double(kernel[i]);
-                    magnitude += double(absF32(kernel[i]));
+                    magnitude += double(prF32Abs(kernel[i]));
                 }
-                copy.convolution.divisor = absF64(sum) <= magnitude * 1e-6 ? 1.0f : float(sum);
+                copy.convolution.divisor = prF64Abs(sum) <= magnitude * 1e-6 ? 1.0f : float(sum);
             }
             break;
         }
@@ -352,7 +352,7 @@ const PrDrawFilter* prDrawFilterCreate(PrDrawFilterBuilder* builder) {
     filter->references.storeRelaxed(1);
     filter->id = drawNextId();
     filter->graph = b->graph;
-    memZero(&b->graph, sizeof(Graph));
+    prMemZero(&b->graph, sizeof(Graph));
     // How far the result may read from its inputs. This is the sum of each node's reach along the longest chain, which
     // the sum of every node's reach bounds from above.
     PrRect outset{0, 0, 0, 0};
@@ -407,8 +407,8 @@ PrAffine4 prDrawColorMatrixSaturate(float amount) {
 }
 
 PrAffine4 prDrawColorMatrixHueRotate(float radians) {
-    float c = cosF32(radians);
-    float s = sinF32(radians);
+    float c = prF32Cos(radians);
+    float s = prF32Sin(radians);
     const float rows[3][3] = {
         {kRed + c * (1 - kRed) - s * kRed, kGreen - c * kGreen - s * kGreen, kBlue - c * kBlue + s * (1 - kBlue)},
         {kRed - c * kRed + s * 0.143f, kGreen + c * (1 - kGreen) + s * 0.140f, kBlue - c * kBlue - s * 0.283f},

@@ -115,8 +115,8 @@ struct LspClient {
 // Sends the writer's text as a message, after its header.
 void sendWritten(LspClient* client) {
     PrStringView body = prJsonWriterText(client->writer);
-    char digits[kU64TextMaxBytes];
-    size_t length = formatU64(body.size, digits);
+    char digits[kPrU64TextMaxBytes];
+    size_t length = prU64Format(body.size, digits, 10);
     client->frame.clear();
     const char header[] = "Content-Length: ";
     client->frame.append(reinterpret_cast<const uint8_t*>(header), sizeof(header) - 1);
@@ -422,7 +422,7 @@ PrLspRequest sendPositionRequest(LspDocument* document, PrStringView method, uin
 
 // Returns true if a byte stands for itself in a path of a URI.
 bool isPathByte(char c) {
-    return asciiIsLetter(c) || asciiIsDigit(c) || c == '-' || c == '.' || c == '_' || c == '~' || c == '/' ||
+    return prAsciiIsLetter(c) || prAsciiIsDigit(c) || c == '-' || c == '.' || c == '_' || c == '~' || c == '/' ||
         c == ':' || c == '@' || c == '!' || c == '$' || c == '&' || c == '\'' || c == '(' || c == ')' || c == '*' ||
         c == '+' || c == ',' || c == ';' || c == '=';
 }
@@ -649,13 +649,13 @@ void publishDiagnostics(LspClient* client, const PrJson* json, PrJsonValueIndex 
         record.sourceSize = uint32_t(source.size);
         PrJsonValueIndex code = member(json, item, "code");
         PrStringView codeText = prJsonString(json, code);
-        char digits[kU64TextMaxBytes + 1];
+        char digits[kPrU64TextMaxBytes + 1];
         if (prJsonKind(json, code) == PrJsonKind_Number) {
             double value = prJsonNumber(json, code, 0);
             size_t length = 0;
             if (value < 0)
                 digits[length++] = '-';
-            length += formatU64(uint64_t(value < 0 ? -value : value), digits + length);
+            length += prU64Format(uint64_t(value < 0 ? -value : value), digits + length, 10);
             codeText = PrStringView{digits, length};
         }
         record.code = keepString(document, codeText);
@@ -695,13 +695,13 @@ void handleMessage(LspClient* client, PrStringView body) {
 bool contentLength(PrStringView header, uint64_t* out) {
     size_t at = 0;
     while (at < header.size) {
-        size_t end = stringFind(stringSlice(header, at, header.size - at), "\r\n");
+        size_t end = prStringFind(prStringSlice(header, at, header.size - at), "\r\n");
         end = end == header.size - at ? header.size : at + end;
-        PrStringView line = stringSlice(header, at, end - at);
-        size_t colon = stringFind(line, ':');
-        if (colon != line.size && asciiEqualsFold(stringSlice(line, 0, colon), "content-length")) {
-            PrStringView value = stringTrim(stringSlice(line, colon + 1, line.size - colon - 1));
-            return parseU64(value.data, value.size, out);
+        PrStringView line = prStringSlice(header, at, end - at);
+        size_t colon = prStringFindByte(line, ':');
+        if (colon != line.size && prAsciiEqualsFold(prStringSlice(line, 0, colon), "content-length")) {
+            PrStringView value = prStringTrim(prStringSlice(line, colon + 1, line.size - colon - 1));
+            return prU64Parse(value.data, value.size, out, 10);
         }
         at = end + 2;
     }
@@ -715,20 +715,20 @@ void handleReceived(LspClient* client) {
             reinterpret_cast<const char*>(client->received.data + client->receivedStart),
             client->received.count - client->receivedStart,
         };
-        size_t headerEnd = stringFind(waiting, "\r\n\r\n");
+        size_t headerEnd = prStringFind(waiting, "\r\n\r\n");
         if (headerEnd == waiting.size) {
             if (waiting.size > kHeaderMaxBytes)
                 fail(client);
             return;
         }
         uint64_t length = 0;
-        if (!contentLength(stringSlice(waiting, 0, headerEnd), &length) || length > kPrTextEditBufferMaxBytes) {
+        if (!contentLength(prStringSlice(waiting, 0, headerEnd), &length) || length > kPrTextEditBufferMaxBytes) {
             fail(client);
             return;
         }
         if (waiting.size - headerEnd - 4 < length)
             return;
-        handleMessage(client, stringSlice(waiting, headerEnd + 4, size_t(length)));
+        handleMessage(client, prStringSlice(waiting, headerEnd + 4, size_t(length)));
         client->receivedStart += uint32_t(headerEnd + 4 + length);
     }
 }
@@ -761,7 +761,7 @@ PrLspClient* prLspClientCreate(const PrLspClientDesc* desc) {
         size_t slash = root.size;
         while (slash > 0 && root.data[slash - 1] != '/' && root.data[slash - 1] != '\\')
             --slash;
-        client->rootName = prStringCopy(stringSlice(root, slash, root.size - slash));
+        client->rootName = prStringCopy(prStringSlice(root, slash, root.size - slash));
     }
 
     PrJsonWriter* writer = client->writer;
@@ -1164,7 +1164,7 @@ uint32_t prLspCompletions(const PrJson* json, PrJsonValueIndex result, PrLspComp
 PrString prLspUriFromPath(PrStringView path) {
     PrString uri = prStringCopy("file://");
     // A drive letter's path, as Windows spells one, is a path below the URI's root.
-    bool drive = path.size >= 2 && asciiIsLetter(path.data[0]) && path.data[1] == ':';
+    bool drive = path.size >= 2 && prAsciiIsLetter(path.data[0]) && path.data[1] == ':';
     if (drive)
         prStringAppend(&uri, "/");
     const char hex[] = "0123456789ABCDEF";
@@ -1181,30 +1181,30 @@ PrString prLspUriFromPath(PrStringView path) {
 }
 
 PrString prLspPathFromUri(PrStringView uri) {
-    if (uri.size < 7 || !asciiEqualsFold(stringSlice(uri, 0, 7), "file://"))
+    if (uri.size < 7 || !prAsciiEqualsFold(prStringSlice(uri, 0, 7), "file://"))
         return prStringNull();
-    PrStringView rest = stringSlice(uri, 7, uri.size - 7);
-    size_t slash = stringFind(rest, '/');
-    PrStringView authority = stringSlice(rest, 0, slash);
-    PrStringView path = stringSlice(rest, slash, rest.size - slash);
+    PrStringView rest = prStringSlice(uri, 7, uri.size - 7);
+    size_t slash = prStringFindByte(rest, '/');
+    PrStringView authority = prStringSlice(rest, 0, slash);
+    PrStringView path = prStringSlice(rest, slash, rest.size - slash);
     PrString decoded = prStringEmpty();
     // A host other than the local one names a share, as a UNC path does.
-    if (authority.size != 0 && !asciiEqualsFold(authority, "localhost")) {
+    if (authority.size != 0 && !prAsciiEqualsFold(authority, "localhost")) {
         prStringAppend(&decoded, "//");
         prStringAppend(&decoded, authority);
     }
     for (size_t i = 0; i < path.size; ++i) {
         char c = path.data[i];
-        if (c == '%' && i + 2 < path.size && asciiIsHexDigit(path.data[i + 1]) && asciiIsHexDigit(path.data[i + 2])) {
-            c = char(asciiHexValue(path.data[i + 1]) << 4 | asciiHexValue(path.data[i + 2]));
+        if (c == '%' && i + 2 < path.size && prAsciiIsHexDigit(path.data[i + 1]) && prAsciiIsHexDigit(path.data[i + 2])) {
+            c = char(prAsciiHexValue(path.data[i + 1]) << 4 | prAsciiHexValue(path.data[i + 2]));
             i += 2;
         }
         prStringAppend(&decoded, PrStringView{&c, 1});
     }
 #if defined(_WIN32)
     PrStringView view = prStringView(&decoded);
-    if (view.size >= 3 && view.data[0] == '/' && asciiIsLetter(view.data[1]) && view.data[2] == ':') {
-        PrString drive = prStringCopy(stringSlice(view, 1, view.size - 1));
+    if (view.size >= 3 && view.data[0] == '/' && prAsciiIsLetter(view.data[1]) && view.data[2] == ':') {
+        PrString drive = prStringCopy(prStringSlice(view, 1, view.size - 1));
         prStringReset(&decoded);
         decoded = drive;
     }

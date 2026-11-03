@@ -431,7 +431,7 @@ void cssStyleValuesRelease(const CssStyleValues* PR_NULLABLE values);
 // Replaces `out` with the families of a computed font-family (css-fonts-4/#font-family-prop), whose names are views of
 // `names`, which the call also replaces. A keyword, alone or in generic(), is a generic family. A string or a sequence
 // of identifiers names a family, never a generic one.
-void cssFontFamilies(CssValueRun run, TextBuffer* names, Array<PrFontFamily>* out);
+void cssFontFamilies(CssValueRun run, PrTextBuffer* names, Array<PrFontFamily>* out);
 
 // Returns what the style's font-variant longhands, font-kerning, font-feature-settings and font-synthesis longhands ask
 // of the shaping of its text (css-fonts-4/#feature-variation-precedence), or null if they ask for shaping's defaults.

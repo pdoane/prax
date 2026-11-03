@@ -59,7 +59,7 @@ void* prMemoryAllocZeroed(size_t size) {
     return checked(PR_PLATFORM_ALLOC_ZEROED_BYTES(requested(size)));
 #else
     void* memory = checked(PR_PLATFORM_ALLOC_BYTES(requested(size)));
-    memZero(memory, size);
+    prMemZero(memory, size);
     return memory;
 #endif
 }

@@ -51,7 +51,7 @@ TEST_CASE("a folded word is every ASCII uppercase byte lowered, and nothing else
         char text[8] = {char(byte), char(byte), char(byte), char(byte), char(byte), char(byte), char(byte), char(byte)};
         char lowered[8];
         for (uint32_t i = 0; i < 8; ++i)
-            lowered[i] = asciiLower(text[i]);
+            lowered[i] = prAsciiLower(text[i]);
         INFO("byte ", byte);
         CHECK(nameFold(wordOf(text, 8)) == wordOf(lowered, 8));
     }
@@ -141,11 +141,11 @@ TEST_CASE("a folded comparison answers what asciiEqualsFold answers") {
 
     nameHashLower("font\rface", 9, kSeed, &word);
     CHECK(!nameEqualsLower(face, "font\rface", word));
-    CHECK(!asciiEqualsFold("font\rface", face));
+    CHECK(!prAsciiEqualsFold("font\rface", face));
 
     nameHashLower("h\x11", 2, kSeed, &word);
     CHECK(!nameEqualsLower(h1, "h\x11", word));
-    CHECK(!asciiEqualsFold("h\x11", h1));
+    CHECK(!prAsciiEqualsFold("h\x11", h1));
 
     nameHashLower("H1", 2, kSeed, &word);
     CHECK(nameEqualsLower(h1, "H1", word));

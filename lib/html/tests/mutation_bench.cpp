@@ -36,7 +36,7 @@ struct Work {
     PrStringView html;
     PrStringView small;
     PrStringView large;
-    TextBuffer unique;          // the text that `unique` made last
+    PrTextBuffer unique;          // the text that `unique` made last
     uint32_t uniqueCount;
     PrDomNode* PR_NULLABLE subtree;
     PrDomNode* PR_NULLABLE detached[2];
@@ -90,19 +90,19 @@ uint32_t walk(PrDomNode* node) {
 }
 
 // Writes the markup of a tree that `build` makes.
-void markup(TextBuffer* out, uint32_t depth, uint32_t fanout) {
+void markup(PrTextBuffer* out, uint32_t depth, uint32_t fanout) {
     PrStringView tag = depth > 1 ? "div" : "span";
     for (uint32_t i = 0; i < fanout; ++i) {
-        textAppend(out, "<");
-        textAppend(out, tag);
-        textAppend(out, " class=\"item\">");
+        prTextBufferAppend(out, "<");
+        prTextBufferAppend(out, tag);
+        prTextBufferAppend(out, " class=\"item\">");
         if (depth > 1)
             markup(out, depth - 1, fanout);
         else
-            textAppend(out, "text");
-        textAppend(out, "</");
-        textAppend(out, tag);
-        textAppend(out, ">");
+            prTextBufferAppend(out, "text");
+        prTextBufferAppend(out, "</");
+        prTextBufferAppend(out, tag);
+        prTextBufferAppend(out, ">");
     }
 }
 
@@ -124,10 +124,10 @@ void clear(Work* work) {
 // Returns `text` with a comment after it that differs at every call, so that no cache holds a parse of it. bench.js's
 // `unique` makes the same text.
 PrStringView unique(Work* work, PrStringView text) {
-    textClear(&work->unique);
-    textAppend(&work->unique, text);
+    prTextBufferClear(&work->unique);
+    prTextBufferAppend(&work->unique, text);
     harnessAppendFormat(&work->unique, "\n/* %u */", ++work->uniqueCount);
-    return textView(&work->unique);
+    return prTextBufferView(&work->unique);
 }
 
 PrCssStyleSheet* sheetOf(PrStringView text) {
@@ -455,13 +455,13 @@ int main(int argc, char** argv) {
         fprintf(stderr, "usage: mutation_bench <small.css> <large.css> [case]\n");
         return 2;
     }
-    TextBuffer small = {};
-    TextBuffer large = {};
+    PrTextBuffer small = {};
+    PrTextBuffer large = {};
     if (!harnessReadFile(&small, argv[1]) || !harnessReadFile(&large, argv[2])) {
         fprintf(stderr, "mutation_bench: cannot read the stylesheets\n");
         return 1;
     }
-    TextBuffer html = {};
+    PrTextBuffer html = {};
     markup(&html, 3, 10);
 
     PrHtmlPage* page = prHtmlPageCreate(nullptr);
@@ -473,9 +473,9 @@ int main(int argc, char** argv) {
     work.other = prDomElementAsNode(element(&work, "div"));
     adopt(body, work.host);
     adopt(body, work.other);
-    work.html = textView(&html);
-    work.small = textView(&small);
-    work.large = textView(&large);
+    work.html = prTextBufferView(&html);
+    work.small = prTextBufferView(&small);
+    work.large = prTextBufferView(&large);
 
     PrStringView only = argc == 4 ? argv[3] : PrStringView{};
     printf("[");
@@ -494,9 +494,9 @@ int main(int argc, char** argv) {
     printf("\n]\n");
 
     prHtmlPageDestroy(page);
-    textReset(&html);
-    textReset(&work.unique);
-    textReset(&small);
-    textReset(&large);
+    prTextBufferReset(&html);
+    prTextBufferReset(&work.unique);
+    prTextBufferReset(&small);
+    prTextBufferReset(&large);
     return 0;
 }

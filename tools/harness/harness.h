@@ -12,8 +12,6 @@ PR_ASSUME_NONNULL_BEGIN
 
 namespace harness {
 
-using pr::TextBuffer;
-
 // The maximum number of fields, and of bytes, in the header line of a case.
 constexpr uint32_t kHarnessMaxFields = 4;
 constexpr uint32_t kHarnessMaxHeaderBytes = 256;
@@ -21,14 +19,14 @@ constexpr uint32_t kHarnessMaxHeaderBytes = 256;
 // One case read from standard input: a header line with a byte count and the fields of the case, followed by that many
 // bytes.
 struct HarnessCase {
-    TextBuffer input;                        // the bytes the header counts
+    PrTextBuffer input;                      // the bytes the header counts
     char header[kHarnessMaxHeaderBytes];     // the header line, each field NUL terminated in place
     PrStringView fields[kHarnessMaxFields];  // the words after the byte count, in `header`
     uint32_t fieldCount;
 };
 
 // Reads the whole file at `path` into `out`, replacing its contents. Returns false if the file cannot be read.
-bool harnessReadFile(TextBuffer* out, const char* path);
+bool harnessReadFile(PrTextBuffer* out, const char* path);
 
 // Returns the name of the file at `path`, without its directory.
 PrStringView harnessFileName(const char* path);
@@ -43,13 +41,13 @@ void harnessCaseReset(HarnessCase* test);
 void harnessWriteLine(PrStringView text);
 
 // Appends `text` to `out` as a JSON string. A surrogate in its UTF-8 form is written as its \u escape.
-void harnessWriteString(TextBuffer* out, PrStringView text);
+void harnessWriteString(PrTextBuffer* out, PrStringView text);
 
 // Appends the decimal digits of `value` to `out`.
-void harnessWriteNumber(TextBuffer* out, uint64_t value);
+void harnessWriteNumber(PrTextBuffer* out, uint64_t value);
 
 // Appends what printf writes for `format` and its arguments to `out`.
-void harnessAppendFormat(TextBuffer* out, const char* format, ...) PR_PRINTF_FORMAT(2, 3);
+void harnessAppendFormat(PrTextBuffer* out, const char* format, ...) PR_PRINTF_FORMAT(2, 3);
 
 // Reads every byte of `text` once, 64 at a time, and returns the bytes ORed into one.
 uint8_t harnessReadBound(PrStringView text);
@@ -130,14 +128,14 @@ void harnessRepeat(Run run) {
 // mJ, "time": ms, "gpu": ms}, ...}. The "gpu" member is present only if a device worked. The time is also a member of
 // the row itself, under the name, and a browser's row has that member too.
 struct HarnessCounts {
-    TextBuffer text;
+    PrTextBuffer text;
 };
 
 // Adds `cost` to the counts under `name`.
 void harnessCountsAdd(HarnessCounts* counts, PrStringView name, const HarnessCounters& cost);
 
 // Appends the counts to `out` as the row's "counts" member, preceded by a comma, and frees them.
-void harnessCountsWrite(HarnessCounts* counts, TextBuffer* out);
+void harnessCountsWrite(HarnessCounts* counts, PrTextBuffer* out);
 
 // Prints the row of a case in a JSON array of rows, preceded by a comma unless it is the first row. The row holds the
 // case's name, its time, and the counts of its cost under "time".

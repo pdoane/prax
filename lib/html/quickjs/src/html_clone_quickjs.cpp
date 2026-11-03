@@ -53,7 +53,7 @@ constexpr uint32_t kErrorNameCount = countOf(kErrorNames);
 
 struct CloneWriter {
     JSContext* ctx;
-    TextBuffer out;
+    PrTextBuffer out = {};
     Array<void*> objects;       // the objects met so far, by number
     HashIndex index;            // positions in `objects`
     const Array<JSValue>* PR_NULLABLE transfer;
@@ -67,7 +67,7 @@ bool cloneFail(JSContext* ctx) {
 }
 
 void putBytes(CloneWriter* w, const void* data, size_t size) {
-    textAppend(&w->out, PrStringView{static_cast<const char*>(data), size});
+    prTextBufferAppend(&w->out, PrStringView{static_cast<const char*>(data), size});
 }
 
 void putTag(CloneWriter* w, CloneTag tag) {
@@ -83,7 +83,7 @@ void putF64(CloneWriter* w, double value) {
 }
 
 uint32_t hashOf(void* object) {
-    return hashPointer(object, 0);
+    return prHashPointer(object, 0);
 }
 
 // Records `object` and returns false, or writes a reference to it and returns true if the stream already holds it.
@@ -125,7 +125,7 @@ bool writeProperties(CloneWriter* w, JSValueConst object) {
     uint32_t count = 0;
     if (JS_GetOwnPropertyNames(w->ctx, &names, &count, object, JS_GPN_STRING_MASK | JS_GPN_ENUM_ONLY) < 0)
         return false;
-    uint32_t countAt = uint32_t(textView(&w->out).size);
+    uint32_t countAt = uint32_t(prTextBufferView(&w->out).size);
     putU32(w, 0);
     uint32_t written = 0;
     bool ok = true;
@@ -144,7 +144,7 @@ bool writeProperties(CloneWriter* w, JSValueConst object) {
     }
     JS_FreePropertyEnum(w->ctx, names, count);
     if (ok)
-        memcpy(w->out.text.data + countAt, &written, sizeof(written));
+        memcpy(w->out.data + countAt, &written, sizeof(written));
     return ok;
 }
 
@@ -669,10 +669,10 @@ bool jsHtmlSerialize(JSContext* ctx, JSValueConst value, const Array<JSValue>* P
     writer.objects.reset();
     writer.index.reset();
     if (!ok) {
-        textReset(&writer.out);
+        prTextBufferReset(&writer.out);
         return false;
     }
-    out->bytes = textTake(&writer.out);
+    out->bytes = prTextBufferTake(&writer.out);
     for (uint32_t i = 0; transfer != nullptr && i < transfer->count; ++i) {
         PrHtmlMessagePort* port = jsHtmlMessagePortOf(ctx, transfer->data[i]);
         if (port != nullptr)

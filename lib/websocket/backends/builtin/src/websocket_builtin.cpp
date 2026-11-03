@@ -11,6 +11,7 @@
 #include "pr/mem.h"
 #include "pr/random.h"
 #include "pr/string_ops.h"
+#include "pr/string_trim.h"
 #include "pr/text_buffer.h"
 #include "pr/url.h"
 #include "pr/utf8.h"
@@ -99,7 +100,7 @@ bool listHas(PrStringView value, PrStringView token) {
         size_t end = start;
         while (end < value.size && value.data[end] != ',')
             ++end;
-        if (asciiEqualsFold(stringTrim(stringSlice(value, start, end - start), asciiIsTabOrSpace), token))
+        if (prAsciiEqualsFold(stringTrimBy(prStringSlice(value, start, end - start), prAsciiIsTabOrSpace), token))
             return true;
         start = end + 1;
     }
@@ -220,7 +221,7 @@ bool lineAt(PrStringView text, size_t start, PrStringView* line, size_t* next) {
     if (end == text.size)
         return false;
     size_t lineEnd = end > start && text.data[end - 1] == '\r' ? end - 1 : end;
-    *line = stringSlice(text, start, lineEnd - start);
+    *line = prStringSlice(text, start, lineEnd - start);
     *next = end + 1;
     return true;
 }
@@ -229,7 +230,7 @@ bool lineAt(PrStringView text, size_t start, PrStringView* line, size_t* next) {
 bool acceptHead(Socket* socket, PrStringView head) {
     PrStringView line{};
     size_t at = 0;
-    if (!lineAt(head, 0, &line, &at) || !stringStartsWith(line, "HTTP/1.1 101"))
+    if (!lineAt(head, 0, &line, &at) || !prStringStartsWith(line, "HTTP/1.1 101"))
         return false;
     if (line.size > 12 && line.data[12] != ' ')
         return false;
@@ -237,23 +238,23 @@ bool acceptHead(Socket* socket, PrStringView head) {
     bool connection = false;
     bool accepted = false;
     while (lineAt(head, at, &line, &at) && line.size != 0) {
-        size_t colon = stringFind(line, ':');
+        size_t colon = prStringFindByte(line, ':');
         if (colon == line.size)
             return false;
-        PrStringView name = stringSlice(line, 0, colon);
-        PrStringView value = stringTrim(stringSlice(line, colon + 1, line.size - colon - 1), asciiIsTabOrSpace);
-        if (asciiEqualsFold(name, "upgrade")) {
-            upgrade = asciiEqualsFold(value, "websocket");
-        } else if (asciiEqualsFold(name, "connection")) {
+        PrStringView name = prStringSlice(line, 0, colon);
+        PrStringView value = stringTrimBy(prStringSlice(line, colon + 1, line.size - colon - 1), prAsciiIsTabOrSpace);
+        if (prAsciiEqualsFold(name, "upgrade")) {
+            upgrade = prAsciiEqualsFold(value, "websocket");
+        } else if (prAsciiEqualsFold(name, "connection")) {
             connection = listHas(value, "upgrade");
-        } else if (asciiEqualsFold(name, "sec-websocket-accept")) {
+        } else if (prAsciiEqualsFold(name, "sec-websocket-accept")) {
             accepted = value == viewOf(socket->accept);
-        } else if (asciiEqualsFold(name, "sec-websocket-extensions")) {
+        } else if (prAsciiEqualsFold(name, "sec-websocket-extensions")) {
             // The client offers no extensions, so the server may use none.
             if (value.size != 0)
                 return false;
-        } else if (asciiEqualsFold(name, "sec-websocket-protocol")) {
-            if (value.size == 0 || !listHas(viewOf(socket->offered), value) || stringContains(value, ","))
+        } else if (prAsciiEqualsFold(name, "sec-websocket-protocol")) {
+            if (value.size == 0 || !listHas(viewOf(socket->offered), value) || prStringContains(value, ","))
                 return false;
             prStringReplace(&socket->protocol, value);
         }
@@ -265,13 +266,13 @@ bool acceptHead(Socket* socket, PrStringView head) {
 // all arrived.
 bool readHead(Socket* socket) {
     PrStringView text{reinterpret_cast<const char*>(socket->input.data), socket->input.count};
-    size_t end = stringFind(text, "\r\n\r\n");
+    size_t end = prStringFind(text, "\r\n\r\n");
     if (end == text.size) {
         if (text.size > kHeadMaxBytes)
             failSocket(socket, kCloseAbnormal, PrNetError_Protocol);
         return false;
     }
-    if (!acceptHead(socket, stringSlice(text, 0, end + 2))) {
+    if (!acceptHead(socket, prStringSlice(text, 0, end + 2))) {
         failSocket(socket, kCloseAbnormal, PrNetError_Protocol);
         return false;
     }
@@ -518,53 +519,53 @@ void writeRequest(Socket* socket, const PrUrl* url, const PrWebSocketDesc* desc)
     uint8_t nonce[16];
     prRandomBytes(nonce, sizeof(nonce));
     char key[24];
-    base64Encode(PrStringView{reinterpret_cast<const char*>(nonce), sizeof(nonce)}, key, sizeof(key));
-    TextBuffer keyed{};
-    textAppend(&keyed, PrStringView{key, sizeof(key)});
-    textAppend(&keyed, kAcceptGuid);
-    uint8_t digest[kSha1Bytes];
-    PrStringView keyedView = textView(&keyed);
-    sha1Digest(PrByteView{reinterpret_cast<const uint8_t*>(keyedView.data), keyedView.size}, digest);
-    textReset(&keyed);
+    prBase64Encode(PrStringView{reinterpret_cast<const char*>(nonce), sizeof(nonce)}, key, sizeof(key));
+    PrTextBuffer keyed{};
+    prTextBufferAppend(&keyed, PrStringView{key, sizeof(key)});
+    prTextBufferAppend(&keyed, kAcceptGuid);
+    uint8_t digest[kPrSha1Bytes];
+    PrStringView keyedView = prTextBufferView(&keyed);
+    prSha1Digest(PrByteView{reinterpret_cast<const uint8_t*>(keyedView.data), keyedView.size}, digest);
+    prTextBufferReset(&keyed);
     char accept[28];
-    base64Encode(PrStringView{reinterpret_cast<const char*>(digest), sizeof(digest)}, accept, sizeof(accept));
+    prBase64Encode(PrStringView{reinterpret_cast<const char*>(digest), sizeof(digest)}, accept, sizeof(accept));
     socket->accept = prStringCopy(PrStringView{accept, sizeof(accept)});
 
-    TextBuffer offered{};
+    PrTextBuffer offered{};
     for (uint32_t i = 0; i < desc->protocolCount; ++i) {
         if (i != 0)
-            textAppend(&offered, ", ");
-        textAppend(&offered, desc->protocols[i]);
+            prTextBufferAppend(&offered, ", ");
+        prTextBufferAppend(&offered, desc->protocols[i]);
     }
-    socket->offered = textCopy(&offered);
-    textReset(&offered);
+    socket->offered = prTextBufferCopy(&offered);
+    prTextBufferReset(&offered);
 
-    TextBuffer out{};
-    textAppend(&out, "GET ");
+    PrTextBuffer out{};
+    prTextBufferAppend(&out, "GET ");
     PrStringView path = prUrlPath(url);
-    textAppend(&out, path.size != 0 ? path : PrStringView{"/"});
+    prTextBufferAppend(&out, path.size != 0 ? path : PrStringView{"/"});
     PrStringView query = prUrlQuery(url);
     if (query.data != nullptr) {
-        textAppendChar(&out, '?');
-        textAppend(&out, query);
+        prTextBufferAppendChar(&out, '?');
+        prTextBufferAppend(&out, query);
     }
-    textAppend(&out, " HTTP/1.1\r\nHost: ");
-    textAppend(&out, prUrlHost(url));
+    prTextBufferAppend(&out, " HTTP/1.1\r\nHost: ");
+    prTextBufferAppend(&out, prUrlHost(url));
     if (prUrlPort(url) >= 0) {
-        textAppendChar(&out, ':');
-        textAppendU64(&out, uint64_t(prUrlPort(url)));
+        prTextBufferAppendChar(&out, ':');
+        prTextBufferAppendU64(&out, uint64_t(prUrlPort(url)), 10);
     }
-    textAppend(&out, "\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Key: ");
-    textAppend(&out, PrStringView{key, sizeof(key)});
-    textAppend(&out, "\r\nSec-WebSocket-Version: 13\r\n");
+    prTextBufferAppend(&out, "\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Key: ");
+    prTextBufferAppend(&out, PrStringView{key, sizeof(key)});
+    prTextBufferAppend(&out, "\r\nSec-WebSocket-Version: 13\r\n");
     if (desc->protocolCount != 0) {
-        textAppend(&out, "Sec-WebSocket-Protocol: ");
-        textAppend(&out, viewOf(socket->offered));
-        textAppend(&out, "\r\n");
+        prTextBufferAppend(&out, "Sec-WebSocket-Protocol: ");
+        prTextBufferAppend(&out, viewOf(socket->offered));
+        prTextBufferAppend(&out, "\r\n");
     }
-    textAppend(&out, "\r\n");
-    socket->request = textCopy(&out);
-    textReset(&out);
+    prTextBufferAppend(&out, "\r\n");
+    socket->request = prTextBufferCopy(&out);
+    prTextBufferReset(&out);
 }
 
 // Source functions
@@ -598,7 +599,7 @@ PrStatus createSocket(PrWebSocketNetwork* base, const PrWebSocketDesc* desc, PrW
     socket->port = uint16_t(port >= 0 ? port : secure ? 443 : 80);
     // An IPv6 address is serialized in brackets, which a connection does not take.
     if (host.size > 2 && host.data[0] == '[')
-        host = stringSlice(host, 1, host.size - 2);
+        host = prStringSlice(host, 1, host.size - 2);
     socket->host = prStringCopy(host);
     socket->protocol = prStringEmpty();
     writeRequest(socket, url, desc);

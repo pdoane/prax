@@ -144,12 +144,12 @@ bool cssSupportsText(PrStringView text) {
     cssParserInit(&parser);
     bool supported = evaluateText(&parser, text);
     if (!supported) {
-        TextBuffer wrapped = {};
-        textAppendChar(&wrapped, '(');
-        textAppend(&wrapped, text);
-        textAppendChar(&wrapped, ')');
-        supported = evaluateText(&parser, textView(&wrapped));
-        textReset(&wrapped);
+        PrTextBuffer wrapped = {};
+        prTextBufferAppendChar(&wrapped, '(');
+        prTextBufferAppend(&wrapped, text);
+        prTextBufferAppendChar(&wrapped, ')');
+        supported = evaluateText(&parser, prTextBufferView(&wrapped));
+        prTextBufferReset(&wrapped);
     }
     cssParserReset(&parser);
     return supported;

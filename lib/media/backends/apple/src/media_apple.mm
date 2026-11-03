@@ -114,7 +114,7 @@ PrMediaAppleSource* sourceOf(const AppleDecoder* decoder) {
 }
 
 double secondsOf(CMTime time) {
-    return CMTIME_IS_NUMERIC(time) ? CMTimeGetSeconds(time) : kNanF64;
+    return CMTIME_IS_NUMERIC(time) ? CMTimeGetSeconds(time) : kPrF64Nan;
 }
 
 // Returns the uniform type identifier of the container that the bytes begin with, or nil for none that AVFoundation
@@ -171,12 +171,12 @@ void decodeFrames(AppleDecoder* d) {
         AVAssetReaderTrackOutput* output = nil;
         prMutexLock(&d->mutex);
         while (!d->stopping) {
-            if (!isNanF64(d->seekTo)) {
+            if (!prF64IsNan(d->seekTo)) {
                 double at = d->seekTo;
-                d->seekTo = kNanF64;
+                d->seekTo = kPrF64Nan;
                 releaseFrames(&d->frames);
                 d->start = at;
-                d->through = -kInfinityF64;
+                d->through = -kPrF64Infinity;
                 d->dropped = false;
                 d->ended = false;
                 prMutexUnlock(&d->mutex);
@@ -201,13 +201,13 @@ void decodeFrames(AppleDecoder* d) {
                 sample = [output copyNextSampleBuffer];
             }
             CVPixelBufferRef buffer = sample != nullptr ? CMSampleBufferGetImageBuffer(sample) : nullptr;
-            double time = sample != nullptr ? secondsOf(CMSampleBufferGetPresentationTimeStamp(sample)) : kNanF64;
+            double time = sample != nullptr ? secondsOf(CMSampleBufferGetPresentationTimeStamp(sample)) : kPrF64Nan;
             if (buffer != nullptr)
                 CVPixelBufferRetain(buffer);
             if (sample != nullptr)
                 CFRelease(sample);
             prMutexLock(&d->mutex);
-            if (!isNanF64(d->seekTo)) {
+            if (!prF64IsNan(d->seekTo)) {
                 CVPixelBufferRelease(buffer);
                 continue;
             }
@@ -215,7 +215,7 @@ void decodeFrames(AppleDecoder* d) {
                 d->ended = true;
                 continue;
             }
-            if (buffer == nullptr || isNanF64(time))
+            if (buffer == nullptr || prF64IsNan(time))
                 continue;
             d->frames.push(AppleFrame{buffer, time, ++d->serials});
             d->through = time;
@@ -286,7 +286,7 @@ void decodeAudio(AppleDecoder* d) {
                 bool copied = block != nullptr && CMBlockBufferCopyDataBytes(block, 0,
                     size_t(samples.count) * sizeof(float), samples.data) == kCMBlockBufferNoErr;
                 CFRelease(sample);
-                if (!copied || isNanF64(time))
+                if (!copied || prF64IsNan(time))
                     continue;
                 // A reader starts at a packet's boundary, so the frames before the time asked for are dropped.
                 uint32_t skip = 0;
@@ -318,7 +318,7 @@ PrMediaSupport supportsType(PrMediaCodec*, PrStringView type) {
     if (text == nil || ![AVURLAsset isPlayableExtendedMIMEType:text])
         return PrMediaSupport_No;
     // A type that names its codecs, which the system plays, is probably playable.
-    return asciiContainsFold(type, "codecs=") ? PrMediaSupport_Probably : PrMediaSupport_Maybe;
+    return prAsciiContainsFold(type, "codecs=") ? PrMediaSupport_Probably : PrMediaSupport_Maybe;
 }
 
 // Waits for the asset to load the values of `keys`. Returns false if any failed to load.
@@ -375,8 +375,8 @@ PrStatus decoderCreate(PrMediaCodec*, PrByteView bytes, PrMediaDecoder* PR_NULLA
         }
         AppleDecoder* d = allocZeroed<AppleDecoder>();
         d->source = (__bridge_retained void*)source;
-        d->seekTo = kNanF64;
-        d->through = -kInfinityF64;
+        d->seekTo = kPrF64Nan;
+        d->through = -kPrF64Infinity;
         d->ended = source.video == nil;
         prMutexInit(&d->mutex);
         prConditionInit(&d->wake);
@@ -425,11 +425,11 @@ bool decoderFrame(PrMediaCodec*, PrMediaDecoder* decoder, double seconds, PrMedi
     // A time before what decoding kept, or far past what it reached, restarts decoding there.
     bool before = seconds < d->start || (d->dropped && d->frames.count != 0 && seconds < d->frames.data[0].time);
     bool past = !d->ended && seconds > d->through + kSeekAhead && seconds > d->start + kSeekAhead;
-    if (isNanF64(d->seekTo) && (before || past))
+    if (prF64IsNan(d->seekTo) && (before || past))
         d->seekTo = seconds;
     // The frame that shows is the last that starts at or before the time. Before the first frame, the first shows.
     uint32_t at = UINT32_MAX;
-    if (isNanF64(d->seekTo)) {
+    if (prF64IsNan(d->seekTo)) {
         for (uint32_t i = 0; i < d->frames.count && d->frames.data[i].time <= seconds; ++i)
             at = i;
         if (at == UINT32_MAX && d->frames.count != 0 && !d->dropped)
@@ -449,7 +449,7 @@ bool decoderFrame(PrMediaCodec*, PrMediaDecoder* decoder, double seconds, PrMedi
         CVPixelBufferRetain(frame.buffer);
     }
     // Without a frame, none will come once decoding has ended with nothing kept.
-    bool done = frame.buffer == nullptr && isNanF64(d->seekTo) && d->ended && d->frames.count == 0;
+    bool done = frame.buffer == nullptr && prF64IsNan(d->seekTo) && d->ended && d->frames.count == 0;
     prConditionSignal(&d->wake);
     prMutexUnlock(&d->mutex);
     if (frame.buffer == nullptr) {
@@ -537,7 +537,7 @@ constexpr VideoCodec kVideoCodecs[] = {
 const VideoCodec* PR_NULLABLE videoCodecOf(PrStringView codec) {
     for (const VideoCodec& known : kVideoCodecs) {
         PrStringView entry = known.entry;
-        if (codec.size >= 4 && asciiEqualsFold(PrStringView{codec.data, 4}, entry))
+        if (codec.size >= 4 && prAsciiEqualsFold(PrStringView{codec.data, 4}, entry))
             return &known;
     }
     return nullptr;
@@ -555,8 +555,8 @@ bool decodesVideo(CMVideoCodecType type) {
 
 // Returns true if the codecs parameter's codec is an audio codec that the converter decodes: AAC or MP3 in MP4.
 bool decodesAudio(PrStringView codec) {
-    return asciiStartsWithFold(codec, "mp4a.40") || asciiEqualsFold(codec, "mp4a.69") ||
-        asciiEqualsFold(codec, "mp4a.6b") || asciiEqualsFold(codec, "mp3");
+    return prAsciiStartsWithFold(codec, "mp4a.40") || prAsciiEqualsFold(codec, "mp4a.69") ||
+        prAsciiEqualsFold(codec, "mp4a.6b") || prAsciiEqualsFold(codec, "mp3");
 }
 
 void videoOutput(void* PR_NULLABLE refcon, void* PR_NULLABLE, OSStatus status, VTDecodeInfoFlags,
@@ -665,7 +665,7 @@ PrStatus audioDecoderCreate(const PrMediaTrackInfo* track, uint32_t sampleRate, 
         PrMediaSampleDecoder* PR_NULLABLE* PR_NONNULL out) {
     if (!decodesAudio(track->codec) || sampleRate == 0 || channels == 0 || channels > 2)
         return PrStatus_NotSupported;
-    bool aac = asciiStartsWithFold(track->codec, "mp4a.40");
+    bool aac = prAsciiStartsWithFold(track->codec, "mp4a.40");
     uint32_t inputRate = track->sampleRate != 0 ? track->sampleRate : 44100;
     uint32_t inputChannels = track->channels != 0 ? track->channels : 2;
     if (aac)
@@ -762,10 +762,10 @@ PrMediaSupport supportsSourceType(PrMediaCodec*, PrStringView type) {
         while (end < codecs.size && codecs.data[end] != ',')
             ++end;
         size_t begin = from;
-        while (begin < end && asciiIsHttpSpace(codecs.data[begin]))
+        while (begin < end && prAsciiIsHttpSpace(codecs.data[begin]))
             ++begin;
         size_t last = end;
-        while (last > begin && asciiIsHttpSpace(codecs.data[last - 1]))
+        while (last > begin && prAsciiIsHttpSpace(codecs.data[last - 1]))
             --last;
         PrStringView codec{codecs.data + begin, last - begin};
         const VideoCodec* video = videoCodecOf(codec);

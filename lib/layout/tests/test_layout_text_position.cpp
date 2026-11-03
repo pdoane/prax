@@ -100,7 +100,7 @@ Painted paintOf(PrLayoutTree* tree) {
 }
 
 bool sameColor(PrColor16 a, PrColor16 b) {
-    return memEquals(&a, &b, sizeof(PrColor16));
+    return prMemEquals(&a, &b, sizeof(PrColor16));
 }
 
 const PrColor16 kYellow = prColor16FromColor(PrColor{1, 1, 0, 1});

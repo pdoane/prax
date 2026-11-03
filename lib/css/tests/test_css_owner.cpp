@@ -56,10 +56,10 @@ void setColor(PrCssRule* rule, PrStringView value) {
 }
 
 std::string ruleText(const CssRuleData* rule) {
-    TextBuffer text;
+    PrTextBuffer text = {};
     cssSerializeRule(&text, rule);
-    std::string out = textOf(textView(&text));
-    textReset(&text);
+    std::string out = textOf(prTextBufferView(&text));
+    prTextBufferReset(&text);
     return out;
 }
 
@@ -223,13 +223,13 @@ TEST_CASE("style elements of the same text share their sheet's data until one is
     prCssStyleDeclarationSetProperty(style, &color, "blue", false);
     CHECK(one->data != two->data);
     CHECK(rule->data == one->data->rules.data[0]);
-    TextBuffer text;
+    PrTextBuffer text = {};
     cssSerializeRule(&text, two->data->rules.data[0]);
-    CHECK(textOf(textView(&text)) == "a { color: red; }");
-    textClear(&text);
+    CHECK(textOf(prTextBufferView(&text)) == "a { color: red; }");
+    prTextBufferClear(&text);
     cssSerializeRule(&text, one->data->rules.data[0]);
-    CHECK(textOf(textView(&text)) == "a { color: blue; }");
-    textReset(&text);
+    CHECK(textOf(prTextBufferView(&text)) == "a { color: blue; }");
+    prTextBufferReset(&text);
     domNodeRelease(document);
 }
 

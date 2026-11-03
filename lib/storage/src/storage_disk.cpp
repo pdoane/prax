@@ -55,13 +55,13 @@ struct DiskRecord {
     PrFileMapping mapping;
 };
 
-void appendPath(const DiskStorage* storage, uint64_t file, TextBuffer* out) {
-    textAppend(out, prStringView(&storage->directory));
-    textAppendChar(out, '/');
+void appendPath(const DiskStorage* storage, uint64_t file, PrTextBuffer* out) {
+    prTextBufferAppend(out, prStringView(&storage->directory));
+    prTextBufferAppendChar(out, '/');
     if (file == 0)
-        textAppend(out, "index");
+        prTextBufferAppend(out, "index");
     else
-        textAppendU64(out, file, 16);
+        prTextBufferAppendU64(out, file, 16);
 }
 
 // Queues the removal of the file of the entry at `position`, and removes the entry. Called with the mutex held.
@@ -75,43 +75,43 @@ void removeAt(DiskStorage* storage, uint32_t position) {
 
 // Writes the index's records, as the store holds them now, to the index file. Called without the mutex held.
 void writeIndex(DiskStorage* storage) {
-    TextBuffer bytes{};
+    PrTextBuffer bytes{};
     prMutexLock(&storage->mutex);
     storage->dirty = false;
-    textAppend(&bytes, reinterpret_cast<const char*>(kIndexMagic), 4);
-    textAppend(&bytes, reinterpret_cast<const char*>(&kIndexVersion), 4);
+    prTextBufferAppend(&bytes, PrStringView{reinterpret_cast<const char*>(kIndexMagic), 4});
+    prTextBufferAppend(&bytes, PrStringView{reinterpret_cast<const char*>(&kIndexVersion), 4});
     uint32_t count = storage->index.entries.count;
-    textAppend(&bytes, reinterpret_cast<const char*>(&count), 4);
+    prTextBufferAppend(&bytes, PrStringView{reinterpret_cast<const char*>(&count), 4});
     for (uint32_t i = 0; i < count; ++i) {
         const StorageEntry& entry = storage->index.entries.data[i];
         PrStringView key = prStringView(&entry.key);
         uint32_t keySize = uint32_t(key.size);
-        textAppend(&bytes, reinterpret_cast<const char*>(&keySize), 4);
-        textAppend(&bytes, key);
-        textAppend(&bytes, reinterpret_cast<const char*>(&entry.size), 8);
-        textAppend(&bytes, reinterpret_cast<const char*>(&entry.used), 8);
-        textAppend(&bytes, reinterpret_cast<const char*>(&entry.file), 8);
+        prTextBufferAppend(&bytes, PrStringView{reinterpret_cast<const char*>(&keySize), 4});
+        prTextBufferAppend(&bytes, key);
+        prTextBufferAppend(&bytes, PrStringView{reinterpret_cast<const char*>(&entry.size), 8});
+        prTextBufferAppend(&bytes, PrStringView{reinterpret_cast<const char*>(&entry.used), 8});
+        prTextBufferAppend(&bytes, PrStringView{reinterpret_cast<const char*>(&entry.file), 8});
     }
     prMutexUnlock(&storage->mutex);
-    TextBuffer path{};
+    PrTextBuffer path{};
     appendPath(storage, 0, &path);
-    PrStringView written = textView(&bytes);
-    prFileWrite(textView(&path), PrByteView{reinterpret_cast<const uint8_t*>(written.data), written.size});
-    textReset(&path);
-    textReset(&bytes);
+    PrStringView written = prTextBufferView(&bytes);
+    prFileWrite(prTextBufferView(&path), PrByteView{reinterpret_cast<const uint8_t*>(written.data), written.size});
+    prTextBufferReset(&path);
+    prTextBufferReset(&bytes);
 }
 
 // Runs one job, without the mutex held.
 void runJob(DiskStorage* storage, const DiskJob& job) {
-    TextBuffer path{};
+    PrTextBuffer path{};
     appendPath(storage, job.file, &path);
     if (job.kind == DiskJobKind_Remove) {
-        prFileRemove(textView(&path));
-        textReset(&path);
+        prFileRemove(prTextBufferView(&path));
+        prTextBufferReset(&path);
         return;
     }
-    bool written = prFileWrite(textView(&path), PrByteView{job.buffer->bytes(), job.buffer->size});
-    textReset(&path);
+    bool written = prFileWrite(prTextBufferView(&path), PrByteView{job.buffer->bytes(), job.buffer->size});
+    prTextBufferReset(&path);
     // The entry reads its file from now on, unless a later write replaced it or the file was not written.
     prMutexLock(&storage->mutex);
     for (uint32_t i = 0; i < storage->index.entries.count; ++i) {
@@ -167,11 +167,11 @@ void unlockAndDrain(DiskStorage* storage) {
 
 // Reads the index file into the store's index. A file that is missing or does not parse leaves the index empty.
 void readIndex(DiskStorage* storage) {
-    TextBuffer path{};
+    PrTextBuffer path{};
     appendPath(storage, 0, &path);
     PrFileMapping mapping{};
-    bool mapped = prFileMap(textView(&path), &mapping);
-    textReset(&path);
+    bool mapped = prFileMap(prTextBufferView(&path), &mapping);
+    prTextBufferReset(&path);
     if (!mapped)
         return;
     const uint8_t* at = mapping.data;
@@ -179,14 +179,14 @@ void readIndex(DiskStorage* storage) {
     auto take = [&](void* out, size_t size) {
         if (size_t(end - at) < size)
             return false;
-        memCopy(out, at, size);
+        prMemCopy(out, at, size);
         at += size;
         return true;
     };
     uint8_t magic[4];
     uint32_t version = 0;
     uint32_t count = 0;
-    if (take(magic, 4) && memEquals(magic, kIndexMagic, 4) && take(&version, 4) && version == kIndexVersion &&
+    if (take(magic, 4) && prMemEquals(magic, kIndexMagic, 4) && take(&version, 4) && version == kIndexVersion &&
             take(&count, 4)) {
         for (uint32_t i = 0; i < count; ++i) {
             uint32_t keySize = 0;
@@ -257,10 +257,10 @@ bool readStorage(PrStorage* base, PrStringView key, PrStorageRecord* out) {
     uint64_t file = entry.file;
     uint64_t size = entry.size;
     unlockAndDrain(storage);
-    TextBuffer path{};
+    PrTextBuffer path{};
     appendPath(storage, file, &path);
-    bool mapped = size == 0 || prFileMap(textView(&path), &record->mapping);
-    textReset(&path);
+    bool mapped = size == 0 || prFileMap(prTextBufferView(&path), &record->mapping);
+    prTextBufferReset(&path);
     if (mapped && record->mapping.size == size) {
         *out = PrStorageRecord{PrByteView{record->mapping.data, record->mapping.size}, record};
         return true;

@@ -191,7 +191,7 @@ CssColorSchemeFlags htmlPageSchemes(PrDomDocument* document) {
     for (const PrDomNode* node = domNodeNext(document, document); node != nullptr; node = domNodeNext(document, node)) {
         const PrDomElement* element = domElementFromNode(node);
         if (element == nullptr || !domIsHtml(element, PrDomTag_Meta) ||
-                !asciiEqualsFold(domAttributeValue(element, "name"), "color-scheme"))
+                !prAsciiEqualsFold(domAttributeValue(element, "name"), "color-scheme"))
             continue;
         const PrDomAttr* attribute = domAttribute(element, PrDomNamespace_None, "content");
         if (attribute == nullptr)
@@ -201,15 +201,15 @@ CssColorSchemeFlags htmlPageSchemes(PrDomDocument* document) {
             continue;
         CssColorSchemeFlags schemes = 0;
         for (size_t at = 0; at < content.size;) {
-            while (at < content.size && asciiIsSpace(content.data[at]))
+            while (at < content.size && prAsciiIsSpace(content.data[at]))
                 ++at;
             size_t start = at;
-            while (at < content.size && !asciiIsSpace(content.data[at]))
+            while (at < content.size && !prAsciiIsSpace(content.data[at]))
                 ++at;
             PrStringView word{content.data + start, at - start};
-            if (asciiEqualsFold(word, "light"))
+            if (prAsciiEqualsFold(word, "light"))
                 schemes |= CssColorSchemeFlag_Light;
-            else if (asciiEqualsFold(word, "dark"))
+            else if (prAsciiEqualsFold(word, "dark"))
                 schemes |= CssColorSchemeFlag_Dark;
         }
         return schemes;

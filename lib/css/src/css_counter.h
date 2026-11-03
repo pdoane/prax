@@ -95,19 +95,19 @@ constexpr uint32_t kCssCounterMaxCodePoints = 60;
 // Appends the representation of `value` in `style` (css-counter-styles-3/#generate-a-counter), without the style's
 // prefix and suffix. A value that the style cannot represent uses the style's fallback, found among `styles`, and
 // decimal in the end. A symbol that points turns to `flow`, as disclosure-closed's does.
-void cssCounterRepresent(TextBuffer* out, const CssCounterStyles* PR_NULLABLE styles, const CssCounterStyle* style,
+void cssCounterRepresent(PrTextBuffer* out, const CssCounterStyles* PR_NULLABLE styles, const CssCounterStyle* style,
     int32_t value, CssCounterFlow flow);
 
 // Appends the representation of `value` in the counter style that a computed <counter-style> names, as counter() and
 // counters() write it: a style's name, among `styles` and the predefined styles, or symbols(). A name that no style has
 // is decimal.
-void cssCounterAppend(TextBuffer* out, const CssCounterStyles* PR_NULLABLE styles, CssValueRun counterStyle,
+void cssCounterAppend(PrTextBuffer* out, const CssCounterStyles* PR_NULLABLE styles, CssValueRun counterStyle,
     int32_t value, CssCounterFlow flow);
 
 // Appends the marker string that a computed list-style-type gives a list item whose list-item counter is `value`
 // (css-lists-3/#text-markers): the counter style's prefix, the representation and the style's suffix, or the string
 // that the type gives. Appends nothing for none. Returns false if the type is none.
-bool cssCounterAppendMarker(TextBuffer* out, const CssCounterStyles* PR_NULLABLE styles, CssValueRun listStyleType,
+bool cssCounterAppendMarker(PrTextBuffer* out, const CssCounterStyles* PR_NULLABLE styles, CssValueRun listStyleType,
     int32_t value, CssCounterFlow flow);
 
 } // namespace pr_impl

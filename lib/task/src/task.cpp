@@ -32,7 +32,7 @@ using namespace pr_impl;
 
 PrTaskPoolBackend prTaskPoolBackendFromName(PrStringView name) {
     for (PrTaskPoolBackend backend = 0; backend < PrTaskPoolBackend_Count; ++backend) {
-        if (asciiEqualsFold(kBackendNames[backend], name))
+        if (prAsciiEqualsFold(kBackendNames[backend], name))
             return backend;
     }
     return PrTaskPoolBackend_Count;

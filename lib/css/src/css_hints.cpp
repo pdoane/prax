@@ -40,8 +40,8 @@ const PrDomElement* PR_NULLABLE giver(const PrDomElement* element, uint32_t* tak
 }
 
 // Replaces `*block` with the declarations of `text`, or with null if there are none.
-void setBlock(CssDeclarationBlock* PR_NULLABLE* PR_NONNULL block, const TextBuffer& text) {
-    if (text.text.count == 0) {
+void setBlock(CssDeclarationBlock* PR_NULLABLE* PR_NONNULL block, const PrTextBuffer& text) {
+    if (text.size == 0) {
         if (*block != nullptr) {
             cssDeclarationBlockReset(*block);
             prMemoryFree(*block);
@@ -51,7 +51,7 @@ void setBlock(CssDeclarationBlock* PR_NULLABLE* PR_NONNULL block, const TextBuff
     }
     if (*block == nullptr)
         *block = allocZeroed<CssDeclarationBlock>();
-    cssDeclarationBlockParse(*block, textView(&text), nullptr);
+    cssDeclarationBlockParse(*block, prTextBufferView(&text), nullptr);
 }
 
 // Builds the hints that an element gives other elements.
@@ -64,12 +64,12 @@ void buildGiven(PrDomElement* element) {
         return;
     const CssHintProvider* provider = providerOf(element);
     for (uint32_t taker = 0; taker < kCssHintTakers; ++taker) {
-        TextBuffer text{};
+        PrTextBuffer text{};
         if (provider != nullptr && provider->given != nullptr)
             provider->given(&text, element, taker);
         setBlock(&given->blocks[taker], text);
         given->ids[taker] = gSharedBuilt.fetchAddRelaxed(1) + 1;
-        textReset(&text);
+        prTextBufferReset(&text);
     }
     given->built = true;
 }
@@ -81,18 +81,18 @@ void cssHintsProvide(PrDomDocument* document, DomNamespaceId space, const CssHin
     cssDocumentRoot(document)->hintProviders[space] = provider;
 }
 
-void cssHintAdd(TextBuffer* out, PrStringView property, PrStringView value) {
-    textAppend(out, property);
-    textAppendChar(out, ':');
-    textAppend(out, value);
-    textAppendChar(out, ';');
+void cssHintAdd(PrTextBuffer* out, PrStringView property, PrStringView value) {
+    prTextBufferAppend(out, property);
+    prTextBufferAppendChar(out, ':');
+    prTextBufferAppend(out, value);
+    prTextBufferAppendChar(out, ';');
 }
 
-void cssHintAddPixels(TextBuffer* out, PrStringView property, double pixels) {
-    textAppend(out, property);
-    textAppendChar(out, ':');
+void cssHintAddPixels(PrTextBuffer* out, PrStringView property, double pixels) {
+    prTextBufferAppend(out, property);
+    prTextBufferAppendChar(out, ':');
     cssSerializeNumber(out, pixels);
-    textAppend(out, "px;");
+    prTextBufferAppend(out, "px;");
 }
 
 CssHintReach cssHintsMapped(const PrDomElement* element, PrStringView name) {
@@ -110,17 +110,17 @@ const CssDeclarationBlock* PR_NULLABLE cssHints(PrDomElement* element) {
     // Most elements have no hints, which the provider tells without building them.
     if (!provider->hasOwn(element) && (style == nullptr || style->hints == nullptr))
         return nullptr;
-    TextBuffer text{};
+    PrTextBuffer text{};
     provider->own(&text, element);
-    if (text.text.count == 0 && (style == nullptr || style->hints == nullptr)) {
-        textReset(&text);
+    if (text.size == 0 && (style == nullptr || style->hints == nullptr)) {
+        prTextBufferReset(&text);
         if (style != nullptr)
             style->hintsBuilt = true;
         return nullptr;
     }
     style = cssElementStyle(element);
     setBlock(&style->hints, text);
-    textReset(&text);
+    prTextBufferReset(&text);
     style->hintsBuilt = true;
     return style->hints;
 }

@@ -2,6 +2,7 @@
 
 #include "text/src/font_cache.h"
 
+#include "pr/align.h"
 #include "pr/alloc.h"
 #include "pr/array.h"
 #include "pr/integer.h"

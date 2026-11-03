@@ -80,7 +80,7 @@ PrLayoutNode iconBox(PrKit& kit, PrLayoutNode parent, uint64_t key, const PrPath
     PrLayoutContent was = prLayoutNodeContent(tree, node);
     if (was.kind == PrLayoutContentKind_Painter && was.painter.paint == paintIcon) {
         const KitPainted* drawn = static_cast<const KitPainted*>(was.painter.context);
-        if (drawn->path == path && drawn->stroked == stroked && memEquals(&drawn->color, &color, sizeof color))
+        if (drawn->path == path && drawn->stroked == stroked && prMemEquals(&drawn->color, &color, sizeof color))
             return node;
     }
     KitPainted* made = allocZeroed<KitPainted>();

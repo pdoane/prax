@@ -390,7 +390,7 @@ size_t readSession(PrNetStream* base, uint8_t* output, size_t capacity) {
     AppleSession* session = static_cast<AppleSession*>(reinterpret_cast<PrTlsSession*>(base));
     uint32_t available = session->received.count - session->receivedStart;
     uint32_t taken = capacity < available ? uint32_t(capacity) : available;
-    memCopy(output, session->received.data + session->receivedStart, taken);
+    prMemCopy(output, session->received.data + session->receivedStart, taken);
     session->receivedStart += taken;
     if (session->receivedStart == session->received.count) {
         session->received.clear();
@@ -454,7 +454,7 @@ bool copyName(PrStringView name, char* out) {
         if (c == 0 || c == '/' || c == ' ' || c == '[' || c == ']')
             return false;
     }
-    memCopy(out, name.data, name.size);
+    prMemCopy(out, name.data, name.size);
     out[name.size] = 0;
     return true;
 }
@@ -543,7 +543,7 @@ PrStatus connectTls(PrTls* base, const PrTlsSessionDesc* desc, PrTlsSession* PR_
             char protocol[256];
             PrStringView offer = offered->protocols[i];
             PR_ASSERT(offer.size != 0 && offer.size < sizeof(protocol));
-            memCopy(protocol, offer.data, offer.size);
+            prMemCopy(protocol, offer.data, offer.size);
             protocol[offer.size] = 0;
             sec_protocol_options_add_tls_application_protocol(secure, protocol);
         }

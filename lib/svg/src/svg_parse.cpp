@@ -12,7 +12,7 @@ namespace pr_impl {
 namespace {
 
 void skipSpace(PrStringView text, size_t* pos) {
-    while (*pos < text.size && asciiIsSpace(text.data[*pos]))
+    while (*pos < text.size && prAsciiIsSpace(text.data[*pos]))
         ++*pos;
 }
 
@@ -85,7 +85,7 @@ PrAffine2 svgViewBoxTransform(PrRect viewBox, SvgAspect aspect, float width, flo
     float sx = width / vw;
     float sy = height / vh;
     if (aspect.x != SvgAlign_None) {
-        float s = aspect.slice ? maxF32(sx, sy) : minF32(sx, sy);
+        float s = aspect.slice ? prF32Max(sx, sy) : prF32Min(sx, sy);
         sx = sy = s;
     }
     float tx = -viewBox.left * sx;
@@ -103,7 +103,7 @@ bool svgParseTransform(PrStringView text, PrAffine2* out) {
     size_t pos = 0;
     bool any = false;
     for (;;) {
-        while (pos < text.size && (asciiIsSpace(text.data[pos]) || text.data[pos] == ','))
+        while (pos < text.size && (prAsciiIsSpace(text.data[pos]) || text.data[pos] == ','))
             ++pos;
         if (pos == text.size)
             break;
@@ -111,7 +111,7 @@ bool svgParseTransform(PrStringView text, PrAffine2* out) {
         while (pos < text.size && ((text.data[pos] | 0x20) >= 'a' && (text.data[pos] | 0x20) <= 'z'))
             ++pos;
         PrStringView function{text.data + name, pos - name};
-        while (pos < text.size && asciiIsSpace(text.data[pos]))
+        while (pos < text.size && prAsciiIsSpace(text.data[pos]))
             ++pos;
         if (pos == text.size || text.data[pos] != '(')
             return false;
@@ -119,7 +119,7 @@ bool svgParseTransform(PrStringView text, PrAffine2* out) {
         float n[6] = {};
         uint32_t count = 0;
         for (;;) {
-            while (pos < text.size && (asciiIsSpace(text.data[pos]) || (count != 0 && text.data[pos] == ',')))
+            while (pos < text.size && (prAsciiIsSpace(text.data[pos]) || (count != 0 && text.data[pos] == ',')))
                 ++pos;
             if (pos < text.size && text.data[pos] == ')')
                 break;
@@ -128,7 +128,7 @@ bool svgParseTransform(PrStringView text, PrAffine2* out) {
             ++count;
         }
         ++pos;
-        constexpr float kRadians = kPiF32 / 180;
+        constexpr float kRadians = kPrF32Pi / 180;
         PrAffine2 f{};
         if (function == "matrix" && count == 6)
             f = PrAffine2{n[0], n[1], n[2], n[3], n[4], n[5]};
@@ -140,9 +140,9 @@ bool svgParseTransform(PrStringView text, PrAffine2* out) {
             f = prAffine2Concat(prAffine2Concat(prAffine2Translate(PrVec2{-n[1], -n[2]}),
                 prAffine2Rotate(n[0] * kRadians)), prAffine2Translate(PrVec2{n[1], n[2]}));
         else if (function == "skewX" && count == 1)
-            f = PrAffine2{1, 0, tanF32(n[0] * kRadians), 1, 0, 0};
+            f = PrAffine2{1, 0, prF32Tan(n[0] * kRadians), 1, 0, 0};
         else if (function == "skewY" && count == 1)
-            f = PrAffine2{1, tanF32(n[0] * kRadians), 0, 1, 0, 0};
+            f = PrAffine2{1, prF32Tan(n[0] * kRadians), 0, 1, 0, 0};
         else
             return false;
         // The function applies inside the ones before it.

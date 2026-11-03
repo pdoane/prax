@@ -93,7 +93,7 @@ size_t tlsSharedRead(PrNetStream* stream, uint8_t* output, size_t capacity) {
     TlsSharedSession* session = tlsSharedSessionFromStream(stream);
     uint32_t available = session->received.count - session->receivedStart;
     uint32_t taken = capacity < available ? uint32_t(capacity) : available;
-    memCopy(output, session->received.data + session->receivedStart, taken);
+    prMemCopy(output, session->received.data + session->receivedStart, taken);
     session->receivedStart += taken;
     if (session->receivedStart == session->received.count) {
         session->received.clear();

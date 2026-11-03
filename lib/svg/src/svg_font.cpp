@@ -69,9 +69,9 @@ bool parseRange(PrStringView item, PrFontCodePointRange* out) {
     uint32_t first = 0;
     uint32_t last = 0;
     uint32_t digits = 0;
-    for (; i < item.size && asciiIsHexDigit(item.data[i]) && digits < 6; ++i, ++digits) {
-        first = first * 16 + asciiHexValue(item.data[i]);
-        last = last * 16 + asciiHexValue(item.data[i]);
+    for (; i < item.size && prAsciiIsHexDigit(item.data[i]) && digits < 6; ++i, ++digits) {
+        first = first * 16 + prAsciiHexValue(item.data[i]);
+        last = last * 16 + prAsciiHexValue(item.data[i]);
     }
     uint32_t wild = 0;
     for (; i < item.size && item.data[i] == '?' && digits < 6; ++i, ++digits, ++wild) {
@@ -87,8 +87,8 @@ bool parseRange(PrStringView item, PrFontCodePointRange* out) {
             i += 2;
         last = 0;
         digits = 0;
-        for (; i < item.size && asciiIsHexDigit(item.data[i]) && digits < 6; ++i, ++digits)
-            last = last * 16 + asciiHexValue(item.data[i]);
+        for (; i < item.size && prAsciiIsHexDigit(item.data[i]) && digits < 6; ++i, ++digits)
+            last = last * 16 + prAsciiHexValue(item.data[i]);
         if (digits == 0)
             return false;
     }
@@ -125,7 +125,7 @@ bool languageMatches(PrStringView languages, PrStringView language) {
     if (languages.data == nullptr)
         return true;
     return anyItem(languages, [&](PrStringView tag) {
-        return language.size >= tag.size && asciiEqualsFold(PrStringView{language.data, tag.size}, tag) &&
+        return language.size >= tag.size && prAsciiEqualsFold(PrStringView{language.data, tag.size}, tag) &&
             (language.size == tag.size || language.data[tag.size] == '-');
     });
 }
@@ -168,7 +168,7 @@ void readGlyph(const PrDomElement* element, float fallbackAdvance, SvgGlyph* out
 // Reads the family of a font-face's font-family attribute, the first of its list, without quotes.
 bool firstFamily(PrStringView list, PrStringView* family) {
     size_t i = 0;
-    while (i < list.size && (asciiIsSpace(list.data[i]) || list.data[i] == ','))
+    while (i < list.size && (prAsciiIsSpace(list.data[i]) || list.data[i] == ','))
         ++i;
     if (i >= list.size)
         return false;
@@ -183,7 +183,7 @@ bool firstFamily(PrStringView list, PrStringView* family) {
     size_t start = i;
     while (i < list.size && list.data[i] != ',')
         ++i;
-    *family = stringTrimEnd(stringSlice(list, start, i - start));
+    *family = prStringTrimEnd(prStringSlice(list, start, i - start));
     return true;
 }
 
@@ -314,7 +314,7 @@ void svgFontLoad(const PrDomElement* font, SvgFont* out) {
     // Without a font-face, the ascent and descent use SVG 1.1's defaults: the font's height above the baseline, and
     // nothing below.
     out->ascent = face != nullptr ? numberAttribute(face, "ascent", out->unitsPerEm) : out->unitsPerEm;
-    out->descent = face != nullptr ? absF32(numberAttribute(face, "descent", 0)) : 0;
+    out->descent = face != nullptr ? prF32Abs(numberAttribute(face, "descent", 0)) : 0;
     // If the font-face does not place the decoration lines, the underline is a tenth of an em below the baseline, the
     // overline is at the ascent, and the line-through is a third of an em up. Each is a twentieth of an em thick.
     auto metric = [&](PrStringView name, float fallback) {

@@ -253,7 +253,7 @@ void readMetrics(Font* font) {
     if (coords.count != 0) {
         size_t bytes = sizeof(Atomic<uint32_t>) * font->glyphCount;
         font->advances = static_cast<Atomic<uint32_t>*>(prMemoryAlloc(bytes));
-        memFill(font->advances, 0xFF, bytes);
+        prMemFill(font->advances, 0xFF, bytes);
     }
     uint16_t os2Version = os2.uint16At(0);
     bool hasOs2 = os2.size >= 78;
@@ -391,7 +391,7 @@ void readMetrics(Font* font) {
     if ((font->overrides & PrFontOverrideFlag_LineGap) != 0)
         m.lineGap = font->lineGapOverride * font->sizeAdjust;
     else
-        m.lineGap = maxF32(gap, 0) * k;
+        m.lineGap = prF32Max(gap, 0) * k;
     m.capHeight = capHeight * k;
     m.xHeight = xHeight * k;
     m.underlinePosition = -underlinePosition * k;
@@ -441,7 +441,7 @@ bool openFont(Font* font, FontData* data, uint32_t index) {
     // it missed would draw the page's own copy of Ahem antialiased beside the aliased copy of the host. A derivation
     // can still set it either way (PrFontOverrideFlag_Aliased).
     PrString family = sfntFamily(font->sfnt);
-    font->aliased = asciiEqualsFold(prStringView(&family), "Ahem");
+    font->aliased = prAsciiEqualsFold(prStringView(&family), "Ahem");
     prStringReset(&family);
     return true;
 }
@@ -520,8 +520,8 @@ void replay(const ColrWalk& w, const PrFontPainter* painter) {
 }
 
 bool validDerivation(const PrFontDerivation* PR_NULLABLE d) {
-    return d == nullptr || (d->sizeAdjust > 0 && isFiniteF32(d->sizeAdjust) && isFiniteF32(d->embolden) &&
-        isFiniteF32(d->oblique));
+    return d == nullptr || (d->sizeAdjust > 0 && prF32IsFinite(d->sizeAdjust) && prF32IsFinite(d->embolden) &&
+        prF32IsFinite(d->oblique));
 }
 
 // What a derivation makes of a font: the values that it sets each axis to, and what it scales, synthesizes and
@@ -552,7 +552,7 @@ void derivedOf(const Font* font, const Font* PR_NULLABLE base, const PrFontDeriv
         float value = base != nullptr ? base->axisValues.data[i] : axis.defaultValue;
         for (uint32_t k = 0; d != nullptr && k < d->variationCount; ++k) {
             if (d->variations[k].tag == axis.tag)
-                value = clampF32(d->variations[k].value, axis.min, axis.max);
+                value = prF32Clamp(d->variations[k].value, axis.min, axis.max);
         }
         out->axes.push(value);
     }
@@ -597,13 +597,13 @@ void derivedReset(Derived* derived) {
 // Returns true if the font is of the state `derived`.
 bool isDerived(const Font* font, const Derived& derived) {
     return font->axisKey.count == derived.axes.count &&
-        memEquals(font->axisKey.data, derived.axes.data, derived.axes.count * sizeof(float)) &&
+        prMemEquals(font->axisKey.data, derived.axes.data, derived.axes.count * sizeof(float)) &&
         font->sizeAdjust == derived.sizeAdjust && font->embolden == derived.embolden &&
         font->oblique == derived.oblique && font->hinting == derived.hinting && font->hinter == derived.hinter &&
         font->aliased == derived.aliased && font->overrides == derived.overrides &&
         font->ascentOverride == derived.ascentOverride && font->descentOverride == derived.descentOverride &&
         font->lineGapOverride == derived.lineGapOverride && font->features.count == derived.features.count &&
-        memEquals(font->features.data, derived.features.data, derived.features.count * sizeof(PrFontFeature));
+        prMemEquals(font->features.data, derived.features.data, derived.features.count * sizeof(PrFontFeature));
 }
 
 // Makes a font, just opened at its default instance, match the base if there is one, and then applies the derivation.
@@ -648,13 +648,13 @@ bool openDerived(Font* font, FontData* data, uint32_t index, const Font* PR_NULL
 // Returns true if the two fonts are of one face of one data, in one state.
 bool sameFont(const Font* a, const Font* b) {
     return a->data == b->data && a->index == b->index && a->axisKey.count == b->axisKey.count &&
-        memEquals(a->axisKey.data, b->axisKey.data, a->axisKey.count * sizeof(float)) &&
+        prMemEquals(a->axisKey.data, b->axisKey.data, a->axisKey.count * sizeof(float)) &&
         a->sizeAdjust == b->sizeAdjust && a->embolden == b->embolden && a->oblique == b->oblique &&
         a->hinting == b->hinting && a->hinter == b->hinter && a->aliased == b->aliased &&
         a->overrides == b->overrides && a->ascentOverride == b->ascentOverride &&
         a->descentOverride == b->descentOverride && a->lineGapOverride == b->lineGapOverride &&
         a->features.count == b->features.count &&
-        memEquals(a->features.data, b->features.data, a->features.count * sizeof(PrFontFeature));
+        prMemEquals(a->features.data, b->features.data, a->features.count * sizeof(PrFontFeature));
 }
 
 // Releases a reference to the font, and frees it with the last (prFontRelease).
@@ -761,7 +761,7 @@ uint32_t prFontCount(PrByteView bytes) {
 
 PrFontHinting prFontHintingFromName(PrStringView name) {
     for (PrFontHinting hinting = 0; hinting < PrFontHinting_Count; ++hinting) {
-        if (asciiEqualsFold(kHintingNames[hinting], name))
+        if (prAsciiEqualsFold(kHintingNames[hinting], name))
             return hinting;
     }
     return PrFontHinting_Count;
@@ -787,7 +787,7 @@ PrStatus prFontCreate(PrByteView bytes, uint32_t index, const PrFontDerivation* 
     initData(copy);
     copy->bytes = reinterpret_cast<const uint8_t*>(copy + 1);
     copy->size = bytes.size;
-    memCopy(copy + 1, bytes.data, bytes.size);
+    prMemCopy(copy + 1, bytes.data, bytes.size);
     PrFont* font = allocZeroed<PrFont>();
     *out = openDerived(font, copy, index, nullptr, derivation) ? static_cast<const PrFont*>(intern(font)) : nullptr;
     return *out != nullptr ? PrStatus_Ok : PrStatus_InvalidData;
@@ -972,7 +972,7 @@ float prFontGlyphVerticalAdvance(const PrFont* font, uint16_t glyph) {
         FontGlyphOutline outline{};
         GlyfPhantom phantom{};
         if (loadDesign(data, glyph, &outline, &phantom))
-            units = maxF32(phantom.verticalOrigin.y - phantom.verticalAdvance.y, 0);
+            units = prF32Max(phantom.verticalOrigin.y - phantom.verticalAdvance.y, 0);
         fontOutlineReset(outline);
     } else {
         int32_t advance = 0;
@@ -998,7 +998,7 @@ PrVec2 prFontGlyphVerticalOrigin(const PrFont* font, uint16_t glyph) {
         float top = 0;
         // The bearing and the height round to whole units, as FreeType divides them out of its scaled coordinates.
         if (tables.verticalCount != 0 && data->truetype) {
-            top = roundF32(phantom.verticalOrigin.y - box.bottom);
+            top = prF32Round(phantom.verticalOrigin.y - box.bottom);
         } else if (tables.verticalCount != 0) {
             int32_t height = 0;
             int32_t tsb = 0;
@@ -1006,7 +1006,7 @@ PrVec2 prFontGlyphVerticalOrigin(const PrFont* font, uint16_t glyph) {
             top = float(tsb);
         } else {
             int32_t extent = int32_t(tables.ascender) - tables.descender;
-            top = float((extent - int32_t(roundF32(box.bottom - box.top))) / 2);
+            top = float((extent - int32_t(prF32Round(box.bottom - box.top))) / 2);
         }
         float k = data->sizeAdjust / float(data->unitsPerEm);
         origin = PrVec2{advance / 2 * k, -(box.bottom + top) * k};

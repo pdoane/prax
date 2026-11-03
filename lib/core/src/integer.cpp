@@ -2,13 +2,11 @@
 
 #include "pr/assert.h"
 
-namespace pr {
-
-size_t formatU64(uint64_t value, char* out, uint32_t radix) {
-    PR_ASSERT(radix >= 2 && radix <= kIntegerMaxRadix);
+size_t prU64Format(uint64_t value, char* out, uint32_t radix) {
+    PR_ASSERT(radix >= 2 && radix <= kPrU64MaxRadix);
     const char* digits = "0123456789abcdefghijklmnopqrstuvwxyz";
 
-    char reversed[kU64TextMaxBytes];
+    char reversed[kPrU64TextMaxBytes];
     size_t size = 0;
     do {
         reversed[size++] = digits[value % radix];
@@ -20,16 +18,16 @@ size_t formatU64(uint64_t value, char* out, uint32_t radix) {
     return size;
 }
 
-bool parseU64(const char* data, size_t size, uint64_t* out, uint32_t radix) {
+bool prU64Parse(const char* data, size_t size, uint64_t* out, uint32_t radix) {
     uint64_t value = 0;
-    if (size == 0 || parseU64Prefix(data, size, &value, radix) != size)
+    if (size == 0 || prU64ParsePrefix(data, size, &value, radix) != size)
         return false;
     *out = value;
     return true;
 }
 
-size_t parseU64Prefix(const char* data, size_t size, uint64_t* out, uint32_t radix) {
-    PR_ASSERT(radix >= 2 && radix <= kIntegerMaxRadix);
+size_t prU64ParsePrefix(const char* data, size_t size, uint64_t* out, uint32_t radix) {
+    PR_ASSERT(radix >= 2 && radix <= kPrU64MaxRadix);
     uint64_t value = 0;
     size_t i = 0;
     for (; i < size; ++i) {
@@ -49,5 +47,3 @@ size_t parseU64Prefix(const char* data, size_t size, uint64_t* out, uint32_t rad
         *out = value;
     return i;
 }
-
-} // namespace pr

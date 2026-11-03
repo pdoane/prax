@@ -95,7 +95,7 @@ DomIds* PR_NULLABLE* PR_NULLABLE idsOf(PrDomNode* root) {
 }
 
 uint32_t idHash(PrStringView id) {
-    return uint32_t(hashBytes(id.data, id.size, kDomIdSeed));
+    return uint32_t(prHashBytes(id.data, id.size, kDomIdSeed));
 }
 
 uint32_t findId(const DomIds* ids, PrStringView id, uint32_t hash) {
@@ -777,7 +777,7 @@ PrDomAttr* PR_NULLABLE findAttribute(const PrDomElement* element, DomNamespaceId
         if (attribute->hash != hash || attribute->space != space)
             continue;
         PrStringView held = prStringView(&attribute->name);
-        if (lowered ? asciiEqualsLowered(held, name) : held == name)
+        if (lowered ? prAsciiEqualsLowered(held, name) : held == name)
             return attribute;
     }
     return nullptr;
@@ -811,9 +811,9 @@ constexpr struct NameClasses {
 
     constexpr NameClasses() : of() {
         for (uint32_t c = 0; c < 256; ++c) {
-            bool stop = c == 0 || c == '/' || c == '>' || asciiIsSpace(char(c));
+            bool stop = c == 0 || c == '/' || c == '>' || prAsciiIsSpace(char(c));
             bool start = c == ':' || c == '_' || c >= 0x80;
-            bool rest = start || c == '-' || c == '.' || asciiIsDigit(char(c)) || asciiIsLetter(char(c));
+            bool rest = start || c == '-' || c == '.' || prAsciiIsDigit(char(c)) || prAsciiIsLetter(char(c));
             of[c] = NameClass((stop ? NameClass_ElementStop | NameClass_AttributeStop : 0) |
                 (c == '=' ? NameClass_AttributeStop : 0) | (start ? NameClass_Start : 0) | (rest ? NameClass_Rest : 0));
         }
@@ -1066,7 +1066,7 @@ PrStatus nodesIntoNode(PrDomDocument* document, const PrDomNodeOrString* PR_NULL
 // Appends the code units of `data` for which `keep` returns true, and inserts `insert` before the unit `at`, or at the
 // end. A code point is kept whole only if both its units are kept.
 template <typename Keep>
-void copyUnits(TextBuffer* out, PrStringView data, Keep keep, PrStringView insert = {}, uint32_t at = UINT32_MAX) {
+void copyUnits(PrTextBuffer* out, PrStringView data, Keep keep, PrStringView insert = {}, uint32_t at = UINT32_MAX) {
     uint32_t unit = 0;
     bool inserted = insert.data == nullptr;
     for (size_t offset = 0; offset < data.size;) {
@@ -1075,26 +1075,26 @@ void copyUnits(TextBuffer* out, PrStringView data, Keep keep, PrStringView inser
         uint32_t units = codePoint > 0xffff ? 2 : 1;
         bool whole = keep(unit) && (units == 1 || keep(unit + 1)) && (units == 1 || at != unit + 1);
         if (!inserted && at == unit) {
-            textAppend(out, insert);
+            prTextBufferAppend(out, insert);
             inserted = true;
         }
         if (whole) {
-            textAppend(out, data.data + offset, size);
+            prTextBufferAppend(out, PrStringView{data.data + offset, size});
         } else {
             for (uint32_t half = 0; half < units; ++half) {
                 if (!inserted && at == unit + half) {
-                    textAppend(out, insert);
+                    prTextBufferAppend(out, insert);
                     inserted = true;
                 }
                 if (keep(unit + half))
-                    textAppendCodePoint(out, kPrUtf8Replacement);
+                    prTextBufferAppendCodePoint(out, kPrUtf8Replacement);
             }
         }
         unit += units;
         offset += size;
     }
     if (!inserted)
-        textAppend(out, insert);
+        prTextBufferAppend(out, insert);
 }
 
 // dom/#valid-shadow-host-name
@@ -1145,7 +1145,7 @@ void eventHandlerAttributeChanged(PrDomElement* element, DomNamespaceId space, P
     // HTML, SVG and MathML elements have event handler content attributes (html/#globaleventhandlers).
     bool handlers = element->space == PrDomNamespace_Html || element->space == PrDomNamespace_Svg ||
         element->space == PrDomNamespace_MathMl;
-    if (!handlers || space != PrDomNamespace_None || !stringStartsWith(name, "on"))
+    if (!handlers || space != PrDomNamespace_None || !prStringStartsWith(name, "on"))
         return;
     PrDomEventHandler handler = domEventHandlerFromName(name);
     if (handler == PrDomEventHandler_Count)
@@ -2586,12 +2586,12 @@ PrDomAttr* PR_NULLABLE domAttributeByName(const PrDomElement* element, PrStringV
         PrStringView name = prStringView(&attribute->name);
         PrStringView local = qualifiedName;
         if (prefix.data != nullptr) {
-            if (qualifiedName.size != prefix.size + 1 + name.size || !stringStartsWith(qualifiedName, prefix) ||
+            if (qualifiedName.size != prefix.size + 1 + name.size || !prStringStartsWith(qualifiedName, prefix) ||
                     qualifiedName.data[prefix.size] != ':')
                 continue;
-            local = stringSlice(qualifiedName, prefix.size + 1, name.size);
+            local = prStringSlice(qualifiedName, prefix.size + 1, name.size);
         }
-        if (lowered && attribute->space == PrDomNamespace_None ? asciiEqualsLowered(name, local) : name == local)
+        if (lowered && attribute->space == PrDomNamespace_None ? prAsciiEqualsLowered(name, local) : name == local)
             return attribute;
     }
     return nullptr;
@@ -2626,7 +2626,7 @@ bool domIsValidElementLocalName(PrStringView name) {
     if (name.size == 0)
         return false;
     char first = name.data[0];
-    if (asciiIsLetter(first))
+    if (prAsciiIsLetter(first))
         return bytesAre(name, 1, 0, NameClass_ElementStop);
     return (kNameClasses.of[uint8_t(first)] & NameClass_Start) != 0 && bytesAre(name, 1, NameClass_Rest, 0);
 }
@@ -2645,13 +2645,13 @@ PrString domElementQualifiedName(const PrDomElement* element) {
     bool prefixed = element->state != nullptr && !prStringIsNull(&element->state->prefix);
     if (!prefixed && !domTagIsAtom(element->tag))
         return prStringExternal(domTagName(PrDomTag(element->tag)));
-    TextBuffer name;
+    PrTextBuffer name = {};
     if (prefixed) {
-        textAppend(&name, prStringView(&element->state->prefix));
-        textAppendChar(&name, ':');
+        prTextBufferAppend(&name, prStringView(&element->state->prefix));
+        prTextBufferAppendChar(&name, ':');
     }
-    textAppend(&name, domElementName(element));
-    return textTake(&name);
+    prTextBufferAppend(&name, domElementName(element));
+    return prTextBufferTake(&name);
 }
 
 PrString domElementTagName(const PrDomElement* element) {
@@ -2661,11 +2661,11 @@ PrString domElementTagName(const PrDomElement* element) {
     PrString name = domElementQualifiedName(element);
     if (!domIsHtmlInHtmlDocument(element))
         return name;
-    TextBuffer upper;
-    textAppend(&upper, prStringView(&name));
+    PrTextBuffer upper = {};
+    prTextBufferAppend(&upper, prStringView(&name));
     prStringReset(&name);
-    textAsciiUpper(&upper);
-    return textTake(&upper);
+    prTextBufferAsciiUpper(&upper);
+    return prTextBufferTake(&upper);
 }
 
 uint32_t domCharacterDataLength(const PrDomCharacterData* node) {
@@ -2677,9 +2677,9 @@ PrStatus domSubstringData(const PrDomCharacterData* node, uint32_t offset, uint3
     if (offset > length)
         return PrStatus_OutOfRange;
     uint32_t end = count > length - offset ? length : offset + count;
-    TextBuffer buffer;
+    PrTextBuffer buffer = {};
     copyUnits(&buffer, prStringView(&node->data), [&](uint32_t unit) { return unit >= offset && unit < end; });
-    *out = textTake(&buffer);
+    *out = prTextBufferTake(&buffer);
     return PrStatus_Ok;
 }
 
@@ -2688,13 +2688,13 @@ PrStatus domReplaceData(PrDomCharacterData* node, uint32_t offset, uint32_t coun
     if (offset > length)
         return PrStatus_OutOfRange;
     uint32_t end = count > length - offset ? length : offset + count;
-    TextBuffer buffer;
+    PrTextBuffer buffer = {};
     copyUnits(&buffer, prStringView(&node->data), [&](uint32_t unit) { return unit < offset || unit >= end; },
         data.data != nullptr ? data : "", offset);
     if (node->document->ranges != nullptr)
         domRangesDataReplaced(node, offset, end - offset, utf16Length(data));
-    writeData(node, textView(&buffer));
-    textReset(&buffer);
+    writeData(node, prTextBufferView(&buffer));
+    prTextBufferReset(&buffer);
     return PrStatus_Ok;
 }
 
@@ -2734,11 +2734,11 @@ void domNormalize(PrDomNode* node) {
             at = next;
             continue;
         }
-        TextBuffer data;
+        PrTextBuffer data = {};
         for (PrDomNode* sibling = at->next; exclusive(sibling); sibling = sibling->next)
-            textAppend(&data, prStringView(&static_cast<PrDomText*>(sibling)->data));
-        domReplaceData(text, length, 0, textView(&data));
-        textReset(&data);
+            prTextBufferAppend(&data, prStringView(&static_cast<PrDomText*>(sibling)->data));
+        domReplaceData(text, length, 0, prTextBufferView(&data));
+        prTextBufferReset(&data);
         for (PrDomNode* sibling = at->next; exclusive(sibling); sibling = sibling->next) {
             if (node->document->ranges != nullptr)
                 domRangesMerged(text, length, sibling);

@@ -60,11 +60,11 @@ PrDomRect domRect(PrLayoutRect rect) {
 
 // Returns a measure rounded to the nearest integer, as a long attribute gives it.
 int32_t integer(double value) {
-    return isFiniteF64(value) ? int32_t(floorF64(value + 0.5)) : 0;
+    return prF64IsFinite(value) ? int32_t(prF64Floor(value + 0.5)) : 0;
 }
 
 double finiteOr0(double value) {
-    return isFiniteF64(value) ? value : 0;
+    return prF64IsFinite(value) ? value : 0;
 }
 
 // Returns true if a computed overflow value does not scroll. Such a value is visible, or clip, which clips without
@@ -347,10 +347,10 @@ uint32_t prCssElementGetClientRects(PrDomElement* element, PrDomRect* PR_NULLABL
             if (drawing->functions->foreignToClient(drawing->content, foreign, corners, 4)) {
                 double left = corners[0].x, top = corners[0].y, right = corners[0].x, bottom = corners[0].y;
                 for (const PrDVec2& corner : corners) {
-                    left = minF64(left, corner.x);
-                    top = minF64(top, corner.y);
-                    right = maxF64(right, corner.x);
-                    bottom = maxF64(bottom, corner.y);
+                    left = prF64Min(left, corner.x);
+                    top = prF64Min(top, corner.y);
+                    right = prF64Max(right, corner.x);
+                    bottom = prF64Max(bottom, corner.y);
                 }
                 rect = PrDomRect{left, top, right - left, bottom - top};
             }
@@ -381,10 +381,10 @@ PrDomRect prCssElementGetBoundingClientRect(PrDomElement* element) {
             any = true;
             continue;
         }
-        double left = minF64(bounds.x, r.x);
-        double top = minF64(bounds.y, r.y);
-        double right = maxF64(bounds.x + bounds.width, r.x + r.width);
-        double bottom = maxF64(bounds.y + bounds.height, r.y + r.height);
+        double left = prF64Min(bounds.x, r.x);
+        double top = prF64Min(bounds.y, r.y);
+        double right = prF64Max(bounds.x + bounds.width, r.x + r.width);
+        double bottom = prF64Max(bounds.y + bounds.height, r.y + r.height);
         bounds = PrDomRect{left, top, right - left, bottom - top};
     }
     rects.reset();

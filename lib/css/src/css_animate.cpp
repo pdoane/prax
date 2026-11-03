@@ -108,14 +108,14 @@ AnimationPhase animationPhase(const PrLayoutTiming& timing, double time, double*
         return AnimationPhase_Before;
     if (since >= activeDuration(timing))
         return AnimationPhase_After;
-    *iteration = timing.duration > 0 ? floorF64(since / timing.duration) : 0;
+    *iteration = timing.duration > 0 ? prF64Floor(since / timing.duration) : 0;
     return AnimationPhase_Active;
 }
 
 // Returns the time in the active phase from which an animation's events measure. A negative delay moves this time
 // forward from the start of the active phase.
 double intervalStart(double delay, double active) {
-    return maxF64(minF64(-delay, active), 0);
+    return prF64Max(prF64Min(-delay, active), 0);
 }
 
 // Queues an event of an animation of `target` for the next rendering update, if a window fires the presentation's
@@ -136,7 +136,7 @@ void queueEvent(CssAnimateState& a, const PrDomNode* target, PrStringView type, 
 void cancelTransition(CssAnimateState& a, const CssRunningTransition& t) {
     if (t.phase == AnimationPhase_Idle || transitionPhase(t, a.time) == AnimationPhase_After)
         return;
-    double elapsed = maxF64(0, minF64(a.time - t.start - t.delay, t.duration));
+    double elapsed = prF64Max(0, prF64Min(a.time - t.start - t.delay, t.duration));
     queueEvent(a, t.target, "transitioncancel", cssPropertyName(t.property), elapsed, a.time, true);
 }
 
@@ -148,7 +148,7 @@ void cancelAnimation(CssAnimateState& a, const CssRunningAnimation& animation) {
         return;
     const PrLayoutTiming& timing = animation.timing;
     double since = (timing.paused ? timing.hold : a.time - timing.start) - timing.delay;
-    double elapsed = maxF64(0, minF64(since, activeDuration(timing)));
+    double elapsed = prF64Max(0, prF64Min(since, activeDuration(timing)));
     queueEvent(a, animation.target, "animationcancel", prStringView(&animation.name), elapsed, a.time, false);
 }
 
@@ -584,7 +584,7 @@ void cssAnimateRestyled(PrCssPresentation* presentation, const PrDomNode* target
         timing.delay = cssTimeMilliseconds(item(PrCssProperty_AnimationDelay), 0);
         CssValueRun count = item(PrCssProperty_AnimationIterationCount);
         if (cssValueRunKeyword(count) == PrCssKeyword_Infinite)
-            timing.iterations = kInfinityF64;
+            timing.iterations = kPrF64Infinity;
         else if (count.count == 1 && cssValueIsNumeric(count.values[0].kind))
             timing.iterations = count.values[0].number;
         else
@@ -928,7 +928,7 @@ bool cssAnimateHaveEventsAhead(const CssAnimateState* animations) {
         // ahead.
         AnimationPhase phase = animationPhase(animation.timing, animations->time, &iteration);
         if (phase == AnimationPhase_Before ||
-                (isFiniteF64(activeDuration(animation.timing)) && phase != AnimationPhase_After))
+                (prF64IsFinite(activeDuration(animation.timing)) && phase != AnimationPhase_After))
             return true;
     }
     return false;
@@ -968,7 +968,7 @@ double cssAnimateNextEventTime(const CssAnimateState* animations) {
         } else if (phase == AnimationPhase_Active) {
             double end = start + active;
             double turn = timing.duration > 0 ? start + (iteration + 1) * timing.duration : end;
-            ahead(minF64(turn, end));
+            ahead(prF64Min(turn, end));
         }
     }
     return next;

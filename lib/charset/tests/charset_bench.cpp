@@ -43,28 +43,28 @@ void decodeView(PrStringView bytes) {
 
 void measure(PrStringView name, PrStringView bytes) {
     PrCharsetDecoder sizing = prCharsetDecoderMake(PrCharset_Utf8, 0);
-    TextBuffer out;
-    out.text.resize(uint32_t(prCharsetDecodeMaxSize(&sizing, bytes.size)));
-    HarnessCounters utf8 = harnessMeasure([&] { decodeInto(PrCharset_Utf8, bytes, out.text.data); });
+    PrTextBuffer out = {};
+    prTextBufferResize(&out, uint32_t(prCharsetDecodeMaxSize(&sizing, bytes.size)));
+    HarnessCounters utf8 = harnessMeasure([&] { decodeInto(PrCharset_Utf8, bytes, out.data); });
     HarnessCounters view = harnessMeasure([&] { decodeView(bytes); });
-    HarnessCounters windows1252 = harnessMeasure([&] { decodeInto(PrCharset_Windows1252, bytes, out.text.data); });
+    HarnessCounters windows1252 = harnessMeasure([&] { decodeInto(PrCharset_Windows1252, bytes, out.data); });
     HarnessCounters bound = harnessMeasure([&] { sink = harnessReadBound(bytes); });
-    textReset(&out);
+    prTextBufferReset(&out);
 
     HarnessCounts counts{};
     harnessCountsAdd(&counts, "utf8", utf8);
     harnessCountsAdd(&counts, "view", view);
     harnessCountsAdd(&counts, "windows1252", windows1252);
     harnessCountsAdd(&counts, "bound", bound);
-    TextBuffer row{};
-    textAppend(&row, "{\"name\": ");
+    PrTextBuffer row{};
+    prTextBufferAppend(&row, "{\"name\": ");
     harnessWriteString(&row, name);
     harnessAppendFormat(&row, ", \"bytes\": %zu, \"utf8\": %.4f, \"view\": %.4f, \"windows1252\": %.4f, \"bound\": %.4f",
         bytes.size, utf8.millis, view.millis, windows1252.millis, bound.millis);
     harnessCountsWrite(&counts, &row);
-    textAppend(&row, "}");
-    harnessWriteLine(textView(&row));
-    textReset(&row);
+    prTextBufferAppend(&row, "}");
+    harnessWriteLine(prTextBufferView(&row));
+    prTextBufferReset(&row);
 }
 
 } // namespace
@@ -77,13 +77,13 @@ int main(int argc, char** argv) {
     }
 
     for (int i = 1; i < argc; ++i) {
-        TextBuffer page;
+        PrTextBuffer page = {};
         if (!harnessReadFile(&page, argv[i])) {
             fprintf(stderr, "cannot read %s\n", argv[i]);
             return 2;
         }
-        measure(harnessFileName(argv[i]), textView(&page));
-        textReset(&page);
+        measure(harnessFileName(argv[i]), prTextBufferView(&page));
+        prTextBufferReset(&page);
     }
     return 0;
 }

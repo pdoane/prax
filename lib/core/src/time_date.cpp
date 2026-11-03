@@ -71,5 +71,5 @@ PrTimeWeekday prTimeWeekdayFromDays(int64_t days) {
 }
 
 int64_t prTimeDaysFromMilliseconds(double milliseconds, double offset) {
-    return int64_t(floorF64((milliseconds + offset) / kDayMilliseconds));
+    return int64_t(prF64Floor((milliseconds + offset) / kDayMilliseconds));
 }

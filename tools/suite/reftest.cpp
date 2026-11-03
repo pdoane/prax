@@ -62,10 +62,10 @@ struct Image {
 
 // Reads the PNG at `path` as straight RGBA. Returns false if it cannot be read.
 bool readPng(PrImageCodec* imageCodec, const std::string& path, Image* out) {
-    TextBuffer bytes;
+    PrTextBuffer bytes = {};
     if (!harnessReadFile(&bytes, path.c_str()))
         return false;
-    PrStringView view = textView(&bytes);
+    PrStringView view = prTextBufferView(&bytes);
     PrImageSource source{};
     source.memory = PrByteView{reinterpret_cast<const uint8_t*>(view.data), view.size};
     PrImageDecoder* decoder = prImageDecoderCreate(imageCodec);
@@ -80,7 +80,7 @@ bool readPng(PrImageCodec* imageCodec, const std::string& path, Image* out) {
         ok = prImageDecoderReadRgba8(decoder, 0, PrImageAlpha_Straight, info->orientation, pixels) == PrStatus_Ok;
     }
     prImageDecoderDestroy(decoder);
-    textReset(&bytes);
+    prTextBufferReset(&bytes);
     return ok;
 }
 
@@ -102,12 +102,12 @@ struct Documents {
         for (auto& [document, from] : loaded)
             if (from == path)
                 return document;
-        TextBuffer source;
+        PrTextBuffer source = {};
         if (!harnessReadFile(&source, path.c_str()))
             return nullptr;
-        PrDomDocument* document = prDomParseXml(textView(&source), "image/svg+xml", nullptr);
+        PrDomDocument* document = prDomParseXml(prTextBufferView(&source), "image/svg+xml", nullptr);
         prSvgEnable(document);
-        textReset(&source);
+        prTextBufferReset(&source);
         loaded.emplace_back(document, path);
         return document;
     }
@@ -151,8 +151,8 @@ bool decodeImage(const Images& images, std::string bytes, PrStringView fragment,
     if (!gunzip(images.compressCodec, &bytes))
         return false;
     PrStringView text{bytes.data(), bytes.size()};
-    PrStringView head = stringSlice(text, 0, text.size < 512 ? text.size : 512);
-    if (stringContains(head, "<svg")) {
+    PrStringView head = prStringSlice(text, 0, text.size < 512 ? text.size : 512);
+    if (prStringContains(head, "<svg")) {
         PrDomDocument* document = prDomParseXml(text, "image/svg+xml", nullptr);
         if (document == nullptr)
             return false;
@@ -175,9 +175,9 @@ bool decodeImage(const Images& images, std::string bytes, PrStringView fragment,
 // Loads an image that a reference names (PrSvgLoadImageFn): a data: URL, or a file beside the document that names it.
 bool loadImage(void* PR_NULLABLE context, PrDomDocument* from, PrStringView url, PrSvgLoadedImage* out) {
     const Images& images = *static_cast<const Images*>(context);
-    size_t hash = stringFind(url, '#');
-    PrStringView fragment = hash < url.size ? stringSlice(url, hash + 1, url.size - hash - 1) : PrStringView{};
-    PrStringView address = stringSlice(url, 0, hash);
+    size_t hash = prStringFindByte(url, '#');
+    PrStringView fragment = hash < url.size ? prStringSlice(url, hash + 1, url.size - hash - 1) : PrStringView{};
+    PrStringView address = prStringSlice(url, 0, hash);
     PrString body{};
     PrString type{};
     if (prUrlProcessData(address, &body, &type) == PrStatus_Ok) {
@@ -192,10 +192,11 @@ bool loadImage(void* PR_NULLABLE context, PrDomDocument* from, PrStringView url,
         if (document != from)
             continue;
         std::string file = path.substr(0, path.find_last_of('/') + 1) + std::string(address.data, address.size);
-        TextBuffer source;
+        PrTextBuffer source = {};
         bool read = harnessReadFile(&source, file.c_str());
-        std::string bytes(textView(&source).data != nullptr ? textView(&source).data : "", textView(&source).size);
-        textReset(&source);
+        PrStringView sourceText = prTextBufferView(&source);
+        std::string bytes(sourceText.data, sourceText.size);
+        prTextBufferReset(&source);
         return read && decodeImage(images, std::move(bytes), fragment, out);
     }
     return false;
@@ -215,21 +216,21 @@ PrDomDocument* PR_NULLABLE loadReferenced(void* PR_NULLABLE context, PrDomDocume
 // The files beside a Lottie animation that it names, each kept until the animation is read.
 struct LottieFiles {
     std::string directory;
-    std::vector<std::unique_ptr<TextBuffer>> read;
+    std::vector<std::unique_ptr<PrTextBuffer>> read;
 
     ~LottieFiles() {
-        for (std::unique_ptr<TextBuffer>& buffer : read)
-            textReset(buffer.get());
+        for (std::unique_ptr<PrTextBuffer>& buffer : read)
+            prTextBufferReset(buffer.get());
     }
 };
 
 bool loadLottieFile(void* PR_NULLABLE context, PrStringView path, PrByteView* out) {
     LottieFiles* files = static_cast<LottieFiles*>(context);
-    std::unique_ptr<TextBuffer> buffer = std::make_unique<TextBuffer>();
+    std::unique_ptr<PrTextBuffer> buffer = std::make_unique<PrTextBuffer>();
     std::string full = files->directory + std::string(path.data, path.size);
     if (!harnessReadFile(buffer.get(), full.c_str()))
         return false;
-    PrStringView view = textView(buffer.get());
+    PrStringView view = prTextBufferView(buffer.get());
     *out = PrByteView{reinterpret_cast<const uint8_t*>(view.data), view.size};
     files->read.push_back(std::move(buffer));
     return true;
@@ -258,7 +259,7 @@ PrFontSet* lottieFonts() {
 // or a dotLottie archive's first animation.
 PrStatus recordLottie(PrCompressCodec* compressCodec, PrImageCodec* imageCodec, const SuiteRender& suite,
         PrTextShaper* shaper, const std::string& path, float width, float height, double frame, PrDrawList* list) {
-    TextBuffer source;
+    PrTextBuffer source = {};
     if (!harnessReadFile(&source, path.c_str()))
         return PrStatus_NotFound;
     LottieFiles files;
@@ -272,7 +273,7 @@ PrStatus recordLottie(PrCompressCodec* compressCodec, PrImageCodec* imageCodec, 
     PrLottieAnimation* animation = nullptr;
     PrStatus status = PrStatus_Ok;
     if (path.ends_with(".lottie")) {
-        PrStringView bytes = textView(&source);
+        PrStringView bytes = prTextBufferView(&source);
         PrLottieArchive* archive = prLottieArchiveCreate(compressCodec);
         status = prLottieArchiveOpen(archive, PrByteView{reinterpret_cast<const uint8_t*>(bytes.data), bytes.size});
         if (status == PrStatus_Ok && prLottieArchiveAnimationCount(archive) > 0)
@@ -281,9 +282,9 @@ PrStatus recordLottie(PrCompressCodec* compressCodec, PrImageCodec* imageCodec, 
             status = PrStatus_NotFound;
         prLottieArchiveDestroy(archive);
     } else {
-        status = prLottieAnimationCreate(textView(&source), &options, &animation);
+        status = prLottieAnimationCreate(prTextBufferView(&source), &options, &animation);
     }
-    textReset(&source);
+    prTextBufferReset(&source);
     if (status != PrStatus_Ok)
         return status;
     PrLottieInfo info = prLottieAnimationInfo(animation);
@@ -355,10 +356,10 @@ PrStatus render(PrDrawRenderer* renderer, PrCompressCodec* compressCodec, PrImag
     return status;
 }
 
-void writeFigure(TextBuffer* out, const char* name, double value) {
+void writeFigure(PrTextBuffer* out, const char* name, double value) {
     char text[64];
     std::snprintf(text, sizeof(text), ",\"%s\":%.9g", name, value);
-    textAppend(out, text);
+    prTextBufferAppend(out, text);
 }
 
 } // namespace
@@ -400,7 +401,7 @@ int main(int argc, char** argv) {
     HarnessCase test = {};
     while (harnessReadCase(&test)) {
         std::vector<std::string> paths;
-        PrStringView input = textView(&test.input);
+        PrStringView input = prTextBufferView(&test.input);
         size_t start = 0;
         for (size_t i = 0; i <= input.size; ++i) {
             if (i == input.size || input.data[i] == '\n') {
@@ -412,7 +413,7 @@ int main(int argc, char** argv) {
             return 1;
         double time = paths.size() == 7 ? std::strtod(paths[6].c_str(), nullptr) : 0;
 
-        TextBuffer out;
+        PrTextBuffer out = {};
         Image reference;
         PrStatus status = PrStatus_Ok;
         if (!paths[1].ends_with(".png")) {
@@ -437,7 +438,7 @@ int main(int argc, char** argv) {
             status = render(renderer, compressCodec, imageCodec, suite, textShaper, paths[0], reference.width,
                 reference.height, time, &rendered);
         double ms = prTimeMonotonicMilliseconds() - started;
-        textAppend(&out, "{\"status\":");
+        prTextBufferAppend(&out, "{\"status\":");
         harnessWriteString(&out, prStatusName(status));
         if (!rendered.empty()) {
             std::vector<uint8_t> diff(rendered.size());
@@ -452,16 +453,16 @@ int main(int argc, char** argv) {
             writeFigure(&out, "maxDifference", double(p.maxDifference));
             writeFigure(&out, "differingPixels", double(p.differingPixels));
             bool drawn = imageDrawsAnything(reference.rgba.data(), reference.width, reference.height, stride);
-            textAppend(&out, drawn ? ",\"blank\":false" : ",\"blank\":true");
+            prTextBufferAppend(&out, drawn ? ",\"blank\":false" : ",\"blank\":true");
             if (paths[3] != "-")
                 writePng(paths[3], rendered, reference.width, reference.height);
             if (paths[5] != "-")
                 writePng(paths[5], diff, reference.width, reference.height);
         }
         writeFigure(&out, "ms", ms);
-        textAppendChar(&out, '}');
-        harnessWriteLine(textView(&out));
-        textReset(&out);
+        prTextBufferAppendChar(&out, '}');
+        harnessWriteLine(prTextBufferView(&out));
+        prTextBufferReset(&out);
     }
     harnessCaseReset(&test);
     prDrawRendererDestroy(renderer);

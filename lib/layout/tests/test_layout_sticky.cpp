@@ -21,7 +21,7 @@ namespace {
 // offset to stay inside the scrollport at its insets, within its containing block. Each case is a document of plain
 // blocks, and checks where the box is drawn, hit and measured as its scroll container scrolls.
 
-constexpr float kAuto = kNanF32;
+constexpr float kAuto = kPrF32Nan;
 
 // Returns `box` sticky positioned, at `top`, `right`, `bottom` and `left`, each auto if it is kAuto.
 PrLayoutBoxStyle sticky(PrLayoutBoxStyle box, float top, float right, float bottom, float left) {

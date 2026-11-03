@@ -14,6 +14,7 @@
 
 #include "draw/backends/fragment/src/draw_fragment_device.h"
 
+#include "pr/align.h"
 #include "pr/alloc.h"
 #include "pr/array.h"
 #include "pr/float.h"
@@ -322,8 +323,8 @@ PrIRect instancePixels(const FragmentInstance& i, const float offset[2], const P
         }
     }
     PrIRect box{
-        int32_t(floorF32(lo[0] + offset[0])) - 1, int32_t(floorF32(lo[1] + offset[1])) - 1,
-        int32_t(ceilF32(hi[0] + offset[0])) + 1, int32_t(ceilF32(hi[1] + offset[1])) + 1,
+        int32_t(prF32Floor(lo[0] + offset[0])) - 1, int32_t(prF32Floor(lo[1] + offset[1])) - 1,
+        int32_t(prF32Ceil(hi[0] + offset[0])) + 1, int32_t(prF32Ceil(hi[1] + offset[1])) + 1,
     };
     return intersection(box, limit);
 }
@@ -524,7 +525,7 @@ void writeData(const FragmentFrame* frame, const PrDrawBeneath* PR_NULLABLE bene
     uint8_t* bytes = static_cast<uint8_t*>(prGpuCommandsStream(commands, total != 0 ? total : 16, &buffer, &offset));
     for (uint32_t part = 0; part < FragmentPart_Count; ++part) {
         if (sources[part].bytes != nullptr && sources[part].size != 0)
-            memCopy(bytes + at[part], sources[part].bytes, sources[part].size);
+            prMemCopy(bytes + at[part], sources[part].bytes, sources[part].size);
         state->uniforms.parts[part] = uint32_t(offset) + at[part];
     }
     state->uniforms.data = buffer.id;

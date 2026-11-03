@@ -190,8 +190,8 @@ void trianglesDeviceRender(TrianglesDevice* d, const TrianglesFrame* frame, PrGp
     PrGpuBuffer buffer{};
     uint64_t offset = 0;
     uint8_t* bytes = static_cast<uint8_t*>(prGpuCommandsStream(commands, indexAt + indexBytes, &buffer, &offset));
-    memCopy(bytes, frame->vertices, vertexBytes);
-    memCopy(bytes + indexAt, frame->indices, indexBytes);
+    prMemCopy(bytes, frame->vertices, vertexBytes);
+    prMemCopy(bytes + indexAt, frame->indices, indexBytes);
     prGpuCommandsSetPipeline(commands, pipeline);
     prGpuPassSetIndexBuffer(pass, buffer, offset + indexAt, true);
     prGpuPassSetViewport(pass, PrRect{

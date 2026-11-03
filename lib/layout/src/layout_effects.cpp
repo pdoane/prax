@@ -138,7 +138,7 @@ void countEntry(LayoutCompounds* compounds, LayoutEffectKind kind, const LayoutE
 void takeStops(PrLayoutBackgroundLayer& image, PrLayoutColorStop* PR_NULLABLE stops, uint32_t* next) {
     if (image.kind != PrLayoutImageKind_Gradient || image.gradient.stopCount == 0)
         return;
-    memCopy(stops + *next, image.gradient.stops, sizeof(PrLayoutColorStop) * image.gradient.stopCount);
+    prMemCopy(stops + *next, image.gradient.stops, sizeof(PrLayoutColorStop) * image.gradient.stopCount);
     image.gradient.stops = stops + *next;
     *next += image.gradient.stopCount;
 }
@@ -158,7 +158,7 @@ void copyInto(LayoutEffectEntry& entry, LayoutEffectKind kind, const PrLayoutSha
             if (shape->pointCount != 0) {
                 size_t bytes = sizeof(PrLayoutLength) * 2 * shape->pointCount;
                 PrLayoutLength* points = static_cast<PrLayoutLength*>(prMemoryAlloc(bytes));
-                memCopy(points, shape->points, bytes);
+                prMemCopy(points, shape->points, bytes);
                 entry.shape.points = points;
             }
             if (shape->path != nullptr)
@@ -187,7 +187,7 @@ void copyInto(LayoutEffectEntry& entry, LayoutEffectKind kind, const PrLayoutSha
             if (mask->layerCount != 0) {
                 PrLayoutMaskLayer* layers =
                     static_cast<PrLayoutMaskLayer*>(prMemoryAlloc(sizeof(PrLayoutMaskLayer) * mask->layerCount));
-                memCopy(layers, mask->layers, sizeof(PrLayoutMaskLayer) * mask->layerCount);
+                prMemCopy(layers, mask->layers, sizeof(PrLayoutMaskLayer) * mask->layerCount);
                 for (uint32_t i = 0; i < mask->layerCount; ++i) {
                     takeStops(layers[i].image, entry.stops, &next);
                     layoutImageTakeFilters(layers[i].image, entry.filters, &nextFilter);
@@ -200,7 +200,7 @@ void copyInto(LayoutEffectEntry& entry, LayoutEffectKind kind, const PrLayoutSha
         }
         default:
             entry.filters = static_cast<PrLayoutFilter*>(prMemoryAlloc(sizeof(PrLayoutFilter) * filterCount));
-            memCopy(entry.filters, filters, sizeof(PrLayoutFilter) * filterCount);
+            prMemCopy(entry.filters, filters, sizeof(PrLayoutFilter) * filterCount);
             entry.filterCount = filterCount;
             break;
     }
@@ -233,10 +233,10 @@ void freeEntry(LayoutEffectEntry& entry) {
 uint32_t intern(LayoutEffectLists* lists, LayoutCompounds* compounds, LayoutEffectKind kind, Array<uint8_t>& key,
         const PrLayoutShape* shape, const PrLayoutMask* mask, const PrLayoutFilter* filters, uint32_t filterCount) {
     LayoutEffectTable& table = lists->tables[kind];
-    uint32_t hash = uint32_t(hashBytes(key.data, key.count, kEffectSeed));
+    uint32_t hash = uint32_t(prHashBytes(key.data, key.count, kEffectSeed));
     uint32_t found = table.index.find(hash, [&](uint32_t i) {
         const LayoutEffectEntry& e = table.entries.data[i];
-        return e.key.count == key.count && memEquals(e.key.data, key.data, key.count);
+        return e.key.count == key.count && prMemEquals(e.key.data, key.data, key.count);
     });
     if (found != kHashMissing) {
         key.reset();
@@ -284,10 +284,10 @@ float resolvePx(const LayoutCompounds* PR_NULLABLE compounds, PrLayoutLength len
 // through the corner would be, for an axis taken alone.
 float extentOf(PrLayoutRadialExtent extent, float near, float far) {
     switch (extent) {
-        case PrLayoutRadialExtent_FarthestSide: return maxF32(near, far);
-        case PrLayoutRadialExtent_ClosestCorner: return minF32(near, far) * kSqrt2F32;
-        case PrLayoutRadialExtent_FarthestCorner: return maxF32(near, far) * kSqrt2F32;
-        default: return minF32(near, far);
+        case PrLayoutRadialExtent_FarthestSide: return prF32Max(near, far);
+        case PrLayoutRadialExtent_ClosestCorner: return prF32Min(near, far) * kPrF32Sqrt2;
+        case PrLayoutRadialExtent_FarthestCorner: return prF32Max(near, far) * kPrF32Sqrt2;
+        default: return prF32Min(near, far);
     }
 }
 
@@ -296,8 +296,8 @@ float extentOf(PrLayoutRadialExtent extent, float near, float far) {
 void cornersOf(const LayoutCompounds* PR_NULLABLE compounds, const PrLayoutLength* radii, PrVec2 extent, PrCorner* corners) {
     for (uint32_t c = 0; c < PrRectCorner_Count; ++c) {
         PrVec2 r{
-            maxF32(resolvePx(compounds, radii[2 * c], extent.x), 0),
-            maxF32(resolvePx(compounds, radii[2 * c + 1], extent.y), 0),
+            prF32Max(resolvePx(compounds, radii[2 * c], extent.x), 0),
+            prF32Max(resolvePx(compounds, radii[2 * c + 1], extent.y), 0),
         };
         corners[c] = prCornerRound(r);
     }
@@ -342,18 +342,18 @@ void ellipsePath(const LayoutCompounds* PR_NULLABLE compounds, const PrLayoutSha
     if (shape.kind == PrLayoutShapeKind_Circle) {
         PrLayoutRadialExtent e = shape.extentX;
         if (e == PrLayoutRadialExtent_Radii) {
-            float diagonal = sqrtF32((extent.x * extent.x + extent.y * extent.y) / 2);
+            float diagonal = prF32Sqrt((extent.x * extent.x + extent.y * extent.y) / 2);
             radii.x = resolvePx(compounds, shape.radiusX, diagonal);
         } else if (e == PrLayoutRadialExtent_ClosestCorner || e == PrLayoutRadialExtent_FarthestCorner) {
             // The distance to the nearest or farthest corner.
             bool closest = e == PrLayoutRadialExtent_ClosestCorner;
-            float dx = closest ? minF32(near.x, far.x) : maxF32(near.x, far.x);
-            float dy = closest ? minF32(near.y, far.y) : maxF32(near.y, far.y);
-            radii.x = sqrtF32(dx * dx + dy * dy);
+            float dx = closest ? prF32Min(near.x, far.x) : prF32Max(near.x, far.x);
+            float dy = closest ? prF32Min(near.y, far.y) : prF32Max(near.y, far.y);
+            radii.x = prF32Sqrt(dx * dx + dy * dy);
         } else {
             float x = extentOf(e, near.x, far.x);
             float y = extentOf(e, near.y, far.y);
-            radii.x = e == PrLayoutRadialExtent_FarthestSide ? maxF32(x, y) : minF32(x, y);
+            radii.x = e == PrLayoutRadialExtent_FarthestSide ? prF32Max(x, y) : prF32Min(x, y);
         }
         radii.y = radii.x;
     } else {
@@ -398,26 +398,26 @@ void polygonPath(const LayoutCompounds* PR_NULLABLE compounds, const PrLayoutSha
         PrVec2 after = points.data[(i + 1) % count];
         PrVec2 a{before.x - at.x, before.y - at.y};
         PrVec2 b{after.x - at.x, after.y - at.y};
-        float la = sqrtF32(a.x * a.x + a.y * a.y);
-        float lb = sqrtF32(b.x * b.x + b.y * b.y);
-        float cosine = la > 0 && lb > 0 ? clampF32((a.x * b.x + a.y * b.y) / (la * lb), -1, 1) : 1;
-        float angle = acosF32(cosine);
-        float half = tanF32(angle / 2);
+        float la = prF32Sqrt(a.x * a.x + a.y * a.y);
+        float lb = prF32Sqrt(b.x * b.x + b.y * b.y);
+        float cosine = la > 0 && lb > 0 ? prF32Clamp((a.x * b.x + a.y * b.y) / (la * lb), -1, 1) : 1;
+        float angle = prF32Acos(cosine);
+        float half = prF32Tan(angle / 2);
         // A vertex at which the sides meet straight or fold back is not rounded.
-        if (!(la > 0) || !(lb > 0) || !(half > 0) || !isFiniteF32(half)) {
+        if (!(la > 0) || !(lb > 0) || !(half > 0) || !prF32IsFinite(half)) {
             if (i == 0)
                 prPathMoveTo(out, at);
             else
                 prPathLineTo(out, at);
             continue;
         }
-        float radius = minF32(shape.round, minF32(half * la / 2, half * lb / 2));
+        float radius = prF32Min(shape.round, prF32Min(half * la / 2, half * lb / 2));
         float distance = radius / half;
         PrVec2 in{at.x + a.x / la * distance, at.y + a.y / la * distance};
         PrVec2 outward{at.x + b.x / lb * distance, at.y + b.y / lb * distance};
         // The cubic that approximates the arc: its handles lie along the sides, toward the vertex.
-        float sweep = kPiF32 - angle;
-        float handle = 4.0f / 3.0f * tanF32(sweep / 4) * radius / distance;
+        float sweep = kPrF32Pi - angle;
+        float handle = 4.0f / 3.0f * prF32Tan(sweep / 4) * radius / distance;
         PrVec2 c1{in.x + (at.x - in.x) * handle, in.y + (at.y - in.y) * handle};
         PrVec2 c2{outward.x + (at.x - outward.x) * handle, outward.y + (at.y - outward.y) * handle};
         if (i == 0)
@@ -605,7 +605,7 @@ bool drawBorder(const LayoutCompounds* compounds, const PrLayoutMaskBorder& b, P
     auto edgeOf = [&](PrLayoutBorderImageKind kind, PrLayoutLength length, float number, float base, uint32_t side) -> float {
         if (kind == PrLayoutBorderImageKind_Number)
             return number * widths[side];
-        return maxF32(resolvePx(compounds, length, base), 0);
+        return prF32Max(resolvePx(compounds, length, base), 0);
     };
     PrVec2 borderExtent{prRectWidth(border), prRectHeight(border)};
     float outsets[PrRectSide_Count];
@@ -625,7 +625,7 @@ bool drawBorder(const LayoutCompounds* compounds, const PrLayoutMaskBorder& b, P
     PrDrawNineSlice slices{};
     for (uint32_t side = 0; side < PrRectSide_Count; ++side) {
         float whole = side % 2 == 0 ? natural.y : natural.x;
-        slices.slices[side] = clampF32(resolvePx(compounds, b.slice[side], whole), 0, whole);
+        slices.slices[side] = prF32Clamp(resolvePx(compounds, b.slice[side], whole), 0, whole);
         float base = side % 2 == 0 ? extent.y : extent.x;
         if (b.widthKind[side] == PrLayoutBorderImageKind_Auto)
             slices.widths[side] = slices.slices[side];
@@ -635,9 +635,9 @@ bool drawBorder(const LayoutCompounds* compounds, const PrLayoutMaskBorder& b, P
     // Widths that overlap are reduced in proportion (css-backgrounds-3/#border-image-width).
     float factor = 1;
     if (slices.widths[PrRectSide_Left] + slices.widths[PrRectSide_Right] > extent.x)
-        factor = minF32(factor, extent.x / (slices.widths[PrRectSide_Left] + slices.widths[PrRectSide_Right]));
+        factor = prF32Min(factor, extent.x / (slices.widths[PrRectSide_Left] + slices.widths[PrRectSide_Right]));
     if (slices.widths[PrRectSide_Top] + slices.widths[PrRectSide_Bottom] > extent.y)
-        factor = minF32(factor, extent.y / (slices.widths[PrRectSide_Top] + slices.widths[PrRectSide_Bottom]));
+        factor = prF32Min(factor, extent.y / (slices.widths[PrRectSide_Top] + slices.widths[PrRectSide_Bottom]));
     for (float& width : slices.widths)
         width *= factor;
     slices.horizontal = b.horizontal;

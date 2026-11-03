@@ -67,16 +67,16 @@ PrDomAttr* PR_NULLABLE attrOf(PrDomNode* PR_NULLABLE node) {
 // NotSupported if the document can hold no other namespace.
 PrStatus validateAndExtract(PrDomDocument* document, PrStringView namespaceUrl,
         PrStringView qualifiedName, bool element, DomNamespaceId* space, PrStringView* prefix, PrStringView* local) {
-    size_t colon = stringFind(qualifiedName, ':');
+    size_t colon = prStringFindByte(qualifiedName, ':');
     *prefix = colon < qualifiedName.size ? PrStringView{qualifiedName.data, colon} : PrStringView{};
     *local = qualifiedName;
     if (colon < qualifiedName.size)
-        *local = stringSlice(qualifiedName, colon + 1, qualifiedName.size - colon - 1);
+        *local = prStringSlice(qualifiedName, colon + 1, qualifiedName.size - colon - 1);
     if (prefix->data != nullptr) {
         // dom/#valid-namespace-prefix
         bool valid = prefix->size != 0;
         for (size_t i = 0; valid && i < prefix->size; ++i)
-            valid = !asciiIsSpace(prefix->data[i]) && prefix->data[i] != '\0' &&
+            valid = !prAsciiIsSpace(prefix->data[i]) && prefix->data[i] != '\0' &&
                 prefix->data[i] != '/' && prefix->data[i] != '>';
         if (!valid)
             return PrStatus_InvalidData;
@@ -94,15 +94,15 @@ PrStatus validateAndExtract(PrDomDocument* document, PrStringView namespaceUrl,
 }
 
 // Returns `name`, in ASCII lowercase if `lower` is set. The lowered name is written to `buffer` if lowering changes it.
-PrStringView lowered(PrStringView name, bool lower, TextBuffer* buffer) {
+PrStringView lowered(PrStringView name, bool lower, PrTextBuffer* buffer) {
     bool upper = false;
     for (size_t i = 0; lower && !upper && i < name.size; ++i)
-        upper = asciiIsUpper(name.data[i]);
+        upper = prAsciiIsUpper(name.data[i]);
     if (!upper)
         return name;
-    textAppend(buffer, name);
-    textAsciiLower(buffer);
-    return textView(buffer);
+    prTextBufferAppend(buffer, name);
+    prTextBufferAsciiLower(buffer);
+    return prTextBufferView(buffer);
 }
 
 // Returns the attribute that a Remove method took off the element, with a reference that the caller takes. Returns
@@ -125,19 +125,19 @@ Handle* PR_NULLABLE nodeOfType(PrDomEventTarget* PR_NULLABLE target, PrDomNodeTy
 
 // infra/#strip-and-collapse-ascii-whitespace
 PrString stripAndCollapse(PrStringView text) {
-    TextBuffer out;
+    PrTextBuffer out = {};
     bool space = false;
     for (size_t i = 0; i < text.size; ++i) {
-        if (asciiIsSpace(text.data[i])) {
+        if (prAsciiIsSpace(text.data[i])) {
             space = true;
             continue;
         }
-        if (space && out.text.count != 0)
-            textAppendChar(&out, ' ');
+        if (space && out.size != 0)
+            prTextBufferAppendChar(&out, ' ');
         space = false;
-        textAppendChar(&out, text.data[i]);
+        prTextBufferAppendChar(&out, text.data[i]);
     }
-    return textTake(&out);
+    return prTextBufferTake(&out);
 }
 
 // Returns the first element of `space` whose tag is `tag`, among the descendants of `root` or among its children alone.
@@ -331,7 +331,7 @@ bool prDomEventKindFromInterface(PrStringView interface, PrDomEventKind* out) {
         {"uievents", PrDomEventKind_Ui},
     };
     for (const EventInterface& entry : kInterfaces) {
-        if (asciiEqualsFold(interface, entry.name)) {
+        if (prAsciiEqualsFold(interface, entry.name)) {
             *out = entry.kind;
             return true;
         }
@@ -1297,7 +1297,7 @@ PrStatus prDomElementCreate(PrDomDocument* document, PrStringView localName,
     if (!domIsValidElementLocalName(localName))
         return PrStatus_InvalidData;
     // An HTML document lowercases the name. An HTML or XHTML document creates an HTML element.
-    TextBuffer buffer;
+    PrTextBuffer buffer = {};
     PrStringView name = lowered(localName, document->kind == DomDocumentKind_Html, &buffer);
     bool html = document->kind == DomDocumentKind_Html ||
         prStringView(&document->contentType) == "application/xhtml+xml";
@@ -1311,7 +1311,7 @@ PrStatus prDomElementCreate(PrDomDocument* document, PrStringView localName,
     PrDomElement* element = made(created);
     if (held)
         domNodeUnhold(element);
-    textReset(&buffer);
+    prTextBufferReset(&buffer);
     if (out != nullptr)
         *out = element;
     else
@@ -1348,10 +1348,10 @@ PrStatus prDomAttrCreate(PrDomDocument* document, PrStringView localName, PrDomA
     *out = nullptr;
     if (!domIsValidAttributeLocalName(localName))
         return PrStatus_InvalidData;
-    TextBuffer buffer;
+    PrTextBuffer buffer = {};
     PrStringView name = lowered(localName, document->kind == DomDocumentKind_Html, &buffer);
     *out = made(domAttrCreate(document, PrDomNamespace_None, PrStringView{}, name, ""));
-    textReset(&buffer);
+    prTextBufferReset(&buffer);
     return PrStatus_Ok;
 }
 
@@ -1379,7 +1379,7 @@ PrStatus prDomTextCreateCdataSection(PrDomDocument* document, PrStringView data,
     *out = nullptr;
     if (document->kind == DomDocumentKind_Html)
         return PrStatus_NotSupported;
-    if (stringContains(data, "]]>"))
+    if (prStringContains(data, "]]>"))
         return PrStatus_InvalidData;
     *out = made(domTextCreateCdataSection(document, data));
     return PrStatus_Ok;
@@ -1392,7 +1392,7 @@ PrDomComment* prDomCommentCreate(PrDomDocument* document, PrStringView data) {
 PrStatus prDomProcessingInstructionCreate(PrDomDocument* document, PrStringView target, PrStringView data,
         PrDomProcessingInstruction* PR_NULLABLE* PR_NONNULL out) {
     *out = nullptr;
-    if (!prXmlIsName(target) || stringContains(data, "?>"))
+    if (!prXmlIsName(target) || prStringContains(data, "?>"))
         return PrStatus_InvalidData;
     *out = made(domProcessingInstructionCreate(document, target, data));
     return PrStatus_Ok;
@@ -1479,7 +1479,7 @@ PrStatus prDomDocumentTypeCreate(PrDomImplementation* implementation, PrStringVi
     *out = nullptr;
     // dom/#valid-doctype-name: no ASCII whitespace, U+0000 or '>'.
     for (size_t i = 0; i < name.size; ++i) {
-        if (asciiIsSpace(name.data[i]) || name.data[i] == '\0' || name.data[i] == '>')
+        if (prAsciiIsSpace(name.data[i]) || name.data[i] == '\0' || name.data[i] == '>')
             return PrStatus_InvalidData;
     }
     *out = made(domDocumentTypeCreate(implementation, name, publicId, systemId));
@@ -1614,7 +1614,7 @@ PrStringView prDomElementGetAttribute(const PrDomElement* element, PrStringView 
 PrStatus prDomElementSetAttribute(PrDomElement* element, PrStringView qualifiedName, PrStringView value) {
     if (!domIsValidAttributeLocalName(qualifiedName))
         return PrStatus_InvalidData;
-    TextBuffer buffer;
+    PrTextBuffer buffer = {};
     PrStringView name = lowered(qualifiedName, domIsHtmlInHtmlDocument(element), &buffer);
     // dom/#dom-element-setattribute: sets the attribute with that qualified name, whatever its namespace, or else adds
     // a new attribute in no namespace.
@@ -1622,7 +1622,7 @@ PrStatus prDomElementSetAttribute(PrDomElement* element, PrStringView qualifiedN
         domSetAttribute(element, attribute->space, prStringView(&attribute->name), value);
     else
         domSetAttribute(element, PrDomNamespace_None, name, value);
-    textReset(&buffer);
+    prTextBufferReset(&buffer);
     return PrStatus_Ok;
 }
 
@@ -1678,7 +1678,7 @@ PrStatus prDomElementToggleAttribute(PrDomElement* element, PrStringView qualifi
         const bool* PR_NULLABLE force, bool* PR_NULLABLE out) {
     if (!domIsValidAttributeLocalName(qualifiedName))
         return PrStatus_InvalidData;
-    TextBuffer buffer;
+    PrTextBuffer buffer = {};
     PrStringView name = lowered(qualifiedName, domIsHtmlInHtmlDocument(element), &buffer);
     PrDomAttr* attribute = domAttributeByName(element, name);
     bool present = attribute != nullptr;
@@ -1689,7 +1689,7 @@ PrStatus prDomElementToggleAttribute(PrDomElement* element, PrStringView qualifi
         domRemoveAttributeNode(element, attribute);
         present = false;
     }
-    textReset(&buffer);
+    prTextBufferReset(&buffer);
     if (out != nullptr)
         *out = present;
     return PrStatus_Ok;
@@ -1715,7 +1715,7 @@ uint32_t prDomElementNamedAttributeNames(const PrDomElement* element, PrString* 
         PrStringView view = prStringView(&name);
         bool keep = true;
         for (size_t i = 0; html && keep && i < view.size; ++i)
-            keep = !asciiIsUpper(view.data[i]);
+            keep = !prAsciiIsUpper(view.data[i]);
         // If an earlier attribute has the same name, the name belongs to that attribute.
         for (const PrDomAttr* before = element->firstAttribute; keep && before != attribute;
                 before = static_cast<const PrDomAttr*>(before->next)) {
@@ -1939,10 +1939,10 @@ PrString prDomTextWholeText(const PrDomText* text) {
     const PrDomNode* first = text;
     while (first->previous != nullptr && first->parent != nullptr && domIsText(first->previous))
         first = first->previous;
-    TextBuffer out;
+    PrTextBuffer out = {};
     for (const PrDomNode* node = first; node != nullptr && domIsText(node); node = node->parent != nullptr ? node->next : nullptr)
-        textAppend(&out, prStringView(&static_cast<const PrDomText*>(node)->data));
-    return textTake(&out);
+        prTextBufferAppend(&out, prStringView(&static_cast<const PrDomText*>(node)->data));
+    return prTextBufferTake(&out);
 }
 
 PrDomComment* PR_NULLABLE prDomCommentQuery(PrDomEventTarget* PR_NULLABLE object) {
@@ -2032,7 +2032,7 @@ PrStatus prDomTokenListSupports(const PrDomTokenList* list, PrStringView token, 
     if (list->supported == nullptr)
         return PrStatus_WrongType;
     for (uint32_t i = 0; i < list->supportedCount; ++i)
-        *out = *out || asciiEqualsFold(token, list->supported[i]);
+        *out = *out || prAsciiEqualsFold(token, list->supported[i]);
     return PrStatus_Ok;
 }
 

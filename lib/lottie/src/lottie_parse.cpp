@@ -48,7 +48,7 @@ bool before(PrStringView version, uint32_t major, uint32_t minor, uint32_t patch
         char c = version.data[i];
         if (c == '.')
             ++part;
-        else if (asciiIsDigit(c))
+        else if (prAsciiIsDigit(c))
             parts[part] = parts[part] * 10 + uint32_t(c - '0');
     }
     uint32_t minimum[3] = {major, minor, patch};
@@ -95,12 +95,12 @@ double number(const Parser& p, uint32_t object, const char* key, double fallback
 
 // Reads a number as an integer, truncated and saturated.
 int32_t integer(const Parser& p, uint32_t object, const char* key, double fallback) {
-    return saturateI32(number(p, object, key, fallback));
+    return prF64SaturateI32(number(p, object, key, fallback));
 }
 
 // Reads a number as a count, truncated and saturated.
 uint32_t count(const Parser& p, uint32_t object, const char* key, uint32_t fallback) {
-    return saturateU32(number(p, object, key, fallback));
+    return prF64SaturateU32(number(p, object, key, fallback));
 }
 
 // Reads a number as one of an enumeration's values. Returns `fallback` if the number cannot be one.
@@ -936,8 +936,8 @@ PrColor hexColor(PrStringView hex) {
         for (uint32_t i = 0; i < 3; ++i) {
             char hi = hex.data[1 + i * 2];
             char lo = hex.data[2 + i * 2];
-            if (asciiIsHexDigit(hi) && asciiIsHexDigit(lo))
-                *channels[i] = float(asciiHexValue(hi) * 16 + asciiHexValue(lo)) / 255;
+            if (prAsciiIsHexDigit(hi) && prAsciiIsHexDigit(lo))
+                *channels[i] = float(prAsciiHexValue(hi) * 16 + prAsciiHexValue(lo)) / 255;
         }
     }
     return color;
@@ -1155,7 +1155,7 @@ struct AssetId {
     PrStringView id;
     uint32_t index;
 
-    bool operator<(PrStringView other) const { return stringCompare(id, other) < 0; }
+    bool operator<(PrStringView other) const { return prStringCompare(id, other) < 0; }
 };
 
 // Returns the ids from `first` on, with their indexes, sorted.
@@ -1164,7 +1164,7 @@ Array<AssetId> sortedIds(const Array<PrStringView>& ids, uint32_t first) {
     for (uint32_t i = first; i < ids.count; ++i)
         sorted.push(AssetId{ids.data[i], i});
     sortItems(sorted.data, sorted.count, [](const AssetId& a, const AssetId& b) {
-        int order = stringCompare(a.id, b.id);
+        int order = prStringCompare(a.id, b.id);
         return order < 0 || (order == 0 && a.index < b.index);
     });
     return sorted;
@@ -1200,14 +1200,14 @@ const PrDrawImage* PR_NULLABLE readImage(const Parser& p, uint32_t asset, const 
     if (path.data == nullptr || options.codec == nullptr)
         return nullptr;
     const PrDrawImage* image = nullptr;
-    if (stringStartsWith(path, "data:")) {
-        size_t comma = stringFind(path, ',');
-        if (comma == path.size || !stringContains(stringSlice(path, 0, comma), ";base64"))
+    if (prStringStartsWith(path, "data:")) {
+        size_t comma = prStringFindByte(path, ',');
+        if (comma == path.size || !prStringContains(prStringSlice(path, 0, comma), ";base64"))
             return nullptr;
-        PrStringView encoded = stringSlice(path, comma + 1, path.size - comma - 1);
-        size_t size = base64DecodedCapacity(encoded.size);
+        PrStringView encoded = prStringSlice(path, comma + 1, path.size - comma - 1);
+        size_t size = prBase64DecodedCapacity(encoded.size);
         char* bytes = static_cast<char*>(prMemoryAlloc(size != 0 ? size : 1));
-        if (base64Decode(encoded, bytes, size, &size))
+        if (prBase64Decode(encoded, bytes, size, &size))
             prDrawImageCreateFromBytes(options.codec, PrByteView{reinterpret_cast<const uint8_t*>(bytes), size}, &image, nullptr);
         prMemoryFree(bytes);
         return image;

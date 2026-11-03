@@ -112,11 +112,11 @@ std::string tabLabel(const Tab& tab) {
 
 // Returns the icon at the start of the address bar for `url`: a lock for a secure page, and a search for anything else.
 PrKitIconKind addressIcon(const std::string& url) {
-    if (stringStartsWith(url, "https:"))
+    if (prStringStartsWith(url, "https:"))
         return PrKitIconKind_Lock;
-    if (stringStartsWith(url, "http:"))
+    if (prStringStartsWith(url, "http:"))
         return PrKitIconKind_Unlock;
-    if (stringStartsWith(url, "file:"))
+    if (prStringStartsWith(url, "file:"))
         return PrKitIconKind_Folder;
     return PrKitIconKind_Search;
 }

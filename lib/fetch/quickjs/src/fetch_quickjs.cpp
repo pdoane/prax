@@ -76,11 +76,11 @@ JSValue newByteString(JSContext* ctx, PrStringView bytes) {
         ++ascii;
     if (ascii == bytes.size)
         return JS_NewStringLen(ctx, bytes.data != nullptr ? bytes.data : "", bytes.size);
-    TextBuffer text;
+    PrTextBuffer text = {};
     for (size_t i = 0; i < bytes.size; ++i)
-        textAppendCodePoint(&text, uint8_t(bytes.data[i]));
-    JSValue result = JS_NewStringLen(ctx, textView(&text).data, textView(&text).size);
-    textReset(&text);
+        prTextBufferAppendCodePoint(&text, uint8_t(bytes.data[i]));
+    JSValue result = JS_NewStringLen(ctx, prTextBufferView(&text).data, prTextBufferView(&text).size);
+    prTextBufferReset(&text);
     return result;
 }
 
@@ -132,7 +132,7 @@ JsHeaders* PR_NULLABLE headersOf(JSContext* ctx, JSValueConst object) {
 
 uint32_t findHeader(const JsHeaders* headers, PrStringView name, uint32_t from = 0) {
     for (uint32_t i = from; i < headers->names.count; ++i) {
-        if (asciiEqualsFold(prStringView(&headers->names.data[i]), name))
+        if (prAsciiEqualsFold(prStringView(&headers->names.data[i]), name))
             return i;
     }
     return kArrayMissing;
@@ -140,12 +140,12 @@ uint32_t findHeader(const JsHeaders* headers, PrStringView name, uint32_t from =
 
 // Appends to `out` the values of the headers named `name`, separated by ", " (fetch/#concept-header-list-get). Returns
 // false if there are none.
-bool combinedValue(const JsHeaders* headers, PrStringView name, TextBuffer* out) {
+bool combinedValue(const JsHeaders* headers, PrStringView name, PrTextBuffer* out) {
     bool found = false;
     for (uint32_t i = findHeader(headers, name); i != kArrayMissing; i = findHeader(headers, name, i + 1)) {
         if (found)
-            textAppend(out, ", ");
-        textAppend(out, prStringView(&headers->values.data[i]));
+            prTextBufferAppend(out, ", ");
+        prTextBufferAppend(out, prStringView(&headers->values.data[i]));
         found = true;
     }
     return found;
@@ -168,7 +168,7 @@ void eraseHeaders(JsHeaders* headers, PrStringView name, uint32_t from = 0) {
 
 // Returns true if `name` is a privileged no-CORS request-header name (fetch/#privileged-no-cors-request-header-name).
 bool isPrivilegedNoCors(PrStringView name) {
-    return asciiEqualsFold(name, "range");
+    return prAsciiEqualsFold(name, "range");
 }
 
 // fetch/#headers-validate. Returns false, with a TypeError pending, for a name or a value that a header cannot have, or
@@ -200,12 +200,12 @@ bool headersAppend(JSContext* ctx, JsHeaders* headers, PrStringView name, PrStri
     if (ignored)
         return true;
     if (headers->guard == Guard_RequestNoCors) {
-        TextBuffer temporary;
+        PrTextBuffer temporary = {};
         if (combinedValue(headers, name, &temporary))
-            textAppend(&temporary, ", ");
-        textAppend(&temporary, value);
-        bool safelisted = prFetchIsNoCorsSafelistedRequestHeader(name, textView(&temporary));
-        textReset(&temporary);
+            prTextBufferAppend(&temporary, ", ");
+        prTextBufferAppend(&temporary, value);
+        bool safelisted = prFetchIsNoCorsSafelistedRequestHeader(name, prTextBufferView(&temporary));
+        prTextBufferReset(&temporary);
         if (!safelisted)
             return true;
     }
@@ -337,9 +337,9 @@ JSValue nameMethod(JSContext* ctx, JSValueConst headersObject, int argc, JSValue
                 return JS_ThrowTypeError(ctx, "Invalid header name");
             if (magic == Method_Has)
                 return JS_NewBool(ctx, findHeader(headers, name) != kArrayMissing);
-            TextBuffer combined;
-            JSValue result = combinedValue(headers, name, &combined) ? newByteString(ctx, textView(&combined)) : JS_NULL;
-            textReset(&combined);
+            PrTextBuffer combined = {};
+            JSValue result = combinedValue(headers, name, &combined) ? newByteString(ctx, prTextBufferView(&combined)) : JS_NULL;
+            prTextBufferReset(&combined);
             return result;
         }
         case Method_Set: {
@@ -393,28 +393,30 @@ JSValue entryAt(JSContext* ctx, JSValueConst headersObject, int, JSValueConst* a
     Array<SortedHeader> sorted;
     for (uint32_t i = 0; i < headers->names.count; ++i) {
         PrStringView name = prStringView(&headers->names.data[i]);
-        bool setCookie = asciiEqualsFold(name, "set-cookie");
+        bool setCookie = prAsciiEqualsFold(name, "set-cookie");
         if (!setCookie && findHeader(headers, name) != i)
             continue;
         uint32_t at = 0;
-        while (at < sorted.count && asciiCompareFold(sorted.data[at].name, name) <= 0)
+        while (at < sorted.count && prAsciiCompareFold(sorted.data[at].name, name) <= 0)
             ++at;
         sorted.insert(at, SortedHeader{name, findHeader(headers, name), setCookie ? i : kArrayMissing});
     }
     JSValue result = JS_UNDEFINED;
     if (index < sorted.count) {
         const SortedHeader& entry = sorted.data[index];
-        TextBuffer name;
-        textAppend(&name, entry.name);
-        textAsciiLower(&name);
-        TextBuffer value;
+        PrTextBuffer name = {};
+        prTextBufferAppend(&name, entry.name);
+        prTextBufferAsciiLower(&name);
+        PrTextBuffer value = {};
         if (entry.setCookie != kArrayMissing)
-            textAppend(&value, prStringView(&headers->values.data[entry.setCookie]));
+            prTextBufferAppend(&value, prStringView(&headers->values.data[entry.setCookie]));
         else
             combinedValue(headers, entry.name, &value);
-        result = jsEntry(ctx, newByteString(ctx, textView(&name)), newByteString(ctx, textView(&value)));
-        textReset(&name);
-        textReset(&value);
+        JSValue nameString = newByteString(ctx, prTextBufferView(&name));
+        JSValue valueString = newByteString(ctx, prTextBufferView(&value));
+        result = jsEntry(ctx, nameString, valueString);
+        prTextBufferReset(&name);
+        prTextBufferReset(&value);
     }
     sorted.reset();
     return result;
@@ -476,7 +478,7 @@ bool extractBody(JSContext* ctx, JSValueConst init, ExtractedBody* out) {
         text = prStringView(&serialized);
         uint8_t* bytes = static_cast<uint8_t*>(prMemoryAlloc(text.size != 0 ? text.size : 1));
         if (text.size != 0)
-            memCopy(bytes, text.data, text.size);
+            prMemCopy(bytes, text.data, text.size);
         jsHoldBytes(ctx, bytes);
         *out = ExtractedBody{PrByteView{bytes, text.size}, "application/x-www-form-urlencoded;charset=UTF-8"};
         prStringReset(&serialized);
@@ -484,7 +486,7 @@ bool extractBody(JSContext* ctx, JSValueConst init, ExtractedBody* out) {
     }
     if (!jsReadString(ctx, init, &text))
         return false;
-    *out = ExtractedBody{PrByteView{stringBytes(text), text.size}, "text/plain;charset=UTF-8"};
+    *out = ExtractedBody{PrByteView{prStringBytes(text), text.size}, "text/plain;charset=UTF-8"};
     return true;
 }
 
@@ -519,13 +521,13 @@ JSValue consume(JSContext* ctx, Body* body, Read read, PrStringView type) {
     JSValue result = JS_UNDEFINED;
     switch (read) {
         case Read_ArrayBuffer:
-            result = JS_NewArrayBufferCopy(ctx, stringBytes(bytes), bytes.size);
+            result = JS_NewArrayBufferCopy(ctx, prStringBytes(bytes), bytes.size);
             break;
         case Read_Bytes:
-            result = JS_NewUint8ArrayCopy(ctx, stringBytes(bytes), bytes.size);
+            result = JS_NewUint8ArrayCopy(ctx, prStringBytes(bytes), bytes.size);
             break;
         case Read_Blob:
-            result = prJsFetchBlobNew(ctx, prFetchBlobCreate(PrByteView{stringBytes(bytes), bytes.size}, type));
+            result = prJsFetchBlobNew(ctx, prFetchBlobCreate(PrByteView{prStringBytes(bytes), bytes.size}, type));
             break;
         case Read_Text:
         case Read_Json: {
@@ -536,11 +538,11 @@ JSValue consume(JSContext* ctx, Body* body, Read read, PrStringView type) {
             if (read == Read_Text) {
                 result = JS_NewStringLen(ctx, text.data != nullptr ? text.data : "", text.size);
             } else {
-                TextBuffer source;
-                textAppend(&source, text);
-                textAppendChar(&source, '\0');
-                result = JS_ParseJSON(ctx, textView(&source).data, text.size, "<json>");
-                textReset(&source);
+                PrTextBuffer source = {};
+                prTextBufferAppend(&source, text);
+                prTextBufferAppendChar(&source, '\0');
+                result = JS_ParseJSON(ctx, prTextBufferView(&source).data, text.size, "<json>");
+                prTextBufferReset(&source);
             }
             prStringReset(&decoded);
             break;
@@ -719,7 +721,7 @@ JSValue jsonStatic(JSContext* ctx, JSValueConst, int argc, JSValueConst* argv) {
     JS_FreeValue(ctx, text);
     if (!read)
         return JS_EXCEPTION;
-    ExtractedBody body{PrByteView{stringBytes(serialized), serialized.size}, "application/json"};
+    ExtractedBody body{PrByteView{prStringBytes(serialized), serialized.size}, "application/json"};
     JsResponse* response = allocZeroed<JsResponse>();
     response->constructed = true;
     JsHeaders* headers = headersCreate(Guard_Response);
@@ -799,12 +801,12 @@ JSValue readMethod(JSContext* ctx, JSValueConst responseObject, int, JSValueCons
         return promise;
     }
     JS_FreeValue(ctx, reason);
-    TextBuffer type;
+    PrTextBuffer type = {};
     JsHeaders* headers = headersOfResponse(ctx, responseObject);
     if (magic == Read_Blob && headers != nullptr)
         combinedValue(headers, "content-type", &type);
-    JSValue promise = consume(ctx, &response->body, Read(magic), textView(&type));
-    textReset(&type);
+    JSValue promise = consume(ctx, &response->body, Read(magic), prTextBufferView(&type));
+    prTextBufferReset(&type);
     return promise;
 }
 
@@ -1078,12 +1080,12 @@ JSValue requestRead(JSContext* ctx, JSValueConst requestObject, int, JSValueCons
     JsRequest* request = requestOf(ctx, requestObject);
     if (request == nullptr)
         return rejectWithException(ctx);
-    TextBuffer type;
+    PrTextBuffer type = {};
     JsHeaders* headers = headersOfResponse(ctx, requestObject);
     if (magic == Read_Blob && headers != nullptr)
         combinedValue(headers, "content-type", &type);
-    JSValue promise = consume(ctx, &request->body, Read(magic), textView(&type));
-    textReset(&type);
+    JSValue promise = consume(ctx, &request->body, Read(magic), prTextBufferView(&type));
+    prTextBufferReset(&type);
     return promise;
 }
 
@@ -1253,7 +1255,7 @@ bool prJsFetchRequestRead(JSContext* ctx, JSValueConst input, JSValueConst init,
         out->keepalive = source->keepalive;
         PrStringView sourceMethod = prStringView(&source->method);
         char* methodBytes = static_cast<char*>(prMemoryAlloc(sourceMethod.size));
-        memCopy(methodBytes, sourceMethod.data, sourceMethod.size);
+        prMemCopy(methodBytes, sourceMethod.data, sourceMethod.size);
         jsHoldBytes(ctx, methodBytes);
         out->method = PrStringView{methodBytes, sourceMethod.size};
         JSValue held = jsSameObject(ctx, input, "signal");
@@ -1456,7 +1458,7 @@ bool prJsFetchRequestRead(JSContext* ctx, JSValueConst input, JSValueConst init,
         auto copy = [&](PrStringView text) {
             uint32_t at = used;
             if (text.size != 0)
-                memCopy(out->bytes + at, stringBytes(text), text.size);
+                prMemCopy(out->bytes + at, prStringBytes(text), text.size);
             used += uint32_t(text.size);
             return PrStringView{reinterpret_cast<const char*>(out->bytes) + at, text.size};
         };
@@ -1470,7 +1472,7 @@ bool prJsFetchRequestRead(JSContext* ctx, JSValueConst input, JSValueConst init,
             out->headers[i] = PrFetchHeader{name, copy(prStringView(&headers->values.data[i]))};
         }
         PrStringView bytes = copy(PrStringView{reinterpret_cast<const char*>(body.bytes.data), body.bytes.size});
-        out->body = PrByteView{stringBytes(bytes), bytes.size};
+        out->body = PrByteView{prStringBytes(bytes), bytes.size};
     }
     headersDestroy(headers);
     out->hasBody = ok && hasBody;

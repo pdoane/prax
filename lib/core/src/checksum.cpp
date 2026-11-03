@@ -5,7 +5,7 @@
 #include "pr/assert.h"
 #include "pr/count_of.h"
 
-namespace pr {
+namespace pr_impl {
 namespace {
 
 struct Crc32Table {
@@ -39,7 +39,11 @@ constexpr size_t kAdlerRun = 16;
 
 } // namespace
 
-uint32_t crc32Update(uint32_t checksum, PrByteView bytes) {
+} // namespace pr_impl
+
+using namespace pr_impl;
+
+uint32_t prCrc32Update(uint32_t checksum, PrByteView bytes) {
     PR_ASSERT(bytes.data != nullptr || bytes.size == 0);
     uint32_t crc = checksum ^ 0xffffffffu;
     for (size_t i = 0; i < bytes.size; ++i)
@@ -47,7 +51,7 @@ uint32_t crc32Update(uint32_t checksum, PrByteView bytes) {
     return crc ^ 0xffffffffu;
 }
 
-uint32_t adler32Update(uint32_t checksum, PrByteView bytes) {
+uint32_t prAdler32Update(uint32_t checksum, PrByteView bytes) {
     PR_ASSERT(bytes.data != nullptr || bytes.size == 0);
     uint32_t low = checksum & 0xffff;
     uint32_t high = checksum >> 16;
@@ -103,7 +107,7 @@ uint32_t adler32Update(uint32_t checksum, PrByteView bytes) {
     return (high << 16) | low;
 }
 
-void sha1Digest(PrByteView bytes, uint8_t out[PR_NONNULL kSha1Bytes]) {
+void prSha1Digest(PrByteView bytes, uint8_t out[PR_NONNULL kPrSha1Bytes]) {
     PR_ASSERT(bytes.data != nullptr || bytes.size == 0);
     uint32_t state[5] = {0x67452301u, 0xefcdab89u, 0x98badcfeu, 0x10325476u, 0xc3d2e1f0u};
     // The message is padded with a one bit, zeros, and its length in bits, to a whole number of 64-byte blocks.
@@ -167,5 +171,3 @@ void sha1Digest(PrByteView bytes, uint8_t out[PR_NONNULL kSha1Bytes]) {
         out[4 * i + 3] = uint8_t(state[i]);
     }
 }
-
-} // namespace pr

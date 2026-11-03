@@ -40,7 +40,7 @@ using namespace pr_impl;
 
 PrNetBackend prNetBackendFromName(PrStringView name) {
     for (PrNetBackend backend = 0; backend < PrNetBackend_Count; ++backend) {
-        if (asciiEqualsFold(kBackendNames[backend], name))
+        if (prAsciiEqualsFold(kBackendNames[backend], name))
             return backend;
     }
     return PrNetBackend_Count;

@@ -44,7 +44,7 @@ using namespace pr_impl;
 
 PrTlsBackend prTlsBackendFromName(PrStringView name) {
     for (PrTlsBackend backend = 0; backend < PrTlsBackend_Count; ++backend) {
-        if (asciiEqualsFold(kBackendNames[backend], name))
+        if (prAsciiEqualsFold(kBackendNames[backend], name))
             return backend;
     }
     return PrTlsBackend_Count;

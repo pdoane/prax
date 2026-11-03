@@ -25,17 +25,17 @@ uint32_t addName(CssSelectorPool* pool, PrStringView text) {
     CssSelectorName name = {};
     name.size = uint32_t(text.size);
     name.hash = domAttributeHash(text);
-    name.text = pool->text.text.count;
-    textAppend(&pool->text, text);
+    name.text = pool->text.size;
+    prTextBufferAppend(&pool->text, text);
 
     bool lower = true;
     for (size_t i = 0; i < text.size; ++i)
-        lower = lower && asciiLower(text.data[i]) == text.data[i];
+        lower = lower && prAsciiLower(text.data[i]) == text.data[i];
     name.lowered = name.text;
     if (!lower) {
-        name.lowered = pool->text.text.count;
-        textAppend(&pool->text, text);
-        asciiLower(pool->text.text.data + name.lowered, text.size);
+        name.lowered = pool->text.size;
+        prTextBufferAppend(&pool->text, text);
+        prAsciiLowerText(pool->text.data + name.lowered, text.size);
     }
     pool->names.push(name);
     return pool->names.count - 1;
@@ -44,7 +44,7 @@ uint32_t addName(CssSelectorPool* pool, PrStringView text) {
 // Returns the ASCII lowercase form of a name that the pool holds.
 PrStringView nameLowered(const CssSelectorPool* pool, uint32_t name) {
     const CssSelectorName* entry = &pool->names.data[name];
-    return PrStringView{pool->text.text.data + entry->lowered, entry->size};
+    return PrStringView{pool->text.data + entry->lowered, entry->size};
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -246,7 +246,7 @@ uint32_t compileArgument(Compiler* c, uint32_t first, uint32_t end, bool nth) {
             uint32_t at;
             if (item->kind == PrCssValueKind_Integer || item->kind == PrCssValueKind_Number) {
                 at = c->pool->numbers.count;
-                c->pool->numbers.push(saturateI32(item->number));
+                c->pool->numbers.push(prF64SaturateI32(item->number));
             } else if (item->kind == PrCssValueKind_Keyword) {
                 at = addName(c->pool, cssKeywordName(cssValueKeyword(item)));
             } else {
@@ -712,7 +712,7 @@ void orderCompound(CssSelectorPool* pool, CssCompoundSelector* compound) {
                 pool->simple.push(next);
         }
     }
-    memCopy(pool->simple.data + compound->simple, pool->simple.data + scratch, sizeof(CssSimpleSelector) * tested);
+    prMemCopy(pool->simple.data + compound->simple, pool->simple.data + scratch, sizeof(CssSimpleSelector) * tested);
     pool->simple.count = scratch;
 }
 
@@ -772,7 +772,7 @@ void clearPool(CssSelectorPool* pool) {
     pool->namespaces.count = 0;
     pool->names.count = 0;
     pool->numbers.count = 0;
-    textClear(&pool->text);
+    prTextBufferClear(&pool->text);
 }
 
 // Copies the records to `*at`, and moves `*at` past them.
@@ -781,7 +781,7 @@ T* place(char** at, const Array<T>& records) {
     T* out = reinterpret_cast<T*>(*at);
     size_t size = sizeof(T) * records.count;
     if (size != 0)
-        memCopy(out, records.data, size);
+        prMemCopy(out, records.data, size);
     *at += size;
     return out;
 }
@@ -793,7 +793,7 @@ PrCssSelectors* hold(CssSelectorPool* pool, CssSelectorList list) {
     size_t size = sizeof(CssSelectors) + sizeof(CssComplexSelector) * pool->complex.count +
         sizeof(CssCompoundSelector) * pool->compounds.count + sizeof(CssSimpleSelector) * pool->simple.count +
         sizeof(CssSelectorArgument) * pool->arguments.count + sizeof(CssSelectorNamespace) * pool->namespaces.count +
-        sizeof(CssSelectorName) * pool->names.count + sizeof(int32_t) * pool->numbers.count + pool->text.text.count;
+        sizeof(CssSelectorName) * pool->names.count + sizeof(int32_t) * pool->numbers.count + pool->text.size;
     char* memory = static_cast<char*>(prMemoryAlloc(size));
     PrCssSelectors* out = reinterpret_cast<PrCssSelectors*>(memory);
     char* at = memory + sizeof(CssSelectors);
@@ -814,7 +814,9 @@ PrCssSelectors* hold(CssSelectorPool* pool, CssSelectorList list) {
     out->namespaces = place(&at, pool->namespaces);
     out->names = place(&at, pool->names);
     out->numbers = place(&at, pool->numbers);
-    out->text = place(&at, pool->text.text);
+    out->text = at;
+    if (pool->text.size != 0)
+        prMemCopy(at, pool->text.data, pool->text.size);
     return out;
 }
 
@@ -906,9 +908,9 @@ bool directAttribute(Direct* d, uint32_t open, CssSimpleSelector* out) {
         directSkipWhitespace(d);
         PrStringView modifier;
         if (directPlain(d, CssTokenKind_Ident, &modifier)) {
-            if (asciiEqualsFold(modifier, "i"))
+            if (prAsciiEqualsFold(modifier, "i"))
                 out->letterCase = CssAttributeCase_Insensitive;
-            else if (asciiEqualsFold(modifier, "s"))
+            else if (prAsciiEqualsFold(modifier, "s"))
                 out->letterCase = CssAttributeCase_Sensitive;
             else
                 return false;
@@ -940,8 +942,8 @@ bool directPseudo(Direct* d, CssSimpleSelector* out) {
         out->pseudoClass = pseudoClass;
         return true;
     }
-    if (!element && !asciiEqualsFold(name, "before") && !asciiEqualsFold(name, "after") &&
-            !asciiEqualsFold(name, "first-line") && !asciiEqualsFold(name, "first-letter"))
+    if (!element && !prAsciiEqualsFold(name, "before") && !prAsciiEqualsFold(name, "after") &&
+            !prAsciiEqualsFold(name, "first-line") && !prAsciiEqualsFold(name, "first-letter"))
         return false;
     CssPseudoElement pseudoElement = cssPseudoElement(name, false);
     if (pseudoElement == CssPseudoElement_None)
@@ -1233,19 +1235,19 @@ void addSimpleSpecificity(const PrCssSelectors* selectors, const CssSimpleSelect
 // ---------------------------------------------------------------------------------------------------------------------
 // Serializing (cssom-1/#serializing-selectors)
 
-void serializeList(TextBuffer* out, const PrCssSelectors* selectors, CssSelectorList list);
+void serializeList(PrTextBuffer* out, const PrCssSelectors* selectors, CssSelectorList list);
 
-void serializeNamespace(TextBuffer* out, const PrCssSelectors* selectors, const CssSimpleSelector* simple) {
+void serializeNamespace(PrTextBuffer* out, const PrCssSelectors* selectors, const CssSimpleSelector* simple) {
     switch (simple->prefix) {
         case CssNamespacePrefix_Any:
-            textAppend(out, "*|");
+            prTextBufferAppend(out, "*|");
             break;
         case CssNamespacePrefix_Empty:
-            textAppendChar(out, '|');
+            prTextBufferAppendChar(out, '|');
             break;
         case CssNamespacePrefix_Named:
             cssSerializeIdent(out, cssSelectorName(selectors, selectors->namespaces[simple->space].prefix));
-            textAppendChar(out, '|');
+            prTextBufferAppendChar(out, '|');
             break;
         default:
             break;
@@ -1256,10 +1258,10 @@ void serializeNamespace(TextBuffer* out, const PrCssSelectors* selectors, const 
 // a string. The ranges of :lang() are written this way, although cssom-1/#serialize-a-simple-selector writes strings
 // (cssom/selectorSerialize.html). ::part() and ::picker() separate items with spaces, which their grammars use. A named
 // view transition pseudo-element writes each item as a class. The other pseudos separate items with commas.
-void serializeItems(TextBuffer* out, const PrCssSelectors* selectors,
+void serializeItems(PrTextBuffer* out, const PrCssSelectors* selectors,
         const CssSelectorArgument* argument, CssPseudoClass pseudoClass, CssPseudoElement pseudoElement) {
     if (argument->name == kCssSelectorAll)
-        textAppendChar(out, '*');
+        prTextBufferAppendChar(out, '*');
     else if (argument->name != kCssSelectorNone)
         cssSerializeIdent(out, cssSelectorName(selectors, argument->name));
 
@@ -1268,9 +1270,9 @@ void serializeItems(TextBuffer* out, const PrCssSelectors* selectors,
     bool numbers = pseudoClass == CssPseudoClass_HeadingFn;
     for (uint32_t i = 0; i < argument->itemCount; ++i) {
         if (classes)
-            textAppendChar(out, '.');
+            prTextBufferAppendChar(out, '.');
         else if (i != 0)
-            textAppend(out, spaced ? " " : ", ");
+            prTextBufferAppend(out, spaced ? " " : ", ");
         if (numbers) {
             cssSerializeNumber(out, double(selectors->numbers[argument->items + i]));
         } else if (selectors->names[argument->items + i].string) {
@@ -1281,14 +1283,14 @@ void serializeItems(TextBuffer* out, const PrCssSelectors* selectors,
     }
 }
 
-void serializeArgument(TextBuffer* out, const PrCssSelectors* selectors, uint32_t index,
+void serializeArgument(PrTextBuffer* out, const PrCssSelectors* selectors, uint32_t index,
         CssPseudoClass pseudoClass, CssPseudoElement pseudoElement) {
     const CssSelectorArgument* argument = &selectors->arguments[index];
-    textAppendChar(out, '(');
+    prTextBufferAppendChar(out, '(');
     if (isNth(pseudoClass)) {
         cssSerializeNth(out, argument->a, argument->b);
         if (argument->selectors.count != 0) {
-            textAppend(out, " of ");
+            prTextBufferAppend(out, " of ");
             serializeList(out, selectors, argument->selectors);
         }
     } else if (argument->itemCount != 0 || argument->name != kCssSelectorNone) {
@@ -1296,10 +1298,10 @@ void serializeArgument(TextBuffer* out, const PrCssSelectors* selectors, uint32_
     } else {
         serializeList(out, selectors, argument->selectors);
     }
-    textAppendChar(out, ')');
+    prTextBufferAppendChar(out, ')');
 }
 
-void serializeSimple(TextBuffer* out, const PrCssSelectors* selectors, const CssSimpleSelector* simple) {
+void serializeSimple(PrTextBuffer* out, const PrCssSelectors* selectors, const CssSimpleSelector* simple) {
     switch (simple->kind) {
         case CssSimpleKind_Type:
             serializeNamespace(out, selectors, simple);
@@ -1307,51 +1309,51 @@ void serializeSimple(TextBuffer* out, const PrCssSelectors* selectors, const Css
             break;
         case CssSimpleKind_Universal:
             serializeNamespace(out, selectors, simple);
-            textAppendChar(out, '*');
+            prTextBufferAppendChar(out, '*');
             break;
         case CssSimpleKind_Id:
-            textAppendChar(out, '#');
+            prTextBufferAppendChar(out, '#');
             cssSerializeIdent(out, cssSelectorName(selectors, simple->name));
             break;
         case CssSimpleKind_Class:
-            textAppendChar(out, '.');
+            prTextBufferAppendChar(out, '.');
             cssSerializeIdent(out, cssSelectorName(selectors, simple->name));
             break;
         case CssSimpleKind_Attribute: {
-            textAppendChar(out, '[');
+            prTextBufferAppendChar(out, '[');
             serializeNamespace(out, selectors, simple);
             cssSerializeIdent(out, cssSelectorName(selectors, simple->name));
             if (simple->match != CssAttributeMatch_Exists) {
                 static constexpr PrStringView kMatchers[] = {"",   "=",  "~=", "|=", "^=", "$=", "*="};
-                textAppend(out, kMatchers[simple->match]);
+                prTextBufferAppend(out, kMatchers[simple->match]);
                 cssSerializeString(out, cssSelectorName(selectors, simple->value));
             }
             if (simple->letterCase == CssAttributeCase_Insensitive)
-                textAppend(out, " i");
+                prTextBufferAppend(out, " i");
             else if (simple->letterCase == CssAttributeCase_Sensitive)
-                textAppend(out, " s");
-            textAppendChar(out, ']');
+                prTextBufferAppend(out, " s");
+            prTextBufferAppendChar(out, ']');
             break;
         }
         case CssSimpleKind_PseudoClass:
-            textAppendChar(out, ':');
-            textAppend(out, kCssPseudoClassName[simple->pseudoClass]);
+            prTextBufferAppendChar(out, ':');
+            prTextBufferAppend(out, kCssPseudoClassName[simple->pseudoClass]);
             if (simple->argument != kCssSelectorNone)
                 serializeArgument(out, selectors, simple->argument, simple->pseudoClass, CssPseudoElement_None);
             break;
         case CssSimpleKind_PseudoElement:
-            textAppend(out, "::");
+            prTextBufferAppend(out, "::");
             if (simple->pseudoElement == CssPseudoElement_UnknownWebkit) {
                 // selectors-4/#unknown--webkit--pseudo-elements: in ASCII lowercase.
-                textAppend(out, cssSelectorNameLowered(selectors, simple->name));
+                prTextBufferAppend(out, cssSelectorNameLowered(selectors, simple->name));
             } else {
-                textAppend(out, kCssPseudoElementName[simple->pseudoElement]);
+                prTextBufferAppend(out, kCssPseudoElementName[simple->pseudoElement]);
             }
             if (simple->argument != kCssSelectorNone)
                 serializeArgument(out, selectors, simple->argument, CssPseudoClass_None, simple->pseudoElement);
             break;
         case CssSimpleKind_Nesting:
-            textAppendChar(out, '&');
+            prTextBufferAppendChar(out, '&');
             break;
         default:
             break;
@@ -1359,18 +1361,18 @@ void serializeSimple(TextBuffer* out, const PrCssSelectors* selectors, const Css
 }
 
 // Writes a combinator other than the descendant one, without the spaces around it.
-void serializeCombinatorSymbol(TextBuffer* out, const PrCssSelectors* selectors, const CssCompoundSelector* compound) {
+void serializeCombinatorSymbol(PrTextBuffer* out, const PrCssSelectors* selectors, const CssCompoundSelector* compound) {
     switch (compound->combinator) {
-        case CssCombinator_Child: textAppendChar(out, '>'); break;
-        case CssCombinator_NextSibling: textAppendChar(out, '+'); break;
-        case CssCombinator_SubsequentSibling: textAppendChar(out, '~'); break;
-        case CssCombinator_Column: textAppend(out, "||"); break;
+        case CssCombinator_Child: prTextBufferAppendChar(out, '>'); break;
+        case CssCombinator_NextSibling: prTextBufferAppendChar(out, '+'); break;
+        case CssCombinator_SubsequentSibling: prTextBufferAppendChar(out, '~'); break;
+        case CssCombinator_Column: prTextBufferAppend(out, "||"); break;
         case CssCombinator_Reference: {
             const CssSimpleSelector* attribute = &selectors->simple[compound->reference];
-            textAppendChar(out, '/');
+            prTextBufferAppendChar(out, '/');
             serializeNamespace(out, selectors, attribute);
             cssSerializeIdent(out, cssSelectorName(selectors, attribute->name));
-            textAppendChar(out, '/');
+            prTextBufferAppendChar(out, '/');
             break;
         }
         default:
@@ -1379,29 +1381,29 @@ void serializeCombinatorSymbol(TextBuffer* out, const PrCssSelectors* selectors,
 }
 
 // Writes a combinator between two spaces, or the single space that is the descendant combinator.
-void serializeCombinator(TextBuffer* out, const PrCssSelectors* selectors, const CssCompoundSelector* compound) {
-    textAppendChar(out, ' ');
+void serializeCombinator(PrTextBuffer* out, const PrCssSelectors* selectors, const CssCompoundSelector* compound) {
+    prTextBufferAppendChar(out, ' ');
     if (compound->combinator == CssCombinator_Descendant)
         return;
     serializeCombinatorSymbol(out, selectors, compound);
-    textAppendChar(out, ' ');
+    prTextBufferAppendChar(out, ' ');
 }
 
 // Serializes a complex selector (cssom-1/#serialize-a-selector). A relative selector with an implied `&` is written
 // with the `&` (css-nesting-1/#cssom).
-void serializeComplex(TextBuffer* out, const PrCssSelectors* selectors, const CssComplexSelector* complex) {
+void serializeComplex(PrTextBuffer* out, const PrCssSelectors* selectors, const CssComplexSelector* complex) {
     if ((complex->flags & CssComplexFlag_Invalid) != 0) {
-        textAppend(out, cssSelectorName(selectors, complex->text));
+        prTextBufferAppend(out, cssSelectorName(selectors, complex->text));
         return;
     }
     uint32_t last = complex->compound + complex->compoundCount - 1;
     const CssCompoundSelector* leftmost = &selectors->compounds[last];
     if ((complex->flags & CssComplexFlag_ImpliedNesting) != 0) {
-        textAppendChar(out, '&');
+        prTextBufferAppendChar(out, '&');
         serializeCombinator(out, selectors, leftmost);
     } else if ((complex->flags & CssComplexFlag_Relative) != 0 && leftmost->combinator != CssCombinator_Descendant) {
         serializeCombinatorSymbol(out, selectors, leftmost);
-        textAppendChar(out, ' ');
+        prTextBufferAppendChar(out, ' ');
     }
 
     Array<uint32_t> written = {};
@@ -1433,10 +1435,10 @@ void serializeComplex(TextBuffer* out, const PrCssSelectors* selectors, const Cs
     written.reset();
 }
 
-void serializeList(TextBuffer* out, const PrCssSelectors* selectors, CssSelectorList list) {
+void serializeList(PrTextBuffer* out, const PrCssSelectors* selectors, CssSelectorList list) {
     for (uint32_t i = 0; i < list.count; ++i) {
         if (i != 0)
-            textAppend(out, ", ");
+            prTextBufferAppend(out, ", ");
         serializeComplex(out, selectors, &selectors->complex[list.first + i]);
     }
 }
@@ -1454,7 +1456,7 @@ void cssSelectorPoolReset(CssSelectorPool* pool) {
     pool->namespaces.reset();
     pool->names.reset();
     pool->numbers.reset();
-    textReset(&pool->text);
+    prTextBufferReset(&pool->text);
 }
 
 PrStringView cssPseudoName(CssPseudo pseudo) {
@@ -1526,7 +1528,7 @@ void cssSelectorsDestroy(PrCssSelectors* PR_NULLABLE selectors) {
 
 PrCssSelectors* cssSelectorsCopy(const PrCssSelectors* selectors) {
     char* memory = static_cast<char*>(prMemoryAlloc(selectors->size));
-    memCopy(memory, selectors, selectors->size);
+    prMemCopy(memory, selectors, selectors->size);
     // Each run moves with the allocation.
     PrCssSelectors* out = reinterpret_cast<PrCssSelectors*>(memory);
     auto moved = [&](auto* run) {
@@ -1644,11 +1646,11 @@ PrCssSelectors* PR_NULLABLE cssCompilePreludeSelectors(CssParser* parser, CssVal
     return hold(pool, list);
 }
 
-void cssSerializeSelectors(TextBuffer* out, const PrCssSelectors* selectors) {
+void cssSerializeSelectors(PrTextBuffer* out, const PrCssSelectors* selectors) {
     serializeList(out, selectors, selectors->list);
 }
 
-void cssSerializeSelectorRange(TextBuffer* out, const PrCssSelectors* selectors, uint32_t first, uint32_t count) {
+void cssSerializeSelectorRange(PrTextBuffer* out, const PrCssSelectors* selectors, uint32_t first, uint32_t count) {
     serializeList(out, selectors, CssSelectorList{selectors->list.first + first, count});
 }
 

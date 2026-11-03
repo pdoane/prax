@@ -684,7 +684,7 @@ bool layoutCacheFindAbsolute(LayoutState& state, LayoutNodeIndex node, const Lay
     if (entry.fragment == nullptr || entry.absolute == kLayoutCacheAbsoluteNone)
         return false;
     const LayoutAbsoluteEntry& a = cache.absolutes.data[entry.absolute];
-    if (!memEquals(&a.containing, &containing.rect, sizeof(PrLayoutRect)) || a.mode != containing.mode || a.at != at ||
+    if (!prMemEquals(&a.containing, &containing.rect, sizeof(PrLayoutRect)) || a.mode != containing.mode || a.at != at ||
             a.edges != edges)
         return false;
     bool readsFallback = (entry.flags & LayoutResultFlag_ReadsFallback) != 0;

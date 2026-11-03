@@ -145,8 +145,8 @@ bool renderPage(PageHost& host, Page* page, PrVec2 viewport, float pixelRatio, P
     prDrawListPopTransform(list);
     if (!ok)
         fprintf(stderr, "%s: no rendering to capture\n", file);
-    out->width = uint32_t(ceilF64(double(viewport.x) * double(pixelRatio)));
-    out->height = uint32_t(ceilF64(double(viewport.y) * double(pixelRatio)));
+    out->width = uint32_t(prF64Ceil(double(viewport.x) * double(pixelRatio)));
+    out->height = uint32_t(prF64Ceil(double(viewport.y) * double(pixelRatio)));
     out->rgba.assign(size_t(out->width) * out->height * 4, 0);
     PrPixels into{out->rgba.data(), size_t(out->width) * 4, {out->width, out->height}};
     if (ok && prDrawRendererBackendIsDevice(backend)) {
@@ -444,7 +444,7 @@ int serve(PageHost& host, const Run& settings, Renderers& renderers) {
         run.renderer = settings.renderer;
         run.timeout = settings.timeout;
         std::vector<std::string> args;
-        PrStringView input = textView(&request.input);
+        PrStringView input = prTextBufferView(&request.input);
         for (size_t start = 0, i = 0; i <= input.size; ++i) {
             if (i == input.size || input.data[i] == '\n') {
                 if (i > start)

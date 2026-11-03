@@ -57,7 +57,7 @@ struct CanvasTextStyle {
 // keeps its storage from one text to the next.
 struct CanvasText {
     PrTextLayout* layout;
-    TextBuffer prepared;            // the text with its whitespace made spaces
+    PrTextBuffer prepared = {};     // the text with its whitespace made spaces
     Array<PrFontGlyph> glyphs;      // every run's glyphs, spaced and placed from the anchor point
     Array<PrFontGlyphRun> runs;     // each a range of `glyphs`
 

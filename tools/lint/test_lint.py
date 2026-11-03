@@ -111,6 +111,24 @@ class CompilerAttributes(unittest.TestCase):
         self.assertEqual(self.rules("#define PR_COLD __attribute__((cold))\n", lint.ATTRIBUTE_HEADER), [])
 
 
+class Builtins(unittest.TestCase):
+    def rules(self, source, path="lib/core/src/a.cpp"):
+        report = lint.Report()
+        lint.check_builtins(report, os.path.join(lint.ROOT, path), source)
+        return [rule for _, _, rule, _ in report.problems]
+
+    def test_a_builtin_is_reached_through_core(self):
+        self.assertEqual(self.rules("return __builtin_ctzll(word);\n"), ["builtin"])
+        self.assertEqual(self.rules("return __builtin_ctzll(word);\n", "lib/core/include/pr/integer.h"), [])
+
+    def test_a_type_intrinsic_is_reached_through_type_traits(self):
+        self.assertEqual(self.rules("static_assert(__is_trivially_copyable(T));\n"), ["builtin"])
+        self.assertEqual(self.rules("static_assert(__is_trivially_copyable(T));\n",
+                                    "lib/core/include/pr/integer.h"), ["builtin"])
+        self.assertEqual(self.rules("bool b = __is_empty(T);\n", lint.TYPE_TRAITS), [])
+        self.assertEqual(self.rules("// __is_empty(T) in a comment\nint __is_x = 0;\n"), [])
+
+
 class ContainerViews(unittest.TestCase):
     def rules(self, source):
         report = lint.Report()

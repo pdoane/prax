@@ -278,7 +278,7 @@ PrVec2 curvePoint(PrVec2 from, PrVec2 to, float bend, float t) {
 
 // Returns how far a wire's curve bends out of its ends, in px of the canvas.
 float bendOf(PrVec2 from, PrVec2 to, float zoom) {
-    return maxF32(absF32(to.x - from.x) / 2, 40 * zoom);
+    return prF32Max(prF32Abs(to.x - from.x) / 2, 40 * zoom);
 }
 
 // Finds a wire's ends on the canvas. Returns false if it names no port of the model.
@@ -311,10 +311,10 @@ float curveDistance(PrVec2 from, PrVec2 to, float zoom, PrVec2 point) {
         t = t < 0 ? 0 : t > 1 ? 1 : t;
         float dx = a.x + ab.x * t - point.x;
         float dy = a.y + ab.y * t - point.y;
-        nearest = minF32(nearest, dx * dx + dy * dy);
+        nearest = prF32Min(nearest, dx * dx + dy * dy);
         a = b;
     }
-    return sqrtF32(nearest);
+    return prF32Sqrt(nearest);
 }
 
 // Records a wire's curve into `list`.
@@ -343,7 +343,7 @@ bool portAt(const PrKitGraph& g, PrVec2 point, uint64_t except, const PrKitGraph
             for (uint32_t j = 0; j < count; ++j) {
                 PrVec2 anchor = toCanvas(*g.view, prKitGraphPortAnchor(&n, s, j));
                 float distance =
-                    sqrtF32((anchor.x - point.x) * (anchor.x - point.x) + (anchor.y - point.y) * (anchor.y - point.y));
+                    prF32Sqrt((anchor.x - point.x) * (anchor.x - point.x) + (anchor.y - point.y) * (anchor.y - point.y));
                 if (distance <= nearest) {
                     nearest = distance;
                     *node = &n;
@@ -359,22 +359,22 @@ bool portAt(const PrKitGraph& g, PrVec2 point, uint64_t except, const PrKitGraph
 
 // Returns the hash of what the canvas's drawing shows: the grid, the wires, and the wire that a drag runs.
 uint64_t drawingHash(const PrKitGraph& g, const GraphState& state, PrVec2 extent) {
-    uint64_t h = hashBytes(g.view, sizeof *g.view, 0x9e3779b97f4a7c15ull);
-    h = hashBytes(&extent, sizeof extent, h);
+    uint64_t h = prHashBytes(g.view, sizeof *g.view, 0x9e3779b97f4a7c15ull);
+    h = prHashBytes(&extent, sizeof extent, h);
     for (uint32_t i = 0; i < g.nodeCount; ++i) {
         const PrKitGraphNode& n = g.nodes[i];
-        h = hashBytes(&n.id, sizeof n.id, h);
-        h = hashBytes(&n.position, sizeof n.position, h);
-        h = hashBytes(&n.width, sizeof n.width, h);
+        h = prHashBytes(&n.id, sizeof n.id, h);
+        h = prHashBytes(&n.position, sizeof n.position, h);
+        h = prHashBytes(&n.width, sizeof n.width, h);
     }
     for (uint32_t i = 0; i < g.wireCount; ++i) {
         const PrKitGraphWire& w = g.wires[i];
-        h = hashBytes(&w.link, sizeof w.link, h);
-        h = hashBytes(&w.selected, sizeof w.selected, h);
+        h = prHashBytes(&w.link, sizeof w.link, h);
+        h = prHashBytes(&w.selected, sizeof w.selected, h);
     }
     if (state.mode == DragMode_Wire) {
-        h = hashBytes(&state.reach, sizeof state.reach, h);
-        h = hashBytes(&state.node, sizeof state.node, h);
+        h = prHashBytes(&state.reach, sizeof state.reach, h);
+        h = prHashBytes(&state.node, sizeof state.node, h);
     }
     return h;
 }
@@ -386,8 +386,8 @@ void drawCanvas(PrKit& kit, const PrKitGraph& g, const GraphState& state, PrVec2
     float spacing = kGridSpacing * view.zoom;
     while (spacing < kGridLeast)
         spacing *= 2;
-    float x0 = view.offset.x - floorF32(view.offset.x / spacing) * spacing;
-    float y0 = view.offset.y - floorF32(view.offset.y / spacing) * spacing;
+    float x0 = view.offset.x - prF32Floor(view.offset.x / spacing) * spacing;
+    float y0 = view.offset.y - prF32Floor(view.offset.y / spacing) * spacing;
     for (float y = y0; y < extent.y; y += spacing) {
         for (float x = x0; x < extent.x; x += spacing)
             prDrawListRect(list, PrRect{x - 0.75f, y - 0.75f, x + 0.75f, y + 0.75f}, {.color = p.line2});
@@ -521,7 +521,7 @@ PrLayoutNode prKitGraph(PrKit* kit, PrLayoutNode parent, PrKitGraph graph, PrKit
         PrVec2 at{};
         if (zoom && prUiPointer(ui, &pointer) && prUiLocalPoint(ui, canvas, pointer, &at)) {
             PrVec2 pivot = toGraph(view, at);
-            float scale = view.zoom * expF32(-wheel.y * kZoomPerPx);
+            float scale = view.zoom * prF32Exp(-wheel.y * kZoomPerPx);
             view.zoom = scale < kMinZoom ? kMinZoom : scale > kMaxZoom ? kMaxZoom : scale;
             view.offset = at - pivot * view.zoom;
         } else if (!zoom) {
@@ -553,7 +553,7 @@ PrLayoutNode prKitGraph(PrKit* kit, PrLayoutNode parent, PrKitGraph graph, PrKit
         PrRect rect = prKitGraphNodeRect(&n);
         PrLayoutStyleIndex record = kitStyle(k, RectBox{.rect = rect, .column = true}, NodeFlex{},
             KitColors{.background = p.bg2, .border = n.selected ? p.accent : p.line2});
-        PrLayoutNode box = prLayoutTreeFrameElement(tree, world, hashMixKeys(canvas, n.id), record);
+        PrLayoutNode box = prLayoutTreeFrameElement(tree, world, prHashMixKeys(canvas, n.id), record);
         if (editable) {
             prUiSetFlags(ui, box, PrUiFlag_Pressable);
             prUiSetCursor(ui, box, PrAppCursor_Hand);
@@ -687,7 +687,7 @@ PrLayoutNode prKitGraph(PrKit* kit, PrLayoutNode parent, PrKitGraph graph, PrKit
                 openGesture(k, canvas, *state);
                 PrVec2 a = toGraph(view, state->press);
                 PrVec2 b = toGraph(view, at);
-                PrRect band{minF32(a.x, b.x), minF32(a.y, b.y), maxF32(a.x, b.x), maxF32(a.y, b.y)};
+                PrRect band{prF32Min(a.x, b.x), prF32Min(a.y, b.y), prF32Max(a.x, b.x), prF32Max(a.y, b.y)};
                 bool changed = false;
                 for (uint32_t i = 0; i < g.nodeCount; ++i) {
                     PrRect rect = prKitGraphNodeRect(&g.nodes[i]);
@@ -711,8 +711,8 @@ PrLayoutNode prKitGraph(PrKit* kit, PrLayoutNode parent, PrKitGraph graph, PrKit
 
     if (state->mode == DragMode_Marquee && state->live && !ended) {
         PrRect marquee{
-            minF32(state->press.x, state->reach.x), minF32(state->press.y, state->reach.y),
-            maxF32(state->press.x, state->reach.x), maxF32(state->press.y, state->reach.y),
+            prF32Min(state->press.x, state->reach.x), prF32Min(state->press.y, state->reach.y),
+            prF32Max(state->press.x, state->reach.x), prF32Max(state->press.y, state->reach.y),
         };
         PrColor wash = p.accent;
         wash.a = 0.12f;
@@ -828,7 +828,7 @@ void prKitGraphArrange(PrKitGraphNode* nodes, uint32_t nodeCount, const PrKitGra
             nodes[i].position = PrVec2{x, y};
             PrRect rect = prKitGraphNodeRect(&nodes[i]);
             y += prRectHeight(rect) + kArrangeRowGap;
-            widest = maxF32(widest, prRectWidth(rect));
+            widest = prF32Max(widest, prRectWidth(rect));
         }
         if (widest > 0)
             x += widest + kArrangeColumnGap;

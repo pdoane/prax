@@ -113,15 +113,15 @@ bool typeEquals(const PrDomElement* a, const PrDomElement* b) {
 bool holdsWord(PrStringView list, PrStringView word, bool fold) {
     size_t at = 0;
     while (at < list.size) {
-        if (asciiIsSpace(list.data[at])) {
+        if (prAsciiIsSpace(list.data[at])) {
             ++at;
             continue;
         }
         size_t start = at;
-        while (at < list.size && !asciiIsSpace(list.data[at]))
+        while (at < list.size && !prAsciiIsSpace(list.data[at]))
             ++at;
-        PrStringView token = stringSlice(list, start, at - start);
-        if (fold ? asciiEqualsFold(token, word) : token == word)
+        PrStringView token = prStringSlice(list, start, at - start);
+        if (fold ? prAsciiEqualsFold(token, word) : token == word)
             return true;
     }
     return false;
@@ -210,18 +210,18 @@ bool matchesValue(CssSelectorMatcher* m, const CssSimpleSelector* simple, PrStri
     bool fold = simple->letterCase == CssAttributeCase_Insensitive || (simple->letterCase == CssAttributeCase_Html && plain);
     switch (simple->match) {
         case CssAttributeMatch_Equals:
-            return fold ? asciiEqualsFold(value, wanted) : value == wanted;
+            return fold ? prAsciiEqualsFold(value, wanted) : value == wanted;
         case CssAttributeMatch_Includes:
             return holdsWord(value, wanted, fold);
         case CssAttributeMatch_DashMatch:
-            return (fold ? asciiStartsWithFold(value, wanted) : stringStartsWith(value, wanted)) &&
+            return (fold ? prAsciiStartsWithFold(value, wanted) : prStringStartsWith(value, wanted)) &&
                 (value.size == wanted.size || value.data[wanted.size] == '-');
         case CssAttributeMatch_Prefix:
-            return wanted.size != 0 && (fold ? asciiStartsWithFold(value, wanted) : stringStartsWith(value, wanted));
+            return wanted.size != 0 && (fold ? prAsciiStartsWithFold(value, wanted) : prStringStartsWith(value, wanted));
         case CssAttributeMatch_Suffix:
-            return wanted.size != 0 && (fold ? asciiEndsWithFold(value, wanted) : stringEndsWith(value, wanted));
+            return wanted.size != 0 && (fold ? prAsciiEndsWithFold(value, wanted) : prStringEndsWith(value, wanted));
         case CssAttributeMatch_Substring:
-            return wanted.size != 0 && (fold ? asciiContainsFold(value, wanted) : stringContains(value, wanted));
+            return wanted.size != 0 && (fold ? prAsciiContainsFold(value, wanted) : prStringContains(value, wanted));
         default:
             return false;
     }
@@ -242,7 +242,7 @@ bool matchesAttribute(CssSelectorMatcher* m, const CssSimpleSelector* simple, co
 
 // selectors-4/#id-selectors, selectors-4/#class-html: compared exactly, and ASCII case-insensitively in quirks mode.
 bool matchesId(CssSelectorMatcher* m, PrStringView id, PrStringView name) {
-    return m->quirks ? asciiEqualsFold(id, name) : id == name;
+    return m->quirks ? prAsciiEqualsFold(id, name) : id == name;
 }
 
 // Returns the atom of the class name at `name`, in the document being matched.
@@ -264,7 +264,7 @@ bool matchesClass(CssSelectorMatcher* m, const CssSimpleSelector* simple, const 
         DomClassList classes = domClassesList(element->document, element->classes);
         for (uint32_t i = 0; i < classes.count; ++i) {
             PrStringView text = domClassesName(element->document, classes.atoms[i]);
-            if (m->quirks ? asciiEqualsFold(text, name) : text == name)
+            if (m->quirks ? prAsciiEqualsFold(text, name) : text == name)
                 return true;
         }
         return false;
@@ -294,7 +294,7 @@ bool isEmpty(const PrDomElement* element) {
             continue;
         PrStringView data = prStringView(&static_cast<const PrDomText*>(child)->data);
         for (size_t i = 0; i < data.size; ++i) {
-            if (!asciiIsSpace(data.data[i]))
+            if (!prAsciiIsSpace(data.data[i]))
                 return false;
         }
     }
@@ -332,7 +332,7 @@ constexpr uint32_t kMemoShift = 3;
 
 // Returns the slot that a memo's probe starts at.
 uint32_t memoSlot(const CssMatchMemos* memos, const PrDomElement* element, uint32_t key) {
-    return hashPointer(element, uint64_t(key) << 40) & memos->mask;
+    return prHashPointer(element, uint64_t(key) << 40) & memos->mask;
 }
 
 // Returns the memo of `key` for `element`, or null if there is none. Adding a memo may move the others.
@@ -723,7 +723,7 @@ PrStringView nextSubtag(PrStringView text, size_t* at) {
     while (end < text.size && text.data[end] != '-')
         ++end;
     *at = end + 1;
-    return stringSlice(text, start, end - start);
+    return prStringSlice(text, start, end - start);
 }
 
 // Returns true if each subtag is one to eight ASCII letters and digits, or, in a range, a wildcard.
@@ -735,7 +735,7 @@ bool wellFormedLanguage(PrStringView text, bool range) {
         if (subtag.size == 0 || subtag.size > kLanguageSubtagMaxLength)
             return false;
         for (size_t i = 0; i < subtag.size; ++i) {
-            if (!asciiIsLetter(subtag.data[i]) && !asciiIsDigit(subtag.data[i]))
+            if (!prAsciiIsLetter(subtag.data[i]) && !prAsciiIsDigit(subtag.data[i]))
                 return false;
         }
     }
@@ -753,7 +753,7 @@ bool matchesLanguage(PrStringView tag, PrStringView range) {
     size_t tagAt = 0;
     size_t rangeAt = 0;
     PrStringView primary = nextSubtag(range, &rangeAt);
-    if (!asciiEqualsFold(nextSubtag(tag, &tagAt), primary) && primary != "*")
+    if (!prAsciiEqualsFold(nextSubtag(tag, &tagAt), primary) && primary != "*")
         return false;
     while (rangeAt <= range.size) {
         PrStringView wanted = nextSubtag(range, &rangeAt);
@@ -763,7 +763,7 @@ bool matchesLanguage(PrStringView tag, PrStringView range) {
             if (tagAt > tag.size)
                 return false;
             PrStringView subtag = nextSubtag(tag, &tagAt);
-            if (asciiEqualsFold(subtag, wanted))
+            if (prAsciiEqualsFold(subtag, wanted))
                 break;
             if (subtag.size == 1)
                 return false;
@@ -1368,7 +1368,7 @@ const PrCssSelectors* PR_NULLABLE cssDomSelectors(const PrDomDocument* document,
     CssSelectorCache*& cache = document->selectors;
     if (cache == nullptr)
         cache = allocZeroed<CssSelectorCache>();
-    uint32_t hash = uint32_t(hashBytes(text.data, text.size, kSeed));
+    uint32_t hash = uint32_t(prHashBytes(text.data, text.size, kSeed));
     uint32_t at = cache->index.find(hash, [&](uint32_t i) {
         return prStringView(&cache->entries.data[i].text) == text;
     });

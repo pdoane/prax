@@ -232,7 +232,7 @@ void appendServerTiming(PrHtmlPerformanceEntry* entry, PrStringView field) {
     size_t at = 0;
     while (at < field.size && field.data[at] != ';')
         ++at;
-    PrStringView name = stringTrim(stringSlice(field, 0, at));
+    PrStringView name = prStringTrim(prStringSlice(field, 0, at));
     if (name.size == 0)
         return;
     HtmlServerMetric metric{.name = prStringCopy(name), .description = prStringCopy("")};
@@ -243,46 +243,46 @@ void appendServerTiming(PrHtmlPerformanceEntry* entry, PrStringView field) {
         size_t start = at;
         while (at < field.size && field.data[at] != '=' && field.data[at] != ';')
             ++at;
-        PrStringView param = stringTrim(stringSlice(field, start, at - start));
+        PrStringView param = prStringTrim(prStringSlice(field, start, at - start));
         if (at == field.size || field.data[at] == ';') {
-            hasDuration = hasDuration || asciiEqualsFold(param, "dur");
-            hasDescription = hasDescription || asciiEqualsFold(param, "desc");
+            hasDuration = hasDuration || prAsciiEqualsFold(param, "dur");
+            hasDescription = hasDescription || prAsciiEqualsFold(param, "desc");
             continue;
         }
         ++at;
-        while (at < field.size && asciiIsSpace(field.data[at]))
+        while (at < field.size && prAsciiIsSpace(field.data[at]))
             ++at;
-        TextBuffer value{};
+        PrTextBuffer value{};
         if (at < field.size && field.data[at] == '"') {
             ++at;
             while (at < field.size && field.data[at] != '"') {
                 if (field.data[at] == '\\' && at + 1 < field.size)
                     ++at;
-                textAppend(&value, PrStringView{field.data + at, 1});
+                prTextBufferAppend(&value, PrStringView{field.data + at, 1});
                 ++at;
             }
             // A quoted string that does not end has no value.
             if (at == field.size)
-                textClear(&value);
+                prTextBufferClear(&value);
         } else {
             // An unquoted value is the token that it starts with.
             start = at;
             while (at < field.size && prFetchIsHeaderName(PrStringView{field.data + at, 1}))
                 ++at;
-            textAppend(&value, stringSlice(field, start, at - start));
+            prTextBufferAppend(&value, prStringSlice(field, start, at - start));
         }
         while (at < field.size && field.data[at] != ';')
             ++at;
-        if (asciiEqualsFold(param, "dur") && !hasDuration) {
+        if (prAsciiEqualsFold(param, "dur") && !hasDuration) {
             hasDuration = true;
             double duration = 0;
-            metric.duration = domParseFloat(textView(&value), &duration) ? duration : 0;
-        } else if (asciiEqualsFold(param, "desc") && !hasDescription) {
+            metric.duration = domParseFloat(prTextBufferView(&value), &duration) ? duration : 0;
+        } else if (prAsciiEqualsFold(param, "desc") && !hasDescription) {
             hasDescription = true;
             prStringReset(&metric.description);
-            metric.description = prStringCopy(textView(&value));
+            metric.description = prStringCopy(prTextBufferView(&value));
         }
-        textReset(&value);
+        prTextBufferReset(&value);
     }
     entry->serverTiming.push(metric);
 }
@@ -295,7 +295,7 @@ void parseServerTiming(PrHtmlPerformanceEntry* entry, PrStringView header) {
     bool quoted = false;
     for (size_t at = 0; at <= header.size; ++at) {
         if (at == header.size || (header.data[at] == ',' && !quoted)) {
-            appendServerTiming(entry, stringSlice(header, start, at - start));
+            appendServerTiming(entry, prStringSlice(header, start, at - start));
             start = at + 1;
         } else if (header.data[at] == '\\' && quoted && at + 1 < header.size) {
             ++at;
@@ -332,7 +332,7 @@ void fillFromReport(PrHtmlPerformanceEntry* entry, const PrHtmlWindow* window, c
         moments[PrHtmlPerformanceMoment_DomainLookupEnd] = fetchStart;
         moments[PrHtmlPerformanceMoment_ConnectStart] = fetchStart;
         moments[PrHtmlPerformanceMoment_ConnectEnd] = fetchStart;
-        if (asciiStartsWithFold(report->url, "https:"))
+        if (prAsciiStartsWithFold(report->url, "https:"))
             moments[PrHtmlPerformanceMoment_SecureConnectionStart] = fetchStart;
         moments[PrHtmlPerformanceMoment_RequestStart] = fetchMoment(anchor, timing.requestStart, now);
         moments[PrHtmlPerformanceMoment_ResponseStart] = responseStart;
@@ -356,11 +356,11 @@ void fillFromReport(PrHtmlPerformanceEntry* entry, const PrHtmlWindow* window, c
         entry->decodedBodySize = timing.decodedBodySize;
         prStringReset(&entry->contentType);
         if (report->contentType.data != nullptr) {
-            TextBuffer essence{};
-            textAppend(&essence, prMimeTypeEssence(report->contentType));
-            textAsciiLower(&essence);
-            entry->contentType = prStringCopy(prMimeTypeMinimize(textView(&essence)));
-            textReset(&essence);
+            PrTextBuffer essence{};
+            prTextBufferAppend(&essence, prMimeTypeEssence(report->contentType));
+            prTextBufferAsciiLower(&essence);
+            entry->contentType = prStringCopy(prMimeTypeMinimize(prTextBufferView(&essence)));
+            prTextBufferReset(&essence);
         }
         prStringReset(&entry->contentEncoding);
         PrStringView coding = report->contentEncoding;
@@ -386,7 +386,7 @@ FetchRevealFlags navigationReveal(const HtmlResourceReport* report) {
 }
 
 bool isHttpUrl(PrStringView url) {
-    return url.size >= 5 && (asciiStartsWithFold(url, "http:") || asciiStartsWithFold(url, "https:"));
+    return url.size >= 5 && (prAsciiStartsWithFold(url, "http:") || prAsciiStartsWithFold(url, "https:"));
 }
 
 // Runs user-timing/#convert-a-mark-to-a-timestamp.
@@ -746,14 +746,14 @@ double prHtmlPerformanceTimingMoment(const PrHtmlPerformance* performance, PrHtm
     PR_ASSERT(moment < PrHtmlPerformanceMoment_LegacyCount);
     double origin = prHtmlPerformanceTimeOrigin(performance);
     if (moment == PrHtmlPerformanceMoment_NavigationStart)
-        return floorF64(origin);
+        return prF64Floor(origin);
     const HtmlTimeline* timeline = performance->timeline;
     if (timeline == nullptr || timeline->navigation == nullptr)
         return 0;
     double value = timeline->navigation->moments[moment];
     bool happened = value != 0 || moment == PrHtmlPerformanceMoment_FetchStart ||
         (moment >= PrHtmlPerformanceMoment_DomainLookupStart && moment <= PrHtmlPerformanceMoment_ConnectEnd);
-    return happened ? floorF64(origin + value) : 0;
+    return happened ? prF64Floor(origin + value) : 0;
 }
 
 PrHtmlNavigationType prHtmlPerformanceNavigationType(const PrHtmlPerformance* performance) {

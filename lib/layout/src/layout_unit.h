@@ -28,7 +28,7 @@ constexpr PrLayoutUnit layoutUnitPx(int32_t px) {
 // Returns `unit` scaled by `factor`, truncated toward zero, which is how a percentage of it resolves.
 inline PrLayoutUnit layoutUnitScaled(PrLayoutUnit unit, float factor) {
     double scaled = double(unit.raw) * double(factor);
-    return scaled != scaled ? kLayoutUnitZero : prLayoutUnitClamped(int64_t(maxF64(minF64(scaled, 4e18), -4e18)));
+    return scaled != scaled ? kLayoutUnitZero : prLayoutUnitClamped(int64_t(prF64Max(prF64Min(scaled, 4e18), -4e18)));
 }
 
 // Returns the greater of two units, or the lesser.

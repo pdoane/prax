@@ -306,7 +306,7 @@ struct Layout {
     Array<TextPath> paths;
     Array<Span> spans;
     Array<Family> families;
-    TextBuffer familyNames;
+    PrTextBuffer familyNames = {};
     Array<Char> chars;
     Array<Positioned> positioned;
     Array<Run> runs;
@@ -493,25 +493,25 @@ TextStyle textStyleOf(Layout& t, const PrDomElement* e, const CssComputedStyle* 
     // A decoration is painted with the fill and stroke of the element that declares it
     // (SVG11/text.html#TextDecorationProperties).
     addDecoration(s, svgStyleLines(style), s.paints);
-    TextBuffer names{};
+    PrTextBuffer names{};
     Array<PrFontFamily> families;
     cssFontFamilies(cssComputedValue(style, PrCssProperty_FontFamily), &names, &families);
     s.firstFamily = t.families.count;
     s.familyCount = families.count;
     for (uint32_t i = 0; i < families.count; ++i) {
         const PrFontFamily& family = families.data[i];
-        Family own{family.generic, t.familyNames.text.count, uint32_t(family.name.size)};
-        textAppend(&t.familyNames, family.name);
+        Family own{family.generic, t.familyNames.size, uint32_t(family.name.size)};
+        prTextBufferAppend(&t.familyNames, family.name);
         t.families.push(own);
     }
     families.reset();
-    textReset(&names);
+    prTextBufferReset(&names);
     return s;
 }
 
 // Returns the name of a family.
 PrStringView familyName(const Layout& t, const Family& family) {
-    return PrStringView{t.familyNames.text.data + family.nameStart, family.nameSize};
+    return PrStringView{t.familyNames.data + family.nameStart, family.nameSize};
 }
 
 void pushChar(Layout& t, uint32_t codePoint, uint32_t span) {
@@ -521,7 +521,7 @@ void pushChar(Layout& t, uint32_t codePoint, uint32_t span) {
     c.offset = t.text.count;
     c.length = length;
     c.span = span;
-    c.x = c.y = c.rotate = kNanF32;
+    c.x = c.y = c.rotate = kPrF32Nan;
     for (uint32_t i = 0; i < length; ++i)
         t.text.push(bytes[i]);
     t.chars.push(c);
@@ -665,7 +665,7 @@ void collect(Layout& t, const PrDomElement* element, uint32_t span) {
 
 float percentBase(const Layout& t, SvgAxis axis) {
     PrVec2 v = t.b->viewport;
-    return axis == SvgAxis_X ? v.x : axis == SvgAxis_Y ? v.y : sqrtF32((v.x * v.x + v.y * v.y) / 2);
+    return axis == SvgAxis_X ? v.x : axis == SvgAxis_Y ? v.y : prF32Sqrt((v.x * v.x + v.y * v.y) / 2);
 }
 
 // Resolves a list of lengths against the axis, into `t.values`.
@@ -815,7 +815,7 @@ PrTextFont* PR_NULLABLE hostFonts(Layout& t, const Span& span) {
     SvgTextFonts& fonts = fontsOf(t);
     for (uint32_t i = 0; i < fonts.hosts.count; ++i) {
         const SvgHostFont& host = fonts.hosts.data[i];
-        if (host.key.count == key.count && memEquals(host.key.data, key.data, key.count)) {
+        if (host.key.count == key.count && prMemEquals(host.key.data, key.data, key.count)) {
             key.reset();
             return host.font;
         }
@@ -877,7 +877,7 @@ Font fontFor(Layout& t, const Char& c, const Span& span, PrStringView cluster) {
             reads.push(hash);
         for (uint32_t i = 0; i < documentFonts->faces.count; ++i) {
             SvgFontFace& face = documentFonts->faces.data[i];
-            if (face.familyHash != hash || !asciiEqualsFold(prStringView(&face.family), name))
+            if (face.familyHash != hash || !prAsciiEqualsFold(prStringView(&face.family), name))
                 continue;
             const SvgFont* font = fontOfFace(t, documentFonts, face);
             if (font == nullptr)
@@ -900,7 +900,7 @@ Font fontFor(Layout& t, const Char& c, const Span& span, PrStringView cluster) {
 }
 
 bool isAbsolute(const Char& c) {
-    return !isNanF32(c.x) || !isNanF32(c.y);
+    return !prF32IsNan(c.x) || !prF32IsNan(c.y);
 }
 
 // Moves the pen by the character's relative position. An absolute position is applied when the character's chunk
@@ -949,7 +949,7 @@ void setSvgRun(Layout& t, Run& run, PrVec2* pen, uint32_t chunk) {
         if (previous != kArrayMissing)
             pen->x -= svgFontKerning(font, previous, g.id) * scale;
         previous = run.upright ? kArrayMissing : g.id;
-        float rotate = isNanF32(c.rotate) ? 0 : c.rotate;
+        float rotate = prF32IsNan(c.rotate) ? 0 : c.rotate;
         Glyph glyph{
             .id = g.id,
             .position = *pen,
@@ -1029,7 +1029,7 @@ void setHostRun(Layout& t, Run& run, PrVec2* pen, uint32_t chunk) {
             .id = glyph.id,
             .position = {pen->x + glyph.offset.x * size, pen->y + glyph.offset.y * size},
             .pen = *pen,
-            .rotate = isNanF32(c.rotate) ? 0 : c.rotate,
+            .rotate = prF32IsNan(c.rotate) ? 0 : c.rotate,
             .advance = glyph.advance.x * size,
             .chunk = chunk,
             .character = placed,
@@ -1075,8 +1075,8 @@ void fitLengths(Layout& t) {
         float target = svgLengthResolve(length, percentBase(t, SvgAxis_X));
         uint32_t first = kArrayMissing;
         uint32_t end = 0;
-        float left = kInfinityF32;
-        float right = -kInfinityF32;
+        float left = kPrF32Infinity;
+        float right = -kPrF32Infinity;
         for (uint32_t g = 0; g < t.glyphs.count; ++g) {
             const Glyph& glyph = t.glyphs.data[g];
             if (glyph.character < at.start || glyph.character >= at.end)
@@ -1084,8 +1084,8 @@ void fitLengths(Layout& t) {
             if (first == kArrayMissing)
                 first = g;
             end = g + 1;
-            left = minF32(left, glyph.pen.x);
-            right = maxF32(right, glyph.pen.x + glyph.advance);
+            left = prF32Min(left, glyph.pen.x);
+            right = prF32Max(right, glyph.pen.x + glyph.advance);
         }
         if (first == kArrayMissing || !(right > left))
             continue;
@@ -1136,7 +1136,7 @@ PrPath* PR_NULLABLE textPathOf(Layout& t, const PrDomElement* element, float* pa
         prPathAppendCommands(path, commands.data, commands.count);
         prPathTransform(path, svgTransformMatrix(svgStyleTransform(style), PrRect{}));
         if (!svgStyleIs(style, PrCssProperty_PathLength, PrCssKeyword_None))
-            *pathLength = maxF32(svgStyleLength(style, PrCssProperty_PathLength).px, 0);
+            *pathLength = prF32Max(svgStyleLength(style, PrCssProperty_PathLength).px, 0);
     }
     commands.reset();
     if (prPathVerbCount(path) == 0) {
@@ -1180,18 +1180,18 @@ void measurePaths(Layout& t) {
             offset.px *= p.length / pathLength;
         p.offset = svgLengthResolve(offset, p.length);
         for (uint32_t c = p.start; c < p.end; ++c) {
-            t.chars.data[c].y = kNanF32;
+            t.chars.data[c].y = kPrF32Nan;
             t.chars.data[c].hidden = t.chars.data[c].hidden || p.measure == nullptr;
         }
         if (p.start < p.end) {
             Char& first = t.chars.data[p.start];
-            first.x = isNanF32(first.x) ? 0 : first.x;
+            first.x = prF32IsNan(first.x) ? 0 : first.x;
             first.y = 0;
         }
         if (p.end < t.chars.count && p.measure != nullptr && !isAbsolute(t.chars.data[p.end])) {
             float at = p.right ? 0 : p.length;
             if (p.closed)
-                at = p.offset - floorF32(p.offset / p.length) * p.length;
+                at = p.offset - prF32Floor(p.offset / p.length) * p.length;
             PrPathMeasurePosition end = prPathMeasurePosition(p.measure, at);
             PrVec2 point = t.vertical ? prAffine2MapPoint(fromPageOf(t), end.point) : end.point;
             t.chars.data[p.end].x = point.x;
@@ -1240,7 +1240,7 @@ void followPaths(Layout& t) {
                     glyph.hidden = true;
                     continue;
                 }
-                mid -= floorF32(mid / p.length) * p.length;
+                mid -= prF32Floor(mid / p.length) * p.length;
             }
             PrAffine2 onPath{};
             if (p.measure == nullptr || !lineOnPath(p, mid, &onPath)) {
@@ -1261,7 +1261,7 @@ void followPaths(Layout& t) {
             }
             // In vertical text, a glyph's up is back along the path (SVG2/text.html#TextpathLayoutRules), a quarter
             // turn less than horizontal text's. The frame turns the glyph back to the page when the text is recorded.
-            float angle = atan2F32(onPath.b, onPath.a) * (180 / kPiF32);
+            float angle = prF32Atan2(onPath.b, onPath.a) * (180 / kPrF32Pi);
             PrVec2 onPage = prAffine2MapPoint(onPath, origin);
             glyph.position = t.vertical ? prAffine2MapPoint(fromPageOf(t), onPage) : onPage;
             glyph.rotate += t.vertical ? angle - 90 : angle;
@@ -1431,8 +1431,8 @@ void anchorChunks(Layout& t) {
             const Glyph& glyph = t.glyphs.data[end++];
             if (glyph.hidden)
                 continue;
-            left = any ? minF32(left, glyph.pen.x) : glyph.pen.x;
-            right = any ? maxF32(right, glyph.pen.x + glyph.advance) : glyph.pen.x + glyph.advance;
+            left = any ? prF32Min(left, glyph.pen.x) : glyph.pen.x;
+            right = any ? prF32Max(right, glyph.pen.x + glyph.advance) : glyph.pen.x + glyph.advance;
             any = true;
         }
         Anchor anchor = Anchor_Start;
@@ -1549,7 +1549,7 @@ float runShift(const Layout& t, const Run& run) {
 // Returns a glyph's own transform about its origin: scaled, stretched horizontally, then rotated.
 PrAffine2 glyphOwn(const Glyph& glyph) {
     return prAffine2Concat(prAffine2Scale(PrVec2{glyph.scale * glyph.stretch, glyph.scale}),
-        prAffine2Rotate(glyph.rotate * (kPiF32 / 180)));
+        prAffine2Rotate(glyph.rotate * (kPrF32Pi / 180)));
 }
 
 PrAffine2 glyphTransform(const Glyph& glyph) {
@@ -1744,7 +1744,7 @@ void layoutReset(Layout& t) {
     t.text.reset();
     t.spans.reset();
     t.families.reset();
-    textReset(&t.familyNames);
+    prTextBufferReset(&t.familyNames);
     t.chars.reset();
     t.positioned.reset();
     t.runs.reset();
@@ -1874,7 +1874,7 @@ void buildRuns(Layout& t) {
             clusterEnd = c.offset + c.length;
         } else if (c.offset >= clusterEnd) {
             clusterEnd = prUnicodeGraphemeNext(all, c.offset);
-            next = fontFor(t, c, t.spans.data[c.span], stringSlice(all, c.offset, clusterEnd - c.offset));
+            next = fontFor(t, c, t.spans.data[c.span], prStringSlice(all, c.offset, clusterEnd - c.offset));
         }
         const Char* head = t.runs.count != 0 ? &t.chars.data[t.runs.last().firstChar] : nullptr;
         const Char* previous = i != 0 ? &t.chars.data[i - 1] : nullptr;
@@ -1899,9 +1899,9 @@ void placeRuns(Layout& t) {
         const Char& head = t.chars.data[t.runs.data[r0].firstChar];
         // A chunk starts at a position of its own, so its first glyph kerns against nothing before it.
         t.kernFont = nullptr;
-        if (!isNanF32(head.x))
+        if (!prF32IsNan(head.x))
             pen.x = head.x;
-        if (!isNanF32(head.y))
+        if (!prF32IsNan(head.y))
             pen.y = head.y;
         uint32_t first = t.runs.data[r0].firstChar;
         uint32_t count = t.runs.data[r1 - 1].endChar - first;
@@ -1954,7 +1954,7 @@ void placeRuns(Layout& t) {
 // Returns the bounds of the glyph cells of the laid-out text, across the whole text element, which a paint server maps
 // onto.
 PrRect textBounds(const Layout& t) {
-    PrRect box{kInfinityF32, kInfinityF32, -kInfinityF32, -kInfinityF32};
+    PrRect box{kPrF32Infinity, kPrF32Infinity, -kPrF32Infinity, -kPrF32Infinity};
     for (uint32_t i = 0; i < t.runs.count; ++i) {
         const Run& run = t.runs.data[i];
         if (run.firstGlyph == run.endGlyph)
@@ -1966,10 +1966,10 @@ PrRect textBounds(const Layout& t) {
             const Glyph& glyph = t.glyphs.data[g];
             if (glyph.hidden || glyph.warp != kArrayMissing)
                 continue;
-            box.left = minF32(box.left, glyph.pen.x);
-            box.right = maxF32(box.right, glyph.pen.x + glyph.advance);
-            box.top = minF32(box.top, glyph.pen.y - ascent);
-            box.bottom = maxF32(box.bottom, glyph.pen.y + descent);
+            box.left = prF32Min(box.left, glyph.pen.x);
+            box.right = prF32Max(box.right, glyph.pen.x + glyph.advance);
+            box.top = prF32Min(box.top, glyph.pen.y - ascent);
+            box.bottom = prF32Max(box.bottom, glyph.pen.y + descent);
         }
     }
     return box.left <= box.right ? box : PrRect{};
@@ -2037,8 +2037,8 @@ void recordCharacters(Layout& t) {
         if (placed.data[i] && end - i > 1) {
             SvgTextCharacter& first = out.characters.data[i];
             float share = first.advance / float(end - i);
-            float radians = first.direction * (kPiF32 / 180);
-            PrVec2 step{cosF32(radians) * share, sinF32(radians) * share};
+            float radians = first.direction * (kPrF32Pi / 180);
+            PrVec2 step{prF32Cos(radians) * share, prF32Sin(radians) * share};
             for (uint32_t k = i; k < end; ++k) {
                 SvgTextCharacter& character = out.characters.data[k];
                 float n = float(k - i);
@@ -2171,9 +2171,9 @@ void ignorePositions(Layout& t) {
     for (uint32_t i = 0; i < t.chars.count; ++i) {
         Char& c = t.chars.data[i];
         if (i != 0)
-            c.x = c.y = kNanF32;
+            c.x = c.y = kPrF32Nan;
         c.dx = c.dy = 0;
-        c.rotate = kNanF32;
+        c.rotate = kPrF32Nan;
     }
 }
 
@@ -2200,8 +2200,8 @@ void setLines(Layout& t, float width, Array<uint32_t>& starts, uint32_t firstEnd
     measureChars(t, &advances, &ascents, &descents);
     breakLines(t, advances, width, &starts, firstEnd);
     const Char& first = t.chars.data[0];
-    float x = isNanF32(first.x) ? 0 : first.x;
-    float baseline = isNanF32(first.y) ? 0 : first.y;
+    float x = prF32IsNan(first.x) ? 0 : first.x;
+    float baseline = prF32IsNan(first.y) ? 0 : first.y;
     // The strut: the text element's line-height about the ascent and descent of the first font that sets the text.
     const TextStyle& own = t.spans.data[0].style;
     float strutAscent = 0;
@@ -2220,8 +2220,8 @@ void setLines(Layout& t, float width, Array<uint32_t>& starts, uint32_t firstEnd
                 continue;
             const TextStyle& style = t.spans.data[t.chars.data[c].span].style;
             float leading = (style.lineHeight - (ascents.data[c] + descents.data[c])) / 2;
-            lineAbove = maxF32(lineAbove, ascents.data[c] + leading);
-            lineBelow = maxF32(lineBelow, descents.data[c] + leading);
+            lineAbove = prF32Max(lineAbove, ascents.data[c] + leading);
+            lineBelow = prF32Max(lineBelow, descents.data[c] + leading);
         }
         // The collapsible spaces at the end of a wrapped line are removed (css-text-4/#white-space-phase-2), so that
         // text-anchor places the line by what it draws.
@@ -2237,12 +2237,12 @@ void setLines(Layout& t, float width, Array<uint32_t>& starts, uint32_t firstEnd
         }
         if (l != 0) {
             baseline += t.stacksRight ? -(below + lineAbove) : below + lineAbove;
-            if (isNanF32(head.x))
+            if (prF32IsNan(head.x))
                 head.x = x;
-            if (isNanF32(head.y))
+            if (prF32IsNan(head.y))
                 head.y = baseline;
         }
-        if (!isNanF32(head.y))
+        if (!prF32IsNan(head.y))
             baseline = head.y;
         below = lineBelow;
     }
@@ -2257,8 +2257,8 @@ void intoFrame(Layout& t) {
         Char& c = t.chars.data[i];
         float x = c.x;
         float dx = c.dx;
-        c.x = isNanF32(c.y) ? kNanF32 : c.y * t.turn;
-        c.y = isNanF32(x) ? kNanF32 : -x * t.turn;
+        c.x = prF32IsNan(c.y) ? kPrF32Nan : c.y * t.turn;
+        c.y = prF32IsNan(x) ? kPrF32Nan : -x * t.turn;
         c.dx = c.dy * t.turn;
         c.dy = -dx * t.turn;
     }
@@ -2269,7 +2269,7 @@ void intoFrame(Layout& t) {
 void toPage(Layout& t) {
     SvgText& out = *t.out;
     PrAffine2 page = toPageOf(t);
-    PrAffine2 turn = prAffine2Rotate(t.turn * kPiF32 / 2);
+    PrAffine2 turn = prAffine2Rotate(t.turn * kPrF32Pi / 2);
     for (uint32_t i = 0; i < out.pieces.count; ++i) {
         SvgTextPiece& piece = out.pieces.data[i];
         if (piece.path != nullptr) {
@@ -2285,7 +2285,7 @@ void toPage(Layout& t) {
     auto turnRect = [&](PrRect r) {
         PrVec2 a = prAffine2MapPoint(page, PrVec2{r.left, r.top});
         PrVec2 b = prAffine2MapPoint(page, PrVec2{r.right, r.bottom});
-        return PrRect{minF32(a.x, b.x), minF32(a.y, b.y), maxF32(a.x, b.x), maxF32(a.y, b.y)};
+        return PrRect{prF32Min(a.x, b.x), prF32Min(a.y, b.y), prF32Max(a.x, b.x), prF32Max(a.y, b.y)};
     };
     if (out.bounds.right > out.bounds.left)
         out.bounds = turnRect(out.bounds);
@@ -2412,7 +2412,7 @@ void overflowLines(Layout& t, const CssComputedStyle* style, float inlineSize, c
     if (overflow != PrCssKeyword_Clip && overflow != PrCssKeyword_Ellipsis)
         return;
     const TextStyle& own = t.spans.data[0].style;
-    float x = isNanF32(t.chars.data[0].x) ? 0 : t.chars.data[0].x;
+    float x = prF32IsNan(t.chars.data[0].x) ? 0 : t.chars.data[0].x;
     bool rtl = own.rightToLeft;
     float left;
     if (own.textAnchor == Anchor_Middle)
@@ -2456,7 +2456,7 @@ void overflowLines(Layout& t, const CssComputedStyle* style, float inlineSize, c
         run.font = fontFor(t, c, t.spans.data[0], PrStringView{t.text.data + c.offset, c.length});
         if (run.font.svg == nullptr && run.font.host == nullptr)
             continue;
-        PrVec2 pen{0, isNanF32(head.y) ? 0 : head.y};
+        PrVec2 pen{0, prF32IsNan(head.y) ? 0 : head.y};
         run.firstGlyph = t.glyphs.count;
         t.kernFont = nullptr;
         if (run.font.svg != nullptr)
@@ -2477,7 +2477,7 @@ void overflowLines(Layout& t, const CssComputedStyle* style, float inlineSize, c
                 continue;
             }
             float end = rtl ? glyph.pen.x : glyph.pen.x + glyph.advance;
-            edge = !kept ? end : rtl ? minF32(edge, end) : maxF32(edge, end);
+            edge = !kept ? end : rtl ? prF32Min(edge, end) : prF32Max(edge, end);
             kept = true;
         }
         run.align = runAlign(t, run);
@@ -2591,8 +2591,8 @@ void layoutTextArea(Layout& t, const PrDomElement* area, const CssComputedStyle*
         for (uint32_t c = starts.data[l]; c < starts.data[l + 1]; ++c) {
             if (t.chars.data[c].hidden || t.codePoints.data[c] == ' ')
                 continue;
-            extent = maxF32(extent, t.spans.data[t.chars.data[c].span].style.fontSize);
-            descent = maxF32(descent, descents.data[c]);
+            extent = prF32Max(extent, t.spans.data[t.chars.data[c].span].style.fontSize);
+            descent = prF32Max(descent, descents.data[c]);
         }
         // A line that draws nothing, such as one between two tbreaks, is one em of its element high. The line-increment
         // comes from the element in which the previous line ended at its break. For the first line, it comes from the
@@ -2625,7 +2625,7 @@ void layoutTextArea(Layout& t, const PrDomElement* area, const CssComputedStyle*
     for (uint32_t l = 0; l < lines; ++l) {
         for (uint32_t c = starts.data[l]; c < starts.data[l + 1]; ++c) {
             t.chars.data[c].hidden = t.chars.data[c].hidden || l >= shown;
-            t.chars.data[c].x = t.chars.data[c].y = kNanF32;
+            t.chars.data[c].x = t.chars.data[c].y = kPrF32Nan;
         }
         Char& head = t.chars.data[starts.data[l]];
         head.x = start;
@@ -2655,7 +2655,7 @@ SvgNodeIndex svgBuildText(SvgBuilder& b, const PrDomElement* element, const CssC
         .visible = visibility != PrCssKeyword_Hidden && visibility != PrCssKeyword_Collapse,
         .fillRule = svgStyleFillRule(style, PrCssProperty_FillRule),
         .clipRule = svgStyleFillRule(style, PrCssProperty_ClipRule),
-        .opacity = clampF32(svgStyleNumber(style, PrCssProperty_Opacity, 1), 0, 1),
+        .opacity = prF32Clamp(svgStyleNumber(style, PrCssProperty_Opacity, 1), 0, 1),
         .pointerEvents = svgStylePointerEvents(style),
         .element = element,
     };
@@ -2747,33 +2747,34 @@ const SvgPaints* PR_NULLABLE svgTextPaints(const SvgText* text) {
 }
 
 bool svgTextSame(const SvgTree* tree, const SvgText* text, const SvgTree* expectedTree, const SvgText* expected,
-        TextBuffer* difference) {
-    if (!memEquals(&text->bounds, &expected->bounds, sizeof(PrRect))) {
-        textAppend(difference, "text bounds differ");
+        PrTextBuffer* difference) {
+    if (!prMemEquals(&text->bounds, &expected->bounds, sizeof(PrRect))) {
+        prTextBufferAppend(difference, "text bounds differ");
         return false;
     }
     if (text->clipped != expected->clipped ||
-            (text->clipped && !memEquals(&text->clip, &expected->clip, sizeof(PrRect)))) {
-        textAppend(difference, "text clips differ");
+            (text->clipped && !prMemEquals(&text->clip, &expected->clip, sizeof(PrRect)))) {
+        prTextBufferAppend(difference, "text clips differ");
         return false;
     }
     bool sameGlyphs = text->glyphs.count == expected->glyphs.count &&
         text->transforms.count == expected->transforms.count &&
-        memEquals(text->transforms.data, expected->transforms.data, text->transforms.count * sizeof(PrAffine2));
+        prMemEquals(text->transforms.data, expected->transforms.data, text->transforms.count * sizeof(PrAffine2));
     // A glyph is compared by its fields, since its id leaves padding before its position.
     for (uint32_t i = 0; sameGlyphs && i < text->glyphs.count; ++i) {
         const PrFontGlyph& a = text->glyphs.data[i];
         const PrFontGlyph& e = expected->glyphs.data[i];
-        sameGlyphs = a.id == e.id && memEquals(&a.position, &e.position, sizeof(PrVec2));
+        sameGlyphs = a.id == e.id && prMemEquals(&a.position, &e.position, sizeof(PrVec2));
     }
     if (!sameGlyphs) {
-        textAppend(difference, "glyphs differ");
+        prTextBufferAppend(difference, "glyphs differ");
         return false;
     }
+    size_t characterBytes = text->characters.count * sizeof(SvgTextCharacter);
     bool sameCharacters = text->characters.count == expected->characters.count &&
-        memEquals(text->characters.data, expected->characters.data, text->characters.count * sizeof(SvgTextCharacter));
+        prMemEquals(text->characters.data, expected->characters.data, characterBytes);
     if (!sameCharacters) {
-        textAppend(difference, "characters differ");
+        prTextBufferAppend(difference, "characters differ");
         return false;
     }
     bool sameElements = text->elements.count == expected->elements.count;
@@ -2784,11 +2785,11 @@ bool svgTextSame(const SvgTree* tree, const SvgText* text, const SvgTree* expect
             a.visible == e.visible && a.painted == e.painted;
     }
     if (!sameElements) {
-        textAppend(difference, "the elements of the text differ");
+        prTextBufferAppend(difference, "the elements of the text differ");
         return false;
     }
     if (text->pieces.count != expected->pieces.count) {
-        textAppend(difference, "text pieces differ in number");
+        prTextBufferAppend(difference, "text pieces differ in number");
         return false;
     }
     for (uint32_t i = 0; i < text->pieces.count; ++i) {
@@ -2798,7 +2799,7 @@ bool svgTextSame(const SvgTree* tree, const SvgText* text, const SvgTree* expect
             a.glyphCount == e.glyphCount && a.transformed == e.transformed &&
             (a.path == nullptr) == (e.path == nullptr) && (a.path == nullptr || svgPathSame(a.path, e.path));
         if (!same) {
-            textAppend(difference, "a text piece differs");
+            prTextBufferAppend(difference, "a text piece differs");
             return false;
         }
         if (!svgPaintsSame(tree, a.paints, expectedTree, e.paints, difference))

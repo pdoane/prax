@@ -408,7 +408,7 @@ void layoutAnchoringStyleChanged(LayoutTree* tree, LayoutNodeIndex node, PrLayou
     if (!suppresses && effectChanged) {
         const PrLayoutEffectStyle& a = layoutEffectStyle(tree->styles, was);
         const PrLayoutEffectStyle& b = layoutEffectStyle(tree->styles, style);
-        suppresses = !memEquals(&a.transform, &b.transform, sizeof(PrLayoutTransform));
+        suppresses = !prMemEquals(&a.transform, &b.transform, sizeof(PrLayoutTransform));
     }
     LayoutTreeNode& n = tree->nodes.data[node];
     if (suppresses && !n.anchorSuppressed) {

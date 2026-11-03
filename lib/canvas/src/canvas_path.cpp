@@ -62,16 +62,16 @@ struct Ellipse {
 // Returns the point of `ellipse` at `angle` (html/#determine-the-point-on-an-ellipse-steps), and the derivative of that
 // point by the angle.
 PrDVec2 pointAt(const Ellipse& ellipse, double angle) {
-    double x = ellipse.radii.x * cosF64(angle);
-    double y = ellipse.radii.y * sinF64(angle);
+    double x = ellipse.radii.x * prF64Cos(angle);
+    double y = ellipse.radii.y * prF64Sin(angle);
     return PrDVec2{
         ellipse.center.x + x * ellipse.cosRotation - y * ellipse.sinRotation,
         ellipse.center.y + x * ellipse.sinRotation + y * ellipse.cosRotation,
     };
 }
 PrDVec2 tangentAt(const Ellipse& ellipse, double angle) {
-    double x = -ellipse.radii.x * sinF64(angle);
-    double y = ellipse.radii.y * cosF64(angle);
+    double x = -ellipse.radii.x * prF64Sin(angle);
+    double y = ellipse.radii.y * prF64Cos(angle);
     return PrDVec2{
         x * ellipse.cosRotation - y * ellipse.sinRotation,
         x * ellipse.sinRotation + y * ellipse.cosRotation,
@@ -87,11 +87,11 @@ void appendArc(CanvasPath* path, PrDAffine2 transform, const Ellipse& ellipse, d
         startAt(path, start);
     else if (start.x != path->last.x || start.y != path->last.y)
         lineAt(path, start);
-    uint32_t segments = uint32_t(ceilF64(absF64(sweep) / (kPiF64 / 2) - 1e-9));
+    uint32_t segments = uint32_t(prF64Ceil(prF64Abs(sweep) / (kPrF64Pi / 2) - 1e-9));
     if (segments == 0)
         return;
     double step = sweep / segments;
-    double k = 4.0 / 3.0 * tanF64(step / 4);
+    double k = 4.0 / 3.0 * prF64Tan(step / 4);
     for (uint32_t i = 0; i < segments; ++i) {
         double from = startAngle + step * i;
         double to = i + 1 == segments ? startAngle + sweep : from + step;
@@ -109,28 +109,28 @@ void appendArc(CanvasPath* path, PrDAffine2 transform, const Ellipse& ellipse, d
 // from the start point to the end point in its direction, so it covers less than a whole turn, and an arc
 // counterclockwise from 0 to 2π, which content draws circles with, is a whole turn.
 double sweepOf(double* startAngle, double endAngle, bool counterclockwise) {
-    double start = fmodF64(*startAngle, 2 * kPiF64);
+    double start = prF64Fmod(*startAngle, 2 * kPrF64Pi);
     if (start < 0) {
-        start += 2 * kPiF64;
-        if (start >= 2 * kPiF64)
-            start -= 2 * kPiF64;
+        start += 2 * kPrF64Pi;
+        if (start >= 2 * kPrF64Pi)
+            start -= 2 * kPrF64Pi;
     }
     double end = endAngle + (start - *startAngle);
     *startAngle = start;
-    if (!counterclockwise && end - start >= 2 * kPiF64)
-        return 2 * kPiF64;
-    if (counterclockwise && start - end >= 2 * kPiF64)
-        return -2 * kPiF64;
+    if (!counterclockwise && end - start >= 2 * kPrF64Pi)
+        return 2 * kPrF64Pi;
+    if (counterclockwise && start - end >= 2 * kPrF64Pi)
+        return -2 * kPrF64Pi;
     if (!counterclockwise && start > end)
-        return 2 * kPiF64 - fmodF64(start - end, 2 * kPiF64);
+        return 2 * kPrF64Pi - prF64Fmod(start - end, 2 * kPrF64Pi);
     if (counterclockwise && start < end)
-        return -(2 * kPiF64 - fmodF64(end - start, 2 * kPiF64));
+        return -(2 * kPrF64Pi - prF64Fmod(end - start, 2 * kPrF64Pi));
     return end - start;
 }
 
 // Returns the length of `v`.
 double lengthOf(PrDVec2 v) {
-    return sqrtF64(v.x * v.x + v.y * v.y);
+    return prF64Sqrt(v.x * v.x + v.y * v.y);
 }
 
 // Returns the distance from `point` to the segment from `a` to `b`.
@@ -252,7 +252,7 @@ PrStatus canvasPathArcTo(CanvasPath* path, PrDAffine2 transform, double x1, doub
     double length0 = lengthOf(v0);
     double length2 = lengthOf(v2);
     double cross = v0.x * v2.y - v0.y * v2.x;
-    if (length0 == 0 || length2 == 0 || radius == 0 || absF64(cross) <= 1e-12 * length0 * length2) {
+    if (length0 == 0 || length2 == 0 || radius == 0 || prF64Abs(cross) <= 1e-12 * length0 * length2) {
         lineAt(path, corner);
         return PrStatus_Ok;
     }
@@ -261,21 +261,21 @@ PrStatus canvasPathArcTo(CanvasPath* path, PrDAffine2 transform, double x1, doub
     // The circle touches both lines at the distance from the corner where its radius meets them at right angles, and
     // its center lies on the bisector of the corner.
     double cosine = v0.x * v2.x + v0.y * v2.y;
-    double half = acosF64(cosine < -1 ? -1 : cosine > 1 ? 1 : cosine) / 2;
-    double tangent = radius / tanF64(half);
+    double half = prF64Acos(cosine < -1 ? -1 : cosine > 1 ? 1 : cosine) / 2;
+    double tangent = radius / prF64Tan(half);
     PrDVec2 bisector{v0.x + v2.x, v0.y + v2.y};
     double bisectorLength = lengthOf(bisector);
-    double centerDistance = radius / sinF64(half);
+    double centerDistance = radius / prF64Sin(half);
     double reach = centerDistance / bisectorLength;
     PrDVec2 center{x1 + bisector.x * reach, y1 + bisector.y * reach};
     PrDVec2 start{x1 + v0.x * tangent, y1 + v0.y * tangent};
     PrDVec2 end{x1 + v2.x * tangent, y1 + v2.y * tangent};
-    double startAngle = atan2F64(start.y - center.y, start.x - center.x);
-    double sweep = atan2F64(end.y - center.y, end.x - center.x) - startAngle;
-    if (sweep > kPiF64)
-        sweep -= 2 * kPiF64;
-    else if (sweep < -kPiF64)
-        sweep += 2 * kPiF64;
+    double startAngle = prF64Atan2(start.y - center.y, start.x - center.x);
+    double sweep = prF64Atan2(end.y - center.y, end.x - center.x) - startAngle;
+    if (sweep > kPrF64Pi)
+        sweep -= 2 * kPrF64Pi;
+    else if (sweep < -kPrF64Pi)
+        sweep += 2 * kPrF64Pi;
     appendArc(path, transform, Ellipse{center, PrDVec2{radius, radius}, 1, 0}, startAngle, sweep);
     return PrStatus_Ok;
 }
@@ -311,8 +311,8 @@ PrStatus canvasPathRoundRect(CanvasPath* path, PrDAffine2 transform, double x, d
     // The rectangle is built from its origin with a positive width and height, and mapped back over the rectangle that
     // the arguments give. A negative width mirrors it, which carries the left corners' radii to the right and reverses
     // the direction of the subpath, and a negative height does the same vertically.
-    double width = absF64(w);
-    double height = absF64(h);
+    double width = prF64Abs(w);
+    double height = prF64Abs(h);
     double sums[4] = {
         corners[0].x + corners[1].x, corners[1].y + corners[2].y, corners[2].x + corners[3].x,
         corners[0].y + corners[3].y,
@@ -331,17 +331,17 @@ PrStatus canvasPathRoundRect(CanvasPath* path, PrDAffine2 transform, double x, d
     // square, and the lines on either side meet at it.
     auto corner = [&](uint32_t index, PrDVec2 center, double angle) {
         if (corners[index].x > 0 && corners[index].y > 0)
-            appendArc(path, mapped, Ellipse{center, corners[index], 1, 0}, angle, kPiF64 / 2);
+            appendArc(path, mapped, Ellipse{center, corners[index], 1, 0}, angle, kPrF64Pi / 2);
     };
     startAt(path, canvasMapPoint(mapped, corners[0].x, 0));
     lineAt(path, canvasMapPoint(mapped, width - corners[1].x, 0));
-    corner(1, PrDVec2{width - corners[1].x, corners[1].y}, -kPiF64 / 2);
+    corner(1, PrDVec2{width - corners[1].x, corners[1].y}, -kPrF64Pi / 2);
     lineAt(path, canvasMapPoint(mapped, width, height - corners[2].y));
     corner(2, PrDVec2{width - corners[2].x, height - corners[2].y}, 0);
     lineAt(path, canvasMapPoint(mapped, corners[3].x, height));
-    corner(3, PrDVec2{corners[3].x, height - corners[3].y}, kPiF64 / 2);
+    corner(3, PrDVec2{corners[3].x, height - corners[3].y}, kPrF64Pi / 2);
     lineAt(path, canvasMapPoint(mapped, 0, corners[0].y));
-    corner(0, PrDVec2{corners[0].x, corners[0].y}, kPiF64);
+    corner(0, PrDVec2{corners[0].x, corners[0].y}, kPrF64Pi);
     canvasPathClose(path);
     startAt(path, canvasMapPoint(transform, x, y));
     return PrStatus_Ok;
@@ -354,7 +354,7 @@ PrStatus canvasPathEllipse(CanvasPath* path, PrDAffine2 transform, double x, dou
     if (radiusX < 0 || radiusY < 0)
         return PrStatus_OutOfRange;
     double sweep = sweepOf(&startAngle, endAngle, counterclockwise);
-    Ellipse ellipse{PrDVec2{x, y}, PrDVec2{radiusX, radiusY}, cosF64(rotation), sinF64(rotation)};
+    Ellipse ellipse{PrDVec2{x, y}, PrDVec2{radiusX, radiusY}, prF64Cos(rotation), prF64Sin(rotation)};
     appendArc(path, transform, ellipse, startAngle, sweep);
     return PrStatus_Ok;
 }

@@ -258,7 +258,7 @@ int main(int argc, char** argv) {
         r.runs = 0;
         HarnessCounters cost = harnessMeasure(run);
         PrLayoutTreeStats stats = prLayoutTreeStats(r.host.tree);
-        TextBuffer row{};
+        PrTextBuffer row{};
         harnessAppendFormat(&row, "%s\n  {\"name\": \"%s\", \"time\": %.6f, \"rounds\": %u, \"blocks\": %u, \"layers\": %u, "
             "\"commands\": %u, \"made\": %u",
             first ? "" : ",", c.name, cost.millis, r.host.rounds, stats.blocksLaidOut, stats.layersRecorded,
@@ -268,9 +268,9 @@ int main(int argc, char** argv) {
         HarnessCounts counts{};
         harnessCountsAdd(&counts, "time", cost);
         harnessCountsWrite(&counts, &row);
-        textAppend(&row, "}");
-        fwrite(row.text.data, 1, row.text.count, stdout);
-        textReset(&row);
+        prTextBufferAppend(&row, "}");
+        fwrite(row.data, 1, row.size, stdout);
+        prTextBufferReset(&row);
         first = false;
     }
     printf("\n]\n");

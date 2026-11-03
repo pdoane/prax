@@ -30,7 +30,7 @@ void appendChunk(std::vector<uint8_t>* out, const char* type, const std::string&
     size_t start = out->size();
     out->insert(out->end(), type, type + 4);
     out->insert(out->end(), data.begin(), data.end());
-    appendU32(out, crc32Update(0, PrByteView{out->data() + start, out->size() - start}));
+    appendU32(out, prCrc32Update(0, PrByteView{out->data() + start, out->size() - start}));
 }
 
 // Returns a PNG file of a header, the chunks of `before`, image data, the chunks of `after`, and an end. The chunks are

@@ -33,7 +33,7 @@ struct CssParser {
 
     // The tokens of a value given rather than written (cssValueTokens), and the bytes of their text.
     CssTokenArray givenTokens;
-    TextBuffer givenSource;
+    PrTextBuffer givenSource = {};
 
     // The arrays whose runs a CssBlock names.
     Array<CssItem> items;
@@ -56,7 +56,7 @@ struct CssParser {
     Array<uint64_t> filter;                  // the names that a block already holds
 
     // The name of a declaration or an at-rule, with escapes resolved.
-    TextBuffer names;
+    PrTextBuffer names = {};
 };
 
 // Initializes `parser` as empty, whatever it held before.

@@ -162,7 +162,7 @@ void startWrite(WindowsProcess* process) {
     prMutexLock(&process->mutex);
     uint32_t size = process->queued.count - process->queuedStart;
     uint32_t taken = size < sizeof(pipe.buffer) ? size : uint32_t(sizeof(pipe.buffer));
-    memCopy(pipe.buffer, process->queued.data + process->queuedStart, taken);
+    prMemCopy(pipe.buffer, process->queued.data + process->queuedStart, taken);
     bool closing = process->inputClosing;
     prMutexUnlock(&process->mutex);
     if (taken == 0) {

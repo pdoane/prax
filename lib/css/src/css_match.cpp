@@ -484,11 +484,11 @@ uint32_t canonicalGroup(CssValuePool* pool, CssMatchEdit* group) {
     for (uint32_t i = 0; i < group->parts; ++i) {
         if ((omitted & (uint64_t(1) << i)) != 0)
             continue;
-        memCopy(scratch + written, values->data + parts[i].start,
+        prMemCopy(scratch + written, values->data + parts[i].start,
             (parts[i].end - parts[i].start) * sizeof(CssValueNode));
         written += parts[i].end - parts[i].start;
     }
-    memCopy(values->data + group->start, scratch, written * sizeof(CssValueNode));
+    prMemCopy(values->data + group->start, scratch, written * sizeof(CssValueNode));
     return written;
 }
 
@@ -552,7 +552,7 @@ void resizeRun(CssMatcher* m, uint32_t later, uint32_t root, uint32_t start, uin
         values->erase(start + length, uint32_t(-delta));
     } else {
         values->reserve(values->count + uint32_t(delta));
-        memMove(values->data + end + delta, values->data + end, (values->count - end) * sizeof(CssValueNode));
+        prMemMove(values->data + end + delta, values->data + end, (values->count - end) * sizeof(CssValueNode));
         values->count += uint32_t(delta);
     }
 
@@ -600,7 +600,7 @@ void foldProduction(CssMatcher* m, uint32_t later, uint32_t root, const CssMatch
             resizeRun(m, later, root, run->start, run->end, size + 1);
             CssValueNode* at = m->pool->values.data + run->start;
             if (second)
-                memMove(at + 1, at, size * sizeof(CssValueNode));
+                prMemMove(at + 1, at, size * sizeof(CssValueNode));
             at[second ? 0 : size] = cssKeywordValue(PrCssKeyword_Center);
             break;
         }
@@ -1294,12 +1294,12 @@ bool checkFeatureName(CssMatcher* m, const CssMatchFrame& f) {
     PrCssDescriptor descriptor = cssDescriptorFromText(m->features, text);
     CssValueAuxFlags prefix = 0;
     if (descriptor == PrCssDescriptor_None && isProduction(enclosing(m, f.outer), CssValueDef_MfPlain)) {
-        if (asciiStartsWithFold(text, "min-"))
+        if (prAsciiStartsWithFold(text, "min-"))
             prefix = CssValueAuxFlag_FeatureMin;
-        else if (asciiStartsWithFold(text, "max-"))
+        else if (prAsciiStartsWithFold(text, "max-"))
             prefix = CssValueAuxFlag_FeatureMax;
         if (prefix != 0)
-            descriptor = cssDescriptorFromText(m->features, stringSlice(text, 4, text.size - 4));
+            descriptor = cssDescriptorFromText(m->features, prStringSlice(text, 4, text.size - 4));
         if (descriptor != PrCssDescriptor_None && !bitsetTest(kCssDescriptorRange, descriptor))
             descriptor = PrCssDescriptor_None;
     }
@@ -1389,7 +1389,7 @@ void holdFeatureValues(CssMatcher* m, uint32_t later, uint32_t root, const CssMa
     int32_t delta = int32_t(length) - int32_t(run->end - run->start);
     resizeRun(m, later, root, run->start, run->end, length);
     built = uint32_t(int32_t(built) + delta);
-    memCopy(pool->values.data + run->start, pool->values.data + built, length * sizeof(CssValueNode));
+    prMemCopy(pool->values.data + run->start, pool->values.data + built, length * sizeof(CssValueNode));
     pool->values.count = built;
 }
 
@@ -1620,7 +1620,7 @@ bool parseElementArgument(const CssMatcher* m, CssPseudoElement pseudo, CssToken
 // Returns true if `name` is an unknown -webkit- pseudo-element. Any other pseudo-element named with a -webkit- prefix,
 // written without parentheses, is valid and matches nothing (selectors-4/#unknown--webkit--pseudo-elements).
 bool isUnknownWebkit(PrStringView name, bool function) {
-    return !function && name.size > 8 && asciiStartsWithFold(name, "-webkit-");
+    return !function && name.size > 8 && prAsciiStartsWithFold(name, "-webkit-");
 }
 
 // Returns the pseudo-element that the pseudo-compound whose frame is `compound` follows in its unit, or
@@ -1768,7 +1768,7 @@ void foldColor(CssValuePool* pool, uint32_t at, uint32_t first, PrColorSpace spa
         CssValueNode* value = &pool->values.data[read];
         uint32_t size = value->next;
         if (value->kind != PrCssValueKind_Literal) {
-            memMove(pool->values.data + write, value, size * sizeof(CssValueNode));
+            prMemMove(pool->values.data + write, value, size * sizeof(CssValueNode));
             write += size;
             ++channels;
         }

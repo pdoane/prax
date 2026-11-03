@@ -111,7 +111,7 @@ int64_t dateNow(JSContext* ctx) {
     double now = prTimeWallMilliseconds();
     if (realm != nullptr && realm->page != nullptr)
         now = prHtmlWindowCurrentTime(prHtmlPageWindow(realm->page));
-    return int64_t(floorF64(now));
+    return int64_t(prF64Floor(now));
 }
 
 // Removes the fetch's abort steps from its signal, and frees its values.
@@ -328,11 +328,11 @@ void freeScripts(JsHtmlRealm* realm) {
 
 // Copies `text` into `out` with a NUL after it, as JS_Eval requires, behind `column - 1` spaces so that the engine's
 // columns are the source's.
-void evalText(PrStringView text, uint32_t column, TextBuffer* out) {
+void evalText(PrStringView text, uint32_t column, PrTextBuffer* out) {
     for (uint32_t i = 1; i < column; ++i)
-        textAppendChar(out, ' ');
-    textAppend(out, text);
-    textAppendChar(out, '\0');
+        prTextBufferAppendChar(out, ' ');
+    prTextBufferAppend(out, text);
+    prTextBufferAppendChar(out, '\0');
 }
 
 // Returns the index of the module named `name`, or kArrayMissing.
@@ -359,7 +359,7 @@ uint32_t recordModule(JsHtmlRealm* realm, PrStringView name) {
 bool resolveSpecifier(PrStringView specifier, PrStringView base, PrString* out) {
     PrUrl* parsed = nullptr;
     PrStatus status = PrStatus_InvalidData;
-    if (stringStartsWith(specifier, "/") || stringStartsWith(specifier, "./") || stringStartsWith(specifier, "../")) {
+    if (prStringStartsWith(specifier, "/") || prStringStartsWith(specifier, "./") || prStringStartsWith(specifier, "../")) {
         PrUrl* baseUrl = nullptr;
         status = prUrlCreate(base, nullptr, PrCharset_Utf8, &baseUrl);
         if (status == PrStatus_Ok)
@@ -403,7 +403,7 @@ char* PR_NULLABLE normalizeModule(JSContext* ctx, const char* baseName, const ch
     PrStringView text = prStringView(&resolved);
     char* result = static_cast<char*>(js_malloc(ctx, text.size + 1));
     if (result != nullptr) {
-        memCopy(result, text.data, text.size);
+        prMemCopy(result, text.data, text.size);
         result[text.size] = '\0';
     }
     prStringReset(&resolved);
@@ -443,28 +443,28 @@ uint32_t parseModule(void* context, PrHtmlPage*, const PrHtmlScript* script, PrH
     if (realm->engine == nullptr)
         return 0;
     JSContext* ctx = realm->ctx;
-    TextBuffer name;
+    PrTextBuffer name = {};
     if (!script->external) {
-        textAppend(&name, "[inline ");
-        textAppendU64(&name, ++realm->inlineModules);
-        textAppend(&name, "] ");
+        prTextBufferAppend(&name, "[inline ");
+        prTextBufferAppendU64(&name, ++realm->inlineModules, 10);
+        prTextBufferAppend(&name, "] ");
     }
-    textAppend(&name, script->url);
-    uint32_t index = recordModule(realm, textView(&name));
+    prTextBufferAppend(&name, script->url);
+    uint32_t index = recordModule(realm, prTextBufferView(&name));
     JsHtmlModule* module = &realm->modules.data[index];
     if (JS_IsUndefined(module->module) && JS_IsUndefined(module->error)) {
         prStringReplace(&module->base, script->baseUrl);
-        TextBuffer text;
+        PrTextBuffer text = {};
         evalText(script->source, script->column, &text);
-        textAppendChar(&name, '\0');
+        prTextBufferAppendChar(&name, '\0');
         JSEvalOptions options{
             JS_EVAL_OPTIONS_VERSION,
             JS_EVAL_TYPE_MODULE | JS_EVAL_FLAG_COMPILE_ONLY | JS_EVAL_FLAG_NO_RESOLVE,
-            textView(&name).data, int(script->line),
+            prTextBufferView(&name).data, int(script->line),
         };
-        PrStringView eval = textView(&text);
+        PrStringView eval = prTextBufferView(&text);
         JSValue compiled = JS_Eval2(ctx, eval.data, eval.size - 1, &options);
-        textReset(&text);
+        prTextBufferReset(&text);
         Array<PrString> requests;
         bool parsed = !JS_IsException(compiled);
         if (parsed) {
@@ -488,7 +488,7 @@ uint32_t parseModule(void* context, PrHtmlPage*, const PrHtmlScript* script, PrH
         if (!parsed)
             module->error = JS_GetException(ctx);
     }
-    textReset(&name);
+    prTextBufferReset(&name);
     for (uint32_t i = 0; i < realm->modules.data[index].requests.count; ++i) {
         uint32_t imported = realm->modules.data[index].requests.data[i];
         request(requestContext, prStringView(&realm->modules.data[imported].name));
@@ -548,10 +548,10 @@ JSModuleDef* PR_NULLABLE loadModule(JSContext* ctx, const char* name, void*) {
 }
 
 // Copies `text` into `out` with a NUL after it.
-const char* cStringOf(PrStringView text, TextBuffer* out) {
-    textAppend(out, text);
-    textAppendChar(out, '\0');
-    return textView(out).data;
+const char* cStringOf(PrStringView text, PrTextBuffer* out) {
+    prTextBufferAppend(out, text);
+    prTextBufferAppendChar(out, '\0');
+    return prTextBufferView(out).data;
 }
 
 void freeImport(JsHtmlImport* import) {
@@ -579,27 +579,27 @@ void imported(void* PR_NULLABLE context, PrStatus status) {
         freeImport(import);
         return;
     }
-    TextBuffer url;
+    PrTextBuffer url = {};
     cStringOf(prStringView(&import->url), &url);
     JSValue result = JS_UNDEFINED;
     if (status != PrStatus_Ok) {
-        result = JS_ThrowTypeError(ctx, "Failed to fetch module '%s'", textView(&url).data);
+        result = JS_ThrowTypeError(ctx, "Failed to fetch module '%s'", prTextBufferView(&url).data);
     } else {
         JSValue error = firstParseError(realm, findModule(realm, prStringView(&import->url)));
         if (!JS_IsUndefined(error)) {
             result = JS_Throw(ctx, error);
         } else {
-            TextBuffer base;
-            TextBuffer specifier;
+            PrTextBuffer base = {};
+            PrTextBuffer specifier = {};
             jsEnterRealm(ctx);
             result = JS_LoadModule(ctx, cStringOf(prStringView(&import->base), &base),
                 cStringOf(prStringView(&import->specifier), &specifier));
             jsLeaveRealm(ctx);
-            textReset(&base);
-            textReset(&specifier);
+            prTextBufferReset(&base);
+            prTextBufferReset(&specifier);
         }
     }
-    textReset(&url);
+    prTextBufferReset(&url);
     bool rejected = JS_IsException(result);
     if (rejected)
         result = JS_GetException(ctx);
@@ -726,14 +726,14 @@ bool evaluate(void* context, PrHtmlPage*, PrStringView source, PrString* out) {
     if (realm->engine == nullptr)
         return false;
     JSContext* ctx = realm->ctx;
-    TextBuffer text;
+    PrTextBuffer text = {};
     evalText(source, 1, &text);
-    PrStringView eval = textView(&text);
+    PrStringView eval = prTextBufferView(&text);
     JSEvalOptions options{JS_EVAL_OPTIONS_VERSION, JS_EVAL_TYPE_GLOBAL, "javascript:", 1};
     jsEnterRealm(ctx);
     JSValue result = JS_Eval2(ctx, eval.data, eval.size - 1, &options);
     jsLeaveRealm(ctx);
-    textReset(&text);
+    prTextBufferReset(&text);
     if (JS_IsException(result))
         jsReportException(ctx);
     PrStringView value = {};
@@ -1007,18 +1007,18 @@ void* PR_NULLABLE prJsHtmlEngineHostContext(JSContext* ctx) {
 }
 
 bool prJsHtmlEngineRun(JSContext* ctx, PrStringView source, PrStringView url, uint32_t line, uint32_t column) {
-    TextBuffer text;
+    PrTextBuffer text = {};
     evalText(source, column, &text);
-    TextBuffer name;
-    textAppend(&name, url);
-    textAppendChar(&name, '\0');
-    PrStringView eval = textView(&text);
-    JSEvalOptions options{JS_EVAL_OPTIONS_VERSION, JS_EVAL_TYPE_GLOBAL, textView(&name).data, int(line)};
+    PrTextBuffer name = {};
+    prTextBufferAppend(&name, url);
+    prTextBufferAppendChar(&name, '\0');
+    PrStringView eval = prTextBufferView(&text);
+    JSEvalOptions options{JS_EVAL_OPTIONS_VERSION, JS_EVAL_TYPE_GLOBAL, prTextBufferView(&name).data, int(line)};
     jsEnterRealm(ctx);
     JSValue result = JS_Eval2(ctx, eval.data, eval.size - 1, &options);
     jsLeaveRealm(ctx);
-    textReset(&text);
-    textReset(&name);
+    prTextBufferReset(&text);
+    prTextBufferReset(&name);
     bool ok = !JS_IsException(result);
     if (!ok)
         jsReportException(ctx);

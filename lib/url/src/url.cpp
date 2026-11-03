@@ -18,7 +18,7 @@ namespace pr_impl {
 namespace {
 
 PrStringView withoutPrefix(PrStringView value, char prefix) {
-    return value.size != 0 && value.data[0] == prefix ? stringSlice(value, 1, value.size - 1) : value;
+    return value.size != 0 && value.data[0] == prefix ? prStringSlice(value, 1, value.size - 1) : value;
 }
 
 bool matches(const UrlPair* pair, PrStringView name, PrStringView value) {
@@ -73,21 +73,21 @@ PrStatus setHref(PrUrl* url, PrStringView value) {
 }
 
 void setProtocol(PrUrl* url, PrStringView value) {
-    TextBuffer input;
-    textAppend(&input, value);
-    textAppendChar(&input, ':');
-    urlParseFrom(url, textView(&input), UrlState_SchemeStart);
-    textReset(&input);
+    PrTextBuffer input = {};
+    prTextBufferAppend(&input, value);
+    prTextBufferAppendChar(&input, ':');
+    urlParseFrom(url, prTextBufferView(&input), UrlState_SchemeStart);
+    prTextBufferReset(&input);
 }
 
 // Sets the username or the password. A URL that cannot have credentials is left unchanged.
 void setCredential(Url* url, PrString* credential, PrStringView value) {
     if (urlCannotHaveCredentials(url))
         return;
-    TextBuffer encoded;
+    PrTextBuffer encoded = {};
     urlAppendPercentEncoded(&encoded, value, PrUrlPercentEncodeSet_Userinfo);
     prStringReset(credential);
-    *credential = textTake(&encoded);
+    *credential = prTextBufferTake(&encoded);
 }
 
 void setHost(PrUrl* url, PrStringView value) {
@@ -204,51 +204,51 @@ int32_t prUrlPort(const PrUrl* url) {
 }
 
 PrString prUrlComponent(const PrUrl* url, PrUrlComponent component) {
-    TextBuffer text;
+    PrTextBuffer text = {};
     PrStringView host = prStringView(&url->host);
     switch (component) {
         case PrUrlComponent_Href: return urlSerialize(url, PrUrlSerialization_Whole);
         case PrUrlComponent_Origin: return urlOrigin(url);
         case PrUrlComponent_Protocol:
-            textAppend(&text, prStringView(&url->scheme));
-            textAppendChar(&text, ':');
+            prTextBufferAppend(&text, prStringView(&url->scheme));
+            prTextBufferAppendChar(&text, ':');
             break;
         case PrUrlComponent_Username:
-            textAppend(&text, prStringView(&url->username));
+            prTextBufferAppend(&text, prStringView(&url->username));
             break;
         case PrUrlComponent_Password:
-            textAppend(&text, prStringView(&url->password));
+            prTextBufferAppend(&text, prStringView(&url->password));
             break;
         case PrUrlComponent_Host:
-            textAppend(&text, host);
+            prTextBufferAppend(&text, host);
             if (host.data != nullptr && url->hasPort) {
-                textAppendChar(&text, ':');
-                textAppendU64(&text, url->port);
+                prTextBufferAppendChar(&text, ':');
+                prTextBufferAppendU64(&text, url->port, 10);
             }
             break;
         case PrUrlComponent_Hostname:
-            textAppend(&text, host);
+            prTextBufferAppend(&text, host);
             break;
         case PrUrlComponent_Port:
             if (url->hasPort)
-                textAppendU64(&text, url->port);
+                prTextBufferAppendU64(&text, url->port, 10);
             break;
         case PrUrlComponent_Pathname:
-            textAppend(&text, prStringView(&url->path));
+            prTextBufferAppend(&text, prStringView(&url->path));
             break;
         case PrUrlComponent_Search:
         case PrUrlComponent_Hash: {
             const PrString* part = component == PrUrlComponent_Search ? &url->query : &url->fragment;
             if (!prStringIsEmpty(part)) {
-                textAppendChar(&text, component == PrUrlComponent_Search ? '?' : '#');
-                textAppend(&text, prStringView(part));
+                prTextBufferAppendChar(&text, component == PrUrlComponent_Search ? '?' : '#');
+                prTextBufferAppend(&text, prStringView(part));
             }
             break;
         }
         default:
             break;
     }
-    return textTake(&text);
+    return prTextBufferTake(&text);
 }
 
 PrStatus prUrlSetComponent(PrUrl* url, PrUrlComponent component, PrStringView value) {

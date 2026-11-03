@@ -20,7 +20,7 @@ void appendKey(Array<uint8_t>& key, const void* PR_NULLABLE bytes, size_t size) 
         return;
     uint32_t at = key.count;
     key.resize(at + uint32_t(size));
-    memCopy(key.data + at, bytes, size);
+    prMemCopy(key.data + at, bytes, size);
 }
 
 // Appends a count to `key`, so that lists of different lengths have different keys.
@@ -34,7 +34,7 @@ T* PR_NULLABLE copyOf(const T* PR_NULLABLE items, uint32_t count) {
     if (count == 0)
         return nullptr;
     T* copy = static_cast<T*>(prMemoryAlloc(sizeof(T) * count));
-    memCopy(copy, items, sizeof(T) * count);
+    prMemCopy(copy, items, sizeof(T) * count);
     return copy;
 }
 
@@ -43,10 +43,10 @@ T* PR_NULLABLE copyOf(const T* PR_NULLABLE items, uint32_t count) {
 // it already.
 template <typename Entry, typename Make>
 uint32_t intern(LayoutGridTable<Entry>& table, Array<uint8_t>& key, Make make) {
-    uint32_t hash = uint32_t(hashBytes(key.data, key.count, kGridTemplateSeed));
+    uint32_t hash = uint32_t(prHashBytes(key.data, key.count, kGridTemplateSeed));
     uint32_t found = table.index.find(hash, [&](uint32_t i) {
         const Entry& e = table.entries.data[i];
-        return e.key.count == key.count && memEquals(e.key.data, key.data, key.count);
+        return e.key.count == key.count && prMemEquals(e.key.data, key.data, key.count);
     });
     if (found != kHashMissing) {
         key.reset();
@@ -204,10 +204,10 @@ PrLayoutGridName layoutGridTemplatesInternName(LayoutGridTemplates* templates, P
         // themselves.
         Array<char> text;
         text.resize(uint32_t(name.size) + 6);
-        memCopy(text.data, name.data, name.size);
-        memCopy(text.data + name.size, "-start", 6);
+        prMemCopy(text.data, name.data, name.size);
+        prMemCopy(text.data + name.size, "-start", 6);
         Atom start = atomTableAdd(&templates->names, PrStringView{text.data, name.size + 6});
-        memCopy(text.data + name.size, "-end", 4);
+        prMemCopy(text.data + name.size, "-end", 4);
         Atom end = atomTableAdd(&templates->names, PrStringView{text.data, name.size + 4});
         text.reset();
         while (templates->forms.count <= (start > end ? start : end))

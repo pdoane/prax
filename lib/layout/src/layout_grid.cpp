@@ -152,7 +152,7 @@ namespace {
 
 // Returns the unit nearest to `raw` units.
 PrLayoutUnit unitOf(double raw) {
-    return prLayoutUnitClamped(int64_t(roundF64(raw)));
+    return prLayoutUnitClamped(int64_t(prF64Round(raw)));
 }
 
 // Returns the units of `unit`, as the algorithm counts them.
@@ -226,12 +226,12 @@ double repeatedSize(const LayoutStyles* styles, const PrLayoutGridTrack& track, 
         PrLayoutWordKind kind = prLayoutWordKind(breadth.bits);
         if (kind == PrLayoutWordKind_Number || !layoutLengthIsFixed(length) || !layoutResolves(length, base))
             return -1.0;
-        return maxF64(0, rawOf(layoutResolve(styles, length, base)));
+        return prF64Max(0, rawOf(layoutResolve(styles, length, base)));
     };
     double min = fixed(track.min);
     double max = fixed(track.max);
     if (max >= 0)
-        return min >= 0 ? maxF64(max, min) : max;
+        return min >= 0 ? prF64Max(max, min) : max;
     return min;
 }
 
@@ -255,20 +255,20 @@ uint32_t repetitionsOf(const LayoutStyles* styles, const LayoutGridTracksEntry& 
         double one = repeatedSize(styles, list.tracks[i], base);
         bool inRepeat = i >= list.repeatStart && i < list.repeatStart + list.repeatCount;
         if (!inRepeat) {
-            others += maxF64(0, one);
+            others += prF64Max(0, one);
             continue;
         }
         // A track that has no definite size makes one repetition, and a size is floored at 1px so that the count stays
         // finite.
         if (one < 0)
             return 1;
-        repeated += maxF64(one, double(kPrLayoutUnitsPerPx));
+        repeated += prF64Max(one, double(kPrLayoutUnitsPerPx));
     }
     double g = rawOf(gap);
     uint32_t othersCount = list.trackCount - list.repeatCount;
     auto total = [&](double n) {
         double tracks = double(othersCount) + n * double(list.repeatCount);
-        return others + n * repeated + g * maxF64(0, tracks - 1);
+        return others + n * repeated + g * prF64Max(0, tracks - 1);
     };
     uint32_t most = 1;
     if (othersCount < uint32_t(kPrLayoutGridMaxLine))
@@ -282,13 +282,13 @@ uint32_t repetitionsOf(const LayoutStyles* styles, const LayoutGridTracksEntry& 
     if (!fills) {
         if (first > avail)
             return 1;
-        double n = 1 + floorF64((avail - first) / step);
-        return uint32_t(minF64(n, double(most)));
+        double n = 1 + prF64Floor((avail - first) / step);
+        return uint32_t(prF64Min(n, double(most)));
     }
     if (first >= avail)
         return 1;
-    double n = 1 + ceilF64((avail - first) / step);
-    return uint32_t(minF64(n, double(most)));
+    double n = 1 + prF64Ceil((avail - first) / step);
+    return uint32_t(prF64Min(n, double(most)));
 }
 
 // Returns the track of the template of `axis` at `index` of its expanded tracks, its automatic repetition repeated.
@@ -538,7 +538,7 @@ void growRows(Occupancy& o, int32_t majorEnd) {
         return;
     uint32_t at = o.bits.count;
     o.bits.resize(o.mark + needed * o.words);
-    memZero(o.bits.data + at, (o.bits.count - at) * sizeof(uint64_t));
+    prMemZero(o.bits.data + at, (o.bits.count - at) * sizeof(uint64_t));
     o.rows = needed;
 }
 
@@ -748,7 +748,7 @@ LayoutGridSizing sizingOf(const LayoutStyles* styles, PrLayoutTrackBreadth bread
         case PrLayoutWordKind_Number:
             if (minimum)
                 return LayoutGridSizing_Auto;
-            *size = maxF64(0, double(prLayoutWordNumberValue(breadth.bits)));
+            *size = prF64Max(0, double(prLayoutWordNumberValue(breadth.bits)));
             return LayoutGridSizing_Flex;
         case PrLayoutWordKind_Keyword:
             switch (prLayoutWordKeywordValue(breadth.bits)) {
@@ -762,7 +762,7 @@ LayoutGridSizing sizingOf(const LayoutStyles* styles, PrLayoutTrackBreadth bread
             PrLayoutLength length{breadth.bits};
             if (!layoutResolves(length, base))
                 return LayoutGridSizing_Auto;
-            *size = maxF64(0, rawOf(layoutResolve(styles, length, base)));
+            *size = prF64Max(0, rawOf(layoutResolve(styles, length, base)));
             return LayoutGridSizing_Fixed;
         }
     }
@@ -788,9 +788,9 @@ void setUpTracks(Grid& g, PrLayoutGridAxis axis, PrLayoutUnit base) {
         track.max = sizingOf(g.state.styles, sizes.max, base, false, &track.maxFixed);
         if (track.max == LayoutGridSizing_FitContent) {
             PrLayoutLength limit = sizes.limit;
-            track.maxFixed = kInfinityF64;
+            track.maxFixed = kPrF64Infinity;
             if (layoutResolves(limit, base))
-                track.maxFixed = maxF64(0, rawOf(layoutResolve(g.state.styles, limit, base)));
+                track.maxFixed = prF64Max(0, rawOf(layoutResolve(g.state.styles, limit, base)));
         }
         tracks.data[a.trackMark + t] = track;
     }
@@ -1091,7 +1091,7 @@ void findContentContributions(Grid& g, uint32_t i, PrLayoutGridAxis axis) {
     it.first = copy.first;
     it.last = copy.last;
     it.minContent = minContent;
-    it.maxContent = maxF64(minContent, maxContent);
+    it.maxContent = prF64Max(minContent, maxContent);
     it.known |= LayoutGridContribution_MinContent | LayoutGridContribution_MaxContent;
 }
 
@@ -1188,7 +1188,7 @@ double limitOf(const Grid& g, uint32_t i, PrLayoutGridAxis axis) {
     for (int32_t t = it.start[axis]; t < it.end[axis]; ++t) {
         const GridTrack& track = g.track(axis, uint32_t(t));
         if (track.max != LayoutGridSizing_Fixed && track.max != LayoutGridSizing_FitContent)
-            return kInfinityF64;
+            return kPrF64Infinity;
         sum += track.maxFixed;
     }
     return sum;
@@ -1197,10 +1197,10 @@ double limitOf(const Grid& g, uint32_t i, PrLayoutGridAxis axis) {
 // Returns the limited min-content or max-content contribution of the item `i` to `axis`: its contribution capped by the
 // fixed maximums of the tracks it spans, and floored by its minimum contribution (css-grid-1/#limited-contribution).
 double limitedMinContentOf(Grid& g, uint32_t i, PrLayoutGridAxis axis) {
-    return maxF64(minF64(minContentOf(g, i, axis), limitOf(g, i, axis)), minimumOf(g, i, axis));
+    return prF64Max(prF64Min(minContentOf(g, i, axis), limitOf(g, i, axis)), minimumOf(g, i, axis));
 }
 double limitedMaxContentOf(Grid& g, uint32_t i, PrLayoutGridAxis axis) {
-    return maxF64(minF64(maxContentOf(g, i, axis), limitOf(g, i, axis)), minimumOf(g, i, axis));
+    return prF64Max(prF64Min(maxContentOf(g, i, axis), limitOf(g, i, axis)), minimumOf(g, i, axis));
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -1255,7 +1255,7 @@ double share(Grid& g, PrLayoutGridAxis axis, const uint32_t* tracks, uint32_t co
             GridTrack& track = g.track(axis, tracks[k]);
             if (track.frozen)
                 continue;
-            double r = maxF64(0, room(track));
+            double r = prF64Max(0, room(track));
             if (space * weight(track) / total >= r) {
                 track.incurred += r;
                 space -= r;
@@ -1294,15 +1294,15 @@ void distribute(Grid& g, PrLayoutGridAxis axis, const uint32_t* items, uint32_t 
     for (uint32_t t = 0; t < trackCount; ++t)
         g.track(axis, t).touched = false;
     auto sizeOf = [&](const GridTrack& track) {
-        return limits ? (track.limit == kInfinityF64 ? track.base : track.limit) : track.base;
+        return limits ? (track.limit == kPrF64Infinity ? track.base : track.limit) : track.base;
     };
     // The most a track's affected size reaches before it is full: a base size its growth limit, capped by its
     // fit-content limit, and a growth limit itself unless it is infinite or infinitely growable.
     auto limitOfTrack = [&](const GridTrack& track) {
-        double fit = track.max == LayoutGridSizing_FitContent ? track.maxFixed : kInfinityF64;
+        double fit = track.max == LayoutGridSizing_FitContent ? track.maxFixed : kPrF64Infinity;
         if (!limits)
-            return minF64(track.limit, fit);
-        if (track.limit != kInfinityF64 && !track.infinitelyGrowable)
+            return prF64Min(track.limit, fit);
+        if (track.limit != kPrF64Infinity && !track.infinitelyGrowable)
             return track.limit;
         return fit;
     };
@@ -1316,7 +1316,7 @@ void distribute(Grid& g, PrLayoutGridAxis axis, const uint32_t* items, uint32_t 
         double sum = gapsWithin(g, axis, first, end);
         for (int32_t t = first; t < end; ++t)
             sum += sizeOf(g.track(axis, uint32_t(t)));
-        double space = maxF64(0, wanted - sum);
+        double space = prF64Max(0, wanted - sum);
         uint32_t mark = set.count;
         double factors = 0;
         uint32_t flexible = 0;
@@ -1363,18 +1363,18 @@ void distribute(Grid& g, PrLayoutGridAxis axis, const uint32_t* items, uint32_t 
             }
             auto pastLimit = [&](const GridTrack& track) {
                 if (track.max != LayoutGridSizing_FitContent)
-                    return kInfinityF64;
+                    return kPrF64Infinity;
                 return track.maxFixed - sizeOf(track) - track.incurred;
             };
             if (set.count > chosen)
                 space = share(g, axis, set.data + chosen, set.count - chosen, space, pastLimit, weight);
             if (space > 0 && beyond != LayoutGridBeyond_Limits)
-                share(g, axis, set.data + mark, affectedCount, space, [](const GridTrack&) { return kInfinityF64; }, weight);
+                share(g, axis, set.data + mark, affectedCount, space, [](const GridTrack&) { return kPrF64Infinity; }, weight);
             set.count = chosen;
         }
         for (uint32_t s = mark; s < mark + affectedCount; ++s) {
             GridTrack& track = g.track(axis, set.data[s]);
-            track.planned = maxF64(track.planned, track.incurred);
+            track.planned = prF64Max(track.planned, track.incurred);
         }
         set.count = mark;
     }
@@ -1386,7 +1386,7 @@ void distribute(Grid& g, PrLayoutGridAxis axis, const uint32_t* items, uint32_t 
             continue;
         if (!limits) {
             track.base += track.planned;
-        } else if (track.limit == kInfinityF64) {
+        } else if (track.limit == kPrF64Infinity) {
             track.limit = track.base + track.planned;
             track.infinitelyGrowable = growable;
         } else {
@@ -1448,7 +1448,7 @@ void shimBaselines(Grid& g, PrLayoutGridAxis axis) {
         extents(i, &before, &after);
         uint32_t slot = first ? uint32_t(it.start[axis]) : trackCount + uint32_t(it.end[axis] - 1);
         double extent = first ? before : after;
-        above.data[mark + slot] = maxF64(above.data[mark + slot], extent);
+        above.data[mark + slot] = prF64Max(above.data[mark + slot], extent);
     }
     if (any) {
         for (uint32_t i = 0; i < g.count; ++i) {
@@ -1506,11 +1506,11 @@ void resolveIntrinsicSizes(Grid& g, PrLayoutGridAxis axis, LayoutGridSpace space
         else if (maxIsMaxContent(max))
             limit = maxContentOf(g, i, axis);
         if (max == LayoutGridSizing_FitContent)
-            limit = minF64(limit, g.track(axis, t).maxFixed);
+            limit = prF64Min(limit, g.track(axis, t).maxFixed);
         GridTrack& track = g.track(axis, t);
-        track.base = maxF64(track.base, base);
+        track.base = prF64Max(track.base, base);
         if (limit >= 0)
-            track.limit = track.limit == kInfinityF64 ? limit : maxF64(track.limit, limit);
+            track.limit = track.limit == kPrF64Infinity ? limit : prF64Max(track.limit, limit);
     }
     raiseLimits(g, axis);
 
@@ -1564,7 +1564,7 @@ void resolveIntrinsicSizes(Grid& g, PrLayoutGridAxis axis, LayoutGridSpace space
     for (uint32_t t = 0; t < g.axes[axis].trackCount; ++t) {
         GridTrack& track = g.track(axis, t);
         track.infinitelyGrowable = false;
-        if (track.limit == kInfinityF64)
+        if (track.limit == kPrF64Infinity)
             track.limit = track.base;
     }
 }
@@ -1594,7 +1594,7 @@ double frSizeOf(Grid& g, PrLayoutGridAxis axis, int32_t first, int32_t end, doub
             else
                 factors += track.maxFixed;
         }
-        double fr = leftover / maxF64(factors, 1);
+        double fr = leftover / prF64Max(factors, 1);
         bool again = false;
         for (int32_t t = first; t < end; ++t) {
             GridTrack& track = g.track(axis, uint32_t(t));
@@ -1604,7 +1604,7 @@ double frSizeOf(Grid& g, PrLayoutGridAxis axis, int32_t first, int32_t end, doub
             }
         }
         if (!again)
-            return maxF64(0, fr);
+            return prF64Max(0, fr);
     }
 }
 
@@ -1627,7 +1627,7 @@ void expandFlexibleTracks(Grid& g, PrLayoutGridAxis axis, LayoutGridSpace space,
         for (uint32_t t = 0; t < count; ++t) {
             const GridTrack& track = g.track(axis, t);
             if (track.max == LayoutGridSizing_Flex)
-                fr = maxF64(fr, track.maxFixed > 1 ? track.base / track.maxFixed : track.base);
+                fr = prF64Max(fr, track.maxFixed > 1 ? track.base / track.maxFixed : track.base);
         }
         for (uint32_t i = 0; i < g.count; ++i) {
             const LayoutGridItem& it = g.item(i);
@@ -1635,14 +1635,14 @@ void expandFlexibleTracks(Grid& g, PrLayoutGridAxis axis, LayoutGridSpace space,
                 continue;
             int32_t first = it.start[axis];
             int32_t end = it.end[axis];
-            fr = maxF64(fr, frSizeOf(g, axis, first, end, maxContentOf(g, i, axis)));
+            fr = prF64Max(fr, frSizeOf(g, axis, first, end, maxContentOf(g, i, axis)));
         }
         // A grid that the fraction makes smaller than the container's minimum or larger than its maximum is sized with
         // the fraction that fills that limit.
         double total = 0;
         for (uint32_t t = 0; t < count; ++t) {
             const GridTrack& track = g.track(axis, t);
-            double flexed = track.max == LayoutGridSizing_Flex ? maxF64(track.base, fr * track.maxFixed) : track.base;
+            double flexed = track.max == LayoutGridSizing_Flex ? prF64Max(track.base, fr * track.maxFixed) : track.base;
             total += flexed + gapAfter(g, axis, t);
         }
         double least = rawOf(g.minSize[axis]);
@@ -1667,7 +1667,7 @@ void sizeTracks(Grid& g, PrLayoutGridAxis axis, LayoutGridSpace space, double av
     for (uint32_t t = 0; t < count; ++t) {
         GridTrack& track = g.track(axis, t);
         track.base = track.min == LayoutGridSizing_Fixed ? track.minFixed : 0;
-        track.limit = track.max == LayoutGridSizing_Fixed ? track.maxFixed : kInfinityF64;
+        track.limit = track.max == LayoutGridSizing_Fixed ? track.maxFixed : kPrF64Infinity;
         if (track.limit < track.base)
             track.limit = track.base;
         track.infinitelyGrowable = false;
@@ -1682,7 +1682,7 @@ void sizeTracks(Grid& g, PrLayoutGridAxis axis, LayoutGridSpace space, double av
     if (space == LayoutGridSpace_Definite)
         free = available - totalOf(g, axis);
     else if (space == LayoutGridSpace_MaxContent)
-        free = layoutIsDefinite(g.maxSize[axis]) ? rawOf(g.maxSize[axis]) - totalOf(g, axis) : kInfinityF64;
+        free = layoutIsDefinite(g.maxSize[axis]) ? rawOf(g.maxSize[axis]) - totalOf(g, axis) : kPrF64Infinity;
     if (free > 0) {
         Array<uint32_t>& all = g.scratch().order;
         uint32_t mark = all.count;
@@ -1690,7 +1690,7 @@ void sizeTracks(Grid& g, PrLayoutGridAxis axis, LayoutGridSpace space, double av
             all.push(t);
         for (uint32_t t = 0; t < count; ++t)
             g.track(axis, t).incurred = 0;
-        if (free == kInfinityF64) {
+        if (free == kPrF64Infinity) {
             for (uint32_t t = 0; t < count; ++t)
                 g.track(axis, t).base = g.track(axis, t).limit;
         } else {
@@ -1777,7 +1777,7 @@ void alignTracks(Grid& g, PrLayoutGridAxis axis, double size) {
                 between = free / double(visible);
                 leading = between / 2;
             } else {
-                leading = maxF64(0, free / 2);
+                leading = prF64Max(0, free / 2);
             }
             break;
         case PrLayoutAlignment_SpaceEvenly:
@@ -1785,7 +1785,7 @@ void alignTracks(Grid& g, PrLayoutGridAxis axis, double size) {
                 between = free / double(visible + 1);
                 leading = between;
             } else {
-                leading = maxF64(0, free / 2);
+                leading = prF64Max(0, free / 2);
             }
             break;
         case PrLayoutAlignment_Center: leading = safe && free < 0 ? 0 : free / 2; break;
@@ -2394,7 +2394,7 @@ LayoutContentOutcome layoutGridContent(LayoutState& state, LayoutNodeIndex node,
             slot = uint32_t(it.start[PrLayoutGridAxis_Rows]);
         else
             slot = rowCount + uint32_t(it.end[PrLayoutGridAxis_Rows] - 1);
-        extents.data[extentMark + slot] = maxF64(extents.data[extentMark + slot], first ? before : after);
+        extents.data[extentMark + slot] = prF64Max(extents.data[extentMark + slot], first ? before : after);
     }
     if (anyBaseline) {
         for (uint32_t i = 0; i < g.count; ++i) {

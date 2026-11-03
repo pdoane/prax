@@ -270,7 +270,7 @@ size_t fetchRead(PrFetchNetwork*, PrFetch* handle, uint8_t* output, size_t capac
         return prFetchRead(fetch->passed, output, capacity);
     uint32_t available = fetch->content.count - fetch->contentStart;
     uint32_t taken = capacity < available ? uint32_t(capacity) : available;
-    memCopy(output, fetch->content.data + fetch->contentStart, taken);
+    prMemCopy(output, fetch->content.data + fetch->contentStart, taken);
     fetch->contentStart += taken;
     return taken;
 }

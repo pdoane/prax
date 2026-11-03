@@ -27,7 +27,7 @@ bool attachExtensions(cmark_parser* PR_NULLABLE parser, PrStringView field, int*
         size_t end = start;
         while (end < field.size && field.data[end] != ',')
             ++end;
-        PrStringView name = stringSlice(field, start, end - start);
+        PrStringView name = prStringSlice(field, start, end - start);
         start = end + 1;
         if (name == "footnotes") {
             *options |= CMARK_OPT_FOOTNOTES;
@@ -40,7 +40,7 @@ bool attachExtensions(cmark_parser* PR_NULLABLE parser, PrStringView field, int*
         char text[32] = {};
         if (name.size >= sizeof(text))
             return false;
-        memCopy(text, name.data, name.size);
+        prMemCopy(text, name.data, name.size);
         cmark_syntax_extension* extension = cmark_find_syntax_extension(text);
         if (extension == nullptr)
             return false;
@@ -65,17 +65,17 @@ int main() {
             return 1;
         cmark_parser* parser = cmark_parser_new(options);
         attachExtensions(parser, test.fields[0], &options);
-        PrStringView source = textView(&test.input);
+        PrStringView source = prTextBufferView(&test.input);
         cmark_parser_feed(parser, source.data != nullptr ? source.data : "", source.size);
         cmark_node* document = cmark_parser_finish(parser);
         char* html = cmark_render_html(document, options, cmark_parser_get_syntax_extensions(parser));
 
-        TextBuffer out;
-        textAppend(&out, "{\"html\":");
+        PrTextBuffer out = {};
+        prTextBufferAppend(&out, "{\"html\":");
         harnessWriteString(&out, html);
-        textAppendChar(&out, '}');
-        harnessWriteLine(textView(&out));
-        textReset(&out);
+        prTextBufferAppendChar(&out, '}');
+        harnessWriteLine(prTextBufferView(&out));
+        prTextBufferReset(&out);
         cmark_get_default_mem_allocator()->free(html);
         cmark_node_free(document);
         cmark_parser_free(parser);

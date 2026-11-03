@@ -62,7 +62,7 @@ Image newImage(const Evaluation& e) {
 
 Image copyImage(const Evaluation& e, const Image& from) {
     Image image = newImage(e);
-    memCopy(image.data, from.data, pixelCount(e) * 4 * sizeof(float));
+    prMemCopy(image.data, from.data, pixelCount(e) * 4 * sizeof(float));
     return image;
 }
 
@@ -164,7 +164,7 @@ void extend(const Evaluation& e, Image& image, PrIRect region, PrImageEdgeMode e
                 p[0] = p[1] = p[2] = p[3] = 0;
                 continue;
             }
-            memCopy(p, image.data + (size_t(region.top + sy) * e.width + uint32_t(region.left + sx)) * 4,
+            prMemCopy(p, image.data + (size_t(region.top + sy) * e.width + uint32_t(region.left + sx)) * 4,
                 4 * sizeof(float));
         }
     }
@@ -193,15 +193,15 @@ void morphLine(float* values, uint32_t count, size_t stride, int32_t radius, PrD
         for (int32_t k = -radius; k <= radius; ++k) {
             int32_t at = int32_t(i) + k;
             float v = at >= 0 && at < int32_t(count) ? scratch.data[at] : 0;
-            best = dilate ? maxF32(best, v) : minF32(best, v);
+            best = dilate ? prF32Max(best, v) : prF32Min(best, v);
         }
         values[i * stride] = best;
     }
 }
 
 void morphImage(Evaluation& e, Image& image, float radiusX, float radiusY, PrDrawMorphologyOp op) {
-    int32_t rx = int32_t(minF32(floorF32(radiusX), float(kMaxMorphology)));
-    int32_t ry = int32_t(minF32(floorF32(radiusY), float(kMaxMorphology)));
+    int32_t rx = int32_t(prF32Min(prF32Floor(radiusX), float(kMaxMorphology)));
+    int32_t ry = int32_t(prF32Min(prF32Floor(radiusY), float(kMaxMorphology)));
     for (uint32_t c = 0; c < 4; ++c) {
         if (rx > 0) {
             for (uint32_t y = 0; y < e.height; ++y)
@@ -217,8 +217,8 @@ void morphImage(Evaluation& e, Image& image, float radiusX, float radiusY, PrDra
 // Moves the image by (dx, dy) pixels, sampled between pixels, with `fill` alpha entering from outside the image.
 Image shifted(const Evaluation& e, const Image& from, float dx, float dy) {
     Image image = newImage(e);
-    int32_t ix = int32_t(floorF32(dx));
-    int32_t iy = int32_t(floorF32(dy));
+    int32_t ix = int32_t(prF32Floor(dx));
+    int32_t iy = int32_t(prF32Floor(dy));
     float fx = dx - float(ix);
     float fy = dy - float(iy);
     auto at = [&](int32_t x, int32_t y, uint32_t c) {
@@ -251,7 +251,7 @@ Image tiled(const Evaluation& e, const Image& from, PrIRect tile) {
         int32_t ty = tile.top + ((int32_t(y) - tile.top) % h + h) % h;
         for (uint32_t x = 0; x < e.width; ++x) {
             int32_t tx = tile.left + ((int32_t(x) - tile.left) % w + w) % w;
-            memCopy(image.data + (size_t(y) * e.width + x) * 4,
+            prMemCopy(image.data + (size_t(y) * e.width + x) * 4,
                 from.data + (size_t(ty) * e.width + uint32_t(tx)) * 4, 4 * sizeof(float));
         }
     }
@@ -280,11 +280,11 @@ Image inverseAlphaOf(const Evaluation& e, const Image& from) {
 // is clamped to [0, 1] unless the offscreen holds half floats.
 void colorize(const Evaluation& e, Image& image, PrColor color, bool linear) {
     size_t count = pixelCount(e);
-    float alpha = clampF32(color.a, 0, 1);
+    float alpha = prF32Clamp(color.a, 0, 1);
     bool extended = e.layer->format == PrPixelFormat_RgbaF16;
-    float r = extended ? color.r : clampF32(color.r, 0, 1);
-    float g = extended ? color.g : clampF32(color.g, 0, 1);
-    float b = extended ? color.b : clampF32(color.b, 0, 1);
+    float r = extended ? color.r : prF32Clamp(color.r, 0, 1);
+    float g = extended ? color.g : prF32Clamp(color.g, 0, 1);
+    float b = extended ? color.b : prF32Clamp(color.b, 0, 1);
     if (linear) {
         r = prColorTransferDecode(PrColorTransfer_Srgb, r);
         g = prColorTransferDecode(PrColorTransfer_Srgb, g);
@@ -292,7 +292,7 @@ void colorize(const Evaluation& e, Image& image, PrColor color, bool linear) {
     }
     for (size_t i = 0; i < count; ++i) {
         float* p = image.data + i * 4;
-        float a = clampF32(p[3], 0, 1) * alpha;
+        float a = prF32Clamp(p[3], 0, 1) * alpha;
         p[0] = r * a;
         p[1] = g * a;
         p[2] = b * a;
@@ -395,8 +395,8 @@ float turbulence(const PrImageNoise& n, uint32_t channel, PrVec2 point, PrVec2 f
         auto adjust = [](float f, float size) {
             if (f == 0 || size <= 0)
                 return f;
-            float low = floorF32(size * f) / size;
-            float high = ceilF32(size * f) / size;
+            float low = prF32Floor(size * f) / size;
+            float high = prF32Ceil(size * f) / size;
             return low > 0 && f / low < high / f ? low : high;
         };
         frequency.x = adjust(frequency.x, tileWidth);
@@ -413,7 +413,7 @@ float turbulence(const PrImageNoise& n, uint32_t channel, PrVec2 point, PrVec2 f
     float ratio = 1;
     for (uint32_t octave = 0; octave < octaves; ++octave) {
         float value = noise2(n, channel, vx, vy, s);
-        sum += (kind == PrDrawTurbulenceKind_FractalNoise ? value : absF32(value)) / ratio;
+        sum += (kind == PrDrawTurbulenceKind_FractalNoise ? value : prF32Abs(value)) / ratio;
         vx *= 2;
         vy *= 2;
         ratio *= 2;
@@ -454,15 +454,15 @@ const Image& inputOf(Evaluation& e, int32_t which) {
 
 // Writes the straight channels of a premultiplied pixel.
 void unpremultiply(const float* p, float out[4]) {
-    out[3] = clampF32(p[3], 0, 1);
+    out[3] = prF32Clamp(p[3], 0, 1);
     for (uint32_t c = 0; c < 3; ++c)
-        out[c] = out[3] > 0 ? clampF32(p[c] / out[3], 0, 1) : 0;
+        out[c] = out[3] > 0 ? prF32Clamp(p[c] / out[3], 0, 1) : 0;
 }
 
 void premultiply(const float straight[4], float* out) {
-    float a = clampF32(straight[3], 0, 1);
+    float a = prF32Clamp(straight[3], 0, 1);
     for (uint32_t c = 0; c < 3; ++c)
-        out[c] = clampF32(straight[c], 0, 1) * a;
+        out[c] = prF32Clamp(straight[c], 0, 1) * a;
     out[3] = a;
 }
 
@@ -472,7 +472,7 @@ float transfer(const PrDrawTransfer& t, float c) {
             if (t.valueCount == 1)
                 return t.values[0];
             float at = c * float(t.valueCount - 1);
-            uint32_t k = minF32(at, float(t.valueCount - 2)) < 0 ? 0 : uint32_t(minF32(at, float(t.valueCount - 2)));
+            uint32_t k = prF32Min(at, float(t.valueCount - 2)) < 0 ? 0 : uint32_t(prF32Min(at, float(t.valueCount - 2)));
             return t.values[k] + (at - float(k)) * (t.values[k + 1] - t.values[k]);
         }
         case PrDrawTransferKind_Discrete: {
@@ -482,7 +482,7 @@ float transfer(const PrDrawTransfer& t, float c) {
         case PrDrawTransferKind_Linear:
             return t.slope * c + t.intercept;
         case PrDrawTransferKind_Gamma:
-            return t.amplitude * powF32(c, t.exponent) + t.offset;
+            return t.amplitude * prF32Pow(c, t.exponent) + t.offset;
         default:
             return c;
     }
@@ -558,9 +558,9 @@ void convolve(Evaluation& e, const PrDrawFilterNode& node, const Image& in, PrIm
                 };
                 premultiply(result, o);
             } else {
-                o[3] = clampF32(sum[3] / divisor + k.bias, 0, 1);
+                o[3] = prF32Clamp(sum[3] / divisor + k.bias, 0, 1);
                 for (uint32_t c = 0; c < 3; ++c)
-                    o[c] = clampF32(sum[c] / divisor + k.bias, 0, o[3]);
+                    o[c] = prF32Clamp(sum[c] / divisor + k.bias, 0, o[3]);
             }
         }
     }
@@ -575,12 +575,12 @@ void displace(const Evaluation& e, const PrDrawFilterNode& node, const Image& in
             unpremultiply(map.data + (size_t(y) * e.width + x) * 4, m);
             float sx = float(x) + scaleX * (m[node.displacement.x] - 0.5f);
             float sy = float(y) + scaleY * (m[node.displacement.y] - 0.5f);
-            int32_t ix = int32_t(floorF32(sx + 0.5f));
-            int32_t iy = int32_t(floorF32(sy + 0.5f));
+            int32_t ix = int32_t(prF32Floor(sx + 0.5f));
+            int32_t iy = int32_t(prF32Floor(sy + 0.5f));
             float* o = out.data + (size_t(y) * e.width + x) * 4;
             if (ix < 0 || iy < 0 || ix >= int32_t(e.width) || iy >= int32_t(e.height))
                 continue;
-            memCopy(o, in.data + (size_t(iy) * e.width + uint32_t(ix)) * 4, 4 * sizeof(float));
+            prMemCopy(o, in.data + (size_t(iy) * e.width + uint32_t(ix)) * 4, 4 * sizeof(float));
         }
     }
 }
@@ -588,7 +588,7 @@ void displace(const Evaluation& e, const PrDrawFilterNode& node, const Image& in
 void light(const Evaluation& e, const PrDrawFilterNode& node, const Image& in, Image& out) {
     const PrDrawFilterLighting& l = node.lighting;
     const PrAffine2& m = e.inputs->transform;
-    float scale = sqrtF32(e.scaleX * e.scaleY);
+    float scale = prF32Sqrt(e.scaleX * e.scaleY);
     float surface = l.surfaceScale;
     auto alphaAt = [&](int32_t x, int32_t y) {
         x = x < 0 ? 0 : x >= int32_t(e.width) ? int32_t(e.width) - 1 : x;
@@ -602,35 +602,35 @@ void light(const Evaluation& e, const PrDrawFilterNode& node, const Image& in, I
     float tx = m.a * l.light.pointsAt.x + m.e - float(e.layer->box.left);
     float ty = m.d * l.light.pointsAt.y + m.f - float(e.layer->box.top);
     float tz = l.light.pointsAt.z * scale;
-    float sLength = sqrtF32((tx - lx) * (tx - lx) + (ty - ly) * (ty - ly) + (tz - lz) * (tz - lz));
+    float sLength = prF32Sqrt((tx - lx) * (tx - lx) + (ty - ly) * (ty - ly) + (tz - lz) * (tz - lz));
     float spot[3] = {(tx - lx) / sLength, (ty - ly) / sLength, (tz - lz) / sLength};
-    float coneCos = l.light.coneAngle > 0 ? cosF32(l.light.coneAngle) : -1;
+    float coneCos = l.light.coneAngle > 0 ? prF32Cos(l.light.coneAngle) : -1;
     for (int32_t y = 0; y < int32_t(e.height); ++y) {
         for (int32_t x = 0; x < int32_t(e.width); ++x) {
             float nx = -surface / 4 * ((alphaAt(x + 1, y - 1) + 2 * alphaAt(x + 1, y) + alphaAt(x + 1, y + 1)) -
                 (alphaAt(x - 1, y - 1) + 2 * alphaAt(x - 1, y) + alphaAt(x - 1, y + 1)));
             float ny = -surface / 4 * ((alphaAt(x - 1, y + 1) + 2 * alphaAt(x, y + 1) + alphaAt(x + 1, y + 1)) -
                 (alphaAt(x - 1, y - 1) + 2 * alphaAt(x, y - 1) + alphaAt(x + 1, y - 1)));
-            float nLength = sqrtF32(nx * nx + ny * ny + 1);
+            float nLength = prF32Sqrt(nx * nx + ny * ny + 1);
             float n[3] = {nx / nLength, ny / nLength, 1 / nLength};
             float z = surface * alphaAt(x, y) * scale;
             float lv[3];
             PrColor lightColor = l.color;
             float color[3] = {lightColor.r, lightColor.g, lightColor.b};
             if (l.light.kind == PrDrawLightKind_Distant) {
-                lv[0] = cosF32(l.light.azimuth) * cosF32(l.light.elevation);
-                lv[1] = sinF32(l.light.azimuth) * cosF32(l.light.elevation);
-                lv[2] = sinF32(l.light.elevation);
+                lv[0] = prF32Cos(l.light.azimuth) * prF32Cos(l.light.elevation);
+                lv[1] = prF32Sin(l.light.azimuth) * prF32Cos(l.light.elevation);
+                lv[2] = prF32Sin(l.light.elevation);
             } else {
                 lv[0] = lx - float(x);
                 lv[1] = ly - float(y);
                 lv[2] = lz - z;
-                float length = sqrtF32(lv[0] * lv[0] + lv[1] * lv[1] + lv[2] * lv[2]);
+                float length = prF32Sqrt(lv[0] * lv[0] + lv[1] * lv[1] + lv[2] * lv[2]);
                 for (float& c : lv)
                     c = length > 0 ? c / length : 0;
                 if (l.light.kind == PrDrawLightKind_Spot) {
                     float along = -(lv[0] * spot[0] + lv[1] * spot[1] + lv[2] * spot[2]);
-                    float factor = along < coneCos ? 0 : powF32(maxF32(along, 0), l.light.spotExponent);
+                    float factor = along < coneCos ? 0 : prF32Pow(prF32Max(along, 0), l.light.spotExponent);
                     for (float& c : color)
                         c *= factor;
                 }
@@ -638,17 +638,17 @@ void light(const Evaluation& e, const PrDrawFilterNode& node, const Image& in, I
             float result[4];
             if (l.kind == PrDrawLightingKind_Specular) {
                 float h[3] = {lv[0], lv[1], lv[2] + 1};
-                float hLength = sqrtF32(h[0] * h[0] + h[1] * h[1] + h[2] * h[2]);
+                float hLength = prF32Sqrt(h[0] * h[0] + h[1] * h[1] + h[2] * h[2]);
                 float dot = hLength > 0 ? (n[0] * h[0] + n[1] * h[1] + n[2] * h[2]) / hLength : 0;
-                float factor = l.constant * powF32(maxF32(dot, 0), l.specularExponent);
+                float factor = l.constant * prF32Pow(prF32Max(dot, 0), l.specularExponent);
                 for (uint32_t c = 0; c < 3; ++c)
-                    result[c] = clampF32(color[c] * factor, 0, 1);
-                result[3] = maxF32(result[0], maxF32(result[1], result[2]));
+                    result[c] = prF32Clamp(color[c] * factor, 0, 1);
+                result[3] = prF32Max(result[0], prF32Max(result[1], result[2]));
             } else {
                 float dot = n[0] * lv[0] + n[1] * lv[1] + n[2] * lv[2];
-                float factor = l.constant * maxF32(dot, 0);
+                float factor = l.constant * prF32Max(dot, 0);
                 for (uint32_t c = 0; c < 3; ++c)
-                    result[c] = clampF32(color[c] * factor, 0, 1);
+                    result[c] = prF32Clamp(color[c] * factor, 0, 1);
                 result[3] = 1;
             }
             float* o = out.data + (size_t(y) * e.width + uint32_t(x)) * 4;
@@ -672,7 +672,7 @@ void imageNode(Evaluation& e, const PrDrawFilterNode& node, Image& out) {
     PrRect covered = prAffine2MapRect(e.inputs->transform, r);
     PrRect texels{};
     const CpuTexture* texture = e.inputs->sourceTexture(e.inputs->context, &node.image.source,
-        uint32_t(ceilF32(prRectWidth(covered))), uint32_t(ceilF32(prRectHeight(covered))), &texels);
+        uint32_t(prF32Ceil(prRectWidth(covered))), uint32_t(prF32Ceil(prRectHeight(covered))), &texels);
     if (texture == nullptr)
         return;
     const CpuTextureLevel& level = texture->levels.data[0];
@@ -696,11 +696,11 @@ void imageNode(Evaluation& e, const PrDrawFilterNode& node, Image& out) {
             float* o = out.data + (size_t(y) * e.width + x) * 4;
             if ((node.image.sampling & PrDrawSamplingFlag_Kind) == PrDrawSampling_Nearest) {
                 for (uint32_t c = 0; c < 4; ++c)
-                    o[c] = texelAt(int32_t(roundF32(u)), int32_t(roundF32(v)), c);
+                    o[c] = texelAt(int32_t(prF32Round(u)), int32_t(prF32Round(v)), c);
                 continue;
             }
-            int32_t x0 = int32_t(floorF32(u));
-            int32_t y0 = int32_t(floorF32(v));
+            int32_t x0 = int32_t(prF32Floor(u));
+            int32_t y0 = int32_t(prF32Floor(v));
             float fx = u - float(x0);
             float fy = v - float(y0);
             for (uint32_t c = 0; c < 4; ++c) {
@@ -752,12 +752,12 @@ void progressiveBlur(Evaluation& e, const PrDrawFilterNode& node, const Image& i
     }
     size_t count = pixelCount(e);
     for (size_t i = 0; i < count; ++i) {
-        float wanted = clampF32(alpha.data[i], 0, 1) * node.progressive.sigma;
+        float wanted = prF32Clamp(alpha.data[i], 0, 1) * node.progressive.sigma;
         uint32_t k = 0;
         while (k + 2 < kProgressiveLevels && sigmas[k + 1] < wanted)
             ++k;
         float span = sigmas[k + 1] - sigmas[k];
-        float t = span > 0 ? clampF32((wanted - sigmas[k]) / span, 0, 1) : 0;
+        float t = span > 0 ? prF32Clamp((wanted - sigmas[k]) / span, 0, 1) : 0;
         for (uint32_t c = 0; c < 4; ++c)
             out.data[i * 4 + c] = levels[k].data[i * 4 + c] + (levels[k + 1].data[i * 4 + c] - levels[k].data[i * 4 + c]) * t;
     }
@@ -812,7 +812,7 @@ Image evaluate(Evaluation& e, const PrDrawFilterNode& node, PrIRect region) {
             PrColor flood = node.flood;
             float color[4];
             if (e.layer->format == PrPixelFormat_RgbaF16) {
-                color[3] = clampF32(flood.a, 0, 1);
+                color[3] = prF32Clamp(flood.a, 0, 1);
                 color[0] = flood.r * color[3];
                 color[1] = flood.g * color[3];
                 color[2] = flood.b * color[3];
@@ -827,7 +827,7 @@ Image evaluate(Evaluation& e, const PrDrawFilterNode& node, PrIRect region) {
                 }
             }
             for (size_t i = 0; i < count; ++i)
-                memCopy(out.data + i * 4, color, sizeof(color));
+                prMemCopy(out.data + i * 4, color, sizeof(color));
             break;
         }
         case PrDrawFilterKind_ColorMatrix:
@@ -853,9 +853,9 @@ Image evaluate(Evaluation& e, const PrDrawFilterNode& node, PrIRect region) {
                 const float* a = in[0].data + i * 4;
                 const float* b = in[1].data + i * 4;
                 float* o = out.data + i * 4;
-                o[3] = clampF32(node.k[0] * a[3] * b[3] + node.k[1] * a[3] + node.k[2] * b[3] + node.k[3], 0, 1);
+                o[3] = prF32Clamp(node.k[0] * a[3] * b[3] + node.k[1] * a[3] + node.k[2] * b[3] + node.k[3], 0, 1);
                 for (uint32_t c = 0; c < 3; ++c)
-                    o[c] = clampF32(node.k[0] * a[c] * b[c] + node.k[1] * a[c] + node.k[2] * b[c] + node.k[3], 0, o[3]);
+                    o[c] = prF32Clamp(node.k[0] * a[c] * b[c] + node.k[1] * a[c] + node.k[2] * b[c] + node.k[3], 0, o[3]);
             }
             break;
         case PrDrawFilterKind_Merge:
@@ -958,7 +958,7 @@ Image evaluate(Evaluation& e, const PrDrawFilterNode& node, PrIRect region) {
             blurImage(e, alpha, half * sx, half * sy, PrImageEdgeMode_None);
             out = copyImage(e, in[0]);
             for (size_t i = 0; i < count; ++i) {
-                float m = clampF32(alpha.data[i * 4 + 3], 0, 1);
+                float m = prF32Clamp(alpha.data[i * 4 + 3], 0, 1);
                 for (uint32_t c = 0; c < 4; ++c)
                     out.data[i * 4 + c] *= m;
             }
@@ -989,8 +989,8 @@ Image evaluate(Evaluation& e, const PrDrawFilterNode& node, PrIRect region) {
 
 int32_t cpuFilterReach(const PrDrawFilter* filter, float scale) {
     PrRect outset = prDrawFilterOutset(filter);
-    float reach = maxF32(maxF32(-outset.left, -outset.top), maxF32(outset.right, outset.bottom));
-    return int32_t(ceilF32(minF32(reach * scale, 1 << 28))) + 1;
+    float reach = prF32Max(prF32Max(-outset.left, -outset.top), prF32Max(outset.right, outset.bottom));
+    return int32_t(prF32Ceil(prF32Min(reach * scale, 1 << 28))) + 1;
 }
 
 void cpuApplyFilter(const PrDrawFilter* filter, const CpuFilterInputs& inputs, const CpuTarget& layer) {
@@ -1001,8 +1001,8 @@ void cpuApplyFilter(const PrDrawFilter* filter, const CpuFilterInputs& inputs, c
     e.height = prIRectHeight(layer.box);
     if (e.width == 0 || e.height == 0)
         return;
-    e.scaleX = absF32(inputs.transform.a);
-    e.scaleY = absF32(inputs.transform.d);
+    e.scaleX = prF32Abs(inputs.transform.a);
+    e.scaleY = prF32Abs(inputs.transform.d);
     PrIRect whole{0, 0, int32_t(e.width), int32_t(e.height)};
     PrRect region = prDrawFilterRegion(filter);
     if (prRectIsEmpty(region))
@@ -1057,7 +1057,7 @@ void cpuBlurCoverage(const CpuCoverage& coverage, float sigmaX, float sigmaY) {
     prImageBlur(pixels, PrPixelFormat_RF32, PrVec2{sigmaX, sigmaY}, PrImageEdgeMode_None);
     for (uint32_t y = 0; y < height; ++y) {
         for (uint32_t x = 0; x < width; ++x)
-            coverage.data[y * coverage.stride + x] = uint8_t(clampF32(values.data[y * width + x], 0, 255) + 0.5f);
+            coverage.data[y * coverage.stride + x] = uint8_t(prF32Clamp(values.data[y * width + x], 0, 255) + 0.5f);
     }
     values.reset();
 }

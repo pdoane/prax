@@ -218,40 +218,40 @@ void registerClass(HINSTANCE instance) {
 }
 
 // Appends `text` to `out` as a JSON string.
-void appendJsonString(TextBuffer* out, PrStringView text) {
+void appendJsonString(PrTextBuffer* out, PrStringView text) {
     static const char kHex[] = "0123456789abcdef";
-    textAppendChar(out, '"');
+    prTextBufferAppendChar(out, '"');
     for (size_t i = 0; i < text.size; ++i) {
         unsigned char c = static_cast<unsigned char>(text.data[i]);
         if (c == '"' || c == '\\') {
-            textAppendChar(out, '\\');
-            textAppendChar(out, char(c));
+            prTextBufferAppendChar(out, '\\');
+            prTextBufferAppendChar(out, char(c));
         } else if (c < 0x20) {
-            textAppend(out, "\\u00");
-            textAppendChar(out, kHex[c >> 4]);
-            textAppendChar(out, kHex[c & 15]);
+            prTextBufferAppend(out, "\\u00");
+            prTextBufferAppendChar(out, kHex[c >> 4]);
+            prTextBufferAppendChar(out, kHex[c & 15]);
         } else {
-            textAppendChar(out, char(c));
+            prTextBufferAppendChar(out, char(c));
         }
     }
-    textAppendChar(out, '"');
+    prTextBufferAppendChar(out, '"');
 }
 
 // Appends `value` to `out` as a JSON number, or zero if it is not finite.
-void appendJsonNumber(TextBuffer* out, double value) {
+void appendJsonNumber(PrTextBuffer* out, double value) {
     if (!(value > -1e308 && value < 1e308) || value == 0) {
-        textAppendChar(out, '0');
+        prTextBufferAppendChar(out, '0');
         return;
     }
     if (value < 0)
-        textAppendChar(out, '-');
-    ShortestDecimal decimal = shortestDecimalF64(value < 0 ? -value : value);
-    textAppendU64(out, decimal.digits);
+        prTextBufferAppendChar(out, '-');
+    PrF64Decimal decimal = prF64ShortestDecimal(value < 0 ? -value : value);
+    prTextBufferAppendU64(out, decimal.digits, 10);
     if (decimal.exponent != 0) {
-        textAppendChar(out, 'e');
+        prTextBufferAppendChar(out, 'e');
         if (decimal.exponent < 0)
-            textAppendChar(out, '-');
-        textAppendU64(out, uint64_t(decimal.exponent < 0 ? -decimal.exponent : decimal.exponent));
+            prTextBufferAppendChar(out, '-');
+        prTextBufferAppendU64(out, uint64_t(decimal.exponent < 0 ? -decimal.exponent : decimal.exponent), 10);
     }
 }
 
@@ -370,17 +370,17 @@ void answer(Win32Browser* b, HRESULT error, LPCWSTR json, PrAppBrowserResultFn d
 }
 
 void evaluate(Win32Browser* b, Request& request) {
-    TextBuffer expression;
-    textAppend(&expression, kEvaluateBefore);
+    PrTextBuffer expression = {};
+    prTextBufferAppend(&expression, kEvaluateBefore);
     appendJsonString(&expression, PrStringView{request.text.data, request.text.count});
-    textAppend(&expression, kEvaluateAfter);
-    TextBuffer params;
-    textAppend(&params, "{\"expression\":");
-    appendJsonString(&params, textView(&expression));
-    textAppend(&params, ",\"awaitPromise\":true,\"returnByValue\":true}");
-    win32Widen(textView(&params), b->utf16);
-    textReset(&expression);
-    textReset(&params);
+    prTextBufferAppend(&expression, kEvaluateAfter);
+    PrTextBuffer params = {};
+    prTextBufferAppend(&params, "{\"expression\":");
+    appendJsonString(&params, prTextBufferView(&expression));
+    prTextBufferAppend(&params, ",\"awaitPromise\":true,\"returnByValue\":true}");
+    win32Widen(prTextBufferView(&params), b->utf16);
+    prTextBufferReset(&expression);
+    prTextBufferReset(&params);
     request.text.reset();
     PrAppBrowserResultFn done = request.result;
     void* context = request.context;
@@ -444,8 +444,8 @@ void deliverCapture(Win32Browser* b, HRESULT error, LPCWSTR json, PrUVec2 size, 
         else
             data = PrStringView{};
         size_t decoded = 0;
-        png.resize(uint32_t(base64DecodedCapacity(data.size)));
-        ok = data.data != nullptr && base64Decode(data, png.data, png.count, &decoded);
+        png.resize(uint32_t(prBase64DecodedCapacity(data.size)));
+        ok = data.data != nullptr && prBase64Decode(data, png.data, png.count, &decoded);
         png.resize(uint32_t(decoded));
         prJsonDestroy(document);
     }
@@ -463,18 +463,18 @@ void deliverCapture(Win32Browser* b, HRESULT error, LPCWSTR json, PrUVec2 size, 
 
 // Captures `rect` of the document, in CSS pixels. Returns false if the engine refused the call, and calls nothing.
 bool screenshot(Win32Browser* b, PrRect rect, PrUVec2 size, PrAppBrowserCaptureFn done, void* PR_NULLABLE context) {
-    TextBuffer params;
-    textAppend(&params, "{\"format\":\"png\",\"fromSurface\":true,\"clip\":{\"x\":");
+    PrTextBuffer params = {};
+    prTextBufferAppend(&params, "{\"format\":\"png\",\"fromSurface\":true,\"clip\":{\"x\":");
     appendJsonNumber(&params, double(rect.left));
-    textAppend(&params, ",\"y\":");
+    prTextBufferAppend(&params, ",\"y\":");
     appendJsonNumber(&params, double(rect.top));
-    textAppend(&params, ",\"width\":");
+    prTextBufferAppend(&params, ",\"width\":");
     appendJsonNumber(&params, double(rect.right - rect.left));
-    textAppend(&params, ",\"height\":");
+    prTextBufferAppend(&params, ",\"height\":");
     appendJsonNumber(&params, double(rect.bottom - rect.top));
-    textAppend(&params, ",\"scale\":1}}");
-    win32Widen(textView(&params), b->utf16);
-    textReset(&params);
+    prTextBufferAppend(&params, ",\"scale\":1}}");
+    win32Widen(prTextBufferView(&params), b->utf16);
+    prTextBufferReset(&params);
     HRESULT called = b->view->CallDevToolsProtocolMethod(L"Page.captureScreenshot", b->utf16.data,
         Callback<ICoreWebView2CallDevToolsProtocolMethodCompletedHandler>(
             [b = hold(b), size, done, context](HRESULT error, LPCWSTR json) -> HRESULT {

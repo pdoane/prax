@@ -89,7 +89,7 @@ Face* faceOf(FreeTypeHinter* hinter, const PrFont* font) {
     if (axes != 0 && FT_HAS_MULTIPLE_MASTERS(face->face)) {
         Array<FT_Fixed> coords;
         for (uint32_t i = 0; i < axes; ++i)
-            coords.push(FT_Fixed(roundF32(prFontAxisValue(font, i) * 65536)));
+            coords.push(FT_Fixed(prF32Round(prFontAxisValue(font, i) * 65536)));
         FT_Set_Var_Design_Coordinates(face->face, coords.count, coords.data);
         coords.reset();
     }
@@ -129,7 +129,7 @@ bool activate(Face* face, float pixelsPerEm, PrFontHinting hinting, FT_Int32* fl
             return false;
         }
         FT_Activate_Size(slot->size);
-        if (FT_Set_Char_Size(face->face, 0, FT_F26Dot6(roundF32(pixelsPerEm * 64)), 72, 72) != 0) {
+        if (FT_Set_Char_Size(face->face, 0, FT_F26Dot6(prF32Round(pixelsPerEm * 64)), 72, 72) != 0) {
             FT_Done_Size(slot->size);
             slot->size = nullptr;
             return false;
@@ -215,7 +215,7 @@ bool hintOutline(PrFontHinter* base, const PrFont* font, uint16_t glyph, float p
     if (loaded) {
         FT_GlyphSlot slot = face->face->glyph;
         if (slot->format == FT_GLYPH_FORMAT_OUTLINE && slot->outline.n_contours != 0) {
-            FT_Pos strength = FT_Pos(roundF32(2 * embolden * 64 * pixelsPerEm));
+            FT_Pos strength = FT_Pos(prF32Round(2 * embolden * 64 * pixelsPerEm));
             if (strength != 0) {
                 // FreeType grows the outline right and up by the whole strength, so half of it is moved back.
                 FT_Outline_EmboldenXY(&slot->outline, strength, strength);

@@ -123,7 +123,7 @@ TEST_CASE("a tree calls its language's functions") {
     PrSyntaxRegistry* registry = prSyntaxRegistryCreate();
     PrTextEditBuffer* buffer = prTextEditBufferCreate("a 12 b 345");
     PrSyntaxTree* h = prSyntaxTreeCreate(&kDigits, registry, buffer);
-    CHECK(prSyntaxTreeUpdate(h, kInfinityF64));
+    CHECK(prSyntaxTreeUpdate(h, kPrF64Infinity));
     CHECK(static_cast<DigitTree*>(h)->updates == 1);
     CHECK_FALSE(prSyntaxTreeIsPending(h));
     PrSyntaxSpan spans[4] = {};

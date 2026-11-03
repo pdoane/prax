@@ -130,8 +130,8 @@ bool covers(const FeatureChain& supported, const FeatureChain& wanted) {
         for (size_t at = span.offset; at + sizeof(VkBool32) <= span.size; at += sizeof(VkBool32)) {
             VkBool32 want = 0;
             VkBool32 have = 0;
-            memCopy(&want, w + at, sizeof(want));
-            memCopy(&have, s + at, sizeof(have));
+            prMemCopy(&want, w + at, sizeof(want));
+            prMemCopy(&have, s + at, sizeof(have));
             if (want && !have)
                 return false;
         }
@@ -625,7 +625,7 @@ PrStatus prGpuVulkanCreate(const PrGpuVulkanOptions* PR_NULLABLE options, PrGpuD
         d->vk.GetPhysicalDeviceProperties(d->physical, &properties);
         d->limits = properties.limits;
         d->vk.GetPhysicalDeviceMemoryProperties(d->physical, &d->memoryProperties);
-        memCopy(d->adapter, properties.deviceName, sizeof(d->adapter));
+        prMemCopy(d->adapter, properties.deviceName, sizeof(d->adapter));
         d->adapter[sizeof(d->adapter) - 1] = '\0';
     }
     if (status == PrStatus_Ok && o.device != nullptr) {

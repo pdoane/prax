@@ -347,7 +347,7 @@ size_t readStream(PrNetStream* base, uint8_t* output, size_t capacity) {
     Stream* stream = static_cast<Stream*>(base);
     uint32_t available = stream->received.count - stream->receivedStart;
     uint32_t taken = capacity < available ? uint32_t(capacity) : available;
-    memCopy(output, stream->received.data + stream->receivedStart, taken);
+    prMemCopy(output, stream->received.data + stream->receivedStart, taken);
     stream->receivedStart += taken;
     if (stream->receivedStart == stream->received.count) {
         stream->received.clear();
@@ -438,7 +438,7 @@ PrStatus connectNetwork(PrNet* base, const PrNetConnectDesc* desc, PrNetStream* 
     ResolveJob* job = allocZeroed<ResolveJob>();
     job->network = network;
     job->stream = stream;
-    memCopy(job->host, desc->host.data, desc->host.size);
+    prMemCopy(job->host, desc->host.data, desc->host.size);
     job->port = desc->port;
     stream->job = job;
     network->streams.push(stream);

@@ -13,11 +13,11 @@ namespace pr_impl {
 
 // Appends the serialization of `node` itself to `out`. For an element, this is the serialization that
 // html/#dom-element-outerhtml gives.
-void htmlSerializeNode(TextBuffer* out, const PrDomNode* node);
+void htmlSerializeNode(PrTextBuffer* out, const PrDomNode* node);
 
 // Appends the serialization of the children of `node` to `out` (html/#html-fragment-serialisation-algorithm). For a
 // template, those are the children of its contents.
-void htmlSerializeChildren(TextBuffer* out, const PrDomNode* node);
+void htmlSerializeChildren(PrTextBuffer* out, const PrDomNode* node);
 
 } // namespace pr_impl
 

@@ -54,7 +54,12 @@ double areaOf(Edges edges) {
 // Writes the intersection of `a` and `b` to `out`. Returns false if they do not meet. Rectangles that share only an
 // edge meet, in a rectangle of no area.
 bool intersect(Edges a, Edges b, Edges* out) {
-    Edges meet{maxF64(a.left, b.left), maxF64(a.top, b.top), minF64(a.right, b.right), minF64(a.bottom, b.bottom)};
+    Edges meet{
+        .left = prF64Max(a.left, b.left),
+        .top = prF64Max(a.top, b.top),
+        .right = prF64Min(a.right, b.right),
+        .bottom = prF64Min(a.bottom, b.bottom),
+    };
     if (meet.right < meet.left || meet.bottom < meet.top)
         return false;
     *out = meet;
@@ -100,7 +105,7 @@ bool parseMargin(PrStringView text, CssIntersectionOffset out[4]) {
             if (kind == CssTokenKind_Percentage)
                 offsets[count++] = CssIntersectionOffset{number, true};
             else
-                offsets[count++] = CssIntersectionOffset{pixels < 0 ? -floorF64(-pixels) : floorF64(pixels), false};
+                offsets[count++] = CssIntersectionOffset{pixels < 0 ? -prF64Floor(-pixels) : prF64Floor(pixels), false};
         }
     }
     cssTokenArrayReset(&tokens);
@@ -119,14 +124,14 @@ bool parseMargin(PrStringView text, CssIntersectionOffset out[4]) {
 
 // Returns the margin's offsets serialized, each a number followed by px or %, separated by spaces.
 PrString serializeMargin(const CssIntersectionOffset margin[4]) {
-    TextBuffer text = {};
+    PrTextBuffer text = {};
     for (uint32_t i = 0; i < 4; ++i) {
         if (i != 0)
-            textAppendChar(&text, ' ');
+            prTextBufferAppendChar(&text, ' ');
         cssSerializeNumber(&text, margin[i].value);
-        textAppend(&text, margin[i].percent ? "%" : "px");
+        prTextBufferAppend(&text, margin[i].percent ? "%" : "px");
     }
-    return textTake(&text);
+    return prTextBufferTake(&text);
 }
 
 // Writes the padding box of a box in the viewport's coordinates. Returns false if the node has no box.

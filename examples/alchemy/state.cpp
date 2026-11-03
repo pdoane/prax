@@ -41,7 +41,7 @@ std::string chooseName(const std::vector<std::string>& names, const std::string&
     if (std::find(names.begin(), names.end(), current) != names.end())
         return current;
     for (const std::string& name : names) {
-        if (preferred.size != 0 && asciiContainsFold(name, preferred))
+        if (preferred.size != 0 && prAsciiContainsFold(name, preferred))
             return name;
     }
     return names.empty() ? std::string() : names.front();
@@ -473,7 +473,7 @@ PrStringView modeName(OperationMode mode) {
 
 OperationMode parseMode(PrStringView name, OperationMode fallback) {
     for (OperationMode mode = 0; mode < OperationMode_Count; ++mode) {
-        if (asciiContainsFold(name, modeName(mode)))
+        if (prAsciiContainsFold(name, modeName(mode)))
             return mode;
     }
     return fallback;

@@ -46,12 +46,12 @@ bool isAsciiControl(char c) {
 }
 
 bool isTagNameChar(char c) {
-    return asciiIsLetter(c) || asciiIsDigit(c) || c == '-';
+    return prAsciiIsLetter(c) || prAsciiIsDigit(c) || c == '-';
 }
 
 // Returns the length of the tag name at `start`, or 0 if none starts there.
 size_t tagName(PrStringView text, size_t start) {
-    if (!asciiIsLetter(at(text, start)))
+    if (!prAsciiIsLetter(at(text, start)))
         return 0;
     size_t end = start + 1;
     while (isTagNameChar(at(text, end)))
@@ -62,7 +62,7 @@ size_t tagName(PrStringView text, size_t start) {
 // Returns true if `name` is one of the `count` names at `names`, compared without regard to ASCII case.
 bool isOneOf(PrStringView name, const char* const* names, size_t count) {
     for (size_t i = 0; i < count; ++i) {
-        if (asciiEqualsFold(name, names[i]))
+        if (prAsciiEqualsFold(name, names[i]))
             return true;
     }
     return false;
@@ -72,7 +72,7 @@ bool isOneOf(PrStringView name, const char* const* names, size_t count) {
 // Raw HTML is scanned within a paragraph, which holds no blank line, so its whitespace holds at most one line ending.
 size_t skipWhitespace(PrStringView text, size_t start) {
     size_t end = start;
-    while (end < text.size && (asciiIsTabOrSpace(text.data[end]) || text.data[end] == '\n' || text.data[end] == '\r'))
+    while (end < text.size && (prAsciiIsTabOrSpace(text.data[end]) || text.data[end] == '\n' || text.data[end] == '\r'))
         ++end;
     return end;
 }
@@ -95,8 +95,8 @@ constexpr size_t kNotMissing = ~size_t(0);
 size_t after(PrStringView text, size_t start, PrStringView needle, MarkdownTagScan* PR_NULLABLE scan, MarkdownTagEnd end) {
     if (start > text.size || (scan != nullptr && start >= scan->missing[end]))
         return 0;
-    PrStringView rest = stringSlice(text, start, text.size - start);
-    size_t found = stringFind(rest, needle);
+    PrStringView rest = prStringSlice(text, start, text.size - start);
+    size_t found = prStringFind(rest, needle);
     if (found == rest.size) {
         if (scan != nullptr && start < scan->missing[end])
             scan->missing[end] = start;
@@ -117,10 +117,10 @@ size_t openTagRest(PrStringView text, size_t start, MarkdownTagScan* PR_NULLABLE
         if (c == '/')
             return at(text, space + 1) == '>' ? space + 2 : 0;
         // An attribute needs whitespace before it.
-        if (space == end || !(asciiIsLetter(c) || c == '_' || c == ':'))
+        if (space == end || !(prAsciiIsLetter(c) || c == '_' || c == ':'))
             return 0;
         size_t name = space + 1;
-        while (asciiIsLetter(at(text, name)) || asciiIsDigit(at(text, name)) || at(text, name) == '_' ||
+        while (prAsciiIsLetter(at(text, name)) || prAsciiIsDigit(at(text, name)) || at(text, name) == '_' ||
                 at(text, name) == '.' || at(text, name) == ':' || at(text, name) == '-')
             ++name;
         end = name;
@@ -137,7 +137,7 @@ size_t openTagRest(PrStringView text, size_t start, MarkdownTagScan* PR_NULLABLE
             end = close;
         } else {
             size_t close = value;
-            while (close < text.size && !asciiIsTabOrSpace(text.data[close]) && text.data[close] != '\n' &&
+            while (close < text.size && !prAsciiIsTabOrSpace(text.data[close]) && text.data[close] != '\n' &&
                     text.data[close] != '\r' && text.data[close] != '"' && text.data[close] != '\'' &&
                     text.data[close] != '=' && text.data[close] != '<' && text.data[close] != '>' && text.data[close] != '`')
                 ++close;
@@ -159,7 +159,7 @@ size_t openOrClosingTag(PrStringView text, size_t start, PrStringView* outName, 
         size_t end = skipWhitespace(text, start + 2 + name);
         if (at(text, end) != '>')
             return 0;
-        *outName = stringSlice(text, start + 2, name);
+        *outName = prStringSlice(text, start + 2, name);
         return end + 1 - start;
     }
     size_t name = tagName(text, start + 1);
@@ -168,17 +168,17 @@ size_t openOrClosingTag(PrStringView text, size_t start, PrStringView* outName, 
     size_t end = openTagRest(text, start + 1 + name, scan);
     if (end == 0)
         return 0;
-    *outName = stringSlice(text, start + 1, name);
+    *outName = prStringSlice(text, start + 1, name);
     return end - start;
 }
 
 // Returns true if the text at `start` in `text` begins with `prefix`, compared without regard to ASCII case.
 bool startsWithFold(PrStringView text, size_t start, PrStringView prefix) {
-    return start <= text.size && asciiStartsWithFold(stringSlice(text, start, text.size - start), prefix);
+    return start <= text.size && prAsciiStartsWithFold(prStringSlice(text, start, text.size - start), prefix);
 }
 
 bool containsFold(PrStringView text, PrStringView needle) {
-    return asciiContainsFold(text, needle);
+    return prAsciiContainsFold(text, needle);
 }
 
 void appendCodePoint(Array<char>* out, uint32_t codePoint) {
@@ -248,11 +248,11 @@ size_t markdownScanHtmlTag(PrStringView text, size_t start, MarkdownTagScan* sca
         size_t end = after(text, start + 4, "-->", scan, MarkdownTagEnd_Comment);
         return end == 0 ? 0 : end - start;
     }
-    if (stringStartsWith(stringSlice(text, start, text.size - start), "<![CDATA[")) {
+    if (prStringStartsWith(prStringSlice(text, start, text.size - start), "<![CDATA[")) {
         size_t end = after(text, start + 9, "]]>", scan, MarkdownTagEnd_Cdata);
         return end == 0 ? 0 : end - start;
     }
-    if (asciiIsLetter(at(text, start + 2))) {
+    if (prAsciiIsLetter(at(text, start + 2))) {
         size_t end = after(text, start + 3, ">", scan, MarkdownTagEnd_Declaration);
         return end == 0 ? 0 : end - start;
     }
@@ -264,26 +264,26 @@ uint8_t markdownHtmlBlockStart(PrStringView line, size_t start, bool interruptsP
         return 0;
     size_t name = tagName(line, start + 1);
     if (name != 0) {
-        PrStringView tag = stringSlice(line, start + 1, name);
+        PrStringView tag = prStringSlice(line, start + 1, name);
         char next = at(line, start + 1 + name);
         bool ends = isLineEnd(line, start + 1 + name);
-        if (isOneOf(tag, kRawTagNames, countOf(kRawTagNames)) && (ends || asciiIsTabOrSpace(next) || next == '>'))
+        if (isOneOf(tag, kRawTagNames, countOf(kRawTagNames)) && (ends || prAsciiIsTabOrSpace(next) || next == '>'))
             return 1;
     }
     if (startsWithFold(line, start, "<!--"))
         return 2;
     if (at(line, start + 1) == '?')
         return 3;
-    if (at(line, start + 1) == '!' && asciiIsLetter(at(line, start + 2)))
+    if (at(line, start + 1) == '!' && prAsciiIsLetter(at(line, start + 2)))
         return 4;
-    if (stringStartsWith(stringSlice(line, start, line.size - start), "<![CDATA["))
+    if (prStringStartsWith(prStringSlice(line, start, line.size - start), "<![CDATA["))
         return 5;
     size_t nameStart = at(line, start + 1) == '/' ? start + 2 : start + 1;
     size_t blockName = tagName(line, nameStart);
-    if (blockName != 0 && isOneOf(stringSlice(line, nameStart, blockName), kBlockTagNames, countOf(kBlockTagNames))) {
+    if (blockName != 0 && isOneOf(prStringSlice(line, nameStart, blockName), kBlockTagNames, countOf(kBlockTagNames))) {
         size_t end = nameStart + blockName;
         char next = at(line, end);
-        if (isLineEnd(line, end) || asciiIsTabOrSpace(next) || next == '>' || (next == '/' && at(line, end + 1) == '>'))
+        if (isLineEnd(line, end) || prAsciiIsTabOrSpace(next) || next == '>' || (next == '/' && at(line, end + 1) == '>'))
             return 6;
     }
     if (interruptsParagraph)
@@ -293,11 +293,11 @@ uint8_t markdownHtmlBlockStart(PrStringView line, size_t start, bool interruptsP
     if (length == 0 || (at(line, start + 1) != '/' && isOneOf(tag, kRawTagNames, countOf(kRawTagNames))))
         return 0;
     // The tag is complete only if it is on this line, followed by nothing but spaces and tabs.
-    PrStringView taken = stringSlice(line, start, length);
-    if (stringFind(taken, '\n') != taken.size || stringFind(taken, '\r') != taken.size)
+    PrStringView taken = prStringSlice(line, start, length);
+    if (prStringFindByte(taken, '\n') != taken.size || prStringFindByte(taken, '\r') != taken.size)
         return 0;
     size_t end = start + length;
-    while (asciiIsTabOrSpace(at(line, end)))
+    while (prAsciiIsTabOrSpace(at(line, end)))
         ++end;
     return isLineEnd(line, end) ? 7 : 0;
 }
@@ -308,23 +308,23 @@ bool markdownHtmlBlockEnds(uint8_t kind, PrStringView line) {
             return containsFold(line, "</pre>") || containsFold(line, "</script>") || containsFold(line, "</style>") ||
                 containsFold(line, "</textarea>");
         case 2:
-            return stringContains(line, "-->");
+            return prStringContains(line, "-->");
         case 3:
-            return stringContains(line, "?>");
+            return prStringContains(line, "?>");
         case 4:
-            return stringContains(line, ">");
+            return prStringContains(line, ">");
         case 5:
-            return stringContains(line, "]]>");
+            return prStringContains(line, "]]>");
         default:
             return false;
     }
 }
 
 size_t markdownScanUriAutolink(PrStringView text, size_t start) {
-    if (at(text, start) != '<' || !asciiIsLetter(at(text, start + 1)))
+    if (at(text, start) != '<' || !prAsciiIsLetter(at(text, start + 1)))
         return 0;
     size_t end = start + 2;
-    while (asciiIsLetter(at(text, end)) || asciiIsDigit(at(text, end)) || at(text, end) == '+' || at(text,
+    while (prAsciiIsLetter(at(text, end)) || prAsciiIsDigit(at(text, end)) || at(text, end) == '+' || at(text,
             end) == '.' || at(text, end) == '-')
         ++end;
     size_t scheme = end - (start + 1);
@@ -346,7 +346,7 @@ size_t markdownScanEmailAutolink(PrStringView text, size_t start) {
     size_t end = start + 1;
     while (end < text.size) {
         char c = text.data[end];
-        if (!(asciiIsLetter(c) || asciiIsDigit(c) || (c != '<' && c != '>' && c != '@' && c != '"' && c != '(' &&
+        if (!(prAsciiIsLetter(c) || prAsciiIsDigit(c) || (c != '<' && c != '>' && c != '@' && c != '"' && c != '(' &&
                 c != ')' && c != ',' && c != ':' && c != ';' && c != '[' &&
                 c != ']' && c != '\\' && markdownIsAsciiPunctuation(c))))
             break;
@@ -357,7 +357,7 @@ size_t markdownScanEmailAutolink(PrStringView text, size_t start) {
     ++end;
     while (true) {
         size_t label = end;
-        while (asciiIsLetter(at(text, end)) || asciiIsDigit(at(text, end)) || at(text, end) == '-')
+        while (prAsciiIsLetter(at(text, end)) || prAsciiIsDigit(at(text, end)) || at(text, end) == '-')
             ++end;
         size_t size = end - label;
         if (size == 0 || size > 63 || text.data[label] == '-' || text.data[end - 1] == '-')
@@ -409,7 +409,7 @@ bool markdownScanLinkDestination(PrStringView text, size_t start, size_t* outLen
             --depth;
         } else if (c == ' ' || isAsciiControl(c)) {
             // A destination is not empty if whitespace follows it.
-            if (end == start && (c == ' ' || asciiIsSpace(c)))
+            if (end == start && (c == ' ' || prAsciiIsSpace(c)))
                 return false;
             break;
         }
@@ -456,10 +456,10 @@ void markdownAppendFilteredHtml(PrStringView html, Array<char>* out) {
             continue;
         size_t name = at(html, index + 1) == '/' ? index + 2 : index + 1;
         size_t length = tagName(html, name);
-        if (length == 0 || !isOneOf(stringSlice(html, name, length), kDisallowed, countOf(kDisallowed)))
+        if (length == 0 || !isOneOf(prStringSlice(html, name, length), kDisallowed, countOf(kDisallowed)))
             continue;
         char next = at(html, name + length);
-        if (!(asciiIsSpace(next) || next == '>' || (next == '/' && at(html, name + length + 1) == '>')))
+        if (!(prAsciiIsSpace(next) || next == '>' || (next == '/' && at(html, name + length + 1) == '>')))
             continue;
         out->append(html.data + run, uint32_t(index - run));
         out->append("&lt;", 4);
@@ -469,25 +469,25 @@ void markdownAppendFilteredHtml(PrStringView html, Array<char>* out) {
 }
 
 bool markdownIsUnsafeDestination(PrStringView destination) {
-    if (asciiStartsWithFold(destination, "data:image/")) {
-        PrStringView type = stringSlice(destination, 11, destination.size - 11);
-        if (asciiStartsWithFold(type, "png") || asciiStartsWithFold(type, "gif") || asciiStartsWithFold(type, "jpeg") ||
-                asciiStartsWithFold(type, "webp"))
+    if (prAsciiStartsWithFold(destination, "data:image/")) {
+        PrStringView type = prStringSlice(destination, 11, destination.size - 11);
+        if (prAsciiStartsWithFold(type, "png") || prAsciiStartsWithFold(type, "gif") || prAsciiStartsWithFold(type, "jpeg") ||
+                prAsciiStartsWithFold(type, "webp"))
             return false;
     }
-    return asciiStartsWithFold(destination, "javascript:") || asciiStartsWithFold(destination, "vbscript:") ||
-        asciiStartsWithFold(destination, "file:") || asciiStartsWithFold(destination, "data:");
+    return prAsciiStartsWithFold(destination, "javascript:") || prAsciiStartsWithFold(destination, "vbscript:") ||
+        prAsciiStartsWithFold(destination, "file:") || prAsciiStartsWithFold(destination, "data:");
 }
 
 size_t markdownSkipSpaceAndLineEnding(PrStringView text, size_t start) {
     size_t end = start;
-    while (asciiIsTabOrSpace(at(text, end)))
+    while (prAsciiIsTabOrSpace(at(text, end)))
         ++end;
     if (at(text, end) == '\r')
         ++end;
     if (at(text, end) == '\n')
         ++end;
-    while (asciiIsTabOrSpace(at(text, end)))
+    while (prAsciiIsTabOrSpace(at(text, end)))
         ++end;
     return end;
 }
@@ -501,8 +501,8 @@ size_t markdownDecodeReference(PrStringView text, size_t start, Array<char>* out
         size_t end = digits;
         uint32_t value = 0;
         while (end - digits < (hex ? kMaxHexDigits : kMaxDecimalDigits) &&
-                (hex ? asciiIsHexDigit(at(text, end)) : asciiIsDigit(at(text, end)))) {
-            value = value * (hex ? 16 : 10) + asciiHexValue(text.data[end]);
+                (hex ? prAsciiIsHexDigit(at(text, end)) : prAsciiIsDigit(at(text, end)))) {
+            value = value * (hex ? 16 : 10) + prAsciiHexValue(text.data[end]);
             ++end;
         }
         if (end == digits || at(text, end) != ';')
@@ -512,11 +512,11 @@ size_t markdownDecodeReference(PrStringView text, size_t start, Array<char>* out
         return end + 1 - start;
     }
     size_t end = start + 1;
-    while (end - start - 1 < kPrHtmlEntityMaxLength && (asciiIsLetter(at(text, end)) || asciiIsDigit(at(text, end))))
+    while (end - start - 1 < kPrHtmlEntityMaxLength && (prAsciiIsLetter(at(text, end)) || prAsciiIsDigit(at(text, end))))
         ++end;
     if (end == start + 1 || at(text, end) != ';')
         return 0;
-    PrStringView expansion = prHtmlEntityMatch(stringSlice(text, start + 1, end + 1 - (start + 1)));
+    PrStringView expansion = prHtmlEntityMatch(prStringSlice(text, start + 1, end + 1 - (start + 1)));
     if (expansion.data == nullptr)
         return 0;
     out->append(expansion.data, uint32_t(expansion.size));

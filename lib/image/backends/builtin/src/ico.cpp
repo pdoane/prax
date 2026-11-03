@@ -11,16 +11,16 @@ bool inspectBitmap(IcoImage& image) {
     if (image.size < 40) {
         return false;
     }
-    image.headerSize = readLeU32(image.bytes);
-    image.bitCount = uint16_t(readLeU16(image.bytes + 14));
+    image.headerSize = prMemReadLeU32(image.bytes);
+    image.bitCount = uint16_t(prMemReadLeU16(image.bytes + 14));
     if ((image.headerSize != 40 && image.headerSize != 108 && image.headerSize != 124) ||
-            image.headerSize > image.size || readLeU32(image.bytes + 4) != image.width ||
-            readLeU32(image.bytes + 8) != image.height * 2 || readLeU16(image.bytes + 12) != 1 ||
-            readLeU32(image.bytes + 16) != 0 || (image.bitCount != 1 && image.bitCount != 4 && image.bitCount != 8 &&
+            image.headerSize > image.size || prMemReadLeU32(image.bytes + 4) != image.width ||
+            prMemReadLeU32(image.bytes + 8) != image.height * 2 || prMemReadLeU16(image.bytes + 12) != 1 ||
+            prMemReadLeU32(image.bytes + 16) != 0 || (image.bitCount != 1 && image.bitCount != 4 && image.bitCount != 8 &&
                 image.bitCount != 24 && image.bitCount != 32)) {
         return false;
     }
-    const uint32_t colors = readLeU32(image.bytes + 32);
+    const uint32_t colors = prMemReadLeU32(image.bytes + 32);
     if (image.bitCount <= 8) {
         const uint32_t maximum = 1u << image.bitCount;
         if (colors > maximum) {
@@ -40,18 +40,18 @@ bool inspectBitmap(IcoImage& image) {
 
 bool icoSelectImage(PrByteView bytes, IcoImage* out) {
     *out = {};
-    if (bytes.size < 6 || readLeU16(bytes.data) != 0 || readLeU16(bytes.data + 2) != 1) {
+    if (bytes.size < 6 || prMemReadLeU16(bytes.data) != 0 || prMemReadLeU16(bytes.data + 2) != 1) {
         return false;
     }
-    const uint32_t count = readLeU16(bytes.data + 4);
+    const uint32_t count = prMemReadLeU16(bytes.data + 4);
     const size_t directoryEnd = 6 + size_t(count) * 16;
     if (count == 0 || directoryEnd > bytes.size) {
         return false;
     }
     for (uint32_t i = 0; i < count; ++i) {
         const uint8_t* entry = bytes.data + 6 + size_t(i) * 16;
-        const size_t length = readLeU32(entry + 8);
-        const size_t offset = readLeU32(entry + 12);
+        const size_t length = prMemReadLeU32(entry + 8);
+        const size_t offset = prMemReadLeU32(entry + 12);
         if (offset < directoryEnd || offset > bytes.size || length > bytes.size - offset) {
             return false;
         }
@@ -60,10 +60,10 @@ bool icoSelectImage(PrByteView bytes, IcoImage* out) {
         image.size = length;
         image.width = entry[0] == 0 ? 256 : entry[0];
         image.height = entry[1] == 0 ? 256 : entry[1];
-        image.png = length >= sizeof(kPngSignature) && memEquals(image.bytes, kPngSignature, sizeof(kPngSignature));
+        image.png = length >= sizeof(kPngSignature) && prMemEquals(image.bytes, kPngSignature, sizeof(kPngSignature));
         if (image.png) {
-            if (length < 29 || readBeU32(image.bytes + 16) != image.width ||
-                    readBeU32(image.bytes + 20) != image.height) {
+            if (length < 29 || prMemReadBeU32(image.bytes + 16) != image.width ||
+                    prMemReadBeU32(image.bytes + 20) != image.height) {
                 continue;
             }
             image.bitCount = 32;

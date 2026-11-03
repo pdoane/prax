@@ -30,7 +30,7 @@ namespace {
 // Returns the index of the cached recording of `fragment`'s subtree for `phase`, or kHashMissing. Every recording of a
 // fragment has the fragment's hash, so one probe sequence finds them all.
 uint32_t subFind(const LayoutPaintCache& cache, const LayoutFragment* fragment, LayoutPhase phase) {
-    return cache.subIndex.find(hashPointer(fragment, 0), [&](uint32_t i) {
+    return cache.subIndex.find(prHashPointer(fragment, 0), [&](uint32_t i) {
         const LayoutPaintSub& sub = cache.subs.data[i];
         return sub.fragment == fragment && sub.phase == phase;
     });
@@ -39,7 +39,7 @@ uint32_t subFind(const LayoutPaintCache& cache, const LayoutFragment* fragment, 
 // Returns the hash of a run's key.
 uint32_t runHash(LayoutNodeIndex node, uint32_t phase, uint32_t index) {
     uint64_t key = uint64_t(node) << 32 | uint64_t(index) << 8 | phase;
-    return uint32_t(hashBytes(nullptr, 0, key));
+    return uint32_t(prHashBytes(nullptr, 0, key));
 }
 
 // Returns the index of the cached run `index` of the children of `node` for `phase`, or kHashMissing.
@@ -119,13 +119,13 @@ void subStore(LayoutPaintCache& cache, LayoutPaintSub& sub) {
         cache.subs.data[at] = sub;
         return;
     }
-    cache.subIndex.insert(hashPointer(sub.fragment, 0), cache.subs.count);
+    cache.subIndex.insert(prHashPointer(sub.fragment, 0), cache.subs.count);
     cache.subs.push(sub);
 }
 
 // Drops the cached recordings of `fragment`'s subtree, for every phase.
 void subDrop(LayoutPaintCache& cache, const LayoutFragment* fragment) {
-    uint32_t hash = hashPointer(fragment, 0);
+    uint32_t hash = prHashPointer(fragment, 0);
     for (;;) {
         uint32_t at = cache.subIndex.find(hash, [&](uint32_t i) { return cache.subs.data[i].fragment == fragment; });
         if (at == kHashMissing)
@@ -135,7 +135,7 @@ void subDrop(LayoutPaintCache& cache, const LayoutFragment* fragment) {
         uint32_t last = cache.subs.count - 1;
         if (at != last) {
             const LayoutPaintSub& moved = cache.subs.data[last];
-            cache.subIndex.relocate(hashPointer(moved.fragment, 0), last, at);
+            cache.subIndex.relocate(prHashPointer(moved.fragment, 0), last, at);
             cache.subs.data[at] = moved;
         }
         cache.subs.pop();
@@ -327,8 +327,8 @@ PrAffine2 fitContent(const LayoutStyles* styles, const PrLayoutDecorationStyle& 
     float scaleY = height > 0 ? float(drawnHeight / height) : 1;
     PrVec2 offset = prLayoutVecToPx(at);
     *drawn = PrLayoutVec{
-        prLayoutUnitClamped(int64_t(roundF64(drawnWidth))),
-        prLayoutUnitClamped(int64_t(roundF64(drawnHeight))),
+        prLayoutUnitClamped(int64_t(prF64Round(drawnWidth))),
+        prLayoutUnitClamped(int64_t(prF64Round(drawnHeight))),
     };
     return PrAffine2{scaleX, 0, 0, scaleY, offset.x, offset.y};
 }
@@ -1406,20 +1406,20 @@ struct Painter : LayoutWalkVisitor {
             // curves the width then insets back to the inner edge.
             float width = prLayoutUnitToPx(outlineWidth);
             float outset = prLayoutUnitToPx(layoutSnapBorderWidth(styles, decoration.outlineOffset)) + width;
-            float outsetX = maxF32(outset, (2 * width - (whole.right - whole.left)) / 2);
-            float outsetY = maxF32(outset, (2 * width - (whole.bottom - whole.top)) / 2);
+            float outsetX = prF32Max(outset, (2 * width - (whole.right - whole.left)) / 2);
+            float outsetY = prF32Max(outset, (2 * width - (whole.bottom - whole.top)) / 2);
             PrDrawBorder outline{};
             if (rounded) {
                 PrCornerRect corners = layoutBorderShape(styles, decoration, whole, fragment->broken);
                 float offsetX = outsetX - width;
                 float offsetY = outsetY - width;
                 float grown[PrRectSide_Count] = {
-                    maxF32(offsetY, 0), maxF32(offsetX, 0), maxF32(offsetY, 0),
-                    maxF32(offsetX, 0),
+                    prF32Max(offsetY, 0), prF32Max(offsetX, 0), prF32Max(offsetY, 0),
+                    prF32Max(offsetX, 0),
                 };
                 float shrunk[PrRectSide_Count] = {
-                    maxF32(-offsetY, 0), maxF32(-offsetX, 0), maxF32(-offsetY, 0),
-                    maxF32(-offsetX, 0),
+                    prF32Max(-offsetY, 0), prF32Max(-offsetX, 0), prF32Max(-offsetY, 0),
+                    prF32Max(-offsetX, 0),
                 };
                 PrCornerRect inner = prCornerRectInset(prCornerRectOutset(corners, grown), shrunk);
                 outline.shape = inner;
@@ -1881,21 +1881,21 @@ struct Painter : LayoutWalkVisitor {
         // stretch is painted in the color of the last highlight that covers it, or in the text's own.
         Array<float>& cuts = highlightCuts;
         cuts.clear();
-        cuts.push(-kInfinityF32);
+        cuts.push(-kPrF32Infinity);
         for (uint32_t i = 0; i < stretches.count; ++i) {
             if (stretches.data[i].lo < stretches.data[i].hi && highlights->ranges.data[stretches.data[i].range].color.a > 0) {
                 cuts.push(stretches.data[i].lo);
                 cuts.push(stretches.data[i].hi);
             }
         }
-        cuts.push(kInfinityF32);
+        cuts.push(kPrF32Infinity);
         sortItems(cuts.data, cuts.count, [](float a, float b) { return a < b; });
         for (uint32_t c = 0; text.glyphCount != 0 && c + 1 < cuts.count; ++c) {
             float lo = cuts.data[c];
             float hi = cuts.data[c + 1];
             if (lo >= hi)
                 continue;
-            float middle = lo == -kInfinityF32 ? hi - 1 : hi == kInfinityF32 ? lo + 1 : (lo + hi) / 2;
+            float middle = lo == -kPrF32Infinity ? hi - 1 : hi == kPrF32Infinity ? lo + 1 : (lo + hi) / 2;
             PrColor16 color = base;
             for (uint32_t i = 0; i < stretches.count; ++i) {
                 const HighlightStretch& stretch = stretches.data[i];
@@ -1907,7 +1907,7 @@ struct Painter : LayoutWalkVisitor {
             bool whole = cuts.count == 2;
             if (!whole) {
                 PrRect clip = prLayoutRectToPx(layoutTextSpanRect(tree, fragment, offset,
-                    lo == -kInfinityF32 ? -text.size : lo, hi == kInfinityF32 ? length + text.size : hi));
+                    lo == -kPrF32Infinity ? -text.size : lo, hi == kPrF32Infinity ? length + text.size : hi));
                 bool vertical = layoutStyleTraits(styles, layoutFragmentStyle(tree, fragment)).vertical;
                 if (vertical) {
                     clip.left -= text.size;
@@ -2160,15 +2160,15 @@ bool sameRecording(const LayoutPaintChunk& a, const LayoutPaintChunk& b) {
     for (uint32_t i = 0; i < a.slots.count; ++i) {
         const LayoutPaintSlot& x = a.slots.data[i];
         const LayoutPaintSlot& y = b.slots.data[i];
-        if (x.embed != y.embed || x.node != y.node || memCompare(&x.box, &y.box, sizeof(PrLayoutRect)) != 0 ||
+        if (x.embed != y.embed || x.node != y.node || prMemCompare(&x.box, &y.box, sizeof(PrLayoutRect)) != 0 ||
                 x.scroll != y.scroll || x.segment != y.segment || x.order != y.order || x.caret != y.caret ||
-                !memEquals(&x.color, &y.color, sizeof(PrColor16)))
+                !prMemEquals(&x.color, &y.color, sizeof(PrColor16)))
             return false;
     }
     for (uint32_t i = 0; i < a.scrolls.count; ++i) {
         const LayoutPaintScroll& x = a.scrolls.data[i];
         const LayoutPaintScroll& y = b.scrolls.data[i];
-        if (x.node != y.node || x.parent != y.parent || memCompare(&x.clip, &y.clip, sizeof(PrLayoutRect)) != 0 ||
+        if (x.node != y.node || x.parent != y.parent || prMemCompare(&x.clip, &y.clip, sizeof(PrLayoutRect)) != 0 ||
                 x.range != y.range || x.userAxes != y.userAxes || x.chainAxes != y.chainAxes || x.kind != y.kind)
             return false;
     }

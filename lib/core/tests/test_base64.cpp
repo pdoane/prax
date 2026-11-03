@@ -10,9 +10,9 @@ namespace {
 
 // Returns the input decoded, or "!" if it is not base64.
 std::string decoded(const std::string& input) {
-    std::string out(base64DecodedCapacity(input.size()), '\0');
+    std::string out(prBase64DecodedCapacity(input.size()), '\0');
     size_t size = 0;
-    if (!base64Decode(input, out.data(), out.size(), &size))
+    if (!prBase64Decode(input, out.data(), out.size(), &size))
         return "!";
     REQUIRE(size <= out.size());
     out.resize(size);
@@ -20,8 +20,8 @@ std::string decoded(const std::string& input) {
 }
 
 std::string encoded(const std::string& input) {
-    std::string out(base64EncodedSize(input.size()), '\0');
-    base64Encode(input, out.data(), out.size());
+    std::string out(prBase64EncodedSize(input.size()), '\0');
+    prBase64Encode(input, out.data(), out.size());
     return out;
 }
 
@@ -63,14 +63,14 @@ TEST_CASE("base64 refuses what is not the alphabet or padded wrongly") {
 TEST_CASE("base64 decodes in place and stops at the capacity") {
     std::string text = "SGVsbG8sIHdvcmxkIQ==";
     size_t size = 0;
-    REQUIRE(base64Decode(text, text.data(), text.size(), &size));
+    REQUIRE(prBase64Decode(text, text.data(), text.size(), &size));
     CHECK(text.substr(0, size) == "Hello, world!");
 
     char out[4] = {};
     std::string input = "SGVsbG8=";
-    REQUIRE(base64Decode(input, out, 4, &size));
+    REQUIRE(prBase64Decode(input, out, 4, &size));
     CHECK(size == 5);
     CHECK(std::string(out, 4) == "Hell");
-    REQUIRE(base64Decode(input, nullptr, 0, &size));
+    REQUIRE(prBase64Decode(input, nullptr, 0, &size));
     CHECK(size == 5);
 }

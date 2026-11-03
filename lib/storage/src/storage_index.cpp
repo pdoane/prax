@@ -11,7 +11,7 @@ namespace pr_impl {
 namespace {
 
 uint32_t hashOf(PrStringView key) {
-    return uint32_t(hashBytes(key.data, key.size, 0));
+    return uint32_t(prHashBytes(key.data, key.size, 0));
 }
 
 } // namespace
@@ -21,7 +21,7 @@ StorageBuffer* storageBufferCreate(PrByteView bytes) {
     buffer->references.storeRelaxed(1);
     buffer->size = bytes.size;
     if (bytes.size != 0)
-        memCopy(buffer->bytes(), bytes.data, bytes.size);
+        prMemCopy(buffer->bytes(), bytes.data, bytes.size);
     return buffer;
 }
 

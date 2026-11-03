@@ -40,7 +40,7 @@ struct XmlParser {
 
     // The source that has arrived, its line breaks normalized. The parse keeps all of it, since an error's position and
     // an element's content start are counted from its start.
-    TextBuffer source;
+    PrTextBuffer source = {};
     bool carriageReturn;        // true if the last text appended ended in a carriage return
     bool inputEnded;
 
@@ -52,7 +52,7 @@ struct XmlParser {
     Array<XmlOpen> open;
     Array<XmlBinding> bindings;
     Array<XmlEntity> entities;
-    TextBuffer text;            // the character data not yet reported
+    PrTextBuffer text = {};     // the character data not yet reported
     size_t textAt;              // where in the source it starts
     PrString publicId;          // the doctype's public identifier, which identifies its external subset
     bool started;               // true once the byte order mark and the XML declaration are read

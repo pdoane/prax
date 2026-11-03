@@ -34,36 +34,36 @@ namespace {
 
 // Appends to `out` the name of the directory of `origin`'s area: the origin, with each byte that a file name may not
 // hold written as '_' and two hex digits.
-void appendDirectoryName(PrStringView origin, TextBuffer* out) {
+void appendDirectoryName(PrStringView origin, PrTextBuffer* out) {
     constexpr char kHex[] = "0123456789ABCDEF";
     for (size_t i = 0; i < origin.size; ++i) {
         unsigned char c = static_cast<unsigned char>(origin.data[i]);
         bool plain = (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '.' || c == '-';
         if (plain) {
-            textAppendChar(out, char(c));
+            prTextBufferAppendChar(out, char(c));
         } else {
-            textAppendChar(out, '_');
-            textAppendChar(out, kHex[c >> 4]);
-            textAppendChar(out, kHex[c & 15]);
+            prTextBufferAppendChar(out, '_');
+            prTextBufferAppendChar(out, kHex[c >> 4]);
+            prTextBufferAppendChar(out, kHex[c & 15]);
         }
     }
 }
 
 // Opens the area on disk whose directory in the provider's directory is `name`, or returns null if it cannot be made.
 PrStorage* PR_NULLABLE openDiskArea(const HtmlStorageProvider* provider, PrStringView name) {
-    TextBuffer path{};
-    textAppend(&path, prStringView(&provider->directory));
-    textAppendChar(&path, '/');
-    textAppend(&path, name);
+    PrTextBuffer path{};
+    prTextBufferAppend(&path, prStringView(&provider->directory));
+    prTextBufferAppendChar(&path, '/');
+    prTextBufferAppend(&path, name);
     PrStorageDiskDesc desc{
-        .directory = textView(&path),
+        .directory = prTextBufferView(&path),
         .limitBytes = provider->quota,
         .eviction = PrStorageEviction_None,
         .pool = provider->pool,
     };
     PrStorage* store = nullptr;
     prStorageDiskCreate(&desc, &store);
-    textReset(&path);
+    prTextBufferReset(&path);
     return store;
 }
 
@@ -71,10 +71,10 @@ PrStorage* PR_NULLABLE openDiskArea(const HtmlStorageProvider* provider, PrStrin
 PrStorage* PR_NULLABLE createArea(const HtmlStorageProvider* provider, PrStringView origin) {
     if (prStringIsNull(&provider->directory))
         return prStorageMemoryCreate(provider->quota, PrStorageEviction_None);
-    TextBuffer name{};
+    PrTextBuffer name{};
     appendDirectoryName(origin, &name);
-    PrStorage* store = openDiskArea(provider, textView(&name));
-    textReset(&name);
+    PrStorage* store = openDiskArea(provider, prTextBufferView(&name));
+    prTextBufferReset(&name);
     return store;
 }
 
@@ -146,16 +146,16 @@ void prHtmlStorageProviderClear(PrHtmlStorageProvider* provider) {
             Gather& g = *static_cast<Gather*>(context);
             if (entry->info.kind != PrFileKind_Directory)
                 return;
-            TextBuffer name{};
+            PrTextBuffer name{};
             for (uint32_t i = 0; i < g.provider->areas.count; ++i) {
-                textClear(&name);
+                prTextBufferClear(&name);
                 appendDirectoryName(prStringView(&g.provider->areas.data[i].origin), &name);
-                if (textView(&name) == entry->name) {
-                    textReset(&name);
+                if (prTextBufferView(&name) == entry->name) {
+                    prTextBufferReset(&name);
                     return;
                 }
             }
-            textReset(&name);
+            prTextBufferReset(&name);
             g.closed.push(prStringCopy(entry->name));
         }, &gather);
     }

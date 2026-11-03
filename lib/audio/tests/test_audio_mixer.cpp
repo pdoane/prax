@@ -26,7 +26,7 @@ PrAudioChunk readTone(void* context, float* samples, uint32_t frames) {
     uint64_t left = tone->limit - tone->frames;
     chunk.frames = left < frames ? uint32_t(left) : frames;
     for (uint32_t i = 0; i < chunk.frames; ++i)
-        samples[i] = float(sinF64(2 * kPi * tone->frequency * double(tone->frames + i) / kRate));
+        samples[i] = float(prF64Sin(2 * kPi * tone->frequency * double(tone->frames + i) / kRate));
     tone->frames += chunk.frames;
     chunk.ended = left == 0;
     return chunk;
@@ -62,7 +62,7 @@ double rootMeanSquare(const std::vector<float>& samples, size_t from = 0) {
     double sum = 0;
     for (size_t i = from; i < samples.size(); ++i)
         sum += double(samples[i]) * double(samples[i]);
-    return sqrtF64(sum / double(samples.size() - from));
+    return prF64Sqrt(sum / double(samples.size() - from));
 }
 
 // The frequency of the samples, by their crossings of zero.

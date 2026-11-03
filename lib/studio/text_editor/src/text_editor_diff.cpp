@@ -41,7 +41,7 @@ bool textEditorDiffModelUpdate(TextEditorDiffModel* model, const PrTextEditBuffe
         const TextEditorDiffColors& colors, float lineHeight) {
     uint64_t versions[] = {prTextEditBufferVersion(old), prTextEditBufferVersion(young)};
     if (model->compared && versions[0] == model->versions[0] && versions[1] == model->versions[1] &&
-            memEquals(&colors, &model->colors, sizeof colors))
+            prMemEquals(&colors, &model->colors, sizeof colors))
         return false;
     model->compared = true;
     model->versions[0] = versions[0];

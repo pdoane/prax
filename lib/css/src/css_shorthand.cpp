@@ -766,22 +766,22 @@ bool textIs(const Longhands* l, uint32_t index, PrStringView text) {
 }
 
 // Appends a space if the output holds something from `start` on.
-void space(TextBuffer* out, uint32_t start) {
-    if (out->text.count != start)
-        textAppendChar(out, ' ');
+void space(PrTextBuffer* out, uint32_t start) {
+    if (out->size != start)
+        prTextBufferAppendChar(out, ' ');
 }
 
 // Appends `text`, preceded by a space if the output holds something from `start` on.
-void word(TextBuffer* out, uint32_t start, PrStringView text) {
+void word(PrTextBuffer* out, uint32_t start, PrStringView text) {
     space(out, start);
-    textAppend(out, text);
+    prTextBufferAppend(out, text);
 }
 
 // A walk of a shorthand's grammar that writes the value of each component. It omits a component that the grammar allows
 // omitting if its longhands hold their initial values.
 struct Walk {
     const Longhands* l;
-    TextBuffer* out;
+    PrTextBuffer* out;
     uint32_t start;     // the offset in `out` where the shorthand's value begins
     uint64_t used;      // the longhands that a component wrote, one bit per index
     uint64_t force;     // longhands that a component writes whatever they hold
@@ -960,36 +960,36 @@ bool walkGrammar(Walk* w, CssGrammarIndex index) {
     return !w->failed;
 }
 
-Walk walkOf(const Longhands* l, TextBuffer* out) {
+Walk walkOf(const Longhands* l, PrTextBuffer* out) {
     uint64_t valued = 0;
     for (uint32_t j = 0; j < l->properties.count; ++j)
         valued |= isInitial(l, j) ? 0 : uint64_t(1) << j;
-    return Walk{l, out, out->text.count, 0, 0, 0, valued, false};
+    return Walk{l, out, out->size, 0, 0, 0, valued, false};
 }
 
 // css-cascade-5/#shorthand-property, in reverse.
-bool serializeComponents(const Longhands* l, TextBuffer* out) {
+bool serializeComponents(const Longhands* l, PrTextBuffer* out) {
     Walk w = walkOf(l, out);
     return walkGrammar(&w, kCssPropertyGrammarRoot[l->shorthand]);
 }
 
 // css-box-4/#propdef-margin: writes the fewest values that give the four sides.
-bool serializeBox(const Longhands* l, TextBuffer* out) {
+bool serializeBox(const Longhands* l, PrTextBuffer* out) {
     uint32_t count = 4;
     if (textIs(l, 3, l->texts[1])) {
         count = 3;
         if (textIs(l, 2, l->texts[0]))
             count = textIs(l, 1, l->texts[0]) ? 1 : 2;
     }
-    uint32_t start = out->text.count;
+    uint32_t start = out->size;
     for (uint32_t i = 0; i < count; ++i)
         word(out, start, l->texts[i]);
     return true;
 }
 
 // css-logical-1/#propdef-margin-block: writes one value if the two are the same.
-bool serializePair(const Longhands* l, TextBuffer* out) {
-    uint32_t start = out->text.count;
+bool serializePair(const Longhands* l, PrTextBuffer* out) {
+    uint32_t start = out->size;
     word(out, start, l->texts[0]);
     if (!textIs(l, 1, l->texts[0]))
         word(out, start, l->texts[1]);
@@ -1022,28 +1022,28 @@ CssValueRun entryOf(CssValueRun run, uint32_t k) {
 // The longhands of one layer: the entry of each longhand that a component sets, and the value of each longhand that
 // takes a single entry, or none, on every layer. After layerOf, `texts` holds their serializations.
 struct Layer {
-    TextBuffer text;
+    PrTextBuffer text = {};
     Array<uint32_t> ends;
     Array<PrStringView> texts;
 };
 
 void layerOf(Layer* layer, const Longhands* l, uint64_t listed, uint32_t k) {
-    textClear(&layer->text);
+    prTextBufferClear(&layer->text);
     layer->ends.count = 0;
     layer->texts.count = 0;
     for (uint32_t j = 0; j < l->properties.count; ++j) {
         bool entry = (listed & (uint64_t(1) << j)) != 0;
         cssSerializeValues(&layer->text, entry ? entryOf(l->values[j], k) : l->values[j]);
-        layer->ends.push(layer->text.text.count);
+        layer->ends.push(layer->text.size);
     }
     for (uint32_t j = 0; j < l->properties.count; ++j) {
         uint32_t from = j == 0 ? 0 : layer->ends.data[j - 1];
-        layer->texts.push(PrStringView{layer->text.text.data + from, layer->ends.data[j] - from});
+        layer->texts.push(PrStringView{layer->text.data + from, layer->ends.data[j] - from});
     }
 }
 
 void layerReset(Layer* layer) {
-    textReset(&layer->text);
+    prTextBufferReset(&layer->text);
     layer->ends.reset();
     layer->texts.reset();
 }
@@ -1094,7 +1094,7 @@ void writeBoxes(Walk* w) {
 // longhand that a component sets has the same number of entries, and the others hold their initial values. The
 // longhands in `last` belong to the final layer only. `boxes` means the layers have an origin and a clip that one box
 // can write.
-bool serializeLayers(const Longhands* l, TextBuffer* out, uint64_t last, bool boxes) {
+bool serializeLayers(const Longhands* l, PrTextBuffer* out, uint64_t last, bool boxes) {
     uint64_t components = componentsOf(l->shorthand, l->properties);
     uint64_t listed = components & ~last;
     uint32_t layers = 0;
@@ -1117,7 +1117,7 @@ bool serializeLayers(const Longhands* l, TextBuffer* out, uint64_t last, bool bo
         layerOf(&layer, l, listed, k);
         Longhands entries = {l->shorthand, l->properties, l->values, layer.texts.data};
         if (k != 0)
-            textAppend(out, ", ");
+            prTextBufferAppend(out, ", ");
         Walk w = walkOf(&entries, out);
         if (boxes)
             writeBoxes(&w);
@@ -1129,11 +1129,11 @@ bool serializeLayers(const Longhands* l, TextBuffer* out, uint64_t last, bool bo
     return written;
 }
 
-bool serializeLonghands(const Longhands* l, TextBuffer* out);
+bool serializeLonghands(const Longhands* l, PrTextBuffer* out);
 
 // css-logical-1/#propdef-border-block: every run of longhands holds the same values as the first run, which is written
 // as the property that the grammar names.
-bool serializeMirror(const Longhands* l, TextBuffer* out) {
+bool serializeMirror(const Longhands* l, PrTextBuffer* out) {
     CssGrammarIndex root = kCssPropertyGrammarRoot[l->shorthand];
     PrCssProperty named = PrCssProperty(cssGrammarValue(kCssGrammarNodes[root]));
     uint32_t run = cssIsShorthand(named) ? cssPropertyLonghands(named).count : 1;
@@ -1142,7 +1142,7 @@ bool serializeMirror(const Longhands* l, TextBuffer* out) {
             return false;
     }
     if (!cssIsShorthand(named)) {
-        textAppend(out, l->texts[0]);
+        prTextBufferAppend(out, l->texts[0]);
         return true;
     }
     Longhands first = {named, cssPropertyLonghands(named), l->values, l->texts};
@@ -1151,11 +1151,11 @@ bool serializeMirror(const Longhands* l, TextBuffer* out) {
 
 // Writes one of a corner's radii: the horizontal radius, or the vertical radius. If the corner holds one value, the
 // vertical radius is the horizontal radius.
-void writeRadius(TextBuffer* out, const Longhands* l, uint32_t corner, bool vertical) {
+void writeRadius(PrTextBuffer* out, const Longhands* l, uint32_t corner, bool vertical) {
     CssValueRun run = l->values[corner];
     uint32_t second = run.values[0].next;
     if (second >= run.count) {
-        textAppend(out, l->texts[corner]);
+        prTextBufferAppend(out, l->texts[corner]);
         return;
     }
     uint32_t at = vertical ? second : 0;
@@ -1165,37 +1165,37 @@ void writeRadius(TextBuffer* out, const Longhands* l, uint32_t corner, bool vert
 
 // css-backgrounds-3/#propdef-border-radius: writes the horizontal radii in the same form as the four sides of a box, or
 // as a pair for one side's two corners, then the vertical radii after a '/' if they differ.
-bool serializeBorderRadius(const Longhands* l, TextBuffer* out) {
+bool serializeBorderRadius(const Longhands* l, PrTextBuffer* out) {
     uint32_t corners = l->properties.count;
-    TextBuffer axes[2][4] = {};
+    PrTextBuffer axes[2][4] = {};
     PrStringView radii[2][4];
     for (uint32_t axis = 0; axis < 2; ++axis) {
         for (uint32_t corner = 0; corner < corners; ++corner) {
             writeRadius(&axes[axis][corner], l, corner, axis == 1);
-            radii[axis][corner] = textView(&axes[axis][corner]);
+            radii[axis][corner] = prTextBufferView(&axes[axis][corner]);
         }
     }
     Longhands across = {l->shorthand, l->properties, l->values, radii[0]};
     Longhands down = {l->shorthand, l->properties, l->values, radii[1]};
-    bool (*serializeAxis)(const Longhands*, TextBuffer*) = corners == 4 ? serializeBox : serializePair;
+    bool (*serializeAxis)(const Longhands*, PrTextBuffer*) = corners == 4 ? serializeBox : serializePair;
     serializeAxis(&across, out);
     bool same = true;
     for (uint32_t corner = 0; corner < corners; ++corner)
         same = same && radii[0][corner] == radii[1][corner];
     if (!same) {
-        textAppend(out, " / ");
+        prTextBufferAppend(out, " / ");
         serializeAxis(&down, out);
     }
     for (uint32_t axis = 0; axis < 2; ++axis) {
         for (uint32_t corner = 0; corner < corners; ++corner)
-            textReset(&axes[axis][corner]);
+            prTextBufferReset(&axes[axis][corner]);
     }
     return true;
 }
 
 // css-flexbox-1/#propdef-flex: writes all three values.
-bool serializeFlex(const Longhands* l, TextBuffer* out) {
-    uint32_t start = out->text.count;
+bool serializeFlex(const Longhands* l, PrTextBuffer* out) {
+    uint32_t start = out->size;
     for (uint32_t j = 0; j < 3; ++j)
         word(out, start, l->texts[j]);
     return true;
@@ -1231,7 +1231,7 @@ PrStringView fontWidthKeyword(CssValueRun width, PrStringView text) {
 // css-fonts-4/#propdef-font: requires the longhands that the grammar resets to be at their initial values, and a
 // font-variant-caps that font-variant can write. Writes the longhands that the grammar writes, and writes a font-width
 // as its keyword if it has one.
-bool serializeFont(const Longhands* l, TextBuffer* out) {
+bool serializeFont(const Longhands* l, PrTextBuffer* out) {
     PrStringView texts[kFontLonghands];
     PR_ASSERT(l->properties.count == kFontLonghands);
     for (uint32_t j = 0; j < l->properties.count; ++j) {
@@ -1250,30 +1250,30 @@ bool serializeFont(const Longhands* l, TextBuffer* out) {
 
 // css-fonts-4/#propdef-font-synthesis: writes the keyword of each longhand that is auto, or none if all are none. A
 // longhand at any other value cannot be written.
-bool serializeFontSynthesis(const Longhands* l, TextBuffer* out) {
+bool serializeFontSynthesis(const Longhands* l, PrTextBuffer* out) {
     static constexpr PrStringView kKeyword[] = {"weight", "style", "small-caps", "position"};
-    uint32_t start = out->text.count;
+    uint32_t start = out->size;
     for (uint32_t j = 0; j < 4; ++j) {
         if (textIs(l, j, "auto"))
             word(out, start, kKeyword[j]);
         else if (!textIs(l, j, "none"))
             return false;
     }
-    if (out->text.count == start)
-        textAppend(out, "none");
+    if (out->size == start)
+        prTextBufferAppend(out, "none");
     return true;
 }
 
 // css-fonts-4/#propdef-font-variant: writes `normal` if every longhand is normal, and `none` if the ligatures are none
 // and the rest are normal. Otherwise writes each longhand that is not normal.
-bool serializeFontVariant(const Longhands* l, TextBuffer* out) {
+bool serializeFontVariant(const Longhands* l, PrTextBuffer* out) {
     bool rest = true;
     for (uint32_t j = 1; j < l->properties.count; ++j)
         rest = rest && isInitial(l, j);
     if (textIs(l, 0, "none")) {
         if (!rest)
             return false;
-        textAppend(out, "none");
+        prTextBufferAppend(out, "none");
         return true;
     }
     return serializeComponents(l, out);
@@ -1289,40 +1289,40 @@ bool omittedLine(const Longhands* l, uint32_t start, uint32_t end) {
 
 // css-grid-2/#propdef-grid-row: writes the start, then the end after a '/', unless omitting the end gives the same
 // value.
-bool serializeGridLine(const Longhands* l, TextBuffer* out) {
-    textAppend(out, l->texts[0]);
+bool serializeGridLine(const Longhands* l, PrTextBuffer* out) {
+    prTextBufferAppend(out, l->texts[0]);
     if (!omittedLine(l, 0, 1)) {
-        textAppend(out, " / ");
-        textAppend(out, l->texts[1]);
+        prTextBufferAppend(out, " / ");
+        prTextBufferAppend(out, l->texts[1]);
     }
     return true;
 }
 
 // css-grid-2/#propdef-grid-area: writes the lines up to the last line that differs from the value that omitting it
 // gives.
-bool serializeGridArea(const Longhands* l, TextBuffer* out) {
+bool serializeGridArea(const Longhands* l, PrTextBuffer* out) {
     static constexpr uint8_t kFrom[4] = {0, 0, 0, 1};
     uint32_t count = 4;
     while (count > 1 && omittedLine(l, kFrom[count - 1], count - 1))
         --count;
     for (uint32_t i = 0; i < count; ++i) {
         if (i != 0)
-            textAppend(out, " / ");
-        textAppend(out, l->texts[i]);
+            prTextBufferAppend(out, " / ");
+        prTextBufferAppend(out, l->texts[i]);
     }
     return true;
 }
 
 // css-inline-3/#propdef-text-box: writes `normal` for `none auto`. Otherwise writes each longhand that differs from the
 // value that omitting it gives.
-bool serializeTextBox(const Longhands* l, TextBuffer* out) {
+bool serializeTextBox(const Longhands* l, PrTextBuffer* out) {
     bool none = textIs(l, 0, "none");
     bool automatic = isInitial(l, 1);
     if (none && automatic) {
-        textAppend(out, "normal");
+        prTextBufferAppend(out, "normal");
         return true;
     }
-    uint32_t start = out->text.count;
+    uint32_t start = out->size;
     if (!textIs(l, 0, "trim-both") || automatic || none)
         word(out, start, l->texts[0]);
     if (!automatic)
@@ -1331,7 +1331,7 @@ bool serializeTextBox(const Longhands* l, TextBuffer* out) {
 }
 
 // css-text-4/#propdef-white-space: writes the keyword that expands to the longhands, or else the longhands.
-bool serializeWhiteSpace(const Longhands* l, TextBuffer* out) {
+bool serializeWhiteSpace(const Longhands* l, PrTextBuffer* out) {
     struct WhiteSpaceKeyword {
         PrStringView keyword;
         PrStringView collapse;
@@ -1346,7 +1346,7 @@ bool serializeWhiteSpace(const Longhands* l, TextBuffer* out) {
     if (isInitial(l, 2)) {
         for (const WhiteSpaceKeyword& keyword : kKeywords) {
             if (textIs(l, 0, keyword.collapse) && textIs(l, 1, keyword.wrap)) {
-                textAppend(out, keyword.keyword);
+                prTextBufferAppend(out, keyword.keyword);
                 return true;
             }
         }
@@ -1355,7 +1355,7 @@ bool serializeWhiteSpace(const Longhands* l, TextBuffer* out) {
 }
 
 // css-writing-modes-4/#glyph-orientation: writes the value that sets the longhand's text-orientation.
-bool serializeGlyphOrientationVertical(const Longhands* l, TextBuffer* out) {
+bool serializeGlyphOrientationVertical(const Longhands* l, PrTextBuffer* out) {
     struct GlyphOrientation {
         PrStringView orientation;
         PrStringView keyword;
@@ -1363,7 +1363,7 @@ bool serializeGlyphOrientationVertical(const Longhands* l, TextBuffer* out) {
     static constexpr GlyphOrientation kKeywords[] = {{"mixed", "auto"}, {"upright", "0deg"}, {"sideways", "90deg"}};
     for (const GlyphOrientation& keyword : kKeywords) {
         if (textIs(l, 0, keyword.orientation)) {
-            textAppend(out, keyword.keyword);
+            prTextBufferAppend(out, keyword.keyword);
             return true;
         }
     }
@@ -1372,19 +1372,19 @@ bool serializeGlyphOrientationVertical(const Longhands* l, TextBuffer* out) {
 
 // css-text-3/#propdef-text-align: writes text-align-all if text-align-last is auto, justify-all if both are justify,
 // and match-parent if both are match-parent. No other pair has a value of the shorthand.
-bool serializeTextAlign(const Longhands* l, TextBuffer* out) {
+bool serializeTextAlign(const Longhands* l, PrTextBuffer* out) {
     if (textIs(l, 1, "auto")) {
         if (textIs(l, 0, "match-parent"))
             return false;
-        textAppend(out, l->texts[0]);
+        prTextBufferAppend(out, l->texts[0]);
         return true;
     }
     if (textIs(l, 0, "justify") && textIs(l, 1, "justify")) {
-        textAppend(out, "justify-all");
+        prTextBufferAppend(out, "justify-all");
         return true;
     }
     if (textIs(l, 0, "match-parent") && textIs(l, 1, "match-parent")) {
-        textAppend(out, "match-parent");
+        prTextBufferAppend(out, "match-parent");
         return true;
     }
     return false;
@@ -1392,22 +1392,22 @@ bool serializeTextAlign(const Longhands* l, TextBuffer* out) {
 
 // css-grid-2/#propdef-grid-template: writes `none`, the rows and columns, or the areas form. The areas form writes each
 // row's size after its string, and the line names in their positions.
-bool serializeGridTemplate(const Longhands* l, TextBuffer* out) {
+bool serializeGridTemplate(const Longhands* l, PrTextBuffer* out) {
     if (isInitial(l, 2)) {
         if (isInitial(l, 0) && isInitial(l, 1)) {
-            textAppend(out, "none");
+            prTextBufferAppend(out, "none");
             return true;
         }
-        textAppend(out, l->texts[0]);
-        textAppend(out, " / ");
-        textAppend(out, l->texts[1]);
+        prTextBufferAppend(out, l->texts[0]);
+        prTextBufferAppend(out, " / ");
+        prTextBufferAppend(out, l->texts[1]);
         return true;
     }
 
     CssValueRun rows = l->values[0];
     CssValueRun areas = l->values[2];
     uint32_t area = 0;
-    uint32_t start = out->text.count;
+    uint32_t start = out->size;
     for (uint32_t i = 0; i < rows.count; i += rows.values[i].next) {
         const CssValueNode* item = &rows.values[i];
         space(out, start);
@@ -1424,22 +1424,22 @@ bool serializeGridTemplate(const Longhands* l, TextBuffer* out) {
         cssSerializeValues(out, CssValueRun{areas.values + area, 1, areas.text});
         ++area;
         if (!cssValueIsKeyword(item, PrCssKeyword_Auto)) {
-            textAppendChar(out, ' ');
+            prTextBufferAppendChar(out, ' ');
             cssSerializeValues(out, CssValueRun{item, item->next, rows.text});
         }
     }
     if (area != areas.count)
         return false;
     if (!isInitial(l, 1)) {
-        textAppend(out, " / ");
-        textAppend(out, l->texts[1]);
+        prTextBufferAppend(out, " / ");
+        prTextBufferAppend(out, l->texts[1]);
     }
     return true;
 }
 
 // css-grid-2/#propdef-grid: writes a grid-template if the auto longhands are initial. Otherwise writes the rows or the
 // columns, with auto-flow along the other axis.
-bool serializeGrid(const Longhands* l, TextBuffer* out) {
+bool serializeGrid(const Longhands* l, PrTextBuffer* out) {
     PrStringView flow = l->texts[5];
     bool autoRows = isInitial(l, 3);
     bool autoColumns = isInitial(l, 4);
@@ -1452,53 +1452,53 @@ bool serializeGrid(const Longhands* l, TextBuffer* out) {
     }
     if (!isInitial(l, 2))
         return false;
-    bool dense = stringEndsWith(flow, "dense");
-    bool column = stringStartsWith(flow, "column");
+    bool dense = prStringEndsWith(flow, "dense");
+    bool column = prStringStartsWith(flow, "column");
     if (column && isInitial(l, 1) && autoRows) {
-        textAppend(out, l->texts[0]);
-        textAppend(out, " / auto-flow");
+        prTextBufferAppend(out, l->texts[0]);
+        prTextBufferAppend(out, " / auto-flow");
         if (dense)
-            textAppend(out, " dense");
+            prTextBufferAppend(out, " dense");
         if (!autoColumns) {
-            textAppendChar(out, ' ');
-            textAppend(out, l->texts[4]);
+            prTextBufferAppendChar(out, ' ');
+            prTextBufferAppend(out, l->texts[4]);
         }
         return true;
     }
     if (!column && isInitial(l, 0) && autoColumns) {
-        textAppend(out, "auto-flow");
+        prTextBufferAppend(out, "auto-flow");
         if (dense)
-            textAppend(out, " dense");
+            prTextBufferAppend(out, " dense");
         if (!autoRows) {
-            textAppendChar(out, ' ');
-            textAppend(out, l->texts[3]);
+            prTextBufferAppendChar(out, ' ');
+            prTextBufferAppend(out, l->texts[3]);
         }
-        textAppend(out, " / ");
-        textAppend(out, l->texts[1]);
+        prTextBufferAppend(out, " / ");
+        prTextBufferAppend(out, l->texts[1]);
         return true;
     }
     return false;
 }
 
 // css-gaps-1/#propdef-column-rule-inset-start: writes the single value that every longhand holds.
-bool serializeSame(const Longhands* l, TextBuffer* out) {
+bool serializeSame(const Longhands* l, PrTextBuffer* out) {
     for (uint32_t j = 1; j < l->properties.count; ++j) {
         if (!textIs(l, j, l->texts[0]))
             return false;
     }
-    textAppend(out, l->texts[0]);
+    prTextBufferAppend(out, l->texts[0]);
     return true;
 }
 
 // css-gaps-1/#propdef-column-rule-inset: writes one value if the four insets are the same. Otherwise writes all four:
 // the cap insets, then the junction insets after a '/'.
-bool serializeRuleInset(const Longhands* l, TextBuffer* out) {
+bool serializeRuleInset(const Longhands* l, PrTextBuffer* out) {
     if (serializeSame(l, out))
         return true;
     for (uint32_t j = 0; j < 4; ++j) {
         if (j != 0)
-            textAppend(out, j == 2 ? " / " : " ");
-        textAppend(out, l->texts[j]);
+            prTextBufferAppend(out, j == 2 ? " / " : " ");
+        prTextBufferAppend(out, l->texts[j]);
     }
     return true;
 }
@@ -1521,22 +1521,22 @@ bool nextEntries(const Longhands* l, uint32_t* at, CssValueRun* entries) {
 
 // Writes one <gap-rule>: the width, style and color that are not at their initial values, or the width if all three are
 // at their initial values.
-void writeGapRule(const Longhands* l, const CssValueRun* entries, TextBuffer* out) {
-    TextBuffer texts[3] = {};
-    uint32_t start = out->text.count;
+void writeGapRule(const Longhands* l, const CssValueRun* entries, PrTextBuffer* out) {
+    PrTextBuffer texts[3] = {};
+    uint32_t start = out->size;
     for (uint32_t j = 0; j < 3; ++j) {
         cssSerializeValues(&texts[j], entries[j]);
-        if (textView(&texts[j]) != cssPropertyInitial(l->properties.data[j]))
-            word(out, start, textView(&texts[j]));
+        if (prTextBufferView(&texts[j]) != cssPropertyInitial(l->properties.data[j]))
+            word(out, start, prTextBufferView(&texts[j]));
     }
-    if (out->text.count == start)
-        textAppend(out, textView(&texts[0]));
-    for (TextBuffer& text : texts)
-        textReset(&text);
+    if (out->size == start)
+        prTextBufferAppend(out, prTextBufferView(&texts[0]));
+    for (PrTextBuffer& text : texts)
+        prTextBufferReset(&text);
 }
 
 // css-gaps-1/#propdef-column-rule: writes the lists entry by entry, if they have the same shape.
-bool serializeGapRule(const Longhands* l, TextBuffer* out) {
+bool serializeGapRule(const Longhands* l, PrTextBuffer* out) {
     uint32_t at[3] = {0, 0, 0};
     CssValueRun entries[3];
     while (nextEntries(l, at, entries)) {
@@ -1559,7 +1559,7 @@ bool serializeGapRule(const Longhands* l, TextBuffer* out) {
             inner.values = arguments;
             uint32_t within[3] = {0, 0, 0};
             CssValueRun parts[3];
-            textAppend(out, "repeat(");
+            prTextBufferAppend(out, "repeat(");
             for (uint32_t k = 0; nextEntries(&inner, within, parts); ++k) {
                 if (k == 0) {
                     const CssValueNode* count = parts[0].values;
@@ -1571,19 +1571,19 @@ bool serializeGapRule(const Longhands* l, TextBuffer* out) {
                     cssSerializeValues(out, parts[0]);
                     continue;
                 }
-                textAppend(out, ", ");
+                prTextBufferAppend(out, ", ");
                 writeGapRule(l, parts, out);
             }
-            textAppendChar(out, ')');
+            prTextBufferAppendChar(out, ')');
         }
         if (at[0] <= l->values[0].count)
-            textAppend(out, ", ");
+            prTextBufferAppend(out, ", ");
     }
     return at[1] > l->values[1].count && at[2] > l->values[2].count;
 }
 
 // Writes the shorthand's value from its longhands' values, according to its form. Returns false if it cannot.
-bool serializeLonghands(const Longhands* l, TextBuffer* out) {
+bool serializeLonghands(const Longhands* l, PrTextBuffer* out) {
     switch (kCssPropertyShorthand[l->shorthand]) {
         case CssShorthand_Box:           return serializeBox(l, out);
         case CssShorthand_Pair:          return serializePair(l, out);
@@ -1645,7 +1645,7 @@ bool cssExpandShorthand(CssParser* parser, PrCssProperty shorthand, CssValueSpan
 // ---------------------------------------------------------------------------------------------------------------------
 // Serialization
 
-void cssSerializeShorthand(TextBuffer* out, PrCssProperty shorthand, const CssValueRun* values) {
+void cssSerializeShorthand(PrTextBuffer* out, PrCssProperty shorthand, const CssValueRun* values) {
     CssPropertyList properties = cssPropertyLonghands(shorthand);
 
     // css-cascade-5/#shorthand-property: longhands that all hold one CSS-wide keyword serialize as that keyword. A
@@ -1657,31 +1657,31 @@ void cssSerializeShorthand(TextBuffer* out, PrCssProperty shorthand, const CssVa
             return;
     }
     if (wide != PrCssKeyword_Count) {
-        textAppend(out, cssKeywordName(wide));
+        prTextBufferAppend(out, cssKeywordName(wide));
         return;
     }
     if (kCssPropertyShorthand[shorthand] == CssShorthand_All)
         return;
 
     // Every longhand's serialization, concatenated in `texts`.
-    TextBuffer texts;
+    PrTextBuffer texts = {};
     uint32_t ends[kLonghandsWritten];
     PrStringView views[kLonghandsWritten];
     PR_ASSERT(properties.count <= kLonghandsWritten);
     for (uint32_t i = 0; i < properties.count; ++i) {
         cssSerializeValues(&texts, values[i]);
-        ends[i] = texts.text.count;
+        ends[i] = texts.size;
     }
     for (uint32_t i = 0; i < properties.count; ++i) {
         uint32_t from = i == 0 ? 0 : ends[i - 1];
-        views[i] = PrStringView{texts.text.data + from, ends[i] - from};
+        views[i] = PrStringView{texts.data + from, ends[i] - from};
     }
 
     Longhands l = {shorthand, properties, values, views};
-    uint32_t start = out->text.count;
+    uint32_t start = out->size;
     if (!serializeLonghands(&l, out))
-        out->text.count = start;
-    textReset(&texts);
+        out->size = start;
+    prTextBufferReset(&texts);
 }
 
 } // namespace pr_impl

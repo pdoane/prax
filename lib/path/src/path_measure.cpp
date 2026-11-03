@@ -56,7 +56,7 @@ struct PathMeasure {
 };
 
 float distanceBetween(PrVec2 a, PrVec2 b) {
-    return sqrtF32((b.x - a.x) * (b.x - a.x) + (b.y - a.y) * (b.y - a.y));
+    return prF32Sqrt((b.x - a.x) * (b.x - a.x) + (b.y - a.y) * (b.y - a.y));
 }
 
 void addPoint(PathMeasure& m, PrVec2 p) {
@@ -88,7 +88,7 @@ void endContour(PathMeasure& m, bool closed) {
 // Returns the cell that a coordinate falls in along an axis, clamped to the grid. Returns the first cell for a
 // coordinate that is not a number.
 uint32_t cellOf(float at, float origin, float size, uint32_t cells) {
-    float cell = floorF32((at - origin) / size);
+    float cell = prF32Floor((at - origin) / size);
     return !(cell >= 0) ? 0 : cell >= float(cells) ? cells - 1 : uint32_t(cell);
 }
 
@@ -101,20 +101,20 @@ void cellRange(float low, float high, float origin, float size, uint32_t cells, 
 void buildGrid(PathMeasure& m) {
     uint32_t total = m.segments.count;
     PrRect& b = m.bounds;
-    b = PrRect{kF32Max, kF32Max, -kF32Max, -kF32Max};
+    b = PrRect{kPrF32Max, kPrF32Max, -kPrF32Max, -kPrF32Max};
     for (uint32_t i = 0; i < m.points.count; ++i) {
         PrVec2 p = m.points.data[i];
-        b.left = minF32(b.left, p.x);
-        b.top = minF32(b.top, p.y);
-        b.right = maxF32(b.right, p.x);
-        b.bottom = maxF32(b.bottom, p.y);
+        b.left = prF32Min(b.left, p.x);
+        b.top = prF32Min(b.top, p.y);
+        b.right = prF32Max(b.right, p.x);
+        b.bottom = prF32Max(b.bottom, p.y);
     }
-    float side = ceilF32(sqrtF32(float(total)));
+    float side = prF32Ceil(prF32Sqrt(float(total)));
     uint32_t cells = side < 1 ? 1 : side > float(kMaxCells) ? kMaxCells : uint32_t(side);
     m.columns = cells;
     m.rows = cells;
-    m.cellWidth = maxF32(prRectWidth(b) / float(cells), kCoincident);
-    m.cellHeight = maxF32(prRectHeight(b) / float(cells), kCoincident);
+    m.cellWidth = prF32Max(prRectWidth(b) / float(cells), kCoincident);
+    m.cellHeight = prF32Max(prRectHeight(b) / float(cells), kCoincident);
     uint32_t count = m.columns * m.rows;
     m.cellStart.reserve(count + 1);
     m.cellStart.count = count + 1;
@@ -129,8 +129,8 @@ void buildGrid(PathMeasure& m) {
             uint32_t x1 = 0;
             uint32_t y0 = 0;
             uint32_t y1 = 0;
-            cellRange(minF32(p.x, q.x), maxF32(p.x, q.x), b.left, m.cellWidth, m.columns, &x0, &x1);
-            cellRange(minF32(p.y, q.y), maxF32(p.y, q.y), b.top, m.cellHeight, m.rows, &y0, &y1);
+            cellRange(prF32Min(p.x, q.x), prF32Max(p.x, q.x), b.left, m.cellWidth, m.columns, &x0, &x1);
+            cellRange(prF32Min(p.y, q.y), prF32Max(p.y, q.y), b.top, m.cellHeight, m.rows, &y0, &y1);
             for (uint32_t y = y0; y <= y1 && y < m.rows; ++y) {
                 for (uint32_t x = x0; x <= x1 && x < m.columns; ++x) {
                     uint32_t cell = y * m.columns + x;
@@ -175,13 +175,13 @@ uint32_t segmentAt(const PathMeasure& m, const Contour& c, float distance) {
 }
 
 void positionOf(const PathMeasure& m, const Contour& c, float distance, PrVec2* point, PrVec2* tangent) {
-    distance = clampF32(distance, 0, c.length);
+    distance = prF32Clamp(distance, 0, c.length);
     uint32_t i = segmentAt(m, c, distance);
     PrVec2 a = m.points.data[c.first + i];
     PrVec2 b = m.points.data[c.first + (i + 1) % c.count];
     float start = m.along.data[c.first + i];
     float span = distanceBetween(a, b);
-    float t = span > 0 ? clampF32((distance - start) / span, 0, 1) : 0;
+    float t = span > 0 ? prF32Clamp((distance - start) / span, 0, 1) : 0;
     *point = a + (b - a) * t;
     *tangent = span > 0 ? (b - a) / span : PrVec2{1, 0};
 }
@@ -287,7 +287,7 @@ PrPathMeasurePosition prPathMeasurePosition(const PrPathMeasure* measure, float 
     PrPathMeasurePosition out{PrVec2{0, 0}, PrVec2{1, 0}};
     if (measure->contours.count == 0)
         return out;
-    distance = clampF32(distance, 0, measure->length);
+    distance = prF32Clamp(distance, 0, measure->length);
     const Contour& c = measure->contours.data[contourAt(*measure, distance)];
     positionOf(*measure, c, distance - c.start, &out.point, &out.tangent);
     return out;
@@ -304,14 +304,14 @@ bool prPathMeasureLineTransform(const PrPathMeasure* measure, float distance, Pr
 }
 
 void prPathMeasureSegment(const PrPathMeasure* measure, float start, float end, PrPathPolyline* out) {
-    start = clampF32(start, 0, measure->length);
-    end = clampF32(end, 0, measure->length);
+    start = prF32Clamp(start, 0, measure->length);
+    end = prF32Clamp(end, 0, measure->length);
     if (!(end > start))
         return;
     for (uint32_t k = 0; k < measure->contours.count; ++k) {
         const Contour& c = measure->contours.data[k];
-        float from = maxF32(start, c.start) - c.start;
-        float to = minF32(end, c.start + c.length) - c.start;
+        float from = prF32Max(start, c.start) - c.start;
+        float to = prF32Min(end, c.start + c.length) - c.start;
         if (!(to > from))
             continue;
         PrVec2 point{};
@@ -350,16 +350,16 @@ bool prPathMeasureNearest(const PrPathMeasure* measure, PrVec2 point, float reac
                 PrVec2 d{b.x - a.x, b.y - a.y};
                 float lengthSquared = d.x * d.x + d.y * d.y;
                 PrVec2 pa{point.x - a.x, point.y - a.y};
-                float t = lengthSquared > 0 ? clampF32((pa.x * d.x + pa.y * d.y) / lengthSquared, 0, 1) : 0;
+                float t = lengthSquared > 0 ? prF32Clamp((pa.x * d.x + pa.y * d.y) / lengthSquared, 0, 1) : 0;
                 PrVec2 near{a.x + d.x * t - point.x, a.y + d.y * t - point.y};
                 float squared = near.x * near.x + near.y * near.y;
-                bool tied = found && absF32(squared - best) <= kPrPathMeasureTieTolerance;
+                bool tied = found && prF32Abs(squared - best) <= kPrPathMeasureTieTolerance;
                 if (tied ? segment >= bestSegment : squared > best)
                     continue;
                 best = squared;
                 found = true;
                 bestSegment = segment;
-                float length = sqrtF32(lengthSquared);
+                float length = prF32Sqrt(lengthSquared);
                 out->contour = s.contour;
                 out->distance = measure->contours.data[s.contour].start + measure->along.data[s.from] + t * length;
                 out->offset = length > 0 ? (d.x * pa.y - d.y * pa.x) / length : 0;

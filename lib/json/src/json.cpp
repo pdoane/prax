@@ -61,7 +61,7 @@ uint32_t emit(Reader& r, PrJsonKind kind) {
 
 bool literal(Reader& r, const char* word, PrJsonKind kind) {
     PrStringView rest{r.text + r.at, r.size - r.at};
-    if (!stringStartsWith(rest, word))
+    if (!prStringStartsWith(rest, word))
         return false;
     r.at += PrStringView(word).size;
     emit(r, kind);
@@ -72,7 +72,7 @@ bool number(Reader& r) {
     size_t start = r.at;
     auto digits = [&] {
         size_t from = r.at;
-        while (r.at < r.size && asciiIsDigit(r.text[r.at]))
+        while (r.at < r.size && prAsciiIsDigit(r.text[r.at]))
             ++r.at;
         return r.at > from;
     };
@@ -96,7 +96,7 @@ bool number(Reader& r) {
             return false;
     }
     double value = 0;
-    if (!decimalToF64(PrStringView{r.text + start, r.at - start}, &value))
+    if (!prF64ParsePrefix(PrStringView{r.text + start, r.at - start}, &value))
         return false;
     uint32_t index = emit(r, PrJsonKind_Number);
     r.document->values.data[index].number = value;
@@ -110,9 +110,9 @@ int32_t hexUnit(Reader& r) {
         return -1;
     int32_t unit = 0;
     for (uint32_t i = 0; i < 4; ++i) {
-        if (!asciiIsHexDigit(r.text[r.at + i]))
+        if (!prAsciiIsHexDigit(r.text[r.at + i]))
             return -1;
-        unit = unit << 4 | int32_t(asciiHexValue(r.text[r.at + i]));
+        unit = unit << 4 | int32_t(prAsciiHexValue(r.text[r.at + i]));
     }
     r.at += 4;
     return unit;
@@ -316,7 +316,7 @@ struct JsonWriterOpen {
 
 // JSON text under construction, and the containers that are open in it.
 struct JsonWriter {
-    TextBuffer text;
+    PrTextBuffer text = {};
     Array<JsonWriterOpen> open; // innermost last
     bool hasRoot;
 };
@@ -335,72 +335,72 @@ void beforeValue(JsonWriter* w) {
         return;
     }
     if (open.hasValue)
-        textAppendChar(&w->text, ',');
+        prTextBufferAppendChar(&w->text, ',');
     open.hasValue = true;
 }
 
 void begin(JsonWriter* w, PrJsonKind kind) {
     beforeValue(w);
-    textAppendChar(&w->text, kind == PrJsonKind_Object ? '{' : '[');
+    prTextBufferAppendChar(&w->text, kind == PrJsonKind_Object ? '{' : '[');
     w->open.push({.kind = kind});
 }
 
 void end(JsonWriter* w, PrJsonKind kind) {
     PR_ASSERT(w->open.count != 0 && w->open.last().kind == kind && !w->open.last().awaitsValue);
     w->open.pop();
-    textAppendChar(&w->text, kind == PrJsonKind_Object ? '}' : ']');
+    prTextBufferAppendChar(&w->text, kind == PrJsonKind_Object ? '}' : ']');
 }
 
 void quote(JsonWriter* w, PrStringView value) {
     static const char kHex[] = "0123456789abcdef";
-    TextBuffer* out = &w->text;
-    textAppendChar(out, '"');
+    PrTextBuffer* out = &w->text;
+    prTextBufferAppendChar(out, '"');
     size_t i = 0;
     while (i < value.size) {
         size_t run = i;
         while (i < value.size && value.data[i] != '"' && value.data[i] != '\\' && uint8_t(value.data[i]) >= 0x20 &&
                 uint8_t(value.data[i]) < 0x80)
             ++i;
-        textAppend(out, value.data + run, uint32_t(i - run));
+        prTextBufferAppend(out, PrStringView{value.data + run, uint32_t(i - run)});
         if (i >= value.size)
             break;
         uint8_t c = uint8_t(value.data[i]);
         if (c >= 0x80) {
             uint32_t codePoint = 0;
             i += prUtf8DecodeScalar(value, i, &codePoint);
-            textAppendCodePoint(out, codePoint);
+            prTextBufferAppendCodePoint(out, codePoint);
             continue;
         }
         ++i;
-        textAppendChar(out, '\\');
+        prTextBufferAppendChar(out, '\\');
         switch (c) {
             case '"':
             case '\\':
-                textAppendChar(out, char(c));
+                prTextBufferAppendChar(out, char(c));
                 break;
             case '\b':
-                textAppendChar(out, 'b');
+                prTextBufferAppendChar(out, 'b');
                 break;
             case '\f':
-                textAppendChar(out, 'f');
+                prTextBufferAppendChar(out, 'f');
                 break;
             case '\n':
-                textAppendChar(out, 'n');
+                prTextBufferAppendChar(out, 'n');
                 break;
             case '\r':
-                textAppendChar(out, 'r');
+                prTextBufferAppendChar(out, 'r');
                 break;
             case '\t':
-                textAppendChar(out, 't');
+                prTextBufferAppendChar(out, 't');
                 break;
             default:
-                textAppend(out, "u00");
-                textAppendChar(out, kHex[c >> 4]);
-                textAppendChar(out, kHex[c & 15]);
+                prTextBufferAppend(out, "u00");
+                prTextBufferAppendChar(out, kHex[c >> 4]);
+                prTextBufferAppendChar(out, kHex[c & 15]);
                 break;
         }
     }
-    textAppendChar(out, '"');
+    prTextBufferAppendChar(out, '"');
 }
 
 } // namespace
@@ -429,7 +429,7 @@ bool prJsonParse(PrJson* document, PrStringView text, size_t* PR_NULLABLE errorA
     document->values.clear();
     document->text.clear();
     Reader r{text.data, text.size, 0, document};
-    if (stringStartsWith(text, "\xEF\xBB\xBF"))
+    if (prStringStartsWith(text, "\xEF\xBB\xBF"))
         r.at = 3;
     bool ok = text.size > 0 && read(r);
     if (!ok) {
@@ -519,13 +519,13 @@ PrJsonWriter* prJsonWriterCreate(void) {
 void prJsonWriterDestroy(PrJsonWriter* PR_NULLABLE writer) {
     if (writer == nullptr)
         return;
-    writer->text.text.reset();
+    prTextBufferReset(&writer->text);
     writer->open.reset();
     prMemoryFree(writer);
 }
 
 void prJsonWriterClear(PrJsonWriter* writer) {
-    textClear(&writer->text);
+    prTextBufferClear(&writer->text);
     writer->open.clear();
     writer->hasRoot = false;
 }
@@ -551,11 +551,11 @@ void prJsonWriterKey(PrJsonWriter* writer, PrStringView key) {
         !writer->open.last().awaitsValue);
     JsonWriterOpen& open = writer->open.last();
     if (open.hasValue)
-        textAppendChar(&writer->text, ',');
+        prTextBufferAppendChar(&writer->text, ',');
     open.hasValue = true;
     open.awaitsValue = true;
     quote(writer, key);
-    textAppendChar(&writer->text, ':');
+    prTextBufferAppendChar(&writer->text, ':');
 }
 
 void prJsonWriterString(PrJsonWriter* writer, PrStringView value) {
@@ -565,22 +565,22 @@ void prJsonWriterString(PrJsonWriter* writer, PrStringView value) {
 
 void prJsonWriterNumber(PrJsonWriter* writer, double value) {
     beforeValue(writer);
-    if (!isFiniteF64(value)) {
-        textAppend(&writer->text, "null");
+    if (!prF64IsFinite(value)) {
+        prTextBufferAppend(&writer->text, "null");
         return;
     }
-    char text[kF64TextMaxBytes];
-    textAppend(&writer->text, text, uint32_t(formatF64(value, text)));
+    char text[kPrF64TextMaxBytes];
+    prTextBufferAppend(&writer->text, PrStringView{text, uint32_t(prF64Format(value, text))});
 }
 
 void prJsonWriterBool(PrJsonWriter* writer, bool value) {
     beforeValue(writer);
-    textAppend(&writer->text, value ? "true" : "false");
+    prTextBufferAppend(&writer->text, value ? "true" : "false");
 }
 
 void prJsonWriterNull(PrJsonWriter* writer) {
     beforeValue(writer);
-    textAppend(&writer->text, "null");
+    prTextBufferAppend(&writer->text, "null");
 }
 
 void prJsonWriterValue(PrJsonWriter* writer, const PrJson* document, PrJsonValueIndex index) {
@@ -618,5 +618,5 @@ void prJsonWriterValue(PrJsonWriter* writer, const PrJson* document, PrJsonValue
 }
 
 PrStringView prJsonWriterText(const PrJsonWriter* writer) {
-    return textView(&writer->text);
+    return prTextBufferView(&writer->text);
 }

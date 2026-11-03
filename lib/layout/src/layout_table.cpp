@@ -131,7 +131,7 @@ constexpr int32_t kColumnMax = 1 << 28;
 
 // Returns the unit nearest to `raw` units.
 PrLayoutUnit unitOf(double raw) {
-    return prLayoutUnitClamped(int64_t(roundF64(raw)));
+    return prLayoutUnitClamped(int64_t(prF64Round(raw)));
 }
 
 // Returns the box style of the table part `node`, or that of an anonymous cell for kPrLayoutNodeNone.
@@ -865,7 +865,7 @@ double percentOf(const LayoutStyles* styles, PrLayoutLength length) {
     constexpr int32_t kBase = 1 << 20;
     double whole = double(layoutResolve(styles, length, layoutUnit(kBase)).raw);
     double none = double(layoutResolve(styles, length, kLayoutUnitZero).raw);
-    return maxF64(0, (whole - none) / double(kBase));
+    return prF64Max(0, (whole - none) / double(kBase));
 }
 
 // Returns the widths that the style `box` gives a cell or a column. `edges` is the box's inline padding and borders. A
@@ -898,7 +898,7 @@ Widths widthsOf(const LayoutStyles* styles, const PrLayoutBoxStyle& box, const L
         else
             w.maxWidth = border(logical.maxInlineSize);
     }
-    w.percent = minF64(w.percent, percentMax);
+    w.percent = prF64Min(w.percent, percentMax);
     if (cell && w.fixedWidth) {
         if (layoutIsDefinite(w.maxWidth))
             w.width = layoutUnitMin(w.width, w.maxWidth);
@@ -985,7 +985,7 @@ void measureColumnBoxes(Table& t) {
             LayoutTableColumn& column = t.column(c);
             column.minContent = layoutUnitMax(column.minContent, min);
             column.maxContent = layoutUnitMax(column.maxContent, max);
-            column.percent = maxF64(column.percent, w.percent);
+            column.percent = prF64Max(column.percent, w.percent);
             column.constrained = column.constrained || w.fixedWidth;
         }
     }
@@ -1030,7 +1030,7 @@ void measureColumns(Table& t) {
             max = layoutUnitMax(cell.minContent, cell.width);
         column.minContent = layoutUnitMax(column.minContent, min);
         column.maxContent = layoutUnitMax(column.maxContent, max);
-        column.percent = maxF64(column.percent, cell.percent);
+        column.percent = prF64Max(column.percent, cell.percent);
     }
     for (uint32_t c = 0; c < t.columnCount; ++c) {
         LayoutTableColumn& column = t.column(c);
@@ -1073,8 +1073,8 @@ void measureColumns(Table& t) {
             double cellMax = double((t.fixed ? cell.width : cell.maxContent).raw) - spacing;
             // The min-content contribution: what lies between the columns' min-content and max-content widths goes in
             // proportion to the room between them, and what lies past their max-content widths in proportion to those.
-            double between = minF64(maxF64(cellMin - baseMin, 0), baseMax - baseMin);
-            double past = maxF64(cellMin - baseMax, 0);
+            double between = prF64Min(prF64Max(cellMin - baseMin, 0), baseMax - baseMin);
+            double past = prF64Max(cellMin - baseMax, 0);
             shareOut(past, first, span, [&](uint32_t c) { return double(before(c).maxContent.raw); }, shares);
             for (uint32_t c = first; c < first + span; ++c) {
                 double room = double((before(c).maxContent - before(c).minContent).raw);
@@ -1082,7 +1082,7 @@ void measureColumns(Table& t) {
                 PrLayoutUnit contribution = unitOf(double(before(c).minContent.raw) + share + shares[c - first]);
                 t.column(c).minContent = layoutUnitMax(t.column(c).minContent, contribution);
             }
-            shareOut(maxF64(cellMax - baseMax, 0), first, span,
+            shareOut(prF64Max(cellMax - baseMax, 0), first, span,
                 [&](uint32_t c) { return double(before(c).maxContent.raw); }, shares);
             for (uint32_t c = first; c < first + span; ++c) {
                 PrLayoutUnit contribution = unitOf(double(before(c).maxContent.raw) + shares[c - first]);
@@ -1090,14 +1090,14 @@ void measureColumns(Table& t) {
             }
             // The percentage contribution goes to the columns that have none, in proportion to their max-content widths
             // from the cells that span them alone, or equally.
-            double percent = maxF64(cell.percent - percents, 0);
+            double percent = prF64Max(cell.percent - percents, 0);
             if (percent > 0 && free != 0) {
                 for (uint32_t c = first; c < first + span; ++c) {
                     if (before(c).percent != 0)
                         continue;
                     double share =
                         freeMax > 0 ? percent * double(before(c).spanningMax.raw) / freeMax : percent / double(free);
-                    t.column(c).percent = maxF64(t.column(c).percent, share);
+                    t.column(c).percent = prF64Max(t.column(c).percent, share);
                 }
             }
         }
@@ -1117,7 +1117,7 @@ void measureColumns(Table& t) {
             column.percent = 0;
         }
         if (!t.fixed)
-            column.percent = minF64(column.percent, maxF64(1 - sum, 0));
+            column.percent = prF64Min(column.percent, prF64Max(1 - sum, 0));
         sum += column.percent;
         if (t.fixed && column.percent > 0)
             column.minContent = kLayoutUnitZero;
@@ -1150,21 +1150,21 @@ GridWidths gridWidths(const Table& t) {
         max += double(column.maxContent.raw);
         percents += column.percent;
         if (column.percent > 0)
-            asked = maxF64(asked, double(column.maxContent.raw) / column.percent);
+            asked = prF64Max(asked, double(column.maxContent.raw) / column.percent);
         else
             others += double(column.maxContent.raw);
     }
     bool unbounded = percents >= 1 && others > 0;
     if (percents > 0) {
         if (percents < 1)
-            asked = maxF64(asked, others / (1 - percents));
-        max = maxF64(max, asked);
+            asked = prF64Max(asked, others / (1 - percents));
+        max = prF64Max(max, asked);
     }
     PrLayoutUnit spacing = spacingAcross(t.inlineSpacing, visibleColumns(t, 0, t.columnCount));
     double fixed = double((spacing + layoutEdgesInline(t.edges)).raw);
     return GridWidths{
         .minContent = unitOf(min + fixed),
-        .maxContent = unitOf(minF64(max, double(kColumnMax)) + fixed),
+        .maxContent = unitOf(prF64Min(max, double(kColumnMax)) + fixed),
         .unbounded = unbounded,
     };
 }
@@ -1182,7 +1182,7 @@ void distributeAuto(Table& t, double width) {
         if (which == 0 || column.collapsed)
             return min;
         if (column.percent > 0)
-            return maxF64(min, column.percent * width);
+            return prF64Max(min, column.percent * width);
         if (which == 1 || (which == 2 && !column.constrained))
             return min;
         return double(column.maxContent.raw);
@@ -1207,7 +1207,7 @@ void distributeAuto(Table& t, double width) {
         while (lower < 2 && sums[lower + 1] < width)
             ++lower;
         double span = sums[lower + 1] - sums[lower];
-        double weight = span > 0 ? minF64(maxF64((width - sums[lower]) / span, 0), 1) : 0;
+        double weight = span > 0 ? prF64Min(prF64Max((width - sums[lower]) / span, 0), 1) : 0;
         for (uint32_t c = 0; c < t.columnCount; ++c) {
             const LayoutTableColumn& column = t.column(c);
             double from = guess(lower, column);
@@ -1280,7 +1280,8 @@ void distributeFixed(Table& t, double width) {
         else
             ++autos;
     }
-    double scale = percents > 0 && lengths + percents * width > width ? maxF64(0, width - lengths) / (percents * width) : 1;
+    bool overflows = percents > 0 && lengths + percents * width > width;
+    double scale = overflows ? prF64Max(0, width - lengths) / (percents * width) : 1;
     double left = width - lengths - percents * width * scale;
     double sum = 0;
     PrLayoutUnit placed = kLayoutUnitZero;
@@ -1495,7 +1496,7 @@ void sizeRows(Table& t) {
         // A cell that spans one row gives the row its percentage, if larger (css-tables-3/#row-layout).
         if (cell.rowSpan == 1) {
             row.blockSize = layoutUnitMax(row.blockSize, size);
-            row.percent = maxF64(row.percent, cell.blockPercent);
+            row.percent = prF64Max(row.percent, cell.blockPercent);
         }
     }
     for (uint32_t grid = 0; grid < t.rowCount; ++grid) {

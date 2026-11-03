@@ -145,7 +145,7 @@ const PrDrawFilter* PR_NULLABLE lottieLayerFilter(const LottieRender& r, const L
                 float color[4];
                 valueOf(a, effect, 0, frame, color);
                 float opacity = scalarOf(a, effect, 1, frame) / 255;
-                float angle = (scalarOf(a, effect, 2, frame) - 90) * kPiF32 / 180;
+                float angle = (scalarOf(a, effect, 2, frame) - 90) * kPrF32Pi / 180;
                 float distance = scalarOf(a, effect, 3, frame);
                 float sigma = scalarOf(a, effect, 4, frame) / 4;
                 PrDrawFilterNode shadow{};
@@ -153,11 +153,11 @@ const PrDrawFilter* PR_NULLABLE lottieLayerFilter(const LottieRender& r, const L
                 shadow.space = PrColorSpace_Srgb;
                 shadow.inputs[0] = source;
                 shadow.inputs[1] = source;
-                shadow.shadow.offset = PrVec2{distance * cosF32(angle), distance * sinF32(angle)};
+                shadow.shadow.offset = PrVec2{distance * prF32Cos(angle), distance * prF32Sin(angle)};
                 shadow.shadow.sigma = PrVec2{sigma, sigma};
                 shadow.shadow.color = PrColor{
-                    roundF32(color[0] * 255) / 255, roundF32(color[1] * 255) / 255,
-                    roundF32(color[2] * 255) / 255, clampF32(opacity, 0, 1),
+                    prF32Round(color[0] * 255) / 255, prF32Round(color[1] * 255) / 255,
+                    prF32Round(color[2] * 255) / 255, prF32Clamp(opacity, 0, 1),
                 };
                 result = prDrawFilterBuilderAdd(builder, &shadow);
                 break;

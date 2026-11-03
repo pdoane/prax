@@ -293,7 +293,7 @@ TEST_CASE("Gzip validates optional headers and consecutive members without retai
     input.insert(input.end(), {3, 0, 'a', 0, 'b', 'f', 'i', 'l', 'e', 0});
     input.insert(input.end(), 70000, 'c');
     input.push_back(0);
-    const uint32_t crc = crc32Update(0, {input.data(), input.size()});
+    const uint32_t crc = prCrc32Update(0, {input.data(), input.size()});
     input.push_back(uint8_t(crc));
     input.push_back(uint8_t(crc >> 8));
     input.insert(input.end(), kGzip + 10, kGzip + sizeof(kGzip));
@@ -380,7 +380,7 @@ TEST_CASE("Zlib requests and validates preset dictionaries and retains their his
         result.append(reinterpret_cast<const char*>(output), written);
         if (status == InflateResult_Dictionary) {
             CHECK(at == 6);
-            CHECK(inflateDictionaryChecksum(parser) == adler32Update(1, {dictionary.data(), dictionary.size()}));
+            CHECK(inflateDictionaryChecksum(parser) == prAdler32Update(1, {dictionary.data(), dictionary.size()}));
             CHECK_FALSE(inflateSetDictionary(parser, {}));
             CHECK(inflateRead(parser, {}, true, &consumed, nullptr, 0, &written) == InflateResult_Dictionary);
             REQUIRE(inflateSetDictionary(parser, {dictionary.data(), dictionary.size()}));

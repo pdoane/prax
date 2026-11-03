@@ -39,9 +39,9 @@ uint32_t normalizeNewlines(char* out, PrStringView text) {
     char* write = out;
     size_t at = 0;
     while (at < text.size) {
-        const char* PR_NULLABLE mark = memFind(text.data + at, '\r', text.size - at);
+        const char* PR_NULLABLE mark = prMemFind(text.data + at, '\r', text.size - at);
         size_t end = mark != nullptr ? size_t(mark - text.data) : text.size;
-        memCopy(write, text.data + at, end - at);
+        prMemCopy(write, text.data + at, end - at);
         write += end - at;
         at = end;
         if (mark == nullptr)
@@ -56,11 +56,11 @@ uint32_t normalizeNewlines(char* out, PrStringView text) {
 // Returns `text` as the input stream holds it, with U+FFFD in place of each ill-formed sequence
 // (encoding/#utf-8-decoder). Text that needs no replacement is returned unchanged. Otherwise the result is written to
 // `repaired`.
-PrStringView wellFormed(PrStringView text, TextBuffer* repaired) {
+PrStringView wellFormed(PrStringView text, PrTextBuffer* repaired) {
     if (prUtf8Validate(text) == text.size)
         return text;
-    textAppendUtf8(repaired, text);
-    return textView(repaired);
+    prTextBufferAppendUtf8(repaired, text);
+    return prTextBufferView(repaired);
 }
 
 constexpr bool isSurrogate(uint32_t codePoint) {
@@ -178,7 +178,7 @@ constexpr HtmlByteTable makeHtmlBytes() {
     HtmlByteTable table = {};
     for (uint32_t b = 0; b < 256; ++b) {
         char c = char(b);
-        bool space = asciiIsSpace(c);
+        bool space = prAsciiIsSpace(c);
 
         ByteClass bits = 0;
         if (b == 0)
@@ -206,9 +206,9 @@ constexpr HtmlByteTable makeHtmlBytes() {
             bits |= ByteClass_Equals;
         if (b == '/')
             bits |= ByteClass_Solidus;
-        if (b < 0x80 && asciiIsUpper(c))
+        if (b < 0x80 && prAsciiIsUpper(c))
             bits |= ByteClass_Upper;
-        if (b < 0x80 && (asciiIsLetter(c) || asciiIsDigit(c)))
+        if (b < 0x80 && (prAsciiIsLetter(c) || prAsciiIsDigit(c)))
             bits |= ByteClass_Alnum;
         if (opensReported(b))
             bits |= ByteClass_Look;
@@ -504,7 +504,7 @@ uint32_t matchEntity(HtmlTokenizer* t, uint32_t from, PrStringView* text) {
         t->cut = true;
 
     if (end < source.size && end - from < kPrHtmlEntityMaxLength && source.data[end] == ';') {
-        PrStringView match = prHtmlEntityMatch(stringSlice(source, from, end + 1 - from));
+        PrStringView match = prHtmlEntityMatch(prStringSlice(source, from, end + 1 - from));
         if (match.data != nullptr) {
             *text = match;
             return end + 1 - from;
@@ -515,7 +515,7 @@ uint32_t matchEntity(HtmlTokenizer* t, uint32_t from, PrStringView* text) {
     if (length > kPrHtmlEntityMaxLegacyLength)
         length = kPrHtmlEntityMaxLegacyLength;
     for (; length != 0; --length) {
-        PrStringView match = prHtmlEntityMatch(stringSlice(source, from, length));
+        PrStringView match = prHtmlEntityMatch(prStringSlice(source, from, length));
         if (match.data != nullptr) {
             *text = match;
             return length;
@@ -532,7 +532,7 @@ void flushInput(HtmlTokenizer* t, HtmlSpan* PR_NULLABLE value, uint32_t from, ui
         return;
     }
     PrStringView text = htmlInputText(t);
-    emitRun(t, from, to, classesOf(stringSlice(text, from, to - from)), next);
+    emitRun(t, from, to, classesOf(prStringSlice(text, from, to - from)), next);
 }
 
 // Flushes the text that a reference resolved to, which is not the input's own bytes, in the same way as flushInput.
@@ -569,9 +569,9 @@ void readReference(HtmlTokenizer* t, HtmlSpan* PR_NULLABLE value, HtmlState next
 
         uint32_t code = 0;
         uint32_t end = digits;
-        while (end < text.size && (base == 16 ? asciiIsHexDigit(text.data[end]) : asciiIsDigit(text.data[end]))) {
+        while (end < text.size && (base == 16 ? prAsciiIsHexDigit(text.data[end]) : prAsciiIsDigit(text.data[end]))) {
             if (code <= kPrUtf8MaxCodePoint)
-                code = code * base + asciiHexValue(text.data[end]);
+                code = code * base + prAsciiHexValue(text.data[end]);
             ++end;
         }
         if (end == digits) {
@@ -665,7 +665,7 @@ uint32_t readName(HtmlTokenizer* t, HtmlSpan* name, ByteClass stop) {
             errorAt(t, HtmlErrorCode_UnexpectedNullCharacter, t->input.pos);
             appendText(t, name, kReplacement);
         } else {
-            appendChar(t, name, asciiLower(char(byte)));
+            appendChar(t, name, prAsciiLower(char(byte)));
         }
         ++t->input.pos;
     }
@@ -685,7 +685,7 @@ bool isTextEndTag(const HtmlTokenizer* t, uint32_t offset) {
 
     for (size_t i = 0; i < tag.size; ++i) {
         char byte = text.data[from + i];
-        if (!asciiIsLetter(byte) || asciiLower(byte) != asciiLower(tag.data[i]))
+        if (!prAsciiIsLetter(byte) || prAsciiLower(byte) != prAsciiLower(tag.data[i]))
             return false;
     }
     return (classOf(text.data[from + tag.size]) & ByteClass_TagEnd) != 0;
@@ -1138,9 +1138,9 @@ bool readDoctype(HtmlTokenizer* t, uint32_t start) {
         return eof(at);
 
     PrStringView text = htmlInputText(t);
-    PrStringView rest = stringSlice(text, at, text.size - at);
-    bool isPublic = asciiStartsWithFold(rest, "public");
-    bool isSystem = asciiStartsWithFold(rest, "system");
+    PrStringView rest = prStringSlice(text, at, text.size - at);
+    bool isPublic = prAsciiStartsWithFold(rest, "public");
+    bool isSystem = prAsciiStartsWithFold(rest, "system");
     if (!isPublic && !isSystem) {
         errorAt(t, HtmlErrorCode_InvalidCharacterSequenceAfterDoctypeName, at);
         t->token.flags |= HtmlTokenFlag_ForceQuirks;
@@ -1211,7 +1211,7 @@ bool readProcessingInstruction(HtmlTokenizer* t, uint32_t start) {
         errorAt(t, HtmlErrorCode_EofInProcessingInstruction, from);
         return emitEof(t);
     }
-    if (!asciiIsLetter(asciiOf(byte)) && byte != '_') {
+    if (!prAsciiIsLetter(prAsciiFromCodePoint(byte)) && byte != '_') {
         errorAt(t, HtmlErrorCode_InvalidFirstCharacterOfProcessingInstructionTarget, from);
         return readBogusComment(t, start, HtmlSpan{from - 1, from});
     }
@@ -1235,8 +1235,8 @@ bool readProcessingInstruction(HtmlTokenizer* t, uint32_t start) {
         return readBogusComment(t, start, HtmlSpan{from - 1, end});
     }
 
-    PrStringView target = stringSlice(text, from, end - from);
-    if (asciiEqualsFold(target, "xml") || asciiEqualsFold(target, "xml-stylesheet")) {
+    PrStringView target = prStringSlice(text, from, end - from);
+    if (prAsciiEqualsFold(target, "xml") || prAsciiEqualsFold(target, "xml-stylesheet")) {
         errorAt(t, HtmlErrorCode_DisallowedProcessingInstructionTarget, end);
         return readBogusComment(t, start, HtmlSpan{from - 1, end});
     }
@@ -1307,16 +1307,16 @@ bool readCdataSection(HtmlTokenizer* t) {
 bool readMarkupDeclaration(HtmlTokenizer* t, uint32_t start) {
     PrStringView text = htmlInputText(t);
     uint32_t at = t->input.pos;
-    PrStringView rest = stringSlice(text, at, text.size - at);
-    if (stringStartsWith(rest, "--")) {
+    PrStringView rest = prStringSlice(text, at, text.size - at);
+    if (prStringStartsWith(rest, "--")) {
         t->input.pos = at + 2;
         return readComment(t, start);
     }
-    if (asciiStartsWithFold(rest, "doctype")) {
+    if (prAsciiStartsWithFold(rest, "doctype")) {
         t->input.pos = at + 7;
         return readDoctype(t, start);
     }
-    if (stringStartsWith(rest, "[CDATA[")) {
+    if (prStringStartsWith(rest, "[CDATA[")) {
         t->input.pos = at + 7;
         if (t->foreign) {
             t->state = HtmlState_CdataSection;
@@ -1340,7 +1340,7 @@ bool readTagOpen(HtmlTokenizer* t, uint32_t start) {
     uint32_t at = start + 1;
     t->input.pos = at;
     uint32_t byte = readByte(t, at);
-    if (asciiIsLetter(asciiOf(byte)))
+    if (prAsciiIsLetter(prAsciiFromCodePoint(byte)))
         return readTag(t, HtmlTokenKind_StartTag, start);
     if (byte == '!') {
         t->input.pos = at + 1;
@@ -1354,7 +1354,7 @@ bool readTagOpen(HtmlTokenizer* t, uint32_t start) {
     // html/#end-tag-open-state: the name of an end tag.
     if (byte == '/') {
         uint32_t after = readByte(t, at + 1);
-        if (asciiIsLetter(asciiOf(after))) {
+        if (prAsciiIsLetter(prAsciiFromCodePoint(after))) {
             t->input.pos = at + 1;
             return readTag(t, HtmlTokenKind_EndTag, start);
         }
@@ -1526,11 +1526,11 @@ bool readScript(HtmlTokenizer* t) {
         bool closing = after < text.size && text.data[after] == '/';
         uint32_t name = closing ? after + 1 : after;
         uint32_t end = name;
-        while (end < text.size && asciiIsLetter(text.data[end]))
+        while (end < text.size && prAsciiIsLetter(text.data[end]))
             ++end;
         if (end != name && end < text.size && (classOf(text.data[end]) & ByteClass_TagEnd) != 0 &&
                 closing == (state == HtmlState_ScriptDataDoubleEscaped) &&
-                asciiEqualsFold(stringSlice(text, name, end - name), "script")) {
+                prAsciiEqualsFold(prStringSlice(text, name, end - name), "script")) {
             state = closing ? HtmlState_ScriptDataEscaped : HtmlState_ScriptDataDoubleEscaped;
             t->input.pos = end;
             continue;
@@ -1563,11 +1563,11 @@ void insertText(HtmlTokenizer* tokenizer, PrStringView text) {
     uint32_t room = uint32_t(text.size);
 
     input.reserve(input.count + room);
-    memMove(input.data + at + room, input.data + at, input.count - at);
+    prMemMove(input.data + at + room, input.data + at, input.count - at);
 
     uint32_t size = normalizeNewlines(input.data + at, text);
     if (size != room)
-        memMove(input.data + at + size, input.data + at + room, input.count - at);
+        prMemMove(input.data + at + size, input.data + at + room, input.count - at);
     input.count += size;
     if (endsWithCarriageReturn)
         carriageReturn = at + size;
@@ -1614,14 +1614,14 @@ bool reachedEnd(const HtmlTokenizer* t, HtmlState state, uint32_t start) {
 } // namespace
 
 void htmlTokenizerStart(HtmlTokenizer* tokenizer, PrStringView source, Array<HtmlError>* errors) {
-    TextBuffer repaired;
+    PrTextBuffer repaired = {};
     PrStringView text = wellFormed(source, &repaired);
     tokenizer->input.text.count = 0;
     if (text.size != 0) {
         tokenizer->input.text.reserve(uint32_t(text.size));
         tokenizer->input.text.count = normalizeNewlines(tokenizer->input.text.data, text);
     }
-    textReset(&repaired);
+    prTextBufferReset(&repaired);
 
     tokenizer->input.pos = 0;
     tokenizer->input.carriageReturn = 0;
@@ -1663,9 +1663,9 @@ void htmlTokenizerSetState(HtmlTokenizer* tokenizer, HtmlState state, PrStringVi
 }
 
 void htmlTokenizerInsert(HtmlTokenizer* tokenizer, PrStringView text) {
-    TextBuffer repaired;
+    PrTextBuffer repaired = {};
     insertText(tokenizer, wellFormed(text, &repaired));
-    textReset(&repaired);
+    prTextBufferReset(&repaired);
 }
 
 void htmlTokenizerAppend(HtmlTokenizer* tokenizer, PrStringView text) {
@@ -1695,13 +1695,13 @@ void htmlTokenizerMakeCharacters(HtmlTokenizer* tokenizer, PrStringView text) {
     tokenizer->values.count = 0;
     tokenizer->attributes.count = 0;
     tokenizer->token = HtmlToken{};
-    TextBuffer repaired;
+    PrTextBuffer repaired = {};
     PrStringView formed = wellFormed(text, &repaired);
     tokenizer->values.reserve(uint32_t(formed.size));
     tokenizer->values.count = normalizeNewlines(tokenizer->values.data, formed);
-    textReset(&repaired);
+    prTextBufferReset(&repaired);
     PrStringView written{tokenizer->values.data, tokenizer->values.count};
-    PR_ASSERT(stringFind(written, '\0') == written.size);
+    PR_ASSERT(prStringFindByte(written, '\0') == written.size);
     tokenizer->token.kind = HtmlTokenKind_Character;
     tokenizer->token.flags = textFlags(classesOf(written));
     tokenizer->token.span = HtmlSpan{tokenizer->input.pos, tokenizer->input.pos};
@@ -1713,12 +1713,12 @@ void htmlTokenizerAddAttribute(HtmlTokenizer* tokenizer, PrStringView name, PrSt
     HtmlAttribute attribute{};
     attribute.name = HtmlSpan{tokenizer->values.count | kHtmlSpanValues, tokenizer->values.count};
     appendText(tokenizer, &attribute.name, name);
-    TextBuffer repaired;
+    PrTextBuffer repaired = {};
     PrStringView formed = wellFormed(value, &repaired);
     uint32_t start = tokenizer->values.count;
     tokenizer->values.reserve(start + uint32_t(formed.size));
     tokenizer->values.count = start + normalizeNewlines(tokenizer->values.data + start, formed);
-    textReset(&repaired);
+    prTextBufferReset(&repaired);
     attribute.value = HtmlSpan{start | kHtmlSpanValues, tokenizer->values.count};
     tokenizer->attributes.push(attribute);
 }

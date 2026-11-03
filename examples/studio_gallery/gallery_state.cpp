@@ -352,8 +352,8 @@ const PrDrawImage* galleryPicture(GalleryState& state) {
                 color[1] = 0.86f;
                 color[2] = 0.55f;
             }
-            float far = 0.62f + 0.08f * sinF32(u * 9 + 1) + 0.04f * sinF32(u * 23);
-            float near = 0.76f + 0.07f * sinF32(u * 5 + 3) + 0.03f * sinF32(u * 17 + 2);
+            float far = 0.62f + 0.08f * prF32Sin(u * 9 + 1) + 0.04f * prF32Sin(u * 23);
+            float near = 0.76f + 0.07f * prF32Sin(u * 5 + 3) + 0.03f * prF32Sin(u * 17 + 2);
             if (v > far) {
                 color[0] = 0.22f;
                 color[1] = 0.24f;

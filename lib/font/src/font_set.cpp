@@ -178,7 +178,7 @@ void familyChanged(FontSet* set, PrStringView family) {
     changed(set);
     uint64_t stamp = set->stamp.load();
     for (uint32_t i = 0; i < set->familyStamps.count; ++i) {
-        if (asciiEqualsFold(prStringView(&set->familyStamps.data[i].name), family)) {
+        if (prAsciiEqualsFold(prStringView(&set->familyStamps.data[i].name), family)) {
             set->familyStamps.data[i].stamp = stamp;
             return;
         }
@@ -198,7 +198,7 @@ uint64_t ownFamilyStamp(const FontSet* set, PrStringView family) {
     uint64_t stamp = set->bindingStamp;
     for (uint32_t i = 0; i < set->familyStamps.count; ++i) {
         const FamilyStamp& at = set->familyStamps.data[i];
-        if (at.stamp > stamp && asciiEqualsFold(prStringView(&at.name), family))
+        if (at.stamp > stamp && prAsciiEqualsFold(prStringView(&at.name), family))
             stamp = at.stamp;
     }
     return stamp;
@@ -262,7 +262,7 @@ void faceAdded(FontSet* set, uint32_t index) {
     PrStringView name = prStringView(&set->faces.data[index].family);
     bool known = false;
     for (uint32_t i = 0; i < set->families.count && !known; ++i)
-        known = asciiEqualsFold(prStringView(&set->families.data[i]), name);
+        known = prAsciiEqualsFold(prStringView(&set->families.data[i]), name);
     if (!known)
         set->families.push(prStringCopy(name));
     familyChanged(set, name);
@@ -375,7 +375,7 @@ void readFile(FontSet* set, uint32_t at) {
                 if (!sfntOpen(mapping.data, mapping.size, i, &sfnt))
                     continue;
                 PrString own = sfntFamily(sfnt);
-                bool same = !prStringIsNull(&own) && asciiEqualsFold(prStringView(&own), family);
+                bool same = !prStringIsNull(&own) && prAsciiEqualsFold(prStringView(&own), family);
                 prStringReset(&own);
                 if (pass == 0 && !same)
                     continue;
@@ -423,13 +423,13 @@ bool before(Rank a, Rank b) {
 // first.
 Rank widthRank(float value, float asked) {
     bool nearer = asked <= kPrFontWidthNormal ? value <= asked : value >= asked;
-    return Rank{nearer ? 0u : 1u, absF32(value - asked)};
+    return Rank{nearer ? 0u : 1u, prF32Abs(value - asked)};
 }
 
 // For weights from kPrFontWeightNormal to kPrFontSetWeightNormalMax, the search goes up to kPrFontSetWeightNormalMax,
 // then lighter, then heavier. For lighter weights it tries lighter first, and for heavier weights heavier first.
 Rank weightRank(float value, float asked) {
-    float distance = absF32(value - asked);
+    float distance = prF32Abs(value - asked);
     if (asked >= kPrFontWeightNormal && asked <= kPrFontSetWeightNormalMax) {
         if (value >= asked && value <= kPrFontSetWeightNormalMax)
             return Rank{0, distance};
@@ -442,7 +442,7 @@ Rank weightRank(float value, float asked) {
 // For oblique angles at or above the threshold, the search tries larger angles first, and for smaller angles smaller
 // first. Each direction goes toward zero before trying the other sign. Negative angles mirror this.
 Rank obliqueRank(float value, float asked) {
-    float distance = absF32(value - asked);
+    float distance = prF32Abs(value - asked);
     bool negative = asked < 0;
     float a = negative ? -asked : asked;
     float v = negative ? -value : value;
@@ -537,7 +537,7 @@ SlopeKind keepSlope(const FontSet* set, Array<Candidate>& candidates, const PrFo
                 asked = kPrFontSetObliqueAngle;
             for (uint32_t i = 0; i < candidates.count; ++i) {
                 const Face& face = set->faces.data[candidates.data[i].face];
-                candidates.data[i].value = clampF32(asked, face.obliqueMin, face.obliqueMax);
+                candidates.data[i].value = prF32Clamp(asked, face.obliqueMin, face.obliqueMax);
             }
             keepBest(candidates, asked, obliqueRank);
         }
@@ -554,20 +554,20 @@ AxisKey instanceAxes(const Face& face, const PrFontStyle* style, SlopeKind kind)
     bool widthFree = (face.unclamped & PrFontFaceAutoFlag_Width) != 0;
     bool slopeFree = (face.unclamped & PrFontFaceAutoFlag_Slope) != 0;
     if (d.weightMin != d.weightMax) {
-        float weight = clampF32(style->weight, weightFree ? d.weightMin : face.weightMin,
+        float weight = prF32Clamp(style->weight, weightFree ? d.weightMin : face.weightMin,
             weightFree ? d.weightMax : face.weightMax);
         setAxis(axes, 0, weight);
     }
     if (d.widthMin != d.widthMax) {
         float width =
-            clampF32(style->width, widthFree ? d.widthMin : face.widthMin, widthFree ? d.widthMax : face.widthMax);
+            prF32Clamp(style->width, widthFree ? d.widthMin : face.widthMin, widthFree ? d.widthMax : face.widthMax);
         setAxis(axes, 1, width);
     }
     if (d.obliqueMin != d.obliqueMax) {
         float angle = 0;
         if (kind == SlopeKind_Oblique || (slopeFree && style->slope == PrFontSlope_Oblique))
             angle = style->slope == PrFontSlope_Oblique ? style->obliqueAngle : kPrFontSetObliqueAngle;
-        setAxis(axes, 2, -clampF32(angle, slopeFree ? d.obliqueMin : face.obliqueMin,
+        setAxis(axes, 2, -prF32Clamp(angle, slopeFree ? d.obliqueMin : face.obliqueMin,
             slopeFree ? d.obliqueMax : face.obliqueMax));
     }
     if (d.italicAxis)
@@ -586,7 +586,7 @@ const PrFont* PR_NULLABLE instanceOf(FontSet* set, uint32_t faceIndex, const Axi
         hinting = SetHinting{PrFontHinting_None, nullptr};
     for (uint32_t i = 0; i < set->instances.count; ++i) {
         const Instance& instance = set->instances.data[i];
-        if (instance.face == face.id && memEquals(&instance.axes, &axes, sizeof(AxisKey)) &&
+        if (instance.face == face.id && prMemEquals(&instance.axes, &axes, sizeof(AxisKey)) &&
                 instance.hinting == hinting.hinting && instance.hinter == hinting.hinter)
             return instance.font;
     }
@@ -629,7 +629,7 @@ const PrFont* PR_NULLABLE instanceOf(FontSet* set, uint32_t faceIndex, const Axi
 bool definesFamily(const FontSet* set, PrStringView family) {
     for (uint32_t i = 0; i < set->faces.count; ++i) {
         const Face& face = set->faces.data[i];
-        if (asciiEqualsFold(prStringView(&face.family), family))
+        if (prAsciiEqualsFold(prStringView(&face.family), family))
             return true;
     }
     return false;
@@ -652,7 +652,7 @@ PrStringView aliasOf(const FontSet* set, PrStringView name) {
         Locked locked(at);
         for (uint32_t a = 0; a < at->aliases.count; ++a) {
             const Alias& alias = at->aliases.data[a];
-            if (asciiEqualsFold(prStringView(&alias.name), name))
+            if (prAsciiEqualsFold(prStringView(&alias.name), name))
                 return prStringView(&alias.family);
         }
     }
@@ -686,7 +686,7 @@ void matchIn(FontSet* set, const PrFontStyle* style, PrStringView family, SetHin
     Locked locked(set);
     for (uint32_t i = 0; i < set->faces.count;) {
         const Face& face = set->faces.data[i];
-        if (face.state == FaceState_Unread && asciiEqualsFold(prStringView(&face.family), family))
+        if (face.state == FaceState_Unread && prAsciiEqualsFold(prStringView(&face.family), family))
             readFile(set, i);
         else
             ++i;
@@ -696,8 +696,8 @@ void matchIn(FontSet* set, const PrFontStyle* style, PrStringView family, SetHin
     Array<Candidate> candidates;
     for (uint32_t i = 0; i < set->faces.count; ++i) {
         const Face& face = set->faces.data[i];
-        if (asciiEqualsFold(prStringView(&face.family), family))
-            candidates.push(Candidate{i, clampF32(style->width, face.widthMin, face.widthMax)});
+        if (prAsciiEqualsFold(prStringView(&face.family), family))
+            candidates.push(Candidate{i, prF32Clamp(style->width, face.widthMin, face.widthMax)});
     }
     // Sorts the highest rank first, an order that keepBest keeps.
     for (uint32_t i = 1; i < candidates.count; ++i) {
@@ -711,7 +711,7 @@ void matchIn(FontSet* set, const PrFontStyle* style, PrStringView family, SetHin
     SlopeKind kind = keepSlope(set, candidates, style);
     for (uint32_t i = 0; i < candidates.count; ++i) {
         const Face& face = set->faces.data[candidates.data[i].face];
-        candidates.data[i].value = clampF32(style->weight, face.weightMin, face.weightMax);
+        candidates.data[i].value = prF32Clamp(style->weight, face.weightMin, face.weightMax);
     }
     keepBest(candidates, style->weight, weightRank);
     for (uint32_t i = 0; i < candidates.count; ++i) {
@@ -732,7 +732,7 @@ void matchIn(FontSet* set, const PrFontStyle* style, PrStringView family, SetHin
                 style->slope == PrFontSlope_Oblique && face.info.obliqueMin != face.info.obliqueMax;
             if ((style->flags & PrFontStyleFlag_SynthesizeStyle) != 0 && slanted && kind == SlopeKind_Normal && !slants) {
                 float angle = style->slope == PrFontSlope_Oblique ? style->obliqueAngle : kPrFontSetObliqueAngle;
-                axes.oblique = tanF32(angle * (kPiF32 / 180));
+                axes.oblique = prF32Tan(angle * (kPrF32Pi / 180));
             }
             font = instanceOf(set, faceIndex, axes, hinting);
             if (font == nullptr)
@@ -792,7 +792,7 @@ struct PrFontSet : FontSet {};
 
 PrFontGeneric prFontGenericFromName(PrStringView keyword) {
     for (uint32_t i = 1; i < PrFontGeneric_Count; ++i) {
-        if (asciiEqualsFold(kGenericNames[i], keyword))
+        if (prAsciiEqualsFold(kGenericNames[i], keyword))
             return PrFontGeneric(i);
     }
     return PrFontGeneric_None;
@@ -915,8 +915,8 @@ void prFontSetAddFileFamily(PrFontSet* set, PrStringView family, PrStringView pa
     for (uint32_t i = 0; i < set->faces.count; ++i) {
         const Face& face = set->faces.data[i];
         PrStringView added = prStringView(&face.path);
-        if (face.state == FaceState_Unread && added.size == path.size && memEquals(added.data, path.data, path.size) &&
-                asciiEqualsFold(prStringView(&face.family), family))
+        if (face.state == FaceState_Unread && added.size == path.size && prMemEquals(added.data, path.data, path.size) &&
+                prAsciiEqualsFold(prStringView(&face.family), family))
             return;
     }
     PrFontFaceDescriptor descriptor = prFontFaceDescriptorDefault();
@@ -930,7 +930,7 @@ void prFontSetAddFileFamily(PrFontSet* set, PrStringView family, PrStringView pa
 
 PrFontSystemBackend prFontSystemBackendFromName(PrStringView name) {
     for (PrFontSystemBackend backend = 0; backend < PrFontSystemBackend_Count; ++backend) {
-        if (asciiEqualsFold(kSystemBackendNames[backend], name))
+        if (prAsciiEqualsFold(kSystemBackendNames[backend], name))
             return backend;
     }
     return PrFontSystemBackend_Count;
@@ -1083,7 +1083,7 @@ uint32_t prFontSetTakeLoads(PrFontSet* set, uint64_t* PR_NULLABLE out, uint32_t 
     for (uint32_t i = 0; i < taken; ++i)
         out[i] = set->requests.data[i];
     uint32_t left = set->requests.count - taken;
-    memMove(set->requests.data, set->requests.data + taken, left * sizeof(uint64_t));
+    prMemMove(set->requests.data, set->requests.data + taken, left * sizeof(uint64_t));
     set->requests.count = left;
     set->requestCount.store(left);
     return taken;
@@ -1099,7 +1099,7 @@ void prFontSetAlias(PrFontSet* set, PrStringView name, PrStringView family) {
     bindingChanged(set);
     for (uint32_t i = 0; i < set->aliases.count; ++i) {
         Alias& alias = set->aliases.data[i];
-        if (asciiEqualsFold(prStringView(&alias.name), name)) {
+        if (prAsciiEqualsFold(prStringView(&alias.name), name)) {
             prStringReset(&alias.family);
             alias.family = prStringCopy(family);
             return;

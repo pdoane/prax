@@ -304,14 +304,14 @@ DimensionFamily familyForArchitecture(ModelArchitecture arch) {
 }
 
 DimensionFamily familyForCheckpoint(PrStringView filename, DimensionFamily fallback) {
-    if (asciiContainsFold(filename, "xl"))
+    if (prAsciiContainsFold(filename, "xl"))
         return DimensionFamily_Sdxl;
     for (PrStringView marker : {"sd15", "sd-1-5", "sd_1_5", "v1-5", "1.5"}) {
-        if (asciiContainsFold(filename, marker))
+        if (prAsciiContainsFold(filename, marker))
             return DimensionFamily_Sd15;
     }
     for (PrStringView marker : {"flux", "sd3", "cascade"}) {
-        if (asciiContainsFold(filename, marker))
+        if (prAsciiContainsFold(filename, marker))
             return DimensionFamily_Flexible;
     }
     return fallback;
@@ -328,7 +328,7 @@ PrStringView familyName(DimensionFamily family) {
 
 DimensionFamily parseFamily(PrStringView name, DimensionFamily fallback) {
     for (DimensionFamily family : {DimensionFamily_Sdxl, DimensionFamily_Sd15, DimensionFamily_Flexible}) {
-        if (asciiContainsFold(name, familyName(family)))
+        if (prAsciiContainsFold(name, familyName(family)))
             return family;
     }
     return fallback;

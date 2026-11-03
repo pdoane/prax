@@ -20,9 +20,9 @@ void appendText(PrString* out, const char* text) {
 
 void appendNumbers(PrString* out, const float* values, uint32_t count) {
     for (uint32_t i = 0; i < count; ++i) {
-        char text[kF64TextMaxBytes + 1];
+        char text[kPrF64TextMaxBytes + 1];
         text[0] = ' ';
-        size_t size = formatF64(double(values[i]), text + 1);
+        size_t size = prF64Format(double(values[i]), text + 1);
         prStringAppend(out, PrStringView{text, size + 1});
     }
 }

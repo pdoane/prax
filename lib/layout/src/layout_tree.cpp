@@ -302,7 +302,7 @@ bool onlyItemFlex(const LayoutStyles* styles, PrLayoutStyleIndex a, PrLayoutStyl
     x.basis = y.basis;
     x.order = y.order;
     x.alignSelf = y.alignSelf;
-    return memEquals(&x, &y, sizeof x);
+    return prMemEquals(&x, &y, sizeof x);
 }
 
 // Returns true if two records differ in their grid groups only in what a grid container reads of its item: its
@@ -314,7 +314,7 @@ bool onlyItemGrid(const LayoutStyles* styles, PrLayoutStyleIndex a, PrLayoutStyl
     x.columnEnd = y.columnEnd;
     x.rowStart = y.rowStart;
     x.rowEnd = y.rowEnd;
-    return memEquals(&x, &y, sizeof x);
+    return prMemEquals(&x, &y, sizeof x);
 }
 
 // Marks the content of the flex or grid container `parent` that adjoins a position among its children, between
@@ -547,7 +547,7 @@ bool sameButHolding(const LayoutStyles* styles, PrLayoutStyleIndex a, PrLayoutSt
     PrLayoutBoxStyle y = layoutBoxStyle(styles, b);
     x.transformed = y.transformed;
     x.filtered = y.filtered;
-    return memEquals(&x, &y, sizeof(PrLayoutBoxStyle));
+    return prMemEquals(&x, &y, sizeof(PrLayoutBoxStyle));
 }
 
 // Returns true if the styles `a` and `b` of a table or a table part differ in the style or color of a border. `box` is
@@ -558,8 +558,8 @@ bool collapsingBorders(const LayoutStyles* styles, const PrLayoutBoxStyle& box, 
         return false;
     const PrLayoutDecorationStyle& x = layoutDecorationStyle(styles, a);
     const PrLayoutDecorationStyle& y = layoutDecorationStyle(styles, b);
-    return !memEquals(x.borderStyle, y.borderStyle, sizeof x.borderStyle) ||
-        !memEquals(x.borderColor, y.borderColor, sizeof x.borderColor);
+    return !prMemEquals(x.borderStyle, y.borderStyle, sizeof x.borderStyle) ||
+        !prMemEquals(x.borderColor, y.borderColor, sizeof x.borderColor);
 }
 
 // Returns true if a box out of flow may be in the subtree of `node`: the fragment that the last layout placed it with
@@ -587,46 +587,46 @@ LayoutScratch* scratchOf(LayoutTree* tree) {
 // The first difference between two results, as prLayoutTreeVerify reports it.
 struct Mismatch {
     LayoutNodeIndex node;           // the node it concerns, or kPrLayoutNodeNone
-    TextBuffer what;
+    PrTextBuffer what;
 };
 
 // Appends a layout unit as pixels, to two decimals.
-void appendUnit(TextBuffer* out, PrLayoutUnit unit) {
+void appendUnit(PrTextBuffer* out, PrLayoutUnit unit) {
     int64_t raw = unit.raw;
     if (raw < 0) {
-        textAppendChar(out, '-');
+        prTextBufferAppendChar(out, '-');
         raw = -raw;
     }
-    textAppendU64(out, uint64_t(raw / kPrLayoutUnitsPerPx));
+    prTextBufferAppendU64(out, uint64_t(raw / kPrLayoutUnitsPerPx), 10);
     int64_t hundredths = (raw % kPrLayoutUnitsPerPx) * 100 / kPrLayoutUnitsPerPx;
     if (hundredths != 0) {
-        textAppendChar(out, '.');
+        prTextBufferAppendChar(out, '.');
         if (hundredths < 10)
-            textAppendChar(out, '0');
-        textAppendU64(out, uint64_t(hundredths));
+            prTextBufferAppendChar(out, '0');
+        prTextBufferAppendU64(out, uint64_t(hundredths), 10);
     }
-    textAppend(out, "px");
+    prTextBufferAppend(out, "px");
 }
 
-void appendVec(TextBuffer* out, PrLayoutVec v) {
+void appendVec(PrTextBuffer* out, PrLayoutVec v) {
     appendUnit(out, v.x);
-    textAppend(out, " x ");
+    prTextBufferAppend(out, " x ");
     appendUnit(out, v.y);
 }
 
 // Records the first mismatch: `field` of `node`'s fragment is `cached` in the cached result and `fresh` in a fresh one.
 void mismatch(Mismatch* out, LayoutNodeIndex node, const char* field, PrLayoutVec cached, PrLayoutVec fresh) {
     out->node = node;
-    textAppend(&out->what, field);
-    textAppend(&out->what, ": cached ");
+    prTextBufferAppend(&out->what, field);
+    prTextBufferAppend(&out->what, ": cached ");
     appendVec(&out->what, cached);
-    textAppend(&out->what, ", fresh ");
+    prTextBufferAppend(&out->what, ", fresh ");
     appendVec(&out->what, fresh);
 }
 
 void mismatch(Mismatch* out, LayoutNodeIndex node, const char* what) {
     out->node = node;
-    textAppend(&out->what, what);
+    prTextBufferAppend(&out->what, what);
 }
 
 // Returns true if two kept baseline sets are the same, with the same clamps.
@@ -932,7 +932,7 @@ void layoutTreeChangeStyle(LayoutTree* tree, LayoutNodeIndex index, PrLayoutStyl
     // its own, and decide only whether a box has one. A clip rectangle is the clip of the box's container, which the
     // recording around the box holds.
     bool clipMoved = (changed & (1u << PrLayoutGroup_Compositing)) != 0 && (boxBefore.clipped || boxAfter.clipped) &&
-        !memEquals(layoutCompositingStyle(tree->styles, was).clip,
+        !prMemEquals(layoutCompositingStyle(tree->styles, was).clip,
             layoutCompositingStyle(tree->styles, style).clip, sizeof(PrLayoutLength) * 4);
     if ((changed & ~kEffect) != 0 || clipMoved) {
         n.paintChanged = tree->paint.paints;
@@ -1117,7 +1117,7 @@ void layoutTreeSetHighlights(LayoutTree* tree, LayoutNodeIndex node, const PrLay
     LayoutHighlights* kept = const_cast<LayoutHighlights*>(layoutTextHighlights(tree, node));
     if (kept != nullptr) {
         kept->frame = frame;
-        if (kept->ranges.count == count && memEquals(kept->ranges.data, highlights, sizeof(PrLayoutHighlight) * count))
+        if (kept->ranges.count == count && prMemEquals(kept->ranges.data, highlights, sizeof(PrLayoutHighlight) * count))
             return;
     }
     if (count == 0) {
@@ -1148,7 +1148,7 @@ void layoutTreeSetCarets(LayoutTree* tree, const PrLayoutCaret* PR_NULLABLE care
         const PrLayoutCaret& a = kept.carets.data[i];
         const PrLayoutCaret& b = carets[i];
         same = a.position.node == b.position.node && a.position.offset == b.position.offset &&
-            a.affinity == b.affinity && memEquals(&a.color, &b.color, sizeof(PrColor16));
+            a.affinity == b.affinity && prMemEquals(&a.color, &b.color, sizeof(PrColor16));
     }
     if (same)
         return;
@@ -1268,7 +1268,7 @@ float prLayoutTreeTargetPixelRatio(const PrLayoutTree* tree) {
 }
 
 void prLayoutTreeSetCanvasColor(PrLayoutTree* tree, PrColor16 color) {
-    if (memEquals(&color, &tree->canvasColor, sizeof color))
+    if (prMemEquals(&color, &tree->canvasColor, sizeof color))
         return;
     tree->canvasColor = color;
     tree->pendingPaint |= LayoutInputFlag_Paint;
@@ -1813,8 +1813,8 @@ bool prLayoutTreeVerify(PrLayoutTree* tree, PrLayoutTreeDifference* PR_NULLABLE 
     t->stacking.listsFound = listsFound;
     if (!same && out != nullptr) {
         out->node = found.node != kPrLayoutNodeNone ? layoutNodeName(t, found.node) : kPrLayoutNodeNone;
-        out->what = textTake(&found.what);
+        out->what = prTextBufferTake(&found.what);
     }
-    textReset(&found.what);
+    prTextBufferReset(&found.what);
     return same;
 }

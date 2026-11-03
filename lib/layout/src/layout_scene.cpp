@@ -49,7 +49,7 @@ uint32_t resolve(const LayoutTree* tree, const LayoutScene* scene, uint32_t laye
 
 // Returns true if `matrix` is the identity.
 bool matrixIsIdentity(const PrMatrix4& matrix) {
-    return memEquals(&matrix, &kLayoutTransformIdentity.matrix, sizeof(PrMatrix4));
+    return prMemEquals(&matrix, &kLayoutTransformIdentity.matrix, sizeof(PrMatrix4));
 }
 
 // Returns the area that the box of `node` and what it holds may draw over, in the space of its layer: its overflow and
@@ -156,7 +156,7 @@ void addLayer(LayoutTree* tree, LayoutScene* scene, LayoutNodeIndex node, const 
             .sticky = sticky,
             .curved = s.curved,
         };
-        memCopy(scroll.corners, s.corners, sizeof(s.corners));
+        prMemCopy(scroll.corners, s.corners, sizeof(s.corners));
         scene->scrolls.push(scroll);
     }
     LayoutSceneLayer& layer = scene->layers.data[index];
@@ -258,7 +258,7 @@ struct Frames {
         if (!s.curved)
             return true;
         PrCornerRect shape{.rect = prLayoutRectToPx(clip)};
-        memCopy(shape.corners, s.corners, sizeof(s.corners));
+        prMemCopy(shape.corners, s.corners, sizeof(s.corners));
         return prCornerRectContains(shape, PrVec2{prLayoutUnitToPx(point.x), prLayoutUnitToPx(point.y)});
     }
 };
@@ -361,7 +361,7 @@ struct Player {
         PrRect rect = prLayoutRectToPx(layoutRectMoved(clip, kLayoutVecZero - corner));
         if (s.curved) {
             PrCornerRect shape{.rect = rect};
-            memCopy(shape.corners, s.corners, sizeof(s.corners));
+            prMemCopy(shape.corners, s.corners, sizeof(s.corners));
             prDrawListPushClipCornerRect(list, shape, PrDrawEdges_Snapped);
         } else {
             prDrawListPushClipRect(list, rect, PrDrawEdges_Snapped);
@@ -868,7 +868,7 @@ const PrLayoutScene* layoutScene(LayoutTree* tree) {
             if (previous != nullptr && previous->canvasBorder == scene->canvasBorder &&
                     previous->canvas == scene->canvas && previous->canvasLayersHash == scene->canvasLayersHash &&
                     previous->canvasViewport == scene->canvasViewport &&
-                    memEquals(&previous->canvasDecoration, &scene->canvasDecoration, sizeof(PrLayoutDecorationStyle))) {
+                    prMemEquals(&previous->canvasDecoration, &scene->canvasDecoration, sizeof(PrLayoutDecorationStyle))) {
                 for (uint32_t i = 0; i < previous->canvasRuns.count; ++i) {
                     prDrawListRetain(previous->canvasRuns.data[i].list);
                     scene->canvasRuns.push(previous->canvasRuns.data[i]);
@@ -1026,8 +1026,8 @@ void layoutSceneScrollOffsets(const LayoutScene* scene, const PrLayoutSceneScrol
             continue;
         PrLayoutVec offset = layoutScrollClamp(scrolls[at].offset, s.range);
         if (ratio != 0) {
-            offset.x = prLayoutUnitFromPxRoundDouble(floorF64(prLayoutUnitToPxDouble(offset.x) * ratio + 0.5) / ratio);
-            offset.y = prLayoutUnitFromPxRoundDouble(floorF64(prLayoutUnitToPxDouble(offset.y) * ratio + 0.5) / ratio);
+            offset.x = prLayoutUnitFromPxRoundDouble(prF64Floor(prLayoutUnitToPxDouble(offset.x) * ratio + 0.5) / ratio);
+            offset.y = prLayoutUnitFromPxRoundDouble(prF64Floor(prLayoutUnitToPxDouble(offset.y) * ratio + 0.5) / ratio);
         }
         out.data[i] = offset;
         next = at + 1;

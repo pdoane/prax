@@ -215,13 +215,13 @@ constexpr PrJsHtmlConsolePrinter kConsolePrinter = {printConsole};
 // Runs the script file in `ctx`. Returns false, saying why on stderr, if the file cannot be read, or if the script
 // throws outside a window, which reports an author's exception to itself.
 bool runFile(JSContext* ctx, const char* path, bool window = false) {
-    TextBuffer text;
+    PrTextBuffer text = {};
     bool ok = harnessReadFile(&text, path);
     if (ok)
-        ok = prJsHtmlEngineRun(ctx, textView(&text), path, 1, 1) || window;
+        ok = prJsHtmlEngineRun(ctx, prTextBufferView(&text), path, 1, 1) || window;
     else
         fprintf(stderr, "cannot read %s\n", path);
-    textReset(&text);
+    prTextBufferReset(&text);
     return ok;
 }
 
@@ -323,15 +323,15 @@ void answerResource(void* PR_NULLABLE context, PrFetchInterceptRequest* request)
         }
         resource = captured->second;
     }
-    TextBuffer text;
+    PrTextBuffer text = {};
     if (!harnessReadFile(&text, resource.file.string().c_str())) {
-        textReset(&text);
+        prTextBufferReset(&text);
         prFetchInterceptRequestFail(request, PrNetError_Refused);
         return;
     }
     std::string type = resource.type.empty() ? contentTypeOf(resource.file) : resource.type;
     PrFetchHeader header{"Content-Type", type};
-    PrStringView body = textView(&text);
+    PrStringView body = prTextBufferView(&text);
     PrFetchInterceptResponse response{
         .status = 200,
         .headers = &header,
@@ -339,7 +339,7 @@ void answerResource(void* PR_NULLABLE context, PrFetchInterceptRequest* request)
         .body = PrByteView{reinterpret_cast<const uint8_t*>(body.data), body.size},
     };
     prFetchInterceptRequestRespond(request, &response);
-    textReset(&text);
+    prTextBufferReset(&text);
 }
 
 // Runs the network's loop on the host's thread, if it runs there.
@@ -613,11 +613,11 @@ JSValue jsReadFile(JSContext* ctx, JSValueConst, int argc, JSValueConst* argv) {
     if (path == nullptr)
         return JS_EXCEPTION;
 
-    TextBuffer text;
+    PrTextBuffer text = {};
     bool read = harnessReadFile(&text, path);
     JS_FreeCString(ctx, path);
-    JSValue value = read ? jsNewStringView(ctx, textView(&text)) : JS_NULL;
-    textReset(&text);
+    JSValue value = read ? jsNewStringView(ctx, prTextBufferView(&text)) : JS_NULL;
+    prTextBufferReset(&text);
     return value;
 }
 
@@ -651,7 +651,7 @@ PrAppKey keyNamed(const std::string& name) {
             return PrAppKey(key);
     }
     if (name.size() == 1 && uint8_t(name[0]) < 128)
-        return PrAppKey(asciiUpper(name[0]));
+        return PrAppKey(prAsciiUpper(name[0]));
     return PrAppKey_Unknown;
 }
 
@@ -912,19 +912,19 @@ bool renderFetches(HostState& s, bool* started) {
 
 // Reads the DER certificate of the PEM file at `path`, its first one, into `out`. Returns false if it cannot.
 bool readPemCertificate(const std::filesystem::path& path, std::string* out) {
-    TextBuffer text;
+    PrTextBuffer text = {};
     bool ok = harnessReadFile(&text, path.string().c_str());
-    std::string pem = ok ? std::string(textView(&text).data, textView(&text).size) : std::string();
-    textReset(&text);
+    std::string pem = ok ? std::string(prTextBufferView(&text).data, prTextBufferView(&text).size) : std::string();
+    prTextBufferReset(&text);
     const std::string begin = "-----BEGIN CERTIFICATE-----";
     size_t start = pem.find(begin);
     size_t end = pem.find("-----END CERTIFICATE-----");
     if (start == std::string::npos || end == std::string::npos || end < start)
         return false;
     PrStringView body{pem.data() + start + begin.size(), end - start - begin.size()};
-    out->assign(base64DecodedCapacity(body.size), '\0');
+    out->assign(prBase64DecodedCapacity(body.size), '\0');
     size_t size = 0;
-    if (!base64Decode(body, out->data(), out->size(), &size))
+    if (!prBase64Decode(body, out->data(), out->size(), &size))
         return false;
     out->resize(size);
     return true;
@@ -965,12 +965,12 @@ void PageHost::reset() {
 }
 
 bool PageHost::addCapture(const std::filesystem::path& capture, std::string* pageUrl, const std::filesystem::path& page) {
-    TextBuffer text;
+    PrTextBuffer text = {};
     PrJson* json = prJsonCreate();
-    bool ok = harnessReadFile(&text, capture.string().c_str()) && prJsonParse(json, textView(&text), nullptr);
+    bool ok = harnessReadFile(&text, capture.string().c_str()) && prJsonParse(json, prTextBufferView(&text), nullptr);
     if (!ok) {
         fprintf(stderr, "%s: not a capture\n", capture.string().c_str());
-        textReset(&text);
+        prTextBufferReset(&text);
         prJsonDestroy(json);
         return false;
     }
@@ -989,7 +989,7 @@ bool PageHost::addCapture(const std::filesystem::path& capture, std::string* pag
             addCaptured(*state_, prJsonString(json, prJsonMember(json, entry, "url")),
                 capture.parent_path() / std::string(file.data, file.size), prJsonString(json, prJsonMember(json, entry, "type")));
     }
-    textReset(&text);
+    prTextBufferReset(&text);
     prJsonDestroy(json);
     return true;
 }
@@ -1092,13 +1092,13 @@ bool PageHost::addTrustAnchor(const std::filesystem::path& pem) {
 }
 
 bool PageHost::setCaptureWait(const std::filesystem::path& script) {
-    TextBuffer text;
+    PrTextBuffer text = {};
     bool ok = harnessReadFile(&text, script.string().c_str());
     if (ok)
-        state_->captureWait.assign(textView(&text).data, textView(&text).size);
+        state_->captureWait.assign(prTextBufferView(&text).data, prTextBufferView(&text).size);
     else
         fprintf(stderr, "cannot read %s\n", script.string().c_str());
-    textReset(&text);
+    prTextBufferReset(&text);
     return ok;
 }
 

@@ -57,29 +57,29 @@ constexpr char kHexDigits[] = "0123456789ABCDEF";
 
 } // namespace
 
-void urlAppendPercentEncodedIn(TextBuffer* out, PrStringView text, PrCharset charset, PrUrlPercentEncodeSet set) {
+void urlAppendPercentEncodedIn(PrTextBuffer* out, PrStringView text, PrCharset charset, PrUrlPercentEncodeSet set) {
     if (charset == PrCharset_Utf8) {
         urlAppendPercentEncoded(out, text, set);
         return;
     }
     PrCharsetEncoder encoder = prCharsetEncoderMake(charset);
-    TextBuffer bytes;
+    PrTextBuffer bytes = {};
     for (size_t at = 0;;) {
-        PrStringView rest = stringSlice(text, at, text.size - at);
-        textClear(&bytes);
-        bytes.text.resize(uint32_t(prCharsetEncodeMaxSize(&encoder, rest.size)));
+        PrStringView rest = prStringSlice(text, at, text.size - at);
+        prTextBufferClear(&bytes);
+        prTextBufferResize(&bytes, uint32_t(prCharsetEncodeMaxSize(&encoder, rest.size)));
         size_t size = 0;
         uint32_t unencoded = 0;
-        at += prCharsetEncode(&encoder, rest, PrCharsetInput_Final, bytes.text.data, &size, &unencoded);
-        bytes.text.count = uint32_t(size);
-        urlAppendPercentEncoded(out, textView(&bytes), set);
+        at += prCharsetEncode(&encoder, rest, PrCharsetInput_Final, bytes.data, &size, &unencoded);
+        bytes.size = uint32_t(size);
+        urlAppendPercentEncoded(out, prTextBufferView(&bytes), set);
         if (unencoded == kPrCharsetUnencodedNone)
             break;
-        textAppend(out, "%26%23");
-        textAppendU64(out, unencoded);
-        textAppend(out, "%3B");
+        prTextBufferAppend(out, "%26%23");
+        prTextBufferAppendU64(out, unencoded, 10);
+        prTextBufferAppend(out, "%3B");
     }
-    textReset(&bytes);
+    prTextBufferReset(&bytes);
 }
 
 } // namespace pr_impl
@@ -115,8 +115,8 @@ size_t prUrlPercentDecode(PrStringView input, char* PR_NULLABLE out, size_t capa
     size_t size = 0;
     for (size_t i = 0; i < input.size; ++i, ++size) {
         char byte = input.data[i];
-        if (byte == '%' && input.size - i > 2 && asciiIsHexDigit(input.data[i + 1]) && asciiIsHexDigit(input.data[i + 2])) {
-            byte = char(asciiHexValue(input.data[i + 1]) << 4 | asciiHexValue(input.data[i + 2]));
+        if (byte == '%' && input.size - i > 2 && prAsciiIsHexDigit(input.data[i + 1]) && prAsciiIsHexDigit(input.data[i + 2])) {
+            byte = char(prAsciiHexValue(input.data[i + 1]) << 4 | prAsciiHexValue(input.data[i + 2]));
             i += 2;
         }
         if (size < capacity)

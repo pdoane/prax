@@ -154,7 +154,7 @@ void endDevice(BLContextCore* ctx) {
 }
 
 BLRgba rgbaOf(PrColor c) {
-    return BLRgba{clampF32(c.r, 0, 1), clampF32(c.g, 0, 1), clampF32(c.b, 0, 1), clampF32(c.a, 0, 1)};
+    return BLRgba{prF32Clamp(c.r, 0, 1), prF32Clamp(c.g, 0, 1), prF32Clamp(c.b, 0, 1), prF32Clamp(c.a, 0, 1)};
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -325,14 +325,14 @@ bool deviceRect(const PrPath* path, PrAffine2 x, PrRect* out) {
     }
     *out = PrRect{p[0].x, p[0].y, p[0].x, p[0].y};
     for (const PrVec2& q : p) {
-        out->left = minF32(out->left, q.x);
-        out->top = minF32(out->top, q.y);
-        out->right = maxF32(out->right, q.x);
-        out->bottom = maxF32(out->bottom, q.y);
+        out->left = prF32Min(out->left, q.x);
+        out->top = prF32Min(out->top, q.y);
+        out->right = prF32Max(out->right, q.x);
+        out->bottom = prF32Max(out->bottom, q.y);
     }
     float edges[4] = {out->left, out->top, out->right, out->bottom};
     for (float e : edges) {
-        if (e != floorF32(e))
+        if (e != prF32Floor(e))
             return false;
     }
     return true;
@@ -418,8 +418,8 @@ BLExtendMode extendOf(PrDrawExtend x, PrDrawExtend y) {
 // so that the texels land in the right place.
 void patternOf(const BLImageCore* image, PrRect texels, PrRect onto, PrAffine2 toSpace,
         BLExtendMode extend, BLPatternCore* out) {
-    bool whole = texels.left == floorF32(texels.left) && texels.top == floorF32(texels.top) &&
-        texels.right == floorF32(texels.right) && texels.bottom == floorF32(texels.bottom);
+    bool whole = texels.left == prF32Floor(texels.left) && texels.top == prF32Floor(texels.top) &&
+        texels.right == prF32Floor(texels.right) && texels.bottom == prF32Floor(texels.bottom);
     float sx = prRectWidth(onto) / prRectWidth(texels);
     float sy = prRectHeight(onto) / prRectHeight(texels);
     PrVec2 origin = whole ? PrVec2{0, 0} : PrVec2{texels.left, texels.top};
@@ -453,9 +453,9 @@ void gradientStops(Renderer& r, const PrDrawBrush* brush, PrColor color) {
         uint32_t ends = piece.count == 1 ? 2 : piece.count;
         for (uint32_t k = 0; k < ends; ++k) {
             const PrColor& c = r.ramp.data[piece.first + (piece.count == 1 ? 0 : k)];
-            float a = clampF32(c.a, 0, 1);
+            float a = prF32Clamp(c.a, 0, 1);
             auto channel = [&](float v) {
-                return uint64_t(clampF32(a > 0 ? v / a : 0, 0, 1) * 65535 + 0.5f);
+                return uint64_t(prF32Clamp(a > 0 ? v / a : 0, 0, 1) * 65535 + 0.5f);
             };
             BLGradientStop stop{};
             stop.offset = double(piece.start) + double(piece.end - piece.start) * double(k) / double(ends - 1);
@@ -517,7 +517,7 @@ bool setStyle(Renderer& r, BLContextStyleSlot slot, const PrDrawBrush* PR_NULLAB
             nearest ? BL_PATTERN_QUALITY_NEAREST : BL_PATTERN_QUALITY_BILINEAR);
         setPaint(&pattern);
         bl_pattern_destroy(&pattern);
-        double alpha = double(clampF32(color.a, 0, 1));
+        double alpha = double(prF32Clamp(color.a, 0, 1));
         if (fill)
             bl_context_set_fill_alpha(ctx, alpha);
         else
@@ -774,7 +774,7 @@ void drawImageRects(Renderer& r, const PrDrawCommand& c, const PrDrawImageRect* 
         patternOf(image, from, to, prAffine2Identity(), BL_EXTEND_MODE_PAD, &pattern);
         bl_context_set_fill_style(ctx, &pattern);
         bl_pattern_destroy(&pattern);
-        bl_context_set_fill_alpha(ctx, double(clampF32(prFloat16ToFloat(c.color.a), 0, 1)));
+        bl_context_set_fill_alpha(ctx, double(prF32Clamp(prFloat16ToFloat(c.color.a), 0, 1)));
         prPathClear(r.shape);
         prPathAddRect(r.shape, to);
         pathOf(r, r.shape);
@@ -1105,7 +1105,7 @@ void pop(Renderer& r) {
             BLContextCore* ctx = context(r);
             beginDevice(ctx);
             bl_context_set_comp_op(ctx, compOpOf(push.composite));
-            bl_context_set_global_alpha(ctx, double(clampF32(push.group->opacity, 0, 1)));
+            bl_context_set_global_alpha(ctx, double(prF32Clamp(push.group->opacity, 0, 1)));
             BLPoint origin{double(layer->box.left), double(layer->box.top)};
             if (push.group->mask != nullptr) {
                 BLPatternCore pattern{};

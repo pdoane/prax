@@ -26,7 +26,7 @@ struct Pass {
     Array<Step>& steps;
     Array<Counter>& counters;
     CssCountingTexts& texts;
-    TextBuffer& text;
+    PrTextBuffer& text;
     const CssStyleValues* initial;  // the initial Generated group, whose counter properties change no counter
     Array<Boundary>& boundaries;    // innermost last
     uint32_t found;                 // the listed changes (counterChanges) among the elements collected
@@ -377,9 +377,9 @@ void readCounters(Pass& p, uint32_t at, bool marker) {
     p.texts.text.clear();
     p.texts.ends.clear();
     auto close = [&]() {
-        p.texts.text.append(p.text.text.data, p.text.text.count);
+        p.texts.text.append(p.text.data, p.text.size);
         p.texts.ends.push(p.texts.text.count);
-        p.text.text.clear();
+        prTextBufferClear(&p.text);
     };
     if (marker) {
         uint32_t counter = counterFor(p, at, "list-item");
@@ -401,7 +401,7 @@ void readCounters(Pass& p, uint32_t at, bool marker) {
             if (!open && stepped)
                 --p.quoteDepth;
             if (shown && stepped)
-                textAppend(&p.text, quoteMark(p, step.node, style, p.quoteDepth, open));
+                prTextBufferAppend(&p.text, quoteMark(p, step.node, style, p.quoteDepth, open));
             if (open && p.quoteDepth != UINT32_MAX)
                 ++p.quoteDepth;
             if (shown)
@@ -426,7 +426,7 @@ void readCounters(Pass& p, uint32_t at, bool marker) {
                 if (p.counters.data[c].name != name)
                     continue;
                 if (!first)
-                    textAppend(&p.text, separator);
+                    prTextBufferAppend(&p.text, separator);
                 first = false;
                 cssCounterAppend(&p.text, styles, styleArgument(content, starts, count, 2), p.counters.data[c].value, flow);
             }

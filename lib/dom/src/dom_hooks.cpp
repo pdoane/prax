@@ -11,7 +11,7 @@ static_assert(kDomDocumentSubscribers <= 8);
 
 // Brings the document's followers of each entry up to date with its subscribers.
 void updateFollowers(PrDomDocument* document) {
-    memZero(document->followers, sizeof(document->followers));
+    prMemZero(document->followers, sizeof(document->followers));
     for (uint32_t i = 0; i < kDomDocumentSubscribers; ++i) {
         const DomDocumentHooks* hooks = document->subscribers[i].hooks;
         if (hooks == nullptr)

@@ -62,10 +62,10 @@ bool skipsDirection(const PrDomElement* element) {
 
 // Returns the first strong direction of the value of a control.
 PrUnicodeBidiStrong valueStrong(const PrDomElement* element) {
-    TextBuffer value;
+    PrTextBuffer value = {};
     domControlValue(element, &value);
-    PrUnicodeBidiStrong strong = prUnicodeBidiFirstStrong(textView(&value));
-    textReset(&value);
+    PrUnicodeBidiStrong strong = prUnicodeBidiFirstStrong(prTextBufferView(&value));
+    prTextBufferReset(&value);
     return strong;
 }
 
@@ -248,7 +248,7 @@ PrStringView domElementOwnLanguage(const PrDomElement* element) {
         if (a->space == PrDomNamespace_Xml && name == "lang")
             return prStringView(&a->value);
         if (plain && lang == nullptr && a->space == PrDomNamespace_None &&
-                (lowered ? asciiEqualsLowered(name, "lang") : name == "lang"))
+                (lowered ? prAsciiEqualsLowered(name, "lang") : name == "lang"))
             lang = a;
     }
     return lang != nullptr ? prStringView(&lang->value) : PrStringView{nullptr, 0};
@@ -277,30 +277,30 @@ PrStringView domDocumentLanguage(const PrDomDocument* document) {
 void domMetaConnected(PrDomElement* element) {
     // html/#meta-referrer, with the legacy keywords that it maps.
     if (domIsHtml(element, PrDomTag_Meta) && domIsConnected(element) &&
-            asciiEqualsFold(domAttributeValue(element, "name"), "referrer")) {
-        PrStringView content = stringTrim(domAttributeValue(element, "content"));
-        if (asciiEqualsFold(content, "never"))
+            prAsciiEqualsFold(domAttributeValue(element, "name"), "referrer")) {
+        PrStringView content = prStringTrim(domAttributeValue(element, "content"));
+        if (prAsciiEqualsFold(content, "never"))
             content = "no-referrer";
-        else if (asciiEqualsFold(content, "default"))
+        else if (prAsciiEqualsFold(content, "default"))
             content = "strict-origin-when-cross-origin";
-        else if (asciiEqualsFold(content, "always"))
+        else if (prAsciiEqualsFold(content, "always"))
             content = "unsafe-url";
-        else if (asciiEqualsFold(content, "origin-when-crossorigin"))
+        else if (prAsciiEqualsFold(content, "origin-when-crossorigin"))
             content = "origin-when-cross-origin";
         domReferrerPolicyFromToken(content, &element->document->referrerPolicy);
     }
     if (!domIsHtml(element, PrDomTag_Meta) || !domIsConnected(element) ||
-            !asciiEqualsFold(domAttributeValue(element, "http-equiv"), "content-language"))
+            !prAsciiEqualsFold(domAttributeValue(element, "http-equiv"), "content-language"))
         return;
     // A content attribute that lists several languages sets none. One with several tokens sets the first.
     PrStringView content = domAttributeValue(element, "content");
-    if (content.data == nullptr || stringFind(content, ',') != content.size)
+    if (content.data == nullptr || prStringFindByte(content, ',') != content.size)
         return;
     size_t start = 0;
-    while (start < content.size && asciiIsSpace(content.data[start]))
+    while (start < content.size && prAsciiIsSpace(content.data[start]))
         ++start;
     size_t end = start;
-    while (end < content.size && !asciiIsSpace(content.data[end]))
+    while (end < content.size && !prAsciiIsSpace(content.data[end]))
         ++end;
     PrStringView candidate{content.data + start, end - start};
     PrDomDocument* document = element->document;
@@ -316,7 +316,7 @@ bool domReferrerPolicyFromToken(PrStringView token, uint8_t* out) {
         "origin-when-cross-origin", "strict-origin-when-cross-origin", "unsafe-url",
     };
     for (uint32_t i = 0; i < countOf(kTokens); ++i) {
-        if (asciiEqualsFold(token, kTokens[i])) {
+        if (prAsciiEqualsFold(token, kTokens[i])) {
             *out = uint8_t(i + 1);
             return true;
         }

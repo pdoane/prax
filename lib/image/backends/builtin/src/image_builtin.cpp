@@ -56,7 +56,7 @@ struct BuiltinDecoder : PrImageReader {
 };
 
 bool startsWith(PrByteView bytes, PrByteView prefix) {
-    return bytes.size >= prefix.size && memEquals(bytes.data, prefix.data, prefix.size);
+    return bytes.size >= prefix.size && prMemEquals(bytes.data, prefix.data, prefix.size);
 }
 
 bool isType(const uint8_t* bytes, const char* type) {
@@ -134,11 +134,11 @@ PrStatus inspectPng(PrCompressCodec* compressCodec, const uint8_t* bytes, size_t
     if (size < 29) {
         return PrStatus_InvalidData;
     }
-    if (readBeU32(bytes + 8) != 13 || !isType(bytes + 12, "IHDR")) {
+    if (prMemReadBeU32(bytes + 8) != 13 || !isType(bytes + 12, "IHDR")) {
         return PrStatus_InvalidData;
     }
-    info->extent.x = readBeU32(bytes + 16);
-    info->extent.y = readBeU32(bytes + 20);
+    info->extent.x = prMemReadBeU32(bytes + 16);
+    info->extent.y = prMemReadBeU32(bytes + 20);
     const uint8_t depth = bytes[24];
     const uint8_t colorType = bytes[25];
     if (info->extent.x == 0 || info->extent.y == 0) {
@@ -182,7 +182,7 @@ PrStatus inspectPng(PrCompressCodec* compressCodec, const uint8_t* bytes, size_t
         if (size - at < 12) {
             break;
         }
-        const uint32_t length = readBeU32(bytes + at);
+        const uint32_t length = prMemReadBeU32(bytes + at);
         if (length > 0x7FFFFFFFu || size_t(length) + 12 > size - at) {
             break;
         }
@@ -299,7 +299,7 @@ PrStatus inspectJpeg(const uint8_t* bytes, size_t size, const PrImageLimits& lim
         if (size - at < 2) {
             break;
         }
-        const uint32_t length = readBeU16(bytes + at);
+        const uint32_t length = prMemReadBeU16(bytes + at);
         if (length < 2) {
             return PrStatus_InvalidData;
         }
@@ -315,8 +315,8 @@ PrStatus inspectJpeg(const uint8_t* bytes, size_t size, const PrImageLimits& lim
             if (frame || segmentSize < 6 || segment[0] != 8) {
                 return segmentSize >= 1 && segment[0] != 8 ? PrStatus_NotSupported : PrStatus_InvalidData;
             }
-            info->extent.y = readBeU16(segment + 1);
-            info->extent.x = readBeU16(segment + 3);
+            info->extent.y = prMemReadBeU16(segment + 1);
+            info->extent.x = prMemReadBeU16(segment + 3);
             components = segment[5];
             if (info->extent.x == 0 || info->extent.y == 0 || (components != 1 && components != 3 && components != 4) ||
                     segmentSize < 6 + components * 3) {
@@ -386,8 +386,8 @@ PrStatus inspectGif(const uint8_t* bytes, size_t size, const PrImageLimits& limi
     if (size < 13) {
         return PrStatus_InvalidData;
     }
-    info->extent.x = readLeU16(bytes + 6);
-    info->extent.y = readLeU16(bytes + 8);
+    info->extent.x = prMemReadLeU16(bytes + 6);
+    info->extent.y = prMemReadLeU16(bytes + 8);
     if (info->extent.x == 0 || info->extent.y == 0) {
         return PrStatus_InvalidData;
     }
@@ -430,8 +430,8 @@ PrStatus inspectGif(const uint8_t* bytes, size_t size, const PrImageLimits& limi
             const uint8_t label = bytes[at++];
             const size_t start = at;
             if (label == 0xFF && size - at >= 16 && bytes[at] == 11 &&
-                    memEquals(bytes + at + 1, "NETSCAPE2.0", 11) && bytes[at + 12] == 3 && bytes[at + 13] == 1) {
-                const uint32_t repeats = readLeU16(bytes + at + 14);
+                    prMemEquals(bytes + at + 1, "NETSCAPE2.0", 11) && bytes[at + 12] == 3 && bytes[at + 13] == 1) {
+                const uint32_t repeats = prMemReadLeU16(bytes + at + 14);
                 // NETSCAPE2.0 counts the repeats after the first play. Zero means indefinitely.
                 playCount = repeats == 0 ? 0 : repeats + 1;
             }
@@ -452,8 +452,8 @@ PrStatus inspectGif(const uint8_t* bytes, size_t size, const PrImageLimits& limi
         if (size - at < 9) {
             break;
         }
-        const uint32_t width = readLeU16(bytes + at + 4);
-        const uint32_t height = readLeU16(bytes + at + 6);
+        const uint32_t width = prMemReadLeU16(bytes + at + 4);
+        const uint32_t height = prMemReadLeU16(bytes + at + 6);
         const uint8_t imagePacked = bytes[at + 8];
         if (width == 0 || height == 0) {
             return PrStatus_InvalidData;
@@ -543,11 +543,11 @@ PrStatus inspectTiff(BuiltinDecoder& decoder, const PrImageLimits& limits) {
 }
 
 bool isIcon(const uint8_t* bytes, size_t size) {
-    return size >= 6 && readLeU16(bytes) == 0 && readLeU16(bytes + 2) == 1;
+    return size >= 6 && prMemReadLeU16(bytes) == 0 && prMemReadLeU16(bytes + 2) == 1;
 }
 
 PrStatus inspectIcon(BuiltinDecoder& decoder, const PrImageLimits& limits) {
-    if (decoder.size >= 6 && readLeU16(decoder.bytes + 4) > limits.work) {
+    if (decoder.size >= 6 && prMemReadLeU16(decoder.bytes + 4) > limits.work) {
         return PrStatus_Limit;
     }
     if (!icoSelectImage({decoder.bytes, decoder.size}, &decoder.icon)) {
@@ -732,7 +732,7 @@ PrStatus decode(PrImageCodec*, PrImageReader* reader, uint32_t frame, PrPixels o
         return PrStatus_InvalidData;
     }
     for (uint32_t row = 0; row < output.extent.y; ++row) {
-        memCopy(output.data + size_t(row) * output.stride,
+        prMemCopy(output.data + size_t(row) * output.stride,
             decoder->scratch + size_t(row) * decoder->rowBytes, decoder->rowBytes);
     }
     return decoder->openStatus;

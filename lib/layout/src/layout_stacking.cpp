@@ -289,7 +289,7 @@ uint32_t layoutStackingVerify(const LayoutTree* tree) {
         uint32_t zero = 0;
         findList(tree, list.context, true, boxes, &zero);
         if (boxes.count != list.boxes.count || zero != list.zero ||
-                !memEquals(boxes.data, list.boxes.data, sizeof(LayoutStackedBox) * boxes.count))
+                !prMemEquals(boxes.data, list.boxes.data, sizeof(LayoutStackedBox) * boxes.count))
             differs = list.context;
     }
     boxes.reset();

@@ -16,6 +16,7 @@
 #include "pr/mime.h"
 #include "pr/net.h"
 #include "pr/string_ops.h"
+#include "pr/string_trim.h"
 #include "pr/svg.h"
 #include "pr/svg_render.h"
 #include "pr/text_buffer.h"
@@ -83,9 +84,9 @@ PrMarkdownOptions markdownOptionsOf(PrStringView type) {
     PrMarkdownOptions options = prMarkdownOptionsDefault();
     PrString variant = prStringNull();
     if (prMimeTypeParameter(type, "variant", &variant)) {
-        if (asciiEqualsFold(prStringView(&variant), "CommonMark"))
+        if (prAsciiEqualsFold(prStringView(&variant), "CommonMark"))
             options.extensions = 0;
-        else if (asciiEqualsFold(prStringView(&variant), "GFM"))
+        else if (prAsciiEqualsFold(prStringView(&variant), "GFM"))
             options.extensions = PrMarkdownExtensionFlag_Gfm;
     }
     prStringReset(&variant);
@@ -111,18 +112,18 @@ bool scriptKind(const PrDomElement* element, PrHtmlScriptKind* out) {
         return true;
     if (type.data == nullptr) {
         // The language attribute names the subtype of a text/ type.
-        TextBuffer named;
-        textAppend(&named, "text/");
-        textAppend(&named, language);
-        bool javaScript = prMimeTypeIsJavaScript(textView(&named));
-        textReset(&named);
+        PrTextBuffer named = {};
+        prTextBufferAppend(&named, "text/");
+        prTextBufferAppend(&named, language);
+        bool javaScript = prMimeTypeIsJavaScript(prTextBufferView(&named));
+        prTextBufferReset(&named);
         return javaScript;
     }
-    type = stringTrim(type);
+    type = prStringTrim(type);
     if (prMimeTypeIsJavaScript(type))
         return true;
     *out = PrHtmlScriptKind_Module;
-    return asciiEqualsFold(type, "module");
+    return prAsciiEqualsFold(type, "module");
 }
 
 // Returns true if the document's load event waits for a fetch for `destination` (html/#delay-the-load-event). A font
@@ -186,24 +187,24 @@ void releaseFetch(HtmlFetch* fetch) {
 void completeScriptFetch(HtmlFetch* fetch) {
     PrFetchResponse response{.status = fetch->status, .type = fetch->responseType};
     Array<PrFetchHeader> headers;
-    TextBuffer exposed;
+    PrTextBuffer exposed = {};
     bool opaque = fetch->responseType == PrFetchResponseType_Opaque ||
         fetch->responseType == PrFetchResponseType_OpaqueRedirect;
     if (fetch->status == PrStatus_Ok && !opaque) {
         // A CORS response exposes the headers that its Access-Control-Expose-Headers lines list, together.
         for (uint32_t i = 0; i < fetch->responseHeaders.count; ++i) {
             const HtmlFetchHeader& header = fetch->responseHeaders.data[i];
-            if (asciiEqualsFold(prStringView(&header.name), "access-control-expose-headers")) {
-                if (textView(&exposed).size != 0)
-                    textAppend(&exposed, ", ");
-                textAppend(&exposed, prStringView(&header.value));
+            if (prAsciiEqualsFold(prStringView(&header.name), "access-control-expose-headers")) {
+                if (prTextBufferView(&exposed).size != 0)
+                    prTextBufferAppend(&exposed, ", ");
+                prTextBufferAppend(&exposed, prStringView(&header.value));
             }
         }
         for (uint32_t i = 0; i < fetch->responseHeaders.count; ++i) {
             PrStringView name = prStringView(&fetch->responseHeaders.data[i].name);
             bool shown;
             if (fetch->responseType == PrFetchResponseType_Cors)
-                shown = prFetchIsCorsExposedHeader(name, textView(&exposed), fetch->credentials);
+                shown = prFetchIsCorsExposedHeader(name, prTextBufferView(&exposed), fetch->credentials);
             else
                 shown = !prFetchIsForbiddenResponseHeaderName(name);
             if (shown)
@@ -220,7 +221,7 @@ void completeScriptFetch(HtmlFetch* fetch) {
     }
     fetch->scriptDone(fetch->data, &response);
     headers.reset();
-    textReset(&exposed);
+    prTextBufferReset(&exposed);
 }
 
 HtmlResourceReport reportOf(const HtmlFetch* fetch) {
@@ -386,19 +387,19 @@ void readBody(HtmlFetch* fetch, PrFetch* handle) {
 
 // Returns the values of the response's headers named `name` joined by commas, or the null string for none.
 PrString headersJoined(const PrFetch* fetch, PrStringView name) {
-    TextBuffer joined{};
+    PrTextBuffer joined{};
     bool any = false;
     for (uint32_t i = 0; i < prFetchHeaderCount(fetch); ++i) {
         PrFetchHeader header = prFetchHeader(fetch, i);
-        if (!asciiEqualsFold(header.name, name))
+        if (!prAsciiEqualsFold(header.name, name))
             continue;
         if (any)
-            textAppend(&joined, ",");
-        textAppend(&joined, header.value);
+            prTextBufferAppend(&joined, ",");
+        prTextBufferAppend(&joined, header.value);
         any = true;
     }
-    PrString result = any ? prStringCopy(textView(&joined)) : prStringNull();
-    textReset(&joined);
+    PrString result = any ? prStringCopy(prTextBufferView(&joined)) : prStringNull();
+    prTextBufferReset(&joined);
     return result;
 }
 
@@ -601,11 +602,11 @@ void answerFetch(HtmlFetch* fetch, PrStatus status) {
 void startFetch(PrHtmlPage* page, PrStringView url, DomFetchDestination destination, PrFetchInitiator initiator,
         PrStringView referrerPolicy, FetchSettings settings, DomFetchFn done, void* PR_NULLABLE data,
         void (*PR_NULLABLE drop)(void* PR_NULLABLE data)) {
-    if (asciiStartsWithFold(url, "data:") || page->host.fetcher == nullptr) {
+    if (prAsciiStartsWithFold(url, "data:") || page->host.fetcher == nullptr) {
         PrString body = {};
         PrString contentType = {};
         PrStatus status = PrStatus_NotSupported;
-        if (asciiStartsWithFold(url, "data:"))
+        if (prAsciiStartsWithFold(url, "data:"))
             status = prUrlProcessData(url, &body, &contentType);
         DomFetchResult result{
             status, uint16_t(status == PrStatus_Ok ? 200 : 0), prStringView(&body),
@@ -767,7 +768,7 @@ void dropModuleFetch(void* PR_NULLABLE data) {
 void fetchModule(PrHtmlPage* page, HtmlModuleIndex index) {
     const HtmlModule& module = page->modules.data[index];
     PrStringView url = prStringView(&module.url);
-    PrString request = prStringCopy(stringSlice(url, 0, stringFind(url, '#')));
+    PrString request = prStringCopy(prStringSlice(url, 0, prStringFindByte(url, '#')));
     FetchSettings mode{PrFetchMode_Cors, module.credentials, false};
     ModuleFetch* fetch = allocZeroed<ModuleFetch>();
     *fetch = ModuleFetch{page, index};
@@ -1207,7 +1208,8 @@ bool changeEncoding(void* data, PrCharset charset) {
         return false;
     }
     bool whole = page->loadSource.data != nullptr;
-    PrStringView decoded = whole ? page->loadSource : stringSlice(textView(&page->streamInput), 0, page->streamRead);
+    PrStringView streamed = prStringSlice(prTextBufferView(&page->streamInput), 0, page->streamRead);
+    PrStringView decoded = whole ? page->loadSource : streamed;
     PrCharsetInput input = whole || page->streamFlushed ? PrCharsetInput_Final : PrCharsetInput_Partial;
     PrCharsetDecoder before = prCharsetDecoderMake(current, 0);
     PrCharsetDecoder after = prCharsetDecoderMake(charset, 0);
@@ -1644,8 +1646,8 @@ bool decodeImage(void* PR_NULLABLE context, PrByteView bytes, PrStringView fragm
 void correctForDensity(DomElementState* state) {
     if (state->density <= 0 || state->density == 1)
         return;
-    state->naturalWidth = uint32_t(roundF64(double(state->naturalWidth) / state->density));
-    state->naturalHeight = uint32_t(roundF64(double(state->naturalHeight) / state->density));
+    state->naturalWidth = uint32_t(prF64Round(double(state->naturalWidth) / state->density));
+    state->naturalHeight = uint32_t(prF64Round(double(state->naturalHeight) / state->density));
 }
 
 void showImage(PrHtmlPage* page, PrDomElement* element, PrStringView bytes) {
@@ -1706,7 +1708,7 @@ void imageFetched(void* PR_NULLABLE data, const DomFetchResult* result) {
             htmlImageSize(result->body, &state->naturalWidth, &state->naturalHeight);
         correctForDensity(state);
         PrStringView url = prStringView(&fetch->url);
-        PrStringView request = stringSlice(url, 0, stringFind(url, '#'));
+        PrStringView request = prStringSlice(url, 0, prStringFindByte(url, '#'));
         if (loaded && availableImage(fetch->page, request) == nullptr)
             fetch->page->availableImages.push(HtmlAvailableImage{prStringCopy(request), prStringCopy(result->body)});
         if (loaded)
@@ -1818,13 +1820,13 @@ void objectFetched(void* PR_NULLABLE data, const DomFetchResult* result) {
         PrStringView essence = prMimeTypeEssence(type.size != 0 ? type : result->contentType);
         if (!domFetchIsOk(result)) {
             queueElementEvent(fetch->page, element, true);
-        } else if (asciiStartsWithFold(essence, "image/") && !prMimeTypeIsXml(essence)) {
+        } else if (prAsciiStartsWithFold(essence, "image/") && !prMimeTypeIsXml(essence)) {
             bool decoded = htmlImageSize(result->body, &state->naturalWidth, &state->naturalHeight);
             if (decoded)
                 state->image = PrDomImageState_CompletelyAvailable;
             showImage(fetch->page, element, decoded ? result->body : PrStringView{});
             queueElementEvent(fetch->page, element, !decoded);
-        } else if (asciiEqualsFold(essence, "text/html") || prMimeTypeIsXml(essence)) {
+        } else if (prAsciiEqualsFold(essence, "text/html") || prMimeTypeIsXml(essence)) {
             attachFrame(fetch->page, element, result->body, prStringView(&fetch->url),
                 PrHtmlResponseHeaders{essence, result->contentLanguage, PrStringView{nullptr, 0}});
         }
@@ -2208,7 +2210,7 @@ void closeStep(HtmlParser* parser, PrStringView) {
 
 // Returns the first language tag of a Content-Language header's value, or the null view if it names none.
 PrStringView firstLanguage(PrStringView header) {
-    PrStringView first = stringTrim(stringSlice(header, 0, stringFind(header, ',')), asciiIsSpace);
+    PrStringView first = stringTrimBy(prStringSlice(header, 0, prStringFindByte(header, ',')), prAsciiIsSpace);
     return first.size != 0 ? first : PrStringView{nullptr, 0};
 }
 
@@ -2363,7 +2365,7 @@ PrStatus beginDocument(PrHtmlPage* page, PrStringView url, const PrHtmlResponseH
     size_t policyStart = 0;
     for (size_t at = 0; at <= policies.size && policies.data != nullptr; ++at) {
         if (at == policies.size || policies.data[at] == ',') {
-            domReferrerPolicyFromToken(stringTrim(stringSlice(policies, policyStart, at - policyStart)),
+            domReferrerPolicyFromToken(prStringTrim(prStringSlice(policies, policyStart, at - policyStart)),
                 &document->referrerPolicy);
             policyStart = at + 1;
         }
@@ -2373,11 +2375,11 @@ PrStatus beginDocument(PrHtmlPage* page, PrStringView url, const PrHtmlResponseH
         page->host.documentCommitted(page->host.context, page);
     page->window->revealing = true;
     document->kind = prMimeTypeIsXml(contentType) ? DomDocumentKind_Xml : DomDocumentKind_Html;
-    TextBuffer essence;
-    textAppend(&essence, prMimeTypeEssence(contentType));
-    textAsciiLower(&essence);
+    PrTextBuffer essence = {};
+    prTextBufferAppend(&essence, prMimeTypeEssence(contentType));
+    prTextBufferAsciiLower(&essence);
     prStringReset(&document->contentType);
-    document->contentType = textTake(&essence);
+    document->contentType = prTextBufferTake(&essence);
     page->markdownOptions = markdownOptionsOf(contentType);
     prStringReset(&document->languagePragma);
     prStringReset(&document->languageHeader);
@@ -2399,11 +2401,11 @@ PrStatus beginDocument(PrHtmlPage* page, PrStringView url, const PrHtmlResponseH
 PrDomTag mediaHostOf(PrStringView essence) {
     if (prMimeTypeIsXml(essence))
         return PrDomTag_Unknown;
-    if (asciiStartsWithFold(essence, "image/"))
+    if (prAsciiStartsWithFold(essence, "image/"))
         return PrDomTag_Img;
-    if (asciiStartsWithFold(essence, "video/"))
+    if (prAsciiStartsWithFold(essence, "video/"))
         return PrDomTag_Video;
-    if (asciiStartsWithFold(essence, "audio/"))
+    if (prAsciiStartsWithFold(essence, "audio/"))
         return PrDomTag_Audio;
     return PrDomTag_Unknown;
 }
@@ -2446,9 +2448,9 @@ PrStatus runXmlParser(PrHtmlPage* page) {
 // decoded: a parse that waits for a script.
 void continueInTasks(PrHtmlPage* page, PrStringView source) {
     page->window->streaming = true;
-    page->streamInput.text.clear();
-    textAppend(&page->streamInput, source);
-    page->streamRead = page->streamInput.text.count;
+    prTextBufferClear(&page->streamInput);
+    prTextBufferAppend(&page->streamInput, source);
+    page->streamRead = page->streamInput.size;
     page->streamEnded = true;
     page->streamQueued = false;
     page->streamSniffed = true;
@@ -2513,7 +2515,7 @@ void queueStream(PrHtmlPage* page) {
 // Ends a load whose parse ran in tasks, by stopping the parse (html/#the-end).
 void endStream(PrHtmlPage* page, PrStatus status) {
     page->window->streaming = false;
-    page->streamInput.text.reset();
+    prTextBufferReset(&page->streamInput);
     page->streamRead = 0;
     if (page->window->document->kind == DomDocumentKind_Html)
         htmlParserReset(&page->parser);
@@ -2564,7 +2566,7 @@ void parseMarkdownStream(PrHtmlPage* page, PrStringView input) {
     bool last = page->streamEnded && end == input.size;
     if (end > page->streamRead || (last && !page->streamFlushed)) {
         PrString decoded = {};
-        PrStringView text = prCharsetDecodeView(&page->decoder, stringSlice(input, page->streamRead,
+        PrStringView text = prCharsetDecodeView(&page->decoder, prStringSlice(input, page->streamRead,
             end - page->streamRead), last ? PrCharsetInput_Final : PrCharsetInput_Partial, &decoded);
         page->streamRead = end;
         page->streamFlushed = last;
@@ -2590,7 +2592,7 @@ void continueXml(PrHtmlPage* page) {
     PrStatus status = runXmlParser(page);
     if (prXmlParserIsEnded(page->xml.parser))
         endStream(page, status);
-    else if (!prXmlParserIsPaused(page->xml.parser) && (page->streamRead < page->streamInput.text.count ||
+    else if (!prXmlParserIsPaused(page->xml.parser) && (page->streamRead < page->streamInput.size ||
             (page->streamEnded && !page->streamFlushed)))
         queueStream(page);
 }
@@ -2613,7 +2615,7 @@ void parseXmlStream(PrHtmlPage* page, PrStringView input) {
     bool last = page->streamEnded && end == input.size;
     if (end > page->streamRead || (last && !page->streamFlushed)) {
         PrString decoded = {};
-        PrStringView text = prCharsetDecodeView(&page->decoder, stringSlice(input, page->streamRead,
+        PrStringView text = prCharsetDecodeView(&page->decoder, prStringSlice(input, page->streamRead,
             end - page->streamRead), last ? PrCharsetInput_Final : PrCharsetInput_Partial, &decoded);
         page->streamRead = end;
         page->streamFlushed = last;
@@ -2633,7 +2635,7 @@ void parseStream(void* data) {
     // A parse that a script paused continues once the script runs (resumeParse).
     if (!page->window->streaming || parsePaused(page))
         return;
-    PrStringView input = textView(&page->streamInput);
+    PrStringView input = prTextBufferView(&page->streamInput);
     if (page->window->document->kind == DomDocumentKind_Xml) {
         parseXmlStream(page, input);
         return;
@@ -2659,7 +2661,7 @@ void parseStream(void* data) {
     bool last = page->streamEnded && end == input.size;
     if (end > page->streamRead || (last && !page->streamFlushed)) {
         PrString decoded = {};
-        PrStringView text = prCharsetDecodeView(&page->decoder, stringSlice(input, page->streamRead,
+        PrStringView text = prCharsetDecodeView(&page->decoder, prStringSlice(input, page->streamRead,
             end - page->streamRead), last ? PrCharsetInput_Final : PrCharsetInput_Partial, &decoded);
         page->streamRead = end;
         page->streamFlushed = last;
@@ -2678,7 +2680,7 @@ void parseStream(void* data) {
         if (page->parser.paused)
             return;
     }
-    if (page->streamRead < page->streamInput.text.count) {
+    if (page->streamRead < page->streamInput.size) {
         queueStream(page);
         return;
     }
@@ -2888,16 +2890,16 @@ void runJavascriptUrl(PrHtmlPage* page, const Navigation* navigation) {
         return;
     PrStringView url = prStringView(&navigation->url);
     PrStringView encoded = {url.data + kJavascriptScheme.size, url.size - kJavascriptScheme.size};
-    TextBuffer decoded{};
-    textReserve(&decoded, uint32_t(encoded.size));
-    decoded.text.count = uint32_t(prUrlPercentDecode(encoded, decoded.text.data, encoded.size));
+    PrTextBuffer decoded{};
+    prTextBufferReserve(&decoded, uint32_t(encoded.size));
+    decoded.size = uint32_t(prUrlPercentDecode(encoded, decoded.data, encoded.size));
     PrCharsetDecoder decoder = prCharsetDecoderMake(PrCharset_Utf8, 0);
     PrString text = {};
-    PrStringView source = prCharsetDecodeView(&decoder, textView(&decoded), PrCharsetInput_Final, &text);
+    PrStringView source = prCharsetDecodeView(&decoder, prTextBufferView(&decoded), PrCharsetInput_Final, &text);
     PrString result = {};
     bool isDocument = page->host.evaluate(page->host.context, page, source, &result);
     prStringReset(&text);
-    textReset(&decoded);
+    prTextBufferReset(&decoded);
     if (isDocument && page->pendingNavigation == 0 && htmlWindowIsFullyActive(page->window) && !page->loading) {
         PrString documentUrl = prDomDocumentUrl(page->window->document);
         PrHtmlResponseHeaders headers{.contentType = "text/html;charset=utf-8"};
@@ -2947,7 +2949,7 @@ struct DocumentLoadPiece {
     PrString url;               // Head: the response's URL, with the fragment that the navigation asked for
     PrString contentType;       // Head: the headers' values, or the null string for a header that is absent
     PrString contentLanguage;
-    TextBuffer bytes;           // Body
+    PrTextBuffer bytes;         // Body
     PrNetError error;           // Fail: PrNetError_None for a URL that the fetcher does not take
     PrString contentEncoding;   // Head
     PrString serverTiming;      // Head: the Server-Timing headers joined by commas
@@ -2979,7 +2981,7 @@ void freePiece(DocumentLoadPiece* piece) {
     prStringReset(&piece->serverTiming);
     prStringReset(&piece->referrerPolicy);
     prStringReset(&piece->sentReferrer);
-    textReset(&piece->bytes);
+    prTextBufferReset(&piece->bytes);
     prMemoryFree(piece);
 }
 
@@ -2999,35 +3001,35 @@ PrStringView failureReason(PrNetError error) {
 }
 
 // Appends `text` to `out` with the characters that HTML reads as markup escaped.
-void appendEscaped(TextBuffer* out, PrStringView text) {
+void appendEscaped(PrTextBuffer* out, PrStringView text) {
     for (size_t i = 0; i < text.size; ++i) {
         char c = text.data[i];
         if (c == '<')
-            textAppend(out, "&lt;");
+            prTextBufferAppend(out, "&lt;");
         else if (c == '>')
-            textAppend(out, "&gt;");
+            prTextBufferAppend(out, "&gt;");
         else if (c == '&')
-            textAppend(out, "&amp;");
+            prTextBufferAppend(out, "&amp;");
         else
-            textAppendChar(out, c);
+            prTextBufferAppendChar(out, c);
     }
 }
 
 // Loads a document at `url` that says why the navigation to it failed, as a browser's error page does, and reports the
 // failure at the end of its load.
 void loadFailure(PrHtmlPage* page, PrStringView url, PrNetError error) {
-    TextBuffer html{};
-    textAppend(&html, "<!doctype html><title>Not loaded</title><body style=\"font: 16px system-ui; margin: 40px\">"
+    PrTextBuffer html{};
+    prTextBufferAppend(&html, "<!doctype html><title>Not loaded</title><body style=\"font: 16px system-ui; margin: 40px\">"
         "<h1>The page did not load</h1><p>");
     appendEscaped(&html, url);
-    textAppend(&html, "</p><p>");
+    prTextBufferAppend(&html, "</p><p>");
     appendEscaped(&html, failureReason(error));
-    textAppend(&html, "</p>");
+    prTextBufferAppend(&html, "</p>");
     PrHtmlResponseHeaders headers{.contentType = "text/html;charset=utf-8"};
     page->navigationFailure = PrStatus_Io;
-    prHtmlPageLoad(page, textView(&html), url, &headers);
+    prHtmlPageLoad(page, prTextBufferView(&html), url, &headers);
     page->navigationFailure = PrStatus_Ok;
-    textReset(&html);
+    prTextBufferReset(&html);
 }
 
 // Ends the load's part on the agent, once its fetch has ended or failed.
@@ -3071,7 +3073,7 @@ void receivePiece(void* PR_NULLABLE data) {
                 break;
             }
             case LoadPiece_Body:
-                prHtmlPageAppendLoad(page, textView(&piece->bytes));
+                prHtmlPageAppendLoad(page, prTextBufferView(&piece->bytes));
                 break;
             case LoadPiece_End: {
                 load->timing = piece->timing;
@@ -3131,8 +3133,8 @@ void postBody(HtmlDocumentLoad* load, PrFetch* fetch) {
     char chunk[16 * 1024];
     for (size_t got = prFetchRead(fetch, reinterpret_cast<uint8_t*>(chunk), sizeof(chunk)); got != 0;
             got = prFetchRead(fetch, reinterpret_cast<uint8_t*>(chunk), sizeof(chunk)))
-        textAppend(&piece->bytes, chunk, uint32_t(got));
-    if (piece->bytes.text.count != 0)
+        prTextBufferAppend(&piece->bytes, PrStringView{chunk, uint32_t(got)});
+    if (piece->bytes.size != 0)
         postPiece(load, piece);
     else
         freePiece(piece);
@@ -3145,17 +3147,17 @@ void documentLoadEvent(void* PR_NULLABLE context, PrFetch* fetch, PrFetchEvent e
         case PrFetchEvent_Response: {
             DocumentLoadPiece* piece = newPiece(LoadPiece_Head);
             // The document's URL keeps the fragment that the navigation asked for, which the response's URL has not.
-            TextBuffer url{};
-            textAppend(&url, prFetchUrl(fetch));
+            PrTextBuffer url{};
+            prTextBufferAppend(&url, prFetchUrl(fetch));
             PrStringView asked = prStringView(&load->url);
             for (size_t i = 0; i < asked.size; ++i) {
                 if (asked.data[i] == '#') {
-                    textAppend(&url, PrStringView{asked.data + i, asked.size - i});
+                    prTextBufferAppend(&url, PrStringView{asked.data + i, asked.size - i});
                     break;
                 }
             }
-            piece->url = prStringCopy(textView(&url));
-            textReset(&url);
+            piece->url = prStringCopy(prTextBufferView(&url));
+            prTextBufferReset(&url);
             PrStringView type = prFetchHeaderValue(fetch, "content-type");
             PrStringView language = prFetchHeaderValue(fetch, "content-language");
             PrStringView encoding = prFetchHeaderValue(fetch, "content-encoding");
@@ -3279,7 +3281,7 @@ void abortDocument(PrHtmlPage* page) {
         return;
     htmlParserReset(&page->parser);
     page->window->streaming = false;
-    page->streamInput.text.reset();
+    prTextBufferReset(&page->streamInput);
     page->streamRead = 0;
     releaseWaiting(page);
 }
@@ -3478,16 +3480,16 @@ bool htmlPageNavigate(PrHtmlWindow* window, const PrHtmlWindow* PR_NULLABLE sour
 }
 
 PrHtmlWindow* PR_NULLABLE htmlPageChooseTarget(PrHtmlWindow* window, PrStringView name) {
-    if (name.size == 0 || asciiEqualsFold(name, "_self"))
+    if (name.size == 0 || prAsciiEqualsFold(name, "_self"))
         return window;
     PrHtmlWindow* top = window;
     while (top->parent != nullptr)
         top = top->parent;
-    if (asciiEqualsFold(name, "_parent"))
+    if (prAsciiEqualsFold(name, "_parent"))
         return window->parent != nullptr ? window->parent : window;
-    if (asciiEqualsFold(name, "_top"))
+    if (prAsciiEqualsFold(name, "_top"))
         return top;
-    if (asciiEqualsFold(name, "_blank"))
+    if (prAsciiEqualsFold(name, "_blank"))
         return nullptr;
     for (PrHtmlWindow* ancestor = window; ancestor != nullptr; ancestor = ancestor->parent) {
         if (hasTargetName(ancestor, name))
@@ -3541,7 +3543,7 @@ PrStatus htmlPageBeginStreamedLoad(PrHtmlPage* page, PrStringView url, const PrH
     if (media != PrDomTag_Unknown)
         return loadMediaDocument(page, media);
     page->window->streaming = true;
-    page->streamInput.text.clear();
+    prTextBufferClear(&page->streamInput);
     page->streamRead = 0;
     page->streamEnded = false;
     page->streamQueued = false;
@@ -3622,7 +3624,7 @@ void prHtmlPageDestroy(PrHtmlPage* PR_NULLABLE page) {
         prHtmlPageDestroy(page->children.data[i]);
     page->children.reset();
     page->window->frames.reset();
-    page->streamInput.text.reset();
+    prTextBufferReset(&page->streamInput);
     dropDocumentLoad(page);
     dropFetches(page);
     domXmlBuilderReset(&page->xml);
@@ -3740,7 +3742,7 @@ PrStatus prHtmlPageBeginLoad(PrHtmlPage* page, PrStringView url, const PrHtmlRes
 void prHtmlPageAppendLoad(PrHtmlPage* page, PrStringView bytes) {
     if (!page->window->streaming || page->streamEnded)
         return;
-    textAppend(&page->streamInput, bytes);
+    prTextBufferAppend(&page->streamInput, bytes);
     queueStream(page);
 }
 
@@ -3818,7 +3820,7 @@ PrStatus prHtmlPageFetch(PrHtmlPage* page, const PrFetchClientRequest* request, 
     if (request->body.size != 0)
         fetch->requestBody.append(request->body.data, uint32_t(request->body.size));
     // A data: URL is answered whatever the method (fetch/#scheme-fetch), as a document's is, but in a task.
-    if (asciiStartsWithFold(prStringView(&fetch->url), "data:")) {
+    if (prAsciiStartsWithFold(prStringView(&fetch->url), "data:")) {
         PrString body = {};
         status = prUrlProcessData(prStringView(&fetch->url), &body, &fetch->contentType);
         if (status == PrStatus_Ok) {
@@ -3898,11 +3900,11 @@ void prHtmlPageSetViewport(PrHtmlPage* page, PrVec2 extent) {
     const PrCssDescriptor features[] = {PrCssDescriptor_MediaWidth, PrCssDescriptor_MediaHeight};
     const float sizes[] = {extent.x, extent.y};
     for (uint32_t i = 0; i < 2; ++i) {
-        TextBuffer length;
+        PrTextBuffer length = {};
         cssSerializeNumber(&length, double(sizes[i]));
-        textAppend(&length, "px");
-        cssMediaEnvironmentSet(&page->window->media, features[i], textView(&length));
-        textReset(&length);
+        prTextBufferAppend(&length, "px");
+        cssMediaEnvironmentSet(&page->window->media, features[i], prTextBufferView(&length));
+        prTextBufferReset(&length);
     }
     cssPresentationDocumentMediaChanged(page->window->document);
 }

@@ -46,15 +46,15 @@ struct Array {
     // Appends a copy of `value` at the index that was `count`.
     void push(const T& value) {
         PR_ASSERT(!holds(&value));
-        memCopy(&emplace(), &value, sizeof(T));
+        prMemCopy(&emplace(), &value, sizeof(T));
     }
 
     // Inserts a copy of `value` at `index`, and moves the elements from `index` onward up by one.
     void insert(uint32_t index, const T& value) {
         PR_ASSERT(index <= count && !holds(&value));
         emplace();
-        memMove(data + index + 1, data + index, size_t(count - index - 1) * sizeof(T));
-        memCopy(data + index, &value, sizeof(T));
+        prMemMove(data + index + 1, data + index, size_t(count - index - 1) * sizeof(T));
+        prMemCopy(data + index, &value, sizeof(T));
     }
 
     // Removes `removedCount` elements starting at `index`, and keeps the order of the rest.
@@ -62,7 +62,7 @@ struct Array {
         PR_ASSERT(index <= count && removedCount <= count - index);
         if (removedCount == 0)
             return;
-        memMove(data + index, data + index + removedCount, size_t(count - index - removedCount) * sizeof(T));
+        prMemMove(data + index, data + index + removedCount, size_t(count - index - removedCount) * sizeof(T));
         count -= removedCount;
     }
 
@@ -73,7 +73,7 @@ struct Array {
         PR_ASSERT(itemsCount <= 0xffffffffu - count && !holds(items));
         if (itemsCount > capacity - count)
             reserve(count + itemsCount);
-        memCopy(data + count, items, size_t(itemsCount) * sizeof(T));
+        prMemCopy(data + count, items, size_t(itemsCount) * sizeof(T));
         count += itemsCount;
     }
 

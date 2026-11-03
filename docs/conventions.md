@@ -83,7 +83,7 @@ tools/harness/                    what the harnesses, the tools and the librarie
 | --- | --- |
 | public type / function | `Pr<Tag><Name>` / `pr<Tag><Subject><Verb>`: `PrDrawList`, `prDrawListPushGroup`. The subject is what the function makes, changes or reports, which need not be its first parameter. A function with no subject is `pr<Tag><Verb>`: `prColorConvert` |
 | enum value / flag | `Pr<Type>_<Name>` / `Pr<Type>Flag_<Name>`; combinations are members too |
-| constant | `k` prefix. A limit is `k<Subject>Max<What>`. In a public header, an integer that fits in an `int` is `enum { kPrX = n }`, and anything else, such as a float, is `static const`. Never a macro unless an `#if` reads it |
+| constant | `k` prefix. A limit is `k<Subject>Max<What>`. In a public header, an integer that fits in an `int` is `enum { kPrX = n }`, and anything else, such as a float, is `PR_CONSTANT`, which is `constexpr` in C++. Never a macro unless an `#if` reads it |
 | callback type | `Fn` suffix, with `void* context` as its first parameter; the context is passed as the parameter after the callback |
 | implementation | `pr_impl::`. A function or type that an internal header declares begins with a word of its module (`layoutBlock`, `CssValue`, not `css::Value`), which every module's implementation shares a namespace for: the module's tag, a backend's name (`cpuShade`), or a format that the module reads (`sfntOpen`, `pngDecode`); `lint.py` checks it (`module-word`). It is named as a public function is, without `pr` |
 | C++ API | `pr::`, in the public headers of a C++ layer and the sources that implement them. A source of the C++ API is one `pr` block, with its anonymous namespace inside it |

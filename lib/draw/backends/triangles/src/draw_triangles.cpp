@@ -185,7 +185,7 @@ struct Walk {
 };
 
 uint32_t packColor(float r, float g, float b, float a) {
-    auto byte = [](float v) { return uint32_t(clampF32(v, 0, 1) * 255 + 0.5f); };
+    auto byte = [](float v) { return uint32_t(prF32Clamp(v, 0, 1) * 255 + 0.5f); };
     return byte(r) | byte(g) << 8 | byte(b) << 16 | byte(a) << 24;
 }
 
@@ -403,7 +403,7 @@ void findBreaks(CachedRamp& r) {
         for (uint32_t k = 0; k < 4; ++k) {
             int a = channel(start, k);
             int line = a + (channel(end, k) - a) * int(i - start) / int(end - start);
-            if (absF32(float(channel(i, k) - line)) > float(kRampError))
+            if (prF32Abs(float(channel(i, k) - line)) > float(kRampError))
                 return false;
         }
         return true;
@@ -504,12 +504,12 @@ void placeGradient(Paint& p) {
             float gap = 1;
             for (uint32_t i = 1; i < ramp->breakCount; ++i) {
                 if (ramp->breaks[i] > ramp->breaks[i - 1])
-                    gap = minF32(gap, ramp->breaks[i] - ramp->breaks[i - 1]);
+                    gap = prF32Min(gap, ramp->breaks[i] - ramp->breaks[i - 1]);
             }
             float perUnit = prAffine2MaxScale(p.fromDevice);
             float pixels = perUnit > 0 ? brush->radial.endRadius / perUnit : kPaintGrid;
             p.cut = PaintCut_Grid;
-            p.grid = clampF32(pixels * gap / 2, kPaintGridFinest, kPaintGrid);
+            p.grid = prF32Clamp(pixels * gap / 2, kPaintGridFinest, kPaintGrid);
             break;
         }
     }
@@ -588,8 +588,8 @@ bool makePaint(Walk& w, const PrDrawBrush* PR_NULLABLE brush, PrColor color, PrR
 uint32_t rampColor(const Paint& p, float t, float alpha) {
     if (!prDrawGradientExtend(p.brush->extend, &t))
         return 0;
-    uint32_t c = p.ramp->colors[uint32_t(clampF32(t, 0, 1) * float(kRampSize - 1) + 0.5f)];
-    uint32_t a = uint32_t(float(c >> 24) * clampF32(alpha, 0, 1) + 0.5f);
+    uint32_t c = p.ramp->colors[uint32_t(prF32Clamp(t, 0, 1) * float(kRampSize - 1) + 0.5f)];
+    uint32_t a = uint32_t(float(c >> 24) * prF32Clamp(alpha, 0, 1) + 0.5f);
     return (c & 0xffffffu) | a << 24;
 }
 
@@ -608,8 +608,8 @@ PrVec2 uvAt(const Walk& w, const Paint& p, PrVec2 device) {
         return whiteUv(w.t);
     PrVec2 uv = prAffine2MapPoint(p.uvFromBrush, brushPoint(p, device));
     if (p.clampUv) {
-        uv.x = clampF32(uv.x, p.uvBounds.left, p.uvBounds.right);
-        uv.y = clampF32(uv.y, p.uvBounds.top, p.uvBounds.bottom);
+        uv.x = prF32Clamp(uv.x, p.uvBounds.left, p.uvBounds.right);
+        uv.y = prF32Clamp(uv.y, p.uvBounds.top, p.uvBounds.bottom);
     }
     return uv;
 }
@@ -656,7 +656,7 @@ uint32_t keepInside(Piece* polygon, uint32_t count, const PrVec2* outline, uint3
         count = keepSide(polygon, count, [&](const Piece& q) {
             return sign * ((b.x - a.x) * (q.p.y - a.y) - (b.y - a.y) * (q.p.x - a.x));
         }, next);
-        memCopy(polygon, next, sizeof(Piece) * count);
+        prMemCopy(polygon, next, sizeof(Piece) * count);
     }
     return count;
 }
@@ -671,8 +671,8 @@ void drawPiece(Walk& w, const Piece* piece, uint32_t count, const Paint& paint, 
         PrVec2 p = piece[i].p;
         uint32_t color;
         if (paint.kind == PaintKind_Gradient && paint.cut != PaintCut_Grid) {
-            float inset = isFiniteF32(high - low) ? (high - low) / 100 : 1e-4f;
-            float t = clampF32(piece[i].value, low + inset, high - inset);
+            float inset = prF32IsFinite(high - low) ? (high - low) / 100 : 1e-4f;
+            float t = prF32Clamp(piece[i].value, low + inset, high - inset);
             color = rampColor(paint, t, paint.alpha * piece[i].coverage);
         } else {
             color = colorAt(paint, p, piece[i].coverage);
@@ -693,18 +693,18 @@ void cutAt(const Piece* polygon, uint32_t count, const float* cuts, uint32_t cut
     Piece rest[kMaxPiece];
     Piece above[kMaxPiece];
     Piece piece[kMaxPiece];
-    memCopy(rest, polygon, sizeof(Piece) * count);
+    prMemCopy(rest, polygon, sizeof(Piece) * count);
     uint32_t n = count;
     for (uint32_t i = 0; i < cutCount && n >= 3; ++i) {
         float cut = cuts[i];
         uint32_t m = keepSide(rest, n, [&](const Piece& q) { return cut - q.value; }, piece);
         n = keepSide(rest, n, [&](const Piece& q) { return q.value - cut; }, above);
-        memCopy(rest, above, sizeof(Piece) * n);
+        prMemCopy(rest, above, sizeof(Piece) * n);
         if (m >= 3)
-            each(piece, m, i == 0 ? -kInfinityF32 : cuts[i - 1], cut);
+            each(piece, m, i == 0 ? -kPrF32Infinity : cuts[i - 1], cut);
     }
     if (n >= 3)
-        each(rest, n, cutCount == 0 ? -kInfinityF32 : cuts[cutCount - 1], kInfinityF32);
+        each(rest, n, cutCount == 0 ? -kPrF32Infinity : cuts[cutCount - 1], kPrF32Infinity);
 }
 
 // Writes the values at which a linear gradient's parameter, before it extends, reaches one of the ramp's breaks,
@@ -726,9 +726,9 @@ uint32_t gradientCuts(const Paint& p, float low, float high, float* out) {
             add(1);
         return count;
     }
-    float first = floorF32(low);
+    float first = prF32Floor(low);
     for (float k = first; k <= high && count < kMaxCuts; k += 1) {
-        bool mirrored = p.brush->extend == PrDrawExtend_Reflect && fmodF32(absF32(k), 2) == 1;
+        bool mirrored = p.brush->extend == PrDrawExtend_Reflect && prF32Fmod(prF32Abs(k), 2) == 1;
         const CachedRamp& r = *p.ramp;
         for (uint32_t i = 0; i < r.breakCount; ++i)
             add(mirrored ? k + 1 - r.breaks[r.breakCount - 1 - i] : k + r.breaks[i]);
@@ -740,20 +740,20 @@ uint32_t gradientCuts(const Paint& p, float low, float high, float* out) {
 // multiples.
 uint32_t gridCuts(float spacing, float low, float high, float* out) {
     uint32_t count = 0;
-    for (float v = floorF32(low / spacing + 1) * spacing; v < high && count < kMaxCuts; v += spacing)
+    for (float v = prF32Floor(low / spacing + 1) * spacing; v < high && count < kMaxCuts; v += spacing)
         out[count++] = v;
     return count;
 }
 
 // Draws the polygon of a gradient whose parameter over it is t0 + tx x + ty y, cut where the ramp's colors turn.
 void drawAffine(Walk& w, Piece* polygon, uint32_t count, const Paint& paint, float t0, float tx, float ty) {
-    float low = kInfinityF32;
-    float high = -kInfinityF32;
+    float low = kPrF32Infinity;
+    float high = -kPrF32Infinity;
     for (uint32_t i = 0; i < count; ++i) {
         Piece& q = polygon[i];
         q.value = t0 + tx * q.p.x + ty * q.p.y;
-        low = minF32(low, q.value);
-        high = maxF32(high, q.value);
+        low = prF32Min(low, q.value);
+        high = prF32Max(high, q.value);
     }
     float cuts[kMaxCuts];
     uint32_t n = gradientCuts(paint, low, high, cuts);
@@ -787,7 +787,7 @@ void drawQuadrants(Walk& w, Piece* polygon, uint32_t count, const Paint& paint) 
             float ty = sx * f.c / r.x + sy * f.d / r.y;
             float t0 = sx * (f.e - c.x) / r.x + sy * (f.f - c.y) / r.y;
             Piece piece[kMaxPiece];
-            memCopy(piece, quarter, sizeof(Piece) * k);
+            prMemCopy(piece, quarter, sizeof(Piece) * k);
             drawAffine(w, piece, k, paint, t0, tx, ty);
         });
     });
@@ -808,7 +808,7 @@ struct RaySide {
 
 // Returns the side of the ray from `center` at `angle`.
 RaySide raySide(const Paint& paint, PrVec2 center, float angle) {
-    return RaySide{.fromDevice = paint.fromDevice, .center = center, .direction = {cosF32(angle), sinF32(angle)}};
+    return RaySide{.fromDevice = paint.fromDevice, .center = center, .direction = {prF32Cos(angle), prF32Sin(angle)}};
 }
 
 // Cuts the polygon along lines through a center in brush space, at each of the angles. The angles ascend through a
@@ -818,7 +818,7 @@ RaySide raySide(const Paint& paint, PrVec2 center, float angle) {
 template <typename Each>
 void cutWedges(const Piece* polygon, uint32_t count, const Paint& paint, PrVec2 c, const float* angles, uint32_t n, Each each) {
     uint32_t half = 0;
-    while (half + 1 < n && angles[half] < angles[0] + kPiF32 - 1e-4f)
+    while (half + 1 < n && angles[half] < angles[0] + kPrF32Pi - 1e-4f)
         ++half;
     RaySide first = raySide(paint, c, angles[0]);
     Piece halves[2][kMaxPiece];
@@ -837,7 +837,7 @@ void cutWedges(const Piece* polygon, uint32_t count, const Paint& paint, PrVec2 
             RaySide ray = raySide(paint, c, angles[k]);
             uint32_t m = keepSide(rest, remaining, [&](const Piece& q) { return -ray(q); }, piece);
             remaining = keepSide(rest, remaining, ray, next);
-            memCopy(rest, next, sizeof(Piece) * remaining);
+            prMemCopy(rest, next, sizeof(Piece) * remaining);
             if (m >= 3)
                 each(piece, m, k - 1);
         }
@@ -858,19 +858,19 @@ void drawWedges(Walk& w, Piece* polygon, uint32_t count, const Paint& paint) {
     const CachedRamp& ramp = *paint.ramp;
     float angles[kRampSize + kConicWedges + 1];
     for (uint32_t i = 0; i < ramp.rayCount; ++i)
-        angles[i] = brush.conic.angle + 2 * kPiF32 * ramp.rays[i];
+        angles[i] = brush.conic.angle + 2 * kPrF32Pi * ramp.rays[i];
     cutWedges(polygon, count, paint, c, angles, ramp.rayCount, [&](const Piece* piece, uint32_t n, uint32_t index) {
         float low = ramp.rays[index];
         float high = ramp.rays[index + 1];
         float bisector = (angles[index] + angles[index + 1]) / 2;
-        PrVec2 u{cosF32(bisector), sinF32(bisector)};
+        PrVec2 u{prF32Cos(bisector), prF32Sin(bisector)};
         Piece wedge[kMaxPiece];
         float far = 0;
         for (uint32_t k = 0; k < n; ++k) {
             wedge[k] = piece[k];
             PrVec2 b = prAffine2MapPoint(f, piece[k].p);
             wedge[k].value = u.x * (b.x - c.x) + u.y * (b.y - c.y);
-            far = maxF32(far, wedge[k].value);
+            far = prF32Max(far, wedge[k].value);
         }
         float cuts[64];
         uint32_t cutCount = 0;
@@ -882,7 +882,7 @@ void drawWedges(Walk& w, Piece* polygon, uint32_t count, const Paint& paint) {
                 colored[k] = part[k];
                 PrVec2 b = prAffine2MapPoint(f, part[k].p);
                 float t = (low + high) / 2;
-                if (absF32(b.x - c.x) + absF32(b.y - c.y) > near * 1e-3f) {
+                if (prF32Abs(b.x - c.x) + prF32Abs(b.y - c.y) > near * 1e-3f) {
                     prDrawGradientParameter(&brush, b, &t);
                     // A point on the ray at the turn's start belongs to either end of the turn. It takes the end that
                     // is nearer the wedge.
@@ -906,16 +906,16 @@ void drawRings(Walk& w, Piece* polygon, uint32_t count, const Paint& paint) {
     float span = brush.radial.endRadius - r0;
     float angles[kRadialWedges + 1];
     for (uint32_t i = 0; i <= kRadialWedges; ++i)
-        angles[i] = 2 * kPiF32 * float(i) / float(kRadialWedges);
+        angles[i] = 2 * kPrF32Pi * float(i) / float(kRadialWedges);
     cutWedges(polygon, count, paint, c, angles, kRadialWedges + 1, [&](const Piece* piece, uint32_t n, uint32_t i) {
         // t = (u . (b - c) - r0) / span, with u along the middle and b the brush point.
         float middle = (angles[i] + angles[i + 1]) / 2;
-        PrVec2 u{cosF32(middle), sinF32(middle)};
+        PrVec2 u{prF32Cos(middle), prF32Sin(middle)};
         float tx = (u.x * f.a + u.y * f.b) / span;
         float ty = (u.x * f.c + u.y * f.d) / span;
         float t0 = (u.x * (f.e - c.x) + u.y * (f.f - c.y) - r0) / span;
         Piece wedge[kMaxPiece];
-        memCopy(wedge, piece, sizeof(Piece) * n);
+        prMemCopy(wedge, piece, sizeof(Piece) * n);
         drawAffine(w, wedge, n, paint, t0, tx, ty);
     });
 }
@@ -948,32 +948,32 @@ void drawPolygon(Walk& w, Piece* polygon, uint32_t count, const Paint& paint) {
         case PaintCut_Grid:
             break;
         default:
-            drawPiece(w, polygon, count, paint, -kInfinityF32, kInfinityF32);
+            drawPiece(w, polygon, count, paint, -kPrF32Infinity, kPrF32Infinity);
             return;
     }
-    float low = kInfinityF32;
-    float high = -kInfinityF32;
+    float low = kPrF32Infinity;
+    float high = -kPrF32Infinity;
     for (uint32_t i = 0; i < count; ++i) {
         polygon[i].value = polygon[i].p.x;
-        low = minF32(low, polygon[i].value);
-        high = maxF32(high, polygon[i].value);
+        low = prF32Min(low, polygon[i].value);
+        high = prF32Max(high, polygon[i].value);
     }
     float cuts[kMaxCuts];
     uint32_t n = gridCuts(paint.grid, low, high, cuts);
     cutAt(polygon, count, cuts, n, [&](const Piece* column, uint32_t m, float, float) {
         Piece rows[kMaxPiece];
-        float top = kInfinityF32;
-        float bottom = -kInfinityF32;
+        float top = kPrF32Infinity;
+        float bottom = -kPrF32Infinity;
         for (uint32_t i = 0; i < m; ++i) {
             rows[i] = column[i];
             rows[i].value = rows[i].p.y;
-            top = minF32(top, rows[i].value);
-            bottom = maxF32(bottom, rows[i].value);
+            top = prF32Min(top, rows[i].value);
+            bottom = prF32Max(bottom, rows[i].value);
         }
         float rowCuts[kMaxCuts];
         uint32_t k = gridCuts(paint.grid, top, bottom, rowCuts);
         cutAt(rows, m, rowCuts, k, [&](const Piece* piece, uint32_t pieceCount, float, float) {
-            drawPiece(w, piece, pieceCount, paint, -kInfinityF32, kInfinityF32);
+            drawPiece(w, piece, pieceCount, paint, -kPrF32Infinity, kPrF32Infinity);
         });
     });
 }
@@ -1008,10 +1008,10 @@ void drawMapped(Walk& w, const Piece* triangle, const Paint& paint) {
     const StrokeMap& m = w.map;
     PrRect box{triangle[0].p.x, triangle[0].p.y, triangle[0].p.x, triangle[0].p.y};
     for (uint32_t k = 1; k < 3; ++k) {
-        box.left = minF32(box.left, triangle[k].p.x);
-        box.top = minF32(box.top, triangle[k].p.y);
-        box.right = maxF32(box.right, triangle[k].p.x);
-        box.bottom = maxF32(box.bottom, triangle[k].p.y);
+        box.left = prF32Min(box.left, triangle[k].p.x);
+        box.top = prF32Min(box.top, triangle[k].p.y);
+        box.right = prF32Max(box.right, triangle[k].p.x);
+        box.bottom = prF32Max(box.bottom, triangle[k].p.y);
     }
     for (uint32_t i = 0; i < m.segments.count; ++i) {
         const MapSegment& s = m.segments.data[i];
@@ -1019,13 +1019,13 @@ void drawMapped(Walk& w, const Piece* triangle, const Paint& paint) {
             continue;
         Piece polygon[kMaxPiece];
         Piece next[kMaxPiece];
-        memCopy(polygon, triangle, sizeof(Piece) * 3);
+        prMemCopy(polygon, triangle, sizeof(Piece) * 3);
         uint32_t count = 3;
         auto keep = [&](PrVec2 origin, PrVec2 normal, float offset) {
             count = keepSide(polygon, count, [&](const Piece& q) {
                 return (q.p.x - origin.x) * normal.x + (q.p.y - origin.y) * normal.y + offset;
             }, next);
-            memCopy(polygon, next, sizeof(Piece) * count);
+            prMemCopy(polygon, next, sizeof(Piece) * count);
         };
         PrVec2 right{-s.direction.y, s.direction.x};
         if (s.startBound)
@@ -1054,7 +1054,7 @@ void drawMapped(Walk& w, const Piece* triangle, const Paint& paint) {
         float end = s.along + span;
         cutAt(polygon, count, ends, 2, [&](const Piece* part, uint32_t n, float low, float high) {
             Piece piece[kMaxPiece];
-            memCopy(piece, part, sizeof(Piece) * n);
+            prMemCopy(piece, part, sizeof(Piece) * n);
             if (high == 0 && !s.startBound)
                 place(piece, n, &start);
             else if (low == span && !s.endBound)
@@ -1182,7 +1182,7 @@ void drawListRect(Walk& w, const PrDrawList* drawn, PrRect area, PrRect destinat
             prAffine2Translate(PrVec2{destination.left, destination.top})));
     PrDrawTransform next = prDrawTransformPush(&w.transforms.last(), &place);
     w.transforms.push(next);
-    w.opacities.push(opacityOf(w) * clampF32(alpha, 0, 1));
+    w.opacities.push(opacityOf(w) * prF32Clamp(alpha, 0, 1));
     if (!prIRectIsEmpty(clipOf(w)))
         runCommands(w, prDrawListCommands(drawn), prDrawListCommandCount(drawn));
     w.opacities.pop();
@@ -1225,21 +1225,21 @@ void drawListBrush(Walk& w, const PrDrawCommand& c) {
         {float(box.left), float(box.top)}, {float(box.right), float(box.top)},
         {float(box.right), float(box.bottom)}, {float(box.left), float(box.bottom)},
     };
-    PrRect reach{kInfinityF32, kInfinityF32, -kInfinityF32, -kInfinityF32};
+    PrRect reach{kPrF32Infinity, kPrF32Infinity, -kPrF32Infinity, -kPrF32Infinity};
     for (const PrVec2& corner : corners) {
         PrVec2 b = prAffine2MapPoint(fromDevice, corner);
         reach = PrRect{
-            minF32(reach.left, b.x), minF32(reach.top, b.y), maxF32(reach.right, b.x),
-            maxF32(reach.bottom, b.y),
+            prF32Min(reach.left, b.x), prF32Min(reach.top, b.y), prF32Max(reach.right, b.x),
+            prF32Max(reach.bottom, b.y),
         };
     }
-    float periodX = prRectWidth(tile) + maxF32(tiles.spacing.x, 0);
-    float periodY = prRectHeight(tile) + maxF32(tiles.spacing.y, 0);
+    float periodX = prRectWidth(tile) + prF32Max(tiles.spacing.x, 0);
+    float periodY = prRectHeight(tile) + prF32Max(tiles.spacing.y, 0);
     auto repeats = [](PrDrawExtend mode) { return mode == PrDrawExtend_Repeat || mode == PrDrawExtend_Reflect; };
-    float firstX = repeats(tiles.x) ? floorF32((reach.left - tile.left) / periodX) : 0;
-    float lastX = repeats(tiles.x) ? floorF32((reach.right - tile.left) / periodX) : 0;
-    float firstY = repeats(tiles.y) ? floorF32((reach.top - tile.top) / periodY) : 0;
-    float lastY = repeats(tiles.y) ? floorF32((reach.bottom - tile.top) / periodY) : 0;
+    float firstX = repeats(tiles.x) ? prF32Floor((reach.left - tile.left) / periodX) : 0;
+    float lastX = repeats(tiles.x) ? prF32Floor((reach.right - tile.left) / periodX) : 0;
+    float firstY = repeats(tiles.y) ? prF32Floor((reach.top - tile.top) / periodY) : 0;
+    float lastY = repeats(tiles.y) ? prF32Floor((reach.bottom - tile.top) / periodY) : 0;
     if (!prIRectIsEmpty(box) && (lastX - firstX + 1) * (lastY - firstY + 1) <= float(kListMaxTiles)) {
         for (float iy = firstY; iy <= lastY; iy += 1) {
             for (float ix = firstX; ix <= lastX; ix += 1) {
@@ -1247,8 +1247,8 @@ void drawListBrush(Walk& w, const PrDrawCommand& c) {
                     tile.left + ix * periodX, tile.top + iy * periodY, tile.right + ix * periodX,
                     tile.bottom + iy * periodY,
                 };
-                bool flipX = tiles.x == PrDrawExtend_Reflect && fmodF32(absF32(ix), 2) == 1;
-                bool flipY = tiles.y == PrDrawExtend_Reflect && fmodF32(absF32(iy), 2) == 1;
+                bool flipX = tiles.x == PrDrawExtend_Reflect && prF32Fmod(prF32Abs(ix), 2) == 1;
+                bool flipY = tiles.y == PrDrawExtend_Reflect && prF32Fmod(prF32Abs(iy), 2) == 1;
                 PrRect source{
                     flipX ? area.right : area.left, flipY ? area.bottom : area.top,
                     flipX ? area.left : area.right, flipY ? area.top : area.bottom,
@@ -1265,7 +1265,7 @@ void drawListBrush(Walk& w, const PrDrawCommand& c) {
                         prRectHeight(at) / prRectHeight(source),
                     })), prAffine2Translate(PrVec2{at.left, at.top})));
                 w.transforms.push(prDrawTransformPush(&w.transforms.last(), &place));
-                w.opacities.push(opacityOf(w) * clampF32(prFloat16ToFloat(c.color.a), 0, 1));
+                w.opacities.push(opacityOf(w) * prF32Clamp(prFloat16ToFloat(c.color.a), 0, 1));
                 if (!prIRectIsEmpty(clipOf(w)))
                     runCommands(w, prDrawListCommands(brush.image.source.list),
                         prDrawListCommandCount(brush.image.source.list));
@@ -1314,7 +1314,7 @@ bool mapStroke(Walk& w, const PrDrawCommand& c) {
     prPathFlatten(t->shape, x.affine, kTolerance, PrPathFlattening_Inside, &t->centerline);
     float scale = stroke.nonScaling ? 1 : prAffine2MaxScale(x.affine);
     // A stroke narrower than a pixel is drawn a pixel wide.
-    m.reach = prDrawStrokeReach(&stroke) * maxF32(stroke.shape.width * scale, 1) + kFringe;
+    m.reach = prDrawStrokeReach(&stroke) * prF32Max(stroke.shape.width * scale, 1) + kFringe;
     const PrPathPolyline& centerline = t->centerline;
     for (uint32_t contour = 0; contour < centerline.contourCount; ++contour) {
         const PrVec2* points = centerline.points + centerline.contours[contour];
@@ -1327,7 +1327,7 @@ bool mapStroke(Walk& w, const PrDrawCommand& c) {
         for (uint32_t i = 0; i < segments; ++i) {
             PrVec2 a = points[i];
             PrVec2 b = points[(i + 1) % count];
-            length += sqrtF32((b.x - a.x) * (b.x - a.x) + (b.y - a.y) * (b.y - a.y));
+            length += prF32Sqrt((b.x - a.x) * (b.x - a.x) + (b.y - a.y) * (b.y - a.y));
         }
         if (count < 2 || !(length > 0))
             continue;
@@ -1338,7 +1338,7 @@ bool mapStroke(Walk& w, const PrDrawCommand& c) {
             PrVec2 b = points[(i + 1) % count];
             float dx = b.x - a.x;
             float dy = b.y - a.y;
-            float span = sqrtF32(dx * dx + dy * dy);
+            float span = prF32Sqrt(dx * dx + dy * dy);
             if (!(span > 0))
                 continue;
             MapSegment s{};
@@ -1351,8 +1351,8 @@ bool mapStroke(Walk& w, const PrDrawCommand& c) {
             s.left = width.left * scale;
             s.right = width.right * scale;
             s.bounds = PrRect{
-                minF32(a.x, b.x) - m.reach, minF32(a.y, b.y) - m.reach, maxF32(a.x, b.x) + m.reach,
-                maxF32(a.y, b.y) + m.reach,
+                prF32Min(a.x, b.x) - m.reach, prF32Min(a.y, b.y) - m.reach, prF32Max(a.x, b.x) + m.reach,
+                prF32Max(a.y, b.y) + m.reach,
             };
             m.segments.push(s);
             along += span;
@@ -1528,7 +1528,7 @@ void cornerOutline(PrRect r, const PrCorner corners[4], PrAffine2 transform, Arr
 // positive.
 void drawCut(Walk& w, const Piece triangle[3], const Array<PrVec2>& outline, float sign, const Paint& paint) {
     Piece polygon[kMaxPiece];
-    memCopy(polygon, triangle, sizeof(Piece) * 3);
+    prMemCopy(polygon, triangle, sizeof(Piece) * 3);
     uint32_t count = keepInside(polygon, 3, outline.data, outline.count, sign);
     if (count < 3)
         return;
@@ -1554,7 +1554,7 @@ void drawShadow(Walk& w, const PrDrawCommand& c) {
     if (c.shadow->nonScaling)
         shifted = prAffine2Concat(device, prAffine2Translate(c.shadow->offset));
     float sigma = c.shadow->nonScaling ? g.sigma : g.sigma * scale;
-    float half = maxF32(sigma * kShadowBand / 2, kFringe / 2) / scale;
+    float half = prF32Max(sigma * kShadowBand / 2, kFringe / 2) / scale;
     PrRect bounds = prDrawFillBounds(&c);
     Paint paint{};
     if (!makePaint(w, c.brush, c.color, bounds, &paint))
@@ -1562,9 +1562,9 @@ void drawShadow(Walk& w, const PrDrawCommand& c) {
 
     float width = prRectWidth(g.shape.rect);
     float height = prRectHeight(g.shape.rect);
-    float insetX = minF32(half, width / 2);
-    float insetY = minF32(half, height / 2);
-    float peak = minF32(1, width / (2 * half)) * minF32(1, height / (2 * half));
+    float insetX = prF32Min(half, width / 2);
+    float insetY = prF32Min(half, height / 2);
+    float peak = prF32Min(1, width / (2 * half)) * prF32Min(1, height / (2 * half));
     float insets[4] = {insetY, insetX, insetY, insetX};
     float outsets[4] = {-half, -half, -half, -half};
     PrCornerRect innerShape = prCornerRectInset(g.shape, insets);
@@ -1898,8 +1898,8 @@ void pushClip(Walk& w, const PrDrawCommand& c) {
         clip.box = PrIRect{0, 0, 0, 0};
     } else {
         PrIRect box{
-            saturateI32(double(roundF32(rect.left))), saturateI32(double(roundF32(rect.top))),
-            saturateI32(double(roundF32(rect.right))), saturateI32(double(roundF32(rect.bottom))),
+            prF64SaturateI32(double(prF32Round(rect.left))), prF64SaturateI32(double(prF32Round(rect.top))),
+            prF64SaturateI32(double(prF32Round(rect.right))), prF64SaturateI32(double(prF32Round(rect.bottom))),
         };
         clip.box = prIRectIntersect(clip.box, box);
         if (outline && !prIRectIsEmpty(clip.box)) {
@@ -1990,7 +1990,7 @@ void runCommands(Walk& w, const PrDrawCommand* commands, uint32_t count) {
                 popClip(w);
                 break;
             case PrDrawCommandKind_PushGroup:
-                w.opacities.push(opacityOf(w) * clampF32(c.group->opacity, 0, 1));
+                w.opacities.push(opacityOf(w) * prF32Clamp(c.group->opacity, 0, 1));
                 break;
             case PrDrawCommandKind_PopGroup:
                 w.opacities.pop();

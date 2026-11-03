@@ -28,9 +28,9 @@ PrDomElement* input(PrDomDocument* document, PrStringView type) {
 
 // Returns the control's value, which lives until the next call.
 PrStringView valueOf(const PrDomElement* element) {
-    static TextBuffer value;
+    static PrTextBuffer value = {};
     domControlValue(element, &value);
-    return textView(&value);
+    return prTextBufferView(&value);
 }
 
 bool parsesFloat(PrStringView text, double expected) {
@@ -93,13 +93,13 @@ TEST_CASE("dates, weeks and times round-trip through their numbers") {
     CHECK((time == 86399123 && digits == 4));
     CHECK(!domIsValidTime("23:59:59.1234"));
     CHECK(!domParseTime("24:00", &time));
-    TextBuffer text;
+    PrTextBuffer text = {};
     domAppendTime(&text, 3600000);
-    CHECK(textView(&text) == "01:00");
-    textClear(&text);
+    CHECK(prTextBufferView(&text) == "01:00");
+    prTextBufferClear(&text);
     domAppendTime(&text, 3661500);
-    CHECK(textView(&text) == "01:01:01.500");
-    textReset(&text);
+    CHECK(prTextBufferView(&text) == "01:01:01.500");
+    prTextBufferReset(&text);
 }
 
 TEST_CASE("an input's value follows its value attribute until script sets it") {

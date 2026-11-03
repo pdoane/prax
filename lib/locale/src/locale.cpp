@@ -35,7 +35,7 @@ struct Subtags {
 
 bool allLetters(PrStringView text) {
     for (size_t i = 0; i < text.size; ++i) {
-        if (!asciiIsLetter(text.data[i]))
+        if (!prAsciiIsLetter(text.data[i]))
             return false;
     }
     return true;
@@ -43,7 +43,7 @@ bool allLetters(PrStringView text) {
 
 bool allDigits(PrStringView text) {
     for (size_t i = 0; i < text.size; ++i) {
-        if (!asciiIsDigit(text.data[i]))
+        if (!prAsciiIsDigit(text.data[i]))
             return false;
     }
     return true;
@@ -51,9 +51,9 @@ bool allDigits(PrStringView text) {
 
 // Returns true if a script code is one of ISO 15924's private-use codes, Qaaa through Qabx.
 bool privateScript(PrStringView code) {
-    char third = asciiLower(code.data[2]);
-    char fourth = asciiLower(code.data[3]);
-    return asciiLower(code.data[0]) == 'q' && asciiLower(code.data[1]) == 'a' &&
+    char third = prAsciiLower(code.data[2]);
+    char fourth = prAsciiLower(code.data[3]);
+    return prAsciiLower(code.data[0]) == 'q' && prAsciiLower(code.data[1]) == 'a' &&
         (third == 'a' || (third == 'b' && fourth <= 'x'));
 }
 
@@ -61,8 +61,8 @@ bool privateScript(PrStringView code) {
 bool privateRegion(PrStringView subtag) {
     if (subtag.size != 2)
         return false;
-    char first = asciiLower(subtag.data[0]);
-    char second = asciiLower(subtag.data[1]);
+    char first = prAsciiLower(subtag.data[0]);
+    char second = prAsciiLower(subtag.data[1]);
     return (first == 'q' && second >= 'm') || first == 'x';
 }
 

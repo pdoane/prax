@@ -58,7 +58,7 @@ std::string serialized(PrStringView property, PrStringView value) {
     CssValueSpan span;
     if (!s.parseProperty(property, &span))
         return std::string();
-    TextBuffer out = {};
+    PrTextBuffer out = {};
     cssSerializeValues(&out, cssValuePoolRun(&s.pool, span));
     return take(&out);
 }

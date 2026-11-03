@@ -29,27 +29,27 @@ float blendChannel(PrDrawBlendMode mode, float b, float s) {
         case PrDrawBlendMode_Overlay:
             return blendChannel(PrDrawBlendMode_HardLight, s, b);
         case PrDrawBlendMode_Darken:
-            return minF32(b, s);
+            return prF32Min(b, s);
         case PrDrawBlendMode_Lighten:
-            return maxF32(b, s);
+            return prF32Max(b, s);
         case PrDrawBlendMode_ColorDodge:
             if (b <= 0)
                 return 0;
-            return s >= 1 ? 1 : minF32(1, b / (1 - s));
+            return s >= 1 ? 1 : prF32Min(1, b / (1 - s));
         case PrDrawBlendMode_ColorBurn:
             if (b >= 1)
                 return 1;
-            return s <= 0 ? 0 : 1 - minF32(1, (1 - b) / s);
+            return s <= 0 ? 0 : 1 - prF32Min(1, (1 - b) / s);
         case PrDrawBlendMode_HardLight:
             return s <= 0.5f ? b * 2 * s : blendChannel(PrDrawBlendMode_Screen, b, 2 * s - 1);
         case PrDrawBlendMode_SoftLight: {
             if (s <= 0.5f)
                 return b - (1 - 2 * s) * b * (1 - b);
-            float d = b <= 0.25f ? ((16 * b - 12) * b + 4) * b : sqrtF32(b);
+            float d = b <= 0.25f ? ((16 * b - 12) * b + 4) * b : prF32Sqrt(b);
             return b + (2 * s - 1) * (d - b);
         }
         case PrDrawBlendMode_Difference:
-            return absF32(b - s);
+            return prF32Abs(b - s);
         case PrDrawBlendMode_Exclusion:
             return b + s - 2 * b * s;
         case PrDrawBlendMode_HardMix:
@@ -66,8 +66,8 @@ float lum(const float c[3]) {
 
 void clipColor(float c[3]) {
     float l = lum(c);
-    float n = minF32(c[0], minF32(c[1], c[2]));
-    float x = maxF32(c[0], maxF32(c[1], c[2]));
+    float n = prF32Min(c[0], prF32Min(c[1], c[2]));
+    float x = prF32Max(c[0], prF32Max(c[1], c[2]));
     for (uint32_t i = 0; i < 3; ++i) {
         if (n < 0 && l - n > 0)
             c[i] = l + (c[i] - l) * l / (l - n);
@@ -84,7 +84,7 @@ void setLum(const float c[3], float l, float out[3]) {
 }
 
 float sat(const float c[3]) {
-    return maxF32(c[0], maxF32(c[1], c[2])) - minF32(c[0], minF32(c[1], c[2]));
+    return prF32Max(c[0], prF32Max(c[1], c[2])) - prF32Min(c[0], prF32Min(c[1], c[2]));
 }
 
 void setSat(const float c[3], float s, float out[3]) {
@@ -166,15 +166,15 @@ inline void compositeWith(const float* s, const float* d, PrDrawBlendMode blend,
         float mixed[3];
         blendColor(blend, cb, cs, mixed);
         for (uint32_t i = 0; i < 3; ++i)
-            source[i] = ((1 - d[3]) * cs[i] + d[3] * clampF32(mixed[i], 0, 1)) * s[3];
+            source[i] = ((1 - d[3]) * cs[i] + d[3] * prF32Clamp(mixed[i], 0, 1)) * s[3];
     }
     if constexpr (Op == PrDrawComposite_PlusLighter) {
         for (uint32_t i = 0; i < 4; ++i)
-            out[i] = minF32(1, source[i] + d[i]);
+            out[i] = prF32Min(1, source[i] + d[i]);
     } else if constexpr (Op == PrDrawComposite_PlusDarker) {
-        float alpha = minF32(1, source[3] + d[3]);
+        float alpha = prF32Min(1, source[3] + d[3]);
         for (uint32_t i = 0; i < 3; ++i)
-            out[i] = maxF32(0, alpha - (source[3] - source[i]) - (d[3] - d[i]));
+            out[i] = prF32Max(0, alpha - (source[3] - source[i]) - (d[3] - d[i]));
         out[3] = alpha;
     } else {
         float fa = 0;
@@ -323,7 +323,7 @@ void convertImage(const PrDrawImage* image, CpuTextureLevel& level) {
             float c[4];
             if (format == PrPixelFormat_RgbaF16) {
                 PrFloat16 stored[4];
-                memCopy(stored, row + x * 8, sizeof(stored));
+                prMemCopy(stored, row + x * 8, sizeof(stored));
                 for (uint32_t i = 0; i < 4; ++i)
                     c[i] = prFloat16ToFloat(stored[i]);
             } else {
@@ -336,11 +336,11 @@ void convertImage(const PrDrawImage* image, CpuTextureLevel& level) {
             }
             if (alpha == PrDrawAlpha_Opaque)
                 c[3] = 1;
-            c[3] = clampF32(c[3], 0, 1);
+            c[3] = prF32Clamp(c[3], 0, 1);
             bool half = level.format == PrPixelFormat_RgbaF16;
             if (alpha != PrDrawAlpha_Premultiplied) {
                 for (uint32_t i = 0; i < 3; ++i)
-                    c[i] = (half ? c[i] : clampF32(c[i], 0, 1)) * c[3];
+                    c[i] = (half ? c[i] : prF32Clamp(c[i], 0, 1)) * c[3];
             }
             cpuWritePixel(out + x * bytes, level.format, c);
         }
@@ -388,21 +388,21 @@ int32_t tapIndex(float k, float origin, float size, float period, PrDrawExtend m
             break;
         case PrDrawExtend_Repeat:
         case PrDrawExtend_Reflect: {
-            float tile = floorF32(position / period);
+            float tile = prF32Floor(position / period);
             position -= tile * period;
             if (position >= size || (tile != 0 && period > size))
                 return -1;
-            if (mode == PrDrawExtend_Reflect && fmodF32(absF32(tile), 2) == 1)
+            if (mode == PrDrawExtend_Reflect && prF32Fmod(prF32Abs(tile), 2) == 1)
                 position = size - position;
             break;
         }
         default:
-            position = clampF32(position, 0.5f, maxF32(size - 0.5f, 0.5f));
+            position = prF32Clamp(position, 0.5f, prF32Max(size - 0.5f, 0.5f));
             break;
     }
-    int32_t index = int32_t(floorF32(origin + position));
-    int32_t first = int32_t(floorF32(origin));
-    int32_t last = int32_t(ceilF32(origin + size)) - 1;
+    int32_t index = int32_t(prF32Floor(origin + position));
+    int32_t first = int32_t(prF32Floor(origin));
+    int32_t last = int32_t(prF32Ceil(origin + size)) - 1;
     index = index < first ? first : index > last ? last : index;
     index = index < 0 ? 0 : index >= int32_t(levelSize) ? int32_t(levelSize) - 1 : index;
     return index;
@@ -415,9 +415,9 @@ int32_t tapIndex(float k, float origin, float size, float period, PrDrawExtend m
 float nearCopy(float k, float size, float period, PrDrawExtend mode) {
     if (mode != PrDrawExtend_Repeat && mode != PrDrawExtend_Reflect)
         return k;
-    float copy = floorF32((k + (period - size) / 2) / period);
+    float copy = prF32Floor((k + (period - size) / 2) / period);
     k -= copy * period;
-    return mode == PrDrawExtend_Reflect && fmodF32(absF32(copy), 2) == 1 ? size - k : k;
+    return mode == PrDrawExtend_Reflect && prF32Fmod(prF32Abs(copy), 2) == 1 ? size - k : k;
 }
 
 // Moves `k`, a distance along an axis from the first tile's start, into the copy that holds it, and makes the axis's
@@ -426,7 +426,7 @@ float nearCopy(float k, float size, float period, PrDrawExtend mode) {
 bool intoCopy(float& k, float size, float period, PrDrawExtend& mode) {
     if (mode != PrDrawExtend_Repeat && mode != PrDrawExtend_Reflect)
         return true;
-    float copy = floorF32(k / period);
+    float copy = prF32Floor(k / period);
     k -= copy * period;
     // At a copy's start, the quotient can round down to the copy before, which leaves `k` a whole period into it.
     if (k >= period) {
@@ -435,7 +435,7 @@ bool intoCopy(float& k, float size, float period, PrDrawExtend& mode) {
     }
     if (k >= size)
         return false;
-    if (mode == PrDrawExtend_Reflect && fmodF32(absF32(copy), 2) == 1)
+    if (mode == PrDrawExtend_Reflect && prF32Fmod(prF32Abs(copy), 2) == 1)
         k = size - k;
     mode = PrDrawExtend_Pad;
     return true;
@@ -466,13 +466,13 @@ void sampleLevel(const Sampler& s, uint32_t levelIndex, PrDrawSampling sampling,
     u *= scale;
     v *= scale;
     if (sampling == PrDrawSampling_Nearest) {
-        texel(level, tapX(s, level, scale, floorF32(u)), tapY(s, level, scale, floorF32(v)), out);
+        texel(level, tapX(s, level, scale, prF32Floor(u)), tapY(s, level, scale, prF32Floor(v)), out);
         return;
     }
     float fu = u - 0.5f;
     float fv = v - 0.5f;
-    float x0 = floorF32(fu);
-    float y0 = floorF32(fv);
+    float x0 = prF32Floor(fu);
+    float y0 = prF32Floor(fv);
     float tx = fu - x0;
     float ty = fv - y0;
     out[0] = out[1] = out[2] = out[3] = 0;
@@ -496,9 +496,9 @@ void sampleLevel(const Sampler& s, uint32_t levelIndex, PrDrawSampling sampling,
                     out[k] += c[k] * w;
             }
         }
-        out[3] = clampF32(out[3], 0, 1);
+        out[3] = prF32Clamp(out[3], 0, 1);
         for (uint32_t k = 0; k < 3; ++k)
-            out[k] = clampF32(out[k], 0, out[3]);
+            out[k] = prF32Clamp(out[k], 0, out[3]);
         return;
     }
     int32_t left = tapX(s, level, scale, x0);
@@ -541,19 +541,19 @@ void sampleTrilinear(const Sampler& s, float u, float v, float lod, float out[4]
 // kMaxAnisotropy taps spread along the major axis cover the rest, so a footprint stretched along one axis stays sharp
 // along the other.
 void sample(const Sampler& s, float u, float v, PrVec2 across, PrVec2 down, float out[4]) {
-    float a = sqrtF32(across.x * across.x + across.y * across.y);
-    float b = sqrtF32(down.x * down.x + down.y * down.y);
-    float major = maxF32(a, b);
-    float minor = minF32(a, b);
+    float a = prF32Sqrt(across.x * across.x + across.y * across.y);
+    float b = prF32Sqrt(down.x * down.x + down.y * down.y);
+    float major = prF32Max(a, b);
+    float minor = prF32Min(a, b);
     if (s.sampling != PrDrawSampling_Mipmap || s.texture->levels.count < 2 || !(major > 1)) {
         PrDrawSampling sampling = s.sampling == PrDrawSampling_Mipmap ? PrDrawSampling_Linear : s.sampling;
         sampleLevel(s, 0, sampling, u, v, out);
         return;
     }
     PrVec2 axis = a >= b ? across : down;
-    float ratio = minor > 0 ? ceilF32(major / minor) : float(kMaxAnisotropy);
-    uint32_t taps = uint32_t(clampF32(ratio, 1, float(kMaxAnisotropy)));
-    float lod = clampF32(log2F32(maxF32(major / float(taps), minor)), 0, float(s.texture->levels.count - 1));
+    float ratio = minor > 0 ? prF32Ceil(major / minor) : float(kMaxAnisotropy);
+    uint32_t taps = uint32_t(prF32Clamp(ratio, 1, float(kMaxAnisotropy)));
+    float lod = prF32Clamp(prF32Log2(prF32Max(major / float(taps), minor)), 0, float(s.texture->levels.count - 1));
     if (taps == 1) {
         sampleTrilinear(s, u, v, lod, out);
         return;
@@ -618,7 +618,7 @@ void placeSpan(const CpuPlacement& placement, int32_t x, int32_t y, uint32_t cou
             default:
                 break;
         }
-        points[i] = reached ? prAffine2MapPoint(m, at) : PrVec2{kNanF32, kNanF32};
+        points[i] = reached ? prAffine2MapPoint(m, at) : PrVec2{kPrF32Nan, kPrF32Nan};
         if (footprints != nullptr) {
             footprints[i] = Footprint{
                 {m.a * across.x + m.c * across.y, m.b * across.x + m.d * across.y},
@@ -639,7 +639,7 @@ void sidesSpan(const CpuSource& source, const CpuPlacement& placement, const PrV
         float d = line[0] * points[i].x + line[1] * points[i].y + line[2];
         PrVec2 g{line[0] * m.a + line[1] * m.b, line[0] * m.c + line[1] * m.d};
         // The weight is a coverage, which is in 255ths here as every coverage is.
-        float after = floorF32(prDrawHalfPlaneArea(d, g) * 255 + 0.5f) / 255;
+        float after = prF32Floor(prDrawHalfPlaneArea(d, g) * 255 + 0.5f) / 255;
         const PrColor& a = s.colors[corner][0];
         const PrColor& b = s.colors[corner][1];
         float* o = out + i * 4;
@@ -655,7 +655,7 @@ void gradientSpan(const CpuSource& source, const PrVec2* points, uint32_t count,
     for (uint32_t i = 0; i < count; ++i) {
         float* o = out + i * 4;
         float t = 0;
-        if (isNanF32(points[i].x) || !prDrawGradientParameter(source.brush, points[i], &t) ||
+        if (prF32IsNan(points[i].x) || !prDrawGradientParameter(source.brush, points[i], &t) ||
                 !prDrawGradientExtend(source.brush->extend, &t)) {
             o[0] = o[1] = o[2] = o[3] = 0;
             continue;
@@ -681,13 +681,13 @@ uint32_t pieceAt(const CpuSource& source, PrVec2 p, uint32_t hint) {
     if (hint < source.pieceCount && holds(hint))
         return hint;
     uint32_t best = 0;
-    float nearest = kF32Max;
+    float nearest = kPrF32Max;
     for (uint32_t i = 0; i < source.pieceCount; ++i) {
         if (holds(i))
             return i;
         const PrRect& d = source.pieces[i].destination;
-        float dx = maxF32(maxF32(d.left - p.x, p.x - d.right), 0);
-        float dy = maxF32(maxF32(d.top - p.y, p.y - d.bottom), 0);
+        float dx = prF32Max(prF32Max(d.left - p.x, p.x - d.right), 0);
+        float dy = prF32Max(prF32Max(d.top - p.y, p.y - d.bottom), 0);
         if (dx + dy < nearest) {
             nearest = dx + dy;
             best = i;
@@ -707,7 +707,7 @@ void textureSpan(const CpuSource& source, const PrVec2* points, const Footprint*
         for (uint32_t i = 0; i < count; ++i) {
             float* o = out + i * 4;
             PrVec2 p = points[i];
-            if (isNanF32(p.x)) {
+            if (prF32IsNan(p.x)) {
                 o[0] = o[1] = o[2] = o[3] = 0;
                 continue;
             }
@@ -750,7 +750,7 @@ void textureSpan(const CpuSource& source, const PrVec2* points, const Footprint*
     for (uint32_t i = 0; i < count; ++i) {
         float* o = out + i * 4;
         PrVec2 p = points[i];
-        if (isNanF32(p.x)) {
+        if (prF32IsNan(p.x)) {
             o[0] = o[1] = o[2] = o[3] = 0;
             continue;
         }
@@ -806,7 +806,7 @@ uint8_t* cpuTargetPixel(const CpuTarget& t, int32_t x, int32_t y) {
 void cpuReadPixel(const uint8_t* p, PrPixelFormat format, float* out) {
     if (format == PrPixelFormat_RgbaF16) {
         PrFloat16 stored[4];
-        memCopy(stored, p, sizeof(stored));
+        prMemCopy(stored, p, sizeof(stored));
         for (uint32_t i = 0; i < 4; ++i)
             out[i] = prFloat16ToFloat(stored[i]);
         return;
@@ -819,17 +819,17 @@ void cpuReadPixel(const uint8_t* p, PrPixelFormat format, float* out) {
 }
 
 void cpuWritePixel(uint8_t* p, PrPixelFormat format, const float* rgba) {
-    float alpha = clampF32(rgba[3], 0, 1);
+    float alpha = prF32Clamp(rgba[3], 0, 1);
     if (format == PrPixelFormat_RgbaF16) {
         PrFloat16 stored[4] = {
             prFloat16FromFloat(rgba[0]), prFloat16FromFloat(rgba[1]), prFloat16FromFloat(rgba[2]),
             prFloat16FromFloat(alpha),
         };
-        memCopy(p, stored, sizeof(stored));
+        prMemCopy(p, stored, sizeof(stored));
         return;
     }
     bool bgra = format == PrPixelFormat_Bgra8;
-    auto byteOf = [&](float v) { return uint8_t(clampF32(v, 0, alpha) * 255 + 0.5f); };
+    auto byteOf = [&](float v) { return uint8_t(prF32Clamp(v, 0, alpha) * 255 + 0.5f); };
     p[bgra ? 2 : 0] = byteOf(rgba[0]);
     p[1] = byteOf(rgba[1]);
     p[bgra ? 0 : 2] = byteOf(rgba[2]);
@@ -840,7 +840,7 @@ void cpuCopyTarget(const CpuTarget& from, const CpuTarget& to) {
     PR_ASSERT(from.format == to.format);
     PrIRect box = prIRectIntersect(from.box, to.box);
     for (int32_t y = box.top; y < box.bottom; ++y)
-        memCopy(cpuTargetPixel(to, box.left, y), cpuTargetPixel(from, box.left, y),
+        prMemCopy(cpuTargetPixel(to, box.left, y), cpuTargetPixel(from, box.left, y),
             size_t(prIRectWidth(box)) * cpuPixelBytes(from.format));
 }
 
@@ -848,8 +848,8 @@ void cpuCopyTarget(const CpuTarget& from, const CpuTarget& to) {
 // Pixels
 
 CpuPixel cpuPixelFromRgba(const float* rgba, PrPixelFormat format) {
-    float alpha = clampF32(rgba[3], 0, 1);
-    auto byteOf = [&](float v) { return uint32_t(clampF32(v, 0, alpha) * 255 + 0.5f); };
+    float alpha = prF32Clamp(rgba[3], 0, 1);
+    auto byteOf = [&](float v) { return uint32_t(prF32Clamp(v, 0, alpha) * 255 + 0.5f); };
     uint32_t r = byteOf(rgba[0]);
     uint32_t g = byteOf(rgba[1]);
     uint32_t b = byteOf(rgba[2]);
@@ -900,15 +900,15 @@ const uint8_t* PR_NULLABLE cpuCoverageSpan(const CpuCoverage& coverage, int32_t 
     int32_t from = x > row.left ? x : row.left;
     int32_t to = end < row.right ? end : row.right;
     if (from >= to) {
-        memZero(scratch, count);
+        prMemZero(scratch, count);
         return scratch;
     }
-    memZero(scratch, size_t(from - x));
+    prMemZero(scratch, size_t(from - x));
     if (row.data != nullptr)
-        memCopy(scratch + (from - x), row.data + (from - row.left), size_t(to - from));
+        prMemCopy(scratch + (from - x), row.data + (from - row.left), size_t(to - from));
     else
-        memFill(scratch + (from - x), 255, size_t(to - from));
-    memZero(scratch + (to - x), size_t(end - to));
+        prMemFill(scratch + (from - x), 255, size_t(to - from));
+    prMemZero(scratch + (to - x), size_t(end - to));
     return scratch;
 }
 
@@ -981,7 +981,7 @@ CpuTexture* cpuListTexture(CpuTextureCache& cache, uint64_t id, PrRect region, u
         CpuTexture* texture = cache.textures.data[i];
         const CpuTextureLevel& level = texture->levels.data[0];
         if (texture->fromList && texture->key == id && level.width == width && level.height == height &&
-                level.format == format && memEquals(&texture->region, &region, sizeof(PrRect))) {
+                level.format == format && prMemEquals(&texture->region, &region, sizeof(PrRect))) {
             texture->lastUsed = cache.render;
             return texture;
         }
@@ -1047,7 +1047,7 @@ void cpuDestroyTextures(CpuTextureCache& cache) {
 void cpuShade(const CpuPaint& paint, int32_t x, int32_t y, uint32_t count, float* out) {
     PR_ASSERT(count <= kShadeSpan);
     for (uint32_t i = 0; i < count; ++i)
-        memCopy(out + i * 4, paint.color, sizeof(paint.color));
+        prMemCopy(out + i * 4, paint.color, sizeof(paint.color));
     PrVec2 points[kShadeSpan];
     Footprint footprints[kShadeSpan];
     float colors[kShadeSpan * 4];
@@ -1093,7 +1093,7 @@ float cpuMaskValue(const PrDrawMask* mask, const float* rgba) {
         return 0;
     float linear[3];
     for (uint32_t i = 0; i < 3; ++i)
-        linear[i] = prColorTransferDecode(PrColorTransfer_Srgb, clampF32(rgba[i] / rgba[3], 0, 1));
+        linear[i] = prColorTransferDecode(PrColorTransfer_Srgb, prF32Clamp(rgba[i] / rgba[3], 0, 1));
     return (kPrColorLuminanceRed * linear[0] + kPrColorLuminanceGreen * linear[1] + kPrColorLuminanceBlue * linear[2]) * rgba[3];
 }
 

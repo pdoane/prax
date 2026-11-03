@@ -30,11 +30,11 @@ bool domOptionDisabled(const PrDomElement* option);
 
 // Writes the option's value (html/#concept-option-value) to `out`, which it clears first: its value attribute, or else
 // its text (html/#dom-option-text).
-void domOptionValue(const PrDomElement* option, TextBuffer* out);
+void domOptionValue(const PrDomElement* option, PrTextBuffer* out);
 
 // Writes the option's text (html/#dom-option-text) to `out`, which it clears first: its descendant text outside script
 // elements, with its ASCII whitespace stripped and collapsed.
-void domOptionText(const PrDomElement* option, TextBuffer* out);
+void domOptionText(const PrDomElement* option, PrTextBuffer* out);
 
 // Sets the option's selectedness and marks it dirty, as a script's change does, then applies the select's rules
 // (html/#dom-option-selected).

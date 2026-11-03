@@ -971,7 +971,7 @@ PrUVec2 dibPixels(const uint8_t* bytes, size_t size, Array<uint8_t>& out) {
     if (size < sizeof(BITMAPINFOHEADER))
         return PrUVec2{0, 0};
     BITMAPINFOHEADER header;
-    memCopy(&header, bytes, sizeof(header));
+    prMemCopy(&header, bytes, sizeof(header));
     bool bitfields = header.biCompression == BI_BITFIELDS;
     bool readable = header.biPlanes == 1 && (header.biCompression == BI_RGB || bitfields) &&
         (header.biBitCount == 32 || (header.biBitCount == 24 && !bitfields));
@@ -1391,7 +1391,7 @@ void run(PrApp* base, const PrAppHandler* handler) {
     app->composing = false;
     app->highSurrogate = 0;
     app->buttons = 0;
-    memZero(app->keys, sizeof(app->keys));
+    prMemZero(app->keys, sizeof(app->keys));
     if (com)
         CoUninitialize();
 }
@@ -1538,7 +1538,7 @@ PrStatus setClipboardText(PrApp* base, PrStringView text) {
         GlobalFree(memory);
         return PrStatus_Io;
     }
-    memCopy(at, app->utf16.data, bytes);
+    prMemCopy(at, app->utf16.data, bytes);
     GlobalUnlock(memory);
     if (!openClipboard(app->window)) {
         GlobalFree(memory);
@@ -1587,7 +1587,7 @@ PrStatus setClipboardImage(PrApp* base, PrPixelView pixels) {
     header.bV5AlphaMask = 0xFF000000;
     header.bV5CSType = LCS_sRGB;
     header.bV5Intent = LCS_GM_IMAGES;
-    memCopy(at, &header, sizeof(header));
+    prMemCopy(at, &header, sizeof(header));
     // A bitmap with a positive height holds its rows from the bottom up.
     for (uint32_t y = 0; y < pixels.extent.y; ++y) {
         const uint8_t* from = pixels.data + y * pixels.stride;

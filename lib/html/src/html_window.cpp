@@ -67,7 +67,7 @@ void release(const PrHtmlIdleRequestCallback& callback) {
 // Coarsens a time to 100 microseconds, as hr-time-3/#dfn-coarsen-time specifies for a context that is not cross-origin
 // isolated.
 double coarsen(double milliseconds) {
-    return floorF64(milliseconds * 10) / 10;
+    return prF64Floor(milliseconds * 10) / 10;
 }
 
 // Returns the time of the next rendering opportunity. Any frame requests run at that time.
@@ -100,7 +100,7 @@ double frameDue(const PrHtmlWindow* window) {
         target = window->timers.data[timer].deadline;
     if (target < 0)
         return due;
-    double frames = floorF64((target - window->lastFrame) / kHtmlFrameInterval);
+    double frames = prF64Floor((target - window->lastFrame) / kHtmlFrameInterval);
     return frames > 1 ? window->lastFrame + frames * kHtmlFrameInterval : due;
 }
 
@@ -441,8 +441,8 @@ void notifyDescendants(PrHtmlWindow* window, const PrHtmlWindow* origin, double 
 }
 
 void consumeActivation(PrHtmlWindow* window) {
-    if (window->lastActivation != kInfinityF64)
-        window->lastActivation = -kInfinityF64;
+    if (window->lastActivation != kPrF64Infinity)
+        window->lastActivation = -kPrF64Infinity;
     for (uint32_t i = 0; i < window->frames.count; ++i)
         consumeActivation(window->frames.data[i].window);
 }
@@ -533,7 +533,7 @@ PrHtmlWindow* htmlWindowCreate(void) {
     window->type = DomTargetType_Window;
     window->references = 1;
     window->destroy = freeWindow;
-    window->lastActivation = kInfinityF64;
+    window->lastActivation = kPrF64Infinity;
     for (PrHtmlPreference preference = 0; preference < PrHtmlPreference_Count; ++preference) {
         PrHtmlPreferenceObject& object = window->preferences[preference];
         object.type = DomTargetType_Preference;
@@ -854,12 +854,12 @@ void htmlWindowScrollToFragment(PrHtmlWindow* window) {
     PrDomElement* indicated = written.size != 0 ? potentialIndicated(document, written) : nullptr;
     bool top = written.size == 0;
     if (indicated == nullptr && !top) {
-        TextBuffer decoded{};
-        textReserve(&decoded, uint32_t(written.size));
-        decoded.text.count = uint32_t(prUrlPercentDecode(written, decoded.text.data, written.size));
-        indicated = potentialIndicated(document, textView(&decoded));
-        top = indicated == nullptr && asciiEqualsFold(textView(&decoded), "top");
-        decoded.text.reset();
+        PrTextBuffer decoded{};
+        prTextBufferReserve(&decoded, uint32_t(written.size));
+        decoded.size = uint32_t(prUrlPercentDecode(written, decoded.data, written.size));
+        indicated = potentialIndicated(document, prTextBufferView(&decoded));
+        top = indicated == nullptr && prAsciiEqualsFold(prTextBufferView(&decoded), "top");
+        prTextBufferReset(&decoded);
     }
     setTarget(document, indicated);
     if (indicated != nullptr) {

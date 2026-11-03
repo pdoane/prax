@@ -226,8 +226,8 @@ TEST_CASE("a face's object made while it loads is held until the load settles it
     while ((read = std::fread(buffer, 1, sizeof(buffer), file)) != 0)
         bytes.append(buffer, read);
     std::fclose(file);
-    std::string encoded(base64EncodedSize(bytes.size()), '\0');
-    base64Encode(bytes, encoded.data(), encoded.size());
+    std::string encoded(prBase64EncodedSize(bytes.size()), '\0');
+    prBase64Encode(bytes, encoded.data(), encoded.size());
     std::string html = "<style>@font-face { font-family: A; src: url(data:font/otf;base64," + encoded + ") }</style>";
     // FontFaceSet.load starts loading the face, which settles only in a task.
     CHECK(prHtmlPageLoad(page, html, "about:blank", nullptr) == PrStatus_Ok);

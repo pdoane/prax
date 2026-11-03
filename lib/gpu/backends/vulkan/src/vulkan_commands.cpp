@@ -23,6 +23,7 @@
 
 #include "gpu/backends/vulkan/src/vulkan_commands.h"
 
+#include "pr/align.h"
 #include "pr/alloc.h"
 #include "pr/assert.h"
 #include "pr/integer.h"
@@ -491,7 +492,7 @@ void commandsSetUniforms(PrGpuDevice* device, PrGpuCommands* commands, const voi
         d->lost.store(true);
         return;
     }
-    memCopy(bytes, data, size);
+    prMemCopy(bytes, data, size);
     c->uniformBuffer = d->resources.data[slot].buffer;
     c->uniformOffset = offset;
     c->uniformSize = bytesSize;
@@ -609,7 +610,7 @@ void commandsPushGroup(PrGpuDevice* device, PrGpuCommands* commands, PrStringVie
         return;
     char text[128];
     size_t size = name.size < sizeof(text) - 1 ? name.size : sizeof(text) - 1;
-    memCopy(text, name.data, size);
+    prMemCopy(text, name.data, size);
     text[size] = '\0';
     VkDebugUtilsLabelEXT label{};
     label.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT;

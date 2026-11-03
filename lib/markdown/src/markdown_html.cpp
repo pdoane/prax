@@ -15,7 +15,7 @@ namespace {
 // character other than the quote, the angle brackets, the square and curly brackets, the backslash, the caret, the
 // backtick and the vertical bar. A '%' is kept, so a URL that is percent-encoded already stays as it is.
 bool isUrlSafe(char c) {
-    if (asciiIsLetter(c) || asciiIsDigit(c))
+    if (prAsciiIsLetter(c) || prAsciiIsDigit(c))
         return true;
     switch (c) {
         case '!':
@@ -45,16 +45,16 @@ bool isUrlSafe(char c) {
     }
 }
 
-void encodeUrl(PrStringView url, TextBuffer* out) {
+void encodeUrl(PrStringView url, PrTextBuffer* out) {
     static const char kHex[] = "0123456789ABCDEF";
     for (size_t i = 0; i < url.size; ++i) {
         char c = url.data[i];
         if (isUrlSafe(c)) {
-            textAppendChar(out, c);
+            prTextBufferAppendChar(out, c);
         } else {
-            textAppendChar(out, '%');
-            textAppendChar(out, kHex[(uint8_t(c) >> 4) & 0xf]);
-            textAppendChar(out, kHex[uint8_t(c) & 0xf]);
+            prTextBufferAppendChar(out, '%');
+            prTextBufferAppendChar(out, kHex[(uint8_t(c) >> 4) & 0xf]);
+            prTextBufferAppendChar(out, kHex[uint8_t(c) & 0xf]);
         }
     }
 }
@@ -88,9 +88,9 @@ struct Writer {
     void* context;
     bool atLineStart;               // true if nothing is written yet, or the last text written ends with a line feed
 
-    TextBuffer values;              // the text of the values of the tag being made
-    TextBuffer description;         // an image's description, which is its alt value
-    uint32_t imageDepth;            // the depth of images whose descriptions are being collected
+    PrTextBuffer values;              // the text of the values of the tag being made
+    PrTextBuffer description;         // an image's description, which is its alt value
+    uint32_t imageDepth;              // the depth of images whose descriptions are being collected
 
     // The footnote definition being written: the depth of the open nodes at which its children are, or 0 outside one.
     // The end of a child paragraph waits until the next child or the definition's end, since the links back to the
@@ -133,7 +133,7 @@ void cr(Writer* w) {
 }
 
 Tag startTag(Writer* w, PrStringView name, bool selfClosing = false) {
-    textClear(&w->values);
+    prTextBufferClear(&w->values);
     Tag tag{};
     tag.name = name;
     tag.selfClosing = selfClosing;
@@ -147,20 +147,20 @@ void attribute(Writer* w, Tag* tag, PrStringView name, PrStringView value) {
     if (value.data == nullptr) {
         tag->values[tag->count] = ValueRange{kNoValue, 0};
     } else {
-        uint32_t mark = w->values.text.count;
-        textAppend(&w->values, value);
-        tag->values[tag->count] = ValueRange{mark, w->values.text.count - mark};
+        uint32_t mark = w->values.size;
+        prTextBufferAppend(&w->values, value);
+        tag->values[tag->count] = ValueRange{mark, w->values.size - mark};
     }
     ++tag->count;
 }
 
 // Adds an attribute whose value is `url` percent-encoded, after `prefix`.
 void urlAttribute(Writer* w, Tag* tag, PrStringView name, PrStringView prefix, PrStringView url) {
-    uint32_t mark = w->values.text.count;
-    textAppend(&w->values, prefix);
+    uint32_t mark = w->values.size;
+    prTextBufferAppend(&w->values, prefix);
     encodeUrl(url, &w->values);
     tag->names[tag->count] = name;
-    tag->values[tag->count] = ValueRange{mark, w->values.text.count - mark};
+    tag->values[tag->count] = ValueRange{mark, w->values.size - mark};
     ++tag->count;
 }
 
@@ -174,7 +174,7 @@ void writeTag(Writer* w, const Tag& tag) {
         else if (tag.values[i].size == 0)
             attributes[i].value = "";
         else
-            attributes[i].value = PrStringView{w->values.text.data + tag.values[i].start, tag.values[i].size};
+            attributes[i].value = PrStringView{w->values.data + tag.values[i].start, tag.values[i].size};
     }
     PrMarkdownHtmlEvent event{};
     event.kind = PrMarkdownHtmlEventKind_StartTag;
@@ -221,27 +221,27 @@ void writeBackReferences(Writer* w, const PrMarkdownStep* step) {
         if (i > 1)
             text(w, " ");
         // A reference after the first is numbered after its footnote's number.
-        TextBuffer suffix;
+        PrTextBuffer suffix = {};
         if (i > 1) {
-            textAppendChar(&suffix, '-');
-            textAppend(&suffix, index);
+            prTextBufferAppendChar(&suffix, '-');
+            prTextBufferAppend(&suffix, index);
         }
         Tag tag = startTag(w, "a");
-        TextBuffer href;
-        textAppend(&href, "#fnref-");
+        PrTextBuffer href = {};
+        prTextBufferAppend(&href, "#fnref-");
         encodeUrl(step->label, &href);
-        textAppend(&href, textView(&suffix));
-        attribute(w, &tag, "href", textView(&href));
+        prTextBufferAppend(&href, prTextBufferView(&suffix));
+        attribute(w, &tag, "href", prTextBufferView(&href));
         attribute(w, &tag, "class", "footnote-backref");
         attribute(w, &tag, "data-footnote-backref", PrStringView{});
-        TextBuffer idx;
-        textAppend(&idx, number);
-        textAppend(&idx, textView(&suffix));
-        attribute(w, &tag, "data-footnote-backref-idx", textView(&idx));
-        TextBuffer label;
-        textAppend(&label, "Back to reference ");
-        textAppend(&label, textView(&idx));
-        attribute(w, &tag, "aria-label", textView(&label));
+        PrTextBuffer idx = {};
+        prTextBufferAppend(&idx, number);
+        prTextBufferAppend(&idx, prTextBufferView(&suffix));
+        attribute(w, &tag, "data-footnote-backref-idx", prTextBufferView(&idx));
+        PrTextBuffer label = {};
+        prTextBufferAppend(&label, "Back to reference ");
+        prTextBufferAppend(&label, prTextBufferView(&idx));
+        attribute(w, &tag, "aria-label", prTextBufferView(&label));
         writeTag(w, tag);
         text(w, "\xe2\x86\xa9");
         if (i > 1) {
@@ -254,10 +254,10 @@ void writeBackReferences(Writer* w, const PrMarkdownStep* step) {
             end(w, "sup");
         }
         end(w, "a");
-        textReset(&suffix);
-        textReset(&href);
-        textReset(&idx);
-        textReset(&label);
+        prTextBufferReset(&suffix);
+        prTextBufferReset(&href);
+        prTextBufferReset(&idx);
+        prTextBufferReset(&label);
     }
 }
 
@@ -296,7 +296,7 @@ void writeStep(void* PR_NULLABLE context, const PrMarkdownStep* step) {
     // An image's description is the text of its descendants, which is its alt value.
     if (w->imageDepth != 0) {
         if (step->kind == PrMarkdownStepKind_Text) {
-            textAppend(&w->description, step->text);
+            prTextBufferAppend(&w->description, step->text);
         } else if (step->node == PrMarkdownNodeKind_Image) {
             if (enter)
                 ++w->imageDepth;
@@ -305,13 +305,13 @@ void writeStep(void* PR_NULLABLE context, const PrMarkdownStep* step) {
             if (w->imageDepth == 0) {
                 Tag tag = startTag(w, "img", true);
                 urlAttribute(w, &tag, "src", "", step->destination);
-                attribute(w, &tag, "alt", textView(&w->description));
+                attribute(w, &tag, "alt", prTextBufferView(&w->description));
                 if (step->title.size != 0)
                     attribute(w, &tag, "title", step->title);
                 writeTag(w, tag);
             }
         } else if (enter && (step->node == PrMarkdownNodeKind_SoftBreak || step->node == PrMarkdownNodeKind_HardBreak)) {
-            textAppendChar(&w->description, ' ');
+            prTextBufferAppendChar(&w->description, ' ');
         }
         return;
     }
@@ -454,13 +454,13 @@ void writeStep(void* PR_NULLABLE context, const PrMarkdownStep* step) {
             if (step->info.size != 0) {
                 // The class is the info string's first word.
                 size_t word = 0;
-                while (word < step->info.size && !asciiIsSpace(step->info.data[word]))
+                while (word < step->info.size && !prAsciiIsSpace(step->info.data[word]))
                     ++word;
-                TextBuffer value;
-                textAppend(&value, "language-");
-                textAppend(&value, PrStringView{step->info.data, word});
-                attribute(w, &tag, "class", textView(&value));
-                textReset(&value);
+                PrTextBuffer value = {};
+                prTextBufferAppend(&value, "language-");
+                prTextBufferAppend(&value, PrStringView{step->info.data, word});
+                attribute(w, &tag, "class", prTextBufferView(&value));
+                prTextBufferReset(&value);
             }
             writeTag(w, tag);
             break;
@@ -572,7 +572,7 @@ void writeStep(void* PR_NULLABLE context, const PrMarkdownStep* step) {
         }
         case PrMarkdownNodeKind_Image:
             if (enter) {
-                textClear(&w->description);
+                prTextBufferClear(&w->description);
                 w->imageDepth = 1;
             }
             break;
@@ -585,17 +585,17 @@ void writeStep(void* PR_NULLABLE context, const PrMarkdownStep* step) {
             Tag tag = startTag(w, "a");
             urlAttribute(w, &tag, "href", "#fn-", step->label);
             char referenceText[16];
-            TextBuffer id;
-            textAppend(&id, "fnref-");
+            PrTextBuffer id = {};
+            prTextBufferAppend(&id, "fnref-");
             encodeUrl(step->label, &id);
             if (step->reference > 1) {
-                textAppendChar(&id, '-');
-                textAppend(&id, decimal(referenceText, step->reference));
+                prTextBufferAppendChar(&id, '-');
+                prTextBufferAppend(&id, decimal(referenceText, step->reference));
             }
-            attribute(w, &tag, "id", textView(&id));
+            attribute(w, &tag, "id", prTextBufferView(&id));
             attribute(w, &tag, "data-footnote-ref", PrStringView{});
             writeTag(w, tag);
-            textReset(&id);
+            prTextBufferReset(&id);
             char numberText[16];
             text(w, decimal(numberText, step->number));
             end(w, "a");
@@ -632,14 +632,14 @@ void writeStep(void* PR_NULLABLE context, const PrMarkdownStep* step) {
 }
 
 void writerReset(Writer* w) {
-    textReset(&w->values);
-    textReset(&w->description);
+    prTextBufferReset(&w->values);
+    prTextBufferReset(&w->description);
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
 // HTML text
 
-void escape(TextBuffer* out, PrStringView characters, bool url) {
+void escape(PrTextBuffer* out, PrStringView characters, bool url) {
     size_t run = 0;
     for (size_t i = 0; i < characters.size; ++i) {
         const char* reference = nullptr;
@@ -665,43 +665,43 @@ void escape(TextBuffer* out, PrStringView characters, bool url) {
             default:
                 continue;
         }
-        textAppend(out, characters.data + run, uint32_t(i - run));
-        textAppend(out, reference);
+        prTextBufferAppend(out, PrStringView{characters.data + run, uint32_t(i - run)});
+        prTextBufferAppend(out, reference);
         run = i + 1;
     }
-    textAppend(out, characters.data + run, uint32_t(characters.size - run));
+    prTextBufferAppend(out, PrStringView{characters.data + run, uint32_t(characters.size - run)});
 }
 
 void writeText(void* PR_NULLABLE context, const PrMarkdownHtmlEvent* event) {
-    TextBuffer* out = static_cast<TextBuffer*>(context);
+    PrTextBuffer* out = static_cast<PrTextBuffer*>(context);
     switch (event->kind) {
         case PrMarkdownHtmlEventKind_StartTag:
-            textAppendChar(out, '<');
-            textAppend(out, event->name);
+            prTextBufferAppendChar(out, '<');
+            prTextBufferAppend(out, event->name);
             for (uint32_t i = 0; i < event->attributeCount; ++i) {
                 const PrMarkdownHtmlAttribute& attribute = event->attributes[i];
-                textAppendChar(out, ' ');
-                textAppend(out, attribute.name);
+                prTextBufferAppendChar(out, ' ');
+                prTextBufferAppend(out, attribute.name);
                 if (attribute.value.data == nullptr)
                     continue;
-                textAppend(out, "=\"");
+                prTextBufferAppend(out, "=\"");
                 // A URL, and the URL fragment that a footnote's id is, write their quotes as references.
                 bool url = attribute.name == "href" || attribute.name == "src" || attribute.name == "id";
                 escape(out, attribute.value, url);
-                textAppendChar(out, '"');
+                prTextBufferAppendChar(out, '"');
             }
-            textAppend(out, event->selfClosing ? " />" : ">");
+            prTextBufferAppend(out, event->selfClosing ? " />" : ">");
             break;
         case PrMarkdownHtmlEventKind_EndTag:
-            textAppend(out, "</");
-            textAppend(out, event->name);
-            textAppendChar(out, '>');
+            prTextBufferAppend(out, "</");
+            prTextBufferAppend(out, event->name);
+            prTextBufferAppendChar(out, '>');
             break;
         case PrMarkdownHtmlEventKind_Text:
             escape(out, event->text, false);
             break;
         case PrMarkdownHtmlEventKind_Html:
-            textAppend(out, event->text);
+            prTextBufferAppend(out, event->text);
             break;
     }
 }
@@ -725,7 +725,7 @@ void prMarkdownWriteHtml(const PrMarkdown* document, uint32_t first, uint32_t co
 void prMarkdownWriteFootnotesHtml(const PrMarkdown* document, PrMarkdownHtmlFn fn, void* PR_NULLABLE context) {
     // The section is written only if a footnote is walked.
     struct Section {
-        Writer writer;
+        Writer writer = {};
         bool open;
     };
     Section section{};
@@ -757,29 +757,29 @@ void prMarkdownWriteFootnotesHtml(const PrMarkdown* document, PrMarkdownHtmlFn f
 }
 
 void prMarkdownHtmlEventAppendText(const PrMarkdownHtmlEvent* event, PrString* out) {
-    TextBuffer text;
+    PrTextBuffer text = {};
     writeText(&text, event);
-    prStringAppend(out, textView(&text));
-    textReset(&text);
+    prStringAppend(out, prTextBufferView(&text));
+    prTextBufferReset(&text);
 }
 
 void prMarkdownEncodeUrl(PrStringView url, PrString* out) {
-    TextBuffer encoded;
+    PrTextBuffer encoded = {};
     encodeUrl(url, &encoded);
-    prStringAppend(out, textView(&encoded));
-    textReset(&encoded);
+    prStringAppend(out, prTextBufferView(&encoded));
+    prTextBufferReset(&encoded);
 }
 
 void prMarkdownAppendHtml(const PrMarkdown* document, uint32_t first, uint32_t count, PrString* out) {
-    TextBuffer text;
+    PrTextBuffer text = {};
     prMarkdownWriteHtml(document, first, count, writeText, &text);
-    prStringAppend(out, textView(&text));
-    textReset(&text);
+    prStringAppend(out, prTextBufferView(&text));
+    prTextBufferReset(&text);
 }
 
 void prMarkdownAppendFootnotesHtml(const PrMarkdown* document, PrString* out) {
-    TextBuffer text;
+    PrTextBuffer text = {};
     prMarkdownWriteFootnotesHtml(document, writeText, &text);
-    prStringAppend(out, textView(&text));
-    textReset(&text);
+    prStringAppend(out, prTextBufferView(&text));
+    prTextBufferReset(&text);
 }

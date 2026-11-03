@@ -71,25 +71,25 @@ void familyNames(PrStringView list, Array<PrString>* out) {
     cssParserInit(&parser);
     cssTokenize(&parser.tokens, &parser.scratch, list);
     const CssTokenArray* tokens = &parser.tokens;
-    TextBuffer name;
+    PrTextBuffer name = {};
     bool any = false;
     for (uint32_t i = 0; i <= cssTokenCount(tokens); ++i) {
         CssTokenKind kind = i < cssTokenCount(tokens) ? cssTokenKind(tokens, i) : CssTokenKind_Eof;
         if (kind == CssTokenKind_Comma || kind == CssTokenKind_Eof) {
             if (any)
-                out->push(prStringCopy(textView(&name)));
-            name.text.count = 0;
+                out->push(prStringCopy(prTextBufferView(&name)));
+            name.size = 0;
             any = false;
             continue;
         }
         if (kind != CssTokenKind_Ident && kind != CssTokenKind_String)
             continue;
         if (any)
-            textAppendChar(&name, ' ');
+            prTextBufferAppendChar(&name, ' ');
         cssValueAppend(&name, cssTokenValueText(tokens, i));
         any = true;
     }
-    textReset(&name);
+    prTextBufferReset(&name);
     cssParserReset(&parser);
 }
 
@@ -109,11 +109,11 @@ CssDeclarationBlock* writableBlockOf(PrCssFontFace* face) {
 
 // Returns the family that the face names, unquoted, or the null string if it names none.
 PrString faceFamily(const PrCssFontFace* face) {
-    TextBuffer text;
+    PrTextBuffer text = {};
     cssSerializePropertyValue(&text, blockOf(face), cssDescriptorDeclaredName(PrCssDescriptor_FontFaceFontFamily));
     Array<PrString> names;
-    familyNames(textView(&text), &names);
-    textReset(&text);
+    familyNames(prTextBufferView(&text), &names);
+    prTextBufferReset(&text);
     PrString family = names.count == 1 ? prStringClone(&names.data[0]) : prStringNull();
     resetNames(&names);
     return family;
@@ -135,9 +135,9 @@ PrUrl* PR_NULLABLE baseOf(const PrCssFontFace* face, PrDomDocument* document) {
 
 // Appends the url()s that the face's src names, in order, each resolved and serialized as a request.
 void sourceRequests(PrCssFontFace* face, PrDomDocument* document, Array<PrString>* out) {
-    TextBuffer text;
+    PrTextBuffer text = {};
     cssSerializePropertyValue(&text, blockOf(face), cssDescriptorDeclaredName(PrCssDescriptor_FontFaceSrc));
-    PrStringView src = textView(&text);
+    PrStringView src = prTextBufferView(&text);
     PrUrl* base = baseOf(face, document);
     CssParser parser;
     cssParserInit(&parser);
@@ -149,22 +149,22 @@ void sourceRequests(PrCssFontFace* face, PrDomDocument* document, Array<PrString
         PrStringView reference = {};
         if (kind == CssTokenKind_Url)
             reference = cssTokenValueText(tokens, i);
-        else if (kind == CssTokenKind_Function && asciiEqualsFold(cssTokenValueText(tokens, i), "url") &&
+        else if (kind == CssTokenKind_Function && prAsciiEqualsFold(cssTokenValueText(tokens, i), "url") &&
                 i + 1 < cssTokenCount(tokens) && cssTokenKind(tokens, i + 1) == CssTokenKind_String)
             reference = cssTokenValueText(tokens, i + 1);
         else
             continue;
-        TextBuffer resolved;
+        PrTextBuffer resolved = {};
         cssValueAppend(&resolved, reference);
         PrUrl* url = nullptr;
-        if (prUrlCreate(textView(&resolved), base, PrCharset_Utf8, &url) == PrStatus_Ok)
+        if (prUrlCreate(prTextBufferView(&resolved), base, PrCharset_Utf8, &url) == PrStatus_Ok)
             out->push(prUrlSerialize(url, PrUrlSerialization_ExcludeFragment));
         prUrlDestroy(url);
-        textReset(&resolved);
+        prTextBufferReset(&resolved);
     }
     cssParserReset(&parser);
     prUrlDestroy(base);
-    textReset(&text);
+    prTextBufferReset(&text);
 }
 
 // Appends the CSS-connected faces of the rules of `list`, and of the lists nested in them, in order. A face in a
@@ -558,18 +558,18 @@ PrCssFontFace* cssFontFaceCreate(PrStringView family, PrStringView source, PrByt
     bool named = family.size != 0 && cssDeclarationBlockSet(&face->descriptors, familyName, family, false, nullptr) !=
         CssEditResult_Rejected;
     if (named) {
-        TextBuffer written;
+        PrTextBuffer written = {};
         cssSerializePropertyValue(&written, &face->descriptors, familyName);
-        named = textView(&written) == family;
-        textReset(&written);
+        named = prTextBufferView(&written) == family;
+        prTextBufferReset(&written);
     }
     bool parsed = true;
     if (!named) {
-        TextBuffer quoted;
+        PrTextBuffer quoted = {};
         cssSerializeString(&quoted, family);
-        parsed = cssDeclarationBlockSet(&face->descriptors, familyName, textView(&quoted), false, nullptr) !=
+        parsed = cssDeclarationBlockSet(&face->descriptors, familyName, prTextBufferView(&quoted), false, nullptr) !=
             CssEditResult_Rejected;
-        textReset(&quoted);
+        prTextBufferReset(&quoted);
     }
     for (uint32_t i = PrCssFontFaceDescriptor_Family + 1; i < PrCssFontFaceDescriptor_Count; ++i) {
         PrStringView value;
@@ -611,16 +611,16 @@ void cssFontFaceRelease(PrCssFontFace* PR_NULLABLE face) {
 }
 
 PrString cssFontFaceDescriptor(const PrCssFontFace* face, PrCssFontFaceDescriptor descriptor) {
-    TextBuffer text;
+    PrTextBuffer text = {};
     cssSerializePropertyValue(&text, blockOf(face), reflected(descriptor));
-    PrString out = prStringCopy(textView(&text));
-    textReset(&text);
+    PrString out = prStringCopy(prTextBufferView(&text));
+    prTextBufferReset(&text);
     return out;
 }
 
 PrStatus cssFontFaceSetDescriptor(PrCssFontFace* face, PrCssFontFaceDescriptor descriptor, PrStringView value) {
     // An empty value is not a value of any descriptor, and would remove the declaration instead.
-    if (stringTrim(value).size == 0)
+    if (prStringTrim(value).size == 0)
         return PrStatus_Syntax;
     CssEdit edit;
     cssEditBegin(&edit, nullptr);
@@ -756,11 +756,11 @@ PrCssFontFace* cssFontFaceOfRule(PrCssRule* rule) {
 void cssFontFaceDisconnect(PrCssFontFace* face) {
     if (face->rule == nullptr)
         return;
-    TextBuffer text;
+    PrTextBuffer text = {};
     cssSerializeDeclarationBlock(&text, &face->rule->data->style);
     face->descriptors.rule = CssAtRule_FontFace;
-    cssDeclarationBlockParse(&face->descriptors, textView(&text), nullptr);
-    textReset(&text);
+    cssDeclarationBlockParse(&face->descriptors, prTextBufferView(&text), nullptr);
+    prTextBufferReset(&text);
     face->rule = nullptr;
 }
 
@@ -845,31 +845,31 @@ void cssFontFaceSetClear(PrCssFontFaceSet* set) {
 
 PrStatus cssFontFaceSetMatch(const PrCssFontFaceSet* set, PrStringView font, Array<PrCssFontFace* PR_NONNULL>* out) {
     // The value of the font property, which cannot be a CSS-wide keyword here.
-    PrStringView trimmed = stringTrim(font);
+    PrStringView trimmed = prStringTrim(font);
     if (cssIsCssWideKeyword(cssKeywordFromText(trimmed)))
         return PrStatus_Syntax;
     CssDeclarationBlock block = {};
     bool parsed = trimmed.size != 0 && cssDeclarationBlockSet(&block, cssPropertyDeclaredName(PrCssProperty_Font),
         font, false, nullptr) != CssEditResult_Rejected;
-    TextBuffer families;
+    PrTextBuffer families = {};
     if (parsed)
         cssSerializePropertyValue(&families, &block, cssPropertyDeclaredName(PrCssProperty_FontFamily));
     cssDeclarationBlockReset(&block);
     // A value containing a substitution function has no family until it is computed.
-    if (!parsed || families.text.count == 0) {
-        textReset(&families);
+    if (!parsed || families.size == 0) {
+        prTextBufferReset(&families);
         return PrStatus_Syntax;
     }
     Array<PrString> names;
-    familyNames(textView(&families), &names);
-    textReset(&families);
+    familyNames(prTextBufferView(&families), &names);
+    prTextBufferReset(&families);
     Array<PrCssFontFace* PR_NONNULL> faces;
     cssFontFaceSetFaces(set, &faces);
     for (uint32_t i = 0; i < faces.count; ++i) {
         PrCssFontFace* face = faces.data[i];
         PrString family = faceFamily(face);
         for (uint32_t j = 0; j < names.count; ++j) {
-            if (!prStringIsNull(&family) && asciiEqualsFold(prStringView(&family), prStringView(&names.data[j]))) {
+            if (!prStringIsNull(&family) && prAsciiEqualsFold(prStringView(&family), prStringView(&names.data[j]))) {
                 out->push(face);
                 break;
             }

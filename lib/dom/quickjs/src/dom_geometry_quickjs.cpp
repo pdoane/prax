@@ -103,7 +103,7 @@ bool matrixFromInit(JSContext* ctx, JSValueConst value, PrDomMatrix* out) {
         flat = flat && out->m[element.index] == prDomMatrixIdentity().m[element.index];
     }
     for (uint32_t i = 0; i < 6; ++i) {
-        if (aliasGiven[i] && elementGiven[i] && !sameValueZeroF64(aliases[i], elements[i])) {
+        if (aliasGiven[i] && elementGiven[i] && !prF64SameValueZero(aliases[i], elements[i])) {
             JS_ThrowTypeError(ctx, "%s and %s disagree", kAliased[i].alias, kAliased[i].element);
             return false;
         }
@@ -803,7 +803,7 @@ JSValue rectListItemMethod(JSContext* ctx, JSValueConst countObject, int argc, J
     if (count == nullptr || !jsArgCount(ctx, argc, 1) || !jsArgNumber(ctx, argc, argv, 0, 0, &index))
         return JS_EXCEPTION;
     // An unsigned long argument (webidl/#js-unsigned-long): the index modulo 2^32.
-    double wrapped = isFiniteF64(index) ? fmodF64(index < 0 ? ceilF64(index) : floorF64(index), 4294967296.0) : 0;
+    double wrapped = prF64IsFinite(index) ? prF64Fmod(index < 0 ? prF64Ceil(index) : prF64Floor(index), 4294967296.0) : 0;
     if (wrapped < 0)
         wrapped += 4294967296.0;
     uint32_t at = uint32_t(wrapped);
@@ -966,7 +966,7 @@ bool prJsDomMatrix2DInitRead(JSContext* ctx, JSValueConst value, PrDomMatrix* ou
             return false;
     }
     for (uint32_t i = 0; i < 6; ++i) {
-        if (aliasGiven[i] && elementGiven[i] && !sameValueZeroF64(aliases[i], elements[i])) {
+        if (aliasGiven[i] && elementGiven[i] && !prF64SameValueZero(aliases[i], elements[i])) {
             JS_ThrowTypeError(ctx, "%s and %s disagree", kAliased[i].alias, kAliased[i].element);
             return false;
         }

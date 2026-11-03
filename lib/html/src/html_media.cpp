@@ -122,7 +122,7 @@ void queueSettle(HtmlMedia* media, PrStringView event, PrStringView rejection) {
 bool potentiallyPlaying(const HtmlMedia* media) {
     return !media->paused && media->error == PrHtmlMediaError_None &&
         media->readyState >= PrHtmlMediaReadyState_HaveFutureData && !media->seeking &&
-        !(media->position >= media->duration && media->rate > 0 && !isNanF64(media->duration));
+        !(media->position >= media->duration && media->rate > 0 && !prF64IsNan(media->duration));
 }
 
 // Adds [start, end] to the played ranges (html/#dom-media-played), merging it with each range that it touches.
@@ -178,7 +178,7 @@ double currentPosition(const HtmlMedia* media) {
     } else {
         position = media->position + (timelineNow(media) - media->since) / 1000 * media->rate;
     }
-    if (!isNanF64(media->duration) && position > media->duration)
+    if (!prF64IsNan(media->duration) && position > media->duration)
         position = media->duration;
     if (position > media->playableEnd)
         position = media->playableEnd > media->position ? media->playableEnd : media->position;
@@ -239,7 +239,7 @@ void closeResource(HtmlMedia* media) {
         htmlMediaSourceDetach(media->mediaSource);
         media->mediaSource = nullptr;
     }
-    media->playableEnd = kInfinityF64;
+    media->playableEnd = kPrF64Infinity;
     media->seekWaits = false;
     media->decoder = nullptr;
     prDrawImageRelease(media->frame);
@@ -392,7 +392,7 @@ void timerFired(void* PR_NULLABLE context) {
     HtmlMedia* media = static_cast<HtmlMedia*>(context);
     media->timer = 0;
     settlePosition(media);
-    bool end = !isNanF64(media->duration) && media->position >= media->duration && media->rate > 0;
+    bool end = !prF64IsNan(media->duration) && media->position >= media->duration && media->rate > 0;
     domEventFire(media->element, "timeupdate");
     if (end)
         reachedEnd(media);
@@ -422,13 +422,13 @@ void schedule(HtmlMedia* media) {
     if (media->window == nullptr || !potentiallyPlaying(media) || media->rate == 0)
         return;
     double wait = kTimeUpdateMilliseconds;
-    if (!isNanF64(media->duration) && media->rate > 0) {
+    if (!prF64IsNan(media->duration) && media->rate > 0) {
         double end = (media->duration - currentPosition(media)) * 1000 / media->rate;
         if (end < wait)
             wait = end;
     }
     // A media source stalls at the end of what it has buffered.
-    if (media->rate > 0 && media->playableEnd != kInfinityF64) {
+    if (media->rate > 0 && media->playableEnd != kPrF64Infinity) {
         double stall = (media->playableEnd - currentPosition(media)) * 1000 / media->rate;
         if (stall < wait)
             wait = stall;
@@ -443,7 +443,7 @@ void schedule(HtmlMedia* media) {
     // Playing in a loop never ends, so its time updates do not keep the window from being idle. Playing to the end
     // does, because the end fires events.
     bool loops = domAttribute(media->element, PrDomNamespace_None, "loop") != nullptr;
-    media->timer = htmlWindowSetTimeout(media->window, &handler, int32_t(ceilF64(wait < 0 ? 0 : wait)), false, loops);
+    media->timer = htmlWindowSetTimeout(media->window, &handler, int32_t(prF64Ceil(wait < 0 ? 0 : wait)), false, loops);
 }
 
 // html/#notify-about-playing
@@ -793,7 +793,7 @@ void initializePlayback(HtmlMedia* media) {
     media->errorMessage = prStringEmpty();
     media->position = 0;
     media->since = 0;
-    media->duration = kNanF64;
+    media->duration = kPrF64Nan;
     media->defaultRate = 1;
     media->rate = 1;
     media->volume = 1;
@@ -810,7 +810,7 @@ void initializePlayback(HtmlMedia* media) {
     media->autoplaying = true;
     media->preservesPitch = true;
     media->loadedData = false;
-    media->playableEnd = kInfinityF64;
+    media->playableEnd = kPrF64Infinity;
     media->showPoster = true;
 }
 
@@ -1009,7 +1009,7 @@ void htmlMediaLoad(HtmlMedia* media) {
             media->position = 0;
             queueEvent(media, "timeupdate");
         }
-        media->duration = kNanF64;
+        media->duration = kPrF64Nan;
         media->videoWidth = 0;
         media->videoHeight = 0;
     }
@@ -1035,7 +1035,7 @@ void htmlMediaSeek(HtmlMedia* media, double seconds) {
         return;
     }
     settlePosition(media);
-    if (!isNanF64(media->duration) && seconds > media->duration)
+    if (!prF64IsNan(media->duration) && seconds > media->duration)
         seconds = media->duration;
     if (seconds < 0)
         seconds = 0;
@@ -1066,7 +1066,7 @@ void htmlMediaSeek(HtmlMedia* media, double seconds) {
 
 bool htmlMediaEnded(HtmlMedia* media) {
     // html/#ended-playback, playing forwards.
-    return media->readyState >= PrHtmlMediaReadyState_HaveMetadata && !isNanF64(media->duration) &&
+    return media->readyState >= PrHtmlMediaReadyState_HaveMetadata && !prF64IsNan(media->duration) &&
         currentPosition(media) >= media->duration && media->rate >= 0 &&
         domAttribute(media->element, PrDomNamespace_None, "loop") == nullptr;
 }
@@ -1163,8 +1163,8 @@ void htmlMediaSourceChanged(HtmlMedia* media) {
     bool last = end >= 0 && ranges.count != 0 && end == ranges.last().end;
     ranges.reset();
     // An ended source plays to the end of its last range, which is the end of the media.
-    bool atEnd = ended && !isNanF64(media->duration) && position >= media->duration;
-    media->playableEnd = end >= 0 ? (ended && last ? kInfinityF64 : end) : (atEnd ? kInfinityF64 : position);
+    bool atEnd = ended && !prF64IsNan(media->duration) && position >= media->duration;
+    media->playableEnd = end >= 0 ? (ended && last ? kPrF64Infinity : end) : (atEnd ? kPrF64Infinity : position);
     PrHtmlMediaReadyState state = PrHtmlMediaReadyState_HaveMetadata;
     if (atEnd || (end >= 0 && (end - position >= kEnoughAhead || (ended && last))))
         state = PrHtmlMediaReadyState_HaveEnoughData;

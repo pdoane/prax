@@ -105,7 +105,7 @@ bool streams(PrStringView source, const PrMarkdownOptions& options) {
     PrMarkdown* document = prMarkdownCreate(&options);
     Client client;
     for (size_t i = 0; i < source.size; ++i) {
-        prMarkdownAppend(document, stringSlice(source, i, 1));
+        prMarkdownAppend(document, prStringSlice(source, i, 1));
         client.update(document);
     }
     prMarkdownEnd(document);
@@ -186,7 +186,7 @@ TEST_CASE("changes replay onto a client's blocks, and final blocks are kept") {
     for (size_t i = 0; i < text.size; i += 3) {
         size_t size = text.size - i < 3 ? text.size - i : 3;
         uint32_t final = prMarkdownFinalCount(document);
-        prMarkdownAppend(document, stringSlice(text, i, size));
+        prMarkdownAppend(document, prStringSlice(text, i, size));
         client.update(document);
         // Only the blocks that were tentative are replaced.
         for (const PrMarkdownChange& change : client.changes)

@@ -385,7 +385,7 @@ JSValue setHidden(JSContext* ctx, JSValueConst elementObject, JSValueConst input
         StringArgument value = {ctx};
         if (!value.read(input))
             return JS_EXCEPTION;
-        if (asciiEqualsFold(value.value(), "until-found"))
+        if (prAsciiEqualsFold(value.value(), "until-found"))
             state = PrHtmlHidden_UntilFound;
     }
     prHtmlElementSetHidden(element, state);
@@ -838,7 +838,7 @@ JSValue setMediaNumber(JSContext* ctx, JSValueConst mediaObject, JSValueConst in
     double value = 0;
     if (media == nullptr || JS_ToFloat64(ctx, &value, input) < 0)
         return JS_EXCEPTION;
-    if (!isFiniteF64(value))
+    if (!prF64IsFinite(value))
         return JS_ThrowTypeError(ctx, "The value is not finite");
     switch (magic) {
         case 0: prHtmlMediaElementSetCurrentTime(media, value); break;
@@ -884,7 +884,7 @@ JSValue mediaFastSeek(JSContext* ctx, JSValueConst mediaObject, int argc, JSValu
     double time = 0;
     if (media == nullptr || !jsArgCount(ctx, argc, 1) || JS_ToFloat64(ctx, &time, argv[0]) < 0)
         return JS_EXCEPTION;
-    if (!isFiniteF64(time))
+    if (!prF64IsFinite(time))
         return JS_ThrowTypeError(ctx, "The value is not finite");
     prHtmlMediaElementFastSeek(media, time);
     return JS_UNDEFINED;
@@ -896,7 +896,7 @@ JSValue mediaStartDate(JSContext* ctx, JSValueConst object, int, JSValueConst*) 
         return JS_EXCEPTION;
     JSValue global = JS_GetGlobalObject(ctx);
     JSValue date = JS_GetPropertyStr(ctx, global, "Date");
-    JSValue nan = JS_NewFloat64(ctx, kNanF64);
+    JSValue nan = JS_NewFloat64(ctx, kPrF64Nan);
     JSValue result = JS_CallConstructor(ctx, date, 1, &nan);
     JS_FreeValue(ctx, date);
     JS_FreeValue(ctx, global);
@@ -969,11 +969,11 @@ JSValue mediaEnumerated(JSContext* ctx, JSValueConst elementObject, int magic) {
     PrStringView text = prDomElementGetAttribute(element, kMediaEnumerated[magic]);
     const char* result = nullptr;
     if (magic == 0) {
-        result = text.data == nullptr ? nullptr : asciiEqualsFold(text, "use-credentials") ? "use-credentials" : "anonymous";
+        result = text.data == nullptr ? nullptr : prAsciiEqualsFold(text, "use-credentials") ? "use-credentials" : "anonymous";
     } else if (magic == 1) {
-        result = asciiEqualsFold(text, "none") ? "none" : asciiEqualsFold(text, "metadata") ? "metadata" : "auto";
+        result = prAsciiEqualsFold(text, "none") ? "none" : prAsciiEqualsFold(text, "metadata") ? "metadata" : "auto";
     } else {
-        result = asciiEqualsFold(text, "lazy") ? "lazy" : "eager";
+        result = prAsciiEqualsFold(text, "lazy") ? "lazy" : "eager";
     }
     return result != nullptr ? JS_NewString(ctx, result) : JS_NULL;
 }
@@ -1347,23 +1347,23 @@ void reportException(JSContext* ctx, JSValueConst error) {
     StringArgument frames = {ctx};
     if (message.read(error) && JS_IsString(stack) && frames.read(stack)) {
         PrStringView text = frames.value();
-        size_t end = stringFind(text, '\n');
-        PrStringView frame = stringTrim(PrStringView{text.data, end < text.size ? end : text.size});
+        size_t end = prStringFindByte(text, '\n');
+        PrStringView frame = prStringTrim(PrStringView{text.data, end < text.size ? end : text.size});
         if (frame.size != 0 && frame.data[frame.size - 1] == ')') {
-            size_t open = stringFindLast(frame, '(');
+            size_t open = prStringFindLastByte(frame, '(');
             frame = open < frame.size ? PrStringView{frame.data + open + 1, frame.size - open - 2} : PrStringView{};
-        } else if (stringStartsWith(frame, "at ")) {
+        } else if (prStringStartsWith(frame, "at ")) {
             frame = PrStringView{frame.data + 3, frame.size - 3};
         }
-        size_t columnColon = stringFindLast(frame, ':');
+        size_t columnColon = prStringFindLastByte(frame, ':');
         size_t lineColon =
-            columnColon < frame.size ? stringFindLast(PrStringView{frame.data, columnColon}, ':') : frame.size;
+            columnColon < frame.size ? prStringFindLastByte(PrStringView{frame.data, columnColon}, ':') : frame.size;
         if (lineColon < frame.size) {
             init.filename = PrStringView{frame.data, lineColon};
             uint64_t line = 0;
             uint64_t column = 0;
-            parseU64(frame.data + lineColon + 1, columnColon - lineColon - 1, &line);
-            parseU64(frame.data + columnColon + 1, frame.size - columnColon - 1, &column);
+            prU64Parse(frame.data + lineColon + 1, columnColon - lineColon - 1, &line, 10);
+            prU64Parse(frame.data + columnColon + 1, frame.size - columnColon - 1, &column, 10);
             init.lineno = uint32_t(line < UINT32_MAX ? line : UINT32_MAX);
             init.colno = uint32_t(column < UINT32_MAX ? column : UINT32_MAX);
         }
@@ -1770,23 +1770,23 @@ JSValue btoa(JSContext* ctx, JSValueConst object, int argc, JSValueConst* argv) 
             !data.read(argv[0]))
         return JS_EXCEPTION;
     PrStringView text = data.value();
-    TextBuffer bytes;
+    PrTextBuffer bytes = {};
     for (size_t at = 0; at < text.size;) {
         uint32_t codePoint = 0;
         at += prUtf8Decode(text, at, &codePoint);
         if (codePoint > 0xFF) {
-            textReset(&bytes);
+            prTextBufferReset(&bytes);
             return jsDomExceptionThrow(ctx, "InvalidCharacterError");
         }
-        textAppendChar(&bytes, char(codePoint));
+        prTextBufferAppendChar(&bytes, char(codePoint));
     }
-    PrStringView input = textView(&bytes);
-    size_t size = base64EncodedSize(input.size);
+    PrStringView input = prTextBufferView(&bytes);
+    size_t size = prBase64EncodedSize(input.size);
     char* encoded = static_cast<char*>(prMemoryAlloc(size));
-    base64Encode(input, encoded, size);
+    prBase64Encode(input, encoded, size);
     JSValue result = JS_NewStringLen(ctx, encoded, size);
     prMemoryFree(encoded);
-    textReset(&bytes);
+    prTextBufferReset(&bytes);
     return result;
 }
 
@@ -1797,20 +1797,20 @@ JSValue atob(JSContext* ctx, JSValueConst object, int argc, JSValueConst* argv) 
             !data.read(argv[0]))
         return JS_EXCEPTION;
     PrStringView text = data.value();
-    size_t capacity = base64DecodedCapacity(text.size);
+    size_t capacity = prBase64DecodedCapacity(text.size);
     char* decoded = static_cast<char*>(prMemoryAlloc(capacity != 0 ? capacity : 1));
     size_t size = 0;
-    if (!base64Decode(text, decoded, capacity, &size)) {
+    if (!prBase64Decode(text, decoded, capacity, &size)) {
         prMemoryFree(decoded);
         return jsDomExceptionThrow(ctx, "InvalidCharacterError");
     }
-    TextBuffer out;
+    PrTextBuffer out = {};
     for (size_t i = 0; i < size; ++i)
-        textAppendCodePoint(&out, uint8_t(decoded[i]));
+        prTextBufferAppendCodePoint(&out, uint8_t(decoded[i]));
     prMemoryFree(decoded);
-    PrStringView view = textView(&out);
+    PrStringView view = prTextBufferView(&out);
     JSValue result = JS_NewStringLen(ctx, view.data, view.size);
-    textReset(&out);
+    prTextBufferReset(&out);
     return result;
 }
 
@@ -2431,19 +2431,19 @@ JSValue documentWrite(JSContext* ctx, JSValueConst documentObject, int argc, JSV
     PrDomDocument* document = jsThis<PrDomDocument>(ctx, documentObject, prJsDomDocumentClass);
     if (document == nullptr)
         return JS_EXCEPTION;
-    TextBuffer text;
+    PrTextBuffer text = {};
     for (int i = 0; i < argc; ++i) {
         StringArgument part = {ctx};
         if (!part.read(argv[i])) {
-            textReset(&text);
+            prTextBufferReset(&text);
             return JS_EXCEPTION;
         }
-        textAppend(&text, part.value());
+        prTextBufferAppend(&text, part.value());
     }
     if (magic != 0)
-        textAppendChar(&text, '\n');
-    PrStatus status = prHtmlDocumentWrite(document, textView(&text));
-    textReset(&text);
+        prTextBufferAppendChar(&text, '\n');
+    PrStatus status = prHtmlDocumentWrite(document, prTextBufferView(&text));
+    prTextBufferReset(&text);
     if (status == PrStatus_InvalidState)
         return jsDomExceptionThrow(ctx, "InvalidStateError");
     return status == PrStatus_Ok ? JS_UNDEFINED : JS_EXCEPTION;
@@ -3069,7 +3069,7 @@ JSValue requestOverride(JSContext* ctx, JSValueConst jsObject, int argc, JSValue
 // Returns true if `text` is an array index in canonical form, and writes it to `out`.
 bool arrayIndexOf(PrStringView text, uint32_t* out) {
     uint64_t value = 0;
-    if ((text.size > 1 && text.data[0] == '0') || !parseU64(text.data, text.size, &value) || value >= 0xffffffffu)
+    if ((text.size > 1 && text.data[0] == '0') || !prU64Parse(text.data, text.size, &value, 10) || value >= 0xffffffffu)
         return false;
     *out = uint32_t(value);
     return true;
@@ -3212,7 +3212,7 @@ JSValue storageGetItem(JSContext* ctx, JSValueConst storageObject, int argc, JSV
 bool setStorageItem(JSContext* ctx, PrHtmlStorage* storage, PrStringView key, PrStringView value) {
     if (prHtmlStorageSetItem(storage, key, value) == PrStatus_Ok)
         return true;
-    jsQuotaExceededErrorThrow(ctx, kNanF64, kNanF64);
+    jsQuotaExceededErrorThrow(ctx, kPrF64Nan, kPrF64Nan);
     return false;
 }
 
@@ -4280,23 +4280,23 @@ bool jsHtmlCompileEventHandler(JSContext* ctx, PrDomEventTarget* target, PrDomEl
     // scope is the global alone, and the Window's onerror receives an ErrorEvent's members.
     bool scoped = prDomElementAsEventTarget(element) == target;
     bool error = !scoped && handler == PrDomEventHandler_onerror;
-    TextBuffer source;
+    PrTextBuffer source = {};
     const char* opening = "(function() { return function(event) {\n";
     if (scoped)
         opening = "(function(document__, element__) { with (document__) with (element__) return function(event) {\n";
     else if (error)
         opening = "(function() { return function(event, source, lineno, colno, error) {\n";
-    textAppend(&source, opening);
+    prTextBufferAppend(&source, opening);
     // An SVG element's handler also names its event evt (SVG2/interact.html#EventAttributes).
     if (scoped && prDomElementNamespace(element) == PrDomNamespace_Svg)
-        textAppend(&source, "var evt = event;\n");
-    textAppend(&source, body);
-    textAppend(&source, "\n}; })");
+        prTextBufferAppend(&source, "var evt = event;\n");
+    prTextBufferAppend(&source, body);
+    prTextBufferAppend(&source, "\n}; })");
     // JS_Eval reads a terminator after the source.
-    textAppendChar(&source, '\0');
-    PrStringView text = textView(&source);
+    prTextBufferAppendChar(&source, '\0');
+    PrStringView text = prTextBufferView(&source);
     JSValue outer = JS_Eval(ctx, text.data, text.size - 1, "event handler", JS_EVAL_TYPE_GLOBAL);
-    textReset(&source);
+    prTextBufferReset(&source);
     JSValue function = JS_EXCEPTION;
     if (!JS_IsException(outer)) {
         JSValue global = JS_GetGlobalObject(ctx);

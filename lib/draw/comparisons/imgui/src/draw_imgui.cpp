@@ -61,7 +61,7 @@ struct Walk {
 };
 
 ImU32 colorOf(PrColor c) {
-    auto byte = [](float v) { return uint32_t(clampF32(v, 0, 1) * 255 + 0.5f); };
+    auto byte = [](float v) { return uint32_t(prF32Clamp(v, 0, 1) * 255 + 0.5f); };
     return IM_COL32(byte(c.r), byte(c.g), byte(c.b), byte(c.a));
 }
 
@@ -170,8 +170,8 @@ bool drawImageBrushRect(Walk& w, const PrDrawCommand& c) {
     PrRect tile = brush->image.tiles.tile;
     PrRect placed = prAffine2MapRect(brush->transform, tile);
     PrRect visible{
-        maxF32(placed.left, c.rect.left), maxF32(placed.top, c.rect.top),
-        minF32(placed.right, c.rect.right), minF32(placed.bottom, c.rect.bottom),
+        prF32Max(placed.left, c.rect.left), prF32Max(placed.top, c.rect.top),
+        prF32Min(placed.right, c.rect.right), prF32Min(placed.bottom, c.rect.bottom),
     };
     if (!(visible.right > visible.left && visible.bottom > visible.top) || !(placed.right > placed.left) ||
             !(placed.bottom > placed.top))
@@ -250,7 +250,7 @@ void drawShape(Walk& w, const PrDrawCommand& c) {
         }
         if (c.kind == PrDrawCommandKind_Ellipse && prAffine2IsSimilarity(t)) {
             float scale = prAffine2MaxScale(t);
-            float turn = atan2F32(t.b, t.a);
+            float turn = prF32Atan2(t.b, t.a);
             w.draw->AddEllipseFilled(vec(prAffine2MapPoint(t, c.ellipse.center)),
                 ImVec2(c.ellipse.radii.x * scale, c.ellipse.radii.y * scale), color, c.ellipse.rotation + turn);
             return;
@@ -390,7 +390,7 @@ void drawGlyphs(Walk& w, const PrDrawCommand& c) {
         float perEm = prDrawGlyphPixelsPerEm(&run, i, device) * adjust;
         if (!(perEm > 0))
             continue;
-        ImFontBaked* baked = font->GetFontBaked(clampF32(perEm * heightPerEm, 1, IMGUI_FONT_SIZE_MAX));
+        ImFontBaked* baked = font->GetFontBaked(prF32Clamp(perEm * heightPerEm, 1, IMGUI_FONT_SIZE_MAX));
         if (baked == nullptr)
             continue;
         ImFontGlyph* glyph = baked->FindGlyphNoFallback(ImWchar(id));
@@ -435,8 +435,8 @@ void pushClip(Walk& w, const PrDrawCommand& c) {
     if (prDrawTransformDrawsNothing(&w.transforms.last(), &c)) {
         clip = ImVec4(0, 0, 0, 0);
     } else if (scissor) {
-        clip = ImVec4(maxF32(clip.x, rect.left), maxF32(clip.y, rect.top), minF32(clip.z, rect.right),
-            minF32(clip.w, rect.bottom));
+        clip = ImVec4(prF32Max(clip.x, rect.left), prF32Max(clip.y, rect.top), prF32Min(clip.z, rect.right),
+            prF32Min(clip.w, rect.bottom));
         if (clip.z < clip.x || clip.w < clip.y)
             clip = ImVec4(0, 0, 0, 0);
     }
@@ -460,8 +460,8 @@ void pushGroup(Walk& w, const PrDrawCommand& c) {
             float(kPrDrawRenderMaxSize), &p)) {
         tangent = prDrawProjectionTangent(&p);
         const PrRect& landed = p.targetBounds;
-        clip = ImVec4(maxF32(clip.x, landed.left), maxF32(clip.y, landed.top), minF32(clip.z, landed.right),
-            minF32(clip.w, landed.bottom));
+        clip = ImVec4(prF32Max(clip.x, landed.left), prF32Max(clip.y, landed.top), prF32Min(clip.z, landed.right),
+            prF32Min(clip.w, landed.bottom));
     } else {
         clip = ImVec4(0, 0, 0, 0);
     }

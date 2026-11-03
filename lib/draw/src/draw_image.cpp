@@ -39,7 +39,7 @@ const uint8_t* pixelsOf(const DrawImage* image) {
 void readPixel(const uint8_t* p, PrPixelFormat format, float out[4]) {
     if (format == PrPixelFormat_RgbaF16) {
         PrFloat16 stored[4];
-        memCopy(stored, p, sizeof(stored));
+        prMemCopy(stored, p, sizeof(stored));
         for (uint32_t i = 0; i < 4; ++i)
             out[i] = prFloat16ToFloat(stored[i]);
         return;
@@ -94,7 +94,7 @@ PrStatus createWide(PrImageDecoder* decoder, const PrImageInfo& info, const PrDr
 // Initializes an image of `extent` that has one reference and a new id. Its pixels follow it in the allocation, at
 // `stride` bytes a row, and the caller fills them.
 void initImage(DrawImage* image, PrUVec2 extent, size_t stride, PrPixelFormat format, PrDrawAlpha alpha) {
-    memZero(image, sizeof(DrawImage));
+    prMemZero(image, sizeof(DrawImage));
     image->references.storeRelaxed(1);
     image->id = drawNextId();
     image->extent = extent;
@@ -122,7 +122,7 @@ void convertPixels(const PrDrawImageDesc& desc, DrawImage* image) {
             for (uint32_t i = 0; i < 3; ++i)
                 stored[i] = prFloat16FromFloat(float(channels[i]) * (premultiplied ? alpha : 1));
             stored[3] = prFloat16FromFloat(c[3]);
-            memCopy(out + x * 8, stored, sizeof(stored));
+            prMemCopy(out + x * 8, stored, sizeof(stored));
         }
     }
 }
@@ -155,7 +155,7 @@ PrStatus prDrawImageCreate(const PrDrawImageDesc* desc, const PrDrawImage* PR_NU
         convertPixels(*desc, image);
     } else {
         for (uint32_t y = 0; y < pixels.extent.y; ++y)
-            memCopy(pixelsOf(image) + y * stride, pixels.data + y * pixels.stride, stride);
+            prMemCopy(pixelsOf(image) + y * stride, pixels.data + y * pixels.stride, stride);
     }
     *out = image;
     return PrStatus_Ok;
@@ -274,7 +274,7 @@ void prDrawImageWritePixels(const PrDrawImage* image, PrPixels target, PrPixelFo
             float c[4];
             if (imageFormat == PrPixelFormat_RgbaF16) {
                 PrFloat16 stored[4];
-                memCopy(stored, from + size_t(column) * 8, sizeof(stored));
+                prMemCopy(stored, from + size_t(column) * 8, sizeof(stored));
                 for (uint32_t k = 0; k < 4; ++k)
                     c[k] = prFloat16ToFloat(stored[k]);
             } else {
@@ -285,21 +285,21 @@ void prDrawImageWritePixels(const PrDrawImage* image, PrPixels target, PrPixelFo
                 c[2] = float(p[bgra ? 0 : 2]) / 255;
                 c[3] = float(p[3]) / 255;
             }
-            c[3] = alpha == PrDrawAlpha_Opaque ? 1 : clampF32(c[3], 0, 1);
+            c[3] = alpha == PrDrawAlpha_Opaque ? 1 : prF32Clamp(c[3], 0, 1);
             if (alpha != PrDrawAlpha_Premultiplied) {
                 for (uint32_t k = 0; k < 3; ++k)
-                    c[k] = (targetHalf ? c[k] : clampF32(c[k], 0, 1)) * c[3];
+                    c[k] = (targetHalf ? c[k] : prF32Clamp(c[k], 0, 1)) * c[3];
             }
             if (targetHalf) {
                 PrFloat16 stored[4];
                 for (uint32_t k = 0; k < 4; ++k)
                     stored[k] = prFloat16FromFloat(c[k]);
-                memCopy(to + size_t(tx) * 8, stored, sizeof(stored));
+                prMemCopy(to + size_t(tx) * 8, stored, sizeof(stored));
                 continue;
             }
             uint8_t bytes[4];
             for (uint32_t k = 0; k < 3; ++k)
-                bytes[k] = uint8_t(clampF32(c[k], 0, c[3]) * 255 + 0.5f);
+                bytes[k] = uint8_t(prF32Clamp(c[k], 0, c[3]) * 255 + 0.5f);
             bytes[3] = uint8_t(c[3] * 255 + 0.5f);
             uint8_t* p = to + size_t(tx) * 4;
             p[0] = bytes[targetBgra ? 2 : 0];

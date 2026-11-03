@@ -8,6 +8,7 @@
 #include "pr/ascii.h"
 #include "pr/integer.h"
 #include "pr/string_ops.h"
+#include "pr/string_trim.h"
 #include "pr/text_buffer.h"
 #include "pr/unicode_idna.h"
 #include "pr/utf8.h"
@@ -28,8 +29,8 @@ struct Parser {
     size_t pointer;
     const Url* PR_NULLABLE base;
     Url* url;
-    TextBuffer path;            // url->path while the parse runs
-    TextBuffer buffer;
+    PrTextBuffer path;            // url->path while the parse runs
+    PrTextBuffer buffer;
     UrlState state;
     UrlScheme scheme;           // the special scheme of url->scheme, or UrlScheme_None
     bool hasOverride;
@@ -41,11 +42,11 @@ struct Parser {
 };
 
 bool isDigit(int c) {
-    return c != kEof && asciiIsDigit(char(c));
+    return c != kEof && prAsciiIsDigit(char(c));
 }
 
 bool isHexDigit(int c) {
-    return c != kEof && asciiIsHexDigit(char(c));
+    return c != kEof && prAsciiIsHexDigit(char(c));
 }
 
 void assign(PrString* target, const PrString* value) {
@@ -53,10 +54,10 @@ void assign(PrString* target, const PrString* value) {
 }
 
 void appendEncoded(PrString* target, PrStringView text, PrUrlPercentEncodeSet set) {
-    TextBuffer encoded;
+    PrTextBuffer encoded = {};
     urlAppendPercentEncoded(&encoded, text, set);
-    prStringAppend(target, textView(&encoded));
-    textReset(&encoded);
+    prStringAppend(target, prTextBufferView(&encoded));
+    prTextBufferReset(&encoded);
 }
 
 bool includesCredentials(const Url* url) {
@@ -69,7 +70,7 @@ bool isEmptyHost(const PrString* host) {
 
 // url/#windows-drive-letter
 bool isDriveLetter(PrStringView text) {
-    return text.size == 2 && asciiIsLetter(text.data[0]) && (text.data[1] == ':' || text.data[1] == '|');
+    return text.size == 2 && prAsciiIsLetter(text.data[0]) && (text.data[1] == ':' || text.data[1] == '|');
 }
 
 bool isNormalizedDriveLetter(PrStringView text) {
@@ -78,7 +79,7 @@ bool isNormalizedDriveLetter(PrStringView text) {
 
 // url/#start-with-a-windows-drive-letter
 bool startsWithDriveLetter(PrStringView text) {
-    if (text.size < 2 || !isDriveLetter(stringSlice(text, 0, 2)))
+    if (text.size < 2 || !isDriveLetter(prStringSlice(text, 0, 2)))
         return false;
     if (text.size == 2)
         return true;
@@ -88,13 +89,13 @@ bool startsWithDriveLetter(PrStringView text) {
 
 // url/#single-dot-path-segment
 bool isSingleDot(PrStringView segment) {
-    return segment == "." || asciiEqualsFold(segment, "%2e");
+    return segment == "." || prAsciiEqualsFold(segment, "%2e");
 }
 
 // url/#double-dot-path-segment
 bool isDoubleDot(PrStringView segment) {
-    return segment == ".." || asciiEqualsFold(segment, ".%2e") ||
-        asciiEqualsFold(segment, "%2e.") || asciiEqualsFold(segment, "%2e%2e");
+    return segment == ".." || prAsciiEqualsFold(segment, ".%2e") ||
+        prAsciiEqualsFold(segment, "%2e.") || prAsciiEqualsFold(segment, "%2e%2e");
 }
 
 // url/#forbidden-host-code-point
@@ -113,16 +114,16 @@ bool parseIpv4Number(PrStringView text, uint64_t* out) {
     if (text.size == 0)
         return false;
     uint32_t radix = 10;
-    if (text.size >= 2 && text.data[0] == '0' && asciiLower(text.data[1]) == 'x') {
+    if (text.size >= 2 && text.data[0] == '0' && prAsciiLower(text.data[1]) == 'x') {
         radix = 16;
-        text = stringSlice(text, 2, text.size - 2);
+        text = prStringSlice(text, 2, text.size - 2);
     } else if (text.size >= 2 && text.data[0] == '0') {
         radix = 8;
-        text = stringSlice(text, 1, text.size - 1);
+        text = prStringSlice(text, 1, text.size - 1);
     }
     // "0x" alone is zero.
     uint64_t value = 0;
-    if (text.size != 0 && !parseU64(text.data, text.size, &value, radix))
+    if (text.size != 0 && !prU64Parse(text.data, text.size, &value, radix))
         return false;
     *out = value < kIpv4Overflow ? value : kIpv4Overflow;
     return true;
@@ -135,10 +136,10 @@ bool endsInNumber(PrStringView text) {
     size_t first = text.size;
     while (first != 0 && text.data[first - 1] != '.')
         --first;
-    PrStringView last = stringSlice(text, first, text.size - first);
+    PrStringView last = prStringSlice(text, first, text.size - first);
     bool digits = last.size != 0;
     for (size_t i = 0; i < last.size; ++i)
-        digits = digits && asciiIsDigit(last.data[i]);
+        digits = digits && prAsciiIsDigit(last.data[i]);
     uint64_t number;
     return digits || parseIpv4Number(last, &number);
 }
@@ -150,8 +151,8 @@ PrStatus parseIpv4(PrStringView text, uint32_t* out) {
     uint64_t numbers[4];
     uint32_t count = 0;
     for (size_t first = 0;;) {
-        size_t end = first + stringFind(stringSlice(text, first, text.size - first), '.');
-        if (count == 4 || !parseIpv4Number(stringSlice(text, first, end - first), &numbers[count]))
+        size_t end = first + prStringFindByte(prStringSlice(text, first, text.size - first), '.');
+        if (count == 4 || !parseIpv4Number(prStringSlice(text, first, end - first), &numbers[count]))
             return PrStatus_Syntax;
         ++count;
         if (end == text.size)
@@ -171,11 +172,11 @@ PrStatus parseIpv4(PrStringView text, uint32_t* out) {
 }
 
 // url/#concept-ipv4-serializer
-void serializeIpv4(TextBuffer* out, uint32_t address) {
+void serializeIpv4(PrTextBuffer* out, uint32_t address) {
     for (uint32_t i = 0; i < 4; ++i) {
         if (i != 0)
-            textAppendChar(out, '.');
-        textAppendU64(out, (address >> (24 - 8 * i)) & 255);
+            prTextBufferAppendChar(out, '.');
+        prTextBufferAppendU64(out, (address >> (24 - 8 * i)) & 255, 10);
     }
 }
 
@@ -206,7 +207,7 @@ PrStatus parseIpv6(PrStringView input, uint16_t address[8]) {
         uint32_t value = 0;
         uint32_t length = 0;
         while (length < 4 && isHexDigit(at(pointer))) {
-            value = value * 16 + asciiHexValue(char(at(pointer)));
+            value = value * 16 + prAsciiHexValue(char(at(pointer)));
             ++pointer;
             ++length;
         }
@@ -265,7 +266,7 @@ PrStatus parseIpv6(PrStringView input, uint16_t address[8]) {
 }
 
 // url/#concept-ipv6-serializer. The address is enclosed in brackets, as the host serializer writes it.
-void serializeIpv6(TextBuffer* out, const uint16_t address[8]) {
+void serializeIpv6(PrTextBuffer* out, const uint16_t address[8]) {
     uint32_t compress = 8;
     uint32_t longest = 1;
     for (uint32_t i = 0; i < 8;) {
@@ -278,39 +279,39 @@ void serializeIpv6(TextBuffer* out, const uint16_t address[8]) {
         }
         i += i == start;
     }
-    textAppendChar(out, '[');
+    prTextBufferAppendChar(out, '[');
     for (uint32_t i = 0; i < 8; ++i) {
         if (i == compress) {
-            textAppend(out, i == 0 ? "::" : ":");
+            prTextBufferAppend(out, i == 0 ? "::" : ":");
             i += longest - 1;
             continue;
         }
-        textAppendU64(out, address[i], 16);
+        prTextBufferAppendU64(out, address[i], 16);
         if (i != 7)
-            textAppendChar(out, ':');
+            prTextBufferAppendChar(out, ':');
     }
-    textAppendChar(out, ']');
+    prTextBufferAppendChar(out, ']');
 }
 
 // url/#concept-domain-to-ascii with beStrict false. An ASCII domain is lowercased, whatever Unicode ToASCII makes of
 // it. Any other domain is converted by ToASCII, which rejects an ill-formed sequence as it rejects the U+FFFD that
 // decoding would replace it with.
-PrStatus domainToAscii(TextBuffer* domain) {
-    PrStringView text = textView(domain);
+PrStatus domainToAscii(PrTextBuffer* domain) {
+    PrStringView text = prTextBufferView(domain);
     bool ascii = true;
     for (size_t i = 0; i < text.size && ascii; ++i)
         ascii = uint8_t(text.data[i]) < 0x80;
     if (ascii) {
-        textAsciiLower(domain);
+        prTextBufferAsciiLower(domain);
     } else {
         PrString converted{};
         if (!prUnicodeIdnaToAscii(text, PrUnicodeIdnaFlag_CheckBidi | PrUnicodeIdnaFlag_CheckJoiners, &converted))
             return PrStatus_Syntax;
-        textClear(domain);
-        textAppend(domain, prStringView(&converted));
+        prTextBufferClear(domain);
+        prTextBufferAppend(domain, prStringView(&converted));
         prStringReset(&converted);
     }
-    text = textView(domain);
+    text = prTextBufferView(domain);
     if (text.size == 0)
         return PrStatus_Syntax;
     for (size_t i = 0; i < text.size; ++i) {
@@ -322,11 +323,14 @@ PrStatus domainToAscii(TextBuffer* domain) {
 
 // url/#concept-host-parser. On success, writes the serialized host to `out`.
 PrStatus parseHost(PrStringView input, bool opaque, PrString* out) {
-    TextBuffer host;
+    PrTextBuffer host = {};
     PrStatus status = PrStatus_Ok;
     if (input.size != 0 && input.data[0] == '[') {
         uint16_t address[8];
-        status = input.data[input.size - 1] != ']' ? PrStatus_Syntax : parseIpv6(stringSlice(input, 1, input.size - 2), address);
+        if (input.data[input.size - 1] != ']')
+            status = PrStatus_Syntax;
+        else
+            status = parseIpv6(prStringSlice(input, 1, input.size - 2), address);
         if (status == PrStatus_Ok)
             serializeIpv6(&host, address);
     } else if (opaque) {
@@ -338,22 +342,22 @@ PrStatus parseHost(PrStringView input, bool opaque, PrString* out) {
         urlAppendPercentEncoded(&host, input, PrUrlPercentEncodeSet_C0Control);
     } else {
         PR_ASSERT(input.size != 0);
-        textAppend(&host, input);
-        host.text.count = uint32_t(prUrlPercentDecode(input, host.text.data, host.text.count));
+        prTextBufferAppend(&host, input);
+        host.size = uint32_t(prUrlPercentDecode(input, host.data, host.size));
         status = domainToAscii(&host);
-        if (status == PrStatus_Ok && endsInNumber(textView(&host))) {
+        if (status == PrStatus_Ok && endsInNumber(prTextBufferView(&host))) {
             uint32_t address;
-            status = parseIpv4(textView(&host), &address);
-            textClear(&host);
+            status = parseIpv4(prTextBufferView(&host), &address);
+            prTextBufferClear(&host);
             if (status == PrStatus_Ok)
                 serializeIpv4(&host, address);
         }
     }
     if (status == PrStatus_Ok) {
         prStringReset(out);
-        *out = textTake(&host);
+        *out = prTextBufferTake(&host);
     }
-    textReset(&host);
+    prTextBufferReset(&host);
     return status;
 }
 
@@ -363,7 +367,7 @@ int codePoint(const Parser* p) {
 
 PrStringView remaining(const Parser* p) {
     size_t next = p->pointer + 1;
-    return next < p->input.size ? stringSlice(p->input, next, p->input.size - next) : "";
+    return next < p->input.size ? prStringSlice(p->input, next, p->input.size - next) : "";
 }
 
 bool remainingStartsWith(const Parser* p, char c) {
@@ -373,7 +377,7 @@ bool remainingStartsWith(const Parser* p, char c) {
 
 // Returns the input from the pointer onward.
 PrStringView fromPointer(const Parser* p) {
-    return stringSlice(p->input, p->pointer, p->input.size - p->pointer);
+    return prStringSlice(p->input, p->pointer, p->input.size - p->pointer);
 }
 
 bool isSpecial(const Parser* p) {
@@ -395,31 +399,31 @@ void takeAuthority(Parser* p) {
 }
 
 void takePath(Parser* p) {
-    textClear(&p->path);
-    textAppend(&p->path, prStringView(&p->base->path));
+    prTextBufferClear(&p->path);
+    prTextBufferAppend(&p->path, prStringView(&p->base->path));
 }
 
 void appendSegment(Parser* p, PrStringView segment) {
-    textAppendChar(&p->path, '/');
-    textAppend(&p->path, segment);
+    prTextBufferAppendChar(&p->path, '/');
+    prTextBufferAppend(&p->path, segment);
 }
 
 PrStringView firstSegment(PrStringView path) {
     if (path.size == 0)
         return path;
-    PrStringView rest = stringSlice(path, 1, path.size - 1);
-    return stringSlice(rest, 0, stringFind(rest, '/'));
+    PrStringView rest = prStringSlice(path, 1, path.size - 1);
+    return prStringSlice(rest, 0, prStringFindByte(rest, '/'));
 }
 
 // url/#shorten-a-urls-path
 void shorten(Parser* p) {
-    PrStringView path = textView(&p->path);
-    if (p->scheme == UrlScheme_File && path.size == 3 && isNormalizedDriveLetter(stringSlice(path, 1, 2)))
+    PrStringView path = prTextBufferView(&p->path);
+    if (p->scheme == UrlScheme_File && path.size == 3 && isNormalizedDriveLetter(prStringSlice(path, 1, 2)))
         return;
-    uint32_t end = p->path.text.count;
-    while (end != 0 && p->path.text.data[end - 1] != '/')
+    uint32_t end = p->path.size;
+    while (end != 0 && p->path.data[end - 1] != '/')
         --end;
-    p->path.text.count = end != 0 ? end - 1 : 0;
+    p->path.size = end != 0 ? end - 1 : 0;
 }
 
 void startQuery(Parser* p) {
@@ -442,8 +446,8 @@ PrStatus run(Parser* p) {
         bool slash = c == '/' || (special && c == '\\');
         switch (p->state) {
             case UrlState_SchemeStart:
-                if (c != kEof && asciiIsLetter(char(c))) {
-                    textAppendChar(&p->buffer, asciiLower(char(c)));
+                if (c != kEof && prAsciiIsLetter(char(c))) {
+                    prTextBufferAppendChar(&p->buffer, prAsciiLower(char(c)));
                     p->state = UrlState_Scheme;
                 } else if (!p->hasOverride) {
                     p->state = UrlState_NoScheme;
@@ -454,10 +458,10 @@ PrStatus run(Parser* p) {
                 break;
 
             case UrlState_Scheme:
-                if (c != kEof && (asciiIsLetter(char(c)) || asciiIsDigit(char(c)) || c == '+' || c == '-' || c == '.')) {
-                    textAppendChar(&p->buffer, asciiLower(char(c)));
+                if (c != kEof && (prAsciiIsLetter(char(c)) || prAsciiIsDigit(char(c)) || c == '+' || c == '-' || c == '.')) {
+                    prTextBufferAppendChar(&p->buffer, prAsciiLower(char(c)));
                 } else if (c == ':') {
-                    PrStringView scheme = textView(&p->buffer);
+                    PrStringView scheme = prTextBufferView(&p->buffer);
                     if (p->hasOverride) {
                         UrlScheme next = urlScheme(scheme);
                         if ((next != UrlScheme_None) != special)
@@ -473,7 +477,7 @@ PrStatus run(Parser* p) {
                             url->hasPort = false;
                         return PrStatus_Ok;
                     }
-                    textClear(&p->buffer);
+                    prTextBufferClear(&p->buffer);
                     if (p->scheme == UrlScheme_File) {
                         p->state = UrlState_File;
                     } else if (isSpecial(p) && p->base != nullptr &&
@@ -485,12 +489,12 @@ PrStatus run(Parser* p) {
                         p->state = UrlState_PathOrAuthority;
                         ++p->pointer;
                     } else {
-                        textClear(&p->path);
+                        prTextBufferClear(&p->path);
                         url->opaquePath = true;
                         p->state = UrlState_OpaquePath;
                     }
                 } else if (!p->hasOverride) {
-                    textClear(&p->buffer);
+                    prTextBufferClear(&p->buffer);
                     p->state = UrlState_NoScheme;
                     p->pointer = size_t(-1);
                 } else {
@@ -587,26 +591,26 @@ PrStatus run(Parser* p) {
                         appendEncoded(p->passwordTokenSeen ? &url->password : &url->username,
                             "%40", PrUrlPercentEncodeSet_Userinfo);
                     p->atSignSeen = true;
-                    PrStringView credentials = textView(&p->buffer);
+                    PrStringView credentials = prTextBufferView(&p->buffer);
                     if (!p->passwordTokenSeen) {
-                        size_t colon = stringFind(credentials, ':');
-                        appendEncoded(&url->username, stringSlice(credentials, 0, colon),
+                        size_t colon = prStringFindByte(credentials, ':');
+                        appendEncoded(&url->username, prStringSlice(credentials, 0, colon),
                             PrUrlPercentEncodeSet_Userinfo);
                         p->passwordTokenSeen = colon != credentials.size;
                         credentials =
-                            p->passwordTokenSeen ? stringSlice(credentials, colon + 1, credentials.size - colon - 1) : "";
+                            p->passwordTokenSeen ? prStringSlice(credentials, colon + 1, credentials.size - colon - 1) : "";
                     }
                     if (p->passwordTokenSeen)
                         appendEncoded(&url->password, credentials, PrUrlPercentEncodeSet_Userinfo);
-                    textClear(&p->buffer);
+                    prTextBufferClear(&p->buffer);
                 } else if (c == kEof || slash || c == '?' || c == '#') {
-                    if (p->atSignSeen && p->buffer.text.count == 0)
+                    if (p->atSignSeen && p->buffer.size == 0)
                         return PrStatus_Syntax;
-                    p->pointer -= p->buffer.text.count + 1;
-                    textClear(&p->buffer);
+                    p->pointer -= p->buffer.size + 1;
+                    prTextBufferClear(&p->buffer);
                     p->state = UrlState_Host;
                 } else {
-                    textAppendChar(&p->buffer, char(c));
+                    prTextBufferAppendChar(&p->buffer, char(c));
                 }
                 break;
 
@@ -616,25 +620,25 @@ PrStatus run(Parser* p) {
                     --p->pointer;
                     p->state = UrlState_FileHost;
                 } else if (c == ':' && !p->insideBrackets) {
-                    if (p->buffer.text.count == 0)
+                    if (p->buffer.size == 0)
                         return PrStatus_Syntax;
                     if (p->hasOverride && p->override == UrlState_Hostname)
                         return PrStatus_Syntax;
-                    PrStatus status = parseHost(textView(&p->buffer), !special, &url->host);
+                    PrStatus status = parseHost(prTextBufferView(&p->buffer), !special, &url->host);
                     if (status != PrStatus_Ok)
                         return status;
-                    textClear(&p->buffer);
+                    prTextBufferClear(&p->buffer);
                     p->state = UrlState_Port;
                 } else if (c == kEof || slash || c == '?' || c == '#') {
                     --p->pointer;
-                    if (special && p->buffer.text.count == 0)
+                    if (special && p->buffer.size == 0)
                         return PrStatus_Syntax;
-                    if (p->hasOverride && p->buffer.text.count == 0 && (includesCredentials(url) || url->hasPort))
+                    if (p->hasOverride && p->buffer.size == 0 && (includesCredentials(url) || url->hasPort))
                         return PrStatus_Syntax;
-                    PrStatus status = parseHost(textView(&p->buffer), !special, &url->host);
+                    PrStatus status = parseHost(prTextBufferView(&p->buffer), !special, &url->host);
                     if (status != PrStatus_Ok)
                         return status;
-                    textClear(&p->buffer);
+                    prTextBufferClear(&p->buffer);
                     p->state = UrlState_PathStart;
                     if (p->hasOverride)
                         return PrStatus_Ok;
@@ -643,22 +647,22 @@ PrStatus run(Parser* p) {
                         p->insideBrackets = true;
                     if (c == ']')
                         p->insideBrackets = false;
-                    textAppendChar(&p->buffer, char(c));
+                    prTextBufferAppendChar(&p->buffer, char(c));
                 }
                 break;
 
             case UrlState_Port:
                 if (isDigit(c)) {
-                    textAppendChar(&p->buffer, char(c));
+                    prTextBufferAppendChar(&p->buffer, char(c));
                 } else if (c == kEof || slash || c == '?' || c == '#' || p->hasOverride) {
-                    if (p->buffer.text.count != 0) {
+                    if (p->buffer.size != 0) {
                         uint64_t port = 0;
-                        parseU64(p->buffer.text.data, p->buffer.text.count, &port);
+                        prU64Parse(p->buffer.data, p->buffer.size, &port, 10);
                         if (port > 0xffff)
                             return PrStatus_Syntax;
                         url->hasPort = int32_t(port) != kUrlSchemePort[p->scheme];
                         url->port = url->hasPort ? uint16_t(port) : 0;
-                        textClear(&p->buffer);
+                        prTextBufferClear(&p->buffer);
                         if (p->hasOverride)
                             return PrStatus_Ok;
                     }
@@ -689,7 +693,7 @@ PrStatus run(Parser* p) {
                         if (!startsWithDriveLetter(fromPointer(p)))
                             shorten(p);
                         else
-                            textClear(&p->path);
+                            prTextBufferClear(&p->path);
                         p->state = UrlState_Path;
                         --p->pointer;
                     }
@@ -717,27 +721,27 @@ PrStatus run(Parser* p) {
             case UrlState_FileHost:
                 if (c == kEof || c == '/' || c == '\\' || c == '?' || c == '#') {
                     --p->pointer;
-                    if (!p->hasOverride && isDriveLetter(textView(&p->buffer))) {
+                    if (!p->hasOverride && isDriveLetter(prTextBufferView(&p->buffer))) {
                         // The buffer carries over into the path state.
                         p->state = UrlState_Path;
-                    } else if (p->buffer.text.count == 0) {
+                    } else if (p->buffer.size == 0) {
                         prStringReplace(&url->host, "");
                         if (p->hasOverride)
                             return PrStatus_Ok;
                         p->state = UrlState_PathStart;
                     } else {
-                        PrStatus status = parseHost(textView(&p->buffer), !special, &url->host);
+                        PrStatus status = parseHost(prTextBufferView(&p->buffer), !special, &url->host);
                         if (status != PrStatus_Ok)
                             return status;
                         if (prStringView(&url->host) == "localhost")
                             prStringReplace(&url->host, "");
                         if (p->hasOverride)
                             return PrStatus_Ok;
-                        textClear(&p->buffer);
+                        prTextBufferClear(&p->buffer);
                         p->state = UrlState_PathStart;
                     }
                 } else {
-                    textAppendChar(&p->buffer, char(c));
+                    prTextBufferAppendChar(&p->buffer, char(c));
                 }
                 break;
 
@@ -761,7 +765,7 @@ PrStatus run(Parser* p) {
 
             case UrlState_Path:
                 if (c == kEof || slash || (!p->hasOverride && (c == '?' || c == '#'))) {
-                    PrStringView segment = textView(&p->buffer);
+                    PrStringView segment = prTextBufferView(&p->buffer);
                     if (isDoubleDot(segment)) {
                         shorten(p);
                         if (!slash)
@@ -770,17 +774,17 @@ PrStatus run(Parser* p) {
                         if (!slash)
                             appendSegment(p, "");
                     } else {
-                        if (p->scheme == UrlScheme_File && p->path.text.count == 0 && isDriveLetter(segment))
-                            p->buffer.text.data[1] = ':';
+                        if (p->scheme == UrlScheme_File && p->path.size == 0 && isDriveLetter(segment))
+                            p->buffer.data[1] = ':';
                         appendSegment(p, segment);
                     }
-                    textClear(&p->buffer);
+                    prTextBufferClear(&p->buffer);
                     if (c == '?')
                         startQuery(p);
                     if (c == '#')
                         startFragment(p);
                 } else {
-                    urlAppendPercentEncoded(&p->buffer, stringSlice(p->input, p->pointer, 1),
+                    urlAppendPercentEncoded(&p->buffer, prStringSlice(p->input, p->pointer, 1),
                         PrUrlPercentEncodeSet_Path);
                 }
                 break;
@@ -792,9 +796,9 @@ PrStatus run(Parser* p) {
                     startFragment(p);
                 } else if (c == ' ') {
                     bool delimited = remainingStartsWith(p, '?') || remainingStartsWith(p, '#');
-                    textAppend(&p->path, delimited ? "%20" : " ");
+                    prTextBufferAppend(&p->path, delimited ? "%20" : " ");
                 } else if (c != kEof) {
-                    urlAppendPercentEncoded(&p->path, stringSlice(p->input, p->pointer, 1),
+                    urlAppendPercentEncoded(&p->path, prStringSlice(p->input, p->pointer, 1),
                         PrUrlPercentEncodeSet_C0Control);
                 }
                 break;
@@ -803,26 +807,29 @@ PrStatus run(Parser* p) {
                 if ((!p->hasOverride && c == '#') || c == kEof) {
                     // The query of a URL that is not special, or of a WebSocket URL, is UTF-8 in any charset.
                     bool utf8 = !special || p->scheme == UrlScheme_Ws || p->scheme == UrlScheme_Wss;
-                    TextBuffer encoded;
-                    urlAppendPercentEncodedIn(&encoded, textView(&p->buffer), utf8 ? PrCharset_Utf8 : p->charset,
-                        special ? PrUrlPercentEncodeSet_SpecialQuery : PrUrlPercentEncodeSet_Query);
-                    prStringAppend(&url->query, textView(&encoded));
-                    textReset(&encoded);
-                    textClear(&p->buffer);
+                    PrTextBuffer encoded = {};
+                    PrCharset queryCharset = utf8 ? PrCharset_Utf8 : p->charset;
+                    PrUrlPercentEncodeSet querySet = PrUrlPercentEncodeSet_Query;
+                    if (special)
+                        querySet = PrUrlPercentEncodeSet_SpecialQuery;
+                    urlAppendPercentEncodedIn(&encoded, prTextBufferView(&p->buffer), queryCharset, querySet);
+                    prStringAppend(&url->query, prTextBufferView(&encoded));
+                    prTextBufferReset(&encoded);
+                    prTextBufferClear(&p->buffer);
                     if (c == '#')
                         startFragment(p);
                 } else {
-                    textAppendChar(&p->buffer, char(c));
+                    prTextBufferAppendChar(&p->buffer, char(c));
                 }
                 break;
 
             case UrlState_Fragment:
                 // The buffer holds the encoded text so far, which becomes the fragment at the end.
                 if (c != kEof)
-                    urlAppendPercentEncoded(&p->buffer, stringSlice(p->input, p->pointer, 1),
+                    urlAppendPercentEncoded(&p->buffer, prStringSlice(p->input, p->pointer, 1),
                         PrUrlPercentEncodeSet_Fragment);
                 else
-                    prStringAppend(&url->fragment, textView(&p->buffer));
+                    prStringAppend(&url->fragment, prTextBufferView(&p->buffer));
                 break;
         }
         if (p->pointer == p->input.size)
@@ -838,13 +845,13 @@ PrStatus parse(Url* url, PrStringView input, const Url* PR_NULLABLE base, UrlSta
     size_t first = 0;
     while (first < input.size && !isTabOrNewline(input.data[first]))
         ++first;
-    TextBuffer cleaned;
+    PrTextBuffer cleaned = {};
     if (first != input.size) {
         for (size_t i = 0; i < input.size; ++i) {
             if (!isTabOrNewline(input.data[i]))
-                textAppendChar(&cleaned, input.data[i]);
+                prTextBufferAppendChar(&cleaned, input.data[i]);
         }
-        input = textView(&cleaned);
+        input = prTextBufferView(&cleaned);
     }
     Parser p = {};
     p.input = input;
@@ -855,12 +862,12 @@ PrStatus parse(Url* url, PrStringView input, const Url* PR_NULLABLE base, UrlSta
     p.hasOverride = hasOverride;
     p.override = state;
     p.charset = charset;
-    textAppend(&p.path, prStringView(&url->path));
+    prTextBufferAppend(&p.path, prStringView(&url->path));
     PrStatus status = run(&p);
     prStringReset(&url->path);
-    url->path = textTake(&p.path);
-    textReset(&p.buffer);
-    textReset(&cleaned);
+    url->path = prTextBufferTake(&p.path);
+    prTextBufferReset(&p.buffer);
+    prTextBufferReset(&cleaned);
     return status;
 }
 
@@ -869,27 +876,27 @@ bool isC0ControlOrSpace(char c) {
 }
 
 // Decodes a name or value for url/#concept-urlencoded-parser, using `bytes` as scratch.
-PrString formDecode(TextBuffer* bytes, PrStringView text) {
-    textClear(bytes);
-    textAppend(bytes, text);
-    for (uint32_t i = 0; i < bytes->text.count; ++i) {
-        if (bytes->text.data[i] == '+')
-            bytes->text.data[i] = ' ';
+PrString formDecode(PrTextBuffer* bytes, PrStringView text) {
+    prTextBufferClear(bytes);
+    prTextBufferAppend(bytes, text);
+    for (uint32_t i = 0; i < bytes->size; ++i) {
+        if (bytes->data[i] == '+')
+            bytes->data[i] = ' ';
     }
-    bytes->text.count = uint32_t(prUrlPercentDecode(textView(bytes), bytes->text.data, bytes->text.count));
-    TextBuffer decoded;
-    textAppendUtf8(&decoded, textView(bytes));
-    return textTake(&decoded);
+    bytes->size = uint32_t(prUrlPercentDecode(prTextBufferView(bytes), bytes->data, bytes->size));
+    PrTextBuffer decoded = {};
+    prTextBufferAppendUtf8(&decoded, prTextBufferView(bytes));
+    return prTextBufferTake(&decoded);
 }
 
 // Encodes a name or value for url/#concept-urlencoded-serializer.
-void formEncode(TextBuffer* out, PrStringView text) {
+void formEncode(PrTextBuffer* out, PrStringView text) {
     for (size_t first = 0; first <= text.size;) {
-        PrStringView rest = stringSlice(text, first, text.size - first);
-        size_t space = stringFind(rest, ' ');
-        urlAppendPercentEncoded(out, stringSlice(rest, 0, space), PrUrlPercentEncodeSet_Form);
+        PrStringView rest = prStringSlice(text, first, text.size - first);
+        size_t space = prStringFindByte(rest, ' ');
+        urlAppendPercentEncoded(out, prStringSlice(rest, 0, space), PrUrlPercentEncodeSet_Form);
         if (space != rest.size)
-            textAppendChar(out, '+');
+            prTextBufferAppendChar(out, '+');
         first += space + 1;
     }
 }
@@ -900,7 +907,7 @@ PrStatus urlParse(PrStringView input, const Url* PR_NULLABLE base, PrCharset cha
     PR_ASSERT(prCharsetOutput(charset) == charset);
     *out = nullptr;
     PrUrl* url = allocZeroed<PrUrl>();
-    PrStatus status = parse(url, stringTrim(input, isC0ControlOrSpace), base, UrlState_SchemeStart, false, charset);
+    PrStatus status = parse(url, stringTrimBy(input, isC0ControlOrSpace), base, UrlState_SchemeStart, false, charset);
     if (status == PrStatus_Ok)
         *out = url;
     else
@@ -949,38 +956,38 @@ bool urlCannotHaveCredentials(const Url* url) {
 }
 
 PrString urlSerialize(const Url* url, PrUrlSerialization serialization) {
-    TextBuffer out;
-    textAppend(&out, prStringView(&url->scheme));
-    textAppendChar(&out, ':');
+    PrTextBuffer out = {};
+    prTextBufferAppend(&out, prStringView(&url->scheme));
+    prTextBufferAppendChar(&out, ':');
     PrStringView path = prStringView(&url->path);
     if (!prStringIsNull(&url->host)) {
-        textAppend(&out, "//");
+        prTextBufferAppend(&out, "//");
         if (includesCredentials(url)) {
-            textAppend(&out, prStringView(&url->username));
+            prTextBufferAppend(&out, prStringView(&url->username));
             if (!prStringIsEmpty(&url->password)) {
-                textAppendChar(&out, ':');
-                textAppend(&out, prStringView(&url->password));
+                prTextBufferAppendChar(&out, ':');
+                prTextBufferAppend(&out, prStringView(&url->password));
             }
-            textAppendChar(&out, '@');
+            prTextBufferAppendChar(&out, '@');
         }
-        textAppend(&out, prStringView(&url->host));
+        prTextBufferAppend(&out, prStringView(&url->host));
         if (url->hasPort) {
-            textAppendChar(&out, ':');
-            textAppendU64(&out, url->port);
+            prTextBufferAppendChar(&out, ':');
+            prTextBufferAppendU64(&out, url->port, 10);
         }
-    } else if (!url->opaquePath && stringStartsWith(path, "//")) {
-        textAppend(&out, "/.");
+    } else if (!url->opaquePath && prStringStartsWith(path, "//")) {
+        prTextBufferAppend(&out, "/.");
     }
-    textAppend(&out, path);
+    prTextBufferAppend(&out, path);
     if (!prStringIsNull(&url->query)) {
-        textAppendChar(&out, '?');
-        textAppend(&out, prStringView(&url->query));
+        prTextBufferAppendChar(&out, '?');
+        prTextBufferAppend(&out, prStringView(&url->query));
     }
     if (serialization != PrUrlSerialization_ExcludeFragment && !prStringIsNull(&url->fragment)) {
-        textAppendChar(&out, '#');
-        textAppend(&out, prStringView(&url->fragment));
+        prTextBufferAppendChar(&out, '#');
+        prTextBufferAppend(&out, prStringView(&url->fragment));
     }
-    return textTake(&out);
+    return prTextBufferTake(&out);
 }
 
 PrString urlOrigin(const Url* url) {
@@ -999,44 +1006,44 @@ PrString urlOrigin(const Url* url) {
     UrlScheme scheme = urlScheme(prStringView(&url->scheme));
     if (scheme == UrlScheme_None || scheme == UrlScheme_File)
         return prStringCopy("null");
-    TextBuffer out;
-    textAppend(&out, prStringView(&url->scheme));
-    textAppend(&out, "://");
-    textAppend(&out, prStringView(&url->host));
+    PrTextBuffer out = {};
+    prTextBufferAppend(&out, prStringView(&url->scheme));
+    prTextBufferAppend(&out, "://");
+    prTextBufferAppend(&out, prStringView(&url->host));
     if (url->hasPort) {
-        textAppendChar(&out, ':');
-        textAppendU64(&out, url->port);
+        prTextBufferAppendChar(&out, ':');
+        prTextBufferAppendU64(&out, url->port, 10);
     }
-    return textTake(&out);
+    return prTextBufferTake(&out);
 }
 
 void urlSearchParamsParse(UrlSearchParams* params, PrStringView input) {
     urlSearchParamsClear(params);
-    TextBuffer bytes;
+    PrTextBuffer bytes = {};
     for (size_t first = 0; first < input.size;) {
-        PrStringView rest = stringSlice(input, first, input.size - first);
-        PrStringView sequence = stringSlice(rest, 0, stringFind(rest, '&'));
+        PrStringView rest = prStringSlice(input, first, input.size - first);
+        PrStringView sequence = prStringSlice(rest, 0, prStringFindByte(rest, '&'));
         first += sequence.size + 1;
         if (sequence.size == 0)
             continue;
-        size_t equals = stringFind(sequence, '=');
-        PrStringView value = equals != sequence.size ? stringSlice(sequence, equals + 1, sequence.size - equals - 1) : "";
-        PrString name = formDecode(&bytes, stringSlice(sequence, 0, equals));
+        size_t equals = prStringFindByte(sequence, '=');
+        PrStringView value = equals != sequence.size ? prStringSlice(sequence, equals + 1, sequence.size - equals - 1) : "";
+        PrString name = formDecode(&bytes, prStringSlice(sequence, 0, equals));
         params->pairs.push(UrlPair{name, formDecode(&bytes, value)});
     }
-    textReset(&bytes);
+    prTextBufferReset(&bytes);
 }
 
 PrString urlSearchParamsSerialize(const UrlSearchParams* params) {
-    TextBuffer out;
+    PrTextBuffer out = {};
     for (uint32_t i = 0; i < params->pairs.count; ++i) {
         if (i != 0)
-            textAppendChar(&out, '&');
+            prTextBufferAppendChar(&out, '&');
         formEncode(&out, prStringView(&params->pairs.data[i].name));
-        textAppendChar(&out, '=');
+        prTextBufferAppendChar(&out, '=');
         formEncode(&out, prStringView(&params->pairs.data[i].value));
     }
-    return textTake(&out);
+    return prTextBufferTake(&out);
 }
 
 void urlSearchParamsUpdate(UrlSearchParams* params) {

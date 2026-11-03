@@ -32,15 +32,15 @@ uint32_t surrogateAt(PrStringView text, size_t at) {
     return 0xd000u | uint32_t(uint8_t(text.data[at + 1]) & 0x3f) << 6 | uint32_t(uint8_t(text.data[at + 2]) & 0x3f);
 }
 
-void writeEscape(TextBuffer* out, uint32_t unit) {
+void writeEscape(PrTextBuffer* out, uint32_t unit) {
     char escape[8];
     int width = snprintf(escape, sizeof(escape), "\\u%04x", unit);
-    textAppend(out, escape, uint32_t(width));
+    prTextBufferAppend(out, PrStringView{escape, uint32_t(width)});
 }
 
 } // namespace
 
-bool harnessReadFile(TextBuffer* out, const char* path) {
+bool harnessReadFile(PrTextBuffer* out, const char* path) {
     FILE* file = fopen(path, "rb");
     if (file == nullptr)
         return false;
@@ -49,13 +49,13 @@ bool harnessReadFile(TextBuffer* out, const char* path) {
     long size = ftell(file);
     fseek(file, 0, SEEK_SET);
 
-    textClear(out);
+    prTextBufferClear(out);
     if (size > 0)
-        textReserve(out, uint32_t(size));
+        prTextBufferReserve(out, uint32_t(size));
     char chunk[kReadChunk];
     size_t got;
     while ((got = fread(chunk, 1, sizeof(chunk), file)) != 0)
-        textAppend(out, chunk, uint32_t(got));
+        prTextBufferAppend(out, PrStringView{chunk, uint32_t(got)});
     bool read = size >= 0 && ferror(file) == 0;
     fclose(file);
     return read;
@@ -102,22 +102,22 @@ bool harnessReadCase(HarnessCase* test) {
             *at++ = '\0';
     }
 
-    textClear(&test->input);
-    textReserve(&test->input, uint32_t(size));
+    prTextBufferClear(&test->input);
+    prTextBufferReserve(&test->input, uint32_t(size));
     char chunk[kReadChunk];
     for (size_t left = size_t(size); left != 0;) {
         size_t want = left < sizeof(chunk) ? left : sizeof(chunk);
         size_t got = fread(chunk, 1, want, stdin);
         if (got == 0)
             return false;
-        textAppend(&test->input, chunk, uint32_t(got));
+        prTextBufferAppend(&test->input, PrStringView{chunk, uint32_t(got)});
         left -= got;
     }
     return true;
 }
 
 void harnessCaseReset(HarnessCase* test) {
-    textReset(&test->input);
+    prTextBufferReset(&test->input);
 }
 
 void harnessWriteLine(PrStringView text) {
@@ -125,8 +125,8 @@ void harnessWriteLine(PrStringView text) {
     fputc('\n', stdout);
 }
 
-void harnessWriteString(TextBuffer* out, PrStringView text) {
-    textAppendChar(out, '"');
+void harnessWriteString(PrTextBuffer* out, PrStringView text) {
+    prTextBufferAppendChar(out, '"');
     for (size_t i = 0; i < text.size; ++i) {
         if (isSurrogate(text, i)) {
             writeEscape(out, surrogateAt(text, i));
@@ -136,27 +136,27 @@ void harnessWriteString(TextBuffer* out, PrStringView text) {
 
         char c = text.data[i];
         switch (c) {
-            case '"':  textAppend(out, "\\\""); break;
-            case '\\': textAppend(out, "\\\\"); break;
-            case '\n': textAppend(out, "\\n"); break;
-            case '\r': textAppend(out, "\\r"); break;
-            case '\t': textAppend(out, "\\t"); break;
+            case '"':  prTextBufferAppend(out, "\\\""); break;
+            case '\\': prTextBufferAppend(out, "\\\\"); break;
+            case '\n': prTextBufferAppend(out, "\\n"); break;
+            case '\r': prTextBufferAppend(out, "\\r"); break;
+            case '\t': prTextBufferAppend(out, "\\t"); break;
             default:
                 if (uint8_t(c) < 0x20)
                     writeEscape(out, uint8_t(c));
                 else
-                    textAppendChar(out, c);
+                    prTextBufferAppendChar(out, c);
         }
     }
-    textAppendChar(out, '"');
+    prTextBufferAppendChar(out, '"');
 }
 
-void harnessWriteNumber(TextBuffer* out, uint64_t value) {
-    char digits[kU64TextMaxBytes];
-    textAppend(out, digits, uint32_t(formatU64(value, digits)));
+void harnessWriteNumber(PrTextBuffer* out, uint64_t value) {
+    char digits[kPrU64TextMaxBytes];
+    prTextBufferAppend(out, PrStringView{digits, uint32_t(prU64Format(value, digits, 10))});
 }
 
-void harnessAppendFormat(TextBuffer* out, const char* format, ...) {
+void harnessAppendFormat(PrTextBuffer* out, const char* format, ...) {
     va_list args;
     va_start(args, format);
     char small[512];
@@ -165,19 +165,19 @@ void harnessAppendFormat(TextBuffer* out, const char* format, ...) {
     if (width < 0)
         return;
     if (size_t(width) < sizeof(small)) {
-        textAppend(out, small, uint32_t(width));
+        prTextBufferAppend(out, PrStringView{small, uint32_t(width)});
         return;
     }
     char* large = static_cast<char*>(prMemoryAlloc(size_t(width) + 1));
     va_start(args, format);
     vsnprintf(large, size_t(width) + 1, format, args);
     va_end(args);
-    textAppend(out, large, uint32_t(width));
+    prTextBufferAppend(out, PrStringView{large, uint32_t(width)});
     prMemoryFree(large);
 }
 
 uint8_t harnessReadBound(PrStringView text) {
-    const uint8_t* bytes = stringBytes(text);
+    const uint8_t* bytes = prStringBytes(text);
     size_t i = 0;
 
 #if defined(__ARM_NEON)
@@ -236,36 +236,36 @@ HarnessCounters harnessEach(const HarnessCounters& spent, double count) {
 }
 
 void harnessCountsAdd(HarnessCounts* counts, PrStringView name, const HarnessCounters& cost) {
-    TextBuffer* out = &counts->text;
-    if (out->text.count != 0)
-        textAppend(out, ", ");
+    PrTextBuffer* out = &counts->text;
+    if (out->size != 0)
+        prTextBufferAppend(out, ", ");
     harnessWriteString(out, name);
     harnessAppendFormat(out, ": {\"instructions\": %.0f, \"cycles\": %.0f, \"performanceInstructions\": %.0f, "
         "\"performanceCycles\": %.0f, \"energy\": %.4f, \"time\": %.6f",
         cost.instructions, cost.cycles, cost.performanceInstructions, cost.performanceCycles, cost.energy, cost.millis);
     if (cost.gpu > 0)
         harnessAppendFormat(out, ", \"gpu\": %.6f", cost.gpu);
-    textAppend(out, "}");
+    prTextBufferAppend(out, "}");
 }
 
-void harnessCountsWrite(HarnessCounts* counts, TextBuffer* out) {
-    textAppend(out, ", \"counts\": {");
-    textAppend(out, textView(&counts->text));
-    textAppend(out, "}");
-    textReset(&counts->text);
+void harnessCountsWrite(HarnessCounts* counts, PrTextBuffer* out) {
+    prTextBufferAppend(out, ", \"counts\": {");
+    prTextBufferAppend(out, prTextBufferView(&counts->text));
+    prTextBufferAppend(out, "}");
+    prTextBufferReset(&counts->text);
 }
 
 void harnessWriteCase(bool first, const char* name, const HarnessCounters& cost) {
-    TextBuffer row{};
-    textAppend(&row, first ? "\n  {\"name\": " : ",\n  {\"name\": ");
+    PrTextBuffer row{};
+    prTextBufferAppend(&row, first ? "\n  {\"name\": " : ",\n  {\"name\": ");
     harnessWriteString(&row, name);
     harnessAppendFormat(&row, ", \"time\": %.6f", cost.millis);
     HarnessCounts counts{};
     harnessCountsAdd(&counts, "time", cost);
     harnessCountsWrite(&counts, &row);
-    textAppend(&row, "}");
-    fwrite(row.text.data, 1, row.text.count, stdout);
-    textReset(&row);
+    prTextBufferAppend(&row, "}");
+    fwrite(row.data, 1, row.size, stdout);
+    prTextBufferReset(&row);
 }
 
 } // namespace harness

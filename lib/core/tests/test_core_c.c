@@ -1,5 +1,8 @@
+#include "pr/ascii.h"
 #include "pr/assert.h"
 #include "pr/base.h"
+#include "pr/base64.h"
+#include "pr/checksum.h"
 #include "pr/core_libc.h"
 #include "pr/core_mimalloc.h"
 #if defined(_WIN32)
@@ -18,13 +21,20 @@
 #include "pr/core_posix_vmem.h"
 #endif
 #include "pr/file.h"
+#include "pr/float.h"
 #include "pr/float16.h"
+#include "pr/float_convert.h"
+#include "pr/hash.h"
+#include "pr/integer.h"
+#include "pr/mem.h"
 #include "pr/memory.h"
 #include "pr/mutex.h"
 #include "pr/pixels.h"
 #include "pr/random.h"
 #include "pr/status.h"
 #include "pr/string.h"
+#include "pr/string_ops.h"
+#include "pr/text_buffer.h"
 #include "pr/thread.h"
 #include "pr/time.h"
 #include "pr/time_date.h"
@@ -54,7 +64,16 @@ int prTestCoreCApi(void) {
     double now = prTimeMonotonicMilliseconds();
     PrTimeDate epoch = prTimeDateFromDays(0);
 
+    PrTextBuffer text = {0};
+    prTextBufferAppend(&text, PR_SV("Platform "));
+    prTextBufferAppendU64(&text, 42, 10);
+    prTextBufferAsciiLower(&text);
+    bool texts = prStringEndsWith(prTextBufferView(&text), PR_SV(" 42")) && prAsciiIsDigit('4') &&
+        prHashBytes(text.data, text.size, 0) != 0 && prF64Abs(-kPrF64Pi) == kPrF64Pi;
+    prTextBufferReset(&text);
+
     PrStringView name = PR_SV("platform");
     PrVec2 point = {1, 2};
-    return usable < 64 || name.size != 8 || point.y != 2 || !(now >= 0) || prThreadHardwareCount() == 0 || epoch.year != 1970;
+    return !texts || usable < 64 || name.size != 8 || point.y != 2 || !(now >= 0) || prThreadHardwareCount() == 0 ||
+        epoch.year != 1970;
 }

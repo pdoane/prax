@@ -3,6 +3,7 @@
 
 #include "pr/ui.h"
 
+#include "pr/align.h"
 #include "pr/alloc.h"
 #include "pr/array.h"
 #include "pr/assert.h"
@@ -371,7 +372,7 @@ void* allocContext(Ui* ui, uint32_t size) {
     }
     uint8_t* data = ui->blocks.data[ui->block].data + ui->blockUsed;
     ui->blockUsed += size;
-    memZero(data, size);
+    prMemZero(data, size);
     return data;
 }
 
@@ -834,7 +835,7 @@ void filterGroups(Ui* ui, Keep keep) {
             releaseGroup(ui, e);
             continue;
         }
-        memMove(groups.bytes.data + bytes, groups.bytes.data + e.offset, e.size);
+        prMemMove(groups.bytes.data + bytes, groups.bytes.data + e.offset, e.size);
         e.offset = bytes;
         bytes += e.size;
         groups.index.insert(e.hash, kept);
@@ -1005,7 +1006,7 @@ uint64_t baseIdentity(const Ui* ui, PrLayoutNode base) {
     if (base == kPrLayoutNodeNone)
         return 0;
     uint64_t key = prLayoutNodeKey(ui->tree, base);
-    return key != 0 ? hashMixKeys(key, 1) : hashMixKeys(base, 2);
+    return key != 0 ? prHashMixKeys(key, 1) : prHashMixKeys(base, 2);
 }
 
 // Begins a round. Takes over what the previous round passed to the next, and finds the node under the pointer in the
@@ -1125,7 +1126,7 @@ void groupRouted(Ui* ui) {
         uint32_t end = first;
         while (end < at && routed.data[end].node == moving.node)
             ++end;
-        memMove(&routed.data[end + 1], &routed.data[end], size_t(at - end) * sizeof(UiRouted));
+        prMemMove(&routed.data[end + 1], &routed.data[end], size_t(at - end) * sizeof(UiRouted));
         routed.data[end] = moving;
     }
     ui->events.clear();
@@ -1141,7 +1142,7 @@ void compactQueue(Ui* ui) {
         UiQueued queued = ui->queue.data[i];
         uint32_t size = uint32_t(queued.event.text.size);
         if (size != 0)
-            memMove(ui->queueText.data + text, ui->queueText.data + queued.textStart, size);
+            prMemMove(ui->queueText.data + text, ui->queueText.data + queued.textStart, size);
         queued.textStart = text;
         text += size;
         ui->queue.data[kept++] = queued;
@@ -1313,15 +1314,15 @@ void prUiRequestMotionAt(PrUi* ui, PrLayoutNode node, double time) {
 }
 
 PrUiKey prUiKey(const PrUi* ui, PrLayoutNode base, PrStringView name) {
-    return hashMixKeys(baseIdentity(ui, base), hashBytes(name.data, name.size, 0x6e616d65ull));
+    return prHashMixKeys(baseIdentity(ui, base), prHashBytes(name.data, name.size, 0x6e616d65ull));
 }
 
 PrUiKey prUiKeyIndex(const PrUi* ui, PrLayoutNode base, uint64_t index) {
-    return hashMixKeys(baseIdentity(ui, base), hashMixKeys(index, 0x696e646578ull));
+    return prHashMixKeys(baseIdentity(ui, base), prHashMixKeys(index, 0x696e646578ull));
 }
 
 PrUiKey prUiKeyIndex2(const PrUi* ui, PrLayoutNode base, uint64_t first, uint64_t second) {
-    return hashMixKeys(baseIdentity(ui, base), hashMixKeys(hashMixKeys(first, second), 0x696e64657832ull));
+    return prHashMixKeys(baseIdentity(ui, base), prHashMixKeys(prHashMixKeys(first, second), 0x696e64657832ull));
 }
 
 void prUiSetFlags(PrUi* ui, PrLayoutNode node, PrUiFlags flags) {
@@ -1669,12 +1670,12 @@ void prUiEdit(PrUi* ui, PrLayoutNode control, PrUiEditPhase phase) {
 
 PrLayoutGroupIndex prUiGroup(PrUi* ui, const PrUiGroupRecipe* recipe) {
     UiGroups& groups = ui->groups;
-    uint64_t seed = hashBytes(&recipe->owner, sizeof recipe->owner, reinterpret_cast<uintptr_t>(recipe->type));
-    uint32_t hash = uint32_t(hashBytes(recipe->bytes, recipe->size, seed));
+    uint64_t seed = prHashBytes(&recipe->owner, sizeof recipe->owner, reinterpret_cast<uintptr_t>(recipe->type));
+    uint32_t hash = uint32_t(prHashBytes(recipe->bytes, recipe->size, seed));
     uint32_t at = groups.index.find(hash, [&](uint32_t i) {
         const UiGroupEntry& e = groups.entries.data[i];
         return e.type == recipe->type && e.owner == recipe->owner && e.size == recipe->size &&
-            memEquals(groups.bytes.data + e.offset, recipe->bytes, recipe->size);
+            prMemEquals(groups.bytes.data + e.offset, recipe->bytes, recipe->size);
     });
     if (at != kHashMissing) {
         UiGroupEntry& e = groups.entries.data[at];
@@ -1739,7 +1740,7 @@ PrLayoutStyleIndex prUiMemoKeep(PrUi* ui, const PrUiPart* part, PrLayoutStyleInd
         memo.bytes.reserve(memo.bytes.count + part->size);
         memo.bytes.count += part->size;
     }
-    memCopy(memo.bytes.data + e.offset, part->bytes, part->size);
+    prMemCopy(memo.bytes.data + e.offset, part->bytes, part->size);
     e.type = part->type;
     e.owner = part->owner;
     e.size = part->size;

@@ -73,15 +73,15 @@ void measure(PrStringView name, PrStringView text) {
     harnessCountsAdd(&counts, "parse", parse);
     harnessCountsAdd(&counts, "tokenize", tokenize);
     harnessCountsAdd(&counts, "bound", bound);
-    TextBuffer row{};
-    textAppend(&row, "{\"name\": ");
+    PrTextBuffer row{};
+    prTextBufferAppend(&row, "{\"name\": ");
     harnessWriteString(&row, name);
     harnessAppendFormat(&row, ", \"bytes\": %zu, \"nodes\": %u, \"parse\": %.4f, \"tokenize\": %.4f, \"bound\": %.4f",
         text.size, nodes, parse.millis, tokenize.millis, bound.millis);
     harnessCountsWrite(&counts, &row);
-    textAppend(&row, "}");
-    harnessWriteLine(textView(&row));
-    textReset(&row);
+    prTextBufferAppend(&row, "}");
+    harnessWriteLine(prTextBufferView(&row));
+    prTextBufferReset(&row);
 }
 
 } // namespace
@@ -94,13 +94,13 @@ int main(int argc, char** argv) {
     }
 
     for (int i = 1; i < argc; ++i) {
-        TextBuffer page;
+        PrTextBuffer page = {};
         if (!harnessReadFile(&page, argv[i])) {
             fprintf(stderr, "cannot read %s\n", argv[i]);
             return 2;
         }
-        measure(harnessFileName(argv[i]), textView(&page));
-        textReset(&page);
+        measure(harnessFileName(argv[i]), prTextBufferView(&page));
+        prTextBufferReset(&page);
     }
     return 0;
 }

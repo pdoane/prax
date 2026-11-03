@@ -49,7 +49,7 @@ PrLayoutRect hitBounds(const LayoutTree* tree, const LayoutFragment* fragment) {
         clearHitBounds(queries);
         queries.hitEffects = tree->effects;
     }
-    uint32_t hash = hashPointer(fragment, 0);
+    uint32_t hash = prHashPointer(fragment, 0);
     uint32_t at = queries.hitIndex.find(hash, [&](uint32_t i) { return queries.hitBounds.data[i].fragment == fragment; });
     if (at != kHashMissing)
         return queries.hitBounds.data[at].bounds;
@@ -150,7 +150,7 @@ struct HitTester : LayoutWalkVisitor {
         PrCorner corners[PrRectCorner_Count];
         if (inside && layoutClipCorners(tree, fragment, rect, corners)) {
             PrCornerRect shape{.rect = prLayoutRectToPx(rect)};
-            memCopy(shape.corners, corners, sizeof(corners));
+            prMemCopy(shape.corners, corners, sizeof(corners));
             inside = prCornerRectContains(shape, PrVec2{prLayoutUnitToPx(point().x), prLayoutUnitToPx(point().y)});
         }
         outside.push(excluded() || !inside);
@@ -601,19 +601,19 @@ bool endsLine(const LayoutInlineShaping& shaping, uint32_t at, uint32_t byte) {
 struct RenderedWalk {
     LayoutTree* tree;
     PrLayoutRenderedTextDesc desc;
-    TextBuffer out;
+    PrTextBuffer out;
     uint32_t breaks;
 };
 
 void renderedAppend(RenderedWalk& walk, PrStringView text) {
     if (text.size == 0)
         return;
-    if (textView(&walk.out).size != 0) {
+    if (prTextBufferView(&walk.out).size != 0) {
         for (uint32_t i = 0; i < walk.breaks; ++i)
-            textAppendChar(&walk.out, '\n');
+            prTextBufferAppendChar(&walk.out, '\n');
     }
     walk.breaks = 0;
-    textAppend(&walk.out, text);
+    prTextBufferAppend(&walk.out, text);
 }
 
 void renderedRequireBreaks(RenderedWalk& walk, uint32_t breaks) {
@@ -860,7 +860,7 @@ void appendLineStops(const PrLayoutTree* tree, const LinePiece& piece, Array<PrL
         const PrLayoutLineStop& before = out.data[first - 1];
         PrLayoutLineStop& after = out.data[first];
         // One place has one `along`, though each fragment is placed in layout units.
-        if (absF32(before.along - after.along) < kLineStopSamePlace)
+        if (prF32Abs(before.along - after.along) < kLineStopSamePlace)
             after.along = before.along;
         if (before.position.node == after.position.node && before.position.offset == after.position.offset &&
                 before.along == after.along) {
@@ -947,7 +947,7 @@ void layoutQueriesRetire(LayoutTree* tree) {
     LayoutQueries& queries = tree->queries;
     for (uint32_t i = 0; i < tree->cache.retired.count; ++i) {
         const LayoutFragment* fragment = tree->cache.retired.data[i];
-        uint32_t hash = hashPointer(fragment, 0);
+        uint32_t hash = prHashPointer(fragment, 0);
         uint32_t at =
             queries.hitIndex.find(hash, [&](uint32_t k) { return queries.hitBounds.data[k].fragment == fragment; });
         if (at == kHashMissing)
@@ -957,7 +957,7 @@ void layoutQueriesRetire(LayoutTree* tree) {
         uint32_t last = queries.hitBounds.count - 1;
         if (at != last) {
             const LayoutHitBound& moved = queries.hitBounds.data[last];
-            queries.hitIndex.relocate(hashPointer(moved.fragment, 0), last, at);
+            queries.hitIndex.relocate(prHashPointer(moved.fragment, 0), last, at);
             queries.hitBounds.data[at] = moved;
         }
         queries.hitBounds.pop();
@@ -988,7 +988,7 @@ bool layoutQueriesVerify(LayoutTree* tree, uint32_t* node) {
             // A box in the final tree is placed with the fragment the tree holds of it.
             bool box = layoutTreeNode(tree, at).kind != PrLayoutNodeKind_Text && !layoutIsInlineBox(tree, at);
             same = unplaced ||
-                (kept.parent == found.parent && memEquals(&kept.offset, &found.offset, sizeof(PrLayoutVec)) &&
+                (kept.parent == found.parent && prMemEquals(&kept.offset, &found.offset, sizeof(PrLayoutVec)) &&
                     kept.fragment == found.fragment && (!box || found.fragment != nullptr));
         }
         if (!same)
@@ -1284,15 +1284,15 @@ PrString prLayoutNodeRenderedText(PrLayoutTree* tree, PrLayoutNode root, const P
         indexRenderedItems(tree);
     RenderedWalk walk{.tree = tree, .desc = desc != nullptr ? *desc : PrLayoutRenderedTextDesc{}};
     renderedCollectChildren(walk, layoutNodeIndex(tree, root));
-    return textTake(&walk.out);
+    return prTextBufferTake(&walk.out);
 }
 
 bool prLayoutTextPositionFromPoint(PrLayoutTree* tree, PrLayoutNode root, PrLayoutVec point, PrLayoutTextPosition* out) {
     if (!prLayoutNodeIsValid(tree, root))
         return false;
     // The nearest piece so far: how far the point is from its line across the line, and from the piece along it.
-    double nearestAcross = kInfinityF64;
-    double nearestAlong = kInfinityF64;
+    double nearestAcross = kPrF64Infinity;
+    double nearestAlong = kPrF64Infinity;
     bool found = false;
     Array<PlacedText> pieces;
     Array<PrDMatrix3> stages;

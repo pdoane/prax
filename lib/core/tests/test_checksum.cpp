@@ -21,17 +21,17 @@ PrByteView bytes(std::string_view value) {
 using namespace pr_impl;
 
 TEST_CASE("CRC-32 and Adler-32 match published check values") {
-    CHECK(crc32Update(0, {}) == 0);
-    CHECK(adler32Update(1, {}) == 1);
-    CHECK(crc32Update(0, bytes("123456789")) == 0xcbf43926);
-    CHECK(adler32Update(1, bytes("123456789")) == 0x091e01de);
-    CHECK(adler32Update(1, bytes("Wikipedia")) == 0x11e60398);
+    CHECK(prCrc32Update(0, {}) == 0);
+    CHECK(prAdler32Update(1, {}) == 1);
+    CHECK(prCrc32Update(0, bytes("123456789")) == 0xcbf43926);
+    CHECK(prAdler32Update(1, bytes("123456789")) == 0x091e01de);
+    CHECK(prAdler32Update(1, bytes("Wikipedia")) == 0x11e60398);
 }
 
 TEST_CASE("SHA-1 matches the digests of rfc 3174 and FIPS 180") {
     auto hex = [](std::string_view text) {
-        uint8_t digest[kSha1Bytes];
-        sha1Digest(bytes(text), digest);
+        uint8_t digest[kPrSha1Bytes];
+        prSha1Digest(bytes(text), digest);
         std::string out;
         for (uint8_t byte : digest) {
             out += "0123456789abcdef"[byte >> 4];
@@ -50,14 +50,14 @@ TEST_CASE("SHA-1 matches the digests of rfc 3174 and FIPS 180") {
 TEST_CASE("checksum updates retain state across arbitrary chunk boundaries") {
     std::vector<uint8_t> data(100000, 0xff);
     const PrByteView input{data.data(), data.size()};
-    const uint32_t crc = crc32Update(0, input);
-    const uint32_t adler = adler32Update(1, input);
+    const uint32_t crc = prCrc32Update(0, input);
+    const uint32_t adler = prAdler32Update(1, input);
     for (size_t split :
             {size_t(0), size_t(1), size_t(5551), size_t(5552), size_t(5553), data.size()}) {
         const PrByteView first{data.data(), split};
         const PrByteView second{data.data() + split, data.size() - split};
-        CHECK(crc32Update(crc32Update(0, first), second) == crc);
-        CHECK(adler32Update(adler32Update(1, first), second) == adler);
+        CHECK(prCrc32Update(prCrc32Update(0, first), second) == crc);
+        CHECK(prAdler32Update(prAdler32Update(1, first), second) == adler);
     }
     uint32_t slowLow = 1, slowHigh = 0;
     for (uint8_t value : data) {
@@ -65,8 +65,8 @@ TEST_CASE("checksum updates retain state across arbitrary chunk boundaries") {
         slowHigh = (slowHigh + slowLow) % 65521;
     }
     CHECK(adler == ((slowHigh << 16) | slowLow));
-    CHECK(crc32Update(crc, {}) == crc);
-    CHECK(adler32Update(adler, {}) == adler);
+    CHECK(prCrc32Update(crc, {}) == crc);
+    CHECK(prAdler32Update(adler, {}) == adler);
 }
 
 TEST_CASE("adler-32 weighs each byte by its distance from the end") {
@@ -82,6 +82,6 @@ TEST_CASE("adler-32 weighs each byte by its distance from the end") {
             slowLow = (slowLow + data[i]) % 65521;
             slowHigh = (slowHigh + slowLow) % 65521;
         }
-        CHECK(adler32Update(1, {data.data() + start, data.size() - start}) == ((slowHigh << 16) | slowLow));
+        CHECK(prAdler32Update(1, {data.data() + start, data.size() - start}) == ((slowHigh << 16) | slowLow));
     }
 }

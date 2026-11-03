@@ -69,8 +69,8 @@ uint32_t characterAt(const TextQuery& q, uint32_t index) {
 
 // Returns the direction of a character's baseline, and the direction down across it.
 PrVec2 alongOf(const SvgTextCharacter& c) {
-    float radians = c.direction * (kPiF32 / 180);
-    return PrVec2{cosF32(radians), sinF32(radians)};
+    float radians = c.direction * (kPrF32Pi / 180);
+    return PrVec2{prF32Cos(radians), prF32Sin(radians)};
 }
 
 PrVec2 acrossOf(const SvgTextCharacter& c) {
@@ -129,7 +129,7 @@ PrDomRect domRectOf(PrRect rect) {
 PrRect cellOf(const SvgTextCharacter& c) {
     PrVec2 along = alongOf(c);
     PrVec2 across = acrossOf(c);
-    PrRect bounds{kInfinityF32, kInfinityF32, -kInfinityF32, -kInfinityF32};
+    PrRect bounds{kPrF32Infinity, kPrF32Infinity, -kPrF32Infinity, -kPrF32Infinity};
     float alongs[] = {0, c.advance};
     float acrosses[] = {-c.ascent, c.descent};
     for (float a : alongs) {
@@ -137,8 +137,8 @@ PrRect cellOf(const SvgTextCharacter& c) {
             float x = c.position.x + along.x * a + across.x * b;
             float y = c.position.y + along.y * a + across.y * b;
             bounds = PrRect{
-                minF32(bounds.left, x), minF32(bounds.top, y), maxF32(bounds.right, x),
-                maxF32(bounds.bottom, y),
+                prF32Min(bounds.left, x), prF32Min(bounds.top, y), prF32Max(bounds.right, x),
+                prF32Max(bounds.bottom, y),
             };
         }
     }
@@ -159,11 +159,11 @@ PrStatus withCharacter(PrSvgElement* element, uint32_t index, Fn fn) {
 
 // Appends the text of the text elements under `node` that are rendered. No container that is never rendered holds them
 // (SVG2/render.html#TermNeverRenderedElement). A text element's white space is stripped and collapsed.
-void appendRenderedText(const PrDomNode* node, bool inText, TextBuffer* out) {
+void appendRenderedText(const PrDomNode* node, bool inText, PrTextBuffer* out) {
     for (const PrDomNode* child = node->first; child != nullptr; child = child->next) {
         if (domIsText(child)) {
             if (inText)
-                textAppend(out, prStringView(&static_cast<const PrDomCharacterData*>(child)->data));
+                prTextBufferAppend(out, prStringView(&static_cast<const PrDomCharacterData*>(child)->data));
             continue;
         }
         const PrDomElement* element = domElementFromNode(child);
@@ -193,9 +193,9 @@ constexpr CssBoxProvider kBoxes = {
     },
     .reads = [](const PrDomElement*, PrStringView) { return false; },
     .replacedText = [](void* PR_NULLABLE element) {
-        TextBuffer text;
+        PrTextBuffer text = {};
         appendRenderedText(static_cast<const PrDomElement*>(element), false, &text);
-        return textTake(&text);
+        return prTextBufferTake(&text);
     },
 };
 
@@ -331,7 +331,7 @@ PrStatus prSvgGeometryElementIsPointInFill(PrSvgElement* element, PrDomPoint poi
     *out = false;
     PrVec2 at{float(point.x), float(point.y)};
     return withShape(element, [&](const SvgTree* tree, const SvgPlace& place, SvgNodeIndex node) {
-        *out = isFiniteF64(point.x) && isFiniteF64(point.y) && svgShapeFillContains(tree, place, node, at);
+        *out = prF64IsFinite(point.x) && prF64IsFinite(point.y) && svgShapeFillContains(tree, place, node, at);
     });
 }
 
@@ -339,7 +339,7 @@ PrStatus prSvgGeometryElementIsPointInStroke(PrSvgElement* element, PrDomPoint p
     *out = false;
     PrVec2 at{float(point.x), float(point.y)};
     return withShape(element, [&](const SvgTree* tree, const SvgPlace& place, SvgNodeIndex node) {
-        *out = isFiniteF64(point.x) && isFiniteF64(point.y) && svgShapeStrokeContains(tree, place, node, at);
+        *out = prF64IsFinite(point.x) && prF64IsFinite(point.y) && svgShapeStrokeContains(tree, place, node, at);
     });
 }
 

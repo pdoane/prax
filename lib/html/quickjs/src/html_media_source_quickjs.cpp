@@ -179,7 +179,7 @@ JSValue sourceSetLiveSeekableRange(JSContext* ctx, JSValueConst sourceObject, in
     if (source == nullptr || !jsArgCount(ctx, argc, 2) || JS_ToFloat64(ctx, &start, argv[0]) < 0 ||
             JS_ToFloat64(ctx, &end, argv[1]) < 0)
         return JS_EXCEPTION;
-    if (!isFiniteF64(start) || !isFiniteF64(end))
+    if (!prF64IsFinite(start) || !prF64IsFinite(end))
         return JS_ThrowTypeError(ctx, "The value is not finite");
     return throwStatus(ctx, prHtmlMediaSourceSetLiveSeekableRange(source, start, end));
 }
@@ -274,7 +274,7 @@ JSValue bufferSetTime(JSContext* ctx, JSValueConst bufferObject, JSValueConst in
     if (buffer == nullptr || JS_ToFloat64(ctx, &value, input) < 0)
         return JS_EXCEPTION;
     // timestampOffset and appendWindowStart are doubles, which are finite; appendWindowEnd is unrestricted.
-    if (magic != 2 && !isFiniteF64(value))
+    if (magic != 2 && !prF64IsFinite(value))
         return JS_ThrowTypeError(ctx, "The value is not finite");
     if (magic == 0)
         return throwStatus(ctx, prHtmlSourceBufferSetTimestampOffset(buffer, value));
@@ -308,7 +308,7 @@ JSValue bufferRemove(JSContext* ctx, JSValueConst bufferObject, int argc, JSValu
     if (buffer == nullptr || !jsArgCount(ctx, argc, 2) || JS_ToFloat64(ctx, &start, argv[0]) < 0 ||
             JS_ToFloat64(ctx, &end, argv[1]) < 0)
         return JS_EXCEPTION;
-    if (!isFiniteF64(start))
+    if (!prF64IsFinite(start))
         return JS_ThrowTypeError(ctx, "The start is not finite");
     return throwStatus(ctx, prHtmlSourceBufferRemove(buffer, start, end));
 }

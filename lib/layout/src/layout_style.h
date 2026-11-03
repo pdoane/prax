@@ -279,7 +279,7 @@ constexpr PrLayoutTransform kLayoutTransformIdentity{
 
 // Returns true if the effects group has a transform other than the identity.
 inline bool layoutHasTransform(const PrLayoutEffectStyle& effects) {
-    return !memEquals(&effects.transform, &kLayoutTransformIdentity, sizeof(PrLayoutTransform));
+    return !prMemEquals(&effects.transform, &kLayoutTransformIdentity, sizeof(PrLayoutTransform));
 }
 
 // Matches the faces of the font group at `group` if it has none, and finds their metrics if they are not of the styles'

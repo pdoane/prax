@@ -423,9 +423,9 @@ void writeBlock(Encoder& e, size_t end, bool final) {
 
     // The block's own codes. Each has at least two symbols, so that each is complete.
     uint32_t literalCounts[kLiteralSymbols];
-    memCopy(literalCounts, e.literalFrequencies, sizeof(literalCounts));
+    prMemCopy(literalCounts, e.literalFrequencies, sizeof(literalCounts));
     uint32_t distanceCounts[kDistanceSymbols];
-    memCopy(distanceCounts, e.distanceFrequencies, sizeof(distanceCounts));
+    prMemCopy(distanceCounts, e.distanceFrequencies, sizeof(distanceCounts));
     if (literalCounts[0] == 0 && literalCounts[1] == 0)
         literalCounts[0] = 1;
     uint32_t usedDistances = 0;
@@ -446,8 +446,8 @@ void writeBlock(Encoder& e, size_t end, bool final) {
     while (distanceCount > 1 && distanceLengths[distanceCount - 1] == 0)
         --distanceCount;
     uint8_t sequence[kLiteralSymbols + kDistanceSymbols];
-    memCopy(sequence, lengths, literalCount);
-    memCopy(sequence + literalCount, distanceLengths, distanceCount);
+    prMemCopy(sequence, lengths, literalCount);
+    prMemCopy(sequence + literalCount, distanceLengths, distanceCount);
     LengthToken lengthTokens[kLiteralSymbols + kDistanceSymbols];
     const uint32_t lengthTokenCount = runLengths(sequence, literalCount + distanceCount, lengthTokens);
     uint32_t lengthFrequencies[kCodeLengthSymbols]{};
@@ -484,7 +484,7 @@ void writeBlock(Encoder& e, size_t end, bool final) {
             put(e.out, length, 16);
             put(e.out, ~length & 0xffff, 16);
             if (length != 0)
-                memCopy(e.out.out + e.out.at, e.input.data + at, length);
+                prMemCopy(e.out.out + e.out.at, e.input.data + at, length);
             e.out.at += length;
             at += length;
         }
@@ -520,8 +520,8 @@ void writeBlock(Encoder& e, size_t end, bool final) {
     }
 
     e.tokenCount = 0;
-    memZero(e.literalFrequencies, sizeof(e.literalFrequencies));
-    memZero(e.distanceFrequencies, sizeof(e.distanceFrequencies));
+    prMemZero(e.literalFrequencies, sizeof(e.literalFrequencies));
+    prMemZero(e.distanceFrequencies, sizeof(e.distanceFrequencies));
     e.blockStart = end;
 }
 
@@ -576,10 +576,10 @@ size_t deflateEncode(InflateFormat format, PrCompressLevel level, PrByteView inp
     Encoder* e = alloc<Encoder>();
     e->input = input;
     e->effort = kEfforts[level];
-    memFill(e->heads, 0xff, sizeof(e->heads));
+    prMemFill(e->heads, 0xff, sizeof(e->heads));
     e->tokenCount = 0;
-    memZero(e->literalFrequencies, sizeof(e->literalFrequencies));
-    memZero(e->distanceFrequencies, sizeof(e->distanceFrequencies));
+    prMemZero(e->literalFrequencies, sizeof(e->literalFrequencies));
+    prMemZero(e->distanceFrequencies, sizeof(e->distanceFrequencies));
     e->blockStart = 0;
     e->out = BitWriter{output, 0, 0, 0};
 
@@ -595,7 +595,7 @@ size_t deflateEncode(InflateFormat format, PrCompressLevel level, PrByteView inp
         // rfc 1952 2.3: the Deflate method, no flags or time, the effort, and an unknown operating system.
         static constexpr uint8_t kEffortFlags[] = {4, 0, 2};
         const uint8_t header[10] = {0x1f, 0x8b, 8, 0, 0, 0, 0, 0, kEffortFlags[level], 255};
-        memCopy(output, header, sizeof(header));
+        prMemCopy(output, header, sizeof(header));
         e->out.at = sizeof(header);
     }
 
@@ -605,10 +605,10 @@ size_t deflateEncode(InflateFormat format, PrCompressLevel level, PrByteView inp
     prMemoryFree(e);
 
     if (format == InflateFormat_Zlib) {
-        writeBeU32(output + at, adler32Update(1, input));
+        prMemWriteBeU32(output + at, prAdler32Update(1, input));
         at += 4;
     } else if (format == InflateFormat_Gzip) {
-        const uint32_t crc = crc32Update(0, input);
+        const uint32_t crc = prCrc32Update(0, input);
         const uint32_t size = uint32_t(input.size);
         for (uint32_t i = 0; i < 4; ++i) {
             output[at + i] = uint8_t(crc >> (8 * i));

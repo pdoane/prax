@@ -45,7 +45,7 @@ struct DomSlots {
     // The assigned slot of each node that has one, which the presentation reads for every node it walks or marks. A
     // node is listed while it has DomNodeFlag_Slotted.
     Array<DomSlotted> slotted;
-    HashIndex slottedIndex;                    // `slotted` by hashPointer of the node
+    HashIndex slottedIndex;                    // `slotted` by prHashPointer of the node
 
     // The document has a shadow root whose sheets style its tree alone, which a rule set tests scopes for. A use
     // element's shadow tree matches the rules of its host's tree (dom_use.h), and makes no scope.

@@ -172,7 +172,7 @@ struct CssCountingScratch {
     Array<CssCounting> counters;           // innermost last
     Array<CssCountingBoundary> boundaries; // innermost last
     CssCountingTexts texts;
-    TextBuffer text;
+    PrTextBuffer text = {};
     Array<char> names;              // the names of the counters that a run took from a point (CssCountingPoint)
     Array<uint32_t> points;         // by CssCountingDepth: the step of each point that a run keeps
 };
@@ -355,7 +355,7 @@ struct CssPresentationTextFonts {
     Array<char> keys;
     HashIndex index;
     Array<char> key;                // scratch: a key being looked up
-    TextBuffer families;            // scratch: names of a font's families
+    PrTextBuffer families = {};     // scratch: names of a font's families
     Array<PrFontFamily> familyViews;
 };
 
@@ -758,14 +758,14 @@ void cssPresentationComputedBlock(PrCssPresentation* presentation, const PrDomEl
 // used value. The result matches the declaration of the property in cssPresentationComputedBlock. Writes nothing for a
 // property that the engine does not render, or an element that it did not style.
 bool cssPresentationComputedValue(PrCssPresentation* presentation, const PrDomElement* element, CssPseudo pseudo,
-    PrCssProperty property, TextBuffer* out);
+    PrCssProperty property, PrTextBuffer* out);
 
 // Serializes the computed value of the custom property `name` of the element, or of its pseudo-element `pseudo`, to
 // `out`, after updating the presentation's styles. The result matches the declaration of the property in
 // cssPresentationComputedBlock. Writes nothing for a property without a valid value, or an element that it did not
 // style.
 bool cssPresentationComputedCustomValue(PrCssPresentation* presentation, const PrDomElement* element, CssPseudo pseudo,
-    PrStringView name, TextBuffer* out);
+    PrStringView name, PrTextBuffer* out);
 
 // The two halves of prCssPresentationStart. The first brings the styles and the tree up to date and waits for the
 // agent's layout thread. The second posts the job, and then restyles the next job's content ahead. A host that presents

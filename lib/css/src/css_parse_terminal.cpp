@@ -107,7 +107,7 @@ bool number(CssTokenStream* ts, CssValuePool* pool, bool integerOnly, bool calcu
     if (const CssValueNode* given = givenValue(ts)) {
         if (given->kind != PrCssValueKind_Integer && given->kind != PrCssValueKind_Number)
             return false;
-        bool whole = given->number == floorF64(given->number) && isFiniteF64(given->number);
+        bool whole = given->number == prF64Floor(given->number) && prF64IsFinite(given->number);
         if (integerOnly && !whole && !calculate)
             return false;
         takeGivenNumber(ts, pool, integerOnly && whole ? PrCssValueKind_Integer : PrCssValueKind_Number, integerOnly && !whole);
@@ -212,8 +212,8 @@ CssValueNode randomUaIdent(const CssMatcher* m, uint32_t at, bool indexed) {
             index += cssTokenKind(m->ts->tokens, i) == CssTokenKind_Function &&
                 cssTokenKeyword(m->ts->tokens, i) == PrCssKeyword_Random;
         }
-        char digits[kU64TextMaxBytes];
-        size_t count = formatU64(index, digits, 10);
+        char digits[kPrU64TextMaxBytes];
+        size_t count = prU64Format(index, digits, 10);
         cssValuePoolAddText(m->pool, "-");
         cssValuePoolAddText(m->pool, PrStringView{digits, count});
     }
@@ -242,11 +242,11 @@ bool canonicalRandomKey(const CssMatcher* m, uint32_t function, uint32_t at) {
         const CssValueNode* part = &pool->values.data[i];
         if (part->kind == PrCssValueKind_Ident) {
             PrStringView text = cssValuePoolText(pool, part);
-            if (dashed == nullptr && stringStartsWith(text, "--")) {
+            if (dashed == nullptr && prStringStartsWith(text, "--")) {
                 dashed = part;
                 continue;
             }
-            if (!stringStartsWith(text, "ua-"))
+            if (!prStringStartsWith(text, "ua-"))
                 return false;
             named = part;
             continue;
@@ -504,7 +504,7 @@ bool readsAsIdents(PrStringView name, FamilyNamesFn names) {
     for (size_t i = 0; i <= name.size; ++i) {
         if (i != name.size && name.data[i] != ' ')
             continue;
-        PrStringView word = stringSlice(name, start, i - start);
+        PrStringView word = prStringSlice(name, start, i - start);
         if (!cssIsBareIdent(word))
             return false;
         if (words++ == 0)
@@ -899,7 +899,7 @@ bool cssParseNumberLiteral(const CssMatcher* m, CssGrammarNumber literal) {
         double canonical = literal.value * literalScale;
         bool same;
         if (scale != 0 && literalScale != 0)
-            same = absF64(value.number * scale - canonical) <= 1e-9 * absF64(canonical);
+            same = prF64Abs(value.number * scale - canonical) <= 1e-9 * prF64Abs(canonical);
         else
             same = value.unit == literal.unit && value.number == literal.value;
         if (same)
@@ -1107,7 +1107,7 @@ bool cssParseViewTransitionType(const CssMatcher* m) {
     if (!cssParseCustomIdent(m))
         return false;
     CssValueNode* type = &m->pool->values.last();
-    if (!stringStartsWith(cssValuePoolText(m->pool, type), "-ua-"))
+    if (!prStringStartsWith(cssValuePoolText(m->pool, type), "-ua-"))
         return true;
     m->pool->values.pop();
     m->pool->text.count = text;
@@ -1176,7 +1176,7 @@ bool cssParseOpentypeTag(const CssMatcher* m) {
         PrStringView text = cssValueText(cssTokenValue(m->ts->tokens, m->ts->pos), given);
         size = uint32_t(text.size);
         if (size == sizeof(tag))
-            memCopy(tag, text.data, sizeof(tag));
+            prMemCopy(tag, text.data, sizeof(tag));
     } else if (cssPeek(m->ts) == CssTokenKind_String) {
         size = cssValue(cssTokenValueText(m->ts->tokens, m->ts->pos), tag, uint32_t(sizeof(tag)));
     } else {
@@ -1184,7 +1184,7 @@ bool cssParseOpentypeTag(const CssMatcher* m) {
     }
     bool printable = size == sizeof(tag);
     for (uint32_t i = 0; i < sizeof(tag) && printable; ++i)
-        printable = asciiIsPrintable(tag[i]);
+        printable = prAsciiIsPrintable(tag[i]);
     return printable && textToken(m->ts, m->pool, CssTokenKind_String, PrCssValueKind_String);
 }
 
@@ -1201,7 +1201,7 @@ bool cssParseHexColor(const CssMatcher* m) {
     if (count != 3 && count != 4 && count != 6 && count != 8)
         return false;
     for (uint32_t i = 0; i < count; ++i) {
-        if (!asciiIsHexDigit(digits[i]))
+        if (!prAsciiIsHexDigit(digits[i]))
             return false;
     }
     ++m->ts->pos;
@@ -1211,8 +1211,8 @@ bool cssParseHexColor(const CssMatcher* m) {
     uint8_t* channels[] = {&color.r, &color.g, &color.b, &color.a};
     uint32_t width = count <= 4 ? 1u : 2u;
     for (uint32_t i = 0; i < count / width; ++i) {
-        uint32_t byte = asciiHexValue(digits[i * width]);
-        byte = width == 1 ? byte * 0x11 : byte * 16 + asciiHexValue(digits[i * width + 1]);
+        uint32_t byte = prAsciiHexValue(digits[i * width]);
+        byte = width == 1 ? byte * 0x11 : byte * 16 + prAsciiHexValue(digits[i * width + 1]);
         *channels[i] = uint8_t(byte);
     }
 

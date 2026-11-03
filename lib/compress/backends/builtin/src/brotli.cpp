@@ -247,7 +247,7 @@ inline bool fill(BitReader& r, uint32_t count) {
     if (r.count >= count)
         return true;
     if (r.size - r.at >= 8) {
-        r.bits |= readLeU64(r.data + r.at) << r.count;
+        r.bits |= prMemReadLeU64(r.data + r.at) << r.count;
         const uint32_t added = (63 - r.count) / 8;
         r.at += added;
         r.count += added * 8;
@@ -333,7 +333,7 @@ struct CodeShape {
 };
 
 void shapeCode(CodeShape& shape, const uint8_t* lengths, uint32_t count) {
-    memZero(shape.counts, sizeof(shape.counts));
+    prMemZero(shape.counts, sizeof(shape.counts));
     for (uint32_t symbol = 0; symbol < count; ++symbol)
         ++shape.counts[lengths[symbol]];
     uint16_t starts[kCodeMaxLength + 2]{};
@@ -345,7 +345,7 @@ void shapeCode(CodeShape& shape, const uint8_t* lengths, uint32_t count) {
 
     // Finds the longest code under each root entry. The canonical codes are visited in order, and their lengths do not
     // decrease.
-    memZero(shape.longest, sizeof(shape.longest));
+    prMemZero(shape.longest, sizeof(shape.longest));
     uint32_t code = 0;
     for (uint32_t length = 1; length <= kCodeMaxLength; ++length) {
         if (length <= kRootBits) {
@@ -508,7 +508,7 @@ BrotliStep readCodeHeader(BrotliState& d, BitReader& r) {
                 {0, 0, 0, 0}, {0, 0, 0, 0}, {1, 1, 0, 0}, {1, 2, 2, 0}, {2, 2, 2, 2},
             };
             static constexpr uint8_t kSelectLengths[4] = {1, 2, 3, 3};
-            memZero(d.lengths, code.alphabet);
+            prMemZero(d.lengths, code.alphabet);
             for (uint32_t i = 0; i < count; ++i)
                 d.lengths[symbols[i]] = select ? kSelectLengths[i] : kSimpleLengths[count][i];
             addTable(d, code.slot, d.lengths, code.alphabet);
@@ -589,7 +589,7 @@ BrotliStep readCodeLengths(BrotliState& d, BitReader& r) {
         const uint32_t added = code.repeat - previous;
         if (added > code.alphabet - code.symbol)
             return BrotliStep_Invalid;
-        memFill(d.lengths + code.symbol, length, added);
+        prMemFill(d.lengths + code.symbol, length, added);
         code.symbol += added;
         if (length != 0)
             code.space -= int32_t(added * (32768u >> length));
@@ -597,7 +597,7 @@ BrotliStep readCodeLengths(BrotliState& d, BitReader& r) {
     }
     if (code.space != 0)
         return BrotliStep_Invalid;
-    memZero(d.lengths + code.symbol, code.alphabet - code.symbol);
+    prMemZero(d.lengths + code.symbol, code.alphabet - code.symbol);
     addTable(d, code.slot, d.lengths, code.alphabet);
     d.phase = code.next;
     return BrotliStep_Ok;
@@ -629,7 +629,7 @@ void flush(BrotliState& d, BrotliOutput& out) {
         size_t count = d.position - d.flushed;
         count = count < d.ringSize - at ? count : d.ringSize - at;
         count = count < out.capacity - out.written ? count : out.capacity - out.written;
-        memCopy(out.data + out.written, d.ring + at, count);
+        prMemCopy(out.data + out.written, d.ring + at, count);
         out.written += count;
         d.flushed += count;
     }
@@ -689,7 +689,7 @@ bool dictionaryWord(BrotliState& d, uint32_t length, uint32_t id) {
     const BrotliTransform& transform = kBrotliTransforms[transformId];
     const uint8_t* base = kBrotliDictionary + kBrotliDictionaryOffsets[length] + (id & ((1u << bits) - 1)) * length;
     uint32_t size = 0;
-    memCopy(d.word, transform.prefix, transform.prefixSize);
+    prMemCopy(d.word, transform.prefix, transform.prefixSize);
     size += transform.prefixSize;
     uint32_t wordSize = length;
     const BrotliElementary elementary = transform.elementary;
@@ -702,7 +702,7 @@ bool dictionaryWord(BrotliState& d, uint32_t length, uint32_t id) {
         wordSize = omitted < length ? length - omitted : 0;
     }
     uint8_t* word = d.word + size;
-    memCopy(word, base, wordSize);
+    prMemCopy(word, base, wordSize);
     if (elementary == BrotliElementary_FermentFirst && wordSize > 0) {
         ferment(word, wordSize, 0);
     } else if (elementary == BrotliElementary_FermentAll) {
@@ -710,7 +710,7 @@ bool dictionaryWord(BrotliState& d, uint32_t length, uint32_t id) {
             at += ferment(word, wordSize, at);
     }
     size += wordSize;
-    memCopy(d.word + size, transform.suffix, transform.suffixSize);
+    prMemCopy(d.word + size, transform.suffix, transform.suffixSize);
     d.wordSize = size + transform.suffixSize;
     return true;
 }
@@ -950,7 +950,7 @@ void copyForward(uint8_t* out, uint32_t distance, uint32_t count) {
     uint32_t at = 0;
     if (distance >= 16) {
         for (; at < count; at += 16)
-            memCopy(out + at, from + at, 16);
+            prMemCopy(out + at, from + at, 16);
         return;
     }
     for (; at < 16; ++at)
@@ -958,8 +958,8 @@ void copyForward(uint8_t* out, uint32_t distance, uint32_t count) {
     const uint32_t step = distance * (16 / distance);
     for (; at < count; at += step) {
         uint8_t chunk[16];
-        memCopy(chunk, out + at - step, 16);
-        memCopy(out + at, chunk, 16);
+        prMemCopy(chunk, out + at - step, 16);
+        prMemCopy(out + at, chunk, 16);
     }
 }
 
@@ -1009,7 +1009,7 @@ uint32_t takeBytes(BitReader& r, uint8_t* PR_NULLABLE out, uint32_t wanted) {
     size_t available = r.size - r.at;
     const uint32_t count = available < wanted - taken ? uint32_t(available) : wanted - taken;
     if (out != nullptr && count != 0)
-        memCopy(out + taken, r.data + r.at, count);
+        prMemCopy(out + taken, r.data + r.at, count);
     r.at += count;
     return taken + count;
 }
@@ -1130,7 +1130,7 @@ BrotliStep step(BrotliState& d, BitReader& r, BrotliOutput& out) {
                 d.phase = BrotliPhase_MapRle;
                 return BrotliStep_Ok;
             }
-            memZero(d.map->data, size);
+            prMemZero(d.map->data, size);
             endMap(d);
             return BrotliStep_Ok;
         }
@@ -1167,7 +1167,7 @@ BrotliStep step(BrotliState& d, BitReader& r, BrotliOutput& out) {
                 const uint32_t run = (1u << symbol) + extra;
                 if (run > map.count - d.index)
                     return BrotliStep_Invalid;
-                memZero(map.data + d.index, run);
+                prMemZero(map.data + d.index, run);
                 d.index += run;
             } else {
                 map.data[d.index++] = uint8_t(symbol - d.rleMax);
@@ -1187,7 +1187,7 @@ BrotliStep step(BrotliState& d, BitReader& r, BrotliOutput& out) {
                     const uint8_t index = map.data[i];
                     const uint8_t moved = order[index];
                     map.data[i] = moved;
-                    memMove(order + 1, order, index);
+                    prMemMove(order + 1, order, index);
                     order[0] = moved;
                 }
             }
@@ -1308,20 +1308,20 @@ BrotliResult brotliRead(Brotli* decoder, PrByteView bytes, bool final, size_t* c
         const size_t space = kPendingCapacity - held;
         const size_t added = bytes.size < space ? bytes.size : space;
         if (added != 0)
-            memCopy(d.pending + held, bytes.data, added);
+            prMemCopy(d.pending + held, bytes.data, added);
         BitReader r{d.pending, held + added, 0, d.bits, d.bitCount};
         result = decode(d, r, out, held);
         unload(r);
         if (result == BrotliStep_Input) {
             // The step needs more input than this read gives.
-            memMove(d.pending, d.pending + r.at, held + added - r.at);
+            prMemMove(d.pending, d.pending + r.at, held + added - r.at);
             d.pendingSize = uint32_t(held + added - r.at);
             taken = added;
         } else if (r.at >= held) {
             d.pendingSize = 0;
             taken = r.at - held;
         } else {
-            memMove(d.pending, d.pending + r.at, held - r.at);
+            prMemMove(d.pending, d.pending + r.at, held - r.at);
             d.pendingSize = uint32_t(held - r.at);
         }
         d.bits = r.bits;
@@ -1335,7 +1335,7 @@ BrotliResult brotliRead(Brotli* decoder, PrByteView bytes, bool final, size_t* c
             const size_t tail = r.size - r.at;
             PR_ASSERT(tail <= kPendingCapacity);
             if (tail != 0)
-                memCopy(d.pending, r.data + r.at, tail);
+                prMemCopy(d.pending, r.data + r.at, tail);
             d.pendingSize = uint32_t(tail);
             taken = bytes.size;
         } else {

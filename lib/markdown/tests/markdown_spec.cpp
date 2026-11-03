@@ -5,6 +5,7 @@
 // whole and the milliseconds that the parse took, and, unless the case is whole, whether a parse that takes the source
 // a byte at a time gives the same HTML, both at its end and as the blocks that its changes report.
 
+#include "pr/array.h"
 #include "pr/assert.h"
 #include "pr/markdown.h"
 #include "pr/markdown_html.h"
@@ -53,7 +54,7 @@ bool streams(const PrMarkdownOptions& options, PrStringView source, PrStringView
     Array<PrString> blocks;
     bool agrees = true;
     for (size_t i = 0; i < source.size; ++i) {
-        prMarkdownAppend(document, stringSlice(source, i, 1));
+        prMarkdownAppend(document, prStringSlice(source, i, 1));
         applyChanges(document, &blocks);
         agrees = agrees && blocks.count == prMarkdownBlockCount(document);
     }
@@ -61,17 +62,17 @@ bool streams(const PrMarkdownOptions& options, PrStringView source, PrStringView
     applyChanges(document, &blocks);
     PrString html = documentHtml(document);
     agrees = agrees && prStringView(&html) == whole;
-    TextBuffer joined;
+    PrTextBuffer joined = {};
     for (uint32_t i = 0; i < blocks.count; ++i) {
-        textAppend(&joined, prStringView(&blocks.data[i]));
+        prTextBufferAppend(&joined, prStringView(&blocks.data[i]));
         prStringReset(&blocks.data[i]);
     }
     PrString footnotes = prStringEmpty();
     prMarkdownAppendFootnotesHtml(document, &footnotes);
-    textAppend(&joined, prStringView(&footnotes));
+    prTextBufferAppend(&joined, prStringView(&footnotes));
     prStringReset(&footnotes);
-    agrees = agrees && textView(&joined) == whole;
-    textReset(&joined);
+    agrees = agrees && prTextBufferView(&joined) == whole;
+    prTextBufferReset(&joined);
     prStringReset(&html);
     blocks.reset();
     prMarkdownDestroy(document);
@@ -90,7 +91,7 @@ bool readOptions(PrStringView field, PrMarkdownOptions* out) {
         size_t end = start;
         while (end < field.size && field.data[end] != ',')
             ++end;
-        PrStringView name = stringSlice(field, start, end - start);
+        PrStringView name = prStringSlice(field, start, end - start);
         if (name == "table")
             out->extensions |= PrMarkdownExtensionFlag_Tables;
         else if (name == "tasklist")
@@ -123,7 +124,7 @@ int main() {
         PrMarkdownOptions options{};
         if (!readOptions(test.fields[0], &options))
             return 1;
-        PrStringView source = textView(&test.input);
+        PrStringView source = prTextBufferView(&test.input);
         HarnessCounters before = harnessCounters();
         PrMarkdown* document = prMarkdownCreate(&options);
         prMarkdownParse(document, source);
@@ -131,18 +132,18 @@ int main() {
         prMarkdownDestroy(document);
         HarnessCounters spent = harnessSpent(before, harnessCounters());
 
-        TextBuffer out;
-        textAppend(&out, "{\"html\":");
+        PrTextBuffer out = {};
+        prTextBufferAppend(&out, "{\"html\":");
         harnessWriteString(&out, prStringView(&html));
-        textAppend(&out, ",\"millis\":");
+        prTextBufferAppend(&out, ",\"millis\":");
         harnessWriteNumber(&out, uint64_t(spent.millis));
         if (test.fieldCount == 1) {
-            textAppend(&out, ",\"streamed\":");
-            textAppend(&out, streams(options, source, prStringView(&html)) ? "true" : "false");
+            prTextBufferAppend(&out, ",\"streamed\":");
+            prTextBufferAppend(&out, streams(options, source, prStringView(&html)) ? "true" : "false");
         }
-        textAppendChar(&out, '}');
-        harnessWriteLine(textView(&out));
-        textReset(&out);
+        prTextBufferAppendChar(&out, '}');
+        harnessWriteLine(prTextBufferView(&out));
+        prTextBufferReset(&out);
         prStringReset(&html);
     }
     harnessCaseReset(&test);

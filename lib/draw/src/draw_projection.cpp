@@ -30,7 +30,7 @@ struct Corners {
 
 bool isFiniteMatrix(const PrMatrix4& matrix) {
     for (uint32_t i = 0; i < 16; ++i) {
-        if (!isFiniteF32(matrix.m[i / 4][i % 4]))
+        if (!prF32IsFinite(matrix.m[i / 4][i % 4]))
             return false;
     }
     return true;
@@ -103,7 +103,7 @@ bool prDrawProjectionPlace(const PrMatrix4* projection, PrAffine2 toTarget, PrRe
         p.x[p.count] = h.m[0][0] * c.x + h.m[0][1] * c.y + h.m[0][2];
         p.y[p.count] = h.m[1][0] * c.x + h.m[1][1] * c.y + h.m[1][2];
         p.w[p.count] = h.m[2][0] * c.x + h.m[2][1] * c.y + h.m[2][2];
-        largest = maxF32(largest, p.w[p.count]);
+        largest = prF32Max(largest, p.w[p.count]);
         ++p.count;
     }
     if (!(largest > 0))
@@ -117,23 +117,26 @@ bool prDrawProjectionPlace(const PrMatrix4* projection, PrAffine2 toTarget, PrRe
         return false;
 
     // The visible corners in target pixels, the area they cover, and the part of the plane they come from.
-    PrRect landed{kF32Max, kF32Max, -kF32Max, -kF32Max};
-    PrRect from{kF32Max, kF32Max, -kF32Max, -kF32Max};
+    PrRect landed{kPrF32Max, kPrF32Max, -kPrF32Max, -kPrF32Max};
+    PrRect from{kPrF32Max, kPrF32Max, -kPrF32Max, -kPrF32Max};
     PrVec2 center{0, 0};
-    float nearest = kF32Max;
+    float nearest = kPrF32Max;
     PrVec2 q[kMaxCorners];
     for (uint32_t i = 0; i < p.count; ++i) {
         q[i] = PrVec2{p.x[i] / p.w[i], p.y[i] / p.w[i]};
         landed = PrRect{
-            minF32(landed.left, q[i].x), minF32(landed.top, q[i].y), maxF32(landed.right, q[i].x),
-            maxF32(landed.bottom, q[i].y),
+            prF32Min(landed.left, q[i].x), prF32Min(landed.top, q[i].y), prF32Max(landed.right, q[i].x),
+            prF32Max(landed.bottom, q[i].y),
         };
         PrVec2 u{};
         if (!prMatrix3MapPoint(&back, q[i], &u))
             return false;
-        from = PrRect{minF32(from.left, u.x), minF32(from.top, u.y), maxF32(from.right, u.x), maxF32(from.bottom, u.y)};
+        from.left = prF32Min(from.left, u.x);
+        from.top = prF32Min(from.top, u.y);
+        from.right = prF32Max(from.right, u.x);
+        from.bottom = prF32Max(from.bottom, u.y);
         center = center + u / float(p.count);
-        nearest = minF32(nearest, p.w[i]);
+        nearest = prF32Min(nearest, p.w[i]);
     }
     float targetArea = 0;
     for (uint32_t i = 0; i < p.count; ++i) {
@@ -141,7 +144,7 @@ bool prDrawProjectionPlace(const PrMatrix4* projection, PrAffine2 toTarget, PrRe
         const PrVec2& b = q[(i + 1) % p.count];
         targetArea += a.x * b.y - b.x * a.y;
     }
-    targetArea = absF32(targetArea) / 2;
+    targetArea = prF32Abs(targetArea) / 2;
     PrRect area = prRectIntersect(bounds, from);
     if (prRectIsEmpty(area))
         return false;
@@ -149,7 +152,7 @@ bool prDrawProjectionPlace(const PrMatrix4* projection, PrAffine2 toTarget, PrRe
     // An edge-on plane scales one direction by a vanishing fraction of the other.
     PrAffine2 tangent = prMatrix3AffineNear(&h, center);
     float squares = tangent.a * tangent.a + tangent.b * tangent.b + tangent.c * tangent.c + tangent.d * tangent.d;
-    float determinant = absF32(tangent.a * tangent.d - tangent.b * tangent.c);
+    float determinant = prF32Abs(tangent.a * tangent.d - tangent.b * tangent.c);
     if (!(squares > 0) || determinant <= kCollapse * squares)
         return false;
 
@@ -161,13 +164,13 @@ bool prDrawProjectionPlace(const PrMatrix4* projection, PrAffine2 toTarget, PrRe
     if (prAffine2FromMatrix3(&h, &affine)) {
         scale = prAffine2MaxScale(affine);
     } else {
-        scale = minF32(prMatrix3MaxScale(&h, area, nearest), prAffine2MaxScale(toTarget));
+        scale = prF32Min(prMatrix3MaxScale(&h, area, nearest), prAffine2MaxScale(toTarget));
         float planeArea = prRectWidth(area) * prRectHeight(area);
-        scale = minF32(scale, sqrtF32(kMaxLayerAreaRatio * targetArea / planeArea));
+        scale = prF32Min(scale, prF32Sqrt(kMaxLayerAreaRatio * targetArea / planeArea));
     }
-    float side = maxF32(prRectWidth(area), prRectHeight(area));
-    scale = minF32(scale, maxLayerSide / side);
-    if (!(scale > 0) || !isFiniteF32(scale))
+    float side = prF32Max(prRectWidth(area), prRectHeight(area));
+    scale = prF32Min(scale, maxLayerSide / side);
+    if (!(scale > 0) || !prF32IsFinite(scale))
         return false;
 
     const PrMatrix3 unscale{{{1 / scale, 0, 0}, {0, 1 / scale, 0}, {0, 0, 1}}};

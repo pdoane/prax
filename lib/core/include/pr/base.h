@@ -139,6 +139,14 @@ PR_ASSUME_NONNULL_BEGIN
 #define PR_CONSTEXPR static inline
 #endif
 
+// Declares a constant of a header that C and C++ share that an enum cannot hold, such as a float. In C++ it is usable
+// in constant expressions.
+#if defined(__cplusplus)
+#define PR_CONSTANT constexpr
+#else
+#define PR_CONSTANT static const
+#endif
+
 // Defines the upcasts of a handle to an interface that it inherits from: pr<Derived>As<Name>, and
 // pr<Derived>AsConst<Name> for a const handle. `Derived` and `Base` are type names without `Pr`, and `Name` is the web
 // interface name of the base. PR_HANDLE_UPCAST(DomText, DomNode, Node) defines prDomTextAsNode. An upcast returns the

@@ -19,7 +19,7 @@ namespace {
 // Returns the number of ASCII digits at `at` in `text`.
 size_t digitsAt(PrStringView text, size_t at) {
     size_t end = at;
-    while (end < text.size && asciiIsDigit(text.data[end]))
+    while (end < text.size && prAsciiIsDigit(text.data[end]))
         ++end;
     return end - at;
 }
@@ -60,7 +60,7 @@ bool readMonth(PrStringView text, size_t* at, int64_t* year, uint32_t* month) {
     if (digits < 4 || digits > kMaxYearDigits)
         return false;
     uint64_t value = 0;
-    parseU64Prefix(text.data + *at, digits, &value);
+    prU64ParsePrefix(text.data + *at, digits, &value, 10);
     *at += digits;
     if (value == 0 || !readChar(text, at, '-') || !readDigits(text, at, 2, month) || *month < 1 || *month > 12)
         return false;
@@ -109,13 +109,13 @@ bool readTime(PrStringView text, size_t* at, DomTime* out, uint32_t* fractionDig
 }
 
 // Appends `value` in decimal, padded with zeros to `width` digits.
-void appendPadded(TextBuffer* out, uint64_t value, uint32_t width) {
+void appendPadded(PrTextBuffer* out, uint64_t value, uint32_t width) {
     uint32_t digits = 1;
     for (uint64_t rest = value / 10; rest != 0; rest /= 10)
         ++digits;
     for (; digits < width; ++digits)
-        textAppendChar(out, '0');
-    textAppendU64(out, value);
+        prTextBufferAppendChar(out, '0');
+    prTextBufferAppendU64(out, value, 10);
 }
 
 } // namespace
@@ -125,13 +125,13 @@ void appendPadded(TextBuffer* out, uint64_t value, uint32_t width) {
 
 bool domParseInteger(PrStringView text, int64_t* out) {
     size_t at = 0;
-    while (at < text.size && asciiIsSpace(text.data[at]))
+    while (at < text.size && prAsciiIsSpace(text.data[at]))
         ++at;
     bool negative = false;
     if (at < text.size && (text.data[at] == '-' || text.data[at] == '+'))
         negative = text.data[at++] == '-';
     uint64_t magnitude = 0;
-    if (parseU64Prefix(text.data + at, text.size - at, &magnitude) == 0)
+    if (prU64ParsePrefix(text.data + at, text.size - at, &magnitude, 10) == 0)
         return false;
     uint64_t limit = negative ? uint64_t(INT64_MAX) + 1 : uint64_t(INT64_MAX);
     magnitude = magnitude < limit ? magnitude : limit;
@@ -148,10 +148,10 @@ bool domParseNonNegativeInteger(PrStringView text, uint64_t* out) {
 }
 
 // The rules read a sign, digits, a fraction and an exponent, each of which may end the number early. The bytes they
-// read are a decimal that parseF64 rounds correctly, as the rules' conversion step asks.
+// read are a decimal that prF64Parse rounds correctly, as the rules' conversion step asks.
 bool domParseFloat(PrStringView text, double* out) {
     size_t at = 0;
-    while (at < text.size && asciiIsSpace(text.data[at]))
+    while (at < text.size && prAsciiIsSpace(text.data[at]))
         ++at;
     if (at == text.size)
         return false;
@@ -161,16 +161,16 @@ bool domParseFloat(PrStringView text, double* out) {
         if (at == text.size)
             return false;
     }
-    // A leading '+' is skipped, and parseF64 reads only a '-'.
+    // A leading '+' is skipped, and prF64Parse reads only a '-'.
     if (text.data[start] == '+')
         start = at;
     size_t whole = digitsAt(text, at);
-    bool fraction = at + 1 < text.size && text.data[at] == '.' && asciiIsDigit(text.data[at + 1]);
+    bool fraction = at + 1 < text.size && text.data[at] == '.' && prAsciiIsDigit(text.data[at + 1]);
     if (whole == 0 && !fraction)
         return false;
     at += whole;
     // A point without digits after it ends the number, and an exponent after it is not read.
-    if (at + 1 < text.size && text.data[at] == '.' && asciiIsDigit(text.data[at + 1]))
+    if (at + 1 < text.size && text.data[at] == '.' && prAsciiIsDigit(text.data[at + 1]))
         at += 1 + digitsAt(text, at + 1);
     size_t end = at;
     if (at < text.size && (text.data[at] == 'e' || text.data[at] == 'E')) {
@@ -181,21 +181,21 @@ bool domParseFloat(PrStringView text, double* out) {
         if (digits != 0)
             end = exponent + digits;
     }
-    // parseF64 needs a digit before a fraction, so a number such as ".5" reads as "0.5".
+    // prF64Parse needs a digit before a fraction, so a number such as ".5" reads as "0.5".
     PrStringView number{text.data + start, end - start};
     double value = 0;
     if (whole == 0) {
         bool negative = number.data[0] == '-';
-        TextBuffer prefixed;
-        textAppend(&prefixed, negative ? "-0" : "0");
-        textAppend(&prefixed, PrStringView{number.data + (negative ? 1 : 0), number.size - (negative ? 1 : 0)});
-        PrStringView view = textView(&prefixed);
-        value = parseF64(view.data, view.size);
-        textReset(&prefixed);
+        PrTextBuffer prefixed = {};
+        prTextBufferAppend(&prefixed, negative ? "-0" : "0");
+        prTextBufferAppend(&prefixed, PrStringView{number.data + (negative ? 1 : 0), number.size - (negative ? 1 : 0)});
+        PrStringView view = prTextBufferView(&prefixed);
+        value = prF64Parse(view.data, view.size);
+        prTextBufferReset(&prefixed);
     } else {
-        value = parseF64(number.data, number.size);
+        value = prF64Parse(number.data, number.size);
     }
-    if (!isFiniteF64(value))
+    if (!prF64IsFinite(value))
         return false;
     *out = value == 0 ? 0 : value;
     return true;
@@ -228,10 +228,10 @@ bool domIsValidFloat(PrStringView text) {
     return at == text.size;
 }
 
-void domAppendFloat(TextBuffer* out, double value) {
-    PR_ASSERT(isFiniteF64(value));
-    char buffer[kF64TextMaxBytes];
-    textAppend(out, buffer, uint32_t(formatF64(value, buffer)));
+void domAppendFloat(PrTextBuffer* out, double value) {
+    PR_ASSERT(prF64IsFinite(value));
+    char buffer[kPrF64TextMaxBytes];
+    prTextBufferAppend(out, PrStringView{buffer, uint32_t(prF64Format(value, buffer))});
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -258,7 +258,7 @@ bool domParseWeek(PrStringView text, int64_t* year, uint32_t* week) {
     if (digits < 4 || digits > kMaxYearDigits)
         return false;
     uint64_t value = 0;
-    parseU64Prefix(text.data, digits, &value);
+    prU64ParsePrefix(text.data, digits, &value, 10);
     at = digits;
     uint32_t number = 0;
     if (value == 0 || !readChar(text, &at, '-') || !readChar(text, &at, 'W') || !readDigits(text, &at, 2, &number) ||
@@ -327,44 +327,44 @@ void domWeekOfDays(int64_t days, int64_t* year, uint32_t* week) {
     *week = uint32_t((days - domWeekDays(at, 1)) / 7 + 1);
 }
 
-void domAppendMonth(TextBuffer* out, int64_t year, uint32_t month) {
+void domAppendMonth(PrTextBuffer* out, int64_t year, uint32_t month) {
     appendPadded(out, uint64_t(year), 4);
-    textAppendChar(out, '-');
+    prTextBufferAppendChar(out, '-');
     appendPadded(out, month, 2);
 }
 
-void domAppendDate(TextBuffer* out, PrTimeDate date) {
+void domAppendDate(PrTextBuffer* out, PrTimeDate date) {
     domAppendMonth(out, date.year, date.month);
-    textAppendChar(out, '-');
+    prTextBufferAppendChar(out, '-');
     appendPadded(out, date.day, 2);
 }
 
-void domAppendWeek(TextBuffer* out, int64_t year, uint32_t week) {
+void domAppendWeek(PrTextBuffer* out, int64_t year, uint32_t week) {
     appendPadded(out, uint64_t(year), 4);
-    textAppend(out, "-W");
+    prTextBufferAppend(out, "-W");
     appendPadded(out, week, 2);
 }
 
-void domAppendTime(TextBuffer* out, DomTime time) {
+void domAppendTime(PrTextBuffer* out, DomTime time) {
     uint64_t milliseconds = uint64_t(time);
     appendPadded(out, milliseconds / 3600000, 2);
-    textAppendChar(out, ':');
+    prTextBufferAppendChar(out, ':');
     appendPadded(out, milliseconds / 60000 % 60, 2);
     uint64_t second = milliseconds / 1000 % 60;
     uint64_t fraction = milliseconds % 1000;
     if (second == 0 && fraction == 0)
         return;
-    textAppendChar(out, ':');
+    prTextBufferAppendChar(out, ':');
     appendPadded(out, second, 2);
     if (fraction == 0)
         return;
-    textAppendChar(out, '.');
+    prTextBufferAppendChar(out, '.');
     appendPadded(out, fraction, 3);
 }
 
-void domAppendLocalDateTime(TextBuffer* out, PrTimeDate date, DomTime time) {
+void domAppendLocalDateTime(PrTextBuffer* out, PrTimeDate date, DomTime time) {
     domAppendDate(out, date);
-    textAppendChar(out, 'T');
+    prTextBufferAppendChar(out, 'T');
     domAppendTime(out, time);
 }
 
@@ -377,17 +377,17 @@ uint32_t domReflectedUnsigned(const PrDomElement* element, PrStringView name, ui
 
 bool domParseDimension(PrStringView text, double* out, bool* percentage) {
     size_t at = 0;
-    while (at < text.size && asciiIsSpace(text.data[at]))
+    while (at < text.size && prAsciiIsSpace(text.data[at]))
         ++at;
     uint64_t whole = 0;
-    size_t digits = parseU64Prefix(text.data + at, text.size - at, &whole);
+    size_t digits = prU64ParsePrefix(text.data + at, text.size - at, &whole, 10);
     if (digits == 0)
         return false;
     at += digits;
     double value = double(whole);
-    if (at + 1 < text.size && text.data[at] == '.' && asciiIsDigit(text.data[at + 1])) {
+    if (at + 1 < text.size && text.data[at] == '.' && prAsciiIsDigit(text.data[at + 1])) {
         double scale = 0.1;
-        for (++at; at < text.size && asciiIsDigit(text.data[at]); ++at, scale /= 10)
+        for (++at; at < text.size && prAsciiIsDigit(text.data[at]); ++at, scale /= 10)
             value += (text.data[at] - '0') * scale;
     }
     *out = value;

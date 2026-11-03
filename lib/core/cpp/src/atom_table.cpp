@@ -13,7 +13,7 @@ namespace {
 constexpr uint64_t kAtomSeed = 0x6a09e667f3bcc909ull;
 
 uint32_t atomHash(PrStringView text) {
-    return uint32_t(hashBytes(text.data, text.size, kAtomSeed));
+    return uint32_t(prHashBytes(text.data, text.size, kAtomSeed));
 }
 
 // Returns the slot that holds `text`, or the empty slot where it would go.
@@ -24,7 +24,7 @@ uint32_t slotOf(const AtomTable* table, PrStringView text, uint32_t hash) {
             return slot;
         const AtomEntry& entry = table->atoms.data[at.atom];
         if (at.hash == hash && entry.size == text.size &&
-                (text.size == 0 || memEquals(entry.text, text.data, text.size)))
+                (text.size == 0 || prMemEquals(entry.text, text.data, text.size)))
             return slot;
     }
 }
@@ -83,7 +83,7 @@ Atom atomTableAdd(AtomTable* table, PrStringView text) {
     char* stored = nullptr;
     if (text.size != 0) {
         stored = store(table, uint32_t(text.size));
-        memCopy(stored, text.data, text.size);
+        prMemCopy(stored, text.data, text.size);
     }
     Atom atom = table->atoms.count;
     table->atoms.push(AtomEntry{stored, uint32_t(text.size), hash});

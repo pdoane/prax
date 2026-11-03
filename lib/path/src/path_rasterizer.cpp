@@ -31,7 +31,8 @@ struct PathRasterizer {
 };
 
 void addEdge(PathRasterizer* r, PrVec2 from, PrVec2 to) {
-    if (from.y == to.y || !isFiniteF32(from.x) || !isFiniteF32(from.y) || !isFiniteF32(to.x) || !isFiniteF32(to.y))
+    bool finite = prF32IsFinite(from.x) && prF32IsFinite(from.y) && prF32IsFinite(to.x) && prF32IsFinite(to.y);
+    if (from.y == to.y || !finite)
         return;
     if (from.y < to.y)
         r->edges.push(PathCellEdge{from.x, from.y, to.x, to.y, 1});
@@ -80,8 +81,8 @@ void accumulateClipped(float* cells, size_t stride, uint32_t width, uint32_t hei
             e.x0 + (e.x1 - e.x0) * t0, e.y0 + (e.y1 - e.y0) * t0,
             e.x0 + (e.x1 - e.x0) * t1, e.y0 + (e.y1 - e.y0) * t1, e.direction,
         };
-        piece.x0 = minF32(maxF32(piece.x0, 0), right);
-        piece.x1 = minF32(maxF32(piece.x1, 0), right);
+        piece.x0 = prF32Min(prF32Max(piece.x0, 0), right);
+        piece.x1 = prF32Min(prF32Max(piece.x1, 0), right);
         pathAccumulate(cells, stride, width, height, piece);
     }
 }
@@ -92,7 +93,7 @@ void fillAntialiased(PathRasterizer* r, PrPathFillRule rule, PrPixels mask) {
     if (r->cells.capacity < cellCount) {
         r->cells.reset();
         r->cells.reserve(uint32_t(cellCount));
-        memZero(r->cells.data, size_t(r->cells.capacity) * sizeof(float));
+        prMemZero(r->cells.data, size_t(r->cells.capacity) * sizeof(float));
     }
     float* cells = r->cells.data;
     for (uint32_t i = 0; i < r->edges.count; ++i)
@@ -105,7 +106,7 @@ void fillAntialiased(PathRasterizer* r, PrPathFillRule rule, PrPixels mask) {
             winding += row[x];
             out[x] = uint8_t(pathCoverageFromWinding(winding, rule) * 255 + 0.5f);
         }
-        memZero(row, stride * sizeof(float));
+        prMemZero(row, stride * sizeof(float));
     }
 }
 
@@ -116,7 +117,7 @@ bool inside(float winding, PrPathFillRule rule) {
 
 // Returns the first column whose center is at or right of `x`, clamped to [0, width].
 uint32_t columnAt(float x, uint32_t width) {
-    float column = ceilF32(x - 0.5f);
+    float column = prF32Ceil(x - 0.5f);
     if (!(column > 0))
         return 0;
     return column >= float(width) ? width : uint32_t(column);
@@ -125,7 +126,7 @@ uint32_t columnAt(float x, uint32_t width) {
 void fillAliased(PathRasterizer* r, PrPathFillRule rule, PrPixels mask) {
     for (uint32_t y = 0; y < mask.extent.y; ++y) {
         uint8_t* out = mask.data + size_t(y) * mask.stride;
-        memZero(out, mask.extent.x);
+        prMemZero(out, mask.extent.x);
         float center = float(y) + 0.5f;
         r->crossings.clear();
         for (uint32_t i = 0; i < r->edges.count; ++i) {

@@ -20,7 +20,7 @@ namespace {
 constexpr uint32_t kCurveMaxLines = 1024;
 
 float length(PrVec2 v) {
-    return sqrtF32(v.x * v.x + v.y * v.y);
+    return prF32Sqrt(v.x * v.x + v.y * v.y);
 }
 
 // Returns the point moved off the curve for a step of `dt`. It moves by the component of the second derivative across
@@ -38,7 +38,7 @@ PrVec2 balanced(PrVec2 point, PrVec2 tangent, PrVec2 second, float dt) {
 // Returns the number of lines for a curve whose largest second difference is `difference`. `scale` relates that
 // difference to the greatest distance of the curve from its chords.
 uint32_t lineCount(float difference, float scale, float tolerance) {
-    float count = ceilF32(sqrtF32(difference * scale / tolerance));
+    float count = prF32Ceil(prF32Sqrt(difference * scale / tolerance));
     if (!(count >= 1))
         return 1;
     return count > float(kCurveMaxLines) ? kCurveMaxLines : uint32_t(count);
@@ -74,7 +74,7 @@ uint32_t pathQuadLineCount(PrVec2 p0, PrVec2 p1, PrVec2 p2, float tolerance) {
 uint32_t pathCubicLineCount(PrVec2 p0, PrVec2 p1, PrVec2 p2, PrVec2 p3, float tolerance) {
     PrVec2 second1{p0.x - 2 * p1.x + p2.x, p0.y - 2 * p1.y + p2.y};
     PrVec2 second2{p1.x - 2 * p2.x + p3.x, p1.y - 2 * p2.y + p3.y};
-    return lineCount(maxF32(length(second1), length(second2)), 0.75f, tolerance);
+    return lineCount(prF32Max(length(second1), length(second2)), 0.75f, tolerance);
 }
 
 void pathFlattenQuadLines(PrVec2 p0, PrVec2 p1, PrVec2 p2, uint32_t count, Array<PrVec2>& out) {

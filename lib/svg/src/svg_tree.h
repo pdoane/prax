@@ -847,7 +847,7 @@ void svgTreeFreeResource(SvgTree* tree, SvgResourceIndex index);
 
 // Returns true if the tree draws as `expected` does. Otherwise writes the first difference to `difference`, naming the
 // element whose node differs. Only what the roots reach is compared, so slots and indices may differ.
-bool svgTreeSame(const SvgTree* tree, const SvgTree* expected, TextBuffer* difference);
+bool svgTreeSame(const SvgTree* tree, const SvgTree* expected, PrTextBuffer* difference);
 
 // ---------------------------------------------------------------------------------------------------------------------
 // What building shares with text
@@ -901,7 +901,7 @@ void svgTreeFreeStroke(SvgTree* tree, const SvgPaints& paints);
 // Returns true if two paints paint the same, each with the strokes and servers of its own tree. Otherwise writes what
 // differs to `difference`.
 bool svgPaintsSame(const SvgTree* tree, const SvgPaints& paints, const SvgTree* expectedTree, const SvgPaints& expected,
-    TextBuffer* difference);
+    PrTextBuffer* difference);
 
 // Returns true if two paths have the same verbs and points.
 bool svgPathSame(const PrPath* path, const PrPath* expected);

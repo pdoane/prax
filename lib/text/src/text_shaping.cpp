@@ -227,12 +227,12 @@ void findBreaks(TextShaping& t, PrStringView text, const PrTextShapingDesc& d, T
         PrTextBreakDesc desc{text, s.codePoints.data, s.codeEnds.data, s.breakStyles.data, s.codePoints.count};
         prTextBreaksTailor(&desc, s.breaks.data, s.codeEmergency.data);
         t.emergency.resize(uint32_t(text.size) + 1);
-        memZero(t.emergency.data, t.emergency.count * sizeof(PrTextEmergency));
+        prMemZero(t.emergency.data, t.emergency.count * sizeof(PrTextEmergency));
         for (uint32_t i = 0; i < s.codePoints.count; ++i)
             t.emergency.data[s.codeEnds.data[i]] = s.codeEmergency.data[i];
     }
     t.breakAt.resize(uint32_t(text.size) + 1);
-    memZero(t.breakAt.data, t.breakAt.count * sizeof(PrUnicodeLineBreak));
+    prMemZero(t.breakAt.data, t.breakAt.count * sizeof(PrUnicodeLineBreak));
     for (uint32_t i = 0; i < s.codePoints.count; ++i)
         t.breakAt.data[s.codeEnds.data[i]] = s.breaks.data[i];
     if (d.objectBreak == PrTextObjectBreak_Around)
@@ -266,7 +266,7 @@ void findWordBreaks(const TextShaping& t, PrStringView text, uint32_t start, uin
     PrTextBreakDesc desc{word, s.codePoints.data, s.ends.data, s.styles.data, count};
     prTextBreaksTailor(&desc, s.breaks.data, s.emergency.data);
     s.atByte.resize(end - start + 1);
-    memZero(s.atByte.data, s.atByte.count * sizeof(PrTextEmergency));
+    prMemZero(s.atByte.data, s.atByte.count * sizeof(PrTextEmergency));
     for (uint32_t i = 0; i < count; ++i)
         s.atByte.data[s.ends.data[i]] = s.emergency.data[i];
 }
@@ -335,7 +335,7 @@ void shapeRun(TextShaping& t, const PrTextShapingDesc& d, PrTextShapedRun& run, 
 float tabAdvance(const TextShaping& t, float x) {
     if (t.tabSize <= 0)
         return 0;
-    float stop = (floorF32(x / t.tabSize) + 1) * t.tabSize;
+    float stop = (prF32Floor(x / t.tabSize) + 1) * t.tabSize;
     if (stop - x < t.tabMinimum)
         stop += t.tabSize;
     return stop - x;
@@ -529,7 +529,7 @@ void prTextShapingSet(PrTextShaping* shaping, const PrTextShapingDesc* desc, PrT
 
     t.advance.resize(size);
     if (size != 0)
-        memZero(t.advance.data, size * sizeof(float));
+        prMemZero(t.advance.data, size * sizeof(float));
     t.glyphs.clear();
     t.runs.clear();
     const PrTextItemRun* runs = prTextItemsRuns(s.items);
@@ -603,7 +603,7 @@ void prTextShapingPositions(const PrTextShaping* shaping, const PrTextShapingSeg
     // Indexed from the start of the segment.
     float* position = out + start;
     const float* advance = t.advance.data + start;
-    memZero(position, (size + 1) * sizeof(float));
+    prMemZero(position, (size + 1) * sizeof(float));
     for (uint32_t i = segment->pieceStart; advances != nullptr && i < segment->pieceEnd && size != 0; ++i) {
         const PieceSpan& piece = t.pieces.data[i];
         uint32_t at = piece.start - start;
@@ -647,13 +647,13 @@ PrTextIntrinsic prTextShapingIntrinsic(const PrTextShaping* shaping, uint32_t st
             if (b != end && (at == PrUnicodeLineBreak_Prohibited || (!soft && at != PrUnicodeLineBreak_Mandatory)))
                 continue;
             PrTextShapingLine line{.start = from, .end = b, .positions = positions};
-            width = maxF32(width, prTextShapingLineWidth(shaping, &line));
+            width = prF32Max(width, prTextShapingLineWidth(shaping, &line));
             from = b;
         }
         return width;
     };
     PrTextIntrinsic sizes{.minContent = widest(true, minPositions)};
-    sizes.maxContent = maxF32(widest(false, maxPositions), sizes.minContent);
+    sizes.maxContent = prF32Max(widest(false, maxPositions), sizes.minContent);
     return sizes;
 }
 

@@ -228,7 +228,7 @@ void setTimer(Xhr* request, uint32_t milliseconds) {
 // Returns the index of the header named `name`, or kArrayMissing.
 uint32_t findHeader(const Array<XhrHeader>& headers, PrStringView name) {
     for (uint32_t i = 0; i < headers.count; ++i) {
-        if (asciiEqualsFold(prStringView(&headers.data[i].name), name))
+        if (prAsciiEqualsFold(prStringView(&headers.data[i].name), name))
             return i;
     }
     return kArrayMissing;
@@ -242,12 +242,12 @@ void combineHeader(Array<XhrHeader>* headers, PrStringView name, PrStringView va
         headers->push(XhrHeader{prStringCopy(name), prStringCopy(value)});
         return;
     }
-    TextBuffer combined;
-    textAppend(&combined, prStringView(&headers->data[index].value));
-    textAppend(&combined, ", ");
-    textAppend(&combined, value);
+    PrTextBuffer combined = {};
+    prTextBufferAppend(&combined, prStringView(&headers->data[index].value));
+    prTextBufferAppend(&combined, ", ");
+    prTextBufferAppend(&combined, value);
     prStringReset(&headers->data[index].value);
-    headers->data[index].value = textTake(&combined);
+    headers->data[index].value = prTextBufferTake(&combined);
 }
 
 } // namespace
@@ -509,7 +509,7 @@ PrString prXhrResponseHeader(const PrXhr* xhr, PrStringView name) {
     Array<XhrHeader> combined;
     for (uint32_t i = 0; i < xhr->responseHeaders.count; ++i) {
         const XhrHeader& header = xhr->responseHeaders.data[i];
-        if (asciiEqualsFold(prStringView(&header.name), name))
+        if (prAsciiEqualsFold(prStringView(&header.name), name))
             combineHeader(&combined, name, prStringView(&header.value));
     }
     PrString result = prStringNull();
@@ -528,31 +528,31 @@ PrString prXhrResponseHeaders(const PrXhr* xhr) {
     Array<XhrHeader> sorted;
     for (uint32_t i = 0; i < xhr->responseHeaders.count; ++i) {
         const XhrHeader& header = xhr->responseHeaders.data[i];
-        TextBuffer lower;
-        textAppend(&lower, prStringView(&header.name));
-        asciiLower(lower.text.data, lower.text.count);
-        combineHeader(&sorted, textView(&lower), prStringView(&header.value));
-        textReset(&lower);
+        PrTextBuffer lower = {};
+        prTextBufferAppend(&lower, prStringView(&header.name));
+        prAsciiLowerText(lower.data, lower.size);
+        combineHeader(&sorted, prTextBufferView(&lower), prStringView(&header.value));
+        prTextBufferReset(&lower);
     }
     for (uint32_t i = 1; i < sorted.count; ++i) {
         for (uint32_t j = i; j > 0; --j) {
-            if (stringCompare(prStringView(&sorted.data[j].name), prStringView(&sorted.data[j - 1].name)) >= 0)
+            if (prStringCompare(prStringView(&sorted.data[j].name), prStringView(&sorted.data[j - 1].name)) >= 0)
                 break;
             XhrHeader swap = sorted.data[j];
             sorted.data[j] = sorted.data[j - 1];
             sorted.data[j - 1] = swap;
         }
     }
-    TextBuffer text;
+    PrTextBuffer text = {};
     for (uint32_t i = 0; i < sorted.count; ++i) {
-        textAppend(&text, prStringView(&sorted.data[i].name));
-        textAppend(&text, ": ");
-        textAppend(&text, prStringView(&sorted.data[i].value));
-        textAppend(&text, "\r\n");
+        prTextBufferAppend(&text, prStringView(&sorted.data[i].name));
+        prTextBufferAppend(&text, ": ");
+        prTextBufferAppend(&text, prStringView(&sorted.data[i].value));
+        prTextBufferAppend(&text, "\r\n");
     }
     headersReset(&sorted);
     sorted.reset();
-    return textTake(&text);
+    return prTextBufferTake(&text);
 }
 
 PrByteView prXhrResponseBody(const PrXhr* xhr) {

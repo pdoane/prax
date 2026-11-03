@@ -25,6 +25,7 @@
 
 #include "pr/gpu_d3d12.h"
 
+#include "pr/align.h"
 #include "pr/alloc.h"
 #include "pr/array.h"
 #include "pr/assert.h"
@@ -1204,7 +1205,7 @@ void bufferUpload(PrGpuDevice* device, PrGpuBuffer buffer, uint64_t offset, cons
         uint64_t at = 0;
         if (!stage(d, n, 16, &block, &at))
             break;
-        memCopy(d->uploadBlocks.data[block].mapped + at, bytes, n);
+        prMemCopy(d->uploadBlocks.data[block].mapped + at, bytes, n);
         gpuSharedUploadAddCopy(&d->uploadBatch, GpuSharedUploadCopy{buffer.id, block, offset, at, n});
         bytes += n;
         offset += n;
@@ -1243,8 +1244,11 @@ void textureUpload(PrGpuDevice* device, PrGpuTexture texture, const PrGpuTexture
     uint8_t* to = staging.mapped + at;
     const uint8_t* from = static_cast<const uint8_t*>(data);
     for (uint32_t s = 0; s < slices; ++s) {
-        for (uint32_t y = 0; y < rows; ++y)
-            memCopy(to + s * sliceBytes + uint64_t(y) * pitch, from + uint64_t(s) * layerBytes + uint64_t(y) * rowBytes, row);
+        for (uint32_t y = 0; y < rows; ++y) {
+            uint8_t* rowTo = to + s * sliceBytes + uint64_t(y) * pitch;
+            const uint8_t* rowFrom = from + uint64_t(s) * layerBytes + uint64_t(y) * rowBytes;
+            prMemCopy(rowTo, rowFrom, row);
+        }
     }
     ID3D12GraphicsCommandList7* list = d->uploads.list;
     if (d->uploadBatch.written.find(texture.id) == kArrayMissing) {
@@ -1836,10 +1840,10 @@ void* commandsStream(PrGpuDevice* device, PrGpuCommands* commands, uint64_t size
 
 void commandsSetPush(PrGpuDevice*, PrGpuCommands* commands, const void* data, uint32_t size) {
     D3d12Commands* c = commandsOf(commands);
-    memCopy(c->push, data, size);
+    prMemCopy(c->push, data, size);
     uint32_t words = (size + 3) / 4;
     if (words * 4 > size)
-        memZero(c->push + size, words * 4 - size);
+        prMemZero(c->push + size, words * 4 - size);
     c->pushWords = words;
     c->dirty |= D3d12DirtyFlag_GraphicsPush | D3d12DirtyFlag_ComputePush;
 }
@@ -1850,7 +1854,7 @@ void commandsSetUniforms(PrGpuDevice* device, PrGpuCommands* commands, const voi
     uint32_t slot = 0;
     uint64_t offset = 0;
     void* bytes = stream(d, c, size != 0 ? size : 16, &slot, &offset);
-    memCopy(bytes, data, size);
+    prMemCopy(bytes, data, size);
     if (slot == 0)
         return;
     c->uniforms = d->resources[slot].address + offset;
@@ -2014,7 +2018,7 @@ void commandsOnDone(PrGpuDevice*, PrGpuCommands* commands, PrGpuDoneFn done, voi
 void commandsPushGroup(PrGpuDevice*, PrGpuCommands* commands, PrStringView name) {
     char text[256];
     size_t size = name.size < sizeof(text) - 1 ? name.size : sizeof(text) - 1;
-    memCopy(text, name.data, size);
+    prMemCopy(text, name.data, size);
     text[size] = 0;
     commandsOf(commands)->list.list->BeginEvent(1, text, UINT(size + 1));
 }
@@ -2074,7 +2078,7 @@ PrGpuFence commandsSubmit(PrGpuDevice* device, PrGpuCommands* commands) {
     D3d12Done* dones = nullptr;
     if (doneCount != 0) {
         dones = static_cast<D3d12Done*>(prMemoryAlloc(sizeof(D3d12Done) * doneCount));
-        memCopy(dones, c->dones.data, sizeof(D3d12Done) * doneCount);
+        prMemCopy(dones, c->dones.data, sizeof(D3d12Done) * doneCount);
     }
     prMutexLock(&d->mutex);
     submitUploads(d);
@@ -2870,7 +2874,7 @@ void nameAdapter(D3d12Device* d) {
     release(adapter);
     int size = WideCharToMultiByte(CP_UTF8, 0, desc.Description, -1, d->adapter, int(sizeof(d->adapter)), nullptr, nullptr);
     if (size <= 1)
-        memCopy(d->adapter, "Direct3D 12", sizeof("Direct3D 12"));
+        prMemCopy(d->adapter, "Direct3D 12", sizeof("Direct3D 12"));
 }
 
 } // namespace

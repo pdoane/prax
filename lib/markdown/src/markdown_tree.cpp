@@ -117,7 +117,7 @@ MarkdownRange markdownTreeAddText(MarkdownTree* tree, PrStringView text) {
 MarkdownRange markdownTreeCopyText(MarkdownTree* tree, MarkdownRange range) {
     MarkdownRange copy{tree->text.count, range.size};
     tree->text.reserve(tree->text.count + range.size);
-    memCopy(tree->text.data + tree->text.count, tree->text.data + range.start, range.size);
+    prMemCopy(tree->text.data + tree->text.count, tree->text.data + range.start, range.size);
     tree->text.count += range.size;
     return copy;
 }

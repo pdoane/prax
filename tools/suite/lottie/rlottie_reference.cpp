@@ -53,7 +53,7 @@ int main() {
     HarnessCase test = {};
     while (harnessReadCase(&test)) {
         std::vector<std::string> lines;
-        PrStringView input = textView(&test.input);
+        PrStringView input = prTextBufferView(&test.input);
         size_t start = 0;
         for (size_t i = 0; i <= input.size; ++i) {
             if (i == input.size || input.data[i] == '\n') {

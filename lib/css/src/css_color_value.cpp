@@ -7,7 +7,7 @@ namespace pr_impl {
 
 namespace {
 
-constexpr CssColorChannelSyntax kUnbounded = {1.0, 0.01, -kF64Max, kF64Max, false};
+constexpr CssColorChannelSyntax kUnbounded = {1.0, 0.01, -kPrF64Max, kPrF64Max, false};
 constexpr CssColorChannelSyntax kHue = {1.0, 0.0, 0.0, 0.0, true};
 
 // The channels of rgb() and rgba(). A number is in [0, 255], and each channel is clamped to the sRGB gamut
@@ -30,29 +30,29 @@ constexpr CssColorChannelSyntax kChannels[PrColorSpace_Count][3] = {
     {kUnbounded, kUnbounded, kUnbounded},                                          // xyz-d50
     {kUnbounded, kUnbounded, kUnbounded},                                          // xyz-d65
     {                                                                              // lab
-        {1.0, 1.0, 0.0, 100.0, false}, {1.0, 1.25, -kF64Max, kF64Max, false},
-        {1.0, 1.25, -kF64Max, kF64Max, false},
+        {1.0, 1.0, 0.0, 100.0, false}, {1.0, 1.25, -kPrF64Max, kPrF64Max, false},
+        {1.0, 1.25, -kPrF64Max, kPrF64Max, false},
     },
-    {{1.0, 1.0, 0.0, 100.0, false}, {1.0, 1.5, 0.0, kF64Max, false}, kHue}, // lch
-    {                                                                       // oklab
-        {1.0, 0.01, 0.0, 1.0, false}, {1.0, 0.004, -kF64Max, kF64Max, false},
-        {1.0, 0.004, -kF64Max, kF64Max, false},
+    {{1.0, 1.0, 0.0, 100.0, false}, {1.0, 1.5, 0.0, kPrF64Max, false}, kHue}, // lch
+    {                                                                         // oklab
+        {1.0, 0.01, 0.0, 1.0, false}, {1.0, 0.004, -kPrF64Max, kPrF64Max, false},
+        {1.0, 0.004, -kPrF64Max, kPrF64Max, false},
     },
-    {{1.0, 0.01, 0.0, 1.0, false}, {1.0, 0.004, 0.0, kF64Max, false}, kHue},            // oklch
-    {kHue, {1.0, 1.0, 0.0, kF64Max, false}, {1.0, 1.0, -kF64Max, kF64Max, false}},      // hsl
-    {kHue, {1.0, 1.0, -kF64Max, kF64Max, false}, {1.0, 1.0, -kF64Max, kF64Max, false}}, // hwb
-    {kUnbounded, kUnbounded, kUnbounded},                                               // rec2100-pq
-    {kUnbounded, kUnbounded, kUnbounded},                                               // rec2100-hlg
-    {kUnbounded, kUnbounded, kUnbounded},                                               // rec2100-linear
-    {                                                                                   // ictcp
-        kUnbounded, {1.0, 0.005, -kF64Max, kF64Max, false},
-        {1.0, 0.005, -kF64Max, kF64Max, false},
+    {{1.0, 0.01, 0.0, 1.0, false}, {1.0, 0.004, 0.0, kPrF64Max, false}, kHue},                  // oklch
+    {kHue, {1.0, 1.0, 0.0, kPrF64Max, false}, {1.0, 1.0, -kPrF64Max, kPrF64Max, false}},        // hsl
+    {kHue, {1.0, 1.0, -kPrF64Max, kPrF64Max, false}, {1.0, 1.0, -kPrF64Max, kPrF64Max, false}}, // hwb
+    {kUnbounded, kUnbounded, kUnbounded},                                                       // rec2100-pq
+    {kUnbounded, kUnbounded, kUnbounded},                                                       // rec2100-hlg
+    {kUnbounded, kUnbounded, kUnbounded},                                                       // rec2100-linear
+    {                                                                                           // ictcp
+        kUnbounded, {1.0, 0.005, -kPrF64Max, kPrF64Max, false},
+        {1.0, 0.005, -kPrF64Max, kPrF64Max, false},
     },
     { // jzazbz
-        kUnbounded, {1.0, 0.0021, -kF64Max, kF64Max, false},
-        {1.0, 0.0021, -kF64Max, kF64Max, false},
+        kUnbounded, {1.0, 0.0021, -kPrF64Max, kPrF64Max, false},
+        {1.0, 0.0021, -kPrF64Max, kPrF64Max, false},
     },
-    {kUnbounded, {1.0, 0.0026, 0.0, kF64Max, false}, kHue},                       // jzczhz
+    {kUnbounded, {1.0, 0.0026, 0.0, kPrF64Max, false}, kHue},                       // jzczhz
 };
 
 } // namespace
@@ -91,8 +91,8 @@ double cssColorChannelValue(const CssValueNode* value, const CssColorChannelSynt
     else
         number = value->number * channel.number;
     if (channel.hue)
-        return isFiniteF64(number) ? prColorHue(number) : 0.0;
-    if (isNanF64(number))
+        return prF64IsFinite(number) ? prColorHue(number) : 0.0;
+    if (prF64IsNan(number))
         return 0.0;
     return number < channel.min ? channel.min : number > channel.max ? channel.max : number;
 }

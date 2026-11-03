@@ -458,7 +458,7 @@ void comfyUpload(ComfyClient* client, uint64_t tag, std::string filename, std::v
         std::string boundary;
         do {
             boundary = "----AlchemyComfyUi" + randomHex(8);
-        } while (stringContains(payload, boundary));
+        } while (prStringContains(payload, boundary));
         std::string safeName;
         for (char c : filename)
             safeName += c == '"' || c == '\\' || uint8_t(c) < 0x20 || c == 0x7f ? '_' : c;

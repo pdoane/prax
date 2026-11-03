@@ -272,7 +272,7 @@ struct CssSelectorPool {
     Array<CssSelectorNamespace> namespaces;
     Array<CssSelectorName> names;
     Array<int32_t> numbers;         // integer arguments, such as the levels of :heading()
-    TextBuffer text;                // the bytes of the names
+    PrTextBuffer text = {};         // the bytes of the names
 };
 
 // Frees everything that the pool owns and leaves it usable.
@@ -399,10 +399,10 @@ PrCssSelectors* PR_NULLABLE cssCompilePreludeSelectors(CssParser* parser, CssVal
 
 // Serializes the selector list, joined with ", " (cssom-1/#serialize-a-group-of-selectors). A relative selector with an
 // implied `&` is written with the `&` (css-nesting-1/#cssom).
-void cssSerializeSelectors(TextBuffer* out, const PrCssSelectors* selectors);
+void cssSerializeSelectors(PrTextBuffer* out, const PrCssSelectors* selectors);
 
 // Serializes `count` complex selectors of the list, starting at `first`, in the same form as cssSerializeSelectors.
-void cssSerializeSelectorRange(TextBuffer* out, const PrCssSelectors* selectors, uint32_t first, uint32_t count);
+void cssSerializeSelectorRange(PrTextBuffer* out, const PrCssSelectors* selectors, uint32_t first, uint32_t count);
 
 } // namespace pr_impl
 

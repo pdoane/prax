@@ -2,6 +2,7 @@
 
 #include "gpu/backends/shared/src/gpu_shared_metal.h"
 
+#include "pr/align.h"
 #include "pr/alloc.h"
 #include "pr/assert.h"
 #include "pr/integer.h"
@@ -128,7 +129,7 @@ void bufferUpload(PrGpuDevice* device, PrGpuBuffer buffer, uint64_t offset, cons
             uint64_t at = 0;
             if (!stage(d, n, &block, &at))
                 break;
-            memCopy(static_cast<uint8_t*>(d->uploadBlocks.data[block].buffer.contents) + at, bytes, n);
+            prMemCopy(static_cast<uint8_t*>(d->uploadBlocks.data[block].buffer.contents) + at, bytes, n);
             gpuSharedUploadAddCopy(&d->uploadBatch, GpuSharedUploadCopy{buffer.id, block, offset, at, n});
             bytes += n;
             offset += n;
@@ -162,7 +163,7 @@ void textureUpload(PrGpuDevice* device, PrGpuTexture texture, const PrGpuTexture
         const uint8_t* from = static_cast<const uint8_t*>(data);
         for (uint32_t s = 0; s < slices; ++s) {
             for (uint32_t y = 0; y < rows; ++y)
-                memCopy(to + s * sliceBytes + uint64_t(y) * row,
+                prMemCopy(to + s * sliceBytes + uint64_t(y) * row,
                     from + uint64_t(s) * layerBytes + uint64_t(y) * rowBytes, row);
         }
         d->uploadsCopyTexture(d, GpuMetalTextureCopy{
@@ -973,7 +974,7 @@ GpuMetalDone* PR_NULLABLE gpuMetalDonesCopy(const GpuMetalCommands* c) {
     if (c->dones.count == 0)
         return nullptr;
     GpuMetalDone* dones = static_cast<GpuMetalDone*>(prMemoryAlloc(sizeof(GpuMetalDone) * c->dones.count));
-    memCopy(dones, c->dones.data, sizeof(GpuMetalDone) * c->dones.count);
+    prMemCopy(dones, c->dones.data, sizeof(GpuMetalDone) * c->dones.count);
     return dones;
 }
 
@@ -1183,7 +1184,7 @@ void gpuMetalDeviceInit(GpuMetalDevice* d, id<MTLDevice> device) {
     d->shaderTarget = PrGpuShaderTarget_Metal;
     // The name's UTF-8 lives no longer than the autorelease pool, so the device keeps a copy.
     if (![device.name getCString:d->adapter maxLength:sizeof(d->adapter) encoding:NSUTF8StringEncoding])
-        memCopy(d->adapter, "Metal", sizeof("Metal"));
+        prMemCopy(d->adapter, "Metal", sizeof("Metal"));
     d->info.adapter = PrStringView{d->adapter, strlen(d->adapter)};
     // Framebuffer fetch on Apple's GPUs reads in raster order.
     d->info.features = PrGpuFeatureFlag_Timestamps | PrGpuFeatureFlag_TextureCompressionAstc |

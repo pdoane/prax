@@ -210,7 +210,7 @@ float tupleScalar(SfntTable peaks, SfntTable starts, SfntTable ends, bool interm
         if (coord == peak)
             continue;
         if (!intermediate) {
-            if (coord < minF32(0, peak) || coord > maxF32(0, peak))
+            if (coord < prF32Min(0, peak) || coord > prF32Max(0, peak))
                 return 0;
             scalar *= coord / peak;
             continue;
@@ -516,7 +516,7 @@ bool loadComposite(const GlyfFace& face, SfntCoords coords, uint32_t glyph, Sfnt
             deltas.push(PrVec2{0, 0});
         addDeltas(face, coords, glyph, original.data, original.count, nullptr, 0, deltas.data);
         for (uint32_t i = 0; i < original.count; ++i)
-            deltas.data[i] = PrVec2{roundF32(deltas.data[i].x), roundF32(deltas.data[i].y)};
+            deltas.data[i] = PrVec2{prF32Round(deltas.data[i].x), prF32Round(deltas.data[i].y)};
         for (uint32_t i = 0; i < components.count; ++i) {
             Component& c = components.data[i];
             if ((c.flags & ComponentFlag_ArgsAreOffsets) != 0)
@@ -542,8 +542,8 @@ bool loadComposite(const GlyfFace& face, SfntCoords coords, uint32_t glyph, Sfnt
         if ((c.flags & ComponentFlag_ArgsAreOffsets) != 0) {
             offset = c.arguments;
             if (scaled && (c.flags & ComponentFlag_ScaledOffset) != 0) {
-                offset.x *= sqrtF32(c.transform.a * c.transform.a + c.transform.c * c.transform.c);
-                offset.y *= sqrtF32(c.transform.d * c.transform.d + c.transform.b * c.transform.b);
+                offset.x *= prF32Sqrt(c.transform.a * c.transform.a + c.transform.c * c.transform.c);
+                offset.y *= prF32Sqrt(c.transform.d * c.transform.d + c.transform.b * c.transform.b);
             }
         } else {
             // The component's point `arguments.y` meets the point `arguments.x` of the components before it.

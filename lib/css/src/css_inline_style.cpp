@@ -12,12 +12,12 @@ namespace {
 // cssom-1/#update-style-attribute-for, for an inline style.
 void updateStyleAttribute(PrCssStyleDeclaration* declaration) {
     PrDomElement* element = domElementFromNode(declaration->ownerNode);
-    TextBuffer text;
+    PrTextBuffer text = {};
     cssSerializeDeclarationBlock(&text, declaration->block);
     element->style->updatingAttribute = true;
-    domSetAttribute(element, PrDomNamespace_None, "style", textView(&text));
+    domSetAttribute(element, PrDomNamespace_None, "style", prTextBufferView(&text));
     element->style->updatingAttribute = false;
-    textReset(&text);
+    prTextBufferReset(&text);
 }
 
 } // namespace

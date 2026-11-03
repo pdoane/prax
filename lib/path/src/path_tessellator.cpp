@@ -205,7 +205,7 @@ uint32_t addFringe(PathTessellator& t, const PrVec2* loop, uint32_t count, float
         PrVec2 m{(d0.y + d1.y) / 2, (-d0.x - d1.x) / 2};
         float length2 = m.x * m.x + m.y * m.y;
         if (length2 > 1e-6f) {
-            float stretch = minF32(1 / length2, kMiterMaxStretch);
+            float stretch = prF32Min(1 / length2, kMiterMaxStretch);
             m.x *= stretch;
             m.y *= stretch;
         }
@@ -537,7 +537,7 @@ double turnFrom(PathGridPoint r, PathGridPoint d) {
     double cross = -(double(r.x) * double(d.y) - double(r.y) * double(d.x));
     double dot = double(r.x) * double(d.x) + double(r.y) * double(d.y);
     // A pseudo-angle that has the same order as atan2(cross, dot) taken into [0, 2π).
-    double sum = absF64(cross) + absF64(dot);
+    double sum = prF64Abs(cross) + prF64Abs(dot);
     if (sum == 0)
         return 4;
     double a = cross / sum;
@@ -739,14 +739,14 @@ PrPathMesh prPathTessellatorFill(PrPathTessellator* tessellator, const PrPathPol
     tessellator->indices.clear();
     tessellator->ring.clear();
     tessellator->ends.clear();
-    bool finite = isFiniteF32(fringe);
+    bool finite = prF32IsFinite(fringe);
     if (finite && polyline->pointCount != 0) {
         tessellator->ring.append(polyline->points, polyline->pointCount);
         for (uint32_t c = 1; c < polyline->contourCount; ++c)
             tessellator->ends.push(polyline->contours[c]);
         tessellator->ends.push(polyline->pointCount);
         for (uint32_t i = 0; i < tessellator->ring.count && finite; ++i)
-            finite = isFiniteF32(tessellator->ring.data[i].x) && isFiniteF32(tessellator->ring.data[i].y);
+            finite = prF32IsFinite(tessellator->ring.data[i].x) && prF32IsFinite(tessellator->ring.data[i].y);
     }
     float band = fringe > 0 ? fringe : 0;
     if (finite && tessellator->ring.count >= 3 && !fanConvex(*tessellator, band))

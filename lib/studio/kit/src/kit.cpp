@@ -49,7 +49,7 @@ void makeLooks(PrKit& kit) {
     const PrKitPalette& p = kit.theme.palette;
     PrColor clear{0, 0, 0, 0};
     auto look = [&](PrKitLookId id, PrColor rest, PrColor hover, PrColor press, PrColor border, PrColor text, PrColor icon) {
-        bool eases = !memEquals(&rest, &hover, sizeof rest) || !memEquals(&rest, &press, sizeof rest);
+        bool eases = !prMemEquals(&rest, &hover, sizeof rest) || !prMemEquals(&rest, &press, sizeof rest);
         kit.looks[id] = PrKitLook{.fill = {rest, hover, press}, .border = border, .text = text, .icon = icon, .eases = eases};
     };
     look(PrKitLookId_Button, p.bg3, p.bg4, p.bg2, p.line2, p.text1, p.text2);
@@ -506,7 +506,7 @@ void prKitPlace(PrKit* kit, PrLayoutNode node, const PrKitPlace* place) {
     const void* type = uiTypeId<Placement>();
     PrLayoutStyleIndex placed = 0;
     const void* kept = prUiMemoFind(k.ui, type, &k, &placed);
-    if (kept == nullptr || !memEquals(kept, &key, sizeof key)) {
+    if (kept == nullptr || !prMemEquals(kept, &key, sizeof key)) {
         PrUiPart part{.type = type, .owner = &k, .bytes = &key, .size = uint32_t(sizeof key)};
         PrLayoutStyle record = prLayoutStyleRecord(tree, key.base);
         PrLayoutGroupIndex& box = record.groups[PrLayoutGroup_Box];

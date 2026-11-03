@@ -79,7 +79,7 @@ PrDomAgentOptions withPool(HostPool& pool) {
 
 // Returns the pixels of a length that is in pixels, and NaN for any other length.
 float px(PrLayoutLength length) {
-    return prLayoutWordKind(length.bits) == PrLayoutWordKind_Px ? prLayoutUnitToPx(prLayoutWordPxValue(length.bits)) : kNanF32;
+    return prLayoutWordKind(length.bits) == PrLayoutWordKind_Px ? prLayoutUnitToPx(prLayoutWordPxValue(length.bits)) : kPrF32Nan;
 }
 
 const PrFont* load(const char* name) {

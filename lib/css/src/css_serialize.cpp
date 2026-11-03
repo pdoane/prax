@@ -58,22 +58,22 @@ bool atEnd(const CodePoints* it) {
 // Identifiers (cssom-1/#serialize-an-identifier)
 
 // Writes `\` and the code point in lowercase hexadecimal, followed by a space.
-void appendHexEscape(TextBuffer* out, uint32_t codePoint) {
-    char digits[kU64TextMaxBytes];
-    size_t count = formatU64(codePoint, digits, 16);
+void appendHexEscape(PrTextBuffer* out, uint32_t codePoint) {
+    char digits[kPrU64TextMaxBytes];
+    size_t count = prU64Format(codePoint, digits, 16);
 
-    textAppendChar(out, '\\');
-    textAppend(out, digits, uint32_t(count));
-    textAppendChar(out, ' ');
+    prTextBufferAppendChar(out, '\\');
+    prTextBufferAppend(out, PrStringView{digits, uint32_t(count)});
+    prTextBufferAppendChar(out, ' ');
 }
 
 // Writes a code point in uppercase hexadecimal, with no leading zeros.
-void appendHexUpper(TextBuffer* out, uint32_t codePoint) {
-    char digits[kU64TextMaxBytes];
-    size_t count = formatU64(codePoint, digits, 16);
+void appendHexUpper(PrTextBuffer* out, uint32_t codePoint) {
+    char digits[kPrU64TextMaxBytes];
+    size_t count = prU64Format(codePoint, digits, 16);
     for (size_t i = 0; i < count; ++i)
-        digits[i] = asciiUpper(digits[i]);
-    textAppend(out, digits, uint32_t(count));
+        digits[i] = prAsciiUpper(digits[i]);
+    prTextBufferAppend(out, PrStringView{digits, uint32_t(count)});
 }
 
 // Returns true if an identifier can hold the code point without an escape. These are the ident code points of
@@ -91,9 +91,9 @@ bool isPlainName(PrStringView text, bool firstPosition) {
         return false;
 
     if (firstPosition) {
-        if (asciiIsDigit(text.data[0]))
+        if (prAsciiIsDigit(text.data[0]))
             return false;
-        if (text.data[0] == '-' && (text.size == 1 || asciiIsDigit(text.data[1])))
+        if (text.data[0] == '-' && (text.size == 1 || prAsciiIsDigit(text.data[1])))
             return false;
     }
 
@@ -119,9 +119,9 @@ bool isPlainString(PrStringView text) {
 
 // Writes an identifier, escaped so that it tokenizes back to `value` (cssom-1/#serialize-an-identifier).
 // `firstPosition` applies the rules for a name's first two characters, which do not apply to the rest of a name.
-void serializeName(TextBuffer* out, CodePoints value, bool verbatim, bool firstPosition) {
+void serializeName(PrTextBuffer* out, CodePoints value, bool verbatim, bool firstPosition) {
     if (verbatim || isPlainName(value.text, firstPosition)) {
-        textAppend(out, value.text);
+        prTextBufferAppend(out, value.text);
         return;
     }
 
@@ -137,38 +137,38 @@ void serializeName(TextBuffer* out, CodePoints value, bool verbatim, bool firstP
 
         if (cssIsControl(codePoint)) {
             appendHexEscape(out, codePoint);
-        } else if (first && asciiIsDigit(asciiOf(codePoint))) {
+        } else if (first && prAsciiIsDigit(prAsciiFromCodePoint(codePoint))) {
             appendHexEscape(out, codePoint);
-        } else if (second && openedWithDash && asciiIsDigit(asciiOf(codePoint))) {
+        } else if (second && openedWithDash && prAsciiIsDigit(prAsciiFromCodePoint(codePoint))) {
             appendHexEscape(out, codePoint);
         } else if (first && openedWithDash && atEnd(&value)) {
-            textAppend(out, "\\-");
+            prTextBufferAppend(out, "\\-");
         } else if (isIdentSafe(codePoint)) {
-            textAppendCodePoint(out, codePoint);
+            prTextBufferAppendCodePoint(out, codePoint);
         } else {
-            textAppendChar(out, '\\');
-            textAppendCodePoint(out, codePoint);
+            prTextBufferAppendChar(out, '\\');
+            prTextBufferAppendCodePoint(out, codePoint);
         }
     }
 }
 
 // Writes a dimension's unit. `1e5` reads back as a number, so a unit cannot start with text that the preceding number
 // would read as an exponent.
-void serializeUnit(TextBuffer* out, CodePoints value, bool verbatim) {
+void serializeUnit(PrTextBuffer* out, CodePoints value, bool verbatim) {
     if (verbatim) {
-        textAppend(out, value.text);
+        prTextBufferAppend(out, value.text);
         return;
     }
 
     CodePoints look = value;
     uint32_t first = 0;
-    bool exponent = next(&look, &first) && asciiLower(asciiOf(first)) == 'e' && !atEnd(&look);
+    bool exponent = next(&look, &first) && prAsciiLower(prAsciiFromCodePoint(first)) == 'e' && !atEnd(&look);
     if (exponent) {
         CodePoints after = look;
         uint32_t second = 0;
         uint32_t third = 0;
-        if (!(next(&after, &second) && asciiIsDigit(asciiOf(second)))) {
-            exponent = second == '-' && next(&after, &third) && asciiIsDigit(asciiOf(third));
+        if (!(next(&after, &second) && prAsciiIsDigit(prAsciiFromCodePoint(second)))) {
+            exponent = second == '-' && next(&after, &third) && prAsciiIsDigit(prAsciiFromCodePoint(third));
         }
     }
     if (!exponent) {
@@ -181,11 +181,11 @@ void serializeUnit(TextBuffer* out, CodePoints value, bool verbatim) {
 }
 
 // Writes a string, quoted with '"' (cssom-1/#serialize-a-string).
-void serializeString(TextBuffer* out, CodePoints value, bool verbatim) {
-    textAppendChar(out, '"');
+void serializeString(PrTextBuffer* out, CodePoints value, bool verbatim) {
+    prTextBufferAppendChar(out, '"');
     if (verbatim || isPlainString(value.text)) {
-        textAppend(out, value.text);
-        textAppendChar(out, '"');
+        prTextBufferAppend(out, value.text);
+        prTextBufferAppendChar(out, '"');
         return;
     }
 
@@ -194,38 +194,38 @@ void serializeString(TextBuffer* out, CodePoints value, bool verbatim) {
         if (cssIsControl(codePoint)) {
             appendHexEscape(out, codePoint);
         } else if (codePoint == '"' || codePoint == '\\') {
-            textAppendChar(out, '\\');
-            textAppendChar(out, char(codePoint));
+            prTextBufferAppendChar(out, '\\');
+            prTextBufferAppendChar(out, char(codePoint));
         } else {
-            textAppendCodePoint(out, codePoint);
+            prTextBufferAppendCodePoint(out, codePoint);
         }
     }
-    textAppendChar(out, '"');
+    prTextBufferAppendChar(out, '"');
 }
 
 // Writes a url token's value, escaped so that it tokenizes back to a url token. css-syntax-3/#consume-url-token ends
 // the token at a quote, a paren, whitespace or a non-printable code point, so each of those gets a backslash.
-void serializeUrlValue(TextBuffer* out, CodePoints value) {
+void serializeUrlValue(PrTextBuffer* out, CodePoints value) {
     uint32_t codePoint = 0;
     while (next(&value, &codePoint)) {
         if (cssIsControl(codePoint) || codePoint == ' ') {
             appendHexEscape(out, codePoint);
         } else if (codePoint == '"' || codePoint == '\'' || codePoint == '(' || codePoint == ')' || codePoint == '\\') {
-            textAppendChar(out, '\\');
-            textAppendChar(out, char(codePoint));
+            prTextBufferAppendChar(out, '\\');
+            prTextBufferAppendChar(out, char(codePoint));
         } else {
-            textAppendCodePoint(out, codePoint);
+            prTextBufferAppendCodePoint(out, codePoint);
         }
     }
 }
 
 // Writes a hash token's value. The value is written as an identifier if it is one. Otherwise the same escaping is used,
 // without the rules for a name's first character (cssom-1/#serialize-an-identifier).
-void serializeHashValue(TextBuffer* out, CodePoints value) {
+void serializeHashValue(PrTextBuffer* out, CodePoints value) {
     uint32_t codePoint = 0;
     while (next(&value, &codePoint)) {
         if (isIdentSafe(codePoint))
-            textAppendCodePoint(out, codePoint);
+            prTextBufferAppendCodePoint(out, codePoint);
         else
             appendHexEscape(out, codePoint);
     }
@@ -281,7 +281,7 @@ bool needsComment(const CssTokenStream* ts, uint32_t first, uint32_t second) {
 
 // A run of values being serialized.
 struct Values {
-    TextBuffer* out;
+    PrTextBuffer* out;
     CssValueRun run;
     bool urls;                                   // true if a <string> of the run itself is a URL
     const PrCssSelectors* PR_NULLABLE selectors; // the compiled form of the run's complex selectors
@@ -319,13 +319,13 @@ void serializeRun(const Values* v, uint32_t first, uint32_t end, CssValueDef par
     const CssValueNode* previous = nullptr;
     for (uint32_t i = first; i < end; i += v->run.values[i].next) {
         const CssValueNode* value = &v->run.values[i];
-        uint32_t mark = v->out->text.count;
+        uint32_t mark = v->out->size;
         if (previous != nullptr && (!together || depth != 0) && spaced(previous, value))
-            textAppendChar(v->out, ' ');
-        uint32_t start = v->out->text.count;
+            prTextBufferAppendChar(v->out, ' ');
+        uint32_t start = v->out->size;
         serializeValue(v, i, parent);
-        if (v->out->text.count == start)
-            v->out->text.count = mark;
+        if (v->out->size == start)
+            v->out->size = mark;
         else
             previous = value;
         if (cssValueIsLiteral(value, '('))
@@ -341,12 +341,12 @@ void serializeMediaQuery(const Values* v, uint32_t index) {
     uint32_t first = index + 1;
     uint32_t end = index + values[index].next;
     if (first == end) {
-        textAppend(v->out, "not all");
+        prTextBufferAppend(v->out, "not all");
         return;
     }
     const CssValueNode* type = &values[first];
     if (cssValueIsProduction(type, CssValueDef_MediaType) && first + type->next < end &&
-            asciiEqualsFold(cssValueText(v->run, &values[first + 1]), "all")) {
+            prAsciiEqualsFold(cssValueText(v->run, &values[first + 1]), "all")) {
         first += type->next;
         first += values[first].next;     // `and`
     }
@@ -359,18 +359,18 @@ void serializeMediaQuery(const Values* v, uint32_t index) {
 // after a '#'.
 void serializeIdent(const Values* v, const CssValueNode* value, CssValueDef parent) {
     if (parent == CssValueDef_IdSelector)
-        textAppendChar(v->out, '#');
-    uint32_t at = v->out->text.count;
+        prTextBufferAppendChar(v->out, '#');
+    uint32_t at = v->out->size;
     PrStringView text = cssValueText(v->run, value);
     cssSerializeIdent(v->out, text);
-    if ((parent == CssValueDef_MediaType || parent == CssValueDef_MfName) && !stringStartsWith(text, "--"))
-        asciiLower(v->out->text.data + at, v->out->text.count - at);
+    if ((parent == CssValueDef_MediaType || parent == CssValueDef_MfName) && !prStringStartsWith(text, "--"))
+        prAsciiLowerText(v->out->data + at, v->out->size - at);
 }
 
 // Writes an alpha in [0, 1] stored in 8 bits, rounded as css-color-4/#serializing-legacy-alpha-values requires. The
 // alpha is written in hundredths if they round to the same 8 bits, and in thousandths otherwise. Each rounds to the
 // nearest integer, with halves rounding up.
-void serializeAlpha(TextBuffer* out, double alpha) {
+void serializeAlpha(PrTextBuffer* out, double alpha) {
     uint32_t bits = uint32_t(alpha * 255.0 + 0.5);
     uint32_t hundredths = (bits * 200 + 255) / 510;
     if ((hundredths * 510 + 100) / 200 == bits) {
@@ -381,15 +381,15 @@ void serializeAlpha(TextBuffer* out, double alpha) {
 }
 
 // Writes a color channel in the space's units, to six significant figures (css-color-4/#serializing-color-values).
-void serializeChannel(TextBuffer* out, double channel) {
-    char text[kF64TextMaxBytes];
-    textAppend(out, text, uint32_t(formatF64Significant(channel, 6, text)));
+void serializeChannel(PrTextBuffer* out, double channel) {
+    char text[kPrF64TextMaxBytes];
+    prTextBufferAppend(out, PrStringView{text, uint32_t(prF64FormatSignificant(channel, 6, text))});
 }
 
 // Rounds an sRGB channel in [0, 1] to an integer in [0, 255], with halves rounding up.
 double byteOf(double channel) {
     channel = channel < 0.0 ? 0.0 : channel > 1.0 ? 1.0 : channel;
-    return floorF64(channel * 255.0 + 0.5);
+    return prF64Floor(channel * 255.0 + 0.5);
 }
 
 // Returns the channel `i` of a color in the units of its space, or 0 if it is written `none`.
@@ -415,17 +415,17 @@ void serializeLegacyColor(const Values* v, PrColorSpace space, const CssColorCha
         channel[2] = double(rgb.b);
     }
     bool opaque = c[3] >= 1.0;
-    textAppend(v->out, opaque ? "rgb(" : "rgba(");
+    prTextBufferAppend(v->out, opaque ? "rgb(" : "rgba(");
     for (uint32_t i = 0; i < 3; ++i) {
         if (i != 0)
-            textAppend(v->out, ", ");
+            prTextBufferAppend(v->out, ", ");
         cssSerializeNumber(v->out, byteOf(channel[i]));
     }
     if (!opaque) {
-        textAppend(v->out, ", ");
+        prTextBufferAppend(v->out, ", ");
         serializeAlpha(v->out, c[3]);
     }
-    textAppendChar(v->out, ')');
+    prTextBufferAppendChar(v->out, ')');
 }
 
 // Writes a color in the modern form of its function (css-color-4/#serializing-color-values). The function is the one
@@ -435,14 +435,14 @@ void serializeModernColor(const Values* v, PrColorSpace space, bool legacy, cons
     PrStringView name = prColorSpaceName(space);
     PrColorModel model = prColorSpaceModel(space);
     if (legacy) {
-        textAppend(v->out, "rgb(");
+        prTextBufferAppend(v->out, "rgb(");
     } else if (model == PrColorModel_Rgb || model == PrColorModel_Xyz) {
-        textAppend(v->out, "color(");
-        textAppend(v->out, name);
-        textAppendChar(v->out, ' ');
+        prTextBufferAppend(v->out, "color(");
+        prTextBufferAppend(v->out, name);
+        prTextBufferAppendChar(v->out, ' ');
     } else {
-        textAppend(v->out, name);
-        textAppendChar(v->out, '(');
+        prTextBufferAppend(v->out, name);
+        prTextBufferAppendChar(v->out, '(');
     }
 
     for (uint32_t i = 0; i < 4; ++i) {
@@ -452,19 +452,19 @@ void serializeModernColor(const Values* v, PrColorSpace space, bool legacy, cons
         if (i == 3) {
             if (!missing && !calculated && channel >= 1.0)
                 break;
-            textAppend(v->out, " / ");
+            prTextBufferAppend(v->out, " / ");
         } else if (i != 0) {
-            textAppendChar(v->out, ' ');
+            prTextBufferAppendChar(v->out, ' ');
         }
 
         if (missing)
-            textAppend(v->out, "none");
+            prTextBufferAppend(v->out, "none");
         else if (calculated)
             serializeValue(v, channels.at[i], CssValueDef_Count);
         else
             serializeChannel(v->out, legacy && i != 3 ? channel * 255.0 : channel);
     }
-    textAppendChar(v->out, ')');
+    prTextBufferAppendChar(v->out, ')');
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -479,18 +479,18 @@ PrStringView unitText(const CssValueNode* value) {
 
 // Writes a numeric value of a calculation. A value that is infinite or NaN is written as its keyword, times one of its
 // unit (css-values-4/#calc-error-constants).
-void serializeNumeric(TextBuffer* out, const CssValueNode* value) {
+void serializeNumeric(PrTextBuffer* out, const CssValueNode* value) {
     double number = value->number;
     PrStringView unit = unitText(value);
-    if (isFiniteF64(number)) {
+    if (prF64IsFinite(number)) {
         cssSerializeNumber(out, number);
-        textAppend(out, unit);
+        prTextBufferAppend(out, unit);
         return;
     }
-    textAppend(out, isNanF64(number) ? "NaN" : number > 0     ? "infinity" : "-infinity");
+    prTextBufferAppend(out, prF64IsNan(number) ? "NaN" : number > 0     ? "infinity" : "-infinity");
     if (unit.size != 0) {
-        textAppend(out, " * 1");
-        textAppend(out, unit);
+        prTextBufferAppend(out, " * 1");
+        prTextBufferAppend(out, unit);
     }
 }
 
@@ -498,36 +498,36 @@ void serializeTree(const Values* v, uint32_t index);
 
 // Removes the parentheses around a calculation written from `mark` on, if it starts with "(" and ends with ")"
 // (css-values-4/#serialize-a-math-function).
-void stripParentheses(TextBuffer* out, uint32_t mark) {
-    char* text = out->text.data + mark;
-    uint32_t size = out->text.count - mark;
+void stripParentheses(PrTextBuffer* out, uint32_t mark) {
+    char* text = out->data + mark;
+    uint32_t size = out->size - mark;
     if (size < 2 || text[0] != '(' || text[size - 1] != ')')
         return;
-    memMove(text, text + 1, size - 2);
-    out->text.count -= 2;
+    prMemMove(text, text + 1, size - 2);
+    out->size -= 2;
 }
 
 // Writes a math function node: its name and its arguments. Arguments are separated by a comma and a space, and the
 // parts of one argument by a space.
 void serializeMathNode(const Values* v, uint32_t index) {
     const CssValueNode* node = &v->run.values[index];
-    textAppend(v->out, cssKeywordName(cssValueKeyword(node)));
-    textAppendChar(v->out, '(');
+    prTextBufferAppend(v->out, cssKeywordName(cssValueKeyword(node)));
+    prTextBufferAppendChar(v->out, '(');
     bool spaced = false;
     for (uint32_t i = index + 1; i < index + node->next; i += v->run.values[i].next) {
         if (cssValueIsLiteral(&v->run.values[i], ',')) {
-            textAppend(v->out, ", ");
+            prTextBufferAppend(v->out, ", ");
             spaced = false;
             continue;
         }
         if (spaced)
-            textAppendChar(v->out, ' ');
-        uint32_t mark = v->out->text.count;
+            prTextBufferAppendChar(v->out, ' ');
+        uint32_t mark = v->out->size;
         serializeTree(v, i);
         stripParentheses(v->out, mark);
         spaced = true;
     }
-    textAppendChar(v->out, ')');
+    prTextBufferAppendChar(v->out, ')');
 }
 
 // Writes a color in the form that css-color-4/#serializing-color-values gives the function that it was written with.
@@ -565,7 +565,7 @@ bool sortsBefore(const Values* v, uint32_t a, uint32_t b) {
     if (rankX != rankY)
         return rankX < rankY;
     if (rankX == 2) {
-        int order = asciiCompareFold(cssUnitName(x->unit), cssUnitName(y->unit));
+        int order = prAsciiCompareFold(cssUnitName(x->unit), cssUnitName(y->unit));
         if (order != 0)
             return order < 0;
     }
@@ -587,7 +587,7 @@ uint32_t nextSorted(const Values* v, uint32_t index, uint32_t after) {
 // Writes a Sum or Product node, with its children sorted and joined by their operators.
 void serializeOperands(const Values* v, uint32_t index, bool sum) {
     uint32_t end = index + v->run.values[index].next;
-    textAppendChar(v->out, '(');
+    prTextBufferAppendChar(v->out, '(');
     bool first = true;
     for (uint32_t i = nextSorted(v, index, index); i < end; i = nextSorted(v, index, i)) {
         const CssValueNode* child = &v->run.values[i];
@@ -595,20 +595,20 @@ void serializeOperands(const Values* v, uint32_t index, bool sum) {
         if (first) {
             serializeTree(v, i);
         } else if (child->kind == PrCssValueKind_Calc && cssValueCalcOperator(child) == inverse) {
-            textAppend(v->out, sum ? " - " : " / ");
+            prTextBufferAppend(v->out, sum ? " - " : " / ");
             serializeTree(v, i + 1);
         } else if (sum && cssValueIsNumeric(child->kind) && child->number < 0) {
             CssValueNode negated = *child;
             negated.number = -child->number;
-            textAppend(v->out, " - ");
+            prTextBufferAppend(v->out, " - ");
             serializeNumeric(v->out, &negated);
         } else {
-            textAppend(v->out, sum ? " + " : " * ");
+            prTextBufferAppend(v->out, sum ? " + " : " * ");
             serializeTree(v, i);
         }
         first = false;
     }
-    textAppendChar(v->out, ')');
+    prTextBufferAppendChar(v->out, ')');
 }
 
 // Serializes the calculation tree at `index` (css-values-4/#serialize-a-calculation-tree).
@@ -628,14 +628,14 @@ void serializeTree(const Values* v, uint32_t index) {
     }
     switch (cssValueCalcOperator(node)) {
         case PrCssCalc_Negate:
-            textAppend(v->out, "(-1 * ");
+            prTextBufferAppend(v->out, "(-1 * ");
             serializeTree(v, index + 1);
-            textAppendChar(v->out, ')');
+            prTextBufferAppendChar(v->out, ')');
             break;
         case PrCssCalc_Invert:
-            textAppend(v->out, "(1 / ");
+            prTextBufferAppend(v->out, "(1 / ");
             serializeTree(v, index + 1);
-            textAppendChar(v->out, ')');
+            prTextBufferAppendChar(v->out, ')');
             break;
         default:
             serializeOperands(v, index, cssValueCalcOperator(node) == PrCssCalc_Sum);
@@ -657,11 +657,11 @@ void serializeMath(const Values* v, uint32_t index) {
         serializeValue(v, root, CssValueDef_Count);
         return;
     }
-    textAppend(v->out, "calc(");
-    uint32_t mark = v->out->text.count;
+    prTextBufferAppend(v->out, "calc(");
+    uint32_t mark = v->out->size;
     serializeTree(v, root);
     stripParentheses(v->out, mark);
-    textAppendChar(v->out, ')');
+    prTextBufferAppendChar(v->out, ')');
 }
 
 // Serializes the value at `index` as a component value (cssom-1/#serialize-a-css-component-value).
@@ -672,11 +672,11 @@ void serializeValue(const Values* v, uint32_t index, CssValueDef parent) {
             // css-animations-1/#dom-csskeyframerule-keytext: `from` is 0% and `to` is 100%.
             PrCssKeyword keyword = cssValueKeyword(value);
             if (parent == CssValueDef_KeyframeSelector && keyword == PrCssKeyword_From)
-                textAppend(v->out, "0%");
+                prTextBufferAppend(v->out, "0%");
             else if (parent == CssValueDef_KeyframeSelector && keyword == PrCssKeyword_To)
-                textAppend(v->out, "100%");
+                prTextBufferAppend(v->out, "100%");
             else
-                textAppend(v->out, cssKeywordName(keyword));
+                prTextBufferAppend(v->out, cssKeywordName(keyword));
             break;
         }
         case PrCssValueKind_Ident:
@@ -684,7 +684,7 @@ void serializeValue(const Values* v, uint32_t index, CssValueDef parent) {
             break;
         case PrCssValueKind_String:
             if ((value->aux & CssValueAuxFlag_FamilyIdents) != 0)
-                textAppend(v->out, cssValueText(v->run, value));
+                prTextBufferAppend(v->out, cssValueText(v->run, value));
             else if (v->urls && parent == CssValueDef_Count && isTopLevel(v, index))
                 cssSerializeUrl(v->out, cssValueText(v->run, value));
             else
@@ -699,14 +699,14 @@ void serializeValue(const Values* v, uint32_t index, CssValueDef parent) {
             break;
         case PrCssValueKind_Percentage:
             cssSerializeNumber(v->out, value->number);
-            textAppendChar(v->out, '%');
+            prTextBufferAppendChar(v->out, '%');
             break;
         case PrCssValueKind_Dimension:
             cssSerializeNumber(v->out, value->number);
             if (value->unit == PrCssUnit_Unknown)
                 cssSerializeIdent(v->out, cssValueText(v->run, &v->run.values[index + 1]));
             else
-                textAppend(v->out, cssUnitName(value->unit));
+                prTextBufferAppend(v->out, cssUnitName(value->unit));
             break;
         case PrCssValueKind_Color:
             serializeColor(v, index);
@@ -716,10 +716,10 @@ void serializeValue(const Values* v, uint32_t index, CssValueDef parent) {
                 cssSerializePath(v->out, v->run, index);
                 break;
             }
-            textAppend(v->out, cssKeywordName(cssValueKeyword(value)));
-            textAppendChar(v->out, '(');
+            prTextBufferAppend(v->out, cssKeywordName(cssValueKeyword(value)));
+            prTextBufferAppendChar(v->out, '(');
             serializeRun(v, index + 1, index + value->next, CssValueDef_Count);
-            textAppendChar(v->out, ')');
+            prTextBufferAppendChar(v->out, ')');
             break;
         case PrCssValueKind_Math:
             serializeMath(v, index);
@@ -728,7 +728,7 @@ void serializeValue(const Values* v, uint32_t index, CssValueDef parent) {
             cssSerializeUnicodeRange(v->out, value->range.first, value->range.last);
             break;
         case PrCssValueKind_Tokens:
-            textAppend(v->out, cssValueText(v->run, value));
+            prTextBufferAppend(v->out, cssValueText(v->run, value));
             break;
         case PrCssValueKind_Production:
             if (v->selectors != nullptr && cssIsComplexSelectorNode(value))
@@ -742,7 +742,7 @@ void serializeValue(const Values* v, uint32_t index, CssValueDef parent) {
                 serializeRun(v, index + 1, index + value->next, cssValueProduction(value));
             break;
         case PrCssValueKind_Literal:
-            textAppendChar(v->out, cssValueLiteral(value));
+            prTextBufferAppendChar(v->out, cssValueLiteral(value));
             break;
         case PrCssValueKind_Longhand:
             serializeRun(v, index + 1, index + value->next, CssValueDef_Count);
@@ -757,22 +757,22 @@ void serializeValue(const Values* v, uint32_t index, CssValueDef parent) {
 // ---------------------------------------------------------------------------------------------------------------------
 // Values
 
-void cssSerializeNumber(TextBuffer* out, double value) {
+void cssSerializeNumber(PrTextBuffer* out, double value) {
     // css-values-4/#calc-internal: a value outside the range an implementation supports is clamped to that range, so
     // the serialized value is always a finite number.
-    if (isNanF64(value))
+    if (prF64IsNan(value))
         value = 0.0;
-    else if (value > kF64Max)
-        value = kF64Max;
-    else if (value < -kF64Max)
-        value = -kF64Max;
+    else if (value > kPrF64Max)
+        value = kPrF64Max;
+    else if (value < -kPrF64Max)
+        value = -kPrF64Max;
 
-    char text[kF64TextMaxBytes];
-    size_t length = formatF64(value, text);
-    textAppend(out, text, uint32_t(length));
+    char text[kPrF64TextMaxBytes];
+    size_t length = prF64Format(value, text);
+    prTextBufferAppend(out, PrStringView{text, uint32_t(length)});
 }
 
-void cssSerializeIdent(TextBuffer* out, PrStringView text) {
+void cssSerializeIdent(PrTextBuffer* out, PrStringView text) {
     serializeName(out, resolved(text), false, true);
 }
 
@@ -785,7 +785,7 @@ bool cssIsBareIdent(PrStringView text) {
     uint32_t count = 0;
     bool bare = true;
     while (next(&value, &codePoint)) {
-        bool digit = asciiIsDigit(asciiOf(codePoint));
+        bool digit = prAsciiIsDigit(prAsciiFromCodePoint(codePoint));
         bool opening = count == 0 ? digit : count == 1 && first == '-' && digit;
         bare = bare && !opening && isIdentSafe(codePoint);
         first = count++ == 0 ? codePoint : first;
@@ -793,56 +793,56 @@ bool cssIsBareIdent(PrStringView text) {
     return bare && count != 0 && !(count == 1 && first == '-');
 }
 
-void cssSerializeString(TextBuffer* out, PrStringView text) {
+void cssSerializeString(PrTextBuffer* out, PrStringView text) {
     serializeString(out, resolved(text), false);
 }
 
-void cssSerializeUrl(TextBuffer* out, PrStringView text) {
-    textAppend(out, "url(");
+void cssSerializeUrl(PrTextBuffer* out, PrStringView text) {
+    prTextBufferAppend(out, "url(");
     cssSerializeString(out, text);
-    textAppendChar(out, ')');
+    prTextBufferAppendChar(out, ')');
 }
 
-void cssSerializeUnicodeRange(TextBuffer* out, uint32_t first, uint32_t last) {
-    textAppend(out, "U+");
+void cssSerializeUnicodeRange(PrTextBuffer* out, uint32_t first, uint32_t last) {
+    prTextBufferAppend(out, "U+");
     appendHexUpper(out, first);
     if (last != first) {
-        textAppendChar(out, '-');
+        prTextBufferAppendChar(out, '-');
         appendHexUpper(out, last);
     }
 }
 
-void cssSerializeNth(TextBuffer* out, int32_t a, int32_t b) {
-    char digits[kU64TextMaxBytes];
+void cssSerializeNth(PrTextBuffer* out, int32_t a, int32_t b) {
+    char digits[kPrU64TextMaxBytes];
 
     if (a != 0) {
         if (a < 0)
-            textAppendChar(out, '-');
+            prTextBufferAppendChar(out, '-');
         uint32_t magnitude = uint32_t(a < 0 ? -int64_t(a) : a);
         if (magnitude != 1)
-            textAppend(out, digits, uint32_t(formatU64(magnitude, digits)));
-        textAppendChar(out, 'n');
+            prTextBufferAppend(out, PrStringView{digits, uint32_t(prU64Format(magnitude, digits, 10))});
+        prTextBufferAppendChar(out, 'n');
 
         if (b == 0)
             return;
-        textAppendChar(out, b < 0 ? '-' : '+');
+        prTextBufferAppendChar(out, b < 0 ? '-' : '+');
     } else if (b < 0) {
-        textAppendChar(out, '-');
+        prTextBufferAppendChar(out, '-');
     }
 
     uint32_t magnitude = uint32_t(b < 0 ? -int64_t(b) : b);
-    textAppend(out, digits, uint32_t(formatU64(magnitude, digits)));
+    prTextBufferAppend(out, PrStringView{digits, uint32_t(prU64Format(magnitude, digits, 10))});
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Value trees
 
-void cssSerializeValues(TextBuffer* out, CssValueRun run) {
+void cssSerializeValues(PrTextBuffer* out, CssValueRun run) {
     Values v = {out, run, false, nullptr, nullptr};
     serializeRun(&v, 0, run.count, CssValueDef_Count);
 }
 
-void cssSerializePreludeValues(TextBuffer* out, CssValueRun run, bool urls,
+void cssSerializePreludeValues(PrTextBuffer* out, CssValueRun run, bool urls,
         const PrCssSelectors* PR_NULLABLE selectors, uint32_t first) {
     Values v = {out, run, urls, selectors, &first};
     serializeRun(&v, 0, run.count, CssValueDef_Count);
@@ -851,7 +851,7 @@ void cssSerializePreludeValues(TextBuffer* out, CssValueRun run, bool urls,
 // ---------------------------------------------------------------------------------------------------------------------
 // Tokens
 
-void cssSerializeToken(TextBuffer* out, const CssTokenStream* ts, uint32_t index) {
+void cssSerializeToken(PrTextBuffer* out, const CssTokenStream* ts, uint32_t index) {
     CssTokenKind kind = cssTokenKind(ts->tokens, index);
     switch (kind) {
         case CssTokenKind_Eof:
@@ -863,16 +863,16 @@ void cssSerializeToken(TextBuffer* out, const CssTokenStream* ts, uint32_t index
 
         case CssTokenKind_Function:
             serializeName(out, tokenValue(ts, index), tokenIsVerbatim(ts, index), true);
-            textAppendChar(out, '(');
+            prTextBufferAppendChar(out, '(');
             break;
 
         case CssTokenKind_AtKeyword:
-            textAppendChar(out, '@');
+            prTextBufferAppendChar(out, '@');
             serializeName(out, tokenValue(ts, index), tokenIsVerbatim(ts, index), true);
             break;
 
         case CssTokenKind_Hash:
-            textAppendChar(out, '#');
+            prTextBufferAppendChar(out, '#');
             if ((cssTokenFlags(ts->tokens, index) & CssTokenFlag_Id) != 0)
                 serializeName(out, tokenValue(ts, index), tokenIsVerbatim(ts, index), true);
             else
@@ -884,23 +884,23 @@ void cssSerializeToken(TextBuffer* out, const CssTokenStream* ts, uint32_t index
             break;
 
         case CssTokenKind_Url:
-            textAppend(out, "url(");
+            prTextBufferAppend(out, "url(");
             serializeUrlValue(out, tokenValue(ts, index));
-            textAppendChar(out, ')');
+            prTextBufferAppendChar(out, ')');
             break;
 
         // A bad string and a bad url have no serialization that tokenizes back to them, so the source bytes are written
         // instead (css-syntax-3/#serialization).
         case CssTokenKind_BadString:
         case CssTokenKind_BadUrl:
-            textAppend(out, cssTokenText(ts->tokens, index));
+            prTextBufferAppend(out, cssTokenText(ts->tokens, index));
             break;
 
         case CssTokenKind_Delim:
             if (cssTokenDelim(ts->tokens, index) == '\\')
-                textAppend(out, "\\\n");
+                prTextBufferAppend(out, "\\\n");
             else
-                textAppendCodePoint(out, cssTokenDelim(ts->tokens, index));
+                prTextBufferAppendCodePoint(out, cssTokenDelim(ts->tokens, index));
             break;
 
         case CssTokenKind_Number:
@@ -908,7 +908,7 @@ void cssSerializeToken(TextBuffer* out, const CssTokenStream* ts, uint32_t index
             break;
         case CssTokenKind_Percentage:
             cssSerializeNumber(out, cssTokenNumber(ts->tokens, index));
-            textAppendChar(out, '%');
+            prTextBufferAppendChar(out, '%');
             break;
         case CssTokenKind_Dimension: {
             cssSerializeNumber(out, cssTokenNumber(ts->tokens, index));
@@ -927,13 +927,13 @@ void cssSerializeToken(TextBuffer* out, const CssTokenStream* ts, uint32_t index
         }
 
         case CssTokenKind_Whitespace:
-            textAppendChar(out, ' ');
+            prTextBufferAppendChar(out, ' ');
             break;
         case CssTokenKind_Cdo:
-            textAppend(out, "<!--");
+            prTextBufferAppend(out, "<!--");
             break;
         case CssTokenKind_Cdc:
-            textAppend(out, "-->");
+            prTextBufferAppend(out, "-->");
             break;
 
         case CssTokenKind_Colon:
@@ -945,24 +945,24 @@ void cssSerializeToken(TextBuffer* out, const CssTokenStream* ts, uint32_t index
         case CssTokenKind_CloseParen:
         case CssTokenKind_OpenBrace:
         case CssTokenKind_CloseBrace:
-            textAppendChar(out, kCssPunctuation.byteOf[kind]);
+            prTextBufferAppendChar(out, kCssPunctuation.byteOf[kind]);
             break;
     }
 }
 
-void cssSerializeTokens(TextBuffer* out, const CssTokenStream* ts, CssTokenSpan span) {
+void cssSerializeTokens(PrTextBuffer* out, const CssTokenStream* ts, CssTokenSpan span) {
     // Bytes that tokenized as two tokens tokenize as two again, so a run of source contains none of the pairs that
     // needsComment separates.
     PrStringView source;
     if (cssSpanIsVerbatim(ts->tokens, span, &source)) {
-        textAppend(out, source);
+        prTextBufferAppend(out, source);
         return;
     }
 
     for (uint32_t i = 0; i < span.count; ++i) {
         uint32_t index = span.start + i;
         if (i != 0 && needsComment(ts, index - 1, index))
-            textAppend(out, "/**/");
+            prTextBufferAppend(out, "/**/");
         cssSerializeToken(out, ts, index);
     }
 }

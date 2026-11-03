@@ -109,7 +109,7 @@ inline bool nameEquals(PrStringView name, PrStringView text, uint64_t word) {
         return false;
     if (text.size <= 8)
         return ((loadUnaligned<uint64_t>(name.data) ^ word) & nameWordMask(text.size)) == 0;
-    return memEquals(name.data, text.data, text.size);
+    return prMemEquals(name.data, text.data, text.size);
 }
 
 // Returns true if `name` equals `text` with ASCII case folded. `word` holds the folded first eight bytes of `text`,
@@ -119,7 +119,7 @@ inline bool nameEqualsLower(PrStringView name, PrStringView text, uint64_t word)
         return false;
     if (text.size <= 8)
         return ((loadUnaligned<uint64_t>(name.data) ^ word) & nameWordMask(text.size)) == 0;
-    return asciiEqualsFold(text, name);
+    return prAsciiEqualsFold(text, name);
 }
 
 } // namespace pr

@@ -25,80 +25,80 @@ namespace {
 // ---------------------------------------------------------------------------------------------------------------------
 // Tokens (the suite's README, "Test results")
 
-void writeSpan(TextBuffer* out, const HtmlTokenizer* tokenizer, HtmlSpan span) {
+void writeSpan(PrTextBuffer* out, const HtmlTokenizer* tokenizer, HtmlSpan span) {
     harnessWriteString(out, htmlSpanText(tokenizer, span));
 }
 
 // Writes a string that the suite writes as null if the token has none.
-void writeOptional(TextBuffer* out, const HtmlTokenizer* tokenizer, HtmlSpan span, HtmlTokenFlags absent) {
+void writeOptional(PrTextBuffer* out, const HtmlTokenizer* tokenizer, HtmlSpan span, HtmlTokenFlags absent) {
     if ((tokenizer->token.flags & absent) != 0)
-        textAppend(out, "null");
+        prTextBufferAppend(out, "null");
     else
         writeSpan(out, tokenizer, span);
 }
 
-void writeAttributes(TextBuffer* out, const HtmlTokenizer* tokenizer) {
-    textAppendChar(out, '{');
+void writeAttributes(PrTextBuffer* out, const HtmlTokenizer* tokenizer) {
+    prTextBufferAppendChar(out, '{');
     for (uint32_t i = 0; i < tokenizer->attributes.count; ++i) {
         const HtmlAttribute& attribute = tokenizer->attributes.data[i];
         if (i != 0)
-            textAppend(out, ", ");
+            prTextBufferAppend(out, ", ");
         writeSpan(out, tokenizer, attribute.name);
-        textAppend(out, ": ");
+        prTextBufferAppend(out, ": ");
         writeSpan(out, tokenizer, attribute.value);
     }
-    textAppendChar(out, '}');
+    prTextBufferAppendChar(out, '}');
 }
 
-void writeToken(TextBuffer* out, const HtmlTokenizer* tokenizer) {
+void writeToken(PrTextBuffer* out, const HtmlTokenizer* tokenizer) {
     const HtmlToken& token = tokenizer->token;
     switch (token.kind) {
         case HtmlTokenKind_Doctype:
-            textAppend(out, "[\"DOCTYPE\", ");
+            prTextBufferAppend(out, "[\"DOCTYPE\", ");
             writeOptional(out, tokenizer, token.name, HtmlTokenFlag_NoName);
-            textAppend(out, ", ");
+            prTextBufferAppend(out, ", ");
             writeOptional(out, tokenizer, token.publicId, HtmlTokenFlag_NoPublicId);
-            textAppend(out, ", ");
+            prTextBufferAppend(out, ", ");
             writeOptional(out, tokenizer, token.systemId, HtmlTokenFlag_NoSystemId);
             // The suite's correctness flag is the force-quirks flag, inverted.
-            textAppend(out, (token.flags & HtmlTokenFlag_ForceQuirks) != 0 ? ", false]" : ", true]");
+            prTextBufferAppend(out, (token.flags & HtmlTokenFlag_ForceQuirks) != 0 ? ", false]" : ", true]");
             return;
 
         case HtmlTokenKind_StartTag:
-            textAppend(out, "[\"StartTag\", ");
+            prTextBufferAppend(out, "[\"StartTag\", ");
             writeSpan(out, tokenizer, token.name);
-            textAppend(out, ", ");
+            prTextBufferAppend(out, ", ");
             writeAttributes(out, tokenizer);
             // A start tag written with a trailing '/' gets a fourth entry. One without it has three, which is what the
             // suite records.
-            textAppend(out, (token.flags & HtmlTokenFlag_SelfClosing) != 0 ? ", true]" : "]");
+            prTextBufferAppend(out, (token.flags & HtmlTokenFlag_SelfClosing) != 0 ? ", true]" : "]");
             return;
 
         case HtmlTokenKind_EndTag:
-            textAppend(out, "[\"EndTag\", ");
+            prTextBufferAppend(out, "[\"EndTag\", ");
             writeSpan(out, tokenizer, token.name);
-            textAppendChar(out, ']');
+            prTextBufferAppendChar(out, ']');
             return;
 
         case HtmlTokenKind_Comment:
-            textAppend(out, "[\"Comment\", ");
+            prTextBufferAppend(out, "[\"Comment\", ");
             writeSpan(out, tokenizer, token.data);
-            textAppendChar(out, ']');
+            prTextBufferAppendChar(out, ']');
             return;
 
         case HtmlTokenKind_Character:
-            textAppend(out, "[\"Character\", ");
+            prTextBufferAppend(out, "[\"Character\", ");
             writeSpan(out, tokenizer, token.data);
-            textAppendChar(out, ']');
+            prTextBufferAppendChar(out, ']');
             return;
 
         case HtmlTokenKind_ProcessingInstruction:
             // The suite predates html/#parsing's processing instructions, and has no form for one.
-            textAppend(out, "[\"ProcessingInstruction\", ");
+            prTextBufferAppend(out, "[\"ProcessingInstruction\", ");
             writeSpan(out, tokenizer, token.name);
-            textAppend(out, ", ");
+            prTextBufferAppend(out, ", ");
             writeSpan(out, tokenizer, token.data);
-            textAppendChar(out, ']');
+            prTextBufferAppendChar(out, ']');
             return;
 
         case HtmlTokenKind_Eof:
@@ -106,27 +106,27 @@ void writeToken(TextBuffer* out, const HtmlTokenizer* tokenizer) {
     }
 }
 
-void writeErrors(TextBuffer* out, const HtmlTokenizer* tokenizer, const Array<HtmlError>& errors) {
+void writeErrors(PrTextBuffer* out, const HtmlTokenizer* tokenizer, const Array<HtmlError>& errors) {
     PrStringView input = htmlInputText(tokenizer);
     uint32_t at = 0;
     uint32_t line = 1;
     uint32_t column = 1;
 
-    textAppendChar(out, '[');
+    prTextBufferAppendChar(out, '[');
     for (uint32_t i = 0; i < errors.count; ++i) {
         htmlInputPosition(input, &at, errors.data[i].at, &line, &column);
 
         if (i != 0)
-            textAppend(out, ", ");
-        textAppend(out, "{\"code\": ");
+            prTextBufferAppend(out, ", ");
+        prTextBufferAppend(out, "{\"code\": ");
         harnessWriteString(out, kHtmlErrorName[errors.data[i].code]);
-        textAppend(out, ", \"line\": ");
+        prTextBufferAppend(out, ", \"line\": ");
         harnessWriteNumber(out, line);
-        textAppend(out, ", \"col\": ");
+        prTextBufferAppend(out, ", \"col\": ");
         harnessWriteNumber(out, column);
-        textAppendChar(out, '}');
+        prTextBufferAppendChar(out, '}');
     }
-    textAppendChar(out, ']');
+    prTextBufferAppendChar(out, ']');
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -142,9 +142,9 @@ HtmlState stateFromName(PrStringView name) {
 }
 
 // A case's fields are its state and its last start tag, which is "-" if the case names none.
-void run(TextBuffer* out, HtmlTokenizer* tokenizer, const HarnessCase& test, Array<HtmlError>* errors) {
+void run(PrTextBuffer* out, HtmlTokenizer* tokenizer, const HarnessCase& test, Array<HtmlError>* errors) {
     errors->count = 0;
-    PrStringView input = textView(&test.input);
+    PrStringView input = prTextBufferView(&test.input);
     htmlTokenizerStart(tokenizer, input, errors);
 
     // The suite names the state together with the tag that an end tag must match, as the tree builder sets them.
@@ -153,20 +153,20 @@ void run(TextBuffer* out, HtmlTokenizer* tokenizer, const HarnessCase& test, Arr
         tag = PrStringView{};
     htmlTokenizerSetState(tokenizer, stateFromName(test.fields[0]), tag);
 
-    textAppend(out, "{\"tokens\": [");
+    prTextBufferAppend(out, "{\"tokens\": [");
     bool first = true;
     for (;;) {
         htmlTokenizerNext(tokenizer);
         if (tokenizer->token.kind == HtmlTokenKind_Eof)
             break;
         if (!first)
-            textAppend(out, ", ");
+            prTextBufferAppend(out, ", ");
         first = false;
         writeToken(out, tokenizer);
     }
-    textAppend(out, "], \"errors\": ");
+    prTextBufferAppend(out, "], \"errors\": ");
     writeErrors(out, tokenizer, *errors);
-    textAppend(out, "}");
+    prTextBufferAppend(out, "}");
 }
 
 } // namespace
@@ -174,7 +174,7 @@ void run(TextBuffer* out, HtmlTokenizer* tokenizer, const HarnessCase& test, Arr
 int main() {
     prCrashHandler();
     HarnessCase test = {};
-    TextBuffer out;
+    PrTextBuffer out = {};
     HtmlTokenizer tokenizer = {};
     Array<HtmlError> errors;
 
@@ -183,14 +183,14 @@ int main() {
             fprintf(stderr, "a case names a state and a last start tag\n");
             return 2;
         }
-        textClear(&out);
+        prTextBufferClear(&out);
         run(&out, &tokenizer, test, &errors);
-        harnessWriteLine(textView(&out));
+        harnessWriteLine(prTextBufferView(&out));
     }
 
     htmlTokenizerReset(&tokenizer);
     errors.reset();
     harnessCaseReset(&test);
-    textReset(&out);
+    prTextBufferReset(&out);
     return 0;
 }

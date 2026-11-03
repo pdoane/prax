@@ -84,15 +84,15 @@ struct PathSparseRasterizer {
 };
 
 uint32_t tileOf(const PathSparseRasterizer* f, float x) {
-    float tile = floorF32(x / float(f->options.tileExtent.x));
+    float tile = prF32Floor(x / float(f->options.tileExtent.x));
     if (!(tile > 0))
         return 0;
     return tile >= float(f->tilesX) ? f->tilesX - 1 : uint32_t(tile);
 }
 
 void addRefs(PathSparseRasterizer* f, uint32_t row, float xa, float xb, uint32_t piece) {
-    uint32_t first = tileOf(f, minF32(xa, xb));
-    uint32_t last = tileOf(f, maxF32(xa, xb));
+    uint32_t first = tileOf(f, prF32Min(xa, xb));
+    uint32_t last = tileOf(f, prF32Max(xa, xb));
     for (uint32_t tile = first; tile <= last; ++tile)
         f->refs.push(Ref{row, tile, piece});
 }
@@ -100,7 +100,7 @@ void addRefs(PathSparseRasterizer* f, uint32_t row, float xa, float xb, uint32_t
 // Adds a part of an edge at or left of the left side of the box to the winding that its rows start with.
 void addLeft(PathSparseRasterizer* f, float y0, float y1, float direction) {
     for (uint32_t y = uint32_t(y0); float(y) < y1 && y < f->height; ++y) {
-        float dy = minF32(float(y + 1), y1) - maxF32(float(y), y0);
+        float dy = prF32Min(float(y + 1), y1) - prF32Max(float(y), y0);
         f->leftWinding.data[y] += dy * direction;
     }
 }
@@ -111,14 +111,14 @@ void addInside(PathSparseRasterizer* f, PathCellEdge e) {
     float th = float(f->options.tileExtent.y);
     float slope = (e.x1 - e.x0) / (e.y1 - e.y0);
     for (uint32_t row = uint32_t(e.y0 / th); row < f->tilesY && float(row) * th < e.y1; ++row) {
-        float ya = maxF32(e.y0, float(row) * th);
-        float yb = minF32(e.y1, float(row + 1) * th);
+        float ya = prF32Max(e.y0, float(row) * th);
+        float yb = prF32Min(e.y1, float(row + 1) * th);
         if (!(yb > ya))
             continue;
         float xa = ya == e.y0 ? e.x0 : e.x0 + (ya - e.y0) * slope;
         float xb = yb == e.y1 ? e.x1 : e.x0 + (yb - e.y0) * slope;
-        xa = minF32(maxF32(xa, 0), float(f->width));
-        xb = minF32(maxF32(xb, 0), float(f->width));
+        xa = prF32Min(prF32Max(xa, 0), float(f->width));
+        xb = prF32Min(prF32Max(xb, 0), float(f->width));
         uint32_t piece = f->pieces.count;
         f->pieces.push(Piece{xa, ya, xb, yb, e.direction, 0});
         addRefs(f, row, xa, xb, piece);
@@ -128,10 +128,10 @@ void addInside(PathSparseRasterizer* f, PathCellEdge e) {
 // Adds a horizontal edge, which covers no area but divides the pixels above it from those below.
 void addHorizontal(PathSparseRasterizer* f, float x0, float x1, float y) {
     float th = float(f->options.tileExtent.y);
-    if (!(y > 0 && y < float(f->height)) || y == floorF32(y / th) * th)
+    if (!(y > 0 && y < float(f->height)) || y == prF32Floor(y / th) * th)
         return;
-    float xa = maxF32(minF32(x0, x1), 0);
-    float xb = minF32(maxF32(x0, x1), float(f->width));
+    float xa = prF32Max(prF32Min(x0, x1), 0);
+    float xb = prF32Min(prF32Max(x0, x1), float(f->width));
     if (!(xb > xa))
         return;
     uint32_t row = uint32_t(y / th);
@@ -141,7 +141,7 @@ void addHorizontal(PathSparseRasterizer* f, float x0, float x1, float y) {
 }
 
 void addEdge(PathSparseRasterizer* f, PrVec2 from, PrVec2 to) {
-    if (!isFiniteF32(from.x) || !isFiniteF32(from.y) || !isFiniteF32(to.x) || !isFiniteF32(to.y))
+    if (!prF32IsFinite(from.x) || !prF32IsFinite(from.y) || !prF32IsFinite(to.x) || !prF32IsFinite(to.y))
         return;
     if (from.y == to.y) {
         addHorizontal(f, from.x, to.x, from.y);
@@ -255,7 +255,7 @@ void addGap(PathSparseRasterizer* f, PrPathFillRule rule, uint32_t x0, uint32_t 
         f->coverage.reserve(data + width * height);
         for (uint32_t r = 0; r < height; ++r) {
             uint8_t c = uint8_t(pathCoverageFromWinding(f->carry.data[r], rule) * 255 + 0.5f);
-            memFill(f->coverage.data + data + r * width, c, width);
+            prMemFill(f->coverage.data + data + r * width, c, width);
         }
         f->coverage.count = data + width * height;
         f->spans.push(PrPathSparseSpan{{f->left + int32_t(x0), f->top + int32_t(y)}, {width, height}, data});
@@ -278,7 +278,7 @@ void addCoverageSpan(PathSparseRasterizer* f, PrPathFillRule rule, uint32_t x0, 
     size_t cellCount = stride * height;
     f->cells.clear();
     f->cells.reserve(uint32_t(cellCount));
-    memZero(f->cells.data, cellCount * sizeof(float));
+    prMemZero(f->cells.data, cellCount * sizeof(float));
     uint32_t stamp = ++f->stamp;
     for (uint32_t i = 0; i < refCount; ++i) {
         Piece& p = f->pieces.data[refs[i].piece];
@@ -329,8 +329,8 @@ void addSegmentSpan(PathSparseRasterizer* f, uint32_t firstTile, uint32_t x1, ui
             if (p.x1 != p.x0) {
                 float ta = (left - p.x0) / (p.x1 - p.x0);
                 float tb = (right - p.x0) / (p.x1 - p.x0);
-                t0 = maxF32(minF32(ta, tb), 0);
-                t1 = minF32(maxF32(ta, tb), 1);
+                t0 = prF32Max(prF32Min(ta, tb), 0);
+                t1 = prF32Min(prF32Max(ta, tb), 1);
             }
             if (!(t1 > t0))
                 continue;
@@ -340,8 +340,8 @@ void addSegmentSpan(PathSparseRasterizer* f, uint32_t firstTile, uint32_t x1, ui
             float yb = t1 == 1 ? p.y1 : p.y0 + (p.y1 - p.y0) * t1;
             if (!(yb > ya))
                 continue;
-            xa = minF32(maxF32(xa, left), right) - left;
-            xb = minF32(maxF32(xb, left), right) - left;
+            xa = prF32Min(prF32Max(xa, left), right) - left;
+            xb = prF32Min(prF32Max(xb, left), right) - left;
             // The segment runs from its start to its end, so the order of its points carries its direction.
             float down[4] = {xa, ya - float(y), xb, yb - float(y)};
             float up[4] = {xb, yb - float(y), xa, ya - float(y)};
@@ -349,7 +349,7 @@ void addSegmentSpan(PathSparseRasterizer* f, uint32_t firstTile, uint32_t x1, ui
             ++count;
             // The winding of the segment reaches every column right of it.
             for (uint32_t r = uint32_t(ya) - y; r < height && float(y + r) < yb; ++r) {
-                float dy = minF32(float(y + r + 1), yb) - maxF32(float(y + r), ya);
+                float dy = prF32Min(float(y + r + 1), yb) - prF32Max(float(y + r), ya);
                 f->carry.data[r] += dy * p.direction;
             }
         }
@@ -373,7 +373,7 @@ void fill(PathSparseRasterizer* f, PrPathFillRule rule) {
     for (uint32_t row = 0; row < f->tilesY; ++row) {
         uint32_t y = row * th;
         uint32_t height = minU32(th, f->height - y);
-        memCopy(f->carry.data, f->leftWinding.data + y, height * sizeof(float));
+        prMemCopy(f->carry.data, f->leftWinding.data + y, height * sizeof(float));
         f->nextOpen.clear();
         uint32_t openAt = 0;
         uint32_t gapTile = 0;
@@ -459,7 +459,7 @@ PrPathSparse prPathSparseRasterizerFill(PrPathSparseRasterizer* rasterizer, cons
     rasterizer->leftWinding.clear();
     rasterizer->leftWinding.reserve(rasterizer->height);
     rasterizer->leftWinding.count = rasterizer->height;
-    memZero(rasterizer->leftWinding.data, rasterizer->height * sizeof(float));
+    prMemZero(rasterizer->leftWinding.data, rasterizer->height * sizeof(float));
     rasterizer->carry.clear();
     rasterizer->carry.reserve(rasterizer->options.tileExtent.y);
     rasterizer->carry.count = rasterizer->options.tileExtent.y;

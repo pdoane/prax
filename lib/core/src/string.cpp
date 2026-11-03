@@ -1,6 +1,7 @@
 // Owned strings and string views.
 
 #include "pr/string.h"
+#include "core/src/string.h"
 
 #include "pr/assert.h"
 #include "pr/mem.h"
@@ -39,13 +40,13 @@ PrString prStringCopy(PrStringView text) {
     PrString string = {};
     if (text.size <= kPrStringInlineCapacity) {
         if (text.size != 0)
-            memCopy(string.small.text, text.data, text.size);
+            prMemCopy(string.small.text, text.data, text.size);
         string.small.tag = inlineTag(text.size);
         return string;
     }
 
     char* data = static_cast<char*>(prMemoryAlloc(text.size));
-    memCopy(data, text.data, text.size);
+    prMemCopy(data, text.data, text.size);
     return stringAdopt(data, uint32_t(text.size), uint32_t(text.size));
 }
 
@@ -95,7 +96,7 @@ void prStringAppend(PrString* string, PrStringView text) {
 
     if (prStringKind(string) == PrStringKind_Inline) {
         if (size <= kPrStringInlineCapacity) {
-            memCopy(string->small.text + held.size, text.data, text.size);
+            prMemCopy(string->small.text + held.size, text.data, text.size);
             string->small.tag = inlineTag(size);
             return;
         }
@@ -103,8 +104,8 @@ void prStringAppend(PrString* string, PrStringView text) {
         // The text no longer fits inline, so it moves to the heap with room to grow.
         size_t capacity = size * 2;
         char* moved = static_cast<char*>(prMemoryAlloc(capacity));
-        memCopy(moved, string->small.text, held.size);
-        memCopy(moved + held.size, text.data, text.size);
+        prMemCopy(moved, string->small.text, held.size);
+        prMemCopy(moved + held.size, text.data, text.size);
         *string = stringAdopt(moved, uint32_t(size), uint32_t(capacity));
         return;
     }
@@ -113,14 +114,14 @@ void prStringAppend(PrString* string, PrStringView text) {
         size_t doubled = size_t(string->heap.capacity) * 2;
         size_t capacity = doubled > size ? doubled : size;
         char* moved = static_cast<char*>(prMemoryAlloc(capacity));
-        memCopy(moved, string->heap.data, held.size);
+        prMemCopy(moved, string->heap.data, held.size);
         prMemoryFree(const_cast<char*>(string->heap.data));
         string->heap.data = moved;
         string->heap.capacity = uint32_t(capacity);
     }
 
     char* data = const_cast<char*>(string->heap.data);
-    memCopy(data + held.size, text.data, text.size);
+    prMemCopy(data + held.size, text.data, text.size);
     string->heap.size = uint32_t(size);
 }
 

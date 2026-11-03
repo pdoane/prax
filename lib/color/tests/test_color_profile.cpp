@@ -1,3 +1,4 @@
+#include "pr/align.h"
 #include "pr/color_profile.h"
 #include "pr/integer.h"
 

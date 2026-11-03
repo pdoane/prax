@@ -108,7 +108,7 @@ void quarter(PrPath* path, PrVec2 from, PrVec2 corner, PrVec2 to) {
 }
 
 float distance(PrVec2 a, PrVec2 b) {
-    return sqrtF32((a.x - b.x) * (a.x - b.x) + (a.y - b.y) * (a.y - b.y));
+    return prF32Sqrt((a.x - b.x) * (a.x - b.x) + (a.y - b.y) * (a.y - b.y));
 }
 
 PrVec2 placedTangent(const PrCornerPlacement& c, float t) {
@@ -117,7 +117,7 @@ PrVec2 placedTangent(const PrCornerPlacement& c, float t) {
         c.before.x * c.radiusBefore * d.x + c.after.x * c.radiusAfter * d.y,
         c.before.y * c.radiusBefore * d.x + c.after.y * c.radiusAfter * d.y,
     };
-    float length = sqrtF32(w.x * w.x + w.y * w.y);
+    float length = prF32Sqrt(w.x * w.x + w.y * w.y);
     return length > 0 ? w / length : c.before;
 }
 
@@ -130,20 +130,20 @@ void fitCubic(const PrCornerPlacement& c, float t0, float t1, PrVec2 out[4]) {
     PrVec2 p3 = prCornerPlacementPoint(c, prCornerCurvePoint(c.shape, t1));
     PrVec2 d0 = placedTangent(c, t0);
     PrVec2 d1 = placedTangent(c, t1);
-    float cosine = clampF32(d0.x * d1.x + d0.y * d1.y, -1, 1);
-    float quarter = acosF32(cosine) / 4;
-    float handle = distance(p0, p3) / (3 * cosF32(quarter) * cosF32(quarter));
+    float cosine = prF32Clamp(d0.x * d1.x + d0.y * d1.y, -1, 1);
+    float quarter = prF32Acos(cosine) / 4;
+    float handle = distance(p0, p3) / (3 * prF32Cos(quarter) * prF32Cos(quarter));
     float handle0 = handle;
     float handle1 = handle;
     // The tangents meet at p0 + d0 a = p3 - d1 b.
     PrVec2 chord{p3.x - p0.x, p3.y - p0.y};
     float cross = d0.x * d1.y - d0.y * d1.x;
-    if (absF32(cross) > 1e-6f) {
+    if (prF32Abs(cross) > 1e-6f) {
         float a = (chord.x * d1.y - chord.y * d1.x) / cross;
         float b = (d0.x * chord.y - d0.y * chord.x) / cross;
         if (a >= 0 && b >= 0) {
-            handle0 = minF32(handle0, a);
-            handle1 = minF32(handle1, b);
+            handle0 = prF32Min(handle0, a);
+            handle1 = prF32Min(handle1, b);
         }
     }
     out[0] = p0;
@@ -161,16 +161,16 @@ float fitError(const PrCornerPlacement& c, float t0, float t1, const PrVec2 cubi
     for (uint32_t s = 1; s <= kCornerSamples; ++s) {
         float t = t0 + (t1 - t0) * float(s) / float(kCornerSamples + 1);
         PrVec2 p = prCornerPlacementPoint(c, prCornerCurvePoint(c.shape, t));
-        float nearest = kF32Max;
+        float nearest = kPrF32Max;
         for (uint32_t i = 0; i < kCornerCubicSteps; ++i) {
             PrVec2 a = polyline[i];
             PrVec2 b = polyline[i + 1];
             PrVec2 ab{b.x - a.x, b.y - a.y};
             float lengthSquared = ab.x * ab.x + ab.y * ab.y;
-            float along = lengthSquared > 0 ? clampF32(((p.x - a.x) * ab.x + (p.y - a.y) * ab.y) / lengthSquared, 0, 1) : 0;
-            nearest = minF32(nearest, distance(p, prVec2Lerp(a, b, along)));
+            float along = lengthSquared > 0 ? prF32Clamp(((p.x - a.x) * ab.x + (p.y - a.y) * ab.y) / lengthSquared, 0, 1) : 0;
+            nearest = prF32Min(nearest, distance(p, prVec2Lerp(a, b, along)));
         }
-        worst = maxF32(worst, nearest);
+        worst = prF32Max(worst, nearest);
     }
     return worst;
 }
@@ -195,10 +195,10 @@ void appendCorner(PrPath* path, const PrCornerPlacement& c) {
     if (!(c.radiusBefore > 0 && c.radiusAfter > 0)) {
         // A fitted square corner has no radii, so its start, corner and end coincide.
         return;
-    } else if (c.shape == kInfinityF32) {
+    } else if (c.shape == kPrF32Infinity) {
         prPathLineTo(path, corner);
         prPathLineTo(path, end);
-    } else if (c.shape == -kInfinityF32) {
+    } else if (c.shape == -kPrF32Infinity) {
         prPathLineTo(path, prCornerPlacementPoint(c, PrVec2{0, 1}));
         prPathLineTo(path, end);
     } else if (c.shape == 0) {
@@ -206,7 +206,7 @@ void appendCorner(PrPath* path, const PrCornerPlacement& c) {
     } else if (c.shape == 1) {
         quarter(path, start, corner, end);
     } else {
-        float tolerance = maxF32(c.radiusBefore, c.radiusAfter) * kCornerTolerance;
+        float tolerance = prF32Max(c.radiusBefore, c.radiusAfter) * kCornerTolerance;
         appendCornerCubics(path, c, 0, 0.5f, tolerance, 1);
         appendCornerCubics(path, c, 0.5f, 1, tolerance, 1);
     }
@@ -216,19 +216,19 @@ void appendCorner(PrPath* path, const PrCornerPlacement& c) {
 // `transform`.
 void arcCubic(PrPath* path, PrAffine2 transform, float a0, float sweep) {
     float a1 = a0 + sweep;
-    float k = 4.0f / 3.0f * tanF32(sweep / 4);
-    PrVec2 p0{cosF32(a0), sinF32(a0)};
-    PrVec2 p3{cosF32(a1), sinF32(a1)};
+    float k = 4.0f / 3.0f * prF32Tan(sweep / 4);
+    PrVec2 p0{prF32Cos(a0), prF32Sin(a0)};
+    PrVec2 p3{prF32Cos(a1), prF32Sin(a1)};
     PrVec2 p1{p0.x - k * p0.y, p0.y + k * p0.x};
     PrVec2 p2{p3.x + k * p3.y, p3.y - k * p3.x};
     prPathCubicTo(path, prAffine2MapPoint(transform, p1), prAffine2MapPoint(transform, p2), prAffine2MapPoint(transform, p3));
 }
 
 void include(PrRect& bounds, PrVec2 p) {
-    bounds.left = minF32(bounds.left, p.x);
-    bounds.top = minF32(bounds.top, p.y);
-    bounds.right = maxF32(bounds.right, p.x);
-    bounds.bottom = maxF32(bounds.bottom, p.y);
+    bounds.left = prF32Min(bounds.left, p.x);
+    bounds.top = prF32Min(bounds.top, p.y);
+    bounds.right = prF32Max(bounds.right, p.x);
+    bounds.bottom = prF32Max(bounds.bottom, p.y);
 }
 
 // Includes in `bounds` the extremes of the quadratic on each axis, at the parameters inside (0, 1) at which its
@@ -262,13 +262,13 @@ uint32_t cubicTurns(float a, float b, float c, float d, float out[2]) {
     float qb = 2 * ((c - b) - (b - a));
     float qc = b - a;
     uint32_t count = 0;
-    if (absF32(qa) < 1e-12f) {
+    if (prF32Abs(qa) < 1e-12f) {
         if (qb != 0)
             out[count++] = -qc / qb;
     } else {
         float discriminant = qb * qb - 4 * qa * qc;
         if (discriminant >= 0) {
-            float root = sqrtF32(discriminant);
+            float root = prF32Sqrt(discriminant);
             out[count++] = (-qb + root) / (2 * qa);
             out[count++] = (-qb - root) / (2 * qa);
         }
@@ -359,14 +359,14 @@ void prPathClose(PrPath* path) {
 void prPathEllipticArcTo(PrPath* path, PrVec2 center, PrVec2 radii, float rotation, float startAngle, float sweep) {
     PrAffine2 transform = prAffine2Concat(prAffine2Concat(prAffine2Scale(radii), prAffine2Rotate(rotation)),
         prAffine2Translate(center));
-    PrVec2 start = prAffine2MapPoint(transform, PrVec2{cosF32(startAngle), sinF32(startAngle)});
+    PrVec2 start = prAffine2MapPoint(transform, PrVec2{prF32Cos(startAngle), prF32Sin(startAngle)});
     if (path->open)
         prPathLineTo(path, start);
     else
         prPathMoveTo(path, start);
-    if (!isFiniteF32(sweep) || sweep == 0)
+    if (!prF32IsFinite(sweep) || sweep == 0)
         return;
-    uint32_t count = uint32_t(ceilF32(absF32(sweep) / (kPiF32 / 2) - 1e-4f));
+    uint32_t count = uint32_t(prF32Ceil(prF32Abs(sweep) / (kPrF32Pi / 2) - 1e-4f));
     count = count < 1 ? 1 : count;
     float step = sweep / float(count);
     for (uint32_t i = 0; i < count; ++i)
@@ -402,7 +402,7 @@ void prPathAddCornerRect(PrPath* path, PrCornerRect shape) {
 }
 
 void prPathAddEllipse(PrPath* path, PrVec2 center, PrVec2 radii, float rotation) {
-    if (!(radii.x >= 0) || !(radii.y >= 0) || !isFiniteF32(radii.x) || !isFiniteF32(radii.y))
+    if (!(radii.x >= 0) || !(radii.y >= 0) || !prF32IsFinite(radii.x) || !prF32IsFinite(radii.y))
         return;
     PrAffine2 transform = prAffine2Concat(prAffine2Concat(prAffine2Scale(radii), prAffine2Rotate(rotation)),
         prAffine2Translate(center));
@@ -424,11 +424,11 @@ void prPathAddEllipse(PrPath* path, PrVec2 center, PrVec2 radii, float rotation)
 void prPathAddSector(PrPath* path, PrVec2 center, float innerRadius, float outerRadius, float startAngle, float sweep) {
     if (!(outerRadius > 0) || !(sweep != 0))
         return;
-    float inner = innerRadius > 0 ? minF32(innerRadius, outerRadius) : 0;
+    float inner = innerRadius > 0 ? prF32Min(innerRadius, outerRadius) : 0;
     PrVec2 outerRadii{outerRadius, outerRadius};
     PrVec2 innerRadii{inner, inner};
-    if (absF32(sweep) >= 2 * kPiF32) {
-        float turn = sweep > 0 ? 2 * kPiF32 : -2 * kPiF32;
+    if (prF32Abs(sweep) >= 2 * kPrF32Pi) {
+        float turn = sweep > 0 ? 2 * kPrF32Pi : -2 * kPrF32Pi;
         path->open = false;
         prPathEllipticArcTo(path, center, outerRadii, 0, startAngle, turn);
         prPathClose(path);
@@ -451,11 +451,11 @@ void prPathAddCapsule(PrPath* path, PrVec2 start, PrVec2 end, float radius) {
     if (!(radius > 0))
         return;
     PrVec2 delta{end.x - start.x, end.y - start.y};
-    float angle = delta.x == 0 && delta.y == 0 ? 0 : atan2F32(delta.y, delta.x);
+    float angle = delta.x == 0 && delta.y == 0 ? 0 : prF32Atan2(delta.y, delta.x);
     PrVec2 radii{radius, radius};
     path->open = false;
-    prPathEllipticArcTo(path, end, radii, 0, angle - kPiF32 / 2, kPiF32);
-    prPathEllipticArcTo(path, start, radii, 0, angle + kPiF32 / 2, kPiF32);
+    prPathEllipticArcTo(path, end, radii, 0, angle - kPrF32Pi / 2, kPrF32Pi);
+    prPathEllipticArcTo(path, start, radii, 0, angle + kPrF32Pi / 2, kPrF32Pi);
     prPathClose(path);
 }
 

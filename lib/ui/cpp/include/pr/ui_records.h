@@ -10,6 +10,7 @@
 #pragma once
 
 #include "pr/mem.h"
+#include "pr/type_traits.h"
 #include "pr/ui.h"
 
 PR_ASSUME_NONNULL_BEGIN
@@ -63,7 +64,7 @@ const void* uiTypeId() {
 // identifies it.
 template <typename Recipe>
 constexpr uint32_t uiRecipeSize() {
-    return __is_empty(Recipe) ? 0 : uint32_t(sizeof(Recipe));
+    return isEmpty<Recipe> ? 0 : uint32_t(sizeof(Recipe));
 }
 
 // Returns the description of `recipe`, owned by `owner`, that the context takes.
@@ -118,7 +119,7 @@ constexpr bool uiKindsDistinct() {
 template <typename Recipe>
 void uiPack(uint8_t* PR_NONNULL& bytes, const Recipe& recipe) {
     constexpr uint32_t size = uiRecipeSize<Recipe>();
-    memCopy(bytes, &recipe, size);
+    prMemCopy(bytes, &recipe, size);
     bytes += size;
 }
 
@@ -139,7 +140,7 @@ PrLayoutStyleIndex uiStyle(PrUi* ui, const Owner& owner, const Groups&... groups
         const void* type = uiTypeId<UiPartOf<Groups...>>();
         PrLayoutStyleIndex style = 0;
         const void* kept = prUiMemoFind(ui, type, &owner, &style);
-        if (kept != nullptr && memEquals(kept, key, size))
+        if (kept != nullptr && prMemEquals(kept, key, size))
             return style;
         PrUiPart part{.type = type, .owner = &owner, .bytes = key, .size = size};
         PrLayoutStyle record = prLayoutStyleDefault();

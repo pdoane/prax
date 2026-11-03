@@ -18,16 +18,16 @@ constexpr double kCollapse = 1e-6;
 bool collapses(const PrAffine2& t) {
     const float values[6] = {t.a, t.b, t.c, t.d, t.e, t.f};
     for (float value : values) {
-        if (!isFiniteF32(value))
+        if (!prF32IsFinite(value))
             return true;
     }
     double a = double(t.a);
     double b = double(t.b);
     double c = double(t.c);
     double d = double(t.d);
-    double determinant = absF64(a * d - c * b);
+    double determinant = prF64Abs(a * d - c * b);
     double squares = a * a + b * b + c * c + d * d;
-    double largest = (squares + sqrtF64(maxF64(squares * squares - 4 * determinant * determinant, 0))) / 2;
+    double largest = (squares + prF64Sqrt(prF64Max(squares * squares - 4 * determinant * determinant, 0))) / 2;
     return !(largest > 0) || determinant <= kCollapse * largest;
 }
 
@@ -50,7 +50,7 @@ Alignment alignmentOf(const PrDAffine2& s) {
 
 // Returns `at` rounded to the nearest whole number, half up.
 double roundHalfUp(double at) {
-    return floorF64(at + 0.5);
+    return prF64Floor(at + 0.5);
 }
 
 // Returns the coordinate `x` along x, or `y` along y, of the snap space `s` with alignment `a`, moved to where it lies
@@ -144,7 +144,7 @@ PrDrawTransform prDrawTransformMoved(const PrDrawTransform* current, PrDVec2 off
     PrDAffine2 s = current->snap;
     next.snap.e = s.a * offset.x + s.c * offset.y + s.e;
     next.snap.f = s.b * offset.x + s.d * offset.y + s.f;
-    next.degenerate = current->degenerate || !isFiniteF32(next.affine.e) || !isFiniteF32(next.affine.f);
+    next.degenerate = current->degenerate || !prF32IsFinite(next.affine.e) || !prF32IsFinite(next.affine.f);
     return next;
 }
 

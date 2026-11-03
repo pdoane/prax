@@ -151,7 +151,7 @@ LayoutFragment* layoutFragmentCreateText(LayoutNodeIndex node, float size, const
     // The maker writes every glyph and stop, so only the fragment is zeroed.
     uint8_t* bytes =
         static_cast<uint8_t*>(prMemoryAlloc(layoutFragmentTextBytes(fontCount, rangeCount, glyphCount, stopCount)));
-    memZero(bytes, sizeof(LayoutFragment));
+    prMemZero(bytes, sizeof(LayoutFragment));
     LayoutFragment* fragment = reinterpret_cast<LayoutFragment*>(bytes);
     fragment->references.storeRelaxed(1);
     fragment->kind = LayoutFragmentKind_Text;
@@ -249,15 +249,15 @@ LayoutFragment* layoutFragmentTable(LayoutFragment* built, PrLayoutRect rect,
     size_t tail = alignedFor<PrLayoutRect>(base);
     size_t bytesNeeded = tail + sizeof(PrLayoutRect) + sizeof(uint32_t) + sizeof(LayoutGridBorder) * count;
     uint8_t* bytes = static_cast<uint8_t*>(prMemoryAlloc(bytesNeeded));
-    memCopy(bytes, built, base);
+    prMemCopy(bytes, built, base);
     LayoutFragment* fragment = reinterpret_cast<LayoutFragment*>(bytes);
     if (fragment->childCount != 0)
         fragment->children = reinterpret_cast<LayoutChild*>(bytes + alignedFor<LayoutChild>(sizeof(LayoutFragment)));
     fragment->flags |= LayoutFragmentFlag_Table;
-    memCopy(bytes + tail, &rect, sizeof(PrLayoutRect));
-    memCopy(bytes + tail + sizeof(PrLayoutRect), &count, sizeof(uint32_t));
+    prMemCopy(bytes + tail, &rect, sizeof(PrLayoutRect));
+    prMemCopy(bytes + tail + sizeof(PrLayoutRect), &count, sizeof(uint32_t));
     if (count != 0)
-        memCopy(bytes + tail + sizeof(PrLayoutRect) + sizeof(uint32_t), borders, sizeof(LayoutGridBorder) * count);
+        prMemCopy(bytes + tail + sizeof(PrLayoutRect) + sizeof(uint32_t), borders, sizeof(LayoutGridBorder) * count);
     // The children of the built fragment now belong to the new one, and it holds nothing else.
     prMemoryFree(built);
     return fragment;
@@ -267,7 +267,7 @@ LayoutTableGrid layoutFragmentTableGrid(const LayoutFragment* table) {
     PR_ASSERT((table->flags & LayoutFragmentFlag_Table) != 0);
     const uint8_t* bytes = reinterpret_cast<const uint8_t*>(table) + gridOffset(table);
     LayoutTableGrid grid{};
-    memCopy(&grid.rect, bytes, sizeof(PrLayoutRect));
+    prMemCopy(&grid.rect, bytes, sizeof(PrLayoutRect));
     grid.borderCount = *reinterpret_cast<const uint32_t*>(bytes + sizeof(PrLayoutRect));
     if (grid.borderCount != 0)
         grid.borders = reinterpret_cast<const LayoutGridBorder*>(bytes + sizeof(PrLayoutRect) + sizeof(uint32_t));
@@ -281,7 +281,7 @@ LayoutFragment* layoutFragmentGrid(LayoutFragment* built, const LayoutGridAxisTr
     for (uint32_t axis = 0; axis < PrLayoutGridAxis_Count; ++axis)
         bytesNeeded += sizeof(GridAxisHeader) + sizeof(PrLayoutUnit) * axes[axis].count;
     uint8_t* bytes = static_cast<uint8_t*>(prMemoryAlloc(bytesNeeded));
-    memCopy(bytes, built, base);
+    prMemCopy(bytes, built, base);
     LayoutFragment* fragment = reinterpret_cast<LayoutFragment*>(bytes);
     if (fragment->childCount != 0)
         fragment->children = reinterpret_cast<LayoutChild*>(bytes + alignedFor<LayoutChild>(sizeof(LayoutFragment)));
@@ -289,10 +289,10 @@ LayoutFragment* layoutFragmentGrid(LayoutFragment* built, const LayoutGridAxisTr
     size_t at = tail;
     for (uint32_t axis = 0; axis < PrLayoutGridAxis_Count; ++axis) {
         GridAxisHeader header{axes[axis].count, axes[axis].explicitStart, axes[axis].repetitions};
-        memCopy(bytes + at, &header, sizeof header);
+        prMemCopy(bytes + at, &header, sizeof header);
         at += sizeof header;
         if (header.count != 0)
-            memCopy(bytes + at, axes[axis].sizes, sizeof(PrLayoutUnit) * header.count);
+            prMemCopy(bytes + at, axes[axis].sizes, sizeof(PrLayoutUnit) * header.count);
         at += sizeof(PrLayoutUnit) * header.count;
     }
     // The children of the built fragment now belong to the new one, and it holds nothing else.
@@ -305,7 +305,7 @@ LayoutGridAxisTracks layoutFragmentGridTracks(const LayoutFragment* grid, PrLayo
     const uint8_t* bytes = reinterpret_cast<const uint8_t*>(grid) + alignedFor<GridAxisHeader>(boxBytes(grid));
     for (uint32_t a = 0;; ++a) {
         GridAxisHeader header{};
-        memCopy(&header, bytes, sizeof header);
+        prMemCopy(&header, bytes, sizeof header);
         bytes += sizeof header;
         if (a == axis)
             return LayoutGridAxisTracks{
@@ -428,7 +428,7 @@ LayoutFragment* layoutFragmentBuild(Array<LayoutLogicalChild>& children, uint32_
     // Most fragments list nothing. A fragment that does is made again with room for its list.
     if (pendingCount != 0) {
         LayoutFragment* listing = layoutFragmentCreate(kind, node, count, pendingCount);
-        memCopy(listing->children, fragment->children, sizeof(LayoutChild) * count);
+        prMemCopy(listing->children, fragment->children, sizeof(LayoutChild) * count);
         prMemoryFree(fragment);
         fragment = listing;
         LayoutPending* pending = layoutFragmentPendingStorage(fragment);
@@ -472,12 +472,12 @@ LayoutFragment* layoutFragmentHold(LayoutFragment* built, const LayoutChild* PR_
         const LayoutPending* PR_NULLABLE pending, uint32_t pendingCount) {
     uint32_t count = built->childCount;
     LayoutFragment* fragment = layoutFragmentCreate(built->kind, built->node, count + heldCount, pendingCount);
-    memCopy(fragment->children, built->children, sizeof(LayoutChild) * count);
+    prMemCopy(fragment->children, built->children, sizeof(LayoutChild) * count);
     for (uint32_t i = 0; i < heldCount; ++i) {
         fragment->children[count + i] = held[i];
     }
     if (pendingCount != 0)
-        memCopy(layoutFragmentPendingStorage(fragment), pending, sizeof(LayoutPending) * pendingCount);
+        prMemCopy(layoutFragmentPendingStorage(fragment), pending, sizeof(LayoutPending) * pendingCount);
     fragment->floatsFirst = built->floatsFirst;
     fragment->floatsEnd = built->floatsEnd;
     fragment->flags |= LayoutFragmentFlags(built->flags & (LayoutFragmentFlag_Placeholders | LayoutFragmentFlag_Lines));

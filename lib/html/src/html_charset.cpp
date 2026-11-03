@@ -25,13 +25,13 @@ char byteAt(const Prescan* p) {
 }
 
 bool startsWith(const Prescan* p, PrStringView prefix) {
-    return stringStartsWith(stringSlice(p->bytes, p->at, p->bytes.size - p->at), prefix);
+    return prStringStartsWith(prStringSlice(p->bytes, p->at, p->bytes.size - p->at), prefix);
 }
 
 // An attribute that the prescan read, its name and value in ASCII lowercase.
 struct PrescanAttribute {
-    TextBuffer name;
-    TextBuffer value;
+    PrTextBuffer name;
+    PrTextBuffer value;
 };
 
 enum {
@@ -43,9 +43,9 @@ typedef uint8_t GetAttribute;
 
 // Reads the next attribute of a tag (html/#concept-get-attributes-when-sniffing).
 GetAttribute getAttribute(Prescan* p, PrescanAttribute* attribute) {
-    textClear(&attribute->name);
-    textClear(&attribute->value);
-    while (!atEnd(p) && (asciiIsSpace(byteAt(p)) || byteAt(p) == '/'))
+    prTextBufferClear(&attribute->name);
+    prTextBufferClear(&attribute->value);
+    while (!atEnd(p) && (prAsciiIsSpace(byteAt(p)) || byteAt(p) == '/'))
         ++p->at;
     if (atEnd(p))
         return GetAttribute_OutOfBytes;
@@ -55,12 +55,12 @@ GetAttribute getAttribute(Prescan* p, PrescanAttribute* attribute) {
         if (atEnd(p))
             return GetAttribute_OutOfBytes;
         char byte = byteAt(p);
-        if (byte == '=' && attribute->name.text.count != 0) {
+        if (byte == '=' && attribute->name.size != 0) {
             ++p->at;
             break;
         }
-        if (asciiIsSpace(byte)) {
-            while (!atEnd(p) && asciiIsSpace(byteAt(p)))
+        if (prAsciiIsSpace(byte)) {
+            while (!atEnd(p) && prAsciiIsSpace(byteAt(p)))
                 ++p->at;
             if (atEnd(p))
                 return GetAttribute_OutOfBytes;
@@ -71,10 +71,10 @@ GetAttribute getAttribute(Prescan* p, PrescanAttribute* attribute) {
         }
         if (byte == '/' || byte == '>')
             return GetAttribute_Found;
-        textAppendChar(&attribute->name, asciiLower(byte));
+        prTextBufferAppendChar(&attribute->name, prAsciiLower(byte));
         ++p->at;
     }
-    while (!atEnd(p) && asciiIsSpace(byteAt(p)))
+    while (!atEnd(p) && prAsciiIsSpace(byteAt(p)))
         ++p->at;
     if (atEnd(p))
         return GetAttribute_OutOfBytes;
@@ -87,7 +87,7 @@ GetAttribute getAttribute(Prescan* p, PrescanAttribute* attribute) {
                 ++p->at;
                 return GetAttribute_Found;
             }
-            textAppendChar(&attribute->value, asciiLower(byteAt(p)));
+            prTextBufferAppendChar(&attribute->value, prAsciiLower(byteAt(p)));
         }
     }
     if (quote == '>')
@@ -96,22 +96,22 @@ GetAttribute getAttribute(Prescan* p, PrescanAttribute* attribute) {
         if (atEnd(p))
             return GetAttribute_OutOfBytes;
         char byte = byteAt(p);
-        if (asciiIsSpace(byte) || byte == '>')
+        if (prAsciiIsSpace(byte) || byte == '>')
             return GetAttribute_Found;
-        textAppendChar(&attribute->value, asciiLower(byte));
+        prTextBufferAppendChar(&attribute->value, prAsciiLower(byte));
     }
 }
 
 // Returns the charset that an XML declaration at the start of the bytes names, or PrCharset_None
 // (html/#concept-get-xml-encoding-when-sniffing).
 PrCharset xmlEncoding(PrStringView bytes) {
-    if (!stringStartsWith(bytes, "<?xml"))
+    if (!prStringStartsWith(bytes, "<?xml"))
         return PrCharset_None;
-    size_t end = stringFind(bytes, '>');
+    size_t end = prStringFindByte(bytes, '>');
     if (end == bytes.size)
         return PrCharset_None;
-    PrStringView declaration = stringSlice(bytes, 0, end);
-    size_t at = stringFind(declaration, "encoding");
+    PrStringView declaration = prStringSlice(bytes, 0, end);
+    size_t at = prStringFind(declaration, "encoding");
     if (at == declaration.size)
         return PrCharset_None;
     at += 8;
@@ -130,7 +130,7 @@ PrCharset xmlEncoding(PrStringView bytes) {
         ++close;
     if (close == bytes.size)
         return PrCharset_None;
-    PrStringView potential = stringSlice(bytes, at, close - at);
+    PrStringView potential = prStringSlice(bytes, at, close - at);
     for (size_t i = 0; i < potential.size; ++i) {
         if (uint8_t(potential.data[i]) <= 0x20)
             return PrCharset_None;
@@ -152,19 +152,19 @@ PrCharset metaCharset(Prescan* p, bool* outOfBytes) {
     bool needPragma = false;
     PrCharset charset = PrCharset_None;
     bool charsetSet = false;
-    PrescanAttribute attribute;
+    PrescanAttribute attribute = {};
     for (;;) {
         GetAttribute got = getAttribute(p, &attribute);
         if (got == GetAttribute_OutOfBytes) {
             *outOfBytes = true;
-            textReset(&attribute.name);
-            textReset(&attribute.value);
+            prTextBufferReset(&attribute.name);
+            prTextBufferReset(&attribute.value);
             return PrCharset_None;
         }
         if (got == GetAttribute_None)
             break;
-        PrStringView name = textView(&attribute.name);
-        PrStringView value = textView(&attribute.value);
+        PrStringView name = prTextBufferView(&attribute.name);
+        PrStringView value = prTextBufferView(&attribute.value);
         if (name == "http-equiv") {
             if (seenHttpEquiv)
                 continue;
@@ -192,8 +192,8 @@ PrCharset metaCharset(Prescan* p, bool* outOfBytes) {
             needPragma = false;
         }
     }
-    textReset(&attribute.name);
-    textReset(&attribute.value);
+    prTextBufferReset(&attribute.name);
+    prTextBufferReset(&attribute.value);
     if (!decided || (needPragma && !gotPragma) || charset == PrCharset_None)
         return PrCharset_None;
     return htmlDeclaredCharset(charset);
@@ -209,21 +209,21 @@ constexpr PrStringView kTextElements[] = {
 // Skips the text of the element that the start tag `name` opens, if its content is text, to its end tag, and leaves the
 // position at the `<` of the end tag. A plaintext element's text runs to the end. Returns false if the bytes end first.
 bool skipText(Prescan* p, PrStringView name) {
-    if (asciiEqualsFold(name, "plaintext")) {
+    if (prAsciiEqualsFold(name, "plaintext")) {
         p->at = p->bytes.size;
         return false;
     }
     bool text = false;
     for (PrStringView element : kTextElements)
-        text = text || asciiEqualsFold(name, element);
+        text = text || prAsciiEqualsFold(name, element);
     if (!text)
         return true;
     for (size_t at = p->at + 1; at + 2 + name.size < p->bytes.size; ++at) {
         if (p->bytes.data[at] != '<' || p->bytes.data[at + 1] != '/' ||
-                !asciiEqualsFold(stringSlice(p->bytes, at + 2, name.size), name))
+                !prAsciiEqualsFold(prStringSlice(p->bytes, at + 2, name.size), name))
             continue;
         char after = p->bytes.data[at + 2 + name.size];
-        if (asciiIsSpace(after) || after == '/' || after == '>') {
+        if (prAsciiIsSpace(after) || after == '/' || after == '>') {
             p->at = at - 1;
             return true;
         }
@@ -252,19 +252,19 @@ PrCharset htmlCharsetFromMetaContent(PrStringView content) {
     size_t position = 0;
     for (;;) {
         size_t found = position;
-        while (found + 7 <= content.size && !asciiEqualsFold(stringSlice(content, found, 7), "charset"))
+        while (found + 7 <= content.size && !prAsciiEqualsFold(prStringSlice(content, found, 7), "charset"))
             ++found;
         if (found + 7 > content.size)
             return PrCharset_None;
         size_t at = found + 7;
-        while (at < content.size && asciiIsSpace(content.data[at]))
+        while (at < content.size && prAsciiIsSpace(content.data[at]))
             ++at;
         if (at >= content.size || content.data[at] != '=') {
             position = at;
             continue;
         }
         ++at;
-        while (at < content.size && asciiIsSpace(content.data[at]))
+        while (at < content.size && prAsciiIsSpace(content.data[at]))
             ++at;
         if (at >= content.size)
             return PrCharset_None;
@@ -275,18 +275,18 @@ PrCharset htmlCharsetFromMetaContent(PrStringView content) {
                 ++close;
             if (close >= content.size)
                 return PrCharset_None;
-            return prCharsetFromLabel(stringSlice(content, at + 1, close - at - 1));
+            return prCharsetFromLabel(prStringSlice(content, at + 1, close - at - 1));
         }
         size_t end = at;
-        while (end < content.size && !asciiIsSpace(content.data[end]) && content.data[end] != ';')
+        while (end < content.size && !prAsciiIsSpace(content.data[end]) && content.data[end] != ';')
             ++end;
-        return prCharsetFromLabel(stringSlice(content, at, end - at));
+        return prCharsetFromLabel(prStringSlice(content, at, end - at));
     }
 }
 
 bool htmlPrescan(PrStringView bytes, bool complete, PrCharset* out) {
     *out = PrCharset_None;
-    PrStringView scanned = stringSlice(bytes, 0, bytes.size < kHtmlPrescanBytes ? bytes.size : kHtmlPrescanBytes);
+    PrStringView scanned = prStringSlice(bytes, 0, bytes.size < kHtmlPrescanBytes ? bytes.size : kHtmlPrescanBytes);
     Prescan p = {scanned, 0};
     // A UTF-16 XML declaration.
     if (startsWith(&p, PrStringView{"<\0?\0x\0", 6})) {
@@ -297,7 +297,7 @@ bool htmlPrescan(PrStringView bytes, bool complete, PrCharset* out) {
         *out = PrCharset_Utf16Be;
         return true;
     }
-    PrescanAttribute attribute;
+    PrescanAttribute attribute = {};
     PrCharset result = PrCharset_None;
     bool outOfBytes = false;
     while (!atEnd(&p) && !outOfBytes) {
@@ -309,19 +309,19 @@ bool htmlPrescan(PrStringView bytes, bool complete, PrCharset* out) {
             if (atEnd(&p))
                 break;
             p.at += 2;
-        } else if (scanned.size - p.at >= 6 && asciiEqualsFold(stringSlice(scanned, p.at, 5), "<meta") &&
-                (asciiIsSpace(scanned.data[p.at + 5]) || scanned.data[p.at + 5] == '/')) {
+        } else if (scanned.size - p.at >= 6 && prAsciiEqualsFold(prStringSlice(scanned, p.at, 5), "<meta") &&
+                (prAsciiIsSpace(scanned.data[p.at + 5]) || scanned.data[p.at + 5] == '/')) {
             p.at += 5;
             PrCharset charset = metaCharset(&p, &outOfBytes);
             if (charset != PrCharset_None) {
                 result = charset;
                 break;
             }
-        } else if (byteAt(&p) == '<' && p.at + 1 < scanned.size && (asciiIsLetter(scanned.data[p.at + 1]) ||
-                (scanned.data[p.at + 1] == '/' && p.at + 2 < scanned.size && asciiIsLetter(scanned.data[p.at + 2])))) {
+        } else if (byteAt(&p) == '<' && p.at + 1 < scanned.size && (prAsciiIsLetter(scanned.data[p.at + 1]) ||
+                (scanned.data[p.at + 1] == '/' && p.at + 2 < scanned.size && prAsciiIsLetter(scanned.data[p.at + 2])))) {
             bool start = scanned.data[p.at + 1] != '/';
             size_t nameStart = p.at + (start ? 1 : 2);
-            while (!atEnd(&p) && !asciiIsSpace(byteAt(&p)) && byteAt(&p) != '>')
+            while (!atEnd(&p) && !prAsciiIsSpace(byteAt(&p)) && byteAt(&p) != '>')
                 ++p.at;
             size_t nameEnd = nameStart;
             while (nameEnd < p.at && scanned.data[nameEnd] != '/')
@@ -335,7 +335,7 @@ bool htmlPrescan(PrStringView bytes, bool complete, PrCharset* out) {
             }
             if (outOfBytes)
                 break;
-            if (start && !skipText(&p, stringSlice(scanned, nameStart, nameEnd - nameStart))) {
+            if (start && !skipText(&p, prStringSlice(scanned, nameStart, nameEnd - nameStart))) {
                 outOfBytes = true;
                 break;
             }
@@ -346,8 +346,8 @@ bool htmlPrescan(PrStringView bytes, bool complete, PrCharset* out) {
         }
         ++p.at;
     }
-    textReset(&attribute.name);
-    textReset(&attribute.value);
+    prTextBufferReset(&attribute.name);
+    prTextBufferReset(&attribute.value);
     if (result != PrCharset_None) {
         *out = result;
         return true;

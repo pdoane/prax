@@ -79,8 +79,8 @@ struct DapClient {
 // Sends the writer's text as a message, after its header.
 void sendWritten(DapClient* client) {
     PrStringView body = prJsonWriterText(client->writer);
-    char digits[kU64TextMaxBytes];
-    size_t length = formatU64(body.size, digits);
+    char digits[kPrU64TextMaxBytes];
+    size_t length = prU64Format(body.size, digits, 10);
     client->frame.clear();
     const char header[] = "Content-Length: ";
     client->frame.append(reinterpret_cast<const uint8_t*>(header), sizeof(header) - 1);
@@ -346,13 +346,13 @@ void handleMessage(DapClient* client, PrStringView body) {
 bool contentLength(PrStringView header, uint64_t* out) {
     size_t at = 0;
     while (at < header.size) {
-        size_t end = stringFind(stringSlice(header, at, header.size - at), "\r\n");
+        size_t end = prStringFind(prStringSlice(header, at, header.size - at), "\r\n");
         end = end == header.size - at ? header.size : at + end;
-        PrStringView line = stringSlice(header, at, end - at);
-        size_t colon = stringFind(line, ':');
-        if (colon != line.size && asciiEqualsFold(stringSlice(line, 0, colon), "content-length")) {
-            PrStringView value = stringTrim(stringSlice(line, colon + 1, line.size - colon - 1));
-            return parseU64(value.data, value.size, out);
+        PrStringView line = prStringSlice(header, at, end - at);
+        size_t colon = prStringFindByte(line, ':');
+        if (colon != line.size && prAsciiEqualsFold(prStringSlice(line, 0, colon), "content-length")) {
+            PrStringView value = prStringTrim(prStringSlice(line, colon + 1, line.size - colon - 1));
+            return prU64Parse(value.data, value.size, out, 10);
         }
         at = end + 2;
     }
@@ -365,20 +365,20 @@ void handleReceived(DapClient* client) {
             reinterpret_cast<const char*>(client->received.data + client->receivedStart),
             client->received.count - client->receivedStart,
         };
-        size_t headerEnd = stringFind(waiting, "\r\n\r\n");
+        size_t headerEnd = prStringFind(waiting, "\r\n\r\n");
         if (headerEnd == waiting.size) {
             if (waiting.size > kHeaderMaxBytes)
                 fail(client);
             return;
         }
         uint64_t length = 0;
-        if (!contentLength(stringSlice(waiting, 0, headerEnd), &length) || length > kMessageMaxBytes) {
+        if (!contentLength(prStringSlice(waiting, 0, headerEnd), &length) || length > kMessageMaxBytes) {
             fail(client);
             return;
         }
         if (waiting.size - headerEnd - 4 < length)
             return;
-        handleMessage(client, stringSlice(waiting, headerEnd + 4, size_t(length)));
+        handleMessage(client, prStringSlice(waiting, headerEnd + 4, size_t(length)));
         client->receivedStart += uint32_t(headerEnd + 4 + length);
     }
 }

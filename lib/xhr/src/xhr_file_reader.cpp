@@ -51,30 +51,30 @@ void packageResult(PrXhrFileReader* reader) {
         case PrXhrFileReaderFormat_ArrayBuffer:
             break;
         case PrXhrFileReaderFormat_BinaryString: {
-            TextBuffer text{};
+            PrTextBuffer text{};
             for (size_t i = 0; i < bytes.size; ++i)
-                textAppendCodePoint(&text, bytes.data[i]);
-            reader->text = prStringCopy(textView(&text));
-            textReset(&text);
+                prTextBufferAppendCodePoint(&text, bytes.data[i]);
+            reader->text = prStringCopy(prTextBufferView(&text));
+            prTextBufferReset(&text);
             break;
         }
         case PrXhrFileReaderFormat_Text:
             decodeText(reader, bytes);
             break;
         case PrXhrFileReaderFormat_DataUrl: {
-            TextBuffer text{};
-            textAppend(&text, "data:");
+            PrTextBuffer text{};
+            prTextBufferAppend(&text, "data:");
             PrStringView type = prFetchBlobType(reader->blob);
-            textAppend(&text, type.size != 0 ? type : PrStringView{"application/octet-stream"});
-            textAppend(&text, ";base64,");
+            prTextBufferAppend(&text, type.size != 0 ? type : PrStringView{"application/octet-stream"});
+            prTextBufferAppend(&text, ";base64,");
             PrStringView input{reinterpret_cast<const char*>(bytes.data), bytes.size};
-            size_t size = base64EncodedSize(bytes.size);
+            size_t size = prBase64EncodedSize(bytes.size);
             char* encoded = static_cast<char*>(prMemoryAlloc(size != 0 ? size : 1));
-            base64Encode(input, encoded, size);
-            textAppend(&text, PrStringView{encoded, size});
+            prBase64Encode(input, encoded, size);
+            prTextBufferAppend(&text, PrStringView{encoded, size});
             prMemoryFree(encoded);
-            reader->text = prStringCopy(textView(&text));
-            textReset(&text);
+            reader->text = prStringCopy(prTextBufferView(&text));
+            prTextBufferReset(&text);
             break;
         }
     }

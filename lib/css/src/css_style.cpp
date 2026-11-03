@@ -96,11 +96,11 @@ bool absoluteLength(double number, PrCssUnit unit, const CssStyleContext& contex
         case PrCssUnit_Vmin:
         case PrCssUnit_Svmin:
         case PrCssUnit_Lvmin:
-        case PrCssUnit_Dvmin: scale = minF64(vw, vh); break;
+        case PrCssUnit_Dvmin: scale = prF64Min(vw, vh); break;
         case PrCssUnit_Vmax:
         case PrCssUnit_Svmax:
         case PrCssUnit_Lvmax:
-        case PrCssUnit_Dvmax: scale = maxF64(vw, vh); break;
+        case PrCssUnit_Dvmax: scale = prF64Max(vw, vh); break;
         default:
             scale = cssUnitScale(unit);
             // An absolute unit has a scale. Any other unit is one that the context does not resolve.
@@ -204,7 +204,7 @@ double computeFontSize(CssValueRun run, const CssStyleContext& context) {
     if (!cssResolveLength(cssValuePoolRun(&pool, CssValueSpan{0, pool.values.count}), 0, parent, &px))
         px = parent;
     cssValuePoolReset(&pool);
-    return maxF64(0, px);
+    return prF64Max(0, px);
 }
 
 // The width that font-width's `normal` names, in percent.
@@ -227,8 +227,8 @@ float computeFontWeight(CssValueRun run, const CssStyleContext& context) {
     switch (cssValueRunKeyword(run)) {
         case PrCssKeyword_Normal: return 400;
         case PrCssKeyword_Bold: return 700;
-        case PrCssKeyword_Bolder: return parent < 350 ? 400 : parent < 550 ? 700 : maxF32(parent, 900);
-        case PrCssKeyword_Lighter: return parent < 550 ? minF32(parent, 100) : parent < 750 ? 400 : 700;
+        case PrCssKeyword_Bolder: return parent < 350 ? 400 : parent < 550 ? 700 : prF32Max(parent, 900);
+        case PrCssKeyword_Lighter: return parent < 550 ? prF32Min(parent, 100) : parent < 750 ? 400 : 700;
         default: break;
     }
     if (run.count != 0 && (run.values[0].kind == PrCssValueKind_Number || run.values[0].kind == PrCssValueKind_Integer))
@@ -248,9 +248,9 @@ double computeZIndex(CssValueRun specified) {
         cssMathTo(specified, 0, PrCssUnit_Number, &number);
     else if (specified.count != 0)
         number = specified.values[0].number;
-    if (isNanF64(number))
+    if (prF64IsNan(number))
         return 0;
-    return minF64(maxF64(floorF64(number + 0.5), double(INT32_MIN)), double(INT32_MAX));
+    return prF64Min(prF64Max(prF64Floor(number + 0.5), double(INT32_MIN)), double(INT32_MAX));
 }
 
 // Appends the computed line height (css-inline-3/#line-height-property). normal computes to itself. A number, or a
@@ -262,7 +262,7 @@ void computeLineHeight(CssValuePool* pool, CssValueRun specified, const CssStyle
     double number = value.number;
     if (value.kind == PrCssValueKind_Number || value.kind == PrCssValueKind_Integer ||
             (value.kind == PrCssValueKind_Math && cssMathTo(specified, 0, PrCssUnit_Number, &number))) {
-        cssValuePoolAdd(pool, cssNumberValue(PrCssValueKind_Number, PrCssUnit_Number, maxF64(0, number)));
+        cssValuePoolAdd(pool, cssNumberValue(PrCssValueKind_Number, PrCssUnit_Number, prF64Max(0, number)));
         return;
     }
     if (value.kind == PrCssValueKind_Keyword) {
@@ -273,7 +273,7 @@ void computeLineHeight(CssValuePool* pool, CssValueRun specified, const CssStyle
     addAbsolute(&absolute, specified, context);
     double px = 0;
     if (cssResolveLength(cssValuePoolRun(&absolute, CssValueSpan{0, absolute.values.count}), 0, context.font.em, &px))
-        cssValuePoolAdd(pool, pxValue(maxF64(0, px)));
+        cssValuePoolAdd(pool, pxValue(prF64Max(0, px)));
     else
         cssValuePoolAddRun(pool, cssValuePoolRun(&absolute, CssValueSpan{0, absolute.values.count}));
     cssValuePoolReset(&absolute);
@@ -398,7 +398,7 @@ bool isLineWidth(PrCssProperty property) {
 }
 
 PrColor8 color8Of(PrColor color) {
-    auto channel = [](float c) { return uint8_t(clampF32(c, 0, 1) * 255 + 0.5f); };
+    auto channel = [](float c) { return uint8_t(prF32Clamp(c, 0, 1) * 255 + 0.5f); };
     return PrColor8{channel(color.r), channel(color.g), channel(color.b), channel(color.a)};
 }
 
@@ -449,8 +449,8 @@ PrColor systemColor(PrCssKeyword keyword, const CssColorContext& context) {
         case PrCssKeyword_Accentcolortext:
             if (accentOf(context, &accent)) {
                 // White or black, whichever contrasts more with the accent color.
-                float luminance = kPrColorLuminanceRed * clampF32(accent.r, 0, 1) +
-                    kPrColorLuminanceGreen * clampF32(accent.g, 0, 1) + kPrColorLuminanceBlue * clampF32(accent.b, 0, 1);
+                float luminance = kPrColorLuminanceRed * prF32Clamp(accent.r, 0, 1) +
+                    kPrColorLuminanceGreen * prF32Clamp(accent.g, 0, 1) + kPrColorLuminanceBlue * prF32Clamp(accent.b, 0, 1);
                 return luminance > 0.5f ? PrColor{0, 0, 0, 1} : PrColor{1, 1, 1, 1};
             }
             rgb = {0xffffff, 0x000000};
@@ -464,15 +464,15 @@ PrColor systemColor(PrCssKeyword keyword, const CssColorContext& context) {
 
 uint64_t hashValue(const CssValueNode& value, const char* PR_NULLABLE text, uint64_t hash) {
     uint64_t head = uint64_t(value.kind) | uint64_t(value.unit) << 8 | uint64_t(value.aux) << 16 | uint64_t(value.next) << 32;
-    hash = hashBytes(&head, sizeof(head), hash);
+    hash = prHashBytes(&head, sizeof(head), hash);
     if (cssValueHasText(value.kind))
-        return hashBytes(text + value.text.start, value.text.length, hash);
+        return prHashBytes(text + value.text.start, value.text.length, hash);
     if (cssValueIsNumeric(value.kind)) {
         uint64_t bits = bitCast<uint64_t>(value.number);
-        return hashBytes(&bits, sizeof(bits), hash);
+        return prHashBytes(&bits, sizeof(bits), hash);
     }
     if (value.kind == PrCssValueKind_UnicodeRange)
-        return hashBytes(&value.range, sizeof(value.range), hash);
+        return prHashBytes(&value.range, sizeof(value.range), hash);
     return hash;
 }
 
@@ -480,7 +480,7 @@ bool sameValue(const CssValueNode& a, const char* PR_NULLABLE aText, const CssVa
     if (a.kind != b.kind || a.unit != b.unit || a.aux != b.aux || a.next != b.next)
         return false;
     if (cssValueHasText(a.kind))
-        return a.text.length == b.text.length && memEquals(aText + a.text.start, bText + b.text.start, a.text.length);
+        return a.text.length == b.text.length && prMemEquals(aText + a.text.start, bText + b.text.start, a.text.length);
     if (cssValueIsNumeric(a.kind))
         return bitCast<uint64_t>(a.number) == bitCast<uint64_t>(b.number);
     if (a.kind == PrCssValueKind_UnicodeRange)
@@ -566,11 +566,11 @@ const CssStyleValues* intern(CssStyleBuilder* builder, CssStyleGroup group, uint
     made->spans = reinterpret_cast<CssValueSpan*>(bytes + spans);
     made->values = reinterpret_cast<CssValueNode*>(bytes + values);
     made->text = textSize != 0 ? reinterpret_cast<char*>(bytes + text) : nullptr;
-    memCopy(made->spans, builder->spans.data, sizeof(CssValueSpan) * slots);
+    prMemCopy(made->spans, builder->spans.data, sizeof(CssValueSpan) * slots);
     if (valueCount != 0)
-        memCopy(made->values, builder->pool.values.data, sizeof(CssValueNode) * valueCount);
+        prMemCopy(made->values, builder->pool.values.data, sizeof(CssValueNode) * valueCount);
     if (textSize != 0)
-        memCopy(made->text, builder->pool.text.data, textSize);
+        prMemCopy(made->text, builder->pool.text.data, textSize);
     uint32_t at = 0;
     if (part.free.count != 0) {
         at = part.free.last();
@@ -671,7 +671,7 @@ constexpr uint64_t kCustomContentsMix = 0x9e3779b97f4a7c15ull;
 // low bit free to mark the sum as computed.
 uint64_t entryContents(uint32_t hash, PrStringView value) {
     uint64_t seed = kCustomContentsSeed ^ (uint64_t(hash) * kCustomContentsMix);
-    return hashBytes(value.data, value.size, seed) & ~uint64_t(1);
+    return prHashBytes(value.data, value.size, seed) & ~uint64_t(1);
 }
 
 // Returns the index of the set's own entry named `name` with hash `hash`, or kHashMissing if there is none.
@@ -928,7 +928,7 @@ void markPowerless(CssColor& color) {
         }
         case PrColorSpace_Hsl:
             // A conversion leaves a white or a black within rounding of its lightness, with any saturation.
-            if (absF64(color.c[1]) <= 0.001 || color.c[2] <= 0.001 || color.c[2] >= 100 - 0.001) {
+            if (prF64Abs(color.c[1]) <= 0.001 || color.c[2] <= 0.001 || color.c[2] >= 100 - 0.001) {
                 if (color.c[1] > 0 && color.c[1] <= 0.001)
                     color.c[1] = 0;
                 color.missing |= 1u;
@@ -1049,7 +1049,7 @@ PrColor toSrgb(const CssColor& color) {
     double alpha = (color.missing & kMissingAlpha) != 0 ? 0 : color.alpha;
     double rgb[3];
     prColorConvert(color.space, PrColorSpace_Srgb, c, rgb);
-    return PrColor{float(rgb[0]), float(rgb[1]), float(rgb[2]), clampF32(float(alpha), 0, 1)};
+    return PrColor{float(rgb[0]), float(rgb[1]), float(rgb[2]), prF32Clamp(float(alpha), 0, 1)};
 }
 
 bool resolveColorValue(CssValueRun run, uint32_t index, const CssColorContext& in, CssColor* out);
@@ -1071,7 +1071,7 @@ bool channelOf(CssValueRun run, uint32_t at, const CssColorChannelSyntax& syntax
         for (uint32_t i = 0; names != nullptr && i < 4; ++i) {
             if (names[i] != keyword)
                 continue;
-            if (isNanF64(components[i])) {
+            if (prF64IsNan(components[i])) {
                 *missing = true;
             } else {
                 CssValueNode number = cssNumberValue(PrCssValueKind_Number, PrCssUnit_Number, components[i]);
@@ -1096,7 +1096,7 @@ bool channelOf(CssValueRun run, uint32_t at, const CssColorChannelSyntax& syntax
             continue;
         for (uint32_t k = 0; k < 4; ++k) {
             if (names[k] == cssValueKeyword(&v)) {
-                double number = isNanF64(components[k]) ? 0 : components[k];
+                double number = prF64IsNan(components[k]) ? 0 : components[k];
                 v = cssNumberValue(PrCssValueKind_Number, PrCssUnit_Number, number);
             }
         }
@@ -1180,7 +1180,7 @@ bool relativeColor(CssValueRun run, uint32_t index, const CssColorContext& in, C
         bool missing = (converted.missing & (1u << i)) != 0;
         double value = i < 3 ? converted.c[i] : converted.alpha;
         double scale = i < 3 ? syntax[i].number : kCssColorAlpha.number;
-        components[i] = missing ? kNanF64 : value / scale;
+        components[i] = missing ? kPrF64Nan : value / scale;
     }
     CssColor color = converted;
     color.missing = converted.missing;
@@ -1327,8 +1327,8 @@ bool deviceCmyk(CssValueRun run, uint32_t index, CssColor* out) {
     *out = CssColor{
         PrColorSpace_Srgb,
         {
-            1 - minF64(1, cmyk[0] * (1 - k) + k), 1 - minF64(1, cmyk[1] * (1 - k) + k),
-            1 - minF64(1, cmyk[2] * (1 - k) + k),
+            1 - prF64Min(1, cmyk[0] * (1 - k) + k), 1 - prF64Min(1, cmyk[1] * (1 - k) + k),
+            1 - prF64Min(1, cmyk[2] * (1 - k) + k),
         },
         alpha,
         0,
@@ -1339,7 +1339,7 @@ bool deviceCmyk(CssValueRun run, uint32_t index, CssColor* out) {
 // Returns the WCAG 2.1 relative luminance of an sRGB color, its channels clamped to the gamut.
 double relativeLuminance(PrColor color) {
     auto linear = [](float channel) {
-        return prColorTransferDecodeDouble(PrColorTransfer_Srgb, double(clampF32(channel, 0, 1)));
+        return prColorTransferDecodeDouble(PrColorTransfer_Srgb, double(prF32Clamp(channel, 0, 1)));
     };
     return 0.2126 * linear(color.r) + 0.7152 * linear(color.g) + 0.0722 * linear(color.b);
 }
@@ -1710,9 +1710,9 @@ void computeFilter(CssValuePool* pool, CssValueRun specified, const CssStyleCont
                     cssValuePoolAddRun(pool, CssValueRun{run.values + first, run.values[first].next, run.text});
                     break;
                 }
-                amount = maxF64(amount, 0);
+                amount = prF64Max(amount, 0);
                 cssValuePoolAdd(pool,
-                    cssNumberValue(PrCssValueKind_Number, PrCssUnit_Number, clamps ? minF64(amount, 1) : amount));
+                    cssNumberValue(PrCssValueKind_Number, PrCssUnit_Number, clamps ? prF64Min(amount, 1) : amount));
                 break;
             }
             case PrCssKeyword_DropShadow: {
@@ -1787,7 +1787,7 @@ void computeSvgLengths(CssValuePool* pool, PrCssProperty property, CssValueRun s
             cssValuePoolAdd(pool, cssLiteralValue(','));
         first = false;
         if (value->kind == PrCssValueKind_Number || value->kind == PrCssValueKind_Integer) {
-            cssValuePoolAdd(pool, pxValue(nonNegative ? maxF64(value->number, 0) : value->number));
+            cssValuePoolAdd(pool, pxValue(nonNegative ? prF64Max(value->number, 0) : value->number));
         } else if (nonNegative && value->kind == PrCssValueKind_Dimension && value->number < 0) {
             cssValuePoolAdd(pool, pxValue(0));
         } else {
@@ -2007,14 +2007,14 @@ CssStyleGroupProperties cssStyleGroupProperties(CssStyleGroup group) {
 }
 
 uint32_t cssCustomHash(PrStringView name) {
-    return uint32_t(hashBytes(name.data, name.size, 0));
+    return uint32_t(prHashBytes(name.data, name.size, 0));
 }
 
 bool cssCustomBefore(uint32_t hashA, PrStringView a, uint32_t hashB, PrStringView b) {
     if (hashA != hashB)
         return hashA < hashB;
     size_t size = a.size < b.size ? a.size : b.size;
-    int order = size != 0 ? memCompare(a.data, b.data, size) : 0;
+    int order = size != 0 ? prMemCompare(a.data, b.data, size) : 0;
     return order != 0 ? order < 0 : a.size < b.size;
 }
 
@@ -2023,8 +2023,8 @@ const CssCustomProperties* cssCustomPropertiesCreate(CssStyleTable* table, const
     PR_ASSERT(base == nullptr || base->base == nullptr);
     uint64_t hash = kCustomKeySeed ^ uint64_t(uintptr_t(base));
     for (uint32_t i = 0; i < count; ++i) {
-        hash = hashBytes(rows[i].name.data, rows[i].name.size, hash ^ rows[i].hash);
-        hash = rows[i].invalid ? hash * kCustomContentsMix : hashBytes(rows[i].value.data, rows[i].value.size, hash);
+        hash = prHashBytes(rows[i].name.data, rows[i].name.size, hash ^ rows[i].hash);
+        hash = rows[i].invalid ? hash * kCustomContentsMix : prHashBytes(rows[i].value.data, rows[i].value.size, hash);
     }
     uint32_t key = uint32_t(hash);
     CssCustomTablePart& part = table->customParts[key >> (32 - kCssStyleTablePartBits)];
@@ -2062,12 +2062,12 @@ const CssCustomProperties* cssCustomPropertiesCreate(CssStyleTable* table, const
         entry.name = at;
         entry.nameSize = uint32_t(row.name.size);
         if (row.name.size != 0)
-            memCopy(made->text + at, row.name.data, row.name.size);
+            prMemCopy(made->text + at, row.name.data, row.name.size);
         at += entry.nameSize;
         entry.value = at;
         entry.valueSize = row.invalid ? kCssCustomInvalid : uint32_t(row.value.size);
         if (!row.invalid && row.value.size != 0) {
-            memCopy(made->text + at, row.value.data, row.value.size);
+            prMemCopy(made->text + at, row.value.data, row.value.size);
             at += uint32_t(row.value.size);
         }
     }
@@ -2267,7 +2267,7 @@ const CssImportantProperties* cssImportantPropertiesCreate(const PrCssProperty* 
         prMemoryAlloc(sizeof(CssImportantProperties) + sizeof(PrCssProperty) * count));
     important->references.storeRelaxed(1);
     important->count = count;
-    memCopy(important->properties, properties, sizeof(PrCssProperty) * count);
+    prMemCopy(important->properties, properties, sizeof(PrCssProperty) * count);
     return important;
 }
 
@@ -2448,7 +2448,7 @@ void cssStyleComputeValue(CssValuePool* pool, PrCssProperty property, CssValueRu
         if (!opacityOf(specified, &number)) {
             addAbsolute(pool, specified, context);
         } else {
-            cssValuePoolAdd(pool, cssNumberValue(PrCssValueKind_Number, PrCssUnit_Number, minF64(maxF64(number, 0), 1)));
+            cssValuePoolAdd(pool, cssNumberValue(PrCssValueKind_Number, PrCssUnit_Number, prF64Min(prF64Max(number, 0), 1)));
         }
     } else if ((property == PrCssProperty_LetterSpacing || property == PrCssProperty_WordSpacing) &&
             keyword == PrCssKeyword_Normal) {
@@ -2515,7 +2515,7 @@ const CssStyleValues* cssStyleEnd(CssStyleBuilder* builder, CssStyleGroup group)
     uint64_t hash = kStyleSeed ^ group;
     for (uint32_t i = 0; i < builder->spans.count; ++i) {
         CssValueSpan span = builder->spans.data[i];
-        hash = hashBytes(&span.count, sizeof(span.count), hash);
+        hash = prHashBytes(&span.count, sizeof(span.count), hash);
         for (uint32_t k = 0; k < span.count; ++k)
             hash = hashValue(builder->pool.values.data[span.start + k], builder->pool.text.data, hash);
     }
@@ -2546,8 +2546,8 @@ void cssStyleValuesRelease(const CssStyleValues* PR_NULLABLE values) {
         prMemoryFree(group);
 }
 
-void cssFontFamilies(CssValueRun run, TextBuffer* names, Array<PrFontFamily>* out) {
-    names->text.clear();
+void cssFontFamilies(CssValueRun run, PrTextBuffer* names, Array<PrFontFamily>* out) {
+    prTextBufferClear(names);
     out->clear();
     Array<uint32_t> starts;             // start of each named family's name, or UINT32_MAX for a generic
     Array<PrFontGeneric> generics;
@@ -2571,12 +2571,12 @@ void cssFontFamilies(CssValueRun run, TextBuffer* names, Array<PrFontFamily>* ou
         }
         PrStringView name = cssValueHasText(value->kind) ? cssValueText(run, value) : PrStringView{};
         if (open) {
-            textAppendChar(names, ' ');
+            prTextBufferAppendChar(names, ' ');
         } else {
-            starts.push(names->text.count);
+            starts.push(names->size);
             generics.push(PrFontGeneric_None);
         }
-        textAppend(names, name);
+        prTextBufferAppend(names, name);
         open = true;
     }
     for (uint32_t i = 0; i < starts.count; ++i) {
@@ -2584,14 +2584,14 @@ void cssFontFamilies(CssValueRun run, TextBuffer* names, Array<PrFontFamily>* ou
             out->push(prFontFamilyGeneric(generics.data[i]));
             continue;
         }
-        uint32_t end = names->text.count;
+        uint32_t end = names->size;
         for (uint32_t k = i + 1; k < starts.count; ++k) {
             if (starts.data[k] != UINT32_MAX) {
                 end = starts.data[k];
                 break;
             }
         }
-        out->push(prFontFamilyFromName(PrStringView{names->text.data + starts.data[i], end - starts.data[i]}));
+        out->push(prFontFamilyFromName(PrStringView{names->data + starts.data[i], end - starts.data[i]}));
     }
     starts.reset();
     generics.reset();
@@ -2862,7 +2862,7 @@ bool cssResolveColor(CssValueRun run, uint32_t index, const CssColorContext& con
             float c[4];
             for (uint32_t i = 0; i < 4; ++i)
                 c[i] = float(cssColorChannelValue(&run.values[channels.at[i]], *channels.meaning[i]));
-            *out = PrColor{c[0], c[1], c[2], clampF32(c[3], 0, 1)};
+            *out = PrColor{c[0], c[1], c[2], prF32Clamp(c[3], 0, 1)};
             return true;
         }
     }

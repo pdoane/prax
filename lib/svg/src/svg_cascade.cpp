@@ -20,26 +20,26 @@ namespace {
 // Returns the rule that gives the root what it inherits from the host: its color, and the custom properties that the
 // host defines. A rule of the user agent's origin gives them as the initial values of inherited properties are given,
 // and the document's own rules override them.
-void hostRule(TextBuffer* out, const PrSvgDrawOptions& options) {
-    textAppend(out, ":root{");
+void hostRule(PrTextBuffer* out, const PrSvgDrawOptions& options) {
+    prTextBufferAppend(out, ":root{");
     if (options.hasColor) {
-        textAppend(out, "color:color(srgb ");
+        prTextBufferAppend(out, "color:color(srgb ");
         cssSerializeNumber(out, double(options.color.r));
-        textAppendChar(out, ' ');
+        prTextBufferAppendChar(out, ' ');
         cssSerializeNumber(out, double(options.color.g));
-        textAppendChar(out, ' ');
+        prTextBufferAppendChar(out, ' ');
         cssSerializeNumber(out, double(options.color.b));
-        textAppend(out, " / ");
+        prTextBufferAppend(out, " / ");
         cssSerializeNumber(out, double(options.color.a));
-        textAppend(out, ");");
+        prTextBufferAppend(out, ");");
     }
     for (uint32_t i = 0; i < options.propertyCount; ++i) {
-        textAppend(out, options.properties[i].name);
-        textAppendChar(out, ':');
-        textAppend(out, options.properties[i].value);
-        textAppendChar(out, ';');
+        prTextBufferAppend(out, options.properties[i].name);
+        prTextBufferAppendChar(out, ':');
+        prTextBufferAppend(out, options.properties[i].value);
+        prTextBufferAppendChar(out, ';');
     }
-    textAppendChar(out, '}');
+    prTextBufferAppendChar(out, '}');
 }
 
 uint64_t keyOf(const PrDomElement* element) {
@@ -63,12 +63,12 @@ void svgCascadeInit(SvgCascade* cascade, PrDomDocument* document, const PrSvgDra
     cssSheetDataParse(svg, kSvgStyle, nullptr, CssOrigin_UserAgent);
     cascade->userAgent.push(svg);
     if (options.hasColor || options.propertyCount != 0) {
-        TextBuffer rule{};
+        PrTextBuffer rule{};
         hostRule(&rule, options);
         CssSheetData* host = cssSheetDataCreate();
-        cssSheetDataParse(host, textView(&rule), nullptr, CssOrigin_UserAgent);
+        cssSheetDataParse(host, prTextBufferView(&rule), nullptr, CssOrigin_UserAgent);
         cascade->userAgent.push(host);
-        textReset(&rule);
+        prTextBufferReset(&rule);
     }
     Array<CssParsedUserAgentSheet> userAgent;
     for (uint32_t i = 0; i < cascade->userAgent.count; ++i)

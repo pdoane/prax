@@ -42,9 +42,9 @@ namespace {
 // Returns what `serialize` writes, as a string.
 template <typename Serialize>
 PrString serialized(Serialize serialize) {
-    TextBuffer buffer;
+    PrTextBuffer buffer = {};
     serialize(&buffer);
-    return textTake(&buffer);
+    return prTextBufferTake(&buffer);
 }
 
 // Returns the data of the rule behind `handle`, or null if there is none.
@@ -105,7 +105,7 @@ bool setPrelude(PrCssRule* rule, PrStringView text) {
 template <typename Handle>
 PrString preludeText(const Handle* handle) {
     const CssRuleData* rule = dataOf(handle);
-    return serialized([&](TextBuffer* out) { cssSerializePrelude(out, rule); });
+    return serialized([&](PrTextBuffer* out) { cssSerializePrelude(out, rule); });
 }
 
 // Returns the rule behind `handle` as a `Handle`, or null if `kind` does not describe it.
@@ -122,7 +122,7 @@ Handle* PR_NULLABLE blockOf(PrCssStyleDeclaration* PR_NULLABLE handle, CssAtRule
 
 // Returns the serialization of the values of `run`.
 PrString serializedValues(CssValueRun run) {
-    return serialized([&](TextBuffer* out) { cssSerializeValues(out, run); });
+    return serialized([&](PrTextBuffer* out) { cssSerializeValues(out, run); });
 }
 
 // Returns the prelude of the rule behind a handle.
@@ -206,7 +206,7 @@ PrString descriptorValue(const Handle* handle, PrCssDescriptor descriptor) {
     const CssDeclaration* declaration = declarationOf(rule, descriptor);
     if (declaration == nullptr)
         return prStringEmpty();
-    return serialized([&](TextBuffer* out) { cssSerializeDeclarationValue(out, &rule->style, declaration); });
+    return serialized([&](PrTextBuffer* out) { cssSerializeDeclarationValue(out, &rule->style, declaration); });
 }
 
 // Returns the selectors of an @scope rule's scoping root, or of its limit, or the null string if the rule has none. The
@@ -229,7 +229,7 @@ PrString scopeSelectors(const PrCssScopeRule* rule, bool limit) {
     }
     if (!written[limit] || data->selectors == nullptr)
         return prStringNull();
-    return serialized([&](TextBuffer* out) {
+    return serialized([&](PrTextBuffer* out) {
         cssSerializeSelectorRange(out, data->selectors, limit ? counts[0] : 0, counts[limit]);
     });
 }
@@ -246,7 +246,7 @@ uint32_t featureIndexes(const CssDeclarationBlock* block, uint32_t index, uint32
         uint32_t capacity) {
     CssValueRun run = cssDeclarationValue(block, &cssDeclarations(block)[index]);
     for (uint32_t i = 0; i < run.count && i < capacity; ++i)
-        items[i] = saturateU32(run.values[i].number);
+        items[i] = prF64SaturateU32(run.values[i].number);
     return run.count;
 }
 
@@ -296,7 +296,7 @@ uint32_t functionParameters(CssValueRun run, PrCssFunctionParameter* PR_NULLABLE
 template <typename Handle>
 PrString serializedName(const Handle* handle) {
     PrStringView name = preludeName(handle);
-    return serialized([&](TextBuffer* out) { cssSerializeIdent(out, name); });
+    return serialized([&](PrTextBuffer* out) { cssSerializeIdent(out, name); });
 }
 
 // Returns the depth of the deepest tree of a run, counting its roots as depth one.
@@ -543,11 +543,11 @@ void setCounterStyleDescriptor(PrCssRule* rule, PrCssDescriptor descriptor, PrSt
 // names, or its color scheme, which the system colors and light-dark() read. A font computed outside the cascade
 // (PrCssFont). The families' names are views of `names`.
 struct CssFont {
-    TextBuffer names;
+    PrTextBuffer names = {};
     Array<PrFontFamily> families;
     PrFontStyle style;
     bool smallCaps;
-    TextBuffer serialization;
+    PrTextBuffer serialization = {};
 };
 
 // The longhands of the font shorthand that a font computed outside the cascade reads, in the order computed.
@@ -650,7 +650,7 @@ struct PrCssFont : CssFont {};
 
 PrString prCssMediaListMediaText(const PrCssMediaList* list) {
     const CssMediaQueries* queries = cssMediaListQueries(list);
-    return serialized([&](TextBuffer* out) { cssSerializeMediaList(out, queries); });
+    return serialized([&](PrTextBuffer* out) { cssSerializeMediaList(out, queries); });
 }
 
 void prCssMediaListSetMediaText(PrCssMediaList* list, PrStringView value) {
@@ -694,7 +694,7 @@ PrCssMediaQueryList* PR_NULLABLE prCssMediaQueryListQuery(PrDomEventTarget* PR_N
 
 PrString prCssMediaQueryListMedia(const PrCssMediaQueryList* mediaQueryList) {
     const CssMediaQueries* list = &mediaQueryList->media;
-    return serialized([&](TextBuffer* out) { cssSerializeMediaList(out, list); });
+    return serialized([&](PrTextBuffer* out) { cssSerializeMediaList(out, list); });
 }
 
 bool prCssMediaQueryListMatches(const PrCssMediaQueryList* list) {
@@ -816,16 +816,17 @@ PrStatus prCssStyleSheetAddRule(PrCssStyleSheet* sheet, PrStringView selector, P
         const uint32_t* PR_NULLABLE index, int32_t* PR_NULLABLE out) {
     // cssom-1/#dom-cssstylesheet-addrule: the rule is the selector, then ` { `, the style and a space if the style is
     // not empty, and `}`. It is inserted at the end if no index is given. The result is always -1.
-    TextBuffer rule;
-    textAppend(&rule, selector);
-    textAppend(&rule, " { ");
+    PrTextBuffer rule = {};
+    prTextBufferAppend(&rule, selector);
+    prTextBufferAppend(&rule, " { ");
     if (style.size != 0) {
-        textAppend(&rule, style);
-        textAppendChar(&rule, ' ');
+        prTextBufferAppend(&rule, style);
+        prTextBufferAppendChar(&rule, ' ');
     }
-    textAppendChar(&rule, '}');
-    PrStatus status = cssStyleSheetInsertRule(sheet, textView(&rule), index != nullptr ? *index : sheet->rules.count);
-    textReset(&rule);
+    prTextBufferAppendChar(&rule, '}');
+    uint32_t position = index != nullptr ? *index : sheet->rules.count;
+    PrStatus status = cssStyleSheetInsertRule(sheet, prTextBufferView(&rule), position);
+    prTextBufferReset(&rule);
     if (status == PrStatus_Ok && out != nullptr)
         *out = -1;
     return status;
@@ -836,7 +837,7 @@ PrStatus prCssStyleSheetAddRule(PrCssStyleSheet* sheet, PrStringView selector, P
 
 PrString prCssRuleCssText(const PrCssRule* rule) {
     const CssRuleData* data = dataOf(rule);
-    return serialized([&](TextBuffer* out) { cssSerializeRule(out, data); });
+    return serialized([&](PrTextBuffer* out) { cssSerializeRule(out, data); });
 }
 
 // The setter does nothing (cssom-1/#the-cssrule-interface). It exists because the attribute is not readonly.
@@ -925,7 +926,7 @@ PrCssStyleRule* PR_NULLABLE prCssStyleRuleQuery(PrCssRule* PR_NULLABLE object) {
 
 PrString prCssStyleRuleSelectorText(const PrCssStyleRule* rule) {
     const CssRuleData* data = dataOf(rule);
-    return serialized([&](TextBuffer* out) { cssSerializeSelectorText(out, data); });
+    return serialized([&](PrTextBuffer* out) { cssSerializeSelectorText(out, data); });
 }
 
 void prCssStyleRuleSetSelectorText(PrCssStyleRule* rule, PrStringView value) {
@@ -987,7 +988,7 @@ PrString prCssImportRuleSupportsText(const PrCssImportRule* rule) {
     uint32_t condition = findProduction(run, CssValueDef_SupportsImportCondition);
     if (condition == run.count)
         return prStringNull();
-    return serialized([&](TextBuffer* out) {
+    return serialized([&](PrTextBuffer* out) {
         cssSerializePreludeValues(out, cssValueChildren(run, condition + 1), false, data->selectors, 0);
     });
 }
@@ -1167,14 +1168,14 @@ PrStringView prCssKeyframesRuleName(const PrCssKeyframesRule* rule) {
 void prCssKeyframesRuleSetName(PrCssKeyframesRule* rule, PrStringView value) {
     // css-animations-1/#dom-csskeyframesrule-name: the name is an identifier if it can be one. Otherwise it is a
     // string, as it is for `none` and the CSS-wide keywords.
-    TextBuffer name;
+    PrTextBuffer name = {};
     cssSerializeIdent(&name, value);
-    if (!setPrelude(rule, textView(&name))) {
-        textClear(&name);
+    if (!setPrelude(rule, prTextBufferView(&name))) {
+        prTextBufferClear(&name);
         cssSerializeString(&name, value);
-        setPrelude(rule, textView(&name));
+        setPrelude(rule, prTextBufferView(&name));
     }
-    textReset(&name);
+    prTextBufferReset(&name);
 }
 
 PrCssRuleList* prCssKeyframesRuleCssRules(PrCssKeyframesRule* rule) {
@@ -1502,10 +1503,10 @@ void prCssFontFeatureValuesMapSet(PrCssFontFeatureValuesMap* map, PrStringView k
         const uint32_t* PR_NULLABLE values, uint32_t count) {
     // css-fonts-4/#om-fontfeaturevalues: the entry's value is the indexes, if the map's feature type accepts that many.
     // Setting any other count does nothing.
-    TextBuffer value;
+    PrTextBuffer value = {};
     for (uint32_t i = 0; i < count; ++i) {
         if (i != 0)
-            textAppendChar(&value, ' ');
+            prTextBufferAppendChar(&value, ' ');
         cssSerializeNumber(&value, double(values[i]));
     }
     PrCssRule* rule = map;
@@ -1513,9 +1514,10 @@ void prCssFontFeatureValuesMapSet(PrCssFontFeatureValuesMap* map, PrStringView k
     if (cssNameFromText(rule->data->style.rule, key, &name)) {
         CssEdit edit;
         cssEditBegin(&edit, cssRuleParser(rule));
-        commitRuleBlock(rule, &edit, cssDeclarationBlockPrepareSet(&edit, &rule->data->style, name, textView(&value), false));
+        PrStringView serialized = prTextBufferView(&value);
+        commitRuleBlock(rule, &edit, cssDeclarationBlockPrepareSet(&edit, &rule->data->style, name, serialized, false));
     }
-    textReset(&value);
+    prTextBufferReset(&value);
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -1772,7 +1774,7 @@ bool prCssPropertyNameFromText(PrStringView text, PrCssDeclarationName* out) {
 
 PrString prCssStyleDeclarationCssText(const PrCssStyleDeclaration* declaration) {
     const CssDeclarationBlock* block = cssStyleDeclarationBlock(declaration);
-    return serialized([&](TextBuffer* out) { cssSerializeDeclarationBlock(out, block); });
+    return serialized([&](PrTextBuffer* out) { cssSerializeDeclarationBlock(out, block); });
 }
 
 PrStatus prCssStyleDeclarationSetCssText(PrCssStyleDeclaration* declaration, PrStringView value) {
@@ -1818,13 +1820,13 @@ PrString prCssStyleDeclarationGetPropertyValue(const PrCssStyleDeclaration* decl
     else
         single = declared.text.data != nullptr;
     if (declaration->serializeValue != nullptr && single) {
-        TextBuffer text{};
+        PrTextBuffer text{};
         if (declaration->serializeValue(declaration, declared, &text))
-            return textTake(&text);
-        textReset(&text);
+            return prTextBufferTake(&text);
+        prTextBufferReset(&text);
     }
     const CssDeclarationBlock* block = cssStyleDeclarationBlock(declaration);
-    return serialized([&](TextBuffer* out) { cssSerializePropertyValue(out, block, declared); });
+    return serialized([&](PrTextBuffer* out) { cssSerializePropertyValue(out, block, declared); });
 }
 
 bool prCssStyleDeclarationIsImportant(const PrCssStyleDeclaration* declaration, const PrCssDeclarationName* name) {
@@ -1943,7 +1945,7 @@ PrCssFunctionDescriptors* PR_NULLABLE prCssFunctionDescriptorsQuery(PrCssStyleDe
 // CSS
 
 PrString prCssEscape(PrStringView ident) {
-    return serialized([&](TextBuffer* out) { cssSerializeIdent(out, ident); });
+    return serialized([&](PrTextBuffer* out) { cssSerializeIdent(out, ident); });
 }
 
 bool prCssSupportsPropertyValue(const PrCssDeclarationName* name, PrStringView value) {
@@ -2391,8 +2393,8 @@ PrString prCssUsedColorSerialize(const PrCssUsedColor* color, PrCssColorSerializ
         bool whole = true;
         for (uint32_t i = 0; i < 3; ++i) {
             double scaled = (color->missing & (1u << i)) != 0 ? 0 : color->components[i] * 255;
-            double rounded = roundF64(scaled);
-            whole = whole && absF64(scaled - rounded) < 1e-6 && rounded >= 0 && rounded <= 255;
+            double rounded = prF64Round(scaled);
+            whole = whole && prF64Abs(scaled - rounded) < 1e-6 && rounded >= 0 && rounded <= 255;
             bytes[i] = whole ? uint32_t(rounded) : 0;
         }
         if (whole) {
@@ -2418,7 +2420,7 @@ PrString prCssUsedColorSerialize(const PrCssUsedColor* color, PrCssColorSerializ
 PrStatus prCssFontCreate(PrStringView text, const PrDomElement* PR_NULLABLE element, PrCssFont* PR_NULLABLE* PR_NONNULL out) {
     *out = nullptr;
     // The value of the font property, which cannot be a CSS-wide keyword or a substitution here.
-    PrStringView trimmed = stringTrim(text);
+    PrStringView trimmed = prStringTrim(text);
     if (cssIsCssWideKeyword(cssKeywordFromText(trimmed)))
         return PrStatus_Syntax;
     CssDeclarationBlock block = {};
@@ -2461,9 +2463,9 @@ PrStatus prCssFontCreate(PrStringView text, const PrDomElement* PR_NULLABLE elem
 void prCssFontDestroy(PrCssFont* PR_NULLABLE font) {
     if (font == nullptr)
         return;
-    textReset(&font->names);
+    prTextBufferReset(&font->names);
     font->families.reset();
-    textReset(&font->serialization);
+    prTextBufferReset(&font->serialization);
     prMemoryFree(font);
 }
 
@@ -2484,13 +2486,13 @@ bool prCssFontSmallCaps(const PrCssFont* font) {
 }
 
 PrStringView prCssFontSerialization(const PrCssFont* font) {
-    return textView(&font->serialization);
+    return prTextBufferView(&font->serialization);
 }
 
 PrStatus prCssParseFilterList(PrStringView text, const PrDomElement* PR_NULLABLE element,
         PrLayoutFilter* PR_NULLABLE out, uint32_t capacity, uint32_t* count) {
     *count = 0;
-    PrStringView trimmed = stringTrim(text);
+    PrStringView trimmed = prStringTrim(text);
     PrCssKeyword keyword = cssKeywordFromText(trimmed);
     if (cssIsCssWideKeyword(keyword) || keyword == PrCssKeyword_None)
         return PrStatus_Syntax;
@@ -2539,7 +2541,7 @@ PrString prCssValueSerialize(const PrCssValue* value, uint32_t first, uint32_t e
     CssValueRun run = cssValueRun(valueRead(value));
     if (first > end || end > run.count)
         PR_FATAL("a value serialized past its end");
-    return serialized([&](TextBuffer* out) {
+    return serialized([&](PrTextBuffer* out) {
         cssSerializeValues(out, CssValueRun{run.values + first, end - first, run.text});
     });
 }
@@ -2797,19 +2799,19 @@ PrStatus prCssMatrixFromString(PrStringView text, PrDomMatrix* out) {
 
 PrStatus prCssMatrixToString(const PrDomMatrix* matrix, PrString* out) {
     for (double element : matrix->m) {
-        if (!isFiniteF64(element))
+        if (!prF64IsFinite(element))
             return PrStatus_InvalidState;
     }
-    TextBuffer text;
-    textAppend(&text, matrix->is2D ? "matrix(" : "matrix3d(");
+    PrTextBuffer text = {};
+    prTextBufferAppend(&text, matrix->is2D ? "matrix(" : "matrix3d(");
     uint32_t count = matrix->is2D ? 6 : 16;
     for (uint32_t i = 0; i < count; ++i) {
         if (i != 0)
-            textAppend(&text, ", ");
+            prTextBufferAppend(&text, ", ");
         cssSerializeNumber(&text, matrix->m[matrix->is2D ? kDomMatrix2DIndices[i] : i]);
     }
-    textAppendChar(&text, ')');
-    *out = textTake(&text);
+    prTextBufferAppendChar(&text, ')');
+    *out = prTextBufferTake(&text);
     return PrStatus_Ok;
 }
 

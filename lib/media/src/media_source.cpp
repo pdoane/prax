@@ -32,7 +32,7 @@ FrameData* frameDataCreate(PrByteView bytes) {
     data->references.storeRelaxed(1);
     data->size = uint32_t(bytes.size);
     if (bytes.size != 0)
-        memCopy(data + 1, bytes.data, bytes.size);
+        prMemCopy(data + 1, bytes.data, bytes.size);
     return data;
 }
 
@@ -109,9 +109,9 @@ void releaseFrames(MediaSourceBuffer* b, TrackBuffer* track, uint32_t from, uint
 }
 
 void resetTrack(TrackBuffer* track) {
-    track->lastDecode = kNanF64;
-    track->lastDuration = kNanF64;
-    track->highestEnd = kNanF64;
+    track->lastDecode = kPrF64Nan;
+    track->lastDuration = kPrF64Nan;
+    track->highestEnd = kPrF64Nan;
     track->needRandomAccess = true;
 }
 
@@ -272,12 +272,12 @@ void processFrame(MediaSourceBuffer* b, const PrMediaCodedFrame& coded) {
         double presentation = coded.presentation;
         double decode = coded.decode;
         double duration = coded.duration;
-        if (b->mode == PrMediaAppendMode_Sequence && !isNanF64(b->groupStart)) {
+        if (b->mode == PrMediaAppendMode_Sequence && !prF64IsNan(b->groupStart)) {
             b->timestampOffset = b->groupStart - presentation;
             b->groupEnd = b->groupStart;
             for (uint32_t i = 0; i < b->tracks.count; ++i)
                 b->tracks.data[i].needRandomAccess = true;
-            b->groupStart = kNanF64;
+            b->groupStart = kPrF64Nan;
         }
         presentation += b->timestampOffset;
         decode += b->timestampOffset;
@@ -285,7 +285,7 @@ void processFrame(MediaSourceBuffer* b, const PrMediaCodedFrame& coded) {
         if (track == nullptr)
             return;
         // A frame out of order, or far past the last, starts a new coded frame group.
-        if (!isNanF64(track->lastDecode) && (decode < track->lastDecode ||
+        if (!prF64IsNan(track->lastDecode) && (decode < track->lastDecode ||
                 decode - track->lastDecode > 2 * track->lastDuration)) {
             if (b->mode == PrMediaAppendMode_Segments)
                 b->groupEnd = presentation;
@@ -308,7 +308,7 @@ void processFrame(MediaSourceBuffer* b, const PrMediaCodedFrame& coded) {
         }
         // The frames that the new frame overlaps are removed, with what depends on them. Of a frame that the new one
         // starts within, a video frame is removed only if the new frame starts within its first microsecond.
-        if (isNanF64(track->lastDecode)) {
+        if (prF64IsNan(track->lastDecode)) {
             uint32_t at = lowerDecode(track, presentation - track->maxReorder - track->maxDuration);
             for (; at < track->frames.count; ++at) {
                 const BufferFrame& frame = track->frames.data[at];
@@ -321,13 +321,13 @@ void processFrame(MediaSourceBuffer* b, const PrMediaCodedFrame& coded) {
                 }
             }
         }
-        double from = isNanF64(track->highestEnd) ? presentation : track->highestEnd;
+        double from = prF64IsNan(track->highestEnd) ? presentation : track->highestEnd;
         if (from < end)
             removePresenting(b, track, from > presentation ? from : presentation, end);
         insertFrame(b, track, BufferFrame{presentation, decode, duration, coded.key, frameDataCreate(coded.bytes)});
         track->lastDecode = decode;
         track->lastDuration = duration;
-        track->highestEnd = isNanF64(track->highestEnd) || end > track->highestEnd ? end : track->highestEnd;
+        track->highestEnd = prF64IsNan(track->highestEnd) || end > track->highestEnd ? end : track->highestEnd;
         b->groupEnd = end > b->groupEnd ? end : b->groupEnd;
         return;
     }
@@ -402,8 +402,8 @@ PrMediaSourceBuffer* prMediaSourceBufferCreate(PrMediaByteStream format, size_t 
     PrMediaSourceBuffer* b = allocZeroed<PrMediaSourceBuffer>();
     prMutexInit(&b->lock);
     b->parser = prMediaSegmentParserCreate(format);
-    b->groupStart = kNanF64;
-    b->appendWindow = PrMediaTimeRange{0, kInfinityF64};
+    b->groupStart = kPrF64Nan;
+    b->appendWindow = PrMediaTimeRange{0, kPrF64Infinity};
     b->quota = quota;
     return b;
 }
@@ -539,18 +539,18 @@ void prMediaSourceBufferRemove(PrMediaSourceBuffer* buffer, double start, double
         // The removal runs on to the first random access point at or after its end, so that no frame that remains
         // depends on one removed.
         double removeEnd = end;
-        double nextKey = kInfinityF64;
+        double nextKey = kPrF64Infinity;
         for (uint32_t i = 0; i < track->frames.count; ++i) {
             const BufferFrame& frame = track->frames.data[i];
             if (frame.key && frame.presentation >= end && frame.presentation < nextKey)
                 nextKey = frame.presentation;
         }
-        if (nextKey != kInfinityF64)
+        if (nextKey != kPrF64Infinity)
             removeEnd = nextKey;
-        else if (!isNanF64(duration) && duration > removeEnd)
+        else if (!prF64IsNan(duration) && duration > removeEnd)
             removeEnd = duration;
         else
-            removeEnd = kInfinityF64;
+            removeEnd = kPrF64Infinity;
         if (removePresenting(buffer, track, start, removeEnd) != UINT32_MAX)
             track->needRandomAccess = true;
     }
@@ -571,7 +571,7 @@ bool prMediaSourceBufferEvict(PrMediaSourceBuffer* buffer, double current, size_
                 keep = frame.presentation;
         }
         if (keep > 0)
-            prMediaSourceBufferRemove(buffer, 0, keep, kNanF64);
+            prMediaSourceBufferRemove(buffer, 0, keep, kPrF64Nan);
     }
     return buffer->bytes + incoming <= buffer->quota;
 }
@@ -598,7 +598,7 @@ bool prMediaSourceBufferNextFrame(PrMediaSourceBuffer* buffer, uint32_t index, d
     if (index < buffer->tracks.count) {
         const TrackBuffer* track = &buffer->tracks.data[index];
         uint32_t at = UINT32_MAX;
-        if (!isNanF64(decode)) {
+        if (!prF64IsNan(decode)) {
             // The first frame decoded after `decode`.
             uint32_t low = lowerDecode(track, decode);
             while (low < track->frames.count && track->frames.data[low].decode <= decode)

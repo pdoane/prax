@@ -390,7 +390,7 @@ uint64_t keyOf(uint32_t codePoint, PrScript script) {
 }
 
 uint32_t clusterHash(PrStringView cluster, PrScript script) {
-    return uint32_t(hashBytes(cluster.data, cluster.size, 0x51ed270b27353d0dull + uint64_t(script)));
+    return uint32_t(prHashBytes(cluster.data, cluster.size, 0x51ed270b27353d0dull + uint64_t(script)));
 }
 
 // Returns the recorded question for a cluster of more than one code point, or kHashMissing.
@@ -398,7 +398,7 @@ uint32_t findCluster(const TextFont& t, PrStringView cluster, PrScript script) {
     return t.clusterIndex.find(clusterHash(cluster, script), [&](uint32_t i) {
         const ClusterChoice& c = t.clusters.data[i];
         return c.script == script && c.size == cluster.size &&
-            memEquals(t.clusterText.data + c.start, cluster.data, cluster.size);
+            prMemEquals(t.clusterText.data + c.start, cluster.data, cluster.size);
     });
 }
 

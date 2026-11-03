@@ -6,6 +6,7 @@
 #include "pr/ascii.h"
 #include "pr/mem.h"
 #include "pr/string_ops.h"
+#include "pr/string_trim.h"
 
 namespace pr_impl {
 
@@ -38,7 +39,7 @@ void eachElement(PrStringView value, Fn fn) {
                 quoted = !quoted;
             ++end;
         }
-        PrStringView element = stringTrim(stringSlice(value, start, end - start), asciiIsTabOrSpace);
+        PrStringView element = stringTrimBy(prStringSlice(value, start, end - start), prAsciiIsTabOrSpace);
         if (element.size != 0)
             fn(element);
         start = end + 1;
@@ -48,12 +49,12 @@ void eachElement(PrStringView value, Fn fn) {
 // Parses a non-negative integer of seconds (rfc 9111 section 1.2.2). Returns false if `text` is not one.
 bool parseSeconds(PrStringView text, double* out) {
     if (text.size >= 2 && text.data[0] == '"' && text.data[text.size - 1] == '"')
-        text = stringSlice(text, 1, text.size - 2);
+        text = prStringSlice(text, 1, text.size - 2);
     if (text.size == 0)
         return false;
     double seconds = 0;
     for (size_t i = 0; i < text.size; ++i) {
-        if (!asciiIsDigit(text.data[i]))
+        if (!prAsciiIsDigit(text.data[i]))
             return false;
         seconds = seconds * 10 + double(text.data[i] - '0');
     }
@@ -71,13 +72,13 @@ int64_t daysFromCivil(int64_t year, int64_t month, int64_t day) {
     return era * 146097 + dayOfEra - 719468;
 }
 
-void appendU32(TextBuffer* out, uint32_t value) {
-    textAppend(out, reinterpret_cast<const char*>(&value), 4);
+void appendU32(PrTextBuffer* out, uint32_t value) {
+    prTextBufferAppend(out, PrStringView{reinterpret_cast<const char*>(&value), 4});
 }
 
-void appendText(TextBuffer* out, PrStringView text) {
+void appendText(PrTextBuffer* out, PrStringView text) {
     appendU32(out, text.data != nullptr ? uint32_t(text.size) : kNullValue);
-    textAppend(out, text);
+    prTextBufferAppend(out, text);
 }
 
 // Reads the fields of a record, in order, from a range of bytes.
@@ -88,7 +89,7 @@ struct Reader {
     bool take(void* out, size_t size) {
         if (size_t(end - at) < size)
             return false;
-        memCopy(out, at, size);
+        prMemCopy(out, at, size);
         at += size;
         return true;
     }
@@ -114,27 +115,27 @@ struct Reader {
 FetchCacheControl fetchCacheControlFromHeaders(const PrFetchHeader* PR_NULLABLE headers, uint32_t count) {
     FetchCacheControl control{};
     for (uint32_t i = 0; i < count; ++i) {
-        if (asciiEqualsFold(headers[i].name, "pragma")) {
+        if (prAsciiEqualsFold(headers[i].name, "pragma")) {
             eachElement(headers[i].value, [&](PrStringView element) {
-                control.noCache = control.noCache || asciiEqualsFold(element, "no-cache");
+                control.noCache = control.noCache || prAsciiEqualsFold(element, "no-cache");
             });
             continue;
         }
-        if (!asciiEqualsFold(headers[i].name, "cache-control"))
+        if (!prAsciiEqualsFold(headers[i].name, "cache-control"))
             continue;
         eachElement(headers[i].value, [&](PrStringView element) {
-            size_t equals = stringFind(element, '=');
-            PrStringView name = stringTrim(stringSlice(element, 0, equals), asciiIsTabOrSpace);
-            PrStringView value;
-            if (equals < element.size)
-                value = stringTrim(stringSlice(element, equals + 1, element.size - equals - 1), asciiIsTabOrSpace);
-            else
-                value = PrStringView{nullptr, 0};
-            if (asciiEqualsFold(name, "no-store")) {
+            size_t equals = prStringFindByte(element, '=');
+            PrStringView name = stringTrimBy(prStringSlice(element, 0, equals), prAsciiIsTabOrSpace);
+            PrStringView value = {nullptr, 0};
+            if (equals < element.size) {
+                PrStringView afterEquals = prStringSlice(element, equals + 1, element.size - equals - 1);
+                value = stringTrimBy(afterEquals, prAsciiIsTabOrSpace);
+            }
+            if (prAsciiEqualsFold(name, "no-store")) {
                 control.noStore = true;
-            } else if (asciiEqualsFold(name, "no-cache")) {
+            } else if (prAsciiEqualsFold(name, "no-cache")) {
                 control.noCache = true;
-            } else if (asciiEqualsFold(name, "max-age")) {
+            } else if (prAsciiEqualsFold(name, "max-age")) {
                 double seconds = 0;
                 // An invalid max-age makes the response stale (rfc 9111 section 4.2.1).
                 control.hasMaxAge = true;
@@ -159,22 +160,22 @@ bool fetchCacheParseDate(PrStringView text, double* out) {
         size_t end = at;
         while (end < text.size && text.data[end] != ' ' && text.data[end] != ',' && text.data[end] != '-')
             ++end;
-        PrStringView token = stringSlice(text, at, end - at);
+        PrStringView token = prStringSlice(text, at, end - at);
         at = end;
         if (token.size == 0)
             continue;
         if (token.size == 8 && token.data[2] == ':' && token.data[5] == ':') {
             for (size_t i = 0; i < 8; ++i) {
-                if (i != 2 && i != 5 && !asciiIsDigit(token.data[i]))
+                if (i != 2 && i != 5 && !prAsciiIsDigit(token.data[i]))
                     return false;
             }
             hour = (token.data[0] - '0') * 10 + (token.data[1] - '0');
             minute = (token.data[3] - '0') * 10 + (token.data[4] - '0');
             second = (token.data[6] - '0') * 10 + (token.data[7] - '0');
-        } else if (asciiIsDigit(token.data[0])) {
+        } else if (prAsciiIsDigit(token.data[0])) {
             int64_t value = 0;
             for (size_t i = 0; i < token.size; ++i) {
-                if (!asciiIsDigit(token.data[i]))
+                if (!prAsciiIsDigit(token.data[i]))
                     return false;
                 value = value * 10 + (token.data[i] - '0');
             }
@@ -186,7 +187,7 @@ bool fetchCacheParseDate(PrStringView text, double* out) {
                 return false;
         } else if (token.size >= 3) {
             for (int64_t m = 0; m < 12; ++m) {
-                if (asciiEqualsFold(stringSlice(token, 0, 3), kMonths[m]) && token.size == 3)
+                if (prAsciiEqualsFold(prStringSlice(token, 0, 3), kMonths[m]) && token.size == 3)
                     month = m + 1;
             }
         }
@@ -200,7 +201,7 @@ bool fetchCacheParseDate(PrStringView text, double* out) {
 
 PrStringView fetchCacheHeader(const PrFetchHeader* PR_NULLABLE headers, uint32_t count, PrStringView name) {
     for (uint32_t i = 0; i < count; ++i) {
-        if (asciiEqualsFold(headers[i].name, name))
+        if (prAsciiEqualsFold(headers[i].name, name))
             return headers[i].value;
     }
     return PrStringView{nullptr, 0};
@@ -253,7 +254,7 @@ double fetchCacheAge(const FetchCachedResponse* response, double now) {
     fetchCacheParseDate(fetchCacheHeader(headers, count, "date"), &date);
     double apparent = response->received > date ? response->received - date : 0;
     double ageSeconds = 0;
-    parseSeconds(stringTrim(fetchCacheHeader(headers, count, "age"), asciiIsTabOrSpace), &ageSeconds);
+    parseSeconds(stringTrimBy(fetchCacheHeader(headers, count, "age"), prAsciiIsTabOrSpace), &ageSeconds);
     double corrected = ageSeconds * 1000 + (response->received - response->requested);
     double initial = apparent > corrected ? apparent : corrected;
     double resident = now > response->received ? now - response->received : 0;
@@ -268,19 +269,19 @@ bool fetchCacheVaryMatches(const FetchCachedResponse* response, const PrFetchHea
         PrStringView value = fetchCacheHeader(request, count, varied.name);
         if ((value.data == nullptr) != (varied.value.data == nullptr))
             return false;
-        if (value.data != nullptr && stringTrim(value,
-                asciiIsTabOrSpace) != stringTrim(varied.value, asciiIsTabOrSpace))
+        if (value.data != nullptr && stringTrimBy(value,
+                prAsciiIsTabOrSpace) != stringTrimBy(varied.value, prAsciiIsTabOrSpace))
             return false;
     }
     return true;
 }
 
-void fetchCacheWrite(const FetchCachedResponse* response, TextBuffer* out) {
-    textAppend(out, reinterpret_cast<const char*>(kRecordMagic), 4);
+void fetchCacheWrite(const FetchCachedResponse* response, PrTextBuffer* out) {
+    prTextBufferAppend(out, PrStringView{reinterpret_cast<const char*>(kRecordMagic), 4});
     appendU32(out, kRecordVersion);
     appendU32(out, response->status);
-    textAppend(out, reinterpret_cast<const char*>(&response->requested), 8);
-    textAppend(out, reinterpret_cast<const char*>(&response->received), 8);
+    prTextBufferAppend(out, PrStringView{reinterpret_cast<const char*>(&response->requested), 8});
+    prTextBufferAppend(out, PrStringView{reinterpret_cast<const char*>(&response->received), 8});
     appendU32(out, response->headers.count);
     for (uint32_t i = 0; i < response->headers.count; ++i) {
         appendText(out, response->headers.data[i].name);
@@ -292,8 +293,9 @@ void fetchCacheWrite(const FetchCachedResponse* response, TextBuffer* out) {
         appendText(out, response->varied.data[i].value);
     }
     uint64_t size = response->body.size;
-    textAppend(out, reinterpret_cast<const char*>(&size), 8);
-    textAppend(out, reinterpret_cast<const char*>(response->body.data), uint32_t(response->body.size));
+    prTextBufferAppend(out, PrStringView{reinterpret_cast<const char*>(&size), 8});
+    const char* body = reinterpret_cast<const char*>(response->body.data);
+    prTextBufferAppend(out, PrStringView{body, response->body.size});
 }
 
 bool fetchCacheRead(PrByteView bytes, FetchCachedResponse* out) {
@@ -302,7 +304,7 @@ bool fetchCacheRead(PrByteView bytes, FetchCachedResponse* out) {
     uint32_t version = 0;
     uint32_t status = 0;
     uint32_t headers = 0;
-    if (!reader.take(magic, 4) || !memEquals(magic, kRecordMagic, 4) || !reader.take(&version, 4) ||
+    if (!reader.take(magic, 4) || !prMemEquals(magic, kRecordMagic, 4) || !reader.take(&version, 4) ||
             version != kRecordVersion || !reader.take(&status, 4) || !reader.take(&out->requested, 8) ||
             !reader.take(&out->received, 8) || !reader.take(&headers, 4))
         return false;

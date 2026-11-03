@@ -67,12 +67,12 @@ TEST_CASE("16-bit floats at the edges of their range") {
     CHECK(bitsOf(prFloat16FromFloat(65519)) == 0x7bff);
     CHECK(bitsOf(prFloat16FromFloat(65520)) == 0x7c00);
     CHECK(bitsOf(prFloat16FromFloat(1e10f)) == 0x7c00);
-    CHECK(bitsOf(prFloat16FromFloat(-kInfinityF32)) == 0xfc00);
+    CHECK(bitsOf(prFloat16FromFloat(-kPrF32Infinity)) == 0xfc00);
     CHECK(bitsOf(prFloat16FromFloat(6.1035156e-5f)) == 0x0400);
     CHECK(bitsOf(prFloat16FromFloat(5.9604645e-8f)) == 0x0001);
     // Half the smallest subnormal ties to 0, and anything above it reaches the subnormal.
     CHECK(bitsOf(prFloat16FromFloat(2.9802322e-8f)) == 0x0000);
     CHECK(bitsOf(prFloat16FromFloat(2.9802326e-8f)) == 0x0001);
     CHECK(bitsOf(prFloat16FromFloat(1e-10f)) == 0x0000);
-    CHECK(isNan(prFloat16ToFloat(prFloat16FromFloat(kNanF32))));
+    CHECK(isNan(prFloat16ToFloat(prFloat16FromFloat(kPrF32Nan))));
 }

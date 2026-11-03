@@ -207,7 +207,7 @@ SvgStrokeStyle svgStyleStroke(const CssComputedStyle* style) {
     stroke.width = svgStyleLength(style, PrCssProperty_StrokeWidth);
     stroke.dashOffset = svgStyleLength(style, PrCssProperty_StrokeDashoffset);
     // A miter limit below one is an error that strokes as one (SVG2/painting.html#StrokeMiterlimitProperty).
-    stroke.miterLimit = maxF32(svgStyleNumber(style, PrCssProperty_StrokeMiterlimit, 4), 1);
+    stroke.miterLimit = prF32Max(svgStyleNumber(style, PrCssProperty_StrokeMiterlimit, 4), 1);
     stroke.join = joinOf(svgStyleKeyword(style, PrCssProperty_StrokeLinejoin));
     stroke.cap = capOf(svgStyleKeyword(style, PrCssProperty_StrokeLinecap));
     CssValueRun dashes = cssComputedValue(style, PrCssProperty_StrokeDasharray);

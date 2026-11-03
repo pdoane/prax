@@ -85,7 +85,7 @@ void headersView(const HeaderList* list, Array<PrFetchHeader>* out) {
 
 PrStringView headersFind(const HeaderList* list, PrStringView name) {
     for (uint32_t i = 0; i < list->names.count; ++i) {
-        if (asciiEqualsFold(prStringView(&list->names.data[i]), name))
+        if (prAsciiEqualsFold(prStringView(&list->names.data[i]), name))
             return prStringView(&list->values.data[i]);
     }
     return PrStringView{nullptr, 0};
@@ -260,7 +260,7 @@ bool isTrustworthy(const PrUrl* url) {
     if (scheme == "data" || scheme == "https" || scheme == "wss" || scheme == "file")
         return true;
     PrStringView host = prUrlHost(url);
-    return host == "[::1]" || stringStartsWith(host, "127.") || host == "localhost" || asciiEndsWithFold(host, ".localhost");
+    return host == "[::1]" || prStringStartsWith(host, "127.") || host == "localhost" || prAsciiEndsWithFold(host, ".localhost");
 }
 
 // Returns true if the URL's scheme is local (fetch/#local-scheme), which a referrer never names.
@@ -368,7 +368,7 @@ void appendOriginHeader(BuiltinFetch* fetch, const PrUrl* current) {
                 case PrFetchReferrerPolicy_NoReferrerWhenDowngrade:
                 case PrFetchReferrerPolicy_StrictOrigin:
                 case PrFetchReferrerPolicy_StrictOriginWhenCrossOrigin:
-                    if (stringStartsWith(origin, "https:") && prUrlScheme(current) != "https")
+                    if (prStringStartsWith(origin, "https:") && prUrlScheme(current) != "https")
                         origin = "null";
                     break;
                 case PrFetchReferrerPolicy_SameOrigin:
@@ -406,9 +406,9 @@ void unsafeHeaderNames(const HeaderList* headers, Array<PrString>* out) {
         unsafe.append(safelisted.data, safelisted.count);
     for (uint32_t k = 0; k < unsafe.count; ++k) {
         PrString name = prStringCopy(prStringView(&headers->names.data[unsafe.data[k]]));
-        asciiLower(const_cast<char*>(prStringView(&name).data), prStringView(&name).size);
+        prAsciiLowerText(const_cast<char*>(prStringView(&name).data), prStringView(&name).size);
         uint32_t at = 0;
-        while (at < out->count && stringCompare(prStringView(&out->data[at]), prStringView(&name)) < 0)
+        while (at < out->count && prStringCompare(prStringView(&out->data[at]), prStringView(&name)) < 0)
             ++at;
         if (at < out->count && prStringView(&out->data[at]) == prStringView(&name)) {
             prStringReset(&name);
@@ -438,7 +438,7 @@ bool needsPreflight(const BuiltinFetch* fetch) {
 PrStringView headersFindOnly(const HeaderList* list, PrStringView name) {
     PrStringView found{nullptr, 0};
     for (uint32_t i = 0; i < list->names.count; ++i) {
-        if (!asciiEqualsFold(prStringView(&list->names.data[i]), name))
+        if (!prAsciiEqualsFold(prStringView(&list->names.data[i]), name))
             continue;
         if (found.data != nullptr)
             return PrStringView{nullptr, 0};
@@ -464,7 +464,7 @@ bool passesCors(const BuiltinFetch* fetch, const HeaderList* response) {
 // (fetch/#extract-header-list-values). Returns false if a value is not a token.
 bool headerTokens(const HeaderList* list, PrStringView name, Array<PrStringView>* out) {
     for (uint32_t i = 0; i < list->names.count; ++i) {
-        if (!asciiEqualsFold(prStringView(&list->names.data[i]), name))
+        if (!prAsciiEqualsFold(prStringView(&list->names.data[i]), name))
             continue;
         PrStringView value = prStringView(&list->values.data[i]);
         size_t start = 0;
@@ -472,9 +472,9 @@ bool headerTokens(const HeaderList* list, PrStringView name, Array<PrStringView>
             size_t end = start;
             while (end < value.size && value.data[end] != ',')
                 ++end;
-            PrStringView item = stringTrim(stringSlice(value, start, end - start));
+            PrStringView item = prStringTrim(prStringSlice(value, start, end - start));
             for (size_t k = 0; k < item.size; ++k) {
-                if (!asciiIsHttpToken(item.data[k]))
+                if (!prAsciiIsHttpToken(item.data[k]))
                     return false;
             }
             if (item.size != 0)
@@ -541,8 +541,8 @@ void store(BuiltinFetch* fetch, PrByteView body) {
     for (uint32_t i = 0; i < fetch->response.names.count; ++i) {
         PrStringView name = prStringView(&fetch->response.names.data[i]);
         // The body is stored decoded, so the headers that describe its encoding on the wire do not apply to it.
-        if (asciiEqualsFold(name, "content-encoding") || asciiEqualsFold(name, "content-length") ||
-                asciiEqualsFold(name, "transfer-encoding"))
+        if (prAsciiEqualsFold(name, "content-encoding") || prAsciiEqualsFold(name, "content-length") ||
+                prAsciiEqualsFold(name, "transfer-encoding"))
             continue;
         response.headers.push(PrFetchHeader{name, prStringView(&fetch->response.values.data[i])});
     }
@@ -552,18 +552,18 @@ void store(BuiltinFetch* fetch, PrByteView body) {
         size_t end = start;
         while (end < vary.size && vary.data[end] != ',')
             ++end;
-        PrStringView name = stringTrim(stringSlice(vary, start, end - start));
+        PrStringView name = prStringTrim(prStringSlice(vary, start, end - start));
         if (name.size != 0)
             response.varied.push(PrFetchHeader{name, headersFind(&fetch->sent, name)});
         start = end + 1;
     }
     response.body = body;
-    TextBuffer record{};
+    PrTextBuffer record{};
     fetchCacheWrite(&response, &record);
-    PrStringView bytes = textView(&record);
+    PrStringView bytes = prTextBufferView(&record);
     prStorageWrite(fetcher->cache, prStringView(&fetch->url),
         PrByteView{reinterpret_cast<const uint8_t*>(bytes.data), bytes.size});
-    textReset(&record);
+    prTextBufferReset(&record);
     fetchCachedResponseReset(&response);
 }
 
@@ -693,7 +693,7 @@ bool passesTimingAllow(const BuiltinFetch* fetch) {
     if (!fetch->timing.timingAllowPassed)
         return false;
     for (uint32_t i = 0; i < fetch->response.names.count; ++i) {
-        if (!asciiEqualsFold(prStringView(&fetch->response.names.data[i]), "timing-allow-origin"))
+        if (!prAsciiEqualsFold(prStringView(&fetch->response.names.data[i]), "timing-allow-origin"))
             continue;
         PrStringView values = prStringView(&fetch->response.values.data[i]);
         size_t start = 0;
@@ -701,7 +701,7 @@ bool passesTimingAllow(const BuiltinFetch* fetch) {
             size_t end = start;
             while (end < values.size && values.data[end] != ',')
                 ++end;
-            PrStringView value = stringTrim(stringSlice(values, start, end - start));
+            PrStringView value = prStringTrim(prStringSlice(values, start, end - start));
             if (value == "*" || value == serializedOrigin(fetch))
                 return true;
             start = end + 1;
@@ -839,15 +839,15 @@ void request(BuiltinFetch* fetch, const PrUrl* current) {
 // Chooses the decoder of the response's content coding. An unknown coding is passed on as it was sent.
 void chooseDecoder(BuiltinFetch* fetch) {
     BuiltinFetcher* fetcher = fetcherOf(fetch);
-    PrStringView coding = stringTrim(headersFind(&fetch->response, "content-encoding"));
+    PrStringView coding = prStringTrim(headersFind(&fetch->response, "content-encoding"));
     if (fetcher->compress == nullptr || coding.size == 0)
         return;
     PrCompressFormat format = PrCompressFormat_Gzip;
-    if (asciiEqualsFold(coding, "gzip") || asciiEqualsFold(coding, "x-gzip"))
+    if (prAsciiEqualsFold(coding, "gzip") || prAsciiEqualsFold(coding, "x-gzip"))
         format = PrCompressFormat_Gzip;
-    else if (asciiEqualsFold(coding, "deflate"))
+    else if (prAsciiEqualsFold(coding, "deflate"))
         format = PrCompressFormat_Zlib;
-    else if (asciiEqualsFold(coding, "br"))
+    else if (prAsciiEqualsFold(coding, "br"))
         format = PrCompressFormat_Brotli;
     else
         return;
@@ -870,28 +870,28 @@ void answerRevalidated(BuiltinFetch* fetch, PrHttpExchange* exchange) {
     for (uint32_t i = 0; i < entry.headers.count; ++i) {
         bool replaced = false;
         for (uint32_t k = 0; k < updates && !replaced; ++k)
-            replaced = asciiEqualsFold(prHttpExchangeHeader(exchange, k).name, entry.headers.data[i].name);
+            replaced = prAsciiEqualsFold(prHttpExchangeHeader(exchange, k).name, entry.headers.data[i].name);
         if (!replaced)
             headersAdd(&merged, entry.headers.data[i].name, entry.headers.data[i].value);
     }
     for (uint32_t k = 0; k < updates; ++k) {
         PrHttpHeader header = prHttpExchangeHeader(exchange, k);
-        if (!asciiEqualsFold(header.name, "content-length") && !asciiEqualsFold(header.name, "content-encoding"))
+        if (!prAsciiEqualsFold(header.name, "content-length") && !prAsciiEqualsFold(header.name, "content-encoding"))
             headersAdd(&merged, header.name, header.value);
     }
     entry.headers.clear();
     headersView(&merged, &entry.headers);
     entry.requested = fetch->requested;
     entry.received = prTimeWallMilliseconds();
-    TextBuffer record{};
+    PrTextBuffer record{};
     fetchCacheWrite(&entry, &record);
     dropExchange(fetch);
     fetch->timing.cacheState = PrFetchCacheState_Validated;
     answerFromCache(fetch, &entry);
-    PrStringView bytes = textView(&record);
+    PrStringView bytes = prTextBufferView(&record);
     prStorageWrite(fetcher->cache, prStringView(&fetch->url),
         PrByteView{reinterpret_cast<const uint8_t*>(bytes.data), bytes.size});
-    textReset(&record);
+    prTextBufferReset(&record);
     fetchCachedResponseReset(&entry);
     headersReset(&merged);
     dropRevalidated(fetch);
@@ -962,20 +962,20 @@ void preflight(BuiltinFetch* fetch) {
     BuiltinFetcher* fetcher = fetcherOf(fetch);
     Array<PrString> names{};
     unsafeHeaderNames(&fetch->requestHeaders, &names);
-    TextBuffer joined{};
+    PrTextBuffer joined{};
     for (uint32_t i = 0; i < names.count; ++i) {
         if (i != 0)
-            textAppend(&joined, ",");
-        textAppend(&joined, prStringView(&names.data[i]));
+            prTextBufferAppend(&joined, ",");
+        prTextBufferAppend(&joined, prStringView(&names.data[i]));
         prStringReset(&names.data[i]);
     }
     names.reset();
     headersClear(&fetch->sent);
     headersAdd(&fetch->sent, "Accept", "*/*");
     headersAdd(&fetch->sent, "Access-Control-Request-Method", prStringView(&fetch->method));
-    if (textView(&joined).size != 0)
-        headersAdd(&fetch->sent, "Access-Control-Request-Headers", textView(&joined));
-    textReset(&joined);
+    if (prTextBufferView(&joined).size != 0)
+        headersAdd(&fetch->sent, "Access-Control-Request-Headers", prTextBufferView(&joined));
+    prTextBufferReset(&joined);
     headersAdd(&fetch->sent, "Origin", serializedOrigin(fetch));
     if (!prStringIsNull(&fetch->referrer))
         headersAdd(&fetch->sent, "Referer", prStringView(&fetch->referrer));
@@ -1015,9 +1015,9 @@ bool allowsMethod(const BuiltinFetch* fetch, const Array<PrStringView>& list) {
 // it holds `*`, the request has no credentials, and the header is not Authorization
 // (fetch/#cors-non-wildcard-request-header-name).
 bool allowsHeader(const BuiltinFetch* fetch, const Array<PrStringView>& list, PrStringView name) {
-    bool wildcard = fetch->credentials != PrFetchCredentials_Include && !asciiEqualsFold(name, "authorization");
+    bool wildcard = fetch->credentials != PrFetchCredentials_Include && !prAsciiEqualsFold(name, "authorization");
     for (uint32_t i = 0; i < list.count; ++i) {
-        if (asciiEqualsFold(list.data[i], name) || (wildcard && list.data[i] == "*"))
+        if (prAsciiEqualsFold(list.data[i], name) || (wildcard && list.data[i] == "*"))
             return true;
     }
     return false;
@@ -1153,13 +1153,13 @@ constexpr FileType kFileTypes[] = {
 // Returns the MIME type of the file at `path` by its extension, or the null view for an extension that it does not
 // know.
 PrStringView fileTypeOf(PrStringView path) {
-    size_t dot = stringFindLast(path, '.');
-    size_t slash = stringFindLast(path, '/');
+    size_t dot = prStringFindLastByte(path, '.');
+    size_t slash = prStringFindLastByte(path, '/');
     if (dot == path.size || (slash != path.size && slash > dot))
         return PrStringView{nullptr, 0};
-    PrStringView extension = stringSlice(path, dot + 1, path.size - dot - 1);
+    PrStringView extension = prStringSlice(path, dot + 1, path.size - dot - 1);
     for (const FileType& entry : kFileTypes) {
-        if (asciiEqualsFold(extension, entry.extension))
+        if (prAsciiEqualsFold(extension, entry.extension))
             return entry.type;
     }
     return PrStringView{nullptr, 0};
@@ -1172,21 +1172,21 @@ bool readFile(BuiltinFetch* fetch, PrStringView url, PrStringView* type) {
     if (prUrlCreate(url, nullptr, PrCharset_Utf8, &parsed) != PrStatus_Ok)
         return false;
     PrStringView encoded = prUrlPath(parsed);
-    TextBuffer path{};
+    PrTextBuffer path{};
     size_t size = prUrlPercentDecode(encoded, nullptr, 0);
-    path.text.resize(uint32_t(size));
-    prUrlPercentDecode(encoded, path.text.data, size);
+    prTextBufferResize(&path, uint32_t(size));
+    prUrlPercentDecode(encoded, path.data, size);
     prUrlDestroy(parsed);
-    PrStringView decoded = textView(&path);
-    if (decoded.size >= 3 && decoded.data[0] == '/' && asciiIsLetter(decoded.data[1]) && decoded.data[2] == ':')
-        decoded = stringSlice(decoded, 1, decoded.size - 1);
+    PrStringView decoded = prTextBufferView(&path);
+    if (decoded.size >= 3 && decoded.data[0] == '/' && prAsciiIsLetter(decoded.data[1]) && decoded.data[2] == ':')
+        decoded = prStringSlice(decoded, 1, decoded.size - 1);
     PrFileMapping mapping{};
-    bool read = stringFind(decoded, '\0') == decoded.size && prFileMap(decoded, &mapping);
+    bool read = prStringFindByte(decoded, '\0') == decoded.size && prFileMap(decoded, &mapping);
     if (read)
         fetch->content.append(mapping.data, uint32_t(mapping.size));
     prFileUnmap(&mapping);
     *type = fileTypeOf(decoded);
-    textReset(&path);
+    prTextBufferReset(&path);
     return read;
 }
 
@@ -1195,7 +1195,7 @@ void answerLocally(BuiltinFetch* fetch) {
     PrStringView url = prStringView(&fetch->url);
     fetch->state = FetchState_Body;
     PrString type = prStringNull();
-    if (asciiStartsWithFold(url, "file:")) {
+    if (prAsciiStartsWithFold(url, "file:")) {
         PrStringView fileType{nullptr, 0};
         if (!readFile(fetch, url, &fileType)) {
             fail(fetch, PrNetError_Io);
@@ -1212,12 +1212,12 @@ void answerLocally(BuiltinFetch* fetch) {
         }
         PrByteView bytes = prFetchBlobBytes(blob);
         fetch->content.append(bytes.data, uint32_t(bytes.size));
-        TextBuffer length{};
-        textAppendU64(&length, bytes.size);
-        headersAdd(&fetch->response, "Content-Length", textView(&length));
-        textReset(&length);
+        PrTextBuffer length{};
+        prTextBufferAppendU64(&length, bytes.size, 10);
+        headersAdd(&fetch->response, "Content-Length", prTextBufferView(&length));
+        prTextBufferReset(&length);
         type = prStringCopy(prFetchBlobType(blob));
-    } else if (asciiStartsWithFold(url, "data:")) {
+    } else if (prAsciiStartsWithFold(url, "data:")) {
         PrString body = prStringNull();
         if (prUrlProcessData(url, &body, &type) != PrStatus_Ok) {
             prStringReset(&body);
@@ -1250,8 +1250,8 @@ void start(void* PR_NULLABLE context) {
     if (!fetch->dead) {
         if (fetch->local)
             answerLocally(fetch);
-        else if (fetcherOf(fetch)->http != nullptr && (asciiStartsWithFold(prStringView(&fetch->url), "http:") ||
-                asciiStartsWithFold(prStringView(&fetch->url), "https:")))
+        else if (fetcherOf(fetch)->http != nullptr && (prAsciiStartsWithFold(prStringView(&fetch->url), "http:") ||
+                prAsciiStartsWithFold(prStringView(&fetch->url), "https:")))
             fetchCurrent(fetch);
         else
             fail(fetch, PrNetError_Protocol);
@@ -1362,7 +1362,7 @@ size_t fetchRead(PrFetchNetwork* base, PrFetch* handle, uint8_t* output, size_t 
     BuiltinFetch* fetch = static_cast<BuiltinFetch*>(handle);
     uint32_t available = fetch->content.count - fetch->contentStart;
     uint32_t taken = capacity < available ? uint32_t(capacity) : available;
-    memCopy(output, fetch->content.data + fetch->contentStart, taken);
+    prMemCopy(output, fetch->content.data + fetch->contentStart, taken);
     fetch->contentStart += taken;
     if (fetch->contentStart == fetch->content.count) {
         fetch->content.clear();

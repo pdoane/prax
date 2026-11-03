@@ -61,16 +61,16 @@ const uint8_t* PR_NULLABLE clipSpan(const Clip& clip, int32_t x, int32_t y, uint
     if (!clip.edges)
         return span;
     const PrRect& r = clip.rect;
-    float row = clampF32(minF32(float(y) + 1, r.bottom) - maxF32(float(y), r.top), 0, 1);
+    float row = prF32Clamp(prF32Min(float(y) + 1, r.bottom) - prF32Max(float(y), r.top), 0, 1);
     if (row >= 1 && float(x) >= r.left && float(x) + float(count) <= r.right)
         return span;
     if (span == nullptr)
-        memFill(scratch, 255, count);
+        prMemFill(scratch, 255, count);
     else if (span != scratch)
-        memCopy(scratch, span, count);
+        prMemCopy(scratch, span, count);
     for (uint32_t i = 0; i < count; ++i) {
         float px = float(x) + float(i);
-        float column = clampF32(minF32(px + 1, r.right) - maxF32(px, r.left), 0, 1);
+        float column = prF32Clamp(prF32Min(px + 1, r.right) - prF32Max(px, r.left), 0, 1);
         scratch[i] = uint8_t(float(scratch[i]) * column * row + 0.5f);
     }
     return scratch;
@@ -408,7 +408,7 @@ void addImageStage(CpuPaint* paint, const CpuTexture* texture, PrRect texels, Pr
 bool makePaint(Renderer& r, const PrDrawBrush* PR_NULLABLE brush, PrColor color, PrRect bounds,
         const PrDrawTransform& x, CpuPaint* paint, const PrVec2* PR_NULLABLE unitPixels = nullptr) {
     *paint = CpuPaint{};
-    float alpha = clampF32(color.a, 0, 1);
+    float alpha = prF32Clamp(color.a, 0, 1);
     paint->color[0] = color.r * alpha;
     paint->color[1] = color.g * alpha;
     paint->color[2] = color.b * alpha;
@@ -451,8 +451,8 @@ bool makePaint(Renderer& r, const PrDrawBrush* PR_NULLABLE brush, PrColor color,
             const PrAffine2& t = brush->transform;
             float ax = t.a * unitPixels->x, by = t.b * unitPixels->y;
             float cx = t.c * unitPixels->x, dy = t.d * unitPixels->y;
-            scale.x = sqrtF32(ax * ax + by * by);
-            scale.y = sqrtF32(cx * cx + dy * dy);
+            scale.x = prF32Sqrt(ax * ax + by * by);
+            scale.y = prF32Sqrt(cx * cx + dy * dy);
         } else {
             float uniform = prAffine2MaxScale(toDevice);
             scale = PrVec2{uniform, uniform};
@@ -569,9 +569,9 @@ void compositeLayer(Renderer& r, const CpuTarget& layer, PrDrawComposite op, PrD
             if (prIRectContains(layer.box, span)) {
                 source = cpuTargetPixel(layer, x, y);
             } else {
-                memZero(pixels, size_t(count) * bytes);
+                prMemZero(pixels, size_t(count) * bytes);
                 if (!prIRectIsEmpty(inside))
-                    memCopy(pixels + size_t(inside.left - x) * bytes, cpuTargetPixel(layer, inside.left, y),
+                    prMemCopy(pixels + size_t(inside.left - x) * bytes, cpuTargetPixel(layer, inside.left, y),
                         size_t(prIRectWidth(inside)) * bytes);
             }
             cpuCompositePixels(row + size_t(x - t.box.left) * bytes, t.format, source, shapeRow,
@@ -598,7 +598,7 @@ void clearTarget(Renderer& r, PrColor color) {
         cpuWritePixel(pixel, r.target.format, paint.color);
         for (int32_t y = box.top; y < box.bottom; ++y) {
             for (int32_t x = box.left; x < box.right; ++x)
-                memCopy(cpuTargetPixel(r.target, x, y), pixel, bytes);
+                prMemCopy(cpuTargetPixel(r.target, x, y), pixel, bytes);
         }
         return;
     }
@@ -633,8 +633,8 @@ bool measureStroke(Renderer& r, const PrDrawCommand& c, StrokeMap* out) {
     prPathMeasureSetPolyline(out->measure, &r.landed);
     float length = 0;
     for (uint32_t i = 0; i < prPathMeasureContourCount(out->measure); ++i)
-        length = maxF32(length, prPathMeasureContour(out->measure, i).length);
-    float across = maxF32(stroke.shape.width * scale, 1);
+        length = prF32Max(length, prPathMeasureContour(out->measure, i).length);
+    float across = prF32Max(stroke.shape.width * scale, 1);
     out->unitPixels = stroke.mapping == PrDrawStrokeMapping_Along ? PrVec2{length, across} : PrVec2{across, length};
     return true;
 }
@@ -712,8 +712,8 @@ void drawNineSlice(Renderer& r, const PrDrawCommand& c) {
     float most = 0;
     for (uint32_t i = 0; i < pieces.count; ++i) {
         const PrDrawImageRect& p = pieces.data[i];
-        most = maxF32(most, prRectWidth(p.destination) / maxF32(prRectWidth(p.source), 1e-6f));
-        most = maxF32(most, prRectHeight(p.destination) / maxF32(prRectHeight(p.source), 1e-6f));
+        most = prF32Max(most, prRectWidth(p.destination) / prF32Max(prRectWidth(p.source), 1e-6f));
+        most = prF32Max(most, prRectHeight(p.destination) / prF32Max(prRectHeight(p.source), 1e-6f));
     }
     float device = prAffine2MaxScale(x.affine) * most;
     PrRect texels{};
@@ -827,7 +827,7 @@ void brushAlpha(void* PR_NULLABLE context, const PrDrawBrush* brush, PrAffine2 t
     uint32_t width = prIRectWidth(box);
     size_t count = size_t(width) * prIRectHeight(box);
     if (!makePaint(r, brush, PrColor{1, 1, 1, 1}, prRectFromIRect(box), prDrawTransformFromAffine2(transform), &paint)) {
-        memZero(out, count * sizeof(float));
+        prMemZero(out, count * sizeof(float));
         return;
     }
     float colors[kShadeSpan * 4];
@@ -905,7 +905,7 @@ void targetPaint(const CpuTarget& target, Array<uint8_t>& storage, const CpuPlac
         const uint8_t* row = cpuTargetRow(target, target.box.top + int32_t(y));
         uint8_t* out = level.data + size_t(y) * width * bytes;
         if (!bgra) {
-            memCopy(out, row, size_t(width) * bytes);
+            prMemCopy(out, row, size_t(width) * bytes);
             continue;
         }
         for (uint32_t x = 0; x < width; ++x) {
@@ -936,7 +936,7 @@ CpuTarget resampleUnder(Renderer& r, const CpuTarget& beneath, const CpuPlacemen
     size_t size = size_t(prIRectWidth(box)) * prIRectHeight(box) * bytes;
     CpuTarget under{pooled(r.unders, index, size), size_t(prIRectWidth(box)) * bytes, box, beneath.format, false, box};
     if (prIRectIsEmpty(beneath.box)) {
-        memZero(under.data, size);
+        prMemZero(under.data, size);
         return under;
     }
     CpuTexture texture{};
@@ -1039,7 +1039,7 @@ void pushProjectedGroup(Renderer& r, Frame& frame) {
         pooled(r.layers, r.frames.count, size), size_t(prIRectWidth(box)) * bytes, box,
         r.target.format, g->knockout, PrIRect{0, 0, 0, 0},
     };
-    memZero(layer.data, size);
+    prMemZero(layer.data, size);
     r.frames.push(frame);
     if (g->backdrop != nullptr) {
         layer.drawn = box;
@@ -1185,7 +1185,7 @@ void pushGroup(Renderer& r, const PrDrawCommand& c) {
     CpuTarget under = frame.local ? frame.under : g->backdrop != nullptr ? seenThrough(r, r.frames.count, r.target) : r.target;
     // A backdrop starts from what lies beneath, which covers the whole offscreen.
     if (g->backdrop == nullptr || !prIRectContains(under.box, box))
-        memZero(layer.data, size);
+        prMemZero(layer.data, size);
     if (g->backdrop != nullptr) {
         // What lies beneath, filtered, goes under the contents, clipped in the same way as the group. The clip applies
         // here, or when the offscreen composites if it is in the group's space.
@@ -1223,7 +1223,7 @@ void applyMask(Renderer& r, const Frame& frame, const CpuTarget& layer) {
                 float m = paints ? cpuMaskValue(mask, colors + i * 4) : 0;
                 if (mask->invert)
                     m = 1 - m;
-                uint32_t scale = uint32_t(clampF32(m, 0, 1) * 255 + 0.5f);
+                uint32_t scale = uint32_t(prF32Clamp(m, 0, 1) * 255 + 0.5f);
                 cpuScalePixel(row + size_t(start + i) * cpuPixelBytes(layer.format), layer.format, scale);
             }
         }
@@ -1329,7 +1329,7 @@ void popGroup(Renderer& r) {
     if (g->mask != nullptr)
         applyMask(r, frame, layer);
     if (g->opacity < 1) {
-        uint32_t scale = uint32_t(clampF32(g->opacity, 0, 1) * 255 + 0.5f);
+        uint32_t scale = uint32_t(prF32Clamp(g->opacity, 0, 1) * 255 + 0.5f);
         for (int32_t y = layer.drawn.top; y < layer.drawn.bottom; ++y) {
             uint8_t* row = cpuTargetPixel(layer, layer.drawn.left, y);
             for (uint32_t i = 0; i < prIRectWidth(layer.drawn); ++i)
@@ -1366,7 +1366,7 @@ CpuTexture* listTexture(Renderer& r, const PrDrawList* drawn, PrRect area, PrRec
     if (texture->levels.data[0].data != nullptr && texture->ready)
         return texture;
     CpuTextureLevel& level = texture->levels.data[0];
-    memZero(level.data, size_t(width) * height * cpuPixelBytes(format));
+    prMemZero(level.data, size_t(width) * height * cpuPixelBytes(format));
     CpuTarget target{
         level.data,
         size_t(width) * cpuPixelBytes(format),
@@ -1433,7 +1433,7 @@ bool drawSidedRing(Renderer& r, const PrDrawCommand& c) {
         return false;
     for (uint32_t k = 0; k < 4; ++k) {
         for (PrColor& color : sides.colors[k]) {
-            float a = clampF32(color.a, 0, 1);
+            float a = prF32Clamp(color.a, 0, 1);
             color = PrColor{color.r * a, color.g * a, color.b * a, a};
         }
     }
@@ -1491,7 +1491,7 @@ void drawShadow(Renderer& r, const PrDrawCommand& c) {
     prPathClear(r.extra);
     prPathAddCornerRect(r.extra, c.shadow->shape);
     const PrPathPolyline& caster = land(x, r.extra, r.cut);
-    int32_t reach = int32_t(minF32(ceilF32(sigma * 4), float(1 << 28)));
+    int32_t reach = int32_t(prF32Min(prF32Ceil(sigma * 4), float(1 << 28)));
     PrIRect limit = prIRectIntersect(currentClip(r).coverage.box, r.target.box);
     PrIRect box;
     if (kind == PrDrawShadowKind_Inner) {

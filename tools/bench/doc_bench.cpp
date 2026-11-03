@@ -295,16 +295,16 @@ void frameNow(Bench& b, PrVec2 extent) {
 // Prints a row: the comma before it unless it is the first row, its name, the time, the fields in `rest`, and the cost
 // of a sample of `measure` if there is one.
 void row(bool& first, const char* name, double time, const char* rest, const Measure* PR_NULLABLE measure) {
-    TextBuffer out{};
+    PrTextBuffer out{};
     harnessAppendFormat(&out, "%s\n  {\"name\": \"%s\", \"time\": %.4f%s", first ? "" : ",", name, time, rest);
     if (measure != nullptr && !measure->costs.empty()) {
         HarnessCounts counts{};
         harnessCountsAdd(&counts, "time", measure->typical());
         harnessCountsWrite(&counts, &out);
     }
-    textAppend(&out, "}");
-    fwrite(out.text.data, 1, out.text.count, stdout);
-    textReset(&out);
+    prTextBufferAppend(&out, "}");
+    fwrite(out.data, 1, out.size, stdout);
+    prTextBufferReset(&out);
     first = false;
 }
 

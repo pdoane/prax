@@ -143,7 +143,7 @@ PrStatus htmlCanvasToDataUrl(PrDomElement* element, PrStringView type, PrString*
     }
     Array<uint8_t> pixels;
     pixels.resize(extent.x * extent.y * 4);
-    memZero(pixels.data, pixels.count);
+    prMemZero(pixels.data, pixels.count);
     if (context != nullptr) {
         PrCanvasImageData data{
             .extent = extent,
@@ -155,15 +155,15 @@ PrStatus htmlCanvasToDataUrl(PrDomElement* element, PrStringView type, PrString*
     PrPixelView view{pixels.data, size_t(extent.x) * 4, extent};
     // The type is a MIME type in any case, and a type that the codec does not encode is PNG
     // (html/#a-serialisation-of-the-bitmap-as-a-file).
-    TextBuffer mime;
-    textAppend(&mime, type);
-    asciiLower(mime.text.data, mime.text.count);
+    PrTextBuffer mime = {};
+    prTextBufferAppend(&mime, type);
+    prAsciiLowerText(mime.data, mime.size);
     size_t size = 0;
-    if (prImageCodecEncode(codec, textView(&mime), view, nullptr, 0, &size) != PrStatus_Ok) {
-        textReset(&mime);
-        textAppend(&mime, "image/png");
-        if (prImageCodecEncode(codec, textView(&mime), view, nullptr, 0, &size) != PrStatus_Ok) {
-            textReset(&mime);
+    if (prImageCodecEncode(codec, prTextBufferView(&mime), view, nullptr, 0, &size) != PrStatus_Ok) {
+        prTextBufferReset(&mime);
+        prTextBufferAppend(&mime, "image/png");
+        if (prImageCodecEncode(codec, prTextBufferView(&mime), view, nullptr, 0, &size) != PrStatus_Ok) {
+            prTextBufferReset(&mime);
             pixels.reset();
             *out = prStringCopy("data:,");
             return PrStatus_Ok;
@@ -171,17 +171,17 @@ PrStatus htmlCanvasToDataUrl(PrDomElement* element, PrStringView type, PrString*
     }
     Array<uint8_t> file;
     file.resize(uint32_t(size));
-    prImageCodecEncode(codec, textView(&mime), view, file.data, size, &size);
+    prImageCodecEncode(codec, prTextBufferView(&mime), view, file.data, size, &size);
     PrStringView bytes{reinterpret_cast<const char*>(file.data), size};
-    TextBuffer url;
-    textAppend(&url, "data:");
-    textAppend(&url, textView(&mime));
-    textAppend(&url, ";base64,");
-    uint32_t start = url.text.count;
-    url.text.resize(start + uint32_t(base64EncodedSize(size)));
-    base64Encode(bytes, url.text.data + start, url.text.count - start);
-    *out = textTake(&url);
-    textReset(&mime);
+    PrTextBuffer url = {};
+    prTextBufferAppend(&url, "data:");
+    prTextBufferAppend(&url, prTextBufferView(&mime));
+    prTextBufferAppend(&url, ";base64,");
+    uint32_t start = url.size;
+    prTextBufferResize(&url, start + uint32_t(prBase64EncodedSize(size)));
+    prBase64Encode(bytes, url.data + start, url.size - start);
+    *out = prTextBufferTake(&url);
+    prTextBufferReset(&mime);
     file.reset();
     pixels.reset();
     return PrStatus_Ok;
@@ -208,7 +208,7 @@ bool htmlCanvasImageSource(PrDomElement* element, PrCanvasImageSource* out) {
         return false;
     Array<uint8_t> pixels;
     pixels.resize(extent.x * extent.y * 4);
-    memZero(pixels.data, pixels.count);
+    prMemZero(pixels.data, pixels.count);
     PrDrawImageDesc desc{
         .pixels = PrPixelView{pixels.data, size_t(extent.x) * 4, extent},
         .format = PrPixelFormat_Rgba8,

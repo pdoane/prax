@@ -100,8 +100,8 @@ bool prCommandMatches(PrStringView query, PrStringView title, PrStringView categ
         size_t end = at;
         while (end < query.size && query.data[end] != ' ')
             ++end;
-        PrStringView word = stringSlice(query, at, end - at);
-        if (word.size != 0 && !asciiContainsFold(title, word) && !asciiContainsFold(category, word))
+        PrStringView word = prStringSlice(query, at, end - at);
+        if (word.size != 0 && !prAsciiContainsFold(title, word) && !prAsciiContainsFold(category, word))
             return false;
         at = end;
     }

@@ -83,7 +83,7 @@ PrStringView prAppKeyCodeName(PrAppKeyCode code) {
 
 PrAppBackend prAppBackendFromName(PrStringView name) {
     for (PrAppBackend backend = 0; backend < PrAppBackend_Count; ++backend) {
-        if (asciiEqualsFold(kBackendNames[backend], name))
+        if (prAsciiEqualsFold(kBackendNames[backend], name))
             return backend;
     }
     return PrAppBackend_Count;

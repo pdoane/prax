@@ -15,7 +15,7 @@ namespace {
 
 // Returns the pixels of a length that is pixels, or NaN for any other length.
 float px(PrLayoutLength length) {
-    return prLayoutWordKind(length.bits) == PrLayoutWordKind_Px ? prLayoutUnitToPx(prLayoutWordPxValue(length.bits)) : kNanF32;
+    return prLayoutWordKind(length.bits) == PrLayoutWordKind_Px ? prLayoutUnitToPx(prLayoutWordPxValue(length.bits)) : kPrF32Nan;
 }
 
 // An empty tree over an empty font set.
@@ -116,7 +116,7 @@ TEST_CASE("pixels and percentages truncate toward zero and saturate, and a numbe
     // agree.
     volatile float tenth = 0.1f;
     volatile float big = 1e9f;
-    volatile float nan = kNanF32;
+    volatile float nan = kPrF32Nan;
     for (float sign : {1.0f, -1.0f}) {
         CHECK(prLayoutWordPxValue(prLayoutWordPx(sign * tenth)).raw == int32_t(sign) * 6);
         CHECK(prLayoutWordPxValue(prLayoutWordPx(sign * 0.7f)).raw == int32_t(sign) * 44);
@@ -172,13 +172,13 @@ TEST_CASE("a calculation computes in doubles, and only its result becomes units"
     CHECK(resolved(c, exact, 300) == 100.0f);
     CHECK(resolved(c, prLayoutLengthPercent(float(100.0 / 3)), 300) < 100.0f);
     // An infinity stays infinite until the result saturates.
-    PrLayoutCalcNode infinite[] = {op(PrLayoutCalcOp_Sum, 2), percent(kInfinityF64), px(-1e300)};
+    PrLayoutCalcNode infinite[] = {op(PrLayoutCalcOp_Sum, 2), percent(kPrF64Infinity), px(-1e300)};
     PrLayoutLength saturated = prLayoutLengthIntern(c.tree, infinite, 3);
     CHECK(prLayoutLengthResolve(c.tree, saturated, prLayoutUnitFromPx(10)).raw == INT32_MAX);
     // NaN propagates, even past an infinity, and a NaN result is 0 against any base.
-    PrLayoutCalcNode nan[] = {op(PrLayoutCalcOp_Hypot, 2), percent(kInfinityF64), px(kNanF64)};
+    PrLayoutCalcNode nan[] = {op(PrLayoutCalcOp_Hypot, 2), percent(kPrF64Infinity), px(kPrF64Nan)};
     CHECK(prLayoutLengthIntern(c.tree, nan, 3).bits == prLayoutLengthPx(0).bits);
-    PrLayoutCalcNode step[] = {op(PrLayoutCalcOp_RoundUp, 2), percent(30), px(kNanF64)};
+    PrLayoutCalcNode step[] = {op(PrLayoutCalcOp_RoundUp, 2), percent(30), px(kPrF64Nan)};
     CHECK(prLayoutLengthIntern(c.tree, step, 3).bits == prLayoutLengthPx(0).bits);
 }
 

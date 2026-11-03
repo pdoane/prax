@@ -62,7 +62,7 @@ std::vector<uint8_t> gzipStored(const std::vector<uint8_t>& bytes) {
         if (bytes.empty())
             break;
     }
-    uint32_t crc = crc32Update(0, bytes);
+    uint32_t crc = prCrc32Update(0, bytes);
     uint32_t size = uint32_t(bytes.size());
     for (uint32_t value : {crc, size}) {
         for (int k = 0; k < 4; ++k)

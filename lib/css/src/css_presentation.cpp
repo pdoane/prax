@@ -213,12 +213,12 @@ WillChange willChangeOf(CssValueRun run) {
             name = PrStringView{};
         const PrStringView transforms[] = {"transform", "translate", "rotate", "scale", "perspective"};
         for (PrStringView property : transforms)
-            will.transforms = will.transforms || asciiEqualsFold(name, property);
-        will.composites = will.composites || asciiEqualsFold(name, "opacity");
-        will.filters = will.filters || asciiEqualsFold(name, "filter") || asciiEqualsFold(name, "backdrop-filter");
+            will.transforms = will.transforms || prAsciiEqualsFold(name, property);
+        will.composites = will.composites || prAsciiEqualsFold(name, "opacity");
+        will.filters = will.filters || prAsciiEqualsFold(name, "filter") || prAsciiEqualsFold(name, "backdrop-filter");
         const PrStringView groups[] = {"clip-path", "mask", "mask-image", "mask-border", "mix-blend-mode"};
         for (PrStringView property : groups)
-            will.groups = will.groups || asciiEqualsFold(name, property);
+            will.groups = will.groups || prAsciiEqualsFold(name, property);
     }
     return will;
 }
@@ -324,7 +324,7 @@ void aspectRatioOf(CssValueRun run, PrLayoutBoxStyle& box) {
             terms[count++] = value.number;
     }
     double ratio = count == 2 && terms[0] > 0 && terms[1] > 0 ? terms[0] / terms[1] : 0;
-    box.aspectRatio = isFiniteF64(ratio) && float(ratio) > 0 && isFiniteF32(float(ratio)) ? float(ratio) : 0;
+    box.aspectRatio = prF64IsFinite(ratio) && float(ratio) > 0 && prF32IsFinite(float(ratio)) ? float(ratio) : 0;
     box.aspectRatioAuto = box.aspectRatio > 0 && hasKeyword(run, PrCssKeyword_Auto);
 }
 
@@ -984,10 +984,10 @@ PrTextFont* textFontIn(PrFontSet* set, CssPresentationTextFonts& fonts, const Cs
     appendKey(key, &font.slope, sizeof(font.slope));
     appendKey(key, &font.flags, sizeof(font.flags));
     appendKey(key, &style->locale, sizeof(style->locale));
-    uint32_t hash = uint32_t(hashBytes(key.data, key.count, 0x7e3a91c5b2d4f608ull));
+    uint32_t hash = uint32_t(prHashBytes(key.data, key.count, 0x7e3a91c5b2d4f608ull));
     uint32_t found = fonts.index.find(hash, [&](uint32_t at) {
         const CssPresentationTextFont& entry = fonts.fonts.data[at];
-        return entry.keyLength == key.count && memEquals(fonts.keys.data + entry.keyStart, key.data, key.count);
+        return entry.keyLength == key.count && prMemEquals(fonts.keys.data + entry.keyStart, key.data, key.count);
     });
     if (found != kHashMissing)
         return fonts.fonts.data[found].font;
@@ -1013,7 +1013,7 @@ void textFontsReset(CssPresentationTextFonts& fonts) {
     fonts.keys.reset();
     fonts.index.reset();
     fonts.key.reset();
-    fonts.families.text.reset();
+    prTextBufferReset(&fonts.families);
     fonts.familyViews.reset();
 }
 
@@ -1351,7 +1351,7 @@ float rangeCapOf(const PrCssPresentation* r, const CssComputedStyle* style, floa
     bool readsDisplay = false;
     CssValueRun limit = cssComputedValue(style, PrCssProperty_DynamicRangeLimit);
     float allowed = rangeLimitOf(limit, 0, r->headroom, &readsDisplay);
-    *cap = allowed < r->headroom ? powF32(2, allowed) : 0;
+    *cap = allowed < r->headroom ? prF32Pow(2, allowed) : 0;
     if (*cap > 0 && readsDisplay)
         *readsOutside = true;
     return allowed;
@@ -1490,7 +1490,7 @@ CssPresentationImage* PR_NULLABLE imageOf(PrCssPresentation* r, PrStringView ref
     PrString url = prUrlSerialize(parsed, PrUrlSerialization_Whole);
     prUrlDestroy(parsed);
     PrStringView view = prStringView(&url);
-    uint32_t hash = uint32_t(hashBytes(view.data, view.size, 0x5be0cd19137e2179ull));
+    uint32_t hash = uint32_t(prHashBytes(view.data, view.size, 0x5be0cd19137e2179ull));
     uint32_t found = r->imageIndex.find(hash, [&](uint32_t at) { return prStringView(&r->images.data[at].url) == view; });
     if (found != kHashMissing) {
         prStringReset(&url);
@@ -2511,14 +2511,14 @@ PrLayoutStyleIndex project(PrCssPresentation* r, const CssComputedStyle* style, 
     // For most elements, the flex group is the default, which is the record's own.
     PrLayoutFlexStyle flex = flexOf(r, style);
     PrLayoutFlexStyle initial = prLayoutFlexStyleDefault();
-    if (!memEquals(&flex, &initial, sizeof(PrLayoutFlexStyle)))
+    if (!prMemEquals(&flex, &initial, sizeof(PrLayoutFlexStyle)))
         record.groups[PrLayoutGroup_Flex] = prLayoutFlexStyleIntern(r->tree, &flex);
     // For most elements, the grid group is the default, which only a grid container or an element placed in a grid
     // declares.
     if (style->groups[CssStyleGroup_Grid] != r->styles.initial[CssStyleGroup_Grid]) {
         PrLayoutGridStyle grid = gridOf(r, style);
         PrLayoutGridStyle initialGrid = prLayoutGridStyleDefault();
-        if (!memEquals(&grid, &initialGrid, sizeof(PrLayoutGridStyle)))
+        if (!prMemEquals(&grid, &initialGrid, sizeof(PrLayoutGridStyle)))
             record.groups[PrLayoutGroup_Grid] = prLayoutGridStyleIntern(r->tree, &grid);
     }
     // For most elements, the table group is the default too. The spacing, border model and caption side in it are
@@ -2529,7 +2529,7 @@ PrLayoutStyleIndex project(PrCssPresentation* r, const CssComputedStyle* style, 
         PrLayoutTableStyle table = tableOf(style, presentation.spans ? presentation.columnSpan : 1,
             presentation.spans ? presentation.rowSpan : 1);
         PrLayoutTableStyle initialTable = prLayoutTableStyleDefault();
-        if (!memEquals(&table, &initialTable, sizeof(PrLayoutTableStyle)))
+        if (!prMemEquals(&table, &initialTable, sizeof(PrLayoutTableStyle)))
             record.groups[PrLayoutGroup_Table] = prLayoutTableStyleIntern(r->tree, &table);
     }
 
@@ -2586,7 +2586,7 @@ PrLayoutStyleIndex project(PrCssPresentation* r, const CssComputedStyle* style, 
     PrLayoutEffectStyle effect = prLayoutEffectStyleDefault();
     CssValueRun opacity = cssComputedValue(style, PrCssProperty_Opacity);
     if (opacity.count == 1 && opacity.values[0].kind == PrCssValueKind_Number)
-        effect.opacity = clampF32(float(opacity.values[0].number), 0, 1);
+        effect.opacity = prF32Clamp(float(opacity.values[0].number), 0, 1);
     effect.transform = transform;
     CssValueRun origin = cssComputedValue(style, PrCssProperty_TransformOrigin);
     if (origin.count != 0) {
@@ -2610,7 +2610,7 @@ PrLayoutStyleIndex project(PrCssPresentation* r, const CssComputedStyle* style, 
     // A perspective below 1px renders as 1px (css-transforms-2/#perspective-property). Its origin matters only with it,
     // and a hidden back face only on a box that a transform can turn.
     if (perspectives) {
-        effect.perspective = maxF32(float(pxOf(perspective)), 1);
+        effect.perspective = prF32Max(float(pxOf(perspective)), 1);
         CssValueRun perspectiveOrigin = cssComputedValue(style, PrCssProperty_PerspectiveOrigin);
         if (perspectiveOrigin.count != 0)
             positionOf(r, perspectiveOrigin, &effect.perspectiveOriginX, &effect.perspectiveOriginY);
@@ -3266,7 +3266,7 @@ uint32_t firstInvalidation(const PrCssPresentation* r, const PrDomElement* eleme
 
 // Adds `features` to the features by which the descendants of `element` are restyled at the next update.
 void addFeatures(PrCssPresentation* r, PrDomElement* element, const Array<uint32_t>& features) {
-    uint32_t hash = hashPointer(element, 0);
+    uint32_t hash = prHashPointer(element, 0);
     uint32_t head = firstInvalidation(r, element, hash);
     for (uint32_t f = 0; f < features.count; ++f) {
         uint32_t feature = features.data[f];
@@ -3415,7 +3415,7 @@ void invalidate(PrCssPresentation* r, PrDomElement* element, uint32_t hash) {
 // (html/#the-directionality).
 bool automaticDirection(const PrDomElement* element) {
     PrStringView dir = domAttributeValue(element, "dir");
-    return asciiEqualsFold(dir, "auto") ||
+    return prAsciiEqualsFold(dir, "auto") ||
         (dir.data == nullptr && (cssBoxTraits(element).flags & CssBoxTraitFlag_AutoDirection) != 0);
 }
 
@@ -3479,8 +3479,8 @@ bool invalidates(PrCssPresentation* r) {
 bool decidesStates(PrStringView name) {
     if (name == "class" || name == "id" || name == "style")
         return false;
-    bool data = name.size > 5 && asciiStartsWithFold(name, "data-");
-    bool aria = name.size > 5 && asciiStartsWithFold(name, "aria-");
+    bool data = name.size > 5 && prAsciiStartsWithFold(name, "data-");
+    bool aria = name.size > 5 && prAsciiStartsWithFold(name, "aria-");
     return !data && !aria;
 }
 
@@ -3489,10 +3489,10 @@ template <typename Visit>
 void eachClass(PrStringView value, Visit visit) {
     size_t i = 0;
     while (i < value.size) {
-        while (i < value.size && asciiIsSpace(value.data[i]))
+        while (i < value.size && prAsciiIsSpace(value.data[i]))
             ++i;
         size_t start = i;
-        while (i < value.size && !asciiIsSpace(value.data[i]))
+        while (i < value.size && !prAsciiIsSpace(value.data[i]))
             ++i;
         if (i != start)
             visit(PrStringView{value.data + start, i - start});
@@ -3552,7 +3552,7 @@ void markChildren(PrCssPresentation* r, PrDomNode* child) {
 
 // Adds the features by which the descendants of `element` are restyled to the update's features.
 void pushFeatures(PrCssPresentation* r, const PrDomElement* element) {
-    uint32_t hash = hashPointer(element, 0);
+    uint32_t hash = prHashPointer(element, 0);
     uint32_t head = firstInvalidation(r, element, hash);
     for (uint32_t i = head; i != kHashMissing; i = r->invalidations.data[i].next)
         r->features.push(r->invalidations.data[i].feature);
@@ -3802,7 +3802,7 @@ bool isBlockContainer(const CssComputedStyle* style) {
 // Returns true if `text` holds only white space, which collapses away at the start of a line.
 bool onlySpace(PrStringView text) {
     for (size_t i = 0; i < text.size; ++i) {
-        if (!asciiIsSpace(text.data[i]))
+        if (!prAsciiIsSpace(text.data[i]))
             return false;
     }
     return true;
@@ -3952,7 +3952,7 @@ LetterSearch findLetter(const PrCssPresentation* r, PrLayoutNode box, bool conta
             if (onlySpace(text))
                 continue;
             size_t skip = 0;
-            while (skip < text.size && asciiIsSpace(text.data[skip]))
+            while (skip < text.size && prAsciiIsSpace(text.data[skip]))
                 ++skip;
             size_t start = 0;
             size_t end = 0;
@@ -4487,32 +4487,32 @@ void fieldText(const PrDomElement* field, bool masked, Text text) {
     bool line = domIsHtml(field, PrDomTag_Input);
     PrStringView placeholder = domAttributeValue(field, "placeholder");
     if (domElementPlaceholderShown(field) && placeholder.size != 0) {
-        TextBuffer shown{};
+        PrTextBuffer shown{};
         for (size_t i = 0; i < placeholder.size; ++i) {
             char c = placeholder.data[i];
             if (!line || (c != '\n' && c != '\r'))
-                textAppend(&shown, PrStringView{&c, 1});
+                prTextBufferAppend(&shown, PrStringView{&c, 1});
         }
-        text(textView(&shown));
-        textReset(&shown);
+        text(prTextBufferView(&shown));
+        prTextBufferReset(&shown);
         return;
     }
-    TextBuffer value{};
+    PrTextBuffer value{};
     domControlValue(field, &value);
-    if (value.text.count == 0 || value.text.data[value.text.count - 1] == '\n')
-        textAppend(&value, " ");
-    if (masked && value.text.count != 0 && value.text.data[0] != ' ') {
-        TextBuffer marks{};
-        for (uint32_t i = 0; i < value.text.count; ++i) {
-            if ((uint8_t(value.text.data[i]) & 0xc0) != 0x80)
-                textAppend(&marks, kPasswordMark);
+    if (value.size == 0 || value.data[value.size - 1] == '\n')
+        prTextBufferAppend(&value, " ");
+    if (masked && value.size != 0 && value.data[0] != ' ') {
+        PrTextBuffer marks{};
+        for (uint32_t i = 0; i < value.size; ++i) {
+            if ((uint8_t(value.data[i]) & 0xc0) != 0x80)
+                prTextBufferAppend(&marks, kPasswordMark);
         }
-        text(textView(&marks));
-        textReset(&marks);
+        text(prTextBufferView(&marks));
+        prTextBufferReset(&marks);
     } else {
-        text(textView(&value));
+        text(prTextBufferView(&value));
     }
-    textReset(&value);
+    prTextBufferReset(&value);
 }
 
 template <typename Text, typename Image>
@@ -4546,7 +4546,7 @@ void eachGenerated(PrCssPresentation* r, const CssComputedStyle* style, CssPseud
         }
         return;
     }
-    TextBuffer run{};
+    PrTextBuffer run{};
     uint32_t next = 0;
     for (uint32_t i = 0; i < content.count; i += content.values[i].next) {
         const CssValueNode* item = &content.values[i];
@@ -4554,20 +4554,20 @@ void eachGenerated(PrCssPresentation* r, const CssComputedStyle* style, CssPseud
             break;
         PrStringView reference{};
         if (item->kind == PrCssValueKind_String) {
-            textAppend(&run, cssValueText(content, item));
+            prTextBufferAppend(&run, cssValueText(content, item));
         } else if (cssValueIsFunction(item, PrCssKeyword_Counter) || cssValueIsFunction(item, PrCssKeyword_Counters) ||
                 cssValueIsKeyword(item, PrCssKeyword_OpenQuote) || cssValueIsKeyword(item, PrCssKeyword_CloseQuote)) {
-            textAppend(&run, counterText(next++));
+            prTextBufferAppend(&run, counterText(next++));
         } else if (urlOf(cssValueSubtree(content, i), &reference) || isFilterImage(cssValueSubtree(content, i))) {
-            if (run.text.count != 0)
-                text(textView(&run));
-            run.text.clear();
+            if (run.size != 0)
+                text(prTextBufferView(&run));
+            prTextBufferClear(&run);
             image(cssValueSubtree(content, i));
         }
     }
-    if (run.text.count != 0)
-        text(textView(&run));
-    run.text.reset();
+    if (run.size != 0)
+        text(prTextBufferView(&run));
+    prTextBufferReset(&run);
 }
 
 // Returns the record of an anonymous box in a box styled by `parent`, which inherits what inherits from it and takes
@@ -5324,10 +5324,10 @@ bool resolvesFromLayout(PrCssProperty property) {
 // Writes the used track list of the grid container `node` along `axis` (css-grid-1/#resolved-track-list): each track of
 // its implicit grid as its size in pixels, with the names of each line before it in one bracketed set. A grid with no
 // tracks writes none.
-void serializeTrackList(TextBuffer* out, const PrCssPresentation* r, PrLayoutNode node, PrLayoutGridAxis axis) {
+void serializeTrackList(PrTextBuffer* out, const PrCssPresentation* r, PrLayoutNode node, PrLayoutGridAxis axis) {
     uint32_t count = prLayoutNodeGridTrackSizes(r->tree, node, axis, nullptr, 0);
     if (count == 0) {
-        textAppend(out, "none");
+        prTextBufferAppend(out, "none");
         return;
     }
     Array<PrLayoutUnit> sizes;
@@ -5340,18 +5340,18 @@ void serializeTrackList(TextBuffer* out, const PrCssPresentation* r, PrLayoutNod
     for (uint32_t line = 0; line <= count; ++line) {
         bool opened = false;
         for (; next < names.count && names.data[next].line == line; ++next) {
-            textAppend(out, opened ? " " : line != 0 ? " [" : "[");
-            textAppend(out, prLayoutGridNameText(r->tree, names.data[next].name));
+            prTextBufferAppend(out, opened ? " " : line != 0 ? " [" : "[");
+            prTextBufferAppend(out, prLayoutGridNameText(r->tree, names.data[next].name));
             opened = true;
         }
         if (opened)
-            textAppendChar(out, ']');
+            prTextBufferAppendChar(out, ']');
         if (line == count)
             break;
         if (line != 0 || opened)
-            textAppendChar(out, ' ');
+            prTextBufferAppendChar(out, ' ');
         cssSerializeNumber(out, double(prLayoutUnitToPx(sizes.data[line])));
-        textAppend(out, "px");
+        prTextBufferAppend(out, "px");
     }
     sizes.reset();
     names.reset();
@@ -5369,24 +5369,24 @@ PrVec2 referenceBoxOf(const PrCssPresentation* r, PrLayoutNode node) {
 
 // Writes `m` as matrix() if it is a 2D matrix, and as matrix3d() otherwise
 // (css-transforms-2/#serialization-of-the-computed-value).
-void serializeMatrix(TextBuffer* out, const PrMatrix4& m) {
+void serializeMatrix(PrTextBuffer* out, const PrMatrix4& m) {
     bool flat = m.m[2][0] == 0 && m.m[2][1] == 0 && m.m[0][2] == 0 && m.m[1][2] == 0 && m.m[2][2] == 1 &&
         m.m[3][0] == 0 && m.m[3][1] == 0 && m.m[3][2] == 0 && m.m[3][3] == 1 && m.m[2][3] == 0;
     // A matrix's arguments go column by column. matrix() leaves out the third row and column, and the fourth row.
-    textAppend(out, flat ? "matrix(" : "matrix3d(");
+    prTextBufferAppend(out, flat ? "matrix(" : "matrix3d(");
     bool first = true;
     for (uint32_t column = 0; column < 4; ++column) {
         if (flat && column == 2)
             continue;
         for (uint32_t row = 0; row < (flat ? 2u : 4u); ++row) {
             if (!first)
-                textAppend(out, ", ");
+                prTextBufferAppend(out, ", ");
             first = false;
             // A negative zero is written as zero.
             cssSerializeNumber(out, double(m.m[row][column]) + 0.0);
         }
     }
-    textAppendChar(out, ')');
+    prTextBufferAppendChar(out, ')');
 }
 
 // The error that converting a length's unit to px can leave. Snapping must not round such a value down past a whole
@@ -5397,10 +5397,10 @@ constexpr double kSnapTolerance = 1e-6;
 // magnitude above zero and under one target pixel is one, and a greater one is rounded down to whole target pixels, the
 // sign kept. Layout snaps the widths and offsets that it is given in the same way, so this is the length it uses.
 double snapBorderWidth(double px, float ratio) {
-    double pixels = absF64(px) * double(ratio);
+    double pixels = prF64Abs(px) * double(ratio);
     if (pixels == 0)
         return 0;
-    double snapped = (pixels < 1 ? 1 : floorF64(pixels + kSnapTolerance)) / double(ratio);
+    double snapped = (pixels < 1 ? 1 : prF64Floor(pixels + kSnapTolerance)) / double(ratio);
     return px < 0 ? -snapped : snapped;
 }
 
@@ -5425,11 +5425,11 @@ bool snapsAsBorderWidth(PrCssProperty property) {
 // is the used length, a number times the font size, or normal. For transform, it is the matrix that the list composes
 // to over the reference box, which is empty if the element generates no box that is not an inline box. For every other
 // property, it is the computed value.
-void serializeResolved(TextBuffer* out, PrCssPresentation* r, const CssComputedStyle* style, PrCssProperty property,
+void serializeResolved(PrTextBuffer* out, PrCssPresentation* r, const CssComputedStyle* style, PrCssProperty property,
         PrLayoutNode node) {
     for (uint32_t side = 0; side < PrRectSide_Count; ++side) {
         if (property == kBorderWidths[side] && !borderStyled(style, side)) {
-            textAppend(out, "0px");
+            prTextBufferAppend(out, "0px");
             return;
         }
     }
@@ -5439,7 +5439,7 @@ void serializeResolved(TextBuffer* out, PrCssPresentation* r, const CssComputedS
                 length.values[0].unit == PrCssUnit_Px) {
             float ratio = cssMediaEnvironmentPixelRatio(r->document->media);
             cssSerializeNumber(out, snapBorderWidth(length.values[0].number, ratio));
-            textAppend(out, "px");
+            prTextBufferAppend(out, "px");
             return;
         }
     }
@@ -5447,7 +5447,7 @@ void serializeResolved(TextBuffer* out, PrCssPresentation* r, const CssComputedS
     if (property == PrCssProperty_LetterSpacing) {
         CssValueRun spacing = cssComputedValue(style, PrCssProperty_LetterSpacing);
         if (spacing.count == 1 && spacing.values[0].kind == PrCssValueKind_Dimension && spacing.values[0].number == 0) {
-            textAppend(out, "normal");
+            prTextBufferAppend(out, "normal");
             return;
         }
     }
@@ -5455,7 +5455,7 @@ void serializeResolved(TextBuffer* out, PrCssPresentation* r, const CssComputedS
         CssValueRun lineHeight = cssComputedValue(style, PrCssProperty_LineHeight);
         if (lineHeight.count == 1 && lineHeight.values[0].kind == PrCssValueKind_Number) {
             cssSerializeNumber(out, cssStyleLineHeight(style));
-            textAppend(out, "px");
+            prTextBufferAppend(out, "px");
             return;
         }
     }
@@ -5464,7 +5464,7 @@ void serializeResolved(TextBuffer* out, PrCssPresentation* r, const CssComputedS
     if (property == PrCssProperty_Transform) {
         CssValueRun transform = cssComputedValue(style, PrCssProperty_Transform);
         if (transform.count == 0 || cssValueIsKeyword(transform.values, PrCssKeyword_None)) {
-            textAppend(out, "none");
+            prTextBufferAppend(out, "none");
             return;
         }
         CssValueRun empty{transform.values, 0, transform.text};
@@ -5487,13 +5487,13 @@ void serializeResolved(TextBuffer* out, PrCssPresentation* r, const CssComputedS
             positionPx(cssComputedValue(style, PrCssProperty_PerspectiveOrigin), extent, origin);
         }
         cssSerializeNumber(out, origin[0]);
-        textAppend(out, "px ");
+        prTextBufferAppend(out, "px ");
         cssSerializeNumber(out, origin[1]);
-        textAppend(out, "px");
+        prTextBufferAppend(out, "px");
         if (transform && effects.originZ != 0) {
-            textAppend(out, " ");
+            prTextBufferAppend(out, " ");
             cssSerializeNumber(out, double(effects.originZ));
-            textAppend(out, "px");
+            prTextBufferAppend(out, "px");
         }
         return;
     }
@@ -5509,7 +5509,7 @@ void serializeResolved(TextBuffer* out, PrCssPresentation* r, const CssComputedS
         PrLayoutWordKind kind = prLayoutWordKind(length.bits);
         if (base >= PrLayoutUnit{0} && (kind == PrLayoutWordKind_Percent || kind == PrLayoutWordKind_Compound)) {
             cssSerializeNumber(out, double(prLayoutUnitToPx(prLayoutLengthResolve(r->tree, length, base))));
-            textAppend(out, "px");
+            prTextBufferAppend(out, "px");
             return;
         }
     }
@@ -5538,7 +5538,7 @@ void serializeResolved(TextBuffer* out, PrCssPresentation* r, const CssComputedS
             used = width ? content.x : content.y;
         }
         cssSerializeNumber(out, double(used > 0 ? used : 0));
-        textAppend(out, "px");
+        prTextBufferAppend(out, "px");
         return;
     }
     // A color's resolved value is its used value: a keyword resolves to sRGB, written with rgb(), and a function that
@@ -5565,7 +5565,7 @@ void serializeResolved(TextBuffer* out, PrCssPresentation* r, const CssComputedS
         CssValuePool pool{};
         if (computed.values[0].kind == PrCssValueKind_Keyword) {
             PrColor srgb = cssColorToSrgb(color);
-            auto channel = [](float c) { return uint8_t(clampF32(c, 0, 1) * 255 + 0.5f); };
+            auto channel = [](float c) { return uint8_t(prF32Clamp(c, 0, 1) * 255 + 0.5f); };
             cssValuePoolAddColor(&pool, PrColor8{channel(srgb.r), channel(srgb.g), channel(srgb.b), channel(srgb.a)});
         } else {
             cssValuePoolAddColorComponents(&pool, color);
@@ -5581,7 +5581,7 @@ void serializeResolved(TextBuffer* out, PrCssPresentation* r, const CssComputedS
         current = cssValueIsKeyword(&computed.values[i], PrCssKeyword_Currentcolor);
     if (current) {
         PrColor srgb = cssStyleColor(style, colorEnvironmentOf(r, 0, nullptr));
-        auto channel = [](float c) { return uint8_t(clampF32(c, 0, 1) * 255 + 0.5f); };
+        auto channel = [](float c) { return uint8_t(prF32Clamp(c, 0, 1) * 255 + 0.5f); };
         PrColor8 resolved{channel(srgb.r), channel(srgb.g), channel(srgb.b), channel(srgb.a)};
         CssValuePool pool{};
         for (uint32_t i = 0; i < computed.count; i += computed.values[i].next) {
@@ -5783,7 +5783,7 @@ ComputedOrder buildComputedOrder() {
             order.properties[order.count++] = group.properties[i];
     }
     sortItems(order.properties, order.count, [](PrCssProperty a, PrCssProperty b) {
-        return stringCompare(cssPropertyName(a), cssPropertyName(b)) < 0;
+        return prStringCompare(cssPropertyName(a), cssPropertyName(b)) < 0;
     });
     return order;
 }
@@ -5801,37 +5801,37 @@ const CssComputedStyle* rootStyleOf(const PrCssPresentation* r, const PrDomEleme
 }
 
 // Appends a short path to `node` for a report: each element's name, ID and first class, from the root down.
-void describeNode(TextBuffer* out, const PrDomNode* node) {
+void describeNode(PrTextBuffer* out, const PrDomNode* node) {
     if (isPseudo(node)) {
         describeNode(out, node->parent);
         CssPseudo pseudo = static_cast<const CssPresentationPseudo*>(node)->pseudo;
-        textAppend(out, pseudo == CssPseudo_Before ? "::before" : pseudo == CssPseudo_After ? "::after" : "::marker");
+        prTextBufferAppend(out, pseudo == CssPseudo_Before ? "::before" : pseudo == CssPseudo_After ? "::after" : "::marker");
         return;
     }
     const PrDomElement* element = domElementFromNode(const_cast<PrDomNode*>(node));
     if (element == nullptr) {
         if (node->parent != nullptr) {
             describeNode(out, node->parent);
-            textAppend(out, " > ");
+            prTextBufferAppend(out, " > ");
         }
-        textAppend(out, "#text");
+        prTextBufferAppend(out, "#text");
         return;
     }
     if (node->parent != nullptr && domElementFromNode(node->parent) != nullptr) {
         describeNode(out, node->parent);
-        textAppend(out, " > ");
+        prTextBufferAppend(out, " > ");
     }
-    textAppend(out, domElementName(element));
+    prTextBufferAppend(out, domElementName(element));
     PrStringView id = domElementId(element);
     if (id.size != 0) {
-        textAppendChar(out, '#');
-        textAppend(out, id);
+        prTextBufferAppendChar(out, '#');
+        prTextBufferAppend(out, id);
     }
     if (element->classes != kDomClassesNone) {
         DomClassList classes = domClassesList(element->document, element->classes);
         if (classes.count != 0) {
-            textAppendChar(out, '.');
-            textAppend(out, domClassesName(element->document, classes.atoms[0]));
+            prTextBufferAppendChar(out, '.');
+            prTextBufferAppend(out, domClassesName(element->document, classes.atoms[0]));
         }
     }
 }
@@ -5839,13 +5839,13 @@ void describeNode(TextBuffer* out, const PrDomNode* node) {
 // The first difference prCssPresentationVerify found.
 struct Difference {
     const PrDomNode* PR_NULLABLE node;
-    TextBuffer what;
+    PrTextBuffer what;
 };
 
 // Records the first difference, which is `what` at `node`.
 bool differs(Difference* out, const PrDomNode* node, const char* what) {
     out->node = node;
-    textAppend(&out->what, what);
+    prTextBufferAppend(&out->what, what);
     return false;
 }
 
@@ -5859,26 +5859,26 @@ static_assert(countOf(kGroupNames) == CssStyleGroup_Count);
 
 // Appends the first property of `group` whose value differs between the cached style and a restyle from scratch, with
 // both values.
-void describeGroupDifference(TextBuffer* out, CssStyleGroup group, const CssComputedStyle* cached,
+void describeGroupDifference(PrTextBuffer* out, CssStyleGroup group, const CssComputedStyle* cached,
         const CssComputedStyle* fresh) {
     CssStyleGroupProperties properties = cssStyleGroupProperties(group);
     for (uint32_t i = 0; i < properties.count; ++i) {
         PrCssProperty property = properties.properties[i];
-        TextBuffer was{};
-        TextBuffer now{};
+        PrTextBuffer was{};
+        PrTextBuffer now{};
         cssSerializeValues(&was, cssComputedValue(cached, property));
         cssSerializeValues(&now, cssComputedValue(fresh, property));
-        bool differ = textView(&was) != textView(&now);
+        bool differ = prTextBufferView(&was) != prTextBufferView(&now);
         if (differ) {
-            textAppend(out, ", ");
-            textAppend(out, cssPropertyName(property));
-            textAppend(out, ": cached ");
-            textAppend(out, textView(&was));
-            textAppend(out, ", fresh ");
-            textAppend(out, textView(&now));
+            prTextBufferAppend(out, ", ");
+            prTextBufferAppend(out, cssPropertyName(property));
+            prTextBufferAppend(out, ": cached ");
+            prTextBufferAppend(out, prTextBufferView(&was));
+            prTextBufferAppend(out, ", fresh ");
+            prTextBufferAppend(out, prTextBufferView(&now));
         }
-        textReset(&was);
-        textReset(&now);
+        prTextBufferReset(&was);
+        prTextBufferReset(&now);
         if (differ)
             return;
     }
@@ -5924,11 +5924,11 @@ bool verifyPseudo(PrCssPresentation* r, PrDomElement* element, uint32_t at, uint
     // which restyles them.
     if (holds && generates != kept) {
         same = differs(out, element, name);
-        textAppend(&out->what, generates ? " should have a style and has none" : " has a style it should not have");
+        prTextBufferAppend(&out->what, generates ? " should have a style and has none" : " has a style it should not have");
     }
     if (same && generates && cssCountsPseudo(r, fresh, kind) && !r->entries.data[own].counts) {
         same = differs(out, element, name);
-        textAppend(&out->what, " takes part in the counter pass, and is not marked as a participant");
+        prTextBufferAppend(&out->what, " takes part in the counter pass, and is not marked as a participant");
     }
     // The style without animations is what the cascade gives. The style with them is what is presented, and decides the
     // box.
@@ -5937,22 +5937,22 @@ bool verifyPseudo(PrCssPresentation* r, PrDomElement* element, uint32_t at, uint
     for (uint32_t g = 0; same && generates && g < CssStyleGroup_Count; ++g) {
         if (fresh->groups[g] != base->groups[g]) {
             same = differs(out, element, name);
-            textAppend(&out->what, ": the computed values of the style group ");
-            textAppend(&out->what, kGroupNames[g]);
+            prTextBufferAppend(&out->what, ": the computed values of the style group ");
+            prTextBufferAppend(&out->what, kGroupNames[g]);
             describeGroupDifference(&out->what, CssStyleGroup(g), base, fresh);
         }
     }
     bool boxes = generates && same && kept && generatesPseudo(element, kind, cached);
     if (same && boxes != (node != kPrLayoutNodeNone)) {
         same = differs(out, element, name);
-        textAppend(&out->what, boxes ? " should generate a box and has none" : " has a box it should not generate");
+        prTextBufferAppend(&out->what, boxes ? " should generate a box and has none" : " has a box it should not generate");
     }
     if (same && boxes) {
         bool reads = false;
         PrLayoutStyleIndex record = recordOf(r, pseudo, cached, r->entries.data[own].composited, &reads);
         if (same && record != prLayoutNodeStyle(r->tree, node)) {
             same = differs(out, element, name);
-            textAppend(&out->what, ": the box's layout record");
+            prTextBufferAppend(&out->what, ": the box's layout record");
         }
         // The content's boxes: its marker's, its runs of text, and a replaced box for each image.
         PrLayoutNode run = prLayoutNodeFirstChild(r->tree, node);
@@ -5978,11 +5978,11 @@ bool verifyPseudo(PrCssPresentation* r, PrDomElement* element, uint32_t at, uint
         content = content && run == kPrLayoutNodeNone;
         if (same && !content) {
             same = differs(out, element, name);
-            textAppend(&out->what, ": the boxes of its content");
+            prTextBufferAppend(&out->what, ": the boxes of its content");
         }
         if (same && node != expected) {
             same = differs(out, element, name);
-            textAppend(&out->what, ": the box is not at its place among its parent's boxes");
+            prTextBufferAppend(&out->what, ": the box is not at its place among its parent's boxes");
         }
         if (same)
             expected = prLayoutNodeNextSibling(r->tree, expected);
@@ -6018,7 +6018,7 @@ bool verifyElement(PrCssPresentation* r, PrDomElement* element, const CssCompute
     for (uint32_t g = 0; same && g < CssStyleGroup_Count; ++g) {
         if (fresh->groups[g] != base->groups[g]) {
             same = differs(out, domNode, "the computed values of the style group ");
-            textAppend(&out->what, kGroupNames[g]);
+            prTextBufferAppend(&out->what, kGroupNames[g]);
             describeGroupDifference(&out->what, CssStyleGroup(g), base, fresh);
         }
     }
@@ -6135,8 +6135,8 @@ bool verifyElement(PrCssPresentation* r, PrDomElement* element, const CssCompute
 bool sameCounterTexts(const CssCountingTexts& a, const CssCountingTexts& b) {
     if (a.text.count != b.text.count || a.ends.count != b.ends.count)
         return false;
-    return (a.text.count == 0 || memEquals(a.text.data, b.text.data, a.text.count)) &&
-        (a.ends.count == 0 || memEquals(a.ends.data, b.ends.data, a.ends.count * sizeof(uint32_t)));
+    return (a.text.count == 0 || prMemEquals(a.text.data, b.text.data, a.text.count)) &&
+        (a.ends.count == 0 || prMemEquals(a.ends.data, b.ends.data, a.ends.count * sizeof(uint32_t)));
 }
 
 // Returns true if the texts that the counters give each pseudo-element are those that a pass over every box gives. The
@@ -6154,9 +6154,9 @@ bool verifyCounters(PrCssPresentation* r, Difference* out) {
             if (!c->same || sameCounterTexts(pseudo->counters, *texts))
                 return;
             c->same = differs(c->out, pseudo, "the texts that counters give its content: cached ");
-            textAppend(&c->out->what, PrStringView{pseudo->counters.text.data, pseudo->counters.text.count});
-            textAppend(&c->out->what, ", fresh ");
-            textAppend(&c->out->what, PrStringView{texts->text.data, texts->text.count});
+            prTextBufferAppend(&c->out->what, PrStringView{pseudo->counters.text.data, pseudo->counters.text.count});
+            prTextBufferAppend(&c->out->what, ", fresh ");
+            prTextBufferAppend(&c->out->what, PrStringView{texts->text.data, texts->text.count});
         }, &check);
     return check.same;
 }
@@ -6172,7 +6172,7 @@ bool verifySvgs(PrCssPresentation* r, Difference* out) {
         bool same = svg->functions->verify(svg->content, &report);
         if (!same) {
             differs(out, svg->element, "the content of its SVG tree: ");
-            textAppend(&out->what, prStringView(&report));
+            prTextBufferAppend(&out->what, prStringView(&report));
         }
         prStringReset(&report);
         if (!same)
@@ -6457,7 +6457,7 @@ bool restyle(PrCssPresentation* r, PrLayoutVec extent, RestyleReach reach) {
         trees.reset();
         const Array<const CssRuleData* PR_NONNULL>& now = r->rules.counterStyleRules;
         if (now.count != counterStyles.count ||
-                !memEquals(now.data, counterStyles.data, now.count * sizeof(const CssRuleData*)))
+                !prMemEquals(now.data, counterStyles.data, now.count * sizeof(const CssRuleData*)))
             counterStylesChanged(r);
         counterStyles.reset();
     }
@@ -7281,31 +7281,31 @@ void cssPresentationComputedBlock(PrCssPresentation* presentation, const PrDomEl
     *filler = presentation;
     *version = presentation->version;
     uint32_t at = cssPresentationNodeEntry(presentation, element);
-    TextBuffer text{};
+    PrTextBuffer text{};
     if (at != kHashMissing && presentation->entries.data[at].style != nullptr) {
         const CssComputedStyle* style = targetStyle(presentation, at, pseudo);
         PrLayoutNode node = pseudo == CssPseudo_None ? presentation->entries.data[at].layoutNode : kPrLayoutNodeNone;
         const ComputedOrder& order = computedOrder();
         for (uint32_t i = 0; i < order.count; ++i) {
-            textAppend(&text, cssPropertyName(order.properties[i]));
-            textAppend(&text, ": ");
+            prTextBufferAppend(&text, cssPropertyName(order.properties[i]));
+            prTextBufferAppend(&text, ": ");
             serializeResolved(&text, presentation, style, order.properties[i], node);
-            textAppend(&text, "; ");
+            prTextBufferAppend(&text, "; ");
         }
         cssCustomEach(style->custom, [&](const CssCustomRow& row) {
-            textAppend(&text, row.name);
-            textAppend(&text, ": ");
-            textAppend(&text, row.value);
-            textAppend(&text, "; ");
+            prTextBufferAppend(&text, row.name);
+            prTextBufferAppend(&text, ": ");
+            prTextBufferAppend(&text, row.value);
+            prTextBufferAppend(&text, "; ");
         });
         cssComputedStyleRelease(style);
     }
-    cssDeclarationBlockParse(out, textView(&text), nullptr);
-    text.text.reset();
+    cssDeclarationBlockParse(out, prTextBufferView(&text), nullptr);
+    prTextBufferReset(&text);
 }
 
 bool cssPresentationComputedValue(PrCssPresentation* presentation, const PrDomElement* element, CssPseudo pseudo,
-        PrCssProperty property, TextBuffer* out) {
+        PrCssProperty property, PrTextBuffer* out) {
     // A flow-relative property resolves as its physical counterpart, using the element's own writing mode and
     // direction.
     if (cssIsFlowRelative(property)) {
@@ -7337,7 +7337,7 @@ bool cssPresentationComputedValue(PrCssPresentation* presentation, const PrDomEl
 }
 
 bool cssPresentationComputedCustomValue(PrCssPresentation* presentation, const PrDomElement* element, CssPseudo pseudo,
-        PrStringView name, TextBuffer* out) {
+        PrStringView name, PrTextBuffer* out) {
     restyle(presentation, presentation->extent, RestyleReach_All);
     uint32_t at = cssPresentationNodeEntry(presentation, element);
     if (at == kHashMissing || presentation->entries.data[at].style == nullptr)
@@ -7345,7 +7345,7 @@ bool cssPresentationComputedCustomValue(PrCssPresentation* presentation, const P
     const CssComputedStyle* style = targetStyle(presentation, at, pseudo);
     PrStringView value{};
     if (cssCustomValue(style->custom, name, &value))
-        textAppend(out, value);
+        prTextBufferAppend(out, value);
     cssComputedStyleRelease(style);
     return true;
 }
@@ -7452,7 +7452,7 @@ void prCssPresentationDestroy(PrCssPresentation* PR_NULLABLE presentation) {
     r->counterScratch.boundaries.reset();
     r->counterScratch.texts.text.reset();
     r->counterScratch.texts.ends.reset();
-    textReset(&r->counterScratch.text);
+    prTextBufferReset(&r->counterScratch.text);
     r->counterScratch.names.reset();
     r->counterScratch.points.reset();
     cssCounterResumeReset(r->counterResume);
@@ -7547,7 +7547,7 @@ void prCssPresentationStart(PrCssPresentation* presentation, PrLayoutVec extent)
 }
 
 void prCssPresentationSetJobBudget(PrCssPresentation* presentation, double milliseconds) {
-    presentation->jobBudget = isFiniteF64(milliseconds) && milliseconds > 0 ? milliseconds : 0;
+    presentation->jobBudget = prF64IsFinite(milliseconds) && milliseconds > 0 ? milliseconds : 0;
     presentation->newLeft = jobShare(presentation);
 }
 
@@ -7658,21 +7658,21 @@ bool prCssPresentationVerify(PrCssPresentation* presentation, PrString* PR_NULLA
         same = prLayoutTreeVerify(r->tree, &difference);
         if (!same) {
             found.node = difference.node != kPrLayoutNodeNone ? prCssPresentationNode(r, difference.node) : nullptr;
-            textAppend(&found.what, prStringView(&difference.what));
+            prTextBufferAppend(&found.what, prStringView(&difference.what));
             prStringReset(&difference.what);
         }
     }
     if (!same && report != nullptr) {
-        TextBuffer text{};
+        PrTextBuffer text{};
         if (found.node != nullptr) {
             describeNode(&text, found.node);
-            textAppend(&text, ": ");
+            prTextBufferAppend(&text, ": ");
         }
-        textAppend(&text, textView(&found.what));
+        prTextBufferAppend(&text, prTextBufferView(&found.what));
         prStringReset(report);
-        *report = textTake(&text);
+        *report = prTextBufferTake(&text);
     }
-    textReset(&found.what);
+    prTextBufferReset(&found.what);
     return same;
 }
 

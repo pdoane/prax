@@ -32,7 +32,7 @@ using namespace pr_impl;
 
 PrHttpBackend prHttpBackendFromName(PrStringView name) {
     for (PrHttpBackend backend = 0; backend < PrHttpBackend_Count; ++backend) {
-        if (asciiEqualsFold(kBackendNames[backend], name))
+        if (prAsciiEqualsFold(kBackendNames[backend], name))
             return backend;
     }
     return PrHttpBackend_Count;

@@ -77,7 +77,7 @@ PrCssStyleSheetList* cssDocumentStyleSheets(PrDomDocument* document) {
 PrStatus cssRegisterProperty(PrDomDocument* document, PrStringView name, PrStringView syntax,
         bool inherits, PrStringView initialValue) {
     // css-variables-1/#custom-property: a custom property's name starts with two dashes.
-    if (!stringStartsWith(name, "--"))
+    if (!prStringStartsWith(name, "--"))
         return PrStatus_Syntax;
     CssRoot* style = cssDocumentRoot(document);
     for (uint32_t i = 0; i < style->registered.count; ++i) {

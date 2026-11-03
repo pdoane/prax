@@ -132,7 +132,7 @@ void load(PrDomDocument* document, uint32_t index) {
 bool domReferenceSplit(const PrDomDocument* document, PrStringView reference, DomReference* out) {
     *out = DomReference{};
     // Leading and trailing white space is stripped (SVG2/linking.html#processingURL).
-    reference = stringTrim(reference);
+    reference = prStringTrim(reference);
     if (reference.size == 0)
         return false;
     size_t hash = 0;

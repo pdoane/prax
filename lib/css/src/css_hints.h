@@ -45,7 +45,7 @@ struct CssHintProvider {
     bool (*hasOwn)(const PrDomElement* element);
 
     // Appends the declarations of the hints that the element's own attributes map to.
-    void (*own)(TextBuffer* out, const PrDomElement* element);
+    void (*own)(PrTextBuffer* out, const PrDomElement* element);
 
     // Returns the elements that a change to the attribute `name` of the element restyles through hints.
     CssHintReach (*mapped)(const PrDomElement* element, PrStringView name);
@@ -55,15 +55,15 @@ struct CssHintProvider {
     const PrDomElement* PR_NULLABLE (*PR_NULLABLE giver)(const PrDomElement* element, uint32_t* taker);
 
     // Appends the declarations of the hints that `giver` gives the elements of the kind `taker`.
-    void (*PR_NULLABLE given)(TextBuffer* out, const PrDomElement* giver, uint32_t taker);
+    void (*PR_NULLABLE given)(PrTextBuffer* out, const PrDomElement* giver, uint32_t taker);
 };
 
 // Gives the document's CSS the provider of the hints of the elements of the namespace `space`.
 void cssHintsProvide(PrDomDocument* document, DomNamespaceId space, const CssHintProvider* provider);
 
 // Append a declaration of `property` with `value`, or with a length of `pixels`, for a provider.
-void cssHintAdd(TextBuffer* out, PrStringView property, PrStringView value);
-void cssHintAddPixels(TextBuffer* out, PrStringView property, double pixels);
+void cssHintAdd(PrTextBuffer* out, PrStringView property, PrStringView value);
+void cssHintAddPixels(PrTextBuffer* out, PrStringView property, double pixels);
 
 // Returns the elements that a change to the attribute named `name` of `element` restyles through hints.
 CssHintReach cssHintsMapped(const PrDomElement* element, PrStringView name);

@@ -131,7 +131,7 @@ TEST_CASE("a writer escapes strings and writes numbers in their shortest form") 
     prJsonWriterString(w, "q\"b\\n\n\x01\xC3\xA9\xFF");
     for (double number : {0.1, -2.5, 1e21, 1e-7, 123456789.0})
         prJsonWriterNumber(w, number);
-    prJsonWriterNumber(w, kInfinityF64);
+    prJsonWriterNumber(w, kPrF64Infinity);
     prJsonWriterEndArray(w);
     CHECK(prJsonWriterText(w) == "[\"q\\\"b\\\\n\\n\\u0001\xC3\xA9\xEF\xBF\xBD\",0.1,-2.5,1e+21,1e-7,123456789,null]");
     prJsonWriterDestroy(w);

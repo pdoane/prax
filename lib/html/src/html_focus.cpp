@@ -498,7 +498,7 @@ bool sandboxedAutomatic(const PrDomDocument* document) {
         domOrderedSetParse(prStringView(&sandbox->value), &tokens);
         bool scripts = false;
         for (uint32_t i = 0; i < tokens.count && !scripts; ++i)
-            scripts = asciiEqualsFold(tokens.data[i], "allow-scripts");
+            scripts = prAsciiEqualsFold(tokens.data[i], "allow-scripts");
         tokens.reset();
         if (!scripts)
             return true;

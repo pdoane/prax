@@ -697,7 +697,7 @@ JSValue setProperty(JSContext* ctx, JSValueConst declarationsObject, int argc, J
         return JS_EXCEPTION;
     // A priority that is neither empty nor "important", a name that the block accepts no declaration of, or a value
     // that the declaration does not accept leaves the block unchanged.
-    bool important = asciiEqualsFold(priority.value(), "important");
+    bool important = prAsciiEqualsFold(priority.value(), "important");
     if (!property.found || (!important && priority.value().size != 0))
         return JS_UNDEFINED;
     return setStatusToJs(ctx, prCssStyleDeclarationSetProperty(declarations, &property.name, value.value(), important));
@@ -883,7 +883,7 @@ uint32_t idlAttributeName(PrStringView property, bool lowercaseFirst, char* out,
             upper = true;
             continue;
         }
-        out[size++] = upper ? asciiUpper(property.data[i]) : property.data[i];
+        out[size++] = upper ? prAsciiUpper(property.data[i]) : property.data[i];
         upper = false;
     }
     return size;
@@ -900,9 +900,9 @@ void defineAttributes(JSContext* ctx, JSValueConst proto, Names names) {
         PrStringView property = attributeText(magic);
         defineAttribute(ctx, proto, property.data, property.size, magic);
         char name[64];
-        if (memFind(property.data, '-', property.size) != nullptr)
+        if (prMemFind(property.data, '-', property.size) != nullptr)
             defineAttribute(ctx, proto, name, idlAttributeName(property, false, name, uint32_t(sizeof(name))), magic);
-        if (stringStartsWith(property, "-webkit-"))
+        if (prStringStartsWith(property, "-webkit-"))
             defineAttribute(ctx, proto, name, idlAttributeName(property, true, name, uint32_t(sizeof(name))), magic);
     }
 }
@@ -1608,7 +1608,7 @@ JSValue animationEventConstruct(JSContext* ctx, JSValueConst newTarget, int argc
         if (pseudoGiven)
             init.pseudoElement = pseudo.value();
         // elapsedTime is a double (webidl/#js-double).
-        if (read && !isFiniteF64(init.elapsedTime)) {
+        if (read && !prF64IsFinite(init.elapsedTime)) {
             JS_ThrowTypeError(ctx, "The provided double value is non-finite");
             read = false;
         }
@@ -2401,7 +2401,7 @@ bool readThreshold(JSContext* ctx, JSValueConst value, Array<double>* out) {
     double number = 0;
     if (JS_ToFloat64(ctx, &number, value) < 0)
         return false;
-    if (!isFiniteF64(number)) {
+    if (!prF64IsFinite(number)) {
         JS_ThrowTypeError(ctx, "The threshold is not a finite number");
         return false;
     }
@@ -3045,7 +3045,7 @@ JSValue scrollingElement(JSContext* ctx, JSValueConst documentObject) {
 bool pointArguments(JSContext* ctx, int argc, JSValueConst* argv, double* x, double* y) {
     if (!jsArgCount(ctx, argc, 2) || !jsArgNumber(ctx, argc, argv, 0, 0, x) || !jsArgNumber(ctx, argc, argv, 1, 0, y))
         return false;
-    if (!isFiniteF64(*x) || !isFiniteF64(*y)) {
+    if (!prF64IsFinite(*x) || !prF64IsFinite(*y)) {
         JS_ThrowTypeError(ctx, "The provided double value is non-finite");
         return false;
     }

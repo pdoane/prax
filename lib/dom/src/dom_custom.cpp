@@ -242,7 +242,7 @@ bool domIsValidCustomElementName(PrStringView name) {
         "font-face-src",  "font-face-uri", "font-face-format",
         "font-face-name", "missing-glyph",
     };
-    if (name.size == 0 || !(name.data[0] >= 'a' && name.data[0] <= 'z') || !stringContains(name, "-"))
+    if (name.size == 0 || !(name.data[0] >= 'a' && name.data[0] <= 'z') || !prStringContains(name, "-"))
         return false;
     for (PrStringView reserved : kReserved) {
         if (name == reserved)

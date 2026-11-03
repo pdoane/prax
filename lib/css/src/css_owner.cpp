@@ -323,20 +323,20 @@ void instructionSheetFetchedAndDropped(void* PR_NULLABLE data, const DomFetchRes
 bool pseudoAttribute(PrStringView data, PrStringView name, PrStringView* out) {
     size_t at = 0;
     for (;;) {
-        while (at < data.size && asciiIsSpace(data.data[at]))
+        while (at < data.size && prAsciiIsSpace(data.data[at]))
             ++at;
         if (at == data.size)
             return false;
         size_t start = at;
-        while (at < data.size && !asciiIsSpace(data.data[at]) && data.data[at] != '=')
+        while (at < data.size && !prAsciiIsSpace(data.data[at]) && data.data[at] != '=')
             ++at;
         PrStringView found{data.data + start, at - start};
-        while (at < data.size && asciiIsSpace(data.data[at]))
+        while (at < data.size && prAsciiIsSpace(data.data[at]))
             ++at;
         if (at == data.size || data.data[at] != '=')
             return false;
         ++at;
-        while (at < data.size && asciiIsSpace(data.data[at]))
+        while (at < data.size && prAsciiIsSpace(data.data[at]))
             ++at;
         if (at == data.size || (data.data[at] != '"' && data.data[at] != '\''))
             return false;
@@ -476,7 +476,7 @@ void cssOwnerFetch(PrDomElement* element, const PrUrl* url, DomCorsSettings cors
 
 bool cssOwnerTypeIsCss(const PrDomElement* element) {
     const PrDomAttr* type = domAttribute(element, PrDomNamespace_None, "type");
-    return type == nullptr || prStringIsEmpty(&type->value) || asciiEqualsFold(prStringView(&type->value), "text/css");
+    return type == nullptr || prStringIsEmpty(&type->value) || prAsciiEqualsFold(prStringView(&type->value), "text/css");
 }
 
 void cssOwnerMediaChanged(PrDomElement* element, PrStringView value) {
@@ -508,7 +508,7 @@ void cssXmlStylesheetInserted(PrDomNode* node) {
     PrStringView alternate{};
     if (!pseudoAttribute(data, "href", &href) || href.size == 0)
         return;
-    if (pseudoAttribute(data, "type", &type) && !asciiEqualsFold(stringTrim(type), "text/css"))
+    if (pseudoAttribute(data, "type", &type) && !prAsciiEqualsFold(prStringTrim(type), "text/css"))
         return;
     if (pseudoAttribute(data, "alternate", &alternate) && alternate == "yes")
         return;

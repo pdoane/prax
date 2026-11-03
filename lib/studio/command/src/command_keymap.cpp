@@ -69,33 +69,33 @@ constexpr KeyWord kKeyWords[] = {
 // Returns the key that `word` names, or PrAppKey_Unknown.
 PrAppKey keyOf(PrStringView word) {
     if (word.size == 1 && word.data[0] > ' ' && word.data[0] <= '~')
-        return PrAppKey(asciiUpper(word.data[0]));
+        return PrAppKey(prAsciiUpper(word.data[0]));
     for (const KeyWord& named : kKeyWords) {
-        if (asciiEqualsFold(named.word, word))
+        if (prAsciiEqualsFold(named.word, word))
             return named.key;
     }
     for (PrAppKey key = PrAppKey_Left; key <= PrAppKey_F20; ++key) {
-        if (asciiEqualsFold(prAppKeyName(key), word))
+        if (prAsciiEqualsFold(prAppKeyName(key), word))
             return key;
     }
     return PrAppKey_Unknown;
 }
 
-void appendKey(TextBuffer* out, PrAppKey key) {
+void appendKey(PrTextBuffer* out, PrAppKey key) {
     for (const KeyWord& named : kKeyWords) {
         if (named.key == key) {
 #if defined(__APPLE__)
-            textAppend(out, named.apple);
+            prTextBufferAppend(out, named.apple);
 #else
-            textAppend(out, named.other);
+            prTextBufferAppend(out, named.other);
 #endif
             return;
         }
     }
     if (key < 0x80)
-        textAppendChar(out, char(key));
+        prTextBufferAppendChar(out, char(key));
     else
-        textAppend(out, prAppKeyName(key));
+        prTextBufferAppend(out, prAppKeyName(key));
 }
 
 } // namespace
@@ -119,14 +119,14 @@ bool prCommandChordParse(PrStringView text, PrCommandChord* out) {
             ++end;
         if (end == at)
             break;
-        PrStringView word = stringSlice(text, at, end - at);
+        PrStringView word = prStringSlice(text, at, end - at);
         at = end;
         // A modifier comes before the key, and the key comes last.
         if (keyed)
             return false;
         bool modifier = false;
         for (const ModifierWord& named : kModifierWords) {
-            if (word.size > 1 && asciiEqualsFold(named.word, word)) {
+            if (word.size > 1 && prAsciiEqualsFold(named.word, word)) {
                 chord.modifiers |= named.modifier;
                 modifier = true;
             }
@@ -145,17 +145,17 @@ bool prCommandChordParse(PrStringView text, PrCommandChord* out) {
 }
 
 PrString prCommandChordText(PrCommandChord chord) {
-    TextBuffer text{};
+    PrTextBuffer text{};
 #if defined(__APPLE__)
     // Apple's menus show the modifiers as symbols, in the order Control, Option, Shift, Command.
     if ((chord.modifiers & PrAppModifierFlag_Control) != 0)
-        textAppend(&text, "\xE2\x8C\x83");
+        prTextBufferAppend(&text, "\xE2\x8C\x83");
     if ((chord.modifiers & PrAppModifierFlag_Alt) != 0)
-        textAppend(&text, "\xE2\x8C\xA5");
+        prTextBufferAppend(&text, "\xE2\x8C\xA5");
     if ((chord.modifiers & PrAppModifierFlag_Shift) != 0)
-        textAppend(&text, "\xE2\x87\xA7");
+        prTextBufferAppend(&text, "\xE2\x87\xA7");
     if ((chord.modifiers & PrAppModifierFlag_Super) != 0)
-        textAppend(&text, "\xE2\x8C\x98");
+        prTextBufferAppend(&text, "\xE2\x8C\x98");
 #else
     static const ModifierWord kNames[] = {
         {"Ctrl+", PrAppModifierFlag_Control},
@@ -165,12 +165,12 @@ PrString prCommandChordText(PrCommandChord chord) {
     };
     for (const ModifierWord& named : kNames) {
         if ((chord.modifiers & named.modifier) != 0)
-            textAppend(&text, named.word);
+            prTextBufferAppend(&text, named.word);
     }
 #endif
     appendKey(&text, chord.key);
-    PrString string = textCopy(&text);
-    textReset(&text);
+    PrString string = prTextBufferCopy(&text);
+    prTextBufferReset(&text);
     return string;
 }
 

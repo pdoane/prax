@@ -35,7 +35,7 @@ void storeU32(uint8_t* bytes, uint32_t value) {
 }
 
 bool isType(const Chunk& chunk, const char* type) {
-    return memEquals(chunk.type, type, 4);
+    return prMemEquals(chunk.type, type, 4);
 }
 
 // Reads the chunk at `*at` of `png` and moves `*at` past it. Returns false, and leaves `*at` as it was, if the chunk is
@@ -48,10 +48,10 @@ bool readChunk(PrByteView png, size_t* at, Chunk* out) {
     // A length past 2^31 - 1 is invalid (png-3/#5Chunk-layout).
     if (length > 0x7fffffffu || png.size - *at - 12 < length)
         return false;
-    memCopy(out->type, start + 4, 4);
+    prMemCopy(out->type, start + 4, 4);
     out->data = PrByteView{start + 8, length};
     out->whole = PrByteView{start, size_t(length) + 12};
-    out->crcMatches = crc32Update(0, PrByteView{start + 4, size_t(length) + 4}) == loadU32(start + 8 + length);
+    out->crcMatches = prCrc32Update(0, PrByteView{start + 4, size_t(length) + 4}) == loadU32(start + 8 + length);
     *at += size_t(length) + 12;
     return true;
 }
@@ -60,7 +60,7 @@ bool readChunk(PrByteView png, size_t* at, Chunk* out) {
 bool hasHeader(PrByteView png) {
     size_t at = sizeof(kSignature);
     Chunk header;
-    return png.size >= sizeof(kSignature) && memEquals(png.data, kSignature, sizeof(kSignature)) &&
+    return png.size >= sizeof(kSignature) && prMemEquals(png.data, kSignature, sizeof(kSignature)) &&
         readChunk(png, &at, &header) && isType(header, "IHDR");
 }
 
@@ -86,9 +86,9 @@ PrStringView keywordOf(const Chunk& chunk) {
 }
 
 // Appends the Latin-1 `bytes` to `out` as UTF-8.
-void appendLatin1(TextBuffer* out, PrByteView bytes) {
+void appendLatin1(PrTextBuffer* out, PrByteView bytes) {
     for (size_t i = 0; i < bytes.size; ++i)
-        textAppendCodePoint(out, bytes.data[i]);
+        prTextBufferAppendCodePoint(out, bytes.data[i]);
 }
 
 // Decompresses the zlib stream `input` into `out`. Returns false if the stream is corrupt, ends early, or decompresses
@@ -129,23 +129,23 @@ bool readText(const Chunk& chunk, PrCompressCodec* PR_NULLABLE codec, PrImagePng
     PrStringView keyword = keywordOf(chunk);
     if (keyword.data == nullptr)
         return false;
-    TextBuffer keywordUtf8{};
+    PrTextBuffer keywordUtf8{};
     appendLatin1(&keywordUtf8, PrByteView{chunk.data.data, keyword.size});
-    TextBuffer converted{};
+    PrTextBuffer converted{};
     Array<uint8_t> inflated{};
-    PrImagePngText text{.keyword = textView(&keywordUtf8), .language = "", .translatedKeyword = ""};
+    PrImagePngText text{.keyword = prTextBufferView(&keywordUtf8), .language = "", .translatedKeyword = ""};
     size_t at = keyword.size + 1;
     bool ok = true;
     if (isType(chunk, "tEXt")) {
         appendLatin1(&converted, PrByteView{chunk.data.data + at, chunk.data.size - at});
-        text.text = textView(&converted);
+        text.text = prTextBufferView(&converted);
     } else if (isType(chunk, "zTXt")) {
         // The one compression method is zlib (png-3/#11zTXt).
         ok = codec != nullptr && at < chunk.data.size && chunk.data.data[at] == 0 &&
             inflate(codec, PrByteView{chunk.data.data + at + 1, chunk.data.size - at - 1}, &inflated);
         if (ok) {
             appendLatin1(&converted, PrByteView{inflated.data, inflated.count});
-            text.text = textView(&converted);
+            text.text = prTextBufferView(&converted);
         }
     } else {
         ok = chunk.data.size - at >= 2 && chunk.data.data[at] <= 1 && chunk.data.data[at + 1] == 0;
@@ -172,8 +172,8 @@ bool readText(const Chunk& chunk, PrCompressCodec* PR_NULLABLE codec, PrImagePng
     }
     if (ok)
         fn(context, &text);
-    keywordUtf8.text.reset();
-    converted.text.reset();
+    prTextBufferReset(&keywordUtf8);
+    prTextBufferReset(&converted);
     inflated.reset();
     return ok;
 }
@@ -188,7 +188,7 @@ struct Output {
 void write(Output* out, const void* bytes, size_t size) {
     if (out->size < out->capacity) {
         size_t room = out->capacity - out->size;
-        memCopy(out->data + out->size, bytes, size < room ? size : room);
+        prMemCopy(out->data + out->size, bytes, size < room ? size : room);
     }
     out->size += size;
 }
@@ -200,15 +200,15 @@ void writeText(Output* out, PrStringView keyword, PrStringView text) {
     size_t length = keyword.size + sizeof(kFields) + text.size;
     uint8_t head[8];
     storeU32(head, uint32_t(length));
-    memCopy(head + 4, "iTXt", 4);
+    prMemCopy(head + 4, "iTXt", 4);
     write(out, head, sizeof(head));
     write(out, keyword.data, keyword.size);
     write(out, kFields, sizeof(kFields));
     write(out, text.data, text.size);
-    uint32_t crc = crc32Update(0, PrByteView{head + 4, 4});
-    crc = crc32Update(crc, PrByteView{reinterpret_cast<const uint8_t*>(keyword.data), keyword.size});
-    crc = crc32Update(crc, PrByteView{kFields, sizeof(kFields)});
-    crc = crc32Update(crc, PrByteView{reinterpret_cast<const uint8_t*>(text.data), text.size});
+    uint32_t crc = prCrc32Update(0, PrByteView{head + 4, 4});
+    crc = prCrc32Update(crc, PrByteView{reinterpret_cast<const uint8_t*>(keyword.data), keyword.size});
+    crc = prCrc32Update(crc, PrByteView{kFields, sizeof(kFields)});
+    crc = prCrc32Update(crc, PrByteView{reinterpret_cast<const uint8_t*>(text.data), text.size});
     uint8_t tail[4];
     storeU32(tail, crc);
     write(out, tail, sizeof(tail));

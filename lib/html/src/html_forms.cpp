@@ -32,8 +32,8 @@
 namespace pr_impl {
 namespace {
 
-PrString stringOf(const TextBuffer* text) {
-    return prStringCopy(textView(text));
+PrString stringOf(const PrTextBuffer* text) {
+    return prStringCopy(prTextBufferView(text));
 }
 
 // Returns the number that `name` of `element` parses to by the rules for parsing floating-point number values, or
@@ -88,23 +88,23 @@ void appendEntries(DomEntryList* list, PrDomElement* field, const PrDomElement* 
     PrStringView name = domAttributeValue(field, "name");
     if (input && type == PrDomInputType_Image) {
         // A submitter that no click activated has the coordinate (0, 0).
-        TextBuffer prefix;
+        PrTextBuffer prefix = {};
         if (name.size != 0) {
-            textAppend(&prefix, name);
-            textAppendChar(&prefix, '.');
+            prTextBufferAppend(&prefix, name);
+            prTextBufferAppendChar(&prefix, '.');
         }
-        uint32_t size = prefix.text.count;
-        textAppendChar(&prefix, 'x');
-        domEntryListAppend(list, textView(&prefix), "0");
-        prefix.text.count = size;
-        textAppendChar(&prefix, 'y');
-        domEntryListAppend(list, textView(&prefix), "0");
-        textReset(&prefix);
+        uint32_t size = prefix.size;
+        prTextBufferAppendChar(&prefix, 'x');
+        domEntryListAppend(list, prTextBufferView(&prefix), "0");
+        prefix.size = size;
+        prTextBufferAppendChar(&prefix, 'y');
+        domEntryListAppend(list, prTextBufferView(&prefix), "0");
+        prTextBufferReset(&prefix);
         return;
     }
     if (name.size == 0)
         return;
-    TextBuffer value;
+    PrTextBuffer value = {};
     if (domIsHtml(field, PrDomTag_Select)) {
         Array<PrDomElement* PR_NONNULL> options;
         domSelectOptions(field, &options);
@@ -112,7 +112,7 @@ void appendEntries(DomEntryList* list, PrDomElement* field, const PrDomElement* 
             if (!domOptionSelected(options.data[i]) || domOptionDisabled(options.data[i]))
                 continue;
             domOptionValue(options.data[i], &value);
-            domEntryListAppend(list, name, textView(&value));
+            domEntryListAppend(list, name, prTextBufferView(&value));
         }
         options.reset();
     } else if (input && (type == PrDomInputType_Checkbox || type == PrDomInputType_Radio)) {
@@ -120,15 +120,15 @@ void appendEntries(DomEntryList* list, PrDomElement* field, const PrDomElement* 
         domEntryListAppend(list, name, attribute.data != nullptr ? attribute : "on");
     } else if (input && type == PrDomInputType_File) {
         // A File entry waits for the File API.
-    } else if (input && type == PrDomInputType_Hidden && asciiEqualsFold(name, "_charset_")) {
+    } else if (input && type == PrDomInputType_Hidden && prAsciiEqualsFold(name, "_charset_")) {
         domEntryListAppend(list, name, "UTF-8");
     } else if (domIsHtml(field, PrDomTag_Button)) {
         domEntryListAppend(list, name, domAttributeValue(field, "value"));
     } else {
         domControlValue(field, &value);
-        domEntryListAppend(list, name, textView(&value));
+        domEntryListAppend(list, name, prTextBufferView(&value));
     }
-    textReset(&value);
+    prTextBufferReset(&value);
     PrStringView dirname = domAttributeValue(field, "dirname");
     if (dirname.size != 0 && autoDirectionality(field))
         domEntryListAppend(list, dirname, domElementRtl(field) ? "rtl" : "ltr");
@@ -316,7 +316,7 @@ bool editControl(PrDomElement* element, uint32_t start, uint32_t end, PrStringVi
 
 } // namespace
 
-void htmlColorWellValue(const PrDomElement* input, PrStringView text, TextBuffer* out) {
+void htmlColorWellValue(const PrDomElement* input, PrStringView text, PrTextBuffer* out) {
     PrCssUsedColor color{};
     if (text.data == nullptr || prCssParseColor(text, input, &color) != PrStatus_Ok)
         color = PrCssUsedColor{.space = PrColorSpace_Srgb, .legacy = true, .alpha = 1};
@@ -324,7 +324,7 @@ void htmlColorWellValue(const PrDomElement* input, PrStringView text, TextBuffer
     if (!alpha)
         color.alpha = 1;
     // html/#attr-input-colorspace: Limited sRGB is the missing value default and the invalid value default.
-    bool p3 = asciiEqualsFold(domAttributeValue(input, "colorspace"), "display-p3");
+    bool p3 = prAsciiEqualsFold(domAttributeValue(input, "colorspace"), "display-p3");
     PrColorSpace space = p3 ? PrColorSpace_DisplayP3 : PrColorSpace_Srgb;
     double converted[3];
     for (uint32_t i = 0; i < 3; ++i)
@@ -338,7 +338,7 @@ void htmlColorWellValue(const PrDomElement* input, PrStringView text, TextBuffer
     if (!p3) {
         // Each component rounds toward positive infinity to a whole number of 255ths.
         for (uint32_t i = 0; i < 3; ++i) {
-            double steps = floorF64(converted[i] * 255 + 0.5);
+            double steps = prF64Floor(converted[i] * 255 + 0.5);
             result.components[i] = (steps < 0 ? 0 : steps > 255 ? 255 : steps) / 255;
         }
         if (!alpha) {
@@ -347,7 +347,7 @@ void htmlColorWellValue(const PrDomElement* input, PrStringView text, TextBuffer
         }
     }
     PrString serialized = prCssUsedColorSerialize(&result, serialization);
-    textAppend(out, prStringView(&serialized));
+    prTextBufferAppend(out, prStringView(&serialized));
     prStringReset(&serialized);
 }
 
@@ -559,10 +559,10 @@ PrDomInputType prHtmlInputElementType(const PrHtmlInputElement* element) {
 }
 
 PrString prHtmlInputElementValue(const PrHtmlInputElement* element) {
-    TextBuffer value;
+    PrTextBuffer value = {};
     domControlValue(element, &value);
     PrString out = stringOf(&value);
-    textReset(&value);
+    prTextBufferReset(&value);
     return out;
 }
 
@@ -588,49 +588,49 @@ void prHtmlInputElementSetIndeterminate(PrHtmlInputElement* element, bool value)
 
 double prHtmlInputElementValueAsNumber(const PrHtmlInputElement* element) {
     if ((domInputApplies(domElementInputType(element)) & DomInputApplyFlag_ValueAsNumber) == 0)
-        return kNanF64;
-    TextBuffer text;
+        return kPrF64Nan;
+    PrTextBuffer text = {};
     domControlValue(element, &text);
-    double value = kNanF64;
-    if (!domInputStringToNumber(element, textView(&text), &value))
-        value = kNanF64;
-    textReset(&text);
+    double value = kPrF64Nan;
+    if (!domInputStringToNumber(element, prTextBufferView(&text), &value))
+        value = kPrF64Nan;
+    prTextBufferReset(&text);
     return value;
 }
 
 PrStatus prHtmlInputElementSetValueAsNumber(PrHtmlInputElement* element, double value) {
-    if (!isFiniteF64(value) && !isNanF64(value))
+    if (!prF64IsFinite(value) && !prF64IsNan(value))
         return PrStatus_WrongType;
     if ((domInputApplies(domElementInputType(element)) & DomInputApplyFlag_ValueAsNumber) == 0)
         return PrStatus_InvalidState;
-    if (isNanF64(value))
+    if (prF64IsNan(value))
         return domControlSetValue(element, "");
-    TextBuffer text;
+    PrTextBuffer text = {};
     domInputNumberToString(element, value, &text);
-    PrStatus status = domControlSetValue(element, textView(&text));
-    textReset(&text);
+    PrStatus status = domControlSetValue(element, prTextBufferView(&text));
+    prTextBufferReset(&text);
     return status;
 }
 
 bool prHtmlInputElementValueAsDate(const PrHtmlInputElement* element, double* out) {
     if ((domInputApplies(domElementInputType(element)) & DomInputApplyFlag_ValueAsDate) == 0)
         return false;
-    TextBuffer text;
+    PrTextBuffer text = {};
     domControlValue(element, &text);
-    bool converted = domInputStringToDate(element, textView(&text), out);
-    textReset(&text);
+    bool converted = domInputStringToDate(element, prTextBufferView(&text), out);
+    prTextBufferReset(&text);
     return converted;
 }
 
 PrStatus prHtmlInputElementSetValueAsDate(PrHtmlInputElement* element, double time) {
     if ((domInputApplies(domElementInputType(element)) & DomInputApplyFlag_ValueAsDate) == 0)
         return PrStatus_InvalidState;
-    if (!isFiniteF64(time))
+    if (!prF64IsFinite(time))
         return domControlSetValue(element, "");
-    TextBuffer text;
+    PrTextBuffer text = {};
     domInputDateToString(element, time, &text);
-    PrStatus status = domControlSetValue(element, textView(&text));
-    textReset(&text);
+    PrStatus status = domControlSetValue(element, prTextBufferView(&text));
+    prTextBufferReset(&text);
     return status;
 }
 
@@ -703,10 +703,10 @@ PrHtmlTextAreaElement* PR_NULLABLE prHtmlTextAreaElementQuery(PrDomEventTarget* 
 }
 
 PrString prHtmlTextAreaElementValue(const PrHtmlTextAreaElement* element) {
-    TextBuffer value;
+    PrTextBuffer value = {};
     domControlValue(element, &value);
     PrString out = stringOf(&value);
-    textReset(&value);
+    prTextBufferReset(&value);
     return out;
 }
 
@@ -715,10 +715,10 @@ void prHtmlTextAreaElementSetValue(PrHtmlTextAreaElement* element, PrStringView 
 }
 
 PrString prHtmlTextAreaElementDefaultValue(const PrHtmlTextAreaElement* element) {
-    TextBuffer value;
+    PrTextBuffer value = {};
     domTextareaDefaultValue(element, &value);
     PrString out = stringOf(&value);
-    textReset(&value);
+    prTextBufferReset(&value);
     return out;
 }
 
@@ -727,17 +727,17 @@ void prHtmlTextAreaElementSetDefaultValue(PrHtmlTextAreaElement* element, PrStri
 }
 
 uint32_t prHtmlTextAreaElementTextLength(const PrHtmlTextAreaElement* element) {
-    TextBuffer value;
+    PrTextBuffer value = {};
     domControlValue(element, &value);
     // A code point counts one UTF-16 code unit, and one past the Basic Multilingual Plane, which takes four bytes in
     // UTF-8, counts two.
     uint32_t length = 0;
-    for (uint32_t i = 0; i < value.text.count; ++i) {
-        uint8_t byte = uint8_t(value.text.data[i]);
+    for (uint32_t i = 0; i < value.size; ++i) {
+        uint8_t byte = uint8_t(value.data[i]);
         if ((byte & 0xc0) != 0x80)
             length += byte >= 0xf0 ? 2 : 1;
     }
-    textReset(&value);
+    prTextBufferReset(&value);
     return length;
 }
 
@@ -939,15 +939,15 @@ PrHtmlMeterValues prHtmlMeterElementValues(const PrHtmlMeterElement* element) {
 }
 
 PrStatus prHtmlElementSetReflectedDouble(PrHtmlElement* element, PrStringView name, double value) {
-    if (!isFiniteF64(value))
+    if (!prF64IsFinite(value))
         return PrStatus_WrongType;
     // html/#dom-progress-max is limited to only positive numbers.
     if (domIsHtml(element, PrDomTag_Progress) && name == "max" && value <= 0)
         return PrStatus_Ok;
-    TextBuffer text;
+    PrTextBuffer text = {};
     domAppendFloat(&text, value);
-    domSetAttribute(element, PrDomNamespace_None, name, textView(&text));
-    textReset(&text);
+    domSetAttribute(element, PrDomNamespace_None, name, prTextBufferView(&text));
+    prTextBufferReset(&text);
     return PrStatus_Ok;
 }
 
@@ -1273,9 +1273,9 @@ PrHtmlFormElement* PR_NULLABLE prHtmlOptionElementForm(PrHtmlOptionElement* opti
 }
 
 PrString prHtmlOptionElementText(const PrHtmlOptionElement* option) {
-    TextBuffer text;
+    PrTextBuffer text = {};
     domOptionText(option, &text);
-    return textTake(&text);
+    return prTextBufferTake(&text);
 }
 
 void prHtmlOptionElementSetText(PrHtmlOptionElement* option, PrStringView value) {
@@ -1283,9 +1283,9 @@ void prHtmlOptionElementSetText(PrHtmlOptionElement* option, PrStringView value)
 }
 
 PrString prHtmlOptionElementValue(const PrHtmlOptionElement* option) {
-    TextBuffer text;
+    PrTextBuffer text = {};
     domOptionValue(option, &text);
-    return textTake(&text);
+    return prTextBufferTake(&text);
 }
 
 PrString prHtmlOptionElementLabel(const PrHtmlOptionElement* option) {

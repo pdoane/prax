@@ -38,12 +38,12 @@ constexpr uint32_t kConicMaxStops = 1024;
 // Returns the parameter in [0, 1] that the extend mode maps `t` to.
 float extendOf(PrFontExtend extend, float t) {
     if (extend == PrFontExtend_Repeat)
-        return t - floorF32(t);
+        return t - prF32Floor(t);
     if (extend == PrFontExtend_Reflect) {
-        float m = t - 2 * floorF32(t / 2);
+        float m = t - 2 * prF32Floor(t / 2);
         return m > 1 ? 2 - m : m;
     }
-    return clampF32(t, 0, 1);
+    return prF32Clamp(t, 0, 1);
 }
 
 // Returns the color at `t` of stops fitted to [0, 1], mixed premultiplied.
@@ -213,8 +213,8 @@ bool brushOf(GlyphPainter& p, const PrFontPaint& paint, PrDrawBrush* brush) {
         case PrFontPaintKind_Radial: {
             float growth = paint.radial.endRadius - paint.radial.startRadius;
             *brush = prDrawBrushRadial(prVec2Lerp(paint.radial.start, paint.radial.end, first),
-                maxF32(paint.radial.startRadius + growth * first, 0),
-                prVec2Lerp(paint.radial.start, paint.radial.end, last), maxF32(paint.radial.startRadius + growth * last,
+                prF32Max(paint.radial.startRadius + growth * first, 0),
+                prVec2Lerp(paint.radial.start, paint.radial.end, last), prF32Max(paint.radial.startRadius + growth * last,
                     0), p.stops.data, p.stops.count);
             break;
         }
@@ -230,13 +230,13 @@ bool brushOf(GlyphPainter& p, const PrFontPaint& paint, PrDrawBrush* brush) {
             if (!(span1 != 0))
                 return false;
             float t0 = -s0 / span1;
-            float t1 = (2 * kPiF32 - s0) / span1;
-            float low = minF32(t0, t1);
-            float high = maxF32(t0, t1);
+            float t1 = (2 * kPrF32Pi - s0) / span1;
+            float low = prF32Min(t0, t1);
+            float high = prF32Max(t0, t1);
             p.conic.clear();
             p.conic.push(PrDrawColorStop{.offset = low, .color = stopColorAt(p.stops, extendOf(paint.extend, low))});
-            int32_t from = paint.extend == PrFontExtend_Pad ? 0 : int32_t(floorF32(low));
-            int32_t to = paint.extend == PrFontExtend_Pad ? 0 : int32_t(floorF32(high));
+            int32_t from = paint.extend == PrFontExtend_Pad ? 0 : int32_t(prF32Floor(low));
+            int32_t to = paint.extend == PrFontExtend_Pad ? 0 : int32_t(prF32Floor(high));
             for (int32_t k = from; k <= to && p.conic.count < kConicMaxStops; ++k) {
                 bool reflected = paint.extend == PrFontExtend_Reflect && (k & 1) != 0;
                 for (uint32_t i = 0; i < p.stops.count; ++i) {
@@ -248,7 +248,7 @@ bool brushOf(GlyphPainter& p, const PrFontPaint& paint, PrDrawBrush* brush) {
             }
             p.conic.push(PrDrawColorStop{.offset = high, .color = stopColorAt(p.stops, extendOf(paint.extend, high))});
             for (uint32_t i = 0; i < p.conic.count; ++i)
-                p.conic.data[i].offset = (s0 + p.conic.data[i].offset * span1) / (2 * kPiF32);
+                p.conic.data[i].offset = (s0 + p.conic.data[i].offset * span1) / (2 * kPrF32Pi);
             if (span1 < 0) {
                 for (uint32_t i = 0, j = p.conic.count - 1; i < j; ++i, --j) {
                     PrDrawColorStop swap = p.conic.data[i];
@@ -326,11 +326,11 @@ struct DrawGlyphCache {
 uint64_t colorsHash(const PrFontPalette* PR_NULLABLE palette) {
     if (palette == nullptr || palette->colorCount == 0)
         return 0;
-    return hashBytes(palette->colors, sizeof(PrFontPaletteColor) * palette->colorCount, 1);
+    return prHashBytes(palette->colors, sizeof(PrFontPaletteColor) * palette->colorCount, 1);
 }
 
 uint32_t hashOf(const GlyphKey& key) {
-    return uint32_t(hashBytes(&key, sizeof(key), 0));
+    return uint32_t(prHashBytes(&key, sizeof(key), 0));
 }
 
 // The decoder of the images of bitmap strikes (prDrawGlyphBitmapCreate).
@@ -399,16 +399,16 @@ PrDrawGlyphPlacement prDrawGlyphPlace(const PrFontGlyphRun* run, uint32_t index,
     out.glyph = prAffine2Concat(prDrawGlyphTransform(run, index), toTarget);
     out.origin = prAffine2MapPoint(toTarget, run->glyphs[index].position);
     const PrAffine2& g = out.glyph;
-    float em = maxF32(absF32(g.a), absF32(g.d));
+    float em = prF32Max(prF32Abs(g.a), prF32Abs(g.d));
     out.phased = g.b == 0 && g.c == 0 && g.a > 0 && g.d > 0 && em <= kPrDrawGlyphMaxPhasedEm &&
-        isFiniteF32(out.origin.x) && isFiniteF32(out.origin.y);
+        prF32IsFinite(out.origin.x) && prF32IsFinite(out.origin.y);
     if (out.phased) {
-        float column = floorF32(out.origin.x);
-        float row = floorF32(out.origin.y);
+        float column = prF32Floor(out.origin.x);
+        float row = prF32Floor(out.origin.y);
         float phases = float(kPrDrawGlyphPhases);
         out.origin = PrVec2{
-            column + roundF32((out.origin.x - column) * phases) / phases,
-            row + roundF32((out.origin.y - row) * phases) / phases,
+            column + prF32Round((out.origin.x - column) * phases) / phases,
+            row + prF32Round((out.origin.y - row) * phases) / phases,
         };
     }
     return out;
@@ -421,7 +421,7 @@ bool prDrawGlyphPath(const PrFontGlyphRun* run, uint32_t index, const PrAffine2*
     if (prFontHinting(font) != PrFontHinting_None && toTarget != nullptr) {
         // Hinting fits an em only if its transform to the target is a plain scale.
         PrAffine2 whole = prAffine2Concat(t, *toTarget);
-        if (whole.b == 0 && whole.c == 0 && whole.a > 0 && absF32(whole.a - whole.d) < 1e-4f * whole.a)
+        if (whole.b == 0 && whole.c == 0 && whole.a > 0 && prF32Abs(whole.a - whole.d) < 1e-4f * whole.a)
             pixelsPerEm = whole.a;
     }
     return prFontGlyphOutline(font, run->glyphs[index].id, pixelsPerEm, t, out);
@@ -524,7 +524,7 @@ PrDrawList* PR_NULLABLE prDrawGlyphCacheList(PrDrawGlyphCache* cache, const PrFo
     }
     uint32_t hash = hashOf(key);
     uint32_t found = cache->index.find(
-        hash, [&](uint32_t i) { return memEquals(&cache->entries.data[i].key, &key, sizeof(key)); });
+        hash, [&](uint32_t i) { return prMemEquals(&cache->entries.data[i].key, &key, sizeof(key)); });
     if (found != kHashMissing) {
         cache->entries.data[found].lastUsed = cache->use;
         return cache->entries.data[found].list;
@@ -547,10 +547,10 @@ PrDrawList* PR_NULLABLE prDrawGlyphCacheList(PrDrawGlyphCache* cache, const PrFo
 uint32_t prDrawGlyphListCommands(const PrDrawCommand* glyphs, uint32_t index, PrDrawList* glyphList, PrDrawGroup* group,
         PrDrawCommand out[PR_NONNULL kPrDrawGlyphMaxCommands]) {
     *group = PrDrawGroup{};
-    group->opacity = clampF32(prFloat16ToFloat(glyphs->color.a), 0, 1);
+    group->opacity = prF32Clamp(prFloat16ToFloat(glyphs->color.a), 0, 1);
     group->composite = glyphs->composite;
     group->blendMode = glyphs->blendMode;
-    memZero(out, sizeof(PrDrawCommand) * 5);
+    prMemZero(out, sizeof(PrDrawCommand) * 5);
     uint32_t count = 0;
     out[count].kind = PrDrawCommandKind_PushTransformAffine2;
     out[count++].affine = prDAffine2FromAffine2(prDrawGlyphTransform(glyphs->glyphs, index));

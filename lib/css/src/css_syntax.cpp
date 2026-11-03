@@ -3,12 +3,12 @@
 #include "pr/ascii.h"
 #include "pr/assert.h"
 #include "pr/bit_cast.h"
-#include "pr/bits.h"
 #include "pr/count_of.h"
 #include "pr/float.h"
 #include "pr/integer.h"
 #include "pr/mem.h"
 #include "pr/string_ops.h"
+#include "pr/string_trim.h"
 #include "pr/utf8.h"
 
 // The tokenizer reads the source in place, one token at a time. The class of a token's first byte selects the algorithm
@@ -26,11 +26,12 @@ PrStringView cssDecodeBytes(PrStringView bytes, PrCharset protocol, PrCharset en
     // css-syntax-3/#determine-the-fallback-encoding: an @charset rule is read from the sheet's first 1024 bytes, and
     // only in the form that the grammar writes it, with its label between `@charset "` and `";`.
     constexpr PrStringView kOpening = "@charset \"";
-    if (charset == PrCharset_None && stringStartsWith(bytes, kOpening)) {
-        PrStringView start = stringSlice(bytes, kOpening.size, (bytes.size < 1024 ? bytes.size : 1024) - kOpening.size);
-        size_t end = stringFind(start, "\";");
+    if (charset == PrCharset_None && prStringStartsWith(bytes, kOpening)) {
+        size_t prefix = bytes.size < 1024 ? bytes.size : 1024;
+        PrStringView start = prStringSlice(bytes, kOpening.size, prefix - kOpening.size);
+        size_t end = prStringFind(start, "\";");
         if (end != start.size) {
-            charset = prCharsetFromLabel(stringSlice(start, 0, end));
+            charset = prCharsetFromLabel(prStringSlice(start, 0, end));
             if (charset == PrCharset_Utf16Be || charset == PrCharset_Utf16Le)
                 charset = PrCharset_Utf8;
         }
@@ -47,12 +48,12 @@ PrStringView cssDecodeBytes(PrStringView bytes, PrCharset protocol, PrCharset en
 constexpr CssByteTable makeCssBytes() {
     CssByteTable table = {};
     for (uint32_t b = 0; b < 256; ++b) {
-        bool letter = asciiIsLetter(char(b));
-        bool space = asciiIsSpace(char(b));
+        bool letter = prAsciiIsLetter(char(b));
+        bool space = prAsciiIsSpace(char(b));
         bool control = b < 0x20 || b == 0x7f;
 
         CssByteFlags bits = 0;
-        if (letter || asciiIsDigit(char(b)) || b == '-' || b == '_')
+        if (letter || prAsciiIsDigit(char(b)) || b == '-' || b == '_')
             bits |= CssByteFlag_Ident;
         if (letter || b == '_')
             bits |= CssByteFlag_Start;
@@ -186,7 +187,7 @@ constexpr LeadTable makeLeads() {
             lead = Lead_Name;
         else if ((classes & CssByteFlag_Decode) != 0)
             lead = Lead_Wide;
-        else if (asciiIsDigit(char(b)))
+        else if (prAsciiIsDigit(char(b)))
             lead = Lead_Digit;
         table.of[b] = lead;
     }
@@ -293,10 +294,10 @@ uint32_t consumeEscape(const Source* s, uint32_t pos) {
     uint32_t byte = at(s, ++pos);
     if (byte == kEnd)
         return pos;
-    if (!asciiIsHexDigit(char(byte)))
+    if (!prAsciiIsHexDigit(char(byte)))
         return pos + ((kCssByte.of[byte] & CssByteFlag_Decode) != 0 ? decodeAt(s, pos, &byte) : 1);
 
-    for (uint32_t digits = 0; digits < 6 && asciiIsHexDigit(char(byte)); ++digits)
+    for (uint32_t digits = 0; digits < 6 && prAsciiIsHexDigit(char(byte)); ++digits)
         byte = at(s, ++pos);
 
     // One whitespace code point ends the escape, and a CRLF counts as one.
@@ -334,16 +335,16 @@ bool startsIdent(const Source* s, uint32_t pos, uint32_t byte) {
 // Returns true if the bytes after the sign at `pos` start a number (css-syntax-3/#starts-with-a-number). The first of
 // those bytes is `second`.
 bool numberAfterSign(const Source* s, uint32_t pos, uint32_t second) {
-    return asciiIsDigit(char(second)) || (second == '.' && asciiIsDigit(char(at(s, pos + 2))));
+    return prAsciiIsDigit(char(second)) || (second == '.' && prAsciiIsDigit(char(at(s, pos + 2))));
 }
 
 // Returns true if the bytes at `pos` start a unicode range (css-syntax-3/#starts-a-unicode-range): `u`, `+`, then a hex
 // digit or a question mark. `byte` is the byte at `pos`.
 bool startsUnicodeRange(const Source* s, uint32_t pos, uint32_t byte) {
-    if (asciiLower(char(byte)) != 'u' || at(s, pos + 1) != '+')
+    if (prAsciiLower(char(byte)) != 'u' || at(s, pos + 1) != '+')
         return false;
     uint32_t third = at(s, pos + 2);
-    return third == '?' || asciiIsHexDigit(char(third));
+    return third == '?' || prAsciiIsHexDigit(char(third));
 }
 
 // The position where a name ends, and the byte at that position.
@@ -388,7 +389,7 @@ PR_FORCE_INLINE NameEnd nameRun(const Source* s, uint32_t pos) {
         uint64_t word = loadUnaligned<uint64_t>(text + pos);
         uint64_t stops = ~nameBytes(word) & wordOf(0x80);
         if (stops != 0) {
-            uint32_t shift = lowestBitU64(stops) & ~7u;
+            uint32_t shift = prU64LowestBit(stops) & ~7u;
             return NameEnd{pos + shift / 8, uint32_t(word >> shift) & 0xff};
         }
     }
@@ -448,31 +449,31 @@ Number readNumber(const Source* s, uint32_t pos) {
     n.sign = byte == '+' || byte == '-';
     if (n.sign)
         byte = at(s, ++pos);
-    while (asciiIsDigit(char(byte)))
+    while (prAsciiIsDigit(char(byte)))
         byte = at(s, ++pos);
     n.integerEnd = pos;
 
     if (byte == '.') {
         uint32_t next = at(s, pos + 1);
-        if (asciiIsDigit(char(next))) {
+        if (prAsciiIsDigit(char(next))) {
             ++pos;
             byte = next;
-            while (asciiIsDigit(char(byte)))
+            while (prAsciiIsDigit(char(byte)))
                 byte = at(s, ++pos);
         }
     }
     n.fractionEnd = pos;
 
-    if (asciiLower(char(byte)) == 'e') {
+    if (prAsciiLower(char(byte)) == 'e') {
         uint32_t exponent = pos + 1;
         uint32_t next = at(s, exponent);
         if (next == '+' || next == '-')
             next = at(s, ++exponent);
-        if (asciiIsDigit(char(next))) {
+        if (prAsciiIsDigit(char(next))) {
             n.exponent = true;
             pos = exponent;
             byte = next;
-            while (asciiIsDigit(char(byte)))
+            while (prAsciiIsDigit(char(byte)))
                 byte = at(s, ++pos);
         }
     }
@@ -524,11 +525,11 @@ bool numberIsVerbatim(const char* text, uint32_t start, const Number* n, uint32_
 
     // The rest is the unit. Serializing escapes its first code point if the number would read it as an exponent.
     uint32_t unit = n->end;
-    if (unit == end || asciiLower(text[unit]) != 'e')
+    if (unit == end || prAsciiLower(text[unit]) != 'e')
         return true;
-    if (unit + 1 < end && asciiIsDigit(text[unit + 1]))
+    if (unit + 1 < end && prAsciiIsDigit(text[unit + 1]))
         return false;
-    return !(unit + 2 < end && text[unit + 1] == '-' && asciiIsDigit(text[unit + 2]));
+    return !(unit + 2 < end && text[unit + 1] == '-' && prAsciiIsDigit(text[unit + 2]));
 }
 
 // Returns the unit from `start` to `end`, with escapes resolved.
@@ -684,10 +685,10 @@ Consumed consumeUrl(const Source* s, uint32_t pos, CssTokenFlags flags) {
 bool isUrl(const Source* s, uint32_t start, uint32_t end, CssTokenFlags flags) {
     PrStringView text = {s->text + start, end - start};
     if ((flags & CssTokenFlag_PlainText) != 0)
-        return asciiEqualsFold(text, "url");
+        return prAsciiEqualsFold(text, "url");
 
     char name[3];
-    return cssValue(text, name, 3) == 3 && asciiEqualsFold(PrStringView{name, 3}, "url");
+    return cssValue(text, name, 3) == 3 && prAsciiEqualsFold(PrStringView{name, 3}, "url");
 }
 
 // Consumes the function or url token that the ident sequence from `start` to `end` starts, with the '(' at `end`
@@ -732,8 +733,8 @@ uint32_t unicodeRangeEnd(const Source* s, uint32_t pos, uint32_t* first, uint32_
 
     uint32_t low = 0;
     uint32_t digits = 0;
-    for (; digits < 6 && asciiIsHexDigit(char(at(s, pos))); ++digits) {
-        low = (low << 4) | asciiHexValue(s->text[pos]);
+    for (; digits < 6 && prAsciiIsHexDigit(char(at(s, pos))); ++digits) {
+        low = (low << 4) | prAsciiHexValue(s->text[pos]);
         ++pos;
     }
 
@@ -751,13 +752,13 @@ uint32_t unicodeRangeEnd(const Source* s, uint32_t pos, uint32_t* first, uint32_
         return pos;
     }
 
-    if (at(s, pos) != '-' || !asciiIsHexDigit(char(at(s, pos + 1))))
+    if (at(s, pos) != '-' || !prAsciiIsHexDigit(char(at(s, pos + 1))))
         return pos;
 
     ++pos;
     uint32_t high = 0;
-    for (uint32_t i = 0; i < 6 && asciiIsHexDigit(char(at(s, pos))); ++i) {
-        high = (high << 4) | asciiHexValue(s->text[pos]);
+    for (uint32_t i = 0; i < 6 && prAsciiIsHexDigit(char(at(s, pos))); ++i) {
+        high = (high << 4) | prAsciiHexValue(s->text[pos]);
         ++pos;
     }
     *last = high;
@@ -994,7 +995,7 @@ uint32_t tokenizeAll(CssTokenArray* tokens, Array<uint32_t>* open, const Source*
                 }
                 case Lead_Dot:
                     next = at(s, pos + 1);
-                    if (!asciiIsDigit(char(next))) {
+                    if (!prAsciiIsDigit(char(next))) {
                         c = delimAt(pos);
                         break;
                     }
@@ -1102,14 +1103,14 @@ bool isSigned(const CssTokenStream* ts) {
 
 // Returns the integer value of a number token, clamped to the range of an int32_t. An+B always reads it as written.
 int32_t integerValue(const CssTokenStream* ts) {
-    return saturateI32(cssTokenNumber(ts->tokens, ts->pos));
+    return prF64SaturateI32(cssTokenNumber(ts->tokens, ts->pos));
 }
 
 // Matches "n", "n-", or "n-<digits>", which are the shapes of a dimension's unit or an ident. Writes the digits,
 // negated and clamped to the range of an int32_t, to `trailing`. Writes whether there were any digits to `hasTrailing`.
 bool matchesN(PrStringView text, uint32_t skip, int32_t* trailing, bool* hasTrailing) {
     uint32_t i = skip;
-    if (i >= text.size || asciiLower(text.data[i]) != 'n')
+    if (i >= text.size || prAsciiLower(text.data[i]) != 'n')
         return false;
     ++i;
 
@@ -1124,7 +1125,7 @@ bool matchesN(PrStringView text, uint32_t skip, int32_t* trailing, bool* hasTrai
         return true;                       // "n-", whose digits follow as a token
 
     uint64_t value = 0;
-    if (!parseU64(text.data + i, text.size - i, &value))
+    if (!prU64Parse(text.data + i, text.size - i, &value, 10))
         return false;
     *trailing = value < 0x80000000 ? -int32_t(value) : INT32_MIN;
     *hasTrailing = true;
@@ -1267,7 +1268,7 @@ PrStringView cssTokenValueText(const CssTokenArray* tokens, uint32_t index) {
             ++start;
             if ((tokens->flags.data[index] & CssTokenFlag_EofTerminated) == 0 && end > start)
                 --end;                              // the ')'
-            return stringTrim(PrStringView{text + start, end - start}, [](char c) {
+            return stringTrimBy(PrStringView{text + start, end - start}, [](char c) {
                 return (kCssByte.of[uint8_t(c)] & CssByteFlag_Space) != 0;
             });
         default:
@@ -1302,7 +1303,7 @@ bool cssValueNext(PrStringView text, uint32_t* pos, uint32_t* codePoint) {
             *pos = here + (after == '\r' && at(&s, here + 2) == '\n' ? 3u : 2u);
             continue;                           // a line continuation
         }
-        if (!asciiIsHexDigit(char(after))) {
+        if (!prAsciiIsHexDigit(char(after))) {
             *pos = here + 1 + decodeAt(&s, here + 1, codePoint);
             return true;
         }
@@ -1310,8 +1311,8 @@ bool cssValueNext(PrStringView text, uint32_t* pos, uint32_t* codePoint) {
         // The value is the escape's hex digits, which end at the whitespace after them.
         uint32_t end = consumeEscape(&s, here);
         uint32_t value = 0;
-        for (uint32_t i = here + 1; i < end && asciiIsHexDigit(s.text[i]); ++i)
-            value = (value << 4) | asciiHexValue(s.text[i]);
+        for (uint32_t i = here + 1; i < end && prAsciiIsHexDigit(s.text[i]); ++i)
+            value = (value << 4) | prAsciiHexValue(s.text[i]);
         *pos = end;
         *codePoint = value != 0 ? value : kPrUtf8Replacement;
         return true;
@@ -1335,11 +1336,11 @@ uint32_t cssValue(PrStringView text, char* PR_NULLABLE buffer, uint32_t capacity
     return written;
 }
 
-void cssValueAppend(TextBuffer* out, PrStringView text) {
+void cssValueAppend(PrTextBuffer* out, PrStringView text) {
     uint32_t pos = 0;
     uint32_t codePoint = 0;
     while (cssValueNext(text, &pos, &codePoint))
-        textAppendCodePoint(out, codePoint);
+        prTextBufferAppendCodePoint(out, codePoint);
 }
 
 PrCssKeyword cssTokenKeyword(const CssTokenArray* tokens, uint32_t index) {
@@ -1360,7 +1361,7 @@ bool cssTokenIsDashedIdent(const CssTokenArray* tokens, uint32_t index) {
 
     PrStringView text = cssTokenValueText(tokens, index);
     if ((tokens->flags.data[index] & CssTokenFlag_PlainText) != 0)
-        return stringStartsWith(text, "--");
+        return prStringStartsWith(text, "--");
 
     char decoded[2];
     return cssValue(text, decoded, uint32_t(sizeof(decoded))) >= 2 && decoded[0] == '-' && decoded[1] == '-';
@@ -1371,7 +1372,7 @@ double cssTokenNumber(const CssTokenArray* tokens, uint32_t index) {
     uint32_t end = tokens->ends.data[index];
 
     Source s = {tokens->source.data, end};
-    return parseF64(tokens->source.data + start, readNumber(&s, start).end - start);
+    return prF64Parse(tokens->source.data + start, readNumber(&s, start).end - start);
 }
 
 PrStringView cssTokenUnitText(const CssTokenArray* tokens, uint32_t index) {
@@ -1545,7 +1546,7 @@ bool cssConsumeAnPlusB(CssTokenStream* ts, int32_t* a, int32_t* b) {
         coefficient = integerValue(ts);
     } else if (kind == CssTokenKind_Ident) {
         text = cssTokenText(ts->tokens, ts->pos);
-        if (stringStartsWith(text, "-")) {
+        if (prStringStartsWith(text, "-")) {
             coefficient = -1;
             skip = 1;
         }

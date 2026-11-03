@@ -46,7 +46,7 @@ using namespace pr_impl;
 
 PrMediaCodecBackend prMediaCodecBackendFromName(PrStringView name) {
     for (PrMediaCodecBackend backend = 0; backend < PrMediaCodecBackend_Count; ++backend) {
-        if (asciiEqualsFold(kBackendNames[backend], name))
+        if (prAsciiEqualsFold(kBackendNames[backend], name))
             return backend;
     }
     return PrMediaCodecBackend_Count;

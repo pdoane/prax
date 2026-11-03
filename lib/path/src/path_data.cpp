@@ -110,8 +110,8 @@ bool readCommand(DataReader& r, PrPathDataCommand* out) {
 // Returns the angle from `u` to `v`, with the sign that the SVG arc conversion uses.
 float angleBetween(PrVec2 u, PrVec2 v) {
     float dot = u.x * v.x + u.y * v.y;
-    float length = sqrtF32((u.x * u.x + u.y * u.y) * (v.x * v.x + v.y * v.y));
-    float angle = acosF32(clampF32(length > 0 ? dot / length : 1, -1, 1));
+    float length = prF32Sqrt((u.x * u.x + u.y * u.y) * (v.x * v.x + v.y * v.y));
+    float angle = prF32Acos(prF32Clamp(length > 0 ? dot / length : 1, -1, 1));
     return u.x * v.y - u.y * v.x < 0 ? -angle : angle;
 }
 
@@ -122,28 +122,28 @@ float angleBetween(PrVec2 u, PrVec2 v) {
 // (SVG2/paths.html#ZeroLengthSegments), rather than omitted as SVG2/paths.html#ArcOutOfRangeParameters says. The
 // omission would leave a lone moveto, which is not stroked.
 void arcTo(PrPath* path, PrVec2 from, float rx, float ry, float rotation, bool large, bool sweep, PrVec2 to) {
-    rx = absF32(rx);
-    ry = absF32(ry);
+    rx = prF32Abs(rx);
+    ry = prF32Abs(ry);
     if ((from.x == to.x && from.y == to.y) || rx == 0 || ry == 0) {
         prPathLineTo(path, to);
         return;
     }
-    float phi = degreesToRadiansF32(rotation);
-    float c = cosF32(phi);
-    float s = sinF32(phi);
+    float phi = prF32DegreesToRadians(rotation);
+    float c = prF32Cos(phi);
+    float s = prF32Sin(phi);
     float dx = (from.x - to.x) / 2;
     float dy = (from.y - to.y) / 2;
     float x1 = c * dx + s * dy;
     float y1 = -s * dx + c * dy;
     float lambda = (x1 * x1) / (rx * rx) + (y1 * y1) / (ry * ry);
     if (lambda > 1) {
-        float scale = sqrtF32(lambda);
+        float scale = prF32Sqrt(lambda);
         rx *= scale;
         ry *= scale;
     }
     float numerator = rx * rx * ry * ry - rx * rx * y1 * y1 - ry * ry * x1 * x1;
     float denominator = rx * rx * y1 * y1 + ry * ry * x1 * x1;
-    float factor = denominator > 0 ? sqrtF32(maxF32(numerator, 0) / denominator) : 0;
+    float factor = denominator > 0 ? prF32Sqrt(prF32Max(numerator, 0) / denominator) : 0;
     if (large == sweep)
         factor = -factor;
     float cx1 = factor * rx * y1 / ry;
@@ -154,9 +154,9 @@ void arcTo(PrPath* path, PrVec2 from, float rx, float ry, float rotation, bool l
     float start = angleBetween(PrVec2{1, 0}, u);
     float delta = angleBetween(u, v);
     if (!sweep && delta > 0)
-        delta -= 2 * kPiF32;
+        delta -= 2 * kPrF32Pi;
     else if (sweep && delta < 0)
-        delta += 2 * kPiF32;
+        delta += 2 * kPrF32Pi;
     prPathEllipticArcTo(path, center, PrVec2{rx, ry}, phi, start, delta);
 }
 
@@ -235,7 +235,7 @@ void appendCommand(PrPath* path, DataPosition& p, const PrPathDataCommand& comma
 
 // Returns `v` at unit length, or zero if it has no length.
 PrVec2 unitOf(PrVec2 v) {
-    float length = sqrtF32(v.x * v.x + v.y * v.y);
+    float length = prF32Sqrt(v.x * v.x + v.y * v.y);
     return length > 0 ? PrVec2{v.x / length, v.y / length} : PrVec2{0, 0};
 }
 
@@ -253,14 +253,14 @@ void directionsOf(const PrVec2* points, uint32_t count, PrPathDataVertex* out) {
     PrVec2 low = points[0];
     PrVec2 high = points[0];
     for (uint32_t i = 1; i < count; ++i) {
-        low = PrVec2{minF32(low.x, points[i].x), minF32(low.y, points[i].y)};
-        high = PrVec2{maxF32(high.x, points[i].x), maxF32(high.y, points[i].y)};
+        low = PrVec2{prF32Min(low.x, points[i].x), prF32Min(low.y, points[i].y)};
+        high = PrVec2{prF32Max(high.x, points[i].x), prF32Max(high.y, points[i].y)};
     }
-    float size = maxF32(high.x - low.x, high.y - low.y);
+    float size = prF32Max(high.x - low.x, high.y - low.y);
     if (!(size > 0))
         return;
     float tolerance = size * kDirectionTolerance;
-    auto apart = [&](PrVec2 a, PrVec2 b) { return absF32(a.x - b.x) > tolerance || absF32(a.y - b.y) > tolerance; };
+    auto apart = [&](PrVec2 a, PrVec2 b) { return prF32Abs(a.x - b.x) > tolerance || prF32Abs(a.y - b.y) > tolerance; };
     for (uint32_t i = 1; i < count; ++i) {
         if (apart(points[i], points[0])) {
             out->startDirection = unitOf(points[i] - points[0]);
@@ -282,12 +282,12 @@ bool hasLength(const PrPathDataVertex& vertex) {
 
 // Appends `value` to `out` with the fewest significant digits that parse back to it.
 void appendNumber(PrString* out, float value) {
-    char text[kF64TextMaxBytes];
+    char text[kPrF64TextMaxBytes];
     size_t length = 0;
     for (uint32_t digits = 6; digits <= 9; ++digits) {
-        length = formatF64Significant(double(value), digits, text);
+        length = prF64FormatSignificant(double(value), digits, text);
         double parsed = 0;
-        if (decimalToF64(PrStringView{text, length}, &parsed) && float(parsed) == value)
+        if (prF64ParsePrefix(PrStringView{text, length}, &parsed) && float(parsed) == value)
             break;
     }
     prStringAppend(out, PrStringView{text, length});

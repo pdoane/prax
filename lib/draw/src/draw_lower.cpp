@@ -182,17 +182,17 @@ struct Ramp {
 
 void prepareStops(Ramp& ramp) {
     const PrDrawBrush* brush = ramp.brush;
-    float previous = -kInfinityF32;
+    float previous = -kPrF32Infinity;
     for (uint32_t i = 0; i < brush->stopCount; ++i) {
         const PrDrawColorStop& stop = brush->stops[i];
         SpaceStop s{};
-        s.offset = maxF32(stop.offset, previous);
+        s.offset = prF32Max(stop.offset, previous);
         previous = s.offset;
         s.hint = stop.hint;
         PrColor color = stop.color;
         double rgb[3] = {double(color.r), double(color.g), double(color.b)};
         prColorConvert(PrColorSpace_Srgb, ramp.space, rgb, s.channels);
-        s.alpha = double(clampF32(color.a, 0, 1));
+        s.alpha = double(prF32Clamp(color.a, 0, 1));
         s.powerless = huePowerless(ramp.space, s.channels);
         if (stop.hasHue && ramp.hue < 3) {
             s.channels[ramp.hue] = double(stop.hue);
@@ -208,8 +208,8 @@ void prepareStops(Ramp& ramp) {
 
 // Adjusts the two hues so that interpolating between them goes in the requested direction.
 void fixHues(PrColorHueMethod mode, double* h1, double* h2) {
-    double a = *h1 - 360 * floorF64(*h1 / 360);
-    double b = *h2 - 360 * floorF64(*h2 / 360);
+    double a = *h1 - 360 * prF64Floor(*h1 / 360);
+    double b = *h2 - 360 * prF64Floor(*h2 / 360);
     double d = b - a;
     switch (mode) {
         case PrColorHueMethod_Longer:
@@ -241,7 +241,7 @@ void fixHues(PrColorHueMethod mode, double* h1, double* h2) {
 // the stops are, and its alpha. A hint moves the point at which the two colors mix evenly.
 void mixStops(const Ramp& ramp, const SpaceStop& a, const SpaceStop& b, float f, double out[3], double* alpha) {
     if (a.hint > 0 && a.hint != 0.5f && f > 0)
-        f = powF32(f, logF32(0.5f) / logF32(a.hint));
+        f = prF32Pow(f, prF32Log(0.5f) / prF32Log(a.hint));
     double h1 = 0;
     double h2 = 0;
     if (ramp.hue < 3) {
@@ -290,12 +290,12 @@ void eachSpan(const Ramp& ramp, PrColorSpace space, F f) {
     }
     f(RampSpan{.start = -1, .end = 0, .flat = true});
     if (s.data[0].offset > 0)
-        f(RampSpan{.start = 0, .end = minF32(s.data[0].offset, 1), .flat = true});
+        f(RampSpan{.start = 0, .end = prF32Min(s.data[0].offset, 1), .flat = true});
     for (uint32_t i = 0; i + 1 < s.count; ++i) {
         const SpaceStop& a = s.data[i];
         const SpaceStop& b = s.data[i + 1];
-        float start = maxF32(a.offset, 0);
-        float end = minF32(b.offset, 1);
+        float start = prF32Max(a.offset, 0);
+        float end = prF32Min(b.offset, 1);
         if (!(end > start))
             continue;
         bool flat = sameStop(a, b);
@@ -308,7 +308,7 @@ void eachSpan(const Ramp& ramp, PrColorSpace space, F f) {
         f(RampSpan{.start = start, .end = end, .a = i, .b = i + 1, .flat = flat, .linear = linear});
     }
     if (s.last().offset < 1)
-        f(RampSpan{.start = maxF32(s.last().offset, 0), .end = 1, .a = s.count - 1, .b = s.count - 1, .flat = true});
+        f(RampSpan{.start = prF32Max(s.last().offset, 0), .end = 1, .a = s.count - 1, .b = s.count - 1, .flat = true});
     f(RampSpan{.start = 1, .end = 2, .a = s.count - 1, .b = s.count - 1, .flat = true});
 }
 
@@ -372,7 +372,7 @@ float cross(PrVec2 a, PrVec2 b) {
 }
 
 float length(PrVec2 a) {
-    return sqrtF32(a.x * a.x + a.y * a.y);
+    return prF32Sqrt(a.x * a.x + a.y * a.y);
 }
 
 Contour contourAt(const Border& b, float fraction) {
@@ -413,13 +413,13 @@ float crossing(const PrCornerPlacement& p, PrVec2 from, PrVec2 toward) {
 
 // Returns the number of lines that a span `span` of a corner's parameter needs to stay within the tolerance.
 uint32_t curveSteps(const PrCornerPlacement& a, const PrCornerPlacement& b, float span, float tolerance) {
-    float radius = maxF32(maxF32(a.radiusBefore, a.radiusAfter), maxF32(b.radiusBefore, b.radiusAfter));
+    float radius = prF32Max(prF32Max(a.radiusBefore, a.radiusAfter), prF32Max(b.radiusBefore, b.radiusAfter));
     if (!(radius > 0))
         return 1;
     float ratio = 1 - tolerance / radius;
-    float step = ratio > 0 ? 2 * acosF32(ratio) : kPiF32 / 2;
-    float sharpness = 1 + minF32(absF32(a.shape) + absF32(b.shape), 8);
-    float steps = ceilF32(kPiF32 / 2 * span * sharpness / step);
+    float step = ratio > 0 ? 2 * prF32Acos(ratio) : kPrF32Pi / 2;
+    float sharpness = 1 + prF32Min(prF32Abs(a.shape) + prF32Abs(b.shape), 8);
+    float steps = prF32Ceil(kPrF32Pi / 2 * span * sharpness / step);
     return steps < 1 ? 1 : steps > 256 ? 256 : uint32_t(steps);
 }
 
@@ -443,7 +443,7 @@ void trackSide(Border& b, uint32_t side, const Contour& outer, const Contour& in
         float o1 = k == 0 ? 1 : to;
         float i0 = k == 0 ? ti : 0;
         float i1 = k == 0 ? 1 : ti;
-        uint32_t steps = curveSteps(po, pi, maxF32(o1 - o0, i1 - i0), b.tolerance);
+        uint32_t steps = curveSteps(po, pi, prF32Max(o1 - o0, i1 - i0), b.tolerance);
         for (uint32_t j = 0; j <= steps; ++j) {
             float u = float(j) / float(steps);
             t.outer.push(curvePoint(po, o0 + (o1 - o0) * u));
@@ -465,7 +465,7 @@ uint32_t segmentAt(const Track& t, float s, float* fraction) {
     while (i + 2 < t.along.count && t.along.data[i + 1] < s)
         ++i;
     float span = t.along.data[i + 1] - t.along.data[i];
-    *fraction = span > 0 ? clampF32((s - t.along.data[i]) / span, 0, 1) : 0;
+    *fraction = span > 0 ? prF32Clamp((s - t.along.data[i]) / span, 0, 1) : 0;
     return i;
 }
 
@@ -551,8 +551,8 @@ bool brushEquals(const PrDrawBrush* PR_NULLABLE a, const PrDrawBrush* PR_NULLABL
     PrDrawBrush y = *b;
     x.stops = nullptr;
     y.stops = nullptr;
-    return memEquals(&x, &y, sizeof(PrDrawBrush)) &&
-        (a->stopCount == 0 || memEquals(a->stops, b->stops, sizeof(PrDrawColorStop) * a->stopCount));
+    return prMemEquals(&x, &y, sizeof(PrDrawBrush)) &&
+        (a->stopCount == 0 || prMemEquals(a->stops, b->stops, sizeof(PrDrawColorStop) * a->stopCount));
 }
 
 bool paints(const PrDrawBorderSide& side) {
@@ -572,7 +572,7 @@ const PrDrawBorderSide* PR_NULLABLE uniformSide(const PrDrawBorder* border) {
                 return nullptr;
             first = &side;
         } else if (side.style != first->style || !brushEquals(side.brush, first->brush) ||
-                !memEquals(&side.color, &first->color, sizeof(PrColor16))) {
+                !prMemEquals(&side.color, &first->color, sizeof(PrColor16))) {
             return nullptr;
         }
     }
@@ -650,13 +650,13 @@ PrVec2 outerDirection(const Track& t, float s) {
 // Returns true if two sides draw the same dots, so that one side can draw a corner's dot whole.
 bool dotsEquals(const PrDrawBorderSide& a, const PrDrawBorderSide& b) {
     return a.style == PrDrawBorderStyle_Dotted && b.style == PrDrawBorderStyle_Dotted &&
-        a.width == b.width && memEquals(&a.color, &b.color, sizeof(PrColor16)) && brushEquals(a.brush, b.brush);
+        a.width == b.width && prMemEquals(&a.color, &b.color, sizeof(PrColor16)) && brushEquals(a.brush, b.brush);
 }
 
 // Returns the whole number of periods nearest `periods`, from one to kPrDrawPatternMaxPeriods, or one if `periods` is
 // not a number.
 uint32_t periodCount(float periods) {
-    float count = roundF32(periods);
+    float count = prF32Round(periods);
     return !(count >= 1) ? 1 : count > float(kPrDrawPatternMaxPeriods) ? kPrDrawPatternMaxPeriods : uint32_t(count);
 }
 
@@ -735,7 +735,7 @@ void lowerSide(Border& b, uint32_t side) {
                     continue;
                 PrVec2 center = innerAt(b.track, float(k) * period);
                 prPathClear(b.curve);
-                prPathEllipticArcTo(b.curve, center, PrVec2{s.width / 2, s.width / 2}, 0, 0, 2 * kPiF32);
+                prPathEllipticArcTo(b.curve, center, PrVec2{s.width / 2, s.width / 2}, 0, 0, 2 * kPrF32Pi);
                 prPathClose(b.curve);
                 prPathFlatten(b.curve, prAffine2Identity(), b.tolerance, PrPathFlattening_Balanced, &b.shape);
             }
@@ -780,14 +780,14 @@ void tileAxis(PrDrawSliceMode mode, float sourceStart, float sourceSize, float s
         return;
     }
     if (mode == PrDrawSliceMode_Round) {
-        float n = maxF32(roundF32(size / tile), 1);
+        float n = prF32Max(prF32Round(size / tile), 1);
         float step = size / n;
         for (uint32_t i = 0; i < uint32_t(n); ++i)
             emit(sourceStart, sourceStart + sourceSize, start + step * float(i), start + step * float(i + 1));
         return;
     }
     if (mode == PrDrawSliceMode_Space) {
-        float n = floorF32(size / tile);
+        float n = prF32Floor(size / tile);
         if (n < 1)
             return;
         float gap = (size - n * tile) / (n + 1);
@@ -800,11 +800,11 @@ void tileAxis(PrDrawSliceMode mode, float sourceStart, float sourceSize, float s
     // Repeat: one tile is centered, and the rest extend outward from it, cut at both ends.
     float end = start + size;
     float first = start + size / 2 - tile / 2;
-    first -= ceilF32((first - start) / tile) * tile;
+    first -= prF32Ceil((first - start) / tile) * tile;
     for (float d0 = first; d0 < end; d0 += tile) {
         float d1 = d0 + tile;
-        float c0 = maxF32(d0, start);
-        float c1 = minF32(d1, end);
+        float c0 = prF32Max(d0, start);
+        float c1 = prF32Min(d1, end);
         if (c1 <= c0)
             continue;
         float s0 = sourceStart + (c0 - d0) / tile * sourceSize;
@@ -895,11 +895,11 @@ PrRect prDrawFillBounds(const PrDrawCommand* command) {
         case PrDrawCommandKind_CornerRect:
             return c.cornerRect->rect;
         case PrDrawCommandKind_Ellipse: {
-            float s = sinF32(c.ellipse.rotation);
-            float k = cosF32(c.ellipse.rotation);
+            float s = prF32Sin(c.ellipse.rotation);
+            float k = prF32Cos(c.ellipse.rotation);
             PrVec2 r = c.ellipse.radii;
-            float x = sqrtF32(r.x * k * r.x * k + r.y * s * r.y * s);
-            float y = sqrtF32(r.x * s * r.x * s + r.y * k * r.y * k);
+            float x = prF32Sqrt(r.x * k * r.x * k + r.y * s * r.y * s);
+            float y = prF32Sqrt(r.x * s * r.x * s + r.y * k * r.y * k);
             return PrRect{
                 c.ellipse.center.x - x, c.ellipse.center.y - y, c.ellipse.center.x + x,
                 c.ellipse.center.y + y,
@@ -908,10 +908,10 @@ PrRect prDrawFillBounds(const PrDrawCommand* command) {
         case PrDrawCommandKind_Capsule: {
             float r = c.capsule.radius;
             return PrRect{
-                minF32(c.capsule.start.x, c.capsule.end.x) - r,
-                minF32(c.capsule.start.y, c.capsule.end.y) - r,
-                maxF32(c.capsule.start.x, c.capsule.end.x) + r,
-                maxF32(c.capsule.start.y, c.capsule.end.y) + r,
+                prF32Min(c.capsule.start.x, c.capsule.end.x) - r,
+                prF32Min(c.capsule.start.y, c.capsule.end.y) - r,
+                prF32Max(c.capsule.start.x, c.capsule.end.x) + r,
+                prF32Max(c.capsule.start.y, c.capsule.end.y) + r,
             };
         }
         case PrDrawCommandKind_Sector:
@@ -955,7 +955,7 @@ PrRect prDrawFillBounds(const PrDrawCommand* command) {
             if (d->style == PrDrawDecorationStyle_Double)
                 half = d->thickness * 1.5f;
             else if (d->style == PrDrawDecorationStyle_Wavy)
-                half += absF32(d->amplitude);
+                half += prF32Abs(d->amplitude);
             return PrRect{d->origin.x, d->origin.y - half, d->origin.x + d->length, d->origin.y + half};
         }
         case PrDrawCommandKind_NineSlice:
@@ -1025,7 +1025,7 @@ bool prDrawGradientParameter(const PrDrawBrush* brush, PrVec2 point, float* t) {
             float c = dot(pd, pd) - r0 * r0;
             if (dot(cd, cd) == 0 && dr == 0)
                 return false;
-            if (absF32(a) < 1e-6f * maxF32(dot(cd, cd), dr * dr)) {
+            if (prF32Abs(a) < 1e-6f * prF32Max(dot(cd, cd), dr * dr)) {
                 if (b == 0)
                     return false;
                 float root = c / (2 * b);
@@ -1037,11 +1037,11 @@ bool prDrawGradientParameter(const PrDrawBrush* brush, PrVec2 point, float* t) {
             float discriminant = b * b - a * c;
             if (discriminant < 0)
                 return false;
-            float root = sqrtF32(discriminant);
+            float root = prF32Sqrt(discriminant);
             float t1 = (b + root) / a;
             float t2 = (b - root) / a;
-            float larger = maxF32(t1, t2);
-            float smaller = minF32(t1, t2);
+            float larger = prF32Max(t1, t2);
+            float smaller = prF32Min(t1, t2);
             if (r0 + larger * dr >= 0) {
                 *t = larger;
                 return true;
@@ -1054,8 +1054,8 @@ bool prDrawGradientParameter(const PrDrawBrush* brush, PrVec2 point, float* t) {
         }
         case PrDrawBrushKind_Conic: {
             PrVec2 d = point - brush->conic.center;
-            float turn = (atan2F32(d.y, d.x) - brush->conic.angle) / (2 * kPiF32);
-            *t = turn - floorF32(turn);
+            float turn = (prF32Atan2(d.y, d.x) - brush->conic.angle) / (2 * kPrF32Pi);
+            *t = turn - prF32Floor(turn);
             return true;
         }
         case PrDrawBrushKind_Diamond: {
@@ -1063,7 +1063,7 @@ bool prDrawGradientParameter(const PrDrawBrush* brush, PrVec2 point, float* t) {
             if (!(r.x > 0 && r.y > 0))
                 return false;
             PrVec2 d = point - brush->diamond.center;
-            *t = absF32(d.x) / r.x + absF32(d.y) / r.y;
+            *t = prF32Abs(d.x) / r.x + prF32Abs(d.y) / r.y;
             return true;
         }
         default:
@@ -1077,21 +1077,21 @@ bool prDrawGradientExtend(PrDrawExtend extend, float* t) {
         return false;
     // Pad keeps which end a point lies past: below 0 or above 1.
     const bool pad = extend != PrDrawExtend_Repeat && extend != PrDrawExtend_Reflect;
-    if (!isFiniteF32(v)) {
-        *t = isNanF32(v) ? 0 : v > 0 ? (pad ? 2 : 1) : (pad ? -1 : 0);
+    if (!prF32IsFinite(v)) {
+        *t = prF32IsNan(v) ? 0 : v > 0 ? (pad ? 2 : 1) : (pad ? -1 : 0);
         return true;
     }
     switch (extend) {
         case PrDrawExtend_Repeat:
-            *t = v - floorF32(v);
+            *t = v - prF32Floor(v);
             break;
         case PrDrawExtend_Reflect: {
-            float m = v - 2 * floorF32(v / 2);
+            float m = v - 2 * prF32Floor(v / 2);
             *t = m > 1 ? 2 - m : m;
             break;
         }
         default:
-            *t = clampF32(v, -1, 2);
+            *t = prF32Clamp(v, -1, 2);
             break;
     }
     return true;
@@ -1100,15 +1100,15 @@ bool prDrawGradientExtend(PrDrawExtend extend, float* t) {
 uint64_t prDrawGradientRampHash(const PrDrawBrush* brush, PrColor color) {
     const uint32_t mode = uint32_t(brush->interpolationSpace) | uint32_t(brush->hueMethod) << 8 |
         uint32_t(brush->interpolationAlpha) << 16;
-    uint64_t h = hashBytes(&color, sizeof(color), mode);
-    return hashBytes(brush->stops, sizeof(PrDrawColorStop) * brush->stopCount, h);
+    uint64_t h = prHashBytes(&color, sizeof(color), mode);
+    return prHashBytes(brush->stops, sizeof(PrDrawColorStop) * brush->stopCount, h);
 }
 
 bool prDrawGradientRampEquals(const PrDrawBrush* a, PrColor aColor, const PrDrawBrush* b, PrColor bColor) {
     return a->interpolationSpace == b->interpolationSpace && a->hueMethod == b->hueMethod &&
         a->interpolationAlpha == b->interpolationAlpha && a->stopCount == b->stopCount &&
-        memEquals(&aColor, &bColor, sizeof(PrColor)) &&
-        (a->stopCount == 0 || memEquals(a->stops, b->stops, sizeof(PrDrawColorStop) * a->stopCount));
+        prMemEquals(&aColor, &bColor, sizeof(PrColor)) &&
+        (a->stopCount == 0 || prMemEquals(a->stops, b->stops, sizeof(PrDrawColorStop) * a->stopCount));
 }
 
 uint32_t prDrawGradientRampMaxPieces(uint32_t stopCount) {
@@ -1125,13 +1125,13 @@ uint32_t prDrawGradientRamp(const PrDrawBrush* brush, PrColor color, PrColorSpac
     Ramp ramp{};
     prepareRamp(brush, ramp);
     const SpaceStop transparent{};
-    const float alphaOf = clampF32(color.a, 0, 1);
+    const float alphaOf = prF32Clamp(color.a, 0, 1);
     uint32_t pieceCount = 0;
     uint32_t colorCount = 0;
     eachSpan(ramp, space, [&](const RampSpan& span) {
         uint32_t count = 1;
         if (!span.flat) {
-            float steps = ceilF32(float(resolution) * (span.end - span.start));
+            float steps = prF32Ceil(float(resolution) * (span.end - span.start));
             count = span.linear || steps < 1 ? 2 : uint32_t(steps) + 1;
         }
         pieces[pieceCount++] = PrDrawRampPiece{.start = span.start, .end = span.end, .first = colorCount, .count = count};
@@ -1144,7 +1144,7 @@ uint32_t prDrawGradientRamp(const PrDrawBrush* brush, PrColor color, PrColorSpac
                 t = span.end;
             else if (k != 0)
                 t += (span.end - span.start) * float(k) / float(count - 1);
-            float f = span.a == span.b ? 0 : clampF32((t - a.offset) / (b.offset - a.offset), 0, 1);
+            float f = span.a == span.b ? 0 : prF32Clamp((t - a.offset) / (b.offset - a.offset), 0, 1);
             double channels[3];
             double alpha = 0;
             mixStops(ramp, a, b, f, channels, &alpha);
@@ -1183,8 +1183,8 @@ PrColor prDrawRampColor(const PrDrawRampPiece* piece, const PrColor* colors, flo
     if (piece->count == 1)
         return c[0];
     float x = (t - piece->start) / (piece->end - piece->start) * float(piece->count - 1);
-    float i = clampF32(floorF32(x), 0, float(piece->count - 2));
-    float f = clampF32(x - i, 0, 1);
+    float i = prF32Clamp(prF32Floor(x), 0, float(piece->count - 2));
+    float f = prF32Clamp(x - i, 0, 1);
     const PrColor& a = c[uint32_t(i)];
     const PrColor& b = c[uint32_t(i) + 1];
     return PrColor{a.r + (b.r - a.r) * f, a.g + (b.g - a.g) * f, a.b + (b.b - a.b) * f, a.a + (b.a - a.a) * f};
@@ -1206,7 +1206,7 @@ void prDrawBorderLower(const PrDrawBorder* border, float tolerance, PrDrawBorder
     for (uint32_t i = 0; i < 4; ++i)
         b.widths[i] = paints(border->sides[i]) ? border->sides[i].width : 0;
     PrCornerRect fitted = prCornerRectFit(border->shape);
-    memCopy(b.corners, fitted.corners, sizeof(b.corners));
+    prMemCopy(b.corners, fitted.corners, sizeof(b.corners));
     b.innerRect = PrRect{
         rect.left + b.widths[PrRectSide_Left], rect.top + b.widths[PrRectSide_Top],
         rect.right - b.widths[PrRectSide_Right],
@@ -1255,7 +1255,7 @@ PrCornerRect prDrawBorderContour(const PrDrawBorder* border, float fraction) {
     for (uint32_t i = 0; i < 4; ++i)
         b.widths[i] = paints(border->sides[i]) ? border->sides[i].width : 0;
     PrCornerRect fitted = prCornerRectFit(border->shape);
-    memCopy(b.corners, fitted.corners, sizeof(b.corners));
+    prMemCopy(b.corners, fitted.corners, sizeof(b.corners));
     return contourAt(b, fraction);
 }
 
@@ -1284,14 +1284,14 @@ bool prDrawBorderSides(const PrDrawBorder* border, PrDrawBorderSides* out) {
     const PrRect rect = border->shape.rect;
     const PrCornerRect fitted = prCornerRectFit(border->shape);
     const PrCorner* c = fitted.corners;
-    float top = maxF32(widths[PrRectSide_Top],
-        maxF32(c[PrRectCorner_TopLeft].radii.y, c[PrRectCorner_TopRight].radii.y));
-    float bottom = maxF32(widths[PrRectSide_Bottom],
-        maxF32(c[PrRectCorner_BottomRight].radii.y, c[PrRectCorner_BottomLeft].radii.y));
-    float left = maxF32(widths[PrRectSide_Left],
-        maxF32(c[PrRectCorner_TopLeft].radii.x, c[PrRectCorner_BottomLeft].radii.x));
-    float right = maxF32(widths[PrRectSide_Right],
-        maxF32(c[PrRectCorner_TopRight].radii.x, c[PrRectCorner_BottomRight].radii.x));
+    float top = prF32Max(widths[PrRectSide_Top],
+        prF32Max(c[PrRectCorner_TopLeft].radii.y, c[PrRectCorner_TopRight].radii.y));
+    float bottom = prF32Max(widths[PrRectSide_Bottom],
+        prF32Max(c[PrRectCorner_BottomRight].radii.y, c[PrRectCorner_BottomLeft].radii.y));
+    float left = prF32Max(widths[PrRectSide_Left],
+        prF32Max(c[PrRectCorner_TopLeft].radii.x, c[PrRectCorner_BottomLeft].radii.x));
+    float right = prF32Max(widths[PrRectSide_Right],
+        prF32Max(c[PrRectCorner_TopRight].radii.x, c[PrRectCorner_BottomRight].radii.x));
     if (rect.top + top > rect.bottom - bottom || rect.left + left > rect.right - right)
         return false;
     PrDrawBorderSides sides{};
@@ -1335,16 +1335,16 @@ uint32_t prDrawBorderSidesCorner(const PrDrawBorderSides* sides, PrVec2 point) {
 }
 
 float prDrawHalfPlaneArea(float distance, PrVec2 gradient) {
-    float length = sqrtF32(gradient.x * gradient.x + gradient.y * gradient.y);
+    float length = prF32Sqrt(gradient.x * gradient.x + gradient.y * gradient.y);
     if (!(length > 0))
         return distance > 0 ? 1.0f : 0.0f;
     // In pixels, the line's unit normal has components u >= v. The area is linear in the distance while the line
     // crosses both sides of the pixel that run along the major axis, and quadratic where it cuts off a corner.
     float d = distance / length;
-    float u = maxF32(absF32(gradient.x), absF32(gradient.y)) / length;
-    float v = minF32(absF32(gradient.x), absF32(gradient.y)) / length;
+    float u = prF32Max(prF32Abs(gradient.x), prF32Abs(gradient.y)) / length;
+    float v = prF32Min(prF32Abs(gradient.x), prF32Abs(gradient.y)) / length;
     float reach = (u + v) / 2;
-    float m = absF32(d);
+    float m = prF32Abs(d);
     if (m >= reach)
         return d > 0 ? 1.0f : 0.0f;
     if (m <= (u - v) / 2)
@@ -1373,16 +1373,16 @@ PrDrawShadowGeometry prDrawShadowGeometry(const PrDrawShadow* shadow, PrDrawShad
                 continue;
             if (spread >= 0) {
                 // A radius smaller than the spread grows by less, so a sharp corner stays sharp.
-                float growth = r >= spread || spread == 0 ? spread : spread * (1 + powF32(r / spread - 1, 3));
+                float growth = r >= spread || spread == 0 ? spread : spread * (1 + prF32Pow(r / spread - 1, 3));
                 r += growth;
             } else {
-                r = maxF32(r + spread, 0);
+                r = prF32Max(r + spread, 0);
             }
         }
         c.radii = PrVec2{radii[0], radii[1]};
         out.shape.corners[i] = c;
     }
-    out.sigma = maxF32(s.sigma, 0);
+    out.sigma = prF32Max(s.sigma, 0);
     return out;
 }
 
@@ -1394,9 +1394,9 @@ void prDrawShadowCoverage(PrPathRasterizer* rasterizer, const PrPathPolyline* sh
         return;
     const PrIRect box{origin.x, origin.y, origin.x + int32_t(width), origin.y + int32_t(height)};
     // Blurs at the resolution that holds the sigma to the limit, over the box and as far beyond it as the blur reaches.
-    sigma = maxF32(sigma, 0);
+    sigma = prF32Max(sigma, 0);
     const float s = sigma > float(kPrDrawBlurMaxSigma) ? float(kPrDrawBlurMaxSigma) / sigma : 1;
-    const int32_t reach = int32_t(ceilF32(sigma * s * 4)) + 1;
+    const int32_t reach = int32_t(prF32Ceil(sigma * s * 4)) + 1;
     const PrRect scaled{float(box.left) * s, float(box.top) * s, float(box.right) * s, float(box.bottom) * s};
     const PrIRect small = prIRectOutset(prIRectRoundOut(scaled), reach);
     const uint32_t smallWidth = prIRectWidth(small);
@@ -1422,13 +1422,13 @@ void prDrawShadowCoverage(PrPathRasterizer* rasterizer, const PrPathPolyline* sh
     // the caster's coverage.
     prPathRasterizerFill(rasterizer, caster, PrPathFillRule_NonZero, coverage, origin, out);
     for (uint32_t y = 0; y < height; ++y) {
-        float fy = clampF32((float(box.top + int32_t(y)) + 0.5f) * s - 0.5f - float(small.top), 0, float(smallHeight - 1));
+        float fy = prF32Clamp((float(box.top + int32_t(y)) + 0.5f) * s - 0.5f - float(small.top), 0, float(smallHeight - 1));
         uint32_t y0 = uint32_t(fy);
         uint32_t y1 = y0 + 1 < smallHeight ? y0 + 1 : y0;
         float ty = fy - float(y0);
         uint8_t* row = out.data + size_t(y) * out.stride;
         for (uint32_t x = 0; x < width; ++x) {
-            float fx = clampF32((float(box.left + int32_t(x)) + 0.5f) * s - 0.5f - float(small.left), 0,
+            float fx = prF32Clamp((float(box.left + int32_t(x)) + 0.5f) * s - 0.5f - float(small.left), 0,
                 float(smallWidth - 1));
             uint32_t x0 = uint32_t(fx);
             uint32_t x1 = x0 + 1 < smallWidth ? x0 + 1 : x0;
@@ -1439,7 +1439,7 @@ void prDrawShadowCoverage(PrPathRasterizer* rasterizer, const PrPathPolyline* sh
             float lower = r1[x0] + (r1[x1] - r1[x0]) * tx;
             float value = upper + (lower - upper) * ty;
             float keep = kind == PrDrawShadowKind_Inner ? float(row[x]) / 255 : 1 - float(row[x]) / 255;
-            row[x] = uint8_t(clampF32(value * keep, 0, 255) + 0.5f);
+            row[x] = uint8_t(prF32Clamp(value * keep, 0, 255) + 0.5f);
         }
     }
     prMemoryFree(values);
@@ -1447,7 +1447,7 @@ void prDrawShadowCoverage(PrPathRasterizer* rasterizer, const PrPathPolyline* sh
 
 void prDrawDecorationOutline(const PrDrawDecoration* decoration, float tolerance, PrPathPolyline* out) {
     const PrDrawDecoration& d = *decoration;
-    if (!(d.length > 0) || !(d.thickness > 0) || !isFiniteF32(d.length) || !isFiniteF32(d.thickness) || !(tolerance > 0))
+    if (!(d.length > 0) || !(d.thickness > 0) || !prF32IsFinite(d.length) || !prF32IsFinite(d.thickness) || !(tolerance > 0))
         return;
     float half = d.thickness / 2;
     float left = d.origin.x;
@@ -1471,7 +1471,7 @@ void prDrawDecorationOutline(const PrDrawDecoration* decoration, float tolerance
             PrPath* dots = prPathCreate();
             for (uint32_t i = 0; i < n; ++i) {
                 PrVec2 center{left + period * (float(i) + 0.5f), y};
-                prPathEllipticArcTo(dots, center, PrVec2{half, half}, 0, 0, 2 * kPiF32);
+                prPathEllipticArcTo(dots, center, PrVec2{half, half}, 0, 0, 2 * kPrF32Pi);
                 prPathClose(dots);
             }
             prPathFlatten(dots, prAffine2Identity(), tolerance, PrPathFlattening_Balanced, out);
@@ -1488,7 +1488,7 @@ void prDrawDecorationOutline(const PrDrawDecoration* decoration, float tolerance
             return;
         }
         case PrDrawDecorationStyle_Wavy: {
-            if (!(d.wavelength > 0) || !isFiniteF32(d.wavelength) || !isFiniteF32(d.amplitude)) {
+            if (!(d.wavelength > 0) || !prF32IsFinite(d.wavelength) || !prF32IsFinite(d.amplitude)) {
                 addRect(PrRect{left, y - half, right, y + half});
                 return;
             }
@@ -1496,16 +1496,16 @@ void prDrawDecorationOutline(const PrDrawDecoration* decoration, float tolerance
             // from the sine's greatest curvature: a chord over dx lies at most A k^2 dx^2 / 8 from the sine. A wave
             // with more periods than kPrDrawPatternMaxPeriods has its wavelength stretched to fit that many periods,
             // and it has at most kWaveMaxLines lines.
-            float wavelength = maxF32(d.wavelength, d.length / float(kPrDrawPatternMaxPeriods));
-            float k = 2 * kPiF32 / wavelength;
-            float bend = absF32(d.amplitude) * k * k;
-            float dx = bend > 0 ? sqrtF32(8 * tolerance / bend) : d.length;
-            float count = ceilF32(d.length / dx);
+            float wavelength = prF32Max(d.wavelength, d.length / float(kPrDrawPatternMaxPeriods));
+            float k = 2 * kPrF32Pi / wavelength;
+            float bend = prF32Abs(d.amplitude) * k * k;
+            float dx = bend > 0 ? prF32Sqrt(8 * tolerance / bend) : d.length;
+            float count = prF32Ceil(d.length / dx);
             uint32_t lines = !(count >= 1) ? 1 : count > float(kWaveMaxLines) ? kWaveMaxLines : uint32_t(count);
             PrPath* wave = prPathCreate();
             for (uint32_t i = 0; i <= lines; ++i) {
                 float x = d.length * float(i) / float(lines);
-                PrVec2 p{left + x, y + d.amplitude * sinF32(k * (x + d.phase))};
+                PrVec2 p{left + x, y + d.amplitude * prF32Sin(k * (x + d.phase))};
                 if (i == 0)
                     prPathMoveTo(wave, p);
                 else
@@ -1529,27 +1529,27 @@ uint32_t prDrawNineSliceRects(const PrDrawNineSlice* slices, PrVec2 imageExtent,
     const PrDrawNineSlice& n = *slices;
     float imageWidth = imageExtent.x;
     float imageHeight = imageExtent.y;
-    float st = clampF32(n.slices[PrRectSide_Top], 0, imageHeight);
-    float sr = clampF32(n.slices[PrRectSide_Right], 0, imageWidth);
-    float sb = clampF32(n.slices[PrRectSide_Bottom], 0, imageHeight);
-    float sl = clampF32(n.slices[PrRectSide_Left], 0, imageWidth);
-    float wt = maxF32(n.widths[PrRectSide_Top], 0);
-    float wr = maxF32(n.widths[PrRectSide_Right], 0);
-    float wb = maxF32(n.widths[PrRectSide_Bottom], 0);
-    float wl = maxF32(n.widths[PrRectSide_Left], 0);
+    float st = prF32Clamp(n.slices[PrRectSide_Top], 0, imageHeight);
+    float sr = prF32Clamp(n.slices[PrRectSide_Right], 0, imageWidth);
+    float sb = prF32Clamp(n.slices[PrRectSide_Bottom], 0, imageHeight);
+    float sl = prF32Clamp(n.slices[PrRectSide_Left], 0, imageWidth);
+    float wt = prF32Max(n.widths[PrRectSide_Top], 0);
+    float wr = prF32Max(n.widths[PrRectSide_Right], 0);
+    float wb = prF32Max(n.widths[PrRectSide_Bottom], 0);
+    float wl = prF32Max(n.widths[PrRectSide_Left], 0);
     float dw = prRectWidth(destination);
     float dh = prRectHeight(destination);
     float factor = 1;
     if (wl + wr > dw)
-        factor = minF32(factor, dw / (wl + wr));
+        factor = prF32Min(factor, dw / (wl + wr));
     if (wt + wb > dh)
-        factor = minF32(factor, dh / (wt + wb));
+        factor = prF32Min(factor, dh / (wt + wb));
     wt *= factor;
     wr *= factor;
     wb *= factor;
     wl *= factor;
-    float sx[4] = {0, sl, maxF32(imageWidth - sr, sl), imageWidth};
-    float sy[4] = {0, st, maxF32(imageHeight - sb, st), imageHeight};
+    float sx[4] = {0, sl, prF32Max(imageWidth - sr, sl), imageWidth};
+    float sy[4] = {0, st, prF32Max(imageHeight - sb, st), imageHeight};
     float dx[4] = {destination.left, destination.left + wl, destination.right - wr, destination.right};
     float dy[4] = {destination.top, destination.top + wt, destination.bottom - wb, destination.bottom};
     uint32_t count = 0;
@@ -1610,11 +1610,11 @@ float prDrawLayerResolution(float reach) {
 PrUVec2 prDrawLayerExtent(PrVec2 extent, PrVec2 scale, uint32_t limit) {
     float w = extent.x * scale.x;
     float h = extent.y * scale.y;
-    if (!(w > 0) || !(h > 0) || !isFiniteF32(w) || !isFiniteF32(h) || limit == 0)
+    if (!(w > 0) || !(h > 0) || !prF32IsFinite(w) || !prF32IsFinite(h) || limit == 0)
         return PrUVec2{0, 0};
-    float fit = minF32(1, minF32(float(limit) / w, float(limit) / h));
+    float fit = prF32Min(1, prF32Min(float(limit) / w, float(limit) / h));
     return PrUVec2{
-        uint32_t(clampF32(ceilF32(w * fit), 1, float(limit))),
-        uint32_t(clampF32(ceilF32(h * fit), 1, float(limit))),
+        uint32_t(prF32Clamp(prF32Ceil(w * fit), 1, float(limit))),
+        uint32_t(prF32Clamp(prF32Ceil(h * fit), 1, float(limit))),
     };
 }

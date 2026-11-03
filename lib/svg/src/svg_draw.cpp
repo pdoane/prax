@@ -47,7 +47,7 @@ float resolveIn(PrVec2 viewport, SvgLengthPercentage length, SvgAxis axis) {
     else if (axis == SvgAxis_Y)
         base = viewport.y;
     else
-        base = sqrtF32((viewport.x * viewport.x + viewport.y * viewport.y) / 2);
+        base = prF32Sqrt((viewport.x * viewport.x + viewport.y * viewport.y) / 2);
     return svgLengthResolve(length, base);
 }
 
@@ -82,8 +82,8 @@ PrRect foreignRectOf(PrVec2 viewport, const SvgForeignShape& f) {
 // greater than zero (SVG2/shapes.html#RectElement).
 PrVec2 cornerRadii(PrVec2 viewport, const SvgRectShape& r, PrRect rect) {
     PrVec2 radii = radiiOf(viewport, r.rx, r.ry, r.rxAuto, r.ryAuto);
-    float rx = clampF32(radii.x, 0, prRectWidth(rect) / 2);
-    float ry = clampF32(radii.y, 0, prRectHeight(rect) / 2);
+    float rx = prF32Clamp(radii.x, 0, prRectWidth(rect) / 2);
+    float ry = prF32Clamp(radii.y, 0, prRectHeight(rect) / 2);
     return rx > 0 && ry > 0 ? PrVec2{rx, ry} : PrVec2{0, 0};
 }
 
@@ -135,7 +135,7 @@ PrVec2 defaultSizeOf(PrSvgNaturalSize natural) {
         if (hasHeight)
             return PrVec2{natural.height * natural.ratio, natural.height};
         // The largest rectangle of the ratio that the default object size contains.
-        float width = minF32(kDefaultObjectSize.x, kDefaultObjectSize.y * natural.ratio);
+        float width = prF32Min(kDefaultObjectSize.x, kDefaultObjectSize.y * natural.ratio);
         return PrVec2{width, width / natural.ratio};
     }
     return PrVec2{hasWidth ? natural.width : kDefaultObjectSize.x, hasHeight ? natural.height : kDefaultObjectSize.y};
@@ -178,7 +178,7 @@ PrRect geometryBounds(const SvgDrawer& d, const SvgNode& node) {
         case SvgNodeKind_Line: {
             PrVec2 from{resolve(d, node.line.x1, SvgAxis_X), resolve(d, node.line.y1, SvgAxis_Y)};
             PrVec2 to{resolve(d, node.line.x2, SvgAxis_X), resolve(d, node.line.y2, SvgAxis_Y)};
-            return PrRect{minF32(from.x, to.x), minF32(from.y, to.y), maxF32(from.x, to.x), maxF32(from.y, to.y)};
+            return PrRect{prF32Min(from.x, to.x), prF32Min(from.y, to.y), prF32Max(from.x, to.x), prF32Max(from.y, to.y)};
         }
         case SvgNodeKind_Path: return node.path.bounds;
         case SvgNodeKind_Text: return svgTextBounds(node.text);
@@ -198,7 +198,7 @@ PrAffine2 constrained(const SvgDrawer& d, const SvgNode& node, PrAffine2 transfo
     SvgVectorEffectFlags flags = node.vectorEffects;
     PrAffine2 ctm = prAffine2Concat(transform, d.space);
     PrAffine2 parent{};
-    float root = sqrtF32(absF32(ctm.a * ctm.d - ctm.b * ctm.c));
+    float root = prF32Sqrt(prF32Abs(ctm.a * ctm.d - ctm.b * ctm.c));
     if (!prAffine2Invert(d.space, &parent) || ((flags & SvgVectorEffectFlag_NonScalingSize) != 0 && !(root > 0)))
         return transform;
     PrAffine2 host = ctm;
@@ -306,8 +306,8 @@ PrRect mapBounds(PrAffine2 transform, PrRect rect) {
     for (PrVec2 corner : corners) {
         PrVec2 at = prAffine2MapPoint(transform, corner);
         bounds = PrRect{
-            minF32(bounds.left, at.x), minF32(bounds.top, at.y), maxF32(bounds.right, at.x),
-            maxF32(bounds.bottom, at.y),
+            prF32Min(bounds.left, at.x), prF32Min(bounds.top, at.y), prF32Max(bounds.right, at.x),
+            prF32Max(bounds.bottom, at.y),
         };
     }
     return bounds;
@@ -317,8 +317,8 @@ PrRect mapBounds(PrAffine2 transform, PrRect rect) {
 void join(PrRect* bounds, bool* any, PrRect rect) {
     if (*any)
         *bounds = PrRect{
-            minF32(bounds->left, rect.left), minF32(bounds->top, rect.top), maxF32(bounds->right, rect.right),
-            maxF32(bounds->bottom, rect.bottom),
+            prF32Min(bounds->left, rect.left), prF32Min(bounds->top, rect.top), prF32Max(bounds->right, rect.right),
+            prF32Max(bounds->bottom, rect.bottom),
         };
     else
         *bounds = rect;
@@ -412,7 +412,7 @@ bool placeMarker(const SvgDrawer& d, SvgResourceIndex index, SvgVertex vertex, f
         return false;
     float angle = m.angle;
     if (m.orient != SvgOrient_Angle)
-        angle = vertex.angle + (m.orient == SvgOrient_AutoStartReverse && start ? kPiF32 : 0);
+        angle = vertex.angle + (m.orient == SvgOrient_AutoStartReverse && start ? kPrF32Pi : 0);
     float scale = m.strokeUnits ? strokeWidth : 1;
     *fit = m.hasViewBox ? svgViewBoxTransform(m.viewBox, m.aspect, width, height) : prAffine2Identity();
     *extent = m.hasViewBox ? PrVec2{prRectWidth(m.viewBox), prRectHeight(m.viewBox)} : PrVec2{width, height};
@@ -492,7 +492,7 @@ void markerVerticesOf(const SvgDrawer& d, const SvgNode& node, MarkerVertices* o
     // tree is drawn in, whatever the user space's scale (SVG2/painting.html#NonScalingStroke).
     out->strokeWidth = svgLengthResolve(markers.strokeWidth, svgPercentBase(d, SvgAxis_Other));
     if (node.paints.nonScaling) {
-        float host = sqrtF32(absF32(d.space.a * d.space.d - d.space.b * d.space.c));
+        float host = prF32Sqrt(prF32Abs(d.space.a * d.space.d - d.space.b * d.space.c));
         out->strokeWidth = host > 0 ? out->strokeWidth / host : out->strokeWidth;
     }
 }
@@ -605,7 +605,7 @@ void drawLine(SvgDrawer& d, const SvgNode& node) {
     PrVec2 from{resolve(d, node.line.x1, SvgAxis_X), resolve(d, node.line.y1, SvgAxis_Y)};
     PrVec2 to{resolve(d, node.line.x2, SvgAxis_X), resolve(d, node.line.y2, SvgAxis_Y)};
     PrRect box = geometryBounds(d, node);
-    float length = sqrtF32((to.x - from.x) * (to.x - from.x) + (to.y - from.y) * (to.y - from.y));
+    float length = prF32Sqrt((to.x - from.x) * (to.x - from.x) + (to.y - from.y) * (to.y - from.y));
     svgPaintShape(d, node.paints, false, box, length, [&](PrDrawPaint paint) { prDrawListLine(d.list, from, to, paint); },
         [&] { drawMarkers(d, node, box); });
 }
@@ -886,7 +886,7 @@ PrRect alignedArea(const SvgDrawer& d, PrRect rect) {
     if (!prAffine2Invert(d.space, &fromTree))
         return rect;
     PrRect tree = prAffine2MapRect(d.space, rect);
-    tree = PrRect{floorF32(tree.left), floorF32(tree.top), ceilF32(tree.right), ceilF32(tree.bottom)};
+    tree = PrRect{prF32Floor(tree.left), prF32Floor(tree.top), prF32Ceil(tree.right), prF32Ceil(tree.bottom)};
     return prRectUnion(rect, prAffine2MapRect(fromTree, tree));
 }
 
@@ -1089,8 +1089,8 @@ PrVec2 layerSizeOf(CssValueRun size, PrSvgNaturalSize natural, PrVec2 area) {
     uint32_t second = size.count != 0 ? size.values[0].next : 0;
     bool autoX = size.count == 0 || cssValueIsKeyword(size.values, PrCssKeyword_Auto);
     bool autoY = second >= size.count || cssValueIsKeyword(&size.values[second], PrCssKeyword_Auto);
-    float x = autoX ? 0 : maxF32(lengthIn(size, 0, area.x), 0);
-    float y = autoY ? 0 : maxF32(lengthIn(size, second, area.y), 0);
+    float x = autoX ? 0 : prF32Max(lengthIn(size, 0, area.x), 0);
+    float y = autoY ? 0 : prF32Max(lengthIn(size, second, area.y), 0);
     if (autoX && autoY) {
         // The default sizing algorithm (css-images-3/#default-sizing), with the area as the default object size.
         if (hasWidth && hasHeight)
@@ -1183,7 +1183,7 @@ LayerResult imageLayer(SvgDrawer& d, SvgNodeIndex index, const SvgEffects& maski
         float whole = axis == 0 ? extent.x : extent.y;
         if (repeats[axis] != PrCssKeyword_Round || !(own > 0))
             continue;
-        float rounded = whole / maxF32(roundF32(whole / own), 1);
+        float rounded = whole / prF32Max(prF32Round(whole / own), 1);
         bool otherRounds = repeats[1 - axis] == PrCssKeyword_Round;
         if (!otherRounds && (axis == 0 ? autoY : autoX))
             other *= rounded / own;
@@ -1224,7 +1224,7 @@ LayerResult imageLayer(SvgDrawer& d, SvgNodeIndex index, const SvgEffects& maski
         // one, by the position.
         float whole = axis == 0 ? extent.x : extent.y;
         float own = axis == 0 ? size.x : size.y;
-        float copies = floorF32(whole / own);
+        float copies = prF32Floor(whole / own);
         if (copies >= 2) {
             (axis == 0 ? at.x : at.y) = axis == 0 ? area.left : area.top;
             (axis == 0 ? spacing.x : spacing.y) = (whole - copies * own) / (copies - 1);
@@ -1535,7 +1535,7 @@ bool gradientPaint(const SvgDrawer& d, const SvgGradient& g, float opacity, PrRe
         // the cone of Canvas's gradient that both circles touch would cover it.
         float focalRadius = gradientCoordinate(d, g, g.fr, SvgAxis_Other);
         PrVec2 apart = center - focal;
-        if (focalRadius >= radius + sqrtF32(apart.x * apart.x + apart.y * apart.y))
+        if (focalRadius >= radius + prF32Sqrt(apart.x * apart.x + apart.y * apart.y))
             return false;
         b = prDrawBrushRadial(focal, focalRadius, center, radius, stops, g.stopCount);
     }
@@ -1579,10 +1579,10 @@ PrDrawList* tileOf(const SvgDrawer& d, SvgResourceIndex index, PrAffine2 content
     if (d.patternDepth == 0) {
         for (uint32_t i = 0; i < d.tiles->tiles.count; ++i) {
             const SvgTile& tile = d.tiles->tiles.data[i];
-            if (tile.pattern == key.pattern && memEquals(&tile.content, &key.content, sizeof(PrAffine2)) &&
-                    memEquals(&tile.space, &key.space, sizeof(PrAffine2)) &&
-                    memEquals(&tile.extent, &key.extent, sizeof(PrVec2)) &&
-                    memEquals(&tile.viewport, &key.viewport, sizeof(PrVec2)))
+            if (tile.pattern == key.pattern && prMemEquals(&tile.content, &key.content, sizeof(PrAffine2)) &&
+                    prMemEquals(&tile.space, &key.space, sizeof(PrAffine2)) &&
+                    prMemEquals(&tile.extent, &key.extent, sizeof(PrVec2)) &&
+                    prMemEquals(&tile.viewport, &key.viewport, sizeof(PrVec2)))
                 return tile.list;
         }
     }
@@ -1860,7 +1860,7 @@ float svgPercentBase(const SvgDrawer& d, SvgAxis axis) {
         return d.viewport.x;
     if (axis == SvgAxis_Y)
         return d.viewport.y;
-    return sqrtF32((d.viewport.x * d.viewport.x + d.viewport.y * d.viewport.y) / 2);
+    return prF32Sqrt((d.viewport.x * d.viewport.x + d.viewport.y * d.viewport.y) / 2);
 }
 
 bool svgPaintFor(const SvgDrawer& d, const SvgPaint& paint, float opacity, PrRect box, PrDrawPaint* base, PrDrawBrush* brush) {
@@ -1911,12 +1911,12 @@ bool svgStrokeShapeFor(const SvgDrawer& d, const SvgPaints& paints, float length
         if (value == 0 || scale == 1)
             return value;
         float result = value * scale;
-        return isFiniteF32(result) ? result : value < 0 ? -beyond : beyond;
+        return prF32IsFinite(result) ? result : value < 0 ? -beyond : beyond;
     };
     // Dashes that sum to zero stroke without dashes (SVG2/painting.html#StrokeDasharrayProperty).
     float total = 0;
     for (uint32_t i = 0; i < style.dashCount; ++i) {
-        dashes[i] = scaled(maxF32(svgLengthResolve(style.dashes[i], diagonal), 0));
+        dashes[i] = scaled(prF32Max(svgLengthResolve(style.dashes[i], diagonal), 0));
         total += dashes[i];
     }
     if (total > 0) {

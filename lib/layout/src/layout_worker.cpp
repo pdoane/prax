@@ -142,7 +142,7 @@ void prLayoutWorkerDestroy(PrLayoutWorker* PR_NULLABLE worker) {
 void prLayoutWorkerPost(PrLayoutWorker* worker, PrLayoutTree* tree, const PrLayoutRoot* roots, uint32_t count) {
     PR_ASSERT(count >= 1);
     PrLayoutRoot* copied = static_cast<PrLayoutRoot*>(prMemoryAlloc(count * sizeof(PrLayoutRoot)));
-    memCopy(copied, roots, count * sizeof(PrLayoutRoot));
+    prMemCopy(copied, roots, count * sizeof(PrLayoutRoot));
     prMutexLock(&worker->mutex);
     for (uint32_t i = worker->next; i < worker->jobs.count; ++i)
         PR_ASSERT(worker->jobs.data[i].tree != tree);

@@ -27,7 +27,7 @@ constexpr size_t kEntryNameMaxBytes = 128;
 // Copies an entry point's name into `out`, terminated, for the stage that Vulkan reads it from.
 void entryName(const PrGpuShaderEntry* entry, char (&out)[kEntryNameMaxBytes]) {
     size_t size = entry->name.size < kEntryNameMaxBytes - 1 ? entry->name.size : kEntryNameMaxBytes - 1;
-    memCopy(out, entry->name.data, size);
+    prMemCopy(out, entry->name.data, size);
     out[size] = '\0';
 }
 
@@ -164,7 +164,7 @@ PrStatus shaderLibraryCreate(PrGpuDevice* device, PrGpuShaderEntry* entries, uin
         return PrStatus_InvalidData;
     // SPIR-V is read as words, so the module is made from an aligned copy of the code.
     uint32_t* words = static_cast<uint32_t*>(prMemoryAlloc(size_t(entries[0].codeSize)));
-    memCopy(words, entries[0].code, size_t(entries[0].codeSize));
+    prMemCopy(words, entries[0].code, size_t(entries[0].codeSize));
     VkShaderModuleCreateInfo info{};
     info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
     info.codeSize = size_t(entries[0].codeSize);

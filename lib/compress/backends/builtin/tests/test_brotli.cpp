@@ -463,7 +463,7 @@ using namespace pr_impl;
 TEST_CASE("The Brotli tables are the RFC's") {
     // rfc 7932 appendix A gives the CRC-32 of the dictionary. Appendix B gives the serialization of the transforms and
     // its CRC-32.
-    CHECK(crc32Update(0, {kBrotliDictionary, kBrotliDictionarySize}) == 0x5136cb04u);
+    CHECK(prCrc32Update(0, {kBrotliDictionary, kBrotliDictionarySize}) == 0x5136cb04u);
     std::string transforms;
     for (const BrotliTransform& transform : kBrotliTransforms) {
         transforms.append(transform.prefix, transform.prefixSize);
@@ -473,7 +473,7 @@ TEST_CASE("The Brotli tables are the RFC's") {
         transforms += '\0';
     }
     CHECK(transforms.size() == 648);
-    CHECK(crc32Update(0, {reinterpret_cast<const uint8_t*>(transforms.data()), transforms.size()}) == 0x3d965f81u);
+    CHECK(prCrc32Update(0, {reinterpret_cast<const uint8_t*>(transforms.data()), transforms.size()}) == 0x3d965f81u);
     CHECK(word(4, 0) == "time");
 }
 

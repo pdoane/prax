@@ -232,7 +232,7 @@ void endPaint(Renderer& r, const PrDrawCommand&) {
 }
 
 void setFillColor(Renderer& r, PrColor color) {
-    CGFloat components[4] = {CGFloat(color.r), CGFloat(color.g), CGFloat(color.b), CGFloat(clampF32(color.a, 0, 1))};
+    CGFloat components[4] = {CGFloat(color.r), CGFloat(color.g), CGFloat(color.b), CGFloat(prF32Clamp(color.a, 0, 1))};
     CGContextSetFillColorSpace(r.context, r.cg->srgb);
     CGContextSetFillColor(r.context, components);
 }
@@ -402,12 +402,12 @@ void drawGradient(Renderer& r, const PrDrawBrush* brush, PrColor color) {
             float length = d.x * d.x + d.y * d.y;
             if (!(length > 0))
                 return;
-            float t0 = kF32Max;
-            float t1 = -kF32Max;
+            float t0 = kPrF32Max;
+            float t1 = -kPrF32Max;
             for (const PrVec2& p : corners) {
                 float t = ((p.x - s.x) * d.x + (p.y - s.y) * d.y) / length;
-                t0 = minF32(t0, t);
-                t1 = maxF32(t1, t);
+                t0 = prF32Min(t0, t);
+                t1 = prF32Max(t1, t);
             }
             if (brush->extend == PrDrawExtend_Pad) {
                 t0 = 0;
@@ -426,13 +426,13 @@ void drawGradient(Renderer& r, const PrDrawBrush* brush, PrColor color) {
                 for (const PrVec2& p : corners) {
                     float t = 0;
                     if (prDrawGradientParameter(brush, p, &t))
-                        t1 = maxF32(t1, t);
+                        t1 = prF32Max(t1, t);
                 }
             }
             PrVec2 c1{g.start.x + (g.end.x - g.start.x) * t1, g.start.y + (g.end.y - g.start.y) * t1};
             float r1 = g.startRadius + (g.endRadius - g.startRadius) * t1;
             drawShading(r, ramp, true, CGPointMake(CGFloat(g.start.x), CGFloat(g.start.y)),
-                CGFloat(g.startRadius), CGPointMake(CGFloat(c1.x), CGFloat(c1.y)), CGFloat(maxF32(r1, 0)), 0, t1);
+                CGFloat(g.startRadius), CGPointMake(CGFloat(c1.x), CGFloat(c1.y)), CGFloat(prF32Max(r1, 0)), 0, t1);
             break;
         }
         case PrDrawBrushKind_Diamond: {
@@ -445,7 +445,7 @@ void drawGradient(Renderer& r, const PrDrawBrush* brush, PrColor color) {
                 for (const PrVec2& p : corners) {
                     float dx = (p.x - g.center.x) / g.radii.x;
                     float dy = (p.y - g.center.y) / g.radii.y;
-                    t1 = maxF32(t1, sqrtF32(dx * dx + dy * dy));
+                    t1 = prF32Max(t1, prF32Sqrt(dx * dx + dy * dy));
                 }
             }
             CGContextTranslateCTM(r.context, CGFloat(g.center.x), CGFloat(g.center.y));
@@ -499,8 +499,8 @@ void drawTiles(Renderer& r, CGImageRef image, PrRect source, const PrDrawTiles& 
     PrRect bounds{corners[0].x, corners[0].y, corners[2].x, corners[2].y};
     auto range = [](PrDrawExtend mode, float low, float high, float origin, float step, int32_t* from, int32_t* to) {
         if (mode == PrDrawExtend_Repeat || mode == PrDrawExtend_Reflect) {
-            *from = int32_t(floorF32((low - origin) / step));
-            *to = int32_t(floorF32((high - origin) / step));
+            *from = int32_t(prF32Floor((low - origin) / step));
+            *to = int32_t(prF32Floor((high - origin) / step));
         } else {
             *from = *to = 0;
         }
@@ -541,7 +541,7 @@ void paintBrush(Renderer& r, const PrDrawBrush* brush, PrColor color, PrRect bou
         case PrDrawBrushKind_Image: {
             const PrDrawSource& source = brush->image.source;
             if (source.kind == PrDrawSourceKind_Image) {
-                CGContextSetAlpha(r.context, CGFloat(clampF32(color.a, 0, 1)));
+                CGContextSetAlpha(r.context, CGFloat(prF32Clamp(color.a, 0, 1)));
                 drawTiles(r, imageOf(r.cg, source.image), source.rect, brush->image.tiles, brush->image.sampling);
             }
             break;
@@ -641,7 +641,7 @@ void drawShapePath(Renderer& r, const PrDrawCommand& c, PrRect bounds) {
     if (c.brush == nullptr) {
         CGFloat components[4] = {
             CGFloat(c.color.r), CGFloat(c.color.g), CGFloat(c.color.b),
-            CGFloat(clampF32(prFloat16ToFloat(c.color.a), 0, 1)),
+            CGFloat(prF32Clamp(prFloat16ToFloat(c.color.a), 0, 1)),
         };
         CGContextSetStrokeColorSpace(r.context, r.cg->srgb);
         CGContextSetStrokeColor(r.context, components);
@@ -707,7 +707,7 @@ void castShadow(Renderer& r, PrColor color, PrVec2 offset, float sigma, PrPathFi
     enterTarget(r);
     CGRect clip = CGContextGetClipBoundingBox(r.context);
     if (surround) {
-        float reach = sigma * 4 + absF32(offset.x) + absF32(offset.y) + 64;
+        float reach = sigma * 4 + prF32Abs(offset.x) + prF32Abs(offset.y) + 64;
         CGContextAddRect(r.context, CGRectInset(clip, CGFloat(-reach), CGFloat(-reach)));
     }
     // Moves the path to just past the clip on the right, including the blur's extent. The path is copied out in target
@@ -719,7 +719,7 @@ void castShadow(Renderer& r, PrColor color, PrVec2 offset, float sigma, PrPathFi
     CGContextTranslateCTM(r.context, CGFloat(away), 0);
     CGContextAddPath(r.context, shape);
     CGPathRelease(shape);
-    CGFloat components[4] = {CGFloat(color.r), CGFloat(color.g), CGFloat(color.b), CGFloat(clampF32(color.a, 0, 1))};
+    CGFloat components[4] = {CGFloat(color.r), CGFloat(color.g), CGFloat(color.b), CGFloat(prF32Clamp(color.a, 0, 1))};
     CGColorRef shadow = CGColorCreate(r.cg->srgb, components);
     // A shadow's offset is in the context's base space, where y points up. Its blur is twice the Gaussian's sigma.
     CGContextSetShadowWithColor(r.context, CGSizeMake(CGFloat(offset.x - away), CGFloat(-offset.y)), CGFloat(2 * sigma), shadow);
@@ -786,7 +786,7 @@ void drawImageRects(Renderer& r, const PrDrawCommand& c, const PrDrawImageRect* 
     if (image == nullptr)
         return;
     beginPaint(r, c);
-    CGContextSetAlpha(r.context, CGFloat(clampF32(prFloat16ToFloat(c.color.a), 0, 1)));
+    CGContextSetAlpha(r.context, CGFloat(prF32Clamp(prFloat16ToFloat(c.color.a), 0, 1)));
     CGContextSetInterpolationQuality(r.context, qualityOf(c.sampling));
     for (uint32_t i = 0; i < count; ++i) {
         const PrRect& s = rects[i].source;
@@ -876,8 +876,8 @@ CGFontRef PR_NULLABLE graphicsFontOf(CgBackend* cg, const PrFont* font) {
             const void* name = CFDictionaryGetValue(axis, kCGFontVariationAxisName);
             for (uint32_t k = 0; k < prFontAxisCount(font) && name != nullptr; ++k) {
                 PrFontAxis a = prFontAxis(font, k);
-                if (absF32(a.min - minimum) < 0.01f && absF32(a.max - maximum) < 0.01f &&
-                        absF32(a.defaultValue - fallback) < 0.01f) {
+                if (prF32Abs(a.min - minimum) < 0.01f && prF32Abs(a.max - maximum) < 0.01f &&
+                        prF32Abs(a.defaultValue - fallback) < 0.01f) {
                     double value = double(prFontAxisValue(font, k));
                     CFNumberRef number = CFNumberCreate(nullptr, kCFNumberDoubleType, &value);
                     CFDictionarySetValue(values, name, number);
@@ -961,7 +961,7 @@ void drawGlyphs(Renderer& r, const PrDrawCommand& c) {
                 // Strokes with the fill color, at twice the growth.
                 CGFloat components[4] = {
                     CGFloat(c.color.r), CGFloat(c.color.g), CGFloat(c.color.b),
-                    CGFloat(clampF32(prFloat16ToFloat(c.color.a), 0, 1)),
+                    CGFloat(prF32Clamp(prFloat16ToFloat(c.color.a), 0, 1)),
                 };
                 CGContextSetStrokeColorSpace(r.context, r.cg->srgb);
                 CGContextSetStrokeColor(r.context, components);
@@ -1074,7 +1074,7 @@ void pushGroup(Renderer& r, const PrDrawCommand& c) {
         push.layered = false;
     }
     if (push.layered) {
-        CGContextSetAlpha(r.context, CGFloat(clampF32(g->opacity, 0, 1)));
+        CGContextSetAlpha(r.context, CGFloat(prF32Clamp(g->opacity, 0, 1)));
         CGContextSetBlendMode(r.context, blendOf(g->composite, g->blendMode));
         // A filter that is one drop shadow becomes Quartz's shadow on the layer.
         if (g->filter != nullptr && prDrawFilterNodeCount(g->filter) == 1 &&
@@ -1085,11 +1085,11 @@ void pushGroup(Renderer& r, const PrDrawCommand& c) {
                 near.a * node.shadow.offset.x + near.c * node.shadow.offset.y,
                 near.b * node.shadow.offset.x + near.d * node.shadow.offset.y,
             };
-            float sigma = maxF32(node.shadow.sigma.x, node.shadow.sigma.y) * prAffine2MaxScale(near);
+            float sigma = prF32Max(node.shadow.sigma.x, node.shadow.sigma.y) * prAffine2MaxScale(near);
             PrColor shadow = node.shadow.color;
             CGFloat components[4] = {
                 CGFloat(shadow.r), CGFloat(shadow.g), CGFloat(shadow.b),
-                CGFloat(clampF32(shadow.a, 0, 1)),
+                CGFloat(prF32Clamp(shadow.a, 0, 1)),
             };
             CGColorRef color = CGColorCreate(r.cg->srgb, components);
             CGContextSetShadowWithColor(r.context, CGSizeMake(CGFloat(offset.x), CGFloat(-offset.y)),

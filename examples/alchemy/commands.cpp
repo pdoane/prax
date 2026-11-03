@@ -119,7 +119,7 @@ constexpr PrCommandParam kUse[] = {
 void runInsertEmbedding(Shell& s, const PrCommandArgs* args) {
     PrStringView part = prCommandArgsString(args, "name", "");
     for (const std::string& name : s.state->catalog.embeddings) {
-        if (asciiContainsFold(name, part)) {
+        if (prAsciiContainsFold(name, part)) {
             insertEmbedding(s, prCommandArgsBool(args, "negative", false) ? 1 : 0, name);
             return;
         }
@@ -177,7 +177,7 @@ constexpr PrCommandParam kParameters[] = {
 // Returns the first of `names` that contains `part`, or `current` if none does.
 std::string matchName(const std::vector<std::string>& names, PrStringView part, const std::string& current) {
     for (const std::string& name : names) {
-        if (asciiContainsFold(name, part))
+        if (prAsciiContainsFold(name, part))
             return name;
     }
     return current;

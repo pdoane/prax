@@ -58,19 +58,19 @@ Labeled* PR_NULLABLE findLabel(Array<Labeled>* list, PrStringView label) {
 
 // Appends the value as console/#generic-javascript-object-formatting formats it: the value's string, or a symbol's
 // description.
-void appendValue(JSContext* ctx, TextBuffer* out, JSValueConst value) {
+void appendValue(JSContext* ctx, PrTextBuffer* out, JSValueConst value) {
     JSValue text = JS_IsSymbol(value) ? JS_GetPropertyStr(ctx, value, "description") : JS_ToString(ctx, value);
     JsString read = {};
     if (!JS_IsException(text) && (JS_IsString(text) || JS_IsUndefined(text))) {
         if (JS_IsSymbol(value))
-            textAppend(out, "Symbol(");
+            prTextBufferAppend(out, "Symbol(");
         if (JS_IsString(text) && jsStringRead(ctx, text, &read))
-            textAppend(out, jsStringView(&read));
+            prTextBufferAppend(out, jsStringView(&read));
         if (JS_IsSymbol(value))
-            textAppendChar(out, ')');
+            prTextBufferAppendChar(out, ')');
     } else {
         JS_FreeValue(ctx, JS_GetException(ctx));
-        textAppend(out, "[object]");
+        prTextBufferAppend(out, "[object]");
     }
     jsStringReset(ctx, &read);
     JS_FreeValue(ctx, text);
@@ -80,14 +80,14 @@ void appendValue(JSContext* ctx, TextBuffer* out, JSValueConst value) {
 // Returns NaN for a symbol.
 double parsed(JSContext* ctx, const char* function, JSValueConst value) {
     if (JS_IsSymbol(value))
-        return kNanF64;
+        return kPrF64Nan;
     JSValue global = JS_GetGlobalObject(ctx);
     JSValue parse = JS_GetPropertyStr(ctx, global, function);
     JSValue result = JS_Call(ctx, parse, JS_UNDEFINED, 1, &value);
-    double number = kNanF64;
+    double number = kPrF64Nan;
     if (JS_IsException(result) || JS_ToFloat64(ctx, &number, result) < 0) {
         JS_FreeValue(ctx, JS_GetException(ctx));
-        number = kNanF64;
+        number = kPrF64Nan;
     }
     JS_FreeValue(ctx, result);
     JS_FreeValue(ctx, parse);
@@ -96,12 +96,12 @@ double parsed(JSContext* ctx, const char* function, JSValueConst value) {
 }
 
 // Appends a number formatted by Number::toString.
-void appendNumber(JSContext* ctx, TextBuffer* out, double number) {
+void appendNumber(JSContext* ctx, PrTextBuffer* out, double number) {
     appendValue(ctx, out, JS_NewFloat64(ctx, number));
 }
 
 // Runs console/#formatter over `args`, writing into `out`. Returns the number of arguments consumed.
-int format(JSContext* ctx, TextBuffer* out, int argc, JSValueConst* argv) {
+int format(JSContext* ctx, PrTextBuffer* out, int argc, JSValueConst* argv) {
     JsString target = {};
     if (!jsStringRead(ctx, argv[0], &target)) {
         JS_FreeValue(ctx, JS_GetException(ctx));
@@ -114,7 +114,7 @@ int format(JSContext* ctx, TextBuffer* out, int argc, JSValueConst* argv) {
         bool known = specifier == 's' || specifier == 'd' || specifier == 'i' || specifier == 'f' ||
             specifier == 'o' || specifier == 'O' || specifier == 'c';
         if (!known || used == argc) {
-            textAppendChar(out, text.data[i]);
+            prTextBufferAppendChar(out, text.data[i]);
             continue;
         }
         JSValueConst current = argv[used++];
@@ -143,18 +143,18 @@ void logger(JSContext* ctx, const ConsoleState* state, PrJsHtmlConsoleLevel leve
         int argc, JSValueConst* argv) {
     if (argc == 0 && prefix.size == 0)
         return;
-    TextBuffer out;
-    textAppend(&out, prefix);
+    PrTextBuffer out = {};
+    prTextBufferAppend(&out, prefix);
     int used = 0;
     if (argc > 1 && JS_IsString(argv[0]))
         used = format(ctx, &out, argc, argv);
     for (int i = used; i < argc; ++i) {
         if (i != 0 || prefix.size != 0)
-            textAppendChar(&out, ' ');
+            prTextBufferAppendChar(&out, ' ');
         appendValue(ctx, &out, argv[i]);
     }
-    print(ctx, level, state->depth, textView(&out));
-    textReset(&out);
+    print(ctx, level, state->depth, prTextBufferView(&out));
+    prTextBufferReset(&out);
 }
 
 ConsoleState* stateOf(JSValueConst* data) {
@@ -214,24 +214,24 @@ JSValue countMethod(JSContext* ctx, JSValueConst, int argc, JSValueConst* argv, 
     if (!readLabel(argc, argv, &label))
         return JS_EXCEPTION;
     Labeled* found = findLabel(&state->counts, label.value());
-    TextBuffer text;
-    textAppend(&text, label.value());
+    PrTextBuffer text = {};
+    prTextBufferAppend(&text, label.value());
     if (magic == 0) {
         if (found == nullptr) {
             found = &state->counts.emplace();
             *found = Labeled{prStringCopy(label.value()), 0};
         }
         found->value += 1;
-        textAppend(&text, ": ");
+        prTextBufferAppend(&text, ": ");
         appendNumber(ctx, &text, found->value);
-        print(ctx, PrJsHtmlConsoleLevel_Info, state->depth, textView(&text));
+        print(ctx, PrJsHtmlConsoleLevel_Info, state->depth, prTextBufferView(&text));
     } else if (found != nullptr) {
         found->value = 0;
     } else {
-        textAppend(&text, ": no count to reset");
-        print(ctx, PrJsHtmlConsoleLevel_Warn, state->depth, textView(&text));
+        prTextBufferAppend(&text, ": no count to reset");
+        print(ctx, PrJsHtmlConsoleLevel_Warn, state->depth, prTextBufferView(&text));
     }
-    textReset(&text);
+    prTextBufferReset(&text);
     return JS_UNDEFINED;
 }
 
@@ -256,24 +256,24 @@ JSValue timeMethod(JSContext* ctx, JSValueConst, int argc, JSValueConst* argv, i
     if (!readLabel(argc, argv, &label))
         return JS_EXCEPTION;
     Labeled* found = findLabel(&state->timers, label.value());
-    TextBuffer text;
-    textAppend(&text, label.value());
+    PrTextBuffer text = {};
+    prTextBufferAppend(&text, label.value());
     if (magic == 0 && found == nullptr) {
         state->timers.push({prStringCopy(label.value()), prTimeMonotonicMilliseconds()});
     } else if (magic == 0 || found == nullptr) {
-        textAppend(&text, magic == 0 ? ": timer already exists" : ": no such timer");
-        print(ctx, PrJsHtmlConsoleLevel_Warn, state->depth, textView(&text));
+        prTextBufferAppend(&text, magic == 0 ? ": timer already exists" : ": no such timer");
+        print(ctx, PrJsHtmlConsoleLevel_Warn, state->depth, prTextBufferView(&text));
     } else {
-        textAppend(&text, ": ");
+        prTextBufferAppend(&text, ": ");
         appendNumber(ctx, &text, prTimeMonotonicMilliseconds() - found->value);
-        textAppend(&text, " ms");
+        prTextBufferAppend(&text, " ms");
         if (magic == 2) {
             prStringReset(&found->label);
             state->timers.erase(uint32_t(found - state->timers.data));
         }
-        logger(ctx, state, PrJsHtmlConsoleLevel_Info, textView(&text), magic == 1 && argc > 1 ? argc - 1 : 0, argv + 1);
+        logger(ctx, state, PrJsHtmlConsoleLevel_Info, prTextBufferView(&text), magic == 1 && argc > 1 ? argc - 1 : 0, argv + 1);
     }
-    textReset(&text);
+    prTextBufferReset(&text);
     return JS_UNDEFINED;
 }
 

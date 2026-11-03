@@ -830,8 +830,8 @@ bool isButton(const PrDomElement* element) {
     if (!domIsHtml(element, PrDomTag_Input))
         return false;
     PrStringView type = domAttributeValue(element, "type");
-    return asciiEqualsFold(type, "button") || asciiEqualsFold(type, "submit") || asciiEqualsFold(type, "reset") ||
-        asciiEqualsFold(type, "image");
+    return prAsciiEqualsFold(type, "button") || prAsciiEqualsFold(type, "submit") || prAsciiEqualsFold(type, "reset") ||
+        prAsciiEqualsFold(type, "image");
 }
 
 // Returns true if `element` takes the keys that would scroll for its own use, as a form control does.
@@ -1090,17 +1090,17 @@ void pasted(HtmlView* v, const PrAppEvent* event) {
     if (!proceed)
         return;
     bool multiline = domIsHtml(target, PrDomTag_Textarea);
-    TextBuffer text{};
+    PrTextBuffer text{};
     for (size_t i = 0; i < event->text.size; ++i) {
         char c = event->text.data[i];
         if (c == '\r' && i + 1 < event->text.size && event->text.data[i + 1] == '\n')
             continue;
         c = c == '\r' ? '\n' : c;
         if (c != '\n' || multiline)
-            textAppend(&text, PrStringView{&c, 1});
+            prTextBufferAppend(&text, PrStringView{&c, 1});
     }
-    htmlTextControlInsert(target, textView(&text), "insertFromPaste");
-    textReset(&text);
+    htmlTextControlInsert(target, prTextBufferView(&text), "insertFromPaste");
+    prTextBufferReset(&text);
     caretMoved(v, event->time);
 }
 
@@ -1875,7 +1875,7 @@ void prHtmlViewPostEvent(PrHtmlView* view, const PrAppEvent* event) {
     post->event.text = PrStringView{nullptr, size};
     post->flags = flags;
     if (size != 0)
-        memCopy(post + 1, event->text.data, size);
+        prMemCopy(post + 1, event->text.data, size);
     prDomAgentPost(view->inbox->agent, applyPost, post);
 }
 

@@ -101,8 +101,8 @@ bool readScreen(const uint8_t* bytes, size_t size, Screen& screen) {
     }
     screen = {};
     screen.loops = 1;
-    screen.width = readLeU16(bytes + 6);
-    screen.height = readLeU16(bytes + 8);
+    screen.width = prMemReadLeU16(bytes + 6);
+    screen.height = prMemReadLeU16(bytes + 8);
     const uint8_t packed = bytes[10];
     size_t at = 13;
     if ((packed & 0x80) != 0) {
@@ -136,15 +136,15 @@ bool readFrames(const uint8_t* bytes, size_t size, Screen& screen, uint32_t limi
             // The Netscape application extension stores the loop count in its own sub-block, after the eleven-byte
             // identifier.
             if (label == 0xFF && size - at >= 19 && bytes[at] == 11 &&
-                    memEquals(bytes + at + 1, "NETSCAPE2.0", 11) && bytes[at + 12] == 3 && bytes[at + 13] == 1) {
-                const uint32_t repeats = readLeU16(bytes + at + 14);
+                    prMemEquals(bytes + at + 1, "NETSCAPE2.0", 11) && bytes[at + 12] == 3 && bytes[at + 13] == 1) {
+                const uint32_t repeats = prMemReadLeU16(bytes + at + 14);
                 screen.loops = repeats == 0 ? 0 : repeats + 1;
             }
             if (label == 0xF9 && size - at >= 6 && bytes[at] == 4) {
                 const uint8_t packed = bytes[at + 1];
                 control.disposal = (packed >> 2) & 7;
                 control.transparent = (packed & 1) != 0;
-                control.delayMs = delayOf(readLeU16(bytes + at + 2));
+                control.delayMs = delayOf(prMemReadLeU16(bytes + at + 2));
                 control.transparentIndex = bytes[at + 4];
             }
             if (!skipSubBlocks(bytes, size, at)) {
@@ -156,10 +156,10 @@ bool readFrames(const uint8_t* bytes, size_t size, Screen& screen, uint32_t limi
             return false;
         }
         Frame frame = control;
-        frame.left = readLeU16(bytes + at);
-        frame.top = readLeU16(bytes + at + 2);
-        frame.width = readLeU16(bytes + at + 4);
-        frame.height = readLeU16(bytes + at + 6);
+        frame.left = prMemReadLeU16(bytes + at);
+        frame.top = prMemReadLeU16(bytes + at + 2);
+        frame.width = prMemReadLeU16(bytes + at + 4);
+        frame.height = prMemReadLeU16(bytes + at + 6);
         const uint8_t packed = bytes[at + 8];
         frame.interlaced = (packed & 0x40) != 0;
         at += 9;
@@ -372,7 +372,7 @@ void clearFrame(const Frame& frame, const Screen& screen, uint8_t* pixels) {
             return;
         }
         uint8_t* out = pixels + (size_t(screenY) * screen.width + frame.left) * 4;
-        memZero(out, size_t(columns) * 4);
+        prMemZero(out, size_t(columns) * 4);
     }
 }
 
@@ -456,7 +456,7 @@ bool gifAnimationFrame(GifAnimation& animation, uint32_t frame, uint8_t* pixels,
         return false;
     }
     if (animation.at == kNoFrame || frame < animation.at) {
-        memZero(animation.pixels, animation.pixelsSize);
+        prMemZero(animation.pixels, animation.pixelsSize);
         animation.at = kNoFrame;
     }
     while (animation.at != frame) {
@@ -466,7 +466,7 @@ bool gifAnimationFrame(GifAnimation& animation, uint32_t frame, uint8_t* pixels,
             if (done.disposal == GifDisposal_Background) {
                 clearFrame(done, animation.screen, animation.pixels);
             } else if (done.disposal == GifDisposal_Previous) {
-                memCopy(animation.pixels, animation.previous, animation.pixelsSize);
+                prMemCopy(animation.pixels, animation.previous, animation.pixelsSize);
             }
         }
         const Frame& current = animation.frames.data[next];
@@ -474,7 +474,7 @@ bool gifAnimationFrame(GifAnimation& animation, uint32_t frame, uint8_t* pixels,
             if (animation.previous == nullptr) {
                 animation.previous = static_cast<uint8_t*>(prMemoryAlloc(animation.pixelsSize));
             }
-            memCopy(animation.previous, animation.pixels, animation.pixelsSize);
+            prMemCopy(animation.previous, animation.pixels, animation.pixelsSize);
         }
         size_t written = 0;
         const size_t count = size_t(current.width) * size_t(current.height);
@@ -485,7 +485,7 @@ bool gifAnimationFrame(GifAnimation& animation, uint32_t frame, uint8_t* pixels,
         drawFrame(current, animation.indices, written, animation.screen, animation.pixels);
         animation.at = next;
     }
-    memCopy(pixels, animation.pixels, pixelsSize);
+    prMemCopy(pixels, animation.pixels, pixelsSize);
     return true;
 }
 

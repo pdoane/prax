@@ -54,7 +54,7 @@ template <typename Unreferenced>
 bool layoutCandidatesCover(const Array<uint32_t>& candidates, uint32_t count, Unreferenced unreferenced) {
     Array<uint64_t> listed{};
     listed.resize(uint32_t(bitsetWords(count)));
-    memZero(listed.data, listed.count * sizeof(uint64_t));
+    prMemZero(listed.data, listed.count * sizeof(uint64_t));
     for (uint32_t k = 0; k < candidates.count; ++k)
         bitsetSet(listed.data, candidates.data[k]);
     bool covered = true;

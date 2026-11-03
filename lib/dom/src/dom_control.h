@@ -159,7 +159,7 @@ DomControl* domTextControlSync(PrDomElement* element);
 // Writes the value of a form control (html/#concept-fe-value) to `out`, which it clears first: an input's value in the
 // value mode, its value attribute in the default modes, or for a textarea its API value
 // (html/#concept-textarea-api-value). An input in the filename mode has no files, and its value is empty.
-void domControlValue(const PrDomElement* element, TextBuffer* out);
+void domControlValue(const PrDomElement* element, PrTextBuffer* out);
 
 // Returns true if the control's value is empty, without building it.
 bool domControlValueEmpty(const PrDomElement* element);
@@ -170,7 +170,7 @@ bool domControlValueEmpty(const PrDomElement* element);
 PrStatus domControlSetValue(PrDomElement* element, PrStringView value);
 
 // Writes the textarea's child text content (html/#dom-textarea-defaultvalue) to `out`, which it clears first.
-void domTextareaDefaultValue(const PrDomElement* textarea, TextBuffer* out);
+void domTextareaDefaultValue(const PrDomElement* textarea, PrTextBuffer* out);
 
 // Runs the steps that follow a change to the children of a textarea that is not dirty: its raw value follows its child
 // text content, which restyles it. Does nothing for any other element.
@@ -195,7 +195,7 @@ bool domInputStringToNumber(const PrDomElement* input, PrStringView text, double
 
 // Converts a number to a string by the rules of the input's type (html/#concept-input-value-number-string), and appends
 // it to `out`. `value` must be finite.
-void domInputNumberToString(const PrDomElement* input, double value, TextBuffer* out);
+void domInputNumberToString(const PrDomElement* input, double value, PrTextBuffer* out);
 
 // Converts a string to the time value of a Date, in milliseconds since the epoch, by the rules of a type to which
 // valueAsDate applies (html/#concept-input-value-string-date). Returns false for a string that does not convert.
@@ -203,7 +203,7 @@ bool domInputStringToDate(const PrDomElement* input, PrStringView text, double* 
 
 // Converts the time value of a Date to a string by the rules of a type to which valueAsDate applies
 // (html/#concept-input-value-date-string), and appends it to `out`. `time` must be finite.
-void domInputDateToString(const PrDomElement* input, double time, TextBuffer* out);
+void domInputDateToString(const PrDomElement* input, double time, PrTextBuffer* out);
 
 // The minimum, maximum and allowed value step of an input, as numbers (html/#concept-input-min,
 // html/#concept-input-max, html/#concept-input-step). A bound is NaN where the input has none, and the step is NaN if

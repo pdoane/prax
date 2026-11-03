@@ -90,7 +90,7 @@ std::string historyDayLabel(int64_t day, int64_t today) {
 
 std::string historyTimeLabel(double time, double offset) {
     double midnight = double(prTimeDaysFromMilliseconds(time, offset)) * kDayMilliseconds;
-    uint32_t minutes = uint32_t(floorF64((time + offset - midnight) / 60000));
+    uint32_t minutes = uint32_t(prF64Floor((time + offset - midnight) / 60000));
     uint32_t hours = minutes / 60;
     return {char('0' + hours / 10), char('0' + hours % 10), ':', char('0' + minutes % 60 / 10), char('0' + minutes % 10)};
 }

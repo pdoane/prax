@@ -299,7 +299,7 @@ void setRoot(PrGpuDevice* device, PrGpuCommands* commands, const void* data, uin
     uint32_t slot = 0;
     uint64_t offset = 0;
     void* bytes = gpuMetalStream(d, c, size != 0 ? size : 16, &slot, &offset);
-    memCopy(bytes, data, size);
+    prMemCopy(bytes, data, size);
     if (slot == 0)
         return;
     *root = RootBinding{gpuMetalBuffer(d, slot), offset};

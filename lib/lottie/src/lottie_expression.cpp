@@ -465,7 +465,7 @@ bool lottieExpressionEvaluate(const LottieAnimation& a, uint32_t property, doubl
     LottieExpressions& e = *a.expressions;
     if (e.valueOf.data[property] != kLottieNone && e.frameOf.data[property] == frame) {
         if (e.answered.data[property] != 0)
-            memCopy(value, e.values.data + e.valueOf.data[property], p.dims * sizeof(float));
+            prMemCopy(value, e.values.data + e.valueOf.data[property], p.dims * sizeof(float));
         return e.answered.data[property] != 0;
     }
     bool read = evaluate(e, property, frame, value);
@@ -477,7 +477,7 @@ bool lottieExpressionEvaluate(const LottieAnimation& a, uint32_t property, doubl
     e.frameOf.data[property] = frame;
     e.answered.data[property] = read ? 1 : 0;
     if (read)
-        memCopy(e.values.data + e.valueOf.data[property], value, p.dims * sizeof(float));
+        prMemCopy(e.values.data + e.valueOf.data[property], value, p.dims * sizeof(float));
     return read;
 }
 

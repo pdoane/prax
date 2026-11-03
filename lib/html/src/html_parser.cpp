@@ -258,24 +258,24 @@ DomQuirks quirksOf(PrStringView name, PrStringView publicId, PrStringView system
         return DomQuirks_Yes;
 
     if (hasPublicId) {
-        if (asciiEqualsFold(publicId, "-//W3O//DTD W3 HTML Strict 3.0//EN//") ||
-                asciiEqualsFold(publicId, "-/W3C/DTD HTML 4.0 Transitional/EN") || asciiEqualsFold(publicId, "HTML"))
+        if (prAsciiEqualsFold(publicId, "-//W3O//DTD W3 HTML Strict 3.0//EN//") ||
+                prAsciiEqualsFold(publicId, "-/W3C/DTD HTML 4.0 Transitional/EN") || prAsciiEqualsFold(publicId, "HTML"))
             return DomQuirks_Yes;
         for (PrStringView prefix : kQuirksPrefix) {
-            if (asciiStartsWithFold(publicId, prefix))
+            if (prAsciiStartsWithFold(publicId, prefix))
                 return DomQuirks_Yes;
         }
     }
-    if (hasSystemId && asciiEqualsFold(systemId, "http://www.ibm.com/data/dtd/v11/ibmxhtml1-transitional.dtd"))
+    if (hasSystemId && prAsciiEqualsFold(systemId, "http://www.ibm.com/data/dtd/v11/ibmxhtml1-transitional.dtd"))
         return DomQuirks_Yes;
 
     bool emptySystem = !hasSystemId || systemId.size == 0;
-    if (hasPublicId && (asciiStartsWithFold(publicId, "-//W3C//DTD HTML 4.01 Frameset//") ||
-            asciiStartsWithFold(publicId, "-//W3C//DTD HTML 4.01 Transitional//")))
+    if (hasPublicId && (prAsciiStartsWithFold(publicId, "-//W3C//DTD HTML 4.01 Frameset//") ||
+            prAsciiStartsWithFold(publicId, "-//W3C//DTD HTML 4.01 Transitional//")))
         return emptySystem ? DomQuirks_Yes : DomQuirks_Limited;
 
-    if (hasPublicId && (asciiStartsWithFold(publicId, "-//W3C//DTD XHTML 1.0 Frameset//") ||
-            asciiStartsWithFold(publicId, "-//W3C//DTD XHTML 1.0 Transitional//")))
+    if (hasPublicId && (prAsciiStartsWithFold(publicId, "-//W3C//DTD XHTML 1.0 Frameset//") ||
+            prAsciiStartsWithFold(publicId, "-//W3C//DTD XHTML 1.0 Transitional//")))
         return DomQuirks_Limited;
 
     return DomQuirks_No;
@@ -836,7 +836,7 @@ void declareCharset(Tree* t, PrDomElement* meta) {
     PrStringView label = domAttributeValue(meta, "charset");
     if (label.data != nullptr) {
         charset = prCharsetFromLabel(label);
-    } else if (asciiEqualsFold(domAttributeValue(meta, "http-equiv"), "content-type")) {
+    } else if (prAsciiEqualsFold(domAttributeValue(meta, "http-equiv"), "content-type")) {
         PrStringView content = domAttributeValue(meta, "content");
         if (content.data != nullptr)
             charset = htmlCharsetFromMetaContent(content);
@@ -854,16 +854,16 @@ bool attachDeclarativeShadow(Tree* t) {
     if ((t->p->flags & HtmlParseFlag_DeclarativeShadowRoots) == 0 || mode.data == nullptr || host == t->p->open.data[0])
         return false;
     PrDomShadowRootInit init = prDomShadowRootInitDefault(PrDomShadowRootMode_Open);
-    if (asciiEqualsFold(mode, "closed"))
+    if (prAsciiEqualsFold(mode, "closed"))
         init.mode = PrDomShadowRootMode_Closed;
-    else if (!asciiEqualsFold(mode, "open"))
+    else if (!prAsciiEqualsFold(mode, "open"))
         return false;
     init.clonable = tokenAttribute(t, "shadowrootclonable").data != nullptr;
     init.serializable = tokenAttribute(t, "shadowrootserializable").data != nullptr;
     init.delegatesFocus = tokenAttribute(t, "shadowrootdelegatesfocus").data != nullptr;
     // html/#attr-template-shadowrootslotassignment. The missing value default and the invalid value default are both
     // named.
-    if (asciiEqualsFold(tokenAttribute(t, "shadowrootslotassignment"), "manual"))
+    if (prAsciiEqualsFold(tokenAttribute(t, "shadowrootslotassignment"), "manual"))
         init.slotAssignment = PrDomSlotAssignmentMode_Manual;
     PrDomShadowRoot* shadow = nullptr;
     if (domAttachShadow(host, &init, &shadow) != PrStatus_Ok) {
@@ -961,7 +961,7 @@ bool takeWhitespace(Tree* t, SpaceRule rule) {
     if (count != 0 && rule != SpaceRule_Ignore) {
         if (rule == SpaceRule_Reconstruct)
             reconstructFormatting(t);
-        insertText(t, stringSlice(text(t, t->token.data), 0, count));
+        insertText(t, prStringSlice(text(t, t->token.data), 0, count));
     }
     htmlTokenAdvance(&t->p->tokenizer, &t->token, count);
     return htmlSpanEmpty(t->token.data);
@@ -1064,8 +1064,8 @@ void resetInsertionMode(Tree* t) {
 bool isHtmlIntegrationPoint(const PrDomElement* element) {
     if (element->space == PrDomNamespace_MathMl && element->tag == PrDomTag_AnnotationXml) {
         const PrDomAttr* encoding = domAttribute(element, PrDomNamespace_None, "encoding");
-        return encoding != nullptr && (asciiEqualsFold(prStringView(&encoding->value), "text/html") ||
-            asciiEqualsFold(prStringView(&encoding->value), "application/xhtml+xml"));
+        return encoding != nullptr && (prAsciiEqualsFold(prStringView(&encoding->value), "text/html") ||
+            prAsciiEqualsFold(prStringView(&encoding->value), "application/xhtml+xml"));
     }
     return isSvgIntegrationPoint(element);
 }
@@ -1470,7 +1470,7 @@ bool inBodyStart(Tree* t) {
             PrDomElement* input = insertHtmlElement(t);
             pop(t);
             const PrDomAttr* type = domAttribute(input, PrDomNamespace_None, "type");
-            if (type == nullptr || !asciiEqualsFold(prStringView(&type->value), "hidden"))
+            if (type == nullptr || !prAsciiEqualsFold(prStringView(&type->value), "hidden"))
                 t->p->framesetOk = false;
             return false;
         }
@@ -1836,7 +1836,7 @@ bool inTable(Tree* t) {
             if (domIsHtml(current(t), PrDomTag_Table) || domIsHtml(current(t), PrDomTag_Tbody) ||
                     domIsHtml(current(t), PrDomTag_Template) || domIsHtml(current(t), PrDomTag_Tfoot) ||
                     domIsHtml(current(t), PrDomTag_Thead) || domIsHtml(current(t), PrDomTag_Tr)) {
-                textClear(&t->p->pending);
+                prTextBufferClear(&t->p->pending);
                 t->p->pendingText = false;
                 t->p->original = t->p->mode;
                 t->p->mode = HtmlInsertionMode_InTableText;
@@ -1895,7 +1895,7 @@ bool inTable(Tree* t) {
                         if (text(t, t->p->tokenizer.attributes.data[i].name) == "type")
                             type = &t->p->tokenizer.attributes.data[i];
                     }
-                    if (type == nullptr || !asciiEqualsFold(text(t, type->value), "hidden"))
+                    if (type == nullptr || !prAsciiEqualsFold(text(t, type->value), "hidden"))
                         break;
                     error(t);
                     insertHtmlElement(t);
@@ -2025,12 +2025,12 @@ bool processForeign(Tree* t) {
             }
 
             uint32_t i = t->p->open.count - 1;
-            if (!asciiEqualsFold(domElementName(t->p->open.data[i]), t->name))
+            if (!prAsciiEqualsFold(domElementName(t->p->open.data[i]), t->name))
                 error(t);
             for (;;) {
                 if (i == 0)
                     return false;
-                if (asciiEqualsFold(domElementName(t->p->open.data[i]), t->name)) {
+                if (prAsciiEqualsFold(domElementName(t->p->open.data[i]), t->name)) {
                     truncateOpen(t->p, i);
                     return false;
                 }
@@ -2401,11 +2401,11 @@ bool processIn(Tree* t, HtmlInsertionMode mode) {
                 }
                 if ((t->token.flags & HtmlTokenFlag_Text) != 0)
                     t->p->pendingText = true;
-                textAppend(&t->p->pending, text(t, t->token.data));
+                prTextBufferAppend(&t->p->pending, text(t, t->token.data));
                 return false;
             }
             {
-                PrStringView pending = textView(&t->p->pending);
+                PrStringView pending = prTextBufferView(&t->p->pending);
                 t->p->mode = t->p->original;
                 if (!t->p->pendingText) {
                     insertText(t, pending);
@@ -2894,7 +2894,7 @@ void htmlParserReset(HtmlParser* parser) {
     setPointer(&parser->form, nullptr);
     setPointer(&parser->context, nullptr);
     parser->templateModes.reset();
-    textReset(&parser->pending);
+    prTextBufferReset(&parser->pending);
 
     PrDomDocument* document = parser->document;
     HtmlParseFlags flags = parser->flags;
@@ -3020,7 +3020,7 @@ HtmlParserRest htmlParserRest(const HtmlParser* parser) {
 bool htmlParserIsAtRest(const HtmlParser* parser, const HtmlParserRest& rest) {
     return parser->open.count == rest.depth && parser->templateModes.count == rest.templates &&
         parser->mode == rest.mode && parser->form == rest.form && parser->formatting.count == 0 &&
-        parser->pending.text.count == 0 && !parser->skipNewline && !parser->fosterParenting && !parser->paused &&
+        parser->pending.size == 0 && !parser->skipNewline && !parser->fosterParenting && !parser->paused &&
         !parser->stopped && htmlTokenizerIsIdle(&parser->tokenizer);
 }
 
@@ -3031,7 +3031,7 @@ void htmlParserRestore(HtmlParser* parser, const HtmlParserRest& rest) {
         eraseFormatting(parser, parser->formatting.count - 1);
     parser->templateModes.resize(rest.templates);
     setPointer(&parser->form, rest.form);
-    textClear(&parser->pending);
+    prTextBufferClear(&parser->pending);
     parser->pendingText = false;
     parser->mode = rest.mode;
     parser->original = rest.mode;

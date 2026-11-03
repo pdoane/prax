@@ -51,7 +51,7 @@ bool sameLines(void* PR_NULLABLE context, uint32_t a, uint32_t b) {
     TextDiff* diff = static_cast<TextDiff*>(context);
     PrStringView first = diff->texts[TextDiffSide_Old]->line(diff->texts[TextDiffSide_Old]->context, a);
     PrStringView second = diff->texts[TextDiffSide_New]->line(diff->texts[TextDiffSide_New]->context, b);
-    return first.size == second.size && memEquals(first.data, second.data, first.size);
+    return first.size == second.size && prMemEquals(first.data, second.data, first.size);
 }
 
 // Writes a key of each character of `line` to `keys`, which its bytes make, and the offset of each to `offsets`, with
@@ -78,7 +78,7 @@ void compareLines(TextDiff* diff, uint32_t oldLine, uint32_t newLine) {
     const PrTextDiffText* young = diff->texts[TextDiffSide_New];
     PrStringView older = old->line(old->context, oldLine);
     PrStringView newer = young->line(young->context, newLine);
-    if (older.size == newer.size && memEquals(older.data, newer.data, older.size))
+    if (older.size == newer.size && prMemEquals(older.data, newer.data, older.size))
         return;
     if (older.size > diff->options.maxLineBytes || newer.size > diff->options.maxLineBytes) {
         diff->lineChanges.push(PrTextDiffLineChange{

@@ -147,7 +147,7 @@ JSValue getPointAtLength(JSContext* ctx, JSValueConst elementObject, int argc, J
     double distance = 0;
     if (element == nullptr || !jsArgCount(ctx, argc, 1) || JS_ToFloat64(ctx, &distance, argv[0]) < 0)
         return JS_EXCEPTION;
-    if (!isFiniteF64(distance))
+    if (!prF64IsFinite(distance))
         return JS_ThrowTypeError(ctx, "The distance is not a finite number");
     PrDomPoint point{0, 0, 0, 1};
     PrStatus status = prSvgGeometryElementGetPointAtLength(element, float(distance), &point);
@@ -184,7 +184,7 @@ bool floatOf(JSContext* ctx, JSValueConst value, float* out) {
     double number = 0;
     if (JS_ToFloat64(ctx, &number, value) < 0)
         return false;
-    if (!isFiniteF64(number) || !isFiniteF32(float(number))) {
+    if (!prF64IsFinite(number) || !prF32IsFinite(float(number))) {
         JS_ThrowTypeError(ctx, "The value is not a finite float");
         return false;
     }

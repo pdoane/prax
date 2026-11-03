@@ -736,10 +736,10 @@ double scalarQuantize(PrKitScalarKind kind, double value) {
     double low = 0;
     double high = 0;
     scalarBounds(kind, &low, &high);
-    double held = clampF64(isFiniteF64(value) ? value : 0, low, high);
+    double held = clampF64(prF64IsFinite(value) ? value : 0, low, high);
     if (kind == PrKitScalarKind_F32)
         return double(float(held));
-    return isIntegral(kind) ? roundF64(held) : held;
+    return isIntegral(kind) ? prF64Round(held) : held;
 }
 
 void scalarStore(PrKitScalar s, double value) {
@@ -810,7 +810,7 @@ NumberBounds boundsOf(const PrKitNumberRange& range, PrKitScalarKind kind) {
 // Writes `value` to `out`, which holds 64 bytes, with `precision` fraction digits. If the value is too large for that,
 // writes its shortest digits and an exponent instead. Returns the number of bytes written.
 uint32_t formatNumber(double value, uint32_t precision, char* out) {
-    if (!isFiniteF64(value))
+    if (!prF64IsFinite(value))
         value = 0;
     double magnitude = value < 0 ? -value : value;
     precision = precision > 9 ? 9 : precision;
@@ -819,22 +819,22 @@ uint32_t formatNumber(double value, uint32_t precision, char* out) {
         scale *= 10;
     uint32_t size = 0;
     if (magnitude * scale >= 1e18) {
-        ShortestDecimal d = shortestDecimalF64(value);
+        PrF64Decimal d = prF64ShortestDecimal(value);
         if (value < 0)
             out[size++] = '-';
-        size += uint32_t(formatU64(d.digits, out + size));
+        size += uint32_t(prU64Format(d.digits, out + size, 10));
         out[size++] = 'e';
         int32_t exponent = d.exponent;
         if (exponent < 0) {
             out[size++] = '-';
             exponent = -exponent;
         }
-        size += uint32_t(formatU64(uint64_t(exponent), out + size));
+        size += uint32_t(prU64Format(uint64_t(exponent), out + size, 10));
         return size;
     }
     uint64_t scaled = uint64_t(magnitude * scale + 0.5);
-    char digits[kU64TextMaxBytes];
-    uint32_t count = uint32_t(formatU64(scaled, digits));
+    char digits[kPrU64TextMaxBytes];
+    uint32_t count = uint32_t(prU64Format(scaled, digits, 10));
     if (value < 0 && scaled != 0)
         out[size++] = '-';
     // The digits are padded with leading zeros to one more than the number of fraction digits, so that a whole digit
@@ -1138,13 +1138,13 @@ struct SliderState {
 };
 
 double sliderValueAt(double low, double high, bool ratio, double t) {
-    return ratio ? low * powF64(high / low, t) : low + t * (high - low);
+    return ratio ? low * prF64Pow(high / low, t) : low + t * (high - low);
 }
 
 double sliderFractionAt(double low, double high, bool ratio, double value) {
     if (ratio) {
         double held = value > low ? value : low;
-        return clampF64(logF64(held / low) / logF64(high / low), 0, 1);
+        return clampF64(prF64Log(held / low) / prF64Log(high / low), 0, 1);
     }
     double span = high - low;
     return span != 0 ? clampF64((value - low) / span, 0, 1) : 0;

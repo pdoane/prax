@@ -101,7 +101,7 @@ void readOnly(Work* work) {
 PrStringView rowName(PrStringView file) {
     for (size_t size = file.size; size != 0; --size) {
         if (file.data[size - 1] == '.')
-            return stringSlice(file, 0, size - 1);
+            return prStringSlice(file, 0, size - 1);
     }
     return file;
 }
@@ -118,29 +118,29 @@ void report(PrStringView name, Work* work, uint32_t rules, uint32_t declarations
     harnessCountsAdd(&counts, "write", write);
     harnessCountsAdd(&counts, "tokenize", tokenize);
     harnessCountsAdd(&counts, "bound", bound);
-    TextBuffer row{};
+    PrTextBuffer row{};
     harnessAppendFormat(&row, "%s\n  {\"name\": \"%.*s\", \"bytes\": %u, \"out\": %u, \"rules\": %u,"
         " \"declarations\": %u, \"parse\": %.6f, \"ready\": %.6f, \"write\": %.6f, \"tokenize\": %.6f, \"bound\": %.6f",
         first ? "" : ",", int(name.size), name.data, uint32_t(work->text.size), out, rules,
         declarations, parse.millis, ready.millis, write.millis, tokenize.millis, bound.millis);
     harnessCountsWrite(&counts, &row);
-    textAppend(&row, "}");
-    fwrite(row.text.data, 1, row.text.count, stdout);
-    textReset(&row);
+    prTextBufferAppend(&row, "}");
+    fwrite(row.data, 1, row.size, stdout);
+    prTextBufferReset(&row);
 }
 
 } // namespace
 
 int main(int argc, char** argv) {
     prCrashHandler();
-    TextBuffer file;
+    PrTextBuffer file = {};
     printf("[");
     for (int i = 1; i < argc; ++i) {
         if (!harnessReadFile(&file, argv[i])) {
             fprintf(stderr, "cannot read %s\n", argv[i]);
             return 2;
         }
-        PrStringView text = textView(&file);
+        PrStringView text = prTextBufferView(&file);
 
         PrCssStyleSheet* sheet = prCssStyleSheetCreate(nullptr);
         prCssStyleSheetReplaceSync(sheet, text);
@@ -156,7 +156,7 @@ int main(int argc, char** argv) {
         cssTokenScratchReset(&work.scratch);
         prCssStyleSheetRelease(sheet);
     }
-    textReset(&file);
+    prTextBufferReset(&file);
     printf("\n]\n");
     return 0;
 }

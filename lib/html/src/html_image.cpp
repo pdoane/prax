@@ -81,58 +81,58 @@ bool webpSize(const uint8_t* data, size_t size, uint32_t* width, uint32_t* heigh
 // Returns a length of an SVG image's root in pixels, if the length is a number, bare or in px. Otherwise returns zero,
 // since a percentage or a relative length resolves against the image's context.
 uint32_t svgLength(PrStringView value) {
-    value = stringTrim(value);
+    value = prStringTrim(value);
     uint64_t whole = 0;
-    size_t at = parseU64Prefix(value.data, value.size, &whole);
+    size_t at = prU64ParsePrefix(value.data, value.size, &whole, 10);
     if (at == 0)
         return 0;
     if (at < value.size && value.data[at] == '.') {
         ++at;
-        while (at < value.size && asciiIsDigit(value.data[at]))
+        while (at < value.size && prAsciiIsDigit(value.data[at]))
             ++at;
     }
-    PrStringView unit = stringSlice(value, at, value.size - at);
+    PrStringView unit = prStringSlice(value, at, value.size - at);
     return unit.size == 0 || unit == "px" ? uint32_t(whole < UINT32_MAX ? whole : UINT32_MAX) : 0;
 }
 
 // Reads the size of an SVG image from the width and height attributes of its root element.
 bool svgSize(PrStringView text, uint32_t* width, uint32_t* height) {
     size_t start = 0;
-    while (start < text.size && asciiIsSpace(text.data[start]))
+    while (start < text.size && prAsciiIsSpace(text.data[start]))
         ++start;
     if (start == text.size || text.data[start] != '<')
         return false;
     size_t root = start;
     for (;;) {
-        root += stringFind(stringSlice(text, root, text.size - root), '<');
+        root += prStringFindByte(prStringSlice(text, root, text.size - root), '<');
         if (root >= text.size)
             return false;
-        PrStringView rest = stringSlice(text, root, text.size - root);
-        if (!stringStartsWith(rest, "<?") && !stringStartsWith(rest, "<!"))
+        PrStringView rest = prStringSlice(text, root, text.size - root);
+        if (!prStringStartsWith(rest, "<?") && !prStringStartsWith(rest, "<!"))
             break;
         ++root;
     }
-    PrStringView rest = stringSlice(text, root, text.size - root);
-    if (!stringStartsWith(rest, "<svg") || rest.size == 4 || !(asciiIsSpace(rest.data[4]) || rest.data[4] == '>'))
+    PrStringView rest = prStringSlice(text, root, text.size - root);
+    if (!prStringStartsWith(rest, "<svg") || rest.size == 4 || !(prAsciiIsSpace(rest.data[4]) || rest.data[4] == '>'))
         return false;
     *width = 0;
     *height = 0;
     size_t at = 4;
     while (at < rest.size && rest.data[at] != '>') {
-        if (asciiIsSpace(rest.data[at]) || rest.data[at] == '/') {
+        if (prAsciiIsSpace(rest.data[at]) || rest.data[at] == '/') {
             ++at;
             continue;
         }
         size_t name = at;
-        while (at < rest.size && rest.data[at] != '=' && rest.data[at] != '>' && !asciiIsSpace(rest.data[at]))
+        while (at < rest.size && rest.data[at] != '=' && rest.data[at] != '>' && !prAsciiIsSpace(rest.data[at]))
             ++at;
-        PrStringView attribute = stringSlice(rest, name, at - name);
-        while (at < rest.size && asciiIsSpace(rest.data[at]))
+        PrStringView attribute = prStringSlice(rest, name, at - name);
+        while (at < rest.size && prAsciiIsSpace(rest.data[at]))
             ++at;
         if (at == rest.size || rest.data[at] != '=')
             continue;
         ++at;
-        while (at < rest.size && asciiIsSpace(rest.data[at]))
+        while (at < rest.size && prAsciiIsSpace(rest.data[at]))
             ++at;
         if (at == rest.size || (rest.data[at] != '"' && rest.data[at] != '\''))
             return true;
@@ -140,7 +140,7 @@ bool svgSize(PrStringView text, uint32_t* width, uint32_t* height) {
         size_t value = at;
         while (at < rest.size && rest.data[at] != quote)
             ++at;
-        PrStringView content = stringSlice(rest, value, at - value);
+        PrStringView content = prStringSlice(rest, value, at - value);
         ++at;
         if (attribute == "width")
             *width = svgLength(content);

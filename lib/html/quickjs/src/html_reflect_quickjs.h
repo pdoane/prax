@@ -120,7 +120,7 @@ JSValue jsReflectEnumerated(JSContext* ctx, JSValueConst elementObject) {
     PrStringView value = prDomElementGetAttribute(element, Name.text);
     PrStringView result = value.data == nullptr ? Keywords->missing : Keywords->invalid;
     for (uint32_t i = 0; value.data != nullptr && i < Keywords->count; ++i) {
-        if (asciiEqualsFold(value, Keywords->keywords[i]))
+        if (prAsciiEqualsFold(value, Keywords->keywords[i]))
             result = Keywords->keywords[i];
     }
     return jsFixedString(ctx, result);

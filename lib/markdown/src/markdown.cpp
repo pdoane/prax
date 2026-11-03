@@ -11,6 +11,7 @@
 #include "pr/memory.h"
 #include "pr/sort.h"
 #include "pr/string_ops.h"
+#include "pr/string_trim.h"
 
 #include "markdown/src/markdown_block.h"
 #include "markdown/src/markdown_inline.h"
@@ -160,7 +161,7 @@ struct Markdown {
 };
 
 uint32_t hashOf(PrStringView label) {
-    return uint32_t(hashBytes(label.data, label.size, 0));
+    return uint32_t(prHashBytes(label.data, label.size, 0));
 }
 
 PrStringView textOf(const MarkdownDefinitions& table, MarkdownRange range) {
@@ -237,7 +238,7 @@ PrStringView viewOf(const MarkdownTopBlock& block, MarkdownRange range) {
 MarkdownTopBlock& addBlock(Markdown* document) {
     if (document->blockCount == document->blocks.count) {
         MarkdownTopBlock& added = document->blocks.emplace();
-        memZero(&added, sizeof(added));
+        prMemZero(&added, sizeof(added));
     }
     MarkdownTopBlock& block = document->blocks.data[document->blockCount++];
     block.nodes.clear();
@@ -320,29 +321,29 @@ typedef uint8_t FrontMatter;
 
 // Returns true if `line` is a fence of front matter: three hyphens, or three periods if `closing`, and spaces or tabs.
 bool isFrontMatterFence(PrStringView line, bool closing) {
-    PrStringView fence = stringTrim(line, [](char c) { return c == ' ' || c == '\t' || c == '\r'; });
+    PrStringView fence = stringTrimBy(line, [](char c) { return c == ' ' || c == '\t' || c == '\r'; });
     return fence == "---" || (closing && fence == "...");
 }
 
 // Finds the front matter at the start of `source`. If it is found, writes to `*outContent` the lines between its
 // fences, and to `*outEnd` the offset after its closing fence.
 FrontMatter findFrontMatter(PrStringView source, bool ended, PrStringView* outContent, size_t* outEnd) {
-    size_t first = stringFind(source, '\n');
+    size_t first = prStringFindByte(source, '\n');
     if (first == source.size) {
         // A first line that is not complete may yet be a fence.
-        PrStringView line = stringTrim(source, [](char c) { return c == ' ' || c == '\t' || c == '\r'; });
-        bool prefix = line.size <= 3 && stringStartsWith("---", line);
+        PrStringView line = stringTrimBy(source, [](char c) { return c == ' ' || c == '\t' || c == '\r'; });
+        bool prefix = line.size <= 3 && prStringStartsWith("---", line);
         return !ended && prefix ? FrontMatter_Pending : FrontMatter_None;
     }
-    if (!isFrontMatterFence(stringSlice(source, 0, first), false))
+    if (!isFrontMatterFence(prStringSlice(source, 0, first), false))
         return FrontMatter_None;
     size_t start = first + 1;
     size_t line = start;
     while (line < source.size) {
-        size_t end = line + stringFind(stringSlice(source, line, source.size - line), '\n');
+        size_t end = line + prStringFindByte(prStringSlice(source, line, source.size - line), '\n');
         bool complete = end < source.size;
-        if ((complete || ended) && isFrontMatterFence(stringSlice(source, line, end - line), true)) {
-            *outContent = stringSlice(source, start, line - start);
+        if ((complete || ended) && isFrontMatterFence(prStringSlice(source, line, end - line), true)) {
+            *outContent = prStringSlice(source, start, line - start);
             *outEnd = complete ? end + 1 : end;
             return FrontMatter_Found;
         }
@@ -487,7 +488,7 @@ void resolveFootnotes(Markdown* document, uint32_t rebuiltFrom) {
         uint32_t count = document->uses.count - block.firstUse;
         bool same = previousFirst + count <= document->previousUses.count;
         for (uint32_t i = 0; same && i < count; ++i)
-            same = memEquals(&document->previousUses.data[previousFirst + i], &document->uses.data[block.firstUse + i],
+            same = prMemEquals(&document->previousUses.data[previousFirst + i], &document->uses.data[block.firstUse + i],
                 sizeof(MarkdownFootnoteUse));
         if (!same)
             markResolved(document, b);
@@ -497,7 +498,7 @@ void resolveFootnotes(Markdown* document, uint32_t rebuiltFrom) {
     bool changed = document->footnotes.count != document->previousFootnotes.count;
     for (uint32_t i = 0; !changed && i < document->footnotes.count; ++i) {
         const MarkdownFootnote& footnote = document->footnotes.data[i];
-        changed = !memEquals(&footnote, &document->previousFootnotes.data[i], sizeof(MarkdownFootnote)) ||
+        changed = !prMemEquals(&footnote, &document->previousFootnotes.data[i], sizeof(MarkdownFootnote)) ||
             footnote.block >= rebuiltFrom || document->blocks.data[footnote.block].resolved;
     }
     document->footnotesChanged = document->footnotesChanged || changed;

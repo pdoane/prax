@@ -77,7 +77,7 @@ void setNonBlocking(int descriptor) {
 // A NUL-terminated copy of `text`.
 char* copyString(PrStringView text) {
     char* copy = static_cast<char*>(prMemoryAlloc(text.size + 1));
-    memCopy(copy, text.data, text.size);
+    prMemCopy(copy, text.data, text.size);
     copy[text.size] = 0;
     return copy;
 }
@@ -133,7 +133,7 @@ void writeInput(PosixProcess* process) {
         prMutexLock(&process->mutex);
         uint32_t size = process->queued.count - process->queuedStart;
         uint32_t taken = size < sizeof(chunk) ? size : uint32_t(sizeof(chunk));
-        memCopy(chunk, process->queued.data + process->queuedStart, taken);
+        prMemCopy(chunk, process->queued.data + process->queuedStart, taken);
         bool closing = process->inputClosing;
         prMutexUnlock(&process->mutex);
         if (taken == 0) {

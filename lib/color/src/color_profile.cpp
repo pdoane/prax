@@ -1,5 +1,6 @@
 #include "pr/color_profile.h"
 
+#include "pr/align.h"
 #include "pr/color_space.h"
 #include "pr/float.h"
 #include "pr/integer.h"
@@ -18,7 +19,7 @@ uint32_t readU16(const uint8_t* p) {
 }
 
 double readS15Fixed16(const uint8_t* p) {
-    return double(int32_t(readBeU32(p))) / 65536.0;
+    return double(int32_t(prMemReadBeU32(p))) / 65536.0;
 }
 
 constexpr uint32_t signature(const char (&text)[5]) {
@@ -32,7 +33,7 @@ double clamp01(double v) {
 
 // Returns `base` to the power `exponent`, for a base in [0, 1].
 double power(double base, double exponent) {
-    return base > 0 ? powF64(base, exponent) : exponent == 0 ? 1 : 0;
+    return base > 0 ? prF64Pow(base, exponent) : exponent == 0 ? 1 : 0;
 }
 
 // A one-dimensional curve: a curv or para element at an offset into the profile's bytes.
@@ -80,15 +81,15 @@ struct ColorProfile {
 
 // Returns the offset and size of the tag `name`, or false if the profile has none.
 bool findTag(const uint8_t* bytes, uint32_t size, uint32_t name, uint32_t* offset, uint32_t* length) {
-    uint32_t count = readBeU32(bytes + 128);
+    uint32_t count = prMemReadBeU32(bytes + 128);
     if (count > (size - 132) / 12)
         return false;
     for (uint32_t i = 0; i < count; ++i) {
         const uint8_t* entry = bytes + 132 + 12 * i;
-        if (readBeU32(entry) != name)
+        if (prMemReadBeU32(entry) != name)
             continue;
-        uint32_t at = readBeU32(entry + 4);
-        uint32_t span = readBeU32(entry + 8);
+        uint32_t at = prMemReadBeU32(entry + 4);
+        uint32_t span = prMemReadBeU32(entry + 8);
         if (at > size || span > size - at || span < 8)
             return false;
         *offset = at;
@@ -102,9 +103,9 @@ bool findTag(const uint8_t* bytes, uint32_t size, uint32_t name, uint32_t* offse
 bool readCurve(const uint8_t* bytes, uint32_t offset, uint32_t limit, Curve* out, uint32_t* used) {
     if (limit < 12)
         return false;
-    uint32_t type = readBeU32(bytes + offset);
+    uint32_t type = prMemReadBeU32(bytes + offset);
     if (type == signature("curv")) {
-        uint32_t count = readBeU32(bytes + offset + 8);
+        uint32_t count = prMemReadBeU32(bytes + offset + 8);
         if (count > (limit - 12) / 2)
             return false;
         *used = alignUp(12 + 2 * count, 4);
@@ -126,8 +127,8 @@ double evaluateCurve(const uint8_t* bytes, Curve curve, double x) {
     if (curve.offset == 0)
         return x;
     const uint8_t* p = bytes + curve.offset;
-    if (readBeU32(p) == signature("curv")) {
-        uint32_t count = readBeU32(p + 8);
+    if (prMemReadBeU32(p) == signature("curv")) {
+        uint32_t count = prMemReadBeU32(p + 8);
         if (count == 0)
             return x;
         if (count == 1)
@@ -172,7 +173,7 @@ double interpolateTable(const uint8_t* bytes, uint32_t at, uint32_t entries, uin
 bool readLut(const uint8_t* bytes, uint32_t offset, uint32_t length, uint32_t channels, Lut* lut) {
     const uint8_t* p = bytes + offset;
     *lut = Lut{};
-    lut->type = readBeU32(p);
+    lut->type = prMemReadBeU32(p);
     if (length < 32)
         return false;
     lut->inputs = p[8];
@@ -211,7 +212,7 @@ bool readLut(const uint8_t* bytes, uint32_t offset, uint32_t length, uint32_t ch
         return false;
     uint32_t offsets[5];
     for (uint32_t i = 0; i < 5; ++i) {
-        offsets[i] = readBeU32(p + 12 + 4 * i);
+        offsets[i] = prMemReadBeU32(p + 12 + 4 * i);
         if (offsets[i] >= length)
             return false;
     }
@@ -359,7 +360,7 @@ void evaluateLut(const ColorProfile* profile, const Lut& lut, const double* in, 
 bool readXyz(const uint8_t* bytes, uint32_t size, uint32_t name, double out[3]) {
     uint32_t offset = 0;
     uint32_t length = 0;
-    if (!findTag(bytes, size, name, &offset, &length) || length < 20 || readBeU32(bytes + offset) != signature("XYZ "))
+    if (!findTag(bytes, size, name, &offset, &length) || length < 20 || prMemReadBeU32(bytes + offset) != signature("XYZ "))
         return false;
     for (uint32_t i = 0; i < 3; ++i)
         out[i] = readS15Fixed16(bytes + offset + 8 + 4 * i);
@@ -384,12 +385,12 @@ struct PrColorProfile : ColorProfile {};
 
 PrStatus prColorProfileCreate(PrByteView bytes, PrColorProfile* PR_NULLABLE* PR_NONNULL out) {
     *out = nullptr;
-    if (bytes.size < 132 || bytes.size > 0xffffffffu || readBeU32(bytes.data + 36) != signature("acsp") ||
-            readBeU32(bytes.data) > bytes.size)
+    if (bytes.size < 132 || bytes.size > 0xffffffffu || prMemReadBeU32(bytes.data + 36) != signature("acsp") ||
+            prMemReadBeU32(bytes.data) > bytes.size)
         return PrStatus_InvalidData;
     uint32_t size = uint32_t(bytes.size);
-    uint32_t space = readBeU32(bytes.data + 16);
-    uint32_t connection = readBeU32(bytes.data + 20);
+    uint32_t space = prMemReadBeU32(bytes.data + 16);
+    uint32_t connection = prMemReadBeU32(bytes.data + 20);
     if (connection != signature("XYZ ") && connection != signature("Lab "))
         return PrStatus_InvalidData;
     PrColorModel model = PrColorModel_Count;

@@ -50,7 +50,7 @@ struct Reader {
     uint32_t read32() {
         if (!has(4))
             return 0;
-        uint32_t value = readBeU32(data + at);
+        uint32_t value = prMemReadBeU32(data + at);
         at += 4;
         return value;
     }
@@ -77,12 +77,12 @@ struct Box {
 int boxHeader(const uint8_t* data, size_t size, uint64_t* total, uint32_t* header) {
     if (size < 8)
         return 0;
-    uint64_t length = readBeU32(data);
+    uint64_t length = prMemReadBeU32(data);
     *header = 8;
     if (length == 1) {
         if (size < 16)
             return 0;
-        length = uint64_t(readBeU32(data + 8)) << 32 | readBeU32(data + 12);
+        length = uint64_t(prMemReadBeU32(data + 8)) << 32 | prMemReadBeU32(data + 12);
         *header = 16;
     }
     // A box that runs to the end of the file has no end in a stream.
@@ -101,7 +101,7 @@ bool eachBox(const uint8_t* data, size_t size, Visit visit) {
         uint32_t header = 0;
         if (boxHeader(data + at, size - at, &total, &header) != 1 || total > size - at)
             return false;
-        visit(Box{readBeU32(data + at + 4), data + at + header, size_t(total - header)});
+        visit(Box{prMemReadBeU32(data + at + 4), data + at + header, size_t(total - header)});
         at += size_t(total);
     }
     return true;
@@ -292,7 +292,7 @@ void readSampleEntry(MediaSegmentParser* p, const Box& entry, Mp4Track* track) {
     // Any other codec is named by its sample entry's type, in lowercase.
     track->codecAt = p->text.count;
     for (char c : name)
-        p->text.push(asciiLower(c));
+        p->text.push(prAsciiLower(c));
     track->codecSize = 4;
 }
 
@@ -383,7 +383,7 @@ bool readMovie(MediaSegmentParser* p, const Box& moov) {
     p->tracks.clear();
     p->text.clear();
     p->configs.clear();
-    p->duration = kNanF64;
+    p->duration = kPrF64Nan;
     bool ok = true;
     uint32_t movieTimescale = 0;
     uint64_t movieDuration = 0;
@@ -586,7 +586,7 @@ bool parseMp4(MediaSegmentParser* p, const PrMediaSegmentHandlers* handlers) {
         }
         if (found == 0 || total > size)
             break;
-        Box box{readBeU32(data + 4), data + header, size_t(total - header)};
+        Box box{prMemReadBeU32(data + 4), data + header, size_t(total - header)};
         if (box.type == fourCc("moov")) {
             if (!readMovie(p, box)) {
                 ok = false;
@@ -614,7 +614,7 @@ bool parseMp4(MediaSegmentParser* p, const PrMediaSegmentHandlers* handlers) {
                 }
                 if (nextFound == 0 || next > size - end)
                     break;
-                bool mdat = readBeU32(data + end + 4) == fourCc("mdat");
+                bool mdat = prMemReadBeU32(data + end + 4) == fourCc("mdat");
                 end += size_t(next);
                 if (mdat) {
                     whole = true;
@@ -648,7 +648,7 @@ struct PrMediaSegmentParser : MediaSegmentParser {};
 
 PrMediaByteStream prMediaByteStreamFromType(PrStringView type) {
     PrStringView essence = prMimeTypeEssence(type);
-    if (asciiEqualsFold(essence, "video/mp4") || asciiEqualsFold(essence, "audio/mp4"))
+    if (prAsciiEqualsFold(essence, "video/mp4") || prAsciiEqualsFold(essence, "audio/mp4"))
         return PrMediaByteStream_Mp4;
     return PrMediaByteStream_None;
 }
@@ -657,7 +657,7 @@ PrMediaSegmentParser* prMediaSegmentParserCreate(PrMediaByteStream format) {
     PR_ASSERT(format == PrMediaByteStream_Mp4);
     PrMediaSegmentParser* parser = allocZeroed<PrMediaSegmentParser>();
     parser->format = format;
-    parser->duration = kNanF64;
+    parser->duration = kPrF64Nan;
     return parser;
 }
 

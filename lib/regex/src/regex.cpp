@@ -78,7 +78,7 @@ bool isPerlClass(char c) {
 }
 
 PerlClass perlClassOf(char c) {
-    switch (asciiLower(c)) {
+    switch (prAsciiLower(c)) {
         case 'd': return PerlClass{kDigitRanges, 1};
         case 'w': return PerlClass{kWordRanges, 4};
         default: return PerlClass{kSpaceRanges, 3};
@@ -171,7 +171,7 @@ struct Parser {
     // Adds the ranges of a Perl class, or of its complement over all code points.
     void addPerlClass(char letter) {
         PerlClass c = perlClassOf(letter);
-        if (!asciiIsUpper(letter)) {
+        if (!prAsciiIsUpper(letter)) {
             program->ranges.append(c.ranges, c.count);
             return;
         }
@@ -257,10 +257,10 @@ struct Parser {
     }
 
     bool parseDecimal(int32_t* out) {
-        if (!asciiIsDigit(peek()))
+        if (!prAsciiIsDigit(peek()))
             return false;
         int32_t value = 0;
-        while (asciiIsDigit(peek())) {
+        while (prAsciiIsDigit(peek())) {
             value = value * 10 + (peek() - '0');
             value = value > kMaxRepeat ? kMaxRepeat + 1 : value;
             ++at;
@@ -394,7 +394,7 @@ struct Parser {
             *out = control;
             return true;
         }
-        if (asciiIsDigit(c) || asciiIsLetter(c)) {
+        if (prAsciiIsDigit(c) || prAsciiIsLetter(c)) {
             fail(PrStatus_Syntax);
             return false;
         }

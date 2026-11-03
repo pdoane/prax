@@ -67,10 +67,10 @@ typedef uint8_t Substitution;
 // not the end of a longer name, and writes the length of the name and parenthesis to `*length`.
 Substitution substitutionAt(PrStringView text, size_t i, size_t* length) {
     char before = i != 0 ? text.data[i - 1] : ' ';
-    if (asciiIsLetter(before) || asciiIsDigit(before) || before == '-')
+    if (prAsciiIsLetter(before) || prAsciiIsDigit(before) || before == '-')
         return Substitution_None;
     auto named = [&](PrStringView name) {
-        return i + name.size < text.size && asciiEqualsFold(PrStringView{text.data + i, name.size}, name) &&
+        return i + name.size < text.size && prAsciiEqualsFold(PrStringView{text.data + i, name.size}, name) &&
             text.data[i + name.size] == '(';
     };
     if (named("var")) {
@@ -123,7 +123,7 @@ struct Filing {
     uint32_t order;
     uint32_t anonymous;             // number of anonymous layers named so far
     const CssSheetData* sheet;      // the sheet whose rules are being filed
-    TextBuffer name;
+    PrTextBuffer name = {};
     Array<uint32_t> types;          // scratch: the types that a subject lists (typeAlternatives)
 
     // The tree whose sheets are being filed, or null for the user agent's sheets, and its depth.
@@ -199,14 +199,16 @@ void eachAttrRead(const CssDeclarationBlock* block, Visit visit) {
         PrStringView text = cssValueText(run, run.values);
         for (size_t at = 0; at < text.size; ++at) {
             size_t length = 0;
-            if (asciiLower(text.data[at]) != 'a' || substitutionAt(text, at, &length) != Substitution_Attr)
+            if (prAsciiLower(text.data[at]) != 'a' || substitutionAt(text, at, &length) != Substitution_Attr)
                 continue;
             size_t start = at + length;
-            while (start < text.size && (asciiIsSpace(text.data[start]) || text.data[start] == '|'))
+            while (start < text.size && (prAsciiIsSpace(text.data[start]) || text.data[start] == '|'))
                 ++start;
+            auto isNameByte = [](char c) {
+                return prAsciiIsLetter(c) || prAsciiIsDigit(c) || c == '-' || c == '_' || uint8_t(c) >= 0x80;
+            };
             size_t end = start;
-            while (end < text.size && (asciiIsLetter(text.data[end]) || asciiIsDigit(text.data[end]) || text.data[end] == '-' ||
-                    text.data[end] == '_' || uint8_t(text.data[end]) >= 0x80))
+            while (end < text.size && isNameByte(text.data[end]))
                 ++end;
             visit(PrStringView{text.data + start, end - start});
         }
@@ -317,7 +319,7 @@ void collectAncestors(const PrCssSelectors* selectors, const CssComplexSelector*
         if (!typeAlternatives(selectors, &compounds[k], types))
             continue;
         if (types.count <= kCssAncestorAlternatives)
-            memCopy(anyOf, types.data, sizeof(uint32_t) * types.count);
+            prMemCopy(anyOf, types.data, sizeof(uint32_t) * types.count);
         break;
     }
     types.clear();
@@ -861,10 +863,10 @@ void fileRules(Filing& f, const Array<CssRuleData* PR_NONNULL>& rules, uint16_t 
 // Returns the name of the layer that an @layer rule's prelude names at `index` among its comma-separated names, under
 // `prefix`.
 PrStringView layerName(Filing& f, PrStringView names, uint32_t index, PrStringView prefix) {
-    f.name.text.clear();
+    prTextBufferClear(&f.name);
     if (prefix.size != 0) {
-        textAppend(&f.name, prefix);
-        textAppendChar(&f.name, '.');
+        prTextBufferAppend(&f.name, prefix);
+        prTextBufferAppendChar(&f.name, '.');
     }
     uint32_t at = 0;
     for (size_t i = 0; i < names.size; ++i) {
@@ -873,10 +875,10 @@ PrStringView layerName(Filing& f, PrStringView names, uint32_t index, PrStringVi
             ++at;
             continue;
         }
-        if (at == index && !asciiIsSpace(c))
-            textAppendChar(&f.name, c);
+        if (at == index && !prAsciiIsSpace(c))
+            prTextBufferAppendChar(&f.name, c);
     }
-    return textView(&f.name);
+    return prTextBufferView(&f.name);
 }
 
 // Returns true if `list` matches the filing's media. The set records the list with the result.
@@ -892,7 +894,7 @@ bool matchesMedia(Filing& f, const CssMediaQueries* list) {
 void fileImport(Filing& f, const CssRuleData* rule, uint16_t layer, PrStringView prefix) {
     CssValueRun prelude = cssValueListRun(&rule->prelude);
     bool layered = false;
-    TextBuffer named{};
+    PrTextBuffer named{};
     // The layer and the condition may sit inside productions that group them, so every node is read. The arguments of a
     // function are read only as part of the function.
     for (uint32_t i = 0; i < prelude.count; ++i) {
@@ -908,7 +910,7 @@ void fileImport(Filing& f, const CssRuleData* rule, uint16_t layer, PrStringView
         // A supports() whose arguments are neither a supports condition nor a declaration is a condition that fails.
         bool condition = arguments.count != 0 && arguments.values[0].kind == PrCssValueKind_Production;
         if (function == PrCssKeyword_Supports && (!condition || !cssSupportsEvaluate(arguments))) {
-            textReset(&named);
+            prTextBufferReset(&named);
             return;
         }
         if (function == PrCssKeyword_Layer) {
@@ -921,12 +923,12 @@ void fileImport(Filing& f, const CssRuleData* rule, uint16_t layer, PrStringView
     PrString name{};
     if (layered) {
         // An import into an anonymous layer is a layer of its own (css-cascade-5/#at-import).
-        PrStringView names = textView(&named);
+        PrStringView names = prTextBufferView(&named);
         if (names.size == 0) {
-            f.name.text.clear();
-            textAppendChar(&f.name, '\x01');
-            textAppendU64(&f.name, f.anonymous++);
-            name = prStringCopy(textView(&f.name));
+            prTextBufferClear(&f.name);
+            prTextBufferAppendChar(&f.name, '\x01');
+            prTextBufferAppendU64(&f.name, f.anonymous++, 10);
+            name = prStringCopy(prTextBufferView(&f.name));
         } else {
             name = prStringCopy(layerName(f, names, 0, prefix));
         }
@@ -937,7 +939,7 @@ void fileImport(Filing& f, const CssRuleData* rule, uint16_t layer, PrStringView
     fileRules(f, rule->imported->rules, index, layered ? prStringView(&name) : prefix);
     f.sheet = importing;
     prStringReset(&name);
-    textReset(&named);
+    prTextBufferReset(&named);
 }
 
 void fileAtRule(Filing& f, const CssRuleData* rule, uint16_t layer, PrStringView prefix) {
@@ -956,9 +958,9 @@ void fileAtRule(Filing& f, const CssRuleData* rule, uint16_t layer, PrStringView
             break;
         case CssAtRule_Keyframes: {
             // A later rule of a name replaces an earlier one (css-animations-1/#keyframes).
-            TextBuffer prelude{};
+            PrTextBuffer prelude{};
             cssSerializePrelude(&prelude, rule);
-            PrStringView name = stringTrim(textView(&prelude));
+            PrStringView name = prStringTrim(prTextBufferView(&prelude));
             if (name.size >= 2 && (name.data[0] == '"' || name.data[0] == '\''))
                 name = PrStringView{name.data + 1, name.size - 2};
             bool replaced = false;
@@ -970,16 +972,16 @@ void fileAtRule(Filing& f, const CssRuleData* rule, uint16_t layer, PrStringView
             }
             if (!replaced)
                 f.set->keyframes.push(CssKeyframes{prStringCopy(name), rule});
-            prelude.text.reset();
+            prTextBufferReset(&prelude);
             break;
         }
         case CssAtRule_CounterStyle:
             f.set->counterStyleRules.push(rule);
             break;
         case CssAtRule_Layer: {
-            TextBuffer prelude{};
+            PrTextBuffer prelude{};
             cssSerializePrelude(&prelude, rule);
-            PrStringView names = textView(&prelude);
+            PrStringView names = prTextBufferView(&prelude);
             if (!rule->block) {
                 // A statement declares the order of its layers (css-cascade-5/#layer-empty).
                 uint32_t count = 1;
@@ -987,23 +989,23 @@ void fileAtRule(Filing& f, const CssRuleData* rule, uint16_t layer, PrStringView
                     count += names.data[i] == ',' ? 1 : 0;
                 for (uint32_t i = 0; i < count; ++i)
                     layerIndex(f, layerName(f, names, i, prefix));
-                prelude.text.reset();
+                prTextBufferReset(&prelude);
                 break;
             }
             // A block with no name is a layer of its own (css-cascade-5/#layer-block).
             PrString name{};
             if (names.size == 0) {
-                f.name.text.clear();
-                textAppendChar(&f.name, '\x01');
-                textAppendU64(&f.name, f.anonymous++);
-                name = prStringCopy(textView(&f.name));
+                prTextBufferClear(&f.name);
+                prTextBufferAppendChar(&f.name, '\x01');
+                prTextBufferAppendU64(&f.name, f.anonymous++, 10);
+                name = prStringCopy(prTextBufferView(&f.name));
             } else {
                 name = prStringCopy(layerName(f, names, 0, prefix));
             }
             uint16_t index = layerIndex(f, prStringView(&name));
             fileRules(f, rule->children, index, prStringView(&name));
             prStringReset(&name);
-            prelude.text.reset();
+            prTextBufferReset(&prelude);
             break;
         }
         default:
@@ -1359,7 +1361,7 @@ typedef uint8_t Fit;
 Fit fits(const CssMatchedStyle& cached, uint32_t hash, const CssCascadeScratch& s, const CssCascadeInput& input,
         uint64_t sharedHints, DomWidget widget, CssAppearance parentAppearance) {
     if (cached.style == nullptr || cached.hash != hash || cached.matched.count != s.candidates.count ||
-            !memEquals(cached.matched.data, s.candidates.data, sizeof(uint32_t) * s.candidates.count) ||
+            !prMemEquals(cached.matched.data, s.candidates.data, sizeof(uint32_t) * s.candidates.count) ||
             cached.pseudo != input.pseudo || cached.sharedHints != sharedHints || cached.widget != widget ||
             cached.parentAppearance != parentAppearance)
         return Fit_None;
@@ -1494,7 +1496,7 @@ bool remembers(const CssCascadeMemo& memo, const CssRuleSet* set, const CssCasca
             (memo.viewport.width != input.viewport.width || memo.viewport.height != input.viewport.height))
         return false;
     return memo.matched.count == s.candidates.count &&
-        memEquals(memo.matched.data, s.candidates.data, sizeof(uint32_t) * s.candidates.count);
+        prMemEquals(memo.matched.data, s.candidates.data, sizeof(uint32_t) * s.candidates.count);
 }
 
 // Keeps `style`, which the element now has from the entries it matched, in its memo.
@@ -1556,7 +1558,7 @@ void filterAncestors(CssCascadeScratch& s, const PrDomElement* element) {
     if (parentElement != nullptr && s.ancestorsOf != nullptr && parent->parent == s.ancestorsOf && s.ancestorsEpoch == s.epoch) {
         addFeatures(s, parentElement);
     } else {
-        memZero(s.ancestorBits, sizeof(s.ancestorBits));
+        prMemZero(s.ancestorBits, sizeof(s.ancestorBits));
         for (const PrDomElement* at = parentElement; at != nullptr; at = domElementFromNode(at->parent))
             addFeatures(s, at);
     }
@@ -1782,10 +1784,10 @@ bool isNumberToken(PrStringView text) {
     if (i < text.size && (text.data[i] == '+' || text.data[i] == '-'))
         ++i;
     size_t digits = 0;
-    for (; i < text.size && asciiIsDigit(text.data[i]); ++i)
+    for (; i < text.size && prAsciiIsDigit(text.data[i]); ++i)
         ++digits;
-    if (i + 1 < text.size && text.data[i] == '.' && asciiIsDigit(text.data[i + 1])) {
-        for (++i; i < text.size && asciiIsDigit(text.data[i]); ++i)
+    if (i + 1 < text.size && text.data[i] == '.' && prAsciiIsDigit(text.data[i + 1])) {
+        for (++i; i < text.size && prAsciiIsDigit(text.data[i]); ++i)
             ++digits;
     }
     if (digits == 0)
@@ -1794,8 +1796,8 @@ bool isNumberToken(PrStringView text) {
         size_t at = i + 1;
         if (at < text.size && (text.data[at] == '+' || text.data[at] == '-'))
             ++at;
-        if (at < text.size && asciiIsDigit(text.data[at])) {
-            for (i = at; i < text.size && asciiIsDigit(text.data[i]); ++i) {
+        if (at < text.size && prAsciiIsDigit(text.data[at])) {
+            for (i = at; i < text.size && prAsciiIsDigit(text.data[i]); ++i) {
             }
         }
     }
@@ -1806,8 +1808,8 @@ bool isNumberToken(PrStringView text) {
 // (css-values-5/#attr-substitution). `fallback` says whether a fallback follows the comma. Returns Reference_Missing on
 // failure, which takes the fallback, or makes the value invalid without one. With neither a type nor a fallback, a
 // failure gives the empty string instead.
-Reference attrValue(const PrDomElement* PR_NULLABLE element, PrStringView first, bool fallback, TextBuffer* out) {
-    PrStringView arguments = stringTrim(first);
+Reference attrValue(const PrDomElement* PR_NULLABLE element, PrStringView first, bool fallback, PrTextBuffer* out) {
+    PrStringView arguments = prStringTrim(first);
     // <attr-name>: an identifier, after an optional '|' that names no namespace. A namespace prefix names a namespace
     // that the engine does not declare.
     size_t at = 0;
@@ -1815,30 +1817,30 @@ Reference attrValue(const PrDomElement* PR_NULLABLE element, PrStringView first,
         ++at;
     size_t nameStart = at;
     while (at < arguments.size &&
-            (asciiIsLetter(arguments.data[at]) || asciiIsDigit(arguments.data[at]) || arguments.data[at] == '-' ||
+            (prAsciiIsLetter(arguments.data[at]) || prAsciiIsDigit(arguments.data[at]) || arguments.data[at] == '-' ||
                 arguments.data[at] == '_' || uint8_t(arguments.data[at]) >= 0x80))
         ++at;
     PrStringView name{arguments.data + nameStart, at - nameStart};
-    PrStringView type = stringTrim(PrStringView{arguments.data + at, arguments.size - at});
-    bool raw = type.size == 0 || asciiEqualsFold(type, "raw-string");
+    PrStringView type = prStringTrim(PrStringView{arguments.data + at, arguments.size - at});
+    bool raw = type.size == 0 || prAsciiEqualsFold(type, "raw-string");
     auto fail = [&]() {
         if (raw && !fallback) {
-            textAppend(out, "\"\"");
+            prTextBufferAppend(out, "\"\"");
             return Reference_Found;
         }
         return Reference_Missing;
     };
-    bool parsed = name.size != 0 && !asciiIsDigit(name.data[0]) &&
-        (at == arguments.size || asciiIsSpace(arguments.data[at]) || type.size == 0);
+    bool parsed = name.size != 0 && !prAsciiIsDigit(name.data[0]) &&
+        (at == arguments.size || prAsciiIsSpace(arguments.data[at]) || type.size == 0);
     if (!parsed || element == nullptr)
         return fail();
     // An HTML element's attribute names are lowercase in an HTML document, and attr() names them as attribute selectors
     // do.
-    TextBuffer lowered{};
+    PrTextBuffer lowered{};
     if (domIsHtmlInHtmlDocument(element)) {
         for (size_t i = 0; i < name.size; ++i)
-            textAppendChar(&lowered, asciiLower(name.data[i]));
-        name = textView(&lowered);
+            prTextBufferAppendChar(&lowered, prAsciiLower(name.data[i]));
+        name = prTextBufferView(&lowered);
     }
     PrStringView value = domAttributeValue(element, name);
     Reference result = Reference_Found;
@@ -1846,27 +1848,27 @@ Reference attrValue(const PrDomElement* PR_NULLABLE element, PrStringView first,
         result = fail();
     } else if (raw) {
         cssSerializeString(out, value);
-    } else if (asciiEqualsFold(type, "number") || asciiEqualsFold(type, "%") ||
+    } else if (prAsciiEqualsFold(type, "number") || prAsciiEqualsFold(type, "%") ||
             cssUnitFromText(type) != PrCssUnit_Unknown) {
         // A number, or a dimension or percentage of the number in the unit.
-        PrStringView number = stringTrim(value);
+        PrStringView number = prStringTrim(value);
         if (!isNumberToken(number)) {
             result = fail();
         } else {
-            textAppend(out, number);
-            if (!asciiEqualsFold(type, "number"))
-                textAppend(out, type);
+            prTextBufferAppend(out, number);
+            if (!prAsciiEqualsFold(type, "number"))
+                prTextBufferAppend(out, type);
         }
-    } else if (type.size > 6 && asciiEqualsFold(PrStringView{type.data, 5}, "type(") && type.data[type.size - 1] == ')') {
+    } else if (type.size > 6 && prAsciiEqualsFold(PrStringView{type.data, 5}, "type(") && type.data[type.size - 1] == ')') {
         // The value as the syntax parses it. <url> is not among the syntax's components.
         CssParser parser;
         cssParserInit(&parser);
         CssSyntaxDefinition syntax{};
-        bool valid = cssSyntaxDefinitionParse(&parser, stringTrim(PrStringView{type.data + 5, type.size - 6}), &syntax);
+        bool valid = cssSyntaxDefinitionParse(&parser, prStringTrim(PrStringView{type.data + 5, type.size - 6}), &syntax);
         for (uint32_t i = 0; valid && i < syntax.components.count; ++i)
             valid = syntax.components.data[i].type != CssValueDef_Url;
         if (valid && cssSyntaxValueMatches(&parser, &syntax, value))
-            textAppend(out, stringTrim(value));
+            prTextBufferAppend(out, prStringTrim(value));
         else
             result = fail();
         cssSyntaxDefinitionReset(&syntax);
@@ -1874,7 +1876,7 @@ Reference attrValue(const PrDomElement* PR_NULLABLE element, PrStringView first,
     } else {
         result = fail();
     }
-    lowered.text.reset();
+    prTextBufferReset(&lowered);
     return result;
 }
 
@@ -1884,14 +1886,14 @@ Reference attrValue(const PrDomElement* PR_NULLABLE element, PrStringView first,
 // attr() (css-values-5/#attr-security). Returns false if a function has neither, or if the result grows past
 // kMaxSubstitution (css-values-5/#long-substitution). Either case makes the value invalid.
 template <typename Lookup>
-bool substitute(TextBuffer* out, PrStringView text, Lookup& lookup) {
+bool substitute(PrTextBuffer* out, PrStringView text, Lookup& lookup) {
     size_t i = 0;
     while (i < text.size) {
         size_t length = 0;
-        char lead = asciiLower(text.data[i]);
+        char lead = prAsciiLower(text.data[i]);
         Substitution function = lead == 'v' || lead == 'a' ? substitutionAt(text, i, &length) : Substitution_None;
         if (function == Substitution_None) {
-            textAppendChar(out, text.data[i++]);
+            prTextBufferAppendChar(out, text.data[i++]);
             continue;
         }
         // The arguments, up to the matching parenthesis.
@@ -1912,16 +1914,16 @@ bool substitute(TextBuffer* out, PrStringView text, Lookup& lookup) {
         PrStringView first{text.data + start, (comma != 0 ? comma : close) - start};
         Reference found = Reference_Missing;
         if (function == Substitution_Var) {
-            found = lookup(stringTrim(first), out);
+            found = lookup(prStringTrim(first), out);
         } else {
             lookup.tainted = true;
-            TextBuffer arguments{};
+            PrTextBuffer arguments{};
             if (!substitute(&arguments, first, lookup)) {
-                arguments.text.reset();
+                prTextBufferReset(&arguments);
                 return false;
             }
-            found = attrValue(lookup.element, textView(&arguments), comma != 0, out);
-            arguments.text.reset();
+            found = attrValue(lookup.element, prTextBufferView(&arguments), comma != 0, out);
+            prTextBufferReset(&arguments);
         }
         if (found == Reference_Invalid)
             return false;
@@ -1929,7 +1931,7 @@ bool substitute(TextBuffer* out, PrStringView text, Lookup& lookup) {
             if (comma == 0 || !substitute(out, PrStringView{text.data + comma + 1, close - comma - 1}, lookup))
                 return false;
         }
-        if (out->text.count > kMaxSubstitution)
+        if (out->size > kMaxSubstitution)
             return false;
         i = close + 1;
     }
@@ -1943,11 +1945,11 @@ struct ComputedLookup {
     const PrDomElement* PR_NULLABLE element;
     bool tainted;                   // an attr() was replaced
 
-    Reference operator()(PrStringView name, TextBuffer* out) const {
+    Reference operator()(PrStringView name, PrTextBuffer* out) const {
         PrStringView value{};
-        if (!cssCustomValue(custom, name, &value) || stringTrim(value).size == 0)
+        if (!cssCustomValue(custom, name, &value) || prStringTrim(value).size == 0)
             return Reference_Missing;
-        textAppend(out, value);
+        prTextBufferAppend(out, value);
         return Reference_Found;
     }
 };
@@ -1963,7 +1965,7 @@ CssValueRun declaredValue(CssCascadeScratch& s, const CssCascaded& cascaded, con
         return run;
     PrCssProperty declared = cascaded.declaration->property;
     bool parsed = declared != property && s.shorthand == cascaded.declaration;
-    s.text.text.clear();
+    prTextBufferClear(&s.text);
     ComputedLookup lookup{custom, s.element, false};
     if (!parsed && !substitute(&s.text, cssValueText(run, run.values), lookup))
         return CssValueRun{};
@@ -1978,7 +1980,7 @@ CssValueRun declaredValue(CssCascadeScratch& s, const CssCascaded& cascaded, con
         return false;
     };
     if (declared == property) {
-        if (!cssParseDeclaredValue(cssPropertyDeclaredName(property), textView(&s.text), &s.substituted, nullptr))
+        if (!cssParseDeclaredValue(cssPropertyDeclaredName(property), prTextBufferView(&s.text), &s.substituted, nullptr))
             return CssValueRun{};
         CssValueRun value = cssValuePoolRun(&s.substituted, CssValueSpan{0, s.substituted.values.count});
         return lookup.tainted && tainted(value) ? CssValueRun{} : value;
@@ -1987,18 +1989,18 @@ CssValueRun declaredValue(CssCascadeScratch& s, const CssCascaded& cascaded, con
     // longhands that it declares reads the one parse.
     CssDeclarationBlock* block = &s.shorthandBlock;
     if (!parsed) {
-        PrStringView text = textView(&s.text);
-        PrStringView last = textView(&s.parsedText);
-        if (s.parsedShorthand != declared || text.size != last.size || !memEquals(text.data, last.data, text.size)) {
-            TextBuffer declaration{};
-            textAppend(&declaration, cssPropertyName(declared));
-            textAppendChar(&declaration, ':');
-            textAppend(&declaration, text);
-            cssDeclarationBlockParse(block, textView(&declaration), nullptr);
-            declaration.text.reset();
+        PrStringView text = prTextBufferView(&s.text);
+        PrStringView last = prTextBufferView(&s.parsedText);
+        if (s.parsedShorthand != declared || text.size != last.size || !prMemEquals(text.data, last.data, text.size)) {
+            PrTextBuffer declaration{};
+            prTextBufferAppend(&declaration, cssPropertyName(declared));
+            prTextBufferAppendChar(&declaration, ':');
+            prTextBufferAppend(&declaration, text);
+            cssDeclarationBlockParse(block, prTextBufferView(&declaration), nullptr);
+            prTextBufferReset(&declaration);
             s.parsedShorthand = declared;
-            s.parsedText.text.clear();
-            textAppend(&s.parsedText, text);
+            prTextBufferClear(&s.parsedText);
+            prTextBufferAppend(&s.parsedText, text);
         }
         s.shorthand = cascaded.declaration;
         s.shorthandTainted = lookup.tainted;
@@ -2029,7 +2031,7 @@ struct CustomEntry {
     uint32_t hash;
     PrStringView declared;
     Resolution resolution;
-    TextBuffer resolved;
+    PrTextBuffer resolved;
 };
 
 // Resolves references among the element's declared custom properties, each property once. A name that the element does
@@ -2041,17 +2043,17 @@ struct CustomLookup {
     const PrDomElement* PR_NULLABLE element; // whose attributes attr() reads
     bool tainted;                            // an attr() was replaced
 
-    Reference operator()(PrStringView name, TextBuffer* out) {
+    Reference operator()(PrStringView name, PrTextBuffer* out) {
         auto named = [&](uint32_t k) { return entries->data[k].name == name; };
         uint32_t i = byName->find(cssCustomHash(name), named);
         if (i == kHashMissing)
             return ComputedLookup{parent, element, false}(name, out);
         if (!resolve(i))
             return Reference_Invalid;
-        PrStringView value = textView(&entries->data[i].resolved);
-        if (stringTrim(value).size == 0)
+        PrStringView value = prTextBufferView(&entries->data[i].resolved);
+        if (prStringTrim(value).size == 0)
             return Reference_Missing;
-        textAppend(out, value);
+        prTextBufferAppend(out, value);
         return Reference_Found;
     }
 
@@ -2064,12 +2066,12 @@ struct CustomLookup {
             return false;
         }
         entry.resolution = Resolution_Resolving;
-        TextBuffer value{};
+        PrTextBuffer value{};
         bool valid = substitute(&value, entry.declared, *this);
         // The entry may have moved while references were resolved, so it is found again by index.
         CustomEntry& resolved = entries->data[index];
         if (!valid || resolved.resolution == Resolution_Invalid) {
-            value.text.reset();
+            prTextBufferReset(&value);
             resolved.resolution = Resolution_Invalid;
             return false;
         }
@@ -2086,7 +2088,7 @@ PrCssKeyword customWideKeyword(CssValueRun run) {
     PrCssKeyword keyword = wideKeyword(run);
     if (keyword != PrCssKeyword_Count || run.count != 1 || run.values[0].kind != PrCssValueKind_Tokens)
         return keyword;
-    PrCssKeyword named = cssKeywordFromText(stringTrim(cssValueText(run, run.values)));
+    PrCssKeyword named = cssKeywordFromText(prStringTrim(cssValueText(run, run.values)));
     return cssIsCssWideKeyword(named) ? named : PrCssKeyword_Count;
 }
 
@@ -2117,7 +2119,7 @@ const CssCustomProperties* PR_NULLABLE customProperties(CssCascadeScratch& s, Cs
             if (cssCustomValue(parent, name, &inherited)) {
                 entry.declared = inherited;
                 entry.resolution = Resolution_Resolved;
-                textAppend(&entry.resolved, inherited);
+                prTextBufferAppend(&entry.resolved, inherited);
             } else {
                 entry.resolution = Resolution_Invalid;
             }
@@ -2136,7 +2138,7 @@ const CssCustomProperties* PR_NULLABLE customProperties(CssCascadeScratch& s, Cs
     for (uint32_t i = 0; i < entries.count; ++i) {
         const CustomEntry& e = entries.data[i];
         bool invalid = e.resolution != Resolution_Resolved;
-        declared.push(CssCustomRow{e.hash, e.name, invalid ? PrStringView{} : textView(&e.resolved), invalid});
+        declared.push(CssCustomRow{e.hash, e.name, invalid ? PrStringView{} : prTextBufferView(&e.resolved), invalid});
     }
     sortItems(declared.data, declared.count, [](const CssCustomRow& a, const CssCustomRow& b) {
         return cssCustomBefore(a.hash, a.name, b.hash, b.name);
@@ -2200,7 +2202,7 @@ const CssCustomProperties* PR_NULLABLE customProperties(CssCascadeScratch& s, Cs
     inherited.reset();
     declared.reset();
     for (uint32_t k = 0; k < entries.count; ++k)
-        entries.data[k].resolved.text.reset();
+        prTextBufferReset(&entries.data[k].resolved);
     entries.reset();
     return made;
 }
@@ -2724,13 +2726,13 @@ const CssStyleValues* computeGroup(CssStyleBuilder* builder, CssCascadeScratch& 
         const CssCascaded& winner = s.winners.data[properties.properties[i]];
         key.push(uint64_t(uintptr_t(winner.declaration)) ^ uint64_t(winner.longhand) << 48);
     }
-    uint64_t hash = hashBytes(key.data, sizeof(uint64_t) * key.count, kMatchedSeed) | 1;
+    uint64_t hash = prHashBytes(key.data, sizeof(uint64_t) * key.count, kMatchedSeed) | 1;
     if (s.cachedGroups.count == 0)
         s.cachedGroups.resizeZeroed(kCssCachedGroups);
     CssCachedGroup& cached = s.cachedGroups.data[hash % kCssCachedGroups];
     const CssStyleValues* parentValues = root ? nullptr : input.parent->groups[group];
     bool hit = cached.hash == hash && cached.key.count == key.count &&
-        memEquals(cached.key.data, key.data, sizeof(uint64_t) * key.count) &&
+        prMemEquals(cached.key.data, key.data, sizeof(uint64_t) * key.count) &&
         (!cached.inheritsReset || cached.parentValues == parentValues) && (!cached.readsViewport ||
             (cached.viewport.width == input.viewport.width && cached.viewport.height == input.viewport.height)) &&
         !cached.readsMetrics;
@@ -2962,7 +2964,7 @@ void cssRuleSetBuildUserAgent(CssRuleSet* set, const PrDomDocument* document,
         fileRules(f, userAgent[i].data->rules, kCssUnlayered, PrStringView{});
     }
     fileAttrReads(set, 0);
-    f.name.text.reset();
+    prTextBufferReset(&f.name);
     f.types.reset();
 }
 
@@ -2994,7 +2996,7 @@ void cssRuleSetBuild(CssRuleSet* set, const CssRuleSet* base, const CssTreeSheet
     fileAttrReads(set, base->entries.count);
     cssCounterStylesBuild(&set->counterStyles, set->counterStyleRules.data, set->counterStyleRules.count,
         media != nullptr ? media->fontSize : 16);
-    f.name.text.reset();
+    prTextBufferReset(&f.name);
     f.types.reset();
 }
 
@@ -3061,7 +3063,7 @@ const CssComputedStyle* cssCascadeStyle(const CssRuleSet* set, CssStyleBuilder* 
     if (s.winners.count == 0) {
         s.winners.reserve(PrCssProperty_Count);
         s.winners.count = PrCssProperty_Count;
-        memZero(s.winners.data, sizeof(CssCascaded) * PrCssProperty_Count);
+        prMemZero(s.winners.data, sizeof(CssCascaded) * PrCssProperty_Count);
     }
     s.element = input.element;
     s.inheritsReset = false;
@@ -3120,7 +3122,7 @@ const CssComputedStyle* cssCascadeStyle(const CssRuleSet* set, CssStyleBuilder* 
     if (cacheable) {
         uint64_t salt = input.pseudo + (uint64_t(widget) << 8) + (uint64_t(parentAppearance) << 16) +
             sharedId * 0x9e3779b97f4a7c15ull;
-        hash = uint32_t(hashBytes(s.candidates.data, sizeof(uint32_t) * s.candidates.count, kMatchedSeed + salt)) | 1;
+        hash = uint32_t(prHashBytes(s.candidates.data, sizeof(uint32_t) * s.candidates.count, kMatchedSeed + salt)) | 1;
         CssMatchedStyle* candidates = matchedSet(s, hash);
         ++s.matchedLookups;
         for (uint32_t way = 0; way < kCssMatchedWays; ++way) {
@@ -3384,11 +3386,11 @@ void cssCascadeScratchReset(CssCascadeScratch* scratch) {
     scratch->custom.reset();
     scratch->customIndex.reset();
     cssValuePoolReset(&scratch->substituted);
-    scratch->text.text.reset();
+    prTextBufferReset(&scratch->text);
     cssDeclarationBlockReset(&scratch->shorthandBlock);
     scratch->shorthand = nullptr;
     scratch->parsedShorthand = PrCssProperty_Count;
-    scratch->parsedText.text.reset();
+    prTextBufferReset(&scratch->parsedText);
 }
 
 void cssStylePrepare(PrDomElement* element) {

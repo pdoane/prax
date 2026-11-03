@@ -49,7 +49,7 @@ size_t readProcess(PrProcess* base, PrProcessStream stream, uint8_t* PR_NULLABLE
     uint32_t available = received.bytes.count - received.start;
     uint32_t taken = capacity < available ? uint32_t(capacity) : available;
     if (taken != 0)
-        memCopy(output, received.bytes.data + received.start, taken);
+        prMemCopy(output, received.bytes.data + received.start, taken);
     received.start += taken;
     if (received.start == received.bytes.count) {
         received.bytes.clear();

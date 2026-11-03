@@ -313,7 +313,7 @@ PrTextEditPosition moveBetweenLines(const PrTextEditGeometry& g, PrTextEditPosit
     if (!g.line(g.context, at, step, &onto) || onto.stopCount == 0)
         return textEdge(g, at, next);
     uint32_t best = 0;
-    float nearest = kInfinityF32;
+    float nearest = kPrF32Infinity;
     for (uint32_t i = 0; i < onto.stopCount; ++i) {
         float distance = onto.stops[i].along - *goal;
         distance = distance < 0 ? -distance : distance;

@@ -20,14 +20,14 @@ namespace pr_impl {
 namespace {
 
 // Returns the value of the token at `index`. If the token holds an escape, the value is resolved into `scratch`.
-PrStringView tokenView(TextBuffer* scratch, const CssTokenStream* ts, uint32_t index) {
+PrStringView tokenView(PrTextBuffer* scratch, const CssTokenStream* ts, uint32_t index) {
     PrStringView text = cssTokenValueText(ts->tokens, index);
     if ((cssTokenFlags(ts->tokens, index) & CssTokenFlag_PlainText) != 0)
         return text;
 
-    textClear(scratch);
+    prTextBufferClear(scratch);
     cssValueAppend(scratch, text);
-    return textView(scratch);
+    return prTextBufferView(scratch);
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -35,7 +35,7 @@ PrStringView tokenView(TextBuffer* scratch, const CssTokenStream* ts, uint32_t i
 
 // Returns true if the name is a custom property (css-variables-1/#defining-variables).
 bool isCustomProperty(PrStringView name) {
-    return stringStartsWith(name, "--");
+    return prStringStartsWith(name, "--");
 }
 
 // Resolves an author's name in a block whose rule accepts one. The name is the block's named value, or a custom
@@ -148,7 +148,7 @@ uint32_t declarerOf(const CssDeclaration* PR_NULLABLE declarations, uint32_t cou
 // Writes to `out` the longhands of the shared declaration at `index` of `declarations` that another declaration
 // declares.
 void takenFrom(const CssDeclaration* declarations, uint32_t count, uint32_t index, PropertySet* out) {
-    memZero(out, sizeof(PropertySet));
+    prMemZero(out, sizeof(PropertySet));
     for (uint32_t i = 0; i < count; ++i) {
         const CssDeclaration& declaration = declarations[i];
         if (i == index || declaration.property == PrCssProperty_Count)
@@ -236,7 +236,7 @@ NameFilter makeNameFilter(CssParser* parser, uint32_t declarations) {
 
     uint32_t first = parser->filter.count;
     parser->filter.reserve(first + words);
-    memZero(parser->filter.data + first, size_t(words) * sizeof(uint64_t));
+    prMemZero(parser->filter.data + first, size_t(words) * sizeof(uint64_t));
     parser->filter.count = first + words;
     return NameFilter{first, words - 1};
 }
@@ -414,7 +414,7 @@ void write(CssDeclarationBlock* block, CssParser* parser, uint32_t first) {
     for (uint32_t i = 0; i < count; ++i) {
         CssDeclaration declaration = parser->declared.data[first + i];
         if (declaration.nameSize != 0)
-            memCopy(text + at, pool->text.data + declaration.name, declaration.nameSize);
+            prMemCopy(text + at, pool->text.data + declaration.name, declaration.nameSize);
         declaration.name = at;
         at += declaration.nameSize;
 
@@ -453,7 +453,7 @@ CssValueNode* PR_NULLABLE storeDeclaration(CssValueRun run, PrStringView name, C
     char* text = reinterpret_cast<char*>(held + run.count);
     cssValueRunCopy(run, held, text, 0);
     if (name.size != 0)
-        memCopy(text + size, name.data, name.size);
+        prMemCopy(text + size, name.data, name.size);
     return held;
 }
 
@@ -508,8 +508,8 @@ void splice(CssDeclarationBlock* block, uint32_t index, uint32_t removed, uint32
             prMemoryRealloc(block->stored, sizeof(CssValueNode*) * block->capacity));
     }
     uint32_t tail = block->count - index - removed;
-    memMove(block->declarations + index + added, block->declarations + index + removed, sizeof(CssDeclaration) * tail);
-    memMove(block->stored + index + added, block->stored + index + removed, sizeof(CssValueNode*) * tail);
+    prMemMove(block->declarations + index + added, block->declarations + index + removed, sizeof(CssDeclaration) * tail);
+    prMemMove(block->stored + index + added, block->stored + index + removed, sizeof(CssValueNode*) * tail);
     for (uint32_t i = 0; i < added; ++i)
         block->stored[index + i] = nullptr;
     block->count = count;
@@ -1058,7 +1058,7 @@ bool blockFits(const CssRuleData* rule) {
     if (syntax == block->count || inherits == block->count)
         return false;
     CssValueRun definition = cssDeclarationValue(block, &cssDeclarations(block)[syntax]);
-    return initial != block->count || stringTrim(cssValueText(definition, definition.values)) == "*";
+    return initial != block->count || prStringTrim(cssValueText(definition, definition.values)) == "*";
 }
 
 // Returns the at-rule that a parsed at-rule names as written, which may be a legacy alias. Returns CssAtRule_None for a
@@ -1408,7 +1408,7 @@ bool gatherLonghands(const CssDeclarationBlock* block, const Listing* PR_NULLABL
 // Serializes the value of `shorthand` from its gathered longhands (cssom-1/#serialize-a-css-value). If each longhand is
 // pending on the shorthand, writes the value that the shorthand declared. If any is pending on another shorthand,
 // writes nothing. Otherwise writes the shorthand's serialization of the longhands' values.
-void serializeGathered(TextBuffer* out, PrCssProperty shorthand, const LonghandValues* gathered) {
+void serializeGathered(PrTextBuffer* out, PrCssProperty shorthand, const LonghandValues* gathered) {
     if (gathered->mixed)
         return;
     if (gathered->pending == shorthand)
@@ -1418,7 +1418,7 @@ void serializeGathered(TextBuffer* out, PrCssProperty shorthand, const LonghandV
 }
 
 // Serializes a shorthand's value from its longhands' values (cssom-1/#dom-cssstyledeclaration-getpropertyvalue).
-void serializeShorthand(TextBuffer* out, const CssDeclarationBlock* block, PrCssProperty shorthand) {
+void serializeShorthand(PrTextBuffer* out, const CssDeclarationBlock* block, PrCssProperty shorthand) {
     LonghandValues gathered = {};
     if (gatherLonghands(block, nullptr, shorthand, &gathered))
         serializeGathered(out, shorthand, &gathered);
@@ -1429,7 +1429,7 @@ void serializeShorthand(TextBuffer* out, const CssDeclarationBlock* block, PrCss
 // cssom-1/#serialize-a-css-declaration-block. Each longhand must be declared, and none may be before the listing's item
 // at `first` or already `written`. Their importance must be the same, and the shorthand must be able to write their
 // values. Returns false otherwise.
-bool serializeAsShorthand(TextBuffer* out, const CssDeclarationBlock* block, const Listing* listing,
+bool serializeAsShorthand(PrTextBuffer* out, const CssDeclarationBlock* block, const Listing* listing,
         PrCssProperty shorthand, uint32_t first, PropertySet* written) {
     CssPropertyList longhands = cssPropertyLonghands(shorthand);
     if (longhands.count > listing->count - first)
@@ -1458,20 +1458,20 @@ bool serializeAsShorthand(TextBuffer* out, const CssDeclarationBlock* block, con
         }
     }
 
-    uint32_t start = out->text.count;
+    uint32_t start = out->size;
     if (writes) {
-        textAppend(out, cssPropertyName(shorthand));
-        textAppend(out, ": ");
-        uint32_t value = out->text.count;
+        prTextBufferAppend(out, cssPropertyName(shorthand));
+        prTextBufferAppend(out, ": ");
+        uint32_t value = out->size;
         serializeGathered(out, shorthand, &gathered);
-        writes = out->text.count != value;
+        writes = out->size != value;
     }
     if (!writes) {
-        out->text.count = start;
+        out->size = start;
     } else {
         if (gathered.important)
-            textAppend(out, " !important");
-        textAppendChar(out, ';');
+            prTextBufferAppend(out, " !important");
+        prTextBufferAppendChar(out, ';');
         for (uint32_t i = 0; i < longhands.count; ++i)
             bitsetSet(written->words, longhands.data[i]);
     }
@@ -1494,46 +1494,46 @@ uint32_t boundsWritten(CssValueRun run) {
 // Serializes one declaration as `name: value`, with `!important` if set, and a closing semicolon
 // (cssom-1/#serialize-a-css-declaration). A feature value's name is escaped as an identifier
 // (css-fonts-4/#font-feature-values-syntax).
-void serializeDeclaration(TextBuffer* out, const CssDeclarationBlock* block, CssDeclarationItem item) {
+void serializeDeclaration(PrTextBuffer* out, const CssDeclarationBlock* block, CssDeclarationItem item) {
     const CssDeclaration* declaration = item.declaration;
     if (item.property != PrCssProperty_Count)
-        textAppend(out, cssPropertyName(item.property));
+        prTextBufferAppend(out, cssPropertyName(item.property));
     else if (kCssAtRuleNamedValue[block->rule] != CssGrammarRoot_None)
         cssSerializeIdent(out, cssDeclarationName(block, declaration));
     else
-        textAppend(out, cssDeclarationName(block, declaration));
-    textAppend(out, ": ");
+        prTextBufferAppend(out, cssDeclarationName(block, declaration));
+    prTextBufferAppend(out, ": ");
     cssSerializeDeclarationValue(out, block, declaration);
     if (declaration->important)
-        textAppend(out, " !important");
-    textAppendChar(out, ';');
+        prTextBufferAppend(out, " !important");
+    prTextBufferAppendChar(out, ';');
 }
 
 // Writes `{`, the rule's declarations and child rules each on its own line, and `}`. Style rules and grouping rules
 // write their blocks this way (cssom-1/#serialize-a-css-rule). A child whose serialization is empty gets no line.
-void serializeBlock(TextBuffer* out, const CssRuleData* rule) {
-    textAppend(out, " {");
+void serializeBlock(PrTextBuffer* out, const CssRuleData* rule) {
+    prTextBufferAppend(out, " {");
     if (rule->style.count != 0) {
-        textAppend(out, "\n  ");
+        prTextBufferAppend(out, "\n  ");
         cssSerializeDeclarationBlock(out, &rule->style);
     }
     for (uint32_t i = 0; i < rule->children.count; ++i) {
-        uint32_t line = out->text.count;
-        textAppend(out, "\n  ");
-        uint32_t start = out->text.count;
+        uint32_t line = out->size;
+        prTextBufferAppend(out, "\n  ");
+        uint32_t start = out->size;
         cssSerializeRule(out, rule->children.data[i]);
-        if (out->text.count == start)
-            out->text.count = line;
+        if (out->size == start)
+            out->size = line;
     }
-    textAppend(out, "\n}");
+    prTextBufferAppend(out, "\n}");
 }
 
 // Writes `{ `, the declarations, and ` }`. A rule whose block holds declarations is written this way. Any child rules
 // follow the declarations on the same line. An empty feature value block writes nothing.
-void serializeDeclarations(TextBuffer* out, const CssRuleData* rule) {
-    textAppend(out, " {");
+void serializeDeclarations(PrTextBuffer* out, const CssRuleData* rule) {
+    prTextBufferAppend(out, " {");
     if (rule->style.count != 0) {
-        textAppendChar(out, ' ');
+        prTextBufferAppendChar(out, ' ');
         cssSerializeDeclarationBlock(out, &rule->style);
     }
     for (uint32_t i = 0; i < rule->children.count; ++i) {
@@ -1541,44 +1541,44 @@ void serializeDeclarations(TextBuffer* out, const CssRuleData* rule) {
         // A block that others merge into serializes only if it holds declarations.
         if (child->kind == CssRuleDataKind_At && bitsetTest(kCssAtRuleMerged, resolved(child)) && child->style.count == 0)
             continue;
-        textAppendChar(out, ' ');
+        prTextBufferAppendChar(out, ' ');
         cssSerializeRule(out, child);
     }
-    textAppend(out, " }");
+    prTextBufferAppend(out, " }");
 }
 
 // Writes `{ `, the declarations of an @property rule in the order syntax, inherits and initial-value, and ` }`
 // (css-properties-values-api-1/#serialize-a-csspropertyrule).
-void serializePropertyDeclarations(TextBuffer* out, const CssRuleData* rule) {
+void serializePropertyDeclarations(PrTextBuffer* out, const CssRuleData* rule) {
     static constexpr PrCssDescriptor kOrder[] = {
         PrCssDescriptor_PropertySyntax,
         PrCssDescriptor_PropertyInherits,
         PrCssDescriptor_PropertyInitialValue,
     };
-    textAppend(out, " {");
+    prTextBufferAppend(out, " {");
     for (PrCssDescriptor descriptor : kOrder) {
         uint32_t index = cssDeclarationBlockFind(&rule->style, cssDescriptorDeclaredName(descriptor));
         if (index != rule->style.count) {
-            textAppendChar(out, ' ');
+            prTextBufferAppendChar(out, ' ');
             serializeDeclaration(out, &rule->style,
                 CssDeclarationItem{&cssDeclarations(&rule->style)[index], PrCssProperty_Count});
         }
     }
-    textAppend(out, " }");
+    prTextBufferAppend(out, " }");
 }
 
-void serializeAtRule(TextBuffer* out, const CssRuleData* rule) {
+void serializeAtRule(PrTextBuffer* out, const CssRuleData* rule) {
     CssAtRule atRule = resolved(rule);
-    textAppendChar(out, '@');
-    textAppend(out, cssAtRuleName(rule->atRule));
+    prTextBufferAppendChar(out, '@');
+    prTextBufferAppend(out, cssAtRuleName(rule->atRule));
 
     // cssom-1/#serialize-a-css-rule writes the space after @media, whatever follows it.
     if (rule->prelude.count != 0 || rule->media.queries.count != 0 || atRule == CssAtRule_Media)
-        textAppendChar(out, ' ');
+        prTextBufferAppendChar(out, ' ');
     cssSerializePrelude(out, rule);
 
     if (!rule->block) {
-        textAppendChar(out, ';');
+        prTextBufferAppendChar(out, ';');
         return;
     }
     if ((kCssAtRuleContents[atRule] & CssContents_QualifiedRules) != 0)
@@ -1608,23 +1608,23 @@ bool isOneQuery(CssValueRun run) {
 
 // Returns true if `query` serializes as `serialized`. Writes the serialization to `scratch`
 // (cssom-1/#compare-media-queries).
-bool isQuery(TextBuffer* scratch, CssValueRun query, PrStringView serialized) {
-    textClear(scratch);
+bool isQuery(PrTextBuffer* scratch, CssValueRun query, PrStringView serialized) {
+    prTextBufferClear(scratch);
     cssSerializeValues(scratch, query);
-    return textView(scratch) == serialized;
+    return prTextBufferView(scratch) == serialized;
 }
 
 // Returns the index of the list's first query that equals `query`, or the list's length if there is none.
 uint32_t findQuery(const CssMediaQueries* list, CssValueRun query) {
-    TextBuffer wanted;
-    TextBuffer held;
+    PrTextBuffer wanted = {};
+    PrTextBuffer held = {};
     cssSerializeValues(&wanted, query);
     uint32_t length = cssMediaListLength(list);
     uint32_t index = 0;
-    while (index < length && !isQuery(&held, cssMediaQueryAt(list, index), textView(&wanted)))
+    while (index < length && !isQuery(&held, cssMediaQueryAt(list, index), prTextBufferView(&wanted)))
         ++index;
-    textReset(&wanted);
-    textReset(&held);
+    prTextBufferReset(&wanted);
+    prTextBufferReset(&held);
     return index;
 }
 
@@ -1641,7 +1641,7 @@ void copyBlock(CssDeclarationBlock* out, const CssDeclarationBlock* block) {
     }
     size_t size = sizeof(CssValueNode) * block->valueCount + sizeof(CssDeclaration) * block->count + block->textSize;
     CssValueNode* held = static_cast<CssValueNode*>(prMemoryAlloc(size));
-    memCopy(held, packedHeld(block), size);
+    prMemCopy(held, packedHeld(block), size);
     out->declarations = reinterpret_cast<CssDeclaration*>(held + block->valueCount);
 }
 
@@ -1980,19 +1980,19 @@ uint32_t cssKeyframesFind(const CssRuleData* rule, PrStringView select, CssParse
     if (cssParsePrelude(kCssAtRuleQualifiedPrelude[resolved(rule)], &selectors, &context, &parser->pool, &parser->match,
             &matched)) {
         // Two selector lists are equal if their serializations are.
-        TextBuffer wanted;
-        TextBuffer held;
+        PrTextBuffer wanted = {};
+        PrTextBuffer held = {};
         cssSerializeValues(&wanted, cssValuePoolRun(&parser->pool, matched));
         while (found != 0) {
-            textClear(&held);
+            prTextBufferClear(&held);
             cssSerializePrelude(&held, rule->children.data[found - 1]);
-            if (textView(&held) == textView(&wanted))
+            if (prTextBufferView(&held) == prTextBufferView(&wanted))
                 break;
             --found;
         }
         found = found != 0 ? found - 1 : rule->children.count;
-        textReset(&wanted);
-        textReset(&held);
+        prTextBufferReset(&wanted);
+        prTextBufferReset(&held);
     }
     parser->pool.values.count = values;
     parser->pool.text.count = text;
@@ -2041,15 +2041,15 @@ CssEditResult cssMediaListPrepareDelete(CssEdit* edit, const CssMediaQueries* li
         return CssEditResult_Unchanged;
 
     // The queries that are not the one `text` holds, joined by ','.
-    TextBuffer wanted;
-    TextBuffer held;
+    PrTextBuffer wanted = {};
+    PrTextBuffer held = {};
     cssSerializeValues(&wanted, cssValuePoolRun(pool, parsed));
     uint32_t length = cssMediaListLength(list);
     CssValueSpan kept = {pool->values.count, 0};
     uint32_t removed = 0;
     for (uint32_t i = 0; i < length; ++i) {
         CssValueRun at = cssMediaQueryAt(list, i);
-        if (isQuery(&held, at, textView(&wanted))) {
+        if (isQuery(&held, at, prTextBufferView(&wanted))) {
             ++removed;
             continue;
         }
@@ -2057,8 +2057,8 @@ CssEditResult cssMediaListPrepareDelete(CssEdit* edit, const CssMediaQueries* li
             cssValuePoolAdd(pool, cssLiteralValue(','));
         cssValuePoolAddRun(pool, at);
     }
-    textReset(&wanted);
-    textReset(&held);
+    prTextBufferReset(&wanted);
+    prTextBufferReset(&held);
     if (removed == 0)
         return CssEditResult_Rejected;
     kept.count = pool->values.count - kept.start;
@@ -2150,7 +2150,7 @@ bool cssDeclarationSupported(const CssDeclaredName& name, PrStringView value) {
     return supported;
 }
 
-void cssSerializePropertyValue(TextBuffer* out, const CssDeclarationBlock* block, const CssDeclaredName& name) {
+void cssSerializePropertyValue(PrTextBuffer* out, const CssDeclarationBlock* block, const CssDeclaredName& name) {
     if (name.property != PrCssProperty_Count && cssIsShorthand(name.property)) {
         serializeShorthand(out, block, name.property);
         return;
@@ -2217,15 +2217,15 @@ CssEditResult cssDeclarationBlockPrepareSetValue(CssEdit* edit, const CssDeclara
 
     CssParser* parser = edit->scope.parser;
     bool takes;
-    TextBuffer text;
+    PrTextBuffer text = {};
     if (name.text.data != nullptr || isTokens(run)) {
         // A custom property's value, or a value kept as tokens, is the tokens that it is written as
         // (css-typed-om-1/#create-an-internal-representation).
         if (isTokens(run))
-            textAppend(&text, cssValueText(run, run.values));
+            prTextBufferAppend(&text, cssValueText(run, run.values));
         else
             cssSerializeValues(&text, run);
-        CssTokenStream ts = cssParserTokenize(parser, textView(&text));
+        CssTokenStream ts = cssParserTokenize(parser, prTextBufferView(&text));
         CssTokenSpan span = cssStreamTrimmed(&ts);
         takes = (span.count != 0 || name.text.data != nullptr) && declare(parser, name, &ts, span, important);
     } else {
@@ -2240,7 +2240,7 @@ CssEditResult cssDeclarationBlockPrepareSetValue(CssEdit* edit, const CssDeclara
             parser->match.calculate = false;
         }
     }
-    textReset(&text);
+    prTextBufferReset(&text);
     cssValuePoolReset(&joined);
     if (!takes)
         return CssEditResult_Rejected;
@@ -2251,9 +2251,9 @@ CssEditResult cssDeclarationBlockPrepareSetValue(CssEdit* edit, const CssDeclara
 CssEditResult cssDeclarationBlockPrepareRemove(CssEdit* edit, const CssDeclarationBlock* block,
         const CssDeclaredName& name, PrString* PR_NULLABLE out) {
     if (out != nullptr) {
-        TextBuffer text;
+        PrTextBuffer text = {};
         cssSerializePropertyValue(&text, block, name);
-        *out = textTake(&text);
+        *out = prTextBufferTake(&text);
     }
     bool held;
     if (name.property == PrCssProperty_Count || !cssIsShorthand(name.property)) {
@@ -2322,16 +2322,16 @@ void cssDeclarationBlockValue(const CssDeclarationBlock* block, const CssDeclare
 
     // A shorthand's value is the serialization of its longhands. A shorthand that is pending on its substitution has
     // the tokens it was given as its value (cssom-1/#dom-cssstyledeclaration-getpropertyvalue).
-    TextBuffer text;
+    PrTextBuffer text = {};
     serializeShorthand(&text, block, name.property);
     CssPropertyList longhands = cssPropertyLonghands(name.property);
     const CssDeclaration* first = findProperty(block, longhands.data[0]);
     bool pending = first != nullptr && first->shorthand == name.property;
-    if (text.text.count != 0) {
+    if (text.size != 0) {
         CssParserScope scope;
         cssParserBegin(&scope, slot);
         CssParser* parser = scope.parser;
-        CssTokenStream ts = cssParserTokenize(parser, textView(&text));
+        CssTokenStream ts = cssParserTokenize(parser, prTextBufferView(&text));
         CssTokenStream value = cssSubStream(&ts, cssStreamTrimmed(&ts));
         uint32_t values = parser->pool.values.count;
         uint32_t size = parser->pool.text.count;
@@ -2344,7 +2344,7 @@ void cssDeclarationBlockValue(const CssDeclarationBlock* block, const CssDeclare
         parser->pool.text.count = size;
         cssParserEnd(&scope);
     }
-    textReset(&text);
+    prTextBufferReset(&text);
 }
 
 bool cssParseDeclaredValue(const CssDeclaredName& name, PrStringView text, CssValuePool* out, CssParserSlot slot) {
@@ -2502,18 +2502,18 @@ void cssRuleListReplace(Array<CssRuleData* PR_NONNULL>* list, uint32_t index, Cs
 // ---------------------------------------------------------------------------------------------------------------------
 // Serialization
 
-void cssSerializeDeclarationBlock(TextBuffer* out, const CssDeclarationBlock* block) {
+void cssSerializeDeclarationBlock(PrTextBuffer* out, const CssDeclarationBlock* block) {
     Listing listing;
     listDeclarations(block, &listing);
     PropertySet written = {};        // the longhands written as a shorthand
     bool allUnwritten = false;       // true if `all`, which sets every longhand, cannot be written
-    uint32_t start = out->text.count;
+    uint32_t start = out->size;
     for (uint32_t i = 0; i < listing.count; ++i) {
         CssDeclarationItem item = itemOf(&listing, i);
         if (item.property != PrCssProperty_Count && bitsetTest(written.words, item.property))
             continue;
-        if (out->text.count != start)
-            textAppendChar(out, ' ');
+        if (out->size != start)
+            prTextBufferAppendChar(out, ' ');
         CssPropertyList shorthands;
         if (item.property != PrCssProperty_Count)
             shorthands = cssPropertyShorthands(item.property);
@@ -2533,7 +2533,8 @@ void cssSerializeDeclarationBlock(TextBuffer* out, const CssDeclarationBlock* bl
     listingReset(&listing);
 }
 
-void cssSerializeDeclarationValue(TextBuffer* out, const CssDeclarationBlock* block, const CssDeclaration* declaration) {
+void cssSerializeDeclarationValue(PrTextBuffer* out, const CssDeclarationBlock* block,
+        const CssDeclaration* declaration) {
     // css-values-5/#pending-substitution-value: a value pending on a shorthand serializes as nothing.
     if (declaration->shorthand != PrCssProperty_Count)
         return;
@@ -2543,17 +2544,17 @@ void cssSerializeDeclarationValue(TextBuffer* out, const CssDeclarationBlock* bl
         run.count = boundsWritten(run);
 
     // css-variables-1/#serializing-custom-props: an empty custom property is a single space.
-    uint32_t start = out->text.count;
+    uint32_t start = out->size;
     cssSerializeValues(out, run);
-    if (out->text.count == start && declaration->nameSize != 0)
-        textAppendChar(out, ' ');
+    if (out->size == start && declaration->nameSize != 0)
+        prTextBufferAppendChar(out, ' ');
 }
 
-void cssSerializeSelectorText(TextBuffer* out, const CssRuleData* rule) {
+void cssSerializeSelectorText(PrTextBuffer* out, const CssRuleData* rule) {
     cssSerializeSelectors(out, rule->selectors);
 }
 
-void cssSerializePrelude(TextBuffer* out, const CssRuleData* rule) {
+void cssSerializePrelude(PrTextBuffer* out, const CssRuleData* rule) {
     CssValueRun prelude = cssValueListRun(&rule->prelude);
     // An empty parameter/argument list is omitted (css-mixins-1/#cssom).
     if ((isAt(rule, CssAtRule_Mixin) || isAt(rule, CssAtRule_Apply)) && prelude.count == 3 &&
@@ -2563,15 +2564,15 @@ void cssSerializePrelude(TextBuffer* out, const CssRuleData* rule) {
     bool urls = isAt(rule, CssAtRule_Import) || isAt(rule, CssAtRule_Namespace);
     cssSerializePreludeValues(out, prelude, urls, rule->selectors, 0);
     if (rule->prelude.count != 0 && rule->media.queries.count != 0)
-        textAppendChar(out, ' ');
+        prTextBufferAppendChar(out, ' ');
     cssSerializeMediaList(out, &rule->media);
 }
 
-void cssSerializeMediaList(TextBuffer* out, const CssMediaQueries* list) {
+void cssSerializeMediaList(PrTextBuffer* out, const CssMediaQueries* list) {
     cssSerializeValues(out, cssValueListRun(&list->queries));
 }
 
-void cssSerializeRule(TextBuffer* out, const CssRuleData* rule) {
+void cssSerializeRule(PrTextBuffer* out, const CssRuleData* rule) {
     switch (rule->kind) {
         case CssRuleDataKind_Style:
             cssSerializeSelectorText(out, rule);
@@ -2595,10 +2596,10 @@ void cssSerializeRule(TextBuffer* out, const CssRuleData* rule) {
     }
 }
 
-void cssSerializeRuleList(TextBuffer* out, const Array<CssRuleData* PR_NONNULL>& rules) {
+void cssSerializeRuleList(PrTextBuffer* out, const Array<CssRuleData* PR_NONNULL>& rules) {
     for (uint32_t i = 0; i < rules.count; ++i) {
         if (i != 0)
-            textAppendChar(out, '\n');
+            prTextBufferAppendChar(out, '\n');
         cssSerializeRule(out, rules.data[i]);
     }
 }

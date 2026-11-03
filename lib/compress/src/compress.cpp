@@ -32,7 +32,7 @@ using namespace pr_impl;
 
 PrCompressCodecBackend prCompressCodecBackendFromName(PrStringView name) {
     for (PrCompressCodecBackend backend = 0; backend < PrCompressCodecBackend_Count; ++backend) {
-        if (asciiEqualsFold(kBackendNames[backend], name))
+        if (prAsciiEqualsFold(kBackendNames[backend], name))
             return backend;
     }
     return PrCompressCodecBackend_Count;

@@ -45,7 +45,7 @@ struct CssStyleDeclaration {
     // Used for a block that `refresh` maintains. The value is the same one that a read of the refreshed block gives.
     // Returns false if it does not serialize the value, and the block is then read instead.
     bool (*PR_NULLABLE serializeValue)(const PrCssStyleDeclaration* declaration, const CssDeclaredName& name,
-        TextBuffer* out);
+        PrTextBuffer* out);
 
     bool readOnly;                                    // cssom-1/#cssstyledeclaration-readonly-flag
 };

@@ -85,7 +85,7 @@ struct Fixture {
         prGpuCommandsCopyBuffer(commands, buffer, 0, readback, 0, size);
         prGpuCommandsSubmitAndWait(commands);
         std::vector<uint8_t> bytes(size);
-        memCopy(bytes.data(), prGpuBufferMap(device, readback), size);
+        prMemCopy(bytes.data(), prGpuBufferMap(device, readback), size);
         prGpuBufferDestroy(device, readback);
         return bytes;
     }
@@ -182,7 +182,7 @@ TEST_CASE("a texture's texels are written and read back, clipped to the texture"
         CHECK(f.read(texture) == texels);
         // A write that hangs off the top left lands where it overlaps.
         uint8_t white[2 * 2 * 4];
-        memFill(white, 255, sizeof(white));
+        prMemFill(white, 255, sizeof(white));
         prGpuTextureWrite(f.device, texture, PrIVec2{-1, -1}, PrPixelView{white, 8, {2, 2}});
         std::vector<uint8_t> after = f.read(texture);
         CHECK(near(texel(after, 4, 0, 0), 255, 255, 255, 255, 0));
@@ -231,14 +231,14 @@ TEST_CASE("uploads to one resource before a submission land as they would copied
         for (const Write& w : writes) {
             std::vector<uint8_t> bytes(w.size, w.value);
             prGpuBufferUpload(f.device, buffer, w.offset, bytes.data(), w.size);
-            memFill(&expected[w.offset], w.value, w.size);
+            prMemFill(&expected[w.offset], w.value, w.size);
         }
         CHECK(f.read(buffer, 4096) == expected);
         // Writes to one texture land in order too.
         PrGpuTexture texture = f.target(PrUVec2{2, 2});
         for (uint8_t value = 1; value <= 3; ++value) {
             uint8_t texels[2 * 2 * 4];
-            memFill(texels, value * 40, sizeof(texels));
+            prMemFill(texels, value * 40, sizeof(texels));
             prGpuTextureWrite(f.device, texture, PrIVec2{0, 0}, PrPixelView{texels, 8, {2, 2}});
         }
         uint8_t last[4] = {200, 200, 200, 200};
@@ -521,7 +521,7 @@ TEST_CASE("mip levels are filled with the average of the level before") {
         // Columns alternating black and white, so every texel of the levels after is gray.
         uint8_t texels[4 * 4 * 4];
         for (int i = 0; i < 16; ++i)
-            memFill(texels + i * 4, (i % 2) != 0 ? 255 : 0, 4);
+            prMemFill(texels + i * 4, (i % 2) != 0 ? 255 : 0, 4);
         prGpuTextureWrite(f.device, texture, PrIVec2{0, 0}, PrPixelView{texels, 16, {4, 4}});
         PrGpuCommands* commands = nullptr;
         REQUIRE(prGpuCommandsBegin(f.device, nullptr, &commands));

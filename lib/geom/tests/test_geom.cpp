@@ -43,7 +43,7 @@ TEST_CASE("rectangles are empty unless they have area") {
     CHECK(!prRectIsEmpty(PrRect{0, 0, 1, 1}));
     CHECK(prRectIsEmpty(PrRect{0, 0, 0, 1}));
     CHECK(prRectIsEmpty(PrRect{2, 0, 1, 1}));
-    CHECK(prRectIsEmpty(PrRect{0, 0, kNanF32, 1}));
+    CHECK(prRectIsEmpty(PrRect{0, 0, kPrF32Nan, 1}));
 }
 
 TEST_CASE("union ignores an empty rectangle and intersection can be empty") {
@@ -60,8 +60,8 @@ TEST_CASE("a rectangle covers the pixels it reaches past a thousandth, and conta
     CHECK(intRectEquals(prIRectRoundOut(PrRect{0.9996f, 0, 2, 1}), PrIRect{1, 0, 2, 1}));
     CHECK(intRectEquals(prIRectRound(PrRect{0.4f, 0.6f, 2.5f, 3}), PrIRect{0, 1, 2, 3}));
     CHECK(intRectEquals(prIRectRoundOut(PrRect{2, 0, 1, 1}), PrIRect{0, 0, 0, 0}));
-    CHECK(intRectEquals(prIRectRoundOut(PrRect{0, 0, kNanF32, 1}), PrIRect{0, 0, 0, 0}));
-    PrIRect far = prIRectRoundOut(PrRect{-kInfinityF32, 0, kInfinityF32, 1});
+    CHECK(intRectEquals(prIRectRoundOut(PrRect{0, 0, kPrF32Nan, 1}), PrIRect{0, 0, 0, 0}));
+    PrIRect far = prIRectRoundOut(PrRect{-kPrF32Infinity, 0, kPrF32Infinity, 1});
     CHECK(prIRectWidth(prIRectOutset(far, 1)) == (1u << 29) + 2);
     CHECK(prRectIsOnPixels(PrRect{0.9996f, 1, 3.0004f, 4}));
     CHECK(!prRectIsOnPixels(PrRect{0.99f, 1, 3, 4}));
@@ -115,19 +115,19 @@ TEST_CASE("transforms concatenate first then second") {
     PrVec2 p{1, 1};
     CHECK(nearPoint(prAffine2MapPoint(prAffine2Concat(scale, move), p), PrVec2{12, 23}));
     CHECK(nearPoint(prAffine2MapPoint(prAffine2Concat(move, scale), p), PrVec2{22, 63}));
-    CHECK(nearPoint(prAffine2MapPoint(prAffine2Rotate(kPiF32 / 2), PrVec2{1, 0}), PrVec2{0, 1}));
+    CHECK(nearPoint(prAffine2MapPoint(prAffine2Rotate(kPrF32Pi / 2), PrVec2{1, 0}), PrVec2{0, 1}));
 }
 
 TEST_CASE("a rotation by a multiple of a quarter turn is exact") {
-    PrAffine2 whole = prAffine2Rotate(2 * kPiF32);
+    PrAffine2 whole = prAffine2Rotate(2 * kPrF32Pi);
     CHECK(whole.a == 1.0f);
     CHECK(whole.b == 0.0f);
     CHECK(whole.c == 0.0f);
     CHECK(whole.d == 1.0f);
-    PrAffine2 quarter = prAffine2Rotate(kPiF32 / 2);
+    PrAffine2 quarter = prAffine2Rotate(kPrF32Pi / 2);
     CHECK(quarter.a == 0.0f);
     CHECK(quarter.b == 1.0f);
-    PrAffine2 half = prAffine2Rotate(kPiF32);
+    PrAffine2 half = prAffine2Rotate(kPrF32Pi);
     CHECK(half.a == -1.0f);
     CHECK(half.b == 0.0f);
 }
@@ -147,7 +147,7 @@ TEST_CASE("an inverse undoes the transform, and a singular one has none") {
 
 TEST_CASE("a mapped rectangle is the bounds of its corners") {
     PrRect r{0, 0, 2, 1};
-    PrRect mapped = prAffine2MapRect(prAffine2Rotate(kPiF32 / 2), r);
+    PrRect mapped = prAffine2MapRect(prAffine2Rotate(kPrF32Pi / 2), r);
     CHECK(nearRect(mapped, PrRect{-1, 0, 0, 2}));
     CHECK(prRectIsEmpty(prAffine2MapRect(prAffine2Scale(PrVec2{2, 2}), PrRect{1, 1, 1, 1})));
 }
@@ -157,8 +157,8 @@ TEST_CASE("a corner's curve runs from the side before it to the side after") {
     CHECK(nearPoint(round, PrVec2{0.70710678f, 1 - 0.70710678f}));
     CHECK(nearPoint(prCornerCurvePoint(0, 0.3f), PrVec2{prCornerCurvePoint(0, 0.3f).x, prCornerCurvePoint(0, 0.3f).x}));
     CHECK(nearPoint(prCornerCurvePoint(-1, 0.5f), PrVec2{1 - 0.70710678f, 0.70710678f}));
-    CHECK(nearPoint(prCornerCurvePoint(kInfinityF32, 0.25f), PrVec2{0.5f, 0}));
-    CHECK(nearPoint(prCornerCurvePoint(-kInfinityF32, 0.25f), PrVec2{0, 0.5f}));
+    CHECK(nearPoint(prCornerCurvePoint(kPrF32Infinity, 0.25f), PrVec2{0.5f, 0}));
+    CHECK(nearPoint(prCornerCurvePoint(-kPrF32Infinity, 0.25f), PrVec2{0, 0.5f}));
     for (float shape : {-3.0f, -1.0f, 0.0f, 0.5f, 1.0f, 2.0f, 5.0f}) {
         CHECK(nearPoint(prCornerCurvePoint(shape, 0), PrVec2{0, 0}));
         CHECK(nearPoint(prCornerCurvePoint(shape, 1), PrVec2{1, 1}));
@@ -198,7 +198,7 @@ TEST_CASE("insetting moves convex corners' midpoints inward by the insets and mo
     const PrCorner* out = inset.corners;
     CHECK(nearRect(inset.rect, PrRect{8, 5, 94, 53}));
     // A squircle's midpoint is 1 - 2^(-1/4) of its radii from the corner.
-    float squircle = (1 - sqrtF32(0.5f)) / (1 - powF32(2, -0.25f));
+    float squircle = (1 - prF32Sqrt(0.5f)) / (1 - prF32Pow(2, -0.25f));
     CHECK(nearPoint(out[PrRectCorner_TopLeft].radii, PrVec2{20 - 8 * squircle, 20 - 5 * squircle}));
     CHECK(out[PrRectCorner_TopLeft].shape == 2.0f);
     CHECK(nearPoint(out[PrRectCorner_TopRight].radii, PrVec2{4, 25}));
@@ -211,7 +211,7 @@ TEST_CASE("insetting moves convex corners' midpoints inward by the insets and mo
     inset = prCornerRectInset(bevels, even);
     float outerLine = 15;
     float innerLine = 4 + 4 + out[PrRectCorner_TopLeft].radii.x;
-    CHECK(near((innerLine - outerLine) / sqrtF32(2), 4));
+    CHECK(near((innerLine - outerLine) / prF32Sqrt(2), 4));
 }
 
 TEST_CASE("outsetting grows radii by the outsets, less for a radius smaller than its outset, and keeps square corners") {
@@ -245,7 +245,7 @@ TEST_CASE("a shape holds the points inside its corners' curves") {
     PrCornerRect scoop{rect, {{{20, 20}, -1}, {{0, 0}, 1}, {{0, 0}, 1}, {{0, 0}, 1}}};
     CHECK(!prCornerRectContains(scoop, PrVec2{5, 5}));
     CHECK(prCornerRectContains(scoop, PrVec2{19, 19}));
-    PrCornerRect notch{rect, {{{20, 20}, -kInfinityF32}, {{0, 0}, 1}, {{0, 0}, 1}, {{0, 0}, 1}}};
+    PrCornerRect notch{rect, {{{20, 20}, -kPrF32Infinity}, {{0, 0}, 1}, {{0, 0}, 1}, {{0, 0}, 1}}};
     CHECK(!prCornerRectContains(notch, PrVec2{19, 19}));
     CHECK(prCornerRectContains(notch, PrVec2{21, 19}));
 }
@@ -275,7 +275,7 @@ TEST_CASE("an affine transform is axis-aligned if it scales, translates or swaps
 
 TEST_CASE("4x4 transforms concatenate, invert and map the plane with perspective") {
     PrMatrix4 move = prMatrix4Translate(PrVec3{10, 20, 0});
-    PrMatrix4 turn = prMatrix4Rotate(PrVec3{0, 0, 1}, kPiF32 / 2);
+    PrMatrix4 turn = prMatrix4Rotate(PrVec3{0, 0, 1}, kPrF32Pi / 2);
     PrMatrix4 both = prMatrix4Concat(&turn, &move);
     PrVec2 out{};
     REQUIRE(prMatrix4MapPoint(&both, PrVec2{1, 0}, &out));
@@ -290,7 +290,7 @@ TEST_CASE("4x4 transforms concatenate, invert and map the plane with perspective
         CHECK(near(identity.m[i][i], 1));
 
     // A rectangle tilted away about x under a perspective of 100: the far edge moves nearer the center.
-    PrMatrix4 tilt = prMatrix4Rotate(PrVec3{1, 0, 0}, kPiF32 / 4);
+    PrMatrix4 tilt = prMatrix4Rotate(PrVec3{1, 0, 0}, kPrF32Pi / 4);
     PrMatrix4 eye = prMatrix4Perspective(100);
     PrMatrix4 seen = prMatrix4Concat(&tilt, &eye);
     CHECK(!prAffine2FromMatrix4(&seen, &flat));
@@ -307,7 +307,7 @@ TEST_CASE("4x4 transforms concatenate, invert and map the plane with perspective
 }
 
 TEST_CASE("4x4 transforms in doubles concatenate, invert, round to floats and tell which side of the plane shows") {
-    PrMatrix4 tilt = prMatrix4Rotate(PrVec3{1, 0, 0}, kPiF32 / 4);
+    PrMatrix4 tilt = prMatrix4Rotate(PrVec3{1, 0, 0}, kPrF32Pi / 4);
     PrMatrix4 eye = prMatrix4Perspective(100);
     PrDMatrix4 a = prDMatrix4FromMatrix4(&tilt);
     PrDMatrix4 b = prDMatrix4FromMatrix4(&eye);
@@ -324,7 +324,7 @@ TEST_CASE("4x4 transforms in doubles concatenate, invert, round to floats and te
     PrDMatrix4 expected = prDMatrix4Identity();
     for (uint32_t row = 0; row < 4; ++row) {
         for (uint32_t column = 0; column < 4; ++column)
-            CHECK(absF64(identity.m[row][column] - expected.m[row][column]) < 1e-12);
+            CHECK(prF64Abs(identity.m[row][column] - expected.m[row][column]) < 1e-12);
     }
     PrMatrix4 flatZ = prMatrix4Scale(PrVec3{1, 1, 0});
     PrDMatrix4 singular = prDMatrix4FromMatrix4(&flatZ);
@@ -332,7 +332,7 @@ TEST_CASE("4x4 transforms in doubles concatenate, invert, round to floats and te
 
     // A half turn about y shows the plane's back, with or without a perspective. A mirror within the plane does not,
     // nor does a tilt short of a quarter turn under a perspective.
-    PrMatrix4 half = prMatrix4Rotate(PrVec3{0, 1, 0}, kPiF32);
+    PrMatrix4 half = prMatrix4Rotate(PrVec3{0, 1, 0}, kPrF32Pi);
     PrDMatrix4 turned = prDMatrix4FromMatrix4(&half);
     CHECK(prDMatrix4ShowsBack(&turned));
     PrDMatrix4 seenTurned = prDMatrix4Concat(&turned, &b);
@@ -345,7 +345,7 @@ TEST_CASE("4x4 transforms in doubles concatenate, invert, round to floats and te
 }
 
 TEST_CASE("projective transforms in doubles extend affine ones, concatenate, invert and map points") {
-    PrDAffine2 turn = prDAffine2FromAffine2(prAffine2Rotate(kPiF32 / 2));
+    PrDAffine2 turn = prDAffine2FromAffine2(prAffine2Rotate(kPrF32Pi / 2));
     PrDAffine2 move = prDAffine2Translate(1e7, 20);
     PrDMatrix3 h = prDMatrix3FromDAffine2(turn);
     PrDMatrix3 m = prDMatrix3FromDAffine2(move);
@@ -353,25 +353,25 @@ TEST_CASE("projective transforms in doubles extend affine ones, concatenate, inv
     PrDAffine2 affine{};
     REQUIRE(prDAffine2FromDMatrix3(&both, &affine));
     PrDAffine2 composed = prDAffine2Concat(turn, move);
-    CHECK(absF64(affine.e - composed.e) < 1e-9);
+    CHECK(prF64Abs(affine.e - composed.e) < 1e-9);
     PrDVec2 out{};
     REQUIRE(prDMatrix3MapPoint(&both, PrDVec2{3, 4}, &out));
     // A large translation keeps the small offsets that floats would lose.
-    CHECK(absF64(out.x - (1e7 - 4)) < 1e-6);
-    CHECK(absF64(out.y - 23) < 1e-6);
+    CHECK(prF64Abs(out.x - (1e7 - 4)) < 1e-6);
+    CHECK(prF64Abs(out.y - 23) < 1e-6);
 
     // w varies across the plane: a point maps if w is above zero, and has no image otherwise.
     const PrDMatrix3 seen{{{1, 0, 0}, {0, 1, 0}, {0.01, 0, 1}}};
     CHECK(!prDAffine2FromDMatrix3(&seen, &affine));
     REQUIRE(prDMatrix3MapPoint(&seen, PrDVec2{100, 50}, &out));
-    CHECK(absF64(out.x - 50) < 1e-12);
+    CHECK(prF64Abs(out.x - 50) < 1e-12);
     CHECK(!prDMatrix3MapPoint(&seen, PrDVec2{-100, 50}, &out));
     PrDMatrix3 inverse{};
     REQUIRE(prDMatrix3Invert(&seen, &inverse));
     PrDVec2 back{};
     REQUIRE(prDMatrix3MapPoint(&inverse, PrDVec2{50, 25}, &back));
-    CHECK(absF64(back.x - 100) < 1e-9);
-    CHECK(absF64(back.y - 50) < 1e-9);
+    CHECK(prF64Abs(back.x - 100) < 1e-9);
+    CHECK(prF64Abs(back.y - 50) < 1e-9);
     const PrDMatrix3 flat{{{1, 2, 3}, {2, 4, 6}, {0, 0, 1}}};
     CHECK(!prDMatrix3Invert(&flat, &inverse));
 
@@ -410,7 +410,7 @@ TEST_CASE("a projective transform's inverse undoes it, and a singular one has no
 }
 
 TEST_CASE("projective transforms extend affine ones, concatenate and map points") {
-    PrAffine2 turn = prAffine2Rotate(kPiF32 / 2);
+    PrAffine2 turn = prAffine2Rotate(kPrF32Pi / 2);
     PrAffine2 move = prAffine2Translate(PrVec2{10, 20});
     PrMatrix3 h = prMatrix3FromAffine2(turn);
     PrMatrix3 m = prMatrix3FromAffine2(move);
@@ -479,8 +479,8 @@ TEST_CASE("the affine tangent of a projection agrees with it to first order") {
     PrVec2 moved{};
     REQUIRE(prMatrix3MapPoint(&h, at + step, &moved));
     PrVec2 approximated = prAffine2MapPoint(tangent, at + step);
-    CHECK(absF32(approximated.x - moved.x) < 1e-3f);
-    CHECK(absF32(approximated.y - moved.y) < 1e-3f);
+    CHECK(prF32Abs(approximated.x - moved.x) < 1e-3f);
+    CHECK(prF32Abs(approximated.y - moved.y) < 1e-3f);
 
     // An affine transform is its own tangent everywhere.
     PrAffine2 turn = prAffine2Concat(prAffine2Rotate(0.3f), prAffine2Translate(PrVec2{5, 6}));
@@ -521,11 +521,11 @@ TEST_CASE("a projection's largest scale bounds its scale everywhere in the visib
                 continue;
             PrAffine2 t = prMatrix3AffineNear(&seen, p);
             for (uint32_t k = 0; k < 16; ++k) {
-                float angle = kPiF32 * float(k) / 16;
-                PrVec2 u{cosF32(angle), sinF32(angle)};
+                float angle = kPrF32Pi * float(k) / 16;
+                PrVec2 u{prF32Cos(angle), prF32Sin(angle)};
                 float x = t.a * u.x + t.c * u.y;
                 float y = t.b * u.x + t.d * u.y;
-                largest = maxF32(largest, sqrtF32(x * x + y * y));
+                largest = prF32Max(largest, prF32Sqrt(x * x + y * y));
             }
         }
     }

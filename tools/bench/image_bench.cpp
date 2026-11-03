@@ -46,8 +46,8 @@ void pngStream(PrByteView bytes, Array<uint8_t>& out) {
     }
 }
 
-void appendLiteral(TextBuffer* out, const char* text) {
-    textAppend(out, text, uint32_t(strlen(text)));
+void appendLiteral(PrTextBuffer* out, const char* text) {
+    prTextBufferAppend(out, PrStringView{text, uint32_t(strlen(text))});
 }
 
 } // namespace
@@ -57,7 +57,7 @@ int main(int argc, char** argv) {
     PrCompressCodec* compressCodec = prCompressBuiltinCreate();
     PrImageCodec* imageCodec = prImageBuiltinCreate(compressCodec);
     PrImageDecoder* decoder = prImageDecoderCreate(imageCodec);
-    TextBuffer file{};
+    PrTextBuffer file{};
     Array<uint8_t> pixels;
     Array<uint8_t> stream;
     Array<uint8_t> inflated;
@@ -68,7 +68,7 @@ int main(int argc, char** argv) {
             status = 1;
             continue;
         }
-        PrByteView bytes{reinterpret_cast<const uint8_t*>(file.text.data), file.text.count};
+        PrByteView bytes{reinterpret_cast<const uint8_t*>(file.data), file.size};
         PrImageSource source{};
         source.memory = bytes;
         if (prImageDecoderOpen(decoder, source, nullptr) != PrStatus_Ok) {
@@ -112,7 +112,7 @@ int main(int argc, char** argv) {
             }
         }
 
-        TextBuffer row{};
+        PrTextBuffer row{};
         appendLiteral(&row, "{\"name\":");
         harnessWriteString(&row, harnessFileName(argv[i]));
         appendLiteral(&row, ",\"bytes\":");
@@ -128,11 +128,11 @@ int main(int argc, char** argv) {
         }
         harnessCountsWrite(&counts, &row);
         appendLiteral(&row, "}");
-        harnessWriteLine(textView(&row));
-        row.text.reset();
+        harnessWriteLine(prTextBufferView(&row));
+        prTextBufferReset(&row);
         prImageDecoderClose(decoder);
     }
-    file.text.reset();
+    prTextBufferReset(&file);
     pixels.reset();
     stream.reset();
     inflated.reset();

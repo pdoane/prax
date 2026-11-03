@@ -105,7 +105,7 @@ std::string builtDocument(PrStringView markdown, const PrMarkdownOptions& option
     htmlMarkdownBuilderInitDocument(&builder, document, HtmlParseFlag_DeclarativeShadowRoots, &options);
     if (streamed) {
         for (size_t i = 0; i < markdown.size; ++i)
-            htmlMarkdownBuilderAppend(&builder, stringSlice(markdown, i, 1));
+            htmlMarkdownBuilderAppend(&builder, prStringSlice(markdown, i, 1));
     } else {
         htmlMarkdownBuilderAppend(&builder, markdown);
     }
@@ -141,7 +141,7 @@ std::string builtElement(PrStringView markdown, const PrMarkdownOptions& options
     if (streamed) {
         PrHtmlMarkdownStream* stream = prHtmlMarkdownStreamCreate(element, &options);
         for (size_t i = 0; i < markdown.size; ++i)
-            prHtmlMarkdownStreamAppend(stream, stringSlice(markdown, i, 1));
+            prHtmlMarkdownStreamAppend(stream, prStringSlice(markdown, i, 1));
         prHtmlMarkdownStreamEnd(stream);
         prHtmlMarkdownStreamDestroy(stream);
     } else {

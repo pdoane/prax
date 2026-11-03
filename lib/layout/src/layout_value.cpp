@@ -55,16 +55,16 @@ struct Calc {
                     power = x.power;
                     switch (node.op) {
                         case PrLayoutCalcOp_Sum:    acc = i == 0 ? x.value : acc + x.value; break;
-                        case PrLayoutCalcOp_Min:    acc = i == 0 ? x.value : minimumF64(acc, x.value); break;
-                        case PrLayoutCalcOp_Max:    acc = i == 0 ? x.value : maximumF64(acc, x.value); break;
+                        case PrLayoutCalcOp_Min:    acc = i == 0 ? x.value : prF64Minimum(acc, x.value); break;
+                        case PrLayoutCalcOp_Max:    acc = i == 0 ? x.value : prF64Maximum(acc, x.value); break;
                         default:
                             // Any NaN makes NaN (css-values-4/#calc-ieee), whereas hypot would let an infinity win.
                             if (i == 0)
-                                acc = absF64(x.value);
-                            else if (isNanF64(acc) || isNanF64(x.value))
-                                acc = kNanF64;
+                                acc = prF64Abs(x.value);
+                            else if (prF64IsNan(acc) || prF64IsNan(x.value))
+                                acc = kPrF64Nan;
                             else
-                                acc = hypotF64(acc, x.value);
+                                acc = prF64Hypot(acc, x.value);
                             break;
                     }
                 }
@@ -96,9 +96,9 @@ struct Calc {
                     return false;
                 double x = v[1].value;
                 if (!v[2].none)
-                    x = minimumF64(x, v[2].value);
+                    x = prF64Minimum(x, v[2].value);
                 if (!v[0].none)
-                    x = maximumF64(v[0].value, x);
+                    x = prF64Maximum(v[0].value, x);
                 *out = CalcValue{x, v[1].power, false};
                 return true;
             }
@@ -114,12 +114,12 @@ struct Calc {
                 double b = v[1].value;
                 double x = 0;
                 switch (node.op) {
-                    case PrLayoutCalcOp_RoundUp:     x = roundToMultipleF64<RoundMode_Up>(a, b); break;
-                    case PrLayoutCalcOp_RoundDown:   x = roundToMultipleF64<RoundMode_Down>(a, b); break;
-                    case PrLayoutCalcOp_RoundToZero: x = roundToMultipleF64<RoundMode_TowardZero>(a, b); break;
-                    case PrLayoutCalcOp_Mod:         x = floorModF64(a, b); break;
-                    case PrLayoutCalcOp_Rem:         x = fmodF64(a, b); break;
-                    default:                         x = roundToMultipleF64<RoundMode_Nearest>(a, b); break;
+                    case PrLayoutCalcOp_RoundUp:     x = prF64RoundToMultiple(a, b, PrF64RoundMode_Up); break;
+                    case PrLayoutCalcOp_RoundDown:   x = prF64RoundToMultiple(a, b, PrF64RoundMode_Down); break;
+                    case PrLayoutCalcOp_RoundToZero: x = prF64RoundToMultiple(a, b, PrF64RoundMode_TowardZero); break;
+                    case PrLayoutCalcOp_Mod:         x = prF64FloorMod(a, b); break;
+                    case PrLayoutCalcOp_Rem:         x = prF64Fmod(a, b); break;
+                    default:                         x = prF64RoundToMultiple(a, b, PrF64RoundMode_Nearest); break;
                 }
                 *out = CalcValue{x, v[0].power, false};
                 return true;
@@ -139,7 +139,7 @@ struct Calc {
                         *out = CalcValue{1 / x, -v[0].power, false};
                         return true;
                     case PrLayoutCalcOp_Abs:
-                        *out = CalcValue{absF64(x), v[0].power, false};
+                        *out = CalcValue{prF64Abs(x), v[0].power, false};
                         return true;
                     default:
                         *out = CalcValue{x > 0 ? 1.0 : x < 0 ? -1.0 : x, 0, false};
@@ -187,11 +187,11 @@ bool evaluate(const PrLayoutCalcNode* nodes, uint32_t count, double base, double
 bool fitsPercent(double percent) {
     double fixed = percent * 65536;
     return fixed >= double(kPrLayoutWordPercentMin) && fixed <= double(kPrLayoutWordPercentMax) &&
-        fixed == floorF64(fixed);
+        fixed == prF64Floor(fixed);
 }
 
 uint32_t hashNodes(const PrLayoutCalcNode* nodes, uint32_t count) {
-    return uint32_t(hashBytes(nodes, sizeof(PrLayoutCalcNode) * count, kCompoundSeed));
+    return uint32_t(prHashBytes(nodes, sizeof(PrLayoutCalcNode) * count, kCompoundSeed));
 }
 
 } // namespace
@@ -205,7 +205,7 @@ PrLayoutLength layoutCompoundsIntern(LayoutCompounds* compounds, const PrLayoutC
     // result is 0 (css-values-4/#calc-ieee). A compound holds no NaN. Another calculation can make NaN at some bases,
     // as an infinite percentage does at 0, and resolves to 0 at those bases.
     for (uint32_t i = 0; i < count; ++i) {
-        if (nodes[i].op == PrLayoutCalcOp_Value && isNanF64(nodes[i].value))
+        if (nodes[i].op == PrLayoutCalcOp_Value && prF64IsNan(nodes[i].value))
             return prLayoutLengthUnits(PrLayoutUnit{0});
     }
     // Pixels alone compute now, and a lone percentage becomes its word if the word can hold it exactly.
@@ -221,13 +221,13 @@ PrLayoutLength layoutCompoundsIntern(LayoutCompounds* compounds, const PrLayoutC
             made = prLayoutCalcLeaf(node.leaf, node.value);
         else
             made = prLayoutCalcOperation(node.op, node.count);
-        PR_ASSERT(memEquals(&made, &node, sizeof(PrLayoutCalcNode)));
+        PR_ASSERT(prMemEquals(&made, &node, sizeof(PrLayoutCalcNode)));
     }
 #endif
     uint32_t hash = hashNodes(nodes, count);
     uint32_t found = compounds->index.find(hash, [&](uint32_t i) {
         const LayoutCompound& c = compounds->entries.data[i];
-        return c.count == count && memEquals(c.nodes, nodes, sizeof(PrLayoutCalcNode) * count);
+        return c.count == count && prMemEquals(c.nodes, nodes, sizeof(PrLayoutCalcNode) * count);
     });
     if (found != kHashMissing)
         return PrLayoutLength{prLayoutWordCompound(found)};
@@ -240,7 +240,7 @@ PrLayoutLength layoutCompoundsIntern(LayoutCompounds* compounds, const PrLayoutC
         compounds->entries.push(LayoutCompound{});
     }
     PrLayoutCalcNode* copy = static_cast<PrLayoutCalcNode*>(prMemoryAlloc(sizeof(PrLayoutCalcNode) * count));
-    memCopy(copy, nodes, sizeof(PrLayoutCalcNode) * count);
+    prMemCopy(copy, nodes, sizeof(PrLayoutCalcNode) * count);
     compounds->entries.data[at] = LayoutCompound{copy, count, hash, 0};
     compounds->index.insert(hash, at);
     compounds->candidates.push(at);

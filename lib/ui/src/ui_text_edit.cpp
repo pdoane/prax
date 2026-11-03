@@ -62,8 +62,8 @@ bool holdsValue(const TextEditState& state, PrStringView value) {
     uint32_t marked = state.markEnd - state.markStart;
     if (text.size - marked != value.size)
         return false;
-    return memEquals(text.data, value.data, state.markStart) &&
-        memEquals(text.data + state.markEnd, value.data + state.markStart, text.size - state.markEnd);
+    return prMemEquals(text.data, value.data, state.markStart) &&
+        prMemEquals(text.data + state.markEnd, value.data + state.markStart, text.size - state.markEnd);
 }
 
 // Returns the selection of `view`, which holds one because only the edit selects in it.

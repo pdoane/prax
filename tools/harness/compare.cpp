@@ -123,7 +123,7 @@ void boxBlurRows(Image& image, float floatRadius, uint32_t passes) {
             uint8_t* row = image.row(y);
             for (uint32_t pass = 0; pass < passes; ++pass) {
                 boxBlurLine(line, row, width - 1, radius, edgeA, edgeB, whole, edge);
-                memCopy(row, line, bytes);
+                prMemCopy(row, line, bytes);
             }
         }
         prMemoryFree(line);
@@ -136,7 +136,7 @@ Image transposed(const Image& image) {
         for (uint32_t y = first; y < last; ++y) {
             uint8_t* to = t.row(y);
             for (uint32_t x = 0; x < t.width; ++x)
-                memCopy(to + size_t(x) * 4, image.row(x) + size_t(y) * 4, 4);
+                prMemCopy(to + size_t(x) * 4, image.row(x) + size_t(y) * 4, 4);
         }
     });
     return t;
@@ -145,8 +145,8 @@ Image transposed(const Image& image) {
 // Returns the box radius whose three passes approximate a Gaussian of `sigma` (Gwosdek et al.), in Pillow's arithmetic.
 float boxRadius(float sigma) {
     float sigma2 = sigma * sigma / 3;
-    float length = float(sqrtF64(12.0 * double(sigma2) + 1.0));
-    float whole = float(floorF64((double(length) - 1.0) / 2.0));
+    float length = float(prF64Sqrt(12.0 * double(sigma2) + 1.0));
+    float whole = float(prF64Floor((double(length) - 1.0) / 2.0));
     float fraction = (2 * whole + 1) * (whole * (whole + 1) - 3 * sigma2);
     fraction /= 6 * (sigma2 - (whole + 1) * (whole + 1));
     return whole + fraction;
@@ -156,7 +156,7 @@ float boxRadius(float sigma) {
 Image gaussianBlur(const Image& image, float sigma) {
     float radius = boxRadius(sigma);
     Image rows = imageCreate(image.width, image.height);
-    memCopy(rows.values, image.values, size_t(image.width) * image.height * 4);
+    prMemCopy(rows.values, image.values, size_t(image.width) * image.height * 4);
     boxBlurRows(rows, radius, 3);
     Image columns = transposed(rows);
     imageFree(rows);

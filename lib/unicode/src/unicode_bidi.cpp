@@ -456,7 +456,7 @@ PrUnicodeBidiStrong prUnicodeBidiFirstStrong(PrStringView text) {
     for (size_t at = 0; at < text.size;) {
         char byte = text.data[at];
         if (uint8_t(byte) < 0x80) {
-            if (asciiIsLetter(byte))
+            if (prAsciiIsLetter(byte))
                 return PrUnicodeBidiStrong_Left;
             ++at;
             continue;

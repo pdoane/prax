@@ -10,6 +10,7 @@
 
 #if defined(PR_FETCH_HAS_BUILTIN)
 #include "pr/fetch_builtin.h"
+#include "pr/string_trim.h"
 #endif
 
 namespace pr_impl {
@@ -30,7 +31,7 @@ bool isToken(PrStringView text) {
     if (text.size == 0)
         return false;
     for (size_t i = 0; i < text.size; ++i) {
-        if (!asciiIsHttpToken(text.data[i]))
+        if (!prAsciiIsHttpToken(text.data[i]))
             return false;
     }
     return true;
@@ -50,19 +51,19 @@ bool hasUnsafeHeaderByte(PrStringView value) {
 // Returns true if a Range header's value is a simple range (fetch/#simple-range-header-value): one range of bytes, from
 // a first byte to an optional last byte that does not precede it.
 bool isSimpleRange(PrStringView value) {
-    if (!stringStartsWith(value, "bytes="))
+    if (!prStringStartsWith(value, "bytes="))
         return false;
     size_t at = 6;
     uint64_t first = 0;
     size_t start = at;
-    while (at < value.size && asciiIsDigit(value.data[at]) && at - start < 19)
+    while (at < value.size && prAsciiIsDigit(value.data[at]) && at - start < 19)
         first = first * 10 + uint64_t(value.data[at++] - '0');
     if (at == start || at == value.size || value.data[at] != '-')
         return false;
     ++at;
     start = at;
     uint64_t last = 0;
-    while (at < value.size && asciiIsDigit(value.data[at]) && at - start < 19)
+    while (at < value.size && prAsciiIsDigit(value.data[at]) && at - start < 19)
         last = last * 10 + uint64_t(value.data[at++] - '0');
     return at == value.size && (at == start || first <= last);
 }
@@ -72,7 +73,7 @@ bool isSimpleRange(PrStringView value) {
 // quoted string as its contents, unescaped. A comma inside a quoted string does not separate items.
 template <typename Visit>
 bool anyListItem(PrStringView value, Visit visit) {
-    TextBuffer item;
+    PrTextBuffer item = {};
     bool found = false;
     for (size_t i = 0; !found && i <= value.size; ++i) {
         if (i < value.size && value.data[i] == '"') {
@@ -80,18 +81,18 @@ bool anyListItem(PrStringView value, Visit visit) {
             for (++i; i < value.size && value.data[i] != '"'; ++i) {
                 if (value.data[i] == '\\' && i + 1 < value.size)
                     ++i;
-                textAppendChar(&item, value.data[i]);
+                prTextBufferAppendChar(&item, value.data[i]);
             }
             continue;
         }
         if (i < value.size && value.data[i] != ',') {
-            textAppendChar(&item, value.data[i]);
+            prTextBufferAppendChar(&item, value.data[i]);
             continue;
         }
-        found = visit(stringTrim(textView(&item), asciiIsTabOrSpace));
-        textClear(&item);
+        found = visit(stringTrimBy(prTextBufferView(&item), prAsciiIsTabOrSpace));
+        prTextBufferClear(&item);
     }
-    textReset(&item);
+    prTextBufferReset(&item);
     return found;
 }
 
@@ -111,7 +112,7 @@ PrStringView prFetchInitiatorName(PrFetchInitiator initiator) {
 
 PrFetchNetworkBackend prFetchNetworkBackendFromName(PrStringView name) {
     for (PrFetchNetworkBackend backend = 0; backend < PrFetchNetworkBackend_Count; ++backend) {
-        if (asciiEqualsFold(kBackendNames[backend], name))
+        if (prAsciiEqualsFold(kBackendNames[backend], name))
             return backend;
     }
     return PrFetchNetworkBackend_Count;
@@ -192,7 +193,7 @@ PrStringView prFetchHeaderValue(const PrFetch* fetch, PrStringView name) {
     uint32_t count = prFetchHeaderCount(fetch);
     for (uint32_t i = 0; i < count; ++i) {
         PrFetchHeader header = prFetchHeader(fetch, i);
-        if (asciiEqualsFold(header.name, name))
+        if (prAsciiEqualsFold(header.name, name))
             return header.value;
     }
     return PrStringView{nullptr, 0};
@@ -236,7 +237,7 @@ bool prFetchIsMethod(PrStringView method) {
 }
 
 bool prFetchIsForbiddenMethod(PrStringView method) {
-    return asciiEqualsFold(method, "CONNECT") || asciiEqualsFold(method, "TRACE") || asciiEqualsFold(method, "TRACK");
+    return prAsciiEqualsFold(method, "CONNECT") || prAsciiEqualsFold(method, "TRACE") || prAsciiEqualsFold(method, "TRACK");
 }
 
 bool prFetchIsCorsSafelistedMethod(PrStringView method) {
@@ -246,7 +247,7 @@ bool prFetchIsCorsSafelistedMethod(PrStringView method) {
 PrStringView prFetchNormalizeMethod(PrStringView method) {
     constexpr PrStringView kNormalized[] = {"DELETE", "GET", "HEAD", "OPTIONS", "POST", "PUT"};
     for (PrStringView normalized : kNormalized) {
-        if (asciiEqualsFold(method, normalized))
+        if (prAsciiEqualsFold(method, normalized))
             return normalized;
     }
     return method;
@@ -257,7 +258,7 @@ bool prFetchIsHeaderName(PrStringView name) {
 }
 
 bool prFetchIsHeaderValue(PrStringView value) {
-    if (value.size != 0 && (asciiIsTabOrSpace(value.data[0]) || asciiIsTabOrSpace(value.data[value.size - 1])))
+    if (value.size != 0 && (prAsciiIsTabOrSpace(value.data[0]) || prAsciiIsTabOrSpace(value.data[value.size - 1])))
         return false;
     for (size_t i = 0; i < value.size; ++i) {
         char c = value.data[i];
@@ -268,7 +269,7 @@ bool prFetchIsHeaderValue(PrStringView value) {
 }
 
 PrStringView prFetchNormalizeHeaderValue(PrStringView value) {
-    return stringTrim(value, asciiIsHttpSpace);
+    return stringTrimBy(value, prAsciiIsHttpSpace);
 }
 
 bool prFetchIsForbiddenRequestHeader(PrStringView name, PrStringView value) {
@@ -278,51 +279,51 @@ bool prFetchIsForbiddenRequestHeader(PrStringView name, PrStringView value) {
         "referer", "set-cookie", "te", "trailer", "transfer-encoding", "upgrade", "via",
     };
     for (PrStringView forbidden : kForbidden) {
-        if (asciiEqualsFold(name, forbidden))
+        if (prAsciiEqualsFold(name, forbidden))
             return true;
     }
-    if (asciiStartsWithFold(name, "proxy-") || asciiStartsWithFold(name, "sec-"))
+    if (prAsciiStartsWithFold(name, "proxy-") || prAsciiStartsWithFold(name, "sec-"))
         return true;
-    if (asciiEqualsFold(name, "x-http-method") || asciiEqualsFold(name, "x-http-method-override") ||
-            asciiEqualsFold(name, "x-method-override"))
+    if (prAsciiEqualsFold(name, "x-http-method") || prAsciiEqualsFold(name, "x-http-method-override") ||
+            prAsciiEqualsFold(name, "x-method-override"))
         return anyListItem(value, prFetchIsForbiddenMethod);
     return false;
 }
 
 bool prFetchIsForbiddenResponseHeaderName(PrStringView name) {
-    return asciiEqualsFold(name, "set-cookie") || asciiEqualsFold(name, "set-cookie2");
+    return prAsciiEqualsFold(name, "set-cookie") || prAsciiEqualsFold(name, "set-cookie2");
 }
 
 bool prFetchIsCorsSafelistedRequestHeader(PrStringView name, PrStringView value) {
     constexpr size_t kSafelistedMaxBytes = 128;
     if (value.size > kSafelistedMaxBytes)
         return false;
-    if (asciiEqualsFold(name, "accept"))
+    if (prAsciiEqualsFold(name, "accept"))
         return !hasUnsafeHeaderByte(value);
-    if (asciiEqualsFold(name, "accept-language") || asciiEqualsFold(name, "content-language")) {
+    if (prAsciiEqualsFold(name, "accept-language") || prAsciiEqualsFold(name, "content-language")) {
         for (size_t i = 0; i < value.size; ++i) {
             char c = value.data[i];
-            if (!asciiIsDigit(c) && !asciiIsLetter(c) && c != ' ' && c != '*' && c != ',' && c != '-' && c != '.' &&
+            if (!prAsciiIsDigit(c) && !prAsciiIsLetter(c) && c != ' ' && c != '*' && c != ',' && c != '-' && c != '.' &&
                     c != ';' && c != '=')
                 return false;
         }
         return true;
     }
-    if (asciiEqualsFold(name, "content-type")) {
+    if (prAsciiEqualsFold(name, "content-type")) {
         if (hasUnsafeHeaderByte(value))
             return false;
         PrStringView essence = prMimeTypeEssence(value);
-        return asciiEqualsFold(essence, "application/x-www-form-urlencoded") ||
-            asciiEqualsFold(essence, "multipart/form-data") || asciiEqualsFold(essence, "text/plain");
+        return prAsciiEqualsFold(essence, "application/x-www-form-urlencoded") ||
+            prAsciiEqualsFold(essence, "multipart/form-data") || prAsciiEqualsFold(essence, "text/plain");
     }
-    if (asciiEqualsFold(name, "range"))
+    if (prAsciiEqualsFold(name, "range"))
         return isSimpleRange(value);
     return false;
 }
 
 bool prFetchIsNoCorsSafelistedRequestHeaderName(PrStringView name) {
-    return asciiEqualsFold(name, "accept") || asciiEqualsFold(name, "accept-language") ||
-        asciiEqualsFold(name, "content-language") || asciiEqualsFold(name, "content-type");
+    return prAsciiEqualsFold(name, "accept") || prAsciiEqualsFold(name, "accept-language") ||
+        prAsciiEqualsFold(name, "content-language") || prAsciiEqualsFold(name, "content-type");
 }
 
 bool prFetchIsNoCorsSafelistedRequestHeader(PrStringView name, PrStringView value) {
@@ -334,12 +335,12 @@ bool prFetchIsCorsExposedHeader(PrStringView name, PrStringView exposed, PrFetch
         "cache-control", "content-language", "content-length", "content-type", "expires", "last-modified", "pragma",
     };
     for (PrStringView safelisted : kSafelisted) {
-        if (asciiEqualsFold(name, safelisted))
+        if (prAsciiEqualsFold(name, safelisted))
             return true;
     }
     if (prFetchIsForbiddenResponseHeaderName(name))
         return false;
     return anyListItem(exposed, [&](PrStringView item) {
-        return asciiEqualsFold(item, name) || (item == "*" && credentials != PrFetchCredentials_Include);
+        return prAsciiEqualsFold(item, name) || (item == "*" && credentials != PrFetchCredentials_Include);
     });
 }

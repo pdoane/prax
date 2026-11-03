@@ -164,7 +164,7 @@ struct MarkBox {
 struct DiamondEffects {
     static constexpr PrLayoutGroup kKind = PrLayoutGroup_Effect;
     void make(const PrKit&, PrLayoutEffectStyle& effects) const {
-        effects.transform = prLayoutTransformFromAffine2(prAffine2Rotate(kPiF32 / 4));
+        effects.transform = prLayoutTransformFromAffine2(prAffine2Rotate(kPrF32Pi / 4));
     }
 };
 
@@ -242,7 +242,7 @@ Snapped snapTime(const PrKitTimeline& t, const Span& span, float time, bool scru
     float best = time;
     bool found = false;
     auto consider = [&](float candidate) {
-        float distance = absF32(candidate - time);
+        float distance = prF32Abs(candidate - time);
         if (distance <= nearest) {
             nearest = distance;
             best = candidate;
@@ -266,7 +266,7 @@ Snapped snapTime(const PrKitTimeline& t, const Span& span, float time, bool scru
         consider(*t.playhead);
     if (found)
         return Snapped{best, true};
-    return Snapped{snap.step > 0 ? roundF32(time / snap.step) * snap.step : time, false};
+    return Snapped{snap.step > 0 ? prF32Round(time / snap.step) * snap.step : time, false};
 }
 
 // Creates a span in `parent` (SpanBox) with `fill` and, if `edge` is not clear, a 1 px frame of it.
@@ -299,8 +299,8 @@ void ticks(PrKit& kit, PrLayoutNode ruler, const Span& span) {
             break;
         }
     }
-    float first = ceilF32(span.start / step);
-    float last = floorF32((span.start + span.seconds) / step);
+    float first = prF32Ceil(span.start / step);
+    float last = prF32Floor((span.start + span.seconds) / step);
     for (float i = first; i <= last; ++i) {
         float time = i * step;
         float percent = span.percent(time);
@@ -308,8 +308,8 @@ void ticks(PrKit& kit, PrLayoutNode ruler, const Span& span) {
         PrLayoutStyleIndex record = kitStyle(kit, TickLabelBox{.percent = percent},
             KitFont{.role = PrKitTextRole_Meta}, KitInk{.color = p.text3});
         PrLayoutNode label = prLayoutTreeFrameElement(kit.tree, ruler, 0, record);
-        char text[kF64TextMaxBytes + 1];
-        size_t size = formatF64Significant(double(time), 6, text);
+        char text[kPrF64TextMaxBytes + 1];
+        size_t size = prF64FormatSignificant(double(time), 6, text);
         text[size++] = 's';
         prLayoutTreeFrameText(kit.tree, label, 0, PrStringView{text, size});
     }
@@ -371,7 +371,7 @@ PrLayoutNode prKitTimeline(PrKit* kit, PrLayoutNode parent, PrKitTimeline timeli
         PrVec2 at{};
         if (zoom && prUiPointer(ui, &pointer) && prUiLocalPoint(ui, ruler, pointer, &at)) {
             float pivot = span.timeAt(at.x);
-            float seconds = span.seconds * expF32(wheel.y * kZoomPerPx);
+            float seconds = span.seconds * prF32Exp(wheel.y * kZoomPerPx);
             seconds = seconds < kMinSpan ? kMinSpan : seconds > kMaxSpan ? kMaxSpan : seconds;
             float start = pivot - (pivot - span.start) * (seconds / span.seconds);
             *t.view = PrKitTimeSpan{start, start + seconds};
@@ -446,7 +446,7 @@ PrLayoutNode prKitTimeline(PrKit* kit, PrLayoutNode parent, PrKitTimeline timeli
                     }
                 }
                 float rows = at.y / trackHeight;
-                int32_t reached = int32_t(track) + int32_t(floorF32(rows));
+                int32_t reached = int32_t(track) + int32_t(prF32Floor(rows));
                 reached = reached < 0 ? 0 : reached >= int32_t(t.trackCount) ? int32_t(t.trackCount) - 1 : reached;
                 state->reachTime = span.timeAt(at.x);
                 state->reachTrack = uint32_t(reached);
@@ -455,8 +455,8 @@ PrLayoutNode prKitTimeline(PrKit* kit, PrLayoutNode parent, PrKitTimeline timeli
                         state->live = true;
                         prUiEdit(k.ui, frame, PrUiEditPhase_Begin);
                     }
-                    float low = minF32(state->marqueeTime, state->reachTime);
-                    float high = maxF32(state->marqueeTime, state->reachTime);
+                    float low = prF32Min(state->marqueeTime, state->reachTime);
+                    float high = prF32Max(state->marqueeTime, state->reachTime);
                     uint32_t top = state->marqueeTrack < state->reachTrack ? state->marqueeTrack : state->reachTrack;
                     uint32_t bottom = state->marqueeTrack < state->reachTrack ? state->reachTrack : state->marqueeTrack;
                     bool changed = false;
@@ -573,7 +573,7 @@ PrLayoutNode prKitTimeline(PrKit* kit, PrLayoutNode parent, PrKitTimeline timeli
                 Snapped atEnd = snapTime(t, span, start + state->duration, false, true);
                 float byStart = atStart.time - start;
                 float byEnd = atEnd.time - (start + state->duration);
-                bool end = byEnd != 0 && (byStart == 0 || absF32(byEnd) < absF32(byStart));
+                bool end = byEnd != 0 && (byStart == 0 || prF32Abs(byEnd) < prF32Abs(byStart));
                 float snapped = start + (end ? byEnd : byStart);
                 if (end ? atEnd.guided : atStart.guided)
                     guide = end ? atEnd : atStart;
@@ -592,7 +592,7 @@ PrLayoutNode prKitTimeline(PrKit* kit, PrLayoutNode parent, PrKitTimeline timeli
                 Snapped snapped = snapTime(t, span, time, false, true);
                 if (snapped.guided)
                     guide = snapped;
-                float start = minF32(snapped.time, end - least);
+                float start = prF32Min(snapped.time, end - least);
                 changed = start != b.start;
                 b.start = start;
                 b.duration = end - start;
@@ -600,7 +600,7 @@ PrLayoutNode prKitTimeline(PrKit* kit, PrLayoutNode parent, PrKitTimeline timeli
                 Snapped snapped = snapTime(t, span, time, false, true);
                 if (snapped.guided)
                     guide = snapped;
-                float end = maxF32(snapped.time, state->start + least);
+                float end = prF32Max(snapped.time, state->start + least);
                 changed = end != b.start + b.duration;
                 b.duration = end - b.start;
             }
@@ -619,8 +619,8 @@ PrLayoutNode prKitTimeline(PrKit* kit, PrLayoutNode parent, PrKitTimeline timeli
             uint32_t top = state->marqueeTrack < state->reachTrack ? state->marqueeTrack : state->reachTrack;
             uint32_t bottom = state->marqueeTrack < state->reachTrack ? state->reachTrack : state->marqueeTrack;
             if (track >= top && track <= bottom) {
-                float low = minF32(state->marqueeTime, state->reachTime);
-                float high = maxF32(state->marqueeTime, state->reachTime);
+                float low = prF32Min(state->marqueeTime, state->reachTime);
+                float high = prF32Max(state->marqueeTime, state->reachTime);
                 PrColor wash = p.accent;
                 wash.a = 0.12f;
                 spanBox(k, lane, span.percent(low), (high - low) / span.seconds * 100, 0, 0, wash, p.accent);

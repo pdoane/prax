@@ -905,7 +905,7 @@ JSValue clipboardEventClipboardData(JSContext* ctx, JSValueConst eventObject) {
 
 // Returns true if `format` names the transfer's text (html/#dom-datatransfer-getdata): "text" stands for text/plain.
 bool namesText(PrStringView format) {
-    return asciiEqualsFold(format, "text") || asciiEqualsFold(format, "text/plain");
+    return prAsciiEqualsFold(format, "text") || prAsciiEqualsFold(format, "text/plain");
 }
 
 JSValue dataTransferGetData(JSContext* ctx, JSValueConst transferObject, int argc, JSValueConst* argv) {
@@ -3977,7 +3977,7 @@ bool prJsDomInsertPositionRead(JSContext* ctx, JSValueConst value, PrDomInsertPo
     if (!name.read(value))
         return false;
     for (uint32_t i = 0; i < countOf(kPositions); ++i) {
-        if (asciiEqualsFold(name.value(), kPositions[i])) {
+        if (prAsciiEqualsFold(name.value(), kPositions[i])) {
             *out = PrDomInsertPosition(i);
             return true;
         }

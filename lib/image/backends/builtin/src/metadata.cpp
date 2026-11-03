@@ -19,11 +19,11 @@ struct TiffReader {
     bool bigEndian;
 
     uint32_t u16At(size_t at) const {
-        return bigEndian ? readBeU16(bytes + at) : readLeU16(bytes + at);
+        return bigEndian ? prMemReadBeU16(bytes + at) : prMemReadLeU16(bytes + at);
     }
 
     uint32_t u32At(size_t at) const {
-        return bigEndian ? readBeU32(bytes + at) : readLeU32(bytes + at);
+        return bigEndian ? prMemReadBeU32(bytes + at) : prMemReadLeU32(bytes + at);
     }
 };
 

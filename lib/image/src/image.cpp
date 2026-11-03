@@ -51,7 +51,7 @@ PrStatus readCached(void* PR_NULLABLE context, uint64_t offset, void* out, size_
     if (offset < decoder->prefixSize) {
         size_t remaining = decoder->prefixSize - size_t(offset);
         size_t copied = size < remaining ? size : remaining;
-        memCopy(target, decoder->prefix + size_t(offset), copied);
+        prMemCopy(target, decoder->prefix + size_t(offset), copied);
         offset += copied;
         size -= copied;
         target += copied;
@@ -97,7 +97,7 @@ using namespace pr_impl;
 
 PrImageCodecBackend prImageCodecBackendFromName(PrStringView name) {
     for (PrImageCodecBackend backend = 0; backend < PrImageCodecBackend_Count; ++backend) {
-        if (asciiEqualsFold(kBackendNames[backend], name))
+        if (prAsciiEqualsFold(kBackendNames[backend], name))
             return backend;
     }
     return PrImageCodecBackend_Count;
@@ -166,7 +166,7 @@ PrStatus prImageSourceRead(const PrImageSource* source, uint64_t offset, void* P
     if (size == 0)
         return PrStatus_Ok;
     if (source->readAt == nullptr) {
-        memCopy(out, source->memory.data + size_t(offset), size);
+        prMemCopy(out, source->memory.data + size_t(offset), size);
         return PrStatus_Ok;
     }
     PrStatus status = source->readAt(source->stream.context, offset, out, size);
@@ -380,7 +380,7 @@ void prImageOrient(PrPixelView source, uint32_t pixelSize, PrImageOrientation or
                 default:
                     break;
             }
-            memCopy(output.data + size_t(y) * output.stride + size_t(x) * pixelSize,
+            prMemCopy(output.data + size_t(y) * output.stride + size_t(x) * pixelSize,
                 source.data + size_t(sy) * source.stride + size_t(sx) * pixelSize, pixelSize);
         }
     }

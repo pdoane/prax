@@ -408,7 +408,7 @@ struct CssCascadeScratch {
     HashIndex customIndex;          // positions in `custom` by cssCustomHash of the name
     CssValuePool substituted;       // values with their substitutions made
     CssValuePool urls;              // a value with its url()s resolved against its sheet's URL
-    TextBuffer text;
+    PrTextBuffer text = {};
 
     // The element's last shorthand declaration with a substitution, its substitutions made and its longhands parsed,
     // which each of its longhands reads. Null if the element has read none yet.
@@ -420,7 +420,7 @@ struct CssCascadeScratch {
     // substitutes to the same text, as one that reads the same custom properties does on every element, is not parsed
     // again.
     PrCssProperty parsedShorthand = PrCssProperty_Count;
-    TextBuffer parsedText;
+    PrTextBuffer parsedText = {};
 
     // The element being styled, or the originating element of the pseudo-element being styled, whose attributes attr()
     // reads.

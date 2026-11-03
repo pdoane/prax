@@ -30,11 +30,11 @@ uint32_t tableChecksum(const uint8_t* data, size_t size) {
     uint32_t sum = 0;
     size_t at = 0;
     for (; at + 4 <= size; at += 4)
-        sum += readBeU32(data + at);
+        sum += prMemReadBeU32(data + at);
     if (at < size) {
         uint8_t last[4]{};
-        memCopy(last, data + at, size - at);
-        sum += readBeU32(last);
+        prMemCopy(last, data + at, size - at);
+        sum += prMemReadBeU32(last);
     }
     return sum;
 }
@@ -47,7 +47,7 @@ void writeOffsetTable(uint8_t* out, uint32_t flavor, uint16_t tables) {
         power = uint16_t(power * 2);
         ++selector;
     }
-    writeBeU32(out, flavor);
+    prMemWriteBeU32(out, flavor);
     writeBeU16(out + 4, tables);
     writeBeU16(out + 6, uint16_t(power * 16));
     writeBeU16(out + 8, selector);
@@ -85,7 +85,7 @@ uint8_t readU8(Reader& r) {
 
 uint16_t readU16(Reader& r) {
     const uint8_t* bytes = readBytes(r, 2);
-    return bytes != nullptr ? readBeU16(bytes) : 0;
+    return bytes != nullptr ? prMemReadBeU16(bytes) : 0;
 }
 
 int16_t readS16(Reader& r) {
@@ -94,7 +94,7 @@ int16_t readS16(Reader& r) {
 
 uint32_t readU32(Reader& r) {
     const uint8_t* bytes = readBytes(r, 4);
-    return bytes != nullptr ? readBeU32(bytes) : 0;
+    return bytes != nullptr ? prMemReadBeU32(bytes) : 0;
 }
 
 // Reads a 255UInt16 (woff2 3.1). Every encoding of a value is accepted.
@@ -139,30 +139,30 @@ PrStatus decodeWoff(PrByteView woff, PrCompressCodec* codec, Array<uint8_t>* out
     const uint8_t* in = woff.data;
     if (woff.size < kWoffHeaderSize)
         return PrStatus_InvalidData;
-    const uint16_t tables = readBeU16(in + 12);
-    const uint32_t size = readBeU32(in + 16);
+    const uint16_t tables = prMemReadBeU16(in + 12);
+    const uint32_t size = prMemReadBeU32(in + 16);
     if (woff.size < kWoffHeaderSize + size_t(tables) * kWoffEntrySize ||
             size < kOffsetTableSize + uint64_t(tables) * kTableRecordSize || size > kMaxFontSize)
         return PrStatus_InvalidData;
     out->resize(size);
     uint8_t* font = out->data;
-    memZero(font, size);
-    writeOffsetTable(font, readBeU32(in + 4), tables);
+    prMemZero(font, size);
+    writeOffsetTable(font, prMemReadBeU32(in + 4), tables);
     size_t at = kOffsetTableSize + size_t(tables) * kTableRecordSize;
     for (uint16_t t = 0; t < tables; ++t) {
         const uint8_t* entry = in + kWoffHeaderSize + size_t(t) * kWoffEntrySize;
-        const uint32_t offset = readBeU32(entry + 4);
-        const uint32_t compressed = readBeU32(entry + 8);
-        const uint32_t length = readBeU32(entry + 12);
+        const uint32_t offset = prMemReadBeU32(entry + 4);
+        const uint32_t compressed = prMemReadBeU32(entry + 8);
+        const uint32_t length = prMemReadBeU32(entry + 12);
         if (size_t(offset) + compressed > woff.size || at + length > size || compressed > length)
             return PrStatus_InvalidData;
         uint8_t* record = font + kOffsetTableSize + size_t(t) * kTableRecordSize;
-        writeBeU32(record, readBeU32(entry));
-        writeBeU32(record + 4, readBeU32(entry + 16));
-        writeBeU32(record + 8, uint32_t(at));
-        writeBeU32(record + 12, length);
+        prMemWriteBeU32(record, prMemReadBeU32(entry));
+        prMemWriteBeU32(record + 4, prMemReadBeU32(entry + 16));
+        prMemWriteBeU32(record + 8, uint32_t(at));
+        prMemWriteBeU32(record + 12, length);
         if (compressed == length) {
-            memCopy(font + at, in + offset, length);
+            prMemCopy(font + at, in + offset, length);
         } else {
             PrCompressRead read{};
             const PrByteView input{in + offset, compressed};
@@ -617,8 +617,8 @@ bool rebuildCompositeGlyph(GlyfStreams& s, uint32_t glyph, Array<uint8_t>& glyf,
     const uint8_t* box = readBytes(s.boxes, 8);
     if (box == nullptr)
         return false;
-    memCopy(header + 2, box, 8);
-    *xMin = int16_t(readBeU16(box));
+    prMemCopy(header + 2, box, 8);
+    *xMin = int16_t(prMemReadBeU16(box));
     glyf.append(header, 10);
     bool instructions = false;
     ComponentFlags flags = 0;
@@ -726,7 +726,7 @@ bool rebuildGlyf(Woff2File& file, const uint8_t* data, uint32_t size, uint32_t l
             if (indexFormat == 0)
                 writeBeU16(loca.data + 2 * glyph, uint16_t(offsets.data[glyph] / 2));
             else
-                writeBeU32(loca.data + 4 * glyph, offsets.data[glyph]);
+                prMemWriteBeU32(loca.data + 4 * glyph, offsets.data[glyph]);
         }
     }
     offsets.reset();
@@ -741,12 +741,15 @@ bool readXMins(Woff2File& file, const Woff2Table& glyf, const Woff2Table& loca, 
     file.xMins.resize(xMinsStart + glyphCount);
     const uint8_t* glyphs = bytesOf(file, glyf);
     const uint8_t* offsets = bytesOf(file, loca);
+    auto locaOffset = [&](uint32_t index) {
+        return longLoca ? prMemReadBeU32(offsets + 4 * index) : 2u * prMemReadBeU16(offsets + 2 * index);
+    };
     for (uint32_t glyph = 0; glyph < glyphCount; ++glyph) {
-        const uint32_t start = longLoca ? readBeU32(offsets + 4 * glyph) : 2u * readBeU16(offsets + 2 * glyph);
-        const uint32_t end = longLoca ? readBeU32(offsets + 4 * glyph + 4) : 2u * readBeU16(offsets + 2 * glyph + 2);
+        const uint32_t start = locaOffset(glyph);
+        const uint32_t end = locaOffset(glyph + 1);
         if (end < start || end > glyf.size)
             return false;
-        file.xMins.data[xMinsStart + glyph] = end - start >= 10 ? int16_t(readBeU16(glyphs + start + 2)) : 0;
+        file.xMins.data[xMinsStart + glyph] = end - start >= 10 ? int16_t(prMemReadBeU16(glyphs + start + 2)) : 0;
     }
     return true;
 }
@@ -780,8 +783,8 @@ bool rebuildHmtx(Woff2File& file, const Woff2Font& font, const Woff2Table& glyf,
     if (maxp == kWoff2TableNone || hhea == kWoff2TableNone || file.tables.data[maxp].size < 6 ||
             file.tables.data[hhea].size < 36)
         return false;
-    const uint16_t glyphCount = readBeU16(bytesOf(file, file.tables.data[maxp]) + 4);
-    const uint16_t metricCount = readBeU16(bytesOf(file, file.tables.data[hhea]) + 34);
+    const uint16_t glyphCount = prMemReadBeU16(bytesOf(file, file.tables.data[maxp]) + 4);
+    const uint16_t metricCount = prMemReadBeU16(bytesOf(file, file.tables.data[hhea]) + 34);
     if (metricCount == 0 || metricCount > glyphCount || glyf.xMinsCount < glyphCount)
         return false;
     const int16_t* xMins = file.xMins.data + glyf.xMinsStart;
@@ -799,16 +802,16 @@ bool rebuildHmtx(Woff2File& file, const Woff2Font& font, const Woff2Table& glyf,
     Array<uint8_t> out;
     out.resize(4 * uint32_t(metricCount) + 2 * (uint32_t(glyphCount) - metricCount));
     for (uint32_t i = 0; i < metricCount; ++i) {
-        memCopy(out.data + 4 * i, advances + 2 * i, 2);
+        prMemCopy(out.data + 4 * i, advances + 2 * i, 2);
         if (bearings != nullptr)
-            memCopy(out.data + 4 * i + 2, bearings + 2 * i, 2);
+            prMemCopy(out.data + 4 * i + 2, bearings + 2 * i, 2);
         else
             writeBeU16(out.data + 4 * i + 2, uint16_t(xMins[i]));
     }
     for (uint32_t i = 0; i < uint32_t(glyphCount) - metricCount; ++i) {
         uint8_t* bearing = out.data + 4 * uint32_t(metricCount) + 2 * i;
         if (monospaced != nullptr)
-            memCopy(bearing, monospaced + 2 * i, 2);
+            prMemCopy(bearing, monospaced + 2 * i, 2);
         else
             writeBeU16(bearing, uint16_t(xMins[metricCount + i]));
     }
@@ -825,8 +828,8 @@ bool readFontXMins(Woff2File& file, const Woff2Font& font, Woff2Table& glyf, con
             file.tables.data[maxp].size < 6)
         return false;
     // The indexToLocFormat of head, and the numGlyphs of maxp (OpenType head, maxp).
-    const bool longLoca = readBeU16(bytesOf(file, file.tables.data[head]) + 50) != 0;
-    const uint16_t glyphCount = readBeU16(bytesOf(file, file.tables.data[maxp]) + 4);
+    const bool longLoca = prMemReadBeU16(bytesOf(file, file.tables.data[head]) + 50) != 0;
+    const uint16_t glyphCount = prMemReadBeU16(bytesOf(file, file.tables.data[maxp]) + 4);
     glyf.xMinsStart = file.xMins.count;
     const bool valid = readXMins(file, glyf, loca, glyphCount, longLoca);
     glyf.xMinsCount = file.xMins.count - glyf.xMinsStart;
@@ -913,31 +916,31 @@ bool writeFont(Woff2File& file, Array<uint8_t>* out) {
     }
     out->resize(uint32_t(size));
     uint8_t* font = out->data;
-    memZero(font, size);
+    prMemZero(font, size);
     for (uint32_t i = 0; i < file.tables.count; ++i) {
         Woff2Table& table = file.tables.data[i];
         if (table.offset == 0)
             continue;
         if (table.size != 0)
-            memCopy(font + table.offset, bytesOf(file, table), table.size);
+            prMemCopy(font + table.offset, bytesOf(file, table), table.size);
         // The checksum adjustment of head counts as zero in the checksum of head itself (OpenType head).
         if (table.tag == kTagHead && table.size >= 12)
-            writeBeU32(font + table.offset + 8, 0);
+            prMemWriteBeU32(font + table.offset + 8, 0);
         table.checksum = tableChecksum(font + table.offset, table.size);
     }
 
     uint32_t at = 0;
     if (file.collection) {
-        writeBeU32(font, kTagCollection);
+        prMemWriteBeU32(font, kTagCollection);
         // A collection header of version 2 would name a DSIG, which decoding has invalidated, so it is version 1.
-        writeBeU32(font + 4, 0x00010000);
-        writeBeU32(font + 8, fontCount);
+        prMemWriteBeU32(font + 4, 0x00010000);
+        prMemWriteBeU32(font + 8, fontCount);
         at = 12 + 4 * fontCount;
     }
     for (uint32_t f = 0; f < fontCount; ++f) {
         const Woff2Font& entry = file.fonts.data[f];
         if (file.collection)
-            writeBeU32(font + 12 + 4 * f, at);
+            prMemWriteBeU32(font + 12 + 4 * f, at);
         uint8_t* offsetTable = font + at;
         writeOffsetTable(offsetTable, entry.flavor, uint16_t(entry.count));
         // The records, sorted by tag. The tags are unique.
@@ -957,10 +960,10 @@ bool writeFont(Woff2File& file, Array<uint8_t>* out) {
             const Woff2Table& table = file.tables.data[sorted.data[i]];
             unique = unique && (i == 0 || file.tables.data[sorted.data[i - 1]].tag != table.tag);
             uint8_t* record = offsetTable + kOffsetTableSize + kTableRecordSize * i;
-            writeBeU32(record, table.tag);
-            writeBeU32(record + 4, table.checksum);
-            writeBeU32(record + 8, table.offset);
-            writeBeU32(record + 12, table.size);
+            prMemWriteBeU32(record, table.tag);
+            prMemWriteBeU32(record + 4, table.checksum);
+            prMemWriteBeU32(record + 8, table.offset);
+            prMemWriteBeU32(record + 12, table.size);
             sum += table.checksum;
             if (table.tag == kTagHead)
                 head = sorted.data[i];
@@ -971,7 +974,7 @@ bool writeFont(Woff2File& file, Array<uint8_t>* out) {
         const uint32_t directorySize = kOffsetTableSize + kTableRecordSize * entry.count;
         sum += tableChecksum(offsetTable, directorySize);
         if (head != kWoff2TableNone && file.tables.data[head].size >= 12)
-            writeBeU32(font + file.tables.data[head].offset + 8, 0xb1b0afbau - sum);
+            prMemWriteBeU32(font + file.tables.data[head].offset + 8, 0xb1b0afbau - sum);
         at += directorySize;
     }
     return true;
@@ -996,7 +999,7 @@ PrStatus woffDecode(PrByteView bytes, PrCompressCodec* codec, Array<uint8_t>* ou
     PR_ASSERT(out->count == 0);
     if (bytes.size < 4)
         return PrStatus_InvalidData;
-    const uint32_t signature = readBeU32(bytes.data);
+    const uint32_t signature = prMemReadBeU32(bytes.data);
     if (signature == PR_FONT_TAG('w', 'O', 'F', '2'))
         return decodeWoff2(bytes, codec, out);
     if (signature == PR_FONT_TAG('w', 'O', 'F', 'F'))

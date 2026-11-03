@@ -473,7 +473,7 @@ PrLayoutNode checkRow(PrKit* kit, PrLayoutNode parent, const PrKitCheck& check, 
 
 // Returns the strip's payload kind. The kind is the strip itself, so that a tab drops only into its own strip.
 uint64_t tabPayloadOf(PrLayoutNode strip) {
-    return hashMixKeys(strip, 0x7461627375ull);
+    return prHashMixKeys(strip, 0x7461627375ull);
 }
 
 // The key of a tab strip's caret. The caret is created before the tabs. Because it is keyed, the tabs keep matching

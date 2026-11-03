@@ -142,7 +142,7 @@ void writePlain(Session* session, const uint8_t* bytes, size_t size) {
         uint32_t chunk = size < sizes.cbMaximumMessage ? uint32_t(size) : uint32_t(sizes.cbMaximumMessage);
         session->sealed.resize(sizes.cbHeader + chunk + sizes.cbTrailer);
         uint8_t* record = session->sealed.data;
-        memCopy(record + sizes.cbHeader, bytes, chunk);
+        prMemCopy(record + sizes.cbHeader, bytes, chunk);
         SecBuffer buffers[4] = {
             {sizes.cbHeader, SECBUFFER_STREAM_HEADER, record},
             {chunk, SECBUFFER_DATA, record + sizes.cbHeader},
@@ -190,7 +190,7 @@ void completeHandshake(Session* session) {
     if (QueryContextAttributesW(&session->context, SECPKG_ATTR_APPLICATION_PROTOCOL, &protocol) == SEC_E_OK &&
             protocol.ProtoNegoStatus == SecApplicationProtocolNegotiationStatus_Success &&
             protocol.ProtoNegoExt == SecApplicationProtocolNegotiationExt_ALPN && protocol.ProtocolIdSize != 0) {
-        memCopy(session->protocolBytes, protocol.ProtocolId, protocol.ProtocolIdSize);
+        prMemCopy(session->protocolBytes, protocol.ProtocolId, protocol.ProtocolIdSize);
         session->protocol = PrStringView{session->protocolBytes, protocol.ProtocolIdSize};
     }
     PCCERT_CONTEXT certificate = nullptr;
@@ -206,7 +206,7 @@ void completeHandshake(Session* session) {
     job->session = session;
     job->certificate = certificate;
     job->anchors = session->anchors != nullptr ? CertDuplicateStore(session->anchors) : nullptr;
-    memCopy(job->name, session->name, sizeof(job->name));
+    prMemCopy(job->name, session->name, sizeof(job->name));
     session->job = job;
     SchannelTls* tls = session->tls;
     prMutexLock(&tls->mutex);
@@ -577,13 +577,13 @@ void protocolsOf(const PrTlsSessionDesc* desc, Array<uint8_t>* out) {
     uint32_t listAt = uint32_t(offsetof(SEC_APPLICATION_PROTOCOLS, ProtocolLists));
     uint32_t wireAt = uint32_t(offsetof(SEC_APPLICATION_PROTOCOL_LIST, ProtocolList));
     out->resize(listAt + wireAt + wire.count);
-    memZero(out->data, out->count);
+    prMemZero(out->data, out->count);
     SEC_APPLICATION_PROTOCOLS* protocols = reinterpret_cast<SEC_APPLICATION_PROTOCOLS*>(out->data);
     protocols->ProtocolListsSize = wireAt + wire.count;
     SEC_APPLICATION_PROTOCOL_LIST* list = protocols->ProtocolLists;
     list->ProtoNegoExt = SecApplicationProtocolNegotiationExt_ALPN;
     list->ProtocolListSize = uint16_t(wire.count);
-    memCopy(out->data + listAt + wireAt, wire.data, wire.count);
+    prMemCopy(out->data + listAt + wireAt, wire.data, wire.count);
     wire.reset();
 }
 
@@ -645,7 +645,7 @@ PrStatus connectTls(PrTls* base, const PrTlsSessionDesc* desc, PrTlsSession* PR_
     session->info = tlsSharedInfo;
     session->tls = tls;
     session->anchors = anchors;
-    memCopy(session->name, name, sizeof(name));
+    prMemCopy(session->name, name, sizeof(name));
     if (desc->transport != nullptr) {
         session->transport = desc->transport;
         prNetStreamSetEvent(desc->transport, tlsSharedTransportEvent, session);

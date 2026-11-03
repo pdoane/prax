@@ -398,7 +398,7 @@ JSValue setInputValueAsDate(JSContext* ctx, JSValueConst elementObject, JSValueC
     PrHtmlInputElement* element = inputThis(ctx, elementObject);
     if (element == nullptr)
         return JS_EXCEPTION;
-    double time = kNanF64;
+    double time = kPrF64Nan;
     if (!JS_IsNull(input)) {
         if (!JS_IsDate(input))
             return JS_ThrowTypeError(ctx, "The value is not a Date");

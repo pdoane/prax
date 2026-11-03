@@ -61,15 +61,15 @@ uint64_t readLittleEndian64(const uint8_t* bytes) {
 ModelArchitecture fromModelSpec(PrStringView architecture) {
     if (architecture.size == 0)
         return ModelArchitecture_Unknown;
-    if (asciiContainsFold(architecture, "stable-cascade"))
+    if (prAsciiContainsFold(architecture, "stable-cascade"))
         return ModelArchitecture_Cascade;
-    if (asciiContainsFold(architecture, "flux"))
+    if (prAsciiContainsFold(architecture, "flux"))
         return ModelArchitecture_Flux;
-    if (asciiContainsFold(architecture, "stable-diffusion-3") || asciiContainsFold(architecture, "sd3"))
+    if (prAsciiContainsFold(architecture, "stable-diffusion-3") || prAsciiContainsFold(architecture, "sd3"))
         return ModelArchitecture_Sd3;
-    if (asciiContainsFold(architecture, "stable-diffusion-xl"))
-        return asciiContainsFold(architecture, "refiner") ? ModelArchitecture_SdxlRefiner : ModelArchitecture_Sdxl;
-    if (asciiContainsFold(architecture, "stable-diffusion-v1"))
+    if (prAsciiContainsFold(architecture, "stable-diffusion-xl"))
+        return prAsciiContainsFold(architecture, "refiner") ? ModelArchitecture_SdxlRefiner : ModelArchitecture_Sdxl;
+    if (prAsciiContainsFold(architecture, "stable-diffusion-v1"))
         return ModelArchitecture_Sd15;
     return ModelArchitecture_Unknown;
 }
@@ -77,9 +77,9 @@ ModelArchitecture fromModelSpec(PrStringView architecture) {
 // Reads `ss_base_model_version` as a Kohya training run records it: the base that the weights were trained against,
 // prefixed by its family.
 ModelArchitecture fromKohyaBaseModel(PrStringView version) {
-    if (stringStartsWith(version, "sdxl_"))
+    if (prStringStartsWith(version, "sdxl_"))
         return ModelArchitecture_Sdxl;
-    if (stringStartsWith(version, "sd_v1"))
+    if (prStringStartsWith(version, "sd_v1"))
         return ModelArchitecture_Sd15;
     return ModelArchitecture_Unknown;
 }
@@ -104,21 +104,21 @@ double contextWidthOf(const PrJson* d, PrJsonValueIndex tensor) {
 // Returns true if `key` names the down projection of a cross-attention key, in the Kohya naming or in the diffusers
 // naming of adapters.
 bool isCrossAttentionKeyDown(PrStringView key) {
-    if (!stringContains(key, "attn2") || !stringContains(key, "to_k"))
+    if (!prStringContains(key, "attn2") || !prStringContains(key, "to_k"))
         return false;
-    return stringEndsWith(key, "lora_down.weight") || stringEndsWith(key, "lora.down.weight") ||
-        stringEndsWith(key, "lora_A.weight");
+    return prStringEndsWith(key, "lora_down.weight") || prStringEndsWith(key, "lora.down.weight") ||
+        prStringEndsWith(key, "lora_A.weight");
 }
 
 ModelArchitecture fromTensors(const PrJson* d) {
     for (PrJsonValueIndex i = prJsonFirst(d, 0); i != kPrJsonMissing; i = prJsonAfter(d, 0, i)) {
         PrStringView key = prJsonString(d, i);
-        if (stringContains(key, "double_blocks."))
+        if (prStringContains(key, "double_blocks."))
             return ModelArchitecture_Flux;
-        if (stringContains(key, "joint_blocks."))
+        if (prStringContains(key, "joint_blocks."))
             return ModelArchitecture_Sd3;
         bool adapted = isCrossAttentionKeyDown(key);
-        bool unet = stringStartsWith(key, "model.diffusion_model.") && stringEndsWith(key, "attn2.to_k.weight");
+        bool unet = prStringStartsWith(key, "model.diffusion_model.") && prStringEndsWith(key, "attn2.to_k.weight");
         if (!adapted && !unet)
             continue;
         ModelArchitecture arch = fromContextWidth(contextWidthOf(d, i + 1));
@@ -198,7 +198,7 @@ const EssentialModel* PR_NULLABLE findEssentialModel(PrStringView name) {
     if (name.size == 0)
         return nullptr;
     for (const EssentialModel& model : kEssentials) {
-        if (asciiContainsFold(model.name, name) || asciiContainsFold(model.filename, name))
+        if (prAsciiContainsFold(model.name, name) || prAsciiContainsFold(model.filename, name))
             return &model;
     }
     return nullptr;

@@ -324,7 +324,7 @@ PrStringView directionName(OutpaintDirection direction) {
 OutpaintDirection parseDirection(PrStringView name, OutpaintDirection fallback) {
     for (OutpaintDirection direction : {OutpaintDirection_Left, OutpaintDirection_Top, OutpaintDirection_Right,
         OutpaintDirection_Bottom}) {
-        if (asciiContainsFold(name, directionName(direction)))
+        if (prAsciiContainsFold(name, directionName(direction)))
             return direction;
     }
     return fallback;
@@ -348,7 +348,7 @@ double upscaleModelFactor(PrStringView model) {
         {"x4", 4}, {"4x", 4}, {"x8", 8}, {"8x", 8},
     };
     for (const Tag& tag : kTags) {
-        if (asciiContainsFold(model, tag.tag))
+        if (prAsciiContainsFold(model, tag.tag))
             return tag.factor;
     }
     return 0.0;

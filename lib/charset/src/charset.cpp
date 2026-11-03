@@ -4,9 +4,9 @@
 
 #include "pr/assert.h"
 #include "pr/bit_cast.h"
-#include "pr/bits.h"
 #include "pr/bitset.h"
 #include "pr/count_of.h"
+#include "pr/integer.h"
 #include "pr/mem.h"
 #include "pr/mime.h"
 #include "pr/search.h"
@@ -125,7 +125,7 @@ void emitBytes(CharsetWriter* w, const uint8_t* bytes, size_t size) {
             size -= 3;
         }
     }
-    memCopy(w->out + w->size, bytes, size);
+    prMemCopy(w->out + w->size, bytes, size);
     w->size += size;
 }
 
@@ -144,7 +144,7 @@ size_t asciiRun(const uint8_t* bytes, size_t size) {
     for (; size - at >= 8; at += 8) {
         uint64_t high = loadUnaligned<uint64_t>(bytes + at) & 0x8080808080808080ull;
         if (high != 0)
-            return at + lowestBitU64(high) / 8;
+            return at + prU64LowestBit(high) / 8;
     }
     while (at < size && bytes[at] < 0x80)
         ++at;
@@ -807,7 +807,7 @@ bool runSingleByte(PrCharsetDecoder* d, CharsetQueue* queue, CharsetWriter* w) {
         if (queue->size - at >= 16) {
             uint64_t words = loadUnaligned<uint64_t>(bytes + at) | loadUnaligned<uint64_t>(bytes + at + 8);
             if ((words & 0x8080808080808080ull) == 0) {
-                memCopy(w->out + w->size, bytes + at, 16);
+                prMemCopy(w->out + w->size, bytes + at, 16);
                 w->size += 16;
                 at += 16;
                 continue;
@@ -918,8 +918,8 @@ bool decodesToItself(PrCharsetDecoder* d, PrStringView bytes, PrStringView* text
     }
     if (runLength(d->charset, data, bytes.size) != bytes.size)
         return false;
-    if (!d->bomSeen && removesBom(d) && stringStartsWith(bytes, "\xEF\xBB\xBF"))
-        *text = stringSlice(bytes, 3, bytes.size - 3);
+    if (!d->bomSeen && removesBom(d) && prStringStartsWith(bytes, "\xEF\xBB\xBF"))
+        *text = prStringSlice(bytes, 3, bytes.size - 3);
     d->bomSeen = true;
     return true;
 }
@@ -1176,7 +1176,7 @@ bool encodeOne(PrCharsetEncoder* e, uint32_t codePoint, CharsetBytes* b, uint32_
 using namespace pr_impl;
 
 PrCharset prCharsetFromLabel(PrStringView label) {
-    return charsetOfLabel(stringTrim(label));
+    return charsetOfLabel(prStringTrim(label));
 }
 
 PrCharset prCharsetFromMimeType(PrStringView type) {
@@ -1207,11 +1207,11 @@ PrCharset prCharsetOutput(PrCharset charset) {
 }
 
 PrCharset prCharsetSniffBom(PrStringView bytes) {
-    if (stringStartsWith(bytes, "\xEF\xBB\xBF"))
+    if (prStringStartsWith(bytes, "\xEF\xBB\xBF"))
         return PrCharset_Utf8;
-    if (stringStartsWith(bytes, "\xFE\xFF"))
+    if (prStringStartsWith(bytes, "\xFE\xFF"))
         return PrCharset_Utf16Be;
-    if (stringStartsWith(bytes, "\xFF\xFE"))
+    if (prStringStartsWith(bytes, "\xFF\xFE"))
         return PrCharset_Utf16Le;
     return PrCharset_None;
 }
@@ -1264,24 +1264,24 @@ PrStringView prCharsetDecodeView(PrCharsetDecoder* decoder, PrStringView bytes, 
             *decoder = prCharsetDecoderMake(decoder->charset, decoder->flags);
         return same;
     }
-    TextBuffer text;
-    text.text.resize(uint32_t(prCharsetDecodeMaxSize(decoder, bytes.size)));
+    PrTextBuffer text = {};
+    prTextBufferResize(&text, uint32_t(prCharsetDecodeMaxSize(decoder, bytes.size)));
     size_t size = 0;
-    if (!prCharsetDecode(decoder, bytes, input, text.text.data, &size)) {
-        textReset(&text);
+    if (!prCharsetDecode(decoder, bytes, input, text.data, &size)) {
+        prTextBufferReset(&text);
         return PrStringView{nullptr, 0};
     }
-    text.text.count = uint32_t(size);
+    text.size = uint32_t(size);
     size_t before = prStringView(out).size;
     if (before == 0) {
         prStringReset(out);
-        *out = textTake(&text);
+        *out = prTextBufferTake(&text);
     } else {
-        prStringAppend(out, textView(&text));
-        textReset(&text);
+        prStringAppend(out, prTextBufferView(&text));
+        prTextBufferReset(&text);
     }
     PrStringView all = prStringView(out);
-    return stringSlice(all, before, all.size - before);
+    return prStringSlice(all, before, all.size - before);
 }
 
 PrCharsetEncoder prCharsetEncoderMake(PrCharset charset) {
@@ -1302,7 +1302,7 @@ size_t prCharsetEncode(PrCharsetEncoder* encoder, PrStringView text, PrCharsetIn
         uint32_t* outUnencoded) {
     *outUnencoded = kPrCharsetUnencodedNone;
     if (encoder->charset == PrCharset_Utf8) {
-        memCopy(out, text.data, text.size);
+        prMemCopy(out, text.data, text.size);
         *outSize = text.size;
         return text.size;
     }
@@ -1314,7 +1314,7 @@ size_t prCharsetEncode(PrCharsetEncoder* encoder, PrStringView text, PrCharsetIn
         // ASCII encodes as itself, except in ISO-2022-JP, whose state decides what a byte means.
         if (!iso2022Jp) {
             size_t length = asciiRun(bytes + at, text.size - at);
-            memCopy(out + b.size, bytes + at, length);
+            prMemCopy(out + b.size, bytes + at, length);
             b.size += length;
             at += length;
             if (at == text.size)

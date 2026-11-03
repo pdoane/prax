@@ -78,7 +78,7 @@ void layoutBidiFindSplits(LayoutInlineShaping& t, LayoutShapingScratch& s) {
         // Boxes that are open across the start of the paragraph begin at its first unit.
         Array<uint32_t>& first = s.unitRuns;
         first.resize(open.count);
-        memZero(first.data, open.count * sizeof(uint32_t));
+        prMemZero(first.data, open.count * sizeof(uint32_t));
         Units units{.s = s, .fresh = true};
         bool last = k + 1 == t.info.paragraphCount;
         for (bool more = true; more && item < t.items.count;) {

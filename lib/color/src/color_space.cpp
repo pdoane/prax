@@ -264,30 +264,30 @@ constexpr double kRec2020Alpha = 1.09929682680944;
 constexpr double kRec2020Beta = 0.018053968510807;
 
 double signedPow(double value, double exponent) {
-    double magnitude = powF64(absF64(value), exponent);
+    double magnitude = prF64Pow(prF64Abs(value), exponent);
     return value < 0 ? -magnitude : magnitude;
 }
 
 // PQ's encoding of an absolute luminance in cd/m², with exponent `m2`, and its inverse. Negative values are black.
 double pqEncode(double luminance, double m2) {
-    double y = powF64((luminance > 0 ? luminance : 0) / 10000, kPqM1);
-    return powF64((kPqC1 + kPqC2 * y) / (1 + kPqC3 * y), m2);
+    double y = prF64Pow((luminance > 0 ? luminance : 0) / 10000, kPqM1);
+    return prF64Pow((kPqC1 + kPqC2 * y) / (1 + kPqC3 * y), m2);
 }
 
 double pqDecode(double encoded, double m2) {
-    double e = powF64(encoded > 0 ? encoded : 0, 1 / m2);
+    double e = prF64Pow(encoded > 0 ? encoded : 0, 1 / m2);
     double num = e - kPqC1;
-    return 10000 * powF64((num > 0 ? num : 0) / (kPqC2 - kPqC3 * e), 1 / kPqM1);
+    return 10000 * prF64Pow((num > 0 ? num : 0) / (kPqC2 - kPqC3 * e), 1 / kPqM1);
 }
 
 // The transfer functions, in doubles. A function that extends to negative values mirrors there, and PQ clamps them to
 // black.
 double decode(PrColorTransfer transfer, double v) {
-    double magnitude = absF64(v);
+    double magnitude = prF64Abs(v);
     double sign = v < 0 ? -1 : 1;
     switch (transfer) {
         case PrColorTransfer_Srgb:
-            return magnitude <= 0.04045 ? v / 12.92 : sign * powF64((magnitude + 0.055) / 1.055, 2.4);
+            return magnitude <= 0.04045 ? v / 12.92 : sign * prF64Pow((magnitude + 0.055) / 1.055, 2.4);
         case PrColorTransfer_A98Rgb:
             return signedPow(v, 563.0 / 256);
         case PrColorTransfer_ProPhotoRgb:
@@ -295,11 +295,13 @@ double decode(PrColorTransfer transfer, double v) {
         case PrColorTransfer_Rec2020:
             if (magnitude < kRec2020Beta * 4.5)
                 return v / 4.5;
-            return sign * powF64((magnitude + kRec2020Alpha - 1) / kRec2020Alpha, 1 / 0.45);
+            return sign * prF64Pow((magnitude + kRec2020Alpha - 1) / kRec2020Alpha, 1 / 0.45);
         case PrColorTransfer_Pq:
             return pqDecode(v, kPqM2) / kReferenceWhite;
         case PrColorTransfer_Hlg: {
-            double linear = magnitude <= 0.5 ? magnitude * magnitude / 3 : (expF64((magnitude - kHlgC) / kHlgA) + kHlgB) / 12;
+            double linear = magnitude * magnitude / 3;
+            if (magnitude > 0.5)
+                linear = (prF64Exp((magnitude - kHlgC) / kHlgA) + kHlgB) / 12;
             return sign * linear * kHlgScale;
         }
         default:
@@ -308,11 +310,11 @@ double decode(PrColorTransfer transfer, double v) {
 }
 
 double encode(PrColorTransfer transfer, double v) {
-    double magnitude = absF64(v);
+    double magnitude = prF64Abs(v);
     double sign = v < 0 ? -1 : 1;
     switch (transfer) {
         case PrColorTransfer_Srgb:
-            return magnitude > 0.0031308 ? sign * (1.055 * powF64(magnitude, 1 / 2.4) - 0.055) : 12.92 * v;
+            return magnitude > 0.0031308 ? sign * (1.055 * prF64Pow(magnitude, 1 / 2.4) - 0.055) : 12.92 * v;
         case PrColorTransfer_A98Rgb:
             return signedPow(v, 256.0 / 563);
         case PrColorTransfer_ProPhotoRgb:
@@ -320,12 +322,12 @@ double encode(PrColorTransfer transfer, double v) {
         case PrColorTransfer_Rec2020:
             if (magnitude <= kRec2020Beta)
                 return 4.5 * v;
-            return sign * (kRec2020Alpha * powF64(magnitude, 0.45) - (kRec2020Alpha - 1));
+            return sign * (kRec2020Alpha * prF64Pow(magnitude, 0.45) - (kRec2020Alpha - 1));
         case PrColorTransfer_Pq:
             return pqEncode(v * kReferenceWhite, kPqM2);
         case PrColorTransfer_Hlg: {
             double scaled = magnitude / kHlgScale;
-            double encoded = scaled <= 1.0 / 12 ? sqrtF64(3 * scaled) : kHlgA * logF64(12 * scaled - kHlgB) + kHlgC;
+            double encoded = scaled <= 1.0 / 12 ? prF64Sqrt(3 * scaled) : kHlgA * prF64Log(12 * scaled - kHlgB) + kHlgC;
             return sign * encoded;
         }
         default:
@@ -335,8 +337,8 @@ double encode(PrColorTransfer transfer, double v) {
 
 // Convert lightness and two opponent axes to lightness, chroma and hue in degrees, and back.
 void toPolar(double* c) {
-    double chroma = hypotF64(c[1], c[2]);
-    double hue = chroma < 1e-12 ? 0 : prColorHue(atan2F64(c[2], c[1]) * 180 / kPi);
+    double chroma = prF64Hypot(c[1], c[2]);
+    double hue = chroma < 1e-12 ? 0 : prColorHue(prF64Atan2(c[2], c[1]) * 180 / kPi);
     c[1] = chroma;
     c[2] = hue;
 }
@@ -344,8 +346,8 @@ void toPolar(double* c) {
 void fromPolar(double* c) {
     double radians = c[2] * kPi / 180;
     double chroma = c[1];
-    c[1] = chroma * cosF64(radians);
-    c[2] = chroma * sinF64(radians);
+    c[1] = chroma * prF64Cos(radians);
+    c[2] = chroma * prF64Sin(radians);
 }
 
 double labF(double t) {
@@ -640,8 +642,8 @@ PrColorTransfer prColorSpaceTransfer(PrColorSpace space) {
 float prColorTransferDecode(PrColorTransfer transfer, float encoded) {
     // sRGB's is the common case, and runs in floats.
     if (transfer == PrColorTransfer_Srgb) {
-        float magnitude = absF32(encoded);
-        float linear = magnitude <= 0.04045f ? magnitude / 12.92f : powF32((magnitude + 0.055f) / 1.055f, 2.4f);
+        float magnitude = prF32Abs(encoded);
+        float linear = magnitude <= 0.04045f ? magnitude / 12.92f : prF32Pow((magnitude + 0.055f) / 1.055f, 2.4f);
         return encoded < 0 ? -linear : linear;
     }
     return float(decode(transfer, double(encoded)));
@@ -649,8 +651,8 @@ float prColorTransferDecode(PrColorTransfer transfer, float encoded) {
 
 float prColorTransferEncode(PrColorTransfer transfer, float linear) {
     if (transfer == PrColorTransfer_Srgb) {
-        float magnitude = absF32(linear);
-        float encoded = magnitude <= 0.0031308f ? magnitude * 12.92f : 1.055f * powF32(magnitude, 1 / 2.4f) - 0.055f;
+        float magnitude = prF32Abs(linear);
+        float encoded = magnitude <= 0.0031308f ? magnitude * 12.92f : 1.055f * prF32Pow(magnitude, 1 / 2.4f) - 0.055f;
         return linear < 0 ? -encoded : encoded;
     }
     return float(encode(transfer, double(linear)));
@@ -671,7 +673,7 @@ PrStringView prColorSpaceName(PrColorSpace space) {
 }
 
 double prColorHue(double degrees) {
-    return degrees - 360.0 * floorF64(degrees / 360.0);
+    return degrees - 360.0 * prF64Floor(degrees / 360.0);
 }
 
 PrColor prColorFromHsl(double hue, double saturation, double lightness, double alpha) {
@@ -722,7 +724,7 @@ PrColor prColorHdrResolve(const PrColorHdr* color, float headroom) {
         return prColorFromColor16(color->colors[0]);
     // The second color's weight.
     float w2 = h2 > h1 ? 1.0f : 0.0f;
-    if (isFiniteF32(headroom)) {
+    if (prF32IsFinite(headroom)) {
         w2 = (headroom - h1) / (h2 - h1);
         w2 = w2 < 0 ? 0 : w2 > 1 ? 1 : w2;
     }
@@ -740,9 +742,9 @@ PrColor prColorHdrResolve(const PrColorHdr* color, float headroom) {
     prColorConvert(PrColorSpace_Srgb, PrColorSpace_XyzD65, second, second);
     double mixed[3];
     for (uint32_t i = 0; i < 3; ++i) {
-        double x = maxF64(kOffset, first[i] * kReferenceWhite + kOffset);
-        double y = maxF64(kOffset, second[i] * kReferenceWhite + kOffset);
-        mixed[i] = (powF64(x, double(1 - w2)) * powF64(y, double(w2)) - kOffset) / kReferenceWhite;
+        double x = prF64Max(kOffset, first[i] * kReferenceWhite + kOffset);
+        double y = prF64Max(kOffset, second[i] * kReferenceWhite + kOffset);
+        mixed[i] = (prF64Pow(x, double(1 - w2)) * prF64Pow(y, double(w2)) - kOffset) / kReferenceWhite;
     }
     prColorConvert(PrColorSpace_XyzD65, PrColorSpace_Srgb, mixed, mixed);
     return PrColor{float(mixed[0]), float(mixed[1]), float(mixed[2]), a.a + (b.a - a.a) * w2};
@@ -825,7 +827,7 @@ PrColor prColorGamutMap(PrColor color, PrColorSpace gamut, float limit) {
     // OKLab's lightness of an achromatic color is the cube root of its luminance.
     double lch[3];
     fromXyzD65(PrColorSpace_Oklch, xyz, lch);
-    if (lch[0] >= cbrtF64(white)) {
+    if (lch[0] >= prF64Cbrt(white)) {
         double top[3] = {high, high, high};
         return srgbOf(top);
     }
@@ -844,7 +846,7 @@ PrColor prColorGamutMap(PrColor color, PrColorSpace gamut, float limit) {
         double b[3];
         toXyzD65(gamut, clipped, at);
         fromXyzD65(PrColorSpace_Oklab, at, b);
-        return sqrtF64((a[0] - b[0]) * (a[0] - b[0]) + (a[1] - b[1]) * (a[1] - b[1]) + (a[2] - b[2]) * (a[2] - b[2]));
+        return prF64Sqrt((a[0] - b[0]) * (a[0] - b[0]) + (a[1] - b[1]) * (a[1] - b[1]) + (a[2] - b[2]) * (a[2] - b[2]));
     };
     constexpr double kJnd = 0.02;
     constexpr double kEpsilon = 0.0001;

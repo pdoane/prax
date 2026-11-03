@@ -15,32 +15,32 @@ using namespace pr_impl;
 PrStatus prUrlProcessData(PrStringView url, PrString* body, PrString* mimeType) {
     *body = PrString{};
     *mimeType = PrString{};
-    if (!asciiStartsWithFold(url, "data:"))
+    if (!prAsciiStartsWithFold(url, "data:"))
         return PrStatus_NotFound;
-    PrStringView input = stringSlice(url, 5, url.size - 5);
-    size_t hash = stringFind(input, '#');
+    PrStringView input = prStringSlice(url, 5, url.size - 5);
+    size_t hash = prStringFindByte(input, '#');
     if (hash < input.size)
         input.size = hash;
-    size_t comma = stringFind(input, ',');
+    size_t comma = prStringFindByte(input, ',');
     if (comma >= input.size)
         return PrStatus_NotFound;
-    PrStringView type = stringTrim(PrStringView{input.data, comma});
-    PrStringView encoded = stringSlice(input, comma + 1, input.size - comma - 1);
+    PrStringView type = prStringTrim(PrStringView{input.data, comma});
+    PrStringView encoded = prStringSlice(input, comma + 1, input.size - comma - 1);
     bool base64 = false;
-    size_t semicolon = stringFindLast(type, ';');
+    size_t semicolon = prStringFindLastByte(type, ';');
     if (semicolon < type.size)
-        base64 = asciiEqualsFold(stringTrim(stringSlice(type, semicolon + 1, type.size - semicolon - 1)), "base64");
-    PrStringView mime = base64 ? stringTrim(PrStringView{type.data, semicolon}) : type;
+        base64 = prAsciiEqualsFold(prStringTrim(prStringSlice(type, semicolon + 1, type.size - semicolon - 1)), "base64");
+    PrStringView mime = base64 ? prStringTrim(PrStringView{type.data, semicolon}) : type;
     // Both decodings shrink the bytes, so each runs in place in one buffer.
-    TextBuffer decoded;
-    decoded.text.reserve(uint32_t(encoded.size));
-    size_t size = prUrlPercentDecode(encoded, decoded.text.data, encoded.size);
-    if (base64 && !base64Decode(PrStringView{decoded.text.data, size}, decoded.text.data, size, &size)) {
-        textReset(&decoded);
+    PrTextBuffer decoded = {};
+    prTextBufferReserve(&decoded, uint32_t(encoded.size));
+    size_t size = prUrlPercentDecode(encoded, decoded.data, encoded.size);
+    if (base64 && !prBase64Decode(PrStringView{decoded.data, size}, decoded.data, size, &size)) {
+        prTextBufferReset(&decoded);
         return PrStatus_NotFound;
     }
     *mimeType = prStringCopy(mime.size != 0 ? mime : "text/plain;charset=US-ASCII");
-    *body = prStringCopy(PrStringView{decoded.text.data != nullptr ? decoded.text.data : "", size});
-    textReset(&decoded);
+    *body = prStringCopy(PrStringView{decoded.data != nullptr ? decoded.data : "", size});
+    prTextBufferReset(&decoded);
     return PrStatus_Ok;
 }

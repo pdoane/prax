@@ -646,8 +646,8 @@ addEventListener('load', () => requestAnimationFrame(() => requestAnimationFrame
 )");
 }
 
-void appendShape(TextBuffer* row, const Shape& shape) {
-    textAppend(row, ", \"shape\": {");
+void appendShape(PrTextBuffer* row, const Shape& shape) {
+    prTextBufferAppend(row, ", \"shape\": {");
     const char* separator = "";
     const std::pair<const char*, int64_t> fields[] = {
         {"laidOut", shape.laidOut},
@@ -671,18 +671,18 @@ void appendShape(TextBuffer* row, const Shape& shape) {
         harnessAppendFormat(row, "%s\"%s\": %lld", separator, name, static_cast<long long>(value));
         separator = ", ";
     }
-    textAppend(row, "}");
+    prTextBufferAppend(row, "}");
 }
 
 bool firstRow = true;
 
 void writeRow(const Engine& engine, const Case& c, const char* measure, const HarnessCounters& cost, const Shape* shape) {
-    TextBuffer row{};
-    textAppend(&row, firstRow ? "\n  {\"engine\": " : ",\n  {\"engine\": ");
+    PrTextBuffer row{};
+    prTextBufferAppend(&row, firstRow ? "\n  {\"engine\": " : ",\n  {\"engine\": ");
     firstRow = false;
     harnessWriteString(&row, engine.name());
     std::string name = std::string(c.name) + " " + measure;
-    textAppend(&row, ", \"name\": ");
+    prTextBufferAppend(&row, ", \"name\": ");
     harnessWriteString(&row, name);
     harnessAppendFormat(&row, ", \"time\": %.6f, \"boxes\": %zu", cost.millis, c.tree.styles.size());
     if (shape != nullptr)
@@ -690,9 +690,9 @@ void writeRow(const Engine& engine, const Case& c, const char* measure, const Ha
     HarnessCounts counts{};
     harnessCountsAdd(&counts, "time", cost);
     harnessCountsWrite(&counts, &row);
-    textAppend(&row, "}");
-    fwrite(row.text.data, 1, row.text.count, stdout);
-    textReset(&row);
+    prTextBufferAppend(&row, "}");
+    fwrite(row.data, 1, row.size, stdout);
+    prTextBufferReset(&row);
 }
 
 // Returns the work of one call of `step`, which lays the tree out once.

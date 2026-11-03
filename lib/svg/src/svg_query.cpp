@@ -152,8 +152,8 @@ uint32_t characterAt(const SvgText* text, PrVec2 point) {
         const SvgTextCharacter& c = characters[i];
         if (c.hidden)
             continue;
-        float radians = c.direction * (kPiF32 / 180);
-        PrVec2 along{cosF32(radians), sinF32(radians)};
+        float radians = c.direction * (kPrF32Pi / 180);
+        PrVec2 along{prF32Cos(radians), prF32Sin(radians)};
         PrVec2 across{-along.y, along.x};
         float x = point.x - c.position.x;
         float y = point.y - c.position.y;

@@ -20,8 +20,8 @@ namespace pr_impl {
 
 // Returns the fragment of the URL `url`, without its `#`, or the null view if it has none.
 inline PrStringView domUrlFragment(PrStringView url) {
-    size_t hash = stringFind(url, '#');
-    return hash < url.size ? stringSlice(url, hash + 1, url.size - hash - 1) : PrStringView{};
+    size_t hash = prStringFindByte(url, '#');
+    return hash < url.size ? prStringSlice(url, hash + 1, url.size - hash - 1) : PrStringView{};
 }
 
 struct DomResources;

@@ -211,15 +211,15 @@ void finish(Work* w, bool paint) {
 // Makes a font set of the checkout's Arimo and a shaper, and returns the default text font over the set.
 PrTextFont* makeFont(PrFontSet** fonts, PrTextShaper** shaper) {
     *fonts = prFontSetCreate(nullptr);
-    TextBuffer path = {};
-    textAppend(&path, PR_FONTS_DIR "/Arimo.ttf");
+    PrTextBuffer path = {};
+    prTextBufferAppend(&path, PR_FONTS_DIR "/Arimo.ttf");
     const PrFont* font = nullptr;
-    if (prFontCreateFromFile(textView(&path), 0, nullptr, &font) == PrStatus_Ok) {
+    if (prFontCreateFromFile(prTextBufferView(&path), 0, nullptr, &font) == PrStatus_Ok) {
         PrFontFaceDescriptor descriptor = prFontFaceDescriptorDefault();
         prFontSetAdd(*fonts, &descriptor, font);
         prFontRelease(font);
     }
-    textReset(&path);
+    prTextBufferReset(&path);
     prFontSetSetDefaultFamily(*fonts, prFontFamilyFromName("Arimo"));
     *shaper = prTextHarfBuzzCreate();
     PrFontStyle style = prFontStyleDefault();
@@ -320,7 +320,7 @@ int main(int argc, char** argv) {
         auto report = [&](const char* label, const HarnessCounters& cost) {
             std::string name = std::to_string(nodes) + " nodes " + label;
             PrLayoutTreeStats stats = prLayoutTreeStats(w.tree);
-            TextBuffer row{};
+            PrTextBuffer row{};
             harnessAppendFormat(&row, "%s\n  {\"name\": \"%s\", \"time\": %.6f, \"nodes\": %u, \"kept\": %u, \"made\": %u, "
                 "\"gone\": %u, \"relinked\": %u, \"blocks\": %u, \"lines\": %u, \"layers\": %u, "
                 "\"commands\": %u, \"flex laid out\": %u, \"measured\": %u, \"handoffs\": %u, "
@@ -332,9 +332,9 @@ int main(int argc, char** argv) {
             HarnessCounts counts{};
             harnessCountsAdd(&counts, "time", cost);
             harnessCountsWrite(&counts, &row);
-            textAppend(&row, "}");
-            fwrite(row.text.data, 1, row.text.count, stdout);
-            textReset(&row);
+            prTextBufferAppend(&row, "}");
+            fwrite(row.data, 1, row.size, stdout);
+            prTextBufferReset(&row);
             first = false;
         };
         for (const Case& c : kCases) {

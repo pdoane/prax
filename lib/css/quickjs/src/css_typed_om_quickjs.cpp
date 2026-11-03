@@ -578,7 +578,7 @@ bool summaryOf(JSContext* ctx, JSValueConst value, Summary* out) {
 // it). A hue accepts any keyword, although css-typed-om-1/#rectify-a-csscolorangle accepts none alone.
 bool channelValid(const Summary& value, ChannelType type) {
     if (value.kind == TypedKind_Keyword && !value.string)
-        return type == ChannelType_Angle || asciiEqualsFold(value.keyword, "none");
+        return type == ChannelType_Angle || prAsciiEqualsFold(value.keyword, "none");
     switch (type) {
         case ChannelType_RgbComp: return matchesNumber(value) || matchesPercentage(value);
         case ChannelType_Percent: return matchesPercentage(value);
@@ -639,7 +639,7 @@ bool childrenValid(JSContext* ctx, const TypedObject& fields, const Summary* chi
             ok = prStringView(&fields.text).size != 0;
             break;
         case TypedKind_VariableReference:
-            ok = stringStartsWith(prStringView(&fields.text), "--") &&
+            ok = prStringStartsWith(prStringView(&fields.text), "--") &&
                 (count == 0 || (!children[0].string && children[0].kind == TypedKind_Unparsed));
             break;
         case TypedKind_Unparsed:
@@ -690,7 +690,7 @@ bool childrenValid(JSContext* ctx, const TypedObject& fields, const Summary* chi
             break;
         case TypedKind_Perspective:
             ok = count == 1 && !children[0].string && (matchesLength(children[0]) ||
-                (children[0].kind == TypedKind_Keyword && asciiEqualsFold(children[0].keyword, "none")));
+                (children[0].kind == TypedKind_Keyword && prAsciiEqualsFold(children[0].keyword, "none")));
             break;
         case TypedKind_Color: {
             // A color() value's color space is not a channel.
@@ -945,7 +945,7 @@ bool flattenComponent(JSContext* ctx, JSValueConst value, PrCssValue* out) {
 // Writes the color space that a CSSColor names. Returns false if it names none.
 bool colorSpaceOf(PrStringView name, PrColorSpace* out) {
     for (PrColorSpace space = 0; space < PrColorSpace_Count; ++space) {
-        if (asciiEqualsFold(name, prColorSpaceName(space))) {
+        if (prAsciiEqualsFold(name, prColorSpaceName(space))) {
             *out = space;
             return true;
         }
@@ -992,7 +992,7 @@ bool flattenColor(JSContext* ctx, JSValueConst value, const TypedObject* object,
 }
 
 // Appends the text of an object (css-typed-om-1/#stylevalue-serialization).
-bool serializeValue(JSContext* ctx, JSValueConst value, TextBuffer* out);
+bool serializeValue(JSContext* ctx, JSValueConst value, PrTextBuffer* out);
 
 // Appends a style value as its trees: the trees that it holds, or what its interface serializes it as. Returns false,
 // with the exception thrown, for a value that no PrCssValue can represent.
@@ -1011,13 +1011,13 @@ bool flattenStyle(JSContext* ctx, JSValueConst value, PrCssValue* out) {
         case TypedKind_Keyword:
             return addNode(ctx, out, identFields(prStringView(&object->text)));
         case TypedKind_Unparsed: {
-            TextBuffer text;
+            PrTextBuffer text = {};
             bool ok = serializeValue(ctx, value, &text);
             PrCssValueFields tokens = {};
             tokens.kind = PrCssValueKind_Tokens;
-            tokens.text = textView(&text);
+            tokens.text = prTextBufferView(&text);
             ok = ok && addNode(ctx, out, tokens);
-            textReset(&text);
+            prTextBufferReset(&text);
             return ok;
         }
         case TypedKind_Transform:
@@ -1040,7 +1040,7 @@ bool flattenStyle(JSContext* ctx, JSValueConst value, PrCssValue* out) {
 // The state of the serializer: the output, the value used to write numbers, and the current depth.
 struct Serializer {
     JSContext* ctx;
-    TextBuffer* out;
+    PrTextBuffer* out;
     PrCssValue* scratch;
     uint32_t depth;
 };
@@ -1049,9 +1049,9 @@ bool serializeTree(Serializer* s, JSValueConst value, bool nested, bool parenles
 bool serializeObject(Serializer* s, JSValueConst value, bool nested, bool parenless);
 
 // Appends the trees of `value` from `first` up to `end`, in the way that a declaration's value is written.
-void appendValue(TextBuffer* out, const PrCssValue* value, uint32_t first, uint32_t end) {
+void appendValue(PrTextBuffer* out, const PrCssValue* value, uint32_t first, uint32_t end) {
     PrString text = prCssValueSerialize(value, first, end);
-    textAppend(out, prStringView(&text));
+    prTextBufferAppend(out, prStringView(&text));
     prStringReset(&text);
 }
 
@@ -1065,9 +1065,9 @@ void serializeNumber(Serializer* s, double number) {
 void serializeUnit(Serializer* s, const TypedObject* object) {
     serializeNumber(s, object->number);
     if (object->unit == PrCssUnit_Percent)
-        textAppendChar(s->out, '%');
+        prTextBufferAppendChar(s->out, '%');
     else if (object->unit != PrCssUnit_Number)
-        textAppend(s->out, prCssUnitName(object->unit));
+        prTextBufferAppend(s->out, prCssUnitName(object->unit));
 }
 
 // css-typed-om-1/#calc-serialization
@@ -1077,18 +1077,18 @@ bool serializeMath(Serializer* s, JSValueConst value, const TypedObject* object,
     if (!children.read(value, object))
         return false;
     if (kind == TypedKind_Min || kind == TypedKind_Max || kind == TypedKind_Clamp) {
-        textAppend(s->out, kind == TypedKind_Min   ? "min(" : kind == TypedKind_Max ? "max(" : "clamp(");
+        prTextBufferAppend(s->out, kind == TypedKind_Min   ? "min(" : kind == TypedKind_Max ? "max(" : "clamp(");
         for (uint32_t i = 0; i < children.values->count; ++i) {
             if (i != 0)
-                textAppend(s->out, ", ");
+                prTextBufferAppend(s->out, ", ");
             if (!serializeTree(s, children.values->data[i], false, true))
                 return false;
         }
-        textAppendChar(s->out, ')');
+        prTextBufferAppendChar(s->out, ')');
         return true;
     }
     if (!parenless)
-        textAppend(s->out, nested ? "(" : "calc(");
+        prTextBufferAppend(s->out, nested ? "(" : "calc(");
     bool ok = true;
     switch (kind) {
         case TypedKind_Sum:
@@ -1101,28 +1101,28 @@ bool serializeMath(Serializer* s, JSValueConst value, const TypedObject* object,
                 if (i == 0) {
                     ok = serializeTree(s, child, true, false);
                 } else if (operand->kind == inverse) {
-                    textAppend(s->out, sum ? " - " : " / ");
+                    prTextBufferAppend(s->out, sum ? " - " : " / ");
                     JSValue inner = jsReference(s->ctx, child, 0);
                     ok = serializeTree(s, inner, true, false);
                     JS_FreeValue(s->ctx, inner);
                 } else {
-                    textAppend(s->out, sum ? " + " : " * ");
+                    prTextBufferAppend(s->out, sum ? " + " : " * ");
                     ok = serializeTree(s, child, true, false);
                 }
             }
             break;
         }
         case TypedKind_Negate:
-            textAppendChar(s->out, '-');
+            prTextBufferAppendChar(s->out, '-');
             ok = serializeTree(s, children.values->data[0], true, false);
             break;
         default:
-            textAppend(s->out, "1 / ");
+            prTextBufferAppend(s->out, "1 / ");
             ok = serializeTree(s, children.values->data[0], true, false);
             break;
     }
     if (ok && !parenless)
-        textAppendChar(s->out, ')');
+        prTextBufferAppendChar(s->out, ')');
     return ok;
 }
 
@@ -1141,22 +1141,22 @@ bool numericEquals(JSContext* ctx, JSValueConst a, JSValueConst b) {
 // takes them.
 bool serializeArguments(Serializer* s, const TypedObject* object, const Values& children,
         PrStringView name, uint32_t first, uint32_t count) {
-    textAppend(s->out, name);
+    prTextBufferAppend(s->out, name);
     for (uint32_t i = first; i < first + count; ++i) {
         if (i != first)
-            textAppend(s->out, ", ");
+            prTextBufferAppend(s->out, ", ");
         JSValueConst argument = children.values->data[i];
         const TypedObject* at = typedOf(argument);
         // A negative perspective is out of range, so a calculation clamps it.
         bool clamp = object->kind == TypedKind_Perspective && at->kind == TypedKind_Unit && at->number < 0;
         if (clamp)
-            textAppend(s->out, "calc(");
+            prTextBufferAppend(s->out, "calc(");
         if (!serializeTree(s, argument, false, false))
             return false;
         if (clamp)
-            textAppendChar(s->out, ')');
+            prTextBufferAppendChar(s->out, ')');
     }
-    textAppendChar(s->out, ')');
+    prTextBufferAppendChar(s->out, ')');
     return true;
 }
 
@@ -1175,7 +1175,7 @@ bool serializeComponent(Serializer* s, JSValueConst value, const TypedObject* ob
             jsDomExceptionThrow(s->ctx, "InvalidStateError");
             return false;
         }
-        textAppend(s->out, prStringView(&text));
+        prTextBufferAppend(s->out, prStringView(&text));
         prStringReset(&text);
         return true;
     }
@@ -1207,29 +1207,29 @@ bool serializeColor(Serializer* s, JSValueConst value, const TypedObject* object
     Values children = heldValues(s->ctx);
     if (!children.read(value, object))
         return false;
-    textAppend(s->out, kColorFunctionNames[object->colorFunction]);
-    textAppendChar(s->out, '(');
+    prTextBufferAppend(s->out, kColorFunctionNames[object->colorFunction]);
+    prTextBufferAppendChar(s->out, '(');
     uint32_t first = 0;
     if (object->colorFunction == ColorFunction_Color) {
         if (!serializeTree(s, children.values->data[0], false, false))
             return false;
-        textAppendChar(s->out, ' ');
+        prTextBufferAppendChar(s->out, ' ');
         first = 1;
     }
     uint32_t alpha = children.values->count - 1;
     for (uint32_t i = first; i < alpha; ++i) {
         if (i != first)
-            textAppendChar(s->out, ' ');
+            prTextBufferAppendChar(s->out, ' ');
         if (!serializeTree(s, children.values->data[i], false, false))
             return false;
     }
     const TypedObject* at = typedOf(children.values->data[alpha]);
     if (!(at->kind == TypedKind_Unit && at->unit == PrCssUnit_Percent && at->number == 100.0)) {
-        textAppend(s->out, " / ");
+        prTextBufferAppend(s->out, " / ");
         if (!serializeTree(s, children.values->data[alpha], false, false))
             return false;
     }
-    textAppendChar(s->out, ')');
+    prTextBufferAppendChar(s->out, ')');
     return true;
 }
 
@@ -1240,7 +1240,7 @@ bool serializeSegments(Serializer* s, JSValueConst value, const TypedObject* obj
         StringArgument text = {s->ctx};
         if (!text.read(child))
             return false;
-        textAppend(s->out, text.value());
+        prTextBufferAppend(s->out, text.value());
         return true;
     });
 }
@@ -1266,23 +1266,23 @@ bool serializeObject(Serializer* s, JSValueConst value, bool nested, bool parenl
             appendValue(s->out, object->value, 0, prCssValueSize(object->value));
             return true;
         case TypedKind_Keyword:
-            textAppend(s->out, prStringView(&object->text));
+            prTextBufferAppend(s->out, prStringView(&object->text));
             return true;
         case TypedKind_Unparsed:
             return serializeSegments(s, value, object);
         case TypedKind_VariableReference: {
             // Only a comma is written before the fallback. The fallback holds the whitespace after the comma that it
             // was reified from, although css-typed-om-1/#unparsedvalue-serialization writes a comma and a space.
-            textAppend(s->out, "var(");
-            textAppend(s->out, prStringView(&object->text));
+            prTextBufferAppend(s->out, "var(");
+            prTextBufferAppend(s->out, prStringView(&object->text));
             JSValue fallback = jsReference(s->ctx, value, 0);
             bool ok = true;
             if (!JS_IsNull(fallback) && !JS_IsUndefined(fallback)) {
-                textAppendChar(s->out, ',');
+                prTextBufferAppendChar(s->out, ',');
                 ok = serializeTree(s, fallback, false, false);
             }
             JS_FreeValue(s->ctx, fallback);
-            textAppendChar(s->out, ')');
+            prTextBufferAppendChar(s->out, ')');
             return ok;
         }
         case TypedKind_Unit:
@@ -1294,7 +1294,7 @@ bool serializeObject(Serializer* s, JSValueConst value, bool nested, bool parenl
             bool first = true;
             return eachChild(s->ctx, value, object, [&](JSValueConst child) {
                 if (!first)
-                    textAppendChar(s->out, ' ');
+                    prTextBufferAppendChar(s->out, ' ');
                 first = false;
                 return serializeComponent(s, child, typedOf(child));
             });
@@ -1306,7 +1306,7 @@ bool serializeObject(Serializer* s, JSValueConst value, bool nested, bool parenl
     }
 }
 
-bool serializeValue(JSContext* ctx, JSValueConst value, TextBuffer* out) {
+bool serializeValue(JSContext* ctx, JSValueConst value, PrTextBuffer* out) {
     Tree scratch = heldTree(ctx);
     Serializer s = {ctx, out, scratch.value, 0};
     return serializeTree(&s, value, false, false);
@@ -1767,9 +1767,11 @@ JSValue reifyFirst(JSContext* ctx, const PrCssValue* value, const PrCssDeclarati
 JSValue toString(JSContext* ctx, JSValueConst styleValue, int, JSValueConst*) {
     if (styleValueOf(ctx, styleValue) == nullptr && typedIn(ctx, styleValue, cssTransformComponentClass) == nullptr)
         return JS_EXCEPTION;
-    TextBuffer text;
-    JSValue result = serializeValue(ctx, styleValue, &text) ? jsNewStringView(ctx, textView(&text)) : JS_EXCEPTION;
-    textReset(&text);
+    PrTextBuffer text = {};
+    JSValue result = JS_EXCEPTION;
+    if (serializeValue(ctx, styleValue, &text))
+        result = jsNewStringView(ctx, prTextBufferView(&text));
+    prTextBufferReset(&text);
     return result;
 }
 
@@ -2215,7 +2217,7 @@ JSValue unitConstruct(JSContext* ctx, JSValueConst newTarget, int argc, JSValueC
     StringArgument name = {ctx};
     if (!jsArgCount(ctx, argc, 2) || JS_ToFloat64(ctx, &number, argv[0]) < 0 || !name.read(argv[1]))
         return JS_EXCEPTION;
-    if (!isFiniteF64(number))
+    if (!prF64IsFinite(number))
         return JS_ThrowTypeError(ctx, "The value is not finite");
     PrCssUnit unit;
     if (!prCssUnitFromName(name.value(), &unit))
@@ -2233,7 +2235,7 @@ JSValue numberSet(JSContext* ctx, JSValueConst jsObject, JSValueConst input) {
     double number = 0;
     if (object == nullptr || JS_ToFloat64(ctx, &number, input) < 0)
         return JS_EXCEPTION;
-    if (!isFiniteF64(number))
+    if (!prF64IsFinite(number))
         return JS_ThrowTypeError(ctx, "The value is not finite");
     object->number = number;
     return JS_UNDEFINED;
@@ -2481,7 +2483,7 @@ JSValue colorConvert(JSContext* ctx, JSValueConst value, ChannelType type, Color
         double number = 0;
         if (JS_ToFloat64(ctx, &number, value) < 0)
             return JS_EXCEPTION;
-        if (!isFiniteF64(number))
+        if (!prF64IsFinite(number))
             return JS_ThrowTypeError(ctx, "The value is not finite");
         switch (type) {
             case ChannelType_Number: break;
@@ -2829,7 +2831,7 @@ JSValue factory(JSContext* ctx, JSValueConst, int argc, JSValueConst* argv, int 
     double number = 0;
     if (!jsArgCount(ctx, argc, 1) || JS_ToFloat64(ctx, &number, argv[0]) < 0)
         return JS_EXCEPTION;
-    if (!isFiniteF64(number))
+    if (!prF64IsFinite(number))
         return JS_ThrowTypeError(ctx, "The value is not finite");
     return newUnit(ctx, number, PrCssUnit(magic));
 }
@@ -3281,7 +3283,7 @@ void prJsCssTypedOmBind(JSContext* ctx, JSValueConst css) {
             continue;
         PrStringView name = factoryName(unit);
         char terminated[16] = {};
-        memCopy(terminated, name.data, name.size < sizeof(terminated) - 1 ? name.size : sizeof(terminated) - 1);
+        prMemCopy(terminated, name.data, name.size < sizeof(terminated) - 1 ? name.size : sizeof(terminated) - 1);
         JSValue function =
             JS_NewCFunctionMagic(ctx, JsCallScoped<factory>::call, terminated, 1, JS_CFUNC_generic_magic, int(unit));
         JS_DefinePropertyValueStr(ctx, css, terminated, function,

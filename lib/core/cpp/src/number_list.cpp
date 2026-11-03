@@ -20,13 +20,13 @@ bool numberListRead(PrStringView text, size_t* pos, float* out) {
     if (at(text, p, '+') || at(text, p, '-'))
         ++p;
     size_t digits = p;
-    while (p < text.size && asciiIsDigit(text.data[p]))
+    while (p < text.size && prAsciiIsDigit(text.data[p]))
         ++p;
     bool whole = p > digits;
     bool fraction = false;
-    if (at(text, p, '.') && p + 1 < text.size && asciiIsDigit(text.data[p + 1])) {
+    if (at(text, p, '.') && p + 1 < text.size && prAsciiIsDigit(text.data[p + 1])) {
         ++p;
-        while (p < text.size && asciiIsDigit(text.data[p]))
+        while (p < text.size && prAsciiIsDigit(text.data[p]))
             ++p;
         fraction = true;
     }
@@ -36,14 +36,14 @@ bool numberListRead(PrStringView text, size_t* pos, float* out) {
         size_t e = p + 1;
         if (at(text, e, '+') || at(text, e, '-'))
             ++e;
-        if (e < text.size && asciiIsDigit(text.data[e])) {
+        if (e < text.size && prAsciiIsDigit(text.data[e])) {
             p = e;
-            while (p < text.size && asciiIsDigit(text.data[p]))
+            while (p < text.size && prAsciiIsDigit(text.data[p]))
                 ++p;
         }
     }
     double value = 0;
-    if (!decimalToF64(PrStringView{text.data + start, p - start}, &value))
+    if (!prF64ParsePrefix(PrStringView{text.data + start, p - start}, &value))
         return false;
     *out = float(value);
     *pos = p;
@@ -72,7 +72,7 @@ void numberListSkipSeparator(PrStringView text, size_t* pos) {
 }
 
 void numberListSkipSpace(PrStringView text, size_t* pos) {
-    while (*pos < text.size && asciiIsSpace(text.data[*pos]))
+    while (*pos < text.size && prAsciiIsSpace(text.data[*pos]))
         ++*pos;
 }
 

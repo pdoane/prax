@@ -8,6 +8,7 @@
 #include "pr/bitset.h"
 #include "pr/float_convert.h"
 #include "pr/string_ops.h"
+#include "pr/string_trim.h"
 #include "pr/text_buffer.h"
 
 #include "css/src/css_property.h"
@@ -22,7 +23,7 @@ namespace {
 bool isBareNumber(PrStringView text) {
     for (size_t i = 0; i < text.size; ++i) {
         char c = text.data[i];
-        if (!asciiIsDigit(c) && c != '.' && c != '+' && c != '-' && c != 'e' && c != 'E')
+        if (!prAsciiIsDigit(c) && c != '.' && c != '+' && c != '-' && c != 'e' && c != 'E')
             return false;
     }
     return text.size != 0;
@@ -141,7 +142,7 @@ bool isOneValue(PrStringView text) {
 int32_t svgTransformArguments(PrStringView text, size_t* pos, double* out) {
     int32_t count = 0;
     for (;;) {
-        while (*pos < text.size && asciiIsSpace(text.data[*pos]))
+        while (*pos < text.size && prAsciiIsSpace(text.data[*pos]))
             ++*pos;
         if (*pos < text.size && text.data[*pos] == ')') {
             ++*pos;
@@ -149,14 +150,15 @@ int32_t svgTransformArguments(PrStringView text, size_t* pos, double* out) {
         }
         if (count != 0 && *pos < text.size && text.data[*pos] == ',') {
             ++*pos;
-            while (*pos < text.size && asciiIsSpace(text.data[*pos]))
+            while (*pos < text.size && prAsciiIsSpace(text.data[*pos]))
                 ++*pos;
         }
         size_t start = *pos;
-        while (*pos < text.size && (asciiIsDigit(text.data[*pos]) || text.data[*pos] == '.' || text.data[*pos] == '-' ||
+        while (*pos < text.size && (prAsciiIsDigit(text.data[*pos]) || text.data[*pos] == '.' || text.data[*pos] == '-' ||
                 text.data[*pos] == '+' || text.data[*pos] == 'e' || text.data[*pos] == 'E'))
             ++*pos;
-        if (count == 6 || *pos == start || !decimalToF64(PrStringView{text.data + start, *pos - start}, &out[count]))
+        PrStringView number = {text.data + start, *pos - start};
+        if (count == 6 || *pos == start || !prF64ParsePrefix(number, &out[count]))
             return -1;
         ++count;
     }
@@ -166,7 +168,7 @@ int32_t svgTransformArguments(PrStringView text, size_t* pos, double* out) {
 // writes lengths and angles as numbers alone, separates functions and arguments with commas, and gives rotate() an
 // optional center, which becomes a translation to the center and back. Returns false, appending nothing that the caller
 // keeps, if the text is not in SVG's syntax.
-bool svgTransform(TextBuffer* out, PrStringView text) {
+bool svgTransform(PrTextBuffer* out, PrStringView text) {
     struct Function {
         PrStringView name;
         int32_t counts[2];      // the argument counts that the function takes
@@ -178,15 +180,15 @@ bool svgTransform(TextBuffer* out, PrStringView text) {
     size_t pos = 0;
     bool any = false;
     for (;;) {
-        while (pos < text.size && (asciiIsSpace(text.data[pos]) || text.data[pos] == ','))
+        while (pos < text.size && (prAsciiIsSpace(text.data[pos]) || text.data[pos] == ','))
             ++pos;
         if (pos == text.size)
             return any;
         size_t start = pos;
-        while (pos < text.size && asciiIsLetter(text.data[pos]))
+        while (pos < text.size && prAsciiIsLetter(text.data[pos]))
             ++pos;
         PrStringView name{text.data + start, pos - start};
-        while (pos < text.size && asciiIsSpace(text.data[pos]))
+        while (pos < text.size && prAsciiIsSpace(text.data[pos]))
             ++pos;
         if (pos == text.size || text.data[pos] != '(')
             return false;
@@ -199,14 +201,14 @@ bool svgTransform(TextBuffer* out, PrStringView text) {
         if (function == nullptr || (count != function->counts[0] && count != function->counts[1]))
             return false;
         if (any)
-            textAppendChar(out, ' ');
+            prTextBufferAppendChar(out, ' ');
         any = true;
         auto number = [&](double value, const char* unit) {
             cssSerializeNumber(out, value);
-            textAppend(out, unit);
+            prTextBufferAppend(out, unit);
         };
         if (name == "rotate" && count == 3) {
-            textAppend(out, "translate(");
+            prTextBufferAppend(out, "translate(");
             number(n[1], "px,");
             number(n[2], "px) rotate(");
             number(n[0], "deg) translate(");
@@ -216,15 +218,15 @@ bool svgTransform(TextBuffer* out, PrStringView text) {
         }
         bool angles = name == "rotate" || name == "skewX" || name == "skewY";
         const char* unit = name == "translate" ? "px" : angles ? "deg" : "";
-        textAppend(out, name);
-        textAppendChar(out, '(');
+        prTextBufferAppend(out, name);
+        prTextBufferAppendChar(out, '(');
         for (int32_t i = 0; i < count; ++i) {
             if (i != 0)
-                textAppendChar(out, ',');
+                prTextBufferAppendChar(out, ',');
             // A matrix's translation is a number in CSS as in SVG.
             number(n[i], unit);
         }
-        textAppendChar(out, ')');
+        prTextBufferAppendChar(out, ')');
     }
 }
 
@@ -232,8 +234,8 @@ bool svgTransform(TextBuffer* out, PrStringView text) {
 // blur(), drop-shadow() and hue-rotate() (SVG2/types.html#presentation-attribute-css-value). The declaration writes
 // each such number as an angle in degrees in hue-rotate(), and as a length in pixels otherwise. The numbers of a color
 // function inside one of these functions are left as they are. A value without such numbers appends nothing.
-void addSvgFilter(TextBuffer* out, PrStringView value) {
-    TextBuffer rewritten{};
+void addSvgFilter(PrTextBuffer* out, PrStringView value) {
+    PrTextBuffer rewritten{};
     PrCssKeyword functions[8];
     uint32_t depth = 0;
     bool changed = false;
@@ -242,47 +244,47 @@ void addSvgFilter(TextBuffer* out, PrStringView value) {
         if (c == '#') {
             // A hex color, whose digits are not a number.
             size_t end = i + 1;
-            while (end < value.size && (asciiIsLetter(value.data[end]) || asciiIsDigit(value.data[end])))
+            while (end < value.size && (prAsciiIsLetter(value.data[end]) || prAsciiIsDigit(value.data[end])))
                 ++end;
-            textAppend(&rewritten, PrStringView{value.data + i, end - i});
+            prTextBufferAppend(&rewritten, PrStringView{value.data + i, end - i});
             i = end;
             continue;
         }
-        if (asciiIsLetter(c)) {
+        if (prAsciiIsLetter(c)) {
             size_t end = i;
             while (end < value.size &&
-                    (asciiIsLetter(value.data[end]) || asciiIsDigit(value.data[end]) || value.data[end] == '-'))
+                    (prAsciiIsLetter(value.data[end]) || prAsciiIsDigit(value.data[end]) || value.data[end] == '-'))
                 ++end;
             PrStringView name{value.data + i, end - i};
-            textAppend(&rewritten, name);
+            prTextBufferAppend(&rewritten, name);
             if (end < value.size && value.data[end] == '(') {
                 PrCssKeyword keyword = PrCssKeyword_Count;
-                if (asciiEqualsFold(name, "blur"))
+                if (prAsciiEqualsFold(name, "blur"))
                     keyword = PrCssKeyword_Blur;
-                else if (asciiEqualsFold(name, "drop-shadow"))
+                else if (prAsciiEqualsFold(name, "drop-shadow"))
                     keyword = PrCssKeyword_DropShadow;
-                else if (asciiEqualsFold(name, "hue-rotate"))
+                else if (prAsciiEqualsFold(name, "hue-rotate"))
                     keyword = PrCssKeyword_HueRotate;
                 if (depth < 8)
                     functions[depth] = keyword;
                 ++depth;
-                textAppendChar(&rewritten, '(');
+                prTextBufferAppendChar(&rewritten, '(');
                 end += 1;
             }
             i = end;
             continue;
         }
         bool sign =
-            (c == '+' || c == '-') && i + 1 < value.size && (asciiIsDigit(value.data[i + 1]) || value.data[i + 1] == '.');
-        if (asciiIsDigit(c) || c == '.' || sign) {
+            (c == '+' || c == '-') && i + 1 < value.size && (prAsciiIsDigit(value.data[i + 1]) || value.data[i + 1] == '.');
+        if (prAsciiIsDigit(c) || c == '.' || sign) {
             size_t end = i + (sign ? 1 : 0);
-            while (end < value.size && (asciiIsDigit(value.data[end]) || value.data[end] == '.'))
+            while (end < value.size && (prAsciiIsDigit(value.data[end]) || value.data[end] == '.'))
                 ++end;
-            textAppend(&rewritten, PrStringView{value.data + i, end - i});
-            bool unit = end < value.size && (asciiIsLetter(value.data[end]) || value.data[end] == '%');
+            prTextBufferAppend(&rewritten, PrStringView{value.data + i, end - i});
+            bool unit = end < value.size && (prAsciiIsLetter(value.data[end]) || value.data[end] == '%');
             PrCssKeyword inside = depth != 0 && depth <= 8 ? functions[depth - 1] : PrCssKeyword_Count;
             if (!unit && inside != PrCssKeyword_Count) {
-                textAppend(&rewritten, inside == PrCssKeyword_HueRotate ? "deg" : "px");
+                prTextBufferAppend(&rewritten, inside == PrCssKeyword_HueRotate ? "deg" : "px");
                 changed = true;
             }
             i = end;
@@ -290,12 +292,12 @@ void addSvgFilter(TextBuffer* out, PrStringView value) {
         }
         if (c == ')' && depth != 0)
             --depth;
-        textAppendChar(&rewritten, c);
+        prTextBufferAppendChar(&rewritten, c);
         ++i;
     }
     if (changed)
-        cssHintAdd(out, "filter", PrStringView{rewritten.text.data, rewritten.text.count});
-    textReset(&rewritten);
+        cssHintAdd(out, "filter", PrStringView{rewritten.data, rewritten.size});
+    prTextBufferReset(&rewritten);
 }
 
 // Appends the hints of an SVG element's presentation attributes. An attribute is parsed as a value of its property,
@@ -303,7 +305,7 @@ void addSvgFilter(TextBuffer* out, PrStringView value) {
 // makes no declaration. A transform is in SVG's syntax alone, without CSS's units and functions
 // (css-transforms-1/#svg-syntax). A path's d is path data, which the d property takes as the string of path()
 // (w3c/svgwg#320). A pathLength is a number alone, which path-length takes as a length in pixels.
-void addSvg(TextBuffer* out, const PrDomElement* element) {
+void addSvg(PrTextBuffer* out, const PrDomElement* element) {
     for (const PrDomNode* node = element->firstAttribute; node != nullptr; node = node->next) {
         const PrDomAttr* attribute = static_cast<const PrDomAttr*>(node);
         if (attribute->space != PrDomNamespace_None)
@@ -311,33 +313,33 @@ void addSvg(TextBuffer* out, const PrDomElement* element) {
         PrCssProperty property = svgPresentationOf(element, prStringView(&attribute->name));
         if (property == PrCssProperty_Count)
             continue;
-        PrStringView value = stringTrim(prStringView(&attribute->value), asciiIsSpace);
+        PrStringView value = stringTrimBy(prStringView(&attribute->value), prAsciiIsSpace);
         if (property == PrCssProperty_D) {
-            textAppend(out, "d:path(");
+            prTextBufferAppend(out, "d:path(");
             cssSerializeString(out, value);
-            textAppend(out, ");");
+            prTextBufferAppend(out, ");");
             continue;
         }
         if (value.size == 0 || !isOneValue(value))
             continue;
         if (property == PrCssProperty_PathLength) {
             double number = 0;
-            if (isBareNumber(value) && decimalToF64(value, &number))
+            if (isBareNumber(value) && prF64ParsePrefix(value, &number))
                 cssHintAddPixels(out, "path-length", number);
             continue;
         }
         if (property == PrCssProperty_Transform) {
-            uint32_t mark = out->text.count;
-            textAppend(out, "transform:");
+            uint32_t mark = out->size;
+            prTextBufferAppend(out, "transform:");
             if (svgTransform(out, value))
-                textAppendChar(out, ';');
+                prTextBufferAppendChar(out, ';');
             else
-                out->text.count = mark;
+                out->size = mark;
             continue;
         }
         cssHintAdd(out, cssPropertyName(property), value);
         double number = 0;
-        if (isBareNumber(value) && decimalToF64(value, &number))
+        if (isBareNumber(value) && prF64ParsePrefix(value, &number))
             cssHintAddPixels(out, cssPropertyName(property), number);
         if (property == PrCssProperty_Filter)
             addSvgFilter(out, value);

@@ -29,11 +29,11 @@ PrStringView xhtmlEntity(void*, PrStringView publicId, PrStringView name) {
     if (!xhtml)
         return PrStringView{};
     // A reference is looked up with its semicolon.
-    TextBuffer reference;
-    textAppend(&reference, name);
-    textAppendChar(&reference, ';');
-    PrStringView expansion = prHtmlEntityMatch(textView(&reference));
-    textReset(&reference);
+    PrTextBuffer reference = {};
+    prTextBufferAppend(&reference, name);
+    prTextBufferAppendChar(&reference, ';');
+    PrStringView expansion = prHtmlEntityMatch(prTextBufferView(&reference));
+    prTextBufferReset(&reference);
     return expansion;
 }
 
@@ -51,16 +51,16 @@ void htmlShowXmlError(PrDomDocument* document, const PrXmlError& error) {
     DomNamespaceId space = PrDomNamespace_None;
     domNamespaceFromUrl(document, "http://www.mozilla.org/newlayout/xml/parsererror.xml", &space);
     PrDomElement* element = domElementCreateNs(document, space, PrStringView{}, "parsererror");
-    TextBuffer text;
-    textAppend(&text, "XML Parsing Error: ");
-    textAppend(&text, error.message);
-    textAppend(&text, "\nLine Number ");
-    textAppendU64(&text, error.line);
-    textAppend(&text, ", Column ");
-    textAppendU64(&text, error.column);
-    textAppendChar(&text, ':');
-    domAttach(element, domTextCreate(document, textView(&text)), nullptr);
-    textReset(&text);
+    PrTextBuffer text = {};
+    prTextBufferAppend(&text, "XML Parsing Error: ");
+    prTextBufferAppend(&text, error.message);
+    prTextBufferAppend(&text, "\nLine Number ");
+    prTextBufferAppendU64(&text, error.line, 10);
+    prTextBufferAppend(&text, ", Column ");
+    prTextBufferAppendU64(&text, error.column, 10);
+    prTextBufferAppendChar(&text, ':');
+    domAttach(element, domTextCreate(document, prTextBufferView(&text)), nullptr);
+    prTextBufferReset(&text);
     domAttach(document, element, nullptr);
 }
 

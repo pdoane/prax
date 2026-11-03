@@ -58,7 +58,7 @@ double fetchCacheAge(const FetchCachedResponse* response, double now);
 bool fetchCacheVaryMatches(const FetchCachedResponse* response, const PrFetchHeader* PR_NULLABLE request, uint32_t count);
 
 // Appends the record of `response` to `out`.
-void fetchCacheWrite(const FetchCachedResponse* response, TextBuffer* out);
+void fetchCacheWrite(const FetchCachedResponse* response, PrTextBuffer* out);
 
 // Reads the record `bytes` into `*out`, whose views are into `bytes`. Returns false if the record does not parse.
 bool fetchCacheRead(PrByteView bytes, FetchCachedResponse* out);

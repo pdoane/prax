@@ -92,19 +92,19 @@ bool cssTransformMatrix(CssValueRun function, PrDomMatrix* out) {
             next.is2D = false;
             break;
         case PrCssKeyword_Rotate:
-        case PrCssKeyword_Rotatez: next = domMatrixRotation(0, 0, 1, degreesToRadiansF64(args[0])); break;
-        case PrCssKeyword_Rotatex: next = domMatrixRotation(1, 0, 0, degreesToRadiansF64(args[0])); break;
-        case PrCssKeyword_Rotatey: next = domMatrixRotation(0, 1, 0, degreesToRadiansF64(args[0])); break;
+        case PrCssKeyword_Rotatez: next = domMatrixRotation(0, 0, 1, prF64DegreesToRadians(args[0])); break;
+        case PrCssKeyword_Rotatex: next = domMatrixRotation(1, 0, 0, prF64DegreesToRadians(args[0])); break;
+        case PrCssKeyword_Rotatey: next = domMatrixRotation(0, 1, 0, prF64DegreesToRadians(args[0])); break;
         case PrCssKeyword_Rotate3d:
-            next = domMatrixRotation(args[0], args[1], args[2], degreesToRadiansF64(args[3]));
+            next = domMatrixRotation(args[0], args[1], args[2], prF64DegreesToRadians(args[3]));
             next.is2D = false;
             break;
         case PrCssKeyword_Skew:
-            next.m[4] = tanF64(degreesToRadiansF64(args[0]));
-            next.m[1] = tanF64(degreesToRadiansF64(args[1]));
+            next.m[4] = prF64Tan(prF64DegreesToRadians(args[0]));
+            next.m[1] = prF64Tan(prF64DegreesToRadians(args[1]));
             break;
-        case PrCssKeyword_Skewx: next.m[4] = tanF64(degreesToRadiansF64(args[0])); break;
-        case PrCssKeyword_Skewy: next.m[1] = tanF64(degreesToRadiansF64(args[0])); break;
+        case PrCssKeyword_Skewx: next.m[4] = prF64Tan(prF64DegreesToRadians(args[0])); break;
+        case PrCssKeyword_Skewy: next.m[1] = prF64Tan(prF64DegreesToRadians(args[0])); break;
         case PrCssKeyword_Perspective:
             next.m[11] = -1 / (args[0] < 1 ? 1 : args[0]);
             next.is2D = false;

@@ -32,7 +32,7 @@ void refreshComputed(const PrCssStyleDeclaration* declaration) {
 }
 
 // Serializes one longhand or custom property of a computed style from the presentation of its element's document.
-bool computedValue(const PrCssStyleDeclaration* declaration, const CssDeclaredName& name, TextBuffer* out) {
+bool computedValue(const PrCssStyleDeclaration* declaration, const CssDeclaredName& name, PrTextBuffer* out) {
     PrDomElement* element = domElementFromNode(declaration->ownerNode);
     PrCssPresentation* presentation = domIsConnected(element) ? cssPresentationOf(element->document) : nullptr;
     CssPseudo pseudo = computedOf(declaration)->pseudo;

@@ -163,7 +163,7 @@ bool mediaValue(CssValueRun run, uint32_t first, uint32_t end, const CssMediaEnv
     if (value->kind == PrCssValueKind_Keyword) {
         // mediaqueries-5/#valdef-media-resolution-infinite
         if (cssValueKeyword(value) == PrCssKeyword_Infinite)
-            *out = mediaNumber(kInfinityF64);
+            *out = mediaNumber(kPrF64Infinity);
         else
             *out = mediaKeyword(cssValueKeyword(value));
         return true;
@@ -244,7 +244,7 @@ Order comparison(CssValueRun run, uint32_t index) {
 // Returns whether the feature's value `held` compares with `given` in an order that `order` accepts. Keywords are
 // either equal or not comparable. A value that the environment does not have is unknown.
 Truth compare(CssMediaValue held, CssMediaValue given, Order order) {
-    if (held.keyword == PrCssKeyword_Unknown && isNanF64(held.number))
+    if (held.keyword == PrCssKeyword_Unknown && prF64IsNan(held.number))
         return Truth_Unknown;
     if (held.keyword != PrCssKeyword_Unknown || given.keyword != PrCssKeyword_Unknown)
         return truthOf((order & Order_Equal) != 0 && held.keyword == given.keyword);
@@ -272,7 +272,7 @@ Truth booleanFeature(CssValueRun run, uint32_t index, const CssMediaEnvironment*
         return Truth_Unknown;
     CssMediaValue held = featureValue(environment, descriptor);
     if (held.keyword == PrCssKeyword_Unknown)
-        return isNanF64(held.number) ? Truth_Unknown : truthOf(held.number != 0);
+        return prF64IsNan(held.number) ? Truth_Unknown : truthOf(held.number != 0);
     return truthOf(held.keyword != PrCssKeyword_None && held.keyword != PrCssKeyword_NoPreference);
 }
 
@@ -439,7 +439,7 @@ void cssMediaEnvironmentInit(CssMediaEnvironment* environment, bool scripting) {
     environment->headroom = 0;
     environment->pixelRatio = 1;
     for (CssMediaValue& value : environment->features)
-        value = mediaNumber(kNanF64);
+        value = mediaNumber(kPrF64Nan);
     for (CssMediaValue& value : environment->overrides)
         value = mediaKeyword(PrCssKeyword_Unknown);
 
@@ -545,7 +545,7 @@ bool cssMediaEnvironmentPrefersDark(const CssMediaEnvironment* PR_NULLABLE envir
 }
 
 bool cssMediaEnvironmentSetDisplay(CssMediaEnvironment* environment, const PrAppDisplay& display) {
-    float stops = display.headroom > 1 ? log2F32(display.headroom) : 0;
+    float stops = display.headroom > 1 ? prF32Log2(display.headroom) : 0;
     PrCssKeyword range = stops > 0 ? PrCssKeyword_High : PrCssKeyword_Standard;
     PrCssKeyword colors = PrCssKeyword_Srgb;
     if (display.gamut == PrColorSpace_DisplayP3 || display.gamut == PrColorSpace_DisplayP3Linear)

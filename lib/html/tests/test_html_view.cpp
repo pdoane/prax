@@ -74,7 +74,7 @@ std::vector<uint8_t> withOrientation(const std::vector<uint8_t>& png, uint8_t or
         'e', 'X', 'I', 'f', 'M', 'M', 0, 42, 0, 0, 0, 8, 0, 1, 0x01, 0x12, 0, 3,
         0,   0,   0,   1,   0,   orientation, 0, 0, 0, 0, 0, 0,
     };
-    uint32_t crc = crc32Update(0, typed);
+    uint32_t crc = prCrc32Update(0, typed);
     uint32_t length = uint32_t(typed.size() - 4);
     std::vector<uint8_t> chunk = {uint8_t(length >> 24), uint8_t(length >> 16), uint8_t(length >> 8), uint8_t(length)};
     chunk.insert(chunk.end(), typed.begin(), typed.end());

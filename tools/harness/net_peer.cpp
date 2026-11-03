@@ -104,7 +104,7 @@ bool netPeerOpen(NetPeer* out) {
         path[size] = directory[size];
         ++size;
     }
-    memCopy(path + size, "/ports", 6);
+    prMemCopy(path + size, "/ports", 6);
     PrFileMapping ports{};
     if (!prFileMap(PrStringView{path, size + 6}, &ports))
         return false;
@@ -121,7 +121,7 @@ bool netPeerOpen(NetPeer* out) {
     out->comfy = portOf(text, "comfy");
     out->closed = portOf(text, "closed");
     prFileUnmap(&ports);
-    memCopy(path + size, "/ca.der", 7);
+    prMemCopy(path + size, "/ca.der", 7);
     return prFileMap(PrStringView{path, size + 7}, &out->ca);
 }
 

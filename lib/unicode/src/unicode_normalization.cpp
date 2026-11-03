@@ -153,11 +153,11 @@ PrString prUnicodeNormalize(PrStringView text, PrUnicodeNormalForm form) {
     Array<uint32_t> codePoints{};
     appendDecoded(&codePoints, text);
     unicodeNormalize(&codePoints, form);
-    TextBuffer out;
+    PrTextBuffer out = {};
     for (uint32_t i = 0; i < codePoints.count; ++i)
-        textAppendCodePoint(&out, codePoints.data[i]);
+        prTextBufferAppendCodePoint(&out, codePoints.data[i]);
     codePoints.reset();
-    return textTake(&out);
+    return prTextBufferTake(&out);
 }
 
 bool prUnicodeIsNormalized(PrStringView text, PrUnicodeNormalForm form) {

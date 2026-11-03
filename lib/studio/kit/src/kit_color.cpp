@@ -147,11 +147,11 @@ PrColor rampTone(float hue, float peak, uint32_t index, PrColorSpace gamut) {
 
 // Returns the sRGB color of a hue in degrees, a saturation and a value in percent, and an alpha.
 PrColor srgbOfHsv(float hue, float saturation, float value, float alpha) {
-    float h = hue - floorF32(hue / 360) * 360;
+    float h = hue - prF32Floor(hue / 360) * 360;
     float s = clampRange(saturation, 0, 100) / 100;
     float v = clampRange(value, 0, 100) / 100;
     float sixths = h / 60;
-    float sector = floorF32(sixths);
+    float sector = prF32Floor(sixths);
     float f = sixths - sector;
     float p = v * (1 - s);
     float q = v * (1 - s * f);
@@ -223,8 +223,8 @@ void readColor(PickerState& s, PrColor color) {
     float r = clampUnit(color.r);
     float g = clampUnit(color.g);
     float b = clampUnit(color.b);
-    float high = maxF32(r, maxF32(g, b));
-    float span = high - minF32(r, minF32(g, b));
+    float high = prF32Max(r, prF32Max(g, b));
+    float span = high - prF32Min(r, prF32Min(g, b));
     if (span > 0) {
         float sixths = high == r ? (g - b) / span : high == g ? 2 + (b - r) / span : 4 + (r - g) / span;
         s.hue = sixths < 0 ? sixths * 60 + 360 : sixths * 60;
@@ -505,14 +505,14 @@ void fillGradient(PrDrawList* list, PrRect rect, PrVec2 from, PrVec2 to, PrColor
 // Fills `rect` with a checkerboard of two grays, under a color's transparency.
 void fillChecker(PrDrawList* list, PrRect rect) {
     prDrawListRect(list, rect, {.color = PrColor{0.59f, 0.59f, 0.59f, 1}});
-    uint32_t columns = uint32_t(ceilF32(prRectWidth(rect) / kChecker));
-    uint32_t rows = uint32_t(ceilF32(prRectHeight(rect) / kChecker));
+    uint32_t columns = uint32_t(prF32Ceil(prRectWidth(rect) / kChecker));
+    uint32_t rows = uint32_t(prF32Ceil(prRectHeight(rect) / kChecker));
     for (uint32_t y = 0; y < rows; ++y) {
         for (uint32_t x = (y & 1); x < columns; x += 2) {
             PrRect square{
                 rect.left + float(x) * kChecker, rect.top + float(y) * kChecker,
-                minF32(rect.left + float(x + 1) * kChecker, rect.right),
-                minF32(rect.top + float(y + 1) * kChecker, rect.bottom),
+                prF32Min(rect.left + float(x + 1) * kChecker, rect.right),
+                prF32Min(rect.top + float(y + 1) * kChecker, rect.bottom),
             };
             prDrawListRect(list, square, {.color = PrColor{0.41f, 0.41f, 0.41f, 1}});
         }
@@ -678,7 +678,7 @@ void planeRow(PrKit& kit, PrLayoutNode node, PickerState& s, PrColor* color, boo
     float hue = perceptual ? s.oklch.hue : s.hue;
     // A drawing is made again for another hue or mode, or on a display of another gamut.
     uint64_t gamutKey = uint64_t(s.gamut) << 8;
-    uint64_t key = hashBytes(&hue, sizeof hue, (s.tab + 1) | gamutKey);
+    uint64_t key = prHashBytes(&hue, sizeof hue, (s.tab + 1) | gamutKey);
     setDrawing(kit, plane.fill, planeExtent, key, &s.drawn[0], [&](PrDrawList* list) {
         if (perceptual) {
             drawSampled(kit, list, planeExtent, Sampled{.skyline = false, .hue = hue}, s.gamut);
@@ -711,7 +711,7 @@ void planeRow(PrKit& kit, PrLayoutNode node, PickerState& s, PrColor* color, boo
 
     if (!opaque) {
         PrColor solid{color->r, color->g, color->b, 1};
-        setDrawing(kit, alpha.fill, stripExtent, hashBytes(&solid, sizeof solid, 0), &s.drawn[2], [&](PrDrawList* list) {
+        setDrawing(kit, alpha.fill, stripExtent, prHashBytes(&solid, sizeof solid, 0), &s.drawn[2], [&](PrDrawList* list) {
             PrRect rect{0, 0, stripExtent.x, stripExtent.y};
             fillChecker(list, rect);
             PrColor clear = solid;
@@ -850,7 +850,7 @@ void hexRow(PrKit* kit, PrLayoutNode node, PickerState& s, PrColor* color) {
     if (!prKitTextChanged(kit, s.hexField, &changed))
         return;
     s.hexLength = uint8_t(changed.size < sizeof s.hex - 1 ? changed.size : sizeof s.hex - 1);
-    memCopy(s.hex, changed.data, s.hexLength);
+    prMemCopy(s.hex, changed.data, s.hexLength);
     PrColor parsed{};
     if (prKitColorParseHex(PrStringView{s.hex, s.hexLength}, &parsed))
         writeEdit(*kit, node, s, color, parsed);
@@ -994,9 +994,9 @@ bool prKitColorParseHex(PrStringView text, PrColor* out) {
     for (uint32_t i = 0; i < uint32_t(text.size) / 2; ++i) {
         char high = text.data[i * 2];
         char low = text.data[i * 2 + 1];
-        if (!asciiIsHexDigit(high) || !asciiIsHexDigit(low))
+        if (!prAsciiIsHexDigit(high) || !prAsciiIsHexDigit(low))
             return false;
-        channels[i] = asciiHexValue(high) * 16 + asciiHexValue(low);
+        channels[i] = prAsciiHexValue(high) * 16 + prAsciiHexValue(low);
     }
     *out = PrColor{
         float(channels[0]) / 255, float(channels[1]) / 255, float(channels[2]) / 255,

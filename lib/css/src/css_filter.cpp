@@ -59,7 +59,7 @@ void cssFilterFunctions(CssValueRun run, const CssColorContext& colors, Array<Cs
             case PrCssKeyword_Blur: {
                 f.kind = PrLayoutFilterKind_Blur;
                 double sigma = 0;
-                f.amount = given && cssResolveLength(run, first, 0, &sigma) ? maxF32(float(sigma), 0) : 0;
+                f.amount = given && cssResolveLength(run, first, 0, &sigma) ? prF32Max(float(sigma), 0) : 0;
                 break;
             }
             case PrCssKeyword_DropShadow: {
@@ -79,13 +79,13 @@ void cssFilterFunctions(CssValueRun run, const CssColorContext& colors, Array<Cs
                     }
                 }
                 f.offset = PrVec2{lengths[0], lengths[1]};
-                f.sigma = maxF32(lengths[2], 0);
+                f.sigma = prF32Max(lengths[2], 0);
                 break;
             }
             case PrCssKeyword_HueRotate: {
                 f.kind = PrLayoutFilterKind_HueRotate;
                 double degrees = 0;
-                f.amount = given && cssMathTo(run, first, PrCssUnit_Deg, &degrees) ? float(degrees * kPiF64 / 180) : 0;
+                f.amount = given && cssMathTo(run, first, PrCssUnit_Deg, &degrees) ? float(degrees * kPrF64Pi / 180) : 0;
                 break;
             }
             case PrCssKeyword_Brightness: f.kind = PrLayoutFilterKind_Brightness; break;
@@ -101,11 +101,11 @@ void cssFilterFunctions(CssValueRun run, const CssColorContext& colors, Array<Cs
                 f.kind != PrLayoutFilterKind_HueRotate) {
             // An omitted amount is 1. An amount over 1 is clamped for a function whose effect is complete at 1
             // (filter-effects-1/#supported-filter-functions).
-            f.amount = maxF32(given ? amountAt(run, first, 1) : 1, 0);
+            f.amount = prF32Max(given ? amountAt(run, first, 1) : 1, 0);
             bool clamps = f.kind == PrLayoutFilterKind_Grayscale || f.kind == PrLayoutFilterKind_Invert ||
                 f.kind == PrLayoutFilterKind_Opacity || f.kind == PrLayoutFilterKind_Sepia;
             if (clamps)
-                f.amount = minF32(f.amount, 1);
+                f.amount = prF32Min(f.amount, 1);
         }
         out->push(item);
     }

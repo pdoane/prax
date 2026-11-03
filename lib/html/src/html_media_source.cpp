@@ -218,8 +218,8 @@ bool initReceived(void* context, const PrMediaInitSegment* segment, bool first) 
         return true;
     if (!codecsSupported(buffer->window, segment))
         return false;
-    if (isNanF64(source->duration))
-        changeDuration(source, isNanF64(segment->duration) ? kInfinityF64 : segment->duration);
+    if (prF64IsNan(source->duration))
+        changeDuration(source, prF64IsNan(segment->duration) ? kPrF64Infinity : segment->duration);
     for (uint32_t i = 0; i < segment->trackCount; ++i) {
         const PrMediaTrackInfo& track = segment->tracks[i];
         if (track.kind == PrMediaTrackKind_Audio)
@@ -280,7 +280,7 @@ void runAppend(void* data) {
         } else {
             PrHtmlMediaSource* source = buffer->source;
             // A frame past the duration extends it (media-source-2/#sourcebuffer-coded-frame-processing).
-            if (source != nullptr && !isNanF64(source->duration) && highestEnd(source) > source->duration)
+            if (source != nullptr && !prF64IsNan(source->duration) && highestEnd(source) > source->duration)
                 changeDuration(source, highestEnd(source));
             finishUpdate(buffer, "update");
             if (source != nullptr)
@@ -296,7 +296,7 @@ void runRemove(void* data) {
     PrHtmlSourceBuffer* buffer = task->buffer;
     if (buffer->updates == task->update && buffer->update == HtmlSourceUpdate_Remove && buffer->buffer != nullptr) {
         PrHtmlMediaSource* source = buffer->source;
-        double duration = source != nullptr ? source->duration : kNanF64;
+        double duration = source != nullptr ? source->duration : kPrF64Nan;
         prMediaSourceBufferRemove(buffer->buffer, buffer->removeStart, buffer->removeEnd, duration);
         finishUpdate(buffer, "update");
         if (source != nullptr)
@@ -422,7 +422,7 @@ bool htmlMediaSourceAttach(PrHtmlMediaSource* source, HtmlMedia* media) {
 
 void htmlMediaSourceDetach(PrHtmlMediaSource* source) {
     source->readyState = PrHtmlMediaSourceReadyState_Closed;
-    source->duration = kNanF64;
+    source->duration = kPrF64Nan;
     source->media = nullptr;
     while (source->activeSourceBuffers.buffers.count != 0)
         listRemove(source->window, &source->activeSourceBuffers, source->activeSourceBuffers.buffers.last());
@@ -483,16 +483,16 @@ void htmlMediaSourceBuffered(const PrHtmlMediaSource* source, Array<PrMediaTimeR
 
 void htmlMediaSourceSeekable(const PrHtmlMediaSource* source, Array<PrMediaTimeRange>* out) {
     out->clear();
-    if (isNanF64(source->duration))
+    if (prF64IsNan(source->duration))
         return;
-    if (source->duration != kInfinityF64) {
+    if (source->duration != kPrF64Infinity) {
         out->push(PrMediaTimeRange{0, source->duration});
         return;
     }
     // A live source can seek within its live seekable range and what it has buffered.
     Array<PrMediaTimeRange> buffered{};
     htmlMediaSourceBuffered(source, &buffered);
-    if (!isNanF64(source->liveStart)) {
+    if (!prF64IsNan(source->liveStart)) {
         double start = source->liveStart;
         double end = source->liveEnd;
         if (buffered.count != 0) {
@@ -534,9 +534,9 @@ PrHtmlMediaSource* prHtmlMediaSourceCreate(PrHtmlWindow* window) {
     source->destroy = destroySource;
     source->references = 1;
     source->window = window;
-    source->duration = kNanF64;
-    source->liveStart = kNanF64;
-    source->liveEnd = kNanF64;
+    source->duration = kPrF64Nan;
+    source->liveStart = kPrF64Nan;
+    source->liveEnd = kPrF64Nan;
     source->sourceBuffers.type = DomTargetType_SourceBufferList;
     source->sourceBuffers.owner = targetOf(source);
     source->activeSourceBuffers.type = DomTargetType_SourceBufferList;
@@ -579,11 +579,11 @@ PrHtmlMediaSourceReadyState prHtmlMediaSourceReadyState(const PrHtmlMediaSource*
 }
 
 double prHtmlMediaSourceDuration(const PrHtmlMediaSource* source) {
-    return source->readyState == PrHtmlMediaSourceReadyState_Closed ? kNanF64 : source->duration;
+    return source->readyState == PrHtmlMediaSourceReadyState_Closed ? kPrF64Nan : source->duration;
 }
 
 PrStatus prHtmlMediaSourceSetDuration(PrHtmlMediaSource* source, double duration) {
-    if (isNanF64(duration) || duration < 0)
+    if (prF64IsNan(duration) || duration < 0)
         return PrStatus_OutOfRange;
     if (source->readyState != PrHtmlMediaSourceReadyState_Open || anyUpdating(source))
         return PrStatus_InvalidState;
@@ -635,7 +635,7 @@ PrStatus prHtmlMediaSourceAddSourceBuffer(PrHtmlMediaSource* source, PrStringVie
     buffer->references = 1;
     buffer->window = source->window;
     buffer->source = source;
-    bool audioOnly = asciiStartsWithFold(type, "audio/");
+    bool audioOnly = prAsciiStartsWithFold(type, "audio/");
     buffer->buffer = prMediaSourceBufferCreate(format, audioOnly ? kAudioQuota : kVideoQuota);
     prDomEventTargetRetain(prHtmlWindowAsEventTarget(source->window));
     retainTarget(targetOf(buffer));
@@ -663,7 +663,7 @@ PrStatus prHtmlMediaSourceEndOfStream(PrHtmlMediaSource* source, PrHtmlEndOfStre
 PrStatus prHtmlMediaSourceSetLiveSeekableRange(PrHtmlMediaSource* source, double start, double end) {
     if (source->readyState != PrHtmlMediaSourceReadyState_Open)
         return PrStatus_InvalidState;
-    if (start < 0 || start > end || isNanF64(start) || isNanF64(end))
+    if (start < 0 || start > end || prF64IsNan(start) || prF64IsNan(end))
         return PrStatus_OutOfRange;
     source->liveStart = start;
     source->liveEnd = end;
@@ -673,8 +673,8 @@ PrStatus prHtmlMediaSourceSetLiveSeekableRange(PrHtmlMediaSource* source, double
 PrStatus prHtmlMediaSourceClearLiveSeekableRange(PrHtmlMediaSource* source) {
     if (source->readyState != PrHtmlMediaSourceReadyState_Open)
         return PrStatus_InvalidState;
-    source->liveStart = kNanF64;
-    source->liveEnd = kNanF64;
+    source->liveStart = kPrF64Nan;
+    source->liveEnd = kPrF64Nan;
     return PrStatus_Ok;
 }
 
@@ -740,7 +740,7 @@ PrStatus prHtmlSourceBufferSetAppendWindowStart(PrHtmlSourceBuffer* buffer, doub
     if (status != PrStatus_Ok)
         return status;
     PrMediaTimeRange window = prMediaSourceBufferAppendWindow(buffer->buffer);
-    if (isNanF64(start) || start < 0 || start >= window.end)
+    if (prF64IsNan(start) || start < 0 || start >= window.end)
         return PrStatus_OutOfRange;
     window.start = start;
     prMediaSourceBufferSetAppendWindow(buffer->buffer, window);
@@ -748,7 +748,7 @@ PrStatus prHtmlSourceBufferSetAppendWindowStart(PrHtmlSourceBuffer* buffer, doub
 }
 
 double prHtmlSourceBufferAppendWindowEnd(const PrHtmlSourceBuffer* buffer) {
-    return buffer->buffer != nullptr ? prMediaSourceBufferAppendWindow(buffer->buffer).end : kInfinityF64;
+    return buffer->buffer != nullptr ? prMediaSourceBufferAppendWindow(buffer->buffer).end : kPrF64Infinity;
 }
 
 PrStatus prHtmlSourceBufferSetAppendWindowEnd(PrHtmlSourceBuffer* buffer, double end) {
@@ -756,7 +756,7 @@ PrStatus prHtmlSourceBufferSetAppendWindowEnd(PrHtmlSourceBuffer* buffer, double
     if (status != PrStatus_Ok)
         return status;
     PrMediaTimeRange window = prMediaSourceBufferAppendWindow(buffer->buffer);
-    if (isNanF64(end) || end <= window.start)
+    if (prF64IsNan(end) || end <= window.start)
         return PrStatus_OutOfRange;
     window.end = end;
     prMediaSourceBufferSetAppendWindow(buffer->buffer, window);
@@ -788,7 +788,7 @@ PrStatus prHtmlSourceBufferAbort(PrHtmlSourceBuffer* buffer) {
         return PrStatus_InvalidState;
     abortUpdate(buffer);
     prMediaSourceBufferResetParser(buffer->buffer);
-    prMediaSourceBufferSetAppendWindow(buffer->buffer, PrMediaTimeRange{0, kInfinityF64});
+    prMediaSourceBufferSetAppendWindow(buffer->buffer, PrMediaTimeRange{0, kPrF64Infinity});
     return PrStatus_Ok;
 }
 
@@ -797,7 +797,8 @@ PrStatus prHtmlSourceBufferRemove(PrHtmlSourceBuffer* buffer, double start, doub
     if (status != PrStatus_Ok)
         return status;
     PrHtmlMediaSource* source = buffer->source;
-    if (isNanF64(source->duration) || start < 0 || start > source->duration || isNanF64(start) || isNanF64(end) || end <= start)
+    double duration = source->duration;
+    if (prF64IsNan(duration) || prF64IsNan(start) || prF64IsNan(end) || start < 0 || start > duration || end <= start)
         return PrStatus_OutOfRange;
     reopen(source);
     buffer->removeStart = start;

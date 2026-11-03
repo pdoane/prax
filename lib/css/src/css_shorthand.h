@@ -68,7 +68,7 @@ bool cssExpandShorthand(CssParser* parser, PrCssProperty shorthand, CssValueSpan
 // Appends the value of `shorthand`, serialized from the values of its longhands (cssom-1/#serialize-a-css-value).
 // `values` holds one value for each longhand, in canonical order. Appends nothing if the shorthand cannot represent
 // those values.
-void cssSerializeShorthand(TextBuffer* out, PrCssProperty shorthand, const CssValueRun* values);
+void cssSerializeShorthand(PrTextBuffer* out, PrCssProperty shorthand, const CssValueRun* values);
 
 } // namespace pr_impl
 

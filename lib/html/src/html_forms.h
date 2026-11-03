@@ -15,7 +15,7 @@ namespace pr_impl {
 
 // Appends a color input's value after the steps of html/#update-a-color-well-control-color, given `text`, the value or
 // value attribute that the steps start from.
-void htmlColorWellValue(const PrDomElement* input, PrStringView text, TextBuffer* out);
+void htmlColorWellValue(const PrDomElement* input, PrStringView text, PrTextBuffer* out);
 
 // Returns true if the user can edit the text of `element`: a textarea or a text-like input that is neither disabled nor
 // read-only.

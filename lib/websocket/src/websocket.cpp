@@ -28,7 +28,7 @@ bool isToken(PrStringView text) {
     if (text.size == 0)
         return false;
     for (size_t i = 0; i < text.size; ++i) {
-        if (!asciiIsHttpToken(text.data[i]))
+        if (!prAsciiIsHttpToken(text.data[i]))
             return false;
     }
     return true;
@@ -55,7 +55,7 @@ using namespace pr_impl;
 
 PrWebSocketNetworkBackend prWebSocketNetworkBackendFromName(PrStringView name) {
     for (PrWebSocketNetworkBackend backend = 0; backend < PrWebSocketNetworkBackend_Count; ++backend) {
-        if (asciiEqualsFold(kBackendNames[backend], name))
+        if (prAsciiEqualsFold(kBackendNames[backend], name))
             return backend;
     }
     return PrWebSocketNetworkBackend_Count;

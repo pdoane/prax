@@ -17,10 +17,10 @@ std::string color(PrStringView value) {
     CssValueSpan span;
     std::string result = "invalid";
     if (cssParsePropertyValue(PrCssProperty_Color, &source.ts, &pool, &match, &span)) {
-        TextBuffer out = {};
+        PrTextBuffer out = {};
         cssSerializeValues(&out, cssValuePoolRun(&pool, span));
-        result = textOf(textView(&out));
-        textReset(&out);
+        result = textOf(prTextBufferView(&out));
+        prTextBufferReset(&out);
     }
     cssValuePoolReset(&pool);
     cssMatchStateReset(&match);

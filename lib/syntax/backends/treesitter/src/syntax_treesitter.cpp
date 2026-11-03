@@ -739,7 +739,7 @@ bool treeUpdate(PrSyntaxTree* tree, double milliseconds) {
     h->deadline = prTimeMonotonicMilliseconds() + milliseconds;
     TSParseOptions options{};
     options.payload = h;
-    options.progress_callback = milliseconds < kInfinityF64 ? outOfTime : nullptr;
+    options.progress_callback = milliseconds < kPrF64Infinity ? outOfTime : nullptr;
     TSTree* parsed = ts_parser_parse_with_options(h->parser, h->parsed, inputOf(h->buffer), options);
     if (parsed == nullptr) {
         h->halted = true;

@@ -296,7 +296,7 @@ void sceneRows(EditorState& editor) {
     uint32_t closedDepth = UINT32_MAX;
     for (const Entity& entity : editor.entities) {
         if (filtered) {
-            if (asciiContainsFold(entity.name, editor.sceneFilter)) {
+            if (prAsciiContainsFold(entity.name, editor.sceneFilter)) {
                 editor.sceneRows.push_back(entity.id);
                 editor.sceneItems.push_back(PrKitTreeItem{});
             }

@@ -49,11 +49,11 @@ constexpr uint32_t kMaxDepth = 16;
 constexpr uint32_t kMaxInstances = 100000;
 
 uint32_t hashOf(const PrDomElement* element) {
-    return hashPointer(element, 0);
+    return prHashPointer(element, 0);
 }
 
 uint32_t hashOfId(PrStringView id) {
-    return uint32_t(hashBytes(id.data, id.size, 0));
+    return uint32_t(prHashBytes(id.data, id.size, 0));
 }
 
 bool isUse(const PrDomElement* element) {

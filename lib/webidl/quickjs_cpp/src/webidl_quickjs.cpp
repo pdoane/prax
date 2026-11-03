@@ -672,7 +672,7 @@ DomException* PR_NULLABLE exceptionOf(JSContext* ctx, JSValueConst object) {
 }
 
 JSValue newException(JSContext* ctx, JSClassID id, PrStringView message, PrStringView name,
-        double quota = kNanF64, double requested = kNanF64) {
+        double quota = kPrF64Nan, double requested = kPrF64Nan) {
     DomException exception = {prStringCopy(name), prStringCopy(message), quota, requested};
     JSValue object = jsNewValue(ctx, id, exception);
     if (JS_IsException(object)) {
@@ -721,7 +721,7 @@ bool readQuotaMember(JSContext* ctx, JSValueConst options, const char* name, dou
     bool given = false;
     if (!jsDictNumber(ctx, options, name, out, &given))
         return false;
-    if (given && !isFiniteF64(*out)) {
+    if (given && !prF64IsFinite(*out)) {
         JS_ThrowTypeError(ctx, "%s is not a finite number", name);
         return false;
     }
@@ -735,8 +735,8 @@ JSValue constructQuota(JSContext* ctx, JSValueConst newTarget, int argc, JSValue
         return JS_EXCEPTION;
     JSValueConst options = argc > 1 ? argv[1] : JS_UNDEFINED;
     bool present = false;
-    double quota = kNanF64;
-    double requested = kNanF64;
+    double quota = kPrF64Nan;
+    double requested = kPrF64Nan;
     if (!jsDictionary(ctx, options, &present) || (present && (!readQuotaMember(ctx, options, "quota", &quota) ||
             !readQuotaMember(ctx, options, "requested", &requested))))
         return JS_EXCEPTION;
@@ -754,7 +754,7 @@ JSValue quotaGet(JSContext* ctx, JSValueConst exceptionObject, int magic) {
     if (exception == nullptr)
         return JS_EXCEPTION;
     double value = magic == 0 ? exception->quota : exception->requested;
-    return isNanF64(value) ? JS_NULL : JS_NewFloat64(ctx, value);
+    return prF64IsNan(value) ? JS_NULL : JS_NewFloat64(ctx, value);
 }
 
 constexpr JSCFunctionListEntry kDomExceptionProto[] = {
@@ -1027,8 +1027,8 @@ bool jsEnforceRange(JSContext* ctx, JSValueConst value, double lower, double upp
     double number = 0;
     if (JS_ToFloat64(ctx, &number, value) < 0)
         return false;
-    number = number < 0 ? ceilF64(number) : floorF64(number);
-    if (!isFiniteF64(number) || number < lower || number > upper) {
+    number = number < 0 ? prF64Ceil(number) : prF64Floor(number);
+    if (!prF64IsFinite(number) || number < lower || number > upper) {
         JS_ThrowTypeError(ctx, "Value is outside the range of the type");
         return false;
     }

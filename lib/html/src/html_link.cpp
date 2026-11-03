@@ -33,12 +33,12 @@ bool relHolds(const PrDomElement* element, PrStringView keyword) {
     PrStringView text = prStringView(&rel->value);
     size_t at = 0;
     while (at < text.size) {
-        while (at < text.size && asciiIsSpace(text.data[at]))
+        while (at < text.size && prAsciiIsSpace(text.data[at]))
             ++at;
         size_t start = at;
-        while (at < text.size && !asciiIsSpace(text.data[at]))
+        while (at < text.size && !prAsciiIsSpace(text.data[at]))
             ++at;
-        if (at != start && asciiEqualsFold(PrStringView{text.data + start, at - start}, keyword))
+        if (at != start && prAsciiEqualsFold(PrStringView{text.data + start, at - start}, keyword))
             return true;
     }
     return false;
@@ -98,17 +98,17 @@ void preloadFetched(void* PR_NULLABLE data, const DomFetchResult* result) {
 // none, in which case the link fetches nothing.
 bool preloadDestination(const PrDomElement* element, DomFetchDestination* out) {
     PrStringView as = domAttributeValue(element, "as");
-    if (asciiEqualsFold(as, "style"))
+    if (prAsciiEqualsFold(as, "style"))
         *out = DomFetchDestination_Style;
-    else if (asciiEqualsFold(as, "script"))
+    else if (prAsciiEqualsFold(as, "script"))
         *out = DomFetchDestination_Script;
-    else if (asciiEqualsFold(as, "image"))
+    else if (prAsciiEqualsFold(as, "image"))
         *out = DomFetchDestination_Image;
-    else if (asciiEqualsFold(as, "font"))
+    else if (prAsciiEqualsFold(as, "font"))
         *out = DomFetchDestination_Font;
-    else if (asciiEqualsFold(as, "audio") || asciiEqualsFold(as, "video") || asciiEqualsFold(as, "track"))
+    else if (prAsciiEqualsFold(as, "audio") || prAsciiEqualsFold(as, "video") || prAsciiEqualsFold(as, "track"))
         *out = DomFetchDestination_Media;
-    else if (asciiEqualsFold(as, "fetch") || asciiEqualsFold(as, "document"))
+    else if (prAsciiEqualsFold(as, "fetch") || prAsciiEqualsFold(as, "document"))
         *out = DomFetchDestination_Document;
     else
         return false;
@@ -211,7 +211,7 @@ PrString htmlLinkIconUrl(const PrDomDocument* document, PrImageCodec* PR_NULLABL
             if (essence.size > sizeof lowered)
                 continue;
             for (size_t i = 0; i < essence.size; ++i)
-                lowered[i] = asciiLower(essence.data[i]);
+                lowered[i] = prAsciiLower(essence.data[i]);
             if (!prImageCodecSupportsType(codec, PrStringView{lowered, essence.size}))
                 continue;
         }

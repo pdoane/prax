@@ -38,7 +38,7 @@ using namespace pr_impl;
 
 PrProcessBackend prProcessBackendFromName(PrStringView name) {
     for (PrProcessBackend backend = 0; backend < PrProcessBackend_Count; ++backend) {
-        if (asciiEqualsFold(kBackendNames[backend], name))
+        if (prAsciiEqualsFold(kBackendNames[backend], name))
             return backend;
     }
     return PrProcessBackend_Count;

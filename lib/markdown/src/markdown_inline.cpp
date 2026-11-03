@@ -125,12 +125,12 @@ void appendTextFrom(Subject& s, uint32_t mark) {
 }
 
 void skipSpaces(Subject& s) {
-    while (asciiIsTabOrSpace(peek(s, s.pos)))
+    while (prAsciiIsTabOrSpace(peek(s, s.pos)))
         ++s.pos;
 }
 
 size_t skipWhitespace(const Subject& s, size_t index) {
-    while (asciiIsTabOrSpace(peek(s, index)) || peek(s, index) == '\n')
+    while (prAsciiIsTabOrSpace(peek(s, index)) || peek(s, index) == '\n')
         ++index;
     return index;
 }
@@ -143,7 +143,7 @@ uint32_t codePointBefore(const Subject& s, size_t end) {
     while (start > 0 && (uint8_t(s.text.data[start]) & 0xc0) == 0x80)
         --start;
     uint32_t codePoint = 0;
-    prUtf8Decode(stringSlice(s.text, start, end - start), 0, &codePoint);
+    prUtf8Decode(prStringSlice(s.text, start, end - start), 0, &codePoint);
     return codePoint;
 }
 
@@ -223,7 +223,7 @@ void handleDelimiter(Subject& s, char c) {
     bool canClose = false;
     size_t start = s.pos;
     uint32_t length = scanDelimiters(s, c, &canOpen, &canClose);
-    PrStringView characters = stringSlice(s.text, start, length);
+    PrStringView characters = prStringSlice(s.text, start, length);
     // A quote is written as a closing quote, or as an opening one if it is a double quote that cannot close. A match
     // with another quote makes the pair a left and a right quote.
     if (c == '\'')
@@ -431,7 +431,7 @@ size_t closingBackticks(Subject& s, size_t from, uint32_t length) {
     Array<uint32_t>& backticks = s.parser->backticks;
     if (!s.clearedBackticks) {
         backticks.resize(kMaxBacktickRun + 1);
-        memZero(backticks.data, backticks.count * sizeof(uint32_t));
+        prMemZero(backticks.data, backticks.count * sizeof(uint32_t));
         s.clearedBackticks = true;
     }
     if (length > kMaxBacktickRun || (s.scannedBackticks && backticks.data[length] <= from))
@@ -462,12 +462,12 @@ void handleBackticks(Subject& s) {
     uint32_t length = uint32_t(s.pos - start);
     size_t end = closingBackticks(s, s.pos, length);
     if (end == 0) {
-        appendText(s, stringSlice(s.text, start, length));
+        appendText(s, prStringSlice(s.text, start, length));
         return;
     }
     // Line endings become spaces, and one space is stripped from each end if both ends have one, unless the code is
     // only spaces (commonmark/#code-spans).
-    PrStringView code = stringSlice(s.text, s.pos, end - length - s.pos);
+    PrStringView code = prStringSlice(s.text, s.pos, end - length - s.pos);
     s.pos = end;
     uint32_t mark = s.tree->text.count;
     for (size_t i = 0; i < code.size; ++i)
@@ -487,7 +487,7 @@ void handleBackticks(Subject& s) {
 void handleBackslash(Subject& s) {
     char next = peek(s, s.pos + 1);
     if (markdownIsAsciiPunctuation(next)) {
-        appendText(s, stringSlice(s.text, s.pos + 1, 1));
+        appendText(s, prStringSlice(s.text, s.pos + 1, 1));
         s.pos += 2;
     } else if (next == '\n') {
         s.pos += 2;
@@ -569,7 +569,7 @@ void handleLessThan(Subject& s) {
         email = length != 0;
     }
     if (length != 0) {
-        PrStringView address = stringSlice(s.text, s.pos + 1, length - 2);
+        PrStringView address = prStringSlice(s.text, s.pos + 1, length - 2);
         s.pos += length;
         uint32_t mark = s.tree->text.count;
         if (email)
@@ -584,7 +584,7 @@ void handleLessThan(Subject& s) {
     }
     length = markdownScanHtmlTag(s.text, s.pos, &s.tags);
     if (length != 0) {
-        appendRawHtml(s, stringSlice(s.text, s.pos, length));
+        appendRawHtml(s, prStringSlice(s.text, s.pos, length));
         s.pos += length;
         return;
     }
@@ -653,7 +653,7 @@ size_t findCloser(Subject& s, size_t from, PrStringView needle, size_t* missingA
     if (from >= *missingAfter)
         return s.text.size;
     for (size_t at = from; at + needle.size <= s.text.size; ++at) {
-        if (stringStartsWith(stringSlice(s.text, at, s.text.size - at), needle) && closes(at))
+        if (prStringStartsWith(prStringSlice(s.text, at, s.text.size - at), needle) && closes(at))
             return at;
     }
     *missingAfter = from;
@@ -668,27 +668,27 @@ void handleDollar(Subject& s) {
     if (peek(s, start + 1) == '`') {
         size_t end = findCloser(s, start + 2, "`$", &s.missingMath[0], [](size_t) { return true; });
         if (end < s.text.size && end > start + 2) {
-            appendMath(s, stringSlice(s.text, start + 2, end - start - 2), false, end + 2);
+            appendMath(s, prStringSlice(s.text, start + 2, end - start - 2), false, end + 2);
             return;
         }
     } else if (peek(s, start + 1) == '$') {
         size_t end = findCloser(s, start + 2, "$$", &s.missingMath[1],
             [&](size_t at) { return at == 0 || s.text.data[at - 1] != '\\'; });
         if (end < s.text.size && end > start + 2) {
-            appendMath(s, stringSlice(s.text, start + 2, end - start - 2), true, end + 2);
+            appendMath(s, prStringSlice(s.text, start + 2, end - start - 2), true, end + 2);
             return;
         }
         appendText(s, "$$");
         s.pos = start + 2;
         return;
-    } else if (!asciiIsTabOrSpace(peek(s, start + 1)) && peek(s, start + 1) != '\n' && start + 1 < s.text.size) {
+    } else if (!prAsciiIsTabOrSpace(peek(s, start + 1)) && peek(s, start + 1) != '\n' && start + 1 < s.text.size) {
         size_t end = findCloser(s, start + 1, "$", &s.missingMath[2], [&](size_t at) {
             char before = s.text.data[at - 1];
-            return at > start + 1 && before != '\\' && !asciiIsTabOrSpace(before) && before != '\n' &&
-                !asciiIsDigit(peek(s, at + 1));
+            return at > start + 1 && before != '\\' && !prAsciiIsTabOrSpace(before) && before != '\n' &&
+                !prAsciiIsDigit(peek(s, at + 1));
         });
         if (end < s.text.size) {
-            appendMath(s, stringSlice(s.text, start + 1, end - start - 1), false, end + 1);
+            appendMath(s, prStringSlice(s.text, start + 1, end - start - 1), false, end + 1);
             return;
         }
     }
@@ -776,11 +776,11 @@ size_t inlineLink(Subject& s, size_t start, MarkdownRange* outDestination, Markd
     if (peek(s, end) != ')')
         return 0;
     uint32_t mark = s.tree->text.count;
-    markdownAppendDecoded(stringSlice(s.text, destination.start, destination.size), &s.tree->text);
+    markdownAppendDecoded(prStringSlice(s.text, destination.start, destination.size), &s.tree->text);
     *outDestination = MarkdownRange{mark, s.tree->text.count - mark};
     mark = s.tree->text.count;
     if (titleEnd != titleStart)
-        markdownAppendDecoded(stringSlice(s.text, title.start, title.size), &s.tree->text);
+        markdownAppendDecoded(prStringSlice(s.text, title.start, title.size), &s.tree->text);
     *outTitle = MarkdownRange{mark, s.tree->text.count - mark};
     return end + 1;
 }
@@ -802,7 +802,7 @@ bool footnoteReference(Subject& s, const MarkdownBracket& opener, size_t initial
     s.pos = initial;
     // The reference's text is "[^label]", which the walk shows if no definition has the label.
     size_t labelStart = opener.position + 1;
-    PrStringView label = stringSlice(s.text, labelStart, initial - 1 > labelStart ? initial - 1 - labelStart : 0);
+    PrStringView label = prStringSlice(s.text, labelStart, initial - 1 > labelStart ? initial - 1 - labelStart : 0);
     uint32_t mark = s.tree->text.count;
     s.tree->text.append("[^", 2);
     s.tree->text.append(label.data, uint32_t(label.size));
@@ -843,10 +843,10 @@ void handleCloseBracket(Subject& s) {
         // (commonmark/#reference-link).
         MarkdownSpan label{};
         size_t after = referenceLabel(s, initial, &label);
-        PrStringView text = stringSlice(s.text, label.start, label.size);
-        bool hasLabel = after != 0 && stringTrim(text).size != 0;
+        PrStringView text = prStringSlice(s.text, label.start, label.size);
+        bool hasLabel = after != 0 && prStringTrim(text).size != 0;
         if (!hasLabel && !opener.bracketAfter) {
-            text = stringSlice(s.text, opener.position, initial - 1 - opener.position);
+            text = prStringSlice(s.text, opener.position, initial - 1 - opener.position);
             hasLabel = true;
             if (after == 0)
                 after = initial;
@@ -988,7 +988,7 @@ size_t trimAutolink(PrStringView text, size_t end) {
                     break;
                 }
                 size_t start = end - 2;
-                while (start > 0 && asciiIsLetter(text.data[start]))
+                while (start > 0 && prAsciiIsLetter(text.data[start]))
                     --start;
                 if (start < end - 2 && text.data[start] == '&')
                     end = start;
@@ -1021,8 +1021,8 @@ bool wwwAutolink(Subject& s) {
         if (before != '*' && before != '_' && before != '~' && before != '(' && !isAsciiSpace(before))
             return false;
     }
-    PrStringView rest = stringSlice(s.text, s.pos, s.text.size - s.pos);
-    if (rest.size < 4 || !stringStartsWith(rest, "www."))
+    PrStringView rest = prStringSlice(s.text, s.pos, s.text.size - s.pos);
+    if (rest.size < 4 || !prStringStartsWith(rest, "www."))
         return false;
     size_t end = validDomain(rest, false);
     if (end == 0)
@@ -1032,7 +1032,7 @@ bool wwwAutolink(Subject& s) {
     end = trimAutolink(rest, end);
     if (end == 0)
         return false;
-    appendAutolink(s, "http://", stringSlice(rest, 0, end));
+    appendAutolink(s, "http://", prStringSlice(rest, 0, end));
     s.pos += end;
     return true;
 }
@@ -1056,23 +1056,23 @@ void unput(Subject& s, size_t count) {
 // Matches an extended URL autolink whose scheme ends at the subject's position, which is a ':'
 // (gfm/#extended-url-autolink). The scheme's letters are text already, which the link takes back.
 bool urlAutolink(Subject& s) {
-    PrStringView rest = stringSlice(s.text, s.pos, s.text.size - s.pos);
+    PrStringView rest = prStringSlice(s.text, s.pos, s.text.size - s.pos);
     if (rest.size < 4 || rest.data[1] != '/' || rest.data[2] != '/')
         return false;
     size_t rewind = 0;
-    while (rewind < s.pos && asciiIsLetter(s.text.data[s.pos - rewind - 1]))
+    while (rewind < s.pos && prAsciiIsLetter(s.text.data[s.pos - rewind - 1]))
         ++rewind;
-    PrStringView url = stringSlice(s.text, s.pos - rewind, rest.size + rewind);
+    PrStringView url = prStringSlice(s.text, s.pos - rewind, rest.size + rewind);
     static const char* const kSchemes[] = {"http://", "https://", "ftp://"};
     bool safe = false;
     for (const char* scheme : kSchemes) {
         size_t length = PrStringView(scheme).size;
-        if (url.size > length && asciiStartsWithFold(url, scheme) && isHostCharacter(url, length))
+        if (url.size > length && prAsciiStartsWithFold(url, scheme) && isHostCharacter(url, length))
             safe = true;
     }
     if (!safe)
         return false;
-    size_t domain = validDomain(stringSlice(rest, 3, rest.size - 3), true);
+    size_t domain = validDomain(prStringSlice(rest, 3, rest.size - 3), true);
     if (domain == 0)
         return false;
     size_t end = 3 + domain;
@@ -1082,7 +1082,7 @@ bool urlAutolink(Subject& s) {
     if (end == 0)
         return false;
     unput(s, rewind);
-    appendAutolink(s, "", stringSlice(s.text, s.pos - rewind, end + rewind));
+    appendAutolink(s, "", prStringSlice(s.text, s.pos - rewind, end + rewind));
     s.pos += end;
     return true;
 }
@@ -1090,12 +1090,12 @@ bool urlAutolink(Subject& s) {
 // Returns true if `protocol` ends at `end` in `text`, starts at or after `start`, and either starts at `start` or
 // follows a character that is not a letter or a digit.
 bool endsWithProtocol(PrStringView text, size_t end, PrStringView protocol, size_t start) {
-    if (protocol.size > end - start || !stringStartsWith(stringSlice(text, end - protocol.size, protocol.size), protocol))
+    if (protocol.size > end - start || !prStringStartsWith(prStringSlice(text, end - protocol.size, protocol.size), protocol))
         return false;
     if (protocol.size == end - start)
         return true;
     char before = text.data[end - protocol.size - 1];
-    return !(asciiIsLetter(before) || asciiIsDigit(before));
+    return !(prAsciiIsLetter(before) || prAsciiIsDigit(before));
 }
 
 // Finds the extended email autolinks in the Text node `node` and splits the node around each of them
@@ -1107,7 +1107,7 @@ void emailAutolinks(Subject& s, MarkdownNodeIndex node) {
         PrStringView text = markdownTreeText(s.tree, range);
         if (offset >= text.size)
             return;
-        size_t at = offset + stringFind(stringSlice(text, offset, text.size - offset), '@');
+        size_t at = offset + prStringFindByte(prStringSlice(text, offset, text.size - offset), '@');
         if (at >= text.size)
             return;
         size_t maxRewind = at - offset;
@@ -1123,7 +1123,7 @@ void emailAutolinks(Subject& s, MarkdownNodeIndex node) {
             size_t base = offset + maxRewind;
             for (rewind = 0; rewind < maxRewind; ++rewind) {
                 char c = text.data[base - rewind - 1];
-                if (asciiIsLetter(c) || asciiIsDigit(c) || c == '.' || c == '+' || c == '-' || c == '_')
+                if (prAsciiIsLetter(c) || prAsciiIsDigit(c) || c == '.' || c == '+' || c == '-' || c == '_')
                     continue;
                 if (c == ':' && endsWithProtocol(text, base - rewind, "mailto:", offset)) {
                     mailto = false;
@@ -1140,7 +1140,7 @@ void emailAutolinks(Subject& s, MarkdownNodeIndex node) {
                 break;
             for (end = 1; base + end < text.size; ++end) {
                 char c = text.data[base + end];
-                if (asciiIsLetter(c) || asciiIsDigit(c))
+                if (prAsciiIsLetter(c) || prAsciiIsDigit(c))
                     continue;
                 if (c == '@') {
                     offset += maxRewind + 1;
@@ -1149,7 +1149,7 @@ void emailAutolinks(Subject& s, MarkdownNodeIndex node) {
                     break;
                 }
                 if (c == '.' && base + end + 1 < text.size &&
-                        (asciiIsLetter(text.data[base + end + 1]) || asciiIsDigit(text.data[base + end + 1])))
+                        (prAsciiIsLetter(text.data[base + end + 1]) || prAsciiIsDigit(text.data[base + end + 1])))
                     ++dots;
                 else if (c == '/' && xmpp)
                     continue;
@@ -1163,11 +1163,11 @@ void emailAutolinks(Subject& s, MarkdownNodeIndex node) {
             continue;
         }
         char last = text.data[base + end - 1];
-        if (end < 2 || dots == 0 || (!asciiIsLetter(last) && last != '.')) {
+        if (end < 2 || dots == 0 || (!prAsciiIsLetter(last) && last != '.')) {
             offset = base + end;
             continue;
         }
-        end = trimAutolink(stringSlice(text, base, text.size - base), end);
+        end = trimAutolink(prStringSlice(text, base, text.size - base), end);
         if (end == 0) {
             offset = base + 1;
             continue;
@@ -1260,7 +1260,7 @@ void markdownParseInlines(MarkdownInlineParser* parser, const PrMarkdownOptions&
     s.parent = parent;
     // The end of the content is trimmed. Its lines begin at their first non-whitespace character already.
     size_t size = content.size;
-    while (size != 0 && (asciiIsTabOrSpace(content.data[size - 1]) || content.data[size - 1] == '\n'))
+    while (size != 0 && (prAsciiIsTabOrSpace(content.data[size - 1]) || content.data[size - 1] == '\n'))
         --size;
     s.text = PrStringView{content.data, size};
     s.pos = 0;
@@ -1315,10 +1315,10 @@ void markdownParseInlines(MarkdownInlineParser* parser, const PrMarkdownOptions&
             size_t end = s.pos + 1;
             while (end < s.text.size && !isSpecial(s, s.text.data[end]))
                 ++end;
-            PrStringView run = stringSlice(s.text, s.pos, end - s.pos);
+            PrStringView run = prStringSlice(s.text, s.pos, end - s.pos);
             // Spaces at the end of a line are not part of its text (commonmark/#soft-line-breaks).
             if (end < s.text.size && s.text.data[end] == '\n') {
-                while (run.size != 0 && asciiIsTabOrSpace(run.data[run.size - 1]))
+                while (run.size != 0 && prAsciiIsTabOrSpace(run.data[run.size - 1]))
                     --run.size;
             }
             if (run.size != 0)

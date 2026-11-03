@@ -108,9 +108,9 @@ bool parse(PrStringView text, LengthValue* out) {
     float number = 0;
     if (!numberListRead(text, &at, &number))
         return false;
-    PrStringView unit = stringTrimEnd(stringSlice(text, at, text.size - at));
+    PrStringView unit = prStringTrimEnd(prStringSlice(text, at, text.size - at));
     for (uint32_t type = PrSvgLengthType_Percentage; type < countOf(kUnits); ++type) {
-        if (asciiEqualsFold(unit, kUnits[type])) {
+        if (prAsciiEqualsFold(unit, kUnits[type])) {
             *out = LengthValue{.type = PrSvgLengthType(type), .factor = number};
             return true;
         }
@@ -131,11 +131,11 @@ bool parse(PrStringView text, LengthValue* out) {
 PrString serialize(const LengthValue& value) {
     if (value.type == PrSvgLengthType_Unknown)
         return prStringClone(&value.text);
-    TextBuffer out{};
+    PrTextBuffer out{};
     cssSerializeNumber(&out, double(value.factor));
-    textAppend(&out, kUnits[value.type]);
-    PrString text = textCopy(&out);
-    textReset(&out);
+    prTextBufferAppend(&out, kUnits[value.type]);
+    PrString text = prTextBufferCopy(&out);
+    prTextBufferReset(&out);
     return text;
 }
 
@@ -216,7 +216,7 @@ Basis basisOf(const SvgLength* length) {
     else if (length->attribute->axis == SvgAxis_Y)
         percent = basis.viewport.y;
     else
-        percent = sqrtF32((basis.viewport.x * basis.viewport.x + basis.viewport.y * basis.viewport.y) / 2);
+        percent = prF32Sqrt((basis.viewport.x * basis.viewport.x + basis.viewport.y * basis.viewport.y) / 2);
     return Basis{percent, basis.fontSize};
 }
 

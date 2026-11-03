@@ -80,7 +80,7 @@ const SvgPaints* PR_NULLABLE svgTextPaints(const SvgText* text);
 // Returns true if two texts draw the same, each with the strokes and servers of its own tree. Otherwise writes what
 // differs to `difference`.
 bool svgTextSame(const SvgTree* tree, const SvgText* text, const SvgTree* expectedTree, const SvgText* expected,
-    TextBuffer* difference);
+    PrTextBuffer* difference);
 
 // Frees what a text node holds, with the strokes that it owns in `tree`.
 void svgTextDestroy(SvgTree* tree, SvgText* PR_NULLABLE text);

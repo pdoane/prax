@@ -35,7 +35,7 @@ PrTextFont* textFontOf(CanvasFont* font, PrFontSet* set, float width, PrLocale l
 // Returns a metric of a font in ems, rounded to the font's design units, so that a metric that the font gives as a
 // whole number of units measures exactly that many units at every size.
 double emsOf(float metric, uint32_t unitsPerEm) {
-    return unitsPerEm != 0 ? roundF64(double(metric) * unitsPerEm) / unitsPerEm : double(metric);
+    return unitsPerEm != 0 ? prF64Round(double(metric) * unitsPerEm) / unitsPerEm : double(metric);
 }
 
 } // namespace
@@ -65,7 +65,7 @@ void canvasTextInit(CanvasText* text) {
 
 void canvasTextReset(CanvasText* text) {
     prTextLayoutDestroy(text->layout);
-    textReset(&text->prepared);
+    prTextBufferReset(&text->prepared);
     text->glyphs.reset();
     text->runs.reset();
     *text = CanvasText{};
@@ -86,14 +86,14 @@ bool canvasTextSet(CanvasText* text, PrStringView source, const CanvasTextStyle&
     float size = prCssFontStyle(style.font->css).size;
 
     // The text's ASCII whitespace is spaces.
-    textReset(&text->prepared);
-    textAppend(&text->prepared, source);
-    for (uint32_t i = 0; i < text->prepared.text.count; ++i) {
-        if (asciiIsSpace(text->prepared.text.data[i]))
-            text->prepared.text.data[i] = ' ';
+    prTextBufferReset(&text->prepared);
+    prTextBufferAppend(&text->prepared, source);
+    for (uint32_t i = 0; i < text->prepared.size; ++i) {
+        if (prAsciiIsSpace(text->prepared.data[i]))
+            text->prepared.data[i] = ' ';
     }
     PrTextLayoutDesc desc{
-        .text = textView(&text->prepared),
+        .text = prTextBufferView(&text->prepared),
         .font = font,
         .shaper = shaper,
         .direction = style.direction,
@@ -107,8 +107,8 @@ bool canvasTextSet(CanvasText* text, PrStringView source, const CanvasTextStyle&
     // The glyphs, spaced: letter spacing follows each character, and word spacing each space. The width is the advance
     // of the glyphs as shaped, and then the spacing.
     float baseline = prTextLayoutLineCount(text->layout) != 0 ? prTextLayoutLine(text->layout, 0).baseline : 0;
-    double left = kInfinityF64;
-    double right = -kInfinityF64;
+    double left = kPrF64Infinity;
+    double right = -kPrF64Infinity;
     double spacing = 0;
     uint32_t runCount = prTextLayoutRunCount(text->layout);
     for (uint32_t r = 0; r < runCount; ++r) {
@@ -117,18 +117,18 @@ bool canvasTextSet(CanvasText* text, PrStringView source, const CanvasTextStyle&
         for (uint32_t g = 0; g < run.glyphCount; ++g) {
             PrFontGlyph glyph = run.glyphs[g];
             double advance = double(prFontGlyphAdvance(run.font, glyph.id, 0)) * double(run.size);
-            left = minF64(left, double(glyph.position.x));
-            right = maxF64(right, double(glyph.position.x) + advance);
+            left = prF64Min(left, double(glyph.position.x));
+            right = prF64Max(right, double(glyph.position.x) + advance);
             double x = double(glyph.position.x) + spacing;
             spacing += style.letterSpacing + (glyph.id == space ? style.wordSpacing : 0);
             text->glyphs.push(PrFontGlyph{glyph.id, PrVec2{float(x), glyph.position.y - baseline}});
         }
     }
-    if (!(left < kInfinityF64)) {
+    if (!(left < kPrF64Infinity)) {
         left = 0;
         right = 0;
     }
-    text->width = maxF64(right - left + spacing, 0);
+    text->width = prF64Max(right - left + spacing, 0);
 
     // The anchor point: across, by the alignment and the direction, and down, by the baseline of the first available
     // font that the text baseline names. The em box is the font's ascent and descent scaled to an em.

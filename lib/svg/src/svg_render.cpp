@@ -289,13 +289,13 @@ bool contentVerify(void* content, PrString* report) {
     SvgBuild build = buildOf(own, &options);
     SvgTree expected{};
     svgTreeBuild(&expected, own->svg, SvgRoot_Box, build);
-    TextBuffer difference{};
+    PrTextBuffer difference{};
     bool same = svgTreeSame(&own->tree, &expected, &difference);
     if (!same) {
         prStringReset(report);
-        *report = textCopy(&difference);
+        *report = prTextBufferCopy(&difference);
     }
-    textReset(&difference);
+    prTextBufferReset(&difference);
     svgTreeReset(&expected);
     return same;
 }
@@ -864,8 +864,8 @@ bool svgClientBounds(const PrDomElement* element, PrRect* out) {
             PrRect bounds{float(corners[0].x), float(corners[0].y), float(corners[0].x), float(corners[0].y)};
             for (const PrDVec2& corner : corners) {
                 bounds = PrRect{
-                    minF32(bounds.left, float(corner.x)), minF32(bounds.top, float(corner.y)),
-                    maxF32(bounds.right, float(corner.x)), maxF32(bounds.bottom, float(corner.y)),
+                    prF32Min(bounds.left, float(corner.x)), prF32Min(bounds.top, float(corner.y)),
+                    prF32Max(bounds.right, float(corner.x)), prF32Max(bounds.bottom, float(corner.y)),
                 };
             }
             *out = bounds;

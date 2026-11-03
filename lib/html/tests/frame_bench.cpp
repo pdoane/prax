@@ -62,27 +62,27 @@ constexpr char kRules[] =
     ".scroller { height: 120px; overflow: auto }";
 
 // The markup of the page's content: `cards` cards, the last few in a scroll container.
-void markup(TextBuffer* out, uint32_t cards) {
+void markup(PrTextBuffer* out, uint32_t cards) {
     for (uint32_t i = 0; i < cards; ++i) {
         if (i == cards - 10)
-            textAppend(out, "<div class=\"scroller\">");
-        textAppend(out, "<div class=\"card\"><h2>Card ");
-        textAppendU64(out, i);
-        textAppend(out, "</h2><p>Some text with <span>an inline span</span> in a paragraph of a card, long "
+            prTextBufferAppend(out, "<div class=\"scroller\">");
+        prTextBufferAppend(out, "<div class=\"card\"><h2>Card ");
+        prTextBufferAppendU64(out, i, 10);
+        prTextBufferAppend(out, "</h2><p>Some text with <span>an inline span</span> in a paragraph of a card, long "
             "enough to break across a line or two at the width a card has.</p></div>");
     }
-    textAppend(out, "</div>");
+    prTextBufferAppend(out, "</div>");
 }
 
 // A whole document of the page: its sheets in its head, then its content.
-void page(TextBuffer* out, PrStringView large, uint32_t cards) {
-    textAppend(out, "<!doctype html><html><head><style>");
-    textAppend(out, large);
-    textAppend(out, "</style><style>");
-    textAppend(out, kRules);
-    textAppend(out, "</style></head><body>");
+void page(PrTextBuffer* out, PrStringView large, uint32_t cards) {
+    prTextBufferAppend(out, "<!doctype html><html><head><style>");
+    prTextBufferAppend(out, large);
+    prTextBufferAppend(out, "</style><style>");
+    prTextBufferAppend(out, kRules);
+    prTextBufferAppend(out, "</style></head><body>");
     markup(out, cards);
-    textAppend(out, "</body></html>");
+    prTextBufferAppend(out, "</body></html>");
 }
 
 // The state that the cases work on.
@@ -225,19 +225,19 @@ PrTextFont* makeFont(PrFontSet** fonts, PrTextShaper** shaper) {
     const char* const kFonts[][2] = {{"Tinos.ttf", "serif"}, {"Tinos-Bold.ttf", nullptr}, {"Arimo.ttf", "sans-serif"}};
     const char* const kFamilies[] = {"Tinos", "Tinos", "Arimo"};
     for (uint32_t i = 0; i < countOf(kFonts); ++i) {
-        TextBuffer path = {};
-        textAppend(&path, PR_FONTS_DIR);
-        textAppend(&path, "/");
-        textAppend(&path, kFonts[i][0]);
+        PrTextBuffer path = {};
+        prTextBufferAppend(&path, PR_FONTS_DIR);
+        prTextBufferAppend(&path, "/");
+        prTextBufferAppend(&path, kFonts[i][0]);
         const PrFont* font = nullptr;
-        if (prFontCreateFromFile(textView(&path), 0, nullptr, &font) == PrStatus_Ok) {
+        if (prFontCreateFromFile(prTextBufferView(&path), 0, nullptr, &font) == PrStatus_Ok) {
             PrFontFaceDescriptor descriptor = prFontFaceDescriptorDefault();
             prFontSetAdd(*fonts, &descriptor, font);
             prFontRelease(font);
             if (kFonts[i][1] != nullptr)
                 prFontSetSetGeneric(*fonts, prFontGenericFromName(kFonts[i][1]), kFamilies[i]);
         }
-        textReset(&path);
+        prTextBufferReset(&path);
     }
     prFontSetSetDefaultFamily(*fonts, prFontFamilyGeneric(PrFontGeneric_Serif));
     *shaper = prTextHarfBuzzCreate();
@@ -303,7 +303,7 @@ int main(int argc, char** argv) {
         fprintf(stderr, "usage: frame_bench [--cards N] [--verify] <large.css> [case], with N at least 20\n");
         return 2;
     }
-    TextBuffer large = {};
+    PrTextBuffer large = {};
     if (!harnessReadFile(&large, argv[1])) {
         fprintf(stderr, "frame_bench: cannot read the stylesheet\n");
         return 1;
@@ -311,8 +311,8 @@ int main(int argc, char** argv) {
     PrFontSet* fonts = nullptr;
     PrTextShaper* shaper = nullptr;
     PrTextFont* font = makeFont(&fonts, &shaper);
-    TextBuffer document = {};
-    page(&document, textView(&large), cardCount);
+    PrTextBuffer document = {};
+    page(&document, prTextBufferView(&large), cardCount);
 
     PrHtmlHost host = prHtmlHostDefault();
     host.font = font;
@@ -320,7 +320,7 @@ int main(int argc, char** argv) {
     Work work = {};
     work.viewport = kViewport;
     work.page = prHtmlPageCreate(&host);
-    prHtmlPageLoad(work.page, textView(&document), "about:blank", nullptr);
+    prHtmlPageLoad(work.page, prTextBufferView(&document), "about:blank", nullptr);
     work.presentation = prHtmlPagePresentation(work.page);
     work.document = prHtmlWindowDocument(prHtmlPageWindow(work.page));
     PrDomHtmlCollection* cards = prDomHtmlCollectionCreateByClassName(prDomDocumentAsNode(work.document), "card");
@@ -366,7 +366,7 @@ int main(int argc, char** argv) {
             failed = true;
         }
         prStringReset(&report);
-        TextBuffer row{};
+        PrTextBuffer row{};
         harnessAppendFormat(&row, "%s\n  {\"name\": \"%s\", \"time\": %.6f, \"visited\": %u, \"styled\": %u, "
             "\"cached\": %u, \"unchanged\": %u, \"blocks\": %u, \"lines\": %u, \"shaped\": %u, "
             "\"layers\": %u, \"commands\": %u, \"repainted\": %u",
@@ -378,9 +378,9 @@ int main(int argc, char** argv) {
         HarnessCounts counts{};
         harnessCountsAdd(&counts, "time", cost);
         harnessCountsWrite(&counts, &row);
-        textAppend(&row, "}");
-        fwrite(row.text.data, 1, row.text.count, stdout);
-        textReset(&row);
+        prTextBufferAppend(&row, "}");
+        fwrite(row.data, 1, row.size, stdout);
+        prTextBufferReset(&row);
         first = false;
     }
     if (only.data == nullptr) {
@@ -388,8 +388,8 @@ int main(int argc, char** argv) {
         // full.
         HarnessCounters firstFrame{};
         HarnessCounters end{};
-        load(font, shaper, textView(&document), &firstFrame, &end);
-        load(font, shaper, textView(&document), &firstFrame, &end);
+        load(font, shaper, prTextBufferView(&document), &firstFrame, &end);
+        load(font, shaper, prTextBufferView(&document), &firstFrame, &end);
         harnessWriteCase(false, "load to first frame", firstFrame);
         harnessWriteCase(false, "load to end", end);
     }
@@ -400,7 +400,7 @@ int main(int argc, char** argv) {
     prTextFontRelease(font);
     prTextShaperDestroy(shaper);
     prFontSetDestroy(fonts);
-    textReset(&document);
-    textReset(&large);
+    prTextBufferReset(&document);
+    prTextBufferReset(&large);
     return failed ? 1 : 0;
 }

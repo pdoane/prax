@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include "pr/array.h"
 #include "pr/string_view.h"
 #include "pr/text_buffer.h"
 
@@ -36,7 +37,7 @@ struct CssSyntaxComponent {
 // written order. A value must match one of the components.
 struct CssSyntaxDefinition {
     Array<CssSyntaxComponent> components;
-    TextBuffer idents;          // the bytes of the components' idents
+    PrTextBuffer idents = {};   // the bytes of the components' idents
     bool universal;             // true for `*`, which accepts any value
 };
 

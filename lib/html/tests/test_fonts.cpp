@@ -42,8 +42,8 @@ std::string readFont(const std::string& name) {
 // Returns a font as a url() of a data: URL.
 std::string fontUrl() {
     std::string bytes = readFont("HandwritingCff2.otf");
-    std::string encoded(base64EncodedSize(bytes.size()), '\0');
-    base64Encode(bytes, encoded.data(), encoded.size());
+    std::string encoded(prBase64EncodedSize(bytes.size()), '\0');
+    prBase64Encode(bytes, encoded.data(), encoded.size());
     return "url(data:font/otf;base64," + encoded + ")";
 }
 

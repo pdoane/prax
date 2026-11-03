@@ -353,7 +353,7 @@ bool cssDeclarationSupported(const CssDeclaredName& name, PrStringView value);
 
 // Serializes the value of `name`. A shorthand's value comes from its longhands. Writes nothing if the block holds no
 // value for the name (cssom-1/#dom-cssstyledeclaration-getpropertyvalue).
-void cssSerializePropertyValue(TextBuffer* out, const CssDeclarationBlock* block, const CssDeclaredName& name);
+void cssSerializePropertyValue(PrTextBuffer* out, const CssDeclarationBlock* block, const CssDeclaredName& name);
 
 // Returns true if `name` is important. For a shorthand, every longhand must be important
 // (cssom-1/#dom-cssstyledeclaration-getpropertypriority).
@@ -435,27 +435,28 @@ void cssRuleListReplace(Array<CssRuleData* PR_NONNULL>* list, uint32_t index, Cs
 
 // Serializes the declarations joined with a space, each ending in a semicolon. Longhands are written as a shorthand
 // where possible (cssom-1/#serialize-a-css-declaration-block).
-void cssSerializeDeclarationBlock(TextBuffer* out, const CssDeclarationBlock* block);
+void cssSerializeDeclarationBlock(PrTextBuffer* out, const CssDeclarationBlock* block);
 
 // Serializes a declaration's value (cssom-1/#serialize-a-css-value). A value pending on a shorthand serializes as
 // nothing.
-void cssSerializeDeclarationValue(TextBuffer* out, const CssDeclarationBlock* block, const CssDeclaration* declaration);
+void cssSerializeDeclarationValue(PrTextBuffer* out, const CssDeclarationBlock* block,
+    const CssDeclaration* declaration);
 
 // Serializes a style rule's selectors (cssom-1/#dom-cssstylerule-selectortext).
-void cssSerializeSelectorText(TextBuffer* out, const CssRuleData* rule);
+void cssSerializeSelectorText(PrTextBuffer* out, const CssRuleData* rule);
 
 // Serializes an at-rule's prelude, with its media queries after the rest, or a keyframe rule's selectors
 // (css-animations-1/#dom-csskeyframerule-keytext).
-void cssSerializePrelude(TextBuffer* out, const CssRuleData* rule);
+void cssSerializePrelude(PrTextBuffer* out, const CssRuleData* rule);
 
 // Serializes the queries joined with ", " (cssom-1/#serialize-a-media-query-list).
-void cssSerializeMediaList(TextBuffer* out, const CssMediaQueries* list);
+void cssSerializeMediaList(PrTextBuffer* out, const CssMediaQueries* list);
 
 // Serializes one rule (cssom-1/#serialize-a-css-rule).
-void cssSerializeRule(TextBuffer* out, const CssRuleData* rule);
+void cssSerializeRule(PrTextBuffer* out, const CssRuleData* rule);
 
 // Serializes the rules joined with a newline (cssom-1/#serialize-a-css-rule).
-void cssSerializeRuleList(TextBuffer* out, const Array<CssRuleData* PR_NONNULL>& rules);
+void cssSerializeRuleList(PrTextBuffer* out, const Array<CssRuleData* PR_NONNULL>& rules);
 
 } // namespace pr_impl
 

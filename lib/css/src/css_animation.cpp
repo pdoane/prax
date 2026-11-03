@@ -86,7 +86,7 @@ bool sameShape(CssValueRun a, CssValueRun b) {
         if (cssValueHasText(x.kind)) {
             PrStringView s = cssValueText(a, &x);
             PrStringView t = cssValueText(b, &y);
-            if (s.size != t.size || !memEquals(s.data, t.data, s.size))
+            if (s.size != t.size || !prMemEquals(s.data, t.data, s.size))
                 return false;
         }
     }
@@ -104,7 +104,7 @@ bool holdsTerms(const CssValueNode& value) {
 // calculation's result, and nor is an argument of path data, which has no range (css_path.h).
 double combinedNumber(PrCssProperty property, const CssValueNode& value, double number, bool term) {
     if (value.kind == PrCssValueKind_Integer)
-        number = floorF64(number + 0.5);
+        number = prF64Floor(number + 0.5);
     if (term)
         return number;
     if (!allowsNegative(property) && number < 0)
@@ -127,7 +127,7 @@ void addBetween(CssValuePool* out, PrCssProperty property, CssValueRun from, Css
             termEnd = i + value.next;
         if (!cssValueIsNumeric(value.kind))
             continue;
-        double number = lerpF64(from.values[i].number, to.values[i].number, progress);
+        double number = prF64Lerp(from.values[i].number, to.values[i].number, progress);
         value.number = combinedNumber(property, value, number, i < termEnd);
     }
 }
@@ -251,14 +251,14 @@ double ratioOf(CssValueRun run) {
         if (cssValueIsNumeric(run.values[i].kind))
             terms[count++] = run.values[i].number;
     }
-    return count == 2 && terms[0] > 0 && terms[1] > 0 && isFiniteF64(terms[0] / terms[1]) ? terms[0] / terms[1] : 0;
+    return count == 2 && terms[0] > 0 && terms[1] > 0 && prF64IsFinite(terms[0] / terms[1]) ? terms[0] / terms[1] : 0;
 }
 
 // Appends `to`, with its ratio interpolated between the ratios of `from` and `to` by the logarithm of each. `from` must
 // have the same shape as `to` and hold a ratio too. The result is written as the interpolated ratio to 1
 // (css-values-4/#combine-ratio).
 void addRatioBetween(CssValuePool* out, CssValueRun from, CssValueRun to, double progress) {
-    double ratio = expF64(lerpF64(logF64(ratioOf(from)), logF64(ratioOf(to)), progress));
+    double ratio = prF64Exp(prF64Lerp(prF64Log(ratioOf(from)), prF64Log(ratioOf(to)), progress));
     CssValueSpan span = cssValuePoolAddRun(out, to);
     uint32_t count = 0;
     for (uint32_t i = 0; i < span.count && count < 2; ++i) {
@@ -421,7 +421,7 @@ bool individualOf(PrCssProperty property, CssValueRun run, Individual* out) {
             const CssValueNode* angle = nodes[count - 1];
             if (angle->kind != PrCssValueKind_Dimension || cssUnitCategory(angle->unit) != CssUnitCategory_Angle)
                 return false;
-            out->v[3] = angle->number * cssUnitScale(angle->unit) * kPiF64 / 180;
+            out->v[3] = angle->number * cssUnitScale(angle->unit) * kPrF64Pi / 180;
             if (count == 2 && nodes[0]->kind == PrCssValueKind_Keyword) {
                 PrCssKeyword axis = cssValueKeyword(nodes[0]);
                 out->v[0] = axis == PrCssKeyword_X ? 1 : 0;
@@ -436,7 +436,7 @@ bool individualOf(PrCssProperty property, CssValueRun run, Individual* out) {
             } else if (count != 1) {
                 return false;
             }
-            double length = sqrtF64(out->v[0] * out->v[0] + out->v[1] * out->v[1] + out->v[2] * out->v[2]);
+            double length = prF64Sqrt(out->v[0] * out->v[0] + out->v[1] * out->v[1] + out->v[2] * out->v[2]);
             if (length > 0) {
                 for (uint32_t k = 0; k < 3; ++k)
                     out->v[k] /= length;
@@ -464,21 +464,21 @@ TranslateKind combinedKind(const Individual& a, const Individual& b, uint32_t k)
 // Writes the unit quaternion of a rotation by `angle` radians about the unit `axis`.
 void quaternionOf(const double axis[3], double angle, double out[4]) {
     for (uint32_t k = 0; k < 3; ++k)
-        out[k] = axis[k] * sinF64(angle / 2);
-    out[3] = cosF64(angle / 2);
+        out[k] = axis[k] * prF64Sin(angle / 2);
+    out[3] = prF64Cos(angle / 2);
 }
 
 // Returns the rotation of the transform list `a` `b`: about their common axis if they share one, and otherwise as the
 // product of their quaternions.
 Individual composeRotations(const Individual& a, const Individual& b) {
     Individual m{};
-    bool sameAxis = absF64(a.v[0] - b.v[0]) < 1e-6 && absF64(a.v[1] - b.v[1]) < 1e-6 && absF64(a.v[2] - b.v[2]) < 1e-6;
+    bool sameAxis = prF64Abs(a.v[0] - b.v[0]) < 1e-6 && prF64Abs(a.v[1] - b.v[1]) < 1e-6 && prF64Abs(a.v[2] - b.v[2]) < 1e-6;
     if (sameAxis || a.v[3] == 0 || b.v[3] == 0) {
         const Individual& axis = a.v[3] == 0 ? b : a;
         for (uint32_t k = 0; k < 3; ++k)
             m.v[k] = axis.v[k];
         // A whole turn is no rotation, so the sum is kept within a turn. No rotation is about z.
-        m.v[3] = fmodF64(a.v[3] + b.v[3], 2 * kPiF64);
+        m.v[3] = prF64Fmod(a.v[3] + b.v[3], 2 * kPrF64Pi);
         if (m.v[3] == 0) {
             m.v[0] = m.v[1] = 0;
             m.v[2] = 1;
@@ -497,10 +497,10 @@ Individual composeRotations(const Individual& a, const Individual& b) {
         p[3] * q[2] + p[0] * q[1] - p[1] * q[0] + p[2] * q[3],
         p[3] * q[3] - p[0] * q[0] - p[1] * q[1] - p[2] * q[2],
     };
-    double length = sqrtF64(r[0] * r[0] + r[1] * r[1] + r[2] * r[2]);
+    double length = prF64Sqrt(r[0] * r[0] + r[1] * r[1] + r[2] * r[2]);
     for (uint32_t k = 0; k < 3; ++k)
         m.v[k] = length > 0 ? r[k] / length : k == 2 ? 1 : 0;
-    m.v[3] = 2 * atan2F64(length, r[3]);
+    m.v[3] = 2 * prF64Atan2(length, r[3]);
     return m;
 }
 
@@ -548,7 +548,7 @@ void addIndividual(CssValuePool* out, PrCssProperty property, const Individual& 
             break;
         }
         default: {
-            double degrees = m.v[3] * 180 / kPiF64;
+            double degrees = m.v[3] * 180 / kPrF64Pi;
             if (m.v[0] == 0 && m.v[1] == 0 && m.v[2] > 0) {
                 // A rotation about z is an angle alone.
             } else if (m.v[1] == 0 && m.v[2] == 0 && m.v[0] > 0) {
@@ -580,13 +580,13 @@ bool individualBetween(CssValuePool* PR_NULLABLE out, PrCssProperty property, Cs
     if (property == PrCssProperty_Translate) {
         for (uint32_t k = 0; k < 2; ++k) {
             m.kind[k] = combinedKind(a, b, k);
-            m.percent[k] = lerpF64(a.percent[k], b.percent[k], progress);
+            m.percent[k] = prF64Lerp(a.percent[k], b.percent[k], progress);
         }
     }
     if (property == PrCssProperty_Rotate) {
         bool same = true;
         for (uint32_t k = 0; k < 3; ++k)
-            same = same && absF64(a.v[k] - b.v[k]) < 1e-6;
+            same = same && prF64Abs(a.v[k] - b.v[k]) < 1e-6;
         if (a.none || a.v[3] == 0) {
             for (uint32_t k = 0; k < 3; ++k)
                 a.v[k] = b.v[k];
@@ -599,37 +599,37 @@ bool individualBetween(CssValuePool* PR_NULLABLE out, PrCssProperty property, Cs
         if (same) {
             for (uint32_t k = 0; k < 3; ++k)
                 m.v[k] = a.v[k];
-            m.v[3] = lerpF64(a.v[3], b.v[3], progress);
+            m.v[3] = prF64Lerp(a.v[3], b.v[3], progress);
         } else {
             // Slerp of the rotations' quaternions (css-transforms-2/#interpolation-of-decomposed-3d-matrix-values).
             double qa[4];
             double qb[4];
             for (uint32_t k = 0; k < 3; ++k) {
-                qa[k] = a.v[k] * sinF64(a.v[3] / 2);
-                qb[k] = b.v[k] * sinF64(b.v[3] / 2);
+                qa[k] = a.v[k] * prF64Sin(a.v[3] / 2);
+                qb[k] = b.v[k] * prF64Sin(b.v[3] / 2);
             }
-            qa[3] = cosF64(a.v[3] / 2);
-            qb[3] = cosF64(b.v[3] / 2);
+            qa[3] = prF64Cos(a.v[3] / 2);
+            qb[3] = prF64Cos(b.v[3] / 2);
             double product = qa[0] * qb[0] + qa[1] * qb[1] + qa[2] * qb[2] + qa[3] * qb[3];
             product = product < -1 ? -1 : product > 1 ? 1 : product;
             double q[4];
-            if (absF64(product) == 1) {
+            if (prF64Abs(product) == 1) {
                 for (uint32_t k = 0; k < 4; ++k)
                     q[k] = qa[k];
             } else {
-                double theta = acosF64(product);
-                double w = sinF64(progress * theta) / sqrtF64(1 - product * product);
+                double theta = prF64Acos(product);
+                double w = prF64Sin(progress * theta) / prF64Sqrt(1 - product * product);
                 for (uint32_t k = 0; k < 4; ++k)
-                    q[k] = qa[k] * (cosF64(progress * theta) - product * w) + qb[k] * w;
+                    q[k] = qa[k] * (prF64Cos(progress * theta) - product * w) + qb[k] * w;
             }
-            double length = sqrtF64(q[0] * q[0] + q[1] * q[1] + q[2] * q[2]);
+            double length = prF64Sqrt(q[0] * q[0] + q[1] * q[1] + q[2] * q[2]);
             for (uint32_t k = 0; k < 3; ++k)
                 m.v[k] = length > 0 ? q[k] / length : k == 2 ? 1 : 0;
-            m.v[3] = 2 * atan2F64(length, q[3]);
+            m.v[3] = 2 * prF64Atan2(length, q[3]);
         }
     } else {
         for (uint32_t k = 0; k < 3; ++k)
-            m.v[k] = lerpF64(a.v[k], b.v[k], progress);
+            m.v[k] = prF64Lerp(a.v[k], b.v[k], progress);
     }
     if (out != nullptr)
         addIndividual(out, property, m);
@@ -669,7 +669,7 @@ bool transformArgument(CssValueRun run, uint32_t index, TransformArgument* out) 
             return true;
         case PrCssValueKind_Dimension:
             if (cssUnitCategory(a->unit) == CssUnitCategory_Angle) {
-                out->value = a->number * cssUnitScale(a->unit) * kPiF64 / 180;
+                out->value = a->number * cssUnitScale(a->unit) * kPrF64Pi / 180;
                 return true;
             }
             return cssResolveLength(run, index, 0, &out->value);
@@ -678,7 +678,7 @@ bool transformArgument(CssValueRun run, uint32_t index, TransformArgument* out) 
                 return true;
             double degrees = 0;
             if (cssMathTo(run, index, PrCssUnit_Deg, &degrees)) {
-                out->value = degrees * kPiF64 / 180;
+                out->value = degrees * kPrF64Pi / 180;
                 return true;
             }
             // A calculation of a length and a percentage: its value at a basis of zero, and how it grows with the
@@ -890,7 +890,7 @@ void addTransformList(CssValuePool* out, const PrLayoutTransformList& list) {
     auto number = [](float v) { return cssNumberValue(PrCssValueKind_Number, PrCssUnit_Number, double(v)); };
     auto px = [](float v) { return cssNumberValue(PrCssValueKind_Dimension, PrCssUnit_Px, double(v)); };
     auto degrees = [](float radians) {
-        return cssNumberValue(PrCssValueKind_Dimension, PrCssUnit_Deg, double(radians) * 180 / kPiF64);
+        return cssNumberValue(PrCssValueKind_Dimension, PrCssUnit_Deg, double(radians) * 180 / kPrF64Pi);
     };
     for (uint32_t i = 0; i < list.count; ++i) {
         const PrLayoutTransformFunction& f = list.functions[i];
@@ -1395,7 +1395,7 @@ bool combineFilter(CssValuePool* out, CssValueRun a, CssValueRun b, double progr
         }
         double p = x.values[0].number;
         double q = y.values[0].number;
-        double value = !sum ? lerpF64(p, q, progress) : oneBased(name) ? p + q - 1 : p + q;
+        double value = !sum ? prF64Lerp(p, q, progress) : oneBased(name) ? p + q - 1 : p + q;
         // drop-shadow()'s offsets have no range, and its blur is never negative.
         bool offset = name == PrCssKeyword_DropShadow && argument < 3;
         CssValueNode node = y.values[0];

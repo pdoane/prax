@@ -4,13 +4,11 @@
 #include "pr/assert.h"
 #include "pr/bit_cast.h"
 #include "pr/count_of.h"
-#include "pr/int128.h"
+#include "pr/integer.h"
 
-#include "core/cpp/src/float_convert_tables.h"
+#include "core/src/float_convert_tables.h"
 
-using namespace pr_impl;
-
-namespace pr {
+namespace pr_impl {
 namespace {
 
 constexpr uint64_t kU64Max = 0xffffffffffffffffull;
@@ -71,9 +69,9 @@ bool multipleOfPowerOf2(uint64_t value, uint32_t p) {
 uint64_t mulShift(uint64_t m, const Pow5* factor, int32_t shift) {
     PR_ASSERT(shift > 64 && shift < 128);
     uint64_t loHigh = 0;
-    mul128(m, factor->lo, &loHigh);
+    prU64Mul128(m, factor->lo, &loHigh);
     uint64_t hiHigh = 0;
-    uint64_t hiLow = mul128(m, factor->hi, &hiHigh);
+    uint64_t hiLow = prU64Mul128(m, factor->hi, &hiHigh);
     uint64_t sum = loHigh + hiLow;
     uint64_t carry = sum < loHigh ? 1 : 0;
     return shiftRight128(sum, hiHigh + carry, uint32_t(shift - 64));
@@ -85,7 +83,7 @@ uint64_t mulShift(uint64_t m, const Pow5* factor, int32_t shift) {
 // Computes the shortest decimal that identifies a binary float, using the Ryu tables. Their precision covers every
 // binary format. `mantissaBits` and `bias` identify the format.
 
-ShortestDecimal shortestDecimal(uint32_t mantissaBits, int32_t bias, uint64_t ieeeMantissa, uint32_t ieeeExponent) {
+PrF64Decimal shortestDecimal(uint32_t mantissaBits, int32_t bias, uint64_t ieeeMantissa, uint32_t ieeeExponent) {
     int32_t e2;
     uint64_t m2;
     if (ieeeExponent == 0) {
@@ -255,11 +253,11 @@ AdjustedMantissa eiselLemire(const BinaryFormat* format, int32_t q, uint64_t w) 
     const Pow5* factor = &kEiselLemirePow5[q - kEiselLemireMinExp10];
 
     uint64_t high = 0;
-    uint64_t low = mul128(w, factor->hi, &high);
+    uint64_t low = prU64Mul128(w, factor->hi, &high);
     if ((high & precisionMask) == precisionMask) {
         // The truncated factor left the result ambiguous. The factor's low half resolves it.
         uint64_t secondHigh = 0;
-        mul128(w, factor->lo, &secondHigh);
+        prU64Mul128(w, factor->lo, &secondHigh);
         low += secondHigh;
         if (secondHigh > low)
             ++high;
@@ -344,7 +342,7 @@ void mulAdd(BigUint<N>* v, uint64_t multiplier, uint64_t addend) {
     uint64_t carry = addend;
     for (size_t i = 0; i < v->count; ++i) {
         uint64_t high = 0;
-        uint64_t low = mul128(v->limbs[i], multiplier, &high);
+        uint64_t low = prU64Mul128(v->limbs[i], multiplier, &high);
         v->limbs[i] = low + carry;
         carry = high + (v->limbs[i] < low ? 1 : 0);
     }
@@ -507,7 +505,7 @@ ExactDecimal scanExact(PrStringView input) {
             ++pos;
             continue;
         }
-        if (!asciiIsDigit(c))
+        if (!prAsciiIsDigit(c))
             break;
         if (out.digits == 0 && c == '0') {
             // A leading zero is not significant, and only moves the point.
@@ -539,9 +537,9 @@ ExactDecimal scanExact(PrStringView input) {
             expNegative = input.data[expPos] == '-';
             ++expPos;
         }
-        if (expPos < input.size && asciiIsDigit(input.data[expPos])) {
+        if (expPos < input.size && prAsciiIsDigit(input.data[expPos])) {
             int32_t exponent = 0;
-            while (expPos < input.size && asciiIsDigit(input.data[expPos])) {
+            while (expPos < input.size && prAsciiIsDigit(input.data[expPos])) {
                 if (exponent < 100000)
                     exponent = exponent * 10 + (input.data[expPos] - '0');
                 ++expPos;
@@ -656,14 +654,14 @@ bool scanDecimal(PrStringView input, DecimalScan* out) {
     } else if (*p == '+') {
         ++p;
     }
-    if (p == end || (!asciiIsDigit(*p) && *p != '.'))
+    if (p == end || (!prAsciiIsDigit(*p) && *p != '.'))
         return false;
 
     // The digits accumulate unchecked. If there are more than kU64Digits, the sum may have wrapped, and the significand
     // is read again below.
     const char* intStart = p;
     uint64_t mantissa = 0;
-    while (p != end && asciiIsDigit(*p)) {
+    while (p != end && prAsciiIsDigit(*p)) {
         mantissa = mantissa * 10 + uint64_t(*p - '0');
         ++p;
     }
@@ -673,7 +671,7 @@ bool scanDecimal(PrStringView input, DecimalScan* out) {
     if (p != end && *p == '.') {
         ++p;
         const char* fracStart = p;
-        while (p != end && asciiIsDigit(*p)) {
+        while (p != end && prAsciiIsDigit(*p)) {
             mantissa = mantissa * 10 + uint64_t(*p - '0');
             ++p;
         }
@@ -723,9 +721,9 @@ bool scanDecimal(PrStringView input, DecimalScan* out) {
             ++q;
         }
         // An exponent marker with no digits after it is not part of the number.
-        if (q != end && asciiIsDigit(*q)) {
+        if (q != end && prAsciiIsDigit(*q)) {
             int32_t exponent = 0;
-            while (q != end && asciiIsDigit(*q)) {
+            while (q != end && prAsciiIsDigit(*q)) {
                 if (exponent < 100000)
                     exponent = exponent * 10 + (*q - '0');
                 ++q;
@@ -780,14 +778,18 @@ PR_NOINLINE AdjustedMantissa decimalToBinary(const BinaryFormat* format, const D
 
 } // namespace
 
-ShortestDecimal shortestDecimalF64(double value) {
+} // namespace pr_impl
+
+using namespace pr_impl;
+
+PrF64Decimal prF64ShortestDecimal(double value) {
     uint64_t bits = bitCast<uint64_t>(value);
     uint64_t mantissa = bits & 0xfffffffffffffull;
     uint32_t exponent = uint32_t((bits >> 52) & 0x7ffull);
     return shortestDecimal(52, 1023, mantissa, exponent);
 }
 
-bool decimalToF64(PrStringView text, double* out) {
+bool prF64ParsePrefix(PrStringView text, double* out) {
     DecimalScan scan;
     if (!scanDecimal(text, &scan))
         return false;
@@ -798,5 +800,3 @@ bool decimalToF64(PrStringView text, double* out) {
     }
     return true;
 }
-
-} // namespace pr

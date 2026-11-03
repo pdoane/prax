@@ -29,29 +29,29 @@ namespace {
 // JSON
 
 // Writes a token's value, with escapes resolved.
-void writeValue(TextBuffer* out, PrStringView text) {
-    TextBuffer value = {};
+void writeValue(PrTextBuffer* out, PrStringView text) {
+    PrTextBuffer value = {};
     cssValueAppend(&value, text);
-    harnessWriteString(out, textView(&value));
-    textReset(&value);
+    harnessWriteString(out, prTextBufferView(&value));
+    prTextBufferReset(&value);
 }
 
-void writeNumber(TextBuffer* out, double value) {
-    char text[kF64TextMaxBytes];
-    size_t length = formatF64(value, text);
-    textAppend(out, text, uint32_t(length));
+void writeNumber(PrTextBuffer* out, double value) {
+    char text[kPrF64TextMaxBytes];
+    size_t length = prF64Format(value, text);
+    prTextBufferAppend(out, PrStringView{text, uint32_t(length)});
 }
 
-void writeError(TextBuffer* out, PrStringView kind) {
-    textAppend(out, "[\"error\", ");
+void writeError(PrTextBuffer* out, PrStringView kind) {
+    prTextBufferAppend(out, "[\"error\", ");
     harnessWriteString(out, kind);
-    textAppendChar(out, ']');
+    prTextBufferAppendChar(out, ']');
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Component values (the suite's README, "Result representation")
 
-void writeComponentValues(TextBuffer* out, const CssTokenStream* ts, CssTokenSpan span);
+void writeComponentValues(PrTextBuffer* out, const CssTokenStream* ts, CssTokenSpan span);
 
 // Returns the bytes that a numeric token was written with, which the suite calls its representation.
 PrStringView representation(const CssTokenStream* ts, uint32_t index) {
@@ -63,20 +63,20 @@ PrStringView representation(const CssTokenStream* ts, uint32_t index) {
     return text;
 }
 
-void writeNumeric(TextBuffer* out, const CssTokenStream* ts, uint32_t index, PrStringView kind) {
-    textAppendChar(out, '[');
+void writeNumeric(PrTextBuffer* out, const CssTokenStream* ts, uint32_t index, PrStringView kind) {
+    prTextBufferAppendChar(out, '[');
     harnessWriteString(out, kind);
-    textAppend(out, ", ");
+    prTextBufferAppend(out, ", ");
     harnessWriteString(out, representation(ts, index));
-    textAppend(out, ", ");
+    prTextBufferAppend(out, ", ");
     writeNumber(out, cssTokenNumber(ts->tokens, index));
-    textAppend(out, ", ");
+    prTextBufferAppend(out, ", ");
     harnessWriteString(out, (cssTokenFlags(ts->tokens, index) & CssTokenFlag_Integer) != 0 ? "integer" : "number");
     if (cssTokenKind(ts->tokens, index) == CssTokenKind_Dimension) {
-        textAppend(out, ", ");
+        prTextBufferAppend(out, ", ");
         writeValue(out, cssTokenUnitText(ts->tokens, index));
     }
-    textAppendChar(out, ']');
+    prTextBufferAppendChar(out, ']');
 }
 
 // Returns the contents of the block that `span` covers, which is `span` without its brackets. A block that ran to the
@@ -89,41 +89,41 @@ CssTokenSpan blockContents(const CssTokenStream* ts, CssTokenSpan span, CssToken
 }
 
 // Writes one component value. `span` is the span that cssConsumeComponentValue returned for it.
-void writeComponentValue(TextBuffer* out, const CssTokenStream* ts, CssTokenSpan span) {
+void writeComponentValue(PrTextBuffer* out, const CssTokenStream* ts, CssTokenSpan span) {
     uint32_t index = span.start;
 
     switch (cssTokenKind(ts->tokens, index)) {
         case CssTokenKind_Ident:
-            textAppend(out, "[\"ident\", ");
+            prTextBufferAppend(out, "[\"ident\", ");
             writeValue(out, cssTokenValueText(ts->tokens, index));
-            textAppendChar(out, ']');
+            prTextBufferAppendChar(out, ']');
             return;
         case CssTokenKind_AtKeyword:
-            textAppend(out, "[\"at-keyword\", ");
+            prTextBufferAppend(out, "[\"at-keyword\", ");
             writeValue(out, cssTokenValueText(ts->tokens, index));
-            textAppendChar(out, ']');
+            prTextBufferAppendChar(out, ']');
             return;
         case CssTokenKind_Hash:
-            textAppend(out, "[\"hash\", ");
+            prTextBufferAppend(out, "[\"hash\", ");
             writeValue(out, cssTokenValueText(ts->tokens, index));
-            textAppend(out, (cssTokenFlags(ts->tokens, index) & CssTokenFlag_Id) != 0 ? ", \"id\"]" :
+            prTextBufferAppend(out, (cssTokenFlags(ts->tokens, index) & CssTokenFlag_Id) != 0 ? ", \"id\"]" :
                 ", \"unrestricted\"]");
             return;
         case CssTokenKind_String:
-            textAppend(out, "[\"string\", ");
+            prTextBufferAppend(out, "[\"string\", ");
             writeValue(out, cssTokenValueText(ts->tokens, index));
-            textAppendChar(out, ']');
+            prTextBufferAppendChar(out, ']');
             return;
         case CssTokenKind_BadString:
-            textAppend(out, "[\"error\", \"bad-string\"]");
+            prTextBufferAppend(out, "[\"error\", \"bad-string\"]");
             return;
         case CssTokenKind_Url:
-            textAppend(out, "[\"url\", ");
+            prTextBufferAppend(out, "[\"url\", ");
             writeValue(out, cssTokenValueText(ts->tokens, index));
-            textAppendChar(out, ']');
+            prTextBufferAppendChar(out, ']');
             return;
         case CssTokenKind_BadUrl:
-            textAppend(out, "[\"error\", \"bad-url\"]");
+            prTextBufferAppend(out, "[\"error\", \"bad-url\"]");
             return;
 
         case CssTokenKind_Delim: {
@@ -141,44 +141,44 @@ void writeComponentValue(TextBuffer* out, const CssTokenStream* ts, CssTokenSpan
             uint32_t first = 0;
             uint32_t last = 0;
             cssTokenRange(ts->tokens, index, &first, &last);
-            textAppend(out, "[\"unicode-range\", ");
+            prTextBufferAppend(out, "[\"unicode-range\", ");
             writeNumber(out, first);
-            textAppend(out, ", ");
+            prTextBufferAppend(out, ", ");
             writeNumber(out, last);
-            textAppendChar(out, ']');
+            prTextBufferAppendChar(out, ']');
             return;
         }
 
-        case CssTokenKind_Whitespace:   textAppend(out, "\" \""); return;
-        case CssTokenKind_Cdo:          textAppend(out, "\"<!--\""); return;
-        case CssTokenKind_Cdc:          textAppend(out, "\"-->\""); return;
-        case CssTokenKind_Colon:        textAppend(out, "\":\""); return;
-        case CssTokenKind_Semicolon:    textAppend(out, "\";\""); return;
-        case CssTokenKind_Comma:        textAppend(out, "\",\""); return;
-        case CssTokenKind_CloseBracket: textAppend(out, "\"]\""); return;
-        case CssTokenKind_CloseParen:   textAppend(out, "\")\""); return;
-        case CssTokenKind_CloseBrace:   textAppend(out, "\"}\""); return;
+        case CssTokenKind_Whitespace:   prTextBufferAppend(out, "\" \""); return;
+        case CssTokenKind_Cdo:          prTextBufferAppend(out, "\"<!--\""); return;
+        case CssTokenKind_Cdc:          prTextBufferAppend(out, "\"-->\""); return;
+        case CssTokenKind_Colon:        prTextBufferAppend(out, "\":\""); return;
+        case CssTokenKind_Semicolon:    prTextBufferAppend(out, "\";\""); return;
+        case CssTokenKind_Comma:        prTextBufferAppend(out, "\",\""); return;
+        case CssTokenKind_CloseBracket: prTextBufferAppend(out, "\"]\""); return;
+        case CssTokenKind_CloseParen:   prTextBufferAppend(out, "\")\""); return;
+        case CssTokenKind_CloseBrace:   prTextBufferAppend(out, "\"}\""); return;
 
         case CssTokenKind_Function:
-            textAppend(out, "[\"function\", ");
+            prTextBufferAppend(out, "[\"function\", ");
             writeValue(out, cssTokenValueText(ts->tokens, index));
             writeComponentValues(out, ts, blockContents(ts, span, CssTokenKind_CloseParen));
-            textAppendChar(out, ']');
+            prTextBufferAppendChar(out, ']');
             return;
         case CssTokenKind_OpenParen:
-            textAppend(out, "[\"()\"");
+            prTextBufferAppend(out, "[\"()\"");
             writeComponentValues(out, ts, blockContents(ts, span, CssTokenKind_CloseParen));
-            textAppendChar(out, ']');
+            prTextBufferAppendChar(out, ']');
             return;
         case CssTokenKind_OpenBracket:
-            textAppend(out, "[\"[]\"");
+            prTextBufferAppend(out, "[\"[]\"");
             writeComponentValues(out, ts, blockContents(ts, span, CssTokenKind_CloseBracket));
-            textAppendChar(out, ']');
+            prTextBufferAppendChar(out, ']');
             return;
         case CssTokenKind_OpenBrace:
-            textAppend(out, "[\"{}\"");
+            prTextBufferAppend(out, "[\"{}\"");
             writeComponentValues(out, ts, blockContents(ts, span, CssTokenKind_CloseBrace));
-            textAppendChar(out, ']');
+            prTextBufferAppendChar(out, ']');
             return;
 
         case CssTokenKind_Eof:
@@ -187,71 +187,71 @@ void writeComponentValue(TextBuffer* out, const CssTokenStream* ts, CssTokenSpan
 }
 
 // Writes every component value in `span`, each preceded by a comma.
-void writeComponentValues(TextBuffer* out, const CssTokenStream* ts, CssTokenSpan span) {
+void writeComponentValues(PrTextBuffer* out, const CssTokenStream* ts, CssTokenSpan span) {
     CssTokenStream scan = cssSubStream(ts, span);
     CssTokenSpan value;
     while (cssConsumeComponentValue(&scan, &value)) {
-        textAppend(out, ", ");
+        prTextBufferAppend(out, ", ");
         writeComponentValue(out, ts, value);
     }
 }
 
 // Writes every component value in `span` as an array of its own.
-void writeComponentValueList(TextBuffer* out, const CssTokenStream* ts, CssTokenSpan span) {
+void writeComponentValueList(PrTextBuffer* out, const CssTokenStream* ts, CssTokenSpan span) {
     CssTokenStream scan = cssSubStream(ts, span);
     CssTokenSpan value;
     bool first = true;
-    textAppendChar(out, '[');
+    prTextBufferAppendChar(out, '[');
     while (cssConsumeComponentValue(&scan, &value)) {
         if (!first)
-            textAppend(out, ", ");
+            prTextBufferAppend(out, ", ");
         first = false;
         writeComponentValue(out, ts, value);
     }
-    textAppendChar(out, ']');
+    prTextBufferAppendChar(out, ']');
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Rules and declarations
 
-void writeDeclaration(TextBuffer* out, const CssTokenStream* ts, const CssSyntaxDeclaration& declaration) {
-    textAppend(out, "[\"declaration\", ");
+void writeDeclaration(PrTextBuffer* out, const CssTokenStream* ts, const CssSyntaxDeclaration& declaration) {
+    prTextBufferAppend(out, "[\"declaration\", ");
     writeValue(out, cssTokenValueText(ts->tokens, declaration.name));
-    textAppend(out, ", ");
+    prTextBufferAppend(out, ", ");
     writeComponentValueList(out, ts, cssTrimWhitespace(ts->tokens, declaration.value));
-    textAppend(out, declaration.important ? ", true]" : ", false]");
+    prTextBufferAppend(out, declaration.important ? ", true]" : ", false]");
 }
 
-void writeRule(TextBuffer* out, const CssTokenStream* ts, const CssSyntaxRule& rule) {
+void writeRule(PrTextBuffer* out, const CssTokenStream* ts, const CssSyntaxRule& rule) {
     if (rule.type == CssSyntaxRuleType_At) {
-        textAppend(out, "[\"at-rule\", ");
+        prTextBufferAppend(out, "[\"at-rule\", ");
         writeValue(out, cssTokenValueText(ts->tokens, rule.name));
-        textAppend(out, ", ");
+        prTextBufferAppend(out, ", ");
         writeComponentValueList(out, ts, rule.prelude);
-        textAppend(out, ", ");
+        prTextBufferAppend(out, ", ");
         if ((rule.flags & CssSyntaxRuleFlag_HasBlock) != 0)
             writeComponentValueList(out, ts, rule.block);
         else
-            textAppend(out, "null");
-        textAppendChar(out, ']');
+            prTextBufferAppend(out, "null");
+        prTextBufferAppendChar(out, ']');
         return;
     }
 
-    textAppend(out, "[\"qualified rule\", ");
+    prTextBufferAppend(out, "[\"qualified rule\", ");
     writeComponentValueList(out, ts, rule.prelude);
-    textAppend(out, ", ");
+    prTextBufferAppend(out, ", ");
     writeComponentValueList(out, ts, rule.block);
-    textAppendChar(out, ']');
+    prTextBufferAppendChar(out, ']');
 }
 
 // Writes the items of a parsed block, in written order.
-void writeItems(TextBuffer* out, const CssTokenStream* ts, const CssParser& parser, CssBlock parsed) {
+void writeItems(PrTextBuffer* out, const CssTokenStream* ts, const CssParser& parser, CssBlock parsed) {
     bool first = true;
-    textAppendChar(out, '[');
+    prTextBufferAppendChar(out, '[');
     for (uint32_t i = 0; i < parsed.items.count; ++i) {
         const CssItem& item = parser.items.data[parsed.items.start + i];
         if (!first)
-            textAppend(out, ", ");
+            prTextBufferAppend(out, ", ");
         first = false;
 
         if (item.type == CssItemType_Declaration)
@@ -261,7 +261,7 @@ void writeItems(TextBuffer* out, const CssTokenStream* ts, const CssParser& pars
         else
             writeError(out, "invalid");
     }
-    textAppendChar(out, ']');
+    prTextBufferAppendChar(out, ']');
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -273,7 +273,7 @@ bool isEmpty(CssTokenStream* ts) {
     return cssPeek(ts) == CssTokenKind_Eof;
 }
 
-void runOneComponentValue(TextBuffer* out, const CssTokenStream* ts) {
+void runOneComponentValue(PrTextBuffer* out, const CssTokenStream* ts) {
     CssTokenStream scan = *ts;
     if (isEmpty(&scan)) {
         writeError(out, "empty");
@@ -289,7 +289,7 @@ void runOneComponentValue(TextBuffer* out, const CssTokenStream* ts) {
     writeComponentValue(out, ts, value);
 }
 
-void runOneDeclaration(TextBuffer* out, const CssTokenStream* ts) {
+void runOneDeclaration(PrTextBuffer* out, const CssTokenStream* ts) {
     CssTokenStream scan = *ts;
     if (isEmpty(&scan)) {
         writeError(out, "empty");
@@ -304,7 +304,7 @@ void runOneDeclaration(TextBuffer* out, const CssTokenStream* ts) {
     writeDeclaration(out, ts, declaration);
 }
 
-void runOneRule(TextBuffer* out, const CssTokenStream* ts) {
+void runOneRule(PrTextBuffer* out, const CssTokenStream* ts) {
     CssTokenStream scan = *ts;
     if (isEmpty(&scan)) {
         writeError(out, "empty");
@@ -323,7 +323,7 @@ void runOneRule(TextBuffer* out, const CssTokenStream* ts) {
     writeRule(out, ts, rule);
 }
 
-void runBlock(TextBuffer* out, const CssTokenStream* ts, bool stylesheet) {
+void runBlock(PrTextBuffer* out, const CssTokenStream* ts, bool stylesheet) {
     CssTokenStream scan = *ts;
     CssParser parser;
     cssParserInit(&parser);
@@ -337,29 +337,29 @@ void runBlock(TextBuffer* out, const CssTokenStream* ts, bool stylesheet) {
     cssParserReset(&parser);
 }
 
-void runAnPlusB(TextBuffer* out, const CssTokenStream* ts) {
+void runAnPlusB(PrTextBuffer* out, const CssTokenStream* ts) {
     CssTokenStream scan = *ts;
     cssSkipWhitespace(&scan);
 
     int32_t a = 0;
     int32_t b = 0;
     if (!cssConsumeAnPlusB(&scan, &a, &b) || !isEmpty(&scan)) {
-        textAppend(out, "null");
+        prTextBufferAppend(out, "null");
         return;
     }
-    textAppendChar(out, '[');
+    prTextBufferAppendChar(out, '[');
     writeNumber(out, a);
-    textAppend(out, ", ");
+    prTextBufferAppend(out, ", ");
     writeNumber(out, b);
-    textAppendChar(out, ']');
+    prTextBufferAppendChar(out, ']');
 }
 
 // Writes a comma-separated list of ranges. An item is a range if the whole item is one <unicode-range-token> within the
 // bounds that css-fonts-4/#unicode-range-desc gives, and null otherwise.
-void runUrange(TextBuffer* out, const CssTokenStream* ts) {
+void runUrange(PrTextBuffer* out, const CssTokenStream* ts) {
     CssTokenStream scan = *ts;
     bool first = true;
-    textAppendChar(out, '[');
+    prTextBufferAppendChar(out, '[');
     for (;;) {
         uint32_t start = scan.pos;
         while (cssPeek(&scan) != CssTokenKind_Comma && cssPeek(&scan) != CssTokenKind_Eof)
@@ -372,24 +372,24 @@ void runUrange(TextBuffer* out, const CssTokenStream* ts) {
             cssTokenRange(ts->tokens, item.start, &rangeFirst, &rangeLast);
 
         if (!first)
-            textAppend(out, ", ");
+            prTextBufferAppend(out, ", ");
         first = false;
 
         if (rangeLast != 0 && rangeLast <= kPrUtf8MaxCodePoint && rangeFirst <= rangeLast) {
-            textAppendChar(out, '[');
+            prTextBufferAppendChar(out, '[');
             writeNumber(out, rangeFirst);
-            textAppend(out, ", ");
+            prTextBufferAppend(out, ", ");
             writeNumber(out, rangeLast);
-            textAppendChar(out, ']');
+            prTextBufferAppendChar(out, ']');
         } else {
-            textAppend(out, "null");
+            prTextBufferAppend(out, "null");
         }
 
         if (cssPeek(&scan) != CssTokenKind_Comma)
             break;
         ++scan.pos;
     }
-    textAppendChar(out, ']');
+    prTextBufferAppendChar(out, ']');
 }
 
 } // namespace
@@ -405,15 +405,15 @@ int main(int argc, char** argv) {
     bool ranges = strcmp(suite, "urange") == 0;
 
     HarnessCase test = {};
-    TextBuffer out;
+    PrTextBuffer out = {};
     while (harnessReadCase(&test)) {
         CssTokenScratch scratch = {};
         CssTokenArray tokens = {};
-        PrStringView source = textView(&test.input);
+        PrStringView source = prTextBufferView(&test.input);
         cssTokenize(&tokens, &scratch, source, ranges ? CssTokenizeFlag_UnicodeRanges : 0);
         CssTokenStream ts = cssStream(&tokens);
 
-        textClear(&out);
+        prTextBufferClear(&out);
         if (strcmp(suite, "component_value_list") == 0)
             writeComponentValueList(&out, &ts, cssStreamAll(&ts));
         else if (strcmp(suite, "one_component_value") == 0)
@@ -435,12 +435,12 @@ int main(int argc, char** argv) {
             return 2;
         }
 
-        harnessWriteLine(textView(&out));
+        harnessWriteLine(prTextBufferView(&out));
         cssTokenArrayReset(&tokens);
         cssTokenScratchReset(&scratch);
     }
 
     harnessCaseReset(&test);
-    textReset(&out);
+    prTextBufferReset(&out);
     return 0;
 }

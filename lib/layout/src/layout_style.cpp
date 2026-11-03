@@ -37,7 +37,7 @@ T& tableSlot(LayoutTable<T>& table, uint32_t index) {
 // Returns the hash that a table keeps for `value`.
 template <typename T>
 uint32_t tableHash(const T& value) {
-    return uint32_t(hashBytes(&value, sizeof(T), kLayoutSeed));
+    return uint32_t(prHashBytes(&value, sizeof(T), kLayoutSeed));
 }
 
 // A record is four 8-byte words of group indices and one more index, which products mix, where the bytes' general hash
@@ -48,9 +48,9 @@ uint32_t tableHash(const PrLayoutStyle& value) {
     constexpr uint64_t kMix = 0x9e3779b97f4a7c15ull;
     uint64_t words[4];
     uint32_t last = 0;
-    memCopy(words, &value, sizeof words);
-    memCopy(&last, value.groups + 8, sizeof last);
-    return uint32_t(hashFold((words[0] * kMix) ^ words[1], (words[2] ^ kMix) + (words[3] + uint64_t(last) * kMix) * kMix));
+    prMemCopy(words, &value, sizeof words);
+    prMemCopy(&last, value.groups + 8, sizeof last);
+    return uint32_t(prHashFold((words[0] * kMix) ^ words[1], (words[2] ^ kMix) + (words[3] + uint64_t(last) * kMix) * kMix));
 }
 
 // Adds an entry of `value` with no references, which the next collect frees unless something names it. An interned
@@ -69,7 +69,7 @@ uint32_t tableAdd(LayoutTable<T>& table, const T& value, uint32_t hash, bool int
         table.hashes.push(0);
         table.indexed.push(false);
     }
-    memCopy(&tableSlot(table, at), &value, sizeof(T));
+    prMemCopy(&tableSlot(table, at), &value, sizeof(T));
     table.references.data[at] = 0;
     table.hashes.data[at] = hash;
     table.indexed.data[at] = interned;
@@ -83,7 +83,7 @@ template <typename T>
 uint32_t tableIntern(LayoutTable<T>& table, const T& value, bool* added = nullptr) {
     uint32_t hash = tableHash(value);
     uint32_t found = table.index.find(hash, [&](uint32_t at) {
-        return memEquals(&layoutTableAt(table, at), &value, sizeof(T));
+        return prMemEquals(&layoutTableAt(table, at), &value, sizeof(T));
     });
     if (found != kHashMissing)
         return found;
@@ -364,7 +364,7 @@ void writeUsedBox(LayoutStyles* styles, uint32_t index) {
 void setTargetPixelRatio(LayoutStyles* styles, float ratio) {
     styles->targetPixelRatio = ratio;
     float units = float(kPrLayoutUnitsPerPx) / ratio;
-    styles->targetPixelUnits = units == floorF32(units) && units >= 1 ? int32_t(units) : 0;
+    styles->targetPixelUnits = units == prF32Floor(units) && units >= 1 ? int32_t(units) : 0;
 }
 
 // Returns the metrics of `font` at `size` px, at the tree's target pixel ratio. Positions along y are measured down
@@ -460,12 +460,12 @@ PR_NOINLINE PrLayoutStyleIndex internRecord(LayoutStyles* c, const PrLayoutStyle
 
 PrLayoutUnit layoutRoundToTargetPixel(const LayoutStyles* styles, float px) {
     double ratio = double(styles->targetPixelRatio);
-    return prLayoutUnitFromPxFloorDouble(roundF64(double(px) * ratio) / ratio);
+    return prLayoutUnitFromPxFloorDouble(prF64Round(double(px) * ratio) / ratio);
 }
 
 PrLayoutUnit layoutFloorToFractionalTargetPixel(const LayoutStyles* styles, PrLayoutUnit unit) {
     double ratio = double(styles->targetPixelRatio);
-    return prLayoutUnitFromPxFloorDouble(floorF64(prLayoutUnitToPxDouble(unit) * ratio) / ratio);
+    return prLayoutUnitFromPxFloorDouble(prF64Floor(prLayoutUnitToPxDouble(unit) * ratio) / ratio);
 }
 
 PrLayoutUnit layoutSnapAnyBorderWidth(const LayoutStyles* styles, PrLayoutUnit width) {
@@ -478,8 +478,8 @@ PrLayoutUnit layoutSnapAnyBorderWidth(const LayoutStyles* styles, PrLayoutUnit w
         snapped = magnitude < step ? step : magnitude - magnitude % step;
     } else {
         double ratio = double(styles->targetPixelRatio);
-        double pixels = floorF64(double(magnitude + 1) * ratio / double(kPrLayoutUnitsPerPx));
-        snapped = prLayoutUnitFromPxFloorDouble(maxF64(pixels, 1) / ratio).raw;
+        double pixels = prF64Floor(double(magnitude + 1) * ratio / double(kPrLayoutUnitsPerPx));
+        snapped = prLayoutUnitFromPxFloorDouble(prF64Max(pixels, 1) / ratio).raw;
     }
     return prLayoutUnitClamped(width.raw < 0 ? -snapped : snapped);
 }
@@ -544,7 +544,7 @@ bool layoutSyncFonts(LayoutStyles* styles, Array<uint64_t>* changed) {
             continue;
         if (!any) {
             changed->resize(uint32_t(bitsetWords(styles->faces.count)));
-            memZero(changed->data, changed->count * sizeof(uint64_t));
+            prMemZero(changed->data, changed->count * sizeof(uint64_t));
         }
         bitsetSet(changed->data, i);
         faces.generation = 0;
@@ -578,7 +578,7 @@ LayoutStyles* layoutStylesCreate(PrTextFont* PR_NULLABLE font, PrTextShaper* PR_
     c->defaultFont = font;
     c->shaper = shaper;
     c->metricsGeneration = 1;
-    PR_ASSERT(targetPixelRatio >= 0 && isFiniteF32(targetPixelRatio));
+    PR_ASSERT(targetPixelRatio >= 0 && prF32IsFinite(targetPixelRatio));
     if (targetPixelRatio > 0)
         setTargetPixelRatio(c, targetPixelRatio);
     PrLayoutFontStyle fontGroup = prLayoutFontStyleDefault();
@@ -654,7 +654,7 @@ void layoutStylesDestroy(LayoutStyles* PR_NULLABLE styles) {
 }
 
 void layoutStylesSetTargetPixelRatio(LayoutStyles* styles, float ratio) {
-    PR_ASSERT(ratio > 0 && isFiniteF32(ratio));
+    PR_ASSERT(ratio > 0 && prF32IsFinite(ratio));
     if (ratio == styles->targetPixelRatio)
         return;
     setTargetPixelRatio(styles, ratio);
@@ -714,7 +714,7 @@ uint32_t prLayoutStyleIntern(PrLayoutTree* tree, const PrLayoutStyle* style) {
     LayoutStyles* c = tree->styles;
     // A component library interns its records each frame, so a record that the table holds is found inline.
     uint32_t found = c->style.index.find(tableHash(*style), [&](uint32_t at) {
-        return memEquals(&layoutTableAt(c->style, at), style, sizeof *style);
+        return prMemEquals(&layoutTableAt(c->style, at), style, sizeof *style);
     });
     return found != kHashMissing ? found : internRecord(c, *style);
 }
@@ -984,7 +984,7 @@ PrLayoutTransform prLayoutTransformFromAffine2(PrAffine2 transform) {
 }
 
 bool prLayoutTransformIsIdentity(const PrLayoutTransform* transform) {
-    return memEquals(transform, &kLayoutTransformIdentity, sizeof(PrLayoutTransform));
+    return prMemEquals(transform, &kLayoutTransformIdentity, sizeof(PrLayoutTransform));
 }
 
 PrMatrix4 prLayoutTransformResolve(const PrLayoutTransform* transform, PrVec2 extent) {

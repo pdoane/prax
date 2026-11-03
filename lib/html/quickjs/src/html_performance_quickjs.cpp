@@ -409,7 +409,7 @@ PrHtmlPerformanceEntry* PR_NULLABLE createMark(JSContext* ctx, PrHtmlPerformance
         hasStart = !JS_IsUndefined(start);
         bool ok = !JS_IsException(start) && (!hasStart || JS_ToFloat64(ctx, &startTime, start) >= 0);
         JS_FreeValue(ctx, start);
-        if (ok && hasStart && !isFiniteF64(startTime)) {
+        if (ok && hasStart && !prF64IsFinite(startTime)) {
             ok = false;
             JS_ThrowTypeError(ctx, "startTime is not finite");
         }

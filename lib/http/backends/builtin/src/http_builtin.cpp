@@ -8,6 +8,7 @@
 #include "pr/assert.h"
 #include "pr/mem.h"
 #include "pr/string_ops.h"
+#include "pr/string_trim.h"
 #include "pr/text_buffer.h"
 #include "pr/url.h"
 
@@ -152,7 +153,7 @@ bool isToken(PrStringView text) {
     if (text.size == 0)
         return false;
     for (size_t i = 0; i < text.size; ++i) {
-        if (!asciiIsHttpToken(text.data[i]))
+        if (!prAsciiIsHttpToken(text.data[i]))
             return false;
     }
     return true;
@@ -173,7 +174,7 @@ bool listHas(PrStringView value, PrStringView token) {
         size_t end = start;
         while (end < value.size && value.data[end] != ',')
             ++end;
-        if (asciiEqualsFold(stringTrim(stringSlice(value, start, end - start), asciiIsTabOrSpace), token))
+        if (prAsciiEqualsFold(stringTrimBy(prStringSlice(value, start, end - start), prAsciiIsTabOrSpace), token))
             return true;
         start = end + 1;
     }
@@ -182,9 +183,9 @@ bool listHas(PrStringView value, PrStringView token) {
 
 // The last element of the comma-separated list `value`.
 PrStringView listLast(PrStringView value) {
-    size_t comma = stringFindLast(value, ',');
-    return stringTrim(comma == value.size ? value : stringSlice(value, comma + 1, value.size - comma - 1),
-        asciiIsTabOrSpace);
+    size_t comma = prStringFindLastByte(value, ',');
+    return stringTrimBy(comma == value.size ? value : prStringSlice(value, comma + 1, value.size - comma - 1),
+        prAsciiIsTabOrSpace);
 }
 
 void hold(Held* held) {
@@ -294,7 +295,7 @@ bool lineAt(PrStringView text, size_t start, PrStringView* line, size_t* next) {
     if (end == text.size)
         return false;
     size_t lineEnd = end > start && text.data[end - 1] == '\r' ? end - 1 : end;
-    *line = stringSlice(text, start, lineEnd - start);
+    *line = prStringSlice(text, start, lineEnd - start);
     *next = end + 1;
     return true;
 }
@@ -307,12 +308,12 @@ bool parseLength(PrStringView value, uint64_t* out) {
         size_t end = start;
         while (end < value.size && value.data[end] != ',')
             ++end;
-        PrStringView digits = stringTrim(stringSlice(value, start, end - start), asciiIsTabOrSpace);
+        PrStringView digits = stringTrimBy(prStringSlice(value, start, end - start), prAsciiIsTabOrSpace);
         if (digits.size == 0 || digits.size > 18)
             return false;
         uint64_t length = 0;
         for (size_t i = 0; i < digits.size; ++i) {
-            if (!asciiIsDigit(digits.data[i]))
+            if (!prAsciiIsDigit(digits.data[i]))
                 return false;
             length = length * 10 + uint64_t(digits.data[i] - '0');
         }
@@ -350,10 +351,10 @@ bool parseHead(Connection* connection, Exchange* exchange) {
                 failExchange(exchange, PrNetError_Protocol);
             return false;
         }
-        PrStringView head = stringSlice(input, 0, at);
+        PrStringView head = prStringSlice(input, 0, at);
         lineAt(head, 0, &line, &next);
-        if (line.size < 12 || !stringStartsWith(line, "HTTP/1.") || line.data[8] != ' ' ||
-                !asciiIsDigit(line.data[9]) || !asciiIsDigit(line.data[10]) || !asciiIsDigit(line.data[11])) {
+        if (line.size < 12 || !prStringStartsWith(line, "HTTP/1.") || line.data[8] != ' ' ||
+                !prAsciiIsDigit(line.data[9]) || !prAsciiIsDigit(line.data[10]) || !prAsciiIsDigit(line.data[11])) {
             failExchange(exchange, PrNetError_Protocol);
             return false;
         }
@@ -380,29 +381,30 @@ bool parseHead(Connection* connection, Exchange* exchange) {
         while (lineAt(stored, cursor, &line, &next) && line.size != 0) {
             uint32_t lineStart = uint32_t(line.data - stored.data);
             cursor = next;
-            size_t colon = stringFind(line, ':');
-            PrStringView name = stringSlice(line, 0, colon);
+            size_t colon = prStringFindByte(line, ':');
+            PrStringView name = prStringSlice(line, 0, colon);
             if (colon == line.size || !isToken(name)) {
                 // A line that folds the field before it, or is not a field, is malformed (rfc 9112 section 5.2).
                 failExchange(exchange, PrNetError_Protocol);
                 return false;
             }
-            PrStringView value = stringTrim(stringSlice(line, colon + 1, line.size - colon - 1), asciiIsTabOrSpace);
+            PrStringView afterColon = prStringSlice(line, colon + 1, line.size - colon - 1);
+            PrStringView value = stringTrimBy(afterColon, prAsciiIsTabOrSpace);
             exchange->fields.push(FieldSpan{
                 lineStart, uint32_t(name.size), uint32_t(value.data - stored.data),
                 uint32_t(value.size),
             });
-            if (asciiEqualsFold(name, "transfer-encoding")) {
+            if (prAsciiEqualsFold(name, "transfer-encoding")) {
                 encoded = true;
-                chunked = asciiEqualsFold(listLast(value), "chunked");
-            } else if (asciiEqualsFold(name, "content-length")) {
+                chunked = prAsciiEqualsFold(listLast(value), "chunked");
+            } else if (prAsciiEqualsFold(name, "content-length")) {
                 if (!parseLength(value, &length) || (lengthGiven && length != exchange->remaining)) {
                     failExchange(exchange, PrNetError_Protocol);
                     return false;
                 }
                 lengthGiven = true;
                 exchange->remaining = length;
-            } else if (asciiEqualsFold(name, "connection")) {
+            } else if (prAsciiEqualsFold(name, "connection")) {
                 if (listHas(value, "close"))
                     closes = true;
                 else if (!http11 && listHas(value, "keep-alive"))
@@ -483,8 +485,8 @@ bool parseContent(Connection* connection, Exchange* exchange) {
                 }
                 uint64_t size = 0;
                 size_t digits = 0;
-                while (digits < line.size && asciiIsHexDigit(line.data[digits]) && digits < 15) {
-                    size = size * 16 + asciiHexValue(line.data[digits]);
+                while (digits < line.size && prAsciiIsHexDigit(line.data[digits]) && digits < 15) {
+                    size = size * 16 + prAsciiHexValue(line.data[digits]);
                     ++digits;
                 }
                 if (digits == 0 || (digits < line.size && line.data[digits] != ';' && line.data[digits] != ' ' &&
@@ -702,10 +704,10 @@ void assign(Connection* connection, Exchange* exchange) {
 // Returns true if the rule's host matches `host`: the same name, or a subdomain of a wildcard's name.
 bool ruleMatches(const HostRule& rule, PrStringView host) {
     PrStringView pattern = viewOf(rule.host);
-    if (!stringStartsWith(pattern, "*."))
-        return asciiEqualsFold(pattern, host);
-    PrStringView suffix = stringSlice(pattern, 1, pattern.size - 1);
-    return host.size > suffix.size && asciiEndsWithFold(host, suffix);
+    if (!prStringStartsWith(pattern, "*."))
+        return prAsciiEqualsFold(pattern, host);
+    PrStringView suffix = prStringSlice(pattern, 1, pattern.size - 1);
+    return host.size > suffix.size && prAsciiEndsWithFold(host, suffix);
 }
 
 void freeHttp(BuiltinHttp* http) {
@@ -760,45 +762,45 @@ void pump(void* PR_NULLABLE context) {
 }
 
 // Writes the request's bytes: its request line, Host, the client's fields, the framing fields and the content.
-PrStatus serializeRequest(const PrHttpRequestDesc* desc, const PrUrl* url, TextBuffer* out) {
+PrStatus serializeRequest(const PrHttpRequestDesc* desc, const PrUrl* url, PrTextBuffer* out) {
     PrStringView method = desc->method.data != nullptr ? desc->method : PrStringView{"GET"};
     if (!isToken(method))
         return PrStatus_InvalidData;
-    textAppend(out, method);
-    textAppendChar(out, ' ');
+    prTextBufferAppend(out, method);
+    prTextBufferAppendChar(out, ' ');
     PrStringView path = prUrlPath(url);
-    textAppend(out, path.size != 0 ? path : PrStringView{"/"});
+    prTextBufferAppend(out, path.size != 0 ? path : PrStringView{"/"});
     PrStringView query = prUrlQuery(url);
     if (query.data != nullptr) {
-        textAppendChar(out, '?');
-        textAppend(out, query);
+        prTextBufferAppendChar(out, '?');
+        prTextBufferAppend(out, query);
     }
-    textAppend(out, " HTTP/1.1\r\nHost: ");
-    textAppend(out, prUrlHost(url));
+    prTextBufferAppend(out, " HTTP/1.1\r\nHost: ");
+    prTextBufferAppend(out, prUrlHost(url));
     if (prUrlPort(url) >= 0) {
-        textAppendChar(out, ':');
-        textAppendU64(out, uint64_t(prUrlPort(url)));
+        prTextBufferAppendChar(out, ':');
+        prTextBufferAppendU64(out, uint64_t(prUrlPort(url)), 10);
     }
-    textAppend(out, "\r\n");
+    prTextBufferAppend(out, "\r\n");
     for (uint32_t i = 0; i < desc->headerCount; ++i) {
         const PrHttpHeader& field = desc->headers[i];
         if (!isToken(field.name) || !isFieldValue(field.value))
             return PrStatus_InvalidData;
-        if (asciiEqualsFold(field.name, "host") || asciiEqualsFold(field.name, "content-length") ||
-                asciiEqualsFold(field.name, "transfer-encoding") || asciiEqualsFold(field.name, "connection"))
+        if (prAsciiEqualsFold(field.name, "host") || prAsciiEqualsFold(field.name, "content-length") ||
+                prAsciiEqualsFold(field.name, "transfer-encoding") || prAsciiEqualsFold(field.name, "connection"))
             continue;
-        textAppend(out, field.name);
-        textAppend(out, ": ");
-        textAppend(out, field.value);
-        textAppend(out, "\r\n");
+        prTextBufferAppend(out, field.name);
+        prTextBufferAppend(out, ": ");
+        prTextBufferAppend(out, field.value);
+        prTextBufferAppend(out, "\r\n");
     }
     if (desc->body.size != 0 || !(method == "GET" || method == "HEAD")) {
-        textAppend(out, "Content-Length: ");
-        textAppendU64(out, desc->body.size);
-        textAppend(out, "\r\n");
+        prTextBufferAppend(out, "Content-Length: ");
+        prTextBufferAppendU64(out, desc->body.size, 10);
+        prTextBufferAppend(out, "\r\n");
     }
-    textAppend(out, "\r\n");
-    textAppend(out, reinterpret_cast<const char*>(desc->body.data), uint32_t(desc->body.size));
+    prTextBufferAppend(out, "\r\n");
+    prTextBufferAppend(out, PrStringView{reinterpret_cast<const char*>(desc->body.data), uint32_t(desc->body.size)});
     return PrStatus_Ok;
 }
 
@@ -829,11 +831,11 @@ PrStatus createExchange(PrHttp* base, const PrHttpRequestDesc* desc, PrHttpExcha
         prUrlDestroy(url);
         return PrStatus_NotSupported;
     }
-    TextBuffer request{};
+    PrTextBuffer request{};
     PrStatus status = serializeRequest(desc, url, &request);
     PrStringView host = prUrlHost(url);
     if (status != PrStatus_Ok || host.size == 0) {
-        textReset(&request);
+        prTextBufferReset(&request);
         prUrlDestroy(url);
         return PrStatus_InvalidData;
     }
@@ -847,7 +849,7 @@ PrStatus createExchange(PrHttp* base, const PrHttpRequestDesc* desc, PrHttpExcha
     exchange->port = uint16_t(port >= 0 ? port : secure ? 443 : 80);
     // An IPv6 address is serialized in brackets, which a connection does not take.
     if (host.size > 2 && host.data[0] == '[')
-        host = stringSlice(host, 1, host.size - 2);
+        host = prStringSlice(host, 1, host.size - 2);
     exchange->host = prStringCopy(host);
     exchange->target = prStringCopy(host);
     exchange->targetPort = exchange->port;
@@ -859,16 +861,16 @@ PrStatus createExchange(PrHttp* base, const PrHttpRequestDesc* desc, PrHttpExcha
             break;
         }
     }
-    TextBuffer origin{};
-    textAppend(&origin, scheme);
-    textAppend(&origin, "://");
-    textAppend(&origin, prUrlHost(url));
-    textAppendChar(&origin, ':');
-    textAppendU64(&origin, exchange->port);
-    exchange->origin = textCopy(&origin);
-    textReset(&origin);
-    exchange->request = textCopy(&request);
-    textReset(&request);
+    PrTextBuffer origin{};
+    prTextBufferAppend(&origin, scheme);
+    prTextBufferAppend(&origin, "://");
+    prTextBufferAppend(&origin, prUrlHost(url));
+    prTextBufferAppendChar(&origin, ':');
+    prTextBufferAppendU64(&origin, exchange->port, 10);
+    exchange->origin = prTextBufferCopy(&origin);
+    prTextBufferReset(&origin);
+    exchange->request = prTextBufferCopy(&request);
+    prTextBufferReset(&request);
     prUrlDestroy(url);
     http->queue.push(exchange);
     schedulePump(http);
@@ -908,8 +910,8 @@ PrHttpHeader exchangeHeader(const PrHttp*, const PrHttpExchange* handle, uint32_
     PrStringView stored = viewOf(exchange->response);
     const FieldSpan& span = exchange->fields.data[index];
     return PrHttpHeader{
-        stringSlice(stored, span.nameStart, span.nameSize),
-        stringSlice(stored, span.valueStart, span.valueSize),
+        prStringSlice(stored, span.nameStart, span.nameSize),
+        prStringSlice(stored, span.valueStart, span.valueSize),
     };
 }
 
@@ -917,7 +919,7 @@ size_t exchangeRead(PrHttp* base, PrHttpExchange* handle, uint8_t* output, size_
     Exchange* exchange = static_cast<Exchange*>(handle);
     uint32_t available = exchange->content.count - exchange->contentStart;
     uint32_t taken = capacity < available ? uint32_t(capacity) : available;
-    memCopy(output, exchange->content.data + exchange->contentStart, taken);
+    prMemCopy(output, exchange->content.data + exchange->contentStart, taken);
     exchange->contentStart += taken;
     if (exchange->contentStart == exchange->content.count) {
         exchange->content.clear();

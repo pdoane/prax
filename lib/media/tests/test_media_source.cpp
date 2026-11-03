@@ -130,7 +130,7 @@ TEST_CASE("appending the same range again replaces its frames") {
     REQUIRE(f.appendSecond(0, 9) == PrStatus_Ok);
     CHECK(f.buffered() == "{ [0.033, 0.998) }");
     PrMediaBufferedFrame frame{};
-    REQUIRE(prMediaSourceBufferNextFrame(f.buffer, 0, pr::kNanF64, 0.5, &frame));
+    REQUIRE(prMediaSourceBufferNextFrame(f.buffer, 0, kPrF64Nan, 0.5, &frame));
     CHECK(frame.key);
     CHECK(frame.bytes.size == 9);
     prMediaBufferedFrameReset(&frame);
@@ -142,7 +142,7 @@ TEST_CASE("a reader takes frames in decode order from the random access point be
     REQUIRE(f.appendSecond(0) == PrStatus_Ok);
     REQUIRE(f.appendSecond(1) == PrStatus_Ok);
     PrMediaBufferedFrame frame{};
-    REQUIRE(prMediaSourceBufferNextFrame(f.buffer, 0, pr::kNanF64, 1.5, &frame));
+    REQUIRE(prMediaSourceBufferNextFrame(f.buffer, 0, kPrF64Nan, 1.5, &frame));
     CHECK(frame.key);
     CHECK(frame.decode == doctest::Approx(1.0));
     double decode = frame.decode;

@@ -69,9 +69,9 @@ bool consumeComponent(const CssTokenArray* tokens, uint32_t* pos, uint32_t end, 
         PrCssKeyword keyword = cssTokenKeyword(tokens, *pos);
         if (cssIsCssWideKeyword(keyword) || keyword == PrCssKeyword_Default)
             return false;
-        component.identStart = out->idents.text.count;
+        component.identStart = out->idents.size;
         cssValueAppend(&out->idents, cssTokenValueText(tokens, *pos));
-        component.identSize = out->idents.text.count - component.identStart;
+        component.identSize = out->idents.size - component.identStart;
         ++*pos;
     } else {
         return false;
@@ -114,11 +114,11 @@ bool matchesOnce(CssParser* parser, const CssSyntaxDefinition* definition,
     if (component.type == CssValueDef_Count) {
         if (span.count != 1 || cssTokenKind(tokens, span.start) != CssTokenKind_Ident)
             return false;
-        TextBuffer value;
+        PrTextBuffer value = {};
         cssValueAppend(&value, cssTokenValueText(tokens, span.start));
-        PrStringView ident = {definition->idents.text.data + component.identStart, component.identSize};
-        bool equal = textView(&value) == ident;
-        textReset(&value);
+        PrStringView ident = {definition->idents.data + component.identStart, component.identSize};
+        bool equal = prTextBufferView(&value) == ident;
+        prTextBufferReset(&value);
         return equal;
     }
     CssTokenStream stream = {tokens, span.start, span.start + span.count};
@@ -170,7 +170,7 @@ bool matches(CssParser* parser, const CssSyntaxDefinition* definition, const Css
 
 void cssSyntaxDefinitionReset(CssSyntaxDefinition* definition) {
     definition->components.reset();
-    textReset(&definition->idents);
+    prTextBufferReset(&definition->idents);
     definition->universal = false;
 }
 

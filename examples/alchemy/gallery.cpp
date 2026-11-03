@@ -18,7 +18,7 @@ using namespace pr;
 namespace {
 
 bool endsWithPng(PrStringView name) {
-    return name.size > 4 && asciiEndsWithFold(name, ".png");
+    return name.size > 4 && prAsciiEndsWithFold(name, ".png");
 }
 
 std::string joinPath(PrStringView dir, PrStringView name) {
@@ -39,7 +39,7 @@ bool exists(const std::string& path) {
 std::string galleryFilename(PrStringView filename) {
     PrStringView base = pathFilename(filename);
     while (base.size != 0 && base.data[0] == '.')
-        base = stringSlice(base, 1, base.size - 1);
+        base = prStringSlice(base, 1, base.size - 1);
     if (base.size == 0)
         return "image.png";
     std::string out = stringOf(base);
@@ -198,7 +198,7 @@ PrStringView pathFilename(PrStringView path) {
     size_t start = path.size;
     while (start > 0 && path.data[start - 1] != '/' && path.data[start - 1] != '\\')
         --start;
-    return stringSlice(path, start, path.size - start);
+    return prStringSlice(path, start, path.size - start);
 }
 
 } // namespace alchemy

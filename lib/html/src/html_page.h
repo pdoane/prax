@@ -265,12 +265,12 @@ struct HtmlPage {
 
     // A load whose input arrives in pieces (prHtmlPageBeginLoad), and which tasks parse one slice at a time. A load of
     // a whole source that waits for a script continues as one whose input has all arrived.
-    TextBuffer streamInput;     // the bytes that have arrived
-    uint32_t streamRead;        // the number of them that the decoder has taken
-    bool streamEnded;           // true once the last piece has arrived
-    bool streamQueued;          // true if a task to parse more is queued
-    bool streamSniffed;         // true once the charset of the input is known
-    bool streamFlushed;         // true once the decoder has read the end of the input
+    PrTextBuffer streamInput = {}; // the bytes that have arrived
+    uint32_t streamRead;           // the number of them that the decoder has taken
+    bool streamEnded;              // true once the last piece has arrived
+    bool streamQueued;             // true if a task to parse more is queued
+    bool streamSniffed;            // true once the charset of the input is known
+    bool streamFlushed;            // true once the decoder has read the end of the input
 
     // The decoding of the bytes of a load (html/#the-input-byte-stream), and how certain the parse is of their charset.
     // The document's charset is the decoder's.

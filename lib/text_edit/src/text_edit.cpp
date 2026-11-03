@@ -158,7 +158,7 @@ void copyBytes(const TextEditBuffer* b, uint32_t start, uint32_t end, char* PR_N
     for (uint32_t at = start; at < end;) {
         PrStringView chunk = chunkAt(b, at);
         uint32_t count = chunk.size < end - at ? uint32_t(chunk.size) : end - at;
-        memCopy(out + (at - start), chunk.data, count);
+        prMemCopy(out + (at - start), chunk.data, count);
         at += count;
     }
 }
@@ -167,12 +167,12 @@ void copyBytes(const TextEditBuffer* b, uint32_t start, uint32_t end, char* PR_N
 void moveGap(TextEditBuffer* b, uint32_t at) {
     if (at < b->gapStart) {
         uint32_t count = b->gapStart - at;
-        memMove(b->text + b->gapEnd - count, b->text + at, count);
+        prMemMove(b->text + b->gapEnd - count, b->text + at, count);
         b->gapStart -= count;
         b->gapEnd -= count;
     } else if (at > b->gapStart) {
         uint32_t count = at - b->gapStart;
-        memMove(b->text + b->gapStart, b->text + b->gapEnd, count);
+        prMemMove(b->text + b->gapStart, b->text + b->gapEnd, count);
         b->gapStart += count;
         b->gapEnd += count;
     }
@@ -188,7 +188,7 @@ void reserveGap(TextEditBuffer* b, uint32_t needed) {
     capacity += capacity / 2 + 64;
     uint32_t tail = b->capacity - b->gapEnd;
     b->text = static_cast<char*>(prMemoryRealloc(b->text, capacity));
-    memMove(b->text + capacity - tail, b->text + b->gapEnd, tail);
+    prMemMove(b->text + capacity - tail, b->text + b->gapEnd, tail);
     b->gapEnd = capacity - tail;
     b->capacity = capacity;
 }
@@ -217,7 +217,7 @@ void reserveLines(TextEditBuffer* b, uint32_t needed) {
     capacity += capacity / 2 + 8;
     uint32_t tail = b->lineCapacity - b->lineGapEnd;
     b->lines = static_cast<uint32_t*>(prMemoryRealloc(b->lines, sizeof(uint32_t) * capacity));
-    memMove(b->lines + capacity - tail, b->lines + b->lineGapEnd, sizeof(uint32_t) * tail);
+    prMemMove(b->lines + capacity - tail, b->lines + b->lineGapEnd, sizeof(uint32_t) * tail);
     b->lineGapEnd = capacity - tail;
     b->lineCapacity = capacity;
 }
@@ -235,7 +235,7 @@ void replaceBytes(TextEditBuffer* b, uint32_t start, uint32_t end, PrStringView 
     b->gapStart = start;
     reserveGap(b, uint32_t(text.size));
     if (text.size != 0)
-        memCopy(b->text + b->gapStart, text.data, text.size);
+        prMemCopy(b->text + b->gapStart, text.data, text.size);
     b->gapStart += uint32_t(text.size);
 
     uint32_t added = 0;
@@ -507,8 +507,8 @@ bool mergeStep(HistoryStep& step, const HistoryStep& next, PrTextEditMerge merge
         step.styles.append(next.styles.data, next.styles.count);
         uint32_t size = step.bytes.count;
         step.bytes.resize(size + next.bytes.count);
-        memMove(step.bytes.data + next.bytes.count, step.bytes.data, size);
-        memCopy(step.bytes.data, next.bytes.data, next.bytes.count);
+        prMemMove(step.bytes.data + next.bytes.count, step.bytes.data, size);
+        prMemCopy(step.bytes.data, next.bytes.data, next.bytes.count);
         was.start = now.start;
         was.end = now.start;
     } else {
@@ -1075,6 +1075,7 @@ PrTextEditCaretBlink prTextEditCaretBlinkAt(double activity, double time) {
     constexpr double kPartSeconds = 0.5;
     if (time < activity)
         return PrTextEditCaretBlink{.on = true, .next = activity + kPartSeconds};
-    double part = floorF64((time - activity) / kPartSeconds);
-    return PrTextEditCaretBlink{.on = part - 2 * floorF64(part / 2) == 0, .next = activity + (part + 1) * kPartSeconds};
+    double part = prF64Floor((time - activity) / kPartSeconds);
+    bool on = part - 2 * prF64Floor(part / 2) == 0;
+    return PrTextEditCaretBlink{.on = on, .next = activity + (part + 1) * kPartSeconds};
 }

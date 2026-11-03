@@ -42,7 +42,7 @@ void triple(LottieGeometry& g, float x, float y, float ox, float oy, float ix, f
 void rectShape(PrVec2 p, PrVec2 size, float roundness, bool reversed, LottieGeometry& g) {
     float v0 = size.x / 2;
     float v1 = size.y / 2;
-    float round = minF32(minF32(v0, v1), roundness);
+    float round = prF32Min(prF32Min(v0, v1), roundness);
     float c = round * (1 - kLottieQuarterArc);
     float x = p.x;
     float y = p.y;
@@ -99,8 +99,8 @@ void ellipseShape(PrVec2 p, PrVec2 size, bool reversed, LottieGeometry& g) {
 
 void starShape(const LottieAnimation& a, const LottieItem& item, double frame, LottieGeometry& g) {
     PrVec2 p = lottiePoint(a, item.props[LottieProp_Position], frame, PrVec2{0, 0});
-    double points = floorF64(double(lottieScalar(a, item.props[LottieProp_Points], frame, 5)));
-    double rotation = double(lottieScalar(a, item.props[LottieProp_Rotation], frame, 0)) * kPiF64 / 180;
+    double points = prF64Floor(double(lottieScalar(a, item.props[LottieProp_Points], frame, 5)));
+    double rotation = double(lottieScalar(a, item.props[LottieProp_Rotation], frame, 0)) * kPrF64Pi / 180;
     double outer = double(lottieScalar(a, item.props[LottieProp_OuterRadius], frame, 0));
     double outerRound = double(lottieScalar(a, item.props[LottieProp_OuterRoundness], frame, 0)) / 100;
     bool star = item.mode != 2;
@@ -109,12 +109,12 @@ void starShape(const LottieAnimation& a, const LottieItem& item, double frame, L
     if (!(points >= 1) || points > 10000)
         return;
     uint32_t count = star ? uint32_t(points) * 2 : uint32_t(points);
-    double angle = 2 * kPiF64 / count;
+    double angle = 2 * kPrF64Pi / count;
     // The length by which a corner's roundness scales its tangents: the circumference at the corner's radius, divided
     // by four times the number of points.
-    double outerSegment = 2 * kPiF64 * outer / (star ? count * 2 : count * 4);
-    double innerSegment = 2 * kPiF64 * inner / (count * 2);
-    double current = -kPiF64 / 2 + rotation;
+    double outerSegment = 2 * kPrF64Pi * outer / (star ? count * 2 : count * 4);
+    double innerSegment = 2 * kPrF64Pi * inner / (count * 2);
+    double current = -kPrF64Pi / 2 + rotation;
     double dir = item.reversed ? -1 : 1;
     uint32_t contour = beginContour(g, true);
     for (uint32_t i = 0; i < count; ++i) {
@@ -122,9 +122,9 @@ void starShape(const LottieAnimation& a, const LottieItem& item, double frame, L
         double radius = longPoint ? outer : inner;
         double roundness = longPoint ? outerRound : innerRound;
         double segment = longPoint ? outerSegment : innerSegment;
-        double x = radius * cosF64(current);
-        double y = radius * sinF64(current);
-        double length = sqrtF64(x * x + y * y);
+        double x = radius * prF64Cos(current);
+        double y = radius * prF64Sin(current);
+        double length = prF64Sqrt(x * x + y * y);
         double ox = x == 0 && y == 0 ? 0 : y / length;
         double oy = x == 0 && y == 0 ? 0 : -x / length;
         x += double(p.x);
@@ -223,10 +223,10 @@ void gather(LottieRender& r, Active& active, uint32_t first, uint32_t count, uin
 PrAffine2 repeaterStep(const LottieAnimation& a, const LottieTransform& t, double frame, double times) {
     PrVec2 anchor = lottiePoint(a, t.anchor, frame, PrVec2{0, 0});
     PrVec2 scale = lottiePoint(a, t.scale, frame, PrVec2{100, 100});
-    double rotation = double(lottieScalar(a, t.rotation, frame, 0)) * kPiF64 / 180;
+    double rotation = double(lottieScalar(a, t.rotation, frame, 0)) * kPrF64Pi / 180;
     PrVec2 position = lottieTransformPosition(a, t, frame);
     // A whole step scales by the full scale. A partial step scales only part of the way.
-    double whole = times >= 0 ? floorF64(times) : ceilF64(times);
+    double whole = times >= 0 ? prF64Floor(times) : prF64Ceil(times);
     double part = times - whole;
     auto stepScale = [&](float s, double perc) { return double(s) / 100 + (1 - double(s) / 100) * (1 - perc); };
     double sx = 1;
@@ -265,7 +265,7 @@ void repeat(LottieRender& r, Active& active, const LottieItem& item, uint32_t fi
     if (item.transform == kLottieNone || before == 0)
         return;
     const LottieTransform& t = a.transforms.data[item.transform];
-    double copies = ceilF64(double(lottieScalar(a, item.props[LottieProp_Copies], frame, 1)));
+    double copies = prF64Ceil(double(lottieScalar(a, item.props[LottieProp_Copies], frame, 1)));
     if (!(copies >= 1) || copies > 10000)
         return;
     uint32_t n = uint32_t(copies);
@@ -354,7 +354,7 @@ void gather(LottieRender& r, Active& active, uint32_t first, uint32_t count, uin
 // Painting
 
 float channel(float value) {
-    return clampF32(value, 0, 1);
+    return prF32Clamp(value, 0, 1);
 }
 
 // Gathers the gradient's stops at `frame`: its color stops and opacity stops, merged at every offset that either has.
@@ -428,13 +428,13 @@ bool gradientBrush(LottieRender& r, const LottieItem& item, double frame, float 
         *brush = prDrawBrushLinear(s, e, r.stops.data, r.stops.count);
         return true;
     }
-    float radius = sqrtF32((e.x - s.x) * (e.x - s.x) + (e.y - s.y) * (e.y - s.y));
-    float angle = atan2F32(e.y - s.y, e.x - s.x);
+    float radius = prF32Sqrt((e.x - s.x) * (e.x - s.x) + (e.y - s.y) * (e.y - s.y));
+    float angle = prF32Atan2(e.y - s.y, e.x - s.x);
     float highlight = lottieScalar(a, item.props[LottieProp_HighlightLength], frame, 0) / 100;
-    highlight = clampF32(highlight, -0.99f, 0.99f);
-    float highlightAngle = lottieScalar(a, item.props[LottieProp_HighlightAngle], frame, 0) * kPiF32 / 180;
+    highlight = prF32Clamp(highlight, -0.99f, 0.99f);
+    float highlightAngle = lottieScalar(a, item.props[LottieProp_HighlightAngle], frame, 0) * kPrF32Pi / 180;
     float dist = radius * highlight;
-    PrVec2 focal{s.x + cosF32(angle + highlightAngle) * dist, s.y + sinF32(angle + highlightAngle) * dist};
+    PrVec2 focal{s.x + prF32Cos(angle + highlightAngle) * dist, s.y + prF32Sin(angle + highlightAngle) * dist};
     *brush = prDrawBrushRadial(focal, 0, s, radius, r.stops.data, r.stops.count);
     return true;
 }
@@ -600,7 +600,7 @@ void lottieDrawShapes(LottieRender& r, const LottieLayer& layer, double frame) {
             prDrawListPushTransformAffine2(r.list, g.transform);
             if (grouped) {
                 PrDrawGroup group = prDrawGroupDefault();
-                group.opacity = clampF32(g.opacity, 0, 1);
+                group.opacity = prF32Clamp(g.opacity, 0, 1);
                 group.blendMode = g.blend;
                 prDrawListPushGroup(r.list, &group);
             }

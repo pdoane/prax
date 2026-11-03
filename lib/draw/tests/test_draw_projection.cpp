@@ -15,7 +15,7 @@ namespace pr_impl {
 namespace {
 
 bool near(float a, float b, float tolerance = 1e-3f) {
-    return absF32(a - b) <= tolerance;
+    return prF32Abs(a - b) <= tolerance;
 }
 
 bool nearPoint(PrVec2 a, PrVec2 b, float tolerance = 1e-3f) {
@@ -58,7 +58,7 @@ TEST_CASE("a projection's bounds are its plane's bounds, projected") {
     CHECK(near(landed.left, nearLeft.x));
 
     PrMatrix4 broken = identity;
-    broken.m[0][0] = kInfinityF32;
+    broken.m[0][0] = kPrF32Infinity;
     CHECK(prRectIsEmpty(prDrawProjectionBounds(&broken, bounds)));
 }
 
@@ -171,13 +171,13 @@ TEST_CASE("a plane partly behind the eye is cut, and one wholly behind it or edg
     behind.m[3][3] = -1;
     CHECK(!prDrawProjectionPlace(&behind, prAffine2Identity(), bounds, kEverywhere, 4096, &p));
 
-    PrMatrix4 edge = prMatrix4Rotate(PrVec3{0, 1, 0}, kPiF32 / 2);
+    PrMatrix4 edge = prMatrix4Rotate(PrVec3{0, 1, 0}, kPrF32Pi / 2);
     PrMatrix4 eye = prMatrix4Perspective(100);
     PrMatrix4 edgeOn = prMatrix4Concat(&edge, &eye);
     CHECK(!prDrawProjectionPlace(&edgeOn, prAffine2Identity(), bounds, kEverywhere, 4096, &p));
 
     PrMatrix4 broken = prMatrix4Identity();
-    broken.m[3][0] = kInfinityF32;
+    broken.m[3][0] = kPrF32Infinity;
     CHECK(!prDrawProjectionPlace(&broken, prAffine2Identity(), bounds, kEverywhere, 4096, &p));
 
     // No part of the plane lands in the visible box.

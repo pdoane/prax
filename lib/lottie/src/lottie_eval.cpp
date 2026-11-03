@@ -21,7 +21,7 @@ constexpr double kOrientSpan = 0.01;
 // The frames over which auto-orient measures a combined position's motion past its last keyframe.
 constexpr double kOrientSpanAtEnd = 0.05;
 
-constexpr double kDegrees = kPiF64 / 180;
+constexpr double kDegrees = kPrF64Pi / 180;
 
 double bezierAt(double t, double p1, double p2) {
     double u = 1 - t;
@@ -50,7 +50,7 @@ void spatialAt(const float* s, const float* e, const float* to, const float* ti,
             double d = point(t1, i) - point(t0, i);
             squared += d * d;
         }
-        total += sqrtF64(squared);
+        total += prF64Sqrt(squared);
         lengths[k] = total;
     }
     double target = total * fraction;
@@ -95,7 +95,7 @@ float orientation(const LottieAnimation& a, const LottieTransform& t, double fra
     }
     PrVec2 v1 = lottieTransformPosition(a, t, to);
     PrVec2 v2 = lottieTransformPosition(a, t, from);
-    return atan2F32(v1.y - v2.y, v1.x - v2.x);
+    return prF32Atan2(v1.y - v2.y, v1.x - v2.x);
 }
 
 // Matrix operations, each applied after the matrix's existing operations.
@@ -118,7 +118,7 @@ void rotate(PrMatrix4& m, float x, float y, float z, double radians) {
 
 void skewFromAxis(PrMatrix4& m, double skew, double axis) {
     rotate(m, 0, 0, 1, axis);
-    then(m, PrMatrix4{{{1, float(tanF64(skew)), 0, 0}, {0, 1, 0, 0}, {0, 0, 1, 0}, {0, 0, 0, 1}}});
+    then(m, PrMatrix4{{{1, float(prF64Tan(skew)), 0, 0}, {0, 1, 0, 0}, {0, 0, 1, 0}, {0, 0, 0, 1}}});
     rotate(m, 0, 0, 1, -axis);
 }
 
@@ -145,8 +145,8 @@ double lottieEase(double x1, double y1, double x2, double y2, double x) {
         return 0;
     if (x >= 1)
         return 1;
-    x1 = minF64(maxF64(x1, 0), 1);
-    x2 = minF64(maxF64(x2, 0), 1);
+    x1 = prF64Min(prF64Max(x1, 0), 1);
+    x2 = prF64Min(prF64Max(x2, 0), 1);
     // Solves for the t at `x` by Newton's method, starting from a guess from a table. Falls back to bisection if the
     // slope is too flat.
     constexpr uint32_t kTable = 11;
@@ -175,7 +175,7 @@ double lottieEase(double x1, double y1, double x2, double y2, double x) {
         for (uint32_t i = 0; i < 10; ++i) {
             t = a + (b - a) / 2;
             double current = bezierAt(t, x1, x2) - x;
-            if (absF64(current) <= 0.0000001)
+            if (prF64Abs(current) <= 0.0000001)
                 break;
             if (current > 0)
                 b = t;
@@ -347,13 +347,13 @@ PrMatrix4 lottieCameraView(const LottieAnimation& a, const LottieTransform& t, d
             double(position[0] - interest[0]), double(position[1] - interest[1]),
             double(position[2] - interest[2]),
         };
-        double length = sqrtF64(toward[0] * toward[0] + toward[1] * toward[1] + toward[2] * toward[2]);
+        double length = prF64Sqrt(toward[0] * toward[0] + toward[1] * toward[1] + toward[2] * toward[2]);
         if (length > 0) {
             for (double& v : toward)
                 v /= length;
-            double across = sqrtF64(toward[0] * toward[0] + toward[2] * toward[2]);
-            rotate(m, 0, 1, 0, -atan2F64(toward[0], -toward[2]));
-            rotate(m, 1, 0, 0, atan2F64(toward[1], across));
+            double across = prF64Sqrt(toward[0] * toward[0] + toward[2] * toward[2]);
+            rotate(m, 0, 1, 0, -prF64Atan2(toward[0], -toward[2]));
+            rotate(m, 1, 0, 0, prF64Atan2(toward[1], across));
         }
     }
     rotate(m, 1, 0, 0, double(lottieScalar(a, t.rotationX, frame, 0)) * kDegrees);
@@ -378,7 +378,7 @@ PrAffine2 lottieTransformAffine(const LottieAnimation& a, const LottieTransform&
     if (skew != 0) {
         // Skews along the skew axis: rotates into the axis, shears along it by the negated angle, and rotates back.
         float axis = float(double(skewAxis) * kDegrees);
-        PrAffine2 shear{1, 0, -float(tanF64(double(skew) * kDegrees)), 1, 0, 0};
+        PrAffine2 shear{1, 0, -float(prF64Tan(double(skew) * kDegrees)), 1, 0, 0};
         m = prAffine2Concat(m, prAffine2Rotate(axis));
         m = prAffine2Concat(m, shear);
         m = prAffine2Concat(m, prAffine2Rotate(-axis));

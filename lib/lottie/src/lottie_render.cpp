@@ -93,7 +93,7 @@ float cameraDepth(const LottieRender& r, const LottieComp& comp, uint32_t index,
     PrMatrix4 m = prMatrix4Concat(&chain, &projection);
     float z = m.m[2][0] * anchor.x + m.m[2][1] * anchor.y + m.m[2][3];
     float w = m.m[3][0] * anchor.x + m.m[3][1] * anchor.y + m.m[3][3];
-    return w > 0 ? z / w : -kInfinityF32;
+    return w > 0 ? z / w : -kPrF32Infinity;
 }
 
 void drawLayer(LottieRender& r, uint32_t compIndex, uint32_t index, double frame, const PrMatrix4* PR_NULLABLE camera);
@@ -147,7 +147,7 @@ bool maskPath(LottieRender& r, const LottieMask& mask, double frame, PrPath* pat
 // and painted according to its mode.
 void drawMask(LottieRender& r, const LottieMask& mask, double frame, PrRect area, PrDrawList* list) {
     const LottieAnimation& a = *r.a;
-    float opacity = clampF32(lottieScalar(a, mask.opacity, frame, 100) / 100, 0, 1);
+    float opacity = prF32Clamp(lottieScalar(a, mask.opacity, frame, 100) / 100, 0, 1);
     float expansion = lottieScalar(a, mask.expansion, frame, 0);
     PrPath* path = prPathCreate();
     if (!maskPath(r, mask, frame, path)) {
@@ -281,7 +281,7 @@ void drawContent(LottieRender& r, const LottieLayer& layer, double frame) {
             // An image whose size differs from its asset's size covers the asset's size, centered and clipped to it.
             float w = float(prDrawImageExtent(image.image).x);
             float h = float(prDrawImageExtent(image.image).y);
-            float scale = maxF32(image.width / w, image.height / h);
+            float scale = prF32Max(image.width / w, image.height / h);
             float dx = (image.width - w * scale) / 2;
             float dy = (image.height - h * scale) / 2;
             PrDrawSource source = prDrawSourceImage(image.image, PrRect{0, 0, w, h});
@@ -346,8 +346,8 @@ void drawProjectedLayer(LottieRender& r, const LottieComp& comp, uint32_t index,
     bool clipped = layer.kind == LottieLayerKind_Precomp;
     PrRect bounds = prDrawListBounds(content);
     // Content that covers its whole plane, as an unbounded operator does, covers the composition.
-    if (!(isFiniteF32(bounds.left) && isFiniteF32(bounds.top) && isFiniteF32(bounds.right) &&
-            isFiniteF32(bounds.bottom)))
+    if (!(prF32IsFinite(bounds.left) && prF32IsFinite(bounds.top) && prF32IsFinite(bounds.right) &&
+            prF32IsFinite(bounds.bottom)))
         bounds = clipped ? PrRect{0, 0, layer.width, layer.height} : PrRect{0, 0, comp.width, comp.height};
     if (clipped)
         bounds = prRectIntersect(bounds, PrRect{0, 0, layer.width, layer.height});

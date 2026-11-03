@@ -20,7 +20,7 @@ JSClassID blobClass;
 JSClassID fileClass;
 
 double truncated(double value) {
-    return value < 0 ? -floorF64(-value) : floorF64(value);
+    return value < 0 ? -prF64Floor(-value) : prF64Floor(value);
 }
 
 void releaseBlob(const PrFetchBlob* PR_NULLABLE blob) {
@@ -36,7 +36,7 @@ constexpr JsReferences kBlobReferences = {
 // The contents of a Blob's or a File's constructor: the bytes of its parts, in order (FileAPI/#process-blob-parts), and
 // the members of its property bag.
 struct BlobInit {
-    TextBuffer bytes;
+    PrTextBuffer bytes;
     PrStringView type;
     bool nativeEndings;
     bool hasLastModified;
@@ -85,7 +85,7 @@ bool readBag(JSContext* ctx, JSValueConst bag, bool file, BlobInit* out) {
             if (!read)
                 return false;
             // A long long (webidl/#abstract-opdef-converttoint): a value that is not finite is 0.
-            out->lastModified = isFiniteF64(out->lastModified) ? truncated(out->lastModified) : 0;
+            out->lastModified = prF64IsFinite(out->lastModified) ? truncated(out->lastModified) : 0;
             out->hasLastModified = true;
         }
     }
@@ -93,17 +93,17 @@ bool readBag(JSContext* ctx, JSValueConst bag, bool file, BlobInit* out) {
 }
 
 // Appends the bytes of one part, with its text's line endings converted if the bag asked for that.
-bool appendPart(JSContext* ctx, JSValueConst part, BlobInit* init, TextBuffer* out) {
+bool appendPart(JSContext* ctx, JSValueConst part, BlobInit* init, PrTextBuffer* out) {
     const uint8_t* data = nullptr;
     size_t size = 0;
     if (jsBufferSource(ctx, part, &data, &size)) {
         if (size != 0)
-            textAppend(out, PrStringView{reinterpret_cast<const char*>(data), size});
+            prTextBufferAppend(out, PrStringView{reinterpret_cast<const char*>(data), size});
         return true;
     }
     if (const PrFetchBlob* blob = prJsFetchBlobFromValue(ctx, part)) {
         PrByteView bytes = prFetchBlobBytes(blob);
-        textAppend(out, PrStringView{reinterpret_cast<const char*>(bytes.data), bytes.size});
+        prTextBufferAppend(out, PrStringView{reinterpret_cast<const char*>(bytes.data), bytes.size});
         return true;
     }
     PrStringView text;
@@ -111,17 +111,17 @@ bool appendPart(JSContext* ctx, JSValueConst part, BlobInit* init, TextBuffer* o
         return false;
     if (init->nativeEndings) {
         PrString converted = prFetchBlobConvertLineEndings(text);
-        textAppend(out, prStringView(&converted));
+        prTextBufferAppend(out, prStringView(&converted));
         prStringReset(&converted);
     } else {
-        textAppend(out, text);
+        prTextBufferAppend(out, text);
     }
     return true;
 }
 
 // Reads the sequence of parts into `*out`. The parts are read before they are converted, since a conversion can run
 // script (webidl/#es-sequence), and the bag's members decide how the strings convert.
-bool readParts(JSContext* ctx, JSValueConst parts, BlobInit* init, TextBuffer* out) {
+bool readParts(JSContext* ctx, JSValueConst parts, BlobInit* init, PrTextBuffer* out) {
     if (JS_IsUndefined(parts))
         return true;
     if (!JS_IsObject(parts)) {
@@ -134,24 +134,24 @@ bool readParts(JSContext* ctx, JSValueConst parts, BlobInit* init, TextBuffer* o
         return true;
     });
     // Each string part converts as it is met, so that a part that throws stops the sequence before the bag is read.
-    Array<TextBuffer> pieces;
+    Array<PrTextBuffer> pieces;
     for (uint32_t i = 0; ok && i < items.count; ++i) {
-        pieces.push(TextBuffer{});
+        pieces.push(PrTextBuffer{});
         ok = appendPart(ctx, items.data[i], init, &pieces.data[i]);
     }
     for (uint32_t i = 0; i < items.count; ++i)
         JS_FreeValue(ctx, items.data[i]);
     items.reset();
     for (uint32_t i = 0; i < pieces.count; ++i) {
-        textAppend(out, textView(&pieces.data[i]));
-        textReset(&pieces.data[i]);
+        prTextBufferAppend(out, prTextBufferView(&pieces.data[i]));
+        prTextBufferReset(&pieces.data[i]);
     }
     pieces.reset();
     return ok;
 }
 
-PrByteView byteViewOf(const TextBuffer* buffer) {
-    PrStringView view = textView(buffer);
+PrByteView byteViewOf(const PrTextBuffer* buffer) {
+    PrStringView view = prTextBufferView(buffer);
     return PrByteView{reinterpret_cast<const uint8_t*>(view.data), view.size};
 }
 
@@ -160,11 +160,11 @@ JSValue blobConstruct(JSContext* ctx, JSValueConst newTarget, int argc, JSValueC
     bool ok = readBag(ctx, argc > 1 ? argv[1] : JS_UNDEFINED, false, &init) &&
         readParts(ctx, argc > 0 ? argv[0] : JS_UNDEFINED, &init, &init.bytes);
     if (!ok) {
-        textReset(&init.bytes);
+        prTextBufferReset(&init.bytes);
         return JS_EXCEPTION;
     }
     const PrFetchBlob* blob = prFetchBlobCreate(byteViewOf(&init.bytes), init.type);
-    textReset(&init.bytes);
+    prTextBufferReset(&init.bytes);
     return jsConstructed(ctx, newTarget, prJsFetchBlobNew(ctx, blob));
 }
 
@@ -176,13 +176,13 @@ JSValue fileConstruct(JSContext* ctx, JSValueConst newTarget, int argc, JSValueC
     bool ok = jsReadString(ctx, argv[1], &name) && readBag(ctx, argc > 2 ? argv[2] : JS_UNDEFINED, true, &init) &&
         readParts(ctx, argv[0], &init, &init.bytes);
     if (!ok) {
-        textReset(&init.bytes);
+        prTextBufferReset(&init.bytes);
         return JS_EXCEPTION;
     }
     // The time of construction is the realm's current time, as Date reads it.
     double modified = init.hasLastModified ? init.lastModified : double(JS_DateNow(ctx));
     const PrFetchBlob* blob = prFetchBlobCreateFile(byteViewOf(&init.bytes), init.type, name, modified);
-    textReset(&init.bytes);
+    prTextBufferReset(&init.bytes);
     return jsConstructed(ctx, newTarget, prJsFetchBlobNew(ctx, blob));
 }
 
@@ -209,7 +209,7 @@ bool readPosition(JSContext* ctx, int argc, JSValueConst* argv, int index, int64
     if (JS_ToFloat64(ctx, &value, argv[index]) < 0)
         return false;
     constexpr double kLimit = 9007199254740992.0;
-    if (!isFiniteF64(value))
+    if (!prF64IsFinite(value))
         value = value > 0 ? kLimit : (value < 0 ? -kLimit : 0);
     *out = int64_t(truncated(value));
     return true;

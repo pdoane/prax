@@ -58,18 +58,18 @@ void cssValuePoolAddAbsolutePath(CssValuePool* pool, CssValueRun run, uint32_t i
     commands.reset();
 }
 
-void cssSerializePath(TextBuffer* out, CssValueRun run, uint32_t index) {
-    textAppend(out, "path(");
+void cssSerializePath(PrTextBuffer* out, CssValueRun run, uint32_t index) {
+    prTextBufferAppend(out, "path(");
     if (run.values[index].next > 1 && run.values[index + 1].kind == PrCssValueKind_Keyword) {
-        textAppend(out, cssKeywordName(cssValueKeyword(&run.values[index + 1])));
-        textAppend(out, ", ");
+        prTextBufferAppend(out, cssKeywordName(cssValueKeyword(&run.values[index + 1])));
+        prTextBufferAppend(out, ", ");
     }
     Array<PrPathDataCommand> commands;
     cssPathCommands(run, index, &commands);
     PrString data = prStringNull();
     prPathDataWrite(commands.data, commands.count, &data);
     cssSerializeString(out, prStringView(&data));
-    textAppendChar(out, ')');
+    prTextBufferAppendChar(out, ')');
     prStringReset(&data);
     commands.reset();
 }

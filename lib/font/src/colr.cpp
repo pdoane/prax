@@ -78,7 +78,7 @@ void deltasOf(const Walker& w, uint32_t base, uint32_t count, float* out) {
         if (w.face.variationMap.size != 0)
             sfntDeltaSetIndex(w.face.variationMap, index, &outer, &inner);
         float delta = sfntVariationDelta(w.face.variations, outer, inner, w.coords);
-        out[i] = roundF32(delta);
+        out[i] = prF32Round(delta);
     }
 }
 
@@ -263,8 +263,8 @@ void walkPaint(Walker& w, SfntTable paint, uint32_t depth) {
             // COLR stores the angles of a sweep in half turns minus one, counterclockwise with y up. That is the
             // negative of clockwise with y down.
             step.paint.conic.center = pointFrom(w, cx, cy);
-            step.paint.conic.startAngle = -(start + 1) * kPiF32;
-            step.paint.conic.endAngle = -(end + 1) * kPiF32;
+            step.paint.conic.startAngle = -(start + 1) * kPrF32Pi;
+            step.paint.conic.endAngle = -(end + 1) * kPrF32Pi;
             w.walk.steps.push(step);
             break;
         }
@@ -350,9 +350,9 @@ void walkPaint(Walker& w, SfntTable paint, uint32_t depth) {
                 cx += d[1];
                 cy += d[2];
             }
-            float radians = angle * kPiF32;
-            float c = cosF32(radians);
-            float s = sinF32(radians);
+            float radians = angle * kPrF32Pi;
+            float c = prF32Cos(radians);
+            float s = prF32Sin(radians);
             pushTransform(w, aboutCenter(w, transformFrom(w, c, s, -s, c, 0, 0), cx, cy), child(paint, 1), depth);
             break;
         }
@@ -370,8 +370,8 @@ void walkPaint(Walker& w, SfntTable paint, uint32_t depth) {
                 cx += d[2];
                 cy += d[3];
             }
-            float x = tanF32(-xAngle * kPiF32);
-            float y = tanF32(yAngle * kPiF32);
+            float x = prF32Tan(-xAngle * kPrF32Pi);
+            float y = prF32Tan(yAngle * kPrF32Pi);
             pushTransform(w, aboutCenter(w, transformFrom(w, 1, y, x, 1, 0, 0), cx, cy), child(paint, 1), depth);
             break;
         }

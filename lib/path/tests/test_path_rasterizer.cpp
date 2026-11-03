@@ -243,19 +243,19 @@ TEST_CASE("shaped corners cut the rectangle by their curves") {
     };
     CHECK(area(1) == doctest::Approx(whole - 4 * (r * r - kPiD * r * r / 4)).epsilon(0.001));
     CHECK(area(0) == doctest::Approx(whole - 4 * (r * r / 2)).epsilon(0.001));
-    CHECK(area(kInfinityF32) == doctest::Approx(whole).epsilon(0.001));
+    CHECK(area(kPrF32Infinity) == doctest::Approx(whole).epsilon(0.001));
     CHECK(area(-1) == doctest::Approx(whole - 4 * (kPiD * r * r / 4)).epsilon(0.001));
-    CHECK(area(-kInfinityF32) == doctest::Approx(whole - 4 * r * r).epsilon(0.001));
+    CHECK(area(-kPrF32Infinity) == doctest::Approx(whole - 4 * r * r).epsilon(0.001));
     // A quarter of a squircle covers 0.92704 of its box.
     CHECK(area(2) == doctest::Approx(whole - 4 * r * r * (1 - 0.92704)).epsilon(0.001));
 }
 
 TEST_CASE("sectors are slices, rings and annular pieces") {
     PrPath* path = prPathCreate();
-    prPathAddSector(path, PrVec2{32, 32}, 0, 20, 0, kPiF32 / 2);
+    prPathAddSector(path, PrVec2{32, 32}, 0, 20, 0, kPrF32Pi / 2);
     CHECK(filledArea(path) == doctest::Approx(kPiD * 400 / 4).epsilon(0.002));
     prPathClear(path);
-    prPathAddSector(path, PrVec2{32, 32}, 10, 20, 1, -kPiF32);
+    prPathAddSector(path, PrVec2{32, 32}, 10, 20, 1, -kPrF32Pi);
     CHECK(filledArea(path) == doctest::Approx(kPiD * 300 / 2).epsilon(0.002));
     prPathClear(path);
     prPathAddSector(path, PrVec2{32, 32}, 10, 20, 0, 7);
@@ -278,7 +278,7 @@ TEST_CASE("a capsule is every point within its radius of the segment") {
 TEST_CASE("an arc lines from an open contour to its start") {
     PrPath* path = prPathCreate();
     prPathMoveTo(path, PrVec2{10, 32});
-    prPathEllipticArcTo(path, PrVec2{32, 32}, PrVec2{20, 10}, 0, kPiF32, kPiF32);
+    prPathEllipticArcTo(path, PrVec2{32, 32}, PrVec2{20, 10}, 0, kPrF32Pi, kPrF32Pi);
     prPathClose(path);
     CHECK(filledArea(path) == doctest::Approx(kPiD * 200 / 2).epsilon(0.002));
     prPathDestroy(path);
@@ -348,7 +348,7 @@ TEST_CASE("a path with points or a transform that are not finite fills without f
     std::vector<uint8_t> coverage(16 * 16, 0xab);
     PrPixels mask{coverage.data(), 16, {16, 16}};
     PrPathPolyline polyline{};
-    for (float bad : {kInfinityF32, -kInfinityF32, kNanF32, 1e30f}) {
+    for (float bad : {kPrF32Infinity, -kPrF32Infinity, kPrF32Nan, 1e30f}) {
         PrPath* path = prPathCreate();
         prPathMoveTo(path, PrVec2{0, 0});
         prPathLineTo(path, PrVec2{bad, 5});

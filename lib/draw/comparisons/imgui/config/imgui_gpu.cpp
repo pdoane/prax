@@ -187,8 +187,8 @@ void imguiGpuRender(ImDrawData* data, PrGpuPass* pass) {
     uint64_t vertexAt = 0;
     uint64_t indexOffset = indexAt;
     for (const ImDrawList* list : data->CmdLists) {
-        memCopy(bytes + vertexAt, list->VtxBuffer.Data, size_t(list->VtxBuffer.Size) * sizeof(ImDrawVert));
-        memCopy(bytes + indexOffset, list->IdxBuffer.Data, size_t(list->IdxBuffer.Size) * sizeof(ImDrawIdx));
+        prMemCopy(bytes + vertexAt, list->VtxBuffer.Data, size_t(list->VtxBuffer.Size) * sizeof(ImDrawVert));
+        prMemCopy(bytes + indexOffset, list->IdxBuffer.Data, size_t(list->IdxBuffer.Size) * sizeof(ImDrawIdx));
         vertexAt += uint64_t(list->VtxBuffer.Size) * sizeof(ImDrawVert);
         indexOffset += uint64_t(list->IdxBuffer.Size) * sizeof(ImDrawIdx);
     }

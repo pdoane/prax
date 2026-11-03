@@ -17,12 +17,12 @@ bool isMultiple(const PrDomElement* select) {
 uint64_t displaySize(const PrDomElement* select) {
     PrStringView size = domAttributeValue(select, "size");
     size_t at = 0;
-    while (at < size.size && asciiIsSpace(size.data[at]))
+    while (at < size.size && prAsciiIsSpace(size.data[at]))
         ++at;
     if (at < size.size && size.data[at] == '+')
         ++at;
     uint64_t value = 0;
-    if (parseU64Prefix(size.data + at, size.size - at, &value) == 0)
+    if (prU64ParsePrefix(size.data + at, size.size - at, &value, 10) == 0)
         return 1;
     return value;
 }
@@ -197,18 +197,18 @@ bool domOptionDisabled(const PrDomElement* option) {
     return false;
 }
 
-void domOptionValue(const PrDomElement* option, TextBuffer* out) {
+void domOptionValue(const PrDomElement* option, PrTextBuffer* out) {
     PrStringView value = domAttributeValue(option, "value");
     if (value.data == nullptr) {
         domOptionText(option, out);
         return;
     }
-    textClear(out);
-    textAppend(out, value);
+    prTextBufferClear(out);
+    prTextBufferAppend(out, value);
 }
 
-void domOptionText(const PrDomElement* option, TextBuffer* out) {
-    textClear(out);
+void domOptionText(const PrDomElement* option, PrTextBuffer* out) {
+    prTextBufferClear(out);
     bool space = false;
     for (const PrDomNode* node = domNodeNext(option, option); node != nullptr;) {
         const PrDomElement* element = domElementFromNode(node);
@@ -219,14 +219,14 @@ void domOptionText(const PrDomElement* option, TextBuffer* out) {
         if (domIsText(node)) {
             PrStringView data = prStringView(&static_cast<const PrDomCharacterData*>(node)->data);
             for (size_t i = 0; i < data.size; ++i) {
-                if (asciiIsSpace(data.data[i])) {
+                if (prAsciiIsSpace(data.data[i])) {
                     space = true;
                     continue;
                 }
-                if (space && out->text.count != 0)
-                    textAppendChar(out, ' ');
+                if (space && out->size != 0)
+                    prTextBufferAppendChar(out, ' ');
                 space = false;
-                textAppendChar(out, data.data[i]);
+                prTextBufferAppendChar(out, data.data[i]);
             }
         }
         node = domNodeNext(option, node);
@@ -268,16 +268,16 @@ void domSelectSetSelectedIndex(PrDomElement* select, int32_t index) {
 
 void domSelectSetValue(PrDomElement* select, PrStringView value) {
     bool found = false;
-    TextBuffer text;
+    PrTextBuffer text = {};
     eachOption(select, [&](PrDomElement* option) {
         domOptionValue(option, &text);
-        bool chosen = !found && textView(&text) == value;
+        bool chosen = !found && prTextBufferView(&text) == value;
         setSelected(option, chosen);
         if (chosen)
             option->flags |= DomNodeFlag_OptionDirty;
         found = found || chosen;
     });
-    textReset(&text);
+    prTextBufferReset(&text);
     domSelectUpdateSelectedContent(select);
 }
 

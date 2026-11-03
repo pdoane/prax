@@ -16,7 +16,7 @@ namespace pr_impl {
 // Returns true if `c` may be part of the name of a named cell token: a name code point, which is a letter, a digit,
 // `-`, `_`, or not ASCII (css-grid-1/#grid-template-areas-property).
 inline bool cssGridIsNameCharacter(char c) {
-    return asciiIsLetter(c) || asciiIsDigit(c) || c == '-' || c == '_' || uint8_t(c) >= 0x80;
+    return prAsciiIsLetter(c) || prAsciiIsDigit(c) || c == '-' || c == '_' || uint8_t(c) >= 0x80;
 }
 
 // Calls `cell(name)` with each cell token of `row`, a string of grid-template-areas, in order: the name of a named cell
@@ -26,7 +26,7 @@ template <typename Cell>
 bool cssGridAreaCells(PrStringView row, Cell cell) {
     for (size_t k = 0; k < row.size;) {
         char c = row.data[k];
-        if (asciiIsSpace(c)) {
+        if (prAsciiIsSpace(c)) {
             ++k;
             continue;
         }

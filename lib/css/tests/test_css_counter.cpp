@@ -15,7 +15,7 @@ namespace {
 std::string represent(const char* name, int32_t value, CssCounterFlow flow = kCssCounterFlowDefault) {
     const CssCounterStyle* style = cssCounterStyleFind(nullptr, name);
     REQUIRE(style != nullptr);
-    TextBuffer out{};
+    PrTextBuffer out{};
     cssCounterRepresent(&out, nullptr, style, value, flow);
     return take(&out);
 }
@@ -27,7 +27,7 @@ std::string marker(const char* type, int32_t value) {
     CssMatchState match{};
     CssValueSpan span{};
     REQUIRE(cssParsePropertyValue(PrCssProperty_ListStyleType, &source.ts, &pool, &match, &span));
-    TextBuffer out{};
+    PrTextBuffer out{};
     bool any = cssCounterAppendMarker(&out, nullptr, cssValuePoolRun(&pool, span), value, kCssCounterFlowDefault);
     cssValuePoolReset(&pool);
     cssMatchStateReset(&match);

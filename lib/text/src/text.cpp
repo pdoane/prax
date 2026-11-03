@@ -374,7 +374,7 @@ PrStatus shapeRun(PrTextShaper* shaper, const PrTextRun* run, PrTextGlyphBuffer&
     if (synthesizeCaps) {
         // Small capitals as tall as the x-height, within reason.
         float scale = metrics.capHeight > 0 ? metrics.xHeight / metrics.capHeight : 0.7f;
-        status = shapeSynthesizedCaps(shaper, shaped, clampF32(scale, 0.6f, 0.9f), g);
+        status = shapeSynthesizedCaps(shaper, shaped, prF32Clamp(scale, 0.6f, 0.9f), g);
     } else {
         status = shapeWith(shaper, shaped, g);
     }
@@ -467,7 +467,7 @@ PrTextFeatureSet* prTextFeatureSetCreate(const PrTextFeatureSetDesc* desc) {
     set->desc = *desc;
     PrTextFeature* features = reinterpret_cast<PrTextFeature*>(set + 1);
     if (desc->featureCount != 0)
-        memCopy(features, desc->features, sizeof(PrTextFeature) * desc->featureCount);
+        prMemCopy(features, desc->features, sizeof(PrTextFeature) * desc->featureCount);
     set->desc.features = desc->featureCount != 0 ? features : nullptr;
     return set;
 }
@@ -490,7 +490,7 @@ bool prTextFeatureSetEquals(const PrTextFeatureSet* PR_NULLABLE a, const PrTextF
     prTextFeatureSetApply(b, &y);
     return x.caps == y.caps && x.position == y.position && x.kerning == y.kerning && x.synthesis == y.synthesis &&
         x.featureCount == y.featureCount &&
-        (x.featureCount == 0 || memEquals(x.features, y.features, sizeof(PrTextFeature) * x.featureCount));
+        (x.featureCount == 0 || prMemEquals(x.features, y.features, sizeof(PrTextFeature) * x.featureCount));
 }
 
 void prTextFeatureSetApply(const PrTextFeatureSet* PR_NULLABLE set, PrTextRun* run) {
@@ -513,7 +513,7 @@ void prTextFeatureSetApply(const PrTextFeatureSet* PR_NULLABLE set, PrTextRun* r
 
 PrTextShaperBackend prTextShaperBackendFromName(PrStringView name) {
     for (PrTextShaperBackend backend = 0; backend < PrTextShaperBackend_Count; ++backend) {
-        if (asciiEqualsFold(kBackendNames[backend], name))
+        if (prAsciiEqualsFold(kBackendNames[backend], name))
             return backend;
     }
     return PrTextShaperBackend_Count;

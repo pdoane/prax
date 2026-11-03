@@ -16,14 +16,14 @@ namespace {
 struct BuiltinDecoder : PrMediaDecoder {};
 
 uint64_t readU64(const uint8_t* bytes) {
-    return uint64_t(readBeU32(bytes)) << 32 | readBeU32(bytes + 4);
+    return uint64_t(prMemReadBeU32(bytes)) << 32 | prMemReadBeU32(bytes + 4);
 }
 
 // Passes each box of [data, end) to `visit`, with its type, its payload, and the payload's size.
 template <typename Visit>
 void eachBox(const uint8_t* data, const uint8_t* end, Visit visit) {
     while (end - data >= 8) {
-        uint64_t size = readBeU32(data);
+        uint64_t size = prMemReadBeU32(data);
         uint32_t header = 8;
         if (size == 1 && end - data >= 16) {
             size = readU64(data + 8);
@@ -33,7 +33,7 @@ void eachBox(const uint8_t* data, const uint8_t* end, Visit visit) {
         }
         if (size < header || size > uint64_t(end - data))
             return;
-        visit(readBeU32(data + 4), data + header, size_t(size - header));
+        visit(prMemReadBeU32(data + 4), data + header, size_t(size - header));
         data += size;
     }
 }
@@ -59,8 +59,8 @@ bool readMovie(PrByteView resource, PrMediaInfo* out) {
         eachBox(payload, payload + size, [&](uint32_t child, const uint8_t* body, size_t length) {
             if (child == fourCc("mvhd") && length >= 32) {
                 bool wide = body[0] == 1;
-                uint32_t scale = readBeU32(body + (wide ? 20 : 12));
-                uint64_t units = wide ? readU64(body + 24) : readBeU32(body + 16);
+                uint32_t scale = prMemReadBeU32(body + (wide ? 20 : 12));
+                uint64_t units = wide ? readU64(body + 24) : prMemReadBeU32(body + 16);
                 if (scale != 0) {
                     out->duration = double(units) / scale;
                     timed = true;
@@ -72,11 +72,11 @@ bool readMovie(PrByteView resource, PrMediaInfo* out) {
                     if (part == fourCc("tkhd")) {
                         size_t at = bytes[0] == 1 ? 88 : 76;
                         if (count >= at + 8)
-                            extent = PrUVec2{readBeU32(bytes + at) >> 16, readBeU32(bytes + at + 4) >> 16};
+                            extent = PrUVec2{prMemReadBeU32(bytes + at) >> 16, prMemReadBeU32(bytes + at + 4) >> 16};
                     } else if (part == fourCc("mdia")) {
                         eachBox(bytes, bytes + count, [&](uint32_t inner, const uint8_t* named, size_t n) {
                             if (inner == fourCc("hdlr") && n >= 12)
-                                handler = readBeU32(named + 8);
+                                handler = prMemReadBeU32(named + 8);
                         });
                     }
                 });
@@ -93,13 +93,13 @@ bool readMovie(PrByteView resource, PrMediaInfo* out) {
 
 PrMediaSupport supportsType(PrMediaCodec*, PrStringView type) {
     PrStringView essence = prMimeTypeEssence(type);
-    if (asciiEqualsFold(essence, "video/mp4") || asciiEqualsFold(essence, "audio/mp4"))
+    if (prAsciiEqualsFold(essence, "video/mp4") || prAsciiEqualsFold(essence, "audio/mp4"))
         return PrMediaSupport_Maybe;
     return PrMediaSupport_No;
 }
 
 PrStatus decoderCreate(PrMediaCodec*, PrByteView bytes, PrMediaDecoder* PR_NULLABLE* PR_NONNULL out, PrMediaInfo* info) {
-    info->duration = kNanF64;
+    info->duration = kPrF64Nan;
     if (!readMovie(bytes, info))
         return PrStatus_NotSupported;
     *out = allocZeroed<BuiltinDecoder>();

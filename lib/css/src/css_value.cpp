@@ -24,10 +24,10 @@ void addGivenTokens(CssValuePool* pool, const CssTokenStream* ts, CssTokenSpan s
         cssValuePoolAddRun(pool, cssTokenValue(tokens, span.start));
         return;
     }
-    TextBuffer text;
+    PrTextBuffer text = {};
     for (uint32_t i = span.start; i < span.start + span.count; ++i) {
         if (i != span.start)
-            textAppendChar(&text, ' ');
+            prTextBufferAppendChar(&text, ' ');
         if (cssTokenKind(tokens, i) == CssTokenKind_Value)
             cssSerializeValues(&text, cssTokenValue(tokens, i));
         else
@@ -35,12 +35,12 @@ void addGivenTokens(CssValuePool* pool, const CssTokenStream* ts, CssTokenSpan s
     }
     CssValueNode value = {};
     value.kind = PrCssValueKind_Tokens;
-    if (stringContains(textView(&text), "attr("))
+    if (prStringContains(prTextBufferView(&text), "attr("))
         value.aux = CssValueAuxFlag_ReadsAttributes;
-    value.text.start = cssValuePoolAddText(pool, textView(&text));
-    value.text.length = text.text.count;
+    value.text.start = cssValuePoolAddText(pool, prTextBufferView(&text));
+    value.text.length = text.size;
     cssValuePoolAdd(pool, value);
-    textReset(&text);
+    prTextBufferReset(&text);
 }
 
 // Returns true if `value` can be a color's channel: a numeric value, a keyword or a calculation.
@@ -52,7 +52,7 @@ bool isChannel(const CssValueNode* value) {
 // The state for writing the tokens of a run.
 struct TokenWriter {
     CssTokenArray* tokens;
-    TextBuffer* source;
+    PrTextBuffer* source;
     CssValueRun run;
     uint32_t count;
 };
@@ -61,9 +61,9 @@ struct TokenWriter {
 uint32_t addToken(TokenWriter* w, CssTokenKind kind, PrStringView bytes) {
     CssTokenArray* tokens = w->tokens;
     uint32_t index = w->count++;
-    tokens->starts.data[index] = w->source->text.count;
-    textAppend(w->source, bytes);
-    tokens->ends.data[index] = w->source->text.count;
+    tokens->starts.data[index] = w->source->size;
+    prTextBufferAppend(w->source, bytes);
+    tokens->ends.data[index] = w->source->size;
     tokens->kinds.data[index] = kind;
     tokens->flags.data[index] = CssTokenFlag_PlainText;
     tokens->units.data[index] = PrCssUnit_Number;
@@ -74,8 +74,8 @@ uint32_t addToken(TokenWriter* w, CssTokenKind kind, PrStringView bytes) {
 // Adds a function token named `name`, for the arguments that follow it.
 uint32_t addFunction(TokenWriter* w, PrStringView name) {
     uint32_t index = addToken(w, CssTokenKind_Function, name);
-    textAppendChar(w->source, '(');
-    w->tokens->ends.data[index] = w->source->text.count;
+    prTextBufferAppendChar(w->source, '(');
+    w->tokens->ends.data[index] = w->source->size;
     return index;
 }
 
@@ -95,8 +95,8 @@ void addLiteral(TokenWriter* w, uint32_t character) {
 void addGiven(TokenWriter* w, uint32_t index) {
     CssTokenArray* tokens = w->tokens;
     uint32_t token = w->count++;
-    tokens->starts.data[token] = w->source->text.count;
-    tokens->ends.data[token] = w->source->text.count;
+    tokens->starts.data[token] = w->source->size;
+    tokens->ends.data[token] = w->source->size;
     tokens->kinds.data[token] = CssTokenKind_Value;
     tokens->flags.data[token] = 0;
     tokens->units.data[token] = w->run.values[index].unit;
@@ -218,7 +218,7 @@ bool cssValueRunEquals(CssValueRun a, CssValueRun b) {
         } else if (cssValueIsNumeric(x->kind)) {
             if (x->number != y->number)
                 return false;
-        } else if (x->kind != PrCssValueKind_Production && !memEquals(&x->number, &y->number, sizeof(double))) {
+        } else if (x->kind != PrCssValueKind_Production && !prMemEquals(&x->number, &y->number, sizeof(double))) {
             return false;
         }
     }
@@ -245,7 +245,7 @@ uint32_t cssValueRunCopy(CssValueRun run, CssValueNode* values, char* text, uint
     uint32_t size = 0;
     cssValueRunText(run, &start, &size);
     if (size != 0)
-        memCopy(text, run.text + start, size);
+        prMemCopy(text, run.text + start, size);
 
     for (uint32_t i = 0; i < run.count; ++i) {
         CssValueNode value = run.values[i];
@@ -363,10 +363,10 @@ void cssValuePoolAddTokens(CssValuePool* pool, const CssTokenStream* ts, CssToke
         if (written != 0)
             cssValuePoolAddText(pool, cssSpanText(tokens, CssTokenSpan{span.start, written}));
         if (cut) {
-            TextBuffer read;
+            PrTextBuffer read = {};
             cssSerializeToken(&read, ts, last);
-            cssValuePoolAddText(pool, textView(&read));
-            textReset(&read);
+            cssValuePoolAddText(pool, prTextBufferView(&read));
+            prTextBufferReset(&read);
         }
     }
     value.text.start = text;
@@ -421,7 +421,7 @@ bool cssValueShapeValid(CssValueRun run, uint32_t index) {
 // ---------------------------------------------------------------------------------------------------------------------
 // Given values
 
-void cssValueTokens(CssTokenArray* tokens, TextBuffer* source, CssValueRun run) {
+void cssValueTokens(CssTokenArray* tokens, PrTextBuffer* source, CssValueRun run) {
     // A value is one token, except a function, which is two tokens around its arguments, and a color, which is at most
     // four around its channels.
     uint32_t entries = 3 * run.count + 1;
@@ -437,14 +437,14 @@ void cssValueTokens(CssTokenArray* tokens, TextBuffer* source, CssValueRun run) 
     tokens->flags.commitTo(entries);
     tokens->units.commitTo(entries);
     tokens->closers.commitTo(entries);
-    textClear(source);
+    prTextBufferClear(source);
 
     TokenWriter w = {tokens, source, run, 0};
     for (uint32_t i = 0; i < run.count; i += run.values[i].next)
         writeTree(&w, i);
 
     uint32_t count = w.count;
-    uint32_t size = source->text.count;
+    uint32_t size = source->size;
     tokens->starts.data[count] = size;
     tokens->ends.data[count] = size;
     tokens->kinds.data[count] = CssTokenKind_Eof;
@@ -457,7 +457,7 @@ void cssValueTokens(CssTokenArray* tokens, TextBuffer* source, CssValueRun run) 
     tokens->flags.count = count;
     tokens->units.count = count;
     tokens->closers.count = count;
-    tokens->source = textView(source);
+    tokens->source = prTextBufferView(source);
     tokens->values = run.values;
     tokens->valueText = run.text;
 }

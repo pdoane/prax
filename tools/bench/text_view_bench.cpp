@@ -153,7 +153,7 @@ struct Bench {
     // Runs a frame, and returns whether the view asks for another.
     bool frame() {
         if (syntax != nullptr)
-            prSyntaxTreeUpdate(syntax, pr::kInfinityF64);
+            prSyntaxTreeUpdate(syntax, kPrF64Infinity);
         prLayoutTreeBeginFrame(tree);
         // The root does not scroll, so the port is under it.
         PrLayoutNode top = prLayoutTreeFrameElement(tree, kPrLayoutNodeNone, 0, style(true));
@@ -351,7 +351,7 @@ int measureFile(const char* path) {
             uint32_t end = prTextEditBufferSize(streamed);
             PrTextEditChange piece{.start = end, .end = end, .text = PrStringView{text.data + at, size}};
             prTextEditBufferApply(streamed, &piece, 1, PrTextEditOrigin_Load);
-            prSyntaxTreeUpdate(growing, pr::kInfinityF64);
+            prSyntaxTreeUpdate(growing, kPrF64Infinity);
             double took = prTimeMonotonicMilliseconds() - pieceStart;
             slowest = took > slowest ? took : slowest;
             ++pieces;
@@ -360,7 +360,7 @@ int measureFile(const char* path) {
             prTimeMonotonicMilliseconds() - start, pieces, slowest);
         prSyntaxTreeDestroy(growing);
         prTextEditBufferDestroy(streamed);
-        timed("first parse of the whole text", [&] { prSyntaxTreeUpdate(b.syntax, pr::kInfinityF64); });
+        timed("first parse of the whole text", [&] { prSyntaxTreeUpdate(b.syntax, kPrF64Infinity); });
         PrSyntaxSpan none{};
         timed("spans of the first page", [&] {
             prSyntaxTreeSpans(b.syntax, 0, prTextEditBufferLineEnd(b.buffer, 60), &none, 0);
@@ -402,7 +402,7 @@ int measureFile(const char* path) {
             for (uint32_t i = 0; i < kRuns; ++i) {
                 prTextViewInsert(b.view, "x", PrTextEditMerge_None);
                 double start = prTimeMonotonicMilliseconds();
-                prSyntaxTreeUpdate(b.syntax, pr::kInfinityF64);
+                prSyntaxTreeUpdate(b.syntax, kPrF64Infinity);
                 double parsed = prTimeMonotonicMilliseconds();
                 prSyntaxTreeSpans(b.syntax, windowStart, windowEnd, nullptr, 0);
                 spans += prTimeMonotonicMilliseconds() - parsed;

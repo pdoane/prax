@@ -147,7 +147,7 @@ void dropFromQueue(AudioSource* source, uint32_t frames) {
     if (frames == 0)
         return;
     uint32_t channels = source->mixer->format.channels;
-    memMove(source->queue, source->queue + size_t(frames) * channels,
+    prMemMove(source->queue, source->queue + size_t(frames) * channels,
         size_t(source->queueFrames - frames) * channels * sizeof(float));
     source->queueFrames -= frames;
     source->queueTime += double(frames) / source->mixer->format.sampleRate;
@@ -163,7 +163,7 @@ uint32_t playDirect(AudioSource* source, float* out, uint32_t frames, double* ti
     uint32_t held = uint32_t(source->readAt);
     if (source->queueFrames > held) {
         uint32_t count = source->queueFrames - held < frames ? source->queueFrames - held : frames;
-        memCopy(out, source->queue + size_t(held) * format.channels, size_t(count) * format.channels * sizeof(float));
+        prMemCopy(out, source->queue + size_t(held) * format.channels, size_t(count) * format.channels * sizeof(float));
         *time = source->queueTime + double(held) / format.sampleRate;
         timed = true;
         written = count;
@@ -213,7 +213,7 @@ int64_t bestStart(const AudioSource* source, int64_t ideal) {
     int64_t low = ideal - source->search < 0 ? 0 : ideal - source->search;
     int64_t high = ideal + source->search;
     int64_t best = ideal;
-    float bestScore = -kInfinityF32;
+    float bestScore = -kPrF32Infinity;
     const float* target = source->queue + (source->lastStart + source->hop) * channels;
     for (int64_t start = low; start <= high; ++start) {
         const float* candidate = source->queue + start * channels;
@@ -248,7 +248,7 @@ bool stretchStep(AudioSource* source) {
             source->ready[at] = source->overlap[at] * (1 - in) + window[at] * in;
         }
     }
-    memCopy(source->overlap, window + size_t(source->hop) * channels, size_t(source->hop) * channels * sizeof(float));
+    prMemCopy(source->overlap, window + size_t(source->hop) * channels, size_t(source->hop) * channels * sizeof(float));
     source->readyFrames = source->hop;
     source->readyTime = source->queueTime + double(start) / format.sampleRate;
     source->lastStart = start;
@@ -273,7 +273,7 @@ uint32_t playStretched(AudioSource* source, float* out, uint32_t frames, double*
         uint32_t count = source->readyFrames < frames - written ? source->readyFrames : frames - written;
         if (written == 0)
             *time = source->readyTime + double(from) * source->rate / format.sampleRate;
-        memCopy(out + size_t(written) * format.channels, source->ready + size_t(from) * format.channels,
+        prMemCopy(out + size_t(written) * format.channels, source->ready + size_t(from) * format.channels,
             size_t(count) * format.channels * sizeof(float));
         source->readyFrames -= count;
         written += count;
@@ -311,7 +311,7 @@ void mixSource(AudioMixer* mixer, AudioSource* source, float* mix, uint32_t fram
     if (written < frames) {
         // The sound stopped short, so it fades from its last frame, and ramps up again when it returns.
         if (source->gainNow != 0 && written != 0) {
-            memCopy(source->tail, source->last, sizeof(source->tail));
+            prMemCopy(source->tail, source->last, sizeof(source->tail));
             source->tailFrames = kFadeFrames;
         }
         source->gainNow = 0;
@@ -360,7 +360,7 @@ void prAudioMixerDestroy(PrAudioMixer* PR_NULLABLE mixer) {
 void prAudioMixerRender(void* PR_NULLABLE context, float* samples, uint32_t frames) {
     AudioMixer* mixer = static_cast<PrAudioMixer*>(context);
     uint32_t channels = mixer->format.channels;
-    memZero(samples, size_t(frames) * channels * sizeof(float));
+    prMemZero(samples, size_t(frames) * channels * sizeof(float));
     if (mixer->busy.exchange(1) != 0)
         return;
     for (uint32_t at = 0; at < frames; at += kBlockFrames) {
@@ -405,7 +405,7 @@ PrAudioSource* PR_NULLABLE prAudioSourceCreate(PrAudioMixer* mixer, PrAudioSourc
     source->queue = allocSamples(size_t(source->queueCapacity) * format.channels);
     source->fade = allocSamples(source->hop);
     for (uint32_t i = 0; i < source->hop; ++i) {
-        float wave = float(sinF64((double(i) + 0.5) / source->hop * kPi / 2));
+        float wave = float(prF64Sin((double(i) + 0.5) / source->hop * kPi / 2));
         source->fade[i] = wave * wave;
     }
     source->overlap = allocSamples(size_t(source->hop) * format.channels);
@@ -463,7 +463,7 @@ void prAudioSourceSetRate(PrAudioSource* source, double rate, bool preservesPitc
     source->preservesPitch = preservesPitch;
     source->lastStart = -1;
     source->readyFrames = 0;
-    memZero(source->overlap, size_t(source->hop) * source->mixer->format.channels * sizeof(float));
+    prMemZero(source->overlap, size_t(source->hop) * source->mixer->format.channels * sizeof(float));
     unlock(source->mixer);
 }
 
@@ -475,9 +475,9 @@ void prAudioSourceReset(PrAudioSource* source) {
     source->lastStart = -1;
     source->readyFrames = 0;
     source->ended = false;
-    memZero(source->overlap, size_t(source->hop) * mixer->format.channels * sizeof(float));
+    prMemZero(source->overlap, size_t(source->hop) * mixer->format.channels * sizeof(float));
     if (source->gainNow != 0) {
-        memCopy(source->tail, source->last, sizeof(source->tail));
+        prMemCopy(source->tail, source->last, sizeof(source->tail));
         source->tailFrames = kFadeFrames;
     }
     source->gainNow = 0;

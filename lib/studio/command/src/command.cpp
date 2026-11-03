@@ -64,21 +64,21 @@ void explain(PrString* PR_NULLABLE error, PrStringView id, PrStringView problem,
         PrStringView detail = {}) {
     if (error == nullptr)
         return;
-    TextBuffer text{};
-    textAppend(&text, "The command ");
-    textAppend(&text, id);
-    textAppendChar(&text, ' ');
-    textAppend(&text, problem);
+    PrTextBuffer text{};
+    prTextBufferAppend(&text, "The command ");
+    prTextBufferAppend(&text, id);
+    prTextBufferAppendChar(&text, ' ');
+    prTextBufferAppend(&text, problem);
     if (name.data != nullptr) {
-        textAppend(&text, " \"");
-        textAppend(&text, name);
-        textAppendChar(&text, '"');
+        prTextBufferAppend(&text, " \"");
+        prTextBufferAppend(&text, name);
+        prTextBufferAppendChar(&text, '"');
     }
-    textAppend(&text, detail);
-    textAppendChar(&text, '.');
+    prTextBufferAppend(&text, detail);
+    prTextBufferAppendChar(&text, '.');
     prStringReset(error);
-    *error = textCopy(&text);
-    textReset(&text);
+    *error = prTextBufferCopy(&text);
+    prTextBufferReset(&text);
 }
 
 // Returns the member named `name` of the arguments, or kPrJsonMissing.
@@ -115,11 +115,11 @@ PrStatus checkArgs(const Command& command, const PrCommandArgs* args, PrString* 
                 return PrStatus_InvalidData;
             }
             if (!hasKind(prJsonKind(document, i + 1), param->kind)) {
-                TextBuffer detail{};
-                textAppend(&detail, ", which takes ");
-                textAppend(&detail, kindName(param->kind));
-                explain(error, id, "was given the wrong kind of value for", name, textView(&detail));
-                textReset(&detail);
+                PrTextBuffer detail{};
+                prTextBufferAppend(&detail, ", which takes ");
+                prTextBufferAppend(&detail, kindName(param->kind));
+                explain(error, id, "was given the wrong kind of value for", name, prTextBufferView(&detail));
+                prTextBufferReset(&detail);
                 return PrStatus_InvalidData;
             }
         }

@@ -287,12 +287,12 @@ bool seekReader(IMFSourceReader* reader, double seconds) {
 void decodeFrames(WindowsDecoder* d) {
     prMutexLock(&d->mutex);
     while (!d->stopping) {
-        if (!isNanF64(d->seekTo)) {
+        if (!prF64IsNan(d->seekTo)) {
             double at = d->seekTo;
-            d->seekTo = kNanF64;
+            d->seekTo = kPrF64Nan;
             releaseFrames(&d->frames);
             d->start = at;
-            d->through = -kInfinityF64;
+            d->through = -kPrF64Infinity;
             d->dropped = false;
             d->ended = false;
             prMutexUnlock(&d->mutex);
@@ -322,7 +322,7 @@ void decodeFrames(WindowsDecoder* d) {
         if (sample != nullptr)
             sample->Release();
         prMutexLock(&d->mutex);
-        if (!isNanF64(d->seekTo)) {
+        if (!prF64IsNan(d->seekTo)) {
             if (copied)
                 frame.buffer->Release();
             continue;
@@ -406,7 +406,7 @@ void decodeAudio(WindowsDecoder* d) {
 // Returns true if the system has a decoder of what a part of a codecs parameter names.
 bool hasDecoder(PrStringView codec) {
     for (const CodecProbe& probe : kCodecProbes) {
-        if (!asciiStartsWithFold(codec, probe.prefix))
+        if (!prAsciiStartsWithFold(codec, probe.prefix))
             continue;
         MFT_REGISTER_TYPE_INFO input{*probe.major, *probe.subtype};
         GUID category = *probe.major == MFMediaType_Video ? MFT_CATEGORY_VIDEO_DECODER : MFT_CATEGORY_AUDIO_DECODER;
@@ -426,7 +426,7 @@ PrMediaSupport supportsType(PrMediaCodec*, PrStringView type) {
     PrStringView essence = prMimeTypeEssence(type);
     bool known = false;
     for (PrStringView container : kContainerTypes)
-        known |= asciiEqualsFold(essence, container);
+        known |= prAsciiEqualsFold(essence, container);
     if (!known)
         return PrMediaSupport_No;
     PrString parameter{};
@@ -441,7 +441,7 @@ PrMediaSupport supportsType(PrMediaCodec*, PrStringView type) {
         while (end < codecs.size && codecs.data[end] != ',')
             ++end;
         size_t begin = from;
-        while (begin < end && asciiIsHttpSpace(codecs.data[begin]))
+        while (begin < end && prAsciiIsHttpSpace(codecs.data[begin]))
             ++begin;
         if (!hasDecoder(PrStringView{codecs.data + begin, end - begin}))
             support = PrMediaSupport_No;
@@ -579,7 +579,7 @@ PrStatus decoderCreate(PrMediaCodec*, PrByteView bytes, PrMediaDecoder* PR_NULLA
             return PrStatus_InvalidData;
         }
     }
-    info->duration = kNanF64;
+    info->duration = kPrF64Nan;
     PROPVARIANT duration{};
     if (SUCCEEDED(reader->GetPresentationAttribute(DWORD(MF_SOURCE_READER_MEDIASOURCE), MF_PD_DURATION, &duration))) {
         if (duration.vt == VT_UI8)
@@ -594,8 +594,8 @@ PrStatus decoderCreate(PrMediaCodec*, PrByteView bytes, PrMediaDecoder* PR_NULLA
     d->videoStream = videoStream;
     d->hasVideo = info->hasVideo;
     d->layout = layout;
-    d->seekTo = kNanF64;
-    d->through = -kInfinityF64;
+    d->seekTo = kPrF64Nan;
+    d->through = -kPrF64Infinity;
     d->ended = !info->hasVideo;
     prMutexInit(&d->mutex);
     prConditionInit(&d->wake);
@@ -642,11 +642,11 @@ bool decoderFrame(PrMediaCodec*, PrMediaDecoder* decoder, double seconds, PrMedi
     // A time before what decoding kept, or far past what it reached, restarts decoding there.
     bool before = seconds < d->start || (d->dropped && d->frames.count != 0 && seconds < d->frames.data[0].time);
     bool past = !d->ended && seconds > d->through + kSeekAhead && seconds > d->start + kSeekAhead;
-    if (isNanF64(d->seekTo) && (before || past))
+    if (prF64IsNan(d->seekTo) && (before || past))
         d->seekTo = seconds;
     // The frame that shows is the last that starts at or before the time. Before the first frame, the first shows.
     uint32_t at = UINT32_MAX;
-    if (isNanF64(d->seekTo)) {
+    if (prF64IsNan(d->seekTo)) {
         for (uint32_t i = 0; i < d->frames.count && d->frames.data[i].time <= seconds; ++i)
             at = i;
         if (at == UINT32_MAX && d->frames.count != 0 && !d->dropped)
@@ -666,7 +666,7 @@ bool decoderFrame(PrMediaCodec*, PrMediaDecoder* decoder, double seconds, PrMedi
         frame.buffer->AddRef();
     }
     // Without a frame, none will come once decoding has ended with nothing kept.
-    bool done = frame.buffer == nullptr && isNanF64(d->seekTo) && d->ended && d->frames.count == 0;
+    bool done = frame.buffer == nullptr && prF64IsNan(d->seekTo) && d->ended && d->frames.count == 0;
     prConditionSignal(&d->wake);
     prMutexUnlock(&d->mutex);
     if (frame.buffer == nullptr) {

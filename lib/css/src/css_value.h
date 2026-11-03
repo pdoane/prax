@@ -446,7 +446,7 @@ inline CssValueRun cssTokenValue(const CssTokenArray* tokens, uint32_t index) {
 // The components of a shorthand become their values. The bytes of the tokens go to `source`, and a CssTokenKind_Value
 // token covers none of them. The run must outlive the tokens. If cssValuePoolAddTokens keeps a run of these tokens as
 // tokens, each token becomes the text that it is written as.
-void cssValueTokens(CssTokenArray* tokens, TextBuffer* source, CssValueRun run);
+void cssValueTokens(CssTokenArray* tokens, PrTextBuffer* source, CssValueRun run);
 
 } // namespace pr_impl
 

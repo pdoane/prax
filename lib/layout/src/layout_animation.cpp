@@ -36,10 +36,10 @@ double bezierEase(const PrLayoutEasing& curve, double x) {
     double t = x;
     for (uint32_t i = 0; i < 16; ++i) {
         double error = bezierAt(x1, x2, t) - x;
-        if (absF64(error) < kBezierTolerance)
+        if (prF64Abs(error) < kBezierTolerance)
             return bezierAt(y1, y2, t);
         double slope = bezierSlope(x1, x2, t);
-        if (absF64(slope) < 1e-6)
+        if (prF64Abs(slope) < 1e-6)
             break;
         t -= error / slope;
     }
@@ -48,7 +48,7 @@ double bezierEase(const PrLayoutEasing& curve, double x) {
     t = x;
     for (uint32_t i = 0; i < 64; ++i) {
         double at = bezierAt(x1, x2, t);
-        if (absF64(at - x) < kBezierTolerance)
+        if (prF64Abs(at - x) < kBezierTolerance)
             break;
         if (at < x)
             low = t;
@@ -62,10 +62,10 @@ double bezierEase(const PrLayoutEasing& curve, double x) {
 // css-easing-2/#step-easing-algo
 double stepEase(const PrLayoutEasing& easing, double input, bool before) {
     double scaled = input * double(easing.steps);
-    double step = floorF64(scaled);
+    double step = prF64Floor(scaled);
     if (easing.position == PrLayoutStepPosition_JumpStart || easing.position == PrLayoutStepPosition_JumpBoth)
         step += 1;
-    if (before && scaled == floorF64(scaled))
+    if (before && scaled == prF64Floor(scaled))
         step -= 1;
     if (input >= 0 && step < 0)
         step = 0;
@@ -104,21 +104,21 @@ bool is2D(const PrDMatrix4& a) {
 // (css-transforms-2/#Rotate3dDefined).
 PrDMatrix4 rotation(double x, double y, double z, double angle) {
     PrDMatrix4 out = prDMatrix4Identity();
-    double length = sqrtF64(x * x + y * y + z * z);
+    double length = prF64Sqrt(x * x + y * y + z * z);
     if (!(length > 0))
         return out;
     x /= length;
     y /= length;
     z /= length;
-    double c = cosF64(angle);
-    double s = sinF64(angle);
+    double c = prF64Cos(angle);
+    double s = prF64Sin(angle);
     // At a multiple of a quarter turn, the sine or cosine that the error of an angle in floats leaves near zero becomes
     // zero, and the other becomes one, so that a whole turn is the identity.
     constexpr double kNearZero = 1e-6;
-    if (absF64(s) < kNearZero) {
+    if (prF64Abs(s) < kNearZero) {
         s = 0;
         c = c < 0 ? -1 : 1;
-    } else if (absF64(c) < kNearZero) {
+    } else if (prF64Abs(c) < kNearZero) {
         c = 0;
         s = s < 0 ? -1 : 1;
     }
@@ -173,8 +173,8 @@ PrDMatrix4 functionMatrix(const PrLayoutTransformFunction& f, PrVec2 extent) {
             break;
         case PrLayoutTransformKind_Rotate: return rotation(v[0], v[1], v[2], v[3]);
         case PrLayoutTransformKind_Skew:
-            out.m[0][1] = tanF64(v[0]);
-            out.m[1][0] = tanF64(v[1]);
+            out.m[0][1] = prF64Tan(v[0]);
+            out.m[1][0] = prF64Tan(v[1]);
             break;
         case PrLayoutTransformKind_Perspective:
             if (v[0] > 0)
@@ -249,8 +249,8 @@ Decomposed2D decompose2D(const PrDMatrix4& m) {
     double c0y = m.m[1][0];
     double c1x = m.m[0][1];
     double c1y = m.m[1][1];
-    d.scaleX = sqrtF64(c0x * c0x + c0y * c0y);
-    d.scaleY = sqrtF64(c1x * c1x + c1y * c1y);
+    d.scaleX = prF64Sqrt(c0x * c0x + c0y * c0y);
+    d.scaleY = prF64Sqrt(c1x * c1x + c1y * c1y);
     // A reflection is a negative scale on one axis.
     if (c0x * c1y - c0y * c1x < 0) {
         if (c0x < c1y)
@@ -266,9 +266,9 @@ Decomposed2D decompose2D(const PrDMatrix4& m) {
         c1x /= d.scaleY;
         c1y /= d.scaleY;
     }
-    d.angle = atan2F64(c0y, c0x);
-    double cs = cosF64(d.angle);
-    double sn = sinF64(d.angle);
+    d.angle = prF64Atan2(c0y, c0x);
+    double cs = prF64Cos(d.angle);
+    double sn = prF64Sin(d.angle);
     d.k[0] = cs * c0x + sn * c0y;
     d.k[1] = -sn * c0x + cs * c0y;
     d.k[2] = cs * c1x + sn * c1y;
@@ -277,8 +277,8 @@ Decomposed2D decompose2D(const PrDMatrix4& m) {
 }
 
 PrDMatrix4 recompose2D(const Decomposed2D& d) {
-    double cs = cosF64(d.angle);
-    double sn = sinF64(d.angle);
+    double cs = prF64Cos(d.angle);
+    double sn = prF64Sin(d.angle);
     // Multiplies rotate by shear, then scales each column.
     PrDMatrix4 out = prDMatrix4Identity();
     out.m[0][0] = (cs * d.k[0] - sn * d.k[1]) * d.scaleX;
@@ -298,22 +298,22 @@ PrDMatrix4 interpolate2D(const PrDMatrix4& from, const PrDMatrix4& to, double pr
     if ((x.scaleX < 0 && y.scaleY < 0) || (x.scaleY < 0 && y.scaleX < 0)) {
         x.scaleX = -x.scaleX;
         x.scaleY = -x.scaleY;
-        x.angle += x.angle < 0 ? kPiF64 : -kPiF64;
+        x.angle += x.angle < 0 ? kPrF64Pi : -kPrF64Pi;
     }
-    if (absF64(x.angle - y.angle) > kPiF64) {
+    if (prF64Abs(x.angle - y.angle) > kPrF64Pi) {
         if (x.angle > y.angle)
-            x.angle -= 2 * kPiF64;
+            x.angle -= 2 * kPrF64Pi;
         else
-            y.angle -= 2 * kPiF64;
+            y.angle -= 2 * kPrF64Pi;
     }
     Decomposed2D m{};
-    m.translateX = lerpF64(x.translateX, y.translateX, progress);
-    m.translateY = lerpF64(x.translateY, y.translateY, progress);
-    m.scaleX = lerpF64(x.scaleX, y.scaleX, progress);
-    m.scaleY = lerpF64(x.scaleY, y.scaleY, progress);
-    m.angle = lerpF64(x.angle, y.angle, progress);
+    m.translateX = prF64Lerp(x.translateX, y.translateX, progress);
+    m.translateY = prF64Lerp(x.translateY, y.translateY, progress);
+    m.scaleX = prF64Lerp(x.scaleX, y.scaleX, progress);
+    m.scaleY = prF64Lerp(x.scaleY, y.scaleY, progress);
+    m.angle = prF64Lerp(x.angle, y.angle, progress);
     for (uint32_t k = 0; k < 4; ++k)
-        m.k[k] = lerpF64(x.k[k], y.k[k], progress);
+        m.k[k] = prF64Lerp(x.k[k], y.k[k], progress);
     return recompose2D(m);
 }
 
@@ -377,11 +377,11 @@ bool decompose3D(const PrDMatrix4& a, Decomposed3D* out) {
         for (uint32_t k = 0; k < 3; ++k)
             v[k] -= by[k] * scale;
     };
-    d.scale[0] = sqrtF64(dot3(row[0], row[0]));
+    d.scale[0] = prF64Sqrt(dot3(row[0], row[0]));
     normalize(row[0], d.scale[0]);
     d.skew[0] = dot3(row[0], row[1]);
     combine(row[1], row[0], d.skew[0]);
-    d.scale[1] = sqrtF64(dot3(row[1], row[1]));
+    d.scale[1] = prF64Sqrt(dot3(row[1], row[1]));
     normalize(row[1], d.scale[1]);
     if (d.scale[1] != 0)
         d.skew[0] /= d.scale[1];
@@ -389,7 +389,7 @@ bool decompose3D(const PrDMatrix4& a, Decomposed3D* out) {
     combine(row[2], row[0], d.skew[1]);
     d.skew[2] = dot3(row[1], row[2]);
     combine(row[2], row[1], d.skew[2]);
-    d.scale[2] = sqrtF64(dot3(row[2], row[2]));
+    d.scale[2] = prF64Sqrt(dot3(row[2], row[2]));
     normalize(row[2], d.scale[2]);
     if (d.scale[2] != 0) {
         d.skew[1] /= d.scale[2];
@@ -406,7 +406,7 @@ bool decompose3D(const PrDMatrix4& a, Decomposed3D* out) {
                 row[i][j] = -row[i][j];
         }
     }
-    auto half = [](double x) { return 0.5 * sqrtF64(x > 0 ? x : 0); };
+    auto half = [](double x) { return 0.5 * prF64Sqrt(x > 0 ? x : 0); };
     d.quaternion[0] = half(1 + row[0][0] - row[1][1] - row[2][2]);
     d.quaternion[1] = half(1 - row[0][0] + row[1][1] - row[2][2]);
     d.quaternion[2] = half(1 - row[0][0] - row[1][1] + row[2][2]);
@@ -483,25 +483,25 @@ bool interpolateMatrices(const PrDMatrix4& from, const PrDMatrix4& to, double pr
         return false;
     Decomposed3D m{};
     for (uint32_t i = 0; i < 3; ++i) {
-        m.translate[i] = lerpF64(a.translate[i], b.translate[i], progress);
-        m.scale[i] = lerpF64(a.scale[i], b.scale[i], progress);
-        m.skew[i] = lerpF64(a.skew[i], b.skew[i], progress);
+        m.translate[i] = prF64Lerp(a.translate[i], b.translate[i], progress);
+        m.scale[i] = prF64Lerp(a.scale[i], b.scale[i], progress);
+        m.skew[i] = prF64Lerp(a.skew[i], b.skew[i], progress);
     }
     for (uint32_t i = 0; i < 4; ++i)
-        m.perspective[i] = lerpF64(a.perspective[i], b.perspective[i], progress);
+        m.perspective[i] = prF64Lerp(a.perspective[i], b.perspective[i], progress);
     // Slerp (css-transforms-2/#interpolation-of-decomposed-3d-matrix-values).
     double product = 0;
     for (uint32_t i = 0; i < 4; ++i)
         product += a.quaternion[i] * b.quaternion[i];
     product = product < -1 ? -1 : product > 1 ? 1 : product;
-    if (absF64(product) == 1) {
+    if (prF64Abs(product) == 1) {
         for (uint32_t i = 0; i < 4; ++i)
             m.quaternion[i] = a.quaternion[i];
     } else {
-        double theta = acosF64(product);
-        double w = sinF64(progress * theta) / sqrtF64(1 - product * product);
+        double theta = prF64Acos(product);
+        double w = prF64Sin(progress * theta) / prF64Sqrt(1 - product * product);
         for (uint32_t i = 0; i < 4; ++i)
-            m.quaternion[i] = a.quaternion[i] * (cosF64(progress * theta) - product * w) + b.quaternion[i] * w;
+            m.quaternion[i] = a.quaternion[i] * (prF64Cos(progress * theta) - product * w) + b.quaternion[i] * w;
     }
     *out = recompose3D(m);
     return true;
@@ -521,11 +521,11 @@ PrLayoutTransformFunction interpolateFunction(const PrLayoutTransformFunction& a
         case PrLayoutTransformKind_Rotate: {
             double x[3] = {double(a.values[0]), double(a.values[1]), double(a.values[2])};
             double y[3] = {double(b.values[0]), double(b.values[1]), double(b.values[2])};
-            double lx = sqrtF64(dot3(x, x));
-            double ly = sqrtF64(dot3(y, y));
+            double lx = prF64Sqrt(dot3(x, x));
+            double ly = prF64Sqrt(dot3(y, y));
             bool same = lx > 0 && ly > 0;
             for (uint32_t k = 0; k < 3 && same; ++k)
-                same = absF64(x[k] / lx - y[k] / ly) < 1e-6;
+                same = prF64Abs(x[k] / lx - y[k] / ly) < 1e-6;
             bool zero = a.values[3] == 0 || b.values[3] == 0;
             if (!same && !zero) {
                 PrDMatrix4 m{};
@@ -544,11 +544,11 @@ PrLayoutTransformFunction interpolateFunction(const PrLayoutTransformFunction& a
             } else {
                 out.values[2] = 1;
             }
-            out.values[3] = float(lerpF64(double(a.values[3]), double(b.values[3]), progress));
+            out.values[3] = float(prF64Lerp(double(a.values[3]), double(b.values[3]), progress));
             return out;
         }
         case PrLayoutTransformKind_Perspective: {
-            double inverse = lerpF64(inverseDistance(a.values[0]), inverseDistance(b.values[0]), progress);
+            double inverse = prF64Lerp(inverseDistance(a.values[0]), inverseDistance(b.values[0]), progress);
             out.values[0] = inverse > 0 ? float(1 / inverse) : 0;
             return out;
         }
@@ -562,7 +562,7 @@ PrLayoutTransformFunction interpolateFunction(const PrLayoutTransformFunction& a
         }
         default:
             for (uint32_t k = 0; k < 16; ++k)
-                out.values[k] = float(lerpF64(double(a.values[k]), double(b.values[k]), progress));
+                out.values[k] = float(prF64Lerp(double(a.values[k]), double(b.values[k]), progress));
             return out;
     }
 }
@@ -628,14 +628,14 @@ double prLayoutTimingProgress(const PrLayoutTiming* timing, double time, bool* f
     } else {
         overall = duration > 0 ? local / duration : t.iterations;
     }
-    double iteration = floorF64(overall);
+    double iteration = prF64Floor(overall);
     double progress = overall - iteration;
     // The end of a whole number of iterations is the end of the last iteration, not the start of the next one.
     if (progress == 0 && overall != 0 && local >= active) {
         progress = 1;
         iteration -= 1;
     }
-    bool odd = fmodF64(iteration, 2) != 0;
+    bool odd = prF64Fmod(iteration, 2) != 0;
     bool reverse = t.direction == PrLayoutPlaybackDirection_Reverse ||
         (t.direction == PrLayoutPlaybackDirection_Alternate && odd) ||
         (t.direction == PrLayoutPlaybackDirection_AlternateReverse && !odd);
@@ -737,7 +737,7 @@ bool prLayoutTrackSample(const PrLayoutTrack* track, double time, PrVec2 extent,
     double span = to.offset - from.offset;
     double local = span > 0 ? prLayoutEase(&from.easing, (progress - from.offset) / span, false) : 1;
     if (track->effect == PrLayoutEffect_Opacity) {
-        double value = lerpF64(double(from.opacity), double(to.opacity), local);
+        double value = prF64Lerp(double(from.opacity), double(to.opacity), local);
         *opacity = float(value < 0 ? 0 : value > 1 ? 1 : value);
     } else {
         PrLayoutTransformList between = prLayoutTransformListInterpolate(&from.transform, &to.transform, local, extent);

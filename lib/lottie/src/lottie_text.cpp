@@ -41,18 +41,18 @@ void styleOf(PrStringView style, float* weight, PrFontSlope* slope) {
         size_t end = at;
         while (end < style.size && style.data[end] != ' ')
             ++end;
-        PrStringView word = stringSlice(style, at, end - at);
-        if (asciiEqualsFold(word, "italic"))
+        PrStringView word = prStringSlice(style, at, end - at);
+        if (prAsciiEqualsFold(word, "italic"))
             *slope = PrFontSlope_Italic;
-        else if (asciiEqualsFold(word, "bold"))
+        else if (prAsciiEqualsFold(word, "bold"))
             *weight = 700;
-        else if (asciiEqualsFold(word, "black"))
+        else if (prAsciiEqualsFold(word, "black"))
             *weight = 900;
-        else if (asciiEqualsFold(word, "medium"))
+        else if (prAsciiEqualsFold(word, "medium"))
             *weight = 500;
-        else if (asciiEqualsFold(word, "regular") || asciiEqualsFold(word, "normal"))
+        else if (prAsciiEqualsFold(word, "regular") || prAsciiEqualsFold(word, "normal"))
             *weight = 400;
-        else if (asciiEqualsFold(word, "light") || asciiEqualsFold(word, "thin"))
+        else if (prAsciiEqualsFold(word, "light") || prAsciiEqualsFold(word, "thin"))
             *weight = 200;
         at = end + 1;
     }
@@ -81,7 +81,7 @@ struct CharKey {
     PrStringView character;
     uint32_t shape;
 
-    bool operator<(PrStringView other) const { return stringCompare(character, other) < 0; }
+    bool operator<(PrStringView other) const { return prStringCompare(character, other) < 0; }
 };
 
 // A measured character: its advance at the document's size, and what draws it.
@@ -159,7 +159,7 @@ void measureCharacters(Layout& t, const LottieTextDocument& d, PrStringView text
     t.measuredTransforms.clear();
     for (uint32_t i = 0; i < chars.count; ++i)
         t.measured.push(Measured{0, 0, 0, 0, false, 0, kLottieNone});
-    auto charAt = [&](uint32_t i) { return stringSlice(text, chars.data[i].offset, chars.data[i].size); };
+    auto charAt = [&](uint32_t i) { return prStringSlice(text, chars.data[i].offset, chars.data[i].size); };
     if (a.charShapes.count > 0) {
         for (uint32_t i = 0; i < chars.count; ++i) {
             if (isNewline(charAt(i)))
@@ -182,7 +182,7 @@ void measureCharacters(Layout& t, const LottieTextDocument& d, PrStringView text
         while (end < chars.count && !isNewline(charAt(end)))
             ++end;
         uint32_t start = chars.data[first].offset;
-        PrStringView paragraph = stringSlice(text, start, chars.data[end - 1].offset + chars.data[end - 1].size - start);
+        PrStringView paragraph = prStringSlice(text, start, chars.data[end - 1].offset + chars.data[end - 1].size - start);
         // The paragraph's runs (pr/text_itemize.h), set left to right, which is how the animation places its
         // characters.
         PrTextPiece piece{};
@@ -263,7 +263,7 @@ void layoutDocument(Layout& t, LottieTextDocument& d, const LottieLayer& layer) 
     PrStringView text = lottieString(a, d.text);
     Array<LottieString> chars;
     characters(text, chars);
-    auto charAt = [&](uint32_t i) { return stringSlice(text, chars.data[i].offset, chars.data[i].size); };
+    auto charAt = [&](uint32_t i) { return prStringSlice(text, chars.data[i].offset, chars.data[i].size); };
     measureCharacters(t, d, text, chars);
     float tracking = d.tracking / 1000 * d.size;
     const LottieFont* font = d.font != kLottieNone ? &a.textFonts.data[d.font] : nullptr;
@@ -340,7 +340,7 @@ void layoutDocument(Layout& t, LottieTextDocument& d, const LottieLayer& layer) 
         if (letter.newline) {
             spaces = 0;
             a.numbers.push(lineWidth);
-            maxLineWidth = maxF32(maxLineWidth, lineWidth);
+            maxLineWidth = prF32Max(maxLineWidth, lineWidth);
             lineWidth = -2 * tracking;
             ++line;
         }
@@ -376,7 +376,7 @@ void layoutDocument(Layout& t, LottieTextDocument& d, const LottieLayer& layer) 
         }
     }
     d.letterCount = a.letters.count - d.letters;
-    maxLineWidth = maxF32(maxLineWidth, lineWidth);
+    maxLineWidth = prF32Max(maxLineWidth, lineWidth);
     a.numbers.push(lineWidth);
     d.lineCount = a.numbers.count - d.lines;
     if (d.box) {
@@ -439,7 +439,7 @@ float selectorMult(const LottieTextAnimator& t, float s, float e, float easeLow,
         y2 = 1 + double(easeHigh) / 100;
     auto ease = [&](float m) { return float(lottieEase(x1, y1, x2, y2, double(m))); };
     float mult = 0;
-    auto ramp = [&] { return maxF32(0, minF32(0.5f / (e - s) + (index - s) / (e - s), 1)); };
+    auto ramp = [&] { return prF32Max(0, prF32Min(0.5f / (e - s) + (index - s) / (e - s), 1)); };
     switch (t.shape) {
         case 2:
             mult = ease(e == s ? (index >= e ? 1 : 0) : ramp());
@@ -457,26 +457,26 @@ float selectorMult(const LottieTextAnimator& t, float s, float e, float easeLow,
         case 5:
             if (e != s) {
                 float total = e - s;
-                float i = minF32(maxF32(0, index + 0.5f - s), total);
+                float i = prF32Min(prF32Max(0, index + 0.5f - s), total);
                 float x = -total / 2 + i;
                 float half = total / 2;
-                mult = sqrtF32(maxF32(0, 1 - (x * x) / (half * half)));
+                mult = prF32Sqrt(prF32Max(0, 1 - (x * x) / (half * half)));
             }
             mult = ease(mult);
             break;
         case 6:
             if (e != s) {
-                float i = minF32(maxF32(0, index + 0.5f - s), e - s);
-                mult = (1 + cosF32(kPiF32 + kPiF32 * 2 * i / (e - s))) / 2;
+                float i = prF32Min(prF32Max(0, index + 0.5f - s), e - s);
+                mult = (1 + prF32Cos(kPrF32Pi + kPrF32Pi * 2 * i / (e - s))) / 2;
             }
             mult = ease(mult);
             break;
         default:
-            if (index >= floorF32(s)) {
+            if (index >= prF32Floor(s)) {
                 if (index - s < 0)
-                    mult = maxF32(0, minF32(minF32(e, 1) - (s - index), 1));
+                    mult = prF32Max(0, prF32Min(prF32Min(e, 1) - (s - index), 1));
                 else
-                    mult = maxF32(0, minF32(e - index, 1));
+                    mult = prF32Max(0, prF32Min(e - index, 1));
             }
             mult = ease(mult);
             break;
@@ -486,7 +486,7 @@ float selectorMult(const LottieTextAnimator& t, float s, float e, float easeLow,
         if (smooth == 0)
             smooth = 0.00000001f;
         float threshold = 0.5f - smooth * 0.5f;
-        mult = mult < threshold ? 0 : minF32((mult - threshold) / smooth, 1);
+        mult = mult < threshold ? 0 : prF32Min((mult - threshold) / smooth, 1);
     }
     return mult * amount;
 }
@@ -507,8 +507,8 @@ void rgbToHsv(const float* c, float* hsv) {
     float r = c[0];
     float g = c[1];
     float b = c[2];
-    float max = maxF32(r, maxF32(g, b));
-    float min = minF32(r, minF32(g, b));
+    float max = prF32Max(r, prF32Max(g, b));
+    float min = prF32Min(r, prF32Min(g, b));
     float d = max - min;
     float h = 0;
     float s = max == 0 ? 0 : d / max;
@@ -530,7 +530,7 @@ void hsvToRgb(const float* hsv, float* c) {
     float h = hsv[0];
     float s = hsv[1];
     float v = hsv[2];
-    float i = floorF32(h * 6);
+    float i = prF32Floor(h * 6);
     float f = h * 6 - i;
     float p = v * (1 - s);
     float q = v * (1 - f * s);
@@ -552,16 +552,16 @@ void adjustHsv(float* c, uint32_t channel, float by) {
     if (channel == 0)
         hsv[0] = hsv[0] > 1 ? hsv[0] - 1 : hsv[0] < 0 ? hsv[0] + 1 : hsv[0];
     else
-        hsv[channel] = clampF32(hsv[channel], 0, 1);
+        hsv[channel] = prF32Clamp(hsv[channel], 0, 1);
     hsvToRgb(hsv, c);
 }
 
 float textChannel(float value) {
-    return clampF32(value, 0, 1);
+    return prF32Clamp(value, 0, 1);
 }
 
 PrAffine2 skewFromAxis(float skew, float axis) {
-    PrAffine2 shear{1, 0, -tanF32(skew), 1, 0, 0};
+    PrAffine2 shear{1, 0, -prF32Tan(skew), 1, 0, 0};
     PrAffine2 m = prAffine2Concat(prAffine2Rotate(axis), shear);
     return prAffine2Concat(m, prAffine2Rotate(-axis));
 }
@@ -575,7 +575,7 @@ void lottieLayoutText(LottieAnimation& a, const PrLottieOptions& options) {
     for (uint32_t i = 0; i < a.charShapes.count; ++i)
         t.shapes.push(CharKey{lottieString(a, a.charShapes.data[i].character), i});
     sortItems(t.shapes.data, t.shapes.count, [](const CharKey& x, const CharKey& y) {
-        int order = stringCompare(x.character, y.character);
+        int order = prStringCompare(x.character, y.character);
         return order < 0 || (order == 0 && x.shape < y.shape);
     });
     for (uint32_t l = 0; l < a.layers.count; ++l) {
@@ -725,12 +725,12 @@ void lottieDrawText(LottieRender& r, const LottieLayer& layer, double frame) {
             const LottieTextAnimator& t = a.animators.data[layer.animators + j];
             float k = mult(j, i);
             if (t.skew != kLottieNone) {
-                float skew = lottieScalar(a, t.skew, frame, 0) * kPiF32 / 180;
-                float axis = lottieScalar(a, t.skewAxis, frame, 0) * kPiF32 / 180;
+                float skew = lottieScalar(a, t.skew, frame, 0) * kPrF32Pi / 180;
+                float axis = lottieScalar(a, t.skewAxis, frame, 0) * kPrF32Pi / 180;
                 m = prAffine2Concat(m, skewFromAxis(skew * k, axis * k));
             }
             if (t.rotation != kLottieNone)
-                m = prAffine2Concat(m, prAffine2Rotate(lottieScalar(a, t.rotation, frame, 0) * kPiF32 / 180 * k));
+                m = prAffine2Concat(m, prAffine2Rotate(lottieScalar(a, t.rotation, frame, 0) * kPrF32Pi / 180 * k));
             if (t.opacity != kLottieNone)
                 opacity += (lottieScalar(a, t.opacity, frame, 100) / 100 * k - opacity) * k;
             if (t.strokeWidth != kLottieNone)
@@ -788,7 +788,7 @@ void lottieDrawText(LottieRender& r, const LottieLayer& layer, double frame) {
             prDrawListPushGroup(r.list, &group);
         }
         PrDrawStroke outline = prDrawStrokeDefault();
-        outline.shape.width = maxF32(strokeWidth, 0);
+        outline.shape.width = prF32Max(strokeWidth, 0);
         outline.shape.join = PrPathJoin_Round;
         PrColor fillTint{textChannel(fill[0]), textChannel(fill[1]), textChannel(fill[2]), 1};
         PrColor strokeTint{textChannel(stroke[0]), textChannel(stroke[1]), textChannel(stroke[2]), 1};

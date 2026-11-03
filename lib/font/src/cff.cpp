@@ -674,7 +674,7 @@ bool run(Interpreter& in, SfntTable code, uint32_t depth) {
                             }
                             float dx = points[4].x - origin.x;
                             float dy = points[4].y - origin.y;
-                            if (absF32(dx) > absF32(dy))
+                            if (prF32Abs(dx) > prF32Abs(dy))
                                 points[5] = PrVec2{at2.x + float(s[10]), origin.y};
                             else
                                 points[5] = PrVec2{origin.x, at2.y + float(s[10])};
@@ -766,7 +766,7 @@ bool run(Interpreter& in, SfntTable code, uint32_t depth) {
                         break;
                     case EscapeOp_Sqrt:
                         if (n >= 1)
-                            s[n - 1] = s[n - 1] > 0 ? double(sqrtF32(float(s[n - 1]))) : 0;
+                            s[n - 1] = s[n - 1] > 0 ? double(prF32Sqrt(float(s[n - 1]))) : 0;
                         break;
                     case EscapeOp_Dup:
                         if (n >= 1 && n < kMaxStack)

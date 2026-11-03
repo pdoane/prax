@@ -12,7 +12,7 @@ namespace {
 
 constexpr DomDocumentHooks kHooks = {
     .colorValue =
-        [](void*, const PrDomElement* input, PrStringView text, TextBuffer* out) { htmlColorWellValue(input, text, out); },
+        [](void*, const PrDomElement* input, PrStringView text, PrTextBuffer* out) { htmlColorWellValue(input, text, out); },
     .linkUpdate = [](void*, PrDomElement* element, DomInsertedBy by) { htmlLinkUpdate(element, by); },
     .ownerAttributeChanged =
         [](void*, PrDomElement* element, PrStringView name, PrStringView) { htmlLinkAttributeChanged(element, name); },

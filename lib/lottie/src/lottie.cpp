@@ -50,7 +50,7 @@ double prLottieAnimationFrameAt(const PrLottieAnimation* animation, double secon
     double frames = seconds * info.frameRate;
     if (!(length > 0))
         return info.inPoint;
-    return info.inPoint + fmodF64(frames, length);
+    return info.inPoint + prF64Fmod(frames, length);
 }
 
 void prLottieAnimationDraw(const PrLottieAnimation* animation, double frame, PrDrawList* list) {

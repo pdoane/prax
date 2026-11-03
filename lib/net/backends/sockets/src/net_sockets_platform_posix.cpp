@@ -211,7 +211,7 @@ PrNetError socketsResolve(const char* host, uint16_t port, Array<SocketsAddress>
         if (entry->ai_addrlen > sizeof(sockaddr_storage))
             continue;
         SocketsAddress address{};
-        memCopy(address.storage, entry->ai_addr, entry->ai_addrlen);
+        prMemCopy(address.storage, entry->ai_addr, entry->ai_addrlen);
         address.length = uint32_t(entry->ai_addrlen);
         out->push(address);
     }

@@ -41,8 +41,8 @@ int32_t edgeIndex(int32_t i, int32_t count, PrImageEdgeMode edge) {
 void blurLine(float* values, uint32_t count, size_t stride, float sigma, PrImageEdgeMode edge, Array<float>& scratch) {
     if (!(sigma > 0) || count == 0)
         return;
-    uint32_t d = uint32_t(floorF32(sigma * 3 * sqrtF32(2 * kPiF32) / 4 + 0.5f));
-    int32_t pad = sigma < kBoxSigma ? int32_t(ceilF32(sigma * 3)) : int32_t(d * 2 + 2);
+    uint32_t d = uint32_t(prF32Floor(sigma * 3 * prF32Sqrt(2 * kPrF32Pi) / 4 + 0.5f));
+    int32_t pad = sigma < kBoxSigma ? int32_t(prF32Ceil(sigma * 3)) : int32_t(d * 2 + 2);
     uint32_t padded = count + uint32_t(pad) * 2;
     scratch.clear();
     scratch.reserve(padded * 2);
@@ -56,7 +56,7 @@ void blurLine(float* values, uint32_t count, size_t stride, float sigma, PrImage
         float kernel[16];
         float sum = 0;
         for (int32_t k = -pad; k <= pad; ++k) {
-            kernel[k + pad] = expF32(-float(k * k) / (2 * sigma * sigma));
+            kernel[k + pad] = prF32Exp(-float(k * k) / (2 * sigma * sigma));
             sum += kernel[k + pad];
         }
         for (uint32_t i = 0; i < count; ++i) {
@@ -140,17 +140,17 @@ void prImageMipLevel(PrPixelView above, PrPixels out, PrPixelFormat format) {
             uint32_t x1 = x0 + 1 < above.extent.x ? x0 + 1 : x0;
             if (half) {
                 PrFloat16 block[4][4];
-                memCopy(block[0], row0 + x0 * 8, 8);
-                memCopy(block[1], row0 + x1 * 8, 8);
-                memCopy(block[2], row1 + x0 * 8, 8);
-                memCopy(block[3], row1 + x1 * 8, 8);
+                prMemCopy(block[0], row0 + x0 * 8, 8);
+                prMemCopy(block[1], row0 + x1 * 8, 8);
+                prMemCopy(block[2], row1 + x0 * 8, 8);
+                prMemCopy(block[3], row1 + x1 * 8, 8);
                 PrFloat16 mean[4];
                 for (uint32_t k = 0; k < 4; ++k) {
                     float sum = prFloat16ToFloat(block[0][k]) + prFloat16ToFloat(block[1][k]) +
                         prFloat16ToFloat(block[2][k]) + prFloat16ToFloat(block[3][k]);
                     mean[k] = prFloat16FromFloat(sum / 4);
                 }
-                memCopy(row + x * 8, mean, 8);
+                prMemCopy(row + x * 8, mean, 8);
                 continue;
             }
             for (uint32_t k = 0; k < 4; ++k) {
@@ -175,7 +175,7 @@ void prImageNoise(float seed, PrImageNoise* out) {
     };
     // A seed is clamped to within twice the modulus either way, and the steps below bring it into the range of the
     // generator.
-    int64_t s = int64_t(minF64(maxF64(double(roundF32(seed)), -2.0 * double(kModulus)), 2.0 * double(kModulus)));
+    int64_t s = int64_t(prF64Min(prF64Max(double(prF32Round(seed)), -2.0 * double(kModulus)), 2.0 * double(kModulus)));
     if (s <= 0)
         s = -(s % (kModulus - 1)) + 1;
     if (s > kModulus - 1)
@@ -189,7 +189,7 @@ void prImageNoise(float seed, PrImageNoise* out) {
                 noise.gradients[k][i][j] = float((s % (kLattice + kLattice)) - kLattice) / kLattice;
             }
             float* g = noise.gradients[k][i];
-            float length = sqrtF32(g[0] * g[0] + g[1] * g[1]);
+            float length = prF32Sqrt(g[0] * g[0] + g[1] * g[1]);
             if (length > 0) {
                 g[0] /= length;
                 g[1] /= length;

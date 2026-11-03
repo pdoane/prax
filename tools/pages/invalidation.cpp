@@ -379,10 +379,10 @@ int main(int argc, char** argv) {
             harnessCountsAdd(&row, "time", k.frame);
             harnessCountsAdd(&row, "update", k.update);
             harnessCountsAdd(&row, "scene", harnessSpent(k.update, k.frame));
-            TextBuffer written{};
+            PrTextBuffer written{};
             harnessCountsWrite(&row, &written);
-            out.append(written.text.data, written.text.count);
-            textReset(&written);
+            out.append(written.data, written.size);
+            prTextBufferReset(&written);
         }
         out += "}";
     }
