@@ -1,4 +1,5 @@
 #include "pr/text.h"
+#include "pr/text_estimate.h"
 #include "pr/text_font.h"
 #include "pr/text_itemize.h"
 #include "pr/text_layout.h"

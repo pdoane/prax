@@ -7,7 +7,6 @@
 #include "pr/ascii.h"
 #include "pr/atomic.h"
 #include "pr/draw_list.h"
-#include "pr/float.h"
 #include "pr/html.h"
 #include "pr/html_forms.h"
 #include "pr/layout_query.h"
@@ -844,9 +843,6 @@ bool takesScrollKeys(const PrDomElement* element) {
 // The distance that a key scrolls by a line, in CSS pixels. cssom-view-1 leaves it to the user agent.
 constexpr float kScrollKeyLine = 40;
 
-// How long a caret's blink takes.
-constexpr double kCaretBlinkSeconds = 1.0;
-
 // The ways in which a key scrolls.
 enum {
     KeyScroll_None,
@@ -1474,10 +1470,7 @@ void placeTextInput(HtmlView* v) {
 // Returns true if the caret stands in the on part of its blink. The clock is the time of the last frame, so a host that
 // posts no frames sees a steady caret.
 bool caretBlinksOn(const HtmlView* v) {
-    if (v->page->preferences.reducedMotion)
-        return true;
-    double phase = v->time - v->caretActivity;
-    return phase <= 0 || phase - kCaretBlinkSeconds * floorF64(phase / kCaretBlinkSeconds) < kCaretBlinkSeconds / 2;
+    return v->page->preferences.reducedMotion || prTextEditCaretBlinkAt(v->caretActivity, v->time).on;
 }
 
 // Shows the selection and the caret of the focused editable text control, and clears those of the last one.
@@ -1488,7 +1481,7 @@ void showTextControl(HtmlView* v) {
     PrLayoutNode node = shown != nullptr ? prCssPresentationFieldText(shown, target) : kPrLayoutNodeNone;
     PrLayoutTree* tree = shown != nullptr ? prCssPresentationTree(shown) : nullptr;
     if (v->caretTree != nullptr && (v->caretTree != tree || v->caretNode != node)) {
-        prLayoutTreeSetCaret(v->caretTree, nullptr);
+        prLayoutTreeSetCarets(v->caretTree, nullptr, 0);
         if (v->caretNode != kPrLayoutNodeNone && prLayoutNodeIsValid(v->caretTree, v->caretNode))
             prLayoutNodeSetHighlights(v->caretTree, v->caretNode, nullptr, 0);
     }
@@ -1517,7 +1510,7 @@ void showTextControl(HtmlView* v) {
             .background = background,
         };
         prLayoutNodeSetHighlights(tree, node, &selection, 1);
-        prLayoutTreeSetCaret(tree, nullptr);
+        prLayoutTreeSetCarets(tree, nullptr, 0);
     } else {
         prLayoutNodeSetHighlights(tree, node, nullptr, 0);
         PrLayoutCaret caret{
@@ -1525,7 +1518,8 @@ void showTextControl(HtmlView* v) {
             .affinity = s.affinity,
             .color = prCssPresentationCaretColor(shown, target),
         };
-        prLayoutTreeSetCaret(tree, v->caretShown && !v->caretHidden ? &caret : nullptr);
+        prLayoutTreeSetCarets(tree, &caret, v->caretHidden ? 0 : 1);
+        prLayoutTreeSetCaretsHidden(tree, !v->caretShown);
     }
     v->caretOffset = s.caret;
     v->caretAnchor = s.anchor;
@@ -1767,14 +1761,16 @@ void prHtmlViewPrepare(PrHtmlView* view) {
 }
 
 PrAppOutput prHtmlViewOutput(const PrHtmlView* view) {
-    // A blinking caret needs frames, and so does a change or a job that a later update takes to the window.
+    // A blinking caret needs a frame when it next turns, and a change or a job that a later update takes to the window
+    // needs one now.
     bool blinks = view->hasTextInput && view->caretCollapsed && !view->caretHidden &&
         !view->page->preferences.reducedMotion;
     return PrAppOutput{
         .cursor = view->cursor,
-        .wantsFrame = blinks || view->changed || view->posted,
+        .wantsFrame = view->changed || view->posted,
         .hasTextInput = view->hasTextInput,
         .textInput = view->textInput,
+        .frameTime = blinks ? prTextEditCaretBlinkAt(view->caretActivity, view->time).next : 0,
     };
 }
 

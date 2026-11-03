@@ -9,6 +9,7 @@
 #include "pr/alloc.h"
 #include "pr/array.h"
 #include "pr/assert.h"
+#include "pr/float.h"
 #include "pr/mem.h"
 #include "pr/memory.h"
 #include "pr/search.h"
@@ -49,6 +50,10 @@ struct TextEditBuffer {
     Array<TextEditStream*> streams;
     TextEditHistory* PR_NULLABLE history;
 
+    // The style runs, none if all the text is of style zero, and scratch memory for rebuilding them.
+    Array<PrTextEditStyleRun> runs;
+    Array<PrTextEditStyleRun> runsScratch;
+
     PrTextEditProposeFn PR_NULLABLE propose;
     void* PR_NULLABLE proposeContext;
 
@@ -68,6 +73,10 @@ struct TextEditBuffer {
 struct TextEditView {
     TextEditBuffer* PR_NULLABLE buffer;
     Array<PrTextEditSelection> selections;
+
+    // The style that the view's next local insertion takes, if `hasTyping`.
+    PrTextEditStyle typing;
+    bool hasTyping;
 };
 
 struct TextEditStream {
@@ -84,11 +93,19 @@ struct StepChange {
     uint32_t textSize;
 };
 
-// One step of a history: how to replace the text that the step left with the text that it found, and the selections on
-// each side of it.
+// A style that a step restores to a range of the text that it brings back.
+struct StepStyle {
+    uint32_t start;
+    uint32_t end;
+    PrTextEditStyle style;
+};
+
+// One step of a history: how to replace the text that the step left with the text that it found, the styles to give
+// that text, and the selections on each side of it. A step with no changes changes only styles.
 struct HistoryStep {
     Array<StepChange> changes;
     Array<char> bytes;
+    Array<StepStyle> styles;
     Array<PrTextEditSelection> before;
     Array<PrTextEditSelection> after;
     PrTextEditMerge merge;
@@ -233,6 +250,71 @@ void replaceBytes(TextEditBuffer* b, uint32_t start, uint32_t end, PrStringView 
     }
 }
 
+// Returns the style at `offset`, which at the end of the text is the style of its last run.
+PrTextEditStyle styleAt(const TextEditBuffer* b, uint32_t offset) {
+    if (b->runs.count == 0)
+        return 0;
+    const Array<PrTextEditStyleRun>& runs = b->runs;
+    return runs.data[partitionPoint(1, runs.count, [&](uint32_t i) { return runs.data[i].start <= offset; }) - 1].style;
+}
+
+// Appends a run, unless the last run has its style. A run that would hold nothing gives way to it.
+void pushRun(Array<PrTextEditStyleRun>& runs, uint32_t start, PrTextEditStyle style) {
+    if (runs.count != 0 && runs.last().start == start)
+        runs.pop();
+    if (runs.count == 0 || runs.last().style != style)
+        runs.push(PrTextEditStyleRun{start, style});
+}
+
+// Replaces the runs of the bytes from `start` to `end`, of the text as it stands, with one run of `style` that holds
+// `size` bytes.
+void spliceRuns(TextEditBuffer* b, uint32_t start, uint32_t end, uint32_t size, PrTextEditStyle style) {
+    if (b->runs.count == 0 && style == 0)
+        return;
+    uint32_t total = sizeOf(b);
+    PrTextEditStyle after = styleAt(b, end);
+    Array<PrTextEditStyleRun>& out = b->runsScratch;
+    out.clear();
+    if (b->runs.count == 0 && start != 0)
+        out.push(PrTextEditStyleRun{0, 0});
+    uint32_t i = 0;
+    for (; i < b->runs.count && b->runs.data[i].start < start; ++i)
+        out.push(b->runs.data[i]);
+    if (size != 0 || out.count == 0)
+        pushRun(out, start, style);
+    if (end < total)
+        pushRun(out, start + size, after);
+    for (; i < b->runs.count; ++i) {
+        const PrTextEditStyleRun& run = b->runs.data[i];
+        if (run.start > end)
+            pushRun(out, run.start - end + start + size, run.style);
+    }
+    Array<PrTextEditStyleRun> kept = b->runs;
+    b->runs = out;
+    b->runsScratch = kept;
+    if (b->runs.count == 1 && b->runs.data[0].style == 0)
+        b->runs.clear();
+}
+
+// Returns the style that text replacing the bytes from `start` to `end` takes.
+PrTextEditStyle insertedStyle(const TextEditBuffer* b, uint32_t start, uint32_t end) {
+    return styleAt(b, end > start || start == 0 ? start : start - 1);
+}
+
+// Appends the styles of the bytes from `start` to `end`. A buffer with no runs has none to restore, since the text at
+// the time of a restore has the same runs as now.
+void captureStyles(const TextEditBuffer* b, uint32_t start, uint32_t end, Array<StepStyle>& out) {
+    const Array<PrTextEditStyleRun>& runs = b->runs;
+    for (uint32_t i = 0; i < runs.count; ++i) {
+        uint32_t from = runs.data[i].start;
+        uint32_t to = i + 1 < runs.count ? runs.data[i + 1].start : sizeOf(b);
+        from = from > start ? from : start;
+        to = to < end ? to : end;
+        if (from < to)
+            out.push(StepStyle{from, to, runs.data[i].style});
+    }
+}
+
 // Fills `b->shifts` for `count` changes.
 void findShifts(TextEditBuffer* b, const PrTextEditChange* changes, uint32_t count) {
     b->shifts.resize(count + 1);
@@ -364,6 +446,7 @@ void remapSelections(TextEditView* view, const TextEditBuffer* b, const PrTextEd
 void resetStep(HistoryStep& step) {
     step.changes.reset();
     step.bytes.reset();
+    step.styles.reset();
     step.before.reset();
     step.after.reset();
 }
@@ -384,6 +467,9 @@ void captureInverse(const TextEditBuffer* b, const PrTextEditChange* changes, ui
         step.bytes.resize(at + removed);
         copyBytes(b, c.start, c.end, step.bytes.data + at);
         step.changes.push(StepChange{.start = start, .end = start + uint32_t(c.text.size), .textStart = at, .textSize = removed});
+        // The styles are in the coordinates of the text before `changes`, which is the text that reverting them
+        // restores.
+        captureStyles(b, c.start, c.end, step.styles);
     }
 }
 
@@ -411,9 +497,14 @@ bool mergeStep(HistoryStep& step, const HistoryStep& next, PrTextEditMerge merge
         return false;
     if (now.start == was.start) {
         // A forward deletion removed what follows what the step removed.
+        for (uint32_t i = 0; i < next.styles.count; ++i) {
+            const StepStyle& style = next.styles.data[i];
+            step.styles.push(StepStyle{style.start + step.bytes.count, style.end + step.bytes.count, style.style});
+        }
         step.bytes.append(next.bytes.data, next.bytes.count);
     } else if (now.start + now.textSize == was.start) {
         // A backward deletion removed what comes before what the step removed.
+        step.styles.append(next.styles.data, next.styles.count);
         uint32_t size = step.bytes.count;
         step.bytes.resize(size + next.bytes.count);
         memMove(step.bytes.data + next.bytes.count, step.bytes.data, size);
@@ -488,6 +579,7 @@ bool applyTransaction(TextEditBuffer* b, TextEditView* PR_NULLABLE view, const P
         step.merge = merge;
     }
 
+    bool typing = view != nullptr && view->hasTyping && proposed;
     bool streamed = b->streams.count != 0;
     if (streamed)
         trimRecords(b);
@@ -507,12 +599,16 @@ bool applyTransaction(TextEditBuffer* b, TextEditView* PR_NULLABLE view, const P
             if (c.text.size != 0)
                 b->recordBytes.append(c.text.data, uint32_t(c.text.size));
         }
+        PrTextEditStyle style = typing ? view->typing : insertedStyle(b, c.start, c.end);
+        spliceRuns(b, c.start, c.end, uint32_t(c.text.size), style);
         replaceBytes(b, c.start, c.end, c.text);
         if (streamed) {
             record.newEndPoint = pointFromOffset(b, record.newEnd);
             b->records.push(record);
         }
     }
+    if (typing && origin == PrTextEditOrigin_Local)
+        view->hasTyping = false;
     ++b->version;
 
     for (uint32_t i = 0; i < b->anchors.count; ++i) {
@@ -568,11 +664,19 @@ bool applyStep(TextEditHistory* history, TextEditView* PR_NULLABLE view, Array<H
     inverse.before.append(step.after.data, step.after.count);
     inverse.after.append(step.before.data, step.before.count);
     inverse.sealed = true;
+    if (step.changes.count == 0) {
+        for (uint32_t i = 0; i < step.styles.count; ++i)
+            captureStyles(b, step.styles.data[i].start, step.styles.data[i].end, inverse.styles);
+    }
 
     history->applying = true;
     applyTransaction(b, nullptr, changes.data, changes.count, PrTextEditOrigin_Undo, PrTextEditMerge_None);
     history->applying = false;
     changes.reset();
+    for (uint32_t i = 0; i < step.styles.count; ++i) {
+        const StepStyle& style = step.styles.data[i];
+        spliceRuns(b, style.start, style.end, style.end - style.start, style.style);
+    }
 
     if (view != nullptr && view->buffer == b && step.before.count != 0) {
         view->selections.clear();
@@ -620,6 +724,8 @@ void prTextEditBufferDestroy(PrTextEditBuffer* PR_NULLABLE buffer) {
     buffer->freeAnchors.reset();
     buffer->views.reset();
     buffer->streams.reset();
+    buffer->runs.reset();
+    buffer->runsScratch.reset();
     buffer->records.reset();
     buffer->recordBytes.reset();
     buffer->recordTexts.reset();
@@ -789,6 +895,14 @@ const PrTextEditSelection* prTextEditViewSelections(const PrTextEditView* view) 
 
 void prTextEditViewSetSelections(PrTextEditView* view, const PrTextEditSelection* selections, uint32_t count) {
     PR_ASSERT(count != 0);
+    // A style waits for the next insertion only where the selections stand when it is set.
+    bool moved = count != view->selections.count;
+    for (uint32_t i = 0; !moved && i < count; ++i) {
+        moved = selections[i].anchor != view->selections.data[i].anchor ||
+            selections[i].caret != view->selections.data[i].caret;
+    }
+    if (moved)
+        view->hasTyping = false;
     view->selections.clear();
     view->selections.append(selections, count);
     uint32_t size = view->buffer != nullptr ? sizeOf(view->buffer) : 0;
@@ -822,6 +936,58 @@ bool prTextEditViewInsert(PrTextEditView* view, PrStringView text, PrTextEditOri
     bool applied = applyTransaction(b, view, changes.data, changes.count, origin, merge);
     changes.reset();
     return applied;
+}
+
+uint32_t prTextEditBufferStyleRunCount(const PrTextEditBuffer* buffer) {
+    return buffer->runs.count;
+}
+
+const PrTextEditStyleRun* PR_NULLABLE prTextEditBufferStyleRuns(const PrTextEditBuffer* buffer) {
+    return buffer->runs.data;
+}
+
+PrTextEditStyle prTextEditBufferStyleAt(const PrTextEditBuffer* buffer, uint32_t offset) {
+    PR_ASSERT(offset <= sizeOf(buffer));
+    return styleAt(buffer, offset);
+}
+
+void prTextEditBufferSetStyle(PrTextEditBuffer* buffer, uint32_t start, uint32_t end, PrTextEditStyle style) {
+    PR_ASSERT(start <= end && end <= sizeOf(buffer));
+    if (start != end)
+        spliceRuns(buffer, start, end, end - start, style);
+}
+
+void prTextEditViewSetStyle(PrTextEditView* view, PrTextEditStyle style) {
+    TextEditBuffer* b = view->buffer;
+    if (b == nullptr)
+        return;
+    bool holds = false;
+    for (uint32_t i = 0; i < view->selections.count; ++i)
+        holds = holds || lowOf(view->selections.data[i]) != highOf(view->selections.data[i]);
+    if (!holds) {
+        view->typing = style;
+        view->hasTyping = true;
+        return;
+    }
+    TextEditHistory* history = b->history;
+    HistoryStep step{};
+    for (uint32_t i = 0; i < view->selections.count; ++i) {
+        const PrTextEditSelection& s = view->selections.data[i];
+        if (history != nullptr)
+            captureStyles(b, lowOf(s), highOf(s), step.styles);
+        // Text of style zero in a buffer with no runs has none to capture, and it reverts to zero.
+        if (history != nullptr && b->runs.count == 0 && lowOf(s) != highOf(s))
+            step.styles.push(StepStyle{lowOf(s), highOf(s), 0});
+        if (lowOf(s) != highOf(s))
+            spliceRuns(b, lowOf(s), highOf(s), highOf(s) - lowOf(s), style);
+    }
+    if (history == nullptr)
+        return;
+    step.before.append(view->selections.data, view->selections.count);
+    step.after.append(view->selections.data, view->selections.count);
+    step.sealed = true;
+    clearSteps(history->redo);
+    history->undo.push(step);
 }
 
 PrTextEditHistory* prTextEditHistoryCreate(PrTextEditBuffer* buffer) {
@@ -868,4 +1034,13 @@ void prTextEditHistoryBreak(PrTextEditHistory* history) {
 void prTextEditHistoryClear(PrTextEditHistory* history) {
     clearSteps(history->undo);
     clearSteps(history->redo);
+}
+
+PrTextEditCaretBlink prTextEditCaretBlinkAt(double activity, double time) {
+    // A caret shows for half a second, then hides for half a second.
+    constexpr double kPartSeconds = 0.5;
+    if (time < activity)
+        return PrTextEditCaretBlink{.on = true, .next = activity + kPartSeconds};
+    double part = floorF64((time - activity) / kPartSeconds);
+    return PrTextEditCaretBlink{.on = part - 2 * floorF64(part / 2) == 0, .next = activity + (part + 1) * kPartSeconds};
 }

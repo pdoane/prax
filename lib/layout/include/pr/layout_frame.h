@@ -66,12 +66,12 @@ void prLayoutTreeFrameSetText(PrLayoutTree* tree, PrLayoutNode text, PrStringVie
 void prLayoutTreeFrameSetNaturalSize(PrLayoutTree* tree, PrLayoutNode replaced, PrLayoutNaturalSize size);
 void prLayoutTreeFrameSetContent(PrLayoutTree* tree, PrLayoutNode replaced, const PrLayoutContent* content);
 
-// Sets the highlights of a text node that the frame created, or the tree's caret, which hold for the frame. Each takes
-// effect immediately, as prLayoutNodeSetHighlights and prLayoutTreeSetCaret do. The commit removes the highlights of a
-// node, and the caret, that its frame did not set.
+// Sets the highlights of a text node that the frame created, or the tree's carets, which hold for the frame. Each takes
+// effect immediately, as prLayoutNodeSetHighlights and prLayoutTreeSetCarets do. The commit removes the highlights of a
+// node, and the carets, that its frame did not set.
 void prLayoutTreeFrameSetHighlights(PrLayoutTree* tree, PrLayoutNode text,
     const PrLayoutHighlight* PR_NULLABLE highlights, uint32_t count);
-void prLayoutTreeFrameSetCaret(PrLayoutTree* tree, const PrLayoutCaret* caret);
+void prLayoutTreeFrameSetCarets(PrLayoutTree* tree, const PrLayoutCaret* PR_NULLABLE carets, uint32_t count);
 
 // Returns a node's slot: its index among the tree's nodes, below prLayoutTreeSlotCount. No two live nodes share a slot,
 // and a node that a frame continues keeps its slot. A client can therefore keep data about nodes in arrays indexed by

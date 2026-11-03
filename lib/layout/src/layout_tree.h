@@ -135,11 +135,11 @@ struct LayoutHighlights {
     Array<PrLayoutHighlight> ranges;
 };
 
-// The caret that a tree paints (prLayoutTreeSetCaret), and the frame that set it, or 0 if no frame did.
-struct LayoutTreeCaret {
-    PrLayoutCaret caret;
+// The carets that a tree paints (prLayoutTreeSetCarets), and the frame that set them, or 0 if no frame did.
+struct LayoutTreeCarets {
+    Array<PrLayoutCaret> carets;
     uint32_t frame;
-    bool shown;                     // false if the tree has no caret
+    bool hidden;                    // the carets paint nothing (prLayoutTreeSetCaretsHidden)
 };
 
 // Returns true if a node of `kind` is an element, whose children are laid out in it, or a box that its record styles.
@@ -182,7 +182,7 @@ struct LayoutReplaced {
 enum {
     LayoutInputFlag_Layout = 1 << 0,    // layout groups, text, children, natural sizes, the viewport's extent
     LayoutInputFlag_Paint = 1 << 1,     // paint groups, replaced content, and whether a box has a layer
-    LayoutInputFlag_Effects = 1 << 2,   // a layer's opacity or transform
+    LayoutInputFlag_Effects = 1 << 2,   // a layer's opacity or transform, and whether the caret is hidden
 };
 typedef uint8_t LayoutInputFlags;
 
@@ -263,7 +263,7 @@ struct LayoutTree {
     // The highlights of the text nodes that have them, indexed by node, and the caret. Few nodes have highlights.
     Array<LayoutHighlights> highlights;
     HashIndex highlightIndex;
-    LayoutTreeCaret caret;
+    LayoutTreeCarets carets;
 
     LayoutScratch* PR_NULLABLE scratch;   // memory that layouts reuse, created by the first layout
 
@@ -399,8 +399,8 @@ const LayoutHighlights* PR_NULLABLE layoutTextHighlights(const LayoutTree* tree,
 void layoutTreeSetHighlights(LayoutTree* tree, LayoutNodeIndex node, const PrLayoutHighlight* PR_NULLABLE highlights,
     uint32_t count, uint32_t frame);
 
-// Sets or removes the caret (prLayoutTreeSetCaret) on behalf of `frame`, or of no frame for 0.
-void layoutTreeSetCaret(LayoutTree* tree, const PrLayoutCaret* PR_NULLABLE caret, uint32_t frame);
+// Sets the carets (prLayoutTreeSetCarets) on behalf of `frame`, or of no frame for 0.
+void layoutTreeSetCarets(LayoutTree* tree, const PrLayoutCaret* PR_NULLABLE carets, uint32_t count, uint32_t frame);
 
 // Removes the highlights and the caret that a frame other than `frame` set.
 void layoutTreeExpireFrameMarks(LayoutTree* tree, uint32_t frame);

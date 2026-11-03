@@ -1043,22 +1043,35 @@ PrStringView recall(PrKit& kit, PrLayoutNode node, const PrKitTextField& field, 
 // Creates the element that holds the text of an edit on `control`, runs the edit, and creates the placeholder after the
 // text while the text is empty.
 void editedText(PrKit& kit, PrLayoutNode control, PrStringView text, PrTextEditBuffer* PR_NULLABLE buffer,
-        PrStringView placeholder, const PrKitFieldStyle& style, bool disabled, bool area, PrUiTextEditFlags flags) {
+        PrStringView placeholder, const PrKitFieldStyle& style, bool disabled, bool area, PrUiTextEditFlags flags,
+        const PrKitTextAreaStyle* PR_NULLABLE styles = nullptr, uint32_t styleCount = 0) {
     const PrKitPalette& p = kit.theme.palette;
     uint8_t textFlags = uint8_t((disabled ? PartFlag_Disabled : 0) | (style.mono ? PartFlag_Mono : 0) |
         (area ? PartFlag_Wraps : 0));
     PrLayoutNode value = part(kit, control, 0,
         PartRecipe{.part = area ? Part_AreaValue : Part_TextValue, .size = style.size, .flags = textFlags});
+    // A style is an inline box in its own role and tone. The records come from the styles of this round, as a recipe's
+    // do.
+    Array<PrLayoutStyleIndex> records;
+    if (styleCount == 0)
+        records.push(kitStyle(kit, KitFont{.role = PrKitTextRole_Body}, KitToneInk{.tone = PrKitTone_Auto}));
+    for (uint32_t i = 0; i < styleCount; ++i) {
+        KitToneInk ink{.tone = kitTextTone(kit, styles[i].role, styles[i].tone)};
+        records.push(kitStyle(kit, KitFont{.role = styles[i].role}, ink));
+    }
     PrUiTextEditDesc edit{
         .control = control,
         .parent = value,
         .value = text,
         .buffer = buffer,
+        .styles = records.data,
+        .styleCount = records.count,
         .flags = PrUiTextEditFlags(flags | (area ? PrUiTextEditFlag_Multiline : 0)),
-        .selection = kitColor16(p.accentWeak),
+        .selection = kitColor16(p.textSelection),
         .caret = kitColor16(p.text1),
     };
     prUiTextEdit(kit.ui, &edit);
+    records.reset();
     PrStringView changed{};
     if (prUiTextEditChanged(kit.ui, control, &changed)) {
         kitReportText(kit, control, changed);
@@ -1287,7 +1300,7 @@ PrLayoutNode prKitTextArea(PrKit* kit, PrLayoutNode parent, PrKitTextArea area, 
         .flags = flags,
     }));
     PrStringView text = area.buffer != nullptr ? prTextEditBufferText(area.buffer) : area.text;
-    editedText(k, node, text, area.buffer, area.placeholder, style, disabled, true, 0);
+    editedText(k, node, text, area.buffer, area.placeholder, style, disabled, true, 0, area.styles, area.styleCount);
     prUiAddFlags(k.ui, node, PrUiFlag_Scrollable);
     return node;
 }

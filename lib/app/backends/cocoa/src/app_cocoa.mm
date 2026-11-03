@@ -38,6 +38,7 @@
 @property(nonatomic, strong) PrCocoaView* view;
 @property(nonatomic, strong) CADisplayLink* displayLink;
 @property(nonatomic, strong) NSTimer* timer;
+@property(nonatomic, strong) NSTimer* frameTimer;
 - (void)deliver:(const PrAppEvent&)event;
 - (void)endCallback;
 - (void)forgetHeld;
@@ -48,6 +49,7 @@
 - (void)frame;
 - (PrAppFrame)frameAt:(double)now;
 - (void)requestFrame;
+- (void)requestFrameAt:(double)time;
 - (void)stop;
 @end
 
@@ -301,6 +303,10 @@ void wake(PrApp* app) {
 
 void requestFrame(PrApp* app) {
     [hostOf(app) requestFrame];
+}
+
+void requestFrameAt(PrApp* app, double time) {
+    [hostOf(app) requestFrameAt:time];
 }
 
 // Returns a cursor that shows nothing, for PrAppCursor_None. A hidden cursor would need [NSCursor hide], whose calls
@@ -831,10 +837,26 @@ using namespace pr_impl;
     }
     self.displayLink.paused = NO;
 }
+- (void)requestFrameAt:(double)time {
+    [self.frameTimer invalidate];
+    self.frameTimer = nil;
+    if (!self.running || time == 0)
+        return;
+    double delay = MAX(time - NSProcessInfo.processInfo.systemUptime, 0.0);
+    __weak PrCocoaHost* weak = self;
+    self.frameTimer = [NSTimer timerWithTimeInterval:delay repeats:NO block:^(NSTimer*) {
+        PrCocoaHost* host = weak;
+        host.frameTimer = nil;
+        [host requestFrame];
+    }];
+    [NSRunLoop.mainRunLoop addTimer:self.frameTimer forMode:NSRunLoopCommonModes];
+}
 - (void)stop {
     if (!self.running)
         return;
     self.running = NO;
+    [self.frameTimer invalidate];
+    self.frameTimer = nil;
     [self.displayLink invalidate];
     self.displayLink = nil;
     [self.timer invalidate];
@@ -877,6 +899,7 @@ PrApp* prAppCocoaCreate(const PrAppDesc* desc) {
     app->stop = stop;
     app->wake = wake;
     app->requestFrame = requestFrame;
+    app->requestFrameAt = requestFrameAt;
     app->setCursor = setCursor;
     app->setTextInputRect = setTextInputRect;
     app->setTitle = setTitle;

@@ -35,6 +35,7 @@ constexpr UINT kMessageClipboard = WM_APP + 2;  // the program requested the cli
 
 // The timer that times the frames of a window that is not composed, and its period.
 constexpr UINT_PTR kTimerFrame = 1;
+constexpr UINT_PTR kTimerFrameAt = 2;   // the time that an output names
 constexpr UINT kHiddenFrameMilliseconds = 16;
 
 // How often the display's headroom is read again, in seconds, while frames run. The headroom changes with the SDR
@@ -1033,6 +1034,11 @@ LRESULT CALLBACK windowProc(HWND window, UINT message, WPARAM wParam, LPARAM lPa
                 return 0;
             break;
         case WM_TIMER:
+            if (wParam == kTimerFrameAt) {
+                KillTimer(window, kTimerFrameAt);
+                app->requestFrame(app);
+                return 0;
+            }
             if (wParam != kTimerFrame)
                 break;
             KillTimer(window, kTimerFrame);
@@ -1298,6 +1304,7 @@ void run(PrApp* base, const PrAppHandler* handler) {
     CloseHandle(app->pacerRequest);
     app->pacerRequest = nullptr;
     KillTimer(app->window, kTimerFrame);
+    KillTimer(app->window, kTimerFrameAt);
     if (GetCapture() == app->window)
         ReleaseCapture();
     releaseDisplayObjects(app);
@@ -1320,6 +1327,7 @@ void stop(PrApp* base) {
         return;
     app->running = false;
     KillTimer(app->window, kTimerFrame);
+    KillTimer(app->window, kTimerFrameAt);
     // The system's modal loop for a move or a resize ends when it is canceled, and the main loop then sees the stop.
     if (app->inSizeMove)
         PostMessageW(app->window, WM_CANCELMODE, 0, 0);
@@ -1341,6 +1349,20 @@ void requestFrame(PrApp* base) {
         return;
     app->frameRequested = true;
     scheduleFrame(app);
+}
+
+void requestFrameAt(PrApp* base, double time) {
+    Win32App* app = static_cast<Win32App*>(base);
+    if (!app->running)
+        return;
+    if (time == 0) {
+        KillTimer(app->window, kTimerFrameAt);
+        return;
+    }
+    double delay = time - secondsNow();
+    // The timer rounds up, so that the frame finds the time reached.
+    UINT milliseconds = delay > 0 ? UINT(delay * 1000) + 1 : USER_TIMER_MINIMUM;
+    SetTimer(app->window, kTimerFrameAt, milliseconds, nullptr);
 }
 
 void setTextInputRect(PrApp* base, PrRect rect) {
@@ -1470,6 +1492,7 @@ PrApp* prAppWin32Create(const PrAppDesc* desc) {
     app->stop = stop;
     app->wake = wake;
     app->requestFrame = requestFrame;
+    app->requestFrameAt = requestFrameAt;
     app->setCursor = setCursor;
     app->setTextInputRect = setTextInputRect;
     app->setTitle = setTitle;

@@ -184,7 +184,7 @@ void addLayer(LayoutTree* tree, LayoutScene* scene, LayoutNodeIndex node, const 
         const LayoutPaintSlot& s = chunk->slots.data[i];
         scene->slots.push(LayoutSceneSlot{
             s.embed, layoutNodeName(tree, s.node), index,
-            resolve(tree, scene, index, base, s.scroll), s.segment, s.order, s.box,
+            resolve(tree, scene, index, base, s.scroll), s.segment, s.order, s.box, s.caret, s.color,
         });
     }
     layer.regionStart = scene->regions.count;
@@ -442,6 +442,14 @@ struct Player {
     // Plays the content of a slot in its container, clipped to its content box, with the box's top-left corner as the
     // origin.
     void slot(const LayoutSceneSlot& slot) {
+        if (slot.caret) {
+            if (scene->caretHidden)
+                return;
+            enter(slot.scroll, frames.frame.data[slot.layer]);
+            PrLayoutRect bar = layoutRectMoved(slot.box, frames.origin.data[slot.layer]);
+            prDrawListRect(list, prLayoutRectToPx(bar), {.color = slot.color});
+            return;
+        }
         if (options.embed == nullptr)
             return;
         enter(slot.scroll, frames.frame.data[slot.layer]);
@@ -667,6 +675,8 @@ struct ScrollFinder {
         auto slotsTo = [&](const LayoutSceneLayer* PR_NULLABLE child) {
             for (; s < slotEnd && (child == nullptr || slotFirst(scene->slots.data[s], *child)); ++s) {
                 const LayoutSceneSlot& candidate = scene->slots.data[s];
+                if (candidate.caret)
+                    continue;
                 scrollsTo(candidate.segmentsBefore);
                 PrLayoutVec in = point;
                 PrLayoutRect box = layoutRectMoved(candidate.box, frames.origin.data[index]);
@@ -744,6 +754,7 @@ void canvasLayers(LayoutTree* tree, const LayoutFragment* root, PrLayoutRect bor
 PrDrawList* drawRoot(LayoutTree* tree, const LayoutLaidRoot& root) {
     PrLayoutScene* scene = allocZeroed<PrLayoutScene>();
     scene->references.storeRelaxed(1);
+    scene->caretHidden = tree->carets.hidden;
     const LayoutFragment* viewport = root.fragment;
     const LayoutChild& top = viewport->children[0];
     // What the root draws outside its containing block is the painter's to clip.
@@ -834,6 +845,7 @@ const PrLayoutScene* layoutScene(LayoutTree* tree) {
     scene->adjustments = unscened;
     unscened = {};
     scene->pixelRatio = tree->styles->targetPixelRatio;
+    scene->caretHidden = tree->carets.hidden;
     scene->canvasColor = prColorFromColor16(tree->canvasColor);
     scene->viewportWheelEvents = tree->viewportWheelEvents;
     const LayoutFragment* viewport = tree->fragment;
@@ -1121,14 +1133,20 @@ PrColor16 prLayoutSceneCanvasColor(const PrLayoutScene* scene) {
 }
 
 uint32_t prLayoutSceneEmbeds(const PrLayoutScene* scene, PrLayoutSceneEmbed* PR_NULLABLE out, uint32_t capacity) {
-    for (uint32_t i = 0; i < scene->slots.count && i < capacity; ++i) {
+    uint32_t count = 0;
+    for (uint32_t i = 0; i < scene->slots.count; ++i) {
         const LayoutSceneSlot& slot = scene->slots.data[i];
-        out[i] = PrLayoutSceneEmbed{
-            slot.embed, slot.node,
-            PrLayoutVec{layoutRectWidth(slot.box), layoutRectHeight(slot.box)},
-        };
+        if (slot.caret)
+            continue;
+        if (count < capacity) {
+            out[count] = PrLayoutSceneEmbed{
+                slot.embed, slot.node,
+                PrLayoutVec{layoutRectWidth(slot.box), layoutRectHeight(slot.box)},
+            };
+        }
+        ++count;
     }
-    return scene->slots.count;
+    return count;
 }
 
 uint32_t prLayoutSceneLayerCount(const PrLayoutScene* scene) {

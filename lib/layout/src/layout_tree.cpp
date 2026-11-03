@@ -1100,28 +1100,31 @@ void layoutTreeSetHighlights(LayoutTree* tree, LayoutNodeIndex node, const PrLay
     markPainted(tree, node, false);
 }
 
-void layoutTreeSetCaret(LayoutTree* tree, const PrLayoutCaret* PR_NULLABLE caret, uint32_t frame) {
-    LayoutTreeCaret& kept = tree->caret;
+void layoutTreeSetCarets(LayoutTree* tree, const PrLayoutCaret* PR_NULLABLE carets, uint32_t count, uint32_t frame) {
+    LayoutTreeCarets& kept = tree->carets;
     kept.frame = frame;
-    bool shown = caret != nullptr;
-    // The caret has padding, so it is compared by its fields.
-    auto same = [&](const PrLayoutCaret& a) {
-        return a.position.node == caret->position.node && a.position.offset == caret->position.offset &&
-            a.affinity == caret->affinity && memEquals(&a.color, &caret->color, sizeof(PrColor16));
-    };
-    if (shown == kept.shown && (!shown || same(kept.caret)))
+    // A caret has padding, so carets are compared by their fields.
+    bool same = kept.carets.count == count;
+    for (uint32_t i = 0; same && i < count; ++i) {
+        const PrLayoutCaret& a = kept.carets.data[i];
+        const PrLayoutCaret& b = carets[i];
+        same = a.position.node == b.position.node && a.position.offset == b.position.offset &&
+            a.affinity == b.affinity && memEquals(&a.color, &b.color, sizeof(PrColor16));
+    }
+    if (same)
         return;
-    // The recordings of the text that the caret leaves and of the text that it comes to change.
+    // The recordings of the text that a caret leaves and of the text that it comes to change.
     auto mark = [&](PrLayoutNode node) {
         if (prLayoutNodeIsValid(static_cast<PrLayoutTree*>(tree), node))
             markPainted(tree, layoutNodeIndex(tree, node), false);
     };
-    if (kept.shown)
-        mark(kept.caret.position.node);
-    kept.shown = shown;
-    kept.caret = shown ? *caret : PrLayoutCaret{};
-    if (shown)
-        mark(caret->position.node);
+    for (uint32_t i = 0; i < kept.carets.count; ++i)
+        mark(kept.carets.data[i].position.node);
+    kept.carets.clear();
+    for (uint32_t i = 0; i < count; ++i) {
+        kept.carets.push(carets[i]);
+        mark(carets[i].position.node);
+    }
 }
 
 void layoutTreeExpireFrameMarks(LayoutTree* tree, uint32_t frame) {
@@ -1130,8 +1133,8 @@ void layoutTreeExpireFrameMarks(LayoutTree* tree, uint32_t frame) {
         if (kept.frame != 0 && kept.frame != frame)
             layoutTreeSetHighlights(tree, kept.node, nullptr, 0, 0);
     }
-    if (tree->caret.shown && tree->caret.frame != 0 && tree->caret.frame != frame)
-        layoutTreeSetCaret(tree, nullptr, 0);
+    if (tree->carets.carets.count != 0 && tree->carets.frame != 0 && tree->carets.frame != frame)
+        layoutTreeSetCarets(tree, nullptr, 0, 0);
 }
 
 PrLayoutStyleIndex layoutFirstLineStyle(const LayoutTree* tree, LayoutNodeIndex node) {
@@ -1178,6 +1181,7 @@ void prLayoutTreeDestroy(PrLayoutTree* PR_NULLABLE tree) {
     t->firstLines.reset();
     t->firstLineIndex.reset();
     t->highlights.reset();
+    t->carets.carets.reset();
     t->highlightIndex.reset();
     t->replaced.reset();
     t->freeReplaced.reset();
@@ -1410,16 +1414,27 @@ uint32_t prLayoutNodeHighlights(const PrLayoutTree* tree, PrLayoutNode text, PrL
     return kept->ranges.count;
 }
 
-void prLayoutTreeSetCaret(PrLayoutTree* tree, const PrLayoutCaret* PR_NULLABLE caret) {
+void prLayoutTreeSetCarets(PrLayoutTree* tree, const PrLayoutCaret* PR_NULLABLE carets, uint32_t count) {
     PR_ASSERT(!tree->frame.open);
-    layoutTreeSetCaret(tree, caret, 0);
+    layoutTreeSetCarets(tree, carets, count, 0);
 }
 
-bool prLayoutTreeCaret(const PrLayoutTree* tree, PrLayoutCaret* out) {
-    if (!tree->caret.shown)
-        return false;
-    *out = tree->caret.caret;
-    return true;
+uint32_t prLayoutTreeCarets(const PrLayoutTree* tree, PrLayoutCaret* PR_NULLABLE out, uint32_t capacity) {
+    const Array<PrLayoutCaret>& carets = tree->carets.carets;
+    for (uint32_t i = 0; i < carets.count && i < capacity; ++i)
+        out[i] = carets.data[i];
+    return carets.count;
+}
+
+void prLayoutTreeSetCaretsHidden(PrLayoutTree* tree, bool hidden) {
+    if (tree->carets.hidden == hidden)
+        return;
+    tree->carets.hidden = hidden;
+    tree->pendingPaint |= LayoutInputFlag_Effects;
+}
+
+bool prLayoutTreeCaretsHidden(const PrLayoutTree* tree) {
+    return tree->carets.hidden;
 }
 
 void prLayoutNodeSetRendered(PrLayoutTree* tree, PrLayoutNode node, PrLayoutRenderedFlags flags) {

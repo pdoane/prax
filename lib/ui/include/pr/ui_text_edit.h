@@ -12,7 +12,7 @@
 // in the text are byte offsets (PrLayoutTextPosition). The pointer and the keys move the caret by what the last layout
 // shows: a press places the caret at the position under the pointer, and Up and Down move it between the lines as they
 // wrap. The layout tree paints the selection as a highlight of the text node and the caret as the tree's caret, for the
-// frame that the edit runs in (prLayoutTreeFrameSetHighlights, prLayoutTreeFrameSetCaret).
+// frame that the edit runs in (prLayoutTreeFrameSetHighlights, prLayoutTreeFrameSetCarets).
 //
 // Keys follow one map on every platform. Left and Right move by a grapheme cluster, with Option or Control by a word,
 // and with Command to the ends of the line. Home and End move to the ends of the line, and with Command or Control to
@@ -59,6 +59,13 @@ typedef struct PrUiTextEditDesc {
     // The buffer that holds the text, or null to edit `value`. The edit ignores `value` if this is set.
     PrTextEditBuffer* PR_NULLABLE buffer;
 
+    // The records of a buffer's styles, by PrTextEditStyle, each of an inline box that holds a run's text. The caller
+    // interns them in each round, as it does any record. A buffer's values outlive a record that no node names, so the
+    // values index this table rather than name records. A value past the table takes the record of style zero. The
+    // table stays valid for the call, and it has at least one record if the buffer has style runs.
+    const PrLayoutStyleIndex* PR_NULLABLE styles;
+    uint32_t styleCount;
+
     PrUiTextEditFlags flags;
     PrTextEditArrowMotion arrowMotion;
 
@@ -82,12 +89,19 @@ typedef struct PrUiTextSelection {
 //
 // The text node holds the text and, if the text is empty or ends in a line feed, a space after it, so that the line
 // that the caret stands on has text to place it.
+//
+// A buffer with style runs shows each run as an inline box of its style, under `parent`, with a text node in it. The
+// text nodes show the text in order, and the last holds the space. Returns the first of them.
 PrLayoutNode prUiTextEdit(PrUi* ui, const PrUiTextEditDesc* desc);
 
 // Returns true if the last prUiTextEdit of `control` changed its text, and writes the new text to `text`. The text is
 // valid until the next prUiTextEdit of `control`. It holds no marked text on an edit of a value, and it is the whole
 // buffer on an edit of the caller's buffer.
 bool prUiTextEditChanged(PrUi* ui, PrLayoutNode control, PrStringView* text);
+
+// Returns the view through which the edit of `control` edits the caller's buffer, or null for an edit of a value. A
+// caller sets the style of the selection through it (prTextEditViewSetStyle), or undoes a step of the buffer's history.
+PrTextEditView* PR_NULLABLE prUiTextEditView(PrUi* ui, PrLayoutNode control);
 
 // Returns true if an input method is composing marked text in the edit of `control`, which then shows text that the
 // value does not hold.

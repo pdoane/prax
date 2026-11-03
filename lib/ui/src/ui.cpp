@@ -247,6 +247,7 @@ struct Ui {
     bool frameRequested;
     bool tweening;
     bool repeating;
+    double frameTime;               // when the next frame is requested for, or zero (prUiRequestFrameAt)
     double time;
 
     // --- Input ---
@@ -1150,6 +1151,14 @@ void compactQueue(Ui* ui) {
     ui->consumed = 0;
 }
 
+// Returns true if a change on `node` would be seen: the node was shown at the last layout or has not been laid out yet.
+bool motionShows(const Ui* ui, PrLayoutNode node) {
+    PrLayoutRect bounds = prLayoutNodeBounds(ui->tree, node, PrLayoutCoordinates_Viewport);
+    bool laidOut = bounds.right.raw > bounds.left.raw || bounds.bottom.raw > bounds.top.raw;
+    PrLayoutRect shown = prLayoutNodeShownBounds(ui->tree, node);
+    return !laidOut || shown.right.raw > shown.left.raw;
+}
+
 } // namespace
 
 } // namespace pr_impl
@@ -1240,6 +1249,7 @@ uint32_t prUiFrame(PrUi* ui, const PrUiFrameDesc* desc, PrUiBuildFn build, void*
         prLayoutTreeSetTargetPixelRatio(ui->tree, desc->display.pixelRatio);
     uint32_t limit = desc->maxRounds != 0 ? desc->maxRounds : 1;
     ui->frameRequested = false;
+    ui->frameTime = 0;
     ui->repeating = false;
     ui->hasTextInput = false;
     uint32_t rounds = 0;
@@ -1288,11 +1298,18 @@ void prUiRequestFrame(PrUi* ui) {
 }
 
 void prUiRequestMotion(PrUi* ui, PrLayoutNode node) {
-    PrLayoutRect bounds = prLayoutNodeBounds(ui->tree, node, PrLayoutCoordinates_Viewport);
-    bool laidOut = bounds.right.raw > bounds.left.raw || bounds.bottom.raw > bounds.top.raw;
-    PrLayoutRect shown = prLayoutNodeShownBounds(ui->tree, node);
-    if (!laidOut || shown.right.raw > shown.left.raw)
+    if (motionShows(ui, node))
         prUiRequestFrame(ui);
+}
+
+void prUiRequestFrameAt(PrUi* ui, double time) {
+    if (ui->frameTime == 0 || time < ui->frameTime)
+        ui->frameTime = time;
+}
+
+void prUiRequestMotionAt(PrUi* ui, PrLayoutNode node, double time) {
+    if (motionShows(ui, node))
+        prUiRequestFrameAt(ui, time);
 }
 
 PrUiKey prUiKey(const PrUi* ui, PrLayoutNode base, PrStringView name) {
@@ -1430,6 +1447,7 @@ PrAppOutput prUiOutput(const PrUi* ui) {
             ui->queue.count != 0,
         .hasTextInput = ui->hasTextInput,
         .textInput = ui->textInput,
+        .frameTime = ui->frameTime,
     };
 }
 

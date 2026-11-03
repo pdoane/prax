@@ -950,10 +950,10 @@ TEST_CASE("a host that paints the document itself shows a selection at once, wit
     CHECK(!prHtmlViewOutput(e.page.view).wantsFrame);
 }
 
-TEST_CASE("a caret asks for frames to blink by, and comes into view as it moves") {
+TEST_CASE("a caret asks for a frame when it next blinks, and comes into view as it moves") {
     EditedArea e("<style>body { margin: 0 }</style><input id=t style='width: 40px' value='a long value that overflows'>");
     e.page.settle();
-    CHECK(prHtmlViewOutput(e.page.view).wantsFrame);
+    CHECK(prHtmlViewOutput(e.page.view).frameTime != 0);
     PrAppEvent event{.kind = PrAppEventKind_KeyDown, .key = PrAppKey_End};
     prHtmlViewEvent(e.page.view, &event, 0);
     e.page.settle();
@@ -963,6 +963,7 @@ TEST_CASE("a caret asks for frames to blink by, and comes into view as it moves"
     e.page.settle();
     e.page.settle();
     CHECK(!prHtmlViewOutput(e.page.view).wantsFrame);
+    CHECK(prHtmlViewOutput(e.page.view).frameTime == 0);
 }
 
 TEST_CASE("an empty control shows its placeholder, until it has a value") {

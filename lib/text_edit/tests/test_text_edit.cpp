@@ -86,6 +86,19 @@ void applyRecords(PrTextEditStream* stream, std::string& replica) {
     }
 }
 
+// The buffer's runs, as start and style in turn.
+std::vector<uint32_t> runsOf(const PrTextEditBuffer* buffer) {
+    std::vector<uint32_t> out;
+    const PrTextEditStyleRun* runs = prTextEditBufferStyleRuns(buffer);
+    for (uint32_t i = 0; i < prTextEditBufferStyleRunCount(buffer); ++i) {
+        out.push_back(runs[i].start);
+        out.push_back(runs[i].style);
+    }
+    return out;
+}
+
+using Runs = std::vector<uint32_t>;
+
 } // namespace
 
 } // namespace pr_impl
@@ -94,6 +107,21 @@ using namespace pr_impl;
 
 TEST_CASE("the public header compiles as C") {
     CHECK(prTestTextEditCApi() == 0);
+}
+
+TEST_CASE("a caret shows for half a second from its last move, then hides for half a second") {
+    PrTextEditCaretBlink blink = prTextEditCaretBlinkAt(10, 10);
+    CHECK(blink.on);
+    CHECK(blink.next == 10.5);
+    blink = prTextEditCaretBlinkAt(10, 10.75);
+    CHECK(!blink.on);
+    CHECK(blink.next == 11);
+    blink = prTextEditCaretBlinkAt(10, 11.25);
+    CHECK(blink.on);
+    CHECK(blink.next == 11.5);
+    blink = prTextEditCaretBlinkAt(10, 9);
+    CHECK(blink.on);
+    CHECK(blink.next == 10.5);
 }
 
 TEST_CASE("a buffer reads back through chunks wherever the gap stands") {
@@ -811,4 +839,143 @@ TEST_CASE("an editor's words are UAX #29's, with runs of Han and of Hiragana who
     CHECK(high == 12);
     CHECK(prTextEditWordAfter(japanese, 12) == 18);
     CHECK(prTextEditWordBefore(japanese, 18) == 12);
+}
+
+TEST_CASE("a buffer with no styles has no runs, and setting style zero back removes them") {
+    PrTextEditBuffer* b = prTextEditBufferCreate("abcdef");
+    CHECK(prTextEditBufferStyleRunCount(b) == 0);
+    CHECK(prTextEditBufferStyleAt(b, 3) == 0);
+    prTextEditBufferSetStyle(b, 2, 4, 7);
+    CHECK(runsOf(b) == Runs{0, 0, 2, 7, 4, 0});
+    CHECK(prTextEditBufferStyleAt(b, 3) == 7);
+    prTextEditBufferSetStyle(b, 2, 4, 0);
+    CHECK(prTextEditBufferStyleRunCount(b) == 0);
+    prTextEditBufferDestroy(b);
+}
+
+TEST_CASE("style runs follow edits, and inserted text takes the style of what it replaces or follows") {
+    struct Case {
+        const char* name;
+        uint32_t start;
+        uint32_t end;
+        const char* text;
+        Runs expected;
+    };
+    const Case cases[] = {
+        {"before the run", 1, 1, "x", {0, 0, 3, 7, 5, 0}},
+        {"at the run's start joins the text before it", 2, 2, "x", {0, 0, 3, 7, 5, 0}},
+        {"inside the run", 3, 3, "x", {0, 0, 2, 7, 5, 0}},
+        {"at the run's end joins the run", 4, 4, "x", {0, 0, 2, 7, 5, 0}},
+        {"after the run", 5, 5, "x", {0, 0, 2, 7, 4, 0}},
+        {"replacing the run takes its style", 2, 4, "xyz", {0, 0, 2, 7, 5, 0}},
+        {"removing the run removes it", 2, 4, "", {}},
+        {"replacing across the run takes the first byte's style", 1, 3, "x", {0, 0, 2, 7, 3, 0}},
+        {"at the start takes the first style", 0, 0, "x", {0, 0, 3, 7, 5, 0}},
+    };
+    for (const Case& c : cases) {
+        INFO(std::string(c.name));
+        PrTextEditBuffer* b = prTextEditBufferCreate("abcdef");
+        prTextEditBufferSetStyle(b, 2, 4, 7);
+        PrTextEditChange change{.start = c.start, .end = c.end, .text = c.text};
+        prTextEditBufferApply(b, &change, 1, PrTextEditOrigin_Local);
+        CHECK(runsOf(b) == c.expected);
+        prTextEditBufferDestroy(b);
+    }
+}
+
+TEST_CASE("a transaction's changes each move the runs") {
+    PrTextEditBuffer* b = prTextEditBufferCreate("abcdef");
+    prTextEditBufferSetStyle(b, 2, 4, 7);
+    PrTextEditChange changes[] = {{.start = 0, .end = 0, .text = "xx"}, {.start = 5, .end = 6, .text = ""}};
+    prTextEditBufferApply(b, changes, 2, PrTextEditOrigin_Local);
+    CHECK(runsOf(b) == Runs{0, 0, 4, 7, 6, 0});
+    prTextEditBufferDestroy(b);
+}
+
+TEST_CASE("undo restores the styles of deleted text, and redo removes them again") {
+    PrTextEditBuffer* b = prTextEditBufferCreate("abcdef");
+    PrTextEditHistory* history = prTextEditHistoryCreate(b);
+    PrTextEditView* view = prTextEditViewCreate(b);
+    prTextEditBufferSetStyle(b, 2, 4, 7);
+    Runs start = runsOf(b);
+    PrTextEditChange change{.start = 1, .end = 5};
+    prTextEditViewApply(view, &change, 1, PrTextEditOrigin_Local, PrTextEditMerge_None);
+    CHECK(runsOf(b) == Runs{});
+    prTextEditHistoryUndo(history, view);
+    CHECK(runsOf(b) == start);
+    prTextEditHistoryRedo(history, view);
+    CHECK(runsOf(b) == Runs{});
+    prTextEditHistoryUndo(history, view);
+    CHECK(runsOf(b) == start);
+    prTextEditViewDestroy(view);
+    prTextEditHistoryDestroy(history);
+    prTextEditBufferDestroy(b);
+}
+
+TEST_CASE("undo of a run of deletions restores each deleted byte's style") {
+    for (bool forward : {false, true}) {
+        INFO(forward);
+        PrTextEditBuffer* b = prTextEditBufferCreate("abcdef");
+        PrTextEditHistory* history = prTextEditHistoryCreate(b);
+        PrTextEditView* view = prTextEditViewCreate(b);
+        prTextEditBufferSetStyle(b, 2, 3, 7);
+        Runs start = runsOf(b);
+        for (uint32_t i = 0; i < 4; ++i) {
+            uint32_t at = forward ? 0 : 5 - i;
+            PrTextEditSelection caret{.anchor = at + (forward ? 0 : 1), .caret = at + (forward ? 0 : 1)};
+            prTextEditViewSetSelections(view, &caret, 1);
+            PrTextEditChange change{.start = at, .end = at + 1};
+            prTextEditViewApply(view, &change, 1, PrTextEditOrigin_Local, PrTextEditMerge_Deleting);
+        }
+        prTextEditHistoryUndo(history, view);
+        CHECK(!prTextEditHistoryCanUndo(history));
+        CHECK(runsOf(b) == start);
+        prTextEditViewDestroy(view);
+        prTextEditHistoryDestroy(history);
+        prTextEditBufferDestroy(b);
+    }
+}
+
+TEST_CASE("a view's style change is a step of the history of each selection") {
+    PrTextEditBuffer* b = prTextEditBufferCreate("abcdef");
+    PrTextEditHistory* history = prTextEditHistoryCreate(b);
+    PrTextEditView* view = prTextEditViewCreate(b);
+    PrTextEditSelection selections[] = {{.anchor = 0, .caret = 1}, {.anchor = 3, .caret = 4}};
+    prTextEditViewSetSelections(view, selections, 2);
+    uint64_t version = prTextEditBufferVersion(b);
+    prTextEditViewSetStyle(view, 7);
+    CHECK(runsOf(b) == Runs{0, 7, 1, 0, 3, 7, 4, 0});
+    CHECK(prTextEditBufferVersion(b) == version);
+    prTextEditHistoryUndo(history, view);
+    CHECK(runsOf(b) == Runs{});
+    prTextEditHistoryRedo(history, view);
+    CHECK(runsOf(b) == Runs{0, 7, 1, 0, 3, 7, 4, 0});
+    prTextEditViewDestroy(view);
+    prTextEditHistoryDestroy(history);
+    prTextEditBufferDestroy(b);
+}
+
+TEST_CASE("a style set at a caret waits for the next insertion, until the caret moves") {
+    PrTextEditBuffer* b = prTextEditBufferCreate("abc");
+    PrTextEditView* view = prTextEditViewCreate(b);
+    PrTextEditSelection caret{.anchor = 1, .caret = 1};
+    prTextEditViewSetSelections(view, &caret, 1);
+    prTextEditViewSetStyle(view, 7);
+    CHECK(prTextEditBufferStyleRunCount(b) == 0);
+    prTextEditViewSetSelections(view, &caret, 1);
+    prTextEditViewInsert(view, "x", PrTextEditOrigin_Local, PrTextEditMerge_Typing);
+    CHECK(runsOf(b) == Runs{0, 0, 1, 7, 2, 0});
+    // The next insertion follows the text that it joins.
+    prTextEditViewInsert(view, "y", PrTextEditOrigin_Local, PrTextEditMerge_Typing);
+    CHECK(runsOf(b) == Runs{0, 0, 1, 7, 3, 0});
+
+    PrTextEditSelection end{.anchor = 4, .caret = 4};
+    prTextEditViewSetSelections(view, &end, 1);
+    prTextEditViewSetStyle(view, 9);
+    PrTextEditSelection moved{.anchor = 0, .caret = 0};
+    prTextEditViewSetSelections(view, &moved, 1);
+    prTextEditViewInsert(view, "z", PrTextEditOrigin_Local, PrTextEditMerge_None);
+    CHECK(prTextEditBufferStyleAt(b, 0) == 0);
+    prTextEditViewDestroy(view);
+    prTextEditBufferDestroy(b);
 }

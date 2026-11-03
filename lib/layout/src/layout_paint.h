@@ -99,7 +99,9 @@ struct LayoutPaintLayer {
 };
 
 // A slot of embedded content that a recording names at the point where its replaced box paints it. A slot is named in
-// the same way as a layer, and also holds its embed id, its node, and its content box in the recording's space.
+// the same way as a layer, and also holds its embed id, its node, and its content box in the recording's space. The
+// tree's caret is a slot too, named after its text fragment, so that the scene can show or hide it without recording. A
+// caret's box is its bar, and it has no embed id.
 struct LayoutPaintSlot {
     uint64_t embed;
     LayoutNodeIndex node;
@@ -107,6 +109,8 @@ struct LayoutPaintSlot {
     LayoutPaintContainerRef scroll;
     uint32_t segment;
     uint32_t order;
+    bool caret;
+    PrColor16 color;                // the bar of a caret
 };
 
 // A part of a recording's wheel region: the border box of a box whose wheel waits for its document

@@ -539,9 +539,9 @@ void prLayoutTreeFrameSetHighlights(PrLayoutTree* tree, PrLayoutNode text,
     layoutTreeSetHighlights(tree, index, highlights, count, tree->frame.frame);
 }
 
-void prLayoutTreeFrameSetCaret(PrLayoutTree* tree, const PrLayoutCaret* caret) {
+void prLayoutTreeFrameSetCarets(PrLayoutTree* tree, const PrLayoutCaret* PR_NULLABLE carets, uint32_t count) {
     PR_ASSERT(tree->frame.open);
-    layoutTreeSetCaret(tree, caret, tree->frame.frame);
+    layoutTreeSetCarets(tree, carets, count, tree->frame.frame);
 }
 
 uint32_t prLayoutNodeSlot(PrLayoutNode node) {

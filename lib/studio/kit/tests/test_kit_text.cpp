@@ -208,6 +208,47 @@ TEST_CASE("an edit's description chooses how its arrows move at a change of dire
     }
 }
 
+TEST_CASE("a text area shows a buffer's styles in their roles and tones, and edits across them") {
+    KitFixture f;
+    PrTextEditBuffer* buffer = prTextEditBufferCreate("plain strong");
+    prTextEditBufferSetStyle(buffer, 6, 12, 1);
+    const PrKitTextAreaStyle styles[] = {
+        {PrKitTextRole_Body, PrKitTone_Auto},
+        {PrKitTextRole_Strong, PrKitTone_Accent},
+    };
+    PrLayoutNode area = kPrLayoutNodeNone;
+    f.build = [&](PrLayoutNode ground) {
+        PrLayoutNode column = prKitBox(f.kit, ground, {}, {.place = {.width = prKitPx(200)}});
+        area = prKitTextArea(f.kit, column, {.buffer = buffer, .rows = 3, .styles = styles, .styleCount = 2}, {});
+    };
+    f.frame();
+    PrRect box = f.bounds(area);
+    f.click(PrVec2{box.right - 4, box.bottom - 4});
+    f.frame();
+    f.frame();
+    REQUIRE(prUiFocus(f.ui) == area);
+    CHECK(prUiTextEditSelection(f.ui, area).caret == 12);
+    f.type("!");
+    f.frame();
+    f.frame();
+    CHECK(prTextEditBufferStyleAt(buffer, 12) == 1);
+    PrStringView text = prTextEditBufferText(buffer);
+    CHECK(std::string(text.data, text.size) == "plain strong!");
+    prTextEditBufferDestroy(buffer);
+}
+
+TEST_CASE("a text field shows a styled buffer as its plain text") {
+    KitFixture f;
+    PrTextEditBuffer* buffer = prTextEditBufferCreate("plain strong");
+    prTextEditBufferSetStyle(buffer, 6, 12, 1);
+    PrLayoutNode field = kPrLayoutNodeNone;
+    f.build = [&](PrLayoutNode ground) { field = prKitTextField(f.kit, ground, {.buffer = buffer}, {}); };
+    f.frame();
+    f.frame();
+    CHECK(field != kPrLayoutNodeNone);
+    prTextEditBufferDestroy(buffer);
+}
+
 TEST_CASE("the caret moves over a grapheme cluster as a whole") {
     // e and a combining acute accent, then a family emoji of four people joined by zero-width joiners.
     Edited e("e\xcc\x81" "\xf0\x9f\x91\xa8\xe2\x80\x8d\xf0\x9f\x91\xa9\xe2\x80\x8d\xf0\x9f\x91\xa7");
@@ -278,9 +319,9 @@ TEST_CASE("cut, copy and paste go through the application's clipboard") {
 TEST_CASE("the tree paints the selection as a highlight and the caret while the field has focus") {
     Edited e("abc");
     PrLayoutCaret caret{};
-    CHECK_FALSE(prLayoutTreeCaret(e.f.tree, &caret));
+    CHECK_FALSE(prLayoutTreeCarets(e.f.tree, &caret, 1) == 1);
     e.focus();
-    REQUIRE(prLayoutTreeCaret(e.f.tree, &caret));
+    REQUIRE(prLayoutTreeCarets(e.f.tree, &caret, 1) == 1);
     CHECK(caret.position.node == e.textNode());
     CHECK(caret.position.offset == 3);
     e.f.key(PrAppKey_Left, PrAppModifierFlag_Shift);
@@ -290,27 +331,28 @@ TEST_CASE("the tree paints the selection as a highlight and the caret while the 
     CHECK(highlight.start == 2);
     CHECK(highlight.end == 3);
     // A selection hides the caret.
-    CHECK_FALSE(prLayoutTreeCaret(e.f.tree, &caret));
+    CHECK_FALSE(prLayoutTreeCarets(e.f.tree, &caret, 1) == 1);
     // Losing focus hides both.
     e.f.click(PrVec2{700, 500});
     e.f.frame();
     CHECK(prLayoutNodeHighlights(e.f.tree, e.textNode(), nullptr, 0) == 0);
-    CHECK_FALSE(prLayoutTreeCaret(e.f.tree, &caret));
+    CHECK_FALSE(prLayoutTreeCarets(e.f.tree, &caret, 1) == 1);
 }
 
 TEST_CASE("the caret blinks while the field has focus, and holds still if the user asks for less motion") {
     Edited e("abc");
     e.focus();
-    PrLayoutCaret caret{};
-    CHECK(prLayoutTreeCaret(e.f.tree, &caret));
-    CHECK(prUiOutput(e.f.ui).wantsFrame);
+    CHECK(!prLayoutTreeCaretsHidden(e.f.tree));
+    CHECK(prUiOutput(e.f.ui).frameTime != 0);
+    CHECK_FALSE(prUiOutput(e.f.ui).wantsFrame);
     e.f.frame(0.6);
-    CHECK_FALSE(prLayoutTreeCaret(e.f.tree, &caret));
+    CHECK(prLayoutTreeCaretsHidden(e.f.tree));
     e.f.frame(0.5);
-    CHECK(prLayoutTreeCaret(e.f.tree, &caret));
+    CHECK(!prLayoutTreeCaretsHidden(e.f.tree));
     e.f.preferences.reducedMotion = true;
     e.f.frame(0.6);
-    CHECK(prLayoutTreeCaret(e.f.tree, &caret));
+    CHECK(!prLayoutTreeCaretsHidden(e.f.tree));
+    CHECK(prUiOutput(e.f.ui).frameTime == 0);
 }
 
 TEST_CASE("Return inserts a line feed in a text area, and Up and Down move between its lines") {
@@ -547,5 +589,5 @@ TEST_CASE("a disabled field takes no text and shows no caret") {
     f.frame();
     CHECK(text == "fixed");
     PrLayoutCaret caret{};
-    CHECK_FALSE(prLayoutTreeCaret(f.tree, &caret));
+    CHECK_FALSE(prLayoutTreeCarets(f.tree, &caret, 1) == 1);
 }

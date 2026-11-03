@@ -147,6 +147,18 @@ PrTextEditMotion prTextEditMotionFromCommand(const PrTextEditGeometry* geometry,
 PrTextEditPosition prTextEditMotionMove(const PrTextEditGeometry* geometry, PrTextEditPosition at,
     PrTextEditMotion motion, float* goal, bool* hasGoal);
 
+// An end of a selection that holds text.
+enum {
+    PrTextEditSelectionEnd_None,
+    PrTextEditSelectionEnd_Low,
+    PrTextEditSelectionEnd_High,
+};
+typedef uint8_t PrTextEditSelectionEnd;
+
+// Returns the end of a selection that holds text that a collapsing `motion` goes toward, in a paragraph of `direction`,
+// or None for a motion that goes from the caret.
+PrTextEditSelectionEnd prTextEditMotionCollapseEnd(PrTextEditMotion motion, PrTextDirection direction);
+
 // What a motion does to a selection's anchor.
 enum {
     PrTextEditSelectionMove_Collapse,   // the anchor moves with the caret

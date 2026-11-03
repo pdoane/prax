@@ -134,6 +134,10 @@ BENCHES = [
           "caret through layout",
           ["text_edit_bench"], fetch=["fonts"], run=engine.text_edit,
           sources=[os.path.join(common.ROOT, "tools", "bench", "text_edit_bench.cpp")]),
+    Bench("text-view", "a windowed view of 100, 10,000 and 1,000,000 lines: opening, a keystroke, a caret's motion and a "
+          "scroll, each through layout",
+          ["text_view_bench"], fetch=["fonts"], run=engine.text_view,
+          sources=[os.path.join(common.ROOT, "tools", "bench", "text_view_bench.cpp")]),
     Bench("flex", "trees of flex boxes in lib/layout, Yoga and Taffy: built, laid out, resized, changed and unchanged",
           ["flex_bench"], run=engine.flex, options=engine.flex_options,
           sources=sorted(glob.glob(os.path.join(FLEX, "*.*")) + glob.glob(os.path.join(FLEX, "taffy", "*.*"))

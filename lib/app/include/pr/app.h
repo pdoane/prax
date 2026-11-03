@@ -361,6 +361,10 @@ typedef struct PrAppOutput {
     bool wantsFrame;            // true to deliver another frame when the display next needs one
     bool hasTextInput;          // true if text is being edited at `textInput`
     PrRect textInput;           // the caret, in logical px of the window, where the input method's windows open
+
+    // When to deliver a frame, on the clock of PrAppFrame::time, for what changes by itself at a known time, or zero
+    // for no time. The application sleeps until then. Each frame's output replaces the last frame's time.
+    double frameTime;
 } PrAppOutput;
 
 // The callbacks into the program, each passed `context`. All are called on the thread that runs the application, and
@@ -449,13 +453,14 @@ struct PrAppBrowser {
 // The functions of an application, at the start of its backend's state. Each member implements the function that it is
 // named for. A null `destroy` leaves nothing to free. An application with no browser engine leaves all the browser
 // functions null. Callers use the functions below, never these members. A backend delivers each frame with
-// prAppDeliverFrame.
+// prAppDeliverFrame. `requestFrameAt` replaces the time of the last call, and zero leaves no time.
 struct PrApp {
     void (*PR_NULLABLE destroy)(PrApp* app);
     void (*run)(PrApp* app, const PrAppHandler* handler);
     void (*stop)(PrApp* app);
     void (*wake)(PrApp* app);
     void (*requestFrame)(PrApp* app);
+    void (*requestFrameAt)(PrApp* app, double time);
     void (*setCursor)(PrApp* app, PrAppCursor cursor);
     void (*PR_NULLABLE setTextInputRect)(PrApp* app, PrRect rect);
     void (*setTitle)(PrApp* app, PrStringView title);
@@ -509,7 +514,8 @@ void prAppRequestFrame(PrApp* app);
 PrAppOutput prAppOutputPlaced(PrAppOutput output, PrVec2 origin, float scale);
 
 // Returns what two surfaces of one window report together. The pointer's surface gives the cursor. The second surface's
-// text input is taken if it has one, and otherwise the first's. Either surface can want a frame.
+// text input is taken if it has one, and otherwise the first's. Either surface can want a frame, and the earlier of
+// their frame times is taken.
 PrAppOutput prAppOutputMerge(PrAppOutput first, PrAppOutput second, bool pointerInSecond);
 
 // Sets the title of the window, which PrAppDesc::title sets first. The window copies `title`.

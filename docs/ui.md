@@ -96,8 +96,9 @@ another must meet belongs to the context, so that no library owns it:
   buffer instead (text.md, Text editing). The edit moves the caret and the selection by the pointer and the keys over
   what the last layout placed, and it applies typing, deletion and the clipboard of the application that the host binds
   (`prUiSetApp`). The edit creates the text node that shows the text, and the layout tree paints the selection and the
-  caret for the frame (layout.md, Text positions, highlights and the caret). A library chooses only the look: the
-  element that holds the text, and the colors of the selection and the caret.
+  caret for the frame (layout.md, Text positions, highlights and the caret). A blink asks for one frame at the time the
+  caret next turns (`prUiRequestMotionAt`), so an idle application with a caret sleeps between its turns. A library
+  chooses only the look: the element that holds the text, and the colors of the selection and the caret.
 
 ## Component libraries
 

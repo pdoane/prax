@@ -9,7 +9,9 @@
 #include "pr/kit_input.h"
 #include "pr/kit_menu.h"
 #include "pr/kit_theme.h"
+#include "pr/text_edit.h"
 #include "pr/ui.h"
+#include "pr/ui_text_edit.h"
 
 #include "examples/studio_gallery/gallery_parts.h"
 
@@ -21,6 +23,16 @@ namespace {
 
 // The width of a field's caption, in px.
 constexpr float kCaptionWidth = 92;
+
+// The styles of the styled text area, by PrTextEditStyle, and the names of their buttons.
+constexpr PrKitTextAreaStyle kStyledLooks[] = {
+    {PrKitTextRole_Body, PrKitTone_Auto},
+    {PrKitTextRole_Strong, PrKitTone_Auto},
+    {PrKitTextRole_BodyItalic, PrKitTone_Auto},
+    {PrKitTextRole_Body, PrKitTone_Accent},
+    {PrKitTextRole_Heading, PrKitTone_Auto},
+};
+constexpr const char* kStyledNames[] = {"Plain", "Strong", "Italic", "Accent", "Heading"};
 
 // The tools of a tool row.
 constexpr PrKitIconKind kToolIcons[] = {
@@ -461,6 +473,36 @@ void sectionInputs(PrKit* kit, PrLayoutNode parent, GalleryState& state) {
         PrKitFieldStyle mono{.mono = true};
         if (prKitTextChanged(kit, prKitTextArea(kit, code, snippet, mono), &text))
             inputs.snippet.assign(text.data, text.size);
+    }
+    {
+        PrLayoutNode panel = demoPanel(kit, section, "STYLED TEXT", "STYLE RUNS IN ONE BUFFER", false);
+        PrKitTextArea styled{
+            .buffer = inputs.styled,
+            .rows = 5,
+            .styles = kStyledLooks,
+            .styleCount = countOf(kStyledLooks),
+        };
+        PrLayoutNode tools = prKitBox(kit, panel, {}, {.direction = PrKitDirection_Row, .gap = kPrKitSpace2});
+        // A button takes focus from the area, and the area takes it back, with its selection as it stood.
+        bool chosen[countOf(kStyledNames)] = {};
+        for (uint32_t i = 0; i < countOf(kStyledNames); ++i)
+            chosen[i] = prKitActivated(kit, prKitButton(kit, tools, {.text = kStyledNames[i]}, {}));
+        bool undo = prKitActivated(kit, prKitButton(kit, tools, {.text = "Undo"}, {}));
+        bool redo = prKitActivated(kit, prKitButton(kit, tools, {.text = "Redo"}, {}));
+        PrLayoutNode area = prKitTextArea(kit, panel, styled, {});
+        PrTextEditView* view = prUiTextEditView(kit->ui, area);
+        bool acted = undo || redo;
+        for (uint32_t i = 0; view != nullptr && i < countOf(kStyledNames); ++i) {
+            if (chosen[i])
+                prTextEditViewSetStyle(view, PrTextEditStyle(i));
+            acted = acted || chosen[i];
+        }
+        if (undo && view != nullptr)
+            prTextEditHistoryUndo(inputs.styledHistory, view);
+        if (redo && view != nullptr)
+            prTextEditHistoryRedo(inputs.styledHistory, view);
+        if (acted)
+            prUiSetFocus(kit->ui, area);
     }
     {
         PrLayoutNode panel = demoPanel(kit, section, "NUMERIC . VECTORS", "DRAG TO SCRUB", false);

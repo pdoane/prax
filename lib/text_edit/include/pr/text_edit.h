@@ -242,6 +242,37 @@ bool prTextEditViewApply(PrTextEditView* view, const PrTextEditChange* PR_NULLAB
 bool prTextEditViewInsert(PrTextEditView* view, PrStringView text, PrTextEditOrigin origin, PrTextEditMerge merge);
 
 // ---------------------------------------------------------------------------------------------------------------------
+// Styles
+
+// What a range of the text looks like, as a value that means something only to whatever shows the text. Zero is the
+// style of text that nothing has styled.
+typedef uint32_t PrTextEditStyle;
+
+// A style from `start` up to the next run's start, or the end of the text. The first run starts at zero, and two runs
+// in a row differ.
+typedef struct PrTextEditStyleRun {
+    uint32_t start;
+    PrTextEditStyle style;
+} PrTextEditStyleRun;
+
+// The buffer's style runs, valid until the buffer changes. A buffer whose text is all of style zero has none, and costs
+// nothing for them. The runs follow every transaction. Inserted text takes the style of what it replaces, or of the
+// text before it, or at the start of the text, of the text after it. The cost of an edit is proportional to the number
+// of runs.
+uint32_t prTextEditBufferStyleRunCount(const PrTextEditBuffer* buffer);
+const PrTextEditStyleRun* PR_NULLABLE prTextEditBufferStyleRuns(const PrTextEditBuffer* buffer);
+
+// Returns the style of the byte at `offset`, or at the end of the text, of its last byte.
+PrTextEditStyle prTextEditBufferStyleAt(const PrTextEditBuffer* buffer, uint32_t offset);
+
+// Sets the style of the bytes from `start` to `end`, outside the history. This is for text that a program loads.
+void prTextEditBufferSetStyle(PrTextEditBuffer* buffer, uint32_t start, uint32_t end, PrTextEditStyle style);
+
+// Sets the style of what each of the view's selections holds, as one step of the history. If no selection holds text,
+// it sets the style that the view's next local insertion takes, until the view's selections move.
+void prTextEditViewSetStyle(PrTextEditView* view, PrTextEditStyle style);
+
+// ---------------------------------------------------------------------------------------------------------------------
 // History
 
 // The steps of a buffer's local transactions, which can be undone and redone. The owner of the model that the buffer
@@ -266,6 +297,19 @@ void prTextEditHistoryBreak(PrTextEditHistory* history);
 
 // Removes every step.
 void prTextEditHistoryClear(PrTextEditHistory* history);
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Caret
+
+// The part of its blink that a caret stands in.
+typedef struct PrTextEditCaretBlink {
+    bool on;                        // true if the caret shows
+    double next;                    // when the caret next turns on or off, on the clock of the call's times
+} PrTextEditCaretBlink;
+
+// The blink of a caret at `time`, in seconds, whose last move was at `activity`. It shows from the move, and through
+// any time before the move.
+PrTextEditCaretBlink prTextEditCaretBlinkAt(double activity, double time);
 
 #if defined(__cplusplus)
 }

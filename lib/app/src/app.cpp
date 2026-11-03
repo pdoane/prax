@@ -135,6 +135,7 @@ void prAppDeliverFrame(PrApp* app, const PrAppHandler* handler, const PrAppFrame
         app->setTextInputRect(app, output.textInput);
     if (output.wantsFrame)
         app->requestFrame(app);
+    app->requestFrameAt(app, output.frameTime);
 }
 
 void prAppWake(PrApp* app) {
@@ -157,11 +158,15 @@ PrAppOutput prAppOutputPlaced(PrAppOutput output, PrVec2 origin, float scale) {
 
 PrAppOutput prAppOutputMerge(PrAppOutput first, PrAppOutput second, bool pointerInSecond) {
     const PrAppOutput& input = second.hasTextInput ? second : first;
+    double frameTime = first.frameTime != 0 ? first.frameTime : second.frameTime;
+    if (second.frameTime != 0 && second.frameTime < frameTime)
+        frameTime = second.frameTime;
     return PrAppOutput{
         .cursor = pointerInSecond ? second.cursor : first.cursor,
         .wantsFrame = first.wantsFrame || second.wantsFrame,
         .hasTextInput = input.hasTextInput,
         .textInput = input.textInput,
+        .frameTime = frameTime,
     };
 }
 

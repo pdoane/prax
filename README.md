@@ -31,7 +31,7 @@ The libraries, by area. The first comment of each library's `CMakeLists.txt` say
 | System | `app`, `gpu`, `audio`, `media` |
 | Networking | `net`, `tls`, `http`, `websocket`, `fetch`, `xhr`, `url`, `mime` |
 | Data | `json`, `xml`, `compress`, `image`, `color`, `geom`, `charset`, `locale`, `unicode`, `html_entity` |
-| Text | `font`, `font_bundle`, `text`, `text_edit` |
+| Text | `font`, `font_bundle`, `text`, `text_edit`, `text_view` |
 | Graphics | `path`, `draw`, `canvas`, `lottie` |
 | Documents | `css`, `dom`, `layout`, `html`, `svg`, `mathml`, `markdown` |
 | Interface | `ui`, `studio/kit`, `studio/command` |

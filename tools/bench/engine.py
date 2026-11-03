@@ -62,6 +62,10 @@ def text_edit(args):
     return {"prax": common.run_json([common.binary(args.bin, "text_edit_bench")], "text_edit_bench")}, []
 
 
+def text_view(args):
+    return {"prax": common.run_json([common.binary(args.bin, "text_view_bench")], "text_view_bench")}, []
+
+
 # ----------------------------------------------------------------------------------------------------------------------
 # flex
 

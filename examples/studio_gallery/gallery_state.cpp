@@ -299,6 +299,9 @@ GalleryState::GalleryState() {
     inputs.snippet = "vec3 n = normalize(worldNormal);\n"
         "float d = dot(n, lightDir);\n"
         "return baseColor * max(d, 0.0);";
+    inputs.styled = prTextEditBufferCreate("Select some text and give it a style. Each style is a run of its own, and the "
+        "caret, the selection and undo count through them all.");
+    inputs.styledHistory = prTextEditHistoryCreate(inputs.styled);
     inputs.commands = {"build --release", "suite render css/flex-basis", "bench vg"};
     uint32_t key = 0;
     for (const TreeSeed& seed : kTreeSeeds) {
@@ -323,6 +326,8 @@ GalleryState::GalleryState() {
 }
 
 GalleryState::~GalleryState() {
+    prTextEditHistoryDestroy(inputs.styledHistory);
+    prTextEditBufferDestroy(inputs.styled);
     prDrawImageRelease(picture);
 }
 

@@ -72,7 +72,8 @@ struct LayoutSceneTransform {
 };
 
 // A slot of embedded content in a layer's recording: its id and node, its content box in its layer's space, the
-// container that holds it, and the number of its layer's segments that play before it.
+// container that holds it, and the number of its layer's segments that play before it. The tree's caret is also a slot
+// (LayoutPaintSlot), which no embed query reports.
 struct LayoutSceneSlot {
     uint64_t embed;
     PrLayoutNode node;
@@ -81,6 +82,8 @@ struct LayoutSceneSlot {
     uint32_t segmentsBefore;
     uint32_t order;                 // its order among the layers and slots that its layer's recording names
     PrLayoutRect box;
+    bool caret;
+    PrColor16 color;                // the bar of a caret
 };
 
 // A part of a scene's wheel region (LayoutPaintRegion): a rectangle in its layer's space, and the container that holds
@@ -148,6 +151,7 @@ struct LayoutScene {
     PrLayoutRect canvas;            // in the viewport's content space
     PrColor canvasColor;            // the color that fills the canvas (prLayoutSceneCanvasColor)
     float pixelRatio;               // the tree's target pixels per px, to which playing rounds scroll offsets
+    bool caretHidden;               // true if the slots of the carets play nothing
 
     // The moves that scroll anchoring made to the tree's offsets since the scene before this one
     // (prLayoutSceneScrollAdjustments).

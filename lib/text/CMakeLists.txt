@@ -2,6 +2,7 @@
 pr_library(text INCLUDE include
     src/text.cpp
     src/text_break.cpp
+    src/text_estimate.cpp
     src/text_font.cpp
     src/text_layout.cpp
     src/text_shaping.cpp
@@ -54,6 +55,7 @@ if (PR_DEVELOP)
         tests/test_text.cpp
         tests/test_text_break.cpp
         tests/test_text_c.c
+        tests/test_text_estimate.cpp
         tests/test_text_shaping.cpp
         tests/test_text_transform.cpp
         backends/simple/tests/test_text_simple.cpp

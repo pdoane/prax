@@ -4,7 +4,6 @@
 
 #include "pr/array.h"
 #include "pr/assert.h"
-#include "pr/float.h"
 #include "pr/layout_frame.h"
 #include "pr/layout_query.h"
 #include "pr/mem.h"
@@ -49,9 +48,6 @@ struct TextEditState {
     double activity;                // the time of the last move of the caret, from which it blinks
 };
 
-// The period of the caret's blink, in seconds, half of it shown.
-constexpr double kBlinkSeconds = 1.0;
-
 // Ends the editing of the text, and frees what held it.
 void closeBuffer(TextEditState& state) {
     prTextEditViewDestroy(state.view);
@@ -89,7 +85,9 @@ struct TextEditor {
     PrUi* ui;
     PrLayoutTree* tree;
     const PrUiTextEditDesc& desc;
-    PrLayoutNode node;              // the text node
+    PrLayoutNode node;                 // the first text node
+    Array<PrTextEditLayoutRun> pieces; // the text nodes, each with where its text starts in the text
+    Array<PrLayoutNode> boxes;         // the inline box of each of `pieces`, if the text has style runs
     TextEditState& state;
     bool multiline;
     bool changed;
@@ -211,19 +209,51 @@ struct TextEditor {
             replace(at < caret ? at : caret, at < caret ? caret : at, PrStringView{}, origin, PrTextEditMerge_Deleting);
     }
 
+    // Returns the piece that shows `offset`. An offset where two pieces meet is in the second, or in the first if it
+    // stands upstream.
+    const PrTextEditLayoutRun& pieceAt(uint32_t offset, PrLayoutTextAffinity side) const {
+        uint32_t i = 0;
+        while (i + 1 < pieces.count && pieces.data[i + 1].start <= offset)
+            ++i;
+        if (side == PrLayoutTextAffinity_Upstream && i > 0 && pieces.data[i].start == offset)
+            --i;
+        return pieces.data[i];
+    }
+
+    // Returns the geometry of the text as the last layout shows it.
+    PrTextEditGeometry geometry(PrStringView t) const {
+        if (pieces.count == 1)
+            return prTextEditGeometryFromLayoutText(tree, node, t);
+        return prTextEditGeometryFromLayoutRuns(tree, desc.parent, pieces.data, pieces.count, t);
+    }
+
     // Returns the position nearest `point` in viewport px, and the affinity that puts the caret on the line under it.
     bool positionAt(PrVec2 point, uint32_t* out, PrLayoutTextAffinity* side) {
-        uint32_t at = 0;
-        if (!prLayoutTextOffsetNear(tree, node, prLayoutVecFromPx(point), &at, side))
-            return false;
-        *out = prTextEditCodePointStart(text(), at);
+        PrLayoutVec at = prLayoutVecFromPx(point);
+        uint32_t offset = 0;
+        uint32_t start = 0;
+        if (pieces.count == 1) {
+            if (!prLayoutTextOffsetNear(tree, node, at, &offset, side))
+                return false;
+        } else {
+            PrLayoutTextPosition position{};
+            if (!prLayoutTextPositionFromPoint(tree, desc.parent, at, &position) ||
+                    !prLayoutTextOffsetNear(tree, position.node, at, &offset, side))
+                return false;
+            for (uint32_t i = 0; i < pieces.count; ++i) {
+                if (pieces.data[i].node == position.node)
+                    start = pieces.data[i].start;
+            }
+        }
+        *out = prTextEditCodePointStart(text(), start + offset);
         return true;
     }
 
     // Writes the caret at `offset` in viewport px.
     bool caretAt(uint32_t offset, PrLayoutTextAffinity side, PrRect* out) {
         PrLayoutRect rect{};
-        if (!prLayoutNodeTextCaret(tree, node, offset, side, PrLayoutCoordinates_Viewport, &rect))
+        const PrTextEditLayoutRun& piece = pieceAt(offset, side);
+        if (!prLayoutNodeTextCaret(tree, piece.node, offset - piece.start, side, PrLayoutCoordinates_Viewport, &rect))
             return false;
         *out = prLayoutRectToPx(rect);
         return true;
@@ -232,9 +262,9 @@ struct TextEditor {
     // Carries out a motion of the caret, and returns false if the edit does not take it.
     bool move(PrTextEditCommand command, bool extend) {
         PrStringView t = text();
-        PrTextEditGeometry geometry = prTextEditGeometryFromLayoutText(tree, node, t);
+        PrTextEditGeometry shape = geometry(t);
         PrTextEditPosition at{node, caret, affinity};
-        PrTextEditMotion motion = prTextEditMotionFromCommand(&geometry, at, command, desc.arrowMotion);
+        PrTextEditMotion motion = prTextEditMotionFromCommand(&shape, at, command, desc.arrowMotion);
         bool between = motion == PrTextEditMotion_LinePrevious || motion == PrTextEditMotion_LineNext;
         if (motion != PrTextEditMotion_None && (multiline || !between)) {
             PrTextEditSelection s{
@@ -245,7 +275,7 @@ struct TextEditor {
                 .affinity = affinity,
             };
             PrTextEditSelectionMove kind = extend ? PrTextEditSelectionMove_Extend : PrTextEditSelectionMove_Collapse;
-            s = prTextEditSelectionMove(&geometry, node, s, motion, kind);
+            s = prTextEditSelectionMove(&shape, node, s, motion, kind);
             anchor = s.anchor;
             caret = s.caret;
             affinity = s.affinity;
@@ -253,7 +283,7 @@ struct TextEditor {
             hasColumn = s.hasGoal;
             moved = true;
         }
-        prTextEditGeometryReset(&geometry);
+        prTextEditGeometryReset(&shape);
         return motion != PrTextEditMotion_None;
     }
 
@@ -383,11 +413,11 @@ struct TextEditor {
             }
         }
         // Up and Down run along the line where lines are vertical, even in a one-line edit.
-        PrTextEditGeometry geometry = prTextEditGeometryFromLayoutText(tree, node, text());
+        PrTextEditGeometry shape = geometry(text());
         PrTextEditLine line{};
-        bool vertical = geometry.line(geometry.context, PrTextEditPosition{node, caret, affinity},
+        bool vertical = shape.line(shape.context, PrTextEditPosition{node, caret, affinity},
             PrTextEditLineStep_Same, &line) && line.flow != PrTextEditFlow_HorizontalTb;
-        prTextEditGeometryReset(&geometry);
+        prTextEditGeometryReset(&shape);
         static const PrAppKey kLines[] = {PrAppKey_Up, PrAppKey_Down};
         for (uint32_t i = 0; (multiline || vertical) && i < 2; ++i) {
             for (PrAppModifierFlags modifiers : kMoveModifiers) {
@@ -416,6 +446,60 @@ struct TextEditor {
         scratch.append(t.data, uint32_t(t.size));
         scratch.push(' ');
         return PrStringView{scratch.data, scratch.count};
+    }
+
+    // Returns the record of a run's style.
+    PrLayoutStyleIndex boxStyle(PrTextEditStyle style) const {
+        PR_ASSERT(desc.styleCount != 0);
+        return desc.styles[style < desc.styleCount ? style : 0];
+    }
+
+    // Writes the text of each run's node, and its style, creating what the runs need beyond what `pieces` has. A piece
+    // that the runs no longer need goes at the commit of a later round, and shows nothing until then.
+    void showRuns() {
+        const PrTextEditStyleRun* runs = prTextEditBufferStyleRuns(desc.buffer);
+        uint32_t count = prTextEditBufferStyleRunCount(desc.buffer);
+        PrStringView all = shown();
+        for (uint32_t i = 0; i < count; ++i) {
+            uint32_t start = runs[i].start;
+            uint32_t end = i + 1 < count ? runs[i + 1].start : uint32_t(all.size);
+            PrStringView part{all.data + start, end - start};
+            if (i < pieces.count) {
+                prLayoutTreeFrameSetStyle(tree, boxes.data[i], boxStyle(runs[i].style));
+                prLayoutTreeFrameSetText(tree, pieces.data[i].node, part);
+                pieces.data[i].start = start;
+            } else {
+                PrLayoutNode box = prLayoutTreeFrameElement(tree, desc.parent, 0, boxStyle(runs[i].style));
+                boxes.push(box);
+                pieces.push(PrTextEditLayoutRun{prLayoutTreeFrameText(tree, box, 0, part), start});
+            }
+        }
+        for (uint32_t i = count; i < pieces.count; ++i)
+            prLayoutTreeFrameSetText(tree, pieces.data[i].node, "");
+        pieces.count = count;
+        boxes.count = count;
+    }
+
+    // Declares the nodes that show the text, as the runs stand when the round begins.
+    void declare() {
+        bool styled = desc.buffer != nullptr && prTextEditBufferStyleRunCount(desc.buffer) != 0;
+        if (styled) {
+            showRuns();
+        } else {
+            pieces.push(PrTextEditLayoutRun{prLayoutTreeFrameText(tree, desc.parent, 0, shown()), 0});
+        }
+        node = pieces.data[0].node;
+    }
+
+    // Shows what this round's edits left. The next round declares the nodes for them.
+    void showEdited() {
+        if (boxes.count != 0 && prTextEditBufferStyleRunCount(desc.buffer) != 0) {
+            showRuns();
+            return;
+        }
+        pieces.count = 1;
+        pieces.data[0].start = 0;
+        prLayoutTreeFrameSetText(tree, node, shown());
     }
 };
 
@@ -457,15 +541,17 @@ PrLayoutNode prUiTextEdit(PrUi* ui, const PrUiTextEditDesc* desc) {
     editor.caret = prTextEditCodePointStart(text, editor.caret);
     if (state.markEnd > text.size || state.markStart > state.markEnd)
         state.markStart = state.markEnd = 0;
-    editor.node = prLayoutTreeFrameText(editor.tree, desc->parent, 0, editor.shown());
+    editor.declare();
 
     // The layout that the last round's edits made is laid out now, so the caret can be brought into view.
     if (state.reveal) {
         state.reveal = false;
         PrLayoutRect rect{};
-        if (prLayoutNodeTextCaret(editor.tree, editor.node, editor.caret, editor.affinity, PrLayoutCoordinates_Viewport, &rect)) {
+        const PrTextEditLayoutRun& piece = editor.pieceAt(editor.caret, editor.affinity);
+        if (prLayoutNodeTextCaret(editor.tree, piece.node, editor.caret - piece.start, editor.affinity,
+                PrLayoutCoordinates_Viewport, &rect)) {
             rect.right = rect.left + prLayoutUnitFromPx(1);
-            prUiRevealRect(ui, editor.node, rect);
+            prUiRevealRect(ui, piece.node, rect);
         }
     }
 
@@ -524,34 +610,47 @@ PrLayoutNode prUiTextEdit(PrUi* ui, const PrUiTextEditDesc* desc) {
         state.reveal = true;
     }
     if (editor.changed)
-        prLayoutTreeFrameSetText(editor.tree, editor.node, editor.shown());
-    editor.scratch.reset();
+        editor.showEdited();
     editor.storeSelection();
 
     // The selection shows while the control has focus, and the caret while it has focus and blinks on.
     if (focused && editor.anchor != editor.caret) {
-        PrLayoutHighlight selection{.start = editor.low(), .end = editor.high(), .background = desc->selection};
-        prLayoutTreeFrameSetHighlights(editor.tree, editor.node, &selection, 1);
+        // A highlight is of one text node, so the selection has one in each piece that it reaches.
+        for (uint32_t i = 0; i < editor.pieces.count; ++i) {
+            uint32_t start = editor.pieces.data[i].start;
+            uint32_t end = i + 1 < editor.pieces.count ? editor.pieces.data[i + 1].start : editor.high();
+            uint32_t from = editor.low() > start ? editor.low() : start;
+            uint32_t to = editor.high() < end ? editor.high() : end;
+            if (from >= to)
+                continue;
+            PrLayoutHighlight selection{.start = from - start, .end = to - start, .background = desc->selection};
+            prLayoutTreeFrameSetHighlights(editor.tree, editor.pieces.data[i].node, &selection, 1);
+        }
     }
     if (focused) {
         PrRect inputRect{};
         if (editor.caretAt(editor.caret, editor.affinity, &inputRect))
             prUiSetTextInput(ui, inputRect);
         bool still = prUiUserPreferences(ui).reducedMotion;
-        double phase = time - state.activity;
-        bool on = still || phase - kBlinkSeconds * floorF64(phase / kBlinkSeconds) < kBlinkSeconds / 2;
-        if (on && editor.anchor == editor.caret) {
+        PrTextEditCaretBlink blink = prTextEditCaretBlinkAt(state.activity, time);
+        if (editor.anchor == editor.caret) {
+            const PrTextEditLayoutRun& piece = editor.pieceAt(editor.caret, editor.affinity);
             PrLayoutCaret shownCaret{
-                .position = {editor.node, editor.caret},
+                .position = {piece.node, editor.caret - piece.start},
                 .affinity = editor.affinity,
                 .color = desc->caret,
             };
-            prLayoutTreeFrameSetCaret(editor.tree, &shownCaret);
+            prLayoutTreeFrameSetCarets(editor.tree, &shownCaret, 1);
+            prLayoutTreeSetCaretsHidden(editor.tree, !still && !blink.on);
+            if (!still)
+                prUiRequestMotionAt(ui, desc->control, blink.next);
         }
-        if (!still)
-            prUiRequestMotion(ui, desc->control);
     }
-    return editor.node;
+    PrLayoutNode first = editor.node;
+    editor.scratch.reset();
+    editor.pieces.reset();
+    editor.boxes.reset();
+    return first;
 }
 
 bool prUiTextEditChanged(PrUi* ui, PrLayoutNode control, PrStringView* text) {
@@ -560,6 +659,10 @@ bool prUiTextEditChanged(PrUi* ui, PrLayoutNode control, PrStringView* text) {
         return false;
     *text = prTextEditBufferText(state.view != nullptr ? prTextEditViewBuffer(state.view) : state.buffer);
     return true;
+}
+
+PrTextEditView* PR_NULLABLE prUiTextEditView(PrUi* ui, PrLayoutNode control) {
+    return stateOf(ui, control).view;
 }
 
 bool prUiTextEditIsComposing(PrUi* ui, PrLayoutNode control) {

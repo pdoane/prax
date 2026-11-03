@@ -230,12 +230,12 @@ values.
   toward an origin at the right or the bottom. Painting, hit testing and a compositor translate content by it and read
   no writing mode. Its range is a rectangle of the least and greatest offsets.
 
-### Text positions, highlights and the caret
+### Text positions, highlights and carets
 
 A position in text is a caret before a byte of a text node's own text, the offset that DOM ranges and selections
 hold. Layout answers where the last layout put a position, and which position is nearest a point
 (`prLayoutNodeTextCaret`, `prLayoutNodeTextRangeBoxes`, `prLayoutTextPositionFromPoint`), and paints highlights of
-ranges and the caret (`prLayoutNodeSetHighlights`, `prLayoutTreeSetCaret`).
+ranges and carets (`prLayoutNodeSetHighlights`, `prLayoutTreeSetCarets`).
 
 - **Source offsets.** Collection keeps, for each byte of the collected text, the offset in its node's text of the
   character that it came from (`LayoutInlineShaping::sources`). White space collapsing and text-transform change the
@@ -249,12 +249,15 @@ ranges and the caret (`prLayoutNodeSetHighlights`, `prLayoutTreeSetCaret`).
 - **Breaks.** A preserved segment break makes a text fragment of its own at the end of its line, with no glyphs and no
   advance, so that a line that holds nothing else gives a caret a place. A break adds no box to the node's boxes, and
   is never hit.
-- **Painting.** A text fragment with a highlight or the caret is recorded on its own: the highlights' backgrounds, then
-  its glyphs, clipped to each stretch along the line that one color paints, then the caret. Every other fragment is
-  recorded as before. Setting highlights or moving the caret marks the nodes whose recordings change, as a record
-  change does.
-- **Frames.** A frame sets highlights and the caret for itself (`prLayoutTreeFrameSetHighlights`,
-  `prLayoutTreeFrameSetCaret`), and the commit removes those that the frame did not set again, as it erases the nodes
+- **Painting.** A text fragment with a highlight is recorded on its own: the highlights' backgrounds, then its glyphs,
+  clipped to each stretch along the line that one color paints. Every other fragment is recorded as before. Setting
+  highlights or moving a caret marks the nodes whose recordings change, as a record change does.
+- **Carets.** A tree paints any number of carets, which are an input of painting and never of layout. A recording names
+  each as a slot after its text fragment, so the text records as it would without a caret. Hidden carets
+  (`prLayoutTreeSetCaretsHidden`) keep their slots. The scene plays the slots or skips them, so a blink assembles a scene
+  and records nothing, whatever the size of the text.
+- **Frames.** A frame sets highlights and the carets for itself (`prLayoutTreeFrameSetHighlights`,
+  `prLayoutTreeFrameSetCarets`), and the commit removes those that the frame did not set again, as it erases the nodes
   that the frame did not create.
 
 ### Scroll anchoring

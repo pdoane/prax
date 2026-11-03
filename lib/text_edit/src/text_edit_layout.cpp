@@ -2,6 +2,7 @@
 
 #include "pr/alloc.h"
 #include "pr/array.h"
+#include "pr/assert.h"
 
 namespace pr_impl {
 
@@ -11,8 +12,11 @@ namespace {
 struct LayoutLines {
     PrLayoutTree* tree;
     PrLayoutNode root;
-    bool flat;                      // the root is one text node that shows `text`
+    bool flat;                      // text nodes show `text`, and offsets count in it
     PrStringView text;
+    const PrTextEditLayoutRun* PR_NULLABLE runs;    // the nodes of flat text, or `ownRun`
+    uint32_t runCount;
+    PrTextEditLayoutRun ownRun;
     Array<PrLayoutLineStop> found;
     Array<PrTextEditLineStop> stops;
 
@@ -28,12 +32,31 @@ struct LayoutLines {
     PrTextEditGeometry ownLines;
 };
 
-// Returns true if the node shows `text`, perhaps with more after it.
+// Returns true if the nodes show `text`, perhaps with more after it in the last.
 bool showsText(const LayoutLines& lines) {
-    PrStringView shown = prLayoutNodeText(lines.tree, lines.root);
-    if (shown.size < lines.text.size)
-        return false;
-    return PrStringView{shown.data, lines.text.size} == lines.text;
+    for (uint32_t i = 0; i < lines.runCount; ++i) {
+        uint32_t start = lines.runs[i].start;
+        bool last = i + 1 == lines.runCount;
+        uint32_t end = last ? uint32_t(lines.text.size) : lines.runs[i + 1].start;
+        PrStringView shown = prLayoutNodeText(lines.tree, lines.runs[i].node);
+        PrStringView part{lines.text.data + start, end - start};
+        if (shown.size < part.size || (!last && shown.size != part.size))
+            return false;
+        if (PrStringView{shown.data, part.size} != part)
+            return false;
+    }
+    return true;
+}
+
+// Returns the run that holds `at`. An offset where two runs meet is in the second, or in the first if it stands
+// upstream.
+uint32_t runHolding(const LayoutLines& lines, PrTextEditPosition at) {
+    uint32_t run = 0;
+    while (run + 1 < lines.runCount && lines.runs[run + 1].start <= at.offset)
+        ++run;
+    if (at.affinity == PrTextEditAffinity_Upstream && run > 0 && lines.runs[run].start == at.offset)
+        --run;
+    return run;
 }
 
 PrTextEditFlow flowFromWritingMode(PrLayoutWritingMode mode) {
@@ -49,7 +72,8 @@ PrTextEditFlow flowFromWritingMode(PrLayoutWritingMode mode) {
 // Answers from the text's own lines, in the direction and writing mode that its node's style gives them.
 bool answerFromText(LayoutLines& lines, PrTextEditPosition at, PrTextEditLineStep step, PrTextEditLine* out) {
     PrLayoutLineInfo info{};
-    prLayoutNodeLineInfo(lines.tree, lines.root, at.offset, &info);
+    uint32_t run = runHolding(lines, at);
+    prLayoutNodeLineInfo(lines.tree, lines.runs[run].node, at.offset - lines.runs[run].start, &info);
     if (!lines.hasOwnLines) {
         lines.ownLines = prTextEditGeometryFromText(lines.text, info.direction);
         lines.hasOwnLines = true;
@@ -62,6 +86,10 @@ bool answerFromText(LayoutLines& lines, PrTextEditPosition at, PrTextEditLineSte
 
 bool answerFromLayout(LayoutLines& lines, PrTextEditPosition at, PrTextEditLineStep step, PrTextEditLine* out) {
     PrLayoutTextPosition position{at.node, at.offset};
+    if (lines.flat) {
+        uint32_t run = runHolding(lines, at);
+        position = PrLayoutTextPosition{lines.runs[run].node, at.offset - lines.runs[run].start};
+    }
     PrLayoutLineInfo info{};
     PrLayoutLineStep layoutStep = PrLayoutLineStep_Same;
     if (step == PrTextEditLineStep_Next)
@@ -82,14 +110,32 @@ bool answerFromLayout(LayoutLines& lines, PrTextEditPosition at, PrTextEditLineS
     uint32_t endStop = 0;
     for (uint32_t i = 0; i < count; ++i) {
         const PrLayoutLineStop& stop = lines.found.data[i];
-        // What a node shows after the flat text is not a place for a caret, so the text's last stop ends the line.
-        if (lines.flat && stop.position.offset > lines.text.size)
-            continue;
+        PrTextEditPosition place{stop.position.node, stop.position.offset, stop.affinity};
+        if (lines.flat) {
+            uint32_t run = 0;
+            while (run < lines.runCount && lines.runs[run].node != stop.position.node)
+                ++run;
+            if (run == lines.runCount)
+                continue;
+            place.node = at.node;
+            place.offset += lines.runs[run].start;
+            // What a node shows after the flat text is not a place for a caret, so the text's last stop ends the line.
+            if (place.offset > lines.text.size)
+                continue;
+        }
+        // Where two runs meet, each has a stop at one place, which is one place for a caret, with the text after it.
+        bool repeats = lines.stops.count != 0 && lines.stops.last().position.offset == place.offset &&
+            lines.stops.last().position.node == place.node && lines.stops.last().along == stop.along;
+        if (repeats) {
+            lines.stops.last().position.affinity = PrTextEditAffinity_Downstream;
+        } else {
+            lines.stops.push(PrTextEditLineStop{place, stop.along});
+        }
+        uint32_t index = lines.stops.count - 1;
         if (i == info.startStop)
-            startStop = lines.stops.count;
-        if (i == info.endStop || (lines.flat && stop.position.offset == lines.text.size))
-            endStop = lines.stops.count;
-        lines.stops.push(PrTextEditLineStop{{stop.position.node, stop.position.offset, stop.affinity}, stop.along});
+            startStop = index;
+        if (i == info.endStop || (lines.flat && place.offset == lines.text.size))
+            endStop = index;
     }
     if (lines.stops.count == 0)
         return false;
@@ -183,5 +229,21 @@ PrTextEditGeometry prTextEditGeometryFromLayoutText(PrLayoutTree* tree, PrLayout
     lines->root = node;
     lines->flat = true;
     lines->text = text;
+    lines->ownRun = PrTextEditLayoutRun{node, 0};
+    lines->runs = &lines->ownRun;
+    lines->runCount = 1;
+    return geometryOf(lines);
+}
+
+PrTextEditGeometry prTextEditGeometryFromLayoutRuns(PrLayoutTree* tree, PrLayoutNode root,
+        const PrTextEditLayoutRun* runs, uint32_t count, PrStringView text) {
+    PR_ASSERT(count != 0);
+    LayoutLines* lines = allocZeroed<LayoutLines>();
+    lines->tree = tree;
+    lines->root = root;
+    lines->flat = true;
+    lines->text = text;
+    lines->runs = runs;
+    lines->runCount = count;
     return geometryOf(lines);
 }

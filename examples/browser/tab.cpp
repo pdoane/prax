@@ -325,7 +325,8 @@ void publish(Browser& b) {
         const PrAppOutput& was = tab->published.output;
         bool sameInput = now.hasTextInput == was.hasTextInput && now.textInput.left == was.textInput.left &&
             now.textInput.top == was.textInput.top;
-        if (sameDocument(info, tab->published) && now.cursor == was.cursor && sameInput)
+        if (sameDocument(info, tab->published) && now.cursor == was.cursor && sameInput &&
+                now.frameTime == was.frameTime)
             continue;
         prMutexLock(&tab->mutex);
         tab->published = info;

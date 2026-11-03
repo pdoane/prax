@@ -202,20 +202,26 @@ void prLayoutNodeSetHighlights(PrLayoutTree* tree, PrLayoutNode text, const PrLa
 uint32_t prLayoutNodeHighlights(const PrLayoutTree* tree, PrLayoutNode text, PrLayoutHighlight* PR_NULLABLE out,
     uint32_t capacity);
 
-// The caret that a tree paints (css-ui-4/#caret): a bar 1 px wide at `position`, which `affinity` places where the
-// position stands at two places, in `color`, across the content area of the text there. The caret paints over its text
-// and the text's highlights.
+// A caret that a tree paints (css-ui-4/#caret): a bar 1 px wide at `position`, which `affinity` places where the
+// position stands at two places, in `color`, across the content area of the text there. A caret paints over its text
+// and the text's highlights. A caret is an input of painting and never of layout.
 typedef struct PrLayoutCaret {
     PrLayoutTextPosition position;
     PrLayoutTextAffinity affinity;
     PrColor16 color;
 } PrLayoutCaret;
 
-// Sets the caret that the tree paints, or removes it if `caret` is null. A caret whose node is erased paints nowhere.
-void prLayoutTreeSetCaret(PrLayoutTree* tree, const PrLayoutCaret* PR_NULLABLE caret);
+// Sets the carets that the tree paints, replacing those it had. A caret whose node is erased paints nowhere.
+void prLayoutTreeSetCarets(PrLayoutTree* tree, const PrLayoutCaret* PR_NULLABLE carets, uint32_t count);
 
-// Writes the tree's caret to `out`. Returns false, and writes nothing, if the tree has none.
-bool prLayoutTreeCaret(const PrLayoutTree* tree, PrLayoutCaret* out);
+// Writes up to `capacity` of the tree's carets to `out`, and returns how many the tree has.
+uint32_t prLayoutTreeCarets(const PrLayoutTree* tree, PrLayoutCaret* PR_NULLABLE out, uint32_t capacity);
+
+// Sets or returns whether the tree's carets keep their places and paint nothing, as in the off part of a blink. The
+// carets blink together. A change of this state records nothing, so its cost does not depend on the text. A frame may
+// be open when it is set.
+void prLayoutTreeSetCaretsHidden(PrLayoutTree* tree, bool hidden);
+bool prLayoutTreeCaretsHidden(const PrLayoutTree* tree);
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Keys

@@ -24,6 +24,7 @@ extern "C" {
 typedef struct PrKitPalette {
     PrColor accent;
     PrColor accentWeak;             // a selected item's wash
+    PrColor textSelection;          // the background of selected text, which the text stays readable over
     PrColor accentText;             // text over an accent fill
     PrColor accentHover;
     PrColor accentPress;

@@ -153,6 +153,12 @@ typedef struct PrKitFieldStyle {
     bool bare;                      // no frame of its own, as in a row that draws one, such as a palette's search row
 } PrKitFieldStyle;
 
+// How a style of a text area's buffer looks: its text's role and tone.
+typedef struct PrKitTextAreaStyle {
+    PrKitTextRole role;
+    PrKitTone tone;
+} PrKitTextAreaStyle;
+
 // What a text field edits and shows.
 typedef struct PrKitTextField {
     PrUiKey key;
@@ -185,6 +191,11 @@ typedef struct PrKitTextArea {
     PrStringView placeholder;
     uint32_t rows;
     bool disabled;
+
+    // How each style of the buffer's text looks, by PrTextEditStyle, with style zero first. A style past the table
+    // looks like style zero. With no table, all of the text looks like the area's own.
+    const PrKitTextAreaStyle* PR_NULLABLE styles;
+    uint32_t styleCount;
 } PrKitTextArea;
 
 // Creates a text area, edited as a text field is, with line feeds of its own: Return inserts one, a triple press

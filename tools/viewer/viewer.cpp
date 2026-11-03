@@ -1036,7 +1036,7 @@ PrAppOutput pageOutput(Viewer& v, const PrAppOutput& panel, double time) {
     PrRect at = placed(v, rect, source.docWidth, source.docHeight, zoom);
     PrAppOutput page = prAppOutputPlaced(output(*source.loaded, v.app, time), PrVec2{at.left, at.top}, zoom);
     // A caret that blinks changes the page's render.
-    if (page.wantsFrame)
+    if (page.wantsFrame || page.frameTime != 0)
         v.panes[index]->touch();
     return prAppOutputMerge(panel, page, inside(rect, v.pointerX, v.pointerY));
 }

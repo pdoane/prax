@@ -11,6 +11,23 @@ function(pr_example name)
     target_link_libraries(${name} PRIVATE pr_warnings)
 endfunction()
 
+# Scribe: a text editor over lib/text_view, whose operations are commands of lib/studio/command.
+# Its editor is a library of its own, which the application and the tests of its interface share.
+add_library(scribe_editor STATIC scribe/scribe.cpp)
+target_include_directories(scribe_editor PUBLIC ${PROJECT_SOURCE_DIR})
+target_link_libraries(scribe_editor PUBLIC prax::app prax::studio_command prax::studio_kit prax::layout prax::text_edit
+                                           prax::text_view prax::ui prax::core_cpp
+                                    PRIVATE pr_warnings)
+
+pr_example(scribe scribe/main.cpp)
+target_link_libraries(scribe PRIVATE scribe_editor prax::app prax::draw prax::gpu prax::font prax::font_bundle
+                                     prax::layout prax::studio_kit prax::text prax::ui)
+
+if (PR_DEVELOP)
+    pr_module_tests(scribe_editor scribe/tests/test_scribe.cpp)
+    target_link_libraries(scribe_editor_tests PRIVATE kit_fixture prax::font prax::layout prax::text prax::ui)
+endif()
+
 # The draw example: animated scenes drawn with lib/draw alone, rendered on the GPU and mapped to the display.
 pr_example(draw draw/main.cpp draw/scenes.cpp)
 target_link_libraries(draw PRIVATE prax::app prax::draw prax::gpu
@@ -39,7 +56,7 @@ pr_example(studio_gallery
     studio_gallery/section_feedback.cpp
     studio_gallery/section_data.cpp
 )
-target_link_libraries(studio_gallery PRIVATE prax::app prax::studio_kit prax::draw prax::gpu prax::font prax::layout
+target_link_libraries(studio_gallery PRIVATE prax::app prax::text_edit prax::studio_kit prax::draw prax::gpu prax::font prax::layout
                                              prax::ui prax::text prax::font_bundle prax::color prax::core_cpp)
 
 # The perspective example: Kit panels standing in 3D over a background that the application draws with its own

@@ -12,6 +12,7 @@
 #include "pr/kit_timeline.h"
 #include "pr/layout_tree.h"
 #include "pr/string_view.h"
+#include "pr/text_edit.h"
 
 #include <stdint.h>
 #include <string>
@@ -143,6 +144,8 @@ struct InputsState {
     std::string revision = "main";
     std::string prose;
     std::string snippet;
+    PrTextEditBuffer* styled = nullptr;     // the text of the styled area, whose styles index kStyledLooks
+    PrTextEditHistory* styledHistory = nullptr;
     std::vector<std::string> commands;      // submitted lines, oldest first
     float uv[2] = {0.5f, 0.5f};
     float position[3] = {1.234f, 0.0f, -4.5f};

@@ -21,6 +21,19 @@ PrTextEditGeometry prTextEditGeometryFromLayout(PrLayoutTree* tree, PrLayoutNode
 // lines.
 PrTextEditGeometry prTextEditGeometryFromLayoutText(PrLayoutTree* tree, PrLayoutNode node, PrStringView text);
 
+// A text node that shows part of a flat text, from byte `start` of the text up to the next run's start.
+typedef struct PrTextEditLayoutRun {
+    PrLayoutNode node;
+    uint32_t start;
+} PrTextEditLayoutRun;
+
+// Creates the geometry of the flat text `text`, which the text nodes of `runs` show in order under `root`, as styled
+// text shows. The last node may show more after the text, as prTextEditGeometryFromLayoutText's may. `runs` and `text`
+// must stay valid while the geometry is in use. A position's node may be any value, and each stop keeps it, since
+// offsets count in the flat text. The place where two runs meet is one stop.
+PrTextEditGeometry prTextEditGeometryFromLayoutRuns(PrLayoutTree* tree, PrLayoutNode root,
+    const PrTextEditLayoutRun* runs, uint32_t count, PrStringView text);
+
 #if defined(__cplusplus)
 }
 #endif

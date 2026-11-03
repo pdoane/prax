@@ -14,6 +14,11 @@ pr_harness(text_edit_bench prax::text_edit text_edit_bench.cpp)
 target_link_libraries(text_edit_bench PRIVATE prax::font prax::layout prax::text)
 target_compile_definitions(text_edit_bench PRIVATE PR_FONTS_DIR="${PROJECT_SOURCE_DIR}/third_party/fonts")
 
+# What a windowed view costs at each size of document, which ./dev.sh bench text-view runs.
+pr_harness(text_view_bench prax::text_view text_view_bench.cpp)
+target_link_libraries(text_view_bench PRIVATE prax::draw prax::font prax::gpu prax::layout prax::text)
+target_compile_definitions(text_view_bench PRIVATE PR_FONTS_DIR="${PROJECT_SOURCE_DIR}/third_party/fonts")
+
 # The flex benchmark, which lays the same trees out in lib/layout, Yoga and Taffy (./dev.sh bench flex). It is built
 # where Cargo is installed. Taffy's side is a Rust static library, which Cargo builds, optimized whatever the build type.
 find_program(PR_CARGO cargo)

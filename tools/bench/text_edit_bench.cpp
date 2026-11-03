@@ -37,6 +37,9 @@ constexpr uint32_t kFarDivisor = 3;
 // The number of anchors in the case that carries them.
 constexpr uint32_t kCarried = 1000;
 
+// The number of style runs in the case that carries them.
+constexpr uint32_t kStyled = 1000;
+
 // Returns a document of `lines` lines of different text.
 std::string makeDocument(uint32_t lines) {
     std::string text;
@@ -203,6 +206,14 @@ int main(int argc, char** argv) {
             report("type with anchors", harnessMeasure([&] { typeAtCaret(&w); }));
             for (PrTextEditAnchor anchor : anchors)
                 prTextEditAnchorRemove(w.buffer, anchor);
+
+            // What a keystroke costs follows the number of runs, so this row has a fixed number of them.
+            for (uint32_t i = 0; i < kStyled; ++i) {
+                uint32_t at = w.size / kStyled * i;
+                prTextEditBufferSetStyle(w.buffer, at, at + 1, 1);
+            }
+            report("type with style runs", harnessMeasure([&] { typeAtCaret(&w); }));
+            prTextEditBufferSetStyle(w.buffer, 0, w.size, 0);
 
             PrTextEditHistory* history = prTextEditHistoryCreate(w.buffer);
             report("type and undo", harnessMeasure([&] {

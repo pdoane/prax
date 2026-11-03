@@ -109,6 +109,15 @@ void prUiRequestFrame(PrUi* ui);
 // view requests no frames until it is shown again.
 void prUiRequestMotion(PrUi* ui, PrLayoutNode node);
 
+// Requests a frame at `time`, on the clock of the frame's time, which prUiOutput reports until the next frame begins.
+// The earliest request of a frame stands. Nothing runs until then, so this is the form for what changes at a known
+// time.
+void prUiRequestFrameAt(PrUi* ui, double time);
+
+// Requests a frame at `time` for a change on `node` that runs without input, such as a caret's blink, under the
+// condition of prUiRequestMotion.
+void prUiRequestMotionAt(PrUi* ui, PrLayoutNode node, double time);
+
 // ---------------------------------------------------------------------------------------------------------------------
 // Node keys
 //

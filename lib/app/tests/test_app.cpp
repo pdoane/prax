@@ -16,6 +16,7 @@ namespace {
 struct FakeApp {
     PrApp record;
     std::vector<std::string> calls;
+    double frameTime;
 };
 
 FakeApp& fakeOf(PrApp* app) {
@@ -38,6 +39,7 @@ void createFake(FakeApp& fake) {
     fake.record.stop = [](PrApp* app) { fakeOf(app).calls.push_back("stop"); };
     fake.record.wake = [](PrApp* app) { fakeOf(app).calls.push_back("wake"); };
     fake.record.requestFrame = [](PrApp* app) { fakeOf(app).calls.push_back("frame"); };
+    fake.record.requestFrameAt = [](PrApp* app, double time) { fakeOf(app).frameTime = time; };
     fake.record.setCursor = [](PrApp* app, PrAppCursor) { fakeOf(app).calls.push_back("cursor"); };
     fake.record.setTitle = [](PrApp* app, PrStringView) { fakeOf(app).calls.push_back("title"); };
     fake.record.surface = [](PrApp*, PrAppSurface*) -> PrStatus { return PrStatus_InvalidState; };
@@ -136,6 +138,31 @@ TEST_CASE("a frame's output reaches the window") {
     PrAppFrame frame{};
     prAppDeliverFrame(&fake.record, &handler, &frame);
     CHECK(fake.calls == std::vector<std::string>{"cursor", "frame"});
+}
+
+TEST_CASE("a frame's time reaches the window, requests no frame now, and the next frame's output replaces it") {
+    FakeApp fake{};
+    createFake(fake);
+    PrAppHandler handler{};
+    handler.frame = [](void*, PrApp*, const PrAppFrame*) { return PrAppOutput{.frameTime = 12.5}; };
+    PrAppFrame frame{};
+    prAppDeliverFrame(&fake.record, &handler, &frame);
+    CHECK(fake.calls == std::vector<std::string>{"cursor"});
+    CHECK(fake.frameTime == 12.5);
+    handler.frame = [](void*, PrApp*, const PrAppFrame*) { return PrAppOutput{}; };
+    prAppDeliverFrame(&fake.record, &handler, &frame);
+    CHECK(fake.frameTime == 0);
+}
+
+TEST_CASE("two surfaces' outputs take the earlier frame time") {
+    PrAppOutput none{};
+    PrAppOutput early{.frameTime = 1};
+    PrAppOutput late{.frameTime = 2};
+    CHECK(prAppOutputMerge(early, late, false).frameTime == 1);
+    CHECK(prAppOutputMerge(late, early, false).frameTime == 1);
+    CHECK(prAppOutputMerge(none, late, false).frameTime == 2);
+    CHECK(prAppOutputMerge(late, none, false).frameTime == 2);
+    CHECK(prAppOutputMerge(none, none, false).frameTime == 0);
 }
 
 TEST_CASE("a surface's output is placed in the window, and two surfaces' outputs merge") {

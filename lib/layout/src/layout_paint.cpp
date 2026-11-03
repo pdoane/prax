@@ -443,6 +443,10 @@ struct Painter : LayoutWalkVisitor {
     Array<HighlightStretch> highlightStretches;
     Array<float> highlightCuts;
 
+    // By caret of the tree: the fragment that holds the caret, once `caretsSearched` is true.
+    Array<const LayoutFragment*> caretFragments;
+    bool caretsSearched;
+
     // Returns the reference by which the chunk names the content of its root's viewport: its own space in the root's
     // chunk, and the root's own space in any other chunk.
     LayoutPaintContainerRef viewportRef() const {
@@ -1237,9 +1241,49 @@ struct Painter : LayoutWalkVisitor {
     void slot(uint64_t embed, LayoutNodeIndex node, PrLayoutRect box) {
         nameNext();
         into().slots.push(LayoutPaintSlot{
-            embed, node, layoutRectMoved(box, kLayoutVecZero - origin), current,
-            into().segments.count, named(),
+            .embed = embed,
+            .node = node,
+            .box = layoutRectMoved(box, kLayoutVecZero - origin),
+            .scroll = current,
+            .segment = into().segments.count,
+            .order = named(),
         });
+    }
+
+    // Names each of the tree's carets that stands in `fragment` after it, placed at `at`. The text around a caret
+    // records as it would without one, so what a caret costs does not grow with its text. The search for the carets'
+    // fragments runs once, since it visits the fragments of their nodes.
+    void caretSlots(const LayoutFragment* fragment, PrLayoutVec at) {
+        const Array<PrLayoutCaret>& carets = tree->carets.carets;
+        if (carets.count == 0)
+            return;
+        if (!caretsSearched) {
+            caretsSearched = true;
+            caretFragments.resize(carets.count);
+            for (uint32_t i = 0; i < carets.count; ++i) {
+                const PrLayoutCaret& caret = carets.data[i];
+                caretFragments.data[i] = nullptr;
+                if (prLayoutNodeIsValid(static_cast<const PrLayoutTree*>(tree), caret.position.node)) {
+                    caretFragments.data[i] = layoutCaretFragment(tree, layoutNodeIndex(tree, caret.position.node),
+                        caret.position.offset, caret.affinity);
+                }
+            }
+        }
+        for (uint32_t i = 0; i < carets.count; ++i) {
+            if (caretFragments.data[i] != fragment)
+                continue;
+            float along = layoutTextCaretAlong(tree, fragment, carets.data[i].position.offset);
+            nameNext();
+            into().slots.push(LayoutPaintSlot{
+                .node = fragment->node,
+                .box = layoutTextSpanRect(tree, fragment, at - origin, along, along + 1),
+                .scroll = current,
+                .segment = into().segments.count,
+                .order = named(),
+                .caret = true,
+                .color = carets.data[i].color,
+            });
+        }
     }
 
     // Adds the border box `at` of `fragment` to the wheel region, with the area that its descendants reach, unless the
@@ -1730,16 +1774,15 @@ struct Painter : LayoutWalkVisitor {
         if (!visible)
             return;
         const LayoutHighlights* highlights = layoutTextHighlights(tree, fragment->node);
-        const LayoutTreeCaret& caret = tree->caret;
-        bool caretHere = caret.shown &&
-            prLayoutNodeIsValid(static_cast<const PrLayoutTree*>(tree), caret.caret.position.node) &&
-            layoutNodeIndex(tree, caret.caret.position.node) == fragment->node;
-        if (highlights != nullptr || caretHere) {
-            marked(fragment, at, highlights, caretHere);
+        if (highlights != nullptr) {
+            marked(fragment, at, highlights);
+            caretSlots(fragment, at);
             return;
         }
-        if (text.glyphCount == 0)
+        if (text.glyphCount == 0) {
+            caretSlots(fragment, at);
             return;
+        }
         PrVec2 offset = prLayoutVecToPx(at - origin);
         PrColor16 color = layoutColorStyle(styles, layoutFragmentStyle(tree, fragment)).color;
         // The glyphs are placed from the fragment's corner, in the frame of a horizontal line that a turn rotates by a
@@ -1793,13 +1836,12 @@ struct Painter : LayoutWalkVisitor {
             prDrawListPopTransform(into);
         ++stats->textFragmentsRecorded;
         stats->glyphCommandsRecorded += text.rangeCount;
+        caretSlots(fragment, at);
     }
 
-    // Records a text fragment that has highlights or the caret, in one batch: the backgrounds of its highlights, then
-    // its glyphs, clipped to each stretch along its line that one color paints, then the caret if the caret stands in
-    // the fragment (css-pseudo-4/#highlight-painting).
-    void marked(const LayoutFragment* fragment, PrLayoutVec at, const LayoutHighlights* PR_NULLABLE highlights,
-            bool caretHere) {
+    // Records a text fragment that has highlights, in one batch: the backgrounds of its highlights, then its glyphs,
+    // clipped to each stretch along its line that one color paints (css-pseudo-4/#highlight-painting).
+    void marked(const LayoutFragment* fragment, PrLayoutVec at, const LayoutHighlights* highlights) {
         const LayoutFragmentText& text = fragment->text;
         PrLayoutVec offset = at - origin;
         PrColor16 base = layoutColorStyle(styles, layoutFragmentStyle(tree, fragment)).color;
@@ -1814,8 +1856,7 @@ struct Painter : LayoutWalkVisitor {
         };
         Array<HighlightStretch>& stretches = highlightStretches;
         stretches.clear();
-        uint32_t count = highlights != nullptr ? highlights->ranges.count : 0;
-        for (uint32_t i = 0; i < count; ++i) {
+        for (uint32_t i = 0; i < highlights->ranges.count; ++i) {
             const PrLayoutHighlight& h = highlights->ranges.data[i];
             uint32_t from = h.start > start ? h.start : start;
             uint32_t to = h.end < text.end ? h.end : text.end;
@@ -1876,15 +1917,6 @@ struct Painter : LayoutWalkVisitor {
             glyphs(into, fragment, offset, color);
             if (!whole) {
                 prDrawListPopClip(into);
-                record();
-            }
-        }
-        if (caretHere) {
-            const PrLayoutCaret& caret = tree->caret.caret;
-            if (layoutCaretFragment(tree, fragment->node, caret.position.offset, caret.affinity) == fragment) {
-                float along = layoutTextCaretAlong(tree, fragment, caret.position.offset);
-                PrRect bar = prLayoutRectToPx(layoutTextSpanRect(tree, fragment, offset, along, along + 1));
-                prDrawListRect(into, bar, {.color = caret.color});
                 record();
             }
         }
@@ -2051,6 +2083,7 @@ void record(LayoutTree* tree, LayoutPaintChunk& chunk, const LayoutFragment* fra
         resetRecording(painter.spare.data[i]);
     painter.spare.reset();
     painter.highlightStretches.reset();
+    painter.caretFragments.reset();
     painter.highlightCuts.reset();
     // Scenes embed the recording on whatever thread plays them.
     for (uint32_t i = 0; i < chunk.segments.count; ++i)
@@ -2090,7 +2123,8 @@ bool sameRecording(const LayoutPaintChunk& a, const LayoutPaintChunk& b) {
         const LayoutPaintSlot& x = a.slots.data[i];
         const LayoutPaintSlot& y = b.slots.data[i];
         if (x.embed != y.embed || x.node != y.node || memCompare(&x.box, &y.box, sizeof(PrLayoutRect)) != 0 ||
-                x.scroll != y.scroll || x.segment != y.segment || x.order != y.order)
+                x.scroll != y.scroll || x.segment != y.segment || x.order != y.order || x.caret != y.caret ||
+                !memEquals(&x.color, &y.color, sizeof(PrColor16)))
             return false;
     }
     for (uint32_t i = 0; i < a.scrolls.count; ++i) {

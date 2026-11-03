@@ -235,6 +235,19 @@ since the report ends a word at each of those characters. Backspace removes one 
 that a writer can correct a mark or a vowel, and takes whole a cluster that means one thing only as a whole: an emoji
 sequence, a flag, a keycap, or a character with a variation selector. Forward Delete and motion take the cluster.
 
+### Styles
+
+A buffer holds style runs beside its text, as opaque values that mean something only to whatever shows the text, so a
+text that no one styles pays nothing for them. They follow every transaction. Text takes the style of what it replaces
+or follows, and a style set at a caret waits for the next insertion. The history restores the styles of what it brings
+back, and a style change is a step of its own that makes no version of the text.
+
+`prUiTextEdit` shows each run of a caller's buffer as an inline box with a text node in it. A run's value indexes a table
+of records that the caller interns in each round, because a record that no node names is freed, and a buffer's values
+outlive it. Offsets stay in the flat text, and `prTextEditGeometryFromLayoutRuns` maps them to the nodes, so that the
+place where two runs meet is one place for a caret. Kit's text area gives its styles as roles and tones, and the studio
+gallery's controls section has one to try.
+
 ### Motion (`pr/text_edit_motion.h`)
 
 A key names an arrow as it lies on the screen, and the flow of the caret's line says whether that arrow runs along the
@@ -256,6 +269,25 @@ window.
 
 `pr/text_edit_layout.h` answers the interface from a layout tree. Text that no layout shows as it stands, such as masked
 text, uses its bytes' lines (`prTextEditGeometryFromText`).
+
+### The windowed view (`pr/text_view.h`)
+
+A document of any size shows through a window of rows near the viewport, each a block for one logical line, so that the
+cost of a frame follows the window. The height index is a sum tree of two levels over the lines. Rows in the window are
+exact. Every other line starts as an estimate from its length, and `prTextViewRefine` improves it in slices of time from
+its text, through an estimator of advances (`pr/text_estimate.h`) that never shapes. A row's measurement outlives
+refinement until the line's text or the width changes. The scroll position is an anchor in the text with a distance into
+its line, so a correction of an estimate does not move what the reader sees.
+
+Rows stack along the block axis of their writing mode, so a vertical view is the same index and window, with a scroll
+offset along x that is negative toward an origin at the right. Style runs show as inline boxes in a row, so shaping
+continues across them, and a line that is all of style zero holds its text directly. Offsets stay in the line, and the
+place where two runs meet is one place for a caret.
+
+To motion, each logical line is a node (`PrTextEditGeometry`), so a motion reads one line's text and the window's rows,
+and never the whole document. A line outside the window answers from its own bytes until a row shows it. Commands act at
+every selection, as one transaction for an edit, and selections that meet join. `prUiTextView` connects a view to
+immediate-mode frames, and `examples/scribe` is an editor over it, whose operations are commands (`lib/studio/command`).
 
 ## Languages and scripts (`pr/locale.h`)
 

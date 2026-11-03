@@ -260,7 +260,7 @@ TEST_CASE("a highlight fills its range's box behind the text, and paints the gly
 TEST_CASE("the caret paints a bar 1 px wide at its position, over the text") {
     Block b("ab\n\ncd");
     PrLayoutCaret caret{.position = {b.text, 3}, .color = kBlue};
-    prLayoutTreeSetCaret(b.f.tree, &caret);
+    prLayoutTreeSetCarets(b.f.tree, &caret, 1);
     Painted painted = paintOf(b.f.tree);
     PrRect at = b.caret(3);
     uint32_t bars = 0;
@@ -274,12 +274,12 @@ TEST_CASE("the caret paints a bar 1 px wide at its position, over the text") {
     }
     CHECK(bars == 1);
     PrLayoutCaret kept{};
-    CHECK(prLayoutTreeCaret(b.f.tree, &kept));
+    CHECK(prLayoutTreeCarets(b.f.tree, &kept, 1) == 1);
     CHECK(kept.position.offset == 3);
 
     // Moving the caret repaints the text it leaves and the text it comes to.
     caret.position.offset = 0;
-    prLayoutTreeSetCaret(b.f.tree, &caret);
+    prLayoutTreeSetCarets(b.f.tree, &caret, 1);
     bars = 0;
     for (const Painted::Fill& r : paintOf(b.f.tree).rects) {
         if (sameColor(r.color, kBlue)) {
@@ -288,10 +288,91 @@ TEST_CASE("the caret paints a bar 1 px wide at its position, over the text") {
         }
     }
     CHECK(bars == 1);
-    prLayoutTreeSetCaret(b.f.tree, nullptr);
-    CHECK(!prLayoutTreeCaret(b.f.tree, &kept));
+    prLayoutTreeSetCarets(b.f.tree, nullptr, 0);
+    CHECK(!prLayoutTreeCarets(b.f.tree, &kept, 1) == 1);
     for (const Painted::Fill& r : paintOf(b.f.tree).rects)
         CHECK(!sameColor(r.color, kBlue));
+}
+
+TEST_CASE("a tree paints each of its carets, and carets in one text share its recording") {
+    Block b("ab\n\ncd");
+    PrLayoutCaret carets[2] = {{.position = {b.text, 0}, .color = kBlue}, {.position = {b.text, 4}, .color = kBlue}};
+    prLayoutTreeSetCarets(b.f.tree, carets, 2);
+    CHECK(prLayoutTreeCarets(b.f.tree, nullptr, 0) == 2);
+    uint32_t bars = 0;
+    for (const Painted::Fill& r : paintOf(b.f.tree).rects) {
+        if (!sameColor(r.color, kBlue))
+            continue;
+        CHECK(r.rect.top == doctest::Approx(bars == 0 ? b.caret(0).top : b.caret(4).top));
+        ++bars;
+    }
+    CHECK(bars == 2);
+    prLayoutTreeSetCarets(b.f.tree, carets, 1);
+    bars = 0;
+    for (const Painted::Fill& r : paintOf(b.f.tree).rects)
+        bars += sameColor(r.color, kBlue) ? 1 : 0;
+    CHECK(bars == 1);
+}
+
+TEST_CASE("a caret's change reaches no layout, and its blink records nothing") {
+    Fixture f;
+    PrLayoutFontStyle font = prLayoutFontStyleDefault();
+    font.font = textFontOf(20);
+    PrLayoutStyleIndex style = f.style(block(), nullptr, nullptr, &font);
+    PrLayoutCaret caret{.color = kBlue};
+    auto frame = [&]() {
+        prLayoutTreeBeginFrame(f.tree);
+        PrLayoutNode root = prLayoutTreeFrameElement(f.tree, kPrLayoutNodeNone, 0, style);
+        caret.position.node = prLayoutTreeFrameText(f.tree, root, 0, "abcd");
+        prLayoutTreeFrameSetCarets(f.tree, &caret, 1);
+        PrLayoutRoot laid{.node = root, .extent = px(400, 400)};
+        prLayoutTreeLayout(f.tree, &laid, 1);
+    };
+    auto bars = [&]() {
+        uint32_t count = 0;
+        for (const Painted::Fill& r : paintOf(f.tree).rects)
+            count += sameColor(r.color, kBlue) ? 1 : 0;
+        return count;
+    };
+    frame();
+    frame();
+    CHECK(bars() == 1);
+
+    prLayoutTreeSetCaretsHidden(f.tree, true);
+    frame();
+    PrLayoutTreeStats laidOut = prLayoutTreeStats(f.tree);
+    CHECK(laidOut.blocksLaidOut == 0);
+    CHECK(laidOut.linesLaidOut == 0);
+    CHECK(laidOut.inlinesShaped == 0);
+    CHECK(!prLayoutTreeSceneIsCurrent(f.tree));
+    CHECK(bars() == 0);
+    PrLayoutTreeStats painted = prLayoutTreeStats(f.tree);
+    CHECK(painted.layersRecorded == 0);
+    CHECK(painted.subtreesRecorded == 0);
+    PrLayoutTreeDifference difference{};
+    CHECK(prLayoutTreeVerify(f.tree, &difference));
+
+    prLayoutTreeSetCaretsHidden(f.tree, false);
+    frame();
+    CHECK(bars() == 1);
+    CHECK(prLayoutTreeStats(f.tree).layersRecorded == 0);
+
+    // A move records again, and still lays nothing out.
+    caret.position.offset = 2;
+    frame();
+    laidOut = prLayoutTreeStats(f.tree);
+    CHECK(laidOut.blocksLaidOut == 0);
+    CHECK(laidOut.linesLaidOut == 0);
+    CHECK(bars() == 1);
+}
+
+TEST_CASE("a caret is no embed that a scene reports") {
+    Block b("abcd");
+    PrLayoutCaret caret{.position = {b.text, 1}, .color = kBlue};
+    prLayoutTreeSetCarets(b.f.tree, &caret, 1);
+    const PrLayoutScene* scene = prLayoutTreeScene(b.f.tree);
+    CHECK(prLayoutSceneEmbeds(scene, nullptr, 0) == 0);
+    prLayoutSceneRelease(scene);
 }
 
 TEST_CASE("a frame's highlights and caret last until a frame that does not set them") {
@@ -308,7 +389,7 @@ TEST_CASE("a frame's highlights and caret last until a frame that does not set t
         if (marks) {
             prLayoutTreeFrameSetHighlights(f.tree, text, &highlight, 1);
             PrLayoutCaret caret{.position = {text, 1}, .color = kBlue};
-            prLayoutTreeFrameSetCaret(f.tree, &caret);
+            prLayoutTreeFrameSetCarets(f.tree, &caret, 1);
         }
         PrLayoutRoot laid{.node = root, .extent = px(400, 400)};
         prLayoutTreeLayout(f.tree, &laid, 1);
@@ -317,10 +398,10 @@ TEST_CASE("a frame's highlights and caret last until a frame that does not set t
     frame(true);
     PrLayoutCaret caret{};
     CHECK(prLayoutNodeHighlights(f.tree, text, nullptr, 0) == 1);
-    CHECK(prLayoutTreeCaret(f.tree, &caret));
+    CHECK(prLayoutTreeCarets(f.tree, &caret, 1) == 1);
     frame(false);
     CHECK(prLayoutNodeHighlights(f.tree, text, nullptr, 0) == 0);
-    CHECK(!prLayoutTreeCaret(f.tree, &caret));
+    CHECK(!prLayoutTreeCarets(f.tree, &caret, 1) == 1);
 }
 
 TEST_CASE("rendered text: white space is processed, and removed only at the edges of a line") {

@@ -456,6 +456,21 @@ PrTextEditPosition prTextEditMotionMove(const PrTextEditGeometry* geometry, PrTe
     }
 }
 
+PrTextEditSelectionEnd prTextEditMotionCollapseEnd(PrTextEditMotion motion, PrTextDirection direction) {
+    bool rtl = direction == PrTextDirection_Rtl;
+    switch (motion) {
+        case PrTextEditMotion_Left: return rtl ? PrTextEditSelectionEnd_High : PrTextEditSelectionEnd_Low;
+        case PrTextEditMotion_Right: return rtl ? PrTextEditSelectionEnd_Low : PrTextEditSelectionEnd_High;
+        case PrTextEditMotion_ClusterBefore:
+        case PrTextEditMotion_StopBefore:
+        case PrTextEditMotion_LinePrevious: return PrTextEditSelectionEnd_Low;
+        case PrTextEditMotion_ClusterAfter:
+        case PrTextEditMotion_StopAfter:
+        case PrTextEditMotion_LineNext: return PrTextEditSelectionEnd_High;
+        default: return PrTextEditSelectionEnd_None;
+    }
+}
+
 PrTextEditSelection prTextEditSelectionMove(const PrTextEditGeometry* geometry, uint64_t node,
         PrTextEditSelection selection, PrTextEditMotion motion, PrTextEditSelectionMove kind) {
     PrTextEditPosition at{node, selection.caret, selection.affinity};
@@ -463,21 +478,12 @@ PrTextEditSelection prTextEditSelectionMove(const PrTextEditGeometry* geometry, 
     uint32_t low = selection.anchor < selection.caret ? selection.anchor : selection.caret;
     uint32_t high = selection.anchor < selection.caret ? selection.caret : selection.anchor;
     PrTextEditLine line{};
-    bool rtl = geometry->line(geometry->context, at, PrTextEditLineStep_Same, &line) &&
-        line.direction == PrTextDirection_Rtl;
-    bool collapses = !extend && low != high;
-    uint32_t collapsed = 0;
-    switch (motion) {
-        case PrTextEditMotion_Left: collapsed = rtl ? high : low; break;
-        case PrTextEditMotion_Right: collapsed = rtl ? low : high; break;
-        case PrTextEditMotion_ClusterBefore:
-        case PrTextEditMotion_StopBefore:
-        case PrTextEditMotion_LinePrevious: collapsed = low; break;
-        case PrTextEditMotion_ClusterAfter:
-        case PrTextEditMotion_StopAfter:
-        case PrTextEditMotion_LineNext: collapsed = high; break;
-        default: collapses = false; break;
-    }
+    PrTextDirection direction = PrTextDirection_Ltr;
+    if (geometry->line(geometry->context, at, PrTextEditLineStep_Same, &line))
+        direction = line.direction;
+    PrTextEditSelectionEnd end = prTextEditMotionCollapseEnd(motion, direction);
+    bool collapses = !extend && low != high && end != PrTextEditSelectionEnd_None;
+    uint32_t collapsed = end == PrTextEditSelectionEnd_Low ? low : high;
     bool between = motion == PrTextEditMotion_LinePrevious || motion == PrTextEditMotion_LineNext;
     if (collapses && !between)
         return PrTextEditSelection{.anchor = collapsed, .caret = collapsed};
