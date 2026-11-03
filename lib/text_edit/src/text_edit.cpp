@@ -362,11 +362,11 @@ uint32_t remapEdited(const TextEditBuffer* b, const PrTextEditChange* changes, u
 }
 
 uint32_t lowOf(const PrTextEditSelection& s) {
-    return s.anchor < s.caret ? s.anchor : s.caret;
+    return prTextEditSelectionStart(s);
 }
 
 uint32_t highOf(const PrTextEditSelection& s) {
-    return s.anchor < s.caret ? s.caret : s.anchor;
+    return prTextEditSelectionEnd(s);
 }
 
 // Returns true if `next`, which starts at or after `was` starts, joins `was`. Two ranges that only touch stay apart, so
@@ -548,6 +548,8 @@ bool applyTransaction(TextEditBuffer* b, TextEditView* PR_NULLABLE view, const P
     b->changes.clear();
     if (count != 0)
         b->changes.append(changes, count);
+    for (uint32_t i = 0; origin == PrTextEditOrigin_Load && i < count; ++i)
+        PR_ASSERT(changes[i].start == sizeOf(b) && changes[i].end == sizeOf(b));
     bool proposed = origin == PrTextEditOrigin_Local || origin == PrTextEditOrigin_Composition;
     if (proposed && b->propose != nullptr && !b->propose(b->proposeContext, origin, b->changes.data, count))
         return false;
@@ -800,6 +802,26 @@ void prTextEditBufferSetText(PrTextEditBuffer* buffer, PrStringView text) {
     applyTransaction(buffer, nullptr, &change, 1, PrTextEditOrigin_Program, PrTextEditMerge_None);
 }
 
+uint32_t prTextEditInputNormalize(PrStringView text, PrTextEditInputFlags keep, char* PR_NULLABLE out) {
+    uint32_t count = 0;
+    for (size_t i = 0; i < text.size; ++i) {
+        char c = text.data[i];
+        if (c == '\r' && i + 1 < text.size && text.data[i + 1] == '\n')
+            continue;
+        c = c == '\r' ? '\n' : c;
+        bool kept = !(uint8_t(c) < 0x20 || c == 0x7f);
+        if (c == '\n')
+            kept = (keep & PrTextEditInputFlag_LineFeeds) != 0;
+        else if (c == '\t')
+            kept = (keep & PrTextEditInputFlag_Tabs) != 0;
+        else if (!kept)
+            kept = (keep & PrTextEditInputFlag_Controls) != 0;
+        if (kept)
+            out[count++] = c;
+    }
+    return count;
+}
+
 PrTextEditStream* prTextEditStreamCreate(PrTextEditBuffer* buffer) {
     PrTextEditStream* stream = allocZeroed<PrTextEditStream>();
     stream->buffer = buffer;
@@ -864,6 +886,14 @@ bool prTextEditAnchorIsLive(const PrTextEditBuffer* buffer, PrTextEditAnchor anc
     return buffer->anchors.data[anchor - 1].live;
 }
 
+uint32_t prTextEditSelectionStart(PrTextEditSelection selection) {
+    return selection.anchor < selection.caret ? selection.anchor : selection.caret;
+}
+
+uint32_t prTextEditSelectionEnd(PrTextEditSelection selection) {
+    return selection.anchor < selection.caret ? selection.caret : selection.anchor;
+}
+
 PrTextEditView* prTextEditViewCreate(PrTextEditBuffer* buffer) {
     PrTextEditView* view = allocZeroed<PrTextEditView>();
     view->buffer = buffer;
@@ -891,6 +921,10 @@ uint32_t prTextEditViewSelectionCount(const PrTextEditView* view) {
 
 const PrTextEditSelection* prTextEditViewSelections(const PrTextEditView* view) {
     return view->selections.data;
+}
+
+PrTextEditSelection prTextEditViewPrimary(const PrTextEditView* view) {
+    return prTextEditViewSelections(view)[prTextEditViewSelectionCount(view) - 1];
 }
 
 void prTextEditViewSetSelections(PrTextEditView* view, const PrTextEditSelection* selections, uint32_t count) {

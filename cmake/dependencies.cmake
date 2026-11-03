@@ -60,6 +60,59 @@ pr_dependency(kb
     SOURCE_SUBDIR none
 )
 
+# tree-sitter, which lib/syntax's tree-sitter languages are built on, built from its one-source library, and the
+# grammars of the languages that the backend builds in.
+pr_dependency(tree_sitter
+    URL https://github.com/tree-sitter/tree-sitter/archive/refs/tags/v0.27.1.tar.gz
+    URL_HASH SHA256=982cd3d4d9eb7be18c243240a622423fd2e4ecb4bec2cd98832c2f3fa1f0f333
+    SOURCE_SUBDIR none
+)
+pr_dependency(tree_sitter_c
+    URL https://github.com/tree-sitter/tree-sitter-c/archive/refs/tags/v0.24.2.tar.gz
+    URL_HASH SHA256=2eeb4db31f8fa0865e45488503d13403923bcb485a1bdb637abff8c42dd97364
+    SOURCE_SUBDIR none
+)
+pr_dependency(tree_sitter_cpp
+    URL https://github.com/tree-sitter/tree-sitter-cpp/archive/refs/tags/v0.23.4.tar.gz
+    URL_HASH SHA256=7a2c55afe3028f4105f25762ea58cc16537d1f5a1dcd9cca90410b3cd5d46051
+    SOURCE_SUBDIR none
+)
+pr_dependency(tree_sitter_css
+    URL https://github.com/tree-sitter/tree-sitter-css/archive/refs/tags/v0.25.0.tar.gz
+    URL_HASH SHA256=03965344d8c0435dc54fb45b281578420bb7db8b99df4d34e7e74105a274cb79
+    SOURCE_SUBDIR none
+)
+pr_dependency(tree_sitter_html
+    URL https://github.com/tree-sitter/tree-sitter-html/archive/refs/tags/v0.23.2.tar.gz
+    URL_HASH SHA256=21fa4f2d4dcb890ef12d09f4979a0007814f67f1c7294a9b17b0108a09e45ef7
+    SOURCE_SUBDIR none
+)
+pr_dependency(tree_sitter_javascript
+    URL https://github.com/tree-sitter/tree-sitter-javascript/archive/refs/tags/v0.25.0.tar.gz
+    URL_HASH SHA256=9712fc283d3dc01d996d20b6392143445d05867a7aad76fdd723824468428b86
+    SOURCE_SUBDIR none
+)
+pr_dependency(tree_sitter_markdown
+    URL https://github.com/tree-sitter-grammars/tree-sitter-markdown/archive/refs/tags/v0.5.4.tar.gz
+    URL_HASH SHA256=481ce2c1cce7b1130bc8455c186052bd0fa461f1ff488666994c6a3da7fca2ac
+    SOURCE_SUBDIR none
+)
+pr_dependency(tree_sitter_python
+    URL https://github.com/tree-sitter/tree-sitter-python/archive/refs/tags/v0.25.0.tar.gz
+    URL_HASH SHA256=4609a3665a620e117acf795ff01b9e965880f81745f287a16336f4ca86cf270c
+    SOURCE_SUBDIR none
+)
+pr_dependency(tree_sitter_xml
+    URL https://github.com/tree-sitter-grammars/tree-sitter-xml/archive/refs/tags/v0.7.0.tar.gz
+    URL_HASH SHA256=4330a6b3685c2f66d108e1df0448eb40c468518c3a66f2c1607a924c262a3eb9
+    SOURCE_SUBDIR none
+)
+pr_dependency(tree_sitter_json
+    URL https://github.com/tree-sitter/tree-sitter-json/archive/refs/tags/v0.24.8.tar.gz
+    URL_HASH SHA256=acf6e8362457e819ed8b613f2ad9a0e1b621a77556c296f3abea58f7880a9213
+    SOURCE_SUBDIR none
+)
+
 # The Vulkan API's headers, which lib/gpu's Vulkan backend is built against. The backend loads the system's Vulkan
 # loader when it creates a device, so nothing links to an SDK.
 pr_dependency(vulkan_headers

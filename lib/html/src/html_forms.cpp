@@ -251,11 +251,11 @@ PrTextEditSelection selectionOf(const DomControl* control) {
 }
 
 uint32_t lowOf(const PrTextEditSelection& s) {
-    return s.anchor < s.caret ? s.anchor : s.caret;
+    return prTextEditSelectionStart(s);
 }
 
 uint32_t highOf(const PrTextEditSelection& s) {
-    return s.anchor < s.caret ? s.caret : s.anchor;
+    return prTextEditSelectionEnd(s);
 }
 
 // Sets the selection in bytes of the text, which are clamped as the specification clamps units. Returns true if the

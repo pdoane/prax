@@ -11,6 +11,8 @@
 #include "doctest/doctest.h"
 
 #include <string>
+#include <utility>
+#include <vector>
 
 extern "C" int prTestTextViewCApi(void);
 
@@ -34,6 +36,10 @@ struct Shown {
     PrTextDirection direction = PrTextDirection_Ltr;
     PrLayoutStyleIndex styleRecords[2] = {};    // the records of styles zero and one, if `styled` is true
     bool styled = false;
+
+    // Spans that the test gives each frame, in red.
+    std::vector<std::pair<uint32_t, uint32_t>> spanned;
+    uint32_t spanCalls = 0;
 
     explicit Shown(const std::string& text, const std::string& family = "Arimo") {
         std::string path = std::string(PR_FONTS_DIR) + "/" + family + ".ttf";
@@ -114,6 +120,8 @@ struct Shown {
             .rowStyle = style(true),
             .styles = styled ? styleRecords : nullptr,
             .styleCount = styled ? 2u : 0u,
+            .spans = spanned.empty() ? nullptr : spansOf,
+            .spansContext = this,
             .wrap = wrap,
             .showCaret = true,
         };
@@ -121,6 +129,20 @@ struct Shown {
         PrLayoutRoot root{top, prLayoutVecFromPx(PrVec2{width, height})};
         prLayoutTreeLayout(tree, &root, 1);
         return prTextViewLaidOut(view);
+    }
+
+    static uint32_t spansOf(void* context, uint32_t start, uint32_t end, PrTextViewSpan* out, uint32_t capacity) {
+        Shown* shown = static_cast<Shown*>(context);
+        shown->spanCalls += 1;
+        uint32_t count = 0;
+        for (const auto& [from, to] : shown->spanned) {
+            if (to <= start || from >= end)
+                continue;
+            if (count < capacity)
+                out[count] = PrTextViewSpan{from, to, prColor16FromColor(PrColor{1, 0, 0, 1})};
+            ++count;
+        }
+        return count;
     }
 
     // Runs frames until the view has settled.
@@ -544,4 +566,72 @@ TEST_CASE("a vertical view wraps at the port's height") {
     s.settle();
     // 32000 px of text on lines of 400 px.
     CHECK(prTextViewInfo(s.view).documentSize == doctest::Approx(81 * 20.0).epsilon(0.03));
+}
+
+TEST_CASE("spans color their text as highlights under the selection's, across runs and lines") {
+    Shown s("int value = 42;\nplain line\nreturn value;");
+    s.styled = true;
+    // A span that crosses the run's end, and one that crosses a line.
+    s.spanned = {{0, 3}, {6, 14}, {20, 30}};
+    prTextEditBufferSetStyle(s.buffer, 2, 8, 1);
+    PrTextEditSelection selection{.anchor = 12, .caret = 13};
+    prTextEditViewSetSelections(prTextViewEdit(s.view), &selection, 1);
+    s.settle();
+    // The view asks once for the whole window in each frame.
+    uint32_t calls = s.spanCalls;
+    s.frame();
+    CHECK(s.spanCalls == calls + 1);
+    // The first line has three runs: before the style, the style, and after it. The second run holds bytes 2 to 8.
+    PrLayoutNode run = kPrLayoutNodeNone;
+    for (PrLayoutNode row =
+            prLayoutNodeFirstChild(s.tree, s.port); row != kPrLayoutNodeNone && run == kPrLayoutNodeNone;
+            row = prLayoutNodeNextSibling(s.tree, row)) {
+        PrLayoutNode second = prLayoutNodeNextSibling(s.tree, prLayoutNodeFirstChild(s.tree, row));
+        if (second != kPrLayoutNodeNone)
+            run = prLayoutNodeFirstChild(s.tree, second);
+    }
+    REQUIRE(run != kPrLayoutNodeNone);
+    // The run holds bytes 2 to 8: the first span colors its first byte, and the second its last two.
+    PrLayoutHighlight marks[4] = {};
+    REQUIRE(prLayoutNodeHighlights(s.tree, run, marks, 4) == 2);
+    CHECK(marks[0].start == 0);
+    CHECK(marks[0].end == 1);
+    CHECK(marks[1].start == 4);
+    CHECK(marks[1].end == 6);
+    CHECK(marks[1].color.a != 0);
+    // Spans change no line, so the text sets as it did.
+    CHECK(prTextViewInfo(s.view).documentSize == doctest::Approx(3 * 20.0));
+    prTextViewRun(s.view, PrTextEditCommand_TextStart, PrTextEditSelectionMove_Collapse);
+    s.settle();
+    for (uint32_t i = 0; i < 15; ++i) {
+        prTextViewRun(s.view, PrTextEditCommand_Right, PrTextEditSelectionMove_Collapse);
+        s.settle();
+    }
+    CHECK(s.caret().column == 15);
+}
+
+TEST_CASE("a jump far through a document whose rows hold spans lays out the rows that it reaches") {
+    Shown s(document(5000));
+    s.styled = true;
+    // A span over each word of every line.
+    PrStringView all = prTextEditBufferText(s.buffer);
+    for (uint32_t i = 0; i < all.size;) {
+        while (i < all.size && (all.data[i] == ' ' || all.data[i] == '\n'))
+            ++i;
+        uint32_t from = i;
+        while (i < all.size && all.data[i] != ' ' && all.data[i] != '\n')
+            ++i;
+        if (from < i)
+            s.spanned.push_back({from, i});
+    }
+    s.settle();
+    for (uint32_t jump = 0; jump < 6; ++jump) {
+        prTextViewScrollTo(s.view, double(jump % 3) * 30000 + double(jump) * 700);
+        s.settle();
+        uint32_t offset = 0;
+        PrTextEditAffinity side = 0;
+        REQUIRE(prTextViewOffsetFromPoint(s.view, PrVec2{1, 5}, &offset, &side));
+        prTextViewInsert(s.view, "x", PrTextEditMerge_None);
+        s.settle();
+    }
 }

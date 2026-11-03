@@ -10,6 +10,8 @@
 #include "pr/layout_query.h"
 #include "pr/layout_style.h"
 #include "pr/mem.h"
+#include "pr/search.h"
+#include "pr/text_edit_layout.h"
 #include "pr/text_estimate.h"
 #include "pr/text_font.h"
 #include "pr/time.h"
@@ -246,6 +248,7 @@ struct TextViewState {
     Array<PrLayoutCaret> carets;
     Array<PrTextEditSelection> scratch;
     Array<PrTextEditChange> changes;
+    Array<PrTextViewSpan> spans;    // of the window, in the frame that the view declares
 };
 
 uint32_t lineBytes(const PrTextEditBuffer* buffer, uint32_t line) {
@@ -459,16 +462,6 @@ const RowPiece* PR_NULLABLE pieceOfNode(TextViewState* v, PrLayoutNode node) {
     return nullptr;
 }
 
-PrTextEditFlow flowOf(PrLayoutWritingMode mode) {
-    switch (mode) {
-        case PrLayoutWritingMode_VerticalRl:
-        case PrLayoutWritingMode_SidewaysRl: return PrTextEditFlow_VerticalRl;
-        case PrLayoutWritingMode_VerticalLr: return PrTextEditFlow_VerticalLr;
-        case PrLayoutWritingMode_SidewaysLr: return PrTextEditFlow_SidewaysLr;
-        default: return PrTextEditFlow_HorizontalTb;
-    }
-}
-
 // Answers for a line outside the window: the clusters of its bytes as one line, at the advance of the view.
 bool estimatedLine(TextViewState* v, uint32_t line, PrTextEditLine* out) {
     PrLayoutLineInfo info{};
@@ -490,7 +483,7 @@ bool estimatedLine(TextViewState* v, uint32_t line, PrTextEditLine* out) {
         return false;
     *out = answered;
     out->stops = v->stops.data;
-    out->flow = flowOf(info.writingMode);
+    out->flow = prTextEditFlowFromWritingMode(info.writingMode);
     return true;
 }
 
@@ -548,7 +541,7 @@ bool geometryLine(void* PR_NULLABLE context, PrTextEditPosition at, PrTextEditLi
                 *out = PrTextEditLine{
                     .stops = v->stops.data,
                     .stopCount = v->stops.count,
-                    .flow = flowOf(info.writingMode),
+                    .flow = prTextEditFlowFromWritingMode(info.writingMode),
                     .direction = info.direction,
                     .startStop = startStop,
                     .endStop = endStop,
@@ -586,10 +579,6 @@ PrTextEditGeometry geometryOf(TextViewState* v) {
     return PrTextEditGeometry{.context = v, .line = geometryLine, .nodeText = geometryText, .nodeStep = geometryStep};
 }
 
-PrTextEditSelection primaryOf(const TextViewState* v) {
-    return prTextEditViewSelections(v->edit)[prTextEditViewSelectionCount(v->edit) - 1];
-}
-
 // Writes the selections in the order of the document to `out`.
 void selectionsInOrder(const TextViewState* v, Array<PrTextEditSelection>& out) {
     uint32_t count = prTextEditViewSelectionCount(v->edit);
@@ -597,11 +586,11 @@ void selectionsInOrder(const TextViewState* v, Array<PrTextEditSelection>& out) 
     out.clear();
     // The selections ascend, but for the last.
     for (uint32_t i = 0; i < count; ++i) {
-        uint32_t low = selections[i].anchor < selections[i].caret ? selections[i].anchor : selections[i].caret;
+        uint32_t low = prTextEditSelectionStart(selections[i]);
         uint32_t at = i;
         while (i + 1 == count && at > 0) {
             const PrTextEditSelection& before = out.data[at - 1];
-            if ((before.anchor < before.caret ? before.anchor : before.caret) <= low)
+            if ((prTextEditSelectionStart(before)) <= low)
                 break;
             --at;
         }
@@ -625,8 +614,8 @@ PrTextEditSelection movedSelection(TextViewState* v, PrTextEditSelection s, PrTe
         PrTextEditSelectionMove kind) {
     PrTextEditGeometry g = geometryOf(v);
     bool extend = kind == PrTextEditSelectionMove_Extend;
-    uint32_t low = s.anchor < s.caret ? s.anchor : s.caret;
-    uint32_t high = s.anchor < s.caret ? s.caret : s.anchor;
+    uint32_t low = prTextEditSelectionStart(s);
+    uint32_t high = prTextEditSelectionEnd(s);
     PrTextEditPosition at = positionOf(v, s.caret, s.affinity);
     if (motion == PrTextEditMotion_TextStart || motion == PrTextEditMotion_TextEnd) {
         uint32_t to = motion == PrTextEditMotion_TextStart ? 0 : prTextEditBufferSize(v->buffer);
@@ -690,8 +679,8 @@ void eraseSelections(TextViewState* v, PrTextEditCommand command) {
     bool deleting = true;
     for (uint32_t i = 0; i < v->scratch.count; ++i) {
         const PrTextEditSelection& s = v->scratch.data[i];
-        uint32_t low = s.anchor < s.caret ? s.anchor : s.caret;
-        uint32_t high = s.anchor < s.caret ? s.caret : s.anchor;
+        uint32_t low = prTextEditSelectionStart(s);
+        uint32_t high = prTextEditSelectionEnd(s);
         if (low != high) {
             deleting = false;
         } else if (command != PrTextEditCommand_None) {
@@ -755,6 +744,7 @@ void prTextViewDestroy(PrTextView* PR_NULLABLE view) {
     view->carets.reset();
     view->scratch.reset();
     view->changes.reset();
+    view->spans.reset();
     prMemoryFree(view);
 }
 
@@ -797,7 +787,7 @@ void prTextViewFrame(PrTextView* view, const PrTextViewFrameDesc* desc) {
     float port = portBlock(v);
     if (v->reveal) {
         // Near enough to show the caret's row. prTextViewLaidOut settles it, by the row's own place.
-        uint32_t caretLine = prTextEditBufferPointFromOffset(v->buffer, primaryOf(v).caret).line;
+        uint32_t caretLine = prTextEditBufferPointFromOffset(v->buffer, prTextEditViewPrimary(v->edit).caret).line;
         double top = index.topOf(caretLine);
         double height = double(index.heightOf(caretLine));
         double y = scrollTop(v);
@@ -823,19 +813,28 @@ void prTextViewFrame(PrTextView* view, const PrTextViewFrameDesc* desc) {
     uint32_t run = 0;
     if (runCount != 0) {
         uint32_t windowStart = prTextEditBufferLineStart(v->buffer, first);
-        uint32_t low = 0;
-        uint32_t high = runCount;
-        while (high - low > 1) {
-            uint32_t middle = low + (high - low) / 2;
-            if (runs[middle].start <= windowStart)
-                low = middle;
-            else
-                high = middle;
-        }
-        run = low;
+        uint32_t after = partitionPoint(1, runCount, [&](uint32_t i) { return runs[i].start <= windowStart; });
+        run = after - 1;
     }
-    double top = index.topOf(first);
-    for (uint32_t line = first; line < lines && top < bottom; ++line) {
+    // The window's lines, and the spans of their text, which the caller gives once for the whole window.
+    uint32_t last = first;
+    for (double probe = index.topOf(first); last < lines && probe < bottom; ++last)
+        probe += double(index.heightOf(last));
+    v->spans.clear();
+    if (desc->spans != nullptr && last > first) {
+        uint32_t windowStart = prTextEditBufferLineStart(v->buffer, first);
+        uint32_t windowEnd = prTextEditBufferLineEnd(v->buffer, last - 1);
+        uint32_t capacity = v->spans.capacity;
+        v->spans.resize(capacity);
+        uint32_t total = desc->spans(desc->spansContext, windowStart, windowEnd, v->spans.data, capacity);
+        if (total > capacity) {
+            v->spans.resize(total);
+            desc->spans(desc->spansContext, windowStart, windowEnd, v->spans.data, total);
+        }
+        v->spans.count = total;
+    }
+    uint32_t span = 0;
+    for (uint32_t line = first; line < last; ++line) {
         uint32_t start = prTextEditBufferLineStart(v->buffer, line);
         uint32_t end = prTextEditBufferLineEnd(v->buffer, line);
         // An empty line shows a space, so that it has a line box and a place for a caret.
@@ -848,6 +847,8 @@ void prTextViewFrame(PrTextView* view, const PrTextViewFrameDesc* desc) {
         uint32_t pieceStart = v->pieces.count;
         while (run + 1 < runCount && runs[run + 1].start <= start)
             ++run;
+        while (span < v->spans.count && v->spans.data[span].end <= start)
+            ++span;
         bool plain = runCount == 0 || (runs[run].style == 0 && (run + 1 == runCount || runs[run + 1].start >= end));
         if (plain || start == end) {
             PrLayoutNode text = prLayoutTreeFrameText(desc->tree, box, 0, PrStringView{v->bytes.data, v->bytes.count});
@@ -858,9 +859,9 @@ void prTextViewFrame(PrTextView* view, const PrTextViewFrameDesc* desc) {
                 uint32_t from = runs[r].start > start ? runs[r].start - start : 0;
                 uint32_t to = r + 1 < runCount && runs[r + 1].start < end ? runs[r + 1].start - start : end - start;
                 PrTextEditStyle style = runs[r].style < desc->styleCount ? runs[r].style : 0;
-                PrLayoutNode span = prLayoutTreeFrameElement(desc->tree, box, r - run + 1, desc->styles[style]);
+                PrLayoutNode runBox = prLayoutTreeFrameElement(desc->tree, box, r - run + 1, desc->styles[style]);
                 PrStringView part{v->bytes.data + from, to - from};
-                v->pieces.push(RowPiece{prLayoutTreeFrameText(desc->tree, span, 0, part), from, rowIndex});
+                v->pieces.push(RowPiece{prLayoutTreeFrameText(desc->tree, runBox, 0, part), from, rowIndex});
             }
         }
         Row row{line, box, pieceStart, v->pieces.count - pieceStart};
@@ -871,9 +872,21 @@ void prTextViewFrame(PrTextView* view, const PrTextViewFrameDesc* desc) {
             uint32_t pieceFrom = start + piece.start;
             uint32_t pieceTo = p + 1 < row.pieceCount ? start + v->pieces.data[pieceStart + p + 1].start : end;
             v->highlights.clear();
+            // The spans paint first, so that the selection paints over them.
+            for (uint32_t k = span; k < v->spans.count && v->spans.data[k].start < pieceTo; ++k) {
+                const PrTextViewSpan& colored = v->spans.data[k];
+                uint32_t from = colored.start > pieceFrom ? colored.start : pieceFrom;
+                uint32_t to = colored.end < pieceTo ? colored.end : pieceTo;
+                if (from < to)
+                    v->highlights.push(PrLayoutHighlight{
+                        .start = from - pieceFrom,
+                        .end = to - pieceFrom,
+                        .color = colored.color,
+                    });
+            }
             for (uint32_t i = 0; i < selectionCount; ++i) {
-                uint32_t low = selections[i].anchor < selections[i].caret ? selections[i].anchor : selections[i].caret;
-                uint32_t high = selections[i].anchor < selections[i].caret ? selections[i].caret : selections[i].anchor;
+                uint32_t low = prTextEditSelectionStart(selections[i]);
+                uint32_t high = prTextEditSelectionEnd(selections[i]);
                 uint32_t from = low > pieceFrom ? low : pieceFrom;
                 uint32_t to = high < pieceTo ? high : pieceTo;
                 if (from < to) {
@@ -898,7 +911,6 @@ void prTextViewFrame(PrTextView* view, const PrTextViewFrameDesc* desc) {
                 .color = desc->caret,
             });
         }
-        top += double(index.heightOf(line));
     }
     if (v->carets.count != 0) {
         prLayoutTreeFrameSetCarets(desc->tree, v->carets.data, v->carets.count);
@@ -1038,7 +1050,7 @@ PrTextViewInfo prTextViewInfo(const PrTextView* view) {
         .portSize = portBlock(v),
         .lineCount = prTextEditBufferLineCount(v->buffer),
         .rowCount = v->rows.count,
-        .caret = prTextEditBufferPointFromOffset(v->buffer, primaryOf(v).caret),
+        .caret = prTextEditBufferPointFromOffset(v->buffer, prTextEditViewPrimary(v->edit).caret),
     };
 }
 
@@ -1157,8 +1169,8 @@ PrString prTextViewSelectedText(const PrTextView* view) {
     bool any = false;
     for (uint32_t i = 0; i < v->scratch.count; ++i) {
         const PrTextEditSelection& s = v->scratch.data[i];
-        uint32_t low = s.anchor < s.caret ? s.anchor : s.caret;
-        uint32_t high = s.anchor < s.caret ? s.caret : s.anchor;
+        uint32_t low = prTextEditSelectionStart(s);
+        uint32_t high = prTextEditSelectionEnd(s);
         if (low == high)
             continue;
         if (any)
@@ -1177,7 +1189,7 @@ void prTextViewAddCaretOnLine(PrTextView* view, PrTextEditLineStep step) {
         return;
     v->hasLineText = false;
     followEdits(v);
-    PrTextEditSelection primary = primaryOf(v);
+    PrTextEditSelection primary = prTextEditViewPrimary(v->edit);
     PrTextEditMotion motion =
         step == PrTextEditLineStep_Next ? PrTextEditMotion_LineNext : PrTextEditMotion_LinePrevious;
     PrTextEditSelection caret{
@@ -1207,7 +1219,7 @@ void prTextViewAddCaret(PrTextView* view, uint32_t offset, PrTextEditAffinity af
 }
 
 void prTextViewKeepPrimary(PrTextView* view) {
-    setPrimary(view, primaryOf(view));
+    setPrimary(view, prTextEditViewPrimary(view->edit));
 }
 
 bool prTextViewOffsetFromPoint(PrTextView* view, PrVec2 point, uint32_t* offset, PrTextEditAffinity* affinity) {
@@ -1252,7 +1264,7 @@ void prTextViewUnitAround(PrTextView* view, uint32_t offset, PrTextEditUnit unit
 
 bool prTextViewCaretRect(PrTextView* view, PrRect* out) {
     PrTextView* v = view;
-    PrTextEditSelection s = primaryOf(v);
+    PrTextEditSelection s = prTextEditViewPrimary(v->edit);
     PrTextEditPoint point = prTextEditBufferPointFromOffset(v->buffer, s.caret);
     if (v->rows.count == 0)
         return false;

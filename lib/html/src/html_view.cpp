@@ -1005,8 +1005,8 @@ bool editKey(HtmlView* v, PrDomElement* target, const PrAppEvent* event) {
     if (command == PrTextEditCommand_None)
         return false;
     bool multiline = domIsHtml(target, PrDomTag_Textarea);
-    uint32_t low = s.anchor < s.caret ? s.anchor : s.caret;
-    uint32_t high = s.anchor < s.caret ? s.caret : s.anchor;
+    uint32_t low = prTextEditSelectionStart(s);
+    uint32_t high = prTextEditSelectionEnd(s);
     bool selected = s.anchor != s.caret;
     PrLayoutTree* tree = nullptr;
     PrLayoutNode node = fieldTextOf(v, target, &tree);
@@ -1504,8 +1504,8 @@ void showTextControl(HtmlView* v) {
         PrColor16 background{};
         prCssPresentationSelectionColors(shown, target, &color, &background);
         PrLayoutHighlight selection{
-            .start = shownOffset(masked, text, s.anchor < s.caret ? s.anchor : s.caret),
-            .end = shownOffset(masked, text, s.anchor < s.caret ? s.caret : s.anchor),
+            .start = shownOffset(masked, text, prTextEditSelectionStart(s)),
+            .end = shownOffset(masked, text, prTextEditSelectionEnd(s)),
             .color = color,
             .background = background,
         };

@@ -11,6 +11,9 @@ PR_ASSUME_NONNULL_BEGIN
 extern "C" {
 #endif
 
+// Returns the flow of the lines of a writing mode.
+PrTextEditFlow prTextEditFlowFromWritingMode(PrLayoutWritingMode mode);
+
 // Creates the geometry of the text nodes of `root` and its descendants as the last layout of `tree` placed them. The
 // tree must stay valid while the geometry is in use, and a position's node is a PrLayoutNode.
 PrTextEditGeometry prTextEditGeometryFromLayout(PrLayoutTree* tree, PrLayoutNode root);

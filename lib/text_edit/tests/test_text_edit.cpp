@@ -38,11 +38,6 @@ void select(PrTextEditView* view, uint32_t anchor, uint32_t caret) {
     prTextEditViewSetSelections(view, &s, 1);
 }
 
-// Returns the primary selection of `view`.
-PrTextEditSelection primary(const PrTextEditView* view) {
-    return prTextEditViewSelections(view)[prTextEditViewSelectionCount(view) - 1];
-}
-
 // Removes the bytes from `start` to `end` through `view`, with the caret after them.
 void erase(PrTextEditView* view, uint32_t start, uint32_t end, PrTextEditMerge merge) {
     PrTextEditChange c = change(start, end, "");
@@ -313,8 +308,8 @@ TEST_CASE("insertion replaces every selection, and each caret lands after its te
     REQUIRE(prTextEditViewInsert(v, "XYZ", PrTextEditOrigin_Local, PrTextEditMerge_None));
     CHECK(textOf(b) == "XYZ bb XYZ");
     REQUIRE(prTextEditViewSelectionCount(v) == 2);
-    CHECK(primary(v).caret == 3);
-    CHECK(primary(v).anchor == 3);
+    CHECK(prTextEditViewPrimary(v).caret == 3);
+    CHECK(prTextEditViewPrimary(v).anchor == 3);
     CHECK(prTextEditViewSelections(v)[0].caret == 10);
     prTextEditViewDestroy(v);
     prTextEditBufferDestroy(b);
@@ -328,8 +323,8 @@ TEST_CASE("selections that overlap join, and the primary selection stays last") 
     prTextEditViewSetSelections(v, overlapping, 3);
     REQUIRE(prTextEditViewSelectionCount(v) == 2);
     CHECK(prTextEditViewSelections(v)[0].caret == 9);
-    CHECK(primary(v).anchor == 5);
-    CHECK(primary(v).caret == 1);
+    CHECK(prTextEditViewPrimary(v).anchor == 5);
+    CHECK(prTextEditViewPrimary(v).caret == 1);
 
     // Ranges that only touch stay apart, and a caret that touches a range joins it.
     PrTextEditSelection touching[] = {{.anchor = 1, .caret = 3}, {.anchor = 3, .caret = 5}};
@@ -341,8 +336,8 @@ TEST_CASE("selections that overlap join, and the primary selection stays last") 
 
     PrTextEditSelection past{.anchor = 100, .caret = 200};
     prTextEditViewSetSelections(v, &past, 1);
-    CHECK(primary(v).anchor == 10);
-    CHECK(primary(v).caret == 10);
+    CHECK(prTextEditViewPrimary(v).anchor == 10);
+    CHECK(prTextEditViewPrimary(v).caret == 10);
 
     prTextEditViewDestroy(v);
     prTextEditBufferDestroy(b);
@@ -356,18 +351,18 @@ TEST_CASE("an edit through one view carries the selections of another") {
     select(other, 5, 5);
     select(editing, 2, 2);
     REQUIRE(prTextEditViewInsert(editing, "ab", PrTextEditOrigin_Local, PrTextEditMerge_None));
-    CHECK(primary(other).caret == 7);
-    CHECK(primary(editing).caret == 4);
+    CHECK(prTextEditViewPrimary(other).caret == 7);
+    CHECK(prTextEditViewPrimary(editing).caret == 4);
 
     // Text inserted at either boundary of a range of another view stays outside it, and a caret there stays before it.
     select(other, 5, 8);
     select(editing, 5, 5);
     REQUIRE(prTextEditViewInsert(editing, "c", PrTextEditOrigin_Local, PrTextEditMerge_None));
-    CHECK(primary(other).anchor == 6);
-    CHECK(primary(other).caret == 9);
+    CHECK(prTextEditViewPrimary(other).anchor == 6);
+    CHECK(prTextEditViewPrimary(other).caret == 9);
     select(editing, 9, 9);
     REQUIRE(prTextEditViewInsert(editing, "d", PrTextEditOrigin_Local, PrTextEditMerge_None));
-    CHECK(primary(other).caret == 9);
+    CHECK(prTextEditViewPrimary(other).caret == 9);
 
     prTextEditViewDestroy(editing);
     prTextEditViewDestroy(other);
@@ -399,7 +394,7 @@ TEST_CASE("a proposal can reject a transaction or change its text") {
     CHECK_FALSE(prTextEditViewInsert(v, "typed", PrTextEditOrigin_Local, PrTextEditMerge_None));
     CHECK(textOf(b) == "ab");
     CHECK(prTextEditBufferVersion(b) == version);
-    CHECK(primary(v).caret == 1);
+    CHECK(prTextEditViewPrimary(v).caret == 1);
     CHECK(filter.origin == PrTextEditOrigin_Local);
 
     // The caret follows the text that the proposal gave.
@@ -407,7 +402,7 @@ TEST_CASE("a proposal can reject a transaction or change its text") {
     filter.text = "xyz";
     CHECK(prTextEditViewInsert(v, "typed", PrTextEditOrigin_Composition, PrTextEditMerge_None));
     CHECK(textOf(b) == "axyzb");
-    CHECK(primary(v).caret == 4);
+    CHECK(prTextEditViewPrimary(v).caret == 4);
     CHECK(filter.origin == PrTextEditOrigin_Composition);
 
     // Remote and program transactions are not proposed against.
@@ -432,14 +427,14 @@ TEST_CASE("undo and redo restore the text and the selections") {
 
     REQUIRE(prTextEditHistoryUndo(h, v));
     CHECK(textOf(b) == "aa bb");
-    CHECK(primary(v).anchor == 3);
-    CHECK(primary(v).caret == 5);
+    CHECK(prTextEditViewPrimary(v).anchor == 3);
+    CHECK(prTextEditViewPrimary(v).caret == 5);
     CHECK(prTextEditHistoryCanRedo(h));
     CHECK_FALSE(prTextEditHistoryCanUndo(h));
 
     REQUIRE(prTextEditHistoryRedo(h, v));
     CHECK(textOf(b) == "aa XYZ");
-    CHECK(primary(v).caret == 6);
+    CHECK(prTextEditViewPrimary(v).caret == 6);
     CHECK_FALSE(prTextEditHistoryRedo(h, v));
 
     // A new edit drops what could be redone.
@@ -551,6 +546,53 @@ TEST_CASE("only local transactions enter the history, and remote and program one
     prTextEditBufferDestroy(b);
 }
 
+TEST_CASE("text from outside the program keeps what an edit asks for, with each line ending a line feed") {
+    auto normalized = [](PrStringView text, PrTextEditInputFlags keep) {
+        std::string out(text.size, '\0');
+        out.resize(prTextEditInputNormalize(text, keep, out.data()));
+        return out;
+    };
+    PrStringView text = "a\r\nb\rc\nd\te\x01" "f\x7f";
+    CHECK(normalized(text, 0) == "abcdef");
+    CHECK(normalized(text, PrTextEditInputFlag_LineFeeds) == "a\nb\nc\ndef");
+    CHECK(normalized(text, PrTextEditInputFlag_LineFeeds | PrTextEditInputFlag_Tabs) == "a\nb\nc\nd\tef");
+    uint8_t all = PrTextEditInputFlag_LineFeeds | PrTextEditInputFlag_Tabs | PrTextEditInputFlag_Controls;
+    CHECK(normalized(text, all) == "a\nb\nc\nd\te\x01" "f\x7f");
+    CHECK(normalized("", all).empty());
+}
+
+TEST_CASE("a selection's ends are in the order of the text, and the last selection is primary") {
+    PrTextEditSelection backward{.anchor = 5, .caret = 2};
+    CHECK(prTextEditSelectionStart(backward) == 2);
+    CHECK(prTextEditSelectionEnd(backward) == 5);
+    PrTextEditBuffer* b = prTextEditBufferCreate("abcdefgh");
+    PrTextEditView* v = prTextEditViewCreate(b);
+    PrTextEditSelection two[2] = {{.anchor = 6, .caret = 7}, {.anchor = 1, .caret = 1}};
+    prTextEditViewSetSelections(v, two, 2);
+    CHECK(prTextEditViewPrimary(v).caret == 1);
+    prTextEditViewDestroy(v);
+    prTextEditBufferDestroy(b);
+}
+
+TEST_CASE("text that loads at the end stays out of the history, and keeps its steps") {
+    PrTextEditBuffer* b = prTextEditBufferCreate("abc");
+    PrTextEditHistory* h = prTextEditHistoryCreate(b);
+    PrTextEditView* v = prTextEditViewCreate(b);
+    REQUIRE(prTextEditViewInsert(v, "x", PrTextEditOrigin_Local, PrTextEditMerge_None));
+    PrTextEditChange load = change(4, 4, "\ndef");
+    REQUIRE(prTextEditBufferApply(b, &load, 1, PrTextEditOrigin_Load));
+    CHECK(textOf(b) == "xabc\ndef");
+    REQUIRE(prTextEditHistoryUndo(h, v));
+    CHECK(textOf(b) == "abc\ndef");
+    CHECK_FALSE(prTextEditHistoryCanUndo(h));
+    REQUIRE(prTextEditHistoryRedo(h, v));
+    CHECK(textOf(b) == "xabc\ndef");
+
+    prTextEditViewDestroy(v);
+    prTextEditHistoryDestroy(h);
+    prTextEditBufferDestroy(b);
+}
+
 TEST_CASE("what is attached to a buffer stays safe after the buffer is destroyed") {
     PrTextEditBuffer* b = prTextEditBufferCreate("abc");
     PrTextEditView* v = prTextEditViewCreate(b);
@@ -650,7 +692,7 @@ TEST_CASE("random transactions agree across the text, lines, anchors, views, str
                 REQUIRE(prTextEditAnchorIsLive(b, a.anchor) == a.live);
             }
             for (const PrTextEditView* v : {editing, other}) {
-                const PrTextEditSelection& s = primary(v);
+                const PrTextEditSelection& s = prTextEditViewPrimary(v);
                 REQUIRE(s.anchor <= model.size());
                 REQUIRE(s.caret <= model.size());
             }
@@ -697,7 +739,7 @@ TEST_CASE("random runs of typing and deleting merge into steps that undo through
         std::vector<std::string> texts{model};
 
         for (uint32_t step = 0; step < 400; ++step) {
-            uint32_t caret = primary(v).caret;
+            uint32_t caret = prTextEditViewPrimary(v).caret;
             char letter = 0;
             switch (next(8)) {
                 case 0:
@@ -715,11 +757,11 @@ TEST_CASE("random runs of typing and deleting merge into steps that undo through
                     break;
                 case 5:
                 case 6:
-                    if (caret > 0 && primary(v).anchor == caret)
+                    if (caret > 0 && prTextEditViewPrimary(v).anchor == caret)
                         erase(v, caret - 1, caret, PrTextEditMerge_Deleting);
                     break;
                 default:
-                    if (caret < model.size() && primary(v).anchor == caret)
+                    if (caret < model.size() && prTextEditViewPrimary(v).anchor == caret)
                         erase(v, caret, caret + 1, PrTextEditMerge_Deleting);
                     break;
             }
@@ -739,7 +781,7 @@ TEST_CASE("random runs of typing and deleting merge into steps that undo through
             while (at > 0 && texts[at] != text)
                 --at;
             REQUIRE(texts[at] == text);
-            REQUIRE(primary(v).caret <= text.size());
+            REQUIRE(prTextEditViewPrimary(v).caret <= text.size());
         }
         CHECK(at == 0);
         CHECK(steps < texts.size() - 1);

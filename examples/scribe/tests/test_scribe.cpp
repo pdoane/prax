@@ -24,8 +24,8 @@ struct Editor {
     KitFixture f;
     Scribe s;
 
-    explicit Editor(const std::string& text) {
-        openText(s, text);
+    explicit Editor(const std::string& text, const std::string& name = "") {
+        openText(s, text, name);
         PrFontFamily mono{.generic = PrFontGeneric_Monospace};
         PrFontStyle style = prFontStyleDefault();
         style.size = 13;
@@ -293,3 +293,94 @@ TEST_CASE("the View menu sets each line's direction, from the choice or from its
     REQUIRE(prTextViewCaretRect(e.s.view, &caret));
     CHECK(caret.left > middle);
 }
+
+#if defined(SCRIBE_HAS_TREESITTER)
+
+TEST_CASE("a file's extension chooses its language, whose captures color the text, and edits recolor it") {
+    Editor e("int main(void) {\n    return 0; // done\n}\n", "main.c");
+    REQUIRE(e.s.language != nullptr);
+    CHECK(e.s.language->name == "c");
+    // The first line's text node colors `int` as a type.
+    PrLayoutNode port = e.s.editor;
+    PrLayoutNode firstRow = prLayoutNodeFirstChild(e.f.tree, port);
+    PrLayoutNode text = prLayoutNodeFirstChild(e.f.tree, firstRow);
+    std::vector<PrLayoutHighlight> marks(prLayoutNodeHighlights(e.f.tree, text, nullptr, 0));
+    prLayoutNodeHighlights(e.f.tree, text, marks.data(), uint32_t(marks.size()));
+    REQUIRE(!marks.empty());
+    CHECK(marks[0].start == 0);
+    CHECK(marks[0].end == 3);
+    CHECK(marks[0].color.a != 0);
+    // A comment opened at the start colors the whole line as one.
+    e.type("/");
+    e.type("/");
+    marks.resize(prLayoutNodeHighlights(e.f.tree, text, nullptr, 0));
+    prLayoutNodeHighlights(e.f.tree, text, marks.data(), uint32_t(marks.size()));
+    REQUIRE(marks.size() == 1);
+    CHECK(marks[0].start == 0);
+    CHECK(marks[0].end == 18);
+}
+
+TEST_CASE("a heading of Markdown takes the color of its class, whichever convention its grammar names it by") {
+    Editor e("# Title\n\nbody text\n", "notes.md");
+    PrLayoutNode firstRow = prLayoutNodeFirstChild(e.f.tree, e.s.editor);
+    PrLayoutNode text = prLayoutNodeFirstChild(e.f.tree, firstRow);
+    std::vector<PrLayoutHighlight> marks(prLayoutNodeHighlights(e.f.tree, text, nullptr, 0));
+    prLayoutNodeHighlights(e.f.tree, text, marks.data(), uint32_t(marks.size()));
+    bool titled = false;
+    for (const PrLayoutHighlight& mark : marks)
+        titled = titled || (mark.start <= 2 && mark.end >= 7 && mark.color.a != 0);
+    CHECK(titled);
+}
+
+TEST_CASE("a file of no language the build has shows plain text") {
+    Editor e("plain words\n", "notes.txt");
+    CHECK(e.s.language == nullptr);
+    PrLayoutNode firstRow = prLayoutNodeFirstChild(e.f.tree, e.s.editor);
+    CHECK(prLayoutNodeHighlights(e.f.tree, prLayoutNodeFirstChild(e.f.tree, firstRow), nullptr, 0) == 0);
+}
+
+#endif
+
+#if defined(SCRIBE_HAS_TREESITTER)
+
+TEST_CASE("a large file streams in over frames, each piece colored as it shows, and an edit meanwhile keeps its undo") {
+    std::string program;
+    while (program.size() < (1u << 20))
+        program += "int value = 1; // a line of the program\n";
+    Editor e(program, "big.c");
+    // The first frame shows text, already colored, and the rest is still to come.
+    uint32_t shown = prTextEditBufferSize(e.s.buffer);
+    CHECK(shown != 0);
+    PrLayoutNode firstRow = prLayoutNodeFirstChild(e.f.tree, e.s.editor);
+    PrLayoutNode text = prLayoutNodeFirstChild(e.f.tree, firstRow);
+    CHECK(prLayoutNodeHighlights(e.f.tree, text, nullptr, 0) != 0);
+    // Typing goes in while the file loads, and the load keeps its undo.
+    e.f.type("x");
+    e.f.frame();
+    for (uint32_t i = 0; i < 2000 && e.s.loading; ++i) {
+        e.f.frame();
+        afterLayout(e.s);
+    }
+    REQUIRE_FALSE(e.s.loading);
+    CHECK(e.text() == "x" + program);
+    e.key('Z', kCommand);
+    CHECK(e.text() == program);
+}
+
+TEST_CASE("Save waits for the load to finish") {
+    std::string program;
+    while (program.size() < (1u << 20))
+        program += "int value = 1;\n";
+    Editor e(program, "big.c");
+    e.s.path = "big.c";
+    if (e.s.loading) {
+        uint32_t index = prCommandRegistryFind(e.s.commands, "file.save");
+        CHECK((prCommandRegistryState(e.s.commands, index) & PrCommandStateFlag_Disabled) != 0);
+    }
+    for (uint32_t i = 0; i < 2000 && e.s.loading; ++i)
+        e.settle();
+    uint32_t index = prCommandRegistryFind(e.s.commands, "file.save");
+    CHECK((prCommandRegistryState(e.s.commands, index) & PrCommandStateFlag_Disabled) == 0);
+}
+
+#endif

@@ -31,7 +31,7 @@ The libraries, by area. The first comment of each library's `CMakeLists.txt` say
 | System | `app`, `gpu`, `audio`, `media` |
 | Networking | `net`, `tls`, `http`, `websocket`, `fetch`, `xhr`, `url`, `mime` |
 | Data | `json`, `xml`, `compress`, `image`, `color`, `geom`, `charset`, `locale`, `unicode`, `html_entity` |
-| Text | `font`, `font_bundle`, `text`, `text_edit`, `text_view` |
+| Text | `font`, `font_bundle`, `text`, `text_edit`, `text_view`, `syntax`, `regex` |
 | Graphics | `path`, `draw`, `canvas`, `lottie` |
 | Documents | `css`, `dom`, `layout`, `html`, `svg`, `mathml`, `markdown` |
 | Interface | `ui`, `studio/kit`, `studio/command` |
@@ -143,6 +143,7 @@ platform supports.
 | text shaper | `PR_TEXT_CORETEXT` | CoreText | Apple platforms | on |
 | text shaper | `PR_TEXT_HARFBUZZ` | HarfBuzz | every platform | off |
 | text shaper | `PR_TEXT_KB` | kb | every platform | off |
+| syntax languages | `PR_SYNTAX_TREESITTER` | tree-sitter's grammars | every platform | off |
 | draw renderer | `PR_DRAW_CPU` | CPU renderer | every platform | on |
 | draw renderer | `PR_DRAW_TRIANGLES` | GPU renderer: colored and textured triangles | every platform | on |
 | draw renderer | `PR_DRAW_FRAGMENT` | GPU renderer: per-pixel coverage and paint evaluation | every platform | on |

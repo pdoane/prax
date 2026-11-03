@@ -240,7 +240,22 @@ bool laidOut(const LayoutTree* tree, LayoutNodeIndex node) {
             return false;
         top = at;
     }
-    return top == tree->root || layoutTreeIsLaidOutRoot(tree, top);
+    if (top != tree->root && !layoutTreeIsLaidOutRoot(tree, top))
+        return false;
+    // A node that a frame made since the last layout keeps the placement of the node that held its slot before, which
+    // can name a box that is gone or is elsewhere. A placement holds only if each box that it passes through is an
+    // ancestor of the box before it, as a containing block always is.
+    for (LayoutNodeIndex at = node;;) {
+        LayoutNodeIndex parent = layoutCachePlacement(tree->cache, at).parent;
+        if (parent == kPrLayoutNodeNone)
+            return true;
+        LayoutNodeIndex above = layoutTreeNode(tree, at).parent;
+        while (above != kPrLayoutNodeNone && above != parent)
+            above = layoutTreeNode(tree, above).parent;
+        if (above == kPrLayoutNodeNone)
+            return false;
+        at = parent;
+    }
 }
 
 // The transform from a space to the coordinates that a query answers in, composed from the boxes that place it. The

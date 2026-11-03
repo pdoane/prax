@@ -59,16 +59,6 @@ uint32_t runHolding(const LayoutLines& lines, PrTextEditPosition at) {
     return run;
 }
 
-PrTextEditFlow flowFromWritingMode(PrLayoutWritingMode mode) {
-    switch (mode) {
-        case PrLayoutWritingMode_VerticalRl:
-        case PrLayoutWritingMode_SidewaysRl: return PrTextEditFlow_VerticalRl;
-        case PrLayoutWritingMode_VerticalLr: return PrTextEditFlow_VerticalLr;
-        case PrLayoutWritingMode_SidewaysLr: return PrTextEditFlow_SidewaysLr;
-        default: return PrTextEditFlow_HorizontalTb;
-    }
-}
-
 // Answers from the text's own lines, in the direction and writing mode that its node's style gives them.
 bool answerFromText(LayoutLines& lines, PrTextEditPosition at, PrTextEditLineStep step, PrTextEditLine* out) {
     PrLayoutLineInfo info{};
@@ -80,7 +70,7 @@ bool answerFromText(LayoutLines& lines, PrTextEditPosition at, PrTextEditLineSte
     }
     if (!lines.ownLines.line(lines.ownLines.context, at, step, out))
         return false;
-    out->flow = flowFromWritingMode(info.writingMode);
+    out->flow = prTextEditFlowFromWritingMode(info.writingMode);
     return true;
 }
 
@@ -142,7 +132,7 @@ bool answerFromLayout(LayoutLines& lines, PrTextEditPosition at, PrTextEditLineS
     *out = PrTextEditLine{
         .stops = lines.stops.data,
         .stopCount = lines.stops.count,
-        .flow = flowFromWritingMode(info.writingMode),
+        .flow = prTextEditFlowFromWritingMode(info.writingMode),
         .direction = info.direction,
         .startStop = startStop,
         .endStop = endStop,
@@ -215,6 +205,16 @@ PrTextEditGeometry geometryOf(LayoutLines* lines) {
 } // namespace pr_impl
 
 using namespace pr_impl;
+
+PrTextEditFlow prTextEditFlowFromWritingMode(PrLayoutWritingMode mode) {
+    switch (mode) {
+        case PrLayoutWritingMode_VerticalRl:
+        case PrLayoutWritingMode_SidewaysRl: return PrTextEditFlow_VerticalRl;
+        case PrLayoutWritingMode_VerticalLr: return PrTextEditFlow_VerticalLr;
+        case PrLayoutWritingMode_SidewaysLr: return PrTextEditFlow_SidewaysLr;
+        default: return PrTextEditFlow_HorizontalTb;
+    }
+}
 
 PrTextEditGeometry prTextEditGeometryFromLayout(PrLayoutTree* tree, PrLayoutNode root) {
     LayoutLines* lines = allocZeroed<LayoutLines>();

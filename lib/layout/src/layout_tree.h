@@ -133,6 +133,11 @@ struct LayoutHighlights {
     LayoutNodeIndex node;
     uint32_t frame;
     Array<PrLayoutHighlight> ranges;
+
+    // The ranges in order of their starts, by index of `ranges`, and the furthest end of the ranges up to each place in
+    // that order, so that a part of the text finds the ranges that reach it without reading the others.
+    Array<uint32_t> byStart;
+    Array<uint32_t> reach;
 };
 
 // The carets that a tree paints (prLayoutTreeSetCarets), and the frame that set them, or 0 if no frame did.
@@ -394,6 +399,10 @@ inline uint32_t layoutHighlightHash(LayoutNodeIndex node) {
 
 // Returns the highlights of the text `node`, or null if it has none.
 const LayoutHighlights* PR_NULLABLE layoutTextHighlights(const LayoutTree* tree, LayoutNodeIndex node);
+
+// Writes to `out` the indices of the ranges of `highlights` that reach the bytes from `start` to `end`, in paint order.
+// The cost follows the number of ranges that begin before `end` and reach past the last range that ends before `start`.
+void layoutHighlightsReaching(const LayoutHighlights* highlights, uint32_t start, uint32_t end, Array<uint32_t>& out);
 
 // Sets the highlights of the text `node` (prLayoutNodeSetHighlights) on behalf of `frame`, or of no frame for 0.
 void layoutTreeSetHighlights(LayoutTree* tree, LayoutNodeIndex node, const PrLayoutHighlight* PR_NULLABLE highlights,

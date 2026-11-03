@@ -4,6 +4,7 @@
 
 #include "pr/alloc.h"
 #include "pr/array.h"
+#include "pr/float.h"
 #include "pr/unicode.h"
 #include "pr/utf8.h"
 
@@ -134,12 +135,8 @@ uint32_t prTextEstimatorLineCount(PrTextEstimator* estimator, PrStringView text,
             at += prUtf8Decode(text, at, &codePoint);
         bool space = codePoint == ' ' || codePoint == '\t';
         float advance = advanceOf(e, codePoint);
-        if (codePoint == '\t' && tabStop > 0) {
-            float past = x;
-            while (past >= tabStop)
-                past -= tabStop;
-            advance = tabStop - past;
-        }
+        if (codePoint == '\t' && tabStop > 0)
+            advance = tabStop - fmodF32(x, tabStop);
         // White space hangs past the end of a line, so only what follows it wraps.
         if (x + advance > width && x > 0 && !space) {
             lines += 1;

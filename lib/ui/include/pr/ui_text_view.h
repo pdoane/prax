@@ -31,6 +31,10 @@ typedef struct PrUiTextViewDesc {
     const PrLayoutStyleIndex* PR_NULLABLE styles;
     uint32_t styleCount;
 
+    // The colored spans of the window's text, such as syntax highlights (PrTextViewFrameDesc).
+    PrTextViewSpansFn PR_NULLABLE spans;
+    void* PR_NULLABLE spansContext;
+
     bool wrap;
     PrTextEditArrowMotion arrowMotion;
     PrColor16 selection;

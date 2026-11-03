@@ -13,6 +13,7 @@
 #include "pr/draw_list.h"
 #include "pr/draw_renderer.h"
 #include "pr/file.h"
+#include "pr/float.h"
 #include "pr/font_set.h"
 #include "pr/gpu.h"
 #include "pr/layout_frame.h"
@@ -20,6 +21,17 @@
 #include "pr/layout_style.h"
 #include "pr/layout_tree.h"
 #include "pr/string_view.h"
+#include "pr/syntax.h"
+#include "pr/syntax_treesitter_c.h"
+#include "pr/syntax_treesitter_cpp.h"
+#include "pr/syntax_treesitter_css.h"
+#include "pr/syntax_treesitter_html.h"
+#include "pr/syntax_treesitter_javascript.h"
+#include "pr/syntax_treesitter_json.h"
+#include "pr/syntax_treesitter_markdown.h"
+#include "pr/syntax_treesitter_markdown_inline.h"
+#include "pr/syntax_treesitter_python.h"
+#include "pr/syntax_treesitter_xml.h"
 #include "pr/text_harfbuzz.h"
 #include "pr/text_view.h"
 #include "pr/time.h"
@@ -33,6 +45,9 @@
 using namespace harness;
 
 namespace {
+
+// The bytes of a piece of a file that streams in.
+constexpr size_t kStreamPiece = 64 * 1024;
 
 // The numbers of lines of the documents.
 constexpr uint32_t kLines[] = {100, 10000, 1000000};
@@ -61,6 +76,11 @@ struct Bench {
     float width = 1000;
     bool caretHidden = false;
 
+    // The syntax tree of the file's language, if it has one, whose every category shows in one color.
+    PrSyntaxRegistry* registry = nullptr;
+    PrSyntaxTree* syntax = nullptr;
+    std::vector<PrSyntaxSpan> raw;
+
     Bench() {
         std::string path = std::string(PR_FONTS_DIR) + "/Arimo.ttf";
         const PrFont* PR_NULLABLE face = nullptr;
@@ -77,6 +97,8 @@ struct Bench {
     }
 
     ~Bench() {
+        prSyntaxTreeDestroy(syntax);
+        prSyntaxRegistryDestroy(registry);
         prTextViewDestroy(view);
         prTextEditBufferDestroy(buffer);
         prLayoutTreeDestroy(tree);
@@ -104,8 +126,30 @@ struct Bench {
         return prLayoutStyleIntern(tree, &record);
     }
 
+    // The spans of a window, kept while the text and the window stay the same, as an editor keeps them.
+    uint64_t rawVersion = UINT64_MAX;
+    uint32_t rawStart = 0;
+    uint32_t rawEnd = 0;
+
+    static uint32_t spansOf(void* context, uint32_t start, uint32_t end, PrTextViewSpan* out, uint32_t capacity) {
+        Bench& b = *static_cast<Bench*>(context);
+        uint64_t version = prTextEditBufferVersion(b.buffer);
+        if (version != b.rawVersion || start != b.rawStart || end != b.rawEnd) {
+            b.raw.resize(prSyntaxTreeSpans(b.syntax, start, end, nullptr, 0));
+            prSyntaxTreeSpans(b.syntax, start, end, b.raw.data(), uint32_t(b.raw.size()));
+            b.rawVersion = version;
+            b.rawStart = start;
+            b.rawEnd = end;
+        }
+        for (uint32_t i = 0; i < b.raw.size() && i < capacity; ++i)
+            out[i] = PrTextViewSpan{b.raw[i].start, b.raw[i].end, prColor16FromColor(PrColor{0.2f, 0.4f, 0.8f, 1})};
+        return uint32_t(b.raw.size());
+    }
+
     // Runs a frame, and returns whether the view asks for another.
     bool frame() {
+        if (syntax != nullptr)
+            prSyntaxTreeUpdate(syntax, pr::kInfinityF64);
         prLayoutTreeBeginFrame(tree);
         // The root does not scroll, so the port is under it.
         PrLayoutNode top = prLayoutTreeFrameElement(tree, kPrLayoutNodeNone, 0, style(true));
@@ -115,6 +159,8 @@ struct Bench {
             .parent = port,
             .extent = PrVec2{width, 800},
             .rowStyle = style(true),
+            .spans = syntax != nullptr ? spansOf : nullptr,
+            .spansContext = this,
             .wrap = true,
             .showCaret = true,
             .caretHidden = caretHidden,
@@ -277,6 +323,44 @@ int measureFile(const char* path) {
         b.buffer = prTextEditBufferCreate(text);
         b.view = prTextViewCreate(b.buffer);
     });
+    b.registry = prSyntaxRegistryCreate();
+    for (const PrSyntaxLanguage* language : {
+        prSyntaxTreeSitterC(), prSyntaxTreeSitterCpp(), prSyntaxTreeSitterCss(), prSyntaxTreeSitterHtml(),
+            prSyntaxTreeSitterJavaScript(), prSyntaxTreeSitterJson(), prSyntaxTreeSitterMarkdown(),
+            prSyntaxTreeSitterMarkdownInline(), prSyntaxTreeSitterPython(), prSyntaxTreeSitterXml(),
+    })
+        prSyntaxRegistryAdd(b.registry, language);
+    const PrSyntaxLanguage* language = prSyntaxRegistryFromPath(b.registry, path);
+    if (language != nullptr) {
+        b.syntax = prSyntaxTreeCreate(language, b.registry, b.buffer);
+        printf("highlighting as %.*s\n", int(language->name.size), language->name.data);
+        // The file streams in as an editor loads it: a piece at a time, each parsed before the next arrives.
+        PrTextEditBuffer* streamed = prTextEditBufferCreate("");
+        PrSyntaxTree* growing = prSyntaxTreeCreate(language, b.registry, streamed);
+        double slowest = 0;
+        uint32_t pieces = 0;
+        double start = prTimeMonotonicMilliseconds();
+        for (size_t at = 0; at < text.size; at += kStreamPiece) {
+            size_t size = text.size - at < kStreamPiece ? text.size - at : kStreamPiece;
+            double pieceStart = prTimeMonotonicMilliseconds();
+            uint32_t end = prTextEditBufferSize(streamed);
+            PrTextEditChange piece{.start = end, .end = end, .text = PrStringView{text.data + at, size}};
+            prTextEditBufferApply(streamed, &piece, 1, PrTextEditOrigin_Load);
+            prSyntaxTreeUpdate(growing, pr::kInfinityF64);
+            double took = prTimeMonotonicMilliseconds() - pieceStart;
+            slowest = took > slowest ? took : slowest;
+            ++pieces;
+        }
+        printf("%-44s %10.2f ms, %u pieces, slowest %.2f ms\n", "streamed load, parsing each piece",
+            prTimeMonotonicMilliseconds() - start, pieces, slowest);
+        prSyntaxTreeDestroy(growing);
+        prTextEditBufferDestroy(streamed);
+        timed("first parse of the whole text", [&] { prSyntaxTreeUpdate(b.syntax, pr::kInfinityF64); });
+        PrSyntaxSpan none{};
+        timed("spans of the first page", [&] {
+            prSyntaxTreeSpans(b.syntax, 0, prTextEditBufferLineEnd(b.buffer, 60), &none, 0);
+        });
+    }
     timed("first frame", [&] { b.frame(); });
     timed("second frame, with every estimate measured", [&] { b.frame(); });
     uint32_t lines = prTextEditBufferLineCount(b.buffer);
@@ -300,6 +384,34 @@ int measureFile(const char* path) {
         timed(jump.c_str(), [&] { b.frame(); });
         std::string settle = std::string("settle at ") + where;
         timed(settle.c_str(), [&] { b.frame(); });
+        if (b.syntax != nullptr) {
+            // A keystroke's syntax in its parts: the incremental parse, and the spans of a window of its lines.
+            uint32_t lines = prTextEditBufferLineCount(b.buffer);
+            uint32_t windowStart = prTextEditBufferLineStart(b.buffer, line > 60 ? line - 60 : 0);
+            uint32_t windowEnd = prTextEditBufferLineEnd(b.buffer, line + 60 < lines ? line + 60 : lines - 1);
+            double parse = 0;
+            double spans = 0;
+            double firstParse = 0;
+            double firstSpans = 0;
+            constexpr uint32_t kRuns = 20;
+            for (uint32_t i = 0; i < kRuns; ++i) {
+                prTextViewInsert(b.view, "x", PrTextEditMerge_None);
+                double start = prTimeMonotonicMilliseconds();
+                prSyntaxTreeUpdate(b.syntax, pr::kInfinityF64);
+                double parsed = prTimeMonotonicMilliseconds();
+                prSyntaxTreeSpans(b.syntax, windowStart, windowEnd, nullptr, 0);
+                spans += prTimeMonotonicMilliseconds() - parsed;
+                parse += parsed - start;
+                if (i == 0) {
+                    firstParse = parse;
+                    firstSpans = spans;
+                }
+            }
+            printf("%-44s %10.2f ms\n", (std::string("parse of a first keystroke at ") + where).c_str(), firstParse);
+            printf("%-44s %10.2f ms\n", (std::string("spans of a first keystroke at ") + where).c_str(), firstSpans);
+            printf("%-44s %10.2f ms\n", (std::string("parse of a keystroke at ") + where).c_str(), parse / kRuns);
+            printf("%-44s %10.2f ms\n", (std::string("spans of a keystroke at ") + where).c_str(), spans / kRuns);
+        }
         std::string key = std::string("keystroke at ") + where;
         timed(key.c_str(), [&] {
             prTextViewInsert(b.view, "x", PrTextEditMerge_None);

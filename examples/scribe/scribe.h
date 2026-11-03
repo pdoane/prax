@@ -5,13 +5,16 @@
 #include "pr/app.h"
 #include "pr/command.h"
 #include "pr/command_keymap.h"
+#include "pr/file.h"
 #include "pr/kit.h"
 #include "pr/layout_style.h"
+#include "pr/syntax.h"
 #include "pr/text_edit.h"
 #include "pr/text_view.h"
 #include "pr/ui.h"
 
 #include <string>
+#include <vector>
 
 PR_ASSUME_NONNULL_BEGIN
 
@@ -49,18 +52,42 @@ struct Scribe {
     PrCommandKeymap* PR_NULLABLE keymap = nullptr;
     std::string status;             // what the last command had to say, until the next
 
+    // The syntax of the document, if its file names a language that the build has.
+    PrSyntaxRegistry* PR_NULLABLE languages = nullptr;
+    const PrSyntaxLanguage* PR_NULLABLE language = nullptr;
+    PrSyntaxTree* PR_NULLABLE syntax = nullptr;
+    uint64_t syntaxChanges = 0;            // the number of updates that changed the tree's spans
+    std::vector<PrColor16> categoryColors; // by PrSyntaxCategory: the color of its text, or zero alpha for none
+    bool darkColors = true;                // the theme that `categoryColors` is of
+
+    // The text that streams into the document as it loads: the file, mapped, or a copy of the text that a caller gave,
+    // and how much of it the buffer holds. The document is loading until the buffer holds all of it.
+    PrFileMapping mapping{};
+    std::string source;
+    size_t loaded = 0;
+    bool loading = false;
+    std::string piece;              // the piece that the last load step appended, with its line endings made line feeds
+
+    // The spans of the last window, which a frame reuses while the text, the window and the syntax stay the same.
+    std::vector<PrSyntaxSpan> spans;
+    uint64_t spansVersion = UINT64_MAX;
+    uint64_t spansChanges = 0;     // the tree's changes that the spans are of
+    uint32_t spansStart = 0;
+    uint32_t spansEnd = 0;
+
     bool paletteRequested = false;  // a command asked to open the palette in the next round
     bool paletteOpen = false;       // the palette was open in the last round, and has focus
     bool menuOpen = false;          // a menu was open in the last round
     std::string paletteQuery;
 };
 
-// Reads the file at `path` into the document, or starts an empty one if `path` is empty. Returns false if the file
-// cannot be read, or is past what a buffer holds.
+// Opens the file at `path` as the document, which streams in over the frames that follow, or starts an empty one if
+// `path` is empty. Returns false if the file cannot be read, or is past what a buffer holds.
 bool openDocument(Scribe& s, const std::string& path);
 
-// Starts a document that holds `text`, which belongs to no file.
-void openText(Scribe& s, PrStringView text);
+// Starts a document that streams in `text` over the frames that follow, as a file does, and that belongs to no file.
+// `name` is a file name that chooses its language, or empty for none.
+void openText(Scribe& s, PrStringView text, const std::string& name);
 
 // Frees the document and the commands.
 void closeDocument(Scribe& s);
@@ -73,7 +100,8 @@ void registerCommands(Scribe& s);
 // under which each command's item has the key of its id (prCommandMenuItem), and "scribe.scrollbar" for the track.
 void buildEditor(Scribe& s, PrLayoutNode root, PrVec2 extent);
 
-// Gives the view the layout of the frame. Returns true if another frame would show something different.
+// Gives the view the layout of the frame. Returns true if another frame would show something different, as while the
+// document loads.
 bool afterLayout(Scribe& s);
 
 } // namespace scribe

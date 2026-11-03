@@ -475,8 +475,8 @@ PrTextEditSelection prTextEditSelectionMove(const PrTextEditGeometry* geometry, 
         PrTextEditSelection selection, PrTextEditMotion motion, PrTextEditSelectionMove kind) {
     PrTextEditPosition at{node, selection.caret, selection.affinity};
     bool extend = kind == PrTextEditSelectionMove_Extend;
-    uint32_t low = selection.anchor < selection.caret ? selection.anchor : selection.caret;
-    uint32_t high = selection.anchor < selection.caret ? selection.caret : selection.anchor;
+    uint32_t low = prTextEditSelectionStart(selection);
+    uint32_t high = prTextEditSelectionEnd(selection);
     PrTextEditLine line{};
     PrTextDirection direction = PrTextDirection_Ltr;
     if (geometry->line(geometry->context, at, PrTextEditLineStep_Same, &line))

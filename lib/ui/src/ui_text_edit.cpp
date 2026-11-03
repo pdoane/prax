@@ -187,17 +187,13 @@ struct TextEditor {
     // Replaces the selection with `value`. Line endings become line feeds, and each is dropped unless `lineFeeds` is
     // true and the edit is multiline. A tab stays in a multiline edit, and every other control character is dropped.
     void insert(PrStringView value, bool lineFeeds, PrTextEditOrigin origin, PrTextEditMerge merge) {
-        scratch.clear();
-        for (size_t i = 0; i < value.size; ++i) {
-            char c = value.data[i];
-            if (c == '\r' && i + 1 < value.size && value.data[i + 1] == '\n')
-                continue;
-            if (c == '\r')
-                c = '\n';
-            bool control = uint8_t(c) < 0x20 || c == 0x7f;
-            if (!control || (c == '\n' && lineFeeds && multiline) || (c == '\t' && multiline))
-                scratch.push(c);
-        }
+        PrTextEditInputFlags keep = 0;
+        if (lineFeeds && multiline)
+            keep |= PrTextEditInputFlag_LineFeeds;
+        if (multiline)
+            keep |= PrTextEditInputFlag_Tabs;
+        scratch.resize(uint32_t(value.size));
+        scratch.count = prTextEditInputNormalize(value, keep, scratch.data);
         replace(low(), high(), PrStringView{scratch.data, scratch.count}, origin, merge);
     }
 

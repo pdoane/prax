@@ -252,7 +252,7 @@ of a change to it is what the change did.
 | webmessaging/multi-globals                          |       4/4 |           0/4 |    0.0% |
 | webmessaging/with-options                           |       9/9 |           9/9 |  100.0% |
 | webmessaging/with-ports                             |     23/24 |         37/39 |   94.8% |
-| webmessaging/without-ports                          |     25/27 |         38/41 |   92.6% |
+| webmessaging/without-ports                          |     25/27 |         37/41 |   90.2% |
 | webstorage                                          |     38/54 |     1231/1285 |   95.7% |
 | workers                                             |    89/112 |        23/226 |   10.1% |
 | workers/baseurl                                     |       3/7 |           0/7 |    0.0% |
@@ -263,7 +263,7 @@ of a change to it is what the change did.
 | workers/multi-globals                               |       1/1 |           0/1 |    0.0% |
 | workers/same-site-cookies                           |       6/6 |           0/6 |    0.0% |
 | workers/semantics                                   |     23/29 |          0/32 |    0.0% |
-| **total**                                           | 8380/9525 | 127517/157122 |   81.1% |
+| **total**                                           | 8380/9525 | 127516/157122 |   81.1% |
 
 ## infrastructure
 

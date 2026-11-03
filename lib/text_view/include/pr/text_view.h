@@ -40,6 +40,20 @@ void prTextViewDestroy(PrTextView* PR_NULLABLE view);
 // The selections of the view. A caller may edit through it. The view follows every transaction of the buffer.
 PrTextEditView* prTextViewEdit(const PrTextView* view);
 
+// A range of the document that the caller colors, such as the span of a syntax highlight. A span paints its text in
+// `color` as a highlight of the text's node (PrLayoutHighlight), so it never changes how the text sets, and a change of
+// spans costs no layout. A style that changes metrics, such as a weight, is a style run of the buffer.
+typedef struct PrTextViewSpan {
+    uint32_t start;
+    uint32_t end;
+    PrColor16 color;
+} PrTextViewSpan;
+
+// Writes the spans that intersect the bytes from `start` to `end` to `out`, up to `capacity`, and returns their number.
+// The spans are in order and do not overlap. The call has no side effects on what later calls return.
+typedef uint32_t (*PrTextViewSpansFn)(void* PR_NULLABLE context, uint32_t start, uint32_t end,
+    PrTextViewSpan* PR_NULLABLE out, uint32_t capacity);
+
 // What a frame shows.
 typedef struct PrTextViewFrameDesc {
     PrLayoutTree* tree;
@@ -57,6 +71,11 @@ typedef struct PrTextViewFrameDesc {
     // directly. A style that changes a line's metrics changes the height of its row once the row is measured.
     const PrLayoutStyleIndex* PR_NULLABLE styles;
     uint32_t styleCount;
+
+    // The spans of the window's text, or null for none. The view asks once in each frame, for the window's range. The
+    // selection paints over them.
+    PrTextViewSpansFn PR_NULLABLE spans;
+    void* PR_NULLABLE spansContext;
 
     bool wrap;                      // the rows wrap at the width of the extent, which the estimates of heights assume
     bool showCaret;

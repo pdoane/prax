@@ -8,6 +8,8 @@
 #include "pr/draw_image.h"
 #include "pr/draw_list.h"
 #include "pr/mem.h"
+#include "pr/search.h"
+#include "pr/sort.h"
 #include "pr/string.h"
 #include "pr/string_ops.h"
 #include "pr/text_buffer.h"
@@ -80,12 +82,32 @@ void dropFirstLine(LayoutTree* tree, LayoutNodeIndex node) {
     tree->nodes.data[node].listed = false;
 }
 
-// Removes the highlights of the text `node`, which has some.
+// Removes the highlights of the text `node`, which has some. Orders the ranges by their starts, and records how far the
+// ranges up to each place reach.
+void indexHighlights(LayoutHighlights& h) {
+    h.byStart.resize(h.ranges.count);
+    for (uint32_t i = 0; i < h.ranges.count; ++i)
+        h.byStart.data[i] = i;
+    const PrLayoutHighlight* ranges = h.ranges.data;
+    sortItems(h.byStart.data, h.byStart.count, [&](uint32_t a, uint32_t b) {
+        return ranges[a].start < ranges[b].start || (ranges[a].start == ranges[b].start && a < b);
+    });
+    h.reach.resize(h.ranges.count);
+    uint32_t furthest = 0;
+    for (uint32_t i = 0; i < h.byStart.count; ++i) {
+        uint32_t end = ranges[h.byStart.data[i]].end;
+        furthest = end > furthest ? end : furthest;
+        h.reach.data[i] = furthest;
+    }
+}
+
 void dropHighlights(LayoutTree* tree, LayoutNodeIndex node) {
     uint32_t hash = layoutHighlightHash(node);
     uint32_t at = tree->highlightIndex.find(hash, [&](uint32_t i) { return tree->highlights.data[i].node == node; });
     PR_ASSERT(at != kHashMissing);
     tree->highlights.data[at].ranges.reset();
+    tree->highlights.data[at].byStart.reset();
+    tree->highlights.data[at].reach.reset();
     tree->highlightIndex.erase(hash, at);
     uint32_t last = tree->highlights.count - 1;
     if (at != last) {
@@ -1073,6 +1095,21 @@ const LayoutHighlights* PR_NULLABLE layoutTextHighlights(const LayoutTree* tree,
     return at != kHashMissing ? &tree->highlights.data[at] : nullptr;
 }
 
+void layoutHighlightsReaching(const LayoutHighlights* highlights, uint32_t start, uint32_t end, Array<uint32_t>& out) {
+    out.clear();
+    const Array<uint32_t>& order = highlights->byStart;
+    const PrLayoutHighlight* ranges = highlights->ranges.data;
+    // The ranges that begin before `end` come first in the order, and those before the first whose reach passes `start`
+    // all end at or before it.
+    uint32_t last = partitionPoint(0, order.count, [&](uint32_t i) { return ranges[order.data[i]].start < end; });
+    uint32_t first = partitionPoint(0, last, [&](uint32_t i) { return highlights->reach.data[i] <= start; });
+    for (uint32_t i = first; i < last; ++i) {
+        if (ranges[order.data[i]].end > start)
+            out.push(order.data[i]);
+    }
+    sortItems(out.data, out.count, [](uint32_t a, uint32_t b) { return a < b; });
+}
+
 void layoutTreeSetHighlights(LayoutTree* tree, LayoutNodeIndex node, const PrLayoutHighlight* PR_NULLABLE highlights,
         uint32_t count, uint32_t frame) {
     LayoutTreeNode& n = nodeAt(tree, node);
@@ -1090,11 +1127,13 @@ void layoutTreeSetHighlights(LayoutTree* tree, LayoutNodeIndex node, const PrLay
     } else if (kept != nullptr) {
         kept->ranges.clear();
         kept->ranges.append(highlights, count);
+        indexHighlights(*kept);
     } else {
         tree->highlightIndex.insert(layoutHighlightHash(node), tree->highlights.count);
         LayoutHighlights& added = tree->highlights.emplace();
         added = LayoutHighlights{.node = node, .frame = frame};
         added.ranges.append(highlights, count);
+        indexHighlights(added);
         n.listed = true;
     }
     markPainted(tree, node, false);
@@ -1180,6 +1219,11 @@ void prLayoutTreeDestroy(PrLayoutTree* PR_NULLABLE tree) {
     t->nodes.reset();
     t->firstLines.reset();
     t->firstLineIndex.reset();
+    for (uint32_t i = 0; i < t->highlights.count; ++i) {
+        t->highlights.data[i].ranges.reset();
+        t->highlights.data[i].byStart.reset();
+        t->highlights.data[i].reach.reset();
+    }
     t->highlights.reset();
     t->carets.carets.reset();
     t->highlightIndex.reset();

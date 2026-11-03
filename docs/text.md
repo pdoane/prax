@@ -282,12 +282,39 @@ its line, so a correction of an estimate does not move what the reader sees.
 Rows stack along the block axis of their writing mode, so a vertical view is the same index and window, with a scroll
 offset along x that is negative toward an origin at the right. Style runs show as inline boxes in a row, so shaping
 continues across them, and a line that is all of style zero holds its text directly. Offsets stay in the line, and the
-place where two runs meet is one place for a caret.
+place where two runs meet is one place for a caret. Colored spans, such as the colors of syntax categories, are layout
+highlights of the rows' text nodes under the selection's, so they cost no node and no layout, and a frame that sets the
+same spans again records nothing.
 
 To motion, each logical line is a node (`PrTextEditGeometry`), so a motion reads one line's text and the window's rows,
 and never the whole document. A line outside the window answers from its own bytes until a row shows it. Commands act at
 every selection, as one transaction for an edit, and selections that meet join. `prUiTextView` connects a view to
 immediate-mode frames, and `examples/scribe` is an editor over it, whose operations are commands (`lib/studio/command`).
+
+### Syntax (`pr/syntax.h`)
+
+A language is an interface that makes the syntax tree of a buffer: a tree that its grammar parses, which each edit
+parses again incrementally from the buffer's edit stream. A tree gives the spans of the categories that its grammar names,
+such as `keyword` or `string.special`, for the range that a host shows. Spans do not overlap: where categories nest the
+inner names the bytes, and of the categories of one node the last pattern of the query wins, as tree-sitter's own
+highlighter chooses. A registry holds a host's languages, finds one by name or by file, and gives each category name one
+number, so a host maps names to looks once. Coloring is the host's step on top of the categories.
+
+An update parses for a budget of time that its caller gives. A parse that runs out of time resumes at the next update,
+and until it finishes, the spans are those of the last parse that finished, moved by the edits since. A text that loads
+streams into its buffer in pieces, as the HTML and Markdown loads do (`PrTextEditOrigin_Load`), and each piece parses
+before the next arrives, so the text and its syntax show together, and the cost of a piece follows the piece.
+
+The tree-sitter backend (`PR_SYNTAX_TREESITTER`, off by default) evaluates the queries' text predicates itself, with
+`lib/regex`. An injection hands ranges to another language of the registry: the language that its query names, or that
+the text of a capture names, such as the info string of a Markdown fence, which a language's name pattern matches. Its
+content leaves out the ranges of the content node's named children, as a block quote's markers, unless the query
+includes them, and the matches of a combined injection are one document. An injected language injects in turn, four
+deep at most, as a script in an HTML block in Markdown's inline text. Each injection in the range asked for is parsed
+when spans of it are asked for, and its tree is kept: the edits move it, a query of the same ranges reuses it, and one
+of ranges that an edit touched parses it again incrementally. A tree that a query does not reach is dropped. Each
+built-in grammar has a header and a function of its own (`pr/syntax_treesitter_<language>.h`), so a program links only
+the grammars that it names, and a host can add a grammar of its own (`prSyntaxTreeSitterLanguageCreate`).
 
 ## Languages and scripts (`pr/locale.h`)
 

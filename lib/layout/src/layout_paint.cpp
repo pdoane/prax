@@ -439,8 +439,10 @@ struct Painter : LayoutWalkVisitor {
     struct HighlightStretch {
         float lo;
         float hi;
+        uint32_t range;             // by index of the node's highlights
     };
     Array<HighlightStretch> highlightStretches;
+    Array<uint32_t> highlightsReaching;
     Array<float> highlightCuts;
 
     // By caret of the tree: the fragment that holds the caret, once `caretsSearched` is true.
@@ -1856,17 +1858,19 @@ struct Painter : LayoutWalkVisitor {
         };
         Array<HighlightStretch>& stretches = highlightStretches;
         stretches.clear();
-        for (uint32_t i = 0; i < highlights->ranges.count; ++i) {
+        // Only the ranges that reach the fragment matter, which keeps the cost of a long text's many lines in
+        // proportion to its ranges.
+        layoutHighlightsReaching(highlights, start, text.end, highlightsReaching);
+        for (uint32_t r = 0; r < highlightsReaching.count; ++r) {
+            uint32_t i = highlightsReaching.data[r];
             const PrLayoutHighlight& h = highlights->ranges.data[i];
             uint32_t from = h.start > start ? h.start : start;
             uint32_t to = h.end < text.end ? h.end : text.end;
-            if (from >= to) {
-                stretches.push(HighlightStretch{0, 0});
+            if (from >= to)
                 continue;
-            }
             float a = layoutTextCaretAlong(tree, fragment, from);
             float b = layoutTextCaretAlong(tree, fragment, to);
-            stretches.push(HighlightStretch{a < b ? a : b, a < b ? b : a});
+            stretches.push(HighlightStretch{a < b ? a : b, a < b ? b : a, i});
             if (h.background.a > 0) {
                 PrRect rect = prLayoutRectToPx(layoutTextSpanRect(tree, fragment, offset, a, b));
                 prDrawListRect(into, rect, {.color = h.background});
@@ -1879,7 +1883,7 @@ struct Painter : LayoutWalkVisitor {
         cuts.clear();
         cuts.push(-kInfinityF32);
         for (uint32_t i = 0; i < stretches.count; ++i) {
-            if (stretches.data[i].lo < stretches.data[i].hi && highlights->ranges.data[i].color.a > 0) {
+            if (stretches.data[i].lo < stretches.data[i].hi && highlights->ranges.data[stretches.data[i].range].color.a > 0) {
                 cuts.push(stretches.data[i].lo);
                 cuts.push(stretches.data[i].hi);
             }
@@ -1895,8 +1899,9 @@ struct Painter : LayoutWalkVisitor {
             PrColor16 color = base;
             for (uint32_t i = 0; i < stretches.count; ++i) {
                 const HighlightStretch& stretch = stretches.data[i];
-                if (highlights->ranges.data[i].color.a > 0 && stretch.lo <= middle && middle < stretch.hi)
-                    color = highlights->ranges.data[i].color;
+                const PrLayoutHighlight& h = highlights->ranges.data[stretch.range];
+                if (h.color.a > 0 && stretch.lo <= middle && middle < stretch.hi)
+                    color = h.color;
             }
             // Glyphs reach past the fragment's content area, so the clip reaches an em past it across the line.
             bool whole = cuts.count == 2;
@@ -2083,6 +2088,7 @@ void record(LayoutTree* tree, LayoutPaintChunk& chunk, const LayoutFragment* fra
         resetRecording(painter.spare.data[i]);
     painter.spare.reset();
     painter.highlightStretches.reset();
+    painter.highlightsReaching.reset();
     painter.caretFragments.reset();
     painter.highlightCuts.reset();
     // Scenes embed the recording on whatever thread plays them.

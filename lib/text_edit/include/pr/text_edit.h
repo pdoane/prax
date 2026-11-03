@@ -85,13 +85,17 @@ typedef struct PrTextEditChange {
 // Where a transaction comes from, which decides what else it does. A local transaction can be proposed against and
 // enters the history. A composition is an input method's marked text, which can be proposed against and stays out of
 // the history. An undo comes from a history. A remote or program transaction is not proposed against, and it empties
-// the history, because the positions that the history holds no longer describe the text.
+// the history, because the positions that the history holds no longer describe the text. A load appends text that
+// arrives at the end of the text, as a file that streams in does: it is not proposed against, and it keeps the history,
+// since text after every position that the history holds moves none of them. A load's changes insert at the end of the
+// text.
 enum {
     PrTextEditOrigin_Local,
     PrTextEditOrigin_Composition,
     PrTextEditOrigin_Undo,
     PrTextEditOrigin_Remote,
     PrTextEditOrigin_Program,
+    PrTextEditOrigin_Load,
 };
 typedef uint8_t PrTextEditOrigin;
 
@@ -114,6 +118,23 @@ bool prTextEditBufferApply(PrTextEditBuffer* buffer, const PrTextEditChange* PR_
 
 // Replaces the whole text with `text`, as a program transaction.
 void prTextEditBufferSetText(PrTextEditBuffer* buffer, PrStringView text);
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Text from outside the program
+
+// What of text from outside the program an edit keeps, besides its printable text.
+enum {
+    PrTextEditInputFlag_LineFeeds = 1 << 0,     // its line endings, each a line feed
+    PrTextEditInputFlag_Tabs = 1 << 1,
+    PrTextEditInputFlag_Controls = 1 << 2,      // the other control characters
+};
+typedef uint8_t PrTextEditInputFlags;
+
+// Writes `text` to `out` as a buffer takes it, and returns the number of bytes written, which is at most `text.size`.
+// CR LF and a lone CR are line endings. A line ending, a tab or another control character that `keep` does not name is
+// dropped. `out` holds `text.size` bytes. A caller that writes a text in pieces does not end a piece between a CR and
+// its LF.
+uint32_t prTextEditInputNormalize(PrStringView text, PrTextEditInputFlags keep, char* PR_NULLABLE out);
 
 // ---------------------------------------------------------------------------------------------------------------------
 // The edit stream
@@ -214,6 +235,11 @@ enum {
 };
 typedef uint8_t PrTextEditMerge;
 
+// Returns the first or the last offset of what `selection` holds, in the order of the text, whichever way the selection
+// runs.
+uint32_t prTextEditSelectionStart(PrTextEditSelection selection);
+uint32_t prTextEditSelectionEnd(PrTextEditSelection selection);
+
 // Creates a view with one caret at the start of the text, or frees one.
 PrTextEditView* prTextEditViewCreate(PrTextEditBuffer* buffer);
 void prTextEditViewDestroy(PrTextEditView* PR_NULLABLE view);
@@ -226,6 +252,9 @@ PrTextEditBuffer* PR_NULLABLE prTextEditViewBuffer(const PrTextEditView* view);
 // changes.
 uint32_t prTextEditViewSelectionCount(const PrTextEditView* view);
 const PrTextEditSelection* prTextEditViewSelections(const PrTextEditView* view);
+
+// Returns the view's primary selection.
+PrTextEditSelection prTextEditViewPrimary(const PrTextEditView* view);
 
 // Replaces the view's selections, with the last as primary. Offsets are clamped to the text. Selections that overlap
 // join, and the joined selection is primary if either was.

@@ -35,11 +35,6 @@ TextViewState& stateOf(PrUi* ui, PrLayoutNode control) {
     return *static_cast<TextViewState*>(prUiState(ui, control, &kUiTextViewOwner, 0, sizeof(TextViewState)));
 }
 
-PrTextEditSelection primaryOf(PrTextView* view) {
-    PrTextEditView* edit = prTextViewEdit(view);
-    return prTextEditViewSelections(edit)[prTextEditViewSelectionCount(edit) - 1];
-}
-
 void select(PrTextView* view, uint32_t anchor, uint32_t caret, PrTextEditAffinity affinity) {
     PrTextEditSelection s{.anchor = anchor, .caret = caret, .affinity = affinity};
     prTextEditViewSetSelections(prTextViewEdit(view), &s, 1);
@@ -75,7 +70,7 @@ void pointerEvent(PrUi* ui, PrTextView* view, TextViewState& state, const PrAppE
     }
     state.dragging = true;
     if ((e.modifiers & PrAppModifierFlag_Shift) != 0) {
-        uint32_t anchor = primaryOf(view).anchor;
+        uint32_t anchor = prTextEditViewPrimary(prTextViewEdit(view)).anchor;
         state.unit = PrTextEditUnit_Character;
         state.unitLow = state.unitHigh = anchor;
         select(view, anchor, at, side);
@@ -93,19 +88,11 @@ void pointerEvent(PrUi* ui, PrTextView* view, TextViewState& state, const PrAppE
     select(view, state.unitLow, state.unit == PrTextEditUnit_Character ? at : state.unitHigh, side);
 }
 
-// Inserts text from outside the program. Line endings become line feeds, and other control characters except a tab go.
+// Inserts text from outside the program, with its line endings and tabs, and without its other control characters.
 void insertOutside(PrTextView* view, PrStringView text, PrTextEditMerge merge) {
     Array<char> clean;
-    for (size_t i = 0; i < text.size; ++i) {
-        char c = text.data[i];
-        if (c == '\r' && i + 1 < text.size && text.data[i + 1] == '\n')
-            continue;
-        c = c == '\r' ? '\n' : c;
-        if (uint8_t(c) >= 0x20 && c != 0x7f)
-            clean.push(c);
-        else if (c == '\n' || c == '\t')
-            clean.push(c);
-    }
+    clean.resize(uint32_t(text.size));
+    clean.count = prTextEditInputNormalize(text, PrTextEditInputFlag_LineFeeds | PrTextEditInputFlag_Tabs, clean.data);
     prTextViewInsert(view, PrStringView{clean.data, clean.count}, merge);
     clean.reset();
 }
@@ -116,9 +103,9 @@ void composeEvent(PrTextView* view, TextViewState& state, const PrAppEvent& e) {
     PrTextEditView* edit = prTextViewEdit(view);
     if (state.markEnd > state.markStart)
         select(view, state.markStart, state.markEnd, PrTextEditAffinity_Downstream);
-    PrTextEditSelection s = primaryOf(view);
-    uint32_t low = s.anchor < s.caret ? s.anchor : s.caret;
-    uint32_t high = s.anchor < s.caret ? s.caret : s.anchor;
+    PrTextEditSelection s = prTextEditViewPrimary(prTextViewEdit(view));
+    uint32_t low = prTextEditSelectionStart(s);
+    uint32_t high = prTextEditSelectionEnd(s);
     PrStringView text = e.kind == PrAppEventKind_CompositionEnd ? PrStringView{} : e.text;
     PrTextEditChange change{.start = low, .end = high, .text = text};
     prTextEditViewApply(edit, &change, 1, PrTextEditOrigin_Composition, PrTextEditMerge_None);
@@ -170,7 +157,7 @@ void prUiTextView(PrUi* ui, const PrUiTextViewDesc* desc) {
             default: break;
         }
     }
-    uint32_t caret = primaryOf(view).caret;
+    uint32_t caret = prTextEditViewPrimary(prTextViewEdit(view)).caret;
     if (caret != state.caret) {
         state.caret = caret;
         state.activity = time;
@@ -184,6 +171,8 @@ void prUiTextView(PrUi* ui, const PrUiTextViewDesc* desc) {
         .rowStyle = desc->rowStyle,
         .styles = desc->styles,
         .styleCount = desc->styleCount,
+        .spans = desc->spans,
+        .spansContext = desc->spansContext,
         .wrap = desc->wrap,
         .showCaret = focused,
         .caretHidden = !still && !blink.on,

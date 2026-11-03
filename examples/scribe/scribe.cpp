@@ -5,6 +5,19 @@
 #include "pr/command_kit.h"
 #include "pr/count_of.h"
 #include "pr/file.h"
+#include "pr/float.h"
+#if defined(SCRIBE_HAS_TREESITTER)
+#include "pr/syntax_treesitter_c.h"
+#include "pr/syntax_treesitter_cpp.h"
+#include "pr/syntax_treesitter_css.h"
+#include "pr/syntax_treesitter_html.h"
+#include "pr/syntax_treesitter_javascript.h"
+#include "pr/syntax_treesitter_json.h"
+#include "pr/syntax_treesitter_markdown.h"
+#include "pr/syntax_treesitter_markdown_inline.h"
+#include "pr/syntax_treesitter_python.h"
+#include "pr/syntax_treesitter_xml.h"
+#endif
 #include "pr/kit_box.h"
 #include "pr/kit_menu.h"
 #include "pr/kit_text.h"
@@ -14,7 +27,9 @@
 #include "pr/layout_style.h"
 #include "pr/layout_tree.h"
 #include "pr/string.h"
+#include "pr/string_ops.h"
 #include "pr/text_edit_command.h"
+#include "pr/time.h"
 #include "pr/ui_text_view.h"
 
 #include <stdio.h>
@@ -35,6 +50,15 @@ constexpr float kThumbMinLength = 24;
 
 // The time that a frame gives to better estimates of the heights of lines outside the window.
 constexpr double kRefineMilliseconds = 2;
+
+// The time that a frame gives to the document's syntax once its text has changed, and to loading the text, in
+// milliseconds. A parse that runs out of time resumes in the next frame. A piece of loading text parses whole, so that
+// no text shows before its syntax does.
+constexpr double kParseMilliseconds = 4;
+constexpr double kLoadMilliseconds = 8;
+
+// The most bytes of a piece of loading text.
+constexpr size_t kLoadPiece = 64 * 1024;
 
 // A command that carries out a key's text command through the view.
 struct KeyCommand {
@@ -197,6 +221,244 @@ Scribe& scribeOf(void* context) {
     return *static_cast<Scribe*>(context);
 }
 
+// A style class: what one theme colors, whatever the language and whatever its grammar's queries call it.
+enum {
+    StyleClass_None,
+    StyleClass_Keyword,
+    StyleClass_Type,
+    StyleClass_Function,
+    StyleClass_Member,
+    StyleClass_Variable,
+    StyleClass_String,
+    StyleClass_Escape,
+    StyleClass_Number,
+    StyleClass_Constant,
+    StyleClass_Comment,
+    StyleClass_Attribute,
+    StyleClass_Operator,
+    StyleClass_Punctuation,
+    StyleClass_Heading,
+    StyleClass_Strong,
+    StyleClass_Emphasis,
+    StyleClass_Link,                // the text that a link reads as
+    StyleClass_LinkTarget,          // where a link points
+    StyleClass_Count,
+};
+typedef uint8_t StyleClass;
+
+// A word of a category's name, and the class that it gives.
+struct ClassWord {
+    const char* word;
+    StyleClass style;
+};
+
+// The classes by the first word of a category's name, as both Neovim's queries and Helix's name them. The name of a
+// markup element, such as a tag, reads as its structure, as a keyword does.
+constexpr ClassWord kClassOfFirstWord[] = {
+    {"attribute", StyleClass_Attribute},
+    {"boolean", StyleClass_Constant},
+    {"character", StyleClass_Constant},
+    {"comment", StyleClass_Comment},
+    {"constant", StyleClass_Constant},
+    {"constructor", StyleClass_Type},
+    {"delimiter", StyleClass_Punctuation},
+    {"escape", StyleClass_Escape},
+    {"field", StyleClass_Member},
+    {"float", StyleClass_Number},
+    {"function", StyleClass_Function},
+    {"keyword", StyleClass_Keyword},
+    {"label", StyleClass_Variable},
+    {"member", StyleClass_Member},
+    {"method", StyleClass_Function},
+    {"module", StyleClass_Type},
+    {"namespace", StyleClass_Type},
+    {"number", StyleClass_Number},
+    {"operator", StyleClass_Operator},
+    {"parameter", StyleClass_Variable},
+    {"preproc", StyleClass_Keyword},
+    {"property", StyleClass_Member},
+    {"punctuation", StyleClass_Punctuation},
+    {"string", StyleClass_String},
+    {"tag", StyleClass_Keyword},
+    {"type", StyleClass_Type},
+    {"variable", StyleClass_Variable},
+};
+
+// The classes of markup, by the second word of a name whose first is `text`, as Neovim names markup, or `markup`, as
+// Helix does.
+constexpr ClassWord kClassOfMarkupWord[] = {
+    {"bold", StyleClass_Strong},
+    {"emphasis", StyleClass_Emphasis},
+    {"heading", StyleClass_Heading},
+    {"italic", StyleClass_Emphasis},
+    {"link", StyleClass_LinkTarget},
+    {"literal", StyleClass_String},
+    {"raw", StyleClass_String},
+    {"reference", StyleClass_Link},
+    {"strong", StyleClass_Strong},
+    {"title", StyleClass_Heading},
+    {"uri", StyleClass_LinkTarget},
+};
+
+// The color of a class's text in a dark theme and in a light one, or zero alpha for the text's own.
+struct ClassColor {
+    PrColor8 dark;
+    PrColor8 light;
+};
+
+constexpr ClassColor kClassColors[StyleClass_Count] = {
+    {},                                                 // None
+    {{197, 134, 192, 255}, {175, 0, 219, 255}},         // Keyword
+    {{78, 201, 176, 255}, {38, 127, 153, 255}},         // Type
+    {{220, 220, 170, 255}, {121, 94, 38, 255}},         // Function
+    {{156, 220, 254, 255}, {0, 16, 128, 255}},          // Member
+    {},                                                 // Variable
+    {{206, 145, 120, 255}, {163, 21, 21, 255}},         // String
+    {{215, 186, 125, 255}, {238, 0, 0, 255}},           // Escape
+    {{181, 206, 168, 255}, {9, 134, 88, 255}},          // Number
+    {{79, 193, 255, 255}, {0, 112, 193, 255}},          // Constant
+    {{106, 153, 85, 255}, {0, 128, 0, 255}},            // Comment
+    {{156, 220, 254, 255}, {229, 0, 0, 255}},           // Attribute
+    {},                                                 // Operator
+    {{150, 150, 150, 255}, {110, 110, 110, 255}},       // Punctuation
+    {{86, 156, 214, 255}, {128, 0, 0, 255}},            // Heading
+    {{197, 134, 192, 255}, {175, 0, 219, 255}},         // Strong
+    {{206, 145, 120, 255}, {163, 21, 21, 255}},         // Emphasis
+    {{86, 156, 214, 255}, {0, 0, 255, 255}},            // Link
+    {{156, 220, 254, 255}, {0, 16, 128, 255}},          // LinkTarget
+};
+
+// Returns the word of `name` that starts at `from`, up to the next dot.
+PrStringView wordAt(PrStringView name, size_t from) {
+    size_t end = from;
+    while (end < name.size && name.data[end] != '.')
+        ++end;
+    return PrStringView{name.data + from, end - from};
+}
+
+StyleClass classOfWord(const ClassWord* words, size_t count, PrStringView word) {
+    for (size_t i = 0; i < count; ++i) {
+        if (word == words[i].word)
+            return words[i].style;
+    }
+    return StyleClass_None;
+}
+
+// Returns the style class of a category's name.
+StyleClass classOfCategory(PrStringView name) {
+    PrStringView first = wordAt(name, 0);
+    if (first == "text" || first == "markup") {
+        if (first.size >= name.size)
+            return StyleClass_None;
+        return classOfWord(kClassOfMarkupWord, countOf(kClassOfMarkupWord), wordAt(name, first.size + 1));
+    }
+    return classOfWord(kClassOfFirstWord, countOf(kClassOfFirstWord), first);
+}
+
+PrColor16 colorOfCategory(PrStringView name, bool dark) {
+    const ClassColor& color = kClassColors[classOfCategory(name)];
+    PrColor8 shown = dark ? color.dark : color.light;
+    return shown.a != 0 ? prColor16FromColor(prColorFromColor8(shown)) : PrColor16{};
+}
+
+// Writes the colored spans of the window from the syntax tree, which the view asks for once in each frame.
+uint32_t spansOf(void* context, uint32_t start, uint32_t end, PrTextViewSpan* PR_NULLABLE out, uint32_t capacity) {
+    Scribe& s = scribeOf(context);
+    uint64_t version = prTextEditBufferVersion(s.buffer);
+    if (version != s.spansVersion || s.syntaxChanges != s.spansChanges || start != s.spansStart || end != s.spansEnd) {
+        s.spans.resize(prSyntaxTreeSpans(s.syntax, start, end, nullptr, 0));
+        prSyntaxTreeSpans(s.syntax, start, end, s.spans.data(), uint32_t(s.spans.size()));
+        s.spansVersion = version;
+        s.spansChanges = s.syntaxChanges;
+        s.spansStart = start;
+        s.spansEnd = end;
+    }
+    uint32_t count = 0;
+    for (const PrSyntaxSpan& span : s.spans) {
+        if (span.category >= s.categoryColors.size() || s.categoryColors[span.category].a == 0)
+            continue;
+        if (count < capacity)
+            out[count] = PrTextViewSpan{span.start, span.end, s.categoryColors[span.category]};
+        ++count;
+    }
+    return count;
+}
+
+// Returns the text that streams into the document.
+PrStringView sourceOf(const Scribe& s) {
+    if (s.mapping.data != nullptr)
+        return PrStringView{reinterpret_cast<const char*>(s.mapping.data), s.mapping.size};
+    return PrStringView(s.source);
+}
+
+// Ends the load: the file holds what the buffer does, and the source is no longer needed.
+void finishLoad(Scribe& s) {
+    s.loading = false;
+    s.savedVersion = prTextEditBufferVersion(s.buffer);
+    if (s.mapping.data != nullptr)
+        prFileUnmap(&s.mapping);
+    s.mapping = PrFileMapping{};
+    s.source.clear();
+    s.source.shrink_to_fit();
+}
+
+// Appends pieces of the loading text to the end of the buffer for about `milliseconds`, and parses each before the
+// next, so that the text and its syntax arrive together.
+void loadPieces(Scribe& s, double milliseconds) {
+    if (!s.loading)
+        return;
+    PrStringView source = sourceOf(s);
+    double end = prTimeMonotonicMilliseconds() + milliseconds;
+    do {
+        size_t at = s.loaded;
+        size_t stop = source.size - at > kLoadPiece ? at + kLoadPiece : source.size;
+        if (stop < source.size) {
+            // A piece ends after a line feed where it can, so that lines arrive whole, and otherwise between code
+            // points and never between a CR and its LF.
+            PrStringView window{source.data + at, stop - at};
+            size_t lineFeed = stringFindLast(window, '\n');
+            if (lineFeed != window.size) {
+                stop = at + lineFeed + 1;
+            } else {
+                size_t start = prTextEditCodePointStart(source, uint32_t(stop));
+                stop = start > at ? start : stop;
+                if (source.data[stop - 1] == '\r' && source.data[stop] == '\n')
+                    ++stop;
+            }
+        }
+        PrTextEditInputFlags keep =
+            PrTextEditInputFlag_LineFeeds | PrTextEditInputFlag_Tabs | PrTextEditInputFlag_Controls;
+        s.piece.resize(stop - at);
+        s.piece.resize(prTextEditInputNormalize(PrStringView{source.data + at, stop - at}, keep, s.piece.data()));
+        uint32_t size = prTextEditBufferSize(s.buffer);
+        PrTextEditChange change{.start = size, .end = size, .text = PrStringView(s.piece)};
+        prTextEditBufferApply(s.buffer, &change, 1, PrTextEditOrigin_Load);
+        s.loaded = stop;
+        if (s.syntax != nullptr && prSyntaxTreeUpdate(s.syntax, kInfinityF64))
+            ++s.syntaxChanges;
+    } while (s.loaded < source.size && prTimeMonotonicMilliseconds() < end);
+    if (s.loaded == source.size)
+        finishLoad(s);
+}
+
+// Loads more of the document, brings its syntax and the colors of its categories up to date, and asks for another frame
+// while there is more to load or to parse.
+void updateSyntax(Scribe& s, PrLayoutNode port, bool dark) {
+    loadPieces(s, kLoadMilliseconds);
+    if (s.syntax != nullptr) {
+        if (prSyntaxTreeUpdate(s.syntax, kParseMilliseconds))
+            ++s.syntaxChanges;
+        uint32_t categories = prSyntaxRegistryCategoryCount(s.languages);
+        if (dark != s.darkColors)
+            s.categoryColors.clear();
+        s.darkColors = dark;
+        for (uint32_t i = uint32_t(s.categoryColors.size()); i < categories; ++i)
+            s.categoryColors.push_back(colorOfCategory(prSyntaxRegistryCategoryName(s.languages, i), dark));
+    }
+    if (s.loading || (s.syntax != nullptr && prSyntaxTreeIsPending(s.syntax)))
+        prUiRequestMotionAt(s.ui, port, prUiCurrentRound(s.ui)->time);
+}
+
 // A command that chooses one of a set of values of the view.
 struct DirectionCommand {
     const char* id;
@@ -332,24 +594,42 @@ void buildScrollbar(Scribe& s, PrLayoutNode parent, PrVec2 extent) {
     prLayoutTreeFrameElement(tree, track, 0, record(tree, thumbBox, &thumbLook));
 }
 
+// Starts an empty document whose text streams in, in the language that `name` chooses.
+void startDocument(Scribe& s, const std::string& name) {
+    s.buffer = prTextEditBufferCreate("");
+    s.history = prTextEditHistoryCreate(s.buffer);
+    s.view = prTextViewCreate(s.buffer);
+    s.savedVersion = prTextEditBufferVersion(s.buffer);
+    s.languages = prSyntaxRegistryCreate();
+#if defined(SCRIBE_HAS_TREESITTER)
+    for (const PrSyntaxLanguage* language : {
+        prSyntaxTreeSitterC(), prSyntaxTreeSitterCpp(), prSyntaxTreeSitterCss(), prSyntaxTreeSitterHtml(),
+            prSyntaxTreeSitterJavaScript(), prSyntaxTreeSitterJson(), prSyntaxTreeSitterMarkdown(),
+            prSyntaxTreeSitterMarkdownInline(), prSyntaxTreeSitterPython(), prSyntaxTreeSitterXml(),
+    })
+        prSyntaxRegistryAdd(s.languages, language);
+#endif
+    s.language = name.empty() ? nullptr : prSyntaxRegistryFromPath(s.languages, name);
+    if (s.language != nullptr)
+        s.syntax = prSyntaxTreeCreate(s.language, s.languages, s.buffer);
+}
+
 } // namespace
 
 bool openDocument(Scribe& s, const std::string& path) {
     s.path = path;
-    std::string text;
+    PrFileMapping mapping{};
     if (!path.empty()) {
-        PrFileMapping mapping{};
         if (!prFileMap(path, &mapping))
             return false;
         if (mapping.size > size_t(kPrTextEditBufferMaxBytes)) {
             prFileUnmap(&mapping);
             return false;
         }
-        const char* bytes = reinterpret_cast<const char*>(mapping.data);
-        size_t size = mapping.size;
         // A document records its line ending, and its buffer ends lines with a line feed.
+        const char* bytes = reinterpret_cast<const char*>(mapping.data);
         s.crlf = false;
-        for (size_t i = 0; i + 1 < size; ++i) {
+        for (size_t i = 0; i + 1 < mapping.size; ++i) {
             if (bytes[i] == '\n')
                 break;
             if (bytes[i] == '\r' && bytes[i + 1] == '\n') {
@@ -357,28 +637,26 @@ bool openDocument(Scribe& s, const std::string& path) {
                 break;
             }
         }
-        text.reserve(size);
-        for (size_t i = 0; i < size; ++i) {
-            if (bytes[i] == '\r' && i + 1 < size && bytes[i + 1] == '\n')
-                continue;
-            text += bytes[i];
-        }
-        prFileUnmap(&mapping);
     }
-    openText(s, text);
+    startDocument(s, path);
+    s.mapping = mapping;
+    s.loading = mapping.size != 0;
     return true;
 }
 
-void openText(Scribe& s, PrStringView text) {
-    s.buffer = prTextEditBufferCreate(text);
-    s.history = prTextEditHistoryCreate(s.buffer);
-    s.view = prTextViewCreate(s.buffer);
-    s.savedVersion = prTextEditBufferVersion(s.buffer);
+void openText(Scribe& s, PrStringView text, const std::string& name) {
+    startDocument(s, name);
+    s.source.assign(text.data, text.size);
+    s.loading = text.size != 0;
 }
 
 void closeDocument(Scribe& s) {
     prCommandKeymapDestroy(s.keymap);
     prCommandRegistryDestroy(s.commands);
+    if (s.mapping.data != nullptr)
+        prFileUnmap(&s.mapping);
+    prSyntaxTreeDestroy(s.syntax);
+    prSyntaxRegistryDestroy(s.languages);
     prTextViewDestroy(s.view);
     prTextEditHistoryDestroy(s.history);
     prTextEditBufferDestroy(s.buffer);
@@ -450,7 +728,11 @@ void registerCommands(Scribe& s) {
         prUiTextViewPaste(editor.ui, editor.editor);
     }, &s);
     addCommand(s, "file.save", "Save", "Cmd S", [](void* c, const PrCommandArgs*) { save(scribeOf(c)); }, &s,
-        [](void* c) -> PrCommandStateFlags { return scribeOf(c).path.empty() ? PrCommandStateFlag_Disabled : 0; });
+        [](void* c) -> PrCommandStateFlags {
+            const Scribe& editor = scribeOf(c);
+            // A file that is still loading would be saved cut short.
+            return editor.path.empty() || editor.loading ? PrCommandStateFlag_Disabled : 0;
+        });
     addCommand(s, "view.toggleWrap", "Word Wrap", "Alt Z", [](void* c, const PrCommandArgs*) {
         Scribe& editor = scribeOf(c);
         editor.wrap = !editor.wrap;
@@ -547,11 +829,16 @@ void buildEditor(Scribe& s, PrLayoutNode root, PrVec2 extent) {
     row.groups[PrLayoutGroup_Font] = fontGroup;
     row.groups[PrLayoutGroup_Color] = prLayoutColorStyleIntern(tree, &rowColor);
     PrLayoutStyleIndex rowStyle = prLayoutStyleIntern(tree, &row);
+    // The theme is dark if its text is lighter than its ground.
+    bool dark = palette.text1.r + palette.text1.g + palette.text1.b > palette.bg0.r + palette.bg0.g + palette.bg0.b;
+    updateSyntax(s, port, dark);
     PrUiTextViewDesc view{
         .view = s.view,
         .control = port,
         .extent = PrVec2{width, portHeight},
         .rowStyle = rowStyle,
+        .spans = s.syntax != nullptr ? spansOf : nullptr,
+        .spansContext = &s,
         .wrap = s.wrap,
         .selection = prColor16FromColor(palette.textSelection),
         .caret = prColor16FromColor(palette.text1),
@@ -578,9 +865,21 @@ void buildEditor(Scribe& s, PrLayoutNode root, PrVec2 extent) {
 
     PrTextViewInfo info = prTextViewInfo(s.view);
     bool dirty = prTextEditBufferVersion(s.buffer) != s.savedVersion;
+    std::string state = dirty ? "edited" : "saved";
+    if (s.loading) {
+        size_t total = sourceOf(s).size;
+        state = "loading " + std::to_string(total != 0 ? s.loaded * 100 / total : 0) + "%";
+    }
     char where[128];
-    snprintf(where, sizeof(where), "%s  Ln %u, Col %u  %u lines  %s%s", dirty ? "edited" : "saved", info.caret.line + 1,
-        info.caret.column + 1, info.lineCount, s.wrap ? "wrap" : "no wrap", s.crlf ? "  CRLF" : "  LF");
+    std::string language = "plain text";
+    if (s.language != nullptr) {
+        language.assign(s.language->name.data, s.language->name.size);
+        if (prSyntaxTreeIsPending(s.syntax))
+            language += ", parsing";
+    }
+    snprintf(where, sizeof(where), "%s  Ln %u, Col %u  %u lines  %s%s  %s", state.c_str(),
+        info.caret.line + 1, info.caret.column + 1, info.lineCount, s.wrap ? "wrap" : "no wrap", s.crlf ? "  CRLF" : "  LF",
+        language.c_str());
     std::string line = (s.path.empty() ? std::string("untitled") : s.path) + "   " + where;
     if (!s.status.empty())
         line += "   " + s.status;
@@ -594,7 +893,7 @@ bool afterLayout(Scribe& s) {
         s.menuHeight = bar.bottom - bar.top;
         again = true;
     }
-    return prTextViewRefine(s.view, kRefineMilliseconds) || again;
+    return prTextViewRefine(s.view, kRefineMilliseconds) || again || s.loading;
 }
 
 } // namespace scribe
