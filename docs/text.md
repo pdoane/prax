@@ -25,8 +25,9 @@ the font, never the shaper.
   (hinted outlines, advances) take the size as an argument.
 - Every metric and baseline has a value, which is synthesized if the font lacks it.
 - Color glyphs: COLR is walked into pushes, pops and fills that `lib/draw` lowers. Their paint types are COLR's own,
-  not draw's, because `lib/draw` depends on `lib/font`, so `lib/font` names nothing of `lib/draw`. Bitmap and SVG
-  glyphs are drawn by a backend's glyph decoder through `lib/image` or `lib/svg`. `lib/font` decodes no pictures.
+  not draw's, because `lib/draw` depends on `lib/font`, so `lib/font` names nothing of `lib/draw`. Bitmap glyphs
+  are drawn by `lib/draw` through `lib/image`, and SVG glyphs by `lib/svg`, each a glyph decoder. `lib/font` decodes
+  no pictures.
 - A font is immutable and thread-safe. The readers only read the font's bytes, so they take no lock. A mutex guards the
   cache of outlines, and painters are called without it held.
 

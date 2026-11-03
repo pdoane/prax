@@ -77,8 +77,9 @@ struct Device {
     }
 };
 
-// Returns the list rendered by the cpu backend onto transparent pixels, which serves as the reference.
-std::vector<uint8_t> reference(const PrDrawList* list, uint32_t width, uint32_t height) {
+// Returns the list rendered by the cpu backend onto transparent pixels, which the test compares the device's render
+// with.
+std::vector<uint8_t> cpuRender(const PrDrawList* list, uint32_t width, uint32_t height) {
     std::vector<uint8_t> pixels(size_t(width) * height * 4, 0);
     PrDrawRenderer* renderer = prDrawCpuCreate(nullptr);
     PrPixels into{pixels.data(), size_t(width) * 4, {width, height}};
@@ -162,7 +163,7 @@ TEST_CASE("the triangles renderer draws a frame on the device") {
     prDrawListEllipse(list, PrVec2{32, 32}, PrVec2{20, 12}, 0.4f, {.color = PrColor{1, 0, 0, 1}});
     prDrawListRect(list, PrRect{32, 0, 64, 64}, {.color = PrColor{0, 0, 0, 0.5f}});
     std::vector<uint8_t> drawn = device.render(list);
-    std::vector<uint8_t> expected = reference(list, 64, 64);
+    std::vector<uint8_t> expected = cpuRender(list, 64, 64);
     CHECK(at(drawn, 64, 2, 2)[0] == 255);
     CHECK(at(drawn, 64, 2, 2)[3] == 255);
     CHECK(at(drawn, 64, 24, 32)[0] == 255);
@@ -196,7 +197,7 @@ TEST_CASE("the triangles renderer draws glyphs from the atlas as the cpu backend
     run.glyphCount = uint32_t(glyphs.size());
     prDrawListGlyphs(list, &run, PrVec2{}, {.color = PrColor{0, 0, 0, 1}});
     std::vector<uint8_t> drawn = device.render(list);
-    double ink = inked(reference(list, 128, 64));
+    double ink = inked(cpuRender(list, 128, 64));
     CHECK(inked(drawn) == doctest::Approx(ink).epsilon(0.02));
     // The text is drawn again, from the atlas that is already on the device.
     CHECK(inked(device.render(list)) == doctest::Approx(ink).epsilon(0.02));
@@ -236,7 +237,7 @@ TEST_CASE("the triangles renderer draws the host's texture of straight texels as
         PrRect{0, 0, 4, 4}, PrDrawAlpha_Straight));
     PrDrawList* fromImage = draw(prDrawSourceImage(image, PrRect{0, 0, 4, 4}));
     std::vector<uint8_t> drawn = device.render(fromTexture);
-    std::vector<uint8_t> expected = reference(fromImage, 32, 16);
+    std::vector<uint8_t> expected = cpuRender(fromImage, 32, 16);
     for (uint32_t y : {4u, 12u}) {
         for (uint32_t x : {4u, 28u}) {
             for (uint32_t k = 0; k < 4; ++k)
@@ -258,7 +259,7 @@ TEST_CASE("triangles fills shapes with the coverage the cpu backend gives them")
     prDrawListEllipse(list, PrVec2{64, 32}, PrVec2{20, 14}, 0.3f, {.color = PrColor{0, 0, 1, 0.8f}});
     prDrawListCornerRect(list, prCornerRectRound(PrRect{6, 36, 44, 60}, 8), {.color = PrColor{0, 0.5f, 0, 1}});
     std::vector<uint8_t> drawn = h.render(list);
-    std::vector<uint8_t> expected = reference(list, 96, 64);
+    std::vector<uint8_t> expected = cpuRender(list, 96, 64);
     CHECK(inked(drawn) == doctest::Approx(inked(expected)).epsilon(0.005));
     CHECK(largestDifference(drawn, expected) <= 48);
     // Checks a pixel inside each shape.
@@ -275,7 +276,7 @@ TEST_CASE("triangles fills a path by its rule and strokes it") {
     prPathAddEllipse(path, PrVec2{32, 32}, PrVec2{12, 12}, 0);
     prDrawListPath(list, path, PrPathFillRule_EvenOdd, {.color = PrColor{0, 0, 0, 1}});
     std::vector<uint8_t> drawn = h.render(list);
-    std::vector<uint8_t> expected = reference(list, 64, 64);
+    std::vector<uint8_t> expected = cpuRender(list, 64, 64);
     CHECK(inked(drawn) == doctest::Approx(inked(expected)).epsilon(0.005));
     CHECK(at(drawn, 64, 32, 32)[3] == 0);
 
@@ -285,7 +286,7 @@ TEST_CASE("triangles fills a path by its rule and strokes it") {
     stroke.shape.join = PrPathJoin_Round;
     prDrawListPath(list, path, PrPathFillRule_NonZero, {.color = PrColor{0, 0, 0, 1}, .stroke = &stroke});
     drawn = h.render(list);
-    expected = reference(list, 64, 64);
+    expected = cpuRender(list, 64, 64);
     CHECK(inked(drawn) == doctest::Approx(inked(expected)).epsilon(0.01));
     CHECK(largestDifference(drawn, expected) <= 64);
 
@@ -294,7 +295,7 @@ TEST_CASE("triangles fills a path by its rule and strokes it") {
     stroke.shape.width = 0.25f;
     prDrawListLine(list, PrVec2{4, 10.5f}, PrVec2{60, 10.5f}, {.color = PrColor{0, 0, 0, 1}, .stroke = &stroke});
     drawn = h.render(list);
-    expected = reference(list, 64, 64);
+    expected = cpuRender(list, 64, 64);
     CHECK(inked(drawn) == doctest::Approx(inked(expected)).epsilon(0.02));
     CHECK(int(at(drawn, 64, 30, 10)[3]) == doctest::Approx(64).epsilon(0.05));
     prPathDestroy(path);
@@ -374,7 +375,7 @@ TEST_CASE("triangles cuts each kind of gradient where its colors turn") {
         prDrawListEllipse(list, PrVec2{50, 50}, PrVec2{45, 40}, 0, {.brush = &brush});
         prDrawListPopTransform(list);
         std::vector<uint8_t> drawn = h.render(list);
-        std::vector<uint8_t> expected = reference(list, 200, 200);
+        std::vector<uint8_t> expected = cpuRender(list, 200, 200);
         // A pixel on a hard stop takes one color from the cpu backend, and a mix of both from the triangles.
         CHECK(fractionDiffering(drawn, expected, k.tolerance) <= 0.005);
         prDrawListRelease(list);
@@ -406,7 +407,7 @@ TEST_CASE("triangles places a brush along and across a stroke") {
         stroke.mapping = mapping;
         prDrawListPath(list, path, PrPathFillRule_NonZero, {.brush = &brush, .stroke = &stroke});
         std::vector<uint8_t> drawn = h.render(list);
-        std::vector<uint8_t> expected = reference(list, 200, 100);
+        std::vector<uint8_t> expected = cpuRender(list, 200, 100);
         CHECK(inked(drawn) == doctest::Approx(inked(expected)).epsilon(0.01));
         CHECK(fractionDiffering(drawn, expected, 16) <= 0.02);
         prPathDestroy(path);
@@ -535,7 +536,7 @@ TEST_CASE("triangles draws glyphs from its atlas, covering what the cpu backend 
     PrDrawList* list = prDrawListCreate();
     addText(list, font, 32, "Hxg", PrVec2{8.3f, 44});
     std::vector<uint8_t> drawn = h.render(list);
-    std::vector<uint8_t> expected = reference(list, 128, 64);
+    std::vector<uint8_t> expected = cpuRender(list, 128, 64);
     double ink = inked(expected);
     CHECK(ink > 200);
     CHECK(inked(drawn) == doctest::Approx(ink).epsilon(0.02));
@@ -554,7 +555,7 @@ TEST_CASE("triangles draws glyphs from its atlas, covering what the cpu backend 
     addText(list, font, 24, "Hxg", PrVec2{8, 40});
     prDrawListPopTransform(list);
     drawn = h.render(list);
-    expected = reference(list, 128, 64);
+    expected = cpuRender(list, 128, 64);
     CHECK(inked(drawn) == doctest::Approx(inked(expected)).epsilon(0.02));
     prDrawListRelease(list);
     prFontRelease(font);
@@ -571,11 +572,11 @@ TEST_CASE("triangles draws a drop shadow with about the cpu backend's coverage")
     shadow.sigma = 6;
     prDrawListDropShadow(list, &shadow, {.color = PrColor{0, 0, 0, 1}});
     std::vector<uint8_t> drawn = h.render(list);
-    std::vector<uint8_t> expected = reference(list, 96, 96);
+    std::vector<uint8_t> expected = cpuRender(list, 96, 96);
     // The cpu backend cuts the shadow to outside the caster, so only the ink outside the caster is compared.
     PrDrawList* caster = prDrawListCreate();
     prDrawListCornerRect(caster, shadow.shape, {.color = PrColor{0, 0, 0, 1}});
-    std::vector<uint8_t> cut = reference(caster, 96, 96);
+    std::vector<uint8_t> cut = cpuRender(caster, 96, 96);
     double outside = 0;
     for (size_t i = 3; i < drawn.size(); i += 4)
         outside += drawn[i] / 255.0 * (1 - cut[i] / 255.0);
@@ -586,7 +587,7 @@ TEST_CASE("triangles draws a drop shadow with about the cpu backend's coverage")
     prDrawListClear(list);
     prDrawListInnerShadow(list, &shadow, {.color = PrColor{0, 0, 0, 1}});
     drawn = h.render(list);
-    expected = reference(list, 96, 96);
+    expected = cpuRender(list, 96, 96);
     // The band has no tail. The blur's tail would fall far into the opening.
     CHECK(inked(drawn) == doctest::Approx(inked(expected)).epsilon(0.2));
     CHECK(at(drawn, 96, 10, 10)[3] == 0);

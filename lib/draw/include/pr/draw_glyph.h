@@ -58,8 +58,9 @@ float prDrawGlyphPixelsPerEm(const PrFontGlyphRun* run, uint32_t index, PrAffine
 // ---------------------------------------------------------------------------------------------------------------------
 // Glyph decoders
 
-// A glyph decoder, created by its backend's own constructor. It draws the glyphs that a font holds as pictures, such as
-// SVG documents (prFontGlyphSvg) and images in bitmap strikes (prFontGlyphImage). One thread uses a decoder at a time.
+// A glyph decoder draws the glyphs that a font holds as pictures, such as SVG documents (prFontGlyphSvg) and images in
+// bitmap strikes (prFontGlyphImage). It is an interface so that a module that builds on lib/draw can draw them: lib/svg
+// draws SVG documents (prSvgGlyphDecoderCreate). One thread uses a decoder at a time.
 typedef struct PrDrawGlyphDecoder PrDrawGlyphDecoder;
 
 // The functions of a glyph decoder, at the start of its backend's state. Each one carries out the function that it is
@@ -83,6 +84,10 @@ bool prDrawGlyphDecoderDecode(PrDrawGlyphDecoder* decoder, const PrFont* font, u
 // Appends the glyph's image from the strike for `pixelsPerEm` (prFontGlyphImage) to `list`, decoded by `codec`, in ems
 // with y down from the glyph's origin. Returns false for a glyph with no image, or an image the codec cannot decode.
 bool prDrawGlyphImage(PrImageCodec* codec, const PrFont* font, uint16_t glyph, float pixelsPerEm, PrDrawList* list);
+
+// Creates a decoder that draws the images of glyphs with no SVG document (prDrawGlyphImage), decoded by `codec`. The
+// codec outlives the decoder.
+PrDrawGlyphDecoder* prDrawGlyphBitmapCreate(PrImageCodec* codec);
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Glyph cache

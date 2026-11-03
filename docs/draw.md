@@ -179,7 +179,7 @@ lowers both kinds to lists. Hinting applies only under a plain scale, and shapin
 | backend | host provides | fidelity |
 | --- | --- | --- |
 | `triangles` | a renderer of textured, colored triangles (Dear ImGui-class) | limited, by design |
-| `cpu` | memory for pixels | complete; the reference |
+| `cpu` | memory for pixels | complete |
 | `fragment` | a `lib/gpu` device | complete |
 | `coregraphics`, `blend2d`, `imgui` | a platform renderer to compare with | the platform's |
 

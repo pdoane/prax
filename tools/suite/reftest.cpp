@@ -22,7 +22,7 @@
 #include "pr/compress.h"
 #include "pr/dom_xml.h"
 #include "pr/draw_cpu.h"
-#include "pr/draw_glyph_bitmap.h"
+#include "pr/draw_glyph.h"
 #include "pr/font_hinter.h"
 #include "pr/font_set.h"
 #include "pr/image.h"

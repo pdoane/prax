@@ -567,6 +567,9 @@ WRAPPERS = {
                                                                     "netinet/tcp.h", "poll.h", "sys/socket.h",
                                                                     "unistd.h"},
     "lib/net/backends/sockets/src/net_sockets_platform_windows.cpp": {"mstcpip.h", "winsock2.h", "ws2tcpip.h"},
+    "lib/process/backends/posix/src/process_posix.cpp": {"crt_externs.h", "errno.h", "fcntl.h", "poll.h", "signal.h",
+                                                        "spawn.h", "sys/wait.h", "unistd.h"},
+    "lib/process/backends/windows/src/process_windows.cpp": {"windows.h"},
     "tools/harness/net_peer.cpp": {"stdlib.h"},
     "lib/tls/backends/apple/src/tls_apple.cpp": {"Network/Network.h", "Security/Security.h", "stdlib.h"},
     "lib/tls/backends/openssl/src/tls_openssl.cpp": {"openssl/err.h", "openssl/ssl.h", "openssl/x509v3.h"},
@@ -1894,7 +1897,7 @@ IMPLEMENTATIONS = re.compile(r"\b(?:(?:as|like) (?:the |all three |other |major 
 
 # The backends that are the library's own implementations rather than wrappers of another. Their comments cite
 # specifications, as the rest of the library's do. Comparisons wrap other implementations, so none is listed.
-OWN_BACKENDS = ("builtin", "cpu", "fragment", "triangles", "glyph_bitmap", "glyph_svg")
+OWN_BACKENDS = ("builtin", "cpu", "fragment", "triangles")
 
 
 def check_implementation_names(report, path, text):

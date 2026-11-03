@@ -11,12 +11,12 @@ function(pr_example name)
     target_link_libraries(${name} PRIVATE pr_warnings)
 endfunction()
 
-# Scribe: a text editor over lib/text_view, whose operations are commands of lib/studio/command.
-# Its editor is a library of its own, which the application and the tests of its interface share.
+# Scribe: Studio's text editor in a window, whose operations are commands of lib/studio/command.
+# Its interface is a library of its own, which the application and the tests of its interface share.
 add_library(scribe_editor STATIC scribe/scribe.cpp)
 target_include_directories(scribe_editor PUBLIC ${PROJECT_SOURCE_DIR})
-target_link_libraries(scribe_editor PUBLIC prax::app prax::syntax prax::studio_command prax::studio_kit
-                                           prax::layout prax::text_edit prax::text_view prax::ui prax::core_cpp
+target_link_libraries(scribe_editor PUBLIC prax::app prax::process prax::syntax prax::studio_command prax::studio_kit
+                                           prax::studio_text_editor prax::layout prax::ui prax::core_cpp
                                     PRIVATE pr_warnings)
 if (PR_SYNTAX_TREESITTER)
     target_compile_definitions(scribe_editor PUBLIC SCRIBE_HAS_TREESITTER)

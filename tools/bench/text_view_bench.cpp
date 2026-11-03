@@ -142,7 +142,11 @@ struct Bench {
             b.rawEnd = end;
         }
         for (uint32_t i = 0; i < b.raw.size() && i < capacity; ++i)
-            out[i] = PrTextViewSpan{b.raw[i].start, b.raw[i].end, prColor16FromColor(PrColor{0.2f, 0.4f, 0.8f, 1})};
+            out[i] = PrTextViewSpan{
+                .start = b.raw[i].start,
+                .end = b.raw[i].end,
+                .color = prColor16FromColor(PrColor{0.2f, 0.4f, 0.8f, 1}),
+            };
         return uint32_t(b.raw.size());
     }
 
@@ -154,13 +158,14 @@ struct Bench {
         // The root does not scroll, so the port is under it.
         PrLayoutNode top = prLayoutTreeFrameElement(tree, kPrLayoutNodeNone, 0, style(true));
         PrLayoutNode port = prLayoutTreeFrameElement(tree, top, 0, style(false));
+        PrTextViewSpanLayer layer{spansOf, this};
         PrTextViewFrameDesc desc{
             .tree = tree,
             .parent = port,
             .extent = PrVec2{width, 800},
             .rowStyle = style(true),
-            .spans = syntax != nullptr ? spansOf : nullptr,
-            .spansContext = this,
+            .spanLayers = syntax != nullptr ? &layer : nullptr,
+            .spanLayerCount = syntax != nullptr ? 1u : 0u,
             .wrap = true,
             .showCaret = true,
             .caretHidden = caretHidden,

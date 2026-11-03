@@ -73,8 +73,9 @@ const PrFont* load(const char* name) {
     return font;
 }
 
-// Returns the list rendered by the cpu backend onto transparent pixels, which serves as the reference.
-std::vector<uint8_t> reference(const PrDrawList* list, uint32_t width, uint32_t height) {
+// Returns the list rendered by the cpu backend onto transparent pixels, which the test compares Dear ImGui's render
+// with.
+std::vector<uint8_t> cpuRender(const PrDrawList* list, uint32_t width, uint32_t height) {
     std::vector<uint8_t> pixels(size_t(width) * height * 4, 0);
     PrDrawRenderer* renderer = prDrawCpuCreate(nullptr);
     PrPixels into{pixels.data(), size_t(width) * 4, {width, height}};
@@ -173,7 +174,7 @@ TEST_CASE("imgui draws shaped glyphs from its atlas, covering what the cpu backe
     PrDrawList* list = prDrawListCreate();
     addText(list, font, 32, "Hxg", PrVec2{8, 44});
     std::vector<uint8_t> drawn = device.render(list);
-    std::vector<uint8_t> expected = reference(list, 128, 64);
+    std::vector<uint8_t> expected = cpuRender(list, 128, 64);
     double ink = inked(expected);
     CHECK(ink > 200);
     CHECK(inked(drawn) == doctest::Approx(ink).epsilon(0.03));
@@ -216,7 +217,7 @@ TEST_CASE("imgui strokes a closed contour centered, inside or outside, as the cp
             stroke.align = align;
             prDrawListPath(list, path, PrPathFillRule_NonZero, {.color = PrColor{0, 0, 0, 1}, .stroke = &stroke});
             std::vector<uint8_t> drawn = device.render(list);
-            std::vector<uint8_t> expected = reference(list, 64, 64);
+            std::vector<uint8_t> expected = cpuRender(list, 64, 64);
             // The tangent misses the projected near edge by most of a pixel, which loses that edge's last row of ink.
             CHECK(inked(drawn) == doctest::Approx(inked(expected)).epsilon(0.06));
             // A pixel of the stroke on the left side. Outside is to its left, and inside is to its right.
@@ -244,7 +245,7 @@ TEST_CASE("imgui draws a variable font's instance as its own font") {
     addText(list, bold, 32, "Hxg", PrVec2{8, 44});
     double black = inked(device.render(list));
     CHECK(black > light * 1.3);
-    CHECK(black == doctest::Approx(inked(reference(list, 128, 64))).epsilon(0.05));
+    CHECK(black == doctest::Approx(inked(cpuRender(list, 128, 64))).epsilon(0.05));
     prDrawListRelease(list);
     prFontRelease(bold);
     prFontRelease(regular);
@@ -256,7 +257,7 @@ TEST_CASE("imgui draws a projected group's contents through its projection's tan
     // A light tilt, which the tangent approximates within a fraction of a pixel.
     recordTilted(list, 0.35f, 300);
     std::vector<uint8_t> drawn = device.render(list);
-    std::vector<uint8_t> expected = reference(list, 64, 64);
+    std::vector<uint8_t> expected = cpuRender(list, 64, 64);
     // The tangent misses the projected near edge by most of a pixel, which loses that edge's last row of ink.
     CHECK(inked(drawn) == doctest::Approx(inked(expected)).epsilon(0.06));
     CHECK(at(drawn, 64, 32, 32)[0] == at(expected, 64, 32, 32)[0]);

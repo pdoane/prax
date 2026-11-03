@@ -91,6 +91,27 @@ TEST_CASE("a file's info is its kind, its size and when it changed") {
     CHECK(prFileRemove(path));
 }
 
+TEST_CASE("two spellings of a path name the same file, and two files are not the same") {
+    REQUIRE(prFileCreateDirectory(pathOf("same/inner")));
+    std::string path = pathOf("same/inner/file.txt");
+    REQUIRE(prFileWrite(path, bytesOf("x")));
+    REQUIRE(prFileWrite(pathOf("same/other.txt"), bytesOf("x")));
+    CHECK(prFileSame(path, path));
+    CHECK(prFileSame(path, pathOf("same/inner/../inner/./file.txt")));
+#if defined(_WIN32)
+    std::string backslashed = path;
+    for (char& c : backslashed)
+        c = c == '/' ? '\\' : c;
+    CHECK(prFileSame(path, backslashed));
+#endif
+    CHECK(prFileSame(pathOf("same/inner"), pathOf("same/inner/")));
+    CHECK(!prFileSame(path, pathOf("same/other.txt")));
+    CHECK(!prFileSame(path, pathOf("same/missing.txt")));
+    CHECK(!prFileSame(pathOf("same/missing.txt"), pathOf("same/missing.txt")));
+    CHECK(prFileRemove(path));
+    CHECK(prFileRemove(pathOf("same/other.txt")));
+}
+
 TEST_CASE("a directory's entries are its files and directories, without its links to itself and its parent") {
     REQUIRE(prFileCreateDirectory(pathOf("listed/inner")));
     REQUIRE(prFileWrite(pathOf("listed/a.txt"), bytesOf("a")));

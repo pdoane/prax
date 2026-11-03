@@ -75,7 +75,8 @@ struct KitFixture {
         prFontSetDestroy(fonts);
     }
 
-    // Runs a frame `delta` seconds after the previous one, in a viewport of 800 by 600 px.
+    // Runs a frame `delta` seconds after the previous one, in a viewport of 800 by 600 px. A frame that gives a key
+    // twice fails the test, since each key names one node of the tree.
     uint32_t frame(double delta = 1.0 / 60, uint32_t rounds = 4) {
         time += delta;
         PrUiFrameDesc desc{
@@ -86,7 +87,7 @@ struct KitFixture {
             .display = display,
             .preferences = preferences,
         };
-        return prUiFrame(ui, &desc, [](void* context, PrUi*, const PrUiRound*) {
+        uint32_t ran = prUiFrame(ui, &desc, [](void* context, PrUi*, const PrUiRound*) {
             KitFixture* f = static_cast<KitFixture*>(context);
             PrKitSurfaceStyle style{
                 .box = {
@@ -101,6 +102,14 @@ struct KitFixture {
             if (f->build)
                 f->build(f->root);
         }, this);
+        PrLayoutDuplicateKey duplicates[4] = {};
+        uint32_t count = prLayoutTreeDuplicateKeys(tree, duplicates, 4);
+        for (uint32_t i = 0; i < count && i < 4; ++i) {
+            MESSAGE("duplicate key " << duplicates[i].key << " of nodes " << uint32_t(duplicates[i].first) << " and " <<
+                uint32_t(duplicates[i].second));
+        }
+        CHECK(count == 0);
+        return ran;
     }
 
     // Returns the border box of a node, in viewport px, at the last layout.

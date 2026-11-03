@@ -111,6 +111,21 @@ bool prCorePosixFileInfo(PrStringView path, PrFileInfo* out) {
     return found;
 }
 
+bool prCorePosixFileSame(PrStringView a, PrStringView b) {
+    struct stat found[2];
+    PrStringView paths[2] = {a, b};
+    for (int i = 0; i < 2; ++i) {
+        char* terminated = terminate(paths[i]);
+        if (terminated == nullptr)
+            return false;
+        bool read = stat(terminated, &found[i]) == 0;
+        free(terminated);
+        if (!read)
+            return false;
+    }
+    return found[0].st_dev == found[1].st_dev && found[0].st_ino == found[1].st_ino;
+}
+
 bool prCorePosixFileEachEntry(PrStringView path, PrFileEntryFn fn, void* PR_NULLABLE context) {
     char* terminated = terminate(path);
     if (terminated == nullptr)

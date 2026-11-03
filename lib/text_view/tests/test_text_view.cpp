@@ -3,6 +3,7 @@
 
 #include "pr/font_set.h"
 #include "pr/layout_frame.h"
+#include "pr/layout_query.h"
 #include "pr/layout_style.h"
 #include "pr/layout_tree.h"
 #include "pr/text_harfbuzz.h"
@@ -40,6 +41,15 @@ struct Shown {
     // Spans that the test gives each frame, in red.
     std::vector<std::pair<uint32_t, uint32_t>> spanned;
     uint32_t spanCalls = 0;
+
+    // Spans of a second layer, underlined in blue.
+    std::vector<std::pair<uint32_t, uint32_t>> underlined;
+
+    // A gutter of this size shows each line's number, and records the lines that it was declared for.
+    float gutterSize = 0;
+    std::vector<uint32_t> gutterLines;
+
+    bool colorLines = false;        // even lines are filled with green
 
     explicit Shown(const std::string& text, const std::string& family = "Arimo") {
         std::string path = std::string(PR_FONTS_DIR) + "/" + family + ".ttf";
@@ -113,6 +123,7 @@ struct Shown {
             styleRecords[0] = runStyle(PrColor{0, 0, 0, 1});
             styleRecords[1] = runStyle(PrColor{1, 0, 0, 1});
         }
+        PrTextViewSpanLayer layers[] = {{spansOf, this}, {underlinesOf, this}};
         PrTextViewFrameDesc desc{
             .tree = tree,
             .parent = port,
@@ -120,14 +131,21 @@ struct Shown {
             .rowStyle = style(true),
             .styles = styled ? styleRecords : nullptr,
             .styleCount = styled ? 2u : 0u,
-            .spans = spanned.empty() ? nullptr : spansOf,
-            .spansContext = this,
+            .spanLayers = spanned.empty() && underlined.empty() ? nullptr : layers,
+            .spanLayerCount = spanned.empty() && underlined.empty() ? 0u : 2u,
+            .gutter = gutterSize > 0 ? gutterOf : nullptr,
+            .gutterContext = this,
+            .gutterSize = gutterSize,
+            .lineColor = colorLines ? lineColorOf : nullptr,
+            .lineColorContext = this,
             .wrap = wrap,
             .showCaret = true,
         };
         prTextViewFrame(view, &desc);
         PrLayoutRoot root{top, prLayoutVecFromPx(PrVec2{width, height})};
         prLayoutTreeLayout(tree, &root, 1);
+        // Every key of a frame names one node.
+        CHECK(prLayoutTreeDuplicateKeys(tree, nullptr, 0) == 0);
         return prTextViewLaidOut(view);
     }
 
@@ -139,10 +157,40 @@ struct Shown {
             if (to <= start || from >= end)
                 continue;
             if (count < capacity)
-                out[count] = PrTextViewSpan{from, to, prColor16FromColor(PrColor{1, 0, 0, 1})};
+                out[count] = PrTextViewSpan{.start = from, .end = to, .color = prColor16FromColor(PrColor{1, 0, 0, 1})};
             ++count;
         }
         return count;
+    }
+
+    static uint32_t underlinesOf(void* context, uint32_t start, uint32_t end, PrTextViewSpan* out, uint32_t capacity) {
+        Shown* shown = static_cast<Shown*>(context);
+        uint32_t count = 0;
+        for (const auto& [from, to] : shown->underlined) {
+            if (to <= start || from >= end)
+                continue;
+            if (count < capacity) {
+                out[count] = PrTextViewSpan{
+                    .start = from,
+                    .end = to,
+                    .underline = prColor16FromColor(PrColor{0, 0, 1, 1}),
+                    .underlineStyle = PrDrawDecorationStyle_Wavy,
+                };
+            }
+            ++count;
+        }
+        return count;
+    }
+
+    static void gutterOf(void* context, PrLayoutTree* tree, PrLayoutNode cell, uint32_t line) {
+        Shown* shown = static_cast<Shown*>(context);
+        shown->gutterLines.push_back(line);
+        std::string number = std::to_string(line + 1);
+        prLayoutTreeFrameText(tree, cell, 0, number);
+    }
+
+    static PrColor16 lineColorOf(void*, uint32_t line) {
+        return line % 2 == 0 ? prColor16FromColor(PrColor{0, 1, 0, 1}) : PrColor16{};
     }
 
     // Runs frames until the view has settled.
@@ -634,4 +682,154 @@ TEST_CASE("a jump far through a document whose rows hold spans lays out the rows
         prTextViewInsert(s.view, "x", PrTextEditMerge_None);
         s.settle();
     }
+}
+
+TEST_CASE("layers of spans paint over each other, and a layer's span may underline its text") {
+    Shown s("int value = 42;");
+    s.spanned = {{0, 3}};
+    s.underlined = {{0, 9}};
+    s.settle();
+    PrLayoutNode text = prLayoutNodeFirstChild(s.tree, prLayoutNodeFirstChild(s.tree, s.port));
+    PrLayoutHighlight marks[4] = {};
+    REQUIRE(prLayoutNodeHighlights(s.tree, text, marks, 4) == 2);
+    CHECK(marks[0].end == 3);
+    CHECK(marks[0].color.a != 0);
+    CHECK(marks[0].underline.a == 0);
+    CHECK(marks[1].end == 9);
+    CHECK(marks[1].underline.a != 0);
+    CHECK(marks[1].underlineStyle == PrDrawDecorationStyle_Wavy);
+}
+
+TEST_CASE("a gutter holds a cell for each row's line, and the text wraps in the room that it leaves") {
+    // A line that fits the port, but not beside the gutter.
+    std::string text = document(3) + "\n" + std::string(95, 'x');
+    Shown plain(text);
+    plain.settle();
+    CHECK(prTextViewInfo(plain.view).documentSize == doctest::Approx(4 * 20.0));
+
+    Shown s(text);
+    s.gutterSize = 100;
+    s.settle();
+    CHECK(prTextViewInfo(s.view).documentSize == doctest::Approx(5 * 20.0));
+    CHECK(s.gutterLines.size() >= 4);
+    // The row holds the cell, at the port's left, and then the text's block, past the gutter.
+    PrLayoutNode row = prLayoutNodeFirstChild(s.tree, s.port);
+    PrLayoutNode cell = prLayoutNodeFirstChild(s.tree, row);
+    PrLayoutNode block = prLayoutNodeNextSibling(s.tree, cell);
+    PrRect cellBox = prLayoutRectToPx(prLayoutNodeBounds(s.tree, cell, PrLayoutCoordinates_Layout));
+    PrRect blockBox = prLayoutRectToPx(prLayoutNodeBounds(s.tree, block, PrLayoutCoordinates_Layout));
+    CHECK(cellBox.left == doctest::Approx(0.0));
+    CHECK(cellBox.right == doctest::Approx(100.0));
+    CHECK(blockBox.left == doctest::Approx(100.0));
+    // A press in the text still finds its line, past the gutter.
+    uint32_t offset = 0;
+    PrTextEditAffinity side = 0;
+    REQUIRE(prTextViewOffsetFromPoint(s.view, PrVec2{101, 25}, &offset, &side));
+    CHECK(offset == prTextEditBufferLineStart(s.buffer, 1));
+    // Motion between lines keeps its place along them, past the gutter.
+    prTextViewRun(s.view, PrTextEditCommand_TextStart, PrTextEditSelectionMove_Collapse);
+    prTextViewRun(s.view, PrTextEditCommand_Right, PrTextEditSelectionMove_Collapse);
+    s.settle();
+    prTextViewRun(s.view, PrTextEditCommand_Down, PrTextEditSelectionMove_Collapse);
+    s.settle();
+    CHECK(s.caret().line == 1);
+    CHECK(s.caret().column == 1);
+    prTextViewAddCaretOnLine(s.view, PrTextEditLineStep_Next);
+    s.settle();
+    CHECK(s.caret().line == 2);
+    CHECK(s.caret().column == 1);
+    // A press over the gutter finds the start of its line, not the number there.
+    REQUIRE(prTextViewOffsetFromPoint(s.view, PrVec2{20, 45}, &offset, &side));
+    CHECK(offset == prTextEditBufferLineStart(s.buffer, 2));
+}
+
+TEST_CASE("a gutter stays at the port's edge while lines that do not wrap scroll, however far the wheel goes") {
+    // The longest line passes the port by 300 px or so, beside the gutter.
+    Shown s(document(3) + "\n" + std::string(120, 'x'));
+    s.wrap = false;
+    s.gutterSize = 100;
+    s.colorLines = true;
+    s.settle();
+    // The rows lie in a sheet, which the port scrolls.
+    PrLayoutNode sheet = prLayoutNodeFirstChild(s.tree, s.port);
+    PrLayoutNode row = prLayoutNodeFirstChild(s.tree, sheet);
+    PrLayoutNode cell = prLayoutNodeFirstChild(s.tree, row);
+    PrLayoutNode block = prLayoutNodeNextSibling(s.tree, cell);
+    PrRect before = prLayoutRectToPx(prLayoutNodeBounds(s.tree, block, PrLayoutCoordinates_Viewport));
+    // A wheel far past the longest line scrolls the text only to its end.
+    prTextViewScrollBy(s.view, PrVec2{5000, 0});
+    s.settle();
+    PrLayoutScrollInfo info{};
+    REQUIRE(prLayoutNodeScrollInfo(s.tree, s.port, &info));
+    float end = prLayoutRectToPx(info.range).right;
+    CHECK(end > 0);
+    CHECK(prLayoutVecToPx(info.offset).x == doctest::Approx(end));
+    sheet = prLayoutNodeFirstChild(s.tree, s.port);
+    row = prLayoutNodeFirstChild(s.tree, sheet);
+    cell = prLayoutNodeFirstChild(s.tree, row);
+    block = prLayoutNodeNextSibling(s.tree, cell);
+    PrRect cellBox = prLayoutRectToPx(prLayoutNodeBounds(s.tree, cell, PrLayoutCoordinates_Viewport));
+    PrRect blockBox = prLayoutRectToPx(prLayoutNodeBounds(s.tree, block, PrLayoutCoordinates_Viewport));
+    PrRect rowBox = prLayoutRectToPx(prLayoutNodeBounds(s.tree, row, PrLayoutCoordinates_Viewport));
+    // The cell stays at the port's left, and the text moves under it by the offset.
+    CHECK(cellBox.left == doctest::Approx(0.0));
+    CHECK(cellBox.right == doctest::Approx(100.0));
+    CHECK(blockBox.left == doctest::Approx(before.left - end));
+    // The row's fill reaches the port's right edge wherever the lines scroll.
+    CHECK(rowBox.right >= s.width - 0.5f);
+    // Scrolling back by the offset returns to the start, with nothing past the end to take back first.
+    prTextViewScrollBy(s.view, PrVec2{-end, 0});
+    s.settle();
+    REQUIRE(prLayoutNodeScrollInfo(s.tree, s.port, &info));
+    CHECK(prLayoutVecToPx(info.offset).x == doctest::Approx(0.0));
+}
+
+TEST_CASE("a line's color fills its row") {
+    Shown s(document(4));
+    s.colorLines = true;
+    s.settle();
+    PrLayoutNode first = prLayoutNodeFirstChild(s.tree, s.port);
+    PrLayoutNode second = prLayoutNodeNextSibling(s.tree, first);
+    PrLayoutStyle filled = prLayoutStyleRecord(s.tree, prLayoutNodeStyle(s.tree, first));
+    PrLayoutStyle empty = prLayoutStyleRecord(s.tree, prLayoutNodeStyle(s.tree, second));
+    CHECK(prLayoutDecorationStyleRecord(s.tree, filled.groups[PrLayoutGroup_Decoration]).background.a != 0);
+    CHECK(prLayoutDecorationStyleRecord(s.tree, empty.groups[PrLayoutGroup_Decoration]).background.a == 0);
+}
+
+TEST_CASE("gaps add space before their lines, and after the last, and the reader's place holds") {
+    Shown s(document(5000));
+    s.settle();
+    double size = prTextViewInfo(s.view).documentSize;
+    PrTextViewGap gaps[] = {{0, 30}, {2, 50}, {5000, 10}};
+    prTextViewSetGaps(s.view, gaps, 3);
+    s.settle();
+    CHECK(prTextViewInfo(s.view).documentSize == doctest::Approx(size + 90));
+    // Line 0 starts below its gap, and line 2 below both gaps before it.
+    PrRect caret{};
+    REQUIRE(prTextViewCaretRect(s.view, &caret));
+    CHECK(caret.top >= 30);
+    prTextViewRun(s.view, PrTextEditCommand_Down, PrTextEditSelectionMove_Collapse);
+    prTextViewRun(s.view, PrTextEditCommand_Down, PrTextEditSelectionMove_Collapse);
+    s.settle();
+    CHECK(s.caret().line == 2);
+    REQUIRE(prTextViewCaretRect(s.view, &caret));
+    CHECK(caret.top >= 30 + 20 + 20 + 50);
+
+    // A gap above the reader's place moves nothing that they see.
+    prTextViewScrollTo(s.view, 50000);
+    s.settle();
+    double offset = prTextViewInfo(s.view).offset;
+    uint32_t at = 0;
+    PrTextEditAffinity side = 0;
+    REQUIRE(prTextViewOffsetFromPoint(s.view, PrVec2{1, 5}, &at, &side));
+    PrTextViewGap more[] = {{0, 30}, {2, 50}, {10, 400}, {5000, 10}};
+    prTextViewSetGaps(s.view, more, 4);
+    s.settle();
+    CHECK(prTextViewInfo(s.view).offset == doctest::Approx(offset + 400));
+    uint32_t still = 0;
+    REQUIRE(prTextViewOffsetFromPoint(s.view, PrVec2{1, 5}, &still, &side));
+    CHECK(still == at);
+    prTextViewSetGaps(s.view, nullptr, 0);
+    s.settle();
+    CHECK(prTextViewInfo(s.view).documentSize == doctest::Approx(size));
 }

@@ -128,6 +128,29 @@ bool prCoreWindowsFileInfo(PrStringView path, PrFileInfo* out) {
     return found;
 }
 
+bool prCoreWindowsFileSame(PrStringView a, PrStringView b) {
+    BY_HANDLE_FILE_INFORMATION found[2];
+    PrStringView paths[2] = {a, b};
+    for (int i = 0; i < 2; ++i) {
+        wchar_t* wide = widen(paths[i]);
+        if (wide == nullptr)
+            return false;
+        // No access is asked for, which reads what the file system records, and a directory opens only with backup
+        // semantics.
+        DWORD share = FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE;
+        HANDLE file = CreateFileW(wide, 0, share, nullptr, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, nullptr);
+        free(wide);
+        if (file == INVALID_HANDLE_VALUE)
+            return false;
+        bool read = GetFileInformationByHandle(file, &found[i]) != 0;
+        CloseHandle(file);
+        if (!read)
+            return false;
+    }
+    return found[0].dwVolumeSerialNumber == found[1].dwVolumeSerialNumber &&
+        found[0].nFileIndexHigh == found[1].nFileIndexHigh && found[0].nFileIndexLow == found[1].nFileIndexLow;
+}
+
 bool prCoreWindowsFileEachEntry(PrStringView path, PrFileEntryFn fn, void* PR_NULLABLE context) {
     wchar_t* wide = widen(path);
     if (wide == nullptr)

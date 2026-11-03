@@ -1,5 +1,5 @@
-# Drawing: draw lists, and the backends that the build turns on, which render them and decode glyphs. A backend is built
-# on the public API of draw and path.
+# Drawing: draw lists, and the backends that the build turns on, which render them. A backend is built on the public
+# API of draw and path.
 pr_library(draw INCLUDE include
     src/draw.cpp
     src/draw_commands.cpp
@@ -18,11 +18,6 @@ target_link_libraries(pr_draw PUBLIC prax::path prax::font prax::image prax::geo
                               PRIVATE prax::core_cpp)
 # The display shader, which maps a frame of lib/draw's colors to a display (pr/draw_display.h).
 pr_slang(pr_draw src/draw_display.slang VARIABLE kDrawDisplayShaders)
-
-if (PR_DRAW_GLYPH_BITMAP)
-    target_sources(pr_draw PRIVATE backends/glyph_bitmap/src/draw_glyph_bitmap.cpp)
-    pr_headers(pr_draw PUBLIC backends/glyph_bitmap/include)
-endif()
 
 if (PR_DRAW_CPU)
     target_sources(pr_draw PRIVATE
@@ -77,16 +72,11 @@ if (PR_DEVELOP)
     target_compile_definitions(draw_tests PRIVATE PR_FONTS_DIR="${PROJECT_SOURCE_DIR}/third_party/fonts")
     target_link_libraries(draw_tests PRIVATE draw_compare prax::path prax::color prax::image prax::compress
                                              prax::font prax::gpu)
-    if (PR_DRAW_GLYPH_BITMAP)
-        target_sources(draw_tests PRIVATE
-            backends/glyph_bitmap/tests/test_draw_glyph_bitmap.cpp
-            backends/glyph_bitmap/tests/test_draw_glyph_bitmap_c.c
-        )
-    endif()
     if (PR_DRAW_CPU)
         target_sources(draw_tests PRIVATE
             backends/cpu/tests/test_draw_cpu.cpp
             backends/cpu/tests/test_draw_cpu_c.c
+            backends/cpu/tests/test_draw_cpu_glyph_bitmap.cpp
             backends/cpu/tests/test_draw_cpu_text.cpp
         )
     endif()

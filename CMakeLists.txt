@@ -123,6 +123,10 @@ endif()
 if (UNIX AND NOT APPLE)
     set(PR_UNIX_OTHER ON)
 endif()
+# The POSIX targets whose applications may start programs: the desktop systems, and not the mobile ones.
+if (CMAKE_SYSTEM_NAME MATCHES "^(Darwin|Linux)$")
+    set(PR_POSIX_PROCESSES ON)
+endif()
 if (PR_DEVELOP OR PR_EXAMPLES OR PR_UNIX_OTHER)
     find_package(OpenSSL 3...<4 QUIET)
 endif()
@@ -134,6 +138,8 @@ pr_backend_option(PR_GPU_D3D12 "lib/gpu's Direct3D 12 backend" "${WIN32}" "${WIN
 pr_backend_option(PR_GPU_VULKAN "lib/gpu's Vulkan backend" "${PR_LINUX}" ON)
 pr_backend_option(PR_NET_SOCKETS "lib/net's backend over the system's sockets" ON ON)
 pr_backend_option(PR_NET_NULL "lib/net's null network, whose loop its owner runs" ON ON)
+pr_backend_option(PR_PROCESS_POSIX "lib/process's POSIX backend" "${PR_POSIX_PROCESSES}" "${PR_POSIX_PROCESSES}")
+pr_backend_option(PR_PROCESS_WINDOWS "lib/process's Windows backend" "${WIN32}" "${WIN32}")
 pr_backend_option(PR_FETCH_INTERCEPT "lib/fetch's fetcher whose host answers its requests" ON ON)
 pr_backend_option(PR_TLS_APPLE "lib/tls's Network.framework backend" "${APPLE}" "${APPLE}")
 pr_backend_option(PR_TLS_SCHANNEL "lib/tls's SChannel backend" "${WIN32}" "${WIN32}")
@@ -161,7 +167,6 @@ pr_backend_option(PR_SYNTAX_TREESITTER "lib/syntax's tree-sitter languages" OFF 
 pr_backend_option(PR_DRAW_CPU "lib/draw's CPU renderer" ON ON)
 pr_backend_option(PR_DRAW_TRIANGLES "lib/draw's triangles renderer" ON ON)
 pr_backend_option(PR_DRAW_FRAGMENT "lib/draw's fragment renderer" ON ON)
-pr_backend_option(PR_DRAW_GLYPH_BITMAP "lib/draw's bitmap glyph decoder" ON ON)
 include(lib/font_bundle/font_bundle.cmake)
 
 # The compiler of the shaders, and the shader libraries that it compiles for each backend.

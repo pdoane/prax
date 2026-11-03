@@ -68,7 +68,6 @@ PrLayoutNode prCommandMenuItem(PrKit* kit, PrLayoutNode menu, const PrCommandReg
     PrCommandStateFlags state = prCommandRegistryState(registry, index);
     PrString shortcut = shortcutOf(keymap, commandId);
     PrKitMenuItem item{
-        .key = prUiKey(kit->ui, menu, commandId),
         .text = command.title,
         .shortcut = prStringView(&shortcut),
         .checked = (state & PrCommandStateFlag_Checked) != 0,

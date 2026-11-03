@@ -333,6 +333,24 @@ uint32_t hashOf(const GlyphKey& key) {
     return uint32_t(hashBytes(&key, sizeof(key), 0));
 }
 
+// The decoder of the images of bitmap strikes (prDrawGlyphBitmapCreate).
+struct BitmapDecoder : PrDrawGlyphDecoder {
+    PrImageCodec* codec;
+};
+
+void destroyBitmapDecoder(PrDrawGlyphDecoder* decoder) {
+    prMemoryFree(decoder);
+}
+
+bool decodeBitmap(PrDrawGlyphDecoder* decoder, const PrFont* font, uint16_t glyph, float pixelsPerEm,
+        const PrFontPalette* PR_NULLABLE, PrColor, PrDrawList* list) {
+    PrFontGlyphSvg svg{};
+    if (prFontGlyphSvg(font, glyph, &svg))
+        return false;
+    BitmapDecoder* bitmap = static_cast<BitmapDecoder*>(decoder);
+    return prDrawGlyphImage(bitmap->codec, font, glyph, pixelsPerEm, list);
+}
+
 } // namespace
 
 PrDrawList* PR_NULLABLE drawGlyphList(const PrFont* font, uint16_t glyph, const PrFontPalette* PR_NULLABLE palette,
@@ -438,6 +456,14 @@ bool prDrawGlyphImage(PrImageCodec* codec, const PrFont* font, uint16_t glyph, f
     prDrawListRect(list, image.bounds, {.brush = &brush});
     prDrawImageRelease(decoded);
     return true;
+}
+
+PrDrawGlyphDecoder* prDrawGlyphBitmapCreate(PrImageCodec* codec) {
+    BitmapDecoder* decoder = allocZeroed<BitmapDecoder>();
+    decoder->destroy = destroyBitmapDecoder;
+    decoder->decode = decodeBitmap;
+    decoder->codec = codec;
+    return decoder;
 }
 
 // ---------------------------------------------------------------------------------------------------------------------

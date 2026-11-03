@@ -1,6 +1,6 @@
 #include "pr/compress_builtin.h"
 #include "pr/draw_cpu.h"
-#include "pr/draw_glyph_bitmap.h"
+#include "pr/draw_glyph.h"
 #include "pr/image_builtin.h"
 #include "pr/vec.h"
 
@@ -9,8 +9,6 @@
 #include <cstdio>
 #include <string>
 #include <vector>
-
-extern "C" int prTestDrawGlyphBitmapCApi(void);
 
 namespace pr_impl {
 
@@ -109,10 +107,6 @@ std::vector<uint8_t> withSbixImage(std::vector<uint8_t> font, uint16_t glyph, ui
 } // namespace pr_impl
 
 using namespace pr_impl;
-
-TEST_CASE("the public header compiles as C") {
-    CHECK(prTestDrawGlyphBitmapCApi() == 0);
-}
 
 TEST_CASE("a TIFF image in an sbix strike draws through the image codec") {
     std::vector<uint8_t> file = readFile("TwemojiSmileySbix.ttf");

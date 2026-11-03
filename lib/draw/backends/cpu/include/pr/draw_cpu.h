@@ -1,4 +1,4 @@
-// The CPU draw backend: the reference renderer, which renders into pixels in memory.
+// The CPU draw backend, which renders into pixels in memory.
 
 #pragma once
 

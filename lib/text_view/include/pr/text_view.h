@@ -40,19 +40,40 @@ void prTextViewDestroy(PrTextView* PR_NULLABLE view);
 // The selections of the view. A caller may edit through it. The view follows every transaction of the buffer.
 PrTextEditView* prTextViewEdit(const PrTextView* view);
 
-// A range of the document that the caller colors, such as the span of a syntax highlight. A span paints its text in
-// `color` as a highlight of the text's node (PrLayoutHighlight), so it never changes how the text sets, and a change of
-// spans costs no layout. A style that changes metrics, such as a weight, is a style run of the buffer.
+// A range of the document that the caller paints, such as the span of a syntax highlight or of a diagnostic. A span
+// paints as a highlight of the text's node (PrLayoutHighlight): its glyphs in `color`, its boxes filled with
+// `background`, and a line under it in `underline`, each left out for zero alpha. So a span never changes how the text
+// sets, and a change of spans costs no layout. A style that changes metrics, such as a weight, is a style run of the
+// buffer.
 typedef struct PrTextViewSpan {
     uint32_t start;
     uint32_t end;
     PrColor16 color;
+    PrColor16 background;
+    PrColor16 underline;
+    PrDrawDecorationStyle underlineStyle;
 } PrTextViewSpan;
 
 // Writes the spans that intersect the bytes from `start` to `end` to `out`, up to `capacity`, and returns their number.
 // The spans are in order and do not overlap. The call has no side effects on what later calls return.
 typedef uint32_t (*PrTextViewSpansFn)(void* PR_NULLABLE context, uint32_t start, uint32_t end,
     PrTextViewSpan* PR_NULLABLE out, uint32_t capacity);
+
+// A source of spans. The spans of one layer do not overlap, and layers paint in order, each over those before it, so
+// that the spans of syntax and of diagnostics can cover the same text.
+typedef struct PrTextViewSpanLayer {
+    PrTextViewSpansFn fn;
+    void* PR_NULLABLE context;
+} PrTextViewSpanLayer;
+
+// The most layers of spans that a frame shows.
+enum { kPrTextViewMaxSpanLayers = 8 };
+
+// Declares the content of the gutter cell of `line`, such as its number, under `cell`, in the frame of `tree`.
+typedef void (*PrTextViewGutterFn)(void* PR_NULLABLE context, PrLayoutTree* tree, PrLayoutNode cell, uint32_t line);
+
+// Returns the color that fills the row of `line` behind its text and its gutter, or zero alpha for none.
+typedef PrColor16 (*PrTextViewLineColorFn)(void* PR_NULLABLE context, uint32_t line);
 
 // What a frame shows.
 typedef struct PrTextViewFrameDesc {
@@ -72,12 +93,26 @@ typedef struct PrTextViewFrameDesc {
     const PrLayoutStyleIndex* PR_NULLABLE styles;
     uint32_t styleCount;
 
-    // The spans of the window's text, or null for none. The view asks once in each frame, for the window's range. The
-    // selection paints over them.
-    PrTextViewSpansFn PR_NULLABLE spans;
-    void* PR_NULLABLE spansContext;
+    // The layers of spans of the window's text, at most kPrTextViewMaxSpanLayers. The view asks each once in each
+    // frame, for the window's range. The selection paints over them.
+    const PrTextViewSpanLayer* PR_NULLABLE spanLayers;
+    uint32_t spanLayerCount;
 
-    bool wrap;                      // the rows wrap at the width of the extent, which the estimates of heights assume
+    // The gutter: a cell of `gutterSize` px along the inline axis at the inline start of each row, filled with
+    // `gutterBackground`, which stays in place as lines scroll along it. The text wraps in the room that the gutter
+    // leaves. With no function, rows have no gutter.
+    PrTextViewGutterFn PR_NULLABLE gutter;
+    void* PR_NULLABLE gutterContext;
+    float gutterSize;
+    PrColor16 gutterBackground;
+
+    // The color of each line's row, or null for none.
+    PrTextViewLineColorFn PR_NULLABLE lineColor;
+    void* PR_NULLABLE lineColorContext;
+
+    PrColor16 gapColor;             // what fills the view's gaps (prTextViewSetGaps)
+
+    bool wrap;                     // the rows wrap at the width of the extent, which the estimates of heights assume
     bool showCaret;
     bool caretHidden;               // the shown carets keep their places and paint nothing
 
@@ -102,6 +137,7 @@ bool prTextViewRefine(PrTextView* view, double milliseconds);
 // The scroll state along the block axis, in px, from estimates outside the window.
 typedef struct PrTextViewInfo {
     double offset;                  // from the block start of the document to that of the viewport
+    double inlineOffset;            // along the inline axis while lines do not wrap, as the port's scroll offset
     double documentSize;
     float portSize;
     uint32_t lineCount;
@@ -117,6 +153,10 @@ PrTextViewInfo prTextViewInfo(const PrTextView* view);
 // distance also moves forward through the document.
 void prTextViewScrollTo(PrTextView* view, double offset);
 void prTextViewScrollBy(PrTextView* view, PrVec2 delta);
+
+// Scrolls lines that do not wrap to `offset` along the inline axis, as prTextViewInfo gives it, clamped to the lines in
+// the window once they are laid out.
+void prTextViewScrollInlineTo(PrTextView* view, double offset);
 
 // Brings the primary caret into view in the next frame.
 void prTextViewReveal(PrTextView* view);
@@ -166,6 +206,18 @@ void prTextViewUnitAround(PrTextView* view, uint32_t offset, PrTextEditUnit unit
 
 // Writes the primary caret in viewport px. Returns false if its row is not in the last layout.
 bool prTextViewCaretRect(PrTextView* view, PrRect* out);
+
+// Space along the block axis before a line, which shows no text, as a diff leaves where the other side has lines that
+// this one does not. A gap at the line count is after the last line.
+typedef struct PrTextViewGap {
+    uint32_t line;
+    float size;                     // in px
+} PrTextViewGap;
+
+// Replaces the view's gaps with `gaps`, which ascend by line, one to a line at most. Gaps are by line number, so an
+// edit that adds or removes lines leaves them at their numbers until the caller sets them again. The scroll position
+// holds its text.
+void prTextViewSetGaps(PrTextView* view, const PrTextViewGap* PR_NULLABLE gaps, uint32_t count);
 
 #if defined(__cplusplus)
 }

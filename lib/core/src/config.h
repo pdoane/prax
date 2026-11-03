@@ -74,6 +74,9 @@
 #if defined(PR_PLATFORM_FILE_MAP) != defined(PR_PLATFORM_FILE_INFO)
 #error "PR_PLATFORM_FILE_MAP and PR_PLATFORM_FILE_INFO are defined together or not at all"
 #endif
+#if defined(PR_PLATFORM_FILE_MAP) != defined(PR_PLATFORM_FILE_SAME)
+#error "PR_PLATFORM_FILE_MAP and PR_PLATFORM_FILE_SAME are defined together or not at all"
+#endif
 #if defined(PR_PLATFORM_FILE_MAP) != defined(PR_PLATFORM_FILE_EACH_ENTRY)
 #error "PR_PLATFORM_FILE_MAP and PR_PLATFORM_FILE_EACH_ENTRY are defined together or not at all"
 #endif
@@ -181,6 +184,7 @@
 #define PR_PLATFORM_FILE_MAP(path, out) prCoreWindowsFileMap(path, out)
 #define PR_PLATFORM_FILE_UNMAP(mapping) prCoreWindowsFileUnmap(mapping)
 #define PR_PLATFORM_FILE_INFO(path, out) prCoreWindowsFileInfo(path, out)
+#define PR_PLATFORM_FILE_SAME(a, b) prCoreWindowsFileSame(a, b)
 #define PR_PLATFORM_FILE_EACH_ENTRY(path, fn, context) prCoreWindowsFileEachEntry(path, fn, context)
 #define PR_PLATFORM_FILE_WRITE(path, bytes) prCoreWindowsFileWrite(path, bytes)
 #define PR_PLATFORM_FILE_REMOVE(path) prCoreWindowsFileRemove(path)
@@ -192,6 +196,7 @@
 #define PR_PLATFORM_FILE_MAP(path, out) prCorePosixFileMap(path, out)
 #define PR_PLATFORM_FILE_UNMAP(mapping) prCorePosixFileUnmap(mapping)
 #define PR_PLATFORM_FILE_INFO(path, out) prCorePosixFileInfo(path, out)
+#define PR_PLATFORM_FILE_SAME(a, b) prCorePosixFileSame(a, b)
 #define PR_PLATFORM_FILE_EACH_ENTRY(path, fn, context) prCorePosixFileEachEntry(path, fn, context)
 #define PR_PLATFORM_FILE_WRITE(path, bytes) prCorePosixFileWrite(path, bytes)
 #define PR_PLATFORM_FILE_REMOVE(path) prCorePosixFileRemove(path)

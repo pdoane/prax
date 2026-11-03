@@ -28,13 +28,14 @@ The libraries, by area. The first comment of each library's `CMakeLists.txt` say
 | area | libraries |
 | --- | --- |
 | Foundation | `core`, `task`, `cache`, `storage`, `webidl` |
-| System | `app`, `gpu`, `audio`, `media` |
+| System | `app`, `gpu`, `audio`, `media`, `process` |
 | Networking | `net`, `tls`, `http`, `websocket`, `fetch`, `xhr`, `url`, `mime` |
 | Data | `json`, `xml`, `compress`, `image`, `color`, `geom`, `charset`, `locale`, `unicode`, `html_entity` |
-| Text | `font`, `font_bundle`, `text`, `text_edit`, `text_view`, `syntax`, `regex` |
+| Text | `font`, `font_bundle`, `text`, `text_edit`, `text_view`, `syntax`, `regex`, `text_diff` |
 | Graphics | `path`, `draw`, `canvas`, `lottie` |
 | Documents | `css`, `dom`, `layout`, `html`, `svg`, `mathml`, `markdown` |
-| Interface | `ui`, `studio/kit`, `studio/command` |
+| Developer tools | `lsp`, `dap` |
+| Interface | `ui`, `studio/kit`, `studio/command`, `studio/text_editor` |
 
 **Verified.** WPT, the test suites of CommonMark, GFM, resvg and the Lottie players, and Prax's own suites check
 conformance. Benchmarks measure immediate-mode frames and dynamic retained documents.
@@ -120,6 +121,8 @@ platform supports.
 | gpu | `PR_GPU_VULKAN` | Vulkan | every platform | on for Linux and Android |
 | net | `PR_NET_SOCKETS` | BSD sockets, or Winsock on Windows | every platform | on |
 | net | `PR_NET_NULL` | no connections, and an event loop that the caller runs | every platform | on |
+| process launcher | `PR_PROCESS_POSIX` | posix_spawn | macOS and Linux | on |
+| process launcher | `PR_PROCESS_WINDOWS` | CreateProcessW | Windows | on |
 | tls | `PR_TLS_APPLE` | Network.framework | Apple platforms | on |
 | tls | `PR_TLS_SCHANNEL` | SChannel | Windows | on |
 | tls | `PR_TLS_OPENSSL` | OpenSSL 3 | where the build finds it | on for Unix-like systems other than Apple's |
@@ -147,7 +150,6 @@ platform supports.
 | draw renderer | `PR_DRAW_CPU` | CPU renderer | every platform | on |
 | draw renderer | `PR_DRAW_TRIANGLES` | GPU renderer: colored and textured triangles | every platform | on |
 | draw renderer | `PR_DRAW_FRAGMENT` | GPU renderer: per-pixel coverage and paint evaluation | every platform | on |
-| glyph decoder | `PR_DRAW_GLYPH_BITMAP` | images of glyphs in bitmap strikes | every platform | on |
 
 `prax::font_bundle` maps the generic font families and font fallback to font files that the application provides.
 `pr_font_bundle_fetch(<directory> Noto)` downloads a bundle's files into a directory at configure time. It is available

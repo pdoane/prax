@@ -1,6 +1,6 @@
 #include "pr/compress_builtin.h"
 #include "pr/draw_cpu.h"
-#include "pr/draw_glyph_bitmap.h"
+#include "pr/draw_glyph.h"
 #include "pr/image_builtin.h"
 
 #include "doctest/doctest.h"

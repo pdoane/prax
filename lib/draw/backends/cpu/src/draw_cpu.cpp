@@ -1,4 +1,4 @@
-// The CPU draw backend: the reference renderer, which renders into pixels in memory.
+// The CPU draw backend, which renders into pixels in memory.
 //
 // Every painting command becomes coverage and a paint. A shape's coverage comes from the path rasterizer, and a
 // stroke's coverage comes from its lowered outline. The paint composites through the coverage into the target. A clip

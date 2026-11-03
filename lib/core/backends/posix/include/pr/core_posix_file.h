@@ -24,6 +24,9 @@ void prCorePosixFileUnmap(PrFileMapping* mapping);
 // cannot be read.
 bool prCorePosixFileInfo(PrStringView path, PrFileInfo* out);
 
+// Returns true if `a` and `b` name one file, as prFileSame does: the same inode on the same device.
+bool prCorePosixFileSame(PrStringView a, PrStringView b);
+
 // Calls `fn` with each entry of the directory at `path`, as prFileEachEntry does, with names as the file system stores
 // them, which need not be UTF-8.
 bool prCorePosixFileEachEntry(PrStringView path, PrFileEntryFn fn, void* PR_NULLABLE context);

@@ -52,6 +52,10 @@ bool prFileInfo(PrStringView path, PrFileInfo* out) {
     return false;
 }
 
+bool prFileSame(PrStringView a, PrStringView b) {
+    return PR_PLATFORM_FILE_SAME(a, b);
+}
+
 bool prFileEachEntry(PrStringView path, PrFileEntryFn fn, void* PR_NULLABLE context) {
     EntryFilter filter{fn, context};
     return PR_PLATFORM_FILE_EACH_ENTRY(path, filterEntry, &filter);

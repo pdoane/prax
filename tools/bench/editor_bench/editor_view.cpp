@@ -741,11 +741,7 @@ void buildEditor(PrKit* kit, PrLayoutNode ground, EditorState& editor) {
     buildToolbar(kit, ground, editor);
     if (editor.dock == nullptr)
         editor.dock = makeDock();
-    PrLayoutNode dock = prKitDockBuild(kit, ground, {
-        .key = prUiKey(kit->ui, ground, "dock"),
-        .dock = editor.dock,
-        .describe = describePanel,
-    });
+    PrLayoutNode dock = prKitDockBuild(kit, ground, {.dock = editor.dock, .describe = describePanel});
     PrKitPlace fill{.flex = PrKitFlex_Fill};
     prKitPlace(kit, dock, &fill);
     for (uint32_t i = 0; i < prKitDockPaneCount(editor.dock); ++i) {

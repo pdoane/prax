@@ -184,13 +184,20 @@ typedef uint8_t PrLayoutTextAffinity;
 
 // A highlight of a range of a text node's text, such as a selection (css-pseudo-4/#highlight-pseudos): the bytes from
 // `start` to `end`, whose boxes (prLayoutNodeTextRangeBoxes) are filled with `background` behind the text, and whose
-// glyphs are painted in `color`. A color with zero alpha keeps the text's own color.
+// glyphs are painted in `color`. A color with zero alpha keeps the text's own color. A highlight may also draw a line
+// under its text, as a spelling error's does (css-text-decor-4/#valdef-text-decoration-line-spelling-error), in front
+// of the glyphs.
+PR_NO_PADDING_BEGIN
 typedef struct PrLayoutHighlight {
     uint32_t start;
     uint32_t end;
     PrColor16 color;
     PrColor16 background;
+    PrColor16 underline;                // the color of the line under the text, or zero alpha for none
+    PrDrawDecorationStyle underlineStyle;
+    uint8_t _pad[7];
 } PrLayoutHighlight;
+PR_NO_PADDING_END
 
 // Sets the highlights of a text node, copied from `highlights`, which paint in order, each over those before it. A
 // count of zero removes them. The part of a glyph that a highlight covers is painted in the highlight's color, so a

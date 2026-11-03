@@ -180,8 +180,8 @@ typedef struct PrKitDockPane {
 // and for each leaf its strip of tabs, titled by `describe`, and the content box of its open panel. A panel's content
 // box keeps its node, and so its subtree, as the panel moves between leaves. The round's input stages a tab's close,
 // and a drop of a dragged tab on another leaf's tabs or content, or near an edge of a leaf or of the dock. While a tab
-// is in flight, the overlay previews its drop (prUiOverlay). The key names the dock's nodes, so two docks in one tree
-// need different keys. Returns the dock's box.
+// is in flight, the overlay previews its drop (prUiOverlay). The dock's nodes are keyed under the dock's own, so docks
+// in one tree never collide. Returns the dock's box.
 PrLayoutNode prKitDockBuild(PrKit* kit, PrLayoutNode parent, PrKitDockView view);
 
 // Return the number of panes that the last build declared, one for each leaf with an open panel, and pane `index`, in

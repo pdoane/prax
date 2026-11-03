@@ -1,14 +1,15 @@
-// Scribe: a text editor over lib/text_view, in a window.
+// Scribe: Studio's text editor, in a window.
 //
 // main() is the composition root. Scribe chooses each piece that runs it: the platform's window, the Noto fonts shaped
 // by the platform, lib/ui's context over a layout tree with the kit on top, and lib/draw's fragment renderer on the
 // platform's GPU. Each frame runs the kit's rounds, plays the tree's scene into a draw list, and renders the list into
 // the window's swap chain.
 //
-// Usage: scribe [--trace] [file]
+// Usage: scribe [--trace] [--debug program] [file | --diff old new]
 //
-// --trace prints each frame that takes long, by its phases, each long gap between frames, and how long input waited for
-// the frame that took it, all in milliseconds.
+// --diff shows the comparison of two files, the old read-only. --debug makes lldb-dap the debugger, which launches
+// `program` (Debug > Start or Continue Debugging). --trace prints each frame that takes long, by its phases, each long
+// gap between frames, and how long input waited for the frame that took it, all in milliseconds.
 
 #include "pr/app.h"
 #include "pr/assert.h"
@@ -85,7 +86,7 @@ void build(void* context, PrUi*, const PrUiRound*) {
         .box = {.overflow = PrKitOverflow_Clip, .place = {.width = prKitPercent(100), .height = prKitPercent(100)}},
         .ground = PrKitGround_App,
     };
-    buildEditor(w.scribe, prKitSurface(w.kit, kPrLayoutNodeNone, {}, style), w.extent);
+    buildScribe(w.scribe, prKitSurface(w.kit, kPrLayoutNodeNone, {}, style), w.extent);
 }
 
 // Frees what the window made on its device, and the device.
@@ -181,7 +182,6 @@ void render(Window& w, PrUVec2 extent, PrColor canvas, const PrAppDisplay& displ
 void start(void* context, PrApp* app, const PrAppFrame*) {
     Window& w = *static_cast<Window*>(context);
     w.app = app;
-    w.scribe.app = app;
     prUiSetApp(w.ui, app);
     if (!openDevice(w)) {
         fprintf(stderr, "scribe: no GPU device to render with\n");
@@ -281,20 +281,25 @@ int main(int argc, char** argv) {
     prCrashHandler();
     static Window w;
     std::string path;
+    std::string compared;           // the old file of --diff
+    std::string debuggee;           // the program of --debug
+    bool diff = false;
     for (int i = 1; i < argc; ++i) {
         std::string argument = argv[i];
         if (argument == "--trace") {
             w.trace = true;
+        } else if (argument == "--debug" && i + 1 < argc) {
+            debuggee = argv[++i];
+        } else if (argument == "--diff" && i + 2 < argc) {
+            diff = true;
+            compared = argv[++i];
+            path = argv[++i];
         } else if (path.empty()) {
             path = argument;
         } else {
-            fprintf(stderr, "usage: scribe [--trace] [file]\n");
+            fprintf(stderr, "usage: scribe [--trace] [--debug program] [file | --diff old new]\n");
             return 2;
         }
-    }
-    if (!openDocument(w.scribe, path)) {
-        fprintf(stderr, "scribe: cannot read %s\n", path.c_str());
-        return 1;
     }
     w.fonts = prFontSetCreate(nullptr);
     if (prFontBundleInstall(w.fonts, PrFontBundle_Noto, PR_FONT_BUNDLE_DIR) == 0) {
@@ -315,15 +320,26 @@ int main(int argc, char** argv) {
     w.scribe.font = prTextFontCreate(&fontDesc);
     w.scribe.kit = w.kit;
     w.scribe.ui = w.ui;
-    registerCommands(w.scribe);
 
     PrAppDesc desc{.title = "Scribe", .extent = {1200, 900}};
     PrApp* app = prAppCreate(PrAppBackend_Default, &desc);
+    // The editor's language servers wake the application, so the application comes first.
+    w.scribe.app = app;
+    openEditor(w.scribe);
+    if (!debuggee.empty())
+        setDebuggee(w.scribe, debuggee);
+    bool opened = diff ? openDiff(w.scribe, compared, path) : openDocument(w.scribe, path);
+    if (!opened) {
+        fprintf(stderr, "scribe: cannot read %s\n", diff ? (compared + " or " + path).c_str() : path.c_str());
+        closeEditor(w.scribe);
+        prAppDestroy(app);
+        return 1;
+    }
     PrAppHandler handler{&w, start, frame, event, shutdown};
     prAppRun(app, &handler);
+    closeEditor(w.scribe);
     prAppDestroy(app);
 
-    closeDocument(w.scribe);
     prDrawListRelease(w.list);
     prLayoutSceneRelease(w.scene);
     prKitDestroy(w.kit);

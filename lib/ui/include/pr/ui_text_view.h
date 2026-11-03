@@ -31,9 +31,17 @@ typedef struct PrUiTextViewDesc {
     const PrLayoutStyleIndex* PR_NULLABLE styles;
     uint32_t styleCount;
 
-    // The colored spans of the window's text, such as syntax highlights (PrTextViewFrameDesc).
-    PrTextViewSpansFn PR_NULLABLE spans;
-    void* PR_NULLABLE spansContext;
+    // The layers of spans of the window's text, such as syntax highlights and diagnostics, the gutter, the colors of
+    // lines and of gaps, as PrTextViewFrameDesc has them.
+    const PrTextViewSpanLayer* PR_NULLABLE spanLayers;
+    uint32_t spanLayerCount;
+    PrTextViewGutterFn PR_NULLABLE gutter;
+    void* PR_NULLABLE gutterContext;
+    float gutterSize;
+    PrColor16 gutterBackground;
+    PrTextViewLineColorFn PR_NULLABLE lineColor;
+    void* PR_NULLABLE lineColorContext;
+    PrColor16 gapColor;
 
     bool wrap;
     PrTextEditArrowMotion arrowMotion;

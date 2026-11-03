@@ -60,3 +60,32 @@ if (PR_DEVELOP)
     )
     target_link_libraries(studio_command_tests PRIVATE kit_fixture prax::json prax::studio_kit)
 endif()
+
+# Studio's text editor: documents of files in windowed views, colored by their syntax, with the commands of a code
+# editor and the language servers of their languages.
+pr_library(studio_text_editor INCLUDE text_editor/include
+    text_editor/src/text_editor.cpp
+    text_editor/src/text_editor_debug.cpp
+    text_editor/src/text_editor_diff.cpp
+    text_editor/src/text_editor_server.cpp
+    text_editor/src/text_editor_style.cpp
+)
+target_link_libraries(pr_studio_text_editor PUBLIC prax::app prax::layout prax::process prax::studio_command
+                                                   prax::studio_kit prax::syntax prax::text prax::text_diff
+                                                   prax::text_edit prax::text_view
+                                            PRIVATE prax::core_cpp prax::color prax::dap prax::lsp prax::ui)
+
+if (PR_DEVELOP)
+    pr_module_tests(studio_text_editor
+        text_editor/tests/test_text_editor.cpp
+        text_editor/tests/test_text_editor_c.c
+    )
+    target_link_libraries(studio_text_editor_tests PRIVATE kit_fixture prax::layout prax::text prax::ui
+                                                           prax::studio_command prax::syntax)
+    target_compile_definitions(studio_text_editor_tests PRIVATE
+        TEXT_EDITOR_TESTS_DIR="${CMAKE_CURRENT_SOURCE_DIR}/text_editor/tests"
+        TEXT_EDITOR_TESTS_PYTHON="${Python3_EXECUTABLE}")
+    if (PR_SYNTAX_TREESITTER)
+        target_compile_definitions(studio_text_editor_tests PRIVATE TEXT_EDITOR_TESTS_HAVE_TREESITTER)
+    endif()
+endif()

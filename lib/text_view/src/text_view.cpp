@@ -6,6 +6,7 @@
 #include "pr/array.h"
 #include "pr/assert.h"
 #include "pr/float.h"
+#include "pr/hash.h"
 #include "pr/layout_frame.h"
 #include "pr/layout_query.h"
 #include "pr/layout_style.h"
@@ -182,9 +183,6 @@ struct RowPiece {
     uint32_t row;                   // by index of the view's rows
 };
 
-// A key of a row's block, which keeps a line's nodes across frames so that layout reuses what it shaped.
-constexpr uint64_t kRowKeyBase = 1ull << 48;
-
 // How much of a row's height a line must change by to count as a correction, in px.
 constexpr float kHeightTolerance = 0.01f;
 
@@ -248,11 +246,52 @@ struct TextViewState {
     Array<PrLayoutCaret> carets;
     Array<PrTextEditSelection> scratch;
     Array<PrTextEditChange> changes;
-    Array<PrTextViewSpan> spans;    // of the window, in the frame that the view declares
+
+    // The spans of the window, in the frame that the view declares, the spans of each layer after those of the layer
+    // before it. Each layer's spans end at its entry of `layerEnds`.
+    Array<PrTextViewSpan> spans;
+    uint32_t layerEnds[kPrTextViewMaxSpanLayers];
+    uint32_t layerCount;
+
+    Array<PrTextViewGap> gaps;
 };
 
 uint32_t lineBytes(const PrTextEditBuffer* buffer, uint32_t line) {
     return prTextEditBufferLineEnd(buffer, line) - prTextEditBufferLineStart(buffer, line);
+}
+
+// The parts of the window that the view keys by line.
+enum {
+    RowPart_Row,
+    RowPart_Gap,                    // the block that fills the gap before a line
+};
+typedef uint8_t RowPart;
+
+// Returns the key of `part` of `line`, which keeps the line's nodes across frames so that layout reuses what it shaped.
+// A key is a node's identity in the tree, and the view's own address is unique, so it is the identity of the view's
+// rows, as a DOM node's address is its own.
+uint64_t rowKey(const TextViewState* v, RowPart part, uint32_t line) {
+    return hashMixKeys(uint64_t(reinterpret_cast<uintptr_t>(v)), uint64_t(line) << 1 | part);
+}
+
+// Returns the key of the sheet that holds the rows of lines that do not wrap, past every key of a line's part.
+uint64_t sheetKey(const TextViewState* v) {
+    return hashMixKeys(uint64_t(reinterpret_cast<uintptr_t>(v)), uint64_t(1) << 40);
+}
+
+// Returns the size of the gap before `line`, or zero.
+float gapBefore(const TextViewState* v, uint32_t line) {
+    const Array<PrTextViewGap>& gaps = v->gaps;
+    uint32_t at = partitionPoint(0, gaps.count, [&](uint32_t i) { return gaps.data[i].line < line; });
+    return at < gaps.count && gaps.data[at].line == line ? gaps.data[at].size : 0;
+}
+
+// Returns the space that the gaps add to the height of `line`: the gap before it, and for the last line, the gap after
+// it.
+float gapOf(const TextViewState* v, uint32_t line) {
+    float gap = gapBefore(v, line);
+    uint32_t lines = prTextEditBufferLineCount(v->buffer);
+    return line + 1 == lines ? gap + gapBefore(v, lines) : gap;
 }
 
 // Returns the height that the view expects of a line of `bytes` bytes.
@@ -282,6 +321,82 @@ float portInline(const TextViewState* v) {
     return v->vertical ? v->frame.extent.y : v->frame.extent.x;
 }
 
+// Returns the room along the inline axis that the gutter leaves the text.
+float textInline(const TextViewState* v) {
+    float room = portInline(v) - (v->frame.gutter != nullptr ? v->frame.gutterSize : 0);
+    return room > 0 ? room : 0;
+}
+
+// The physical side of a row where its lines start, by the rows' writing mode and direction.
+PrRectSide inlineStartSide(const TextViewState* v) {
+    if (v->vertical)
+        return v->inlineReversed ? PrRectSide_Bottom : PrRectSide_Top;
+    return v->inlineReversed ? PrRectSide_Right : PrRectSide_Left;
+}
+
+// Returns a record of `box` with the font of a row, so that what it holds lies in the rows' writing mode, filled with
+// `fill` unless it has zero alpha.
+PrLayoutStyleIndex rowPartStyle(TextViewState* v, const PrLayoutBoxStyle& box, PrColor16 fill) {
+    PrLayoutTree* tree = v->frame.tree;
+    PrLayoutStyle style = prLayoutStyleDefault();
+    style.groups[PrLayoutGroup_Box] = prLayoutBoxStyleIntern(tree, &box);
+    style.groups[PrLayoutGroup_Font] = prLayoutStyleRecord(tree, v->frame.rowStyle).groups[PrLayoutGroup_Font];
+    if (fill.a > 0) {
+        PrLayoutDecorationStyle decoration = prLayoutDecorationStyleDefault();
+        decoration.background = fill;
+        style.groups[PrLayoutGroup_Decoration] = prLayoutDecorationStyleIntern(tree, &decoration);
+    }
+    return prLayoutStyleIntern(tree, &style);
+}
+
+// Returns the record of the sheet that holds the rows of lines that do not wrap: a block as long as the longest of
+// them, and at least as long as the port, so that every row, and its fill, spans whatever the lines scroll through.
+PrLayoutStyleIndex sheetStyle(TextViewState* v) {
+    PrLayoutBoxStyle box = prLayoutBoxStyleDefault();
+    box.display = PrLayoutDisplay_Block;
+    PrLayoutLength& size = v->vertical ? box.height : box.width;
+    PrLayoutLength& least = v->vertical ? box.minHeight : box.minWidth;
+    size = prLayoutLengthMaxContent();
+    least = prLayoutLengthPercent(100);
+    return rowPartStyle(v, box, PrColor16{});
+}
+
+// Returns the record of a row that holds a gutter's cell and the text's block, filled with `fill`: a flex row of the
+// two along the inline axis.
+PrLayoutStyleIndex wrapperStyle(TextViewState* v, PrColor16 fill) {
+    PrLayoutBoxStyle box = prLayoutBoxStyleDefault();
+    box.display = PrLayoutDisplay_Flex;
+    return rowPartStyle(v, box, fill);
+}
+
+// Returns the record of a gutter's cell, which spans its row along the block axis and sticks to the port's inline start
+// while lines that do not wrap scroll along it.
+PrLayoutStyleIndex cellStyle(TextViewState* v) {
+    PrLayoutBoxStyle box = prLayoutBoxStyleDefault();
+    box.display = PrLayoutDisplay_Block;
+    box.position = PrLayoutPosition_Sticky;
+    box.inset[inlineStartSide(v)] = prLayoutLengthPx(0);
+    PrLayoutLength& size = v->vertical ? box.height : box.width;
+    size = prLayoutLengthPx(v->frame.gutterSize);
+    PrLayoutTree* tree = v->frame.tree;
+    PrLayoutStyle style = prLayoutStyleRecord(tree, rowPartStyle(v, box, v->frame.gutterBackground));
+    PrLayoutFlexStyle flex = prLayoutFlexStyleDefault();
+    flex.shrink = 0;
+    style.groups[PrLayoutGroup_Flex] = prLayoutFlexStyleIntern(tree, &flex);
+    return prLayoutStyleIntern(tree, &style);
+}
+
+// Returns the record of the block that fills a gap of `size` px.
+PrLayoutStyleIndex gapStyle(TextViewState* v, float size) {
+    PrLayoutBoxStyle box = prLayoutBoxStyleDefault();
+    box.display = PrLayoutDisplay_Block;
+    if (v->vertical)
+        box.width = prLayoutLengthPx(size);
+    else
+        box.height = prLayoutLengthPx(size);
+    return rowPartStyle(v, box, v->frame.gapColor);
+}
+
 // Estimates the height of every line from its length. Its cost is proportional to the number of lines. Refinement then
 // reads the text of each.
 void estimateAll(TextViewState* v) {
@@ -297,6 +412,8 @@ void estimateAll(TextViewState* v) {
         chunk.exact.resize(count);
         for (uint32_t i = 0; i < count; ++i) {
             float height = estimateHeight(v, lineBytes(v->buffer, line + i));
+            if (v->gaps.count != 0)
+                height += gapOf(v, line + i);
             chunk.heights.data[i] = height;
             chunk.exact.data[i] = 0;
             chunk.sum += double(height);
@@ -321,7 +438,8 @@ float refinedHeight(TextViewState* v, uint32_t line) {
         text = PrStringView{v->bytes.data, v->bytes.count};
     }
     text.size = end - start;
-    return v->lineHeight * float(prTextEstimatorLineCount(v->estimator, text, v->estimatedWidth));
+    float gap = v->gaps.count != 0 ? gapOf(v, line) : 0;
+    return v->lineHeight * float(prTextEstimatorLineCount(v->estimator, text, v->estimatedWidth)) + gap;
 }
 
 // Brings the height index up to the changes that the buffer has made.
@@ -404,6 +522,18 @@ PrTextEditPosition positionOf(const TextViewState* v, uint32_t offset, PrTextEdi
 
 uint32_t offsetOf(const TextViewState* v, PrTextEditPosition position) {
     return prTextEditBufferLineStart(v->buffer, uint32_t(position.node - 1)) + position.offset;
+}
+
+// Brings the inline scroll offset within the range of the last layout, which the rows' scroll was clamped to, so that a
+// scroll past the longest line in the window leaves nothing to take back.
+void clampInline(TextViewState* v) {
+    PrLayoutScrollInfo info{};
+    if (v->wrap || !prLayoutNodeScrollInfo(v->frame.tree, v->frame.parent, &info))
+        return;
+    PrRect range = prLayoutRectToPx(info.range);
+    double low = double(v->vertical ? range.top : range.left);
+    double high = double(v->vertical ? range.bottom : range.right);
+    v->scrollInline = v->scrollInline < low ? low : (v->scrollInline > high ? high : v->scrollInline);
 }
 
 // Adds `delta` to the inline scroll offset, which stays on the side of the origin that the direction gives it.
@@ -501,12 +631,20 @@ bool geometryLine(void* PR_NULLABLE context, PrTextEditPosition at, PrTextEditLi
             layoutStep = PrLayoutLineStep_Previous;
         const RowPiece& piece = pieceAt(v, *row, at.offset, at.affinity);
         PrLayoutTextPosition position{piece.node, at.offset - piece.start};
-        uint32_t capacity = v->found.count;
-        uint32_t stops = prLayoutLineStops(v->frame.tree, v->frame.parent, position, at.affinity, layoutStep, &info,
-            v->found.data, capacity);
-        if (stops > capacity) {
-            v->found.resize(stops);
-            prLayoutLineStops(v->frame.tree, v->frame.parent, position, at.affinity, layoutStep, &info, v->found.data, stops);
+        uint32_t stops = 0;
+        // A line of the gutter, which holds no text of the document, is stepped past to the next line of a row.
+        for (uint32_t attempt = 0; attempt < 4; ++attempt) {
+            uint32_t capacity = v->found.count;
+            stops = prLayoutLineStops(v->frame.tree, v->frame.parent, position, at.affinity, layoutStep, &info,
+                v->found.data, capacity);
+            if (stops > capacity) {
+                v->found.resize(stops);
+                prLayoutLineStops(v->frame.tree, v->frame.parent, position, at.affinity, layoutStep, &info,
+                    v->found.data, stops);
+            }
+            if (stops == 0 || layoutStep == PrLayoutLineStep_Same || pieceOfNode(v, v->found.data[0].position.node))
+                break;
+            position = v->found.data[0].position;
         }
         if (stops != 0) {
             v->stops.clear();
@@ -745,6 +883,7 @@ void prTextViewDestroy(PrTextView* PR_NULLABLE view) {
     view->scratch.reset();
     view->changes.reset();
     view->spans.reset();
+    view->gaps.reset();
     prMemoryFree(view);
 }
 
@@ -776,7 +915,7 @@ void prTextViewFrame(PrTextView* view, const PrTextViewFrameDesc* desc) {
             v->advance = prTextEstimatorByteAdvance(v->estimator);
         }
     }
-    float inlineSize = portInline(v);
+    float inlineSize = textInline(v);
     changedShape = changedShape || (desc->wrap && v->estimatedWidth != inlineSize);
     v->wrap = desc->wrap;
     if (changedShape) {
@@ -821,19 +960,35 @@ void prTextViewFrame(PrTextView* view, const PrTextViewFrameDesc* desc) {
     for (double probe = index.topOf(first); last < lines && probe < bottom; ++last)
         probe += double(index.heightOf(last));
     v->spans.clear();
-    if (desc->spans != nullptr && last > first) {
-        uint32_t windowStart = prTextEditBufferLineStart(v->buffer, first);
-        uint32_t windowEnd = prTextEditBufferLineEnd(v->buffer, last - 1);
-        uint32_t capacity = v->spans.capacity;
-        v->spans.resize(capacity);
-        uint32_t total = desc->spans(desc->spansContext, windowStart, windowEnd, v->spans.data, capacity);
-        if (total > capacity) {
-            v->spans.resize(total);
-            desc->spans(desc->spansContext, windowStart, windowEnd, v->spans.data, total);
+    v->layerCount = desc->spanLayerCount < kPrTextViewMaxSpanLayers ? desc->spanLayerCount : kPrTextViewMaxSpanLayers;
+    // Where each layer's spans start, and the first of them that the line being declared may reach.
+    uint32_t layerSpan[kPrTextViewMaxSpanLayers];
+    for (uint32_t l = 0; l < v->layerCount; ++l) {
+        const PrTextViewSpanLayer& layer = desc->spanLayers[l];
+        uint32_t at = v->spans.count;
+        layerSpan[l] = at;
+        if (last > first) {
+            uint32_t windowStart = prTextEditBufferLineStart(v->buffer, first);
+            uint32_t windowEnd = prTextEditBufferLineEnd(v->buffer, last - 1);
+            uint32_t room = v->spans.capacity > at + 64 ? v->spans.capacity - at : 64;
+            v->spans.resize(at + room);
+            uint32_t total = layer.fn(layer.context, windowStart, windowEnd, v->spans.data + at, room);
+            if (total > room) {
+                v->spans.resize(at + total);
+                layer.fn(layer.context, windowStart, windowEnd, v->spans.data + at, total);
+            }
+            v->spans.count = at + total;
         }
-        v->spans.count = total;
+        v->layerEnds[l] = v->spans.count;
     }
-    uint32_t span = 0;
+    // Lines that wrap lie in the port, and lines that do not in a sheet as long as the longest of them.
+    PrLayoutNode sheet = desc->parent;
+    if (!v->wrap)
+        sheet = prLayoutTreeFrameElement(desc->tree, desc->parent, sheetKey(v), sheetStyle(v));
+    // With a gutter or colored lines, a row is a flex row of the gutter's cell and the text's block.
+    bool wrapped = desc->gutter != nullptr || desc->lineColor != nullptr;
+    PrLayoutStyleIndex plainWrapper = wrapped ? wrapperStyle(v, PrColor16{}) : 0;
+    PrLayoutStyleIndex cell = desc->gutter != nullptr ? cellStyle(v) : 0;
     for (uint32_t line = first; line < last; ++line) {
         uint32_t start = prTextEditBufferLineStart(v->buffer, line);
         uint32_t end = prTextEditBufferLineEnd(v->buffer, line);
@@ -842,24 +997,41 @@ void prTextViewFrame(PrTextView* view, const PrTextViewFrameDesc* desc) {
         prTextEditBufferCopy(v->buffer, start, end, v->bytes.data);
         if (start == end)
             v->bytes.push(' ');
-        PrLayoutNode box = prLayoutTreeFrameElement(desc->tree, desc->parent, kRowKeyBase + line, desc->rowStyle);
+        float gap = v->gaps.count != 0 ? gapBefore(v, line) : 0;
+        if (gap > 0)
+            prLayoutTreeFrameElement(desc->tree, sheet, rowKey(v, RowPart_Gap, line), gapStyle(v, gap));
+        PrLayoutNode box = kPrLayoutNodeNone;
+        PrLayoutNode holder = kPrLayoutNodeNone;
+        if (wrapped) {
+            PrColor16 fill = desc->lineColor != nullptr ? desc->lineColor(desc->lineColorContext, line) : PrColor16{};
+            PrLayoutStyleIndex wrapper = fill.a > 0 ? wrapperStyle(v, fill) : plainWrapper;
+            box = prLayoutTreeFrameElement(desc->tree, sheet, rowKey(v, RowPart_Row, line), wrapper);
+            if (desc->gutter != nullptr)
+                desc->gutter(desc->gutterContext, desc->tree, prLayoutTreeFrameElement(desc->tree, box, 0, cell), line);
+            holder = prLayoutTreeFrameElement(desc->tree, box, 0, desc->rowStyle);
+        } else {
+            box = prLayoutTreeFrameElement(desc->tree, sheet, rowKey(v, RowPart_Row, line), desc->rowStyle);
+            holder = box;
+        }
         uint32_t rowIndex = v->rows.count;
         uint32_t pieceStart = v->pieces.count;
         while (run + 1 < runCount && runs[run + 1].start <= start)
             ++run;
-        while (span < v->spans.count && v->spans.data[span].end <= start)
-            ++span;
+        for (uint32_t l = 0; l < v->layerCount; ++l) {
+            while (layerSpan[l] < v->layerEnds[l] && v->spans.data[layerSpan[l]].end <= start)
+                ++layerSpan[l];
+        }
         bool plain = runCount == 0 || (runs[run].style == 0 && (run + 1 == runCount || runs[run + 1].start >= end));
         if (plain || start == end) {
-            PrLayoutNode text = prLayoutTreeFrameText(desc->tree, box, 0, PrStringView{v->bytes.data, v->bytes.count});
-            v->pieces.push(RowPiece{text, 0, rowIndex});
+            PrStringView all{v->bytes.data, v->bytes.count};
+            v->pieces.push(RowPiece{prLayoutTreeFrameText(desc->tree, holder, 0, all), 0, rowIndex});
         } else {
             // Each run in the line is an inline box with its text in it, so that shaping continues across them.
             for (uint32_t r = run; r < runCount && runs[r].start < end; ++r) {
                 uint32_t from = runs[r].start > start ? runs[r].start - start : 0;
                 uint32_t to = r + 1 < runCount && runs[r + 1].start < end ? runs[r + 1].start - start : end - start;
                 PrTextEditStyle style = runs[r].style < desc->styleCount ? runs[r].style : 0;
-                PrLayoutNode runBox = prLayoutTreeFrameElement(desc->tree, box, r - run + 1, desc->styles[style]);
+                PrLayoutNode runBox = prLayoutTreeFrameElement(desc->tree, holder, 0, desc->styles[style]);
                 PrStringView part{v->bytes.data + from, to - from};
                 v->pieces.push(RowPiece{prLayoutTreeFrameText(desc->tree, runBox, 0, part), from, rowIndex});
             }
@@ -872,17 +1044,23 @@ void prTextViewFrame(PrTextView* view, const PrTextViewFrameDesc* desc) {
             uint32_t pieceFrom = start + piece.start;
             uint32_t pieceTo = p + 1 < row.pieceCount ? start + v->pieces.data[pieceStart + p + 1].start : end;
             v->highlights.clear();
-            // The spans paint first, so that the selection paints over them.
-            for (uint32_t k = span; k < v->spans.count && v->spans.data[k].start < pieceTo; ++k) {
-                const PrTextViewSpan& colored = v->spans.data[k];
-                uint32_t from = colored.start > pieceFrom ? colored.start : pieceFrom;
-                uint32_t to = colored.end < pieceTo ? colored.end : pieceTo;
-                if (from < to)
-                    v->highlights.push(PrLayoutHighlight{
-                        .start = from - pieceFrom,
-                        .end = to - pieceFrom,
-                        .color = colored.color,
-                    });
+            // The spans paint first, layer by layer, so that the selection paints over them.
+            for (uint32_t l = 0; l < v->layerCount; ++l) {
+                for (uint32_t k = layerSpan[l]; k < v->layerEnds[l] && v->spans.data[k].start < pieceTo; ++k) {
+                    const PrTextViewSpan& painted = v->spans.data[k];
+                    uint32_t from = painted.start > pieceFrom ? painted.start : pieceFrom;
+                    uint32_t to = painted.end < pieceTo ? painted.end : pieceTo;
+                    if (from < to) {
+                        v->highlights.push(PrLayoutHighlight{
+                            .start = from - pieceFrom,
+                            .end = to - pieceFrom,
+                            .color = painted.color,
+                            .background = painted.background,
+                            .underline = painted.underline,
+                            .underlineStyle = painted.underlineStyle,
+                        });
+                    }
+                }
             }
             for (uint32_t i = 0; i < selectionCount; ++i) {
                 uint32_t low = prTextEditSelectionStart(selections[i]);
@@ -912,6 +1090,9 @@ void prTextViewFrame(PrTextView* view, const PrTextViewFrameDesc* desc) {
             });
         }
     }
+    float trailing = last == lines && v->gaps.count != 0 ? gapBefore(v, lines) : 0;
+    if (trailing > 0)
+        prLayoutTreeFrameElement(desc->tree, sheet, rowKey(v, RowPart_Gap, lines), gapStyle(v, trailing));
     if (v->carets.count != 0) {
         prLayoutTreeFrameSetCarets(desc->tree, v->carets.data, v->carets.count);
         prLayoutTreeSetCaretsHidden(desc->tree, desc->caretHidden);
@@ -932,6 +1113,7 @@ bool prTextViewLaidOut(PrTextView* view) {
         float height = blockSizeOf(v, box);
         if (height <= 0)
             continue;
+        float gap = v->gaps.count != 0 ? gapOf(v, row.line) : 0;
         if (!v->measured && row.pieceCount == 1) {
             // A row of one visual line gives the line height, and the advance if there is no estimator. Every estimate
             // takes them.
@@ -943,7 +1125,7 @@ bool prTextViewLaidOut(PrTextView* view) {
                     PrLayoutCoordinates_Layout, &part, 1);
             }
             float along = inlineSizeOf(v, prLayoutRectToPx(part));
-            if (boxes == 1 && along > 0 && along < portInline(v)) {
+            if (boxes == 1 && along > 0 && along < textInline(v)) {
                 if (v->estimator == nullptr)
                     v->advance = along / float(bytes);
                 v->lineHeight = height;
@@ -955,9 +1137,9 @@ bool prTextViewLaidOut(PrTextView* view) {
             }
         }
         float was = v->heights.heightOf(row.line);
-        if (absF32(was - height) > kHeightTolerance)
+        if (absF32(was - (height + gap)) > kHeightTolerance)
             corrected = true;
-        v->heights.set(row.line, height, true);
+        v->heights.set(row.line, height + gap, true);
     }
     // A window in which every row wraps still says how tall a line is, so that the estimates do not stay at the first
     // guess.
@@ -969,6 +1151,7 @@ bool prTextViewLaidOut(PrTextView* view) {
     double limit = scrollLimit(v);
     if (scrollTop(v) > limit)
         setScroll(v, limit);
+    clampInline(v);
     placeScroll(v);
     if (v->reveal) {
         v->reveal = false;
@@ -1046,6 +1229,7 @@ PrTextViewInfo prTextViewInfo(const PrTextView* view) {
     PrTextView* v = const_cast<PrTextView*>(view);
     return PrTextViewInfo{
         .offset = scrollTop(v),
+        .inlineOffset = v->wrap ? 0 : v->scrollInline,
         .documentSize = v->heights.total,
         .portSize = portBlock(v),
         .lineCount = prTextEditBufferLineCount(v->buffer),
@@ -1073,6 +1257,15 @@ void prTextViewScrollBy(PrTextView* view, PrVec2 delta) {
     if (!v->wrap)
         scrollInlineBy(v, double(v->vertical ? delta.y : delta.x));
     v->changedView = true;
+}
+
+void prTextViewScrollInlineTo(PrTextView* view, double offset) {
+    followEdits(view);
+    if (view->wrap)
+        return;
+    view->scrollInline = 0;
+    scrollInlineBy(view, offset);
+    view->changedView = true;
 }
 
 void prTextViewReveal(PrTextView* view) {
@@ -1226,6 +1419,18 @@ bool prTextViewOffsetFromPoint(PrTextView* view, PrVec2 point, uint32_t* offset,
     PrTextView* v = view;
     if (!v->framed)
         return false;
+    if (v->frame.gutter != nullptr) {
+        // A point over the gutter stands for the start of its line's text, past the gutter.
+        PrRect port = prLayoutRectToPx(prLayoutNodeBounds(v->frame.tree, v->frame.parent,
+            PrLayoutCoordinates_Viewport));
+        float past = v->frame.gutterSize + 1;
+        switch (inlineStartSide(v)) {
+            case PrRectSide_Left: point.x = point.x > port.left + past ? point.x : port.left + past; break;
+            case PrRectSide_Right: point.x = point.x < port.right - past ? point.x : port.right - past; break;
+            case PrRectSide_Top: point.y = point.y > port.top + past ? point.y : port.top + past; break;
+            default: point.y = point.y < port.bottom - past ? point.y : port.bottom - past; break;
+        }
+    }
     PrLayoutVec at = prLayoutVecFromPx(point);
     PrLayoutTextPosition position{};
     if (!prLayoutTextPositionFromPoint(v->frame.tree, v->frame.parent, at, &position))
@@ -1278,4 +1483,26 @@ bool prTextViewCaretRect(PrTextView* view, PrRect* out) {
         return false;
     *out = prLayoutRectToPx(rect);
     return true;
+}
+
+void prTextViewSetGaps(PrTextView* view, const PrTextViewGap* PR_NULLABLE gaps, uint32_t count) {
+    PrTextView* v = view;
+    followEdits(v);
+    uint32_t lines = prTextEditBufferLineCount(v->buffer);
+    // A gap's line holds its space in the height index, and the last line holds the gap after it.
+    auto adjust = [&](const PrTextViewGap& gap, float sign) {
+        if (gap.line > lines)
+            return;
+        uint32_t line = gap.line < lines ? gap.line : lines - 1;
+        v->heights.set(line, v->heights.heightOf(line) + sign * gap.size, v->heights.isExact(line));
+    };
+    for (uint32_t i = 0; i < v->gaps.count; ++i)
+        adjust(v->gaps.data[i], -1);
+    v->gaps.clear();
+    if (count != 0)
+        v->gaps.append(gaps, count);
+    for (uint32_t i = 0; i < v->gaps.count; ++i)
+        adjust(v->gaps.data[i], 1);
+    // The scroll position is a line and a distance into it, which hold.
+    v->changedView = true;
 }

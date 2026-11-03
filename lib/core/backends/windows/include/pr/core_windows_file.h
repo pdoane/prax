@@ -24,6 +24,10 @@ void prCoreWindowsFileUnmap(PrFileMapping* mapping);
 // file or it cannot be read.
 bool prCoreWindowsFileInfo(PrStringView path, PrFileInfo* out);
 
+// Returns true if the UTF-8 paths `a` and `b` name one file, as prFileSame does: the same file index on the same
+// volume.
+bool prCoreWindowsFileSame(PrStringView a, PrStringView b);
+
 // Calls `fn` with each entry of the directory at the UTF-8 `path`, as prFileEachEntry does, with names converted to
 // UTF-8.
 bool prCoreWindowsFileEachEntry(PrStringView path, PrFileEntryFn fn, void* PR_NULLABLE context);

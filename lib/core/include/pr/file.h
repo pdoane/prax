@@ -48,6 +48,11 @@ typedef struct PrFileInfo {
 // zeroed with kind None, if there is no such file or it cannot be read.
 bool prFileInfo(PrStringView path, PrFileInfo* out);
 
+// Returns true if the UTF-8 paths `a` and `b` name the same file, however each spells it: through a link, with other
+// separators, or in another case on a file system that ignores case. Returns false if either names no file or cannot be
+// read.
+bool prFileSame(PrStringView a, PrStringView b);
+
 // An entry of a directory: the name of a file in it, which is UTF-8 and has no separator, and what the file system
 // records about that file.
 typedef struct PrFileEntry {

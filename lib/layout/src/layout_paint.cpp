@@ -1925,6 +1925,38 @@ struct Painter : LayoutWalkVisitor {
                 record();
             }
         }
+        // The lines under the text paint in front of its glyphs, in the order of their highlights. A line sits on the
+        // block-end side of the content area, and its wave is in phase along the whole line, so that the lines of
+        // neighboring stretches meet.
+        bool vertical = layoutStyleTraits(styles, layoutFragmentStyle(tree, fragment)).vertical;
+        float thickness = text.size / 14 > 1 ? text.size / 14 : 1;
+        for (uint32_t i = 0; i < stretches.count; ++i) {
+            const HighlightStretch& stretch = stretches.data[i];
+            const PrLayoutHighlight& h = highlights->ranges.data[stretch.range];
+            if (h.underline.a <= 0 || stretch.lo >= stretch.hi)
+                continue;
+            PrRect span = prLayoutRectToPx(layoutTextSpanRect(tree, fragment, offset, stretch.lo, stretch.hi));
+            PrDrawDecoration line{
+                .length = stretch.hi - stretch.lo,
+                .thickness = thickness,
+                .style = h.underlineStyle,
+                .wavelength = thickness * 4,
+                .amplitude = thickness,
+                .phase = stretch.lo,
+            };
+            float inset = thickness / 2 + (h.underlineStyle == PrDrawDecorationStyle_Wavy ? thickness : 0);
+            if (vertical) {
+                prDrawListPushTransformAffine2(into, PrAffine2{0, 1, -1, 0, span.left + inset, span.top});
+                prDrawListDecoration(into, &line, {.color = h.underline});
+                prDrawListPopTransform(into);
+                record();
+                record();
+            } else {
+                line.origin = PrVec2{span.left, span.bottom - inset};
+                prDrawListDecoration(into, &line, {.color = h.underline});
+            }
+            record();
+        }
         ++stats->textFragmentsRecorded;
         if (commands != before && batched >= kPaintBatch)
             flush();
