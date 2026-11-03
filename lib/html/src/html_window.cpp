@@ -561,6 +561,18 @@ void htmlWindowBackdateClock(PrHtmlWindow* window, double elapsed) {
     window->timeOriginWall -= elapsed;
 }
 
+void htmlWindowRevokeObjectUrls(PrHtmlWindow* window) {
+    PrHtmlPage* page = htmlDocumentPage(window->document);
+    PrString origin = htmlWindowOrigin(window);
+    for (uint32_t i = 0; i < window->objectUrls.count; ++i) {
+        if (page != nullptr && page->host.fetcher != nullptr)
+            prFetchBlobUrlRevoke(page->host.fetcher, prStringView(&window->objectUrls.data[i]), prStringView(&origin));
+        prStringReset(&window->objectUrls.data[i]);
+    }
+    prStringReset(&origin);
+    window->objectUrls.reset();
+}
+
 double htmlWindowNow(const PrHtmlWindow* window) {
     return coarsen(htmlWindowClock(window) - window->timeOrigin);
 }

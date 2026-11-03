@@ -1,4 +1,4 @@
-// JavaScript binding of Headers and Response, and of fetch()'s arguments.
+// JavaScript binding of Headers, Request and Response, and of fetch()'s arguments.
 //
 // A body is held whole: a Response's bytes, read once by text(), json(), arrayBuffer() or bytes(). Its body attribute,
 // a ReadableStream, is absent until a page needs one. A response that fetch() made with a signal keeps the signal, and
@@ -15,6 +15,7 @@
 #include "pr/count_of.h"
 #include "pr/dom_abort.h"
 #include "pr/dom_quickjs.h"
+#include "pr/fetch_blob_quickjs.h"
 #include "pr/mem.h"
 #include "pr/memory.h"
 #include "pr/quickjs_binding.h"
@@ -30,6 +31,9 @@ namespace {
 JSClassID headersClass;
 JSClassID headersIteratorClass;
 JSClassID responseClass;
+JSClassID requestClass;
+
+PrJsFetchBaseUrlFn PR_NULLABLE baseUrlOf;
 
 // ---------------------------------------------------------------------------------------------------------------------
 // ByteStrings (webidl/#idl-ByteString)
@@ -452,11 +456,16 @@ struct ExtractedBody {
     PrStringView type;
 };
 
-// fetch/#concept-bodyinit-extract, for the BodyInit kinds that the engine has: a BufferSource, URLSearchParams and a
-// string. The call's scope holds the bytes.
+// fetch/#concept-bodyinit-extract, for the BodyInit kinds that the engine has: a Blob, a BufferSource, URLSearchParams
+// and a string. The call's scope holds the bytes.
 bool extractBody(JSContext* ctx, JSValueConst init, ExtractedBody* out) {
     const uint8_t* data = nullptr;
     size_t size = 0;
+    if (const PrFetchBlob* blob = prJsFetchBlobFromValue(ctx, init)) {
+        PrStringView type = prFetchBlobType(blob);
+        *out = ExtractedBody{prFetchBlobBytes(blob), type.size != 0 ? type : PrStringView{nullptr, 0}};
+        return true;
+    }
     if (jsBufferSource(ctx, init, &data, &size)) {
         *out = ExtractedBody{PrByteView{data, size}, PrStringView{nullptr, 0}};
         return true;
@@ -492,12 +501,13 @@ enum {
     Read_Json,
     Read_ArrayBuffer,
     Read_Bytes,
+    Read_Blob,
 };
 typedef uint8_t Read;
 
 // fetch/#concept-body-consume-body: settles a promise with the body's bytes as `read` packages them
 // (fetch/#concept-body-package-data). A body that was used rejects with a TypeError.
-JSValue consume(JSContext* ctx, Body* body, Read read) {
+JSValue consume(JSContext* ctx, Body* body, Read read, PrStringView type) {
     if (body->used) {
         JS_ThrowTypeError(ctx, "The body has already been read");
         return rejectWithException(ctx);
@@ -513,6 +523,9 @@ JSValue consume(JSContext* ctx, Body* body, Read read) {
             break;
         case Read_Bytes:
             result = JS_NewUint8ArrayCopy(ctx, stringBytes(bytes), bytes.size);
+            break;
+        case Read_Blob:
+            result = prJsFetchBlobNew(ctx, prFetchBlobCreate(PrByteView{stringBytes(bytes), bytes.size}, type));
             break;
         case Read_Text:
         case Read_Json: {
@@ -786,7 +799,13 @@ JSValue readMethod(JSContext* ctx, JSValueConst responseObject, int, JSValueCons
         return promise;
     }
     JS_FreeValue(ctx, reason);
-    return consume(ctx, &response->body, Read(magic));
+    TextBuffer type;
+    JsHeaders* headers = headersOfResponse(ctx, responseObject);
+    if (magic == Read_Blob && headers != nullptr)
+        combinedValue(headers, "content-type", &type);
+    JSValue promise = consume(ctx, &response->body, Read(magic), textView(&type));
+    textReset(&type);
+    return promise;
 }
 
 // fetch/#dom-response-clone
@@ -859,6 +878,245 @@ bool readEnum(JSContext* ctx, JSValueConst init, const char* name, const PrStrin
 constexpr PrStringView kModes[] = {"navigate", "same-origin", "no-cors", "cors"};
 constexpr PrStringView kCredentials[] = {"omit", "same-origin", "include"};
 constexpr PrStringView kRedirects[] = {"follow", "error", "manual"};
+constexpr PrStringView kCaches[] = {"default", "no-store", "reload", "no-cache", "force-cache", "only-if-cached"};
+constexpr PrStringView kReferrerPolicies[] = {
+    "", "no-referrer", "no-referrer-when-downgrade", "same-origin", "origin", "strict-origin",
+    "origin-when-cross-origin", "strict-origin-when-cross-origin", "unsafe-url",
+};
+constexpr PrStringView kDuplexes[] = {"half"};
+constexpr PrStringView kModeNames[] = {"no-cors", "cors", "same-origin", "navigate"};
+constexpr PrStringView kCredentialNames[] = {"same-origin", "omit", "include"};
+constexpr PrStringView kRedirectNames[] = {"follow", "error", "manual"};
+
+// A request object (fetch/#request-class). Its headers and its signal are the objects that it holds as `headers` and
+// `signal`.
+struct JsRequest {
+    PrString url;
+    PrString method;
+    PrString referrer;          // as PrJsFetchRequest holds it
+    PrString integrity;
+    PrFetchMode mode;
+    PrFetchCredentials credentials;
+    PrFetchRedirect redirect;
+    PrFetchReferrerPolicy referrerPolicy;
+    uint8_t cache;
+    bool keepalive;
+    Body body;
+};
+
+void requestDestroy(JsRequest* request) {
+    prStringReset(&request->url);
+    prStringReset(&request->method);
+    prStringReset(&request->referrer);
+    prStringReset(&request->integrity);
+    request->body.bytes.reset();
+    prMemoryFree(request);
+}
+
+JsRequest* PR_NULLABLE requestOf(JSContext* ctx, JSValueConst object) {
+    return jsValueOf<JsRequest>(ctx, object, requestClass, "Request");
+}
+
+void requestFinalizer(JSRuntime* runtime, JSValue object) {
+    jsFinalize<JsRequest>(runtime, object, requestClass, requestDestroy);
+}
+
+void requestMark(JSRuntime* runtime, JSValueConst object, JS_MarkFunc* mark) {
+    jsMark(runtime, object, requestClass, mark);
+}
+
+// Returns a Request object that holds `request`, a copy of `headers`' list with a Request's guard, and `signal`.
+JSValue newRequest(JSContext* ctx, JsRequest* request, JsHeaders* headers, JSValueConst signal) {
+    JSValue object = jsWrap(ctx, requestClass, JS_UNDEFINED, request, true);
+    if (JS_IsException(object)) {
+        requestDestroy(request);
+        headersDestroy(headers);
+        return object;
+    }
+    JSValue held = newHeaders(ctx, headers);
+    if (JS_IsException(held)) {
+        JS_FreeValue(ctx, object);
+        return held;
+    }
+    jsSetSameObject(ctx, object, "headers", held);
+    JS_FreeValue(ctx, held);
+    if (!JS_IsUndefined(signal))
+        jsSetSameObject(ctx, object, "signal", signal);
+    return object;
+}
+
+// fetch/#dom-request
+JSValue constructRequest(JSContext* ctx, JSValueConst newTarget, int argc, JSValueConst* argv) {
+    if (!jsArgCount(ctx, argc, 1))
+        return JS_EXCEPTION;
+    PrString base = baseUrlOf != nullptr ? baseUrlOf(ctx) : prStringNull();
+    PrJsFetchRequest read = {.signal = JS_UNDEFINED};
+    bool ok = prJsFetchRequestRead(ctx, argv[0], argc > 1 ? argv[1] : JS_UNDEFINED, prStringView(&base), &read);
+    prStringReset(&base);
+    if (!ok) {
+        prJsFetchRequestReset(&read);
+        return JS_EXCEPTION;
+    }
+    JsRequest* request = allocZeroed<JsRequest>();
+    request->url = prStringCopy(read.url);
+    request->method = prStringCopy(read.method.data != nullptr ? read.method : PrStringView{"GET"});
+    request->referrer = prStringClone(&read.referrer);
+    request->integrity = prStringClone(&read.integrity);
+    request->mode = read.mode;
+    request->credentials = read.credentials;
+    request->redirect = read.redirect;
+    request->referrerPolicy = read.referrerPolicy;
+    request->cache = read.cache;
+    request->keepalive = read.keepalive;
+    request->body.present = read.hasBody;
+    if (read.body.size != 0)
+        request->body.bytes.append(read.body.data, uint32_t(read.body.size));
+    JsHeaders* headers = headersCreate(request->mode == PrFetchMode_NoCors ? Guard_RequestNoCors : Guard_Request);
+    for (uint32_t i = 0; i < read.headerCount; ++i)
+        appendHeader(headers, read.headers[i].name, read.headers[i].value);
+    JSValueConst signal = read.signal;
+    JSValue object = newRequest(ctx, request, headers, signal);
+    prJsFetchRequestReset(&read);
+    return jsConstructed(ctx, newTarget, object);
+}
+
+JSValue requestString(JSContext* ctx, JSValueConst requestObject, PrStringView (*read)(const JsRequest*)) {
+    JsRequest* request = requestOf(ctx, requestObject);
+    return request != nullptr ? jsNewStringView(ctx, read(request)) : JS_EXCEPTION;
+}
+
+JSValue requestUrl(JSContext* ctx, JSValueConst object) {
+    return requestString(ctx, object, [](const JsRequest* r) { return prStringView(&r->url); });
+}
+
+JSValue requestMethod(JSContext* ctx, JSValueConst object) {
+    return requestString(ctx, object, [](const JsRequest* r) { return prStringView(&r->method); });
+}
+
+JSValue requestMode(JSContext* ctx, JSValueConst object) {
+    return requestString(ctx, object, [](const JsRequest* r) { return kModeNames[r->mode]; });
+}
+
+JSValue requestCredentials(JSContext* ctx, JSValueConst object) {
+    return requestString(ctx, object, [](const JsRequest* r) { return kCredentialNames[r->credentials]; });
+}
+
+JSValue requestRedirect(JSContext* ctx, JSValueConst object) {
+    return requestString(ctx, object, [](const JsRequest* r) { return kRedirectNames[r->redirect]; });
+}
+
+JSValue requestCache(JSContext* ctx, JSValueConst object) {
+    return requestString(ctx, object, [](const JsRequest* r) { return kCaches[r->cache]; });
+}
+
+JSValue requestReferrerPolicy(JSContext* ctx, JSValueConst object) {
+    return requestString(ctx, object, [](const JsRequest* r) { return kReferrerPolicies[r->referrerPolicy]; });
+}
+
+// fetch/#dom-request-referrer: the empty string for no referrer, and about:client for the client's.
+JSValue requestReferrer(JSContext* ctx, JSValueConst object) {
+    return requestString(ctx, object, [](const JsRequest* r) -> PrStringView {
+        if (prStringIsNull(&r->referrer))
+            return "about:client";
+        return prStringView(&r->referrer);
+    });
+}
+
+JSValue requestIntegrity(JSContext* ctx, JSValueConst object) {
+    return requestString(ctx, object, [](const JsRequest* r) -> PrStringView {
+        if (prStringIsNull(&r->integrity))
+            return "";
+        return prStringView(&r->integrity);
+    });
+}
+
+// destination, which is empty: a Request that script makes is for no element (fetch/#dom-request-destination).
+JSValue requestDestination(JSContext* ctx, JSValueConst object) {
+    return requestString(ctx, object, [](const JsRequest*) -> PrStringView { return ""; });
+}
+
+JSValue requestDuplex(JSContext* ctx, JSValueConst object) {
+    return requestString(ctx, object, [](const JsRequest*) -> PrStringView { return "half"; });
+}
+
+JSValue requestKeepalive(JSContext* ctx, JSValueConst requestObject) {
+    JsRequest* request = requestOf(ctx, requestObject);
+    return request != nullptr ? JS_NewBool(ctx, request->keepalive) : JS_EXCEPTION;
+}
+
+// isReloadNavigation and isHistoryNavigation, which only a navigation's request sets.
+JSValue requestFalse(JSContext* ctx, JSValueConst object) {
+    return requestOf(ctx, object) != nullptr ? JS_FALSE : JS_EXCEPTION;
+}
+
+JSValue requestHeaders(JSContext* ctx, JSValueConst object) {
+    return requestOf(ctx, object) != nullptr ? jsSameObject(ctx, object, "headers") : JS_EXCEPTION;
+}
+
+// signal, which a request made without one holds as a signal of its own (fetch/#dom-request-signal).
+JSValue requestSignal(JSContext* ctx, JSValueConst object) {
+    if (requestOf(ctx, object) == nullptr)
+        return JS_EXCEPTION;
+    return jsSameObject(ctx, object, "signal", [&] {
+        JSValue global = JS_GetGlobalObject(ctx);
+        JSValue constructor = JS_GetPropertyStr(ctx, global, "AbortController");
+        JSValue controller = JS_CallConstructor(ctx, constructor, 0, nullptr);
+        JSValue signal = JS_IsException(controller) ? controller : JS_GetPropertyStr(ctx, controller, "signal");
+        JS_FreeValue(ctx, controller);
+        JS_FreeValue(ctx, constructor);
+        JS_FreeValue(ctx, global);
+        return signal;
+    });
+}
+
+JSValue requestBodyUsed(JSContext* ctx, JSValueConst requestObject) {
+    JsRequest* request = requestOf(ctx, requestObject);
+    return request != nullptr ? JS_NewBool(ctx, request->body.used) : JS_EXCEPTION;
+}
+
+JSValue requestRead(JSContext* ctx, JSValueConst requestObject, int, JSValueConst*, int magic) {
+    JsRequest* request = requestOf(ctx, requestObject);
+    if (request == nullptr)
+        return rejectWithException(ctx);
+    TextBuffer type;
+    JsHeaders* headers = headersOfResponse(ctx, requestObject);
+    if (magic == Read_Blob && headers != nullptr)
+        combinedValue(headers, "content-type", &type);
+    JSValue promise = consume(ctx, &request->body, Read(magic), textView(&type));
+    textReset(&type);
+    return promise;
+}
+
+// fetch/#dom-request-clone
+JSValue requestClone(JSContext* ctx, JSValueConst requestObject, int, JSValueConst*) {
+    JsRequest* request = requestOf(ctx, requestObject);
+    if (request == nullptr)
+        return JS_EXCEPTION;
+    if (request->body.used)
+        return JS_ThrowTypeError(ctx, "The body has already been read");
+    JsRequest* clone = allocZeroed<JsRequest>();
+    clone->url = prStringClone(&request->url);
+    clone->method = prStringClone(&request->method);
+    clone->referrer = prStringClone(&request->referrer);
+    clone->integrity = prStringClone(&request->integrity);
+    clone->mode = request->mode;
+    clone->credentials = request->credentials;
+    clone->redirect = request->redirect;
+    clone->referrerPolicy = request->referrerPolicy;
+    clone->cache = request->cache;
+    clone->keepalive = request->keepalive;
+    clone->body.present = request->body.present;
+    if (request->body.bytes.count != 0)
+        clone->body.bytes.append(request->body.bytes.data, request->body.bytes.count);
+    JsHeaders* original = headersOfResponse(ctx, requestObject);
+    JsHeaders* headers = headersCreate(original->guard);
+    for (uint32_t i = 0; i < original->names.count; ++i)
+        appendHeader(headers, prStringView(&original->names.data[i]), prStringView(&original->values.data[i]));
+    JSValue signal = requestSignal(ctx, requestObject);
+    JSValue object = newRequest(ctx, clone, headers, signal);
+    JS_FreeValue(ctx, signal);
+    return object;
+}
 
 constexpr JSCFunctionListEntry kHeadersProto[] = {
     PR_JS_TAG("Headers"),
@@ -885,9 +1143,37 @@ constexpr JSCFunctionListEntry kResponseProto[] = {
     PR_JS_METHOD("clone", 0, cloneMethod),
     PR_JS_GET("bodyUsed", bodyUsedGet),
     PR_JS_MAGIC("arrayBuffer", 0, readMethod, Read_ArrayBuffer),
+    PR_JS_MAGIC("blob", 0, readMethod, Read_Blob),
     PR_JS_MAGIC("bytes", 0, readMethod, Read_Bytes),
     PR_JS_MAGIC("json", 0, readMethod, Read_Json),
     PR_JS_MAGIC("text", 0, readMethod, Read_Text),
+};
+
+constexpr JSCFunctionListEntry kRequestProto[] = {
+    PR_JS_TAG("Request"),
+    PR_JS_GET("method", requestMethod),
+    PR_JS_GET("url", requestUrl),
+    PR_JS_GET("headers", requestHeaders),
+    PR_JS_GET("destination", requestDestination),
+    PR_JS_GET("referrer", requestReferrer),
+    PR_JS_GET("referrerPolicy", requestReferrerPolicy),
+    PR_JS_GET("mode", requestMode),
+    PR_JS_GET("credentials", requestCredentials),
+    PR_JS_GET("cache", requestCache),
+    PR_JS_GET("redirect", requestRedirect),
+    PR_JS_GET("integrity", requestIntegrity),
+    PR_JS_GET("keepalive", requestKeepalive),
+    PR_JS_GET("isReloadNavigation", requestFalse),
+    PR_JS_GET("isHistoryNavigation", requestFalse),
+    PR_JS_GET("signal", requestSignal),
+    PR_JS_GET("duplex", requestDuplex),
+    PR_JS_METHOD("clone", 0, requestClone),
+    PR_JS_GET("bodyUsed", requestBodyUsed),
+    PR_JS_MAGIC("arrayBuffer", 0, requestRead, Read_ArrayBuffer),
+    PR_JS_MAGIC("blob", 0, requestRead, Read_Blob),
+    PR_JS_MAGIC("bytes", 0, requestRead, Read_Bytes),
+    PR_JS_MAGIC("json", 0, requestRead, Read_Json),
+    PR_JS_MAGIC("text", 0, requestRead, Read_Text),
 };
 
 constexpr JSCFunctionListEntry kResponseStatic[] = {
@@ -902,6 +1188,7 @@ constexpr JSCFunctionListEntry kResponseStatic[] = {
 using namespace pr_impl;
 
 void prJsFetchBind(JSContext* ctx) {
+    prJsFetchBlobBind(ctx);
     JSValue headers = jsDefineClass(ctx, {
         .name = "Headers",
         .id = &headersClass,
@@ -926,6 +1213,21 @@ void prJsFetchBind(JSContext* ctx) {
         .constructor = constructResponse,
     });
     JS_FreeValue(ctx, response);
+    JSValue request = jsDefineClass(ctx, {
+        .name = "Request",
+        .id = &requestClass,
+        .finalizer = requestFinalizer,
+        .mark = requestMark,
+        .proto = kRequestProto,
+        .protoCount = int(countOf(kRequestProto)),
+        .constructor = constructRequest,
+        .length = 1,
+    });
+    JS_FreeValue(ctx, request);
+}
+
+void prJsFetchSetBaseUrl(PrJsFetchBaseUrlFn fn) {
+    baseUrlOf = fn;
 }
 
 bool prJsFetchRequestRead(JSContext* ctx, JSValueConst input, JSValueConst init, PrStringView baseUrl, PrJsFetchRequest* out) {
@@ -934,45 +1236,98 @@ bool prJsFetchRequestRead(JSContext* ctx, JSValueConst input, JSValueConst init,
         .credentials = PrFetchCredentials_SameOrigin,
         .signal = JS_UNDEFINED,
     };
-    PrStringView given;
-    if (!jsReadString(ctx, input, &given))
-        return false;
-    // The URL parses before init is read, so that its TypeError comes first.
+    // A Request gives what its members hold, which init then overrides (fetch/#dom-request).
+    JsRequest* source = jsHandleAs<JsRequest>(ctx, input, requestClass);
     PrUrl* base = nullptr;
-    PrUrl* parsed = nullptr;
-    bool valid = prUrlCreate(baseUrl, nullptr, PrCharset_Utf8, &base) == PrStatus_Ok &&
-        prUrlCreate(given, base, PrCharset_Utf8, &parsed) == PrStatus_Ok;
-    bool userinfo = valid && (prUrlUsername(parsed).size != 0 || prUrlPassword(parsed).size != 0);
-    if (valid && !userinfo)
-        out->parsedUrl = prUrlSerialize(parsed, PrUrlSerialization_Whole);
-    prUrlDestroy(parsed);
-    prUrlDestroy(base);
-    if (!valid || userinfo) {
-        JS_ThrowTypeError(ctx, valid ? "A request's URL cannot have credentials" : "Invalid URL");
-        return false;
+    if (baseUrl.data != nullptr)
+        prUrlCreate(baseUrl, nullptr, PrCharset_Utf8, &base);
+    if (source != nullptr) {
+        out->parsedUrl = prStringClone(&source->url);
+        out->mode = source->mode;
+        out->credentials = source->credentials;
+        out->redirect = source->redirect;
+        out->referrerPolicy = source->referrerPolicy;
+        out->referrer = prStringClone(&source->referrer);
+        out->integrity = prStringClone(&source->integrity);
+        out->cache = source->cache;
+        out->keepalive = source->keepalive;
+        PrStringView sourceMethod = prStringView(&source->method);
+        char* methodBytes = static_cast<char*>(prMemoryAlloc(sourceMethod.size));
+        memCopy(methodBytes, sourceMethod.data, sourceMethod.size);
+        jsHoldBytes(ctx, methodBytes);
+        out->method = PrStringView{methodBytes, sourceMethod.size};
+        JSValue held = jsSameObject(ctx, input, "signal");
+        if (!JS_IsUndefined(held)) {
+            JsHeld hold = {};
+            hold.kind = JsHeldKind_Value;
+            hold.value = held;
+            jsHold(ctx, hold);
+            out->signal = held;
+        }
+    } else {
+        PrStringView given;
+        if (!jsReadString(ctx, input, &given)) {
+            prUrlDestroy(base);
+            return false;
+        }
+        // The URL parses before init is read, so that its TypeError comes first.
+        PrUrl* parsed = nullptr;
+        bool valid = prUrlCreate(given, base, PrCharset_Utf8, &parsed) == PrStatus_Ok;
+        bool userinfo = valid && (prUrlUsername(parsed).size != 0 || prUrlPassword(parsed).size != 0);
+        if (valid && !userinfo)
+            out->parsedUrl = prUrlSerialize(parsed, PrUrlSerialization_Whole);
+        prUrlDestroy(parsed);
+        if (!valid || userinfo) {
+            prUrlDestroy(base);
+            JS_ThrowTypeError(ctx, valid ? "A request's URL cannot have credentials" : "Invalid URL");
+            return false;
+        }
     }
     out->url = prStringView(&out->parsedUrl);
     bool present = false;
-    if (!jsDictionary(ctx, init, &present))
+    if (!jsDictionary(ctx, init, &present)) {
+        prUrlDestroy(base);
         return false;
+    }
     JsHeaders* headers = headersCreate(Guard_Request);
+    bool headersGiven = false;
     ExtractedBody body = {};
     bool hasBody = false;
     bool ok = true;
     if (present) {
-        // The members in lexicographic order: body, credentials, headers, method, mode, redirect, signal. The call's
-        // scope holds each member's value, so that a buffer that a body names outlives the conversion.
+        // The members in lexicographic order: body, cache, credentials, duplex, headers, integrity, keepalive, method,
+        // mode, redirect, referrer, referrerPolicy, signal, window. The call's scope holds each member's value, so that
+        // a buffer that a body names outlives the conversion.
         JSValue value;
         ok = readMember(ctx, init, "body", &value);
         hasBody = ok && !JS_IsUndefined(value) && !JS_IsNull(value);
         ok = ok && (!hasBody || extractBody(ctx, value, &body));
-        uint32_t credentials = 1;
+        uint32_t cache = out->cache;
+        ok = ok && readEnum(ctx, init, "cache", kCaches, &cache);
+        out->cache = uint8_t(cache);
+        constexpr uint32_t kCredentialsIndex[] = {1, 0, 2};
+        uint32_t credentials = kCredentialsIndex[out->credentials];
         ok = ok && readEnum(ctx, init, "credentials", kCredentials, &credentials);
+        uint32_t duplex = 0;
+        ok = ok && readEnum(ctx, init, "duplex", kDuplexes, &duplex);
         constexpr PrFetchCredentials kCredentialsOf[] = {
             PrFetchCredentials_Omit, PrFetchCredentials_SameOrigin, PrFetchCredentials_Include,
         };
         out->credentials = kCredentialsOf[credentials];
         ok = ok && readMember(ctx, init, "headers", &value) && (JS_IsUndefined(value) || headersFill(ctx, headers, value));
+        headersGiven = ok && !JS_IsUndefined(value);
+        ok = ok && readMember(ctx, init, "integrity", &value);
+        if (ok && !JS_IsUndefined(value)) {
+            PrStringView integrity;
+            ok = jsReadString(ctx, value, &integrity);
+            if (ok) {
+                prStringReset(&out->integrity);
+                out->integrity = prStringCopy(integrity);
+            }
+        }
+        ok = ok && readMember(ctx, init, "keepalive", &value);
+        if (ok && !JS_IsUndefined(value))
+            out->keepalive = JS_ToBool(ctx, value) > 0;
         ok = ok && readMember(ctx, init, "method", &value);
         if (ok && !JS_IsUndefined(value)) {
             PrStringView method;
@@ -987,7 +1342,8 @@ bool prJsFetchRequestRead(JSContext* ctx, JSValueConst input, JSValueConst init,
             if (ok)
                 out->method = prFetchNormalizeMethod(method);
         }
-        uint32_t mode = 3;
+        constexpr uint32_t kModeIndex[] = {2, 3, 1, 0};
+        uint32_t mode = kModeIndex[out->mode];
         ok = ok && readEnum(ctx, init, "mode", kModes, &mode);
         if (ok && mode == 0) {
             JS_ThrowTypeError(ctx, "A request's mode cannot be navigate");
@@ -998,17 +1354,71 @@ bool prJsFetchRequestRead(JSContext* ctx, JSValueConst input, JSValueConst init,
             PrFetchMode_Cors,
         };
         out->mode = kModeOf[mode];
-        uint32_t redirect = 0;
+        uint32_t redirect = out->redirect;
         ok = ok && readEnum(ctx, init, "redirect", kRedirects, &redirect);
         constexpr PrFetchRedirect kRedirectOf[] = {
             PrFetchRedirect_Follow, PrFetchRedirect_Error,
             PrFetchRedirect_Manual,
         };
         out->redirect = kRedirectOf[redirect];
+        ok = ok && readMember(ctx, init, "referrer", &value);
+        if (ok && !JS_IsUndefined(value)) {
+            // fetch/#dom-request: a URL of another origin, and about:client, stand for the client's referrer.
+            PrStringView referrer;
+            ok = jsReadString(ctx, value, &referrer);
+            prStringReset(&out->referrer);
+            if (ok && referrer.size == 0) {
+                out->referrer = prStringEmpty();
+            } else if (ok) {
+                PrUrl* parsed = nullptr;
+                if (prUrlCreate(referrer, base, PrCharset_Utf8, &parsed) != PrStatus_Ok) {
+                    JS_ThrowTypeError(ctx, "Invalid referrer");
+                    ok = false;
+                } else if (prUrlScheme(parsed) != "about" || prUrlPath(parsed) != "client") {
+                    PrString from = prUrlOrigin(parsed);
+                    PrString own = base != nullptr ? prUrlOrigin(base) : prStringNull();
+                    if (prStringView(&from) == prStringView(&own))
+                        out->referrer = prUrlSerialize(parsed, PrUrlSerialization_Whole);
+                    prStringReset(&from);
+                    prStringReset(&own);
+                }
+                prUrlDestroy(parsed);
+            }
+        }
+        uint32_t referrerPolicy = out->referrerPolicy;
+        ok = ok && readEnum(ctx, init, "referrerPolicy", kReferrerPolicies, &referrerPolicy);
+        out->referrerPolicy = PrFetchReferrerPolicy(referrerPolicy);
         ok = ok && readMember(ctx, init, "signal", &value);
         if (ok && !JS_IsUndefined(value) && !JS_IsNull(value)) {
             ok = jsValueOf<PrDomAbortSignal>(ctx, value, prJsDomAbortSignalClass, "an AbortSignal") != nullptr;
             out->signal = value;
+        }
+        ok = ok && readMember(ctx, init, "window", &value);
+        if (ok && !JS_IsUndefined(value) && !JS_IsNull(value)) {
+            JS_ThrowTypeError(ctx, "A request's window can only be null");
+            ok = false;
+        }
+    }
+    prUrlDestroy(base);
+    if (ok && out->cache == 5 && out->mode != PrFetchMode_SameOrigin) {
+        JS_ThrowTypeError(ctx, "Cache mode only-if-cached needs mode same-origin");
+        ok = false;
+    }
+    if (ok && source != nullptr) {
+        if (!headersGiven) {
+            JsHeaders* original = headersOfResponse(ctx, input);
+            for (uint32_t i = 0; original != nullptr && i < original->names.count; ++i)
+                appendHeader(headers, prStringView(&original->names.data[i]), prStringView(&original->values.data[i]));
+        }
+        if (!hasBody && source->body.present) {
+            if (source->body.used) {
+                JS_ThrowTypeError(ctx, "The request's body has already been read");
+                ok = false;
+            } else {
+                body.bytes = PrByteView{source->body.bytes.data, source->body.bytes.count};
+                hasBody = true;
+                source->body.used = true;
+            }
         }
     }
     PrStringView method = out->method.data != nullptr ? out->method : PrStringView{"GET"};
@@ -1063,13 +1473,25 @@ bool prJsFetchRequestRead(JSContext* ctx, JSValueConst input, JSValueConst init,
         out->body = PrByteView{stringBytes(bytes), bytes.size};
     }
     headersDestroy(headers);
+    out->hasBody = ok && hasBody;
     return ok;
 }
 
 void prJsFetchRequestReset(PrJsFetchRequest* request) {
     prStringReset(&request->parsedUrl);
+    prStringReset(&request->referrer);
+    prStringReset(&request->integrity);
     prMemoryFree(request->headers);
     prMemoryFree(request->bytes);
+}
+
+bool prJsFetchBodyExtract(JSContext* ctx, JSValueConst value, PrByteView* bytes, PrStringView* type) {
+    ExtractedBody body = {};
+    if (!extractBody(ctx, value, &body))
+        return false;
+    *bytes = body.bytes;
+    *type = body.type;
+    return true;
 }
 
 JSValue prJsFetchResponseNew(JSContext* ctx, const PrJsFetchResponseDesc* desc) {

@@ -5,9 +5,11 @@
 // until open(), send() or abort() starts over.
 
 #include "pr/xhr_quickjs.h"
+#include "xhr/quickjs/src/xhr_quickjs.h"
 
 #include "pr/count_of.h"
 #include "pr/dom_quickjs.h"
+#include "pr/fetch_blob_quickjs.h"
 #include "pr/html.h"
 #include "pr/html_page.h"
 #include "pr/quickjs_binding.h"
@@ -15,6 +17,8 @@
 #include "pr/url_quickjs.h"
 #include "pr/webidl_quickjs.h"
 #include "pr/xhr.h"
+
+#include "xhr/quickjs/src/xhr_file_reader_quickjs.h"
 
 namespace pr_impl {
 
@@ -141,16 +145,7 @@ JSValue xhrConstruct(JSContext* ctx, JSValueConst newTarget, int, JSValueConst*)
     PrHtmlWindow* window = document != nullptr ? prHtmlDocumentDefaultView(document) : nullptr;
     if (window == nullptr)
         return JS_ThrowTypeError(ctx, "XMLHttpRequest needs a window");
-    PrXhrDesc desc{
-        .client = {
-            .context = window,
-            .baseUrl = windowBaseUrl,
-            .fetch = windowFetch,
-            .cancelFetch = windowCancelFetch,
-            .setTimeout = windowSetTimeout,
-            .clearTimeout = windowClearTimeout,
-        },
-    };
+    PrXhrDesc desc{.client = jsXhrWindowClient(window)};
     PrXhr* request = prXhrCreate(&desc);
     JSValue object = jsWrap(ctx, xhrClass, JS_UNDEFINED, prXhrAsEventTarget(request), true);
     if (JS_IsException(object)) {
@@ -235,7 +230,12 @@ JSValue xhrSend(JSContext* ctx, JSValueConst requestObject, int argc, JSValueCon
     PrString form = prStringNull();
     const uint8_t* data = nullptr;
     size_t size = 0;
+    const PrFetchBlob* blob = prJsFetchBlobFromValue(ctx, body);
     if (JS_IsUndefined(body) || JS_IsNull(body)) {
+    } else if (blob != nullptr) {
+        bytes = prFetchBlobBytes(blob);
+        PrStringView type = prFetchBlobType(blob);
+        contentType = type.size != 0 ? type : PrStringView{nullptr, 0};
     } else if (jsBufferSource(ctx, body, &data, &size)) {
         bytes = PrByteView{data != nullptr ? data : reinterpret_cast<const uint8_t*>(""), size};
     } else if (PrUrlSearchParams* params = prJsUrlSearchParamsFromValue(ctx, body)) {
@@ -337,8 +337,8 @@ JSValue xhrResponseText(JSContext* ctx, JSValueConst requestObject) {
     return jsTakeString(ctx, prXhrResponseText(request));
 }
 
-// Returns the response as an object of the request's response type, once the request is done. A blob or a document
-// response is null, since no Blob or document is made of it.
+// Returns the response as an object of the request's response type, once the request is done. A document response is
+// null, since no document is made of it.
 JSValue responseObject(JSContext* ctx, PrXhr* request) {
     PrByteView body = prXhrResponseBody(request);
     switch (prXhrResponseType(request)) {
@@ -359,6 +359,10 @@ JSValue responseObject(JSContext* ctx, PrXhr* request) {
                 return JS_NULL;
             }
             return parsed;
+        }
+        case PrXhrResponseType_Blob: {
+            PrStringView type = prXhrFinalMimeType(request);
+            return prJsFetchBlobNew(ctx, prFetchBlobCreate(body, type.data != nullptr ? type : PrStringView{""}));
         }
         default: return JS_NULL;
     }
@@ -487,11 +491,23 @@ constexpr JsClassDefinition kClasses[] = {
 
 } // namespace
 
+PrXhrClient jsXhrWindowClient(PrHtmlWindow* window) {
+    return PrXhrClient{
+        .context = window,
+        .baseUrl = windowBaseUrl,
+        .fetch = windowFetch,
+        .cancelFetch = windowCancelFetch,
+        .setTimeout = windowSetTimeout,
+        .clearTimeout = windowClearTimeout,
+    };
+}
+
 } // namespace pr_impl
 
 using namespace pr_impl;
 
 void prJsXhrBind(JSContext* ctx) {
+    jsXhrFileReaderBind(ctx);
     for (const JsClassDefinition& definition : kClasses)
         JS_FreeValue(ctx, jsDefineClass(ctx, definition));
     JSRuntime* runtime = JS_GetRuntime(ctx);

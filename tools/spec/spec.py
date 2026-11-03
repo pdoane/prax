@@ -37,10 +37,10 @@ W3C = {"uievents": "main/index.bs", "uievents-key": "gh-pages/index.html", "uiev
        "input-events": "gh-pages/index.html", "pointerevents": "gh-pages/index.html",
        "intersection-observer": "main/index.bs", "hr-time": "main/index.bs", "performance-timeline": "main/index.bs",
        "user-timing": "main/index.bs", "navigation-timing": "main/index.bs", "resource-timing": "main/index.bs",
-       "server-timing": "main/index.bs"}
+       "server-timing": "main/index.bs", "file-api": "main/index.bs"}
 
 # The repositories of the W3C specifications whose repository is not named for the specification.
-W3C_REPOSITORIES = {"intersection-observer": "IntersectionObserver"}
+W3C_REPOSITORIES = {"intersection-observer": "IntersectionObserver", "file-api": "FileAPI"}
 
 # The drafts of the FXTF, which w3c/fxtf-drafts holds rather than w3c/csswg-drafts.
 FXTF = {"compositing-1", "compositing-2", "css-masking-1", "css-masking-2", "filter-effects-1", "filter-effects-2",

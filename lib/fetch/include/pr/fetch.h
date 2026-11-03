@@ -26,6 +26,9 @@ extern "C" {
 // A source of fetches, created by prFetchNetworkCreate or by its backend's own constructor.
 typedef struct PrFetchNetwork PrFetchNetwork;
 
+// The blob URLs that a source answers.
+typedef struct PrFetchBlobStore PrFetchBlobStore;
+
 // One fetch: a request, and the response that it receives.
 typedef struct PrFetch PrFetch;
 
@@ -215,8 +218,10 @@ struct PrFetchNetwork {
     size_t (*fetchRead)(PrFetchNetwork* fetcher, PrFetch* fetch, uint8_t* output, size_t capacity);
     PrNetError (*fetchError)(const PrFetchNetwork* fetcher, const PrFetch* fetch);
     PrFetchTiming (*PR_NULLABLE fetchTiming)(const PrFetchNetwork* fetcher, const PrFetch* fetch);
+    PrStringView (*PR_NULLABLE fetchSentReferrer)(const PrFetchNetwork* fetcher, const PrFetch* fetch);
 
-    PrNet* net;                 // the network whose loop runs the fetches' callbacks
+    PrNet* net;                              // the network whose loop runs the fetches' callbacks
+    PrFetchBlobStore* PR_NULLABLE blobStore; // the blob URLs that the source answers
 
     // The default User-Agent value (fetch/#default-user-agent-value), which the source holds unchanged for its life.
     PrStringView userAgent;
@@ -311,6 +316,10 @@ size_t prFetchRead(PrFetch* fetch, uint8_t* PR_NULLABLE output, size_t capacity)
 // Returns why the fetch failed, or None if it has not.
 PrNetError prFetchError(const PrFetch* fetch);
 
+// Returns the referrer that the fetch's last request sent, as its policy left it (fetch/#concept-request-referrer), or
+// the null view for none. The view is valid while the fetch lives.
+PrStringView prFetchSentReferrer(const PrFetch* fetch);
+
 // Returns the fetch's measurements so far. All are zero for a fetcher that does not measure.
 PrFetchTiming prFetchTiming(const PrFetch* fetch);
 
@@ -357,6 +366,11 @@ typedef struct PrFetchClientRequest {
     PrFetchCredentials credentials;
     PrFetchRedirect redirect;
     PrFetchInitiator initiator;
+
+    // The policy, or Default for the client's, and the referrer: a URL, empty for none, or the null view for the
+    // client's own.
+    PrFetchReferrerPolicy referrerPolicy;
+    PrStringView referrer;
 } PrFetchClientRequest;
 
 // ---------------------------------------------------------------------------------------------------------------------

@@ -466,7 +466,10 @@ void cssOwnerFetch(PrDomElement* element, const PrUrl* url, DomCorsSettings cors
     fetch->alternate = alternate;
     PrString request = prUrlSerialize(url, PrUrlSerialization_ExcludeFragment);
     style->fetching = 1;
-    DomFetchRequest asked{prStringView(&request), DomFetchDestination_Style, cors, DomFetchInitiator_Link};
+    DomFetchRequest asked{
+        prStringView(&request), DomFetchDestination_Style, cors, DomFetchInitiator_Link,
+        domAttributeValue(element, "referrerpolicy"),
+    };
     host->fetch(host->context, &asked, sheetFetched, fetch, dropSheetFetch);
     prStringReset(&request);
 }

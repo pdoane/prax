@@ -62,6 +62,7 @@ typedef void (*PrHtmlImportFn)(void* PR_NULLABLE context, PrStatus status);
 typedef struct PrHtmlResponseHeaders {
     PrStringView contentType;           // Content-Type: the resource's MIME type
     PrStringView contentLanguage;       // Content-Language: the languages of the resource's audience
+    PrStringView referrerPolicy;        // Referrer-Policy (referrer-policy/#parse-referrer-policy-from-header), or null
 } PrHtmlResponseHeaders;
 
 // Which animation frames a page's event loop runs (html/#update-the-rendering).
@@ -349,6 +350,10 @@ PrStatus prHtmlPageFetch(PrHtmlPage* page, const PrFetchClientRequest* request, 
 // Cancels the fetch that prHtmlPageFetch started with `context` and has not answered (fetch/#fetch-controller-abort).
 // The fetch stops if it still runs, and its `done` is never called. Does nothing if no such fetch waits.
 void prHtmlPageCancelFetch(PrHtmlPage* page, void* PR_NULLABLE context);
+
+// Drops the tasks that the page's window has queued and its performance observers. A script engine calls this for each
+// of its pages before it frees its runtime, because they refer to the runtime's objects.
+void prHtmlPageDropScriptWork(PrHtmlPage* page);
 
 // Returns true while the page's navigation (prHtmlPageNavigate) waits for its response, which the current document
 // stays in place for.

@@ -11,6 +11,8 @@
 #include "pr/css_typed_om_quickjs.h"
 #include "pr/dom_abort.h"
 #include "pr/dom_quickjs.h"
+#include "pr/fetch_blob_quickjs.h"
+#include "pr/fetch_quickjs.h"
 #include "pr/float.h"
 #include "pr/html.h"
 #include "pr/html_console_quickjs.h"
@@ -2470,6 +2472,75 @@ JSValue setDocumentCookie(JSContext* ctx, JSValueConst object, JSValueConst inpu
     return JS_UNDEFINED;
 }
 
+JSValue documentReferrer(JSContext* ctx, JSValueConst documentObject) {
+    PrDomDocument* document = jsThis<PrDomDocument>(ctx, documentObject, prJsDomDocumentClass);
+    return document != nullptr ? jsNewStringView(ctx, prHtmlDocumentReferrer(document)) : JS_EXCEPTION;
+}
+
+// sendBeacon(url, data) (beacon/#dom-navigator-sendbeacon).
+JSValue navigatorSendBeacon(JSContext* ctx, JSValueConst, int argc, JSValueConst* argv) {
+    PrHtmlWindow* window = jsHtmlGlobalWindow(ctx);
+    StringArgument url = {ctx};
+    if (window == nullptr || !jsArgCount(ctx, argc, 1) || !url.read(argv[0]))
+        return JS_EXCEPTION;
+    PrByteView body{nullptr, 0};
+    PrStringView type{nullptr, 0};
+    if (argc > 1 && !JS_IsUndefined(argv[1]) && !JS_IsNull(argv[1]) && !prJsFetchBodyExtract(ctx, argv[1], &body, &type))
+        return JS_EXCEPTION;
+    bool queued = false;
+    if (prHtmlWindowSendBeacon(window, url.value(), body, type, &queued) == PrStatus_InvalidData)
+        return JS_ThrowTypeError(ctx, "A beacon's URL must be HTTP or HTTPS");
+    return JS_NewBool(ctx, queued);
+}
+
+// The API base URL of the realm (html/#api-base-url).
+PrString realmBaseUrl(JSContext* ctx) {
+    PrHtmlWindow* window = jsHtmlGlobalWindow(ctx);
+    if (window == nullptr)
+        return prStringNull();
+    return prDomNodeBaseUri(prDomDocumentAsNode(prHtmlWindowDocument(window)));
+}
+
+// URL.createObjectURL (FileAPI/#dfn-createObjectURL).
+JSValue createObjectUrl(JSContext* ctx, JSValueConst, int argc, JSValueConst* argv) {
+    if (!jsArgCount(ctx, argc, 1))
+        return JS_EXCEPTION;
+    const PrFetchBlob* blob = prJsFetchBlobFromValue(ctx, argv[0]);
+    if (blob == nullptr)
+        return JS_ThrowTypeError(ctx, "The argument is not a Blob");
+    PrHtmlWindow* window = jsHtmlGlobalWindow(ctx);
+    if (window == nullptr)
+        return JS_ThrowTypeError(ctx, "createObjectURL needs a window");
+    PrString url = prHtmlWindowCreateObjectUrl(window, blob);
+    JSValue result = jsNewStringView(ctx, prStringView(&url));
+    prStringReset(&url);
+    return result;
+}
+
+// URL.revokeObjectURL (FileAPI/#dfn-revokeObjectURL).
+JSValue revokeObjectUrl(JSContext* ctx, JSValueConst, int argc, JSValueConst* argv) {
+    PrStringView url;
+    if (!jsArgCount(ctx, argc, 1) || !jsReadString(ctx, argv[0], &url))
+        return JS_EXCEPTION;
+    if (PrHtmlWindow* window = jsHtmlGlobalWindow(ctx))
+        prHtmlWindowRevokeObjectUrl(window, url);
+    return JS_UNDEFINED;
+}
+
+constexpr JSCFunctionListEntry kUrlStatics[] = {
+    PR_JS_METHOD("createObjectURL", 1, createObjectUrl),
+    PR_JS_METHOD("revokeObjectURL", 1, revokeObjectUrl),
+};
+
+void bindObjectUrls(JSContext* ctx) {
+    JSValue global = JS_GetGlobalObject(ctx);
+    JSValue url = JS_GetPropertyStr(ctx, global, "URL");
+    if (JS_IsObject(url))
+        JS_SetPropertyFunctionList(ctx, url, kUrlStatics, int(countOf(kUrlStatics)));
+    JS_FreeValue(ctx, url);
+    JS_FreeValue(ctx, global);
+}
+
 JSValue currentScript(JSContext* ctx, JSValueConst documentObject) {
     PrDomDocument* document = jsThis<PrDomDocument>(ctx, documentObject, prJsDomDocumentClass);
     if (document == nullptr)
@@ -3212,6 +3283,7 @@ constexpr JSCFunctionListEntry kDocumentProto[] = {
     PR_JS_GET("defaultView", defaultView),
     PR_JS_GET("readyState", readyState),
     PR_JS_GET_SET("cookie", documentCookie, setDocumentCookie),
+    PR_JS_GET("referrer", documentReferrer),
     PR_JS_METHOD("getSelection", 0, documentGetSelection),
     PR_JS_GET("currentScript", currentScript),
     PR_JS_GET("activeElement", activeElement),
@@ -3663,6 +3735,7 @@ constexpr JSCFunctionListEntry kNavigatorProto[] = {
     PR_JS_MAGIC_GET("pdfViewerEnabled", navigatorFlag, NavigatorFlag_PdfViewerEnabled),
     PR_JS_MAGIC_GET("webdriver", navigatorFlag, NavigatorFlag_Webdriver),
     PR_JS_METHOD("javaEnabled", 0, navigatorJavaEnabled),
+    PR_JS_METHOD("sendBeacon", 1, navigatorSendBeacon),
     PR_JS_GET("hardwareConcurrency", navigatorHardwareConcurrency),
     PR_JS_GET("maxTouchPoints", navigatorMaxTouchPoints),
     PR_JS_GET("preferences", preferences),
@@ -4046,6 +4119,8 @@ void jsHtmlBind(JSContext* ctx) {
     }
     jsHtmlFormsBind(ctx);
     jsHtmlElementsBind(ctx);
+    prJsFetchSetBaseUrl(realmBaseUrl);
+    bindObjectUrls(ctx);
     jsHtmlMessageBind(ctx);
     jsHtmlPerformanceBind(ctx);
     // The members that HTML adds to the classes of other modules.

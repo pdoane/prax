@@ -291,6 +291,19 @@ class HtmlHostTests(unittest.TestCase):
                 "seen a 0",
             ])
 
+    def test_a_page_exits_with_reads_and_messages_still_queued(self):
+        with tempfile.TemporaryDirectory() as directory:
+            result = self.run_page(Path(directory),
+                                   "<!doctype html><script>const reader = new FileReader();\n"
+                                   "const blob = new Blob(['a']);\n"
+                                   "reader.onloadend = () => reader.readAsText(blob);\n"
+                                   "reader.readAsText(blob);\n"
+                                   "const {port1, port2} = new MessageChannel();\n"
+                                   "port1.onmessage = () => port2.postMessage(1);\n"
+                                   "port2.postMessage(1);\n"
+                                   "print('running');</script>", "--timeout", "300")
+            self.assertEqual(result.stdout.splitlines(), ["running"])
+
     def test_a_page_exits_with_a_performance_observer_still_registered(self):
         with tempfile.TemporaryDirectory() as directory:
             result = self.run_page(Path(directory),

@@ -229,6 +229,8 @@ JSValue fetchMethod(JSContext* ctx, JSValueConst, int argc, JSValueConst* argv) 
             .credentials = request.credentials,
             .redirect = request.redirect,
             .initiator = PrFetchInitiator_Fetch,
+            .referrerPolicy = request.referrerPolicy,
+            .referrer = prStringIsNull(&request.referrer) ? PrStringView{nullptr, 0} : prStringView(&request.referrer),
         };
         if (prHtmlPageFetch(realm->page, &desc, fetched, fetch) == PrStatus_Ok) {
             realm->fetches.push(fetch);
@@ -960,6 +962,11 @@ void prJsHtmlEngineDestroy(PrJsHtmlEngine* PR_NULLABLE engine) {
     for (uint32_t i = 0; i < engine->agents.count; ++i)
         prDomAgentRemoveCheckpoint(engine->agents.data[i].agent, checkpointHook, engine);
     engine->agents.reset();
+    for (uint32_t i = 0; i < engine->realms.count; ++i) {
+        JsHtmlRealm* realm = engine->realms.data[i];
+        if (realm->page != nullptr && !realm->closed)
+            prHtmlPageDropScriptWork(realm->page);
+    }
     for (uint32_t i = 0; i < engine->realms.count; ++i)
         freeScripts(engine->realms.data[i]);
     jsRuntimeDestroy(engine->runtime);

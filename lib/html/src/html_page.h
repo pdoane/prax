@@ -72,6 +72,7 @@ struct HtmlFetch {
     PrFetchMode mode;
     PrFetchCredentials credentials;
     PrFetchRedirect redirect;
+    PrFetchReferrerPolicy referrerPolicy;
     PrString method;            // the null string for GET
     Array<HtmlFetchHeader> requestHeaders;
     Array<uint8_t> requestBody;
@@ -89,6 +90,8 @@ struct HtmlFetch {
     Array<HtmlFetchHeader> responseHeaders; // a script's fetch's, unfiltered
     PrString contentEncoding;
     PrString serverTiming;
+    PrString sentReferrer;
+    PrString responseReferrerPolicy;        // the Referrer-Policy headers joined by commas
     PrFetchTiming timing;
     PrNetError error;
 
@@ -114,6 +117,11 @@ struct HtmlDocumentLoad {
     PrString contentType;
     PrString contentEncoding;
     PrString serverTiming;
+
+    // The referrer that the navigation sends, and its policy, and what the fetch sent once its policy applied.
+    PrString referrer;
+    PrFetchReferrerPolicy referrerPolicy;
+    PrString sentReferrer;
 
     PrHtmlPage* PR_NULLABLE page;           // the agent's side: null once the page no longer waits for the load
     PrDomAgent* agent;
@@ -190,6 +198,8 @@ struct HtmlPage {
                                                   // tasks
     HtmlFetch* PR_NULLABLE fetches;               // the fetches that it waits for, newest first
     const HtmlFetch* PR_NULLABLE completingFetch; // the fetch whose callback is running
+    PrString nextReferrer;                        // what the next startNavigation sends, or the null string for none
+    PrFetchReferrerPolicy nextReferrerPolicy;
     HtmlDocumentLoad* PR_NULLABLE documentLoad;   // the navigation's fetch of its next document (prHtmlPageNavigate)
 
     // The failure of the navigation whose error document is loading, which the end of the load reports in its place

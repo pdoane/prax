@@ -32,6 +32,7 @@ enum {
     DomTargetType_MediaQueryList,
     DomTargetType_XmlHttpRequest,
     DomTargetType_MessagePort,
+    DomTargetType_FileReader,               // a FileReader (FileAPI/#APIASynch)
 
     // Parts of other targets: a PreferenceObject (mediaqueries-5/#preferenceobject), a Performance
     // (hr-time-3/#sec-performance), a ScreenOrientation (screen-orientation/#screenorientation-interface), an

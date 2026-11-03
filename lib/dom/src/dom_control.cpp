@@ -1091,11 +1091,12 @@ void domControlCloned(const PrDomElement* element, PrDomElement* clone) {
 }
 
 void domControlDestroy(PrDomElement* element) {
+    // A listed element with a form attribute is on the document's list whether or not it has state.
+    if (domIsListed(element))
+        forgetFormAttributed(element);
     DomElementState* state = element->state;
     if (state == nullptr)
         return;
-    if (domIsListed(element))
-        forgetFormAttributed(element);
     if (DomControl* control = state->control) {
         if (control->form != nullptr)
             removeFromForm(control->form, element);

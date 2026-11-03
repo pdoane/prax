@@ -1,6 +1,7 @@
 # Fetch: the interface, the backends that the build turns on, and its QuickJS layer.
 pr_library(fetch INCLUDE include
     src/fetch.cpp
+    src/fetch_blob.cpp
     src/fetch_load.cpp
 )
 target_link_libraries(pr_fetch PUBLIC prax::net prax::http prax::compress prax::storage PRIVATE prax::core_cpp prax::mime)
@@ -23,6 +24,7 @@ endif()
 
 if (PR_JS)
     pr_library(fetch_quickjs INCLUDE quickjs/include
+        quickjs/src/fetch_blob_quickjs.cpp
         quickjs/src/fetch_quickjs.cpp
     )
     target_link_libraries(pr_fetch_quickjs PUBLIC prax::fetch prax::quickjs PRIVATE prax::charset prax::dom

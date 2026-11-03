@@ -46,8 +46,7 @@ std::string charsetOf(PrHtmlPage* page) {
 PrHtmlPage* loaded(const std::string& source, const char* type = nullptr) {
     PrHtmlPage* page = prHtmlPageCreate(nullptr);
     PrHtmlResponseHeaders headers = {
-        type != nullptr ? PrStringView{type, strlen(type)} : PrStringView{nullptr, 0},
-        PrStringView{nullptr, 0},
+        .contentType = type != nullptr ? PrStringView{type, strlen(type)} : PrStringView{nullptr, 0},
     };
     CHECK(prHtmlPageLoad(page, {source.data(), source.size()}, "https://charset.test/", &headers) == PrStatus_Ok);
     runTasks(page);
@@ -218,7 +217,7 @@ TEST_CASE("a streamed meta element changes the decoder for the bytes that follow
     prHtmlPageDestroy(page);
 
     page = prHtmlPageCreate(nullptr);
-    PrHtmlResponseHeaders headers = {"text/html;charset=utf-8", PrStringView{nullptr, 0}};
+    PrHtmlResponseHeaders headers = {.contentType = "text/html;charset=utf-8"};
     REQUIRE(prHtmlPageBeginLoad(page, "https://charset.test/", &headers) == PrStatus_Ok);
     prHtmlPageAppendLoad(page, "<p id=p>\xE2\x82");
     runTasks(page);

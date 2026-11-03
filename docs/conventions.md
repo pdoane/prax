@@ -53,8 +53,8 @@ tools/harness/                    what the harnesses, the tools and the librarie
   with it, so nothing in core is a subject of its own. The toolkit holds general-purpose data structures and
   algorithms, and a facility with a domain of its own, such as JSON or task scheduling, is a module.
 - A type with a subject lives in that subject's module, however small, with the operations on it: color values in
-  `lib/color`, rectangles and transforms in `lib/geom`, locales in `lib/locale`. Linking a module that depends only on
-  core costs a consumer nothing that it does not call.
+  `lib/color`, rectangles and transforms in `lib/geom`, locales in `lib/locale`. Functions that a consumer does not
+  call add nothing to its binary, since COMDAT folding is assumed.
 - An interface module, a record of functions and the dispatch over it, holds the types that its operations take and
   report, as `lib/app` holds displays and user preferences. Its library holds each of its backends that the build turns
   on, by an option `PR_<MODULE>_<BACKEND>` (README.md), and builds with none of them for a host that brings its own.

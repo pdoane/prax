@@ -405,6 +405,67 @@ PrHtmlWindow* PR_NULLABLE prHtmlDocumentDefaultView(PrDomDocument* document) {
     return window->document == document ? window : nullptr;
 }
 
+PrStringView prHtmlDocumentReferrer(PrDomDocument* document) {
+    PrHtmlWindow* window = prHtmlDocumentDefaultView(document);
+    return window != nullptr && !prStringIsNull(&window->referrer) ? prStringView(&window->referrer) : PrStringView{""};
+}
+
+PrString prHtmlWindowCreateObjectUrl(PrHtmlWindow* window, const PrFetchBlob* blob) {
+    PrHtmlPage* page = htmlDocumentPage(window->document);
+    PrFetchNetwork* fetcher = page != nullptr ? page->host.fetcher : nullptr;
+    PrString origin = htmlWindowOrigin(window);
+    PrString url = fetcher != nullptr ? prFetchBlobUrlCreate(fetcher, blob, prStringView(&origin)) : prStringEmpty();
+    prStringReset(&origin);
+    if (fetcher != nullptr)
+        window->objectUrls.push(prStringClone(&url));
+    return url;
+}
+
+void prHtmlWindowRevokeObjectUrl(PrHtmlWindow* window, PrStringView url) {
+    PrHtmlPage* page = htmlDocumentPage(window->document);
+    if (page == nullptr || page->host.fetcher == nullptr)
+        return;
+    PrString origin = htmlWindowOrigin(window);
+    prFetchBlobUrlRevoke(page->host.fetcher, url, prStringView(&origin));
+    prStringReset(&origin);
+}
+
+PrStatus prHtmlWindowSendBeacon(PrHtmlWindow* window, PrStringView url, PrByteView body, PrStringView contentType, bool* queued) {
+    // beacon/#sec-processing-model: the keepalive limit of fetch/#http-network-or-cache-fetch.
+    constexpr size_t kBeaconMaxBytes = 64 * 1024;
+    *queued = false;
+    PrUrl* base = domDocumentBaseUrl(window->document);
+    PrUrl* parsed = nullptr;
+    PrStatus status = prUrlCreate(url, base, PrCharset_Utf8, &parsed);
+    prUrlDestroy(base);
+    if (status != PrStatus_Ok)
+        return PrStatus_InvalidData;
+    bool http = prUrlScheme(parsed) == "http" || prUrlScheme(parsed) == "https";
+    prUrlDestroy(parsed);
+    if (!http)
+        return PrStatus_InvalidData;
+    PrHtmlPage* page = htmlDocumentPage(window->document);
+    if (page == nullptr || body.size > kBeaconMaxBytes)
+        return PrStatus_Ok;
+    PrFetchHeader header{"Content-Type", contentType};
+    bool safelisted = contentType.data == nullptr || prFetchIsCorsSafelistedRequestHeader("Content-Type", contentType);
+    PrFetchClientRequest request{
+        .url = url,
+        .method = "POST",
+        .headers = contentType.data != nullptr ? &header : nullptr,
+        .headerCount = contentType.data != nullptr ? 1u : 0u,
+        .body = body,
+        .mode = PrFetchMode(safelisted ? PrFetchMode_NoCors : PrFetchMode_Cors),
+        .credentials = PrFetchCredentials_Include,
+        .redirect = PrFetchRedirect_Follow,
+        .initiator = PrFetchInitiator_Beacon,
+    };
+    PrFetchResponseFn ignore = [](void* PR_NULLABLE, const PrFetchResponse*) {};
+    status = prHtmlPageFetch(page, &request, ignore, nullptr);
+    *queued = status == PrStatus_Ok;
+    return status;
+}
+
 PrStringView prHtmlDocumentBodyAttribute(PrDomDocument* document, PrStringView name) {
     PrDomElement* body = domDocumentBody(document);
     PrStringView value = domIsHtml(body, PrDomTag_Body) ? domAttributeValue(body, name) : PrStringView{};

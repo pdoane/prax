@@ -6,6 +6,7 @@
 #include "pr/array.h"
 #include "pr/ascii.h"
 #include "pr/assert.h"
+#include "pr/fetch_blob.h"
 #include "pr/file.h"
 #include "pr/mem.h"
 #include "pr/string_ops.h"
@@ -141,9 +142,13 @@ struct BuiltinFetch : PrFetch {
     Array<uint8_t> stored;
 
     PrFetchTiming timing;
+
+    // The blob that a blob URL named when the fetch was created (fetch/#scheme-fetch), or null.
+    const PrFetchBlob* PR_NULLABLE blob;
 };
 
 void freeFetch(BuiltinFetch* fetch) {
+    prFetchBlobRelease(fetch->blob);
     prStringReset(&fetch->url);
     prStringReset(&fetch->method);
     headersReset(&fetch->requestHeaders);
@@ -1198,6 +1203,20 @@ void answerLocally(BuiltinFetch* fetch) {
         }
         if (fileType.data != nullptr)
             type = prStringCopy(fileType);
+    } else if (prFetchBlobIsUrl(url)) {
+        // fetch/#scheme-fetch: a GET of a blob that the store has, and otherwise a network error.
+        const PrFetchBlob* blob = fetch->blob;
+        if (blob == nullptr || prStringView(&fetch->method) != "GET") {
+            fail(fetch, PrNetError_Protocol);
+            return;
+        }
+        PrByteView bytes = prFetchBlobBytes(blob);
+        fetch->content.append(bytes.data, uint32_t(bytes.size));
+        TextBuffer length{};
+        textAppendU64(&length, bytes.size);
+        headersAdd(&fetch->response, "Content-Length", textView(&length));
+        textReset(&length);
+        type = prStringCopy(prFetchBlobType(blob));
     } else if (asciiStartsWithFold(url, "data:")) {
         PrString body = prStringNull();
         if (prUrlProcessData(url, &body, &type) != PrStatus_Ok) {
@@ -1254,6 +1273,7 @@ void resume(void* PR_NULLABLE context) {
 void destroyFetcher(PrFetchNetwork* base) {
     BuiltinFetcher* fetcher = static_cast<BuiltinFetcher*>(base);
     prStringReset(&fetcher->userAgentStorage);
+    prFetchBlobStoreDestroy(fetcher->blobStore);
     prMemoryFree(fetcher);
 }
 
@@ -1283,9 +1303,11 @@ PrStatus createFetch(PrFetchNetwork* base, const PrFetchRequestDesc* desc, PrFet
     fetch->event = event;
     fetch->context = context;
     PrStringView scheme = prUrlScheme(url);
-    fetch->local = scheme == "data" || scheme == "file" || (scheme == "about" && prUrlPath(url) == "blank");
+    fetch->local = scheme == "data" || scheme == "file" || scheme == "blob" || (scheme == "about" && prUrlPath(url) == "blank");
     fetch->url = prUrlSerialize(url, PrUrlSerialization_ExcludeFragment);
     prUrlDestroy(url);
+    if (prFetchBlobIsUrl(prStringView(&fetch->url)))
+        fetch->blob = prFetchBlobStoreResolve(base->blobStore, prStringView(&fetch->url));
     fetch->method = prStringCopy(desc->method.data != nullptr ? desc->method : PrStringView{"GET"});
     for (uint32_t i = 0; i < desc->headerCount; ++i)
         headersAdd(&fetch->requestHeaders, desc->headers[i].name, desc->headers[i].value);
@@ -1358,6 +1380,11 @@ PrNetError fetchError(const PrFetchNetwork*, const PrFetch* handle) {
     return static_cast<const BuiltinFetch*>(handle)->error;
 }
 
+PrStringView fetchSentReferrer(const PrFetchNetwork*, const PrFetch* handle) {
+    const BuiltinFetch* fetch = static_cast<const BuiltinFetch*>(handle);
+    return prStringIsNull(&fetch->referrer) ? PrStringView{nullptr, 0} : prStringView(&fetch->referrer);
+}
+
 PrFetchTiming fetchTiming(const PrFetchNetwork*, const PrFetch* handle) {
     return static_cast<const BuiltinFetch*>(handle)->timing;
 }
@@ -1381,8 +1408,10 @@ PrFetchNetwork* prFetchBuiltinCreate(const PrFetchNetworkDesc* desc) {
     fetcher->fetchRead = fetchRead;
     fetcher->fetchError = fetchError;
     fetcher->fetchTiming = fetchTiming;
+    fetcher->fetchSentReferrer = fetchSentReferrer;
     PR_ASSERT(desc->http == nullptr || desc->http->net == desc->net);
     fetcher->net = desc->net;
+    fetcher->blobStore = prFetchBlobStoreCreate();
     fetcher->http = desc->http;
     fetcher->compress = desc->compress;
     fetcher->cache = desc->cache;

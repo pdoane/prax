@@ -8,6 +8,7 @@
 #include "html/quickjs/src/html_clone_quickjs.h"
 
 #include "pr/count_of.h"
+#include "pr/fetch_blob_quickjs.h"
 #include "pr/hash.h"
 #include "pr/hash_index.h"
 #include "pr/memory.h"
@@ -38,6 +39,7 @@ enum {
     CloneTag_DataView,
     CloneTag_Error,
     CloneTag_Port,
+    CloneTag_Blob,
 };
 typedef uint8_t CloneTag;
 
@@ -264,6 +266,22 @@ bool writePort(CloneWriter* w, JSValueConst value) {
     return false;
 }
 
+// Writes a blob or a file (FileAPI/#blob-section): its type, its bytes, and a file's name and time.
+void writeBlob(CloneWriter* w, const PrFetchBlob* blob) {
+    putTag(w, CloneTag_Blob);
+    PrStringView type = prFetchBlobType(blob);
+    PrByteView bytes = prFetchBlobBytes(blob);
+    PrStringView name = prFetchBlobIsFile(blob) ? prFetchBlobFileName(blob) : PrStringView{nullptr, 0};
+    putU32(w, prFetchBlobIsFile(blob) ? 1 : 0);
+    putF64(w, prFetchBlobIsFile(blob) ? prFetchBlobFileLastModified(blob) : 0);
+    putU32(w, uint32_t(type.size));
+    putBytes(w, type.data, type.size);
+    putU32(w, uint32_t(name.size));
+    putBytes(w, name.data, name.size);
+    putU32(w, uint32_t(bytes.size));
+    putBytes(w, bytes.data, bytes.size);
+}
+
 bool writeObject(CloneWriter* w, JSValueConst value) {
     JSContext* ctx = w->ctx;
     if (writeSeen(w, value))
@@ -274,6 +292,10 @@ bool writeObject(CloneWriter* w, JSValueConst value) {
         return cloneFail(ctx);
     if (jsHtmlMessagePortOf(ctx, value) != nullptr)
         return writePort(w, value) || cloneFail(ctx);
+    if (const PrFetchBlob* blob = prJsFetchBlobFromValue(ctx, value)) {
+        writeBlob(w, blob);
+        return true;
+    }
     ++w->depth;
     bool ok = false;
     switch (JS_GetCloneKind(value)) {
@@ -487,6 +509,31 @@ JSValue readView(CloneReader* r, bool isDataView) {
     return view;
 }
 
+// Reads a size and returns that many bytes of the stream as a view.
+bool getView(CloneReader* r, PrStringView* out) {
+    uint32_t size = 0;
+    if (!getBytes(r, &size, sizeof(size)) || size_t(r->end - r->at) < size)
+        return false;
+    *out = PrStringView{r->at, size};
+    r->at += size;
+    return true;
+}
+
+JSValue readBlob(CloneReader* r) {
+    uint32_t isFile = 0;
+    double lastModified = 0;
+    PrStringView type;
+    PrStringView name;
+    PrStringView bytes;
+    if (!getBytes(r, &isFile, sizeof(isFile)) || !getBytes(r, &lastModified, sizeof(lastModified)) ||
+            !getView(r, &type) || !getView(r, &name) || !getView(r, &bytes))
+        return corrupt(r->ctx);
+    PrByteView content{reinterpret_cast<const uint8_t*>(bytes.data), bytes.size};
+    const PrFetchBlob* blob =
+        isFile != 0 ? prFetchBlobCreateFile(content, type, name, lastModified) : prFetchBlobCreate(content, type);
+    return remember(r, prJsFetchBlobNew(r->ctx, blob));
+}
+
 JSValue readValue(CloneReader* r) {
     JSContext* ctx = r->ctx;
     CloneTag tag = 0;
@@ -546,6 +593,8 @@ JSValue readValue(CloneReader* r) {
             return readView(r, true);
         case CloneTag_Error:
             return readError(r);
+        case CloneTag_Blob:
+            return readBlob(r);
         case CloneTag_Port: {
             uint32_t position = 0;
             if (!getBytes(r, &position, sizeof(position)) || JS_IsUndefined(r->ports))

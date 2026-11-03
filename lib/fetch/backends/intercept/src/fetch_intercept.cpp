@@ -5,6 +5,7 @@
 #include "pr/alloc.h"
 #include "pr/array.h"
 #include "pr/assert.h"
+#include "pr/fetch_blob.h"
 #include "pr/mem.h"
 #include "pr/time.h"
 #include "pr/url.h"
@@ -86,6 +87,9 @@ struct InterceptFetch : PrFetch, PrFetchInterceptRequest {
     PrNetError error;
     PrFetch* PR_NULLABLE passed;
     PrFetchTiming timing;       // the measurements of a request that the host answers
+
+    // The blob that a blob URL named when the fetch was created, or null. The fetcher answers such a URL itself.
+    const PrFetchBlob* PR_NULLABLE blob;
 };
 
 InterceptFetcher* fetcherOf(InterceptFetch* fetch) {
@@ -93,6 +97,7 @@ InterceptFetcher* fetcherOf(InterceptFetch* fetch) {
 }
 
 void freeFetch(InterceptFetch* fetch) {
+    prFetchBlobRelease(fetch->blob);
     prStringReset(&fetch->url);
     prStringReset(&fetch->responseUrl);
     prStringReset(&fetch->method);
@@ -116,6 +121,23 @@ void deliver(InterceptFetch* fetch, PrFetchEvent event) {
         fetch->event(fetch->context, fetch, event);
 }
 
+// Answers a request for a blob URL from the fetcher's own store.
+void answerBlob(InterceptFetch* fetch) {
+    const PrFetchBlob* blob = fetch->blob;
+    if (blob == nullptr || (fetch->desc.method.data != nullptr && fetch->desc.method != "GET")) {
+        prFetchInterceptRequestFail(fetch, PrNetError_Protocol);
+        return;
+    }
+    PrFetchHeader header{"Content-Type", prFetchBlobType(blob)};
+    PrFetchInterceptResponse response{
+        .status = 200,
+        .headers = &header,
+        .headerCount = 1,
+        .body = prFetchBlobBytes(blob),
+    };
+    prFetchInterceptRequestRespond(fetch, &response);
+}
+
 // Asks the host for the response, from a task, so that the fetch's events come after the call that made it.
 void ask(void* PR_NULLABLE context) {
     InterceptFetch* fetch = static_cast<InterceptFetch*>(context);
@@ -124,7 +146,11 @@ void ask(void* PR_NULLABLE context) {
         fetch->state = InterceptState_Asked;
         // The host's hold, which its answer releases.
         ++fetch->holds;
-        fetcher->request(fetcher->context, fetch);
+        // A blob URL names what the fetcher holds, so no host answers for it.
+        if (prFetchBlobIsUrl(fetch->desc.url))
+            answerBlob(fetch);
+        else
+            fetcher->request(fetcher->context, fetch);
     }
     release(fetch);
 }
@@ -142,6 +168,8 @@ void passedEvent(void* PR_NULLABLE context, PrFetch*, PrFetchEvent event) {
 void destroyFetcher(PrFetchNetwork* base) {
     InterceptFetcher* fetcher = static_cast<InterceptFetcher*>(base);
     prStringReset(&fetcher->userAgentStorage);
+    if (fetcher->next == nullptr)
+        prFetchBlobStoreDestroy(fetcher->blobStore);
     prMemoryFree(fetcher);
 }
 
@@ -178,6 +206,8 @@ PrStatus createFetch(PrFetchNetwork* base, const PrFetchRequestDesc* desc, PrFet
     fetch->desc.body = PrByteView{fetch->requestBody.data, fetch->requestBody.count};
     fetch->timing.startTime = prTimeMonotonicMilliseconds();
     fetch->timing.postRedirectStart = fetch->timing.startTime;
+    if (prFetchBlobIsUrl(fetch->desc.url))
+        fetch->blob = prFetchBlobStoreResolve(base->blobStore, fetch->desc.url);
     // The hold of the task that asks the host.
     fetch->holds = 1;
     prNetPost(base->net, ask, fetch);
@@ -245,6 +275,11 @@ size_t fetchRead(PrFetchNetwork*, PrFetch* handle, uint8_t* output, size_t capac
     return taken;
 }
 
+PrStringView fetchSentReferrer(const PrFetchNetwork*, const PrFetch* handle) {
+    const InterceptFetch* fetch = static_cast<const InterceptFetch*>(handle);
+    return fetch->passed != nullptr ? prFetchSentReferrer(fetch->passed) : fetch->desc.referrer;
+}
+
 PrFetchTiming fetchTiming(const PrFetchNetwork*, const PrFetch* handle) {
     const InterceptFetch* fetch = static_cast<const InterceptFetch*>(handle);
     return fetch->passed != nullptr ? prFetchTiming(fetch->passed) : fetch->timing;
@@ -277,7 +312,9 @@ PrFetchNetwork* prFetchInterceptCreate(const PrFetchInterceptDesc* desc) {
     fetcher->fetchRead = fetchRead;
     fetcher->fetchError = fetchError;
     fetcher->fetchTiming = fetchTiming;
+    fetcher->fetchSentReferrer = fetchSentReferrer;
     fetcher->net = desc->net;
+    fetcher->blobStore = desc->next != nullptr ? desc->next->blobStore : prFetchBlobStoreCreate();
     fetcher->request = desc->request;
     fetcher->context = desc->context;
     fetcher->next = desc->next;

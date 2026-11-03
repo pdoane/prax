@@ -98,6 +98,7 @@ struct HtmlResourceReport {
     PrStringView contentType;       // the Content-Type header, or the null view for none
     PrStringView contentEncoding;   // the Content-Encoding header, or the null view for none
     PrStringView serverTiming;      // the Server-Timing headers joined by commas, or the null view for none
+    PrStringView sentReferrer;      // the referrer that the request sent, or the null view for none
 };
 
 // Adds an entry for a fetch to the window's timeline (resource-timing/#dfn-mark-resource-timing). A fetch that does not

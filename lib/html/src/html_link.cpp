@@ -139,6 +139,7 @@ void preload(PrDomElement* element, const DomDocumentHost* host) {
         prStringView(&request), destination,
         domCorsSettings(domAttributeValue(element, "crossorigin")),
         DomFetchInitiator_Link,
+        domAttributeValue(element, "referrerpolicy"),
     };
     host->fetch(host->context, &asked, preloadFetched, fetch, dropPreloadFetch);
     prStringReset(&request);

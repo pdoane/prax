@@ -10,6 +10,7 @@
 #include "pr/css_presentation.h"
 #include "pr/css_view.h"
 #include "pr/dom.h"
+#include "pr/fetch_blob.h"
 #include "pr/status.h"
 #include "pr/string.h"
 #include "pr/string_view.h"
@@ -139,6 +140,21 @@ void prHtmlSetTabIndex(PrDomElement* element, int32_t value);
 
 // Returns the window whose document this is, or null if there is none (html/#dom-document-defaultview).
 PrHtmlWindow* PR_NULLABLE prHtmlDocumentDefaultView(PrDomDocument* document);
+
+// Returns the URL of the document that navigated to `document`, as its referrer policy left it, or the empty view for
+// none (html/#dom-document-referrer).
+PrStringView prHtmlDocumentReferrer(PrDomDocument* document);
+
+// Creates a blob URL of `blob` for the window's origin, which lasts until it is revoked or the window closes
+// (FileAPI/#dfn-createObjectURL).
+PrString prHtmlWindowCreateObjectUrl(PrHtmlWindow* window, const PrFetchBlob* blob);
+
+// Revokes `url`, if the window's origin created it (FileAPI/#dfn-revokeObjectURL).
+void prHtmlWindowRevokeObjectUrl(PrHtmlWindow* window, PrStringView url);
+
+// Queues `body` to be sent to `url` (beacon/#sec-processing-model). Returns InvalidData for a URL that is not HTTP(S),
+// and writes false to `*queued` for a body over the limit that a keepalive fetch has.
+PrStatus prHtmlWindowSendBeacon(PrHtmlWindow* window, PrStringView url, PrByteView body, PrStringView contentType, bool* queued);
 
 // Returns the content attribute `name` of the document's body, or the empty string if it has none or its body element
 // is not a body, and sets it (html/#dom-document-fgcolor).

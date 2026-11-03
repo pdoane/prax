@@ -485,6 +485,10 @@ struct CssPresentation {
     // entry's own state says what applying it does.
     Array<const PrDomNode*> boxQueue;
 
+    // The queued nodes whose entries were dropped, each with a reference, so that the queue's pointers stay valid until
+    // it is applied.
+    Array<const PrDomNode*> boxQueueDropped;
+
     // A participant of the counter pass was added, removed or restyled since the last pass, which the next update runs.
     // The elements where the participants changed are listed, each with CssPresentationEntry::counterChanged set,
     // unless a change has no such element, such as a removal, which `countersFromRoot` notes. The next pass then starts

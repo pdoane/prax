@@ -65,6 +65,7 @@ baseline-shift                                   build
 baseline-source                                  build
 bdi                                              build
 bdo                                              build
+beacons                                          build
 before-after                                     build
 beforeunload                                     build
 bfcache-blocking-reasons                         open
@@ -478,6 +479,7 @@ readablestream-from                              build
 reading-flow                                     build
 rect-xywh                                        build
 referencetarget                                  build
+referrer-policy                                  build
 registered-custom-properties                     build
 registerprotocolhandler                          open
 relative-color                                   build

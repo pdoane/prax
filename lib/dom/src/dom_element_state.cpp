@@ -5,6 +5,7 @@
 
 #include "dom/src/dom_element_state.h"
 
+#include "pr/count_of.h"
 #include "pr/string_ops.h"
 #include "pr/unicode_bidi.h"
 
@@ -278,6 +279,20 @@ PrStringView domDocumentLanguage(const PrDomDocument* document) {
 }
 
 void domMetaConnected(PrDomElement* element) {
+    // html/#meta-referrer, with the legacy keywords that it maps.
+    if (domIsHtml(element, PrDomTag_Meta) && domIsConnected(element) &&
+            asciiEqualsFold(domAttributeValue(element, "name"), "referrer")) {
+        PrStringView content = stringTrim(domAttributeValue(element, "content"));
+        if (asciiEqualsFold(content, "never"))
+            content = "no-referrer";
+        else if (asciiEqualsFold(content, "default"))
+            content = "strict-origin-when-cross-origin";
+        else if (asciiEqualsFold(content, "always"))
+            content = "unsafe-url";
+        else if (asciiEqualsFold(content, "origin-when-crossorigin"))
+            content = "origin-when-cross-origin";
+        domReferrerPolicyFromToken(content, &element->document->referrerPolicy);
+    }
     if (!domIsHtml(element, PrDomTag_Meta) || !domIsConnected(element) ||
             !asciiEqualsFold(domAttributeValue(element, "http-equiv"), "content-language"))
         return;
@@ -297,6 +312,20 @@ void domMetaConnected(PrDomElement* element) {
         return;
     prStringReplace(&document->languagePragma, candidate);
     domNotifyLanguageChanged(document);
+}
+
+bool domReferrerPolicyFromToken(PrStringView token, uint8_t* out) {
+    constexpr PrStringView kTokens[] = {
+        "no-referrer", "no-referrer-when-downgrade", "same-origin", "origin", "strict-origin",
+        "origin-when-cross-origin", "strict-origin-when-cross-origin", "unsafe-url",
+    };
+    for (uint32_t i = 0; i < countOf(kTokens); ++i) {
+        if (asciiEqualsFold(token, kTokens[i])) {
+            *out = uint8_t(i + 1);
+            return true;
+        }
+    }
+    return false;
 }
 
 // The dir attribute belongs to HTML elements, so every other element takes its parent's directionality.

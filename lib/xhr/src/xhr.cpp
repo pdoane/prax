@@ -559,14 +559,16 @@ PrByteView prXhrResponseBody(const PrXhr* xhr) {
     return PrByteView{xhr->body.data, xhr->body.count};
 }
 
+PrStringView prXhrFinalMimeType(const PrXhr* object) {
+    if (!prStringIsNull(&object->overrideMime))
+        return prStringView(&object->overrideMime);
+    uint32_t index = findHeader(object->responseHeaders, "Content-Type");
+    return index != kArrayMissing ? prStringView(&object->responseHeaders.data[index].value) : PrStringView{nullptr, 0};
+}
+
 PrString prXhrResponseText(const PrXhr* xhr) {
-    // The final MIME type is the override, or else the response's Content-Type (xhr/#final-mime-type).
-    PrStringView mime = prStringView(&xhr->overrideMime);
-    if (prStringIsNull(&xhr->overrideMime)) {
-        uint32_t index = findHeader(xhr->responseHeaders, "Content-Type");
-        mime = index != kArrayMissing ? prStringView(&xhr->responseHeaders.data[index].value) : PrStringView("");
-    }
-    PrCharset charset = prCharsetFromMimeType(mime);
+    PrStringView mime = prXhrFinalMimeType(xhr);
+    PrCharset charset = prCharsetFromMimeType(mime.data != nullptr ? mime : PrStringView{""});
     PrCharsetDecoder decoder = prCharsetDecoderMake(charset != PrCharset_None ? charset : PrCharset_Utf8, 0);
     PrStringView bytes{reinterpret_cast<const char*>(xhr->body.data), xhr->body.count};
     PrString out = prStringNull();

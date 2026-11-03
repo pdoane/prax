@@ -95,6 +95,8 @@ struct HtmlWindow : DomCountedTarget {
     // The default User-Agent value of the host's fetcher (prFetchNetworkUserAgent), or empty without one, and the
     // navigator compatibility mode of the host.
     PrStringView userAgent;
+    PrString referrer;                        // html/#dom-document-referrer, or the null string for none
+    Array<PrString> objectUrls;               // the blob URLs that the window's scripts created and did not revoke
     PrHtmlNavigatorCompatibilityMode navigatorCompatibilityMode;
 
     // The clock's time of the last activation notification (html/#last-activation-timestamp). It is positive infinity
@@ -196,6 +198,9 @@ void htmlWindowStartClock(PrHtmlWindow* window);
 // Moves the window's time origin back by `elapsed` milliseconds, to the start of the navigation of its document
 // (hr-time-3/#sec-time-origin). Frame times stay where they are.
 void htmlWindowBackdateClock(PrHtmlWindow* window, double elapsed);
+
+// Revokes the blob URLs that the window's scripts created, as the window closes (FileAPI/#lifeTime).
+void htmlWindowRevokeObjectUrls(PrHtmlWindow* window);
 
 // Returns the milliseconds since the window's time origin, coarsened (hr-time-3/#dfn-coarsen-time)
 // (hr-time-3/#dom-performance-now).

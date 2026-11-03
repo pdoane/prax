@@ -209,6 +209,12 @@ PrNetError prFetchError(const PrFetch* fetch) {
     return fetch->fetcher->fetchError(fetch->fetcher, fetch);
 }
 
+PrStringView prFetchSentReferrer(const PrFetch* fetch) {
+    if (fetch->fetcher->fetchSentReferrer == nullptr)
+        return PrStringView{nullptr, 0};
+    return fetch->fetcher->fetchSentReferrer(fetch->fetcher, fetch);
+}
+
 PrFetchTiming prFetchTiming(const PrFetch* fetch) {
     if (fetch->fetcher->fetchTiming == nullptr)
         return PrFetchTiming{};

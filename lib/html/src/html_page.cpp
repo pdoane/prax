@@ -175,6 +175,8 @@ void releaseFetch(HtmlFetch* fetch) {
     prStringReset(&fetch->contentLanguage);
     prStringReset(&fetch->contentEncoding);
     prStringReset(&fetch->serverTiming);
+    prStringReset(&fetch->sentReferrer);
+    prStringReset(&fetch->responseReferrerPolicy);
     prStringReset(&fetch->responseUrl);
     prMutexReset(&fetch->lock);
     prMemoryFree(fetch);
@@ -232,6 +234,7 @@ HtmlResourceReport reportOf(const HtmlFetch* fetch) {
         .contentType = prStringView(&fetch->contentType),
         .contentEncoding = prStringView(&fetch->contentEncoding),
         .serverTiming = prStringView(&fetch->serverTiming),
+        .sentReferrer = prStringView(&fetch->sentReferrer),
     };
 }
 
@@ -381,13 +384,13 @@ void readBody(HtmlFetch* fetch, PrFetch* handle) {
         fetch->body.append(chunk, uint32_t(got));
 }
 
-// Returns the response's Server-Timing headers joined by commas, or the null string for none.
-PrString serverTimingOf(const PrFetch* fetch) {
+// Returns the values of the response's headers named `name` joined by commas, or the null string for none.
+PrString headersJoined(const PrFetch* fetch, PrStringView name) {
     TextBuffer joined{};
     bool any = false;
     for (uint32_t i = 0; i < prFetchHeaderCount(fetch); ++i) {
         PrFetchHeader header = prFetchHeader(fetch, i);
-        if (!asciiEqualsFold(header.name, "server-timing"))
+        if (!asciiEqualsFold(header.name, name))
             continue;
         if (any)
             textAppend(&joined, ",");
@@ -397,6 +400,10 @@ PrString serverTimingOf(const PrFetch* fetch) {
     PrString result = any ? prStringCopy(textView(&joined)) : prStringNull();
     textReset(&joined);
     return result;
+}
+
+PrString serverTimingOf(const PrFetch* fetch) {
+    return headersJoined(fetch, "server-timing");
 }
 
 // Receives the fetch's events on the loop.
@@ -414,6 +421,9 @@ void fetchEvent(void* PR_NULLABLE context, PrFetch* handle, PrFetchEvent event) 
             if (encoding.data != nullptr)
                 fetch->contentEncoding = prStringCopy(encoding);
             fetch->serverTiming = serverTimingOf(handle);
+            fetch->responseReferrerPolicy = headersJoined(handle, "referrer-policy");
+            if (prFetchSentReferrer(handle).data != nullptr)
+                fetch->sentReferrer = prStringCopy(prFetchSentReferrer(handle));
             fetch->responseUrl = prStringCopy(prFetchUrl(handle));
             fetch->responseType = prFetchResponseType(handle);
             if (fetch->scriptDone != nullptr) {
@@ -491,6 +501,7 @@ void beginOnLoop(void* PR_NULLABLE data) {
         .redirect = fetch->redirect,
         .origin = prStringView(&fetch->origin),
         .referrer = prStringView(&fetch->referrer),
+        .referrerPolicy = fetch->referrerPolicy,
     };
     PrStatus status = prFetchCreate(fetch->fetcher, &desc, fetchEvent, fetch, &fetch->fetch);
     headers.reset();
@@ -561,6 +572,7 @@ HtmlFetch* createFetch(PrHtmlPage* page, PrStringView url, DomFetchDestination d
     fetch->url = prStringCopy(url);
     fetch->origin = htmlWindowOrigin(page->window);
     fetch->referrer = prUrlSerialize(page->window->document->url, PrUrlSerialization_Whole);
+    fetch->referrerPolicy = page->window->document->referrerPolicy;
     fetch->mode = settings.mode;
     fetch->credentials = settings.credentials;
     prMutexInit(&fetch->lock);
@@ -587,7 +599,8 @@ void answerFetch(HtmlFetch* fetch, PrStatus status) {
 // call. Any other result is passed in a task once the response arrives. If the context drops the fetch first, it calls
 // `drop` with `data` instead.
 void startFetch(PrHtmlPage* page, PrStringView url, DomFetchDestination destination, PrFetchInitiator initiator,
-        FetchSettings settings, DomFetchFn done, void* PR_NULLABLE data, void (*PR_NULLABLE drop)(void* PR_NULLABLE data)) {
+        PrStringView referrerPolicy, FetchSettings settings, DomFetchFn done, void* PR_NULLABLE data,
+        void (*PR_NULLABLE drop)(void* PR_NULLABLE data)) {
     if (asciiStartsWithFold(url, "data:") || page->host.fetcher == nullptr) {
         PrString body = {};
         PrString contentType = {};
@@ -606,6 +619,8 @@ void startFetch(PrHtmlPage* page, PrStringView url, DomFetchDestination destinat
     }
     HtmlFetch* fetch = createFetch(page, url, destination, settings);
     fetch->initiator = initiator;
+    // An element's valid attribute overrides its document's policy (html/#referrer-policy-attribute).
+    domReferrerPolicyFromToken(referrerPolicy, &fetch->referrerPolicy);
     fetch->done = done;
     fetch->data = data;
     fetch->drop = drop;
@@ -633,7 +648,7 @@ void fetchHost(void* PR_NULLABLE context, const DomFetchRequest* request, DomFet
             initiator = PrFetchInitiator_Video;
             break;
     }
-    startFetch(page, request->url, request->destination, initiator,
+    startFetch(page, request->url, request->destination, initiator, request->referrerPolicy,
         fetchSettingsOf(request->destination, request->cors), done, data, drop);
 }
 
@@ -756,8 +771,8 @@ void fetchModule(PrHtmlPage* page, HtmlModuleIndex index) {
     FetchSettings mode{PrFetchMode_Cors, module.credentials, false};
     ModuleFetch* fetch = allocZeroed<ModuleFetch>();
     *fetch = ModuleFetch{page, index};
-    startFetch(page, prStringView(&request), DomFetchDestination_Script, PrFetchInitiator_Script, mode, moduleFetched,
-        fetch, dropModuleFetch);
+    startFetch(page, prStringView(&request), DomFetchDestination_Script, PrFetchInitiator_Script,
+        PrStringView{nullptr, 0}, mode, moduleFetched, fetch, dropModuleFetch);
     prStringReset(&request);
 }
 
@@ -957,8 +972,8 @@ void fetchScript(PrHtmlPage* page, PreparedScript* script, PrStringView src, con
     prUrlDestroy(resource);
     script->fetching = true;
     FetchSettings mode = scriptSettingsOf(script->element, script->kind);
-    startFetch(page, prStringView(&request), DomFetchDestination_Script, PrFetchInitiator_Script, mode, scriptFetched,
-        script, dropScriptFetch);
+    startFetch(page, prStringView(&request), DomFetchDestination_Script, PrFetchInitiator_Script,
+        domAttributeValue(script->element, "referrerpolicy"), mode, scriptFetched, script, dropScriptFetch);
     prStringReset(&request);
 }
 
@@ -1429,13 +1444,21 @@ bool inWindow(const PrHtmlPage* page, PrDomElement* element) {
 
 // Receives the result of fetching an iframe's src. The iframe's browsing context navigates to the resource, or to an
 // empty document at its URL if the resource does not load. If the host gives no MIME type, the resource is HTML.
+// Returns the Referrer-Policy of the response whose callback is running, or the null view.
+PrStringView referrerPolicyOfFetch(const PrHtmlPage* page) {
+    const HtmlFetch* fetch = page->completingFetch;
+    return fetch != nullptr ? prStringView(&fetch->responseReferrerPolicy) : PrStringView{nullptr, 0};
+}
+
 void frameFetched(void* PR_NULLABLE data, const DomFetchResult* result) {
     EmbedFetch* fetch = static_cast<EmbedFetch*>(data);
     if (isCurrent(fetch) && inWindow(fetch->page, fetch->element)) {
         bool loaded = result->status == PrStatus_Ok;
         PrHtmlResponseHeaders headers{};
         if (loaded)
-            headers = PrHtmlResponseHeaders{result->contentType, result->contentLanguage};
+            headers = PrHtmlResponseHeaders{
+                result->contentType, result->contentLanguage, referrerPolicyOfFetch(fetch->page),
+            };
         // The document replaces the initial about:blank, as a navigation of the iframe's browsing context would.
         dropFrame(fetch->page, fetch->element);
         attachFrame(fetch->page, fetch->element, loaded ? result->body : "", prStringView(&fetch->url), headers);
@@ -1508,6 +1531,7 @@ void frameChanged(PrHtmlPage* page, PrDomElement* element) {
         PrString request = prUrlSerialize(resolved, PrUrlSerialization_ExcludeFragment);
         startFetch(page, prStringView(&request), DomFetchDestination_Document,
             element->tag == PrDomTag_Frame ? PrFetchInitiator_Frame : PrFetchInitiator_Iframe,
+            domAttributeValue(element, "referrerpolicy"),
             fetchSettingsOf(DomFetchDestination_Document, DomCorsSettings_NoCors), frameFetched, fetch, dropEmbedFetch);
         prStringReset(&request);
     } else {
@@ -1715,6 +1739,7 @@ void updateImage(PrHtmlPage* page, PrDomElement* element, PrStringView source, d
             EmbedFetch* fetch = newEmbedFetch(page, element, prUrlSerialize(url, PrUrlSerialization_Whole));
             startFetch(page, prStringView(&request), DomFetchDestination_Image,
                 element->tag == PrDomTag_Input ? PrFetchInitiator_Input : PrFetchInitiator_Img,
+                domAttributeValue(element, "referrerpolicy"),
                 fetchSettingsOf(DomFetchDestination_Image, corsOf(element)), imageFetched, fetch, dropEmbedFetch);
         }
         prStringReset(&request);
@@ -1791,7 +1816,7 @@ void objectFetched(void* PR_NULLABLE data, const DomFetchResult* result) {
             queueElementEvent(fetch->page, element, !decoded);
         } else if (asciiEqualsFold(essence, "text/html") || prMimeTypeIsXml(essence)) {
             attachFrame(fetch->page, element, result->body, prStringView(&fetch->url),
-                PrHtmlResponseHeaders{essence, result->contentLanguage});
+                PrHtmlResponseHeaders{essence, result->contentLanguage, PrStringView{nullptr, 0}});
         }
     }
     dropEmbedFetch(fetch);
@@ -1816,6 +1841,7 @@ void objectChanged(PrHtmlPage* page, PrDomElement* element) {
         PrString request = prUrlSerialize(url, PrUrlSerialization_ExcludeFragment);
         startFetch(page, prStringView(&request), DomFetchDestination_Object,
             element->tag == PrDomTag_Embed ? PrFetchInitiator_Embed : PrFetchInitiator_Object,
+            domAttributeValue(element, "referrerpolicy"),
             fetchSettingsOf(DomFetchDestination_Object, DomCorsSettings_NoCors), objectFetched, fetch, dropEmbedFetch);
         prStringReset(&request);
     } else {
@@ -2204,6 +2230,7 @@ void shareWithWindow(PrHtmlPage* page, PrHtmlWindow* window) {
 // storage objects go. The window lives on while references to it remain.
 void closeWindow(PrHtmlPage* page) {
     htmlPerformanceReset(&page->window->performance);
+    htmlWindowRevokeObjectUrls(page->window);
     if (page->host.windowClosed != nullptr)
         page->host.windowClosed(page->host.context, page);
     PrHtmlWindow* window = page->window;
@@ -2220,6 +2247,7 @@ void closeWindow(PrHtmlPage* page) {
     window->performance.listeners = nullptr;
     domListenersDestroy(window->orientation.listeners);
     window->orientation.listeners = nullptr;
+    prStringReset(&window->referrer);
     for (PrHtmlStorage& storage : window->storage)
         htmlStorageReset(&storage);
 }
@@ -2312,6 +2340,23 @@ PrStatus beginDocument(PrHtmlPage* page, PrStringView url, const PrHtmlResponseH
         report.anchor.windowTime = 0;
     }
     htmlPerformanceBeginNavigation(page->window, prStringView(&committed), fetched ? &report : nullptr, navigationType);
+    // The document's referrer is what its request sent. A srcdoc document's is its container's URL.
+    prStringReset(&page->window->referrer);
+    if (fetched && report.sentReferrer.data != nullptr)
+        page->window->referrer = prStringCopy(report.sentReferrer);
+    else if (!fetched && page->window->parent != nullptr && prStringView(&committed) == "about:srcdoc")
+        page->window->referrer = prUrlSerialize(page->window->parent->document->url, PrUrlSerialization_Whole);
+    // A response's policy is the document's (html/#initialise-the-document-object).
+    document->referrerPolicy = PrFetchReferrerPolicy_Default;
+    PrStringView policies = given.referrerPolicy;
+    size_t policyStart = 0;
+    for (size_t at = 0; at <= policies.size && policies.data != nullptr; ++at) {
+        if (at == policies.size || policies.data[at] == ',') {
+            domReferrerPolicyFromToken(stringTrim(stringSlice(policies, policyStart, at - policyStart)),
+                &document->referrerPolicy);
+            policyStart = at + 1;
+        }
+    }
     prStringReset(&committed);
     if (page->host.documentCommitted != nullptr)
         page->host.documentCommitted(page->host.context, page);
@@ -2417,7 +2462,7 @@ PrStatus restartDocument(PrHtmlPage* page) {
     PrString url = prUrlSerialize(old->url, PrUrlSerialization_Whole);
     PrString contentType = prStringClone(&old->contentType);
     PrString language = prStringClone(&old->languageHeader);
-    PrHtmlResponseHeaders headers = {prStringView(&contentType), prStringView(&language)};
+    PrHtmlResponseHeaders headers = {prStringView(&contentType), prStringView(&language), PrStringView{nullptr, 0}};
     htmlParserReset(&page->parser);
     PrStatus status = beginDocument(page, prStringView(&url), &headers);
     prStringReset(&url);
@@ -2803,6 +2848,8 @@ struct Navigation {
     HtmlHistoryCommit commit;   // how the document that the navigation loads takes its entry
     uint32_t target;
     bool javascript;            // true if the URL's scheme is javascript
+    PrString referrer;          // the URL of the document that started the navigation, or the null string
+    PrFetchReferrerPolicy referrerPolicy;
     bool sameOrigin;            // true if the document that started the navigation shares the origin of the page
 };
 
@@ -2810,6 +2857,7 @@ void dropNavigation(void* data) {
     Navigation* navigation = static_cast<Navigation*>(data);
     prStringReset(&navigation->url);
     prStringReset(&navigation->origin);
+    prStringReset(&navigation->referrer);
     prMemoryFree(navigation);
 }
 
@@ -2862,6 +2910,10 @@ void runNavigation(void* data) {
         } else {
             abortDocument(page);
             htmlHistoryExpect(page->window->history, navigation->commit, navigation->target);
+            prStringReset(&page->nextReferrer);
+            page->nextReferrer = navigation->referrer;
+            page->nextReferrerPolicy = navigation->referrerPolicy;
+            navigation->referrer = prStringNull();
             startNavigation(page, prStringView(&navigation->url), prStringView(&navigation->origin));
         }
     }
@@ -2888,6 +2940,8 @@ struct DocumentLoadPiece {
     PrNetError error;           // Fail: PrNetError_None for a URL that the fetcher does not take
     PrString contentEncoding;   // Head
     PrString serverTiming;      // Head: the Server-Timing headers joined by commas
+    PrString referrerPolicy;    // Head: the Referrer-Policy headers joined by commas
+    PrString sentReferrer;      // Head: the referrer that the request sent
     uint16_t responseStatus;    // Head
     PrFetchTiming timing;       // Head and End: the fetch's measurements so far
 };
@@ -2900,6 +2954,8 @@ void releaseDocumentLoad(HtmlDocumentLoad* load) {
     prStringReset(&load->contentType);
     prStringReset(&load->contentEncoding);
     prStringReset(&load->serverTiming);
+    prStringReset(&load->referrer);
+    prStringReset(&load->sentReferrer);
     prMutexReset(&load->lock);
     prMemoryFree(load);
 }
@@ -2910,6 +2966,8 @@ void freePiece(DocumentLoadPiece* piece) {
     prStringReset(&piece->contentLanguage);
     prStringReset(&piece->contentEncoding);
     prStringReset(&piece->serverTiming);
+    prStringReset(&piece->referrerPolicy);
+    prStringReset(&piece->sentReferrer);
     textReset(&piece->bytes);
     prMemoryFree(piece);
 }
@@ -2986,9 +3044,12 @@ void receivePiece(void* PR_NULLABLE data) {
                 prStringReset(&load->serverTiming);
                 load->serverTiming = prStringCopy(prStringView(&piece->serverTiming));
                 load->responseStatus = piece->responseStatus;
+                prStringReset(&load->sentReferrer);
+                load->sentReferrer = prStringClone(&piece->sentReferrer);
                 PrHtmlResponseHeaders headers{
                     .contentType = prStringView(&piece->contentType),
                     .contentLanguage = prStringView(&piece->contentLanguage),
+                    .referrerPolicy = prStringView(&piece->referrerPolicy),
                 };
                 if (htmlPageBeginStreamedLoad(page, prStringView(&piece->url), &headers) != PrStatus_Ok) {
                     PrString url = prStringCopy(prStringView(&load->url));
@@ -3094,6 +3155,9 @@ void documentLoadEvent(void* PR_NULLABLE context, PrFetch* fetch, PrFetchEvent e
             if (encoding.data != nullptr)
                 piece->contentEncoding = prStringCopy(encoding);
             piece->serverTiming = serverTimingOf(fetch);
+            piece->referrerPolicy = headersJoined(fetch, "referrer-policy");
+            if (prFetchSentReferrer(fetch).data != nullptr)
+                piece->sentReferrer = prStringCopy(prFetchSentReferrer(fetch));
             piece->responseStatus = prFetchStatus(fetch);
             piece->timing = prFetchTiming(fetch);
             postPiece(load, piece);
@@ -3135,6 +3199,8 @@ void beginLoadOnLoop(void* PR_NULLABLE data) {
         .mode = PrFetchMode_Navigate,
         .credentials = PrFetchCredentials_Include,
         .origin = prStringView(&load->origin),
+        .referrer = prStringView(&load->referrer),
+        .referrerPolicy = load->referrerPolicy,
     };
     if (prFetchCreate(load->fetcher, &desc, documentLoadEvent, load, &load->fetch) != PrStatus_Ok) {
         postPiece(load, newPiece(LoadPiece_Fail));
@@ -3252,6 +3318,7 @@ bool documentFetchReport(PrHtmlPage* page, HtmlResourceReport* out) {
         .contentType = prStringView(&load->contentType),
         .contentEncoding = prStringView(&load->contentEncoding),
         .serverTiming = prStringView(&load->serverTiming),
+        .sentReferrer = prStringView(&load->sentReferrer),
     };
     return true;
 }
@@ -3272,6 +3339,10 @@ PrStatus startNavigation(PrHtmlPage* page, PrStringView url, PrStringView origin
     load->url = prStringCopy(url);
     load->origin = prStringCopy(origin);
     load->anchor = htmlPerformanceFetchAnchor(page->window);
+    load->referrer = page->nextReferrer;
+    load->referrerPolicy = page->nextReferrerPolicy;
+    page->nextReferrer = prStringNull();
+    page->nextReferrerPolicy = PrFetchReferrerPolicy_Default;
     prMutexInit(&load->lock);
     load->references.store(2);
     page->documentLoad = load;
@@ -3382,6 +3453,10 @@ bool htmlPageNavigate(PrHtmlWindow* window, const PrHtmlWindow* PR_NULLABLE sour
     // A traversal loads an entry that the session history holds already, as the user's back and forward buttons do, so
     // it reaches no URL that the user's navigations did not. Any other navigation is the document's own.
     navigation->origin = source == nullptr ? prStringNull() : htmlWindowOrigin(source);
+    if (source != nullptr) {
+        navigation->referrer = prUrlSerialize(source->document->url, PrUrlSerialization_Whole);
+        navigation->referrerPolicy = source->document->referrerPolicy;
+    }
     navigation->commit = commit;
     navigation->target = target;
     navigation->javascript = javascript;
@@ -3711,6 +3786,13 @@ PrStatus prHtmlPageFetch(PrHtmlPage* page, const PrFetchClientRequest* request, 
     HtmlFetch* fetch = createFetch(page, prStringView(&url), DomFetchDestination_Empty, settings);
     prStringReset(&url);
     fetch->initiator = request->initiator;
+    if (request->referrerPolicy != PrFetchReferrerPolicy_Default)
+        fetch->referrerPolicy = request->referrerPolicy;
+    if (request->referrer.data != nullptr) {
+        prStringReset(&fetch->referrer);
+        if (request->referrer.size != 0)
+            fetch->referrer = prStringCopy(request->referrer);
+    }
     fetch->scriptDone = done;
     fetch->data = context;
     fetch->redirect = request->redirect;
@@ -3758,6 +3840,11 @@ void prHtmlPageCancelFetch(PrHtmlPage* page, void* PR_NULLABLE context) {
             dropFetch(fetch);
         return;
     }
+}
+
+void prHtmlPageDropScriptWork(PrHtmlPage* page) {
+    htmlPerformanceReset(&page->window->performance);
+    htmlWindowClearTasks(page->window);
 }
 
 bool prHtmlPageIsNavigating(const PrHtmlPage* page) {

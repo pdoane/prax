@@ -253,8 +253,10 @@ void releaseNode(PrDomNode* node) {
         case PrDomNodeType_Element: {
             PrDomElement* element = static_cast<PrDomElement*>(node);
             domNotifyElementDestroyed(element);
-            if (element->state != nullptr) {
+            // An element with no state may still be on the document's list of elements with a form attribute.
+            if (element->state != nullptr || element->document->formAttributed.count != 0)
                 domControlDestroy(element);
+            if (element->state != nullptr) {
                 if (element->state->forgetEmbedded != nullptr)
                     element->state->forgetEmbedded(element->state->embedded);
                 domCustomDestroy(element->state->custom);

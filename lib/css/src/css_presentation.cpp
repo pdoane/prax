@@ -3191,6 +3191,10 @@ void dropEntry(PrCssPresentation* r, uint32_t at) {
             break;
         }
     }
+    if ((entry.ops & CssPresentationBoxOp_Queued) != 0) {
+        domNodeRetain(const_cast<PrDomNode*>(entry.node));
+        r->boxQueueDropped.push(entry.node);
+    }
     entry.node->presentationEntry = 0;
     if (entry.animated)
         cssAnimateForget(r, entry.node);
@@ -4280,6 +4284,12 @@ void prefetch(PrCssPresentation* r, PrDomElement* element, const CssComputedStyl
         domResolveIds(r->document);
     prTaskPoolRun(pool, width, width, runPrefetch, &job);
     r->accrued.elementsStyledAhead += count;
+}
+
+void releaseDroppedQueue(PrCssPresentation* r) {
+    for (uint32_t i = 0; i < r->boxQueueDropped.count; ++i)
+        domNodeRelease(const_cast<PrDomNode*>(r->boxQueueDropped.data[i]));
+    r->boxQueueDropped.clear();
 }
 
 // Queues box operations for the entry's box. Applying them makes or erases the box as `boxed` says, and performs `ops`.
@@ -6563,6 +6573,7 @@ void applyBoxes(PrCssPresentation* r) {
         r->entries.data[at].ops = 0;
     }
     r->boxQueue.clear();
+    releaseDroppedQueue(r);
     applyFirsts(r);
     // No queue or box refers to the pseudo-elements dropped before now.
     for (uint32_t i = 0; i < r->retired.count; ++i)
@@ -7317,6 +7328,8 @@ void prCssPresentationDestroy(PrCssPresentation* PR_NULLABLE presentation) {
     if (r == nullptr)
         return;
     own(r);
+    releaseDroppedQueue(r);
+    r->boxQueueDropped.reset();
     if (r->agent->worker != nullptr)
         prLayoutWorkerForget(r->agent->worker, r->tree);
     r->erasing.reset();

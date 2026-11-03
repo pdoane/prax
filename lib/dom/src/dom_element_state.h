@@ -48,6 +48,10 @@ PrStringView domDocumentLanguage(const PrDomDocument* document);
 // other element.
 void domMetaConnected(PrDomElement* element);
 
+// Finds the referrer policy that `token` names (referrer-policy/#referrer-policies), with the values of
+// PrFetchReferrerPolicy. Returns false if it names none. The empty token names none.
+bool domReferrerPolicyFromToken(PrStringView token, uint8_t* out);
+
 // Returns true if the element's directionality is 'rtl' rather than 'ltr' (html/#the-directionality).
 bool domElementRtl(const PrDomElement* element);
 

@@ -43,7 +43,7 @@ PrStatus prTestHtmlCApi(PrStringView source) {
     PrDomProcessingInstruction* instruction = NULL;
     (void)prDomProcessingInstructionCreate(document, PR_SV("target"), PR_SV("data"), &instruction);
 
-    PrHtmlResponseHeaders headers = {PR_SV("text/html"), PR_SV("en")};
+    PrHtmlResponseHeaders headers = {.contentType = PR_SV("text/html"), .contentLanguage = PR_SV("en")};
     PrStatus status = prHtmlPageLoad(page, source, PR_SV("about:blank"), &headers);
     prHtmlPageDestroy(page);
     return status;

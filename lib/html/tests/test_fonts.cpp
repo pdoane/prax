@@ -168,7 +168,7 @@ struct Served {
         host.compress = decompress ? compress : nullptr;
         host.fetcher = fetcher.fetcher;
         PrHtmlPage* page = prHtmlPageCreate(&host);
-        PrHtmlResponseHeaders headers = {"text/html; charset=utf-8", PrStringView{nullptr, 0}};
+        PrHtmlResponseHeaders headers = {.contentType = "text/html; charset=utf-8"};
         REQUIRE(prHtmlPageLoad(page, html, "https://fonts.test/page.html", &headers) == PrStatus_Ok);
         return page;
     }

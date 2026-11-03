@@ -31,7 +31,7 @@ static_assert(sizeof(DomText) == 128);
 static_assert(sizeof(DomComment) == 128);
 static_assert(sizeof(DomProcessingInstruction) == 160);
 static_assert(sizeof(DomDocumentType) == 192);
-static_assert(sizeof(DomDocument) == 608);
+static_assert(sizeof(DomDocument) == 616);
 
 // Returns the fragment that a template element holds (html/#the-template-element), or null for any other element.
 inline PrDomNode* PR_NULLABLE domElementContents(const PrDomElement* element) {

@@ -224,6 +224,10 @@ PrString prXhrResponseHeaders(const PrXhr* xhr);
 // network error. The view is valid until the request is opened again.
 PrByteView prXhrResponseBody(const PrXhr* xhr);
 
+// The final MIME type (xhr/#final-mime-type): the override, or else the response's Content-Type, or the null view. The
+// view is valid until the request's response changes.
+PrStringView prXhrFinalMimeType(const PrXhr* object);
+
 // Returns the response's body decoded as text (xhr/#text-response), in the charset that the final MIME type names, or
 // UTF-8. The caller releases the string with prStringReset.
 PrString prXhrResponseText(const PrXhr* xhr);

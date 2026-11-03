@@ -107,6 +107,9 @@ struct DomFetchRequest {
     DomFetchDestination destination;
     DomCorsSettings cors;
     DomFetchInitiator initiator;
+
+    // The element's referrerpolicy attribute, or the null view.
+    PrStringView referrerPolicy = PrStringView{nullptr, 0};
 };
 
 // The result of a fetch: the resource's bytes and its MIME type, or a network error for a status other than Ok. The
@@ -271,6 +274,7 @@ struct DomDocument : PrDomNode {
     // pragma set, and the first tag of the Content-Language header that the document was loaded with. Each is the null
     // string if nothing gave one.
     PrString languagePragma;
+
     PrString languageHeader;
 
     PrDomNode* PR_NULLABLE detached;                            // roots of the document's other trees
@@ -364,6 +368,7 @@ struct DomDocument : PrDomNode {
     bool controls;
 
     DomQuirks quirks;
+    uint8_t referrerPolicy;     // referrer-policy/#referrer-policies, by the values of PrFetchReferrerPolicy
 
     // By DomHook, the bits of the subscribers that have the entry (dom_hooks.h).
     uint8_t followers[kDomDocumentHooks];

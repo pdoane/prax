@@ -4107,7 +4107,7 @@ TEST_CASE("an SVG document lays out its root svg element, a replaced box, as the
     PrHtmlHost host = prHtmlHostDefault();
     host.font = fonts.defaultFont;
     host.shaper = fonts.shaper;
-    PrHtmlResponseHeaders svg = {"image/svg+xml", PrStringView{nullptr, 0}};
+    PrHtmlResponseHeaders svg = {.contentType = "image/svg+xml"};
     const char* source = "<svg xmlns='http://www.w3.org/2000/svg'><rect width='10' height='10'/></svg>";
     PrHtmlPage* whole = prHtmlPageCreate(&host);
     REQUIRE(prHtmlPageLoad(whole, source, "about:blank", &svg) == PrStatus_Ok);
@@ -4138,7 +4138,7 @@ TEST_CASE("a document streamed in pieces renders as it arrives, once its head is
     PrHtmlPage* page = prHtmlPageCreate(&host);
     // The response names its charset, so the parse starts with the first piece instead of waiting for the bytes that
     // the prescan reads.
-    PrHtmlResponseHeaders utf8 = {"text/html; charset=utf-8", PrStringView{nullptr, 0}};
+    PrHtmlResponseHeaders utf8 = {.contentType = "text/html; charset=utf-8"};
     REQUIRE(prHtmlPageBeginLoad(page, "about:blank", &utf8) == PrStatus_Ok);
     PrCssPresentation* presentation = prHtmlPagePresentation(page);
     PrDomDocument* document = prHtmlWindowDocument(prHtmlPageWindow(page));
@@ -4223,7 +4223,7 @@ TEST_CASE("a load restyles on one thread, and a change once the load is in divid
     PrHtmlPage* page = prHtmlPageCreate(&host);
     // The response names its charset, so the parse starts with the first piece instead of waiting for the bytes that
     // the prescan reads.
-    PrHtmlResponseHeaders utf8 = {"text/html; charset=utf-8", PrStringView{nullptr, 0}};
+    PrHtmlResponseHeaders utf8 = {.contentType = "text/html; charset=utf-8"};
     REQUIRE(prHtmlPageBeginLoad(page, "about:blank", &utf8) == PrStatus_Ok);
     PrCssPresentation* presentation = prHtmlPagePresentation(page);
     PrDomDocument* document = prHtmlWindowDocument(prHtmlPageWindow(page));
