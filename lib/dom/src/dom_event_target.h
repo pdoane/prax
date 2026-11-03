@@ -26,18 +26,22 @@ enum {
     DomTargetType_AbortSignal,              // an AbortSignal (dom/#interface-AbortSignal)
 
     // Reference-counted targets: a Window (html/#the-window-object), a MediaQueryList
-    // (cssom-view-1/#the-mediaquerylist-interface), an XMLHttpRequest (xhr/#interface-xmlhttprequest) and a MessagePort
-    // (html/#message-ports).
+    // (cssom-view-1/#the-mediaquerylist-interface), an XMLHttpRequest (xhr/#interface-xmlhttprequest), a MessagePort
+    // (html/#message-ports), a FileReader (FileAPI/#APIASynch), a MediaSource (media-source-2/#mediasource) and a
+    // SourceBuffer (media-source-2/#sourcebuffer).
     DomTargetType_Window = DomTargetTypeFlag_Counted | 0x100,
     DomTargetType_MediaQueryList,
     DomTargetType_XmlHttpRequest,
     DomTargetType_MessagePort,
-    DomTargetType_FileReader,               // a FileReader (FileAPI/#APIASynch)
+    DomTargetType_FileReader,
+    DomTargetType_MediaSource,
+    DomTargetType_SourceBuffer,
 
     // Parts of other targets: a PreferenceObject (mediaqueries-5/#preferenceobject), a Performance
     // (hr-time-3/#sec-performance), a ScreenOrientation (screen-orientation/#screenorientation-interface), an
     // XMLHttpRequestUpload (xhr/#xmlhttprequestupload), a TextTrackList (html/#texttracklist), an AudioTrackList
-    // (html/#audiotracklist) and a VideoTrackList (html/#videotracklist).
+    // (html/#audiotracklist), a VideoTrackList (html/#videotracklist) and a SourceBufferList
+    // (media-source-2/#sourcebufferlist).
     DomTargetType_Preference = DomTargetTypeFlag_Part | 0x100,
     DomTargetType_Performance,
     DomTargetType_ScreenOrientation,
@@ -45,6 +49,7 @@ enum {
     DomTargetType_TextTrackList,
     DomTargetType_AudioTrackList,
     DomTargetType_VideoTrackList,
+    DomTargetType_SourceBufferList,
 };
 typedef uint16_t DomTargetType;
 

@@ -9,6 +9,7 @@
 
 #include "css/src/css_presentation_hooks.h"
 #include "dom/src/dom_element_state.h"
+#include "html/src/html_media_source.h"
 
 namespace pr_impl {
 
@@ -141,6 +142,12 @@ void addPlayed(HtmlMedia* media, double start, double end) {
     ranges.insert(at + 1, end);
 }
 
+// The time on the clock that the element's timeline runs on, in milliseconds: its window's clock, which the window's
+// timers also run on, or the system's monotonic clock while no window runs the element.
+double timelineNow(const HtmlMedia* media) {
+    return media->window != nullptr ? htmlWindowClock(media->window) : prTimeMonotonicMilliseconds();
+}
+
 // Returns true if the element's audio can play at its rate. At any other rate, the element plays without sound.
 bool audioPlaysAtRate(const HtmlMedia* media) {
     return media->rate >= kPrAudioSourceMinRate && media->rate <= kPrAudioSourceMaxRate;
@@ -169,10 +176,12 @@ double currentPosition(const HtmlMedia* media) {
         position = clock.valid ? clock.position + elapsed / 1000 * media->rate : media->position;
         position = position < media->position ? media->position : position;
     } else {
-        position = media->position + (prTimeMonotonicMilliseconds() - media->since) / 1000 * media->rate;
+        position = media->position + (timelineNow(media) - media->since) / 1000 * media->rate;
     }
     if (!isNanF64(media->duration) && position > media->duration)
         position = media->duration;
+    if (position > media->playableEnd)
+        position = media->playableEnd > media->position ? media->playableEnd : media->position;
     return position < 0 ? 0 : position;
 }
 
@@ -183,7 +192,7 @@ void settlePosition(HtmlMedia* media) {
         addPlayed(media, media->position < position ? media->position : position,
             media->position < position ? position : media->position);
     media->position = position;
-    media->since = prTimeMonotonicMilliseconds();
+    media->since = timelineNow(media);
 }
 
 // Returns true if the element is muted: as a script last set it, or else as its muted attribute says
@@ -221,10 +230,17 @@ void pictureChanged(HtmlMedia* media) {
 
 // Releases the resource's decoder and its decoded frame.
 void closeResource(HtmlMedia* media) {
-    // The source reads the decoder, so it goes first.
+    // The audio source reads the decoder, and the decoder reads a media source's buffers, so they go in that order.
     prAudioSourceDestroy(media->source);
     media->source = nullptr;
     prMediaDecoderDestroy(media->decoder);
+    media->decoder = nullptr;
+    if (media->mediaSource != nullptr) {
+        htmlMediaSourceDetach(media->mediaSource);
+        media->mediaSource = nullptr;
+    }
+    media->playableEnd = kInfinityF64;
+    media->seekWaits = false;
     media->decoder = nullptr;
     prDrawImageRelease(media->frame);
     media->frame = nullptr;
@@ -380,6 +396,8 @@ void timerFired(void* PR_NULLABLE context) {
     domEventFire(media->element, "timeupdate");
     if (end)
         reachedEnd(media);
+    if (media->mediaSource != nullptr)
+        htmlMediaSourceChanged(media);
     schedule(media);
 }
 
@@ -408,6 +426,12 @@ void schedule(HtmlMedia* media) {
         double end = (media->duration - currentPosition(media)) * 1000 / media->rate;
         if (end < wait)
             wait = end;
+    }
+    // A media source stalls at the end of what it has buffered.
+    if (media->rate > 0 && media->playableEnd != kInfinityF64) {
+        double stall = (media->playableEnd - currentPosition(media)) * 1000 / media->rate;
+        if (stall < wait)
+            wait = stall;
     }
     // The timer holds the element.
     PrHtmlTimerHandler handler = {
@@ -446,7 +470,7 @@ void setReadyState(HtmlMedia* media, PrHtmlMediaReadyState state) {
         // played.
         if (media->paused && media->autoplaying && domAttribute(media->element, PrDomNamespace_None, "autoplay") != nullptr) {
             media->paused = false;
-            media->since = prTimeMonotonicMilliseconds();
+            media->since = timelineNow(media);
             queueEvent(media, "play");
             notifyPlaying(media);
         }
@@ -487,6 +511,22 @@ void startAudio(HtmlMedia* media, const PrMediaInfo& info) {
         return PrAudioChunk{.frames = chunk.frames, .time = chunk.time, .ended = chunk.ended};
     };
     media->source = prAudioSourceCreate(mixer, read, media->decoder);
+}
+
+// Makes the decoder of the element's media source from its active buffers, if it has none, and starts its audio.
+void openSourceDecoder(HtmlMedia* media) {
+    PrMediaCodec* codec = media->window != nullptr ? media->window->mediaCodec : nullptr;
+    if (media->decoder != nullptr || codec == nullptr)
+        return;
+    PrMediaSourceBuffer* buffers[8];
+    uint32_t count = htmlMediaSourceActiveBuffers(media->mediaSource, buffers, 8);
+    if (count == 0)
+        return;
+    PrMediaInfo info{};
+    if (prMediaDecoderCreateFromSource(codec, buffers, count < 8 ? count : 8, &media->decoder, &info) != PrStatus_Ok)
+        return;
+    startAudio(media, info);
+    pictureChanged(media);
 }
 
 bool resourceArrived(HtmlMedia* media, PrStringView body) {
@@ -560,6 +600,27 @@ void candidateFetched(void* PR_NULLABLE data, const DomFetchResult* result) {
 void fetchCandidate(HtmlMedia* media, const PrUrl* url, PrDomElement* PR_NULLABLE source) {
     prStringReset(&media->currentSrc);
     media->currentSrc = prUrlSerialize(url, PrUrlSerialization_Whole);
+    // A URL of a media source attaches the source (media-source-2/#mediasource-attach).
+    PrString whole = prUrlSerialize(url, PrUrlSerialization_ExcludeFragment);
+    PrHtmlMediaSource* mediaSource = nullptr;
+    if (media->window != nullptr)
+        mediaSource = htmlMediaSourceFromUrl(media->window, prStringView(&whole));
+    prStringReset(&whole);
+    if (mediaSource != nullptr) {
+        if (htmlMediaSourceAttach(mediaSource, media)) {
+            media->mediaSource = mediaSource;
+            media->playableEnd = 0;
+            return;
+        }
+        MediaTask* failed = newTask(media);
+        if (source != nullptr) {
+            domNodeHold(source);
+            failed->target = source;
+        }
+        candidateFailed(failed);
+        dropTask(failed);
+        return;
+    }
     MediaTask* fetch = newTask(media);
     if (source != nullptr) {
         domNodeHold(source);
@@ -662,6 +723,25 @@ void resourceSelection(HtmlMedia* media) {
         dropTask(task);
 }
 
+// Queues the end of the latest seek: the media data is at the new position once this task runs, unless a later seek has
+// started, whose own task ends the seeking instead.
+void queueSeekDone(HtmlMedia* media) {
+    MediaTask* done = newTask(media);
+    done->seekCount = media->seeks;
+    done->run = [](MediaTask* task) {
+        HtmlMedia* seeked = task->media;
+        if (task->seekCount != seeked->seeks)
+            return;
+        seeked->seeking = false;
+        seeked->since = timelineNow(seeked);
+        updateFlags(seeked);
+        domEventFire(seeked->element, "timeupdate");
+        domEventFire(seeked->element, "seeked");
+        schedule(seeked);
+    };
+    queueTask(done);
+}
+
 // html/#internal-play-steps
 void internalPlay(HtmlMedia* media) {
     if (media->networkState == PrHtmlMediaNetworkState_Empty)
@@ -673,7 +753,7 @@ void internalPlay(HtmlMedia* media) {
         // html/#internal-play-steps: playing unsets the show poster flag.
         media->showPoster = false;
         pictureChanged(media);
-        media->since = prTimeMonotonicMilliseconds();
+        media->since = timelineNow(media);
         queueEvent(media, "play");
         if (media->readyState <= PrHtmlMediaReadyState_HaveCurrentData)
             queueEvent(media, "waiting");
@@ -730,6 +810,7 @@ void initializePlayback(HtmlMedia* media) {
     media->autoplaying = true;
     media->preservesPitch = true;
     media->loadedData = false;
+    media->playableEnd = kInfinityF64;
     media->showPoster = true;
 }
 
@@ -966,27 +1047,19 @@ void htmlMediaSeek(HtmlMedia* media, double seconds) {
     start->event = "seeking";
     queueTask(start);
     media->position = seconds;
-    media->since = prTimeMonotonicMilliseconds();
+    media->since = timelineNow(media);
     if (media->source != nullptr) {
         prMediaDecoderAudioSeek(media->decoder, seconds);
         prAudioSourceReset(media->source);
     }
-    // The media data is at the new position once the task that follows the seeking event runs.
-    MediaTask* done = newTask(media);
-    done->seekCount = ++media->seeks;
-    done->run = [](MediaTask* task) {
-        // If a later seek has started, its own task ends the seeking instead.
-        HtmlMedia* seeked = task->media;
-        if (task->seekCount != seeked->seeks)
-            return;
-        seeked->seeking = false;
-        seeked->since = prTimeMonotonicMilliseconds();
-        updateFlags(seeked);
-        domEventFire(seeked->element, "timeupdate");
-        domEventFire(seeked->element, "seeked");
-        schedule(seeked);
-    };
-    queueTask(done);
+    ++media->seeks;
+    // A media source may not hold the new position yet, and the seek waits for it
+    // (media-source-2/#mediasource-seeking).
+    media->seekWaits = media->mediaSource != nullptr;
+    if (media->mediaSource != nullptr)
+        htmlMediaSourceChanged(media);
+    else
+        queueSeekDone(media);
     updateFlags(media);
     schedule(media);
 }
@@ -1036,6 +1109,112 @@ void htmlMediaSetVolume(HtmlMedia* media, double volume, bool muted) {
 void htmlMediaSetPreservesPitch(HtmlMedia* media, bool preserves) {
     media->preservesPitch = preserves;
     updateAudio(media);
+}
+
+void htmlMediaSourceMetadata(HtmlMedia* media, PrUVec2 videoExtent) {
+    if (media->readyState != PrHtmlMediaReadyState_HaveNothing)
+        return;
+    if (videoExtent.x != 0 && videoExtent.y != 0 && media->element->tag == PrDomTag_Video) {
+        media->videoWidth = videoExtent.x;
+        media->videoHeight = videoExtent.y;
+        queueEvent(media, "resize");
+    }
+    media->readyState = PrHtmlMediaReadyState_HaveMetadata;
+    queueEvent(media, "loadedmetadata");
+    htmlMediaSourceChanged(media);
+}
+
+void htmlMediaSourceDuration(HtmlMedia* media, double duration) {
+    settlePosition(media);
+    media->duration = duration;
+    queueEvent(media, "durationchange");
+    // A position past the new duration moves to it (media-source-2/#duration-change-algorithm).
+    if (media->position > duration)
+        media->position = duration;
+    schedule(media);
+}
+
+// The time that a media source's data at the position must reach past it for the element to have enough data to play
+// through, in seconds. A source that has ended has all of its data, however much that is.
+constexpr double kEnoughAhead = 10;
+
+// The longest gap in a media source's buffered ranges that playback crosses rather than waits at, in seconds. Edit
+// lists and codec delays leave such gaps, most often before the first frame.
+constexpr double kSkippableGap = 0.25;
+
+void htmlMediaSourceChanged(HtmlMedia* media) {
+    if (media->mediaSource == nullptr || media->readyState == PrHtmlMediaReadyState_HaveNothing)
+        return;
+    openSourceDecoder(media);
+    if (media->decoder != nullptr)
+        prMediaDecoderSetSourceEnded(media->decoder, htmlMediaSourceHasEnded(media->mediaSource));
+    settlePosition(media);
+    Array<PrMediaTimeRange> ranges{};
+    htmlMediaSourceBuffered(media->mediaSource, &ranges);
+    bool ended = htmlMediaSourceHasEnded(media->mediaSource);
+    double position = media->position;
+    // The data at the position: the range that holds it, or one that starts a short gap after it, which playback
+    // crosses so that a page whose first frame starts a little after zero plays from the start.
+    double end = -1;
+    for (uint32_t i = 0; i < ranges.count; ++i) {
+        if (ranges.data[i].start <= position + kSkippableGap && position < ranges.data[i].end)
+            end = ranges.data[i].end;
+    }
+    bool last = end >= 0 && ranges.count != 0 && end == ranges.last().end;
+    ranges.reset();
+    // An ended source plays to the end of its last range, which is the end of the media.
+    bool atEnd = ended && !isNanF64(media->duration) && position >= media->duration;
+    media->playableEnd = end >= 0 ? (ended && last ? kInfinityF64 : end) : (atEnd ? kInfinityF64 : position);
+    PrHtmlMediaReadyState state = PrHtmlMediaReadyState_HaveMetadata;
+    if (atEnd || (end >= 0 && (end - position >= kEnoughAhead || (ended && last))))
+        state = PrHtmlMediaReadyState_HaveEnoughData;
+    else if (end > position)
+        state = PrHtmlMediaReadyState_HaveFutureData;
+    else if (end >= 0)
+        state = PrHtmlMediaReadyState_HaveCurrentData;
+    // A playing element that runs out of data waits for more (html/#ready-states).
+    if (state < PrHtmlMediaReadyState_HaveFutureData && media->readyState >= PrHtmlMediaReadyState_HaveFutureData &&
+            !media->paused)
+        queueEvent(media, "waiting");
+    if (media->seekWaits && state >= PrHtmlMediaReadyState_HaveCurrentData) {
+        media->seekWaits = false;
+        queueSeekDone(media);
+    }
+    if (state != media->readyState)
+        setReadyState(media, state);
+    else
+        schedule(media);
+    pictureChanged(media);
+}
+
+void htmlMediaSourceFailed(HtmlMedia* media, PrHtmlMediaError error) {
+    // An error before the metadata is a failure of the resource (media-source-2/#end-of-stream-algorithm).
+    if (media->readyState == PrHtmlMediaReadyState_HaveNothing) {
+        sourceFailed(media, "The media source ended with an error");
+        return;
+    }
+    MediaTask* task = newTask(media);
+    task->run = [](MediaTask* task) {
+        domEventFire(task->media->element, "error");
+    };
+    media->error = error;
+    media->networkState = PrHtmlMediaNetworkState_Idle;
+    queueTask(task);
+    updateFlags(media);
+}
+
+void htmlMediaSourceTracksChanging(HtmlMedia* media) {
+    prAudioSourceDestroy(media->source);
+    media->source = nullptr;
+    prMediaDecoderDestroy(media->decoder);
+    media->decoder = nullptr;
+    prDrawImageRelease(media->frame);
+    media->frame = nullptr;
+    media->frameSerial = 0;
+}
+
+bool htmlMediaSourceHasError(const HtmlMedia* media) {
+    return media->error != PrHtmlMediaError_None;
 }
 
 PrHtmlCanPlay htmlCanPlayType(const PrHtmlWindow* PR_NULLABLE window, PrStringView type) {

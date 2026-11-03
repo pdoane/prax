@@ -7,6 +7,8 @@
 
 #include "pr/base.h"
 #include "pr/byte_view.h"
+#include "pr/media_segment.h"
+#include "pr/media_source.h"
 #include "pr/pixels.h"
 #include "pr/status.h"
 #include "pr/string_view.h"
@@ -63,10 +65,34 @@ struct PrMediaDecoder {
     PrMediaCodec* codec;
 };
 
+// A decoder of one track's coded frames, one frame at a time, which a codec creates for a media source. It is used by
+// one thread at a time. `kind` is the kind of its track.
+typedef struct PrMediaSampleDecoder PrMediaSampleDecoder;
+struct PrMediaSampleDecoder {
+    PrMediaCodec* codec;
+    PrMediaTrackKind kind;
+};
+
+// What a sample decoder produces as it decodes, during the call that decodes. A video decoder gives images, each with
+// one reference that passes to the sink, which the codec's imageRelease releases. An audio decoder gives interleaved
+// samples in the format that it was created for, which are valid only during the call, and `time` says where the first
+// lies on the track's timeline.
+typedef struct PrMediaSampleSink {
+    void (*PR_NULLABLE image)(void* PR_NULLABLE context, void* image, double presentation);
+    void (*PR_NULLABLE samples)(void* PR_NULLABLE context, const float* samples, uint32_t frames, double time);
+    void* PR_NULLABLE context;
+} PrMediaSampleSink;
+
 // The function table of a codec, placed at the start of the backend's state. Each function member implements the public
 // function of the same name. A null `destroy` means there is nothing to free, a null `decoderFrame` that the codec
 // decodes no frames, and a null `decoderAudioStart` that it decodes no audio, and then `decoderAudioSeek` and
 // `decoderAudioRead` are null too. Callers use the functions below, never these members.
+//
+// The sample members decode the coded frames of media sources. A null `sampleDecoderCreate` means that the codec
+// decodes none, and then the other sample members are null too, and a null `supportsSourceType` means that the codec's
+// answer for a media source is its answer for a resource. `sampleDecode` returns false if the frame does not decode,
+// and `sampleDecoderFlush` drops what the decoder holds of the frames before, for a jump on the timeline. An image is a
+// decoded video frame: `imageLock` makes its pixels readable, which stay so until `imageUnlock`.
 struct PrMediaCodec {
     void (*PR_NULLABLE destroy)(PrMediaCodec* codec);
     PrMediaSupport (*supportsType)(PrMediaCodec* codec, PrStringView type);
@@ -79,6 +105,16 @@ struct PrMediaCodec {
     void (*PR_NULLABLE decoderAudioSeek)(PrMediaCodec* codec, PrMediaDecoder* decoder, double seconds);
     PrMediaAudioChunk (*PR_NULLABLE decoderAudioRead)(PrMediaCodec* codec, PrMediaDecoder* decoder, float* samples,
         uint32_t frames);
+    PrMediaSupport (*PR_NULLABLE supportsSourceType)(PrMediaCodec* codec, PrStringView type);
+    PrStatus (*PR_NULLABLE sampleDecoderCreate)(PrMediaCodec* codec, const PrMediaTrackInfo* track, uint32_t sampleRate,
+        uint32_t channels, PrMediaSampleDecoder* PR_NULLABLE* PR_NONNULL out);
+    void (*PR_NULLABLE sampleDecoderDestroy)(PrMediaCodec* codec, PrMediaSampleDecoder* decoder);
+    bool (*PR_NULLABLE sampleDecode)(PrMediaCodec* codec, PrMediaSampleDecoder* decoder,
+        const PrMediaBufferedFrame* frame, const PrMediaSampleSink* sink);
+    void (*PR_NULLABLE sampleDecoderFlush)(PrMediaCodec* codec, PrMediaSampleDecoder* decoder);
+    bool (*PR_NULLABLE imageLock)(PrMediaCodec* codec, void* image, PrPixelView* out);
+    void (*PR_NULLABLE imageUnlock)(PrMediaCodec* codec, void* image);
+    void (*PR_NULLABLE imageRelease)(PrMediaCodec* codec, void* image);
 };
 
 // The library's backends of codecs, which the build turns on (README.md), and Default, the platform's own or else the
@@ -113,10 +149,25 @@ void prMediaCodecDestroy(PrMediaCodec* PR_NULLABLE codec);
 // (rfc6381).
 PrMediaSupport prMediaCodecSupportsType(PrMediaCodec* codec, PrStringView type);
 
+// Returns how likely the codec is to play a media source's byte stream of the MIME type `type`, whose codecs it decodes
+// one coded frame at a time.
+PrMediaSupport prMediaCodecSupportsSourceType(PrMediaCodec* codec, PrStringView type);
+
 // Opens the resource in `bytes`, which the decoder copies, and writes what it holds to `info`. Returns NotSupported if
 // the codec does not read the resource, and InvalidData if the resource is corrupt. On failure, `*out` is null.
 PrStatus prMediaDecoderCreate(PrMediaCodec* codec, PrByteView bytes, PrMediaDecoder* PR_NULLABLE* PR_NONNULL out,
     PrMediaInfo* info);
+
+// Creates a decoder of the media source whose track buffers are `buffers`: the first video track among them, and the
+// first audio track. The decoder reads their frames as script appends them, on threads of its own, and decodes them
+// with the codec's sample decoders. A codec that decodes no samples gives a decoder that decodes no frames and no
+// audio. The buffers must outlive the decoder. Writes what the tracks hold to `info`, with a duration of NaN.
+PrStatus prMediaDecoderCreateFromSource(PrMediaCodec* codec, PrMediaSourceBuffer* PR_NONNULL const* PR_NONNULL buffers,
+    uint32_t count, PrMediaDecoder* PR_NULLABLE* PR_NONNULL out, PrMediaInfo* info);
+
+// Tells a decoder of a media source whether the source has ended (media-source-2/#end-of-stream-algorithm). Once it
+// has, the decoder's audio ends where the buffered audio does. Does nothing for any other decoder.
+void prMediaDecoderSetSourceEnded(PrMediaDecoder* decoder, bool ended);
 
 // Frees the decoder.
 void prMediaDecoderDestroy(PrMediaDecoder* PR_NULLABLE decoder);

@@ -24,6 +24,7 @@ pr_library(html INCLUDE include
     src/html_table.cpp
     src/html_tokenizer.cpp
     src/html_media.cpp
+    src/html_media_source.cpp
     src/html_view.cpp
     src/html_window.cpp
     src/html_xml.cpp
@@ -40,6 +41,7 @@ if (PR_JS)
         quickjs/src/html_clone_quickjs.cpp
         quickjs/src/html_elements_quickjs.cpp
         quickjs/src/html_forms_quickjs.cpp
+        quickjs/src/html_media_source_quickjs.cpp
         quickjs/src/html_message_quickjs.cpp
         quickjs/src/html_performance_quickjs.cpp
         quickjs/src/html_console_quickjs.cpp

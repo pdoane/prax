@@ -3,6 +3,9 @@
 
 #include "doctest/doctest.h"
 
+#include <algorithm>
+#include <string>
+#include <utility>
 #include <vector>
 
 #import <AVFoundation/AVFoundation.h>
@@ -164,6 +167,152 @@ double frequencyOf(const std::vector<float>& samples, double rate) {
     return double(crossings) / 2 / (double(samples.size()) / rate);
 }
 
+// A track's compressed samples, as a media source's frames, with what a sample decoder needs to know of the track.
+struct Compressed {
+    PrMediaTrackInfo track{};
+    std::string codec;
+    std::vector<uint8_t> config;
+    std::vector<std::vector<uint8_t>> bytes;
+    std::vector<PrMediaBufferedFrame> frames;
+};
+
+// Returns the bytes of the descriptor of `tag` inside an MPEG-4 ES descriptor, or nothing.
+std::vector<uint8_t> descriptorOf(const uint8_t* data, size_t size, uint8_t tag) {
+    for (size_t at = 0; at + 2 < size; ++at) {
+        if (data[at] != tag)
+            continue;
+        size_t length = 0;
+        size_t i = at + 1;
+        for (int k = 0; k < 4 && i < size; ++k, ++i) {
+            length = length << 7 | (data[i] & 0x7f);
+            if ((data[i] & 0x80) == 0) {
+                ++i;
+                break;
+            }
+        }
+        if (length != 0 && i + length <= size)
+            return std::vector<uint8_t>(data + i, data + i + length);
+    }
+    return {};
+}
+
+// Reads the first track of `kind` from a file's bytes without decoding it: its samples and its configuration record.
+Compressed compressedOf(const std::vector<uint8_t>& file, NSString* kind) {
+    Compressed out;
+    @autoreleasepool {
+        NSString* path = [NSTemporaryDirectory()
+            stringByAppendingPathComponent:[NSString stringWithFormat:@"prax-samples-%@.mp4", NSUUID.UUID.UUIDString]];
+        [[NSData dataWithBytes:file.data() length:file.size()] writeToFile:path atomically:NO];
+        AVURLAsset* asset = [AVURLAsset URLAssetWithURL:[NSURL fileURLWithPath:path] options:nil];
+        AVAssetTrack* track = nil;
+        for (AVAssetTrack* candidate in asset.tracks) {
+            if (track == nil && [candidate.mediaType isEqualToString:kind])
+                track = candidate;
+        }
+        AVAssetReader* reader = [[AVAssetReader alloc] initWithAsset:asset error:nil];
+        AVAssetReaderTrackOutput* output = [[AVAssetReaderTrackOutput alloc] initWithTrack:track outputSettings:nil];
+        [reader addOutput:output];
+        [reader startReading];
+        CMFormatDescriptionRef format = (__bridge CMFormatDescriptionRef)track.formatDescriptions.firstObject;
+        if ([kind isEqualToString:AVMediaTypeVideo]) {
+            NSDictionary* atoms = (__bridge NSDictionary*)CMFormatDescriptionGetExtension(format,
+                kCMFormatDescriptionExtension_SampleDescriptionExtensionAtoms);
+            NSData* avcc = atoms[@"avcC"];
+            out.config.assign(static_cast<const uint8_t*>(avcc.bytes),
+                static_cast<const uint8_t*>(avcc.bytes) + avcc.length);
+            char name[16];
+            snprintf(name, sizeof name, "avc1.%02X%02X%02X", out.config[1], out.config[2], out.config[3]);
+            out.codec = name;
+            CMVideoDimensions size = CMVideoFormatDescriptionGetDimensions(format);
+            out.track.kind = PrMediaTrackKind_Video;
+            out.track.extent = PrUVec2{uint32_t(size.width), uint32_t(size.height)};
+        } else {
+            size_t cookieSize = 0;
+            const uint8_t* cookie = static_cast<const uint8_t*>(CMAudioFormatDescriptionGetMagicCookie(format,
+                &cookieSize));
+            out.config = descriptorOf(cookie, cookieSize, 5);
+            out.codec = "mp4a.40.2";
+            const AudioStreamBasicDescription* stream = CMAudioFormatDescriptionGetStreamBasicDescription(format);
+            out.track.kind = PrMediaTrackKind_Audio;
+            out.track.sampleRate = uint32_t(stream->mSampleRate);
+            out.track.channels = stream->mChannelsPerFrame;
+        }
+        for (CMSampleBufferRef sample = [output copyNextSampleBuffer]; sample != nullptr;
+                sample = [output copyNextSampleBuffer]) {
+            CMBlockBufferRef block = CMSampleBufferGetDataBuffer(sample);
+            // An audio buffer holds many packets, which its packet descriptions place.
+            const AudioStreamPacketDescription* packets = nullptr;
+            size_t packetCount = 0;
+            if (block != nullptr && CMSampleBufferGetAudioStreamPacketDescriptionsPtr(sample, &packets, &packetCount) ==
+                    noErr && packets != nullptr) {
+                double start = CMTimeGetSeconds(CMSampleBufferGetPresentationTimeStamp(sample));
+                double rate = out.track.sampleRate;
+                for (size_t i = 0; i < packetCount; ++i) {
+                    std::vector<uint8_t> bytes(packets[i].mDataByteSize);
+                    CMBlockBufferCopyDataBytes(block, size_t(packets[i].mStartOffset), bytes.size(), bytes.data());
+                    out.bytes.push_back(bytes);
+                    double time = start + double(i) * 1024 / rate;
+                    out.frames.push_back(PrMediaBufferedFrame{
+                        .presentation = time,
+                        .decode = time,
+                        .duration = 1024 / rate,
+                        .key = true,
+                    });
+                }
+            } else if (block != nullptr && CMSampleBufferGetNumSamples(sample) == 1) {
+                std::vector<uint8_t> bytes(CMBlockBufferGetDataLength(block));
+                CMBlockBufferCopyDataBytes(block, 0, bytes.size(), bytes.data());
+                out.bytes.push_back(bytes);
+                bool key = true;
+                CFArrayRef attachments = CMSampleBufferGetSampleAttachmentsArray(sample, false);
+                if (attachments != nullptr && CFArrayGetCount(attachments) != 0) {
+                    CFDictionaryRef first = static_cast<CFDictionaryRef>(CFArrayGetValueAtIndex(attachments, 0));
+                    key = !CFDictionaryContainsKey(first, kCMSampleAttachmentKey_NotSync);
+                }
+                out.frames.push_back(PrMediaBufferedFrame{
+                    .presentation = CMTimeGetSeconds(CMSampleBufferGetPresentationTimeStamp(sample)),
+                    .decode = CMTimeGetSeconds(CMSampleBufferGetDecodeTimeStamp(sample)),
+                    .duration = CMTimeGetSeconds(CMSampleBufferGetDuration(sample)),
+                    .key = key,
+                });
+            }
+            CFRelease(sample);
+        }
+        [[NSFileManager defaultManager] removeItemAtPath:path error:nil];
+    }
+    for (size_t i = 0; i < out.frames.size(); ++i)
+        out.frames[i].bytes = PrByteView(out.bytes[i]);
+    out.track.codec = PrStringView(out.codec);
+    out.track.config = PrByteView(out.config);
+    return out;
+}
+
+// What a sample decoder gave: each image's presentation and the red at its center, and the samples.
+struct Decoded {
+    PrMediaCodec* codec = nullptr;
+    std::vector<std::pair<double, uint8_t>> images;
+    std::vector<float> samples;
+};
+
+PrMediaSampleSink sinkOf(Decoded* decoded) {
+    PrMediaSampleSink sink{};
+    sink.context = decoded;
+    sink.image = [](void* context, void* image, double presentation) {
+        Decoded* d = static_cast<Decoded*>(context);
+        PrPixelView pixels{};
+        REQUIRE(d->codec->imageLock(d->codec, image, &pixels));
+        uint8_t red = pixels.data[(pixels.extent.y / 2) * pixels.stride + (pixels.extent.x / 2) * 4 + 2];
+        d->codec->imageUnlock(d->codec, image);
+        d->codec->imageRelease(d->codec, image);
+        d->images.emplace_back(presentation, red);
+    };
+    sink.samples = [](void* context, const float* samples, uint32_t frames, double) {
+        Decoded* d = static_cast<Decoded*>(context);
+        d->samples.insert(d->samples.end(), samples, samples + frames);
+    };
+    return sink;
+}
+
 // Returns the red level at the frame's center.
 uint8_t centerRed(const PrMediaFrame& frame) {
     return frame.pixels.data[(frame.pixels.extent.y / 2) * frame.pixels.stride + (frame.pixels.extent.x / 2) * 4 + 2];
@@ -174,6 +323,57 @@ uint8_t centerRed(const PrMediaFrame& frame) {
 } // namespace pr_impl
 
 using namespace pr_impl;
+
+TEST_CASE("the AVFoundation codec decodes a video track's frames one at a time, as a media source gives them") {
+    Compressed video = compressedOf(encodeMovie(), AVMediaTypeVideo);
+    REQUIRE(video.frames.size() == size_t(kFrames));
+    PrMediaCodec* codec = prMediaAppleCreate();
+    CHECK(prMediaCodecSupportsSourceType(codec, "video/mp4; codecs=\"avc1.42E01E\"") == PrMediaSupport_Probably);
+    CHECK(prMediaCodecSupportsSourceType(codec, "video/mp4; codecs=\"xyz1\"") == PrMediaSupport_No);
+    PrMediaSampleDecoder* decoder = nullptr;
+    REQUIRE(codec->sampleDecoderCreate(codec, &video.track, 0, 0, &decoder) == PrStatus_Ok);
+    Decoded decoded;
+    decoded.codec = codec;
+    PrMediaSampleSink sink = sinkOf(&decoded);
+    for (const PrMediaBufferedFrame& frame : video.frames)
+        CHECK(codec->sampleDecode(codec, decoder, &frame, &sink));
+    codec->sampleDecoderFlush(codec, decoder);
+    REQUIRE(decoded.images.size() == size_t(kFrames));
+    // The decoder gives images in decode order, which B-frames make differ from presentation order. Each frame keeps
+    // its time and its color through the decoder.
+    std::sort(decoded.images.begin(), decoded.images.end());
+    // The reader's timestamps include the encoder's delay, so the frames are one frame apart from the first, and
+    // compression moves each red level by a few steps.
+    double first = decoded.images[0].first;
+    for (int32_t i = 0; i < kFrames; ++i) {
+        CHECK(decoded.images[size_t(i)].first - first == doctest::Approx(double(i) / kFramesPerSecond));
+        CHECK(int(decoded.images[size_t(i)].second) - int(redOf(i)) < 16);
+        CHECK(int(decoded.images[size_t(i)].second) - int(redOf(i)) > -16);
+    }
+    codec->sampleDecoderDestroy(codec, decoder);
+    prMediaCodecDestroy(codec);
+}
+
+TEST_CASE("the AVFoundation codec decodes an AAC track's frames one at a time, at the rate asked for") {
+    Compressed audio = compressedOf(encodeTone(1000, 1), AVMediaTypeAudio);
+    REQUIRE(!audio.frames.empty());
+    REQUIRE(!audio.config.empty());
+    PrMediaCodec* codec = prMediaAppleCreate();
+    PrMediaSampleDecoder* decoder = nullptr;
+    REQUIRE(codec->sampleDecoderCreate(codec, &audio.track, 48000, 1, &decoder) == PrStatus_Ok);
+    Decoded decoded;
+    decoded.codec = codec;
+    PrMediaSampleSink sink = sinkOf(&decoded);
+    for (const PrMediaBufferedFrame& frame : audio.frames)
+        CHECK(codec->sampleDecode(codec, decoder, &frame, &sink));
+    // About a second at 48 kHz, less the frames that the decoder keeps for its delay.
+    CHECK(decoded.samples.size() > 40000);
+    CHECK(decoded.samples.size() < 52000);
+    std::vector<float> middle(decoded.samples.begin() + 12000, decoded.samples.begin() + 36000);
+    CHECK(frequencyOf(middle, 48000) == doctest::Approx(1000).epsilon(0.02));
+    codec->sampleDecoderDestroy(codec, decoder);
+    prMediaCodecDestroy(codec);
+}
 
 TEST_CASE("the AVFoundation codec decodes AAC at the rate asked for, and seeks in it") {
     std::vector<uint8_t> bytes = encodeTone(1000, 2);

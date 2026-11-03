@@ -6,12 +6,11 @@
 #include "pr/array.h"
 #include "pr/ascii.h"
 #include "pr/float.h"
+#include "pr/media_audio.h"
 #include "pr/memory.h"
 #include "pr/mime.h"
 #include "pr/mutex.h"
 #include "pr/thread.h"
-
-#include "media/backends/shared/src/media_shared_audio.h"
 
 #define NOMINMAX
 #define WIN32_LEAN_AND_MEAN
@@ -89,7 +88,7 @@ struct WindowsDecoder : PrMediaDecoder {
     // The audio, which a reader of its own decodes, so that seeking it does not disturb the frames.
     IMFSourceReader* PR_NULLABLE audioReader;
     DWORD audioStream;
-    MediaAudioQueue queue;
+    PrMediaAudioQueue* PR_NULLABLE queue;
     PrThread audioThread;
     bool audioStarted;
 };
@@ -351,13 +350,14 @@ void decodeFrames(WindowsDecoder* d) {
 
 // Decodes the audio into the queue, and starts over at each seek, until the decoder stops.
 void decodeAudio(WindowsDecoder* d) {
-    MediaAudioQueue* queue = &d->queue;
-    while (!queue->stopping.load()) {
-        uint32_t seek = queue->seekWanted.load();
-        double seconds = queue->seekSeconds.load();
+    PrMediaAudioQueue* queue = d->queue;
+    while (!prMediaAudioQueueIsStopping(queue)) {
+        PrMediaAudioSeek request = prMediaAudioQueueRequest(queue);
+        uint32_t seek = request.id;
+        double seconds = request.seconds;
         bool moved = seekReader(d->audioReader, seconds);
         bool begun = false;
-        while (moved && !mediaAudioQueueInterrupted(queue, seek)) {
+        while (moved && !prMediaAudioQueueIsInterrupted(queue, seek)) {
             DWORD flags = 0;
             LONGLONG ticks = 0;
             IMFSample* sample = nullptr;
@@ -371,20 +371,22 @@ void decodeAudio(WindowsDecoder* d) {
                 BYTE* data = nullptr;
                 DWORD length = 0;
                 if (SUCCEEDED(buffer->Lock(&data, nullptr, &length))) {
-                    uint32_t frames = length / DWORD(queue->channels * sizeof(float));
+                    uint32_t frames = length / DWORD(prMediaAudioQueueChannels(queue) * sizeof(float));
                     double time = double(ticks) / kTicksPerSecond;
                     // A seek lands on a packet's boundary, so the frames before the time asked for are dropped.
                     uint32_t skip = 0;
                     if (time < seconds) {
-                        double extra = (seconds - time) * queue->sampleRate;
+                        double extra = (seconds - time) * prMediaAudioQueueSampleRate(queue);
                         skip = extra >= frames ? frames : uint32_t(extra);
                     }
                     if (skip != frames) {
                         if (!begun)
-                            mediaAudioQueueBegin(queue, seek, time + double(skip) / queue->sampleRate);
+                            prMediaAudioQueueBegin(queue, seek,
+                                time + double(skip) / prMediaAudioQueueSampleRate(queue));
                         begun = true;
-                        written = mediaAudioQueueWrite(queue, seek,
-                            reinterpret_cast<const float*>(data) + size_t(skip) * queue->channels, frames - skip);
+                        written = prMediaAudioQueueWrite(queue, seek,
+                            reinterpret_cast<const float*>(data) + size_t(skip) * prMediaAudioQueueChannels(queue),
+                            frames - skip);
                     }
                     buffer->Unlock();
                 }
@@ -396,8 +398,8 @@ void decodeAudio(WindowsDecoder* d) {
                 break;
         }
         if (!begun)
-            mediaAudioQueueBegin(queue, seek, seconds);
-        mediaAudioQueueFinish(queue, seek);
+            prMediaAudioQueueBegin(queue, seek, seconds);
+        prMediaAudioQueueFinish(queue, seek);
     }
 }
 
@@ -608,9 +610,9 @@ PrStatus decoderCreate(PrMediaCodec*, PrByteView bytes, PrMediaDecoder* PR_NULLA
 void decoderDestroy(PrMediaCodec*, PrMediaDecoder* decoder) {
     WindowsDecoder* d = static_cast<WindowsDecoder*>(decoder);
     if (d->audioStarted) {
-        d->queue.stopping.store(true);
+        prMediaAudioQueueStop(d->queue);
         prThreadJoin(&d->audioThread);
-        mediaAudioQueueReset(&d->queue);
+        prMediaAudioQueueDestroy(d->queue);
     }
     if (d->audioReader != nullptr)
         d->audioReader->Release();
@@ -695,18 +697,18 @@ bool decoderAudioStart(PrMediaCodec*, PrMediaDecoder* decoder, uint32_t sampleRa
     WindowsDecoder* d = static_cast<WindowsDecoder*>(decoder);
     if (d->audioReader == nullptr || FAILED(selectAudio(d->audioReader, d->audioStream, sampleRate, channels)))
         return false;
-    mediaAudioQueueInit(&d->queue, sampleRate, channels, seconds);
+    d->queue = prMediaAudioQueueCreate(sampleRate, channels, seconds);
     d->audioStarted = true;
     prThreadStart(&d->audioThread, [](void* context) { decodeAudio(static_cast<WindowsDecoder*>(context)); }, d);
     return true;
 }
 
 void decoderAudioSeek(PrMediaCodec*, PrMediaDecoder* decoder, double seconds) {
-    mediaAudioQueueSeek(&static_cast<WindowsDecoder*>(decoder)->queue, seconds);
+    prMediaAudioQueueSeek(static_cast<WindowsDecoder*>(decoder)->queue, seconds);
 }
 
 PrMediaAudioChunk decoderAudioRead(PrMediaCodec*, PrMediaDecoder* decoder, float* samples, uint32_t frames) {
-    return mediaAudioQueueRead(&static_cast<WindowsDecoder*>(decoder)->queue, samples, frames);
+    return prMediaAudioQueueRead(static_cast<WindowsDecoder*>(decoder)->queue, samples, frames);
 }
 
 void destroy(PrMediaCodec* codec) {

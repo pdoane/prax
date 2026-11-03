@@ -92,7 +92,7 @@ of a change to it is what the change did.
 | css/css-pseudo                   |     339/342 |      695/1126 |   61.7% |
 | css/css-ruby                     |     178/178 |       118/247 |   47.7% |
 | css/css-scroll-anchoring         |       77/78 |         86/98 |   87.7% |
-| css/css-scroll-snap              |     180/197 |       366/838 |   43.6% |
+| css/css-scroll-snap              |     181/197 |       366/838 |   43.6% |
 | css/css-scrollbars               |       57/57 |        60/115 |   52.1% |
 | css/css-shadow                   |     202/203 |       330/480 |   68.7% |
 | css/css-shapes                   |     382/382 |     4673/7752 |   60.2% |
@@ -132,62 +132,62 @@ of a change to it is what the change did.
 | web-animations/interfaces        |       45/47 |        80/834 |    9.5% |
 | web-animations/responsive        |       40/46 |         0/105 |    0.0% |
 | web-animations/timing-model      |       25/34 |         2/402 |    0.4% |
-| **total**                        | 31760/32090 | 153445/208892 |   73.4% |
+| **total**                        | 31761/32090 | 153445/208892 |   73.4% |
 
 ## dom
 
-| Module                           |     Files |        Tests | Passing |
-|----------------------------------|----------:|-------------:|--------:|
-| dom                              |     11/12 |    1843/2056 |   89.6% |
-| dom/abort                        |       9/9 |        40/40 |  100.0% |
-| dom/collections                  |     12/12 |        50/56 |   89.2% |
-| dom/crashtests                   |       4/4 |          4/4 |  100.0% |
-| dom/events                       |   194/202 |      578/839 |   68.8% |
-| dom/lists                        |       5/5 |      185/189 |   97.8% |
-| dom/nodes                        |   400/404 |  13556/15295 |   88.6% |
-| dom/ranges                       |     72/72 |  44512/44706 |   99.5% |
-| dom/traversal                    |     18/18 |    1600/1608 |   99.5% |
-| domparsing                       |     46/46 |      257/597 |   43.0% |
-| domparsing/tentative             |     25/36 |      42/1104 |    3.8% |
-| input-events                     |     30/34 |     114/3248 |    3.5% |
-| intersection-observer            |   109/113 |      283/346 |   81.7% |
-| pointerevents                    |    98/228 |      195/667 |   29.2% |
-| pointerevents/bugs               |       1/2 |          0/2 |    0.0% |
-| pointerevents/compat             |     10/15 |         6/52 |   11.5% |
-| pointerevents/crashtests         |       1/1 |          1/1 |  100.0% |
-| pointerevents/parsing            |       3/3 |         9/15 |   60.0% |
-| pointerevents/persistentDeviceId |       2/3 |          1/4 |   25.0% |
-| pointerevents/pointerlock        |       3/8 |          0/8 |    0.0% |
-| selection                        |     93/94 |  33724/33850 |   99.6% |
-| selection/anonymous              |       3/3 |        13/13 |  100.0% |
-| selection/bidi                   |       3/3 |        18/92 |   19.5% |
-| selection/caret                  |       7/7 |        13/31 |   41.9% |
-| selection/contenteditable        |     12/12 |       18/252 |    7.1% |
-| selection/crashtests             |     35/35 |        35/35 |  100.0% |
-| selection/shadow-dom             |     23/23 |       81/120 |   67.5% |
-| selection/textcontrols           |       7/9 |        11/78 |   14.1% |
-| shadow-dom                       |    98/100 |      673/788 |   85.4% |
-| shadow-dom/crashtests            |     25/25 |        25/25 |  100.0% |
-| shadow-dom/declarative           |     25/57 |     135/7790 |    1.7% |
-| shadow-dom/focus                 |     39/40 |       99/111 |   89.1% |
-| shadow-dom/focus-navigation      |     45/45 |        43/89 |   48.3% |
-| shadow-dom/leaktests             |       4/4 |        10/16 |   62.5% |
-| shadow-dom/reference-target      |     14/15 |        1/635 |    0.1% |
-| shadow-dom/untriaged             |     59/59 |      241/256 |   94.1% |
-| uievents                         |       4/4 |      135/174 |   77.5% |
-| uievents/click                   |       3/7 |          3/7 |   42.8% |
-| uievents/constructors            |       2/2 |        16/21 |   76.1% |
-| uievents/focusevents             |       1/1 |          2/2 |  100.0% |
-| uievents/interface               |       2/3 |          0/6 |    0.0% |
-| uievents/keyboard                |       6/6 |        16/17 |   94.1% |
-| uievents/legacy                  |       1/1 |          4/4 |  100.0% |
-| uievents/legacy-domevents-tests  |       4/4 |          4/5 |   80.0% |
-| uievents/mouse                   |     21/23 |       21/140 |   15.0% |
-| uievents/order-of-events         |     11/16 |         9/17 |   52.9% |
-| uievents/textInput               |       5/7 |         1/21 |    4.7% |
-| webidl                           |       2/2 |      167/192 |   86.9% |
-| webidl/ecmascript-binding        |     42/43 |      226/314 |   71.9% |
-| **total**                        | 1649/1877 | 99020/115938 |   85.4% |
+| Module                           |     Files |         Tests | Passing |
+|----------------------------------|----------:|--------------:|--------:|
+| dom                              |     11/12 |     1843/2056 |   89.6% |
+| dom/abort                        |       9/9 |         40/40 |  100.0% |
+| dom/collections                  |     12/12 |         50/56 |   89.2% |
+| dom/crashtests                   |       4/4 |           4/4 |  100.0% |
+| dom/events                       |   194/202 |       578/839 |   68.8% |
+| dom/lists                        |       5/5 |       185/189 |   97.8% |
+| dom/nodes                        |   400/404 |   14574/15295 |   95.2% |
+| dom/ranges                       |     72/72 |   44512/44706 |   99.5% |
+| dom/traversal                    |     18/18 |     1600/1608 |   99.5% |
+| domparsing                       |     46/46 |       257/597 |   43.0% |
+| domparsing/tentative             |     25/36 |       42/1104 |    3.8% |
+| input-events                     |     30/34 |      114/3248 |    3.5% |
+| intersection-observer            |   109/113 |       283/346 |   81.7% |
+| pointerevents                    |    98/228 |       195/667 |   29.2% |
+| pointerevents/bugs               |       1/2 |           0/2 |    0.0% |
+| pointerevents/compat             |     10/15 |          6/52 |   11.5% |
+| pointerevents/crashtests         |       1/1 |           1/1 |  100.0% |
+| pointerevents/parsing            |       3/3 |          9/15 |   60.0% |
+| pointerevents/persistentDeviceId |       2/3 |           1/4 |   25.0% |
+| pointerevents/pointerlock        |       3/8 |           0/8 |    0.0% |
+| selection                        |     93/94 |   33724/33850 |   99.6% |
+| selection/anonymous              |       3/3 |         13/13 |  100.0% |
+| selection/bidi                   |       3/3 |         18/92 |   19.5% |
+| selection/caret                  |       7/7 |         13/31 |   41.9% |
+| selection/contenteditable        |     12/12 |        18/252 |    7.1% |
+| selection/crashtests             |     35/35 |         35/35 |  100.0% |
+| selection/shadow-dom             |     23/23 |        81/120 |   67.5% |
+| selection/textcontrols           |       7/9 |         11/78 |   14.1% |
+| shadow-dom                       |    98/100 |       673/788 |   85.4% |
+| shadow-dom/crashtests            |     25/25 |         25/25 |  100.0% |
+| shadow-dom/declarative           |     25/57 |      135/7790 |    1.7% |
+| shadow-dom/focus                 |     39/40 |        99/111 |   89.1% |
+| shadow-dom/focus-navigation      |     45/45 |         43/89 |   48.3% |
+| shadow-dom/leaktests             |       4/4 |         10/16 |   62.5% |
+| shadow-dom/reference-target      |     14/15 |         1/635 |    0.1% |
+| shadow-dom/untriaged             |     59/59 |       241/256 |   94.1% |
+| uievents                         |       4/4 |       135/174 |   77.5% |
+| uievents/click                   |       3/7 |           3/7 |   42.8% |
+| uievents/constructors            |       2/2 |         16/21 |   76.1% |
+| uievents/focusevents             |       1/1 |           2/2 |  100.0% |
+| uievents/interface               |       2/3 |           0/6 |    0.0% |
+| uievents/keyboard                |       6/6 |         16/17 |   94.1% |
+| uievents/legacy                  |       1/1 |           4/4 |  100.0% |
+| uievents/legacy-domevents-tests  |       4/4 |           4/5 |   80.0% |
+| uievents/mouse                   |     21/23 |        21/140 |   15.0% |
+| uievents/order-of-events         |     11/16 |          9/17 |   52.9% |
+| uievents/textInput               |       5/7 |          1/21 |    4.7% |
+| webidl                           |       2/2 |       167/192 |   86.9% |
+| webidl/ecmascript-binding        |     42/43 |       227/314 |   72.2% |
+| **total**                        | 1649/1877 | 100039/115938 |   86.2% |
 
 ## encoding
 
@@ -206,10 +206,10 @@ of a change to it is what the change did.
 | Module                                              |     Files |         Tests | Passing |
 |-----------------------------------------------------|----------:|--------------:|--------:|
 | apng                                                |       2/2 |           1/2 |   50.0% |
-| custom-elements                                     |     42/43 |       309/632 |   48.8% |
+| custom-elements                                     |     42/43 |       312/632 |   49.3% |
 | custom-elements/form-associated                     |     20/24 |         9/119 |    7.5% |
 | custom-elements/htmlconstructor                     |       1/1 |          2/10 |   20.0% |
-| custom-elements/parser                              |     10/11 |         20/32 |   62.5% |
+| custom-elements/parser                              |     10/11 |         21/32 |   65.6% |
 | custom-elements/reactions                           |     29/29 |       205/331 |   61.9% |
 | custom-elements/registries                          |     32/39 |     1940/2312 |   83.9% |
 | custom-elements/state                               |       4/5 |         24/26 |   92.3% |
@@ -218,7 +218,7 @@ of a change to it is what the change did.
 | gif                                                 |       1/1 |           0/1 |    0.0% |
 | html-ruby-extensions                                |     84/84 |          4/84 |    4.7% |
 | html/browsers                                       |   566/769 |      602/2349 |   25.6% |
-| html/canvas                                         | 2645/2876 |     1735/5247 |   33.0% |
+| html/canvas                                         | 2651/2876 |     1738/5247 |   33.1% |
 | html/dom                                            |   346/353 |   60927/66758 |   91.2% |
 | html/editing                                        |   125/254 |       522/848 |   61.5% |
 | html/embedded-content                               |       1/1 |           0/2 |    0.0% |
@@ -230,11 +230,11 @@ of a change to it is what the change did.
 | html/rendering                                      |   479/481 |   10567/11499 |   91.8% |
 | html/scripting                                      |       3/3 |           0/4 |    0.0% |
 | html/select                                         |       2/2 |           5/6 |   83.3% |
-| html/semantics                                      | 2524/2909 |    9366/19953 |   46.9% |
+| html/semantics                                      | 2525/2909 |    9366/19953 |   46.9% |
 | html/syntax                                         |   249/250 |     6682/6914 |   96.6% |
 | html/the-xhtml-syntax                               |     15/15 |   21368/25609 |   83.4% |
 | html/user-activation                                |     13/21 |         32/46 |   69.5% |
-| html/webappapis                                     |   298/329 |     2240/2878 |   77.8% |
+| html/webappapis                                     |   298/329 |     2244/2878 |   77.9% |
 | inert                                               |     25/29 |        53/112 |   47.3% |
 | png                                                 |       4/4 |           3/4 |   75.0% |
 | png/apng                                            |     29/29 |         10/29 |   34.4% |
@@ -263,7 +263,7 @@ of a change to it is what the change did.
 | workers/multi-globals                               |       1/1 |           0/1 |    0.0% |
 | workers/same-site-cookies                           |       6/6 |           0/6 |    0.0% |
 | workers/semantics                                   |     23/29 |          0/32 |    0.0% |
-| **total**                                           | 8371/9525 | 126039/157051 |   80.2% |
+| **total**                                           | 8378/9525 | 126050/157051 |   80.2% |
 
 ## infrastructure
 
@@ -293,6 +293,15 @@ of a change to it is what the change did.
 | mathml/relations           | 174/176 |  827/2456 |   33.6% |
 | **total**                  | 594/596 | 1248/3706 |   33.6% |
 
+## media-source
+
+| Module                         | Files |   Tests | Passing |
+|--------------------------------|------:|--------:|--------:|
+| media-source                   | 63/73 | 361/465 |   77.6% |
+| media-source/dedicated-worker  |   4/7 |    1/58 |    1.7% |
+| media-source/mse-for-webcodecs |   0/3 |     0/3 |    0.0% |
+| **total**                      | 67/83 | 362/526 |   68.8% |
+
 ## networking
 
 | Module                             |     Files |      Tests | Passing |
@@ -300,7 +309,7 @@ of a change to it is what the change did.
 | FileAPI                            |       6/6 |    173/204 |   84.8% |
 | FileAPI/BlobURL                    |       5/5 |       0/18 |    0.0% |
 | FileAPI/FileReader                 |       2/2 |        1/2 |   50.0% |
-| FileAPI/blob                       |     16/16 |    295/323 |   91.3% |
+| FileAPI/blob                       |     16/16 |    298/323 |   92.2% |
 | FileAPI/file                       |     15/15 |     97/207 |   46.8% |
 | FileAPI/filelist-section           |       1/1 |        0/7 |    0.0% |
 | FileAPI/reading-data-section       |     14/14 |      46/51 |   90.1% |
@@ -308,7 +317,7 @@ of a change to it is what the change did.
 | beacon                             |       6/6 |      34/64 |   53.1% |
 | beacon/headers                     |     10/10 |      23/24 |   95.8% |
 | cors                               |     26/26 |    258/414 |   62.3% |
-| fetch/api                          |   180/194 |  1904/2583 |   73.7% |
+| fetch/api                          |   180/194 |  1905/2583 |   73.7% |
 | fetch/compression-dictionary       |     26/31 |      8/103 |    7.7% |
 | fetch/connection-pool              |       0/1 |        0/8 |    0.0% |
 | fetch/content-disposition          |       2/2 |        8/8 |  100.0% |
@@ -355,7 +364,7 @@ of a change to it is what the change did.
 | websockets/security                |       4/4 |        2/4 |   50.0% |
 | websockets/stream                  |     21/21 |      0/159 |    0.0% |
 | websockets/unload-a-document       |     11/11 |       0/11 |    0.0% |
-| **total**                          | 2356/2582 | 9438/18661 |   50.5% |
+| **total**                          | 2356/2582 | 9442/18661 |   50.5% |
 
 ## performance
 

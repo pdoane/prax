@@ -5,6 +5,8 @@
 #include "pr/ascii.h"
 #include "pr/assert.h"
 
+#include "media/src/media_source_decoder.h"
+
 #if defined(PR_MEDIA_HAS_APPLE)
 #include "pr/media_apple.h"
 #endif
@@ -86,6 +88,12 @@ PrMediaSupport prMediaCodecSupportsType(PrMediaCodec* codec, PrStringView type) 
     return codec->supportsType(codec, type);
 }
 
+PrMediaSupport prMediaCodecSupportsSourceType(PrMediaCodec* codec, PrStringView type) {
+    if (codec->supportsSourceType != nullptr)
+        return codec->supportsSourceType(codec, type);
+    return codec->supportsType(codec, type);
+}
+
 PrStatus prMediaDecoderCreate(PrMediaCodec* codec, PrByteView bytes, PrMediaDecoder* PR_NULLABLE* PR_NONNULL out,
         PrMediaInfo* info) {
     *out = nullptr;
@@ -95,6 +103,16 @@ PrStatus prMediaDecoderCreate(PrMediaCodec* codec, PrByteView bytes, PrMediaDeco
     if (status == PrStatus_Ok)
         (*out)->codec = codec;
     return status;
+}
+
+PrStatus prMediaDecoderCreateFromSource(PrMediaCodec* codec, PrMediaSourceBuffer* PR_NONNULL const* PR_NONNULL buffers,
+        uint32_t count, PrMediaDecoder* PR_NULLABLE* PR_NONNULL out, PrMediaInfo* info) {
+    *info = PrMediaInfo{};
+    return mediaSourceDecoderCreate(codec, buffers, count, out, info);
+}
+
+void prMediaDecoderSetSourceEnded(PrMediaDecoder* decoder, bool ended) {
+    mediaSourceDecoderSetEnded(decoder, ended);
 }
 
 void prMediaDecoderDestroy(PrMediaDecoder* PR_NULLABLE decoder) {

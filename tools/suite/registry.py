@@ -45,7 +45,7 @@ SUITES = [
     Suite("html-tokens", ("html5lib",), ("html5lib/tokenizer",), ("tools.suite.html_tokens",), ("html_tokens",)),
     Suite("html-tree", ("wpt",), ("wpt/.git",), ("tools.suite.html_tree",), ("html_tree",)),
     Suite("url-parsing", ("wpt",), ("wpt/.git",), ("tools.suite.url_parsing",), ("url_parsing",)),
-    *(wpt(name) for name in ("url", "mathml", "performance", "svg", "webaudio", "xhr")),
+    *(wpt(name) for name in ("url", "mathml", "media-source", "performance", "svg", "webaudio", "xhr")),
     reftest("resvg", ("resvg_tests", "fonts"), ("resvg-tests/tests",)),
     reftest("lottie-web", ("lottie_corpora", "lottie_web"), ("lottie-web/version",), ("reftest", "lottie_reference")),
     reftest("skottie", ("lottie_corpora", "canvaskit", "resvg_tests"), ("canvaskit/version",),

@@ -38,6 +38,7 @@ async-iterable-streams                           build
 attr                                             build
 attr-contents                                    build
 audio                                            build
+audio-video-tracks                               open
 audio-worklet                                    build
 autocapitalize                                   build
 autocorrect                                      build
@@ -384,6 +385,7 @@ mathml                                           build
 media-pseudos                                    build
 media-queries                                    build
 media-query-range-syntax                         build
+media-source                                     build
 messageerror                                     build
 meta                                             build
 meter                                            build

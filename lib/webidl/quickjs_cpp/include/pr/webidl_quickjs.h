@@ -157,8 +157,8 @@ bool jsDictUint32(JSContext* ctx, JSValueConst dictionary, const char* name, uin
 bool jsDictString(JSContext* ctx, JSValueConst dictionary, const char* name, StringArgument* out,
     bool* PR_NULLABLE given = nullptr);
 
-// Reads the bytes of `value` if it is a BufferSource (webidl/#BufferSource): an ArrayBuffer, or a view of one. Returns
-// false, with nothing thrown, for any other value.
+// Reads the bytes of `value` if it is a BufferSource (webidl/#BufferSource): an ArrayBuffer, or a view of one. A
+// detached buffer, or a view of one, has no bytes. Returns false, with nothing thrown, for any other value.
 bool jsBufferSource(JSContext* ctx, JSValueConst value, const uint8_t* PR_NULLABLE* PR_NONNULL data, size_t* size);
 
 // ---------------------------------------------------------------------------------------------------------------------

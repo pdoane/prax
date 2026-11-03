@@ -29,6 +29,7 @@
 #include "html/src/html_focus.h"
 #include "html/src/html_interface.h"
 #include "html/src/html_media.h"
+#include "html/src/html_media_source.h"
 #include "html/src/html_message.h"
 #include "html/src/html_page.h"
 #include "html/src/html_parser.h"
@@ -422,6 +423,7 @@ PrString prHtmlWindowCreateObjectUrl(PrHtmlWindow* window, const PrFetchBlob* bl
 }
 
 void prHtmlWindowRevokeObjectUrl(PrHtmlWindow* window, PrStringView url) {
+    htmlMediaSourceRevokeUrl(window, url);
     PrHtmlPage* page = htmlDocumentPage(window->document);
     if (page == nullptr || page->host.fetcher == nullptr)
         return;
@@ -1195,6 +1197,21 @@ uint32_t prHtmlMediaElementRanges(PrHtmlMediaElement* element, PrHtmlMediaRanges
             starts[i] = media->played.data[i * 2];
             ends[i] = media->played.data[i * 2 + 1];
         }
+        return count;
+    }
+    // A media source answers from what it has buffered and what it can seek to.
+    if (media->mediaSource != nullptr) {
+        Array<PrMediaTimeRange> ranges{};
+        if (which == PrHtmlMediaRanges_Buffered)
+            htmlMediaSourceBuffered(media->mediaSource, &ranges);
+        else
+            htmlMediaSourceSeekable(media->mediaSource, &ranges);
+        uint32_t count = ranges.count;
+        for (uint32_t i = 0; i < count && i < capacity; ++i) {
+            starts[i] = ranges.data[i].start;
+            ends[i] = ranges.data[i].end;
+        }
+        ranges.reset();
         return count;
     }
     // The whole resource is fetched, so all of its data is available to seek to.

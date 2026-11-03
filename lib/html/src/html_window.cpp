@@ -26,6 +26,7 @@
 #include "html/src/html_focus.h"
 #include "html/src/html_interface.h"
 #include "html/src/html_media.h"
+#include "html/src/html_media_source.h"
 #include "html/src/html_page.h"
 
 namespace pr_impl {
@@ -562,6 +563,7 @@ void htmlWindowBackdateClock(PrHtmlWindow* window, double elapsed) {
 }
 
 void htmlWindowRevokeObjectUrls(PrHtmlWindow* window) {
+    htmlMediaSourceUrlsReset(window);
     PrHtmlPage* page = htmlDocumentPage(window->document);
     PrString origin = htmlWindowOrigin(window);
     for (uint32_t i = 0; i < window->objectUrls.count; ++i) {

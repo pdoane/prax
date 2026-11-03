@@ -17,6 +17,7 @@
 #include "pr/dom.h"
 #include "pr/draw_image.h"
 #include "pr/html.h"
+#include "pr/html_media_source.h"
 #include "pr/media.h"
 #include "pr/string_view.h"
 
@@ -73,6 +74,12 @@ struct HtmlMedia {
     // earlier fetch is dropped.
     PrMediaDecoder* PR_NULLABLE decoder;     // the resource of the current load, or null
     PrAudioSource* PR_NULLABLE source;       // plays the audio of `decoder`, or null if nothing does
+
+    // The media source that the element plays, which it holds, or null for a fetched resource. Playback stops at
+    // `playableEnd`, the end of the buffered range at the position, until more data arrives.
+    PrHtmlMediaSource* PR_NULLABLE mediaSource;
+    double playableEnd;
+    bool seekWaits;                          // a seek waits for the media source to buffer its position
     const PrDrawImage* PR_NULLABLE frame;
     const PrDrawImage* PR_NULLABLE poster;
     uint64_t frameSerial;
@@ -121,6 +128,22 @@ void htmlMediaPause(HtmlMedia* media);
 void htmlMediaSetRate(HtmlMedia* media, double rate, bool isDefault);
 void htmlMediaSetVolume(HtmlMedia* media, double volume, bool muted);
 void htmlMediaSetPreservesPitch(HtmlMedia* media, bool preserves);
+
+// The element's side of a media source (media-source-2/#htmlmediaelement-extensions). Its first initialization segments
+// give the element its metadata and the natural size of `videoExtent`; a duration change fires durationchange; a change
+// to what is buffered, or the end of the stream, updates the ready state and ends a seek that waits for data; and an
+// end of stream with an error fails the element with `error`.
+void htmlMediaSourceMetadata(HtmlMedia* media, PrUVec2 videoExtent);
+void htmlMediaSourceDuration(HtmlMedia* media, double duration);
+void htmlMediaSourceChanged(HtmlMedia* media);
+void htmlMediaSourceFailed(HtmlMedia* media, PrHtmlMediaError error);
+
+// Drops the element's decoder of its media source, before the source's active buffers change. The next update makes it
+// again from the buffers then active.
+void htmlMediaSourceTracksChanging(HtmlMedia* media);
+
+// Returns true if the element's error attribute is set, which stops appends to its media source.
+bool htmlMediaSourceHasError(const HtmlMedia* media);
 
 // Returns how likely the window's codec is to play a resource of the MIME type `type`
 // (html/#dom-navigator-canplaytype). No resource plays without a window or a codec.

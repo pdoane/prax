@@ -7,6 +7,7 @@
 
 #include "pr/dom.h"
 #include "pr/html.h"
+#include "pr/html_media_source.h"
 #include "pr/html_page.h"
 #include "pr/string_view.h"
 
@@ -21,6 +22,12 @@ PR_ASSUME_NONNULL_BEGIN
 namespace pr_impl {
 
 struct DomAgent;
+
+// An object URL that names a media source, which the entry holds (media-source-2/#mediasource-object-url).
+struct HtmlMediaSourceUrl {
+    PrString url;
+    PrHtmlMediaSource* source;
+};
 
 // A timeout or an interval waiting to run (html/#timers).
 struct HtmlTimer {
@@ -98,6 +105,7 @@ struct HtmlWindow : DomCountedTarget {
     PrStringView userAgent;
     PrString referrer;                        // html/#dom-document-referrer, or the null string for none
     Array<PrString> objectUrls;               // the blob URLs that the window's scripts created and did not revoke
+    Array<HtmlMediaSourceUrl> mediaSources;   // the blob URLs of media sources that the window's scripts created
     PrHtmlNavigatorCompatibilityMode navigatorCompatibilityMode;
 
     // The clock's time of the last activation notification (html/#last-activation-timestamp). It is positive infinity

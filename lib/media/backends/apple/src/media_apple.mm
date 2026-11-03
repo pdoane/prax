@@ -6,15 +6,18 @@
 #include "pr/array.h"
 #include "pr/ascii.h"
 #include "pr/assert.h"
+#include "pr/count_of.h"
 #include "pr/float.h"
+#include "pr/media_audio.h"
 #include "pr/memory.h"
+#include "pr/mime.h"
 #include "pr/mutex.h"
 #include "pr/thread.h"
 
-#include "media/backends/shared/src/media_shared_audio.h"
-
 #import <AVFoundation/AVFoundation.h>
+#import <AudioToolbox/AudioToolbox.h>
 #import <CoreVideo/CoreVideo.h>
+#import <VideoToolbox/VideoToolbox.h>
 
 // Serves a resource's bytes from memory to an asset, through a URL that no other loader handles.
 @interface PrMediaAppleLoader : NSObject <AVAssetResourceLoaderDelegate>
@@ -101,7 +104,7 @@ struct AppleDecoder : PrMediaDecoder {
     CVPixelBufferRef shown;
 
     // The audio, from when it starts.
-    MediaAudioQueue queue;
+    PrMediaAudioQueue* PR_NULLABLE queue;
     PrThread audioThread;
     bool audioStarted;
 };
@@ -224,7 +227,7 @@ void decodeFrames(AppleDecoder* d) {
 
 // Returns a reader of the audio track's samples as interleaved floats from `seconds` on, started, or nil if it cannot
 // read them.
-AVAssetReaderTrackOutput* PR_NULLABLE startReadingAudio(PrMediaAppleSource* source, const MediaAudioQueue* queue,
+AVAssetReaderTrackOutput* PR_NULLABLE startReadingAudio(PrMediaAppleSource* source, const PrMediaAudioQueue* queue,
         double seconds, AVAssetReader* PR_NULLABLE __strong* out) {
     NSError* error = nil;
     AVAssetReader* reader = [[AVAssetReader alloc] initWithAsset:source.asset error:&error];
@@ -232,11 +235,12 @@ AVAssetReaderTrackOutput* PR_NULLABLE startReadingAudio(PrMediaAppleSource* sour
         return nil;
     reader.timeRange = CMTimeRangeMake(CMTimeMakeWithSeconds(seconds, 90000), kCMTimePositiveInfinity);
     AudioChannelLayout layout{};
-    layout.mChannelLayoutTag = queue->channels == 1 ? kAudioChannelLayoutTag_Mono : kAudioChannelLayoutTag_Stereo;
+    layout.mChannelLayoutTag =
+        prMediaAudioQueueChannels(queue) == 1 ? kAudioChannelLayoutTag_Mono : kAudioChannelLayoutTag_Stereo;
     NSDictionary* settings = @{
         AVFormatIDKey: @(kAudioFormatLinearPCM),
-        AVSampleRateKey: @(queue->sampleRate),
-        AVNumberOfChannelsKey: @(queue->channels),
+        AVSampleRateKey: @(prMediaAudioQueueSampleRate(queue)),
+        AVNumberOfChannelsKey: @(prMediaAudioQueueChannels(queue)),
         AVChannelLayoutKey: [NSData dataWithBytes:&layout length:sizeof(layout)],
         AVLinearPCMBitDepthKey: @32,
         AVLinearPCMIsFloatKey: @YES,
@@ -257,17 +261,18 @@ AVAssetReaderTrackOutput* PR_NULLABLE startReadingAudio(PrMediaAppleSource* sour
 
 // Decodes the audio into the queue, and starts over at each seek, until the decoder stops.
 void decodeAudio(AppleDecoder* d) {
-    MediaAudioQueue* queue = &d->queue;
+    PrMediaAudioQueue* queue = d->queue;
     Array<float> samples{};
     PrMediaAppleSource* source = sourceOf(d);
-    while (!queue->stopping.load()) {
-        uint32_t seek = queue->seekWanted.load();
-        double seconds = queue->seekSeconds.load();
+    while (!prMediaAudioQueueIsStopping(queue)) {
+        PrMediaAudioSeek request = prMediaAudioQueueRequest(queue);
+        uint32_t seek = request.id;
+        double seconds = request.seconds;
         @autoreleasepool {
             AVAssetReader* reader = nil;
             AVAssetReaderTrackOutput* output = startReadingAudio(source, queue, seconds, &reader);
             bool begun = false;
-            while (output != nil && !mediaAudioQueueInterrupted(queue, seek)) {
+            while (output != nil && !prMediaAudioQueueIsInterrupted(queue, seek)) {
                 CMSampleBufferRef sample = nullptr;
                 @autoreleasepool {
                     sample = [output copyNextSampleBuffer];
@@ -276,7 +281,7 @@ void decodeAudio(AppleDecoder* d) {
                     break;
                 uint32_t frames = uint32_t(CMSampleBufferGetNumSamples(sample));
                 double time = secondsOf(CMSampleBufferGetPresentationTimeStamp(sample));
-                samples.resize(frames * queue->channels);
+                samples.resize(frames * prMediaAudioQueueChannels(queue));
                 CMBlockBufferRef block = CMSampleBufferGetDataBuffer(sample);
                 bool copied = block != nullptr && CMBlockBufferCopyDataBytes(block, 0,
                     size_t(samples.count) * sizeof(float), samples.data) == kCMBlockBufferNoErr;
@@ -286,23 +291,24 @@ void decodeAudio(AppleDecoder* d) {
                 // A reader starts at a packet's boundary, so the frames before the time asked for are dropped.
                 uint32_t skip = 0;
                 if (time < seconds) {
-                    double extra = (seconds - time) * queue->sampleRate;
+                    double extra = (seconds - time) * prMediaAudioQueueSampleRate(queue);
                     skip = extra >= frames ? frames : uint32_t(extra);
                 }
                 if (skip == frames)
                     continue;
                 if (!begun) {
-                    mediaAudioQueueBegin(queue, seek, time + double(skip) / queue->sampleRate);
+                    prMediaAudioQueueBegin(queue, seek, time + double(skip) / prMediaAudioQueueSampleRate(queue));
                     begun = true;
                 }
-                if (!mediaAudioQueueWrite(queue, seek, samples.data + size_t(skip) * queue->channels, frames - skip))
+                if (!prMediaAudioQueueWrite(queue, seek, samples.data + size_t(skip) * prMediaAudioQueueChannels(queue),
+                        frames - skip))
                     break;
             }
             if (!begun)
-                mediaAudioQueueBegin(queue, seek, seconds);
+                prMediaAudioQueueBegin(queue, seek, seconds);
             [reader cancelReading];
         }
-        mediaAudioQueueFinish(queue, seek);
+        prMediaAudioQueueFinish(queue, seek);
     }
     samples.reset();
 }
@@ -386,9 +392,9 @@ PrStatus decoderCreate(PrMediaCodec*, PrByteView bytes, PrMediaDecoder* PR_NULLA
 void decoderDestroy(PrMediaCodec*, PrMediaDecoder* decoder) {
     AppleDecoder* d = static_cast<AppleDecoder*>(decoder);
     if (d->audioStarted) {
-        d->queue.stopping.store(true);
+        prMediaAudioQueueStop(d->queue);
         prThreadJoin(&d->audioThread);
-        mediaAudioQueueReset(&d->queue);
+        prMediaAudioQueueDestroy(d->queue);
     }
     if (sourceOf(d).video != nil) {
         prMutexLock(&d->mutex);
@@ -472,18 +478,391 @@ bool decoderAudioStart(PrMediaCodec*, PrMediaDecoder* decoder, uint32_t sampleRa
     PR_ASSERT(!d->audioStarted);
     if (sourceOf(d).audio == nil || channels > 2)
         return false;
-    mediaAudioQueueInit(&d->queue, sampleRate, channels, seconds);
+    d->queue = prMediaAudioQueueCreate(sampleRate, channels, seconds);
     d->audioStarted = true;
     prThreadStart(&d->audioThread, [](void* context) { decodeAudio(static_cast<AppleDecoder*>(context)); }, d);
     return true;
 }
 
 void decoderAudioSeek(PrMediaCodec*, PrMediaDecoder* decoder, double seconds) {
-    mediaAudioQueueSeek(&static_cast<AppleDecoder*>(decoder)->queue, seconds);
+    prMediaAudioQueueSeek(static_cast<AppleDecoder*>(decoder)->queue, seconds);
 }
 
 PrMediaAudioChunk decoderAudioRead(PrMediaCodec*, PrMediaDecoder* decoder, float* samples, uint32_t frames) {
-    return mediaAudioQueueRead(&static_cast<AppleDecoder*>(decoder)->queue, samples, frames);
+    return prMediaAudioQueueRead(static_cast<AppleDecoder*>(decoder)->queue, samples, frames);
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Sample decoders, for media sources
+
+// A decoder of a video track's coded frames, which VideoToolbox decodes into Bgra8 pixel buffers.
+struct AppleSampleVideo : PrMediaSampleDecoder {
+    CMVideoFormatDescriptionRef format;
+    VTDecompressionSessionRef session;
+    const PrMediaSampleSink* PR_NULLABLE sink;      // during a decode, what receives its images
+};
+
+// A decoder of an audio track's coded frames, which an audio converter decodes into interleaved floats.
+struct AppleSampleAudio : PrMediaSampleDecoder {
+    AudioConverterRef converter;
+    uint32_t inputChannels;
+    uint32_t channels;
+    Array<float> output;
+
+    // The frame being decoded, which the converter's input callback gives it once.
+    const PrMediaBufferedFrame* PR_NULLABLE input;
+    AudioStreamPacketDescription packet;
+};
+
+// The status that the input callback returns once it has given its frame, which ends a conversion.
+constexpr OSStatus kInputDone = 'done';
+
+// The video codec types and the boxes of their configuration records, by the sample entry that names them.
+struct VideoCodec {
+    const char* entry;
+    CMVideoCodecType type;
+    const char* record;
+};
+
+constexpr VideoCodec kVideoCodecs[] = {
+    {"avc1", kCMVideoCodecType_H264, "avcC"},
+    {"avc3", kCMVideoCodecType_H264, "avcC"},
+    {"hvc1", kCMVideoCodecType_HEVC, "hvcC"},
+    {"hev1", kCMVideoCodecType_HEVC, "hvcC"},
+    {"av01", 'av01', "av1C"},
+    {"vp09", 'vp09', "vpcC"},
+};
+
+// Returns the video codec that a codecs parameter's codec names, or null for none that VideoToolbox decodes.
+const VideoCodec* PR_NULLABLE videoCodecOf(PrStringView codec) {
+    for (const VideoCodec& known : kVideoCodecs) {
+        PrStringView entry = known.entry;
+        if (codec.size >= 4 && asciiEqualsFold(PrStringView{codec.data, 4}, entry))
+            return &known;
+    }
+    return nullptr;
+}
+
+// Returns true if this system decodes the codec type, which VideoToolbox answers for the codecs that it decodes only on
+// some hardware.
+bool decodesVideo(CMVideoCodecType type) {
+    if (type == 'vp09')
+        VTRegisterSupplementalVideoDecoderIfAvailable(type);
+    if (type == kCMVideoCodecType_H264 || type == kCMVideoCodecType_HEVC)
+        return true;
+    return VTIsHardwareDecodeSupported(type);
+}
+
+// Returns true if the codecs parameter's codec is an audio codec that the converter decodes: AAC or MP3 in MP4.
+bool decodesAudio(PrStringView codec) {
+    return asciiStartsWithFold(codec, "mp4a.40") || asciiEqualsFold(codec, "mp4a.69") ||
+        asciiEqualsFold(codec, "mp4a.6b") || asciiEqualsFold(codec, "mp3");
+}
+
+void videoOutput(void* PR_NULLABLE refcon, void* PR_NULLABLE, OSStatus status, VTDecodeInfoFlags,
+        CVImageBufferRef PR_NULLABLE image, CMTime presentation, CMTime) {
+    AppleSampleVideo* d = static_cast<AppleSampleVideo*>(refcon);
+    if (status != noErr || image == nullptr || d->sink == nullptr || d->sink->image == nullptr)
+        return;
+    CVPixelBufferRetain(image);
+    d->sink->image(d->sink->context, image, secondsOf(presentation));
+}
+
+PrStatus videoDecoderCreate(const PrMediaTrackInfo* track, PrMediaSampleDecoder* PR_NULLABLE* PR_NONNULL out) {
+    const VideoCodec* codec = videoCodecOf(track->codec);
+    if (codec == nullptr || track->config.size == 0 || !decodesVideo(codec->type))
+        return PrStatus_NotSupported;
+    @autoreleasepool {
+        NSDictionary* atoms = @{
+            [NSString stringWithUTF8String:codec->record]: [NSData dataWithBytes:track->config.data
+                length:track->config.size],
+        };
+        NSDictionary* extensions = @{(id)kCMFormatDescriptionExtension_SampleDescriptionExtensionAtoms: atoms};
+        CMVideoFormatDescriptionRef format = nullptr;
+        if (CMVideoFormatDescriptionCreate(kCFAllocatorDefault, codec->type, int32_t(track->extent.x),
+                int32_t(track->extent.y), (__bridge CFDictionaryRef)extensions, &format) != noErr)
+            return PrStatus_InvalidData;
+        AppleSampleVideo* d = allocZeroed<AppleSampleVideo>();
+        d->kind = PrMediaTrackKind_Video;
+        d->format = format;
+        NSDictionary* attributes = @{(id)kCVPixelBufferPixelFormatTypeKey: @(kCVPixelFormatType_32BGRA)};
+        VTDecompressionOutputCallbackRecord callback{videoOutput, d};
+        if (VTDecompressionSessionCreate(kCFAllocatorDefault, format, nullptr, (__bridge CFDictionaryRef)attributes,
+                &callback, &d->session) != noErr) {
+            CFRelease(format);
+            prMemoryFree(d);
+            return PrStatus_NotSupported;
+        }
+        *out = d;
+        return PrStatus_Ok;
+    }
+}
+
+// Reads the sample rate and channels that an AudioSpecificConfig gives (ISO/IEC 14496-3, 1.6.2.1). Leaves them for a
+// config that does not say.
+void readAudioConfig(PrByteView config, uint32_t* sampleRate, uint32_t* channels) {
+    constexpr uint32_t kRates[] = {
+        96000, 88200, 64000, 48000, 44100, 32000, 24000, 22050, 16000, 12000, 11025, 8000,
+        7350,
+    };
+    if (config.size < 2)
+        return;
+    uint32_t bits = uint32_t(config.data[0]) << 8 | config.data[1];
+    uint32_t type = bits >> 11;
+    uint32_t at = 5;
+    if (type == 31)
+        at += 6;
+    if (config.size < 4)
+        return;
+    uint32_t word = uint32_t(config.data[0]) << 24 | uint32_t(config.data[1]) << 16 | uint32_t(config.data[2]) << 8 |
+        config.data[3];
+    uint32_t index = (word >> (32 - at - 4)) & 15;
+    at += 4;
+    if (index < countOf(kRates)) {
+        *sampleRate = kRates[index];
+    } else if (index == 15) {
+        if (config.size < 6)
+            return;
+        return;
+    }
+    uint32_t channelConfig = (word >> (32 - at - 4)) & 15;
+    if (channelConfig >= 1 && channelConfig <= 6)
+        *channels = channelConfig;
+    else if (channelConfig == 7)
+        *channels = 8;
+}
+
+// Appends an MPEG-4 descriptor's tag and length, in four bytes of seven bits each (ISO/IEC 14496-1, 8.3.3).
+void appendDescriptor(Array<uint8_t>* out, uint8_t tag, uint32_t length) {
+    out->push(tag);
+    out->push(uint8_t(0x80 | ((length >> 21) & 0x7f)));
+    out->push(uint8_t(0x80 | ((length >> 14) & 0x7f)));
+    out->push(uint8_t(0x80 | ((length >> 7) & 0x7f)));
+    out->push(uint8_t(length & 0x7f));
+}
+
+// Writes the ES descriptor of an AAC stream whose AudioSpecificConfig is `config`, which the converter takes as its
+// magic cookie, as an esds box holds it.
+void esdsOf(PrByteView config, Array<uint8_t>* out) {
+    uint32_t specific = uint32_t(config.size);
+    uint32_t decoderConfig = 13 + 5 + specific;
+    uint32_t elementary = 3 + 5 + decoderConfig + 5 + 1;
+    appendDescriptor(out, 3, elementary);
+    out->push(0);
+    out->push(0);
+    out->push(0);
+    appendDescriptor(out, 4, decoderConfig);
+    const uint8_t fields[13] = {0x40, 0x15, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+    out->append(fields, 13);
+    appendDescriptor(out, 5, specific);
+    if (specific != 0)
+        out->append(config.data, specific);
+    appendDescriptor(out, 6, 1);
+    out->push(2);
+}
+
+PrStatus audioDecoderCreate(const PrMediaTrackInfo* track, uint32_t sampleRate, uint32_t channels,
+        PrMediaSampleDecoder* PR_NULLABLE* PR_NONNULL out) {
+    if (!decodesAudio(track->codec) || sampleRate == 0 || channels == 0 || channels > 2)
+        return PrStatus_NotSupported;
+    bool aac = asciiStartsWithFold(track->codec, "mp4a.40");
+    uint32_t inputRate = track->sampleRate != 0 ? track->sampleRate : 44100;
+    uint32_t inputChannels = track->channels != 0 ? track->channels : 2;
+    if (aac)
+        readAudioConfig(track->config, &inputRate, &inputChannels);
+    AudioStreamBasicDescription input{};
+    input.mSampleRate = inputRate;
+    input.mFormatID = aac ? kAudioFormatMPEG4AAC : kAudioFormatMPEGLayer3;
+    input.mChannelsPerFrame = inputChannels;
+    AudioStreamBasicDescription output{};
+    output.mSampleRate = sampleRate;
+    output.mFormatID = kAudioFormatLinearPCM;
+    output.mFormatFlags = kAudioFormatFlagIsFloat | kAudioFormatFlagIsPacked;
+    output.mBitsPerChannel = 32;
+    output.mChannelsPerFrame = channels;
+    output.mFramesPerPacket = 1;
+    output.mBytesPerFrame = channels * sizeof(float);
+    output.mBytesPerPacket = output.mBytesPerFrame;
+    AudioConverterRef converter = nullptr;
+    if (AudioConverterNew(&input, &output, &converter) != noErr)
+        return PrStatus_NotSupported;
+    if (aac && track->config.size != 0) {
+        Array<uint8_t> cookie{};
+        esdsOf(track->config, &cookie);
+        AudioConverterSetProperty(converter, kAudioConverterDecompressionMagicCookie, cookie.count, cookie.data);
+        cookie.reset();
+    }
+    // A mono track plays in both channels of a stereo output.
+    if (inputChannels == 1 && channels == 2) {
+        SInt32 map[2] = {0, 0};
+        AudioConverterSetProperty(converter, kAudioConverterChannelMap, sizeof(map), map);
+    }
+    AppleSampleAudio* d = allocZeroed<AppleSampleAudio>();
+    d->kind = PrMediaTrackKind_Audio;
+    d->converter = converter;
+    d->inputChannels = inputChannels;
+    d->channels = channels;
+    *out = d;
+    return PrStatus_Ok;
+}
+
+OSStatus audioInput(AudioConverterRef, UInt32* packets, AudioBufferList* data,
+        AudioStreamPacketDescription* PR_NULLABLE* PR_NULLABLE descriptions, void* PR_NULLABLE context) {
+    AppleSampleAudio* d = static_cast<AppleSampleAudio*>(context);
+    if (d->input == nullptr) {
+        *packets = 0;
+        return kInputDone;
+    }
+    data->mNumberBuffers = 1;
+    data->mBuffers[0].mData = const_cast<uint8_t*>(d->input->bytes.data);
+    data->mBuffers[0].mDataByteSize = UInt32(d->input->bytes.size);
+    data->mBuffers[0].mNumberChannels = d->inputChannels;
+    d->packet = AudioStreamPacketDescription{0, 0, UInt32(d->input->bytes.size)};
+    if (descriptions != nullptr)
+        *descriptions = &d->packet;
+    *packets = 1;
+    d->input = nullptr;
+    return noErr;
+}
+
+bool audioDecode(AppleSampleAudio* d, const PrMediaBufferedFrame* frame, const PrMediaSampleSink* sink) {
+    constexpr uint32_t kChunkFrames = 4096;
+    d->input = frame;
+    d->output.clear();
+    for (;;) {
+        uint32_t at = d->output.count;
+        d->output.resize(at + kChunkFrames * d->channels);
+        AudioBufferList list{};
+        list.mNumberBuffers = 1;
+        list.mBuffers[0].mNumberChannels = d->channels;
+        list.mBuffers[0].mDataByteSize = UInt32(kChunkFrames * d->channels * sizeof(float));
+        list.mBuffers[0].mData = d->output.data + at;
+        UInt32 frames = kChunkFrames;
+        OSStatus status = AudioConverterFillComplexBuffer(d->converter, audioInput, d, &frames, &list, nullptr);
+        d->output.resize(at + frames * d->channels);
+        if (status != noErr || frames == 0)
+            break;
+    }
+    d->input = nullptr;
+    uint32_t frames = d->output.count / d->channels;
+    if (frames != 0 && sink->samples != nullptr)
+        sink->samples(sink->context, d->output.data, frames, frame->presentation);
+    return true;
+}
+
+PrMediaSupport supportsSourceType(PrMediaCodec*, PrStringView type) {
+    PrString parameter{};
+    if (!prMimeTypeParameter(type, "codecs", &parameter))
+        return PrMediaSupport_Maybe;
+    PrStringView codecs = prStringView(&parameter);
+    PrMediaSupport support = PrMediaSupport_Probably;
+    size_t from = 0;
+    while (from <= codecs.size && support != PrMediaSupport_No) {
+        size_t end = from;
+        while (end < codecs.size && codecs.data[end] != ',')
+            ++end;
+        size_t begin = from;
+        while (begin < end && asciiIsHttpSpace(codecs.data[begin]))
+            ++begin;
+        size_t last = end;
+        while (last > begin && asciiIsHttpSpace(codecs.data[last - 1]))
+            --last;
+        PrStringView codec{codecs.data + begin, last - begin};
+        const VideoCodec* video = videoCodecOf(codec);
+        if (!(video != nullptr && decodesVideo(video->type)) && !decodesAudio(codec))
+            support = PrMediaSupport_No;
+        from = end + 1;
+    }
+    prStringReset(&parameter);
+    return support;
+}
+
+PrStatus sampleDecoderCreate(PrMediaCodec*, const PrMediaTrackInfo* track, uint32_t sampleRate, uint32_t channels,
+        PrMediaSampleDecoder* PR_NULLABLE* PR_NONNULL out) {
+    *out = nullptr;
+    if (track->kind == PrMediaTrackKind_Video)
+        return videoDecoderCreate(track, out);
+    if (track->kind == PrMediaTrackKind_Audio)
+        return audioDecoderCreate(track, sampleRate, channels, out);
+    return PrStatus_NotSupported;
+}
+
+void sampleDecoderDestroy(PrMediaCodec*, PrMediaSampleDecoder* decoder) {
+    if (decoder->kind == PrMediaTrackKind_Video) {
+        AppleSampleVideo* d = static_cast<AppleSampleVideo*>(decoder);
+        VTDecompressionSessionInvalidate(d->session);
+        CFRelease(d->session);
+        CFRelease(d->format);
+        prMemoryFree(d);
+        return;
+    }
+    AppleSampleAudio* d = static_cast<AppleSampleAudio*>(decoder);
+    AudioConverterDispose(d->converter);
+    d->output.reset();
+    prMemoryFree(d);
+}
+
+bool sampleDecode(PrMediaCodec*, PrMediaSampleDecoder* decoder, const PrMediaBufferedFrame* frame,
+        const PrMediaSampleSink* sink) {
+    if (decoder->kind == PrMediaTrackKind_Audio)
+        return audioDecode(static_cast<AppleSampleAudio*>(decoder), frame, sink);
+    AppleSampleVideo* d = static_cast<AppleSampleVideo*>(decoder);
+    CMBlockBufferRef block = nullptr;
+    if (CMBlockBufferCreateWithMemoryBlock(kCFAllocatorDefault, nullptr, frame->bytes.size, kCFAllocatorDefault,
+            nullptr, 0, frame->bytes.size, kCMBlockBufferAssureMemoryNowFlag, &block) != kCMBlockBufferNoErr)
+        return false;
+    CMBlockBufferReplaceDataBytes(frame->bytes.data, block, 0, frame->bytes.size);
+    CMSampleTimingInfo timing{
+        CMTimeMakeWithSeconds(frame->duration, 90000),
+        CMTimeMakeWithSeconds(frame->presentation, 90000),
+        CMTimeMakeWithSeconds(frame->decode, 90000),
+    };
+    size_t size = frame->bytes.size;
+    CMSampleBufferRef sample = nullptr;
+    OSStatus status = CMSampleBufferCreateReady(kCFAllocatorDefault, block, d->format, 1, 1, &timing, 1, &size, &sample);
+    CFRelease(block);
+    if (status != noErr)
+        return false;
+    // Decoding without the asynchronous flag returns once the frame's images have reached the output callback.
+    d->sink = sink;
+    VTDecodeInfoFlags flags = 0;
+    status = VTDecompressionSessionDecodeFrame(d->session, sample, 0, nullptr, &flags);
+    VTDecompressionSessionWaitForAsynchronousFrames(d->session);
+    d->sink = nullptr;
+    CFRelease(sample);
+    return status == noErr;
+}
+
+void sampleDecoderFlush(PrMediaCodec*, PrMediaSampleDecoder* decoder) {
+    if (decoder->kind == PrMediaTrackKind_Audio) {
+        AudioConverterReset(static_cast<AppleSampleAudio*>(decoder)->converter);
+        return;
+    }
+    // The frames that the session held back for reordering are dropped, since no sink receives them.
+    AppleSampleVideo* d = static_cast<AppleSampleVideo*>(decoder);
+    d->sink = nullptr;
+    VTDecompressionSessionFinishDelayedFrames(d->session);
+    VTDecompressionSessionWaitForAsynchronousFrames(d->session);
+}
+
+bool imageLock(PrMediaCodec*, void* image, PrPixelView* out) {
+    CVPixelBufferRef buffer = static_cast<CVPixelBufferRef>(image);
+    if (CVPixelBufferLockBaseAddress(buffer, kCVPixelBufferLock_ReadOnly) != kCVReturnSuccess)
+        return false;
+    PrUVec2 extent{uint32_t(CVPixelBufferGetWidth(buffer)), uint32_t(CVPixelBufferGetHeight(buffer))};
+    *out = PrPixelView{
+        static_cast<const uint8_t*>(CVPixelBufferGetBaseAddress(buffer)),
+        CVPixelBufferGetBytesPerRow(buffer), extent,
+    };
+    return out->data != nullptr;
+}
+
+void imageUnlock(PrMediaCodec*, void* image) {
+    CVPixelBufferUnlockBaseAddress(static_cast<CVPixelBufferRef>(image), kCVPixelBufferLock_ReadOnly);
+}
+
+void imageRelease(PrMediaCodec*, void* image) {
+    CVPixelBufferRelease(static_cast<CVPixelBufferRef>(image));
 }
 
 constexpr PrMediaCodec kApple = {
@@ -494,6 +873,14 @@ constexpr PrMediaCodec kApple = {
     .decoderAudioStart = decoderAudioStart,
     .decoderAudioSeek = decoderAudioSeek,
     .decoderAudioRead = decoderAudioRead,
+    .supportsSourceType = supportsSourceType,
+    .sampleDecoderCreate = sampleDecoderCreate,
+    .sampleDecoderDestroy = sampleDecoderDestroy,
+    .sampleDecode = sampleDecode,
+    .sampleDecoderFlush = sampleDecoderFlush,
+    .imageLock = imageLock,
+    .imageUnlock = imageUnlock,
+    .imageRelease = imageRelease,
 };
 
 } // namespace

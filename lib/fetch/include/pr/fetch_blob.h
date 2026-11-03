@@ -65,6 +65,10 @@ const PrFetchBlob* PR_NULLABLE prFetchBlobStoreResolve(PrFetchBlobStore* store, 
 // Returns true if `url` has the scheme of a blob URL.
 bool prFetchBlobIsUrl(PrStringView url);
 
+// Returns a new blob URL for `origin`, which names nothing until a store's entry gives it an object
+// (FileAPI/#unicodeBlobURL).
+PrString prFetchBlobUrlGenerate(PrStringView origin);
+
 // Creates a blob URL of `blob` for `origin`, which `fetcher` answers until it is revoked (FileAPI/#url). Any thread may
 // call this and prFetchBlobUrlRevoke.
 PrString prFetchBlobUrlCreate(PrFetchNetwork* fetcher, const PrFetchBlob* blob, PrStringView origin);

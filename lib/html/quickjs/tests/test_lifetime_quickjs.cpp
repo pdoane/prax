@@ -192,6 +192,15 @@ TEST_CASE("what a script puts on a node lasts while it can reach any node of its
     CHECK(page.run("if (document.body.firstChild.marker !== 1) throw new Error('moved');"));
 }
 
+TEST_CASE("what a script puts on a node of the window's document lasts, though script never read the document") {
+    // A named property reaches the node without the document's object.
+    Page page("<body><div id=target></div></body>");
+    CHECK(page.run("target.marker = 1; target.addEventListener('x', () => { globalThis.heard = true; });"));
+    JS_RunGC(page.runtime);
+    CHECK(page.run("if (target.marker !== 1) throw new Error('expando');"
+        "target.dispatchEvent(new Event('x')); if (!globalThis.heard) throw new Error('listener');"));
+}
+
 TEST_CASE("an observer with a delivery pending lasts until it runs, however unreachable script leaves it") {
     Page page("<body></body>");
     CHECK(page.run("(() => { const node = document.createTextNode('');"

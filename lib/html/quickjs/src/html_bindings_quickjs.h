@@ -3,6 +3,7 @@
 #pragma once
 
 #include "pr/html.h"
+#include "pr/html_media_source.h"
 #include "pr/string_view.h"
 
 #include "quickjs.h"
@@ -21,6 +22,9 @@ extern JSClassID htmlPerformanceClass;
 
 // Returns the window of the context's global, or null if it has none.
 PrHtmlWindow* PR_NULLABLE jsHtmlGlobalWindow(JSContext* ctx);
+
+// Returns a new TimeRanges of `ranges`, which are in order and do not touch (html/#timeranges).
+JSValue jsHtmlTimeRangesNew(JSContext* ctx, const PrMediaTimeRange* PR_NULLABLE ranges, uint32_t count);
 
 // Makes `handle` the window of the context's global, with the window's custom element registry. Returns false, with an
 // exception pending, if the runtime already runs the windows of another agent. The host owns the window, and must keep

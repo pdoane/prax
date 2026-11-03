@@ -32,6 +32,7 @@
 #include "html/quickjs/src/html_clone_quickjs.h"
 #include "html/quickjs/src/html_elements_quickjs.h"
 #include "html/quickjs/src/html_forms_quickjs.h"
+#include "html/quickjs/src/html_media_source_quickjs.h"
 #include "html/quickjs/src/html_message_quickjs.h"
 #include "html/quickjs/src/html_performance_quickjs.h"
 #include "html/quickjs/src/html_reflect_quickjs.h"
@@ -174,6 +175,12 @@ JSClassID classifyEventTarget(void* handle) {
         return trackListClass(prHtmlTrackListKind(list));
     if (prHtmlMessagePortQuery(target) != nullptr)
         return htmlMessagePortClass;
+    if (prHtmlMediaSourceQuery(target) != nullptr)
+        return htmlMediaSourceClass;
+    if (prHtmlSourceBufferQuery(target) != nullptr)
+        return htmlSourceBufferClass;
+    if (prHtmlSourceBufferListQuery(target) != nullptr)
+        return htmlSourceBufferListClass;
     return prJsDomEventTargetClass;
 }
 
@@ -1702,25 +1709,28 @@ void trackRejection(JSContext* ctx, JSValueConst promise, JSValueConst reason, b
 // ---------------------------------------------------------------------------------------------------------------------
 // Window (html/#window)
 
+// Returns the object of the window's document, which the window's object `holder` holds (WindowSlot_Document).
+JSValue heldDocument(JSContext* ctx, JSValueConst holder, PrHtmlWindow* window) {
+    JSValue object = jsWrapAs(ctx, prJsDomDocumentClass, holder, prHtmlWindowDocument(window), false);
+    if (JS_IsException(object))
+        return object;
+    JSValue held = jsReference(ctx, holder, WindowSlot_Document);
+    bool current = JS_VALUE_GET_PTR(held) == JS_VALUE_GET_PTR(object);
+    JS_FreeValue(ctx, held);
+    if (!current)
+        jsSetReference(ctx, holder, WindowSlot_Document, object);
+    return object;
+}
+
 JSValue document(JSContext* ctx, JSValueConst windowObject) {
     PrHtmlWindow* window = jsThis<PrHtmlWindow>(ctx, windowObject, htmlWindowClass);
     if (window == nullptr)
         return JS_EXCEPTION;
     // The receiver may be the global, whose prototype is the window's object.
     JSValue holder = jsWrap(ctx, htmlWindowClass, JS_NULL, window, false);
-    JSValue object;
     if (JS_IsException(holder))
-        object = JS_EXCEPTION;
-    else
-        object = jsWrapAs(ctx, prJsDomDocumentClass, holder, prHtmlWindowDocument(window), false);
-    // The window's object holds its document's object, which changes only when a new document loads.
-    if (!JS_IsException(object)) {
-        JSValue held = jsReference(ctx, holder, WindowSlot_Document);
-        bool current = JS_VALUE_GET_PTR(held) == JS_VALUE_GET_PTR(object);
-        JS_FreeValue(ctx, held);
-        if (!current)
-            jsSetReference(ctx, holder, WindowSlot_Document, object);
-    }
+        return holder;
+    JSValue object = heldDocument(ctx, holder, window);
     JS_FreeValue(ctx, holder);
     return object;
 }
@@ -2505,10 +2515,19 @@ PrString realmBaseUrl(JSContext* ctx) {
 JSValue createObjectUrl(JSContext* ctx, JSValueConst, int argc, JSValueConst* argv) {
     if (!jsArgCount(ctx, argc, 1))
         return JS_EXCEPTION;
+    PrHtmlWindow* window = jsHtmlGlobalWindow(ctx);
+    // A MediaSource's URL names it for a media element to attach (FileAPI/#dfn-createObjectURL).
+    if (PrHtmlMediaSource* source = jsHtmlMediaSourceOf(ctx, argv[0])) {
+        if (window == nullptr)
+            return JS_ThrowTypeError(ctx, "createObjectURL needs a window");
+        PrString url = prHtmlMediaSourceUrlCreate(window, source);
+        JSValue result = jsNewStringView(ctx, prStringView(&url));
+        prStringReset(&url);
+        return result;
+    }
     const PrFetchBlob* blob = prJsFetchBlobFromValue(ctx, argv[0]);
     if (blob == nullptr)
-        return JS_ThrowTypeError(ctx, "The argument is not a Blob");
-    PrHtmlWindow* window = jsHtmlGlobalWindow(ctx);
+        return JS_ThrowTypeError(ctx, "The argument is not a Blob or a MediaSource");
     if (window == nullptr)
         return JS_ThrowTypeError(ctx, "createObjectURL needs a window");
     PrString url = prHtmlWindowCreateObjectUrl(window, blob);
@@ -4122,6 +4141,7 @@ void jsHtmlBind(JSContext* ctx) {
     prJsFetchSetBaseUrl(realmBaseUrl);
     bindObjectUrls(ctx);
     jsHtmlMessageBind(ctx);
+    jsHtmlMediaSourceBind(ctx);
     jsHtmlPerformanceBind(ctx);
     // The members that HTML adds to the classes of other modules.
     struct Extension {
@@ -4175,6 +4195,18 @@ PrHtmlWindow* PR_NULLABLE jsHtmlGlobalWindow(JSContext* ctx) {
     return globalWindow(ctx);
 }
 
+JSValue jsHtmlTimeRangesNew(JSContext* ctx, const PrMediaTimeRange* PR_NULLABLE ranges, uint32_t count) {
+    TimeRangesValue* value = allocZeroed<TimeRangesValue>();
+    for (uint32_t i = 0; i < count; ++i) {
+        value->bounds.push(ranges[i].start);
+        value->bounds.push(ranges[i].end);
+    }
+    JSValue object = jsWrap(ctx, htmlTimeRangesClass, JS_NULL, value, true);
+    if (JS_IsException(object))
+        timeRangesDestroy(value);
+    return object;
+}
+
 bool jsHtmlSetGlobal(JSContext* ctx, PrHtmlWindow* handle) {
     // The runtime runs the agent of the first window it is given.
     JSRuntime* runtime = JS_GetRuntime(ctx);
@@ -4190,6 +4222,11 @@ bool jsHtmlSetGlobal(JSContext* ctx, PrHtmlWindow* handle) {
     JSValue global = JS_GetGlobalObject(ctx);
     bool ok = JS_SetPrototype(ctx, global, object) >= 0;
     jsSetReference(ctx, object, WindowSlot_Global, global);
+    // The document's object is held before script reaches any of its nodes, which script can also reach without it, as
+    // through the window's named properties. A window keeps its document, since a new document gets a new window.
+    JSValue document = heldDocument(ctx, object, handle);
+    ok &= !JS_IsException(document);
+    JS_FreeValue(ctx, document);
     ok &= jsCustomElementsSetGlobal(ctx, object, handle);
     // html/#dom-window, html/#dom-self and html/#dom-frames, for a browsing context that no script opened.
     constexpr const char* kSelves[] = {"window", "self", "frames"};

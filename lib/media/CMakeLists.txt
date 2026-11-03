@@ -1,6 +1,10 @@
 # Media: the interface, and the backends that the build turns on.
 pr_library(media INCLUDE include
     src/media.cpp
+    src/media_audio.cpp
+    src/media_segment.cpp
+    src/media_source.cpp
+    src/media_source_decoder.cpp
 )
 target_link_libraries(pr_media PUBLIC prax::core PRIVATE prax::core_cpp prax::mime)
 
@@ -16,7 +20,7 @@ if (PR_MEDIA_APPLE)
     pr_headers(pr_media PUBLIC backends/apple/include)
     target_compile_definitions(pr_media PRIVATE PR_MEDIA_HAS_APPLE)
     target_link_libraries(pr_media PUBLIC "-framework AVFoundation" "-framework CoreMedia" "-framework CoreVideo"
-        "-framework CoreGraphics" "-framework Foundation" "-framework AudioToolbox")
+        "-framework CoreGraphics" "-framework Foundation" "-framework AudioToolbox" "-framework VideoToolbox")
 endif()
 
 if (PR_MEDIA_WINDOWS)
@@ -30,6 +34,8 @@ if (PR_DEVELOP)
     pr_module_tests(media
         tests/test_media.cpp
         tests/test_media_c.c
+        tests/test_media_segment.cpp
+        tests/test_media_source.cpp
     )
     if (PR_MEDIA_BUILTIN)
         target_sources(media_tests PRIVATE backends/builtin/tests/test_media_builtin.cpp)

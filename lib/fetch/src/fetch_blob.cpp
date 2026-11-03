@@ -209,7 +209,7 @@ bool prFetchBlobIsUrl(PrStringView url) {
     return asciiStartsWithFold(url, "blob:");
 }
 
-PrString prFetchBlobUrlCreate(PrFetchNetwork* fetcher, const PrFetchBlob* blob, PrStringView origin) {
+PrString prFetchBlobUrlGenerate(PrStringView origin) {
     TextBuffer url{};
     textAppend(&url, "blob:");
     textAppend(&url, origin);
@@ -217,6 +217,11 @@ PrString prFetchBlobUrlCreate(PrFetchNetwork* fetcher, const PrFetchBlob* blob, 
     appendUuid(&url);
     PrString result = prStringCopy(textView(&url));
     textReset(&url);
+    return result;
+}
+
+PrString prFetchBlobUrlCreate(PrFetchNetwork* fetcher, const PrFetchBlob* blob, PrStringView origin) {
+    PrString result = prFetchBlobUrlGenerate(origin);
     PrFetchBlobStore* store = fetcher->blobStore;
     if (store == nullptr)
         return result;

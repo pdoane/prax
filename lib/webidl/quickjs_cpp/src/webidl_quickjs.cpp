@@ -1085,8 +1085,9 @@ bool jsBufferSource(JSContext* ctx, JSValueConst value, const uint8_t* PR_NULLAB
         return false;
     }
     if (JS_IsException(buffer)) {
+        // A typed array whose buffer was detached is a view of no bytes.
         JS_FreeValue(ctx, JS_GetException(ctx));
-        return false;
+        return JS_GetTypedArrayType(value) >= 0;
     }
     size_t total = 0;
     const uint8_t* bytes = JS_GetArrayBuffer(ctx, &total, buffer);

@@ -99,6 +99,7 @@ SUITES = {
              "webstorage", "workers", "webmessaging", "requestidlecallback"),
     "infrastructure": ("infrastructure",),
     "mathml": ("mathml",),
+    "media-source": ("media-source",),
     "networking": ("fetch", "beacon", "referrer-policy", "cors", "FileAPI", "streams", "websockets"),
     "performance": ("hr-time", "performance-timeline", "user-timing", "navigation-timing", "resource-timing",
                     "server-timing"),
