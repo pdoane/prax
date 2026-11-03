@@ -8,6 +8,7 @@
 #include "pr/count_of.h"
 #include "pr/dom_abort.h"
 #include "pr/dom_geometry_quickjs.h"
+#include "pr/dom_traversal.h"
 #include "pr/float.h"
 #include "pr/mem.h"
 #include "pr/quickjs_binding.h"
@@ -24,6 +25,10 @@ JSClassID domImplementationClass;
 JSClassID domMutationObserverClass;
 JSClassID domMutationRecordClass;
 JSClassID domStaticRangeClass;
+JSClassID domCdataSectionClass;
+JSClassID domNodeFilterClass;
+JSClassID domNodeIteratorClass;
+JSClassID domTreeWalkerClass;
 
 namespace {
 
@@ -310,8 +315,8 @@ JSClassID classifyNode(void* handle) {
     switch (prDomNodeType(static_cast<PrDomNode*>(handle))) {
         case PrDomNodeType_Element: return prJsDomElementClass;
         case PrDomNodeType_Attribute: return domAttrClass;
-        case PrDomNodeType_Text:
-        case PrDomNodeType_CdataSection: return prJsDomTextClass;
+        case PrDomNodeType_Text: return prJsDomTextClass;
+        case PrDomNodeType_CdataSection: return domCdataSectionClass;
         case PrDomNodeType_Comment: return prJsDomCommentClass;
         case PrDomNodeType_ProcessingInstruction: return prJsDomProcessingInstructionClass;
         case PrDomNodeType_Document: return prJsDomDocumentClass;
@@ -1203,6 +1208,27 @@ JSValue nodeRelation(JSContext* ctx, JSValueConst nodeObject, int argc, JSValueC
     }
 }
 
+// The namespace lookups of Node, as nodeLookup's magic.
+enum {
+    NodeLookup_Prefix,
+    NodeLookup_NamespaceUri,
+    NodeLookup_IsDefaultNamespace,
+};
+typedef uint8_t NodeLookup;
+
+// Implements the namespace lookups of Node, whose argument is nullable.
+JSValue nodeLookup(JSContext* ctx, JSValueConst nodeObject, int argc, JSValueConst* argv, int magic) {
+    PrDomNode* node = jsThis<PrDomNode>(ctx, nodeObject, prJsDomNodeClass);
+    StringArgument text = {ctx, ""};
+    if (node == nullptr || !jsArgCount(ctx, argc, 1) || !text.readNullable(argv[0]))
+        return JS_EXCEPTION;
+    switch (magic) {
+        case NodeLookup_Prefix: return jsNewStringView(ctx, prDomNodeLookupPrefix(node, text.value()));
+        case NodeLookup_NamespaceUri: return jsNewStringView(ctx, prDomNodeLookupNamespaceUri(node, text.value()));
+        default: return JS_NewBool(ctx, prDomNodeIsDefaultNamespace(node, text.value()));
+    }
+}
+
 JSValue compareDocumentPosition(JSContext* ctx, JSValueConst nodeObject, int argc, JSValueConst* argv) {
     PrDomNode* node = jsThis<PrDomNode>(ctx, nodeObject, prJsDomNodeClass);
     if (node == nullptr || !jsArgCount(ctx, argc, 1))
@@ -1463,6 +1489,220 @@ JSValue importNode(JSContext* ctx, JSValueConst documentObject, int argc, JSValu
     PrStatus status = prDomDocumentImportNode(document, node, deep, &clone);
     return status == PrStatus_Ok ? madeToJs(ctx, documentObject, clone) : prJsDomThrow(ctx, status);
 }
+
+JSValue adoptNode(JSContext* ctx, JSValueConst documentObject, int argc, JSValueConst* argv) {
+    PrDomDocument* document = jsThis<PrDomDocument>(ctx, documentObject, prJsDomDocumentClass);
+    if (document == nullptr || !jsArgCount(ctx, argc, 1))
+        return JS_EXCEPTION;
+    PrDomNode* node = nodeArgument(ctx, argv[0]);
+    if (node == nullptr)
+        return JS_EXCEPTION;
+    PrStatus status = prDomDocumentAdoptNode(document, node);
+    return status == PrStatus_Ok ? JS_DupValue(ctx, argv[0]) : prJsDomThrow(ctx, status);
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+// NodeFilter, NodeIterator and TreeWalker (dom/#traversal)
+
+constexpr JsConstant kNodeFilterConstants[] = {
+    {"FILTER_ACCEPT", PrDomNodeFilterResult_Accept},
+    {"FILTER_REJECT", PrDomNodeFilterResult_Reject},
+    {"FILTER_SKIP", PrDomNodeFilterResult_Skip},
+    {"SHOW_ALL", kPrDomNodeShowAll},
+    {"SHOW_ELEMENT", PrDomNodeShowFlag_Element},
+    {"SHOW_ATTRIBUTE", PrDomNodeShowFlag_Attribute},
+    {"SHOW_TEXT", PrDomNodeShowFlag_Text},
+    {"SHOW_CDATA_SECTION", PrDomNodeShowFlag_CdataSection},
+    {"SHOW_ENTITY_REFERENCE", PrDomNodeShowFlag_EntityReference},
+    {"SHOW_ENTITY", PrDomNodeShowFlag_Entity},
+    {"SHOW_PROCESSING_INSTRUCTION", PrDomNodeShowFlag_ProcessingInstruction},
+    {"SHOW_COMMENT", PrDomNodeShowFlag_Comment},
+    {"SHOW_DOCUMENT", PrDomNodeShowFlag_Document},
+    {"SHOW_DOCUMENT_TYPE", PrDomNodeShowFlag_DocumentType},
+    {"SHOW_DOCUMENT_FRAGMENT", PrDomNodeShowFlag_DocumentFragment},
+    {"SHOW_NOTATION", PrDomNodeShowFlag_Notation},
+};
+
+// Calls a script's filter. An exception stays pending for the method that started the traversal. The filter's answer
+// converts to an unsigned short.
+PrDomNodeFilterResult invokeNodeFilter(void* PR_NULLABLE context, PrDomNode* node) {
+    JsCallback* callback = static_cast<JsCallback*>(context);
+    JSContext* ctx = callback->ctx;
+    JSValue args[] = {nodeToJs(ctx, JS_NULL, node)};
+    if (JS_IsException(args[0]))
+        return PrDomNodeFilterResult_Abandon;
+    JSValue result = jsCallbackCall(callback, "acceptNode", JS_UNDEFINED, 1, args);
+    JS_FreeValue(ctx, args[0]);
+    uint32_t answer = 0;
+    bool read = !JS_IsException(result) && JS_ToUint32(ctx, &answer, result) >= 0;
+    JS_FreeValue(ctx, result);
+    return read ? answer & 0xFFFF : PrDomNodeFilterResult_Abandon;
+}
+
+JSValue nodeFilterToJs(JSContext* ctx, const PrDomNodeFilter* PR_NULLABLE filter) {
+    return filter != nullptr ? JS_DupValue(ctx, static_cast<JsCallback*>(filter->context)->value) : JS_NULL;
+}
+
+// The kinds of traversal that a document creates, as createTraversal's magic.
+enum {
+    TraversalKind_NodeIterator,
+    TraversalKind_TreeWalker,
+};
+typedef uint8_t TraversalKind;
+
+// Implements createNodeIterator and createTreeWalker, which take the same arguments.
+JSValue createTraversal(JSContext* ctx, JSValueConst documentObject, int argc, JSValueConst* argv, int magic) {
+    if (jsThis<PrDomDocument>(ctx, documentObject, prJsDomDocumentClass) == nullptr || !jsArgCount(ctx, argc, 1))
+        return JS_EXCEPTION;
+    PrDomNode* root = nodeArgument(ctx, argv[0]);
+    if (root == nullptr)
+        return JS_EXCEPTION;
+    uint32_t whatToShow = kPrDomNodeShowAll;
+    if (jsArgGiven(argc, argv, 1) && JS_ToUint32(ctx, &whatToShow, argv[1]) < 0)
+        return JS_EXCEPTION;
+    JSValueConst given = argc > 2 ? argv[2] : JS_NULL;
+    if (!JS_IsNull(given) && !JS_IsUndefined(given) && !JS_IsObject(given))
+        return JS_ThrowTypeError(ctx, "Expected a NodeFilter");
+    CallbackArgument<PrDomNodeFilter> filter = {ctx, JS_UNDEFINED};
+    if (!filter.read(given, invokeNodeFilter, true))
+        return JS_EXCEPTION;
+    JSValue object;
+    if (magic == TraversalKind_NodeIterator) {
+        PrDomNodeIterator* iterator = prDomNodeIteratorCreate(root, whatToShow, filter.get());
+        object = ownedToJs(ctx, domNodeIteratorClass, documentObject, iterator, prDomNodeIteratorDestroy);
+    } else {
+        PrDomTreeWalker* walker = prDomTreeWalkerCreate(root, whatToShow, filter.get());
+        object = ownedToJs(ctx, domTreeWalkerClass, documentObject, walker, prDomTreeWalkerDestroy);
+    }
+    // The filter belongs to the traversal's object, which is created after the filter.
+    if (!JS_IsException(object) && filter.callback != nullptr)
+        jsCallbackOwn(filter.callback, object);
+    holdDocumentOf(ctx, object, root);
+    return object;
+}
+
+JSValue traversalMoved(JSContext* ctx, JSValueConst object, PrStatus status, PrDomNode* PR_NULLABLE node) {
+    if (status == PrStatus_Ok)
+        return node != nullptr ? nodeToJs(ctx, object, node) : JS_NULL;
+    return status == PrStatus_NotAllowed ? JS_EXCEPTION : prJsDomThrow(ctx, status);
+}
+
+// The attributes of NodeIterator and TreeWalker, as the magic of their getters. Each interface has only some of them.
+enum {
+    TraversalAttribute_Root,
+    TraversalAttribute_ReferenceNode,
+    TraversalAttribute_PointerBeforeReferenceNode,
+    TraversalAttribute_WhatToShow,
+    TraversalAttribute_Filter,
+};
+typedef uint8_t TraversalAttribute;
+
+JSValue iteratorAttribute(JSContext* ctx, JSValueConst iteratorObject, int magic) {
+    PrDomNodeIterator* iterator = jsThis<PrDomNodeIterator>(ctx, iteratorObject, domNodeIteratorClass);
+    if (iterator == nullptr)
+        return JS_EXCEPTION;
+    switch (magic) {
+        case TraversalAttribute_Root: return nodeToJs(ctx, iteratorObject, prDomNodeIteratorRoot(iterator));
+        case TraversalAttribute_ReferenceNode:
+            return nodeToJs(ctx, iteratorObject, prDomNodeIteratorReferenceNode(iterator));
+        case TraversalAttribute_PointerBeforeReferenceNode:
+            return JS_NewBool(ctx, prDomNodeIteratorPointerBeforeReferenceNode(iterator));
+        case TraversalAttribute_WhatToShow: return JS_NewUint32(ctx, prDomNodeIteratorWhatToShow(iterator));
+        default: return nodeFilterToJs(ctx, prDomNodeIteratorFilter(iterator));
+    }
+}
+
+// Implements nextNode and previousNode. A magic of 0 moves forward.
+JSValue iteratorMove(JSContext* ctx, JSValueConst iteratorObject, int, JSValueConst*, int magic) {
+    PrDomNodeIterator* iterator = jsThis<PrDomNodeIterator>(ctx, iteratorObject, domNodeIteratorClass);
+    if (iterator == nullptr)
+        return JS_EXCEPTION;
+    PrDomNode* node = nullptr;
+    PrStatus status = magic == 0 ? prDomNodeIteratorNextNode(iterator, &node) : prDomNodeIteratorPreviousNode(iterator, &node);
+    return traversalMoved(ctx, iteratorObject, status, node);
+}
+
+// NodeIterator's detach does nothing (dom/#dom-nodeiterator-detach).
+JSValue iteratorDetach(JSContext* ctx, JSValueConst object, int, JSValueConst*) {
+    if (jsThis<PrDomNodeIterator>(ctx, object, domNodeIteratorClass) == nullptr)
+        return JS_EXCEPTION;
+    return JS_UNDEFINED;
+}
+
+JSValue walkerAttribute(JSContext* ctx, JSValueConst walkerObject, int magic) {
+    PrDomTreeWalker* walker = jsThis<PrDomTreeWalker>(ctx, walkerObject, domTreeWalkerClass);
+    if (walker == nullptr)
+        return JS_EXCEPTION;
+    switch (magic) {
+        case TraversalAttribute_Root: return nodeToJs(ctx, walkerObject, prDomTreeWalkerRoot(walker));
+        case TraversalAttribute_WhatToShow: return JS_NewUint32(ctx, prDomTreeWalkerWhatToShow(walker));
+        default: return nodeFilterToJs(ctx, prDomTreeWalkerFilter(walker));
+    }
+}
+
+JSValue walkerCurrentNode(JSContext* ctx, JSValueConst walkerObject) {
+    PrDomTreeWalker* walker = jsThis<PrDomTreeWalker>(ctx, walkerObject, domTreeWalkerClass);
+    return walker != nullptr ? nodeToJs(ctx, walkerObject, prDomTreeWalkerCurrentNode(walker)) : JS_EXCEPTION;
+}
+
+JSValue walkerSetCurrentNode(JSContext* ctx, JSValueConst walkerObject, JSValueConst value) {
+    PrDomTreeWalker* walker = jsThis<PrDomTreeWalker>(ctx, walkerObject, domTreeWalkerClass);
+    PrDomNode* node = walker != nullptr ? nodeArgument(ctx, value) : nullptr;
+    if (node == nullptr)
+        return JS_EXCEPTION;
+    prDomTreeWalkerSetCurrentNode(walker, node);
+    holdDocumentOf(ctx, walkerObject, node);
+    return JS_UNDEFINED;
+}
+
+// The moves of a TreeWalker, in the order of their magic.
+constexpr PrStatus (*kWalkerMoves[])(PrDomTreeWalker*, PrDomNode* PR_NULLABLE*) = {
+    prDomTreeWalkerParentNode,
+    prDomTreeWalkerFirstChild,
+    prDomTreeWalkerLastChild,
+    prDomTreeWalkerPreviousSibling,
+    prDomTreeWalkerNextSibling,
+    prDomTreeWalkerPreviousNode,
+    prDomTreeWalkerNextNode,
+};
+
+JSValue walkerMove(JSContext* ctx, JSValueConst walkerObject, int, JSValueConst*, int magic) {
+    PrDomTreeWalker* walker = jsThis<PrDomTreeWalker>(ctx, walkerObject, domTreeWalkerClass);
+    if (walker == nullptr)
+        return JS_EXCEPTION;
+    PrDomNode* node = nullptr;
+    PrStatus status = kWalkerMoves[magic](walker, &node);
+    return traversalMoved(ctx, walkerObject, status, node);
+}
+
+constexpr JSCFunctionListEntry kNodeFilterProto[] = {PR_JS_TAG("NodeFilter")};
+
+constexpr JSCFunctionListEntry kNodeIteratorProto[] = {
+    PR_JS_TAG("NodeIterator"),
+    PR_JS_MAGIC_GET("root", iteratorAttribute, TraversalAttribute_Root),
+    PR_JS_MAGIC_GET("referenceNode", iteratorAttribute, TraversalAttribute_ReferenceNode),
+    PR_JS_MAGIC_GET("pointerBeforeReferenceNode", iteratorAttribute, TraversalAttribute_PointerBeforeReferenceNode),
+    PR_JS_MAGIC_GET("whatToShow", iteratorAttribute, TraversalAttribute_WhatToShow),
+    PR_JS_MAGIC_GET("filter", iteratorAttribute, TraversalAttribute_Filter),
+    PR_JS_MAGIC("nextNode", 0, iteratorMove, 0),
+    PR_JS_MAGIC("previousNode", 0, iteratorMove, 1),
+    PR_JS_METHOD("detach", 0, iteratorDetach),
+};
+
+constexpr JSCFunctionListEntry kTreeWalkerProto[] = {
+    PR_JS_TAG("TreeWalker"),
+    PR_JS_MAGIC_GET("root", walkerAttribute, TraversalAttribute_Root),
+    PR_JS_MAGIC_GET("whatToShow", walkerAttribute, TraversalAttribute_WhatToShow),
+    PR_JS_MAGIC_GET("filter", walkerAttribute, TraversalAttribute_Filter),
+    PR_JS_GET_SET("currentNode", walkerCurrentNode, walkerSetCurrentNode),
+    PR_JS_MAGIC("parentNode", 0, walkerMove, 0),
+    PR_JS_MAGIC("firstChild", 0, walkerMove, 1),
+    PR_JS_MAGIC("lastChild", 0, walkerMove, 2),
+    PR_JS_MAGIC("previousSibling", 0, walkerMove, 3),
+    PR_JS_MAGIC("nextSibling", 0, walkerMove, 4),
+    PR_JS_MAGIC("previousNode", 0, walkerMove, 5),
+    PR_JS_MAGIC("nextNode", 0, walkerMove, 6),
+};
 
 JSValue createDocumentFragment(JSContext* ctx, JSValueConst documentObject, int, JSValueConst*) {
     PrDomDocument* document = jsThis<PrDomDocument>(ctx, documentObject, prJsDomDocumentClass);
@@ -2928,6 +3168,9 @@ constexpr JSCFunctionListEntry kNodeProto[] = {
     PR_JS_METHOD("normalize", 0, normalize),
     PR_JS_MAGIC("isEqualNode", 1, nodeRelation, 1),
     PR_JS_MAGIC("isSameNode", 1, nodeRelation, 2),
+    PR_JS_MAGIC("lookupPrefix", 1, nodeLookup, NodeLookup_Prefix),
+    PR_JS_MAGIC("lookupNamespaceURI", 1, nodeLookup, NodeLookup_NamespaceUri),
+    PR_JS_MAGIC("isDefaultNamespace", 1, nodeLookup, NodeLookup_IsDefaultNamespace),
 };
 
 constexpr JSCFunctionListEntry kDocumentProto[] = {
@@ -2941,6 +3184,9 @@ constexpr JSCFunctionListEntry kDocumentProto[] = {
     PR_JS_MAGIC("createElement", 1, documentMethod, DocumentMethod_CreateElement),
     PR_JS_METHOD("createElementNS", 2, createElementNs),
     PR_JS_METHOD("importNode", 1, importNode),
+    PR_JS_METHOD("adoptNode", 1, adoptNode),
+    PR_JS_MAGIC("createNodeIterator", 1, createTraversal, TraversalKind_NodeIterator),
+    PR_JS_MAGIC("createTreeWalker", 1, createTraversal, TraversalKind_TreeWalker),
     PR_JS_METHOD("createDocumentFragment", 0, createDocumentFragment),
     PR_JS_MAGIC("createAttribute", 1, createAttribute, 0),
     PR_JS_MAGIC("createAttributeNS", 2, createAttribute, 1),
@@ -3084,6 +3330,8 @@ constexpr JSCFunctionListEntry kTextProto[] = {
     PR_JS_GET("wholeText", (jsStringGetter<&prJsDomTextClass, prDomTextWholeText>)),
     PR_JS_GET("assignedSlot", assignedSlot),
 };
+
+constexpr JSCFunctionListEntry kCdataSectionProto[] = {PR_JS_TAG("CDATASection")};
 
 constexpr JSCFunctionListEntry kCommentProto[] = {PR_JS_TAG("Comment")};
 
@@ -3338,6 +3586,10 @@ constexpr JsClassDefinition kClasses[] = {
         .base = &prJsDomCharacterDataClass,
     },
     {
+        PR_JS_CLASS("CDATASection", domCdataSectionClass, jsViewFinalizer<&domCdataSectionClass>, kCdataSectionProto),
+        .base = &prJsDomTextClass,
+    },
+    {
         PR_JS_CLASS("Comment", prJsDomCommentClass, jsViewFinalizer<&prJsDomCommentClass>, kCommentProto),
         .constructor = commentConstruct,
         .base = &prJsDomCharacterDataClass,
@@ -3381,6 +3633,15 @@ constexpr JsClassDefinition kClasses[] = {
         .base = &prJsDomAbstractRangeClass,
     },
     {PR_JS_CLASS("Selection", prJsDomSelectionClass, jsViewFinalizer<&prJsDomSelectionClass>, kSelectionProto)},
+    {PR_JS_CLASS("NodeFilter", domNodeFilterClass, nullptr, kNodeFilterProto), PR_JS_CONSTANTS(kNodeFilterConstants)},
+    {
+        PR_JS_CLASS("NodeIterator", domNodeIteratorClass,
+            (jsFinalizer<&domNodeIteratorClass, prDomNodeIteratorDestroy>), kNodeIteratorProto),
+    },
+    {
+        PR_JS_CLASS("TreeWalker", domTreeWalkerClass,
+            (jsFinalizer<&domTreeWalkerClass, prDomTreeWalkerDestroy>), kTreeWalkerProto),
+    },
     {
         PR_JS_CLASS("MutationObserver", domMutationObserverClass,
             (jsFinalizer<&domMutationObserverClass, prDomMutationObserverRelease>), kMutationObserverProto),

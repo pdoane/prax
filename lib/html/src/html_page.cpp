@@ -1766,6 +1766,13 @@ void embedRemoved(void* PR_NULLABLE context, PrDomElement* element, PrDomNode* o
         sourceChanged(static_cast<PrHtmlPage*>(context), oldParent, oldNext);
 }
 
+// Handles the adoption of embedded content. An img element updates its image, because its URLs resolve against its new
+// document and that document may be able to load it (html/#reacting-to-dom-mutations).
+void embedAdopted(void* PR_NULLABLE context, PrDomElement* element) {
+    if (domIsHtml(element, PrDomTag_Img))
+        updateImageSource(static_cast<PrHtmlPage*>(context), element);
+}
+
 // Brings a frame's viewport up to date as its iframe's content box, after the parent's layout. A frame whose iframe has
 // no box keeps its last viewport.
 void updateFrameViewport(PrHtmlPage* page) {
@@ -3130,6 +3137,7 @@ PrHtmlPage* prHtmlPageCreate(const PrHtmlHost* PR_NULLABLE host) {
         .compile = compileHandler,
         .embedChanged = embedChanged,
         .embedRemoved = embedRemoved,
+        .embedAdopted = embedAdopted,
         .prepareScript = prepareConnectedScript,
         .elementState = elementState,
         .activates = activates,

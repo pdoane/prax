@@ -27,6 +27,7 @@
 #include "dom/src/dom_select.h"
 #include "dom/src/dom_selection.h"
 #include "dom/src/dom_slot.h"
+#include "dom/src/dom_traversal.h"
 #include "dom/src/dom_use.h"
 
 PR_ASSUME_NONNULL_BEGIN
@@ -603,6 +604,8 @@ void unlink(PrDomNode* child) {
     domUsesChildrenChanged(parent, child);
     if (child->document->ranges != nullptr)
         domRangesRemoving(child);
+    if (child->document->iterators != nullptr)
+        domNodeIteratorsRemoving(child);
     bool slotted = child->document->slots != nullptr;
     PrDomElement* assigned = slotted ? domAssignedSlot(child) : nullptr;
 
@@ -720,6 +723,8 @@ void adoptTree(PrDomDocument* document, PrDomNode* node, uint32_t* moved) {
     transferDocument(document, node, moved);
     if (from->ranges != nullptr)
         *moved += domRangesAdopted(from, node);
+    if (from->iterators != nullptr)
+        domNodeIteratorsAdopted(from, node);
 }
 
 // Moves what `from` records about the nodes that just moved to `document`: their holds and their observers.
@@ -745,6 +750,20 @@ void adoptContents(PrDomDocument* document, PrDomNode* contents) {
     moveRecords(from, document);
     document->retained += moved;
     from->retained -= moved;
+}
+
+// Runs the host's adopting steps of the embedded content in `node` and its shadow-including descendants, once the whole
+// tree has moved.
+void embedsAdopted(const DomDocumentHost* host, PrDomNode* node) {
+    for (PrDomNode* at = node; at != nullptr; at = domNodeNext(node, at)) {
+        PrDomElement* element = domElementFromNode(at);
+        if (element == nullptr)
+            continue;
+        if (domEmbeds(element))
+            host->embedAdopted(host->context, element);
+        if (PrDomShadowRoot* shadow = domShadowRootOfHost(element))
+            embedsAdopted(host, shadow);
+    }
 }
 
 // Returns the attribute of `element` in `space` named `name` or, if `lowered` is set, named the ASCII lowercase of
@@ -2152,6 +2171,9 @@ void domAdopt(PrDomDocument* document, PrDomNode* node) {
         ++moved;
     document->retained += moved;
     treeMoved(node);
+    const DomDocumentHost* host = document->host;
+    if (host != nullptr && host->embedAdopted != nullptr && node->type != PrDomNodeType_Attribute)
+        embedsAdopted(host, node);
     from->retained -= moved;
     if (from->retained == 0)
         destroyDocument(from);

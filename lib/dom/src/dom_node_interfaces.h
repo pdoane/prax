@@ -196,6 +196,10 @@ struct DomDocumentHost {
     void (*PR_NULLABLE embedRemoved)(void* PR_NULLABLE context, PrDomElement* element, PrDomNode* oldParent,
         PrDomNode* PR_NULLABLE oldNext);
 
+    // Called after an element for which domEmbeds is true moves into the host's document (dom/#concept-node-adopt-ext).
+    // Null for a host whose content does not depend on adoption.
+    void (*PR_NULLABLE embedAdopted)(void* PR_NULLABLE context, PrDomElement* element);
+
     // Prepares a script element that is not parser-inserted (html/#prepare-the-script-element), as its post-connection
     // steps do: once an insertion that connects it ends, when its children change while it is connected, and when its
     // source attribute is set while it is connected (html/#script-processing-model). Null for a host that runs no
@@ -283,18 +287,19 @@ struct DomDocument : PrDomNode {
     PrDomEventTarget* PR_NULLABLE global;
 
     const DomDocumentHost* PR_NULLABLE host;
-    AtomTable* PR_NULLABLE namespaces;              // URLs of the namespaces from PrDomNamespace_Other on, if any
-    AtomTable* PR_NULLABLE prefixes;                // prefixes that the document's attributes have, if any
-    Array<PrDomNode* PR_NONNULL> holds;             // nodes that the engine holds (domNodeHold), each listed once
-    Array<PrDomElement* PR_NONNULL> formAttributed; // listed elements with a form attribute (dom_control.h)
-    DomMutationObservers* PR_NULLABLE observers;    // created by the first registration
-    DomSlots* PR_NULLABLE slots;                    // created by the first shadow root
-    DomUses* PR_NULLABLE uses;                      // created by the first connected use element (dom_use.h)
-    DomResources* PR_NULLABLE resources;            // created by the first reference to another document
-                                                    // (dom_resource.h)
-    PrDomRange* PR_NULLABLE ranges;                 // live ranges (dom/#concept-live-range), kept current by the
-                                                    // document's mutations
-    PrDomSelection* PR_NULLABLE selection;          // created on first access
+    AtomTable* PR_NULLABLE namespaces;               // URLs of the namespaces from PrDomNamespace_Other on, if any
+    AtomTable* PR_NULLABLE prefixes;                 // prefixes that the document's attributes have, if any
+    Array<PrDomNode* PR_NONNULL> holds;              // nodes that the engine holds (domNodeHold), each listed once
+    Array<PrDomElement* PR_NONNULL> formAttributed;  // listed elements with a form attribute (dom_control.h)
+    DomMutationObservers* PR_NULLABLE observers;     // created by the first registration
+    DomSlots* PR_NULLABLE slots;                     // created by the first shadow root
+    DomUses* PR_NULLABLE uses;                       // created by the first connected use element (dom_use.h)
+    DomResources* PR_NULLABLE resources;             // created by the first reference to another document
+                                                     // (dom_resource.h)
+    PrDomRange* PR_NULLABLE ranges;                  // live ranges (dom/#concept-live-range), kept current by the
+                                                     // document's mutations
+    struct PrDomNodeIterator* PR_NULLABLE iterators; // the iterators whose root is in the document
+    PrDomSelection* PR_NULLABLE selection;           // created on first access
 
     // The registry of the document's window (dom/#document-custom-element-registry).
     const PrDomCustomElementRegistry* PR_NULLABLE customElements;

@@ -260,6 +260,24 @@ DomKeyboardEventData* keyboardOf(PrDomEvent* event) {
     return event->keyboard;
 }
 
+// Returns the element whose scope holds the namespace declarations in effect at `node`, or null if a node of its type
+// has none (dom/#locate-a-namespace).
+PrDomElement* PR_NULLABLE scopeElement(PrDomNode* node) {
+    switch (node->type) {
+        case PrDomNodeType_Element:
+            return static_cast<PrDomElement*>(node);
+        case PrDomNodeType_Document:
+            return domDocumentElement(static_cast<PrDomDocument*>(node));
+        case PrDomNodeType_DocumentType:
+        case PrDomNodeType_DocumentFragment:
+            return nullptr;
+        case PrDomNodeType_Attribute:
+            return static_cast<PrDomElement*>(node->parent);
+        default:
+            return prDomNodeParentElement(node);
+    }
+}
+
 } // namespace
 
 } // namespace pr_impl
@@ -1022,6 +1040,57 @@ void prDomNodeRemove(PrDomNode* node) {
     domRemoveFromParent(node);
 }
 
+PrStringView prDomNodeLookupPrefix(PrDomNode* node, PrStringView namespaceUri) {
+    if (namespaceUri.size == 0)
+        return PrStringView{};
+    for (PrDomElement* element = scopeElement(node); element != nullptr; element = prDomNodeParentElement(element)) {
+        PrStringView prefix = prDomElementPrefix(element);
+        if (prefix.size != 0 && prDomElementNamespaceUri(element) == namespaceUri)
+            return prefix;
+        uint32_t count = prDomElementAttributeCount(element);
+        for (uint32_t i = 0; i < count; ++i) {
+            const PrDomAttr* attribute = prDomElementAttributeAt(element, i);
+            if (prDomAttrPrefix(attribute) == "xmlns" && prDomAttrValue(attribute) == namespaceUri)
+                return prDomAttrLocalName(attribute);
+        }
+    }
+    return PrStringView{};
+}
+
+PrStringView prDomNodeLookupNamespaceUri(PrDomNode* node, PrStringView prefix) {
+    PrStringView xmlns = domNamedNamespaceUrl(PrDomNamespace_XmlNs);
+    if (scopeElement(node) != nullptr) {
+        if (prefix == "xml")
+            return domNamedNamespaceUrl(PrDomNamespace_Xml);
+        if (prefix == "xmlns")
+            return xmlns;
+    }
+    for (PrDomElement* element = scopeElement(node); element != nullptr; element = prDomNodeParentElement(element)) {
+        PrStringView space = prDomElementNamespaceUri(element);
+        if (space.size != 0 && prDomElementPrefix(element) == prefix)
+            return space;
+        uint32_t count = prDomElementAttributeCount(element);
+        for (uint32_t i = 0; i < count; ++i) {
+            const PrDomAttr* attribute = prDomElementAttributeAt(element, i);
+            if (prDomAttrNamespaceUri(attribute) != xmlns)
+                continue;
+            PrStringView declared = prDomAttrLocalName(attribute);
+            bool named = prDomAttrPrefix(attribute) == "xmlns" && prefix.size != 0 && declared == prefix;
+            bool fallback = prDomAttrPrefix(attribute).size == 0 && prefix.size == 0 && declared == "xmlns";
+            if (named || fallback)
+                return prDomAttrValue(attribute).size != 0 ? prDomAttrValue(attribute) : PrStringView{};
+        }
+    }
+    return PrStringView{};
+}
+
+bool prDomNodeIsDefaultNamespace(PrDomNode* node, PrStringView namespaceUri) {
+    PrStringView space = prDomNodeLookupNamespaceUri(node, PrStringView{});
+    if (namespaceUri.size == 0)
+        return space.size == 0;
+    return space == namespaceUri;
+}
+
 PrDomDocument* PR_NULLABLE prDomDocumentQuery(PrDomEventTarget* PR_NULLABLE object) {
     return nodeOfType<PrDomDocument>(object, PrDomNodeType_Document);
 }
@@ -1110,6 +1179,24 @@ PrStatus prDomDocumentImportNode(PrDomDocument* document, PrDomNode* node, bool 
     PrDomNode* clone = domNodeShadowRoot(node) == nullptr ? made(domClone(node, document, deep)) : nullptr;
     *out = clone;
     return clone != nullptr ? PrStatus_Ok : PrStatus_NotSupported;
+}
+
+PrStatus prDomDocumentAdoptNode(PrDomDocument* document, PrDomNode* node) {
+    if (node->type == PrDomNodeType_Document)
+        return PrStatus_NotSupported;
+    if (domNodeShadowRoot(node) != nullptr)
+        return PrStatus_NotAllowed;
+    // The contents of a template or the tree of a shadow host stay with their host.
+    if (node->type == PrDomNodeType_DocumentFragment && static_cast<PrDomDocumentFragment*>(node)->host != nullptr)
+        return PrStatus_Ok;
+    if (node->type == PrDomNodeType_Attribute) {
+        if (node->parent != nullptr)
+            domRemoveAttributeNode(static_cast<PrDomElement*>(node->parent), static_cast<PrDomAttr*>(node));
+    } else {
+        domRemoveFromParent(node);
+    }
+    domAdopt(document, node);
+    return PrStatus_Ok;
 }
 
 PrStatus prDomElementCreate(PrDomDocument* document, PrStringView localName,

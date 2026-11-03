@@ -22,6 +22,7 @@ pr_library(dom INCLUDE include
     src/dom_selection.cpp
     src/dom_slot.cpp
     src/dom_tag.cpp
+    src/dom_traversal.cpp
     src/dom_use.cpp
     src/dom_resource.cpp
     src/dom_xml.cpp
@@ -46,6 +47,7 @@ if (PR_DEVELOP)
         tests/test_agent.cpp
         tests/test_event.cpp
         tests/test_mutation.cpp
+        tests/test_traversal.cpp
         tests/test_node.cpp
         tests/test_select.cpp
         tests/test_control.cpp

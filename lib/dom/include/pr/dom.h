@@ -792,6 +792,15 @@ PrStatus prDomNodeReplaceWith(PrDomNode* node, const PrDomNodeOrString* PR_NULLA
 // Removes the node from its parent, if it has one (dom/#dom-childnode-remove).
 void prDomNodeRemove(PrDomNode* node);
 
+// Return the prefix that is in scope at the node for `namespaceUri`, or the namespace that is in scope for `prefix`
+// (dom/#locate-a-namespace-prefix, dom/#locate-a-namespace). These return the null view if there is none. An empty
+// argument stands for null. The view is valid until the node's tree changes.
+PrStringView prDomNodeLookupPrefix(PrDomNode* node, PrStringView namespaceUri);
+PrStringView prDomNodeLookupNamespaceUri(PrDomNode* node, PrStringView prefix);
+
+// Returns true if `namespaceUri` is the default namespace at the node (dom/#dom-node-isdefaultnamespace).
+bool prDomNodeIsDefaultNamespace(PrDomNode* node, PrStringView namespaceUri);
+
 // ---------------------------------------------------------------------------------------------------------------------
 // Document : Node (dom)
 //
@@ -880,6 +889,10 @@ PrDomElement* PR_NULLABLE prDomDocumentElement(PrDomDocument* document);
 // Clones `node` into the document, with its descendants if `deep` is set (dom/#dom-document-importnode). The clone is a
 // detached root that the caller owns. Returns NotSupported for a document or a shadow root, and sets `*out` to null.
 PrStatus prDomDocumentImportNode(PrDomDocument* document, PrDomNode* node, bool deep, PrDomNode* PR_NULLABLE* PR_NONNULL out);
+
+// Moves `node` and its subtree into the document, and removes it from its parent or, for an attribute, from its element
+// (dom/#dom-document-adoptnode). Returns NotSupported for a document, and NotAllowed for a shadow root.
+PrStatus prDomDocumentAdoptNode(PrDomDocument* document, PrDomNode* node);
 
 // Creates an element whose local name is `localName` (dom/#dom-document-createelement). An HTML document lowercases the
 // name. An HTML or XHTML document creates an HTML element, and any other document an element in no namespace. Returns
