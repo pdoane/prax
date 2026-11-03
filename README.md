@@ -23,15 +23,18 @@ web; the Status section says what runs today.
 
 ## How it fits together
 
-Key libraries:
+The libraries, by area. The first comment of each library's `CMakeLists.txt` says what it holds.
 
-| layer | libraries |
+| area | libraries |
 | --- | --- |
-| Platform | `core` (memory, strings, threads, files), `task`, `app` (windows, input), `gpu`, `net`, `tls`, `http`, `fetch`, `websocket`, `storage` and `cache` |
-| Formats | `json`, `xml`, `charset`, `locale`, `unicode`, `image`, `compress` and `color` |
-| Engines | `font`, `text`, `layout`, `path` and `draw` |
-| Documents | `html`, `svg`, `mathml`, `markdown` and `lottie` |
-| Applications | `ui` (immediate-mode UI), `studio/kit` (widgets/component library) and `studio/command` (commands and key bindings) |
+| Foundation | `core`, `task`, `cache`, `storage`, `webidl` |
+| System | `app`, `gpu`, `media` |
+| Networking | `net`, `tls`, `http`, `websocket`, `fetch`, `xhr`, `url`, `mime` |
+| Data | `json`, `xml`, `compress`, `image`, `color`, `geom`, `charset`, `locale`, `unicode`, `html_entity` |
+| Text | `font`, `font_bundle`, `text` |
+| Graphics | `path`, `draw`, `canvas`, `lottie` |
+| Documents | `css`, `dom`, `layout`, `html`, `svg`, `mathml`, `markdown` |
+| Interface | `ui`, `studio/kit`, `studio/command` |
 
 **Verified.** WPT, the test suites of CommonMark, GFM, resvg and the Lottie players, and Prax's own suites check
 conformance. Benchmarks measure immediate-mode frames and dynamic retained documents.
@@ -107,18 +110,39 @@ A backend is on by default when it uses the platform's own API or Prax's own cod
 third-party library. A development build (`PR_DEVELOP`) or an examples build (`PR_EXAMPLES`) enables every backend the
 platform supports.
 
-| module | backends: on by default | off by default |
-| --- | --- | --- |
-| app | `COCOA` on Apple platforms, `WIN32` on Windows | |
-| gpu | `METAL` on Apple platforms, `D3D12` on Windows, `VULKAN` on Linux and Android | `VULKAN` elsewhere |
-| net | `SOCKETS`, `NULL` | |
-| tls | `APPLE` (Network.framework) on Apple platforms, `SCHANNEL` on Windows, `OPENSSL` on other Unix-like systems | `OPENSSL` elsewhere |
-| fetch | `BUILTIN`, `INTERCEPT` | |
-| http, websocket, task, compress, image | `BUILTIN` | |
-| media | `BUILTIN`, `APPLE` (AVFoundation) on Apple platforms, `WINDOWS` (Media Foundation) on Windows | |
-| font | `CORETEXT` on Apple platforms, `DIRECTWRITE` on Windows | `FREETYPE` |
-| text | `SIMPLE`, `CORETEXT` on Apple platforms | `HARFBUZZ`, `KB` |
-| draw | `CPU`, `TRIANGLES`, `FRAGMENT`, `GLYPH_BITMAP` | |
+| interface | option | backend | builds on | default |
+| --- | --- | --- | --- | --- |
+| app | `PR_APP_COCOA` | Cocoa | Apple platforms | on |
+| app | `PR_APP_WIN32` | Win32 | Windows | on |
+| gpu | `PR_GPU_METAL` | Metal 4 | Apple platforms | on |
+| gpu | `PR_GPU_D3D12` | Direct3D 12 | Windows | on |
+| gpu | `PR_GPU_VULKAN` | Vulkan | every platform | on for Linux and Android |
+| net | `PR_NET_SOCKETS` | BSD sockets, or Winsock on Windows | every platform | on |
+| net | `PR_NET_NULL` | no connections, and an event loop that the caller runs | every platform | on |
+| tls | `PR_TLS_APPLE` | Network.framework | Apple platforms | on |
+| tls | `PR_TLS_SCHANNEL` | SChannel | Windows | on |
+| tls | `PR_TLS_OPENSSL` | OpenSSL 3 | where the build finds it | on for Unix-like systems other than Apple's |
+| http | `PR_HTTP_BUILTIN` | HTTP/1.1 over `lib/net` and `lib/tls` | every platform | on |
+| websocket | `PR_WEBSOCKET_BUILTIN` | the WebSocket protocol over `lib/net` and `lib/tls` | every platform | on |
+| fetch | `PR_FETCH_BUILTIN` | the Fetch Standard over `lib/http` | every platform | on |
+| fetch | `PR_FETCH_INTERCEPT` | requests that the host answers, or passes to the next fetcher | every platform | on |
+| task pool | `PR_TASK_BUILTIN` | Prax | every platform | on |
+| compression | `PR_COMPRESS_BUILTIN` | Prax | every platform | on |
+| image codecs | `PR_IMAGE_BUILTIN` | Prax | every platform | on |
+| media | `PR_MEDIA_BUILTIN` | Prax | every platform | on |
+| media | `PR_MEDIA_APPLE` | AVFoundation | Apple platforms | on |
+| media | `PR_MEDIA_WINDOWS` | Media Foundation | Windows | on |
+| system fonts | `PR_FONT_CORETEXT` | CoreText | Apple platforms | on |
+| system fonts | `PR_FONT_DIRECTWRITE` | DirectWrite | Windows | on |
+| font hinter | `PR_FONT_FREETYPE` | FreeType | every platform | off |
+| text shaper | `PR_TEXT_SIMPLE` | one glyph per character, with pair kerning | every platform | on |
+| text shaper | `PR_TEXT_CORETEXT` | CoreText | Apple platforms | on |
+| text shaper | `PR_TEXT_HARFBUZZ` | HarfBuzz | every platform | off |
+| text shaper | `PR_TEXT_KB` | kb | every platform | off |
+| draw renderer | `PR_DRAW_CPU` | CPU renderer | every platform | on |
+| draw renderer | `PR_DRAW_TRIANGLES` | GPU renderer: colored and textured triangles | every platform | on |
+| draw renderer | `PR_DRAW_FRAGMENT` | GPU renderer: per-pixel coverage and paint evaluation | every platform | on |
+| glyph decoder | `PR_DRAW_GLYPH_BITMAP` | images of glyphs in bitmap strikes | every platform | on |
 
 `prax::font_bundle` maps the generic font families and font fallback to font files that the application provides.
 `pr_font_bundle_fetch(<directory> Noto)` downloads a bundle's files into a directory at configure time. It is available
