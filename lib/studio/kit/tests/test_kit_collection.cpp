@@ -321,7 +321,7 @@ TEST_CASE("a list frame that changes nothing makes no node and lays nothing out"
     PrLayoutTreeStats stats = prLayoutTreeStats(f.tree);
     CHECK(stats.frameNodesMade == 0);
     CHECK(stats.blocksLaidOut == 0);
-    CHECK_FALSE(prUiWantsFrame(f.ui));
+    CHECK_FALSE(prUiOutput(f.ui).wantsFrame);
     CHECK(kitVerified(f.tree));
 }
 

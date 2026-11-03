@@ -134,7 +134,7 @@ void runBrowser(Browse& b) {
             REQUIRE(created == PrStatus_Ok);
             b.begin(b);
         },
-        [](void*, PrApp*, const PrAppFrame*) {},
+        [](void*, PrApp*, const PrAppFrame*) { return PrAppOutput{}; },
         [](void*, PrApp*, const PrAppEvent*) {},
         [](void* context, PrApp*) {
             Browse& b = browseOf(context);
@@ -216,7 +216,7 @@ TEST_CASE("a headless run starts, frames, wakes from another thread and shuts do
         [](void* context, PrApp* app, const PrAppFrame* frame) {
             Run& r = runOf(context);
             if (r.frames++ != 0)
-                return;
+                return PrAppOutput{};
             r.seen.push_back("frame");
             CHECK(frame->extent.x == doctest::Approx(64.0f).epsilon(0.02));
             CHECK(frame->extent.y == doctest::Approx(32.0f).epsilon(0.02));
@@ -225,6 +225,7 @@ TEST_CASE("a headless run starts, frames, wakes from another thread and shuts do
             CHECK(frame->display.pixelRatio >= 1.0f);
             CHECK(frame->display.headroom >= 1.0f);
             r.helper = std::thread([app] { prAppWake(app); });
+            return PrAppOutput{};
         },
         [](void* context, PrApp* app, const PrAppEvent* event) {
             if (event->kind != PrAppEventKind_Wake)
@@ -270,11 +271,12 @@ TEST_CASE("a resize runs a frame at the new extent without a request") {
                     SetWindowPos(window, nullptr, 0, 0, outer.right - outer.left, outer.bottom - outer.top,
                         SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE);
                 });
-                return;
+                return PrAppOutput{};
             }
             r.resized = frame->extent;
             CHECK(frame->delta >= 0.0);
             prAppStop(app);
+            return PrAppOutput{};
         },
         [](void*, PrApp*, const PrAppEvent*) {},
         [](void*, PrApp*) {},
@@ -326,7 +328,7 @@ TEST_CASE("keys, text, pointers and wheels translate to events") {
                 prAppWake(app);
             });
         },
-        [](void*, PrApp*, const PrAppFrame*) {},
+        [](void*, PrApp*, const PrAppFrame*) { return PrAppOutput{}; },
         [](void* context, PrApp* app, const PrAppEvent* event) {
             Input& in = *static_cast<Input*>(context);
             if (event->kind == PrAppEventKind_Wake) {
@@ -425,7 +427,7 @@ TEST_CASE("input that a callback's own message loop dispatches arrives after the
             }
             n.starting = false;
         },
-        [](void*, PrApp*, const PrAppFrame*) {},
+        [](void*, PrApp*, const PrAppFrame*) { return PrAppOutput{}; },
         [](void* context, PrApp* app, const PrAppEvent* event) {
             Nesting& n = nestingOf(context);
             n.nested = n.nested || n.starting;
@@ -461,7 +463,7 @@ TEST_CASE("a window that loses the pointer's capture releases the buttons that a
                 prAppWake(app);
             });
         },
-        [](void*, PrApp*, const PrAppFrame*) {},
+        [](void*, PrApp*, const PrAppFrame*) { return PrAppOutput{}; },
         [](void* context, PrApp* app, const PrAppEvent* event) {
             Nesting& n = nestingOf(context);
             n.events.push_back(seenOf(event));
@@ -506,7 +508,7 @@ TEST_CASE("a window that loses the keyboard releases the keys that are down, onc
                 prAppWake(app);
             });
         },
-        [](void*, PrApp*, const PrAppFrame*) {},
+        [](void*, PrApp*, const PrAppFrame*) { return PrAppOutput{}; },
         [](void* context, PrApp* app, const PrAppEvent* event) {
             Nesting& n = nestingOf(context);
             n.events.push_back(seenOf(event));
@@ -539,7 +541,7 @@ TEST_CASE("closing the window stops the run") {
             runOf(context).seen.push_back("start");
             PostMessageW(windowOf(app), WM_CLOSE, 0, 0);
         },
-        [](void*, PrApp*, const PrAppFrame*) {},
+        [](void*, PrApp*, const PrAppFrame*) { return PrAppOutput{}; },
         [](void*, PrApp*, const PrAppEvent*) {},
         [](void* context, PrApp*) { runOf(context).seen.push_back("shutdown"); },
     };
@@ -568,7 +570,7 @@ TEST_CASE("the clipboard's text arrives after the request, never during it") {
             prAppRequestClipboardText(app);
             c.requesting = false;
         },
-        [](void*, PrApp*, const PrAppFrame*) {},
+        [](void*, PrApp*, const PrAppFrame*) { return PrAppOutput{}; },
         [](void* context, PrApp* app, const PrAppEvent* event) {
             Clip& c = *static_cast<Clip*>(context);
             if (event->kind != PrAppEventKind_Clipboard)

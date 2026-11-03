@@ -153,13 +153,13 @@ void start(void* context, PrApp* app, const PrAppFrame*) {
     prAppRequestFrame(app);
 }
 
-void frame(void* context, PrApp* app, const PrAppFrame* f) {
+PrAppOutput frame(void* context, PrApp*, const PrAppFrame* f) {
     Window& w = *static_cast<Window*>(context);
     // A lost device is made again, with everything on it.
     if (w.device != nullptr && prGpuDeviceIsLost(w.device))
         closeDevice(w);
     if (w.device == nullptr && !openDevice(w))
-        return;
+        return {};
     prGpuSwapChainWait(w.swapChain);
     if (!w.paused)
         w.clock += f->delta;
@@ -181,7 +181,7 @@ void frame(void* context, PrApp* app, const PrAppFrame* f) {
     PrUVec2 extent{uint32_t(f->extent.x * ratio + 0.5f), uint32_t(f->extent.y * ratio + 0.5f)};
     if (extent.x != 0 && extent.y != 0)
         render(w, extent, f->display);
-    prAppRequestFrame(app);
+    return PrAppOutput{.wantsFrame = true};
 }
 
 void event(void* context, PrApp* app, const PrAppEvent* e) {

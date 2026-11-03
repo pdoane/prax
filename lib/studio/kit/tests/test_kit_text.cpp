@@ -245,7 +245,7 @@ TEST_CASE("the caret blinks while the field has focus, and holds still if the us
     e.focus();
     PrLayoutCaret caret{};
     CHECK(prLayoutTreeCaret(e.f.tree, &caret));
-    CHECK(prUiWantsFrame(e.f.ui));
+    CHECK(prUiOutput(e.f.ui).wantsFrame);
     e.f.frame(0.6);
     CHECK_FALSE(prLayoutTreeCaret(e.f.tree, &caret));
     e.f.frame(0.5);

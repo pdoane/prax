@@ -353,6 +353,15 @@ typedef struct PrAppFrame {
     PrAppUserPreferences preferences;
 } PrAppFrame;
 
+// What a frame reports to the window, which the frame handler returns. A library that draws a surface reports its own
+// (prUiOutput, prHtmlViewOutput), and a host with several surfaces combines them (prAppOutputPlaced, prAppOutputMerge).
+typedef struct PrAppOutput {
+    PrAppCursor cursor;         // the shape of the pointer over the window
+    bool wantsFrame;            // true to deliver another frame when the display next needs one
+    bool hasTextInput;          // true if text is being edited at `textInput`
+    PrRect textInput;           // the caret, in logical px of the window, where the input method's windows open
+} PrAppOutput;
+
 // The callbacks into the program, each passed `context`. All are called on the thread that runs the application, and
 // none is nested in another. `start` is called once the window exists, with `window`, the window as the first frame
 // finds it (its delta is zero), so that what the program makes for the window can start at its extent, on its display,
@@ -361,11 +370,12 @@ typedef struct PrAppFrame {
 //
 // `frame` runs within the window's display transaction: at the display's refresh after a frame is requested, and at
 // each step of a resize, whether or not one is requested. What `frame` presents through a swap chain that presents
-// within the transaction (prGpuSwapChainCreate) is shown with the window at the frame's extent.
+// within the transaction (prGpuSwapChainCreate) is shown with the window at the frame's extent. What it returns is
+// applied to the window when it returns.
 typedef struct PrAppHandler {
     void* PR_NULLABLE context;
     void (*start)(void* PR_NULLABLE context, PrApp* app, const PrAppFrame* window);
-    void (*frame)(void* PR_NULLABLE context, PrApp* app, const PrAppFrame* frame);
+    PrAppOutput (*frame)(void* PR_NULLABLE context, PrApp* app, const PrAppFrame* frame);
     void (*event)(void* PR_NULLABLE context, PrApp* app, const PrAppEvent* event);
     void (*shutdown)(void* PR_NULLABLE context, PrApp* app);
 } PrAppHandler;
@@ -437,7 +447,8 @@ struct PrAppBrowser {
 
 // The functions of an application, at the start of its backend's state. Each member implements the function that it is
 // named for. A null `destroy` leaves nothing to free. An application with no browser engine leaves all the browser
-// functions null. Callers use the functions below, never these members.
+// functions null. Callers use the functions below, never these members. A backend delivers each frame with
+// prAppDeliverFrame.
 struct PrApp {
     void (*PR_NULLABLE destroy)(PrApp* app);
     void (*run)(PrApp* app, const PrAppHandler* handler);
@@ -445,6 +456,7 @@ struct PrApp {
     void (*wake)(PrApp* app);
     void (*requestFrame)(PrApp* app);
     void (*setCursor)(PrApp* app, PrAppCursor cursor);
+    void (*PR_NULLABLE setTextInputRect)(PrApp* app, PrRect rect);
     void (*setTitle)(PrApp* app, PrStringView title);
     PrStatus (*surface)(PrApp* app, PrAppSurface* out);
     PrStatus (*openUrl)(PrApp* app, PrStringView url);
@@ -482,14 +494,22 @@ void prAppRun(PrApp* app, const PrAppHandler* handler);
 // Ends the run, which calls the handler's `shutdown`.
 void prAppStop(PrApp* app);
 
+// Calls the handler's `frame` and applies what it returns. Backends call it.
+void prAppDeliverFrame(PrApp* app, const PrAppHandler* handler, const PrAppFrame* frame);
+
 // Delivers a Wake event soon. Any thread may call it. Several wakes before the next delivery produce one event.
 void prAppWake(PrApp* app);
 
 // Delivers a frame when the display next needs one. Several requests before that frame produce one frame.
 void prAppRequestFrame(PrApp* app);
 
-// Sets the shape of the pointer over the window.
-void prAppSetCursor(PrApp* app, PrAppCursor cursor);
+// Returns what a surface of the window reports, in the surface's logical px, in logical px of the window: the surface's
+// origin in the window, and logical px of the window per px of the surface.
+PrAppOutput prAppOutputPlaced(PrAppOutput output, PrVec2 origin, float scale);
+
+// Returns what two surfaces of one window report together. The pointer's surface gives the cursor. The second surface's
+// text input is taken if it has one, and otherwise the first's. Either surface can want a frame.
+PrAppOutput prAppOutputMerge(PrAppOutput first, PrAppOutput second, bool pointerInSecond);
 
 // Sets the title of the window, which PrAppDesc::title sets first. The window copies `title`.
 void prAppSetTitle(PrApp* app, PrStringView title);

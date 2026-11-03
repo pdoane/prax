@@ -735,6 +735,9 @@ PrLayoutNode prUiTextEdit(PrUi* ui, const PrUiTextEditDesc* desc) {
         prLayoutTreeFrameSetHighlights(editor.tree, editor.node, &selection, 1);
     }
     if (focused) {
+        PrRect inputRect{};
+        if (editor.caretAt(editor.caret, editor.affinity, &inputRect))
+            prUiSetTextInput(ui, inputRect);
         bool still = prUiUserPreferences(ui).reducedMotion;
         double phase = time - state.activity;
         bool on = still || phase - kBlinkSeconds * floorF64(phase / kBlinkSeconds) < kBlinkSeconds / 2;

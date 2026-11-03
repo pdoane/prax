@@ -207,7 +207,7 @@ int main(int argc, char** argv) {
             });
             prAppBrowserLoad(h.browser, h.url, loaded, &h);
         },
-        [](void*, PrApp*, const PrAppFrame*) {},
+        [](void*, PrApp*, const PrAppFrame*) { return PrAppOutput{}; },
         [](void* context, PrApp*, const PrAppEvent* event) {
             Host& h = *static_cast<Host*>(context);
             if (event->kind == PrAppEventKind_Wake && h.browser != nullptr && h.polling)

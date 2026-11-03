@@ -18,7 +18,7 @@ int prTestUiCApi(void) {
     PrUi* ui = prUiCreate(tree);
     PrUiFrameDesc frame = {.time = 1, .extent = {100, 100}, .maxRounds = 1, .display = prAppDisplayDefault()};
     uint32_t rounds = prUiFrame(ui, &frame, buildEmpty, NULL);
-    int result = rounds != 1 || prUiWantsFrame(ui);
+    int result = rounds != 1 || prUiOutput(ui).wantsFrame;
     prUiDestroy(ui);
     prLayoutTreeDestroy(tree);
     return result;

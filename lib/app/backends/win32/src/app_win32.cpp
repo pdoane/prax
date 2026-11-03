@@ -78,6 +78,7 @@ constexpr uint8_t kPointerButtons = 5;
 
 struct Win32App : PrApp {
     PrAppHandler handler;
+    PrRect textInputRect;       // where the caret stands, in logical px
     wchar_t* title;             // NUL-terminated
     PrUVec2 extent;             // the extent that the window opens at, in logical pixels
     bool headless;
@@ -604,7 +605,7 @@ void runFrame(Win32App* app) {
     app->framed = true;
     app->lastFrame = now;
     app->inCallback = true;
-    app->handler.frame(app->handler.context, app, &frame);
+    prAppDeliverFrame(app, &app->handler, &frame);
     endCallback(app);
 }
 
@@ -814,20 +815,20 @@ void deliverCodePoint(Win32App* app, uint32_t codePoint) {
         deliverText(app, PrAppEventKind_Text, win32Narrow(units, count, app->utf8), PrAppTextRange{});
 }
 
-// Places the input method's windows at the window's bottom left.
+// Places the input method's windows at the caret that the program last gave, in the window's client area.
 void placeInputMethod(Win32App* app) {
     HIMC context = ImmGetContext(app->window);
     if (context == nullptr)
         return;
-    RECT client;
-    GetClientRect(app->window, &client);
+    float scale = float(GetDpiForWindow(app->window)) / USER_DEFAULT_SCREEN_DPI;
+    POINT below{LONG(app->textInputRect.left * scale), LONG(app->textInputRect.bottom * scale)};
     COMPOSITIONFORM composition{};
     composition.dwStyle = CFS_POINT;
-    composition.ptCurrentPos = POINT{0, client.bottom};
+    composition.ptCurrentPos = below;
     ImmSetCompositionWindow(context, &composition);
     CANDIDATEFORM candidate{};
     candidate.dwStyle = CFS_CANDIDATEPOS;
-    candidate.ptCurrentPos = POINT{0, client.bottom};
+    candidate.ptCurrentPos = below;
     ImmSetCandidateWindow(context, &candidate);
     ImmReleaseContext(app->window, context);
 }
@@ -1325,6 +1326,13 @@ void requestFrame(PrApp* base) {
     scheduleFrame(app);
 }
 
+void setTextInputRect(PrApp* base, PrRect rect) {
+    Win32App* app = static_cast<Win32App*>(base);
+    app->textInputRect = rect;
+    if (app->window != nullptr)
+        placeInputMethod(app);
+}
+
 void setCursor(PrApp* base, PrAppCursor cursor) {
     Win32App* app = static_cast<Win32App*>(base);
     if (cursor == app->shape)
@@ -1446,6 +1454,7 @@ PrApp* prAppWin32Create(const PrAppDesc* desc) {
     app->wake = wake;
     app->requestFrame = requestFrame;
     app->setCursor = setCursor;
+    app->setTextInputRect = setTextInputRect;
     app->setTitle = setTitle;
     app->surface = surface;
     app->openUrl = openUrl;

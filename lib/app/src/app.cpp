@@ -128,6 +128,15 @@ void prAppStop(PrApp* app) {
     app->stop(app);
 }
 
+void prAppDeliverFrame(PrApp* app, const PrAppHandler* handler, const PrAppFrame* frame) {
+    PrAppOutput output = handler->frame(handler->context, app, frame);
+    app->setCursor(app, output.cursor);
+    if (output.hasTextInput && app->setTextInputRect != nullptr)
+        app->setTextInputRect(app, output.textInput);
+    if (output.wantsFrame)
+        app->requestFrame(app);
+}
+
 void prAppWake(PrApp* app) {
     app->wake(app);
 }
@@ -136,8 +145,24 @@ void prAppRequestFrame(PrApp* app) {
     app->requestFrame(app);
 }
 
-void prAppSetCursor(PrApp* app, PrAppCursor cursor) {
-    app->setCursor(app, cursor);
+PrAppOutput prAppOutputPlaced(PrAppOutput output, PrVec2 origin, float scale) {
+    output.textInput = PrRect{
+        .left = origin.x + output.textInput.left * scale,
+        .top = origin.y + output.textInput.top * scale,
+        .right = origin.x + output.textInput.right * scale,
+        .bottom = origin.y + output.textInput.bottom * scale,
+    };
+    return output;
+}
+
+PrAppOutput prAppOutputMerge(PrAppOutput first, PrAppOutput second, bool pointerInSecond) {
+    const PrAppOutput& input = second.hasTextInput ? second : first;
+    return PrAppOutput{
+        .cursor = pointerInSecond ? second.cursor : first.cursor,
+        .wantsFrame = first.wantsFrame || second.wantsFrame,
+        .hasTextInput = input.hasTextInput,
+        .textInput = input.textInput,
+    };
 }
 
 void prAppSetTitle(PrApp* app, PrStringView title) {

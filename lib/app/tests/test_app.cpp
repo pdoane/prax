@@ -28,7 +28,7 @@ void createFake(FakeApp& fake) {
         fakeOf(app).calls.push_back("run");
         PrAppFrame frame{.extent = {100, 50}, .display = {.pixelRatio = 2, .headroom = 1, .potentialHeadroom = 1}};
         handler->start(handler->context, app, &frame);
-        handler->frame(handler->context, app, &frame);
+        prAppDeliverFrame(app, handler, &frame);
         PrAppEvent event{};
         event.kind = PrAppEventKind_KeyDown;
         event.key = 'A';
@@ -69,6 +69,7 @@ TEST_CASE("a run delivers to the handler in order") {
         [](void* context, PrApp*, const PrAppFrame* frame) {
             static_cast<std::vector<std::string>*>(context)->push_back(
                 "frame " + std::to_string(int(frame->extent.x * frame->display.pixelRatio)));
+            return PrAppOutput{};
         },
         [](void* context, PrApp*, const PrAppEvent* event) {
             static_cast<std::vector<std::string>*>(context)->push_back("key " + std::string(1, char(event->key)));
@@ -87,7 +88,6 @@ TEST_CASE("the interface passes calls through") {
     PrApp* app = &fake.record;
     prAppRequestFrame(app);
     prAppWake(app);
-    prAppSetCursor(app, PrAppCursor_Hand);
     prAppSetTitle(app, "Title");
     prAppRequestClipboardText(app);
     prAppStop(app);
@@ -99,7 +99,7 @@ TEST_CASE("the interface passes calls through") {
     CHECK(browser == nullptr);
     prAppDestroy(app);
     prAppDestroy(nullptr);
-    CHECK(fake.calls == std::vector<std::string>{"frame", "wake", "cursor", "title", "clipboard", "stop", "destroy"});
+    CHECK(fake.calls == std::vector<std::string>{"frame", "wake", "title", "clipboard", "stop", "destroy"});
 }
 
 TEST_CASE("named keys and codes take the names of UI Events") {
@@ -124,4 +124,34 @@ TEST_CASE("a scroll resolves to pixels by its unit") {
     resolved = prAppEventScrollPixels(&lines, 20);
     CHECK(resolved.x == 20.0f);
     CHECK(resolved.y == -40.0f);
+}
+
+TEST_CASE("a frame's output reaches the window") {
+    FakeApp fake{};
+    createFake(fake);
+    PrAppHandler handler{};
+    handler.frame = [](void*, PrApp*, const PrAppFrame*) {
+        return PrAppOutput{.cursor = PrAppCursor_Hand, .wantsFrame = true};
+    };
+    PrAppFrame frame{};
+    prAppDeliverFrame(&fake.record, &handler, &frame);
+    CHECK(fake.calls == std::vector<std::string>{"cursor", "frame"});
+}
+
+TEST_CASE("a surface's output is placed in the window, and two surfaces' outputs merge") {
+    PrAppOutput page{.cursor = PrAppCursor_Hand, .hasTextInput = true, .textInput = {1, 2, 3, 4}};
+    PrAppOutput placed = prAppOutputPlaced(page, PrVec2{10, 20}, 2);
+    CHECK(placed.textInput.left == 12);
+    CHECK(placed.textInput.top == 24);
+    CHECK(placed.textInput.right == 16);
+    CHECK(placed.textInput.bottom == 28);
+
+    PrAppOutput chrome{.cursor = PrAppCursor_Arrow, .wantsFrame = true};
+    PrAppOutput overPage = prAppOutputMerge(chrome, placed, true);
+    CHECK(overPage.cursor == PrAppCursor_Hand);
+    CHECK(overPage.wantsFrame);
+    CHECK(overPage.hasTextInput);
+    CHECK(overPage.textInput.left == 12);
+    CHECK(prAppOutputMerge(chrome, placed, false).cursor == PrAppCursor_Arrow);
+    CHECK(!prAppOutputMerge(chrome, PrAppOutput{}, false).hasTextInput);
 }

@@ -853,13 +853,13 @@ void start(void* context, PrApp* app, const PrAppFrame*) {
     prAppRequestFrame(app);
 }
 
-void frame(void* context, PrApp* app, const PrAppFrame* f) {
+PrAppOutput frame(void* context, PrApp*, const PrAppFrame* f) {
     Window& w = *static_cast<Window*>(context);
     // A lost device is made again, with everything on it.
     if (w.device != nullptr && prGpuDeviceIsLost(w.device))
         closeDevice(w);
     if (w.device == nullptr && !openDevice(w))
-        return;
+        return {};
     prGpuSwapChainWait(w.swapChain);
     w.stream.display = f->display;
     w.stream.preferences = f->preferences;
@@ -896,11 +896,12 @@ void frame(void* context, PrApp* app, const PrAppFrame* f) {
     PrUVec2 extent{uint32_t(f->extent.x * ratio + 0.5f), uint32_t(f->extent.y * ratio + 0.5f)};
     if (extent.x != 0 && extent.y != 0)
         render(w, extent, PrColor{canvas.r * canvas.a, canvas.g * canvas.a, canvas.b * canvas.a, canvas.a});
-    prAppSetCursor(app, prUiCursor(w.ui));
     // A stream that is delivering, or a page that has tasks, needs the next frame.
+    PrAppOutput output = prUiOutput(w.ui);
     bool streaming = !w.stream.paused && !finished(w.stream);
-    if (streaming || prUiWantsFrame(w.ui) || prDomAgentNextTaskDelay(prHtmlPageAgent(w.stream.page)) >= 0)
-        prAppRequestFrame(app);
+    if (streaming || prDomAgentNextTaskDelay(prHtmlPageAgent(w.stream.page)) >= 0)
+        output.wantsFrame = true;
+    return output;
 }
 
 void event(void* context, PrApp* app, const PrAppEvent* e) {

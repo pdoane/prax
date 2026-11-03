@@ -151,7 +151,7 @@ int main() {
             }
             runNext(c);
         },
-        [](void*, PrApp*, const PrAppFrame*) {},
+        [](void*, PrApp*, const PrAppFrame*) { return PrAppOutput{}; },
         [](void*, PrApp*, const PrAppEvent*) {},
         [](void* context, PrApp*) {
             Capturing& c = *static_cast<Capturing*>(context);

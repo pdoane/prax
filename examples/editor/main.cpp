@@ -130,13 +130,13 @@ void start(void* context, PrApp* app, const PrAppFrame*) {
     prAppRequestFrame(app);
 }
 
-void frame(void* context, PrApp* app, const PrAppFrame* f) {
+PrAppOutput frame(void* context, PrApp*, const PrAppFrame* f) {
     Window& w = *static_cast<Window*>(context);
     // A lost device is made again, with everything on it. The frame draws from the model, as every frame does.
     if (w.device != nullptr && prGpuDeviceIsLost(w.device))
         closeDevice(w);
     if (w.device == nullptr && !openDevice(w))
-        return;
+        return {};
     // Waiting first lets the frame read the latest input, and then wait for nothing once it is built.
     prGpuSwapChainWait(w.swapChain);
 
@@ -178,9 +178,7 @@ void frame(void* context, PrApp* app, const PrAppFrame* f) {
     PrUVec2 extent{uint32_t(f->extent.x * ratio + 0.5f), uint32_t(f->extent.y * ratio + 0.5f)};
     if (extent.x != 0 && extent.y != 0)
         render(w, extent, PrColor{canvas.r * canvas.a, canvas.g * canvas.a, canvas.b * canvas.a, canvas.a});
-    prAppSetCursor(app, prUiCursor(w.ui));
-    if (prUiWantsFrame(w.ui))
-        prAppRequestFrame(app);
+    return prUiOutput(w.ui);
 }
 
 void event(void* context, PrApp* app, const PrAppEvent* e) {

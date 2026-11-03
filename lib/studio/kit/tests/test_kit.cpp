@@ -133,13 +133,13 @@ TEST_CASE("a hovered button fades to its hover fill, and keeps one record once i
     f.frame(0.02);
     PrLayoutStyleIndex fading = prLayoutNodeStyle(f.tree, button);
     CHECK(fading != rest);
-    CHECK(prUiWantsFrame(f.ui));
+    CHECK(prUiOutput(f.ui).wantsFrame);
     f.frame(0.5);
     f.frame(0.5);
     PrLayoutStyleIndex hovered = prLayoutNodeStyle(f.tree, button);
     f.frame(0.5);
     CHECK(prLayoutNodeStyle(f.tree, button) == hovered);
-    CHECK_FALSE(prUiWantsFrame(f.ui));
+    CHECK_FALSE(prUiOutput(f.ui).wantsFrame);
     // A fill change affects only painting.
     CHECK(prLayoutTreeStats(f.tree).blocksLaidOut == 0);
     CHECK(kitVerified(f.tree));

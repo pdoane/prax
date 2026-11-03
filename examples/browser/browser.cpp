@@ -210,7 +210,7 @@ void start(void* context, PrApp* app, const PrAppFrame* window) {
 // Each frame builds the chrome, posts the frame to the active tab's view at the extent of the page's box, and presents
 // the tab's compositor, which renders the page with the chrome over it. A tab with no frame to present yet renders the
 // chrome over a blank page.
-void frame(void* context, PrApp* app, const PrAppFrame* f) {
+PrAppOutput frame(void* context, PrApp*, const PrAppFrame* f) {
     Browser& b = *static_cast<Browser*>(context);
     prGpuSwapChainWait(b.swapChain);
     tabsRefresh(b);
@@ -265,11 +265,17 @@ void frame(void* context, PrApp* app, const PrAppFrame* f) {
     }
     if (!b.presented)
         render(b, nullptr, kBlankCanvas);
-    // The pointer shows the document's cursor wherever the page takes the pointer, and the chrome's elsewhere.
-    bool pagePointer = view != nullptr && (b.pageButtons != 0 || overPage(b, b.pointer));
-    prAppSetCursor(app, pagePointer ? tab->info.cursor : prUiCursor(b.ui));
-    if (prUiWantsFrame(b.ui) || (tab != nullptr && prLayoutCompositorWantsFrame(tab->compositor)))
-        prAppRequestFrame(app);
+    // The pointer shows the document's cursor wherever the page takes the pointer, and the chrome's elsewhere. The page
+    // sees the window at its zoom.
+    PrAppOutput output = prUiOutput(b.ui);
+    if (view != nullptr) {
+        bool pagePointer = b.pageButtons != 0 || overPage(b, b.pointer);
+        PrVec2 origin{b.chrome.page.left, b.chrome.page.top};
+        output = prAppOutputMerge(output, prAppOutputPlaced(tab->info.output, origin, tab->zoom), pagePointer);
+    }
+    if (tab != nullptr && prLayoutCompositorWantsFrame(tab->compositor))
+        output.wantsFrame = true;
+    return output;
 }
 
 // The window's input goes to the chrome, and to the active tab's page where the page has it. The pointer goes to the

@@ -86,7 +86,7 @@ TEST_CASE("a context's first round routes nothing, and the next routes what was 
     // settles.
     CHECK(f.frame() == 4);
     CHECK(clicked);
-    CHECK_FALSE(prUiWantsFrame(f.ui));
+    CHECK_FALSE(prUiOutput(f.ui).wantsFrame);
 }
 
 TEST_CASE("a press and its release are rounds of their own, and a round that settles follows the release") {
@@ -494,13 +494,13 @@ TEST_CASE("the cursor is the request nearest the pointer's node") {
     f.frame();
     f.move(20, 20);
     f.frame();
-    CHECK(prUiCursor(f.ui) == PrAppCursor_Text);
+    CHECK(prUiOutput(f.ui).cursor == PrAppCursor_Text);
     f.move(120, 120);
     f.frame();
-    CHECK(prUiCursor(f.ui) == PrAppCursor_Crosshair);
+    CHECK(prUiOutput(f.ui).cursor == PrAppCursor_Crosshair);
     f.move(600, 500);
     f.frame();
-    CHECK(prUiCursor(f.ui) == PrAppCursor_Arrow);
+    CHECK(prUiOutput(f.ui).cursor == PrAppCursor_Arrow);
 }
 
 TEST_CASE("a primary press focuses the innermost focusable node, and Tab steps through the tree's order") {
@@ -677,10 +677,10 @@ TEST_CASE("an activation marked in one round is seen in the next") {
     mark = true;
     f.frame(1.0 / 60, 1);
     CHECK(seen == 0);
-    CHECK(prUiWantsFrame(f.ui));
+    CHECK(prUiOutput(f.ui).wantsFrame);
     f.frame(1.0 / 60, 1);
     CHECK(seen == 1);
-    CHECK_FALSE(prUiWantsFrame(f.ui));
+    CHECK_FALSE(prUiOutput(f.ui).wantsFrame);
 }
 
 TEST_CASE("the wheel scrolls the innermost scroll container, and what it cannot take passes outward") {
@@ -816,12 +816,12 @@ TEST_CASE("a tween moves to its target over its duration and asks for frames whi
     target = 10;
     f.frame(0.25);
     CHECK(value == doctest::Approx(0.0));
-    CHECK(prUiWantsFrame(f.ui));
+    CHECK(prUiOutput(f.ui).wantsFrame);
     f.frame(0.5);
     CHECK(value == doctest::Approx(5.0));
     f.frame(0.6);
     CHECK(value == 10.0f);
-    CHECK_FALSE(prUiWantsFrame(f.ui));
+    CHECK_FALSE(prUiOutput(f.ui).wantsFrame);
 }
 
 TEST_CASE("a held press repeats after its delay, at its interval") {
@@ -835,7 +835,7 @@ TEST_CASE("a held press repeats after its delay, at its interval") {
     f.down(10, 10);
     f.frame();
     CHECK(repeats == 0);
-    CHECK(prUiWantsFrame(f.ui));
+    CHECK(prUiOutput(f.ui).wantsFrame);
     f.frame(0.45);
     CHECK(repeats == 0);
     f.frame(0.3);
@@ -943,13 +943,13 @@ TEST_CASE("the node that holds a press keeps its cursor while the pointer leaves
     f.frame();
     f.down(10, 10);
     f.frame();
-    CHECK(prUiCursor(f.ui) == PrAppCursor_ResizeX);
+    CHECK(prUiOutput(f.ui).cursor == PrAppCursor_ResizeX);
     f.push(PrAppEvent{.kind = PrAppEventKind_PointerMove, .position = PrVec2{120, 10}});
     f.frame();
-    CHECK(prUiCursor(f.ui) == PrAppCursor_ResizeX);
+    CHECK(prUiOutput(f.ui).cursor == PrAppCursor_ResizeX);
     f.up(120, 10);
     f.frame();
-    CHECK(prUiCursor(f.ui) == PrAppCursor_Hand);
+    CHECK(prUiOutput(f.ui).cursor == PrAppCursor_Hand);
 }
 
 TEST_CASE("keys made under one base differ by name and index, and keys of one name differ by base") {

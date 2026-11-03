@@ -243,7 +243,7 @@ TEST_CASE("a hovered segment fades to its hover fill, and keeps one record once 
     PrLayoutStyleIndex hovered = prLayoutNodeStyle(f.tree, segment);
     f.frame(0.5);
     CHECK(prLayoutNodeStyle(f.tree, segment) == hovered);
-    CHECK_FALSE(prUiWantsFrame(f.ui));
+    CHECK_FALSE(prUiOutput(f.ui).wantsFrame);
     CHECK(prLayoutTreeStats(f.tree).blocksLaidOut == 0);
     CHECK(kitVerified(f.tree));
 }
@@ -331,14 +331,14 @@ TEST_CASE("a toggle's knob eases across its track, then keeps the record of its 
     float middle = f.bounds(knob).left;
     CHECK(middle > start);
     CHECK(middle < start + 12);
-    CHECK(prUiWantsFrame(f.ui));
+    CHECK(prUiOutput(f.ui).wantsFrame);
     f.frame(0.5);
     f.frame(0.5);
     CHECK(f.bounds(knob).left == start + 12);
     PrLayoutStyleIndex settled = prLayoutNodeStyle(f.tree, knob);
     f.frame(0.5);
     CHECK(prLayoutNodeStyle(f.tree, knob) == settled);
-    CHECK_FALSE(prUiWantsFrame(f.ui));
+    CHECK_FALSE(prUiOutput(f.ui).wantsFrame);
     PrLayoutTreeStats stats = prLayoutTreeStats(f.tree);
     CHECK(stats.blocksLaidOut == 0);
     CHECK(stats.frameNodesMade == 0);
@@ -409,7 +409,7 @@ TEST_CASE("an indeterminate bar sweeps its band and requests the frames that mov
     f.frame(0.3);
     PrLayoutNode band = prLayoutNodeFirstChild(f.tree, bar);
     float before = f.bounds(band).left;
-    CHECK(prUiWantsFrame(f.ui));
+    CHECK(prUiOutput(f.ui).wantsFrame);
     f.frame(0.2);
     CHECK(f.bounds(band).left > before);
     CHECK(widthOf(f, band) == doctest::Approx(0.3 * double(widthOf(f, bar))).epsilon(0.001));
@@ -448,7 +448,7 @@ TEST_CASE("a spinner turns by kept steps, requesting frames, and paints nothing 
     f.frame();
     CHECK(widthOf(f, spinner) == 16.0f);
     PrLayoutStyleIndex first = prLayoutNodeStyle(f.tree, spinner);
-    CHECK(prUiWantsFrame(f.ui));
+    CHECK(prUiOutput(f.ui).wantsFrame);
     f.frame(0.25);
     PrLayoutStyleIndex turned = prLayoutNodeStyle(f.tree, spinner);
     CHECK(turned != first);
@@ -476,10 +476,10 @@ TEST_CASE("a spinner scrolled out of view requests no frames, and requests them 
     // The first round asks for the frame that lays the spinner out, which finds it below the scrollport.
     f.frame();
     f.frame();
-    CHECK(!prUiWantsFrame(f.ui));
+    CHECK(!prUiOutput(f.ui).wantsFrame);
     prLayoutNodeSetScroll(f.tree, view, PrLayoutVec{prLayoutUnitFromPx(0), prLayoutUnitFromPx(400)});
     f.frame();
-    CHECK(prUiWantsFrame(f.ui));
+    CHECK(prUiOutput(f.ui).wantsFrame);
     CHECK(kitVerified(f.tree));
 }
 
@@ -510,7 +510,7 @@ TEST_CASE("a frame of the same choices makes no node and lays nothing out") {
     PrLayoutTreeStats stats = prLayoutTreeStats(f.tree);
     CHECK(stats.frameNodesMade == 0);
     CHECK(stats.blocksLaidOut == 0);
-    CHECK_FALSE(prUiWantsFrame(f.ui));
+    CHECK_FALSE(prUiOutput(f.ui).wantsFrame);
     CHECK(kitVerified(f.tree));
 }
 

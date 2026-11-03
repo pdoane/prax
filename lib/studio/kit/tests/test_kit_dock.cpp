@@ -198,7 +198,7 @@ TEST_CASE("dragging a band moves weight between the panes beside it") {
     PrVec2 band{(scene.right + viewport.left) / 2, 300};
     f.move(band);
     f.frame();
-    CHECK(prUiCursor(f.ui) == PrAppCursor_ResizeX);
+    CHECK(prUiOutput(f.ui).cursor == PrAppCursor_ResizeX);
     f.push(PrAppEvent{.kind = PrAppEventKind_PointerDown, .position = band});
     f.frame();
     f.move(PrVec2{band.x + 79, 300});
@@ -422,7 +422,7 @@ TEST_CASE("a split's panes divide its box by weight, and its band moves weight b
     PrVec2 band{400, f.bounds(panes[0]).bottom + kPrKitSplitBand / 2};
     f.move(band);
     f.frame();
-    CHECK(prUiCursor(f.ui) == PrAppCursor_ResizeY);
+    CHECK(prUiOutput(f.ui).cursor == PrAppCursor_ResizeY);
     f.push(PrAppEvent{.kind = PrAppEventKind_PointerDown, .position = band});
     f.frame();
     f.move(PrVec2{400, 0});

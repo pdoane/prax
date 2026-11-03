@@ -483,7 +483,7 @@ bool inEditable(const PrDomElement* element) {
     return false;
 }
 
-// Returns the cursor that `hit` shows, as prHtmlViewCursor describes. The text cursor is vertical in a vertical writing
+// Returns the cursor that `hit` shows, as prHtmlViewOutput describes. The text cursor is vertical in a vertical writing
 // mode.
 PrAppCursor cursorOf(const ViewHit& hit) {
     if (hit.element == nullptr || hit.presentation == nullptr)
@@ -1325,8 +1325,8 @@ PrColor16 prHtmlViewPaint(PrHtmlView* view, PrDrawList* list) {
     return playTree(view, presentation, list, view->canvasFilled);
 }
 
-PrAppCursor prHtmlViewCursor(const PrHtmlView* view) {
-    return view->cursor;
+PrAppOutput prHtmlViewOutput(const PrHtmlView* view) {
+    return PrAppOutput{.cursor = view->cursor};
 }
 
 PrHtmlViewEventResult prHtmlViewEvent(PrHtmlView* view, const PrAppEvent* event, PrHtmlViewEventFlags flags) {

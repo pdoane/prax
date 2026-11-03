@@ -509,13 +509,13 @@ void start(void* context, PrApp* app, const PrAppFrame*) {
     prAppRequestFrame(app);
 }
 
-void frame(void* context, PrApp* app, const PrAppFrame* f) {
+PrAppOutput frame(void* context, PrApp*, const PrAppFrame* f) {
     Window& w = *static_cast<Window*>(context);
     // A lost device is made again, with everything on it.
     if (w.device != nullptr && prGpuDeviceIsLost(w.device))
         closeDevice(w);
     if (w.device == nullptr && !openDevice(w))
-        return;
+        return {};
     prGpuSwapChainWait(w.swapChain);
     if (w.origin < 0)
         w.origin = f->time;
@@ -554,9 +554,10 @@ void frame(void* context, PrApp* app, const PrAppFrame* f) {
     };
     if (extent.x != 0 && extent.y != 0)
         render(w, extent);
-    prAppSetCursor(app, prUiCursor(w.ui));
     // The background moves in every frame.
-    prAppRequestFrame(app);
+    PrAppOutput output = prUiOutput(w.ui);
+    output.wantsFrame = true;
+    return output;
 }
 
 void event(void* context, PrApp* app, const PrAppEvent* e) {

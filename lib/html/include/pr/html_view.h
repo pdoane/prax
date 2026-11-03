@@ -117,14 +117,15 @@ void prHtmlViewWait(PrHtmlView* view);
 // (PrHtmlViewDesc::canvasFilled), or transparent while the document is render-blocked.
 PrColor16 prHtmlViewPaint(PrHtmlView* view, PrDrawList* list);
 
-// Returns the cursor that the document under the pointer shows there (css-ui-4/#cursor), for the host to show with
-// prAppSetCursor. The view finds it again at each hover, and after a commit of a scene, at most every so often while
-// scenes follow each other and always after the last of them. It reads the cursor property of the element hit, in the
-// innermost document under the pointer. The view shows no cursor images, so the cursor is the keyword that ends the
-// property's value. The value auto shows the text cursor over an editable element, and over text that the user can
-// select: text that user-select does not exclude, outside any widget other than a text control. Auto shows the arrow
-// anywhere else. The cursor is the arrow until the pointer has been over the view.
-PrAppCursor prHtmlViewCursor(const PrHtmlView* view);
+// Returns what the view reports to the window, in viewport px, which a host places (prAppOutputPlaced). The cursor is
+// what the document under the pointer shows there (css-ui-4/#cursor). The view finds it again at each hover, and after
+// a commit of a scene, at most every so often while scenes follow each other and always after the last of them. It
+// reads the cursor property of the element hit, in the innermost document under the pointer. The view shows no cursor
+// images, so the cursor is the keyword that ends the property's value. The value auto shows the text cursor over an
+// editable element, and over text that the user can select: text that user-select does not exclude, outside any widget
+// other than a text control. Auto shows the arrow anywhere else. The cursor is the arrow until the pointer has been
+// over the view.
+PrAppOutput prHtmlViewOutput(const PrHtmlView* view);
 
 // What the host did with an event before passing it to the view.
 enum {

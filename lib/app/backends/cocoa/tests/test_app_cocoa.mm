@@ -96,12 +96,13 @@ TEST_CASE("a headless run starts, frames, wakes from another thread and shuts do
         [](void* context, PrApp* app, const PrAppFrame* frame) {
             Run& r = runOf(context);
             if (r.frames++ != 0)
-                return;
+                return PrAppOutput{};
             r.seen.push_back("frame");
             CHECK(frame->extent.x == 64.0f);
             CHECK(frame->extent.y == 32.0f);
             CHECK(frame->delta == 0.0);
             r.waker = std::thread([app] { prAppWake(app); });
+            return PrAppOutput{};
         },
         [](void* context, PrApp* app, const PrAppEvent* event) {
             if (event->kind != PrAppEventKind_Wake)
@@ -157,7 +158,7 @@ TEST_CASE("a browser loads a page, runs a script in it and captures it at two pi
                     }, &b);
             }, &b);
         },
-        [](void*, PrApp*, const PrAppFrame*) {},
+        [](void*, PrApp*, const PrAppFrame*) { return PrAppOutput{}; },
         [](void*, PrApp*, const PrAppEvent*) {},
         [](void* context, PrApp*) {
             Browse& b = *static_cast<Browse*>(context);
@@ -207,7 +208,7 @@ TEST_CASE("a page from a file reads the files beside it, and a promise answers o
                         }, &b);
             }, &b);
         },
-        [](void*, PrApp*, const PrAppFrame*) {},
+        [](void*, PrApp*, const PrAppFrame*) { return PrAppOutput{}; },
         [](void*, PrApp*, const PrAppEvent*) {},
         [](void* context, PrApp*) {
             Browse& b = *static_cast<Browse*>(context);
@@ -240,7 +241,7 @@ TEST_CASE("input that a callback's own run loop dispatches arrives after the cal
             [NSRunLoop.currentRunLoop runUntilDate:[NSDate dateWithTimeIntervalSinceNow:0.1]];
             in.starting = false;
         },
-        [](void*, PrApp*, const PrAppFrame*) {},
+        [](void*, PrApp*, const PrAppFrame*) { return PrAppOutput{}; },
         [](void* context, PrApp* app, const PrAppEvent* event) {
             Input& in = inputOf(context);
             in.nested = in.nested || in.starting;
@@ -275,7 +276,7 @@ TEST_CASE("a window that stops being the key window releases the buttons and key
             [view mouseUp:leftMouse(view.window, NSEventTypeLeftMouseUp)];
             prAppWake(app);
         },
-        [](void*, PrApp*, const PrAppFrame*) {},
+        [](void*, PrApp*, const PrAppFrame*) { return PrAppOutput{}; },
         [](void* context, PrApp* app, const PrAppEvent* event) {
             inputOf(context).events.push_back(*event);
             if (event->kind == PrAppEventKind_Wake)

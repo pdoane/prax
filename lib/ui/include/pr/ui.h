@@ -101,12 +101,8 @@ const PrUiRound* prUiCurrentRound(const PrUi* ui);
 PrAppDisplay prUiDisplay(const PrUi* ui);
 PrAppUserPreferences prUiUserPreferences(const PrUi* ui);
 
-// Requests another frame. prUiWantsFrame returns true until the next frame begins.
+// Requests another frame, which prUiOutput reports until the next frame begins.
 void prUiRequestFrame(PrUi* ui);
-
-// Returns true if the context needs another frame because a tween is moving, a press is repeating, an activation is
-// pending, input is still queued, or a frame was requested. Call between frames.
-bool prUiWantsFrame(const PrUi* ui);
 
 // Requests another frame for an animation on `node` that runs without input, such as a spinner's, if the node was shown
 // at the last layout (prLayoutNodeShownBounds) or has not been laid out yet. A node that is scrolled or clipped out of
@@ -230,9 +226,14 @@ double prUiHoverSeconds(const PrUi* ui, PrLayoutNode node);
 // closest to that node instead, wherever the pointer is.
 void prUiSetCursor(PrUi* ui, PrLayoutNode node, PrAppCursor cursor);
 
-// Returns the cursor resolved in the last round, for the host to show with prAppSetCursor. Returns the arrow if no node
-// requested a cursor.
-PrAppCursor prUiCursor(const PrUi* ui);
+// Sets where the caret of the text being edited stands in this frame, in logical px of the window.
+void prUiSetTextInput(PrUi* ui, PrRect caret);
+
+// Returns what the context reports to the window, which a frame handler returns or merges with its other surfaces: the
+// cursor resolved in the last round, or the arrow if no node requested one, whether it wants another frame because a
+// tween is moving, a press is repeating, an activation is pending, input is still queued, or a frame was requested, and
+// the caret of the text being edited. Call between frames.
+PrAppOutput prUiOutput(const PrUi* ui);
 
 // Returns true if the node has captured the pointer with a press of `button`. Button 0 is the primary button.
 bool prUiIsPressed(const PrUi* ui, PrLayoutNode node, uint8_t button);

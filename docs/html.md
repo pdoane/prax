@@ -173,8 +173,8 @@ generator takes them from WHATWG's `entities.json`.
   that a frame's document cannot take passes on to the containers around the frame, unless its root's
   `overscroll-behavior` contains it, in the view and in the compositor alike.
 - The pointer's shape comes from the document. The view hit tests the pointer's position at each hover and at each
-  commit of a scene, and reads the `cursor` property of the element that it hits (`prHtmlViewCursor`), which the host
-  shows with `prAppSetCursor`. Hit testing honors `pointer-events`, `visibility` and inertness, so the element hit is
+  commit of a scene, and reads the `cursor` property of the element that it hits (`prHtmlViewOutput`), which the host
+  returns from its frame. Hit testing honors `pointer-events`, `visibility` and inertness, so the element hit is
   the one that takes the pointer's events.
 - Some states of an element are the host's to know: whether a link's URL is in the user's history (`:visited`), and
   whether the user agent autofilled a control (`:autofill`). A restyle asks the host (`PrHtmlHost::elementState`), and a

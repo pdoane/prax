@@ -271,6 +271,8 @@ struct Ui {
     UiButton buttons[kUiButtons];
     PrLayoutNode clicked[kUiButtons];
     bool pressedRound[kUiButtons];  // true if the button was pressed in the current round
+    PrRect textInput;               // the caret of the text being edited, if hasTextInput
+    bool hasTextInput;
     PrAppCursor cursor;
     Array<UiWheel> wheels;
     UiCarry payload;
@@ -1247,6 +1249,7 @@ uint32_t prUiFrame(PrUi* ui, const PrUiFrameDesc* desc, PrUiBuildFn build, void*
     uint32_t limit = desc->maxRounds != 0 ? desc->maxRounds : 1;
     ui->frameRequested = false;
     ui->repeating = false;
+    ui->hasTextInput = false;
     uint32_t rounds = 0;
     bool settle = false;
     PrLayoutVec extent = prLayoutVecFromPx(desc->extent);
@@ -1290,10 +1293,6 @@ PrAppUserPreferences prUiUserPreferences(const PrUi* ui) {
 
 void prUiRequestFrame(PrUi* ui) {
     ui->frameRequested = true;
-}
-
-bool prUiWantsFrame(const PrUi* ui) {
-    return ui->frameRequested || ui->tweening || ui->repeating || ui->nextActivations.count != 0 || ui->queue.count != 0;
 }
 
 void prUiRequestMotion(PrUi* ui, PrLayoutNode node) {
@@ -1423,8 +1422,19 @@ void prUiSetCursor(PrUi* ui, PrLayoutNode node, PrAppCursor cursor) {
     s.cursorRound = ui->roundId;
 }
 
-PrAppCursor prUiCursor(const PrUi* ui) {
-    return ui->cursor;
+void prUiSetTextInput(PrUi* ui, PrRect caret) {
+    ui->hasTextInput = true;
+    ui->textInput = caret;
+}
+
+PrAppOutput prUiOutput(const PrUi* ui) {
+    return PrAppOutput{
+        .cursor = ui->cursor,
+        .wantsFrame = ui->frameRequested || ui->tweening || ui->repeating || ui->nextActivations.count != 0 ||
+            ui->queue.count != 0,
+        .hasTextInput = ui->hasTextInput,
+        .textInput = ui->textInput,
+    };
 }
 
 bool prUiIsPressed(const PrUi* ui, PrLayoutNode node, uint8_t button) {

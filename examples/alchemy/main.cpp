@@ -184,12 +184,12 @@ void start(void* context, PrApp* app, const PrAppFrame*) {
     prAppRequestFrame(app);
 }
 
-void frame(void* context, PrApp* app, const PrAppFrame* f) {
+PrAppOutput frame(void* context, PrApp* app, const PrAppFrame* f) {
     Window& w = *static_cast<Window*>(context);
     if (w.device != nullptr && prGpuDeviceIsLost(w.device))
         closeDevice(w);
     if (w.device == nullptr && !openDevice(w))
-        return;
+        return {};
     prGpuSwapChainWait(w.swapChain);
 
     PrAppColorScheme scheme = f->preferences.colorScheme;
@@ -242,15 +242,14 @@ void frame(void* context, PrApp* app, const PrAppFrame* f) {
         if (!capture(w, w.capturePath, extent, canvas))
             fprintf(stderr, "alchemy: could not write %s\n", w.capturePath);
         prAppStop(app);
-        return;
+        return {};
     }
+    PrAppOutput output = prUiOutput(w.ui);
     // A capture waits for its moment, which no input announces.
     if (w.capturePath != nullptr)
-        prAppRequestFrame(app);
-    prAppSetCursor(app, prUiCursor(w.ui));
+        output.wantsFrame = true;
     // A run in flight moves its progress and its preview, which the server's events deliver with a wake.
-    if (prUiWantsFrame(w.ui))
-        prAppRequestFrame(app);
+    return output;
 }
 
 void event(void* context, PrApp* app, const PrAppEvent* e) {

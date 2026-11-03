@@ -69,8 +69,8 @@ struct TabInfo {
     bool canGoBack = false;         // true if the session history has entries before the current one
     bool canGoForward = false;      // true if the session history has entries after the current one
 
-    // The cursor that the document shows at the pointer (prHtmlViewCursor).
-    PrAppCursor cursor = PrAppCursor_Arrow;
+    // What the document reports to the window (prHtmlViewOutput), in the page's px.
+    PrAppOutput output{};
 };
 
 struct Browser;

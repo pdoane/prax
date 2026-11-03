@@ -494,7 +494,7 @@ TEST_CASE("a tooltip shows once the pointer has rested on its anchor for the del
     f.move(f.center(anchor));
     f.frame(0.1);
     CHECK(tip == kPrLayoutNodeNone);
-    CHECK(prUiWantsFrame(f.ui));
+    CHECK(prUiOutput(f.ui).wantsFrame);
     f.frame(0.2);
     CHECK(tip == kPrLayoutNodeNone);
     f.frame(0.4);
@@ -623,7 +623,7 @@ TEST_CASE("a command palette's selection moves by Up and Down, and Enter runs th
     CHECK(ran == 1);
     CHECK_FALSE(open);
     // The activation closes the palette after the round that created it, and requests the frame that removes it.
-    CHECK(prUiWantsFrame(f.ui));
+    CHECK(prUiOutput(f.ui).wantsFrame);
     f.frame();
     CHECK(list == kPrLayoutNodeNone);
     CHECK(kitVerified(f.tree));
@@ -677,7 +677,7 @@ TEST_CASE("a frame with an open menu that changes nothing lays nothing out and m
     PrLayoutTreeStats stats = prLayoutTreeStats(f.tree);
     CHECK(stats.frameNodesMade == 0);
     CHECK(stats.blocksLaidOut == 0);
-    CHECK_FALSE(prUiWantsFrame(f.ui));
+    CHECK_FALSE(prUiOutput(f.ui).wantsFrame);
     CHECK(kitVerified(f.tree));
 }
 

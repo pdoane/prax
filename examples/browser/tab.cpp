@@ -282,7 +282,7 @@ TabInfo infoOf(Tab& tab) {
     info.canGoBack = length != 0 && index > 0;
     info.canGoForward = index + 1 < length;
     if (const PrHtmlView* view = tab.view.load())
-        info.cursor = prHtmlViewCursor(view);
+        info.output = prHtmlViewOutput(view);
     return info;
 }
 
@@ -319,7 +319,11 @@ void publish(Browser& b) {
         info.iconUrl = tab->published.iconUrl;
         if (!info.loading && !sameDocument(info, tab->published))
             info.iconUrl = taken(prHtmlPageIconUrl(tab->page));
-        if (sameDocument(info, tab->published) && info.cursor == tab->published.cursor)
+        const PrAppOutput& now = info.output;
+        const PrAppOutput& was = tab->published.output;
+        bool sameInput = now.hasTextInput == was.hasTextInput && now.textInput.left == was.textInput.left &&
+            now.textInput.top == was.textInput.top;
+        if (sameDocument(info, tab->published) && now.cursor == was.cursor && sameInput)
             continue;
         prMutexLock(&tab->mutex);
         tab->published = info;

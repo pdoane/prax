@@ -1019,10 +1019,10 @@ void frameDone(void* PR_NULLABLE context, double) {
 
 // The viewer thread's frame: the controls, and each pane's latest render, taken as it is, because the panes render
 // independently. The display paces the frames, and taking a pane's render lets the pane start its next.
-void frame(void* context, PrApp* app, const PrAppFrame* frame) {
+PrAppOutput frame(void* context, PrApp* app, const PrAppFrame* frame) {
     Viewer& v = *static_cast<Viewer*>(context);
     if (v.swapChain == nullptr || !(frame->extent.x > 0 && frame->extent.y > 0))
-        return;
+        return {};
     float pixelRatio = frame->display.pixelRatio;
     uint32_t width = uint32_t(std::lround(frame->extent.x * pixelRatio));
     uint32_t height = uint32_t(std::lround(frame->extent.y * pixelRatio));
@@ -1055,7 +1055,7 @@ void frame(void* context, PrApp* app, const PrAppFrame* frame) {
     v.preferences = frame->preferences;
     PrPixelFormat format = v.swapChainHdr ? PrPixelFormat_RgbaF16 : PrPixelFormat_Bgra8;
     if (sizeTexture(v.device, v.frame, width, height, format) != PrStatus_Ok)
-        return;
+        return {};
     std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
     v.content = uiLayout(v.ui, frame->extent.x, frame->extent.y, pixelRatio, frame->delta, v.configs,
         shownDocument(v).references, v.figures, v.choices);
@@ -1123,7 +1123,7 @@ void frame(void* context, PrApp* app, const PrAppFrame* frame) {
         // The viewer shares its device with every pane's thread, and stops instead of making it again.
         std::fprintf(stderr, "viewer: the GPU device was lost\n");
         prAppStop(app);
-        return;
+        return {};
     }
     if (compare && v.choices.look == Look_Difference) {
         if (v.figures.compared)
@@ -1193,7 +1193,7 @@ void frame(void* context, PrApp* app, const PrAppFrame* frame) {
         if (!writePng(v.snapshot, pixels, width, height))
             std::fprintf(stderr, "viewer: cannot write %s\n", v.snapshot);
         prAppStop(app);
-        return;
+        return {};
     }
     prGpuCommandsSubmit(commands);
     if (v.profile)
@@ -1212,13 +1212,13 @@ void frame(void* context, PrApp* app, const PrAppFrame* frame) {
     if (v.touring != 0 && toured) {
         if (--v.touring == 0) {
             prAppStop(app);
-            return;
+            return {};
         }
         uint32_t count = uint32_t(allCollections()[v.choices.collection].documents().size());
         v.choices.document = (v.choices.document + 1) % count;
     }
     // Every refresh shows the panes' latest renders and takes them, which paces the panes' continuous rendering.
-    prAppRequestFrame(app);
+    return PrAppOutput{.wantsFrame = true};
 }
 
 bool inside(PrRect r, float x, float y) {

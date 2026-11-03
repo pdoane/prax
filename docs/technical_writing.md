@@ -82,7 +82,7 @@ Each pair is a real comment from this repository and its rewrite.
 
 **"Where" for "if".**
 
-> The cursor the last round resolved, which a host shows (prAppSetCursor): an arrow where no node requested one.
+> The cursor the last round resolved, which a host shows: an arrow where no node requested one.
 
 > Returns the arrow if no node requested a cursor.
 

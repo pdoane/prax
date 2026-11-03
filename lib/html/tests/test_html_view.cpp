@@ -1024,13 +1024,13 @@ TEST_CASE("the cursor at the pointer is its element's, and auto shows the text c
     prHtmlViewSetViewport(page.view, PrVec2{400, 400});
     prHtmlViewUpdate(page.view);
     page.settle();
-    CHECK(prHtmlViewCursor(page.view) == PrAppCursor_Arrow);
+    CHECK(prHtmlViewOutput(page.view).cursor == PrAppCursor_Arrow);
     auto cursorAt = [&](float x, float y) {
         PrAppEvent move{.kind = PrAppEventKind_PointerMove, .position = PrVec2{x, y}};
         prHtmlViewEvent(page.view, &move, 0);
         prHtmlViewUpdate(page.view);
         page.settle();
-        return prHtmlViewCursor(page.view);
+        return prHtmlViewOutput(page.view).cursor;
     };
     CHECK(cursorAt(5, 10) == PrAppCursor_Text);
     CHECK(cursorAt(150, 10) == PrAppCursor_Arrow);
@@ -1049,7 +1049,7 @@ TEST_CASE("the cursor at the pointer is its element's, and auto shows the text c
     prDomElementSetAttribute(page.byId("text"), "style", "cursor: move");
     prHtmlViewUpdate(page.view);
     page.settle();
-    CHECK(prHtmlViewCursor(page.view) == PrAppCursor_Move);
+    CHECK(prHtmlViewOutput(page.view).cursor == PrAppCursor_Move);
 }
 
 TEST_CASE("the text of a widget other than a text control shows the arrow") {
@@ -1062,7 +1062,7 @@ TEST_CASE("the text of a widget other than a text control shows the arrow") {
     prHtmlViewEvent(page.view, &move, 0);
     prHtmlViewUpdate(page.view);
     page.settle();
-    CHECK(prHtmlViewCursor(page.view) == PrAppCursor_Arrow);
+    CHECK(prHtmlViewOutput(page.view).cursor == PrAppCursor_Arrow);
 }
 
 TEST_CASE("links restyle once the host says that what it knows of visited links changed") {

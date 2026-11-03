@@ -19,6 +19,7 @@
 @interface PrCocoaView : NSView <CALayerDelegate, NSTextInputClient>
 @property(nonatomic, weak) PrCocoaHost* host;
 @property(nonatomic, strong) NSCursor* cursor;
+@property(nonatomic) NSRect textInputRect;      // where the caret stands, from the top left of the view
 @property(nonatomic, copy) NSString* marked;    // the text that an input method composes, or nil
 @end
 
@@ -406,6 +407,15 @@ void requestClipboardText(PrApp* app) {
     });
 }
 
+void setTextInputRect(PrApp* app, PrRect rect) {
+    CocoaApp* cocoa = static_cast<CocoaApp*>(app);
+    PrCocoaHost* host = (__bridge PrCocoaHost*)cocoa->host;
+    if (host != nil) {
+        host.view.textInputRect = NSMakeRect(CGFloat(rect.left), CGFloat(rect.top), CGFloat(rect.right - rect.left),
+            CGFloat(rect.bottom - rect.top));
+    }
+}
+
 PrStatus setClipboardText(PrApp*, PrStringView text) {
     NSString* string = [[NSString alloc] initWithBytes:text.data length:text.size encoding:NSUTF8StringEncoding];
     NSPasteboard* board = NSPasteboard.generalPasteboard;
@@ -572,8 +582,8 @@ using namespace pr_impl;
         [self deliverText:text kind:PrAppEventKind_Text selection:NSMakeRange(NSNotFound, 0)];
 }
 
-// NSTextInputClient. The view holds no text of its own: the program does. The input method's window is placed at the
-// window's bottom left.
+// NSTextInputClient. The view holds no text of its own: the program does. The input method's window opens at the caret
+// that the program last gave.
 - (void)insertText:(id)string replacementRange:(NSRange)replacementRange {
     (void)replacementRange;
     [self commit:[string isKindOfClass:NSAttributedString.class] ? [(NSAttributedString*)string string] : string];
@@ -619,8 +629,10 @@ using namespace pr_impl;
 - (NSRect)firstRectForCharacterRange:(NSRange)range actualRange:(NSRangePointer)actualRange {
     (void)range;
     (void)actualRange;
-    NSRect corner = [self convertRect:NSMakeRect(0, self.bounds.size.height, 0, 0) toView:nil];
-    return [self.window convertRectToScreen:corner];
+    NSRect caret = self.textInputRect;
+    if (!self.isFlipped)
+        caret.origin.y = self.bounds.size.height - caret.origin.y - caret.size.height;
+    return [self.window convertRectToScreen:[self convertRect:caret toView:nil]];
 }
 - (NSUInteger)characterIndexForPoint:(NSPoint)point {
     (void)point;
@@ -747,7 +759,8 @@ using namespace pr_impl;
     PrAppFrame frame = [self frameAt:now];
     self.lastFrame = now;
     self.inCallback = YES;
-    self.handler.frame(self.handler.context, self.app, &frame);
+    PrAppHandler handler = self.handler;
+    prAppDeliverFrame(self.app, &handler, &frame);
     [self endCallback];
 }
 // The window as a frame at `now` finds it.
@@ -855,6 +868,7 @@ PrApp* prAppCocoaCreate(const PrAppDesc* desc) {
     app->wake = wake;
     app->requestFrame = requestFrame;
     app->setCursor = setCursor;
+    app->setTextInputRect = setTextInputRect;
     app->setTitle = setTitle;
     app->surface = surface;
     app->openUrl = openUrl;
