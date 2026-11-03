@@ -3,6 +3,7 @@
 
 import os
 from pathlib import Path
+import socket
 import struct
 import subprocess
 import tempfile
@@ -96,6 +97,18 @@ class HtmlHostTests(unittest.TestCase):
             self.assertEqual(result.stdout, "continued\n")
             self.assertIn("SyntaxError", result.stderr)
             self.assertIn(url(Path(directory) / "pages" / "test.html") + ":3:", result.stderr)
+
+    def test_a_run_that_times_out_still_writes_its_screenshot(self):
+        with tempfile.TemporaryDirectory() as directory:
+            screenshot = Path(directory) / "page.png"
+            # A server that never answers holds the page's load open.
+            with socket.create_server(("127.0.0.1", 0)) as server:
+                port = server.getsockname()[1]
+                result = self.run_page(Path(directory),
+                                       f"<!doctype html><script src='http://127.0.0.1:{port}/'></script>",
+                                       "--network", "--timeout", "200", "--screenshot", str(screenshot))
+            self.assertEqual(result.returncode, 124, result.stderr)
+            self.assertTrue(screenshot.exists())
 
     def test_modules_defer_resolve_imports_and_share_external_instances(self):
         with tempfile.TemporaryDirectory() as directory:

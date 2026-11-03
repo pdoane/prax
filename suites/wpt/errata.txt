@@ -140,12 +140,6 @@ css/selectors/parsing/parse-has-slotted.tentative.html:0-17
     css-shadow-1/#selectordef-has-slotted defines :has-slotted with no argument; no spec has the
     functional form the corpus tests.
 
-html/semantics/embedded-content/the-img-element/list-of-available-images-does-not-coalesce-in-flight-requests.sub.tentative.html:0
-    whatwg/html#7005 is open on whether an in-flight image request enters the list of available
-    images, and the test says itself that no browser keeps two requests for the same image apart,
-    as it expects. Its two trickled loads race each other, and the count that the server reports
-    depends on which arrives first.
-
 html/semantics/forms/the-select-element/customizable-select/selectedcontent-insertion-removal.html:0
     html/#the-selectedcontent-element: a selectedcontent's removing steps run "update a select's
     selectedcontent" for the select it leaves, which fills the next selectedcontent. The corpus

@@ -26,6 +26,7 @@ import tools
 from tools.lint import modules
 from tools.suite.prax import suite
 from tools.suite.wpt import web_features
+from tools.suite.wpt import wpt
 
 ROOT = tools.ROOT
 
@@ -3190,11 +3191,13 @@ def main():
     check_unique_names(report, code_files("lib/**/*.[ch]", "lib/**/*.cpp", "lib/**/*.mm"))
     check_module_dependencies(report)
 
-    # tools/suite/wpt/web_features.txt rules on every feature that web-features names, once each.
+    # tools/suite/wpt/web_features.txt rules once on each feature that the suites test.
     features = web_features.data()
     if features is None:
         sys.exit("no web-features data for tools/suite/wpt/web_features.txt; run ./dev.sh fetch webfeatures")
-    for line, problem in web_features.check(features):
+    if not os.path.isdir(wpt.WPT):
+        sys.exit("no WPT checkout for tools/suite/wpt/web_features.txt; run ./dev.sh fetch wpt")
+    for line, problem in web_features.check(features, wpt.tested_features(wpt.WPT, features)):
         report.add(web_features.RULINGS_FILE, max(line, 1), "features", problem)
 
     # Every text file of the working tree, tracked or new, has the line endings that .gitattributes keeps.

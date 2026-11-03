@@ -43,18 +43,23 @@ class PagesTests(unittest.TestCase):
         pages = self.pages({"dom": "rules:\n- a.html: [old, both]\n"}, features)
         self.assertEqual(pages.of("dom/a.html"), ["new", "first"])
 
+    def test_the_features_of_directories_leave_out_those_of_excluded_directories(self):
+        pages = self.pages({"css": "rules:\n- a.html: [a]\n", "css/x": "rules:\n- b.html: [b]\n",
+                            "css/y": "rules:\n- c.html: [c]\n", "cssom": "rules:\n- d.html: [d]\n"})
+        self.assertEqual(pages.named(["css"], ["css/y"]), {"a", "b"})
+
 
 class RulingsTests(unittest.TestCase):
-    def check(self, text, features):
+    def check(self, text, features, tested=None):
         with tempfile.NamedTemporaryFile("w", suffix=".txt", delete=False, encoding="utf-8") as f:
             f.write("# web-features 1.0.0\n\n" + text)
         self.addCleanup(os.unlink, f.name)
         with patch.object(web_features, "RULINGS_FILE", f.name):
-            return [problem for _, problem in web_features.check(features)]
+            return [problem for _, problem in web_features.check(features, {"a", "b"} if tested is None else tested)]
 
-    def test_every_feature_is_ruled_once_with_a_ruling_the_file_defines(self):
+    def test_every_tested_feature_is_ruled_once_with_a_ruling_the_file_defines(self):
         features = {"a": {"kind": "feature"}, "b": {"kind": "feature"}, "gone": {"kind": "moved"}}
-        self.assertEqual(self.check("a build\nb cut  # why\n", features), [])
+        self.assertEqual(self.check("a build\nb cut\n", features), [])
         self.assertEqual(self.check("a build\n", features), ["b has no ruling"])
         self.assertEqual(self.check("a build\nb maybe\n", features)[0],
                          "a line is a feature and one of build, cut, open, quickjs")
@@ -62,10 +67,15 @@ class RulingsTests(unittest.TestCase):
         self.assertEqual(self.check("a build\nb cut\ngone open\n", features),
                          ["gone is not a feature of web-features 1.0.0"])
 
-    def test_a_feature_that_web_features_does_not_name_is_ruled_by_its_anchor(self):
+    def test_a_feature_that_no_suite_tests_needs_no_ruling_and_may_not_have_one(self):
         features = {"a": {"kind": "feature"}}
-        ruling = "css-color-5/#at-profile cut  # why\n"
-        self.assertEqual(self.check("a build\n" + ruling, features), [])
+        self.assertEqual(self.check("", features, set()), [])
+        self.assertEqual(self.check("a cut\n", features, set()), ["a is tested by no suite"])
+
+    def test_a_feature_that_web_features_does_not_name_is_ruled_by_its_anchor(self):
+        features = {"a": {"kind": "feature"}, "b": {"kind": "feature"}}
+        ruling = "css-color-5/#at-profile cut\n"
+        self.assertEqual(self.check("a build\nb cut\n" + ruling, features), [])
 
 
 if __name__ == "__main__":

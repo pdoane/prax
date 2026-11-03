@@ -67,6 +67,8 @@ struct CapturedResource {
 };
 
 struct HostState {
+    bool timedOut = false;      // the run passed its timeout, so painting waits for no more of the network
+
     PrJsHtmlEngine* engine = nullptr;       // runs the pages' scripts, and the host's own outside any page
     PrDomAgent* agent = nullptr;            // the single event loop that every page runs on
     PrFontSet* fonts = nullptr;
@@ -917,6 +919,7 @@ PageHost::~PageHost() {
 void PageHost::reset() {
     HostState& s = *state_;
     stopRun(s);
+    s.timedOut = false;
     startRun(s);
 }
 
@@ -1192,10 +1195,23 @@ PageHost::Settled PageHost::settle(double timeout) {
             s.awaitingRender = started;
             continue;
         }
-        if (delay > 0 && !waitMilliseconds(s, delay))
-            return Settled::Failed;
+        if (delay > 0) {
+            // A browser has a rendering opportunity before a wait ends, so the presentations come up to date before the
+            // clock moves, and the fetches that the update starts are answered while it stands.
+            bool started = false;
+            if (renderFetches(s, &started)) {
+                s.awaitingRender = started;
+                continue;
+            }
+            if (!waitMilliseconds(s, delay))
+                return Settled::Failed;
+        }
         prDomAgentRun(s.agent, 0);
     }
+}
+
+void PageHost::stopWaiting() {
+    state_->timedOut = true;
 }
 
 void PageHost::input(Page* page, const PrAppEvent& event) {
@@ -1247,7 +1263,7 @@ bool PageHost::paint(Page* page, PrVec2 viewport, const PrAppDisplay& display, c
     // responses are used in tasks, which run before the page is painted again with them. A page whose styles were
     // computed before its load ended had its load wait for them instead.
     HostState& s = *state_;
-    double deadline = prTimeMonotonicMilliseconds() + kPaintNetworkWait;
+    double deadline = prTimeMonotonicMilliseconds() + (s.timedOut ? 0 : kPaintNetworkWait);
     for (uint32_t pass = 0; pass < kMaxPaintPasses; ++pass) {
         // Every response that the server is to send arrives before the page is painted again.
         bool ran = false;

@@ -750,7 +750,9 @@ void collectCompound(CssRuleSet* set, const PrCssSelectors* selectors, const Css
                 break;
             case CssPseudoClass_Required:
             case CssPseudoClass_Optional:
+                // An input's type decides whether the input can be required at all.
                 invalidateAttribute(set, "required", reach);
+                invalidateAttribute(set, "type", reach);
                 break;
             // States that an element takes from its ancestors' attributes.
             case CssPseudoClass_LangFn:

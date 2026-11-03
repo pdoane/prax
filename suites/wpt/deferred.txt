@@ -17,16 +17,6 @@ css/css-masking/idlharness.html
     svg interfaces: its objects are an SVGClipPathElement and an SVGMaskElement, which idlharness
     tells apart by their interfaces.
 
-css/css-navigation/tentative/crossdoc-002.html
-css/css-view-transitions/navigation/pageswap-push-navigation.html
-css/css-view-transitions/navigation/pageswap-push-with-redirect.html
-css/css-view-transitions/navigation/pageswap-replace-navigation.html
-css/css-view-transitions/navigation/pageswap-traverse-navigation-no-bfcache.https.html
-css/css-view-transitions/navigation/prerender-coop.https.html
-css/css-view-transitions/navigation/zero-named-elements.html
-    navigation: they navigate between documents and hear of it through a BroadcastChannel or
-    speculation rules.
-
 css/css-scroll-anchoring/anchor-inside-iframe.html
 css/css-sizing/responsive-iframe/responsive-iframe-allow-origins.html
 css/css-values/viewport-units-after-font-load.html
@@ -40,6 +30,15 @@ css/css-sizing/aspect-ratio/replaced-element-036.html
 
 css/css-values/dynamic-viewport-units-rule-cache.html
     layout: it waits for a resize event of a frame whose used size its style sets.
+
+css/css-view-transitions/navigation/pageswap-push-navigation.html
+css/css-view-transitions/navigation/pageswap-push-with-redirect.html
+css/css-view-transitions/navigation/pageswap-replace-navigation.html
+css/css-view-transitions/navigation/pageswap-traverse-navigation-no-bfcache.https.html
+css/css-view-transitions/navigation/prerender-coop.https.html
+css/css-view-transitions/navigation/zero-named-elements.html
+    navigation: they navigate between documents and hear of it through a BroadcastChannel or
+    speculation rules.
 
 css/cssom-view/scroll-behavior-smooth-navigation.html
     history: it waits for the scroll of a traversal of the session history.
@@ -56,9 +55,6 @@ css/selectors/media/media-loading-state-timing.sub.html
 css/selectors/media/media-loading-state.sub.html
     server handlers: a Python handler of WPT's server stalls the media resource they load, and
     the runner answers from the files of the checkout.
-
-html/document-isolation-policy/shared-workers.tentative.https.html
-    workers: it waits on a SharedWorker, which the engine lacks.
 
 shadow-dom/scroll-to-the-fragment-in-shadow-tree.html
     fragments: it scrolls to a fragment by activating a link, and the engine scrolls to none.

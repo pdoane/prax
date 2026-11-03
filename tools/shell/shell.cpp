@@ -357,15 +357,15 @@ constexpr int kTimedOut = 124;
 int finish(PageHost& host, Run& run, Renderers& renderers) {
     if (run.ok) {
         PageHost::Settled settled = host.settle(run.timeout);
-        if (settled == PageHost::Settled::TimedOut) {
-            fprintf(stderr, "the pages did not settle in %g ms\n", run.timeout);
-            return kTimedOut;
-        }
         // A page that still waits once it has rendered hears so, and settles again.
         if (settled == PageHost::Settled::Idle && host.signalRendered(run.viewport))
             settled = host.settle(run.timeout);
         if (settled == PageHost::Settled::TimedOut) {
             fprintf(stderr, "the pages did not settle in %g ms\n", run.timeout);
+            // What the pages reached is still answered, because a page that never settles has no other record of it.
+            host.stopWaiting();
+            for (const Request& request : run.requests)
+                answer(host, request, run.viewport, run.pixelRatio, run.renderer, renderers);
             return kTimedOut;
         }
         run.ok = settled == PageHost::Settled::Idle;

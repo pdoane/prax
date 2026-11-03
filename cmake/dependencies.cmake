@@ -7,27 +7,38 @@
 
 include(${CMAKE_CURRENT_LIST_DIR}/pr_dependency.cmake)
 
-# A patch command that applies the patches in `directory` to a fetched source tree. It runs Git outside the repository
-# that holds the build directory, which `git apply` would otherwise patch instead. The patches' hash is part of the
-# command, so a change to a patch fetches the source again.
-function(pr_patch_command variable directory)
-    file(GLOB patches ${directory}/*.patch)
+# The FetchContent arguments that apply the patches in `directory` to the fetched source tree of the dependency `name`.
+# A tree holds one set of patches, and git apply cannot apply a set to a tree that holds another. So the tree's directory
+# is named for the patches' hash, and any change to the patches, in either direction, extracts a new tree. Adding or
+# editing a patch configures the build again. The command runs Git outside the repository that holds the build directory,
+# which `git apply` would otherwise patch instead.
+function(pr_patch_arguments variable name directory)
+    file(GLOB patches CONFIGURE_DEPENDS ${directory}/*.patch)
+    set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${patches})
     set(contents "")
     foreach (patch IN LISTS patches)
         file(READ ${patch} text)
         string(APPEND contents "${text}")
     endforeach()
     string(SHA256 hash "${contents}")
+    string(SUBSTRING ${hash} 0 12 hash)
+    # The trees of other patches are out of date, and extracting one again is cheap.
+    file(GLOB trees ${FETCHCONTENT_BASE_DIR}/${name}-src ${FETCHCONTENT_BASE_DIR}/${name}-src-*)
+    list(REMOVE_ITEM trees ${FETCHCONTENT_BASE_DIR}/${name}-src-${hash})
+    if (trees)
+        file(REMOVE_RECURSE ${trees})
+    endif()
     find_package(Git REQUIRED)
-    set(${variable} PATCH_COMMAND ${CMAKE_COMMAND} -E env GIT_CEILING_DIRECTORIES=${FETCHCONTENT_BASE_DIR}
-        PR_PATCHES=${hash} ${GIT_EXECUTABLE} apply ${patches} PARENT_SCOPE)
+    set(${variable} SOURCE_DIR ${FETCHCONTENT_BASE_DIR}/${name}-src-${hash}
+        PATCH_COMMAND ${CMAKE_COMMAND} -E env GIT_CEILING_DIRECTORIES=${FETCHCONTENT_BASE_DIR}
+        ${GIT_EXECUTABLE} apply ${patches} PARENT_SCOPE)
 endfunction()
 
 # A dependency whose sources a target of the engine compiles, or whose headers it reads, is fetched without its own
 # build: SOURCE_SUBDIR names a directory that has no CMakeLists.txt.
 
 # QuickJS, with the changes that patches/quickjs makes, for whatever is built to run JavaScript.
-pr_patch_command(PR_QUICKJS_PATCH ${PROJECT_SOURCE_DIR}/patches/quickjs)
+pr_patch_arguments(PR_QUICKJS_PATCH quickjs ${PROJECT_SOURCE_DIR}/patches/quickjs)
 pr_dependency(quickjs
     URL https://github.com/quickjs-ng/quickjs/archive/refs/tags/v0.9.0.tar.gz
     URL_HASH SHA256=77f9e79b42e2e7cff9517bae612431af47e120730286cb1dcfad0753bc160f10
@@ -106,7 +117,7 @@ pr_dependency(doctest
 
 # Dear ImGui, which lib/draw/comparisons/imgui records into, with the changes that patches/imgui makes. Its commit is
 # on features/drawlist_193, where ImDrawList gains what it is growing next.
-pr_patch_command(PR_IMGUI_PATCH ${PROJECT_SOURCE_DIR}/patches/imgui)
+pr_patch_arguments(PR_IMGUI_PATCH imgui ${PROJECT_SOURCE_DIR}/patches/imgui)
 pr_dependency(imgui
     URL https://github.com/ocornut/imgui/archive/241bf3bb05ebb918063c148da2c44062b5508ed4.tar.gz
     URL_HASH SHA256=3fe2e934b341a124fb72b21b20e8465dc07c6392ac15683662664eb7b5ab857b

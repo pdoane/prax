@@ -41,7 +41,7 @@ What the engine decides about a suite's cases, and the suite's scores, are the s
 | `errata.txt` | the cases in which the engine is right and the reference is wrong, each with the reason |
 | `cut.txt` | the cases that test what the engine has decided not to build, such as a player's own extension |
 | `deferred.txt` | the cases that wait on what the engine will build |
-| `skip.txt` | the cases that cost more than they test, such as a JIT's benchmark |
+| `skip.txt` | the cases that we choose not to run, such as a JIT's benchmark or a case whose result varies for a reason that the engine does not control |
 | `scoreboard.md` | what a plain run of the default build passes, which the run writes |
 | `fuzzy.txt` | tolerances that override a case's own, in a suite whose cases state them |
 | `render.txt` | the fonts and settings that a suite renders with (`tools/suite/suite_render.h`) |
@@ -82,8 +82,9 @@ A plain run excludes five kinds of page. The pages that `WAITS` finds would stal
 lacks. The pages whose WEB_FEATURES.yml names a feature that `tools/suite/wpt/web_features.txt` does not build are
 excluded. The pages that `suites/wpt/deferred.txt` lists wait on what the engine will build. The pages that
 `suites/wpt/cut.txt` lists test what the engine has decided not to build. The pages that `suites/wpt/skip.txt` lists
-cost more than they test. Every WPT suite shares `suites/wpt/`, and a plain run of the default build, with or without
-`--verify`, rewrites its own table in the scoreboard.
+are pages that we choose not to run: they cost more than they test, or their result varies for a reason that the engine
+does not control. Every WPT suite shares `suites/wpt/`, and a plain run of the default build, with or without `--verify`,
+rewrites its own table in the scoreboard.
 
 ## Invalidation over real pages
 

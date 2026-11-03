@@ -41,7 +41,7 @@ def wpt(name):
 
 SUITES = [
     Suite("css-parsing", ("cssparser",), ("cssparser/src",), ("tools.suite.css_parsing",), ("css_parsing",)),
-    *(wpt(name) for name in ("css", "dom", "encoding", "fetch", "html")),
+    *(wpt(name) for name in ("css", "dom", "encoding", "html", "infrastructure", "networking")),
     Suite("html-tokens", ("html5lib",), ("html5lib/tokenizer",), ("tools.suite.html_tokens",), ("html_tokens",)),
     Suite("html-tree", ("wpt",), ("wpt/.git",), ("tools.suite.html_tree",), ("html_tree",)),
     Suite("url-parsing", ("wpt",), ("wpt/.git",), ("tools.suite.url_parsing",), ("url_parsing",)),

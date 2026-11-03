@@ -538,6 +538,10 @@ struct CssPresentation {
     // document for the viewport. Each entry holds its node (domNodeHold).
     Array<PrDomNode*> scrolled;
 
+    // What scroll anchoring moved each container by since the last run of the scroll steps, summed over the layouts in
+    // between. A container that layouts moved and moved back has not scrolled, and gets no scroll event.
+    Array<PrLayoutScrollAdjustment> anchorMoves;
+
     // The host's scrolls made while the presentation's thread held the tree. They apply in order when the presentation
     // takes the tree back.
     Array<PrLayoutSceneScroll> pendingScrolls;

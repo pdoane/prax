@@ -1,11 +1,11 @@
 """Reads the engine's rulings on web features, and the features that WPT's pages test.
 
-tools/suite/wpt/web_features.txt rules on each feature that web-features names
-(https://github.com/web-platform-dx/web-features), at the version that its header states. It also rules on each feature
-that the engine has considered and web-features does not name, which it names by the anchor of its definition
-(css-color-5/#at-profile). ./dev.sh fetch webfeatures fetches that version. A WPT directory's WEB_FEATURES.yml maps its
-files to features. Each rule pairs a file name pattern with the features that the matching files test, and the first
-rule that matches decides. A directory without a WEB_FEATURES.yml uses its parent's."""
+tools/suite/wpt/web_features.txt rules on each feature of web-features
+(https://github.com/web-platform-dx/web-features), at the version that its header states, that the WPT suites test. It
+also rules on each feature that the engine has considered and web-features does not name, which it names by the anchor
+of its definition (css-color-5/#at-profile). ./dev.sh fetch webfeatures fetches that version. A WPT directory's
+WEB_FEATURES.yml maps its files to features. Each rule pairs a file name pattern with the features that the matching
+files test, and the first rule that matches decides. A directory without a WEB_FEATURES.yml uses its parent's."""
 
 import fnmatch
 import json
@@ -35,15 +35,15 @@ def version():
 
 
 def rulings():
-    """Returns each feature's ruling and the reason given, by identifier, and the file's problems: an unknown ruling, or
-    a feature ruled twice."""
+    """Returns each feature's ruling, by identifier, and the file's problems: an unknown ruling, or a feature ruled
+    twice."""
     ruled = {}
     problems = []
     with open(RULINGS_FILE, encoding="utf-8") as f:
         for number, line in enumerate(f, 1):
-            # A comment starts at a # that begins the line or follows a space, since an anchor holds a #.
-            text = re.split(r"(?:^|(?<=\s))#", line, maxsplit=1)
-            fields = text[0].split()
+            if line.startswith("#"):
+                continue
+            fields = line.split()
             if not fields:
                 continue
             if len(fields) != 2 or fields[1] not in RULINGS:
@@ -52,7 +52,7 @@ def rulings():
                 continue
             if fields[0] in ruled:
                 problems.append((number, "%s is ruled twice" % fields[0]))
-            ruled[fields[0]] = (fields[1], text[1].strip() if len(text) > 1 else "")
+            ruled[fields[0]] = fields[1]
     return ruled, problems
 
 
@@ -72,15 +72,18 @@ def unnamed(name):
     return "#" in name
 
 
-def check(features):
-    """Returns the problems with the rulings, checked against the data: a feature without a ruling, a ruling that names
-    no feature, and a ruling for a feature that moved or split, whose ruling belongs to the features that it became."""
+def check(features, tested):
+    """Returns the problems with the rulings, checked against the data and the features that the suites test: a tested
+    feature without a ruling, a ruling that names no feature, a ruling for a feature that moved or split, whose ruling
+    belongs to the features that it became, and a ruling on a feature that no suite tests."""
     ruled, problems = rulings()
     live = {name for name, feature in features.items() if feature.get("kind") == "feature"}
-    for name in sorted(live - set(ruled)):
+    for name in sorted(tested & live - set(ruled)):
         problems.append((0, "%s has no ruling" % name))
     for name in sorted(name for name in set(ruled) - live if not unnamed(name)):
         problems.append((0, "%s is not a feature of web-features %s" % (name, version())))
+    for name in sorted(set(ruled) & live - tested):
+        problems.append((0, "%s is tested by no suite" % name))
     return problems
 
 
@@ -106,6 +109,15 @@ class Pages:
             moved = feature["kind"] == "moved"
             name = feature["redirect_target"] if moved else feature["redirect_targets"][0]
         return name
+
+    def named(self, directories, excluded=()):
+        """Returns the features that the manifests of `directories` name, leaving out those of `excluded`, which are
+        directories inside them."""
+        def within(directory, tops):
+            return any(directory == top or directory.startswith(top + "/") for top in tops)
+        return {self.resolve(feature) for directory, rules in self.manifests.items()
+                if within(directory, directories) and not within(directory, excluded)
+                for _, features in rules for feature in features}
 
     def of(self, name):
         """Returns the features that the page `name`, a path in the checkout, tests: the features of the first matching

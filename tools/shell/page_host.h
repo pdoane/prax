@@ -103,6 +103,9 @@ public:
     // while a fetch waits for the network.
     void useVirtualTime();
 
+    // Has painting wait for no more responses, for a run that has passed its timeout and answers with what it reached.
+    void stopWaiting();
+
     // Runs every animation frame that an animation wants (PrHtmlAnimationFrames_All), on a virtual clock too, for a
     // host that shows the pages' animations. The pages loaded afterward run this way.
     void runAllAnimationFrames();

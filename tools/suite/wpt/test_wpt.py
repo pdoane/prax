@@ -57,6 +57,38 @@ class RunnerTests(unittest.TestCase):
             result = self.run_page('while (true) {}')
         self.assertEqual(result.harness, "TIMEOUT")
 
+    def test_a_test_that_marks_itself_long_takes_the_long_deadline(self):
+        with tempfile.TemporaryDirectory() as directory:
+            marks = {"page.html": '<meta name="timeout" content="long">', "script.any.js": "// META: timeout=long\n",
+                     "plain.html": "<p>", "plain.any.js": "// META: global=window\n"}
+            for name, text in marks.items():
+                with open(os.path.join(directory, name), "w", encoding="utf-8") as f:
+                    f.write(text)
+            timeouts = {name: wpt.Test(os.path.join(directory, name)).timeout for name in marks}
+            self.assertEqual(timeouts, {"page.html": wpt.LONG_TIMEOUT, "script.any.js": wpt.LONG_TIMEOUT,
+                                        "plain.html": wpt.TIMEOUT, "plain.any.js": wpt.TIMEOUT})
+            long = wpt.Test(os.path.join(directory, "page.html"))
+            self.assertEqual(wpt.deadline_options(long), ["--timeout", "%d" % (wpt.LONG_TIMEOUT * 1000)])
+            self.assertEqual(wpt.deadline_options(wpt.Test(os.path.join(directory, "plain.html"))), [])
+
+    def test_a_test_that_a_person_runs_is_manual(self):
+        with tempfile.TemporaryDirectory() as directory:
+            pages = {
+                "animated.html": '<meta name="flags" content="ahem animated"><link rel="match" href="r.html">',
+                "paged.html": "<meta content=paged name=flags><script src=/resources/testharness.js></script>",
+                "plain.html": '<meta name="flags" content="ahem"><link rel="match" href="r.html">',
+                "click-manual.html": "<script src=/resources/testharness.js></script>",
+                "look-visual.html": '<link rel="match" href="r.html">',
+            }
+            manual = {}
+            for name, text in pages.items():
+                path = os.path.join(directory, name)
+                with open(path, "w", encoding="utf-8") as f:
+                    f.write(text)
+                manual[name] = wpt.is_manual(path)
+            self.assertEqual(manual, {"animated.html": True, "paged.html": True, "plain.html": False,
+                                      "click-manual.html": True, "look-visual.html": True})
+
     def test_subtest_exception_keeps_other_results(self):
         result = self.run_page('''
             test(() => {}, "first");
@@ -88,6 +120,14 @@ class RunnerTests(unittest.TestCase):
              patch("sys.argv", ["wpt.py", "--match", "test.html"]), \
              redirect_stdout(io.StringIO()):
             wpt.main()
+
+    def test_a_crashtest_passes_a_document_that_is_not_well_formed_and_fails_any_other_failure(self):
+        def outcome(stderr):
+            process = subprocess.CompletedProcess([], 1, "", stderr)
+            with patch.object(wpt.SHELLS, "run", return_value=process):
+                return wpt.crash("shell", wpt.Test("page.xhtml")).harness
+        self.assertIsNone(outcome("page.xhtml: XML Parsing Error: an element is not closed\n"))
+        self.assertEqual(outcome("page.xhtml: HTML load failed: Io\n"), "CRASH: page.xhtml: HTML load failed: Io")
 
     def test_a_case_that_reaches_for_what_the_engine_lacks_fails(self):
         result = self.run_page('''
@@ -225,6 +265,19 @@ class GateTests(unittest.TestCase):
         text = wpt.format_scoreboard(boards)
         self.assertEqual(wpt.parse_scoreboard(text), boards)
         self.assertLess(text.index("| css/b"), text.index("| **total**"))
+
+    def test_a_run_stops_on_rulings_that_do_not_match_the_suites(self):
+        problems = [(0, "a-feature has no ruling"), (0, "b-feature is tested by no suite")]
+        with patch.object(wpt.web_features, "data", return_value={}), \
+             patch.object(wpt, "tested_features", return_value=set()), \
+             patch.object(wpt.web_features, "check", return_value=problems), \
+             patch.object(wpt, "select") as select, \
+             patch("sys.argv", ["wpt.py", "--list"]), redirect_stdout(io.StringIO()):
+            with self.assertRaises(SystemExit) as stopped:
+                wpt.main()
+        self.assertIn("a-feature has no ruling", str(stopped.exception.code))
+        self.assertIn("b-feature is tested by no suite", str(stopped.exception.code))
+        select.assert_not_called()
 
     def test_errata_entries_expand_their_keys(self):
         with tempfile.TemporaryDirectory() as root:
@@ -494,7 +547,7 @@ class DiscoveryTests(unittest.TestCase):
                           "css/css-a/input.html",
                           "css/css-a/layout.html",
                           "css/css-a/parsing/a-valid.html"])
-        self.assertEqual(left, {"waits": 1})
+        self.assertEqual(left, {"manual": 1})
         self.assertEqual([name for _, name, _ in explicit],
                          ["css/css-a/input.html"])
         self.assertEqual([name for _, name, _ in other], ["dom/x/input.html"])

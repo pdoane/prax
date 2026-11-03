@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """Runs web-platform-tests in pr_shell, with WPT's harness and a vendor result reporter.
 
-A run covers one suite: the directories of the checkout that SUITES names for it. Its tests are found as WPT's manifest
-finds them. They are every page except those in a support or resources directory and the references that a reftest
-compares against. They also include every .any.js and .window.js file, which runs in a page made for it, as WPT's
-server makes one. A testharness page's cases are its subtests, keyed "<file>:<index>" in registration order, where
-<file> is the page's path in the checkout. A crashtest is one case, which passes if the page loads without the shell
-failing.
+A run covers one suite: the directories of the checkout that SUITES names for it, without those of NOT_RUN. Its tests
+are found as WPT's manifest finds them. They are every page except those in a support or resources directory and the
+references that a reftest compares against. They also include every .any.js and .window.js file, which runs in a page
+made for it, as WPT's server makes one. A testharness page's cases are its subtests, keyed "<file>:<index>" in
+registration order, where <file> is the page's path in the checkout. A crashtest is one case, which passes if the page
+loads without the shell failing.
 
 A reftest is one case. It is rendered if the test and each of its references can be rendered at WPT's 800 by 600: an
 HTML or XHTML page loads in the shell, and a static SVG document is rendered by the reftest harness
@@ -28,8 +28,8 @@ point that the engine does not define fails as it would in an engine without it.
 vendor files (tools/suite/wpt): the reporter, a testdriver that drives clicks, keys and action sequences through the
 page's view as a host's input, and a fetch() of the checkout's resources.
 
-A plain run takes every test of the suite except the pages that WAITS finds, which stall on what the engine lacks
-instead of failing. --module takes a whole module, and --all takes every test. --match takes the tests that it names,
+A plain run takes every test of the suite except those that a person runs, which wptrunner leaves out too
+(is_manual). --module takes a whole module, and --all takes every test. --match takes the tests that it names,
 and names each of their assertions that does not pass, as --failures does. A plain run and a run of modules leave out
 each page that tests a feature that tools/suite/wpt/web_features.txt does not rule as built by the engine. The
 WEB_FEATURES.yml files of the checkout map pages to features. --left-out lists every page that a plain run of any suite
@@ -71,11 +71,12 @@ import math
 import fnmatch
 import os
 import pathlib
+import posixpath
+import queue
 import re
 import shutil
 import subprocess
 import sys
-import select as polling
 import tempfile
 import threading
 import time
@@ -94,21 +95,35 @@ SUITES = {
     "dom": ("dom", "domparsing", "selection", "shadow-dom", "uievents", "pointerevents", "input-events", "webidl",
             "intersection-observer"),
     "encoding": ("encoding",),
-    "fetch": ("fetch",),
-    "html": ("html", "custom-elements", "focus", "inert", "close-watcher", "quirks", "html-ruby-extensions", "png",
-             "apng", "gif", "density-size-correction", "infrastructure", "webstorage"),
+    "html": ("html", "custom-elements", "focus", "inert", "quirks", "html-ruby-extensions", "png", "apng", "gif",
+             "webstorage", "workers", "webmessaging"),
+    "infrastructure": ("infrastructure",),
     "mathml": ("mathml",),
+    "networking": ("fetch", "cors", "FileAPI", "streams", "websockets"),
     "svg": ("svg",),
     "url": ("url",),
     "xhr": ("xhr",),
 }
+# The directories inside a suite's that no suite runs.
+NOT_RUN = {
+    "css/css-device-adapt", "css/css-exclusions", "css/css-layout-api", "css/css-link-params", "css/css-navigation",
+    "html/capability-delegation", "html/cross-origin-embedder-policy", "html/cross-origin-opener-policy",
+    "html/document-isolation-policy", "html/syntax/speculative-parsing",
+}
 
 SHELL = corpus.binary("pr_shell")
+SHELL_EXIT_TIMEOUT = 60  # seconds that a shell has to exit once its input closes
 # The vendor's files, which serve the checkout as WPT's server serves it to a vendor's runner.
 SUPPORT = os.path.join(corpus.ROOT, "tools", "suite", "wpt")
 # The data of every WPT suite (corpus.Data).
 DATA = corpus.Data("wpt")
 TIMEOUT = 10 * corpus.SLOWDOWN  # seconds; the runner enforces the deadline that report.js leaves to it
+LONG_TIMEOUT = 60 * corpus.SLOWDOWN  # seconds, for a test that marks itself long (wptrunner's long_timeout)
+
+# Matches a test's mark that it takes WPT's long timeout: a page's <meta name=timeout content=long>, or a script's
+# `// META: timeout=long` comment (WPT's manifest, tools/manifest/sourcefile.py).
+LONG_MARK = re.compile(r"<meta\s+name=[\"']?timeout[\"']?\s+content=[\"']?long[\"']?|^//\s*META:\s*timeout=long\s*$",
+                       re.M | re.I)
 
 
 # The shell's options for every run beyond those that reach WPT's server, which the command line adds to (setup()).
@@ -258,6 +273,7 @@ class Shells:
         self.lock = threading.Lock()
         self.serving = {}           # by binary: true if the shell supports serving
         self.started = []
+        self.stuck = False
 
     def serves(self, binary):
         with self.lock:
@@ -278,12 +294,14 @@ class Shells:
         """Returns the result of running the shell with its setup and `args`, as subprocess.run returns it with text
         output. Raises subprocess.TimeoutExpired as subprocess.run does."""
         command = [binary] + self.setup(binary) + args
+        # The shell writes UTF-8, whatever the platform's default encoding is.
+        own_process = dict(capture_output=True, encoding="utf-8", errors="replace")
         if not self.serves(binary):
-            return subprocess.run(command, capture_output=True, text=True, timeout=timeout)
+            return subprocess.run(command, timeout=timeout, **own_process)
         timeout += BACKSTOP
         answer = self.ask(binary, args, timeout)
         if answer is None:
-            return subprocess.run(command, capture_output=True, text=True, timeout=timeout)
+            return subprocess.run(command, timeout=timeout, **own_process)
         status, out, err = answer
         return subprocess.CompletedProcess(command, status, out, err)
 
@@ -295,6 +313,10 @@ class Shells:
         if shell is None or shell.poll() is not None:
             shell = subprocess.Popen([binary] + self.setup(binary) + ["--serve"], stdin=subprocess.PIPE,
                                      stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
+            shell.chunks = queue.SimpleQueue()
+            shell.pending = bytearray()
+            shell.pump = threading.Thread(target=self.pump, args=(shell,), daemon=True)
+            shell.pump.start()
             shells[binary] = shell
             with self.lock:
                 self.started.append(shell)
@@ -310,24 +332,44 @@ class Shells:
         except (OSError, ValueError, TimeoutError):
             shell.kill()
             shell.wait()
+            shell.pump.join()
+            shell.stdin.close()
+            shell.stdout.close()
             shells.pop(binary, None)
+            with self.lock:
+                self.started.remove(shell)
             return None
         return (status, out.decode("utf-8", errors="replace"),
                 err.decode("utf-8", errors="replace"))
 
     @staticmethod
-    def read(shell, count, deadline):
-        data = bytearray()
+    def pump(shell):
+        """Passes what the shell writes to its queue, ending with an empty chunk. A thread reads it because a pipe can
+        only be waited on with a deadline this way on every platform."""
         fd = shell.stdout.fileno()
+        while True:
+            chunk = os.read(fd, 65536)
+            shell.chunks.put(chunk)
+            if not chunk:
+                return
+
+    @staticmethod
+    def read(shell, count, deadline):
+        data = shell.pending
         while len(data) < count:
             left = deadline - time.monotonic()
-            if left <= 0 or not polling.select([fd], [], [], left)[0]:
+            if left <= 0:
                 raise TimeoutError()
-            chunk = os.read(fd, count - len(data))
+            try:
+                chunk = shell.chunks.get(timeout=left)
+            except queue.Empty:
+                raise TimeoutError() from None
             if not chunk:
                 raise OSError("the shell ended")
             data += chunk
-        return bytes(data)
+        result = bytes(data[:count])
+        del data[:count]
+        return result
 
     @classmethod
     def read_line(cls, shell, deadline):
@@ -340,7 +382,14 @@ class Shells:
         for shell in self.started:
             if shell.poll() is None:
                 shell.stdin.close()
-                shell.wait()
+                try:
+                    shell.wait(timeout=SHELL_EXIT_TIMEOUT)
+                except subprocess.TimeoutExpired:
+                    print("pr_shell %d did not exit in %d seconds, and was killed" % (shell.pid, SHELL_EXIT_TIMEOUT),
+                          file=sys.stderr)
+                    self.stuck = True
+                    shell.kill()
+                    shell.wait()
 
 
 SHELLS = Shells()
@@ -380,19 +429,6 @@ def note_verify(error):
     for match in VERIFY_FAILURE.finditer(error or ""):
         with verify_lock:
             verify_failures.setdefault(match.group(1), match.group(2))
-
-# Patterns that keep a page out of a plain run. Such a page waits for something that the engine lacks, through a
-# listener or a promise that never settles, so the page stalls instead of failing. An example is the flag of a CSS test
-# that a person drives by hand.
-WAITS = [re.compile(pattern) for pattern in (
-    r"<meta[^>]*\bname=[\"']?flags[\"']?[^>]*\binteract\b",
-)]
-
-# Matches the scripts that a page loads or imports. The scripts that follow are those whose text WAITS does not read:
-# WPT's harness and the helpers of css/support. A page that waits on them names them in its own text.
-SCRIPT = re.compile(r"""<script[^>]*\bsrc\s*=\s*["']?([^"'\s>?#]+)|\bimport\b[^;"']*["']([^"'?#]+)["']""",
-                    re.I)
-SHARED = (os.path.join(WPT, "resources") + os.sep, os.path.join(CSS, "support") + os.sep)
 
 FUZZY_FILE = DATA.path("fuzzy.txt")
 DEFERRED_FILE = DATA.path("deferred.txt")
@@ -510,8 +546,7 @@ DEFERRED = DATA.deferred
 # The pages left out because they test what the engine has decided not to build, by name, with what is cut and the
 # reason. The file uses the errata's form, with whole files only.
 CUT = DATA.cut
-# The pages left out because they cost more than they test, by name, with the cost and the reason. The file uses the
-# errata's form, with whole files only.
+# The pages that we choose not to run, by name, with the reason. The file uses the errata's form, with whole files only.
 SKIP = DATA.skip
 
 
@@ -586,6 +621,33 @@ def page_text(path):
         if data.startswith(bom):
             return data[len(bom):].decode(encoding, errors="replace")
     return data.decode("latin-1")
+
+
+# The CSS flags that make a test one that a person runs (WPT's manifest, content_is_css_manual).
+CSS_MANUAL_FLAGS = {"animated", "font", "history", "interact", "paged", "speech", "userstyle"}
+
+# Matches a <meta name=flags> element, whose content lists a CSS test's flags.
+FLAGS_META = re.compile(r"<meta\b[^>]*\bname\s*=\s*[\"']?flags\b[^>]*>", re.I)
+CONTENT_ATTRIBUTE = re.compile(r"\bcontent\s*=\s*(?:\"([^\"]*)\"|'([^']*)'|([^\s>]+))", re.I)
+
+
+def css_flags(text):
+    """Returns the flags that a CSS test's <meta name=flags> elements list."""
+    flags = set()
+    for tag in FLAGS_META.findall(text):
+        match = CONTENT_ATTRIBUTE.search(tag)
+        if match:
+            flags.update(next(g for g in match.groups() if g is not None).split())
+    return flags
+
+
+def is_manual(path):
+    """Returns true if the test at `path` is one that a person runs, which wptrunner leaves out, as WPT's manifest finds
+    them: a name whose type is manual or visual, or a CSS test whose flags call for a person."""
+    stem = os.path.splitext(os.path.basename(path))[0]
+    if "-" in stem and stem.rsplit("-", 1)[1].split(".")[0] in ("manual", "visual"):
+        return True
+    return not path.endswith(SCRIPTS) and bool(css_flags(page_text(path)) & CSS_MANUAL_FLAGS)
 
 
 def kind_of(path, relative):
@@ -823,8 +885,9 @@ def discover(root, directories):
 def walk(root, top):
     tests = []
     for directory, subdirectories, files in os.walk(top):
-        subdirectories[:] = sorted(d for d in subdirectories if d not in NOT_TESTS
-                                   and not d.startswith("."))
+        parent = os.path.relpath(directory, root).replace(os.sep, "/")
+        subdirectories[:] = sorted(d for d in subdirectories if d not in NOT_TESTS and not d.startswith(".")
+                                   and posixpath.join(parent, d) not in NOT_RUN)
         for file in sorted(files):
             if not file.endswith(PAGES + SCRIPTS):
                 continue
@@ -838,22 +901,6 @@ def walk(root, top):
     return tests
 
 
-def matches(path, patterns):
-    """Returns true if the page at `path` contains any of `patterns`, in its text or in the scripts that it loads."""
-    text = page_text(path)
-    texts = [text]
-    for source in ("".join(match) for match in SCRIPT.findall(text)):
-        if "//" in source or not source.endswith((".js", ".mjs")):
-            continue
-        if source.startswith("/"):
-            script = os.path.join(WPT, source[1:])
-        else:
-            script = os.path.normpath(os.path.join(os.path.dirname(path), source))
-        if not script.startswith(SHARED) and os.path.isfile(script):
-            texts.append(page_text(script))
-    return any(pattern.search(t) for pattern in patterns for t in texts)
-
-
 def module_of(name):
     """Returns a directory's first two levels, or CSS2's first three, because CSS2 is a collection of modules."""
     parts = page_of(name).split("/")[:-1]
@@ -861,11 +908,29 @@ def module_of(name):
     return "/".join(parts[:depth]) or name
 
 
+def tested_features(root, features):
+    """Returns the features that the suites test, by the manifests of the checkout at `root`."""
+    directories = {directory for suite in SUITES.values() for directory in suite}
+    return web_features.Pages(root, features).named(directories, NOT_RUN)
+
+
+def check_rulings(root):
+    """Exits unless tools/suite/wpt/web_features.txt rules on exactly the features that the suites test, by the
+    manifests of the checkout at `root`, since a page's ruling decides whether a run selects it."""
+    features = web_features.data()
+    if features is None:
+        sys.exit("no web-features data; run ./dev.sh fetch webfeatures")
+    problems = web_features.check(features, tested_features(root, features))
+    if problems:
+        sys.exit("%s does not match the suites:\n%s" % (os.path.relpath(web_features.RULINGS_FILE, corpus.ROOT),
+                                                        "\n".join("  " + problem for _, problem in problems)))
+
+
 def unbuilt(pages, ruled, name):
     """Returns the first feature that the page `name` tests and the engine does not build, as its ruling and name, or
     None if the engine builds each feature."""
     for feature in pages.of(page_of(name)):
-        ruling = ruled.get(feature, ("open", ""))[0]
+        ruling = ruled.get(feature, "open")
         if ruling not in web_features.BUILT:
             return "%s: %s" % (ruling, feature)
     return None
@@ -893,8 +958,8 @@ def select(root, directories, modules=(), all_tests=False, match=None, needs=Non
         if not corpus.holds(name, match) and not corpus.holds(page_of(name), match):
             continue
         need = None
-        if default and kind == TESTHARNESS and matches(path, WAITS):
-            need = "waits"
+        if default and is_manual(path):
+            need = "manual"
         if need is None and pruned:
             need = unbuilt(pages, ruled, name)
         deferred = DEFERRED.get(name, DEFERRED.get(page_of(name)))
@@ -915,10 +980,21 @@ def select(root, directories, modules=(), all_tests=False, match=None, needs=Non
     return tests, left
 
 
+def timeout_of(path):
+    """Returns the deadline of the test at `path`, in seconds: LONG_TIMEOUT if it marks itself long, and TIMEOUT
+    otherwise."""
+    try:
+        with open(path, encoding="utf-8", errors="replace") as f:
+            return LONG_TIMEOUT if LONG_MARK.search(f.read()) else TIMEOUT
+    except OSError:
+        return TIMEOUT
+
+
 class Test:
     def __init__(self, path, variant=""):
         self.path = path
         self.variant = variant    # the query or fragment that it runs as, or empty for none
+        self.timeout = timeout_of(path)  # seconds
         self.results = []      # (status, name, message)
         self.result_indices = []  # registration order, independent of completion order
         self.harness = None    # harness or host failure, separate from subtest failures
@@ -927,6 +1003,11 @@ class Test:
 
 def run(shell, test):
     return run_page(shell, test, url_of(test.path, test.variant))
+
+
+def deadline_options(test):
+    """Returns the shell's options for the test's own deadline, which a long test needs in place of the shell's."""
+    return ["--timeout", "%d" % (test.timeout * 1000)] if test.timeout != TIMEOUT else []
 
 
 def text_of(captured):
@@ -941,7 +1022,7 @@ def run_page(shell, test, url):
     returncode = None
     reported = False
     try:
-        process = SHELLS.run(shell, ["--html", url], TIMEOUT)
+        process = SHELLS.run(shell, deadline_options(test) + ["--html", url], test.timeout)
         output, error = process.stdout, process.stderr
         returncode = process.returncode
         note_verify(error)
@@ -988,17 +1069,22 @@ def run_page(shell, test, url):
     return test
 
 
+# What the shell says of a document that is not well-formed (htmlShowXmlError).
+XML_ERROR = ": XML Parsing Error: "
+
+
 def crash(shell, test):
-    """Runs a crashtest, which passes if the page loads and the shell exits without failing."""
+    """Runs a crashtest, which passes if the page loads and the shell exits without failing. A document that is not
+    well-formed fails a run of the shell, but it loads as its parse error, which is all that a crashtest asks of it."""
     try:
         # A crashtest may load testharness.js, which reports through the vendor reporter as a testharness page does,
         # instead of waiting out its own timeout.
-        process = SHELLS.run(shell, ["--html", url_of(test.path)], TIMEOUT)
+        process = SHELLS.run(shell, deadline_options(test) + ["--html", url_of(test.path)], test.timeout)
         note_verify(process.stderr)
         diagnostics = process.stderr.strip().splitlines()
         if process.returncode == TIMED_OUT:
             test.harness = "TIMEOUT"
-        elif process.returncode != 0:
+        elif process.returncode != 0 and not any(XML_ERROR in line for line in diagnostics):
             test.harness = "CRASH: " + (diagnostics[0] if diagnostics
                                         else "process exited %d" % process.returncode)
     except subprocess.TimeoutExpired:
@@ -1123,6 +1209,7 @@ def main():
         missing = [name for name in sorted(entries) if not os.path.exists(os.path.join(args.tests, name))]
         if missing:
             sys.exit("%s: %s no longer exists" % (os.path.relpath(path, corpus.ROOT), missing[0]))
+    check_rulings(args.tests)
     if args.left_out:
         needs = {}
         for directories in SUITES.values():
@@ -1263,6 +1350,8 @@ def main():
                             out("                  %s" % message)
 
     SHELLS.close()
+    if SHELLS.stuck:
+        sys.exit("a shell did not exit; the run's results are not recorded")
     durations.update(took)
     write_durations(durations)
     progress.clear()
@@ -1334,4 +1423,6 @@ def main():
     return 0
 
 if __name__ == "__main__":
+    # A failure's message quotes what a page wrote, which the console's own encoding may not hold.
+    sys.stdout.reconfigure(encoding="utf-8", errors="backslashreplace")
     sys.exit(main())

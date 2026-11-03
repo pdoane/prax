@@ -3008,14 +3008,22 @@ void scrollTree(PrCssPresentation* r, PrLayoutNode node, PrLayoutVec offset, Css
     queueScrolled(r, node);
 }
 
-// Queues the scroll events of the containers whose offsets scroll anchoring moved in the tree's last layouts
-// (css-scroll-anchoring-1/#scroll-adjustment). The host's compositor learns of the moves from the scene.
+// Adds the moves that scroll anchoring made in the tree's last layouts (css-scroll-anchoring-1/#scroll-adjustment) to
+// the moves since the last run of the scroll steps, which queues their scroll events. The host's compositor learns of
+// the moves from the scene.
 void anchorsMoved(PrCssPresentation* r) {
     PrLayoutScrollAdjustment moved[8];
     uint32_t count = 0;
     while ((count = prLayoutTreeTakeScrollAdjustments(r->tree, moved, 8)) != 0) {
-        for (uint32_t i = 0; i < count; ++i)
-            queueScrolled(r, moved[i].node);
+        for (uint32_t i = 0; i < count; ++i) {
+            uint32_t at = 0;
+            while (at < r->anchorMoves.count && r->anchorMoves.data[at].node != moved[i].node)
+                ++at;
+            if (at == r->anchorMoves.count)
+                r->anchorMoves.push(moved[i]);
+            else
+                r->anchorMoves.data[at].delta = r->anchorMoves.data[at].delta + moved[i].delta;
+        }
     }
 }
 
@@ -7055,6 +7063,11 @@ void cssPresentationScrollTo(PrCssPresentation* presentation, PrLayoutNode node,
 }
 
 void cssPresentationRunScrollSteps(PrCssPresentation* presentation) {
+    for (uint32_t i = 0; i < presentation->anchorMoves.count; ++i) {
+        if (presentation->anchorMoves.data[i].delta != PrLayoutVec{})
+            queueScrolled(presentation, presentation->anchorMoves.data[i].node);
+    }
+    presentation->anchorMoves.clear();
     if (presentation->scrolled.count == 0)
         return;
     // Event listeners can scroll again. Those scrolls wait for the next run.
@@ -7106,7 +7119,8 @@ void cssPresentationSendAnimationEvents(PrCssPresentation* presentation) {
 }
 
 bool cssPresentationHasWork(const PrCssPresentation* presentation) {
-    return presentation->scrolled.count != 0 || presentation->animations.events.count != 0 || presentation->changed ||
+    return presentation->scrolled.count != 0 || presentation->anchorMoves.count != 0 ||
+        presentation->animations.events.count != 0 || presentation->changed ||
         cssDocumentRoot(presentation->document)->fontsVersion != presentation->fontsVersion ||
         cssPresentationAwaitsFontRequests(presentation);
 }
@@ -7289,6 +7303,7 @@ void prCssPresentationDestroy(PrCssPresentation* PR_NULLABLE presentation) {
     for (uint32_t i = 0; i < r->scrolled.count; ++i)
         domNodeUnhold(r->scrolled.data[i]);
     r->scrolled.reset();
+    r->anchorMoves.reset();
     r->pendingScrolls.reset();
     r->documentScrolls.reset();
     for (uint32_t i = 0; i < r->entries.count; ++i) {

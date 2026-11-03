@@ -5,29 +5,6 @@ open: CSS since CSS 2, the CSSOM, HTML and the DOM, SVG, and Lottie. No single s
 specifications, the implementations, the issues and the tests each say something, and each can be wrong for the
 engine. A decision is researched, judged, and discussed with the developer.
 
-## Which features
-
-`tools/suite/wpt/web_features.txt` records whether the engine builds each feature. It rules on every feature that
-[web-features](https://github.com/web-platform-dx/web-features) names. It also rules on each feature that the engine
-has considered and web-features does not name, which is often a feature that no engine ships. Such a feature is named
-by the anchor of its definition. A feature without a ruling is not built. The file's header lists the rulings: build,
-cut, or open while undecided. A Baseline feature is built unless it serves too little for what it costs or it is a
-browser product's own. A ruling records its reason where the reason is not evident. The rulings are tentative: they
-are a first classification that has not had careful review.
-
-A ruling weighs what the feature costs outside its own code against what it serves: the content and the native apps
-that would use it. How many engines ship a feature is evidence of what it serves, not a ruling. A feature whose cost
-stays within its own parsing and resolution is cheap to keep. Some features make shared state depend on something new,
-such as computed values that wait on a resource, or need a new type in another library's API. Such a feature is cut
-unless content needs it.
-
-The rulings do not change what is parsed. `tools/gen/gen_css.py` generates the specifications' whole grammar, so a
-change of ruling adds or removes no generated tables. A value of a feature that the engine does not build parses but
-does not resolve. A rule of such a feature has no object model interface of its own, and is a plain `CSSRule`.
-
-`suites/prax` covers the specifications rather than the engine. It keeps its pages for features that the engine
-does not build.
-
 ## The sources
 
 - **Specifications**, and their drafts, say where a standard is going, but a draft is only a draft. It holds features

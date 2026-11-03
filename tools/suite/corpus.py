@@ -111,8 +111,9 @@ class Data:
     - errata.txt: the cases in which the engine is right and the reference is wrong, each with the reason.
     - cut.txt: the cases that test what the engine has decided not to build. The reason starts with what is cut.
     - deferred.txt: the cases that wait on what the engine will build. The reason starts with what they need.
-    - skip.txt: the cases that the engine could pass but that cost more than they test, such as a benchmark of a JIT
-      that takes the interpreter past the deadline. The reason starts with what they cost.
+    - skip.txt: the cases that we choose not to run. A case may cost more than it tests, such as a benchmark of a JIT
+      that takes the interpreter past the deadline, or its result may vary for a reason that the engine does not
+      control. The reason says which.
     - scoreboard.md: what a plain run of the default build passes. The run writes it, and its diff is what a change did.
     - fuzzy.txt and render.txt, in a suite that compares renders: the tolerances that override a case's own, and the
       fonts and settings that the suite renders with.
