@@ -200,6 +200,9 @@ public:
     // page's viewport, in CSS pixels.
     void input(Page* page, const PrAppEvent& event);
 
+    // Returns what the view that presents the page reports to the window, in the page's px.
+    PrAppOutput output(Page* page);
+
     // Returns true if the page is done in the sense that a reftest uses: its root element no longer has the class
     // `reftest-wait`.
     static bool finished(const Page* page);

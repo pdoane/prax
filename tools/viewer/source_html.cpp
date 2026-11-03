@@ -131,4 +131,8 @@ void htmlInput(HtmlSource& html, const PrAppEvent& event) {
         html.host.input(html.page, event);
 }
 
+PrAppOutput htmlOutput(HtmlSource& html) {
+    return html.page != nullptr ? html.host.output(html.page) : PrAppOutput{};
+}
+
 } // namespace viewer

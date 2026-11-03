@@ -1258,6 +1258,10 @@ void PageHost::input(Page* page, const PrAppEvent& event) {
     dispatchEvent(*state_, page, event);
 }
 
+PrAppOutput PageHost::output(Page* page) {
+    return page->htmlPage != nullptr ? prHtmlViewOutput(viewOf(page)) : PrAppOutput{};
+}
+
 bool PageHost::finished(const Page* page) {
     if (page->htmlPage == nullptr)
         return true;

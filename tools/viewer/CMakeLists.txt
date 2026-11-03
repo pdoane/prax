@@ -44,10 +44,10 @@ if ((APPLE OR WIN32) AND PR_JS)
         target_link_libraries(viewer_documents PRIVATE draw_coregraphics)
     endif()
 
-    # The viewer: the documents, rendered by each renderer. Its controls are drawn by the renderer of Dear ImGui on
-    # lib/gpu.
-    add_executable(viewer viewer.cpp ui.cpp ui_renderer.cpp)
-    target_compile_definitions(viewer PRIVATE PR_FONTS_DIR="${PROJECT_SOURCE_DIR}/third_party/fonts")
-    target_link_libraries(viewer PRIVATE viewer_documents prax::app imgui prax::draw prax::geom prax::gpu
-                                         prax::compress prax::image pr_warnings)
+    # The viewer: the documents, rendered by each renderer, beside its controls in Studio Kit.
+    add_executable(viewer viewer.cpp ui.cpp)
+    target_compile_definitions(viewer PRIVATE PR_FONT_BUNDLE_DIR="${PR_FONT_BUNDLE_DIR}")
+    target_link_libraries(viewer PRIVATE viewer_documents prax::app prax::draw prax::font prax::font_bundle prax::geom
+                                         prax::gpu prax::compress prax::image prax::layout prax::studio_kit prax::text
+                                         prax::ui prax::core_cpp pr_warnings)
 endif()

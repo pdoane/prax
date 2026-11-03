@@ -42,6 +42,9 @@ void drawHtml(HtmlSource& html, PrDrawList* list, float width, float height, con
 // the page's viewport, in CSS pixels.
 void htmlInput(HtmlSource& html, const PrAppEvent& event);
 
+// Returns what the page's view reports to the window, in CSS pixels of the page's viewport.
+PrAppOutput htmlOutput(HtmlSource& html);
+
 } // namespace viewer
 
 PR_ASSUME_NONNULL_END

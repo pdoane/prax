@@ -1,301 +1,467 @@
-// The viewer's controls in Dear ImGui, in their own context beside any that the imgui renderer creates, drawn by the
-// platform's renderer of Dear ImGui (ui_renderer.h).
+// The viewer's controls in Studio Kit, in a layout tree of their own, which renders over the documents' renders.
 
 #include "tools/viewer/ui.h"
 
-#include "tools/viewer/document_tree.h"
-#include "tools/viewer/ui_renderer.h"
+#include "pr/app_display.h"
+#include "pr/draw_list.h"
+#include "pr/font_bundle.h"
+#include "pr/font_set.h"
+#include "pr/kit.h"
+#include "pr/kit_box.h"
+#include "pr/kit_button.h"
+#include "pr/kit_choice.h"
+#include "pr/kit_collection.h"
+#include "pr/kit_input.h"
+#include "pr/kit_menu.h"
+#include "pr/kit_surface.h"
+#include "pr/kit_text.h"
+#include "pr/kit_theme.h"
+#include "pr/layout_query.h"
+#include "pr/layout_scene.h"
+#include "pr/layout_tree.h"
+#include "pr/text.h"
+#include "pr/ui.h"
 
-#include "imgui.h"
-#include "imgui_internal.h"
+#include "tools/viewer/document_tree.h"
 
 #include <algorithm>
 #include <cmath>
+#include <cstdarg>
 #include <cstdio>
 #include <memory>
 #include <string>
+#include <vector>
 
 namespace viewer {
 
 // The width of the panel of controls, in logical pixels.
 constexpr float kPanel = 300;
 
+// The height of the list of documents, as a share of the window's, and of its rows, in logical pixels.
+constexpr float kTreeShare = 0.45f;
+constexpr float kTreeRow = 22;
+
+// A render of a document that the frame shows under the controls.
+struct ShownImage {
+    PrGpuTexture texture;
+    PrRect clip;
+    PrRect destination;
+    bool nearest;
+};
+
 struct Ui {
-    ImGuiContext* context;
-    UiRenderer* renderer = nullptr;
+    PrGpuDevice* device = nullptr;
+    PrFontSet* fonts = nullptr;
+    PrTextShaper* shaper = nullptr;
+    PrLayoutTree* layout = nullptr;
+    PrUi* ui = nullptr;
+    PrKit* kit = nullptr;
+    PrDrawRenderer* renderer = nullptr;
+    PrDrawFrame* frame = nullptr;
+    PrDrawList* list = nullptr;
+    const PrLayoutScene* scene = nullptr;
+    std::vector<PrLayoutSceneScroll> scrolls;
+    std::vector<ShownImage> images;
+    float pixelRatio = 1;
+    PrAppColorScheme scheme = PrAppColorScheme_Light;
+
+    // The nodes of the last round: the box left for documents, and the list of documents, which holds the keyboard
+    // unless something else does.
+    PrLayoutNode slot = kPrLayoutNodeNone;
+    PrLayoutNode treeView = kPrLayoutNodeNone;
+    PrVec2 pointer{};
+    bool pressed = false;           // a press that landed on the controls is held
 
     // The shown collection's documents as a tree, created when the collection is first shown, the collection that the
     // tree holds, and the filter typed over it.
     std::unique_ptr<DocumentTree> tree = nullptr;
     uint32_t treeCollection = 0;
-    char filter[256] = {};
+    std::string filter;
+    std::vector<PrKitTreeItem> items;   // the tree's rows, as the view takes them
 
-    // The tree's row that the arrow keys move from: the shown document's row, or a directory's. It follows the shown
-    // document when something else turns to another document.
-    uint32_t cursor = 0;
+    // The row that the keys move from, and the document that the row last followed.
+    PrKitSelection selection{};
     uint32_t cursorDocument = 0;
 };
 
 namespace {
 
-void use(Ui* ui) {
-    ImGui::SetCurrentContext(ui->context);
-}
+// What a round of the controls reads and changes.
+struct Round {
+    Ui* ui;
+    const std::vector<RendererConfig>* configs;
+    const std::vector<Reference>* references;
+    const Figures* figures;
+    Choices* choices;
+    float height;
+    bool pageKeys;
+};
 
-ImGuiKey keyOf(PrAppKey key) {
-    if (key >= 'A' && key <= 'Z')
-        return ImGuiKey(ImGuiKey_A + (key - 'A'));
-    if (key >= '0' && key <= '9')
-        return ImGuiKey(ImGuiKey_0 + (key - '0'));
-    switch (key) {
-        case PrAppKey_Left: return ImGuiKey_LeftArrow;
-        case PrAppKey_Right: return ImGuiKey_RightArrow;
-        case PrAppKey_Up: return ImGuiKey_UpArrow;
-        case PrAppKey_Down: return ImGuiKey_DownArrow;
-        case PrAppKey_Home: return ImGuiKey_Home;
-        case PrAppKey_End: return ImGuiKey_End;
-        case PrAppKey_PageUp: return ImGuiKey_PageUp;
-        case PrAppKey_PageDown: return ImGuiKey_PageDown;
-        case PrAppKey_Enter: return ImGuiKey_Enter;
-        case PrAppKey_Escape: return ImGuiKey_Escape;
-        case PrAppKey_Backspace: return ImGuiKey_Backspace;
-        case PrAppKey_Delete: return ImGuiKey_Delete;
-        case PrAppKey_Tab: return ImGuiKey_Tab;
-        case ' ': return ImGuiKey_Space;
-        default: return ImGuiKey_None;
-    }
-}
-
-void modifiers(ImGuiIO& io, PrAppModifierFlags flags) {
-    io.AddKeyEvent(ImGuiMod_Shift, (flags & PrAppModifierFlag_Shift) != 0);
-    io.AddKeyEvent(ImGuiMod_Ctrl, (flags & PrAppModifierFlag_Control) != 0);
-    io.AddKeyEvent(ImGuiMod_Alt, (flags & PrAppModifierFlag_Alt) != 0);
-    io.AddKeyEvent(ImGuiMod_Super, (flags & PrAppModifierFlag_Super) != 0);
-}
-
-// Returns the row of the tree's node, or -1 if it is not listed.
-int rowOf(const DocumentTree& tree, uint32_t node) {
+// Returns the row of the tree's node, or the first row if it is not listed.
+uint32_t rowOf(const DocumentTree& tree, uint32_t node) {
     const std::vector<TreeRow>& rows = tree.rows();
     for (size_t i = 0; i < rows.size(); ++i) {
         if (rows[i].node == node)
-            return int(i);
+            return uint32_t(i);
     }
-    return -1;
+    return 0;
 }
 
-// Moves the cursor as the arrow keys and the page keys direct, unless text is being typed. Up and down move along the
-// rows, a page at a time with the page keys. Right opens a closed directory, and otherwise moves down. Left closes an
-// open directory, and otherwise moves to the directory holding the row. A document the cursor lands on is shown.
-// Returns true if the cursor moved, so that the tree scrolls to it.
-bool moveCursor(Ui* ui, float height, Choices& choices) {
-    if (ImGui::GetIO().WantTextInput)
-        return false;
-    int step = 0;
-    int page = std::max(1, int(height / ImGui::GetFrameHeight()) - 1);
-    if (ImGui::IsKeyPressed(ImGuiKey_DownArrow))
-        step = 1;
-    else if (ImGui::IsKeyPressed(ImGuiKey_UpArrow))
-        step = -1;
-    else if (ImGui::IsKeyPressed(ImGuiKey_PageDown))
-        step = page;
-    else if (ImGui::IsKeyPressed(ImGuiKey_PageUp))
-        step = -page;
-    bool right = ImGui::IsKeyPressed(ImGuiKey_RightArrow);
-    bool left = ImGui::IsKeyPressed(ImGuiKey_LeftArrow);
-    if (step == 0 && !right && !left)
-        return false;
-    DocumentTree& tree = *ui->tree;
-    if (tree.rows().empty())
-        return false;
-    int row = rowOf(tree, ui->cursor);
-    if (row < 0) {
-        ui->cursor = tree.rows()[0].node;
-        row = 0;
-    }
-    const DocumentTree::Node& node = tree.nodes()[ui->cursor];
-    bool directory = node.document < 0;
-    if (right && directory && !node.expanded) {
-        tree.setExpanded(ui->cursor, true);
-        return true;
-    }
-    if (left && directory && node.expanded) {
-        tree.setExpanded(ui->cursor, false);
-        return true;
-    }
-    if (left) {
-        if (node.parent != 0)
-            ui->cursor = node.parent;
-    } else {
-        int last = int(tree.rows().size()) - 1;
-        ui->cursor = tree.rows()[size_t(std::clamp(row + (right ? 1 : step), 0, last))].node;
-    }
-    int32_t document = tree.nodes()[ui->cursor].document;
-    if (document >= 0) {
-        choices.document = uint32_t(document);
-        ui->cursorDocument = choices.document;
-    }
-    return true;
+// Returns text that printf formats.
+std::string format(const char* text, ...) PR_PRINTF_FORMAT(1, 2);
+
+std::string format(const char* text, ...) {
+    char buffer[256];
+    va_list args;
+    va_start(args, text);
+    std::vsnprintf(buffer, sizeof buffer, text, args);
+    va_end(args);
+    return buffer;
 }
 
-// Draws the filter and the tree of the collection's documents. A directory opens and closes when it is clicked, and a
-// clicked document is chosen. The keys move a cursor over the rows (moveCursor). A document that a plain run of its
-// suite leaves out is dimmed, and shows what the run needs. The tree shows the chosen document whenever a key chose it.
-void documentTree(Ui* ui, const Collection& collection, float height, Choices& choices) {
-    const std::vector<Document>& documents = collection.documents();
-    DocumentTree& tree = *ui->tree;
-    ImGui::SetNextItemWidth(-1);
-    if (ImGui::InputTextWithHint("##filter", "filter", ui->filter, sizeof(ui->filter)))
-        tree.filter(ui->filter);
-    bool reveal = choices.documentChanged;
-    if (reveal || ui->cursorDocument != choices.document) {
+void label(PrKit* kit, PrLayoutNode parent, const std::string& text, PrKitTone tone = PrKitTone_Auto) {
+    prKitLabel(kit, parent, {.text = text}, {.role = PrKitTextRole_BodySmall, .tone = tone, .wrap = PrKitWrap_Wrap});
+}
+
+// Creates a select of `count` options under `parent`, which `name` names and `chosen` marks. Calls `choose` with the
+// index of an option that is activated.
+template <typename Name, typename Choose>
+void select(PrKit* kit, PrLayoutNode parent, const std::string& shown, uint32_t count, uint32_t chosen, Name name,
+        Choose choose) {
+    PrLayoutNode node = prKitSelect(kit, parent, {.label = shown}, {.size = PrKitControlSize_Sm});
+    PrLayoutNode menu = prKitSelectMenu(kit, node);
+    if (menu == kPrLayoutNodeNone)
+        return;
+    for (uint32_t i = 0; i < count; ++i) {
+        std::string text = name(i);
+        if (text.empty())
+            continue;
+        PrKitMenuItem item{.text = text, .checked = i == chosen};
+        if (prKitActivated(kit, prKitMenuItem(kit, menu, item, {})))
+            choose(i);
+    }
+}
+
+// Creates a labeled row of the panel, and returns the node that its control goes under.
+PrLayoutNode row(PrKit* kit, PrLayoutNode parent, PrStringView name) {
+    return prKitInspectorRow(kit, parent, {.label = name}, {});
+}
+
+// Creates a row of small buttons, and returns the row.
+PrLayoutNode buttonRow(PrKit* kit, PrLayoutNode parent) {
+    PrKitBoxStyle style{.direction = PrKitDirection_Row, .align = PrKitAlign_Center, .gap = kPrKitSpace2};
+    return prKitBox(kit, parent, {}, style);
+}
+
+bool button(PrKit* kit, PrLayoutNode parent, PrStringView text) {
+    return prKitActivated(kit, prKitButton(kit, parent, {.text = text}, {.size = PrKitControlSize_Sm}));
+}
+
+// Creates the filter and the tree of the collection's documents. A document whose row the keys or a click select is
+// shown, and a row's disclosure opens and closes it. The tree shows the chosen document whenever something else chose
+// it.
+void documentTree(const Round& r, PrLayoutNode parent, const Collection& collection) {
+    Ui& ui = *r.ui;
+    PrKit* kit = ui.kit;
+    Choices& choices = *r.choices;
+    DocumentTree& tree = *ui.tree;
+    PrLayoutNode field = prKitTextField(kit, parent, {.text = ui.filter, .placeholder = "filter"},
+        {.size = PrKitControlSize_Sm});
+    PrStringView typed{};
+    if (prKitTextChanged(kit, field, &typed)) {
+        ui.filter.assign(typed.data, typed.size);
+        tree.filter(ui.filter);
+    }
+    bool reveal = choices.documentChanged || ui.cursorDocument != choices.document;
+    if (reveal) {
         tree.reveal(choices.document);
-        ui->cursor = tree.nodeOf(choices.document);
-        ui->cursorDocument = choices.document;
+        ui.cursorDocument = choices.document;
     }
-    reveal = moveCursor(ui, height, choices) || reveal;
-    int toggled = -1;
-    if (ImGui::BeginChild("##documents", ImVec2(-1, height), ImGuiChildFlags_Borders)) {
-        const std::vector<TreeRow>& rows = tree.rows();
-        int shownRow = reveal ? rowOf(tree, ui->cursor) : -1;
-        const float indent = ImGui::GetStyle().IndentSpacing * 0.6f;
-        ImGuiListClipper clipper;
-        clipper.Begin(int(rows.size()));
-        if (shownRow >= 0)
-            clipper.IncludeItemByIndex(shownRow);
-        while (clipper.Step()) {
-            for (int i = clipper.DisplayStart; i < clipper.DisplayEnd; ++i) {
-                const TreeRow& row = rows[size_t(i)];
-                const DocumentTree::Node& node = tree.nodes()[row.node];
-                ImGui::PushID(int(row.node));
-                ImGui::SetCursorPosX(ImGui::GetCursorPosX() + float(row.depth) * indent);
-                ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_NoTreePushOnOpen | ImGuiTreeNodeFlags_SpanAvailWidth;
-                if (node.document < 0) {
-                    if (row.node == ui->cursor)
-                        flags |= ImGuiTreeNodeFlags_Selected;
-                    ImGui::SetNextItemOpen(node.expanded);
-                    if (ImGui::TreeNodeEx("##directory", flags, "%s  (%u)", node.name.c_str(), node.matches) !=
-                            node.expanded)
-                        toggled = int(row.node);
-                } else {
-                    flags |= ImGuiTreeNodeFlags_Leaf;
-                    if (row.node == ui->cursor)
-                        flags |= ImGuiTreeNodeFlags_Selected;
-                    ImGui::TreeNodeEx("##document", flags, "%s", node.name.c_str());
-                    if (ImGui::IsItemClicked()) {
-                        choices.document = uint32_t(node.document);
-                        ui->cursor = row.node;
-                        ui->cursorDocument = choices.document;
-                    }
-                }
-                if (i == shownRow)
-                    ImGui::SetScrollHereY();
-                ImGui::PopID();
-            }
+    uint32_t lead = reveal ? rowOf(tree, tree.nodeOf(choices.document)) : ui.selection.lead;
+    const std::vector<TreeRow>& rows = tree.rows();
+    if (reveal)
+        ui.selection = PrKitSelection{lead, lead};
+
+    ui.items.resize(rows.size());
+    for (size_t i = 0; i < rows.size(); ++i) {
+        const DocumentTree::Node& node = tree.nodes()[rows[i].node];
+        ui.items[i] = PrKitTreeItem{.depth = rows[i].depth, .hasChildren = node.document < 0, .open = node.expanded};
+    }
+    PrKitTreeView content{.count = uint32_t(rows.size()), .selection = &ui.selection, .items = ui.items.data()};
+    float treeHeight = r.height * kTreeShare;
+    PrKitListViewStyle style{.rowHeight = kTreeRow, .place = {.height = prKitPx(treeHeight), .flex = PrKitFlex_Fixed}};
+    PrLayoutNode view = prKitTreeView(kit, parent, content, style);
+    ui.treeView = view;
+    if (r.pageKeys && prUiIsFocusWithin(ui.ui, view))
+        prUiSetFocus(ui.ui, kPrLayoutNodeNone);
+    else if (!r.pageKeys && prUiFocus(ui.ui) == kPrLayoutNodeNone)
+        prUiSetFocus(ui.ui, view);
+
+    auto rowAt = [&](uint32_t i) {
+        const DocumentTree::Node& node = tree.nodes()[rows[i].node];
+        PrLayoutNode shown =
+            prKitTreeRow(kit, view, {.index = i, .item = rows[i].node + 1, .selected = i == ui.selection.lead});
+        if (node.document < 0) {
+            std::string text = format("%s  (%u)", node.name.c_str(), node.matches);
+            prKitRowLabel(kit, shown, {.text = text}, PrKitTone_Auto);
+        } else {
+            prKitRowLabel(kit, shown, {.text = node.name}, PrKitTone_Auto);
+        }
+        return shown;
+    };
+    PrKitWindow window = prKitListWindow(kit, view);
+    uint32_t end = std::min(window.first + window.count, uint32_t(rows.size()));
+    for (uint32_t i = window.first; i < end; ++i)
+        rowAt(i);
+    // A row that something else chose may lie outside the window, so the view scrolls by its place in the list, with
+    // the row in the middle of the view. The next round's window holds it.
+    if (reveal) {
+        float offset = std::max(float(lead) * kTreeRow - treeHeight / 2, 0.0f);
+        prLayoutNodeSetScroll(ui.layout, view, PrLayoutVec{prLayoutUnitFromPx(0), prLayoutUnitFromPx(offset)});
+    }
+
+    PrKitSelectionEdit edit{};
+    if (prKitSelectionEdited(kit, view, &edit) && edit.first < rows.size()) {
+        int32_t document = tree.nodes()[rows[edit.first].node].document;
+        ui.selection = PrKitSelection{edit.first, edit.first};
+        if (document >= 0) {
+            choices.document = uint32_t(document);
+            ui.cursorDocument = choices.document;
         }
     }
-    ImGui::EndChild();
-    if (toggled >= 0) {
-        tree.setExpanded(uint32_t(toggled), !tree.nodes()[uint32_t(toggled)].expanded);
-        ui->cursor = uint32_t(toggled);
-    }
-    if (ui->filter[0] != '\0')
-        ImGui::TextDisabled("%u of %zu documents", tree.matching(), documents.size());
+    PrKitTreeFold fold{};
+    if (prKitFolded(kit, view, &fold) && fold.row < rows.size())
+        tree.setExpanded(rows[fold.row].node, fold.open);
+
+    if (!ui.filter.empty())
+        label(kit, parent, format("%u of %zu documents", tree.matching(), collection.documents().size()),
+            PrKitTone_Faint);
     else
-        ImGui::TextDisabled("%zu documents", documents.size());
+        label(kit, parent, format("%zu documents", collection.documents().size()), PrKitTone_Faint);
 }
 
-// Draws a combo that chooses the pane's family of renderers, by name, and if the family has several configurations, a
-// combo that chooses among them.
-void rendererCombos(const std::vector<RendererConfig>& configs, PaneChoice& pane) {
+// Creates the controls of Prax's renderers in a pane: the family of renderers, its variants if it has several, the
+// shaper and the hinting.
+void praxControls(const Round& r, PrLayoutNode parent, PaneChoice& pane) {
+    PrKit* kit = r.ui->kit;
+    const std::vector<RendererConfig>& configs = *r.configs;
     const RendererConfig& current = configs[pane.config];
-    if (ImGui::BeginCombo("Renderer", current.familyName)) {
-        for (uint32_t b = 0; b < uint32_t(configs.size()); ++b) {
-            if (b != 0 && configs[b - 1].family == configs[b].family)
-                continue;
-            if (ImGui::Selectable(configs[b].familyName, configs[b].family == current.family))
-                chooseFamily(pane, configs, configs[b].family);
-        }
-        ImGui::EndCombo();
+    select(kit, row(kit, parent, "Renderer"), current.familyName, uint32_t(configs.size()), pane.config, [&](uint32_t b) {
+        bool first = b == 0 || configs[b - 1].family != configs[b].family;
+        return first ? std::string(configs[b].familyName) : std::string();
+    }, [&](uint32_t b) { chooseFamily(pane, configs, configs[b].family); });
+    if (nextInFamily(configs, pane.config) != pane.config) {
+        select(kit, row(kit, parent, "Variant"), configs[pane.config].name, uint32_t(configs.size()),
+            pane.config, [&](uint32_t b) {
+                return configs[b].family == configs[pane.config].family ? std::string(configs[b].name) : std::string();
+            }, [&](uint32_t b) { pane.config = b; });
     }
-    if (nextInFamily(configs, pane.config) == pane.config)
-        return;
-    ImGui::SetNextItemWidth(-90);
-    if (ImGui::BeginCombo("Variant", current.name)) {
-        for (uint32_t b = 0; b < uint32_t(configs.size()); ++b)
-            if (configs[b].family == current.family && ImGui::Selectable(configs[b].name, b == pane.config))
-                pane.config = b;
-        ImGui::EndCombo();
-    }
+    select(kit, row(kit, parent, "Shaper"), std::string(prTextShaperBackendName(pane.text.shaper).data),
+        PrTextShaperBackend_Count, pane.text.shaper, [](uint32_t s) {
+            bool built = prTextShaperBackendIsBuilt(PrTextShaperBackend(s));
+            return built ? std::string(prTextShaperBackendName(PrTextShaperBackend(s)).data) : std::string();
+        }, [&](uint32_t s) { pane.text.shaper = PrTextShaperBackend(s); });
+    select(kit, row(kit, parent, "Hinting"), std::string(prFontHintingName(pane.text.hinting).data),
+        PrFontHinting_Count, pane.text.hinting,
+        [](uint32_t h) { return std::string(prFontHintingName(PrFontHinting(h)).data); },
+        [&](uint32_t h) { pane.text.hinting = PrFontHinting(h); });
 }
 
-// Draws a combo that chooses the pane's shaper, and one that chooses how it hints fonts.
-void textCombos(PaneChoice& pane) {
-    ImGui::SetNextItemWidth(-90);
-    if (ImGui::BeginCombo("Shaper", prTextShaperBackendName(pane.text.shaper).data)) {
-        for (PrTextShaperBackend s = 0; s < PrTextShaperBackend_Count; ++s) {
-            if (prTextShaperBackendIsBuilt(s) &&
-                    ImGui::Selectable(prTextShaperBackendName(s).data, s == pane.text.shaper))
-                pane.text.shaper = s;
-        }
-        ImGui::EndCombo();
-    }
-    ImGui::SetNextItemWidth(-90);
-    if (ImGui::BeginCombo("Hinting", prFontHintingName(pane.text.hinting).data)) {
-        for (PrFontHinting h = 0; h < PrFontHinting_Count; ++h)
-            if (ImGui::Selectable(prFontHintingName(h).data, h == pane.text.hinting))
-                pane.text.hinting = h;
-        ImGui::EndCombo();
-    }
-}
-
-// Draws the controls of a pane: what renders it, Prax or one of the document's references, and Prax's renderers.
-void paneControls(const char* label, const std::vector<RendererConfig>& configs,
-        const std::vector<Reference>& references, PaneChoice& pane) {
-    ImGui::PushID(label);
+// Creates the controls of a pane: what renders it, Prax or one of the document's references, and Prax's renderers.
+void paneControls(const Round& r, PrLayoutNode parent, PrStringView name, PaneChoice& pane) {
+    PrKit* kit = r.ui->kit;
+    const std::vector<Reference>& references = *r.references;
+    PrKitBoxStyle style{.gap = kPrKitSpace2};
+    PrLayoutNode box = prKitBox(kit, parent, {}, style);
     bool prax = pane.renderer == Renderer_Prax || pane.reference >= references.size();
-    ImGui::SetNextItemWidth(-90);
-    if (ImGui::BeginCombo(label, prax ? "Prax" : references[pane.reference].name.c_str())) {
-        if (ImGui::Selectable("Prax", prax))
-            pane.renderer = Renderer_Prax;
-        for (uint32_t r = 0; r < uint32_t(references.size()); ++r) {
-            if (ImGui::Selectable(references[r].name.c_str(), !prax && r == pane.reference)) {
-                pane.renderer = Renderer_Reference;
-                pane.reference = r;
-            }
-        }
-        ImGui::EndCombo();
-    }
-    if (pane.renderer == Renderer_Prax || pane.reference >= references.size()) {
-        ImGui::SetNextItemWidth(-90);
-        rendererCombos(configs, pane);
-        textCombos(pane);
-    }
-    ImGui::PopID();
+    select(kit, row(kit, box, name), prax ? "Prax" : references[pane.reference].name,
+        uint32_t(references.size()) + 1, prax ? 0 : pane.reference + 1,
+        [&](uint32_t i) { return i == 0 ? std::string("Prax") : references[i - 1].name; }, [&](uint32_t i) {
+            pane.renderer = i == 0 ? Renderer_Prax : Renderer_Reference;
+            if (i != 0)
+                pane.reference = i - 1;
+        });
+    if (pane.renderer == Renderer_Prax || pane.reference >= references.size())
+        praxControls(r, box, pane);
 }
 
-void renderedText(const char* label, const Rendered& r) {
-    if (r.status != PrStatus_Ok)
-        ImGui::TextColored(ImVec4(1, 0.4f, 0.4f, 1), "%s: failed, status %d", label, int(r.status));
-    else if (r.captured && r.fps > 0)
-        ImGui::Text("%s: %.1f FPS", label, r.fps);
-    else if (r.captured)
-        ImGui::Text("%s: %.2f ms a capture", label, r.ms);
-    else if (r.fps > 0)
-        ImGui::Text("%s: %.1f FPS %s, %.2f ms", label, r.fps, r.backToBack ? "back to back" : "paced", r.ms);
-    else
-        ImGui::Text("%s: %.2f ms %s", label, r.ms, r.backToBack ? "back to back" : "paced");
-    if (r.status != PrStatus_Ok)
+// Creates the figures of a render.
+void renderedText(PrKit* kit, PrLayoutNode parent, const std::string& name, const Rendered& r) {
+    const char* paced = r.backToBack ? "back to back" : "paced";
+    if (r.status != PrStatus_Ok) {
+        label(kit, parent, format("%s: failed, status %d", name.c_str(), int(r.status)), PrKitTone_Danger);
         return;
+    }
+    if (r.captured && r.fps > 0)
+        label(kit, parent, format("%s: %.1f FPS", name.c_str(), r.fps));
+    else if (r.captured)
+        label(kit, parent, format("%s: %.2f ms a capture", name.c_str(), r.ms));
+    else if (r.fps > 0)
+        label(kit, parent, format("%s: %.1f FPS %s, %.2f ms", name.c_str(), r.fps, paced, r.ms));
+    else
+        label(kit, parent, format("%s: %.2f ms %s", name.c_str(), r.ms, paced));
     if (!r.captured && r.onGpu)
-        ImGui::Text("  record %.2f, renderer %.2f, GPU %.2f", r.recordMs, r.rendererMs, r.gpuMs);
+        label(kit, parent, format("record %.2f, renderer %.2f, GPU %.2f", r.recordMs, r.rendererMs, r.gpuMs),
+            PrKitTone_Muted);
     else if (!r.captured)
-        ImGui::Text("  record %.2f, renderer %.2f", r.recordMs, r.rendererMs);
+        label(kit, parent, format("record %.2f, renderer %.2f", r.recordMs, r.rendererMs), PrKitTone_Muted);
     if (r.time >= 0 && r.frame >= 0)
-        ImGui::Text("  at %.3f s, frame %.3f", r.time, r.frame);
+        label(kit, parent, format("at %.3f s, frame %.3f", r.time, r.frame), PrKitTone_Muted);
     else if (r.time >= 0)
-        ImGui::Text("  at %.3f s", r.time);
+        label(kit, parent, format("at %.3f s", r.time), PrKitTone_Muted);
     else if (r.frame >= 0)
-        ImGui::Text("  at frame %.3f", r.frame);
+        label(kit, parent, format("at frame %.3f", r.frame), PrKitTone_Muted);
+}
+
+// Creates a segment of a segmented control, and returns true if it is activated.
+bool segment(PrKit* kit, PrLayoutNode control, PrStringView name, bool selected) {
+    return prKitActivated(kit, prKitSegment(kit, control, {.label = name, .selected = selected}));
+}
+
+// Creates the panel's view controls: one render or two, how two compare, the zoom, and the clock.
+void viewControls(const Round& r, PrLayoutNode parent) {
+    PrKit* kit = r.ui->kit;
+    Choices& c = *r.choices;
+    PrKitChoiceStyle small{.size = PrKitControlSize_Sm};
+    PrLayoutNode view = prKitSegmented(kit, parent, {}, small);
+    if (segment(kit, view, "Single", c.view == View_Single))
+        c.view = View_Single;
+    if (segment(kit, view, "Compare", c.view == View_Compare))
+        c.view = View_Compare;
+    if (c.view == View_Compare) {
+        paneControls(r, parent, "Second", c.panes[1]);
+        PrLayoutNode look = prKitSegmented(kit, parent, {}, small);
+        if (segment(kit, look, "Side by side", c.look == Look_SideBySide))
+            c.look = Look_SideBySide;
+        if (segment(kit, look, "Flip", c.look == Look_Flip))
+            c.look = Look_Flip;
+        if (segment(kit, look, "Difference", c.look == Look_Difference))
+            c.look = Look_Difference;
+        if (c.look == Look_Flip)
+            prKitCheckbox(kit, parent, {.value = &c.showingSecond, .label = "Showing the second"}, small);
+    }
+    // Both views zoom and pan.
+    PrLayoutNode zoom = buttonRow(kit, parent);
+    label(kit, zoom, format("Zoom %.0f%%%s", double(r.figures->zoom) * 100, c.fit ? ", fitted" : ""));
+    if (button(kit, zoom, "Fit")) {
+        c.fit = true;
+        c.panX = 0;
+        c.panY = 0;
+    }
+    if (button(kit, zoom, "1:1")) {
+        c.fit = false;
+        c.zoom = 1;
+        c.panX = 0;
+        c.panY = 0;
+    }
+    prKitCheckbox(kit, parent, {.value = &c.backToBack, .label = "Render back to back"}, small);
+    // The clock pauses and steps. Rendering continues either way.
+    PrLayoutNode clock = buttonRow(kit, parent);
+    if (button(kit, clock, c.playing ? "Pause" : "Play"))
+        c.playing = !c.playing;
+    if (button(kit, clock, "<")) {
+        c.playing = false;
+        c.time = std::fmax(c.time - kFrame, 0.0);
+    }
+    if (button(kit, clock, ">")) {
+        c.playing = false;
+        c.time += kFrame;
+    }
+    if (button(kit, clock, "0")) {
+        c.playing = false;
+        c.time = 0;
+    }
+    label(kit, clock, format("%.3f s", c.time));
+}
+
+// Creates the panel's figures, and what the keys do.
+void figureControls(const Round& r, PrLayoutNode parent) {
+    PrKit* kit = r.ui->kit;
+    const Choices& c = *r.choices;
+    const Figures& figures = *r.figures;
+    const Rendered& first = figures.panes[0];
+    if (!first.captured)
+        label(kit, parent, format("%u commands, %ux%u", first.commands, first.width, first.height));
+    renderedText(kit, parent, paneName(c.panes[0], *r.configs, *r.references), first);
+    if (c.view == View_Compare) {
+        renderedText(kit, parent, paneName(c.panes[1], *r.configs, *r.references), figures.panes[1]);
+        if (figures.playing) {
+            label(kit, parent, "comparing needs the clock paused: space", PrKitTone_Warning);
+        } else if (figures.comparing) {
+            label(kit, parent, "comparing...", PrKitTone_Faint);
+        } else if (figures.compared) {
+            const ImageDifference& d = figures.difference;
+            label(kit, parent, format("changed %.3f%%, of content %.3f%%", d.changedRatio * 100, d.contentChangedRatio * 100));
+            label(kit, parent, format("mean error %.3f", d.mae));
+        }
+    }
+    prKitDivider(kit, parent, {});
+    for (const char* line : {"arrows  tree     [ ]  document", "1-9  renderer    V  variant     T  shaper",
+        "C  compare     F  flip     D  difference     X  swap", "scroll  zoom     drag  pan     =  1:1     0  fit",
+                "space  play     , .  frame     Home  start", "Q  quit"})
+        label(kit, parent, line, PrKitTone_Faint);
+    label(kit, parent, format("B  back to back     H  HDR%s", c.hdr ? " (on)" : ""), PrKitTone_Faint);
+}
+
+// Builds a round: the panel at the window's left, and the box left for documents, which draws nothing.
+void build(void* context, PrUi*, const PrUiRound*) {
+    const Round& r = *static_cast<const Round*>(context);
+    Ui& ui = *r.ui;
+    PrKit* kit = ui.kit;
+    Choices& choices = *r.choices;
+    PrKitBoxStyle shell{.direction = PrKitDirection_Row, .place = {.width = prKitFill(), .height = prKitFill()}};
+    PrLayoutNode root = prKitBox(kit, kPrLayoutNodeNone, {}, shell);
+    PrKitSurfaceStyle panelStyle{
+        .box = {
+            .overflow = PrKitOverflow_ScrollY,
+            .gap = kPrKitSpace3,
+            .padding = prKitEdgesXY(kPrKitSpace4, kPrKitSpace4),
+            .place = {.width = prKitPx(kPanel), .height = prKitFill(), .flex = PrKitFlex_Fixed},
+        },
+        .ground = PrKitGround_Panel,
+        .rules = PrKitRuleFlag_Right,
+    };
+    PrLayoutNode panel = prKitSurface(kit, root, {}, panelStyle);
+    ui.slot = prKitBox(kit, root, {}, {.place = {.height = prKitFill(), .flex = PrKitFlex_Fill}});
+
+    const std::vector<Collection>& collections = allCollections();
+    select(kit, panel, collections[choices.collection].name, uint32_t(collections.size()), choices.collection,
+        [&](uint32_t c) { return collections[c].name; }, [&](uint32_t c) {
+            choices.collection = c;
+            choices.document = 0;
+            // A document is first compared with its first reference, which its suite compares Prax with.
+            choices.panes[1].renderer = Renderer_Reference;
+            choices.panes[1].reference = 0;
+        });
+    const Collection& collection = collections[choices.collection];
+    if (ui.tree == nullptr || ui.treeCollection != choices.collection) {
+        ui.tree = std::make_unique<DocumentTree>(collection.documents());
+        ui.tree->filter(ui.filter);
+        ui.treeCollection = choices.collection;
+        // A new tree shows the chosen document.
+        choices.documentChanged = true;
+    }
+    documentTree(r, panel, collection);
+    choices.documentChanged = false;
+    label(ui.kit, panel, collection.documents()[choices.document].description, PrKitTone_Muted);
+    prKitDivider(kit, panel, {});
+    paneControls(r, panel, "First", choices.panes[0]);
+    viewControls(r, panel);
+    prKitDivider(kit, panel, {});
+    figureControls(r, panel);
+}
+
+// Returns true if something of the controls lies at `point`, rather than the box left for documents.
+bool overControls(const Ui& ui, PrVec2 point) {
+    PrLayoutNode top = kPrLayoutNodeNone;
+    prLayoutTreeHitTest(ui.layout, prLayoutVecFromPx(point), &top, 1);
+    return top != kPrLayoutNodeNone && top != ui.slot;
+}
+
+// Returns true if the keyboard is with something that takes every key: a text field or an open menu.
+bool holdsKeys(const Ui& ui) {
+    PrLayoutNode focus = prUiFocus(ui.ui);
+    return focus != kPrLayoutNodeNone && focus != ui.treeView;
 }
 
 } // namespace
@@ -313,213 +479,157 @@ std::string paneName(const PaneChoice& pane, const std::vector<RendererConfig>& 
         prTextShaperBackendName(pane.text.shaper).data + ", " + prFontHintingName(pane.text.hinting).data;
 }
 
-Ui* uiCreate(PrGpuDevice* device) {
-    ImGuiContext* previous = ImGui::GetCurrentContext();
-    Ui* ui = new Ui{ImGui::CreateContext()};
-    use(ui);
-    ImGuiIO& io = ImGui::GetIO();
-    io.IniFilename = nullptr;
-    io.Fonts->AddFontFromFileTTF(PR_FONTS_DIR "/NotoSans.ttf", 15);
-    ImGui::StyleColorsDark();
-    ui->renderer = uiRendererCreate(device);
-    ImGui::SetCurrentContext(previous);
+Ui* uiCreate(PrGpuDevice* device, PrApp* app) {
+    Ui* ui = new Ui{};
+    ui->device = device;
+    ui->fonts = prFontSetCreate(nullptr);
+    prFontBundleInstall(ui->fonts, PrFontBundle_Noto, PR_FONT_BUNDLE_DIR);
+    ui->shaper = prTextShaperCreate(PrTextShaperBackend_Default);
+    PrLayoutTreeDesc tree{.shaper = ui->shaper};
+    ui->layout = prLayoutTreeCreate(&tree);
+    ui->ui = prUiCreate(ui->layout);
+    prUiSetApp(ui->ui, app);
+    PrKitTheme theme = prKitThemeStudio(PrKitThemeVariant_Light, ui->fonts);
+    ui->kit = prKitCreate(ui->ui, &theme);
+    prDrawRendererCreate(PrDrawRendererBackend_Default, device, nullptr, &ui->renderer);
+    ui->frame = prDrawFrameCreate(ui->renderer);
+    ui->list = prDrawListCreate();
     return ui;
 }
 
 void uiDestroy(Ui* ui) {
     if (ui == nullptr)
         return;
-    use(ui);
-    uiRendererDestroy(ui->renderer);
-    ImGui::DestroyContext(ui->context);
+    prLayoutSceneRelease(ui->scene);
+    prDrawListRelease(ui->list);
+    prDrawFrameDestroy(ui->frame);
+    prDrawRendererDestroy(ui->renderer);
+    prKitDestroy(ui->kit);
+    prUiDestroy(ui->ui);
+    prLayoutTreeDestroy(ui->layout);
+    prTextShaperDestroy(ui->shaper);
+    prFontSetDestroy(ui->fonts);
     delete ui;
 }
 
 bool uiEvent(Ui* ui, const PrAppEvent& event) {
-    use(ui);
-    ImGuiIO& io = ImGui::GetIO();
-    modifiers(io, event.modifiers);
     switch (event.kind) {
         case PrAppEventKind_PointerMove:
-            io.AddMousePosEvent(event.position.x, event.position.y);
-            return io.WantCaptureMouse;
         case PrAppEventKind_PointerDown:
-        case PrAppEventKind_PointerUp:
-            io.AddMousePosEvent(event.position.x, event.position.y);
-            if (event.button < ImGuiMouseButton_COUNT)
-                io.AddMouseButtonEvent(event.button, event.kind == PrAppEventKind_PointerDown);
-            return io.WantCaptureMouse;
+        case PrAppEventKind_PointerUp: {
+            ui->pointer = event.position;
+            bool over = overControls(*ui, event.position);
+            bool taken = over || ui->pressed;
+            if (event.kind == PrAppEventKind_PointerDown)
+                ui->pressed = over;
+            else if (event.kind == PrAppEventKind_PointerUp)
+                ui->pressed = false;
+            // The controls see every move, so that their hover follows the pointer out of them, and every press, so
+            // that a press elsewhere closes their menus.
+            prUiPushEvent(ui->ui, &event);
+            return taken;
+        }
         case PrAppEventKind_Scroll:
-            io.AddMouseWheelEvent(-event.delta.x * 0.02f, -event.delta.y * 0.02f);
-            return io.WantCaptureMouse;
+            if (!overControls(*ui, ui->pointer))
+                return false;
+            prUiPushEvent(ui->ui, &event);
+            return true;
         case PrAppEventKind_KeyDown:
         case PrAppEventKind_KeyUp: {
-            io.AddKeyEvent(keyOf(event.key), event.kind == PrAppEventKind_KeyDown);
-            // The tree's cursor moves by the arrow and page keys (moveCursor).
+            if (holdsKeys(*ui)) {
+                prUiPushEvent(ui->ui, &event);
+                return true;
+            }
+            // The tree takes the arrow and page keys. The rest are the viewer's.
             bool moves = event.key == PrAppKey_Up || event.key == PrAppKey_Down || event.key == PrAppKey_Left ||
                 event.key == PrAppKey_Right || event.key == PrAppKey_PageUp || event.key == PrAppKey_PageDown;
-            return io.WantCaptureKeyboard || moves;
+            if (moves)
+                prUiPushEvent(ui->ui, &event);
+            return moves;
         }
-        case PrAppEventKind_Text: {
-            std::string text(event.text.data, event.text.size);
-            io.AddInputCharactersUTF8(text.c_str());
-            return io.WantTextInput;
-        }
+        case PrAppEventKind_Text:
+        case PrAppEventKind_CompositionUpdate:
+        case PrAppEventKind_CompositionEnd:
+            if (!holdsKeys(*ui))
+                return false;
+            prUiPushEvent(ui->ui, &event);
+            return true;
+        case PrAppEventKind_Clipboard:
+            prUiPushEvent(ui->ui, &event);
+            return true;
         default:
             return false;
     }
 }
 
-PrRect uiLayout(Ui* ui, float width, float height, float pixelRatio, double delta,
-        const std::vector<RendererConfig>& configs, const std::vector<Reference>& references,
-        const Figures& figures, Choices& choices) {
-    use(ui);
-    ImGuiIO& io = ImGui::GetIO();
-    io.DisplaySize = ImVec2(width, height);
-    io.DisplayFramebufferScale = ImVec2(pixelRatio, pixelRatio);
-    io.DeltaTime = delta > 0 ? float(delta) : 1.0f / 60;
-    ImGui::NewFrame();
+PrRect uiLayout(Ui* ui, const PrAppFrame* frame, bool pageKeys, const std::vector<RendererConfig>& configs,
+        const std::vector<Reference>& references, const Figures& figures, Choices& choices) {
+    if (frame->preferences.colorScheme != ui->scheme) {
+        ui->scheme = frame->preferences.colorScheme;
+        PrKitThemeVariant variant =
+            ui->scheme == PrAppColorScheme_Dark ? PrKitThemeVariant_Dark : PrKitThemeVariant_Light;
+        PrKitTheme theme = prKitThemeStudio(variant, ui->fonts);
+        prKitSetTheme(ui->kit, &theme);
+    }
+    Round round{ui, &configs, &references, &figures, &choices, frame->extent.y, pageKeys};
+    PrUiFrameDesc desc{
+        .time = frame->time,
+        .delta = frame->delta,
+        .extent = frame->extent,
+        .maxRounds = 4,
+        .display = frame->display,
+        .preferences = frame->preferences,
+    };
+    prUiFrame(ui->ui, &desc, build, &round);
+    ui->pixelRatio = frame->display.pixelRatio;
+    ui->images.clear();
+    return prLayoutRectToPx(prLayoutNodeBounds(ui->layout, ui->slot, PrLayoutCoordinates_Viewport));
+}
 
-    ImGui::SetNextWindowPos(ImVec2(0, 0));
-    ImGui::SetNextWindowSize(ImVec2(kPanel, height));
-    ImGui::Begin("Viewer", nullptr, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize |
-        ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoBringToFrontOnFocus);
-    const std::vector<Collection>& collections = allCollections();
-    ImGui::SetNextItemWidth(-1);
-    if (ImGui::BeginCombo("##collection", collections[choices.collection].name.c_str())) {
-        for (uint32_t c = 0; c < uint32_t(collections.size()); ++c) {
-            if (ImGui::Selectable(collections[c].name.c_str(), c == choices.collection)) {
-                choices.collection = c;
-                choices.document = 0;
-                // A document is first compared with its first reference, which its suite compares Prax with.
-                choices.panes[1].renderer = Renderer_Reference;
-                choices.panes[1].reference = 0;
-            }
-        }
-        ImGui::EndCombo();
-    }
-    // The collection as the combo left it.
-    const Collection& collection = collections[choices.collection];
-    if (ui->tree == nullptr || ui->treeCollection != choices.collection) {
-        ui->tree = std::make_unique<DocumentTree>(collection.documents());
-        ui->tree->filter(ui->filter);
-        ui->treeCollection = choices.collection;
-        // A new tree shows the chosen document.
-        choices.documentChanged = true;
-    }
-    documentTree(ui, collection, height * 0.45f, choices);
-    choices.documentChanged = false;
-    const Document& document = collection.documents()[choices.document];
-    ImGui::TextWrapped("%s", document.description.c_str());
-    ImGui::Separator();
-
-    paneControls("First", configs, references, choices.panes[0]);
-    int view = choices.view == View_Single ? 0 : 1;
-    ImGui::RadioButton("Single", &view, 0);
-    ImGui::SameLine();
-    ImGui::RadioButton("Compare", &view, 1);
-    choices.view = view == 0 ? View_Single : View_Compare;
-    if (choices.view == View_Compare) {
-        paneControls("Second", configs, references, choices.panes[1]);
-        int look = int(choices.look);
-        ImGui::RadioButton("Side by side", &look, int(Look_SideBySide));
-        ImGui::SameLine();
-        ImGui::RadioButton("Flip", &look, int(Look_Flip));
-        ImGui::SameLine();
-        ImGui::RadioButton("Difference", &look, int(Look_Difference));
-        choices.look = Look(look);
-        if (choices.look == Look_Flip)
-            ImGui::Checkbox("Showing the second", &choices.showingSecond);
-    }
-    // Both views zoom and pan.
-    ImGui::Text("Zoom %.0f%%%s", double(figures.zoom) * 100, choices.fit ? ", fitted" : "");
-    ImGui::SameLine();
-    if (ImGui::SmallButton("Fit")) {
-        choices.fit = true;
-        choices.panX = 0;
-        choices.panY = 0;
-    }
-    ImGui::SameLine();
-    if (ImGui::SmallButton("1:1")) {
-        choices.fit = false;
-        choices.zoom = 1;
-        choices.panX = 0;
-        choices.panY = 0;
-    }
-    ImGui::Separator();
-    ImGui::Checkbox("Render back to back", &choices.backToBack);
-    // The clock pauses and steps. Rendering continues either way.
-    ImGui::Separator();
-    if (ImGui::SmallButton(choices.playing ? "Pause" : "Play"))
-        choices.playing = !choices.playing;
-    ImGui::SameLine();
-    if (ImGui::SmallButton("<")) {
-        choices.playing = false;
-        choices.time = std::fmax(choices.time - kFrame, 0.0);
-    }
-    ImGui::SameLine();
-    if (ImGui::SmallButton(">")) {
-        choices.playing = false;
-        choices.time += kFrame;
-    }
-    ImGui::SameLine();
-    if (ImGui::SmallButton("0")) {
-        choices.playing = false;
-        choices.time = 0;
-    }
-    ImGui::SameLine();
-    ImGui::Text("%.3f s", choices.time);
-    ImGui::Separator();
-
-    const Rendered& r = figures.panes[0];
-    if (!r.captured)
-        ImGui::Text("%u commands, %ux%u", r.commands, r.width, r.height);
-    renderedText(paneName(choices.panes[0], configs, references).c_str(), r);
-    if (choices.view == View_Compare) {
-        renderedText(paneName(choices.panes[1], configs, references).c_str(), figures.panes[1]);
-        if (figures.playing)
-            ImGui::TextColored(ImVec4(1, 0.8f, 0.3f, 1), "comparing needs the clock paused: space");
-        else if (figures.comparing)
-            ImGui::TextDisabled("comparing...");
-        else if (figures.compared) {
-            const ImageDifference& d = figures.difference;
-            ImGui::Text("changed %.3f%%, of content %.3f%%", d.changedRatio * 100, d.contentChangedRatio * 100);
-            ImGui::Text("mean error %.3f", d.mae);
-        }
-    }
-    ImGui::Separator();
-    ImGui::TextDisabled("arrows  tree     [ ]  document");
-    ImGui::TextDisabled("1-9  renderer    V  variant     T  shaper");
-    ImGui::TextDisabled("C  compare     F  flip     D  difference     X  swap");
-    ImGui::TextDisabled("scroll  zoom     drag  pan     =  1:1     0  fit");
-    ImGui::TextDisabled("B  back to back     H  HDR%s", choices.hdr ? " (on)" : "");
-    ImGui::TextDisabled("space  play     , .  frame     Home  start");
-    ImGui::TextDisabled("Q  quit");
-    ImGui::End();
-    return PrRect{kPanel, 0, width, height};
+PrAppOutput uiOutput(const Ui* ui) {
+    return prUiOutput(ui->ui);
 }
 
 void uiImage(Ui* ui, PrGpuTexture texture, PrRect clip, PrRect destination, bool nearest) {
-    use(ui);
-    ImTextureID id = uiRendererTexture(ui->renderer, texture);
-    if (id == ImTextureID_Invalid)
-        return;
-    ImDrawList* draw = ImGui::GetBackgroundDrawList();
-    const ImGuiPlatformIO& platform = ImGui::GetPlatformIO();
-    draw->PushClipRect(ImVec2(clip.left, clip.top), ImVec2(clip.right, clip.bottom), true);
-    if (nearest && platform.DrawCallback_SetSamplerNearest != nullptr)
-        draw->AddCallback(platform.DrawCallback_SetSamplerNearest, nullptr);
-    draw->AddImage(ImTextureRef(id), ImVec2(destination.left, destination.top),
-        ImVec2(destination.right, destination.bottom));
-    if (nearest && platform.DrawCallback_SetSamplerLinear != nullptr)
-        draw->AddCallback(platform.DrawCallback_SetSamplerLinear, nullptr);
-    draw->PopClipRect();
+    ui->images.push_back(ShownImage{texture, clip, destination, nearest});
+}
+
+void uiPrepare(Ui* ui, PrGpuCommands* commands, PrUVec2 extent, PrPixelFormat format) {
+    const PrLayoutScene* scene = prLayoutTreeScene(ui->layout);
+    prLayoutSceneRelease(ui->scene);
+    ui->scene = scene;
+    ui->scrolls.resize(prLayoutSceneScrolls(ui->layout, scene, nullptr, 0));
+    prLayoutSceneScrolls(ui->layout, scene, ui->scrolls.data(), uint32_t(ui->scrolls.size()));
+    PrLayoutScenePlayOptions options = prLayoutScenePlayOptionsDefault();
+    options.scrolls = ui->scrolls.data();
+    options.scrollCount = uint32_t(ui->scrolls.size());
+    options.canvasFilled = true;
+
+    PrDrawList* list = ui->list;
+    prDrawListClear(list);
+    prDrawListPushTransformAffine2(list, prAffine2Scale(PrVec2{ui->pixelRatio, ui->pixelRatio}));
+    // The renders go first, so that a menu that opens over them covers them.
+    for (const ShownImage& image : ui->images) {
+        PrUVec2 size = prGpuTextureExtent(ui->device, image.texture);
+        PrRect all{0, 0, float(size.x), float(size.y)};
+        PrDrawSource source =
+            prDrawSourceTexture(prDrawGpuTexture(image.texture), size, all, PrDrawAlpha_Premultiplied);
+        PrDrawSampling sampling = image.nearest ? PrDrawSampling_Nearest : PrDrawSampling_Linear;
+        prDrawListPushClipRect(list, image.clip, PrDrawEdges_Aliased);
+        PrDrawBrush brush = prDrawBrushImage(source, image.destination, sampling);
+        PrDrawPaint paint{};
+        paint.brush = &brush;
+        prDrawListRect(list, image.destination, paint);
+        prDrawListPopClip(list);
+    }
+    prLayoutScenePlay(scene, list, &options);
+    prDrawListPopTransform(list);
+    PrDrawTarget target{.extent = extent, .format = format, .commands = commands};
+    prDrawFramePrepare(ui->frame, list, &target);
 }
 
 void uiEncode(Ui* ui, PrGpuPass* pass) {
-    use(ui);
-    ImGui::Render();
-    uiRendererRender(ui->renderer, ImGui::GetDrawData(), pass);
+    prDrawFrameRender(ui->frame, pass, PrIVec2{0, 0});
 }
 
 } // namespace viewer

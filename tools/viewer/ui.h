@@ -1,11 +1,11 @@
-// The viewer's controls: the lists, choices and figures beside the documents. Dear ImGui draws them, and no other file
-// of the viewer uses it.
+// The viewer's controls: the lists, choices and figures beside the documents, in Studio Kit.
 
 #pragma once
 
 #include "pr/app.h"
 #include "pr/geom.h"
 #include "pr/gpu.h"
+#include "pr/pixels.h"
 #include "pr/status.h"
 
 #include "tools/harness/compare.h"
@@ -139,22 +139,27 @@ void chooseFamily(PaneChoice& pane, const std::vector<RendererConfig>& configs, 
 std::string paneName(const PaneChoice& pane, const std::vector<RendererConfig>& configs,
     const std::vector<Reference>& references);
 
-// Creates controls drawn on the device, a device of prGpuDeviceCreate, which renders them into the frame after the
+// Creates controls drawn on the device, a device of prGpuDeviceCreate, which renders them into the frame over the
 // documents.
-Ui* uiCreate(PrGpuDevice* device);
+Ui* uiCreate(PrGpuDevice* device, PrApp* app);
 
 // Destroys the controls.
 void uiDestroy(Ui* ui);
 
-// Passes an input to the controls. Returns true if they take it rather than the documents.
+// Passes an input to the controls. Returns true if they take it, so that nothing else acts on it. The pointer is theirs
+// over them and while a press on them is held. The keys are theirs while a text field or a menu has focus, and the keys
+// that move in the list of documents are always theirs. A page that holds the keyboard is sent its keys without passing
+// them here.
 bool uiEvent(Ui* ui, const PrAppEvent& event);
 
-// Lays out the controls over a window of `width` by `height` logical pixels, at `pixelRatio` target pixels per logical
-// pixel. `delta` is the time in seconds since the last layout. Applies what the controls changed to `choices`.
-// `references` are the shown document's own references. Returns the rectangle left for documents, in logical pixels.
-PrRect uiLayout(Ui* ui, float width, float height, float pixelRatio, double delta,
-    const std::vector<RendererConfig>& configs, const std::vector<Reference>& references,
-    const Figures& figures, Choices& choices);
+// Lays out the controls for the frame, and applies what they changed to `choices`. `pageKeys` is true while a page
+// holds the keyboard, so that the controls give up focus. `references` are the shown document's own references. Returns
+// the rectangle left for documents, in logical pixels.
+PrRect uiLayout(Ui* ui, const PrAppFrame* frame, bool pageKeys, const std::vector<RendererConfig>& configs,
+    const std::vector<Reference>& references, const Figures& figures, Choices& choices);
+
+// The cursor that the controls show at the pointer.
+PrAppOutput uiOutput(const Ui* ui);
 
 // Draws the texture into the frame at `destination`, clipped to `clip`, under the controls laid out last. Both
 // rectangles are in logical pixels. If `nearest` is true, the texture is sampled by nearest texel, and zoomed pixels
@@ -162,7 +167,11 @@ PrRect uiLayout(Ui* ui, float width, float height, float pixelRatio, double delt
 // while the frame draws it.
 void uiImage(Ui* ui, PrGpuTexture texture, PrRect clip, PrRect destination, bool nearest);
 
-// Draws the images and controls of the frame's layout into `pass`, which is open over the frame.
+// Prepares the images and controls of the frame's layout, for a frame of `extent` target pixels in `format`. This comes
+// before the pass that uiEncode draws in.
+void uiPrepare(Ui* ui, PrGpuCommands* commands, PrUVec2 extent, PrPixelFormat format);
+
+// Draws what uiPrepare prepared into `pass`, which is open over the frame.
 void uiEncode(Ui* ui, PrGpuPass* pass);
 
 } // namespace viewer

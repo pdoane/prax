@@ -11,6 +11,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <mutex>
 #include <string>
 
 namespace viewer {
@@ -97,6 +98,10 @@ std::vector<LoadedFont>& loadedFonts() {
 
 PrTextGlyphBuffer* glyphBuffer;
 
+// Panes draw on their own threads, and the drawings share their captions, images, fonts and glyph buffer, so one
+// drawing records at a time.
+std::mutex drawingLock;
+
 // The shaper and the hinter of the drawing that is being drawn on this thread, and the display that it is drawn for
 // (drawDrawing).
 thread_local PrTextShaper* currentShaper = nullptr;
@@ -149,6 +154,7 @@ void drawCaptions(PrDrawList* list) {
 
 void drawDrawing(const Drawing& drawing, PrDrawList* list, PrTextShaper* shaper, PrFontHinter* PR_NULLABLE hinter,
         const PrAppDisplay& display, float width, float height, double time) {
+    std::lock_guard lock(drawingLock);
     currentShaper = shaper;
     currentHinter = hinter;
     currentDisplay = display;

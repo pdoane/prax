@@ -251,6 +251,11 @@ void input(Loaded& loaded, const PrAppEvent& event) {
         htmlInput(*loaded.html, event);
 }
 
+PrAppOutput output(Loaded& loaded) {
+    std::lock_guard<std::mutex> lock(loaded.mutex);
+    return loaded.html != nullptr ? htmlOutput(*loaded.html) : PrAppOutput{};
+}
+
 const std::vector<Document>& Collection::documents() const {
     if (listed_ == nullptr)
         listed_ = std::make_shared<const std::vector<Document>>(list());

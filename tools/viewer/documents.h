@@ -148,6 +148,9 @@ bool takesInput(const Loaded& loaded);
 // input's effect from its next draw on.
 void input(Loaded& loaded, const PrAppEvent& event);
 
+// Returns what a document that takes input reports to the window, in its own px.
+PrAppOutput output(Loaded& loaded);
+
 // A named, ordered set of documents, listed on first access. If a view fits the documents to a pane rather than giving
 // them the pane's size, they lay out for `width` by `height` logical pixels.
 struct Collection {

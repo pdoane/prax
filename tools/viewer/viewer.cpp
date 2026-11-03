@@ -1007,7 +1007,7 @@ void start(void* context, PrApp* app, const PrAppFrame*) {
     };
     for (std::unique_ptr<Pane>& pane : v.panes)
         pane = std::make_unique<Pane>(shared, true);
-    v.ui = uiCreate(v.device);
+    v.ui = uiCreate(v.device, app);
 }
 
 void frameDone(void* PR_NULLABLE context, double) {
@@ -1019,6 +1019,25 @@ void frameDone(void* PR_NULLABLE context, double) {
 
 // The viewer thread's frame: the controls, and each pane's latest render, taken as it is, because the panes render
 // independently. The display paces the frames, and taking a pane's render lets the pane start its next.
+bool inside(PrRect r, float x, float y) {
+    return x >= r.left && x < r.right && y >= r.top && y < r.bottom;
+}
+
+// Returns the panel's output with that of the page that holds the keyboard, where its pane shows it.
+PrAppOutput pageOutput(Viewer& v, const PrAppOutput& panel) {
+    uint32_t index = v.pagePane;
+    if (!v.pageKeys)
+        return panel;
+    const PaneSource& source = v.panes[index]->source();
+    if (source.loaded == nullptr || !takesInput(*source.loaded) || !paneShown(v, index))
+        return panel;
+    PrRect rect = paneShownRect(v, index);
+    float zoom = zoomFor(v, rect, PrVec2{source.docWidth, source.docHeight});
+    PrRect at = placed(v, rect, source.docWidth, source.docHeight, zoom);
+    PrAppOutput page = prAppOutputPlaced(output(*source.loaded), PrVec2{at.left, at.top}, zoom);
+    return prAppOutputMerge(panel, page, inside(rect, v.pointerX, v.pointerY));
+}
+
 PrAppOutput frame(void* context, PrApp* app, const PrAppFrame* frame) {
     Viewer& v = *static_cast<Viewer*>(context);
     if (v.swapChain == nullptr || !(frame->extent.x > 0 && frame->extent.y > 0))
@@ -1057,8 +1076,7 @@ PrAppOutput frame(void* context, PrApp* app, const PrAppFrame* frame) {
     if (sizeTexture(v.device, v.frame, width, height, format) != PrStatus_Ok)
         return {};
     std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
-    v.content = uiLayout(v.ui, frame->extent.x, frame->extent.y, pixelRatio, frame->delta, v.configs,
-        shownDocument(v).references, v.figures, v.choices);
+    v.content = uiLayout(v.ui, frame, v.pageKeys, v.configs, shownDocument(v).references, v.figures, v.choices);
     double layoutMs = millisSince(begin);
 
     // The clock starts from zero on each document that the controls or keys turn to, and runs while it plays. When
@@ -1140,6 +1158,7 @@ PrAppOutput frame(void* context, PrApp* app, const PrAppFrame* frame) {
     else
         v.figures.zoom = viewZoom(v, first, paneRect(v, 0));
     // One pass clears the frame to the backdrop, then draws the panes' renders and the controls.
+    uiPrepare(v.ui, commands, PrUVec2{width, height}, format);
     PrGpuSubresources all{};
     prGpuCommandsTextureBarrier(commands, v.frame, all, PrGpuAccessFlag_ShaderRead, PrGpuAccessFlag_ColorAttachment);
     PrGpuPassDesc controls = prGpuPassDescColor(v.frame, PrGpuLoad_Clear, PrColor{kBackdrop.r, kBackdrop.g, kBackdrop.b, 1});
@@ -1218,11 +1237,9 @@ PrAppOutput frame(void* context, PrApp* app, const PrAppFrame* frame) {
         v.choices.document = (v.choices.document + 1) % count;
     }
     // Every refresh shows the panes' latest renders and takes them, which paces the panes' continuous rendering.
-    return PrAppOutput{.wantsFrame = true};
-}
-
-bool inside(PrRect r, float x, float y) {
-    return x >= r.left && x < r.right && y >= r.top && y < r.bottom;
+    PrAppOutput panel = uiOutput(v.ui);
+    panel.wantsFrame = true;
+    return pageOutput(v, panel);
 }
 
 // Zooms both renders by `factor` about the point, which stays fixed in its pane.
@@ -1369,12 +1386,21 @@ void event(void* context, PrApp* app, const PrAppEvent* event) {
     if (v.ui == nullptr)
         return;
     prAppRequestFrame(app);
+    // Each input has one owner. The keys go to a page that holds the keyboard and to nothing else, apart from Command
+    // chords, which stay the viewer's.
+    bool key = event->kind == PrAppEventKind_KeyDown || event->kind == PrAppEventKind_KeyUp ||
+        event->kind == PrAppEventKind_Text || event->kind == PrAppEventKind_CompositionUpdate ||
+        event->kind == PrAppEventKind_CompositionEnd;
+    if (key && toPage(v, *event))
+        return;
     bool taken = uiEvent(v.ui, *event);
+    if (taken && event->kind == PrAppEventKind_PointerDown)
+        v.pageKeys = false;
     if (!taken && event->kind == PrAppEventKind_PointerMove) {
         v.pointerX = event->position.x;
         v.pointerY = event->position.y;
     }
-    if (!taken && !v.dragging && toPage(v, *event))
+    if (!taken && !key && !v.dragging && toPage(v, *event))
         return;
     switch (event->kind) {
         case PrAppEventKind_KeyDown:
