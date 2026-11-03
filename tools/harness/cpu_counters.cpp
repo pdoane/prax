@@ -7,6 +7,8 @@
 
 using namespace pr;
 
+#elif defined(_WIN32)
+#include <windows.h>
 #endif
 
 namespace harness {
@@ -26,6 +28,22 @@ CpuCounters cpuCounters() {
         mach_timebase_info(&timebase);
         double ticks = double(usage.ri_user_time + usage.ri_system_time);
         counters.cpuMillis = ticks * timebase.numer / timebase.denom / 1e6;
+    }
+#elif defined(_WIN32)
+    // Windows counts the cycles that the process's threads ran for, without a driver, but not the instructions they
+    // retired, which need the kernel's performance counters.
+    HANDLE process = GetCurrentProcess();
+    ULONG64 cycles = 0;
+    if (QueryProcessCycleTime(process, &cycles))
+        counters.cycles = double(cycles);
+    FILETIME created{};
+    FILETIME exited{};
+    FILETIME kernel{};
+    FILETIME user{};
+    if (GetProcessTimes(process, &created, &exited, &kernel, &user)) {
+        // The times are in units of 100 nanoseconds.
+        auto ticks = [](FILETIME time) { return double((uint64_t(time.dwHighDateTime) << 32) | time.dwLowDateTime); };
+        counters.cpuMillis = (ticks(kernel) + ticks(user)) / 1e4;
     }
 #endif
     return counters;

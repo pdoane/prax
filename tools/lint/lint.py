@@ -578,7 +578,7 @@ WRAPPERS = {
     "lib/core/backends/posix/src/core_posix_vmem.cpp": {"sys/mman.h"},
     "lib/core/backends/posix/src/core_posix_random.cpp": {"sys/random.h", "unistd.h"},
     "lib/core/backends/windows/src/core_windows_random.cpp": {"windows.h", "bcrypt.h"},
-    "tools/harness/cpu_counters.cpp": {"libproc.h", "mach/mach_time.h", "unistd.h"},
+    "tools/harness/cpu_counters.cpp": {"libproc.h", "mach/mach_time.h", "unistd.h", "windows.h"},
     "lib/core/quickjs_cpp/src/quickjs_callback.cpp": {"stdio.h"},
     "lib/text/backends/coretext/src/text_coretext.cpp": {"CoreText/CoreText.h"},
     "lib/font/backends/coretext/src/font_coretext.cpp": {"CoreText/CoreText.h"},

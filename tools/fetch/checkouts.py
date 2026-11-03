@@ -97,12 +97,18 @@ class Pages:
         dev.python("tools.pages.pages", "roll", *args)
 
 
+# The User-Agent that a download sends: the engine's own (kPrFetchDefaultUserAgent in lib/fetch), as Prax's browser
+# sends it, rather than the one urllib sends.
+USER_AGENT = "Mozilla/5.0 (compatible; Prax)"
+
+
 def download(url, path):
     """Writes what `url` holds to `path`, through a temporary file, so that a failed download leaves nothing."""
     os.makedirs(os.path.dirname(path), exist_ok=True)
     handle, temporary = tempfile.mkstemp(dir=os.path.dirname(path))
+    request = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
     try:
-        with os.fdopen(handle, "wb") as out, urllib.request.urlopen(url) as response:
+        with os.fdopen(handle, "wb") as out, urllib.request.urlopen(request) as response:
             shutil.copyfileobj(response, out)
         os.replace(temporary, path)
     except Exception as error:

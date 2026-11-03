@@ -4,12 +4,13 @@ of each run are written under perf/ab, outside the repository, and the next run 
 
 Measures are compared on the instructions that one call retired (harnessCounters). Instruction counts barely change
 with the machine's load, its clocks or the kind of core that the work ran on, so a run can be compared with another run
-made at any time. Some work still varies a little from run to run, such as the CPU work around a device's frame, so a
-results file holds a few runs. A change is reported if it exceeds the threshold and the spread of the runs on each
-side. Beside it are shown the cycles and the time as they were measured, and the share of the instructions retired on
-performance cores, which explains a change in time when the instructions did not change. If a device did work, its time
-is shown too. Rows without counts, such as the latencies of a paced load, have only times. They are listed with
---all, because they vary with the machine.
+made at any time. Where the system counts no instructions, as Windows does not without a driver, measures are compared
+on cycles, which move with the clocks and the machine's load, so a comparison there wants more runs a side. Some work
+still varies a little from run to run, such as the CPU work around a device's frame, so a results file holds a few runs.
+A change is reported if it exceeds the threshold and the spread of the runs on each side. Beside it are shown the cycles
+and the time as they were measured, and the share of the instructions retired on performance cores, which explains a
+change in time when the instructions did not change. If a device did work, its time is shown too. Rows without counts,
+such as the latencies of a paced load, have only times. They are listed with --all, because they vary with the machine.
 
 A results file names the commit that it measured, whether the tree had changes, the power source, and a hash of the
 workload: the benchmark's script and sources and the inputs that it read. A change of workload is reported, because a
@@ -125,8 +126,7 @@ OTHERS = ("yoga", "taffy")
 def print_engines(results):
     """Prints each row of the engine beside the rows of the same name from the other engines. The columns are each
     engine's instructions, each other engine's instructions and cycles as multiples of the engine's, and the work that
-    each engine did, from the row's shape: the boxes laid out, reused and measured, and, if the row has it, the boxes
-    placed as Taffy places them.
+    each engine did, from the row's shape: the boxes laid out, reused and measured.
 
     Instructions compare two builds of one engine reliably, but not two engines. Waiting, such as on memory that an
     engine allocates, costs cycles that retire no instructions, so the cycles compare the engines."""
@@ -138,9 +138,7 @@ def print_engines(results):
             return "-"
         work = row.get("shape", {})
         cells = "/".join(str(work[key]) if key in work else "-" for key in ("laidOut", "reused", "measured"))
-        if "agrees" in row:
-            cells += " %d/%d" % (row["agrees"], row["boxes"])
-        return cells if work or "agrees" in row else "-"
+        return cells if work else "-"
     header = (["measure", "prax"] + engines + ["x " + e for e in engines] + ["cyc x " + e for e in engines]
               + ["work"] + ["work " + e for e in engines])
     def ratio(row, mine, key):
@@ -159,7 +157,7 @@ def print_engines(results):
     print(common.text_table(header, lines))
     print("x: the other's instructions as a multiple of the engine's, and cyc x its cycles; above 1, the engine is "
           "faster.")
-    print("work: laid out/reused/measured, and on a cold row the boxes placed as Taffy places them.")
+    print("work: laid out/reused/measured.")
 
 
 def timings(results):
@@ -194,25 +192,27 @@ class Change:
         self.name = name
         self.before = before
         self.after = after
+        # The count that the measure is compared on: the instructions, unless no run counted any.
+        self.key = "instructions" if any(c.get("instructions") for c in before + after) else "cycles"
 
     def median(self, side, key):
         return statistics.median(counts[key] for counts in side)
 
-    def instructions(self):
-        return percent(self.median(self.before, "instructions"), self.median(self.after, "instructions"))
+    def change(self):
+        """Returns the change in the compared count, in percent."""
+        return percent(self.median(self.before, self.key), self.median(self.after, self.key))
 
     def noise(self):
-        return max(spread([c["instructions"] for c in self.before]),
-                   spread([c["instructions"] for c in self.after]))
+        return max(spread([c[self.key] for c in self.before]), spread([c[self.key] for c in self.after]))
 
     def changed(self, threshold):
-        """Returns true if the instructions changed by more than the threshold and more than twice the spread of the
+        """Returns true if the compared count changed by more than the threshold and more than twice the spread of the
         runs on either side, with every run of one side beyond every run of the other."""
-        change = self.instructions()
+        change = self.change()
         if abs(change) < max(threshold, 2 * self.noise()):
             return False
-        before = [c["instructions"] for c in self.before]
-        after = [c["instructions"] for c in self.after]
+        before = [c[self.key] for c in self.before]
+        after = [c[self.key] for c in self.after]
         return min(after) > max(before) if change > 0 else max(after) < min(before)
 
     def gpu(self):
@@ -225,11 +225,11 @@ class Change:
         return now, percent(was, now)
 
     def line(self, gpu):
-        was = self.median(self.before, "instructions")
-        now = self.median(self.after, "instructions")
+        was = self.median(self.before, self.key)
+        now = self.median(self.after, self.key)
         cycles = percent(self.median(self.before, "cycles"), self.median(self.after, "cycles"))
         time = statistics.median(c["time"] for c in self.after)
-        cells = [self.name, scaled(was), scaled(now), "%+.1f%%" % self.instructions(), "%+.1f%%" % cycles,
+        cells = [self.name, scaled(was), scaled(now), "%+.1f%%" % self.change(), "%+.1f%%" % cycles,
                  "%.0f%%" % share(self.after[len(self.after) // 2]), duration(time)]
         if gpu:
             device = self.gpu()
@@ -237,7 +237,9 @@ class Change:
         return cells
 
 
-HEADER = ["measure", "instr was", "instr now", "change", "cycles", "p-core", "time"]
+# The columns of a change. `was` and `now` are the compared count: the instructions, or the cycles where no run
+# counted instructions.
+HEADER = ["measure", "was", "now", "change", "cycles", "p-core", "time"]
 
 # The columns for a device's time: the time after, and the change, which varies with the device's clocks.
 GPU_HEADER = ["gpu time", "gpu change"]
@@ -267,7 +269,7 @@ class Assessment:
             self.note = "the base has no counts" if not any(was) else "no counts"
             return
         self.changes = [Change(n, [m[n] for m in was], [m[n] for m in now]) for n in names]
-        self.moved = sorted((c for c in self.changes if c.changed(threshold)), key=lambda c: -abs(c.instructions()))
+        self.moved = sorted((c for c in self.changes if c.changed(threshold)), key=lambda c: -abs(c.change()))
         # If a measure's runs disagree, its work varies from run to run, which hides smaller changes.
         self.unsteady = sorted((c for c in self.changes if c.noise() >= threshold), key=lambda c: -c.noise())
         self.gone = [n for n in was[0] if n not in now[0]]

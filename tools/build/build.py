@@ -10,6 +10,7 @@ import json
 import os
 import shutil
 import subprocess
+import sys
 import tempfile
 
 from tools import dev
@@ -207,12 +208,22 @@ def configure(source, directory, build_type, flags="", out=None):
         dev.run(["cmake", "-S", source, "-B", directory, "-G", "Ninja", "-DCMAKE_BUILD_TYPE=" + build_type,
                  "-DCMAKE_C_FLAGS=" + flags, "-DCMAKE_CXX_FLAGS=" + flags, "-DCMAKE_EXE_LINKER_FLAGS=" + flags,
                  *options()], stdout=out, stderr=out)
-    elif ("PR_DEVELOP:BOOL=ON" not in lines or "PR_PLATFORM_MIMALLOC:BOOL=ON" not in lines
+    # A configure that was stopped before it generated leaves a cache and no build.ninja, which CMake finishes.
+    elif (not os.path.exists(os.path.join(directory, "build.ninja"))
+          or "PR_DEVELOP:BOOL=ON" not in lines or "PR_PLATFORM_MIMALLOC:BOOL=ON" not in lines
           or "CMAKE_BUILD_TYPE:STRING=" + build_type not in lines
           or (openssl and not any(line.startswith("OPENSSL_ROOT_DIR:") and line.endswith("=" + openssl)
                                   for line in lines))):
         dev.run(["cmake", "-S", source, "-B", directory, "-DCMAKE_BUILD_TYPE=" + build_type, *options()], stdout=out,
                 stderr=out)
+
+
+def build_targets(directory):
+    """Returns the names of the targets of the configured build in `directory`, once CMake has regenerated it for any
+    change to the sources. A target that needs a tool, such as Cargo, is in the build only where the tool is."""
+    dev.run(["ninja", "-C", directory, "build.ninja"], stdout=sys.stderr)
+    listed = dev.output(["ninja", "-C", directory, "-t", "targets", "all"])
+    return {line.split(":")[0] for line in listed.splitlines()}
 
 
 def build(name="default", targets=(), keep_going=False):

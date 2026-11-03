@@ -9,7 +9,7 @@ USAGE = {
     "prax": """\
 ./dev.sh prax fit [directory...]
     the pages of suites/prax that do not fit 600x800 in Chrome (tools/suite/prax/suite_fit.py)
-./dev.sh prax stills --out <directory> <directory>... [--page NAME]... [--browser C1|S|F|E]... [--print-only]
+./dev.sh prax stills --out <directory> <directory>... [--page NAME]... [--browser C1|S|F|P]... [--print-only]
                      [--scheme light|dark] [--safari]
     each page of those directories of suites/prax in Chrome, WebKit, Firefox and the engine, and a sheet of the four
     side by side, with each browser's printed pages of the page's pr-paged figures below

@@ -19,19 +19,31 @@ pr_harness(text_view_bench prax::text_view text_view_bench.cpp)
 target_link_libraries(text_view_bench PRIVATE prax::draw prax::font prax::gpu prax::syntax prax::layout prax::text)
 target_compile_definitions(text_view_bench PRIVATE PR_FONTS_DIR="${PROJECT_SOURCE_DIR}/third_party/fonts")
 
-# The flex benchmark, which lays the same trees out in lib/layout, Yoga and Taffy (./dev.sh bench flex). It is built
-# where Cargo is installed. Taffy's side is a Rust static library, which Cargo builds, optimized whatever the build type.
+# The flex benchmark, which lays the same trees out in lib/layout, Yoga and Taffy (./dev.sh bench flex). Taffy's side
+# is a Rust static library, which Cargo builds, optimized whatever the build type. Where Cargo is not installed, the
+# harness lays the trees out in lib/layout and Yoga only, with no reference to check their boxes against.
+pr_dependency_available(yoga)
+file(GLOB_RECURSE PR_YOGA_SOURCES CONFIGURE_DEPENDS ${yoga_SOURCE_DIR}/yoga/*.cpp)
+add_library(yoga STATIC ${PR_YOGA_SOURCES})
+target_include_directories(yoga SYSTEM PUBLIC ${yoga_SOURCE_DIR})
+pr_third_party(yoga)
+
+add_executable(flex_bench
+    flex_bench/flex_bench.cpp
+    flex_bench/prax_engine.cpp
+    flex_bench/yoga_engine.cpp
+)
+target_include_directories(flex_bench PRIVATE ${PROJECT_SOURCE_DIR})
+target_link_libraries(flex_bench PRIVATE prax::layout harness yoga pr_warnings)
+
 find_program(PR_CARGO cargo)
 if (PR_CARGO)
-    pr_dependency_available(yoga taffy)
-    file(GLOB_RECURSE PR_YOGA_SOURCES CONFIGURE_DEPENDS ${yoga_SOURCE_DIR}/yoga/*.cpp)
-    add_library(yoga STATIC ${PR_YOGA_SOURCES})
-    target_include_directories(yoga SYSTEM PUBLIC ${yoga_SOURCE_DIR})
-    pr_third_party(yoga)
-
+    pr_dependency_available(taffy)
     set(FLEX_BENCH_TAFFY ${CMAKE_CURRENT_SOURCE_DIR}/flex_bench/taffy)
     set(FLEX_BENCH_TAFFY_MANIFEST ${CMAKE_CURRENT_BINARY_DIR}/flex_bench_taffy)
-    set(FLEX_BENCH_TAFFY_LIB ${CMAKE_CURRENT_BINARY_DIR}/cargo/release/libflex_bench_taffy.a)
+    # Cargo names a static library as the platform does: libflex_bench_taffy.a, or flex_bench_taffy.lib with MSVC.
+    set(FLEX_BENCH_TAFFY_FILE ${CMAKE_STATIC_LIBRARY_PREFIX}flex_bench_taffy${CMAKE_STATIC_LIBRARY_SUFFIX})
+    set(FLEX_BENCH_TAFFY_LIB ${CMAKE_CURRENT_BINARY_DIR}/cargo/release/${FLEX_BENCH_TAFFY_FILE})
     configure_file(${FLEX_BENCH_TAFFY}/Cargo.toml.in ${FLEX_BENCH_TAFFY_MANIFEST}/Cargo.toml @ONLY)
     configure_file(${FLEX_BENCH_TAFFY}/Cargo.lock ${FLEX_BENCH_TAFFY_MANIFEST}/Cargo.lock COPYONLY)
     file(GLOB_RECURSE PR_TAFFY_SOURCES CONFIGURE_DEPENDS ${taffy_SOURCE_DIR}/src/*.rs)
@@ -45,23 +57,21 @@ if (PR_CARGO)
     add_custom_target(flex_bench_taffy_build DEPENDS ${FLEX_BENCH_TAFFY_LIB})
     add_library(flex_bench_taffy STATIC IMPORTED)
     set_target_properties(flex_bench_taffy PROPERTIES IMPORTED_LOCATION ${FLEX_BENCH_TAFFY_LIB})
+    # Rust's standard library calls the system libraries that a Rust executable links on Windows.
+    if (WIN32)
+        set_target_properties(flex_bench_taffy PROPERTIES INTERFACE_LINK_LIBRARIES "ws2_32;userenv;ntdll;bcrypt")
+    endif()
     add_dependencies(flex_bench_taffy flex_bench_taffy_build)
-
-    add_executable(flex_bench
-        flex_bench/flex_bench.cpp
-        flex_bench/prax_engine.cpp
-        flex_bench/taffy_engine.cpp
-        flex_bench/yoga_engine.cpp
-    )
-    target_include_directories(flex_bench PRIVATE ${PROJECT_SOURCE_DIR})
-    target_link_libraries(flex_bench PRIVATE prax::layout harness yoga flex_bench_taffy pr_warnings)
-
-    # A check that Yoga can set Prax text. It links lib/text and no layout, so it fails if the library comes to need one.
-    add_executable(text_yoga_check flex_bench/text_yoga_check.cpp)
-    target_link_libraries(text_yoga_check PRIVATE prax::font prax::text yoga pr_warnings)
-    target_compile_definitions(text_yoga_check PRIVATE PR_FONTS_DIR="${PROJECT_SOURCE_DIR}/third_party/fonts")
-    add_test(NAME text_yoga_check COMMAND text_yoga_check)
+    target_sources(flex_bench PRIVATE flex_bench/taffy_engine.cpp)
+    target_link_libraries(flex_bench PRIVATE flex_bench_taffy)
 endif()
+target_compile_definitions(flex_bench PRIVATE PR_FLEX_BENCH_TAFFY=$<BOOL:${PR_CARGO}>)
+
+# A check that Yoga can set Prax text. It links lib/text and no layout, so it fails if the library comes to need one.
+add_executable(text_yoga_check flex_bench/text_yoga_check.cpp)
+target_link_libraries(text_yoga_check PRIVATE prax::font prax::text yoga pr_warnings)
+target_compile_definitions(text_yoga_check PRIVATE PR_FONTS_DIR="${PROJECT_SOURCE_DIR}/third_party/fonts")
+add_test(NAME text_yoga_check COMMAND text_yoga_check)
 
 if (PR_JS)
     # What the editor's frames cost, by stage, on the platform's device, over a fixture of the benchmark's own.

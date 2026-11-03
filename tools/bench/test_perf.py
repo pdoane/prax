@@ -38,13 +38,13 @@ class MeasuresTest(unittest.TestCase):
 
     def test_another_engines_measures_are_named_by_it(self):
         row = {"name": "tree cold", "time": 1, "boxes": 4, "counts": {"time": counts(30)}}
-        run = results([dict(row, shape={"laidOut": 4, "reused": 0, "measured": 0}, agrees=1)])
-        run["engines"]["yoga"] = [dict(row, counts={"time": counts(60)}, shape={"laidOut": 4}, agrees=4)]
+        run = results([dict(row, shape={"laidOut": 4, "reused": 0, "measured": 0})])
+        run["engines"]["yoga"] = [dict(row, counts={"time": counts(60)}, shape={"laidOut": 4})]
         self.assertEqual(set(perf.measures(run)), {"tree cold", "tree cold (yoga)"})
         output = io.StringIO()
         with redirect_stdout(output):
             perf.print_engines(run)
-        self.assertRegex(output.getvalue(), r"tree cold\s+30\s+60\s+2\.00\s+2\.00\s+4/0/0 1/4\s+4/-/- 4/4")
+        self.assertRegex(output.getvalue(), r"tree cold\s+30\s+60\s+2\.00\s+2\.00\s+4/0/0\s+4/-/-")
 
 
 class ChangeTest(unittest.TestCase):
@@ -60,6 +60,12 @@ class ChangeTest(unittest.TestCase):
     def test_every_run_of_one_side_is_beyond_every_run_of_the_other(self):
         self.assertTrue(perf.Change("m", [counts(100), counts(101)], [counts(120), counts(121)]).changed(1.0))
         self.assertFalse(perf.Change("m", [counts(100), counts(130)], [counts(120), counts(121)]).changed(1.0))
+
+    def test_runs_that_count_no_instructions_compare_their_cycles(self):
+        change = perf.Change("m", [counts(0, cycles=100)], [counts(0, cycles=110)])
+        self.assertEqual(change.key, "cycles")
+        self.assertTrue(change.changed(1.0))
+        self.assertFalse(perf.Change("m", [counts(0, cycles=100)], [counts(0, cycles=100.5)]).changed(1.0))
 
     def test_the_share_on_performance_cores(self):
         self.assertEqual(perf.share(counts(200, performance=50)), 25.0)

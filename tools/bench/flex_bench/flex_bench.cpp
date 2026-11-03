@@ -1,4 +1,5 @@
-// The flex benchmark, which ./dev.sh bench flex runs. It lays out the same trees in lib/layout, Yoga and Taffy.
+// The flex benchmark, which ./dev.sh bench flex runs. It lays out the same trees in lib/layout, Yoga and, where the
+// build has Cargo, Taffy.
 //
 // The trees are those of Taffy's own flexbox benchmarks (benches/benches/flexbox.rs in Taffy), generated here from this
 // harness's own seed, so they have the shapes and styles of Taffy's trees but not their exact sizes. Every engine lays
@@ -13,16 +14,14 @@
 //   unchanged  a layout after nothing changed
 //
 // A row is an engine's measure of one tree: {"engine", "name": "<tree> <measure>", "time", "counts", "boxes", "shape"}.
-// The shape is the work of one layout as the engine counts it (flex_engine.h). A cold row also has "agrees", the number
-// of boxes that the engine places where Taffy places them, to within a pixel. Rows are written as a JSON array, one row
-// per line.
+// The shape is the work of one layout as the engine counts it (flex_engine.h). Rows are written as a JSON array, one
+// row per line.
 //
-// Usage: flex_bench [--differences] [--repeat MEASURE] [--html NODE] [TREE]...
+// Usage: flex_bench [--repeat MEASURE] [--html NODE] [TREE]...
 //
-// Measures the trees whose names start with one of the TREE arguments, or every tree. --differences prints, on stderr,
-// the first boxes that each engine places differently from Taffy, with the node's style. --repeat runs one measure of
-// the first chosen tree in lib/layout over and over for five minutes (kHarnessRepeatSeconds), for a profiler to sample,
-// and prints nothing. --html prints the subtree at NODE of the first chosen tree as a probe page (./dev.sh probe) that
+// Measures the trees whose names start with one of the TREE arguments, or every tree. --repeat runs one measure of the
+// first chosen tree in lib/layout over and over for five minutes (kHarnessRepeatSeconds), for a profiler to sample, and
+// prints nothing. --html prints the subtree at NODE of the first chosen tree as a probe page (./dev.sh probe) that
 // measures each box by its id, and measures nothing itself. The page shows how the browsers lay out a subtree in which
 // the engines differ.
 
@@ -537,56 +536,10 @@ uint32_t deepestLeaf(const Tree& tree) {
     return best;
 }
 
-std::vector<Box> boxesOf(Engine& engine, const Tree& tree) {
-    std::vector<Box> out(tree.styles.size());
-    for (uint32_t i = 0; i < out.size(); ++i)
-        out[i] = engine.box(i);
-    return out;
-}
-
-bool same(const Box& a, const Box& b) {
-    return std::fabs(a.x - b.x) <= 1 && std::fabs(a.y - b.y) <= 1 && std::fabs(a.width - b.width) <= 1 &&
-        std::fabs(a.height - b.height) <= 1;
-}
-
-uint32_t agreeing(const std::vector<Box>& a, const std::vector<Box>& b) {
-    uint32_t count = 0;
-    for (size_t i = 0; i < a.size(); ++i)
-        count += same(a[i], b[i]);
-    return count;
-}
-
-bool showDifferences = false;
-
 const char* lengthText(FlexLength length, char* buffer, size_t size) {
     if (length.kind == FlexLengthKind_Auto)
         return "auto";
     snprintf(buffer, size, length.kind == FlexLengthKind_Px ? "%gpx" : "%g%%", double(length.value));
-    return buffer;
-}
-
-// Writes the properties that a node's style sets to `buffer`: its sizes and flexibility, and any alignment, direction,
-// gap and auto margins that differ from the initial values.
-const char* styleText(const FlexStyle& style, size_t children, char* buffer, size_t size) {
-    char width[32];
-    char height[32];
-    int at = snprintf(buffer, size, "%zu children, width %s, height %s, grow %g", children,
-        lengthText(style.width, width, sizeof width), lengthText(style.height, height, sizeof height),
-        double(style.grow));
-    auto add = [&](const char* name, int value) {
-        if (value != 0 && at >= 0 && size_t(at) < size)
-            at += snprintf(buffer + at, size - size_t(at), ", %s %d", name, value);
-    };
-    add("direction", style.direction);
-    add("wrap", style.wrap);
-    add("justify", style.justifyContent);
-    add("align-items", style.alignItems);
-    add("align-self", style.alignSelf);
-    add("gap", int(style.gap));
-    add("auto margins", style.marginAuto);
-    add("align-content", style.alignContent);
-    add("position", style.position);
-    add("aspect ratio x100", int(style.aspectRatio * 100));
     return buffer;
 }
 
@@ -693,40 +646,6 @@ addEventListener('load', () => requestAnimationFrame(() => requestAnimationFrame
 )");
 }
 
-// Prints the boxes of `engine` where each difference starts: the first boxes, in the order that the tree made them,
-// that are not where Taffy places them although their parents are. Each is printed with its parent's style and box.
-void printDifferences(const Engine& engine, const char* tree, const Tree& nodes, const std::vector<Box>& boxes,
-        const std::vector<Box>& reference) {
-    std::vector<uint32_t> parents(boxes.size(), UINT32_MAX);
-    for (uint32_t parent = 0; parent < nodes.children.size(); ++parent) {
-        for (uint32_t child : nodes.children[parent])
-            parents[child] = parent;
-    }
-    uint32_t shown = 0;
-    for (uint32_t i = 0; i < boxes.size() && shown < 5; ++i) {
-        if (same(boxes[i], reference[i]))
-            continue;
-        if (parents[i] != UINT32_MAX && !same(boxes[parents[i]], reference[parents[i]]))
-            continue;
-        char own[256];
-        fprintf(stderr, "%s %s node %u (%s): %g,%g %gx%g; taffy %g,%g %gx%g\n", engine.name(), tree, i,
-            styleText(nodes.styles[i], nodes.children[i].size(), own, sizeof own), double(boxes[i].x),
-            double(boxes[i].y), double(boxes[i].width), double(boxes[i].height), double(reference[i].x),
-            double(reference[i].y), double(reference[i].width), double(reference[i].height));
-        if (parents[i] != UINT32_MAX) {
-            uint32_t parent = parents[i];
-            const std::vector<uint32_t>& children = nodes.children[parent];
-            char style[256];
-            fprintf(stderr, "    in node %u (%s): %g,%g %gx%g; taffy %g,%g %gx%g\n", parent,
-                styleText(nodes.styles[parent], children.size(), style, sizeof style), double(boxes[parent].x),
-                double(boxes[parent].y), double(boxes[parent].width), double(boxes[parent].height),
-                double(reference[parent].x), double(reference[parent].y), double(reference[parent].width),
-                double(reference[parent].height));
-        }
-        ++shown;
-    }
-}
-
 void appendShape(TextBuffer* row, const Shape& shape) {
     textAppend(row, ", \"shape\": {");
     const char* separator = "";
@@ -757,8 +676,7 @@ void appendShape(TextBuffer* row, const Shape& shape) {
 
 bool firstRow = true;
 
-void writeRow(const Engine& engine, const Case& c, const char* measure, const HarnessCounters& cost,
-        const Shape* shape, int64_t agrees) {
+void writeRow(const Engine& engine, const Case& c, const char* measure, const HarnessCounters& cost, const Shape* shape) {
     TextBuffer row{};
     textAppend(&row, firstRow ? "\n  {\"engine\": " : ",\n  {\"engine\": ");
     firstRow = false;
@@ -769,8 +687,6 @@ void writeRow(const Engine& engine, const Case& c, const char* measure, const Ha
     harnessAppendFormat(&row, ", \"time\": %.6f, \"boxes\": %zu", cost.millis, c.tree.styles.size());
     if (shape != nullptr)
         appendShape(&row, *shape);
-    if (agrees >= 0)
-        harnessAppendFormat(&row, ", \"agrees\": %lld", static_cast<long long>(agrees));
     HarnessCounts counts{};
     harnessCountsAdd(&counts, "time", cost);
     harnessCountsWrite(&counts, &row);
@@ -787,14 +703,14 @@ Shape counted(Engine& engine, Step step) {
     return engine.stopCounting();
 }
 
-void measure(Engine& engine, const Case& c, const std::vector<Box>& reference) {
+void measure(Engine& engine, const Case& c) {
     const Tree& tree = c.tree;
     engine.prepare(tree);
     HarnessCounters build = harnessMeasure([&] {
         engine.build(tree);
         engine.destroy();
     });
-    writeRow(engine, c, "build", build, nullptr, -1);
+    writeRow(engine, c, "build", build, nullptr);
 
     HarnessCounters cold = harnessMeasure([&] {
         engine.build(tree);
@@ -803,10 +719,7 @@ void measure(Engine& engine, const Case& c, const std::vector<Box>& reference) {
     });
     engine.build(tree);
     Shape coldShape = counted(engine, [&] { engine.layout(kViewportWidth, kViewportHeight); });
-    std::vector<Box> boxes = boxesOf(engine, tree);
-    if (showDifferences && !c.local)
-        printDifferences(engine, c.name, tree, boxes, reference);
-    writeRow(engine, c, "cold", cold, &coldShape, c.local ? int64_t(-1) : int64_t(agreeing(boxes, reference)));
+    writeRow(engine, c, "cold", cold, &coldShape);
 
     // Each step toggles the width between two values, so that every call lays out after a change.
     bool narrow = false;
@@ -818,7 +731,7 @@ void measure(Engine& engine, const Case& c, const std::vector<Box>& reference) {
     };
     HarnessCounters resized = harnessMeasure(resize);
     Shape resizeShape = counted(engine, resize);
-    writeRow(engine, c, "resize", resized, &resizeShape, -1);
+    writeRow(engine, c, "resize", resized, &resizeShape);
     if (narrow)
         resize();
 
@@ -831,11 +744,11 @@ void measure(Engine& engine, const Case& c, const std::vector<Box>& reference) {
     };
     HarnessCounters changed = harnessMeasure(change);
     Shape changeShape = counted(engine, change);
-    writeRow(engine, c, "change", changed, &changeShape, -1);
+    writeRow(engine, c, "change", changed, &changeShape);
 
     HarnessCounters unchanged = harnessMeasure([&] { engine.layout(kViewportWidth, kViewportHeight); });
     Shape unchangedShape = counted(engine, [&] { engine.layout(kViewportWidth, kViewportHeight); });
-    writeRow(engine, c, "unchanged", unchanged, &unchangedShape, -1);
+    writeRow(engine, c, "unchanged", unchanged, &unchangedShape);
     engine.destroy();
 }
 
@@ -888,9 +801,7 @@ int main(int argc, char** argv) {
     const char* repeated = nullptr;
     int64_t html = -1;
     for (int i = 1; i < argc; ++i) {
-        if (strcmp(argv[i], "--differences") == 0)
-            showDifferences = true;
-        else if (strcmp(argv[i], "--html") == 0 && i + 1 < argc)
+        if (strcmp(argv[i], "--html") == 0 && i + 1 < argc)
             html = atoll(argv[++i]);
         else if (strcmp(argv[i], "--repeat") == 0 && i + 1 < argc)
             repeated = argv[++i];
@@ -900,8 +811,9 @@ int main(int argc, char** argv) {
     std::vector<std::unique_ptr<Engine>> engines;
     engines.push_back(makePrax());
     engines.push_back(makeYoga());
+#if PR_FLEX_BENCH_TAFFY
     engines.push_back(makeTaffy());
-    Engine& taffy = *engines[2];
+#endif
 
     if (html < 0)
         printf("[");
@@ -920,16 +832,11 @@ int main(int argc, char** argv) {
             return 0;
         }
         if (c.local) {
-            measure(*engines[0], c, {});
+            measure(*engines[0], c);
             continue;
         }
-        taffy.prepare(c.tree);
-        taffy.build(c.tree);
-        taffy.layout(kViewportWidth, kViewportHeight);
-        std::vector<Box> reference = boxesOf(taffy, c.tree);
-        taffy.destroy();
         for (const std::unique_ptr<Engine>& engine : engines)
-            measure(*engine, c, reference);
+            measure(*engine, c);
     }
     printf("\n]\n");
     return 0;

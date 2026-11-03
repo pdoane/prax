@@ -47,7 +47,9 @@ def compare(suite, args, env):
     selection = hashlib.sha1(" ".join(rest).encode()).hexdigest()[:12]
     results = os.path.join(builds.AB, "suites", base.sha or "directory", "%s-%s.json" % (suite.name, selection))
     if base.directory or not os.path.exists(results):
-        harnesses = base.harnesses(suite.harnesses)
+        harnesses, absent = base.harnesses(suite.harnesses)
+        if absent:
+            dev.fail("the base's build has no %s, which the suite runs" % ", ".join(absent))
         runner = base.runner()
         os.makedirs(os.path.dirname(results), exist_ok=True)
         print("--- %s at %s%s" % (suite.name, base.label, "" if base.directory else ", once for this commit"),

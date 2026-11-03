@@ -477,7 +477,8 @@ class Chrome:
     def __init__(self):
         browser = browsers.BROWSERS["chrome"]
         if not browser.installed(None):
-            sys.exit("pages are captured with Chrome, which is not installed at %s" % browser.app)
+            sys.exit("pages are captured with Chrome, which is not installed at %s" % (browser.path(None) or
+                                                                                    "a location known on this platform"))
         self.profile = tempfile.mkdtemp(prefix="pages-chrome-")
         self.port = free_port()
         self.process = subprocess.Popen(

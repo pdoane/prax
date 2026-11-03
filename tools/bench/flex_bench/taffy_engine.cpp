@@ -12,7 +12,6 @@ extern "C" uint64_t prFlexTaffyNodeNew(TaffyTree* tree, const FlexStyle* style, 
 extern "C" void prFlexTaffyNodeSetStyle(TaffyTree* tree, uint64_t node, const FlexStyle* style);
 extern "C" void prFlexTaffyLayout(TaffyTree* tree, uint64_t root, float width, float height);
 extern "C" uint32_t prFlexTaffyLayoutCounted(TaffyTree* tree, uint64_t root, float width, float height);
-extern "C" void prFlexTaffyNodeBox(const TaffyTree* tree, uint64_t node, float* out);
 
 namespace flex_bench {
 namespace {
@@ -31,7 +30,6 @@ public:
         tree_ = prFlexTaffyTreeNew();
         built_ = &tree;
         nodes_.assign(tree.styles.size(), 0);
-        parents_.assign(tree.styles.size(), UINT32_MAX);
         root_ = make(tree, tree.root);
     }
 
@@ -61,26 +59,12 @@ public:
         return Shape{.measured = measured_};
     }
 
-    Box box(uint32_t index) override {
-        float rect[4];
-        prFlexTaffyNodeBox(tree_, nodes_[index], rect);
-        Box out{0, 0, rect[2], rect[3]};
-        for (uint32_t at = index; at != UINT32_MAX; at = parents_[at]) {
-            prFlexTaffyNodeBox(tree_, nodes_[at], rect);
-            out.x += rect[0];
-            out.y += rect[1];
-        }
-        return out;
-    }
-
 private:
     // Taffy creates a node together with its children, so the children are made first. Their nodes are gathered after
     // all of them are made, so one buffer serves every level.
     uint64_t make(const Tree& tree, uint32_t index) {
-        for (uint32_t child : tree.children[index]) {
+        for (uint32_t child : tree.children[index])
             make(tree, child);
-            parents_[child] = index;
-        }
         children_.clear();
         for (uint32_t child : tree.children[index])
             children_.push_back(nodes_[child]);
@@ -92,7 +76,6 @@ private:
     uint64_t root_ = 0;
     const Tree* built_ = nullptr;
     std::vector<uint64_t> nodes_;
-    std::vector<uint32_t> parents_;
     std::vector<uint64_t> children_;
     bool counting_ = false;
     int64_t measured_ = -1;

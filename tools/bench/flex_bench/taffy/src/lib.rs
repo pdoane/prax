@@ -230,16 +230,3 @@ pub unsafe extern "C" fn taffy_layout_counted(tree: *mut Tree, root: u64, width:
     measured
 }
 
-/// The border box of `node` from its parent's border box: left, top, width and height.
-///
-/// # Safety
-/// `tree` is live, `node` is its node, and `out` points to four floats.
-#[export_name = "prFlexTaffyNodeBox"]
-pub unsafe extern "C" fn taffy_node_box(tree: *const Tree, node: u64, out: *mut f32) {
-    let layout = (*tree).taffy.layout(NodeId::from(node)).expect("a node");
-    let out = std::slice::from_raw_parts_mut(out, 4);
-    out[0] = layout.location.x;
-    out[1] = layout.location.y;
-    out[2] = layout.size.width;
-    out[3] = layout.size.height;
-}

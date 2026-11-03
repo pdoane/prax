@@ -66,6 +66,11 @@ def build(names, extra=()):
     """Builds the release build's harnesses of the benchmarks, and the `extra` targets."""
     builds.configure(dev.ROOT, builds.RELEASE, "Release")
     targets = harnesses(names) + list(extra)
+    present = builds.build_targets(builds.RELEASE)
+    missing = [target for target in targets if target not in present]
+    if missing:
+        dev.fail("the build has no %s, which tools/bench/CMakeLists.txt builds only where its tools are installed"
+                 % ", ".join(missing))
     dev.run(["cmake", "--build", builds.RELEASE] + [part for target in targets for part in ("--target", target)])
 
 
@@ -118,9 +123,20 @@ def compare(args):
     fetch(names)
     build(names)
     base = ab.Base(ref, directory)
-    base_bin = base.harnesses(harnesses(names))
+    base_bin, absent = base.harnesses(harnesses(names))
+    # A benchmark whose harness the base's build does not have, such as one that a later commit added, has nothing to
+    # compare with.
+    compared = []
+    for bench in registry.named(names):
+        lacking = [target for target in bench.harnesses if target in absent]
+        if lacking:
+            print("%s: not compared, because the base's build has no %s" % (bench.name, ", ".join(lacking)), flush=True)
+        else:
+            compared.append(bench.name)
+    if not compared:
+        dev.fail("no benchmark has a harness in both builds")
     power()
-    perf.ab(names, base_bin, base.label, builds.RELEASE, runs, threshold, everything, rest)
+    perf.ab(compared, base_bin, base.label, builds.RELEASE, runs, threshold, everything, rest)
 
 
 def scripted(command, args):

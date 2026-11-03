@@ -14,6 +14,7 @@ import ctypes
 import http.server
 import json
 import os
+import re
 import subprocess
 import sys
 import threading
@@ -21,35 +22,53 @@ import threading
 import tools
 
 class Browser:
-    """A browser to compare with. It is either an application, or `host`, a harness in the build that the runner
-    launches with a URL. `arguments(profile)` returns the arguments that precede the URL, `profile(directory,
-    preferences)` writes a fresh profile into the directory, with `preferences` beside its own, and `environment` holds
-    variables added to the browser's environment."""
+    """A browser to compare with. It is either an application, installed where `programs` says for each platform
+    (sys.platform), or `host`, a harness in the build that the runner launches with a URL. `arguments(profile)`
+    returns the arguments that precede the URL, `profile(directory, preferences)` writes a fresh profile into the
+    directory, with `preferences` beside its own, and `environment` holds variables added to the browser's
+    environment."""
 
-    def __init__(self, app=None, executable=None, arguments=None, profile=None, host=None, environment=None):
-        self.app = app
-        self.executable = executable
+    def __init__(self, programs=None, arguments=None, profile=None, host=None, environment=None):
+        self.programs = programs or {}
         self.arguments = arguments or (lambda profile: [])
         self.profile = profile
         self.host = host
         self.environment = environment or {}
 
     def path(self, directory):
-        """Returns the program to launch, given that the harnesses are in `directory`."""
-        return os.path.join(directory, self.host) if self.host else os.path.join(self.app, "Contents", "MacOS",
-                                                                                 self.executable)
+        """Returns the program to launch, given that the harnesses are in `directory`, or "" if the browser has no
+        program on this platform."""
+        if self.host:
+            return os.path.join(directory, self.host)
+        return self.programs.get(sys.platform, "")
 
     def installed(self, directory):
-        return os.path.exists(self.path(directory))
+        path = self.path(directory)
+        return path != "" and os.path.exists(path)
 
     def version(self):
-        if self.host:
-            plist = "/System/Library/Frameworks/WebKit.framework/Resources/Info.plist"
-            key = "CFBundleVersion"
-        else:
-            plist = os.path.join(self.app, "Contents", "Info.plist")
-            key = "CFBundleShortVersionString"
-        return subprocess.run(["plutil", "-extract", key, "raw", plist], capture_output=True, text=True).stdout.strip()
+        """Returns the installed version, or "" if it cannot be read."""
+        if sys.platform == "darwin":
+            if self.host:
+                plist = "/System/Library/Frameworks/WebKit.framework/Resources/Info.plist"
+                key = "CFBundleVersion"
+            else:
+                plist = os.path.join(self.path(None).split(".app/")[0] + ".app", "Contents", "Info.plist")
+                key = "CFBundleShortVersionString"
+            return subprocess.run(["plutil", "-extract", key, "raw", plist], capture_output=True,
+                                  text=True).stdout.strip()
+        if self.host or not self.installed(None):
+            return ""
+        # On Windows, Chrome keeps each version in a directory of its number beside its program, and Firefox writes
+        # its version into application.ini.
+        folder = os.path.dirname(self.path(None))
+        ini = os.path.join(folder, "application.ini")
+        if os.path.exists(ini):
+            for line in open(ini, encoding="utf-8", errors="replace"):
+                if line.startswith("Version="):
+                    return line.strip()[len("Version="):]
+        numbered = [name for name in os.listdir(folder) if re.fullmatch(r"[0-9]+(\.[0-9]+)+", name)]
+        return max(numbered, key=lambda name: [int(part) for part in name.split(".")], default="")
 
     def launch(self, url, profile, directory, extra=(), preferences=None):
         """Opens `url`, with `extra` arguments after the browser's own and `preferences` in its profile, and returns the
@@ -98,13 +117,19 @@ def firefox_profile(profile, preferences=None):
             f.write("user_pref(%s, %s);\n" % (json.dumps(key), json.dumps(value)))
 
 
+# Where Windows installs programs for every user.
+PROGRAM_FILES = os.environ.get("PROGRAMFILES", r"C:\Program Files")
+
 BROWSERS = {
-    "chrome": Browser("/Applications/Google Chrome.app", "Google Chrome", chrome_arguments),
+    "chrome": Browser({"darwin": "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+                       "win32": os.path.join(PROGRAM_FILES, "Google", "Chrome", "Application", "chrome.exe")},
+                      chrome_arguments),
     # The system's WebKit, which Safari uses, in a window of its own instead of in the developer's Safari.
     "webkit": Browser(host="webkit_host"),
     # Firefox installs a staged update the next time it launches, and macOS asks the terminal that launched it for
     # permission. A run leaves the update for the next time the developer launches Firefox.
-    "firefox": Browser("/Applications/Firefox.app", "firefox",
+    "firefox": Browser({"darwin": "/Applications/Firefox.app/Contents/MacOS/firefox",
+                        "win32": os.path.join(PROGRAM_FILES, "Mozilla Firefox", "firefox.exe")},
                        lambda profile: ["-no-remote", "-profile", profile, "-new-window"], firefox_profile,
                        environment={"MOZ_DISABLE_UPDATE_PROCESSING": "1"}),
 }

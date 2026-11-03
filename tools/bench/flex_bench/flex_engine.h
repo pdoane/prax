@@ -28,11 +28,6 @@ struct Tree {
     }
 };
 
-// A node's border box in the viewport's coordinates, in pixels.
-struct Box {
-    float x, y, width, height;
-};
-
 // The work of a layout, as each engine counts it. A count that an engine does not keep is -1.
 //
 // `laidOut` is the number of boxes that the layout laid out instead of reusing. `reused` is the number of boxes whose
@@ -88,9 +83,6 @@ public:
     // Starts counting the work of the layouts that follow, or stops counting and returns the work of the last layout.
     virtual void startCounting() = 0;
     virtual Shape stopCounting() = 0;
-
-    // Returns the border box of the node at `index` after the last layout.
-    virtual Box box(uint32_t index) = 0;
 };
 
 } // namespace flex_bench

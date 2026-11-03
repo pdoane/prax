@@ -178,15 +178,6 @@ public:
         };
     }
 
-    Box box(uint32_t index) override {
-        PrLayoutRect rect = prLayoutNodeBounds(tree_, nodes_[index], PrLayoutCoordinates_Layout);
-        return Box{
-            prLayoutUnitToPx(rect.left), prLayoutUnitToPx(rect.top),
-            prLayoutUnitToPx(rect.right) - prLayoutUnitToPx(rect.left),
-            prLayoutUnitToPx(rect.bottom) - prLayoutUnitToPx(rect.top),
-        };
-    }
-
 private:
     // Makes the node at `index` under `parent`, then its children under the node, in order.
     void make(const Tree& tree, uint32_t index, PrLayoutNode parent) {

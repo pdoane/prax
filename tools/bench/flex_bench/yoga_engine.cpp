@@ -213,7 +213,6 @@ public:
     void build(const Tree& tree) override {
         destroy();
         nodes_.resize(tree.styles.size());
-        parents_.assign(tree.styles.size(), UINT32_MAX);
         root_ = make(tree, tree.root);
     }
 
@@ -240,15 +239,6 @@ public:
         return Shape{.laidOut = last_.layouts, .reused = last_.cachedLayouts, .measured = last_.measures};
     }
 
-    Box box(uint32_t index) override {
-        Box out{0, 0, YGNodeLayoutGetWidth(nodes_[index]), YGNodeLayoutGetHeight(nodes_[index])};
-        for (uint32_t at = index; at != UINT32_MAX; at = parents_[at]) {
-            out.x += YGNodeLayoutGetLeft(nodes_[at]);
-            out.y += YGNodeLayoutGetTop(nodes_[at]);
-        }
-        return out;
-    }
-
 private:
     // Makes the node at `index`, then its children, inserting each child as it is made.
     YGNodeRef make(const Tree& tree, uint32_t index) {
@@ -256,10 +246,8 @@ private:
         applyStyle(node, styles_[index]);
         nodes_[index] = node;
         const std::vector<uint32_t>& children = tree.children[index];
-        for (size_t at = 0; at < children.size(); ++at) {
+        for (size_t at = 0; at < children.size(); ++at)
             YGNodeInsertChild(node, make(tree, children[at]), at);
-            parents_[children[at]] = index;
-        }
         return node;
     }
 
@@ -267,7 +255,6 @@ private:
     YGNodeRef root_ = nullptr;
     std::vector<YGNodeRef> nodes_;
     std::vector<YogaStyle> styles_;     // by node: the style that prepare converted
-    std::vector<uint32_t> parents_;
     LayoutData last_{};
 };
 

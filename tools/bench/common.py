@@ -53,10 +53,35 @@ def run_json(command, what):
     return [json.loads(line) for line in out.splitlines()]
 
 
+def peak_working_set(process):
+    """Returns the peak working set of `process`, which has exited, in bytes: Windows' measure of the peak resident
+    size. Its handle, which Popen holds until the object goes, keeps the process's counters readable."""
+    import ctypes
+    from ctypes import wintypes
+
+    class Counters(ctypes.Structure):
+        _fields_ = [("cb", wintypes.DWORD), ("PageFaultCount", wintypes.DWORD),
+                    ("PeakWorkingSetSize", ctypes.c_size_t), ("WorkingSetSize", ctypes.c_size_t),
+                    ("QuotaPeakPagedPoolUsage", ctypes.c_size_t), ("QuotaPagedPoolUsage", ctypes.c_size_t),
+                    ("QuotaPeakNonPagedPoolUsage", ctypes.c_size_t), ("QuotaNonPagedPoolUsage", ctypes.c_size_t),
+                    ("PagefileUsage", ctypes.c_size_t), ("PeakPagefileUsage", ctypes.c_size_t)]
+
+    counters = Counters()
+    counters.cb = ctypes.sizeof(Counters)
+    query = ctypes.windll.kernel32.K32GetProcessMemoryInfo
+    query.argtypes = [wintypes.HANDLE, ctypes.POINTER(Counters), wintypes.DWORD]
+    if not query(wintypes.HANDLE(int(process._handle)), ctypes.byref(counters), counters.cb):
+        raise OSError(ctypes.get_last_error(), "cannot read the peak working set of %s" % process.args[0])
+    return counters.PeakWorkingSetSize
+
+
 def run_peak(command):
     """Runs `command` and returns what it printed and the peak resident size of the process, in bytes."""
     process = subprocess.Popen(command, stdout=subprocess.PIPE)
     out = process.stdout.read()
+    if os.name == "nt":
+        process.wait()
+        return subprocess.CompletedProcess(process.args, process.returncode, out), peak_working_set(process)
     _, status, usage = os.wait4(process.pid, 0)
     done = subprocess.CompletedProcess(process.args, os.waitstatus_to_exitcode(status), out)
     # ru_maxrss is bytes on macOS and kilobytes on Linux.

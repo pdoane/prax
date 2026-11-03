@@ -783,13 +783,13 @@ def main():
             if screenshot(column, name, extra, page_url, path, options.timeout, options.build, options.viewport,
                           options.pixel_ratio, options.scheme) and not options.scan:
                 print(path)
-        path = os.path.join(os.path.abspath(options.screenshot), "E.png")
+        path = os.path.join(os.path.abspath(options.screenshot), "P.png")
         shell = common.binary(options.build, "pr_shell")
         subprocess.run([shell, "--viewport", options.viewport] + shell_pixel_ratio(options.pixel_ratio)
                        + (["--dark"] if options.scheme == "dark" else []) + ["--screenshot", path, "--html", page],
                        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         if options.scan:
-            print_scans(page, options.screenshot, [c[0] for c in columns] + ["E"], options.pixel_ratio)
+            print_scans(page, options.screenshot, [c[0] for c in columns] + ["P"], options.pixel_ratio)
         elif os.path.exists(path):
             print(path)
         return 0
@@ -816,15 +816,15 @@ def main():
         if report is not None:
             reports[column] = report
             versions.append("%s %s at %s" % (name, version(name), report.get("dpr")))
-    print("  E", file=sys.stderr, flush=True)
+    print("  P", file=sys.stderr, flush=True)
     engine = run_engine(page, options.build, options.viewport, options.pixel_ratio, options.keys)
     if engine is not None:
-        reports["E"] = engine
+        reports["P"] = engine
 
     if options.json:
         print(json.dumps(reports, indent=1))
         return 0
-    names = [c[0] for c in columns if c[0] in reports] + (["E"] if "E" in reports else [])
+    names = [c[0] for c in columns if c[0] in reports] + (["P"] if "P" in reports else [])
     print("; ".join(versions))
     lines = []
     for case, what, measure in cases_of(page):

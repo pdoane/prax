@@ -63,8 +63,14 @@ bool harnessReadFile(TextBuffer* out, const char* path) {
 
 PrStringView harnessFileName(const char* path) {
     const char* name = path;
+    // Windows separates the parts of a path with either slash.
+#if defined(_WIN32)
+    const bool backslashes = true;
+#else
+    const bool backslashes = false;
+#endif
     for (const char* at = path; *at != '\0'; ++at) {
-        if (*at == '/')
+        if (*at == '/' || (backslashes && *at == '\\'))
             name = at + 1;
     }
     return name;

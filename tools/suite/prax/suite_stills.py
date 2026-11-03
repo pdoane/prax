@@ -54,7 +54,7 @@ from tools.suite.prax import suite
 
 VIEWPORT = "600x800"
 COLUMNS = [("C1", "chrome", ["--force-device-scale-factor=1"]), ("S", "webkit", []), ("F", "firefox", [])]
-NAMES = {"C1": "Chrome", "S": "Safari", "F": "Firefox", "E": "Prax"}
+NAMES = {"C1": "Chrome", "S": "Safari", "F": "Firefox", "P": "Prax"}
 
 # The directory that the documents of printed figures are written to for serving, under the checkout's ignored build
 # directory.
@@ -106,7 +106,7 @@ def capture(server, build, columns, engine, page, out, timeout, scheme):
             path = os.path.join(out, column + ".png")
             if probe.screenshot(column, name, extra, url, path, timeout, build, VIEWPORT, None, scheme):
                 written.append(column)
-        path = os.path.join(out, "E.png")
+        path = os.path.join(out, "P.png")
         if engine:
             if os.path.exists(path):
                 os.remove(path)
@@ -118,7 +118,7 @@ def capture(server, build, columns, engine, page, out, timeout, scheme):
                            + ["--screenshot", path, "--html", local], stdout=subprocess.DEVNULL,
                            stderr=subprocess.DEVNULL)
             if os.path.exists(path):
-                written.append("E")
+                written.append("P")
     finally:
         shutil.rmtree(work, ignore_errors=True)
     return written
@@ -343,8 +343,8 @@ def main():
     parser.add_argument("--file", action="append", default=[],
                         help="a page of the checkout outside the suite, captured as a page of it is")
     parser.add_argument("--page", action="append", help="only the pages of this name, as `float-rules.html`")
-    parser.add_argument("--browser", action="append", choices=["C1", "S", "F", "E"],
-                        help="a column to capture: C1, S, F or E for the engine; every one by default. The sheet keeps "
+    parser.add_argument("--browser", action="append", choices=["C1", "S", "F", "P"],
+                        help="a column to capture: C1, S, F or P for Prax; every one by default. The sheet keeps "
                              "the stills of the columns not captured from an earlier run")
     parser.add_argument("--print-only", action="store_true",
                         help="only the printed figures; the sheet keeps the screen stills of an earlier run")
@@ -360,7 +360,7 @@ def main():
                and probe.installed(c[1], options.build)]
     if options.safari:
         columns = [("S", "safari", []) if c[0] == "S" else c for c in columns]
-    engine = not options.browser or "E" in options.browser
+    engine = not options.browser or "P" in options.browser
     pages = [(d, os.path.join(suite.SUITE, d, p)) for d, p in suite.pages_of(options.directories)
              if not options.page or p in options.page]
     pages += [("", os.path.abspath(f)) for f in options.file]
@@ -375,7 +375,7 @@ def main():
         directory, page = item
         out = os.path.join(os.path.abspath(options.out), directory, os.path.basename(page)[:-5])
         os.makedirs(out, exist_ok=True)
-        order = [c[0] for c in COLUMNS] + ["E"]
+        order = [c[0] for c in COLUMNS] + ["P"]
         if not options.print_only:
             capture(server, options.build, columns, engine, page, out, options.timeout, options.scheme)
         written = [c for c in order if os.path.exists(os.path.join(out, c + ".png"))]
